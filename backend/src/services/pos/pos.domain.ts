@@ -35,7 +35,7 @@
 // two sides were computed independently.
 // ============================================
 
-export type SessionStatus = 'open' | 'closing' | 'closed' | 'force_closed'
+export type SessionStatus = 'open' | 'suspended' | 'closing' | 'closed' | 'force_closed'
 
 export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'credit' | 'other'
 
@@ -254,6 +254,15 @@ export function summarise(
 
 // ─── Rules ───────────────────────────────────────────────────────────────────
 
+/** Suspend ↔ resume. Only an open till suspends; only a suspended one resumes. */
+export function checkSuspendChange(
+  status: SessionStatus,
+  to: 'suspended' | 'open',
+): 'POS_SESSION_NOT_OPEN' | 'POS_SESSION_NOT_SUSPENDED' | null {
+  if (to === 'suspended') return status === 'open' ? null : 'POS_SESSION_NOT_OPEN'
+  return status === 'suspended' ? null : 'POS_SESSION_NOT_SUSPENDED'
+}
+
 export type PosRuleCode =
   | 'POS_SESSION_NOT_OPEN'
   | 'POS_SESSION_ALREADY_OPEN'
@@ -343,7 +352,8 @@ export function validateClose(
 ): PosRuleCode[] {
   const problems: PosRuleCode[] = []
 
-  if (session.status !== 'open' && session.status !== 'closing') {
+  // A suspended till can be closed from its row without resuming it first.
+  if (session.status !== 'open' && session.status !== 'closing' && session.status !== 'suspended') {
     problems.push('POS_SESSION_NOT_OPEN')
   }
 
@@ -371,6 +381,8 @@ export function validateClose(
 
 export interface AbandonedSession {
   sessionId: string
+  /** 'open' or 'suspended' (the till list shows both). */
+  status: SessionStatus
   openedBy: string
   openedAt: string
   hoursOpen: number
@@ -402,9 +414,10 @@ export function findAbandoned(
   const now = Date.parse(asOf)
 
   return sessions
-    .filter((entry) => entry.session.status === 'open')
+    .filter((entry) => entry.session.status === 'open' || staleAfterHours === 0)
     .map((entry) => ({
       sessionId: entry.session.id,
+      status: entry.session.status,
       openedBy: entry.session.openedBy,
       openedAt: entry.session.openedAt,
       hoursOpen: (now - Date.parse(entry.session.openedAt)) / 3_600_000,

@@ -3,10 +3,11 @@
 // ============================================
 // Multi-warehouse (request #90): which warehouse this invoice moves stock in.
 //
-// Shown only when there is a choice. With one warehouse the server uses it;
-// with none, stock moves in no warehouse. With several and nothing picked, the
-// form SAYS that no warehouse's stock will change — a silent unattributed sale
-// is how warehouse figures drifted before.
+// Shown whenever the business has a warehouse, so every sale says which
+// warehouse the goods LEAVE and every purchase which one they ENTER. With a
+// single warehouse it is chosen automatically. With several and nothing picked,
+// the form SAYS that no warehouse's stock will change — a silent unattributed
+// sale is how warehouse figures drifted before.
 // ============================================
 
 import { useEffect } from 'react'
@@ -30,10 +31,12 @@ export function InvoiceWarehouseSelect({
 
   // A remembered warehouse that was deleted is not a choice any more.
   useEffect(() => {
-    if (value && data && !warehouses.some((warehouse) => warehouse.id === value)) onChange(null)
+    if (!data) return
+    if (value && !warehouses.some((warehouse) => warehouse.id === value)) onChange(null)
+    else if (!value && warehouses.length === 1) onChange(warehouses[0]!.id)
   }, [value, data, warehouses, onChange])
 
-  if (warehouses.length < 2) return null
+  if (warehouses.length === 0) return null
 
   return (
     <div className="rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] p-3">

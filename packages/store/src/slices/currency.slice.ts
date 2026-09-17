@@ -39,6 +39,8 @@ export interface ExchangeRate {
   code: CurrencyCode
   rate: number // Rate relative to AFN (base currency)
   lastUpdated: string
+  /** Entered by the user (request #92). Only these are shown as real conversions. */
+  manual?: boolean
 }
 
 export interface CurrencyState {
@@ -74,6 +76,11 @@ export interface CurrencyState {
   setPrimaryCurrency: (code: CurrencyCode) => void
   setSecondaryCurrency: (code: CurrencyCode | null) => void
   fetchRates: () => Promise<void>
+  /**
+   * The user's own rate: how many AFN one unit of `code` is worth. `null`
+   * removes it. Stored as the slice's AFN-relative rate (1 / afnPerUnit).
+   */
+  setManualRate: (code: CurrencyCode, afnPerUnit: number | null) => void
   /** `null` when either rate is unknown. Never a guess. */
   convertAmount: (amount: number, from: CurrencyCode, to: CurrencyCode) => number | null
 }
@@ -129,6 +136,23 @@ export const useCurrencyStore = create<CurrencyState>()(
         set({ secondaryCurrency: code })
       },
 
+      setManualRate: (code, afnPerUnit) => {
+        set((state) => {
+          const rates = { ...state.rates }
+          if (afnPerUnit === null || !Number.isFinite(afnPerUnit) || afnPerUnit <= 0) {
+            delete rates[code]
+          } else {
+            rates[code] = {
+              code,
+              rate: code === 'AFN' ? 1 : 1 / afnPerUnit,
+              lastUpdated: new Date().toISOString(),
+              manual: true,
+            }
+          }
+          return { rates }
+        })
+      },
+
       // Fetch live rates
       fetchRates: async () => {
         set({ isLoadingRates: true, ratesError: null })
@@ -140,9 +164,14 @@ export const useCurrencyStore = create<CurrencyState>()(
           await new Promise((resolve) => setTimeout(resolve, 500))
 
           // For now, keep default rates
+          // A rate the user typed is never replaced by a placeholder.
+          const manual = Object.fromEntries(
+            Object.entries(get().rates).filter(([, rate]) => rate?.manual),
+          )
           set({
             rates: {
               ...defaultRates,
+              ...manual,
             },
             isLoadingRates: false,
             ratesError: null,

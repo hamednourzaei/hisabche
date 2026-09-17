@@ -79,6 +79,13 @@ export interface TillViewProps {
   onRefresh: () => void
   /** «افزودن صندوق» — opens a till with its opening float. */
   onOpen: (openingFloatMinor: number) => void
+  /** Row actions: «تعلیق» / «ادامه» and «بستن». */
+  onSetSuspended: (sessionId: string, suspended: boolean) => void
+  onCloseTill: (input: {
+    sessionId: string
+    countedCashMinor: number
+    varianceReason?: string
+  }) => void
   /** «افزودن مبلغ به صندوق» — a cash_in on the selected till. */
   onAddCash: (input: { amountMinor: number; reason: string }) => void
   /** The drawer as a ledger, from the server. Last balance = expected cash. */
@@ -171,6 +178,8 @@ export const TillView = memo(function TillView({
   onRefresh,
   onOpen,
   onAddCash,
+  onSetSuspended,
+  onCloseTill,
   ledger,
   isLedgerLoading,
   ledgerError,
@@ -198,6 +207,11 @@ export const TillView = memo(function TillView({
   const [cashReason, setCashReason] = useState('')
   const [addCashOpen, setAddCashOpen] = useState(false)
   const [tillSearch, setTillSearch] = useState('')
+  // Row «بستن»: the till being counted, and the count.
+  const [closing, setClosing] = useState<AbandonedSession | null>(null)
+  const [countedMinor, setCountedMinor] = useState(0)
+  const [varianceReason, setVarianceReason] = useState('')
+  const closeVariance = closing ? countedMinor - closing.expectedCashMinor : 0
   const [ledgerSearch, setLedgerSearch] = useState('')
   const [ledgerFilter, setLedgerFilter] = useState<LedgerFilter>('all')
   const [ledgerPage, setLedgerPage] = useState(0)
@@ -347,8 +361,60 @@ export const TillView = memo(function TillView({
         sortValue: (item) => item.expectedCashMinor,
         render: (item) => <Money minor={item.expectedCashMinor} />,
       },
+      {
+        id: 'status',
+        labelKey: 'till.col_status',
+        labelFallback: 'وضعیت',
+        align: 'end',
+        sortValue: (item) => item.status ?? 'open',
+        render: (item) => (
+          <span
+            className={
+              item.status === 'suspended'
+                ? 'rounded-full bg-[hsl(var(--color-warning)/0.12)] px-2 py-0.5 text-xs text-[hsl(var(--color-warning))]'
+                : 'rounded-full bg-[hsl(var(--color-success)/0.12)] px-2 py-0.5 text-xs text-[hsl(var(--color-success))]'
+            }
+          >
+            {item.status === 'suspended'
+              ? t('till.status_suspended', 'معلق')
+              : t('till.status_open', 'باز')}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        labelKey: 'till.col_actions',
+        labelFallback: 'عملیات',
+        align: 'end',
+        locked: true,
+        render: (item) => (
+          // stopPropagation: the row click selects the till; these act on it.
+          <span className="inline-flex gap-1" onClick={(e) => e.stopPropagation()}>
+            <ActionButton
+              variant="quiet"
+              className="min-h-8 px-3 text-xs"
+              disabled={isBusy}
+              onClick={() => onSetSuspended(item.sessionId, item.status !== 'suspended')}
+            >
+              {item.status === 'suspended' ? t('till.resume', 'ادامه') : t('till.suspend', 'تعلیق')}
+            </ActionButton>
+            <ActionButton
+              variant="quiet"
+              className="min-h-8 px-3 text-xs"
+              disabled={isBusy}
+              onClick={() => {
+                setClosing(item)
+                setCountedMinor(0)
+                setVarianceReason('')
+              }}
+            >
+              {t('till.close_action', 'بستن صندوق')}
+            </ActionButton>
+          </span>
+        ),
+      },
     ],
-    [dateTime, t, selectedTillId],
+    [dateTime, t, selectedTillId, isBusy, onSetSuspended],
   )
 
   return (
@@ -546,6 +612,53 @@ export const TillView = memo(function TillView({
             <ActionButton variant="quiet" onClick={() => setAddTillOpen(false)} disabled={isBusy}>
               {t('common.cancel', 'انصراف')}
             </ActionButton>
+          </div>
+        ) : null}
+        {closing ? (
+          <div className="mb-3 space-y-3 rounded-xl border border-[hsl(var(--border-default))] p-3">
+            <p className="text-sm font-medium">
+              {t('till.close_title', 'شمارش و بستن')} — {dateTime(closing.openedAt)}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-[12rem_1fr]">
+              <MinorInput
+                label={t('till.counted_cash', 'نقد شمرده‌شده')}
+                value={countedMinor}
+                onChange={setCountedMinor}
+                disabled={isBusy}
+              />
+              <div className="self-end rounded-xl bg-[hsl(var(--surface-muted)/0.4)] px-4 py-3 text-sm">
+                {t('till.expected_cash', 'نقد مورد انتظار')}:{' '}
+                <Money minor={closing.expectedCashMinor} tone="muted" /> ·{' '}
+                {t('till.variance', 'اختلاف')}: <Money minor={closeVariance} signed tone="auto" />
+              </div>
+            </div>
+            {closeVariance !== 0 ? (
+              <Field
+                label={t('till.variance_reason', 'توضیح اختلاف')}
+                value={varianceReason}
+                onChange={setVarianceReason}
+                disabled={isBusy}
+              />
+            ) : null}
+            <div className="flex gap-2">
+              <ActionButton
+                // A difference must be explained before the till is sealed.
+                disabled={isBusy || (closeVariance !== 0 && varianceReason.trim() === '')}
+                onClick={() => {
+                  onCloseTill({
+                    sessionId: closing.sessionId,
+                    countedCashMinor: countedMinor,
+                    ...(varianceReason.trim() ? { varianceReason: varianceReason.trim() } : {}),
+                  })
+                  setClosing(null)
+                }}
+              >
+                {t('till.close_action', 'بستن صندوق')}
+              </ActionButton>
+              <ActionButton variant="quiet" onClick={() => setClosing(null)} disabled={isBusy}>
+                {t('common.cancel', 'انصراف')}
+              </ActionButton>
+            </div>
           </div>
         ) : null}
         {isTillsLoading ? (

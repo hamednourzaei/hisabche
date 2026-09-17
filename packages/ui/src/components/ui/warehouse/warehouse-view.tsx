@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/warehouse/warehouse-view.tsx
 'use client'
 
-import { memo, useMemo, type ReactNode } from 'react'
+import { memo, useMemo, useState, type ReactNode } from 'react'
 import type { StockSummary } from '@hisabche/api'
 import { cn } from '../../../lib/utils'
 import { FOCUS_RING } from '../focus-ring'
@@ -43,6 +43,8 @@ interface WarehouseViewProps {
    */
   summary: StockSummary | null
   currencies: Currency[]
+  /** Save the user's rate (AFN per unit); null clears it. */
+  onSetRate: (code: string, afnPerUnit: number | null) => void
   onNavigate: (id: string) => void
   /** H4 — open the movements behind a product's on-hand figure. */
   onOpenHistory?:
@@ -141,22 +143,81 @@ WarehouseHeader.displayName = 'WarehouseHeader'
 // ─── CurrencyChips ─────────────────────────────────────────────────────────
 
 const CurrencyChips = memo(function CurrencyChips({
+  t,
   fmt,
   currencies,
   totalValue,
+  onSetRate,
 }: {
+  t: (key: string, fallback?: string) => string
   fmt: (v: number) => string
   currencies: Currency[]
   totalValue: number | null
+  onSetRate: (code: string, afnPerUnit: number | null) => void
 }) {
+  const [editing, setEditing] = useState<string | null>(null)
+  const [draft, setDraft] = useState('')
   if (totalValue === null) return null
   return (
-    <div className="flex flex-wrap gap-2 text-xs text-[hsl(var(--fg-secondary))]">
-      {currencies.map((c) => (
-        <span key={c.code} className="rounded-lg bg-[hsl(var(--surface-muted))] px-2 py-1">
-          {c.label}: {fmt(totalValue * c.rate)}
-        </span>
-      ))}
+    <div className="flex flex-wrap items-center gap-2 text-xs text-[hsl(var(--fg-secondary))]">
+      <span className="rounded-lg bg-[hsl(var(--surface-muted))] px-2 py-1">
+        {t('warehouse.currencyAFN', 'افغانی')}: {fmt(totalValue)}
+      </span>
+      {currencies.map((c) =>
+        editing === c.code ? (
+          <span
+            key={c.code}
+            className="inline-flex items-center gap-1 rounded-lg border border-[hsl(var(--border-default))] px-2 py-0.5"
+          >
+            <label htmlFor={`rate-${c.code}`}>
+              {t('warehouse.ratePrefix', '۱')} {c.label} =
+            </label>
+            <input
+              id={`rate-${c.code}`}
+              type="number"
+              min={0}
+              inputMode="decimal"
+              dir="ltr"
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              className="h-7 w-24 rounded border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-1 text-xs"
+            />
+            <span>{t('warehouse.currencyAFN', 'افغانی')}</span>
+            <button
+              type="button"
+              className="rounded px-1.5 py-0.5 font-medium text-[hsl(var(--color-primary))]"
+              onClick={() => {
+                const value = Number(draft)
+                onSetRate(c.code, draft.trim() === '' || !(value > 0) ? null : value)
+                setEditing(null)
+              }}
+            >
+              {t('common.save', 'ذخیره')}
+            </button>
+          </span>
+        ) : (
+          <button
+            key={c.code}
+            type="button"
+            title={t('warehouse.editRate', 'ویرایش نرخ')}
+            onClick={() => {
+              setEditing(c.code)
+              setDraft(c.afnPerUnit ? String(Math.round(c.afnPerUnit * 10000) / 10000) : '')
+            }}
+            className="rounded-lg bg-[hsl(var(--surface-muted))] px-2 py-1 hover:bg-[hsl(var(--surface-muted)/0.7)]"
+          >
+            {c.label}:{' '}
+            {c.rate === null ? (
+              <span className="text-[hsl(var(--color-warning))]">
+                {t('warehouse.enterRate', 'نرخ را وارد کنید')}
+              </span>
+            ) : (
+              fmt(totalValue * c.rate)
+            )}
+          </button>
+        ),
+      )}
     </div>
   )
 })
@@ -193,6 +254,7 @@ export const WarehouseView = memo(function WarehouseView({
   isLoading,
   summary,
   currencies,
+  onSetRate,
   onNavigate,
   onOpenHistory,
   onDelete,
@@ -260,7 +322,13 @@ export const WarehouseView = memo(function WarehouseView({
       {/* همان کامپوننت و گرید invoices — فقط داده‌ی warehouse */}
       <BentoStats t={t} stats={stats} />
 
-      <CurrencyChips fmt={fmt} currencies={currencies} totalValue={summary?.totalValue ?? null} />
+      <CurrencyChips
+        t={t}
+        fmt={fmt}
+        currencies={currencies}
+        totalValue={summary?.totalValue ?? null}
+        onSetRate={onSetRate}
+      />
 
       {isLoading ? (
         <LoadingSkeleton />

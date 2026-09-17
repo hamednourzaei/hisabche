@@ -6,9 +6,9 @@
 // Data and intent for the till. Web and desktop both mount this module; the
 // view below it holds no query of its own.
 //
-// The page is a list of the workspace's open tills. Selecting one shows its
-// transactions; the caller's own till is selected by default. Counting,
-// closing and bank transfers are not offered here.
+// The page is a list of the workspace's open and suspended tills. Selecting one
+// shows its transactions (the caller's own till by default); each row can be
+// suspended/resumed or counted and closed. Bank transfers are not offered here.
 // ============================================
 
 import { memo, useCallback, useEffect, useState } from 'react'
@@ -21,6 +21,8 @@ import {
   useRecordCashMovement,
   useSession,
   useSessionLedger,
+  useSetTillSuspended,
+  useCloseSession,
 } from '@hisabche/api'
 import { TillView } from '../till-view'
 
@@ -37,6 +39,8 @@ export const TillContainer = memo(function TillContainer() {
   const tills = useOpenSessions()
   const openSession = useOpenSession()
   const cashMovement = useRecordCashMovement()
+  const setSuspended = useSetTillSuspended()
+  const closeSession = useCloseSession()
 
   // Selected till: the caller's own open till unless another row was clicked.
   const [selectedTillId, setSelectedTillId] = useState<string | null>(null)
@@ -64,10 +68,13 @@ export const TillContainer = memo(function TillContainer() {
       (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
       (err as Error)?.message
     const code = message ? /^([A-Z][A-Z_]{5,})/.exec(message)?.[1] : undefined
+    const known = [
+      'POS_SESSION_ALREADY_OPEN',
+      'POS_SUSPEND_MIGRATION_REQUIRED',
+      'POS_VARIANCE_REASON_REQUIRED',
+    ]
     setActionError(
-      code === 'POS_SESSION_ALREADY_OPEN'
-        ? t('till.error_POS_SESSION_ALREADY_OPEN', message)
-        : (message ?? null),
+      code && known.includes(code) ? t(`till.error_${code}`, message) : (message ?? null),
     )
   }, [])
 
@@ -108,6 +115,28 @@ export const TillContainer = memo(function TillContainer() {
     [activeId, cashFlow, cashMovement, ledger, report, selected, tills],
   )
 
+  const refreshAll = useCallback(() => {
+    void tills.refetch()
+    void current.refetch()
+    void cashFlow.refetch()
+  }, [cashFlow, current, tills])
+
+  const handleSetSuspended = useCallback(
+    (sessionId: string, suspended: boolean) => {
+      setActionError(null)
+      setSuspended.mutate({ sessionId, suspended }, { onSuccess: refreshAll, onError: report })
+    },
+    [refreshAll, report, setSuspended],
+  )
+
+  const handleCloseTill = useCallback(
+    (input: { sessionId: string; countedCashMinor: number; varianceReason?: string }) => {
+      setActionError(null)
+      closeSession.mutate(input, { onSuccess: refreshAll, onError: report })
+    },
+    [closeSession, refreshAll, report],
+  )
+
   const handleRefresh = useCallback(() => {
     setActionError(null)
     current.refetch()
@@ -131,7 +160,14 @@ export const TillContainer = memo(function TillContainer() {
       onSelectTill={setSelectedTillId}
       isLoading={current.isLoading}
       error={current.error ? (current.error as Error).message : null}
-      isBusy={openSession.isPending || cashMovement.isPending}
+      isBusy={
+        openSession.isPending ||
+        cashMovement.isPending ||
+        setSuspended.isPending ||
+        closeSession.isPending
+      }
+      onSetSuspended={handleSetSuspended}
+      onCloseTill={handleCloseTill}
       actionError={actionError}
       onRefresh={handleRefresh}
       onOpen={handleOpen}

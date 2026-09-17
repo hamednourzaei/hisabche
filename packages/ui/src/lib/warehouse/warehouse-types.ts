@@ -28,5 +28,8 @@ export interface Product {
 export interface Currency {
   code: string
   label: string
-  rate: number
+  /** AFN-relative rate the user entered; null = not entered yet. */
+  rate: number | null
+  /** The same rate as the user typed it: AFN per one unit. */
+  afnPerUnit: number | null
 }

@@ -110,6 +110,18 @@ export function useCreateWarehouse() {
   })
 }
 
+/** Rename / relocate a warehouse (PATCH /warehouses/:id). */
+export function useUpdateWarehouse() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { id: string; name: string; location: string }) => {
+      const { data } = await apiClient.patch(`/warehouses/${input.id}`, input)
+      return data as { id: string; name: string }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: warehouseKeys.all }),
+  })
+}
+
 export function useAssignWarehouseStock(warehouseId: string) {
   const queryClient = useQueryClient()
   return useMutation({

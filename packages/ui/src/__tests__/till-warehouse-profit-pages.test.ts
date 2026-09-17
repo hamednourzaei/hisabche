@@ -14,10 +14,8 @@ describe('#89 till page', () => {
     for (const key of [
       "t('till.session_title'",
       "t('till.movement_title'",
-      "t('till.close_title'",
       "t('till.abandoned_title'",
       'onBankTransfer',
-      'onClose(',
     ]) {
       expect(view, key).not.toContain(key)
     }
@@ -67,5 +65,32 @@ describe('#91 profit & loss', () => {
     expect(table).toContain("router.push('/till')")
     expect(table).toContain('percent(totals.netMarginPercent)')
     expect(table).not.toMatch(/\.reduce\(/)
+  })
+})
+
+describe('#92 till row actions, warehouse edit, manual rates, invoice warehouse', () => {
+  it('each till row can be suspended/resumed and closed with a count', () => {
+    const view = code(ui('till/till-view.tsx'))
+    expect(view).toContain("onSetSuspended(item.sessionId, item.status !== 'suspended')")
+    expect(view).toContain('onCloseTill({')
+    expect(view).toContain("closeVariance !== 0 && varianceReason.trim() === ''")
+  })
+  it('warehouse rows have «ویرایش»', () => {
+    expect(code(ui('warehouse/warehouse-list-table.tsx'))).toContain(
+      'onEdit({ id: row.id, name: row.name, location: row.location })',
+    )
+    expect(code(ui('warehouse/containers/Warehouse-container.tsx'))).toContain(
+      'useUpdateWarehouse()',
+    )
+  })
+  it('currency chips use only rates the user entered — no constants', () => {
+    const container = code(ui('warehouse/containers/Warehouse-container.tsx'))
+    expect(container).not.toMatch(/rate:\s*0\.\d/)
+    expect(container).toContain('rate: rate?.manual ? rate.rate : null')
+  })
+  it('the invoice warehouse is shown for any warehouse, auto-picked when there is one', () => {
+    const select = code(ui('invoice-builder/invoice-warehouse-select.tsx'))
+    expect(select).toContain('if (warehouses.length === 0) return null')
+    expect(select).toContain('warehouses.length === 1) onChange(warehouses[0]!.id)')
   })
 })

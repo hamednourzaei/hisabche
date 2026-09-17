@@ -381,7 +381,8 @@ describe('commands that must survive a retry are written so they can', () => {
     // Two devices closing at once: the second finds nothing to update rather
     // than posting the day's takings a second time.
     const source = readFileSync(join(SERVICES, 'pos', 'pos.service.ts'), 'utf8')
-    expect(source).toMatch(/\.in\('status', \['open', 'closing'\]\)/)
+    // A suspended till (#92) may be closed from its row as well.
+    expect(source).toMatch(/\.in\('status', \['open', 'closing'(, 'suspended')?\]\)/)
   })
 
   it('depreciation is keyed on the schedule row, not on today', () => {

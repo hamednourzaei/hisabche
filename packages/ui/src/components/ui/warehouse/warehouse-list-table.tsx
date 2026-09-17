@@ -10,6 +10,7 @@
 // ============================================
 
 import { memo, useMemo, useState } from 'react'
+import { Pencil } from 'lucide-react'
 import type { StockSummary, WarehouseOverviewItem } from '@hisabche/api'
 
 import { DataTable, matchesSearch, type TableColumn } from '../data-table'
@@ -32,6 +33,7 @@ export const WarehouseListTable = memo(function WarehouseListTable({
   unassigned,
   onOpen,
   onAdd,
+  onEdit,
 }: {
   t: (key: string, fallback?: string) => string
   fmt: (v: number) => string
@@ -39,6 +41,8 @@ export const WarehouseListTable = memo(function WarehouseListTable({
   unassigned: StockSummary | null
   onOpen: (id: string) => void
   onAdd: () => void
+  /** «ویرایش» on a warehouse row (not on the «بدون انبار» row). */
+  onEdit: (warehouse: { id: string; name: string; location: string }) => void
 }) {
   const [search, setSearch] = useState('')
 
@@ -130,8 +134,31 @@ export const WarehouseListTable = memo(function WarehouseListTable({
           </span>
         ),
       },
+      {
+        id: 'actions',
+        labelKey: 'warehouse.actions',
+        labelFallback: 'عملیات',
+        align: 'end',
+        locked: true,
+        render: (row) =>
+          row.unassigned ? null : (
+            <button
+              type="button"
+              // The row click opens the warehouse; this edits it.
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit({ id: row.id, name: row.name, location: row.location })
+              }}
+              aria-label={t('warehouse.editWarehouse', 'ویرایش انبار')}
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--surface-muted))]"
+            >
+              <Pencil className="size-3.5" aria-hidden="true" />
+              {t('common.edit', 'ویرایش')}
+            </button>
+          ),
+      },
     ],
-    [fmt],
+    [fmt, onEdit, t],
   )
 
   return (

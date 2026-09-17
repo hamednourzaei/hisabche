@@ -187,3 +187,48 @@ describe('one system: the accounting core owns the rule', () => {
     expect(body).toContain('.range(from, to)')
   })
 })
+
+import { checkSuspendChange, findAbandoned, validateClose } from '../services/pos/pos.domain'
+
+describe('#92 till suspend / close from the row', () => {
+  it('only an open till suspends, only a suspended one resumes', () => {
+    expect(checkSuspendChange('open', 'suspended')).toBeNull()
+    expect(checkSuspendChange('suspended', 'suspended')).toBe('POS_SESSION_NOT_OPEN')
+    expect(checkSuspendChange('suspended', 'open')).toBeNull()
+    expect(checkSuspendChange('open', 'open')).toBe('POS_SESSION_NOT_SUSPENDED')
+    expect(checkSuspendChange('closed', 'open')).toBe('POS_SESSION_NOT_SUSPENDED')
+  })
+
+  const session = (status: 'open' | 'suspended' | 'closed') => ({
+    id: 's',
+    status,
+    openingFloatMinor: 0,
+    openedAt: '2026-09-17T00:00:00Z',
+    openedBy: 'u',
+    closedAt: null,
+    closedBy: null,
+    countedCashMinor: null,
+  })
+  const totals = { expectedCashMinor: 1000 } as Parameters<typeof validateClose>[1]
+
+  it('a suspended till can be closed; a closed one cannot', () => {
+    expect(
+      validateClose(session('suspended'), totals, { countedCashMinor: 1000, role: 'owner' }),
+    ).toEqual([])
+    expect(
+      validateClose(session('closed'), totals, { countedCashMinor: 1000, role: 'owner' }),
+    ).toContain('POS_SESSION_NOT_OPEN')
+  })
+
+  it('the till list includes suspended tills with their status; the abandoned list does not', () => {
+    const rows = [
+      { session: session('open'), orders: [], movements: [] },
+      { session: { ...session('suspended'), id: 's2' }, orders: [], movements: [] },
+    ]
+    expect(findAbandoned(rows, '2026-09-18T00:00:00Z', 0).map((r) => r.status)).toEqual([
+      'open',
+      'suspended',
+    ])
+    expect(findAbandoned(rows, '2026-09-18T00:00:00Z', 24).map((r) => r.status)).toEqual(['open'])
+  })
+})

@@ -44,12 +44,15 @@ export function AddWarehouseDialog({
   onClose,
   onCreate,
   isPending,
+  initial,
 }: {
   t: T
   open: boolean
   onClose: () => void
   onCreate: (input: { name: string; location: string }) => Promise<unknown>
   isPending: boolean
+  /** Set when editing an existing warehouse: the form starts from its values. */
+  initial?: { name: string; location: string } | null | undefined
 }) {
   const [name, setName] = useState('')
   const [location, setLocation] = useState('')
@@ -57,11 +60,11 @@ export function AddWarehouseDialog({
 
   useEffect(() => {
     if (open) {
-      setName('')
-      setLocation('')
+      setName(initial?.name ?? '')
+      setLocation(initial?.location ?? '')
       setError(null)
     }
-  }, [open])
+  }, [open, initial])
 
   const submit = async () => {
     try {
@@ -76,7 +79,11 @@ export function AddWarehouseDialog({
     <Dialog open={open} onOpenChange={(next) => (next ? null : onClose())}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('warehouse.addWarehouse', 'افزودن انبار')}</DialogTitle>
+          <DialogTitle>
+            {initial
+              ? t('warehouse.editWarehouse', 'ویرایش انبار')
+              : t('warehouse.addWarehouse', 'افزودن انبار')}
+          </DialogTitle>
           <DialogDescription>
             {t('warehouse.addWarehouseHint', 'نام انبار یا شعبه‌ای که کالا در آن نگهداری می‌شود.')}
           </DialogDescription>

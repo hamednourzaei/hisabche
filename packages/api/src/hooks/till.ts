@@ -25,7 +25,7 @@ export type PosPaymentMethod = 'cash' | 'card' | 'transfer' | 'credit' | 'other'
 
 export interface PosSession {
   id: string
-  status: 'open' | 'closing' | 'closed' | 'force_closed'
+  status: 'open' | 'suspended' | 'closing' | 'closed' | 'force_closed'
   /** Minor units. Every money figure on this screen is an integer. */
   openingFloatMinor: number
   openedAt: string
@@ -71,6 +71,8 @@ export interface DrawerLedger {
 
 export interface AbandonedSession {
   sessionId: string
+  /** 'open' or 'suspended' in the till list. */
+  status?: PosSession['status']
   openedBy: string
   openedAt: string
   hoursOpen: number
@@ -339,6 +341,20 @@ export function useCloseSession() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tillKeys.all })
     },
+  })
+}
+
+/** «تعلیق» / «ادامه» a till from its row (docs/pos-session-suspend-migration.sql). */
+export function useSetTillSuspended() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ sessionId, suspended }: { sessionId: string; suspended: boolean }) => {
+      const { data } = suspended
+        ? await apiClient.post(`/pos/sessions/${sessionId}/suspend`)
+        : await apiClient.post(`/pos/sessions/${sessionId}/resume`)
+      return data as PosSession
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: tillKeys.all }),
   })
 }
 

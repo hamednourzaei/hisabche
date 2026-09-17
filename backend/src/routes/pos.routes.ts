@@ -327,6 +327,39 @@ export async function posRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── POST /sessions/:id/suspend | /resume ──────────────
+  fastify.post(
+    '/sessions/:id/suspend',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.create')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        return reply.send(await posService.setSuspended(request.tenancy, id, true))
+      } catch (err) {
+        return fail(reply, err, 'Failed to suspend the till')
+      }
+    },
+  )
+
+  fastify.post(
+    '/sessions/:id/resume',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.create')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        return reply.send(await posService.setSuspended(request.tenancy, id, false))
+      } catch (err) {
+        return fail(reply, err, 'Failed to resume the till')
+      }
+    },
+  )
+
   // ─── GET /sessions/abandoned ───────────────────────────
   // Drawers open far longer than a shift. Surfaced, never auto-closed.
   fastify.get(

@@ -1836,7 +1836,15 @@
     "saveFailed": "Couldn't save. Try again.",
     "noProductsInWarehouse": "No products in this warehouse; add stock that has no warehouse, or record a purchase invoice for this warehouse",
     "name": "Product",
-    "totalValue": "Total value (AFN)"
+    "totalValue": "Total value (AFN)",
+    "actions": "Actions",
+    "editWarehouse": "Edit warehouse",
+    "currencyAFN": "Afghani",
+    "currencyUSD": "Dollar",
+    "currencyIRR": "Toman",
+    "ratePrefix": "1",
+    "editRate": "Edit rate",
+    "enterRate": "Enter rate"
   },
   "customers": {
     "title": "Customers",
@@ -3764,7 +3772,14 @@
     "add_cash": "Add cash to till",
     "add_cash_confirm": "Add",
     "error_POS_SESSION_ALREADY_OPEN": "You already have a till open in this branch; pick it from the list.",
-    "col_margin": "Margin"
+    "col_margin": "Margin",
+    "col_status": "Status",
+    "col_actions": "Actions",
+    "status_suspended": "Suspended",
+    "suspend": "Suspend",
+    "resume": "Resume",
+    "error_POS_SUSPEND_MIGRATION_REQUIRED": "Suspending tills isn't enabled on the database yet (migration not run).",
+    "error_POS_VARIANCE_REASON_REQUIRED": "Explain the till difference."
   },
   "assets": {
     "title": "Fixed assets",
@@ -4559,7 +4574,28 @@
         "body3": "A closed shift is fixed and does not change afterwards."
       },
       "seoTitle": "Point of Sale and Shifts — Guide",
-      "seoDescription": "Point of sale in Hisabche: quick sales, opening a shift with starting cash, closing the till with a cash count, and seeing any difference."
+      "seoDescription": "Point of sale in Hisabche: quick sales, opening a shift with starting cash, closing the till with a cash count, and seeing any difference.",
+      "tills": {
+        "heading": "The till list",
+        "body1": "The till page lists every open and suspended till in one table: when it opened, how many hours it has been open, the number of sales and the cash that should be in it.",
+        "body2": "Expected cash is computed by the server from sales, cash in and out, and cash invoice payments, and cannot be edited — a figure you can type over is not a control.",
+        "body3": "Each person has one open till per branch at a time. Two open tills for one person are two counts that can never be reconciled.",
+        "step1": "Press «Add till» next to the table title.",
+        "step2": "Enter the opening cash and open the till.",
+        "step3": "Click a row to see that till's transactions in the table below."
+      },
+      "cash": {
+        "heading": "Adding cash and profit %",
+        "body1": "«Add cash to till» records money put into the till with a reason. The reason is required so every amount can be explained.",
+        "body2": "Cash payments of invoices appear in the till's transactions automatically. Search and filters for in, out and invoices sit above the table.",
+        "body3": "Each cash receipt for an invoice shows the profit % of that sale, from the accounting core and the real cost of goods. When no cost is recorded, no figure is guessed."
+      },
+      "closing": {
+        "heading": "Suspend and close",
+        "body1": "«Suspend» at the end of each row takes a till out of use: it accepts no sales or cash movements but keeps its money and history, and «Resume» opens it again.",
+        "body2": "«Close till» asks for the counted cash and shows the difference from expected cash before you confirm. A difference must be explained.",
+        "body3": "Closing records the handover figures as of that moment and posts the journal entry; later voids do not change a handover someone signed."
+      }
     },
     "offline": {
       "title": "Working offline",
@@ -4585,7 +4621,32 @@
         "body2": "A branch is a reporting boundary, not a separate security boundary — all branches of one business share one set of books."
       },
       "seoTitle": "Multi-Branch Accounting — Guide",
-      "seoDescription": "Running several branches in Hisabche: set up branches, tie each employee to theirs, and report per branch or for the whole business."
+      "seoDescription": "Running several branches in Hisabche: set up branches, tie each employee to theirs, and report per branch or for the whole business.",
+      "setup": {
+        "heading": "Setting up branches",
+        "body1": "Branches form a tree: a branch can sit under another, for example a head office with two shops below it.",
+        "body2": "All branches share one workspace and one ledger; a branch separates work and reports, not data.",
+        "step1": "Open Staff & payroll and go to the branches tab.",
+        "step2": "Add the branch by name and, if needed, choose its parent branch.",
+        "step3": "Assign employees to their branch."
+      },
+      "staff": {
+        "heading": "Staff and branches",
+        "body1": "Each employee can be assigned to one or more branches, so it is clear where they work.",
+        "body2": "Tills belong to a branch too: one open till per person per branch, so someone working in two branches has a till in each."
+      },
+      "reports": {
+        "heading": "Reports by branch",
+        "body1": "Accounting reports such as profit and loss have a branch selector: view one branch or the whole business.",
+        "body2": "The combined report is the sum of the same documents the single-branch reports show; nothing is calculated separately.",
+        "body3": "Because every branch is in one ledger, a customer balance or supplier debt is one figure for the whole business, not per branch."
+      },
+      "warehouses": {
+        "heading": "Warehouses",
+        "body1": "If each branch keeps its own goods, create a warehouse for each. The warehouse page lists warehouses with each one's total value, product count, low stock and out of stock.",
+        "body2": "A sales invoice says which warehouse the goods leave and a purchase invoice which one they arrive at. With a single warehouse it is chosen automatically.",
+        "body3": "Stock not yet in any warehouse shows in the «No warehouse» row and can be moved into the right warehouse without changing the product total."
+      }
     },
     "permissions": {
       "title": "Staff access",
@@ -4636,7 +4697,33 @@
         "body1": "Reports and lists can be exported to use elsewhere."
       },
       "seoTitle": "Backups and Data Export — Guide",
-      "seoDescription": "Backups and exports in Hisabche: take a full backup of your data whenever you want, and export reports and lists to use elsewhere."
+      "seoDescription": "Backups and exports in Hisabche: take a full backup of your data whenever you want, and export reports and lists to use elsewhere.",
+      "contents": {
+        "heading": "What a backup contains",
+        "body1": "The backup is a JSON file with the business's real data: customers, suppliers, products, warehouses, invoices and their lines, payments and their allocations to invoices.",
+        "body2": "It also holds stock movements (the source of product quantities), the chart of accounts, journal entries and lines, employees, branches and purchase orders.",
+        "body3": "Rows are written in a fixed order, so two backups of unchanged data are identical and can be compared."
+      },
+      "limits": {
+        "heading": "Backup limits",
+        "body1": "Only the workspace owner can take a full backup, because it contains all of the business data.",
+        "body2": "It is an export, not a restore: there is currently no way to load it back into the app. It is for safekeeping, for your accountant, or for rebuilding by hand.",
+        "body3": "At most 5,000 rows per table go into one file. When a table has more, the file says exactly which table is incomplete — a partial backup is never silent."
+      },
+      "csv": {
+        "heading": "CSV export",
+        "body1": "Lists and reports have an export button that creates a CSV file you can open in Excel or Google Sheets.",
+        "body2": "Each customer's statement exports with opening balance, debit, credit and running balance.",
+        "body3": "The export contains the figures you see on screen, from the server; nothing is re-added in the browser.",
+        "step1": "Open the page or report and, if needed, choose the date range.",
+        "step2": "Press the export button.",
+        "step3": "Open the CSV file in Excel or another program."
+      },
+      "offline": {
+        "heading": "Offline data",
+        "body1": "In the desktop and mobile apps, work done without internet is kept on that device and synced once it reconnects.",
+        "body2": "Until it has synced, that work is not in the server backup — make sure devices have synced before taking one."
+      }
     },
     "related": "Read next",
     "browseAll": "All articles",

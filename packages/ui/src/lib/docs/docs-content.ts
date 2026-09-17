@@ -140,7 +140,12 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
   {
     slug: 'pos',
     group: 'money',
-    sections: [{ id: 'shift', bodyCount: 3 }],
+    sections: [
+      { id: 'shift', bodyCount: 3 },
+      { id: 'tills', bodyCount: 3, stepCount: 3 },
+      { id: 'cash', bodyCount: 3 },
+      { id: 'closing', bodyCount: 3 },
+    ],
     related: ['inventory', 'customers', 'permissions'],
     outbound: [{ href: '/features/offline', labelKey: 'landing.featurePage.offline.h1' }],
   },
@@ -157,7 +162,13 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
   {
     slug: 'branches',
     group: 'team',
-    sections: [{ id: 'branches', bodyCount: 2 }],
+    sections: [
+      { id: 'branches', bodyCount: 2 },
+      { id: 'setup', bodyCount: 2, stepCount: 3 },
+      { id: 'staff', bodyCount: 2 },
+      { id: 'reports', bodyCount: 3 },
+      { id: 'warehouses', bodyCount: 3 },
+    ],
     related: ['permissions', 'accounting', 'inventory'],
   },
   {
@@ -184,7 +195,11 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
     group: 'platform',
     sections: [
       { id: 'backup', bodyCount: 1 },
+      { id: 'contents', bodyCount: 3 },
+      { id: 'limits', bodyCount: 3 },
       { id: 'export', bodyCount: 1 },
+      { id: 'csv', bodyCount: 3, stepCount: 3 },
+      { id: 'offline', bodyCount: 2 },
     ],
     related: ['getting-started', 'offline', 'accounting'],
   },

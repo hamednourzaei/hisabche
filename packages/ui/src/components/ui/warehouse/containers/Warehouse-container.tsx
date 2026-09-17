@@ -17,10 +17,12 @@ import { StockHistoryDrawer } from '../stock-history-drawer'
 import { fmt } from '../../../../lib/warehouse/warehouse-format'
 import type { Product } from '../../../../lib/warehouse/warehouse-types'
 import { useQueryClient } from '@tanstack/react-query'
+import { useCurrencyStore } from '@hisabche/store'
 import {
   productKeys,
   useAssignWarehouseStock,
   useCreateWarehouse,
+  useUpdateWarehouse,
   useStockHistory,
   useWarehouseDetail,
   useWarehouseOverview,
@@ -38,11 +40,12 @@ import { AddWarehouseDialog, AssignStockDialog } from '../warehouse-dialogs'
  */
 const HISTORY_LIMIT = 200
 
-const CURRENCIES = [
-  { code: 'AFN', label: 'افغانی', rate: 1 },
-  { code: 'USD', label: 'دالر', rate: 0.014 },
-  { code: 'IRR', label: 'پومان', rate: 0.85 },
-]
+// Request #92: the chips convert with rates the USER entered, never with a
+// constant. Without a rate the chip asks for one instead of showing a number.
+const CHIP_CURRENCIES = [
+  { code: 'USD', labelKey: 'warehouse.currencyUSD', fallback: 'دالر' },
+  { code: 'IRR', labelKey: 'warehouse.currencyIRR', fallback: 'تومان' },
+] as const
 
 export function warehouseContainer() {
   const t = useTranslations()
@@ -60,6 +63,12 @@ export function warehouseContainer() {
   const [showAddModal, setShowAddModal] = useState(addParam === 'true')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showAddWarehouse, setShowAddWarehouse] = useState(false)
+  const [editingWarehouse, setEditingWarehouse] = useState<{
+    id: string
+    name: string
+    location: string
+  } | null>(null)
+  const updateWarehouse = useUpdateWarehouse()
   const [showAssign, setShowAssign] = useState(false)
 
   const overview = useWarehouseOverview()
@@ -129,6 +138,23 @@ export function warehouseContainer() {
 
   const handleNavigate = useCallback((id: string) => router.push(`/warehouse/${id}`), [router])
 
+  const rates = useCurrencyStore((state) => state.rates)
+  const setManualRate = useCurrencyStore((state) => state.setManualRate)
+  const currencies = useMemo(
+    () =>
+      CHIP_CURRENCIES.map((currency) => {
+        const rate = rates[currency.code]
+        return {
+          code: currency.code,
+          label: safeT(currency.labelKey, currency.fallback),
+          // Only a rate the user typed converts; null = ask for it.
+          rate: rate?.manual ? rate.rate : null,
+          afnPerUnit: rate?.manual && rate.rate > 0 ? 1 / rate.rate : null,
+        }
+      }),
+    [rates, safeT],
+  )
+
   // One warehouse's products in the shape the product table already renders.
   // `quantity` is the quantity IN THIS WAREHOUSE.
   const warehouseProducts: Product[] = useMemo(
@@ -177,7 +203,9 @@ export function warehouseContainer() {
     search,
     onSearchChange: setSearch,
     deletingId,
-    currencies: CURRENCIES,
+    currencies,
+    onSetRate: (code: string, afnPerUnit: number | null) =>
+      setManualRate(code as Parameters<typeof setManualRate>[0], afnPerUnit),
     onNavigate: handleNavigate,
     onOpenHistory: handleOpenHistory,
     onDelete,
@@ -229,6 +257,7 @@ export function warehouseContainer() {
               unassigned={overview.data?.unassigned ?? null}
               onOpen={(id) => openWarehouse(id)}
               onAdd={() => setShowAddWarehouse(true)}
+              onEdit={setEditingWarehouse}
             />
           ),
         }),
@@ -249,6 +278,19 @@ export function warehouseContainer() {
         onClose={() => setShowAddWarehouse(false)}
         isPending={createWarehouse.isPending}
         onCreate={(input) => createWarehouse.mutateAsync(input)}
+      />
+
+      <AddWarehouseDialog
+        t={safeT}
+        open={editingWarehouse !== null}
+        initial={editingWarehouse}
+        onClose={() => setEditingWarehouse(null)}
+        isPending={updateWarehouse.isPending}
+        onCreate={(input) =>
+          editingWarehouse
+            ? updateWarehouse.mutateAsync({ id: editingWarehouse.id, ...input })
+            : Promise.resolve()
+        }
       />
 
       {inWarehouse && !isUnassigned ? (

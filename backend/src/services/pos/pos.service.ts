@@ -19,6 +19,8 @@ import { AccountingService, ledger } from '../accounting'
 import {
   buildDrawerLedger,
   paymentMargin,
+  checkSuspendChange,
+  type SessionStatus,
   dailyCashFlow,
   type CashEvent,
   buildPosting,
@@ -652,9 +654,9 @@ export class PosService {
       })
       .eq('workspace_id', ctx.workspaceId)
       .eq('id', sessionId)
-      // Only an OPEN session closes. Two devices closing at once means the
-      // second finds nothing to update rather than posting a second time.
-      .in('status', ['open', 'closing'])
+      // Only an OPEN (or suspended) session closes. Two devices closing at once
+      // means the second finds nothing to update rather than posting twice.
+      .in('status', ['open', 'closing', 'suspended'])
       .select(SESSION_COLUMNS)
       .single()
 
@@ -883,17 +885,50 @@ export class PosService {
     return { days: dailyCashFlow(events, days, today, offsetMinutes), today }
   }
 
-  /** Every open till of the workspace, with its server-derived expected cash (the till list). */
+  /** Every open or suspended till of the workspace, with its expected cash (the till list). */
   async listOpenSessions(ctx: TenancyContext) {
-    return this.findAbandonedSessions(ctx, 0)
+    return this.findAbandonedSessions(ctx, 0, ['open', 'suspended'])
   }
 
-  async findAbandonedSessions(ctx: TenancyContext, staleAfterHours = 24) {
+  /** «تعلیق» / «ادامه» from the till list. The status is the whole change. */
+  async setSuspended(ctx: TenancyContext, sessionId: string, suspended: boolean) {
+    const session = await this.getSession(ctx, sessionId)
+    const refusal = checkSuspendChange(session.status, suspended ? 'suspended' : 'open')
+    if (refusal) throw new ConflictError(refusal)
+
+    const { data, error } = await supabase
+      .from('pos_sessions')
+      .update({ status: suspended ? 'suspended' : 'open' })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', sessionId)
+      .eq('status', session.status)
+      .select(SESSION_COLUMNS)
+      .maybeSingle()
+
+    if (error) {
+      // 23514: the status check has no 'suspended' yet (docs/pos-session-suspend-migration.sql).
+      if (error.code === '23514') throw new ConflictError('POS_SUSPEND_MIGRATION_REQUIRED')
+      // 23505: resuming while this person already has another open till here.
+      if (error.code === '23505') throw new ConflictError('POS_SESSION_ALREADY_OPEN')
+      throw new DatabaseError('Failed to change the till status', error)
+    }
+    if (!data)
+      throw new ConflictError(suspended ? 'POS_SESSION_NOT_OPEN' : 'POS_SESSION_NOT_SUSPENDED')
+
+    await this.invalidate(ctx.workspaceId)
+    return mapSession(data)
+  }
+
+  async findAbandonedSessions(
+    ctx: TenancyContext,
+    staleAfterHours = 24,
+    statuses: SessionStatus[] = ['open'],
+  ) {
     const { data, error } = await supabase
       .from('pos_sessions')
       .select(SESSION_COLUMNS)
       .eq('workspace_id', ctx.workspaceId)
-      .eq('status', 'open')
+      .in('status', statuses)
       .limit(200)
 
     if (error) throw new DatabaseError('Failed to look for abandoned sessions', error)
