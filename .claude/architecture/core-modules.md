@@ -116,6 +116,7 @@ accounting:<workspaceId>:trial:<from>:<to>
 | Inventory Costing                      | `backend/src/services/inventory-costing/`                 | ✅ Tier 1، مورد ۲                                                                                              |
 | Payments / AR / AP                     | `backend/src/services/payments/`                          | ✅ Tier 1، مورد ۳                                                                                              |
 | CRM (tasks, opportunities)             | `backend/src/services/crm/` — port: `CrmPort`             | ✅ مصرف بین‌هسته‌ای فقط از port؛ UI: `CustomerCrmPanel`                                                        |
+| Profit report (per product, payroll)   | `backend/src/services/accounting/profit-report.domain.ts` | ✅ تنها قاعده‌ی سود؛ insights و صندوق از `AccountingService` می‌خوانند                                         |
 | Customer Profile (credit, terms, docs) | `backend/src/services/customer-profile/`                  | ✅ فاز ۳ و ۴ Customer 360؛ پول از Payments Core، اسناد از Accounting (`entriesForDocuments`)، تحلیل قاعده‌محور |
 | Authorization                          | `backend/src/services/authorization/`                     | ✅ Tier 1، موارد ۴ و ۵                                                                                         |
 | Offline Conflict Resolution            | `backend/src/services/conflict/`                          | ✅ Tier 1، مورد ۶                                                                                              |

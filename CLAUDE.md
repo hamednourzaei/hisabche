@@ -194,7 +194,9 @@ cd apps/admin     && npx tsc --noEmit
 
 - داده‌ی CRM را فقط از `backend/src/services/crm` (index/port) بخوان؛ هیچ سرویس دیگری جدول `interactions`/`opportunities` را مستقیم نمی‌خواند (`crm-core.test.ts` گارد است). در UI برای تصویر CRM یک مشتری `CustomerCrmPanel` را بگذار، دوباره نساز.
 - کلیدهای React Query خلاصه/صورت‌حساب/فعالیت مشتری زیر `paymentKeys.all` هستند؛ هر mutation مالی (پرداخت، فاکتور) باید آن را invalidate کند.
+- سود هر کالا/فاکتور فقط از `AccountingService.getProfitReport / getProductProfits / getInvoiceMargins` (گارد: `profit-report.test.ts`). موجودی هر انبار از `warehouse-summary.domain.ts`؛ فاکتور `warehouseId` را می‌فرستد، وگرنه با چند انبار هیچ انباری حرکت نمی‌کند.
 - سقف اعتبار، مهلت پرداخت، تأمین‌کننده‌ی وصل و مدارک مشتری فقط از `backend/src/services/customer-profile` (گارد: `customer-profile-core.test.ts`). خواندن schema جدید قبل از اجرای migration باید `isMissingSchema` را چک کند و «پیکربندی نشده» برگرداند، نه ۵۰۰.
+- سود هر کالا/فاکتور فقط از `AccountingService` (`getProfitReport` / `getProductProfits` / `getInvoiceMargins`، قاعده در `accounting/profit-report.domain.ts`، گارد `profit-report.test.ts`). موجودی هر انبار از `inventory/warehouse-summary.domain.ts`؛ فاکتور باید `warehouseId` بفرستد، وگرنه با چند انبار موجودی هیچ انباری حرکت نمی‌کند.
 
 ---
 

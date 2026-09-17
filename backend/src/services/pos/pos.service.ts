@@ -14,10 +14,11 @@ import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
 import { logBusinessEvent } from '../event-log.service'
-import { ledger } from '../accounting'
+import { AccountingService, ledger } from '../accounting'
 
 import {
   buildDrawerLedger,
+  paymentMargin,
   dailyCashFlow,
   type CashEvent,
   buildPosting,
@@ -253,7 +254,44 @@ export class PosService {
   async sessionLedger(ctx: TenancyContext, sessionId: string) {
     const session = await this.getSession(ctx, sessionId)
     const { orders, movements, settlements } = await this.loadContents(ctx, sessionId, session)
-    return buildDrawerLedger(session, orders, movements, settlements)
+    const drawer = buildDrawerLedger(session, orders, movements, settlements)
+
+    // Request #91 — profit % of each cash receipt, via the accounting core.
+    const receiptIds = drawer.entries
+      .filter((entry) => entry.kind === 'settlement_in' && entry.sourceId)
+      .map((entry) => entry.sourceId as string)
+    if (receiptIds.length === 0) return drawer
+
+    const invoicesByPayment = new Map<string, string[]>()
+    for (let i = 0; i < receiptIds.length; i += 200) {
+      const { data, error } = await supabase
+        .from('payment_allocations')
+        .select('payment_id, invoice_id')
+        .eq('workspace_id', ctx.workspaceId)
+        .in('payment_id', receiptIds.slice(i, i + 200))
+      if (error) throw new DatabaseError('Failed to read payment allocations', error)
+      for (const row of data ?? []) {
+        const key = String(row.payment_id)
+        invoicesByPayment.set(key, [...(invoicesByPayment.get(key) ?? []), String(row.invoice_id)])
+      }
+    }
+    const margins = await new AccountingService().getInvoiceMargins(
+      ctx,
+      [...invoicesByPayment.values()].flat(),
+    )
+    return {
+      ...drawer,
+      entries: drawer.entries.map((entry) =>
+        entry.kind === 'settlement_in' && entry.sourceId
+          ? {
+              ...entry,
+              marginPercent: invoicesByPayment.has(entry.sourceId)
+                ? paymentMargin(invoicesByPayment.get(entry.sourceId) ?? [], margins)
+                : null,
+            }
+          : entry,
+      ),
+    }
   }
 
   /**
@@ -843,6 +881,11 @@ export class PosService {
     ]
 
     return { days: dailyCashFlow(events, days, today, offsetMinutes), today }
+  }
+
+  /** Every open till of the workspace, with its server-derived expected cash (the till list). */
+  async listOpenSessions(ctx: TenancyContext) {
+    return this.findAbandonedSessions(ctx, 0)
   }
 
   async findAbandonedSessions(ctx: TenancyContext, staleAfterHours = 24) {

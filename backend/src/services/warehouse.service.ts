@@ -30,6 +30,17 @@ import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.
 import { ValidationError } from '../errors/validation.error'
 import { memoryCache } from '../utils/pagination'
 import type { TenancyContext } from './tenancy.service'
+import {
+  checkAssign,
+  unassignedQuantities,
+  warehouseOverview,
+  warehouseProducts,
+  type ProductStockRow,
+  type WarehouseRow,
+  type WarehouseStockRow,
+} from './inventory/warehouse-summary.domain'
+
+const PAGE = 1000
 
 type CreateWarehouse = any
 type UpdateWarehouse = any
@@ -79,6 +90,9 @@ export class WarehouseService {
         name: data.name,
         location: data.location || '',
         is_active: data.isActive !== false,
+        // Explicit: the table once defaulted deleted_at to now(), which made
+        // every new warehouse invisible (docs/multi-warehouse-migration.sql).
+        deleted_at: null,
         workspace_id: ctx.workspaceId,
         user_id: ctx.userId,
       })
@@ -210,6 +224,141 @@ export class WarehouseService {
     await this.invalidate(ctx.workspaceId)
 
     return { success: true, transferred: quantity, ...(result as object) }
+  }
+
+  // ─── Multi-warehouse (request #90) ───────────────────────────
+  //
+  // Not cached: these figures change with every sale, and the money caches do
+  // not know the memory keys of this service.
+
+  private async readAllProducts(workspaceId: string): Promise<ProductStockRow[]> {
+    const rows: ProductStockRow[] = []
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, sku, unit, quantity, sell_price, buy_price, min_stock_level')
+        .eq('workspace_id', workspaceId)
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+      if (error) throw new DatabaseError('Failed to read products', error)
+      rows.push(...((data ?? []) as ProductStockRow[]))
+      if (!data || data.length < PAGE) return rows
+    }
+  }
+
+  private async readAllStock(workspaceId: string): Promise<WarehouseStockRow[]> {
+    const rows: WarehouseStockRow[] = []
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('warehouse_stock')
+        .select('warehouse_id, product_id, quantity')
+        .eq('workspace_id', workspaceId)
+        .order('warehouse_id', { ascending: true })
+        .order('product_id', { ascending: true })
+        .range(from, from + PAGE - 1)
+      if (error) throw new DatabaseError('Failed to read warehouse stock', error)
+      rows.push(...((data ?? []) as WarehouseStockRow[]))
+      if (!data || data.length < PAGE) return rows
+    }
+  }
+
+  private async liveWarehouses(workspaceId: string): Promise<WarehouseRow[]> {
+    const { data, error } = await supabase
+      .from('warehouses')
+      .select('id, name, location, is_active')
+      .eq('workspace_id', workspaceId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true })
+    if (error) throw new DatabaseError('Failed to fetch warehouses', error)
+    return (data ?? []) as WarehouseRow[]
+  }
+
+  /** Every warehouse with its own stat cards, plus stock that is in no warehouse. */
+  async overview(ctx: TenancyContext) {
+    const [warehouses, products, stock] = await Promise.all([
+      this.liveWarehouses(ctx.workspaceId),
+      this.readAllProducts(ctx.workspaceId),
+      this.readAllStock(ctx.workspaceId),
+    ])
+    const live = new Set(warehouses.map((warehouse) => warehouse.id))
+    // Stock left in a deleted warehouse is still somewhere: it counts as unassigned.
+    return warehouseOverview(
+      warehouses,
+      products,
+      stock.filter((row) => live.has(row.warehouse_id)),
+    )
+  }
+
+  /** One warehouse's products; `warehouseId = 'unassigned'` for stock in no warehouse. */
+  async warehouseDetail(ctx: TenancyContext, warehouseId: string) {
+    const unassigned = warehouseId === 'unassigned'
+    const [warehouses, products, stock] = await Promise.all([
+      this.liveWarehouses(ctx.workspaceId),
+      this.readAllProducts(ctx.workspaceId),
+      this.readAllStock(ctx.workspaceId),
+    ])
+    const warehouse = unassigned ? null : warehouses.find((row) => row.id === warehouseId)
+    if (!unassigned && !warehouse) throw new NotFoundError('Warehouse')
+    const live = new Set(warehouses.map((row) => row.id))
+    const result = warehouseProducts(
+      unassigned ? null : warehouseId,
+      products,
+      stock.filter((row) => live.has(row.warehouse_id)),
+    )
+    return {
+      warehouse: warehouse
+        ? { id: warehouse.id, name: warehouse.name, location: warehouse.location ?? '' }
+        : null,
+      ...result,
+    }
+  }
+
+  /**
+   * Put stock that is in no warehouse into this one. Two movements in ONE
+   * insert statement (atomic in Postgres): +q into the warehouse and −q with no
+   * warehouse. The product total is unchanged; only where the stock is changes.
+   */
+  async assignStock(
+    ctx: TenancyContext,
+    warehouseId: string,
+    input: { productId: string; quantity: number; notes?: string | undefined },
+  ) {
+    await this.assertWarehousesInWorkspace(ctx, [warehouseId])
+    const [warehouses, products, stock] = await Promise.all([
+      this.liveWarehouses(ctx.workspaceId),
+      this.readAllProducts(ctx.workspaceId),
+      this.readAllStock(ctx.workspaceId),
+    ])
+    if (!warehouses.some((row) => row.id === warehouseId)) throw new NotFoundError('Warehouse')
+    const product = products.find((row) => row.id === input.productId)
+    if (!product) throw new NotFoundError('Product')
+
+    const live = new Set(warehouses.map((row) => row.id))
+    const free =
+      unassignedQuantities(
+        products,
+        stock.filter((row) => live.has(row.warehouse_id)),
+      ).get(product.id) ?? 0
+    const refusal = checkAssign(input.quantity, free)
+    if (refusal) throw new ValidationError(refusal)
+
+    const base = {
+      product_id: product.id,
+      type: 'adjustment',
+      reference_type: 'warehouse_assign',
+      reference_id: warehouseId,
+      workspace_id: ctx.workspaceId,
+      user_id: ctx.userId,
+      notes: input.notes || 'assigned to warehouse',
+    }
+    const { error } = await supabase.from('stock_movements').insert([
+      { ...base, quantity: input.quantity, to_warehouse_id: warehouseId },
+      { ...base, quantity: -input.quantity },
+    ])
+    if (error) throw new DatabaseError('Failed to assign stock to the warehouse', error)
+
+    await this.invalidate(ctx.workspaceId)
+    return { assigned: input.quantity }
   }
 
   // ─── Stock reads ──────────────────────────────────────────────

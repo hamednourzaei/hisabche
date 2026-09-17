@@ -14,7 +14,15 @@ import { Suspense } from 'react'
 import { getMessages, setRequestLocale } from 'next-intl/server'
 import { IntlProvider } from './intl-provider'
 import { CORE_NAMESPACES, pickNamespaces } from './scoped-messages'
-import { SITE_URL, localeMeta, localeToBcp47, localeUrl, resolveLocale } from './i18n-config'
+import { notFound } from 'next/navigation'
+import {
+  SITE_URL,
+  isLocale,
+  localeMeta,
+  localeToBcp47,
+  localeUrl,
+  resolveLocale,
+} from './i18n-config'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RootLayout v8 — Fixed Favicons + PWA manifest
@@ -229,6 +237,11 @@ export default async function RootLayout({
   params: Promise<{ lang: string }>
 }) {
   const { lang } = await params
+  // ⚠️ A path with a dot (`/wp-login.php`, `/sitemap-0.xml`) skips the proxy
+  // (its matcher excludes file-like paths) and lands here as `lang`. Falling
+  // back to `fa` served the whole landing page with 200 and a canonical to
+  // /fa — duplicate URLs Search Console reported. Unknown segment → 404.
+  if (!isLocale(lang)) notFound()
   // Direction comes from localeMeta rather than a hardcoded `lang === "fa" ||
   // lang === "af"` check, so adding a locale can't silently ship LTR RTL text.
   const routeLocale = resolveLocale(lang)

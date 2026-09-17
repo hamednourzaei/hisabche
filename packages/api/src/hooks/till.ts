@@ -60,6 +60,8 @@ export interface DrawerEntry {
   at: string
   reference: string
   sourceId: string | null
+  /** Profit % of the sale(s) a cash receipt settled (accounting core); null when unknown. */
+  marginPercent?: number | null
 }
 
 export interface DrawerLedger {
@@ -173,6 +175,21 @@ export function useSession(sessionId: string) {
       return data as { session: PosSession; totals: SessionTotals }
     },
     enabled: ready && Boolean(sessionId),
+  })
+}
+
+/** Every open till in the workspace (GET /pos/sessions/open). */
+export function useOpenSessions() {
+  const ready = useAuthReady()
+
+  return useQuery({
+    queryKey: [...tillKeys.all, 'open-list'],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/pos/sessions/open')
+      return asList<AbandonedSession>(data)
+    },
+    enabled: ready,
+    staleTime: 10_000,
   })
 }
 

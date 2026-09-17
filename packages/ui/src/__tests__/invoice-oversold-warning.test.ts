@@ -51,12 +51,11 @@ describe('the warning is on the form, not only the preview', () => {
   it('the builder container computes and passes it', () => {
     const container = read('containers/invoice-builder-container.tsx')
     expect(container).toContain('useOversoldLines(items, draft.transactionType)')
-    // Passed on its own or inside a fragment next to the credit-limit warning.
+    // Passed inside the stockWarning slot, possibly beside the warehouse
+    // select and the credit-limit warning.
     const flat = container.replace(/\s+/g, '')
-    expect(
-      flat.includes('stockWarning={<OversoldWarningt={t}lines={oversoldLines}') ||
-        flat.includes('stockWarning={<><OversoldWarningt={t}lines={oversoldLines}'),
-    ).toBe(true)
+    const slot = flat.slice(flat.indexOf('stockWarning={'), flat.indexOf('customers={'))
+    expect(slot).toContain('<OversoldWarningt={t}lines={oversoldLines}/>')
   })
 
   it('both layouts render it', () => {

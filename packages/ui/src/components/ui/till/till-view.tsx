@@ -23,20 +23,21 @@
 // control this screen exists to provide.
 //
 // ---------------------------------------------------------------------------
-// LAYOUT — the invoices list structure: header, stat strip, work, then the
-// list (abandoned drawers) on the shared DataTable.
+// LAYOUT — header, today's KPIs and charts, the list of open tills (with
+// «افزودن صندوق»), then the selected till's transactions with its figures,
+// search and type filter above the table and «افزودن مبلغ به صندوق».
+// Counting/closing, per-method totals and bank transfers are not on this page.
 // ============================================
 
-import { memo, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Skeleton } from '../skeleton'
 import { formatSelectedMoney } from '../../../lib/money-display'
-import { ArrowDownLeft, ArrowUpRight, Banknote, ShoppingCart, Wallet } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Banknote, Plus, ShoppingCart, Wallet } from 'lucide-react'
 import type {
   PosSession,
   SessionTotals,
   AbandonedSession,
-  PosPaymentMethod,
   DrawerEntry,
   CashFlowDay,
 } from '@hisabche/api'
@@ -45,7 +46,6 @@ import { useDateFormat } from '../../../hooks/use-date-format'
 import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 import {
   ActionButton,
-  Badge,
   CapabilityHeader,
   CapabilityPage,
   EmptyState,
@@ -62,31 +62,26 @@ import {
 
 export interface TillViewProps {
   t: (key: string, fallback?: string) => string
+  /** The till whose transactions are shown (selected in the list). */
   session: PosSession | null
   totals: SessionTotals | null
-  abandoned: AbandonedSession[]
-  /** Kept apart from `abandoned`: a failed read must not read as «none». */
-  abandonedError: string | null
-  isAbandonedLoading: boolean
+  /** Every open till in the workspace. */
+  tills: AbandonedSession[]
+  /** Kept apart from `tills`: a failed read must not read as «none». */
+  tillsError: string | null
+  isTillsLoading: boolean
+  selectedTillId: string | null
+  onSelectTill: (sessionId: string) => void
   isLoading: boolean
   error: string | null
   isBusy: boolean
   actionError: string | null
   onRefresh: () => void
+  /** «افزودن صندوق» — opens a till with its opening float. */
   onOpen: (openingFloatMinor: number) => void
-  onCashMovement: (input: {
-    kind: 'cash_in' | 'cash_out'
-    amountMinor: number
-    reason: string
-  }) => void
-  onClose: (input: { countedCashMinor: number; varianceReason?: string }) => void
+  /** «افزودن مبلغ به صندوق» — a cash_in on the selected till. */
+  onAddCash: (input: { amountMinor: number; reason: string }) => void
   /** The drawer as a ledger, from the server. Last balance = expected cash. */
-  /** Cash between the till and the bank, posted to the ledger. */
-  onBankTransfer: (input: {
-    direction: 'to_bank' | 'from_bank'
-    amountMinor: number
-    reason: string
-  }) => void
   ledger: DrawerEntry[]
   isLedgerLoading: boolean
   ledgerError: string | null
@@ -137,29 +132,45 @@ function DeltaHint({
   )
 }
 
+/**
+ * Profit % of the sale a cash receipt settled — computed by the accounting
+ * core (request #91). No figure («—») when it is not a sale receipt or the sale
+ * has no recorded cost; a guessed 100% would be worse than none.
+ */
+function MarginCell({ value }: { value: number | null | undefined }) {
+  if (typeof value !== 'number') return <span className="text-[hsl(var(--fg-tertiary))]">—</span>
+  return (
+    <span
+      className={
+        value < 0 ? 'text-[hsl(var(--color-destructive))]' : 'text-[hsl(var(--color-success))]'
+      }
+    >
+      {Math.round(value * 10) / 10}%
+    </span>
+  )
+}
+
 const CashFlowChart = dynamic(() => import('./till-cash-flow-chart-internal'), {
   ssr: false,
   loading: () => <Skeleton className="h-60 w-full rounded-xl" />,
 })
 
-const METHOD_ORDER: PosPaymentMethod[] = ['cash', 'card', 'transfer', 'credit', 'other']
-
 export const TillView = memo(function TillView({
   t,
   session,
   totals,
-  abandoned,
-  abandonedError,
-  isAbandonedLoading,
+  tills,
+  tillsError,
+  isTillsLoading,
+  selectedTillId,
+  onSelectTill,
   isLoading,
   error,
   isBusy,
   actionError,
   onRefresh,
   onOpen,
-  onCashMovement,
-  onBankTransfer,
-  onClose,
+  onAddCash,
   ledger,
   isLedgerLoading,
   ledgerError,
@@ -182,13 +193,21 @@ export const TillView = memo(function TillView({
     [dailyCashFlow, date],
   )
   const [floatMinor, setFloatMinor] = useState(0)
-  const [movementMinor, setMovementMinor] = useState(0)
-  const [movementReason, setMovementReason] = useState('')
-  const [countedMinor, setCountedMinor] = useState(0)
-  const [varianceReason, setVarianceReason] = useState('')
-  const [search, setSearch] = useState('')
+  const [addTillOpen, setAddTillOpen] = useState(false)
+  const [cashMinor, setCashMinor] = useState(0)
+  const [cashReason, setCashReason] = useState('')
+  const [addCashOpen, setAddCashOpen] = useState(false)
+  const [tillSearch, setTillSearch] = useState('')
+  const [ledgerSearch, setLedgerSearch] = useState('')
   const [ledgerFilter, setLedgerFilter] = useState<LedgerFilter>('all')
   const [ledgerPage, setLedgerPage] = useState(0)
+
+  // Another till → its own first page, filter and search.
+  useEffect(() => {
+    setLedgerPage(0)
+    setLedgerSearch('')
+    setLedgerFilter('all')
+  }, [selectedTillId])
 
   // Today and yesterday from the server's daily aggregate (last two days of
   // the window). Missing days are real zeros there, never gaps.
@@ -245,27 +264,49 @@ export const TillView = memo(function TillView({
               : ledgerFilter === 'out'
                 ? entry.amountMinor < 0
                 : entry.kind === 'settlement_in' || entry.kind === 'settlement_out',
+        )
+        .filter((entry) =>
+          matchesSearch(ledgerSearch, [
+            entry.reference,
+            t(`till.kind_${entry.kind}`, entry.kind),
+            dateTime(entry.at),
+          ]),
         ),
-    [ledger, ledgerFilter],
+    [ledger, ledgerFilter, ledgerSearch, t, dateTime],
   )
 
   const pageCount = Math.max(1, Math.ceil(ledgerRows.length / PAGE_SIZE))
   const pagedRows = ledgerRows.slice(ledgerPage * PAGE_SIZE, (ledgerPage + 1) * PAGE_SIZE)
 
-  // Computed in the view because it is a preview of an unsaved count, not a
-  // stored fact. The server recomputes it from its own totals on close.
-  const previewVariance = totals != null ? countedMinor - totals.expectedCashMinor : null
-
-  const abandonedRows = useMemo(
+  const tillRows = useMemo(
     () =>
-      abandoned.filter((item) =>
-        matchesSearch(search, [dateTime(item.openedAt), item.orderCount, item.openedBy]),
+      tills.filter((item) =>
+        matchesSearch(tillSearch, [dateTime(item.openedAt), item.orderCount, item.openedBy]),
       ),
-    [abandoned, dateTime, search],
+    [tills, dateTime, tillSearch],
   )
 
-  const abandonedColumns = useMemo<TableColumn<AbandonedSession>[]>(
+  const tillColumns = useMemo<TableColumn<AbandonedSession>[]>(
     () => [
+      {
+        id: 'selected',
+        labelKey: 'till.col_till',
+        labelFallback: 'صندوق',
+        locked: true,
+        render: (item) => (
+          <span
+            className={
+              item.sessionId === selectedTillId
+                ? 'font-semibold text-[hsl(var(--color-primary))]'
+                : 'text-[hsl(var(--fg-secondary))]'
+            }
+          >
+            {item.sessionId === selectedTillId
+              ? t('till.selected', 'انتخاب‌شده')
+              : t('till.view_transactions', 'نمایش تراکنش‌ها')}
+          </span>
+        ),
+      },
       {
         id: 'openedAt',
         labelKey: 'till.opened_at',
@@ -307,7 +348,7 @@ export const TillView = memo(function TillView({
         render: (item) => <Money minor={item.expectedCashMinor} />,
       },
     ],
-    [dateTime, t],
+    [dateTime, t, selectedTillId],
   )
 
   return (
@@ -468,6 +509,71 @@ export const TillView = memo(function TillView({
         </div>
       </div>
 
+      {/* ─── Tills — every open till; click one to see its transactions ─── */}
+      <ListSection
+        title={t('till.tills_title', 'صندوق‌ها')}
+        description={t(
+          'till.tills_hint',
+          'صندوق‌های باز این کسب‌وکار. روی هر صندوق بزنید تا تراکنش‌هایش را ببینید.',
+        )}
+        action={
+          <ActionButton onClick={() => setAddTillOpen((open) => !open)} disabled={isBusy}>
+            <Plus className="me-1 size-4" aria-hidden="true" />
+            {t('till.add_till', 'افزودن صندوق')}
+          </ActionButton>
+        }
+      >
+        {addTillOpen ? (
+          <div className="mb-3 flex flex-wrap items-end gap-3 rounded-xl border border-[hsl(var(--border-default))] p-3">
+            <div className="w-48">
+              <MinorInput
+                label={t('till.opening_float', 'نقد اولیه')}
+                value={floatMinor}
+                onChange={setFloatMinor}
+                disabled={isBusy}
+              />
+            </div>
+            <ActionButton
+              onClick={() => {
+                onOpen(floatMinor)
+                setAddTillOpen(false)
+                setFloatMinor(0)
+              }}
+              disabled={isBusy}
+            >
+              {t('till.open_action', 'باز کردن صندوق')}
+            </ActionButton>
+            <ActionButton variant="quiet" onClick={() => setAddTillOpen(false)} disabled={isBusy}>
+              {t('common.cancel', 'انصراف')}
+            </ActionButton>
+          </div>
+        ) : null}
+        {isTillsLoading ? (
+          <Loading label={t('common.loading', 'در حال بارگذاری…')} />
+        ) : tillsError ? (
+          <ErrorNote
+            message={tillsError}
+            onRetry={onRefresh}
+            retryLabel={t('common.retry', 'تلاش دوباره')}
+          />
+        ) : (
+          <DataTable
+            tableId="till-list"
+            t={t}
+            rows={tillRows}
+            columns={tillColumns}
+            rowKey={(item) => item.sessionId}
+            onRowClick={(item) => onSelectTill(item.sessionId)}
+            searchValue={tillSearch}
+            onSearchChange={setTillSearch}
+            minWidthClass="min-w-[480px]"
+            emptyState={
+              <EmptyState icon="search" title={t('till.no_open_session', 'صندوقی باز نیست')} />
+            }
+          />
+        )}
+      </ListSection>
+
       {session && totals ? (
         <ListSection
           title={t('till.ledger_title', 'تراکنش‌های صندوق')}
@@ -475,8 +581,54 @@ export const TillView = memo(function TillView({
             'till.ledger_hint',
             'هر ورود و خروج نقد با موجودی پس از آن. پرداخت‌های نقدی فاکتور خودکار اینجا می‌آیند.',
           )}
+          action={
+            <ActionButton onClick={() => setAddCashOpen((open) => !open)} disabled={isBusy}>
+              <Plus className="me-1 size-4" aria-hidden="true" />
+              {t('till.add_cash', 'افزودن مبلغ به صندوق')}
+            </ActionButton>
+          }
         >
+          {addCashOpen ? (
+            <div className="mb-3 grid gap-3 rounded-xl border border-[hsl(var(--border-default))] p-3 sm:grid-cols-[12rem_1fr_auto_auto]">
+              <MinorInput
+                label={t('till.amount', 'مبلغ')}
+                value={cashMinor}
+                onChange={setCashMinor}
+                disabled={isBusy}
+              />
+              <Field
+                label={t('till.reason', 'دلیل')}
+                value={cashReason}
+                onChange={setCashReason}
+                disabled={isBusy}
+              />
+              <ActionButton
+                className="self-end"
+                // The server requires a reason too; this saves a round trip.
+                disabled={isBusy || cashMinor <= 0 || cashReason.trim() === ''}
+                onClick={() => {
+                  onAddCash({ amountMinor: cashMinor, reason: cashReason.trim() })
+                  setAddCashOpen(false)
+                  setCashMinor(0)
+                  setCashReason('')
+                }}
+              >
+                {t('till.add_cash_confirm', 'ثبت')}
+              </ActionButton>
+              <ActionButton
+                variant="quiet"
+                className="self-end"
+                onClick={() => setAddCashOpen(false)}
+                disabled={isBusy}
+              >
+                {t('common.cancel', 'انصراف')}
+              </ActionButton>
+            </div>
+          ) : null}
           <p className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[hsl(var(--fg-tertiary))]">
+            <span>
+              {t('till.opened_at', 'زمان باز شدن')}: {dateTime(session.openedAt)}
+            </span>
             <span>
               {t('till.opening_float', 'نقد اولیه')}:{' '}
               <Money minor={session.openingFloatMinor} tone="muted" />
@@ -492,21 +644,37 @@ export const TillView = memo(function TillView({
                 <Money minor={totals.settlementsMinor} signed tone="muted" />
               </span>
             ) : null}
+            <span>
+              {t('till.balance_now', 'موجودی فعلی صندوق')}:{' '}
+              <Money minor={totals.expectedCashMinor} tone="muted" />
+            </span>
           </p>
-          <SegmentedFilter
-            label={t('till.ledger_filter', 'نوع')}
-            value={ledgerFilter}
-            onChange={(next) => {
-              setLedgerFilter(next)
-              setLedgerPage(0)
-            }}
-            options={[
-              { value: 'all', label: t('common.all', 'همه') },
-              { value: 'in', label: t('till.filter_in', 'ورود') },
-              { value: 'out', label: t('till.filter_out', 'خروج') },
-              { value: 'invoices', label: t('till.filter_invoices', 'فاکتورها') },
-            ]}
-          />
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="w-full sm:w-64">
+              <Field
+                label={t('common.search', 'جستجو')}
+                value={ledgerSearch}
+                onChange={(value) => {
+                  setLedgerSearch(value)
+                  setLedgerPage(0)
+                }}
+              />
+            </div>
+            <SegmentedFilter
+              label={t('till.ledger_filter', 'نوع')}
+              value={ledgerFilter}
+              onChange={(next) => {
+                setLedgerFilter(next)
+                setLedgerPage(0)
+              }}
+              options={[
+                { value: 'all', label: t('common.all', 'همه') },
+                { value: 'in', label: t('till.filter_in', 'ورود') },
+                { value: 'out', label: t('till.filter_out', 'خروج') },
+                { value: 'invoices', label: t('till.filter_invoices', 'فاکتورها') },
+              ]}
+            />
+          </div>
           {isLedgerLoading ? (
             <Loading label={t('common.loading', 'در حال بارگذاری…')} />
           ) : ledgerError ? (
@@ -534,6 +702,9 @@ export const TillView = memo(function TillView({
                       </th>
                       <th className="px-3 py-2.5 text-end font-medium">
                         {t('till.col_amount', 'مبلغ')}
+                      </th>
+                      <th className="px-3 py-2.5 text-end font-medium">
+                        {t('till.col_margin', 'درصد سود')}
                       </th>
                       <th className="px-3 py-2.5 text-end font-medium">
                         {t('till.balance_after', 'موجودی')}
@@ -570,6 +741,9 @@ export const TillView = memo(function TillView({
                             tone={entry.kind === 'opening_float' ? 'muted' : 'auto'}
                           />
                         </td>
+                        <td className="px-3 py-2.5 text-end tabular-nums" dir="ltr">
+                          <MarginCell value={entry.marginPercent} />
+                        </td>
                         <td className="px-3 py-2.5 text-end">
                           <Money minor={entry.balanceMinor} tone="muted" />
                         </td>
@@ -604,7 +778,16 @@ export const TillView = memo(function TillView({
                       </p>
                     ) : null}
                     <div className="mt-1 flex justify-between text-xs text-[hsl(var(--fg-tertiary))]">
-                      <span>{dateTime(entry.at)}</span>
+                      <span>
+                        {dateTime(entry.at)}
+                        {typeof entry.marginPercent === 'number' ? (
+                          <>
+                            {' · '}
+                            {t('till.col_margin', 'درصد سود')}:{' '}
+                            <MarginCell value={entry.marginPercent} />
+                          </>
+                        ) : null}
+                      </span>
                       <span>
                         {t('till.balance_after', 'موجودی')}:{' '}
                         <Money minor={entry.balanceMinor} tone="muted" />
@@ -654,224 +837,6 @@ export const TillView = memo(function TillView({
           )}
         </ListSection>
       ) : null}
-
-      {!isLoading && !error && !session ? (
-        <Panel
-          title={t('till.open_title', 'صندوق بسته است')}
-          description={t('till.open_hint', 'مبلغ نقد اولیه‌ی داخل صندوق را وارد کنید.')}
-        >
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="w-48">
-              <MinorInput
-                label={t('till.opening_float', 'نقد اولیه')}
-                value={floatMinor}
-                onChange={setFloatMinor}
-                disabled={isBusy}
-              />
-            </div>
-            <ActionButton onClick={() => onOpen(floatMinor)} disabled={isBusy}>
-              {t('till.open_action', 'باز کردن صندوق')}
-            </ActionButton>
-          </div>
-        </Panel>
-      ) : null}
-
-      {session && totals ? (
-        <>
-          <Panel
-            title={t('till.session_title', 'صندوق باز')}
-            description={t('till.opened_at', 'زمان باز شدن') + ': ' + dateTime(session.openedAt)}
-            action={<Badge tone="good">{t(`till.status_${session.status}`, session.status)}</Badge>}
-          >
-            <div className="grid gap-2 sm:grid-cols-5">
-              {METHOD_ORDER.map((method) => (
-                <div
-                  key={method}
-                  className="rounded-xl border border-[hsl(var(--border-default))] px-3 py-2 text-sm"
-                >
-                  <div className="text-xs text-[hsl(var(--fg-tertiary))]">
-                    {t(`till.method_${method}`, method)}
-                  </div>
-                  <Money minor={totals.byMethod?.[method] ?? 0} tone="muted" />
-                </div>
-              ))}
-            </div>
-          </Panel>
-
-          <Panel
-            title={t('till.movement_title', 'ورود و خروج نقدی')}
-            description={t(
-              'till.movement_hint',
-              'برداشت از صندوق بدون دلیل، یعنی کسری بدون توضیح.',
-            )}
-          >
-            <div className="grid gap-3 sm:grid-cols-[12rem_1fr_auto_auto]">
-              <MinorInput
-                label={t('till.amount', 'مبلغ')}
-                value={movementMinor}
-                onChange={setMovementMinor}
-                disabled={isBusy}
-              />
-              <Field
-                label={t('till.reason', 'دلیل')}
-                value={movementReason}
-                onChange={setMovementReason}
-                disabled={isBusy}
-              />
-              <ActionButton
-                variant="quiet"
-                className="self-end"
-                // Reason is required by the server too. Disabling it here just
-                // avoids a round trip to be told so.
-                disabled={isBusy || movementMinor <= 0 || movementReason.trim() === ''}
-                onClick={() =>
-                  onCashMovement({
-                    kind: 'cash_in',
-                    amountMinor: movementMinor,
-                    reason: movementReason.trim(),
-                  })
-                }
-              >
-                {t('till.cash_in', 'ورود نقدی')}
-              </ActionButton>
-              <ActionButton
-                variant="quiet"
-                className="self-end"
-                disabled={isBusy || movementMinor <= 0 || movementReason.trim() === ''}
-                onClick={() =>
-                  onCashMovement({
-                    kind: 'cash_out',
-                    amountMinor: movementMinor,
-                    reason: movementReason.trim(),
-                  })
-                }
-              >
-                {t('till.cash_out', 'خروج نقدی')}
-              </ActionButton>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2 border-t border-[hsl(var(--border-default))] pt-3">
-              <p className="w-full text-xs text-[hsl(var(--fg-tertiary))]">
-                {t(
-                  'till.transfer_hint',
-                  'انتقال به بانک یا برداشت از بانک با سند حسابداری (بدهکار بانک / بستانکار صندوق) ثبت می‌شود.',
-                )}
-              </p>
-              <ActionButton
-                variant="quiet"
-                disabled={isBusy || movementMinor <= 0 || movementReason.trim() === ''}
-                onClick={() =>
-                  onBankTransfer({
-                    direction: 'to_bank',
-                    amountMinor: movementMinor,
-                    reason: movementReason.trim(),
-                  })
-                }
-              >
-                {t('till.transfer_to_bank', 'انتقال به بانک')}
-              </ActionButton>
-              <ActionButton
-                variant="quiet"
-                disabled={isBusy || movementMinor <= 0 || movementReason.trim() === ''}
-                onClick={() =>
-                  onBankTransfer({
-                    direction: 'from_bank',
-                    amountMinor: movementMinor,
-                    reason: movementReason.trim(),
-                  })
-                }
-              >
-                {t('till.transfer_from_bank', 'برداشت از بانک')}
-              </ActionButton>
-            </div>
-          </Panel>
-
-          <Panel
-            title={t('till.close_title', 'شمارش و بستن')}
-            description={t('till.close_hint', 'اختلاف پیش از تأیید نشان داده می‌شود.')}
-          >
-            <div className="grid gap-3 sm:grid-cols-[12rem_1fr]">
-              <MinorInput
-                label={t('till.counted_cash', 'نقد شمرده‌شده')}
-                value={countedMinor}
-                onChange={setCountedMinor}
-                disabled={isBusy}
-              />
-              <div className="self-end rounded-xl bg-[hsl(var(--surface-muted)/0.4)] px-4 py-3 text-sm">
-                <span className="text-[hsl(var(--fg-tertiary))]">
-                  {t('till.variance', 'اختلاف')}:{' '}
-                </span>
-                {previewVariance == null ? (
-                  '—'
-                ) : (
-                  <Money minor={previewVariance} signed tone="auto" />
-                )}
-              </div>
-            </div>
-
-            {previewVariance != null && previewVariance !== 0 ? (
-              <div className="mt-3">
-                <Field
-                  label={t('till.variance_reason', 'توضیح اختلاف')}
-                  value={varianceReason}
-                  onChange={setVarianceReason}
-                  disabled={isBusy}
-                />
-              </div>
-            ) : null}
-
-            <ActionButton
-              className="mt-4"
-              // A non-zero variance must be explained before it can be sealed.
-              // Once the session closes, the person who could still find the
-              // missing note has gone home.
-              disabled={
-                isBusy ||
-                (previewVariance != null && previewVariance !== 0 && varianceReason.trim() === '')
-              }
-              onClick={() =>
-                onClose({
-                  countedCashMinor: countedMinor,
-                  ...(varianceReason.trim() ? { varianceReason: varianceReason.trim() } : {}),
-                })
-              }
-            >
-              {t('till.close_action', 'بستن صندوق')}
-            </ActionButton>
-          </Panel>
-        </>
-      ) : null}
-
-      <ListSection
-        title={t('till.abandoned_title', 'صندوق‌های رها شده')}
-        description={t('till.abandoned_hint', 'پولی که در صندوقی است که کسی به آن دسترسی ندارد.')}
-      >
-        {isAbandonedLoading ? (
-          <Loading label={t('common.loading', 'در حال بارگذاری…')} />
-        ) : abandonedError ? (
-          <ErrorNote
-            message={abandonedError}
-            onRetry={onRefresh}
-            retryLabel={t('common.retry', 'تلاش دوباره')}
-          />
-        ) : (
-          <DataTable
-            tableId="till-abandoned"
-            t={t}
-            rows={abandonedRows}
-            columns={abandonedColumns}
-            rowKey={(item) => item.sessionId}
-            searchValue={search}
-            onSearchChange={setSearch}
-            minWidthClass="min-w-[420px]"
-            emptyState={
-              <EmptyState
-                icon="search"
-                title={t('till.abandoned_empty', 'صندوق رها شده‌ای نیست')}
-              />
-            }
-          />
-        )}
-      </ListSection>
     </CapabilityPage>
   )
 })

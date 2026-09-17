@@ -223,6 +223,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         type: draft.transactionType,
         date: draft.date,
         ...(draft.dueDate ? { dueDate: draft.dueDate } : {}),
+        ...(draft.warehouseId ? { warehouseId: draft.warehouseId } : {}),
         subtotal: summary.subtotal,
         discountTotal: summary.discountTotal,
         discountType: draft.discountType,

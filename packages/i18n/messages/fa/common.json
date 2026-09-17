@@ -1777,7 +1777,7 @@
     "barcode": "بارکد",
     "sku": "کد محصول",
     "category": "دسته‌بندی",
-    "quantity": "تعداد",
+    "quantity": "مقدار",
     "unit": "واحد",
     "buyPrice": "قیمت خرید",
     "sellPrice": "قیمت فروش",
@@ -1819,7 +1819,29 @@
     "summaryUnavailable": "نامعلوم",
     "deleteHasSales": "این کالا در فاکتور فروخته یا خریده شده و قابل حذف نیست؛ به‌جای حذف آن را غیرفعال کنید.",
     "deleteHasStockHistory": "این کالا سابقه‌ی حرکت انبار دارد و قابل حذف نیست؛ به‌جای حذف آن را غیرفعال کنید.",
-    "deleteFailed": "حذف کالا انجام نشد."
+    "deleteFailed": "حذف کالا انجام نشد.",
+    "addWarehouse": "افزودن انبار",
+    "addWarehouseHint": "نام انبار یا شعبه‌ای که کالا در آن نگهداری می‌شود.",
+    "warehouseName": "انبار",
+    "location": "محل",
+    "backToList": "بازگشت به فهرست انبارها",
+    "unassigned": "بدون انبار",
+    "unassignedHint": "موجودی‌ای که هنوز در هیچ انباری ثبت نشده",
+    "noWarehouses": "هنوز انباری ثبت نشده",
+    "noWarehousesDesc": "اولین انبار خود را اضافه کنید",
+    "warehouseStock": "کالاهای این انبار",
+    "loadError": "فهرست انبارها خوانده نشد.",
+    "assignTitle": "افزودن کالا به انبار",
+    "assignAction": "افزودن به انبار",
+    "assignMax": "حداکثر",
+    "assignHint": "موجودی‌ای که در هیچ انباری نیست به این انبار منتقل می‌شود؛ کل موجودی کالا تغییر نمی‌کند. کالای تازه را با فاکتور خرید همین انبار ثبت کنید.",
+    "assignExceeds": "این مقدار بیشتر از موجودی بدون انبار این کالاست",
+    "nothingUnassigned": "موجودی بدون انبار وجود ندارد.",
+    "chooseProduct": "انتخاب کالا",
+    "saveFailed": "ذخیره نشد. دوباره تلاش کنید.",
+    "noProductsInWarehouse": "کالایی در این انبار نیست؛ موجودی بدون انبار را اضافه کنید یا فاکتور خرید با این انبار ثبت کنید",
+    "name": "نام کالا",
+    "totalValue": "ارزش کل (AFN)"
   },
   "customers": {
     "title": "مشتریان",
@@ -2481,7 +2503,28 @@
     "postUnpostedError": "ثبت در دفتر انجام نشد. دوباره تلاش کنید.",
     "postUnpostedChecked": "بررسی‌شده:",
     "postUnpostedWithoutCost": "ثبت‌شده بدون بهای تمام‌شده:",
-    "postUnpostedAlready": "از قبل ثبت‌شده:"
+    "postUnpostedAlready": "از قبل ثبت‌شده:",
+    "profit": {
+      "title": "سود و زیان هر کالا",
+      "loadError": "گزارش سود خوانده نشد.",
+      "colProduct": "کالا",
+      "colQuantity": "تعداد فروش",
+      "colRevenue": "فروش خالص",
+      "colCost": "بهای تمام‌شده",
+      "colProfit": "سود / زیان",
+      "colMargin": "درصد سود",
+      "costMissing": "بهای تمام‌شده ثبت نشده؛ سود بیشتر از واقع است",
+      "costEstimated": "بخشی از بها تخمینی است",
+      "empty": "در این بازه فروشی ثبت نشده",
+      "totalRevenue": "جمع فروش خالص",
+      "totalCost": "جمع بهای تمام‌شده",
+      "grossProfit": "سود ناخالص",
+      "salaries": "حقوق کارمندان",
+      "netProfit": "سود خالص",
+      "invoices": "فاکتور",
+      "payrolls": "فیش حقوق",
+      "otherCurrencies": "اسناد با ارز دیگر در این جمع نیستند"
+    }
   },
   "hr": {
     "title": "منابع انسانی",
@@ -3442,7 +3485,11 @@
     "partialCoversAll": "این مبلغ کل فاکتور را پوشش می‌دهد",
     "creditLimitTitle": "این فروش بدهی مشتری را از سقف اعتبارش بیشتر می‌کند",
     "creditAfter": "بعد از این فاکتور",
-    "creditLimitHint": "ثبت انجام می‌شود؛ پیش از تحویل، دریافت یا تأیید را بررسی کنید."
+    "creditLimitHint": "ثبت انجام می‌شود؛ پیش از تحویل، دریافت یا تأیید را بررسی کنید.",
+    "warehouseIn": "انبار ورود کالا",
+    "warehouseOut": "انبار خروج کالا",
+    "warehouseNone": "انتخاب انبار",
+    "warehouseMissing": "بدون انتخاب انبار، موجودی کل کالا تغییر می‌کند اما موجودی هیچ انباری تغییر نمی‌کند."
   },
   "admin": {
     "dashboard": {
@@ -3712,7 +3759,17 @@
     "transfer_from_bank": "برداشت از بانک",
     "kind_transfer_to_bank": "انتقال به بانک",
     "kind_transfer_from_bank": "برداشت از بانک",
-    "error_POS_TRANSFER_EXCEEDS_CASH": "مبلغ انتقال از موجودی صندوق بیشتر است."
+    "error_POS_TRANSFER_EXCEEDS_CASH": "مبلغ انتقال از موجودی صندوق بیشتر است.",
+    "col_till": "صندوق",
+    "selected": "انتخاب‌شده",
+    "view_transactions": "نمایش تراکنش‌ها",
+    "tills_title": "صندوق‌ها",
+    "tills_hint": "صندوق‌های باز این کسب‌وکار. روی هر صندوق بزنید تا تراکنش‌هایش را ببینید.",
+    "add_till": "افزودن صندوق",
+    "add_cash": "افزودن مبلغ به صندوق",
+    "add_cash_confirm": "ثبت",
+    "error_POS_SESSION_ALREADY_OPEN": "شما در این شعبه یک صندوق باز دارید؛ همان را از فهرست انتخاب کنید.",
+    "col_margin": "درصد سود"
   },
   "assets": {
     "title": "دارایی‌های ثابت",

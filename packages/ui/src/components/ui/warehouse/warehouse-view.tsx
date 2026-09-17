@@ -1,14 +1,14 @@
 // packages/ui/src/components/ui/warehouse/warehouse-view.tsx
 'use client'
 
-import { memo, useMemo } from 'react'
+import { memo, useMemo, type ReactNode } from 'react'
 import type { StockSummary } from '@hisabche/api'
 import { cn } from '../../../lib/utils'
 import { FOCUS_RING } from '../focus-ring'
 import { EmptyState } from '../empty-state'
 import { BentoStats, type BentoStat } from '../bento-stats'
 import { WarehouseProductList } from './warehouse-product-list'
-import { Plus, Check, DollarSign, Package, AlertTriangle } from 'lucide-react'
+import { Plus, Check, ChevronRight, DollarSign, Package, AlertTriangle } from 'lucide-react'
 import type { Product, Currency } from '../../../lib/warehouse/warehouse-types'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -20,7 +20,19 @@ interface WarehouseViewProps {
   fmt: (v: number) => string
   search: string
   onSearchChange: (value: string) => void
+  /** The header's primary action: «افزودن انبار» on the list, «افزودن کالا به انبار» in a warehouse. */
   onOpenAddModal: () => void
+  actionLabel?: string | undefined
+  /** Header title/subtitle; default «موجودی». A warehouse passes its own name. */
+  title?: string | undefined
+  description?: string | undefined
+  /** Set inside one warehouse: back to the warehouse list. */
+  onBack?: (() => void) | undefined
+  /**
+   * Replaces the product table — the warehouse list uses it for the
+   * warehouses table. Omit to show `products`.
+   */
+  children?: ReactNode
   deletingId: string | null
   products: Product[]
   isLoading: boolean
@@ -67,20 +79,41 @@ SaveIndicator.displayName = 'SaveIndicator'
 const WarehouseHeader = memo(function WarehouseHeader({
   t,
   onOpenAddModal,
+  actionLabel,
+  title,
+  description,
+  onBack,
 }: {
   t: (key: string, fallback?: string) => string
   onOpenAddModal: () => void
+  actionLabel: string
+  title: string
+  description: string
+  onBack?: (() => void) | undefined
 }) {
   return (
     // Title and action share one row at every width, mobile included.
     <div className="flex flex-row items-start justify-between gap-3">
-      <div className="min-w-0 space-y-1.5">
-        <h1 className="truncate text-2xl font-bold sm:text-3xl text-[hsl(var(--fg-primary))]">
-          {t('nav.stock', 'موجودی')}
-        </h1>
-        <p className="text-sm text-[hsl(var(--fg-secondary))]">
-          {t('nav.stock_description', 'چه چیزی داریم و چه چیزی کم است')}
-        </p>
+      <div className="flex min-w-0 items-start gap-2">
+        {onBack ? (
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label={t('warehouse.backToList', 'بازگشت به فهرست انبارها')}
+            className={cn(
+              'mt-1 inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]',
+              FOCUS_RING,
+            )}
+          >
+            <ChevronRight className="size-5 ltr:rotate-180" aria-hidden="true" />
+          </button>
+        ) : null}
+        <div className="min-w-0 space-y-1.5">
+          <h1 className="truncate text-2xl font-bold sm:text-3xl text-[hsl(var(--fg-primary))]">
+            {title}
+          </h1>
+          <p className="text-sm text-[hsl(var(--fg-secondary))]">{description}</p>
+        </div>
       </div>
 
       <button
@@ -98,7 +131,7 @@ const WarehouseHeader = memo(function WarehouseHeader({
         )}
       >
         <Plus className="size-4" aria-hidden="true" />
-        <span className="whitespace-nowrap">{t('warehouse.addProduct', 'افزودن محصول')}</span>
+        <span className="whitespace-nowrap">{actionLabel}</span>
       </button>
     </div>
   )
@@ -150,6 +183,11 @@ export const WarehouseView = memo(function WarehouseView({
   search,
   onSearchChange,
   onOpenAddModal,
+  actionLabel,
+  title,
+  description,
+  onBack,
+  children,
   deletingId,
   products,
   isLoading,
@@ -210,7 +248,14 @@ export const WarehouseView = memo(function WarehouseView({
   return (
     <div className="space-y-6">
       <SaveIndicator t={t} deletingId={deletingId} />
-      <WarehouseHeader t={t} onOpenAddModal={onOpenAddModal} />
+      <WarehouseHeader
+        t={t}
+        onOpenAddModal={onOpenAddModal}
+        actionLabel={actionLabel ?? t('warehouse.addWarehouse', 'افزودن انبار')}
+        title={title ?? t('nav.stock', 'موجودی')}
+        description={description ?? t('nav.stock_description', 'چه چیزی داریم و چه چیزی کم است')}
+        onBack={onBack}
+      />
 
       {/* همان کامپوننت و گرید invoices — فقط داده‌ی warehouse */}
       <BentoStats t={t} stats={stats} />
@@ -219,6 +264,8 @@ export const WarehouseView = memo(function WarehouseView({
 
       {isLoading ? (
         <LoadingSkeleton />
+      ) : children !== undefined ? (
+        children
       ) : (
         <WarehouseProductList
           t={t}
@@ -237,9 +284,12 @@ export const WarehouseView = memo(function WarehouseView({
               <EmptyState
                 icon="product"
                 title={t('warehouse.noProducts', 'هیچ محصولی موجود نیست')}
-                description={t('warehouse.noProductsDesc', 'اولین محصول خود را اضافه کنید')}
+                description={t(
+                  'warehouse.noProductsInWarehouse',
+                  'کالایی در این انبار نیست؛ موجودی بدون انبار را اضافه کنید یا فاکتور خرید با این انبار ثبت کنید',
+                )}
                 action={{
-                  label: t('warehouse.addProduct', 'افزودن محصول'),
+                  label: actionLabel ?? t('warehouse.addProduct', 'افزودن محصول'),
                   onClick: onOpenAddModal,
                 }}
               />

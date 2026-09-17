@@ -1781,7 +1781,7 @@
     "barcode": "بارکد",
     "sku": "SKU",
     "category": "دسته‌بندی",
-    "quantity": "تعداد",
+    "quantity": "مقدار",
     "unit": "واحد",
     "buyPrice": "قیمت خرید",
     "sellPrice": "قیمت فروش",
@@ -1823,7 +1823,29 @@
     "summaryUnavailable": "نامعلوم",
     "deleteHasSales": "این کالا در فاکتور فروخته یا خریده شده و قابل حذف نیست؛ به‌جای حذف آن را غیرفعال کنید.",
     "deleteHasStockHistory": "این کالا سابقه‌ی حرکت انبار دارد و قابل حذف نیست؛ به‌جای حذف آن را غیرفعال کنید.",
-    "deleteFailed": "حذف کالا انجام نشد."
+    "deleteFailed": "حذف کالا انجام نشد.",
+    "addWarehouse": "افزودن گدام",
+    "addWarehouseHint": "نام گدام یا شعبه‌ای که جنس در آن نگهداری می‌شود.",
+    "warehouseName": "گدام",
+    "location": "محل",
+    "backToList": "بازگشت به فهرست گدام‌ها",
+    "unassigned": "بدون گدام",
+    "unassignedHint": "موجودی‌ای که هنوز در هیچ گدامی ثبت نشده",
+    "noWarehouses": "هنوز گدامی ثبت نشده",
+    "noWarehousesDesc": "اولین گدام خود را اضافه کنید",
+    "warehouseStock": "اجناس این گدام",
+    "loadError": "فهرست گدام‌ها خوانده نشد.",
+    "assignTitle": "افزودن جنس به گدام",
+    "assignAction": "افزودن به گدام",
+    "assignMax": "حداکثر",
+    "assignHint": "موجودی‌ای که در هیچ گدامی نیست به این گدام منتقل می‌شود؛ کل موجودی جنس تغییر نمی‌کند. جنس تازه را با بل خرید همین گدام ثبت کنید.",
+    "assignExceeds": "این مقدار بیشتر از موجودی بدون گدام این جنس است",
+    "nothingUnassigned": "موجودی بدون گدام وجود ندارد.",
+    "chooseProduct": "انتخاب جنس",
+    "saveFailed": "ذخیره نشد. دوباره کوشش کنید.",
+    "noProductsInWarehouse": "جنسی در این گدام نیست؛ موجودی بدون گدام را اضافه کنید یا بل خرید با این گدام ثبت کنید",
+    "name": "نام جنس",
+    "totalValue": "ارزش کل (AFN)"
   },
   "customers": {
     "title": "مشتری‌ها",
@@ -2474,7 +2496,28 @@
     "postUnpostedError": "ثبت در دفتر انجام نشد. دوباره تلاش کنید.",
     "postUnpostedChecked": "بررسی‌شده:",
     "postUnpostedWithoutCost": "ثبت‌شده بدون بهای تمام‌شده:",
-    "postUnpostedAlready": "از قبل ثبت‌شده:"
+    "postUnpostedAlready": "از قبل ثبت‌شده:",
+    "profit": {
+      "title": "سود و زیان هر جنس",
+      "loadError": "گزارش سود خوانده نشد.",
+      "colProduct": "جنس",
+      "colQuantity": "تعداد فروش",
+      "colRevenue": "فروش خالص",
+      "colCost": "قیمت تمام‌شده",
+      "colProfit": "سود / زیان",
+      "colMargin": "فیصدی سود",
+      "costMissing": "قیمت تمام‌شده ثبت نشده؛ سود بیشتر از واقع است",
+      "costEstimated": "بخشی از قیمت تخمینی است",
+      "empty": "در این بازه فروشی ثبت نشده",
+      "totalRevenue": "جمع فروش خالص",
+      "totalCost": "جمع قیمت تمام‌شده",
+      "grossProfit": "سود ناخالص",
+      "salaries": "معاش کارمندان",
+      "netProfit": "سود خالص",
+      "invoices": "بل",
+      "payrolls": "فیش معاش",
+      "otherCurrencies": "اسناد با اسعار دیگر در این جمع نیستند"
+    }
   },
   "hr": {
     "title": "منابع انسانی",
@@ -3446,7 +3489,11 @@
     "partialCoversAll": "این مبلغ کل فاکتور را پوشش می‌دهد",
     "creditLimitTitle": "این فروش قرض مشتری را از سقف اعتبارش بیشتر می‌کند",
     "creditAfter": "بعد از این بل",
-    "creditLimitHint": "ثبت انجام می‌شود؛ پیش از تحویل، دریافت یا تأیید را بررسی کنید."
+    "creditLimitHint": "ثبت انجام می‌شود؛ پیش از تحویل، دریافت یا تأیید را بررسی کنید.",
+    "warehouseIn": "گدام ورود جنس",
+    "warehouseOut": "گدام خروج جنس",
+    "warehouseNone": "انتخاب گدام",
+    "warehouseMissing": "بدون انتخاب گدام، موجودی کل جنس تغییر می‌کند اما موجودی هیچ گدامی تغییر نمی‌کند."
   },
   "admin": {
     "dashboard": {
@@ -3716,7 +3763,17 @@
     "transfer_from_bank": "برداشت از بانک",
     "kind_transfer_to_bank": "انتقال به بانک",
     "kind_transfer_from_bank": "برداشت از بانک",
-    "error_POS_TRANSFER_EXCEEDS_CASH": "مبلغ انتقال از موجودی صندوق بیشتر است."
+    "error_POS_TRANSFER_EXCEEDS_CASH": "مبلغ انتقال از موجودی صندوق بیشتر است.",
+    "col_till": "صندوق",
+    "selected": "انتخاب‌شده",
+    "view_transactions": "نمایش معاملات",
+    "tills_title": "صندوق‌ها",
+    "tills_hint": "صندوق‌های باز این تجارت. روی هر صندوق کلیک کنید تا معاملاتش را ببینید.",
+    "add_till": "افزودن صندوق",
+    "add_cash": "افزودن پول به صندوق",
+    "add_cash_confirm": "ثبت",
+    "error_POS_SESSION_ALREADY_OPEN": "شما در این شعبه یک صندوق باز دارید؛ همان را از فهرست انتخاب کنید.",
+    "col_margin": "فیصدی سود"
   },
   "assets": {
     "title": "دارایی‌های ثابت",

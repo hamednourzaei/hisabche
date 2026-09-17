@@ -739,6 +739,9 @@ export class InvoiceService {
   ) {
     const { workspaceId, userId } = ctx
     const clientRequestId = options.clientRequestId ?? null
+    // Multi-warehouse: an invoice may name the warehouse its goods move in.
+    const invoiceWarehouseId = (data as { warehouseId?: string | null }).warehouseId ?? null
+    if (invoiceWarehouseId) await this.assertInvoiceWarehouse(workspaceId, invoiceWarehouseId)
 
     // ═══════════════════════════════════════════════════════════════════════
     // ⚠️ A REPLAYED REQUEST RETURNS THE INVOICE IT ALREADY CREATED.
@@ -888,6 +891,9 @@ export class InvoiceService {
         // workspace_id is the tenancy boundary; user_id records the actor.
         workspace_id: workspaceId,
         user_id: userId,
+        // Multi-warehouse: which warehouse this invoice's goods leave/arrive.
+        // Only named when set, so creation works before the migration.
+        ...(invoiceWarehouseId ? { warehouse_id: invoiceWarehouseId } : {}),
         // Only a keyed request names the column, so unkeyed creation keeps
         // working on a database that has not run the idempotency migration.
         ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
@@ -1718,11 +1724,48 @@ export class InvoiceService {
    * this resolves. Zero or several leaves the movement unattributed, exactly as
    * before, and the product total still moves.
    */
+  /**
+   * The warehouse an invoice names (multi-warehouse). null when it names none,
+   * or before docs/multi-warehouse-migration.sql (missing column → none).
+   */
+  private async invoiceWarehouseId(
+    workspaceId: string,
+    invoiceId: string | undefined,
+  ): Promise<string | null> {
+    if (!invoiceId) return null
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('warehouse_id')
+      .eq('workspace_id', workspaceId)
+      .eq('id', invoiceId)
+      .maybeSingle()
+    if (error) {
+      if (['42703', 'PGRST204'].includes(error.code ?? '')) return null
+      throw new DatabaseError('Failed to read the invoice warehouse', error)
+    }
+    return (data as { warehouse_id?: string | null } | null)?.warehouse_id ?? null
+  }
+
+  /** A warehouse id from a request must belong to this workspace and not be deleted. */
+  private async assertInvoiceWarehouse(workspaceId: string, warehouseId: string): Promise<void> {
+    const { data, error } = await supabase
+      .from('warehouses')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('id', warehouseId)
+      .is('deleted_at', null)
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to check the invoice warehouse', error)
+    if (!data) throw new ValidationError('INVOICE_WAREHOUSE_NOT_FOUND')
+  }
+
   private async soleWarehouseId(workspaceId: string): Promise<string | null> {
     const { data, error } = await supabase
       .from('warehouses')
       .select('id')
       .eq('workspace_id', workspaceId)
+      // A deleted warehouse is not a place goods can leave from.
+      .is('deleted_at', null)
       .limit(2)
 
     // A failed lookup is «unknown», not «none» — but both leave the movement
@@ -1780,8 +1823,11 @@ export class InvoiceService {
     // weighed product.
     const unitOptions = await this.loadProductUnits(workspaceId, productIds)
 
-    // Which warehouse the goods leave from / arrive at, when unambiguous.
-    const warehouseId = await this.soleWarehouseId(workspaceId)
+    // Which warehouse the goods leave from / arrive at: the one the invoice
+    // names, else the only one there is (never a guess among several).
+    const warehouseId =
+      (await this.invoiceWarehouseId(workspaceId, invoiceId)) ??
+      (await this.soleWarehouseId(workspaceId))
 
     // ─── PHASE C — the movement IS the update ────────────────────────────────
     //

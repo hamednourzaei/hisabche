@@ -266,6 +266,9 @@ export {
   useGeneralLedger,
   useBalanceSheet,
   useIncomeStatement,
+  useProfitReport,
+  type ProfitReport,
+  type ProductProfitRow,
   accountingKeys,
   type Account,
   type AccountRootType,
@@ -426,6 +429,7 @@ export {
   useCurrentSession,
   useSession,
   useAbandonedSessions,
+  useOpenSessions,
   useOpenSession,
   useRecordOrder,
   useRecordCashMovement,
@@ -693,3 +697,16 @@ export {
   type CreditControl,
   type SupplierOption,
 } from './hooks/customer-profile'
+
+// ─── Warehouses (multi-warehouse, request #90) ───────────
+export {
+  useWarehouseOverview,
+  useWarehouseDetail,
+  useCreateWarehouse,
+  useAssignWarehouseStock,
+  warehouseKeys,
+  type WarehouseOverview,
+  type WarehouseOverviewItem,
+  type WarehouseProduct,
+  type WarehouseDetail,
+} from './hooks/warehouses'

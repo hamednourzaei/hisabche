@@ -427,6 +427,8 @@ export const invoiceSchema = z.object({
 
   // Customer/Supplier
   customerId: uuidSchema.optional(),
+  /** Multi-warehouse: the warehouse this invoice's goods leave (sale) or arrive at (purchase). */
+  warehouseId: uuidSchema.nullable().optional(),
   supplierId: uuidSchema.optional(),
   supplierName: nonEmptyStringSchema.optional(),
 

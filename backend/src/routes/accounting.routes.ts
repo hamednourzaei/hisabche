@@ -425,6 +425,43 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /profit-report ────────────────────────────────
+  // Request #91. Not cached: the range and currency are the user's choice and
+  // the figures move with every invoice.
+  fastify.get(
+    '/profit-report',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = z
+          .object({
+            from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            currency: z.string().min(3).max(8),
+          })
+          .parse(request.query)
+        return reply.send(
+          await accountingService.getProfitReport(
+            request.tenancy,
+            query.from,
+            query.to,
+            query.currency,
+          ),
+        )
+      } catch (err) {
+        if (err instanceof z.ZodError)
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        return fail(reply, err, 'Failed to build the profit report')
+      }
+    },
+  )
+
   // ─── GET /cash-flow ────────────────────────────────────
   fastify.get(
     '/cash-flow',

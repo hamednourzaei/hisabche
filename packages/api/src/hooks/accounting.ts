@@ -334,3 +334,59 @@ export function useIncomeStatement(from: string, to: string, branchId: string | 
     staleTime: 60_000,
   })
 }
+
+// ─── Profit report (request #91) ─────────────────────────
+// Per-product profit, salaries and net profit from the accounting core
+// (GET /accounting/profit-report). Under `payments` so every invoice and
+// payment mutation — which invalidate paymentKeys.all — refreshes it.
+
+export interface ProductProfitRow {
+  productId: string | null
+  name: string
+  quantity: number
+  revenue: number
+  cost: number
+  profit: number
+  marginPercent: number | null
+  costMissing: boolean
+  costEstimated: boolean
+}
+
+export interface ProfitReport {
+  from: string
+  to: string
+  currency: string
+  products: ProductProfitRow[]
+  totals: {
+    revenue: number
+    cost: number
+    grossProfit: number
+    salaries: number
+    netProfit: number
+    netMarginPercent: number | null
+    invoiceCount: number
+    payrollCount: number
+  }
+  otherCurrencies: Array<{ currency: string; invoices: number; payrolls: number }>
+}
+
+export function useProfitReport(from: string, to: string, currency: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: ['payments', 'profit-report', from, to, currency],
+    queryFn: async (): Promise<ProfitReport> => {
+      const { data } = await apiClient.get('/accounting/profit-report', {
+        params: { from, to, currency },
+      })
+      return {
+        ...(data as ProfitReport),
+        products: asList<ProductProfitRow>((data as Partial<ProfitReport>)?.products),
+        otherCurrencies: asList<ProfitReport['otherCurrencies'][number]>(
+          (data as Partial<ProfitReport>)?.otherCurrencies,
+        ),
+      }
+    },
+    enabled: authReady && !!from && !!to && !!currency,
+    staleTime: 30_000,
+  })
+}

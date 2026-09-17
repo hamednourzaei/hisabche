@@ -140,6 +140,16 @@
 - **رفع:** همه‌ی clearها `activities(-unread):<userId>:*`؛ در invoice routes کاربر عامل (`request.tenancy.userId`). فید بقیه‌ی اعضای workspace با TTL ۱۵–۳۰ ثانیه تازه می‌شود.
 - **تست:** `activity-cache-keys.test.ts` (injection-tested).
 
+## BUG-013 — مسیرهای ناموجودِ نقطه‌دار کل لندینگ را با ۲۰۰ و canonical به /fa سرو می‌کردند
+
+- **منبع:** گزارش Coverage سرچ کنسول (۱۷ سپتامبر): «Alternate page with proper canonical» ۲، «Crawled – currently not indexed» ۳.
+- **الگو:** ۵ (نبود نشانه) — `resolveLocale` بی‌صدا به `fa` برمی‌گشت
+- **ریشه:** matcher در `apps/web/proxy.ts` هر مسیر دارای پسوند را رد می‌کند؛ `/wp-login.php` و `/sitemap-0.xml` مستقیم به `[lang]` رسیدند با `lang = "wp-login.php"`؛ layout به `fa` fallback کرد → صفحه‌ی کامل ۷۴۳KB، `index, follow`، canonical به `/fa`. روی دامنه‌ی زنده با curl تأیید شد.
+- **رفع:** در `RootLayout` قبل از هر رندر: `if (!isLocale(lang)) notFound()`.
+- **اثبات:** بیلد production محلی (`NEXT_STANDALONE=0`) + `next start`: `/wp-login.php` و `/sitemap-0.xml` → 404 + noindex؛ `/fa` `/en` `/af` about/docs/features → 200 index؛ `/fa` هنوز `x-nextjs-prerender: 1` و `x-nextjs-cache: HIT` (پرفورمنس دست نخورد).
+- **تست:** `packages/ui/src/__tests__/unknown-locale-404.test.ts` (injection-tested).
+- **بقیه‌ی گزارش (کد نیست):** ۹۰ URL سایت‌مپ همه ۲۰۰ + index + canonical خودی. redirect ۴ = http/www/`/`/اسلش انتهایی (درست). noindex ۲ = login/signup (عمدی). ۴۰۴ ۱ = URL قدیمی/خارجی (فهرست URL در zip نبود). «Discovered – not indexed» ۷۵ = زمان‌بندی خزش گوگل برای دامنه‌ی جدید. محتوای کم: docs/branches ۱۳۰، data-and-backup ۱۲۵، pos ۱۴۶ کلمه — نیازمند محتوای واقعی.
+
 ## صف کاندیدها (هنوز بررسی نشده — فرضیه، نه باگ)
 
 | #   | کاندید | الگو |

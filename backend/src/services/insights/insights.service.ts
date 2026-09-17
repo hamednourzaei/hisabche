@@ -10,6 +10,7 @@
 // ============================================
 
 import { supabase } from '../../db'
+import { AccountingService } from '../accounting'
 import { DatabaseError } from '../../errors/database.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
@@ -140,54 +141,14 @@ export class InsightsService {
   }
 
   /** Profit per product over a period, from revenue and consumed cost. */
+  /**
+   * Per-product profit comes from the ACCOUNTING CORE (request #91): one rule for
+   * revenue (net of invoice discount, no tax), cost and currency, shared with
+   * the profit report on /accounting. This used to be a private copy with
+   * `.limit(20_000)` and gross line totals.
+   */
   private async profitByProduct(ctx: TenancyContext, from: string, to: string) {
-    const [items, consumptions] = await Promise.all([
-      supabase
-        .from('invoice_items')
-        .select(
-          'product_id, product_name, total_price, invoice:invoices!inner(date, type, workspace_id)',
-        )
-        .eq('workspace_id', ctx.workspaceId)
-        .gte('invoice.date', from)
-        .lte('invoice.date', to)
-        .eq('invoice.type', 'sale')
-        .limit(20_000),
-      supabase
-        .from('cost_consumptions')
-        .select('product_id, amount')
-        .eq('workspace_id', ctx.workspaceId)
-        .eq('consumer_type', 'invoice')
-        .gte('entry_date', from)
-        .lte('entry_date', to)
-        .limit(20_000),
-    ])
-
-    if (items.error) throw new DatabaseError('Failed to read invoice items', items.error)
-    if (consumptions.error) {
-      throw new DatabaseError('Failed to read cost consumptions', consumptions.error)
-    }
-
-    const revenue = new Map<string, { label: string; value: number }>()
-    for (const item of items.data ?? []) {
-      const key = (item as any).product_id
-      if (!key) continue
-      const current = revenue.get(key) ?? { label: (item as any).product_name ?? key, value: 0 }
-      current.value += Number((item as any).total_price) || 0
-      revenue.set(key, current)
-    }
-
-    const cost = new Map<string, number>()
-    for (const row of consumptions.data ?? []) {
-      const key = row.product_id
-      if (!key) continue
-      cost.set(key, (cost.get(key) ?? 0) + (Number(row.amount) || 0))
-    }
-
-    return [...revenue.entries()].map(([key, entry]) => ({
-      key,
-      label: entry.label,
-      value: round2(entry.value - (cost.get(key) ?? 0)),
-    }))
+    return new AccountingService().getProductProfits(ctx, from, to)
   }
 
   /**

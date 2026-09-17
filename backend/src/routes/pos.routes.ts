@@ -119,6 +119,23 @@ export async function posRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /sessions/open ────────────────────────────────
+  // The till list: every open session in the workspace. Before `/sessions/:id`.
+  fastify.get(
+    '/sessions/open',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.read')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send(await posService.listOpenSessions(request.tenancy))
+      } catch (err) {
+        return fail(reply, err, 'Failed to list open tills')
+      }
+    },
+  )
+
   // ─── POST /sessions ────────────────────────────────────
   fastify.post(
     '/sessions',

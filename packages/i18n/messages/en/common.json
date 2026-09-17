@@ -1814,7 +1814,29 @@
     "summaryUnavailable": "Unavailable",
     "deleteHasSales": "This product appears on invoices and can’t be deleted; deactivate it instead.",
     "deleteHasStockHistory": "This product has stock history and can’t be deleted; deactivate it instead.",
-    "deleteFailed": "The product could not be deleted."
+    "deleteFailed": "The product could not be deleted.",
+    "addWarehouse": "Add warehouse",
+    "addWarehouseHint": "The name of the warehouse or branch where goods are kept.",
+    "warehouseName": "Warehouse",
+    "location": "Location",
+    "backToList": "Back to warehouses",
+    "unassigned": "No warehouse",
+    "unassignedHint": "Stock not yet recorded in any warehouse",
+    "noWarehouses": "No warehouses yet",
+    "noWarehousesDesc": "Add your first warehouse",
+    "warehouseStock": "Products in this warehouse",
+    "loadError": "Couldn't load the warehouses.",
+    "assignTitle": "Add products to warehouse",
+    "assignAction": "Add to warehouse",
+    "assignMax": "Max",
+    "assignHint": "Stock that is in no warehouse moves into this one; the product's total does not change. Record new goods with a purchase invoice for this warehouse.",
+    "assignExceeds": "That is more than this product's stock with no warehouse",
+    "nothingUnassigned": "There is no stock without a warehouse.",
+    "chooseProduct": "Choose a product",
+    "saveFailed": "Couldn't save. Try again.",
+    "noProductsInWarehouse": "No products in this warehouse; add stock that has no warehouse, or record a purchase invoice for this warehouse",
+    "name": "Product",
+    "totalValue": "Total value (AFN)"
   },
   "customers": {
     "title": "Customers",
@@ -2465,7 +2487,28 @@
     "postUnpostedError": "Posting failed. Please try again.",
     "postUnpostedChecked": "Checked:",
     "postUnpostedWithoutCost": "Posted without cost of goods:",
-    "postUnpostedAlready": "Already posted:"
+    "postUnpostedAlready": "Already posted:",
+    "profit": {
+      "title": "Profit and loss by product",
+      "loadError": "Couldn't load the profit report.",
+      "colProduct": "Product",
+      "colQuantity": "Qty sold",
+      "colRevenue": "Net sales",
+      "colCost": "Cost of goods",
+      "colProfit": "Profit / loss",
+      "colMargin": "Margin",
+      "costMissing": "No cost recorded; profit is overstated",
+      "costEstimated": "Part of the cost is estimated",
+      "empty": "No sales in this period",
+      "totalRevenue": "Total net sales",
+      "totalCost": "Total cost of goods",
+      "grossProfit": "Gross profit",
+      "salaries": "Staff salaries",
+      "netProfit": "Net profit",
+      "invoices": "invoices",
+      "payrolls": "payslips",
+      "otherCurrencies": "Documents in other currencies are not in these totals"
+    }
   },
   "hr": {
     "title": "Human Resources",
@@ -3437,7 +3480,11 @@
     "partialCoversAll": "This amount covers the whole invoice",
     "creditLimitTitle": "This sale takes the customer past their credit limit",
     "creditAfter": "After this invoice",
-    "creditLimitHint": "Saving is allowed; check payment or approval before handing over goods."
+    "creditLimitHint": "Saving is allowed; check payment or approval before handing over goods.",
+    "warehouseIn": "Receiving warehouse",
+    "warehouseOut": "Shipping warehouse",
+    "warehouseNone": "Choose warehouse",
+    "warehouseMissing": "Without a warehouse, the product total changes but no warehouse's stock does."
   },
   "admin": {
     "dashboard": {
@@ -3707,7 +3754,17 @@
     "transfer_from_bank": "Withdraw from bank",
     "kind_transfer_to_bank": "Transfer to bank",
     "kind_transfer_from_bank": "Withdrawal from bank",
-    "error_POS_TRANSFER_EXCEEDS_CASH": "The transfer is larger than the cash in the till."
+    "error_POS_TRANSFER_EXCEEDS_CASH": "The transfer is larger than the cash in the till.",
+    "col_till": "Till",
+    "selected": "Selected",
+    "view_transactions": "Show transactions",
+    "tills_title": "Tills",
+    "tills_hint": "This business's open tills. Click a till to see its transactions.",
+    "add_till": "Add till",
+    "add_cash": "Add cash to till",
+    "add_cash_confirm": "Add",
+    "error_POS_SESSION_ALREADY_OPEN": "You already have a till open in this branch; pick it from the list.",
+    "col_margin": "Margin"
   },
   "assets": {
     "title": "Fixed assets",

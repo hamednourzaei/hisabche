@@ -3,9 +3,18 @@
 
 import { memo, useCallback, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { toIsoDay } from '@hisabche/formatting'
+import {
+  CURRENCY_SIGN,
+  formatMoney,
+  formatNumber,
+  toIsoDay,
+  type KnownCurrency,
+} from '@hisabche/formatting'
+import { useCurrencyStore } from '@hisabche/store'
 import { cn } from '../../../../lib/utils'
-import { useIncomeStatement, type TrialBalance } from '@hisabche/api'
+import { useIncomeStatement, useProfitReport, type TrialBalance } from '@hisabche/api'
+import { ProductProfitTable } from '../components/ProductProfitTable'
+import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { DateRangePicker } from '../components/DateRangePicker'
 import { ExportButton, type ExportColumn } from '../components/ExportButton'
 import { AccountingSkeleton } from '../AccountingSkeleton'
@@ -121,6 +130,18 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
   const [to, setTo] = useState(getToday)
   const { branchId } = useBranchScope()
   const { data, isLoading } = useIncomeStatement(from, to, branchId)
+  // Request #91 — per-product profit in the currency chosen at onboarding.
+  const currency = useCurrencyStore((state) => state.primaryCurrency)
+  const locale = useIntlLocale()
+  const profit = useProfitReport(from, to, currency)
+  const money = useCallback(
+    (value: number) =>
+      currency in CURRENCY_SIGN
+        ? formatMoney(value, currency as KnownCurrency, locale)
+        : `${formatNumber(value, locale, 2)} ${currency}`,
+    [currency, locale],
+  )
+  const num = useCallback((value: number) => formatNumber(value, locale, 2), [locale])
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {
@@ -162,6 +183,24 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
       </header>
 
       <div className="flex-1 overflow-y-auto p-5">
+        <section className="mb-6 space-y-3">
+          <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+            {safeT('accounting.profit.title', 'سود و زیان هر کالا')}
+          </h3>
+          {profit.isLoading ? (
+            <AccountingSkeleton rows={3} />
+          ) : profit.isError || !profit.data ? (
+            <p role="alert" className="text-sm text-[hsl(var(--color-destructive))]">
+              {safeT('accounting.profit.loadError', 'گزارش سود خوانده نشد.')}{' '}
+              <button type="button" className="underline" onClick={() => void profit.refetch()}>
+                {safeT('common.retry', 'تلاش دوباره')}
+              </button>
+            </p>
+          ) : (
+            <ProductProfitTable t={safeT} report={profit.data} money={money} num={num} />
+          )}
+        </section>
+
         {isLoading ? (
           <AccountingSkeleton rows={3} />
         ) : !data ? (

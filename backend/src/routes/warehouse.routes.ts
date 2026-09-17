@@ -15,6 +15,9 @@ import { WarehouseService } from '../services/warehouse.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
+import { BaseError } from '../errors/base.error'
+import { invalidateMoneyCaches } from '../utils/money-cache'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -159,6 +162,69 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
         }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to transfer stock' })
+      }
+    },
+  )
+
+  // ─── Multi-warehouse (request #90) ───────────────────────────
+  // Not cached: stock figures change with every invoice.
+  const failWarehouse = (reply: FastifyReply, err: unknown, fallback: string) => {
+    if (err instanceof z.ZodError) {
+      return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+    }
+    if (err instanceof BaseError && err.statusCode < 500) {
+      return reply.code(err.statusCode).send({ error: err.message, code: err.message })
+    }
+    fastify.log.error(err)
+    return reply.code(500).send({ error: fallback })
+  }
+
+  fastify.get(
+    '/api/warehouses/overview',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send(await warehouseService.overview(request.tenancy))
+      } catch (err) {
+        return failWarehouse(reply, err, 'Failed to build the warehouse overview')
+      }
+    },
+  )
+
+  fastify.get(
+    '/api/warehouses/:id/detail',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z
+          .object({ id: z.union([z.string().uuid(), z.literal('unassigned')]) })
+          .parse(request.params)
+        return reply.send(await warehouseService.warehouseDetail(request.tenancy, id))
+      } catch (err) {
+        return failWarehouse(reply, err, 'Failed to fetch the warehouse stock')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/warehouses/:id/assign',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const body = z
+          .object({
+            productId: z.string().uuid(),
+            quantity: z.number().positive(),
+            notes: z.string().max(500).optional(),
+          })
+          .strict()
+          .parse(request.body)
+        const result = await warehouseService.assignStock(request.tenancy, id, body)
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.send(result)
+      } catch (err) {
+        return failWarehouse(reply, err, 'Failed to assign stock to the warehouse')
       }
     },
   )

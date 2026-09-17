@@ -21,6 +21,7 @@ import { OversoldWarning } from '../oversold-warning'
 import { useOversoldLines } from '../use-oversold-lines'
 import { CreditLimitWarning } from '../credit-limit-warning'
 import { useCustomerTerms } from '../use-customer-terms'
+import { InvoiceWarehouseSelect } from '../invoice-warehouse-select'
 
 export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   const router = useRouter()
@@ -107,6 +108,10 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
 
   // Customer terms: fill an empty due date, warn past the credit limit.
   const setDueDate = useCallback((value: string) => draft.setField('dueDate', value), [draft])
+  const setWarehouseId = useCallback(
+    (value: string | null) => draft.setField('warehouseId', value),
+    [draft],
+  )
   const creditBreachInfo = useCustomerTerms({
     customerId: draft.customers[0]?.id,
     transactionType: draft.transactionType,
@@ -131,6 +136,12 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
       issues={issues}
       stockWarning={
         <>
+          <InvoiceWarehouseSelect
+            t={t}
+            transactionType={draft.transactionType}
+            value={draft.warehouseId}
+            onChange={setWarehouseId}
+          />
           <OversoldWarning t={t} lines={oversoldLines} />
           <CreditLimitWarning
             t={t}

@@ -5,22 +5,23 @@
 //
 // Data and intent for the till. Web and desktop both mount this module; the
 // view below it holds no query of its own.
+//
+// The page is a list of the workspace's open tills. Selecting one shows its
+// transactions; the caller's own till is selected by default. Counting,
+// closing and bank transfers are not offered here.
 // ============================================
 
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
-  asList,
-  useAbandonedSessions,
-  useCloseSession,
+  useCashFlow,
   useCurrentSession,
   useOpenSession,
+  useOpenSessions,
   useRecordCashMovement,
+  useSession,
   useSessionLedger,
-  useCashFlow,
-  useBankTransfer,
 } from '@hisabche/api'
-import type { AbandonedSession } from '@hisabche/api'
 import { TillView } from '../till-view'
 
 export const TillContainer = memo(function TillContainer() {
@@ -33,30 +34,39 @@ export const TillContainer = memo(function TillContainer() {
   const [actionError, setActionError] = useState<string | null>(null)
 
   const current = useCurrentSession()
-  const abandoned = useAbandonedSessions()
+  const tills = useOpenSessions()
   const openSession = useOpenSession()
   const cashMovement = useRecordCashMovement()
-  const closeSession = useCloseSession()
 
-  const session = current.data?.session ?? null
-  const ledger = useSessionLedger(session?.id ?? null)
+  // Selected till: the caller's own open till unless another row was clicked.
+  const [selectedTillId, setSelectedTillId] = useState<string | null>(null)
+  const ownId = current.data?.session?.id ?? null
+  const firstId = tills.data?.[0]?.sessionId ?? null
+  const tillIds = tills.data?.map((till) => till.sessionId) ?? []
+  const stillOpen = selectedTillId !== null && tillIds.includes(selectedTillId)
+  const activeId = stillOpen ? selectedTillId : (ownId ?? firstId)
+  useEffect(() => {
+    if (selectedTillId !== null && tills.data && !stillOpen) setSelectedTillId(null)
+  }, [selectedTillId, stillOpen, tills.data])
+
+  const selected = useSession(activeId ?? '')
+  const ledger = useSessionLedger(activeId)
   const [cashFlowDays, setCashFlowDays] = useState<7 | 30 | 90>(7)
   const cashFlow = useCashFlow(cashFlowDays)
 
   /**
    * Server refusals are shown verbatim rather than replaced with a generic
-   * message. `POS_SESSION_NOT_OPEN` and `POS_VARIANCE_REASON_REQUIRED` each
-   * tell the cashier something they can act on; "an error occurred" does not.
+   * message. `POS_SESSION_ALREADY_OPEN` tells the person they already have a
+   * till open in this branch; "an error occurred" would not.
    */
   const report = useCallback((err: unknown) => {
     const message =
       (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
       (err as Error)?.message
-    // Known refusals in words; anything else exactly as the server sent it.
     const code = message ? /^([A-Z][A-Z_]{5,})/.exec(message)?.[1] : undefined
     setActionError(
-      code === 'POS_TRANSFER_EXCEEDS_CASH'
-        ? t('till.error_POS_TRANSFER_EXCEEDS_CASH', message)
+      code === 'POS_SESSION_ALREADY_OPEN'
+        ? t('till.error_POS_SESSION_ALREADY_OPEN', message)
         : (message ?? null),
     )
   }, [])
@@ -64,81 +74,70 @@ export const TillContainer = memo(function TillContainer() {
   const handleOpen = useCallback(
     (openingFloatMinor: number) => {
       setActionError(null)
-      openSession.mutate({ openingFloatMinor }, { onError: report })
-    },
-    [openSession, report],
-  )
-
-  const bankTransfer = useBankTransfer()
-  // One id per intended transfer: kept across retries of a failed attempt and
-  // replaced only after the server has recorded it.
-  const [transferId, setTransferId] = useState(() => crypto.randomUUID())
-
-  const handleBankTransfer = useCallback(
-    (input: { direction: 'to_bank' | 'from_bank'; amountMinor: number; reason: string }) => {
-      if (!session) return
-      setActionError(null)
-      bankTransfer.mutate(
-        { sessionId: session.id, transferId, ...input },
+      openSession.mutate(
+        { openingFloatMinor },
         {
-          onSuccess: () => setTransferId(crypto.randomUUID()),
+          onSuccess: (session: { id?: string } | undefined) => {
+            if (session?.id) setSelectedTillId(session.id)
+            void tills.refetch()
+          },
           onError: report,
         },
       )
     },
-    [bankTransfer, report, session, transferId],
+    [openSession, report, tills],
   )
 
-  const handleCashMovement = useCallback(
-    (input: { kind: 'cash_in' | 'cash_out'; amountMinor: number; reason: string }) => {
-      if (!session) return
+  const handleAddCash = useCallback(
+    (input: { amountMinor: number; reason: string }) => {
+      if (!activeId) return
       setActionError(null)
-      cashMovement.mutate({ sessionId: session.id, ...input }, { onError: report })
+      cashMovement.mutate(
+        { sessionId: activeId, kind: 'cash_in', ...input },
+        {
+          onSuccess: () => {
+            void ledger.refetch()
+            void tills.refetch()
+            void selected.refetch()
+            void cashFlow.refetch()
+          },
+          onError: report,
+        },
+      )
     },
-    [cashMovement, report, session],
-  )
-
-  const handleClose = useCallback(
-    (input: { countedCashMinor: number; varianceReason?: string }) => {
-      if (!session) return
-      setActionError(null)
-      closeSession.mutate({ sessionId: session.id, ...input }, { onError: report })
-    },
-    [closeSession, report, session],
+    [activeId, cashFlow, cashMovement, ledger, report, selected, tills],
   )
 
   const handleRefresh = useCallback(() => {
     setActionError(null)
     current.refetch()
-    abandoned.refetch()
-    if (session) ledger.refetch()
+    tills.refetch()
+    if (activeId) {
+      selected.refetch()
+      ledger.refetch()
+    }
     cashFlow.refetch()
-  }, [abandoned, cashFlow, current, ledger, session])
+  }, [activeId, cashFlow, current, ledger, selected, tills])
 
   return (
     <TillView
       t={t}
-      session={session}
-      totals={current.data?.totals ?? null}
-      abandoned={asList<AbandonedSession>(abandoned.data)}
-      abandonedError={abandoned.error ? (abandoned.error as Error).message : null}
-      isAbandonedLoading={abandoned.isLoading}
+      session={activeId ? (selected.data?.session ?? null) : null}
+      totals={activeId ? (selected.data?.totals ?? null) : null}
+      tills={tills.data ?? []}
+      tillsError={tills.error ? (tills.error as Error).message : null}
+      isTillsLoading={tills.isLoading}
+      selectedTillId={activeId}
+      onSelectTill={setSelectedTillId}
       isLoading={current.isLoading}
       error={current.error ? (current.error as Error).message : null}
-      isBusy={
-        openSession.isPending ||
-        cashMovement.isPending ||
-        closeSession.isPending ||
-        bankTransfer.isPending
-      }
+      isBusy={openSession.isPending || cashMovement.isPending}
       actionError={actionError}
       onRefresh={handleRefresh}
       onOpen={handleOpen}
-      onCashMovement={handleCashMovement}
-      onBankTransfer={handleBankTransfer}
-      onClose={handleClose}
+      onAddCash={handleAddCash}
       ledger={ledger.data?.entries ?? []}
-      isLedgerLoading={!!session && ledger.isLoading}
+      isLedgerLoading={!!activeId && ledger.isLoading}
       ledgerError={ledger.error ? (ledger.error as Error).message : null}
       dailyCashFlow={cashFlow.data ?? []}
       cashFlowDays={cashFlowDays}

@@ -53,6 +53,12 @@ export interface InvoiceDraftState {
   /** ISO date the invoice is dated. */
   date: string
   dueDate: string | null
+  /**
+   * Multi-warehouse: where this invoice's goods leave/arrive. Kept across
+   * invoices (a counter usually sells from one warehouse); null = the server
+   * uses the only warehouse, or none.
+   */
+  warehouseId: string | null
   notes: string
   paymentMethod: 'cash' | 'credit'
   isPaid: boolean
@@ -140,6 +146,7 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
     (set, get) => ({
       columns: defaultColumns(INITIAL_CURRENCY),
       columnsInitialised: false,
+      warehouseId: null,
       rates: {},
       ...blankDraft(defaultColumns(INITIAL_CURRENCY)),
 
@@ -354,6 +361,7 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
         transactionType: state.transactionType,
         date: state.date,
         dueDate: state.dueDate,
+        warehouseId: state.warehouseId,
         notes: state.notes,
         paymentMethod: state.paymentMethod,
         isPaid: state.isPaid,

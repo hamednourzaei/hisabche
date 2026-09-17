@@ -506,6 +506,31 @@ export interface DrawerEntry {
   reference: string
   /** For settlements: the payment id, so the UI can link to the document. */
   sourceId: string | null
+  /**
+   * Request #91 — profit % of the sale(s) this cash settled, from the
+   * accounting core. null: not a sale receipt, or no cost recorded.
+   */
+  marginPercent?: number | null
+}
+
+/**
+ * Margin of one payment over the invoices it settled, weighted by each
+ * invoice's net sales: (Σ revenue − Σ cost) / Σ revenue. A payment touching an
+ * invoice with no recorded cost gets no figure — a guessed 100% is worse.
+ */
+export function paymentMargin(
+  invoiceIds: string[],
+  margins: Map<string, { revenue: number; cost: number; costMissing: boolean }>,
+): number | null {
+  let revenue = 0
+  let cost = 0
+  for (const id of new Set(invoiceIds)) {
+    const margin = margins.get(id)
+    if (!margin || margin.costMissing) return null
+    revenue += margin.revenue
+    cost += margin.cost
+  }
+  return revenue === 0 ? null : Math.round(((revenue - cost) / revenue) * 10000) / 100
 }
 
 /**

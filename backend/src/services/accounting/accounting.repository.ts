@@ -666,4 +666,141 @@ export class AccountingRepository {
       credit: Number(row.total_credit) || 0,
     }))
   }
+
+  // ─── Profit report (request #91) ──────────────────────────────────────────
+  // Paged and chunked: a report someone decides on never reads one page.
+
+  private async pages<T>(
+    label: string,
+    page: (
+      from: number,
+      to: number,
+    ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  ) {
+    return fetchAllPages<T>(page, `Failed to read ${label}`)
+  }
+
+  private async profitDetails(workspaceId: string, invoiceIds: string[]) {
+    const lines: Record<string, any>[] = []
+    const consumptions: Record<string, any>[] = []
+    for (let i = 0; i < invoiceIds.length; i += 200) {
+      const chunk = invoiceIds.slice(i, i + 200)
+      const [chunkLines, chunkCosts] = await Promise.all([
+        this.pages<Record<string, any>>('invoice lines', (from, to) =>
+          supabase
+            .from('invoice_items')
+            .select('id, invoice_id, product_id, product_name, quantity, total_price')
+            .in('invoice_id', chunk)
+            .order('id', { ascending: true })
+            .range(from, to),
+        ),
+        this.pages<Record<string, any>>('cost consumptions', (from, to) =>
+          supabase
+            .from('cost_consumptions')
+            .select('id, consumer_id, product_id, amount, is_estimated')
+            .eq('workspace_id', workspaceId)
+            .eq('consumer_type', 'invoice')
+            .in('consumer_id', chunk)
+            .order('id', { ascending: true })
+            .range(from, to),
+        ),
+      ])
+      lines.push(...chunkLines)
+      consumptions.push(...chunkCosts)
+    }
+    return {
+      lines: lines.map((row) => ({
+        invoiceId: String(row.invoice_id),
+        productId: row.product_id ? String(row.product_id) : null,
+        productName: String(row.product_name ?? ''),
+        quantity: Number(row.quantity) || 0,
+        totalPrice: Number(row.total_price) || 0,
+      })),
+      consumptions: consumptions.map((row) => ({
+        invoiceId: row.consumer_id ? String(row.consumer_id) : null,
+        productId: String(row.product_id),
+        amount: Number(row.amount) || 0,
+        isEstimated: row.is_estimated === true,
+      })),
+    }
+  }
+
+  private mapProfitInvoice(row: Record<string, any>) {
+    return {
+      id: String(row.id),
+      currency: String(row.currency || 'AFN'),
+      subtotal: Number(row.subtotal) || 0,
+      discountTotal: Number(row.discount_total) || 0,
+    }
+  }
+
+  /** Sale invoices (not cancelled) dated in [from, to], their lines, costs and the period's payrolls. */
+  async profitSources(workspaceId: string, from: string, to: string) {
+    const [invoiceRows, payrollRows] = await Promise.all([
+      this.pages<Record<string, any>>('sale invoices', (a, b) =>
+        supabase
+          .from('invoices')
+          .select('id, currency, subtotal, discount_total')
+          .eq('workspace_id', workspaceId)
+          .eq('type', 'sale')
+          .neq('status', 'cancelled')
+          .gte('date', `${from}T00:00:00`)
+          .lte('date', `${to}T23:59:59.999`)
+          .order('id', { ascending: true })
+          .range(a, b),
+      ),
+      this.pages<Record<string, any>>('payrolls', (a, b) =>
+        supabase
+          .from('payrolls')
+          .select('id, currency, base_salary, bonuses, overtime_amount, status')
+          .eq('workspace_id', workspaceId)
+          .gte('period_end', from)
+          .lte('period_end', to)
+          .order('id', { ascending: true })
+          .range(a, b),
+      ),
+    ])
+    const invoices = invoiceRows.map((row) => this.mapProfitInvoice(row))
+    const details = await this.profitDetails(
+      workspaceId,
+      invoices.map((invoice) => invoice.id),
+    )
+    return {
+      invoices,
+      ...details,
+      payrolls: payrollRows
+        .filter((row) => !['cancelled', 'rejected'].includes(String(row.status ?? '')))
+        .map((row) => ({
+          currency: String(row.currency || 'AFN'),
+          baseSalary: Number(row.base_salary) || 0,
+          bonuses: Number(row.bonuses) || 0,
+          overtimeAmount: Number(row.overtime_amount) || 0,
+        })),
+    }
+  }
+
+  /** The same sources for specific invoices (the till's per-transaction margin). */
+  async profitSourcesForInvoices(workspaceId: string, invoiceIds: string[]) {
+    const unique = [...new Set(invoiceIds)]
+    if (unique.length === 0) return { invoices: [], lines: [], consumptions: [] }
+    const invoiceRows: Record<string, any>[] = []
+    for (let i = 0; i < unique.length; i += 200) {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id, currency, subtotal, discount_total')
+        .eq('workspace_id', workspaceId)
+        .eq('type', 'sale')
+        .in('id', unique.slice(i, i + 200))
+      if (error) throw new DatabaseError('Failed to read invoices', error)
+      invoiceRows.push(...(data ?? []))
+    }
+    const invoices = invoiceRows.map((row) => this.mapProfitInvoice(row))
+    return {
+      invoices,
+      ...(await this.profitDetails(
+        workspaceId,
+        invoices.map((invoice) => invoice.id),
+      )),
+    }
+  }
 }

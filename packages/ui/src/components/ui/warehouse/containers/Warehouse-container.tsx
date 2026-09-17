@@ -1,6 +1,12 @@
 // packages/ui/src/components/ui/warehouse/containers/Warehouse-container.tsx
 'use client'
 
+// Multi-warehouse (request #90). The stock tab has two states, chosen by
+// `?warehouse=` so a warehouse can be linked to and survives a reload:
+//   no param   → business-wide stat cards + the warehouse list («افزودن انبار»)
+//   ?warehouse → that warehouse's stat cards + its products («افزودن کالا به انبار»)
+// `?warehouse=unassigned` is the stock that is in no warehouse yet.
+
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -11,7 +17,16 @@ import { StockHistoryDrawer } from '../stock-history-drawer'
 import { fmt } from '../../../../lib/warehouse/warehouse-format'
 import type { Product } from '../../../../lib/warehouse/warehouse-types'
 import { useQueryClient } from '@tanstack/react-query'
-import { productKeys, useStockHistory } from '@hisabche/api'
+import {
+  productKeys,
+  useAssignWarehouseStock,
+  useCreateWarehouse,
+  useStockHistory,
+  useWarehouseDetail,
+  useWarehouseOverview,
+} from '@hisabche/api'
+import { WarehouseListTable, UNASSIGNED_WAREHOUSE_ID } from '../warehouse-list-table'
+import { AddWarehouseDialog, AssignStockDialog } from '../warehouse-dialogs'
 
 /**
  * H4 — the server's own cap on `GET /products/:id/stock-history`.
@@ -39,10 +54,28 @@ export function warehouseContainer() {
   const searchParams = useSearchParams()
   const addParam = searchParams?.get('add')
   const queryParam = searchParams?.get('q')
+  const warehouseParam = searchParams?.get('warehouse') ?? null
 
   const [search, setSearch] = useState(queryParam ?? '')
   const [showAddModal, setShowAddModal] = useState(addParam === 'true')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [showAddWarehouse, setShowAddWarehouse] = useState(false)
+  const [showAssign, setShowAssign] = useState(false)
+
+  const overview = useWarehouseOverview()
+  const detail = useWarehouseDetail(warehouseParam)
+  // The unassigned list feeds «افزودن کالا به انبار»; only read when the dialog is open.
+  const unassignedDetail = useWarehouseDetail(showAssign ? UNASSIGNED_WAREHOUSE_ID : null)
+  const createWarehouse = useCreateWarehouse()
+  const assignStock = useAssignWarehouseStock(warehouseParam ?? '')
+
+  const openWarehouse = useCallback(
+    (id: string | null) => {
+      setSearch('')
+      router.replace(id ? `/warehouse?warehouse=${encodeURIComponent(id)}` : '/warehouse')
+    },
+    [router],
+  )
 
   // ─── H4 — stock history and reorder ──────────────────────────────────────
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null)
@@ -96,6 +129,25 @@ export function warehouseContainer() {
 
   const handleNavigate = useCallback((id: string) => router.push(`/warehouse/${id}`), [router])
 
+  // One warehouse's products in the shape the product table already renders.
+  // `quantity` is the quantity IN THIS WAREHOUSE.
+  const warehouseProducts: Product[] = useMemo(
+    () =>
+      (detail.data?.products ?? [])
+        .filter((product) => !search || product.name.toLowerCase().includes(search.toLowerCase()))
+        .map((product) => ({
+          id: product.id,
+          name: product.name,
+          quantity: product.quantity,
+          sellPrice: product.sellPrice,
+          buyPrice: product.buyPrice,
+          minStockLevel: product.minStockLevel ?? 5,
+          unit: product.unit,
+          category: '',
+        })),
+    [detail.data, search],
+  )
+
   const handleOpenAddModal = useCallback(() => setShowAddModal(true), [])
 
   // ✅ FIX: بعد از بستن مودال و ایجاد محصول، کش را پاک کن
@@ -113,22 +165,73 @@ export function warehouseContainer() {
     refetch()
   }, [queryClient, refetch])
 
+  const inWarehouse = warehouseParam !== null
+  const isUnassigned = warehouseParam === UNASSIGNED_WAREHOUSE_ID
+  const warehouseName = isUnassigned
+    ? safeT('warehouse.unassigned', 'بدون انبار')
+    : (detail.data?.warehouse?.name ?? '')
+
   const viewProps = {
     t: safeT,
     fmt,
     search,
     onSearchChange: setSearch,
-    onOpenAddModal: handleOpenAddModal,
     deletingId,
-    products,
-    isLoading,
-    summary,
     currencies: CURRENCIES,
     onNavigate: handleNavigate,
     onOpenHistory: handleOpenHistory,
     onDelete,
     stockStatus,
     stockLabel,
+    ...(inWarehouse
+      ? {
+          title: warehouseName || safeT('nav.stock', 'موجودی'),
+          description: isUnassigned
+            ? safeT('warehouse.unassignedHint', 'موجودی‌ای که هنوز در هیچ انباری ثبت نشده')
+            : detail.data?.warehouse?.location ||
+              safeT('warehouse.warehouseStock', 'کالاهای این انبار'),
+          onBack: () => openWarehouse(null),
+          // No «add» inside the unassigned pseudo-warehouse: its stock is added
+          // to a real warehouse from that warehouse.
+          onOpenAddModal: isUnassigned ? () => openWarehouse(null) : () => setShowAssign(true),
+          actionLabel: isUnassigned
+            ? safeT('warehouse.backToList', 'بازگشت به فهرست انبارها')
+            : safeT('warehouse.assignTitle', 'افزودن کالا به انبار'),
+          products: warehouseProducts,
+          isLoading: detail.isLoading,
+          summary: detail.isError ? null : (detail.data?.summary ?? null),
+        }
+      : {
+          onOpenAddModal: () => setShowAddWarehouse(true),
+          actionLabel: safeT('warehouse.addWarehouse', 'افزودن انبار'),
+          products,
+          isLoading,
+          summary,
+          children: overview.isError ? (
+            <p
+              role="alert"
+              className="py-8 text-center text-sm text-[hsl(var(--color-destructive))]"
+            >
+              {safeT('warehouse.loadError', 'فهرست انبارها خوانده نشد.')}{' '}
+              <button type="button" className="underline" onClick={() => void overview.refetch()}>
+                {safeT('common.retry', 'تلاش دوباره')}
+              </button>
+            </p>
+          ) : overview.isLoading ? (
+            <p className="py-8 text-center text-sm text-[hsl(var(--fg-secondary))]">
+              {safeT('common.loading', 'در حال بارگذاری…')}
+            </p>
+          ) : (
+            <WarehouseListTable
+              t={safeT}
+              fmt={fmt}
+              warehouses={overview.data?.warehouses ?? []}
+              unassigned={overview.data?.unassigned ?? null}
+              onOpen={(id) => openWarehouse(id)}
+              onAdd={() => setShowAddWarehouse(true)}
+            />
+          ),
+        }),
   }
 
   return (
@@ -139,6 +242,28 @@ export function warehouseContainer() {
         onCreated={handleProductCreated}
       />
       <WarehouseView {...viewProps} />
+
+      <AddWarehouseDialog
+        t={safeT}
+        open={showAddWarehouse}
+        onClose={() => setShowAddWarehouse(false)}
+        isPending={createWarehouse.isPending}
+        onCreate={(input) => createWarehouse.mutateAsync(input)}
+      />
+
+      {inWarehouse && !isUnassigned ? (
+        <AssignStockDialog
+          t={safeT}
+          fmt={fmt}
+          open={showAssign}
+          onClose={() => setShowAssign(false)}
+          warehouseName={warehouseName}
+          unassigned={unassignedDetail.data?.products ?? []}
+          isLoadingUnassigned={unassignedDetail.isLoading}
+          isPending={assignStock.isPending}
+          onAssign={(input) => assignStock.mutateAsync(input)}
+        />
+      ) : null}
 
       {/* H4 — the movements behind an on-hand figure. */}
       <StockHistoryDrawer

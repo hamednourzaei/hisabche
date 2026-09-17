@@ -55,6 +55,7 @@ import {
   trialBalanceTotals,
 } from './accounting.reports'
 import { getCashFlow, getCustomerDebtReport } from './operational-reports'
+import { buildProfitReport, invoiceMargins, type ProfitReport } from './profit-report.domain'
 import { carryForward, planClosing, type AccountBalance } from './year-end.domain'
 import type {
   LedgerPort,
@@ -699,6 +700,44 @@ export class AccountingService implements LedgerPort {
 
     await memoryCache.set(cacheKey, result, REPORT_TTL_SECONDS)
     return result
+  }
+
+  /** Request #91 — per-product profit, salaries and net profit for a range, in one currency. Not cached. */
+  async getProfitReport(
+    ctx: TenancyContext,
+    fromDate: string,
+    toDate: string,
+    currency: string,
+  ): Promise<ProfitReport> {
+    const from = dateOnly(fromDate)
+    const to = dateOnly(toDate)
+    if (from > to) throw new ValidationError('PROFIT_REPORT_RANGE_INVALID')
+    const sources = await this.repo.profitSources(ctx.workspaceId, from, to)
+    return buildProfitReport({ from, to, currency, ...sources })
+  }
+
+  /** Per-product profit in every currency present (insights' «profit change» explanation). */
+  async getProductProfits(ctx: TenancyContext, fromDate: string, toDate: string) {
+    const from = dateOnly(fromDate)
+    const to = dateOnly(toDate)
+    const sources = await this.repo.profitSources(ctx.workspaceId, from, to)
+    const currencies = [...new Set(sources.invoices.map((invoice) => invoice.currency))]
+    return currencies.flatMap((currency) =>
+      buildProfitReport({ from, to, currency, ...sources, payrolls: [] }).products.map((row) => ({
+        key:
+          currencies.length > 1
+            ? `${row.productId ?? row.name}:${currency}`
+            : (row.productId ?? row.name),
+        label: currencies.length > 1 ? `${row.name} (${currency})` : row.name,
+        value: row.profit,
+      })),
+    )
+  }
+
+  /** Profit % of each sale invoice — the till shows it beside each transaction. */
+  async getInvoiceMargins(ctx: TenancyContext, invoiceIds: string[]) {
+    const sources = await this.repo.profitSourcesForInvoices(ctx.workspaceId, invoiceIds)
+    return invoiceMargins(sources.invoices, sources.lines, sources.consumptions)
   }
 
   async getIncomeStatement(
