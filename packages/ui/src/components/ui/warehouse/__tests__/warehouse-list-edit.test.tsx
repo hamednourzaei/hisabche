@@ -57,3 +57,13 @@ describe('warehouse list — edit', () => {
     expect(onOpen).toHaveBeenCalledWith('w1')
   })
 })
+
+describe('the edit button is reachable without scrolling', () => {
+  it('sits in the second column, beside the name — not past the totals', () => {
+    const { view } = setup()
+    const headers = view.getAllByRole('columnheader').map((cell) => cell.textContent?.trim() ?? '')
+    // The table scrolls horizontally on a narrow screen and has no card view,
+    // so a last-column action is off-screen on a phone.
+    expect(headers[1]).toContain('عملیات')
+  })
+})

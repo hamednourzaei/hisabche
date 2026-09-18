@@ -8,7 +8,7 @@ import { FOCUS_RING } from '../focus-ring'
 import { EmptyState } from '../empty-state'
 import { BentoStats, type BentoStat } from '../bento-stats'
 import { WarehouseProductList } from './warehouse-product-list'
-import { Plus, Check, ChevronRight, DollarSign, Package, AlertTriangle } from 'lucide-react'
+import { Plus, Check, ChevronRight, DollarSign, Package, Pencil, AlertTriangle } from 'lucide-react'
 import type { Product, Currency } from '../../../lib/warehouse/warehouse-types'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -28,6 +28,8 @@ interface WarehouseViewProps {
   description?: string | undefined
   /** Set inside one warehouse: back to the warehouse list. */
   onBack?: (() => void) | undefined
+  /** «ویرایش» beside the title — renaming the warehouse you are looking at. */
+  onEditCurrent?: (() => void) | undefined
   /**
    * Replaces the product table — the warehouse list uses it for the
    * warehouses table. Omit to show `products`.
@@ -85,6 +87,7 @@ const WarehouseHeader = memo(function WarehouseHeader({
   title,
   description,
   onBack,
+  onEditCurrent,
 }: {
   t: (key: string, fallback?: string) => string
   onOpenAddModal: () => void
@@ -92,6 +95,7 @@ const WarehouseHeader = memo(function WarehouseHeader({
   title: string
   description: string
   onBack?: (() => void) | undefined
+  onEditCurrent?: (() => void) | undefined
 }) {
   return (
     // Title and action share one row at every width, mobile included.
@@ -111,8 +115,22 @@ const WarehouseHeader = memo(function WarehouseHeader({
           </button>
         ) : null}
         <div className="min-w-0 space-y-1.5">
-          <h1 className="truncate text-2xl font-bold sm:text-3xl text-[hsl(var(--fg-primary))]">
-            {title}
+          <h1 className="flex items-center gap-2 text-2xl font-bold sm:text-3xl text-[hsl(var(--fg-primary))]">
+            <span className="truncate">{title}</span>
+            {onEditCurrent ? (
+              <button
+                type="button"
+                onClick={onEditCurrent}
+                aria-label={t('warehouse.editWarehouse', 'ویرایش انبار')}
+                className={cn(
+                  'inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--surface-muted))]',
+                  FOCUS_RING,
+                )}
+              >
+                <Pencil className="size-3.5" aria-hidden="true" />
+                {t('common.edit', 'ویرایش')}
+              </button>
+            ) : null}
           </h1>
           <p className="text-sm text-[hsl(var(--fg-secondary))]">{description}</p>
         </div>
@@ -248,6 +266,7 @@ export const WarehouseView = memo(function WarehouseView({
   title,
   description,
   onBack,
+  onEditCurrent,
   children,
   deletingId,
   products,
@@ -317,6 +336,7 @@ export const WarehouseView = memo(function WarehouseView({
         title={title ?? t('nav.stock', 'موجودی')}
         description={description ?? t('nav.stock_description', 'چه چیزی داریم و چه چیزی کم است')}
         onBack={onBack}
+        onEditCurrent={onEditCurrent}
       />
 
       {/* همان کامپوننت و گرید invoices — فقط داده‌ی warehouse */}

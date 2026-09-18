@@ -81,6 +81,29 @@ export const WarehouseListTable = memo(function WarehouseListTable({
         ),
       },
       {
+        id: 'actions',
+        labelKey: 'warehouse.actions',
+        labelFallback: 'عملیات',
+        align: 'end',
+        locked: true,
+        render: (row) =>
+          row.unassigned ? null : (
+            <button
+              type="button"
+              // The row click opens the warehouse; this edits it.
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit({ id: row.id, name: row.name, location: row.location })
+              }}
+              aria-label={t('warehouse.editWarehouse', 'ویرایش انبار')}
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--surface-muted))]"
+            >
+              <Pencil className="size-3.5" aria-hidden="true" />
+              {t('common.edit', 'ویرایش')}
+            </button>
+          ),
+      },
+      {
         id: 'location',
         labelKey: 'warehouse.location',
         labelFallback: 'محل',
@@ -133,29 +156,6 @@ export const WarehouseListTable = memo(function WarehouseListTable({
             {fmt(row.summary.outOfStockCount)}
           </span>
         ),
-      },
-      {
-        id: 'actions',
-        labelKey: 'warehouse.actions',
-        labelFallback: 'عملیات',
-        align: 'end',
-        locked: true,
-        render: (row) =>
-          row.unassigned ? null : (
-            <button
-              type="button"
-              // The row click opens the warehouse; this edits it.
-              onClick={(e) => {
-                e.stopPropagation()
-                onEdit({ id: row.id, name: row.name, location: row.location })
-              }}
-              aria-label={t('warehouse.editWarehouse', 'ویرایش انبار')}
-              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--surface-muted))]"
-            >
-              <Pencil className="size-3.5" aria-hidden="true" />
-              {t('common.edit', 'ویرایش')}
-            </button>
-          ),
       },
     ],
     [fmt, onEdit, t],

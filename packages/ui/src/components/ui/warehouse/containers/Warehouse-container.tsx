@@ -222,6 +222,18 @@ export function warehouseContainer() {
               safeT('warehouse.warehouseStock', 'کالاهای این انبار'),
           // Back is the arrow beside the title; the action button ADDS.
           onBack: () => openWarehouse(null),
+          // Renaming from inside the warehouse too: on a narrow screen the
+          // table's own edit button sits past the horizontal scroll.
+          ...(isUnassigned || !detail.data?.warehouse
+            ? {}
+            : {
+                onEditCurrent: () =>
+                  setEditingWarehouse({
+                    id: detail.data!.warehouse!.id,
+                    name: detail.data!.warehouse!.name,
+                    location: detail.data!.warehouse!.location,
+                  }),
+              }),
           // «بدون انبار» holds stock that is in no warehouse, and that is
           // exactly where a brand-new product's opening stock lands — so its
           // action is the product modal (name, unit, quantity, buy/sell price).
