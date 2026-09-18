@@ -30,6 +30,7 @@ import {
 } from '@hisabche/api'
 import { WarehouseListTable, UNASSIGNED_WAREHOUSE_ID } from '../warehouse-list-table'
 import { AddWarehouseDialog, AssignStockDialog } from '../warehouse-dialogs'
+import { AddToWarehouseModal } from '../add-to-warehouse-modal'
 
 /**
  * H4 — the server's own cap on `GET /products/:id/stock-history`.
@@ -71,6 +72,7 @@ export function warehouseContainer() {
   } | null>(null)
   const updateWarehouse = useUpdateWarehouse()
   const [showAssign, setShowAssign] = useState(false)
+  const [showAddToWarehouse, setShowAddToWarehouse] = useState(false)
 
   const overview = useWarehouseOverview()
   const detail = useWarehouseDetail(warehouseParam)
@@ -238,10 +240,19 @@ export function warehouseContainer() {
           // exactly where a brand-new product's opening stock lands — so its
           // action is the product modal (name, unit, quantity, buy/sell price).
           // A real warehouse instead takes stock that already exists.
-          onOpenAddModal: isUnassigned ? () => setShowAddModal(true) : () => setShowAssign(true),
+          onOpenAddModal: isUnassigned
+            ? () => setShowAddModal(true)
+            : () => setShowAddToWarehouse(true),
           actionLabel: isUnassigned
             ? safeT('warehouse.addProduct', 'افزودن محصول')
-            : safeT('warehouse.assignTitle', 'افزودن کالا به انبار'),
+            : safeT('warehouse.addToWarehouse', 'افزودن به انبار'),
+          // Moving stock that is already in the business but in no warehouse.
+          ...(isUnassigned
+            ? {}
+            : {
+                secondaryActionLabel: safeT('warehouse.assignTitle', 'افزودن کالا به انبار'),
+                onSecondaryAction: () => setShowAssign(true),
+              }),
           products: warehouseProducts,
           isLoading: detail.isLoading,
           summary: detail.isError ? null : (detail.data?.summary ?? null),
@@ -309,6 +320,17 @@ export function warehouseContainer() {
             : Promise.resolve()
         }
       />
+
+      {inWarehouse && !isUnassigned && detail.data?.warehouse ? (
+        <AddToWarehouseModal
+          t={safeT}
+          open={showAddToWarehouse}
+          onClose={() => setShowAddToWarehouse(false)}
+          warehouseId={detail.data.warehouse.id}
+          warehouseName={detail.data.warehouse.name}
+          onCreated={refreshStock}
+        />
+      ) : null}
 
       {inWarehouse && !isUnassigned ? (
         <AssignStockDialog

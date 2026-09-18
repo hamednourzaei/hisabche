@@ -23,6 +23,9 @@ interface WarehouseViewProps {
   /** The header's primary action: «افزودن انبار» on the list, «افزودن کالا به انبار» in a warehouse. */
   onOpenAddModal: () => void
   actionLabel?: string | undefined
+  /** A second, quieter action beside it — «افزودن کالا به انبار» in a warehouse. */
+  secondaryActionLabel?: string | undefined
+  onSecondaryAction?: (() => void) | undefined
   /** Header title/subtitle; default «موجودی». A warehouse passes its own name. */
   title?: string | undefined
   description?: string | undefined
@@ -84,6 +87,8 @@ const WarehouseHeader = memo(function WarehouseHeader({
   t,
   onOpenAddModal,
   actionLabel,
+  secondaryActionLabel,
+  onSecondaryAction,
   title,
   description,
   onBack,
@@ -92,6 +97,8 @@ const WarehouseHeader = memo(function WarehouseHeader({
   t: (key: string, fallback?: string) => string
   onOpenAddModal: () => void
   actionLabel: string
+  secondaryActionLabel?: string | undefined
+  onSecondaryAction?: (() => void) | undefined
   title: string
   description: string
   onBack?: (() => void) | undefined
@@ -136,23 +143,38 @@ const WarehouseHeader = memo(function WarehouseHeader({
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={onOpenAddModal}
-        className={cn(
-          'inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 sm:px-5',
-          'min-h-[44px] sm:min-h-[40px]',
-          'text-sm font-bold text-white',
-          'bg-[image:var(--gradient-brand)]',
-          'shadow-sm shadow-[hsl(var(--color-primary)/0.15)]',
-          'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
-          FOCUS_RING,
-          'motion-reduce:transition-none',
-        )}
-      >
-        <Plus className="size-4" aria-hidden="true" />
-        <span className="whitespace-nowrap">{actionLabel}</span>
-      </button>
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+        {secondaryActionLabel && onSecondaryAction ? (
+          <button
+            type="button"
+            onClick={onSecondaryAction}
+            className={cn(
+              'inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[hsl(var(--border-default))] px-4 text-sm font-medium sm:min-h-[40px]',
+              'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]',
+              FOCUS_RING,
+            )}
+          >
+            {secondaryActionLabel}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onOpenAddModal}
+          className={cn(
+            'inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 sm:px-5',
+            'min-h-[44px] sm:min-h-[40px]',
+            'text-sm font-bold text-white',
+            'bg-[image:var(--gradient-brand)]',
+            'shadow-sm shadow-[hsl(var(--color-primary)/0.15)]',
+            'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
+            FOCUS_RING,
+            'motion-reduce:transition-none',
+          )}
+        >
+          <Plus className="size-4" aria-hidden="true" />
+          <span className="whitespace-nowrap">{actionLabel}</span>
+        </button>
+      </div>
     </div>
   )
 })
@@ -263,6 +285,8 @@ export const WarehouseView = memo(function WarehouseView({
   onSearchChange,
   onOpenAddModal,
   actionLabel,
+  secondaryActionLabel,
+  onSecondaryAction,
   title,
   description,
   onBack,
@@ -333,6 +357,8 @@ export const WarehouseView = memo(function WarehouseView({
         t={t}
         onOpenAddModal={onOpenAddModal}
         actionLabel={actionLabel ?? t('warehouse.addWarehouse', 'افزودن انبار')}
+        secondaryActionLabel={secondaryActionLabel}
+        onSecondaryAction={onSecondaryAction}
         title={title ?? t('nav.stock', 'موجودی')}
         description={description ?? t('nav.stock_description', 'چه چیزی داریم و چه چیزی کم است')}
         onBack={onBack}

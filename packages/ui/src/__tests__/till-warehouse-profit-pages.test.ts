@@ -98,8 +98,9 @@ describe('#92 till row actions, warehouse edit, manual rates, invoice warehouse'
 describe('#93 «بدون انبار» adds a product; warehouses can be renamed', () => {
   const container = code(ui('warehouse/containers/Warehouse-container.tsx'))
   it('the unassigned view opens the product modal, not a back link', () => {
-    expect(container).toContain(
-      'isUnassigned ? () => setShowAddModal(true) : () => setShowAssign(true)',
+    // In a real warehouse the same button now opens «افزودن به انبار» (#94).
+    expect(container.replace(/\s+/g, ' ')).toContain(
+      'isUnassigned ? () => setShowAddModal(true) : () => setShowAddToWarehouse(true)',
     )
     expect(container).toContain("safeT('warehouse.addProduct'")
   })
@@ -114,6 +115,56 @@ describe('#93 «بدون انبار» adds a product; warehouses can be renamed'
     expect(container).toContain('onEdit={setEditingWarehouse}')
     expect(container).toContain(
       'updateWarehouse.mutateAsync({ id: editingWarehouse.id, ...input })',
+    )
+  })
+})
+
+describe('#94/#95 add-to-warehouse modal, product code, expiry', () => {
+  const modal = code(ui('warehouse/add-to-warehouse-modal.tsx'))
+  const picker = code(ui('invoice-builder/grid/description-cell.tsx'))
+  const expiry = code(ui('warehouse-detail/product-expiry-panel.tsx'))
+
+  it('the modal has code, unit + custom unit, quantity, both prices and ONE minimum', () => {
+    for (const key of [
+      'productCode',
+      'unit',
+      'quantity',
+      'buyPrice',
+      'sellPrice',
+      'minStock',
+      'addUnit',
+    ]) {
+      expect(modal, key).toContain(`warehouse.${key}`)
+    }
+    // One minimum-stock input, not a second reorder point.
+    expect((modal.match(/wh-product-min/g) ?? []).length).toBe(1)
+    expect(modal).toContain('warehouseId,')
+  })
+
+  it('expiry is behind a switch and recorded as a batch', () => {
+    expect(modal).toContain('<Switch')
+    expect(modal).toContain('receiveBatch.mutateAsync({')
+    expect(modal).toContain('expiryDate: form.expiryDate')
+  })
+
+  it('the invoice picker shows the code and the stock of the invoice warehouse', () => {
+    expect(picker).toContain('useInvoiceWarehouseStock()')
+    expect(picker).toContain('warehouseStock.quantityOf(product.id)')
+    expect(picker).toContain('warehouseStock.warehouseName')
+    expect(picker).toContain('{product.sku}')
+  })
+
+  it('a sale is blocked on the warehouse figure, a purchase never is', () => {
+    expect(picker).toContain(
+      "transactionType !== 'purchase' && typeof stock === 'number' && stock <= 0",
+    )
+  })
+
+  it('the product page can correct an expiry date', () => {
+    expect(expiry).toContain('useBatches(productId)')
+    expect(expiry).toContain('useUpdateBatchDates()')
+    expect(code(ui('warehouse-detail/containers/warehouse-detail-container.tsx'))).toContain(
+      '<ProductExpiryPanel',
     )
   })
 })

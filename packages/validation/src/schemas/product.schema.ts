@@ -48,11 +48,19 @@ export type Product = z.infer<typeof productSchema>
 // Create Product
 // ============================================
 
-export const createProductSchema = productSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-})
+export const createProductSchema = productSchema
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    /**
+     * Multi-warehouse: put this product's opening stock IN a warehouse.
+     * Omitted, the stock exists but sits in no warehouse («بدون انبار»).
+     */
+    warehouseId: uuidSchema.nullable().optional(),
+  })
 
 export type CreateProduct = z.infer<typeof createProductSchema>
 

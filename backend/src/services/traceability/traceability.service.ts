@@ -170,6 +170,39 @@ export class TraceabilityService {
   }
 
   /**
+   * Correct a batch's expiry (request #95) — the date was mistyped, or the
+   * label says something else.
+   *
+   * ⚠️ ONLY the dates. Quantities are what the batch has already given out and
+   * taken in; letting a screen rewrite them would break the FEFO queue and the
+   * lot trail that says which goods went to which invoice.
+   */
+  async updateBatchDates(
+    ctx: TenancyContext,
+    batchId: string,
+    input: { expiryDate?: string | null | undefined; manufacturedDate?: string | null | undefined },
+  ): Promise<StockBatch> {
+    const patch: Record<string, string | null> = {}
+    if (input.expiryDate !== undefined) patch.expiry_date = input.expiryDate
+    if (input.manufacturedDate !== undefined) patch.manufactured_date = input.manufacturedDate
+    if (Object.keys(patch).length === 0) throw new ValidationError('BATCH_NOTHING_TO_UPDATE')
+
+    const { data, error } = await supabase
+      .from('stock_batches')
+      .update(patch)
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', batchId)
+      .select(BATCH_COLUMNS)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Failed to update the batch', error)
+    if (!data) throw new NotFoundError('Batch')
+
+    await this.invalidate(ctx.workspaceId)
+    return mapBatch(data)
+  }
+
+  /**
    * Which batches an issue would take, without taking them.
    *
    * FEFO by default: goods received later can expire sooner, and FIFO would

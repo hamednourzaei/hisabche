@@ -40,6 +40,8 @@
 // ============================================
 
 import { supabase } from '../../db'
+import { ConflictError, DatabaseError } from '../../errors/database.error'
+import { ValidationError } from '../../errors/validation.error'
 
 export interface UnitRecord {
   /**
@@ -232,8 +234,54 @@ interface UnitRow {
   is_base: boolean
 }
 
+function mapUnitRow(row: UnitRow): UnitRecord {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    nameFa: row.name_fa ?? null,
+    symbol: row.symbol ?? null,
+    // The column is a free text with a CHECK; anything outside the four known
+    // dimensions is treated as 'count' rather than cast blindly.
+    dimension: (['weight', 'length', 'volume', 'count'] as const).includes(
+      row.dimension as UnitRecord['dimension'],
+    )
+      ? (row.dimension as UnitRecord['dimension'])
+      : 'count',
+    conversionFactor: Number(row.conversion_factor) || 1,
+    isBase: row.is_base === true,
+  }
+}
+
 export class UnitsService {
-  async list(): Promise<{ units: readonly UnitRecord[]; source: 'table' | 'seed' }> {
+  /**
+   * The seeded units plus THIS workspace's own (request #94).
+   *
+   * `workspaceId` omitted → global only. A workspace's unit is never served to
+   * another: the `units` table is shared, so the filter is the whole boundary.
+   * Before docs/custom-units-migration.sql the column is absent; the read then
+   * falls back to the unfiltered list rather than failing the picker.
+   */
+  async list(
+    workspaceId?: string,
+  ): Promise<{ units: readonly UnitRecord[]; source: 'table' | 'seed' }> {
+    if (workspaceId) {
+      const scoped = await supabase
+        .from('units')
+        .select('id, code, name, name_fa, symbol, dimension, conversion_factor, is_base')
+        .eq('is_active', true)
+        .or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`)
+        .order('dimension', { ascending: true })
+        .order('conversion_factor', { ascending: true })
+      if (!scoped.error && scoped.data && scoped.data.length > 0) {
+        return { units: (scoped.data as UnitRow[]).map(mapUnitRow), source: 'table' }
+      }
+      // 42703 / PGRST204: the migration has not run here. Fall through.
+      if (scoped.error && !SCHEMA_ABSENT.has(scoped.error.code) && scoped.error.code !== '42703') {
+        throw scoped.error
+      }
+    }
+
     const { data, error } = await supabase
       .from('units')
       .select('id, code, name, name_fa, symbol, dimension, conversion_factor, is_base')
@@ -272,5 +320,52 @@ export class UnitsService {
       })),
       source: 'table',
     }
+  }
+
+  /**
+   * A unit this workspace invented («طاقه»). Dimension 'count' with factor 1:
+   * the app cannot convert a word nobody defined, and pretending it can would
+   * make totals wrong rather than missing.
+   */
+  async create(
+    workspaceId: string,
+    input: { name: string; symbol?: string | undefined },
+  ): Promise<UnitRecord> {
+    const name = input.name.trim()
+    if (!name) throw new ValidationError('UNIT_NAME_REQUIRED')
+
+    // The code is the app's identifier; the name is what people read. Latin
+    // letters only, so a Persian name still yields a usable code.
+    const slug = name
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .toLowerCase()
+    const code = `ws-${slug || Math.random().toString(36).slice(2, 8)}`
+
+    const { data, error } = await supabase
+      .from('units')
+      .insert({
+        code,
+        name,
+        name_fa: name,
+        symbol: input.symbol?.trim() || null,
+        dimension: 'count',
+        conversion_factor: 1,
+        is_base: false,
+        is_active: true,
+        workspace_id: workspaceId,
+      })
+      .select('id, code, name, name_fa, symbol, dimension, conversion_factor, is_base')
+      .single()
+
+    if (error) {
+      if (error.code === '42703' || error.code === 'PGRST204') {
+        throw new ConflictError('UNIT_CUSTOM_MIGRATION_REQUIRED')
+      }
+      if (error.code === '23505') throw new ConflictError('UNIT_ALREADY_EXISTS')
+      throw new DatabaseError('Failed to create the unit', error)
+    }
+
+    return mapUnitRow(data as UnitRow)
   }
 }

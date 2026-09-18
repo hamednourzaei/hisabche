@@ -58,12 +58,20 @@ describe('warehouse list — edit', () => {
   })
 })
 
-describe('the edit button is reachable without scrolling', () => {
-  it('sits in the second column, beside the name — not past the totals', () => {
+describe('the «عملیات» column', () => {
+  it('is the LAST column, and the button sits under its own header', () => {
     const { view } = setup()
     const headers = view.getAllByRole('columnheader').map((cell) => cell.textContent?.trim() ?? '')
-    // The table scrolls horizontally on a narrow screen and has no card view,
-    // so a last-column action is off-screen on a phone.
-    expect(headers[1]).toContain('عملیات')
+    expect(headers.at(-1)).toContain('عملیات')
+
+    // Same column index in the row as the header, so the button is under it.
+    const header = view.getAllByRole('columnheader').at(-1)!
+    const headerIndex = [...header.parentElement!.children].indexOf(header)
+    const button = view.getAllByRole('button', { name: 'ویرایش انبار' })[0]!
+    const cell = button.closest('td')!
+    expect([...cell.parentElement!.children].indexOf(cell)).toBe(headerIndex)
+    // Header and cell are both end-aligned, so they line up.
+    expect(header.className).toContain('text-end')
+    expect(cell.className).toContain('text-end')
   })
 })

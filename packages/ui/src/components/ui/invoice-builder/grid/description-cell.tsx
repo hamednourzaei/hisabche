@@ -34,6 +34,7 @@ import { useInvoiceDraftStore } from '@hisabche/store'
 
 import { cn } from '../../../../lib/utils'
 import { productPrice, readProducts, type PickerProduct } from '../../../../lib/invoices/products'
+import { useInvoiceWarehouseStock } from '../../../../hooks/invoices/use-invoice-warehouse-stock'
 
 export interface DescriptionCellProps {
   value: string
@@ -102,8 +103,18 @@ export const DescriptionCell = memo(function DescriptionCell({
   // Hiding it would make a shopkeeper think the item was deleted. And only a
   // SALE is blocked: a purchase is exactly how an exhausted product comes back.
   const transactionType = useInvoiceDraftStore((state) => state.transactionType)
-  const isExhausted = (product: PickerProduct) =>
-    transactionType !== 'purchase' && typeof product.quantity === 'number' && product.quantity <= 0
+  // With a warehouse on the invoice, «how many» means «how many HERE».
+  const warehouseStock = useInvoiceWarehouseStock()
+  const stockOf = (product: PickerProduct): number | null =>
+    warehouseStock.inWarehouse
+      ? warehouseStock.quantityOf(product.id)
+      : typeof product.quantity === 'number'
+        ? product.quantity
+        : null
+  const isExhausted = (product: PickerProduct) => {
+    const stock = stockOf(product)
+    return transactionType !== 'purchase' && typeof stock === 'number' && stock <= 0
+  }
 
   /**
    * Measure the cell and decide which way the list opens.
@@ -339,6 +350,14 @@ export const DescriptionCell = memo(function DescriptionCell({
                     >
                       <span className="flex min-w-0 items-center gap-1.5">
                         <span className="min-w-0 truncate">{product.name}</span>
+                        {product.sku ? (
+                          <span
+                            dir="ltr"
+                            className="shrink-0 rounded bg-[hsl(var(--surface-muted))] px-1.5 py-0.5 text-[10px] text-[hsl(var(--fg-tertiary))]"
+                          >
+                            {product.sku}
+                          </span>
+                        ) : null}
                         {isExhausted(product) ? (
                           <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]">
                             {t('warehouse.outOfStock', 'تمام شده')}
@@ -346,10 +365,16 @@ export const DescriptionCell = memo(function DescriptionCell({
                         ) : null}
                       </span>
                       <span className="shrink-0 text-[11px] tabular-nums text-[hsl(var(--fg-tertiary))]">
-                        {/* Stock on hand, so the user sees what they are drawing down. */}
-                        {typeof product.quantity === 'number'
-                          ? product.quantity.toLocaleString(locale)
-                          : ''}
+                        {/* Stock the invoice will actually draw down, and where
+                            it is — a business-wide figure would be the wrong
+                            number the moment there are two warehouses. */}
+                        {(() => {
+                          const stock = stockOf(product)
+                          if (stock === null) return ''
+                          return warehouseStock.inWarehouse
+                            ? `${stock.toLocaleString(locale)} · ${warehouseStock.warehouseName}`
+                            : stock.toLocaleString(locale)
+                        })()}
                       </span>
                     </button>
                   ))

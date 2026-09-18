@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl'
 // same numbers rather than re-implementing them.
 import { profitPerUnit, stockValue, totalProfit } from '@hisabche/validation'
 import { useProduct, useUpdateProduct, useDeleteProduct } from '@hisabche/api'
+import { ProductExpiryPanel } from '../product-expiry-panel'
 import { ProductDetailPage } from '../warehouse-detail-page'
 import { productDeleteRefusal } from '../../../../lib/warehouse/delete-refusal'
 import { STOCK_LABEL_KEY, STOCK_TONE, stockStateOf } from '../../../../lib/warehouse/stock-state'
@@ -189,6 +190,7 @@ export function ProductDetailContainer() {
       onCancelEditing={() => setEditing(false)}
       onSave={onSave}
       onDelete={handleDelete}
+      expiry={id ? <ProductExpiryPanel t={safeT} productId={id} /> : null}
     />
   )
 }

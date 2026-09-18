@@ -354,6 +354,31 @@ export async function operationsRoutes(fastify: FastifyInstance) {
   )
 
   // Which batches an issue WOULD take. FEFO by default; consumes nothing.
+  // ─── PATCH /batches/:id ────────────────────────────────
+  // Correcting the expiry someone typed. Dates only — see the service.
+  fastify.patch(
+    '/batches/:id',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const body = z
+          .object({
+            expiryDate: z.string().nullable().optional(),
+            manufacturedDate: z.string().nullable().optional(),
+          })
+          .strict()
+          .parse(request.body)
+        return reply.send(await traceabilityService.updateBatchDates(request.tenancy, id, body))
+      } catch (err) {
+        return fail(reply, err, 'Failed to update the batch')
+      }
+    },
+  )
+
   fastify.post(
     '/batches/plan-issue',
     {

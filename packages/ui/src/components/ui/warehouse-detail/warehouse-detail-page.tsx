@@ -116,6 +116,8 @@ export interface ProductDetailPageProps {
   onCancelEditing: () => void
   onSave: (data: ProductEditValues) => void
   onDelete: () => void
+  /** Expiry (request #95) — the batches panel, rendered by the container. */
+  expiry?: React.ReactNode
 }
 
 export function ProductDetailPage({
@@ -135,6 +137,7 @@ export function ProductDetailPage({
   onCancelEditing,
   onSave,
   onDelete,
+  expiry,
 }: ProductDetailPageProps) {
   const [editValues, setEditValues] = useState<ProductEditValues>({
     name: '',
@@ -458,6 +461,8 @@ export function ProductDetailPage({
           </div>
         ))}
       </div>
+
+      {expiry}
     </div>
   )
 }

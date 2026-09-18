@@ -80,7 +80,10 @@ describe('a negative quantity is out of stock', () => {
 describe('the invoice picker', () => {
   it('⚠️ keeps an exhausted product visible but unpickable on a sale', () => {
     expect(picker).toContain("transactionType !== 'purchase'")
-    expect(picker).toContain('product.quantity <= 0')
+    // The figure is now the stock of the invoice's warehouse when it names one
+    // (#94); with no warehouse it is still the product total.
+    expect(picker).toContain("typeof stock === 'number' && stock <= 0")
+    expect(picker).toContain('warehouseStock.quantityOf(product.id)')
     expect(picker).toContain('disabled={isExhausted(product)}')
     expect(picker).toContain('if (isExhausted(product)) return')
   })

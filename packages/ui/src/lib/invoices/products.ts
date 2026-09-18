@@ -10,6 +10,8 @@
 export interface PickerProduct {
   id: string
   name: string
+  /** Product code (SKU) — how two same-named goods are told apart. */
+  sku?: string | null
   sell_price?: number | null
   sellPrice?: number | null
   unit?: string | null

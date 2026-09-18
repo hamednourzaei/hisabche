@@ -22,7 +22,7 @@
 //     refetch a list that cannot differ.
 // ============================================
 
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { asList } from '../lib/as-list'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
@@ -98,4 +98,23 @@ export function useUnitsByDimension(dimension: UnitDimension) {
     // well the query types resolve in a given app.
     units: asList<Unit>(query.data?.units, '/units').filter((u: Unit) => u.dimension === dimension),
   }
+}
+
+/**
+ * A unit this workspace invented («طاقه») — request #94.
+ *
+ * Dimension 'count' with factor 1 on the server: the app cannot convert a word
+ * nobody defined, and inventing a factor would put wrong quantities in totals.
+ * Needs docs/custom-units-migration.sql; without it the server answers
+ * UNIT_CUSTOM_MIGRATION_REQUIRED and the caller says so.
+ */
+export function useCreateUnit() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { name: string; symbol?: string }) => {
+      const { data } = await apiClient.post('/units', input)
+      return data as Unit
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: unitKeys.all }),
+  })
 }

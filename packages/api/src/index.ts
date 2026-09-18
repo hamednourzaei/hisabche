@@ -554,6 +554,7 @@ export {
   useLotTrail,
   usePlanIssue,
   useReceiveBatch,
+  useUpdateBatchDates,
   useReceiveSerials,
   type StockBatch,
   type SerialUnit,
@@ -598,6 +599,7 @@ export {
 export {
   unitKeys,
   useUnits,
+  useCreateUnit,
   useUnitsByDimension,
   type Unit,
   type UnitDimension,

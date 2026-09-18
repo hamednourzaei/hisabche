@@ -240,3 +240,27 @@ export function useReceiveSerials() {
     },
   })
 }
+
+/**
+ * Correct a batch's expiry (request #95). Dates only — quantities belong to
+ * the movements that created them, and the FEFO queue reads them.
+ */
+export function useUpdateBatchDates() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      batchId,
+      ...body
+    }: {
+      batchId: string
+      expiryDate?: string | null
+      manufacturedDate?: string | null
+    }) => {
+      const { data } = await apiClient.patch(`/operations/batches/${batchId}`, body)
+      return data as StockBatch
+    },
+    retry: false,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: expiryKeys.all }),
+  })
+}

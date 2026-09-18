@@ -224,6 +224,12 @@ export class ProductService {
   ) {
     const { workspaceId, userId } = ctx
     const clientRequestId = options.clientRequestId ?? null
+    // Request #94 — «افزودن به انبار»: the opening stock lands in this warehouse.
+    const openingWarehouseId =
+      (data as { warehouseId?: string | null }).warehouseId && (Number(data.quantity) || 0) > 0
+        ? ((data as { warehouseId?: string | null }).warehouseId as string)
+        : null
+    if (openingWarehouseId) await this.assertWarehouse(workspaceId, openingWarehouseId)
 
     if (clientRequestId) {
       const existing = await this.findByClientRequestId(workspaceId, clientRequestId)
@@ -239,7 +245,11 @@ export class ProductService {
         category: data.category || 'general',
         description: data.description || '',
         image_url: data.imageUrl || '',
-        quantity: data.quantity || 0,
+        // ⚠️ 0 when the product is being put IN a warehouse: the quantity then
+        // arrives as a stock movement below, so `products.quantity` and
+        // `warehouse_stock` are both maintained by the Phase C trigger from one
+        // row. Writing it here as well would double the opening stock.
+        quantity: openingWarehouseId ? 0 : data.quantity || 0,
         unit: data.unit || 'piece',
         min_stock_level: data.minStockLevel || 5,
         buy_price: data.buyPrice || 0,
@@ -261,6 +271,26 @@ export class ProductService {
       if (isMissingIdempotencySupport(error)) throw new IdempotencyUnavailableError('product')
     }
     if (error) throw new DatabaseError('Failed to create product', error)
+
+    // The opening stock as a MOVEMENT, so the warehouse figure and the product
+    // total come from the same row (stock_movements_project).
+    if (openingWarehouseId && product) {
+      const { error: movementError } = await supabase.from('stock_movements').insert({
+        product_id: (product as { id: string }).id,
+        type: 'purchase',
+        quantity: Number(data.quantity) || 0,
+        reference_type: 'product_opening',
+        reference_id: (product as { id: string }).id,
+        to_warehouse_id: openingWarehouseId,
+        workspace_id: workspaceId,
+        user_id: userId,
+        notes: 'opening stock',
+      })
+      // Not swallowed: a product whose stock never landed must not report success.
+      if (movementError) {
+        throw new DatabaseError('Failed to record the opening stock', movementError)
+      }
+    }
 
     await this.invalidateWorkspaceCache(workspaceId)
 
@@ -526,6 +556,19 @@ export class ProductService {
     await memoryCache.invalidate(`product:${workspaceId}:*`)
     await memoryCache.invalidate(`product:barcode:${workspaceId}:*`)
     await memoryCache.invalidate(`dashboard:${workspaceId}`)
+  }
+
+  /** A warehouse id from a request must be this workspace's and not deleted. */
+  private async assertWarehouse(workspaceId: string, warehouseId: string): Promise<void> {
+    const { data, error } = await supabase
+      .from('warehouses')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('id', warehouseId)
+      .is('deleted_at', null)
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to check the warehouse', error)
+    if (!data) throw new ValidationError('PRODUCT_WAREHOUSE_NOT_FOUND')
   }
 }
 

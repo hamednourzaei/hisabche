@@ -14,7 +14,12 @@
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 
+import { z } from 'zod'
+
 import { authenticate } from '../middleware/auth.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
+import { BaseError } from '../errors/base.error'
 import { UnitsService } from '../services/inventory/units.service'
 
 export async function unitsRoutes(fastify: FastifyInstance) {
@@ -22,10 +27,13 @@ export async function unitsRoutes(fastify: FastifyInstance) {
 
   fastify.get(
     '/api/units',
-    { preHandler: [authenticate] },
-    async (_request: FastifyRequest, reply: FastifyReply) => {
+    // Reads request.tenancy for the workspace's own units, so it declares the
+    // workspace guard (workspace-guard-order.test.ts).
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { units, source } = await service.list()
+        // The workspace's own units come too, when the request carries one.
+        const { units, source } = await service.list(request.tenancy?.workspaceId)
         // `source` is reported rather than hidden: a client showing the seed
         // list because the migration has not been applied is a real state, and
         // silently serving it as if it came from the table is how the previous
@@ -34,6 +42,33 @@ export async function unitsRoutes(fastify: FastifyInstance) {
       } catch (err) {
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to load units' })
+      }
+    },
+  )
+
+  // ─── POST /api/units ───────────────────────────────────
+  // A unit this business invented («طاقه»). Scoped to the workspace — the
+  // table is shared, so the filter in `list` is the whole boundary. See
+  // docs/custom-units-migration.sql.
+  fastify.post(
+    '/api/units',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({ name: z.string().min(1).max(60), symbol: z.string().max(12).optional() })
+          .strict()
+          .parse(request.body)
+        return reply.code(201).send(await service.create(request.tenancy.workspaceId, body))
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        }
+        if (err instanceof BaseError && err.statusCode < 500) {
+          return reply.code(err.statusCode).send({ error: err.message, code: err.message })
+        }
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to create the unit' })
       }
     },
   )
