@@ -22,6 +22,7 @@ import {
   productKeys,
   useAssignWarehouseStock,
   useCreateWarehouse,
+  warehouseKeys,
   useUpdateWarehouse,
   useStockHistory,
   useWarehouseDetail,
@@ -177,19 +178,20 @@ export function warehouseContainer() {
   const handleOpenAddModal = useCallback(() => setShowAddModal(true), [])
 
   // ✅ FIX: بعد از بستن مودال و ایجاد محصول، کش را پاک کن
-  const handleCloseAddModal = useCallback(() => {
-    setShowAddModal(false)
-    // ✅ پاک کردن کش محصولات
+  // A new product's opening stock is in no warehouse yet, so the warehouse
+  // list and «بدون انبار» change with it — not only the product list.
+  const refreshStock = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: productKeys.lists() })
-    // ✅ رفرش کردن داده‌ها
+    queryClient.invalidateQueries({ queryKey: warehouseKeys.all })
     refetch()
   }, [queryClient, refetch])
 
-  // ✅ FIX: وقتی محصول جدید ایجاد شد، کش را پاک کن
-  const handleProductCreated = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: productKeys.lists() })
-    refetch()
-  }, [queryClient, refetch])
+  const handleCloseAddModal = useCallback(() => {
+    setShowAddModal(false)
+    refreshStock()
+  }, [refreshStock])
+
+  const handleProductCreated = useCallback(refreshStock, [refreshStock])
 
   const inWarehouse = warehouseParam !== null
   const isUnassigned = warehouseParam === UNASSIGNED_WAREHOUSE_ID
@@ -218,12 +220,15 @@ export function warehouseContainer() {
             ? safeT('warehouse.unassignedHint', 'موجودی‌ای که هنوز در هیچ انباری ثبت نشده')
             : detail.data?.warehouse?.location ||
               safeT('warehouse.warehouseStock', 'کالاهای این انبار'),
+          // Back is the arrow beside the title; the action button ADDS.
           onBack: () => openWarehouse(null),
-          // No «add» inside the unassigned pseudo-warehouse: its stock is added
-          // to a real warehouse from that warehouse.
-          onOpenAddModal: isUnassigned ? () => openWarehouse(null) : () => setShowAssign(true),
+          // «بدون انبار» holds stock that is in no warehouse, and that is
+          // exactly where a brand-new product's opening stock lands — so its
+          // action is the product modal (name, unit, quantity, buy/sell price).
+          // A real warehouse instead takes stock that already exists.
+          onOpenAddModal: isUnassigned ? () => setShowAddModal(true) : () => setShowAssign(true),
           actionLabel: isUnassigned
-            ? safeT('warehouse.backToList', 'بازگشت به فهرست انبارها')
+            ? safeT('warehouse.addProduct', 'افزودن محصول')
             : safeT('warehouse.assignTitle', 'افزودن کالا به انبار'),
           products: warehouseProducts,
           isLoading: detail.isLoading,

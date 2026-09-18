@@ -94,3 +94,26 @@ describe('#92 till row actions, warehouse edit, manual rates, invoice warehouse'
     expect(select).toContain('warehouses.length === 1) onChange(warehouses[0]!.id)')
   })
 })
+
+describe('#93 «بدون انبار» adds a product; warehouses can be renamed', () => {
+  const container = code(ui('warehouse/containers/Warehouse-container.tsx'))
+  it('the unassigned view opens the product modal, not a back link', () => {
+    expect(container).toContain(
+      'isUnassigned ? () => setShowAddModal(true) : () => setShowAssign(true)',
+    )
+    expect(container).toContain("safeT('warehouse.addProduct'")
+  })
+  it('a new product refreshes the warehouse figures too', () => {
+    const refresh = container.slice(container.indexOf('const refreshStock'))
+    expect(refresh.slice(0, 300)).toContain('queryKey: warehouseKeys.all')
+  })
+  it('the warehouse list has an edit action wired to the update hook', () => {
+    expect(code(ui('warehouse/warehouse-list-table.tsx'))).toContain(
+      "labelKey: 'warehouse.actions'",
+    )
+    expect(container).toContain('onEdit={setEditingWarehouse}')
+    expect(container).toContain(
+      'updateWarehouse.mutateAsync({ id: editingWarehouse.id, ...input })',
+    )
+  })
+})

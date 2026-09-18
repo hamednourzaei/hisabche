@@ -15,7 +15,17 @@
 -- answers POS_SESSION_ALREADY_OPEN instead of creating two open drawers.
 -- ============================================================================
 
+-- ⚠️ LOCK NOTE (۲۰۲۶-۰۹-۱۸): ALTER TABLE needs an exclusive lock on a table the
+-- live app is reading, so a run during traffic can end with
+-- «40P01: deadlock detected». NOTHING is half-applied — the whole file is one
+-- transaction, so a failed run changes nothing and it can simply be re-run when
+-- the app is quiet. `lock_timeout` below makes it give up quickly instead of
+-- deadlocking.
+
 BEGIN;
+
+-- Give up rather than queue behind (or deadlock with) live queries.
+SET LOCAL lock_timeout = '5s';
 
 ALTER TABLE pos_sessions DROP CONSTRAINT IF EXISTS pos_sessions_status_check;
 ALTER TABLE pos_sessions
