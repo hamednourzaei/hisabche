@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/dashboard/dashboard-view.tsx
 'use client'
 
-import { KpiCard } from '../kpi-card'
+import { KpiCard, KpiGrid } from '../kpi-card'
 import { memo, useEffect, useMemo, useState } from 'react'
 import type { ElementType } from 'react'
 import { useTranslations } from 'next-intl'
@@ -488,8 +488,10 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
       {/* Level 1: Context */}
       <Greeting t={t} />
 
-      {/* Level 2: KPI cards — ۴ کارت افقی */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* Level 2: KPI cards — `KpiGrid`, the same row `/invoices`,
+          `/warehouse` and `/customers` draw. A local grid here is what made
+          the dashboard look like a different page. */}
+      <KpiGrid>
         {/* ✅ این دو کارت روندشان را از داده‌ی نمودار می‌گیرند، پس تا وقتی آن
             کوئری کامل نشده باید skeleton نشان دهند؛ وگرنه یک لحظه با
             trend=null رندر می‌شوند و خط خنثی (نه اسپارک‌لاین) دیده می‌شود. */}
@@ -543,7 +545,7 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
           onOpen={() => onNavigate('/warehouse')}
           openLabel={t('dashboard.openWarehouse', 'انبار')}
         />
-      </div>
+      </KpiGrid>
 
       {/* Level 3: Chart + AI Insights (عمودی، جای قبلی صورت‌حساب‌های اخیر) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">

@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/crm/crm-view.tsx
 'use client'
 
+import { KpiCard, KpiGrid } from '../kpi-card'
 import { memo, useMemo, useState, useCallback } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { formatDate as formatIntlDate } from '@hisabche/formatting'
@@ -460,7 +461,7 @@ export const CrmView = memo(function CrmView({
       ) : (
         <div className="space-y-4">
           {/* KPI cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          <KpiGrid>
             {[
               {
                 id: 'total',
@@ -487,25 +488,9 @@ export const CrmView = memo(function CrmView({
                 value: completedCount,
               },
             ].map((card) => (
-              <div
-                key={card.id}
-                className="min-w-0 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-2.5 sm:p-4 space-y-1 sm:space-y-2"
-              >
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <card.icon
-                    className="size-3.5 sm:size-4 shrink-0 text-[hsl(var(--color-primary))]"
-                    aria-hidden="true"
-                  />
-                  <span className="truncate text-[10px] sm:text-xs text-[hsl(var(--fg-secondary))]">
-                    {card.label}
-                  </span>
-                </div>
-                <p className="truncate text-sm sm:text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-                  {card.value}
-                </p>
-              </div>
+              <KpiCard key={card.id} label={card.label} value={card.value} icon={card.icon} />
             ))}
-          </div>
+          </KpiGrid>
 
           {/* Bar chart: task count per employee, colored by status */}
           {isLoading ? (

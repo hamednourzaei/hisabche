@@ -10,6 +10,7 @@
 // (12-month chart + top products), CRM (shared CustomerCrmPanel), history.
 // ============================================
 
+import { KpiCard } from '../kpi-card'
 import { useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import {
@@ -241,28 +242,28 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
       {/* ── The money picture ─────────────────────────────────────────────── */}
       {summary && (
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-          <div
-            className={cn(
-              card,
-              'col-span-2 p-4',
-              net > 0 && 'border-[hsl(var(--color-destructive)/0.35)]',
-            )}
-          >
-            <p className="text-xs text-[hsl(var(--fg-secondary))]">{t('netBalance')}</p>
-            <p
-              className={cn(
-                'mt-1 text-2xl font-bold tabular-nums',
-                net > 0
-                  ? 'text-[hsl(var(--color-destructive))]'
-                  : net < 0
-                    ? 'text-[hsl(var(--color-success))]'
-                    : 'text-[hsl(var(--fg-primary))]',
-              )}
-            >
-              {money(Math.abs(net))}
-            </p>
-            <p className="text-xs text-[hsl(var(--fg-tertiary))]">{netLabel}</p>
-          </div>
+          {/* ⚠️ The sign is the whole meaning here: positive is money THEY
+              owe us, negative is money WE owe them. The colour carries it,
+              and `netLabel` says it in words so colour is not the only
+              channel. */}
+          <KpiCard
+            label={t('netBalance')}
+            value={
+              <span
+                className={
+                  net > 0
+                    ? 'text-[hsl(var(--color-destructive))]'
+                    : net < 0
+                      ? 'text-[hsl(var(--color-success))]'
+                      : 'text-[hsl(var(--fg-primary))]'
+                }
+              >
+                {money(Math.abs(net))}
+              </span>
+            }
+            hint={netLabel}
+            className={cn('col-span-2', net > 0 && 'border-[hsl(var(--color-destructive)/0.35)]')}
+          />
           <Stat label={t('receivable')} value={money(summary.receivable)} />
           <Stat
             label={t('overdue')}
@@ -588,6 +589,12 @@ function InvoicesTable(props: CustomerDetailViewProps & { money: Money }) {
   )
 }
 
+/**
+ * The product's KPI card, with this screen's one addition: `tone: 'danger'`
+ * colours the FIGURE because the figure itself is bad news (money overdue).
+ * That is a different question from `invertDelta`, which is about the
+ * direction of a change.
+ */
 function Stat({
   label,
   value,
@@ -600,20 +607,17 @@ function Stat({
   tone?: 'danger' | undefined
 }) {
   return (
-    <div className={cn(card, 'p-4')}>
-      <p className="text-xs text-[hsl(var(--fg-secondary))]">{label}</p>
-      <p
-        className={cn(
-          'mt-1 text-lg font-bold tabular-nums',
-          tone === 'danger'
-            ? 'text-[hsl(var(--color-destructive))]'
-            : 'text-[hsl(var(--fg-primary))]',
-        )}
-      >
-        {value}
-      </p>
-      {hint && <p className="text-xs text-[hsl(var(--fg-tertiary))]">{hint}</p>}
-    </div>
+    <KpiCard
+      label={label}
+      value={
+        tone === 'danger' ? (
+          <span className="text-[hsl(var(--color-destructive))]">{value}</span>
+        ) : (
+          value
+        )
+      }
+      {...(hint ? { hint } : {})}
+    />
   )
 }
 

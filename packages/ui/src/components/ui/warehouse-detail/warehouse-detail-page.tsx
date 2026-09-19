@@ -1,5 +1,6 @@
 'use client'
 
+import { KpiCard, KpiGrid } from '../kpi-card'
 import { useState, useEffect } from 'react'
 import { UnitSelect } from '../units/unit-select'
 import { GHOST_ICON_BUTTON, OUTLINE_BUTTON } from '../button-classes'
@@ -15,6 +16,7 @@ import {
   Edit3,
   X,
   type LucideIcon,
+  TrendingUp,
 } from 'lucide-react'
 import { MoneyInput } from '../money-input'
 
@@ -85,18 +87,6 @@ const stockBadgeStyles: Record<string, string> = {
     'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border-[hsl(var(--color-destructive)/0.2)]',
   secondary:
     'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border-[hsl(var(--border-default))]',
-}
-
-function InfoBox({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
-  return (
-    <div>
-      <div className="mb-1 flex items-center gap-2">
-        <Icon className="size-4 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
-        <p className="text-xs text-[hsl(var(--fg-secondary))]">{label}</p>
-      </div>
-      <p className="font-bold tabular-nums text-[hsl(var(--fg-primary))]">{value}</p>
-    </div>
-  )
 }
 
 export interface ProductDetailPageProps {
@@ -383,28 +373,30 @@ export function ProductDetailPage({
           ) : (
             /* ── View Mode ── */
             <>
-              <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
-                <InfoBox
+              {/* The product's own KPI row — these were bare label/value
+                  pairs with no card around them (a local `InfoBox`). */}
+              <KpiGrid>
+                <KpiCard
                   icon={DollarSign}
                   label={t('warehouse.sellPrice', 'قیمت فروش')}
                   value={`${fmt(product.sellPrice)} AFN`}
                 />
-                <InfoBox
+                <KpiCard
                   icon={DollarSign}
                   label={t('warehouse.buyPrice', 'قیمت خرید')}
                   value={`${fmt(product.buyPrice)} AFN`}
                 />
-                <InfoBox
+                <KpiCard
                   icon={Package}
                   label={t('warehouse.quantity', 'تعداد')}
                   value={`${product.quantity} ${t(`warehouse.units.${toUnitType(product.unit)}`, product.unit)}`}
                 />
-                <InfoBox
+                <KpiCard
                   icon={AlertTriangle}
                   label={t('warehouse.minStock', 'حداقل موجودی')}
                   value={`${product.minStockLevel}`}
                 />
-              </div>
+              </KpiGrid>
               <div className="grid grid-cols-2 gap-4 border-t border-[hsl(var(--border-default))] pt-4 sm:grid-cols-3">
                 <div>
                   <p className="text-xs text-[hsl(var(--fg-secondary))]">
@@ -434,33 +426,24 @@ export function ProductDetailPage({
         </div>
       </div>
 
-      {/* ── Profit Cards ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {[
-          {
-            value: product.quantity,
-            label: t('warehouse.currentStock', 'موجودی فعلی'),
-            className: 'text-[hsl(var(--fg-primary))]',
-          },
-          {
-            value: `${fmt(profitPerUnit)} AFN`,
-            label: t('warehouse.profitPerUnit', 'سود هر واحد'),
-            className: 'text-[hsl(var(--color-success))]',
-          },
-          {
-            value: `${fmt(totalProfit)} AFN`,
-            label: t('warehouse.totalProfit', 'سود کل موجودی'),
-            className: 'text-[hsl(var(--color-primary))]',
-          },
-        ].map(({ value, label, className }) => (
-          <div key={label} className={interactiveCard}>
-            <div className="p-4 text-center">
-              <p className={cn('text-2xl font-bold tabular-nums', className)}>{value}</p>
-              <p className="text-xs text-[hsl(var(--fg-secondary))]">{label}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* ── Profit cards — the product's KPI row, three across ── */}
+      <KpiGrid className="sm:grid-cols-3">
+        <KpiCard
+          icon={Package}
+          label={t('warehouse.currentStock', 'موجودی فعلی')}
+          value={product.quantity}
+        />
+        <KpiCard
+          icon={TrendingUp}
+          label={t('warehouse.profitPerUnit', 'سود هر واحد')}
+          value={`${fmt(profitPerUnit)} AFN`}
+        />
+        <KpiCard
+          icon={TrendingUp}
+          label={t('warehouse.totalProfit', 'سود کل موجودی')}
+          value={`${fmt(totalProfit)} AFN`}
+        />
+      </KpiGrid>
 
       {expiry}
     </div>

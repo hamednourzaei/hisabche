@@ -43,12 +43,15 @@ describe('the card is assembled in exactly one file', () => {
     expect(offenders.map((f) => f.replace(UI_ROOT, ''))).toEqual([])
   })
 
-  it('the bento row lays cells out but does not re-draw them', () => {
+  it('⚠️ the row is `KpiGrid` everywhere — no page has its own arrangement', () => {
+    // `BentoStats` used to draw a 7/5 · 5/7 grid that merged into one bordered
+    // box on mobile, while `/dashboard` drew a plain row. Same card underneath
+    // and still two different pages on screen, which is what the owner kept
+    // reporting.
     const bento = code(readFileSync(join(UI_ROOT, 'bento-stats.tsx'), 'utf8'))
+    expect(bento).toContain('<KpiGrid')
     expect(bento).toContain('<KpiCard')
-    // Its cells must not paint a border on mobile: the grid already draws one
-    // around all four, and a cell border inside it is a border inside a border.
-    expect(bento).toContain('surface="desktop"')
+    expect(bento).not.toMatch(/grid-cols-12|col-span-7|col-span-5/)
     expect(bento).not.toContain('STAT_VALUE')
   })
 
@@ -79,9 +82,10 @@ describe('no screen declares a KPI card of its own', () => {
     expect(offenders.map((f) => f.replace(UI_ROOT, ''))).toEqual([])
   })
 
-  it('the dashboard’s four cards are the shared one, with their drill-downs', () => {
+  it('the dashboard’s four cards are the shared one, in the shared row', () => {
     const view = code(readFileSync(join(UI_ROOT, 'dashboard', 'dashboard-view.tsx'), 'utf8'))
-    expect(view).toContain("import { KpiCard } from '../kpi-card'")
+    expect(view).toContain("import { KpiCard, KpiGrid } from '../kpi-card'")
+    expect(view).toContain('<KpiGrid>')
     // Four cards, each opening the rows its figure was computed from.
     expect((view.match(/<KpiCard/g) ?? []).length).toBe(4)
     expect((view.match(/onOpen=\{/g) ?? []).length).toBe(4)
@@ -108,6 +112,55 @@ describe('no screen declares a KPI card of its own', () => {
     expect(kpi).toContain("'aria-label': openLabel ? `${label} — ${openLabel}` : label")
     // RTL: a button centre-aligns by default.
     expect(kpi).toContain('w-full text-start')
+  })
+})
+
+describe('every screen with a row of figures uses it', () => {
+  it.each([
+    ['dashboard/dashboard-view.tsx'],
+    ['warehouse/warehouse-view.tsx'],
+    ['warehouse-detail/warehouse-detail-page.tsx'],
+    ['invoices/invoices-view.tsx'],
+    ['customers/customer-workspace.tsx'],
+    ['customers/customer-stats.tsx'],
+    ['crm/crm-view.tsx'],
+    ['crm/customer-crm-panel.tsx'],
+    ['sync-center/sync-center-page.tsx'],
+    ['human-resources/hr-view.tsx'],
+    ['team-and-payroll/team-and-payroll-view.tsx'],
+    ['inventory-ops/inventory-ops-view.tsx'],
+  ])('%s', (file) => {
+    const src = code(readFileSync(join(UI_ROOT, ...file.split('/')), 'utf8'))
+    // Either directly, or through `BentoStats`/`Stat`, which are the row and
+    // the alias — never a shell of its own.
+    expect(/<(?:KpiCard|KpiGrid|BentoStats|Stat)\b/.test(src), file).toBe(true)
+  })
+
+  it('⚠️ no screen hand-builds a figure-with-caption box any more', () => {
+    // `text-2xl font-bold tabular-nums` over a small caption IS a KPI card.
+    // Pricing pages and invoice totals are not KPI rows and keep their own
+    // type scale, so they are named rather than matched.
+    const ALLOWED = [
+      'kpi-card.tsx',
+      'landing-section.tsx',
+      'landing-preview.tsx',
+      'pricing-scene.tsx',
+      'PricingPage.tsx',
+      'IncomeStatementTab.tsx',
+      'sales-funnel.tsx',
+      'invoice-preview-container.tsx',
+      'invoice-builder-mobile.tsx',
+      // A table footer's total and the number inside a donut are not cards.
+      'ProductProfitTable.tsx',
+      'till-distribution-chart-internal.tsx',
+    ]
+    const offenders = files.filter((file) => {
+      if (ALLOWED.some((name) => file.endsWith(name))) return false
+      const src = code(readFileSync(file, 'utf8'))
+      return /text-(?:xl|2xl|3xl) font-bold tabular-nums/.test(src)
+    })
+
+    expect(offenders.map((f) => f.replace(UI_ROOT, ''))).toEqual([])
   })
 })
 

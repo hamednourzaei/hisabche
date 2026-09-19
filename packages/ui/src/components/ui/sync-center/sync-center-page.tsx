@@ -1,5 +1,6 @@
 'use client'
 
+import { KpiCard, KpiGrid } from '../kpi-card'
 import { cn } from '../../../lib/utils'
 import {
   Cloud,
@@ -83,100 +84,30 @@ export function SyncCenterPage({
         </p>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {/* Connection */}
-        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 transition-shadow duration-200 hover:shadow-lg">
-          <div className="flex items-center gap-4">
-            <div
-              className={cn(
-                'flex h-14 w-14 items-center justify-center rounded-2xl shrink-0',
-                isOnline
-                  ? 'bg-[hsl(var(--color-success)/0.1)]'
-                  : 'bg-[hsl(var(--color-warning)/0.1)]',
-              )}
-            >
-              {isOnline ? (
-                <Cloud className="size-7 text-[hsl(var(--color-success))]" aria-hidden="true" />
-              ) : (
-                <CloudOff className="size-7 text-[hsl(var(--color-warning))]" aria-hidden="true" />
-              )}
-            </div>
-            <div>
-              <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-                {isOnline ? t('sync.online', 'آنلاین') : t('sync.offline', 'آفلاین')}
-              </p>
-              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                {t('sync.connectionStatus', 'وضعیت اتصال')}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Backups count */}
-        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 transition-shadow duration-200 hover:shadow-lg">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--color-primary)/0.1)] shrink-0">
-              <Database className="size-7 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-            </div>
-            <div>
-              <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-                {backups.length}
-              </p>
-              <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('sync.backups', 'بکاپ')}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Pending */}
-        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 transition-shadow duration-200 hover:shadow-lg">
-          <div className="flex items-center gap-4">
-            <div
-              className={cn(
-                'flex h-14 w-14 items-center justify-center rounded-2xl shrink-0',
-                pendingCount > 0
-                  ? 'bg-[hsl(var(--color-warning)/0.1)]'
-                  : 'bg-[hsl(var(--color-success)/0.1)]',
-              )}
-            >
-              <AlertTriangle
-                className={cn(
-                  'size-7',
-                  pendingCount > 0
-                    ? 'text-[hsl(var(--color-warning))]'
-                    : 'text-[hsl(var(--color-success))]',
-                )}
-                aria-hidden="true"
-              />
-            </div>
-            <div>
-              <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-                {pendingCount}
-              </p>
-              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                {t('sync.pending', 'عملیات معلق')}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Storage */}
-        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 transition-shadow duration-200 hover:shadow-lg">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--surface-muted))] shrink-0">
-              <HardDrive className="size-7 text-[hsl(var(--fg-secondary))]" aria-hidden="true" />
-            </div>
-            <div>
-              <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-                {localStorageSize}
-              </p>
-              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                {t('sync.localStorage', 'حافظه محلی')}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/*
+        The product's KPI row. These were four hand-built cards with a 56-pixel
+        icon tile each — a sixth way of drawing a figure with a caption.
+        The icon still carries the state (online/offline, pending or clear),
+        which is what this screen needs from it.
+      */}
+      <KpiGrid>
+        <KpiCard
+          icon={isOnline ? Cloud : CloudOff}
+          label={t('sync.connectionStatus', 'وضعیت اتصال')}
+          value={isOnline ? t('sync.online', 'آنلاین') : t('sync.offline', 'آفلاین')}
+        />
+        <KpiCard icon={Database} label={t('sync.backups', 'بکاپ')} value={backups.length} />
+        <KpiCard
+          icon={AlertTriangle}
+          label={t('sync.pending', 'عملیات معلق')}
+          value={pendingCount}
+        />
+        <KpiCard
+          icon={HardDrive}
+          label={t('sync.localStorage', 'حافظه محلی')}
+          value={localStorageSize}
+        />
+      </KpiGrid>
 
       {/* Quick Actions */}
       <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">

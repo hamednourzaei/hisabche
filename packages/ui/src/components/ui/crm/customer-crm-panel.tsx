@@ -12,6 +12,7 @@
 // only tasks whose primary customer they are.
 // ============================================
 
+import { KpiCard, KpiGrid } from '../kpi-card'
 import { useTranslations } from 'next-intl'
 import { CalendarClock, CheckCircle2, ListTodo, Target } from 'lucide-react'
 import { useCustomerCrm } from '@hisabche/api'
@@ -83,44 +84,35 @@ export function CustomerCrmPanel({
   }
 
   const { summary, interactions, opportunities } = data
-  const stat = (icon: React.ReactNode, label: string, value: string, hint?: string) => (
-    <div className={cn(card, 'p-3')}>
-      <p className="flex items-center gap-1.5 text-xs text-[hsl(var(--fg-secondary))]">
-        {icon}
-        {label}
-      </p>
-      <p className="mt-1 text-lg font-bold tabular-nums text-[hsl(var(--fg-primary))]">{value}</p>
-      {hint && <p className="text-xs text-[hsl(var(--fg-tertiary))]">{hint}</p>}
-    </div>
-  )
 
   return (
     <section className={cn('space-y-4', className)}>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {stat(
-          <ListTodo className="size-3.5" aria-hidden="true" />,
-          t('openTasks'),
-          formatNumber(summary.openTasks, locale),
-          t('completedTasks', { count: summary.completedTasks }),
-        )}
-        {stat(
-          <Target className="size-3.5" aria-hidden="true" />,
-          t('openPipeline'),
-          money(summary.openPipelineValue),
-          t('openDeals', { count: summary.openOpportunities }),
-        )}
-        {stat(
-          <Target className="size-3.5" aria-hidden="true" />,
-          t('weightedPipeline'),
-          money(summary.weightedPipelineValue),
-        )}
-        {stat(
-          <CheckCircle2 className="size-3.5" aria-hidden="true" />,
-          t('won'),
-          money(summary.wonValue),
-          summary.lostCount > 0 ? t('lostCount', { count: summary.lostCount }) : undefined,
-        )}
-      </div>
+      {/* The product's KPI row — this panel had a local `stat()` helper. */}
+      <KpiGrid>
+        <KpiCard
+          icon={ListTodo}
+          label={t('openTasks')}
+          value={formatNumber(summary.openTasks, locale)}
+          hint={t('completedTasks', { count: summary.completedTasks })}
+        />
+        <KpiCard
+          icon={Target}
+          label={t('openPipeline')}
+          value={money(summary.openPipelineValue)}
+          hint={t('openDeals', { count: summary.openOpportunities })}
+        />
+        <KpiCard
+          icon={Target}
+          label={t('weightedPipeline')}
+          value={money(summary.weightedPipelineValue)}
+        />
+        <KpiCard
+          icon={CheckCircle2}
+          label={t('won')}
+          value={money(summary.wonValue)}
+          {...(summary.lostCount > 0 ? { hint: t('lostCount', { count: summary.lostCount }) } : {})}
+        />
+      </KpiGrid>
 
       {summary.nextTask && (
         <p

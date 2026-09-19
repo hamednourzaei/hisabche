@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/customers/customer-workspace.tsx
 'use client'
 
+import { KpiCard, KpiGrid } from '../kpi-card'
 import { useState, useCallback } from 'react'
 import { cn } from '../../../lib/utils'
 import { ChevronRight, Clock, FileText, Handshake, DollarSign } from 'lucide-react'
@@ -143,36 +144,33 @@ export function customerWorkspace(props: CustomerWorkspaceProps) {
       <Customer360Header t={t} customer={customer} fmt={fmt} onQuickAction={onQuickAction} />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-[hsl(var(--color-destructive))]">
-            {fmt(totalDebt)}
-          </p>
-          <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">
-            {t('customers.totalDebt', 'کل بدهی')}
-          </p>
-        </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-[hsl(var(--fg-primary))]">{openInvoices.length}</p>
-          <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">
-            {t('customers.openInvoices', 'فاکتور باز')}
-          </p>
-        </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-[hsl(var(--fg-primary))]">{interactions.length}</p>
-          <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">
-            {t('customers.interactions', 'تعاملات')}
-          </p>
-        </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-            {fmt(customer.lifetimeValue)}
-          </p>
-          <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">
-            {t('customers.lifetimeValue', 'ارزش کل')}
-          </p>
-        </div>
-      </div>
+      {/*
+        The product's KPI row. These were four `glass-card` boxes with centred
+        text — a fifth way of drawing the same thing, and the reason this page
+        did not look like `/dashboard`.
+      */}
+      <KpiGrid>
+        <KpiCard
+          label={t('customers.totalDebt', 'کل بدهی')}
+          value={fmt(totalDebt)}
+          icon={DollarSign}
+        />
+        <KpiCard
+          label={t('customers.openInvoices', 'فاکتور باز')}
+          value={openInvoices.length}
+          icon={FileText}
+        />
+        <KpiCard
+          label={t('customers.interactions', 'تعاملات')}
+          value={interactions.length}
+          icon={Handshake}
+        />
+        <KpiCard
+          label={t('customers.lifetimeValue', 'ارزش کل')}
+          value={fmt(customer.lifetimeValue)}
+          icon={DollarSign}
+        />
+      </KpiGrid>
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-[hsl(var(--border-default))]">
