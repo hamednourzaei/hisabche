@@ -14,6 +14,7 @@ import { CalendarDays, Plus, X } from 'lucide-react'
 import { useCreateLeave, useLeaves, type LeaveType } from '@hisabche/api'
 
 import { JalaliDatePicker } from '../jalali-datepicker'
+import { Switch } from '../switch'
 import { SelectField } from '../select-field'
 import { cn } from '../../../lib/utils'
 
@@ -50,6 +51,20 @@ export function leaveDayCount(startDate: string, endDate: string): number | null
   return Math.round((end - start) / 86_400_000) + 1
 }
 
+/**
+ * The last day of a leave of `days` days that starts on `startDate`.
+ * Inclusive, so a 1-day leave ends the day it starts.
+ *
+ * ⚠️ Built from the ISO day string, never from `toISOString()` on a local
+ * Date: at +04:30 that rolls the day over and the leave would end «tomorrow».
+ */
+export function endOfLeave(startDate: string, days: number): string {
+  const start = new Date(`${startDate}T00:00:00`)
+  start.setDate(start.getDate() + Math.max(1, Math.round(days)) - 1)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`
+}
+
 export const EmployeeLeavePanel = memo(function EmployeeLeavePanel({
   t,
   employeeId,
@@ -67,11 +82,45 @@ export const EmployeeLeavePanel = memo(function EmployeeLeavePanel({
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const days = useMemo(() => leaveDayCount(startDate, endDate), [startDate, endDate])
+  /**
+   * ⚠️ THE DAY COUNT IS THE FIRST FIELD, NOT THE LAST.
+   *
+   * It used to be derived from the range and rendered read-only, so recording
+   * «سه روز مرخصی» meant first working out which two calendar days that was —
+   * «نمی‌ذاره به اینپوت دسترسی داشته باشم». Now the count is typed directly and
+   * the leave runs from today; the switch below is for when the exact days
+   * matter. Either way ONE of them is derived from the other, so the stored
+   * range and the stored `total_days` can never contradict each other.
+   */
+  const [dayInput, setDayInput] = useState('1')
+  const [exactDates, setExactDates] = useState(false)
+
+  const typedDays = Number(dayInput)
+  const rangeDays = useMemo(() => leaveDayCount(startDate, endDate), [startDate, endDate])
+  const days = exactDates
+    ? rangeDays
+    : Number.isFinite(typedDays) && typedDays > 0
+      ? Math.round(typedDays)
+      : null
+
+  const today = useMemo(() => {
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+  }, [])
+
+  // What will actually be stored — shown to the user in both modes, so the
+  // dates are never something the form decided behind their back.
+  const effectiveStart = exactDates ? startDate : today
+  const effectiveEnd = exactDates ? endDate : days === null ? '' : endOfLeave(today, days)
 
   const submit = useCallback(async () => {
-    if (days === null) {
-      setError(t('hr.leaveRangeInvalid', 'تاریخ پایان نمی‌تواند قبل از تاریخ شروع باشد.'))
+    if (days === null || !effectiveStart || !effectiveEnd) {
+      setError(
+        exactDates
+          ? t('hr.leaveRangeInvalid', 'تاریخ پایان نمی‌تواند قبل از تاریخ شروع باشد.')
+          : t('hr.leaveDaysInvalid', 'تعداد روز باید عددی بزرگ‌تر از صفر باشد.'),
+      )
       return
     }
     setError(null)
@@ -79,19 +128,31 @@ export const EmployeeLeavePanel = memo(function EmployeeLeavePanel({
       await createLeave.mutateAsync({
         employeeId,
         leaveType,
-        startDate,
-        endDate,
+        startDate: effectiveStart,
+        endDate: effectiveEnd,
         totalDays: days,
         ...(reason.trim() ? { reason: reason.trim() } : {}),
       })
       setOpen(false)
       setStartDate('')
       setEndDate('')
+      setDayInput('1')
+      setExactDates(false)
       setReason('')
     } catch (err) {
       setError(err instanceof Error ? err.message : t('hr.leaveSaveError', 'ثبت مرخصی انجام نشد.'))
     }
-  }, [createLeave, days, employeeId, endDate, leaveType, reason, startDate, t])
+  }, [
+    createLeave,
+    days,
+    effectiveEnd,
+    effectiveStart,
+    employeeId,
+    exactDates,
+    leaveType,
+    reason,
+    t,
+  ])
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-6 space-y-4">
@@ -134,36 +195,78 @@ export const EmployeeLeavePanel = memo(function EmployeeLeavePanel({
               <span className="text-xs text-[hsl(var(--fg-secondary))]">
                 {t('hr.leaveDays', 'تعداد روز')}
               </span>
-              {/*
-                Not typed in: the count IS the range. Two fields that can
-                disagree would let «۳ روز» sit on a five-day span, and the
-                payroll would then be wrong for whichever one it trusted.
-              */}
-              <span
-                className={cn(
-                  FIELD,
-                  'tabular-nums',
-                  days === null && 'text-[hsl(var(--fg-tertiary))]',
-                )}
-              >
-                {days === null ? t('hr.leavePickRange', 'بازه را انتخاب کنید') : days}
-              </span>
-            </label>
-
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs text-[hsl(var(--fg-secondary))]">
-                {t('hr.leaveFrom', 'از تاریخ')}
-              </span>
-              <JalaliDatePicker value={startDate} onChange={setStartDate} />
-            </label>
-
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs text-[hsl(var(--fg-secondary))]">
-                {t('hr.leaveTo', 'تا تاریخ')}
-              </span>
-              <JalaliDatePicker value={endDate} onChange={setEndDate} />
+              {exactDates ? (
+                // With a range chosen, the count is what the range says — two
+                // editable fields could disagree, and then «۳ روز» would sit on
+                // a five-day span with payroll trusting whichever it read.
+                <span
+                  className={cn(
+                    FIELD,
+                    'tabular-nums',
+                    rangeDays === null && 'text-[hsl(var(--fg-tertiary))]',
+                  )}
+                >
+                  {rangeDays === null ? t('hr.leavePickRange', 'بازه را انتخاب کنید') : rangeDays}
+                </span>
+              ) : (
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={dayInput}
+                  onChange={(e) => setDayInput(e.target.value)}
+                  className={cn(FIELD, 'tabular-nums')}
+                />
+              )}
             </label>
           </div>
+
+          <label className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-[hsl(var(--fg-primary))]">
+              {t('hr.leaveExactDates', 'مشخص کردن تاریخ دقیق')}
+            </span>
+            <Switch
+              id="leave-exact-dates"
+              checked={exactDates}
+              onCheckedChange={(next) => {
+                setExactDates(next)
+                setError(null)
+                if (!next) {
+                  // Leaving exact mode: keep the length the user already chose
+                  // rather than silently resetting it to one day.
+                  if (rangeDays !== null) setDayInput(String(rangeDays))
+                  setStartDate('')
+                  setEndDate('')
+                }
+              }}
+            />
+          </label>
+
+          {exactDates ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                  {t('hr.leaveFrom', 'از تاریخ')}
+                </span>
+                <JalaliDatePicker value={startDate} onChange={setStartDate} />
+              </label>
+
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                  {t('hr.leaveTo', 'تا تاریخ')}
+                </span>
+                <JalaliDatePicker value={endDate} onChange={setEndDate} />
+              </label>
+            </div>
+          ) : (
+            // The dates are still what gets stored, so they are shown rather
+            // than decided quietly on the user's behalf.
+            <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+              {t('hr.leaveFromToday', 'از امروز، به مدت {days} روز (تا {end})')
+                .replace('{days}', days === null ? '—' : String(days))
+                .replace('{end}', effectiveEnd || '—')}
+            </p>
+          )}
 
           <textarea
             value={reason}

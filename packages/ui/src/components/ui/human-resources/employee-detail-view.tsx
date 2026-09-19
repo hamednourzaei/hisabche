@@ -17,10 +17,6 @@ import {
   Clock,
   UserPlus,
   Edit,
-  ShieldX,
-  Pause,
-  UserCheck,
-  Plane,
   Phone,
   Plus,
   X,
@@ -169,22 +165,11 @@ function getStatusBadge(
 // ─── Status Actions ────────────────────────────────────────────────────────
 
 const STATUS_ACTIONS = [
-  { status: 'active', labelKey: 'hr.active', icon: UserCheck, color: 'success' },
-  { status: 'on_leave', labelKey: 'hr.on_leave', icon: Plane, color: 'warning' },
-  { status: 'inactive', labelKey: 'hr.inactive', icon: Pause, color: 'secondary' },
-  { status: 'terminated', labelKey: 'hr.terminated', icon: ShieldX, color: 'destructive' },
+  { status: 'active', labelKey: 'hr.active' },
+  { status: 'on_leave', labelKey: 'hr.on_leave' },
+  { status: 'inactive', labelKey: 'hr.inactive' },
+  { status: 'terminated', labelKey: 'hr.terminated' },
 ] as const
-
-const actionColorMap: Record<string, string> = {
-  success:
-    'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border-[hsl(var(--color-success)/0.2)]',
-  warning:
-    'bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))] border-[hsl(var(--color-warning)/0.2)]',
-  destructive:
-    'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border-[hsl(var(--color-destructive)/0.2)]',
-  secondary:
-    'bg-[hsl(var(--fg-tertiary)/0.12)] text-[hsl(var(--fg-tertiary))] border-[hsl(var(--border-default))]',
-}
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
@@ -645,33 +630,30 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
           />
         </div>
 
-        {/* Status Change */}
+        {/* ─── Status change ────────────────────────────────────────────
+          A SELECT, not a row of pills. Four coloured buttons competing for the
+          same corner read as four separate actions and took a whole line of
+          the card; picking a status is one choice out of a known list, which
+          is what a select is for. Same `SelectField` as the rest of the app.
+        */}
         {employee.status !== 'terminated' && (
           <div className="flex items-center gap-2 pt-4 border-t border-[hsl(var(--border-default))]">
             <span className="text-xs text-[hsl(var(--fg-tertiary))] shrink-0">
               {t('hr.changeStatus', 'تغییر وضعیت:')}
             </span>
-            <div className="flex gap-1.5 flex-wrap">
-              {STATUS_ACTIONS.filter((a) => a.status !== employee.status).map((action) => {
-                const IconComponent = action.icon
-                const colorClass = actionColorMap[action.color] || actionColorMap.secondary
-                return (
-                  <button
-                    key={action.status}
-                    type="button"
-                    onClick={() => onUpdate({ status: action.status })}
-                    className={cn(
-                      'inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-full border transition-colors',
-                      colorClass,
-                      'hover:brightness-90',
-                    )}
-                  >
-                    <IconComponent className="size-3.5" />
-                    {t(action.labelKey, action.status)}
-                  </button>
-                )
-              })}
-            </div>
+            <SelectField
+              value={employee.status}
+              onChange={(next) => {
+                // The current status is the shown value, so choosing it again
+                // is not a change and must not fire a write.
+                if (next && next !== employee.status) void onUpdate({ status: next })
+              }}
+              options={STATUS_ACTIONS.map((action) => ({
+                value: action.status,
+                label: t(action.labelKey, action.status),
+              }))}
+              className="min-w-0 flex-1 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2 text-sm"
+            />
           </div>
         )}
       </div>

@@ -2641,7 +2641,14 @@
     "leaveStatus_approved": "Approved",
     "leaveStatus_rejected": "Rejected",
     "leaveStatus_cancelled": "Cancelled",
-    "paymentNotes": "Notes (optional)"
+    "paymentNotes": "Notes (optional)",
+    "leaveExactDates": "Pick exact dates",
+    "leaveFromToday": "From today, for {days} days (until {end})",
+    "leaveDaysInvalid": "The number of days must be greater than zero.",
+    "payroll_paid": "Paid",
+    "payroll_draft": "Draft",
+    "payroll_approved": "Approved",
+    "payroll_cancelled": "Cancelled"
   },
   "projects": {
     "title": "Projects",
@@ -4941,7 +4948,7 @@
     "noEmployees": "No employees yet",
     "noPayroll": "No payroll yet",
     "noEmployeesHint": "Add your first employee to start managing the team.",
-    "noPayrollHint": "Payroll payments appear here once recorded.",
+    "noPayrollHint": "Salary payments are recorded on an employee’s page and appear here.",
     "employeeName": "Employee",
     "phone": "Phone",
     "status": "Status",

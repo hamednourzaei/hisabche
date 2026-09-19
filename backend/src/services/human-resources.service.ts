@@ -736,21 +736,42 @@ export class HumanResourcesService {
   // ─── Payroll Summary (جمع حقوق) ──────────────────────────────
   // aggregate سمت سرور — جمع کل پرداختی‌ها و جمع هر کارمند، برای
   // کارت‌های KPI و ستون «جمع حقوق» بدون محاسبه‌ی سنگین سمت کلاینت.
+  /**
+   * «جمع حقوق پرداختی» — a figure the owner reads and acts on.
+   *
+   * ⚠️ PAGED. A bare `.select()` stops at PostgREST's default 1000 rows and
+   * returns a total that is quietly too small, with no error anywhere
+   * (راهنمای سشن، §۷٫۴). A workspace paying 30 people monthly crosses 1000
+   * payroll rows in under three years.
+   *
+   * ⚠️ CANCELLED PAYROLLS DO NOT COUNT. A cancelled run is money that was not
+   * paid; including it inflates the card. This matches what the profit report
+   * already excludes, so the two figures cannot disagree.
+   */
   async getPayrollSummary(ctx: TenancyContext) {
-    const { workspaceId, userId } = ctx
-    const { data, error } = await supabase
-      .from('payrolls')
-      .select('employee_id, net_salary')
-      .eq('workspace_id', workspaceId)
-
-    if (error) throw new DatabaseError('Failed to fetch payroll summary', error)
-
+    const { workspaceId } = ctx
+    const PAGE = 1000
     const byEmployee: Record<string, number> = {}
     let total = 0
-    for (const row of data || []) {
-      const amount = Number(row.net_salary) || 0
-      total += amount
-      byEmployee[row.employee_id] = (byEmployee[row.employee_id] || 0) + amount
+
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('payrolls')
+        .select('employee_id, net_salary, status')
+        .eq('workspace_id', workspaceId)
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+
+      if (error) throw new DatabaseError('Failed to fetch payroll summary', error)
+
+      for (const row of data ?? []) {
+        if (['cancelled', 'rejected'].includes(String(row.status ?? ''))) continue
+        const amount = Number(row.net_salary) || 0
+        total += amount
+        byEmployee[row.employee_id] = (byEmployee[row.employee_id] || 0) + amount
+      }
+
+      if (!data || data.length < PAGE) break
     }
 
     return { total, byEmployee }

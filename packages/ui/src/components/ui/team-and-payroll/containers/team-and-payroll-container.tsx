@@ -35,6 +35,7 @@
 // warehouse screen uses for its catalogue tab.
 // ============================================
 
+import type { PayrollRow } from '../payroll-list-table'
 import { useCallback, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -49,6 +50,8 @@ import {
   useDeleteEmployee,
   useEmployees,
   usePayrolls,
+  usePayrollSummary,
+  asList,
   usePermissionMatrix,
   useWorkspaces,
 } from '@hisabche/api'
@@ -100,6 +103,9 @@ export function TeamAndPayrollContainer() {
   } = useEmployees({ page: 1, limit: 20 })
 
   const { data: payrollData, isLoading: isLoadingPayroll } = usePayrolls()
+  // The total is its own server-side sum over every payroll row — not
+  // something added up from whatever page of rows happened to arrive.
+  const { data: payrollSummary } = usePayrollSummary()
 
   // The flat list feeds the employee form's branch picker; the tree feeds the
   // «شعب» tab. Two reads because they answer two questions — the picker needs
@@ -138,8 +144,11 @@ export function TeamAndPayrollContainer() {
 
   const employees = employeesData?.employees ?? []
   const totalEmployees = employeesData?.total ?? 0
-  const payrollRecords = payrollData?.payrolls ?? []
-  const totalPayroll = payrollData?.total ?? 0
+  // ⚠️ `GET /api/payrolls` returns the ARRAY of rows — there is no `.payrolls`
+  // and no `.total` on it. Both reads were `undefined`, so the tab was empty
+  // and the total was 0 even once the query above started running.
+  const payrollRecords = asList<PayrollRow>(payrollData)
+  const totalPayroll = payrollSummary?.total ?? 0
 
   // ─── Actions ──────────────────────────────────────────────────────────────
 
@@ -272,11 +281,6 @@ export function TeamAndPayrollContainer() {
     [router],
   )
 
-  const handleViewPayroll = useCallback(
-    (id: string) => router.push(`/team-and-payroll/payroll/${id}`),
-    [router],
-  )
-
   // ─── The «شعب» tab ────────────────────────────────────────────────────────
 
   const branchesTab = useMemo(
@@ -337,7 +341,6 @@ export function TeamAndPayrollContainer() {
       statusFilter={tab}
       onStatusChange={setTab}
       onViewEmployee={handleViewEmployee}
-      onViewPayroll={handleViewPayroll}
       onCreateEmployee={handleCreateEmployee}
       onDeleteEmployee={handleDeleteEmployee}
       branches={branches}

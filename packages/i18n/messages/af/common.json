@@ -2650,7 +2650,14 @@
     "leaveStatus_approved": "تأیید شده",
     "leaveStatus_rejected": "رد شده",
     "leaveStatus_cancelled": "لغو شده",
-    "paymentNotes": "توضیحات (اختیاری)"
+    "paymentNotes": "توضیحات (اختیاری)",
+    "leaveExactDates": "مشخص کردن تاریخ دقیق",
+    "leaveFromToday": "از امروز، به مدت {days} روز (تا {end})",
+    "leaveDaysInvalid": "تعداد روز باید عددی بزرگ‌تر از صفر باشد.",
+    "payroll_paid": "پرداخت شده",
+    "payroll_draft": "پیش‌نویس",
+    "payroll_approved": "تأیید شده",
+    "payroll_cancelled": "لغو شده"
   },
   "projects": {
     "title": "پروژه‌ها",
@@ -4950,7 +4957,7 @@
     "noEmployees": "هیچ کارمندی ثبت نشده",
     "noPayroll": "هیچ سابقه حقوقی وجود ندارد",
     "noEmployeesHint": "با افزودن کارمندان جدید، شروع کنید",
-    "noPayrollHint": "با ثبت پرداخت حقوق، شروع کنید",
+    "noPayrollHint": "پرداخت معاش از صفحه‌ی هر کارمند ثبت می‌شود و همین‌جا دیده خواهد شد.",
     "employeeName": "نام کارمند",
     "phone": "شماره تماس",
     "status": "وضعیت",

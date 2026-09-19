@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useState, useMemo, useCallback, memo } from 'react'
 import { EmployeeListTable, type EmployeeRow } from './employee-list-table'
+import { PayrollListTable, type PayrollRow } from './payroll-list-table'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { JalaliDatePicker } from '../jalali-datepicker'
 
@@ -42,17 +43,12 @@ export type PayrollStatus = 'paid' | 'pending' | 'processing' | 'overdue'
  */
 export type Employee = EmployeeRow
 
-export interface PayrollRecord {
-  id: string
-  employeeId: string
-  employeeName: string
-  period: string
-  amount: number
-  status: PayrollStatus
-  dueDate: string
-  paidDate?: string
-  currency: string
-}
+/**
+ * ⚠️ snake_case — the row `GET /api/payrolls` actually sends, with the employee
+ * embedded. This declared `employeeName` / `period` / `amount` / `dueDate`,
+ * none of which exist on the response (request #100).
+ */
+export type PayrollRecord = PayrollRow
 
 /**
  * G2 — the screen has three tabs now: [کارمندان] [شعب] [حقوق].
@@ -80,7 +76,6 @@ interface TeamAndPayrollViewProps {
   statusFilter?: TeamTab
   onStatusChange?: (status: TeamTab) => void
   onViewEmployee?: (id: string) => void
-  onViewPayroll?: (id: string) => void
   onCreateEmployee?: (
     values: Record<string, unknown>,
     /** Only present when the owner switched sign-in access on. */
@@ -146,38 +141,6 @@ const EMPLOYEE_STATUSES: {
 const FORM_FIELD =
   'rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]'
 
-const PAYROLL_STATUSES: {
-  value: PayrollStatus
-  label: string
-  color: string
-  icon: React.ElementType
-}[] = [
-  {
-    value: 'paid',
-    label: 'پرداخت شده',
-    color: 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]',
-    icon: Wallet,
-  },
-  {
-    value: 'pending',
-    label: 'در انتظار',
-    color: 'bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]',
-    icon: Clock,
-  },
-  {
-    value: 'processing',
-    label: 'در حال پردازش',
-    color: 'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]',
-    icon: TrendingUp,
-  },
-  {
-    value: 'overdue',
-    label: 'سررسیدن',
-    color: 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]',
-    icon: AlertCircle,
-  },
-]
-
 // ─── Sub-components ────────────────────────────────────────────────────────
 
 const StatCard = memo(function StatCard({
@@ -217,72 +180,6 @@ const StatCard = memo(function StatCard({
 })
 StatCard.displayName = 'StatCard'
 
-const PayrollCard = memo(function PayrollCard({
-  payroll,
-  onView,
-  t,
-}: {
-  payroll: PayrollRecord
-  onView?: ((id: string) => void) | undefined
-  t: (key: string, fallback?: string) => string
-}) {
-  // ⚠️ SAFE AND CALENDAR-AWARE. date-fns `format(new Date(x))` THROWS «RangeError:
-  // Invalid time value» on a missing or malformed date — a newly added employee
-  // arrives with `hire_date` (snake_case), so `hireDate` was undefined and the
-  // whole page fell into the error boundary. This returns «—» instead, and follows
-  // the reader's calendar (Shamsi / Afghan / Gregorian).
-  const { date: fmtDay } = useDateFormat()
-  const dateText = (value: string | null | undefined) => fmtDay(value) || '—'
-  const statusInfo = PAYROLL_STATUSES.find((s) => s.value === payroll.status)
-  const StatusIcon = statusInfo?.icon
-
-  return (
-    <div
-      className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 space-y-4 hover:border-[hsl(var(--color-primary)/0.3)] transition-all cursor-pointer"
-      onClick={() => onView?.(payroll.id)}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-[hsl(var(--color-primary)/0.12)] flex items-center justify-center text-[hsl(var(--color-primary))]">
-            <Wallet className="size-5" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-[hsl(var(--fg-primary))] mb-1">
-              {payroll.employeeName}
-            </h3>
-            <p className="text-xs text-[hsl(var(--fg-secondary))] mb-1">{payroll.period}</p>
-            <p className="text-xs text-[hsl(var(--fg-tertiary))] font-mono">
-              {payroll.id.slice(0, 8)}...
-            </p>
-          </div>
-        </div>
-        <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', statusInfo?.color)}>
-          {statusInfo?.label}
-        </span>
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-lg font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-            {payroll.amount.toLocaleString('fa-AF')} {payroll.currency}
-          </span>
-          <span className="text-xs text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
-            <Calendar className="size-3" />
-            سررسید: {dateText(payroll.dueDate)}
-          </span>
-        </div>
-        {payroll.paidDate && (
-          <div className="text-xs text-[hsl(var(--color-success))] flex items-center gap-1">
-            <Wallet className="size-3" />
-            پرداخته در: {dateText(payroll.paidDate)}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-})
-PayrollCard.displayName = 'PayrollCard'
-
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export const TeamAndPayrollView = memo(function TeamAndPayrollView({
@@ -296,7 +193,6 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
   statusFilter = 'employees',
   onStatusChange,
   onViewEmployee,
-  onViewPayroll,
   onCreateEmployee,
   onDeleteEmployee,
   branches = [],
@@ -997,16 +893,11 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                   canAdd={hasBranch}
                 />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {filteredPayroll.map((payroll) => (
-                    <PayrollCard
-                      key={payroll.id}
-                      payroll={payroll}
-                      onView={onViewPayroll ?? undefined}
-                      t={t}
-                    />
-                  ))}
-                </div>
+                <PayrollListTable
+                  t={t}
+                  payrolls={filteredPayroll}
+                  onView={onViewEmployee ?? undefined}
+                />
               )}
             </div>
           )}

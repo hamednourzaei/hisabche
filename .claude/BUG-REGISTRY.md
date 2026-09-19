@@ -179,3 +179,15 @@
 - **رفع:** تایپ به snake_case اصلاح شد (`EmployeeRow`)، نام‌سازی در یک تابع مشترک `employeeName()` و گزینه‌ی بی‌نام از dropdown حذف می‌شود. کارت‌ها جای خود را به `EmployeeListTable` (همان DataTable انبار) دادند.
 - **نکته‌ی باقی‌مانده:** `branches.manager_employee_id` کلید خارجی به `employees` دارد، پس **مالک** فقط وقتی قابل انتخاب است که به‌عنوان کارمند ثبت شده باشد.
 - **مرورگر:** ❌ نیازمند ورود کاربر.
+
+## BUG-017 — تب «حقوق» همیشه خالی و «جمع حقوق پرداختی» همیشه صفر
+
+- **الگو:** ۱ (کوئری‌ای که هیچ‌وقت فعال نمی‌شود) + ۲ (تایپ ≠ شکل واقعی پاسخ) + ۴ (عدد بی‌صدا غلط)
+- **نشانه:** کاربر برای دو کارمند حقوق ثبت کرده بود؛ `/fa/team-and-payroll?tab=payroll` می‌گفت «هیچ سابقه حقوقی وجود ندارد» و کارت جمع، `۰ AFN`.
+- **ریشه‌ها (سه تای مستقل، هرکدام به‌تنهایی کافی):**
+  1. `usePayrolls()` در `packages/api/src/hooks/payroll.ts`: `enabled: authReady && !!employeeId` — فراخوانی سطح workspace (بدون employeeId) هرگز اجرا نمی‌شد. **کوئری غیرفعال و جدول خالی روی صفحه یکسان‌اند**، پس هیچ خطایی دیده نمی‌شد.
+  2. کانتینر `payrollData?.payrolls` و `payrollData?.total` می‌خواند؛ route یک آرایه می‌فرستد و جمع در endpoint جداگانه‌ی `/payrolls/summary` است.
+  3. `PayrollCard` فیلدهای `employeeName` / `period` / `amount` / `dueDate` را می‌خواند که هیچ‌کدام در ردیف واقعی (`net_salary`، `period_start`، `employee:{first_name,last_name}`) وجود ندارند.
+- **رفع:** هوک فعال شد (employeeId فقط فیلتر است)، `asList<PayrollRow>()` + `usePayrollSummary()`، و `PayrollListTable` با ستون‌های واقعی جای کارت را گرفت (کارت حذف شد، §14). ضمناً `getPayrollSummary` صفحه‌بندی شد — `.select()` بدون `range` روی سقف ۱۰۰۰ ردیفی PostgREST بی‌صدا جمعِ کمتر می‌داد — و پرداخت لغوشده دیگر در جمع نمی‌آید (هم‌راستا با گزارش سود و زیان).
+- **تست:** `packages/ui/src/components/ui/team-and-payroll/__tests__/payroll-tab-wiring.test.ts` (۷ تست) — **injection-tested**.
+- **مرورگر:** ❌ نیازمند ورود کاربر.
