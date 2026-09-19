@@ -69,8 +69,10 @@ describe('the shape only claims what is true', () => {
     expect(funnel).toContain('(count / firstCount) * 100')
   })
 
-  it('a shop with one data point is still readable', () => {
-    expect(funnel).toMatch(/MIN_WIDTH_PERCENT/)
+  it('a stage with no share still renders a visible tile', () => {
+    // The bar is clamped to 2% so a zero stage is still a row the reader can
+    // see and hover, rather than a tile that looks like it failed to render.
+    expect(funnel).toContain('Math.max(2, Math.min(100, stage.percent))')
   })
 })
 
@@ -130,23 +132,45 @@ describe('green and red are earned, not default', () => {
   })
 })
 
-describe('the funnel shape', () => {
-  it('⚠️ is one continuous taper: each bottom edge is the next top edge', () => {
-    // The previous version drew separate rows with gaps and a side pill, which
-    // read as a list of bars rather than a funnel. The outline is unbroken
-    // only if every segment closes onto the width of the one below it.
-    expect(funnel).toContain(
-      'bottom: index + 1 < tops.length ? (tops[index + 1] ?? tipTop) : tipTop',
-    )
-    expect(funnel).toContain('<ul className="flex flex-col"')
-  })
+describe('the funnel card layout', () => {
+  // The «funnel chart card» presentation (dashboardcn, MIT), adopted on the
+  // owner's instruction. The taper this replaced is gone; what must NOT change
+  // with it is what the shape is allowed to claim.
 
-  it('⚠️ the money tip is a fixed closing segment, not a proportional width', () => {
-    // Afghanis have no width that means anything beside counts.
-    expect(funnel).toContain("key: 'sales'")
-    expect(funnel).toContain('value: fmt(shownTotal)')
+  it('⚠️ the money row is not a stage, and gets no bar and no percentage', () => {
+    // Afghanis have no width that means anything beside counts — true of a
+    // trapezoid and equally true of a bar.
     expect(funnel).not.toContain('share(total)')
     expect(funnel).not.toContain('share(shownTotal)')
+    // The outcome row renders the money directly, outside the stage list.
+    expect(funnel).toContain("t('dashboard.totalSales', 'فروش کل')")
+    expect(funnel).toContain('fmt(shownTotal)')
+    // Whatever the stages are built from, money is not one of them.
+    const stagesRegion = funnel.slice(
+      funnel.indexOf('const stages = bands.map('),
+      funnel.indexOf('const focused ='),
+    )
+    expect(stagesRegion).not.toContain('shownTotal')
+  })
+
+  it('⚠️ each tile is sized as its share of the first stage', () => {
+    expect(funnel).toContain('(count / firstCount) * 100')
+    expect(funnel).toContain('percent: share(band.count)')
+  })
+
+  it('⚠️ a percentage is shown only when there is a base to divide by', () => {
+    // 0/0 is not 100%. With no first stage the tile shows «—».
+    expect(funnel).toContain("firstCount > 0 ? `${Math.round(stage.percent)}%` : '—'")
+  })
+
+  it('⚠️ colour is the trend when there is one, never a decorative gradient', () => {
+    expect(funnel).toContain('TREND_TONE[stage.trend]')
+    expect(funnel).not.toMatch(/bg-gradient-to|from-\[|to-\[/)
+  })
+
+  it('a stage with no trend is a neutral brand fade, not green', () => {
+    expect(funnel).toContain("stage.trend === 'unknown'")
+    expect(funnel).toContain('FADE_TONE[stage.fade]')
   })
 
   it('⚠️ totals cover EVERY chart point, not only the two comparison windows', () => {
@@ -158,23 +182,24 @@ describe('the funnel shape', () => {
     expect(funnel).not.toContain('count: invoicesNow + invoicesBefore')
   })
 
-  it('trapezoids are drawn with clip-path in a style object', () => {
-    expect(funnel).toContain('clipPath: clipFor(segment.top, segment.bottom)')
-    expect(funnel).toContain('polygon(')
+  it('the headline says what it is the number of', () => {
+    // It follows the hovered tile, so a changing big number without its own
+    // changing label would be a number of nothing in particular.
+    expect(funnel).toContain('focused ? focused.label :')
+    expect(funnel).toContain('focused ? focused.count.toLocaleString')
   })
 
-  it('⚠️ colour is the trend when there is one, never a decorative gradient', () => {
-    expect(funnel).toContain('TREND_TONE[segment.trend]')
-    expect(funnel).not.toMatch(/bg-gradient-to|from-\[|to-\[/)
+  it('⚠️ the bar is laid out with logical properties, not left/right', () => {
+    // RTL: a bar pinned to `left` grows away from the label in Persian.
+    expect(funnel).toContain('inset-y-0 start-0')
+    expect(funnel).not.toMatch(/\binset-y-0 left-0\b/)
   })
 
-  it('a stage with no trend is a neutral brand fade, not green', () => {
-    expect(funnel).toContain("segment.trend === 'unknown'")
-    expect(funnel).toContain('FADE_TONE[segment.fade]')
-  })
-
-  it('the number sits on a full-width row so a narrow tip never truncates it', () => {
-    expect(funnel).toContain('absolute inset-x-0 text-center')
+  it('hovering is reachable from the keyboard too', () => {
+    // The tiles are buttons, so the headline follows focus as well as the
+    // pointer — otherwise the interaction exists only for a mouse.
+    expect(funnel).toContain('onFocus={() => setHovered(stage.key)}')
+    expect(funnel).toContain('onBlur={() => setHovered(null)}')
   })
 })
 

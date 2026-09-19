@@ -2354,7 +2354,10 @@
     "viewFunnel": "قیف تبدیل",
     "rangeSales": "فروش",
     "vsPrevious": "نسبت به",
-    "daysBefore": "روز قبل"
+    "daysBefore": "روز قبل",
+    "chartHigh": "بیشترین در این بازه",
+    "chartLow": "کمترین در این بازه",
+    "chartAverage": "میانگین این بازه"
   },
   "quickInvoice": {
     "title": "فاکتور سریع",

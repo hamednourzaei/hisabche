@@ -2345,7 +2345,10 @@
     "viewFunnel": "Conversion funnel",
     "rangeSales": "Sales",
     "vsPrevious": "vs the previous",
-    "daysBefore": "days"
+    "daysBefore": "days",
+    "chartHigh": "High in this range",
+    "chartLow": "Low in this range",
+    "chartAverage": "Average for this range"
   },
   "quickInvoice": {
     "title": "Quick Invoice",

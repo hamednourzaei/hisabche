@@ -96,6 +96,30 @@ export const SalesChart = memo(function SalesChart({
   )
   const noSeriesHint = 'این داده در پاسخ سرور موجود نیست'
 
+  /**
+   * The «balance chart card» supporting stats (dashboardcn, MIT), adopted on
+   * the owner's instruction with this product's own tokens.
+   *
+   * ⚠️ HIGH / LOW / AVERAGE ARE OF THE DRAWN WINDOW, and each says so in its
+   * label. A bare «بیشترین» beside a headline invites the reader to take it
+   * for an all-time record.
+   *
+   * ⚠️ `null` WHEN THERE IS NOTHING TO MEASURE. Zeroes here would read as
+   * «your best day was zero» — a statement about the business made out of an
+   * empty array.
+   */
+  const stats = useMemo(() => {
+    const points = (data ?? []).map((d) => Number(d.value) || 0)
+    if (points.length === 0) return null
+
+    const total = points.reduce((sum, value) => sum + value, 0)
+    return {
+      high: Math.max(...points),
+      low: Math.min(...points),
+      average: Math.round(total / points.length),
+    }
+  }, [data])
+
   // Calculate insights with safe percentage
   const { percentageChange, isPositive, allZero, hasData } = useMemo(() => {
     const hasData = data && data.length > 0
@@ -225,6 +249,46 @@ export const SalesChart = memo(function SalesChart({
             </span>
           )}
         </div>
+
+        {/*
+          Supporting stats — the row the card design puts under the headline.
+          Rendered only when the window has points to describe.
+        */}
+        {stats && (
+          <div className="grid grid-cols-3 gap-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2">
+            {(
+              [
+                [
+                  'dashboard.chartHigh',
+                  'بیشترین در این بازه',
+                  stats.high,
+                  'text-[hsl(var(--color-success))]',
+                ],
+                [
+                  'dashboard.chartLow',
+                  'کمترین در این بازه',
+                  stats.low,
+                  'text-[hsl(var(--fg-secondary))]',
+                ],
+                [
+                  'dashboard.chartAverage',
+                  'میانگین این بازه',
+                  stats.average,
+                  'text-[hsl(var(--fg-primary))]',
+                ],
+              ] as [string, string, number, string][]
+            ).map(([key, fallback, value, tone]) => (
+              <div key={key} className="min-w-0">
+                <p className="truncate text-[11px] text-[hsl(var(--fg-tertiary))]">
+                  {t(key, fallback)}
+                </p>
+                <p className={cn('truncate text-sm font-semibold tabular-nums', tone)}>
+                  {fmt(value)}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Chart with motion */}
         <div className="relative">

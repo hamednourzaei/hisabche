@@ -118,8 +118,6 @@ const FADE_TONE: Record<number, string> = {
   2: 'bg-[hsl(var(--color-primary)/0.5)]',
 }
 
-const MIN_WIDTH_PERCENT = 30
-
 export function SalesFunnel({
   data,
   total,
@@ -139,6 +137,9 @@ export function SalesFunnel({
   height?: number | undefined
   t: (key: string, fallback?: string) => string
 }) {
+  /** Which stage the cursor is on — the headline follows it. */
+  const [hovered, setHovered] = React.useState<string | null>(null)
+
   const { bands, revenue, revenueTotal, windowDays } = React.useMemo(() => {
     // ⚠️ A type annotation is not a runtime check. This exact shape has taken
     // down two production screens in this codebase.
@@ -256,108 +257,137 @@ export function SalesFunnel({
   }
 
   /*
-   * ⚠️ ONE CONTINUOUS SHAPE, STACKED WITH NO GAPS.
+   * ─── PRESENTATION: the «funnel chart card» layout (dashboardcn, MIT) ─────
    *
-   * The previous version drew separate rows with a gap between them and a
-   * label pill beside each, which ate half the width — so it read as a list of
-   * bars, not a funnel. This follows the «flow / sharp» funnel pattern turned
-   * vertical: every segment's TOP edge is its own share of the first stage and
-   * its BOTTOM edge is the next segment's top, so the outline is one unbroken
-   * taper from the widest stage to the tip.
+   * Adopted on the owner's instruction, with colours taken from this product's
+   * tokens rather than the source palette. A tile per stage: its name, its
+   * number, a bar whose width is its share of the first stage, and that share
+   * as a percentage. Hovering a tile moves it into the headline.
    *
-   * ⚠️ THE TIP CARRIES MONEY BUT ITS WIDTH IS NOT MONEY. Invoices and customers
-   * are counts and share one scale; total sales is afghanis and has no width
-   * that means anything beside them. The tip is therefore a fixed closing
-   * segment — it shows the outcome, and its size claims nothing.
+   * ⚠️ WHAT THE PERCENTAGE MEANS IS UNCHANGED, AND IT IS NOT A CONVERSION.
+   *
+   * The reasoning at the top of this file still governs: invoices and
+   * customers share one scale and invoices-per-customer is a real ratio, so
+   * they get a proportional bar. Revenue is afghanis — it has no width that
+   * means anything beside a count — so it stays the OUTCOME tile beneath the
+   * stages, with no bar and no percentage. A revenue bar sized against a
+   * customer count would be a picture of nothing, whatever the layout.
    */
   const firstCount = bands[0]?.count ?? 0
-  const share = (count: number) =>
-    firstCount > 0
-      ? Math.max(MIN_WIDTH_PERCENT, Math.round((count / firstCount) * 100))
-      : MIN_WIDTH_PERCENT
+  const share = (count: number) => (firstCount > 0 ? (count / firstCount) * 100 : 0)
 
-  const tops = [...bands.map((band) => share(band.count))]
-  const tipTop = Math.max(MIN_WIDTH_PERCENT - 4, Math.round((tops[tops.length - 1] ?? 100) * 0.6))
-  const tipBottom = Math.max(10, Math.round(tipTop * 0.55))
+  const stages = bands.map((band, index) => ({
+    key: band.key,
+    label: t(`dashboard.funnel.band.${band.key}`, band.key),
+    count: band.count,
+    percent: share(band.count),
+    trend: band.trend,
+    changePercent: band.changePercent,
+    fade: index,
+  }))
 
-  const segments: Array<{
-    key: string
-    label: string
-    value: string
-    trend: Trend
-    changePercent: number | null
-    top: number
-    bottom: number
-    fade: number
-  }> = [
-    ...bands.map((band, index) => ({
-      key: band.key,
-      label: t(`dashboard.funnel.band.${band.key}`, band.key),
-      value: String(band.count),
-      trend: band.trend,
-      changePercent: band.changePercent,
-      top: tops[index] ?? 100,
-      bottom: index + 1 < tops.length ? (tops[index + 1] ?? tipTop) : tipTop,
-      fade: index,
-    })),
-    {
-      key: 'sales',
-      label: t('dashboard.totalSales', 'فروش کل'),
-      value: fmt(shownTotal),
-      trend: revenue.trend,
-      changePercent: revenue.changePercent,
-      top: tipTop,
-      bottom: tipBottom,
-      fade: bands.length,
-    },
-  ]
-
-  /** polygon() insets for a centred trapezoid, independent of pixel width. */
-  const clipFor = (top: number, bottom: number) => {
-    const topInset = (100 - top) / 2
-    const bottomInset = (100 - bottom) / 2
-    return `polygon(${topInset}% 0, ${100 - topInset}% 0, ${100 - bottomInset}% 100%, ${bottomInset}% 100%)`
-  }
+  const focused = stages.find((stage) => stage.key === hovered) ?? null
 
   return (
-    <div className="flex flex-col gap-2" style={{ minHeight: height }}>
-      <ul className="flex flex-col" aria-label={t('dashboard.funnel.aria', 'قیف فروش')}>
-        {segments.map((segment) => (
-          <li key={segment.key} className="group relative h-16">
-            {/* The segment. Unknown trend falls back to the brand colour,
-                fading stage by stage — a neutral shape, not a verdict. */}
-            <div
-              aria-hidden="true"
-              className={cn(
-                'absolute inset-0 transition-[filter] duration-150 motion-reduce:transition-none',
-                'group-hover:brightness-110',
-                segment.trend === 'unknown'
-                  ? (FADE_TONE[segment.fade] ?? FADE_TONE[2])
-                  : TREND_TONE[segment.trend],
-              )}
-              style={{ clipPath: clipFor(segment.top, segment.bottom) }}
-            />
+    <div className="flex flex-col gap-3" style={{ minHeight: height }}>
+      {/*
+        The headline. It shows the outcome by default and the stage under the
+        cursor while one is hovered — so the big number always says what it is
+        the number OF, rather than changing silently.
+      */}
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-xs text-[hsl(var(--fg-tertiary))]">
+            {focused ? focused.label : t('dashboard.totalSales', 'فروش کل')}
+          </p>
+          <p className="text-2xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+            {focused ? focused.count.toLocaleString('fa-AF') : fmt(shownTotal)}
+          </p>
+        </div>
+        <TrendMark
+          trend={focused ? focused.trend : revenue.trend}
+          changePercent={focused ? focused.changePercent : revenue.changePercent}
+        />
+      </div>
 
-            {/* Text sits on a full-width row over the shape, so a narrow
-                segment near the tip never truncates its own number. */}
-            <div className="relative flex h-full items-center justify-between gap-2 px-1">
-              <span className="min-w-0 truncate text-xs font-medium text-[hsl(var(--fg-secondary))]">
-                {segment.label}
+      <ul className="flex flex-col gap-1.5" aria-label={t('dashboard.funnel.aria', 'قیف فروش')}>
+        {stages.map((stage) => (
+          <li key={stage.key}>
+            <button
+              type="button"
+              onMouseEnter={() => setHovered(stage.key)}
+              onMouseLeave={() => setHovered(null)}
+              onFocus={() => setHovered(stage.key)}
+              onBlur={() => setHovered(null)}
+              className={cn(
+                'relative w-full overflow-hidden rounded-xl border px-3 py-2.5 text-start',
+                'transition-colors duration-150 motion-reduce:transition-none',
+                hovered === stage.key
+                  ? 'border-[hsl(var(--color-primary)/0.45)] bg-[hsl(var(--surface-muted))]'
+                  : 'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))]',
+              )}
+            >
+              {/*
+                The bar is the tile's own background, not a separate element
+                below the text: at 19% a bar on its own line is four pixels of
+                colour nobody reads. Filling the tile makes the share legible
+                at any width. It sits behind the text, so it never clips a
+                number (§RTL: `inset-inline-start`, not `left`).
+              */}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'absolute inset-y-0 start-0 transition-[width] duration-300 motion-reduce:transition-none',
+                  stage.trend === 'unknown'
+                    ? (FADE_TONE[stage.fade] ?? FADE_TONE[2])
+                    : TREND_TONE[stage.trend],
+                )}
+                style={{ width: `${Math.max(2, Math.min(100, stage.percent))}%` }}
+              />
+
+              <span className="relative flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate text-xs font-medium text-[hsl(var(--fg-primary))]">
+                  {stage.label}
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="text-sm font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+                    {stage.count.toLocaleString('fa-AF')}
+                  </span>
+                  {/*
+                    The first stage is always 100% of itself — true, and worth
+                    showing, because it is what the others are measured
+                    against.
+                  */}
+                  <span className="w-12 text-end text-[11px] tabular-nums text-[hsl(var(--fg-secondary))]">
+                    {firstCount > 0 ? `${Math.round(stage.percent)}%` : '—'}
+                  </span>
+                  <TrendMark trend={stage.trend} changePercent={stage.changePercent} />
+                </span>
               </span>
-              <span className="absolute inset-x-0 text-center text-base font-bold tabular-nums text-white drop-shadow">
-                {segment.value}
-              </span>
-              <span className="relative shrink-0">
-                <TrendMark trend={segment.trend} changePercent={segment.changePercent} />
-              </span>
-            </div>
+            </button>
           </li>
         ))}
       </ul>
 
       {/*
+        ⚠️ THE OUTCOME, NOT A STAGE. Money has no width on a scale of counts,
+        so it gets a row of its own with no bar and no percentage.
+      */}
+      <div className="flex items-center justify-between gap-2 rounded-xl border border-[hsl(var(--color-primary)/0.25)] bg-[hsl(var(--color-primary)/0.06)] px-3 py-2.5">
+        <span className="text-xs font-medium text-[hsl(var(--fg-secondary))]">
+          {t('dashboard.totalSales', 'فروش کل')}
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="text-sm font-bold tabular-nums text-[hsl(var(--color-primary))]">
+            {fmt(shownTotal)}
+          </span>
+          <TrendMark trend={revenue.trend} changePercent={revenue.changePercent} />
+        </span>
+      </div>
+
+      {/*
         ⚠️ THE COMPARISON NAMES ITS OWN WINDOW.
-        A coloured segment with no caption is a claim with no stated basis. The
+        A coloured tile with no caption is a claim with no stated basis. The
         window follows the range picker above, so this changes with it.
       */}
       {windowDays > 0 ? (
@@ -378,15 +408,7 @@ export function SalesFunnel({
  * the reader to treat it as «no change»; absent is the honest rendering of a
  * question that has no answer yet.
  */
-function TrendMark({
-  trend,
-  changePercent,
-  onBand = false,
-}: {
-  trend: Trend
-  changePercent: number | null
-  onBand?: boolean
-}) {
+function TrendMark({ trend, changePercent }: { trend: Trend; changePercent: number | null }) {
   if (trend === 'unknown') return null
 
   const Icon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus
@@ -395,7 +417,7 @@ function TrendMark({
     <span
       className={cn(
         'inline-flex items-center gap-1 text-[11px] font-medium tabular-nums',
-        onBand ? 'text-white/90' : TREND_TEXT[trend],
+        TREND_TEXT[trend],
       )}
     >
       <Icon className="size-3.5 shrink-0" aria-hidden="true" />
