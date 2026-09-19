@@ -283,6 +283,11 @@ export { PhoneInput } from './components/ui/phone-input'
 export { exportToCSV } from './lib/export'
 export { useCurrency } from './hooks/use-currency'
 export { useDateFormat, type DateFormatters } from './hooks/use-date-format'
+export {
+  useServerFieldErrors,
+  focusField,
+  type ServerFieldErrors,
+} from './hooks/use-server-field-errors'
 export { toPersianNumbers, toArabicNumbers, usePersianNumbers } from './lib/persian-numbers'
 
 // ---------- Types ----------

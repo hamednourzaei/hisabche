@@ -14,6 +14,7 @@ import {
   useReconciliation,
   type BankStatement,
   type MatchSuggestion,
+  apiErrorMessage,
 } from '@hisabche/api'
 import { BankView } from '../bank-view'
 
@@ -47,10 +48,8 @@ export const BankContainer = memo(function BankContainer() {
       setActionError(null)
       reconcile.mutate(input, {
         onError: (err) => {
-          const message =
-            (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-            (err as Error)?.message
-          setActionError(message ?? null)
+          const message = apiErrorMessage(err, t('common.saveError', 'انجام نشد'))
+          setActionError(message)
         },
       })
     },

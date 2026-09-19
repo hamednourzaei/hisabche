@@ -23,6 +23,7 @@ import {
   useSessionLedger,
   useSetTillSuspended,
   useCloseSession,
+  apiErrorMessage,
 } from '@hisabche/api'
 import { TillView } from '../till-view'
 
@@ -63,20 +64,23 @@ export const TillContainer = memo(function TillContainer() {
    * message. `POS_SESSION_ALREADY_OPEN` tells the person they already have a
    * till open in this branch; "an error occurred" would not.
    */
-  const report = useCallback((err: unknown) => {
-    const message =
-      (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-      (err as Error)?.message
-    const code = message ? /^([A-Z][A-Z_]{5,})/.exec(message)?.[1] : undefined
-    const known = [
-      'POS_SESSION_ALREADY_OPEN',
-      'POS_SUSPEND_MIGRATION_REQUIRED',
-      'POS_VARIANCE_REASON_REQUIRED',
-    ]
-    setActionError(
-      code && known.includes(code) ? t(`till.error_${code}`, message) : (message ?? null),
-    )
-  }, [])
+  const report = useCallback(
+    (err: unknown) => {
+      // The CODE is matched below, so it is read from `data.error` directly — a
+      // server that sends a code AND a sentence must not hide the code.
+      // A real fallback, not '': an empty string renders an empty red box.
+      const message = apiErrorMessage(err, t('common.saveError', 'انجام نشد'))
+      const rawCode = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      const code = /^([A-Z][A-Z_]{5,})/.exec(rawCode ?? message ?? '')?.[1]
+      const known = [
+        'POS_SESSION_ALREADY_OPEN',
+        'POS_SUSPEND_MIGRATION_REQUIRED',
+        'POS_VARIANCE_REASON_REQUIRED',
+      ]
+      setActionError(code && known.includes(code) ? t(`till.error_${code}`, message) : message)
+    },
+    [t],
+  )
 
   const handleOpen = useCallback(
     (openingFloatMinor: number) => {

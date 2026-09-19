@@ -25,13 +25,15 @@ import {
   type Account,
   type BudgetCheck,
   type SaveBudgetInput,
+  apiErrorMessage,
 } from '@hisabche/api'
 
 import { BudgetsView, type BudgetFilters } from '../budgets-view'
 
 function errorMessage(err: unknown): string | null {
-  const response = (err as { response?: { data?: { error?: string; code?: string } } })?.response
-  return response?.data?.error ?? (err as Error)?.message ?? null
+  // Empty input means «no error»; the shared reader always returns a string,
+  // so the caller's own empty sentinel is what turns it back into null.
+  return err ? apiErrorMessage(err, 'انجام نشد') : null
 }
 
 function localToday(): string {

@@ -14,6 +14,7 @@ import {
   type DepreciationRunResult,
   type FixedAsset,
   type ScheduleRow,
+  apiErrorMessage,
 } from '@hisabche/api'
 import { AssetsView } from '../assets-view'
 
@@ -39,10 +40,8 @@ export const AssetsContainer = memo(function AssetsContainer() {
       {
         onSuccess: (result) => setLastRun(result),
         onError: (err) => {
-          const message =
-            (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-            (err as Error)?.message
-          setActionError(message ?? null)
+          const message = apiErrorMessage(err, t('common.saveError', 'انجام نشد'))
+          setActionError(message)
         },
       },
     )

@@ -2664,7 +2664,8 @@
     "payroll_paid": "پرداخت شده",
     "payroll_draft": "پیش‌نویس",
     "payroll_approved": "تأیید شده",
-    "payroll_cancelled": "لغو شده"
+    "payroll_cancelled": "لغو شده",
+    "emailInvalid": "ایمیل معتبر نیست — باید شامل @ و دامنه باشد."
   },
   "projects": {
     "title": "پروژه‌ها",

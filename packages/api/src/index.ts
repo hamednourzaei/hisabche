@@ -16,6 +16,8 @@ export {
   isTokenProviderReady,
   tokenReady,
 } from './lib/tokenProvider'
+export { apiErrorMessage } from './lib/api-error-message'
+export { apiErrorFields, type ApiFieldError } from './lib/api-error-fields'
 export {
   setOnUnauthorized,
   setRefreshSession,

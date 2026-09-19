@@ -19,6 +19,7 @@ import {
   useRoleMembers,
   useSetPermissionCell,
   type AccessLevel,
+  apiErrorMessage,
 } from '@hisabche/api'
 
 import { PermissionMatrixView } from '../permission-matrix-view'
@@ -43,8 +44,10 @@ function messageOf(
   const authorization = authorizationText(error, t)
   if (authorization) return authorization
 
-  const response = (error as { response?: { data?: { error?: string } } })?.response
-  const raw = response?.data?.error ?? (error as { message?: string })?.message ?? fallback
+  // ⚠️ The CODE is matched below, so it is read from `data.error` directly —
+  // a server that sends both a code and a sentence must not hide the code.
+  const code = (error as { response?: { data?: { error?: string } } })?.response?.data?.error ?? ''
+  const raw = `${code} ${apiErrorMessage(error, fallback)}`.trim()
   // The owner's own access to members and settings cannot be removed — said in
   // words, not as the server's code.
   if (String(raw).includes('PERMISSION_OWNER_LOCKED')) {

@@ -14,6 +14,7 @@ import {
   useProjects,
   useTimesheetSummary,
   type BillableLine,
+  apiErrorMessage,
 } from '@hisabche/api'
 import { TimesheetsView, type TimesheetProjectOption } from '../timesheets-view'
 
@@ -64,10 +65,7 @@ export const TimesheetsContainer = memo(function TimesheetsContainer() {
         { projectId: selectedProjectId, ...input },
         {
           onError: (err) => {
-            const message =
-              (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-              (err as Error)?.message
-            setActionError(message ?? null)
+            setActionError(apiErrorMessage(err, 'انجام نشد'))
           },
         },
       )

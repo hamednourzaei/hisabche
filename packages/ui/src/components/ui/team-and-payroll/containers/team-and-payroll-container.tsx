@@ -35,6 +35,7 @@
 // warehouse screen uses for its catalogue tab.
 // ============================================
 
+import { useServerFieldErrors } from '../../../../hooks/use-server-field-errors'
 import type { PayrollRow } from '../payroll-list-table'
 import { useCallback, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -54,6 +55,8 @@ import {
   asList,
   usePermissionMatrix,
   useWorkspaces,
+  apiErrorMessage,
+  apiErrorFields,
 } from '@hisabche/api'
 
 import { TeamAndPayrollView, type TeamTab } from '../team-and-payroll-view'
@@ -66,9 +69,14 @@ function tabFrom(value: string | null | undefined): TeamTab {
 }
 
 /** The server's message, or a generic fallback. Never a swallowed error. */
-function messageOf(error: unknown, fallback: string): string {
-  const response = (error as { response?: { data?: { error?: string } } })?.response
-  return response?.data?.error ?? (error as Error)?.message ?? fallback
+
+/**
+ * The banner's text, or null when every reason is already sitting on a field.
+ * Showing both would say the same thing twice, in two places, and make the
+ * form look like it has more wrong with it than it does.
+ */
+function employeeFieldsMessage(error: unknown, fallback: string): string | null {
+  return apiErrorFields(error).length > 0 ? null : apiErrorMessage(error, fallback)
 }
 
 export function TeamAndPayrollContainer() {
@@ -139,6 +147,9 @@ export function TeamAndPayrollContainer() {
   )
 
   const [employeeFormError, setEmployeeFormError] = useState<string | null>(null)
+  // A refusal that names a field belongs ON that field, with the user taken
+  // to it — «هیچ اروری نبود، حتی منم نفهمیدم ارور چی بود».
+  const employeeFields = useServerFieldErrors()
   const [branchFormError, setBranchFormError] = useState<string | null>(null)
   const [showBranchForm, setShowBranchForm] = useState(false)
 
@@ -167,6 +178,7 @@ export function TeamAndPayrollContainer() {
       access?: { email: string; password: string; role: 'admin' | 'member' | 'viewer' },
     ) => {
       setEmployeeFormError(null)
+      employeeFields.reset()
       const { permissionProfileId, ...employeeValues } = values as Record<string, unknown> & {
         permissionProfileId?: string
       }
@@ -197,7 +209,7 @@ export function TeamAndPayrollContainer() {
             accessUserId = member?.user_id ?? null
           } catch (error) {
             setEmployeeFormError(
-              `${t('team.accountFailed', 'کارمند ثبت شد، ولی ساخت حساب کاربری ناموفق بود')}: ${messageOf(error, '')}`,
+              `${t('team.accountFailed', 'کارمند ثبت شد، ولی ساخت حساب کاربری ناموفق بود')}: ${apiErrorMessage(error, '')}`,
             )
           }
         } else if (access && !workspaceId) {
@@ -244,11 +256,24 @@ export function TeamAndPayrollContainer() {
         // their employee was created when it was not — and the branch
         // assignment fails loudly on the server when phase-d-01 has not run,
         // which is precisely the message they need to see.
-        setEmployeeFormError(messageOf(error, t('common.saveError', 'ذخیره ناموفق بود')))
+        // Names the field where it can, and falls back to one sentence for
+        // the whole form where the failure belongs to no single input.
+        employeeFields.report(error, t('common.saveError', 'ذخیره ناموفق بود'))
+        setEmployeeFormError(
+          employeeFieldsMessage(error, t('common.saveError', 'ذخیره ناموفق بود')),
+        )
         throw error
       }
     },
-    [createEmployee, assignProfile, createMemberDirect, workspaceId, refetchEmployees, t],
+    [
+      createEmployee,
+      assignProfile,
+      createMemberDirect,
+      workspaceId,
+      refetchEmployees,
+      employeeFields,
+      t,
+    ],
   )
 
   const handleDeleteEmployee = useCallback(
@@ -268,7 +293,7 @@ export function TeamAndPayrollContainer() {
       } catch (error) {
         // The service refuses a non-owner with BRANCH_MANAGE_FORBIDDEN. Showing
         // that beats a form that closes as though it had worked.
-        setBranchFormError(messageOf(error, t('common.saveError', 'ذخیره ناموفق بود')))
+        setBranchFormError(apiErrorMessage(error, t('common.saveError', 'ذخیره ناموفق بود')))
       }
     },
     [createBranch, t],
@@ -347,6 +372,7 @@ export function TeamAndPayrollContainer() {
       permissionProfiles={permissionProfiles}
       branchesTab={branchesTab}
       employeeFormError={employeeFormError}
+      employeeFieldErrors={employeeFields.fields}
     />
   )
 }

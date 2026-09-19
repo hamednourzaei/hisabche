@@ -90,6 +90,14 @@ interface TeamAndPayrollViewProps {
   branchesTab?: React.ReactNode
   /** Surfaced instead of being swallowed: a failed save must say why. */
   employeeFormError?: string | null
+  /**
+   * field name → the server's reason for refusing it.
+   *
+   * Rendered under the input that carries that `name`, because a form that
+   * says only «ذخیره ناموفق بود» leaves the user guessing which of eighteen
+   * fields to change (request #102).
+   */
+  employeeFieldErrors?: Record<string, string>
 
   // ─── G3 ───────────────────────────────────────────────────────────────────
   /**
@@ -198,6 +206,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
   branches = [],
   branchesTab,
   employeeFormError,
+  employeeFieldErrors = {},
   permissionProfiles = [],
 }: TeamAndPayrollViewProps) {
   const [showEmployeeForm, setShowEmployeeForm] = useState(false)
@@ -298,6 +307,23 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
     !form.hasAccess ||
     (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.accessEmail.trim()) && form.accessPassword.length >= 8)
 
+  /**
+   * Empty is fine — the email is optional and simply is not sent. What is not
+   * fine is a non-empty value that is not an address: the server's
+   * `z.string().email()` refuses it with a 400 and the whole form comes back
+   * as one unexplained «Error».
+   */
+  /** The server's complaint about one field, or nothing. */
+  const fieldError = (name: string) =>
+    employeeFieldErrors[name] ? (
+      <span className="text-xs text-[hsl(var(--color-destructive))]" role="alert">
+        {employeeFieldErrors[name]}
+      </span>
+    ) : null
+
+  const emailValue = form.email.trim()
+  const emailLooksValid = emailValue.length === 0 || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)
+
   const canSubmitEmployee =
     form.firstName.trim().length > 0 &&
     form.lastName.trim().length > 0 &&
@@ -305,6 +331,9 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
     // An employee belongs to a branch (request #98-و). The server refuses one
     // without it too; this keeps the user from filling a form that cannot save.
     form.branchId.trim().length > 0 &&
+    // An address the server will refuse anyway. Caught here so the owner is
+    // told which field is wrong instead of losing a filled-in form to a 400.
+    emailLooksValid &&
     accessComplete &&
     !isSubmitting
 
@@ -469,9 +498,11 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <input
                 value={form.firstName}
                 onChange={(e) => setField('firstName')(e.target.value)}
+                name="firstName"
                 className={FORM_FIELD}
                 disabled={isSubmitting}
               />
+              {fieldError('firstName')}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -481,9 +512,11 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <input
                 value={form.lastName}
                 onChange={(e) => setField('lastName')(e.target.value)}
+                name="lastName"
                 className={FORM_FIELD}
                 disabled={isSubmitting}
               />
+              {fieldError('lastName')}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -493,10 +526,12 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <input
                 value={form.employeeCode}
                 onChange={(e) => setField('employeeCode')(e.target.value)}
+                name="employeeCode"
                 placeholder={t('team.employeeCodeAuto', 'خالی بگذارید تا خودکار ساخته شود')}
                 className={FORM_FIELD}
                 disabled={isSubmitting}
               />
+              {fieldError('employeeCode')}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -506,9 +541,11 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <input
                 value={form.position}
                 onChange={(e) => setField('position')(e.target.value)}
+                name="position"
                 className={FORM_FIELD}
                 disabled={isSubmitting}
               />
+              {fieldError('position')}
             </label>
 
             {/*
@@ -528,6 +565,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <SelectField
                 value={form.branchId}
                 onChange={(value) => setField('branchId')(value)}
+                data-field="branchId"
                 options={[
                   // No «بدون شعبه»: an employee belongs to a branch, and the
                   // form cannot be submitted without one.
@@ -540,6 +578,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                 className={FORM_FIELD}
                 disabled={isSubmitting}
               />
+              {fieldError('branchId')}
             </label>
 
             {/*
@@ -663,6 +702,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <SelectField
                 value={form.permissionProfileId}
                 onChange={(value) => setField('permissionProfileId')(value)}
+                data-field="permissionProfileId"
                 options={[
                   { value: '', label: t('team.noProfile', 'بدون پروفایل') },
                   ...permissionProfiles.map((profile) => ({
@@ -679,6 +719,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                   'فقط برای کارمندی اعمال می‌شود که حساب کاربری دارد.',
                 )}
               </span>
+              {fieldError('permissionProfileId')}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -688,10 +729,12 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <input
                 value={form.nationalId}
                 onChange={(e) => setField('nationalId')(e.target.value)}
+                name="nationalId"
                 className={FORM_FIELD}
                 dir="ltr"
                 disabled={isSubmitting}
               />
+              {fieldError('nationalId')}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -702,9 +745,11 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                 type="date"
                 value={form.dateOfBirth}
                 onChange={(e) => setField('dateOfBirth')(e.target.value)}
+                name="dateOfBirth"
                 className={FORM_FIELD}
                 disabled={isSubmitting}
               />
+              {fieldError('dateOfBirth')}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -714,6 +759,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <SelectField
                 value={form.gender}
                 onChange={(value) => setField('gender')(value)}
+                data-field="gender"
                 options={[
                   { value: '', label: t('team.notSpecified', 'مشخص نشده') },
                   { value: 'male', label: t('hr.gender_male', 'مرد') },
@@ -722,6 +768,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                 ]}
                 disabled={isSubmitting}
               />
+              {fieldError('gender')}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -732,10 +779,12 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setField('phone')(e.target.value)}
+                name="phone"
                 className={FORM_FIELD}
                 dir="ltr"
                 disabled={isSubmitting}
               />
+              {fieldError('phone')}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -746,10 +795,21 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                 type="email"
                 value={form.email}
                 onChange={(e) => setField('email')(e.target.value)}
+                name="email"
                 className={FORM_FIELD}
                 dir="ltr"
+                aria-invalid={!emailLooksValid}
                 disabled={isSubmitting}
               />
+              {/* The message sits ON the field that is wrong — a disabled
+                  Save button with no reason beside it is the same dead end as
+                  the 400 was. */}
+              {!emailLooksValid && (
+                <span className="text-xs text-[hsl(var(--color-destructive))]" role="alert">
+                  {t('hr.emailInvalid', 'ایمیل معتبر نیست — باید شامل @ و دامنه باشد.')}
+                </span>
+              )}
+              {fieldError('email')}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -759,11 +819,13 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <SelectField
                 value={form.employmentType}
                 onChange={(value) => setField('employmentType')(value)}
+                data-field="employmentType"
                 options={(
                   ['full_time', 'part_time', 'contractor', 'intern', 'consultant'] as const
                 ).map((type) => ({ value: type, label: t(`hr.employment_${type}`, type) }))}
                 disabled={isSubmitting}
               />
+              {fieldError('employmentType')}
             </label>
 
             <label className="flex flex-col gap-1.5 sm:col-span-2">
@@ -773,9 +835,11 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <input
                 value={form.address}
                 onChange={(e) => setField('address')(e.target.value)}
+                name="address"
                 className={FORM_FIELD}
                 disabled={isSubmitting}
               />
+              {fieldError('address')}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -786,9 +850,11 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                 type="number"
                 value={form.salary}
                 onChange={(e) => setField('salary')(e.target.value)}
+                name="salary"
                 className={FORM_FIELD}
                 disabled={isSubmitting}
               />
+              {fieldError('salary')}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -798,10 +864,12 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <SelectField
                 value={form.salaryCurrency}
                 onChange={(value) => setField('salaryCurrency')(value)}
+                data-field="salaryCurrency"
                 options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
                 className={FORM_FIELD}
                 disabled={isSubmitting}
               />
+              {fieldError('salaryCurrency')}
             </label>
 
             <label className="flex flex-col gap-1.5">
@@ -812,9 +880,11 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                 type="date"
                 value={form.hireDate}
                 onChange={(e) => setField('hireDate')(e.target.value)}
+                name="hireDate"
                 className={FORM_FIELD}
                 disabled={isSubmitting}
               />
+              {fieldError('hireDate')}
             </label>
           </div>
 

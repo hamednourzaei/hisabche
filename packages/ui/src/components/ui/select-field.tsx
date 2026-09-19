@@ -65,6 +65,15 @@ export interface SelectFieldProps {
   id?: string
   'aria-label'?: string
   name?: string
+  /**
+   * The API's name for what this select sets, so a refused save can find the
+   * control and send the user to it (see `useServerFieldErrors`).
+   *
+   * ⚠️ It has to be declared HERE. A hyphenated JSX attribute is exempt from
+   * excess-property checking, so passing `data-field` to a component that
+   * does not forward it compiles cleanly and then does nothing at all.
+   */
+  'data-field'?: string
 }
 
 export function SelectField({
@@ -77,6 +86,7 @@ export function SelectField({
   id,
   name,
   'aria-label': ariaLabel,
+  'data-field': dataField,
 }: SelectFieldProps) {
   // A stored value that is not in the list is RENDERED, not dropped. The old
   // native element showed nothing in that case and silently submitted the
@@ -91,7 +101,12 @@ export function SelectField({
       disabled={Boolean(disabled)}
       {...(name ? { name } : {})}
     >
-      <SelectTrigger id={id} aria-label={ariaLabel} className={cn('w-full', className)}>
+      <SelectTrigger
+        id={id}
+        aria-label={ariaLabel}
+        {...(dataField ? { 'data-field': dataField } : {})}
+        className={cn('w-full', className)}
+      >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

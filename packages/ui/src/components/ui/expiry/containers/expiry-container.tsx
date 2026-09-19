@@ -13,6 +13,7 @@ import {
   usePlanIssue,
   type AllocationPlan,
   type StockBatch,
+  apiErrorMessage,
 } from '@hisabche/api'
 import { ExpiryView } from '../expiry-view'
 
@@ -39,10 +40,8 @@ export const ExpiryContainer = memo(function ExpiryContainer() {
       planIssue.mutate(input, {
         onSuccess: setPlan,
         onError: (err) => {
-          const message =
-            (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-            (err as Error)?.message
-          setActionError(message ?? null)
+          const message = apiErrorMessage(err, t('common.saveError', 'انجام نشد'))
+          setActionError(message)
         },
       })
     },

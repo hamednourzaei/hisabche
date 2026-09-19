@@ -2648,7 +2648,8 @@
     "payroll_paid": "Paid",
     "payroll_draft": "Draft",
     "payroll_approved": "Approved",
-    "payroll_cancelled": "Cancelled"
+    "payroll_cancelled": "Cancelled",
+    "emailInvalid": "Not a valid email — it needs an @ and a domain."
   },
   "projects": {
     "title": "Projects",

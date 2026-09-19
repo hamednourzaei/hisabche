@@ -17,6 +17,7 @@ import {
   useResolveConflict,
   type Conflict,
   type ResolutionChoice,
+  apiErrorMessage,
 } from '@hisabche/api'
 import { ConflictsView } from '../conflicts-view'
 
@@ -68,10 +69,8 @@ export const ConflictsContainer = memo(function ConflictsContainer() {
             // Server refusals are shown verbatim: CONFLICT_ALREADY_RESOLVED and
             // CONFLICT_MERGE_FIELD_UNKNOWN each tell the person something they
             // can act on, which "an error occurred" does not.
-            const message =
-              (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-              (err as Error)?.message
-            setActionError(message ?? null)
+            const message = apiErrorMessage(err, t('common.saveError', 'انجام نشد'))
+            setActionError(message)
           },
         },
       )

@@ -14,6 +14,7 @@ import {
   type SoDMode,
   type SoDOverride,
   type SoDRule,
+  apiErrorMessage,
 } from '@hisabche/api'
 import { GovernanceView } from '../governance-view'
 
@@ -31,10 +32,7 @@ export const GovernanceContainer = memo(function GovernanceContainer() {
   const save = useSaveSoD()
 
   const report = useCallback((err: unknown) => {
-    const message =
-      (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-      (err as Error)?.message
-    setActionError(message ?? null)
+    setActionError(apiErrorMessage(err, 'انجام نشد'))
   }, [])
 
   const handleModeChange = useCallback(
