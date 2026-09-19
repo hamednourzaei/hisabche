@@ -1,5 +1,6 @@
 'use client'
 
+import { KpiCard } from '../kpi-card'
 import { SUPPORTED_CURRENCIES } from '@hisabche/store'
 import { SelectField } from '../select-field'
 import { Switch } from '../switch'
@@ -150,43 +151,6 @@ const FORM_FIELD =
   'rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]'
 
 // ─── Sub-components ────────────────────────────────────────────────────────
-
-const StatCard = memo(function StatCard({
-  label,
-  value,
-  icon: Icon,
-  trend,
-}: {
-  label: string
-  value: string | number
-  icon: React.ElementType
-  trend?: { value: number; label: string; positive: boolean }
-}) {
-  return (
-    <div className="flex-1 min-w-[180px] flex items-start justify-between gap-3 p-4 rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
-      <div>
-        <p className="text-xs text-[hsl(var(--fg-secondary))] mb-1">{label}</p>
-        <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))] mb-1">{value}</p>
-        {trend && (
-          <p
-            className={cn(
-              'text-xs',
-              trend.positive
-                ? 'text-[hsl(var(--color-success))]'
-                : 'text-[hsl(var(--color-destructive))]',
-            )}
-          >
-            {trend.label}
-          </p>
-        )}
-      </div>
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl shrink-0 bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]">
-        <Icon className="size-5" aria-hidden="true" />
-      </div>
-    </div>
-  )
-})
-StatCard.displayName = 'StatCard'
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
@@ -472,15 +436,17 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
 
       {/* KPI Cards */}
       <div className="flex gap-4 flex-wrap">
-        <StatCard
+        <KpiCard
           label={t('team.totalEmployees', 'جمع کارمندان')}
           value={totalEmployees}
           icon={Users}
+          className="min-w-[180px] flex-1"
         />
-        <StatCard
+        <KpiCard
           label={t('team.totalPayroll', 'جمع حقوق پرداختی')}
           value={`${totalPayroll.toLocaleString('fa-AF')} AFN`}
           icon={Wallet}
+          className="min-w-[180px] flex-1"
         />
       </div>
 

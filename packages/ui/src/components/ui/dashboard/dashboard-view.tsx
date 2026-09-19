@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/dashboard/dashboard-view.tsx
 'use client'
 
+import { KpiCard } from '../kpi-card'
 import { memo, useEffect, useMemo, useState } from 'react'
 import type { ElementType } from 'react'
 import { useTranslations } from 'next-intl'
@@ -119,108 +120,6 @@ const Greeting = memo(function Greeting({ t }: { t: Translate }) {
   )
 })
 Greeting.displayName = 'Greeting'
-
-// ─── KPI Card ──────────────────────────────────────────────────────────────
-
-const KpiCard = memo(function KpiCard({
-  icon: Icon,
-  label,
-  value,
-  change,
-  changeLabel,
-  isLoading,
-  onOpen,
-  openLabel,
-}: {
-  icon: typeof TrendingUp
-  label: string
-  value: string
-  // ✅ اسپارک‌لاین حذف شد: برای «بدهی مشتریان» و «ارزش انبار» هیچ سری
-  // زمانی وجود نداشت و فقط یک خط‌چین خنثی رسم می‌شد. حالا به‌جایش درصد
-  // تغییر واقعی نمایش داده می‌شود (null یعنی داده‌ی مقایسه‌ای نداریم).
-  change: number | null
-  changeLabel?: string | undefined
-  isLoading: boolean
-  /**
-   * H1 — where this number lives.
-   *
-   * Optional, and a card without one stays a plain `<div>`. «ارزش کل انبار»
-   * has a destination; a card whose figure has no list behind it must not
-   * pretend to, because a control that looks pressable and does nothing reads
-   * as a broken app rather than as a card with no drill-down.
-   */
-  onOpen?: (() => void) | undefined
-  /** What the drill-down shows, for a screen reader and the tooltip. */
-  openLabel?: string | undefined
-}) {
-  if (isLoading) {
-    return <div className="h-[104px] rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
-  }
-  const positive = (change ?? 0) >= 0
-
-  // A real <button> when it acts like one: keyboard focus, Enter and Space,
-  // and an accessible name — none of which an onClick on a div provides.
-  const Tag = onOpen ? 'button' : 'div'
-
-  return (
-    <Tag
-      {...(onOpen
-        ? {
-            type: 'button' as const,
-            onClick: onOpen,
-            title: openLabel ?? label,
-            'aria-label': openLabel ? `${label} — ${openLabel}` : label,
-          }
-        : {})}
-      className={cn(
-        'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 space-y-2',
-        // RTL-safe: `text-start`, never `text-left`. A button element
-        // centre-aligns its content by default, which would silently
-        // re-align every figure the moment a card became clickable.
-        onOpen &&
-          'w-full text-start cursor-pointer transition-colors hover:border-[hsl(var(--color-primary)/0.5)] hover:bg-[hsl(var(--surface-muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
-      )}
-    >
-      <div className="flex items-center gap-2">
-        <Icon className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-        <span className="text-xs text-[hsl(var(--fg-secondary))]">{label}</span>
-      </div>
-      {/* ✅ عدد هرگز خلاصه یا گرد نمی‌شود؛ به‌جایش با بلندتر شدن رقم‌ها،
-          اندازه‌ی فونت کم می‌شود تا نه از کارت بیرون بزند و نه به خط بعد برود. */}
-      <p
-        className={cn(
-          'font-bold tabular-nums text-[hsl(var(--fg-primary))] whitespace-nowrap overflow-hidden',
-          value.length <= 9
-            ? 'text-xl'
-            : value.length <= 12
-              ? 'text-lg'
-              : value.length <= 15
-                ? 'text-base'
-                : 'text-sm',
-        )}
-        title={value}
-      >
-        {value}
-      </p>
-      {change === null ? (
-        <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">—</p>
-      ) : (
-        <p
-          className={cn(
-            'flex items-center gap-1 text-[11px] tabular-nums',
-            positive ? 'text-[hsl(var(--color-success))]' : 'text-[hsl(var(--color-destructive))]',
-          )}
-        >
-          {positive ? '▲' : '▼'} {Math.abs(change).toFixed(1)}٪
-          {changeLabel ? (
-            <span className="text-[hsl(var(--fg-tertiary))]">{changeLabel}</span>
-          ) : null}
-        </p>
-      )}
-    </Tag>
-  )
-})
-KpiCard.displayName = 'KpiCard'
 
 // ─── AI Insights (عمودی) ────────────────────────────────────────────────────
 
@@ -602,8 +501,9 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
           icon={TrendingUp}
           label={t('dashboard.totalSales', 'فروش کل')}
           value={fmt(totalSales)}
-          change={monthlyGrowth ?? null}
-          changeLabel={t('dashboard.vsLastMonth', 'نسبت به ماه گذشته')}
+          delta={monthlyGrowth ?? null}
+          deltaLabel={t('dashboard.vsLastMonth', 'نسبت به ماه گذشته')}
+          showEmptyDelta
           isLoading={kpiLoading}
           onOpen={() => onNavigate(invoiceListHref('totalSales'))}
           openLabel={t('dashboard.openSalesInvoices', 'فاکتورهای فروش')}
@@ -612,8 +512,9 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
           icon={Wallet}
           label={rangeLabel}
           value={fmt(rangeSalesTotal ?? 0)}
-          change={rangeChange}
-          changeLabel={rangeChangeLabel}
+          delta={rangeChange}
+          {...(rangeChangeLabel ? { deltaLabel: rangeChangeLabel } : {})}
+          showEmptyDelta
           isLoading={rangeLoading || rangeSalesTotal === null}
           onOpen={() => onNavigate(invoiceListHref(rangeIsToday ? 'todaySales' : 'totalSales'))}
           openLabel={t('dashboard.openTodayInvoices', 'فاکتورهای امروز')}
@@ -622,7 +523,12 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
           icon={CreditCard}
           label={t('dashboard.customerDebt', 'بدهی مشتریان')}
           value={fmt(customerDebt)}
-          change={null}
+          delta={null}
+          // ⚠️ Debt is the one card here where rising is BAD. It carries no
+          // comparison today, so nothing is coloured — but the flag is set so
+          // a future delta cannot inherit «up is green».
+          invertDelta
+          showEmptyDelta
           isLoading={kpiLoading}
           onOpen={() => onNavigate(invoiceListHref('customerDebt'))}
           openLabel={t('dashboard.openUnpaidInvoices', 'فاکتورهای تسویه‌نشده')}
@@ -631,7 +537,8 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
           icon={Boxes}
           label={t('dashboard.warehouseValue', 'ارزش کل انبار')}
           value={fmt(warehouseValue)}
-          change={null}
+          delta={null}
+          showEmptyDelta
           isLoading={kpiLoading}
           onOpen={() => onNavigate('/warehouse')}
           openLabel={t('dashboard.openWarehouse', 'انبار')}

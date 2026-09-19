@@ -134,6 +134,28 @@ export interface KpiCardProps {
   invertDelta?: boolean
   surface?: KpiSurface
   className?: string
+  /** The shape of what is coming, at the card's own height. */
+  isLoading?: boolean
+  /**
+   * H1 — where this number lives.
+   *
+   * With it the card is a real `<button>`: keyboard focus, Enter and Space and
+   * an accessible name, none of which an onClick on a div gives. Without it it
+   * stays a plain box — a card that looks pressable and does nothing reads as
+   * a broken app.
+   */
+  onOpen?: (() => void) | undefined
+  /** What the drill-down shows, for the tooltip and the screen reader. */
+  openLabel?: string | undefined
+  /**
+   * ⚠️ «—» WHEN THERE IS NOTHING TO COMPARE, instead of no line at all.
+   *
+   * For a ROW of cards: without it the cards that have no comparison are
+   * shorter than the ones that do, and the row's baselines break. The dash
+   * means «not compared», never «unchanged» — which is why it is a dash and
+   * not «۰٪».
+   */
+  showEmptyDelta?: boolean
 }
 
 const SURFACE_CLASS: Record<KpiSurface, string> = {
@@ -152,6 +174,10 @@ export function KpiCard({
   invertDelta = false,
   surface = 'card',
   className,
+  isLoading = false,
+  onOpen,
+  openLabel,
+  showEmptyDelta = false,
 }: KpiCardProps) {
   const locale = useIntlLocale()
 
@@ -163,8 +189,41 @@ export function KpiCard({
   const isGood = invertDelta ? !isUp : isUp
   const TrendIcon = isUp ? TrendingUp : TrendingDown
 
+  if (isLoading) {
+    return (
+      <div
+        className={cn(
+          'h-[104px] rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse',
+          className,
+        )}
+        aria-hidden="true"
+      />
+    )
+  }
+
+  const Tag = onOpen ? 'button' : 'div'
+
   return (
-    <div className={cn(SURFACE_CLASS[surface], STAT_PADDING, className)}>
+    <Tag
+      {...(onOpen
+        ? {
+            type: 'button' as const,
+            onClick: onOpen,
+            title: openLabel ?? label,
+            'aria-label': openLabel ? `${label} — ${openLabel}` : label,
+          }
+        : {})}
+      className={cn(
+        SURFACE_CLASS[surface],
+        STAT_PADDING,
+        // RTL-safe: `text-start`, never `text-left`. A button centre-aligns
+        // its content by default, which would silently re-align every figure
+        // the moment a card became clickable.
+        onOpen &&
+          'w-full text-start cursor-pointer hover:border-[hsl(var(--color-primary)/0.5)] hover:bg-[hsl(var(--surface-muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
+        className,
+      )}
+    >
       <div className="flex items-center gap-1.5 sm:gap-2">
         {Icon ? (
           <Icon
@@ -213,8 +272,13 @@ export function KpiCard({
         </div>
       )}
 
+      {!hasDelta && showEmptyDelta && (
+        // Not «۰٪»: nothing was compared, and a zero would claim it was.
+        <p className="mt-1 text-[11px] text-[hsl(var(--fg-tertiary))]">—</p>
+      )}
+
       {hint ? <div className={cn('mt-0.5', STAT_HINT)}>{hint}</div> : null}
-    </div>
+    </Tag>
   )
 }
 

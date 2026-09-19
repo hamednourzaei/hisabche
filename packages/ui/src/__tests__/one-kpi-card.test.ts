@@ -60,6 +60,57 @@ describe('the card is assembled in exactly one file', () => {
   })
 })
 
+describe('no screen declares a KPI card of its own', () => {
+  it('⚠️ there is no second component named like the card', () => {
+    // The dashboard, `/human-resources` and `/team-and-payroll` each had their
+    // own `KpiCard`/`StatCard` — same information, four different cards, and
+    // the owner's report was exactly that: the dashboard's four cards were not
+    // the new card.
+    //
+    // `landing-preview.tsx` is excluded by NAME, not by path: its `PreviewKpi`
+    // is a 9-pixel drawing of a card inside a mockup laptop, with invented
+    // numbers and no data behind it.
+    const offenders = files.filter((file) => {
+      if (file.endsWith('kpi-card.tsx')) return false
+      const src = code(readFileSync(file, 'utf8'))
+      return /\b(?:const|function)\s+(?:Kpi|Stat|Metric|Summary)Card\b/.test(src)
+    })
+
+    expect(offenders.map((f) => f.replace(UI_ROOT, ''))).toEqual([])
+  })
+
+  it('the dashboard’s four cards are the shared one, with their drill-downs', () => {
+    const view = code(readFileSync(join(UI_ROOT, 'dashboard', 'dashboard-view.tsx'), 'utf8'))
+    expect(view).toContain("import { KpiCard } from '../kpi-card'")
+    // Four cards, each opening the rows its figure was computed from.
+    expect((view.match(/<KpiCard/g) ?? []).length).toBe(4)
+    expect((view.match(/onOpen=\{/g) ?? []).length).toBe(4)
+    // ⚠️ Debt is the one where rising is bad.
+    const debt = view.slice(view.indexOf('dashboard.customerDebt'))
+    expect(debt.slice(0, 400)).toContain('invertDelta')
+  })
+
+  it('⚠️ a row keeps its baselines when only some cards have a comparison', () => {
+    // Without this the cards with no delta are shorter than the ones with it.
+    // The dash means «not compared» — never «unchanged», which is why it is a
+    // dash and not «۰٪».
+    const kpi = code(readFileSync(join(UI_ROOT, 'kpi-card.tsx'), 'utf8'))
+    expect(kpi).toContain('{!hasDelta && showEmptyDelta && (')
+    expect(kpi).not.toContain("showEmptyDelta && '۰٪'")
+  })
+
+  it('a card with a drill-down is a real button', () => {
+    // Keyboard focus, Enter and Space and an accessible name — none of which
+    // an onClick on a div provides.
+    const kpi = code(readFileSync(join(UI_ROOT, 'kpi-card.tsx'), 'utf8'))
+    expect(kpi).toContain("const Tag = onOpen ? 'button' : 'div'")
+    expect(kpi).toContain("type: 'button' as const")
+    expect(kpi).toContain("'aria-label': openLabel ? `${label} — ${openLabel}` : label")
+    // RTL: a button centre-aligns by default.
+    expect(kpi).toContain('w-full text-start')
+  })
+})
+
 describe('what the card promises about the numbers', () => {
   const kpi = code(readFileSync(join(UI_ROOT, 'kpi-card.tsx'), 'utf8'))
 

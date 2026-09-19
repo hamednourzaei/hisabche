@@ -13,7 +13,14 @@ const CHART_HEIGHTS = [42, 68, 48, 82, 58, 92, 72, 86, 64, 78]
 
 // ─── KpiCard ─────────────────────────────────────────────────────────────────
 
-const KpiCard = memo(function KpiCard({
+/**
+ * ⚠️ NOT THE PRODUCT'S KPI CARD, and deliberately not named like it.
+ *
+ * This is a 9-pixel drawing of one inside a fake laptop screen on the landing
+ * page — invented numbers, a tenth of the scale, no data behind it. Rendering
+ * the real `KpiCard` here would put a full-size card in a mockup.
+ */
+const PreviewKpi = memo(function PreviewKpi({
   label,
   value,
   change,
@@ -43,7 +50,7 @@ const KpiCard = memo(function KpiCard({
     </div>
   )
 })
-KpiCard.displayName = 'KpiCard'
+PreviewKpi.displayName = 'PreviewKpi'
 
 // ─── ChartBars ───────────────────────────────────────────────────────────────
 
@@ -254,7 +261,7 @@ export const LandingPreview = memo(function LandingPreview() {
               aria-label={t('landing.kpiAria', 'شاخص‌های کلیدی')}
             >
               {kpiData.map((kpi, i) => (
-                <KpiCard key={i} {...kpi} />
+                <PreviewKpi key={i} {...kpi} />
               ))}
             </div>
             <ChartBars t={t} />

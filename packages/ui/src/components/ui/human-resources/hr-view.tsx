@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/human-resources/hr-view.tsx
 'use client'
 
+import { KpiCard } from '../kpi-card'
 import { SelectField } from '../select-field'
 import { cn } from '../../../lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
@@ -143,29 +144,6 @@ function getStatusBadge(status: string, t: (key: string, fallback?: string) => s
 }
 
 // ─── KPI Stat Card ─────────────────────────────────────────────────────────
-
-const StatCard = memo(function StatCard({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string
-  value: string | number
-  icon: React.ElementType
-}) {
-  return (
-    <div className="flex-1 min-w-[180px] flex items-start justify-between gap-3 p-4 rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
-      <div>
-        <p className="text-xs text-[hsl(var(--fg-secondary))]">{label}</p>
-        <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))] mt-1">{value}</p>
-      </div>
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl shrink-0 bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]">
-        <Icon className="size-5" aria-hidden="true" />
-      </div>
-    </div>
-  )
-})
-StatCard.displayName = 'StatCard'
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
@@ -373,12 +351,18 @@ export const HumanResourcesView = memo(function HumanResourcesView({
 
       {/* KPI Cards */}
       <div className="flex gap-4 flex-wrap">
-        <StatCard
+        <KpiCard
           label={t('hr.totalPayroll', 'جمع حقوق پرداختی')}
           value={`${payrollTotal.toLocaleString('fa-AF')} AFN`}
           icon={Wallet}
+          className="min-w-[180px] flex-1"
         />
-        <StatCard label={t('hr.totalEmployees', 'تعداد کارمندان')} value={total} icon={Users} />
+        <KpiCard
+          label={t('hr.totalEmployees', 'تعداد کارمندان')}
+          value={total}
+          icon={Users}
+          className="min-w-[180px] flex-1"
+        />
       </div>
 
       {/* Form */}
