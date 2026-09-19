@@ -12,7 +12,7 @@ import { AxiosError, AxiosHeaders, type InternalAxiosRequestConfig } from 'axios
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { apiClient, setOnSubscriptionExpired, SUBSCRIPTION_EXPIRED_CODE } from '../lib/client'
-import { registerTokenGetter } from '../lib/tokenProvider'
+import { markTokenReady, registerTokenGetter } from '../lib/tokenProvider'
 
 function respondWith(status: number, data: unknown) {
   apiClient.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
@@ -30,6 +30,8 @@ const expired = vi.fn()
 
 beforeEach(() => {
   registerTokenGetter(() => null)
+  // Hydration finished with no session: requests go out and get a real 401.
+  markTokenReady()
   expired.mockReset()
   setOnSubscriptionExpired(expired)
 })

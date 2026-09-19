@@ -27,11 +27,12 @@
 
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
-import { useCreateProduct, useCreateUnit, useReceiveBatch } from '@hisabche/api'
+import { useCreateProduct, useCreateUnit, useReceiveBatch, useUnits } from '@hisabche/api'
 import { toIsoDay } from '@hisabche/formatting'
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../dialog'
 import { UnitSelect, toValidUnit } from '../units/unit-select'
+import { SelectField } from '../select-field'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { Switch } from '../switch'
 
@@ -43,6 +44,25 @@ const primary =
   'inline-flex min-h-11 items-center justify-center rounded-full bg-[hsl(var(--color-primary))] px-5 text-sm font-bold text-[hsl(var(--color-primary-fg))] disabled:opacity-50'
 const quiet =
   'inline-flex min-h-11 items-center justify-center rounded-full border border-[hsl(var(--border-default))] px-4 text-sm text-[hsl(var(--fg-secondary))]'
+
+/**
+ * A workspace's own unit measures something, and the app must know how much.
+ * «۱ مثقال = ۴٫۶۸۷۵ گرم» → dimension 'weight', factor 4.6875. The base of each
+ * dimension is fixed for everyone (gram, metre, litre, piece), which is why a
+ * workspace unit is a row in `custom_units` and never in `units`.
+ */
+const DIMENSIONS = [
+  { value: 'count', labelKey: 'warehouse.dimCount', fallback: 'تعداد (پایه: عدد)' },
+  { value: 'weight', labelKey: 'warehouse.dimWeight', fallback: 'وزن (پایه: گرم)' },
+  { value: 'length', labelKey: 'warehouse.dimLength', fallback: 'طول (پایه: متر)' },
+  { value: 'volume', labelKey: 'warehouse.dimVolume', fallback: 'حجم (پایه: لیتر)' },
+] as const
+
+const blankUnit = {
+  name: '',
+  dimension: 'count' as (typeof DIMENSIONS)[number]['value'],
+  factor: '1',
+}
 
 const blank = {
   name: '',
@@ -73,10 +93,11 @@ export function AddToWarehouseModal({
 }) {
   const [form, setForm] = useState(blank)
   const [error, setError] = useState<string | null>(null)
-  const [newUnit, setNewUnit] = useState<string | null>(null)
+  const [newUnit, setNewUnit] = useState<typeof blankUnit | null>(null)
   const [hasExpiry, setHasExpiry] = useState(false)
   const createProduct = useCreateProduct()
   const createUnit = useCreateUnit()
+  const { data: unitData } = useUnits()
   const receiveBatch = useReceiveBatch()
 
   useEffect(() => {
@@ -108,22 +129,38 @@ export function AddToWarehouseModal({
     return t('warehouse.saveFailed', 'ذخیره نشد. دوباره تلاش کنید.')
   }
 
+  /** A unit the seeded list does not have is this workspace's own. */
+  const chosenUnit = (unitData?.units ?? []).find((unit) => unit.code === form.unit)
+  const isWorkspaceUnit = !!chosenUnit && toValidUnit(chosenUnit.code) === null
+
   const addUnit = async () => {
-    const name = (newUnit ?? '').trim()
-    if (!name) return
+    const name = (newUnit?.name ?? '').trim()
+    const factor = Number(newUnit?.factor)
+    if (!name || !Number.isFinite(factor) || factor <= 0) {
+      setError(t('warehouse.unitFactorInvalid', 'نام و ضریب تبدیل واحد را درست وارد کنید.'))
+      return
+    }
     try {
-      const unit = await createUnit.mutateAsync({ name })
+      const unit = await createUnit.mutateAsync({
+        name,
+        dimension: newUnit!.dimension,
+        conversionFactor: factor,
+      })
       set('unit', unit.code)
       setNewUnit(null)
+      setError(null)
     } catch (err) {
       setError(failed(err))
     }
   }
 
   const submit = async () => {
-    // The unit must be one the API accepts; a word the picker cannot resolve is
-    // refused here rather than silently saved as «عدد».
-    const unit = toValidUnit(form.unit)
+    // A seeded unit goes through as itself. A workspace unit is stored the way
+    // the schema already models one: `unit: 'custom'` plus the word in
+    // `unitLabel` — the same shape invoice lines use. Anything else (a code
+    // from neither list) is refused rather than silently saved as «عدد».
+    const seeded = toValidUnit(form.unit)
+    const unit = seeded ?? (isWorkspaceUnit ? ('custom' as const) : null)
     if (!unit) {
       setError(t('warehouse.unitUnknown', 'این واحد پشتیبانی نمی‌شود'))
       return
@@ -137,6 +174,7 @@ export function AddToWarehouseModal({
         name: form.name.trim(),
         sku: form.sku.trim(),
         unit,
+        ...(seeded ? {} : { unitLabel: chosenUnit?.nameFa ?? chosenUnit?.name ?? '' }),
         quantity: number(form.quantity),
         buyPrice: number(form.buyPrice),
         sellPrice: number(form.sellPrice),
@@ -216,7 +254,7 @@ export function AddToWarehouseModal({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setNewUnit('')}
+                  onClick={() => setNewUnit(blankUnit)}
                   aria-label={t('warehouse.addUnit', 'افزودن واحد دلخواه')}
                   className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] text-[hsl(var(--color-primary))]"
                 >
@@ -224,26 +262,56 @@ export function AddToWarehouseModal({
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5">
+              <div className="space-y-2 rounded-lg border border-[hsl(var(--border-default))] p-2">
                 <input
                   id="wh-new-unit"
                   autoFocus
-                  value={newUnit}
-                  onChange={(e) => setNewUnit(e.target.value)}
-                  placeholder={t('warehouse.newUnitPlaceholder', 'مثلاً طاقه')}
+                  value={newUnit.name}
+                  onChange={(e) => setNewUnit({ ...newUnit, name: e.target.value })}
+                  placeholder={t('warehouse.newUnitPlaceholder', 'مثلاً مثقال')}
                   className={field}
                 />
-                <button
-                  type="button"
-                  onClick={() => void addUnit()}
-                  disabled={createUnit.isPending || newUnit.trim() === ''}
-                  className={quiet}
-                >
-                  {t('common.save', 'ذخیره')}
-                </button>
-                <button type="button" onClick={() => setNewUnit(null)} className={quiet}>
-                  {t('common.cancel', 'انصراف')}
-                </button>
+                <SelectField
+                  id="wh-new-unit-dimension"
+                  value={newUnit.dimension}
+                  onChange={(next) =>
+                    setNewUnit({ ...newUnit, dimension: next as typeof newUnit.dimension })
+                  }
+                  options={DIMENSIONS.map((dimension) => ({
+                    value: dimension.value,
+                    label: t(dimension.labelKey, dimension.fallback),
+                  }))}
+                />
+                {/* The conversion is what makes the unit usable in a total. */}
+                <label className="flex items-center gap-2 text-xs">
+                  <span className="shrink-0 text-[hsl(var(--fg-secondary))]">
+                    {t('warehouse.unitFactor', 'هر ۱ واحد برابر است با')}
+                  </span>
+                  <input
+                    id="wh-new-unit-factor"
+                    type="number"
+                    min={0}
+                    step="any"
+                    inputMode="decimal"
+                    dir="ltr"
+                    value={newUnit.factor}
+                    onChange={(e) => setNewUnit({ ...newUnit, factor: e.target.value })}
+                    className={field}
+                  />
+                </label>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => void addUnit()}
+                    disabled={createUnit.isPending || newUnit.name.trim() === ''}
+                    className={quiet}
+                  >
+                    {t('common.save', 'ذخیره')}
+                  </button>
+                  <button type="button" onClick={() => setNewUnit(null)} className={quiet}>
+                    {t('common.cancel', 'انصراف')}
+                  </button>
+                </div>
               </div>
             )}
           </div>

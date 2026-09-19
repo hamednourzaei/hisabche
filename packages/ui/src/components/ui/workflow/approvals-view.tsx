@@ -40,6 +40,21 @@ interface ApprovalsViewProps {
   error: string | null
   items: ApprovalListItem[]
   onRetry: () => void
+  /**
+   * ⚠️ «نبودِ یک نشانه، نشانه نیست» (راهنمای سشن، §۷٫۵).
+   *
+   * An empty approvals page has two completely different meanings and used to
+   * show one sentence for both: «چیزی در انتظار تأیید شما نیست». That reads as
+   * "you are up to date" — but if this workspace has never defined an approval
+   * workflow, NOTHING is ever routed here, and the page will stay empty
+   * forever while the user waits for a document to appear in it.
+   *
+   * `null` = we do not know yet (still loading); the page then says nothing
+   * about the cause rather than guessing.
+   */
+  hasActiveWorkflow: boolean | null
+  /** Take the user to where an approval workflow is actually defined. */
+  onDefineWorkflow: () => void
 }
 
 export const ApprovalsView = memo(function ApprovalsView({
@@ -48,6 +63,8 @@ export const ApprovalsView = memo(function ApprovalsView({
   error,
   items,
   onRetry,
+  hasActiveWorkflow,
+  onDefineWorkflow,
 }: ApprovalsViewProps) {
   const [statusFilter, setStatusFilter] = useState<ApprovalStatusFilter>('all')
 
@@ -116,10 +133,24 @@ export const ApprovalsView = memo(function ApprovalsView({
             <ClipboardCheck className="size-12 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
           }
           title={
-            items.length === 0
-              ? t('nav.approvals_empty', 'چیزی در انتظار تأیید شما نیست')
-              : t('workflow.no_match', 'درخواستی با این وضعیت نیست')
+            items.length > 0
+              ? t('workflow.no_match', 'درخواستی با این وضعیت نیست')
+              : hasActiveWorkflow === false
+                ? t('workflow.noWorkflowTitle', 'هنوز هیچ گردش‌کار تأییدی تعریف نشده')
+                : t('nav.approvals_empty', 'چیزی در انتظار تأیید شما نیست')
           }
+          {...(items.length === 0 && hasActiveWorkflow === false
+            ? {
+                description: t(
+                  'workflow.noWorkflowHint',
+                  'تا وقتی یک گردش‌کار تأیید فعال نباشد، هیچ سندی برای تأیید به این صفحه نمی‌آید — فاکتورها مستقیم ثبت می‌شوند.',
+                ),
+                action: {
+                  label: t('workflow.defineWorkflow', 'تعریف گردش‌کار تأیید'),
+                  onClick: onDefineWorkflow,
+                },
+              }
+            : {})}
         />
       ) : (
         <div className="space-y-4">

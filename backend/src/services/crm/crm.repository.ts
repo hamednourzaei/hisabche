@@ -133,6 +133,32 @@ export class CrmRepository {
     return data ?? []
   }
 
+  /**
+   * The auth user behind an employee, if they have one.
+   *
+   * ⚠️ An employee working from a public task link has NO account, and that is
+   * the normal case. Returning null says «nobody to notify» — it must never be
+   * filled in with a guess, because a notification lands in a real person's
+   * inbox (§12).
+   */
+  async employeeAccount(
+    workspaceId: string,
+    employeeId: string,
+  ): Promise<{ userId: string | null; name: string }> {
+    const { data, error } = await supabase
+      .from('employees')
+      .select('user_id, first_name, last_name')
+      .eq('id', employeeId)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to read the task employee', error)
+    const row = data as { user_id?: string | null; first_name?: string; last_name?: string } | null
+    return {
+      userId: row?.user_id ?? null,
+      name: [row?.first_name, row?.last_name].filter(Boolean).join(' ').trim(),
+    }
+  }
+
   async insertInteraction(full: Row, legacy: Row): Promise<Row> {
     let result = await supabase
       .from('interactions')
@@ -240,9 +266,7 @@ export class CrmRepository {
    * Paged: the reads this replaced (intelligence/forecast) stopped at 2000
    * opportunities and 10000 interactions without saying so.
    */
-  async opportunityActivity(
-    workspaceId: string,
-  ): Promise<
+  async opportunityActivity(workspaceId: string): Promise<
     Array<{
       id: string
       title: string

@@ -94,8 +94,12 @@ export const CrmContainer = memo(function CrmContainer() {
   )
 
   const handleUpdateStatus = useCallback(
-    async (id: string, status: TaskStatus) => {
-      await updateStatus({ id, status })
+    async (id: string, status: TaskStatus, assignee?: { id: string; name: string }) => {
+      await updateStatus({
+        id,
+        status,
+        ...(assignee ? { employeeId: assignee.id, employeeName: assignee.name } : {}),
+      })
     },
     [updateStatus],
   )

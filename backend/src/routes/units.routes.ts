@@ -47,19 +47,28 @@ export async function unitsRoutes(fastify: FastifyInstance) {
   )
 
   // ─── POST /api/units ───────────────────────────────────
-  // A unit this business invented («طاقه»). Scoped to the workspace — the
-  // table is shared, so the filter in `list` is the whole boundary. See
-  // docs/custom-units-migration.sql.
+  // A unit this business invented («مثقال»), with its conversion. Stored in
+  // `custom_units`, scoped to the workspace — see
+  // docs/patch-02-custom-units-migration.sql.
   fastify.post(
     '/api/units',
     { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = z
-          .object({ name: z.string().min(1).max(60), symbol: z.string().max(12).optional() })
+          .object({
+            name: z.string().min(1).max(60),
+            symbol: z.string().max(12).optional(),
+            // The conversion is required: a unit that cannot be converted is a
+            // quantity no report can add up. See the service.
+            dimension: z.enum(['weight', 'length', 'volume', 'count']),
+            conversionFactor: z.number().positive().max(1e9),
+          })
           .strict()
           .parse(request.body)
-        return reply.code(201).send(await service.create(request.tenancy.workspaceId, body))
+        return reply
+          .code(201)
+          .send(await service.create(request.tenancy.workspaceId, request.tenancy.userId, body))
       } catch (err) {
         if (err instanceof z.ZodError) {
           return reply.code(400).send({ error: 'Validation failed', details: err.errors })

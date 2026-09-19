@@ -33,20 +33,33 @@ describe('opening stock into a warehouse', () => {
   })
 })
 
-describe('a workspace’s own unit', () => {
+describe('a workspace’s own unit lives in custom_units', () => {
   const units = code(src('services/inventory/units.service.ts'))
 
-  it('is scoped to the workspace on read and on write', () => {
-    expect(units).toContain('workspace_id.is.null,workspace_id.eq.${workspaceId}')
+  it('is a SEPARATE table — `units` keeps its global invariants', () => {
+    // `units.code` is globally UNIQUE and one row per dimension is the base;
+    // per-workspace rows there would mean rewriting both.
     const create = units.slice(units.indexOf('async create('))
-    expect(create).toContain('workspace_id: workspaceId')
+    expect(create).toContain(".from('custom_units')")
+    expect(create).not.toContain(".from('units')")
+    expect(units).not.toContain('workspace_id.is.null,workspace_id.eq.')
   })
 
-  it('never claims a conversion it does not know', () => {
+  it('is scoped to the workspace on read and on write', () => {
+    const scoped = units.slice(units.indexOf('private async workspaceUnits'))
+    expect(scoped.slice(0, 700)).toContain(".eq('workspace_id', workspaceId)")
+    expect(units.slice(units.indexOf('async create('))).toContain('workspace_id: workspaceId')
+  })
+
+  it('carries a real conversion and never claims a base', () => {
     const create = units.slice(units.indexOf('async create('))
-    expect(create).toContain("dimension: 'count'")
-    expect(create).toContain('conversion_factor: 1')
-    expect(create).toContain('is_base: false')
+    expect(create).toContain('conversion_factor: input.conversionFactor')
+    expect(create).toContain("throw new ValidationError('UNIT_FACTOR_INVALID')")
+    // The INSERT never names is_base: a workspace cannot redefine a
+    // dimension's base. (It appears once more below, where the row is mapped
+    // back out as `false`.)
+    const insert = create.slice(create.indexOf('.insert({'), create.indexOf('.select('))
+    expect(insert).not.toContain('is_base')
   })
 
   it('says so when the migration has not run', () => {

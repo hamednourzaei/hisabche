@@ -101,17 +101,27 @@ export function useUnitsByDimension(dimension: UnitDimension) {
 }
 
 /**
- * A unit this workspace invented («طاقه») — request #94.
+ * A unit this workspace invented, WITH its conversion — «۱ مثقال = ۴٫۶۸۷۵ گرم»
+ * is dimension 'weight', factor 4.6875 (request #94).
  *
- * Dimension 'count' with factor 1 on the server: the app cannot convert a word
- * nobody defined, and inventing a factor would put wrong quantities in totals.
- * Needs docs/custom-units-migration.sql; without it the server answers
+ * Stored in `custom_units`, never in `units`: that table's codes are globally
+ * unique and one row per dimension is the base, so a workspace unit there
+ * would mean rewriting invariants every conversion depends on.
+ *
+ * `conversionFactor` is how many of the dimension's BASE unit one of these is
+ * — the same meaning as `units.conversionFactor`, so one converter serves both.
+ * Needs docs/patch-02-custom-units-migration.sql; without it the server answers
  * UNIT_CUSTOM_MIGRATION_REQUIRED and the caller says so.
  */
 export function useCreateUnit() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { name: string; symbol?: string }) => {
+    mutationFn: async (input: {
+      name: string
+      symbol?: string
+      dimension: 'weight' | 'length' | 'volume' | 'count'
+      conversionFactor: number
+    }) => {
       const { data } = await apiClient.post('/units', input)
       return data as Unit
     },

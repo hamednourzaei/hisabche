@@ -10,6 +10,7 @@ export type { ApiResponse, ApiError } from './lib/client'
 // ✅ Token Provider + onUnauthorized
 export {
   registerTokenGetter,
+  markTokenReady,
   getToken,
   hasToken,
   isTokenProviderReady,
@@ -243,6 +244,14 @@ export {
 
 // ─── Payroll ──────────────────────────────────────────────
 export { usePayrolls, usePayrollSummary, useCreatePayroll, payrollKeys } from './hooks/payroll'
+export {
+  useLeaves,
+  useCreateLeave,
+  leaveKeys,
+  type Leave,
+  type LeaveType,
+  type CreateLeaveInput,
+} from './hooks/leaves'
 
 // ─── Permissions ──────────────────────────────────────────
 export {

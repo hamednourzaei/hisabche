@@ -2,19 +2,38 @@
 'use client'
 
 import { memo, useCallback, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   asList,
   useWorkflowInstances,
   useWorkflowInstanceDetail,
   useWorkflow,
+  useWorkflows,
   usePerformWorkflowAction,
   type WorkflowInstance,
 } from '@hisabche/api'
 import { ApprovalCard } from '../approval-timeline'
 import { ApprovalsView } from '../approvals-view'
 import { useToast } from '../../toast-provider'
+
+/**
+ * ⚠️ Every internal link carries the locale prefix (راهنمای سشن، §وب).
+ *
+ * `router.push('/invoices/…')` from a page mounted at `/fa/approvals` lands on
+ * `/invoices/…`, which does not exist — the app only serves `/[lang]/…`. So the
+ * one button on an approval card that opens the document being approved went
+ * to a 404, which is part of why «هیچ‌جا برای تأییدش وجود ندارد».
+ */
+function useLocalePush(): (route: string) => void {
+  const router = useRouter()
+  const params = useParams<{ lang?: string }>()
+  const lang = typeof params?.lang === 'string' ? params.lang : 'fa'
+  return useCallback(
+    (route: string) => router.push(route.startsWith('/') ? `/${lang}${route}` : route),
+    [router, lang],
+  )
+}
 
 interface ApiErrorLike {
   status?: number
@@ -57,7 +76,7 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
   } = useWorkflow(instance.workflow_id)
   const { mutateAsync: performAction } = usePerformWorkflowAction()
   const toast = useToast()
-  const router = useRouter()
+  const push = useLocalePush()
 
   const handleAction = useCallback(
     async (action: 'approved' | 'rejected' | 'cancelled', comment?: string) => {
@@ -110,7 +129,7 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
       instanceId={instance.id}
       entityType={instance.entity_type}
       entityId={instance.entity_id}
-      onOpenDocument={(route) => router.push(route)}
+      onOpenDocument={push}
       totalSteps={instance.total_steps}
       startedAt={instance.started_at}
       isPending={NEEDS_ACTION_STATUSES.has(instance.status)}
@@ -129,6 +148,15 @@ export const ApprovalsContainer = memo(function ApprovalsContainer() {
   }
 
   const { data, isLoading, error, refetch } = useWorkflowInstances()
+  const push = useLocalePush()
+
+  // An empty page must be able to say WHY it is empty. Without an active
+  // workflow nothing is ever routed here, and «چیزی در انتظار تأیید شما نیست»
+  // would be a permanent, misleading answer.
+  const { data: workflowData, isLoading: workflowsLoading } = useWorkflows({ is_active: true })
+  const hasActiveWorkflow = workflowsLoading
+    ? null
+    : asList<{ id: string }>(workflowData?.data).length > 0
 
   const pendingInstances = useMemo(
     () => asList<WorkflowInstance>(data?.data).filter((i) => NEEDS_ACTION_STATUSES.has(i.status)),
@@ -152,6 +180,8 @@ export const ApprovalsContainer = memo(function ApprovalsContainer() {
       error={error ? (error as Error).message : null}
       items={items}
       onRetry={() => void refetch()}
+      hasActiveWorkflow={hasActiveWorkflow}
+      onDefineWorkflow={() => push('/workflow-templates')}
     />
   )
 })

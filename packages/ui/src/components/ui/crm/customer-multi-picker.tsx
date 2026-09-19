@@ -63,18 +63,25 @@ export const CustomerMultiPicker = memo(function CustomerMultiPicker({
   const filtered = useMemo(() => (data?.customers || []).slice(0, 25), [data])
   const selectedIds = useMemo(() => new Set(value.map((c) => c.id)), [value])
 
-  const toggle = useCallback(
+  /**
+   * ⚠️ ADD-ONLY (request #98-ب): «هر مشتری که سلکت شد رنگش عوض بشه و دیگه
+   * دوبار قابل سلکت نباشه».
+   *
+   * This used to toggle, so a second click on a row that LOOKED selected
+   * silently removed it — in a list where the same customer can scroll past
+   * twice after a search, that is how someone loses a customer from a task
+   * without noticing. Removing is still possible, but only where it reads as
+   * removing: the ✕ on the chip below.
+   */
+  const select = useCallback(
     (customerId: string) => {
+      if (selectedIds.has(customerId)) return
       const customer = filtered.find((c) => c.id === customerId)
       if (!customer) return
-      if (selectedIds.has(customerId)) {
-        onChange(value.filter((c) => c.id !== customerId))
-      } else {
-        onChange([
-          ...value,
-          { id: customer.id ?? '', name: customer.fullName, phone: customer.phone ?? '' },
-        ])
-      }
+      onChange([
+        ...value,
+        { id: customer.id ?? '', name: customer.fullName, phone: customer.phone ?? '' },
+      ])
     },
     [filtered, selectedIds, value, onChange],
   )
@@ -210,25 +217,41 @@ export const CustomerMultiPicker = memo(function CustomerMultiPicker({
                         key={id}
                         role="option"
                         aria-selected={checked}
-                        onClick={() => toggle(id)}
+                        aria-disabled={checked}
+                        onClick={() => select(id)}
                         className={cn(
-                          'relative flex cursor-pointer select-none items-center justify-between rounded-lg px-3 py-2.5 text-sm outline-none',
+                          'relative flex select-none items-center justify-between rounded-lg px-3 py-2.5 text-sm outline-none',
                           'min-h-[44px]',
-                          'text-[hsl(var(--fg-primary))]',
-                          'hover:bg-[hsl(var(--color-primary)/0.08)]',
                           'transition-colors duration-100',
+                          checked
+                            ? // Already on the task: coloured in, and not a
+                              // target any more. Colour alone would be the only
+                              // signal for a reader who cannot see it, so the
+                              // ✓ and `aria-disabled` carry it too.
+                              'cursor-default bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]'
+                            : 'cursor-pointer text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--color-primary)/0.08)]',
                         )}
                       >
                         <div>
                           <p className="font-medium">{customer.fullName}</p>
                           {customer.phone && (
-                            <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                            <p
+                              className={cn(
+                                'text-xs',
+                                checked
+                                  ? 'text-[hsl(var(--color-success))]'
+                                  : 'text-[hsl(var(--fg-tertiary))]',
+                              )}
+                            >
                               {customer.phone}
                             </p>
                           )}
                         </div>
                         {checked && (
-                          <Check className="size-4 shrink-0 text-[hsl(var(--color-success))]" />
+                          <span className="flex shrink-0 items-center gap-1 text-xs font-medium">
+                            <Check className="size-4" aria-hidden="true" />
+                            {t('crm.customerAlreadyPicked', 'انتخاب شده')}
+                          </span>
                         )}
                       </div>
                     )

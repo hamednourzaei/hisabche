@@ -20,7 +20,7 @@
 // on the backend.
 // ============================================
 
-import { registerTokenGetter } from '@hisabche/api'
+import { markTokenReady, registerTokenGetter } from '@hisabche/api'
 import { createAdminSupabaseClient } from './supabase-client'
 
 let accessToken: string | null = null
@@ -34,9 +34,9 @@ let started = false
  * which also fires on `TOKEN_REFRESHED`, so a long-lived tab never starts
  * sending an expired token.
  *
- * `registerTokenGetter` is deliberately called only after the first
- * `getSession()` resolves: it resolves the `tokenReady` promise that the API
- * client awaits, and registering earlier would let the first request race out
+ * Readiness is declared only after the first `getSession()` resolves:
+ * `markTokenReady()` releases the `tokenReady` promise that the API client
+ * awaits, and declaring it earlier would let the first request race out
  * without a header.
  */
 export function initAdminApiAuth(): void {
@@ -54,5 +54,6 @@ export function initAdminApiAuth(): void {
       accessToken = data.session.access_token
     }
     registerTokenGetter(() => accessToken)
+    markTokenReady()
   })
 }

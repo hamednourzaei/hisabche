@@ -55,7 +55,7 @@ const DESKTOP_ROUTES = new Set([
   '/till',
   // ─── people ───
   '/customers',
-  '/crm',
+  '/tasks',
   '/team-and-payroll',
   // ─── work ───
   '/approvals',

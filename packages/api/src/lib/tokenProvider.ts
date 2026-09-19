@@ -19,15 +19,35 @@ export const tokenReady: Promise<void> = new Promise((resolve) => {
 
 /**
  * ثبت یک تابع برای دریافت token.
- * فقط یک بار از سمت Store صدا زده می‌شود (پس از hydrate شدن session).
+ *
+ * ⚠️ REGISTERING THE GETTER IS NOT THE SAME AS HAVING A SESSION.
+ *
+ * This used to resolve `tokenReady` too, and the store calls it at module
+ * import — BEFORE the persisted session has been read back out of storage. So
+ * every request fired during the first paint went out with no Authorization
+ * header, took a 401, and was only rescued by the refresh-and-retry path. The
+ * screen worked; the console filled with 401s on `/notifications`,
+ * `/accounting/accounts`, `/invoices` … on every page load.
+ *
+ * Readiness is now declared by the store, with `markTokenReady()`, once
+ * hydration has actually finished.
  */
 export function registerTokenGetter(fn: TokenGetter): void {
   tokenGetter = fn
-  if (!isReady) {
-    isReady = true
-    resolveReady?.()
-    resolveReady = null
-  }
+}
+
+/**
+ * The session has been read out of storage (or there is none). Everything
+ * waiting on `tokenReady` may now send its request.
+ *
+ * Idempotent: a second call is a no-op, so the store can call it from both
+ * the rehydrate callback and the «storage was empty» path without racing.
+ */
+export function markTokenReady(): void {
+  if (isReady) return
+  isReady = true
+  resolveReady?.()
+  resolveReady = null
 }
 
 /**

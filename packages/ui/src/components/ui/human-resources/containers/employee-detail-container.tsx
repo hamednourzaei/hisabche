@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/human-resources/containers/employee-detail-container.tsx
 'use client'
 
+import { EmployeeLeavePanel } from '../employee-leave-panel'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
@@ -32,7 +33,12 @@ export function EmployeeDetailContainer({ id }: { id: string }) {
     await updateEmployee.mutateAsync({ id, ...values })
   }
 
-  const handleAddPayment = async (values: { amount: number; date: string }) => {
+  const handleAddPayment = async (values: {
+    amount: number
+    date: string
+    notes?: string
+    currency?: string
+  }) => {
     // ✅ FIX: ورودی تاریخ فقط «2026-08-01» می‌دهد، اما schema سمت سرور
     // (isoDateSchema = z.string().datetime()) تاریخ-زمانِ کامل ISO می‌خواهد؛
     // برای همین درخواست با خطای ۴۰۰ رد می‌شد:
@@ -51,7 +57,8 @@ export function EmployeeDetailContainer({ id }: { id: string }) {
       overtimeRate: 0,
       taxAmount: 0,
       netSalary: values.amount,
-      currency: employee?.salary_currency || 'AFN',
+      currency: values.currency || employee?.salary_currency || 'AFN',
+      ...(values.notes ? { notes: values.notes } : {}),
       status: 'paid',
       paymentDate: isoDate,
     })
@@ -69,6 +76,8 @@ export function EmployeeDetailContainer({ id }: { id: string }) {
       onBack={() => router.push('/team-and-payroll')} // G1: canonical people route
       extraSlot={
         <div className="mt-6 space-y-4">
+          {/* Request #99 — days off: how many, why, from when to when. */}
+          <EmployeeLeavePanel t={safeT} employeeId={id} />
           {/* H5 — read back from `employee_branch_assignments`, which G2's form
               has been writing to with nothing able to read it. */}
           <EmployeeBranchesPanel

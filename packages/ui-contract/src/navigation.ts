@@ -145,7 +145,7 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     emoji: '🤝',
     labelKey: 'nav.followUp',
     descriptionKey: 'nav.followUp_description',
-    path: '/crm',
+    path: '/tasks',
     group: 'people',
   },
   // team (/human-resources) is gone from navigation: colleagues and payroll

@@ -55,7 +55,11 @@ interface CrmViewProps {
     subject: string
     content: string
   }) => Promise<void>
-  onUpdateStatus: (id: string, status: TaskStatus) => Promise<void>
+  onUpdateStatus: (
+    id: string,
+    status: TaskStatus,
+    assignee?: { id: string; name: string },
+  ) => Promise<void>
   /** Records how one customer on a task went. */
   onRecordOutcome: (
     taskId: string,
@@ -235,78 +239,108 @@ export const CrmView = memo(function CrmView({
         )}
       </div>
 
-      {/* New Task Form */}
+      {/* ─── «وظیفه جدید» ─────────────────────────────────────────────────
+        A MODAL (request #98-ب). As an inline panel it pushed the task list
+        down the page on every open, and the customer picker's dropdown had to
+        fight the rows underneath it for space. Same shell as
+        `TaskDetailModal`, so both dialogs behave the same.
+      */}
       {activeTab === 'interactions' && isFormOpen && (
-        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 space-y-4">
-          <Select value={employeeId} onValueChange={setEmployeeId}>
-            <SelectTrigger>
-              <SelectValue placeholder={t('crm.pickEmployeePlaceholder', 'انتخاب پرسنل...')} />
-            </SelectTrigger>
-            <SelectContent>
-              {employees.map((emp) => (
-                <SelectItem key={emp.id} value={emp.id}>
-                  {emp.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <CustomerMultiPicker
-            value={customers}
-            onChange={setCustomers}
-            placeholder={t('crm.pickCustomersPlaceholder', 'انتخاب مشتری‌ها...')}
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('crm.interactions.new', 'وظیفه جدید')}
+        >
+          <div
+            className="absolute inset-0 bg-[hsl(var(--surface-base)/0.8)] backdrop-blur-sm"
+            onClick={() => setIsFormOpen(false)}
           />
+          <div className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-6 shadow-2xl space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
+                {t('crm.interactions.new', 'وظیفه جدید')}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsFormOpen(false)}
+                aria-label={t('action.close', 'بستن')}
+                className="text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))]"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Select value={type} onValueChange={setType}>
+            <Select value={employeeId} onValueChange={setEmployeeId}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder={t('crm.pickEmployeePlaceholder', 'انتخاب پرسنل...')} />
               </SelectTrigger>
               <SelectContent>
-                {INTERACTION_TYPES.map((it) => (
-                  <SelectItem key={it} value={it}>
-                    {t(`crm.interactions.type.${it}`, it)}
+                {employees.map((emp) => (
+                  <SelectItem key={emp.id} value={emp.id}>
+                    {emp.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {/* Free text, but backed by the subjects this user has already
+
+            <CustomerMultiPicker
+              value={customers}
+              onChange={setCustomers}
+              placeholder={t('crm.pickCustomersPlaceholder', 'انتخاب مشتری‌ها...')}
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {INTERACTION_TYPES.map((it) => (
+                    <SelectItem key={it} value={it}>
+                      {t(`crm.interactions.type.${it}`, it)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {/* Free text, but backed by the subjects this user has already
                 used. A recurring campaign keeps one spelling instead of
                 fragmenting into near-duplicates that split the stats. A native
                 datalist keeps typing unrestricted — a new subject is still
                 just typed. */}
-            <input
-              type="text"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              list="crm-subject-suggestions"
-              autoComplete="off"
-              placeholder={t('crm.interactions.subject', 'موضوع')}
-              className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]"
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                list="crm-subject-suggestions"
+                autoComplete="off"
+                placeholder={t('crm.interactions.subject', 'موضوع')}
+                className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]"
+              />
+              <datalist id="crm-subject-suggestions">
+                {subjectSuggestions.map((suggestion) => (
+                  <option key={suggestion} value={suggestion} />
+                ))}
+              </datalist>
+            </div>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={t('crm.interactions.contentPlaceholder', 'توضیحات (اختیاری)')}
+              rows={2}
+              className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))] resize-none"
             />
-            <datalist id="crm-subject-suggestions">
-              {subjectSuggestions.map((suggestion) => (
-                <option key={suggestion} value={suggestion} />
-              ))}
-            </datalist>
+            <button
+              type="button"
+              disabled={
+                customers.length === 0 || !subject.trim() || !employeeId || isCreatingInteraction
+              }
+              onClick={handleSubmit}
+              className="w-full rounded-full px-5 py-2.5 text-sm font-bold text-white bg-[hsl(var(--color-primary))] hover:brightness-110 disabled:opacity-40 transition-all"
+            >
+              {t('crm.interactions.create', 'ثبت وظیفه')}
+            </button>
           </div>
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder={t('crm.interactions.contentPlaceholder', 'توضیحات (اختیاری)')}
-            rows={2}
-            className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))] resize-none"
-          />
-          <button
-            type="button"
-            disabled={
-              customers.length === 0 || !subject.trim() || !employeeId || isCreatingInteraction
-            }
-            onClick={handleSubmit}
-            className="w-full rounded-full px-5 py-2.5 text-sm font-bold text-white bg-[hsl(var(--color-primary))] hover:brightness-110 disabled:opacity-40 transition-all"
-          >
-            {t('crm.interactions.create', 'ثبت وظیفه')}
-          </button>
         </div>
       )}
 
@@ -500,7 +534,8 @@ export const CrmView = memo(function CrmView({
           }
           isUpdating={isUpdatingStatus}
           onClose={() => setSelectedTaskId(null)}
-          onUpdateStatus={(status) => onUpdateStatus(selectedTask.id, status)}
+          onUpdateStatus={(status, assignee) => onUpdateStatus(selectedTask.id, status, assignee)}
+          employees={employees}
           onRecordOutcome={(input) => void onRecordOutcome(selectedTask.id, input)}
           pendingCustomerId={pendingCustomerId}
         />

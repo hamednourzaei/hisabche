@@ -21,13 +21,21 @@
 // changed nothing, because the filter was in the code.
 //
 // ---------------------------------------------------------------------------
-// ⚠️ THE TABLE IS GLOBAL REFERENCE DATA — NO `workspace_id`, AND THAT IS FINE
+// ⚠️ `units` IS GLOBAL REFERENCE DATA — NO `workspace_id`, AND THAT IS FINE
 //
 // A gram is a gram in every workspace. There is nothing tenant-specific to
-// isolate here, so this service reads the table WITHOUT a workspace filter —
-// which is safe only because the table holds no tenant data at all. The
-// per-workspace, per-product part («1 carton = 24 pieces») lives in
-// `product_units`, which IS workspace-scoped and is not touched here.
+// isolate there, so this service reads that table WITHOUT a workspace filter —
+// safe only because it holds no tenant data at all. The per-workspace,
+// per-product part («1 carton = 24 pieces») lives in `product_units`.
+//
+// ⚠️ A WORKSPACE'S OWN UNITS ARE A SECOND TABLE — `custom_units`
+// (docs/patch-02-custom-units-migration.sql). They could NOT be rows in
+// `units`: `code` there is globally UNIQUE and `units_one_base_per_dimension`
+// allows one base per dimension for everyone, so per-workspace codes would
+// mean rewriting both invariants. A workspace may ADD a unit with a conversion
+// («۱ مثقال = ۴٫۶۸۷۵ گرم»); it may never redefine what a dimension's base is.
+// `list()` merges the two, filtered by workspace — that filter is the whole
+// tenancy boundary for the custom half.
 //
 // ---------------------------------------------------------------------------
 // ⚠️ THE FALLBACK IS THE SEED, NOT A GUESS
@@ -255,33 +263,21 @@ function mapUnitRow(row: UnitRow): UnitRecord {
 
 export class UnitsService {
   /**
-   * The seeded units plus THIS workspace's own (request #94).
+   * The seeded units, plus this workspace's own from `custom_units`.
    *
-   * `workspaceId` omitted → global only. A workspace's unit is never served to
-   * another: the `units` table is shared, so the filter is the whole boundary.
-   * Before docs/custom-units-migration.sql the column is absent; the read then
-   * falls back to the unfiltered list rather than failing the picker.
+   * ⚠️ TWO TABLES, ON PURPOSE (docs/patch-02-custom-units-migration.sql).
+   * `units` is system reference data: its `code` is globally UNIQUE and one
+   * row per dimension is the base. A workspace unit cannot live there without
+   * rewriting both invariants — and a second base in a dimension makes every
+   * conversion in it ambiguous. A workspace may ADD a unit, never redefine a
+   * dimension's base, which is exactly the split these two tables encode.
+   *
+   * `workspaceId` omitted → the seeded list only. A workspace's units are
+   * never served to another: the filter below is the whole boundary.
    */
   async list(
     workspaceId?: string,
   ): Promise<{ units: readonly UnitRecord[]; source: 'table' | 'seed' }> {
-    if (workspaceId) {
-      const scoped = await supabase
-        .from('units')
-        .select('id, code, name, name_fa, symbol, dimension, conversion_factor, is_base')
-        .eq('is_active', true)
-        .or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`)
-        .order('dimension', { ascending: true })
-        .order('conversion_factor', { ascending: true })
-      if (!scoped.error && scoped.data && scoped.data.length > 0) {
-        return { units: (scoped.data as UnitRow[]).map(mapUnitRow), source: 'table' }
-      }
-      // 42703 / PGRST204: the migration has not run here. Fall through.
-      if (scoped.error && !SCHEMA_ABSENT.has(scoped.error.code) && scoped.error.code !== '42703') {
-        throw scoped.error
-      }
-    }
-
     const { data, error } = await supabase
       .from('units')
       .select('id, code, name, name_fa, symbol, dimension, conversion_factor, is_base')
@@ -293,7 +289,10 @@ export class UnitsService {
 
     if (error) {
       if (SCHEMA_ABSENT.has(error.code)) {
-        return { units: SEEDED_UNITS, source: 'seed' }
+        return {
+          units: [...SEEDED_UNITS, ...(await this.workspaceUnits(workspaceId))],
+          source: 'seed',
+        }
       }
       throw error
     }
@@ -305,19 +304,22 @@ export class UnitsService {
     }
 
     return {
-      units: (data as UnitRow[]).map((row) => ({
-        id: row.id,
-        code: row.code,
-        name: row.name,
-        nameFa: row.name_fa,
-        symbol: row.symbol,
-        dimension: row.dimension as UnitRecord['dimension'],
-        // numeric(18,6) arrives as a string from PostgREST. Number() on it is
-        // exact for every seeded factor; the arithmetic that matters is done
-        // in the database, not here.
-        conversionFactor: Number(row.conversion_factor),
-        isBase: row.is_base,
-      })),
+      units: [
+        ...(data as UnitRow[]).map((row) => ({
+          id: row.id,
+          code: row.code,
+          name: row.name,
+          nameFa: row.name_fa,
+          symbol: row.symbol,
+          dimension: row.dimension as UnitRecord['dimension'],
+          // numeric(18,6) arrives as a string from PostgREST. Number() on it is
+          // exact for every seeded factor; the arithmetic that matters is done
+          // in the database, not here.
+          conversionFactor: Number(row.conversion_factor),
+          isBase: row.is_base,
+        })),
+        ...(await this.workspaceUnits(workspaceId)),
+      ],
       source: 'table',
     }
   }
@@ -327,12 +329,55 @@ export class UnitsService {
    * the app cannot convert a word nobody defined, and pretending it can would
    * make totals wrong rather than missing.
    */
+  /**
+   * This workspace's own units. Empty (not an error) before the patch-02
+   * migration has run — the picker then shows the seeded list alone.
+   */
+  private async workspaceUnits(workspaceId?: string): Promise<UnitRecord[]> {
+    if (!workspaceId) return []
+    const { data, error } = await supabase
+      .from('custom_units')
+      .select('id, code, name, name_fa, symbol, dimension, conversion_factor')
+      .eq('workspace_id', workspaceId)
+      .eq('is_active', true)
+      .order('dimension', { ascending: true })
+      .order('conversion_factor', { ascending: true })
+
+    if (error) {
+      if (SCHEMA_ABSENT.has(error.code) || error.code === '42P01') return []
+      throw error
+    }
+    // `is_base` is not a column here and never will be: a workspace cannot
+    // redefine a dimension's base. It is reported as false.
+    return (data ?? []).map((row) => mapUnitRow({ ...(row as UnitRow), is_base: false }))
+  }
+
+  /**
+   * A unit this workspace invented, WITH its conversion — «۱ مثقال = ۴٫۶۸۷۵
+   * گرم» is dimension 'weight', factor 4.6875.
+   *
+   * ⚠️ The factor is required, and means the same thing as
+   * `units.conversion_factor`: how many of the dimension's BASE unit one of
+   * these is. A unit without it could be stored but never converted, and a
+   * warehouse total that cannot be converted is a total nobody can add up.
+   * For 'count' the base is the piece, so the factor is how many pieces one
+   * of these holds.
+   */
   async create(
     workspaceId: string,
-    input: { name: string; symbol?: string | undefined },
+    userId: string,
+    input: {
+      name: string
+      symbol?: string | undefined
+      dimension: UnitRecord['dimension']
+      conversionFactor: number
+    },
   ): Promise<UnitRecord> {
     const name = input.name.trim()
     if (!name) throw new ValidationError('UNIT_NAME_REQUIRED')
+    if (!Number.isFinite(input.conversionFactor) || input.conversionFactor <= 0) {
+      throw new ValidationError('UNIT_FACTOR_INVALID')
+    }
 
     // The code is the app's identifier; the name is what people read. Latin
     // letters only, so a Persian name still yields a usable code.
@@ -343,29 +388,29 @@ export class UnitsService {
     const code = `ws-${slug || Math.random().toString(36).slice(2, 8)}`
 
     const { data, error } = await supabase
-      .from('units')
+      .from('custom_units')
       .insert({
+        workspace_id: workspaceId,
         code,
         name,
         name_fa: name,
         symbol: input.symbol?.trim() || null,
-        dimension: 'count',
-        conversion_factor: 1,
-        is_base: false,
+        dimension: input.dimension,
+        conversion_factor: input.conversionFactor,
         is_active: true,
-        workspace_id: workspaceId,
+        created_by: userId,
       })
-      .select('id, code, name, name_fa, symbol, dimension, conversion_factor, is_base')
+      .select('id, code, name, name_fa, symbol, dimension, conversion_factor')
       .single()
 
     if (error) {
-      if (error.code === '42703' || error.code === 'PGRST204') {
+      if (SCHEMA_ABSENT.has(error.code) || error.code === '42P01' || error.code === '42703') {
         throw new ConflictError('UNIT_CUSTOM_MIGRATION_REQUIRED')
       }
       if (error.code === '23505') throw new ConflictError('UNIT_ALREADY_EXISTS')
       throw new DatabaseError('Failed to create the unit', error)
     }
 
-    return mapUnitRow(data as UnitRow)
+    return mapUnitRow({ ...(data as UnitRow), is_base: false })
   }
 }

@@ -115,8 +115,16 @@ export async function crmRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const { status } = updateInteractionStatusSchema.parse(request.body)
-        const interaction = await crmService.updateInteractionStatus(request.tenancy, id, status)
+        const { status, employeeId, employeeName } = updateInteractionStatusSchema.parse(
+          request.body,
+        )
+        const interaction = await crmService.updateInteractionStatus(
+          request.tenancy,
+          id,
+          status,
+          'owner',
+          employeeId ? { employeeId, employeeName } : undefined,
+        )
         return reply.send(interaction)
       } catch (err) {
         return fail(reply, err, 'Failed to update task status')

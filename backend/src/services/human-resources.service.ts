@@ -594,7 +594,21 @@ export class HumanResourcesService {
         tax_amount: data.taxAmount,
         net_salary: netSalary,
         currency: data.currency,
-        status: 'draft',
+        // ═══════════════════════════════════════════════════════════════════
+        // ⚠️ THE CALLER'S STATUS AND PAYMENT DATE USED TO BE DISCARDED.
+        //
+        // This wrote `status: 'draft'` unconditionally and never wrote
+        // `payment_date` at all. «ثبت پرداخت» on an employee sends
+        // `status: 'paid'` with the date the owner picked — and got back a
+        // draft with no payment date. The row then rendered its PERIOD start
+        // instead of the payment date, and no payment ever counted as paid.
+        // That is «حقوق کار نمی‌کند» (request #98-ح).
+        //
+        // The schema's own default is 'draft', so a caller that says nothing
+        // still gets a draft; one that states an outcome is now believed.
+        // ═══════════════════════════════════════════════════════════════════
+        status: data.status,
+        payment_date: data.paymentDate ?? null,
         notes: data.notes || null,
         workspace_id: workspaceId,
         user_id: userId,

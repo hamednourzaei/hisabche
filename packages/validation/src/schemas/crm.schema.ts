@@ -42,6 +42,15 @@ export type CreateInteraction = z.infer<typeof createInteractionSchema>
 
 export const updateInteractionStatusSchema = z.object({
   status: z.enum(['pending', 'in_progress', 'completed']),
+  /**
+   * Who the task belongs to from now on (request #98).
+   *
+   * Optional: «تغییر دستی وضعیت» is usually just a status. When the owner also
+   * names somebody, the task moves to them in the same write — two requests
+   * could leave the task reassigned with the old status, or the reverse.
+   */
+  employeeId: uuidSchema.optional(),
+  employeeName: z.string().max(200).optional(),
 })
 
 export type UpdateInteractionStatus = z.infer<typeof updateInteractionStatusSchema>

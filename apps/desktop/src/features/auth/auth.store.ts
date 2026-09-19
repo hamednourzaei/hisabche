@@ -7,7 +7,12 @@
 // ============================================
 
 import { create } from 'zustand'
-import { registerTokenGetter, setOnUnauthorized, type ApiError } from '@hisabche/api'
+import {
+  markTokenReady,
+  registerTokenGetter,
+  setOnUnauthorized,
+  type ApiError,
+} from '@hisabche/api'
 import { signUpSchema, type SignUpInput } from '@hisabche/validation'
 import {
   isSession,
@@ -197,6 +202,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: false,
         isSessionValid: false,
       })
+    } finally {
+      /**
+       * Hydration is finished — with a session or without one. Either way the API
+       * client may stop holding requests back. `registerTokenGetter` no longer says
+       * this: registering the getter happens at import, long before the stored
+       * session has been read, and announcing readiness there was what sent the
+       * first requests of a launch out with no Authorization header.
+       */
+      markTokenReady()
     }
   },
 

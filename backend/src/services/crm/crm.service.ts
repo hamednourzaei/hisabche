@@ -18,6 +18,7 @@ import { NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { cacheService } from '../cache.service'
 import { logBusinessEvent } from '../event-log.service'
+import { NotificationService } from '../notification.service'
 import type { TenancyContext } from '../tenancy.service'
 import {
   CrmRuleError,
@@ -38,6 +39,14 @@ import {
 } from './crm.domain'
 import { CrmRepository, type TaskLookup } from './crm.repository'
 
+const notificationService = new NotificationService()
+
+/** What a status is called in the notification the person actually reads. */
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'در حال انتظار',
+  in_progress: 'در حال انجام',
+  completed: 'کامل شد',
+}
 /** Route-cache prefixes (cacheMiddleware keyPrefix) holding CRM responses. */
 export const CRM_CACHE_PREFIXES = ['interactions', 'opportunities', 'crm'] as const
 
@@ -112,6 +121,17 @@ export class CrmService {
       base,
     )
     await this.invalidate(ctx.workspaceId)
+
+    // «زمانی که این وظیفه جدید ثبت شد، برای هر کارمند به اون کارمند
+    // نوتیفیکیشن بره که تسک جدید داره» (request #98-ج).
+    if (data.employeeId) {
+      await this.notifyEmployee(ctx.workspaceId, data.employeeId, {
+        title: `وظیفه جدید: ${data.subject || ''}`.trim(),
+        body: snapshot.length > 0 ? `${snapshot.length} مشتری` : null,
+        entityId: row.id as string,
+      })
+    }
+
     return toInteraction(row)
   }
 
@@ -120,8 +140,9 @@ export class CrmService {
     id: string,
     status: InteractionStatus,
     changedBy = 'owner',
+    assignee?: { employeeId: string; employeeName?: string | undefined } | undefined,
   ): Promise<Interaction> {
-    return this.changeStatus({ id, workspaceId: ctx.workspaceId }, status, changedBy)
+    return this.changeStatus({ id, workspaceId: ctx.workspaceId }, status, changedBy, assignee)
   }
 
   /**
@@ -168,8 +189,18 @@ export class CrmService {
     return distinctSubjects(await this.repo.recentSubjects(ctx.workspaceId), limit)
   }
 
-  private async changeStatus(lookup: TaskLookup, status: InteractionStatus, changedBy: string) {
-    const task = await this.repo.findTask(lookup, 'status_history')
+  private async changeStatus(
+    lookup: TaskLookup,
+    status: InteractionStatus,
+    changedBy: string,
+    assignee?: { employeeId: string; employeeName?: string | undefined } | undefined,
+  ) {
+    // `user_id` is the owner who created the task, `employee_id` the person it
+    // was given to — both are needed to say who hears about this change.
+    const task = await this.repo.findTask(
+      lookup,
+      'status_history, user_id, employee_id, subject, status',
+    )
     if (!task) throw new NotFoundError('Task')
     const history = (
       Array.isArray(task.status_history) ? task.status_history : []
@@ -177,11 +208,98 @@ export class CrmService {
     const row = await this.repo.updateTask(task.id, task.workspace_id, {
       status,
       status_history: appendStatus(history, status, changedBy, new Date().toISOString()),
+      // Reassignment travels with the status so the two can never disagree.
+      ...(assignee
+        ? {
+            employee_id: assignee.employeeId,
+            ...(assignee.employeeName ? { employee_name: assignee.employeeName } : {}),
+          }
+        : {}),
     })
     // The workspace comes from the row, so a change through a public link
     // clears the owner's cached list too.
     await this.invalidate(task.workspace_id)
+    // The NEW owner of the task is the one who needs telling, not the old one.
+    await this.notifyStatusChange(
+      assignee ? { ...task, employee_id: assignee.employeeId } : task,
+      status,
+      changedBy,
+    )
     return toInteraction(row)
+  }
+
+  /**
+   * ⚠️ A NOTIFICATION MUST NOT BE ABLE TO UNDO THE WRITE.
+   *
+   * The status change has already been saved by the time these run. If the
+   * notification insert fails — a row with no account behind it, a transient
+   * error — the caller must still get their success, so the failure is logged
+   * and swallowed here rather than thrown back over a change that did happen.
+   */
+  private async notifyEmployee(
+    workspaceId: string,
+    employeeId: string,
+    input: { title: string; body: string | null; entityId: string },
+  ) {
+    try {
+      const { userId } = await this.repo.employeeAccount(workspaceId, employeeId)
+      // No account = no inbox. The employee works through the public link and
+      // is told about the task by that link, not by a notification nobody
+      // could ever read.
+      if (!userId) return
+      await notificationService.create(workspaceId, {
+        user_id: userId,
+        title: input.title,
+        ...(input.body ? { body: input.body } : {}),
+        type: 'info',
+        entity_type: 'interaction',
+        entity_id: input.entityId,
+      })
+    } catch (error) {
+      console.error('[CrmService] task notification failed:', error)
+    }
+  }
+
+  /**
+   * «مثلا کارمند تسک رو از در حال انتظار کرد در حال انجام، به مالک نوتیف بره؛
+   * بعد شد انجام شده، به مالک دوباره نوتیف بره» (request #98-ج).
+   *
+   * Symmetric: a change the OWNER makes is told to the employee instead, so
+   * neither side learns about the task's state by going and looking.
+   */
+  private async notifyStatusChange(
+    task: Record<string, unknown>,
+    status: InteractionStatus,
+    changedBy: string,
+  ) {
+    const workspaceId = task.workspace_id as string
+    const subject = (task.subject as string) || ''
+    const label = STATUS_LABEL[status] ?? status
+
+    if (changedBy === 'employee') {
+      const ownerId = task.user_id as string | null
+      if (!ownerId) return
+      try {
+        await notificationService.create(workspaceId, {
+          user_id: ownerId,
+          title: `وضعیت وظیفه «${subject}» شد: ${label}`,
+          type: status === 'completed' ? 'success' : 'info',
+          entity_type: 'interaction',
+          entity_id: task.id as string,
+        })
+      } catch (error) {
+        console.error('[CrmService] owner notification failed:', error)
+      }
+      return
+    }
+
+    const employeeId = task.employee_id as string | null
+    if (!employeeId) return
+    await this.notifyEmployee(workspaceId, employeeId, {
+      title: `وضعیت وظیفه «${subject}» شد: ${label}`,
+      body: null,
+      entityId: task.id as string,
+    })
   }
 
   // ─── Opportunities ────────────────────────────────────────────────────────

@@ -4,12 +4,13 @@
 
 import { z } from 'zod'
 import {
-  uuidSchema,
+  currencyCodeSchema,
+  isoDateSchema,
   nonEmptyStringSchema,
+  nonNegativeNumberSchema,
   optionalStringSchema,
   positiveNumberSchema,
-  isoDateSchema,
-  nonNegativeNumberSchema,
+  uuidSchema,
 } from './common.schema'
 
 /** YYYY-MM-DD, or a full ISO datetime. For fields that mean a day. */
@@ -85,7 +86,16 @@ export const employeeSchema = z.object({
 
   // Compensation
   salary: nonNegativeNumberSchema.default(0),
-  salaryCurrency: z.enum(['AFN', 'USD', 'PKR', 'IRR']).default('AFN'),
+  /**
+   * ⚠️ THE SHARED CATALOGUE, not a private four-code list.
+   *
+   * Payroll had its own `['AFN','USD','PKR','IRR']`, so an owner in Iran could
+   * not pay a salary in تومان or euro even though every other money field in
+   * the product accepts them (request #98). One list means one precision
+   * contract — `currency-policy.test.ts` keeps it in step with
+   * `FRACTION_DIGITS` in @hisabche/formatting.
+   */
+  salaryCurrency: currencyCodeSchema.default('AFN'),
   bankAccount: optionalStringSchema,
   bankName: optionalStringSchema,
 
@@ -98,8 +108,15 @@ export const employeeSchema = z.object({
    * assignment has a start date that a column would silently overwrite on
    * transfer. See docs/phase-d-01-employee-branch-assignments-migration.sql.
    *
-   * Optional: an unassigned employee is "not yet assigned", and refusing to
-   * create one would block hiring before the branch exists.
+   * Optional ON THE SCHEMA, required ON CREATE.
+   *
+   * The owner's rule (request #98-و): «هیچ کارمندی بدون شعبه اضافه نباید بشه و
+   * باید اول نام شعبه اضافه بشه سپس اون کارمند اضافه بشه». So
+   * `createEmployeeSchema` below makes it required, while the base schema stays
+   * nullable — the employees ALREADY in the database were created before this
+   * rule and must still parse. Requiring it here would make every existing
+   * unassigned employee unreadable, which is a far worse failure than the one
+   * being prevented.
    */
   branchId: uuidSchema.nullable().optional(),
 
@@ -112,11 +129,18 @@ export const employeeSchema = z.object({
 
 export type Employee = z.infer<typeof employeeSchema>
 
-export const createEmployeeSchema = employeeSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-})
+export const createEmployeeSchema = employeeSchema
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    // ⚠️ REQUIRED ON CREATE (request #98-و). A new employee must name the
+    // branch they work at, and a branch must therefore exist first. Existing
+    // employees keep parsing through the base schema, which stays nullable.
+    branchId: uuidSchema,
+  })
 
 export type CreateEmployee = z.infer<typeof createEmployeeSchema>
 
@@ -177,7 +201,9 @@ export const payrollSchema = z.object({
   overtimeAmount: nonNegativeNumberSchema.default(0),
   taxAmount: nonNegativeNumberSchema.default(0),
   netSalary: nonNegativeNumberSchema,
-  currency: z.enum(['AFN', 'USD', 'PKR', 'IRR']).default('AFN'),
+  /** Each payment states its OWN currency — a salary can be paid in a
+   * different one from the contract. Same catalogue as everywhere else. */
+  currency: currencyCodeSchema.default('AFN'),
   status: z.enum(['draft', 'approved', 'paid', 'cancelled']).default('draft'),
   paymentDate: isoDateSchema.optional().nullable(),
   notes: optionalStringSchema,

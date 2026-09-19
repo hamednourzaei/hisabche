@@ -175,8 +175,23 @@ export function useCreateInteraction() {
 export function useUpdateInteractionStatus() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: TaskStatus }) => {
-      const { data } = await apiClient.patch(`/interactions/${id}/status`, { status })
+    mutationFn: async ({
+      id,
+      status,
+      employeeId,
+      employeeName,
+    }: {
+      id: string
+      status: TaskStatus
+      /** Reassign in the same write — see `updateInteractionStatusSchema`. */
+      employeeId?: string
+      employeeName?: string
+    }) => {
+      const { data } = await apiClient.patch(`/interactions/${id}/status`, {
+        status,
+        ...(employeeId ? { employeeId } : {}),
+        ...(employeeName ? { employeeName } : {}),
+      })
       return data as Interaction
     },
     // Optimistic: a status is not money. Shown at once, rolled back on refusal.

@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import CryptoJS from 'crypto-js'
 import type { AuthUser } from '@hisabche/auth-core'
 import { registerTokenGetter } from '@hisabche/api'
-import { setOnUnauthorized, setRefreshSession } from '@hisabche/api'
+import { markTokenReady, setOnUnauthorized, setRefreshSession } from '@hisabche/api'
 import { useWorkspaceStore } from './workspace.slice'
 
 // ============================================
@@ -420,6 +420,14 @@ export const useAuthStore = create<AuthState>()(
         isDemo: s.isDemo,
       }),
       onRehydrateStorage: () => () => {
+        // ⚠️ THIS IS WHERE THE SESSION BECOMES REAL, and therefore where the
+        // API client is allowed to start sending. Announcing readiness at
+        // import time meant the first requests of every page load carried no
+        // token and took a 401 before the refresh retry rescued them.
+        //
+        // Called for an empty store too (zustand runs the callback either
+        // way), so a signed-out visitor is not left waiting for the timeout.
+        markTokenReady()
         queueMicrotask(() => {
           useAuthStore.getState().initAuth()
         })
@@ -434,6 +442,11 @@ export const useAuthStore = create<AuthState>()(
 // ============================================
 if (typeof window !== 'undefined') {
   registerTokenGetter(() => useAuthStore.getState().token)
+
+  // Hydration may already have finished before this module ran (a re-import,
+  // or a store restored synchronously). Readiness must not wait for an event
+  // that has already passed.
+  if (useAuthStore.getState().hasHydrated) markTokenReady()
 
   setRefreshSession(async () => {
     const { refreshToken, token, isDemo } = useAuthStore.getState()

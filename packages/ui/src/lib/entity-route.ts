@@ -62,8 +62,8 @@ const ROUTES: Record<string, { list: string; detail?: (id: string) => string }> 
   workflow_instance: { list: '/approvals' },
   workflow: { list: '/approvals' },
 
-  opportunity: { list: '/crm' },
-  interaction: { list: '/crm' },
+  opportunity: { list: '/tasks' },
+  interaction: { list: '/tasks' },
 
   // The projects module was removed. Historical notifications still name these
   // types, so they point at the activity log rather than a dead route.

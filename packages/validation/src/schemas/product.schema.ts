@@ -11,6 +11,7 @@ import {
   optionalStringSchema,
   productCategorySchema,
   unitSchema,
+  unitLabelSchema,
 } from './common.schema'
 
 // ============================================
@@ -29,6 +30,11 @@ export const productSchema = z.object({
   // Stock
   quantity: nonNegativeNumberSchema.default(0),
   unit: unitSchema.default('piece'),
+  /**
+   * The word shown when `unit === 'custom'` — a workspace's own unit from
+   * `custom_units` (patch 2). Same role as `invoice_items.unitLabel`.
+   */
+  unitLabel: unitLabelSchema.nullish(),
   minStockLevel: nonNegativeNumberSchema.default(5),
 
   // Pricing

@@ -8,6 +8,7 @@ vi.mock('@hisabche/api', () => ({
     registeredRefresh = fn
   },
   registerTokenGetter: () => {},
+  markTokenReady: () => {},
 }))
 
 type Call = { url: string; init: RequestInit }

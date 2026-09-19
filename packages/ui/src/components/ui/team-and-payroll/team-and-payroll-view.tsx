@@ -1,5 +1,6 @@
 'use client'
 
+import { SUPPORTED_CURRENCIES } from '@hisabche/store'
 import { SelectField } from '../select-field'
 import { Switch } from '../switch'
 import { cn } from '../../../lib/utils'
@@ -19,6 +20,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { useState, useMemo, useCallback, memo } from 'react'
+import { EmployeeListTable, type EmployeeRow } from './employee-list-table'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { JalaliDatePicker } from '../jalali-datepicker'
 
@@ -31,19 +33,14 @@ import { JalaliDatePicker } from '../jalali-datepicker'
 export type EmployeeStatus = 'active' | 'inactive' | 'terminated' | 'on_leave'
 export type PayrollStatus = 'paid' | 'pending' | 'processing' | 'overdue'
 
-export interface Employee {
-  id: string
-  employeeCode: string
-  firstName: string
-  lastName: string
-  email?: string
-  phone?: string
-  position: string
-  department: { name: string } | null
-  hireDate: string
-  salary: number
-  status: EmployeeStatus
-}
+/**
+ * ⚠️ snake_case, because that is what `GET /api/employees` sends: the database
+ * row, untouched. This interface used to declare camelCase, so `firstName` was
+ * always `undefined` — every employee card showed a blank name and the branch
+ * form's «مدیر شعبه» dropdown offered «undefined undefined» (request #98-ز).
+ * A type annotation is not a runtime check (راهنمای سشن، §۷٫۲).
+ */
+export type Employee = EmployeeRow
 
 export interface PayrollRecord {
   id: string
@@ -220,86 +217,6 @@ const StatCard = memo(function StatCard({
 })
 StatCard.displayName = 'StatCard'
 
-const EmployeeCard = memo(function EmployeeCard({
-  employee,
-  onView,
-  onDelete,
-  t,
-}: {
-  employee: Employee
-  onView?: ((id: string) => void) | undefined
-  onDelete?: ((id: string) => Promise<void>) | undefined
-  t: (key: string, fallback?: string) => string
-}) {
-  // ⚠️ SAFE AND CALENDAR-AWARE. date-fns `format(new Date(x))` THROWS «RangeError:
-  // Invalid time value» on a missing or malformed date — a newly added employee
-  // arrives with `hire_date` (snake_case), so `hireDate` was undefined and the
-  // whole page fell into the error boundary. This returns «—» instead, and follows
-  // the reader's calendar (Shamsi / Afghan / Gregorian).
-  const { date: fmtDay } = useDateFormat()
-  const dateText = (value: string | null | undefined) => fmtDay(value) || '—'
-  const statusInfo = EMPLOYEE_STATUSES.find((s) => s.value === employee.status)
-  const StatusIcon = statusInfo?.icon
-
-  return (
-    <div
-      className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 space-y-4 hover:border-[hsl(var(--color-primary)/0.3)] transition-all cursor-pointer"
-      onClick={() => onView?.(employee.id)}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-[hsl(var(--color-primary)/0.12)] flex items-center justify-center text-[hsl(var(--color-primary))]">
-            <Users className="size-5" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-[hsl(var(--fg-primary))] mb-1">
-              {employee.firstName} {employee.lastName}
-            </h3>
-            <p className="text-xs text-[hsl(var(--fg-secondary))] mb-1">{employee.position}</p>
-            <p className="text-xs text-[hsl(var(--fg-tertiary))] font-mono">
-              {employee.employeeCode}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', statusInfo?.color)}>
-            {statusInfo?.label}
-          </span>
-          {onDelete && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete(employee.id)
-              }}
-              className="p-1.5 rounded-lg hover:bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]"
-              aria-label="حذف کارمند"
-            >
-              <Trash2 className="size-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex items-center gap-4 text-xs text-[hsl(var(--fg-secondary))]">
-          <span className="flex items-center gap-1">
-            <Building2 className="size-3" />
-            {employee.department?.name || '-'}
-          </span>
-          <span className="flex items-center gap-1">
-            <Calendar className="size-3" />
-            {dateText(employee.hireDate ?? (employee as { hire_date?: string }).hire_date)}
-          </span>
-          <span className="tabular-nums font-medium text-[hsl(var(--fg-primary))]">
-            {employee.salary.toLocaleString('fa-AF')} AFN
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-})
-EmployeeCard.displayName = 'EmployeeCard'
-
 const PayrollCard = memo(function PayrollCard({
   payroll,
   onView,
@@ -408,6 +325,9 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
     branchId: '',
     permissionProfileId: '',
     salary: '',
+    // «مدیر بتونه با هر ارزی حقوق بده» — the contract currency. AFN is the
+    // default, not an assumption baked into the field.
+    salaryCurrency: 'AFN',
     hireDate: '',
     // The same fields the employee detail page shows. A detail page that lists
     // «کد ملی / تاریخ تولد / جنسیت / تماس / ایمیل / آدرس / نوع قرارداد» which
@@ -449,6 +369,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
         branchId: '',
         permissionProfileId: '',
         salary: '',
+        salaryCurrency: 'AFN',
         hireDate: '',
         nationalId: '',
         dateOfBirth: '',
@@ -485,6 +406,9 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
     form.firstName.trim().length > 0 &&
     form.lastName.trim().length > 0 &&
     form.hireDate.length > 0 &&
+    // An employee belongs to a branch (request #98-و). The server refuses one
+    // without it too; this keeps the user from filling a form that cannot save.
+    form.branchId.trim().length > 0 &&
     accessComplete &&
     !isSubmitting
 
@@ -504,6 +428,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
           position: form.position.trim() || undefined,
           hireDate: form.hireDate,
           salary: form.salary ? Number(form.salary) : 0,
+          salaryCurrency: form.salaryCurrency,
           employmentType: form.employmentType,
           // Optional personal fields: '' is "not given" and is not sent, so the
           // server's enum/email/date validation never sees an empty string.
@@ -539,6 +464,10 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
     }
   }, [canSubmitEmployee, form, onCreateEmployee, resetForm])
 
+  // «اول شعبه، بعد کارمند» — one source for the button, the submit gate and
+  // the empty state, so they can never disagree.
+  const hasBranch = branches.length > 0
+
   const filteredEmployees = useMemo(() => {
     // Apply any filters here
     return employees
@@ -564,10 +493,22 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
           tree renders its own «افزودن شعبه», and two competing add buttons in
           one header is how someone adds the wrong thing.
         */}
+        {/*
+          ⚠️ «هیچ کارمندی بدون شعبه اضافه نباید بشه و باید اول نام شعبه اضافه
+          بشه» (request #98-و). The gate is on the button AND on the submit
+          below AND on the server's schema — a disabled button is a hint, not
+          a rule.
+        */}
         {statusFilter === 'employees' && (
           <button
             onClick={toggleEmployeeForm}
-            className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] hover:brightness-110 transition"
+            disabled={!hasBranch}
+            title={
+              hasBranch
+                ? undefined
+                : t('team.branchFirstHint', 'اول یک شعبه ثبت کنید؛ هر کارمند باید شعبه داشته باشد.')
+            }
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] hover:brightness-110 transition disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Plus className="size-4" />
             {t('team.addEmployee', 'کارمند جدید')}
@@ -692,7 +633,9 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                 value={form.branchId}
                 onChange={(value) => setField('branchId')(value)}
                 options={[
-                  { value: '', label: t('team.noBranch', 'بدون شعبه') },
+                  // No «بدون شعبه»: an employee belongs to a branch, and the
+                  // form cannot be submitted without one.
+                  { value: '', label: t('team.chooseBranch', 'انتخاب شعبه') },
                   ...branches.map((branch) => ({
                     value: branch.id,
                     label: `${branch.name} (${branch.code})`,
@@ -954,6 +897,19 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
 
             <label className="flex flex-col gap-1.5">
               <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('team.salaryCurrency', 'ارز حقوق')}
+              </span>
+              <SelectField
+                value={form.salaryCurrency}
+                onChange={(value) => setField('salaryCurrency')(value)}
+                options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
+                className={FORM_FIELD}
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
                 {t('team.hireDate', 'تاریخ استخدام')}
               </span>
               <input
@@ -1032,17 +988,14 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
           ) : (
             <div className="space-y-6">
               {statusFilter === 'employees' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {filteredEmployees.map((employee) => (
-                    <EmployeeCard
-                      key={employee.id}
-                      employee={employee}
-                      onView={onViewEmployee ?? undefined}
-                      onDelete={onDeleteEmployee ?? undefined}
-                      t={t}
-                    />
-                  ))}
-                </div>
+                <EmployeeListTable
+                  t={t}
+                  employees={filteredEmployees}
+                  onView={onViewEmployee ?? undefined}
+                  onDelete={onDeleteEmployee ?? undefined}
+                  onAdd={toggleEmployeeForm}
+                  canAdd={hasBranch}
+                />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {filteredPayroll.map((payroll) => (

@@ -1722,7 +1722,7 @@
     "generatedBy": "تولید شده توسط",
     "copiedToClipboard": "متن فاکتور کپی شد",
     "completed": "تکمیل شده",
-    "pending": "در انتظار",
+    "pending": "پرداخت‌نشده",
     "cancelled": "لغو شده",
     "downloadPDF": "دانلود PDF",
     "downloading": "در حال دانلود...",
@@ -1855,7 +1855,7 @@
     "productCode": "کد جنس",
     "productCodeHint": "برای تشخیص کالاهای هم‌نام",
     "addUnit": "افزودن واحد دلخواه",
-    "newUnitPlaceholder": "مثلاً طاقه",
+    "newUnitPlaceholder": "مثلاً مثقال",
     "unitMigrationRequired": "افزودن واحد دلخواه هنوز در پایگاه داده فعال نشده.",
     "hasExpiry": "تاریخ انقضا دارد",
     "expiryDate": "تاریخ انقضا",
@@ -1867,7 +1867,13 @@
     "daysLeft": "روز",
     "remaining": "باقی‌مانده",
     "editExpiry": "ویرایش تاریخ انقضا",
-    "unitUnknown": "این واحد پشتیبانی نمی‌شود"
+    "unitUnknown": "این واحد پشتیبانی نمی‌شود",
+    "dimCount": "تعداد (پایه: عدد)",
+    "dimWeight": "وزن (پایه: گرم)",
+    "dimLength": "طول (پایه: متر)",
+    "dimVolume": "حجم (پایه: لیتر)",
+    "unitFactor": "هر ۱ واحد برابر است با",
+    "unitFactorInvalid": "نام و ضریب تبدیل واحد را درست وارد کنید."
   },
   "customers": {
     "title": "مشتریان",
@@ -2090,7 +2096,9 @@
       "notePlaceholder": "مثلاً: شماره خاموش بود",
       "empty": "مشتری‌ای پیدا نشد",
       "summary": "{done} انجام شد · {failed} انجام نشد · {total} کل"
-    }
+    },
+    "customerAlreadyPicked": "انتخاب شده",
+    "keepEmployee": "همان پرسنل فعلی"
   },
   "payments": {
     "amount": "مبلغ",
@@ -2627,7 +2635,29 @@
     "employment_part_time": "پاره‌وقت",
     "employment_contractor": "قراردادی",
     "employment_intern": "کارآموز",
-    "employment_consultant": "مشاور"
+    "employment_consultant": "مشاور",
+    "addLeave": "ثبت مرخصی",
+    "noLeaves": "هنوز مرخصی‌ای ثبت نشده",
+    "leaveDays": "تعداد روز",
+    "leaveFrom": "از تاریخ",
+    "leaveTo": "تا تاریخ",
+    "leaveReason": "دلیل مرخصی",
+    "days": "روز",
+    "leavePickRange": "بازه را انتخاب کنید",
+    "leaveRangeInvalid": "تاریخ پایان نمی‌تواند قبل از تاریخ شروع باشد.",
+    "leaveSaveError": "ثبت مرخصی انجام نشد.",
+    "leaveAnnual": "مرخصی استحقاقی",
+    "leaveSick": "استعلاجی",
+    "leaveUnpaid": "بدون حقوق",
+    "leaveMaternity": "زایمان",
+    "leavePaternity": "پدری",
+    "leaveBereavement": "فوت بستگان",
+    "leaveOther": "سایر",
+    "leaveStatus_pending": "در انتظار",
+    "leaveStatus_approved": "تأیید شده",
+    "leaveStatus_rejected": "رد شده",
+    "leaveStatus_cancelled": "لغو شده",
+    "paymentNotes": "توضیحات (اختیاری)"
   },
   "projects": {
     "title": "پروژه‌ها",
@@ -3204,7 +3234,10 @@
     },
     "status_filter": "وضعیت درخواست",
     "awaiting_total": "کل درخواست‌های منتظر",
-    "no_match": "درخواستی با این وضعیت نیست"
+    "no_match": "درخواستی با این وضعیت نیست",
+    "noWorkflowTitle": "هنوز هیچ گردش‌کار تأییدی تعریف نشده",
+    "noWorkflowHint": "تا وقتی یک گردش‌کار تأیید فعال نباشد، هیچ سندی برای تأیید به این صفحه نمی‌آید — فاکتورها مستقیم ثبت می‌شوند.",
+    "defineWorkflow": "تعریف گردش‌کار تأیید"
   },
   "action": {
     "clear": "پاک کردن",
@@ -3213,7 +3246,8 @@
     "retry": "تلاش دوباره",
     "cancel": "لغو",
     "save": "ذخیره",
-    "edit": "ویرایش"
+    "edit": "ویرایش",
+    "close": "بستن"
   },
   "faq": {
     "start1Q": "شروع کار با حسابچه چقدر وقت می‌برد؟",
@@ -4912,7 +4946,14 @@
     "noEmployees": "هیچ کارمندی ثبت نشده",
     "noPayroll": "هیچ سابقه حقوقی وجود ندارد",
     "noEmployeesHint": "با افزودن کارمندان جدید، شروع کنید",
-    "noPayrollHint": "با ثبت پرداخت حقوق، شروع کنید"
+    "noPayrollHint": "با ثبت پرداخت حقوق، شروع کنید",
+    "employeeName": "نام کارمند",
+    "phone": "شماره تماس",
+    "status": "وضعیت",
+    "deleteEmployee": "حذف کارمند",
+    "chooseBranch": "انتخاب شعبه",
+    "branchFirstHint": "اول یک شعبه ثبت کنید؛ هر کارمند باید شعبه داشته باشد.",
+    "salaryCurrency": "ارز حقوق"
   },
   "role": {
     "owner": "مالک",

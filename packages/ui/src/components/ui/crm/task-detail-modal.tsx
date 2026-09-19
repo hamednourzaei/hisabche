@@ -8,6 +8,7 @@ import { useDateFormat } from '../../../hooks/use-date-format'
 import { X, User, Phone, Clock, CheckCircle2, Loader2, Share2, Check } from 'lucide-react'
 import type { Interaction, TaskStatus } from '@hisabche/api'
 import { TaskCustomerOutcomes } from './task-customer-outcomes'
+import { SelectField } from '../select-field'
 
 interface TaskDetailModalProps {
   t: (key: string, fallback?: string) => string
@@ -15,7 +16,12 @@ interface TaskDetailModalProps {
   publicTaskUrl: string | null
   isUpdating: boolean
   onClose: () => void
-  onUpdateStatus: (status: TaskStatus) => Promise<void>
+  onUpdateStatus: (status: TaskStatus, assignee?: { id: string; name: string }) => Promise<void>
+  /**
+   * Staff this task can be handed to. Empty renders no picker — an owner with
+   * no employees on file is not shown an empty dropdown to wonder about.
+   */
+  employees?: ReadonlyArray<{ id: string; name: string }>
   /** Omit to render the customer table read-only. */
   onRecordOutcome?:
     ((input: { customerId: string; outcome: 'done' | 'failed'; note?: string }) => void) | undefined
@@ -61,12 +67,15 @@ export const TaskDetailModal = memo(function TaskDetailModal({
   isUpdating,
   onClose,
   onUpdateStatus,
+  employees = [],
   onRecordOutcome,
   pendingCustomerId = null,
 }: TaskDetailModalProps) {
   // The reader's calendar — see the helper above.
   const { lang } = useDateFormat()
 
+  // '' = leave the task where it is.
+  const [assigneeId, setAssigneeId] = useState('')
   const [copied, setCopied] = useState(false)
 
   const handleCopyLink = useCallback(async () => {
@@ -154,6 +163,8 @@ export const TaskDetailModal = memo(function TaskDetailModal({
           outcomes={task.customerOutcomes ?? []}
           onRecord={onRecordOutcome}
           pendingCustomerId={pendingCustomerId}
+          // A finished task is a record. Nothing in it may be rewritten.
+          isLocked={task.status === 'completed'}
         />
 
         {/* Timeline */}
@@ -205,13 +216,33 @@ export const TaskDetailModal = memo(function TaskDetailModal({
           <p className="text-xs font-semibold text-[hsl(var(--fg-tertiary))]">
             {t('crm.changeStatus', 'تغییر دستی وضعیت')}
           </p>
+          {/*
+            «هر کاربر هم با سلکت مشخص بشه» — who the task belongs to, changed
+            in the same write as the status so the two cannot disagree. The
+            same `SelectField` the rest of the app uses.
+          */}
+          {employees.length > 0 && (
+            <SelectField
+              value={assigneeId}
+              onChange={setAssigneeId}
+              options={[
+                { value: '', label: t('crm.keepEmployee', 'همان پرسنل فعلی') },
+                ...employees.map((employee) => ({ value: employee.id, label: employee.name })),
+              ]}
+              className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2 text-sm"
+              disabled={isUpdating}
+            />
+          )}
           <div className="flex gap-2 flex-wrap">
             {(Object.keys(STATUS_LABEL_KEY) as TaskStatus[]).map((s) => (
               <button
                 key={s}
                 type="button"
-                disabled={isUpdating || task.status === s}
-                onClick={() => onUpdateStatus(s)}
+                disabled={isUpdating || (task.status === s && !assigneeId)}
+                onClick={() => {
+                  const picked = employees.find((employee) => employee.id === assigneeId)
+                  void onUpdateStatus(s, picked ? { id: picked.id, name: picked.name } : undefined)
+                }}
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors',
                   task.status === s

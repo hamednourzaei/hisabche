@@ -251,6 +251,9 @@ export class ProductService {
         // row. Writing it here as well would double the opening stock.
         quantity: openingWarehouseId ? 0 : data.quantity || 0,
         unit: data.unit || 'piece',
+        // Only when there is one: `products.unit_label` arrives with patch 2,
+        // and naming a column a database does not have fails the whole insert.
+        ...(data.unitLabel ? { unit_label: data.unitLabel } : {}),
         min_stock_level: data.minStockLevel || 5,
         buy_price: data.buyPrice || 0,
         sell_price: data.sellPrice || 0,

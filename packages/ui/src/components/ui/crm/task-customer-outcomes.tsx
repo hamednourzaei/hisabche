@@ -37,6 +37,19 @@ export interface TaskCustomerOutcomesProps {
     ((input: { customerId: string; outcome: 'done' | 'failed'; note?: string }) => void) | undefined
   /** Customer id currently being written, so only that row shows a spinner. */
   pendingCustomerId?: string | null | undefined
+  /**
+   * ⚠️ A RECORDED RESULT IS A RECORD, NOT A DRAFT (request #98-د).
+   *
+   * «زمانی که رویه علامت تیک می‌زنم نتیجه می‌شود انجام شد، اما اون تیک سبز و
+   * قرمز هنوز هستن و حتی با کامل شدن تسک باز امکان تغییر دادنش هست و این
+   * اشتباهه». Two separate locks, because they say different things:
+   *
+   *  • a row that already has an outcome loses its own buttons — the call
+   *    happened, and «انجام شد» is not a toggle;
+   *  • a task that is finished loses the whole column — nothing about a closed
+   *    task may be rewritten afterwards.
+   */
+  isLocked?: boolean | undefined
 }
 
 interface CustomerRow extends InteractionCustomer {
@@ -63,6 +76,7 @@ export const TaskCustomerOutcomes = memo(function TaskCustomerOutcomes({
   outcomes,
   onRecord,
   pendingCustomerId = null,
+  isLocked = false,
 }: TaskCustomerOutcomesProps) {
   const locale = useIntlLocale()
   const [search, setSearch] = useState('')
@@ -207,7 +221,7 @@ export const TaskCustomerOutcomes = memo(function TaskCustomerOutcomes({
           </span>
         ),
       },
-      ...(onRecord
+      ...(onRecord && !isLocked
         ? [
             {
               id: 'actions',
@@ -216,6 +230,10 @@ export const TaskCustomerOutcomes = memo(function TaskCustomerOutcomes({
               locked: true,
               align: 'end' as const,
               render: (row: CustomerRow) => {
+                // Already answered: show nothing to press. The result itself is
+                // in the «نتیجه» column beside it.
+                if (row.outcome) return null
+
                 if (pendingCustomerId === row.id) {
                   return (
                     <Loader2 className="ms-auto size-4 animate-spin text-[hsl(var(--fg-tertiary))] motion-reduce:animate-none" />
@@ -247,7 +265,7 @@ export const TaskCustomerOutcomes = memo(function TaskCustomerOutcomes({
           ]
         : []),
     ],
-    [t, locale, onRecord, pendingCustomerId, handleDone, handleStartFail],
+    [t, locale, onRecord, isLocked, pendingCustomerId, handleDone, handleStartFail],
   )
 
   const doneCount = outcomes.filter((o) => o.outcome === 'done').length

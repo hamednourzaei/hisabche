@@ -180,6 +180,7 @@ export function PublicTaskContainer({ token }: { token: string }) {
               outcomes={data.customerOutcomes ?? []}
               onRecord={recordOutcome}
               pendingCustomerId={pendingCustomerId}
+              isLocked={data.status === 'completed'}
             />
           </div>
         )}

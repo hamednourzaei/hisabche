@@ -1,7 +1,18 @@
 -- ============================================================================
 -- PATCH 2 / L0.2 — custom units, as a SEPARATE table.
 --
--- ⚠️ PROPOSAL — AWAITING THE OWNER'S GO-AHEAD BEFORE IT IS RUN.
+-- ✅ APPROVED by the owner on 2026-09-19, over the alternative that added
+-- `workspace_id` to `units` (that draft is deleted; see USER-REQUESTS #94).
+--
+-- ⚠️ TWO CHANGES SINCE THE PROPOSAL, both forced by the live database:
+--   1. The RLS predicate no longer calls `auth_workspace_ids()`. That function
+--      does NOT exist on this project (42883 when another migration tried it),
+--      so the policy uses the `workspace_members` subquery that
+--      tenant-isolation-closure-migration.sql already runs with.
+--   2. `products.unit_label` is added here. A product measured in a workspace
+--      unit stores `unit = 'custom'` (the existing enum member) and needs
+--      somewhere to keep the word the user chose — `invoice_items` already has
+--      exactly this column, `products` did not.
 --
 -- The patch brief offered two shapes and asked which and why. This file is the
 -- answer, written out so the decision can be judged against real SQL rather
@@ -64,7 +75,15 @@
 --   state.
 -- ============================================================================
 
+-- ⚠️ LOCK NOTE: the ALTER TABLE statements need an exclusive lock on tables the
+-- live app reads, so a run during traffic can end with «40P01: deadlock
+-- detected». NOTHING is half-applied — the file is one transaction. Re-run it
+-- when the app is quiet.
+
 BEGIN;
+
+-- Give up rather than queue behind (or deadlock with) live queries.
+SET LOCAL lock_timeout = '5s';
 
 -- ---------------------------------------------------------------------------
 -- 1. custom_units — a workspace's own units.
@@ -128,8 +147,14 @@ ALTER TABLE custom_units ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS custom_units_workspace ON custom_units;
 CREATE POLICY custom_units_workspace ON custom_units
   FOR ALL
-  USING (EXISTS (SELECT 1 FROM auth_workspace_ids() w WHERE w = custom_units.workspace_id))
-  WITH CHECK (EXISTS (SELECT 1 FROM auth_workspace_ids() w WHERE w = custom_units.workspace_id));
+  USING (workspace_id IN (
+    SELECT workspace_id FROM workspace_members
+    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+  ))
+  WITH CHECK (workspace_id IN (
+    SELECT workspace_id FROM workspace_members
+    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+  ));
 
 
 -- ---------------------------------------------------------------------------
@@ -159,6 +184,23 @@ COMMENT ON COLUMN product_units.custom_unit_id IS
 -- guarantee without touching the existing constraint.
 CREATE UNIQUE INDEX IF NOT EXISTS product_units_unique_custom
   ON product_units (product_id, custom_unit_id) WHERE custom_unit_id IS NOT NULL;
+
+
+-- ---------------------------------------------------------------------------
+-- 3. The word itself, on the product.
+--
+-- `unit` is an enum whose 'custom' member means «the user typed their own
+-- word», and the word lives in a sibling label — that is already how
+-- `invoice_items.unit_label` works. `products` had no such column, so a
+-- product measured in «مثقال» could only ever display «custom».
+--
+-- Nullable and unconstrained: it is meaningful only when unit = 'custom', and
+-- every existing row keeps NULL.
+-- ---------------------------------------------------------------------------
+ALTER TABLE products ADD COLUMN IF NOT EXISTS unit_label text;
+
+COMMENT ON COLUMN products.unit_label IS
+  'Patch 2 - the workspace unit''s name, shown when unit = ''custom''. Same role as invoice_items.unit_label.';
 
 COMMIT;
 

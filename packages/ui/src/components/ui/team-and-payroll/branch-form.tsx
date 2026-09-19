@@ -12,6 +12,7 @@
 // ============================================
 
 import { SelectField } from '../select-field'
+import { employeeName, type EmployeeRow } from './employee-list-table'
 import { memo, useCallback, useState } from 'react'
 
 interface BranchOption {
@@ -20,11 +21,14 @@ interface BranchOption {
   name: string
 }
 
-interface EmployeeOption {
-  id: string
-  firstName: string
-  lastName: string
-}
+/**
+ * ⚠️ snake_case — `GET /api/employees` sends the database row untouched.
+ * This declared `firstName`/`lastName`, which are never present, so every
+ * option in «مدیر شعبه» read «undefined undefined» and the owner could not
+ * pick anybody (request #98-ز). `employeeName()` is shared with the employee
+ * table so one place decides how a person is named.
+ */
+type EmployeeOption = EmployeeRow
 
 export interface BranchFormValues {
   code: string
@@ -137,10 +141,11 @@ export const BranchForm = memo(function BranchForm({
             onChange={(value) => setManagerEmployeeId(value)}
             options={[
               { value: '', label: t('branch.noManager', 'هنوز مشخص نشده') },
-              ...employees.map((employee) => ({
-                value: employee.id,
-                label: `${employee.firstName} ${employee.lastName}`,
-              })),
+              ...employees
+                .map((employee) => ({ value: employee.id, label: employeeName(employee) }))
+                // Somebody with no name on file cannot be told apart in a
+                // dropdown; offering a blank row is worse than omitting it.
+                .filter((option) => option.label.length > 0),
             ]}
             className={FIELD}
             disabled={isSubmitting}

@@ -12,7 +12,7 @@ import { AxiosError, AxiosHeaders, type InternalAxiosRequestConfig } from 'axios
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { apiClient, setOnUnauthorized, setRefreshSession } from '../lib/client'
-import { registerTokenGetter } from '../lib/tokenProvider'
+import { markTokenReady, registerTokenGetter } from '../lib/tokenProvider'
 
 let calls: Array<{ url: string; auth: string | undefined }> = []
 
@@ -41,6 +41,9 @@ beforeEach(() => {
   logout.mockReset()
   setOnUnauthorized(logout)
   registerTokenGetter(() => 'expired')
+  // A restored session. Registering the getter no longer implies this —
+  // see token-ready-waits-for-hydration.test.ts for why they are separate.
+  markTokenReady()
 })
 
 describe('refresh on 401', () => {

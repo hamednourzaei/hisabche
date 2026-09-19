@@ -154,3 +154,28 @@
 
 | #   | کاندید | الگو |
 | --- | ------ | ---- |
+
+## BUG-014 — سیل ۴۰۱ در هر بارگذاری: «getter ثبت شد» با «session آماده است» یکی گرفته شده بود
+
+- **الگو:** ۱ (قانونی هست و درست صدا زده نمی‌شود) + ترتیب راه‌اندازی
+- **نشانه:** کنسول کاربر پر از `401` روی `/notifications`، `/notifications/unread-count`، `/billing/subscription`، `/accounting/accounts`، `/accounting/journal` و دو بار `/invoices` — با اینکه صفحه درست کار می‌کرد و کاربر تازه وارد شده بود.
+- **ریشه:** `registerTokenGetter()` در `packages/api/src/lib/tokenProvider.ts` علاوه بر ثبت getter، خودِ `tokenReady` را هم resolve می‌کرد. `packages/store/src/slices/auth.slice.ts` آن را در سطح ماژول (هنگام import) صدا می‌زند — یعنی **قبل از** hydrate شدن zustand-persist. پس `waitForTokenReady()` در interceptor فوراً رد می‌شد و اولین درخواست‌ها بدون هدر `Authorization` بیرون می‌رفتند؛ ۴۰۱ می‌گرفتند و فقط به لطف `refreshOnce()` + یک retry موفق می‌شدند. خطا دیده می‌شد، ولی چون نتیجه درست بود هیچ‌وقت به‌عنوان باگ گزارش نشد.
+- **رفع:** `markTokenReady()` جدا شد. وب بعد از `onRehydrateStorage` (که zustand برای storage خالی هم صدا می‌زند، پس کاربر خارج‌شده منتظر timeout نمی‌ماند)، دسکتاپ و موبایل در `finally` ی `hydrate()`، ادمین بعد از اولین `getSession()`. `registerTokenGetter` دیگر هیچ چیزی را resolve نمی‌کند.
+- **تست:** `packages/api/src/__tests__/token-ready-waits-for-hydration.test.ts` (۸ تست: ثبت getter آزاد نمی‌کند، `markTokenReady` می‌کند، idempotent، کاربر خارج‌شده هم آزاد می‌شود، و هر چهار رندرر `markTokenReady` را صدا می‌زنند) — **injection-tested**: با برگرداندن باگ، تست اول قرمز شد.
+- **مرورگر:** ❌ نیازمند ورود کاربر.
+
+## BUG-015 — «ثبت پرداخت» حقوق هیچ‌وقت پرداخت نمی‌شد
+
+- **الگو:** سرویسی که ورودی صریح کلاینت را بی‌صدا دور می‌ریزد
+- **نشانه:** گزارش کاربر: «حقوق کار نمی‌کنه».
+- **ریشه:** `HumanResourcesService.createPayroll` همیشه `status: 'draft'` می‌نوشت و `payment_date` را اصلاً در INSERT نمی‌آورد — در حالی که صفحه‌ی کارمند `status: 'paid'` و تاریخِ انتخاب‌شده را می‌فرستد. نتیجه: هیچ پرداختی «پرداخت‌شده» نمی‌شد و ردیف، به‌جای تاریخ پرداخت، **تاریخ شروع دوره** را نشان می‌داد.
+- **رفع:** `status: data.status` و `payment_date: data.paymentDate ?? null`. پیش‌فرض `'draft'` در schema باقی است، پس فراخوانی‌ای که چیزی نگوید همچنان draft می‌سازد. گزارش سود/زیان تحت تأثیر نیست (فقط `cancelled`/`rejected` را کنار می‌گذارد).
+- **مرورگر:** ❌ نیازمند ورود کاربر.
+
+## BUG-016 — «مدیر شعبه: undefined undefined» و نام خالی کارمندها
+
+- **الگو:** ۲ (تایپ، چکِ زمان اجرا نیست)
+- **ریشه:** `GET /api/employees` ردیف خام دیتابیس را می‌فرستد (`first_name`، `last_name`، `hire_date`)، ولی `team-and-payroll-view.tsx` آن را camelCase تایپ کرده بود. tsc ساکت بود چون هوک `any` برمی‌گرداند. پس کارت‌ها نام خالی داشتند و گزینه‌های «مدیر شعبه» همه «undefined undefined» بودند.
+- **رفع:** تایپ به snake_case اصلاح شد (`EmployeeRow`)، نام‌سازی در یک تابع مشترک `employeeName()` و گزینه‌ی بی‌نام از dropdown حذف می‌شود. کارت‌ها جای خود را به `EmployeeListTable` (همان DataTable انبار) دادند.
+- **نکته‌ی باقی‌مانده:** `branches.manager_employee_id` کلید خارجی به `employees` دارد، پس **مالک** فقط وقتی قابل انتخاب است که به‌عنوان کارمند ثبت شده باشد.
+- **مرورگر:** ❌ نیازمند ورود کاربر.

@@ -28,6 +28,8 @@ import {
 } from 'lucide-react'
 import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { JalaliDatePicker } from '../../ui/jalali-datepicker'
+import { SelectField } from '../select-field'
+import { SUPPORTED_CURRENCIES } from '@hisabche/store'
 import { PhoneInput } from '../../ui/phone-input'
 import { MoneyInput } from '../../ui/money-input'
 import { toIsoDay } from '@hisabche/formatting'
@@ -75,6 +77,8 @@ interface Payroll {
   status: string
   payment_date?: string | null
   currency?: string
+  /** What this payment was for — written by the «توضیحات» field. */
+  notes?: string | null
 }
 
 interface EmployeeDetailViewProps {
@@ -84,7 +88,12 @@ interface EmployeeDetailViewProps {
   payrolls: Payroll[]
   isLoadingPayrolls: boolean
   onUpdate: (values: Record<string, unknown>) => Promise<void>
-  onAddPayment: (values: { amount: number; date: string }) => Promise<void>
+  onAddPayment: (values: {
+    amount: number
+    date: string
+    notes?: string
+    currency?: string
+  }) => Promise<void>
   onBack: () => void
   /** H5 & H6 — branch postings and this record's audit trail. */
   extraSlot?: React.ReactNode
@@ -282,13 +291,28 @@ const AddPaymentForm = memo(function AddPaymentForm({
   t,
   onSubmit,
   onCancel,
+  defaultCurrency,
 }: {
+  defaultCurrency: string
   t: (key: string, fallback?: string) => string
-  onSubmit: (values: { amount: number; date: string }) => Promise<void>
+  onSubmit: (values: {
+    amount: number
+    date: string
+    notes?: string
+    currency?: string
+  }) => Promise<void>
   onCancel: () => void
 }) {
   const [amount, setAmount] = useState<string>('')
   const [date, setDate] = useState<string>('')
+  // «در بخش ثبت حقوق … می‌خوام بخش توضیحات هم وجود داشته باشد» — what this
+  // payment was for (advance, bonus, deduction) is the thing nobody remembers
+  // three months later. `payrolls.notes` already exists; nothing was writing it.
+  const [notes, setNotes] = useState<string>('')
+  // «شاید در ایران یکی حقوقش را با تتر یا یورو یا دلار بگیرد» — the payment
+  // carries its own currency, which need not be the contract's. Defaults to
+  // the employee's salary currency so the common case is one click.
+  const [currency, setCurrency] = useState<string>(defaultCurrency)
   const [submitting, setSubmitting] = useState(false)
 
   const isValid = Number(amount) > 0 && !!date
@@ -297,13 +321,19 @@ const AddPaymentForm = memo(function AddPaymentForm({
     if (!isValid) return
     setSubmitting(true)
     try {
-      await onSubmit({ amount: Number(amount), date })
+      await onSubmit({
+        amount: Number(amount),
+        date,
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
+        currency,
+      })
       setAmount('')
       setDate('')
+      setNotes('')
     } finally {
       setSubmitting(false)
     }
-  }, [amount, date, isValid, onSubmit])
+  }, [amount, date, notes, currency, isValid, onSubmit])
 
   return (
     <div className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4 space-y-3">
@@ -319,7 +349,20 @@ const AddPaymentForm = memo(function AddPaymentForm({
           onChange={setDate}
           placeholder={t('hr.paymentDate', 'تاریخ پرداخت')}
         />
+        <SelectField
+          value={currency}
+          onChange={setCurrency}
+          options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
+          className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm"
+        />
       </div>
+      <textarea
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        rows={2}
+        placeholder={t('hr.paymentNotes', 'توضیحات (اختیاری)')}
+        className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
+      />
       <div className="flex gap-2">
         <button
           type="button"
@@ -657,6 +700,7 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
             t={t}
             onSubmit={handleAddPayment}
             onCancel={() => setShowAddPayment(false)}
+            defaultCurrency={employee.salary_currency || 'AFN'}
           />
         )}
 
@@ -673,8 +717,11 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
                 key={p.id}
                 className="flex items-center justify-between rounded-xl border border-[hsl(var(--border-default))] p-3"
               >
-                <span className="text-xs text-[hsl(var(--fg-secondary))]">
-                  {p.payment_date || p.period_start}
+                <span className="flex min-w-0 flex-col text-xs text-[hsl(var(--fg-secondary))]">
+                  <span className="tabular-nums">{p.payment_date || p.period_start}</span>
+                  {p.notes && (
+                    <span className="truncate text-[hsl(var(--fg-tertiary))]">{p.notes}</span>
+                  )}
                 </span>
                 <span className="text-sm font-bold tabular-nums text-[hsl(var(--fg-primary))]">
                   {Number(p.net_salary).toLocaleString('fa-AF')} {p.currency || 'AFN'}

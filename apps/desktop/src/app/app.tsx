@@ -114,7 +114,10 @@ const router = createHashRouter([
 
       { path: 'accounting', element: <AccountingPage /> },
       { path: 'activities', element: <ActivitiesPage /> },
-      { path: 'crm', element: <CrmPage /> },
+      // Paths mirror the web routes exactly (NAV_CONTRACT). /crm became
+      // /tasks there; both resolve here so old in-app history still works.
+      { path: 'tasks', element: <CrmPage /> },
+      { path: 'crm', element: <Navigate to="/tasks" replace /> },
       { path: 'sync-center', element: <SyncCenterPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'approvals', element: <ApprovalsPage /> },
@@ -127,7 +130,7 @@ const router = createHashRouter([
       { path: 'team-and-payroll', element: <TeamAndPayrollPage /> },
       { path: 'team-and-payroll/:id', element: <EmployeeDetailPage /> },
       { path: 'workflow', element: <WorkflowPage /> },
-      { path: 'sales-followup', element: <Navigate to="/crm" replace /> },
+      { path: 'sales-followup', element: <Navigate to="/tasks" replace /> },
       { path: 'audit', element: <AuditPage /> },
 
       // Paths mirror the web routes exactly, so no container needs a
