@@ -1,76 +1,32 @@
 // packages/ui/src/components/ui/bento-stats.tsx
-// 🍱 Bento Grid + Soft UI — KPI box (mobile: یک باکس نامتقارن ۲×۲ / دسکتاپ: کارت‌های مجزا)
+// 🍱 Bento Grid — the dashboard's KPI row.
+//
+// ⚠️ THIS IS A LAYOUT, NOT A SECOND KPI CARD.
+//
+// Every cell is a `KpiCard` (the owner's instruction: one KPI card in the whole
+// product). What lives here is only the asymmetric arrangement — on mobile the
+// four cells merge into ONE bordered box with internal dividers, and become
+// four separate cards from `sm` up. That is why the cells are rendered with
+// `surface="desktop"`: a cell drawing its own border on mobile would put a
+// border inside a border.
 'use client'
 
-import { STAT_CARD_SURFACE_DESKTOP, STAT_LABEL, STAT_PADDING } from './stat-surface'
+import { KpiCard, fullAmount, type KpiCardProps } from './kpi-card'
+import { STAT_PADDING } from './stat-surface'
 import { cn } from '../../lib/utils'
-import { TrendingUp, TrendingDown, type LucideIcon } from 'lucide-react'
-import { useIntlLocale } from '../../hooks/use-intl-locale'
-
-// ============================================================
-// 🔢 قالب‌بندی عدد — کوتاه‌سازی میلیون/میلیارد + اندازه‌ی خودکار فونت
-// ============================================================
+import { type LucideIcon } from 'lucide-react'
 
 type Translate = (key: string, fallback?: string) => string
 
-function localeNumber(v: number, locale: string, decimals = 0): string {
-  try {
-    return new Intl.NumberFormat(locale, {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    }).format(v)
-  } catch {
-    return v.toFixed(decimals)
-  }
-}
-
-/**
- * Full grouped digits — never abbreviated.
- *
- * KPI cards used to collapse large sums to "۱۲ میلیون", which hides the exact
- * figure a bookkeeper is checking. The card shrinks its font instead (see
- * `valueFontClass`), so the whole number stays readable without overflowing.
- */
-export function fullAmount(v: number, locale: string): string {
-  return localeNumber(v, locale)
-}
+export { fullAmount }
 
 /**
  * @deprecated Kept so existing imports keep compiling. Returns the full number;
- * abbreviation was removed deliberately — see `fullAmount`.
+ * abbreviation was removed deliberately — «۱۲ میلیون» hides the exact figure a
+ * bookkeeper is checking.
  */
 export function compactAmount(v: number, _t?: Translate, locale = 'fa-IR'): string {
   return fullAmount(v, locale)
-}
-
-/**
- * رنگ عدد بر اساس علامت آن. متن‌های غیرعددی (مثل نام پرخریدترین مشتری)
- * `amount` ندارند و خنثی می‌مانند.
- */
-function amountTone(amount: number | undefined): string {
-  if (amount === undefined || amount === 0) return 'text-[hsl(var(--fg-primary))]'
-  return amount < 0 ? 'text-[hsl(var(--color-destructive))]' : 'text-[hsl(var(--color-success))]'
-}
-
-/**
- * هرچه متن بلندتر، فونت کوچک‌تر — جلوگیری از سرریز در کارت.
- *
- * Now that amounts are never abbreviated, this is what keeps a nine-figure sum
- * inside its box, so the steps run further down than they used to.
- */
-function valueFontClass(text: string): string {
-  const len = text.length
-  if (len <= 7) return 'text-lg sm:text-2xl'
-  if (len <= 11) return 'text-base sm:text-xl'
-  if (len <= 16) return 'text-sm sm:text-lg'
-  if (len <= 20) return 'text-xs sm:text-base'
-  if (len <= 26) return 'text-[11px] sm:text-sm'
-  return 'text-[10px] sm:text-xs'
-}
-
-function formatPercent(delta: number, locale: string): string {
-  const abs = Math.abs(delta)
-  return `${localeNumber(abs, locale, abs < 10 ? 1 : 0)}٪`
 }
 
 // ============================================================
@@ -81,7 +37,7 @@ export interface BentoStat {
   id: string
   icon: LucideIcon
   label: string
-  /** مقدار عددی — کوتاه‌سازی و اندازه‌ی فونت خودکار اعمال می‌شود */
+  /** مقدار عددی — قالب‌بندی، رنگِ علامت و اندازه‌ی فونت خودکار اعمال می‌شود */
   amount?: number
   /** مقدار متنی (مثلاً نام مشتری) — جایگزین amount */
   text?: string
@@ -98,7 +54,6 @@ export interface BentoStat {
 interface BentoStatsProps {
   t: Translate
   stats: BentoStat[]
-  /** واحد پول برای مقادیر عددی */
   className?: string
 }
 
@@ -110,9 +65,7 @@ const INNER_BORDERS = ['border-b border-e', 'border-b', 'border-e', ''] as const
 // 🎨 Component
 // ============================================================
 
-export function BentoStats({ t, stats, className }: BentoStatsProps) {
-  const locale = useIntlLocale()
-
+export function BentoStats({ t: _t, stats, className }: BentoStatsProps) {
   return (
     <div
       className={cn(
@@ -130,70 +83,30 @@ export function BentoStats({ t, stats, className }: BentoStatsProps) {
         // `suffix` (the currency code) is deliberately not rendered: the user
         // picks their currency once during onboarding, so repeating it on every
         // card is noise that only costs horizontal room.
-        const value =
-          stat.text ?? (stat.amount !== undefined ? fullAmount(stat.amount, locale) : '—')
-        const hasDelta = stat.delta !== undefined && stat.delta !== null
-        const isUp = hasDelta && (stat.delta as number) >= 0
-        const isGood = stat.invertDelta ? !isUp : isUp
-        const TrendIcon = isUp ? TrendingUp : TrendingDown
+        //
+        // A number goes through as a NUMBER, so the card formats it, colours it
+        // by sign and sizes it. Text goes through as text and stays neutral.
+        const value: KpiCardProps['value'] =
+          stat.text ?? (stat.amount !== undefined ? stat.amount : '—')
 
         return (
-          <div
+          <KpiCard
             key={stat.id}
+            label={stat.label}
+            value={value}
+            icon={stat.icon}
+            {...(stat.delta !== undefined ? { delta: stat.delta } : {})}
+            {...(stat.deltaLabel ? { deltaLabel: stat.deltaLabel } : {})}
+            invertDelta={stat.invertDelta ?? false}
+            surface="desktop"
             className={cn(
               STAT_PADDING,
               SPANS[i],
               INNER_BORDERS[i],
               'border-[hsl(var(--border-default))]',
-              // دسکتاپ: هر خانه یک کارت مستقل — همان ظاهری که
-              // `stat-surface` تعریف می‌کند و capability-kit هم از آن
-              // استفاده می‌کند، تا دو زبان بصری نداشته باشیم (T3).
               'sm:col-span-1',
-              STAT_CARD_SURFACE_DESKTOP,
             )}
-          >
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <stat.icon
-                className="size-3.5 shrink-0 text-[hsl(var(--color-primary))] sm:size-4"
-                aria-hidden="true"
-              />
-              <span className={STAT_LABEL}>{stat.label}</span>
-            </div>
-
-            <p
-              className={cn(
-                'mt-1.5 truncate font-bold tabular-nums sm:mt-2',
-                valueFontClass(value),
-                // عدد منفی قرمز، مثبت سبز، صفر خنثی — کاربر باید بدون خواندن
-                // علامت هم بفهمد وضعیت خوب است یا بد.
-                amountTone(stat.amount),
-              )}
-              title={value}
-            >
-              {value}
-            </p>
-
-            {hasDelta && (
-              <div className="mt-1 flex items-center gap-1">
-                <span
-                  className={cn(
-                    'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums',
-                    isGood
-                      ? 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]'
-                      : 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]',
-                  )}
-                >
-                  <TrendIcon className="size-3" aria-hidden="true" />
-                  {formatPercent(stat.delta as number, locale)}
-                </span>
-                {stat.deltaLabel && (
-                  <span className="truncate text-[10px] text-[hsl(var(--fg-tertiary))]">
-                    {stat.deltaLabel}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
+          />
         )
       })}
     </div>

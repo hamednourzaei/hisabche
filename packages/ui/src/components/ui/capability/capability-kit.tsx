@@ -30,10 +30,10 @@
 // component directly — not add a new primitive to this file.
 // ============================================
 
+import { KpiCard, KpiGrid, type KpiCardProps } from '../kpi-card'
 import { DocsHelpLink } from '../docs/docs-help-link'
 import type { LucideIcon } from 'lucide-react'
 
-import { STAT_CARD_SURFACE, STAT_HINT, STAT_LABEL, STAT_PADDING, STAT_VALUE } from '../stat-surface'
 import { SelectField as SharedSelectField } from '../select-field'
 import React from 'react'
 
@@ -146,41 +146,22 @@ export function Panel({
  * `icon` is optional and new: the dashboard cards carry one, and a screen that
  * has a sensible icon can now match completely.
  */
-export function Stat({
-  label,
-  value,
-  hint,
-  icon: Icon,
-}: {
-  label: string
-  value: React.ReactNode
-  hint?: React.ReactNode
-  icon?: LucideIcon
-}) {
-  return (
-    <div className={cn(STAT_CARD_SURFACE, STAT_PADDING)}>
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        {Icon ? (
-          <Icon
-            className="size-3.5 shrink-0 text-[hsl(var(--color-primary))] sm:size-4"
-            aria-hidden="true"
-          />
-        ) : null}
-        <span className={STAT_LABEL}>{label}</span>
-      </div>
-      {/* `text-lg sm:text-xl` rather than the bento's automatic sizing: these
-          screens pass formatted strings, not raw numbers, so there is no
-          magnitude to size against. */}
-      <p className={cn('mt-1.5 text-lg sm:mt-2 sm:text-xl', STAT_VALUE)}>{value}</p>
-      {hint ? <div className={cn('mt-0.5', STAT_HINT)}>{hint}</div> : null}
-    </div>
-  )
+/**
+ * ⚠️ AN ALIAS, NOT A SECOND CARD.
+ *
+ * Every KPI in the product is `KpiCard` now (the owner's instruction). This
+ * name and signature are kept because sixteen capability screens call it; the
+ * markup, the classes and the colours all live in one file.
+ *
+ * `delta` and `deltaLabel` pass straight through, so a capability screen that
+ * has a comparison can show one without a second component being invented for
+ * it.
+ */
+export function Stat(props: KpiCardProps) {
+  return <KpiCard {...props} />
 }
 
-export function StatGrid({ children }: { children: React.ReactNode }) {
-  // Matches the dashboard's desktop row: four across, two on mobile.
-  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{children}</div>
-}
+export { KpiGrid as StatGrid }
 
 /* ─── States ──────────────────────────────────────────────────────────────── */
 

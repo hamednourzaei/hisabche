@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/dashboard/sales-chart.tsx
 'use client'
 
-import { memo, useMemo, useId, useState } from 'react'
+import { memo, useMemo, useId } from 'react'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
 import dynamic from 'next/dynamic'
@@ -80,21 +80,11 @@ export const SalesChart = memo(function SalesChart({
   const descriptionId = useId()
   const isMobile = useIsMobile()
   const isReducedMotion = useIsReducedMotion()
-  const [showInvoices, setShowInvoices] = useState(true)
-  const [showCustomers, setShowCustomers] = useState(true)
-
-  // ✅ FIX (باگ toggle): اگر پاسخ API این سری‌ها را نداشته باشد، تیک زدن هیچ
-  // خطی اضافه نمی‌کرد و کاربر فکر می‌کرد کنترل خراب است. حالا تیک غیرفعال
-  // می‌شود و علتش در tooltip گفته می‌شود.
-  const hasInvoiceSeries = useMemo(
-    () => (data ?? []).some((d) => typeof d.invoiceCount === 'number'),
-    [data],
-  )
-  const hasCustomerSeries = useMemo(
-    () => (data ?? []).some((d) => typeof d.customerCount === 'number'),
-    [data],
-  )
-  const noSeriesHint = 'این داده در پاسخ سرور موجود نیست'
+  // ⚠️ ONE SERIES. The «فاکتورها» and «مشتریان» lines and their checkboxes were
+  // removed on the owner's instruction — three lines on one pair of axes, two
+  // of them counts and one money, made the card unreadable. The counts are
+  // still shown, as stages, in the conversion funnel beside it; nothing was
+  // removed from there.
 
   /**
    * The «balance chart card» supporting stats (dashboardcn, MIT), adopted on
@@ -297,12 +287,10 @@ export const SalesChart = memo(function SalesChart({
             fmt={fmt}
             height={height}
             animationDuration={animationDuration}
-            showInvoices={showInvoices}
-            showCustomers={showCustomers}
           />
         </div>
 
-        {/* Contextual footer — سویچ‌های فعال/غیرفعال کردن هر خط (فروش همیشه روشن است) */}
+        {/* The window the numbers cover, and what the one line is. */}
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[hsl(var(--fg-tertiary))] pt-1 border-t border-[hsl(var(--border-default)/0.5)]">
           <span>
             {tCount(
@@ -311,46 +299,10 @@ export const SalesChart = memo(function SalesChart({
               `Last ${data?.length ?? 0} periods`,
             )}
           </span>
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--color-primary))]" />
-              {t('dashboard.salesTrend')}
-            </span>
-            <label
-              className={cn(
-                'flex items-center gap-1 select-none',
-                hasInvoiceSeries ? 'cursor-pointer' : 'cursor-not-allowed opacity-40',
-              )}
-              title={hasInvoiceSeries ? undefined : noSeriesHint}
-            >
-              <input
-                type="checkbox"
-                checked={showInvoices && hasInvoiceSeries}
-                disabled={!hasInvoiceSeries}
-                onChange={(e) => setShowInvoices(e.target.checked)}
-                className="size-3 accent-[hsl(var(--color-info))]"
-              />
-              <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--color-info))]" />
-              {t('dashboard.invoicesLine', 'فاکتورها')}
-            </label>
-            <label
-              className={cn(
-                'flex items-center gap-1 select-none',
-                hasCustomerSeries ? 'cursor-pointer' : 'cursor-not-allowed opacity-40',
-              )}
-              title={hasCustomerSeries ? undefined : noSeriesHint}
-            >
-              <input
-                type="checkbox"
-                checked={showCustomers && hasCustomerSeries}
-                disabled={!hasCustomerSeries}
-                onChange={(e) => setShowCustomers(e.target.checked)}
-                className="size-3 accent-[hsl(var(--color-warning))]"
-              />
-              <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--color-warning))]" />
-              {t('dashboard.customersLine', 'مشتریان')}
-            </label>
-          </div>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--color-primary))]" />
+            {t('dashboard.salesTrend')}
+          </span>
         </div>
       </div>
     </section>

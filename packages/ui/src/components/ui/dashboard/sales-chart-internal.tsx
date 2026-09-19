@@ -15,6 +15,13 @@
 // ⚠️ THE PEAK IS MARKED ON THE AGGREGATED SERIES. Long ranges are downsampled
 // below, so the marked point is the highest point ON SCREEN. Marking the raw
 // maximum would put the dot where no drawn point sits.
+//
+// ⚠️ ONE SERIES ONLY — sales. The «فاکتور» and «مشتری» lines were removed on
+// the owner's instruction: two counts and one money figure on one pair of axes
+// share no scale, so the counts sat flat along the bottom and the card was
+// unreadable. `aggregateDataPoints` still carries `invoiceCount` and
+// `customerCount` through, because the conversion funnel reads the SAME array
+// and nothing was removed from there.
 // ============================================
 
 import { memo, useMemo, useId } from 'react'
@@ -29,14 +36,7 @@ import {
   ReferenceDot,
 } from 'recharts'
 
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-  type ChartConfig,
-} from '../chart'
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '../chart'
 
 interface ChartDataPoint {
   label: string
@@ -51,8 +51,6 @@ interface InternalChartProps {
   fmt: (v: number) => string
   height: number
   animationDuration: number
-  showInvoices?: boolean
-  showCustomers?: boolean
 }
 
 // ✅ تابع aggregate با بررسی کامل TypeScript
@@ -91,8 +89,6 @@ function aggregateDataPoints(data: ChartDataPoint[], maxPoints: number): ChartDa
 
 const chartConfig = {
   value: { label: 'فروش', color: 'hsl(var(--color-primary))' },
-  invoiceCount: { label: 'فاکتور', color: 'hsl(var(--color-info))' },
-  customerCount: { label: 'مشتری', color: 'hsl(var(--color-warning))' },
 } satisfies ChartConfig
 
 export default memo(function InternalSalesChart({
@@ -100,8 +96,6 @@ export default memo(function InternalSalesChart({
   fmt,
   height,
   animationDuration,
-  showInvoices = true,
-  showCustomers = true,
 }: InternalChartProps) {
   const gradientId = useId()
 
@@ -223,33 +217,10 @@ export default memo(function InternalSalesChart({
           />
         )}
 
-        {showInvoices && (
-          <Line
-            type="monotone"
-            dataKey="invoiceCount"
-            stroke="hsl(var(--color-info))"
-            strokeWidth={1.5}
-            dot={false}
-            isAnimationActive={animationDuration > 0}
-            animationDuration={animationDuration}
-            connectNulls={false}
-          />
-        )}
-
-        {showCustomers && (
-          <Line
-            type="monotone"
-            dataKey="customerCount"
-            stroke="hsl(var(--color-warning))"
-            strokeWidth={1.5}
-            dot={false}
-            isAnimationActive={animationDuration > 0}
-            animationDuration={animationDuration}
-            connectNulls={false}
-          />
-        )}
-
-        <ChartLegend content={<ChartLegendContent />} />
+        {/*
+          ⚠️ NO LEGEND. With one series the legend names the only line on the
+          chart, under a card that already says «فروش» twice above it.
+        */}
       </ComposedChart>
     </ChartContainer>
   )

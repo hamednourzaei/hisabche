@@ -128,6 +128,15 @@ export { LivingBackground } from './components/ui/living-background'
 // ---------- Data Display ----------
 export { EmptyState, type EmptyStateProps } from './components/ui/empty-state'
 export { BentoStats, compactAmount, type BentoStat } from './components/ui/bento-stats'
+// THE KPI card — every screen in the product uses this one.
+export {
+  KpiCard,
+  KpiGrid,
+  fullAmount,
+  valueFontClass,
+  type KpiCardProps,
+  type KpiSurface,
+} from './components/ui/kpi-card'
 
 // ─── Shared table system (search / column settings / sorting) ───
 export {
@@ -144,7 +153,6 @@ export {
   type ColumnVisibility,
   type SortDirection,
 } from './components/ui/data-table'
-export { StockStatsCard } from './components/ui/stock-stats-card'
 export { SyncStatus, type SyncStatusProps } from './components/ui/sync-status'
 export { OfflineBanner, type OfflineBannerProps } from './components/ui/offline-banner'
 export { OfflineQueue, type OfflineQueueProps } from './components/ui/offline-queue'

@@ -39,7 +39,7 @@ import {
 
 import { EmptyState } from '../empty-state'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../table'
-import { STAT_CARD_SURFACE, STAT_LABEL, STAT_PADDING, STAT_VALUE } from '../stat-surface'
+import { KpiCard } from '../kpi-card'
 import { cn } from '../../../lib/utils'
 
 export interface InventoryOpsViewProps {
@@ -78,36 +78,31 @@ export function InventoryOpsView({ t, fmtMoney, fmtDate }: InventoryOpsViewProps
 
         {forecast.data ? (
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className={cn(STAT_CARD_SURFACE, STAT_PADDING)}>
-              <span className={STAT_LABEL}>{tr('ops.openingBalance', 'موجودی فعلی')}</span>
-              <p className={cn('mt-1.5 text-lg sm:text-xl', STAT_VALUE)}>
-                {fmtMoney(forecast.data.openingBalance)}
-              </p>
-            </div>
+            <KpiCard
+              label={tr('ops.openingBalance', 'موجودی فعلی')}
+              value={fmtMoney(forecast.data.openingBalance)}
+            />
 
-            <div className={cn(STAT_CARD_SURFACE, STAT_PADDING)}>
-              <span className={STAT_LABEL}>{tr('ops.daysProjected', 'روزهای پیش‌بینی')}</span>
-              <p className={cn('mt-1.5 text-lg sm:text-xl', STAT_VALUE)}>
-                {num(forecast.data.days.length)}
-              </p>
-            </div>
+            <KpiCard
+              label={tr('ops.daysProjected', 'روزهای پیش‌بینی')}
+              value={num(forecast.data.days.length)}
+            />
 
-            <div className={cn(STAT_CARD_SURFACE, STAT_PADDING)}>
-              <span className={STAT_LABEL}>{tr('ops.firstShortfall', 'اولین کسری')}</span>
-              {/* ⚠️ null means «no shortfall in the projected window», which is
-                  good news and must not read like missing data. */}
-              <p
-                className={cn(
-                  'mt-1.5 text-lg sm:text-xl',
-                  STAT_VALUE,
-                  forecast.data.firstShortfallDate && 'text-[hsl(var(--color-destructive))]',
-                )}
-              >
-                {forecast.data.firstShortfallDate
-                  ? fmtDate(forecast.data.firstShortfallDate)
-                  : tr('ops.noShortfall', 'کسری ندارد')}
-              </p>
-            </div>
+            {/* ⚠️ null means «no shortfall in the projected window», which is
+                good news and must not read like missing data — so the red is
+                on the DATE, never on «کسری ندارد». */}
+            <KpiCard
+              label={tr('ops.firstShortfall', 'اولین کسری')}
+              value={
+                forecast.data.firstShortfallDate ? (
+                  <span className="text-[hsl(var(--color-destructive))]">
+                    {fmtDate(forecast.data.firstShortfallDate)}
+                  </span>
+                ) : (
+                  tr('ops.noShortfall', 'کسری ندارد')
+                )
+              }
+            />
           </div>
         ) : (
           <p className="text-sm text-[hsl(var(--fg-tertiary))]">
