@@ -22,7 +22,7 @@
         "image": "latest"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://staging-api.hisabche.com/api"
+        "EXPO_PUBLIC_API_URL": "https://api.hisabche.com/api"
       },
       "node": "22.13.0"
     },
