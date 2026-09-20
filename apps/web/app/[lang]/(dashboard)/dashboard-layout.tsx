@@ -392,8 +392,12 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
       ? {
           userId: user.id,
           name: user.fullName || user.email || '',
-          email: user.email,
-          role: user.role,
+          // ⚠️ SPREAD, NOT ASSIGNED. `exactOptionalPropertyTypes` is on across
+          // the monorepo, so `role?: string` REFUSES an explicit `null` —
+          // and `user.role` is `string | null | undefined`. Assigning it
+          // compiles nowhere and failed the Vercel type check.
+          ...(user.email ? { email: user.email } : {}),
+          ...(user.role ? { role: user.role } : {}),
         }
       : null,
     { canSee: canSeePeople === true },
