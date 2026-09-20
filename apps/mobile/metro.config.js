@@ -1,4 +1,5 @@
 const { getDefaultConfig } = require('expo/metro-config')
+const fs = require('fs')
 const path = require('path')
 
 const projectRoot = __dirname
@@ -68,35 +69,97 @@ config.resolver.extraNodeModules = {
 // `resolveRequest` runs FIRST and unconditionally, so it is the only place
 // that can make this guarantee. Guard: `single-react-instance.test.ts`.
 // ============================================
+// ⚠️ EVERY LIBRARY THAT CARRIES STATE IN A MODULE OR A REACT CONTEXT BELONGS
+// HERE, not just React.
+//
+// pnpm gives each workspace package its own copy of a dependency when the
+// peer graph differs — and `packages/api` is built against React 19 for web
+// while this app is on React 18, so its `@tanstack/react-query` was a
+// DIFFERENT MODULE INSTANCE from the one `QueryProvider` renders. Same class,
+// different context object, so on the real device:
+//
+//   Error: No QueryClient set, use QueryClientProvider to set one
+//     at useQueryClient → useRealtime → useDashboardKPIs → DashboardScreen
+//
+// …even though QueryClientProvider is plainly in the tree above it. The same
+// trap applies to `i18next` (the configured instance is module state — a
+// second copy is an EMPTY i18n that renders raw keys), `react-i18next` (five
+// copies in the store) and `zustand` (three): a second store is a store
+// nobody writes to.
 const FORCED = {
   react: path.resolve(projectRoot, 'node_modules', 'react'),
   'react-dom': path.resolve(projectRoot, 'node_modules', 'react-dom'),
   'react-native': path.resolve(projectRoot, 'node_modules', 'react-native'),
+  '@tanstack/react-query': path.resolve(projectRoot, 'node_modules', '@tanstack/react-query'),
+  i18next: path.resolve(projectRoot, 'node_modules', 'i18next'),
+  'react-i18next': path.resolve(projectRoot, 'node_modules', 'react-i18next'),
+  zustand: path.resolve(projectRoot, 'node_modules', 'zustand'),
+}
+
+// ⚠️ THE LIST ABOVE IS NOT ENOUGH, BECAUSE THE PROBLEM IS pnpm's SHAPE.
+//
+// pnpm duplicates a package whenever two workspace packages resolve a
+// different peer graph, and this monorepo does that everywhere: `packages/api`
+// is built against React 19 for web, this app against React 18. A snapshot of
+// the store found duplicates of `react-i18next` (5 copies), `expo-router`,
+// `react-native-screens`, `react-native-reanimated`, every `expo-*` native
+// module, `@tanstack/react-query` and `zustand`.
+//
+// A bundler cannot tell which duplicates are harmless. A plain React Native
+// app never has to: npm/yarn hoist ONE copy of each package and every import
+// lands on it. This restores exactly that shape for the bundle — if this app
+// declares a package, its copy wins for everybody — instead of patching the
+// list one crash at a time.
+function packageOf(moduleName) {
+  if (moduleName.startsWith('@')) {
+    const [scope, name] = moduleName.split('/')
+    return name ? `${scope}/${name}` : null
+  }
+  return moduleName.split('/')[0] ?? null
+}
+
+const appModules = path.resolve(projectRoot, 'node_modules')
+const ownCopy = new Map()
+
+function appCopyOf(pkg) {
+  if (!ownCopy.has(pkg)) {
+    const candidate = path.join(appModules, pkg)
+    ownCopy.set(pkg, fs.existsSync(candidate) ? candidate : null)
+  }
+  return ownCopy.get(pkg)
 }
 
 const defaultResolveRequest = config.resolver.resolveRequest
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  const forcedRoot = FORCED[moduleName]
-  if (forcedRoot) {
-    return context.resolveRequest(context, forcedRoot, platform)
-  }
+  const fallback = () =>
+    defaultResolveRequest
+      ? defaultResolveRequest(context, moduleName, platform)
+      : context.resolveRequest(context, moduleName, platform)
 
-  // Subpaths too: `react/jsx-runtime`, `react-dom/client`, … Without this the
-  // JSX runtime alone can drag the other copy back in.
-  for (const [name, root] of Object.entries(FORCED)) {
-    if (moduleName.startsWith(`${name}/`)) {
-      return context.resolveRequest(
-        context,
-        path.join(root, moduleName.slice(name.length + 1)),
-        platform,
-      )
-    }
-  }
+  // Relative and absolute requests already point at one file.
+  if (moduleName.startsWith('.') || path.isAbsolute(moduleName)) return fallback()
 
-  return defaultResolveRequest
-    ? defaultResolveRequest(context, moduleName, platform)
-    : context.resolveRequest(context, moduleName, platform)
+  const pkg = packageOf(moduleName)
+  if (!pkg) return fallback()
+
+  // The workspace packages are single by construction — and rewriting them
+  // would break the symlink Metro follows to their source.
+  if (pkg.startsWith('@hisabche/')) return fallback()
+
+  const root = FORCED[pkg] ?? appCopyOf(pkg)
+  if (!root) return fallback()
+
+  const subpath = moduleName.slice(pkg.length + 1)
+  const target = subpath ? path.join(root, subpath) : root
+
+  try {
+    return context.resolveRequest(context, target, platform)
+  } catch {
+    // A package whose subpath only resolves through its own `exports` map:
+    // let Metro do it the ordinary way rather than fail the build.
+    return fallback()
+  }
 }
 
 module.exports = config

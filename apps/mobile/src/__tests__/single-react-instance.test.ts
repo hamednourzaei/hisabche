@@ -68,7 +68,29 @@ describe('the mobile app renders at all', () => {
     )
   })
 
-  it('⚠️ redirects subpaths too — react/jsx-runtime alone brings the other copy back', () => {
-    expect(metroConfig).toContain('moduleName.startsWith(`${name}/`)')
+  it('⚠️ every package this app declares wins for the whole bundle', () => {
+    // Forcing React alone left `@tanstack/react-query` duplicated, and the
+    // device answered «No QueryClient set» with the provider plainly in the
+    // tree above it. pnpm duplicates by peer graph, so the rule has to be
+    // general: if this app has a copy, that copy is what gets bundled.
+    expect(metroConfig).toContain('appCopyOf(pkg)')
+    expect(metroConfig).toContain('const appModules = path.resolve(projectRoot')
+    // Workspace packages resolve through symlinks to their source; rewriting
+    // those would break Metro's view of them.
+    expect(metroConfig).toContain("pkg.startsWith('@hisabche/')")
+  })
+
+  it('⚠️ names the libraries whose duplicate is a crash, not merely waste', () => {
+    // Each of these keeps state — a React context or a configured module
+    // singleton — so a second copy is an empty one: no QueryClient, an i18n
+    // with no catalogs, a store nobody writes to.
+    for (const singleton of [
+      "'@tanstack/react-query'",
+      'i18next:',
+      "'react-i18next'",
+      'zustand:',
+    ]) {
+      expect(metroConfig).toContain(singleton)
+    }
   })
 })
