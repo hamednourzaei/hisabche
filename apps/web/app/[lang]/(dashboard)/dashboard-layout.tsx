@@ -41,24 +41,69 @@ function cap(value: string): string {
 
 // ─── Hook: Prefetch Routes ─────────────────────────────────────────────────
 
-function usePrefetchRoutes(pathname: string) {
+/**
+ * Every destination in the menu, warmed while the browser is idle.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠️ WHY NAVIGATION FELT SLOW
+ *
+ * This prefetched THREE routes, chosen by a filter that mostly did not mean
+ * anything: `currentPath.split('/').length === item.path.split('/').length`
+ * matches every top-level page against every other, so which three got warmed
+ * depended on the order of the array, not on where the user was likely to go.
+ * Worse, `router.prefetch` was called with a BARE path — `/invoices` — while
+ * every real navigation goes to `/fa/invoices`. A prefetch of a URL nobody
+ * ever visits warms nothing at all.
+ *
+ * So the first click on any menu item waited for a full RSC round trip, on
+ * both the sidebar and the mobile bar. The paths are prefixed now, and all of
+ * them are warmed — the menu has ~20 entries, they are deduped by Next and
+ * fetched only when the main thread is free.
+ *
+ * ⚠️ IDLE, NOT ON MOUNT. Firing twenty prefetches while the page is still
+ * painting competes with the render the user is waiting for, which would make
+ * the FIRST screen slower to fix the second one.
+ */
+function usePrefetchRoutes(locale: string) {
   const router = useRouter()
 
   useEffect(() => {
-    const currentPath = pathname.replace(/^\/(af|en)(?=\/|$)/, '') || '/'
+    const prefix = `/${locale}`
+    const paths = [...new Set(NAV_ITEMS.map((item) => item.path))]
+    let cancelled = false
+    let index = 0
 
-    const relevantItems = NAV_ITEMS.filter((item) => {
-      return (
-        currentPath.startsWith(item.path) ||
-        item.path.startsWith(currentPath) ||
-        currentPath.split('/').length === item.path.split('/').length
-      )
-    })
-
-    for (const item of relevantItems.slice(0, 3)) {
-      router.prefetch(item.path)
+    const warmNext = (deadline?: IdleDeadline) => {
+      if (cancelled) return
+      // A few per idle slice: `prefetch` is cheap to call but each one is a
+      // request, and a burst of twenty is its own stall.
+      let budget = 4
+      while (index < paths.length && budget > 0) {
+        const path = paths[index++]
+        if (path) router.prefetch(path === '/' ? prefix : `${prefix}${path}`)
+        budget -= 1
+      }
+      if (index < paths.length) schedule()
+      void deadline
     }
-  }, [router, pathname])
+
+    const schedule = () => {
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(warmNext, { timeout: 2000 })
+      } else {
+        // Safari has no requestIdleCallback; a timeout keeps it off the
+        // critical path without needing the API.
+        window.setTimeout(warmNext, 300)
+      }
+    }
+
+    schedule()
+    return () => {
+      cancelled = true
+    }
+    // Locale only: the set of destinations does not change with the page, and
+    // re-running this on every navigation is what made it a per-route cost.
+  }, [router, locale])
 }
 
 // ─── Hook: Redirect Guard ──────────────────────────────────────────────────
@@ -145,7 +190,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const subscriptionLocked = useSubscriptionLocked()
   const routeLocked = subscriptionLocked && !isRouteAllowedWhenExpired(pathname ?? '')
 
-  usePrefetchRoutes(pathname)
+  usePrefetchRoutes(locale)
   useRedirectGuard(locale)
 
   const activeNav = optimisticPath ?? pathname

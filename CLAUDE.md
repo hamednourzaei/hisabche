@@ -147,7 +147,9 @@ cd apps/admin     && npx tsc --noEmit
   **کاما مشکلی ندارد** — با خروجی کامپایل‌شده‌ی همین ریپو تأیید شد: `grid-cols-[minmax(0,1fr)_…]` واقعاً به `grid-template-columns: minmax(0,1fr) …` تبدیل می‌شود و ۶۰ کامای escape‌شده (`\2c`) در CSS دسکتاپ هست.
   نسخه‌ی قبلی این فایل خلافش را می‌گفت و غلط بود؛ بر اساس آن ~۴۰ فراخوان سالم بازنویسی می‌شد.
 - Radix `asChild`/`Slot` دقیقاً یک فرزند می‌گیرد؛ یک sibling شرطی همه‌ی dropdown ها را می‌شکند.
-- RTL: `ms-`/`me-`، `ps-`/`pe-`، `text-start`/`text-end`، `border-e`. هرگز `left`/`right`. آیکون جهت‌دار را از `getComputedStyle(node).direction` **انتخاب** کن، با `scale-x-[-1]` آینه نکن.
+- RTL: `ms-`/`me-`، `ps-`/`pe-`، `text-start`/`text-end`، `border-e`. هرگز `left`/`right`.
+- ⚠️ **`start-*` منطقی است، `translate-x-*` فیزیکی.** `start-1/2` در فارسی یعنی `right: 50%` ولی `-translate-x-1/2` همیشه به چپ می‌برد؛ ترکیبشان در RTL عنصر را نصفِ عرض خودش کنار می‌اندازد (نشانگر منوی پایین روی تبِ همسایه می‌افتاد). برای وسط‌چین‌کردن، یک ردیف تمام‌عرض با `inset-x-0 flex justify-center` بگذار — بدون transform، پس چیزی برای اختلاف نمی‌ماند. گارد: `bottom-nav-indicator.test.ts`.
+- ⚠️ **`router.prefetch` مسیرِ واقعی را می‌خواهد، با پیشوند locale.** prefetch روی `/invoices` در برنامه‌ای که همیشه به `/fa/invoices` می‌رود، هیچ چیزی warm نمی‌کند و بی‌صدا بی‌اثر است. آیکون جهت‌دار را از `getComputedStyle(node).direction` **انتخاب** کن، با `scale-x-[-1]` آینه نکن.
 - فقط توکن: `hsl(var(--color-primary))`. هیچ hex و هیچ رنگ پالت Tailwind.
 
 **سریالایز و داده**

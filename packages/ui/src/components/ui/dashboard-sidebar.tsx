@@ -742,14 +742,32 @@ export const BottomNav = memo(function BottomNav({
                     aria-current={isActive ? 'page' : undefined}
                     aria-label={item.label}
                   >
-                    <div
-                      className={cn(
-                        'absolute start-1/2 -translate-x-1/2 h-[3px] rounded-full bg-[image:var(--gradient-brand)]',
-                        'transition-all duration-150 ease-out',
-                        isActive ? 'w-8 opacity-100' : 'w-0 opacity-0',
-                      )}
+                    {/*
+                      ⚠️ NEVER `start-1/2` WITH `-translate-x-1/2`.
+                      `start-1/2` is LOGICAL — in RTL it sets `right: 50%` —
+                      while `translate-x` is PHYSICAL and always moves left.
+                      In Persian the two fought each other and the bar landed
+                      half its own width away from the item it marks, which is
+                      exactly what the owner saw: the indicator sitting over
+                      the wrong tab.
+
+                      A full-width row that centres its child needs no
+                      transform at all, so there is nothing left to disagree
+                      about in either direction.
+                    */}
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-x-0 flex justify-center"
                       style={{ top: -1 }}
-                    />
+                    >
+                      <span
+                        className={cn(
+                          'h-[3px] rounded-full bg-[image:var(--gradient-brand)]',
+                          'transition-all duration-150 ease-out motion-reduce:transition-none',
+                          isActive ? 'w-8 opacity-100' : 'w-0 opacity-0',
+                        )}
+                      />
+                    </span>
                     <div
                       className={cn(
                         'transition-transform duration-150 motion-reduce:transition-none',
