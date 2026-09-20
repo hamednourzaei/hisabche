@@ -164,6 +164,55 @@ describe('every screen with a row of figures uses it', () => {
   })
 })
 
+describe('a longer number takes a smaller font', () => {
+  // ⚠️ THE BUG THIS PREVENTS: the ladder existed from the start and almost
+  // nothing reached it. The card sized a NUMBER automatically and gave every
+  // pre-formatted STRING a fixed `text-lg sm:text-xl` — and practically every
+  // screen passes a formatted string, because money carries its own currency
+  // rules. «۲۶۱٬۵۰۰٬۰۰۰» rendered at the fixed size and overflowed its card.
+  const kpi = code(readFileSync(join(UI_ROOT, 'kpi-card.tsx'), 'utf8'))
+
+  it('⚠️ a string is measured too, not only a number', () => {
+    expect(kpi).toContain("typeof value === 'string' ? value : null")
+    expect(kpi).toContain('valueFontClass(text)')
+    // Only a ReactNode may keep the fixed step — there is no text to measure.
+    expect(kpi).toContain('mt-1.5 text-lg sm:mt-2 sm:text-xl')
+  })
+
+  it('the ladder actually steps down', () => {
+    const ladder = kpi.slice(kpi.indexOf('export function valueFontClass'))
+    for (const step of ['text-lg sm:text-2xl', 'text-base sm:text-xl', 'text-[10px] sm:text-xs']) {
+      expect(ladder).toContain(step)
+    }
+  })
+
+  it('⚠️ ONE ladder, not a hand-written set per screen', () => {
+    // Three breakpoint sets is how the dashboard came to have a card that
+    // shrank and a headline beside it that did not.
+    expect(kpi).toContain('export function headlineFontClass')
+    expect(kpi).toContain('export function statFontClass')
+
+    const chart = code(readFileSync(join(UI_ROOT, 'dashboard', 'sales-chart.tsx'), 'utf8'))
+    const funnel = code(readFileSync(join(UI_ROOT, 'dashboard', 'sales-funnel.tsx'), 'utf8'))
+
+    expect(chart).toContain('headlineFontClass(fmt(currentPeriodTotal))')
+    expect(chart).toContain('statFontClass(fmt(value))')
+    expect(funnel).toContain('headlineFontClass(')
+
+    // The fixed sizes these replaced must not come back.
+    expect(chart).not.toContain('text-3xl font-bold text-[hsl(var(--fg-primary))] tracking-tight')
+    expect(funnel).not.toContain('text-2xl font-bold tabular-nums text-[hsl(var(--fg-primary))]')
+  })
+
+  it('⚠️ a formatted string is never sign-coloured', () => {
+    // `amountTone` reads a NUMBER. Handing it a string would make every
+    // formatted figure green, including ones that are bad news.
+    expect(kpi).toContain(
+      "isNumeric ? amountTone(value as number) : 'text-[hsl(var(--fg-primary))]'",
+    )
+  })
+})
+
 describe('what the card promises about the numbers', () => {
   const kpi = code(readFileSync(join(UI_ROOT, 'kpi-card.tsx'), 'utf8'))
 

@@ -42,6 +42,7 @@ import {
   Sparkles,
   type LucideIcon,
   DatabaseZap,
+  Gift,
 } from 'lucide-react'
 import {
   COMMAND_CONTRACT,
@@ -84,6 +85,7 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   // is the People destination now.
   production: Factory,
   approvals: ClipboardCheck,
+  referrals: Gift,
   settings: Settings,
   // `history` is declared in the contract's id union but has no destination
   // yet; the map stays exhaustive so adding one needs no icon archaeology.

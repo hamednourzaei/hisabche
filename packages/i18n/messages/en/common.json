@@ -1484,7 +1484,9 @@
     "missingBusinessName": "Your business name is not set",
     "missingFixOwner": "Open settings to add or change it.",
     "missingFixStaff": "The owner enters your name when adding staff. Ask them to correct it.",
-    "teamPayroll": "Team & payroll"
+    "teamPayroll": "Team & payroll",
+    "referrals": "Refer Hisabche",
+    "referrals_description": "Invite friends and earn a share of their subscription"
   },
   "dateRange": {
     "today": "Today",
@@ -5207,5 +5209,40 @@
     "noColleagues": "No colleagues recorded yet.",
     "online": "Online",
     "offline": "Offline"
+  },
+  "referral": {
+    "title": "Refer Hisabche",
+    "subtitle": "{rate} of your friends’ subscription, for up to {months} months",
+    "kpiReferred": "Referred",
+    "kpiEarnings": "Total earned",
+    "activeCount": "{count} paying",
+    "pendingAmount": "Pending: {amount}",
+    "linkTitle": "Your referral link",
+    "linkHint": "A new business signing up with this link gets {discount} off its first payment.",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "notConfigured": "The referral programme is not enabled on the database yet.",
+    "colName": "Signed up",
+    "colSignedUp": "Sign-up date",
+    "colPlan": "Plan activated",
+    "colPeriods": "Paid periods",
+    "colCommission": "Your commission",
+    "unnamed": "Unnamed",
+    "notPaidYet": "Has not paid yet",
+    "empty": "Nobody has signed up with your link yet",
+    "emptyHint": "Share the link above with businesses you know.",
+    "loadError": "The referral data could not be loaded.",
+    "threshold": "Cash payouts start at {amount}.",
+    "interval": {
+      "month": "Monthly",
+      "year": "Yearly"
+    },
+    "status": {
+      "pending": "Pending",
+      "credited": "Credited",
+      "paid": "Paid",
+      "void": "Void",
+      "none": "No commission"
+    }
   }
 }

@@ -38,6 +38,7 @@ const CrmPage = lazy(() => import('@/features/crm/crm-page'))
 const SettingsPage = lazy(() => import('@/features/settings/settings-page'))
 const SyncCenterPage = lazy(() => import('@/features/sync/sync-page'))
 const ApprovalsPage = lazy(() => import('@/features/approvals/approvals-page'))
+const ReferralsPage = lazy(() => import('@/features/referrals/referrals-page'))
 const BillingPage = lazy(() => import('@/features/billing/billing-page'))
 const OnboardingPage = lazy(() => import('@/features/onboarding/onboarding-page'))
 const ManufacturingPage = lazy(() => import('@/features/manufacturing/manufacturing-page'))
@@ -121,6 +122,7 @@ const router = createHashRouter([
       { path: 'sync-center', element: <SyncCenterPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'approvals', element: <ApprovalsPage /> },
+      { path: 'referrals', element: <ReferralsPage /> },
       { path: 'billing', element: <BillingPage /> },
       { path: 'onboarding', element: <OnboardingPage /> },
       { path: 'manufacturing', element: <ManufacturingPage /> },

@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 // barrel dragged the whole dashboard (1.6 MB) into every public page's JS.
 import { ToastProvider } from '@hisabche/ui/toast-provider'
 import { bindActiveWorkspace } from '@hisabche/store'
+import { createNotificationMutationCache } from '@hisabche/api'
 
 // Publish the active workspace into @hisabche/api, which scopes every realtime
 // subscription to one business. Without it, realtime resolves no workspace and
@@ -33,7 +34,18 @@ const HeavyProviders = lazy(() =>
 )
 
 // ✅ QueryClient با useMemo (برای جلوگیری از بازتعریف)
+/**
+ * ⚠️ The cache needs the client, and the client needs the cache. Declared
+ * first, read lazily through the getter — a direct reference here would be a
+ * TDZ error at module load (راهنمای سشن §۸، تله‌ی TDZ).
+ */
+let queryClientRef: QueryClient | null = null
+
 const queryClient = new QueryClient({
+  // Every successful write refreshes the notification badge, so the person who
+  // just issued an invoice sees the count change without reloading the page.
+  // Realtime remains the path for changes made by somebody else.
+  mutationCache: createNotificationMutationCache(() => queryClientRef),
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
@@ -43,6 +55,8 @@ const queryClient = new QueryClient({
     mutations: { retry: 0 },
   },
 })
+
+queryClientRef = queryClient
 
 export function Providers({ children }: { children: React.ReactNode }) {
   // ✅ استفاده از useMemo برای queryClient (اگر در future نیاز به re-init داشت)

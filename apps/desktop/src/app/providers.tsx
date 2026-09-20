@@ -2,6 +2,7 @@
 // Root providers — TanStack Query tuned for a desktop client.
 // ============================================
 
+import { createNotificationMutationCache } from '@hisabche/api'
 import React, { useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@hisabche/ui'
@@ -16,7 +17,11 @@ if (typeof window !== 'undefined') {
 }
 
 function createQueryClient(): QueryClient {
-  return new QueryClient({
+  // Every successful write refreshes the notification badge, so the person who
+  // just issued an invoice sees the count change without reloading.
+  let ref: QueryClient | null = null
+  const client = new QueryClient({
+    mutationCache: createNotificationMutationCache(() => ref),
     defaultOptions: {
       queries: {
         staleTime: 1000 * 60 * 2,
@@ -30,6 +35,8 @@ function createQueryClient(): QueryClient {
       mutations: { retry: 0 },
     },
   })
+  ref = client
+  return client
 }
 
 export function Providers({ children }: { children: ReactNode }) {

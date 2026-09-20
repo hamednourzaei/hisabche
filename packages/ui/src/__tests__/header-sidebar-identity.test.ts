@@ -70,9 +70,42 @@ describe('the app is named once per breakpoint', () => {
   })
 })
 
-describe('the avatar is a circle', () => {
-  it('⚠️ has a floor on both axes, not just a basis', () => {
-    expect(header).toMatch(/size-10 shrink-0 aspect-square/)
+describe('there is ONE identity control in the bar', () => {
+  // ⚠️ THE AVATAR IS GONE, ON PURPOSE.
+  //
+  // The header used to have two places that both meant «you»: the pill at one
+  // end said which role you had, and an avatar at the other end held the
+  // account address and sign-out. Neither mentioned the other. The owner asked
+  // for them merged into the pill, and for the avatar's place removed — so the
+  // old «the avatar is a circle» guard is replaced rather than deleted, and
+  // what it protected (one deliberate, reachable control) is asserted here.
+
+  it('⚠️ the pill IS the menu — no second account control', () => {
+    expect(header).toContain('const IdentityMenu = memo(')
+    expect(header).not.toContain('const AccountMenu = memo(')
+    expect(header).not.toContain('<AccountMenu')
+  })
+
+  it('sign-out lives inside it, not as a bare button in the bar', () => {
+    // It used to sit one mis-aimed click from the theme toggle.
+    const menu = header.slice(header.indexOf('const IdentityMenu'))
+    expect(menu).toContain('onClick={onLogout}')
+    expect(menu).toContain('text-[hsl(var(--color-destructive))]')
+  })
+
+  it('⚠️ the roster is withheld politely, never rendered as «nobody is online»', () => {
+    // An empty list to somebody without `people.presence.read` would be a
+    // statement about their colleagues instead of about their permissions.
+    const menu = header.slice(header.indexOf('const IdentityMenu'))
+    expect(menu).toContain('{!canSeePeople ? (')
+    expect(menu).toContain('people.presenceNotAllowed')
+  })
+
+  it('⚠️ offline says «offline», never an invented last-seen time', () => {
+    // Presence knows the socket is closed, not when it closed.
+    const menu = header.slice(header.indexOf('const IdentityMenu'))
+    expect(menu).toContain("t('people.offline')")
+    expect(menu).not.toMatch(/lastSeen|آخرین بازدید/)
   })
 })
 

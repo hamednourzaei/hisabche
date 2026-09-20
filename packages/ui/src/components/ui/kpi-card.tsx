@@ -71,6 +71,14 @@ export function fullAmount(value: number, locale: string): string {
 /**
  * The longer the text, the smaller the font — so the whole number fits without
  * being shortened.
+ *
+ * ⚠️ IT MUST APPLY TO STRINGS, NOT ONLY TO NUMBERS.
+ *
+ * This existed from the start and almost nothing reached it: the card sized a
+ * NUMBER automatically and gave every pre-formatted string a fixed
+ * `text-lg sm:text-xl`. Practically every screen passes a formatted string —
+ * money with its own currency rules — so «۲۶۱٬۵۰۰٬۰۰۰» rendered at the fixed
+ * size and overflowed its card, which is exactly what the owner reported.
  */
 export function valueFontClass(text: string): string {
   const len = text.length
@@ -80,6 +88,33 @@ export function valueFontClass(text: string): string {
   if (len <= 20) return 'text-xs sm:text-base'
   if (len <= 26) return 'text-[11px] sm:text-sm'
   return 'text-[10px] sm:text-xs'
+}
+
+/**
+ * The same ladder, one step larger — for a HEADLINE figure (the chart's total,
+ * the funnel's focused stage) rather than a card's.
+ *
+ * ⚠️ ONE LADDER, THREE ENTRY POINTS. Three hand-written breakpoint sets is how
+ * the dashboard came to have a card that shrank and a headline beside it that
+ * did not.
+ */
+export function headlineFontClass(text: string): string {
+  const len = text.length
+  if (len <= 7) return 'text-2xl sm:text-3xl'
+  if (len <= 11) return 'text-xl sm:text-2xl'
+  if (len <= 16) return 'text-lg sm:text-xl'
+  if (len <= 20) return 'text-base sm:text-lg'
+  if (len <= 26) return 'text-sm sm:text-base'
+  return 'text-xs sm:text-sm'
+}
+
+/** The same ladder, one step smaller — for a supporting stat in a tight row. */
+export function statFontClass(text: string): string {
+  const len = text.length
+  if (len <= 11) return 'text-sm'
+  if (len <= 16) return 'text-xs'
+  if (len <= 22) return 'text-[11px]'
+  return 'text-[10px]'
 }
 
 function formatPercent(delta: number, locale: string): string {
@@ -181,8 +216,11 @@ export function KpiCard({
 }: KpiCardProps) {
   const locale = useIntlLocale()
 
+  // A number is formatted here; a string is already formatted by the caller.
+  // ⚠️ BOTH get the automatic size — see `valueFontClass`. Only a ReactNode
+  // keeps the fixed step, because there is no text to measure.
   const isNumeric = typeof value === 'number'
-  const text = isNumeric ? fullAmount(value, locale) : null
+  const text = isNumeric ? fullAmount(value, locale) : typeof value === 'string' ? value : null
 
   const hasDelta = delta !== undefined && delta !== null
   const isUp = hasDelta && delta >= 0
@@ -239,15 +277,17 @@ export function KpiCard({
           className={cn(
             'mt-1.5 truncate font-bold tabular-nums sm:mt-2',
             valueFontClass(text),
-            amountTone(value as number),
+            // Only a real number carries a sign worth colouring; a formatted
+            // string (a name, a date, money with its own symbol) stays neutral.
+            isNumeric ? amountTone(value as number) : 'text-[hsl(var(--fg-primary))]',
           )}
           title={text}
         >
           {text}
         </p>
       ) : (
-        // A pre-formatted string has no magnitude to size against, so it takes
-        // the fixed step rather than the automatic one.
+        // A ReactNode — an element, not text. Nothing to measure, so it keeps
+        // the fixed step.
         <p className={cn('mt-1.5 text-lg sm:mt-2 sm:text-xl', STAT_VALUE)}>{value}</p>
       )}
 

@@ -41,6 +41,7 @@
 // from the sign of the delta.
 // ============================================
 
+import { headlineFontClass } from '../kpi-card'
 import * as React from 'react'
 
 import { AlertCircle, Minus, TrendingDown, TrendingUp } from 'lucide-react'
@@ -300,7 +301,13 @@ export function SalesFunnel({
           <p className="truncate text-xs text-[hsl(var(--fg-tertiary))]">
             {focused ? focused.label : t('dashboard.totalSales', 'فروش کل')}
           </p>
-          <p className="text-2xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+          {/* Shrinks with the digits, like every other figure. */}
+          <p
+            className={cn(
+              'font-bold tabular-nums text-[hsl(var(--fg-primary))]',
+              headlineFontClass(focused ? focused.count.toLocaleString('fa-AF') : fmt(shownTotal)),
+            )}
+          >
             {focused ? focused.count.toLocaleString('fa-AF') : fmt(shownTotal)}
           </p>
         </div>

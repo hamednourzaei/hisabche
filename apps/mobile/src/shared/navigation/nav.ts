@@ -51,6 +51,7 @@ const ICONS: Record<NavId, readonly [IconName, IconName]> = {
   // G1: 'team' removed with the /human-resources entry.
   production: ['construct-outline', 'construct'],
   approvals: ['checkmark-done-outline', 'checkmark-done'],
+  referrals: ['gift-outline', 'gift'],
   settings: ['settings-outline', 'settings'],
   history: ['time-outline', 'time'],
   events: ['notifications-outline', 'notifications'],

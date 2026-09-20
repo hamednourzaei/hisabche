@@ -6,7 +6,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { BillingService, PLANS } from '../services/billing.service'
+import { BillingService, PLANS, PLAN_PRICING } from '../services/billing.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
@@ -64,10 +64,12 @@ export async function billingRoutes(fastify: FastifyInstance) {
       const plans = Object.entries(PLANS).map(([key, value]) => ({
         plan: key as Plan,
         name: value.name,
-        priceMonthly: key === 'pro' ? 12 : key === 'enterprise' ? null : null,
-        priceYearly: key === 'pro' ? 99 : key === 'enterprise' ? null : null,
-        // See the schema note above: this records what the UI already showed.
-        currency: 'USD',
+        // ⚠️ From `PLAN_PRICING`, not from a literal here. A second copy of
+        // a price is how the pricing page and the referral commission come to
+        // disagree about what someone paid.
+        priceMonthly: PLAN_PRICING[key as Plan].monthly,
+        priceYearly: PLAN_PRICING[key as Plan].yearly,
+        currency: PLAN_PRICING[key as Plan].currency,
         limits: value.limits,
         featureKeys: value.featureKeys, // ✅ تغییر: features → featureKeys
       }))

@@ -54,6 +54,7 @@ export { PublicTaskContainer } from './components/ui/crm/containers/public-task-
 
 // ---------- Workflow / Approvals ----------
 export { ApprovalsContainer } from './components/ui/workflow/containers/approvals-container'
+export { ReferralsContainer } from './components/ui/referrals/containers/referrals-container'
 export { WorkflowTemplatesContainer } from './components/ui/workflow/containers/workflow-templates-container'
 
 // ---------- Billing ----------

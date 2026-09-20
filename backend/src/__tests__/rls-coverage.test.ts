@@ -173,6 +173,31 @@ const GLOBAL_REFERENCE_TABLES = ['units', 'currencies']
 const isGlobalReference = (policy: string): boolean =>
   GLOBAL_REFERENCE_TABLES.some((table) => new RegExp(`\\bON\\s+${table}\\b`, 'i').test(policy))
 
+/**
+ * Tables whose rows belong to a PERSON, not to a workspace.
+ *
+ * ⚠️ A NARROW, NAMED EXEMPTION — NOT A LOOSENING OF THE RULE.
+ *
+ * `workspace_id` is the tenancy boundary for business data, and `user_id` must
+ * never stand in for it there. The referral programme is the one thing in this
+ * product that genuinely belongs to a person: somebody keeps the businesses
+ * they invited when they move between shops, and two owners of the SAME shop
+ * must not see each other's commissions. Scoping these by workspace would be
+ * the wrong answer, not a stricter one.
+ *
+ * The exemption is paid for below: each of these must still be scoped to
+ * `auth.uid()` and must still be SELECT-only for a client.
+ */
+const PERSON_SCOPED_TABLES = [
+  'referral_codes',
+  'referrals',
+  'referral_commissions',
+  'referral_payouts',
+]
+
+const isPersonScoped = (policy: string): boolean =>
+  PERSON_SCOPED_TABLES.some((table) => new RegExp(`\\bON\\s+${table}\\b`, 'i').test(policy))
+
 describe('the policies restrict by workspace membership, not by nothing', () => {
   it('never grants unconditional access', () => {
     // `USING (true)` is a policy that exists, satisfies a checklist, and
@@ -217,6 +242,8 @@ describe('the policies restrict by workspace membership, not by nothing', () => 
       // reference. See GLOBAL_REFERENCE_TABLES — the exemption is paid for by
       // the SELECT-only assertion above.
       if (isGlobalReference(policy)) continue
+      // Person-scoped: asserted separately, and more strictly, below.
+      if (isPersonScoped(policy)) continue
 
       const scoped =
         /workspace_members/i.test(policy) ||
@@ -225,6 +252,28 @@ describe('the policies restrict by workspace membership, not by nothing', () => 
         /%I/.test(policy)
 
       expect(scoped, `policy is not workspace-scoped:\n${policy.slice(0, 200)}`).toBe(true)
+    }
+  })
+
+  it('⚠️ a person-scoped table is scoped to auth.uid() and is SELECT-only', () => {
+    // What makes the exemption safe. Without `auth.uid()` these would be
+    // readable by every authenticated user on the platform, and a writable
+    // commission table is a way to pay yourself.
+    const policies = code.match(/CREATE\s+POLICY[\s\S]*?;/gi) ?? []
+    const exempted = policies.filter(isPersonScoped)
+
+    expect(exempted.length, 'person-scoped tables have no policies').toBeGreaterThan(0)
+
+    for (const policy of exempted) {
+      expect(
+        /auth\.uid\s*\(\s*\)/i.test(policy),
+        `person-scoped policy is not tied to the caller:\n${policy.slice(0, 200)}`,
+      ).toBe(true)
+
+      expect(
+        /FOR\s+SELECT/i.test(policy),
+        `person-scoped policy is not SELECT-only:\n${policy.slice(0, 200)}`,
+      ).toBe(true)
     }
   })
 
@@ -237,6 +286,9 @@ describe('the policies restrict by workspace membership, not by nothing', () => 
     //
     // `workspace_members.user_id = auth.uid()` is the membership lookup, not a
     // boundary, so a policy only offends if it has no workspace scope at all.
+    //
+    // Person-scoped tables are excluded by name: for them `auth.uid()` is the
+    // correct boundary, asserted in its own test above.
     const policies = code.match(/CREATE\s+POLICY[\s\S]*?;/gi) ?? []
 
     /**
@@ -266,6 +318,9 @@ describe('the policies restrict by workspace membership, not by nothing', () => 
       )
       .map((policy) => /ON\s+(\w+)/i.exec(policy)?.[1] ?? policy.slice(0, 60))
       .filter((table) => !SELF_REFERENTIAL_BY_NECESSITY.has(table))
+      // The referral programme belongs to a person by design — see
+      // PERSON_SCOPED_TABLES and the stricter test above.
+      .filter((table) => !PERSON_SCOPED_TABLES.includes(table))
 
     expect(offenders, 'these policies scope by creator instead of by workspace').toEqual([])
   })

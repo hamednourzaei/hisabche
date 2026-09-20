@@ -18,6 +18,8 @@ export {
 } from './lib/tokenProvider'
 export { apiErrorMessage } from './lib/api-error-message'
 export { apiErrorFields, type ApiFieldError } from './lib/api-error-fields'
+// The unread badge refreshes when THIS tab causes a notification.
+export { createNotificationMutationCache } from './lib/notification-refresh'
 export {
   setOnUnauthorized,
   setRefreshSession,
@@ -248,6 +250,17 @@ export {
 
 // ─── Payroll ──────────────────────────────────────────────
 export { usePayrolls, usePayrollSummary, useCreatePayroll, payrollKeys } from './hooks/payroll'
+
+// ─── Referrals ────────────────────────────────────────────
+export {
+  useReferralOverview,
+  referralLink,
+  referralKeys,
+  type ReferralOverview,
+  type ReferralRow,
+  type ReferralSummary,
+  type ReferralTerms,
+} from './hooks/referrals'
 export {
   useLeaves,
   useCreateLeave,

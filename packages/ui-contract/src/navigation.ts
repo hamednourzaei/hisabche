@@ -36,6 +36,7 @@ export type NavId =
   // `projects` is gone: the module was deleted, not hidden.
   | 'production'
   | 'approvals'
+  | 'referrals'
   | 'workflow-templates'
   | 'billing'
   | 'governance'
@@ -161,6 +162,15 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     labelKey: 'nav.approvals',
     descriptionKey: 'nav.approvals_description',
     path: '/approvals',
+    group: 'work',
+  },
+
+  {
+    id: 'referrals',
+    emoji: '🎁',
+    labelKey: 'nav.referrals',
+    descriptionKey: 'nav.referrals_description',
+    path: '/referrals',
     group: 'work',
   },
 

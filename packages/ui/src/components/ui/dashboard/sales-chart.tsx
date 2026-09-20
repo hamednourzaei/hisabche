@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/dashboard/sales-chart.tsx
 'use client'
 
+import { headlineFontClass, statFontClass } from '../kpi-card'
 import { memo, useMemo, useId } from 'react'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
@@ -215,7 +216,15 @@ export const SalesChart = memo(function SalesChart({
 
         {/* Hero Metric + Comparison */}
         <div className="flex items-baseline gap-3">
-          <span className="text-3xl font-bold text-[hsl(var(--fg-primary))] tracking-tight">
+          {/* ⚠️ The same automatic sizing the KPI cards use. A fixed
+              `text-3xl` overflowed the card the moment the shop's numbers grew
+              a digit — and a nine-figure sum is not an edge case here. */}
+          <span
+            className={cn(
+              'font-bold tabular-nums tracking-tight text-[hsl(var(--fg-primary))]',
+              headlineFontClass(fmt(currentPeriodTotal)),
+            )}
+          >
             {fmt(currentPeriodTotal)}
           </span>
           {previousPeriodTotal > 0 && (
@@ -272,7 +281,13 @@ export const SalesChart = memo(function SalesChart({
                 <p className="truncate text-[11px] text-[hsl(var(--fg-tertiary))]">
                   {t(key, fallback)}
                 </p>
-                <p className={cn('truncate text-sm font-semibold tabular-nums', tone)}>
+                <p
+                  className={cn(
+                    'truncate font-semibold tabular-nums',
+                    statFontClass(fmt(value)),
+                    tone,
+                  )}
+                >
                   {fmt(value)}
                 </p>
               </div>

@@ -9,6 +9,7 @@ import { supabase } from '../db'
 import { Plan, Subscription, SubscriptionStatus, UsageLimits } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
+import { referralService } from './referral'
 
 /**
  * How a usage counter is scoped. Workspace-owned tables (the shared book) are
@@ -27,6 +28,54 @@ const USAGE_TABLES: Partial<Record<keyof UsageLimits, { table: string; scope: Us
 }
 
 // ─── Plan Configuration ────────────────────────────────────────
+
+/**
+ * ⚠️ THE ONE PLACE A PLAN'S PRICE IS WRITTEN DOWN.
+ *
+ * These numbers lived as literals inside `GET /api/billing/plans`
+ * (`key === 'pro' ? 12 : null`). Nothing else could read them, so anything
+ * that needed the amount someone paid — the referral commission, for one —
+ * had no source but the plan's NAME, and a commission inferred from a name is
+ * an invented figure in a financial product.
+ *
+ * `null` means «not priced here»: `free` costs nothing and `enterprise` is
+ * negotiated. A null price is NOT zero, and nothing may treat it as zero —
+ * a 10% commission on a null is not «0», it is «unknown», and the referral
+ * table says so rather than showing someone a number that is not owed.
+ *
+ * ⚠️ The currency is USD because the pricing page has always rendered a
+ * hardcoded `$`. That records what is charged today; it is not a new
+ * decision, and the owner should confirm it — everything else in this product
+ * prices in the workspace's own currency.
+ */
+/**
+ * Month or year, read from the period the upgrade actually wrote.
+ *
+ * ⚠️ DERIVED FROM BOTH ENDS, NEVER GUESSED. `subscriptions` has no interval
+ * column, and a commission calculated against the wrong interval is wrong by a
+ * factor of eight. `upgradePatch` writes `period_end` one month or twelve
+ * months out, so the distance between them answers it exactly — and anything
+ * that cannot be parsed falls back to the SMALLER of the two, which under-pays
+ * rather than over-pays on bad data.
+ */
+export function intervalOfPeriod(periodStart: string, periodEnd: string | null): 'month' | 'year' {
+  if (!periodEnd) return 'month'
+  const start = Date.parse(periodStart)
+  const end = Date.parse(periodEnd)
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 'month'
+  // ~100 days: far above one month, far below one year. Nothing legitimate
+  // lands near this boundary.
+  return end - start > 100 * 24 * 60 * 60 * 1000 ? 'year' : 'month'
+}
+
+export const PLAN_PRICING: Record<
+  Plan,
+  { monthly: number | null; yearly: number | null; currency: string }
+> = {
+  free: { monthly: null, yearly: null, currency: 'USD' },
+  pro: { monthly: 12, yearly: 99, currency: 'USD' },
+  enterprise: { monthly: null, yearly: null, currency: 'USD' },
+}
 
 export const PLANS: Record<
   Plan,
@@ -479,6 +528,7 @@ export class BillingService {
     if (!row) throw new DatabaseError('No subscription found to upgrade')
 
     await this.invalidateFor(row)
+    await this.creditReferral(row)
     return this.mapSubscription(row)
   }
 
@@ -504,7 +554,46 @@ export class BillingService {
     if (!row) throw new DatabaseError('No subscription found to upgrade')
 
     await this.invalidateFor(row)
+    await this.creditReferral(row)
     return this.mapSubscription(row)
+  }
+
+  /**
+   * A paid plan just became active — credit whoever invited this business.
+   *
+   * ⚠️ HERE, NOT AT THE FOUR CALL SITES. Checkout, the Stripe webhook, the
+   * admin panel and the direct upgrade route all end in `upgrade` or
+   * `upgradeSubscriptionRow`. Crediting in each is four chances to miss one,
+   * and a missed one is somebody not paid what they are owed.
+   *
+   * ⚠️ A TRIAL EARNS NOTHING, and the row says whether it is one. The Referral
+   * Core refuses it anyway; passing the flag rather than assuming `false`
+   * means the refusal is based on this subscription, not on a guess here.
+   *
+   * ⚠️ NEVER THROWS. The customer's subscription is already active by this
+   * point; referral bookkeeping must not turn a successful payment into an
+   * error response.
+   */
+  private async creditReferral(raw: {
+    id?: string
+    workspace_id?: string | null
+    plan?: string
+    period_start?: string | null
+    period_end?: string | null
+    is_trial?: boolean | null
+  }) {
+    if (!raw.workspace_id || !raw.id || !raw.plan) return
+
+    const periodStart = raw.period_start ?? new Date().toISOString()
+
+    await referralService.recordPayment({
+      workspaceId: raw.workspace_id,
+      subscriptionId: raw.id,
+      plan: raw.plan as Plan,
+      interval: intervalOfPeriod(periodStart, raw.period_end ?? null),
+      periodStart,
+      isTrial: raw.is_trial === true,
+    })
   }
 
   private upgradePatch(

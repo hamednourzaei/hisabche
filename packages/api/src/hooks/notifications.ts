@@ -158,6 +158,10 @@ export function useMarkAsRead() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    // ⚠️ Named so the global mutation cache can tell its own writes apart.
+    // Without it, marking one notification read would invalidate the
+    // notification queries twice — once here, once there.
+    mutationKey: notificationKeys.all,
     mutationFn: async (ids: string[]) => {
       if (!ids || ids.length === 0) return
       await apiClient.patch('/v1/notifications/mark-read', { ids })
@@ -180,6 +184,7 @@ export function useMarkAllAsRead() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    mutationKey: notificationKeys.all,
     mutationFn: async () => {
       await apiClient.patch('/v1/notifications/mark-all-read')
     },

@@ -1,6 +1,7 @@
 // apps/admin/app/[lang]/providers.tsx
 'use client'
 
+import { createNotificationMutationCache } from '@hisabche/api'
 import React, { useEffect, useMemo } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@hisabche/ui'
@@ -32,7 +33,10 @@ if (typeof window !== 'undefined') {
    web-specific, effect-only initializers.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+let queryClientRef: QueryClient | null = null
+
 const queryClient = new QueryClient({
+  mutationCache: createNotificationMutationCache(() => queryClientRef),
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
@@ -42,6 +46,8 @@ const queryClient = new QueryClient({
     mutations: { retry: 0 },
   },
 })
+
+queryClientRef = queryClient
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const client = useMemo(() => queryClient, [])
