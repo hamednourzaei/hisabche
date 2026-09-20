@@ -18,7 +18,10 @@
 import { randomBytes } from 'node:crypto'
 
 import type { Plan } from '@hisabche/validation'
-import { PLAN_PRICING } from '../billing.service'
+// ⚠️ NOT from `billing.service`: that file imports THIS core to credit a
+// referral on activation, and importing it back is the cycle that made
+// `GET /api/referrals` answer 500.
+import { PLAN_PRICING } from '../plan-pricing'
 import {
   ATTRIBUTION_WINDOW_DAYS,
   COMMISSION_PERIOD_LIMIT,

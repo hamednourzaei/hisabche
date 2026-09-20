@@ -47,9 +47,35 @@ describe('tokenReady means the session is hydrated', () => {
 
   it('is idempotent — a second call cannot throw or re-arm', async () => {
     const provider = await freshProvider()
+    provider.registerTokenGetter(() => 'token')
     provider.markTokenReady()
     expect(() => provider.markTokenReady()).not.toThrow()
     expect(provider.isTokenProviderReady()).toBe(true)
+  })
+
+  it('⚠️ readiness announced BEFORE a getter exists is HELD, not honoured', async () => {
+    // zustand-persist with synchronous storage runs `onRehydrateStorage`
+    // DURING `create()` — before the store's next statement registers the
+    // getter. Releasing there sent every first-paint request with no
+    // Authorization header: the same 401 storm, one line earlier.
+    const provider = await freshProvider()
+
+    provider.markTokenReady()
+    expect(provider.isTokenProviderReady()).toBe(false)
+    await expect(settled(provider.tokenReady)).resolves.toBe(false)
+
+    provider.registerTokenGetter(() => 'token-from-storage')
+    expect(provider.isTokenProviderReady()).toBe(true)
+    await expect(settled(provider.tokenReady)).resolves.toBe(true)
+    // And the waiter gets the token it was waiting FOR.
+    expect(provider.getToken()).toBe('token-from-storage')
+  })
+
+  it('a getter with no ready signal still waits — registering is not hydrating', async () => {
+    const provider = await freshProvider()
+    provider.registerTokenGetter(() => 'token')
+    expect(provider.isTokenProviderReady()).toBe(false)
+    await expect(settled(provider.tokenReady)).resolves.toBe(false)
   })
 
   it('a signed-out visitor is released too, not left on the timeout', async () => {

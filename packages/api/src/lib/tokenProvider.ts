@@ -10,6 +10,21 @@ let isReady = false
 let resolveReady: (() => void) | null = null
 
 /**
+ * Hydration finished BEFORE a getter existed, so readiness is owed.
+ *
+ * ⚠️ THE ORDER IS NOT UNDER THE STORE'S CONTROL. zustand-persist with
+ * synchronous storage runs `onRehydrateStorage` DURING `create()` — which is
+ * before the next statement in the store's module body, where
+ * `registerTokenGetter` is called. Announcing readiness there released every
+ * waiting request while `tokenGetter` was still null, so they went out with no
+ * Authorization header and took a 401: the exact bug the split was meant to
+ * fix, moved one line earlier.
+ *
+ * Holding the promise until BOTH have happened makes the order irrelevant.
+ */
+let readyPending = false
+
+/**
  * Promise‌ای که وقتی Store برای اولین‌بار توکن‌گیر را ثبت کند resolve می‌شود.
  * برای جلوگیری از race condition بین mount شدن صفحه و آماده شدن session استفاده می‌شود.
  */
@@ -34,6 +49,12 @@ export const tokenReady: Promise<void> = new Promise((resolve) => {
  */
 export function registerTokenGetter(fn: TokenGetter): void {
   tokenGetter = fn
+  // Hydration already announced itself and was held. Release it now that
+  // there is something to read the token from.
+  if (readyPending) {
+    readyPending = false
+    settle()
+  }
 }
 
 /**
@@ -44,6 +65,20 @@ export function registerTokenGetter(fn: TokenGetter): void {
  * the rehydrate callback and the «storage was empty» path without racing.
  */
 export function markTokenReady(): void {
+  if (isReady) return
+
+  // ⚠️ A READY SIGNAL WITH NO GETTER IS WORSE THAN NO SIGNAL. It would release
+  // the request interceptor to send with no token. Remember it instead, and
+  // `registerTokenGetter` releases it a moment later.
+  if (!tokenGetter) {
+    readyPending = true
+    return
+  }
+
+  settle()
+}
+
+function settle(): void {
   if (isReady) return
   isReady = true
   resolveReady?.()

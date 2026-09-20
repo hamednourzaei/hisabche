@@ -191,3 +191,34 @@
 - **رفع:** هوک فعال شد (employeeId فقط فیلتر است)، `asList<PayrollRow>()` + `usePayrollSummary()`، و `PayrollListTable` با ستون‌های واقعی جای کارت را گرفت (کارت حذف شد، §14). ضمناً `getPayrollSummary` صفحه‌بندی شد — `.select()` بدون `range` روی سقف ۱۰۰۰ ردیفی PostgREST بی‌صدا جمعِ کمتر می‌داد — و پرداخت لغوشده دیگر در جمع نمی‌آید (هم‌راستا با گزارش سود و زیان).
 - **تست:** `packages/ui/src/components/ui/team-and-payroll/__tests__/payroll-tab-wiring.test.ts` (۷ تست) — **injection-tested**.
 - **مرورگر:** ❌ نیازمند ورود کاربر.
+
+## BUG-018 — `GET /api/referrals` روی سایت زنده ۵۰۰ می‌داد، با ۲۲۰۲ تست سبز
+
+- **الگو:** چرخه‌ی ماژول (TDZ / نیمه‌مقداردهی) — راهنمای سشن §۸
+- **ریشه:** `billing.service` → `services/referral/index` → `referral.service` → `billing.service`.
+  کمیسیون باید در **یک نقطه** ثبت شود، پس `billing.service` هسته‌ی رفرال را import می‌کند؛ و هسته برای
+  قیمت پلن `PLAN_PRICING` را از `billing.service` می‌خواست. Node چرخه را با تحویلِ ماژولِ **نیمه‌مقداردهی‌شده**
+  حل می‌کند، بنابراین `referralService` هنگام اجرای بدنه‌ی `billing.service` برابر `undefined` بود.
+- ⚠️ **چرا تست‌ها نگرفتند:** تست‌ها برگ‌ها را مستقیم import می‌کنند (`referral.domain`, `plan-pricing`) و
+  هیچ‌وقت حلقه را نمی‌بندند. سوئیت سبز، هیچ چیزی درباره‌ی ترتیب مقداردهی ماژول‌ها ثابت نمی‌کند.
+- **رفع:** ثابت‌های مشترک به `backend/src/services/plan-pricing.ts` منتقل شدند — ماژولی که **هیچ چیزی import نمی‌کند**
+  و بنابراین نمی‌تواند جزو هیچ چرخه‌ای باشد. `billing.service` همان‌ها را دوباره export می‌کند تا واردکننده‌های قبلی نشکنند.
+- **تست:** `no-service-import-cycles.test.ts` — گرافِ import کل `backend/src/services` را می‌پیماید.
+  `import type` نادیده گرفته می‌شود (کامپایلر پاکش می‌کند؛ `analytics.service` و aggregates عمداً تایپ همدیگر را می‌خوانند).
+  **injection-tested.**
+- **مرورگر:** ❌ نیازمند deploy.
+
+## BUG-019 — سیل ۴۰۱ برگشت: «آماده» یک خط زودتر از «getter ثبت شد» اعلام می‌شد
+
+- **الگو:** ترتیب راه‌اندازی — دنباله‌ی مستقیم BUG-014
+- **ریشه:** رفع BUG-014 اعلام آمادگی را به `onRehydrateStorage` برد. ولی zustand-persist با استوریج **همگام**
+  (اینجا `encryptedStorage` روی localStorage) آن callback را **حین `create()`** اجرا می‌کند — یعنی پیش از
+  خط بعدیِ بدنه‌ی ماژول که `registerTokenGetter` را صدا می‌زند. پس `tokenReady` وقتی resolve می‌شد که
+  `tokenGetter` هنوز `null` بود؛ `getToken()` هیچ برمی‌گرداند و اولین درخواست‌ها باز هم بدون هدر
+  `Authorization` می‌رفتند. همان باگ، یک خط زودتر.
+- **رفع:** `markTokenReady()` اگر getter نباشد سیگنال را **نگه می‌دارد** (`readyPending`) و
+  `registerTokenGetter` آزادش می‌کند. حالا promise فقط وقتی resolve می‌شود که **هر دو** اتفاق افتاده باشند،
+  و ترتیبِ خارج از کنترلِ store بی‌اهمیت می‌شود.
+- **درس:** «سیگنال آمادگی بدون منبع داده، بدتر از نبودِ سیگنال است» — مصرف‌کننده را آزاد می‌کند تا با دستِ خالی برود.
+- **تست:** `token-ready-waits-for-hydration.test.ts` (۱۰ تست) — **injection-tested**.
+- **مرورگر:** ❌ نیازمند deploy.

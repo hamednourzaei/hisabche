@@ -9,6 +9,12 @@ import { supabase } from '../db'
 import { Plan, Subscription, SubscriptionStatus, UsageLimits } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
+// ⚠️ A CONSTANTS MODULE THAT IMPORTS NOTHING — see plan-pricing.ts. These
+// used to live in this file, which put `billing.service` and the Referral
+// Core in a module cycle and left `referralService` undefined at runtime.
+import { PLAN_PRICING, intervalOfPeriod } from './plan-pricing'
+// Re-exported so existing importers keep working.
+export { PLAN_PRICING, intervalOfPeriod }
 import { referralService } from './referral'
 
 /**
@@ -48,35 +54,6 @@ const USAGE_TABLES: Partial<Record<keyof UsageLimits, { table: string; scope: Us
  * decision, and the owner should confirm it — everything else in this product
  * prices in the workspace's own currency.
  */
-/**
- * Month or year, read from the period the upgrade actually wrote.
- *
- * ⚠️ DERIVED FROM BOTH ENDS, NEVER GUESSED. `subscriptions` has no interval
- * column, and a commission calculated against the wrong interval is wrong by a
- * factor of eight. `upgradePatch` writes `period_end` one month or twelve
- * months out, so the distance between them answers it exactly — and anything
- * that cannot be parsed falls back to the SMALLER of the two, which under-pays
- * rather than over-pays on bad data.
- */
-export function intervalOfPeriod(periodStart: string, periodEnd: string | null): 'month' | 'year' {
-  if (!periodEnd) return 'month'
-  const start = Date.parse(periodStart)
-  const end = Date.parse(periodEnd)
-  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 'month'
-  // ~100 days: far above one month, far below one year. Nothing legitimate
-  // lands near this boundary.
-  return end - start > 100 * 24 * 60 * 60 * 1000 ? 'year' : 'month'
-}
-
-export const PLAN_PRICING: Record<
-  Plan,
-  { monthly: number | null; yearly: number | null; currency: string }
-> = {
-  free: { monthly: null, yearly: null, currency: 'USD' },
-  pro: { monthly: 12, yearly: 99, currency: 'USD' },
-  enterprise: { monthly: null, yearly: null, currency: 'USD' },
-}
-
 export const PLANS: Record<
   Plan,
   {
