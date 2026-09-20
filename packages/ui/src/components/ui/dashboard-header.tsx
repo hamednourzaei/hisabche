@@ -321,6 +321,14 @@ interface HeaderProps {
   /** جستجوی سراسری — کنار انتخاب زبان رندر می‌شود. */
   searchSlot?: React.ReactNode
   onLogout?: () => void
+  /**
+   * The workspace's people, me FIRST — the caller decides the order because
+   * it is the caller that knows which user is signed in.
+   */
+  people?: readonly HeaderPerson[] | undefined
+  /** The server's `people.presence.read`. Absent means the list is withheld. */
+  canSeePeople?: boolean | undefined
+  isLoadingPeople?: boolean | undefined
   onNavigateLogin: () => void
 }
 
@@ -365,37 +373,190 @@ function initialsOf(name?: string, email?: string): string {
  * would see themselves described as view-only while the role was still
  * loading. No colour says «not known», which is the truth.
  */
-const RolePill = memo(function RolePill({
+export interface HeaderPerson {
+  /** The auth user id — what presence is keyed by. */
+  userId: string | null
+  name: string
+  email?: string | undefined
+  roleLabel?: string | undefined
+  /** True only while a socket of theirs is open. */
+  isOnline: boolean
+  /** ISO time they came online; absent when they are not. */
+  onlineSince?: string | undefined
+}
+
+/**
+ * The identity pill, and everything behind it.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠️ ONE MENU, NOT TWO.
+ *
+ * Sign-out used to live behind a separate avatar at the other end of the bar,
+ * so the header had two places that were both «you»: this pill said which role
+ * you had, the avatar said which account you were in, and neither mentioned
+ * the other. They are merged here on the owner's instruction — the pill opens
+ * the menu, and the avatar is gone.
+ *
+ * ⚠️ THE ROSTER IS A PERMISSION, AND ITS ABSENCE IS EXPLAINED.
+ *
+ * `canSeePeople` is the server's `people.presence.read`. Without it the menu
+ * still works — it is where sign-out is — and simply says the list is not
+ * available, rather than rendering an empty section that reads as «nobody is
+ * online».
+ */
+const IdentityMenu = memo(function IdentityMenu({
   subtitle,
   role,
   roleLabel,
+  userName,
+  userEmail,
+  signOutLabel,
+  onLogout,
+  people,
+  canSeePeople,
+  isLoadingPeople,
+  t,
 }: {
   subtitle: string
   role?: string | null | undefined
   roleLabel?: string | undefined
+  userName?: string | undefined
+  userEmail?: string | undefined
+  signOutLabel: string
+  onLogout?: (() => void) | undefined
+  /** Me first, then colleagues — the caller decides the order. */
+  people?: readonly HeaderPerson[] | undefined
+  canSeePeople?: boolean | undefined
+  isLoadingPeople?: boolean | undefined
+  t: (key: string) => string
 }) {
   const tone = roleTone(role)
+  const roster = people ?? []
+  const onlineCount = roster.filter((person) => person.isOnline).length
 
   return (
-    <span
-      className={cn(
-        'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2 text-[11px] font-medium',
-        tone,
-      )}
-    >
-      <span className="truncate">{subtitle}</span>
-      {roleLabel ? (
-        <>
-          <span aria-hidden="true" className="opacity-40">
-            ·
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={t('nav.account')}
+        className={cn(
+          'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2 text-[11px] font-medium',
+          'transition-colors hover:brightness-95 motion-reduce:transition-none',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
+          tone,
+        )}
+      >
+        <span className="truncate">{subtitle}</span>
+        {roleLabel ? (
+          <>
+            <span aria-hidden="true" className="opacity-40">
+              ·
+            </span>
+            <span className="truncate">{roleLabel}</span>
+          </>
+        ) : null}
+        {/* The count is only meaningful to someone allowed to see the list. */}
+        {canSeePeople && onlineCount > 0 ? (
+          <span className="ms-0.5 inline-flex items-center gap-1 tabular-nums">
+            <span
+              aria-hidden="true"
+              className="size-1.5 rounded-full bg-[hsl(var(--color-success))]"
+            />
+            {onlineCount}
           </span>
-          <span className="truncate">{roleLabel}</span>
-        </>
-      ) : null}
-    </span>
+        ) : null}
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" className="w-72">
+        <div className="px-2 py-1.5">
+          {userName ? (
+            <p className="truncate text-sm font-medium text-[hsl(var(--fg-primary))]">{userName}</p>
+          ) : null}
+          {userEmail ? (
+            // `dir="ltr"` — an address is Latin text and renders in the wrong
+            // visual order inside an RTL block.
+            <p dir="ltr" className="truncate text-start text-xs text-[hsl(var(--fg-tertiary))]">
+              {userEmail}
+            </p>
+          ) : null}
+        </div>
+
+        <DropdownMenuSeparator />
+
+        <p className="px-2 py-1 text-[11px] font-semibold text-[hsl(var(--fg-tertiary))]">
+          {t('people.whoIsOnline')}
+        </p>
+
+        {!canSeePeople ? (
+          // ⚠️ Said out loud. An empty section here would read as «nobody is
+          // online», which is a statement about colleagues rather than about
+          // this account's permissions.
+          <p className="px-2 pb-2 text-[11px] text-[hsl(var(--fg-tertiary))]">
+            {t('people.presenceNotAllowed')}
+          </p>
+        ) : isLoadingPeople ? (
+          <p className="px-2 pb-2 text-[11px] text-[hsl(var(--fg-tertiary))]">
+            {t('common.loading')}
+          </p>
+        ) : roster.length === 0 ? (
+          <p className="px-2 pb-2 text-[11px] text-[hsl(var(--fg-tertiary))]">
+            {t('people.noColleagues')}
+          </p>
+        ) : (
+          <ul className="max-h-64 overflow-y-auto pb-1">
+            {roster.map((person, index) => (
+              <li
+                key={person.userId ?? `${person.name}-${index}`}
+                className="flex items-center gap-2 px-2 py-1.5"
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'size-2 shrink-0 rounded-full',
+                    person.isOnline
+                      ? 'bg-[hsl(var(--color-success))]'
+                      : 'bg-[hsl(var(--border-strong))]',
+                  )}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs text-[hsl(var(--fg-primary))]">
+                    {person.name}
+                  </span>
+                  {person.roleLabel ? (
+                    <span className="block truncate text-[10px] text-[hsl(var(--fg-tertiary))]">
+                      {person.roleLabel}
+                    </span>
+                  ) : null}
+                </span>
+                {/* ⚠️ «آفلاین» rather than a last-seen time: presence knows
+                    only that the socket is closed, not when it closed. A
+                    made-up «۲ ساعت پیش» would be a fact nobody measured. */}
+                <span
+                  className={cn(
+                    'shrink-0 text-[10px]',
+                    person.isOnline
+                      ? 'text-[hsl(var(--color-success))]'
+                      : 'text-[hsl(var(--fg-tertiary))]',
+                  )}
+                >
+                  {person.isOnline ? t('people.online') : t('people.offline')}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={onLogout}
+          className="text-[hsl(var(--color-destructive))] focus:text-[hsl(var(--color-destructive))]"
+        >
+          {signOutLabel}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 })
-RolePill.displayName = 'RolePill'
+IdentityMenu.displayName = 'IdentityMenu'
 
 /**
  * Collapse or expand the sidebar.
@@ -486,68 +647,6 @@ function useIsRtl(node: HTMLElement | null): boolean {
   return isRtl
 }
 
-/** The avatar, the address behind it, and sign-out. */
-const AccountMenu = memo(function AccountMenu({
-  userName,
-  userEmail,
-  signOutLabel,
-  onLogout,
-  t,
-}: {
-  // `| undefined` explicitly: `exactOptionalPropertyTypes` is on, so an
-  // optional prop and a prop that may be `undefined` are different types.
-  userName?: string | undefined
-  userEmail?: string | undefined
-  signOutLabel: string
-  onLogout?: (() => void) | undefined
-  t: (key: string) => string
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label={t('nav.account')}
-        className={cn(
-          // 40px — a touch target, not a 24px circle.
-          //
-          // ⚠️ `shrink-0` AND `aspect-square`. `size-10` sets a BASIS, not a
-          // floor: as a flex child in a row that runs out of room it was
-          // compressed horizontally only, and a circle compressed on one axis
-          // is an egg. That is the «دایره بدفرم».
-          'flex size-10 shrink-0 aspect-square items-center justify-center rounded-full',
-          'text-xs font-semibold',
-          'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
-          'transition-colors hover:bg-[hsl(var(--color-primary)/0.12)]',
-          'hover:text-[hsl(var(--color-primary))] motion-reduce:transition-none',
-        )}
-      >
-        {initialsOf(userName, userEmail)}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
-        <div className="px-2 py-1.5">
-          {userName ? (
-            <p className="truncate text-sm font-medium text-[hsl(var(--fg-primary))]">{userName}</p>
-          ) : null}
-          {userEmail ? (
-            // `dir="ltr"` — an address is Latin text and renders in the wrong
-            // visual order inside an RTL block.
-            <p dir="ltr" className="truncate text-start text-xs text-[hsl(var(--fg-tertiary))]">
-              {userEmail}
-            </p>
-          ) : null}
-        </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={onLogout}
-          className="text-[hsl(var(--color-destructive))] focus:text-[hsl(var(--color-destructive))]"
-        >
-          {signOutLabel}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-})
-AccountMenu.displayName = 'AccountMenu'
-
 // ✅ DashboardHeader با memo
 export const DashboardHeader = memo(function DashboardHeader({
   variant = 'dashboard',
@@ -555,6 +654,9 @@ export const DashboardHeader = memo(function DashboardHeader({
   appSubtitle,
   role,
   roleLabel,
+  people,
+  canSeePeople,
+  isLoadingPeople,
   userEmail,
   userName,
   isSidebarCollapsed,
@@ -618,7 +720,19 @@ export const DashboardHeader = memo(function DashboardHeader({
               </span>
 
               {appSubtitle ? (
-                <RolePill subtitle={appSubtitle} role={role} roleLabel={roleLabel} />
+                <IdentityMenu
+                  subtitle={appSubtitle}
+                  role={role}
+                  roleLabel={roleLabel}
+                  userName={userName}
+                  userEmail={userEmail}
+                  signOutLabel={signOutLabel}
+                  onLogout={onLogout}
+                  people={people}
+                  canSeePeople={canSeePeople}
+                  isLoadingPeople={isLoadingPeople}
+                  t={t}
+                />
               ) : null}
 
               <span className="mx-0.5 hidden h-6 w-px bg-[hsl(var(--border-default))] xl:block" />
@@ -668,21 +782,10 @@ export const DashboardHeader = memo(function DashboardHeader({
             {isDark ? IconSun : IconMoon}
           </button>
           {variant === 'dashboard' && <NotificationBell />}
-          {variant === 'dashboard' && (
-            /* ⚠️ SIGN-OUT IS NO LONGER A BARE BUTTON IN THE BAR.
-               It sat one mis-aimed click from the theme toggle, with only an
-               icon and a label that appeared at `lg`. Behind the avatar it
-               takes a deliberate two steps, and the menu is also where the
-               signed-in address belongs — there was previously nowhere at all
-               to see which account you were in. */
-            <AccountMenu
-              userName={userName}
-              userEmail={userEmail}
-              signOutLabel={signOutLabel}
-              onLogout={onLogout}
-              t={t}
-            />
-          )}
+          {/* ⚠️ NO SECOND «YOU» AT THIS END OF THE BAR. The account menu used
+              to sit here as an avatar while the pill at the other end said the
+              role — two controls for one identity. They are one control now,
+              on the pill; see `IdentityMenu`. */}
           {variant === 'landing' && (
             <button
               type="button"

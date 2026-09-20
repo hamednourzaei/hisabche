@@ -182,6 +182,8 @@ export { useWorkspaceBackup, type WorkspaceBackup, type WorkspaceBackupMeta } fr
 
 // ─── Realtime ─────────────────────────────────────────────
 export { useRealtime, useActiveWorkspaceId } from './hooks/useRealtime'
+// Who is signed in right now — Supabase Presence, not a table.
+export { usePresence, type PresenceMember } from './hooks/usePresence'
 
 // The workspace registry. `@hisabche/store` calls `setActiveWorkspaceId`,
 // because it depends on this package and not the reverse — see

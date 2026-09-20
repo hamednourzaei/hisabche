@@ -5200,5 +5200,12 @@
         "body": "No sales, receipts or balance in the last 12 months."
       }
     }
+  },
+  "people": {
+    "whoIsOnline": "Who is online",
+    "presenceNotAllowed": "Seeing colleagues’ status is not enabled for you.",
+    "noColleagues": "No colleagues recorded yet.",
+    "online": "Online",
+    "offline": "Offline"
   }
 }

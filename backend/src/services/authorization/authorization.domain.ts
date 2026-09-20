@@ -81,6 +81,8 @@ export const CAPABILITIES = [
   'budget.approve',
   // Bringing an existing business in
   'data.import',
+  // Who else is signed in right now
+  'people.presence.read',
   // The workspace itself
   'member.manage',
   'workspace.manage',
@@ -137,6 +139,14 @@ const MIN_ROLE: Record<Capability, WorkspaceRole> = {
   // seller creates customers one at a time at a counter; this is a different
   // operation with a different blast radius.
   'data.import': 'manager',
+
+  // ⚠️ SEEING WHO IS ONLINE IS A FACT ABOUT PEOPLE, NOT ABOUT THE BOOKS.
+  //
+  // It tells a colleague when someone started work and when they stopped, so
+  // it is off for a seller by default and the owner turns it on per profile
+  // — which is exactly what was asked for. `seller` would have made it a
+  // default of «everyone can watch everyone».
+  'people.presence.read': 'manager',
 
   'member.manage': 'owner',
   'workspace.manage': 'owner',
@@ -456,6 +466,16 @@ export const PERMISSION_MODULES: readonly ModuleSpec[] = [
     read: ['budget.read'],
     write: ['budget.manage'],
     full: ['budget.approve'],
+  },
+  {
+    key: 'people',
+    label: 'همکاران',
+    // Read is the whole module: there is nothing to write. Keeping it its own
+    // module is what lets the owner grant it to one person without also
+    // handing over member management, which lives in `workspace` below.
+    read: ['people.presence.read'],
+    write: [],
+    full: [],
   },
   {
     key: 'workspace',

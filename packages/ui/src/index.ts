@@ -100,7 +100,7 @@ export { AccountingPage } from './components/ui/accounting'
 export { DashboardSidebar, BottomNav, type NavItem } from './components/ui/dashboard-sidebar'
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/ui/tooltip'
 export { BrandMark, LOGO_SRC } from './components/ui/brand-mark'
-export { DashboardHeader } from './components/ui/dashboard-header'
+export { DashboardHeader, type HeaderPerson } from './components/ui/dashboard-header'
 export { CommandPalette } from './components/ui/command-palette'
 export { GlobalSearch, type SearchPageItem } from './components/ui/global-search'
 
