@@ -24,7 +24,16 @@
         "backgroundColor": "#059669"
       },
       "package": "com.hisabche.mobile",
-      "permissions": ["CAMERA", "INTERNET", "USE_BIOMETRIC", "USE_FINGERPRINT"]
+      "permissions": [
+        "CAMERA",
+        "INTERNET",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -42,8 +51,11 @@
     "extra": {
       "apiUrl": "https://api.hisabche.com/api",
       "webUrl": "https://hisabche.com",
+      "router": {
+        "origin": false
+      },
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "292de4cb-3817-48e9-9e86-b4dec62fd7c6"
       }
     }
   }
