@@ -1,4 +1,10 @@
 -- ============================================================================
+-- ✅ RUN AND VERIFIED BY THE OWNER — 2026-09-20.
+-- Every row of the verification query below returned ok = true.
+-- Do not run again; it is idempotent, but there is nothing left to do.
+-- ============================================================================
+
+-- ============================================================================
 -- REFERRAL SYSTEM — additive, idempotent, re-runnable.
 --
 -- The owner's model, in full:

@@ -249,3 +249,98 @@ describe('the core boundary', () => {
     expect(service).toContain('if (owner.user_id === input.referredUserId) return')
   })
 })
+
+// ============================================
+// ⚠️ THE RESPONSE SCHEMA IS THE RESPONSE.
+//
+// `GET /api/referrals` answered 500 on the live site with
+// `"rateBps" is required!` while every test here was green: the handler
+// returned `terms.rateBps`, the schema demanded a top-level `rateBps`, and
+// fast-json-stringify THROWS on a missing required field. No unit test that
+// calls the service can see that — only compiling the real serializer and
+// running a real payload through it can.
+// ============================================
+describe('the serialized response', () => {
+  const overview = {
+    code: 'AB12CD34',
+    summary: summarize([], []),
+    referrals: buildReferralList(
+      [
+        {
+          id: 'r1',
+          referred_name: 'کارگاه نمونه',
+          signed_up_at: '2026-09-01T00:00:00.000Z',
+          first_paid_at: null,
+          commission_ends_at: null,
+        } as never,
+      ],
+      [],
+    ),
+    terms: {
+      rateBps: REFERRAL_RATE_BPS,
+      signupDiscountBps: SIGNUP_DISCOUNT_BPS,
+      periodLimit: COMMISSION_PERIOD_LIMIT,
+      attributionWindowDays: 90,
+      payoutThresholdMinor: PAYOUT_THRESHOLD_MINOR,
+    },
+  }
+
+  it('⚠️ serializes what the service actually returns, without throwing', async () => {
+    // Fastify itself compiles the serializer — the same code path that threw
+    // in production. Nothing is mocked but the handler's data.
+    const [{ referralOverviewJsonSchema }, { default: Fastify }] = await Promise.all([
+      import('../routes/referral.routes'),
+      import('fastify'),
+    ])
+    const app = Fastify()
+    app.get(
+      '/x',
+      { schema: { response: { 200: referralOverviewJsonSchema } } },
+      async () => overview,
+    )
+    const res = await app.inject({ method: 'GET', url: '/x' })
+    await app.close()
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json() as {
+      summary: Record<string, unknown>
+      referrals: [Record<string, unknown>]
+      terms: Record<string, unknown>
+    }
+
+    // Every field the page reads must survive the serializer. A field the
+    // schema forgets is dropped SILENTLY — no error, just an undefined on the
+    // page — which is the other half of this bug.
+    expect(body.terms.rateBps).toBe(REFERRAL_RATE_BPS)
+    expect(body.terms.payoutThresholdMinor).toBe(PAYOUT_THRESHOLD_MINOR)
+    expect(body.summary.activeCount).toBe(0)
+    expect(body.summary.totalMinor).toBe(0)
+    expect(body.summary.payoutThresholdMinor).toBe(PAYOUT_THRESHOLD_MINOR)
+    expect(body.referrals[0].periodsRemaining).toBe(COMMISSION_PERIOD_LIMIT)
+    expect(body.referrals[0].isActive).toBe(false)
+    expect(body.referrals[0].paidPeriods).toBe(0)
+    // `null` must stay null, not become "" (fast-json-stringify replaces a
+    // null on a plain `string` rather than erroring).
+    expect(body.summary.currency).toBeNull()
+    expect(body.referrals[0].plan).toBeNull()
+  })
+
+  it('⚠️ the schema names no field the service does not return', async () => {
+    const { referralOverviewJsonSchema } = await import('../routes/referral.routes')
+    const schema = referralOverviewJsonSchema as {
+      properties: {
+        summary: { properties: Record<string, unknown> }
+        terms: { properties: Record<string, unknown> }
+      } & Record<string, unknown>
+    }
+    expect(Object.keys(schema.properties).sort()).toEqual(
+      ['code', 'referrals', 'summary', 'terms'].sort(),
+    )
+    expect(Object.keys(schema.properties.summary.properties).sort()).toEqual(
+      Object.keys(overview.summary).sort(),
+    )
+    expect(Object.keys(schema.properties.terms.properties).sort()).toEqual(
+      Object.keys(overview.terms).sort(),
+    )
+  })
+})

@@ -1,4 +1,11 @@
 -- ============================================================================
+-- ✅ RUN AND VERIFIED BY THE OWNER — 2026-09-20.
+-- Every row of the verification query below returned ok = true.
+-- Do not run again; it is idempotent, but there is nothing left to do.
+-- ============================================================================
+
+-- All four tables reported published = true and replica_identity = f.
+-- ============================================================================
 -- REALTIME PUBLICATION — additive, idempotent, re-runnable.
 --
 -- ⚠️ THE CLIENT SUBSCRIBES; POSTGRES DECIDES WHETHER TO SPEAK.

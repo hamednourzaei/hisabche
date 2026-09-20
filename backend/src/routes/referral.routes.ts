@@ -26,19 +26,31 @@ const toJsonSchema = (schema: any) => {
   return result
 }
 
+// ⚠️ THIS SCHEMA IS THE RESPONSE, NOT A DESCRIPTION OF IT.
+//
+// fast-json-stringify only emits what the schema names, and a `required` field
+// the handler does not return makes it THROW — `"rateBps" is required!`, a 500
+// on a handler that did its job perfectly. The shape below must stay identical
+// to `ReferralOverview` in `services/referral/referral.service.ts` and to the
+// interface in `packages/api/src/hooks/referrals.ts`.
+// Guard: `referral-programme.test.ts` → «response schema matches the service».
+const summarySchema = z.object({
+  referredCount: z.number(),
+  activeCount: z.number(),
+  thisMonthMinor: z.number(),
+  totalMinor: z.number(),
+  pendingMinor: z.number(),
+  currency: z.string().nullable(),
+  currencies: z.array(z.string()),
+  payoutThresholdMinor: z.number(),
+})
+
 const overviewSchema = z.object({
   // `['string','null']` — fast-json-stringify REPLACES a null on a plain
   // `string` with `""` rather than erroring, and «no code yet» would then be
   // indistinguishable from an empty one (راهنمای سشن، سریالایز).
   code: z.string().nullable(),
-  rateBps: z.number(),
-  summary: z.object({
-    referredCount: z.number(),
-    pendingMinor: z.number(),
-    paidMinor: z.number(),
-    currency: z.string().nullable(),
-    currencies: z.array(z.string()),
-  }),
+  summary: summarySchema,
   referrals: z.array(
     z.object({
       id: z.string(),
@@ -49,10 +61,23 @@ const overviewSchema = z.object({
       commissionMinor: z.number(),
       baseAmountMinor: z.number(),
       currency: z.string().nullable(),
+      paidPeriods: z.number(),
+      periodsRemaining: z.number(),
+      isActive: z.boolean(),
       status: z.string(),
     }),
   ),
+  terms: z.object({
+    rateBps: z.number(),
+    signupDiscountBps: z.number(),
+    periodLimit: z.number(),
+    attributionWindowDays: z.number(),
+    payoutThresholdMinor: z.number(),
+  }),
 })
+
+/** Exported for the guard test only — the real serializer is built from it. */
+export const referralOverviewJsonSchema = toJsonSchema(overviewSchema)
 
 export async function referralRoutes(fastify: FastifyInstance) {
   // ─── GET /api/referrals ───────────────────────────────────────────────
