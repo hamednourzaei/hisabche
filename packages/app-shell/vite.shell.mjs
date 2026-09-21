@@ -147,6 +147,21 @@ export function shellRendererConfig({ outDir, base = './', singleFile = false })
     root: shellRoot,
     base,
 
+    // ══════════════════════════════════════════════════════════════════════
+    // ⚠️ `localhost` IS NOT ONE ADDRESS ON WINDOWS.
+    //
+    // Vite binds 127.0.0.1 and prints «http://localhost:5173/»; Chromium
+    // resolves that name to `::1` first and gets nothing. The dev window
+    // then opens on ERR_CONNECTION_REFUSED while the terminal insists the
+    // server is running — and before the renderer failure listeners existed
+    // it showed as a blank page with an empty console.
+    //
+    // Binding the literal address makes ELECTRON_RENDERER_URL carry
+    // 127.0.0.1, so no name is left for the two stacks to resolve
+    // differently.
+    // ══════════════════════════════════════════════════════════════════════
+    server: { host: '127.0.0.1' },
+
     // The canonical UI references brand assets by absolute path
     // (`/logo-icon.png` in DashboardSidebar), which web serves from its
     // `public/`. Without the same directory those requests 404 and the sidebar
