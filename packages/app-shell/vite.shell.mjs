@@ -29,6 +29,8 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
 import react from '@vitejs/plugin-react'
+import autoprefixer from 'autoprefixer'
+import tailwindcss from 'tailwindcss'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
@@ -161,6 +163,26 @@ export function shellRendererConfig({ outDir, base = './', singleFile = false })
     // differently.
     // ══════════════════════════════════════════════════════════════════════
     server: { host: '127.0.0.1' },
+
+    // ══════════════════════════════════════════════════════════════════════
+    // ⚠️ POSTCSS IS NAMED, NEVER SEARCHED FOR.
+    //
+    // Vite looks for `postcss.config.*` upward from `root`, and `root` here is
+    // `packages/app-shell/src`. The config used to sit in `apps/desktop/`,
+    // which is not on that path — so the search quietly found nothing,
+    // `@tailwind base/components/utilities` reached the browser as three
+    // unknown at-rules, and the app came up with its whole design system
+    // present and not one utility class applied. Mobile never had a config at
+    // all.
+    //
+    // Naming both files removes the search, and with it the difference
+    // between the two hosts.
+    // ══════════════════════════════════════════════════════════════════════
+    css: {
+      postcss: {
+        plugins: [tailwindcss(resolve(here, 'tailwind.config.ts')), autoprefixer()],
+      },
+    },
 
     // The canonical UI references brand assets by absolute path
     // (`/logo-icon.png` in DashboardSidebar), which web serves from its

@@ -16,6 +16,7 @@ import {
 import { signUpSchema, type SignUpInput } from '@hisabche/validation'
 import {
   isSession,
+  isSessionExpired,
   sessionCan,
   type Capability,
   type LoginCredentials,
@@ -157,7 +158,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   hydrate: async () => {
     try {
       const stored = await sessionStore.read()
-      const isValid = isSession(stored)
+
+      // ═══════════════════════════════════════════════════════════════════
+      // ⚠️ A SHAPE CHECK CANNOT TELL YOU THE SESSION IS OVER.
+      //
+      // `isSession` asks whether the blob has a token, an id and an email. A
+      // token issued last month has all three, so the app opened straight
+      // onto the dashboard for someone who was no longer signed in — and the
+      // login screen they were expecting never appeared.
+      //
+      // Online that shows up as every request 401ing behind a UI that
+      // believes it is authenticated. Offline nothing corrects it at all.
+      //
+      // An expired session is treated exactly like a malformed one: dropped,
+      // cleared from the store, and sent to `/login`. What it is NOT is an
+      // error — a session ending is the ordinary passage of time, not a
+      // fault, and telling the person their data was corrupt would be a lie.
+      // ═══════════════════════════════════════════════════════════════════
+      const hasShape = isSession(stored)
+      const hasExpired = hasShape && isSessionExpired(stored)
+      const isValid = hasShape && !hasExpired
 
       // ═══════════════════════════════════════════════════════════════════
       // ⚠️ THE VALIDATION RESULT IS THE GATE — IT USED TO BE DISCARDED.
@@ -192,7 +212,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isSessionValid: isValid,
         // Only an actual malformed payload is an error. An empty store is the
         // ordinary state of a machine nobody has signed in on yet.
-        error: stored !== null && !isValid ? 'INVALID_SESSION_DATA' : null,
+        error: stored !== null && !hasShape ? 'INVALID_SESSION_DATA' : null,
       })
     } catch (error) {
       set({
