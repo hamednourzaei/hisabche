@@ -11,13 +11,24 @@
 //
 // A host passes only what is genuinely host-specific: where to write the
 // build, and the base URL the assets are served from.
+//
+// ⚠️ PLAIN JAVASCRIPT ON PURPOSE, AND .mjs ON PURPOSE.
+//
+// This was `.ts`. Vite loads a config by handing it to Node, and whether Node
+// can read TypeScript depends on its VERSION — 22.22 strips types, 22.13 does
+// not. The EAS build machine runs the version pinned in `eas.json`, so the
+// mobile build died in `eas-build-post-install` with `SyntaxError: Unexpected
+// token {` while the identical command succeeded on this laptop.
+//
+// A build config that only works on some Node versions is a build that only
+// works on some machines. The types are kept through JSDoc, so the desktop's
+// TypeScript still checks every call site.
 // ============================================
 
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
 import react from '@vitejs/plugin-react'
-import type { Plugin, UserConfig } from 'vite'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
@@ -33,14 +44,14 @@ const shims = resolve(shellRoot, 'shims')
  * whose job is `readFile` + `replace` is a dependency that can break a build
  * on a version bump.
  */
-function inlineEverything(): Plugin {
+/** @returns {import('vite').Plugin} */
+function inlineEverything() {
   return {
     name: 'hisabche-inline-shell',
     enforce: 'post',
     generateBundle(_options, bundle) {
       const html = Object.values(bundle).find(
-        (file): file is Extract<typeof file, { type: 'asset' }> =>
-          file.type === 'asset' && file.fileName.endsWith('.html'),
+        (file) => file.type === 'asset' && file.fileName.endsWith('.html'),
       )
       if (!html) return
 
@@ -76,37 +87,33 @@ function inlineEverything(): Plugin {
   }
 }
 
-export interface ShellBuildOptions {
-  /** Where the built files go, absolute. */
-  outDir: string
-  /**
-   * How the page will reference its own assets.
-   *
-   * ⚠️ Electron and a WebView both load from `file://`, where an absolute
-   * `/assets/app.js` means the ROOT OF THE DRIVE and silently 404s. Both hosts
-   * pass './'; only a server-hosted build would pass '/'.
-   */
-  base?: string
-  /**
-   * Emit ONE self-contained `index.html`, with every script, stylesheet and
-   * font inlined.
-   *
-   * ⚠️ REQUIRED WHEN THE HOST SHIPS THE UI AS A BUNDLER ASSET.
-   *
-   * Metro copies the files it is told to import — nothing else. A normal Vite
-   * build puts 45 files beside `index.html`; importing only the HTML shipped
-   * the page and none of its code, so the WebView would render an empty body
-   * and 404 every script, silently. Electron has a real filesystem and does
-   * not need this.
-   */
-  singleFile?: boolean
-}
+/**
+ * What a host contributes to the shared build.
+ *
+ * @typedef {object} ShellBuildOptions
+ *
+ * @property {string} outDir Where the built files go, absolute.
+ *
+ * @property {string} [base] How the page will reference its own assets.
+ *   ⚠️ Electron and a WebView both load from `file://`, where an absolute
+ *   `/assets/app.js` means the ROOT OF THE DRIVE and silently 404s. Both hosts
+ *   use the './' default; only a server-hosted build would pass '/'.
+ *
+ * @property {boolean} [singleFile] Emit ONE self-contained `index.html`, with
+ *   every script, stylesheet and font inlined.
+ *
+ *   ⚠️ REQUIRED WHEN THE HOST SHIPS THE UI AS A BUNDLER ASSET. Metro copies
+ *   the files it is told to import — nothing else. A normal Vite build puts 45
+ *   files beside `index.html`; importing only the HTML shipped the page and
+ *   none of its code, so the WebView rendered an empty body and 404'd every
+ *   script, silently. Electron has a real filesystem and does not need this.
+ */
 
-export function shellRendererConfig({
-  outDir,
-  base = './',
-  singleFile = false,
-}: ShellBuildOptions): UserConfig {
+/**
+ * @param {ShellBuildOptions} options
+ * @returns {import('vite').UserConfig}
+ */
+export function shellRendererConfig({ outDir, base = './', singleFile = false }) {
   return {
     root: shellRoot,
     base,

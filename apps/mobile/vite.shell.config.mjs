@@ -11,6 +11,11 @@
 // Android serves the result from `file:///android_asset/...`, so the assets
 // have to be referenced relatively; `base: './'` is the shell's default for
 // exactly that reason and is not repeated here.
+//
+// ⚠️ .mjs, NOT .ts. Vite hands its config to Node, and whether Node can read
+// TypeScript depends on its version: 22.22 strips types, the 22.13 pinned for
+// the EAS build machine does not. As `.ts` this file built here and died in
+// `eas-build-post-install` with `SyntaxError: Unexpected token {`.
 // ============================================
 
 import { fileURLToPath } from 'node:url'

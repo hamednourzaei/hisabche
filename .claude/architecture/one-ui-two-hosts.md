@@ -49,7 +49,7 @@
 `packages/app-shell/src/shared/lib/bridge.ts` استفاده کن که `null` را هندل می‌کند
 (تست‌ها و پیش‌نمایش مرورگر میزبان ندارند).
 
-**۴. بیلد هم یکی است.** `packages/app-shell/vite.shell.ts`. میزبان فقط مسیر خروجی
+**۴. بیلد هم یکی است.** `packages/app-shell/vite.shell.mjs`. میزبان فقط مسیر خروجی
 می‌دهد. اگر میزبانی شروع کند به تعریف alias خودش، UI دوباره دوشاخه شده است.
 
 ---

@@ -98,7 +98,7 @@ describe('the mobile app hosts the shared UI', () => {
   })
 
   it('⚠️ both hosts build the shell from the same declaration', () => {
-    const mobileConfig = readFileSync(join(mobileRoot, 'vite.shell.config.ts'), 'utf8')
+    const mobileConfig = readFileSync(join(mobileRoot, 'vite.shell.config.mjs'), 'utf8')
     const desktopConfig = readFileSync(
       join(repoRoot, 'apps/desktop/electron.vite.config.ts'),
       'utf8',

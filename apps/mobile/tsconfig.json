@@ -27,5 +27,5 @@
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "../../packages/app-bridge/src/node-sqlite.d.ts"],
-  "exclude": ["node_modules", "e2e", "vite.shell.config.ts", "assets/shell"]
+  "exclude": ["node_modules", "e2e", "vite.shell.config.mjs", "assets/shell"]
 }

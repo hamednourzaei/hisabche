@@ -6,7 +6,7 @@
   "types": "./src/main.tsx",
   "exports": {
     ".": "./src/main.tsx",
-    "./vite.shell": "./vite.shell.ts",
+    "./vite.shell": "./vite.shell.mjs",
     "./src/*": "./src/*"
   },
   "scripts": {

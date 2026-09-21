@@ -14,7 +14,7 @@
     "test:watch": "jest --watch",
     "e2e:android": "detox test --configuration android.emu.debug",
     "e2e:ios": "detox test --configuration ios.sim.debug",
-    "build:shell": "vite build --config vite.shell.config.ts",
+    "build:shell": "vite build --config vite.shell.config.mjs",
     "eas-build-post-install": "pnpm run build:shell"
   },
   "dependencies": {
