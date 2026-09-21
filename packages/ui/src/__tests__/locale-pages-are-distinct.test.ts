@@ -20,7 +20,15 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const source = readFileSync(join(__dirname, '..', 'app/[lang]/page.tsx'), 'utf8')
+import { describe, expect, it } from 'vitest'
+
+// The web app's landing metadata, read from where it lives. This guard sits in
+// `packages/ui` because that is where the web SEO guards run — `apps/web` has
+// no test runner of its own, and a test nobody executes guards nothing.
+const source = readFileSync(
+  join(__dirname, '..', '..', '..', '..', 'apps/web/app/[lang]/page.tsx'),
+  'utf8',
+)
 
 /** Pull one string field out of a locale's block in `pageConfig`. */
 function field(locale: 'fa' | 'af' | 'en', key: string): string {
