@@ -1,27 +1,37 @@
 // ============================================
-// Root layout — bootstrap order matters:
-// 1. storage adapter (the API client reads language/token through it)
-// 2. i18n + RTL, then the persisted session
-// 3. providers, then the navigator
+// Root layout — the native host, and nothing else.
+//
+// ⚠️ THE SCREENS ARE GONE ON PURPOSE.
+//
+// This app used to draw its own React Native version of every page. That was
+// the third UI: the same product, a third time, drifting from web and desktop
+// with every change. The UI now comes from `@hisabche/app-shell` — the exact
+// bundle Electron loads — and this file starts only what a browser engine
+// cannot do for itself:
+//
+//   • the offline outbox and its sync runner, which must outlive the WebView
+//   • the persisted session, so the bridge can answer `secure.get` at once
+//   • push registration, which is an OS-level grant
+//
+// Fonts, language, direction, routing and theming all belong to the shared UI
+// and are NOT repeated here — `styles.css` in the shell ships Vazirmatn with
+// the bundle.
 // ============================================
 
 import React, { useEffect, useState } from 'react'
-import { useFonts } from 'expo-font'
-import { SplashScreen, Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
+import { SplashScreen } from 'expo-router'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
-import { ThemeProvider, useTheme } from '@hisabche/mobile-ui'
 
-import { initMobileI18n } from '../src/shared/i18n'
 import { initStorage } from '../src/shared/lib/storage'
-import { QueryProvider } from '../src/shared/providers/query-provider'
 import { useAuthStore } from '../src/features/auth/auth.store'
-import { usePersistentQueryCache, useSyncOnReconnect } from '../src/features/offline/use-outbox'
-import { cacheScope } from '../src/features/offline/query-cache-persistence'
+import { ShellWebView } from '../src/host/shell-webview'
+import { initLocalDb } from '../src/host/local-db'
+import { migrateLegacyOutbox } from '../src/host/migrate-legacy-outbox'
 
 void SplashScreen.preventAutoHideAsync()
 
-function useBootstrap(): boolean {
+function useHostBootstrap(): boolean {
   const [ready, setReady] = useState(false)
   const hydrateAuth = useAuthStore((s) => s.hydrate)
 
@@ -29,8 +39,30 @@ function useBootstrap(): boolean {
     let cancelled = false
 
     async function bootstrap(): Promise<void> {
+      // ⚠️ Storage first: the bridge answers `secure.get` from it, and the
+      // shared UI asks during its own start-up. A bridge that answers null
+      // because storage was not open yet reads as «signed out» (BUG-019).
       await initStorage()
-      await initMobileI18n()
+
+      // ⚠️ THE CACHE OPENS BEFORE THE WEBVIEW DOES.
+      //
+      // The shared UI asks `db.query` while its first screen mounts. A cache
+      // that opens a moment later answers that first call with
+      // LOCAL_CACHE_UNAVAILABLE, and the page has already decided it has
+      // nothing to show — the same ordering mistake as announcing token
+      // readiness before the token exists (BUG-019).
+      const cacheOpened = await initLocalDb()
+
+      // Anything the previous build left in the AsyncStorage queue is moved
+      // into SQLite now, before the first drain can run — otherwise those
+      // invoices are queued in a store nothing reads any more.
+      if (cacheOpened) {
+        const moved = await migrateLegacyOutbox()
+        if (moved.moved > 0) {
+          console.warn(`[outbox] migrated ${moved.moved} queued writes into the local cache`)
+        }
+      }
+
       await hydrateAuth()
       if (!cancelled) setReady(true)
     }
@@ -44,35 +76,8 @@ function useBootstrap(): boolean {
   return ready
 }
 
-function RootNavigator() {
-  const { colors } = useTheme()
-
-  // Drains the offline outbox on mount and on every reconnect.
-  useSyncOnReconnect()
-  // The read cache offline screens show; restored per session, cleared on sign-out.
-  usePersistentQueryCache(useAuthStore((s) => cacheScope(s.session)))
-
-  return (
-    <>
-      <StatusBar style="auto" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.surfaceBase },
-          animation: 'fade',
-        }}
-      />
-    </>
-  )
-}
-
-export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({
-    'Vazirmatn-Regular': require('../assets/fonts/Vazirmatn-Regular.ttf'),
-    'Vazirmatn-Bold': require('../assets/fonts/Vazirmatn-Bold.ttf'),
-  })
-  const bootstrapped = useBootstrap()
-  const ready = bootstrapped && (fontsLoaded || Boolean(fontError))
+export default function RootLayout(): React.JSX.Element | null {
+  const ready = useHostBootstrap()
 
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync()
@@ -82,11 +87,8 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider mode="system">
-        <QueryProvider>
-          <RootNavigator />
-        </QueryProvider>
-      </ThemeProvider>
+      <StatusBar style="light" />
+      <ShellWebView />
     </SafeAreaProvider>
   )
 }

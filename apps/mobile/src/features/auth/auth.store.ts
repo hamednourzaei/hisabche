@@ -23,7 +23,7 @@ import {
 
 import { apiClient } from '../../shared/lib/api'
 import { sessionStore } from '../../shared/lib/storage'
-import { clearPersistedQueryCaches } from '../offline/query-cache-persistence'
+import { clearCachedReads } from '../../host/local-db'
 
 export interface AuthState {
   session: Session | null
@@ -101,9 +101,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     if (get().session) await apiClient.post('/auth/logout', {}).catch(() => undefined)
     await sessionStore.clear()
-    // Stored reads belong to the person signing out; the next one on this
-    // phone must not open to their customers and invoices.
-    await clearPersistedQueryCaches().catch(() => undefined)
+    // ⚠️ Cached READS belong to the person signing out; the next one on this
+    // phone must not open to their customers and invoices. Queued WRITES are
+    // kept — they are the only copy of work this device has not sent yet.
+    await clearCachedReads().catch(() => undefined)
     set({ session: null, isAuthenticated: false, isLoading: false, error: null })
   },
 

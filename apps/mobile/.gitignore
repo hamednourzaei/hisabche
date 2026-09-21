@@ -1,0 +1,13 @@
+
+# ============================================
+# The shared UI, built.
+#
+# ⚠️ BUILT ON THE BUILD MACHINE, NOT COMMITTED.
+#
+# `assets/shell/index.html` is a 4.5 MB artifact of `packages/app-shell`.
+# Committing it would put a build output in git that silently goes stale the
+# moment anybody edits the shared UI — and the mobile app would then ship a
+# different version of the product than web and desktop, which is the exact
+# drift this architecture removed. EAS rebuilds it in `eas-build-post-install`.
+# ============================================
+assets/shell/

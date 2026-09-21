@@ -7,6 +7,11 @@ const workspaceRoot = path.resolve(projectRoot, '../..')
 
 const config = getDefaultConfig(projectRoot)
 
+// ⚠️ The shared UI is an ASSET, not a module graph Metro should parse. Its
+// entry is an .html file that Metro must copy into the app verbatim; without
+// this it refuses the import as an unknown extension.
+config.resolver.assetExts = [...config.resolver.assetExts, 'html']
+
 // Watch all files in monorepo
 config.watchFolders = [workspaceRoot]
 
