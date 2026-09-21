@@ -11,3 +11,6 @@
 # drift this architecture removed. EAS rebuilds it in `eas-build-post-install`.
 # ============================================
 assets/shell/
+
+# The same build output, at its Android path.
+android/app/src/main/assets/shell/

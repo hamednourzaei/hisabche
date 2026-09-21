@@ -17,3 +17,6 @@ android/build/
 android/app/build/
 android/.gradle/
 ios/build/
+
+# The same build output, at its Android path.
+android/app/src/main/assets/shell/

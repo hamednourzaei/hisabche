@@ -14,8 +14,10 @@
     "test:watch": "jest --watch",
     "e2e:android": "detox test --configuration android.emu.debug",
     "e2e:ios": "detox test --configuration ios.sim.debug",
-    "build:shell": "vite build --config vite.shell.config.mjs",
-    "eas-build-post-install": "pnpm run build:shell"
+    "build:shell": "vite build --config vite.shell.config.mjs && node scripts/copy-shell-for-ios.mjs",
+    "eas-build-post-install": "pnpm run build:shell",
+    "android:debug": "pnpm run build:shell && node scripts/gradle.mjs assembleDebug",
+    "android:release": "pnpm run build:shell && node scripts/gradle.mjs assembleRelease"
   },
   "dependencies": {
     "@babel/runtime": "^7.25.0",

@@ -138,6 +138,18 @@ describe('the WebView opens the UI from disk, not from a URL', () => {
     expect(webview).toContain('SHELL_ASSET_NOT_LOCAL')
   })
 
+  it('⚠️ Android reads the native asset path, not the asset registry', () => {
+    // ⚠️ `expo-asset` packs files into the APK under a HASHED NAME WITH NO
+    // EXTENSION. The WebView had nothing to infer a MIME type from, fell back
+    // to `text/plain`, and rendered the app's minified JavaScript as visible
+    // text. `file:///android_asset/…` is a real path with the extension
+    // intact — no registry, no runtime copy, no hash.
+    expect(webview).toContain('file:///android_asset/shell/index.html')
+    // And its absence is REPORTED: a build whose shell step did not run ships
+    // an app with no UI, which would otherwise be a blank screen.
+    expect(webview).toContain('SHELL_MISSING_FROM_APK')
+  })
+
   it('⚠️ the file keeps a .html extension, or the WebView prints the source', () => {
     // ⚠️ Android packs bundled assets into the APK under a HASHED NAME WITH
     // NO EXTENSION. A WebView given such a file has nothing to infer a MIME

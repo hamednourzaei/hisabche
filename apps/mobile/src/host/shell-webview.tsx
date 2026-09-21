@@ -68,19 +68,18 @@ export function ShellWebView(): React.JSX.Element {
     )
   }, [])
 
-  // ⚠️ `asset.uri` IS A URL. `asset.localUri` IS THE FILE.
+  // ⚠️ A REAL PATH WITH A REAL EXTENSION, NOT AN ASSET REGISTRY ENTRY.
   //
-  // `Asset.fromModule()` hands back a descriptor whose `uri` points at wherever
-  // the asset is SERVED from — Metro in development, and a packaged path that
-  // Android's WebView refuses to fetch over cleartext in a release build:
+  // `expo-asset` packs bundled files into the APK under a HASHED NAME WITH NO
+  // EXTENSION. A WebView handed such a file has nothing to infer a MIME type
+  // from, falls back to `text/plain`, and renders the app's minified
+  // JavaScript as visible text — a screen full of source code, which is what
+  // the emulator showed.
   //
-  //   net::ERR_CLEARTEXT_NOT_PERMITTED
-  //
-  // …which renders as a blank screen with an error the person cannot act on.
-  // `downloadAsync()` materialises it on the filesystem and fills `localUri`,
-  // which is the `file://` path the WebView can actually open — and the only
-  // one that works with no network at all, which is the whole point of
-  // shipping the UI inside the app.
+  // `android/app/src/main/assets/shell/index.html` is served by Android itself
+  // at `file:///android_asset/shell/index.html`: a path the WebView reads
+  // natively, with the extension intact, with no runtime copy and no network.
+  // The Vite config writes the build there directly.
   const [shellUri, setShellUri] = useState<string | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
 
@@ -89,34 +88,36 @@ export function ShellWebView(): React.JSX.Element {
 
     async function resolve(): Promise<void> {
       try {
+        if (Platform.OS === 'android') {
+          const uri = 'file:///android_asset/shell/index.html'
+          const info = await FileSystem.getInfoAsync(uri)
+
+          // ⚠️ CHECKED, NOT ASSUMED. A build whose `build:shell` step did not
+          // run ships an app with no UI in it, and pointing the WebView at a
+          // file that is not there produces a blank screen with no reason on
+          // it (راهنمای سشن §۷٫۶).
+          if (!info.exists) {
+            setFailure('SHELL_MISSING_FROM_APK')
+            return
+          }
+
+          if (!cancelled) setShellUri(uri)
+          return
+        }
+
+        // iOS has no `android_asset`. The file travels through the asset
+        // registry there and is copied once to a path ending `.html`, for the
+        // same MIME reason.
         const asset = Asset.fromModule(SHELL_HTML)
         if (!asset.localUri) await asset.downloadAsync()
         const packaged = asset.localUri ?? asset.uri
         if (cancelled) return
 
-        // ⚠️ AN http:// URI HERE IS THE BUG, NOT A FALLBACK.
-        //
-        // Android blocks cleartext, so handing one to the WebView produces
-        // `net::ERR_CLEARTEXT_NOT_PERMITTED` on a blank screen. Worse, it
-        // would mean the UI is being FETCHED — from a machine that may not be
-        // reachable — when the entire point is that it ships inside the app.
         if (!packaged || packaged.startsWith('http:')) {
           setFailure('SHELL_ASSET_NOT_LOCAL')
           return
         }
 
-        // ⚠️ THE FILE NEEDS ITS EXTENSION BACK.
-        //
-        // Android packs bundled assets into the APK under a hashed name with
-        // NO extension. A WebView handed such a file has nothing to infer a
-        // MIME type from, falls back to `text/plain`, and renders the app's
-        // JavaScript as VISIBLE TEXT — a screen full of minified source,
-        // which is what the device showed.
-        //
-        // Copying it once to a path ending in `.html` is the whole fix. The
-        // hash is in the name so a new build lands at a new path instead of
-        // reusing the previous release's UI, and the copy is skipped when it
-        // is already there.
         const target = `${FileSystem.cacheDirectory}shell-${asset.hash ?? 'v1'}.html`
         const existing = await FileSystem.getInfoAsync(target)
         if (!existing.exists) {

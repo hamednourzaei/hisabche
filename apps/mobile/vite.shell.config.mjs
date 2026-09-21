@@ -33,6 +33,26 @@ const here = dirname(fileURLToPath(import.meta.url))
  * app at all without a connection, and the offline outbox — the one thing the
  * mobile app exists for — would have nothing to render.
  */
+/**
+ * ⚠️ BUILT STRAIGHT INTO THE NATIVE ASSETS FOLDER.
+ *
+ * Android serves anything under `android/app/src/main/assets` at
+ * `file:///android_asset/…` — a real path, with a real extension, so the
+ * WebView infers `text/html` and renders the page.
+ *
+ * The previous output went through `expo-asset`, which packs files into the
+ * APK under a HASHED NAME WITH NO EXTENSION. The WebView had nothing to infer
+ * a MIME type from, fell back to `text/plain`, and displayed the app's
+ * minified JavaScript as visible text — a screen full of source code, which
+ * is exactly what the emulator showed.
+ *
+ * Going through the native folder removes the guessing entirely: no asset
+ * registry, no copy at runtime, no hash — and it still works with no network,
+ * which is the whole point of shipping the UI inside the app.
+ */
 export default defineConfig(
-  shellRendererConfig({ outDir: resolve(here, 'assets/shell'), singleFile: true }),
+  shellRendererConfig({
+    outDir: resolve(here, 'android/app/src/main/assets/shell'),
+    singleFile: true,
+  }),
 )
