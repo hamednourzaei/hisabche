@@ -110,3 +110,41 @@ describe('the mobile app hosts the shared UI', () => {
     }
   })
 })
+
+describe('the WebView opens the UI from disk, not from a URL', () => {
+  const webview = readFileSync(join(mobileRoot, 'src/host/shell-webview.tsx'), 'utf8')
+    // Comments explain the bug and name the very calls asserted against.
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+
+  it('⚠️ uses localUri, never the asset’s uri alone', () => {
+    // ⚠️ `asset.uri` IS A URL.
+    //
+    // It points at wherever the asset is SERVED from, and Android blocks
+    // cleartext — so a release build rendered a blank screen reading
+    // `net::ERR_CLEARTEXT_NOT_PERMITTED`. `downloadAsync()` puts the file on
+    // disk and fills `localUri`, which is also the only form that works with
+    // no network at all — the whole reason the UI ships inside the app.
+    expect(webview).toContain('downloadAsync()')
+    expect(webview).toContain('asset.localUri')
+    expect(webview).not.toContain('source={{ uri: source.uri }}')
+  })
+
+  it('⚠️ refuses an http URI rather than handing it to the WebView', () => {
+    // Falling back to a URL would not be a fallback: it would mean fetching
+    // the UI from a machine that may be unreachable, which is the failure
+    // this architecture exists to remove.
+    expect(webview).toContain("uri.startsWith('http:')")
+    expect(webview).toContain('SHELL_ASSET_NOT_LOCAL')
+  })
+
+  it('⚠️ a blank screen says why, in the language of the person holding it', () => {
+    // «Still loading», «the UI could not be unpacked» and «this build shipped
+    // no UI» render identically unless one of them is written down (§7.6).
+    // Persian, because this screen appears BEFORE the shared UI and its
+    // translations exist.
+    expect(webview).toContain('برنامه باز نشد')
+    expect(webview).toContain('onError=')
+    expect(webview).toContain('renderError=')
+  })
+})
