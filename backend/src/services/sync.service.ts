@@ -62,51 +62,38 @@ const ENTITY_TABLE: Record<SyncEntity, string> = {
  * them from a client is how a row ends up in someone else's workspace.
  */
 const WRITABLE: Record<SyncEntity, readonly string[]> = {
-  invoice: [
-    'id',
-    'invoice_number',
-    'type',
-    'customer_id',
-    'supplier_id',
-    'date',
-    'due_date',
-    'subtotal',
-    'discount_total',
-    'tax_total',
-    'total',
-    'paid_amount',
-    'currency',
-    'payment_method',
-    'status',
-    'notes',
-    'reference',
-  ],
-  customer: ['id', 'name', 'phone', 'email', 'address', 'type', 'notes', 'credit_limit'],
+  // ⚠️ NOTHING FINANCIAL. This road writes the row as given — no stock moves,
+  // no ledger entry is booked, no total is re-derived from the lines. A
+  // client that could send `total`, `paid_amount` or `status` here could
+  // mark an invoice paid without a payment existing, or set a total the
+  // ledger never saw. Those belong to `InvoiceService`, which is reached
+  // through `/api/invoices` and nowhere else.
+  //
+  // What is left is the descriptive tail of an invoice: a note, a reference,
+  // a due date. The client routing in `@hisabche/app-bridge` already refuses
+  // to send an invoice down this road at all; this is the server refusing
+  // too, because a server that trusts its clients has no rule.
+  invoice: ['id', 'notes', 'reference', 'due_date'],
+  // ⚠️ `credit_limit` is a CREDIT DECISION, not a detail. Raised through this
+  // road it would let a device extend its own customer's borrowing with no
+  // check that anybody is allowed to, and no record of who did.
+  customer: ['id', 'name', 'phone', 'email', 'address', 'type', 'notes'],
   product: [
     'id',
     'name',
     'barcode',
     'sku',
     'category',
-    'quantity',
+    // ⚠️ `quantity` is STOCK and `buy_price` is cost — both move money.
+    // Stock changes through an inventory movement, not a row update.
     'unit',
-    'buy_price',
-    'sell_price',
     'min_stock_level',
     'description',
   ],
-  transaction: [
-    'id',
-    'customer_id',
-    'supplier_id',
-    'invoice_id',
-    'type',
-    'amount',
-    'currency',
-    'payment_method',
-    'date',
-    'notes',
-  ],
+  // ⚠️ A PAYMENT IS MONEY MOVING. `amount`, `type` and `invoice_id` decide
+  // what a customer still owes; written straight to the table they change a
+  // balance with no entry behind it. Only the note is descriptive.
+  transaction: ['id', 'notes'],
   // Note what is ABSENT: `invoice_id`. Its presence is the lock that says
   // these hours are already on a bill, and it is the SERVER's to set when the
   // invoice is raised. A device that could send it could un-bill hours that
@@ -119,7 +106,8 @@ const WRITABLE: Record<SyncEntity, readonly string[]> = {
     'on_date',
     'minutes',
     'billable',
-    'rate_minor',
+    // ⚠️ `rate_minor` is what the hours are BILLED at. A device that could
+    // set it could re-price work that has already been quoted.
     'description',
   ],
 }
@@ -141,7 +129,53 @@ class SyncError extends Error {
   }
 }
 
+/**
+ * Fields this road must never write, and must never SILENTLY ignore either.
+ *
+ * ⚠️ DROPPING AND REFUSING ARE DIFFERENT ANSWERS.
+ *
+ * An unknown key is dropped on purpose: a newer client sending a field this
+ * server has not learned about yet should still succeed on the fields it does
+ * know. That is forward compatibility, and it is correct.
+ *
+ * A FINANCIAL key is not that. If a client sends `total` or `paid_amount`
+ * here, silently ignoring it answers «saved» to somebody who just changed an
+ * amount — and nothing changed. They close the screen believing the books say
+ * one thing while the books say another. The request is refused instead, with
+ * the field named, so the client can send it down the road that actually
+ * recalculates (`/api/invoices`, `/api/transactions`).
+ *
+ * No client does this today — `routeFor` in `@hisabche/app-bridge` sends
+ * anything financial to the domain — but a server that relies on its clients
+ * behaving has no rule at all.
+ */
+const REFUSED_FIELDS: readonly string[] = [
+  'total',
+  'subtotal',
+  'paid_amount',
+  'discount_total',
+  'tax_total',
+  'amount',
+  'status',
+  'quantity',
+  'buy_price',
+  'sell_price',
+  'credit_limit',
+  'opening_balance',
+  'salary',
+  'rate_minor',
+]
+
 function pickWritable(entity: SyncEntity, payload: Record<string, unknown>) {
+  const refused = REFUSED_FIELDS.filter((field) => field in payload)
+  if (refused.length > 0) {
+    throw new SyncError(
+      'validation_failed',
+      `FINANCIAL_FIELD_NOT_WRITABLE: ${refused.join(', ')} — send this through the ` +
+        `domain route (/api/invoices, /api/transactions) so the figures are recalculated`,
+    )
+  }
+
   const allowed = WRITABLE[entity]
   const out: Record<string, unknown> = {}
   for (const key of allowed) {

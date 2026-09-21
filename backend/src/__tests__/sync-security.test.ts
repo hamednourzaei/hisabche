@@ -172,7 +172,7 @@ describe('a client cannot name a table', () => {
         entityType: 'invoice',
         entityId: id(11),
         operation: 'create',
-        payload: { total: 1 },
+        payload: { notes: 'note' },
       },
     ])
 
@@ -208,7 +208,7 @@ describe('a client cannot set the columns that decide authority', () => {
         entityId: id(21),
         operation: 'create',
         // Trying to plant a row in someone else's workspace.
-        payload: { total: 1, workspace_id: VICTIM_WORKSPACE },
+        payload: { notes: 'note', workspace_id: VICTIM_WORKSPACE },
       },
     ])
 
@@ -226,7 +226,7 @@ describe('a client cannot set the columns that decide authority', () => {
         entityType: 'invoice',
         entityId: id(23),
         operation: 'create',
-        payload: { total: 1, user_id: 'someone-else' },
+        payload: { notes: 'note', user_id: 'someone-else' },
       },
     ])
 
@@ -242,7 +242,7 @@ describe('a client cannot set the columns that decide authority', () => {
         entityType: 'invoice',
         entityId: id(25),
         operation: 'create',
-        payload: { total: 1, version: 999999 },
+        payload: { notes: 'note', version: 999999 },
       },
     ])
 
@@ -258,7 +258,7 @@ describe('a client cannot set the columns that decide authority', () => {
         entityType: 'invoice',
         entityId: id(27),
         operation: 'create',
-        payload: { total: 1, finalized_at: '2020-01-01T00:00:00Z' },
+        payload: { notes: 'note', finalized_at: '2020-01-01T00:00:00Z' },
       },
     ])
 
@@ -296,7 +296,7 @@ describe('a client cannot set the columns that decide authority', () => {
         entityType: 'invoice',
         entityId: id(31),
         operation: 'create',
-        payload: { total: 1, is_admin: true, '; DROP TABLE invoices; --': 1 },
+        payload: { notes: 'note', is_admin: true, '; DROP TABLE invoices; --': 1 },
       },
     ])
 
@@ -327,7 +327,7 @@ describe('workspace isolation', () => {
         entityType: 'invoice',
         entityId: id(40),
         operation: 'update',
-        payload: { total: 1 },
+        payload: { notes: 'note' },
       },
     ])
 
@@ -384,7 +384,10 @@ describe('replay and financial authority', () => {
       entityType: 'transaction' as const,
       entityId: id(51),
       operation: 'create' as const,
-      payload: { amount: 999_999 },
+      // The attacker's amount is refused outright now, so the replay test
+      // uses what a client may legitimately send. Idempotency is the point
+      // here; the refusal has its own test.
+      payload: { notes: 'replayed' },
     }
 
     await syncService.push(ATTACKER, [payment])
@@ -394,26 +397,39 @@ describe('replay and financial authority', () => {
     expect(tables.get('transactions')).toHaveLength(1)
   })
 
-  it('a client-supplied total is stored as intent, never trusted as authority', async () => {
+  it('⚠️ a client-supplied total is REFUSED, not quietly dropped', async () => {
     reset()
 
-    await syncService.push(ATTACKER, [
+    const result = await syncService.push(ATTACKER, [
       {
         mutationId: id(52),
         entityType: 'invoice',
         entityId: id(53),
         operation: 'create',
-        payload: { total: 1, subtotal: 5_000_000 },
+        payload: { total: 1, subtotal: 5_000_000, notes: 'یادداشت' },
       },
     ])
 
-    // The column IS writable — a client proposes figures. What protects the
-    // books is that the server recalculates on the authoritative path and
-    // that `version`, `workspace_id` and `finalized_at` are not writable, so
-    // a client can never make its proposal final or invisible.
-    const row = tables.get('invoices')!.find((r) => r.id === id(53))
-    expect(row?.total).toBe(1)
-    expect(row?.version).toBe(1)
+    // ⚠️ THE RULE GOT STRICTER, TWICE.
+    //
+    // First it was «the figures are written but not trusted» — the server
+    // recalculated on the authoritative path, so the row carried a number
+    // nobody had derived from any lines, visible in every list until
+    // something recalculated it.
+    //
+    // Then it was «the figures are dropped». That is quieter and worse: the
+    // client is told the mutation applied, so a person who just changed an
+    // amount closes the screen believing it saved. Nothing changed.
+    //
+    // Now the whole mutation is refused and the field is NAMED, so the client
+    // can say which one and send it down the road that recalculates.
+    expect(result.results[0]?.status).toBe('rejected')
+    expect(result.results[0]?.errorMessage ?? '').toContain('FINANCIAL_FIELD_NOT_WRITABLE')
+    expect(result.results[0]?.errorMessage ?? '').toContain('total')
+
+    // Nothing was written — not even the descriptive part that was allowed.
+    // A partial write would leave the row half-saved with no way to tell.
+    expect(tables.get('invoices')!.find((r) => r.id === id(53))).toBeUndefined()
   })
 })
 

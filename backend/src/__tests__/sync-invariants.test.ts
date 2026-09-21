@@ -239,7 +239,15 @@ function invoiceMutation(overrides: Partial<Record<string, unknown>> = {}) {
     entityType: 'invoice' as const,
     entityId: uuid(1),
     operation: 'create' as const,
-    payload: { total: 100, currency: 'IRR', type: 'sale' },
+    // ⚠️ A DESCRIPTIVE FIELD ON PURPOSE.
+    //
+    // These tests are about idempotency, versioning and immutability — they
+    // need a field they can watch change, not a financial one. `total` used
+    // to be that field, but this road may no longer write money: it inserts
+    // the row directly, with no lines to derive a total from and no ledger
+    // entry behind it. `notes` proves the same invariants and is what a
+    // client is actually allowed to send here.
+    payload: { notes: 'یادداشت اول' },
     ...overrides,
   }
 }
@@ -288,7 +296,10 @@ describe('a mutation is applied at most once', () => {
       entityType: 'transaction' as const,
       entityId: uuid(20),
       operation: 'create' as const,
-      payload: { amount: 5000, type: 'payment', currency: 'IRR' },
+      // ⚠️ NOT `amount`. This road refuses financial fields outright now —
+      // see the test below. What it still proves is the thing it was written
+      // for: the same mutation sent three times is applied once.
+      payload: { notes: 'رسید نقدی' },
     }
 
     // The response to the first attempt is "lost" — the client simply sends
@@ -298,8 +309,35 @@ describe('a mutation is applied at most once', () => {
     await syncService.push(ACTOR, [payment])
 
     const paid = tables.get('transactions') ?? []
+    // Applied ONCE — that is what this test is about, and it still holds.
     expect(paid).toHaveLength(1)
-    expect(paid[0]?.amount).toBe(5000)
+
+    expect(paid[0]?.notes).toBe('رسید نقدی')
+    // Money is not here, and could not have been: see the refusal test.
+    expect(paid[0]?.amount).toBeUndefined()
+  })
+
+  it('⚠️ a financial field is REFUSED, not quietly dropped', async () => {
+    // The difference decides what a person believes. Dropping `amount` and
+    // answering «applied» tells somebody who just changed a payment that it
+    // saved — and nothing changed. They close the screen trusting a number
+    // the books do not have.
+    const withMoney = {
+      mutationId: uuid(911),
+      entityType: 'transaction' as const,
+      entityId: uuid(21),
+      operation: 'create' as const,
+      payload: { amount: 5000, notes: 'رسید' },
+    }
+
+    const result = await syncService.push(ACTOR, [withMoney])
+
+    expect(result.results[0]?.status).toBe('rejected')
+    // The message names the field, so the client can say which one and send
+    // it down the road that recalculates.
+    expect(result.results[0]?.errorMessage ?? '').toContain('FINANCIAL_FIELD_NOT_WRITABLE')
+    // And nothing was written — not even the part that was allowed.
+    expect(tables.get('transactions') ?? []).toHaveLength(0)
   })
 })
 
@@ -319,7 +357,7 @@ describe('a stale write never overwrites a newer one', () => {
         entityId: uuid(2),
         operation: 'update',
         expectedVersion: 1,
-        payload: { total: 200 },
+        payload: { notes: 'note-200' },
       },
     ])
 
@@ -331,7 +369,7 @@ describe('a stale write never overwrites a newer one', () => {
         entityId: uuid(2),
         operation: 'update',
         expectedVersion: 1,
-        payload: { total: 999 },
+        payload: { notes: 'note-999' },
       },
     ])
 
@@ -342,7 +380,8 @@ describe('a stale write never overwrites a newer one', () => {
     // The server hands back its row so the client can merge rather than guess.
     expect(stale.results[0]?.serverState).toBeDefined()
 
-    expect(tables.get('invoices')?.[0]?.total).toBe(200)
+    // The winner's value stands; the stale one never landed.
+    expect(tables.get('invoices')?.[0]?.notes).toBe('note-200')
   })
 
   it('accepts an update that carries the current version', async () => {
@@ -355,7 +394,7 @@ describe('a stale write never overwrites a newer one', () => {
         entityId: uuid(3),
         operation: 'update',
         expectedVersion: 1,
-        payload: { total: 150 },
+        payload: { notes: 'note-150' },
       },
     ])
 
@@ -381,14 +420,15 @@ describe('a finalized invoice is immutable', () => {
         entityType: 'invoice',
         entityId: uuid(4),
         operation: 'update',
-        payload: { total: 1 },
+        payload: { notes: 'note-1' },
       },
     ])
 
     expect(attempt.results[0]?.status).toBe('rejected')
     expect(attempt.results[0]?.errorCode).toBe('immutable')
     expect(attempt.results[0]?.retryable).toBe(false)
-    expect(tables.get('invoices')?.find((r) => r.id === uuid(4))?.total).toBe(100)
+    // Untouched — a finalized invoice refuses even a note.
+    expect(tables.get('invoices')?.find((r) => r.id === uuid(4))?.notes).toBe('یادداشت اول')
   })
 })
 
@@ -402,7 +442,7 @@ describe('the client cannot decide what it is not entitled to', () => {
       invoiceMutation({
         mutationId: uuid(950),
         entityId: uuid(5),
-        payload: { total: 10, workspace_id: 'someone-elses-workspace', user_id: OTHER_USER },
+        payload: { notes: 'note-10', workspace_id: 'someone-elses-workspace', user_id: OTHER_USER },
       }),
     ])
 
@@ -417,7 +457,7 @@ describe('the client cannot decide what it is not entitled to', () => {
       invoiceMutation({
         mutationId: uuid(951),
         entityId: uuid(6),
-        payload: { total: 10, version: 9999 },
+        payload: { notes: 'note-10', version: 9999 },
       }),
     ])
 
@@ -439,7 +479,7 @@ describe('one bad mutation does not discard the batch', () => {
         entityId: uuid(7),
         operation: 'update',
         expectedVersion: 1,
-        payload: { total: 500 },
+        payload: { notes: 'note-500' },
       },
     ])
 
@@ -451,7 +491,7 @@ describe('one bad mutation does not discard the batch', () => {
         entityId: uuid(7),
         operation: 'update',
         expectedVersion: 1, // stale
-        payload: { total: 1 },
+        payload: { notes: 'note-1' },
       },
       invoiceMutation({ mutationId: uuid(964), entityId: uuid(9) }),
     ])
@@ -524,13 +564,17 @@ describe('the cursor is monotonic and never skips a change', () => {
 
   it('carries the row data, so a change needs no follow-up request', async () => {
     await syncService.push(ACTOR, [
-      invoiceMutation({ mutationId: uuid(991), entityId: uuid(51), payload: { total: 777 } }),
+      invoiceMutation({
+        mutationId: uuid(991),
+        entityId: uuid(51),
+        payload: { notes: 'note-777' },
+      }),
     ])
 
     const page = await syncService.pull(ACTOR.workspaceId, 0, 10)
     const change = page.changes.find((c) => c.entityId === uuid(51))
 
-    expect(change?.data).toMatchObject({ total: 777 })
+    expect(change?.data).toMatchObject({ notes: 'note-777' })
   })
 
   it('sends no row for a delete — there is nothing left to send', async () => {
@@ -594,7 +638,7 @@ describe('the draft editing lease', () => {
         entityType: 'invoice',
         entityId: uuid(62),
         operation: 'update',
-        payload: { total: 42 },
+        payload: { notes: 'note-42' },
       },
     ])
 
@@ -613,7 +657,7 @@ describe('the draft editing lease', () => {
       entityType: 'invoice' as const,
       entityId: uuid(63),
       operation: 'update' as const,
-      payload: { total: 42 },
+      payload: { notes: 'note-42' },
     }
 
     await syncService.push(other, [attempt])

@@ -20,7 +20,7 @@ import {
   readClientRequestId,
   sendCreated,
 } from '../utils/client-request'
-import { BaseError } from '../errors/base.error'
+import { failRoute } from '../utils/route-failure'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
@@ -71,19 +71,12 @@ const cancelSchema = z.object({
 export async function paymentsRoutes(fastify: FastifyInstance) {
   const paymentsService = new PaymentsService()
 
-  const fail = (reply: FastifyReply, err: unknown, fallback: string) => {
-    if (err instanceof z.ZodError) {
-      return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-    }
-    if (err instanceof BaseError && err.statusCode < 500) {
-      // The domain refuses with a code — PAYMENT_OVER_ALLOCATED,
-      // PAYMENT_ALLOCATION_EXCEEDS_OUTSTANDING — that the client translates.
-      const code = /^[A-Z][A-Z_]{6,}/.exec(err.message)?.[0]
-      return reply.code(err.statusCode).send({ error: err.message, code: code ?? err.name })
-    }
-    fastify.log.error(err)
-    return reply.code(500).send({ error: fallback })
-  }
+  // The shared answer — see `utils/route-failure.ts`. It used to be written
+  // out here and again in `transaction.routes.ts`, which is how one endpoint
+  // came to answer a refusal with a translatable code and the other with a
+  // bare message.
+  const fail = (reply: FastifyReply, err: unknown, fallback: string) =>
+    failRoute(reply, err, fallback, fastify.log)
 
   // ─── GET / ─────────────────────────────────────────────
   fastify.get(

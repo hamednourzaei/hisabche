@@ -17,6 +17,8 @@ import {
 // books through — see services/payments/index.ts.
 import { partyBalance, payments as paymentsService } from '../services/payments'
 import { BaseError } from '../errors/base.error'
+import { requireCapability } from '../middleware/authorize.middleware'
+import { failRoute } from '../utils/route-failure'
 import {
   IdempotencyUnavailableError,
   isMissingIdempotencySupport,
@@ -404,31 +406,58 @@ export async function transactionRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ═══════════════════════════════════════════════════════════════════════
   // DELETE /api/transactions/:id
+  //
+  // ⚠️ MONEY IS NOT DELETED. IT IS REVERSED.
+  //
+  // This used to run `supabase.from('transactions').delete()` directly. The
+  // row vanished and NOTHING else changed: the invoices that payment settled
+  // kept their `paid_amount`, so an invoice stayed «paid» with no payment
+  // behind it; the ledger kept the entry that booked the cash; and the audit
+  // trail kept no record that the money had ever been received — because the
+  // only record was the row that was just erased.
+  //
+  // `cancelPayment` is what this operation actually is. It exists, it
+  // un-allocates the invoices, it books the reversing entry, it enforces
+  // separation of duties (the person who TOOK a payment may not be the one
+  // who erases it), and it requires the `payment.cancel` capability — which
+  // this route did not.
+  //
+  // The verb stays DELETE because clients already send it; what it means is
+  // now the same thing the cancel route means.
+  // ═══════════════════════════════════════════════════════════════════════
   fastify.delete(
     '/api/transactions/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        // ⚠️ Added. Reversing a receipt was previously open to any member.
+        requireCapability('payment.cancel'),
+      ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string }
+      const { reason, sodOverrideReason } = (request.body ?? {}) as {
+        reason?: string
+        sodOverrideReason?: string
+      }
 
-      // ⚠️ SECURITY — unscoped DELETE. Any authenticated user could destroy any
-      // transaction on the platform by guessing or harvesting its id.
-      const { workspaceId } = request.tenancy
-
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', id)
-        .eq('workspace_id', workspaceId)
-
-      if (error) return reply.code(500).send({ error: error.message })
-
-      await clearCache(`transactions:${workspaceId}:*`)
-      await clearCache(`dashboard:${workspaceId}`)
-      await clearCache(`sales:${workspaceId}:*`)
-      return reply.code(204).send()
+      try {
+        return reply.send(
+          await paymentsService.cancelPayment(
+            request.tenancy,
+            id,
+            // A cancellation with no stated reason is a gap in the audit
+            // trail exactly where somebody will later need one.
+            reason ?? 'Cancelled from the transactions list',
+            sodOverrideReason ? { reason: sodOverrideReason } : undefined,
+          ),
+        )
+      } catch (err) {
+        return failRoute(reply, err, 'Failed to cancel the payment', fastify.log)
+      }
     },
   )
 }
