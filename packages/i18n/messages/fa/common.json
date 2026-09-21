@@ -1765,7 +1765,11 @@
     "publicFooter": "این فاکتور توسط حسابچه صادر شده",
     "supplierInfo": "اطلاعات فروشنده",
     "bulkDeleteConfirm": "فاکتورهای انتخاب‌شده حذف شوند؟",
-    "party": "طرف حساب"
+    "party": "طرف حساب",
+    "totalAmount": "مجموع مبلغ",
+    "totalCount": "تعداد فاکتورها",
+    "pendingAmount": "در انتظار پرداخت",
+    "paymentDate": "تاریخ تسویه"
   },
   "warehouse": {
     "title": "انبار",
@@ -1875,7 +1879,10 @@
     "dimLength": "طول (پایه: متر)",
     "dimVolume": "حجم (پایه: لیتر)",
     "unitFactor": "هر ۱ واحد برابر است با",
-    "unitFactorInvalid": "نام و ضریب تبدیل واحد را درست وارد کنید."
+    "unitFactorInvalid": "نام و ضریب تبدیل واحد را درست وارد کنید.",
+    "currentStock": "موجودی فعلی",
+    "profitPerUnit": "سود هر واحد",
+    "totalProfit": "سود کل موجودی"
   },
   "customers": {
     "title": "مشتریان",
@@ -2035,7 +2042,8 @@
     "title": "ارتباط با مشتریان",
     "tabs": {
       "interactions": "تعاملات",
-      "opportunities": "فرصت‌های فروش"
+      "opportunities": "فرصت‌های فروش",
+      "stats": "آمار تعاملات"
     },
     "interactions": {
       "empty": "هیچ تعاملی ثبت نشده",
@@ -2049,7 +2057,8 @@
       "date": "تاریخ",
       "new": "وظیفه جدید",
       "create": "ثبت وظیفه",
-      "contentPlaceholder": "توضیحات (اختیاری)"
+      "contentPlaceholder": "توضیحات (اختیاری)",
+      "typeLabel": "نوع"
     },
     "opportunities": {
       "empty": "هیچ فرصت فروشی ثبت نشده",

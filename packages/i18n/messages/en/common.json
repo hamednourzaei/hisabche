@@ -1760,7 +1760,11 @@
     "purchaseInvoice": "Purchase Invoice",
     "supplierInfo": "Supplier info",
     "bulkDeleteConfirm": "Delete the selected invoices?",
-    "party": "Party"
+    "party": "Party",
+    "totalAmount": "Total amount",
+    "totalCount": "Invoice count",
+    "pendingAmount": "Awaiting payment",
+    "paymentDate": "Settled on"
   },
   "warehouse": {
     "title": "Warehouse",
@@ -1870,7 +1874,10 @@
     "dimLength": "Length (base: metre)",
     "dimVolume": "Volume (base: litre)",
     "unitFactor": "One of these equals",
-    "unitFactorInvalid": "Enter a name and a valid conversion factor."
+    "unitFactorInvalid": "Enter a name and a valid conversion factor.",
+    "currentStock": "Current stock",
+    "profitPerUnit": "Profit per unit",
+    "totalProfit": "Total stock profit"
   },
   "customers": {
     "title": "Customers",
@@ -2030,7 +2037,8 @@
     "title": "CRM",
     "tabs": {
       "interactions": "Interactions",
-      "opportunities": "Opportunities"
+      "opportunities": "Opportunities",
+      "stats": "Interaction stats"
     },
     "interactions": {
       "empty": "No interactions recorded",
@@ -2044,7 +2052,8 @@
       "date": "Date",
       "new": "New task",
       "create": "Create task",
-      "contentPlaceholder": "Notes (optional)"
+      "contentPlaceholder": "Notes (optional)",
+      "typeLabel": "Type"
     },
     "opportunities": {
       "empty": "No sales opportunities recorded",
