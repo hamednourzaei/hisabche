@@ -7,6 +7,7 @@
 
 import { BrowserWindow, app, shell } from 'electron'
 
+import { reportError } from './services/monitoring'
 import { bindUpdaterWindow } from './services/updater'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
@@ -69,6 +70,47 @@ export function createMainWindow(): BrowserWindow {
       : 'file://'
 
     if (target.origin !== allowed && target.protocol !== 'file:') event.preventDefault()
+  })
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ⚠️ A RENDERER THAT FAILS SILENTLY IS A WHITE WINDOW WITH NO EXPLANATION.
+  //
+  // Nothing was listening for any of these, so when the packaged app came up
+  // showing only its background there was no message anywhere — not in the
+  // window, not on stdout, not in Sentry. The person sees an app that opened
+  // and did nothing, and the only way to find out why is to rebuild it
+  // yourself with devtools.
+  //
+  // Each of these is a DIFFERENT failure that looks identical on screen:
+  //   did-fail-load        the HTML itself never loaded
+  //   preload-error        the bridge threw, so the UI has no host
+  //   render-process-gone  the page crashed after loading
+  //   console-message      the app's own error, e.g. a failed import
+  // ══════════════════════════════════════════════════════════════════════
+  window.webContents.on('did-fail-load', (_event, code, description, url) => {
+    reportError(new Error(`renderer failed to load: ${description} (${code})`), {
+      scope: 'renderer.load',
+      url,
+    })
+  })
+
+  window.webContents.on('preload-error', (_event, preloadPath, error) => {
+    // The bridge is how the UI reaches the database, the printer and the
+    // queue. Losing it leaves a UI that renders and cannot do anything.
+    reportError(error, { scope: 'renderer.preload', preloadPath })
+  })
+
+  window.webContents.on('render-process-gone', (_event, details) => {
+    reportError(new Error(`renderer gone: ${details.reason}`), {
+      scope: 'renderer.crash',
+      exitCode: details.exitCode,
+    })
+  })
+
+  window.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    // Only errors. Forwarding every log would bury the one that matters.
+    if (level < 3) return
+    reportError(new Error(message), { scope: 'renderer.console', line, sourceId })
   })
 
   if (process.env.ELECTRON_RENDERER_URL) {

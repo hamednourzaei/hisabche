@@ -36,6 +36,35 @@ export const shellRoot = resolve(here, 'src')
 const shims = resolve(shellRoot, 'shims')
 
 /**
+ * Remove `crossorigin` from the built HTML.
+ *
+ * ⚠️ UNDER `file://`, `crossorigin` BLOCKS THE STYLESHEET.
+ *
+ * Vite adds the attribute so a CDN-hosted build reports useful errors. Both
+ * hosts here load from `file://` instead, where the origin is `null`: the
+ * stylesheet becomes a CORS request that can never succeed, the browser drops
+ * it WITHOUT logging anything, and the app renders — correctly, completely —
+ * with no styles at all.
+ *
+ * What that looks like is not a broken page. It looks like a working page
+ * that someone forgot to design: a 1536px logo at its natural size, the
+ * navigation as plain text in the corner, and a console reporting «No
+ * Issues». That is why this is worth a plugin rather than a note.
+ */
+function stripCrossorigin() {
+  return {
+    name: 'hisabche-strip-crossorigin',
+    enforce: 'post',
+    generateBundle(_options, bundle) {
+      for (const file of Object.values(bundle)) {
+        if (file.type !== 'asset' || !file.fileName.endsWith('.html')) continue
+        file.source = String(file.source).replace(/\s+crossorigin(?==|\s|>)/g, '')
+      }
+    },
+  }
+}
+
+/**
  * Folds the built script and stylesheet into `index.html` and drops the
  * originals, so the whole UI is one file.
  *
@@ -124,7 +153,11 @@ export function shellRendererConfig({ outDir, base = './', singleFile = false })
     // shows a broken image where the logo belongs.
     publicDir: resolve(shellRoot, 'public'),
 
-    plugins: [react(), ...(singleFile ? [inlineEverything()] : [])],
+    // ⚠️ `stripCrossorigin` runs for BOTH hosts. The mobile build inlines
+    // everything so it has no external stylesheet to block — but Electron
+    // loads its CSS from a file beside the HTML, and that is the one that
+    // silently never arrived.
+    plugins: [react(), stripCrossorigin(), ...(singleFile ? [inlineEverything()] : [])],
 
     resolve: {
       alias: {
