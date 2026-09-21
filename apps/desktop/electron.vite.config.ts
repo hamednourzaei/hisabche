@@ -21,8 +21,26 @@ export default defineConfig({
     },
 
     plugins: [
+      // ⚠️ EVERY WORKSPACE PACKAGE MUST BE BUNDLED IN, NOT EXTERNALISED.
+      //
+      // `externalizeDepsPlugin` leaves each dependency as a bare `require()`
+      // and trusts it to exist in `node_modules` next to the packaged app.
+      // That holds for anything published to npm; it does NOT hold for a
+      // workspace package, which lives in this repository and is never copied
+      // into the installer. The app then starts and dies immediately with:
+      //
+      //   A JavaScript error occurred in the main process
+      //   Cannot find module '@hisabche/app-bridge'
+      //
+      // …which no test catches, because the failure only exists in the
+      // PACKAGED build — `electron-vite dev` resolves it from the workspace
+      // and works perfectly.
+      //
+      // `auth-core` was already excluded for exactly this reason. Adding a
+      // second workspace import to main without adding it here is how this
+      // came back.
       externalizeDepsPlugin({
-        exclude: ['@hisabche/auth-core'],
+        exclude: ['@hisabche/auth-core', '@hisabche/app-bridge'],
       }),
     ],
   },
@@ -40,8 +58,13 @@ export default defineConfig({
       },
     },
     plugins: [
+      // ⚠️ SAME RULE AS MAIN. `app-bridge` is a workspace package: left
+      // external, the preload dies on `require()` and the renderer comes up
+      // with NO BRIDGE AT ALL — which the shared UI reads as «there is no
+      // host», i.e. a working-looking app that cannot print, cannot reach the
+      // local cache and cannot queue a write.
       externalizeDepsPlugin({
-        exclude: ['zod'],
+        exclude: ['zod', '@hisabche/app-bridge'],
       }),
     ],
   },

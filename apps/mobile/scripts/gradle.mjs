@@ -52,6 +52,41 @@ if (!existsSync(shell)) {
 // `'gradlew.bat' is not recognized` — under a shell, cmd.exe resolves the
 // command against PATH, not against `cwd`, so the wrapper sitting right there
 // is invisible. Quoted because the repository path may contain spaces.
+// ⚠️ GRADLE 8.8 CANNOT READ JAVA 25's CLASS FILES.
+//
+// It fails with `Unsupported class file major version 69` — a message that
+// names neither Java nor the version anybody has installed, and sends people
+// looking at their project instead of at `JAVA_HOME`.
+//
+// Android Gradle Plugin 8.x wants JDK 17, which is what EAS uses. Checking
+// here turns four minutes of Gradle followed by a cryptic failure into one
+// sentence.
+const CLASS_FILE_VERSIONS = { 17: 61, 21: 65, 22: 66 }
+
+function javaMajor() {
+  const probe = spawnSync('java', ['-version'], { encoding: 'utf8', shell: true })
+  const text = `${probe.stderr ?? ''}${probe.stdout ?? ''}`
+  // `openjdk version "25.0.3"` and `java version "1.8.0_503"` both appear.
+  const match = /version "(\d+)(?:\.(\d+))?/.exec(text)
+  if (!match) return null
+  const first = Number(match[1])
+  return first === 1 ? Number(match[2]) : first
+}
+
+const major = javaMajor()
+if (major !== null && !(major in CLASS_FILE_VERSIONS)) {
+  console.error(
+    `[gradle] Java ${major} is not usable with the Gradle version this project pins.\n` +
+      `Gradle 8.8 supports up to Java 22, and Android Gradle Plugin 8.x wants JDK 17 —\n` +
+      `which is also what EAS builds with.\n\n` +
+      `Point JAVA_HOME at a JDK 17 for this shell, then run again:\n` +
+      `  set JAVA_HOME=C:\\Program Files\\Eclipse Adoptium\\jdk-17...\n\n` +
+      `Or build on EAS instead:\n` +
+      `  npx eas-cli build --platform android --profile preview`,
+  )
+  process.exit(1)
+}
+
 const wrapper = join(androidDir, process.platform === 'win32' ? 'gradlew.bat' : 'gradlew')
 
 const result = spawnSync(`"${wrapper}"`, [task], {
