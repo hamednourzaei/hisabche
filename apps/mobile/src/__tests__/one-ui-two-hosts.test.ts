@@ -134,8 +134,22 @@ describe('the WebView opens the UI from disk, not from a URL', () => {
     // Falling back to a URL would not be a fallback: it would mean fetching
     // the UI from a machine that may be unreachable, which is the failure
     // this architecture exists to remove.
-    expect(webview).toContain("uri.startsWith('http:')")
+    expect(webview).toContain("packaged.startsWith('http:')")
     expect(webview).toContain('SHELL_ASSET_NOT_LOCAL')
+  })
+
+  it('⚠️ the file keeps a .html extension, or the WebView prints the source', () => {
+    // ⚠️ Android packs bundled assets into the APK under a HASHED NAME WITH
+    // NO EXTENSION. A WebView given such a file has nothing to infer a MIME
+    // type from, falls back to `text/plain`, and renders the app's minified
+    // JavaScript as visible text — which is exactly what the device showed.
+    //
+    // Copying it once to a path ending `.html` is the whole fix.
+    expect(webview).toContain('FileSystem.copyAsync')
+    expect(webview).toContain('.html`')
+    // The hash is in the name so a new build lands at a new path instead of
+    // reusing the previous release's UI.
+    expect(webview).toContain('asset.hash')
   })
 
   it('⚠️ a blank screen says why, in the language of the person holding it', () => {

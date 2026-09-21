@@ -12,6 +12,7 @@
 import React, { useCallback, useRef, useState } from 'react'
 import { ActivityIndicator, BackHandler, Platform, StyleSheet, Text, View } from 'react-native'
 import { Asset } from 'expo-asset'
+import * as FileSystem from 'expo-file-system'
 import { WebView, type WebViewMessageEvent } from 'react-native-webview'
 import { rpcRequestSchema, webViewBridgeSource } from '@hisabche/app-bridge'
 
@@ -90,7 +91,7 @@ export function ShellWebView(): React.JSX.Element {
       try {
         const asset = Asset.fromModule(SHELL_HTML)
         if (!asset.localUri) await asset.downloadAsync()
-        const uri = asset.localUri ?? asset.uri
+        const packaged = asset.localUri ?? asset.uri
         if (cancelled) return
 
         // ⚠️ AN http:// URI HERE IS THE BUG, NOT A FALLBACK.
@@ -99,12 +100,31 @@ export function ShellWebView(): React.JSX.Element {
         // `net::ERR_CLEARTEXT_NOT_PERMITTED` on a blank screen. Worse, it
         // would mean the UI is being FETCHED — from a machine that may not be
         // reachable — when the entire point is that it ships inside the app.
-        if (!uri || uri.startsWith('http:')) {
+        if (!packaged || packaged.startsWith('http:')) {
           setFailure('SHELL_ASSET_NOT_LOCAL')
           return
         }
 
-        setShellUri(uri)
+        // ⚠️ THE FILE NEEDS ITS EXTENSION BACK.
+        //
+        // Android packs bundled assets into the APK under a hashed name with
+        // NO extension. A WebView handed such a file has nothing to infer a
+        // MIME type from, falls back to `text/plain`, and renders the app's
+        // JavaScript as VISIBLE TEXT — a screen full of minified source,
+        // which is what the device showed.
+        //
+        // Copying it once to a path ending in `.html` is the whole fix. The
+        // hash is in the name so a new build lands at a new path instead of
+        // reusing the previous release's UI, and the copy is skipped when it
+        // is already there.
+        const target = `${FileSystem.cacheDirectory}shell-${asset.hash ?? 'v1'}.html`
+        const existing = await FileSystem.getInfoAsync(target)
+        if (!existing.exists) {
+          await FileSystem.copyAsync({ from: packaged, to: target })
+        }
+        if (cancelled) return
+
+        setShellUri(target)
       } catch (error) {
         if (!cancelled) {
           setFailure(error instanceof Error ? error.message : String(error))

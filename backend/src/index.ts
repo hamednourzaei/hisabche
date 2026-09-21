@@ -248,6 +248,15 @@ server.addHook('preHandler', async (request, reply) => {
     '/docs',
     '/live',
     '/ready',
+    // ⚠️ A CRAWLER CANNOT AUTHENTICATE.
+    //
+    // Search Console reported `robots.txt` on this host as «Blocked due to
+    // unauthorized request (401)» — the global auth hook below was answering
+    // the one file whose entire purpose is to be readable by anonymous
+    // machines. A robots.txt that cannot be fetched is not a permissive
+    // robots.txt: Google treats a 401 as «unknown», which is why the API host
+    // sat in the report as a crawl error for weeks.
+    '/robots.txt',
     '/api/health',
     '/api/slo',
     '/api/auth/login',
@@ -278,6 +287,29 @@ server.addHook('preHandler', async (request, reply) => {
 // ──────────────────────────────────────────────
 // 3. HEALTH CHECKS
 // ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// robots.txt
+//
+// ⚠️ NOTHING ON THIS HOST BELONGS IN A SEARCH INDEX.
+//
+// It is an API: every path either needs a token or returns somebody's data.
+// A crawler that indexes it wastes crawl budget the marketing site needs, and
+// any endpoint that ever answers without auth becomes a public search result.
+//
+// `Disallow: /` is the whole policy, stated once. There is deliberately no
+// sitemap line — there is nothing here to find.
+// ══════════════════════════════════════════════════════════════════════════
+const API_ROBOTS = ['User-agent: *', 'Disallow: /', ''].join('\n')
+
+server.get('/robots.txt', async (_request, reply) =>
+  reply
+    .type('text/plain; charset=utf-8')
+    // A day: long enough to stop re-fetching, short enough that a change to
+    // this policy is not stuck in caches for a week.
+    .header('Cache-Control', 'public, max-age=86400')
+    .send(API_ROBOTS),
+)
+
 server.get('/api/health', async () => ({
   status: 'ok',
   timestamp: new Date().toISOString(),

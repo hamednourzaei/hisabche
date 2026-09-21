@@ -68,9 +68,21 @@ const pageConfig = {
     schemaOperatingSystem: 'Web, iOS, Android',
   },
   af: {
-    title: 'نرم‌افزار حسابداری آنلاین و آفلاین — حسابچه',
+    // ⚠️ THIS TITLE MUST NOT MATCH THE PERSIAN ONE, CHARACTER FOR CHARACTER.
+    //
+    // It did, and Search Console reported /fa as «Duplicate, Google chose a
+    // different canonical than user». Both pages declared the correct
+    // self-canonical and correct hreflang — that was never the problem.
+    // Google compares what it can read: two pages whose <title> and headline
+    // are the same sentence in the same script look like one page served
+    // twice, and it picks one.
+    //
+    // The rest of this block was already Dari — گدام, انترنت, ویب, قرض. Only
+    // the two strings that reach <title> and og:title had been copied across
+    // unchanged, which is exactly the pair Google weighs most.
+    title: 'نرم‌افزار حسابداری آنلاین و آفلاین برای افغانستان — حسابچه',
     description:
-      'نرم‌افزار حسابداری آنلاین و آفلاین برای تجارت: فروش، خرید، گدام، صندوق و حسابداری دوطرفه در یک سیستم؛ آنلاین در ویب و بدون انترنت در اپ.',
+      'نرم‌افزار حسابداری آنلاین و آفلاین برای تجارت‌های افغانستان: فروش، خرید، گدام، صندوق و حسابداری دوطرفه در یک سیستم؛ آنلاین در ویب و بدون انترنت در اپ.',
     keywords: [
       'حسابداری',
       'نرم‌افزار حسابداری',
@@ -82,12 +94,17 @@ const pageConfig = {
       'نرم‌افزار حسابداری رایگان',
       'مدیریت تجارت',
       'گدامداری',
+      // The searches this page should actually win, and which the Persian
+      // list has no reason to carry.
+      'حسابداری افغانستان',
+      'نرم‌افزار حسابداری افغانی',
+      'حسابداری به افغانی',
       'حسابداری آنلاین',
       'حسابداری آفلاین',
       'فاکتور آنلاین',
       'مدیریت مشتریان',
     ],
-    ogTitle: 'نرم‌افزار حسابداری آنلاین و آفلاین — حسابچه',
+    ogTitle: 'نرم‌افزار حسابداری آنلاین و آفلاین برای افغانستان — حسابچه',
     ogDescription:
       'فروش، خرید، گدام، صندوق و حسابداری دوطرفه در یک سیستم یکپارچه — حتی بدون انترنت.',
     siteName: 'حسابچه',
