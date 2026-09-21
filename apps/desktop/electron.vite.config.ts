@@ -1,12 +1,10 @@
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import react from '@vitejs/plugin-react'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import { shellRendererConfig } from '@hisabche/app-shell/vite.shell'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-
-const shims = resolve(__dirname, 'src/shims')
 
 export default defineConfig({
   main: {
@@ -48,43 +46,11 @@ export default defineConfig({
     ],
   },
 
-  renderer: {
-    root: resolve(__dirname, 'src'),
-
-    // Canonical UI references brand assets by absolute path (`/logo-icon.png`
-    // in DashboardSidebar), which web serves from its `public/`. Without the
-    // same directory here those requests 404 and the sidebar shows a broken
-    // image where the logo belongs.
-    publicDir: resolve(__dirname, 'src/public'),
-
-    plugins: [react()],
-
-    resolve: {
-      alias: {
-        '@': resolve(__dirname, 'src'),
-
-        'next/link': resolve(shims, 'next-link.tsx'),
-
-        'next/navigation': resolve(shims, 'next-navigation.ts'),
-
-        'next/image': resolve(shims, 'next-image.tsx'),
-
-        'next/dynamic': resolve(shims, 'next-dynamic.tsx'),
-
-        // `@hisabche/ui` is authored against next-intl; the shim maps it onto
-        // the desktop i18next instance so both read one message catalog.
-        'next-intl': resolve(shims, 'next-intl.tsx'),
-      },
-    },
-
-    build: {
-      outDir: 'out/renderer',
-
-      rollupOptions: {
-        input: resolve(__dirname, 'src/index.html'),
-      },
-
-      chunkSizeWarningLimit: 900,
-    },
-  },
+  // ⚠️ THE RENDERER IS NOT THIS APP'S.
+  //
+  // It is `@hisabche/app-shell` — the same React UI the Android WebView loads
+  // — and its build is declared there, so the two hosts cannot drift into two
+  // different renderings of one source. Electron contributes the one genuinely
+  // host-specific thing: where the output goes.
+  renderer: shellRendererConfig({ outDir: resolve(__dirname, 'out/renderer') }),
 })

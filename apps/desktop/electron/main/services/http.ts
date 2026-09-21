@@ -10,7 +10,7 @@
 // beyond what the contract permits.
 // ============================================
 
-import { httpRequestSchema, type HttpRequestResponse } from '../../shared/ipc-contract'
+import { httpRequestSchema, type HttpRequestResponse } from '@hisabche/app-bridge'
 
 const ALLOWED_HOSTS = [
   'api.hisabche.com',

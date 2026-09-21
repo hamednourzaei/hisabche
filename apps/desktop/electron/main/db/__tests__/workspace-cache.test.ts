@@ -31,7 +31,7 @@
 // adapter below supplies them.
 // ============================================
 
-import { DatabaseSync } from 'node:sqlite'
+import { TestDriver } from './test-driver'
 
 jest.mock('electron', () => ({
   app: { getPath: () => '/tmp', isPackaged: false },
@@ -51,58 +51,6 @@ import {
   setCursor,
   upsertMany,
 } from '../database'
-
-/** better-sqlite3's surface, over Node's built-in SQLite. */
-class TestDriver {
-  private db: DatabaseSync
-
-  constructor(path: string) {
-    this.db = new DatabaseSync(path)
-  }
-
-  prepare(sql: string) {
-    const statement = this.db.prepare(sql)
-    return {
-      all: (...params: unknown[]) => statement.all(...(params as never[])),
-      get: (...params: unknown[]) => statement.get(...(params as never[])),
-      run: (...params: unknown[]) => statement.run(...(params as never[])),
-    }
-  }
-
-  exec(sql: string): void {
-    this.db.exec(sql)
-  }
-
-  pragma(sql: string): unknown {
-    // WAL is meaningless for :memory: and journal_mode is not settable there;
-    // running it as a statement keeps the call site unchanged either way.
-    try {
-      this.db.exec(`PRAGMA ${sql}`)
-    } catch {
-      /* ignore — pragmas are tuning, not behaviour under test */
-    }
-    return null
-  }
-
-  /** Real BEGIN/COMMIT, so a failure mid-purge genuinely rolls back. */
-  transaction<T extends (...args: never[]) => unknown>(fn: T): T {
-    return ((...args: never[]) => {
-      this.db.exec('BEGIN')
-      try {
-        const result = fn(...args)
-        this.db.exec('COMMIT')
-        return result
-      } catch (error) {
-        this.db.exec('ROLLBACK')
-        throw error
-      }
-    }) as T
-  }
-
-  close(): void {
-    this.db.close()
-  }
-}
 
 const WS_A = 'workspace-a'
 const WS_B = 'workspace-b'

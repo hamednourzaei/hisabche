@@ -117,3 +117,11 @@ export { ConflictsContainer } from './components/ui/conflicts/containers/conflic
 // ---------- Separation of duties ----------
 export { GovernanceContainer } from './components/ui/governance/containers/governance-container'
 export { GovernanceHubContainer } from './components/ui/governance/containers/governance-hub-container'
+
+// ⚠️ Added so the shared shell can route them: Windows and mobile were
+// missing /assistant, /operations and /stock-count entirely — three pages the
+// web app has had all along. A container the shell cannot import is a page
+// that exists on one machine and not the others.
+export { AiAssistantContainer } from './components/ui/ai/containers/ai-assistant-container'
+export { CycleCountContainer } from './components/ui/cycle-count/containers/cycle-count-container'
+export { InventoryOpsContainer } from './components/ui/inventory-ops/containers/inventory-ops-container'

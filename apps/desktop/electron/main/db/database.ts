@@ -9,8 +9,18 @@
 import { app } from 'electron'
 import { join } from 'node:path'
 
-import { CREATE_STATEMENTS, SCHEMA_VERSION, SEARCHABLE_COLUMNS, WRITABLE_COLUMNS } from './schema'
-import type { LocalTable, QueueEntry } from '../../shared/ipc-contract'
+import { reportError } from '../services/monitoring'
+
+import {
+  CREATE_STATEMENTS,
+  SCHEMA_VERSION,
+  isAlreadyApplied,
+  migrationsFrom,
+  SEARCHABLE_COLUMNS,
+  WRITABLE_COLUMNS,
+  type LocalTable,
+  type QueueEntry,
+} from '@hisabche/app-bridge'
 
 type SqliteDatabase = {
   prepare(sql: string): {
@@ -25,6 +35,15 @@ type SqliteDatabase = {
 }
 
 let db: SqliteDatabase | null = null
+
+/**
+ * Why the cache is unavailable, when it is.
+ *
+ * ⚠️ «No cache» and «no data» must never render the same (راهنمای سشن §۷٫۳),
+ * and neither must «no cache» and «working offline fine». The renderer reads
+ * this through .
+ */
+let lastFailure: string | null = null
 
 /** Quote an identifier we have already validated against an allow-list. */
 const ident = (name: string): string => `"${name.replace(/"/g, '')}"`
@@ -43,6 +62,34 @@ const ident = (name: string): string => `"${name.replace(/"/g, '')}"`
  * `node:sqlite`, so the SQL, the transaction and the DELETEs below are really
  * executed against a real SQLite. Only the binding differs.
  */
+
+/**
+ * Bring an existing cache up to the current schema.
+ *
+ * ⚠️ RUNS BEFORE THE VERSION IS STAMPED. The stamp is written after this
+ * returns, so a migration that throws leaves the old number in place and is
+ * retried on the next launch rather than being skipped forever.
+ */
+function runMigrations(database: SqliteDatabase): void {
+  const row = database.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get() as
+    { value?: string } | undefined
+  // A cache with no stamp is either brand new (CREATE just ran, so it is
+  // already current) or predates stamping. Treating it as v1 is safe: every
+  // migration is written to be harmless when already applied.
+  const from = Number(row?.value ?? 1) || 1
+
+  for (const migration of migrationsFrom(from)) {
+    for (const statement of migration.statements) {
+      try {
+        database.exec(statement)
+      } catch (error) {
+        if (isAlreadyApplied(error)) continue
+        throw error
+      }
+    }
+  }
+}
+
 export function initDatabaseWith(
   Driver: new (path: string) => SqliteDatabase,
   path: string,
@@ -55,13 +102,22 @@ export function initDatabaseWith(
     db.pragma('foreign_keys = ON')
 
     CREATE_STATEMENTS.forEach((statement) => db?.exec(statement))
+    runMigrations(db)
     db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(
       'schema_version',
       String(SCHEMA_VERSION),
     )
     return true
   } catch (error) {
-    console.error('[db] SQLite unavailable, running online-only:', error)
+    // ⚠️ REPORTED, NOT SWALLOWED.
+    //
+    // Falling back to online-only is the right behaviour — the app must still
+    // start. Doing it in silence is not: a machine whose cache never opens
+    // looks identical to one that is simply online, so nobody finds out that
+    // the offline product does not work on it. The reason is kept in
+    // `lastFailure` so the renderer can say WHICH it is.
+    lastFailure = error instanceof Error ? error.message : String(error)
+    reportError(error, { scope: 'db.init' })
     db = null
     return false
   }
@@ -81,13 +137,22 @@ export function initDatabase(): boolean {
     db.pragma('foreign_keys = ON')
 
     CREATE_STATEMENTS.forEach((statement) => db?.exec(statement))
+    runMigrations(db)
     db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(
       'schema_version',
       String(SCHEMA_VERSION),
     )
     return true
   } catch (error) {
-    console.error('[db] SQLite unavailable, running online-only:', error)
+    // ⚠️ REPORTED, NOT SWALLOWED.
+    //
+    // Falling back to online-only is the right behaviour — the app must still
+    // start. Doing it in silence is not: a machine whose cache never opens
+    // looks identical to one that is simply online, so nobody finds out that
+    // the offline product does not work on it. The reason is kept in
+    // `lastFailure` so the renderer can say WHICH it is.
+    lastFailure = error instanceof Error ? error.message : String(error)
+    reportError(error, { scope: 'db.init' })
     db = null
     return false
   }
@@ -95,6 +160,11 @@ export function initDatabase(): boolean {
 
 export function isReady(): boolean {
   return db !== null
+}
+
+/** The reason the cache is unavailable, or null when it is working. */
+export function cacheFailure(): string | null {
+  return db === null ? (lastFailure ?? 'unknown') : null
 }
 
 export function closeDatabase(): void {

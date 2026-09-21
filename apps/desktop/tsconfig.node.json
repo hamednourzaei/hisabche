@@ -11,6 +11,10 @@
     "noEmit": true,
     "types": ["node", "electron", "jest"]
   },
-  "include": ["electron/**/*.ts", "electron.vite.config.ts"],
+  "include": [
+    "electron/**/*.ts",
+    "electron.vite.config.ts",
+    "../../packages/app-bridge/src/node-sqlite.d.ts"
+  ],
   "exclude": ["node_modules", "out", "dist"]
 }

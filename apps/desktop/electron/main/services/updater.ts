@@ -29,7 +29,7 @@ import { app } from 'electron'
 
 import type { BrowserWindow } from 'electron'
 
-import { IPC_EVENT, type UpdateStatus } from '../../shared/ipc-contract'
+import { IPC_EVENT, type UpdateStatus } from '@hisabche/app-bridge'
 
 export type { UpdateStatus }
 

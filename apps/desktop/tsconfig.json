@@ -15,7 +15,7 @@
     "types": ["vite/client", "jest"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
+      "@/*": ["../../packages/app-shell/src/*"],
       "@hisabche/api": ["../../packages/api/src"],
       "@hisabche/auth-core": ["../../packages/auth-core/src"],
       "@hisabche/i18n": ["../../packages/i18n/src"],
@@ -25,13 +25,18 @@
       "@hisabche/ui/menu": ["../../packages/ui/src/lib/menu/nav-items.ts"],
       "@hisabche/validation": ["../../packages/validation/src"],
       "@hisabche/store": ["../../packages/store/src"],
-      "next/link": ["./src/shims/next-link.tsx"],
-      "next/navigation": ["./src/shims/next-navigation.ts"],
-      "next/image": ["./src/shims/next-image.tsx"],
-      "next/dynamic": ["./src/shims/next-dynamic.tsx"],
-      "next-intl": ["./src/shims/next-intl.tsx"]
+      "next/link": ["../../packages/app-shell/src/shims/next-link.tsx"],
+      "next/navigation": ["../../packages/app-shell/src/shims/next-navigation.ts"],
+      "next/image": ["../../packages/app-shell/src/shims/next-image.tsx"],
+      "next/dynamic": ["../../packages/app-shell/src/shims/next-dynamic.tsx"],
+      "next-intl": ["../../packages/app-shell/src/shims/next-intl.tsx"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "electron/shared/**/*.ts"],
+  "include": [
+    "../../packages/app-shell/src/**/*.ts",
+    "../../packages/app-shell/src/**/*.tsx",
+    "electron/**/*.ts",
+    "../../packages/app-bridge/src/node-sqlite.d.ts"
+  ],
   "exclude": ["node_modules", "out", "dist"]
 }

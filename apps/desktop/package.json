@@ -30,6 +30,8 @@
   },
   "dependencies": {
     "@hisabche/api": "workspace:*",
+    "@hisabche/app-bridge": "workspace:*",
+    "@hisabche/app-shell": "workspace:*",
     "@hisabche/auth-core": "workspace:*",
     "@hisabche/formatting": "workspace:*",
     "@hisabche/i18n": "workspace:*",

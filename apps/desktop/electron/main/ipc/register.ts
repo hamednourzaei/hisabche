@@ -25,9 +25,9 @@ import {
   secureSetSchema,
   windowControlSchema,
   httpRequestSchema,
-} from '../../shared/ipc-contract'
+} from '@hisabche/app-bridge'
 import { sessionCan } from '@hisabche/auth-core'
-import type { AppInfo, ImportedFile } from '../../shared/ipc-contract'
+import type { AppInfo, ImportedFile } from '@hisabche/app-bridge'
 import * as db from '../db/database'
 import { secureDelete, secureGet, secureSet } from '../services/secure-store'
 import { printEscPos, printHtml } from '../services/printing'
@@ -242,6 +242,11 @@ export function registerIpcHandlers(): void {
     platform: process.platform,
     locale: app.getLocale(),
     databaseReady: db.isReady(),
+    // ⚠️ Carried so the UI can say WHY offline does not work on this machine.
+    //  alone is indistinguishable from «this build has
+    // no cache», and a person told nothing keeps trusting an app that is
+    // quietly not storing anything.
+    databaseFailure: db.cacheFailure(),
   }))
   // ⚠️ THESE RETURN A RESULT. `checkForUpdates` used to return `void`, so the
   // button that called it could report nothing and the person learned only

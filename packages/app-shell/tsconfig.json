@@ -1,0 +1,36 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "types": ["vite/client", "jest"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@hisabche/api": ["../api/src"],
+      "@hisabche/auth-core": ["../auth-core/src"],
+      "@hisabche/i18n": ["../i18n/src"],
+      "@hisabche/i18n/messages": ["../i18n/src/messages.ts"],
+      "@hisabche/ui": ["../ui/src"],
+      "@hisabche/ui/screens": ["../ui/src/screens.ts"],
+      "@hisabche/ui/menu": ["../ui/src/lib/menu/nav-items.ts"],
+      "@hisabche/validation": ["../validation/src"],
+      "@hisabche/store": ["../store/src"],
+      "next/link": ["./src/shims/next-link.tsx"],
+      "next/navigation": ["./src/shims/next-navigation.ts"],
+      "next/image": ["./src/shims/next-image.tsx"],
+      "next/dynamic": ["./src/shims/next-dynamic.tsx"],
+      "next-intl": ["./src/shims/next-intl.tsx"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.shell.ts"]
+}
