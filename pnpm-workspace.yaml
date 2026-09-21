@@ -51,5 +51,14 @@ allowBuilds:
   msgpackr-extract: true
   sharp: true
   unrs-resolver: true
+  # eas-cli pulls this in. Its postinstall only generates codegen wrappers for
+  # protobufjs's own CLI, which nothing in this repo calls.
+  #
+  # ⚠️ Leaving the answer blank is NOT neutral. pnpm writes the placeholder
+  # itself and then exits 1 on every install until someone decides — and
+  # `android:debug` runs an install first, so the local Android build died
+  # before Gradle was ever reached, with a pnpm stack trace and no mention of
+  # Android anywhere in it.
+  protobufjs: false
 minimumReleaseAgeExclude:
   - better-sqlite3@13.0.3

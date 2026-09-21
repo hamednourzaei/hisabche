@@ -58,9 +58,10 @@
         "origin": false
       },
       "eas": {
-        "projectId": "292de4cb-3817-48e9-9e86-b4dec62fd7c6"
+        "projectId": "c7ce2e49-883b-4c2f-b363-275446eba45c"
       }
     },
-    "icon": "./assets/icon.png"
+    "icon": "./assets/icon.png",
+    "owner": "hamednourzaie"
   }
 }
