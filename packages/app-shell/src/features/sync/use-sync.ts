@@ -67,8 +67,16 @@ export function useSyncStatus(): SyncStatus {
   }
 }
 
-/** Drains the queue on mount, on reconnect, and on a slow background timer. */
-export function useBackgroundSync(): void {
+/**
+ * Drains the queue and refreshes the device database: on mount, when the
+ * workspace becomes known, on reconnect, and on a slow background timer.
+ *
+ * ⚠️ `workspaceId` is a dependency on purpose. The first run after sign-in
+ * usually happens BEFORE the workspace has loaded, so its pull cannot record a
+ * cursor; the run the workspace's arrival triggers is the one that fills the
+ * device with the stock and customers an offline invoice needs.
+ */
+export function useBackgroundSync(workspaceId: string | null): void {
   const queryClient = useQueryClient()
 
   useEffect(() => {
@@ -82,7 +90,7 @@ export function useBackgroundSync(): void {
       window.removeEventListener('online', trigger)
       window.clearInterval(timer)
     }
-  }, [queryClient])
+  }, [queryClient, workspaceId])
 }
 
 /**

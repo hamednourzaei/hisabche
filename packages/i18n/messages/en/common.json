@@ -3566,7 +3566,8 @@
     "warehouseIn": "Receiving warehouse",
     "warehouseOut": "Shipping warehouse",
     "warehouseNone": "Choose warehouse",
-    "warehouseMissing": "Without a warehouse, the product total changes but no warehouse's stock does."
+    "warehouseMissing": "Without a warehouse, the product total changes but no warehouse's stock does.",
+    "savedOffline": "The invoice is saved on this device and will be recorded as soon as you are back online."
   },
   "admin": {
     "dashboard": {

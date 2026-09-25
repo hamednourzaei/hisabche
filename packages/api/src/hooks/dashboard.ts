@@ -120,6 +120,59 @@ function getWeekAgoDate(): string {
   return toLocalDateString(date)
 }
 
+/** Longest range that is filled day by day; beyond it the points are returned as they came. */
+const MAX_FILLED_DAYS = 1100
+
+/**
+ * One point per calendar day from `startDate` to `endDate`, zero where the
+ * server had nothing.
+ *
+ * The analytics endpoint returns only the days that HAD sales. The chart drew
+ * those as isolated dots or joined them straight across the empty days, so a
+ * quiet week read as one steady line — and a single sale was a lone dot with
+ * no line at all. A day without a sale is a real zero, and the line should
+ * sit on it and rise when a sale arrives.
+ *
+ * The invoice/customer series are filled with 0 only if the server sent them:
+ * a missing series stays missing (see `mapToSalesDataPoint`).
+ */
+export function fillDailyGaps(
+  points: SalesDataPoint[],
+  startDate: string,
+  endDate: string,
+): SalesDataPoint[] {
+  const parse = (iso: string) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
+    return m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : NaN
+  }
+  const from = parse(startDate)
+  const to = parse(endDate)
+  const DAY = 86_400_000
+  if (!Number.isFinite(from) || !Number.isFinite(to) || to < from) return points
+  if ((to - from) / DAY > MAX_FILLED_DAYS) return points
+
+  const byDay = new Map(points.map((p) => [p.date.slice(0, 10), p]))
+  const hasInvoices = points.some((p) => typeof p.invoiceCount === 'number')
+  const hasCustomers = points.some((p) => typeof p.customerCount === 'number')
+
+  const filled: SalesDataPoint[] = []
+  for (let t = from; t <= to; t += DAY) {
+    const day = new Date(t).toISOString().slice(0, 10)
+    filled.push(
+      byDay.get(day) ?? {
+        label: day,
+        value: 0,
+        date: day,
+        ...(hasInvoices ? { invoiceCount: 0 } : {}),
+        ...(hasCustomers ? { customerCount: 0 } : {}),
+      },
+    )
+  }
+  // A point outside the requested range is still the server's answer — keep it.
+  for (const p of points) if (!filled.includes(p)) filled.push(p)
+  return filled.sort((a, b) => a.date.localeCompare(b.date))
+}
+
 function mapToSalesDataPoint(item: {
   label: string
   value: number
@@ -245,7 +298,12 @@ export function useDashboardSales(params?: DashboardSalesParams) {
         data = response.data.chartData.map(mapToSalesDataPoint)
         total = response.data.totalRevenue ?? data.reduce((sum: number, d) => sum + d.value, 0)
         average = data.length > 0 ? total / data.length : 0
-        return { data, chartData: data, total, average }
+        const series = fillDailyGaps(
+          data,
+          String(queryParams.startDate),
+          String(queryParams.endDate),
+        )
+        return { data: series, chartData: series, total, average }
       }
 
       // ✅ حالت ۲: response.data.data (فرمت قبلی)
@@ -253,7 +311,12 @@ export function useDashboardSales(params?: DashboardSalesParams) {
         data = response.data.data.map(mapToSalesDataPoint)
         total = response.data.total ?? data.reduce((sum: number, d) => sum + d.value, 0)
         average = response.data.average ?? (data.length > 0 ? total / data.length : 0)
-        return { data, chartData: data, total, average }
+        const series = fillDailyGaps(
+          data,
+          String(queryParams.startDate),
+          String(queryParams.endDate),
+        )
+        return { data: series, chartData: series, total, average }
       }
 
       // ✅ حالت ۳: response.data خودش آرایه است
@@ -261,7 +324,12 @@ export function useDashboardSales(params?: DashboardSalesParams) {
         data = response.data.map(mapToSalesDataPoint)
         total = data.reduce((sum: number, d) => sum + d.value, 0)
         average = data.length > 0 ? total / data.length : 0
-        return { data, chartData: data, total, average }
+        const series = fillDailyGaps(
+          data,
+          String(queryParams.startDate),
+          String(queryParams.endDate),
+        )
+        return { data: series, chartData: series, total, average }
       }
 
       // ❌ حالت ۴: هیچ داده‌ای پیدا نشد

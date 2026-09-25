@@ -270,7 +270,10 @@ apiClient.interceptors.response.use(
         responseData?.message ||
         error.message ||
         'An unexpected error occurred',
-      code: responseData?.code || 'UNKNOWN_ERROR',
+      // ⚠️ No response at all is not a server error. It used to arrive as
+      // status 500 / UNKNOWN_ERROR — indistinguishable from the server failing
+      // — so nothing could decide "the network is down, queue it".
+      code: responseData?.code || (error.response ? 'UNKNOWN_ERROR' : 'NETWORK_ERROR'),
       status: error.response?.status || 500,
       details: responseData?.details,
     }

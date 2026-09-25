@@ -2,13 +2,14 @@
 // Root providers — TanStack Query tuned for a desktop client.
 // ============================================
 
-import { createNotificationMutationCache } from '@hisabche/api'
+import { createNotificationMutationCache, registerOfflineQueue } from '@hisabche/api'
 import React, { useEffect, useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@hisabche/ui'
 import { bindActiveWorkspace, useWorkspaceStore } from '@hisabche/store'
 
 import { useAuthStore } from '@/features/auth/auth.store'
+import { bridge } from '@/shared/lib/bridge'
 import {
   PERSISTED_CACHE_MAX_AGE_MS,
   cacheOwner,
@@ -22,6 +23,19 @@ import {
 // after the realtime hooks had already looked for a workspace.
 if (typeof window !== 'undefined') {
   bindActiveWorkspace()
+
+  // A host with a device database takes a write the network could not — see
+  // packages/api/src/lib/offline-queue.ts. `__hisabcheOnline` is what the
+  // mobile host reports (its WebView's navigator.onLine never changes).
+  const device = bridge()
+  if (device) {
+    registerOfflineQueue({
+      isOffline: () =>
+        (window as { __hisabcheOnline?: boolean }).__hisabcheOnline === false ||
+        navigator.onLine === false,
+      enqueue: (entry) => device.db.enqueue(entry),
+    })
+  }
 }
 
 function createQueryClient(): QueryClient {
@@ -73,8 +87,30 @@ function usePersistedQueryCache(client: QueryClient): void {
   }, [cache, isHydrated, userId, workspaceId])
 }
 
+/**
+ * ⚠️ THE WORKSPACE WAS NEVER LOADED IN THIS SHELL.
+ *
+ * `fetchWorkspace` had exactly one caller — the workspace settings page — so
+ * on Windows, Mac, Android and iOS `workspaceId` stayed null unless someone
+ * happened to open that page. Nothing failed: realtime quietly subscribed to
+ * nothing (`subscribeToChannel` returns early without a workspace), the sync
+ * engine ran with a null workspace, and the device cache had no owner to be
+ * saved under. Signed in means loaded now. A failed request keeps what is
+ * stored; only the server's own answer changes it (see workspace.slice.ts).
+ */
+function useLoadWorkspace(): void {
+  const isHydrated = useAuthStore((s) => s.isHydrated)
+  const userId = useAuthStore((s) => s.session?.user?.id ?? null)
+  const fetchWorkspace = useWorkspaceStore((s) => s.fetchWorkspace)
+
+  useEffect(() => {
+    if (isHydrated && userId) void fetchWorkspace(userId)
+  }, [isHydrated, userId, fetchWorkspace])
+}
+
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(createQueryClient)
+  useLoadWorkspace()
   usePersistedQueryCache(client)
   return (
     <QueryClientProvider client={client}>

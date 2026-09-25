@@ -19,7 +19,7 @@
 // The validation was there. It was simply not the thing being asked.
 // ============================================
 
-import { isSession, isSessionExpired, type Session } from '@hisabche/auth-core'
+import { isSession, isSessionExpired, isSessionUsable, type Session } from '@hisabche/auth-core'
 
 describe('isSession is a real validator', () => {
   // If this ever degenerates into a null check, the gate below becomes the
@@ -47,8 +47,7 @@ describe('the gate is the validation result', () => {
   /** What `hydrate()` now computes, in the same order. */
   function gate(stored: unknown) {
     const hasShape = isSession(stored)
-    const hasExpired = hasShape && isSessionExpired(stored)
-    const isValid = hasShape && !hasExpired
+    const isValid = isSessionUsable(stored)
     return {
       session: isValid ? stored : null,
       isAuthenticated: isValid,
@@ -149,6 +148,19 @@ describe('a session that has run out is not a session', () => {
     expect(gateFor(sessionWith(tokenExpiring(now - HOUR)), now).isAuthenticated).toBe(false)
   })
 
+  it('⚠️ an expired ACCESS token with a refresh token still opens the app, and is kept', () => {
+    // Otherwise every desktop and mobile session ended an hour after sign-in,
+    // and an offline launch deleted it from the device.
+    const renewable = { ...sessionWith(tokenExpiring(now - HOUR)), refreshToken: 'r1' }
+    expect(gateFor(renewable, now).isAuthenticated).toBe(true)
+    expect(gateFor(renewable, now).shouldClear).toBe(false)
+  })
+
+  it('an expired access token with an EMPTY refresh token does not', () => {
+    const empty = { ...sessionWith(tokenExpiring(now - HOUR)), refreshToken: '' }
+    expect(gateFor(empty, now).isAuthenticated).toBe(false)
+  })
+
   it('an unexpired session still opens the app', () => {
     expect(gateFor(sessionWith(tokenExpiring(now + HOUR)), now).isAuthenticated).toBe(true)
   })
@@ -186,8 +198,7 @@ describe('a session that has run out is not a session', () => {
   /** The same computation `hydrate()` performs, with time injected. */
   function gateFor(stored: unknown, at: number) {
     const hasShape = isSession(stored)
-    const hasExpired = hasShape && isSessionExpired(stored, at)
-    const isValid = hasShape && !hasExpired
+    const isValid = isSessionUsable(stored, at)
     return {
       isAuthenticated: isValid,
       shouldClear: stored !== null && !isValid,

@@ -21,6 +21,7 @@ import {
 } from '@hisabche/store'
 
 import { Button } from '../../button'
+import { useToast } from '../../toast-provider'
 import {
   InvoiceDocument,
   type InvoiceDocumentData,
@@ -48,6 +49,7 @@ const DEFAULT_DISPLAY: InvoiceDocumentDisplaySettings = {
 export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
   const router = useRouter()
   const createInvoice = useCreateInvoice()
+  const toast = useToast()
   const { markInvoiceCreated } = useOnboardingStore()
   const preferences = usePreferencesStore()
   const { setSaveStatus } = useSyncStore()
@@ -261,6 +263,23 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       preferences.setLastCurrency(currency)
       markInvoiceCreated()
 
+      // Queued on the device, not yet recorded: no number, no id to open. Say
+      // exactly that, and go to the list — the header's pending count is the
+      // receipt until the sync engine sends it.
+      if (created.pendingSync) {
+        setSaveStatus('idle')
+        toast.info(
+          t(
+            'invoiceBuilder.savedOffline',
+            'فاکتور روی این دستگاه ذخیره شد و به‌محض وصل شدن اینترنت ثبت می‌شود.',
+          ),
+        )
+        submittedRef.current = true
+        clearDraft()
+        router.push('/invoices')
+        return
+      }
+
       addAuditEntry({
         action: 'create',
         entity: 'invoice',
@@ -307,6 +326,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     clearDraft,
     router,
     t,
+    toast,
   ])
 
   return (

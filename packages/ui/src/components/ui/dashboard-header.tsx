@@ -418,6 +418,7 @@ const IdentityMenu = memo(function IdentityMenu({
   people,
   canSeePeople,
   isLoadingPeople,
+  isOnline,
   t,
 }: {
   subtitle: string
@@ -431,6 +432,8 @@ const IdentityMenu = memo(function IdentityMenu({
   people?: readonly HeaderPerson[] | undefined
   canSeePeople?: boolean | undefined
   isLoadingPeople?: boolean | undefined
+  /** This device's connection — the dot on the pill. */
+  isOnline: boolean
   t: (key: string) => string
 }) {
   const tone = roleTone(role)
@@ -448,6 +451,18 @@ const IdentityMenu = memo(function IdentityMenu({
           tone,
         )}
       >
+        {/* The person's own connection, where they look for who they are:
+            green online, red offline. Text for screen readers — a colour
+            alone is not a message (راهنمای سشن §۷٫۵). */}
+        <span
+          aria-hidden="true"
+          data-connection={isOnline ? 'online' : 'offline'}
+          className={cn(
+            'inline-block size-2 shrink-0 rounded-full align-middle transition-colors motion-reduce:transition-none',
+            isOnline ? 'bg-[hsl(var(--color-success))]' : 'bg-[hsl(var(--color-destructive))]',
+          )}
+        />
+        <span className="sr-only">{isOnline ? t('sync.online') : t('sync.offline')}</span>
         <span className="truncate">{subtitle}</span>
         {roleLabel ? (
           <>
@@ -734,6 +749,7 @@ export const DashboardHeader = memo(function DashboardHeader({
                   people={people}
                   canSeePeople={canSeePeople}
                   isLoadingPeople={isLoadingPeople}
+                  isOnline={isOnline}
                   t={t}
                 />
               ) : null}

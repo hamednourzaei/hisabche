@@ -26,6 +26,8 @@ import { Toolbar } from '@/components/layout/toolbar'
 import { Skeleton } from '@/components/ui/primitives'
 import { useShortcuts } from '@/shared/hooks/use-shortcuts'
 import { useUiStore } from '@/shared/stores/ui.store'
+import { useBackgroundSync, useWorkspaceCache } from '@/features/sync/use-sync'
+import { useWorkspaceStore } from '@hisabche/store'
 
 function RouteFallback() {
   return (
@@ -44,6 +46,15 @@ export function AppShell() {
   // Same gate as web's dashboard layout: expired → only dashboard, invoices
   // (view) and billing render; the server refuses writes either way.
   const routeLocked = useSubscriptionLocked() && !isRouteAllowedWhenExpired(location.pathname)
+
+  // ⚠️ NEITHER OF THESE WAS EVER MOUNTED. Both hooks were written with the sync
+  // engine and nothing called them, so the device database was never filled
+  // from the server (offline, the invoice list said "no invoices") and an
+  // invoice issued offline sat in the queue until someone pressed "sync" by
+  // hand. Signed in is when both must run.
+  const workspaceId = useWorkspaceStore((s) => s.workspaceId)
+  useWorkspaceCache(workspaceId)
+  useBackgroundSync(workspaceId)
 
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen)
   const requestSearchFocus = useUiStore((s) => s.requestSearchFocus)

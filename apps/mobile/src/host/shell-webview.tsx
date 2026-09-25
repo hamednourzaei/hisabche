@@ -15,6 +15,7 @@ import { Asset } from 'expo-asset'
 import * as FileSystem from 'expo-file-system'
 import { WebView, type WebViewMessageEvent } from 'react-native-webview'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import NetInfo from '@react-native-community/netinfo'
 import { rpcRequestSchema, webViewBridgeSource } from '@hisabche/app-bridge'
 
 import { handleBridgeCall } from './native-bridge'
@@ -40,6 +41,33 @@ export function ShellWebView(): React.JSX.Element {
 
   const onOutboxDrained = useCallback(() => pushEvent('outboxDrained', null), [pushEvent])
   useHostServices({ onOutboxDrained })
+
+  // ⚠️ THE PAGE NEVER HEARD THE CONNECTION CHANGE.
+  //
+  // Android's WebView updates `navigator.onLine` and fires `online` /
+  // `offline` only when the app calls `setNetworkAvailable`, and
+  // react-native-webview does not. So the header said "online" with the
+  // network off, and the shell's sync-on-reconnect never fired. The host
+  // hears it from the OS and re-announces it as the standard events the shell
+  // already listens for — on every change, and once more after each load.
+  const isConnected = useRef<boolean | null>(null)
+  const announceConnection = useCallback(() => {
+    if (isConnected.current === null) return
+    const event = isConnected.current ? 'online' : 'offline'
+    webViewRef.current?.injectJavaScript(
+      `window.__hisabcheOnline = ${isConnected.current}; window.dispatchEvent(new Event('${event}')); true;`,
+    )
+  }, [])
+  React.useEffect(
+    () =>
+      NetInfo.addEventListener((state) => {
+        const next = state.isConnected !== false
+        if (next === isConnected.current) return
+        isConnected.current = next
+        announceConnection()
+      }),
+    [announceConnection],
+  )
 
   // ⚠️ Android's hardware back button must move the UI back a route, not close
   // the app. Without this the first back press quits from any screen, which
@@ -214,7 +242,10 @@ export function ShellWebView(): React.JSX.Element {
         // before the first paint rather than after it.
         injectedJavaScriptBeforeContentLoaded={`${HOST_MARKER}${webViewBridgeSource()}`}
         onMessage={onMessage}
-        onLoadEnd={() => setReady(true)}
+        onLoadEnd={() => {
+          setReady(true)
+          announceConnection()
+        }}
         // Without this the WebView shows its own English error page — the
         // `ERR_CLEARTEXT_NOT_PERMITTED` screen a person cannot act on.
         onError={(event) => setFailure(event.nativeEvent.description)}

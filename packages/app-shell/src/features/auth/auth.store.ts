@@ -11,12 +11,13 @@ import {
   markTokenReady,
   registerTokenGetter,
   setOnUnauthorized,
+  setRefreshSession,
   type ApiError,
 } from '@hisabche/api'
 import { signUpSchema, type SignUpInput } from '@hisabche/validation'
 import {
   isSession,
-  isSessionExpired,
+  isSessionUsable,
   sessionCan,
   type Capability,
   type LoginCredentials,
@@ -93,6 +94,7 @@ async function postAuth(path: string, body: unknown): Promise<Session> {
         user?: Session['user']
         token?: string
         access_token?: string
+        refreshToken?: string
       }
   >(path, body)
 
@@ -109,6 +111,11 @@ async function postAuth(path: string, body: unknown): Promise<Session> {
     return {
       user: hydrateUserFromToken(payload.user, payload.token),
       token: payload.token,
+      // ⚠️ KEPT NOW. The server has always sent it; this dropped it, so the
+      // session could not outlive its one-hour access token.
+      ...('refreshToken' in payload && typeof payload.refreshToken === 'string'
+        ? { refreshToken: payload.refreshToken }
+        : {}),
     }
   }
 
@@ -176,8 +183,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // fault, and telling the person their data was corrupt would be a lie.
       // ═══════════════════════════════════════════════════════════════════
       const hasShape = isSession(stored)
-      const hasExpired = hasShape && isSessionExpired(stored)
-      const isValid = hasShape && !hasExpired
+      // An expired access token with a refresh token is still usable — the
+      // first request renews it (setRefreshSession below). See isSessionUsable.
+      const isValid = isSessionUsable(stored)
 
       // ═══════════════════════════════════════════════════════════════════
       // ⚠️ THE VALIDATION RESULT IS THE GATE — IT USED TO BE DISCARDED.
@@ -274,13 +282,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     set({ isLoading: true, error: null })
     try {
-      const response = await apiClient.post<{ token: string }>('/auth/refresh', {
-        token: state.session.token,
-      })
+      const response = await apiClient.post<{ token: string; refreshToken?: string }>(
+        '/auth/refresh',
+        { refreshToken: state.session.refreshToken },
+      )
 
       const newSession: Session = {
         ...state.session,
         token: response.data.token,
+        refreshToken: response.data.refreshToken ?? state.session.refreshToken,
         user: state.session.user,
       }
 
@@ -418,4 +428,37 @@ setOnUnauthorized(() => {
     isSessionValid: false,
     error: 'UNAUTHORIZED',
   })
+})
+
+// ============================================
+// ⚠️ NOTHING RENEWED A DESKTOP OR MOBILE SESSION.
+//
+// The API client asks this when a request answers 401; with nothing
+// registered it answered "no" and signed the person out — an hour after every
+// sign-in. Now the refresh token is exchanged for a new pair.
+//
+// Only a REFUSAL from the server ends the session. A request that never got an
+// answer rethrows instead of returning null: returning null means "signed
+// out", and a dropped connection is not that.
+// ============================================
+setRefreshSession(async () => {
+  const session = useAuthStore.getState().session
+  if (!session?.refreshToken) return null
+  try {
+    const { data } = await apiClient.post<{ token: string; refreshToken?: string }>(
+      '/auth/refresh',
+      { refreshToken: session.refreshToken },
+    )
+    const renewed: Session = {
+      ...session,
+      token: data.token,
+      refreshToken: data.refreshToken ?? session.refreshToken,
+    }
+    await sessionStore.write(renewed)
+    useAuthStore.setState({ session: renewed, isAuthenticated: true, isSessionValid: true })
+    return renewed.token
+  } catch (error) {
+    if ((error as Partial<ApiError>)?.code === 'NETWORK_ERROR') throw error
+    return null
+  }
 })

@@ -398,3 +398,21 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 **نتیجه (۲۵ سپتامبر):** `app-release.apk` (۱۰۵ مگابایت) روی شبیه‌ساز نصب شد، ورود و داشبورد رندر شد؛ API
 در هر دو باندل `https://api.hisabche.com/api`. ⚠️ `.env` محلی `EXPO_PUBLIC_API_URL` دارد — بیلد release
 را همیشه با این متغیر **صریح** بساز. Jest موبایل ۱۱/۱۱ سوئیت، ۱۶۶ تست.
+
+## BUG-026 — پوسته‌ی دسکتاپ/موبایل: شش «قانون بدون صداکننده» که آفلاین را از کار انداخته بودند (۲۵ سپتامبر)
+
+الگوی مسلط: §۷٫۱ — انتزاع ساخته شده، درست هم هست، هیچ caller ندارد.
+
+| #   | چه چیزی وجود داشت و صدا زده نمی‌شد                                   | اثر                                                                                      | رفع                                                                                                                         |
+| --- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| ۱   | `fetchWorkspace` فقط در صفحه‌ی تنظیمات workspace                     | `workspaceId` همه‌جا null → realtime به هیچ چیز subscribe نمی‌کرد، sync با workspace تهی | `useLoadWorkspace` در `app-shell/providers.tsx` + وب `dashboard-layout.tsx` (گارد `workspace-is-loaded-on-sign-in.test.ts`) |
+| ۲   | `useBackgroundSync` و `useWorkspaceCache` هرگز mount نشده بودند      | SQLite دستگاه هیچ‌وقت پر نمی‌شد؛ آفلاین «فاکتوری یافت نشد»                               | mount در `app-shell.tsx`، با `workspaceId` در deps                                                                          |
+| ۳   | `db.enqueue` هیچ caller نداشت (جز retry صفحه‌ی sync)                 | فاکتور آفلاین: دکمه می‌چرخید و فروش گم می‌شد                                             | `registerOfflineQueue` + `submitInvoice` (همان payload و همان Idempotency-Key) — گارد `offline-invoice-queue.test.ts`       |
+| ۴   | `setRefreshSession` در پوسته ثبت نشده بود؛ refreshToken ذخیره نمی‌شد | هر نشست دسکتاپ/موبایل ~۱ ساعت بعد خارج می‌شد؛ آفلاین نشست **پاک** می‌شد                  | ذخیره‌ی `refreshToken`، `isSessionUsable` در auth-core، ثبت refresh (خطای شبکه = sign-out نیست) — گارد `auth-gate.test.ts`  |
+| ۵   | Supabase client بدون توکن کاربر (anon)                               | realtime با RLS هیچ ردیفی تحویل نمی‌داد                                                  | `accessToken` option + `setSupabaseTokenSource` — گارد `realtime-runs-as-the-user.test.ts`                                  |
+| ۶   | `ThemeProvider` برای `next-themes` mount نشده بود                    | دکمه‌ی تم کار نمی‌کرد (دسکتاپ و موبایل)                                                  | `useThemeStore` (همان store وب)                                                                                             |
+
+و موارد وابسته: جدول‌های داده در publication نبودند (`docs/realtime-data-tables-migration.sql` — **PENDING HUMAN CONFIRMATION**)؛
+خطای شبکه با ۵۰۰ واقعی قابل تشخیص نبود (`NETWORK_ERROR`)؛ WebView اندروید `online/offline` را اعلام نمی‌کرد (NetInfo → رویداد)؛
+`scalesPageToFit` + نبود `minimum-scale` صفحه را zoom-out و منوی پایین را بیرون می‌برد؛ blur در WebView لکه می‌انداخت (`data-host`)؛
+`better-sqlite3` به‌عنوان optionalDependency در بسته‌ی ویندوز جمع نمی‌شد (`Cannot find module`) → dependencies.

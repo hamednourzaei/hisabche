@@ -19,6 +19,7 @@ export {
   serializeSession,
   isSession,
   isSessionExpired,
+  isSessionUsable,
   sessionExpiresAt,
   type SessionStore,
 } from './session'

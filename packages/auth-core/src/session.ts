@@ -109,3 +109,16 @@ export function isSessionExpired(session: Session, now: number = Date.now()): bo
   const expiresAt = sessionExpiresAt(session)
   return expiresAt !== null && expiresAt <= now
 }
+
+/**
+ * Whether a stored session may open the app.
+ *
+ * ⚠️ An expired ACCESS token is not an ended session while a refresh token can
+ * renew it. Treating it as one signed every desktop and mobile user out an
+ * hour after sign-in, and offline deleted the session from the device.
+ */
+export function isSessionUsable(value: unknown, now: number = Date.now()): value is Session {
+  if (!isSession(value)) return false
+  if (!isSessionExpired(value, now)) return true
+  return typeof value.refreshToken === 'string' && value.refreshToken.length > 0
+}

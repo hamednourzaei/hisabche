@@ -16,7 +16,8 @@
 // ============================================
 
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
-import apiClient from '../lib/client'
+import apiClient, { type ApiError } from '../lib/client'
+import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { asList } from '../lib/as-list'
 import { useRealtime } from './useRealtime'
@@ -164,6 +165,54 @@ export function useInvoice(id: string | undefined) {
   })
 }
 
+/**
+ * Send one invoice — or, where the host keeps a device queue and there is no
+ * network, queue the identical request. Exported for the offline tests.
+ */
+export async function submitInvoice({
+  idempotencyKey,
+  ...input
+}: CreateInvoice & { idempotencyKey?: string | undefined }): Promise<
+  Invoice & { pendingSync?: true }
+> {
+  // ⚠️ OFFLINE INVOICING WAS NEVER WIRED. The device database, its queue
+  // and the sync engine all existed; nothing ever put a write into the
+  // queue, so without a network the confirm button spun and the sale was
+  // lost. On a host with a queue, the SAME request — same payload, same
+  // Idempotency-Key — is queued instead, and the sync engine sends it to
+  // the same domain route later. The server numbers it, moves the stock
+  // and books it then; until then it is pending, and says so.
+  const offline = getOfflineQueue()
+  const queueIt = async () => {
+    await offline!.enqueue({
+      entity: 'invoice',
+      operation: 'create',
+      clientId: idempotencyKey!,
+      payload: input as unknown as Record<string, unknown>,
+    })
+    return { id: '', pendingSync: true } as Invoice & { pendingSync: true }
+  }
+
+  // Without a key a replay could become a second sale: never queue that.
+  if (offline && idempotencyKey && offline.isOffline()) return queueIt()
+
+  try {
+    const { data } = await apiClient.post<Invoice>(
+      '/invoices',
+      input,
+      idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined,
+    )
+    return data
+  } catch (error) {
+    // Only when the request never got an answer. A refusal from the server
+    // (stock, validation, 5xx) is an answer and is shown, not queued.
+    if (offline && idempotencyKey && (error as Partial<ApiError>)?.code === 'NETWORK_ERROR') {
+      return queueIt()
+    }
+    throw error
+  }
+}
+
 export function useCreateInvoice() {
   const queryClient = useQueryClient()
 
@@ -173,17 +222,7 @@ export function useCreateInvoice() {
      * resent unchanged on retry — the server answers a repeat with the invoice
      * it already created instead of a second sale.
      */
-    mutationFn: async ({
-      idempotencyKey,
-      ...input
-    }: CreateInvoice & { idempotencyKey?: string | undefined }) => {
-      const { data } = await apiClient.post<Invoice>(
-        '/invoices',
-        input,
-        idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined,
-      )
-      return data
-    },
+    mutationFn: submitInvoice,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() })
       // ✅ FIX: کارت‌های داشبورد، نمودار فروش و پیشنهادهای هوشمند همگی از

@@ -4,6 +4,7 @@
 
 // ─── Core Client ──────────────────────────────────────────
 export { apiClient, normalizeBaseUrl } from './lib/client'
+export { registerOfflineQueue, type OfflineQueue } from './lib/offline-queue'
 export { asList } from './lib/as-list'
 export type { ApiResponse, ApiError } from './lib/client'
 

@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { useAuthStore, useThemeStore, useOnboardingStore } from '@hisabche/store'
+import { useAuthStore, useThemeStore, useOnboardingStore, useWorkspaceStore } from '@hisabche/store'
 import { asList, useEmployees, useMyCapabilities, usePresence } from '@hisabche/api'
 import { useTranslations, useLocale } from 'next-intl'
 import {
@@ -181,6 +181,14 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const isFullscreenWorkflow = /\/invoices\/new(\/|$)/.test(pathname ?? '')
   // The signed-in person, for the header identity block and the account menu.
   const user = useAuthStore((s) => s.user)
+  // ⚠️ The workspace was loaded only by the workspace settings page, so for
+  // anyone who never opened it `workspaceId` was null and realtime subscribed
+  // to nothing — another employee's work appeared only after a reload.
+  const fetchWorkspace = useWorkspaceStore((s) => s.fetchWorkspace)
+  const userId = user?.id ?? null
+  useEffect(() => {
+    if (userId) void fetchWorkspace(userId)
+  }, [userId, fetchWorkspace])
   const isDark = useThemeStore((s) => s.isDark)
   const toggle = useThemeStore((s) => s.toggle)
   const [optimisticPath, setOptimisticPath] = useState<string | null>(null)

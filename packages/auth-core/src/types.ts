@@ -49,6 +49,11 @@ export interface WorkspaceContext {
 export interface Session {
   user: AuthUser
   token: string
+  /**
+   * Exchanged at /auth/refresh for a new access token. The access token lasts
+   * about an hour; without this a desktop or mobile session ended with it.
+   */
+  refreshToken?: string | undefined
   workspace?: WorkspaceContext
 }
 
