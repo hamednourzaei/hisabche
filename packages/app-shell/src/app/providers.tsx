@@ -34,6 +34,8 @@ if (typeof window !== 'undefined') {
         (window as { __hisabcheOnline?: boolean }).__hisabcheOnline === false ||
         navigator.onLine === false,
       enqueue: (entry) => device.db.enqueue(entry),
+      readRows: (table, search) =>
+        device.db.query<Record<string, unknown>>({ table, search, limit: 500 }),
     })
   }
 }

@@ -15,7 +15,8 @@
 // ============================================
 
 import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import apiClient from '../lib/client'
+import apiClient, { type ApiError } from '../lib/client'
+import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
 import type { Product, CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validation'
@@ -47,6 +48,24 @@ export interface StockSummary {
 }
 
 // ✅ گیت شده با authReady
+/** A device-database product row (sync-engine PULL_SPECS) in the API's shape. */
+function productFromRow(r: Record<string, unknown>): Product {
+  return {
+    id: String(r.id),
+    name: String(r.name ?? ''),
+    barcode: (r.barcode as string | null) ?? undefined,
+    sku: (r.sku as string | null) ?? undefined,
+    category: (r.category as string | null) ?? undefined,
+    quantity: Number(r.quantity ?? 0),
+    unit: (r.unit as string | null) ?? undefined,
+    minStockLevel: Number(r.min_stock_level ?? 0),
+    buyPrice: Number(r.buy_price ?? 0),
+    sellPrice: Number(r.sell_price ?? 0),
+    isActive: r.is_active !== 0,
+    updatedAt: String(r.updated_at ?? ''),
+  } as unknown as Product
+}
+
 export function useProducts(filters: Partial<ProductFilters> = {}) {
   const authReady = useAuthReady()
 
@@ -75,15 +94,30 @@ export function useProducts(filters: Partial<ProductFilters> = {}) {
   return useQuery({
     queryKey: productKeys.list(mergedFilters),
     queryFn: async () => {
-      const { data } = await apiClient.get<{
+      type Page = {
         products: Product[]
         total: number
         /** Present only when the request set `includeSummary: true`. */
         summary?: StockSummary | undefined
-      }>('/products', {
-        params: mergedFilters,
-      })
-      return data
+      }
+      // ⚠️ Offline this list used to render "no products" — the network error
+      // shown as an empty stock (راهنمای سشن §۷٫۳) — while the device database
+      // held every product. A host with that database answers instead.
+      const device = getOfflineQueue()
+      const fromDevice = async (): Promise<Page> => {
+        const rows = await device!.readRows!('product', mergedFilters.search ?? '')
+        const products = rows.map(productFromRow)
+        return { products, total: products.length }
+      }
+      if (device?.readRows && device.isOffline()) return fromDevice()
+      try {
+        const { data } = await apiClient.get<Page>('/products', { params: mergedFilters })
+        return data
+      } catch (error) {
+        if (device?.readRows && (error as Partial<ApiError>)?.code === 'NETWORK_ERROR')
+          return fromDevice()
+        throw error
+      }
     },
     enabled: authReady,
     staleTime: 1000 * 60 * 2,

@@ -20,6 +20,12 @@ export interface OfflineQueue {
     clientId: string
     payload: Record<string, unknown>
   }): Promise<void>
+  /**
+   * Rows of the device database, for a list the network cannot answer. The
+   * sync engine fills these from the same endpoints, so offline the stock
+   * picker shows the stock the device last saw instead of "no products".
+   */
+  readRows?(table: 'product' | 'customer', search: string): Promise<Array<Record<string, unknown>>>
 }
 
 let queue: OfflineQueue | null = null

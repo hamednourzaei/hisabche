@@ -169,6 +169,24 @@ function waitForTokenReady(): Promise<void> {
   ])
 }
 
+/**
+ * Whether a JWT's `exp` is past or within 30 seconds. Reads the payload we
+ * already hold — not a security check; the server still verifies every token.
+ * A token with no readable `exp` is left alone (no answer is not an answer).
+ */
+export function isExpiring(token: string, now: number = Date.now()): boolean {
+  try {
+    const payload = token.split('.')[1]
+    if (!payload) return false
+    const { exp } = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
+      exp?: unknown
+    }
+    return typeof exp === 'number' && exp * 1000 - now < 30_000
+  } catch {
+    return false
+  }
+}
+
 // ============================================
 // Request Interceptor
 // ============================================
@@ -177,6 +195,21 @@ apiClient.interceptors.request.use(
     // ✅ صبر می‌کنیم تا Store توکن‌گیر را ثبت کند (یا سقف زمانی برسد)
     // این کار جلوی 401 کاذب ناشی از race بین mount شدن صفحه و hydrate شدن session را می‌گیرد
     await waitForTokenReady()
+
+    // ⚠️ RENEW BEFORE SENDING, NOT AFTER THE 401.
+    //
+    // Supabase's auth log showed ~36 `GET /user` → 403 "token is expired" in
+    // 13 seconds: every request of a page went out with the stale token, each
+    // was verified and refused, and only then did one refresh happen. A token
+    // whose `exp` has passed (or is about to) is renewed first — through the
+    // same single-flight refresh, so ten requests cause one renewal.
+    const current = getToken()
+    const isAuthRoute = /\/auth\/(login|signup|refresh|logout)(\/|\?|$)/.test(
+      String(config.url ?? ''),
+    )
+    if (current && !isAuthRoute && refreshSession && isExpiring(current)) {
+      await refreshOnce().catch(() => null)
+    }
 
     // ✅ فقط از Token Provider می‌خوانیم
     const token = getToken()
