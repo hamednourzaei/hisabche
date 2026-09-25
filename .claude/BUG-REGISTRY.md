@@ -300,3 +300,101 @@
   قبل از رسیدن به Gradle با یک stack trace از pnpm می‌مرد که اسم Android در آن نبود.
 - **تست:** `scripts/__tests__/gradle-script.test.ts` (۱۱ تست، source-assertion با حذف کامنت‌ها).
 - **مرورگر:** — فقط toolchain.
+
+## BUG-024 — بیلد محلی اندروید: دو مانع که هیچ‌کدام اسم خودش را نمی‌گفت
+
+### الف) `ninja: error: manifest 'build.ninja' still dirty after 100 tries`
+
+- **الگو:** «پیام خطا درباره‌ی چیز دیگری حرف می‌زند»
+- **چطور پیدا شد:** `ninja -d explain` — نه حدس. اولین خطش همه‌چیز را گفت:
+  `output ../prefab/…/fbjniConfigVersion.cmake of phony edge with no inputs doesn't exist`
+- **ریشه:** فایل **وجود داشت**. ninja آن را به‌صورت `../prefab/…` نسبت به build dir ی به عمق ۱۷۴ کاراکتر
+  stat می‌کند و ویندوز MAX_PATH را روی رشته‌ی **جمع‌نشده** اعمال می‌کند — قبل از حذف `..`:
+
+  |                           |                                 |
+  | ------------------------- | ------------------------------- |
+  | ۱۷۴ (cwd) + ۱ + ۸۹ (نسبی) | **۲۶۴** ← چیزی که ninja می‌سنجد |
+  | مسیر جمع‌شده              | ۲۵۱                             |
+  | سقف قابل‌استفاده          | ۲۵۹                             |
+
+- ⚠️ **چرا هیچ بررسی‌ای نشانش نداد:** همین شکاف. هر ابزاری که اول path را resolve کند ۲۵۱ می‌بیند و
+  می‌گوید فایل سر جایش است. من و کاربر هر دو دقیقاً همین را دیدیم و دو بار فرضیه را رد کردیم.
+- ⚠️ **`LongPathsEnabled=1` کمک نمی‌کند** — فقط برای exe هایی که در manifest خودشان opt-in کرده باشند،
+  و ninja ی Android CMake 3.22.1 نکرده. رجیستری را چک کردم: از قبل ۱ بود.
+- **رفع اول (برگردانده شد):** `virtualStoreDir: 'C:\pn'` — ninja را درست کرد ولی بخش «ج» را ببین.
+- **رفع نهایی:** `virtualStoreDir: '.p'` + `virtualStoreDirMaxLength: 40` → عمیق‌ترین build dir از ۱۷۴ به
+  **۱۵۲** (اندازه‌گیری‌شده بعد از `android:debug` کامل)، ninja می‌سنجد ۱۵۲+۱+۸۹ = **۲۴۲** — ۱۷ زیر سقف.
+  ⚠️ این حاشیه به مسیر همین کلون بسته است؛ کلون در مسیری ~۱۷ کاراکتر بلندتر دوباره همین خطا را می‌دهد.
+- ⚠️ **دو فرضیه‌ی غلط قبل از این:** (۱) symlink های pnpm — اسکریپتی برای dereference نوشتم که هیچ اثری
+  نداشت چون Gradle از همان مسیر واقعی store بیلد می‌گیرد؛ **کد حذف شد** (§۱۴). (۲) `buildStagingDirectory`
+  — AGP اجازه نمی‌دهد از ریشه‌ی پروژه تنظیم شود («It is too late to set»)، برگردانده شد.
+- ⚠️ **عارضه‌ی جانبی جابه‌جایی store:** symlink های hoist‌شده در `node_modules` ریشه بازسازی نشدند و به
+  مسیر حذف‌شده اشاره می‌کردند → `Included build '…\android\null' does not exist`. pnpm سه بار
+  «Already up to date» گفت؛ لازم شد `.modules.yaml` و `.pnpm-workspace-state-v1.json` و همه‌ی
+  `node_modules` حذف شوند.
+
+### ب) `Unresolved reference: expo` در MainActivity/MainApplication
+
+- **ریشه:** `useExpoModules()` در `settings.gradle` هر هجده ماژول را **include** می‌کند —
+  `gradlew projects` همه را نشان می‌دهد و لاگ configure اسمشان را چاپ می‌کند، پس همه‌چیز وصل به‌نظر می‌رسد.
+  ولی **include با dependency یکی نیست**: پروژه‌ی `:expo` است که `addExpoModulesDependencies` را صدا می‌زند
+  و بقیه را re-export می‌کند، و `app/build.gradle` اصلاً به آن وابسته نبود.
+- **رفع:** `implementation project(':expo')`.
+- این مانع از قبل وجود داشت؛ بیلد محلی هیچ‌وقت به آن نرسیده بود چون همیشه زودتر روی ninja می‌افتاد.
+
+### ج) عارضه‌های `C:\pn` — store بیرون از ریپو
+
+- **علامت ۱:** هر ۱۰ سوئیت Jest موبایل: `Cannot find module '@babel/runtime/helpers/interopRequireDefault'`
+  از `react-native/jest/react-native-env.js`.
+- **ریشه:** Node برای وابستگیِ اعلام‌نشده به **بالا** می‌رود. از `C:\pn\…` هرگز به `node_modules` ریشه‌ی ریپو
+  نمی‌رسد، که `publicHoistPattern` پکیج‌های `@babel/runtime` و `invariant` و … را آنجا می‌گذارد — و pnpm
+  همان‌ها را در `C:\pn\node_modules` (hoist خصوصی) **تکرار نمی‌کند** (۱۵۳۳ پکیج آنجا بود، این‌ها نه).
+  Metro سالم ماند چون `nodeModulesPaths` ریشه را صریح دارد؛ require ی خود Node ندارد.
+- **علامت ۲:** مسیر درایو ویندوز در فایل commit‌شده‌ای که Vercel و EAS روی لینوکس می‌خوانند.
+- **علامت ۳ (جدا، ولی همان سشن):** بعد از بازسازی `node_modules` هیچ `node_modules/.bin` ی در کل monorepo
+  نبود → jest/vitest/tsc هیچ‌جا اجرا نمی‌شد. ریشه: `better-sqlite3@13.0.3` (ریشه) باینری را در `prebuilds/`
+  دارد و `"gypfile": false`، ولی `binding.gyp` در tarball هست؛ `allowBuilds: better-sqlite3: true` باعث
+  `node-gyp rebuild` شد → Python نبود → install **قبل از لینک bin** ها قطع شد. رفع: `allowBuilds` نسخه‌ای —
+  `@11.10.0: true` (دسکتاپ، باینری دانلود می‌کند)، `@13.0.3: false`.
+- **الگو:** «رفعی که وریفای شد، فقط همان چیزی را که وریفای شد رفع کرده». BUILD SUCCESSFUL درست بود؛ Jest اجرا نشده بود.
+
+**نتیجه (۲۵ سپتامبر، با store داخل ریپو):** `BUILD SUCCESSFUL in 3m 30s`، ۳۲ تسک CMake، بدون ninja؛
+`app-debug.apk` شامل `assets/shell/index.html` (۴.۷ مگابایت)، `libexpo-modules-core.so` و `libfbjni.so`.
+Jest موبایل ۱۰/۱۰ سوئیت، ۱۶۲/۱۶۲ تست.
+
+## BUG-025 — APK ی release: سه مانع پشت سر هم، هیچ‌کدام در debug دیده نمی‌شد
+
+debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خواند؛ پس هر سه فقط در release ظاهر شدند.
+
+### الف) `createBundleReleaseJsAndAssets` — «None of these files exist» برای فایلی که وجود دارد
+
+- **ریشه (لاگ‌شده، نه حدس):** پلاگین Gradle ی RN همیشه entry را **مطلق** می‌دهد؛ `@expo/cli` بک‌اسلش را
+  اسلش می‌کند و `./` جلویش می‌گذارد → resolver درخواست `./C:/Users/…/index.js` می‌گیرد: مسیر **نسبی** به پوشه‌ای به اسم `C:`.
+- **رفع:** `metro.config.js` — درخواست drive-letter (با یا بی `./`) نسبت به مبدأ بازنویسی می‌شود.
+- **گارد:** `src/__tests__/metro-windows-entry.test.ts` (injection-tested).
+
+### ب) `SHELL_MISSING_FROM_APK` در حالی که `assets/shell/index.html` داخل APK بود
+
+- **ریشه:** `expo-file-system` برای `file://` از `java.io.File.exists()` استفاده می‌کند؛ `android_asset` روی دیسک
+  نیست. چک برای **هر** APK «نیست» می‌گفت. فقط `asset:///` از AssetManager می‌رود.
+- **رفع:** `getInfoAsync('asset:///shell/index.html')`؛ WebView همچنان `file:///android_asset/…` را می‌گیرد.
+- **گارد:** `one-ui-two-hosts.test.ts` (injection-tested).
+
+### ج) WebView کد مینیفای‌شده را به‌صورت متن نشان داد
+
+- **الگو:** «`String.replace` با رشته‌ی جایگزین». در رشته‌ی جایگزین `` $` `` و `$'` و `$&` الگو هستند و کد مینیفای
+  آن‌ها را دارد → تکه‌هایی از خود HTML (با `</script>`) وسط باندل کپی شد. فایل ۲۴ `</script` داشت به‌جای ۱.
+- **رفع:** `packages/app-shell/vite.shell.mjs` — جایگزین به‌صورت **تابع** (`() => …`) برای script و style.
+- **گارد:** `one-ui-two-hosts.test.ts` (injection-tested).
+
+### د) بعد از ورود: `ReferenceError: __VITE_PRELOAD__ is not defined`
+
+- **ریشه:** Vite جای‌نگهدار `__VITE_PRELOAD__` را در `generateBundle` ی `vite:build-import-analysis` پر می‌کند.
+  `enforce: 'post'` روی پلاگین کافی نبود — inliner زودتر اجرا شد و کد خام را در HTML گذاشت (۴ جای‌نگهدار).
+  صفحه‌ی ورود (بدون lazy route) سالم بود؛ اولین route ی lazy بعد از ورود مرد.
+- **رفع:** `generateBundle: { order: 'post', handler }`. بعد از رفع: ۰ جای‌نگهدار؛ داشبورد با داده‌ی واقعی رندر شد.
+- **گارد:** `one-ui-two-hosts.test.ts` (injection-tested).
+
+**نتیجه (۲۵ سپتامبر):** `app-release.apk` (۱۰۵ مگابایت) روی شبیه‌ساز نصب شد، ورود و داشبورد رندر شد؛ API
+در هر دو باندل `https://api.hisabche.com/api`. ⚠️ `.env` محلی `EXPO_PUBLIC_API_URL` دارد — بیلد release
+را همیشه با این متغیر **صریح** بساز. Jest موبایل ۱۱/۱۱ سوئیت، ۱۶۶ تست.

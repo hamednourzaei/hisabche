@@ -32,8 +32,11 @@ interface FakeChannel {
 
 const channels: FakeChannel[] = []
 
-/** Auth callbacks the module registered, so sign-out can be simulated. */
-const authListeners: Array<(event: string) => void> = []
+/**
+ * The token source the client registered — what supabase-js asks on every
+ * realtime heartbeat. Calling it is how a heartbeat is simulated.
+ */
+let tokenSource: (() => string | null) | null = null
 
 vi.mock('../../../auth/src/supabase', () => ({
   supabaseClient: {
@@ -57,14 +60,13 @@ vi.mock('../../../auth/src/supabase', () => ({
       channel.removed = true
       return Promise.resolve('ok')
     },
-    auth: {
-      onAuthStateChange(callback: (event: string) => void) {
-        authListeners.push(callback)
-        return { data: { subscription: { unsubscribe() {} } } }
-      },
-    },
+  },
+  setSupabaseTokenSource(source: () => string | null) {
+    tokenSource = source
   },
 }))
+
+const { registerTokenGetter } = await import('../lib/tokenProvider')
 
 const { subscribeToChannel, realtimeStats, closeWorkspaceChannels, __resetRealtimeForTests } =
   await import('../supabase/realtime')
@@ -86,7 +88,6 @@ function fire(table: string, workspaceId: string = WS_A): void {
 beforeEach(() => {
   __resetRealtimeForTests()
   channels.length = 0
-  authListeners.length = 0
 })
 
 describe('one channel per table, however many subscribers', () => {
@@ -296,7 +297,9 @@ describe('a workspace never hears another workspace', () => {
 
     // A sign-out that leaves components mounted would otherwise keep a socket
     // joined to a workspace the user is no longer a member of.
-    for (const listener of authListeners) listener('SIGNED_OUT')
+    // The heartbeat asks for a token and there is none.
+    registerTokenGetter(() => null)
+    expect(tokenSource?.()).toBeNull()
 
     expect(realtimeStats()).toEqual({ channels: 0, listeners: 0 })
     expect(channels.every((c) => c.removed)).toBe(true)
@@ -305,7 +308,10 @@ describe('a workspace never hears another workspace', () => {
   it('leaves channels alone on a token refresh', async () => {
     await subscribeToChannel('invoices', WS_A, () => {})
 
-    for (const listener of authListeners) listener('TOKEN_REFRESHED')
+    registerTokenGetter(() => 'refreshed-jwt')
+    // ⚠️ And realtime is handed THE USER'S token, not nothing: without it the
+    // channel joined as anon and RLS delivered no rows to anyone.
+    expect(tokenSource?.()).toBe('refreshed-jwt')
 
     // Tearing down on every refresh would drop realtime roughly hourly and
     // silently degrade the app to poll-on-navigation.

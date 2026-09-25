@@ -3,7 +3,7 @@
 
 import { useEffect, useCallback, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { supabaseClient } from '@hisabche/auth'
+import { supabaseClient } from '../supabase/client'
 import { activityKeys } from './useActivities'
 import type { ActivityGroupDto } from '../types/activity.types'
 

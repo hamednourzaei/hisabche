@@ -28,7 +28,7 @@
 
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
-import { supabaseClient } from '../../../auth/src/supabase'
+import { supabaseClient } from './client'
 
 /** What a client announces about itself. Nothing private. */
 export interface PresenceIdentity {

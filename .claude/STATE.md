@@ -182,6 +182,16 @@ retry واقعی، هم‌زمانی واقعی، ایزوله‌سازی tenant
 | `vertical-slice-integration.test.ts` | روت ثبت‌شده، گاردها به ترتیب، سرویس context بگیرد، idempotency نوشته شده باشد |
 | `financial-flows-e2e.test.ts`        | درز بین Coreها: خروجی یکی ورودی درست بعدی باشد                                |
 
+### شکست‌های پایه‌ی شناخته‌شده (baseline) — ۲۵ سپتامبر
+
+`packages/ui` vitest: ۲ فایل قرمز، **قبل از** کار ۲۵ سپتامبر. هر دو فایلی از دسکتاپ را می‌خوانند که
+commit `d46e0c42` حذف کرد (ENOENT). هنوز اصلاح نشده‌اند — «سبز» حساب نکن و شل هم نکن.
+
+- `src/__tests__/error-boundary-escape.test.ts` → `apps/desktop/src/app/route-error.tsx`
+- `src/__tests__/subscription-lock.test.ts` → `apps/desktop/src/components/layout/app-shell.tsx`
+- `packages/api`: `token-ready-waits-for-hydration.test.ts` → `apps/desktop/src/features/auth/auth.store.ts`
+  (همان علت؛ فایل تست نسبت به HEAD دست‌نخورده)
+
 ---
 
 ## ۷. migrationها — ترتیب اجرا

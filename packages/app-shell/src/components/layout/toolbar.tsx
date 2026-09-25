@@ -20,9 +20,9 @@
 import React, { memo, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslations } from 'next-intl'
-import { useTheme } from 'next-themes'
 import { Search } from 'lucide-react'
 import { DashboardHeader } from '@hisabche/ui'
+import { useThemeStore } from '@hisabche/store'
 
 import { useAuthStore, useCurrentUser } from '@/features/auth/auth.store'
 import { useSyncStatus } from '@/features/sync/use-sync'
@@ -74,9 +74,13 @@ export const Toolbar = memo(function Toolbar({ title }: { title: string }) {
       ? (t(`team.role${user.role.charAt(0).toUpperCase()}${user.role.slice(1)}` as never) as string)
       : undefined
 
-  const { theme, setTheme } = useTheme()
-  const isDark = theme === 'dark'
-  const toggleTheme = useCallback(() => setTheme(isDark ? 'light' : 'dark'), [isDark, setTheme])
+  // ⚠️ THE SAME STORE THE WEB HEADER USES, not next-themes. `useTheme()`
+  // without a <ThemeProvider> — and the shell never mounted one — returns a
+  // context whose `setTheme` does nothing and whose `theme` is undefined: the
+  // button did nothing on Windows or mobile. The store applies the `dark`
+  // class, `data-theme` and colour-scheme itself.
+  const isDark = useThemeStore((s) => s.isDark)
+  const toggleTheme = useThemeStore((s) => s.toggle)
 
   const [lang, setLang] = useState<SupportedLanguage>(() => {
     // Read the active language on mount so the selector shows the value

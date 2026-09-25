@@ -142,6 +142,28 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       ? defaultResolveRequest(context, moduleName, platform)
       : context.resolveRequest(context, moduleName, platform)
 
+  // ⚠️ THE RELEASE APK DID NOT BUILD ON WINDOWS WITHOUT THIS.
+  //
+  // The React Native Gradle plugin always hands `export:embed` an ABSOLUTE
+  // entry file; @expo/cli turns its backslashes into slashes and then prefixes
+  // `./`, so what arrives here is `./C:/Users/…/apps/mobile/index.js` — a
+  // RELATIVE request for a folder named `C:` (logged, not guessed). Hence
+  // `createBundleReleaseJsAndAssets` failed with "None of these files exist",
+  // while listing the very file that exists. Debug builds and `expo export`
+  // never reached this: they pass a relative entry.
+  //
+  // Re-expressing it relative to the requester is the form Metro resolves.
+  const drivePath = /^(?:\.\/)?([A-Za-z]:[\\/].*)$/.exec(moduleName)?.[1]
+  if (drivePath) {
+    const from = path.dirname(context.originModulePath)
+    const relative = path.relative(from, drivePath).split(path.sep).join('/')
+    return context.resolveRequest(
+      context,
+      relative.startsWith('.') ? relative : `./${relative}`,
+      platform,
+    )
+  }
+
   // Relative and absolute requests already point at one file.
   if (moduleName.startsWith('.') || path.isAbsolute(moduleName)) return fallback()
 

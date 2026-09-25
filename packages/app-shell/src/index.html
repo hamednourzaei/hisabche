@@ -2,7 +2,12 @@
 <html lang="fa" dir="rtl" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- ⚠️ minimum-scale=1: without it Android's WebView "shrinks to fit"
+         the moment anything is momentarily wider than the phone, and never
+         zooms back in. The layout viewport stuck at 578px on a 411px screen,
+         the page slid sideways and the fixed bottom menu went off-screen
+         (accounting). An app never zooms out to fit its own content. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0" />
     <title>Hisabche</title>
   </head>
   <body>

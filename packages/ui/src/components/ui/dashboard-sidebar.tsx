@@ -630,7 +630,14 @@ const BACKDROP_BOTTOM = `calc(${NAV_HEIGHT_PX + NAV_OFFSET_PX}px + env(safe-area
  * The subtraction leaves room for the nav bar the panel sits above, its gap,
  * and a margin at the top so the panel never looks welded to the status bar.
  */
-const MORE_PANEL_MAX_HEIGHT = `calc(100dvh - ${NAV_HEIGHT_PX + NAV_OFFSET_PX + NAV_GAP_PX + 24}px - env(safe-area-inset-bottom, 0px) - env(safe-area-inset-top, 0px))`
+// ⚠️ The top margin must clear the HEADER, not just the screen edge. 24px of
+// margin let the panel rise under the sticky header (`h-16`), so its first
+// rows sat behind the language and theme controls. `safe-area-inset-top` does
+// not help inside the mobile WebView: the host already keeps the page below the
+// status bar, so there it is always 0.
+const HEADER_HEIGHT_PX = 64
+const PANEL_TOP_GAP_PX = 12
+const MORE_PANEL_MAX_HEIGHT = `calc(100dvh - ${NAV_HEIGHT_PX + NAV_OFFSET_PX + NAV_GAP_PX + HEADER_HEIGHT_PX + PANEL_TOP_GAP_PX}px - env(safe-area-inset-bottom, 0px) - env(safe-area-inset-top, 0px))`
 
 export const BottomNav = memo(function BottomNav({
   primaryItems,
@@ -717,7 +724,11 @@ export const BottomNav = memo(function BottomNav({
           className={cn(
             'relative h-14 rounded-2xl',
             'border border-[hsl(var(--color-primary)/0.18)]',
-            'bg-[hsl(var(--surface-elevated)/0.98)] backdrop-blur-md',
+            // ⚠️ SOLID, NO `backdrop-blur`. Android's WebView paints a
+            // backdrop-filter on a fixed layer with ghosts of whatever scrolled
+            // behind it — blotches over the menu in dark mode. At 98% opacity
+            // the blur bought nothing visible anyway.
+            'bg-[hsl(var(--surface-elevated))]',
             'shadow-lg',
           )}
         >
@@ -852,7 +863,8 @@ export const BottomNav = memo(function BottomNav({
               className={cn(
                 'rounded-2xl overflow-hidden',
                 'border border-[hsl(var(--border-default))]',
-                'bg-[hsl(var(--surface-elevated)/0.99)] backdrop-blur-xl',
+                // Solid, no blur — see the bar above: the blur drew ghosts.
+                'bg-[hsl(var(--surface-elevated))]',
                 'shadow-xl shadow-black/10',
                 // The panel is anchored to the BOTTOM and grows upward. With no
                 // ceiling it grew past the top of the screen on a phone, and

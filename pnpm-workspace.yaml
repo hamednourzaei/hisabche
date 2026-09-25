@@ -40,7 +40,14 @@ allowBuilds:
   '@parcel/watcher': true
   '@sentry/cli': true
   '@swc/core': true
-  better-sqlite3: true
+  # v11 (desktop) has no bundled binary; its install script fetches one.
+  better-sqlite3@11.10.0: true
+  # ⚠️ v13 (root) SHIPS its binaries in `prebuilds/` and declares
+  # `"gypfile": false`, but a `binding.gyp` is still in the tarball, so
+  # allowing its build makes pnpm run `node-gyp rebuild` — which needs Python.
+  # That failure aborts the install BEFORE any `node_modules/.bin` is linked,
+  # so jest, vitest and tsc vanish from every package at once.
+  better-sqlite3@13.0.3: false
   core-js: true
   detox: true
   dtrace-provider: true
@@ -62,3 +69,51 @@ allowBuilds:
   protobufjs: false
 minimumReleaseAgeExclude:
   - better-sqlite3@13.0.3
+
+# ══════════════════════════════════════════════════════════════════════════
+# ⚠️ THE NATIVE ANDROID BUILD DIES 174 CHARACTERS INTO THE STORE PATH.
+#
+# The failure is `ninja: error: manifest 'build.ninja' still dirty after 100
+# tries` — a sentence about ninja's bookkeeping that names neither paths nor
+# Windows. `ninja -d explain` gives the real one:
+#
+#   output ../prefab/…/fbjniConfigVersion.cmake of phony edge
+#   with no inputs doesn't exist
+#
+# The file does exist. ninja stats it as `../prefab/…` relative to a build
+# directory 174 characters deep, and Windows applies MAX_PATH to the
+# UNCOLLAPSED string — before `..` is resolved:
+#
+#   174 (cwd) + 1 + 89 (relative part) = 264   > 259 usable
+#   collapsed path                     = 251   < 259
+#
+# That gap is why every check said the file was there: anything that resolves
+# the path first sees 251 and reports success, while ninja's own stat sees
+# 264 and reports absence. CMake then regenerates, ninja stats again, and the
+# two disagree a hundred times.
+#
+# `LongPathsEnabled` is already 1 on this machine and does not help: it only
+# applies to executables that opt in through their manifest, and the ninja
+# shipped with Android's CMake 3.22.1 does not.
+#
+# The 174 characters are almost all pnpm's: `node_modules\.pnpm\` plus a
+# store directory name of up to 60. The two settings below shorten both;
+# MEASURED after a full `android:debug`, the deepest CMake build dir went from
+# 174 to 152, so ninja's stat is 152 + 1 + 89 = 242 — 17 under the limit.
+# That margin assumes this repo's location: a clone at a path more than ~17
+# characters longer than `C:\Users\hamed\Desktop\hisabche` fails the same way.
+# They change only where packages are stored — the dependency graph, the
+# lockfile and every import path are unaffected.
+#
+# ⚠️ The store must stay INSIDE the repo. It was once moved to `C:\pn`, which
+# fixed ninja and broke two other things:
+#   - Node walks UP from a package to find what it forgot to declare. From
+#     `C:\pn\…` it never reaches the repo's `node_modules`, where
+#     `publicHoistPattern` puts `@babel/runtime`, `invariant` and the rest —
+#     and pnpm does not also hoist those into the store's own `node_modules`.
+#     Every mobile Jest suite died on react-native's test environment with
+#     `Cannot find module '@babel/runtime/helpers/interopRequireDefault'`.
+#   - A drive letter in a committed file is read by Vercel and EAS on Linux.
+# ══════════════════════════════════════════════════════════════════════════
+virtualStoreDir: '.p'
+virtualStoreDirMaxLength: 40

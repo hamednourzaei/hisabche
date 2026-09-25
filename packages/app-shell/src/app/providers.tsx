@@ -3,10 +3,18 @@
 // ============================================
 
 import { createNotificationMutationCache } from '@hisabche/api'
-import React, { useState, type ReactNode } from 'react'
+import React, { useEffect, useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@hisabche/ui'
-import { bindActiveWorkspace } from '@hisabche/store'
+import { bindActiveWorkspace, useWorkspaceStore } from '@hisabche/store'
+
+import { useAuthStore } from '@/features/auth/auth.store'
+import {
+  PERSISTED_CACHE_MAX_AGE_MS,
+  cacheOwner,
+  createPersistedQueryCache,
+  createQueryCachePersister,
+} from './persisted-query-cache'
 
 // Publish the active workspace into @hisabche/api, which scopes every realtime
 // subscription to one business. At module scope rather than in an effect:
@@ -25,7 +33,10 @@ function createQueryClient(): QueryClient {
     defaultOptions: {
       queries: {
         staleTime: 1000 * 60 * 2,
-        gcTime: 1000 * 60 * 30,
+        // As long as a saved cache may be shown: a shorter gcTime drops a
+        // screen not visited this session from memory, and the next save then
+        // drops it from the device too (see persisted-query-cache.ts).
+        gcTime: PERSISTED_CACHE_MAX_AGE_MS,
         retry: 2,
         // The window is long-lived; refetching on focus keeps a left-open
         // dashboard from going stale.
@@ -39,8 +50,32 @@ function createQueryClient(): QueryClient {
   return client
 }
 
+/**
+ * Keeps the on-device query cache owned by whoever is signed in, in whichever
+ * workspace — see persisted-query-cache.ts for why the owner is the design.
+ */
+function usePersistedQueryCache(client: QueryClient): void {
+  const [cache] = useState(() =>
+    createPersistedQueryCache(
+      client,
+      createQueryCachePersister(typeof window === 'undefined' ? undefined : window.localStorage),
+    ),
+  )
+  const isHydrated = useAuthStore((s) => s.isHydrated)
+  const userId = useAuthStore((s) => s.session?.user?.id ?? null)
+  const workspaceId = useWorkspaceStore((s) => s.workspaceId)
+
+  useEffect(() => {
+    // Before hydration "no user" means "not read yet", not "signed out" —
+    // treating it as a sign-out would wipe the cache on every launch.
+    if (!isHydrated) return
+    void cache.setOwner(cacheOwner(userId, workspaceId))
+  }, [cache, isHydrated, userId, workspaceId])
+}
+
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(createQueryClient)
+  usePersistedQueryCache(client)
   return (
     <QueryClientProvider client={client}>
       {/* ⚠️ THIS WAS MISSING, AND IT CRASHED WHOLE SCREENS.

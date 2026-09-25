@@ -80,40 +80,56 @@ function inlineEverything() {
   return {
     name: 'hisabche-inline-shell',
     enforce: 'post',
-    generateBundle(_options, bundle) {
-      const html = Object.values(bundle).find(
-        (file) => file.type === 'asset' && file.fileName.endsWith('.html'),
-      )
-      if (!html) return
+    // ⚠️ `order: 'post'` ON THE HOOK, not only `enforce` on the plugin. Vite's
+    // own `vite:build-import-analysis` rewrites the `__VITE_PRELOAD__`
+    // placeholder in ITS generateBundle, and `enforce: 'post'` alone ran this
+    // one first — so the HTML got the code with the placeholders still in it.
+    // The login screen rendered; the first lazy route after sign-in died on
+    // `ReferenceError: __VITE_PRELOAD__ is not defined`.
+    generateBundle: {
+      order: 'post',
+      handler(_options, bundle) {
+        const html = Object.values(bundle).find(
+          (file) => file.type === 'asset' && file.fileName.endsWith('.html'),
+        )
+        if (!html) return
 
-      let source = String(html.source)
+        let source = String(html.source)
 
-      for (const file of Object.values(bundle)) {
-        if (file === html) continue
+        for (const file of Object.values(bundle)) {
+          if (file === html) continue
 
-        if (file.type === 'chunk') {
-          // `</script>` — a bundle containing the literal characters
-          // `</script>` inside a string would otherwise end the tag early and
-          // truncate the app at that byte.
-          const code = file.code.replace(/<\/script>/gi, '<\\/script>')
-          source = source.replace(
-            new RegExp(`<script[^>]*src="[^"]*${file.fileName}"[^>]*></script>`),
-            `<script type="module">${code}</script>`,
-          )
-          delete bundle[file.fileName]
-          continue
+          if (file.type === 'chunk') {
+            // `</script>` — a bundle containing the literal characters
+            // `</script>` inside a string would otherwise end the tag early and
+            // truncate the app at that byte.
+            const code = file.code.replace(/<\/script>/gi, '<\\/script>')
+            // ⚠️ A FUNCTION, NOT A STRING, AS THE REPLACEMENT. In a replacement
+            // string `$'`, `` $` `` and `$&` are patterns — "the text after /
+            // before / of the match" — and minified code contains them. Each
+            // one pasted a slice of this HTML, `<script src=…></script>`
+            // included, into the middle of the bundle; that `</script>` ended
+            // the tag early and the WebView printed the rest as text. The file
+            // held 24 `</script` where there should be one.
+            source = source.replace(
+              new RegExp(`<script[^>]*src="[^"]*${file.fileName}"[^>]*></script>`),
+              () => `<script type="module">${code}</script>`,
+            )
+            delete bundle[file.fileName]
+            continue
+          }
+
+          if (file.fileName.endsWith('.css')) {
+            source = source.replace(
+              new RegExp(`<link[^>]*href="[^"]*${file.fileName}"[^>]*>`),
+              () => `<style>${String(file.source)}</style>`,
+            )
+            delete bundle[file.fileName]
+          }
         }
 
-        if (file.fileName.endsWith('.css')) {
-          source = source.replace(
-            new RegExp(`<link[^>]*href="[^"]*${file.fileName}"[^>]*>`),
-            `<style>${String(file.source)}</style>`,
-          )
-          delete bundle[file.fileName]
-        }
-      }
-
-      html.source = source
+        html.source = source
+      },
     },
   }
 }

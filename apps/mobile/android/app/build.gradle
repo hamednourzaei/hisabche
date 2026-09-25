@@ -170,6 +170,20 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
+    // ⚠️ WITHOUT THIS LINE THE APP CANNOT SEE EXPO AT ALL.
+    //
+    // `useExpoModules()` in settings.gradle includes every expo module as a
+    // Gradle project — `gradlew projects` lists all eighteen, and the configure
+    // log prints them by name — so everything looks wired. But inclusion is not
+    // a dependency: the `:expo` project is the one that calls
+    // `addExpoModulesDependencies` and re-exports the rest, and nothing here
+    // depended on it.
+    //
+    // The compiler then reports `Unresolved reference: expo` in MainActivity
+    // and MainApplication, which reads like the packages are missing rather
+    // than like one line of wiring is.
+    implementation project(':expo')
+
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
     def isWebpAnimatedEnabled = (findProperty('expo.webp.animated') ?: "") == "true";

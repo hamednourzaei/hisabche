@@ -16,7 +16,7 @@
 import React, { useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslations } from 'next-intl'
-import { DashboardSidebar } from '@hisabche/ui'
+import { BottomNav, DashboardSidebar } from '@hisabche/ui'
 import { MORE_GROUPS, MORE_ICON, PRIMARY_ITEMS } from '@hisabche/ui/menu'
 
 import { useUiStore } from '@/shared/stores/ui.store'
@@ -149,16 +149,37 @@ export function Sidebar() {
     [navigate],
   )
 
+  // ⚠️ THE PHONE HAD NO NAVIGATION AT ALL. `DashboardSidebar` is desktop-width
+  // only (`lg:`), and the web layout pairs it with `BottomNav` for narrow
+  // screens — this shell rendered the sidebar alone, so on mobile every page
+  // was a dead end. Same items, same handler; it stands down during the
+  // invoice builder exactly as web's does, because the builder owns the bottom
+  // of the screen there.
+  const isFullscreenWorkflow = /^\/invoices\/new(\/|$)/.test(location.pathname)
+
   return (
-    <DashboardSidebar
-      primaryItems={primaryItems}
-      moreGroups={moreGroups}
-      moreIcon={MORE_ICON}
-      activeNav={activeNav}
-      onNavigate={handleNavigate}
-      collapsed={collapsed}
-      onExpand={expand}
-      onOpenSettings={openSettings}
-    />
+    <>
+      <DashboardSidebar
+        primaryItems={primaryItems}
+        moreGroups={moreGroups}
+        moreIcon={MORE_ICON}
+        activeNav={activeNav}
+        onNavigate={handleNavigate}
+        collapsed={collapsed}
+        onExpand={expand}
+        onOpenSettings={openSettings}
+      />
+      {/* Published so a sticky in-page action bar can sit above the nav, as on web. */}
+      <style>{`:root{--bottom-nav-h:${isFullscreenWorkflow ? '0px' : 'calc(4.5rem + env(safe-area-inset-bottom,0px))'}}`}</style>
+      {isFullscreenWorkflow ? null : (
+        <BottomNav
+          primaryItems={primaryItems}
+          moreGroups={moreGroups}
+          moreIcon={MORE_ICON}
+          activeNav={activeNav}
+          onNavigate={handleNavigate}
+        />
+      )}
+    </>
   )
 }

@@ -150,6 +150,75 @@ describe('the WebView opens the UI from disk, not from a URL', () => {
     expect(webview).toContain('SHELL_MISSING_FROM_APK')
   })
 
+  it('⚠️ the single-file inliner hands .replace() a function, never the bundle as a string', () => {
+    // ⚠️ In a replacement STRING, `$'` `` $` `` `$&` are patterns, and
+    // minified code contains them: each pasted a slice of the HTML — a
+    // `</script>` included — into the bundle, and the WebView printed the
+    // app's source as text.
+    const inliner = readFileSync(
+      join(mobileRoot, '../../packages/app-shell/vite.shell.mjs'),
+      'utf8',
+    )
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+    expect(inliner).toContain('() => `<script type="module">${code}</script>`')
+    expect(inliner).toContain('() => `<style>${String(file.source)}</style>`')
+    expect(inliner).not.toMatch(/,\s*`<script type="module">/)
+    expect(inliner).not.toMatch(/,\s*`<style>/)
+  })
+
+  it('⚠️ the inliner runs AFTER Vite fills in __VITE_PRELOAD__', () => {
+    // ⚠️ `enforce: 'post'` on the plugin still ran its generateBundle before
+    // Vite's import-analysis one, so the placeholders were copied in raw: the
+    // login screen rendered and the first lazy route after sign-in died on
+    // `ReferenceError: __VITE_PRELOAD__ is not defined`.
+    const inliner = readFileSync(
+      join(mobileRoot, '../../packages/app-shell/vite.shell.mjs'),
+      'utf8',
+    )
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+    expect(inliner).toMatch(/generateBundle:\s*\{\s*order:\s*'post'/)
+  })
+
+  it('⚠️ the WebView is marked before first paint, and the shell drops blur there', () => {
+    // ⚠️ Android's WebView drew backdrop-filter as ghosts over the menu and
+    // the 140px glows behind sign-in as hard patches — "stains on the
+    // background". The marker must go in BEFORE content loads, or the first
+    // paint still has them.
+    const code = webview.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    expect(code).toContain("document.documentElement.setAttribute('data-host', 'mobile');")
+    expect(code).toContain('injectedJavaScriptBeforeContentLoaded={`${HOST_MARKER}')
+    const css = readFileSync(join(mobileRoot, '../../packages/app-shell/src/styles.css'), 'utf8')
+    expect(css).toContain("html[data-host='mobile'] *,")
+    expect(css).toContain('backdrop-filter: none !important;')
+    expect(css).toContain("html[data-host='mobile'] .rounded-full[class*='blur-']")
+  })
+
+  it('⚠️ the WebView never zooms out to fit a wide page', () => {
+    // Overview mode + no minimum-scale: the layout viewport stuck at 578px on
+    // a 411px phone, the page slid sideways and the bottom menu left the
+    // screen. Both halves are needed — either one alone let it happen.
+    const code = webview.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    expect(code).toContain('scalesPageToFit={false}')
+    const html = readFileSync(
+      join(mobileRoot, '../../packages/app-shell/src/index.html'),
+      'utf8',
+    ).replace(/<!--[\s\S]*?-->/g, '')
+    expect(html).toContain('minimum-scale=1.0')
+  })
+
+  it('⚠️ the "is the shell there" check reads inside the APK', () => {
+    // ⚠️ expo-file-system answers `file://` with java.io.File.exists(), and
+    // `android_asset` is not on disk — so asking about the `file://` form
+    // said "missing" for every APK, and the release build opened on
+    // SHELL_MISSING_FROM_APK with the shell inside it. Only `asset:///` goes
+    // through the AssetManager.
+    const code = webview.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    expect(code).toContain("getInfoAsync('asset:///shell/index.html')")
+    expect(code).not.toContain('getInfoAsync(uri)')
+  })
+
   it('⚠️ the file keeps a .html extension, or the WebView prints the source', () => {
     // ⚠️ Android packs bundled assets into the APK under a HASHED NAME WITH
     // NO EXTENSION. A WebView given such a file has nothing to infer a MIME

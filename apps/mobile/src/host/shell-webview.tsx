@@ -14,6 +14,7 @@ import { ActivityIndicator, BackHandler, Platform, StyleSheet, Text, View } from
 import { Asset } from 'expo-asset'
 import * as FileSystem from 'expo-file-system'
 import { WebView, type WebViewMessageEvent } from 'react-native-webview'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { rpcRequestSchema, webViewBridgeSource } from '@hisabche/app-bridge'
 
 import { handleBridgeCall } from './native-bridge'
@@ -21,10 +22,13 @@ import { useHostServices } from './use-host-services'
 
 import SHELL_HTML from '../../assets/shell/index.html'
 
+const HOST_MARKER = "document.documentElement.setAttribute('data-host', 'mobile');"
+
 export function ShellWebView(): React.JSX.Element {
   const webViewRef = useRef<WebView>(null)
   const [canGoBack, setCanGoBack] = useState(false)
   const [ready, setReady] = useState(false)
+  const insets = useSafeAreaInsets()
 
   // ⚠️ A push, not an answer: the page never asked. The queue finished on its
   // own, possibly while a different screen was open, and the UI has to hear
@@ -90,12 +94,20 @@ export function ShellWebView(): React.JSX.Element {
       try {
         if (Platform.OS === 'android') {
           const uri = 'file:///android_asset/shell/index.html'
-          const info = await FileSystem.getInfoAsync(uri)
 
           // ⚠️ CHECKED, NOT ASSUMED. A build whose `build:shell` step did not
           // run ships an app with no UI in it, and pointing the WebView at a
           // file that is not there produces a blank screen with no reason on
           // it (راهنمای سشن §۷٫۶).
+          //
+          // ⚠️ But NOT through the `file://` form. expo-file-system answers a
+          // `file://` URI with `java.io.File.exists()`, and `android_asset` is
+          // not a directory on disk — it lives inside the APK. That check said
+          // "missing" for EVERY build, including ones that carried the shell,
+          // and the release APK opened on SHELL_MISSING_FROM_APK with the file
+          // sitting in `assets/shell/`. The `asset:///` scheme is the one it
+          // routes through Android's AssetManager.
+          const info = await FileSystem.getInfoAsync('asset:///shell/index.html')
           if (!info.exists) {
             setFailure('SHELL_MISSING_FROM_APK')
             return
@@ -170,10 +182,23 @@ export function ShellWebView(): React.JSX.Element {
     )
   }
 
+  // ⚠️ THE WEBVIEW DREW UNDER THE STATUS BAR. The status bar is translucent,
+  // so the header's logo sat on the clock and the wifi icon. The page cannot
+  // fix this reliably from CSS — Android's WebView does not report
+  // `env(safe-area-inset-*)` without `viewport-fit=cover`, and not on every
+  // version even then — so the host keeps the page out of both system bars.
+  // The strip left behind is `container`'s dark background, which the
+  // light status-bar icons stay readable on in either theme.
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <WebView
         ref={webViewRef}
+        webviewDebuggingEnabled // TEMP-DEBUG: remove before final build
+        // ⚠️ Android's default (`true`) turns on the WebView's overview mode,
+        // which zooms OUT to fit anything momentarily wider than the phone —
+        // and stays zoomed out. The bottom menu slid off-screen on accounting.
+        // The page's own viewport meta decides instead.
+        scalesPageToFit={false}
         source={{ uri: shellUri }}
         // The bundle lives beside index.html on the filesystem; without these
         // the page loads and every one of its own scripts 404s.
@@ -184,7 +209,10 @@ export function ShellWebView(): React.JSX.Element {
         // ⚠️ BEFORE the content loads. The shared UI decides whether it has a
         // host while its own modules initialise; a bridge installed after
         // first paint is a bridge it has already concluded is absent.
-        injectedJavaScriptBeforeContentLoaded={webViewBridgeSource()}
+        // `data-host` first, so the shell's CSS can drop the effects this
+        // WebView draws badly (see "Android WebView" in app-shell styles.css)
+        // before the first paint rather than after it.
+        injectedJavaScriptBeforeContentLoaded={`${HOST_MARKER}${webViewBridgeSource()}`}
         onMessage={onMessage}
         onLoadEnd={() => setReady(true)}
         // Without this the WebView shows its own English error page — the

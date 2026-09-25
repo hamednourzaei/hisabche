@@ -32,3 +32,29 @@ body,
   --sidebar-width-collapsed: 64px;
   --toolbar-height: 52px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⚠️ ANDROID WEBVIEW — NO BLUR.
+
+   The mobile app marks <html data-host="mobile"> before the page loads. In
+   that WebView, CSS blur is drawn as tiles: a `backdrop-filter` on a fixed
+   layer leaves ghosts of whatever scrolled behind it (blotches over the "more"
+   menu in dark mode), and the 100–140px `blur()` glows behind the sign-in
+   card came out as hard-edged coloured patches. The owner reported both as
+   "stains on the background".
+
+   So in that host: no backdrop-filter anywhere, and the decorative glows —
+   every one is an absolute, rounded-full, pointer-less blob — are not drawn.
+   Nothing that carries information uses blur. Web and Windows keep the
+   effects; they render them correctly.
+   ═══════════════════════════════════════════════════════════════════════════ */
+html[data-host='mobile'] *,
+html[data-host='mobile'] *::before,
+html[data-host='mobile'] *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html[data-host='mobile'] .rounded-full[class*='blur-'] {
+  display: none !important;
+}

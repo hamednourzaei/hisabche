@@ -95,8 +95,7 @@
       "<rootDir>/jest.setup.js"
     ],
     "transformIgnorePatterns": [
-      "node_modules/\\.pnpm/(?!((jest-)?react-native@|@react-native\\+|@react-native-community\\+|expo@|expo-|@expo\\+|@shopify\\+flash-list|react-navigation@|@react-navigation\\+|@hisabche\\+))",
-      "node_modules/(?!\\.pnpm/)(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|expo-modules-core|@shopify/flash-list|react-navigation|@react-navigation/.*|@hisabche/.*)/)"
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|expo-modules-core|@shopify/flash-list|react-navigation|@react-navigation/.*|@hisabche/.*)/)"
     ],
     "roots": [
       "<rootDir>/src",

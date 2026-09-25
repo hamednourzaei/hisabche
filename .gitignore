@@ -1,5 +1,7 @@
 # Dependencies
 node_modules
+# pnpm's virtual store (`virtualStoreDir` in pnpm-workspace.yaml)
+/.p/
 .pnp
 .pnp.js
 

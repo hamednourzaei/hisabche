@@ -69,7 +69,7 @@
 
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
-import { supabaseClient } from '../../../auth/src/supabase'
+import { onSignedOut, supabaseClient } from './client'
 
 type Listener = () => void
 
@@ -211,16 +211,15 @@ let signOutHookInstalled = false
  * side effect would either be skipped permanently or throw, depending on
  * order. The first subscribe is the moment both are certainly present.
  */
+//
+// ⚠️ It listened for supabase-auth's SIGNED_OUT, which never fired: sign-in
+// goes through the backend, so this client never held a session to sign out
+// of. And once the client got `accessToken`, merely reading `.auth` throws.
+// The signal now comes from the token itself (see ./client).
 function installSignOutHook(): void {
   if (signOutHookInstalled) return
   signOutHookInstalled = true
-
-  const auth = (supabaseClient as { auth?: { onAuthStateChange?: unknown } }).auth
-  if (typeof auth?.onAuthStateChange !== 'function') return
-
-  ;(auth.onAuthStateChange as (cb: (event: string) => void) => unknown)((event) => {
-    if (event === 'SIGNED_OUT') closeAllChannels()
-  })
+  onSignedOut(closeAllChannels)
 }
 
 /**

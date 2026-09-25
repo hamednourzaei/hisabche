@@ -47,7 +47,10 @@ const IconSun = (
     }
   />
 )
-const IconMoon = <SvgIcon d="M13.2 9.4A5.4 5.4 0 0 1 6.6 2.8a5.4 5.4 0 1 0 6.6 6.6Z" />
+// ⚠️ `d` here is the svg's CHILDREN, not a path string. The moon was passed
+// the bare string, which renders as an invisible text node inside `<svg>` —
+// in light mode the theme button was an empty square.
+const IconMoon = <SvgIcon d={<path d="M13.2 9.4A5.4 5.4 0 0 1 6.6 2.8a5.4 5.4 0 1 0 6.6 6.6Z" />} />
 const IconLogout = (
   <SvgIcon
     d={
