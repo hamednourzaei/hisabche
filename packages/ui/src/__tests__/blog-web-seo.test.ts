@@ -53,6 +53,12 @@ describe('ISR and static rendering', () => {
     }
   })
 
+  it('every page opts into ISR with generateStaticParams (without it the route renders per request)', () => {
+    for (const f of pages) {
+      expect(read(f), relative(ROOT, f)).toMatch(/export function generateStaticParams\(\)/)
+    }
+  })
+
   it('no <Suspense> and no searchParams — both would make the pages dynamic', () => {
     for (const f of appFiles) {
       const src = read(f)

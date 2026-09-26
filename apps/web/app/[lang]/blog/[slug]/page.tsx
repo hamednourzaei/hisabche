@@ -21,6 +21,14 @@ import { BlogChrome, blogDate, blogNumber, blogTranslator, cardLabels } from '..
 // render after its time.
 export const revalidate = 3600 // = BLOG_REVALIDATE_SECONDS (lib/blog-api.ts); segment config must be a literal
 
+// No path is built ahead: the API may be unreachable during `next build`, and
+// an article only exists once someone publishes it. An empty list still makes
+// the route ISR — rendered on its first request, then cached for `revalidate`
+// (without it the route is dynamic and renders on every request).
+export function generateStaticParams() {
+  return []
+}
+
 type Params = Promise<{ lang: string; slug: string }>
 
 const OG_LOCALE: Record<Locale, string> = { fa: 'fa_IR', af: 'fa_AF', en: 'en_US' }
