@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS public.plan_limit_settings (
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
+
 CREATE TABLE IF NOT EXISTS public.workspace_limit_overrides (
   workspace_id uuid PRIMARY KEY,
   limits       jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(limits) = 'object'),
