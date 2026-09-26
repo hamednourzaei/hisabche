@@ -3907,6 +3907,195 @@
       "limitFromPlan": "Blank = from the plan",
       "note": "Note",
       "quotaHint": "Blank means \"follow the plan\". Zero means \"none\". They are not the same."
+    },
+    "blog": {
+      "title": "Blog",
+      "description": "Write, schedule and publish articles, moderate comments and see each article’s statistics.",
+      "newPost": "New article",
+      "emptyPosts": "No articles yet.",
+      "emptyPostsHint": "Use «New article» to write the first one; it is not on the site until it is published.",
+      "emptyComments": "No comments in this state.",
+      "unknownAuthor": "Unnamed user",
+      "isReply": "Reply",
+      "tabs": {
+        "posts": "Articles",
+        "comments": "Comments",
+        "taxonomy": "Categories & tags"
+      },
+      "filters": {
+        "allLocales": "All languages",
+        "status": "Status",
+        "allStatuses": "All statuses",
+        "search": "Search title or address"
+      },
+      "columns": {
+        "title": "Title",
+        "locale": "Language",
+        "status": "Status"
+      },
+      "locales": {
+        "fa": "Persian",
+        "af": "Dari",
+        "en": "English"
+      },
+      "status": {
+        "draft": "Draft",
+        "scheduled": "Scheduled",
+        "published": "Published"
+      },
+      "commentStatus": {
+        "pending": "Awaiting approval",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "spam": "Spam"
+      },
+      "moderate": {
+        "approved": "Approve",
+        "rejected": "Reject",
+        "spam": "Spam"
+      },
+      "stats": {
+        "title": "Statistics",
+        "views": "Views",
+        "likes": "Helpful / not",
+        "rating": "Rating",
+        "comments": "Comments"
+      },
+      "taxonomy": {
+        "categories": "Categories (topic hub pages)",
+        "tags": "Tags",
+        "name": "Name",
+        "slug": "Address (Latin or Persian, hyphens)",
+        "description": "Short description (shown on the category page)",
+        "add": "Add",
+        "delete": "Delete",
+        "confirmDelete": "Delete it? Articles stay; only this category/tag is removed from them.",
+        "empty": "Nothing defined yet."
+      },
+      "fields": {
+        "locale": "Language",
+        "author": "Author",
+        "title": "Article title",
+        "excerpt": "Summary (optional; used in lists and search results)",
+        "organise": "Category & tags",
+        "category": "Category",
+        "none": "— No category —",
+        "tags": "Tags",
+        "noTags": "No tags defined for this language.",
+        "cover": "Cover image",
+        "coverUpload": "Upload cover image",
+        "coverAlt": "Image alt text (required)"
+      },
+      "publish": {
+        "title": "Publishing",
+        "current": "Current state",
+        "date": "Publication date and time",
+        "dateHint": "Pick a future time to schedule. Empty = now.",
+        "saveDraft": "Save draft",
+        "schedule": "Schedule",
+        "publish": "Publish",
+        "view": "View on site",
+        "saved": "Saved.",
+        "revalidateFailed": "Saved, but the site was not refreshed at once; it will show within an hour.",
+        "revalidateDisabled": "Instant site refresh is not configured; the change will show within an hour.",
+        "confirmDelete": "Delete this article with all its comments and votes? This cannot be undone.",
+        "delete": "Delete article"
+      },
+      "translations": {
+        "title": "Translations",
+        "create": "Create translation"
+      },
+      "faq": {
+        "title": "Frequently asked questions",
+        "hint": "Only questions you really answer. They appear under the article, and the FAQ structured data is built from them.",
+        "question": "Question",
+        "answer": "Answer",
+        "remove": "Remove question",
+        "add": "Add question"
+      },
+      "seo": {
+        "title": "SEO",
+        "preview": "Google result preview",
+        "untitled": "Untitled",
+        "noDescription": "No meta description; Google will pick part of the text itself.",
+        "focusKeyword": "Focus keyword",
+        "keywords": "Secondary keywords",
+        "keywordsHint": "Separate with commas",
+        "metaTitle": "Meta title (no brand name)",
+        "metaDescription": "Meta description",
+        "slug": "Article address",
+        "canonicalUrl": "Canonical URL (only if the original lives elsewhere)",
+        "ogImageUrl": "Social image (optional)",
+        "noindex": "Keep out of search results (noindex)",
+        "checklist": "SEO checklist: {passed} of {total}",
+        "guidanceOnly": "The checklist is guidance only and never blocks publishing.",
+        "checks": {
+          "keywordInTitle": "Focus keyword in the title",
+          "keywordInFirstParagraph": "Focus keyword in the first paragraph",
+          "keywordInHeading": "Focus keyword in at least one H2",
+          "length": "At least {minWords} words (now {value})",
+          "imageAlt": "Every image has alt text ({value} without)",
+          "internalLinks": "At least {minLinks} internal links (now {value})",
+          "metaTitleLength": "Meta title 30–60 characters (now {value})",
+          "metaDescriptionLength": "Meta description 70–160 characters (now {value})",
+          "readability": "Short sentences: 25 words or fewer on average (now {value})"
+        }
+      },
+      "editor": {
+        "placeholder": "Write the article here…",
+        "words": "{count} words",
+        "undo": "Undo",
+        "redo": "Redo",
+        "h2": "Heading 2",
+        "h3": "Heading 3",
+        "h4": "Heading 4",
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline",
+        "strike": "Strikethrough",
+        "code": "Inline code",
+        "bulletList": "Bulleted list",
+        "orderedList": "Numbered list",
+        "quote": "Quote",
+        "codeBlock": "Code block",
+        "hr": "Divider",
+        "link": "Link",
+        "image": "Image",
+        "table": "Table",
+        "font": "Font",
+        "fontDefault": "Default",
+        "fonts": {
+          "sans": "Vazirmatn (project font)",
+          "mono": "Monospace (code)"
+        },
+        "size": "Size",
+        "sizeDefault": "Default",
+        "direction": "Text direction",
+        "rtl": "Right-to-left",
+        "ltr": "Left-to-right",
+        "alignStart": "Align start",
+        "alignCenter": "Center",
+        "alignEnd": "Align end",
+        "alignJustify": "Justify",
+        "addRow": "Add row",
+        "addColumn": "Add column",
+        "deleteRow": "Delete row",
+        "deleteColumn": "Delete column",
+        "deleteTable": "Delete table",
+        "imageAlt": "Image alt text (required)",
+        "apply": "Apply",
+        "linkUrl": "Link address",
+        "unlink": "Remove link",
+        "searchArticles": "Search published articles to link",
+        "imageFile": "Image file (JPEG, PNG, WebP, AVIF — max 2 MB)",
+        "uploading": "Uploading…",
+        "insertImage": "Insert image"
+      },
+      "errors": {
+        "save": "Not saved.",
+        "load": "Could not load.",
+        "upload": "Image upload failed."
+      }
     }
   },
   "till": {

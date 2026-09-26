@@ -3,6 +3,7 @@ import {
   Building2,
   CreditCard,
   LayoutDashboard,
+  Newspaper,
   ScrollText,
   Server,
   Sparkles,
@@ -10,7 +11,7 @@ import {
 } from 'lucide-react'
 
 /**
- * The admin navigation — six destinations, each backed by an endpoint that
+ * The admin navigation — every destination backed by an endpoint that
  * exists today.
  *
  * DELIBERATELY ABSENT: tickets, reports, settings. There is no
@@ -77,6 +78,16 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     titleKey: 'admin.ai.title',
     descriptionKey: 'admin.ai.description',
     endpoint: 'GET /ai/config',
+  },
+  {
+    // Added with the blog (26 Sep 2026): every /admin/blog/* route exists in
+    // backend/src/routes/blog.routes.ts, behind platformAdminGuard.
+    id: 'blog',
+    path: '/blog',
+    icon: Newspaper,
+    titleKey: 'admin.blog.title',
+    descriptionKey: 'admin.blog.description',
+    endpoint: 'GET /admin/blog/posts',
   },
   {
     id: 'servers',

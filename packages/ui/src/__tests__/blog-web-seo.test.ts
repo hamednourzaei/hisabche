@@ -10,11 +10,13 @@ const WEB = join(ROOT, 'apps/web')
 const BLOG_APP = join(WEB, 'app/[lang]/blog')
 const BLOG_UI = join(__dirname, '../components/ui/blog')
 
+// Line comments FIRST: a path glob in one (`/admin/blog/*`) must not open a
+// block comment that swallows the code after it.
 const strip = (s: string) =>
   s
+    .replace(/^\s*\/\/.*$/gm, '')
     .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
     .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/^\s*\/\/.*$/gm, '')
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
