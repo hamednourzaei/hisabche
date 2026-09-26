@@ -446,3 +446,17 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
   عمومی، wrapper روی خانه، ریدایرکت auth در proxy) و `landing-header-dashboard-button.test.tsx` — هر دو **injection-tested**.
 - **مرورگر:** ✅ Chromium روی بیلد production محلی (session رمزشده با همان کلید dev)؛ main → `/fa/onboarding`، شاخه → `/fa` + «داشبورد».
   روی سایت زنده ❌ نیازمند deploy.
+
+## BUG-029 — گارد RLS ۴۹ جدول را «بدون RLS» می‌دید؛ علت یک `*` در کامنت بود (۲۶ سپتامبر)
+
+- **الگو:** «گاردی که سورس می‌خواند، کامنت را اشتباه می‌خواند» (درس ۸۲، این‌بار در SQL).
+- **نشانه:** `rls-coverage.test.ts` روی `main` ۴۹ قرمز داشت («has RLS enabled by a migration» برای pos_sessions، fixed_assets…)،
+  در حالی که `finance-gaps-migration.sql` همه‌شان را در یک `FOREACH … ARRAY[...]` روشن می‌کند.
+- **ریشه:** `stripSqlComments` اول `/* … */` و بعد `--` را حذف می‌کرد. چهار migration در یک کامنت خطی مسیر با glob نوشته‌اند
+  (`-- backend/src/services/accounting/* …`، `-- docs/*.sql …`). آن `/*` شروع یک کامنت بلوکی خوانده می‌شد که تا اولین `*/`
+  بعدی در SQL به‌هم‌چسبیده ادامه پیدا می‌کرد و migrationهای وسط را می‌بلعید — از جمله policyهای وبلاگ.
+- **رفع:** اول `--`، بعد `/* */`. ۴۹ قرمز → ۱ یافته‌ی واقعی (`app_releases_public_read`، گزارش در USER-REQUESTS).
+- **همان باگ دو بار دیگر در همین سشن:** گاردهای تازه‌ی `admin-blog.test.ts` (مسیر `/admin/blog/*` در کامنت) و
+  `blog-web-seo.test.ts` — هر دو با همان ترتیب اصلاح شدند.
+- **درس:** در هر stripper، کامنت خطی را **اول** حذف کن؛ glob و مسیر در کامنت خطی عادی است.
+- **تست:** خودِ گارد؛ injection: `FOR ALL` روی `blog_posts_public_read` → قرمز.
