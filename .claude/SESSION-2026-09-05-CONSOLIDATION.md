@@ -256,13 +256,14 @@ enumerate کند).
 
 ## وضعیت اجرا (تکمیل جدول بالا)
 
-| فاز | فایل‌ها                          | روی دیتابیس اجرا شد؟ |
-| --- | -------------------------------- | -------------------- |
-| G1  | — (فقط کد)                       | —                    |
-| G2  | `phase-g-01-branch-manager`      | ✅ بله               |
-| G3  | `phase-g-02-permission-profiles` | ✅ بله               |
-| G4  | `phase-g-03-audit-branch`        | ✅ بله               |
-| J1  | `phase-j-01-branch-period-lock`  | ✅ بله               |
+| فاز   | فایل‌ها                                                         | روی دیتابیس اجرا شد؟ |
+| ----- | --------------------------------------------------------------- | -------------------- |
+| G1    | — (فقط کد)                                                      | —                    |
+| G2    | `phase-g-01-branch-manager`                                     | ✅ بله               |
+| G3    | `phase-g-02-permission-profiles`                                | ✅ بله               |
+| G4    | `phase-g-03-audit-branch`                                       | ✅ بله               |
+| J1    | `phase-j-01-branch-period-lock`                                 | ✅ بله               |
+| وبلاگ | `blog-migration.sql` (+ `VERIFY-blog.sql` ۱۲/۱۲ ok، ۲۶ سپتامبر) | ✅ بله               |
 
 ## 🔴 کرشی که به production رسید
 
