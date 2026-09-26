@@ -67,6 +67,10 @@ allowBuilds:
   # before Gradle was ever reached, with a pnpm stack trace and no mention of
   # Android anywhere in it.
   protobufjs: false
+  # Dev-only: a real Postgres for the backend's concurrency tests (job claiming,
+  # scheduler locks). Its postinstall only recreates the symlinks inside its own
+  # bundled binaries.
+  '@embedded-postgres/windows-x64': true
 minimumReleaseAgeExclude:
   - better-sqlite3@13.0.3
 

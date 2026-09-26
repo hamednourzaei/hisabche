@@ -30,6 +30,8 @@
 // ============================================
 
 import { roleCapabilities } from '../services/authorization/role-capabilities.service'
+import { memberModuleBlocks } from '../services/authorization/member-module-blocks.service'
+import { restrictByModuleBlocks } from '../services/authorization/authorization.domain'
 import { FastifyReply, FastifyRequest } from 'fastify'
 
 import { requireWorkspace, type TenancyContext } from '../services/tenancy.service'
@@ -73,7 +75,13 @@ export async function requireWorkspaceContext(request: FastifyRequest, reply: Fa
     const resolved = await requireWorkspace(userId, requestedWorkspaceId(request))
     request.tenancy = {
       ...resolved,
-      capabilities: await roleCapabilities.effective(resolved.workspaceId, resolved.role),
+      // The role's set, minus any modules the owner took away from THIS person.
+      // Only ever a subset; never applied to the owner (restrictByModuleBlocks).
+      capabilities: restrictByModuleBlocks(
+        resolved.role,
+        await roleCapabilities.effective(resolved.workspaceId, resolved.role),
+        await memberModuleBlocks.forMember(resolved.workspaceId, userId),
+      ),
     }
   } catch (error) {
     const status = error instanceof BaseError ? error.statusCode : 500

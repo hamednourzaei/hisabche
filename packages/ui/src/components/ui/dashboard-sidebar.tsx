@@ -19,6 +19,12 @@ export interface NavItem {
   label: string
   path: string
   badge?: number
+  /**
+   * The owner took this page away from the signed-in person. Drawn with a lock;
+   * the host decides what a click does (it explains instead of navigating).
+   * The server refuses the page either way — this is only what the menu shows.
+   */
+  locked?: boolean | undefined
 }
 
 export interface NavGroup {
@@ -111,6 +117,26 @@ const SidebarIcon = memo(function SidebarIcon({
 SidebarIcon.displayName = 'SidebarIcon'
 
 // ✅ ItemIcon با memo
+/** A padlock in the item's slot — the page is closed to this person. */
+const LockedIcon = ({ size }: { size: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    data-nav-locked="true"
+    className="opacity-60"
+  >
+    <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
+    <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+  </svg>
+)
+
 const ItemIcon = memo(function ItemIcon({
   item,
   active,
@@ -120,6 +146,9 @@ const ItemIcon = memo(function ItemIcon({
   active: boolean
   size?: number
 }) {
+  // One place for every menu surface: sidebar, collapsed rail, bottom bar and
+  // its "more" panel all draw their icon through here.
+  if (item.locked) return <LockedIcon size={size} />
   if (ICON_PATHS[item.id]) return <SidebarIcon id={item.id} active={active} size={size} />
 
   // A destination whose icon did not resolve must not take the whole shell

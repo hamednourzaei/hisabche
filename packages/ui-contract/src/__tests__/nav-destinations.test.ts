@@ -13,14 +13,12 @@
 // directory name, so a test that only reads types cannot see the break. This
 // one looks for the files.
 //
-// Mobile is judged against its OWN list rather than the whole contract: it is
-// deliberately behind, and `IMPLEMENTED` in `apps/mobile/.../nav.ts` is the
-// honest statement of how far. What is checked is that the list does not lie —
-// every id it claims has a route file.
+// Mobile renders the desktop shell in a WebView, so it is covered by the
+// desktop routes; its block only checks that this is still how it works.
 // ============================================
 
 import { existsSync } from 'node:fs'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -53,7 +51,7 @@ describe('web routes', () => {
 })
 
 describe('desktop routes', () => {
-  const app = readFileSync(join(ROOT, 'apps', 'desktop', 'src', 'app', 'app.tsx'), 'utf8')
+  const app = readFileSync(join(ROOT, 'packages', 'app-shell', 'src', 'app', 'app.tsx'), 'utf8')
 
   it.each(NAV_CONTRACT.map((item) => [item.id, item.path] as const))(
     '%s is routed at %s',
@@ -68,41 +66,19 @@ describe('desktop routes', () => {
 })
 
 describe('mobile routes', () => {
-  const nav = readFileSync(
-    join(ROOT, 'apps', 'mobile', 'src', 'shared', 'navigation', 'nav.ts'),
-    'utf8',
-  )
-
-  const implemented = (() => {
-    const block = /const IMPLEMENTED[^=]*=\s*new Set<NavId>\(\[([\s\S]*?)\]\)/.exec(nav)
-    if (!block) throw new Error('could not read IMPLEMENTED from mobile nav.ts')
-
-    return [...block[1]!.matchAll(/'([\w-]+)'/g)].map((match) => match[1]!)
-  })()
-
-  it('claims at least one destination', () => {
-    expect(implemented.length).toBeGreaterThan(0)
+  // Mobile has no router of its own: it renders the SAME app-shell bundle as
+  // desktop inside a WebView, so every destination the desktop block above
+  // proves is routed is routed on the phone too. What must stay true for that
+  // is that the phone keeps loading the shell and grows no second router.
+  it('the phone renders the shared shell', () => {
+    const host = readFileSync(
+      join(ROOT, 'apps', 'mobile', 'src', 'host', 'shell-webview.tsx'),
+      'utf8',
+    )
+    expect(host).toContain("from '../../assets/shell/index.html'")
   })
 
-  it.each(implemented)('%s has a screen', (id) => {
-    const item = NAV_CONTRACT.find((entry) => entry.id === id)
-
-    // A few NavIds are deliberately NOT navigation destinations — `buy`
-    // (/purchasing) is reached from the stock screen rather than the menu, and
-    // says so at navigation.ts:112. Mobile may still have a screen for one;
-    // what this test can check is only what the contract describes.
-    if (!item) return
-
-    // Expo Router serves a destination three ways: `<seg>.tsx`, a directory
-    // with `index.tsx`, or either of those inside the `(tabs)` group.
-    const route = join(ROOT, 'apps', 'mobile', 'app', `${segment(item!.path)}.tsx`)
-    const routeIndex = join(ROOT, 'apps', 'mobile', 'app', segment(item!.path), 'index.tsx')
-    const tabRoute = join(ROOT, 'apps', 'mobile', 'app', '(tabs)', `${segment(item!.path)}.tsx`)
-    const tabIndex = join(ROOT, 'apps', 'mobile', 'app', '(tabs)', segment(item!.path), 'index.tsx')
-
-    expect(
-      existsSync(route) || existsSync(routeIndex) || existsSync(tabRoute) || existsSync(tabIndex),
-      `${id} is listed as implemented but has no route file`,
-    ).toBe(true)
+  it('and has no screens of its own besides the host layout', () => {
+    expect(readdirSync(join(ROOT, 'apps', 'mobile', 'app'))).toEqual(['_layout.tsx'])
   })
 })

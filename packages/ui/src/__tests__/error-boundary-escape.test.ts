@@ -34,8 +34,8 @@ const boundary = code(join(__dirname, '..', 'components', 'ui', 'error-boundary.
 const webError = code(join(REPO, 'apps', 'web', 'app', '[lang]', 'error.tsx'))
 const webBoundary = code(join(REPO, 'apps', 'web', 'app', '[lang]', 'client-error-boundary.tsx'))
 const webGlobal = code(join(REPO, 'apps', 'web', 'app', '[lang]', 'global-error.tsx'))
-const desktopError = code(join(REPO, 'apps', 'desktop', 'src', 'app', 'route-error.tsx'))
-const desktopRoutes = code(join(REPO, 'apps', 'desktop', 'src', 'app', 'app.tsx'))
+const desktopError = code(join(REPO, 'packages', 'app-shell', 'src', 'app', 'route-error.tsx'))
+const desktopRoutes = code(join(REPO, 'packages', 'app-shell', 'src', 'app', 'app.tsx'))
 
 describe('the shared boundary offers a way out', () => {
   it('reads authentication from the one auth store', () => {

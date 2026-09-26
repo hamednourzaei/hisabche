@@ -51,9 +51,12 @@ export function useCustomers(
 
   return useQuery({
     queryKey: customerKeys.list(filters),
-    queryFn: async () => {
+    // `signal`: when the search term changes or the picker closes, React Query
+    // aborts the request still in flight instead of letting it finish unused.
+    queryFn: async ({ signal }) => {
       const { data } = await apiClient.get<{ customers: Customer[]; total: number }>('/customers', {
         params: filters,
+        signal,
       })
       // A type annotation is not a runtime check. Every picker and list slices
       // `customers`, so the list is asked for, not assumed.

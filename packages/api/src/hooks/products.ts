@@ -93,7 +93,8 @@ export function useProducts(filters: Partial<ProductFilters> = {}) {
 
   return useQuery({
     queryKey: productKeys.list(mergedFilters),
-    queryFn: async () => {
+    // Aborted by React Query when the search term changes or the picker closes.
+    queryFn: async ({ signal }) => {
       type Page = {
         products: Product[]
         total: number
@@ -111,9 +112,11 @@ export function useProducts(filters: Partial<ProductFilters> = {}) {
       }
       if (device?.readRows && device.isOffline()) return fromDevice()
       try {
-        const { data } = await apiClient.get<Page>('/products', { params: mergedFilters })
+        const { data } = await apiClient.get<Page>('/products', { params: mergedFilters, signal })
         return data
       } catch (error) {
+        // An aborted request is not "no network": never fall back to the device for it.
+        if (signal.aborted) throw error
         if (device?.readRows && (error as Partial<ApiError>)?.code === 'NETWORK_ERROR')
           return fromDevice()
         throw error
@@ -121,6 +124,11 @@ export function useProducts(filters: Partial<ProductFilters> = {}) {
     },
     enabled: authReady,
     staleTime: 1000 * 60 * 2,
+    // ⚠️ 'always', not the default 'online': offline, React Query PAUSES a
+    // query and never calls queryFn — so the device-database answer above was
+    // never reached and the stock picker said "no products" with all of them
+    // on the device. This queryFn decides for itself what offline means.
+    networkMode: 'always',
   })
 }
 

@@ -16,6 +16,7 @@ import { useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useIntentKey } from '../lib/intent-key'
 import { useActiveWorkspaceId } from './useRealtime'
 import type {
   Transaction,
@@ -106,12 +107,18 @@ export function useTransactions(
 
 export function useCreateTransaction() {
   const queryClient = useQueryClient()
+  // Same key while the same transaction is retried after a lost response.
+  const intent = useIntentKey('txn')
   return useMutation({
     mutationFn: async (input: CreateTransaction) => {
-      const response = await apiClient.post<Transaction>('/transactions', input)
+      const response = await apiClient.post<Transaction>('/transactions', input, {
+        headers: { 'Idempotency-Key': intent.current() },
+      })
       return (response as any).data || response
     },
+    onError: (error) => intent.settle(error),
     onSuccess: () => {
+      intent.settle()
       queryClient.invalidateQueries({ queryKey: transactionKeys.lists() })
       queryClient.invalidateQueries({ queryKey: ['ledger'] })
     },

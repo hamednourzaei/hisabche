@@ -2576,21 +2576,22 @@ export class InvoiceService {
       // Only templates that actually exist, in THIS workspace, and are active.
       // A rule naming a deleted or foreign template must not hold a document
       // hostage to an approval nobody can grant — see `decideApproval`.
-      const startable: string[] = []
-
-      for (const workflowId of decision.workflowIds) {
-        const { data: workflows } = await supabase
-          .from('workflows')
-          .select('id')
-          .eq('id', workflowId)
-          .eq('workspace_id', workspaceId)
-          .eq('entity_type', 'invoice')
-          .eq('is_active', true)
-          .is('deleted_at', null)
-          .limit(1)
-
-        if (workflows?.[0]) startable.push(workflows[0].id)
-      }
+      //
+      // One query for all of them, not one per workflow (N+1). The rule's own
+      // order is kept, since it decides which workflow starts first.
+      const { data: workflows } =
+        decision.workflowIds.length > 0
+          ? await supabase
+              .from('workflows')
+              .select('id')
+              .in('id', decision.workflowIds)
+              .eq('workspace_id', workspaceId)
+              .eq('entity_type', 'invoice')
+              .eq('is_active', true)
+              .is('deleted_at', null)
+          : { data: [] as Array<{ id: string }> }
+      const found = new Set((workflows ?? []).map((w: { id: string }) => w.id))
+      const startable: string[] = decision.workflowIds.filter((id: string) => found.has(id))
 
       const outcome = decideApproval({
         requiresApproval: decision.requiresApproval,

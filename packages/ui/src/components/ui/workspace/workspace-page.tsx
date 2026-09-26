@@ -14,7 +14,8 @@ import {
 } from '@hisabche/store'
 import { useRemoveMember, useUpdateMemberRole } from '@hisabche/api'
 import { InviteModal } from '../invite-modal'
-import { Users, UserPlus, Crown, Shield, User, X } from 'lucide-react'
+import { Users, UserPlus, Crown, Shield, User, X, LockKeyhole } from 'lucide-react'
+import { MemberPageAccess } from './member-page-access'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    WorkspacePage v3 — Memoized · Performance Optimized · i18n Fixed
@@ -54,61 +55,82 @@ const MemberRow = memo(function MemberRow({
   roleLabel: (role: string) => string
   t: (key: string) => string
 }) {
+  // The owner's per-person page access (never offered for the owner).
+  const [accessOpen, setAccessOpen] = useState(false)
+  const canEditAccess = isOwner && member.role !== 'owner'
+
   const bs =
     badgeStyles[
       member.role === 'owner' ? 'warning' : member.role === 'admin' ? 'default' : 'secondary'
     ] ?? badgeStyles.secondary
 
   return (
-    <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--border-default))] p-4">
-      <div className="flex items-center gap-3 text-start">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--color-primary)/0.12)] font-bold text-[hsl(var(--color-primary))]">
-          {member.fullName?.charAt(0) || '?'}
+    <div className="rounded-xl border border-[hsl(var(--border-default))] p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 text-start">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--color-primary)/0.12)] font-bold text-[hsl(var(--color-primary))]">
+            {member.fullName?.charAt(0) || '?'}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate font-medium text-[hsl(var(--fg-primary))]">{member.fullName}</p>
+            <p className="truncate text-xs text-[hsl(var(--fg-secondary))]">{member.email}</p>
+          </div>
         </div>
-        <div className="min-w-0">
-          <p className="truncate font-medium text-[hsl(var(--fg-primary))]">{member.fullName}</p>
-          <p className="truncate text-xs text-[hsl(var(--fg-secondary))]">{member.email}</p>
+
+        <div className="flex items-center gap-2">
+          {isOwner && member.role !== 'owner' ? (
+            <SelectField
+              value={member.role}
+              onChange={(value) => onRoleChange(member.id, value as WorkspaceRole)}
+              options={[
+                { value: 'admin', label: t('workspace.admin') },
+                { value: 'member', label: t('workspace.employee') },
+                { value: 'viewer', label: t('workspace.viewer') },
+              ]}
+              className={
+                'text-xs rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] px-2 py-1 cursor-pointer'
+              }
+            />
+          ) : (
+            <span
+              className={cn(
+                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border shrink-0 gap-1',
+                bs,
+              )}
+            >
+              {roleIconMap[member.role] || (
+                <User className="size-4 text-[hsl(var(--fg-secondary))]" />
+              )}
+              {roleLabel(member.role)}
+            </span>
+          )}
+
+          {canEditAccess && (
+            <button
+              type="button"
+              onClick={() => setAccessOpen((open) => !open)}
+              aria-expanded={accessOpen}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
+            >
+              <LockKeyhole className="size-3.5" />
+              {t('workspace.pageAccess')}
+            </button>
+          )}
+
+          {isAdmin && member.role !== 'owner' && (
+            <button
+              onClick={() => onRemove(member.id)}
+              className="p-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))] transition-colors"
+              aria-label={t('action.remove')}
+            >
+              <X className="size-4" />
+            </button>
+          )}
         </div>
       </div>
-
-      <div className="flex items-center gap-2">
-        {isOwner && member.role !== 'owner' ? (
-          <SelectField
-            value={member.role}
-            onChange={(value) => onRoleChange(member.id, value as WorkspaceRole)}
-            options={[
-              { value: 'admin', label: t('workspace.admin') },
-              { value: 'member', label: t('workspace.employee') },
-              { value: 'viewer', label: t('workspace.viewer') },
-            ]}
-            className={
-              'text-xs rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] px-2 py-1 cursor-pointer'
-            }
-          />
-        ) : (
-          <span
-            className={cn(
-              'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border shrink-0 gap-1',
-              bs,
-            )}
-          >
-            {roleIconMap[member.role] || (
-              <User className="size-4 text-[hsl(var(--fg-secondary))]" />
-            )}
-            {roleLabel(member.role)}
-          </span>
-        )}
-
-        {isAdmin && member.role !== 'owner' && (
-          <button
-            onClick={() => onRemove(member.id)}
-            className="p-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))] transition-colors"
-            aria-label={t('action.remove')}
-          >
-            <X className="size-4" />
-          </button>
-        )}
-      </div>
+      {canEditAccess && accessOpen ? (
+        <MemberPageAccess userId={member.userId} t={t} onClose={() => setAccessOpen(false)} />
+      ) : null}
     </div>
   )
 })

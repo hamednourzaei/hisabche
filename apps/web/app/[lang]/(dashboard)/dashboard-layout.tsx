@@ -19,9 +19,17 @@ import {
   useSubscriptionLocked,
   isRouteAllowedWhenExpired,
   type HeaderPerson,
+  useToast,
 } from '@hisabche/ui'
 import { useEffect, useRef, useCallback, useMemo, useState, memo } from 'react'
-import { NAV_ITEMS, PRIMARY_ITEMS, MORE_GROUPS, MORE_ICON, COMMAND_ITEMS } from '@hisabche/ui/menu'
+import {
+  NAV_ITEMS,
+  PRIMARY_ITEMS,
+  MORE_GROUPS,
+  MORE_ICON,
+  COMMAND_ITEMS,
+  isNavLocked,
+} from '@hisabche/ui/menu'
 import { cn } from '@/lib/utils'
 import '@hisabche/ui/globals.css'
 
@@ -166,6 +174,9 @@ function useRedirectGuard(currentLang: string) {
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
+/** The blocked-module list back from its comma-joined key. */
+const blockedOf = (key: string): string[] => (key ? key.split(',') : [])
+
 const DashboardLayout = memo(function DashboardLayout({ children }: { children: ReactNode }) {
   const t = useTranslations()
   const locale = useLocale()
@@ -181,6 +192,11 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const isFullscreenWorkflow = /\/invoices\/new(\/|$)/.test(pathname ?? '')
   // The signed-in person, for the header identity block and the account menu.
   const user = useAuthStore((s) => s.user)
+  // Pages the owner took away from this person: drawn locked, and a click
+  // explains instead of opening onto a 403. A string so memos re-run only when
+  // the set changes.
+  const blockedKey = (useMyCapabilities().data?.blockedModules ?? []).join(',')
+  const toast = useToast()
   // ⚠️ The workspace was loaded only by the workspace settings page, so for
   // anyone who never opened it `workspaceId` was null and realtime subscribed
   // to nothing — another employee's work appeared only after a reload.
@@ -250,11 +266,15 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
       // (e.g. "/dashboard") — re-prefix with the current locale so the
       // user isn't silently switched back to the default locale, and so
       // isPathActive() stays consistent with the resulting pathname.
+      if (isNavLocked(path, blockedOf(blockedKey))) {
+        toast.info(t('nav.lockedByOwner'))
+        return
+      }
       const localizedPath = withLocale(path)
       setOptimisticPath(localizedPath)
       router.push(localizedPath)
     },
-    [router, withLocale],
+    [router, withLocale, blockedKey, toast, t],
   )
 
   const handleLogout = useCallback(() => {
@@ -276,8 +296,9 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         icon: item.icon,
         label: t(item.labelKey),
         path: item.path,
+        locked: isNavLocked(item.path, blockedOf(blockedKey)),
       })),
-    [t],
+    [t, blockedKey],
   )
 
   const moreGroups = useMemo(
@@ -291,9 +312,10 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
           icon: item.icon,
           label: t(item.labelKey),
           path: item.path,
+          locked: isNavLocked(item.path, blockedOf(blockedKey)),
         })),
       })),
-    [t],
+    [t, blockedKey],
   )
 
   // ✅ صفحه‌های قابل جستجو — از همان NAV_ITEMS ساخته می‌شوند تا با منو

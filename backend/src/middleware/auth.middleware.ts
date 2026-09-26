@@ -160,7 +160,9 @@ const SESSION_EPOCH_TTL_SECONDS = 60
  */
 async function getSessionEpochSeconds(userId: string): Promise<number | null> {
   const cacheKey = `session-epoch:${userId}`
-  const cached = await memoryCache.get<{ at: number | null }>(cacheKey)
+  // Shared-only: "sign out everywhere" must reach every instance at once, not
+  // after each one's local cache expires (memoryCache.getShared).
+  const cached = await memoryCache.getShared<{ at: number | null }>(cacheKey)
   if (cached) return cached.at
 
   const { data, error } = await supabase
@@ -176,7 +178,7 @@ async function getSessionEpochSeconds(userId: string): Promise<number | null> {
     : ((data as { sessions_valid_from?: string | null })?.sessions_valid_from ?? null)
   const at = raw ? Math.floor(new Date(raw).getTime() / 1000) : null
 
-  await memoryCache.set(cacheKey, { at }, SESSION_EPOCH_TTL_SECONDS)
+  await memoryCache.setShared(cacheKey, { at }, SESSION_EPOCH_TTL_SECONDS)
   return at
 }
 

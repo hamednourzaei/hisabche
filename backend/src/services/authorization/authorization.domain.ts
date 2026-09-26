@@ -517,3 +517,73 @@ export function levelOfCapabilities(module: ModuleSpec, held: Set<string>): Acce
   if (satisfies(module.read)) return 'read'
   return 'none'
 }
+
+// ─── Per-member page blocks ──────────────────────────────────────────────────
+//
+// The owner can take whole modules away from ONE person
+// (docs/member-module-blocks-migration.sql). Roles and profiles cannot: role
+// overrides move a whole role, and profiles only ever ADD.
+//
+// ⚠️ A BLOCK ONLY RESTRICTS. The result is always a subset of what the role
+// already holds, and the owner is never restricted — a block on the owner is
+// ignored, because a business whose owner is locked out of a module has
+// nobody left who can unlock it.
+
+/**
+ * Read access a module cannot work without, kept even when the module that
+ * owns it is blocked. "Invoices only" still has to pick an item from stock and
+ * a customer from the list — blocking the inventory PAGE must not break the
+ * invoice form. Only READS: a dependency never keeps a write.
+ */
+export const MODULE_READ_DEPENDENCIES: Readonly<Record<string, readonly Capability[]>> = {
+  invoices: ['product.read', 'inventory.read', 'customer.read'],
+  payments: ['customer.read', 'invoice.read'],
+}
+
+/**
+ * Never removed by a block. It is the floor every role holds, and the server's
+ * own self-description endpoints (/governance/my-capabilities, /why-not) and
+ * the home screen are guarded by it — blocking it would leave the app unable
+ * even to ask which pages are locked. Blocking the reports module still
+ * removes the financial reports.
+ */
+export const BLOCK_FLOOR: readonly Capability[] = ['report.operational.read']
+
+/** Every module key a block may name. */
+export const BLOCKABLE_MODULES: readonly string[] = PERMISSION_MODULES.map((m) => m.key)
+
+/**
+ * The capabilities left once `blocked` modules are taken away.
+ *
+ * `held` is the role's effective set; the answer is never larger than it.
+ */
+export function restrictByModuleBlocks(
+  role: WorkspaceRole,
+  held: ReadonlySet<Capability>,
+  blocked: readonly string[],
+): Set<Capability> {
+  const result = new Set<Capability>(held)
+  if (role === 'owner' || blocked.length === 0) return result
+
+  const blockedSet = new Set(blocked)
+  for (const module of PERMISSION_MODULES) {
+    if (!blockedSet.has(module.key)) continue
+    for (const capability of capabilitiesForLevel(module, 'full')) {
+      if (!BLOCK_FLOOR.includes(capability)) result.delete(capability)
+    }
+  }
+
+  // Put back the reads an ALLOWED module needs — but only ones the role had.
+  for (const module of PERMISSION_MODULES) {
+    if (blockedSet.has(module.key)) continue
+    for (const capability of MODULE_READ_DEPENDENCIES[module.key] ?? []) {
+      if (held.has(capability) && moduleCapabilitiesHeld(module, result)) result.add(capability)
+    }
+  }
+  return result
+}
+
+/** Whether the member still holds anything of this module — a dependency of a module they cannot use is not needed. */
+function moduleCapabilitiesHeld(module: ModuleSpec, held: ReadonlySet<Capability>): boolean {
+  return capabilitiesForLevel(module, 'full').some((c) => held.has(c))
+}

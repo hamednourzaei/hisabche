@@ -221,7 +221,6 @@ export function ShellWebView(): React.JSX.Element {
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <WebView
         ref={webViewRef}
-        webviewDebuggingEnabled // TEMP-DEBUG: remove before final build
         // ⚠️ Android's default (`true`) turns on the WebView's overview mode,
         // which zooms OUT to fit anything momentarily wider than the phone —
         // and stays zoomed out. The bottom menu slid off-screen on accounting.

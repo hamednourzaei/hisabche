@@ -182,15 +182,26 @@ retry واقعی، هم‌زمانی واقعی، ایزوله‌سازی tenant
 | `vertical-slice-integration.test.ts` | روت ثبت‌شده، گاردها به ترتیب، سرویس context بگیرد، idempotency نوشته شده باشد |
 | `financial-flows-e2e.test.ts`        | درز بین Coreها: خروجی یکی ورودی درست بعدی باشد                                |
 
-### شکست‌های پایه‌ی شناخته‌شده (baseline) — ۲۵ سپتامبر
+### شکست‌های پایه‌ی ۲۵ سپتامبر — ۲۶ سپتامبر اصلاح شد
 
-`packages/ui` vitest: ۲ فایل قرمز، **قبل از** کار ۲۵ سپتامبر. هر دو فایلی از دسکتاپ را می‌خوانند که
-commit `d46e0c42` حذف کرد (ENOENT). هنوز اصلاح نشده‌اند — «سبز» حساب نکن و شل هم نکن.
+چهار گارد فایلی از `apps/desktop/src` را می‌خواندند که commit `d46e0c42` به `packages/app-shell/src`
+برد (ENOENT). مسیرشان به فایل واقعی برگشت و حالا دوباره واقعاً گارد می‌کنند:
+`error-boundary-escape`، `subscription-lock` (ui)، `token-ready-waits-for-hydration` (api)،
+`nav-destinations` (ui-contract). بلوک «mobile routes» در آخری `apps/mobile/src/shared/navigation/nav.ts`
+را می‌خواند که `8005a347` حذف کرد — موبایل همان shell دسکتاپ را در WebView رندر می‌کند، پس حالا همین را چک می‌کند.
 
-- `src/__tests__/error-boundary-escape.test.ts` → `apps/desktop/src/app/route-error.tsx`
-- `src/__tests__/subscription-lock.test.ts` → `apps/desktop/src/components/layout/app-shell.tsx`
-- `packages/api`: `token-ready-waits-for-hydration.test.ts` → `apps/desktop/src/features/auth/auth.store.ts`
-  (همان علت؛ فایل تست نسبت به HEAD دست‌نخورده)
+### ممیزی چند-instance — ۲۶ سپتامبر
+
+درست برای N instance: claim کار پس‌زمینه/رویداد/cron (Postgres، SKIP LOCKED)، کش تصمیم دسترسی (فقط Redis،
+هیچ L1)، Idempotency-Key (قید یکتای دیتابیس)، زمان‌بندی (صریحاً UTC، slot از epoch).
+**هنوز per-instance (مانع صحت نیست، ولی بدان):**
+
+- `@fastify/rate-limit` استور حافظه دارد → با N instance سقف عملاً N برابر (شامل login).
+- `email.service` صف حافظه‌ای و فاصله‌ی ۲۰۰ms فقط داخل همان پروسه است.
+- L1 کش عمومی (۵ ثانیه) و `fallbackStore` وقتی Redis قطع است: خواندن مالی روی instance دیگر
+  تا TTL کهنه می‌ماند (نوشتن‌ها RPC دیتابیس‌اند و درست‌اند).
+- کلیدهای `landing.security.badge.*` / `common.alert` / `common.viewDetails` بین سه locale ناهمخوان‌اند
+  ولی هیچ caller ندارند (پیش از این سشن).
 
 ---
 

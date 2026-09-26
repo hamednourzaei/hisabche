@@ -613,3 +613,43 @@ export function splitForBudget<T>(
   if (maxVisible <= 0) return { visible: [], overflow: [...items] }
   return { visible: items.slice(0, maxVisible), overflow: items.slice(maxVisible) }
 }
+
+// ─── Per-member page locks ───────────────────────────────────────────────────
+//
+// The owner can take whole modules away from one person (backend
+// PERMISSION_MODULES keys; docs/member-module-blocks-migration.sql). Each
+// destination belongs to at most one module; a destination with none — home,
+// settings, sync, conflicts — is never locked, because a person must always be
+// able to land somewhere, and to finish syncing work done offline.
+//
+// This only decides what the menu SHOWS. The server enforces the same blocks on
+// every request, so a locked page opened by URL answers 403 either way.
+export const NAV_MODULE: Readonly<Record<string, string>> = {
+  '/invoices': 'invoices',
+  '/sales-workspace': 'parties',
+  '/customers': 'parties',
+  '/till': 'payments',
+  '/warehouse': 'inventory',
+  '/inventory-workspace': 'inventory',
+  '/expiry': 'inventory',
+  '/manufacturing': 'inventory',
+  '/purchasing': 'inventory',
+  '/accounting': 'accounting',
+  '/accounting-workspace': 'accounting',
+  '/bank': 'accounting',
+  '/assets': 'accounting',
+  '/budgets': 'budgets',
+  '/team-and-payroll': 'people',
+  '/people-workspace': 'people',
+  '/timesheets': 'people',
+  '/governance': 'workspace',
+  '/data-migration': 'workspace',
+}
+
+/** Whether this destination is locked for someone with these blocked modules. */
+export function isNavLocked(path: string, blockedModules: readonly string[]): boolean {
+  if (blockedModules.length === 0) return false
+  const bare = path.split('?')[0] ?? path
+  const module = NAV_MODULE[bare]
+  return module !== undefined && blockedModules.includes(module)
+}

@@ -147,6 +147,14 @@ class CacheService {
   }
 
   // ─── Get cache ──────────────────────────────────────────────
+  /**
+   * Whether a value written here is visible to EVERY backend instance. False
+   * while Redis is unreachable: the fallback store is a Map inside this process.
+   */
+  get isShared(): boolean {
+    return this.isConnected
+  }
+
   async get<T>(key: string): Promise<T | null> {
     if (!this.isConnected) {
       const cached = fallbackGet(key)

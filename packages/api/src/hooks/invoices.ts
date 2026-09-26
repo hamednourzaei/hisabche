@@ -90,7 +90,8 @@ export function useInvoices(
 
   return useQuery({
     queryKey: invoiceKeys.list(filters),
-    queryFn: async () => {
+    // Aborted by React Query when the filters change or the list unmounts.
+    queryFn: async ({ signal }) => {
       const { data } = await apiClient.get<{
         invoices: InvoiceWithCustomer[]
         total: number
@@ -101,6 +102,7 @@ export function useInvoices(
         summary?: InvoiceListSummary | undefined
       }>('/invoices', {
         params: filters,
+        signal,
       })
       return data
     },
@@ -124,13 +126,14 @@ export function useInvoicesInfinite(filters: Omit<InvoiceFilters, 'page' | 'curs
   return useInfiniteQuery({
     queryKey: [...invoiceKeys.lists(), 'infinite', filters] as const,
     initialPageParam: null as string | null,
-    queryFn: async ({ pageParam }) => {
+    queryFn: async ({ pageParam, signal }) => {
       const { data } = await apiClient.get<{
         invoices: InvoiceWithCustomer[]
         hasMore: boolean
         nextCursor: string | null
       }>('/invoices', {
         params: { ...filters, ...(pageParam ? { cursor: pageParam } : {}) },
+        signal,
       })
       return {
         invoices: asList<InvoiceWithCustomer>(data?.invoices),
@@ -223,6 +226,10 @@ export function useCreateInvoice() {
      * it already created instead of a second sale.
      */
     mutationFn: submitInvoice,
+    // ⚠️ Offline, a mutation in the default 'online' mode is PAUSED — the
+    // confirm button spun and submitInvoice never ran, so its queue-it path
+    // was unreachable. submitInvoice decides for itself what offline means.
+    networkMode: 'always',
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() })
       // ✅ FIX: کارت‌های داشبورد، نمودار فروش و پیشنهادهای هوشمند همگی از

@@ -262,6 +262,12 @@ apiClient.interceptors.response.use(
       details?: Record<string, string[]>
     }>,
   ) => {
+    // ⚠️ A request WE cancelled (AbortController / React Query's signal) is
+    // passed through untouched. Wrapped like other failures it had no
+    // response, so it read as NETWORK_ERROR — which the offline paths treat as
+    // "the device is offline, queue it / read the device database".
+    if (axios.isCancel(error)) return Promise.reject(error)
+
     const responseData = error.response?.data as any
 
     // ─── Expired access token → renew once, retry once ───────────────────

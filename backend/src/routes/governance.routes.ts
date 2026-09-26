@@ -26,6 +26,8 @@ import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
+import { memberModuleBlocks } from '../services/authorization/member-module-blocks.service'
+import { PERMISSION_MODULES } from '../services/authorization/authorization.domain'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -48,6 +50,8 @@ const whyNotSchema = z.object({
   ]),
   capability: z.enum(CAPABILITIES),
 })
+
+const memberBlocksSchema = z.object({ modules: z.array(z.string().regex(/^[a-z_]+$/)).max(50) })
 
 export async function governanceRoutes(fastify: FastifyInstance) {
   const sodService = new SoDService()
@@ -180,6 +184,16 @@ export async function governanceRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       return reply.send({
         role: request.tenancy.role,
+        // Modules the owner took away from this person — the menus lock them.
+        // A rendering hint like the set below; the capabilities are what the
+        // server enforces.
+        blockedModules:
+          request.tenancy.role === 'owner'
+            ? []
+            : await memberModuleBlocks.forMember(
+                request.tenancy.workspaceId,
+                request.tenancy.userId,
+              ),
         // The EFFECTIVE set — defaults with this workspace's changes applied.
         capabilities: request.tenancy.capabilities
           ? [...request.tenancy.capabilities]
@@ -216,6 +230,47 @@ export async function governanceRoutes(fastify: FastifyInstance) {
       } catch (err) {
         fastify.log.error(err)
         return reply.code(400).send({ error: 'Failed to explain the refusal' })
+      }
+    },
+  )
+
+  // ─── Per-member page blocks ─────────────────────────────────────────────
+  // The owner takes whole modules away from ONE person ("invoices only").
+  // Enforced in requireWorkspaceContext on every request; these two routes
+  // only read and write the choice. Guarded by member.manage, and the service
+  // refuses anyone but the owner and refuses to restrict the owner.
+  fastify.get(
+    '/member-blocks',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('member.manage')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send({
+          modules: PERMISSION_MODULES.map((m) => ({ key: m.key, label: m.label })),
+          blocks: await memberModuleBlocks.all(request.tenancy.workspaceId),
+        })
+      } catch (err) {
+        return fail(reply, err, 'Failed to read page access')
+      }
+    },
+  )
+
+  fastify.put(
+    '/member-blocks/:userId',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('member.manage')],
+      schema: { body: toJsonSchema(memberBlocksSchema), response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { userId } = request.params as { userId: string }
+        const body = memberBlocksSchema.parse(request.body)
+        const modules = await memberModuleBlocks.setForMember(request.tenancy, userId, body.modules)
+        return reply.send({ userId, modules })
+      } catch (err) {
+        return fail(reply, err, 'Failed to save page access')
       }
     },
   )

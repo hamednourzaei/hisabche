@@ -138,6 +138,28 @@ class MemoryCache {
     await cacheService.set(key, data, ttlSeconds ?? DEFAULT_TTL_SECONDS)
   }
 
+  // ─── Authorization decisions ─────────────────────────────────────────────
+  //
+  // ⚠️ NEVER FROM THIS PROCESS'S MEMORY. The L1 above lives in each instance
+  // and invalidate() clears only the instance that called it — so after an
+  // owner revoked access, another instance could keep authorizing it for up to
+  // L1_TTL_MS. And while Redis is down cacheService falls back to a Map inside
+  // the process, which is the same problem for the whole TTL.
+  //
+  // So a value that DECIDES access is read and written only through the shared
+  // store, and only while it is actually shared; otherwise it is not cached at
+  // all and the caller reads the database. Revocation is then effective on
+  // every instance as soon as the writer's invalidate() returns.
+  async getShared<T>(key: string): Promise<T | null> {
+    if (!cacheService.isShared) return null
+    return cacheService.get<T>(key)
+  }
+
+  async setShared<T>(key: string, data: T, ttlSeconds: number): Promise<void> {
+    if (!cacheService.isShared) return
+    await cacheService.set(key, data, ttlSeconds)
+  }
+
   // D5 — a bare key invalidates its PREFIX family (`key*`), never an
   // arbitrary SUBSTRING (`*key*`).
   //

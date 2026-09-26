@@ -195,6 +195,8 @@ export {
   visibleNavItems,
   visibleNavGroups,
   splitForBudget,
+  NAV_MODULE,
+  isNavLocked,
 } from './navigation'
 
 export {

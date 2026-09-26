@@ -58,7 +58,7 @@ describe('the way out keeps the locale', () => {
 describe('both shells gate with the one notice', () => {
   it.each([
     'apps/web/app/[lang]/(dashboard)/dashboard-layout.tsx',
-    'apps/desktop/src/components/layout/app-shell.tsx',
+    'packages/app-shell/src/components/layout/app-shell.tsx',
   ])('%s', (file) => {
     const src = code(file)
     expect(src).toContain('isRouteAllowedWhenExpired(')

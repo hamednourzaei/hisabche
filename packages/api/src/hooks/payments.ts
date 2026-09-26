@@ -24,6 +24,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { apiClient } from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useIntentKey } from '../lib/intent-key'
 
 export type PaymentDirection = 'in' | 'out'
 export type PaymentPartyType = 'customer' | 'supplier'
@@ -268,12 +269,21 @@ export function useOpenInvoices(partyType: PaymentPartyType, partyId?: string) {
  */
 export function useRecordPayment() {
   const queryClient = useQueryClient()
+  // Same key while the same payment is retried after a lost response, so the
+  // server returns the first payment instead of recording a second.
+  const intent = useIntentKey('pay')
 
   return useMutation({
     mutationFn: async (input: RecordPaymentInput) =>
-      unwrap<PaymentRecord>(await apiClient.post('/payments', input)),
+      unwrap<PaymentRecord>(
+        await apiClient.post('/payments', input, {
+          headers: { 'Idempotency-Key': intent.current() },
+        }),
+      ),
 
+    onError: (error) => intent.settle(error),
     onSuccess: () => {
+      intent.settle()
       queryClient.invalidateQueries({ queryKey: paymentKeys.all })
       // A cash payment is money in the cashier's drawer: the till must show it
       // without anyone entering it again.

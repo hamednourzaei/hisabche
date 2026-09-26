@@ -157,7 +157,10 @@ export function fillDailyGaps(
 
   const filled: SalesDataPoint[] = []
   for (let t = from; t <= to; t += DAY) {
-    const day = new Date(t).toISOString().slice(0, 10)
+    // Calendar arithmetic on a YYYY-MM-DD string: built from the UTC fields of
+    // a UTC-midnight instant, so no timezone can move the day.
+    const d = new Date(t)
+    const day = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
     filled.push(
       byDay.get(day) ?? {
         label: day,

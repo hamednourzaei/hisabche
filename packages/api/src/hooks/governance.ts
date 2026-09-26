@@ -127,10 +127,16 @@ export function useMyCapabilities() {
     queryKey: ['governance', 'my-capabilities', workspaceId ?? ''],
     queryFn: async () => {
       const { data } = await apiClient.get('/governance/my-capabilities')
-      const body = data as { role?: string; capabilities?: unknown } | null
+      const body = data as {
+        role?: string
+        capabilities?: unknown
+        blockedModules?: unknown
+      } | null
       return {
         role: typeof body?.role === 'string' ? body.role : null,
         capabilities: asList<string>(body?.capabilities),
+        // Modules the owner took away from this person; the menus lock them.
+        blockedModules: asList<string>(body?.blockedModules),
       }
     },
     enabled: ready && !!workspaceId,
@@ -143,4 +149,46 @@ export function useMyCapabilities() {
     can: (capability: string): boolean | undefined =>
       query.data ? set.has(capability) : undefined,
   }
+}
+
+// ─── Per-member page blocks (owner) ──────────────────────────────────────────
+
+export interface MemberBlocksData {
+  modules: Array<{ key: string; label: string }>
+  /** user id → blocked module keys */
+  blocks: Record<string, string[]>
+}
+
+export function useMemberBlocks(enabled = true) {
+  const ready = useAuthReady()
+  const workspaceId = getActiveWorkspaceId()
+  return useQuery({
+    queryKey: ['governance', 'member-blocks', workspaceId ?? ''],
+    queryFn: async (): Promise<MemberBlocksData> => {
+      const { data } = await apiClient.get('/governance/member-blocks')
+      const body = data as { modules?: unknown; blocks?: unknown } | null
+      return {
+        modules: asList<{ key: string; label: string }>(body?.modules),
+        blocks:
+          body?.blocks && typeof body.blocks === 'object'
+            ? (body.blocks as Record<string, string[]>)
+            : {},
+      }
+    },
+    enabled: enabled && ready && !!workspaceId,
+  })
+}
+
+export function useSetMemberBlocks() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ userId, modules }: { userId: string; modules: string[] }) => {
+      const { data } = await apiClient.put(`/governance/member-blocks/${userId}`, { modules })
+      return data as { userId: string; modules: string[] }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['governance', 'member-blocks'] })
+      void queryClient.invalidateQueries({ queryKey: ['governance', 'my-capabilities'] })
+    },
+  })
 }

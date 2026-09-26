@@ -1,44 +1,42 @@
-import { FastifyInstance } from "fastify";
-import { JobService } from "../services/job.service";
-import { NotificationService } from "../services/notification.service";
-import { supabase } from "../db";
+import { FastifyInstance } from 'fastify'
+import { JobService } from '../services/job.service'
+import { NotificationService } from '../services/notification.service'
+import { supabase } from '../db'
+import { claimJobs, completeJob, failJob, type ClaimedJob } from '../services/distributed-work'
 
-const jobService = new JobService();
-const notificationService = new NotificationService();
+const jobService = new JobService()
+const notificationService = new NotificationService()
 
 async function checkOverdueInvoices() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split('T')[0]
 
   const { data: invoices } = await supabase
-    .from("invoices")
-    .select("id, invoice_number, total, user_id, due_date")
-    .lt("due_date", today)
-    .eq("status", "pending")
-    .limit(50);
+    .from('invoices')
+    // ⚠️ The invoice's OWN workspace. This used to look up "the first workspace
+    // this user belongs to" — one extra query per invoice (N+1), and for a
+    // person in two businesses, a notification filed under the wrong one.
+    // workspace_id is the security boundary (راهنمای سشن §۱٫۱).
+    .select('id, invoice_number, total, user_id, due_date, workspace_id')
+    .lt('due_date', today)
+    .eq('status', 'pending')
+    .limit(50)
 
-  if (!invoices?.length) return;
+  if (!invoices?.length) return
 
   for (const inv of invoices) {
     try {
-      // Get workspace_id from workspace_members
-      const { data: members } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", inv.user_id)
-        .limit(1);
-
-      const workspaceId = members?.[0]?.workspace_id;
-      if (!workspaceId) continue;
+      const workspaceId = inv.workspace_id as string | null
+      if (!workspaceId) continue
 
       await notificationService.create(workspaceId, {
         user_id: inv.user_id,
-        title: "فاکتور سررسید شده",
+        title: 'فاکتور سررسید شده',
         body: `فاکتور #${inv.invoice_number} به مبلغ ${inv.total} افغانی سررسید شده است.`,
-        type: "warning",
+        type: 'warning',
         action_url: `/invoices/${inv.id}`,
-        entity_type: "invoice",
+        entity_type: 'invoice',
         entity_id: inv.id,
-      });
+      })
     } catch {
       // Continue
     }
@@ -47,7 +45,59 @@ async function checkOverdueInvoices() {
 
 const JOB_HANDLERS: Record<string, () => Promise<void>> = {
   CHECK_OVERDUE_INVOICES: checkOverdueInvoices,
-};
+}
+
+/**
+ * One poll. With the claim function installed (docs/background-jobs-claim-
+ * migration.sql) a job is taken by exactly one instance — the claim is a single
+ * statement with FOR UPDATE SKIP LOCKED — and only the holder may finish it.
+ *
+ * Before that migration the old read-then-mark path runs, which is correct for
+ * ONE instance only.
+ */
+export async function pollJobs(): Promise<void> {
+  const claimed = await claimJobs(5).catch((err) => {
+    console.error('[jobs] claim failed:', err)
+    return [] as ClaimedJob[]
+  })
+
+  if (claimed === null) {
+    await pollJobsSingleInstance()
+    return
+  }
+
+  for (const job of claimed) {
+    const handler = JOB_HANDLERS[job.job_type]
+    try {
+      if (!handler) throw new Error(`Unknown job_type: ${job.job_type}`)
+      await handler()
+      await completeJob(job.id)
+    } catch (err: any) {
+      await failJob(job.id, err?.message || 'Unknown error').catch((e) =>
+        console.error('[jobs] could not record the failure:', e),
+      )
+    }
+  }
+}
+
+/** The pre-migration path: read, then mark. Safe with one instance only. */
+async function pollJobsSingleInstance(): Promise<void> {
+  const jobs = await jobService.fetchPending()
+  for (const job of jobs) {
+    await jobService.markProcessing(job.id)
+    const handler = JOB_HANDLERS[job.job_type as string]
+    if (handler) {
+      try {
+        await handler()
+        await jobService.markCompleted(job.id)
+      } catch (err: any) {
+        await jobService.markFailed(job.id, err?.message || 'Unknown error')
+      }
+    } else {
+      await jobService.markFailed(job.id, `Unknown job_type: ${job.job_type}`)
+    }
+  }
+}
 
 export async function jobSchedulerPlugin(fastify: FastifyInstance) {
   // ✅ FIX: فاصله از ۶۰ ثانیه به ۱۰ دقیقه افزایش یافت.
@@ -59,23 +109,7 @@ export async function jobSchedulerPlugin(fastify: FastifyInstance) {
   // (مثلاً CHECK_OVERDUE_INVOICES که در JOB_HANDLERS تعریف شده ولی
   // هیچ‌جا trigger نمی‌شود)، این فقط یک safety net است، نه چیزی
   // که تأخیرش اهمیت عملیاتی داشته باشد.
-  const interval = setInterval(async () => {
-    const jobs = await jobService.fetchPending();
-    for (const job of jobs) {
-      await jobService.markProcessing(job.id);
-      const handler = JOB_HANDLERS[job.job_type as string];
-      if (handler) {
-        try {
-          await handler();
-          await jobService.markCompleted(job.id);
-        } catch (err: any) {
-          await jobService.markFailed(job.id, err?.message || "Unknown error");
-        }
-      } else {
-        await jobService.markFailed(job.id, `Unknown job_type: ${job.job_type}`);
-      }
-    }
-  }, 10 * 60_000);
+  const interval = setInterval(() => void pollJobs(), 10 * 60_000)
 
-  fastify.addHook("onClose", () => clearInterval(interval));
+  fastify.addHook('onClose', () => clearInterval(interval))
 }

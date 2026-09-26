@@ -17,7 +17,9 @@ import React, { useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslations } from 'next-intl'
 import { BottomNav, DashboardSidebar } from '@hisabche/ui'
-import { MORE_GROUPS, MORE_ICON, PRIMARY_ITEMS } from '@hisabche/ui/menu'
+import { MORE_GROUPS, MORE_ICON, PRIMARY_ITEMS, isNavLocked } from '@hisabche/ui/menu'
+import { useMyCapabilities } from '@hisabche/api'
+import { useToast } from '@hisabche/ui'
 
 import { useUiStore } from '@/shared/stores/ui.store'
 
@@ -82,12 +84,21 @@ const DESKTOP_ROUTES = new Set([
   '/governance',
 ])
 
+/** The blocked-module list back from its comma-joined key. */
+const blockedOf = (key: string): string[] => (key ? key.split(',') : [])
+
 export function Sidebar() {
   // Labels are resolved here exactly as the web dashboard layout resolves them —
   // the canonical sidebar takes rendered strings, not keys.
   const t = useTranslations()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Pages the owner took away from this person — drawn locked, never hidden,
+  // so the menu does not silently shrink and nobody wonders where a page went.
+  // A string, so the memos below re-run only when the set actually changes.
+  const blockedKey = (useMyCapabilities().data?.blockedModules ?? []).join(',')
+  const toast = useToast()
 
   const primaryItems = useMemo(
     () =>
@@ -96,8 +107,9 @@ export function Sidebar() {
         icon: item.icon,
         label: t(item.labelKey),
         path: item.path,
+        locked: isNavLocked(item.path, blockedOf(blockedKey)),
       })),
-    [t],
+    [t, blockedKey],
   )
 
   const moreGroups = useMemo(
@@ -113,9 +125,10 @@ export function Sidebar() {
             icon: item.icon,
             label: t(item.labelKey),
             path: item.path,
+            locked: isNavLocked(item.path, blockedOf(blockedKey)),
           })),
       })).filter((group) => group.items.length > 0),
-    [t],
+    [t, blockedKey],
   )
 
   // `/` is the dashboard route on desktop; the contract calls it `/dashboard`.
@@ -145,8 +158,15 @@ export function Sidebar() {
 
   // SPA navigation — never a renderer reload.
   const handleNavigate = useCallback(
-    (_id: string, path: string) => navigate(path === '/dashboard' ? '/' : path),
-    [navigate],
+    (_id: string, path: string) => {
+      // A locked page explains itself instead of opening onto a 403.
+      if (isNavLocked(path, blockedOf(blockedKey))) {
+        toast.info(t('nav.lockedByOwner'))
+        return
+      }
+      navigate(path === '/dashboard' ? '/' : path)
+    },
+    [navigate, blockedKey, toast, t],
   )
 
   // ⚠️ THE PHONE HAD NO NAVIGATION AT ALL. `DashboardSidebar` is desktop-width

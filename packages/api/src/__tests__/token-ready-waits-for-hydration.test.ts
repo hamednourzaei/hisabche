@@ -100,7 +100,7 @@ describe('every app that registers a getter also declares readiness', () => {
 
   it.each([
     ['packages/store/src/slices/auth.slice.ts'],
-    ['apps/desktop/src/features/auth/auth.store.ts'],
+    ['packages/app-shell/src/features/auth/auth.store.ts'],
     ['apps/mobile/src/features/auth/auth.store.ts'],
     ['apps/admin/lib/admin-api-token.ts'],
   ])('%s calls markTokenReady', (file) => {

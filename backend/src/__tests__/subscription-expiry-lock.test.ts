@@ -78,6 +78,10 @@ vi.mock('../utils/pagination', () => ({
     invalidate: async (prefix: string) => {
       for (const key of [...cache.keys()]) if (key.startsWith(prefix)) cache.delete(key)
     },
+    // Authorization decisions are never cached without a shared store — as the
+    // real memoryCache behaves when Redis is not configured.
+    getShared: async () => null,
+    setShared: async () => undefined,
   },
 }))
 

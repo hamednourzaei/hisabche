@@ -34,7 +34,7 @@ export class RoleCapabilitiesService {
   }
 
   async overrides(workspaceId: string): Promise<CapabilityOverride[]> {
-    const cached = await memoryCache.get<CapabilityOverride[]>(this.key(workspaceId))
+    const cached = await memoryCache.getShared<CapabilityOverride[]>(this.key(workspaceId))
     if (cached) return cached
 
     const { data, error } = await supabase
@@ -61,7 +61,7 @@ export class RoleCapabilitiesService {
         granted: r.granted === true,
       }))
 
-    await memoryCache.set(this.key(workspaceId), rows, 60)
+    await memoryCache.setShared(this.key(workspaceId), rows, 60)
     return rows
   }
 

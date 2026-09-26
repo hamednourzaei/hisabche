@@ -1486,7 +1486,8 @@
     "missingFixStaff": "The owner enters your name when adding staff. Ask them to correct it.",
     "teamPayroll": "Team & payroll",
     "referrals": "Refer Hisabche",
-    "referrals_description": "Invite friends and earn a share of their subscription"
+    "referrals_description": "Invite friends and earn a share of their subscription",
+    "lockedByOwner": "The owner has closed this section for you."
   },
   "dateRange": {
     "today": "Today",
@@ -2753,7 +2754,11 @@
     "inviteAccepted": "Invitation accepted! Redirecting to workspace...",
     "inviteExpired": "Invite link has expired or is invalid.",
     "inviteChecking": "Checking invitation...",
-    "goToWorkspace": "Go to Workspace"
+    "goToWorkspace": "Go to Workspace",
+    "pageAccess": "Page access",
+    "pageAccessHint": "Ticked = this person may open the section. Unticked sections are locked in their menu and refused by the server.",
+    "pageAccessSaved": "Page access saved.",
+    "pageAccessNotConfigured": "This feature is not enabled in the database yet."
   },
   "permissions": {
     "title": "Roles & Permissions",
@@ -2765,7 +2770,19 @@
     "selectRole": "Select a role",
     "selectRoleHint": "Select a role to view its permissions",
     "ownerLocked": "The owner always keeps member and business-settings management; this level cannot be lowered for the owner.",
-    "migrationRequired": "Editing the built-in roles becomes available once the database migration has run."
+    "migrationRequired": "Editing the built-in roles becomes available once the database migration has run.",
+    "module": {
+      "invoices": "Invoices",
+      "payments": "Payments",
+      "accounting": "Accounting",
+      "inventory": "Inventory & products",
+      "costing": "Cost of goods",
+      "parties": "Customers & suppliers",
+      "reports": "Reports",
+      "budgets": "Budgets",
+      "people": "Colleagues",
+      "workspace": "Business & members"
+    }
   },
   "audit": {
     "title": "Audit",

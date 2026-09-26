@@ -6,6 +6,8 @@
 // confirm button spun and the sale was lost.
 // ============================================
 
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const post = vi.fn()
@@ -73,5 +75,22 @@ describe('submitInvoice', () => {
     post.mockRejectedValue({ status: 500, code: 'NETWORK_ERROR', message: 'Network Error' })
     await expect(submitInvoice({ ...input })).rejects.toMatchObject({ code: 'NETWORK_ERROR' })
     expect(queued).toEqual([])
+  })
+})
+
+describe('⚠️ React Query must let the offline paths run', () => {
+  // Default networkMode 'online' PAUSES queries and mutations offline: the
+  // stock picker showed "no products" and the confirm button spun forever,
+  // with the device-database and queue paths never reached.
+  const code = (f: string) =>
+    readFileSync(join(__dirname, '..', 'hooks', f), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+
+  it('invoice creation runs offline', () => {
+    expect(code('invoices.ts')).toMatch(/mutationFn: submitInvoice,\s*networkMode: 'always'/)
+  })
+  it('the product list runs offline', () => {
+    expect(code('products.ts')).toContain("networkMode: 'always'")
   })
 })
