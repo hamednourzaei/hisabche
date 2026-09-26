@@ -1852,6 +1852,13 @@
     "currencyIRR": "Toman",
     "ratePrefix": "1",
     "editRate": "Edit rate",
+    "totalValueShort": "Total value",
+    "showIn": "Show in",
+    "rateForm": "Set a rate",
+    "rateSame": "The two units must differ.",
+    "rateAmount": "Both amounts must be greater than zero.",
+    "rateBridge": "One side must be afghani or already have a rate.",
+    "rateSaved": "Rate saved.",
     "enterRate": "Enter rate",
     "addToWarehouse": "Add to warehouse",
     "addToWarehouseHint": "The product is created and its opening stock is recorded in this warehouse.",
@@ -2216,6 +2223,17 @@
     "profileSaved": "Your details were saved"
   },
   "sync": {
+    "download": {
+      "title": "Download a full copy of your data",
+      "hint": "Everything in this business (invoices, customers, products, payments, journal …) is exported from the server right now and saved — so your data stays with you too.",
+      "markdown": "Markdown",
+      "excel": "Excel",
+      "downloading": "Preparing…",
+      "requiresPlan": "Markdown and Excel downloads are part of the Pro and Enterprise plans.",
+      "upgrade": "Upgrade plan",
+      "ownerOnly": "Only the business owner can download a full copy of the data.",
+      "failed": "The download failed. Please try again."
+    },
     "title": "Sync",
     "description": "Manage offline sync",
     "syncing": "Syncing...",
@@ -2491,6 +2509,10 @@
       }
     },
     "incomeStatement": {
+      "chooseAccounts": "Choose accounts",
+      "hiddenAccounts": "{n} accounts hidden",
+      "showAll": "Show all",
+      "chooseHint": "Untick the accounts you do not want in this view. Only your view changes; the books are untouched.",
       "title": "Income Statement",
       "revenue": "Revenue",
       "expenses": "Expenses",
@@ -2539,6 +2561,8 @@
     "postUnpostedWithoutCost": "Posted without cost of goods:",
     "postUnpostedAlready": "Already posted:",
     "profit": {
+      "byCurrency": "Net profit by currency",
+      "noConversion": "Each currency is counted on its own; currencies are never added together — that would need a rate this report does not have.",
       "title": "Profit and loss by product",
       "loadError": "Couldn't load the profit report.",
       "colProduct": "Product",
@@ -5157,6 +5181,8 @@
   "ai": {
     "emptyHint": "For example: who owes the most? · what has reached its reorder point?",
     "thinking": "Thinking…",
+    "busy": "The AI model is busy right now. Please ask again in a moment.",
+    "notReady": "The assistant is not fully set up on the server yet. Please tell support.",
     "emptyTitle": "Ask about your books",
     "error": "I could not answer. Please try again.",
     "launch": "Ask the assistant",
@@ -5179,8 +5205,14 @@
     "rateCurrency": "Currency",
     "rateDate": "Rate date",
     "rateHint": "A rate belongs to its day — past figures use that day’s rate, not today’s.",
-    "ratePerUnit": "How many per one unit",
-    "setRate": "Set a rate"
+    "exchangeButton": "Dashboard exchange rate",
+    "editRate": "Correct the rate",
+    "each": "Every",
+    "rateAmountLabel": "Amount",
+    "rateSame": "The two units must differ.",
+    "rateAmount": "Both amounts must be greater than zero.",
+    "rateNeedsBase": "One side must be your books’ currency.",
+    "confirm": "Confirm"
   },
   "invoiceDetail": {
     "addPayment": "Add payment",

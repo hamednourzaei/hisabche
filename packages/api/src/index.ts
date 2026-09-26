@@ -299,7 +299,7 @@ export {
   useGeneralLedger,
   useBalanceSheet,
   useIncomeStatement,
-  useProfitReport,
+  useProfitReportsByCurrency,
   type ProfitReport,
   type ProductProfitRow,
   accountingKeys,

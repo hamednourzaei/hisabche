@@ -1,34 +1,37 @@
-"use client"
+'use client'
 
-import { useCallback, useMemo } from "react"
-import { useTranslations } from "next-intl";
-import { useQueryClient } from "@tanstack/react-query"
-import { useSyncStore, useBackupStore } from "@hisabche/store"
-import { SyncCenterPage } from "../sync-center-page"
-import type { SyncCenterPageProps } from "../sync-center-page"
+import { useCallback, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
+import { useQueryClient } from '@tanstack/react-query'
+import { useSyncStore, useBackupStore } from '@hisabche/store'
+import { SyncCenterPage } from '../sync-center-page'
+import type { SyncCenterPageProps } from '../sync-center-page'
+import { BackupDownloadPanel } from '../backup-download-panel'
 
 export function SyncCenterContainer() {
-  const t = useTranslations();const queryClient = useQueryClient()
+  const t = useTranslations()
+  const queryClient = useQueryClient()
   const { isOnline, isSyncing, pendingCount, lastSyncedAt, setLastSynced } = useSyncStore()
-  const { backups, autoBackupEnabled, setAutoBackup, addBackup, createBackup, auditLog } = useBackupStore()
+  const { backups, autoBackupEnabled, setAutoBackup, addBackup, createBackup, auditLog } =
+    useBackupStore()
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {
       const v = t(key)
       return v && v !== key ? v : (fallback ?? key)
     },
-    [t]
+    [t],
   )
 
   const timeAgo = useCallback(
     (ts: number) => {
       const s = Math.floor((Date.now() - ts) / 1000)
-      if (s < 60) return `${s} ${t("sync.secondsAgo")}`
-      if (s < 3600) return `${Math.floor(s / 60)} ${t("sync.minutesAgo")}`
-      if (s < 86400) return `${Math.floor(s / 3600)} ${t("sync.hoursAgo")}`
-      return `${Math.floor(s / 86400)} ${t("sync.daysAgo")}`
+      if (s < 60) return `${s} ${t('sync.secondsAgo')}`
+      if (s < 3600) return `${Math.floor(s / 60)} ${t('sync.minutesAgo')}`
+      if (s < 86400) return `${Math.floor(s / 3600)} ${t('sync.hoursAgo')}`
+      return `${Math.floor(s / 86400)} ${t('sync.daysAgo')}`
     },
-    [t]
+    [t],
   )
 
   // ✅ FIX: قبلاً «همگام‌سازی الآن» فقط یک ساعت محلی را عوض می‌کرد و هیچ
@@ -40,12 +43,12 @@ export function SyncCenterContainer() {
   }, [queryClient, setLastSynced])
 
   const localStorageSize = useMemo(() => {
-    if (typeof window === "undefined") return "0 KB"
+    if (typeof window === 'undefined') return '0 KB'
     let bytes = 0
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
-      if (key && key.startsWith("hisabche-")) {
-        bytes += new Blob([localStorage.getItem(key) || ""]).size
+      if (key && key.startsWith('hisabche-')) {
+        bytes += new Blob([localStorage.getItem(key) || '']).size
       }
     }
     return bytes > 1024 * 1024
@@ -59,25 +62,31 @@ export function SyncCenterContainer() {
   // createBackup() پیش‌فرض آن را "auto" ثبت می‌کند.
   const handleBackup = useCallback(() => {
     const backup = createBackup()
-    addBackup({ ...backup, type: "manual" })
+    addBackup({ ...backup, type: 'manual' })
   }, [createBackup, addBackup])
-  const handleToggleAutoBackup = useCallback(() => setAutoBackup(!autoBackupEnabled), [autoBackupEnabled, setAutoBackup])
+  const handleToggleAutoBackup = useCallback(
+    () => setAutoBackup(!autoBackupEnabled),
+    [autoBackupEnabled, setAutoBackup],
+  )
 
   return (
-    <SyncCenterPage
-      t={safeT}
-      timeAgo={timeAgo}
-      isOnline={isOnline}
-      isSyncing={isSyncing}
-      pendingCount={pendingCount}
-      lastSyncedAt={lastSyncedAt}
-      autoBackupEnabled={autoBackupEnabled}
-      backups={backups as SyncCenterPageProps["backups"]}
-      auditLog={auditLog as SyncCenterPageProps["auditLog"]}
-      localStorageSize={localStorageSize}
-      onSync={handleSync}
-      onBackup={handleBackup}
-      onToggleAutoBackup={handleToggleAutoBackup}
-    />
+    <div className="space-y-4">
+      <BackupDownloadPanel />
+      <SyncCenterPage
+        t={safeT}
+        timeAgo={timeAgo}
+        isOnline={isOnline}
+        isSyncing={isSyncing}
+        pendingCount={pendingCount}
+        lastSyncedAt={lastSyncedAt}
+        autoBackupEnabled={autoBackupEnabled}
+        backups={backups as SyncCenterPageProps['backups']}
+        auditLog={auditLog as SyncCenterPageProps['auditLog']}
+        localStorageSize={localStorageSize}
+        onSync={handleSync}
+        onBackup={handleBackup}
+        onToggleAutoBackup={handleToggleAutoBackup}
+      />
+    </div>
   )
 }

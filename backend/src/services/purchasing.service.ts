@@ -22,7 +22,7 @@ import { supabase } from '../db'
 import { CreatePurchaseOrder, UpdatePurchaseOrder } from '@hisabche/validation'
 import type { TenancyContext } from './tenancy.service'
 import { costing } from './inventory-costing'
-import { DatabaseError, NotFoundError } from '../errors/database.error'
+import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
 import { ledger } from './accounting'
@@ -288,6 +288,59 @@ export class PurchasingService {
     if (error) throw new DatabaseError('Failed to fetch purchase order', error)
     if (!order) throw new NotFoundError('Purchase order')
 
+    // ⚠️ CLAIM THE TRANSITION BEFORE MOVING ANY STOCK (#142, 26 Sep 2026).
+    //
+    // Nothing here checked the status, and the status was written LAST. A
+    // second «receive» — a double-click, a retry after a lost response, or two
+    // devices — ran the whole method again: cost layers are idempotent
+    // (`ON CONFLICT DO NOTHING` on the source line), but the `stock_movements`
+    // insert is not, so the goods arrived twice on the shelf. Now the status
+    // flips first, conditioned on the status just read: exactly one caller's
+    // update matches a row, every other one finds nothing and is refused.
+    const priorStatus = String((order as { status?: unknown }).status ?? '')
+    if (priorStatus === 'received') throw new ConflictError('PURCHASE_ORDER_ALREADY_RECEIVED')
+    if (priorStatus === 'cancelled') throw new ConflictError('PURCHASE_ORDER_CANCELLED')
+
+    const receivedAt = new Date().toISOString()
+    const { data: claimed, error: claimError } = await supabase
+      .from('purchase_orders')
+      .update({ status: 'received', received_at: receivedAt, updated_at: receivedAt })
+      .eq('id', id)
+      .eq('workspace_id', workspaceId)
+      .eq('status', priorStatus)
+      .select(PO_LIST_COLUMNS)
+      .maybeSingle()
+
+    if (claimError)
+      throw new DatabaseError('Failed to claim purchase order for receiving', claimError)
+    if (!claimed) throw new ConflictError('PURCHASE_ORDER_ALREADY_RECEIVED')
+
+    try {
+      await this.moveReceivedGoods(ctx, id, order)
+    } catch (moveError) {
+      // The stock did not (fully) arrive, so the order must not say it did.
+      // A status write, not a compensating DELETE: the cost layers already
+      // written are keyed by source line, so the retry reuses them.
+      await supabase
+        .from('purchase_orders')
+        .update({ status: priorStatus, received_at: null, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'received')
+      throw moveError
+    }
+
+    // The goods arrived; the purchase invoice that pays for them posts the
+    // actual. Holding the reservation too would count the same money twice.
+    await budgets.release(ctx, 'purchase_order', id)
+
+    await this.invalidate(workspaceId)
+    return claimed
+  }
+
+  /** Cost layers + stock movements for a claimed receipt. Only `receiveGoods` calls this. */
+  private async moveReceivedGoods(ctx: TenancyContext, id: string, order: object) {
+    const { workspaceId, userId } = ctx
     const items = ((order as any).items ?? []) as Array<{
       id: string
       product_id: string
@@ -352,29 +405,6 @@ export class PurchasingService {
         }
       }
     }
-
-    const { data: updated, error: updateError } = await supabase
-      .from('purchase_orders')
-      .update({
-        status: 'received',
-        received_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .eq('workspace_id', workspaceId)
-      .select(PO_LIST_COLUMNS)
-      .single()
-
-    if (updateError || !updated) {
-      throw new DatabaseError('Failed to update purchase order status', updateError)
-    }
-
-    // The goods arrived; the purchase invoice that pays for them posts the
-    // actual. Holding the reservation too would count the same money twice.
-    await budgets.release(ctx, 'purchase_order', id)
-
-    await this.invalidate(workspaceId)
-    return updated
   }
 
   // ─── Delete ──────────────────────────────────────────────────

@@ -93,8 +93,17 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || loading}
         {...props}
       >
-        {loading && <Loader2 className="size-4 animate-spin shrink-0" aria-hidden="true" />}
-        {children}
+        {/* ⚠️ With asChild, Slot needs EXACTLY ONE child. `{loading && …}`
+            is a second child even when false — «Slot failed to slot onto its
+            children» on the admin blog's <Button asChild><Link/></Button>. */}
+        {asChild ? (
+          children
+        ) : (
+          <>
+            {loading && <Loader2 className="size-4 animate-spin shrink-0" aria-hidden="true" />}
+            {children}
+          </>
+        )}
       </Comp>
     )
   },

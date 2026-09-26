@@ -269,6 +269,12 @@ export function useRecordCashMovement() {
       amountMinor: number
       /** Never optional: cash out of a drawer with no reason is a hole. */
       reason: string
+      /**
+       * ⚠️ Made by the CALLER once per movement and resent unchanged on retry
+       * (this mutation retries three times). A fresh id per attempt is a
+       * second movement.
+       */
+      movementId: string
     }) => {
       const { data } = await apiClient.post(`/pos/sessions/${sessionId}/cash`, body)
       return data

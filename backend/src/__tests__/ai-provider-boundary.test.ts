@@ -205,10 +205,15 @@ describe('the admin surface is platform-level, not workspace-level', () => {
   it('quota is checked BEFORE the provider is called', () => {
     // Otherwise an over-quota question still costs the owner a request.
     const chat = code(join(AI, 'ai-chat.service.ts'))
-    const quotaAt = chat.indexOf('AI_QUOTA_EXCEEDED')
-    const readerAt = chat.indexOf('new ReportingReader')
+    const ask = chat.slice(chat.indexOf('async ask('))
+    const quotaAt = ask.indexOf('AI_QUOTA_EXCEEDED')
+    const firstProviderCall = ask.indexOf('this.chooseViews(')
     expect(quotaAt).toBeGreaterThan(-1)
-    expect(quotaAt).toBeLessThan(readerAt)
+    expect(quotaAt).toBeLessThan(firstProviderCall)
+    // And whether the server can read AS THE USER — a missing anon key was
+    // found after a 22-second model call (reported 26 Sep 2026).
+    expect(ask.indexOf('createReader(accessToken)')).toBeGreaterThan(-1)
+    expect(ask.indexOf('createReader(accessToken)')).toBeLessThan(firstProviderCall)
   })
 
   it('usage is counted from the log, not stored in a counter', () => {

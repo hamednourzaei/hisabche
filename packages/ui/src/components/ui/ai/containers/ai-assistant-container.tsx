@@ -40,6 +40,7 @@ import { useAiAvailability, useAskAi, type AiQuotaExceeded } from '@hisabche/api
 
 import { AiAssistantPanel } from '../ai-assistant-panel'
 import { cn } from '../../../../lib/utils'
+import { aiErrorText } from '../../../../lib/ai-error-text'
 
 export function AiAssistantContainer() {
   // ⚠️ RESOLVED HERE, NOT PASSED IN. Every other container in this package
@@ -96,9 +97,7 @@ export function AiAssistantContainer() {
             ...prev,
             {
               role: 'assistant',
-              content: [
-                { type: 'text', text: tr('ai.error', 'پاسخ گرفته نشد. دوباره تلاش کنید.') },
-              ],
+              content: [{ type: 'text', text: aiErrorText(error, tr) }],
             },
           ])
         },

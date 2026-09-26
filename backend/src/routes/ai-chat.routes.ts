@@ -22,6 +22,7 @@ import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { AiChatService } from '../services/ai/ai-chat.service'
 import { AiQuotaService } from '../services/ai/ai-quota.service'
 import { AiSettingsService } from '../services/ai/ai-settings.service'
+import { AiBusyError, AiReaderNotConfiguredError } from '../services/ai/ai-chat.service'
 
 // instantiates recursively over the schema type; naming it `ZodTypeAny` makes
 // the compiler unfold that and hit its depth limit. Every other route file in
@@ -87,6 +88,17 @@ export async function aiChatRoutes(fastify: FastifyInstance) {
   const fail = (reply: FastifyReply, err: unknown, fallback: string) => {
     if (err instanceof z.ZodError) {
       return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+    }
+    // A momentarily busy provider (429/5xx after retries) is said as such — a
+    // generic 500 made the user think the assistant was broken.
+    if (err instanceof AiReaderNotConfiguredError) {
+      fastify.log.error(err)
+      return reply
+        .code(503)
+        .send({ error: 'AI_READER_NOT_CONFIGURED', code: 'AI_READER_NOT_CONFIGURED' })
+    }
+    if (err instanceof AiBusyError) {
+      return reply.code(503).send({ error: 'AI_PROVIDER_BUSY', code: 'AI_PROVIDER_BUSY' })
     }
     if (err instanceof BaseError && err.statusCode < 500) {
       const code = /^[A-Z][A-Z_]{4,}/.exec(err.message)?.[0]

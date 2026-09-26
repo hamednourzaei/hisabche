@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { createPurchaseOrderSchema, updatePurchaseOrderSchema } from '@hisabche/validation'
 import PurchasingService from '../services/purchasing.service'
+import { ConflictError, NotFoundError } from '../errors/database.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
@@ -149,6 +150,9 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
         await clearCache('purchase-orders:*')
         return reply.send(result)
       } catch (err) {
+        // Already received / cancelled, or another request received it first.
+        if (err instanceof ConflictError) return reply.code(409).send({ error: err.message })
+        if (err instanceof NotFoundError) return reply.code(404).send({ error: err.message })
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to receive goods' })
       }

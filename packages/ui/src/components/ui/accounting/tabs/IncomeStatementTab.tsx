@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/accounting/tabs/IncomeStatementTab.tsx
 'use client'
 
-import { memo, useCallback, useState, useMemo } from 'react'
+import { memo, useCallback, useEffect, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   CURRENCY_SIGN,
@@ -12,7 +12,7 @@ import {
 } from '@hisabche/formatting'
 import { useCurrencyStore } from '@hisabche/store'
 import { cn } from '../../../../lib/utils'
-import { useIncomeStatement, useProfitReport, type TrialBalance } from '@hisabche/api'
+import { useIncomeStatement, useProfitReportsByCurrency, type TrialBalance } from '@hisabche/api'
 import { ProductProfitTable } from '../components/ProductProfitTable'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { DateRangePicker } from '../components/DateRangePicker'
@@ -123,6 +123,9 @@ function StatementSection({
   )
 }
 
+/** Browser-storage key for the accounts a viewer hid from this statement. */
+const HIDDEN_ACCOUNTS_KEY = 'hisabche:income-statement:hidden-accounts'
+
 export const IncomeStatementTab = memo(function IncomeStatementTab() {
   const t = useTranslations()
   const n = useLedgerNumber()
@@ -130,16 +133,65 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
   const [to, setTo] = useState(getToday)
   const { branchId } = useBranchScope()
   const { data, isLoading } = useIncomeStatement(from, to, branchId)
-  // Request #91 — per-product profit in the currency chosen at onboarding.
-  const currency = useCurrencyStore((state) => state.primaryCurrency)
+  // Request #91 — per-product profit, now for EVERY currency in the range
+  // (owner's request, 26 Sep 2026: the business is not single-currency; the
+  // report used to count only the onboarding currency and list the rest as
+  // «not in this total»). Each currency is its own report — never summed.
+  const primaryCurrency = useCurrencyStore((state) => state.primaryCurrency)
   const locale = useIntlLocale()
-  const profit = useProfitReport(from, to, currency)
-  const money = useCallback(
-    (value: number) =>
-      currency in CURRENCY_SIGN
-        ? formatMoney(value, currency as KnownCurrency, locale)
-        : `${formatNumber(value, locale, 2)} ${currency}`,
-    [currency, locale],
+  const profitReports = useProfitReportsByCurrency(from, to, primaryCurrency)
+  const [selectedCurrency, setSelectedCurrency] = useState<string | null>(null)
+  const reports = profitReports.data ?? []
+  const currency =
+    selectedCurrency && reports.some((r) => r.currency === selectedCurrency)
+      ? selectedCurrency
+      : primaryCurrency
+  const selectedReport = reports.find((r) => r.currency === currency)
+  const moneyIn = useCallback(
+    (value: number, code: string) =>
+      code in CURRENCY_SIGN
+        ? formatMoney(value, code as KnownCurrency, locale)
+        : `${formatNumber(value, locale, 2)} ${code}`,
+    [locale],
+  )
+  const money = useCallback((value: number) => moneyIn(value, currency), [moneyIn, currency])
+
+  // Accounts this viewer chose to hide from the statement — a per-viewer
+  // view setting (browser storage), never a change to the books.
+  const [hiddenAccounts, setHiddenAccounts] = useState<ReadonlySet<string>>(() => new Set())
+  const [choosing, setChoosing] = useState(false)
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(HIDDEN_ACCOUNTS_KEY)
+      if (raw) setHiddenAccounts(new Set(JSON.parse(raw) as string[]))
+    } catch {
+      // Storage unavailable (private window): every account stays visible.
+    }
+  }, [])
+  const toggleAccount = useCallback((accountId: string) => {
+    setHiddenAccounts((current) => {
+      const next = new Set(current)
+      if (next.has(accountId)) next.delete(accountId)
+      else next.add(accountId)
+      try {
+        window.localStorage.setItem(HIDDEN_ACCOUNTS_KEY, JSON.stringify([...next]))
+      } catch {
+        // Not persisted — still applied for this visit.
+      }
+      return next
+    })
+  }, [])
+  const showAllAccounts = useCallback(() => {
+    setHiddenAccounts(new Set())
+    try {
+      window.localStorage.removeItem(HIDDEN_ACCOUNTS_KEY)
+    } catch {
+      // Nothing stored to clear.
+    }
+  }, [])
+  const visible = useCallback(
+    (rows: TrialBalance[]) => rows.filter((row) => !hiddenAccounts.has(row.accountId)),
+    [hiddenAccounts],
   )
   const num = useCallback((value: number) => formatNumber(value, locale, 2), [locale])
 
@@ -187,17 +239,71 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
           <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
             {safeT('accounting.profit.title', 'سود و زیان هر کالا')}
           </h3>
-          {profit.isLoading ? (
+          {profitReports.isLoading ? (
             <AccountingSkeleton rows={3} />
-          ) : profit.isError || !profit.data ? (
+          ) : profitReports.isError || !selectedReport ? (
             <p role="alert" className="text-sm text-[hsl(var(--color-destructive))]">
               {safeT('accounting.profit.loadError', 'گزارش سود خوانده نشد.')}{' '}
-              <button type="button" className="underline" onClick={() => void profit.refetch()}>
+              <button
+                type="button"
+                className="underline"
+                onClick={() => void profitReports.refetch()}
+              >
                 {safeT('common.retry', 'تلاش دوباره')}
               </button>
             </p>
           ) : (
-            <ProductProfitTable t={safeT} report={profit.data} money={money} num={num} />
+            <>
+              {reports.length > 1 ? (
+                <div className="space-y-2" data-profit-by-currency="">
+                  <p className="text-xs font-medium text-[hsl(var(--fg-secondary))]">
+                    {safeT('accounting.profit.byCurrency', 'سود خالص به تفکیک ارز')}
+                  </p>
+                  <div className="flex flex-wrap gap-2" role="tablist">
+                    {reports.map((report) => {
+                      const net = report.totals.netProfit
+                      return (
+                        <button
+                          key={report.currency}
+                          type="button"
+                          role="tab"
+                          aria-selected={report.currency === currency}
+                          onClick={() => setSelectedCurrency(report.currency)}
+                          className={cn(
+                            'rounded-xl border px-3 py-2 text-start text-sm transition-colors',
+                            report.currency === currency
+                              ? 'border-[hsl(var(--color-primary))] bg-[hsl(var(--color-primary)/0.08)]'
+                              : 'border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted))]',
+                          )}
+                        >
+                          <span className="block text-xs text-[hsl(var(--fg-tertiary))]">
+                            {report.currency} · {report.totals.invoiceCount}{' '}
+                            {safeT('accounting.profit.invoices', 'فاکتور')}
+                          </span>
+                          <span
+                            className={cn(
+                              'block font-semibold tabular-nums',
+                              net >= 0
+                                ? 'text-[hsl(var(--color-success))]'
+                                : 'text-[hsl(var(--color-destructive))]',
+                            )}
+                          >
+                            {moneyIn(net, report.currency)}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
+                    {safeT(
+                      'accounting.profit.noConversion',
+                      'هر ارز جدا حساب شده و ارزها با هم جمع نمی‌شوند.',
+                    )}
+                  </p>
+                </div>
+              ) : null}
+              <ProductProfitTable t={safeT} report={selectedReport} money={money} num={num} />
+            </>
           )}
         </section>
 
@@ -207,10 +313,52 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
           <AccountingEmptyState title={t('accounting.incomeStatement.empty.title')} />
         ) : (
           <div className="mx-auto max-w-2xl space-y-4">
+            <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
+              {hiddenAccounts.size > 0 ? (
+                <>
+                  <span className="text-[hsl(var(--fg-tertiary))]">
+                    {t('accounting.incomeStatement.hiddenAccounts', { n: hiddenAccounts.size })}
+                  </span>
+                  <button type="button" className="underline" onClick={showAllAccounts}>
+                    {t('accounting.incomeStatement.showAll')}
+                  </button>
+                </>
+              ) : null}
+              <button
+                type="button"
+                aria-expanded={choosing}
+                onClick={() => setChoosing((open) => !open)}
+                className="rounded-lg border border-[hsl(var(--border-default))] px-2.5 py-1 hover:bg-[hsl(var(--surface-muted))]"
+              >
+                {t('accounting.incomeStatement.chooseAccounts')}
+              </button>
+            </div>
+            {choosing ? (
+              <div
+                data-account-chooser=""
+                className="space-y-2 rounded-xl border border-[hsl(var(--border-default))] p-3 text-sm"
+              >
+                <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                  {t('accounting.incomeStatement.chooseHint')}
+                </p>
+                <div className="grid gap-1 sm:grid-cols-2">
+                  {[...data.revenue, ...data.expenses].map((row) => (
+                    <label key={row.accountId} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={!hiddenAccounts.has(row.accountId)}
+                        onChange={() => toggleAccount(row.accountId)}
+                      />
+                      <span className="truncate">{row.accountName}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <StatementSection
               title={t('accounting.incomeStatement.revenue')}
               total={data.totalRevenue}
-              accounts={data.revenue}
+              accounts={visible(data.revenue)}
               emptyLabel={t('accounting.incomeStatement.empty.title')}
               onOpenAccount={drilldown.open}
             />
@@ -218,7 +366,7 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
             <StatementSection
               title={t('accounting.incomeStatement.expenses')}
               total={data.totalExpenses}
-              accounts={data.expenses}
+              accounts={visible(data.expenses)}
               emptyLabel={t('accounting.incomeStatement.empty.title')}
               onOpenAccount={drilldown.open}
             />

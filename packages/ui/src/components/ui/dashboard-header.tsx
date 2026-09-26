@@ -445,7 +445,7 @@ const IdentityMenu = memo(function IdentityMenu({
       <DropdownMenuTrigger
         aria-label={t('nav.account')}
         className={cn(
-          'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2 text-[11px] font-medium',
+          'inline-flex h-7 shrink-0 items-center gap-2 rounded-lg px-2.5 text-[11px] font-medium',
           'transition-colors hover:brightness-95 motion-reduce:transition-none',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
           tone,
@@ -460,7 +460,11 @@ const IdentityMenu = memo(function IdentityMenu({
             before the connection dropped, so it is shown only while online —
             the red dot is then the whole message. Text for screen readers — a
             colour alone is not a message (راهنمای سشن §۷٫۵). */}
-        <span className="inline-flex shrink-0 items-center gap-1 tabular-nums">
+        {/* Its own padded block, so the dot does not touch the label beside it. */}
+        <span
+          className="inline-flex shrink-0 items-center gap-1.5 px-1.5 py-0.5 tabular-nums"
+          data-connection-group=""
+        >
           <span
             aria-hidden="true"
             data-connection={isOnline ? 'online' : 'offline'}
@@ -471,7 +475,12 @@ const IdentityMenu = memo(function IdentityMenu({
           />
           {/* The count is only meaningful to someone allowed to see the list. */}
           {isOnline && canSeePeople && onlineCount > 0 ? (
-            <span data-online-count="">{onlineCount}</span>
+            <span
+              data-online-count=""
+              className="inline-flex min-w-5 items-center justify-center rounded-full bg-[hsl(var(--fg-primary)/0.12)] px-1.5 py-px leading-4"
+            >
+              {onlineCount}
+            </span>
           ) : null}
         </span>
         <span className="sr-only">{isOnline ? t('sync.online') : t('sync.offline')}</span>

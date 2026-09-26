@@ -58,7 +58,8 @@ describe('#91 profit & loss', () => {
   const tab = code(ui('accounting/tabs/IncomeStatementTab.tsx'))
   const table = code(ui('accounting/components/ProductProfitTable.tsx'))
   it('same date range, currency from onboarding, shared DataTable, totals + links', () => {
-    expect(tab).toContain('useProfitReport(from, to, currency)')
+    // Every currency in the range, one report each (never summed).
+    expect(tab).toContain('useProfitReportsByCurrency(from, to, primaryCurrency)')
     expect(tab).toContain('useCurrencyStore((state) => state.primaryCurrency)')
     expect(table).toContain('<DataTable')
     expect(table).toContain("router.push('/team-and-payroll')")

@@ -462,6 +462,43 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /profit-report/by-currency ─────────────────────
+  // One report per currency with documents in the range (plus the primary
+  // one), never summed across currencies. Not cached, like /profit-report.
+  fastify.get(
+    '/profit-report/by-currency',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = z
+          .object({
+            from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            currency: z.string().min(3).max(8),
+          })
+          .parse(request.query)
+        return reply.send(
+          await accountingService.getProfitReportsByCurrency(
+            request.tenancy,
+            query.from,
+            query.to,
+            query.currency,
+          ),
+        )
+      } catch (err) {
+        if (err instanceof z.ZodError)
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        return fail(reply, err, 'Failed to build the profit reports')
+      }
+    },
+  )
+
   // ─── GET /cash-flow ────────────────────────────────────
   fastify.get(
     '/cash-flow',

@@ -35,6 +35,7 @@
 
 import { supabase } from '../../db'
 import { ValidationError } from '../../errors/validation.error'
+import { BaseError } from '../../errors/base.error'
 import type { TenancyContext } from '../tenancy.service'
 
 import { AiQuotaService, type QuotaStatus } from './ai-quota.service'
@@ -103,6 +104,32 @@ async function providerErrorDetail(response: Response): Promise<string> {
   }
 }
 
+/** The server lacks what it needs to read AS THE USER (SUPABASE_ANON_KEY). */
+export class AiReaderNotConfiguredError extends BaseError {
+  constructor() {
+    super('AI_READER_NOT_CONFIGURED: SUPABASE_ANON_KEY is not set on the server', 503)
+    this.name = 'AiReaderNotConfiguredError'
+  }
+}
+
+/** Whether the server can build the user-scoped reader at all. */
+export function isReaderConfigured(): boolean {
+  return Boolean(process.env.SUPABASE_ANON_KEY)
+}
+
+function createReader(accessToken: string): ReportingReader {
+  if (!isReaderConfigured()) throw new AiReaderNotConfiguredError()
+  return new ReportingReader(accessToken)
+}
+
+/** The provider is momentarily overloaded or rate-limited — try again shortly. */
+export class AiBusyError extends BaseError {
+  constructor(readonly providerStatus: number | undefined) {
+    super(`AI_PROVIDER_BUSY: ${providerStatus ?? 'unknown'}`, 503)
+    this.name = 'AiBusyError'
+  }
+}
+
 export interface ProviderTestResult {
   ok: boolean
   /** The provider's HTTP status; null when it could not be reached at all. */
@@ -123,6 +150,12 @@ export class AiChatService {
     const config = await this.settings.getConfig()
     if (!config) throw new ValidationError('AI_NOT_CONFIGURED')
 
+    // ⚠️ FIRST, before any provider call: can this server read AS THE USER?
+    // Without SUPABASE_ANON_KEY it cannot (and must not fall back to the
+    // service key — that would turn row-level security off). It used to be
+    // discovered AFTER a 22-second model call (reported 26 Sep 2026).
+    const reader = createReader(accessToken)
+
     const quota = await this.quota.status(ctx)
     if (quota.remaining <= 0) {
       // Checked BEFORE the provider call, so an over-quota question costs the
@@ -136,7 +169,6 @@ export class AiChatService {
     const views = await this.chooseViews(config, question)
 
     // 2. Read them AS THE USER.
-    const reader = new ReportingReader(accessToken)
     const results = await reader.readMany(views)
 
     // 3. Answer from those rows only.
@@ -216,7 +248,41 @@ export class AiChatService {
    * The access token is never included; only the question and the rows the
    * user is already entitled to read.
    */
+  /**
+   * A provider call that survives a momentarily busy provider.
+   *
+   * ⚠️ Reported 26 Sep 2026: the admin's test passed, a user's «سلام» got
+   * «نتوانستم پاسخ بدهم». OpenRouter had answered 429 — the free model is a
+   * pool shared by everyone («temporarily rate-limited upstream»). A 429 or
+   * 5xx is retried twice (1 s, 3 s — or the provider's Retry-After, capped);
+   * if it is still busy, the user is told THAT (AI_PROVIDER_BUSY, 503), not
+   * a generic failure. Any other status is final at once — retrying a bad key
+   * or a wrong model only makes the user wait.
+   */
   private async call(config: AiProviderConfig, system: string, user: string): Promise<string> {
+    const delays = [1000, 3000]
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.callOnce(config, system, user)
+      } catch (err) {
+        const status = (err as { providerStatus?: number }).providerStatus
+        const retryable = status === 429 || (status !== undefined && status >= 500)
+        if (!retryable) throw err
+        if (attempt >= delays.length) {
+          const busy = new AiBusyError(status)
+          ;(busy as AiBusyError & { providerDetail?: string | undefined }).providerDetail = (
+            err as { providerDetail?: string }
+          ).providerDetail
+          throw busy
+        }
+        const hinted = (err as { retryAfterMs?: number }).retryAfterMs
+        const wait = Math.min(hinted ?? delays[attempt]!, 3000)
+        await new Promise((resolve) => setTimeout(resolve, wait))
+      }
+    }
+  }
+
+  private async callOnce(config: AiProviderConfig, system: string, user: string): Promise<string> {
     const timeout = AbortSignal.timeout(60_000)
 
     if (config.provider === 'anthropic') {
@@ -281,7 +347,15 @@ export class AiChatService {
       `[ai] provider ${config.provider} (${config.model}) at ${providerEndpoint(config.provider, config.baseUrl)} answered ${response.status}: ${detail}`,
     )
     const error = new ValidationError(`AI_PROVIDER_ERROR: ${response.status}`)
-    ;(error as ValidationError & { providerDetail?: string }).providerDetail = detail
+    const extra = error as ValidationError & {
+      providerDetail?: string
+      providerStatus?: number
+      retryAfterMs?: number
+    }
+    extra.providerDetail = detail
+    extra.providerStatus = response.status
+    const retryAfter = Number(response.headers.get('retry-after'))
+    if (Number.isFinite(retryAfter) && retryAfter > 0) extra.retryAfterMs = retryAfter * 1000
     return error
   }
 
@@ -292,6 +366,17 @@ export class AiChatService {
    */
   async testConnection(config: AiProviderConfig): Promise<ProviderTestResult> {
     const started = Date.now()
+    // The provider can answer and users still get nothing: say so here, where
+    // the admin is looking, not only in the server log.
+    if (!isReaderConfigured()) {
+      return {
+        ok: false,
+        status: null,
+        latencyMs: 0,
+        detail:
+          "SUPABASE_ANON_KEY is not set on the backend (Render → Environment). The assistant reads data with the user's own permissions and cannot answer without it.",
+      }
+    }
     try {
       const reply = await this.call(
         config,
@@ -300,7 +385,9 @@ export class AiChatService {
       )
       return { ok: true, status: 200, latencyMs: Date.now() - started, detail: reply.slice(0, 200) }
     } catch (err) {
-      const status = /AI_PROVIDER_ERROR: (\d+)/.exec(err instanceof Error ? err.message : '')?.[1]
+      const status = /AI_PROVIDER_(?:ERROR|BUSY): (\d+)/.exec(
+        err instanceof Error ? err.message : '',
+      )?.[1]
       const detail =
         (err as { providerDetail?: string }).providerDetail ||
         (err instanceof Error ? err.message : String(err))

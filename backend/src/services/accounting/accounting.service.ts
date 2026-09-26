@@ -716,6 +716,35 @@ export class AccountingService implements LedgerPort {
     return buildProfitReport({ from, to, currency, ...sources })
   }
 
+  /**
+   * The profit report of EVERY currency the period has documents in — one
+   * report each, never added together (owner's request, 26 Sep 2026: «dollar
+   * profit so much, toman so much, afghani so much»).
+   *
+   * ⚠️ No conversion. Summing AFN and IRT needs a rate this report does not
+   * have; a single «total profit» across currencies would be an invented
+   * number. The primary currency is always included, even when empty.
+   */
+  async getProfitReportsByCurrency(
+    ctx: TenancyContext,
+    fromDate: string,
+    toDate: string,
+    primaryCurrency: string,
+  ): Promise<ProfitReport[]> {
+    const from = dateOnly(fromDate)
+    const to = dateOnly(toDate)
+    if (from > to) throw new ValidationError('PROFIT_REPORT_RANGE_INVALID')
+    const sources = await this.repo.profitSources(ctx.workspaceId, from, to)
+    const currencies = [
+      primaryCurrency,
+      ...new Set([
+        ...sources.invoices.map((invoice) => invoice.currency),
+        ...sources.payrolls.map((payroll) => payroll.currency),
+      ]),
+    ].filter((code, index, all) => code && all.indexOf(code) === index)
+    return currencies.map((currency) => buildProfitReport({ from, to, currency, ...sources }))
+  }
+
   /** Per-product profit in every currency present (insights' «profit change» explanation). */
   async getProductProfits(ctx: TenancyContext, fromDate: string, toDate: string) {
     const from = dateOnly(fromDate)

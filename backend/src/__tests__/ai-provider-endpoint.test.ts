@@ -98,3 +98,63 @@ describe('testConnection (the admin «test» button)', () => {
     expect(result.detail).toContain('fetch failed')
   })
 })
+
+describe('⚠️ a busy provider (reported: OpenRouter free model answered 429)', () => {
+  const config = {
+    provider: 'openai' as const,
+    baseUrl: 'https://openrouter.ai/api/v1',
+    model: 'poolside/laguna-s-2.1:free',
+    apiKey: 'sk-test',
+    systemPrompt: '',
+    topupContact: '',
+    isEnabled: true,
+  }
+  // Retry-After 0.01 s keeps the test fast; the service honours it (capped).
+  const busy = () =>
+    new Response('{"error":{"message":"temporarily rate-limited upstream"}}', {
+      status: 429,
+      headers: { 'retry-after': '0.01' },
+    })
+  const ok = () =>
+    new Response(JSON.stringify({ choices: [{ message: { content: 'OK' } }] }), { status: 200 })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('two 429s, then an answer: the user gets the answer', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(busy())
+      .mockResolvedValueOnce(busy())
+      .mockResolvedValueOnce(ok())
+    vi.stubGlobal('fetch', fetchMock)
+    const result = await new AiChatService().testConnection(config)
+    expect(result).toMatchObject({ ok: true, detail: 'OK' })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it("still busy after the retries: AI_PROVIDER_BUSY with the 429 and the provider's words", async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => busy()),
+    )
+    const result = await new AiChatService().testConnection(config)
+    expect(result).toMatchObject({ ok: false, status: 429 })
+    expect(result.detail).toContain('rate-limited')
+  })
+
+  it('a non-retryable status (401 bad key) is final at once', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const fetchMock = vi.fn(async () => new Response('{"error":"bad key"}', { status: 401 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await new AiChatService().testConnection(config)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('the ask route answers 503 AI_PROVIDER_BUSY — not a generic 500', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const routes = readFileSync(join(__dirname, '..', 'routes', 'ai-chat.routes.ts'), 'utf8')
+    expect(routes).toMatch(/instanceof AiBusyError[\s\S]{0,120}503[\s\S]{0,80}AI_PROVIDER_BUSY/)
+  })
+})

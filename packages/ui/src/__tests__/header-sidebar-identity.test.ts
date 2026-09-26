@@ -312,7 +312,9 @@ describe('the identity pill has ONE status dot', () => {
   )
 
   it('exactly one dot on the trigger, and it is the connection dot', () => {
-    expect(pill.match(/rounded-full/g) ?? []).toHaveLength(1)
+    // A DOT is a small fixed-size circle; the count's badge is rounded too but
+    // is sized by its text, so it is not counted.
+    expect(pill.match(/size-(?:1\.5|2)[^'"]*rounded-full/g) ?? []).toHaveLength(1)
     expect(pill).toContain("data-connection={isOnline ? 'online' : 'offline'}")
     expect(pill).toContain(
       "isOnline ? 'bg-[hsl(var(--color-success))]' : 'bg-[hsl(var(--color-destructive))]'",

@@ -26,6 +26,7 @@ import { useAiAvailability, useAskAi, type AiQuotaExceeded } from '@hisabche/api
 
 import { AiAssistantPanel } from './ai-assistant-panel'
 import { cn } from '../../../lib/utils'
+import { aiErrorText } from '../../../lib/ai-error-text'
 
 export interface AiAssistantLauncherProps {
   t?: ((key: string, fallback?: string) => string) | undefined
@@ -75,7 +76,7 @@ export function AiAssistantLauncher({ t, fullPageHref }: AiAssistantLauncherProp
             content: [
               {
                 type: 'text',
-                text: tr('ai.error', 'نتوانستم پاسخ بدهم. لطفاً دوباره تلاش کنید.'),
+                text: aiErrorText(error, tr),
               },
             ],
           },

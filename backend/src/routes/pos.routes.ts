@@ -57,6 +57,8 @@ const movementSchema = z.object({
   kind: z.enum(['cash_in', 'cash_out']),
   amountMinor: z.number().int().positive(),
   reason: z.string().min(1).max(300),
+  /** Idempotency key, made once by the caller. Optional for older desktop builds. */
+  movementId: z.string().uuid().optional(),
 })
 
 const closeSchema = z.object({

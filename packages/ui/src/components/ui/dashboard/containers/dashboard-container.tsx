@@ -89,7 +89,7 @@ export function DashboardContainer() {
   // `POST /currency/revalue`, which books the difference as a journal entry.
   const display = useDisplayBasis()
   const setRate = useSetExchangeRate()
-  const [rateOpen, setRateOpen] = useState(false)
+  const [rateOpen, setRateOpen] = useState<'new' | 'edit' | null>(null)
 
   /**
    * `fmt`, but in whatever the user chose to read in.
@@ -145,24 +145,41 @@ export function DashboardContainer() {
               feature is unreachable — `PUT /currency/rates` had no caller. */}
           <button
             type="button"
-            onClick={() => setRateOpen((open) => !open)}
+            aria-expanded={rateOpen === 'new'}
+            onClick={() => setRateOpen((open) => (open === 'new' ? null : 'new'))}
             className="h-9 shrink-0 rounded-full border border-[hsl(var(--border-default))] px-3 text-xs text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
           >
-            {t('display.setRate', 'ثبت نرخ')}
+            {t('display.exchangeButton', 'تبادل نرخ داشبورد')}
           </button>
+          {/* «اصلاح قیمت» — only while reading in another currency: the rate
+              behind every number on screen, opened on that currency. */}
+          {display.basis !== display.base ? (
+            <button
+              type="button"
+              data-edit-rate=""
+              aria-expanded={rateOpen === 'edit'}
+              onClick={() => setRateOpen((open) => (open === 'edit' ? null : 'edit'))}
+              className="h-9 shrink-0 rounded-full border border-[hsl(var(--border-default))] px-3 text-xs text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
+            >
+              {t('display.editRate', 'اصلاح قیمت')}
+            </button>
+          ) : null}
         </div>
 
         {rateOpen ? (
-          <div className="w-full sm:max-w-lg">
+          <div className="w-full sm:max-w-2xl">
             <ExchangeRateForm
+              // Remount per mode so the pair starts on the right currency.
+              key={rateOpen}
               t={t}
               base={display.base}
+              initialCurrency={rateOpen === 'edit' ? display.basis : undefined}
               // The base is excluded: it is 1 against itself by definition, and
               // offering it invites someone to quote AFN against AFN.
               currencies={CURRENCY_CODES.filter((code) => code !== display.base)}
               isSaving={setRate.isPending}
               error={setRate.error ? String((setRate.error as Error).message) : null}
-              onSave={(input) => setRate.mutate(input, { onSuccess: () => setRateOpen(false) })}
+              onSave={(input) => setRate.mutate(input, { onSuccess: () => setRateOpen(null) })}
             />
           </div>
         ) : null}

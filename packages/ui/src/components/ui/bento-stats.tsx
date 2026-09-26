@@ -23,6 +23,7 @@
 import { KpiCard, KpiGrid, fullAmount, type KpiCardProps } from './kpi-card'
 import { cn } from '../../lib/utils'
 import { type LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 type Translate = (key: string, fallback?: string) => string
 
@@ -45,6 +46,8 @@ export interface BentoStat {
   id: string
   icon: LucideIcon
   label: string
+  /** A small control beside the label (see KpiCard.labelAddon). */
+  labelAddon?: ReactNode | undefined
   /** مقدار عددی — قالب‌بندی، رنگِ علامت و اندازه‌ی فونت خودکار اعمال می‌شود */
   amount?: number
   /** مقدار متنی (مثلاً نام مشتری) — جایگزین amount */
@@ -95,6 +98,7 @@ export function BentoStats({ t: _t, stats, className }: BentoStatsProps) {
           <KpiCard
             key={stat.id}
             label={stat.label}
+            {...(stat.labelAddon ? { labelAddon: stat.labelAddon } : {})}
             value={value}
             icon={stat.icon}
             {...(stat.delta !== undefined ? { delta: stat.delta } : {})}

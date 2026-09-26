@@ -142,6 +142,8 @@ export type KpiSurface =
 
 export interface KpiCardProps {
   label: string
+  /** A small control beside the label — e.g. the currency a value is shown in. */
+  labelAddon?: React.ReactNode | undefined
   /**
    * The figure.
    *
@@ -201,6 +203,7 @@ const SURFACE_CLASS: Record<KpiSurface, string> = {
 
 export function KpiCard({
   label,
+  labelAddon,
   value,
   hint,
   icon: Icon,
@@ -270,6 +273,7 @@ export function KpiCard({
           />
         ) : null}
         <span className={STAT_LABEL}>{label}</span>
+        {labelAddon}
       </div>
 
       {text !== null ? (

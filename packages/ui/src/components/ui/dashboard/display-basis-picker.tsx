@@ -20,6 +20,7 @@ import { CURRENCY_SIGN } from '@hisabche/formatting'
 import { SelectField } from '../select-field'
 import { cn } from '../../../lib/utils'
 import { toIsoDay } from '@hisabche/formatting'
+import { rateFromPair } from '../../../lib/warehouse/rate-from-pair'
 
 /** Persian labels for the codes a shop is most likely to display in. */
 const LABEL: Record<string, string> = {
@@ -173,75 +174,130 @@ export interface ExchangeRateFormProps {
   base: string
   /** Codes the user may quote. Excludes the base — it is 1 by definition. */
   currencies: readonly string[]
+  /** «اصلاح قیمت»: open on the currency being displayed. */
+  initialCurrency?: string | undefined
   isSaving?: boolean
   error?: string | null
   onSave: (input: { currency: string; rate: number; onDate: string }) => void
 }
 
+/**
+ * «[amount] [unit] = [amount] [unit]», the way a rate is said — «هر ۳٬۰۰۰
+ * افغانی = ۱٬۰۰۰٬۰۰۰ تومان», «هر ۱ گرم طلا = ۲۴٬۰۰۰٬۰۰۰ …» (owner's request,
+ * 26 Sep 2026). The left box starts on the books' currency. Whatever is typed
+ * is turned into the one thing stored: how many BASE units one unit of the
+ * other currency is worth (`rateFromPair`), so every reader of the rate is
+ * unchanged. One side must be the base: the dashboard keeps no rate between
+ * two foreign currencies to bridge with.
+ */
 export function ExchangeRateForm({
   t,
   base,
   currencies,
+  initialCurrency,
   isSaving,
   error,
   onSave,
 }: ExchangeRateFormProps) {
   const tr = (key: string, fallback: string) => (t ? t(key, fallback) : fallback)
 
-  const [currency, setCurrency] = React.useState(currencies[0] ?? '')
-  const [rate, setRate] = React.useState('')
+  const units = [base, ...currencies]
+  const [leftAmount, setLeftAmount] = React.useState('1')
+  const [leftCode, setLeftCode] = React.useState(initialCurrency ?? base)
+  const [rightAmount, setRightAmount] = React.useState('')
+  const [rightCode, setRightCode] = React.useState(initialCurrency ? base : (currencies[0] ?? ''))
   const [onDate, setOnDate] = React.useState(() => toIsoDay(new Date()))
-
-  const parsed = Number(rate)
-  // The server rejects a non-positive rate too; refusing here saves a round
-  // trip. Zero would also divide by zero on every converted card.
-  const valid = currency !== '' && Number.isFinite(parsed) && parsed > 0
+  const [problem, setProblem] = React.useState<string | null>(null)
 
   if (currencies.length === 0) return null
 
+  const option = (code: string) => ({
+    value: code,
+    label:
+      code === base
+        ? `${LABEL[code] ?? code} — ${tr('display.ownCurrency', 'ارز دفاتر')}`
+        : (LABEL[code] ?? code),
+  })
+  const box =
+    'h-9 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 text-xs text-[hsl(var(--fg-primary))] outline-none focus:border-[hsl(var(--color-primary))]'
+
   return (
     <form
+      data-exchange-rate-form=""
       className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-3"
       onSubmit={(event) => {
         event.preventDefault()
-        if (!valid || isSaving) return
-        onSave({ currency, rate: parsed, onDate })
+        if (isSaving) return
+        const result = rateFromPair(
+          { amount: Number(leftAmount), code: leftCode },
+          { amount: Number(rightAmount), code: rightCode },
+          () => null,
+          base,
+        )
+        if (!result.ok) {
+          setProblem(
+            result.reason === 'same'
+              ? tr('display.rateSame', 'دو واحد باید متفاوت باشند.')
+              : result.reason === 'amount'
+                ? tr('display.rateAmount', 'هر دو مقدار باید بزرگ‌تر از صفر باشند.')
+                : tr('display.rateNeedsBase', 'یکی از دو طرف باید ارز دفاتر باشد.'),
+          )
+          return
+        }
+        setProblem(null)
+        onSave({ currency: result.code, rate: result.afnPerUnit, onDate })
       }}
     >
       <p className="text-xs font-medium text-[hsl(var(--fg-primary))]">
-        {tr('display.setRate', 'ثبت نرخ')}
+        {tr('display.exchangeButton', 'تبادل نرخ داشبورد')}
       </p>
 
-      <div className="grid gap-2 sm:grid-cols-3">
-        <SelectField
-          value={currency}
-          onChange={setCurrency}
-          options={currencies.map((code) => ({ value: code, label: LABEL[code] ?? code }))}
-          aria-label={tr('display.rateCurrency', 'ارز')}
-        />
-
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span>{tr('display.each', 'هر')}</span>
         <input
           type="number"
           inputMode="decimal"
           min={0}
           step="any"
-          value={rate}
-          onChange={(event) => setRate(event.target.value)}
+          dir="ltr"
+          aria-label={tr('display.rateAmountLabel', 'مقدار')}
+          value={leftAmount}
+          onChange={(event) => setLeftAmount(event.target.value)}
           disabled={isSaving}
-          // The label is the whole contract: «how many AFN is one gram of
-          // gold», not «what is the gold rate», which is ambiguous about
-          // direction and is how an inverted rate gets entered.
-          placeholder={tr('display.ratePerUnit', `چند ${base} برای یک واحد`)}
-          className="h-9 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 text-xs text-[hsl(var(--fg-primary))] outline-none focus:border-[hsl(var(--color-primary))]"
+          className={cn(box, 'w-28 tabular-nums')}
         />
-
+        <SelectField
+          value={leftCode}
+          onChange={setLeftCode}
+          options={units.map(option)}
+          aria-label={tr('display.rateCurrency', 'ارز')}
+        />
+        <span aria-hidden="true">=</span>
+        <input
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step="any"
+          dir="ltr"
+          aria-label={tr('display.rateAmountLabel', 'مقدار')}
+          value={rightAmount}
+          onChange={(event) => setRightAmount(event.target.value)}
+          disabled={isSaving}
+          className={cn(box, 'w-36 tabular-nums')}
+        />
+        <SelectField
+          value={rightCode}
+          onChange={setRightCode}
+          options={units.map(option)}
+          aria-label={tr('display.rateCurrency', 'ارز')}
+        />
         <input
           type="date"
           value={onDate}
           onChange={(event) => setOnDate(event.target.value)}
           disabled={isSaving}
           aria-label={tr('display.rateDate', 'تاریخ نرخ')}
-          className="h-9 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 text-xs text-[hsl(var(--fg-primary))] outline-none focus:border-[hsl(var(--color-primary))]"
+          className={box}
         />
       </div>
 
@@ -252,18 +308,18 @@ export function ExchangeRateForm({
         )}
       </p>
 
-      {error ? (
+      {problem || error ? (
         <p className="text-[11px] text-[hsl(var(--color-destructive))]" role="alert">
-          {error}
+          {problem ?? error}
         </p>
       ) : null}
 
       <button
         type="submit"
-        disabled={!valid || isSaving}
+        disabled={isSaving}
         className="h-9 rounded-full bg-[hsl(var(--color-primary))] px-4 text-xs font-bold text-[hsl(var(--color-primary-fg))] disabled:opacity-40"
       >
-        {isSaving ? tr('common.saving', 'در حال ثبت…') : tr('common.save', 'ثبت')}
+        {isSaving ? tr('common.saving', 'در حال ثبت…') : tr('display.confirm', 'تأیید')}
       </button>
     </form>
   )

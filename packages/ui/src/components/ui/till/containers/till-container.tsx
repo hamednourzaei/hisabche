@@ -104,7 +104,8 @@ export const TillContainer = memo(function TillContainer() {
       if (!activeId) return
       setActionError(null)
       cashMovement.mutate(
-        { sessionId: activeId, kind: 'cash_in', ...input },
+        // One id per submitted movement; the hook's retries reuse it.
+        { sessionId: activeId, kind: 'cash_in', movementId: crypto.randomUUID(), ...input },
         {
           onSuccess: () => {
             void ledger.refetch()

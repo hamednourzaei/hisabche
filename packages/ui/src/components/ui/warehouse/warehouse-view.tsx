@@ -10,6 +10,8 @@ import { BentoStats, type BentoStat } from '../bento-stats'
 import { WarehouseProductList } from './warehouse-product-list'
 import { Plus, Check, ChevronRight, DollarSign, Package, Pencil, AlertTriangle } from 'lucide-react'
 import type { Product, Currency } from '../../../lib/warehouse/warehouse-types'
+import { BASE_CODE, rateFromPair } from '../../../lib/warehouse/rate-from-pair'
+import { SelectField } from '../select-field'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    WarehouseView v5 — search moved onto the table toolbar
@@ -195,58 +197,57 @@ const CurrencyChips = memo(function CurrencyChips({
   totalValue: number | null
   onSetRate: (code: string, afnPerUnit: number | null) => void
 }) {
-  const [editing, setEditing] = useState<string | null>(null)
-  const [draft, setDraft] = useState('')
+  // «[amount] [unit] = [amount] [unit]» — the way a rate is said aloud
+  // (owner's request, 26 Sep 2026). The old form was fixed to «۱ X = … افغانی»
+  // and had no room for «۳٬۰۰۰ افغانی = ۱٬۰۰۰٬۰۰۰ تومان».
+  const units = [{ code: BASE_CODE, label: t('warehouse.currencyAFN', 'افغانی') }, ...currencies]
+  const [leftAmount, setLeftAmount] = useState('1')
+  const [leftCode, setLeftCode] = useState(currencies[0]?.code ?? BASE_CODE)
+  const [rightAmount, setRightAmount] = useState('')
+  const [rightCode, setRightCode] = useState(BASE_CODE)
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+
   if (totalValue === null) return null
+
+  const submit = () => {
+    const result = rateFromPair(
+      { amount: Number(leftAmount), code: leftCode },
+      { amount: Number(rightAmount), code: rightCode },
+      (code) => currencies.find((c) => c.code === code)?.afnPerUnit ?? null,
+    )
+    if (!result.ok) {
+      setMessage({
+        ok: false,
+        text:
+          result.reason === 'same'
+            ? t('warehouse.rateSame', 'دو واحد باید متفاوت باشند.')
+            : result.reason === 'amount'
+              ? t('warehouse.rateAmount', 'هر دو مقدار باید بزرگ‌تر از صفر باشند.')
+              : t(
+                  'warehouse.rateBridge',
+                  'یکی از دو واحد باید افغانی باشد یا نرخش از قبل ثبت شده باشد.',
+                ),
+      })
+      return
+    }
+    onSetRate(result.code, result.afnPerUnit)
+    setMessage({ ok: true, text: t('warehouse.rateSaved', 'نرخ ذخیره شد.') })
+  }
+
+  const amountInput =
+    'h-9 w-28 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 text-sm tabular-nums'
+  const unitSelect =
+    'h-9 min-w-[96px] rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 text-sm'
+  const unitOptions = units.map((u) => ({ value: u.code, label: u.label }))
+
   return (
-    <div className="flex flex-wrap items-center gap-2 text-xs text-[hsl(var(--fg-secondary))]">
-      <span className="rounded-lg bg-[hsl(var(--surface-muted))] px-2 py-1">
-        {t('warehouse.currencyAFN', 'افغانی')}: {fmt(totalValue)}
-      </span>
-      {currencies.map((c) =>
-        editing === c.code ? (
-          <span
-            key={c.code}
-            className="inline-flex items-center gap-1 rounded-lg border border-[hsl(var(--border-default))] px-2 py-0.5"
-          >
-            <label htmlFor={`rate-${c.code}`}>
-              {t('warehouse.ratePrefix', '۱')} {c.label} =
-            </label>
-            <input
-              id={`rate-${c.code}`}
-              type="number"
-              min={0}
-              inputMode="decimal"
-              dir="ltr"
-              autoFocus
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              className="h-7 w-24 rounded border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-1 text-xs"
-            />
-            <span>{t('warehouse.currencyAFN', 'افغانی')}</span>
-            <button
-              type="button"
-              className="rounded px-1.5 py-0.5 font-medium text-[hsl(var(--color-primary))]"
-              onClick={() => {
-                const value = Number(draft)
-                onSetRate(c.code, draft.trim() === '' || !(value > 0) ? null : value)
-                setEditing(null)
-              }}
-            >
-              {t('common.save', 'ذخیره')}
-            </button>
-          </span>
-        ) : (
-          <button
-            key={c.code}
-            type="button"
-            title={t('warehouse.editRate', 'ویرایش نرخ')}
-            onClick={() => {
-              setEditing(c.code)
-              setDraft(c.afnPerUnit ? String(Math.round(c.afnPerUnit * 10000) / 10000) : '')
-            }}
-            className="rounded-lg bg-[hsl(var(--surface-muted))] px-2 py-1 hover:bg-[hsl(var(--surface-muted)/0.7)]"
-          >
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-[hsl(var(--fg-secondary))]">
+        <span className="rounded-lg bg-[hsl(var(--surface-muted))] px-2 py-1">
+          {t('warehouse.currencyAFN', 'افغانی')}: {fmt(totalValue)}
+        </span>
+        {currencies.map((c) => (
+          <span key={c.code} className="rounded-lg bg-[hsl(var(--surface-muted))] px-2 py-1">
             {c.label}:{' '}
             {c.rate === null ? (
               <span className="text-[hsl(var(--color-warning))]">
@@ -255,9 +256,75 @@ const CurrencyChips = memo(function CurrencyChips({
             ) : (
               fmt(totalValue * c.rate)
             )}
-          </button>
-        ),
-      )}
+          </span>
+        ))}
+      </div>
+
+      <form
+        data-rate-form=""
+        className="flex flex-wrap items-center gap-2 text-sm"
+        onSubmit={(event) => {
+          event.preventDefault()
+          submit()
+        }}
+      >
+        <span className="text-xs font-medium text-[hsl(var(--fg-secondary))]">
+          {t('warehouse.rateForm', 'ثبت نرخ')}:
+        </span>
+        <input
+          aria-label={t('warehouse.rateForm', 'ثبت نرخ')}
+          type="number"
+          min={0}
+          step="any"
+          inputMode="decimal"
+          dir="ltr"
+          value={leftAmount}
+          onChange={(e) => setLeftAmount(e.target.value)}
+          className={amountInput}
+        />
+        <SelectField
+          value={leftCode}
+          onChange={setLeftCode}
+          options={unitOptions}
+          className={unitSelect}
+        />
+        <span aria-hidden="true">=</span>
+        <input
+          aria-label={t('warehouse.rateForm', 'ثبت نرخ')}
+          type="number"
+          min={0}
+          step="any"
+          inputMode="decimal"
+          dir="ltr"
+          value={rightAmount}
+          onChange={(e) => setRightAmount(e.target.value)}
+          className={amountInput}
+        />
+        <SelectField
+          value={rightCode}
+          onChange={setRightCode}
+          options={unitOptions}
+          className={unitSelect}
+        />
+        <button
+          type="submit"
+          className="h-9 rounded-lg bg-[hsl(var(--color-primary))] px-3 text-sm font-medium text-[hsl(var(--color-primary-fg))]"
+        >
+          {t('common.save', 'ذخیره')}
+        </button>
+        {message ? (
+          <span
+            role={message.ok ? 'status' : 'alert'}
+            className={
+              message.ok
+                ? 'text-xs text-[hsl(var(--color-success))]'
+                : 'text-xs text-[hsl(var(--color-destructive))]'
+            }
+          >
+            {message.text}
+          </span>
+        ) : null}
+      </form>
     </div>
   )
 })
@@ -317,14 +384,41 @@ export const WarehouseView = memo(function WarehouseView({
   // ⚠️ عمداً از `text` استفاده شده (نه `amount`) چون BentoStats مقدار متنی
   // را هرگز compact نمی‌کند — عدد کامل در موبایل/تبلت/دسکتاپ ثابت می‌ماند
   // (مثلاً 27,820,000 AFN) و فقط اندازه‌ی فونت تغییر می‌کند.
+  // The unit «ارزش کل» is shown in — afghani, or any currency with a rate
+  // (owner's request: the «(AFN)» of the card should be selectable).
+  const [displayCode, setDisplayCode] = useState(BASE_CODE)
+  const displayed = currencies.find((c) => c.code === displayCode)
+  const valueText =
+    displayCode === BASE_CODE || !displayed
+      ? figure(summary?.totalValue)
+      : isLoading || summary?.totalValue === undefined
+        ? figure(summary?.totalValue)
+        : displayed.rate === null
+          ? t('warehouse.enterRate', 'نرخ را وارد کنید')
+          : fmt(summary.totalValue * displayed.rate)
+
   const stats: BentoStat[] = useMemo(
     () => [
       {
         id: 'value',
         icon: DollarSign,
-        label: t('warehouse.totalValue', 'ارزش کل (AFN)'),
-        text: figure(summary?.totalValue),
-        ...(summary ? { suffix: 'AFN' } : {}),
+        label: t('warehouse.totalValueShort', 'ارزش کل'),
+        labelAddon:
+          currencies.length > 0 ? (
+            <SelectField
+              aria-label={t('warehouse.showIn', 'نمایش به')}
+              value={displayCode}
+              onChange={setDisplayCode}
+              options={[
+                { value: BASE_CODE, label: 'AFN' },
+                ...currencies.map((c) => ({ value: c.code, label: c.code })),
+              ]}
+              className="h-6 rounded-md border border-[hsl(var(--border-default))] bg-transparent px-1 text-[11px]"
+            />
+          ) : (
+            <span className="text-[11px] text-[hsl(var(--fg-tertiary))]">(AFN)</span>
+          ),
+        text: valueText,
       },
       {
         id: 'count',
@@ -345,7 +439,7 @@ export const WarehouseView = memo(function WarehouseView({
         text: figure(summary?.outOfStockCount),
       },
     ],
-    [t, fmt, summary, isLoading],
+    [t, fmt, summary, isLoading, currencies, displayCode, valueText],
   )
 
   const showEmptyState = !isLoading && products.length === 0

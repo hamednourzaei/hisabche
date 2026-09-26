@@ -466,16 +466,28 @@ export class PosService {
   async recordMovement(
     ctx: TenancyContext,
     sessionId: string,
-    input: { kind: 'cash_in' | 'cash_out'; amountMinor: number; reason: string },
+    input: {
+      kind: 'cash_in' | 'cash_out'
+      amountMinor: number
+      reason: string
+      /**
+       * Made by the caller once and resent unchanged on retry, like
+       * `transferId`. The client retries this request up to three times; with
+       * no key, one lost response put the same cash in the drawer four times.
+       */
+      movementId?: string | undefined
+    },
   ): Promise<CashMovement> {
     const session = await this.getSession(ctx, sessionId)
 
     const problems = validateMovement(session, input)
     if (problems.length > 0) throw new ValidationError(problems.join(', '))
 
+    const columns = 'id, kind, amount_minor, reason, created_at'
     const { data, error } = await supabase
       .from('pos_cash_movements')
       .insert({
+        ...(input.movementId ? { id: input.movementId } : {}),
         workspace_id: ctx.workspaceId,
         session_id: sessionId,
         kind: input.kind,
@@ -483,9 +495,23 @@ export class PosService {
         reason: input.reason,
         created_by: ctx.userId,
       })
-      .select('id, kind, amount_minor, reason, created_at')
+      .select(columns)
       .single()
 
+    // The same key again: this movement is already in the drawer. Answer with
+    // it — scoped to this workspace and session, so a key cannot read another's.
+    if (error?.code === '23505' && input.movementId) {
+      const { data: existing, error: readError } = await supabase
+        .from('pos_cash_movements')
+        .select(columns)
+        .eq('id', input.movementId)
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('session_id', sessionId)
+        .maybeSingle()
+      if (readError) throw new DatabaseError('Failed to read the recorded cash movement', readError)
+      if (!existing) throw new ConflictError('POS_MOVEMENT_ID_TAKEN')
+      return mapMovement(existing)
+    }
     if (error) throw new DatabaseError('Failed to record the cash movement', error)
 
     await this.invalidate(ctx.workspaceId)

@@ -370,21 +370,25 @@ export interface ProfitReport {
   otherCurrencies: Array<{ currency: string; invoices: number; payrolls: number }>
 }
 
-export function useProfitReport(from: string, to: string, currency: string) {
+/**
+ * Every currency's profit report for the range — one per currency with
+ * documents in it (plus the primary), never summed across currencies
+ * (GET /accounting/profit-report/by-currency).
+ */
+export function useProfitReportsByCurrency(from: string, to: string, currency: string) {
   const authReady = useAuthReady()
   return useQuery({
-    queryKey: ['payments', 'profit-report', from, to, currency],
-    queryFn: async (): Promise<ProfitReport> => {
-      const { data } = await apiClient.get('/accounting/profit-report', {
+    queryKey: ['payments', 'profit-report', 'by-currency', from, to, currency],
+    queryFn: async ({ signal }): Promise<ProfitReport[]> => {
+      const { data } = await apiClient.get('/accounting/profit-report/by-currency', {
         params: { from, to, currency },
+        signal,
       })
-      return {
-        ...(data as ProfitReport),
-        products: asList<ProductProfitRow>((data as Partial<ProfitReport>)?.products),
-        otherCurrencies: asList<ProfitReport['otherCurrencies'][number]>(
-          (data as Partial<ProfitReport>)?.otherCurrencies,
-        ),
-      }
+      return asList<ProfitReport>(data).map((report) => ({
+        ...report,
+        products: asList<ProductProfitRow>(report.products),
+        otherCurrencies: asList<ProfitReport['otherCurrencies'][number]>(report.otherCurrencies),
+      }))
     },
     enabled: authReady && !!from && !!to && !!currency,
     staleTime: 30_000,
