@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import CryptoJS from 'crypto-js'
-import type { AuthUser } from '@hisabche/auth-core'
+import { isSessionUsable, type AuthUser } from '@hisabche/auth-core'
 import { registerTokenGetter } from '@hisabche/api'
 import { markTokenReady, setOnUnauthorized, setRefreshSession } from '@hisabche/api'
 import { useWorkspaceStore } from './workspace.slice'
@@ -435,6 +435,23 @@ export const useAuthStore = create<AuthState>()(
     },
   ),
 )
+
+/**
+ * Whether the stored session may still open the app — the rule the desktop and
+ * mobile auth gate already use (`isSessionUsable`): an expired access token
+ * counts only while a refresh token can renew it.
+ *
+ * For DISPLAY only (a public header choosing «Dashboard» over «Sign in»). The
+ * server verifies the token on every request and stays the authority.
+ */
+export function selectHasUsableSession(
+  state: Pick<AuthState, 'isAuthenticated' | 'user' | 'token' | 'refreshToken'>,
+): boolean {
+  return (
+    state.isAuthenticated &&
+    isSessionUsable({ user: state.user, token: state.token, refreshToken: state.refreshToken })
+  )
+}
 
 // ============================================
 // ✅ Register token getter + onUnauthorized

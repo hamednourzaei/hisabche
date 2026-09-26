@@ -29,7 +29,9 @@ export interface LandingMobileMenuProps {
   /** Called after the drawer has closed — its scroll lock would stop a smooth scroll. */
   onSelectSection: (id: string) => void
   routePrefix: string
-  labels: { open: string; close: string; signIn: string; signUp: string }
+  /** Decided after mount by TopNav (`useSignedInAfterMount`), never here. */
+  signedIn: boolean
+  labels: { open: string; close: string; signIn: string; signUp: string; dashboard: string }
 }
 
 export default function LandingMobileMenu({
@@ -41,6 +43,7 @@ export default function LandingMobileMenu({
   activeSection,
   onSelectSection,
   routePrefix,
+  signedIn,
   labels,
 }: LandingMobileMenuProps) {
   const pendingSection = useRef<string | null>(null)
@@ -103,20 +106,33 @@ export default function LandingMobileMenu({
         </nav>
 
         <div className="flex flex-col gap-3 border-t border-[hsl(var(--border-default))] p-5">
-          <Link
-            prefetch={false}
-            href={`${routePrefix}/login`}
-            className="btn-secondary flex min-h-12 w-full items-center justify-center rounded-xl text-base"
-          >
-            {labels.signIn}
-          </Link>
-          <Link
-            prefetch={false}
-            href={`${routePrefix}/signup`}
-            className="btn-primary flex min-h-12 w-full items-center justify-center rounded-xl text-base"
-          >
-            {labels.signUp}
-          </Link>
+          {signedIn ? (
+            <Link
+              prefetch={false}
+              href={`${routePrefix}/dashboard`}
+              rel="nofollow"
+              className="btn-primary flex min-h-12 w-full items-center justify-center rounded-xl text-base"
+            >
+              {labels.dashboard}
+            </Link>
+          ) : (
+            <>
+              <Link
+                prefetch={false}
+                href={`${routePrefix}/login`}
+                className="btn-secondary flex min-h-12 w-full items-center justify-center rounded-xl text-base"
+              >
+                {labels.signIn}
+              </Link>
+              <Link
+                prefetch={false}
+                href={`${routePrefix}/signup`}
+                className="btn-primary flex min-h-12 w-full items-center justify-center rounded-xl text-base"
+              >
+                {labels.signUp}
+              </Link>
+            </>
+          )}
         </div>
       </SheetContent>
     </Sheet>

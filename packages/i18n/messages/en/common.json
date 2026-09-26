@@ -1350,7 +1350,8 @@
           "new": "Audit trail"
         }
       }
-    }
+    },
+    "navDashboard": "Dashboard"
   },
   "nav": {
     "dashboard": "Dashboard",
