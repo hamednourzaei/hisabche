@@ -427,3 +427,22 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 - **گارد:** `backend/src/__tests__/workspace-build-approvals.test.ts` — اگر یک نسخه‌ی پلتفرمیِ پکیجی تأیید شده،
   همه‌ی نسخه‌های آن در lockfile باید تصمیم داشته باشند. injection: حذف `linux-x64` → قرمز با نام همان پکیج.
 - **درس:** «نصب روی ماشین من سبز است» برای پکیج‌های پلتفرمی چیزی ثابت نمی‌کند؛ lockfile همه‌ی پلتفرم‌ها را دارد، ماشین نه.
+
+## BUG-028 — کاربر واردشده هرگز صفحه‌ی خانه را نمی‌دید (۲۶ سپتامبر)
+
+- **الگو:** «گیتِ ورود جای اشتباه» — یک wrapper کلاینتی روی صفحه‌ی عمومی تصمیمِ مسیر می‌گرفت.
+- **نشانه:** با session ذخیره‌شده، `/fa` بلافاصله به `/fa/dashboard` (یا `/fa/onboarding` اگر پرچم محلی onboarding نبود) می‌رفت.
+  کنسول ساکت؛ سرور ۲۰۰ می‌داد و HTML لندینگ کامل بود — ریدایرکت بعد از hydration در مرورگر اتفاق می‌افتاد.
+- **ریشه:** `apps/web/app/[lang]/auth-gate.tsx` دور `LandingPage` در `page.tsx`، با `useEffect` → `router.replace('/dashboard')`
+  برای هر `isAuthenticated`. `proxy.ts` بی‌تقصیر بود (فقط next-intl و پیشوند locale). گیت ورود و onboarding از قبل در
+  `useRedirectGuard` ی `(dashboard)/dashboard-layout.tsx` وجود داشت، پس AuthGate تکراری بود.
+- **رفع:** AuthGate حذف شد (§۱۴). هدر عمومی بعد از mount و فقط با session قابل‌استفاده (`isSessionUsable`) یک دکمه‌ی «داشبورد»
+  با `rel="nofollow"` نشان می‌دهد.
+- ⚠️ **ادعای نادرستی که خودم نوشتم و اصلاح شد:** اول نوشتم خواندن store هنگام render در هدر «hydration mismatch» می‌سازد.
+  تست تزریقی قرمز نشد و علتش را خواندم: zustand 4.5.7 در `useStore` برای SSR و hydration از `getServerState || getInitialState`
+  (وضعیتِ پیش از بازیابی persist) استفاده می‌کند، پس خواندن با **هوک** mismatch نمی‌سازد؛ فقط `getState()` یا window/document
+  هنگام render می‌سازد. کامنت‌ها و تست اصلاح شدند و تستِ جدید قرارداد «اولین render کلاینت = خارج‌شده» را مستقیم می‌سنجد.
+- **گارد:** `packages/ui/src/__tests__/public-pages-open-when-signed-in.test.ts` (effect یا redirect سروری به dashboard در صفحات
+  عمومی، wrapper روی خانه، ریدایرکت auth در proxy) و `landing-header-dashboard-button.test.tsx` — هر دو **injection-tested**.
+- **مرورگر:** ✅ Chromium روی بیلد production محلی (session رمزشده با همان کلید dev)؛ main → `/fa/onboarding`، شاخه → `/fa` + «داشبورد».
+  روی سایت زنده ❌ نیازمند deploy.
