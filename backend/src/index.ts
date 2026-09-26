@@ -90,6 +90,7 @@ import { manufacturingRoutes } from './routes/manufacturing.routes'
 import { purchasingRoutes } from './routes/purchasing.routes'
 import { billingRoutes } from './routes/billing.routes'
 import { referralRoutes } from './routes/referral.routes'
+import { blogRoutes, isPublicBlogRequest } from './routes/blog.routes'
 import { workflowRoutes } from './routes/workflow.routes'
 import { notificationRoutes } from './routes/notification.routes'
 import { debugRoutes } from './routes/debug.routes'
@@ -302,6 +303,9 @@ server.addHook('preHandler', async (request, reply) => {
 
   if (publicPaths.some((p) => url.startsWith(p))) return
   if (path !== undefined && exactPublicPaths.includes(path)) return
+  // The public blog: reading it, and the view beacon. Signed-in blog routes
+  // (comment, like, stars, «me») authenticate in their own preHandler.
+  if (path !== undefined && isPublicBlogRequest(request.method, path)) return
   if (request.method === 'OPTIONS') return
 
   await authenticate(request, reply)
@@ -652,6 +656,7 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(jobSchedulerPlugin)
   await server.register(billingRoutes)
   await server.register(referralRoutes)
+  await server.register(blogRoutes)
   await server.register(adminRoutes)
 
   server.log.info('✅ All routes registered successfully')

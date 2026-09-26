@@ -1350,7 +1350,8 @@
           "new": "Audit trail"
         }
       }
-    }
+    },
+    "navDashboard": "Dashboard"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -3906,6 +3907,195 @@
       "limitFromPlan": "Blank = from the plan",
       "note": "Note",
       "quotaHint": "Blank means \"follow the plan\". Zero means \"none\". They are not the same."
+    },
+    "blog": {
+      "title": "Blog",
+      "description": "Write, schedule and publish articles, moderate comments and see each article’s statistics.",
+      "newPost": "New article",
+      "emptyPosts": "No articles yet.",
+      "emptyPostsHint": "Use «New article» to write the first one; it is not on the site until it is published.",
+      "emptyComments": "No comments in this state.",
+      "unknownAuthor": "Unnamed user",
+      "isReply": "Reply",
+      "tabs": {
+        "posts": "Articles",
+        "comments": "Comments",
+        "taxonomy": "Categories & tags"
+      },
+      "filters": {
+        "allLocales": "All languages",
+        "status": "Status",
+        "allStatuses": "All statuses",
+        "search": "Search title or address"
+      },
+      "columns": {
+        "title": "Title",
+        "locale": "Language",
+        "status": "Status"
+      },
+      "locales": {
+        "fa": "Persian",
+        "af": "Dari",
+        "en": "English"
+      },
+      "status": {
+        "draft": "Draft",
+        "scheduled": "Scheduled",
+        "published": "Published"
+      },
+      "commentStatus": {
+        "pending": "Awaiting approval",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "spam": "Spam"
+      },
+      "moderate": {
+        "approved": "Approve",
+        "rejected": "Reject",
+        "spam": "Spam"
+      },
+      "stats": {
+        "title": "Statistics",
+        "views": "Views",
+        "likes": "Helpful / not",
+        "rating": "Rating",
+        "comments": "Comments"
+      },
+      "taxonomy": {
+        "categories": "Categories (topic hub pages)",
+        "tags": "Tags",
+        "name": "Name",
+        "slug": "Address (Latin or Persian, hyphens)",
+        "description": "Short description (shown on the category page)",
+        "add": "Add",
+        "delete": "Delete",
+        "confirmDelete": "Delete it? Articles stay; only this category/tag is removed from them.",
+        "empty": "Nothing defined yet."
+      },
+      "fields": {
+        "locale": "Language",
+        "author": "Author",
+        "title": "Article title",
+        "excerpt": "Summary (optional; used in lists and search results)",
+        "organise": "Category & tags",
+        "category": "Category",
+        "none": "— No category —",
+        "tags": "Tags",
+        "noTags": "No tags defined for this language.",
+        "cover": "Cover image",
+        "coverUpload": "Upload cover image",
+        "coverAlt": "Image alt text (required)"
+      },
+      "publish": {
+        "title": "Publishing",
+        "current": "Current state",
+        "date": "Publication date and time",
+        "dateHint": "Pick a future time to schedule. Empty = now.",
+        "saveDraft": "Save draft",
+        "schedule": "Schedule",
+        "publish": "Publish",
+        "view": "View on site",
+        "saved": "Saved.",
+        "revalidateFailed": "Saved, but the site was not refreshed at once; it will show within an hour.",
+        "revalidateDisabled": "Instant site refresh is not configured; the change will show within an hour.",
+        "confirmDelete": "Delete this article with all its comments and votes? This cannot be undone.",
+        "delete": "Delete article"
+      },
+      "translations": {
+        "title": "Translations",
+        "create": "Create translation"
+      },
+      "faq": {
+        "title": "Frequently asked questions",
+        "hint": "Only questions you really answer. They appear under the article, and the FAQ structured data is built from them.",
+        "question": "Question",
+        "answer": "Answer",
+        "remove": "Remove question",
+        "add": "Add question"
+      },
+      "seo": {
+        "title": "SEO",
+        "preview": "Google result preview",
+        "untitled": "Untitled",
+        "noDescription": "No meta description; Google will pick part of the text itself.",
+        "focusKeyword": "Focus keyword",
+        "keywords": "Secondary keywords",
+        "keywordsHint": "Separate with commas",
+        "metaTitle": "Meta title (no brand name)",
+        "metaDescription": "Meta description",
+        "slug": "Article address",
+        "canonicalUrl": "Canonical URL (only if the original lives elsewhere)",
+        "ogImageUrl": "Social image (optional)",
+        "noindex": "Keep out of search results (noindex)",
+        "checklist": "SEO checklist: {passed} of {total}",
+        "guidanceOnly": "The checklist is guidance only and never blocks publishing.",
+        "checks": {
+          "keywordInTitle": "Focus keyword in the title",
+          "keywordInFirstParagraph": "Focus keyword in the first paragraph",
+          "keywordInHeading": "Focus keyword in at least one H2",
+          "length": "At least {minWords} words (now {value})",
+          "imageAlt": "Every image has alt text ({value} without)",
+          "internalLinks": "At least {minLinks} internal links (now {value})",
+          "metaTitleLength": "Meta title 30–60 characters (now {value})",
+          "metaDescriptionLength": "Meta description 70–160 characters (now {value})",
+          "readability": "Short sentences: 25 words or fewer on average (now {value})"
+        }
+      },
+      "editor": {
+        "placeholder": "Write the article here…",
+        "words": "{count} words",
+        "undo": "Undo",
+        "redo": "Redo",
+        "h2": "Heading 2",
+        "h3": "Heading 3",
+        "h4": "Heading 4",
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline",
+        "strike": "Strikethrough",
+        "code": "Inline code",
+        "bulletList": "Bulleted list",
+        "orderedList": "Numbered list",
+        "quote": "Quote",
+        "codeBlock": "Code block",
+        "hr": "Divider",
+        "link": "Link",
+        "image": "Image",
+        "table": "Table",
+        "font": "Font",
+        "fontDefault": "Default",
+        "fonts": {
+          "sans": "Vazirmatn (project font)",
+          "mono": "Monospace (code)"
+        },
+        "size": "Size",
+        "sizeDefault": "Default",
+        "direction": "Text direction",
+        "rtl": "Right-to-left",
+        "ltr": "Left-to-right",
+        "alignStart": "Align start",
+        "alignCenter": "Center",
+        "alignEnd": "Align end",
+        "alignJustify": "Justify",
+        "addRow": "Add row",
+        "addColumn": "Add column",
+        "deleteRow": "Delete row",
+        "deleteColumn": "Delete column",
+        "deleteTable": "Delete table",
+        "imageAlt": "Image alt text (required)",
+        "apply": "Apply",
+        "linkUrl": "Link address",
+        "unlink": "Remove link",
+        "searchArticles": "Search published articles to link",
+        "imageFile": "Image file (JPEG, PNG, WebP, AVIF — max 2 MB)",
+        "uploading": "Uploading…",
+        "insertImage": "Insert image"
+      },
+      "errors": {
+        "save": "Not saved.",
+        "load": "Could not load.",
+        "upload": "Image upload failed."
+      }
     }
   },
   "till": {
@@ -5413,5 +5603,96 @@
       "void": "Void",
       "none": "No commission"
     }
+  },
+  "blog": {
+    "title": "Hisabche Blog",
+    "metaDescription": "Practical guides to accounting, invoicing, inventory, payroll and tax for small and mid-sized businesses.",
+    "intro": "Practical guides to accounting, invoicing, inventory, payroll and tax — written for business owners.",
+    "empty": "No articles have been published here yet.",
+    "unavailable": "The blog is not set up yet. Please check back later.",
+    "readMore": "Read more",
+    "readingMinutes": "{minutes} min read",
+    "publishedOn": "Published {date}",
+    "updatedOn": "Updated {date}",
+    "by": "By {name}",
+    "toc": "Contents",
+    "faq": "Frequently asked questions",
+    "tags": "Tags",
+    "category": "Category",
+    "related": "Related articles",
+    "allPosts": "All articles",
+    "breadcrumbHome": "Home",
+    "categoryTitle": "{name} articles",
+    "tagTitle": "Tag: {name}",
+    "pageSuffix": "Page {page}",
+    "pagination": {
+      "label": "Article pages",
+      "previous": "Previous page",
+      "next": "Next page",
+      "status": "Page {page} of {pages}"
+    },
+    "cta": {
+      "title": "Keep your business books in one place",
+      "body": "Invoices, inventory, cash and double-entry accounting in one system — on the web, Windows and mobile.",
+      "features": "Hisabche features",
+      "signup": "Start free"
+    },
+    "nav": {
+      "blog": "Blog",
+      "features": "Features",
+      "docs": "Docs"
+    },
+    "actions": {
+      "title": "Was this article helpful?",
+      "like": "Helpful",
+      "dislike": "Not helpful",
+      "ratingLabel": "Your rating for this article",
+      "star": "{stars} stars",
+      "ratingSummary": "Average {avg} of 5 ({count} votes)",
+      "noRatings": "No ratings yet",
+      "signInPrompt": "Sign in to rate and comment.",
+      "signIn": "Sign in",
+      "failed": "Not saved. Please try again."
+    },
+    "comments": {
+      "title": "Comments",
+      "count": "{count} comments",
+      "empty": "No comments yet. Be the first.",
+      "label": "Your comment",
+      "placeholder": "Write a comment or a question…",
+      "submit": "Post comment",
+      "sending": "Posting…",
+      "reply": "Reply",
+      "replyingTo": "Replying to {name}",
+      "cancelReply": "Cancel",
+      "pending": "Awaiting approval",
+      "rejected": "Rejected",
+      "sent": "Your comment was saved and will appear once approved.",
+      "unknownAuthor": "Hisabche user",
+      "honeypot": "Leave this field empty",
+      "loadFailed": "Comments could not be loaded."
+    },
+    "errors": {
+      "slug": "Use lowercase Latin letters, digits, Persian letters and hyphens only.",
+      "slugTaken": "This address is already used in this language.",
+      "slugReserved": "This address is reserved; choose another.",
+      "https": "The address must start with https://.",
+      "coverAlt": "The cover image needs alt text.",
+      "scheduleDate": "Choose a publication date to schedule.",
+      "imageAlt": "Image number {index} has no alt text.",
+      "imageType": "The file is not a JPEG, PNG, WebP or AVIF image.",
+      "imageSize": "The image is larger than 2 MB.",
+      "replyInvalid": "This comment cannot be replied to.",
+      "taxonomyLocale": "The selected category or tag is not in this article’s language.",
+      "taxonomyMissing": "The selected category or tag no longer exists.",
+      "translationTaken": "This article already has a translation in that language.",
+      "migrationPending": "The blog is not set up in the database (migration not run)."
+    },
+    "warnings": {
+      "linkLocaleAdded": "A language prefix was added to a link: {href}",
+      "claimNotInProduct": "The text mentions «{claim}»; Hisabche does not have this. Make sure it is not claimed."
+    },
+    "breadcrumbLabel": "Breadcrumb",
+    "metaTitle": "Blog — Guides to accounting, invoicing and inventory"
   }
 }

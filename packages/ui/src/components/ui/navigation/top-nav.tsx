@@ -10,6 +10,8 @@ import { Menu } from 'lucide-react'
 // menu button, not with the page.
 const LandingMobileMenu = dynamic(() => import('./landing-mobile-menu'), { ssr: false })
 import { useNavigation } from '../../../hooks/menu/use-navigation-state'
+import { useSignedInAfterMount } from '../../../hooks/use-signed-in-after-mount'
+import { PublicAuthActions } from './public-auth-actions'
 import { useAuthStore } from '@hisabche/store'
 import { cn } from '../../../lib/utils'
 
@@ -146,7 +148,17 @@ export const TopNav = memo(function TopNav({
   // always has one. An empty prefix must not produce a "//signup" href.
   const routePrefix = locale ? `/${locale}` : ''
 
-  const displayName = businessName || user?.businessName || user?.fullName || t('app.name')
+  // After mount only — see the hook. The server HTML is always signed-out.
+  const signedIn = useSignedInAfterMount()
+
+  // The landing logo is the BRAND link to the home page, never the visitor's
+  // business name. Signed-in visitors used to be redirected off the landing,
+  // so nobody saw it read `user.businessName`; now they stay, and the public
+  // logo would have swapped to their shop's name after hydration.
+  const displayName =
+    variant === 'landing'
+      ? t('app.name')
+      : businessName || user?.businessName || user?.fullName || t('app.name')
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -204,6 +216,7 @@ export const TopNav = memo(function TopNav({
 
   const ctaText = t('landing.cta', locale === 'en' ? 'Start Free' : 'شروع رایگان')
   const signOutText = t('auth.signOut', locale === 'en' ? 'Sign Out' : 'خروج')
+  const dashboardText = t('landing.navDashboard', locale === 'en' ? 'Dashboard' : 'داشبورد')
 
   return (
     <header
@@ -308,26 +321,16 @@ export const TopNav = memo(function TopNav({
             size from `lg` up. */}
         {variant === 'landing' && (
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-            <Link
-              prefetch={false}
-              href={`${routePrefix}/login`}
-              className="hidden rounded-full px-3 py-1.5 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors hover:text-[hsl(var(--fg-primary))] md:inline-flex"
-            >
-              {t('auth.signIn', locale === 'en' ? 'Sign In' : 'ورود')}
-            </Link>
-            <Link
-              prefetch={false}
-              href={`${routePrefix}/signup`}
-              // Spread rather than pass `undefined`: `exactOptionalPropertyTypes`
-              // makes `onClick={undefined}` a type error on LinkProps.
-              {...(onNavigateCta ? { onClick: onNavigateCta } : {})}
-              className="inline-flex min-h-9 items-center gap-1 rounded-full px-4 text-sm font-bold text-[hsl(var(--color-primary-fg))] bg-[image:var(--gradient-brand)] hover:brightness-110 transition-all shrink-0 lg:min-h-10 lg:px-5"
-            >
-              <span className="cta-text">{ctaText}</span>
-              <span aria-hidden="true" className="hidden lg:inline">
-                {isRTL ? '←' : '→'}
-              </span>
-            </Link>
+            <PublicAuthActions
+              routePrefix={routePrefix}
+              isRTL={isRTL}
+              onNavigateCta={onNavigateCta}
+              labels={{
+                signIn: t('auth.signIn', locale === 'en' ? 'Sign In' : 'ورود'),
+                signUp: ctaText,
+                dashboard: dashboardText,
+              }}
+            />
             <button
               type="button"
               aria-haspopup="dialog"
@@ -351,7 +354,9 @@ export const TopNav = memo(function TopNav({
                 activeSection={activeSection}
                 onSelectSection={handleSetSection}
                 routePrefix={routePrefix}
+                signedIn={signedIn}
                 labels={{
+                  dashboard: dashboardText,
                   open: t('landing.menuOpen', locale === 'en' ? 'Open menu' : 'باز کردن منو'),
                   close: t('landing.menuClose', locale === 'en' ? 'Close menu' : 'بستن منو'),
                   signIn: t('auth.signIn', locale === 'en' ? 'Sign In' : 'ورود'),

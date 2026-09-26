@@ -80,6 +80,9 @@ const COLUMNS: FooterColumn[] = [
       // able to read them before signing up.
       // Straight to the article — `/docs` is a redirect, and making every reader
       // in the footer take an extra hop is pointless.
+      // The blog hub — a crawlable link from every public page to the pillar
+      // articles and, through them, to every post.
+      { key: 'blog', fallback: 'وبلاگ', href: '/blog' },
       { key: 'docs', fallback: 'راهنما', href: '/docs/getting-started' },
       { key: 'about', fallback: 'درباره ما', href: '/about' },
       { key: 'contact', fallback: 'تماس با ما', href: '/contact' },
@@ -211,7 +214,7 @@ export default function SiteFooterView({ t, localePrefix, year }: SiteFooterView
                   className={cn(
                     'sm:space-y-2 lg:space-y-2.5',
                     col.titleKey === 'landing.footerColCompany' &&
-                      'grid grid-cols-3 gap-x-4 sm:block',
+                      'grid grid-cols-4 gap-x-4 sm:block',
                   )}
                 >
                   {col.links.map((link) => (

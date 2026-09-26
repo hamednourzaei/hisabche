@@ -43,6 +43,16 @@ const nextConfig = {
     // served from the 640px device size — PageSpeed measured 15 KiB wasted there.
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384, 512],
     dangerouslyAllowSVG: false,
+    // Blog covers and in-article images: the public `blog-images` bucket only
+    // (docs/blog-migration.sql). Served through the optimiser so a 2 MB upload
+    // reaches a phone as a right-sized AVIF/WebP — it is the article's LCP.
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/blog-images/**',
+      },
+    ],
   },
 
   compiler: {

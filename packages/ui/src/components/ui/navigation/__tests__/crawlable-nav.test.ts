@@ -39,6 +39,9 @@ const read = (...parts: string[]) =>
   stripComments(readFileSync(join(__dirname, '..', '..', ...parts), 'utf8'))
 
 const topNav = read('navigation', 'top-nav.tsx')
+// The sign-in end of the header (login / start free, or dashboard) — shared
+// with the blog header since 26 Sep 2026.
+const authActions = read('navigation', 'public-auth-actions.tsx')
 // The footer markup lives in the hook-free view; site-footer.tsx only wraps it.
 const siteFooter = read('landing', 'site-footer-view.tsx')
 // The landing's module overview carries the in-content links to /features/*.
@@ -59,7 +62,16 @@ describe('top-nav is crawlable', () => {
   })
 
   it('points the CTA at the locale-prefixed signup route as a link', () => {
-    expect(topNav).toMatch(/<Link\s+(?:prefetch=\{false\}\s+)?href=\{`\$\{routePrefix\}\/signup`\}/)
+    // TopNav hands its locale prefix to the shared actions…
+    expect(topNav).toMatch(/<PublicAuthActions\s+routePrefix=\{routePrefix\}/)
+    // …which render the CTA (and «ورود», and «داشبورد») as real links.
+    expect(authActions).toMatch(
+      /<Link\s+(?:prefetch=\{false\}\s+)?href=\{`\$\{routePrefix\}\/signup`\}/,
+    )
+    expect(authActions).toMatch(
+      /<Link\s+(?:prefetch=\{false\}\s+)?href=\{`\$\{routePrefix\}\/login`\}/,
+    )
+    expect(authActions).not.toMatch(/<button\b/)
   })
 
   it('has no <button> used purely for navigation in the landing header', () => {

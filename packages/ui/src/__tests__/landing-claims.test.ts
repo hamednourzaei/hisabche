@@ -39,6 +39,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
+import { CAPABILITIES_NOT_IN_PRODUCT, CLAIMS_NOT_IN_PRODUCT } from '@hisabche/validation'
 
 const LANDING = join(__dirname, '..', 'components', 'ui', 'landing')
 
@@ -97,10 +98,35 @@ describe('no security or integration claim the product does not implement', () =
       ).landing,
     ),
   ])
-  const UNBUILT = ['دو مرحله', 'two-factor', '2FA', 'وب‌هوک', 'webhook', 'بازیابی ۳۰ روزه', 'کلیدش']
+  // The blog's own copy (CTA, prompts) is held to the same list.
+  const blogMessages = ['fa', 'af', 'en'].map((l) => [
+    l,
+    JSON.stringify(
+      JSON.parse(
+        readFileSync(
+          join(__dirname, '..', '..', '..', 'i18n', 'messages', l, 'common.json'),
+          'utf8',
+        ),
+      ).blog,
+    ),
+  ])
+  // The shared list (@hisabche/validation) — the blog's save check reads the
+  // same one, so the landing and the articles cannot drift apart.
+  //
+  // ⚠️ The landing CATALOGUE is checked for capabilities only. It still holds
+  // the old invented numbers as dead keys (`landing.badge`, `landing.stat*`:
+  // «۳۴۰+ کسب‌وکار فعال», «۴.۹ رضایت کاربران») — no scene reads them (asserted
+  // below, «the hero shows facts»), and removing them is a separate change
+  // (reported 26 Sep 2026). The blog's copy is held to the full list.
+  const UNBUILT = CAPABILITIES_NOT_IN_PRODUCT
 
   it.each(messages)('%s landing copy', (_locale, copy) => {
     for (const claim of UNBUILT) expect(copy, claim).not.toContain(claim)
+  })
+
+  it.each(blogMessages)('%s blog copy', (_locale, copy) => {
+    expect(copy.length).toBeGreaterThan(100)
+    for (const claim of CLAIMS_NOT_IN_PRODUCT) expect(copy, claim).not.toContain(claim)
   })
 })
 

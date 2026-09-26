@@ -1,7 +1,6 @@
 // apps/web/app/[lang]/page.tsx
 import { LandingPage } from '@hisabche/ui/landing/landing-page'
 import { BILLING_CURRENCY } from '@hisabche/ui-contract'
-import { AuthGate } from './auth-gate'
 import { ScopedMessages } from './scoped-messages'
 import type { Metadata } from 'next'
 import { setRequestLocale } from 'next-intl/server'
@@ -261,9 +260,12 @@ export default async function RootPage({ params }: { params: Promise<{ lang: str
             "element render delay 2,050 ms"), and the spinner→page swap was
             desktop's CLS 0.02. LandingPage is statically prerendered: there is
             nothing to wait for, so it renders inline. */}
-        <AuthGate>
-          <LandingPage locale={resolveLocale(lang)} />
-        </AuthGate>
+        {/* ⚠️ NO AUTH REDIRECT HERE. An `AuthGate` used to wrap the landing
+            and `router.replace('/dashboard')` anyone with a stored session, so
+            a signed-in person could never read the home page. The header shows
+            them a «Dashboard» button instead (TopNav, after mount); sign-in and
+            onboarding gating belong to the (dashboard) layout, which has them. */}
+        <LandingPage locale={resolveLocale(lang)} />
       </ScopedMessages>
     </>
   )

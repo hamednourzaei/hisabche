@@ -427,3 +427,36 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 - **گارد:** `backend/src/__tests__/workspace-build-approvals.test.ts` — اگر یک نسخه‌ی پلتفرمیِ پکیجی تأیید شده،
   همه‌ی نسخه‌های آن در lockfile باید تصمیم داشته باشند. injection: حذف `linux-x64` → قرمز با نام همان پکیج.
 - **درس:** «نصب روی ماشین من سبز است» برای پکیج‌های پلتفرمی چیزی ثابت نمی‌کند؛ lockfile همه‌ی پلتفرم‌ها را دارد، ماشین نه.
+
+## BUG-028 — کاربر واردشده هرگز صفحه‌ی خانه را نمی‌دید (۲۶ سپتامبر)
+
+- **الگو:** «گیتِ ورود جای اشتباه» — یک wrapper کلاینتی روی صفحه‌ی عمومی تصمیمِ مسیر می‌گرفت.
+- **نشانه:** با session ذخیره‌شده، `/fa` بلافاصله به `/fa/dashboard` (یا `/fa/onboarding` اگر پرچم محلی onboarding نبود) می‌رفت.
+  کنسول ساکت؛ سرور ۲۰۰ می‌داد و HTML لندینگ کامل بود — ریدایرکت بعد از hydration در مرورگر اتفاق می‌افتاد.
+- **ریشه:** `apps/web/app/[lang]/auth-gate.tsx` دور `LandingPage` در `page.tsx`، با `useEffect` → `router.replace('/dashboard')`
+  برای هر `isAuthenticated`. `proxy.ts` بی‌تقصیر بود (فقط next-intl و پیشوند locale). گیت ورود و onboarding از قبل در
+  `useRedirectGuard` ی `(dashboard)/dashboard-layout.tsx` وجود داشت، پس AuthGate تکراری بود.
+- **رفع:** AuthGate حذف شد (§۱۴). هدر عمومی بعد از mount و فقط با session قابل‌استفاده (`isSessionUsable`) یک دکمه‌ی «داشبورد»
+  با `rel="nofollow"` نشان می‌دهد.
+- ⚠️ **ادعای نادرستی که خودم نوشتم و اصلاح شد:** اول نوشتم خواندن store هنگام render در هدر «hydration mismatch» می‌سازد.
+  تست تزریقی قرمز نشد و علتش را خواندم: zustand 4.5.7 در `useStore` برای SSR و hydration از `getServerState || getInitialState`
+  (وضعیتِ پیش از بازیابی persist) استفاده می‌کند، پس خواندن با **هوک** mismatch نمی‌سازد؛ فقط `getState()` یا window/document
+  هنگام render می‌سازد. کامنت‌ها و تست اصلاح شدند و تستِ جدید قرارداد «اولین render کلاینت = خارج‌شده» را مستقیم می‌سنجد.
+- **گارد:** `packages/ui/src/__tests__/public-pages-open-when-signed-in.test.ts` (effect یا redirect سروری به dashboard در صفحات
+  عمومی، wrapper روی خانه، ریدایرکت auth در proxy) و `landing-header-dashboard-button.test.tsx` — هر دو **injection-tested**.
+- **مرورگر:** ✅ Chromium روی بیلد production محلی (session رمزشده با همان کلید dev)؛ main → `/fa/onboarding`، شاخه → `/fa` + «داشبورد».
+  روی سایت زنده ❌ نیازمند deploy.
+
+## BUG-029 — گارد RLS ۴۹ جدول را «بدون RLS» می‌دید؛ علت یک `*` در کامنت بود (۲۶ سپتامبر)
+
+- **الگو:** «گاردی که سورس می‌خواند، کامنت را اشتباه می‌خواند» (درس ۸۲، این‌بار در SQL).
+- **نشانه:** `rls-coverage.test.ts` روی `main` ۴۹ قرمز داشت («has RLS enabled by a migration» برای pos_sessions، fixed_assets…)،
+  در حالی که `finance-gaps-migration.sql` همه‌شان را در یک `FOREACH … ARRAY[...]` روشن می‌کند.
+- **ریشه:** `stripSqlComments` اول `/* … */` و بعد `--` را حذف می‌کرد. چهار migration در یک کامنت خطی مسیر با glob نوشته‌اند
+  (`-- backend/src/services/accounting/* …`، `-- docs/*.sql …`). آن `/*` شروع یک کامنت بلوکی خوانده می‌شد که تا اولین `*/`
+  بعدی در SQL به‌هم‌چسبیده ادامه پیدا می‌کرد و migrationهای وسط را می‌بلعید — از جمله policyهای وبلاگ.
+- **رفع:** اول `--`، بعد `/* */`. ۴۹ قرمز → ۱ یافته‌ی واقعی (`app_releases_public_read`، گزارش در USER-REQUESTS).
+- **همان باگ دو بار دیگر در همین سشن:** گاردهای تازه‌ی `admin-blog.test.ts` (مسیر `/admin/blog/*` در کامنت) و
+  `blog-web-seo.test.ts` — هر دو با همان ترتیب اصلاح شدند.
+- **درس:** در هر stripper، کامنت خطی را **اول** حذف کن؛ glob و مسیر در کامنت خطی عادی است.
+- **تست:** خودِ گارد؛ injection: `FOR ALL` روی `blog_posts_public_read` → قرمز.

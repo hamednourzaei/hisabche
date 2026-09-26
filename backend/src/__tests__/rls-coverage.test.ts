@@ -115,7 +115,13 @@ const sql = allMigrationSql()
 
 /** Strip SQL comments so a table named in prose is not counted as covered. */
 function stripSqlComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*--.*$/gm, '')
+  // ⚠️ LINE COMMENTS FIRST. Four migrations write a path with a glob in a `--`
+  // comment (`-- backend/src/services/accounting/* …`, `-- docs/*.sql …`).
+  // Stripping block comments first read that `/*` as the start of one, which
+  // ran on to the next `*/` anywhere in the concatenated SQL and swallowed
+  // every migration in between — 49 tenant tables «had no RLS» and the blog's
+  // policies were invisible to the checks below.
+  return source.replace(/^\s*--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
 }
 
 const code = stripSqlComments(sql)
@@ -167,8 +173,26 @@ describe('row level security is enabled on every tenant table', () => {
  * table that users can also WRITE lets one customer change every other
  * customer's conversion factors — or, for currencies, how every amount in the
  * product is formatted.
+ *
+ * `blog_categories` / `blog_tags` (docs/blog-migration.sql) passed that check:
+ * no workspace column, the same public blog for everyone, and clients hold
+ * SELECT only — every write goes through the backend's platform-admin routes.
  */
-const GLOBAL_REFERENCE_TABLES = ['units', 'currencies']
+const GLOBAL_REFERENCE_TABLES = ['units', 'currencies', 'blog_categories', 'blog_tags']
+
+/**
+ * Platform-published content whose visibility is a PUBLICATION rule, not a
+ * membership rule: `blog_posts` (published, or scheduled and due) and
+ * `blog_post_tags` (tags of such a post).
+ *
+ * Same price as the lists around it: no workspace column, and SELECT-only for
+ * every client — asserted below. Drafts stay invisible to clients because the
+ * policy body is the publication predicate, never `true`.
+ */
+const PUBLIC_CONTENT_TABLES = ['blog_posts', 'blog_post_tags']
+
+const isPublicContent = (policy: string): boolean =>
+  PUBLIC_CONTENT_TABLES.some((table) => new RegExp(`\\bON\\s+${table}\\b`, 'i').test(policy))
 
 const isGlobalReference = (policy: string): boolean =>
   GLOBAL_REFERENCE_TABLES.some((table) => new RegExp(`\\bON\\s+${table}\\b`, 'i').test(policy))
@@ -187,12 +211,20 @@ const isGlobalReference = (policy: string): boolean =>
  *
  * The exemption is paid for below: each of these must still be scoped to
  * `auth.uid()` and must still be SELECT-only for a client.
+ *
+ * The blog's comments, reactions and ratings are a person's own words and
+ * votes on public content — there is no workspace in them. Same terms: the
+ * policies are SELECT-only and name `auth.uid()`; writes go through the
+ * backend, which takes the user from the verified token.
  */
 const PERSON_SCOPED_TABLES = [
   'referral_codes',
   'referrals',
   'referral_commissions',
   'referral_payouts',
+  'blog_comments',
+  'blog_reactions',
+  'blog_ratings',
 ]
 
 const isPersonScoped = (policy: string): boolean =>
@@ -244,6 +276,8 @@ describe('the policies restrict by workspace membership, not by nothing', () => 
       if (isGlobalReference(policy)) continue
       // Person-scoped: asserted separately, and more strictly, below.
       if (isPersonScoped(policy)) continue
+      // Published blog content: SELECT-only, asserted below.
+      if (isPublicContent(policy)) continue
 
       const scoped =
         /workspace_members/i.test(policy) ||
@@ -252,6 +286,21 @@ describe('the policies restrict by workspace membership, not by nothing', () => 
         /%I/.test(policy)
 
       expect(scoped, `policy is not workspace-scoped:\n${policy.slice(0, 200)}`).toBe(true)
+    }
+  })
+
+  it('published content is SELECT-only and never unconditional', () => {
+    const policies = code.match(/CREATE\s+POLICY[\s\S]*?;/gi) ?? []
+    const exempted = policies.filter(isPublicContent)
+
+    expect(exempted.length, 'public content tables have no policies').toBeGreaterThan(0)
+
+    for (const policy of exempted) {
+      expect(/FOR\s+SELECT/i.test(policy), `not SELECT-only:\n${policy.slice(0, 200)}`).toBe(true)
+      expect(
+        /blog_post_is_public\s*\(/i.test(policy),
+        `does not apply the publication rule:\n${policy.slice(0, 200)}`,
+      ).toBe(true)
     }
   })
 

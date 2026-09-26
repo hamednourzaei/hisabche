@@ -3,7 +3,12 @@
 // ============================================
 
 // Auth
-export { useAuthStore, type User, type AuthState } from './slices/auth.slice'
+export {
+  useAuthStore,
+  selectHasUsableSession,
+  type User,
+  type AuthState,
+} from './slices/auth.slice'
 
 // Theme
 export { useThemeStore, type ThemeMode, type ThemeState } from './slices/theme.slice'
