@@ -5,6 +5,8 @@
 
 import Redis from 'ioredis'
 
+import { isMoneyCacheKey } from '../utils/money-cache-keys'
+
 // ✅ Environment variables with defaults
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379'
 const CACHE_DEFAULT_TTL = parseInt(process.env.CACHE_DEFAULT_TTL || '60', 10)
@@ -63,6 +65,18 @@ function fallbackDelPattern(pattern: string): number {
   }
   return deleted
 }
+
+// A key without a TTL (PTTL -1) would never reset — give it the window again.
+const RATE_LIMIT_HIT_LUA = `
+local current = redis.call('INCR', KEYS[1])
+if current == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end
+local ttl = redis.call('PTTL', KEYS[1])
+if ttl < 0 then
+  redis.call('PEXPIRE', KEYS[1], ARGV[1])
+  ttl = tonumber(ARGV[1])
+end
+return {current, ttl}
+`
 
 // ✅ Stats for monitoring
 interface CacheStats {
@@ -155,8 +169,12 @@ class CacheService {
     return this.isConnected
   }
 
+  // ⚠️ MONEY KEYS NEVER TOUCH THE IN-PROCESS FALLBACK (utils/money-cache-keys):
+  // without Redis another instance's invalidation cannot reach this copy, so
+  // it is a miss and the caller reads the database.
   async get<T>(key: string): Promise<T | null> {
     if (!this.isConnected) {
+      if (isMoneyCacheKey(key)) return null
       const cached = fallbackGet(key)
       return cached ? (JSON.parse(cached) as T) : null
     }
@@ -172,6 +190,7 @@ class CacheService {
       this.stats.errors++
       const errorMessage = err instanceof Error ? err.message : String(err)
       console.error(`❌ Cache get error [${key}]:`, errorMessage)
+      if (isMoneyCacheKey(key)) return null
       const cached = fallbackGet(key)
       return cached ? (JSON.parse(cached) as T) : null
     }
@@ -180,6 +199,7 @@ class CacheService {
   // ─── Set cache with TTL ────────────────────────────────────
   async set<T>(key: string, value: T, ttl: number = this.defaultTTL): Promise<boolean> {
     if (!this.isConnected) {
+      if (isMoneyCacheKey(key)) return false
       fallbackSet(key, JSON.stringify(value), ttl)
       return true
     }
@@ -191,6 +211,7 @@ class CacheService {
       this.stats.errors++
       const errorMessage = err instanceof Error ? err.message : String(err)
       console.error(`❌ Cache set error [${key}]:`, errorMessage)
+      if (isMoneyCacheKey(key)) return false
       fallbackSet(key, JSON.stringify(value), ttl)
       return true
     }
@@ -284,6 +305,32 @@ class CacheService {
     } catch (err) {
       this.stats.errors++
       console.error(`❌ Cache incr error [${key}]:`, err)
+      return null
+    }
+  }
+
+  // ─── Rate-limit counter shared by every instance ──────────
+  /**
+   * One hit on a fixed-window counter in Redis: INCR, and the window starts on
+   * the first hit. Atomic in one script, so N instances count into ONE budget.
+   * `null` while Redis is not shared — the caller owns the fallback
+   * (utils/shared-rate-limit-store.ts).
+   */
+  async rateLimitHit(
+    key: string,
+    windowMs: number,
+  ): Promise<{ current: number; ttl: number } | null> {
+    if (!this.isConnected) return null
+    try {
+      const [current, ttl] = (await this.client.eval(RATE_LIMIT_HIT_LUA, 1, key, windowMs)) as [
+        number,
+        number,
+      ]
+      return { current, ttl }
+    } catch (err) {
+      this.stats.errors++
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      console.error(`❌ Rate-limit counter error [${key}]:`, errorMessage)
       return null
     }
   }

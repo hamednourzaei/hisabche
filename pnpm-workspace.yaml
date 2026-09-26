@@ -69,7 +69,19 @@ allowBuilds:
   protobufjs: false
   # Dev-only: a real Postgres for the backend's concurrency tests (job claiming,
   # scheduler locks). Its postinstall only recreates the symlinks inside its own
-  # bundled binaries.
+  # bundled binaries — the same script in every platform package.
+  #
+  # ⚠️ EVERY PLATFORM, not just the one this was added on. pnpm installs the
+  # variant for the machine it runs on, and an unapproved build script fails
+  # the install: approving only windows-x64 broke the Vercel deploy (linux-x64,
+  # ERR_PNPM_IGNORED_BUILDS). Guard: backend/src/__tests__/workspace-build-approvals.test.ts.
+  '@embedded-postgres/darwin-arm64': true
+  '@embedded-postgres/darwin-x64': true
+  '@embedded-postgres/linux-arm': true
+  '@embedded-postgres/linux-arm64': true
+  '@embedded-postgres/linux-ia32': true
+  '@embedded-postgres/linux-ppc64': true
+  '@embedded-postgres/linux-x64': true
   '@embedded-postgres/windows-x64': true
 minimumReleaseAgeExclude:
   - better-sqlite3@13.0.3

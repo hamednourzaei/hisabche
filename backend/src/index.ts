@@ -23,6 +23,7 @@ import 'dotenv/config'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
+import { SharedRateLimitStore } from './utils/shared-rate-limit-store'
 import compress from '@fastify/compress'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
@@ -523,6 +524,8 @@ export async function buildServer(): Promise<typeof server> {
 
   // ─── 6.4 RATE LIMIT ────────────────────────
   await server.register(rateLimit, {
+    // One budget across all instances (Redis), not one per process.
+    store: SharedRateLimitStore,
     max: 100,
     timeWindow: '1 minute',
     keyGenerator: (request) => {

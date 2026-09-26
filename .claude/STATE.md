@@ -194,12 +194,13 @@ retry واقعی، هم‌زمانی واقعی، ایزوله‌سازی tenant
 
 درست برای N instance: claim کار پس‌زمینه/رویداد/cron (Postgres، SKIP LOCKED)، کش تصمیم دسترسی (فقط Redis،
 هیچ L1)، Idempotency-Key (قید یکتای دیتابیس)، زمان‌بندی (صریحاً UTC، slot از epoch).
-**هنوز per-instance (مانع صحت نیست، ولی بدان):**
+**دور دوم ۲۶ سپتامبر — بسته شد:** rate limit در Redis (`utils/shared-rate-limit-store.ts`)، صف ایمیل در
+`email_outbox` با claim اتمیک (`docs/email-outbox-migration.sql`)، کلید مالی فقط در Redis، نه L1 و نه
+fallback (`utils/money-cache-keys.ts`). ترتیب scale و وضعیت: `.claude/USER-REQUESTS.md` #113–118.
 
-- `@fastify/rate-limit` استور حافظه دارد → با N instance سقف عملاً N برابر (شامل login).
-- `email.service` صف حافظه‌ای و فاصله‌ی ۲۰۰ms فقط داخل همان پروسه است.
-- L1 کش عمومی (۵ ثانیه) و `fallbackStore` وقتی Redis قطع است: خواندن مالی روی instance دیگر
-  تا TTL کهنه می‌ماند (نوشتن‌ها RPC دیتابیس‌اند و درست‌اند).
+**هنوز باز:**
+
+- L1 پنج‌ثانیه‌ای برای کلیدهای **غیرمالی** بین instanceها (مثلاً فهرست دعوت‌ها) — عمداً.
 - کلیدهای `landing.security.badge.*` / `common.alert` / `common.viewDetails` بین سه locale ناهمخوان‌اند
   ولی هیچ caller ندارند (پیش از این سشن).
 

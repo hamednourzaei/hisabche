@@ -6,6 +6,13 @@
 import { Resend } from 'resend'
 import { supabase } from '../db'
 import { memoryCache } from '../utils/pagination'
+import {
+  claimEmails,
+  deliverClaimed,
+  drainOutbox,
+  enqueueEmail,
+  type SendResult,
+} from './email-outbox'
 
 // ─── Initialize Resend ──────────────────────────────────────────
 console.log('[EMAIL] Initializing Resend...')
@@ -56,7 +63,8 @@ const translations = {
     reset: {
       title: 'بازنشانی رمز عبور',
       hello: 'سلام،',
-      message: 'درخواست بازنشانی رمز عبور برای حساب شما ثبت شده است. برای تغییر رمز روی دکمه زیر کلیک کنید:',
+      message:
+        'درخواست بازنشانی رمز عبور برای حساب شما ثبت شده است. برای تغییر رمز روی دکمه زیر کلیک کنید:',
       button: 'بازنشانی رمز عبور',
       expire: 'این لینک تا ۱ ساعت معتبر است.',
       ignore: 'اگر شما این درخواست را نداده‌اید، این ایمیل را نادیده بگیرید.',
@@ -64,7 +72,8 @@ const translations = {
 
     invite: {
       title: '🤝 دعوت به فضای کاری',
-      body: (inviter: string, workspace: string) => `<strong>${inviter}</strong> شما را به فضای کاری <strong>${workspace}</strong> در حسابچه دعوت کرده است.`,
+      body: (inviter: string, workspace: string) =>
+        `<strong>${inviter}</strong> شما را به فضای کاری <strong>${workspace}</strong> در حسابچه دعوت کرده است.`,
       button: 'پذیرفتن دعوت',
       expire: 'این دعوت تا ۷ روز معتبر است.',
       subject: (workspace: string) => `دعوت به فضای کاری ${workspace} در حسابچه`,
@@ -80,10 +89,14 @@ const translations = {
         subject: '🎉 دوره آزمایشی شما در حسابچه شروع شد',
       },
       ending: {
-        title: (days: number) => days === 1 ? '⏰ فردا دوره آزمایشی شما تمام می‌شود!' : `📅 ${days} روز تا پایان دوره آزمایشی شما باقی مانده است.`,
-        body: (days: number) => days === 1 
-          ? 'فردا دوره آزمایشی شما تمام می‌شود!' 
-          : `${days} روز تا پایان دوره آزمایشی شما باقی مانده است.`,
+        title: (days: number) =>
+          days === 1
+            ? '⏰ فردا دوره آزمایشی شما تمام می‌شود!'
+            : `📅 ${days} روز تا پایان دوره آزمایشی شما باقی مانده است.`,
+        body: (days: number) =>
+          days === 1
+            ? 'فردا دوره آزمایشی شما تمام می‌شود!'
+            : `${days} روز تا پایان دوره آزمایشی شما باقی مانده است.`,
         message: 'برای ادامه استفاده از امکانات Pro، اشتراک خود را ارتقا دهید.',
         button: '🔥 مشاهده پلن‌ها',
         warning: (days: number) => `⏳ ${days} روز دیگر دوره آزمایشی شما به پایان می‌رسد.`,
@@ -94,7 +107,11 @@ const translations = {
         body: 'دوره آزمایشی ۷ روزه شما به پایان رسید.',
         message: 'برای ادامه استفاده از امکانات Pro، لطفاً اشتراک خود را ارتقا دهید.',
         button: '🔄 ارتقا به Pro',
-        features: ['گزارشات پیشرفته غیرفعال شد', 'هوش مصنوعی غیرفعال شد', 'تیم به ۱ کاربر محدود شد'],
+        features: [
+          'گزارشات پیشرفته غیرفعال شد',
+          'هوش مصنوعی غیرفعال شد',
+          'تیم به ۱ کاربر محدود شد',
+        ],
         subject: '⛔ دوره آزمایشی شما به پایان رسید',
       },
     },
@@ -131,7 +148,8 @@ const translations = {
     reset: {
       title: 'بازنشانی پسورد',
       hello: 'سلام،',
-      message: 'درخواست بازنشانی پسورد برای حساب شما ثبت شده است. برای تغییر پسورد روی دکمه زیر کلیک کنید:',
+      message:
+        'درخواست بازنشانی پسورد برای حساب شما ثبت شده است. برای تغییر پسورد روی دکمه زیر کلیک کنید:',
       button: 'بازنشانی پسورد',
       expire: 'این لینک تا ۱ ساعت معتبر است.',
       ignore: 'اگر شما این درخواست را نداده‌اید، این ایمیل را نادیده بگیرید.',
@@ -139,7 +157,8 @@ const translations = {
 
     invite: {
       title: '🤝 دعوت به فضای کاری',
-      body: (inviter: string, workspace: string) => `<strong>${inviter}</strong> شما را به فضای کاری <strong>${workspace}</strong> در حسابچه دعوت کرده است.`,
+      body: (inviter: string, workspace: string) =>
+        `<strong>${inviter}</strong> شما را به فضای کاری <strong>${workspace}</strong> در حسابچه دعوت کرده است.`,
       button: 'پذیرفتن دعوت',
       expire: 'این دعوت تا ۷ روز معتبر است.',
       subject: (workspace: string) => `دعوت به فضای کاری ${workspace} در حسابچه`,
@@ -155,10 +174,14 @@ const translations = {
         subject: '🎉 دوره آزمایشی شما در حسابچه شروع شد',
       },
       ending: {
-        title: (days: number) => days === 1 ? '⏰ فردا دوره آزمایشی شما تمام می‌شود!' : `📅 ${days} روز تا پایان دوره آزمایشی شما باقی مانده است.`,
-        body: (days: number) => days === 1 
-          ? 'فردا دوره آزمایشی شما تمام می‌شود!' 
-          : `${days} روز تا پایان دوره آزمایشی شما باقی مانده است.`,
+        title: (days: number) =>
+          days === 1
+            ? '⏰ فردا دوره آزمایشی شما تمام می‌شود!'
+            : `📅 ${days} روز تا پایان دوره آزمایشی شما باقی مانده است.`,
+        body: (days: number) =>
+          days === 1
+            ? 'فردا دوره آزمایشی شما تمام می‌شود!'
+            : `${days} روز تا پایان دوره آزمایشی شما باقی مانده است.`,
         message: 'برای ادامه استفاده از امکانات Pro، اشتراک خود را ارتقا دهید.',
         button: '🔥 مشاهده پلن‌ها',
         warning: (days: number) => `⏳ ${days} روز دیگر دوره آزمایشی شما به پایان می‌رسد.`,
@@ -169,7 +192,11 @@ const translations = {
         body: 'دوره آزمایشی ۷ روزه شما به پایان رسید.',
         message: 'برای ادامه استفاده از امکانات Pro، لطفاً اشتراک خود را ارتقا دهید.',
         button: '🔄 ارتقا به Pro',
-        features: ['راپورهای پیشرفته غیرفعال شد', 'هوش مصنوعی غیرفعال شد', 'تیم به ۱ کاربر محدود شد'],
+        features: [
+          'راپورهای پیشرفته غیرفعال شد',
+          'هوش مصنوعی غیرفعال شد',
+          'تیم به ۱ کاربر محدود شد',
+        ],
         subject: '⛔ دوره آزمایشی شما به پایان رسید',
       },
     },
@@ -197,7 +224,7 @@ const translations = {
     },
   },
 
-  'en': {
+  en: {
     brand: 'Hisabche',
     brandFooter: 'Business Management System',
     direction: 'ltr',
@@ -206,7 +233,8 @@ const translations = {
     reset: {
       title: 'Reset Your Password',
       hello: 'Hello,',
-      message: 'A password reset request has been made for your account. Click the button below to reset your password:',
+      message:
+        'A password reset request has been made for your account. Click the button below to reset your password:',
       button: 'Reset Password',
       expire: 'This link is valid for 1 hour.',
       ignore: 'If you did not request this, please ignore this email.',
@@ -214,7 +242,8 @@ const translations = {
 
     invite: {
       title: '🤝 Workspace Invitation',
-      body: (inviter: string, workspace: string) => `<strong>${inviter}</strong> invited you to join the <strong>${workspace}</strong> workspace on Hisabche.`,
+      body: (inviter: string, workspace: string) =>
+        `<strong>${inviter}</strong> invited you to join the <strong>${workspace}</strong> workspace on Hisabche.`,
       button: 'Accept Invitation',
       expire: 'This invitation is valid for 7 days.',
       subject: (workspace: string) => `Invitation to join ${workspace} on Hisabche`,
@@ -225,15 +254,20 @@ const translations = {
         title: '🎉 Your Trial Has Started!',
         body: 'Your 7-day trial of Hisabche has begun.',
         proNote: 'You have access to all <strong>Pro</strong> features.',
-        features: ['Unlimited Invoices', 'Advanced Reports', 'AI Assistant', 'Team up to 10 members'],
+        features: [
+          'Unlimited Invoices',
+          'Advanced Reports',
+          'AI Assistant',
+          'Team up to 10 members',
+        ],
         button: '🚀 Go to Dashboard',
         subject: '🎉 Your Trial Has Started',
       },
       ending: {
-        title: (days: number) => days === 1 ? '⏰ Your trial ends tomorrow!' : `📅 ${days} days left in your trial`,
-        body: (days: number) => days === 1 
-          ? 'Your trial ends tomorrow!' 
-          : `${days} days left in your trial.`,
+        title: (days: number) =>
+          days === 1 ? '⏰ Your trial ends tomorrow!' : `📅 ${days} days left in your trial`,
+        body: (days: number) =>
+          days === 1 ? 'Your trial ends tomorrow!' : `${days} days left in your trial.`,
         message: 'Upgrade to Pro to keep using all features.',
         button: '🔥 View Plans',
         warning: (days: number) => `⏳ ${days} days left in your trial.`,
@@ -277,7 +311,7 @@ const translations = {
 
 async function getUserLanguage(userId: string): Promise<Language> {
   const cacheKey = `user:lang:${userId}`
-  
+
   // ✅ کش کردن زبان کاربر
   const cached = await memoryCache.get(cacheKey)
   if (cached) return cached as Language
@@ -291,7 +325,7 @@ async function getUserLanguage(userId: string): Promise<Language> {
 
     const lang = user?.preferred_language || 'fa-IR'
     const result = LANGUAGES.includes(lang) ? lang : 'fa-IR'
-    
+
     // ✅ ذخیره در کش به مدت ۱ ساعت
     await memoryCache.set(cacheKey, result, 3600)
     return result
@@ -360,29 +394,35 @@ function buildEmailHtml(
 
 // ─── Email Queue (برای جلوگیری از ارسال همزمان) ──────────────
 
-let emailQueue: { to: string; subject: string; html: string; resolve: (value: any) => void; reject: (error: any) => void }[] = []
+const emailQueue: {
+  to: string
+  subject: string
+  html: string
+  resolve: (value: any) => void
+  reject: (error: any) => void
+}[] = []
 let isProcessingQueue = false
 
 async function processEmailQueue() {
   if (isProcessingQueue || emailQueue.length === 0) return
-  
+
   isProcessingQueue = true
-  
+
   while (emailQueue.length > 0) {
     const item = emailQueue.shift()
     if (!item) continue
-    
+
     try {
       const result = await emailService._send(item.to, item.subject, item.html)
       item.resolve(result)
     } catch (error) {
       item.reject(error)
     }
-    
+
     // ✅ فاصله بین ایمیل‌ها (برای جلوگیری از Rate Limit)
-    await new Promise(resolve => setTimeout(resolve, 200))
+    await new Promise((resolve) => setTimeout(resolve, 200))
   }
-  
+
   isProcessingQueue = false
 }
 
@@ -390,7 +430,12 @@ async function processEmailQueue() {
 
 export const emailService = {
   // ─── Internal send ──────────────────────────────────────────
-  async _send(to: string, subject: string, html: string) {
+  async _send(
+    to: string,
+    subject: string,
+    html: string,
+    idempotencyKey?: string,
+  ): Promise<SendResult> {
     console.log('[EMAIL] ====== SEND START ======')
     console.log('[EMAIL] To:', to)
     console.log('[EMAIL] From:', `${FROM_NAME} <${FROM_EMAIL}>`)
@@ -403,12 +448,16 @@ export const emailService = {
     }
 
     try {
-      const { data, error } = await resend.emails.send({
-        from: `${FROM_NAME} <${FROM_EMAIL}>`,
-        to,
-        subject,
-        html,
-      })
+      const { data, error } = await resend.emails.send(
+        {
+          from: `${FROM_NAME} <${FROM_EMAIL}>`,
+          to,
+          subject,
+          html,
+        },
+        // A retry of the same outbox row is the same email to the provider.
+        idempotencyKey ? { idempotencyKey } : undefined,
+      )
 
       if (error) {
         console.error('[EMAIL] ❌ Resend error:', JSON.stringify(error, null, 2))
@@ -424,8 +473,47 @@ export const emailService = {
     }
   },
 
-  // ─── Send email (با Queue) ──────────────────────────────────
-  async send({ to, subject, html }: SendEmailParams) {
+  // ─── Send email ─────────────────────────────────────────────
+  //
+  // ⚠️ DURABLE FIRST. The email is written to email_outbox before anything is
+  // sent, then this instance claims that row and sends it. A crash between
+  // the two leaves the row for the outbox poller on any instance
+  // (plugins/job-scheduler.plugin.ts) instead of losing an invite or a reset
+  // link. Before docs/email-outbox-migration.sql runs, or if the row cannot
+  // be written, the in-process queue below is used as before.
+  async send({
+    to,
+    subject,
+    html,
+  }: SendEmailParams): Promise<SendResult | { success: true; queued: true }> {
+    let id: string | null
+    try {
+      id = await enqueueEmail(to, subject, html)
+    } catch (err) {
+      console.error('[EMAIL] outbox write failed — sending from this process only:', err)
+      id = null
+    }
+    if (id === null) return this.sendInProcess({ to, subject, html })
+
+    const [claimed] = (await claimEmails(1, id)) ?? []
+    // Already claimed by another instance's poller, or waiting out a backoff.
+    if (!claimed) return { success: true, queued: true }
+    const outcome = await deliverClaimed(claimed, (email) =>
+      this._send(email.to, email.subject, email.html, email.idempotencyKey),
+    )
+    return outcome === 'sent' ? { success: true } : { success: false, error: outcome }
+  },
+
+  /** Sends due and orphaned outbox emails. Called by the poller on every instance. */
+  async drainOutbox() {
+    return drainOutbox((email) =>
+      this._send(email.to, email.subject, email.html, email.idempotencyKey),
+    )
+  },
+
+  // The pre-migration path: an array in this process. Lost on a crash, and
+  // per instance — correct for ONE instance only.
+  sendInProcess({ to, subject, html }: SendEmailParams): Promise<SendResult> {
     return new Promise((resolve, reject) => {
       emailQueue.push({ to, subject, html, resolve, reject })
       processEmailQueue()
@@ -452,7 +540,13 @@ export const emailService = {
   },
 
   // ─── Workspace Invite ─────────────────────────────────────────
-  async sendWorkspaceInvite(to: string, inviterName: string, workspaceName: string, inviteLink: string, lang: Language = 'fa-IR') {
+  async sendWorkspaceInvite(
+    to: string,
+    inviterName: string,
+    workspaceName: string,
+    inviteLink: string,
+    lang: Language = 'fa-IR',
+  ) {
     const t = translations[lang]
     const html = buildEmailHtml(
       lang,
@@ -468,7 +562,7 @@ export const emailService = {
   // ─── Trial Started ───────────────────────────────────────────
   async sendTrialStarted(to: string, name: string, lang: Language = 'fa-IR') {
     const t = translations[lang]
-    const featuresHtml = t.trial.started.features.map(f => `<li>✅ ${f}</li>`).join('')
+    const featuresHtml = t.trial.started.features.map((f) => `<li>✅ ${f}</li>`).join('')
     const extraContent = `
       <p>${t.trial.started.proNote}</p>
       <div class="features"><ul>${featuresHtml}</ul></div>
@@ -502,7 +596,7 @@ export const emailService = {
   // ─── Trial Expired ──────────────────────────────────────────
   async sendTrialExpired(to: string, name: string, lang: Language = 'fa-IR') {
     const t = translations[lang]
-    const featuresHtml = t.trial.expired.features.map(f => `<li>📊 ${f}</li>`).join('')
+    const featuresHtml = t.trial.expired.features.map((f) => `<li>📊 ${f}</li>`).join('')
     const extraContent = `
       <p>${t.trial.expired.message}</p>
       <div class="features"><ul>${featuresHtml}</ul></div>
@@ -566,7 +660,12 @@ export const emailService = {
   },
 
   // ─── Generic send with language detection ──────────────────
-  async sendWithLanguage(to: string, template: 'trialStarted' | 'trialEndingSoon' | 'trialExpired' | 'paymentSuccess' | 'paymentFailed', data: EmailData) {
+  async sendWithLanguage(
+    to: string,
+    template:
+      'trialStarted' | 'trialEndingSoon' | 'trialExpired' | 'paymentSuccess' | 'paymentFailed',
+    data: EmailData,
+  ) {
     let lang: Language = 'fa-IR'
     try {
       const { data: user } = await supabase

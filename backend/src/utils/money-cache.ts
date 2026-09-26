@@ -24,44 +24,14 @@
 
 import { cacheService } from '../services/cache.service'
 import { memoryCache } from './pagination'
+import { MEMORY_MONEY_PREFIXES, MONEY_CACHE_PREFIXES } from './money-cache-keys'
 
-/** `cacheMiddleware` key prefixes whose responses change when an invoice or payment changes. */
-export const MONEY_CACHE_PREFIXES = [
-  'invoice',
-  'invoices',
-  'payments',
-  'aging',
-  'customer',
-  'customers',
-  'customer-balance',
-  'customer-debt',
-  'transactions',
-  'transaction-balance',
-  'journal',
-  'accounts',
-  'trial-balance',
-  'balance-sheet',
-  'income-statement',
-  'cash-flow',
-  'dashboard',
-  'sales',
-  'financial',
-  'insights',
-  'inventory',
-  'inventory-valuation',
-  'low-stock',
-  'product',
-  'products',
-  'warehouse-stock',
-  'warehouses',
-] as const
-
-/** `memoryCache` prefixes written by services for the same figures. */
-const MEMORY_PREFIXES = ['payments', 'invoices', 'accounting'] as const
+// The lists live in a leaf module so cache.service can consult them too.
+export { MONEY_CACHE_PREFIXES } from './money-cache-keys'
 
 export async function invalidateMoneyCaches(workspaceId: string): Promise<void> {
   await Promise.all([
     ...MONEY_CACHE_PREFIXES.map((prefix) => cacheService.delPattern(`${prefix}:${workspaceId}:*`)),
-    ...MEMORY_PREFIXES.map((prefix) => memoryCache.invalidate(`${prefix}:${workspaceId}`)),
+    ...MEMORY_MONEY_PREFIXES.map((prefix) => memoryCache.invalidate(`${prefix}:${workspaceId}`)),
   ])
 }

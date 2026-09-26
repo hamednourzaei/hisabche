@@ -20,6 +20,7 @@
 
 import { supabase } from '../db'
 import { cacheService } from '../services/cache.service'
+import { isMoneyCacheKey } from './money-cache-keys'
 
 // ═══════════════════════════════════════════
 // Types
@@ -125,16 +126,23 @@ function l1Set(key: string, value: unknown): void {
 }
 
 class MemoryCache {
+  // ⚠️ A money figure skips the L1: invalidate() clears only the L1 of the
+  // instance that called it, so after a payment on A, B would serve the unpaid
+  // balance for up to L1_TTL_MS. It is cached in Redis only — and while Redis
+  // is down, not at all (cache.service; utils/money-cache-keys).
   async get<T>(key: string): Promise<T | null> {
-    const local = l1Get<T>(key)
-    if (local !== null) return local
+    const money = isMoneyCacheKey(key)
+    if (!money) {
+      const local = l1Get<T>(key)
+      if (local !== null) return local
+    }
     const remote = await cacheService.get<T>(key)
-    if (remote !== null && remote !== undefined) l1Set(key, remote)
+    if (!money && remote !== null && remote !== undefined) l1Set(key, remote)
     return remote
   }
 
   async set<T>(key: string, data: T, ttlSeconds?: number): Promise<void> {
-    l1Set(key, data)
+    if (!isMoneyCacheKey(key)) l1Set(key, data)
     await cacheService.set(key, data, ttlSeconds ?? DEFAULT_TTL_SECONDS)
   }
 

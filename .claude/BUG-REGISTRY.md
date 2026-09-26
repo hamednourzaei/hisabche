@@ -416,3 +416,14 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 خطای شبکه با ۵۰۰ واقعی قابل تشخیص نبود (`NETWORK_ERROR`)؛ WebView اندروید `online/offline` را اعلام نمی‌کرد (NetInfo → رویداد)؛
 `scalesPageToFit` + نبود `minimum-scale` صفحه را zoom-out و منوی پایین را بیرون می‌برد؛ blur در WebView لکه می‌انداخت (`data-host`)؛
 `better-sqlite3` به‌عنوان optionalDependency در بسته‌ی ویندوز جمع نمی‌شد (`Cannot find module`) → dependencies.
+
+## BUG-027 — دیپلوی ورسل: `ERR_PNPM_IGNORED_BUILDS` روی `@embedded-postgres/linux-x64` (۲۶ سپتامبر)
+
+- **علامت:** `pnpm install --frozen-lockfile` روی Vercel با exit 1 تمام شد؛ commit `97b5440`.
+- **ریشه:** `embedded-postgres` (تست‌های Postgres واقعی بک‌اند) پکیج جدا برای هر پلتفرم دارد و pnpm فقط نسخه‌ی
+  همان ماشین را نصب می‌کند. در `allowBuilds` فقط `windows-x64` تأیید شده بود (ماشینی که روی آن اضافه شد)؛
+  ورسل لینوکس است و pnpm 11 روی build script بی‌تصمیم کل نصب را می‌شکند. نصب محلی سبز بود و هیچ نشانه‌ای نداشت.
+- **رفع:** هر هشت نسخه‌ی پلتفرم در `pnpm-workspace.yaml` (اسکریپت فقط symlink داخل باینری خودش را می‌سازد).
+- **گارد:** `backend/src/__tests__/workspace-build-approvals.test.ts` — اگر یک نسخه‌ی پلتفرمیِ پکیجی تأیید شده،
+  همه‌ی نسخه‌های آن در lockfile باید تصمیم داشته باشند. injection: حذف `linux-x64` → قرمز با نام همان پکیج.
+- **درس:** «نصب روی ماشین من سبز است» برای پکیج‌های پلتفرمی چیزی ثابت نمی‌کند؛ lockfile همه‌ی پلتفرم‌ها را دارد، ماشین نه.

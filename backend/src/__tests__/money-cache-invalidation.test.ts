@@ -5,7 +5,42 @@
 // shapes (`invoice:<ws>:<id>`, `dashboard:v2:<ws>`) the middleware never writes.
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+// A Redis that connects. Money keys are cached ONLY in a shared store (never in
+// the in-process fallback — utils/money-cache-keys), so without one there would
+// be nothing to invalidate and every "is gone" below would pass vacuously.
+vi.mock('ioredis', () => {
+  const store = new Map<string, string>()
+  return {
+    default: class {
+      on(event: string, cb: () => void) {
+        if (event === 'connect') setTimeout(cb, 0)
+        return this
+      }
+      async get(key: string) {
+        return store.get(key) ?? null
+      }
+      async set(key: string, value: string) {
+        store.set(key, value)
+        return 'OK'
+      }
+      async scan(_cursor: string, _match: string, pattern: string) {
+        // Every pattern invalidateMoneyCaches sends is `<prefix>:<ws>:*`.
+        if (!pattern.endsWith('*') || pattern.indexOf('*') !== pattern.length - 1) {
+          throw new Error(`fake redis: unsupported pattern ${pattern}`)
+        }
+        const prefix = pattern.slice(0, -1)
+        return ['0', [...store.keys()].filter((k) => k.startsWith(prefix))]
+      }
+      async del(...keys: string[]) {
+        let n = 0
+        for (const k of keys) if (store.delete(k)) n++
+        return n
+      }
+    },
+  }
+})
 
 import { cacheService } from '../services/cache.service'
 import { MONEY_CACHE_PREFIXES, invalidateMoneyCaches } from '../utils/money-cache'
@@ -18,6 +53,11 @@ const OTHER_WS = '11111111-1111-1111-1111-111111111111'
 const middlewareKey = (prefix: string, ws: string, url: string) => `${prefix}:${ws}:${url}`
 
 describe('invalidateMoneyCaches clears the keys the route cache really writes', () => {
+  beforeAll(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    expect(cacheService.isShared).toBe(true)
+  })
+
   beforeEach(async () => {
     await cacheService.set(
       middlewareKey('invoice', WS, '/api/invoices/abc'),
@@ -34,6 +74,7 @@ describe('invalidateMoneyCaches clears the keys the route cache really writes', 
   })
 
   it('the invoice detail response is gone after a payment', async () => {
+    expect(await cacheService.get(middlewareKey('invoice', WS, '/api/invoices/abc'))).not.toBeNull()
     await invalidateMoneyCaches(WS)
     expect(await cacheService.get(middlewareKey('invoice', WS, '/api/invoices/abc'))).toBeNull()
     expect(

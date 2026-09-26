@@ -3,6 +3,7 @@ import { JobService } from '../services/job.service'
 import { NotificationService } from '../services/notification.service'
 import { supabase } from '../db'
 import { claimJobs, completeJob, failJob, type ClaimedJob } from '../services/distributed-work'
+import { emailService } from '../services/email.service'
 
 const jobService = new JobService()
 const notificationService = new NotificationService()
@@ -72,8 +73,8 @@ export async function pollJobs(): Promise<void> {
       if (!handler) throw new Error(`Unknown job_type: ${job.job_type}`)
       await handler()
       await completeJob(job.id)
-    } catch (err: any) {
-      await failJob(job.id, err?.message || 'Unknown error').catch((e) =>
+    } catch (err) {
+      await failJob(job.id, err instanceof Error ? err.message : 'Unknown error').catch((e) =>
         console.error('[jobs] could not record the failure:', e),
       )
     }
@@ -99,6 +100,21 @@ async function pollJobsSingleInstance(): Promise<void> {
   }
 }
 
+const EMAIL_POLL_MS = 60_000
+
+export async function pollEmailOutbox(): Promise<void> {
+  try {
+    const counts = await emailService.drainOutbox()
+    if (counts && (counts.sent || counts.retry || counts.failed)) {
+      console.log(
+        `[email-outbox] sent=${counts.sent} retry=${counts.retry} failed=${counts.failed}`,
+      )
+    }
+  } catch (err) {
+    console.error('[email-outbox] poll failed:', err)
+  }
+}
+
 export async function jobSchedulerPlugin(fastify: FastifyInstance) {
   // ✅ FIX: فاصله از ۶۰ ثانیه به ۱۰ دقیقه افزایش یافت.
   // بررسی شد که هیچ‌جای پروژه (نه route ها، نه scheduler، نه جای
@@ -111,5 +127,13 @@ export async function jobSchedulerPlugin(fastify: FastifyInstance) {
   // که تأخیرش اهمیت عملیاتی داشته باشد.
   const interval = setInterval(() => void pollJobs(), 10 * 60_000)
 
-  fastify.addHook('onClose', () => clearInterval(interval))
+  // Email outbox (docs/email-outbox-migration.sql): retries that are due, and
+  // emails whose sending instance died before finishing. Every instance polls;
+  // each row is claimed by one of them. Almost every email is sent at once by
+  // emailService.send — this only catches what that could not finish.
+  const emailInterval = setInterval(() => void pollEmailOutbox(), EMAIL_POLL_MS)
+  fastify.addHook('onClose', () => {
+    clearInterval(interval)
+    clearInterval(emailInterval)
+  })
 }
