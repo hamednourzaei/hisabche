@@ -50,6 +50,7 @@ import { requireWorkspace } from './tenancy.service'
 import { logBusinessEvent } from './event-log.service'
 import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
 import { IdempotencyUnavailableError, isMissingIdempotencySupport } from '../utils/client-request'
+import { assertWithinLimit } from './plan-limits.service'
 
 // ============================================
 // ✅ OPTIMIZED: فقط ستون‌های مورد نیاز
@@ -755,6 +756,10 @@ export class InvoiceService {
       const existing = await this.findByClientRequestId(workspaceId, clientRequestId)
       if (existing) return { ...existing, idempotentReplay: true }
     }
+
+    // The plan's invoice ceiling — AFTER the replay check, so a sale already
+    // recorded and merely resent by an offline device is never refused.
+    await assertWithinLimit(workspaceId, 'invoices')
 
     // ═══════════════════════════════════════════════════════════════════════
     // ⚠️ THE MONEY IS DERIVED FROM THE LINES BEFORE ANYTHING IS WRITTEN.

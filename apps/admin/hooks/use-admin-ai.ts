@@ -113,3 +113,35 @@ export function useSetWorkspaceAiQuota() {
     },
   })
 }
+
+export interface TestAiConfigInput {
+  provider: 'anthropic' | 'openai'
+  baseUrl?: string | null
+  model: string
+  /** Omit or leave blank to test with the stored key. */
+  apiKey?: string
+}
+
+export interface AiTestResult {
+  ok: boolean
+  /** The provider's HTTP status; null when it could not be reached. */
+  status: number | null
+  latencyMs: number
+  /** Success: the start of the model's reply. Failure: the provider's own message. */
+  detail: string
+}
+
+/**
+ * `POST /ai/config/test` — one tiny real call with the form's values. Saves
+ * nothing, so it can be run before «save» and before enabling.
+ */
+export function useTestAdminAiConfig() {
+  return useMutation({
+    mutationFn: async (input: TestAiConfigInput): Promise<AiTestResult> => {
+      const body: Record<string, unknown> = { ...input }
+      if (!input.apiKey || !input.apiKey.trim()) delete body.apiKey
+      const { data } = await apiClient.post('/ai/config/test', body)
+      return data as AiTestResult
+    },
+  })
+}

@@ -38,7 +38,7 @@ import { ValidationError } from '../../errors/validation.error'
 import type { TenancyContext } from '../tenancy.service'
 
 import { AiQuotaService, type QuotaStatus } from './ai-quota.service'
-import { AiSettingsService, type AiProviderConfig } from './ai-settings.service'
+import { AiSettingsService, type AiProvider, type AiProviderConfig } from './ai-settings.service'
 import { ReportingReader, REPORTING_VIEWS, type ReportingResult } from './reporting-reader'
 
 export interface AskResult {
@@ -72,6 +72,45 @@ const VIEW_MENU = [
   'sales_summary — sales per month and currency: invoice count, totals, discounts, tax',
   'outstanding_invoices — unpaid invoices with age and days overdue',
 ].join('\n')
+
+/**
+ * The provider's endpoint from the admin's base URL.
+ *
+ * ⚠️ `${baseUrl}/v1/chat/completions` broke every OpenAI-compatible gateway
+ * whose documented base URL already ends in `/v1` — OpenRouter's is
+ * `https://openrouter.ai/api/v1`, so the request went to `…/api/v1/v1/…`
+ * and every question came back 400 (reported 26 Sep 2026; the admin had
+ * pasted the whole endpoint, `…/api/v1/chat/completions`). Every spelling
+ * is accepted now: bare host, `…/v1`, or the full endpoint, with or without
+ * a trailing slash.
+ */
+export function providerEndpoint(provider: AiProvider, baseUrl: string | null): string {
+  const fallback = provider === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com'
+  const path = provider === 'anthropic' ? '/messages' : '/chat/completions'
+  const base = (baseUrl?.trim() || fallback).replace(/\/+$/, '')
+  // Pasted as the whole endpoint (what OpenRouter's docs show first).
+  if (base.endsWith(path)) return base
+  const root = /\/v1$/.test(base) ? base : `${base}/v1`
+  return `${root}${path}`
+}
+
+/** What the provider said, for OUR log — never the client's. Bounded, key-free. */
+async function providerErrorDetail(response: Response): Promise<string> {
+  try {
+    return (await response.text()).slice(0, 500)
+  } catch {
+    return ''
+  }
+}
+
+export interface ProviderTestResult {
+  ok: boolean
+  /** The provider's HTTP status; null when it could not be reached at all. */
+  status: number | null
+  latencyMs: number
+  /** Success: the first part of the model's reply. Failure: the provider's own message. */
+  detail: string
+}
 
 export class AiChatService {
   private readonly settings = new AiSettingsService()
@@ -181,7 +220,7 @@ export class AiChatService {
     const timeout = AbortSignal.timeout(60_000)
 
     if (config.provider === 'anthropic') {
-      const response = await fetch(`${config.baseUrl ?? 'https://api.anthropic.com'}/v1/messages`, {
+      const response = await fetch(providerEndpoint('anthropic', config.baseUrl), {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -199,40 +238,79 @@ export class AiChatService {
 
       if (!response.ok) {
         // ⚠️ The provider's body is NOT forwarded to the client: it can echo
-        // request content and, on some errors, key metadata.
-        throw new ValidationError(`AI_PROVIDER_ERROR: ${response.status}`)
+        // request content and, on some errors, key metadata. It IS logged —
+        // without it a 400 has no reason anywhere.
+        throw await this.providerError(config, response)
       }
 
       const body = (await response.json()) as { content?: { text?: string }[] }
       return body.content?.map((part) => part.text ?? '').join('') ?? ''
     }
 
-    const response = await fetch(
-      `${config.baseUrl ?? 'https://api.openai.com'}/v1/chat/completions`,
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: config.model,
-          max_tokens: 2048,
-          messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: user },
-          ],
-        }),
-        signal: timeout,
+    const response = await fetch(providerEndpoint('openai', config.baseUrl), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${config.apiKey}`,
       },
-    )
+      body: JSON.stringify({
+        model: config.model,
+        max_tokens: 2048,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+      }),
+      signal: timeout,
+    })
 
-    if (!response.ok) throw new ValidationError(`AI_PROVIDER_ERROR: ${response.status}`)
+    if (!response.ok) throw await this.providerError(config, response)
 
     const body = (await response.json()) as {
       choices?: { message?: { content?: string } }[]
     }
     return body.choices?.[0]?.message?.content ?? ''
+  }
+
+  private async providerError(
+    config: AiProviderConfig,
+    response: Response,
+  ): Promise<ValidationError> {
+    const detail = await providerErrorDetail(response)
+    console.error(
+      `[ai] provider ${config.provider} (${config.model}) at ${providerEndpoint(config.provider, config.baseUrl)} answered ${response.status}: ${detail}`,
+    )
+    const error = new ValidationError(`AI_PROVIDER_ERROR: ${response.status}`)
+    ;(error as ValidationError & { providerDetail?: string }).providerDetail = detail
+    return error
+  }
+
+  /**
+   * One tiny real call with the given settings — the admin's «test» button.
+   * Platform-admin only (routes/ai-chat.routes.ts), so the provider's own
+   * message may be shown: the admin owns the key it is about.
+   */
+  async testConnection(config: AiProviderConfig): Promise<ProviderTestResult> {
+    const started = Date.now()
+    try {
+      const reply = await this.call(
+        config,
+        'You are a connectivity check.',
+        'Reply with the single word: OK',
+      )
+      return { ok: true, status: 200, latencyMs: Date.now() - started, detail: reply.slice(0, 200) }
+    } catch (err) {
+      const status = /AI_PROVIDER_ERROR: (\d+)/.exec(err instanceof Error ? err.message : '')?.[1]
+      const detail =
+        (err as { providerDetail?: string }).providerDetail ||
+        (err instanceof Error ? err.message : String(err))
+      return {
+        ok: false,
+        status: status ? Number(status) : null,
+        latencyMs: Date.now() - started,
+        detail: detail.slice(0, 500),
+      }
+    }
   }
 
   /**

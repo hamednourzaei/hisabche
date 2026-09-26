@@ -99,6 +99,9 @@ export const activityKeys = {
   list: (filters?: ActivityFilter) => [...activityKeys.all, 'list', filters] as const,
   infinite: (filters?: ActivityFilter) => [...activityKeys.all, 'infinite', filters] as const,
   unread: () => [...activityKeys.all, 'unread'] as const,
+  // Under `unread`: everything that invalidates the unread badge (realtime,
+  // mark-read) refreshes the tab counts too.
+  counts: () => [...activityKeys.unread(), 'counts'] as const,
   entity: (entityType: string, entityId: string) =>
     [...activityKeys.all, 'entity', entityType, entityId] as const,
   entityActivities: (entityType: string, entityId: string) =>
@@ -177,6 +180,33 @@ export function useUnreadCount() {
     // هر رویداد جدید، مستقیماً activityKeys.unread() را
     // invalidateQueries می‌کند، پس این عدد همیشه تازه می‌ماند.
     placeholderData: 0,
+  })
+}
+
+export interface ActivityFilterCounts {
+  all: number
+  unread: number
+  invoices: number
+  payments: number
+  customers: number
+}
+
+/**
+ * Exact badge counts for the /activities tabs — from the server, not the
+ * length of the pages loaded so far.
+ */
+export function useActivityFilterCounts() {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: activityKeys.counts(),
+    queryFn: async ({ signal }): Promise<ActivityFilterCounts> => {
+      const { data } = await apiClient.get<ActivityFilterCounts>('/v1/activities/counts', {
+        signal,
+      })
+      return data
+    },
+    enabled: authReady,
+    staleTime: 30_000,
   })
 }
 

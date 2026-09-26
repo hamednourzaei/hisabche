@@ -17,6 +17,7 @@ import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 import { emailService } from './email.service'
 import crypto from 'crypto'
+import { assertWithinLimit } from './plan-limits.service'
 
 // ✅ Types
 interface WorkspaceMember {
@@ -401,6 +402,9 @@ export class WorkspaceService {
   // ─── Invites ────────────────────────────────────────────────
   async createInvite(userId: string, data: CreateInvite) {
     await this.requireRole(userId, data.workspaceId, 'admin')
+    // The plan's member ceiling: an invite that could never be accepted is
+    // refused now, not at the invitee's click.
+    await assertWithinLimit(data.workspaceId, 'users')
 
     const { data: ws } = await supabase
       .from('workspaces')

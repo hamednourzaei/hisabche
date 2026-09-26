@@ -21,7 +21,7 @@ import React, { memo, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslations } from 'next-intl'
 import { Search } from 'lucide-react'
-import { DashboardHeader } from '@hisabche/ui'
+import { DashboardHeader, useHeaderPeople } from '@hisabche/ui'
 import { useThemeStore } from '@hisabche/store'
 
 import { useAuthStore, useCurrentUser } from '@/features/auth/auth.store'
@@ -95,6 +95,14 @@ export const Toolbar = memo(function Toolbar({ title }: { title: string }) {
     void setDesktopLanguage(code)
   }, [])
 
+  // Who else is online in this workspace — the same hook the web header uses.
+  // The shell passed nothing here, so the menu listed only the person using it.
+  const translate = useCallback((key: string) => t(key as never) as string, [t])
+  const { people, canSeePeople, isLoadingPeople } = useHeaderPeople(
+    user?.id ? { id: user.id, fullName: user.fullName, email: user.email, role: user.role } : null,
+    translate,
+  )
+
   const handleLogout = useCallback(() => {
     logout()
     navigate('/login')
@@ -135,6 +143,9 @@ export const Toolbar = memo(function Toolbar({ title }: { title: string }) {
         onLogout={handleLogout}
         onNavigateLogin={() => navigate('/login')}
         searchSlot={<SearchTrigger />}
+        people={people}
+        canSeePeople={canSeePeople}
+        isLoadingPeople={isLoadingPeople}
       />
     </div>
   )

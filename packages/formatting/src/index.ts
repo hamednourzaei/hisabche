@@ -30,3 +30,5 @@ export {
   parseNumericInput,
   groupThousands,
 } from './digits'
+
+export { formatCompactCount } from './compact'

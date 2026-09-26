@@ -53,6 +53,19 @@ const MONEY_PREFIXES: ReadonlySet<string> = new Set<string>([
   ...MEMORY_MONEY_PREFIXES,
 ])
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Whose money a key (or a delete pattern) is about: the first UUID in it —
+ * the workspace in `invoices:<ws>:…`, and equally in `products:category:<ws>`
+ * or `customer:balance:<ws>:<id>`, where it is not the second segment. A key
+ * with no UUID falls back to its second segment.
+ */
+export function moneyScopeOf(key: string): string {
+  const parts = key.split(':')
+  return parts.find((part) => UUID.test(part)) ?? parts[1] ?? ''
+}
+
 /** A key is `<prefix>:<scope>:…`; it holds money figures when its prefix is listed above. */
 export function isMoneyCacheKey(key: string): boolean {
   const colon = key.indexOf(':')

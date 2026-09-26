@@ -767,6 +767,53 @@ export class ActivityService {
   }
 
   // ─── Get Unread Count ────────────────────────────────────────────────────
+  /**
+   * The five tab badges of /activities, EXACT.
+   *
+   * ⚠️ The page counted the groups it had LOADED — the first page — so «همه
+   * (12)» meant «12 on screen», not the account. Each count here is a
+   * `head: true` exact count (راهنمای سشن §۷٫۴), no rows transferred. They
+   * count events, the same unit as the unread badge.
+   */
+  async getFilterCounts(
+    userId: string,
+  ): Promise<{
+    all: number
+    unread: number
+    invoices: number
+    payments: number
+    customers: number
+  }> {
+    const cacheKey = `activities:counts:${userId}`
+    const cached = await memoryCache.get(cacheKey)
+    if (cached !== null) return cached as Awaited<ReturnType<ActivityService['getFilterCounts']>>
+
+    const base = () =>
+      supabase
+        .from('activities')
+        .select('id', { count: 'exact', head: true })
+        .eq('actor_id', userId)
+    const results = await Promise.all([
+      base(),
+      base().eq('is_read', false),
+      base().eq('entity_type', 'invoice'),
+      base().eq('entity_type', 'payment'),
+      base().eq('entity_type', 'customer'),
+    ])
+    const failed = results.find((r) => r.error)
+    if (failed?.error) throw new DatabaseError('Failed to count activities', failed.error)
+    const [all, unread, invoices, payments, customers] = results.map((r) => r.count ?? 0) as [
+      number,
+      number,
+      number,
+      number,
+      number,
+    ]
+    const result = { all, unread, invoices, payments, customers }
+    await memoryCache.set(cacheKey, result, 10)
+    return result
+  }
+
   async getUnreadCount(userId: string): Promise<number> {
     const cacheKey = `activities:unread:${userId}`
     const cached = await memoryCache.get(cacheKey)
@@ -807,6 +854,7 @@ export class ActivityService {
   private async invalidateCache(userId: string) {
     await memoryCache.invalidate(`activities:${userId}:*`)
     await memoryCache.invalidate(`activities:unread:${userId}`)
+    await memoryCache.invalidate(`activities:counts:${userId}`)
   }
 }
 

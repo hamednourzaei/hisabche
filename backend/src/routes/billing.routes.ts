@@ -11,6 +11,17 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { Plan } from '@hisabche/validation'
+import { BaseError } from '../errors/base.error'
+import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { subscriptionUpgradeService } from '../services/subscription-upgrade.service'
+import {
+  cleanPatch,
+  getWorkspaceOverride,
+  listPlanSettings,
+  savePlanSettings,
+  saveWorkspaceOverride,
+  type LimitPatch,
+} from '../services/plan-limits.service'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -103,28 +114,171 @@ export async function billingRoutes(fastify: FastifyInstance) {
     },
   )
 
+  /** An HTTP error from the upgrade service keeps its status and its code. */
+  const upgradeFail = (reply: FastifyReply, err: unknown, fallback: string) => {
+    if (err instanceof BaseError) {
+      return reply.code(err.statusCode).send({ error: err.message, code: err.message })
+    }
+    fastify.log.error(err)
+    return reply.code(500).send({ error: fallback })
+  }
+
   // ─── POST /api/billing/upgrade ──────────────────────────────
+  //
+  // ⚠️ A REQUEST, NOT AN ACTIVATION. This used to make the caller's
+  // subscription pro/enterprise immediately, with no payment, for every
+  // workspace they owned. It now records a request for THIS workspace; the
+  // plan changes only when the platform admin approves it after the money
+  // arrived (services/subscription-upgrade.service.ts).
   fastify.post(
     '/api/billing/upgrade',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(
           z.object({
             plan: z.enum(['pro', 'enterprise']),
             interval: z.enum(['month', 'year']).default('month'),
+            paymentMethod: z.enum(['card_to_card', 'gateway', 'manual']).optional(),
+            paymentReference: z.string().trim().max(120).optional(),
+            note: z.string().trim().max(500).optional(),
           }),
         ),
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const { plan, interval } = request.body as {
+      // Buying for the business is the owner's (or an admin's) decision.
+      if (!['owner', 'admin'].includes(request.tenancy.role)) {
+        return reply.code(403).send({ error: 'UPGRADE_FORBIDDEN', code: 'UPGRADE_FORBIDDEN' })
+      }
+      const body = request.body as {
         plan: 'pro' | 'enterprise'
         interval: 'month' | 'year'
+        paymentMethod?: 'card_to_card' | 'gateway' | 'manual'
+        paymentReference?: string
+        note?: string
       }
-      const subscription = await billingService.upgrade(request.userId, plan, interval)
-      await clearCache(`subscription:${request.userId}`)
-      return reply.send(subscription)
+      try {
+        const current = await billingService.getCurrentSubscription(
+          request.userId,
+          request.tenancy.workspaceId,
+        )
+        if (current.plan === body.plan && !current.isTrial && current.status === 'active') {
+          return reply.code(409).send({ error: 'ALREADY_ON_PLAN', code: 'ALREADY_ON_PLAN' })
+        }
+        const created = await subscriptionUpgradeService.request(request.tenancy, current.plan, {
+          plan: body.plan,
+          interval: body.interval,
+          paymentMethod: body.paymentMethod,
+          paymentReference: body.paymentReference,
+          note: body.note,
+        })
+        return reply.code(201).send(created)
+      } catch (err) {
+        return upgradeFail(reply, err, 'Failed to request the upgrade')
+      }
+    },
+  )
+
+  // ─── GET /api/billing/upgrade-requests ──────────────────────
+  // This workspace's requests and its subscription log (purchases,
+  // activations, the period end of each).
+  fastify.get(
+    '/api/billing/upgrade-requests',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send(await subscriptionUpgradeService.history(request.tenancy))
+      } catch (err) {
+        return upgradeFail(reply, err, 'Failed to read upgrade requests')
+      }
+    },
+  )
+
+  // ─── POST /api/billing/upgrade-requests/:id/cancel ──────────
+  fastify.post(
+    '/api/billing/upgrade-requests/:id/cancel',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      if (!['owner', 'admin'].includes(request.tenancy.role)) {
+        return reply.code(403).send({ error: 'UPGRADE_FORBIDDEN', code: 'UPGRADE_FORBIDDEN' })
+      }
+      try {
+        await subscriptionUpgradeService.cancel(
+          request.tenancy,
+          (request.params as { id: string }).id,
+        )
+        return reply.send({ success: true })
+      } catch (err) {
+        return upgradeFail(reply, err, 'Failed to cancel the upgrade request')
+      }
+    },
+  )
+
+  // ─── Platform admin: the queue ──────────────────────────────
+  fastify.get(
+    '/api/admin/upgrade-requests',
+    { preHandler: [authenticate, platformAdminGuard] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const status = z
+        .enum(['pending', 'approved', 'rejected', 'cancelled', 'all'])
+        .catch('pending')
+        .parse((request.query as { status?: string }).status)
+      try {
+        return reply.send(await subscriptionUpgradeService.listForAdmin(status))
+      } catch (err) {
+        return upgradeFail(reply, err, 'Failed to read upgrade requests')
+      }
+    },
+  )
+
+  const decisionSchema = z.object({
+    /** Minor units. Required for a plan the product does not price (enterprise). */
+    amountMinor: z.number().int().nonnegative().nullable().optional(),
+    note: z.string().trim().max(500).optional(),
+  })
+
+  fastify.post(
+    '/api/admin/upgrade-requests/:id/approve',
+    {
+      preHandler: [authenticate, platformAdminGuard],
+      schema: { body: toJsonSchema(decisionSchema) },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = decisionSchema.parse(request.body ?? {})
+      try {
+        const subscriptionId = await subscriptionUpgradeService.approve(
+          request.userId,
+          (request.params as { id: string }).id,
+          body.amountMinor ?? null,
+          body.note || null,
+        )
+        await billingService.afterApprovedUpgrade(subscriptionId)
+        return reply.send({ success: true, subscriptionId })
+      } catch (err) {
+        return upgradeFail(reply, err, 'Failed to approve the upgrade')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/admin/upgrade-requests/:id/reject',
+    {
+      preHandler: [authenticate, platformAdminGuard],
+      schema: { body: toJsonSchema(decisionSchema) },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = decisionSchema.parse(request.body ?? {})
+      try {
+        await subscriptionUpgradeService.reject(
+          request.userId,
+          (request.params as { id: string }).id,
+          body.note || null,
+        )
+        return reply.send({ success: true })
+      } catch (err) {
+        return upgradeFail(reply, err, 'Failed to reject the upgrade')
+      }
     },
   )
 
@@ -155,11 +309,12 @@ export async function billingRoutes(fastify: FastifyInstance) {
       ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      // ⚠️ The report IS the response: { usage, limits, plan, isTrial }. It was
+      // wrapped again as { usage: report, limits }, so the page read
+      // `usage.usage.invoices` → report.invoices → undefined and printed
+      // «/ ∞» with no number in front (reported on /billing).
       const { workspaceId } = request.tenancy
-      const usage = await billingService.getUsageReport(request.userId, workspaceId)
-      const subscription = await billingService.getCurrentSubscription(request.userId, workspaceId)
-      const plan = PLANS[subscription.plan as Plan]
-      return reply.send({ usage, limits: plan.limits })
+      return reply.send(await billingService.getUsageReport(request.userId, workspaceId))
     },
   )
 
@@ -172,6 +327,88 @@ export async function billingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       const status = await billingService.checkTrialStatus(request.userId)
       return reply.send(status)
+    },
+  )
+
+  // ─── Platform admin: plan limits ────────────────────────────
+  //
+  //   GET /api/admin/plan-limits                    defaults, settings, effective — per plan
+  //   PUT /api/admin/plan-limits/:plan              { invoices?, users?, aiMonthly? }
+  //   GET /api/admin/workspace-limits/:workspaceId  this workspace's override
+  //   PUT /api/admin/workspace-limits/:workspaceId  { limits, note }
+  //
+  // A key sent as null = unlimited; a key left out = inherit from the layer
+  // below. AI questions cost money: null is refused for aiMonthly.
+  const limitsFail = (reply: FastifyReply, err: unknown) => {
+    if (err instanceof Error && err.message === 'PLAN_LIMITS_NOT_CONFIGURED') {
+      return reply
+        .code(503)
+        .send({ error: 'PLAN_LIMITS_NOT_CONFIGURED', code: 'PLAN_LIMITS_NOT_CONFIGURED' })
+    }
+    fastify.log.error(err)
+    return reply.code(500).send({ error: 'Failed to save the limits' })
+  }
+  const refuseUnlimitedAi = (patch: LimitPatch, reply: FastifyReply) =>
+    'aiMonthly' in patch && patch.aiMonthly === null
+      ? reply.code(400).send({ error: 'AI_LIMIT_REQUIRED', code: 'AI_LIMIT_REQUIRED' })
+      : null
+
+  fastify.get(
+    '/api/admin/plan-limits',
+    { preHandler: [authenticate, platformAdminGuard] },
+    async () => listPlanSettings(),
+  )
+
+  fastify.put(
+    '/api/admin/plan-limits/:plan',
+    { preHandler: [authenticate, platformAdminGuard] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const plan = (request.params as { plan: string }).plan
+      if (!['free', 'pro', 'enterprise'].includes(plan)) {
+        return reply.code(400).send({ error: 'UNKNOWN_PLAN', code: 'UNKNOWN_PLAN' })
+      }
+      const patch = cleanPatch(request.body)
+      const refused = refuseUnlimitedAi(patch, reply)
+      if (refused) return refused
+      try {
+        await savePlanSettings(plan, patch, request.userId)
+        return reply.send({ success: true })
+      } catch (err) {
+        return limitsFail(reply, err)
+      }
+    },
+  )
+
+  fastify.get(
+    '/api/admin/workspace-limits/:workspaceId',
+    { preHandler: [authenticate, platformAdminGuard] },
+    async (request: FastifyRequest) =>
+      getWorkspaceOverride((request.params as { workspaceId: string }).workspaceId),
+  )
+
+  fastify.put(
+    '/api/admin/workspace-limits/:workspaceId',
+    { preHandler: [authenticate, platformAdminGuard] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const workspaceId = (request.params as { workspaceId: string }).workspaceId
+      if (!/^[0-9a-f-]{36}$/i.test(workspaceId)) {
+        return reply.code(400).send({ error: 'INVALID_WORKSPACE_ID', code: 'INVALID_WORKSPACE_ID' })
+      }
+      const body = (request.body ?? {}) as { limits?: unknown; note?: unknown }
+      const patch = cleanPatch(body.limits)
+      const refused = refuseUnlimitedAi(patch, reply)
+      if (refused) return refused
+      try {
+        await saveWorkspaceOverride(
+          workspaceId,
+          patch,
+          typeof body.note === 'string' && body.note.trim() ? body.note.trim().slice(0, 500) : null,
+          request.userId,
+        )
+        return reply.send({ success: true })
+      } catch (err) {
+        return limitsFail(reply, err)
+      }
     },
   )
 }

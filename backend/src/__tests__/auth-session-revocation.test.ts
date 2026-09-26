@@ -67,8 +67,17 @@ describe('logout revokes the session', () => {
   it('the cache key it clears is the one authenticate writes', () => {
     // A mismatched prefix would clear nothing and fail silently — the exact
     // failure mode of the bug being fixed.
-    expect(middleware).toMatch(/const cacheKey = `auth:\$\{token\}`/)
-    expect(middleware).toMatch(/invalidate\(`auth:\$\{token\}`\)/)
+    // Both through the one key function.
+    expect(middleware).toMatch(/const cacheKey = authCacheKey\(token\)/)
+    expect(middleware).toMatch(/invalidate\(authCacheKey\(token\)\)/)
+  })
+
+  it('⚠️ the bearer token itself is never a cache key — only its hash', () => {
+    // `auth:<token>` put every live session in Redis's keyspace in plain text.
+    expect(middleware).not.toMatch(/`auth:\$\{token\}`/)
+    expect(middleware).toMatch(
+      /`auth:\$\{createHash\('sha256'\)\.update\(token\)\.digest\('hex'\)\}`/,
+    )
   })
 
   it('a failed revocation does not fail the request', () => {

@@ -24,6 +24,13 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
 import { SharedRateLimitStore } from './utils/shared-rate-limit-store'
+import { cacheService } from './services/cache.service'
+import {
+  registerInstanceAdminRoutes,
+  registerSystemMetricsRoutes,
+} from './routes/system-metrics.routes'
+import { startInstanceHeartbeat } from './services/instance-registry'
+import { MONITOR_BANNER_CSS, MONITOR_BANNER_JS } from './docs/monitor-banner'
 import compress from '@fastify/compress'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
@@ -148,22 +155,35 @@ server.log.info(`📦 Environment: ${process.env.NODE_ENV || 'development'}`)
 // ──────────────────────────────────────────────
 let inflightRequests = 0
 
-server.addHook('onRequest', async (request) => {
+/**
+ * Uncount a request exactly once, however it ended.
+ *
+ * ⚠️ onResponse DOES NOT RUN for a reply that was hijacked (the /docs metrics
+ * stream) or whose client went away mid-request (a closed tab, a cancelled
+ * query). Counted only there, every such request stayed «in flight» forever:
+ * the counter only grew, and inflightAtStart in the perf log — 14 on a quiet
+ * server — was mostly ghosts. The raw response's 'close' fires in every case.
+ */
+function releaseInflight(request: { countedInflight?: boolean }): void {
+  if (!request.countedInflight) return
+  request.countedInflight = false
+  inflightRequests = Math.max(0, inflightRequests - 1)
+}
+
+server.addHook('onRequest', async (request, reply) => {
   ;(request as any).startTime = Date.now()
   // context شمارنده‌ی کوئری را برای این درخواست فعال می‌کند.
   enterMetricsContext(inflightRequests)
   inflightRequests += 1
   ;(request as any).countedInflight = true
+  reply.raw.once('close', () => releaseInflight(request as { countedInflight?: boolean }))
 })
 
 server.addHook('onResponse', async (request, reply) => {
   // فاز ۰ — یک خط ساختاریافته به‌ازای هر درخواست، تا بتوان جدول
   // «Endpoint / تعداد Query / زمان DB / زمان کل» را مستقیماً از لاگ Render
   // ساخت. OPTIONS ها حذف می‌شوند چون نویز محض‌اند.
-  if ((request as any).countedInflight) {
-    inflightRequests = Math.max(0, inflightRequests - 1)
-    ;(request as any).countedInflight = false
-  }
+  releaseInflight(request as { countedInflight?: boolean })
   if (request.method === 'OPTIONS') return
 
   const total = Date.now() - ((request as any).startTime || Date.now())
@@ -260,6 +280,8 @@ server.addHook('preHandler', async (request, reply) => {
     '/robots.txt',
     '/api/health',
     '/api/slo',
+    // Live CPU/RAM percentages for the /docs bar — public by decision (routes/system-metrics.routes.ts).
+    '/api/system/metrics',
     '/api/auth/login',
     '/api/auth/signup',
     // ⚠️ The refresh token IS the credential here; there is no valid access
@@ -317,29 +339,44 @@ server.get('/api/health', async () => ({
   uptime: process.uptime(),
   env: process.env.NODE_ENV,
   version: '2.5.0',
+  // The exact build this instance runs (Render sets it per deploy). During a
+  // rolling deploy two instances can differ — this is how to tell.
+  commit: process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? null,
+  // ⚠️ Configured, not connected: REDIS_URL being set says nothing about
+  // whether this instance reached Redis. `redisConnected` does.
   cache: process.env.REDIS_URL ? 'redis' : 'memory',
+  redisConnected: cacheService.isShared,
 }))
+
+registerSystemMetricsRoutes(server, () => inflightRequests)
+registerInstanceAdminRoutes(server)
 
 server.get('/live', async () => ({
   status: 'ok',
   timestamp: new Date().toISOString(),
 }))
 
-server.get('/ready', async () => {
+// The load balancer's question: can this instance serve? It reads the STATUS
+// CODE, not the body — so a database it cannot reach is a 503.
+//
+// ⚠️ This answered 200 with `database: 'disconnected'` in the body: a health
+// check would have kept sending traffic to an instance with no database.
+// Redis is deliberately NOT part of it: every instance shares the one Redis,
+// and without it the backend still serves correctly (uncached, rate limit per
+// instance) — failing readiness on it would take every instance out at once.
+server.get('/ready', async (_request, reply) => {
+  let connected = false
   try {
     const { error } = await supabase.from('products').select('id').limit(1)
-    return {
-      status: error ? 'error' : 'ok',
-      database: error ? 'disconnected' : 'connected',
-      timestamp: new Date().toISOString(),
-    }
+    connected = !error
   } catch {
-    return {
-      status: 'error',
-      database: 'disconnected',
-      timestamp: new Date().toISOString(),
-    }
+    connected = false
   }
+  return reply.status(connected ? 200 : 503).send({
+    status: connected ? 'ok' : 'error',
+    database: connected ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString(),
+  })
 })
 
 server.get('/api', async () => ({
@@ -520,6 +557,12 @@ export async function buildServer(): Promise<typeof server> {
       persistAuthorization: true,
     },
     staticCSP: true,
+    // The live CPU/RAM bar at the top (docs/monitor-banner.ts). Theme files are
+    // served from /docs itself, so the strict CSP above allows them.
+    theme: {
+      css: [{ filename: 'monitor.css', content: MONITOR_BANNER_CSS }],
+      js: [{ filename: 'monitor.js', content: MONITOR_BANNER_JS }],
+    },
   })
 
   // ─── 6.4 RATE LIMIT ────────────────────────
@@ -633,6 +676,8 @@ async function start() {
 
     // ─── 6.7 START SCHEDULER ──────────────────
     startScheduler()
+    // The admin «servers» page reads these (services/instance-registry.ts).
+    startInstanceHeartbeat(() => inflightRequests)
   } catch (err) {
     const error = err as Error
     server.log.error(error)

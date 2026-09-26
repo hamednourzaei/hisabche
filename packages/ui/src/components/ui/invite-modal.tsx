@@ -11,6 +11,7 @@ import { X, Check, ChevronDown, Copy } from 'lucide-react'
 import { type WorkspaceRole } from '@hisabche/store'
 import { useInviteMember } from '@hisabche/api'
 import { cn } from '../../lib/utils'
+import { planLimitMessage } from '../../lib/plan-limit-message'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    InviteModal v2 — Memoized · Performance Optimized
@@ -58,7 +59,11 @@ export const InviteModal = memo(function InviteModal({ open, onClose, workspaceI
       setInviteLink(link)
       setSent(true)
     } catch (err: any) {
-      setError(err?.message || t('workspace.inviteError', 'خطا در ارسال دعوت'))
+      setError(
+        planLimitMessage(err, (key, values) => t(key, values as never)) ||
+          err?.message ||
+          t('workspace.inviteError', 'خطا در ارسال دعوت'),
+      )
     }
   }, [email, workspaceId, role, inviteMember, t])
 

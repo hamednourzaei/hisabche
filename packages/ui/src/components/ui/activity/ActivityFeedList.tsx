@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import type { ActivityGroupDto, ActivityItemDto } from '@hisabche/api'
 import { ActivityGroupCard } from './ActivityGroupCard'
+import { ActivityGroupTable } from './ActivityGroupTable'
 
 export interface ActivityFeedListProps {
   groups: ActivityGroupDto[]
@@ -58,7 +59,10 @@ export function ActivityFeedList({
       aria-busy={isFetchingNextPage}
       aria-label={t('activity.feedLabel')}
     >
-      <div className="space-y-1.5 md:space-y-2 p-1.5 md:p-2">
+      {/* Below tablet: cards — a shrunken desktop table is unreadable on a
+          phone. From tablet up: the same rows as a table, like /invoices.
+          CSS decides, so server and client render the same tree. */}
+      <div className="space-y-2 md:hidden">
         {groups.map((group) => (
           <ActivityGroupCard
             key={`${group.entityType}-${group.entityId}`}
@@ -66,6 +70,9 @@ export function ActivityFeedList({
             onActivityClick={onActivityClick}
           />
         ))}
+      </div>
+      <div className="hidden md:block" data-activity-table="">
+        <ActivityGroupTable groups={groups} onActivityClick={onActivityClick} />
       </div>
 
       {(hasNextPage || isFetchingNextPage) && (

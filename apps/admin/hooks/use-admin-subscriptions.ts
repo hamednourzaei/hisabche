@@ -1,7 +1,7 @@
 'use client'
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { apiClient } from '@hisabche/api'
+import { apiClient, asList } from '@hisabche/api'
 
 /**
  * Admin subscription management.
@@ -157,4 +157,75 @@ export function daysUntilExpiry(periodEnd: string | null): number | null {
   const end = new Date(periodEnd).getTime()
   if (Number.isNaN(end)) return null
   return Math.ceil((end - Date.now()) / (1000 * 60 * 60 * 24))
+}
+
+// ─── Upgrade requests: the approval queue ─────────────────────────────────
+//
+// A member's «request upgrade» lands here. Approving runs ONE transaction on
+// the server (approve_subscription_upgrade): the plan becomes active from now
+// for that workspace only, and the log records it with its period end.
+//
+//   GET  /admin/upgrade-requests?status=pending|approved|rejected|cancelled|all
+//   POST /admin/upgrade-requests/:id/approve  { amountMinor?, note? }
+//   POST /admin/upgrade-requests/:id/reject   { note? }
+
+export interface AdminUpgradeRequest {
+  id: string
+  workspace_id: string
+  requested_by: string
+  current_plan: string
+  requested_plan: 'pro' | 'enterprise'
+  billing_interval: 'month' | 'year'
+  /** Minor units; null = not priced by the product (enterprise). */
+  amount_minor: number | null
+  currency: string | null
+  payment_method: 'card_to_card' | 'gateway' | 'manual' | null
+  payment_reference: string | null
+  member_note: string | null
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled'
+  admin_note: string | null
+  created_at: string
+  decided_at: string | null
+}
+
+export type UpgradeRequestStatusFilter = AdminUpgradeRequest['status'] | 'all'
+
+export function useAdminUpgradeRequests(status: UpgradeRequestStatusFilter) {
+  return useQuery({
+    queryKey: [...adminSubscriptionKeys.all, 'upgrade-requests', status] as const,
+    queryFn: async ({ signal }): Promise<AdminUpgradeRequest[]> => {
+      const { data } = await apiClient.get('/admin/upgrade-requests', {
+        params: { status },
+        signal,
+      })
+      return asList<AdminUpgradeRequest>(data)
+    },
+  })
+}
+
+export function useDecideUpgradeRequest() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      id: string
+      decision: 'approve' | 'reject'
+      amountMinor?: number | null
+      note?: string
+    }) => {
+      const body: Record<string, unknown> = {}
+      if (input.decision === 'approve' && input.amountMinor !== undefined)
+        body.amountMinor = input.amountMinor
+      if (input.note?.trim()) body.note = input.note.trim()
+      const { data } = await apiClient.post(
+        `/admin/upgrade-requests/${input.id}/${input.decision}`,
+        body,
+      )
+      return data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminSubscriptionKeys.all })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'workspaces'] })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'metrics'] })
+    },
+  })
 }

@@ -195,13 +195,15 @@ export const AuditTrailTab = memo(function AuditTrailTab({
 }: AuditTrailTabProps) {
   const [openId, setOpenId] = useState<string | null>(null)
 
+  // min-w-0: three selects share one row even on a phone (owner's request —
+  // they were stacked full-width, one per line).
   const select =
-    'rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2 text-sm'
+    'min-w-0 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 py-2 text-xs sm:px-3 sm:text-sm'
 
   return (
     <div className="space-y-4">
       {/* The combined filter the tab exists to answer. */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="grid grid-cols-3 gap-2" data-audit-filters="">
         <SelectField
           value={entityType}
           onChange={(value) => onEntityTypeChange(value)}
@@ -234,11 +236,10 @@ export const AuditTrailTab = memo(function AuditTrailTab({
           className={select}
           aria-label={t('audit.actor', 'کاربر')}
         />
-
-        <span className="ms-auto text-sm text-[hsl(var(--fg-tertiary))]">
-          {t('audit.total', 'تعداد')}: <span className="tabular-nums">{total}</span>
-        </span>
       </div>
+      <p className="text-sm text-[hsl(var(--fg-tertiary))]">
+        {t('audit.total', 'تعداد')}: <span className="tabular-nums">{total}</span>
+      </p>
 
       {error && (
         <p role="alert" className="text-sm text-[hsl(var(--color-destructive))]">
@@ -274,111 +275,218 @@ export const AuditTrailTab = memo(function AuditTrailTab({
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
-          <table className="w-full min-w-[860px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-[hsl(var(--border-default))] text-xs text-[hsl(var(--fg-tertiary))]">
-                <th className="px-4 py-2.5 text-start font-medium">{t('audit.time', 'زمان')}</th>
-                <th className="px-4 py-2.5 text-start font-medium">{t('audit.actor', 'کاربر')}</th>
-                <th className="px-4 py-2.5 text-start font-medium">{t('audit.role', 'نقش')}</th>
-                <th className="px-4 py-2.5 text-start font-medium">{t('audit.branch', 'شعبه')}</th>
-                <th className="px-4 py-2.5 text-start font-medium">
-                  {t('audit.action', 'عملیات')}
-                </th>
-                <th className="px-4 py-2.5 text-start font-medium">
-                  {t('audit.entityType', 'نوع رکورد')}
-                </th>
-                <th className="px-4 py-2.5 text-start font-medium">
-                  {t('audit.entityId', 'شناسه رکورد')}
-                </th>
-                <th className="px-4 py-2.5 text-start font-medium">
-                  {t('audit.changes', 'قبل / بعد')}
-                </th>
-              </tr>
-            </thead>
+        <>
+          {/* Below tablet: cards — the same rule as the events tab. */}
+          <div className="space-y-2 md:hidden">
+            {rows.map((row) => (
+              <AuditCard
+                key={row.id}
+                row={row}
+                t={t}
+                isOpen={openId === row.id}
+                onToggle={() => setOpenId(openId === row.id ? null : row.id)}
+                onOpenRecord={onOpenRecord}
+                formatDate={formatDate}
+                labelForActor={labelForActor}
+                labelForBranch={labelForBranch}
+                labelForRole={labelForRole}
+              />
+            ))}
+          </div>
+          <div
+            className="hidden overflow-x-auto rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] md:block"
+            data-audit-table=""
+          >
+            <table className="w-full min-w-[860px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] text-xs text-[hsl(var(--fg-tertiary))]">
+                  <th className="px-4 py-2.5 text-start font-medium">{t('audit.time', 'زمان')}</th>
+                  <th className="px-4 py-2.5 text-start font-medium">
+                    {t('audit.actor', 'کاربر')}
+                  </th>
+                  <th className="px-4 py-2.5 text-start font-medium">{t('audit.role', 'نقش')}</th>
+                  <th className="px-4 py-2.5 text-start font-medium">
+                    {t('audit.branch', 'شعبه')}
+                  </th>
+                  <th className="px-4 py-2.5 text-start font-medium">
+                    {t('audit.action', 'عملیات')}
+                  </th>
+                  <th className="px-4 py-2.5 text-start font-medium">
+                    {t('audit.entityType', 'نوع رکورد')}
+                  </th>
+                  <th className="px-4 py-2.5 text-start font-medium">
+                    {t('audit.entityId', 'شناسه رکورد')}
+                  </th>
+                  <th className="px-4 py-2.5 text-start font-medium">
+                    {t('audit.changes', 'قبل / بعد')}
+                  </th>
+                </tr>
+              </thead>
 
-            <tbody>
-              {rows.map((row) => {
-                const isOpen = openId === row.id
+              <tbody>
+                {rows.map((row) => {
+                  const isOpen = openId === row.id
 
-                return (
-                  <Fragment key={row.id}>
-                    <tr className="border-b border-[hsl(var(--border-default)/0.5)] last:border-0">
-                      <td className="whitespace-nowrap px-4 py-2.5 tabular-nums text-[hsl(var(--fg-secondary))]">
-                        {formatDate(row.created_at)}
-                      </td>
-                      <td className="px-4 py-2.5 text-[hsl(var(--fg-primary))]">
-                        {labelForActor(row.user_id)}
-                      </td>
-                      <td className="px-4 py-2.5 text-[hsl(var(--fg-tertiary))]">
-                        {labelForRole(row.user_id)}
-                      </td>
-                      <td className="px-4 py-2.5 text-[hsl(var(--fg-tertiary))]">
-                        {labelForBranch(row.branch_id)}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <span
-                          className={cn(
-                            'rounded-md px-2 py-0.5 text-xs font-medium',
-                            ACTION_TONE[row.action] ?? FALLBACK_TONE,
-                          )}
-                        >
-                          {t(`audit.actions.${row.action}`, row.action)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-[hsl(var(--fg-secondary))]">
-                        {t(`audit.entities.${row.entity_type}`, row.entity_type)}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        {/*
+                  return (
+                    <Fragment key={row.id}>
+                      <tr className="border-b border-[hsl(var(--border-default)/0.5)] last:border-0">
+                        <td className="whitespace-nowrap px-4 py-2.5 tabular-nums text-[hsl(var(--fg-secondary))]">
+                          {formatDate(row.created_at)}
+                        </td>
+                        <td className="px-4 py-2.5 text-[hsl(var(--fg-primary))]">
+                          {labelForActor(row.user_id)}
+                        </td>
+                        <td className="px-4 py-2.5 text-[hsl(var(--fg-tertiary))]">
+                          {labelForRole(row.user_id)}
+                        </td>
+                        <td className="px-4 py-2.5 text-[hsl(var(--fg-tertiary))]">
+                          {labelForBranch(row.branch_id)}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span
+                            className={cn(
+                              'rounded-md px-2 py-0.5 text-xs font-medium',
+                              ACTION_TONE[row.action] ?? FALLBACK_TONE,
+                            )}
+                          >
+                            {t(`audit.actions.${row.action}`, row.action)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-[hsl(var(--fg-secondary))]">
+                          {t(`audit.entities.${row.entity_type}`, row.entity_type)}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {/*
                           H6 — clickable through to the real record. The parent
                           maps entity_type to a route; this component does not
                           know the product's URLs.
                         */}
-                        {row.entity_id && onOpenRecord ? (
+                          {row.entity_id && onOpenRecord ? (
+                            <button
+                              type="button"
+                              onClick={() => onOpenRecord(row.entity_type, row.entity_id as string)}
+                              className="font-mono text-xs text-[hsl(var(--color-primary))] hover:underline"
+                            >
+                              {row.entity_id.slice(0, 8)}
+                            </button>
+                          ) : (
+                            <span className="font-mono text-xs text-[hsl(var(--fg-tertiary))]">
+                              {row.entity_id ? row.entity_id.slice(0, 8) : '—'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5">
                           <button
                             type="button"
-                            onClick={() => onOpenRecord(row.entity_type, row.entity_id as string)}
-                            className="font-mono text-xs text-[hsl(var(--color-primary))] hover:underline"
+                            onClick={() => setOpenId(isOpen ? null : row.id)}
+                            aria-expanded={isOpen}
+                            className="inline-flex items-center gap-1 text-xs text-[hsl(var(--color-primary))] hover:underline"
                           >
-                            {row.entity_id.slice(0, 8)}
+                            {t('audit.viewChanges', 'مشاهده')}
+                            <ChevronDown
+                              className={cn('size-3 transition-transform', isOpen && 'rotate-180')}
+                              aria-hidden
+                            />
                           </button>
-                        ) : (
-                          <span className="font-mono text-xs text-[hsl(var(--fg-tertiary))]">
-                            {row.entity_id ? row.entity_id.slice(0, 8) : '—'}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <button
-                          type="button"
-                          onClick={() => setOpenId(isOpen ? null : row.id)}
-                          aria-expanded={isOpen}
-                          className="inline-flex items-center gap-1 text-xs text-[hsl(var(--color-primary))] hover:underline"
-                        >
-                          {t('audit.viewChanges', 'مشاهده')}
-                          <ChevronDown
-                            className={cn('size-3 transition-transform', isOpen && 'rotate-180')}
-                            aria-hidden
-                          />
-                        </button>
-                      </td>
-                    </tr>
-
-                    {isOpen && (
-                      <tr className="bg-[hsl(var(--surface-muted)/0.4)]">
-                        <td colSpan={8} className="p-0">
-                          <AuditDetailRow row={row} t={t} />
                         </td>
                       </tr>
-                    )}
-                  </Fragment>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+
+                      {isOpen && (
+                        <tr className="bg-[hsl(var(--surface-muted)/0.4)]">
+                          <td colSpan={8} className="p-0">
+                            <AuditDetailRow row={row} t={t} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   )
 })
+
+/** One change as a card (below tablet). Same fields and the same before/after as a table row. */
+function AuditCard({
+  row,
+  t,
+  isOpen,
+  onToggle,
+  onOpenRecord,
+  formatDate,
+  labelForActor,
+  labelForBranch,
+  labelForRole,
+}: {
+  row: AuditRow
+  t: (key: string, fallback?: string) => string
+  isOpen: boolean
+  onToggle: () => void
+  onOpenRecord?: ((entityType: string, entityId: string) => void) | undefined
+  formatDate: (iso: string) => string
+  labelForActor: (userId: string | null | undefined) => string
+  labelForBranch: (branchId: string | null | undefined) => string
+  labelForRole: (userId: string | null | undefined) => string
+}) {
+  const branch = labelForBranch(row.branch_id)
+  return (
+    <div className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
+      <div className="space-y-1.5 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-2">
+            <span
+              className={cn(
+                'rounded-md px-2 py-0.5 text-xs font-medium',
+                ACTION_TONE[row.action] ?? FALLBACK_TONE,
+              )}
+            >
+              {t(`audit.actions.${row.action}`, row.action)}
+            </span>
+            <span className="text-sm text-[hsl(var(--fg-primary))]">
+              {t(`audit.entities.${row.entity_type}`, row.entity_type)}
+            </span>
+          </span>
+          {row.entity_id && onOpenRecord ? (
+            <button
+              type="button"
+              onClick={() => onOpenRecord(row.entity_type, row.entity_id as string)}
+              className="font-mono text-xs text-[hsl(var(--color-primary))] hover:underline"
+            >
+              {row.entity_id.slice(0, 8)}
+            </button>
+          ) : null}
+        </div>
+        <p className="text-xs text-[hsl(var(--fg-secondary))]">
+          {labelForActor(row.user_id)} · {labelForRole(row.user_id)}
+          {branch !== '—' ? ` · ${branch}` : ''}
+        </p>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] tabular-nums text-[hsl(var(--fg-tertiary))]">
+            {formatDate(row.created_at)}
+          </span>
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={isOpen}
+            className="inline-flex items-center gap-1 text-xs text-[hsl(var(--color-primary))]"
+          >
+            {t('audit.viewChanges', 'مشاهده')}
+            <ChevronDown
+              className={cn('size-3 transition-transform', isOpen && 'rotate-180')}
+              aria-hidden
+            />
+          </button>
+        </div>
+      </div>
+      {isOpen && (
+        <div className="border-t border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.4)]">
+          <AuditDetailRow row={row} t={t} />
+        </div>
+      )}
+    </div>
+  )
+}

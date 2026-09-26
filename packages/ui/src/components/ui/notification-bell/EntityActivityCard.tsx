@@ -24,6 +24,7 @@ import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { useNow } from '../../../hooks/use-now'
 import { useEntitySummary, useEntityActivities } from '@hisabche/api'
 import { useDateFormat } from '../../../hooks/use-date-format'
+import { timeAgo } from '../../../lib/time-ago'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -81,30 +82,6 @@ const activityLabels: Record<string, string> = {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function timeAgo(date: string, now: number | null, t: (key: string) => string): string {
-  // `now` is null until mounted (see useNow): no clock is read during render.
-  if (now === null) return ''
-  const diff = now - new Date(date).getTime()
-  const minutes = Math.floor(diff / 60000)
-
-  if (minutes < 1) return t('time.justNow')
-  if (minutes < 60) return t('time.minutesAgo')
-
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return t('time.hoursAgo')
-
-  const days = Math.floor(hours / 24)
-  if (days < 7) return t('time.daysAgo')
-
-  const weeks = Math.floor(days / 7)
-  if (weeks < 4) return t('time.weeksAgo')
-
-  const months = Math.floor(days / 30)
-  if (months < 12) return t('time.monthsAgo')
-
-  return t('time.yearsAgo')
-}
 
 // The locale was pinned to 'fa-AF' and a missing currency fell back to the
 // literal 'AFN'. Digits follow the reader's language; the fallback is the

@@ -31,7 +31,8 @@ import { memo, useCallback, useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 
-import { useAuditTrail, useBranches, useEmployees } from '@hisabche/api'
+import { asList, useAuditTrail, useBranches, useWorkspaceMembers } from '@hisabche/api'
+import { useWorkspaceStore } from '@hisabche/store'
 import { resolveIntlLocale, type UiLanguage } from '@hisabche/formatting'
 
 import { AuditTrailTab, type AuditRow } from '../../activity/audit-trail-tab'
@@ -71,12 +72,19 @@ export const AuditContainer = memo(function AuditContainer() {
     limit: 50,
   })
 
-  // Branches and employees name the ids the audit rows carry. Without them the
-  // table shows a uuid where a person's name belongs.
+  // Branches and MEMBERS name the ids the audit rows carry.
+  //
+  // ⚠️ Names came from the employees list: the owner, and anyone with a login
+  // but no employee record, showed as an 8-character id with role «—». Every
+  // person who can write an audit row is a workspace MEMBER — that list has
+  // the name and the role.
   const { data: branches = [] } = useBranches()
-  const { data: employeesData } = useEmployees({ page: 1, limit: 100 })
-
-  const employees = useMemo(() => employeesData?.employees ?? [], [employeesData])
+  const workspaceId = useWorkspaceStore((state) => state.workspaceId)
+  const { data: membersData } = useWorkspaceMembers(workspaceId ?? '')
+  const members = useMemo(
+    () => asList<{ user_id: string; role: string; full_name: string | null }>(membersData),
+    [membersData],
+  )
 
   const branchName = useMemo(() => {
     const map = new Map(branches.map((b) => [b.id, b.name]))
@@ -84,41 +92,29 @@ export const AuditContainer = memo(function AuditContainer() {
   }, [branches])
 
   const actorName = useMemo(() => {
-    // Keyed by the employee's USER id, because that is what an audit row
-    // carries. An employee with no login is not in this map and their id falls
-    // through to the short form — which is honest, not a gap to paper over.
-    // Typed explicitly: inferring from a `.map()` over `Record<string, any>`
-    // gives `Map<any, {}>`, and `{}` is not assignable to the `string` the
-    // view's label props promise.
     const map = new Map<string, string>(
-      employees
-        .filter((e: Record<string, any>) => e.user_id)
-        .map((e: Record<string, any>) => [
-          e.user_id as string,
-          `${e.first_name ?? ''} ${e.last_name ?? ''}`.trim(),
-        ]),
+      members.filter((m) => m.full_name).map((m) => [m.user_id, m.full_name as string]),
     )
+    // Someone no longer a member keeps their short id — honest, not guessed.
     return (id: string | null | undefined) => (id ? (map.get(id) ?? id.slice(0, 8)) : '—')
-  }, [employees])
+  }, [members])
 
   const actorRole = useMemo(() => {
-    // Typed explicitly: inferring from a `.map()` over `Record<string, any>`
-    // gives `Map<any, {}>`, and `{}` is not assignable to the `string` the
-    // view's label props promise.
-    const map = new Map<string, string>(
-      employees
-        .filter((e: Record<string, any>) => e.user_id)
-        .map((e: Record<string, any>) => [e.user_id as string, (e.position as string) ?? '—']),
-    )
-    return (id: string | null | undefined) => (id ? (map.get(id) ?? '—') : '—')
-  }, [employees])
+    const map = new Map<string, string>(members.map((m) => [m.user_id, m.role]))
+    return (id: string | null | undefined) => {
+      const role = id ? map.get(id) : undefined
+      return role ? t(`role.${role}`, role) : '—'
+    }
+  }, [members, t])
 
   const formatDate = useCallback(
     (iso: string) => {
       if (!iso) return '—'
       // ⚠️ `format` THROWS «RangeError: Invalid time value» on a malformed
       // timestamp, which takes the whole audit page into the error boundary.
-      const parsed = new Date(iso)
+      // Postgres may spell the offset «+00» (no minutes) and use a space for
+      // «T»; V8 rejects both, which rendered every time as «—».
+      const parsed = new Date(iso.replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00'))
       if (Number.isNaN(parsed.getTime())) return '—'
       // An explicit locale, not the browser's — the same defect the accounting
       // tabs had, where two people in one shop saw two different renderings.
@@ -145,13 +141,10 @@ export const AuditContainer = memo(function AuditContainer() {
 
   const actorOptions = useMemo(
     () =>
-      employees
-        .filter((e: Record<string, any>) => e.user_id)
-        .map((e: Record<string, any>) => ({
-          value: e.user_id as string,
-          label: `${e.first_name ?? ''} ${e.last_name ?? ''}`.trim(),
-        })),
-    [employees],
+      members
+        .filter((m) => m.full_name)
+        .map((m) => ({ value: m.user_id, label: m.full_name as string })),
+    [members],
   )
 
   const entityTypeOptions = useMemo(

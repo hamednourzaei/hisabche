@@ -5,7 +5,7 @@
 
 import Redis from 'ioredis'
 
-import { isMoneyCacheKey } from '../utils/money-cache-keys'
+import { isMoneyCacheKey, moneyScopeOf } from '../utils/money-cache-keys'
 
 // ✅ Environment variables with defaults
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379'
@@ -77,6 +77,9 @@ if ttl < 0 then
 end
 return {current, ttl}
 `
+
+/** How long a money cache miss keeps the generation it saw (cacheService.getMoney). */
+const PENDING_MONEY_GEN_MS = 60_000
 
 // ✅ Stats for monitoring
 interface CacheStats {
@@ -179,6 +182,7 @@ class CacheService {
       return cached ? (JSON.parse(cached) as T) : null
     }
     try {
+      if (isMoneyCacheKey(key)) return await this.getMoney<T>(key)
       const data = await this.client.get(key)
       if (data) {
         this.stats.hits++
@@ -204,6 +208,7 @@ class CacheService {
       return true
     }
     try {
+      if (isMoneyCacheKey(key)) return await this.setMoney(key, value, ttl)
       await this.client.set(key, JSON.stringify(value), 'EX', ttl)
       this.stats.sets++
       return true
@@ -217,6 +222,96 @@ class CacheService {
     }
   }
 
+  // ─── Money figures: generation-checked ────────────────────
+  //
+  // ⚠️ THE CACHE-ASIDE RACE. Deleting a key after a write is not enough:
+  //
+  //   request A misses, reads the invoice from Postgres (unpaid)
+  //   request B records the payment, commits, invalidates
+  //   request A — slower — writes what it read: the UNPAID invoice
+  //
+  // and every instance serves that until the TTL runs out. So each workspace
+  // has a money generation in Redis; invalidateMoneyCaches() bumps it. A miss
+  // remembers the generation it saw BEFORE the caller read the database, the
+  // value is stored with that generation, and a read only accepts a value of
+  // the current generation. A's late write carries the old one and is never
+  // served. One MGET per read — the same round trip as before.
+  //
+  // Still NOT atomic with the database commit: a process that dies between
+  // COMMIT and the bump leaves the previous generation current, so an entry
+  // can live out its TTL (≤ 5 min for money keys). Bounded, not eliminated.
+  private readonly pendingMoneyGen = new Map<string, { gen: string; at: number }>()
+
+  private moneyGenKey(key: string): string {
+    return `money-gen:${moneyScopeOf(key)}`
+  }
+
+  private async getMoney<T>(key: string): Promise<T | null> {
+    const [raw, gen] = await this.client.mget(key, this.moneyGenKey(key))
+    const current = gen ?? '0'
+    if (raw) {
+      const entry = JSON.parse(raw) as { g?: string; v?: T }
+      if (entry.g === current) {
+        this.stats.hits++
+        return entry.v as T
+      }
+    }
+    this.stats.misses++
+    // The OLDEST generation a still-running read began under wins: storing a
+    // value as older than it is only costs a miss; storing it as newer serves
+    // stale money.
+    //
+    // A miss whose caller never writes (its query failed) would otherwise pin
+    // an old generation here and waste the next write; after
+    // PENDING_MONEY_GEN_MS it no longer counts. No money read runs that long
+    // (the client gives up at 15 s).
+    const pending = this.pendingMoneyGen.get(key)
+    if (!pending || Date.now() - pending.at > PENDING_MONEY_GEN_MS) {
+      if (!pending && this.pendingMoneyGen.size >= FALLBACK_MAX_ENTRIES) {
+        const oldest = this.pendingMoneyGen.keys().next().value
+        if (oldest !== undefined) this.pendingMoneyGen.delete(oldest)
+      }
+      this.pendingMoneyGen.set(key, { gen: current, at: Date.now() })
+    }
+    return null
+  }
+
+  private async setMoney<T>(key: string, value: T, ttl: number): Promise<boolean> {
+    // A set without a preceding miss reads the generation now — the race is
+    // then open only for that caller, never wider than before.
+    const pending = this.pendingMoneyGen.get(key)
+    const gen =
+      pending && Date.now() - pending.at <= PENDING_MONEY_GEN_MS
+        ? pending.gen
+        : ((await this.client.get(this.moneyGenKey(key))) ?? '0')
+    this.pendingMoneyGen.delete(key)
+    await this.client.set(key, JSON.stringify({ g: gen, v: value }), 'EX', ttl)
+    this.stats.sets++
+    return true
+  }
+
+  /**
+   * After a money write: every money entry of this workspace, on every
+   * instance, is stale from now on — including one being written right now
+   * by a read that started before the write. No-op without Redis (money is
+   * not cached then).
+   */
+  async bumpMoneyGeneration(workspaceId: string): Promise<void> {
+    if (!this.isConnected) return
+    try {
+      const key = this.moneyGenKey(`money:${workspaceId}`)
+      // A day outlives every money entry (TTL ≤ 5 min), so a counter that
+      // expires and restarts at 0 cannot revive one.
+      await this.client.multi().incr(key).expire(key, 86_400).exec()
+    } catch (err) {
+      this.stats.errors++
+      console.error(
+        `❌ Money generation bump failed [${workspaceId}]:`,
+        err instanceof Error ? err.message : err,
+      )
+    }
+  }
+
   // ─── Set with specific TTL types ──────────────────────────
   async setShort<T>(key: string, value: T): Promise<boolean> {
     return this.set(key, value, CACHE_SHORT_TTL)
@@ -227,10 +322,15 @@ class CacheService {
   }
 
   // ─── Delete cache ──────────────────────────────────────────
+  // ⚠️ Deleting a money key bumps its workspace's generation first — every
+  // path that invalidates money (invalidateMoneyCaches, clearCache in the
+  // routes, memoryCache.invalidate in the services) then closes the
+  // cache-aside race, not only the ones that remember to.
   async del(key: string): Promise<boolean> {
     if (!this.isConnected) {
       return fallbackDel(key)
     }
+    if (isMoneyCacheKey(key)) await this.bumpMoneyGeneration(moneyScopeOf(key))
     try {
       const result = await this.client.del(key)
       this.stats.deletes++
@@ -250,6 +350,7 @@ class CacheService {
     if (!this.isConnected) {
       return fallbackDelPattern(pattern)
     }
+    if (isMoneyCacheKey(pattern)) await this.bumpMoneyGeneration(moneyScopeOf(pattern))
     try {
       let deletedCount = 0
       let cursor = '0'
@@ -272,6 +373,26 @@ class CacheService {
       const errorMessage = err instanceof Error ? err.message : String(err)
       console.error(`❌ Cache delPattern error [${pattern}]:`, errorMessage)
       return fallbackDelPattern(pattern)
+    }
+  }
+
+  // ─── List keys by pattern (SCAN, never KEYS) ──────────────
+  /** Keys matching `pattern` in the SHARED store; [] while Redis is down. */
+  async keys(pattern: string): Promise<string[]> {
+    if (!this.isConnected) return []
+    const found: string[] = []
+    let cursor = '0'
+    try {
+      do {
+        const [next, batch] = await this.client.scan(cursor, 'MATCH', pattern, 'COUNT', 100)
+        cursor = next
+        found.push(...batch)
+      } while (cursor !== '0')
+      return found
+    } catch (err) {
+      this.stats.errors++
+      console.error(`❌ Cache keys error [${pattern}]:`, err instanceof Error ? err.message : err)
+      return []
     }
   }
 

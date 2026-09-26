@@ -30,6 +30,10 @@ import { MEMORY_MONEY_PREFIXES, MONEY_CACHE_PREFIXES } from './money-cache-keys'
 export { MONEY_CACHE_PREFIXES } from './money-cache-keys'
 
 export async function invalidateMoneyCaches(workspaceId: string): Promise<void> {
+  // FIRST: from this instant no money entry of this workspace is served, on
+  // any instance — including one a slower read is about to write
+  // (cacheService.getMoney). The deletes below only reclaim the memory.
+  await cacheService.bumpMoneyGeneration(workspaceId)
   await Promise.all([
     ...MONEY_CACHE_PREFIXES.map((prefix) => cacheService.delPattern(`${prefix}:${workspaceId}:*`)),
     ...MEMORY_MONEY_PREFIXES.map((prefix) => memoryCache.invalidate(`${prefix}:${workspaceId}`)),

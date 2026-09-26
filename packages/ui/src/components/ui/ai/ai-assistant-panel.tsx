@@ -45,6 +45,40 @@ import { Send, Sparkles } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
 
+/**
+ * The «thinking» label, handed from the panel (which has `t`) down to the
+ * message components the library renders (which do not).
+ */
+const ThinkingLabel = React.createContext('')
+
+/**
+ * What an assistant message shows before its answer arrives.
+ *
+ * ⚠️ The library's default was a lone «●» — reported as «فقط یه نقطه هست»:
+ * nothing said the question had been received and was being worked on.
+ * The answer comes back whole (no streaming), so this is the whole wait.
+ * `Empty` is what the library renders for a message with no parts yet; its
+ * `status` says whether that message is still running.
+ */
+function ThinkingPart({ status }: { status: { type: string } }) {
+  const label = React.useContext(ThinkingLabel)
+  if (status.type !== 'running') return null
+  return (
+    <span
+      role="status"
+      data-thinking=""
+      className="inline-flex items-center gap-2 text-[hsl(var(--fg-secondary))]"
+    >
+      <span className="inline-flex gap-1" aria-hidden="true">
+        <span className="size-1.5 animate-bounce rounded-full bg-[hsl(var(--color-primary))] [animation-delay:-0.3s] motion-reduce:animate-none" />
+        <span className="size-1.5 animate-bounce rounded-full bg-[hsl(var(--color-primary))] [animation-delay:-0.15s] motion-reduce:animate-none" />
+        <span className="size-1.5 animate-bounce rounded-full bg-[hsl(var(--color-primary))] motion-reduce:animate-none" />
+      </span>
+      {label}
+    </span>
+  )
+}
+
 export interface AiAssistantPanelProps {
   t?: ((key: string, fallback?: string) => string) | undefined
   messages: ThreadMessageLike[]
@@ -88,53 +122,55 @@ export function AiAssistantPanel({
   })
 
   return (
-    <AssistantRuntimeProvider runtime={runtime}>
-      <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col bg-[hsl(var(--surface-base))]">
-        <ThreadPrimitive.Viewport className="flex-1 overflow-y-auto px-4 py-3">
-          <ThreadPrimitive.Empty>
-            <div className="flex flex-col items-center gap-2 py-10 text-center">
-              <Sparkles className="size-6 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-              <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
-                {tr('ai.emptyTitle', 'از دفترهایتان بپرسید')}
-              </p>
-              <p className="max-w-xs text-xs text-[hsl(var(--fg-tertiary))]">
-                {tr(
-                  'ai.emptyHint',
-                  'مثلاً: کدام مشتری بیشترین بدهی را دارد؟ · کدام کالاها به نقطه‌ی سفارش رسیده‌اند؟',
-                )}
-              </p>
-            </div>
-          </ThreadPrimitive.Empty>
+    <ThinkingLabel.Provider value={tr('ai.thinking', 'در حال فکر کردن…')}>
+      <AssistantRuntimeProvider runtime={runtime}>
+        <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col bg-[hsl(var(--surface-base))]">
+          <ThreadPrimitive.Viewport className="flex-1 overflow-y-auto px-4 py-3">
+            <ThreadPrimitive.Empty>
+              <div className="flex flex-col items-center gap-2 py-10 text-center">
+                <Sparkles className="size-6 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+                <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+                  {tr('ai.emptyTitle', 'از دفترهایتان بپرسید')}
+                </p>
+                <p className="max-w-xs text-xs text-[hsl(var(--fg-tertiary))]">
+                  {tr(
+                    'ai.emptyHint',
+                    'مثلاً: کدام مشتری بیشترین بدهی را دارد؟ · کدام کالاها به نقطه‌ی سفارش رسیده‌اند؟',
+                  )}
+                </p>
+              </div>
+            </ThreadPrimitive.Empty>
 
-          <ThreadPrimitive.Messages components={{ UserMessage, AssistantMessage }} />
-        </ThreadPrimitive.Viewport>
+            <ThreadPrimitive.Messages components={{ UserMessage, AssistantMessage }} />
+          </ThreadPrimitive.Viewport>
 
-        {notice ? <div className="px-4 pb-2">{notice}</div> : null}
+          {notice ? <div className="px-4 pb-2">{notice}</div> : null}
 
-        <ComposerPrimitive.Root className="flex items-end gap-2 border-t border-[hsl(var(--border-default))] p-3">
-          <ComposerPrimitive.Input
-            autoFocus
-            disabled={Boolean(disabled)}
-            placeholder={tr('ai.placeholder', 'سؤالتان را بنویسید…')}
-            rows={1}
-            className={cn(
-              'max-h-32 flex-1 resize-none rounded-xl px-3 py-2 text-sm',
-              'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
-              'text-[hsl(var(--fg-primary))] outline-none',
-              'focus:border-[hsl(var(--color-primary))]',
-              'disabled:opacity-50',
-            )}
-          />
-          <ComposerPrimitive.Send
-            disabled={Boolean(disabled)}
-            className="shrink-0 rounded-xl bg-[hsl(var(--color-primary))] p-2.5 text-[hsl(var(--color-primary-fg))] disabled:opacity-40"
-            aria-label={tr('ai.send', 'ارسال')}
-          >
-            <Send className="size-4" aria-hidden="true" />
-          </ComposerPrimitive.Send>
-        </ComposerPrimitive.Root>
-      </ThreadPrimitive.Root>
-    </AssistantRuntimeProvider>
+          <ComposerPrimitive.Root className="flex items-end gap-2 border-t border-[hsl(var(--border-default))] p-3">
+            <ComposerPrimitive.Input
+              autoFocus
+              disabled={Boolean(disabled)}
+              placeholder={tr('ai.placeholder', 'سؤالتان را بنویسید…')}
+              rows={1}
+              className={cn(
+                'max-h-32 flex-1 resize-none rounded-xl px-3 py-2 text-sm',
+                'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+                'text-[hsl(var(--fg-primary))] outline-none',
+                'focus:border-[hsl(var(--color-primary))]',
+                'disabled:opacity-50',
+              )}
+            />
+            <ComposerPrimitive.Send
+              disabled={Boolean(disabled)}
+              className="shrink-0 rounded-xl bg-[hsl(var(--color-primary))] p-2.5 text-[hsl(var(--color-primary-fg))] disabled:opacity-40"
+              aria-label={tr('ai.send', 'ارسال')}
+            >
+              <Send className="size-4" aria-hidden="true" />
+            </ComposerPrimitive.Send>
+          </ComposerPrimitive.Root>
+        </ThreadPrimitive.Root>
+      </AssistantRuntimeProvider>
+    </ThinkingLabel.Provider>
   )
 }
 
@@ -161,7 +197,7 @@ function AssistantMessage() {
           'whitespace-pre-wrap text-sm leading-relaxed text-[hsl(var(--fg-primary))]',
         )}
       >
-        <MessagePrimitive.Parts />
+        <MessagePrimitive.Parts components={{ Empty: ThinkingPart }} />
       </div>
     </MessagePrimitive.Root>
   )

@@ -25,13 +25,8 @@
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
 import type { TenancyContext } from '../tenancy.service'
-
-/** Allowance per plan when a workspace has no explicit override. */
-const PLAN_ALLOWANCE: Record<string, number> = {
-  free: 20,
-  pro: 500,
-  enterprise: 5000,
-}
+import { defaultsFor } from '../plan-limit-defaults'
+import { effectiveLimits } from '../plan-limits.service'
 
 const DEFAULT_PLAN = 'free'
 
@@ -71,7 +66,10 @@ export class AiQuotaService {
       this.usedThisMonth(ctx.workspaceId),
     ])
 
-    const planLimit = PLAN_ALLOWANCE[plan] ?? PLAN_ALLOWANCE[DEFAULT_PLAN]!
+    // The plan's allowance as the admin set it (plan-limits.service); AI is
+    // never unlimited, so a null there falls back to the built-in number.
+    const planLimit =
+      (await effectiveLimits(ctx.workspaceId, plan)).aiMonthly ?? defaultsFor(plan).aiMonthly ?? 0
     const limit = override === null ? planLimit : override
 
     return {

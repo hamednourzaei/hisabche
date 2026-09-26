@@ -14,10 +14,11 @@ import type { ActivityGroupDto, ActivityItemDto } from '@hisabche/api'
 import { entityRegistry, type EntityType } from '../../../lib/activity/entity-registry'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { useNow } from '../../../hooks/use-now'
+import { timeAgo } from '../../../lib/time-ago'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const STATUS_COLOR_CLASSES: Record<string, string> = {
+export const STATUS_COLOR_CLASSES: Record<string, string> = {
   amber: 'text-amber-500 bg-amber-500/10',
   emerald: 'text-emerald-500 bg-emerald-500/10',
   red: 'text-red-500 bg-red-500/10',
@@ -26,25 +27,7 @@ const STATUS_COLOR_CLASSES: Record<string, string> = {
   gray: 'text-gray-500 bg-gray-500/10',
 }
 
-function timeAgo(iso: string, now: number | null, t: (key: string) => string): string {
-  // `now` is null until mounted (see useNow) — the server and the first client
-  // render then agree on empty text instead of on two different clocks.
-  if (now === null) return ''
-  const minutes = Math.floor((now - new Date(iso).getTime()) / 60000)
-  if (!Number.isFinite(minutes) || minutes < 1) return t('time.justNow')
-  if (minutes < 60) return t('time.minutesAgo')
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return t('time.hoursAgo')
-  const days = Math.floor(hours / 24)
-  if (days < 7) return t('time.daysAgo')
-  const weeks = Math.floor(days / 7)
-  if (weeks < 4) return t('time.weeksAgo')
-  const months = Math.floor(days / 30)
-  if (months < 12) return t('time.monthsAgo')
-  return t('time.yearsAgo')
-}
-
-function formatAmount(amount: number, currency: string | undefined, locale: string): string {
+export function formatAmount(amount: number, currency: string | undefined, locale: string): string {
   try {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
@@ -56,7 +39,7 @@ function formatAmount(amount: number, currency: string | undefined, locale: stri
   }
 }
 
-function getEntityConfig(entityType: string) {
+export function getEntityConfig(entityType: string) {
   const key = entityType as EntityType
   return entityRegistry[key] ?? entityRegistry.invoice
 }

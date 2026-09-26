@@ -240,7 +240,9 @@ describe('the core boundary', () => {
 
   it('⚠️ the commission is credited in ONE place, not at each call site', () => {
     const billing = code(src('services/billing.service.ts'))
-    expect((billing.match(/this\.creditReferral\(/g) ?? []).length).toBe(2)
+    // One call per ACTIVATION PATH — a user-id upgrade (checkout), a row
+    // upgrade (webhook), an admin-approved request — all into creditReferral.
+    expect((billing.match(/this\.creditReferral\(/g) ?? []).length).toBe(3)
     expect(billing).toContain('referralService.recordPayment(')
   })
 

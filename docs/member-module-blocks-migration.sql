@@ -1,9 +1,9 @@
 -- ============================================================================
 -- PER-MEMBER PAGE BLOCKS — additive, idempotent, re-runnable.
 --
--- ⚠️ NOT YET RUN. Run it in the SQL Editor, then the verification query at the
--- bottom. Nothing in this repository executes DDL against the live database.
--- Status: PENDING HUMAN CONFIRMATION.
+-- ✅ RUN on the live database, 26 Sep 2026. Post-migration Audit: PASS — its
+-- rows in docs/VERIFY-multi-instance-2026-09-26.sql all ok = true (16/16 in
+-- total, reported by the user).
 --
 -- WHAT IT IS FOR
 --

@@ -20,8 +20,9 @@ export interface TableToolbarProps<T> {
   columns: readonly TableColumn<T>[]
   hiddenIds: readonly string[]
   onToggleColumn: (id: string) => void
-  searchValue: string
-  onSearchChange: (value: string) => void
+  /** Omit both to show no search control (a page whose filter is elsewhere). */
+  searchValue?: string | undefined
+  onSearchChange?: ((value: string) => void) | undefined
   /** Export buttons and other page-specific controls. */
   actions?: ReactNode
 }
@@ -55,14 +56,16 @@ function TableToolbarInner<T>({
     return () => window.removeEventListener('mousedown', onPointerDown)
   }, [menuOpen])
 
+  const hasSearch = onSearchChange !== undefined
+
   const closeSearch = useCallback(() => {
-    onSearchChange('')
+    onSearchChange?.('')
     setSearchOpen(false)
   }, [onSearchChange])
 
   return (
     <div className="flex items-center justify-end gap-1.5 pb-2">
-      {searchOpen ? (
+      {!hasSearch ? null : searchOpen ? (
         <div className="relative flex-1 sm:max-w-xs">
           <Search
             className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-[hsl(var(--fg-tertiary))]"
@@ -73,9 +76,9 @@ function TableToolbarInner<T>({
             type="text"
             inputMode="search"
             enterKeyHint="search"
-            value={searchValue}
+            value={searchValue ?? ''}
             placeholder={t('action.search', 'جستجو')}
-            onChange={(event) => onSearchChange(event.target.value)}
+            onChange={(event) => onSearchChange?.(event.target.value)}
             onKeyDown={(event) => event.key === 'Escape' && closeSearch()}
             className={cn(
               'h-10 w-full rounded-xl ps-9 pe-9 text-base sm:h-9 sm:text-sm',

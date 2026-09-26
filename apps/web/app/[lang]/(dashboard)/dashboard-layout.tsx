@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore, useThemeStore, useOnboardingStore, useWorkspaceStore } from '@hisabche/store'
-import { asList, useEmployees, useMyCapabilities, usePresence } from '@hisabche/api'
+import { useMyCapabilities } from '@hisabche/api'
 import { useTranslations, useLocale } from 'next-intl'
 import {
   DashboardHeader,
@@ -18,7 +18,7 @@ import {
   SubscriptionLockDialog,
   useSubscriptionLocked,
   isRouteAllowedWhenExpired,
-  type HeaderPerson,
+  useHeaderPeople,
   useToast,
 } from '@hisabche/ui'
 import { useEffect, useRef, useCallback, useMemo, useState, memo } from 'react'
@@ -401,81 +401,13 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
     return t(`team.role${cap(role)}` as never) as string
   }, [t, user?.role])
 
-  /**
-   * Who is in this workspace, and who is online right now.
-   *
-   * ⚠️ EVERYONE ANNOUNCES, ONLY THE PERMITTED SEE.
-   *
-   * `usePresence` joins the roster unconditionally — a colleague cannot appear
-   * online unless their own client says so — and returns nothing to a caller
-   * without `people.presence.read`. The server decides that capability; this
-   * is a rendering hint, and there is no endpoint here to protect.
-   *
-   * `can()` is `undefined` while the answer is still loading, so the menu
-   * shows «loading» rather than flashing «not allowed» at someone who is.
-   */
-  const { can } = useMyCapabilities()
-  const canSeePeople = can('people.presence.read')
-
-  const presence = usePresence(
-    user?.id
-      ? {
-          userId: user.id,
-          name: user.fullName || user.email || '',
-          // ⚠️ SPREAD, NOT ASSIGNED. `exactOptionalPropertyTypes` is on across
-          // the monorepo, so `role?: string` REFUSES an explicit `null` —
-          // and `user.role` is `string | null | undefined`. Assigning it
-          // compiles nowhere and failed the Vercel type check.
-          ...(user.email ? { email: user.email } : {}),
-          ...(user.role ? { role: user.role } : {}),
-        }
-      : null,
-    { canSee: canSeePeople === true },
+  // Who is in this workspace and who is online — the same hook the
+  // desktop/mobile shell uses (packages/ui use-header-people).
+  const translate = useCallback((key: string) => t(key as never) as string, [t])
+  const { people, canSeePeople, isLoadingPeople } = useHeaderPeople(
+    user?.id ? { id: user.id, fullName: user.fullName, email: user.email, role: user.role } : null,
+    translate,
   )
-
-  // Employees are only fetched for someone allowed to see the list.
-  const { data: employeesData, isLoading: isLoadingEmployees } = useEmployees(
-    canSeePeople === true ? { page: 1, limit: 100 } : {},
-  )
-
-  const people = useMemo<HeaderPerson[]>(() => {
-    if (canSeePeople !== true) return []
-
-    const rows = asList<{
-      id?: string
-      user_id?: string | null
-      first_name?: string | null
-      last_name?: string | null
-      email?: string | null
-      position?: string | null
-    }>((employeesData as { employees?: unknown } | undefined)?.employees)
-
-    // ⚠️ ME FIRST, and never twice. An owner who is also on the employee list
-    // would otherwise appear once as themselves and once as staff.
-    const me: HeaderPerson = {
-      userId: user?.id ?? null,
-      name: user?.fullName || user?.email || t('nav.account'),
-      ...(user?.email ? { email: user.email } : {}),
-      ...(roleLabel ? { roleLabel } : {}),
-      isOnline: true,
-    }
-
-    const colleagues = rows
-      .filter((row) => row.user_id && row.user_id !== user?.id)
-      .map((row) => {
-        const name = [row.first_name, row.last_name].filter(Boolean).join(' ').trim()
-        const online = presence.onlineIds.has(row.user_id as string)
-        return {
-          userId: row.user_id as string,
-          name: name || row.email || '',
-          ...(row.email ? { email: row.email } : {}),
-          ...(row.position ? { roleLabel: row.position } : {}),
-          isOnline: online,
-        } satisfies HeaderPerson
-      })
-
-    return [me, ...colleagues]
-  }, [canSeePeople, employeesData, presence.onlineIds, roleLabel, t, user])
 
   const hasHydrated = useAuthStore((s) => s.hasHydrated)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -533,8 +465,8 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
           userName={user?.fullName || undefined}
           userEmail={user?.email || undefined}
           people={people}
-          canSeePeople={canSeePeople === true}
-          isLoadingPeople={canSeePeople === undefined || isLoadingEmployees}
+          canSeePeople={canSeePeople}
+          isLoadingPeople={isLoadingPeople}
           lastSyncedAt={lastSyncedAt.current}
           isOnline={true}
           isSyncing={false}

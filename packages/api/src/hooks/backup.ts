@@ -45,3 +45,34 @@ export function useWorkspaceBackup() {
     return data
   }, [])
 }
+
+export type BackupFileFormat = 'md' | 'xlsx'
+
+/**
+ * Download the backup as Markdown or Excel (Pro and Enterprise — the server
+ * decides, answering 402 BACKUP_FORMAT_REQUIRES_PLAN otherwise).
+ *
+ * Saved through a temporary object URL from inside the click handler, so no
+ * document is read during render.
+ */
+export function useDownloadWorkspaceBackup() {
+  return useCallback(async (format: BackupFileFormat): Promise<void> => {
+    const response = await apiClient.get<Blob>('/workspaces/backup', {
+      params: { format },
+      responseType: 'blob',
+    })
+    const stamp = new Date().toISOString().slice(0, 10)
+    const url = URL.createObjectURL(response.data)
+    try {
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `hisabche-backup-${stamp}.${format}`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    } finally {
+      // Released on the next tick: some browsers start the save asynchronously.
+      setTimeout(() => URL.revokeObjectURL(url), 0)
+    }
+  }, [])
+}

@@ -39,6 +39,7 @@ import { useInvoiceDraft } from '../../../../hooks/invoices/use-invoice-draft'
 import { PreviewItemsTable } from '../preview-items-table'
 import { OversoldWarning } from '../oversold-warning'
 import { useOversoldLines } from '../use-oversold-lines'
+import { planLimitMessage } from '../../../../lib/plan-limit-message'
 
 const DEFAULT_DISPLAY: InvoiceDocumentDisplaySettings = {
   showSignature: true,
@@ -304,7 +305,11 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       // generic sentence, and nobody could tell WHICH step failed.
       const reason = (cause as { message?: unknown } | null)?.message
       const generic = t('invoiceBuilder.errors.createFailed', 'ثبت فاکتور ناموفق بود')
-      setError(typeof reason === 'string' && reason.trim() ? `${generic}: ${reason}` : generic)
+      // The plan's ceiling says what to do, not a code.
+      const limit = planLimitMessage(cause, (key, values) => t(key, values as never))
+      setError(
+        limit ?? (typeof reason === 'string' && reason.trim() ? `${generic}: ${reason}` : generic),
+      )
     }
   }, [
     issues.length,

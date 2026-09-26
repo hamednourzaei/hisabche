@@ -300,3 +300,30 @@ describe('the redirect guard keeps the locale', () => {
     expect(layout).toMatch(/currentLang\]\)/)
   })
 })
+
+describe('the identity pill has ONE status dot', () => {
+  // Reported: two green dots side by side on the pill — the connection dot and
+  // a second one in front of the online-people count. The count now sits
+  // beside the one connection dot, which turns red offline.
+  const header = code(join(UI, 'dashboard-header.tsx'))
+  const pill = header.slice(
+    header.indexOf('const IdentityMenu = memo('),
+    header.indexOf('</DropdownMenuTrigger>', header.indexOf('const IdentityMenu = memo(')),
+  )
+
+  it('exactly one dot on the trigger, and it is the connection dot', () => {
+    expect(pill.match(/rounded-full/g) ?? []).toHaveLength(1)
+    expect(pill).toContain("data-connection={isOnline ? 'online' : 'offline'}")
+    expect(pill).toContain(
+      "isOnline ? 'bg-[hsl(var(--color-success))]' : 'bg-[hsl(var(--color-destructive))]'",
+    )
+  })
+
+  it('the count sits with that dot, and only while online (offline it is a stale snapshot)', () => {
+    const dot = pill.indexOf('data-connection=')
+    const count = pill.indexOf('{onlineCount}')
+    expect(count).toBeGreaterThan(dot)
+    expect(pill).toMatch(/isOnline && canSeePeople && onlineCount > 0 \?/)
+    expect(pill.match(/\{onlineCount\}/g) ?? []).toHaveLength(1)
+  })
+})

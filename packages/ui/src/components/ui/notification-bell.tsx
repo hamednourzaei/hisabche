@@ -26,6 +26,7 @@ import { useIntlLocale } from '../../hooks/use-intl-locale'
 import { useNow } from '../../hooks/use-now'
 import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead } from '@hisabche/api'
 import type { Notification } from '@hisabche/api'
+import { timeAgo } from '../../lib/time-ago'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -90,21 +91,6 @@ const statusLabels: Record<string, string> = {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function timeAgo(d: string, now: number | null, t: (key: string) => string): string {
-  // `now` is null until mounted (see useNow): no clock is read during render.
-  if (now === null) return ''
-  const m = Math.floor((now - new Date(d).getTime()) / 60000)
-  if (m < 1) return t('time.justNow')
-  if (m < 60) return t('time.minutesAgo')
-  const h = Math.floor(m / 60)
-  if (h < 24) return t('time.hoursAgo')
-  const d2 = Math.floor(h / 24)
-  if (d2 < 7) return t('time.daysAgo')
-  const w = Math.floor(d2 / 7)
-  if (w < 4) return t('time.weeksAgo')
-  return t('time.monthsAgo')
-}
 
 // ✅ FIX: قبلاً فقط ۴ نوع entity شناخته می‌شد و بقیه (project، workflow،
 // purchase_order، ...) بی‌صدا به "/dashboard" سقوط می‌کردند. همچنین

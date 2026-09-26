@@ -1,9 +1,9 @@
 -- ============================================================================
 -- MULTI-INSTANCE SAFE BACKGROUND WORK — additive, idempotent, re-runnable.
 --
--- ⚠️ NOT YET RUN. Run it in the SQL Editor, then the verification query at the
--- bottom. Nothing in this repository executes DDL against the live database.
--- Status: PENDING HUMAN CONFIRMATION.
+-- ✅ RUN on the live database. Post-migration Audit: PASS — its rows in
+-- docs/VERIFY-background-jobs-and-realtime-2026-09-26.sql all ok = true
+-- (19/19 in total, reported by the user 26 Sep 2026).
 --
 -- ⚠️ RUN THIS BEFORE THE BACKEND RUNS ON MORE THAN ONE INSTANCE.
 --

@@ -36,6 +36,8 @@ import {
   type Plan,
   type SubscriptionStatus,
 } from '@/hooks/use-admin-subscriptions'
+import { UpgradeRequestsPanel } from './upgrade-requests-panel'
+import { PlanLimitsPanel } from './plan-limits-panel'
 
 const PAGE_SIZE = 20
 
@@ -97,6 +99,10 @@ export function SubscriptionsClient() {
 
   return (
     <div className="space-y-6">
+      {/* Paid plans are activated here, after payment — never by the customer. */}
+      <UpgradeRequestsPanel />
+      <PlanLimitsPanel />
+
       {/*
         Honest about a real limitation rather than shipping buckets that only
         cover the loaded page. See use-admin-subscriptions.ts.
@@ -320,6 +326,17 @@ function SubscriptionRow({
             t('admin.subscriptions.noPeriod')
           )}
         </div>
+
+        {/* Which business this is — the id support asks for and the AI quota
+            form takes. Selectable, so it can be copied. */}
+        {subscription.workspace_id && (
+          <div className="mt-1 text-xs text-muted-foreground">
+            {t('admin.subscriptions.workspaceId')}:{' '}
+            <code dir="ltr" className="select-all font-mono" data-workspace-id="">
+              {subscription.workspace_id}
+            </code>
+          </div>
+        )}
 
         {/* A subscription with no workspace_id is mid-migration. Saying so
             beats rendering an empty cell that looks like a bug. */}

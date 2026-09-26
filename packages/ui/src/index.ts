@@ -101,6 +101,7 @@ export { DashboardSidebar, BottomNav, type NavItem } from './components/ui/dashb
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/ui/tooltip'
 export { BrandMark, LOGO_SRC } from './components/ui/brand-mark'
 export { DashboardHeader, type HeaderPerson } from './components/ui/dashboard-header'
+export { useHeaderPeople, type HeaderPeopleUser } from './hooks/use-header-people'
 export { CommandPalette } from './components/ui/command-palette'
 export { GlobalSearch, type SearchPageItem } from './components/ui/global-search'
 

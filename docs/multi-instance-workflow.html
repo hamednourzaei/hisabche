@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>بک‌اند چندسروره حسابچه</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --ink: #14181f; --ink2: #4a5260; --ink3: #7a8392;
+  --line: #dde1e7; --green: #0f9d6b; --green-bg: #e3f6ee; --red: #d4453a; --red-bg: #fbe7e5;
+  --blue: #2f6fe0; --blue-bg: #e6eefc; --amber: #b97a06; --amber-bg: #fcf1dc;
+  --violet: #7a4fd6; --violet-bg: #efe9fb; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1116; --card: #161b22; --ink: #e8ecf1; --ink2: #b3bcc8; --ink3: #7f8a99;
+    --line: #2a313b; --green: #3ccf95; --green-bg: #11291f; --red: #ff7a6e; --red-bg: #2e1614;
+    --blue: #7aa6ff; --blue-bg: #14213a; --amber: #f0b949; --amber-bg: #2d220c;
+    --violet: #b497ff; --violet-bg: #221a38; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1116; --card: #161b22; --ink: #e8ecf1; --ink2: #b3bcc8; --ink3: #7f8a99;
+  --line: #2a313b; --green: #3ccf95; --green-bg: #11291f; --red: #ff7a6e; --red-bg: #2e1614;
+  --blue: #7aa6ff; --blue-bg: #14213a; --amber: #f0b949; --amber-bg: #2d220c;
+  --violet: #b497ff; --violet-bg: #221a38; --shadow: none;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: Vazirmatn, Tahoma, sans-serif; line-height: 1.8; }
+main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 80px; }
+h1 { font-size: 30px; font-weight: 800; margin: 0 0 6px; }
+h2 { font-size: 21px; font-weight: 800; margin: 48px 0 6px; display: flex; gap: 10px; align-items: center; }
+h2 .n { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--ink); color: var(--bg); font-size: 15px; }
+h3 { font-size: 16px; margin: 0 0 4px; }
+p.lead { color: var(--ink2); margin: 0 0 12px; }
+.sub { color: var(--ink3); font-size: 13px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); }
+.rule { border-inline-start: 4px solid var(--green); background: var(--green-bg); padding: 14px 18px; border-radius: 12px; font-weight: 500; margin: 18px 0; }
+code, .mono { font-family: ui-monospace, Consolas, monospace; font-size: .86em; direction: ltr; unicode-bidi: isolate; background: color-mix(in srgb, var(--ink) 7%, transparent); padding: 1px 6px; border-radius: 6px; }
+
+/* architecture */
+.arch { display: grid; gap: 14px; }
+.tier { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.box { border-radius: 14px; padding: 12px 16px; text-align: center; min-width: 150px; border: 1.5px solid var(--line); background: var(--card); }
+.box b { display: block; font-size: 15px; }
+.box small { color: var(--ink2); font-size: 12.5px; display: block; line-height: 1.6; }
+.b-user { background: var(--blue-bg); border-color: var(--blue); }
+.b-lb { background: var(--violet-bg); border-color: var(--violet); min-width: 320px; }
+.b-srv { background: var(--card); border-color: var(--ink3); border-style: dashed; min-width: 190px; }
+.b-pg { background: var(--green-bg); border-color: var(--green); }
+.b-redis { background: var(--red-bg); border-color: var(--red); }
+.b-rt { background: var(--amber-bg); border-color: var(--amber); }
+.down { text-align: center; color: var(--ink3); font-size: 22px; line-height: 1; }
+.shared { border: 2px solid var(--green); border-radius: 18px; padding: 14px; position: relative; margin-top: 6px; }
+.shared > .tag { position: absolute; top: -13px; inset-inline-start: 16px; background: var(--green); color: #fff; font-size: 12px; padding: 1px 10px; border-radius: 99px; font-weight: 700; }
+.srv-note { font-size: 12px; color: var(--ink3); margin-top: 4px; }
+
+/* request pipeline */
+.pipe { display: grid; gap: 0; }
+.step { display: grid; grid-template-columns: 46px 1fr minmax(0, 220px); gap: 14px; align-items: start; padding: 14px 0; border-bottom: 1px dashed var(--line); }
+.step:last-child { border-bottom: 0; }
+.dot { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; color: #fff; }
+.where { font-size: 12.5px; border-radius: 10px; padding: 6px 10px; font-weight: 500; }
+.w-redis { background: var(--red-bg); color: var(--red); }
+.w-pg { background: var(--green-bg); color: var(--green); }
+.w-both { background: var(--violet-bg); color: var(--violet); }
+.w-rt { background: var(--amber-bg); color: var(--amber); }
+.w-mem { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink2); }
+
+/* claim race */
+.race { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.lane { border-radius: 14px; padding: 14px; border: 1.5px solid var(--line); }
+.lane h3 { display: flex; align-items: center; gap: 8px; }
+.pill { font-size: 12px; padding: 1px 9px; border-radius: 99px; font-weight: 700; }
+.ok { background: var(--green-bg); color: var(--green); }
+.no { background: var(--red-bg); color: var(--red); }
+.lane ol { margin: 6px 0 0; padding-inline-start: 20px; font-size: 14px; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+
+/* timeline for cron */
+.tl { position: relative; height: 170px; margin-top: 10px; }
+.tl .axis { position: absolute; top: 80px; inset-inline: 0; height: 2px; background: var(--line); }
+.tl .tick { position: absolute; top: 72px; width: 2px; height: 18px; background: var(--ink3); }
+.tl .lbl { position: absolute; top: 96px; transform: translateX(50%); font-size: 12px; color: var(--ink3); white-space: nowrap; }
+.tl .ev { position: absolute; font-size: 12px; padding: 3px 8px; border-radius: 8px; transform: translateX(50%); white-space: nowrap; }
+
+/* failures table */
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: start; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 13px; color: var(--ink3); font-weight: 500; }
+.tbl-wrap { overflow-x: auto; }
+.check { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.check li { display: flex; gap: 10px; align-items: flex-start; }
+.check .s { flex: none; width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center; font-size: 13px; font-weight: 800; }
+footer { margin-top: 48px; color: var(--ink3); font-size: 12.5px; }
+
+@media (max-width: 640px) {
+  .step { grid-template-columns: 40px 1fr; }
+  .step .where { grid-column: 2; }
+  .race { grid-template-columns: 1fr; }
+  .b-lb { min-width: 0; width: 100%; }
+  h1 { font-size: 24px; }
+}
+</style>
+</head>
+<body>
+<main>
+
+<h1>بک‌اند حسابچه روی چند سرور — چه چیزی به چه چیزی وصل است</h1>
+<p class="lead">نسخه‌ی ۲۶ سپتامبر ۲۰۲۶ (بازبینی‌شده). هر ادعای این صفحه با کد یا تست واقعی چک شده؛ جایی که تضمینی نیست، صریحاً نوشته شده.</p>
+
+<div class="rule">قانون اصلی: همه‌ی سرورها از <b>یک منبع حقیقت مشترک</b> (Postgres) و قوانین یکسان استفاده می‌کنند و هیچ سروری چیزی را که برای درستی لازم است فقط در حافظه‌ی خودش نگه نمی‌دارد.
+ولی «مشترک بودن Postgres و Redis» به‌تنهایی درستی نمی‌آورد: نتیجه‌ی هر عملیات فقط وقتی قابل اتکاست که <b>تراکنش، قفل، idempotency، مجوز و سازگاری کش</b> آن عملیات جداگانه تضمین شده باشد. بقیه‌ی صفحه همین تضمین‌ها — و حدودشان — است.</div>
+
+<div class="row">
+  <div class="card"><h3>🐘 Postgres</h3><div class="sub">منبع حقیقت. هر چیزی که درست‌بودنش مهم است — پول، موجودی، مجوز، صف‌ها، نوبت cron — اینجاست.</div></div>
+  <div class="card"><h3>⚡ Redis</h3><div class="sub">شتاب‌دهنده و هماهنگ‌کننده: کش، شمارنده‌ی rate limit. از دست رفتنش داده‌ای را غلط نمی‌کند؛ فقط کندتر می‌کند و rate limit را تقریبی.</div></div>
+  <div class="card"><h3>🧩 Fastify</h3><div class="sub">اجراکننده‌ی بی‌حالت. هر سرور قابل تعویض است.</div></div>
+  <div class="card"><h3>📤 اثر خارجی</h3><div class="sub">ایمیل، نوتیفیکیشن، سرویس بیرونی: <b>حداقل یک بار</b> (at-least-once) + outbox پایدار + idempotency. «دقیقاً یک بار» ادعا نمی‌شود.</div></div>
+</div>
+
+<!-- ═══════════════════════ 1 ═══════════════════════ -->
+<h2><span class="n">۱</span>نقشه‌ی کلی</h2>
+<p class="lead">سرورها بی‌حالت‌اند؛ سه چیز پایین مشترک است.</p>
+
+<div class="card arch">
+  <div class="tier">
+    <div class="box b-user"><b>🌐 وب</b><small>hisabche.com (ورسل)</small></div>
+    <div class="box b-user"><b>🖥️ ویندوز</b><small>اپ دسکتاپ</small></div>
+    <div class="box b-user"><b>📱 موبایل</b><small>اندروید / iOS</small></div>
+  </div>
+  <div class="down">↓</div>
+  <div class="tier">
+    <div class="box b-lb"><b>⚖️ Load Balancer رندر</b><small>هر درخواست را به یکی از سرورها می‌دهد؛ sticky لازم نیست. فقط به سرورهایی که <span class="mono">/ready</span> آن‌ها ۲۰۰ است.</small></div>
+  </div>
+  <div class="down">↙ ↓ ↘</div>
+  <div class="tier">
+    <div class="box b-srv"><b>سرور ۱</b><small>Fastify · commit در <span class="mono">/api/health</span></small><div class="srv-note">کش ۵ ثانیه‌ای فقط برای داده‌ی غیرمالی</div></div>
+    <div class="box b-srv"><b>سرور ۲</b><small>Fastify · commit در <span class="mono">/api/health</span></small><div class="srv-note">کش ۵ ثانیه‌ای فقط برای داده‌ی غیرمالی</div></div>
+    <div class="box b-srv" style="opacity:.55"><b>سرور ۳ …</b><small>بعداً، بعد از تست بار</small></div>
+  </div>
+  <div class="down">↓ ↓ ↓</div>
+  <div class="shared">
+    <span class="tag">مشترک بین همه‌ی سرورها</span>
+    <div class="tier">
+      <div class="box b-pg"><b>🐘 Postgres (سوپابیس)</b><small>منبع حقیقت + قفل‌ها و صف‌ها<br>(claim با <span class="mono">SKIP LOCKED</span>)</small></div>
+      <div class="box b-redis"><b>⚡ Redis</b><small>کش مشترک، شمارنده‌ی rate limit،<br>نسخه‌ی کش مالی هر workspace</small></div>
+      <div class="box b-rt"><b>📡 Realtime سوپابیس</b><small>تغییر ۱۴ جدول را به کلاینت‌ها خبر می‌دهد<br>(برای تازه‌سازی صفحه، نه برای درستی)</small></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 2 ═══════════════════════ -->
+<h2><span class="n">۲</span>مسیر یک درخواست — مثال: ثبت پرداخت روی سرور ۱</h2>
+<p class="lead">کنار هر مرحله: داده‌اش کجاست، و اگر آنجا در دسترس نباشد چه می‌شود.</p>
+
+<div class="card pipe">
+  <div class="step">
+    <div class="dot" style="background:var(--red)">۱</div>
+    <div><h3>سقف درخواست (rate limit)</h3>
+      <div class="sub">شمارنده در Redis: سقف ۱۰۰ در دقیقه یعنی ۱۰۰ <b>در مجموع همه‌ی سرورها</b>.
+      <b>حد:</b> اگر Redis قطع باشد، هر سرور جدا می‌شمارد و هر درخواست را <span class="mono">RATE_LIMIT_INSTANCE_COUNT</span> بار حساب می‌کند — <u>تقریب</u>، نه سقف دقیق. اگر این عدد با تعداد واقعی سرورها فرق کند (autoscaling، سرورِ ازکارافتاده) سقف واقعی هم فرق می‌کند. تا این درست نشده autoscaling را روشن نکن.</div></div>
+    <div class="where w-redis">Redis · قطع: تقریب محلی</div>
+  </div>
+  <div class="step">
+    <div class="dot" style="background:var(--blue)">۲</div>
+    <div><h3>توکن کاربر (کیست؟)</h3>
+      <div class="sub">توکن با سوپابیس Auth تأیید و نتیجه با کلید <b>هش توکن</b> (نه خود توکن) کش می‌شود — تا ۶۰ ثانیه قبل از انقضای توکن، حداکثر یک ساعت. تمدید توکن (refresh) جدا از این کش است و خود کلاینت هر ساعت انجامش می‌دهد.
+      «خروج از همه‌ی دستگاه‌ها»: لحظه‌اش در Postgres (<span class="mono">profiles.sessions_valid_from</span>) است و Redis فقط ۶۰ ثانیه کشش می‌کند؛ روی هر مسیر، حتی کش‌شده، چک می‌شود. از دست رفتن Redis این را از بین نمی‌برد.
+      <b>حد:</b> خروج از <u>یک</u> دستگاه کش را پاک می‌کند، ولی سرور دیگر تا ۵ ثانیه ممکن است از کش محلی‌اش جواب دهد. timeout و circuit breaker جدا برای Auth نداریم.</div></div>
+    <div class="where w-both">Auth سوپابیس + Postgres؛ Redis فقط کش</div>
+  </div>
+  <div class="step">
+    <div class="dot" style="background:var(--violet)">۳</div>
+    <div><h3>workspace، نقش و قفل صفحه‌ها (اجازه دارد؟)</h3>
+      <div class="sub">از دیتابیس خوانده و <b>فقط</b> در Redis کش می‌شود — هرگز در حافظه‌ی سرور. کلید با workspace scope دارد و ۶۰ ثانیه عمر دارد. مالک دسترسی را بگیرد، کلید پاک می‌شود و سرور ۲ از درخواست بعدی رد می‌کند. Redis قطع باشد: اصلاً کش نمی‌شود، هر بار از دیتابیس.
+      <b>حد:</b> اگر پاک‌کردن کلید خودش شکست بخورد (Redis وسطش قطع شود)، مجوز قدیمی تا پایان TTL کش می‌ماند.</div></div>
+    <div class="where w-both">Postgres ← Redis (فقط مشترک)</div>
+  </div>
+  <div class="step">
+    <div class="dot" style="background:var(--green)">۴</div>
+    <div><h3>نوشتن پرداخت</h3>
+      <div class="sub">یک تابع Postgres (<span class="mono">payments_record</span>) در <b>یک تراکنش</b>: پرداخت + تخصیصش به فاکتورها. یا همه، یا هیچ. isolation پیش‌فرض Postgres (<span class="mono">READ COMMITTED</span>) + قفل صریح؛ کسر موجودی با <span class="mono">pg_advisory_xact_lock</span> روی (workspace، سند، سطر) که حتی وقتی ردیفی هنوز وجود ندارد کار می‌کند.
+      <span class="mono">Idempotency-Key</span>: روی خود ردیف پرداخت در <u>همان تراکنش</u> نوشته می‌شود، با قید یکتای (workspace، کلید). درخواست تکراری — دوبار کلیک، یا commit موفق + timeout + retry — نتیجه‌ی <b>همان پرداخت قبلی</b> را پس می‌گیرد (<span class="mono">replayed</span>)، نه خطا.</div></div>
+    <div class="where w-pg">Postgres (تراکنش + قفل)</div>
+  </div>
+  <div class="step">
+    <div class="dot" style="background:var(--red)">۵</div>
+    <div><h3>کهنه‌کردن کش مالی</h3>
+      <div class="sub">هر workspace یک <b>شماره‌ی نسخه‌ی مالی</b> در Redis دارد. هر پاک‌کردن کلید مالی — از هر مسیری — اول آن را یکی بالا می‌برد. مقدار کش‌شده با نسخه‌ای ذخیره می‌شود که <u>قبل از</u> خواندن دیتابیس دیده شده بود، و فقط اگر نسخه هنوز همان باشد جواب داده می‌شود.
+      این مسابقه را می‌بندد: درخواستی کُند که عدد قدیمی را خوانده، بعد از ثبت پرداخت آن را در کش می‌نویسد — ولی با نسخه‌ی قدیمی، پس هرگز نشان داده نمی‌شود.
+      <b>حد:</b> بالا بردن نسخه <u>بعد</u> از commit است، نه داخل آن. اگر سرور دقیقاً بین این دو بمیرد، کش قبلی تا پایان TTL می‌ماند — حداکثر ۵ دقیقه برای کلیدهای مالی.</div></div>
+    <div class="where w-redis">Redis · قطع: کش مالی خاموش</div>
+  </div>
+  <div class="step">
+    <div class="dot" style="background:var(--amber)">۶</div>
+    <div><h3>خبر به بقیه‌ی کاربران</h3>
+      <div class="sub">Realtime سوپابیس تغییر ردیف را به کلاینت‌های همان workspace خبر می‌دهد و صفحه‌ی همکارت دوباره از سرور می‌خواند. این برای <b>تازه‌سازی</b> است، نه زنجیره‌ی درستی: اگر پیامی نرسد، عدد غلط نمی‌شود، فقط دیرتر تازه می‌شود.</div></div>
+    <div class="where w-rt">Realtime · اختیاری برای درستی</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 3 ═══════════════════════ -->
+<h2><span class="n">۳</span>کارهای پس‌زمینه — «حداقل یک بار»، نه «دقیقاً یک بار»</h2>
+<p class="lead">هر سرور همان cronها و pollerها را دارد. قبل از انجام، ردیف را در Postgres <b>claim</b> می‌کند. این تضمین می‌کند دو سرور <u>هم‌زمان</u> یک کار را اجرا نکنند — نه اینکه یک کار هرگز دو بار اجرا نشود.</p>
+
+<div class="card">
+  <h3>مسابقه‌ی دو سرور سر یک کار</h3>
+  <div class="race" style="margin-top:10px">
+    <div class="lane" style="border-color:var(--green)">
+      <h3>سرور ۱ <span class="pill ok">برد</span></h3>
+      <ol>
+        <li><span class="mono">claim_…()</span>: Postgres ردیف را به اسم سرور ۱ می‌زند + مهلت (lease)</li>
+        <li>کار را انجام می‌دهد</li>
+        <li><span class="mono">complete_…()</span> — فقط اگر هنوز صاحبش باشد</li>
+      </ol>
+    </div>
+    <div class="lane" style="border-color:var(--red)">
+      <h3>سرور ۲ <span class="pill no">رد شد</span></h3>
+      <ol>
+        <li>همان لحظه همان را می‌پرسد</li>
+        <li><span class="mono">FOR UPDATE SKIP LOCKED</span>: ردیف گرفته‌شده را رد می‌کند</li>
+        <li>یک ردیف هرگز هم‌زمان به دو سرور داده نمی‌شود</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px; border-color:var(--amber)">
+  <h3>⚠️ جایی که یک کار دو بار اجرا می‌شود</h3>
+  <ol style="margin:6px 0 0; padding-inline-start:20px; font-size:14px">
+    <li>سرور ۱ کار را claim می‌کند و شروع می‌کند (مثلاً ایمیل را به Resend می‌دهد)</li>
+    <li>سرور ۱ گیر می‌کند یا می‌میرد — <b>بعد از</b> انجام اثر، قبل از <span class="mono">complete</span></li>
+    <li>مهلت تمام می‌شود؛ سرور ۲ همان کار را claim و <b>دوباره اجرا</b> می‌کند</li>
+    <li>اگر سرور ۱ بیدار شود، <span class="mono">complete</span> او رد می‌شود — ولی اثرِ انجام‌شده برنمی‌گردد</li>
+  </ol>
+  <p class="sub" style="margin-top:8px">پس درستی به <b>idempotent بودن خود کار</b> بستگی دارد:</p>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>کار</th><th>مهلت</th><th>اگر دو بار اجرا شود</th></tr></thead>
+    <tbody>
+      <tr><td>✉️ ایمیل (outbox)</td><td>۲ دقیقه</td><td>شناسه‌ی ردیف به‌عنوان <span class="mono">Idempotency-Key</span> به Resend می‌رود؛ طبق قرارداد Resend درخواست تکراری با همان کلید دوباره ارسال نمی‌شود — <u>در پنجره‌ی نگهداری کلید آن سرویس</u>. تضمینش با Resend است، نه با ما.</td></tr>
+      <tr><td>🔔 رویدادها</td><td>۵ دقیقه</td><td>امروز هیچ handlerی ثبت نشده؛ پردازش فقط ردیف را «انجام‌شده» می‌زند. هر handler آینده باید idempotent باشد.</td></tr>
+      <tr><td>📦 کار «فاکتورهای سررسیدگذشته»</td><td>۱۵ دقیقه</td><td>ممکن است نوتیفیکیشن تکراری بسازد. اثر مالی ندارد. هنوز dedupe ندارد (باز).</td></tr>
+      <tr><td>⏰ انقضای دوره‌ی آزمایشی</td><td>—</td><td>بر اساس وضعیت است نه اتفاق: اجرای دوم چیزی برای تغییر پیدا نمی‌کند.</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="row" style="margin-top:14px">
+  <div class="card">
+    <h3>⏰ cronها</h3>
+    <div class="sub">زمان‌بندی صریحاً <b>UTC</b> و شماره‌ی نوبت از زمان epoch — نه از ساعت محلی سرور. کلید اصلی <span class="mono">(task, slot)</span> در جدول: دو claim برای یک نوبت ممکن نیست.
+    <b>نوبت از دست‌رفته:</b> اگر ساعت ۰۰:۰۰ دیتابیس در دسترس نباشد، آن شب اجرا نمی‌شود و جبرانی نیست؛ ولی انقضای آزمایشی بر اساس وضعیت است و اجرای شب بعد هر چه جا مانده را می‌گیرد. بازیابی رویدادها هر ۳ دقیقه است.
+    <b>اختلاف ساعت سرورها:</b> ممکن است cron چند ثانیه دیرتر زنگ بزند؛ نوبت همان است چون از epoch حساب می‌شود.</div>
+  </div>
+  <div class="card">
+    <h3>☠️ کارِ شکست‌خورده کجا می‌رود</h3>
+    <div class="sub">سقف تلاش و backoff دارند و بعد می‌ایستند — تا بی‌نهایت تکرار نمی‌شوند:
+    کار پس‌زمینه → <span class="mono">failed</span>؛ رویداد → <span class="mono">dead</span> (دیگر claim نمی‌شود)؛ ایمیل → ۵ تلاش با فاصله‌ی ۱، ۲، ۴، ۸ دقیقه، بعد <span class="mono">failed</span> و متنش پاک.
+    <b>حد:</b> هشدار/داشبوردی برای این ردیف‌ها نداریم — شکست ثبت می‌شود ولی کسی خبردار نمی‌شود (باز).</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 4 ═══════════════════════ -->
+<h2><span class="n">۴</span>وقتی چیزی خراب می‌شود</h2>
+<div class="card tbl-wrap">
+<table>
+  <thead><tr><th>اتفاق</th><th>چه می‌شود</th><th>چه چیزی درست می‌ماند — و حدش</th></tr></thead>
+  <tbody>
+    <tr><td><b>سرور ۱ وسط کار کرش کرد</b></td><td>Load balancer بعد از شکست <span class="mono">/ready</span> ترافیک را به سرور ۲ می‌دهد (چند ثانیه تا ترافیک به سرور مرده هم می‌رسد). کارِ نیمه‌کاره بعد از مهلت به سرور ۲ می‌رسد.</td><td>تراکنش نیمه‌کاره rollback می‌شود. کارِ پس‌زمینه ممکن است دو بار اجرا شود (بخش ۳).</td></tr>
+    <tr><td><b>commit موفق، ولی جواب به کاربر نرسید</b></td><td>کلاینت با همان <span class="mono">Idempotency-Key</span> دوباره می‌فرستد.</td><td>همان نتیجه‌ی قبلی پس داده می‌شود. برای فاکتور، پرداخت، مشتری، کالا، تراکنش. عملیاتی بدون کلید چنین تضمینی ندارد.</td></tr>
+    <tr><td><b>سرور به دیتابیس نمی‌رسد</b></td><td><span class="mono">/ready</span> ← <b>۵۰۳</b>؛ load balancer ترافیک نمی‌فرستد.</td><td>قبلاً ۲۰۰ می‌داد و فقط در متن «disconnected» می‌نوشت — اصلاح شد.</td></tr>
+    <tr><td><b>Redis قطع شد</b></td><td>سایت کار می‌کند، کندتر. عدد مالی و مجوزها از دیتابیس؛ rate limit تقریبی (بخش ۲).</td><td>داده‌ای غلط نمی‌شود. بار روی دیتابیس و Auth بالا می‌رود.</td></tr>
+    <tr><td><b>Redis کند شد (نه قطع)</b></td><td>هر درخواست کندتر.</td><td><span class="mono">/api/health</span> وصل‌بودن را می‌گوید (<span class="mono">redisConnected</span>)، نه سرعت را. متریک latency نداریم (باز).</td></tr>
+    <tr><td><b>دو فروش هم‌زمان آخرین کالا</b></td><td>یکی موفق، دیگری خطای موجودی (آفلاین: تعارض برای تأیید مالک).</td><td>قفل advisory + <span class="mono">FOR UPDATE</span> در همان تراکنش؛ تست همزمانی روی دیتابیس زنده PASS ۵/۵.</td></tr>
+    <tr><td><b>deploy — نسخه‌ی قدیم و جدید هم‌زمان</b></td><td>در deploy رندر مدت کوتاهی هر دو نسخه جواب می‌دهند؛ <span class="mono">commit</span> در <span class="mono">/api/health</span> نشان می‌دهد کدام.</td><td>قانون: migration فقط افزایشی (G3) و کدِ جدید با نبودِ migration کار می‌کند — پس ترتیب migration و deploy مهم نیست. هیچ ستونی حذف نمی‌شود تا هیچ نسخه‌ای به آن نیاز نداشته باشد.</td></tr>
+    <tr><td><b>Postgres (سوپابیس) قطع شد</b></td><td>نوشتن متوقف. اپ‌های ویندوز/موبایل آفلاین کار می‌کنند و بعداً sync می‌کنند.</td><td>تنها منبع حقیقت — عمداً جایگزینی ندارد.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ═══════════════════════ 5 ═══════════════════════ -->
+<h2><span class="n">۵</span>بازبینی ۱۰ مورد بحرانی — وضعیت واقعی</h2>
+<p class="lead">از نقد ۱۰۰‌موردی. هر وضعیت با کد یا تست چک شده.</p>
+<div class="card tbl-wrap">
+<table>
+  <thead><tr><th>مسئله</th><th>وضعیت</th><th>توضیح</th></tr></thead>
+  <tbody>
+    <tr><td>ادعای «دقیقاً یک بار» برای کارها</td><td><span class="pill ok">اصلاح شد</span></td><td>ادعای متن غلط بود. حالا «حداقل یک بار» + جدول idempotency هر کار (بخش ۳).</td></tr>
+    <tr><td>پایان مهلت ← اثر خارجی تکراری</td><td><span class="pill" style="background:var(--amber-bg);color:var(--amber)">محدود</span></td><td>ایمیل: کلید idempotency به Resend. نوتیف سررسید: ممکن است تکرار شود (باز، بی‌اثر مالی).</td></tr>
+    <tr><td>پاک‌کردن کش بعد از commit اتمیک نیست</td><td><span class="pill" style="background:var(--amber-bg);color:var(--amber)">محدود</span></td><td>پنجره‌ی کرش بین commit و کهنه‌کردن: حداکثر ۵ دقیقه کش قدیمی. اتمیک‌کردن کامل نیازمند نسخه‌ی داخل تراکنش Postgres است (باز).</td></tr>
+    <tr><td>مسابقه‌ی cache-aside (نوشتن مقدار قدیمی بعد از پاک‌کردن)</td><td><span class="pill ok">اصلاح شد</span></td><td>نسخه‌ی مالی هر workspace؛ روی همه‌ی مسیرهای پاک‌کردن. تست: بدون این مکانیزم ۳ تست قرمز.</td></tr>
+    <tr><td>Redis در مسیر درستی auth/session</td><td><span class="pill ok">نبود</span></td><td>متن قبلی غلط می‌گفت «فقط در Redis». حقیقت در Postgres است؛ Redis فقط ۶۰ ثانیه کش. توکن خام دیگر کلید Redis نیست (هش).</td></tr>
+    <tr><td>قطع Redis سیاست rate limit را عوض می‌کند</td><td><span class="pill" style="background:var(--amber-bg);color:var(--amber)">پذیرفته</span></td><td>تقریب با <span class="mono">RATE_LIMIT_INSTANCE_COUNT</span>؛ نه باز کامل، نه قطع کل API. صریحاً در بخش ۲.</td></tr>
+    <tr><td>idempotency باید نتیجه را برگرداند</td><td><span class="pill ok">از قبل بود</span></td><td>کلید روی خود ردیف در همان تراکنش؛ تکرار ← <span class="mono">replayed</span> با همان شناسه. scope: (workspace، کلید).</td></tr>
+    <tr><td>deploy هم‌زمان کد قدیم/جدید + migration</td><td><span class="pill ok">قانون + دید</span></td><td>migration افزایشی و کدِ تحمل‌کننده (بخش ۴)؛ <span class="mono">commit</span> در health اضافه شد.</td></tr>
+    <tr><td><span class="mono">FOR UPDATE</span> به‌تنهایی برای موجودی کافی نیست</td><td><span class="pill ok">از قبل بود</span></td><td>قفل advisory روی کلید سطر، که بدون وجود ردیف هم کار می‌کند؛ PASS ۵/۵ روی دیتابیس زنده.</td></tr>
+    <tr><td>DLQ / سقف تلاش / poison job</td><td><span class="pill" style="background:var(--amber-bg);color:var(--amber)">نیمه</span></td><td>سقف تلاش، backoff و وضعیت پایانی (<span class="mono">failed</span>/<span class="mono">dead</span>) هست. هشدار و داشبورد نیست (باز).</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ═══════════════════════ 6 ═══════════════════════ -->
+<h2><span class="n">۶</span>هنوز باز — قبل از ۳ سرور یا بار جدی</h2>
+<div class="card">
+  <ul class="check">
+    <li><span class="s no">!</span><div><b>هشدار برای کارهای failed/dead و ایمیل‌های ارسال‌نشده</b> — امروز فقط در دیتابیس ثبت می‌شوند.</div></li>
+    <li><span class="s no">!</span><div><b>متریک latency برای Redis، Auth و دیتابیس</b> — health وصل‌بودن را می‌گوید، نه کندی را.</div></li>
+    <li><span class="s no">!</span><div><b>timeout / circuit breaker برای Auth سوپابیس</b> — با قطع Redis بار Auth بالا می‌رود.</div></li>
+    <li><span class="s no">!</span><div><b>نسخه‌ی مالی داخل تراکنش Postgres</b> — تا پنجره‌ی ۵ دقیقه‌ای کرش بین commit و Redis هم بسته شود.</div></li>
+    <li><span class="s no">!</span><div><b>dedupe نوتیفیکیشن سررسید</b> در اجرای تکراری.</div></li>
+    <li><span class="s no">!</span><div><b>HA بودن Redis رندر</b> (failover/persistence) — به پلن بستگی دارد و بررسی نشده؛ خوشبختانه درستی به آن وابسته نیست.</div></li>
+    <li><span class="s ok">✓</span><div>کش ۵ ثانیه‌ای داده‌ی <b>غیرمالی</b> بین سرورها — عمداً، برای سرعت.</div></li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════ 7 ═══════════════════════ -->
+<h2><span class="n">۷</span>بردن از ۱ به ۲ سرور — چک‌لیست</h2>
+<div class="card">
+  <ul class="check">
+    <li><span class="s ok">✓</span><div>۵ migration اجرا و وریفای شده: background-jobs (۵/۵)، realtime (۱۴/۱۴)، event-log (۴/۴)، member-blocks (۴/۴)، email-outbox (۸/۸)</div></li>
+    <li><span class="s no">۱</span><div>deploy این نسخه؛ بعد <span class="mono">/api/health</span> باید <span class="mono">redisConnected: true</span> و <span class="mono">commit</span> درست را نشان دهد</div></li>
+    <li><span class="s no">۲</span><div>در داشبورد رندر، <b>Health Check Path</b> را روی <span class="mono">/ready</span> بگذار (<span class="mono">/health</span> جواب ۴۰۱ می‌دهد)</div></li>
+    <li><span class="s no">۳</span><div><span class="mono">RATE_LIMIT_INSTANCE_COUNT=2</span>، بعد تعداد instance را ۲ کن. autoscaling خاموش بماند.</div></li>
+    <li><span class="s no">۴</span><div>تست بار و هم‌زمانی + تست خرابی (کشتن یک instance وسط کار)؛ متریک‌ها را ببین</div></li>
+    <li><span class="s no">۵</span><div>قبل از ۳+ سرور: موارد بخش ۶</div></li>
+  </ul>
+  <p class="sub" style="margin-top:12px">لازم نیست: Kubernetes، میکروسرویس، CQRS، read replica.</p>
+</div>
+
+<footer>منبع: <span class="mono">backend/src/services/distributed-work.ts</span>، <span class="mono">email-outbox.ts</span>، <span class="mono">cache.service.ts</span>، <span class="mono">utils/shared-rate-limit-store.ts</span>، <span class="mono">utils/money-cache-keys.ts</span>، <span class="mono">middleware/auth.middleware.ts</span>، <span class="mono">docs/*-migration.sql</span> · تست‌ها: <span class="mono">*.pg.test.ts</span> روی Postgres واقعی، <span class="mono">money-cache-race.test.ts</span>، <span class="mono">shared-rate-limit.test.ts</span>.</footer>
+</main>
+</body>
+</html>

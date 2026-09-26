@@ -68,6 +68,8 @@ const configSchema = z.object({
  * meaningful: the day someone writes a real body-supplied tenancy, it still
  * fails.
  */
+const testSchema = configSchema.pick({ provider: true, baseUrl: true, model: true, apiKey: true })
+
 const quotaSchema = z.object({
   // Null clears the override and returns the workspace to its plan allowance.
   // 0 is a real value meaning «none» and is NOT the same as null.
@@ -189,6 +191,36 @@ export async function aiChatRoutes(fastify: FastifyInstance) {
         )
       } catch (err) {
         return fail(reply, err, 'Failed to save the AI configuration')
+      }
+    },
+  )
+
+  // The admin's «test» button: one tiny real call with what is in the form.
+  // Nothing is saved. An empty key field means «the stored key», exactly as
+  // on save.
+  fastify.post(
+    '/api/ai/config/test',
+    { preHandler: adminOnly, schema: { body: toJsonSchema(testSchema) } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = testSchema.parse(request.body)
+        const apiKey = body.apiKey ?? (await settings.getStoredApiKey())
+        if (!apiKey) {
+          return reply.code(400).send({ error: 'AI_KEY_MISSING', code: 'AI_KEY_MISSING' })
+        }
+        return reply.send(
+          await chat.testConnection({
+            provider: body.provider,
+            baseUrl: body.baseUrl ?? null,
+            model: body.model,
+            apiKey,
+            systemPrompt: '',
+            topupContact: '',
+            isEnabled: true,
+          }),
+        )
+      } catch (err) {
+        return fail(reply, err, 'Failed to test the AI configuration')
       }
     },
   )

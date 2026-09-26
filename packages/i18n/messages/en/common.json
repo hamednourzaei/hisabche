@@ -2804,6 +2804,57 @@
     "dateRangeSeparator": "to"
   },
   "billing": {
+    "limitReached": {
+      "invoices": "Your plan allows {limit} invoices and they are used up. Upgrade under «Plan & billing» to add more.",
+      "users": "Your plan allows {limit} members and they are used up. Upgrade under «Plan & billing» to add more."
+    },
+    "request": {
+      "button": "Request upgrade",
+      "pendingLabel": "Awaiting approval",
+      "lowerPlan": "Lower plan",
+      "confirmTitle": "Request an upgrade to {plan}",
+      "howItWorks": "After you send the request and pay, support activates the plan. Your current plan does not change until then.",
+      "paymentMethod": "Payment method",
+      "methods": {
+        "card_to_card": "Card-to-card transfer",
+        "manual": "Arrange with support",
+        "gateway": "Payment gateway"
+      },
+      "reference": "Payment tracking number (optional)",
+      "note": "Note (optional)",
+      "submit": "Send request",
+      "dismiss": "Cancel",
+      "sent": "Request sent — it is activated once the payment is confirmed.",
+      "pendingBanner": "Your upgrade to {plan} is awaiting approval by support.",
+      "withdraw": "Withdraw request",
+      "adminNote": "Note from support:",
+      "validUntil": "Valid until {date}",
+      "notConfigured": "Subscription history is not set up yet.",
+      "errors": {
+        "UPGRADE_REQUEST_PENDING": "You already have an upgrade request awaiting approval.",
+        "ALREADY_ON_PLAN": "You are already on this plan.",
+        "UPGRADE_NOT_CONFIGURED": "Upgrades are not set up yet; please contact support.",
+        "UPGRADE_FORBIDDEN": "Only the owner or an admin of the business can change the plan."
+      },
+      "history": "Subscription history",
+      "noHistory": "Nothing recorded yet.",
+      "col": {
+        "date": "Date",
+        "event": "Event",
+        "plan": "Plan",
+        "amount": "Amount",
+        "until": "Valid until"
+      },
+      "events": {
+        "upgrade_requested": "Upgrade requested",
+        "upgrade_approved": "Activated",
+        "upgrade_rejected": "Rejected",
+        "upgrade_cancelled": "Request withdrawn",
+        "cancel_scheduled": "Cancels at period end",
+        "cancelled": "Cancelled",
+        "expired": "Expired"
+      }
+    },
     "loading": "Loading...",
     "title": "Billing & Subscription",
     "subtitle": "Manage your plan and subscription",
@@ -3210,6 +3261,15 @@
     "loadingMore": "Loading more...",
     "scrollForMore": "Scroll for more",
     "endOfList": "You've reached the end of the list",
+    "col": {
+      "entity": "Record",
+      "type": "Type",
+      "status": "Status",
+      "latest": "Latest event",
+      "amount": "Amount",
+      "actor": "By",
+      "time": "Time"
+    },
     "filter": {
       "all": "All",
       "unread": "Unread",
@@ -3587,6 +3647,78 @@
     "savedOffline": "The invoice is saved on this device and will be recorded as soon as you are back online."
   },
   "admin": {
+    "limits": {
+      "title": "Plan limits",
+      "hint": "Empty = the plan's default. «Unlimited» = no ceiling. Limits are enforced: once reached, new invoices or members are refused (trials are not limited).",
+      "invoices": "Invoices",
+      "users": "Members (users)",
+      "aiMonthly": "AI questions per month",
+      "unlimited": "Unlimited",
+      "default": "Default: {value}",
+      "unlimitedValue": "unlimited",
+      "save": "Save",
+      "saved": "Saved.",
+      "notConfigured": "Not set up yet; run docs/plan-limits-migration.sql.",
+      "aiRequired": "AI questions cost money and cannot be unlimited.",
+      "workspaceTitle": "Limits for one business",
+      "workspaceHint": "Wins over that business's plan. Copy the ID from the subscription list.",
+      "load": "Load",
+      "note": "Note"
+    },
+    "servers": {
+      "title": "Servers",
+      "description": "CPU and memory of each backend server, and how many run behind the load balancer",
+      "pick": "Server",
+      "self": "this server",
+      "cpu": "CPU",
+      "ram": "Memory (RAM)",
+      "gpu": "GPU",
+      "noGpu": "These servers have no GPU",
+      "uptime": "Up for",
+      "inflight": "Requests in flight",
+      "commit": "Build",
+      "seconds": "{n} s",
+      "empty": "No server has reported yet.",
+      "notShared": "Redis is unreachable; only the server that answered this page is visible.",
+      "scaleTitle": "Server count (load balancer)",
+      "scaleHint": "Render spreads traffic across every server. Each one is billed. After changing it, set RATE_LIMIT_INSTANCE_COUNT on Render to match.",
+      "scaleCurrent": "Now: {n} servers",
+      "scaleNew": "New count (at most {max})",
+      "scaleApply": "Apply",
+      "scaleDone": "Sent to Render; the new server appears in the list above within a few minutes.",
+      "scaleNotConfigured": "To add servers from here, set RENDER_API_KEY and RENDER_SERVICE_ID in the backend's Render settings.",
+      "scaleError": "Render refused the request:"
+    },
+    "upgrades": {
+      "title": "Upgrade requests",
+      "hint": "Approve once the money has arrived. Approval activates that business's plan from now and records it in its subscription history.",
+      "empty": "No requests in this state.",
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "cancelled": "Cancelled",
+        "all": "All"
+      },
+      "interval": {
+        "month": "Monthly",
+        "year": "Yearly"
+      },
+      "method": {
+        "card_to_card": "Card-to-card",
+        "gateway": "Gateway",
+        "manual": "Arranged"
+      },
+      "reference": "Tracking number",
+      "memberNote": "Customer note",
+      "amount": "Amount",
+      "amountAgreed": "Agreed amount (smallest unit, e.g. cents)",
+      "negotiated": "Negotiated",
+      "note": "Note (shown to the customer)",
+      "approve": "Approve and activate",
+      "reject": "Reject",
+      "done": "Done."
+    },
     "dashboard": {
       "title": "Platform dashboard",
       "planMix": "Plan mix",
@@ -3672,6 +3804,7 @@
       "label": "Pagination"
     },
     "subscriptions": {
+      "workspaceId": "Workspace ID",
       "title": "Subscriptions",
       "description": "Manage each business plan and subscription status",
       "workspace": "Workspace",
@@ -3755,6 +3888,14 @@
       "keyStored": "A key is stored — enter a new one to replace it",
       "keyMissing": "No key stored yet",
       "keyHint": "The key is never read back. Leaving this blank means \"do not change it\".",
+      "test": "Test connection",
+      "testing": "Testing…",
+      "testOk": "Connected — the model answered in {ms} ms.",
+      "testFailed": "The provider returned an error (status {status}):",
+      "testUnreachable": "The provider could not be reached:",
+      "testNoKey": "No key is stored or entered yet.",
+      "testHint": "Sends one small real question with the values in this form; nothing is saved.",
+      "baseUrlHint": "Both a base URL (…/v1) and the full endpoint (…/chat/completions) are accepted.",
       "systemPrompt": "Assistant task",
       "systemPromptHint": "Appended to the safety instructions, never replacing them.",
       "topupContact": "Top-up contact",
@@ -4825,6 +4966,7 @@
   },
   "ai": {
     "emptyHint": "For example: who owes the most? · what has reached its reorder point?",
+    "thinking": "Thinking…",
     "emptyTitle": "Ask about your books",
     "error": "I could not answer. Please try again.",
     "launch": "Ask the assistant",

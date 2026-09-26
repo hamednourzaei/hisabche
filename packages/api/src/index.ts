@@ -181,7 +181,13 @@ export {
 // ─── Workspace backup (G7) ────────────────────────────────
 // The real rows, not the localStorage list of backups that never contained
 // anything.
-export { useWorkspaceBackup, type WorkspaceBackup, type WorkspaceBackupMeta } from './hooks/backup'
+export {
+  useWorkspaceBackup,
+  useDownloadWorkspaceBackup,
+  type BackupFileFormat,
+  type WorkspaceBackup,
+  type WorkspaceBackupMeta,
+} from './hooks/backup'
 
 // ─── Realtime ─────────────────────────────────────────────
 export { useRealtime, useActiveWorkspaceId } from './hooks/useRealtime'
@@ -365,8 +371,14 @@ export {
   useTrialStatus,
   useUsage,
   useUpgrade,
+  useUpgradeRequests,
+  useCancelUpgradeRequest,
   useCancelSubscription,
   billingKeys,
+  type UpgradeRequest,
+  type SubscriptionEvent,
+  type UpgradeHistory,
+  type PaymentMethod,
   type BillingPlan,
   type UsageReport,
   type TrialStatus,
@@ -397,6 +409,8 @@ export {
   useInfiniteActivities,
   // ✅ renamed to avoid collision with hooks/notifications' useUnreadCount
   useUnreadCount as useUnreadActivityCount,
+  useActivityFilterCounts,
+  type ActivityFilterCounts,
   useEntityActivities,
   useEntitySummary,
 

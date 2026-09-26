@@ -23,8 +23,9 @@ export interface DataTableProps<T> {
   columns: readonly TableColumn<T>[]
   rowKey: (row: T, index: number) => string
   onRowClick?: ((row: T) => void) | undefined
-  searchValue: string
-  onSearchChange: (value: string) => void
+  /** Omit both for a table with no search control. */
+  searchValue?: string | undefined
+  onSearchChange?: ((value: string) => void) | undefined
   /** Export buttons, rendered next to the search and column icons. */
   actions?: ReactNode
   emptyState?: ReactNode

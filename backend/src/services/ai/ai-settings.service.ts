@@ -103,6 +103,23 @@ export class AiSettingsService {
     }
   }
 
+  /**
+   * ⚠️ INTERNAL ONLY. The stored key whether or not the assistant is enabled —
+   * so the admin can test a configuration BEFORE switching it on. Never
+   * returned from a route.
+   */
+  async getStoredApiKey(): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('ai_provider_settings')
+      .select('api_key')
+      .maybeSingle()
+    if (error) {
+      if (SCHEMA_ABSENT.has(error.code)) return null
+      throw new DatabaseError('Failed to read AI provider settings', error)
+    }
+    return (data as { api_key: string | null } | null)?.api_key || null
+  }
+
   /** What the admin panel renders. Never includes the key. */
   async getStatus(): Promise<AiProviderStatus | null> {
     const { data, error } = await supabase

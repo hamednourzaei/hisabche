@@ -1,13 +1,23 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import {
   useSubscription,
   useTrialStatus,
   useUsage,
-  useUpgrade,
+  useUpgradeRequests,
+  useCancelUpgradeRequest,
   useCancelSubscription,
+  type SubscriptionEvent,
 } from '@hisabche/api'
+import {
+  formatDate,
+  formatMoney,
+  fractionDigits,
+  resolveIntlLocale,
+  type KnownCurrency,
+  type UiLanguage,
+} from '@hisabche/formatting'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../card'
 import { Button } from '../../button'
 import { Badge } from '../../badge'
@@ -21,8 +31,17 @@ export function BillingContainer() {
   const { data: subscription, isLoading: subLoading } = useSubscription()
   const { data: trialStatus, isLoading: trialLoading } = useTrialStatus()
   const { data: usage, isLoading: usageLoading } = useUsage()
-  const upgrade = useUpgrade()
   const cancel = useCancelSubscription()
+  const lang = useLocale() as UiLanguage
+  const { data: history } = useUpgradeRequests()
+  const withdraw = useCancelUpgradeRequest()
+  const pendingRequest = history?.requests.find((r) => r.status === 'pending') ?? null
+  // Minor units → the currency's own amount; null = negotiated, shown as «—».
+  const money = (minor: number | null, currency: string | null) => {
+    if (minor === null || !currency) return '—'
+    const code = currency as KnownCurrency
+    return formatMoney(minor / 10 ** fractionDigits(code), code, resolveIntlLocale(lang))
+  }
 
   const isLoading = subLoading || trialLoading || usageLoading
 
@@ -94,6 +113,33 @@ export function BillingContainer() {
                 paid plan, so there is nothing left for this button to do. */}
           </div>
 
+          {!subscription.isTrial && subscription.plan !== 'free' && subscription.periodEnd ? (
+            <p className="text-sm text-[hsl(var(--fg-secondary))]" data-period-end="">
+              {t('billing.request.validUntil', { date: formatDate(subscription.periodEnd, lang) })}
+            </p>
+          ) : null}
+
+          {pendingRequest ? (
+            <div
+              role="status"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[hsl(var(--color-primary)/0.08)] p-2 text-sm"
+            >
+              <span>
+                {t('billing.request.pendingBanner', {
+                  plan: t(`billing.plans.${pendingRequest.requested_plan}.name`),
+                })}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={withdraw.isPending}
+                onClick={() => withdraw.mutate(pendingRequest.id)}
+              >
+                {t('billing.request.withdraw')}
+              </Button>
+            </div>
+          ) : null}
+
           {subscription.cancelAtPeriodEnd && (
             <div className="rounded-lg bg-[hsl(var(--color-warning)/0.1)] p-2 text-sm text-[hsl(var(--color-warning))]">
               ⚠️ {t('billing.cancelScheduled')}
@@ -113,9 +159,86 @@ export function BillingContainer() {
           the free plan AND to anyone on the trial, which is the case the old
           condition excluded. Someone already paying sees their plan marked as
           current rather than a wall of buy buttons. */}
-      {subscription.plan === 'free' || subscription.isTrial ? (
-        <PricingPage currentPlan={subscription.plan} isTrial={subscription.isTrial} />
+      {/* Anyone below the top plan may ask for a bigger one — a pro
+          subscriber had no way to reach enterprise (reported). */}
+      {subscription.plan !== 'enterprise' || subscription.isTrial ? (
+        <PricingPage
+          currentPlan={subscription.plan}
+          isTrial={subscription.isTrial}
+          pendingRequest={pendingRequest}
+        />
       ) : null}
+
+      {/* ─── Subscription log: every request, activation and its period ─── */}
+      <Card data-subscription-history="">
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">{t('billing.request.history')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!history ? null : !history.configured ? (
+            <p className="text-sm text-[hsl(var(--fg-tertiary))]">
+              {t('billing.request.notConfigured')}
+            </p>
+          ) : history.events.length === 0 ? (
+            <p className="text-sm text-[hsl(var(--fg-tertiary))]">
+              {t('billing.request.noHistory')}
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead>
+                  <tr className="border-b border-[hsl(var(--border-default))] text-xs text-[hsl(var(--fg-tertiary))]">
+                    <th className="px-2 py-2 text-start font-medium">
+                      {t('billing.request.col.date')}
+                    </th>
+                    <th className="px-2 py-2 text-start font-medium">
+                      {t('billing.request.col.event')}
+                    </th>
+                    <th className="px-2 py-2 text-start font-medium">
+                      {t('billing.request.col.plan')}
+                    </th>
+                    <th className="px-2 py-2 text-end font-medium">
+                      {t('billing.request.col.amount')}
+                    </th>
+                    <th className="px-2 py-2 text-start font-medium">
+                      {t('billing.request.col.until')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.events.map((event: SubscriptionEvent) => (
+                    <tr
+                      key={event.id}
+                      className="border-b border-[hsl(var(--border-default)/0.5)] last:border-0"
+                    >
+                      <td className="whitespace-nowrap px-2 py-2 tabular-nums">
+                        {formatDate(event.created_at, lang)}
+                      </td>
+                      <td className="px-2 py-2">
+                        {t(`billing.request.events.${event.event}`)}
+                        {event.note ? (
+                          <span className="block text-xs text-[hsl(var(--fg-tertiary))]">
+                            {event.note}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-2 py-2">
+                        {event.plan ? t(`billing.plans.${event.plan}.name`) : '—'}
+                      </td>
+                      <td className="px-2 py-2 text-end tabular-nums">
+                        {money(event.amount_minor, event.currency)}
+                      </td>
+                      <td className="whitespace-nowrap px-2 py-2 tabular-nums">
+                        {event.period_end ? formatDate(event.period_end, lang) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Usage */}
       {usage && (

@@ -16,6 +16,8 @@ import { PLAN_PRICING, intervalOfPeriod } from './plan-pricing'
 // Re-exported so existing importers keep working.
 export { PLAN_PRICING, intervalOfPeriod }
 import { referralService } from './referral'
+import { PLAN_LIMIT_DEFAULTS } from './plan-limit-defaults'
+import { effectiveLimits } from './plan-limits.service'
 
 /**
  * How a usage counter is scoped. Workspace-owned tables (the shared book) are
@@ -65,8 +67,8 @@ export const PLANS: Record<
   free: {
     name: 'Free',
     limits: {
-      invoices: 10,
-      users: 1,
+      invoices: PLAN_LIMIT_DEFAULTS.free.invoices,
+      users: PLAN_LIMIT_DEFAULTS.free.users,
       businesses: 1,
       reports: 0,
       transactions: 20,
@@ -83,8 +85,8 @@ export const PLANS: Record<
   pro: {
     name: 'Pro',
     limits: {
-      invoices: null,
-      users: null,
+      invoices: PLAN_LIMIT_DEFAULTS.pro.invoices,
+      users: PLAN_LIMIT_DEFAULTS.pro.users,
       businesses: null,
       reports: null,
       transactions: null,
@@ -102,8 +104,8 @@ export const PLANS: Record<
   enterprise: {
     name: 'Enterprise',
     limits: {
-      invoices: null,
-      users: null,
+      invoices: PLAN_LIMIT_DEFAULTS.enterprise.invoices,
+      users: PLAN_LIMIT_DEFAULTS.enterprise.users,
       businesses: null,
       reports: null,
       transactions: null,
@@ -509,6 +511,23 @@ export class BillingService {
     return this.mapSubscription(row)
   }
 
+  /**
+   * After the platform admin approved an upgrade (the plan itself was changed
+   * inside `approve_subscription_upgrade`): drop every cached view of this
+   * subscription and credit the referral, exactly as a paid activation does.
+   */
+  async afterApprovedUpgrade(rowId: string): Promise<void> {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('id', rowId)
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to read the activated subscription', error)
+    if (!data) return
+    await this.invalidateFor(data)
+    await this.creditReferral(data)
+  }
+
   // Same upgrade, addressed by OUR primary key. The webhook path resolves the
   // row from Stripe identifiers and then hands over the row id, so the mutation
   // is always scoped to the exact subscription record — never to a
@@ -793,7 +812,8 @@ export class BillingService {
       this.countUsage(userId, 'invoices', workspaceId),
       this.countUsage(userId, 'users', workspaceId),
       this.countUsage(userId, 'transactions', workspaceId),
-      this.getCurrentSubscription(userId),
+      // This workspace's plan — not whichever the user's first one is.
+      this.getCurrentSubscription(userId, workspaceId),
     ])
     const workspaces = await this.countUsage(userId, 'workspaces', workspaceId)
 
@@ -806,7 +826,9 @@ export class BillingService {
         workspaces,
         transactions,
       },
-      limits: plan.limits,
+      // The limits this workspace actually has — the admin's plan and
+      // workspace settings over the built-in defaults.
+      limits: { ...plan.limits, ...(await effectiveLimits(workspaceId, subscription.plan)) },
       plan: subscription.plan,
       isTrial: subscription.isTrial,
     }

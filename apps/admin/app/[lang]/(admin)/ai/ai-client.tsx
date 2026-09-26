@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { apiErrorMessage } from '@hisabche/api'
 
 import { Button, Input } from '@/components/ui'
 import { ErrorState, Panel } from '@/components/admin-shell/admin-ui'
@@ -9,6 +10,7 @@ import {
   useAdminAiConfig,
   useSaveAdminAiConfig,
   useSetWorkspaceAiQuota,
+  useTestAdminAiConfig,
 } from '@/hooks/use-admin-ai'
 
 /**
@@ -30,6 +32,7 @@ export function AiClient() {
   const { data: config, isLoading, isError, refetch } = useAdminAiConfig()
   const save = useSaveAdminAiConfig()
   const setQuota = useSetWorkspaceAiQuota()
+  const test = useTestAdminAiConfig()
 
   const [provider, setProvider] = useState<'anthropic' | 'openai'>('anthropic')
   const [model, setModel] = useState('claude-sonnet-4-5')
@@ -116,6 +119,9 @@ export function AiClient() {
               onChange={(event) => setBaseUrl(event.target.value)}
               placeholder="https://api.anthropic.com"
             />
+            <span className="block text-[11px] text-[hsl(var(--fg-tertiary))]">
+              {t('admin.ai.baseUrlHint')}
+            </span>
           </label>
 
           <label className="block space-y-1.5">
@@ -167,9 +173,65 @@ export function AiClient() {
             {t('admin.ai.enabled')}
           </label>
 
-          <Button type="submit" disabled={save.isPending || isLoading}>
-            {save.isPending ? t('common.saving') : t('common.save')}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="submit" disabled={save.isPending || isLoading}>
+              {save.isPending ? t('common.saving') : t('common.save')}
+            </Button>
+            {/* Tests what is IN THE FORM, before it is saved or enabled. The
+                key field is not cleared: the admin may still want to save it. */}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={test.isPending || !model.trim()}
+              onClick={() =>
+                test.mutate({
+                  provider,
+                  baseUrl: baseUrl.trim() ? baseUrl.trim() : null,
+                  model: model.trim(),
+                  ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
+                })
+              }
+            >
+              {test.isPending ? t('admin.ai.testing') : t('admin.ai.test')}
+            </Button>
+          </div>
+          <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">{t('admin.ai.testHint')}</p>
+
+          {test.data ? (
+            <div
+              role="status"
+              data-test-result={test.data.ok ? 'ok' : 'failed'}
+              className={
+                test.data.ok
+                  ? 'rounded-lg border border-[hsl(var(--color-success))] px-3 py-2 text-xs text-[hsl(var(--color-success))]'
+                  : 'rounded-lg border border-[hsl(var(--color-destructive))] px-3 py-2 text-xs text-[hsl(var(--color-destructive))]'
+              }
+            >
+              <p className="font-medium">
+                {test.data.ok
+                  ? t('admin.ai.testOk', { ms: test.data.latencyMs })
+                  : test.data.status === null
+                    ? t('admin.ai.testUnreachable')
+                    : t('admin.ai.testFailed', { status: test.data.status })}
+              </p>
+              {/* The provider's own words — the one thing that says WHY. */}
+              {test.data.detail ? (
+                <p
+                  dir="ltr"
+                  className="mt-1 break-words text-start font-mono text-[11px] opacity-90"
+                >
+                  {test.data.detail}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {test.isError ? (
+            <p className="text-xs text-[hsl(var(--color-destructive))]" role="alert">
+              {apiErrorMessage(test.error, t('admin.error.generic')) === 'AI_KEY_MISSING'
+                ? t('admin.ai.testNoKey')
+                : apiErrorMessage(test.error, t('admin.error.generic'))}
+            </p>
+          ) : null}
 
           {save.isError ? (
             <p className="text-xs text-[hsl(var(--color-destructive))]" role="alert">

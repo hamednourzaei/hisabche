@@ -5,15 +5,17 @@
 // only presentation changed.
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
-import { Search, CheckCheck } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
+import { CheckCheck } from 'lucide-react'
+import { formatCompactCount, type UiLanguage } from '@hisabche/formatting'
 import { cn } from '../../../lib/utils'
 import {
   useInfiniteActivities,
   useUnreadCount as useUnreadActivityCount,
   useMarkAllAsRead as useMarkAllActivitiesAsRead,
+  useActivityFilterCounts,
   type ActivityGroupDto,
   type ActivityItemDto,
   type ActivityFilter,
@@ -23,7 +25,6 @@ import { Badge } from '../badge'
 import { ActivityFeedList } from './ActivityFeedList'
 import { ActivitySkeleton } from './ActivitySkeleton'
 import { ActivityEmptyState } from './ActivityEmptyState'
-import { useDebounce } from '../../../hooks/activity/useDebounce'
 import { AuditContainer } from '../audit/containers/audit-container'
 
 // ─── Filter mapping (kept exactly as before — this logic is correct) ───────
@@ -48,17 +49,6 @@ const filterGroupsByType = (groups: ActivityGroupDto[], filter: FilterType): Act
   return groups.filter((g) => g.entityType === targetType)
 }
 
-const searchGroups = (groups: ActivityGroupDto[], query: string): ActivityGroupDto[] => {
-  const q = query.toLowerCase().trim()
-  if (!q) return groups
-  return groups.filter(
-    (group) =>
-      group.entitySummary.label.toLowerCase().includes(q) ||
-      (group.entitySummary.subtitle?.toLowerCase().includes(q) ?? false) ||
-      group.activities.some((a: ActivityItemDto) => a.title.toLowerCase().includes(q)),
-  )
-}
-
 // ─── Main Page Component ──────────────────────────────────────────────────────
 
 type SectionType = 'activity' | 'audit'
@@ -68,18 +58,14 @@ export function ActivitiesPage() {
   const router = useRouter()
   const [section, setSection] = useState<SectionType>('activity')
   const [filter, setFilter] = useState<FilterType>('all')
-  const [search, setSearch] = useState('')
-  const searchRef = useRef<HTMLInputElement>(null)
-
-  const debouncedSearch = useDebounce(search, 300)
+  const lang = useLocale() as UiLanguage
 
   const activityFilter = useMemo<ActivityFilter>(() => {
     const entityType = getEntityTypeFilter(filter)
     const result: ActivityFilter = {}
     if (entityType) result.type = entityType
-    if (debouncedSearch) result.search = debouncedSearch
     return result
-  }, [filter, debouncedSearch])
+  }, [filter])
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteActivities(activityFilter)
@@ -92,21 +78,11 @@ export function ActivitiesPage() {
     [data],
   )
 
-  const filteredGroups = useMemo(() => {
-    const typeFiltered = filterGroupsByType(allGroups, filter)
-    return search.trim() ? searchGroups(typeFiltered, search) : typeFiltered
-  }, [allGroups, filter, search])
+  const filteredGroups = useMemo(() => filterGroupsByType(allGroups, filter), [allGroups, filter])
 
-  const filterCounts = useMemo(
-    () => ({
-      all: allGroups.length,
-      unread: allGroups.filter((g) => g.unreadCount > 0).length,
-      invoices: allGroups.filter((g) => g.entityType === 'invoice').length,
-      payments: allGroups.filter((g) => g.entityType === 'payment').length,
-      customers: allGroups.filter((g) => g.entityType === 'customer').length,
-    }),
-    [allGroups],
-  )
+  // ⚠️ From the server, exact. These were the lengths of the pages loaded so
+  // far — «همه (12)» meant «12 on screen», whatever the account held.
+  const { data: filterCounts } = useActivityFilterCounts()
 
   const handleActivityClick = useCallback(
     (_activity: ActivityItemDto, group: ActivityGroupDto) => {
@@ -117,7 +93,9 @@ export function ActivitiesPage() {
   )
 
   return (
-    <div className="flex flex-col h-full w-full max-w-3xl md:max-w-4xl lg:max-w-5xl mx-auto px-3 md:px-4 lg:px-6">
+    // No side padding of its own: the route already pads the page. The two
+    // together left a wide empty margin on phones (reported).
+    <div className="flex flex-col h-full w-full">
       {/* ─── Header ─────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-2 pb-3 md:pb-4 lg:pb-5">
         <div className="flex items-center gap-2 min-w-0">
@@ -165,87 +143,44 @@ export function ActivitiesPage() {
         </div>
       ) : (
         <>
-          {/* ─── Toolbar: search + filter tabs ─────────────────── */}
+          {/* ─── Filter tabs (no search — removed at the owner's request) ─── */}
           <div className="space-y-2 md:space-y-3 lg:space-y-4 pb-3 md:pb-4 lg:pb-5 pt-3 md:pt-4 lg:pt-5">
-            <div className="relative">
-              <Search className="absolute start-2.5 md:start-3 lg:start-3.5 top-1/2 -translate-y-1/2 size-3.5 md:size-4 lg:size-[18px] text-[hsl(var(--fg-tertiary))]" />
-              <input
-                ref={searchRef}
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t('activity.search')}
-                className={cn(
-                  'w-full rounded-lg md:rounded-xl border border-[hsl(var(--border-default))] bg-transparent',
-                  'h-9 md:h-10 lg:h-11',
-                  'ps-8 md:ps-9 lg:ps-10 pe-3 md:pe-4 lg:pe-5',
-                  'text-xs md:text-sm lg:text-base text-[hsl(var(--fg-primary))]',
-                  'placeholder:text-[hsl(var(--fg-tertiary))]',
-                  'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.4)]',
-                )}
-              />
-            </div>
-
             <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
               <TabsList className="w-full md:w-auto flex-nowrap md:flex-wrap justify-start">
                 <TabsTrigger value="all">
                   {t('activity.filter.all')}
-                  {filterCounts.all > 0 && (
-                    <span className="text-[hsl(var(--fg-tertiary))] font-normal">
-                      ({filterCounts.all})
-                    </span>
-                  )}
+                  <TabCount count={filterCounts?.all} lang={lang} />
                 </TabsTrigger>
                 <TabsTrigger value="unread">
                   {t('activity.filter.unread')}
-                  {filterCounts.unread > 0 && (
-                    <span className="text-[hsl(var(--fg-tertiary))] font-normal">
-                      ({filterCounts.unread})
-                    </span>
-                  )}
+                  <TabCount count={filterCounts?.unread} lang={lang} />
                 </TabsTrigger>
                 <TabsTrigger value="invoices">
                   {t('activity.filter.invoices')}
-                  {filterCounts.invoices > 0 && (
-                    <span className="text-[hsl(var(--fg-tertiary))] font-normal">
-                      ({filterCounts.invoices})
-                    </span>
-                  )}
+                  <TabCount count={filterCounts?.invoices} lang={lang} />
                 </TabsTrigger>
                 <TabsTrigger value="payments">
                   {t('activity.filter.payments')}
-                  {filterCounts.payments > 0 && (
-                    <span className="text-[hsl(var(--fg-tertiary))] font-normal">
-                      ({filterCounts.payments})
-                    </span>
-                  )}
+                  <TabCount count={filterCounts?.payments} lang={lang} />
                 </TabsTrigger>
                 <TabsTrigger value="customers">
                   {t('activity.filter.customers')}
-                  {filterCounts.customers > 0 && (
-                    <span className="text-[hsl(var(--fg-tertiary))] font-normal">
-                      ({filterCounts.customers})
-                    </span>
-                  )}
+                  <TabCount count={filterCounts?.customers} lang={lang} />
                 </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
 
           {/* ─── Body ───────────────────────────────────────────── */}
-          <div className="flex-1 min-h-[400px] md:min-h-[500px] lg:min-h-[600px] rounded-xl md:rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] overflow-hidden">
+          <div className="flex-1 min-h-[400px]">
             {isLoading && allGroups.length === 0 ? (
               <ActivitySkeleton />
             ) : filteredGroups.length === 0 ? (
               <div className="p-4 md:p-6 lg:p-8">
                 <ActivityEmptyState
-                  title={search ? t('activity.empty.search') : t('activity.empty.title')}
+                  title={t('activity.empty.title')}
                   subtitle={
-                    search
-                      ? t('activity.empty.searchHint', { query: search })
-                      : filter === 'unread'
-                        ? t('activity.empty.unread')
-                        : t('activity.empty.all')
+                    filter === 'unread' ? t('activity.empty.unread') : t('activity.empty.all')
                   }
                 />
               </div>
@@ -266,3 +201,16 @@ export function ActivitiesPage() {
 }
 
 ActivitiesPage.displayName = 'ActivitiesPage'
+
+/** A tab badge: exact, and short past 999 («1.3k»). Nothing until known, or when zero. */
+function TabCount({ count, lang }: { count: number | undefined; lang: UiLanguage }) {
+  if (!count) return null
+  return (
+    <span
+      className="font-normal tabular-nums text-[hsl(var(--fg-tertiary))]"
+      data-tab-count={count}
+    >
+      ({formatCompactCount(count, lang)})
+    </span>
+  )
+}

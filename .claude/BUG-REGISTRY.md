@@ -412,7 +412,7 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 | ۵   | Supabase client بدون توکن کاربر (anon)                               | realtime با RLS هیچ ردیفی تحویل نمی‌داد                                                  | `accessToken` option + `setSupabaseTokenSource` — گارد `realtime-runs-as-the-user.test.ts`                                  |
 | ۶   | `ThemeProvider` برای `next-themes` mount نشده بود                    | دکمه‌ی تم کار نمی‌کرد (دسکتاپ و موبایل)                                                  | `useThemeStore` (همان store وب)                                                                                             |
 
-و موارد وابسته: جدول‌های داده در publication نبودند (`docs/realtime-data-tables-migration.sql` — **PENDING HUMAN CONFIRMATION**)؛
+و موارد وابسته: جدول‌های داده در publication نبودند (`docs/realtime-data-tables-migration.sql` — **PASS ۱۴/۱۴**، ۲۶ سپتامبر)؛
 خطای شبکه با ۵۰۰ واقعی قابل تشخیص نبود (`NETWORK_ERROR`)؛ WebView اندروید `online/offline` را اعلام نمی‌کرد (NetInfo → رویداد)؛
 `scalesPageToFit` + نبود `minimum-scale` صفحه را zoom-out و منوی پایین را بیرون می‌برد؛ blur در WebView لکه می‌انداخت (`data-host`)؛
 `better-sqlite3` به‌عنوان optionalDependency در بسته‌ی ویندوز جمع نمی‌شد (`Cannot find module`) → dependencies.

@@ -1,5 +1,13 @@
 import type { LucideIcon } from 'lucide-react'
-import { Building2, CreditCard, LayoutDashboard, ScrollText, Sparkles, Users } from 'lucide-react'
+import {
+  Building2,
+  CreditCard,
+  LayoutDashboard,
+  ScrollText,
+  Server,
+  Sparkles,
+  Users,
+} from 'lucide-react'
 
 /**
  * The admin navigation — six destinations, each backed by an endpoint that
@@ -69,6 +77,14 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     titleKey: 'admin.ai.title',
     descriptionKey: 'admin.ai.description',
     endpoint: 'GET /ai/config',
+  },
+  {
+    id: 'servers',
+    path: '/servers',
+    icon: Server,
+    titleKey: 'admin.servers.title',
+    descriptionKey: 'admin.servers.description',
+    endpoint: 'GET /admin/instances',
   },
   {
     id: 'auditLogs',

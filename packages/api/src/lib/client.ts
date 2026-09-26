@@ -19,6 +19,8 @@ export interface ApiError {
   code: string
   status: number
   details?: Record<string, string[]>
+  /** PLAN_LIMIT_REACHED: which ceiling, how high, how much is used. */
+  limit?: { feature: string; limit: number; used: number } | undefined
 }
 
 // ============================================
@@ -315,6 +317,15 @@ apiClient.interceptors.response.use(
       code: responseData?.code || (error.response ? 'UNKNOWN_ERROR' : 'NETWORK_ERROR'),
       status: error.response?.status || 500,
       details: responseData?.details,
+      ...(responseData?.code === 'PLAN_LIMIT_REACHED'
+        ? {
+            limit: {
+              feature: responseData.feature,
+              limit: responseData.limit,
+              used: responseData.used,
+            },
+          }
+        : {}),
     }
 
     // ✅ ۴۰۱ → فقط callback صدا می‌شود (بدون logout، بدون loop)

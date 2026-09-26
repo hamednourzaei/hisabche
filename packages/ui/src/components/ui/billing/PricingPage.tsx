@@ -42,9 +42,17 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Check, Loader2 } from 'lucide-react'
 
-import { usePlans, useUpgrade, type BillingPlan } from '@hisabche/api'
+import {
+  apiErrorMessage,
+  usePlans,
+  useUpgrade,
+  type BillingPlan,
+  type PaymentMethod,
+  type UpgradeRequest,
+} from '@hisabche/api'
 
 import { Badge } from '../badge'
+import { SelectField } from '../select-field'
 import { Button } from '../button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../card'
 import { cn } from '../../../lib/utils'
@@ -56,6 +64,8 @@ export interface PricingPageProps {
   currentPlan?: string | undefined
   /** True while the trial is running — a trial user may still upgrade. */
   isTrial?: boolean | undefined
+  /** The workspace's request awaiting approval — no second one can be sent. */
+  pendingRequest?: UpgradeRequest | null | undefined
 }
 
 /** The amount, with whatever currency the SERVER declared. Never a guess. */
@@ -88,11 +98,28 @@ function yearlySaving(plan: BillingPlan): number | null {
   return Math.round(((full - plan.priceYearly) / full) * 100)
 }
 
-export function PricingPage({ currentPlan, isTrial }: PricingPageProps = {}) {
+/** Order of the plans — nothing lower than the current one can be «bought». */
+const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, enterprise: 2 }
+
+/** A server refusal as a sentence: the codes the upgrade routes answer with. */
+const UPGRADE_ERROR_CODES = [
+  'UPGRADE_REQUEST_PENDING',
+  'ALREADY_ON_PLAN',
+  'UPGRADE_NOT_CONFIGURED',
+  'UPGRADE_FORBIDDEN',
+]
+
+export function PricingPage({ currentPlan, isTrial, pendingRequest }: PricingPageProps = {}) {
   const t = useTranslations()
   const { data: plans, isLoading } = usePlans()
   const upgrade = useUpgrade()
   const [interval, setInterval] = useState<Interval>('month')
+  // The plan being requested: its form opens under the cards.
+  const [chosen, setChosen] = useState<BillingPlan | null>(null)
+  const [method, setMethod] = useState<PaymentMethod>('card_to_card')
+  const [reference, setReference] = useState('')
+  const [note, setNote] = useState('')
+  const currentRank = PLAN_RANK[currentPlan ?? 'free'] ?? 0
 
   if (isLoading) {
     return (
@@ -144,6 +171,8 @@ export function PricingPage({ currentPlan, isTrial }: PricingPageProps = {}) {
       <div className="grid gap-4 md:grid-cols-3">
         {plans.map((plan) => {
           const isCurrent = currentPlan === plan.plan && !isTrial
+          // Nothing below the plan already paid for is on sale here.
+          const isLower = !isTrial && (PLAN_RANK[plan.plan] ?? 0) < currentRank
           const isPopular = plan.plan === 'pro'
           const amount = priceFor(plan, interval)
           const saving = interval === 'year' ? yearlySaving(plan) : null
@@ -209,18 +238,19 @@ export function PricingPage({ currentPlan, isTrial }: PricingPageProps = {}) {
                   variant={isPopular ? 'default' : 'outline'}
                   // The free plan is where you already are if you have not
                   // paid; there is nothing to buy.
-                  disabled={isCurrent || plan.plan === 'free' || upgrade.isPending}
-                  onClick={() => upgrade.mutate({ plan: plan.plan, interval })}
+                  disabled={isCurrent || isLower || plan.plan === 'free' || Boolean(pendingRequest)}
+                  onClick={() => {
+                    upgrade.reset()
+                    setChosen(plan)
+                  }}
                 >
-                  {upgrade.isPending ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  ) : isCurrent ? (
-                    t('billing.currentPlanLabel')
-                  ) : plan.priceMonthly === null && plan.plan !== 'free' ? (
-                    t('billing.contactUs')
-                  ) : (
-                    t('billing.upgradeNow')
-                  )}
+                  {isCurrent
+                    ? t('billing.currentPlanLabel')
+                    : pendingRequest?.requested_plan === plan.plan
+                      ? t('billing.request.pendingLabel')
+                      : isLower
+                        ? t('billing.request.lowerPlan')
+                        : t('billing.request.button')}
                 </Button>
               </CardFooter>
             </Card>
@@ -228,9 +258,104 @@ export function PricingPage({ currentPlan, isTrial }: PricingPageProps = {}) {
         })}
       </div>
 
+      {/* ─── The request ─────────────────────────────────────────────
+          ⚠️ Not «buy now»: this records a request, and support activates the
+          plan after the payment arrives. The form says so before it is sent. */}
+      {chosen && !upgrade.isSuccess ? (
+        <Card data-upgrade-form="">
+          <CardHeader>
+            <CardTitle className="text-base">
+              {t('billing.request.confirmTitle', { plan: t(`billing.plans.${chosen.plan}.name`) })}
+            </CardTitle>
+            <CardDescription>{t('billing.request.howItWorks')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form
+              className="space-y-3"
+              onSubmit={(event) => {
+                event.preventDefault()
+                upgrade.mutate({
+                  plan: chosen.plan,
+                  interval,
+                  paymentMethod: method,
+                  paymentReference: reference.trim() || undefined,
+                  note: note.trim() || undefined,
+                })
+              }}
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1 text-sm">
+                  <span className="text-[hsl(var(--fg-secondary))]">
+                    {t('billing.request.paymentMethod')}
+                  </span>
+                  <SelectField
+                    name="paymentMethod"
+                    data-field="paymentMethod"
+                    value={method}
+                    onChange={(value) => setMethod(value as PaymentMethod)}
+                    options={[
+                      { value: 'card_to_card', label: t('billing.request.methods.card_to_card') },
+                      { value: 'manual', label: t('billing.request.methods.manual') },
+                    ]}
+                    className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2"
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="text-[hsl(var(--fg-secondary))]">
+                    {t('billing.request.reference')}
+                  </span>
+                  <input
+                    name="paymentReference"
+                    value={reference}
+                    maxLength={120}
+                    onChange={(event) => setReference(event.target.value)}
+                    className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2"
+                  />
+                </label>
+              </div>
+              <label className="block space-y-1 text-sm">
+                <span className="text-[hsl(var(--fg-secondary))]">{t('billing.request.note')}</span>
+                <textarea
+                  name="note"
+                  value={note}
+                  maxLength={500}
+                  rows={2}
+                  onChange={(event) => setNote(event.target.value)}
+                  className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2"
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" disabled={upgrade.isPending}>
+                  {upgrade.isPending ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    t('billing.request.submit')
+                  )}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setChosen(null)}>
+                  {t('billing.request.dismiss')}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {upgrade.isSuccess ? (
+        <p role="status" className="text-center text-sm text-[hsl(var(--color-success))]">
+          {t('billing.request.sent')}
+        </p>
+      ) : null}
+
       {upgrade.isError ? (
         <p className="text-center text-sm text-[hsl(var(--color-destructive))]" role="alert">
-          {(upgrade.error as Error).message}
+          {(() => {
+            const code = apiErrorMessage(
+              upgrade.error,
+              t('billing.request.errors.UPGRADE_NOT_CONFIGURED'),
+            )
+            return UPGRADE_ERROR_CODES.includes(code) ? t(`billing.request.errors.${code}`) : code
+          })()}
         </p>
       ) : null}
     </div>

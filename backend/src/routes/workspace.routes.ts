@@ -15,11 +15,14 @@ import {
 } from '@hisabche/validation'
 import { WorkspaceService } from '../services/workspace.service'
 import { BackupService } from '../services/workspace/backup.service'
+import { backupToMarkdown, backupToXlsx } from '../services/workspace/backup-formats'
+import { BillingService } from '../services/billing.service'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireActiveSubscriptionForWorkspaceParam } from '../middleware/subscription.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
+import { PlanLimitError } from '../services/plan-limits.service'
 
 const toJsonSchema = (schema: any) => {
   const r = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -30,6 +33,7 @@ const toJsonSchema = (schema: any) => {
 export async function workspaceRoutes(fastify: FastifyInstance) {
   const svc = new WorkspaceService()
   const backupSvc = new BackupService()
+  const billingForBackup = new BillingService()
 
   // ─── GET /api/workspaces/backup ─────────────────────────
   //
@@ -53,15 +57,47 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        const format = String((request.query as { format?: unknown }).format ?? 'json')
+        if (!['json', 'md', 'xlsx'].includes(format)) {
+          return reply.code(400).send({ error: 'UNKNOWN_FORMAT', code: 'UNKNOWN_FORMAT' })
+        }
+        // Markdown and Excel are the paid plans' — decided by THIS workspace's
+        // subscription on the server, not by which button the page showed.
+        if (format !== 'json') {
+          const subscription = await billingForBackup.getCurrentSubscription(
+            request.tenancy.userId,
+            request.tenancy.workspaceId,
+          )
+          if (!['pro', 'enterprise'].includes(subscription.plan) || subscription.isTrial) {
+            return reply
+              .code(402)
+              .send({ error: 'BACKUP_FORMAT_REQUIRES_PLAN', code: 'BACKUP_FORMAT_REQUIRES_PLAN' })
+          }
+        }
+
         const backup = await backupSvc.export(request.tenancy)
 
         // Sent as an attachment with a dated filename, so the browser saves it
-        // instead of rendering a wall of JSON.
+        // instead of rendering it.
         const stamp = new Date().toISOString().slice(0, 10)
-        return reply
-          .header('Content-Type', 'application/json; charset=utf-8')
-          .header('Content-Disposition', `attachment; filename="hisabche-backup-${stamp}.json"`)
-          .send(backup)
+        reply.header(
+          'Content-Disposition',
+          `attachment; filename="hisabche-backup-${stamp}.${format}"`,
+        )
+        if (format === 'md') {
+          return reply
+            .header('Content-Type', 'text/markdown; charset=utf-8')
+            .send(backupToMarkdown(backup))
+        }
+        if (format === 'xlsx') {
+          return reply
+            .header(
+              'Content-Type',
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
+            .send(backupToXlsx(backup))
+        }
+        return reply.header('Content-Type', 'application/json; charset=utf-8').send(backup)
       } catch (err) {
         // `ForbiddenError` is a 403 and lands here — a member who is not the
         // owner is refused, not told the server crashed.
@@ -302,12 +338,18 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         const { id } = req.params as any
         const data = createInviteSchema.omit({ workspaceId: true }).parse(req.body)
         const invite = await svc.createInvite(req.userId, { ...data, workspaceId: id })
-        console.log('[route] createInvite result:', invite)
+        // ⚠️ Not logged: the result carries the raw invite token — anyone who
+        // can read the server logs could accept the invitation in its place.
         await clearCache(`workspace-invites:${id}:*`)
         return reply.code(201).send(invite)
       } catch (e) {
         if (e instanceof z.ZodError)
           return reply.code(400).send({ error: 'Validation', details: e.errors })
+        if (e instanceof PlanLimitError) {
+          return reply
+            .code(e.statusCode)
+            .send({ error: e.code, code: e.code, feature: e.feature, limit: e.limit, used: e.used })
+        }
         fastify.log.error(e)
         return reply.code(500).send({ error: 'Failed to create invite' })
       }

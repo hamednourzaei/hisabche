@@ -48,6 +48,27 @@ export async function activityRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /api/v1/activities/counts ─────────────────────────────────────
+  // Exact badge counts for the five tabs (all / unread / invoices / payments /
+  // customers) — not the length of whatever pages the client has loaded.
+  fastify.get(
+    '/api/v1/activities/counts',
+    {
+      preHandler: [
+        authenticate,
+        cacheMiddleware({ scope: 'user', ttl: 15, keyPrefix: 'activities-counts' }),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send(await activityService.getFilterCounts(request.userId))
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to count activities' })
+      }
+    },
+  )
+
   // ─── GET /api/v1/activities/unread-count ──────────────────────────────
   fastify.get(
     '/api/v1/activities/unread-count',
@@ -83,6 +104,7 @@ export async function activityRoutes(fastify: FastifyInstance) {
         await activityService.markAsRead(userId, ids)
         await clearCache(`activities:${userId}:*`)
         await clearCache(`activities-unread:${userId}:*`)
+        await clearCache(`activities-counts:${userId}:*`)
 
         return reply.send({ success: true })
       } catch (err: any) {
@@ -105,6 +127,7 @@ export async function activityRoutes(fastify: FastifyInstance) {
         await activityService.markAllAsRead(userId)
         await clearCache(`activities:${userId}:*`)
         await clearCache(`activities-unread:${userId}:*`)
+        await clearCache(`activities-counts:${userId}:*`)
 
         return reply.send({ success: true })
       } catch (err: any) {

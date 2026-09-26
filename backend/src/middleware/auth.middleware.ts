@@ -12,6 +12,7 @@
 // auth حدود ۸.۳ ساعت (نه ۳۰ ثانیه) زنده بماند.
 // ============================================
 
+import { createHash } from 'node:crypto'
 import { FastifyRequest, FastifyReply } from 'fastify'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { supabase } from '../db'
@@ -132,6 +133,18 @@ function getTokenIssuedAtSeconds(token: string): number | null {
   }
 }
 
+/**
+ * The auth cache key for a token — a HASH of it, never the token.
+ *
+ * ⚠️ The key used to be `auth:<the bearer token>`: every live access token of
+ * every user sat in plain text in Redis's keyspace, where a `SCAN` or a
+ * memory dump by anyone with Redis access hands out working sessions. The
+ * hash identifies the same token without being usable as one.
+ */
+function authCacheKey(token: string): string {
+  return `auth:${createHash('sha256').update(token).digest('hex')}`
+}
+
 /** چند ثانیه یک epoch کاربر کش می‌ماند. کوتاه، چون نقطه‌ی اعمال قفل است. */
 const SESSION_EPOCH_TTL_SECONDS = 60
 
@@ -189,7 +202,7 @@ async function getSessionEpochSeconds(userId: string): Promise<number | null> {
  * از کش سرو می‌شود حتی اگر بالادست باطل شده باشد.
  */
 export async function invalidateAuthToken(token: string): Promise<void> {
-  await memoryCache.invalidate(`auth:${token}`)
+  await memoryCache.invalidate(authCacheKey(token))
 }
 
 /** بعد از تغییر رمز صدا زده می‌شود تا epoch تازه بلافاصله دیده شود. */
@@ -224,7 +237,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
 
   // ✅ FIX: چک کش قبل از هر کوئری — await اضافه شد چون memoryCache.get
   // یک Promise برمی‌گرداند (wrapper روی cacheService.get که Redis-backed است)
-  const cacheKey = `auth:${token}`
+  const cacheKey = authCacheKey(token)
   const cached = await memoryCache.get<CachedAuth>(cacheKey)
 
   if (cached) {

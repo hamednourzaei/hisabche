@@ -30,6 +30,16 @@ const AUDIT_STATS_COLUMNS = 'action, entity_type, user_id'
 // ✅ Minimal columns for listing (فقط ستون‌های ضروری)
 const AUDIT_MINIMAL_COLUMNS = 'id, action, entity_type, entity_id, created_at'
 
+/**
+ * What the «سابقه تغییرات» table shows: who, when, where, and before/after.
+ *
+ * ⚠️ It selected AUDIT_MINIMAL_COLUMNS — no `user_id`, no `branch_id`, no
+ * `old_data`/`new_data` — so every row read «—» for user, role and branch
+ * and «before / after» opened on nothing (reported 26 Sep 2026). The page
+ * asked for columns the query never fetched.
+ */
+const WORKSPACE_AUDIT_COLUMNS = `${AUDIT_MINIMAL_COLUMNS}, user_id, old_data, new_data`
+
 export class AuditService {
   // ─── Cache Keys ───────────────────────────────────────────
   private getStatsCacheKey(startDate: string, endDate: string) {
@@ -175,7 +185,12 @@ export class AuditService {
     const build = (withBranch: boolean) => {
       let query = supabase
         .from('audit_logs')
-        .select(AUDIT_MINIMAL_COLUMNS, { count: 'estimated' })
+        // branch_id only once phase-g-03 has added it; the retry below drops it.
+        .select(withBranch ? `${WORKSPACE_AUDIT_COLUMNS}, branch_id` : WORKSPACE_AUDIT_COLUMNS, {
+          // Exact: this is the «تعداد» the page prints (§۷٫۴) — a planner estimate
+          // on a workspace-filtered query can be off by any amount.
+          count: 'exact',
+        })
         .eq('workspace_id', ctx.workspaceId)
 
       if (filters.entityType) query = query.eq('entity_type', filters.entityType)

@@ -5,7 +5,9 @@ services:
     rootDir: .
     buildCommand: bash render-build.sh
     startCommand: bash render-start.sh
-    healthCheckPath: /health
+    # /ready: 200 only while this instance reaches the database (503 otherwise).
+    # Was /health — a path the API does not serve publicly (401).
+    healthCheckPath: /ready
     autoDeploy: true
     envVars:
       - key: NODE_VERSION

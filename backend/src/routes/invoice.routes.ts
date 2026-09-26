@@ -19,6 +19,7 @@ import { resolveBranchContext } from '../middleware/branch.middleware'
 import { BaseError } from '../errors/base.error'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { invalidateMoneyCaches } from '../utils/money-cache'
+import { PlanLimitError } from '../services/plan-limits.service'
 
 const invoiceService = new InvoiceService()
 const invoiceRelatedService = new InvoiceRelatedService()
@@ -233,6 +234,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         try {
           await clearCache(`activities:${request.tenancy.userId}:*`)
           await clearCache(`activities-unread:${request.tenancy.userId}:*`)
+          await clearCache(`activities-counts:${request.tenancy.userId}:*`)
         } catch (activityErr) {
           fastify.log.error(activityErr, 'Failed to clear activity cache after invoice create')
         }
@@ -243,6 +245,17 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           // 503, not 4xx: the mobile runner treats 4xx as permanent and would
           // give up on a sale that only needs the migration to go through.
           return reply.code(503).send({ error: err.message, code: err.code })
+        }
+        if (err instanceof PlanLimitError) {
+          return reply
+            .code(err.statusCode)
+            .send({
+              error: err.code,
+              code: err.code,
+              feature: err.feature,
+              limit: err.limit,
+              used: err.used,
+            })
         }
         fastify.log.error(err)
         return reply.code(500).send({ error: err.message })
@@ -342,6 +355,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           })
           await clearCache(`activities:${request.tenancy.userId}:*`)
           await clearCache(`activities-unread:${request.tenancy.userId}:*`)
+          await clearCache(`activities-counts:${request.tenancy.userId}:*`)
         } catch (activityErr) {
           fastify.log.error(activityErr, 'Failed to create activity for invoice update')
         }
@@ -396,6 +410,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           })
           await clearCache(`activities:${request.tenancy.userId}:*`)
           await clearCache(`activities-unread:${request.tenancy.userId}:*`)
+          await clearCache(`activities-counts:${request.tenancy.userId}:*`)
         } catch (activityErr) {
           fastify.log.error(activityErr, 'Failed to create activity for invoice delete')
         }

@@ -169,7 +169,15 @@ describe('⚠️ the provider key never leaves the server', () => {
     // A provider error body can echo the request and, on some failures,
     // key metadata.
     expect(chat).toContain('AI_PROVIDER_ERROR')
-    expect(chat).not.toMatch(/await response\.text\(\)/)
+    // Read in ONE place — for the server log and the admin's «test» — and the
+    // error a user's question fails with carries only the status code.
+    expect(chat.match(/response\.text\(\)/g) ?? []).toHaveLength(1)
+    expect(chat).toMatch(/async function providerErrorDetail[\s\S]{0,160}response\.text\(\)/)
+    expect(chat).toContain('new ValidationError(`AI_PROVIDER_ERROR: ${response.status}`)')
+    // The detail reaches a client only through the admin-guarded test route.
+    const routes = code(join(__dirname, '..', 'routes', 'ai-chat.routes.ts'))
+    expect(routes).not.toContain('providerDetail')
+    expect(routes).toMatch(/'\/api\/ai\/config\/test',\s*\{ preHandler: adminOnly/)
   })
 
   it('the caller access token is never sent to the provider', () => {

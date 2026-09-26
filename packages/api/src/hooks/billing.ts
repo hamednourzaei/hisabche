@@ -87,6 +87,50 @@ export const billingKeys = {
   subscription: () => [...billingKeys.all, 'subscription'] as const,
   usage: () => [...billingKeys.all, 'usage'] as const,
   trialStatus: () => [...billingKeys.all, 'trial-status'] as const,
+  upgradeRequests: () => [...billingKeys.all, 'upgrade-requests'] as const,
+}
+
+export type PaymentMethod = 'card_to_card' | 'gateway' | 'manual'
+
+export interface UpgradeRequest {
+  id: string
+  requested_plan: 'pro' | 'enterprise'
+  billing_interval: 'month' | 'year'
+  /** Minor units (cents); null = not priced by the product (enterprise). */
+  amount_minor: number | null
+  currency: string | null
+  payment_method: PaymentMethod | null
+  payment_reference: string | null
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled'
+  admin_note: string | null
+  created_at: string
+  decided_at: string | null
+}
+
+export interface SubscriptionEvent {
+  id: string
+  event:
+    | 'upgrade_requested'
+    | 'upgrade_approved'
+    | 'upgrade_rejected'
+    | 'upgrade_cancelled'
+    | 'cancel_scheduled'
+    | 'cancelled'
+    | 'expired'
+  plan: string | null
+  billing_interval: string | null
+  amount_minor: number | null
+  currency: string | null
+  period_end: string | null
+  note: string | null
+  created_at: string
+}
+
+export interface UpgradeHistory {
+  requests: UpgradeRequest[]
+  events: SubscriptionEvent[]
+  /** false until docs/subscription-upgrade-requests-migration.sql has run. */
+  configured: boolean
 }
 
 // ─── Hooks ──────────────────────────────────────────────────────
@@ -148,19 +192,54 @@ export function useUsage() {
   })
 }
 
-// ۵. ارتقا به پلن جدید
+// ۵. درخواست ارتقا
+//
+// ⚠️ A REQUEST, not an activation: the plan changes when the platform admin
+// approves it after payment. The subscription itself is untouched here.
 export function useUpgrade() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ plan, interval }: { plan: Plan; interval: 'month' | 'year' }) => {
-      const { data } = await apiClient.post('/billing/upgrade', { plan, interval })
-      return data
+    mutationFn: async (input: {
+      plan: Plan
+      interval: 'month' | 'year'
+      paymentMethod?: PaymentMethod | undefined
+      paymentReference?: string | undefined
+      note?: string | undefined
+    }): Promise<UpgradeRequest> => {
+      // A double click cannot create two: one pending request per workspace
+      // (unique index); the second answers UPGRADE_REQUEST_PENDING.
+      const { data } = await apiClient.post('/billing/upgrade', input)
+      return data as UpgradeRequest
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: billingKeys.subscription() })
-      queryClient.invalidateQueries({ queryKey: billingKeys.usage() })
-      queryClient.invalidateQueries({ queryKey: billingKeys.trialStatus() })
+      queryClient.invalidateQueries({ queryKey: billingKeys.upgradeRequests() })
+    },
+  })
+}
+
+/** This workspace's upgrade requests and subscription log (purchases, periods). */
+export function useUpgradeRequests() {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: billingKeys.upgradeRequests(),
+    queryFn: async ({ signal }): Promise<UpgradeHistory> => {
+      const { data } = await apiClient.get('/billing/upgrade-requests', { signal })
+      return data as UpgradeHistory
+    },
+    enabled: authReady,
+    staleTime: 30_000,
+  })
+}
+
+export function useCancelUpgradeRequest() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (requestId: string) => {
+      await apiClient.post(`/billing/upgrade-requests/${requestId}/cancel`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: billingKeys.upgradeRequests() })
     },
   })
 }

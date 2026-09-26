@@ -21,6 +21,21 @@ vi.mock('ioredis', () => {
       async get(key: string) {
         return store.get(key) ?? null
       }
+      async mget(...keys: string[]) {
+        return keys.map((k) => store.get(k) ?? null)
+      }
+      multi() {
+        const ops: Array<() => void> = []
+        const chain = {
+          incr: (k: string) => {
+            ops.push(() => store.set(k, String(Number(store.get(k) ?? '0') + 1)))
+            return chain
+          },
+          expire: () => chain,
+          exec: async () => ops.forEach((op) => op()),
+        }
+        return chain
+      }
       async set(key: string, value: string) {
         store.set(key, value)
         return 'OK'

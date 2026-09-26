@@ -18,6 +18,10 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 // The auth guard calls `supabase.auth.getUser()` to validate a bearer token.
 // Stubbing it keeps the suite off the network entirely and makes rejection
 // deterministic: an unverifiable token yields no user, so the guard must 401.
+// Flipped by the readiness tests: every query then fails as an unreachable
+// database would.
+const db = vi.hoisted(() => ({ down: false }))
+
 vi.mock('../db', () => {
   const rejectToken = async () => ({ data: { user: null }, error: { message: 'invalid token' } })
 
@@ -28,8 +32,14 @@ vi.mock('../db', () => {
     limit: () => query,
     maybeSingle: async () => ({ data: null, error: null }),
     single: async () => ({ data: null, error: null }),
-    then: (resolve: (value: { data: never[]; error: null }) => unknown) =>
-      resolve({ data: [], error: null }),
+    then: (
+      resolve: (value: { data: never[] | null; error: { message: string } | null }) => unknown,
+    ) =>
+      resolve(
+        db.down
+          ? { data: null, error: { message: 'connection refused' } }
+          : { data: [], error: null },
+      ),
   }
 
   const supabase = {
@@ -66,6 +76,35 @@ describe('API health', () => {
 
     expect(res.statusCode).toBe(200)
     expect(res.json()).toMatchObject({ status: 'ok' })
+  })
+
+  it('GET /api/health names the exact build and whether Redis is actually reached', async () => {
+    const body = (await app.inject({ method: 'GET', url: '/api/health' })).json()
+    expect(body).toHaveProperty('commit')
+    expect(typeof body.redisConnected).toBe('boolean')
+  })
+
+  it('⚠️ GET /ready is 200 with a database and 503 without — the status code is what a load balancer reads', async () => {
+    const up = await app.inject({ method: 'GET', url: '/ready' })
+    expect(up.statusCode).toBe(200)
+    expect(up.json()).toMatchObject({ database: 'connected' })
+
+    db.down = true
+    try {
+      const down = await app.inject({ method: 'GET', url: '/ready' })
+      expect(down.statusCode).toBe(503)
+      expect(down.json()).toMatchObject({ status: 'error', database: 'disconnected' })
+    } finally {
+      db.down = false
+    }
+  })
+
+  it('render.yaml health-checks /ready, not a path that answers 401', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const yaml = readFileSync(join(__dirname, '..', '..', '..', 'render.yaml'), 'utf8')
+    const path = /^\s*healthCheckPath:\s*(\S+)\s*$/m.exec(yaml)?.[1]
+    expect(path).toBe('/ready')
   })
 
   it('GET /live is public', async () => {

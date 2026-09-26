@@ -451,17 +451,29 @@ const IdentityMenu = memo(function IdentityMenu({
           tone,
         )}
       >
-        {/* The person's own connection, where they look for who they are:
-            green online, red offline. Text for screen readers — a colour
-            alone is not a message (راهنمای سشن §۷٫۵). */}
-        <span
-          aria-hidden="true"
-          data-connection={isOnline ? 'online' : 'offline'}
-          className={cn(
-            'inline-block size-2 shrink-0 rounded-full align-middle transition-colors motion-reduce:transition-none',
-            isOnline ? 'bg-[hsl(var(--color-success))]' : 'bg-[hsl(var(--color-destructive))]',
-          )}
-        />
+        {/* ONE dot: the person's own connection, where they look for who they
+            are — green online, red offline — with the number of colleagues
+            online beside it. The count used to carry a second green dot of its
+            own, and two identical dots read as a duplicate.
+
+            The count is realtime presence: offline it is a snapshot from
+            before the connection dropped, so it is shown only while online —
+            the red dot is then the whole message. Text for screen readers — a
+            colour alone is not a message (راهنمای سشن §۷٫۵). */}
+        <span className="inline-flex shrink-0 items-center gap-1 tabular-nums">
+          <span
+            aria-hidden="true"
+            data-connection={isOnline ? 'online' : 'offline'}
+            className={cn(
+              'inline-block size-2 shrink-0 rounded-full align-middle transition-colors motion-reduce:transition-none',
+              isOnline ? 'bg-[hsl(var(--color-success))]' : 'bg-[hsl(var(--color-destructive))]',
+            )}
+          />
+          {/* The count is only meaningful to someone allowed to see the list. */}
+          {isOnline && canSeePeople && onlineCount > 0 ? (
+            <span data-online-count="">{onlineCount}</span>
+          ) : null}
+        </span>
         <span className="sr-only">{isOnline ? t('sync.online') : t('sync.offline')}</span>
         <span className="truncate">{subtitle}</span>
         {roleLabel ? (
@@ -471,16 +483,6 @@ const IdentityMenu = memo(function IdentityMenu({
             </span>
             <span className="truncate">{roleLabel}</span>
           </>
-        ) : null}
-        {/* The count is only meaningful to someone allowed to see the list. */}
-        {canSeePeople && onlineCount > 0 ? (
-          <span className="ms-0.5 inline-flex items-center gap-1 tabular-nums">
-            <span
-              aria-hidden="true"
-              className="size-1.5 rounded-full bg-[hsl(var(--color-success))]"
-            />
-            {onlineCount}
-          </span>
         ) : null}
       </DropdownMenuTrigger>
 

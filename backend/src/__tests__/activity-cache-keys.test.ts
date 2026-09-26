@@ -18,7 +18,9 @@ describe('activity cache clears match the user-scoped keys', () => {
   })
   it('every clear is by user and ends with :*', () => {
     for (const key of clears) {
-      expect(key, key).toMatch(/^activities(-unread)?:\$\{(userId|request\.tenancy\.userId)\}:\*$/)
+      expect(key, key).toMatch(
+        /^activities(-unread|-counts)?:\$\{(userId|request\.tenancy\.userId)\}:\*$/,
+      )
     }
   })
 })
