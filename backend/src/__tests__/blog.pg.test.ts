@@ -109,7 +109,7 @@ async function as<T>(
 describe('the migration', () => {
   it('ran twice without error and VERIFY-blog.sql is all ok', async () => {
     const rows = await a.unsafe(verify)
-    expect(rows.length).toBe(11)
+    expect(rows.length).toBe(12)
     expect(rows.filter((r) => r.ok !== true).map((r) => r.check)).toEqual([])
   })
 })
@@ -199,7 +199,7 @@ describe('publishing', () => {
   it('scheduled in the future is private; once the time passes it is public', async () => {
     const future = await post('scheduled', new Date(Date.now() + 3_600_000).toISOString(), 'later')
     const past = await post('scheduled', new Date(Date.now() - 1_000).toISOString(), 'earlier')
-    const visible = await as('anon', null, (tx) => tx`SELECT id FROM blog_posts`)
+    const visible = await as('authenticated', ALI, (tx) => tx`SELECT id FROM blog_posts`)
     const ids = visible.map((r) => r.id)
     expect(ids).toContain(published)
     expect(ids).toContain(past)
@@ -219,6 +219,49 @@ describe('publishing', () => {
     await expect(
       a`INSERT INTO blog_posts (locale, slug, title) VALUES ('fa', 'published', 'dup')`,
     ).rejects.toThrow()
+  })
+})
+
+describe('blog_save_post — a post and its tags in one transaction', () => {
+  const fields = (slug: string) => ({
+    locale: 'fa',
+    slug,
+    title: 'عنوان',
+    content_html: '<p>x</p>',
+    status: 'draft',
+  })
+
+  it('creates with tags, then replaces the tag set on update', async () => {
+    const [t1] =
+      await a`INSERT INTO blog_tags (locale, slug, name) VALUES ('fa', 't1', 'یک') RETURNING id`
+    const [t2] =
+      await a`INSERT INTO blog_tags (locale, slug, name) VALUES ('fa', 't2', 'دو') RETURNING id`
+    const [{ blog_save_post: id }] = (await a`
+      SELECT blog_save_post(NULL, ${a.json(fields('saved'))}, ARRAY[${t1!.id}::uuid, ${t2!.id}::uuid])`) as unknown as [
+      { blog_save_post: string },
+    ]
+    expect((await a`SELECT tag_id FROM blog_post_tags WHERE post_id = ${id}`).length).toBe(2)
+
+    await a`SELECT blog_save_post(${id}::uuid, ${a.json({ title: 'تازه' })}, ARRAY[${t2!.id}::uuid])`
+    const tags = await a`SELECT tag_id FROM blog_post_tags WHERE post_id = ${id}`
+    expect(tags.map((r) => r.tag_id)).toEqual([t2!.id])
+    const [row] = await a`SELECT title, slug FROM blog_posts WHERE id = ${id}`
+    // Absent keys keep their value; present ones change.
+    expect(row).toEqual({ title: 'تازه', slug: 'saved' })
+  })
+
+  it('⚠️ an invalid tag rolls the whole save back — no post without its tags', async () => {
+    const missingTag = '99999999-9999-9999-9999-999999999999'
+    await expect(
+      a`SELECT blog_save_post(NULL, ${a.json(fields('orphan'))}, ARRAY[${missingTag}::uuid])`,
+    ).rejects.toThrow(/foreign key/)
+    expect(await a`SELECT id FROM blog_posts WHERE slug = 'orphan'`).toEqual([])
+  })
+
+  it('a taken slug names the constraint (mapped to «slug taken» by the backend)', async () => {
+    await expect(
+      a`SELECT blog_save_post(NULL, ${a.json(fields('published'))}, NULL)`,
+    ).rejects.toThrow(/blog_posts_locale_slug_key/)
   })
 })
 
@@ -253,8 +296,21 @@ describe('row level security, as PostgREST would run it', () => {
     await a`SELECT blog_set_reaction(${published}::uuid, ${SARA}::uuid, 1::smallint)`
   })
 
-  it('anon sees approved comments on public posts only', async () => {
-    const rows = await as('anon', null, (tx) => tx`SELECT body FROM blog_comments ORDER BY body`)
+  it('anon reads nothing directly — the public site reads through the backend', async () => {
+    await expect(as('anon', null, (tx) => tx`SELECT body FROM blog_comments`)).rejects.toThrow(
+      /permission denied/,
+    )
+    await expect(as('anon', null, (tx) => tx`SELECT id FROM blog_posts`)).rejects.toThrow(
+      /permission denied/,
+    )
+  })
+
+  it('a signed-in reader sees approved comments on public posts, not on drafts', async () => {
+    const rows = await as(
+      'authenticated',
+      SARA,
+      (tx) => tx`SELECT body FROM blog_comments WHERE status = 'approved'`,
+    )
     expect(rows.map((r) => r.body)).toEqual(['تأییدشده'])
   })
 

@@ -115,7 +115,13 @@ const sql = allMigrationSql()
 
 /** Strip SQL comments so a table named in prose is not counted as covered. */
 function stripSqlComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*--.*$/gm, '')
+  // ⚠️ LINE COMMENTS FIRST. Four migrations write a path with a glob in a `--`
+  // comment (`-- backend/src/services/accounting/* …`, `-- docs/*.sql …`).
+  // Stripping block comments first read that `/*` as the start of one, which
+  // ran on to the next `*/` anywhere in the concatenated SQL and swallowed
+  // every migration in between — 49 tenant tables «had no RLS» and the blog's
+  // policies were invisible to the checks below.
+  return source.replace(/^\s*--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
 }
 
 const code = stripSqlComments(sql)

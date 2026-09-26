@@ -19,6 +19,7 @@
 --   blog_reactions                  one row per (post, user): 1 = like, -1 = dislike
 --   blog_ratings                    one row per (post, user): 1..5 stars
 --   blog_post_view_days             views per post per day (admin statistics)
+--   blog_save_post(…)               a post AND its tags in one transaction
 --   blog_post_stats(uuid[])         EXACT counts (count(*)), never a stored
 --                                   counter a client could write (§۷٫۴)
 --   blog_set_reaction / blog_set_rating / blog_record_view
@@ -26,9 +27,13 @@
 --                                   user are ONE row (primary key + ON CONFLICT)
 --   storage bucket `blog-images`    public read; jpeg/png/webp/avif; 2 MB
 --
--- WHO MAY WRITE
+-- WHO MAY READ AND WRITE
 --
---   Nobody but the backend (service_role). anon/authenticated have SELECT only.
+--   The public site reads the blog THROUGH THE BACKEND (service_role), which
+--   applies the publication rule itself — no client talks to Supabase directly
+--   (USER-REQUESTS #112). So `anon` is granted nothing, as everywhere in this
+--   repo; `authenticated` may SELECT exactly what the policies below allow.
+--   Nobody but the backend writes.
 --   «A user writes only their own row» is enforced where the token is verified:
 --   the backend takes user_id from the verified JWT, never from the body, and
 --   every write is keyed by (post_id, user_id). A direct PostgREST write with a
@@ -312,6 +317,86 @@ BEGIN
 END
 $$;
 
+-- A post and its tags in ONE transaction (supabase-js has no transactions:
+-- راهنمای سشن §۱٫۴). p_post_id NULL creates; otherwise updates that post.
+-- p_fields holds the columns by name; absent keys keep their current value on
+-- update. Returns the post id. A unique violation surfaces as 23505 with the
+-- constraint name, which the backend maps to «slug taken» / «translation taken».
+CREATE OR REPLACE FUNCTION public.blog_save_post(p_post_id uuid, p_fields jsonb, p_tag_ids uuid[])
+RETURNS uuid
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  v_id uuid;
+BEGIN
+  IF p_post_id IS NULL THEN
+    INSERT INTO blog_posts (
+      locale, slug, title, excerpt, content_json, content_html, faq, cover_url, cover_alt,
+      meta_title, meta_description, focus_keyword, keywords, canonical_url, og_image_url,
+      noindex, status, published_at, reading_minutes, category_id, translation_group_id, author_id
+    ) VALUES (
+      p_fields->>'locale', p_fields->>'slug', p_fields->>'title', p_fields->>'excerpt',
+      coalesce(p_fields->'content_json', '{"type":"doc","content":[]}'::jsonb),
+      coalesce(p_fields->>'content_html', ''),
+      coalesce(p_fields->'faq', '[]'::jsonb),
+      p_fields->>'cover_url', p_fields->>'cover_alt',
+      p_fields->>'meta_title', p_fields->>'meta_description', p_fields->>'focus_keyword',
+      coalesce(ARRAY(SELECT jsonb_array_elements_text(p_fields->'keywords')), '{}'),
+      p_fields->>'canonical_url', p_fields->>'og_image_url',
+      coalesce((p_fields->>'noindex')::boolean, false),
+      coalesce(p_fields->>'status', 'draft'),
+      (p_fields->>'published_at')::timestamptz,
+      coalesce((p_fields->>'reading_minutes')::integer, 1),
+      (p_fields->>'category_id')::uuid,
+      coalesce((p_fields->>'translation_group_id')::uuid, gen_random_uuid()),
+      (p_fields->>'author_id')::uuid
+    )
+    RETURNING id INTO v_id;
+  ELSE
+    UPDATE blog_posts SET
+      locale           = CASE WHEN p_fields ? 'locale' THEN p_fields->>'locale' ELSE locale END,
+      slug             = CASE WHEN p_fields ? 'slug' THEN p_fields->>'slug' ELSE slug END,
+      title            = CASE WHEN p_fields ? 'title' THEN p_fields->>'title' ELSE title END,
+      excerpt          = CASE WHEN p_fields ? 'excerpt' THEN p_fields->>'excerpt' ELSE excerpt END,
+      content_json     = CASE WHEN p_fields ? 'content_json' THEN p_fields->'content_json' ELSE content_json END,
+      content_html     = CASE WHEN p_fields ? 'content_html' THEN p_fields->>'content_html' ELSE content_html END,
+      faq              = CASE WHEN p_fields ? 'faq' THEN p_fields->'faq' ELSE faq END,
+      cover_url        = CASE WHEN p_fields ? 'cover_url' THEN p_fields->>'cover_url' ELSE cover_url END,
+      cover_alt        = CASE WHEN p_fields ? 'cover_alt' THEN p_fields->>'cover_alt' ELSE cover_alt END,
+      meta_title       = CASE WHEN p_fields ? 'meta_title' THEN p_fields->>'meta_title' ELSE meta_title END,
+      meta_description = CASE WHEN p_fields ? 'meta_description' THEN p_fields->>'meta_description' ELSE meta_description END,
+      focus_keyword    = CASE WHEN p_fields ? 'focus_keyword' THEN p_fields->>'focus_keyword' ELSE focus_keyword END,
+      keywords         = CASE WHEN p_fields ? 'keywords'
+                              THEN coalesce(ARRAY(SELECT jsonb_array_elements_text(p_fields->'keywords')), '{}')
+                              ELSE keywords END,
+      canonical_url    = CASE WHEN p_fields ? 'canonical_url' THEN p_fields->>'canonical_url' ELSE canonical_url END,
+      og_image_url     = CASE WHEN p_fields ? 'og_image_url' THEN p_fields->>'og_image_url' ELSE og_image_url END,
+      noindex          = CASE WHEN p_fields ? 'noindex' THEN (p_fields->>'noindex')::boolean ELSE noindex END,
+      status           = CASE WHEN p_fields ? 'status' THEN p_fields->>'status' ELSE status END,
+      published_at     = CASE WHEN p_fields ? 'published_at' THEN (p_fields->>'published_at')::timestamptz ELSE published_at END,
+      reading_minutes  = CASE WHEN p_fields ? 'reading_minutes' THEN (p_fields->>'reading_minutes')::integer ELSE reading_minutes END,
+      category_id      = CASE WHEN p_fields ? 'category_id' THEN (p_fields->>'category_id')::uuid ELSE category_id END,
+      translation_group_id = CASE WHEN p_fields ? 'translation_group_id' AND p_fields->>'translation_group_id' IS NOT NULL
+                                  THEN (p_fields->>'translation_group_id')::uuid ELSE translation_group_id END
+    WHERE id = p_post_id
+    RETURNING id INTO v_id;
+    IF v_id IS NULL THEN
+      RAISE EXCEPTION 'BLOG_POST_NOT_FOUND' USING ERRCODE = 'no_data_found';
+    END IF;
+  END IF;
+
+  IF p_tag_ids IS NOT NULL THEN
+    DELETE FROM blog_post_tags WHERE post_id = v_id AND NOT (tag_id = ANY (p_tag_ids));
+    INSERT INTO blog_post_tags (post_id, tag_id)
+    SELECT v_id, t FROM unnest(p_tag_ids) AS t
+    ON CONFLICT DO NOTHING;
+  END IF;
+
+  RETURN v_id;
+END
+$$;
+
 -- ─────────────────────────────────────────────── exact statistics
 
 -- One row per requested post, zeros included. Every number is a count(*) or an
@@ -354,35 +439,36 @@ ALTER TABLE public.blog_reactions       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.blog_ratings         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.blog_post_view_days  ENABLE ROW LEVEL SECURITY;
 
--- Public content: readable by anyone, writable by nobody but the service role.
+-- Published content: readable by a signed-in client, writable by nobody but
+-- the service role. (Anonymous readers go through the backend.)
 DROP POLICY IF EXISTS blog_categories_public_read ON public.blog_categories;
 CREATE POLICY blog_categories_public_read ON blog_categories
-  FOR SELECT TO anon, authenticated
+  FOR SELECT TO authenticated
   USING (true);
 
 DROP POLICY IF EXISTS blog_tags_public_read ON public.blog_tags;
 CREATE POLICY blog_tags_public_read ON blog_tags
-  FOR SELECT TO anon, authenticated
+  FOR SELECT TO authenticated
   USING (true);
 
 DROP POLICY IF EXISTS blog_posts_public_read ON public.blog_posts;
 CREATE POLICY blog_posts_public_read ON blog_posts
-  FOR SELECT TO anon, authenticated
+  FOR SELECT TO authenticated
   USING (public.blog_post_is_public(status, published_at));
 
 DROP POLICY IF EXISTS blog_post_tags_public_read ON public.blog_post_tags;
 CREATE POLICY blog_post_tags_public_read ON blog_post_tags
-  FOR SELECT TO anon, authenticated
+  FOR SELECT TO authenticated
   USING (EXISTS (
     SELECT 1 FROM public.blog_posts p
     WHERE p.id = post_id AND public.blog_post_is_public(p.status, p.published_at)
   ));
 
--- Person-scoped. Approved comments on public posts for everyone; the author
--- also sees their own, whatever the status («در انتظار تأیید»).
+-- Person-scoped. Approved comments on public posts; the author also sees
+-- their own, whatever the status («در انتظار تأیید»).
 DROP POLICY IF EXISTS blog_comments_read ON public.blog_comments;
 CREATE POLICY blog_comments_read ON blog_comments
-  FOR SELECT TO anon, authenticated
+  FOR SELECT TO authenticated
   USING (
     (status = 'approved' AND EXISTS (
       SELECT 1 FROM public.blog_posts p
@@ -408,7 +494,7 @@ REVOKE ALL ON public.blog_categories, public.blog_tags, public.blog_posts, publi
               public.blog_comments, public.blog_reactions, public.blog_ratings,
               public.blog_post_view_days FROM anon, authenticated;
 GRANT SELECT ON public.blog_categories, public.blog_tags, public.blog_posts, public.blog_post_tags,
-                public.blog_comments TO anon, authenticated;
+                public.blog_comments TO authenticated;
 GRANT SELECT ON public.blog_reactions, public.blog_ratings TO authenticated;
 GRANT ALL ON public.blog_categories, public.blog_tags, public.blog_posts, public.blog_post_tags,
              public.blog_comments, public.blog_reactions, public.blog_ratings,
@@ -418,10 +504,12 @@ REVOKE ALL ON FUNCTION public.blog_set_reaction(uuid, uuid, smallint) FROM PUBLI
 REVOKE ALL ON FUNCTION public.blog_set_rating(uuid, uuid, smallint) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.blog_record_view(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.blog_post_stats(uuid[]) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.blog_save_post(uuid, jsonb, uuid[]) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.blog_set_reaction(uuid, uuid, smallint) TO service_role;
 GRANT EXECUTE ON FUNCTION public.blog_set_rating(uuid, uuid, smallint) TO service_role;
 GRANT EXECUTE ON FUNCTION public.blog_record_view(uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.blog_post_stats(uuid[]) TO service_role;
+GRANT EXECUTE ON FUNCTION public.blog_save_post(uuid, jsonb, uuid[]) TO service_role;
 
 -- ─────────────────────────────────────────────── storage bucket (public images)
 
@@ -443,6 +531,7 @@ COMMIT;
 --
 --   BEGIN;
 --   DROP FUNCTION IF EXISTS public.blog_post_stats(uuid[]);
+--   DROP FUNCTION IF EXISTS public.blog_save_post(uuid, jsonb, uuid[]);
 --   DROP FUNCTION IF EXISTS public.blog_record_view(uuid);
 --   DROP FUNCTION IF EXISTS public.blog_set_rating(uuid, uuid, smallint);
 --   DROP FUNCTION IF EXISTS public.blog_set_reaction(uuid, uuid, smallint);

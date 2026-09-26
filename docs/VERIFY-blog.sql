@@ -48,6 +48,7 @@ SELECT 'functions present',
        AND to_regprocedure('public.blog_record_view(uuid)') IS NOT NULL
        AND to_regprocedure('public.blog_post_stats(uuid[])') IS NOT NULL
        AND to_regprocedure('public.blog_post_is_public(text, timestamptz)') IS NOT NULL
+       AND to_regprocedure('public.blog_save_post(uuid, jsonb, uuid[])') IS NOT NULL
 UNION ALL
 SELECT 'clients cannot write',
        NOT has_table_privilege('authenticated', 'public.blog_comments', 'INSERT')
@@ -60,6 +61,12 @@ SELECT 'clients cannot call write functions',
        NOT has_function_privilege('authenticated', 'public.blog_set_reaction(uuid, uuid, smallint)', 'EXECUTE')
        AND NOT has_function_privilege('anon', 'public.blog_set_rating(uuid, uuid, smallint)', 'EXECUTE')
        AND NOT has_function_privilege('anon', 'public.blog_record_view(uuid)', 'EXECUTE')
+       AND NOT has_function_privilege('authenticated', 'public.blog_save_post(uuid, jsonb, uuid[])', 'EXECUTE')
+UNION ALL
+SELECT 'anon is granted nothing',
+       NOT has_table_privilege('anon', 'public.blog_posts', 'SELECT')
+       AND NOT has_table_privilege('anon', 'public.blog_comments', 'SELECT')
+       AND NOT has_table_privilege('anon', 'public.blog_categories', 'SELECT')
 UNION ALL
 SELECT 'view statistics not readable by clients',
        NOT has_table_privilege('anon', 'public.blog_post_view_days', 'SELECT')
