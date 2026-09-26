@@ -2,8 +2,9 @@
 -- VERIFY — docs/blog-migration.sql
 --
 -- Read-only. Run in the SQL Editor AFTER the migration. Every row must read
--- ok = true. Paste the result back; until then the status is
--- PENDING HUMAN CONFIRMATION.
+-- ok = true.
+--
+-- Production, 2026-09-26: 12/12 ok = true (reported by a human).
 -- ============================================================================
 
 SELECT 'tables' AS check,

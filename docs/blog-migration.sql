@@ -2,8 +2,8 @@
 -- BLOG — posts, categories, tags, comments, reactions, ratings, views.
 -- Additive, idempotent (safe to run twice).
 --
--- ⚠️ NOT YET RUN. Run it in the SQL Editor, then docs/VERIFY-blog.sql.
--- Status: PENDING HUMAN CONFIRMATION.
+-- ✅ RUN on production Supabase 2026-09-26; docs/VERIFY-blog.sql returned
+-- 12/12 rows ok = true (reported by a human).
 --
 -- WHAT THIS ADDS
 --
