@@ -758,3 +758,23 @@ export {
   type WarehouseProduct,
   type WarehouseDetail,
 } from './hooks/warehouses'
+
+// ─── Blog (the reader's interactive island) ───────────────
+export {
+  useBlogComments,
+  useBlogMe,
+  useAddBlogComment,
+  useSetBlogReaction,
+  useSetBlogRating,
+  recordBlogView,
+  blogKeys,
+  type BlogLocaleCode,
+  type BlogTaxonomyRef,
+  type BlogPostSummary,
+  type BlogPublicStats,
+  type BlogPostPublic,
+  type BlogListResponse,
+  type BlogSitemapResponse,
+  type BlogComment,
+  type BlogMe,
+} from './hooks/blog'

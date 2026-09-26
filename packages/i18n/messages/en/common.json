@@ -5414,5 +5414,96 @@
       "void": "Void",
       "none": "No commission"
     }
+  },
+  "blog": {
+    "title": "Hisabche Blog",
+    "metaDescription": "Practical guides to accounting, invoicing, inventory, payroll and tax for small and mid-sized businesses.",
+    "intro": "Practical guides to accounting, invoicing, inventory, payroll and tax — written for business owners.",
+    "empty": "No articles have been published here yet.",
+    "unavailable": "The blog is not set up yet. Please check back later.",
+    "readMore": "Read more",
+    "readingMinutes": "{minutes} min read",
+    "publishedOn": "Published {date}",
+    "updatedOn": "Updated {date}",
+    "by": "By {name}",
+    "toc": "Contents",
+    "faq": "Frequently asked questions",
+    "tags": "Tags",
+    "category": "Category",
+    "related": "Related articles",
+    "allPosts": "All articles",
+    "breadcrumbHome": "Home",
+    "categoryTitle": "{name} articles",
+    "tagTitle": "Tag: {name}",
+    "pageSuffix": "Page {page}",
+    "pagination": {
+      "label": "Article pages",
+      "previous": "Previous page",
+      "next": "Next page",
+      "status": "Page {page} of {pages}"
+    },
+    "cta": {
+      "title": "Keep your business books in one place",
+      "body": "Invoices, inventory, cash and double-entry accounting in one system — on the web, Windows and mobile.",
+      "features": "Hisabche features",
+      "signup": "Start free"
+    },
+    "nav": {
+      "blog": "Blog",
+      "features": "Features",
+      "docs": "Docs"
+    },
+    "actions": {
+      "title": "Was this article helpful?",
+      "like": "Helpful",
+      "dislike": "Not helpful",
+      "ratingLabel": "Your rating for this article",
+      "star": "{stars} stars",
+      "ratingSummary": "Average {avg} of 5 ({count} votes)",
+      "noRatings": "No ratings yet",
+      "signInPrompt": "Sign in to rate and comment.",
+      "signIn": "Sign in",
+      "failed": "Not saved. Please try again."
+    },
+    "comments": {
+      "title": "Comments",
+      "count": "{count} comments",
+      "empty": "No comments yet. Be the first.",
+      "label": "Your comment",
+      "placeholder": "Write a comment or a question…",
+      "submit": "Post comment",
+      "sending": "Posting…",
+      "reply": "Reply",
+      "replyingTo": "Replying to {name}",
+      "cancelReply": "Cancel",
+      "pending": "Awaiting approval",
+      "rejected": "Rejected",
+      "sent": "Your comment was saved and will appear once approved.",
+      "unknownAuthor": "Hisabche user",
+      "honeypot": "Leave this field empty",
+      "loadFailed": "Comments could not be loaded."
+    },
+    "errors": {
+      "slug": "Use lowercase Latin letters, digits, Persian letters and hyphens only.",
+      "slugTaken": "This address is already used in this language.",
+      "slugReserved": "This address is reserved; choose another.",
+      "https": "The address must start with https://.",
+      "coverAlt": "The cover image needs alt text.",
+      "scheduleDate": "Choose a publication date to schedule.",
+      "imageAlt": "Image number {index} has no alt text.",
+      "imageType": "The file is not a JPEG, PNG, WebP or AVIF image.",
+      "imageSize": "The image is larger than 2 MB.",
+      "replyInvalid": "This comment cannot be replied to.",
+      "taxonomyLocale": "The selected category or tag is not in this article’s language.",
+      "taxonomyMissing": "The selected category or tag no longer exists.",
+      "translationTaken": "This article already has a translation in that language.",
+      "migrationPending": "The blog is not set up in the database (migration not run)."
+    },
+    "warnings": {
+      "linkLocaleAdded": "A language prefix was added to a link: {href}",
+      "claimNotInProduct": "The text mentions «{claim}»; Hisabche does not have this. Make sure it is not claimed."
+    },
+    "breadcrumbLabel": "Breadcrumb",
+    "metaTitle": "Blog — Guides to accounting, invoicing and inventory"
   }
 }

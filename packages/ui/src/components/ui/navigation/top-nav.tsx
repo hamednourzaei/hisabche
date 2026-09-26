@@ -11,6 +11,7 @@ import { Menu } from 'lucide-react'
 const LandingMobileMenu = dynamic(() => import('./landing-mobile-menu'), { ssr: false })
 import { useNavigation } from '../../../hooks/menu/use-navigation-state'
 import { useSignedInAfterMount } from '../../../hooks/use-signed-in-after-mount'
+import { PublicAuthActions } from './public-auth-actions'
 import { useAuthStore } from '@hisabche/store'
 import { cn } from '../../../lib/utils'
 
@@ -320,42 +321,16 @@ export const TopNav = memo(function TopNav({
             size from `lg` up. */}
         {variant === 'landing' && (
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-            {signedIn ? (
-              // A signed-in visitor has nothing to sign up for. `nofollow`: a
-              // public page linking into the private app (CLAUDE.md §8).
-              <Link
-                prefetch={false}
-                href={`${routePrefix}/dashboard`}
-                rel="nofollow"
-                data-testid="landing-dashboard-link"
-                className="inline-flex min-h-9 items-center gap-1 rounded-full px-4 text-sm font-bold text-[hsl(var(--color-primary-fg))] bg-[image:var(--gradient-brand)] hover:brightness-110 transition-all motion-reduce:transition-none shrink-0 lg:min-h-10 lg:px-5"
-              >
-                {dashboardText}
-              </Link>
-            ) : (
-              <>
-                <Link
-                  prefetch={false}
-                  href={`${routePrefix}/login`}
-                  className="hidden rounded-full px-3 py-1.5 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors hover:text-[hsl(var(--fg-primary))] md:inline-flex"
-                >
-                  {t('auth.signIn', locale === 'en' ? 'Sign In' : 'ورود')}
-                </Link>
-                <Link
-                  prefetch={false}
-                  href={`${routePrefix}/signup`}
-                  // Spread rather than pass `undefined`: `exactOptionalPropertyTypes`
-                  // makes `onClick={undefined}` a type error on LinkProps.
-                  {...(onNavigateCta ? { onClick: onNavigateCta } : {})}
-                  className="inline-flex min-h-9 items-center gap-1 rounded-full px-4 text-sm font-bold text-[hsl(var(--color-primary-fg))] bg-[image:var(--gradient-brand)] hover:brightness-110 transition-all shrink-0 lg:min-h-10 lg:px-5"
-                >
-                  <span className="cta-text">{ctaText}</span>
-                  <span aria-hidden="true" className="hidden lg:inline">
-                    {isRTL ? '←' : '→'}
-                  </span>
-                </Link>
-              </>
-            )}
+            <PublicAuthActions
+              routePrefix={routePrefix}
+              isRTL={isRTL}
+              onNavigateCta={onNavigateCta}
+              labels={{
+                signIn: t('auth.signIn', locale === 'en' ? 'Sign In' : 'ورود'),
+                signUp: ctaText,
+                dashboard: dashboardText,
+              }}
+            />
             <button
               type="button"
               aria-haspopup="dialog"

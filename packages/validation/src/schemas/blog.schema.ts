@@ -56,8 +56,8 @@ export const BLOG_SLUG_PATTERN = /^[a-z0-9؀-ۿ]+(?:-[a-z0-9؀-ۿ]+)*$/
 
 /**
  * Slugs that would collide with a route: `/api/blog/posts/:id/comments` (and
- * `me`, `view`, `reaction`, `rating`) on the API, `/blog/category/…` and
- * `/blog/tag/…` on the web. A post or taxonomy may not take these names.
+ * `me`, `view`, `reaction`, `rating`) on the API, `/blog/category/…`,
+ * `/blog/tag/…` and `/blog/page/N` on the web. A post or taxonomy may not take these names.
  */
 export const BLOG_RESERVED_SLUGS = [
   'comments',
@@ -67,6 +67,7 @@ export const BLOG_RESERVED_SLUGS = [
   'rating',
   'category',
   'tag',
+  'page',
 ] as const
 
 export const blogLocaleSchema = z.enum(BLOG_LOCALES)
@@ -197,6 +198,39 @@ export const blogImageUploadSchema = z.object({
 export const blogCommentModerationSchema = z.object({
   status: z.enum(['approved', 'rejected', 'spam']),
 })
+
+// ─── claims the product does not make ───────────────────────────────────────
+//
+// ONE list for the landing (landing-claims.test.ts) and the blog (checked on
+// every save, shown to the author). Each entry is a capability that does not
+// exist in this codebase, or a number nobody measures
+// (.claude/POSITIONING-2026-09-15.md «NOT implemented — never claim»).
+//
+// For an article this is a WARNING, not a refusal: «what is two-factor login»
+// is a legitimate topic. What it must not say is that Hisabche has it — the
+// author reads the warning and checks the sentence.
+/** Capabilities that do not exist anywhere in backend/ or apps/. */
+export const CAPABILITIES_NOT_IN_PRODUCT = [
+  'دو مرحله',
+  'two-factor',
+  '2FA',
+  'وب‌هوک',
+  'webhook',
+  'بازیابی ۳۰ روزه',
+  'کلیدش',
+  'سامانه مودیان',
+] as const
+
+/** Numbers about users nobody counts (no counter, no rating source). */
+export const UNSOURCED_METRICS = ['کسب‌وکار فعال', 'تراکنش روزانه', 'رضایت کاربران'] as const
+
+export const CLAIMS_NOT_IN_PRODUCT = [...CAPABILITIES_NOT_IN_PRODUCT, ...UNSOURCED_METRICS] as const
+
+/** The listed claims that appear in `text` (case-insensitive, ZWNJ-tolerant). */
+export function claimsNotInProduct(text: string): string[] {
+  const haystack = normalizeForMatch(text)
+  return CLAIMS_NOT_IN_PRODUCT.filter((claim) => haystack.includes(normalizeForMatch(claim)))
+}
 
 // ─── SEO checklist ──────────────────────────────────────────────────────────
 //

@@ -12,6 +12,7 @@
 
 import {
   BLOG_IMAGE_MAX_BYTES,
+  claimsNotInProduct,
   type BlogCommentInput,
   type BlogCommentStatus,
   type BlogLocale,
@@ -542,7 +543,21 @@ export class BlogService {
     const savedId = await this.repo.savePost(id, fields, input.tagIds)
     const post = await this.adminGet(savedId)
     const revalidated = await revalidateBlogPages(log)
-    return { post, warnings: sanitized.warnings, revalidated }
+
+    // Capabilities the product does not have, mentioned anywhere in the text
+    // (the landing's list — landing-claims.test.ts). A warning, not a refusal:
+    // explaining a concept is fine; claiming Hisabche has it is not.
+    const text = [
+      input.title,
+      input.excerpt ?? '',
+      sanitized.html,
+      ...input.faq.flatMap((f) => [f.q, f.a]),
+    ].join(' ')
+    const claims = claimsNotInProduct(text).map((claim) => ({
+      path: 'contentHtml',
+      message: `blog.warnings.claimNotInProduct:${claim}`,
+    }))
+    return { post, warnings: [...sanitized.warnings, ...claims], revalidated }
   }
 
   async remove(id: string, log: Logger): Promise<{ revalidated: RevalidateOutcome }> {
