@@ -4,6 +4,7 @@
 // Exchange rates, and what foreign balances are worth today.
 // ============================================
 
+import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
@@ -19,16 +20,19 @@ export class CurrencyService {
   }
 
   async listRates(ctx: TenancyContext, currency?: string): Promise<RateQuote[]> {
-    let query = supabase
-      .from('exchange_rates')
-      .select('currency_code, rate, rate_date')
-      .eq('workspace_id', ctx.workspaceId)
-      .order('rate_date', { ascending: false })
-      .limit(1000)
-
-    if (currency) query = query.eq('currency_code', currency)
-
-    const { data, error } = await query
+    // The whole history (27 Sep 2026), not its newest 1000 quotes. A single
+    // rate for a date is read by getRateFor with one row.
+    const { data, error } = await selectAllPages((lo, hi) => {
+      let query = supabase
+        .from('exchange_rates')
+        .select('currency_code, rate, rate_date')
+        .eq('workspace_id', ctx.workspaceId)
+      if (currency) query = query.eq('currency_code', currency)
+      return query
+        .order('rate_date', { ascending: false })
+        .order('currency_code', { ascending: true })
+        .range(lo, hi)
+    })
     if (error) throw new DatabaseError('Failed to fetch exchange rates', error)
 
     return (data ?? []).map((row) => ({
@@ -102,13 +106,18 @@ export class CurrencyService {
 
   /** Outstanding foreign-currency receivables and payables. */
   private async openBalances(ctx: TenancyContext, baseCurrency: string): Promise<ForeignBalance[]> {
-    const { data, error } = await supabase
-      .from('invoice_outstanding')
-      .select('invoice_id, type, currency, outstanding, total')
-      .eq('workspace_id', ctx.workspaceId)
-      .neq('currency', baseCurrency)
-      .gt('outstanding', 0)
-      .limit(5000)
+    // Every row, in ordered pages (27 Sep 2026): a `.limit(N)` here was silently cut to
+    // PostgREST max-rows (1000), and this read feeds a total or a decision.
+    const { data, error } = await selectAllPages((from, to) =>
+      supabase
+        .from('invoice_outstanding')
+        .select('invoice_id, type, currency, outstanding, total')
+        .eq('workspace_id', ctx.workspaceId)
+        .neq('currency', baseCurrency)
+        .gt('outstanding', 0)
+        .order('invoice_id', { ascending: true })
+        .range(from, to),
+    )
 
     if (error) throw new DatabaseError('Failed to read foreign balances', error)
 

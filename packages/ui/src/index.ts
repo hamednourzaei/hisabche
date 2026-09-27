@@ -403,3 +403,5 @@ export {
   type HostPrinter,
   type ReceiptPrinterHost,
 } from './lib/print/printer-host'
+// The phone's camera as a barcode scanner (the host registers it).
+export { registerCameraScanner, type CameraScannerHost } from './lib/barcode/camera-host'

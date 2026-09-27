@@ -20,6 +20,7 @@
 //     rather than silently dropping the approval or the revision.
 // ============================================
 
+import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
 import { ForbiddenError } from '../../errors/auth.error'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
@@ -704,22 +705,30 @@ export class BudgetService {
     }
 
     const [actual, committed] = await Promise.all([
-      supabase
-        .from('journal_lines')
-        .select('debit, credit, journal:journal_entries!inner(date, status, workspace_id)')
-        .eq('workspace_id', ctx.workspaceId)
-        .eq('account_id', budget.accountId)
-        .eq('journal.status', 'posted')
-        .gte('journal.date', start)
-        .lte('journal.date', end)
-        .limit(10_000),
-      supabase
-        .from('budget_commitments')
-        .select('amount_minor')
-        .eq('workspace_id', ctx.workspaceId)
-        .eq('budget_id', budget.id)
-        .is('released_at', null)
-        .limit(5000),
+      // Every row (27 Sep 2026): `.limit(10_000)` was cut to 1000 by PostgREST,
+      // and this sum is the budget's actual.
+      selectAllPages((from, to) =>
+        supabase
+          .from('journal_lines')
+          .select('debit, credit, journal:journal_entries!inner(date, status, workspace_id)')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('account_id', budget.accountId)
+          .eq('journal.status', 'posted')
+          .gte('journal.date', start)
+          .lte('journal.date', end)
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
+      selectAllPages((lo, hi) =>
+        supabase
+          .from('budget_commitments')
+          .select('amount_minor')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('budget_id', budget.id)
+          .is('released_at', null)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      ),
     ])
 
     if (actual.error) throw new DatabaseError('Failed to read actual spend', actual.error)

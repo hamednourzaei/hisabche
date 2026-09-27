@@ -136,10 +136,14 @@ describe('GET /api/products/by-barcode/:code', () => {
 describe('a duplicate barcode is refused by name, on the field', () => {
   it('create and update map the unique violation to 409 BARCODE_TAKEN with details.path', () => {
     const routes = readFileSync(join(__dirname, '..', 'routes', 'product.routes.ts'), 'utf8')
-    expect(routes.split("err.message === 'BARCODE_TAKEN'").length - 1).toBe(2)
+    // create, update, and adding an extra barcode (27 Sep 2026)
+    expect(routes.split("err.message === 'BARCODE_TAKEN'").length - 1).toBe(3)
     expect(routes).toContain("details: [{ path: ['barcode'], message: 'BARCODE_TAKEN' }]")
     const service = readFileSync(join(__dirname, '..', 'services', 'product.service.ts'), 'utf8')
-    expect(service).toContain("includes('products_workspace_barcode_key')")
+    // Main and extra barcodes (docs/product-barcodes-migration.sql).
+    expect(service).toContain(
+      'products_workspace_barcode_key|product_barcodes_workspace_barcode_key',
+    )
     const migration = readFileSync(
       join(__dirname, '..', '..', '..', 'docs', 'product-barcode-unique-migration.sql'),
       'utf8',

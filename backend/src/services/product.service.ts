@@ -30,10 +30,24 @@ const BARCODE_SAFE = /^[A-Za-z0-9._-]{3,64}$/
 
 /** A unique violation on the per-workspace barcode index. */
 function isBarcodeTaken(error: { code?: string; message?: string } | null | undefined): boolean {
+  // Main barcodes, extra barcodes (docs/product-barcodes-migration.sql), and
+  // the trigger that stops one code being both.
   return (
     error?.code === '23505' &&
-    String(error.message ?? '').includes('products_workspace_barcode_key')
+    /products_workspace_barcode_key|product_barcodes_workspace_barcode_key/.test(
+      String(error.message ?? ''),
+    )
   )
+}
+
+/** product_barcodes is absent until its migration runs: «no extra codes». */
+const EXTRA_BARCODES_ABSENT = new Set(['42P01', 'PGRST205'])
+
+export interface ExtraBarcode {
+  id: string
+  barcode: string
+  /** The unit this code sells in; null = the product's own. */
+  unit: string | null
 }
 
 // ✅ Column Selection Constants
@@ -515,26 +529,124 @@ export class ProductService {
     ctx: TenancyContext,
     rawBarcode: string,
   ): Promise<
-    | { status: 'found'; product: ReturnType<typeof mapProduct> }
+    // `unit`: the unit an EXTRA code sells in (the carton's code), when it names one.
+    | { status: 'found'; product: ReturnType<typeof mapProduct>; unit?: string | undefined }
     | { status: 'ambiguous'; products: Array<ReturnType<typeof mapProduct>> }
     | { status: 'not_found' }
   > {
     const barcode = normalizeBarcode(rawBarcode)
     if (!barcode) return { status: 'not_found' }
 
-    const { data, error } = await supabase
-      .from('products')
-      .select(PRODUCT_LIST_COLUMNS)
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('barcode', barcode)
-      .eq('is_active', true)
-      .limit(5)
+    // The main barcode and the extra ones, together — one round trip each, in
+    // parallel. Either failing is an error, never «not found».
+    const [main, extra] = await Promise.all([
+      supabase
+        .from('products')
+        .select(PRODUCT_LIST_COLUMNS)
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('barcode', barcode)
+        .eq('is_active', true)
+        .limit(5),
+      supabase
+        .from('product_barcodes')
+        .select(`unit, product:products!inner(${PRODUCT_LIST_COLUMNS})`)
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('barcode', barcode)
+        .eq('product.is_active', true)
+        .limit(5),
+    ])
 
-    if (error) throw new DatabaseError('Failed to look up barcode', error)
-    const rows = (data ?? []).map(mapProduct)
-    if (rows.length === 0) return { status: 'not_found' }
-    if (rows.length > 1) return { status: 'ambiguous', products: rows }
-    return { status: 'found', product: rows[0]! }
+    if (main.error) throw new DatabaseError('Failed to look up barcode', main.error)
+    if (extra.error && !EXTRA_BARCODES_ABSENT.has(extra.error.code ?? '')) {
+      throw new DatabaseError('Failed to look up extra barcodes', extra.error)
+    }
+
+    const found = new Map<string, { product: ReturnType<typeof mapProduct>; unit?: string }>()
+    for (const row of (main.data ?? []) as Record<string, unknown>[]) {
+      const product = mapProduct(row)
+      found.set(product.id, { product })
+    }
+    for (const row of (extra.error ? [] : (extra.data ?? [])) as unknown as Array<{
+      unit: string | null
+      product: Record<string, unknown>
+    }>) {
+      const product = mapProduct(row.product)
+      if (!found.has(product.id)) {
+        found.set(product.id, row.unit ? { product, unit: row.unit } : { product })
+      }
+    }
+
+    const hits = [...found.values()]
+    if (hits.length === 0) return { status: 'not_found' }
+    if (hits.length > 1) return { status: 'ambiguous', products: hits.map((h) => h.product) }
+    const hit = hits[0]!
+    return hit.unit
+      ? { status: 'found', product: hit.product, unit: hit.unit }
+      : { status: 'found', product: hit.product }
+  }
+
+  // ─── Extra barcodes (docs/product-barcodes-migration.sql) ────────────────
+
+  async listBarcodes(ctx: TenancyContext, productId: string): Promise<ExtraBarcode[]> {
+    const { data, error } = await supabase
+      .from('product_barcodes')
+      .select('id, barcode, unit')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('product_id', productId)
+      .order('created_at', { ascending: true })
+    if (error) {
+      if (EXTRA_BARCODES_ABSENT.has(error.code ?? '')) return []
+      throw new DatabaseError('Failed to read extra barcodes', error)
+    }
+    return (data ?? []) as ExtraBarcode[]
+  }
+
+  async addBarcode(
+    ctx: TenancyContext,
+    productId: string,
+    input: { barcode: string; unit?: string | null | undefined },
+  ): Promise<ExtraBarcode> {
+    await scopes.assertMay(ctx, 'product', productId, 'product.write')
+    const barcode = normalizeBarcode(input.barcode)
+    if (!barcode) throw new ValidationError('BARCODE_EMPTY')
+
+    const { data, error } = await supabase
+      .from('product_barcodes')
+      .insert({
+        workspace_id: ctx.workspaceId,
+        product_id: productId,
+        barcode,
+        unit: input.unit?.trim() || null,
+        created_by: ctx.userId,
+      })
+      .select('id, barcode, unit')
+      .single()
+
+    if (isBarcodeTaken(error)) throw new ConflictError('BARCODE_TAKEN')
+    if (error) {
+      if (EXTRA_BARCODES_ABSENT.has(error.code ?? '')) {
+        throw new ConflictError('EXTRA_BARCODES_MIGRATION_REQUIRED')
+      }
+      // 23503: the product is not there (or not in this workspace's reach).
+      if (error.code === '23503') throw new NotFoundError('Product')
+      throw new DatabaseError('Failed to add the barcode', error)
+    }
+    await memoryCache.invalidate(`products:${ctx.workspaceId}`)
+    return data as ExtraBarcode
+  }
+
+  async removeBarcode(ctx: TenancyContext, productId: string, barcodeId: string): Promise<void> {
+    await scopes.assertMay(ctx, 'product', productId, 'product.write')
+    const { data, error } = await supabase
+      .from('product_barcodes')
+      .delete()
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('product_id', productId)
+      .eq('id', barcodeId)
+      .select('id')
+    if (error) throw new DatabaseError('Failed to remove the barcode', error)
+    if (!data || data.length === 0) throw new NotFoundError('Barcode')
+    await memoryCache.invalidate(`products:${ctx.workspaceId}`)
   }
 
   // ─── Get Products by Category ────────────────────────────────

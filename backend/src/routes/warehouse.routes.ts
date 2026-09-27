@@ -3,6 +3,8 @@
 // FIXED: listwarehouses → listWarehouses
 // ============================================
 
+import { sendFailure } from '../errors/http-failure'
+import { IdempotencyUnavailableError, readClientRequestId } from '../utils/client-request'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
@@ -152,16 +154,19 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = stockTransferSchema.parse(request.body)
-        const result = await warehouseService.transferStock(request.tenancy, data)
+        const result = await warehouseService.transferStock(request.tenancy, data, {
+          idempotencyKey: readClientRequestId(request),
+        })
         await clearCache('warehouses:*')
         await clearCache('stock:*')
         return reply.send(result)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        if (err instanceof IdempotencyUnavailableError) {
+          return reply.code(503).send({ error: err.message, code: err.code })
         }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to transfer stock' })
+        // «Not enough stock» is a 409 and a bad warehouse a 400 — they were
+        // all answered as a bare 500.
+        return sendFailure(reply, fastify.log, err, 'Failed to transfer stock')
       }
     },
   )

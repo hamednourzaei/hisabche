@@ -9,6 +9,7 @@
 // disagree nobody will know which is right.
 // ============================================
 
+import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
 import { AccountingService } from '../accounting'
 import { DatabaseError } from '../../errors/database.error'
@@ -42,22 +43,29 @@ export class InsightsService {
    */
   private async periodTotals(ctx: TenancyContext, from: string, to: string): Promise<PeriodTotals> {
     const [invoices, consumptions] = await Promise.all([
-      supabase
-        .from('invoices')
-        .select('id, total')
-        .eq('workspace_id', ctx.workspaceId)
-        .eq('type', 'sale')
-        .gte('date', from)
-        .lte('date', to)
-        .limit(5000),
-      supabase
-        .from('cost_consumptions')
-        .select('amount')
-        .eq('workspace_id', ctx.workspaceId)
-        .eq('consumer_type', 'invoice')
-        .gte('entry_date', from)
-        .lte('entry_date', to)
-        .limit(20_000),
+      // Every row (27 Sep 2026): a .limit(N) here was cut to 1000 by PostgREST, and this feeds a total.
+      selectAllPages((lo, hi) =>
+        supabase
+          .from('invoices')
+          .select('id, total')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('type', 'sale')
+          .gte('date', from)
+          .lte('date', to)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      ),
+      selectAllPages((lo, hi) =>
+        supabase
+          .from('cost_consumptions')
+          .select('amount')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('consumer_type', 'invoice')
+          .gte('entry_date', from)
+          .lte('entry_date', to)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      ),
     ])
 
     if (invoices.error) throw new DatabaseError('Failed to read invoices', invoices.error)
@@ -164,24 +172,31 @@ export class InsightsService {
     options: { marginFloorPercent?: number; discountCeilingPercent?: number } = {},
   ) {
     const [items, consumptions] = await Promise.all([
-      supabase
-        .from('invoice_items')
-        .select(
-          'invoice_id, product_id, product_name, total_price, discount, invoice:invoices!inner(invoice_number, date, type, workspace_id)',
-        )
-        .eq('workspace_id', ctx.workspaceId)
-        .gte('invoice.date', from)
-        .lte('invoice.date', to)
-        .eq('invoice.type', 'sale')
-        .limit(5000),
-      supabase
-        .from('cost_consumptions')
-        .select('consumer_id, product_id, amount, is_estimated')
-        .eq('workspace_id', ctx.workspaceId)
-        .eq('consumer_type', 'invoice')
-        .gte('entry_date', from)
-        .lte('entry_date', to)
-        .limit(20_000),
+      // Every row (27 Sep 2026): a .limit(N) here was cut to 1000 by PostgREST, and this feeds a total.
+      selectAllPages((lo, hi) =>
+        supabase
+          .from('invoice_items')
+          .select(
+            'invoice_id, product_id, product_name, total_price, discount, invoice:invoices!inner(invoice_number, date, type, workspace_id)',
+          )
+          .eq('workspace_id', ctx.workspaceId)
+          .gte('invoice.date', from)
+          .lte('invoice.date', to)
+          .eq('invoice.type', 'sale')
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      ),
+      selectAllPages((lo, hi) =>
+        supabase
+          .from('cost_consumptions')
+          .select('consumer_id, product_id, amount, is_estimated')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('consumer_type', 'invoice')
+          .gte('entry_date', from)
+          .lte('entry_date', to)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      ),
     ])
 
     if (items.error) throw new DatabaseError('Failed to read invoice items', items.error)

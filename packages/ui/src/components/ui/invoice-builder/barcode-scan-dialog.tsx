@@ -14,6 +14,7 @@
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import type { Product } from '@hisabche/validation'
+import type { ScaleLabel } from '../../../lib/barcode/scale-label'
 
 import { Button } from '../button'
 import {
@@ -27,8 +28,13 @@ import {
 
 export type ScanProblem =
   | { kind: 'unknown'; barcode: string }
-  | { kind: 'ambiguous'; barcode: string; products: Product[] }
+  // `label`: the scale label that led here, so the product picked still gets
+  // its weight rather than «one».
+  | { kind: 'ambiguous'; barcode: string; products: Product[]; label?: ScaleLabel | undefined }
   | { kind: 'error'; barcode: string; offline: boolean }
+  // A PRICE label on a product with no unit price: the amount cannot become a
+  // quantity, and «one kilogram» would be a guess (27 Sep 2026).
+  | { kind: 'noUnitPrice'; barcode: string }
 
 interface BarcodeScanDialogProps {
   t: (key: string) => string
@@ -59,7 +65,9 @@ export function BarcodeScanDialog({
               ? t('barcode.unknownTitle')
               : problem.kind === 'ambiguous'
                 ? t('barcode.ambiguousTitle')
-                : t('barcode.errorTitle')}
+                : problem.kind === 'noUnitPrice'
+                  ? t('barcode.noUnitPriceTitle')
+                  : t('barcode.errorTitle')}
           </DialogTitle>
           <DialogDescription>
             <span dir="ltr" className="font-mono tabular-nums">
@@ -70,9 +78,11 @@ export function BarcodeScanDialog({
               ? t('barcode.unknownBody')
               : problem.kind === 'ambiguous'
                 ? t('barcode.ambiguousBody')
-                : problem.offline
-                  ? t('barcode.errorOffline')
-                  : t('barcode.errorBody')}
+                : problem.kind === 'noUnitPrice'
+                  ? t('barcode.noUnitPriceBody')
+                  : problem.offline
+                    ? t('barcode.errorOffline')
+                    : t('barcode.errorBody')}
           </DialogDescription>
         </DialogHeader>
 

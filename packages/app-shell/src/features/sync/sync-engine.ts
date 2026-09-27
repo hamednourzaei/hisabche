@@ -18,6 +18,7 @@
 // data migration.
 // ============================================
 
+import { REJECTED_PREFIX, type CommittedEntry } from './outbox-stage'
 import type { QueryClient } from '@tanstack/react-query'
 import {
   invoiceKeys,
@@ -42,7 +43,7 @@ import {
   type QueueEntry,
 } from '@hisabche/app-bridge'
 
-const MAX_ATTEMPTS = 5
+export const MAX_ATTEMPTS = 5
 
 const num = (value: unknown): number =>
   typeof value === 'number' ? value : Number(value ?? 0) || 0
@@ -521,6 +522,30 @@ async function pushVersioned(entry: QueueEntry): Promise<void> {
 let running = false
 let again = false
 
+// ─── What the sync page shows, stage by stage (outbox-stage.ts) ────────────
+// In memory, on purpose: «sending» is only true while this process sends, and
+// a delivered change leaves the outbox — the recent ones are kept here so the
+// page can say «ثبت شد» for this session instead of the row just vanishing.
+const inFlight = new Set<string>()
+const COMMITTED_KEPT = 20
+let committed: CommittedEntry[] = []
+const stageListeners = new Set<() => void>()
+let stageSnapshot = { inFlight: new Set<string>(), committed: [] as CommittedEntry[] }
+
+function publishStages(): void {
+  stageSnapshot = { inFlight: new Set(inFlight), committed: [...committed] }
+  for (const listener of stageListeners) listener()
+}
+
+/** For useSyncExternalStore: a stable snapshot until something changes. */
+export function subscribeStages(listener: () => void): () => void {
+  stageListeners.add(listener)
+  return () => stageListeners.delete(listener)
+}
+export function stagesSnapshot() {
+  return stageSnapshot
+}
+
 /**
  * Drain the queue then refresh server state. Safe to call concurrently: a
  * call that arrives while a sync runs is not dropped — it schedules exactly
@@ -543,17 +568,42 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
 
     for (const entry of queue) {
       if (entry.attempts >= MAX_ATTEMPTS) continue
+      // Refused by the server: resending the same request gets the same answer.
+      // It waits for a person (the sync page's retry re-queues it fresh).
+      if (entry.lastError?.startsWith(REJECTED_PREFIX)) continue
       if (gate.blockedBy(entry)) continue
 
+      inFlight.add(entry.clientId)
+      publishStages()
       try {
         await pushEntry(entry)
         await desktop.db.resolveQueue(entry.clientId, 'done')
         gate.markSent(entry)
+        committed = [
+          {
+            clientId: entry.clientId,
+            entity: entry.entity,
+            operation: entry.operation,
+            committedAt: new Date().toISOString(),
+          },
+          ...committed,
+        ].slice(0, COMMITTED_KEPT)
       } catch (error) {
         const apiError = error as Partial<ApiError>
-        await desktop.db.resolveQueue(entry.clientId, 'failed', apiError.message ?? 'SYNC_FAILED')
-        // A permanent rejection stops here; the sync page offers a manual retry.
-        if (apiError.status && isPermanent(apiError.status)) continue
+        const message = apiError.message ?? 'SYNC_FAILED'
+        // ⚠️ A REFUSAL IS WRITTEN AS ONE (27 Sep 2026). It used to be stored
+        // exactly like a network drop, so the page could not tell «goes again
+        // by itself» from «someone must look». The marker is what makes
+        // stageOf() answer «rejected».
+        const permanent = Boolean(apiError.status && isPermanent(apiError.status))
+        await desktop.db.resolveQueue(
+          entry.clientId,
+          'failed',
+          permanent ? `${REJECTED_PREFIX}${message}` : message,
+        )
+      } finally {
+        inFlight.delete(entry.clientId)
+        publishStages()
       }
     }
 

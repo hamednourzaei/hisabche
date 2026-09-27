@@ -4,6 +4,7 @@
 // Fixed assets: capitalise, depreciate on a schedule, dispose.
 // ============================================
 
+import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
@@ -72,12 +73,17 @@ export class AssetsService {
   }
 
   async list(ctx: TenancyContext): Promise<FixedAsset[]> {
-    const { data, error } = await supabase
-      .from('fixed_assets')
-      .select(ASSET_COLUMNS)
-      .eq('workspace_id', ctx.workspaceId)
-      .order('acquired_on', { ascending: false })
-      .limit(1000)
+    // Every row, in ordered pages (27 Sep 2026): a `.limit(N)` here was silently cut to
+    // PostgREST max-rows (1000), and this read feeds a total or a decision.
+    const { data, error } = await selectAllPages((from, to) =>
+      supabase
+        .from('fixed_assets')
+        .select(ASSET_COLUMNS)
+        .eq('workspace_id', ctx.workspaceId)
+        .order('acquired_on', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to),
+    )
 
     if (error) throw new DatabaseError('Failed to fetch fixed assets', error)
     return (data ?? []).map(mapAsset)

@@ -17,6 +17,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { resolveBranchContext } from '../middleware/branch.middleware'
 import { BaseError } from '../errors/base.error'
+import { sendFailure } from '../errors/http-failure'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { invalidateMoneyCaches } from '../utils/money-cache'
 import { PlanLimitError } from '../services/plan-limits.service'
@@ -247,15 +248,13 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           return reply.code(503).send({ error: err.message, code: err.code })
         }
         if (err instanceof PlanLimitError) {
-          return reply
-            .code(err.statusCode)
-            .send({
-              error: err.code,
-              code: err.code,
-              feature: err.feature,
-              limit: err.limit,
-              used: err.used,
-            })
+          return reply.code(err.statusCode).send({
+            error: err.code,
+            code: err.code,
+            feature: err.feature,
+            limit: err.limit,
+            used: err.used,
+          })
         }
         fastify.log.error(err)
         return reply.code(500).send({ error: err.message })
@@ -361,9 +360,10 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         }
 
         return reply.send(invoice)
-      } catch (err: any) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: err.message })
+      } catch (err) {
+        // A stale version (409), a finalized invoice (409), a derived-total
+        // refusal (400) and a missing invoice (404) are answers, not 500s.
+        return sendFailure(reply, fastify.log, err, 'Failed to update invoice')
       }
     },
   )

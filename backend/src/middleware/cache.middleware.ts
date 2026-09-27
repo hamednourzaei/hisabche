@@ -17,12 +17,16 @@ import { cacheService } from '../services/cache.service'
  * 'user'      — genuinely user-private responses: profile, billing, the list
  *               of workspaces you belong to. Never one of the four shared
  *               entities.
+ * 'member'    — private to one person INSIDE one workspace (their own activity
+ *               feed). Keyed `<user>:<workspace>` — user first, so the
+ *               existing `<prefix>:<user>:*` invalidations still clear every
+ *               workspace's entry. Needs a resolved tenancy, like 'workspace'.
  *
  * Required, with no default. A default would be a fallback wearing different
  * clothes: whichever value it took would be silently wrong for half the
  * routes, and the wrong half would fail open.
  */
-export type CacheScope = 'workspace' | 'user'
+export type CacheScope = 'workspace' | 'user' | 'member'
 
 interface CacheOptions {
   scope: CacheScope
@@ -56,7 +60,7 @@ export function cacheMiddleware(options: CacheOptions) {
     // workspace context is a bug, so it fails closed and loudly.
     let scope: string
 
-    if (scopeKind === 'workspace') {
+    if (scopeKind === 'workspace' || scopeKind === 'member') {
       const workspaceId = request.tenancy?.workspaceId
       if (!workspaceId) {
         // Reachable only by misordering the preHandlers: requireWorkspaceContext
@@ -70,7 +74,7 @@ export function cacheMiddleware(options: CacheOptions) {
           .status(500)
           .send({ error: 'Internal Server Error', code: 'NO_TENANCY_CONTEXT' })
       }
-      scope = workspaceId
+      scope = scopeKind === 'member' ? `${request.tenancy.userId}:${workspaceId}` : workspaceId
     } else {
       const userId = request.userId
       if (!userId) {

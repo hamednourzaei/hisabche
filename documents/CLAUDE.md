@@ -18,9 +18,10 @@ four deployable targets:
 
 Shared packages under `packages/`: `auth-core` (session contract + roles),
 `auth` (Supabase adapters), `api` (typed client + hooks + realtime), `store`
-(Zustand), `db` (WatermelonDb + sync queue), `db-schema` (Drizzle subset),
-`validation` (Zod), `ui`, `mobile-ui`, `i18n`, `offline`, `config`,
-`analytics`.
+(Zustand), `db-schema` (Drizzle subset), `validation` (Zod), `ui`,
+`mobile-ui`, `i18n`, `config`, `analytics`, `sync` (the HSB wire + stream
+client), `app-shell` (desktop/mobile shell + sync engine). `db` and `offline`
+(WatermelonDb) were never imported and were removed (27 Sep 2026).
 
 Default currency: **AFN**. Default language direction: **RTL** (Persian/Dari
 primary).
@@ -81,9 +82,8 @@ Changes affect their platform and the shared packages underneath:
   (`electron/shared/ipc-contract.ts`). Every new IPC channel needs a Zod
   payload schema + main-side validation; renderer talks to native only via
   preload (context isolation).
-- **Mobile** — Expo/React Native. Offline via WatermelonDb
-  (`packages/db`), session via expo-secure-store; sync via
-  `performSync`. Keep iOS and Android both working.
+- **Mobile** — Expo/React Native. Offline via expo-sqlite (`apps/mobile/src/host/local-db.ts`) + outbox (`apps/mobile/src/features/offline/sync-runner.ts`);
+  session via expo-secure-store. Keep iOS and Android both working.
 
 ## Testing Requirements
 

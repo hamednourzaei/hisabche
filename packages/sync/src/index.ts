@@ -1,49 +1,17 @@
 // ============================================
-// @hisabche/sync — the client half of the local-first architecture.
+// @hisabche/sync — the sync WIRE shared by the server and every client.
 //
-// One protocol implementation, three platforms. Web supplies an IndexedDB
-// StorageAdapter, desktop a SQLite-over-IPC one, mobile a native SQLite one;
-// the outbox lifecycle, the retry policy and the cursor guarantees are this
-// package's, so they cannot drift apart.
+//   @hisabche/sync/wire    the Hisabche Sync Binary codec and its frames
+//   @hisabche/sync/stream  the wake-up stream client (WebSocket)
+//
+// ⚠️ ONLY THE WIRE (27 Sep 2026). This package also held a complete
+// client-side sync engine — SyncEngine, repositories, IndexedDB / memory
+// adapters, GC, wake sources — that nothing imported: the real engine lives in
+// packages/app-shell/src/features/sync (desktop SQLite over IPC) and
+// apps/mobile (native SQLite). Two engines is the parallel architecture G2
+// forbids, and an unused one is dead code (§14); it was removed. Git history
+// has it if it is ever wanted.
 // ============================================
 
-export { SyncEngine, backoffMs, newId } from './engine'
-export { MemoryStorageAdapter } from './memory-adapter'
-export { IndexedDbStorageAdapter, indexedDbAvailable } from './indexeddb-adapter'
-export { discardMutation, mutateLocal, retryWithServerVersion } from './mutations'
-export type { MutateOptions, MutateResult } from './mutations'
-export { HttpTransport } from './http-transport'
-export { installWakeSources, installCrossTabWake, announceMutation } from './wakeup'
-export type { WakeTarget, WakeupOptions } from './wakeup'
-export { collectGarbage, hydrateEntities, startGcScheduler, DEFAULT_RETENTION } from './gc'
-export type { GcOptions, GcReport, HydrationSource, RetentionPolicy } from './gc'
-export {
-  Repository,
-  InvoiceRepository,
-  CustomerRepository,
-  ProductRepository,
-  PaymentRepository,
-  createRepositories,
-  changeBus,
-} from './repository'
-export type {
-  Repositories,
-  RepositoryContext,
-  RepositoryRow,
-  InvoiceRow,
-  CustomerRow,
-  ProductRow,
-  TransactionRow,
-} from './repository'
-export type {
-  LocalEntity,
-  OutboxRecord,
-  OutboxStatus,
-  PushOutcome,
-  StorageAdapter,
-  SyncEngineOptions,
-  SyncListener,
-  SyncPhase,
-  SyncState,
-  Transport,
-} from './types'
+export * from './wire'
+export * from './stream-client'

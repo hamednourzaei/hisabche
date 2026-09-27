@@ -6,7 +6,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { createProductSchema, updateProductSchema } from '@hisabche/validation'
+import { createProductSchema, unitSchema, updateProductSchema } from '@hisabche/validation'
 import { ProductService } from '../services/product.service'
 import {
   IdempotencyUnavailableError,
@@ -101,20 +101,96 @@ export async function productRoutes(fastify: FastifyInstance) {
       try {
         const result = await productService.lookupByBarcode(request.tenancy, code)
         reply.header('cache-control', 'no-store')
-        if (result.status === 'found') return reply.send({ product: result.product })
+        // `unit`: an extra code that sells in its own unit (the carton's code).
+        if (result.status === 'found') {
+          return reply.send(
+            result.unit
+              ? { product: result.product, unit: result.unit }
+              : { product: result.product },
+          )
+        }
         if (result.status === 'ambiguous') {
-          return reply
-            .code(409)
-            .send({
-              error: 'BARCODE_AMBIGUOUS',
-              code: 'BARCODE_AMBIGUOUS',
-              products: result.products,
-            })
+          return reply.code(409).send({
+            error: 'BARCODE_AMBIGUOUS',
+            code: 'BARCODE_AMBIGUOUS',
+            products: result.products,
+          })
         }
         return reply.code(404).send({ error: 'BARCODE_NOT_FOUND', code: 'BARCODE_NOT_FOUND' })
       } catch (err) {
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to look up barcode' })
+      }
+    },
+  )
+
+  // ─── Extra barcodes of a product (docs/product-barcodes-migration.sql) ───
+  const barcodeBody = z.object({
+    barcode: z.string().trim().min(1).max(128),
+    // A unit the product model knows. Not «custom»: that carries a free label
+    // and no conversion, so «this code sells a custom» would mean nothing.
+    unit: unitSchema.exclude(['custom']).nullable().optional(),
+  })
+  const barcodeFailure = (reply: FastifyReply, err: unknown, fallback: string) => {
+    if (err instanceof z.ZodError) {
+      return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+    }
+    if (err instanceof ConflictError && err.message === 'BARCODE_TAKEN') {
+      return reply.code(409).send({
+        error: 'BARCODE_TAKEN',
+        code: 'BARCODE_TAKEN',
+        message: 'BARCODE_TAKEN',
+        details: [{ path: ['barcode'], message: 'BARCODE_TAKEN' }],
+      })
+    }
+    if (err instanceof ConflictError) {
+      return reply.code(409).send({ error: err.message, code: err.message })
+    }
+    if (err instanceof NotFoundError) return reply.code(404).send({ error: err.message })
+    fastify.log.error(err)
+    return reply.code(500).send({ error: fallback })
+  }
+
+  fastify.get(
+    '/api/products/:id/barcodes',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        return reply.send({ barcodes: await productService.listBarcodes(request.tenancy, id) })
+      } catch (err) {
+        return barcodeFailure(reply, err, 'Failed to read barcodes')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/products/:id/barcodes',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const body = barcodeBody.parse(request.body)
+        const created = await productService.addBarcode(request.tenancy, id, body)
+        await clearCache(`products:${request.tenancy.workspaceId}:*`)
+        return reply.code(201).send(created)
+      } catch (err) {
+        return barcodeFailure(reply, err, 'Failed to add the barcode')
+      }
+    },
+  )
+
+  fastify.delete(
+    '/api/products/:id/barcodes/:barcodeId',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id, barcodeId } = request.params as { id: string; barcodeId: string }
+        await productService.removeBarcode(request.tenancy, id, barcodeId)
+        await clearCache(`products:${request.tenancy.workspaceId}:*`)
+        return reply.code(204).send()
+      } catch (err) {
+        return barcodeFailure(reply, err, 'Failed to remove the barcode')
       }
     },
   )

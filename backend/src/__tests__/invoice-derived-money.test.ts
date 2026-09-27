@@ -182,32 +182,39 @@ describe('create() uses the derived money everywhere', () => {
   it('⚠️ the APPROVAL THRESHOLD is compared against the derived total', () => {
     // Otherwise «anything above X needs a manager» is decided by the number
     // the person trying to get past it supplied.
-    expect(createBody).toMatch(/routeForApproval\(ctx, invoice\.id, money\.total/)
-    expect(createBody).not.toMatch(/routeForApproval\([^)]*Number\(data\.total/)
+    // (27 Sep 2026: the decision is decideApprovalRoute, made before any write.)
+    expect(createBody).toMatch(/decideApprovalRoute\(ctx, money\.total/)
+    expect(createBody).not.toMatch(/decideApprovalRoute\([^)]*data\.total/)
   })
 
   it('the money is derived before the first write', () => {
-    expect(createBody.indexOf('computeInvoiceMoney')).toBeLessThan(
-      createBody.indexOf("from('invoices')"),
-    )
+    // The first write is the one-transaction document write (27 Sep 2026).
+    const firstWrite = createBody.indexOf('this.writeInvoiceDocument(')
+    expect(firstWrite).toBeGreaterThan(-1)
+    expect(createBody.indexOf('computeInvoiceMoney')).toBeLessThan(firstWrite)
   })
 })
 
 describe('stock moves exactly once', () => {
   it('⚠️ creation does not move stock while the document is held', () => {
-    expect(createBody).toMatch(/if \(!isHeld\) \{[\s\S]{0,200}?batchUpdateStock/)
+    // The movements are planned only when not held, and written with the
+    // document; held → none (postApprovedInvoice moves them on approval).
+    expect(createBody).toMatch(
+      /!isHeld && lines\.length > 0\s*\?\s*await this\.planStockMovements\(/,
+    )
   })
 
   it('the approval decision happens before the items block', () => {
-    expect(createBody.indexOf('routeForApproval')).toBeLessThan(
-      createBody.indexOf('batchUpdateStock'),
-    )
+    const decision = createBody.indexOf('decideApprovalRoute(')
+    expect(decision).toBeGreaterThan(-1)
+    expect(decision).toBeLessThan(createBody.indexOf('this.planStockMovements('))
+    expect(decision).toBeLessThan(createBody.indexOf('this.writeInvoiceDocument('))
   })
 
   it('there is exactly one approval decision in create()', () => {
     // Two would be two answers to one question, and the second used the
     // client's total.
-    expect(createBody.match(/routeForApproval\(/g)?.length ?? 0).toBe(1)
+    expect(createBody.match(/decideApprovalRoute\(/g)?.length ?? 0).toBe(1)
   })
 })
 
@@ -220,8 +227,9 @@ describe('nothing is compensated with a DELETE', () => {
 
   it('⚠️ the customer is verified before the invoice row exists', () => {
     const check = createBody.indexOf("from('customers')")
-    const insert = createBody.indexOf("from('invoices')")
+    const insert = createBody.indexOf('this.writeInvoiceDocument(')
     expect(check).toBeGreaterThan(-1)
+    expect(insert).toBeGreaterThan(-1)
     expect(check).toBeLessThan(insert)
   })
 
@@ -233,6 +241,8 @@ describe('nothing is compensated with a DELETE', () => {
   })
 
   it('a failed items insert says what state was left behind', () => {
-    expect(createBody).toMatch(/items could not be saved/)
+    // Only reachable on the pre-migration path; with the migration the whole
+    // document rolls back and there is no state to describe.
+    expect(source).toMatch(/was saved but its items could not be/)
   })
 })

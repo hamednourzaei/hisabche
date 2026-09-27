@@ -5,7 +5,7 @@
 import { createNotificationMutationCache, registerOfflineQueue } from '@hisabche/api'
 import React, { useEffect, useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { registerReceiptPrinterHost, ToastProvider } from '@hisabche/ui'
+import { registerCameraScanner, registerReceiptPrinterHost, ToastProvider } from '@hisabche/ui'
 import { bindActiveWorkspace, useWorkspaceStore } from '@hisabche/store'
 
 import { useAuthStore } from '@/features/auth/auth.store'
@@ -61,6 +61,11 @@ if (typeof window !== 'undefined') {
       printEscPos: ({ data, deviceName }) =>
         device.print.escPos({ data, ...(deviceName ? { deviceName } : {}) }),
     })
+
+    // The phone's camera as a barcode scanner. Only a host that HAS one
+    // answers barcode.scan; elsewhere no camera button is drawn at all.
+    const camera = device.barcode
+    registerCameraScanner(camera ? { scan: () => camera.scan() } : null)
   }
 }
 

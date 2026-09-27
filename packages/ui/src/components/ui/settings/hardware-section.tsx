@@ -11,7 +11,7 @@
 
 import { memo, useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Printer, ScanBarcode } from 'lucide-react'
+import { Printer, Scale, ScanBarcode } from 'lucide-react'
 import { lookupProductByBarcode, type BarcodeLookup } from '@hisabche/api'
 
 import { Switch } from '../switch'
@@ -19,6 +19,12 @@ import { SelectField } from '../select-field'
 import { useBarcodeScanner } from '../../../hooks/use-barcode-scanner'
 import type { BarcodeScan, ScannerConfig } from '../../../lib/barcode/scan-detector'
 import { loadScannerConfig, saveScannerConfig } from '../../../lib/barcode/scanner-settings'
+import {
+  loadScaleLabelConfig,
+  sanitizeScaleLabelConfig,
+  saveScaleLabelConfig,
+  type ScaleLabelConfig,
+} from '../../../lib/barcode/scale-label'
 import { getReceiptPrinterHost, type HostPrinter } from '../../../lib/print/printer-host'
 import { printReceipt } from '../../../lib/print/print-receipt'
 import {
@@ -63,9 +69,11 @@ export const HardwareSection = memo(function HardwareSection() {
   const [printer, setPrinter] = useState<PrinterSettings | null>(null)
   const [printers, setPrinters] = useState<HostPrinter[] | null>(null)
   const [hasHost, setHasHost] = useState(false)
+  const [scale, setScale] = useState<ScaleLabelConfig | null>(null)
 
   useEffect(() => {
     setScanner(loadScannerConfig())
+    setScale(loadScaleLabelConfig())
     setPrinter(loadPrinterSettings())
     const host = getReceiptPrinterHost()
     setHasHost(host !== null)
@@ -79,6 +87,15 @@ export const HardwareSection = memo(function HardwareSection() {
       if (!current) return current
       const next = { ...current, ...patch }
       saveScannerConfig(next)
+      return next
+    })
+  }, [])
+
+  const updateScale = useCallback((patch: Partial<ScaleLabelConfig>) => {
+    setScale((current) => {
+      if (!current) return current
+      const next = sanitizeScaleLabelConfig({ ...current, ...patch })
+      saveScaleLabelConfig(next)
       return next
     })
   }, [])
@@ -160,7 +177,7 @@ export const HardwareSection = memo(function HardwareSection() {
     }
   }, [printer, t, toast])
 
-  if (!scanner || !printer) return null
+  if (!scanner || !printer || !scale) return null
 
   return (
     <div className={card} data-hardware-settings="">
@@ -249,6 +266,63 @@ export const HardwareSection = memo(function HardwareSection() {
               <p className="mt-1 text-[hsl(var(--fg-tertiary))]">{t('hardware.testWaiting')}</p>
             )}
           </div>
+        </section>
+
+        {/* ── Scale labels (27 Sep 2026) ────────────────────────────── */}
+        <section className="space-y-4" data-scale-label-settings="">
+          <div className="flex items-center gap-2">
+            <Scale className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+            <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
+              {t('hardware.scaleTitle')}
+            </h2>
+          </div>
+          <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('hardware.scaleIntro')}</p>
+
+          <Row label={t('hardware.scaleEnabled')}>
+            <Switch
+              checked={scale.enabled}
+              onCheckedChange={(enabled) => updateScale({ enabled })}
+            />
+          </Row>
+          <Row label={t('hardware.scaleValueKind')}>
+            <SelectField
+              value={scale.valueKind}
+              onChange={(value) =>
+                updateScale(
+                  value === 'price'
+                    ? { valueKind: 'price', decimals: 0 }
+                    : { valueKind: 'weight', decimals: 3 },
+                )
+              }
+              options={[
+                { value: 'weight', label: t('hardware.scaleWeight') },
+                { value: 'price', label: t('hardware.scalePrice') },
+              ]}
+              aria-label={t('hardware.scaleValueKind')}
+            />
+          </Row>
+          <Row label={t('hardware.scaleItemDigits')} hint={t('hardware.scaleItemDigitsHint')}>
+            <input
+              type="number"
+              min={4}
+              max={7}
+              aria-label={t('hardware.scaleItemDigits')}
+              value={scale.itemDigits}
+              onChange={(e) => updateScale({ itemDigits: Number(e.target.value) })}
+              className={numberInput}
+            />
+          </Row>
+          <Row label={t('hardware.scaleDecimals')} hint={t('hardware.scaleDecimalsHint')}>
+            <input
+              type="number"
+              min={0}
+              max={3}
+              aria-label={t('hardware.scaleDecimals')}
+              value={scale.decimals}
+              onChange={(e) => updateScale({ decimals: Number(e.target.value) })}
+              className={numberInput}
+            />
+          </Row>
         </section>
 
         {/* ── Receipt printer ───────────────────────────────────────── */}

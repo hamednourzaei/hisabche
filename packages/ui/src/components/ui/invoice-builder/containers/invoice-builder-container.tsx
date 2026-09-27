@@ -23,6 +23,13 @@ import { CreditLimitWarning } from '../credit-limit-warning'
 import { useCustomerTerms } from '../use-customer-terms'
 import { InvoiceWarehouseSelect } from '../invoice-warehouse-select'
 import { BarcodeScanDialog, type ScanProblem } from '../barcode-scan-dialog'
+import { CameraScanButton } from '../camera-scan-button'
+import {
+  loadScaleLabelConfig,
+  parseScaleLabel,
+  quantityOfLabel,
+  type ScaleLabel,
+} from '../../../../lib/barcode/scale-label'
 import { useBarcodeScanner } from '../../../../hooks/use-barcode-scanner'
 import { planScan } from '../../../../lib/barcode/scan-into-invoice'
 import { lookupProductByBarcode } from '@hisabche/api'
@@ -73,7 +80,7 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   const [scanProblem, setScanProblem] = useState<ScanProblem | null>(null)
 
   const placeScanned = useCallback(
-    (product: Product) => {
+    (product: Product, add = 1) => {
       // No id → nothing to link stock to; never a line that moves nothing.
       if (!product.id) return
       const unit = product.unit || 'piece'
@@ -83,7 +90,7 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
       // Read the store at the moment of the scan: two scans a few ms apart
       // must see each other's line, not the same render's snapshot.
       const rows = useInvoiceDraftStore.getState().rows
-      const plan = planScan(rows, { id: product.id, name: product.name, price, unit })
+      const plan = planScan(rows, { id: product.id, name: product.name, price, unit }, add)
       if (plan.kind === 'increment') {
         draft.setCell(plan.rowId, COLUMN.quantity, plan.quantity)
         return
@@ -96,26 +103,47 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
       if (!rowId) return
       draft.setRowProduct(rowId, product.id, product.name, price)
       draft.setCell(rowId, COLUMN.unit, unit)
+      if (add !== 1) draft.setCell(rowId, COLUMN.quantity, String(add))
     },
     [draft],
   )
 
+  // A scale label's weight (or price ÷ unit price) is the quantity; an
+  // ordinary code adds one. null = a price label the product cannot convert.
+  const placeWithLabel = useCallback(
+    (product: Product, label: ScaleLabel | undefined, barcode: string) => {
+      if (!label) return placeScanned(product)
+      const unitPrice = Number(
+        (draft.transactionType === 'purchase' ? product.buyPrice : product.sellPrice) ?? 0,
+      )
+      const quantity = quantityOfLabel(label, unitPrice)
+      if (quantity === null) return setScanProblem({ kind: 'noUnitPrice', barcode })
+      placeScanned(product, quantity)
+    },
+    [draft.transactionType, placeScanned],
+  )
+
   const handleScan = useCallback(
     async (barcode: string) => {
-      const result = await lookupProductByBarcode(barcode)
+      // A scale label is looked up by prefix + item code, not the whole code.
+      const label = parseScaleLabel(barcode, loadScaleLabelConfig()) ?? undefined
+      const code = label ? label.productCode : barcode
+      const result = await lookupProductByBarcode(code)
       if (result.status === 'found') {
-        placeScanned(result.product)
+        // An extra code that sells in its own unit (the carton's code) adds that unit.
+        const product = result.unit ? { ...result.product, unit: result.unit } : result.product
+        placeWithLabel(product, label, barcode)
         return
       }
       setScanProblem(
         result.status === 'ambiguous'
-          ? { kind: 'ambiguous', barcode, products: result.products }
+          ? { kind: 'ambiguous', barcode: code, products: result.products, label }
           : result.status === 'unknown'
             ? { kind: 'unknown', barcode: result.barcode }
             : { kind: 'error', barcode: result.barcode, offline: result.offline },
       )
     },
-    [placeScanned],
+    [placeWithLabel],
   )
 
   // Paused while the dialog is open: the cashier is answering it.
@@ -189,8 +217,13 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
         t={t}
         problem={scanProblem}
         onPick={(product) => {
+          const picked = scanProblem
           setScanProblem(null)
-          placeScanned(product)
+          placeWithLabel(
+            product,
+            picked?.kind === 'ambiguous' ? picked.label : undefined,
+            picked?.barcode ?? '',
+          )
         }}
         onRetry={(barcode) => {
           setScanProblem(null)
@@ -209,6 +242,11 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
         issues={issues}
         stockWarning={
           <>
+            <CameraScanButton
+              t={t}
+              onCode={(code) => void handleScan(code)}
+              disabled={scanProblem !== null}
+            />
             <InvoiceWarehouseSelect
               t={t}
               transactionType={draft.transactionType}

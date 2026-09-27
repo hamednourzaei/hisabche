@@ -4,6 +4,7 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { supabase } from '../db'
+import { selectAllPages } from '../utils/fetch-all-pages'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
@@ -82,13 +83,18 @@ export async function transactionRoutes(fastify: FastifyInstance) {
         //
         // The view is the union of posted invoices, posted payments, and the
         // legacy rows no document stands behind. Same columns, real contents.
-        const { data, error } = await supabase
-          .from('transactions_view')
-          .select('type, amount, created_at')
-          .eq('workspace_id', request.tenancy.workspaceId)
-          .eq(column, partyId)
-          .order('created_at', { ascending: true })
-          .limit(10_000)
+        // The whole statement (27 Sep 2026): `.limit(10_000)` was cut to 1000
+        // rows by PostgREST, and the running balance was summed over that.
+        const { data, error } = await selectAllPages((lo, hi) =>
+          supabase
+            .from('transactions_view')
+            .select('type, amount, created_at')
+            .eq('workspace_id', request.tenancy.workspaceId)
+            .eq(column, partyId)
+            .order('created_at', { ascending: true })
+            .order('id', { ascending: true })
+            .range(lo, hi),
+        )
 
         if (error) throw error
 

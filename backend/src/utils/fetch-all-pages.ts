@@ -41,3 +41,25 @@ export async function fetchAllPages<T>(
     if (batch.length < PAGE_SIZE) return rows
   }
 }
+
+/**
+ * The same complete read, answered in the SHAPE of one select —
+ * `{ data, error }` — for call sites that already branch on the error (some
+ * deliberately tolerate a table that is not there yet). An error on any page
+ * returns that error and NO rows: a partial set is never handed back as data.
+ * Same ordering rule as fetchAllPages.
+ */
+export async function selectAllPages<T, E extends { message: string; code?: string }>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: E | null }>,
+): Promise<{ data: T[] | null; error: E | null }> {
+  const rows: T[] = []
+
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await page(from, from + PAGE_SIZE - 1)
+    if (error) return { data: null, error }
+
+    const batch = data ?? []
+    rows.push(...batch)
+    if (batch.length < PAGE_SIZE) return { data: rows, error: null }
+  }
+}

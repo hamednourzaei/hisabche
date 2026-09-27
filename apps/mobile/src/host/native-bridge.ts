@@ -14,6 +14,9 @@
 // re-validates each channel.
 // ============================================
 
+import { Camera } from 'expo-camera'
+import type { CameraScanResult } from '@hisabche/app-bridge'
+import { requestScan } from './camera-scan'
 import * as FileSystem from 'expo-file-system'
 import * as Print from 'expo-print'
 import * as SecureStore from 'expo-secure-store'
@@ -219,6 +222,17 @@ const http = {
   },
 }
 
+// ─── camera barcode scan ──────────────────────────────────────────────────
+// Permission FIRST, so «not allowed» is its own answer rather than a camera
+// screen that stays black (camera-scan.ts, camera-scan-overlay.tsx).
+const barcode = {
+  async scan(): Promise<CameraScanResult> {
+    const permission = await Camera.requestCameraPermissionsAsync()
+    if (!permission.granted) return { status: 'denied' }
+    return requestScan()
+  },
+}
+
 const HANDLERS: Record<string, (...args: never[]) => unknown> = {
   'secure.get': secure.get as never,
   'secure.set': secure.set as never,
@@ -241,6 +255,7 @@ const HANDLERS: Record<string, (...args: never[]) => unknown> = {
   'app.downloadUpdate': app.downloadUpdate as never,
   'app.installUpdate': app.installUpdate as never,
   'http.request': http.request as never,
+  'barcode.scan': barcode.scan as never,
 }
 
 /**

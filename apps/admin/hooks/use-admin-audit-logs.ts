@@ -26,10 +26,9 @@ export interface AdminAuditLog {
   action: string
   entity_type: string | null
   entity_id: string | null
-  old_data: unknown
-  new_data: unknown
+  // The list carries no before/after snapshots (27 Sep 2026): they were never
+  // shown here, and each one is a full JSON copy of a record.
   ip_address: string | null
-  user_agent: string | null
   created_at: string
 }
 

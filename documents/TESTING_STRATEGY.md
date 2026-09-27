@@ -53,7 +53,8 @@ pnpm build
   Existing `__tests__` in `packages/validation`.
 - `@hisabche/api`: client wrapper (`ApiError` shape), token provider.
 - `@hisabche/store`: Zustand slices — auth, cart, sync, workspace, currency.
-- `@hisabche/db`: sync-queue logic, WatermelonDb schema/migrations.
+- `@hisabche/sync`: the HSB codec (`wire-codec.test.ts`) and the stream client.
+- `@hisabche/app-shell`: the sync engine (pull, snapshot, outbox order, binary over the Android bridge).
 
 ### Desktop (Electron)
 

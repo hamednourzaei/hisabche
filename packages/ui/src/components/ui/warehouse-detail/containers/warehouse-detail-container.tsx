@@ -10,6 +10,7 @@ import { profitPerUnit, stockValue, totalProfit } from '@hisabche/validation'
 import { apiErrorMessage, useProduct, useUpdateProduct, useDeleteProduct } from '@hisabche/api'
 import { barcodeTakenMessage } from '../../../../lib/barcode/barcode-errors'
 import { ProductExpiryPanel } from '../product-expiry-panel'
+import { ProductBarcodesPanel } from '../product-barcodes-panel'
 import { ProductDetailPage } from '../warehouse-detail-page'
 import { productDeleteRefusal } from '../../../../lib/warehouse/delete-refusal'
 import { STOCK_LABEL_KEY, STOCK_TONE, stockStateOf } from '../../../../lib/warehouse/stock-state'
@@ -199,6 +200,7 @@ export function ProductDetailContainer() {
       onCancelEditing={() => setEditing(false)}
       onSave={onSave}
       onDelete={handleDelete}
+      barcodes={id ? <ProductBarcodesPanel t={safeT} productId={id} /> : null}
       expiry={id ? <ProductExpiryPanel t={safeT} productId={id} /> : null}
     />
   )

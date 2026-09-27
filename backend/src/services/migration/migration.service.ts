@@ -32,6 +32,7 @@
 // make the history lie about what happened in the workspace.
 // ============================================
 
+import { selectAllPages } from '../../utils/fetch-all-pages'
 import { createHash } from 'node:crypto'
 
 import { supabase } from '../../db'
@@ -455,12 +456,16 @@ export class MigrationService {
     this.assertMayImport(ctx)
     const job = await this.get(ctx, id)
 
-    const { data, error } = await supabase
-      .from('migration_records')
-      .select('target_id, outcome')
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('migration_id', id)
-      .limit(50_000)
+    // The WHOLE ledger (27 Sep 2026): a rollback planned from the first 1000 records leaves the rest behind.
+    const { data, error } = await selectAllPages((lo, hi) =>
+      supabase
+        .from('migration_records')
+        .select('target_id, outcome')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('migration_id', id)
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
 
     if (error) throw new DatabaseError('Failed to read the migration ledger', error)
 
@@ -554,12 +559,15 @@ export class MigrationService {
           ] as const)
 
     for (const [table, column] of sources) {
-      const { data, error } = await supabase
-        .from(table)
-        .select(column)
-        .eq('workspace_id', ctx.workspaceId)
-        .in(column, ids)
-        .limit(50_000)
+      const { data, error } = await selectAllPages((lo, hi) =>
+        supabase
+          .from(table)
+          .select(column)
+          .eq('workspace_id', ctx.workspaceId)
+          .in(column, ids)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      )
 
       if (error) {
         for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1)
@@ -668,11 +676,15 @@ export class MigrationService {
   async exportCsv(ctx: TenancyContext, entity: MigrationEntity): Promise<string> {
     const columns = EXPORT_COLUMNS[entity]
 
-    const { data, error } = await supabase
-      .from(entity === 'customer' ? 'customers' : 'products')
-      .select('*')
-      .eq('workspace_id', ctx.workspaceId)
-      .limit(20_000)
+    // The WHOLE table (27 Sep 2026): an export cut at PostgREST's 1000 rows lost the rest silently.
+    const { data, error } = await selectAllPages((lo, hi) =>
+      supabase
+        .from(entity === 'customer' ? 'customers' : 'products')
+        .select('*')
+        .eq('workspace_id', ctx.workspaceId)
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
 
     if (error) throw new DatabaseError('Failed to export', error)
 
@@ -780,11 +792,15 @@ export class MigrationService {
     const keys = new Set<string>()
 
     if (entity === 'customer') {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('phone, email, full_name')
-        .eq('workspace_id', ctx.workspaceId)
-        .limit(20_000)
+      // EVERY existing key (27 Sep 2026): with only the first 1000, an import into a larger book created twins of the rest.
+      const { data, error } = await selectAllPages((lo, hi) =>
+        supabase
+          .from('customers')
+          .select('phone, email, full_name')
+          .eq('workspace_id', ctx.workspaceId)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      )
 
       if (error) throw new DatabaseError('Failed to read existing customers', error)
 
@@ -797,11 +813,14 @@ export class MigrationService {
         if (name) keys.add(`name:${name}`)
       }
     } else {
-      const { data, error } = await supabase
-        .from('products')
-        .select('sku, barcode, name')
-        .eq('workspace_id', ctx.workspaceId)
-        .limit(20_000)
+      const { data, error } = await selectAllPages((lo, hi) =>
+        supabase
+          .from('products')
+          .select('sku, barcode, name')
+          .eq('workspace_id', ctx.workspaceId)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      )
 
       if (error) throw new DatabaseError('Failed to read existing products', error)
 
@@ -823,12 +842,15 @@ export class MigrationService {
     ctx: TenancyContext,
     entity: MigrationEntity,
   ): Promise<Map<string, string>> {
-    const { data, error } = await supabase
-      .from('migration_records')
-      .select('source_identity, target_id')
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('source_entity_type', entity)
-      .limit(50_000)
+    const { data, error } = await selectAllPages((lo, hi) =>
+      supabase
+        .from('migration_records')
+        .select('source_identity, target_id')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('source_entity_type', entity)
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
 
     if (error) throw new DatabaseError('Failed to read the migration ledger', error)
 
@@ -866,12 +888,15 @@ export class MigrationService {
   }
 
   private async countLedger(ctx: TenancyContext, migrationId: string) {
-    const { data, error } = await supabase
-      .from('migration_records')
-      .select('outcome')
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('migration_id', migrationId)
-      .limit(50_000)
+    const { data, error } = await selectAllPages((lo, hi) =>
+      supabase
+        .from('migration_records')
+        .select('outcome')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('migration_id', migrationId)
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
 
     if (error) throw new DatabaseError('Failed to reconcile the migration', error)
 

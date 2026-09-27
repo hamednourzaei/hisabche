@@ -12,6 +12,7 @@
 // party name, the workspace id and the transaction type (sale | purchase).
 // ============================================
 
+import { randomUUID } from 'node:crypto'
 import { PaymentsService } from './payments/payments.service'
 import { supabase } from '../db'
 import { sod } from './authorization'
@@ -22,6 +23,8 @@ import { summarizeInvoices, type InvoiceSummaryRow } from './invoices/invoice-li
 import { toBaseQuantity, type ProductUnitOption } from './inventory/unit-conversion.domain'
 import { conflicts } from './conflict'
 import { detectBreaches } from './pos/negative-stock.domain'
+import { netReversal, type MovementRow } from './invoices/stock-reversal.domain'
+import { fetchAllPages } from '../utils/fetch-all-pages'
 import { WorkflowService } from '../services/workflow.service'
 import { NotificationService } from '../services/notification.service'
 import {
@@ -35,7 +38,7 @@ import { ledger, type DraftLine } from './accounting'
 import { costing } from './inventory-costing'
 import { rules } from './rules'
 import { tax } from './tax'
-import { DatabaseError, NotFoundError, isFailedRead } from '../errors/database.error'
+import { ConflictError, DatabaseError, NotFoundError, isFailedRead } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
 import {
   AWAITING_APPROVAL_STATUS,
@@ -826,99 +829,6 @@ export class InvoiceService {
 
     const invoiceNumber = await this.generateInvoiceNumber()
 
-    const { data: invoice, error: invoiceError } = await supabase
-      .from('invoices')
-      .insert({
-        invoice_number: invoiceNumber,
-        branch_id: branchId,
-        type: data.type,
-        date: data.date || new Date().toISOString(),
-        due_date: data.dueDate || null,
-        customer_id: data.customerId || null,
-        supplier_id: data.supplierId || null,
-        // ⚠️ DERIVED, NOT ACCEPTED. See `money` above.
-        subtotal: money.subtotal,
-        discount_total: money.discountTotal,
-        discount_type: data.discountType || 'fixed',
-        // The flat rate the client sent is kept for backward compatibility with
-        // screens that still show it, but it decides nothing: the tax core
-        // computes the real figures below and they overwrite these.
-        tax_rate: data.taxRate || 0,
-        tax_total: money.taxTotal,
-        total: money.total,
-        // ⚠️ T9 — ALWAYS ZERO AT INSERT, AND THAT IS THE FIX.
-        //
-        // This line used to read `paid_amount: data.paidAmount || 0`. Phase F
-        // made `paid_amount` a projection of `SUM(payment_allocations)` and
-        // closed the PATCH that wrote it — but this insert kept writing it, so
-        // creation remained a second writer on a derived number.
-        //
-        // A real sale showed the consequence: `paid_amount` was ۱۸٬۰۰۰٬۰۰۰
-        // with no payment behind it, and the drift warning built in H2 caught
-        // it. The invoice claimed to be paid and the ledger had never seen a
-        // rial of it.
-        //
-        // The money is recorded as an actual payment below, and this column
-        // follows from the allocations the way every other screen expects.
-        paid_amount: 0,
-        payment_method: data.paymentMethod || 'cash',
-        currency: data.currency || 'AFN',
-        // ⚠️ J3 — THIS LINE IS THE CONFLATION, and it is kept deliberately.
-        //
-        // `completed` is a DOCUMENT word being set by whether the invoice was
-        // PAID at creation. `settlementDate()` then reads `status ===
-        // 'completed'` to decide when it settled, which works only because of
-        // that accident.
-        //
-        // It stays because every screen, filter and export reads this column,
-        // and the deprecation flow is three releases: add beside → move
-        // readers → remove. Changing it now would move a value under readers
-        // that have not been converted.
-        //
-        // `document_status` below is the correct answer, written alongside.
-        status:
-          data.paidAmount && data.total && data.paidAmount >= data.total ? 'completed' : 'pending',
-        notes: data.notes || '',
-        reference: data.reference || '',
-
-        // ⚠️ J3 — `document_status` is deliberately NOT written here.
-        //
-        // Two reasons. The column defaults to NULL and `invoice_state` reads
-        // NULL as `draft`, which is correct at insert time — nothing has been
-        // posted yet.
-        //
-        // And putting it in this insert would make the ENTIRE create path fail
-        // with 42703 on a database that has not run phase-j-03. Invoice
-        // creation is the one thing that must never depend on an optional
-        // column; it is set in a separate, tolerant write once the ledger has
-        // actually been written (see `markPosted` below).
-
-        // workspace_id is the tenancy boundary; user_id records the actor.
-        workspace_id: workspaceId,
-        user_id: userId,
-        // Multi-warehouse: which warehouse this invoice's goods leave/arrive.
-        // Only named when set, so creation works before the migration.
-        ...(invoiceWarehouseId ? { warehouse_id: invoiceWarehouseId } : {}),
-        // Only a keyed request names the column, so unkeyed creation keeps
-        // working on a database that has not run the idempotency migration.
-        ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
-      })
-      .select(INVOICE_LIST_COLUMNS)
-      .single()
-
-    if (invoiceError && clientRequestId) {
-      // A concurrent copy of the same request won the insert: answer with its
-      // invoice. Nothing after this point has run for this attempt.
-      if (invoiceError.code === '23505') {
-        const winner = await this.findByClientRequestId(workspaceId, clientRequestId)
-        if (winner) return { ...winner, idempotentReplay: true }
-      }
-      if (isMissingIdempotencySupport(invoiceError)) {
-        throw new IdempotencyUnavailableError('invoice')
-      }
-    }
-    if (invoiceError || !invoice) throw new DatabaseError('Failed to create invoice', invoiceError)
-
     // ═══════════════════════════════════════════════════════════════════════
     // ⚠️ APPROVAL IS DECIDED BEFORE THE STOCK MOVES, NOT AFTER.
     //
@@ -940,77 +850,174 @@ export class InvoiceService {
     // «anything above X needs a manager» rule. It reads the derived total now,
     // like the document and the ledger do.
     // ═══════════════════════════════════════════════════════════════════════
-    const approval = await this.routeForApproval(ctx, invoice.id, money.total, {
+    //
+    // ⚠️ AND BEFORE ANYTHING IS WRITTEN (27 Sep 2026). Only the DECISION is
+    // made here, with reads; the workflow instances start after the document
+    // exists (startApprovalWorkflows), so a failed write leaves no approval
+    // pointing at an invoice that is not there.
+    const approvalOutcome = await this.decideApprovalRoute(ctx, money.total, {
       type: data.type,
       currency: data.currency,
       customerId: data.customerId ?? null,
     })
 
     /** Held for approval: the goods must not move until somebody says so. */
-    const isHeld = !mayPostDocument(approval)
+    let isHeld = !mayPostDocument(approvalOutcome)
 
-    // ─── ایجاد آیتم‌های فاکتور ──────────────────────────────────────────
-    if (data.items?.length) {
-      const items = data.items.map((item) => ({
-        invoice_id: invoice.id,
-        product_id: item.productId,
-        product_name: item.productName || '',
-        quantity: item.quantity,
-        unit: item.unit || 'piece',
-        unit_label: item.unitLabel ?? null,
-        weight_grams: item.weightGrams ?? null,
-        unit_price: item.unitPrice,
-        discount: item.discount || 0,
-        total_price: item.totalPrice || item.quantity * item.unitPrice,
-        notes: item.notes || '',
-        user_id: userId,
-      }))
+    // The ids are made HERE so every row of the document can be built before
+    // anything is written, and written together (writeInvoiceDocument).
+    const invoiceId = randomUUID()
+    const settledStatus =
+      data.paidAmount && data.total && data.paidAmount >= data.total ? 'completed' : 'pending'
+    const direction: 1 | -1 = data.type === 'purchase' ? 1 : -1
 
-      // `.select()` so the generated item ids come back — the nested details
-      // need them, and a second round-trip per item would be N+1.
-      const { data: insertedItems, error: itemsError } = await supabase
-        .from('invoice_items')
-        .insert(items)
-        .select('id')
+    const header = {
+      id: invoiceId,
+      invoice_number: invoiceNumber,
+      branch_id: branchId,
+      type: data.type,
+      date: data.date || new Date().toISOString(),
+      due_date: data.dueDate || null,
+      customer_id: data.customerId || null,
+      supplier_id: data.supplierId || null,
+      // ⚠️ DERIVED, NOT ACCEPTED. See `money` above.
+      subtotal: money.subtotal,
+      discount_total: money.discountTotal,
+      discount_type: data.discountType || 'fixed',
+      // The flat rate the client sent is kept for backward compatibility with
+      // screens that still show it, but it decides nothing: the tax core
+      // computes the real figures below and they overwrite these.
+      tax_rate: data.taxRate || 0,
+      tax_total: money.taxTotal,
+      total: money.total,
+      // ⚠️ T9 — ALWAYS ZERO AT INSERT, AND THAT IS THE FIX.
+      //
+      // This line used to read `paid_amount: data.paidAmount || 0`. Phase F
+      // made `paid_amount` a projection of `SUM(payment_allocations)` and
+      // closed the PATCH that wrote it — but this insert kept writing it, so
+      // creation remained a second writer on a derived number.
+      //
+      // A real sale showed the consequence: `paid_amount` was ۱۸٬۰۰۰٬۰۰۰
+      // with no payment behind it, and the drift warning built in H2 caught
+      // it. The invoice claimed to be paid and the ledger had never seen a
+      // rial of it.
+      //
+      // The money is recorded as an actual payment below, and this column
+      // follows from the allocations the way every other screen expects.
+      paid_amount: 0,
+      payment_method: data.paymentMethod || 'cash',
+      currency: data.currency || 'AFN',
+      // ⚠️ J3 — THIS LINE IS THE CONFLATION, and it is kept deliberately.
+      //
+      // `completed` is a DOCUMENT word being set by whether the invoice was
+      // PAID at creation. `settlementDate()` then reads `status ===
+      // 'completed'` to decide when it settled, which works only because of
+      // that accident.
+      //
+      // It stays because every screen, filter and export reads this column,
+      // and the deprecation flow is three releases: add beside → move
+      // readers → remove. Changing it now would move a value under readers
+      // that have not been converted.
+      //
+      // `document_status` below is the correct answer, written alongside.
+      // Held for approval → the waiting status from the first moment;
+      // there is no second write to set it any more.
+      status: isHeld ? AWAITING_APPROVAL_STATUS : settledStatus,
+      notes: data.notes || '',
+      reference: data.reference || '',
 
-      if (itemsError || !insertedItems) {
-        // ⚠️ THE INVOICE IS NOT DELETED HERE.
-        //
-        // It used to be, and that is the forbidden compensating write: with no
-        // transaction, the DELETE is a second statement that can fail on its
-        // own or never run at all if the process dies — leaving exactly the
-        // half-state it was meant to prevent.
-        //
-        // Deleting it does not even undo the visible damage. The invoice
-        // number has already been taken from `get_next_invoice_number`, so the
-        // gap in the series exists either way; all the DELETE adds is the loss
-        // of the header somebody just entered.
-        //
-        // So the row stays, with no items, which is a state the invoice screen
-        // can show and a person can correct. The error says what happened.
-        //
-        // ⚠️ THE REAL FIX IS AN RPC. `invoices` + `invoice_items` +
-        // `invoice_item_details` + `stock_movements` is one write and belongs
-        // in one Postgres function — the pattern this codebase already uses
-        // for `product_units_replace`. That is a larger piece of work; this
-        // stops the current behaviour making things worse in the meantime.
-        throw new DatabaseError(
-          `Invoice ${invoiceNumber} was created but its items could not be saved`,
-          itemsError,
-        )
+      // ⚠️ J3 — `document_status` is deliberately NOT written here.
+      //
+      // Two reasons. The column defaults to NULL and `invoice_state` reads
+      // NULL as `draft`, which is correct at insert time — nothing has been
+      // posted yet.
+      //
+      // And putting it in this insert would make the ENTIRE create path fail
+      // with 42703 on a database that has not run phase-j-03. Invoice
+      // creation is the one thing that must never depend on an optional
+      // column; it is set in a separate, tolerant write once the ledger has
+      // actually been written (see `markPosted` below).
+
+      // workspace_id is the tenancy boundary; user_id records the actor.
+      workspace_id: workspaceId,
+      user_id: userId,
+      // Multi-warehouse: which warehouse this invoice's goods leave/arrive.
+      // Only named when set, so creation works before the migration.
+      ...(invoiceWarehouseId ? { warehouse_id: invoiceWarehouseId } : {}),
+      // Only a keyed request names the column, so unkeyed creation keeps
+      // working on a database that has not run the idempotency migration.
+      ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
+    }
+
+    const lines = data.items ?? []
+    const itemRows = this.buildItemRows(lines, invoiceId, userId)
+    // A purchase moves stock too — it just moves it the other way. ⚠️ NOT WHILE
+    // THE DOCUMENT IS HELD: `postApprovedInvoice` moves it on approval, and
+    // moving it here too moved every held invoice's stock twice.
+    const movementRows =
+      !isHeld && lines.length > 0
+        ? await this.planStockMovements(
+            lines,
+            ctx,
+            direction,
+            invoiceId,
+            invoiceWarehouseId ?? (await this.soleWarehouseId(workspaceId)),
+          )
+        : []
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ⚠️ ONE WRITE (27 Sep 2026): header, items, their details and the stock
+    // movements in one transaction (docs/invoice-write-document-migration.sql).
+    // It used to be four statements, and a failure between them left a header
+    // with no items, or — through a compensating DELETE — no invoice at all
+    // after the details failed.
+    // ═══════════════════════════════════════════════════════════════════════
+    const invoiceError = await this.writeInvoiceDocument(ctx, {
+      invoiceId,
+      header,
+      itemRows,
+      detailRows: this.buildDetailRows(lines, itemRows),
+      movementRows,
+    })
+
+    if (invoiceError && clientRequestId) {
+      // A concurrent copy of the same request won the insert: answer with its
+      // invoice. The whole write of this attempt rolled back with it.
+      if (invoiceError.code === '23505') {
+        const winner = await this.findByClientRequestId(workspaceId, clientRequestId)
+        if (winner) return { ...winner, idempotentReplay: true }
       }
+      if (isMissingIdempotencySupport(invoiceError)) {
+        throw new IdempotencyUnavailableError('invoice')
+      }
+    }
+    if (invoiceError) throw new DatabaseError('Failed to create invoice', invoiceError)
 
-      await this.insertItemDetails(data.items, insertedItems, invoice.id, workspaceId)
+    const invoice = {
+      id: invoiceId,
+      invoice_number: invoiceNumber,
+      total: money.total,
+      currency: header.currency,
+    }
 
-      // A purchase moves stock too — it just moves it the other way. Guarding
-      // this on `type === "sale"` meant every purchase left inventory
-      // untouched, which is why bought goods never appeared in the warehouse.
-      // ⚠️ NOT WHILE THE DOCUMENT IS HELD. `postApprovedInvoice` runs the same
-      // call on approval; doing it here too moved every held invoice's stock
-      // twice. A document waiting for a decision has had no effect yet — that
-      // is what waiting means.
-      if (!isHeld) {
-        await this.batchUpdateStock(data.items, ctx, data.type === 'purchase' ? 1 : -1, invoice.id)
+    // M2 — did this sale take stock below zero? Read back after the write.
+    if (movementRows.length > 0 && direction === -1) {
+      await this.flagNegativeStock(ctx, invoiceId, movementRows)
+    }
+
+    if (approvalOutcome.kind === 'hold') {
+      const started = await this.startApprovalWorkflows(ctx, invoiceId, approvalOutcome.workflowIds)
+      if (!started) {
+        // ⚠️ POSTS ON FAILURE, LOUDLY — the rule routeForApproval always had.
+        // A held invoice with no workflow instance can never be released, and
+        // nothing would show that it is stuck; a posted one can be reversed.
+        isHeld = false
+        await this.batchUpdateStock(lines, ctx, direction, invoiceId)
+        await supabase
+          .from('invoices')
+          .update({ status: settledStatus })
+          .eq('id', invoiceId)
+          .eq('workspace_id', workspaceId)
       }
     }
 
@@ -1151,12 +1158,7 @@ export class InvoiceService {
       // runs the costing, the ledger and the stock when the workflow approves.
       //
       // Rejection therefore needs no reversal: nothing was ever booked.
-      await supabase
-        .from('invoices')
-        .update({ status: AWAITING_APPROVAL_STATUS })
-        .eq('id', invoice.id)
-        .eq('workspace_id', workspaceId)
-
+      // (Its waiting status was written with the header.)
       console.info(
         `[InvoiceService] invoice ${invoice.id} held for approval; ledger and stock deferred.`,
       )
@@ -1314,35 +1316,82 @@ export class InvoiceService {
         'INVOICE_PAID_AMOUNT_IS_DERIVED: record a payment through POST /api/payments; paid_amount is computed from payment allocations and cannot be set directly.',
       )
     }
-    if (data.total !== undefined) updates.total = data.total
     if (data.notes !== undefined) updates.notes = data.notes
     if (data.reference !== undefined) updates.reference = data.reference
 
-    const { data: invoice, error } = await supabase
+    // ═══════════════════════════════════════════════════════════════════════
+    // ⚠️ THE TOTAL IS DERIVED FROM THE LINES, ON EDIT TOO (27 Sep 2026).
+    //
+    // PATCH wrote `updates.total = data.total` — the client's number — and
+    // editing the lines never recomputed it (CLAUDE.md rule 3). The header's
+    // money now comes from the new lines, as on create; a `total` that does
+    // not match them, or a `total` with no lines, is refused, not ignored.
+    //
+    // ⚠️ AND AN EDIT NAMES THE VERSION IT READ. Two people editing one invoice:
+    // the second silently won. A line edit without `version` is refused; a
+    // stale one is a 409, and nothing is written.
+    // ═══════════════════════════════════════════════════════════════════════
+    const lines = (data as { items?: any[] }).items
+    const editingLines = Array.isArray(lines) && lines.length > 0
+    const expectedVersion = (data as { version?: number }).version
+
+    if (data.total !== undefined && !editingLines) {
+      throw new ValidationError(
+        'INVOICE_TOTAL_IS_DERIVED: the total is computed from the lines; send the lines, not a total.',
+      )
+    }
+
+    if (editingLines) {
+      if (typeof expectedVersion !== 'number') {
+        throw new ValidationError(
+          'INVOICE_VERSION_REQUIRED: editing the lines needs the version you read, so another edit is not overwritten.',
+        )
+      }
+      const money = computeInvoiceMoney({
+        items: lines,
+        discountTotal: data.discountTotal,
+        taxRate: data.taxRate,
+        taxTotal: data.taxTotal,
+      })
+      if (data.total !== undefined && Number(data.total) !== money.total) {
+        throw new ValidationError(
+          `INVOICE_TOTAL_IS_DERIVED: the lines add up to ${money.total}, not ${data.total}.`,
+        )
+      }
+      // Lines, money, version check and stock — one transaction.
+      await this.replaceInvoiceItems(id, lines, ctx, String(currentInvoice?.type ?? 'sale'), {
+        expectedVersion,
+        moneyPatch: {
+          subtotal: money.subtotal,
+          discount_total: money.discountTotal,
+          tax_total: money.taxTotal,
+          total: money.total,
+          updated_at: new Date().toISOString(),
+        },
+      })
+    }
+
+    let metadataQuery = supabase
       .from('invoices')
       .update(updates)
       .eq('id', id)
       .eq('workspace_id', workspaceId)
-      .select(INVOICE_LIST_COLUMNS)
-      .single()
+    // A metadata-only edit that names its version gets the same protection.
+    // (After a line edit the version has moved on — that write was ours.)
+    if (!editingLines && typeof expectedVersion === 'number') {
+      metadataQuery = metadataQuery.eq('version', expectedVersion)
+    }
+    const { data: invoice, error } = await metadataQuery.select(INVOICE_LIST_COLUMNS).maybeSingle()
 
     if (error) throw new DatabaseError('Failed to update invoice', error)
-    if (!invoice) throw new NotFoundError('Invoice')
+    if (!invoice) {
+      if (!editingLines && typeof expectedVersion === 'number' && currentInvoice) {
+        throw new ConflictError('INVOICE_VERSION_CONFLICT')
+      }
+      throw new NotFoundError('Invoice')
+    }
 
     if (cancelling) await this.markCancelled(ctx, id)
-
-    // ─── آیتم‌ها و جزئیات ─────────────────────────────────────────────────
-    // Only when the caller actually sends items. Omitting `items` keeps this
-    // a metadata-only patch, which is what every existing caller does — their
-    // behaviour is unchanged.
-    if ((data as { items?: unknown[] }).items?.length) {
-      await this.replaceInvoiceItems(
-        id,
-        (data as { items: any[] }).items,
-        ctx,
-        String(invoice.type ?? 'sale'),
-      )
-    }
 
     // ─── ✅ بررسی پرداخت ──────────────────────────────────────────────────
     const isNowPaid =
@@ -1524,29 +1573,43 @@ export class InvoiceService {
     return { todaySales, totalDebt, lowStockCount, todayPurchases, totalPayable }
   }
 
-  // ─── Invoice Item Details ────────────────────────────────────────────────
+  // ─── Invoice document rows ───────────────────────────────────────────────
   /**
-   * Persist the nested components of each item ("گردنبند" → زنجیر / سنگ / اجرت).
-   *
-   * One batched insert for the whole invoice, not one per detail — N details
-   * must never become N round-trips.
-   *
-   * `insertedItems` comes back from a single `.insert().select("id")`, which
-   * preserves the order of the rows given to it, so index i of `items` is
-   * index i of `insertedItems`.
-   *
-   * On failure the whole invoice is removed: an invoice whose items lost their
-   * details is worse than no invoice at all, and `ON DELETE CASCADE` cleans up
-   * the item rows.
+   * The item rows of an invoice, WITH their ids — made here so the details can
+   * name their item and the whole document can be written in one call.
    */
-  private async insertItemDetails(
+  private buildItemRows(
     items: any[],
-    insertedItems: { id: string }[],
     invoiceId: string,
-    workspaceId: string,
-  ): Promise<void> {
-    const rows = items.flatMap((item, index) => {
-      const parentId = insertedItems[index]?.id
+    userId: string,
+  ): Array<Record<string, unknown> & { id: string }> {
+    return items.map((item) => ({
+      id: randomUUID(),
+      invoice_id: invoiceId,
+      product_id: item.productId,
+      product_name: item.productName || '',
+      quantity: item.quantity,
+      unit: item.unit || 'piece',
+      unit_label: item.unitLabel ?? null,
+      weight_grams: item.weightGrams ?? null,
+      unit_price: item.unitPrice,
+      discount: item.discount || 0,
+      total_price: item.totalPrice || item.quantity * item.unitPrice,
+      notes: item.notes || '',
+      user_id: userId,
+    }))
+  }
+
+  /**
+   * The nested components of each item ("گردنبند" → زنجیر / سنگ / اجرت).
+   * Index i of `items` is index i of `itemRows`: both come from the same map.
+   */
+  private buildDetailRows(
+    items: any[],
+    itemRows: Array<{ id: string }>,
+  ): Array<Record<string, unknown>> {
+    return items.flatMap((item, index) => {
+      const parentId = itemRows[index]?.id
       if (!parentId || !item.details?.length) return []
 
       return item.details.map((detail: any, order: number) => ({
@@ -1561,46 +1624,205 @@ export class InvoiceService {
         sort_order: detail.sortOrder ?? order,
       }))
     })
+  }
 
-    if (rows.length === 0) return
+  /**
+   * `unit_label` / `weight_grams` on a component are labels, not figures. A
+   * database that has not run unified-sale-purchase-migration.sql lacks them;
+   * that must not take the invoice down, so the write is retried without them.
+   */
+  private static isMissingDetailLabelColumn(
+    error: { code?: string; message?: string } | null,
+  ): boolean {
+    if (!error) return false
+    const missing = error.code === 'PGRST204' || error.code === '42703'
+    return missing && /unit_label|weight_grams/.test(error.message ?? '')
+  }
 
-    const { error } = await supabase.from('invoice_item_details').insert(rows)
-    if (!error) return
+  private static withoutDetailLabels(rows: Array<Record<string, unknown>>) {
+    return rows.map(({ unit_label: _label, weight_grams: _weight, ...rest }) => rest)
+  }
 
-    /**
-     * A server whose `unified-sale-purchase-migration.sql` has not been applied
-     * has the details table but not its optional columns, and PostgREST answers
-     * PGRST204 "Could not find the 'unit_label' column".
-     *
-     * That must not take the whole invoice down. `unit_label` and
-     * `weight_grams` decorate a component; `title`, `quantity` and `amount`
-     * ARE the component. So the optional pair is dropped and the insert is
-     * retried, which keeps every figure on the invoice intact and loses only
-     * two labels that the schema has nowhere to put yet.
-     *
-     * A failure of the retry is a real failure and still rolls the invoice
-     * back — a line whose components vanished is worse than no invoice.
-     */
-    const missingColumn =
-      error.code === 'PGRST204' || error.code === '42703' || /column/i.test(error.message ?? '')
+  /**
+   * Write an invoice's document — header (new invoices), items, their details
+   * and the stock movements — in ONE transaction
+   * (docs/invoice-write-document-migration.sql).
+   *
+   * `replaceItems`: an edit. The old lines are deleted and EXACTLY the stock
+   * they moved is given back, from the recorded movements, in the same
+   * transaction.
+   *
+   * Returns the error instead of throwing, so the caller can recognise a
+   * replayed request (23505) or a missing idempotency column.
+   *
+   * Before the migration (PGRST202 / 42883) the same rows are written one
+   * statement at a time, in the order the old code used — the half-state risk
+   * of that path is the reason for the migration, not a new one.
+   */
+  private async writeInvoiceDocument(
+    ctx: TenancyContext,
+    doc: {
+      invoiceId: string
+      header?: Record<string, unknown> | undefined
+      itemRows: Array<Record<string, unknown>>
+      detailRows: Array<Record<string, unknown>>
+      movementRows: Array<Record<string, unknown>>
+      replaceItems?: boolean | undefined
+      /** Edit: the header's money, derived from the new lines. */
+      headerPatch?: Record<string, unknown> | undefined
+      /** Edit: the version the editor read — another edit in between is a 409. */
+      expectedVersion?: number | undefined
+    },
+  ): Promise<{ code?: string; message?: string } | null> {
+    const call = (detailRows: Array<Record<string, unknown>>) =>
+      supabase.rpc('invoice_write_document', {
+        p_workspace_id: ctx.workspaceId,
+        p_invoice_id: doc.invoiceId,
+        p_user_id: ctx.userId,
+        p_header: doc.header ?? null,
+        p_items: doc.itemRows,
+        p_details: detailRows,
+        p_movements: doc.movementRows,
+        p_replace_items: doc.replaceItems === true,
+        p_header_patch: doc.headerPatch ?? null,
+        p_expected_version: doc.expectedVersion ?? null,
+      })
 
-    if (missingColumn) {
+    let { error } = await call(doc.detailRows)
+    if (InvoiceService.isMissingDetailLabelColumn(error)) {
       console.warn(
-        '[InvoiceService] invoice_item_details is missing unit_label/weight_grams — ' +
-          'run unified-sale-purchase-migration.sql. Saving components without them.',
+        '[InvoiceService] invoice_item_details lacks unit_label/weight_grams — run unified-sale-purchase-migration.sql',
       )
+      ;({ error } = await call(InvoiceService.withoutDetailLabels(doc.detailRows)))
+    }
+    if (!error) return null
+    if (error.code !== 'PGRST202' && error.code !== '42883') return error
 
-      const reduced = rows.map(({ unit_label: _label, weight_grams: _weight, ...rest }) => rest)
-      const retry = await supabase.from('invoice_item_details').insert(reduced)
-      if (!retry.error) return
+    return this.writeInvoiceDocumentStepwise(ctx, doc)
+  }
+
+  /** The pre-migration path. Same rows, one statement at a time. */
+  private async writeInvoiceDocumentStepwise(
+    ctx: TenancyContext,
+    doc: {
+      invoiceId: string
+      header?: Record<string, unknown> | undefined
+      itemRows: Array<Record<string, unknown>>
+      detailRows: Array<Record<string, unknown>>
+      movementRows: Array<Record<string, unknown>>
+      replaceItems?: boolean | undefined
+      headerPatch?: Record<string, unknown> | undefined
+      expectedVersion?: number | undefined
+    },
+  ): Promise<{ code?: string; message?: string } | null> {
+    if (!doc.header && doc.expectedVersion !== undefined) {
+      // The version check, as a conditional update: no row → someone else
+      // edited it first (or it is not in this workspace).
+      const { data, error } = await supabase
+        .from('invoices')
+        .update({ ...(doc.headerPatch ?? {}), updated_at: new Date().toISOString() })
+        .eq('id', doc.invoiceId)
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('version', doc.expectedVersion)
+        .select('id')
+      if (error) return error
+      if (!data || data.length === 0) {
+        const exists = await supabase
+          .from('invoices')
+          .select('id')
+          .eq('id', doc.invoiceId)
+          .eq('workspace_id', ctx.workspaceId)
+          .maybeSingle()
+        if (exists.error) return exists.error
+        return exists.data
+          ? { code: '40001', message: 'INVOICE_VERSION_CONFLICT' }
+          : { code: 'P0002', message: 'INVOICE_NOT_FOUND' }
+      }
     }
 
-    // Scoped even though this id came from the insert we just performed. A
-    // DELETE on a financial table with `.eq('id', …)` alone is exactly the
-    // shape that becomes an IDOR the moment the id starts arriving from a
-    // caller instead of from the line above.
-    await supabase.from('invoices').delete().eq('id', invoiceId).eq('workspace_id', workspaceId)
-    throw new DatabaseError('Failed to create invoice item details', error)
+    if (doc.header) {
+      const { error } = await supabase.from('invoices').insert(doc.header)
+      if (error) return error
+    }
+
+    if (doc.replaceItems) {
+      const reversal = await this.reversalOfRecordedMovements(ctx, doc.invoiceId)
+      if (reversal.length > 0) {
+        const { error } = await supabase.from('stock_movements').insert(reversal)
+        if (error) throw new DatabaseError("Failed to give back the edited lines' stock", error)
+      }
+      const { error } = await supabase
+        .from('invoice_items')
+        .delete()
+        .eq('invoice_id', doc.invoiceId)
+      if (error) throw new DatabaseError('Failed to remove the edited lines', error)
+    }
+
+    if (doc.itemRows.length > 0) {
+      const { error } = await supabase.from('invoice_items').insert(doc.itemRows)
+      if (error) {
+        // ⚠️ THE INVOICE IS NOT DELETED (rule 4: no compensating DELETE). The
+        // header stays, visible and correctable; the migration removes this
+        // state entirely.
+        throw new DatabaseError(
+          `Invoice ${doc.invoiceId} was saved but its items could not be`,
+          error,
+        )
+      }
+    }
+
+    if (doc.detailRows.length > 0) {
+      let { error } = await supabase.from('invoice_item_details').insert(doc.detailRows)
+      if (InvoiceService.isMissingDetailLabelColumn(error)) {
+        ;({ error } = await supabase
+          .from('invoice_item_details')
+          .insert(InvoiceService.withoutDetailLabels(doc.detailRows)))
+      }
+      // No compensating DELETE here either — it used to delete the invoice.
+      if (error) throw new DatabaseError('Failed to create invoice item details', error)
+    }
+
+    if (doc.movementRows.length > 0) {
+      const { error } = await supabase.from('stock_movements').insert(doc.movementRows)
+      // The movement is the only thing that moves stock: an unrecorded one
+      // means the invoice exists and the goods never left (lesson 4).
+      if (error) throw new DatabaseError('Failed to record stock movements', error)
+    }
+    return null
+  }
+
+  /**
+   * The movements that give back EXACTLY what an invoice has moved so far: per
+   * product and warehouse, the negative of the net of every movement recorded
+   * against it. The same rule as the SQL function; used only before the
+   * migration.
+   *
+   * ⚠️ This replaced re-deriving the stock from `invoice_items` WITHOUT the
+   * line's unit — «2 cartons» (48 pieces) came back as 2.
+   */
+  private async reversalOfRecordedMovements(
+    ctx: TenancyContext,
+    invoiceId: string,
+  ): Promise<Array<Record<string, unknown>>> {
+    const recorded = await fetchAllPages(
+      (from, to) =>
+        supabase
+          .from('stock_movements')
+          .select('id, product_id, quantity, from_warehouse_id, to_warehouse_id')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('reference_type', 'invoice')
+          .eq('reference_id', invoiceId)
+          .order('id', { ascending: true })
+          .range(from, to),
+      'Failed to read the invoice stock movements',
+    )
+    return netReversal(recorded as MovementRow[]).map((m) => ({
+      ...m,
+      reference_type: 'invoice',
+      reference_id: invoiceId,
+      workspace_id: ctx.workspaceId,
+      user_id: ctx.userId,
+    }))
   }
 
   /**
@@ -1616,66 +1838,63 @@ export class InvoiceService {
     items: any[],
     ctx: TenancyContext,
     type: string,
+    edit: { expectedVersion: number; moneyPatch: Record<string, unknown> },
   ): Promise<void> {
-    const { userId } = ctx
-    // Reverse the OLD items' stock effect before deleting them, then apply the
-    // new ones below. Skipping this would silently drift inventory on every
-    // edit — the stock of the removed lines would never come back.
     const direction: 1 | -1 = type === 'purchase' ? 1 : -1
-    const { data: oldItems } = await supabase
-      .from('invoice_items')
-      .select('product_id, quantity')
-      .eq('invoice_id', invoiceId)
+    const warehouseId =
+      (await this.invoiceWarehouseId(ctx.workspaceId, invoiceId)) ??
+      (await this.soleWarehouseId(ctx.workspaceId))
 
-    if (oldItems?.length) {
-      const reversal = oldItems.map((row: any) => ({
-        productId: row.product_id,
-        quantity: Number(row.quantity) || 0,
-      }))
-      await this.batchUpdateStock(reversal, ctx, (direction * -1) as 1 | -1, invoiceId)
+    const itemRows = this.buildItemRows(items, invoiceId, ctx.userId)
+    const movementRows = await this.planStockMovements(
+      items,
+      ctx,
+      direction,
+      invoiceId,
+      warehouseId,
+    )
 
-      // Give the consumed cost layers their quantities back before the old
-      // lines are deleted. Without this an edited sale keeps holding stock it
-      // no longer sells, and the layers it drew from stay short for good.
-      if (direction === -1) {
-        await costing
-          .releaseDocument(ctx, 'invoice', invoiceId)
-          .catch((err) => console.error('[InvoiceService] cost release failed:', err))
-      } else {
-        // A purchase edit would have to unwind layers that later sales may
-        // already have consumed. That is a revaluation, not a release, and it
-        // belongs with the backdated-entry work rather than being faked here.
-        console.warn(
-          `[InvoiceService] purchase ${invoiceId} edited: existing cost layers were left as they are`,
-        )
-      }
-    }
-
-    await supabase.from('invoice_items').delete().eq('invoice_id', invoiceId)
-
-    const rows = items.map((item) => ({
-      invoice_id: invoiceId,
-      product_id: item.productId,
-      product_name: item.productName || '',
-      quantity: item.quantity,
-      unit: item.unit || 'piece',
-      unit_label: item.unitLabel ?? null,
-      weight_grams: item.weightGrams ?? null,
-      unit_price: item.unitPrice,
-      discount: item.discount || 0,
-      total_price: item.totalPrice || item.quantity * item.unitPrice,
-      notes: item.notes || '',
-      user_id: userId,
-    }))
-
-    const { data: inserted, error } = await supabase.from('invoice_items').insert(rows).select('id')
-
-    if (error || !inserted) {
+    // ⚠️ ONE TRANSACTION (27 Sep 2026): version check, the header's money, the
+    // old lines' stock given back EXACTLY (from the recorded movements — the
+    // old code re-derived it without the line's unit, so «2 cartons» gave back
+    // 2), the old lines removed, the new ones and their stock written. It used
+    // to be six statements, and a failure on the insert left an invoice with
+    // no lines and its stock already returned.
+    const error = await this.writeInvoiceDocument(ctx, {
+      invoiceId,
+      itemRows,
+      detailRows: this.buildDetailRows(items, itemRows),
+      movementRows,
+      replaceItems: true,
+      headerPatch: edit.moneyPatch,
+      expectedVersion: edit.expectedVersion,
+    })
+    if (error) {
+      if (error.code === '40001') throw new ConflictError('INVOICE_VERSION_CONFLICT')
+      if (error.code === '55000') throw new ConflictError('INVOICE_FINALIZED')
+      if (error.code === 'P0002') throw new NotFoundError('Invoice')
       throw new DatabaseError('Failed to replace invoice items', error)
     }
 
-    await this.insertItemDetails(items, inserted, invoiceId, ctx.workspaceId)
-    await this.batchUpdateStock(items, ctx, direction, invoiceId)
+    if (direction === -1 && movementRows.length > 0) {
+      await this.flagNegativeStock(ctx, invoiceId, movementRows)
+    }
+
+    // Give the consumed cost layers their quantities back. Without this an
+    // edited sale keeps holding stock it no longer sells, and the layers it
+    // drew from stay short for good.
+    if (direction === -1) {
+      await costing
+        .releaseDocument(ctx, 'invoice', invoiceId)
+        .catch((err) => console.error('[InvoiceService] cost release failed:', err))
+    } else {
+      // A purchase edit would have to unwind layers that later sales may
+      // already have consumed. That is a revaluation, not a release, and it
+      // belongs with the backdated-entry work rather than being faked here.
+      console.warn(
+        `[InvoiceService] purchase ${invoiceId} edited: existing cost layers were left as they are`,
+      )
+    }
 
     // The new lines carry new ids, so the costing keys differ from the ones
     // just released and the goods move again rather than being deduplicated
@@ -1787,12 +2006,54 @@ export class InvoiceService {
     direction: 1 | -1 = -1,
     invoiceId?: string | undefined,
   ) {
-    const { workspaceId, userId } = ctx
     if (!items || items.length === 0) return
+
+    // Which warehouse the goods leave from / arrive at: the one the invoice
+    // names, else the only one there is (never a guess among several).
+    const warehouseId =
+      (await this.invoiceWarehouseId(ctx.workspaceId, invoiceId)) ??
+      (await this.soleWarehouseId(ctx.workspaceId))
+
+    const movements = await this.planStockMovements(items, ctx, direction, invoiceId, warehouseId)
+
+    if (movements.length > 0) {
+      const { error: movementError } = await supabase.from('stock_movements').insert(movements)
+
+      // This insert used to be fire-and-forget, which was survivable while
+      // `products.quantity` was written separately. It is not survivable now:
+      // the movement is the only thing that moves stock, so swallowing the
+      // error means the invoice exists and the goods never left (lesson 4).
+      if (movementError) {
+        throw new DatabaseError('Failed to record stock movements', movementError)
+      }
+
+      // M2 — did this sale take stock below zero? BOTH sales stay recorded
+      // (M2.4 forbids silent reject/overwrite/correction); a conflict goes to a
+      // person. Read back rather than predicted: the quantity is maintained by
+      // the projection trigger.
+      if (direction === -1 && invoiceId) {
+        await this.flagNegativeStock(ctx, invoiceId, movements)
+      }
+    }
+  }
+
+  /**
+   * The stock movements an invoice's lines cause — built, not written, so the
+   * create path can write them in the same transaction as the document.
+   */
+  private async planStockMovements(
+    items: any[],
+    ctx: TenancyContext,
+    direction: 1 | -1,
+    invoiceId: string | undefined,
+    warehouseId: string | null,
+  ): Promise<Array<{ product_id: string; quantity: number } & Record<string, unknown>>> {
+    const { workspaceId, userId } = ctx
+    if (!items || items.length === 0) return []
 
     const productIds = items.filter((item) => item.productId).map((item) => item.productId)
 
-    if (productIds.length === 0) return
+    if (productIds.length === 0) return []
 
     // ⚠️ SECURITY — scoped to the workspace. Without this filter an invoice
     // could name another shop's product id and move THEIR inventory: the
@@ -1828,12 +2089,6 @@ export class InvoiceService {
     // weighed product.
     const unitOptions = await this.loadProductUnits(workspaceId, productIds)
 
-    // Which warehouse the goods leave from / arrive at: the one the invoice
-    // names, else the only one there is (never a guess among several).
-    const warehouseId =
-      (await this.invoiceWarehouseId(workspaceId, invoiceId)) ??
-      (await this.soleWarehouseId(workspaceId))
-
     // ─── PHASE C — the movement IS the update ────────────────────────────────
     //
     // This used to read each product's quantity, add the delta in Node, and
@@ -1859,79 +2114,54 @@ export class InvoiceService {
     // That is information, not corruption — and it is how someone finds out
     // their count was wrong.
 
-    const movements = items
-      // Products outside this workspace never entered productMap, so naming
-      // another shop's product id moves nothing (lesson 17).
-      .filter((item) => item.productId && productMap.has(item.productId))
-      .map((item) => {
-        // L1 — the line's own unit, converted to the product's base.
-        //
-        // ⚠️ REFUSED, not silently passed through, when the unit is not one
-        // the product declares: storing a carton count as a piece count is a
-        // wrong quantity in the source of truth that nothing would flag.
-        const converted = toBaseQuantity(
-          Number(item.quantity) || 0,
-          item.unit ?? null,
-          unitOptions.get(item.productId) ?? [],
-        )
-
-        if (!converted.ok) {
-          throw new ValidationError(`${converted.code}: product ${item.productId}`)
-        }
-
-        return {
-          product_id: item.productId,
-          // The movement must name the transaction that caused it. Hardcoding
-          // "sale" made every stock movement look like a sale in reports.
-          type: direction === 1 ? 'purchase' : 'sale',
-          quantity: direction * converted.baseQuantity,
-          reference_type: 'invoice',
-          // H4 — WHICH invoice. Omitted before, so `reference_type` named a kind
-          // of document and nothing could reach the document itself.
+    return (
+      items
+        // Products outside this workspace never entered productMap, so naming
+        // another shop's product id moves nothing (lesson 17).
+        .filter((item) => item.productId && productMap.has(item.productId))
+        .map((item) => {
+          // L1 — the line's own unit, converted to the product's base.
           //
-          // `?? null` rather than dropping the key: an explicit null records
-          // «this movement has no document» honestly, and is what the column
-          // already holds for every historical row. Guessing one would be worse
-          // (§12) — old rows stay unknown.
-          reference_id: invoiceId ?? null,
-          // A sale leaves a warehouse; a purchase arrives at one. Null when the
-          // workspace has zero or several — see soleWarehouseId().
-          ...(warehouseId
-            ? direction === 1
-              ? { to_warehouse_id: warehouseId }
-              : { from_warehouse_id: warehouseId }
-            : {}),
-          workspace_id: workspaceId,
-          user_id: userId,
-        }
-      })
+          // ⚠️ REFUSED, not silently passed through, when the unit is not one
+          // the product declares: storing a carton count as a piece count is a
+          // wrong quantity in the source of truth that nothing would flag.
+          const converted = toBaseQuantity(
+            Number(item.quantity) || 0,
+            item.unit ?? null,
+            unitOptions.get(item.productId) ?? [],
+          )
 
-    if (movements.length > 0) {
-      const { error: movementError } = await supabase.from('stock_movements').insert(movements)
+          if (!converted.ok) {
+            throw new ValidationError(`${converted.code}: product ${item.productId}`)
+          }
 
-      // This insert used to be fire-and-forget, which was survivable while
-      // `products.quantity` was written separately. It is not survivable now:
-      // the movement is the only thing that moves stock, so swallowing the
-      // error means the invoice exists and the goods never left (lesson 4).
-      if (movementError) {
-        throw new DatabaseError('Failed to record stock movements', movementError)
-      }
-
-      // ─── M2 — did this sale take stock below zero? ────────────────────────
-      //
-      // Two tills selling the last units concurrently, or one sale exceeding
-      // what is on the shelf. BOTH sales stay recorded: M2.4 forbids silent
-      // reject, overwrite, delete and stock correction. The negative on-hand
-      // stays visible — Phase C already treats it as information — and a
-      // conflict goes to a person.
-      //
-      // Read back rather than predicted: the quantity is maintained by the
-      // projection trigger, and computing it here would be the read-modify-
-      // write Phase C removed.
-      if (direction === -1 && invoiceId) {
-        await this.flagNegativeStock(ctx, invoiceId, movements)
-      }
-    }
+          return {
+            product_id: item.productId,
+            // The movement must name the transaction that caused it. Hardcoding
+            // "sale" made every stock movement look like a sale in reports.
+            type: direction === 1 ? 'purchase' : 'sale',
+            quantity: direction * converted.baseQuantity,
+            reference_type: 'invoice',
+            // H4 — WHICH invoice. Omitted before, so `reference_type` named a kind
+            // of document and nothing could reach the document itself.
+            //
+            // `?? null` rather than dropping the key: an explicit null records
+            // «this movement has no document» honestly, and is what the column
+            // already holds for every historical row. Guessing one would be worse
+            // (§12) — old rows stay unknown.
+            reference_id: invoiceId ?? null,
+            // A sale leaves a warehouse; a purchase arrives at one. Null when the
+            // workspace has zero or several — see soleWarehouseId().
+            ...(warehouseId
+              ? direction === 1
+                ? { to_warehouse_id: warehouseId }
+                : { from_warehouse_id: warehouseId }
+              : {}),
+            workspace_id: workspaceId,
+            user_id: userId,
+          }
+        })
+    )
   }
 
   /**
@@ -2548,9 +2778,13 @@ export class InvoiceService {
    *
    * The caller awaits this and does not post when it says `hold`.
    */
-  private async routeForApproval(
+  /**
+   * Whether this invoice must wait for approval, and on which workflows.
+   * READS ONLY — the instances are started by startApprovalWorkflows once the
+   * document exists.
+   */
+  private async decideApprovalRoute(
     ctx: TenancyContext,
-    invoiceId: string,
     total: number,
     data?: {
       type?: string | undefined
@@ -2608,17 +2842,9 @@ export class InvoiceService {
         // is the safer failure — holding would strand the document with no
         // route out — but it IS a misconfiguration and is said out loud.
         console.warn(
-          `[InvoiceService] invoice ${invoiceId}: a rule required approval but no active workflow matched. Posting without approval.`,
+          `[InvoiceService] a rule required approval but no active workflow matched. Posting without approval.`,
         )
         return outcome
-      }
-
-      for (const workflowId of outcome.workflowIds) {
-        await this.workflowService.startWorkflow(workspaceId, {
-          workflow_id: workflowId,
-          entity_type: 'invoice',
-          entity_id: invoiceId,
-        })
       }
 
       return outcome
@@ -2635,8 +2861,36 @@ export class InvoiceService {
       // colleague" and there is no screen anywhere that would show the
       // difference. Posting leaves a wrong entry that CAN be reversed; the
       // freeze leaves a shop unable to invoice.
-      console.error(`[InvoiceService] approval routing failed for ${invoiceId}:`, err)
+      console.error('[InvoiceService] approval routing failed:', err)
       return { kind: 'post_now' }
+    }
+  }
+
+  /**
+   * Start the approval workflows for a held invoice. `false` when they could
+   * not be started — the caller then posts, loudly: a held invoice with no
+   * workflow instance can never be released (see decideApprovalRoute).
+   */
+  private async startApprovalWorkflows(
+    ctx: TenancyContext,
+    invoiceId: string,
+    workflowIds: string[],
+  ): Promise<boolean> {
+    try {
+      for (const workflowId of workflowIds) {
+        await this.workflowService.startWorkflow(ctx.workspaceId, {
+          workflow_id: workflowId,
+          entity_type: 'invoice',
+          entity_id: invoiceId,
+        })
+      }
+      return true
+    } catch (err) {
+      console.error(
+        `[InvoiceService] approval workflow did not start for ${invoiceId}; posting:`,
+        err,
+      )
+      return false
     }
   }
 

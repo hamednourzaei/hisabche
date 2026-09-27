@@ -53,7 +53,14 @@ export interface StockSummary {
  * never read as `unknown`, which invites creating a product that exists.
  */
 export type BarcodeLookup =
-  | { status: 'found'; product: Product; source: 'device' | 'server' }
+  // `unit`: an EXTRA barcode that sells in its own unit — the carton's code
+  // adds a carton (docs/product-barcodes-migration.sql).
+  | {
+      status: 'found'
+      product: Product
+      source: 'device' | 'server'
+      unit?: Product['unit'] | undefined
+    }
   | { status: 'ambiguous'; products: Product[] }
   | { status: 'unknown'; barcode: string }
   | { status: 'error'; barcode: string; offline: boolean }
@@ -86,10 +93,12 @@ export async function lookupProductByBarcode(raw: string): Promise<BarcodeLookup
   if (device?.isOffline()) return { status: 'error', barcode, offline: true }
 
   try {
-    const { data } = await apiClient.get<{ product: Product }>(
+    const { data } = await apiClient.get<{ product: Product; unit?: Product['unit'] }>(
       `/products/by-barcode/${encodeURIComponent(barcode)}`,
     )
-    return { status: 'found', product: data.product, source: 'server' }
+    return data.unit
+      ? { status: 'found', product: data.product, source: 'server', unit: data.unit }
+      : { status: 'found', product: data.product, source: 'server' }
   } catch (error) {
     const apiError = error as Partial<ApiError>
     if (apiError.status === 404) return { status: 'unknown', barcode }
@@ -187,6 +196,61 @@ export function useProducts(filters: Partial<ProductFilters> = {}) {
 // ⚠️ توجه: این هوک عمداً subscription realtime جدای خودش را ندارد
 // (توضیح در بالای فایل). اگر در صفحه‌ای مستقل و بدون useProducts
 // استفاده می‌شود، به‌روزرسانی realtime نخواهد داشت.
+// ─── Extra barcodes of one product ──────────────────────────────────────
+//
+// ⚠️ ONLINE ONLY. The device database keeps each product's MAIN barcode; an
+// extra code is resolved by the server, so offline it reads as «not on this
+// device» (the error answer), never as a different product.
+
+export interface ProductBarcode {
+  id: string
+  barcode: string
+  /** The unit this code sells in; null = the product's own. */
+  unit: Product['unit'] | null
+}
+
+export const productBarcodeKeys = {
+  of: (productId: string) => [...productKeys.all, 'barcodes', productId] as const,
+}
+
+export function useProductBarcodes(productId: string | undefined) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: productBarcodeKeys.of(productId ?? ''),
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ barcodes?: ProductBarcode[] }>(
+        `/products/${productId}/barcodes`,
+      )
+      return Array.isArray(data?.barcodes) ? data.barcodes : []
+    },
+    enabled: authReady && Boolean(productId),
+  })
+}
+
+export function useAddProductBarcode(productId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { barcode: string; unit?: Product['unit'] | null }) => {
+      const { data } = await apiClient.post<ProductBarcode>(
+        `/products/${productId}/barcodes`,
+        input,
+      )
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: productBarcodeKeys.of(productId) }),
+  })
+}
+
+export function useRemoveProductBarcode(productId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (barcodeId: string) => {
+      await apiClient.delete(`/products/${productId}/barcodes/${barcodeId}`)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: productBarcodeKeys.of(productId) }),
+  })
+}
+
 export function useProduct(id: string | undefined) {
   const authReady = useAuthReady()
 

@@ -957,7 +957,11 @@ export class AdminService {
     const { limit: l, offset: o } = clampPage({ limit, offset })
     const { data, error, count } = await supabase
       .from('audit_logs')
-      .select('*', { count: 'exact' })
+      // The list, not the record (27 Sep 2026): `select('*')` shipped each row's
+      // full before/after JSON snapshots, which the table never shows.
+      .select('id, user_id, action, entity_type, entity_id, ip_address, created_at', {
+        count: 'exact',
+      })
       .order('created_at', { ascending: false })
       .range(o, o + l - 1)
 

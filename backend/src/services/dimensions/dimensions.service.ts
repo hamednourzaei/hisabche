@@ -9,7 +9,7 @@ import { supabase } from '../../db'
 import { ConflictError, DatabaseError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
-import { fetchAllPages } from '../../utils/fetch-all-pages'
+import { fetchAllPages, selectAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
 
 import {
@@ -69,16 +69,16 @@ export class DimensionsService {
     const cached = await memoryCache.get<DimensionValue[]>(cacheKey)
     if (cached) return cached
 
-    let query = supabase
-      .from('dimension_values')
-      .select('id, dimension_id, code, name, parent_id, is_active')
-      .eq('workspace_id', ctx.workspaceId)
-      .order('code')
-      .limit(5000)
-
-    if (dimensionId) query = query.eq('dimension_id', dimensionId)
-
-    const { data, error } = await query
+    // Every value, in ordered pages (27 Sep 2026): a picker that silently
+    // stops at PostgREST's 1000 rows hides values nobody can then choose.
+    const { data, error } = await selectAllPages((from, to) => {
+      let query = supabase
+        .from('dimension_values')
+        .select('id, dimension_id, code, name, parent_id, is_active')
+        .eq('workspace_id', ctx.workspaceId)
+      if (dimensionId) query = query.eq('dimension_id', dimensionId)
+      return query.order('code').order('id', { ascending: true }).range(from, to)
+    })
     if (error) throw new DatabaseError('Failed to fetch dimension values', error)
 
     const values = (data ?? []).map((row) => ({

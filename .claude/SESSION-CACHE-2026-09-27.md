@@ -49,3 +49,40 @@
 5. تصمیم منطقه: Render و Supabase در یک region.
 6. Leaked-password protection در Supabase Auth.
 7. بعد از deploy: `SELECT pg_stat_statements_reset();` و snapshot دوم.
+
+## ۵. دور دوم (همان روز) — BUG-054 تا BUG-064
+
+| حوزه          | کجا                                               | نکته                                                                                               |
+| ------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| فاکتور اتمیک  | `invoice_write_document` + `writeInvoiceDocument` | ردیف‌ها در TS ساخته می‌شوند (یک منبع قاعده)؛ SQL فقط با هم می‌نویسد و مالکیت ردیف‌ها را چک می‌کند. |
+| ویرایش فاکتور | همان تابع با `p_replace_items`                    | برگشت موجودی = منفیِ خالص حرکت‌های ثبت‌شده؛ `version` اجباری؛ نهایی‌شده = 409.                     |
+| امنیت RPC     | `rpc-client-revoke-migration.sql`                 | هر تابعی که بک‌اند صدا می‌زند باید REVOKE داشته باشد — گارد همین را می‌خواهد.                      |
+| خواندن کامل   | `selectAllPages`                                  | هیچ `.limit()` بالای ۱۰۰۰ مجاز نیست (گارد).                                                        |
+| مراحل outbox  | `outbox-stage.ts`                                 | «ثبت شد» فقط برای این نشست — ردیفِ تحویل‌شده از outbox می‌رود.                                     |
+| دوربین        | `barcode.scan` (اختیاری در قرارداد)               | فقط میزبان موبایل دارد؛ دکمه فقط همان‌جا.                                                          |
+| برچسب ترازو   | `scale-label.ts`                                  | پیش‌فرض خاموش؛ check digit غلط رد می‌شود؛ مبلغ بدون قیمت واحد = پنجره‌ی مشکل، نه حدس.              |
+| چند بارکد     | `product_barcodes`                                | یک کد = یک کالا در هر دو جا (trigger)؛ **فقط آنلاین**.                                             |
+
+### تله‌های دور دوم
+
+- ⚠️ **تابع SECURITY DEFINER بدون REVOKE = API عمومی.** Supabase EXECUTE را به anon می‌دهد؛ anon key عمومی است.
+- ⚠️ **`.limit(N)` با N>1000 یک دروغ است** — PostgREST در ۱۰۰۰ می‌بُرد، بی‌صدا.
+- ⚠️ **ترجمه‌ی «دری» را با حروف پشتو بسنج** (ږ ښ ې ۍ ټ ډ ړ ڼ ګ) — ۳۶۲ مورد پیدا شد.
+- ⚠️ **دو لایه که یکدیگر را می‌پوشانند:** injection روی یکی تست را قرمز نمی‌کند؛ لایه‌ای را بزن که تنها محافظ است.
+- ⚠️ **توکن رنگ را grep کن:** `--color-danger` وجود ندارد؛ `--color-destructive` هست. رنگِ ناموجود بی‌صدا هیچ رنگی نمی‌شود.
+
+### ساخته نشد (عمداً، با دلیل)
+
+- **چاپگر بلوتوث موبایل:** ماژول native لازم دارد (نه Expo Go) و بدون دستگاه واقعی قابل وریفای نیست.
+- **iOS:** حساب Apple Developer و بیلد EAS لازم است — اقدام انسانی.
+- **صفحه‌بندی cursor UI دسته‌ها:** خواندن حالا کامل است؛ صفحه‌بندی UI جداگانه.
+- `select('*')` روی `subscriptions` (یک ردیف کوچک) — عمداً دست نخورد.
+
+### migration های جدید برای اجرا (به ترتیب)
+
+1. `rpc-client-revoke-migration.sql` ← **امنیتی، اول**
+2. `invoice-write-document-migration.sql`
+3. `purchase-order-write-migration.sql` (بعد از ۲)
+4. `stock-transfer-idempotency-migration.sql`
+5. `product-barcodes-migration.sql` (بعد از product-barcode-unique)
+6. VERIFY: `VERIFY-rpc-client-revoke.sql`، `VERIFY-write-functions.sql`

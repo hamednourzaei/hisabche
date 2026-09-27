@@ -2,6 +2,8 @@
 // backend/src/routes/purchasing.routes.ts
 // ============================================
 
+import { sendFailure } from '../errors/http-failure'
+import { IdempotencyUnavailableError, readClientRequestId } from '../utils/client-request'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
@@ -86,15 +88,19 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createPurchaseOrderSchema.parse(request.body)
-        const order = await purchasingService.createPurchaseOrder(request.tenancy, data)
+        const order = await purchasingService.createPurchaseOrder(request.tenancy, data, {
+          idempotencyKey: readClientRequestId(request),
+        })
         await clearCache('purchase-orders:*')
-        return reply.code(201).send(order)
+        // A replay answers 200 with the first order, not a second 201.
+        const replayed = (order as { idempotentReplay?: boolean }).idempotentReplay === true
+        return reply.code(replayed ? 200 : 201).send(order)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        if (err instanceof IdempotencyUnavailableError) {
+          return reply.code(503).send({ error: err.message, code: err.code })
         }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to create purchase order' })
+        // BUDGET_EXCEEDED / BUDGET_APPROVAL_REQUIRED are 400s, not 500s.
+        return sendFailure(reply, fastify.log, err, 'Failed to create purchase order')
       }
     },
   )

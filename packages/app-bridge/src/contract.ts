@@ -261,6 +261,14 @@ export interface AppInfo {
   databaseFailure?: string | null
 }
 
+/**
+ * What the camera saw (27 Sep 2026). Three answers, never one blurred into
+ * another: a code, the person closing the camera, or the camera not allowed —
+ * «no barcode» and «you did not let me look» are different problems to fix.
+ */
+export type CameraScanResult =
+  { status: 'scanned'; code: string } | { status: 'cancelled' } | { status: 'denied' }
+
 export interface ImportedFile {
   fileName: string
   /** base64 contents; the renderer decides how to parse it. */
@@ -370,5 +378,13 @@ export interface HisabcheBridge {
       headers?: Record<string, string>
       body?: string | null
     }): Promise<HttpRequestResponse>
+  }
+  /**
+   * Scan one barcode with the device camera. OPTIONAL: only the phone host has
+   * it (desktop scans with a keyboard-wedge scanner, the browser build has no
+   * host) — the UI shows its camera button only where this exists.
+   */
+  barcode?: {
+    scan(): Promise<CameraScanResult>
   }
 }

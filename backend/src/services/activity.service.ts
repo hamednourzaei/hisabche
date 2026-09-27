@@ -304,7 +304,9 @@ export class ActivityService {
     },
   ): Promise<PaginatedActivitiesResponse> {
     const { workspaceId, userId } = ctx
-    const cacheKey = `activities:${userId}:${JSON.stringify(filters)}`
+    // User FIRST, then workspace: every invalidation clears `activities:<user>:*`,
+    // which still covers each workspace's entry.
+    const cacheKey = `activities:${userId}:${workspaceId}:${JSON.stringify(filters)}`
 
     try {
       const cached = await memoryCache.get(cacheKey)
@@ -320,6 +322,11 @@ export class ActivityService {
       let query = supabase
         .from('activities')
         .select(ACTIVITY_COLUMNS, { count: 'exact' })
+        // ⚠️ AND the workspace (27 Sep 2026, CLAUDE.md rule 1). This filtered
+        // by actor alone: a user in two businesses saw both in one feed, and
+        // someone removed from a workspace kept reading its invoice numbers,
+        // amounts and customer names through their own past actions.
+        .eq('workspace_id', workspaceId)
         .eq('actor_id', userId)
         .order('created_at', { ascending: false })
         .limit(limit + 1)
@@ -732,7 +739,8 @@ export class ActivityService {
   }
 
   // ─── Mark as Read ────────────────────────────────────────────────────────
-  async markAsRead(userId: string, ids: string[]) {
+  async markAsRead(ctx: { workspaceId: string; userId: string }, ids: string[]) {
+    const { userId } = ctx
     console.log('📝 [ActivityService] Marking as read:', ids)
 
     if (!ids || ids.length === 0) {
@@ -744,6 +752,7 @@ export class ActivityService {
       .from('activities')
       .update({ is_read: true })
       .in('id', ids)
+      .eq('workspace_id', ctx.workspaceId)
       .eq('actor_id', userId)
 
     if (error) {
@@ -756,12 +765,14 @@ export class ActivityService {
   }
 
   // ─── Mark All as Read ────────────────────────────────────────────────────
-  async markAllAsRead(userId: string) {
+  async markAllAsRead(ctx: { workspaceId: string; userId: string }) {
+    const { userId } = ctx
     console.log('📝 [ActivityService] Marking all as read for user:', userId)
 
     const { error } = await supabase
       .from('activities')
       .update({ is_read: true })
+      .eq('workspace_id', ctx.workspaceId)
       .eq('actor_id', userId)
       .eq('is_read', false)
 
@@ -783,14 +794,15 @@ export class ActivityService {
    * `head: true` exact count (راهنمای سشن §۷٫۴), no rows transferred. They
    * count events, the same unit as the unread badge.
    */
-  async getFilterCounts(userId: string): Promise<{
+  async getFilterCounts(ctx: { workspaceId: string; userId: string }): Promise<{
     all: number
     unread: number
     invoices: number
     payments: number
     customers: number
   }> {
-    const cacheKey = `activities:counts:${userId}`
+    const { userId, workspaceId } = ctx
+    const cacheKey = `activities:counts:${userId}:${workspaceId}`
     const cached = await memoryCache.get(cacheKey)
     if (cached !== null) return cached as Awaited<ReturnType<ActivityService['getFilterCounts']>>
 
@@ -798,6 +810,7 @@ export class ActivityService {
       supabase
         .from('activities')
         .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
         .eq('actor_id', userId)
     const results = await Promise.all([
       base(),
@@ -820,14 +833,16 @@ export class ActivityService {
     return result
   }
 
-  async getUnreadCount(userId: string): Promise<number> {
-    const cacheKey = `activities:unread:${userId}`
+  async getUnreadCount(ctx: { workspaceId: string; userId: string }): Promise<number> {
+    const { userId, workspaceId } = ctx
+    const cacheKey = `activities:unread:${userId}:${workspaceId}`
     const cached = await memoryCache.get(cacheKey)
     if (cached !== null) return cached as number
 
     const { count, error } = await supabase
       .from('activities')
       .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
       .eq('actor_id', userId)
       .eq('is_read', false)
 
@@ -842,10 +857,16 @@ export class ActivityService {
   }
 
   // ─── Delete Activity ─────────────────────────────────────────────────────
-  async deleteActivity(userId: string, id: string) {
+  async deleteActivity(ctx: { workspaceId: string; userId: string }, id: string) {
+    const { userId } = ctx
     console.log('📝 [ActivityService] Deleting activity:', id)
 
-    const { error } = await supabase.from('activities').delete().eq('id', id).eq('actor_id', userId)
+    const { error } = await supabase
+      .from('activities')
+      .delete()
+      .eq('id', id)
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('actor_id', userId)
 
     if (error) {
       console.error('❌ [ActivityService] Failed to delete activity:', error)

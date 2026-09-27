@@ -71,6 +71,11 @@ export {
   useDeleteProduct,
   productKeys,
   lookupProductByBarcode,
+  useProductBarcodes,
+  useAddProductBarcode,
+  useRemoveProductBarcode,
+  productBarcodeKeys,
+  type ProductBarcode,
   type BarcodeLookup,
   type StockSummary,
 } from './hooks/products'

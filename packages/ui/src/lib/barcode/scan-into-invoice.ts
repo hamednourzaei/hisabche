@@ -41,7 +41,15 @@ function quantityOf(value: string | undefined): number {
 const isBlank = (row: InvoiceGridRow) =>
   !row.productId && Object.values(row.values).every((v) => !String(v ?? '').trim())
 
-export function planScan(rows: readonly InvoiceGridRow[], product: ScannedProduct): ScanPlan {
+/**
+ * `add`: how much this scan adds — one for an ordinary code, the weight (or
+ * price ÷ unit price) for a scale label (scale-label.ts).
+ */
+export function planScan(
+  rows: readonly InvoiceGridRow[],
+  product: ScannedProduct,
+  add = 1,
+): ScanPlan {
   const unit = unitOf(product.unit)
   const same = rows.find(
     (row) => row.productId === product.id && unitOf(row.values[COLUMN.unit]) === unit,
@@ -55,7 +63,7 @@ export function planScan(rows: readonly InvoiceGridRow[], product: ScannedProduc
       return {
         kind: 'increment',
         rowId: same.id,
-        quantity: String(Math.round((current + 1) * 1000) / 1000),
+        quantity: String(Math.round((current + add) * 1000) / 1000),
       }
     }
   }

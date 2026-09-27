@@ -106,9 +106,9 @@ Capabilities: `record.read`, `record.create`, `record.update`, `record.delete`,
 
 ### Offline Mode
 
-Every platform has a local store — Web/Android/iOS use
-WatermelonDb (`@hisabche/db`), Desktop uses a local SQLite
-(`apps/desktop/electron/main/db/schema.ts`). Sync via `/api/sync/pull`
+Desktop and mobile keep a local store — SQLite through `better-sqlite3`
+(`apps/desktop/electron/main/db/schema.ts`) and `expo-sqlite`
+(`apps/mobile/src/host/local-db.ts`). Web works online through the API. Sync via `/api/sync/pull`
 and `/api/sync/push` on the backend, or an Electron `sync_queue` for
 Local writes that are pushed in a queue.
 

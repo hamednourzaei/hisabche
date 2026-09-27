@@ -77,21 +77,20 @@ old_column dropped
   by version (destination-only; destructive local changes are safe because
   the server DB is authoritative and repulls).
 
-### Web/mobile WatermelonDb
+### Mobile local SQLite
 
-`packages/db/src/schema/`:
-
-- WatermelonDb migrations live beside the schema
-  (`migrations` entries with `toVersion`). Bump version + add a migration
-  step for each change (WatermelonDb requires explicit versioned
-  migrations).
+`apps/mobile/src/host/local-db.ts` (expo-sqlite) holds the same mirrored
+rows as the desktop database and is created/upgraded by that file on open.
+A server column that a mirrored entity now needs locally goes into BOTH the
+desktop mirror and this file. (WatermelonDb, `packages/db`, was never used
+by any app and was removed on 27 Sep 2026.)
 
 ## Checklist for any schema PR
 
 ```text
 [ ] new Drizzle migration generated & committed
 [ ] desktop SQLite mirror updated (if table mirrored) — SCHEMA_VERSION bump if needed
-[ ] WatermelonDb migration bump (if model touched)
+[ ] mobile local-db.ts updated (if a mirrored entity changed)
 [ ] rollback described (or known-safe additive)
 [ ] no immediate column DELETE
 [ ] data backfill included (data migration step) where new NOT NULL column added

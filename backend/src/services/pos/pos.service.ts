@@ -8,6 +8,7 @@
 // involved: idempotency and the ledger posting.
 // ============================================
 
+import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
@@ -214,20 +215,27 @@ export class PosService {
   ): Promise<{ orders: PosOrder[]; movements: CashMovement[]; settlements: CashSettlement[] }> {
     const resolved = session ?? (await this.getSession(ctx, sessionId))
     const [orders, movements, settlements] = await Promise.all([
-      supabase
-        .from('pos_orders')
-        .select(
-          'id, order_ref, total_minor, change_minor, status, created_at, payments:pos_order_payments(method, amount_minor)',
-        )
-        .eq('workspace_id', ctx.workspaceId)
-        .eq('session_id', sessionId)
-        .limit(5000),
-      supabase
-        .from('pos_cash_movements')
-        .select('id, kind, amount_minor, reason, created_at')
-        .eq('workspace_id', ctx.workspaceId)
-        .eq('session_id', sessionId)
-        .limit(1000),
+      // Every order and cash movement of the session (27 Sep 2026): the till close sums them.
+      selectAllPages((lo, hi) =>
+        supabase
+          .from('pos_orders')
+          .select(
+            'id, order_ref, total_minor, change_minor, status, created_at, payments:pos_order_payments(method, amount_minor)',
+          )
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('session_id', sessionId)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      ),
+      selectAllPages((lo, hi) =>
+        supabase
+          .from('pos_cash_movements')
+          .select('id, kind, amount_minor, reason, created_at')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('session_id', sessionId)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      ),
       this.loadSettlements(ctx, resolved),
     ])
 

@@ -7,6 +7,7 @@
 // that reads a workspace's configuration and decides which components apply.
 // ============================================
 
+import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
@@ -350,13 +351,17 @@ export class TaxService {
 
   /** The base-and-tax figures a return is filed from. */
   async getTaxReturn(ctx: TenancyContext, from: string, to: string) {
-    const { data, error } = await supabase
-      .from('invoice_tax_lines')
-      .select('component_id, label_key, treatment, rate, base_minor, amount_minor, direction')
-      .eq('workspace_id', ctx.workspaceId)
-      .gte('entry_date', from.slice(0, 10))
-      .lte('entry_date', to.slice(0, 10))
-      .limit(50_000)
+    // EVERY tax line of the period (27 Sep 2026): a return filed from the first 1000 lines under-declares.
+    const { data, error } = await selectAllPages((lo, hi) =>
+      supabase
+        .from('invoice_tax_lines')
+        .select('component_id, label_key, treatment, rate, base_minor, amount_minor, direction')
+        .eq('workspace_id', ctx.workspaceId)
+        .gte('entry_date', from.slice(0, 10))
+        .lte('entry_date', to.slice(0, 10))
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
 
     if (error) throw new DatabaseError('Failed to build the tax return', error)
 

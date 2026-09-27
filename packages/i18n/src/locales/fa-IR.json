@@ -1309,7 +1309,35 @@
     "offlineBanner": "شما آفلاین هستید",
     "pendingBanner": "{{count}} عملیات در انتظار",
     "queueEmpty": "صف خالی است",
-    "syncNow_description": "همگام‌سازی حالا"
+    "syncNow_description": "همگام‌سازی حالا",
+    "stage": {
+      "queued": "در صف",
+      "sending": "در حال ارسال",
+      "retrying": "دوباره تلاش می‌شود",
+      "rejected": "رد شد — نیاز به بررسی",
+      "committed": "ثبت شد"
+    },
+    "col": {
+      "record": "رکورد",
+      "operation": "تغییر",
+      "stage": "وضعیت",
+      "reason": "دلیل",
+      "time": "زمان"
+    },
+    "op": {
+      "create": "جدید",
+      "update": "ویرایش",
+      "delete": "حذف"
+    },
+    "entity": {
+      "invoice": "فاکتور",
+      "customer": "مشتری",
+      "product": "کالا",
+      "transaction": "تراکنش"
+    },
+    "committedTitle": "ثبت‌شده در این نشست",
+    "committedHint": "تغییرهایی که سرور از زمان باز شدن برنامه پذیرفته است. قدیمی‌ترها روی سرور هستند، نه در این فهرست.",
+    "rejectedHint": "سرور این‌ها را نپذیرفت. تلاش دوباره همان تغییر را دوباره می‌فرستد — اول علت را برطرف کنید."
   },
   "validation": {
     "required": "این فیلد الزامی است",

@@ -10,7 +10,7 @@
 // inventory can book entries without knowing a single account code.
 // ============================================
 
-import { createHash } from 'node:crypto'
+import { sourceIdOf } from '../../utils/deterministic-id'
 import {
   type AccountRole,
   type CreateAccount,
@@ -132,20 +132,9 @@ function toNodes(accounts: AccountRow[]): AccountNode[] {
 const REPORT_TTL_SECONDS = 120
 const ACCOUNTS_TTL_SECONDS = 300
 
-/**
- * A stable UUID for (workspace, kind, …parts) — the `source_id` of an entry
- * that has no document of its own (a manual entry's idempotency key, a
- * year-end period). Deterministic, so the same request always maps to the same
- * source and the unique index can refuse the second. RFC 4122 shape with the
- * version nibble set to 5 (name-based, SHA hash).
- */
-export function sourceIdOf(workspaceId: string, kind: string, ...parts: string[]): string {
-  const hex = createHash('sha256')
-    .update([workspaceId, kind, ...parts].join('\u0000'))
-    .digest('hex')
-  const variant = ((parseInt(hex[16]!, 16) & 0x3) | 0x8).toString(16)
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`
-}
+// sourceIdOf lives in utils/deterministic-id (imports nothing), re-exported
+// here because this module is where the journal callers already import it from.
+export { sourceIdOf } from '../../utils/deterministic-id'
 
 export class AccountingService implements LedgerPort {
   private readonly repo: AccountingRepository

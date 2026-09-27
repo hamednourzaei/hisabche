@@ -58,8 +58,9 @@ describe('wiring', () => {
   })
 
   it('the year-end close is sourced by its period', () => {
-    expect(service).toContain(
-      "source: { type: 'year_end_close', id: sourceIdOf(ctx.workspaceId, 'year_end_close', plan.from, plan.to) }",
+    // Whitespace-insensitive: the formatter wraps this call across lines.
+    expect(service.replace(/\s+/g, ' ')).toMatch(
+      /source: \{ type: 'year_end_close', id: sourceIdOf\(ctx\.workspaceId, 'year_end_close', plan\.from, plan\.to\),? \}/,
     )
   })
 

@@ -68,12 +68,17 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   {
     routeFile: 'invoice.routes.ts',
     route: 'POST /api/invoices',
-    mechanisms: ['idempotency-key'],
+    mechanisms: ['idempotency-key', 'db-function'],
     evidence: [
       { file: `${RT}/invoice.routes.ts`, text: 'readClientRequestId' },
       { file: `${SVC}/invoice.service.ts`, text: "invoiceError.code === '23505'" },
+      // Header, lines, details and stock in one transaction.
+      { file: `${SVC}/invoice.service.ts`, text: "supabase.rpc('invoice_write_document'" },
+      {
+        file: 'docs/invoice-write-document-migration.sql',
+        text: 'CREATE OR REPLACE FUNCTION public.invoice_write_document(',
+      },
     ],
-    gap: 'Header, lines and stock are separate writes, not one transaction: a crash mid-way leaves a partial invoice (the key makes the retry return it, not repeat it).',
   },
   {
     routeFile: 'invoice.routes.ts',
@@ -90,11 +95,18 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   {
     routeFile: 'invoice.routes.ts',
     route: 'PATCH /api/invoices/:id',
-    mechanisms: ['last-write-wins'],
+    mechanisms: ['conditional-update', 'db-function'],
     evidence: [
-      { file: `${SVC}/invoice.service.ts`, text: 'async update(id: string, ctx: TenancyContext' },
+      { file: `${SVC}/invoice.service.ts`, text: 'INVOICE_VERSION_REQUIRED' },
+      {
+        file: `${SVC}/invoice.service.ts`,
+        text: "throw new ConflictError('INVOICE_VERSION_CONFLICT')",
+      },
+      {
+        file: 'docs/invoice-write-document-migration.sql',
+        text: "RAISE EXCEPTION 'INVOICE_VERSION_CONFLICT' USING ERRCODE = '40001'",
+      },
     ],
-    gap: 'No version check: two simultaneous edits of one invoice — the later one stands without seeing the first.',
   },
   {
     routeFile: 'invoice.routes.ts',
@@ -318,11 +330,18 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   {
     routeFile: 'warehouse.routes.ts',
     route: 'POST /api/stock-transfers',
-    mechanisms: ['db-function'],
+    mechanisms: ['idempotency-key', 'db-function'],
     evidence: [
-      { file: `${SVC}/warehouse.service.ts`, text: "supabase.rpc('warehouse_transfer_stock'" },
+      { file: `${RT}/warehouse.routes.ts`, text: 'idempotencyKey: readClientRequestId(request)' },
+      {
+        file: `${SVC}/warehouse.service.ts`,
+        text: "supabase.rpc('warehouse_transfer_stock_keyed'",
+      },
+      {
+        file: 'docs/stock-transfer-idempotency-migration.sql',
+        text: 'EXCEPTION WHEN unique_violation THEN',
+      },
     ],
-    gap: 'No idempotency key: a retried transfer after a lost response moves the goods again.',
   },
   {
     routeFile: 'warehouse.routes.ts',
@@ -335,9 +354,15 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   {
     routeFile: 'purchasing.routes.ts',
     route: 'POST /api/purchase-orders',
-    mechanisms: ['last-write-wins'],
-    evidence: [{ file: `${SVC}/purchasing.service.ts`, text: "status: data.status || 'pending'" }],
-    gap: 'No idempotency key: a double-submit creates two orders (no stock moves until «receive»).',
+    mechanisms: ['idempotency-key', 'db-function'],
+    evidence: [
+      { file: `${RT}/purchasing.routes.ts`, text: 'idempotencyKey: readClientRequestId(request)' },
+      {
+        file: `${SVC}/purchasing.service.ts`,
+        text: "sourceIdOf(workspaceId, 'purchase_order', key)",
+      },
+      { file: `${SVC}/purchasing.service.ts`, text: "supabase.rpc('purchase_order_write'" },
+    ],
   },
   {
     routeFile: 'purchasing.routes.ts',

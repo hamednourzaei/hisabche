@@ -22,7 +22,7 @@ import { ProductPicker } from '../product-picker'
 import { CustomerPicker } from '../customer-picker'
 import { MoneyInput } from '../money-input'
 import { Switch } from '../switch'
-import { memo, useMemo, useState } from 'react'
+import { memo, useMemo, useState, type ReactNode } from 'react'
 import {
   InvoiceDocument,
   type InvoiceDocumentData,
@@ -125,6 +125,11 @@ const STEPS: Step[] = ['product', 'customer', 'price', 'preview', 'done'] as con
 
 export interface QuickInvoicePageProps {
   t: (key: string, fallback?: string) => string
+  /**
+   * Drawn above the item step — the camera scan button on a phone host; empty
+   * elsewhere. A slot, so this view stays unaware of which host it is on.
+   */
+  scanSlot?: ReactNode | undefined
   elapsedFormatted: string
   showSaved: boolean
   showCelebration: boolean
@@ -1262,6 +1267,7 @@ Celebration.displayName = 'Celebration'
 
 export const QuickInvoicePage = memo(function QuickInvoicePage({
   t,
+  scanSlot,
   elapsedFormatted,
   showSaved,
   showCelebration,
@@ -1332,6 +1338,7 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
         </div>
 
         {/* Step 1: Items */}
+        {step === 'product' && scanSlot ? <div className="mb-3">{scanSlot}</div> : null}
         {step === 'product' && (
           <ItemsStep
             items={items}

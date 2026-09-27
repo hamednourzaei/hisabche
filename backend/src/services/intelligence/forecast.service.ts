@@ -8,6 +8,7 @@
 // forecast. Every number is derived at read time.
 // ============================================
 
+import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
 import { crm } from '../crm'
@@ -69,13 +70,17 @@ export class ForecastService {
    * re-summing allocations and risking a different answer.
    */
   private async outstandingReceivables(ctx: TenancyContext) {
-    const { data, error } = await supabase
-      .from('invoices')
-      .select('id, total, paid_amount, due_date, status, type')
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('type', 'sale')
-      .neq('status', 'cancelled')
-      .limit(5000)
+    // Every row (27 Sep 2026): a .limit(N) here was cut to 1000 by PostgREST, and this feeds a total.
+    const { data, error } = await selectAllPages((lo, hi) =>
+      supabase
+        .from('invoices')
+        .select('id, total, paid_amount, due_date, status, type')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('type', 'sale')
+        .neq('status', 'cancelled')
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
 
     if (error) throw new DatabaseError('Failed to read receivables', error)
 
@@ -133,14 +138,21 @@ export class ForecastService {
 
     const accountIds = data.map((row: Record<string, any>) => String(row.id))
 
-    const { data: lines, error: linesError } = await supabase
-      .from('journal_lines')
-      .select('debit, credit, account_id')
-      .eq('workspace_id', ctx.workspaceId)
-      .in('account_id', accountIds)
-      .limit(50000)
+    // Every row (27 Sep 2026): the large .limit() was cut to 1000 by PostgREST, and this feeds a total.
+    const { data: lines, error: linesError } = await selectAllPages((lo, hi) =>
+      supabase
+        .from('journal_lines')
+        .select('debit, credit, account_id')
+        .eq('workspace_id', ctx.workspaceId)
+        .in('account_id', accountIds)
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
 
-    if (linesError || !lines) return 0
+    // A failed read is not «no cash» (§7.3): a forecast built on 0 would
+    // tell the owner the business is empty when the database was unreachable.
+    if (linesError) throw new DatabaseError('Failed to read cash balances', linesError)
+    if (!lines) return 0
 
     // Cash is an asset: debits increase it.
     let minor = 0

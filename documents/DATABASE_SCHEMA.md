@@ -12,8 +12,8 @@
 - **Offline (desktop)**: local SQLite (`better-sqlite3`),
   `apps/desktop/electron/main/db/schema.ts` — mirrors a subset of server
   tables with `dirty`/`updated_at` columns.
-- **Offline (web/mobile)**: WatermelonDb schema in `packages/db/src/schema/`
-  (Invoice, Product, Customer models).
+- **Offline (mobile)**: expo-sqlite mirror in `apps/mobile/src/host/local-db.ts`.
+  Web has no local database: it works online through the API.
 - A secondary shared schema `packages/db-schema/src/drizzle.schema.ts`
   declares a **smaller subset** of tables (invoices, products, customers,
   transactions, workflows*) used by desktop tooling; the authoritative
@@ -298,11 +298,13 @@ Conventions:
 - Write path allow-listed via `WRITABLE_COLUMNS`; free-text search columns
   in `SEARCHABLE_COLUMNS`.
 
-### Web/mobile WatermelonDb (per `packages/db/src/`)
+### Mobile local SQLite (`apps/mobile/src/host/local-db.ts`)
 
-Models: `Invoice`, `Product`, `Customer` (`packages/db/src/models/`,
-`packages/db/src/schema/`). Sync via `sync.ts` (`syncDatabase`) — pushes
-local changes and pulls server changes; web entry `packages/offline/`.
+The same mirrored entities as the desktop database, synced by the shared
+engine through `/api/sync/pull`, `/push`, `/snapshot` (JSON or HSB binary)
+and woken by `/api/sync/stream` — see `documents/OFFLINE_SYNC.md`.
+(`packages/db` / `packages/offline`, WatermelonDb, were never imported by an
+app and were removed on 27 Sep 2026.)
 
 ## Notes / Discrepancies
 

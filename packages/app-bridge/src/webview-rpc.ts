@@ -98,6 +98,7 @@ export const WEBVIEW_METHODS = [
   'app.downloadUpdate',
   'app.installUpdate',
   'http.request',
+  'barcode.scan',
 ] as const
 
 export type WebViewMethod = (typeof WEBVIEW_METHODS)[number]

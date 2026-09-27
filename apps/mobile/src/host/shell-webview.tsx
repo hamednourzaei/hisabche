@@ -19,6 +19,7 @@ import NetInfo from '@react-native-community/netinfo'
 import { rpcRequestSchema, webViewBridgeSource } from '@hisabche/app-bridge'
 
 import { handleBridgeCall } from './native-bridge'
+import { CameraScanOverlay } from './camera-scan-overlay'
 import { useHostServices } from './use-host-services'
 
 import SHELL_HTML from '../../assets/shell/index.html'
@@ -265,6 +266,8 @@ export function ShellWebView(): React.JSX.Element {
           <ActivityIndicator size="large" />
         </View>
       ) : null}
+      {/* Over the page while a barcode scan is open (barcode.scan). */}
+      <CameraScanOverlay />
     </View>
   )
 }

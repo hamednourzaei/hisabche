@@ -553,6 +553,12 @@ export type CreateInvoiceParsed = z.infer<typeof createInvoiceSchema>
 
 export const updateInvoiceSchema = invoiceSchema.partial().extend({
   id: uuidSchema,
+  /**
+   * The version the editor read (27 Sep 2026). REQUIRED by the server when the
+   * lines are edited; a different current version is a 409, so a second editor
+   * never silently overwrites the first.
+   */
+  version: z.number().int().positive().optional(),
 })
 
 export type UpdateInvoice = z.infer<typeof updateInvoiceSchema>

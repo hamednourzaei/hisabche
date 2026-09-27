@@ -7,6 +7,7 @@ import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
 import { asList } from '../lib/as-list'
+import { useIntentKey } from '../lib/intent-key'
 
 // ═══ Types ═══
 export interface PurchaseOrder {
@@ -74,12 +75,19 @@ export function usePurchaseOrder(id: string) {
 
 export function useCreatePurchaseOrder() {
   const queryClient = useQueryClient()
+  // Same key while the same order is retried after a lost response, so the
+  // server returns the first order instead of creating (and budgeting) a second.
+  const intent = useIntentKey('po')
   return useMutation({
     mutationFn: async (input: any) => {
-      const { data } = await apiClient.post('/purchase-orders', input)
+      const { data } = await apiClient.post('/purchase-orders', input, {
+        headers: { 'Idempotency-Key': intent.current() },
+      })
       return data
     },
+    onError: (error) => intent.settle(error),
     onSuccess: () => {
+      intent.settle()
       queryClient.invalidateQueries({ queryKey: purchasingKeys.orders() })
     },
   })

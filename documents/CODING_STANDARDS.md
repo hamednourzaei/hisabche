@@ -59,7 +59,7 @@
   `apps/desktop/electron/shared/ipc-contract.ts` with a Zod schema;
   renderer → native only via preload; writable DB columns allow-listed.
 - **Mobile** — expo-router routes; session in `expo-secure-store`;
-  offline via WatermelonDb.
+  offline via expo-sqlite (`apps/mobile/src/host/local-db.ts`) + outbox (`apps/mobile/src/features/offline/sync-runner.ts`).
 
 ## Repository Discipline
 

@@ -1309,7 +1309,35 @@
     "offlineBanner": "You are offline",
     "pendingBanner": "{{count}} pending operations",
     "queueEmpty": "Queue is empty",
-    "syncNow_description": "Synchronize now"
+    "syncNow_description": "Synchronize now",
+    "stage": {
+      "queued": "Queued",
+      "sending": "Sending",
+      "retrying": "Will retry",
+      "rejected": "Refused — needs review",
+      "committed": "Recorded"
+    },
+    "col": {
+      "record": "Record",
+      "operation": "Change",
+      "stage": "Status",
+      "reason": "Reason",
+      "time": "Time"
+    },
+    "op": {
+      "create": "New",
+      "update": "Edit",
+      "delete": "Delete"
+    },
+    "entity": {
+      "invoice": "Invoice",
+      "customer": "Customer",
+      "product": "Product",
+      "transaction": "Transaction"
+    },
+    "committedTitle": "Recorded in this session",
+    "committedHint": "Changes the server accepted since the app was opened. Older ones are on the server, not in this list.",
+    "rejectedHint": "The server refused these. Retrying sends the same change again — fix the cause first."
   },
   "validation": {
     "required": "This field is required",

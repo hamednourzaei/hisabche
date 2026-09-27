@@ -46,7 +46,6 @@ const syncService = readFileSync(
   join(ROOT, 'backend', 'src', 'services', 'sync.service.ts'),
   'utf8',
 )
-const gc = readFileSync(join(ROOT, 'packages', 'sync', 'src', 'gc.ts'), 'utf8')
 
 /** What the protocol accepts today. */
 const entities = syncEntitySchema.options as readonly string[]
@@ -101,19 +100,22 @@ describe('the offline contract', () => {
     expect(missing, 'documented as syncing, but the protocol would reject it').toEqual([])
   })
 
-  it('every syncing entity has a table, a column allow-list and a retention policy', () => {
-    // Three separate places have to agree. A protocol entry with no table is a
-    // 500; with no allow-list it writes nothing; with no retention policy the
-    // device keeps its rows forever and the phone fills up.
+  it('every syncing entity has a table and a column allow-list', () => {
+    // Two places have to agree. A protocol entry with no table is a 500; with
+    // no allow-list it writes nothing.
+    //
+    // ⚠️ This also asserted a «retention policy» per entity in
+    // packages/sync/src/gc.ts. That GC belonged to an engine no app ever ran:
+    // the assertion proved a policy existed in code that never executed, so
+    // it was a false assurance, not a guard. The engine was removed on
+    // 27 Sep 2026; devices keep every mirrored row today, and the remedy for
+    // a device grown too large is the rebuild in docs/SYNC_RUNBOOK.md.
     for (const entity of entities) {
       expect(syncService, `${entity} has no physical table`).toMatch(
         new RegExp(`${entity}:\\s*'\\w+'`),
       )
       expect(syncService, `${entity} has no writable column list`).toMatch(
         new RegExp(`${entity}:\\s*\\[`),
-      )
-      expect(gc, `${entity} has no retention policy`).toMatch(
-        new RegExp(`${entity}:\\s*\\{\\s*keepDays`),
       )
     }
   })

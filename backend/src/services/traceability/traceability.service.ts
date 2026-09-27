@@ -8,7 +8,7 @@ import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
-import { fetchAllPages } from '../../utils/fetch-all-pages'
+import { fetchAllPages, selectAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
 
 import {
@@ -330,17 +330,17 @@ export class TraceabilityService {
     ctx: TenancyContext,
     filters: { productId?: string; status?: string } = {},
   ): Promise<SerialUnit[]> {
-    let query = supabase
-      .from('stock_serials')
-      .select(SERIAL_COLUMNS)
-      .eq('workspace_id', ctx.workspaceId)
-      .order('received_on')
-      .limit(5000)
-
-    if (filters.productId) query = query.eq('product_id', filters.productId)
-    query = query.eq('status', filters.status ?? 'in_stock')
-
-    const { data, error } = await query
+    // Every serial (27 Sep 2026): a unit beyond PostgREST's 1000 rows could
+    // not be picked — nor would anyone know it existed.
+    const { data, error } = await selectAllPages((lo, hi) => {
+      let query = supabase
+        .from('stock_serials')
+        .select(SERIAL_COLUMNS)
+        .eq('workspace_id', ctx.workspaceId)
+      if (filters.productId) query = query.eq('product_id', filters.productId)
+      query = query.eq('status', filters.status ?? 'in_stock')
+      return query.order('received_on').order('id', { ascending: true }).range(lo, hi)
+    })
     if (error) throw new DatabaseError('Failed to fetch serial numbers', error)
     return (data ?? []).map(mapSerial)
   }
@@ -487,15 +487,19 @@ export class TraceabilityService {
 
   /** The trail from a document back to the exact physical goods. */
   async getTrail(ctx: TenancyContext, consumerType: string, consumerId: string) {
-    const { data, error } = await supabase
-      .from('lot_allocations')
-      .select(
-        'id, product_id, batch_id, serial_id, quantity, entry_date, batch:stock_batches(batch_number, expiry_date), serial:stock_serials(serial_number)',
-      )
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('consumer_type', consumerType)
-      .eq('consumer_id', consumerId)
-      .limit(1000)
+    // The whole trail (27 Sep 2026), not its first 1000 allocations.
+    const { data, error } = await selectAllPages((lo, hi) =>
+      supabase
+        .from('lot_allocations')
+        .select(
+          'id, product_id, batch_id, serial_id, quantity, entry_date, batch:stock_batches(batch_number, expiry_date), serial:stock_serials(serial_number)',
+        )
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('consumer_type', consumerType)
+        .eq('consumer_id', consumerId)
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
 
     if (error) throw new DatabaseError('Failed to fetch the lot trail', error)
     if ((data ?? []).length === 0) throw new NotFoundError('Lot trail')

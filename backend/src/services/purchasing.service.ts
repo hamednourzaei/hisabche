@@ -18,6 +18,9 @@
 // same way a purchase invoice does.
 // ============================================
 
+import { randomUUID } from 'node:crypto'
+import { sourceIdOf } from '../utils/deterministic-id'
+import { IdempotencyUnavailableError } from '../utils/client-request'
 import { supabase } from '../db'
 import { CreatePurchaseOrder, UpdatePurchaseOrder } from '@hisabche/validation'
 import type { TenancyContext } from './tenancy.service'
@@ -98,9 +101,23 @@ export class PurchasingService {
   }
 
   // ─── Create ──────────────────────────────────────────────────
-  async createPurchaseOrder(ctx: TenancyContext, data: CreatePurchaseOrder) {
+  async createPurchaseOrder(
+    ctx: TenancyContext,
+    data: CreatePurchaseOrder,
+    options: { idempotencyKey?: string | null | undefined } = {},
+  ) {
     const { workspaceId, userId } = ctx
     const items = data.items || []
+
+    // ⚠️ KEYED (27 Sep 2026). With an Idempotency-Key the order's id is
+    // derived from it, so a retried submit names the same order: the first
+    // one is returned and nothing — budget reservation included — runs twice.
+    const key = options.idempotencyKey ?? null
+    const orderId = key ? sourceIdOf(workspaceId, 'purchase_order', key) : randomUUID()
+    if (key) {
+      const replay = await this.existingOrder(workspaceId, orderId)
+      if (replay) return { ...(await this.getPurchaseOrder(orderId, ctx)), idempotentReplay: true }
+    }
 
     // ⚠️ ASKED BEFORE THE ORDER EXISTS. The budget engine had checkSpend and
     // commit and nothing called them, so a purchase order could spend any
@@ -128,40 +145,38 @@ export class PurchasingService {
       throw new ValidationError(`BUDGET_APPROVAL_REQUIRED: over by ${over}`)
     }
 
-    const { data: order, error } = await supabase
-      .from('purchase_orders')
-      .insert({
-        supplier_id: data.supplierId,
-        order_date: data.orderDate || new Date().toISOString(),
-        expected_delivery_date: data.expectedDeliveryDate || null,
-        status: data.status || 'pending',
-        notes: data.notes || null,
-        workspace_id: workspaceId,
-        user_id: userId,
-      })
-      .select(PO_LIST_COLUMNS)
-      .single()
-
-    if (error || !order) throw new DatabaseError('Failed to create purchase order', error)
-
-    if (items.length > 0) {
-      const orderItems = items.map((item: any) => ({
-        purchase_order_id: order.id,
-        product_id: item.productId,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        total_price: item.totalPrice ?? item.quantity * item.unitPrice,
-        workspace_id: workspaceId,
-        user_id: userId,
-      }))
-
-      const { error: itemsError } = await supabase.from('purchase_order_items').insert(orderItems)
-
-      if (itemsError) {
-        await supabase.from('purchase_orders').delete().eq('id', order.id)
-        throw new DatabaseError('Failed to create purchase order items', itemsError)
-      }
+    const header = {
+      id: orderId,
+      supplier_id: data.supplierId,
+      order_date: data.orderDate || new Date().toISOString(),
+      expected_delivery_date: data.expectedDeliveryDate || null,
+      status: data.status || 'pending',
+      notes: data.notes || null,
+      workspace_id: workspaceId,
+      user_id: userId,
     }
+    const orderItems = items.map((item: any) => ({
+      purchase_order_id: orderId,
+      product_id: item.productId,
+      quantity: item.quantity,
+      unit_price: item.unitPrice,
+      total_price: item.totalPrice ?? item.quantity * item.unitPrice,
+      workspace_id: workspaceId,
+      user_id: userId,
+    }))
+
+    // ⚠️ ONE TRANSACTION (docs/purchase-order-write-migration.sql). A lines
+    // failure used to DELETE the header afterwards — the compensating write
+    // rule 4 forbids.
+    const writeError = await this.writeOrder(ctx, orderId, header, orderItems, key !== null)
+    if (writeError) {
+      if (key && writeError.code === '23505') {
+        // A concurrent copy of the same submit won: answer with its order.
+        return { ...(await this.getPurchaseOrder(orderId, ctx)), idempotentReplay: true }
+      }
+      throw new DatabaseError('Failed to create purchase order', writeError)
+    }
+    const order = { id: orderId }
 
     await this.invalidate(workspaceId)
 
@@ -204,6 +219,55 @@ export class PurchasingService {
     }).catch((err) => console.error('[PurchasingService] logBusinessEvent failed:', err))
 
     return this.getPurchaseOrder(order.id, ctx)
+  }
+
+  private async existingOrder(workspaceId: string, id: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('purchase_orders')
+      .select('id')
+      .eq('id', id)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to check for an existing purchase order', error)
+    return data !== null
+  }
+
+  /**
+   * Header and lines in one transaction. Before the migration: the two rows
+   * one at a time — never a compensating DELETE; a lines failure leaves the
+   * header, visible and correctable, and says so. A KEYED create is refused
+   * then (503): the key promises one order, and the stepwise path cannot keep
+   * that promise across a crash between the two writes.
+   */
+  private async writeOrder(
+    ctx: TenancyContext,
+    orderId: string,
+    header: Record<string, unknown>,
+    lines: Array<Record<string, unknown>>,
+    keyed: boolean,
+  ): Promise<{ code?: string; message?: string } | null> {
+    const { error } = await supabase.rpc('purchase_order_write', {
+      p_workspace_id: ctx.workspaceId,
+      p_order_id: orderId,
+      p_order: header,
+      p_items: lines,
+    })
+    if (!error) return null
+    if (error.code !== 'PGRST202' && error.code !== '42883') return error
+    if (keyed) throw new IdempotencyUnavailableError('purchase_order')
+
+    const { error: headerError } = await supabase.from('purchase_orders').insert(header)
+    if (headerError) return headerError
+    if (lines.length > 0) {
+      const { error: linesError } = await supabase.from('purchase_order_items').insert(lines)
+      if (linesError) {
+        throw new DatabaseError(
+          `Purchase order ${orderId} was saved but its lines could not be`,
+          linesError,
+        )
+      }
+    }
+    return null
   }
 
   // ─── Get ─────────────────────────────────────────────────────

@@ -4,6 +4,7 @@
 // Logging time, and turning the billable part of it into invoice lines.
 // ============================================
 
+import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
@@ -103,19 +104,22 @@ export class TimesheetsService {
     ctx: TenancyContext,
     filters: { projectId?: string; employeeId?: string; from?: string; to?: string } = {},
   ): Promise<TimeEntry[]> {
-    let query = supabase
-      .from('time_entries')
-      .select(ENTRY_COLUMNS)
-      .eq('workspace_id', ctx.workspaceId)
-      .order('on_date', { ascending: false })
-      .limit(5000)
-
-    if (filters.projectId) query = query.eq('project_id', filters.projectId)
-    if (filters.employeeId) query = query.eq('employee_id', filters.employeeId)
-    if (filters.from) query = query.gte('on_date', filters.from.slice(0, 10))
-    if (filters.to) query = query.lte('on_date', filters.to.slice(0, 10))
-
-    const { data, error } = await query
+    // Every entry (27 Sep 2026): project profitability sums these, and the
+    // `.limit(5000)` was cut to 1000 by PostgREST.
+    const { data, error } = await selectAllPages((lo, hi) => {
+      let query = supabase
+        .from('time_entries')
+        .select(ENTRY_COLUMNS)
+        .eq('workspace_id', ctx.workspaceId)
+      if (filters.projectId) query = query.eq('project_id', filters.projectId)
+      if (filters.employeeId) query = query.eq('employee_id', filters.employeeId)
+      if (filters.from) query = query.gte('on_date', filters.from.slice(0, 10))
+      if (filters.to) query = query.lte('on_date', filters.to.slice(0, 10))
+      return query
+        .order('on_date', { ascending: false })
+        .order('id', { ascending: true })
+        .range(lo, hi)
+    })
     if (error) throw new DatabaseError('Failed to fetch time entries', error)
     return (data ?? []).map(mapEntry)
   }
@@ -274,18 +278,25 @@ export class TimesheetsService {
   async getProfitability(ctx: TenancyContext, projectId: string) {
     const [entries, employees, invoices] = await Promise.all([
       this.listEntries(ctx, { projectId }),
-      supabase
-        .from('employees')
-        .select('id, cost_rate_minor')
-        .eq('workspace_id', ctx.workspaceId)
-        .limit(1000),
-      supabase
-        .from('invoices')
-        .select('total')
-        .eq('workspace_id', ctx.workspaceId)
-        .eq('project_id', projectId)
-        .eq('type', 'sale')
-        .limit(1000),
+      // Every row (27 Sep 2026): a .limit(N) here was cut to 1000 by PostgREST, and this feeds a total.
+      selectAllPages((lo, hi) =>
+        supabase
+          .from('employees')
+          .select('id, cost_rate_minor')
+          .eq('workspace_id', ctx.workspaceId)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      ),
+      selectAllPages((lo, hi) =>
+        supabase
+          .from('invoices')
+          .select('total')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('project_id', projectId)
+          .eq('type', 'sale')
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      ),
     ])
 
     if (employees.error) throw new DatabaseError('Failed to read employees', employees.error)

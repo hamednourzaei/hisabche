@@ -38,10 +38,17 @@ vi.mock('../db', () => {
   }
   const supabase = {
     from: (table: string) => builder(table),
-    rpc: async (name: string) => (
-      calls.push({ table: `rpc:${name}`, op: 'rpc' }),
-      { data: 'INV-000001', error: null }
-    ),
+    rpc: async (name: string) => {
+      // The document write (header + items + stock in one transaction) IS the
+      // header insert here: it answers exactly as that insert would, 23505
+      // included — and a failure means nothing else of it was written.
+      if (name === 'invoice_write_document') {
+        calls.push({ table: 'invoices', op: 'insert' })
+        return { data: null, error: insert.error }
+      }
+      calls.push({ table: `rpc:${name}`, op: 'rpc' })
+      return { data: 'INV-000001', error: null }
+    },
   }
   return { supabase, default: supabase }
 })

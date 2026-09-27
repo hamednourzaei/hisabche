@@ -328,21 +328,21 @@ window is shorter than that workspace's offline periods — lengthen it.
 2. One row means one commit, however many times it was sent. That is the
    ledger working.
 3. Two rows for one logical action means two different `mutation_id`s were
-   generated — a client bug, not a protocol failure. The stable-id rule in
-   `packages/sync/src/mutations.ts` is the thing to check.
+   generated — a client bug, not a protocol failure. The mutation id is the
+   outbox entry's `clientId`, made once when the entry is queued: desktop in
+   `packages/app-shell/src/features/sync/sync-engine.ts`, mobile in
+   `apps/mobile/src/features/offline/sync-runner.ts` — those are the things to check.
 
 ### Rebuilding a client's local database
 
 Last resort, and only when the outbox is empty:
 
-```js
-// Verify FIRST. A non-empty outbox means unsent user work.
-await storage.listOutbox(workspaceId) // must be []
-indexedDB.deleteDatabase('hisabche-local')
-```
-
-The next start hydrates from the server. If the outbox is not empty, resolve
-those mutations first — deleting the database deletes them.
+Desktop and mobile keep their mirror in SQLite (better-sqlite3 / expo-sqlite).
+Verify FIRST that the outbox is empty — a non-empty outbox is unsent user
+work. Then clear the device's sync cursor: the next sync finds no cursor and
+rebuilds every mirrored entity from `/api/sync/snapshot` (keyset pages, with
+`version`). If the outbox is not empty, resolve those mutations first —
+wiping the local database deletes them. (Web keeps no local database.)
 
 ### Emergency: disable sync without a deploy
 
@@ -355,12 +355,10 @@ re-enabled.
 
 ## GC and retention
 
-**Local GC** (`packages/sync/src/gc.ts`) evicts local replicas only. It cannot
-delete server data — it never enqueues a mutation, and the test suite asserts
-the outbox stays empty across every eviction path.
-
-Defaults: invoices and transactions 90 days / 2000–5000 rows; customers and
-products effectively never. A local miss triggers targeted hydration.
+**Local GC** does not exist today. The engine that had one (`packages/sync`
+engine, never used by any app) was removed on 27 Sep 2026; desktop and
+mobile keep every mirrored row. If a device's database grows too large, the
+rebuild above is the remedy — never a delete that could reach the outbox.
 
 **Server retention** (`sync_change_log`) is the one that needs a job — see
 above. These are unrelated: pruning the change log never deletes a business

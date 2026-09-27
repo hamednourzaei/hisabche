@@ -121,8 +121,12 @@ describe('assigning stock', () => {
 describe('invoices name their warehouse', () => {
   const invoice = readFileSync(join(__dirname, '../services/invoice.service.ts'), 'utf8')
   it('the movement uses the invoice warehouse before the sole-warehouse fallback', () => {
-    expect(invoice.replace(/\s+/g, ' ')).toContain(
-      '(await this.invoiceWarehouseId(workspaceId, invoiceId)) ?? (await this.soleWarehouseId(workspaceId))',
+    const flat = invoice.replace(/\s+/g, ' ')
+    // Create: the warehouse the request named (verified above), else the sole one.
+    expect(flat).toContain('invoiceWarehouseId ?? (await this.soleWarehouseId(workspaceId))')
+    // Edit / approval: the warehouse stored on the invoice, else the sole one.
+    expect(flat).toContain(
+      '(await this.invoiceWarehouseId(ctx.workspaceId, invoiceId)) ?? (await this.soleWarehouseId(ctx.workspaceId))',
     )
   })
   it('a requested warehouse must be in this workspace', () => {

@@ -8,6 +8,7 @@
 // merged into what.
 // ============================================
 
+import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
@@ -90,10 +91,17 @@ export class MdmService {
         ? `id, ${config.nameColumn}, barcode, sku, created_at`
         : `id, ${config.nameColumn}, phone, email, created_at`
 
-    let query = supabase.from(config.table).select(columns).eq('workspace_id', ctx.workspaceId)
-    query =
-      config.retiredBy === 'is_active' ? query.eq('is_active', true) : query.is('deleted_at', null)
-    const { data, error } = await query.limit(2000)
+    // EVERY live record (27 Sep 2026): the scan was `.limit(2000)` — cut to
+    // 1000 by PostgREST — so duplicates beyond the first thousand were never
+    // proposed, and the screen said nothing about it.
+    const { data, error } = await selectAllPages((lo, hi) => {
+      let query = supabase.from(config.table).select(columns).eq('workspace_id', ctx.workspaceId)
+      query =
+        config.retiredBy === 'is_active'
+          ? query.eq('is_active', true)
+          : query.is('deleted_at', null)
+      return query.order('id', { ascending: true }).range(lo, hi)
+    })
 
     if (error) throw new DatabaseError('Failed to load records for duplicate detection', error)
 

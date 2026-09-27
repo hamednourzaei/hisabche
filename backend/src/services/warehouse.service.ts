@@ -25,6 +25,8 @@
 // workspace onto the movement row.
 // ============================================
 
+import { sourceIdOf } from '../utils/deterministic-id'
+import { IdempotencyUnavailableError, isMissingIdempotencySupport } from '../utils/client-request'
 import { supabase } from '../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
@@ -193,7 +195,11 @@ export class WarehouseService {
    * A transfer does NOT touch cost layers: the goods have not been consumed,
    * they have only changed shelf. Their cost travels with them.
    */
-  async transferStock(ctx: TenancyContext, data: any) {
+  async transferStock(
+    ctx: TenancyContext,
+    data: any,
+    options: { idempotencyKey?: string | null | undefined } = {},
+  ) {
     const quantity = Number(data.quantity) || 0
     if (quantity <= 0) throw new ValidationError('WAREHOUSE_TRANSFER_QUANTITY_INVALID')
     if (data.fromWarehouseId === data.toWarehouseId) {
@@ -202,17 +208,38 @@ export class WarehouseService {
 
     await this.assertWarehousesInWorkspace(ctx, [data.fromWarehouseId, data.toWarehouseId])
 
-    const { data: result, error } = await supabase.rpc('warehouse_transfer_stock', {
-      p_workspace_id: ctx.workspaceId,
-      p_user_id: ctx.userId,
-      p_payload: {
-        product_id: data.productId,
-        from_warehouse_id: data.fromWarehouseId,
-        to_warehouse_id: data.toWarehouseId,
-        quantity,
-        notes: data.notes || '',
-      },
-    })
+    const payload = {
+      product_id: data.productId,
+      from_warehouse_id: data.fromWarehouseId,
+      to_warehouse_id: data.toWarehouseId,
+      quantity,
+      notes: data.notes || '',
+    }
+
+    // ⚠️ KEYED (27 Sep 2026): with an Idempotency-Key the movement's id is
+    // derived from it, so a retried request after a lost response names the
+    // same movement and the goods move ONCE
+    // (docs/stock-transfer-idempotency-migration.sql).
+    const key = options.idempotencyKey ?? null
+    const { data: result, error } = key
+      ? await supabase.rpc('warehouse_transfer_stock_keyed', {
+          p_workspace_id: ctx.workspaceId,
+          p_user_id: ctx.userId,
+          p_payload: payload,
+          p_movement_id: sourceIdOf(ctx.workspaceId, 'stock_transfer', key),
+        })
+      : await supabase.rpc('warehouse_transfer_stock', {
+          p_workspace_id: ctx.workspaceId,
+          p_user_id: ctx.userId,
+          p_payload: payload,
+        })
+
+    // A keyed request on a database without the keyed function is refused —
+    // never quietly sent unkeyed, which is exactly the double move it asked
+    // to be protected from.
+    if (key && isMissingIdempotencySupport(error)) {
+      throw new IdempotencyUnavailableError('stock_transfer')
+    }
 
     if (error) {
       const code = /\b([A-Z][A-Z_]{6,})\b/.exec(error.message ?? '')?.[1]

@@ -361,7 +361,10 @@ export class BankingService {
       .eq('workspace_id', ctx.workspaceId)
       .not('matched_party', 'is', null)
       .order('on_date', { ascending: false })
-      .limit(2000)
+      // The most recent thousand confirmed matches — a heuristic's sample, not
+      // a total, so bounded on purpose. It said 2000; PostgREST returns at
+      // most 1000 (max-rows), so the number now says what actually happens.
+      .limit(1000)
 
     // History is an enhancement. Without it the suggestions are exactly what
     // they were before N1, which is a working feature — failing the whole

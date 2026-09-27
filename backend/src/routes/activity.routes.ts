@@ -25,7 +25,7 @@ export async function activityRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
-        cacheMiddleware({ scope: 'user', ttl: 30, keyPrefix: 'activities' }),
+        cacheMiddleware({ scope: 'member', ttl: 30, keyPrefix: 'activities' }),
       ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -56,12 +56,13 @@ export async function activityRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 15, keyPrefix: 'activities-counts' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'member', ttl: 15, keyPrefix: 'activities-counts' }),
       ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        return reply.send(await activityService.getFilterCounts(request.userId))
+        return reply.send(await activityService.getFilterCounts(request.tenancy))
       } catch (err) {
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to count activities' })
@@ -75,13 +76,13 @@ export async function activityRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 15, keyPrefix: 'activities-unread' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'member', ttl: 15, keyPrefix: 'activities-unread' }),
       ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = (request as any).userId
-        const count = await activityService.getUnreadCount(userId)
+        const count = await activityService.getUnreadCount(request.tenancy)
         return reply.send({ count })
       } catch (err: any) {
         fastify.log.error(err)
@@ -94,14 +95,14 @@ export async function activityRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/v1/activities/mark-read',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { ids } = request.body as { ids: string[] }
-        const userId = (request as any).userId
+        const { userId } = request.tenancy
 
-        await activityService.markAsRead(userId, ids)
+        await activityService.markAsRead(request.tenancy, ids)
         await clearCache(`activities:${userId}:*`)
         await clearCache(`activities-unread:${userId}:*`)
         await clearCache(`activities-counts:${userId}:*`)
@@ -118,13 +119,13 @@ export async function activityRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/v1/activities/mark-all-read',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = (request as any).userId
+        const { userId } = request.tenancy
 
-        await activityService.markAllAsRead(userId)
+        await activityService.markAllAsRead(request.tenancy)
         await clearCache(`activities:${userId}:*`)
         await clearCache(`activities-unread:${userId}:*`)
         await clearCache(`activities-counts:${userId}:*`)
@@ -141,14 +142,14 @@ export async function activityRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/v1/activities/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const userId = (request as any).userId
+        const { userId } = request.tenancy
 
-        await activityService.deleteActivity(userId, id)
+        await activityService.deleteActivity(request.tenancy, id)
         await clearCache(`activities:${userId}:*`)
 
         return reply.code(204).send()

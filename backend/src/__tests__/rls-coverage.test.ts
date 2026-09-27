@@ -35,6 +35,7 @@ const DOCS = join(__dirname, '..', '..', '..', 'docs')
  * DATABASE would refuse a direct client that tried.
  */
 const TENANT_TABLES = [
+  'product_barcodes',
   'migration_jobs',
   'migration_profiles',
   'migration_records',

@@ -5740,7 +5740,23 @@
     "errorTitle": "Barcode not checked",
     "errorBody": "Looking up the barcode failed. Try again.",
     "errorOffline": "You are offline and this product is not on this device. Try again once connected.",
-    "createProduct": "Define a product with this barcode"
+    "createProduct": "Define a product with this barcode",
+    "cameraScan": "Scan with camera",
+    "cameraDenied": "Camera permission was not given. Allow Hisabche to use the camera in the phone settings.",
+    "cameraTitle": "Hold the barcode in front of the camera",
+    "cameraCancel": "Close",
+    "noUnitPriceTitle": "This product has no unit price",
+    "noUnitPriceBody": "This scale label carries a price, not a weight. Turning it into a quantity needs the product’s sell price — set it in the warehouse.",
+    "extraTitle": "Other barcodes of this product",
+    "extraHint": "Another supplier’s code, the carton’s code, a new packaging. Each code belongs to one product. These are recognised online; offline, only the main barcode.",
+    "extraEmpty": "No other barcodes.",
+    "extraLoadFailed": "The other barcodes could not be read.",
+    "extraAdd": "Add",
+    "extraRemove": "Remove this barcode",
+    "extraUnit": "Unit (optional)",
+    "extraAddFailed": "The barcode was not added.",
+    "extraRemoveFailed": "The barcode was not removed.",
+    "extraUnitProduct": "The product’s own unit"
   },
   "receipt": {
     "print": "Print receipt",
@@ -5799,6 +5815,16 @@
     "testPrint": "Print a test receipt",
     "testReceiptTitle": "Test receipt",
     "testReceiptLine": "Print test — not a sale",
-    "testReceiptFooter": "This is not an invoice"
+    "testReceiptFooter": "This is not an invoice",
+    "scaleTitle": "Scale labels",
+    "scaleIntro": "A shop scale prints a barcode that carries the weight or the price (prefix 20–29). With this on, scanning such a label adds the product with that weight. The product’s barcode must be the label’s first seven digits (e.g. 2012345).",
+    "scaleEnabled": "Read scale labels",
+    "scaleValueKind": "The label carries",
+    "scaleWeight": "Weight",
+    "scalePrice": "Price",
+    "scaleItemDigits": "Item code digits",
+    "scaleItemDigitsHint": "How many digits after the prefix identify the product (usually 5).",
+    "scaleDecimals": "Decimal places",
+    "scaleDecimalsHint": "Weight in grams: 3 (i.e. kilograms). Price without decimals: 0."
   }
 }

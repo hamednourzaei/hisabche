@@ -15,6 +15,14 @@ import {
   useBackupStore,
 } from '@hisabche/store'
 import { QuickInvoicePage, lineTotalOf } from '../quick-invoice-page'
+import { CameraScanButton } from '../../invoice-builder/camera-scan-button'
+import {
+  loadScaleLabelConfig,
+  parseScaleLabel,
+  quantityOfLabel,
+  type ScaleLabel,
+} from '../../../../lib/barcode/scale-label'
+import { getCameraScanner } from '../../../../lib/barcode/camera-host'
 import type {
   QuickInvoicePageProps,
   InvoiceLineItem,
@@ -135,7 +143,8 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
   // for a scanner: scanning the second can of the same drink must count it.
   const [scanProblem, setScanProblem] = useState<ScanProblem | null>(null)
 
-  const addScanned = useCallback((product: Product) => {
+  /** `add`: one for an ordinary code; the weight for a scale label. */
+  const addScanned = useCallback((product: Product, add = 1) => {
     if (!product.id) return
     const id = product.id
     setItems((prev) => {
@@ -146,7 +155,7 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
         if (!Number.isFinite(current)) return prev
         return prev.map((item) =>
           item.key === same.key
-            ? { ...item, quantity: String(Math.round((current + 1) * 1000) / 1000) }
+            ? { ...item, quantity: String(Math.round((current + add) * 1000) / 1000) }
             : item,
         )
       }
@@ -156,26 +165,44 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
         {
           key: id,
           product: { id, name: product.name, sellPrice, unit: product.unit ?? '' },
-          quantity: '1',
+          quantity: String(add),
           price: String(sellPrice),
         },
       ]
     })
   }, [])
 
+  // A scale label's weight (or price ÷ unit price) is the quantity — the same
+  // rule as the invoice builder (lib/barcode/scale-label.ts).
+  const addWithLabel = useCallback(
+    (product: Product, label: ScaleLabel | undefined, barcode: string) => {
+      if (!label) return addScanned(product)
+      const quantity = quantityOfLabel(label, Number(product.sellPrice ?? 0))
+      if (quantity === null) return setScanProblem({ kind: 'noUnitPrice', barcode })
+      addScanned(product, quantity)
+    },
+    [addScanned],
+  )
+
   const handleScan = useCallback(
     async (barcode: string) => {
-      const result = await lookupProductByBarcode(barcode)
-      if (result.status === 'found') return addScanned(result.product)
+      const label = parseScaleLabel(barcode, loadScaleLabelConfig()) ?? undefined
+      const code = label ? label.productCode : barcode
+      const result = await lookupProductByBarcode(code)
+      if (result.status === 'found') {
+        // An extra code that sells in its own unit (the carton's code) adds that unit.
+        const product = result.unit ? { ...result.product, unit: result.unit } : result.product
+        return addWithLabel(product, label, barcode)
+      }
       setScanProblem(
         result.status === 'ambiguous'
-          ? { kind: 'ambiguous', barcode, products: result.products }
+          ? { kind: 'ambiguous', barcode: code, products: result.products, label }
           : result.status === 'unknown'
             ? { kind: 'unknown', barcode: result.barcode }
             : { kind: 'error', barcode: result.barcode, offline: result.offline },
       )
     },
-    [addScanned],
+    [addWithLabel],
   )
 
   useBarcodeScanner((scan) => void handleScan(scan.value), {
@@ -390,8 +417,13 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
         t={safeT}
         problem={scanProblem}
         onPick={(product) => {
+          const picked = scanProblem
           setScanProblem(null)
-          addScanned(product)
+          addWithLabel(
+            product,
+            picked?.kind === 'ambiguous' ? picked.label : undefined,
+            picked?.barcode ?? '',
+          )
         }}
         onRetry={(barcode) => {
           setScanProblem(null)
@@ -401,6 +433,15 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
       />
       <QuickInvoicePage
         t={safeT}
+        scanSlot={
+          getCameraScanner() ? (
+            <CameraScanButton
+              t={safeT}
+              onCode={(code) => void handleScan(code)}
+              disabled={scanProblem !== null}
+            />
+          ) : undefined
+        }
         elapsedFormatted={elapsedFormatted}
         showSaved={false}
         showCelebration={showCelebration}

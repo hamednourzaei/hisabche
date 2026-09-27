@@ -7,6 +7,7 @@
 // purchase order: «Read Model / Suggestion only, no automatic PO».
 // ============================================
 
+import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
 import type { TenancyContext } from '../tenancy.service'
@@ -118,12 +119,16 @@ export class ReorderService {
   }
 
   private async products(ctx: TenancyContext) {
-    const { data, error } = await supabase
-      .from('products')
-      .select('id, name, quantity')
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('is_active', true)
-      .limit(5000)
+    // Every active product (27 Sep 2026): the reorder list stopped at PostgREST 1000 rows.
+    const { data, error } = await selectAllPages((lo, hi) =>
+      supabase
+        .from('products')
+        .select('id, name, quantity')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('is_active', true)
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
 
     if (error) throw new DatabaseError('Failed to read products', error)
     return (data ?? []).map((row) => ({
@@ -143,13 +148,17 @@ export class ReorderService {
    * Sale movements are negative, so the magnitude is the demand.
    */
   private async soldSince(ctx: TenancyContext, since: string): Promise<Map<string, number>> {
-    const { data, error } = await supabase
-      .from('stock_movements')
-      .select('product_id, quantity')
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('type', 'sale')
-      .gte('created_at', since)
-      .limit(20000)
+    // Every row (27 Sep 2026): the large .limit() was cut to 1000 by PostgREST, and this feeds a total.
+    const { data, error } = await selectAllPages((lo, hi) =>
+      supabase
+        .from('stock_movements')
+        .select('product_id, quantity')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('type', 'sale')
+        .gte('created_at', since)
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
 
     if (error) throw new DatabaseError('Failed to read sales history', error)
 
@@ -163,13 +172,16 @@ export class ReorderService {
 
   /** The most recent SALE per product, for L4. */
   private async lastSaleByProduct(ctx: TenancyContext): Promise<Map<string, string>> {
-    const { data, error } = await supabase
-      .from('stock_movements')
-      .select('product_id, created_at')
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('type', 'sale')
-      .order('created_at', { ascending: false })
-      .limit(20000)
+    const { data, error } = await selectAllPages((lo, hi) =>
+      supabase
+        .from('stock_movements')
+        .select('product_id, created_at')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('type', 'sale')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
 
     if (error) throw new DatabaseError('Failed to read sales history', error)
 
@@ -190,11 +202,14 @@ export class ReorderService {
    * in transit, and an empty map is the correct answer rather than an error.
    */
   private async inTransit(ctx: TenancyContext): Promise<Map<string, number>> {
-    const { data, error } = await supabase
-      .from('stock_in_transit')
-      .select('product_id, quantity_in_transit')
-      .eq('workspace_id', ctx.workspaceId)
-      .limit(5000)
+    const { data, error } = await selectAllPages((lo, hi) =>
+      supabase
+        .from('stock_in_transit')
+        .select('product_id, quantity_in_transit')
+        .eq('workspace_id', ctx.workspaceId)
+        .order('product_id', { ascending: true })
+        .range(lo, hi),
+    )
 
     if (error) {
       if (error.code === '42P01' || error.code === 'PGRST205') return new Map()

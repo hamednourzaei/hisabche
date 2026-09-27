@@ -3,6 +3,7 @@
 // FIXED: Added cache, count: estimated, projection
 // ============================================
 
+import { selectAllPages } from '../utils/fetch-all-pages'
 import { supabase } from '../db'
 import { CreateAuditLog, AuditFilters } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
@@ -450,15 +451,20 @@ export class AuditService {
   // ─── Export Logs ────────────────────────────────────────
   async exportLogs(filters: AuditFilters) {
     // ✅ بدون کش برای Export (چون داده‌های کامل نیاز است)
-    let query = supabase.from('audit_logs').select(AUDIT_LIST_COLUMNS) // ✅ فقط ستون‌های ضروری
-
-    if (filters.userId) query = query.eq('user_id', filters.userId)
-    if (filters.action) query = query.eq('action', filters.action)
-    if (filters.entityType) query = query.eq('entity_type', filters.entityType)
-    if (filters.startDate) query = query.gte('created_at', filters.startDate)
-    if (filters.endDate) query = query.lte('created_at', filters.endDate)
-
-    const { data, error } = await query.order('created_at', { ascending: false }).limit(10000)
+    // ⚠️ AND ACTUALLY COMPLETE (27 Sep 2026): `.limit(10000)` was cut to
+    // PostgREST max-rows (1000) — an «export» of the newest thousand entries.
+    const { data, error } = await selectAllPages((from, to) => {
+      let query = supabase.from('audit_logs').select(AUDIT_LIST_COLUMNS) // ✅ فقط ستون‌های ضروری
+      if (filters.userId) query = query.eq('user_id', filters.userId)
+      if (filters.action) query = query.eq('action', filters.action)
+      if (filters.entityType) query = query.eq('entity_type', filters.entityType)
+      if (filters.startDate) query = query.gte('created_at', filters.startDate)
+      if (filters.endDate) query = query.lte('created_at', filters.endDate)
+      return query
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to)
+    })
 
     if (error) throw new DatabaseError('Failed to export audit logs', error)
     return data || []

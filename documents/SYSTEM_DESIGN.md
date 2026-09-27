@@ -17,7 +17,8 @@ hisabche/
 │   ├── auth/       Auth adapters (Supabase client wrappers)
 │   ├── api/        Typed API client, hooks, storage, Supabase realtime
 │   ├── store/      Zustand stores (auth, cart, currency, sync, workspace…)
-│   ├── db/         WatermelonDb local DB + sync queue (offline)
+│   ├── sync/       HSB binary wire + wake-up stream client (server + clients)
+│   ├── app-shell/  desktop/mobile shell and the sync engine
 │   ├── db-schema/  Drizzle shared schema (subset used by desktop)
 │   ├── validation/ Zod schemas (login, signup, forgot/reset password…)
 │   ├── ui/         Shared React UI kit (shadcn-style primitives)
@@ -107,8 +108,7 @@ Electron 31 + Vite renderer.
 - **Expo 51 / React Native 0.74**, expo-router file-based routing
   (`app/(auth)`, `app/(tabs)`, `app/customers`, `app/inventory`,
   `app/sales`).
-- Offline DB: WatermelonDb (`@hisabche/db` mobile entry) with models for
-  Invoice, Product, Customer; `performSync()` pushes/pulls.
+- Offline DB: expo-sqlite (`apps/mobile/src/host/local-db.ts`) + outbox (`apps/mobile/src/features/offline/sync-runner.ts`); the outbox pushes, the cursor pulls.
 - Secure storage: `expo-secure-store` (session adapter).
 - Biometrics (`expo-local-authentication`), camera (`expo-camera`),
   notifications (`expo-notifications`), netinfo for connectivity state.
@@ -130,7 +130,7 @@ State Layer (Zustand store or React Query)
    │                                                 rate limit,           filters)
    │                                                 Arcjet)
    │
-   └── offline ──► Local DB (WatermelonDb / SQLite / sync_queue)
+   └── offline ──► Local DB (SQLite: better-sqlite3 / expo-sqlite, outbox)
                         │   enqueue
                         └──► sync worker ──► /api/sync/push (when online)
                                               /api/sync/pull (incremental)
@@ -144,9 +144,8 @@ done by main or a fetcher in renderer with token from the credential store.
 
 ### Local Database
 
-- **Web/mobile**: WatermelonDb (SQLite under the hood) in
-  `packages/db` — schema in `packages/db/src/schema/`, models for
-  Invoice/Product/Customer; web entry `packages/offline/database.web.ts`.
+- **Web**: no local database — online through the API.
+- **Mobile**: expo-sqlite in `apps/mobile/src/host/local-db.ts`.
 - **Desktop**: plain SQLite via `better-sqlite3` in main process
   (`apps/desktop/electron/main/db/schema.ts`), tables mirror the server
   tables (product, customer, invoice, invoice_item, transaction,

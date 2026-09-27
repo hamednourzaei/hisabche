@@ -213,8 +213,14 @@ function makeQuery(table: string) {
   return api
 }
 
+// No database functions here: every write takes its pre-migration path
+// (e.g. invoice_write_document → the same rows, one statement at a time), which
+// is what this fake models row by row.
 vi.mock('../db', () => ({
-  supabase: { from: (table: string) => makeQuery(table) },
+  supabase: {
+    from: (table: string) => makeQuery(table),
+    rpc: async () => ({ data: null, error: { code: 'PGRST202', message: 'not found' } }),
+  },
 }))
 
 vi.mock('../utils/pagination', () => ({
