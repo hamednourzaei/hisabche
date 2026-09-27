@@ -29,9 +29,5 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 export default function DashboardPage() {
-  return (
-    <main className="section">
-      <DashboardContainer />
-    </main>
-  )
+  return <DashboardContainer />
 }

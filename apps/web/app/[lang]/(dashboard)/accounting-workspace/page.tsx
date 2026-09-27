@@ -12,9 +12,5 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 export default function AccountingWorkspacePage() {
-  return (
-    <main className="section">
-      <DomainWorkspaceContainer domain="accounting" />
-    </main>
-  )
+  return <DomainWorkspaceContainer domain="accounting" />
 }

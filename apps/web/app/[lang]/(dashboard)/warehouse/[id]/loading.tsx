@@ -3,9 +3,5 @@
 import { PageSkeleton } from '@hisabche/ui'
 
 export default function Loading() {
-  return (
-    <main className="section">
-      <PageSkeleton stats={4} rows={3} />
-    </main>
-  )
+  return <PageSkeleton stats={4} rows={3} />
 }

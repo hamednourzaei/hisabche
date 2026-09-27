@@ -35,10 +35,8 @@ export const dynamic = 'force-dynamic'
 
 export default function CustomersPage() {
   return (
-    <main className="section">
-      <Suspense fallback={<CustomersSkeleton />}>
-        <CustomersContainer />
-      </Suspense>
-    </main>
+    <Suspense fallback={<CustomersSkeleton />}>
+      <CustomersContainer />
+    </Suspense>
   )
 }

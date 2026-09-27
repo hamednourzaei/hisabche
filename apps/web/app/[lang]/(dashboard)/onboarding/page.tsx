@@ -1,71 +1,67 @@
 // apps/web/app/[lang]/(dashboard)/onboarding/page.tsx
-import { OnboardingContainer } from "@hisabche/ui";
+import { OnboardingContainer } from '@hisabche/ui'
 
 const titles: Record<string, string> = {
-  "fa": "راه‌اندازی",
-  "af": "راه‌اندازی",
-  "en": "Onboarding",
-};
+  fa: 'راه‌اندازی',
+  af: 'راه‌اندازی',
+  en: 'Onboarding',
+}
 
 const descriptions: Record<string, string> = {
-  "fa": "راه‌اندازی سریع حسابچه برای کسب‌وکار شما. تنظیم نام تجاری، ارز، انبار و اطلاعات اولیه در چند دقیقه.",
-  "af": "راه‌اندازی سریع حسابچه برای تجارت شما. تنظیم نام تجاری، ارز، گدام و اطلاعات اولیه در چند دقیقه.",
-  "en": "Quick Hisabche setup for your business. Set up business name, currency, warehouse and basic info in minutes.",
-};
+  fa: 'راه‌اندازی سریع حسابچه برای کسب‌وکار شما. تنظیم نام تجاری، ارز، انبار و اطلاعات اولیه در چند دقیقه.',
+  af: 'راه‌اندازی سریع حسابچه برای تجارت شما. تنظیم نام تجاری، ارز، گدام و اطلاعات اولیه در چند دقیقه.',
+  en: 'Quick Hisabche setup for your business. Set up business name, currency, warehouse and basic info in minutes.',
+}
 
 const keywords: Record<string, string[]> = {
-  "fa": [
-    "راه‌اندازی",
-    "شروع کار",
-    "تنظیمات اولیه",
-    "ایجاد حساب",
-    "کسب‌وکار جدید",
-    "ثبت‌نام",
-    "پیکربندی",
-    "حسابچه",
-    "شروع سریع",
-    "تنظیم فروشگاه",
+  fa: [
+    'راه‌اندازی',
+    'شروع کار',
+    'تنظیمات اولیه',
+    'ایجاد حساب',
+    'کسب‌وکار جدید',
+    'ثبت‌نام',
+    'پیکربندی',
+    'حسابچه',
+    'شروع سریع',
+    'تنظیم فروشگاه',
   ],
-  "af": [
-    "راه‌اندازی",
-    "شروع کار",
-    "تنظیمات اولیه",
-    "ایجاد حساب",
-    "تجارت جدید",
-    "ثبت‌نام",
-    "پیکربندی",
-    "حسابچه",
-    "شروع سریع",
-    "تنظیم دوکان",
+  af: [
+    'راه‌اندازی',
+    'شروع کار',
+    'تنظیمات اولیه',
+    'ایجاد حساب',
+    'تجارت جدید',
+    'ثبت‌نام',
+    'پیکربندی',
+    'حسابچه',
+    'شروع سریع',
+    'تنظیم دوکان',
   ],
-  "en": [
-    "onboarding",
-    "get started",
-    "initial setup",
-    "create account",
-    "new business",
-    "signup",
-    "configuration",
-    "hisabche",
-    "quick start",
-    "store setup",
+  en: [
+    'onboarding',
+    'get started',
+    'initial setup',
+    'create account',
+    'new business',
+    'signup',
+    'configuration',
+    'hisabche',
+    'quick start',
+    'store setup',
   ],
-};
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
-  const { lang } = await params;
+  const { lang } = await params
   return {
-    title: titles[lang] || titles["fa"],
-    description: descriptions[lang] || descriptions["fa"],
-    keywords: keywords[lang] || keywords["fa"],
+    title: titles[lang] || titles['fa'],
+    description: descriptions[lang] || descriptions['fa'],
+    keywords: keywords[lang] || keywords['fa'],
     robots: { index: false, follow: false },
-  };
+  }
 }
 
 export default function Page() {
-  return (
-    <main className="section">
-      <OnboardingContainer />
-    </main>
-  );
+  return <OnboardingContainer />
 }

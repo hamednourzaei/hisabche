@@ -15,9 +15,5 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 export default function Page() {
-  return (
-    <main className="section">
-      <InvoicePreviewContainer />
-    </main>
-  )
+  return <InvoicePreviewContainer />
 }

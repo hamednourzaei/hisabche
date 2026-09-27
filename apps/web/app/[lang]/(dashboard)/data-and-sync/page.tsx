@@ -12,9 +12,5 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 export default function DataAndSyncPage() {
-  return (
-    <main className="section">
-      <DataAndSyncContainer />
-    </main>
-  )
+  return <DataAndSyncContainer />
 }

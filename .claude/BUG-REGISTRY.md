@@ -664,3 +664,32 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 - **رفع:** `HardwareSection` از `@hisabche/ui/screens` export و در تنظیمات app-shell سوار شد. بقیه‌ی صفحه‌ی تنظیمات دسکتاپ میزبان‌محور می‌ماند (خروج با store امن دسکتاپ، زبان `setDesktopLanguage`، وضعیت SQLite، به‌روزرسانی).
 - **جانبی:** سه لینک برهنه (`/billing`، `/workflow-templates`، `/quick-invoice?type=purchase`) → `localizePath`. گارد `dashboard-page-structure.test.ts` حالا `href="/…"` برهنه را هم می‌گیرد — injection-tested.
 - **گزارش، نه تعمیر (§13):** `StorageSection` در تنظیمات وب «24 MB» ثابت نشان می‌دهد و دکمه‌ی پاک‌کردن کش فقط `console.log` می‌کند (G1). و سه فایل خالیِ ردیابی‌شده در `apps/desktop`: `cls`، `npm`، `electron-vite`.
+
+## BUG-070 — hydration #418 روی `/warehouse?tab=products` (۲۷ سپتامبر، دور چهارم)
+
+- **ریشه:** `useSyncStore` → `isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true`. Node 22 `navigator` سراسری دارد بدون `onLine` → سرور `undefined` (آفلاین) و badge «آفلاین» رندر می‌کرد؛ مرورگر آنلاین. zustand 4.5 `getInitialState()` را snapshot سرور می‌دهد، پس هر مقدار اولیه‌ی وابسته به محیط، mismatch است.
+- **رفع:** مقدار اولیه `true`؛ `setOnline(navigator.onLine)` بعد از `create()` و فقط روی کلاینت. **گارد:** `sync-initial-state.test.ts` (navigator بدون onLine و offline) — injection-tested.
+
+## BUG-071 — hydration #418 روی `/data-and-sync` (۲۷ سپتامبر، دور چهارم)
+
+- **ریشه:** `KpiCard` مقدار ReactNode را در `<p>` می‌پیچید؛ `Badge` یک `<div>` است. parser HTML پاراگراف را زود می‌بندد، DOM سرور با درخت کلاینت فرق می‌کند.
+- **رفع:** `<div>`. **گارد:** `one-kpi-card.test.ts` — injection-tested.
+
+## BUG-072 — `<main>` تودرتو در همه‌ی صفحه‌های داشبورد (۲۷ سپتامبر، دور چهارم)
+
+- **ریشه:** layout یک `<main>` دارد و ۴۴ صفحه/loading یک `<main className="section">` دیگر درونش می‌گذاشتند (`.section` تعریف نشده بود).
+- **رفع:** wrapper حذف؛ صفحه فقط container را برمی‌گرداند. **گارد:** «exactly one <main>» — injection-tested.
+
+## BUG-073 — `StorageSection` ساختگی و breadcrumb با کلید خام (۲۷ سپتامبر، دور چهارم)
+
+- **ریشه:** «24 MB» ثابت و دکمه‌ی `console.log` (G1). breadcrumb `t('common.details')` را صدا می‌زد که در هیچ کاتالوگی نبود → «common.details» روی صفحه‌ی هر رکورد.
+- **رفع:** شمار کش TanStack Query + `navigator.storage.estimate()`، پاک‌کردن با `resetQueries()`؛ کلید `common.details` در fa/af/en. `purchasing-view` هم دیگر `'fa-AF'` ثابت ندارد (`formatNumber` + `useIntlLocale`).
+- **گارد:** `settings-storage-section.test.ts`، `breadcrumb-keys.test.ts`، ratchet در `calendar-follows-language.test.ts` — همه injection-tested.
+
+## BUG-074 — ۱۸۵ کلید ترجمه در هیچ کاتالوگی نبود؛ زنگ اعلان کلید خام نشان می‌داد (۲۷ سپتامبر، دور چهارم)
+
+- **ریشه:** کلیدهایی که صفحه‌های زنده صدا می‌زدند (با namespace حل‌شده) در fa/af/en نبودند. ۲۲ تا بدون fallback → کلید خام روی صفحه (زنگ داشبورد: «notifications.markAllRead»، «notifications.viewAll»). ۱۶۳ تا با fallback فارسی → انگلیسی و دری‌خوان فارسی می‌دید. زنگ علاوه بر این وضعیت فاکتور، «بدون عنوان»، «فاکتور #»، «۹۹+» و aria-label را ثابت فارسی داشت.
+- **هم‌خانواده:** صفحه‌ی صف ارسال دسکتاپ/اندروید ۱۰ کلید `desktop` نداشت («sync.col.record» به‌عنوان سرستون). صفحه‌ی «برنامه باز نشد» و overlay دوربین موبایل فارسی ثابت بودند (با این استدلال غلط که «ترجمه هنوز وجود ندارد» — زبان انتخاب‌شده در secure store هست).
+- **رفع:** ۱۸۴ کلید در سه زبان (کلید `invoices.noinvoicess` غلط تایپی بود → `invoices.noInvoices`؛ شمارش مشتری با ICU `{count}`). وضعیت‌های زنگ از `invoices.<status>` (همان برچسب فهرست فاکتور). bundle تایپ‌شده‌ی `sync` در `desktop-strings.ts`. bundle کوچک تایپ‌شده‌ی میزبان موبایل `host-strings.ts` (نه کاتالوگ ۹۳۵KB در باندل نیتیو).
+- **گارد:** `i18n-keys-exist.test.ts` (namespace-aware، روی ui/web/admin)، `desktop-keys.test.ts`، `host-strings.test.ts` — هر سه injection-tested.
+- **گزارش، نه تعمیر:** ۸ فایل هیچ مصرف‌کننده‌ای ندارند و کلیدهایشان عمداً اضافه نشد (فهرست `UNUSED_FILES` در گارد): customer-360-container، dashboard-invoices، invoice-360-container، landing-preview، landing/transform-scene، EntityActivityCard، permissions-view، approval-actions.

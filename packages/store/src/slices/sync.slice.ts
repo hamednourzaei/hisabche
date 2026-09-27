@@ -22,7 +22,14 @@ interface SyncState {
 
 export const useSyncStore = create<SyncState>((set) => ({
   lastSyncedAt: null,
-  isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+  // ⚠️ A constant, not `navigator.onLine`. The server renders with this
+  // initial state and hydration compares against it (zustand hands React
+  // `getInitialState()` as the server snapshot). Node 22 HAS a global
+  // `navigator` — without `onLine` — so the old expression made the server
+  // render «offline» while the browser rendered «online»: React #418 on every
+  // screen that shows the connection badge (/warehouse?tab=products). The real
+  // value is applied right below, on the client only, after the store exists.
+  isOnline: true,
   pendingCount: 0,
   isSyncing: false,
   autoSaveEnabled: true,
@@ -41,6 +48,7 @@ export const useSyncStore = create<SyncState>((set) => ({
 }))
 
 if (typeof window !== 'undefined') {
+  useSyncStore.getState().setOnline(navigator.onLine)
   window.addEventListener('online', () => useSyncStore.getState().setOnline(true))
   window.addEventListener('offline', () => useSyncStore.getState().setOnline(false))
 }

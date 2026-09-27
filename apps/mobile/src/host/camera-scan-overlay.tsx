@@ -13,6 +13,7 @@ import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native'
 import { CameraView } from 'expo-camera'
 
 import { finishScan, isScanning, onScanRequest } from './camera-scan'
+import { hostText } from './host-strings'
 
 // The symbologies a shop's goods carry: retail EAN/UPC, warehouse Code 128/39,
 // and QR for the shop's own labels.
@@ -46,13 +47,13 @@ export function CameraScanOverlay(): React.JSX.Element | null {
         }}
       />
       <View style={styles.frame} pointerEvents="none" />
-      <Text style={styles.title}>بارکد را جلوی دوربین بگیرید</Text>
+      <Text style={styles.title}>{hostText('scanTitle')}</Text>
       <Pressable
         accessibilityRole="button"
         onPress={() => finishScan({ status: 'cancelled' })}
         style={styles.close}
       >
-        <Text style={styles.closeText}>بستن</Text>
+        <Text style={styles.closeText}>{hostText('close')}</Text>
       </Pressable>
     </View>
   )

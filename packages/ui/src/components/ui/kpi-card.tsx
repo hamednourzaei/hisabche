@@ -291,8 +291,11 @@ export function KpiCard({
         </p>
       ) : (
         // A ReactNode — an element, not text. Nothing to measure, so it keeps
-        // the fixed step.
-        <p className={cn('mt-1.5 text-lg sm:mt-2 sm:text-xl', STAT_VALUE)}>{value}</p>
+        // the fixed step. A `div`, not a `p`: the element may be a block (a
+        // Badge renders one), and `<div>` inside `<p>` makes the HTML parser
+        // close the paragraph early — the server's DOM then differs from the
+        // client's and React throws #418 (seen on /data-and-sync).
+        <div className={cn('mt-1.5 text-lg sm:mt-2 sm:text-xl', STAT_VALUE)}>{value}</div>
       )}
 
       {hasDelta && (

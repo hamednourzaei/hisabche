@@ -133,7 +133,7 @@ export const CustomerMultiPicker = memo(function CustomerMultiPicker({
             <span className="font-medium">
               {value.length === 1
                 ? value[0]?.name
-                : t('crm.customersSelectedCount', `${value.length} مشتری انتخاب شده`)}
+                : tOriginal('crm.customersSelectedCount', { count: value.length })}
             </span>
           ) : (
             <span className="text-[hsl(var(--fg-tertiary))]">

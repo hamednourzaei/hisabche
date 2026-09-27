@@ -13,9 +13,5 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  return (
-    <main className="section">
-      <CustomerDetailContainer customerId={id} />
-    </main>
-  )
+  return <CustomerDetailContainer customerId={id} />
 }

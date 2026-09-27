@@ -18,9 +18,5 @@ export async function generateMetadata({ params }: { params: Params }) {
 
 export default async function DomainWorkspacePage({ params }: { params: Params }) {
   const { domain } = await params
-  return (
-    <main className="section">
-      <DomainWorkspaceContainer domain={domain} />
-    </main>
-  )
+  return <DomainWorkspaceContainer domain={domain} />
 }

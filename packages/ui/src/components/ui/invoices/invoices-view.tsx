@@ -631,8 +631,8 @@ export const InvoicesView = memo(function InvoicesView({
         emptyState={
           <EmptyState
             icon="invoice"
-            title={t('invoices.noinvoicess', 'هیچ فاکتوری یافت نشد')}
-            description={t('invoices.noinvoicessDesc', 'هنوز هیچ فاکتوری ثبت نشده است.')}
+            title={t('invoices.noInvoices', 'هیچ فاکتوری یافت نشد')}
+            description={t('invoices.noInvoicesDesc', 'هنوز هیچ فاکتوری ثبت نشده است.')}
             action={{
               label: t('invoices.newinvoices', 'فاکتور جدید'),
               onClick: onNewInvoice,

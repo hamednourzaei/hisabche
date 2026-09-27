@@ -92,7 +92,7 @@
 **الگوی مرجع** (داشبورد، دریافت پول = `/invoices`، طرف حساب‌ها = `/customers`):
 
 ```
-apps/web/app/[lang]/(dashboard)/<route>/page.tsx   metadata + <main className="section"><XContainer /></main>
+apps/web/app/[lang]/(dashboard)/<route>/page.tsx   metadata + <XContainer />   (تنها <main> مال layout است)
 packages/ui/src/components/ui/<feature>/            containers/ (داده + ناوبری) · *-view.tsx · *-skeleton.tsx · index.ts
 packages/app-shell/src/features/<f>/<f>-page.tsx    export { XContainer as default } from '@hisabche/ui/screens'
 packages/ui-contract                                 قاعده‌ی خالص (مسیر، دامنه، نوار) — بدون React
@@ -114,3 +114,13 @@ packages/ui-contract                                 قاعده‌ی خالص (�
 - `pnpm install` بعد از pull: `@hisabche/sync/wire` تا نصب نشود tsc اپ‌شل را قرمز می‌کند (وابستگی جدید main).
 
 **عمداً دست نخورد (میزبان‌محور، نه صفحه):** `dashboard-layout.tsx` (قاب وب)، `app-shell` → `settings-page` (نسخه/بروزرسانی/دیتابیس محلی از پل)، `sync-page` (صف SQLite محلی)، `login-page`. و `auth` در UI مشترک (مقصد redirect خودش).
+
+## ۷. دور چهارم — پیگیری یافته‌های باز (BUG-070 تا BUG-073)
+
+- **#418 روی `/warehouse?tab=products`:** `useSyncStore` مقدار اولیه‌ی `isOnline` را از `navigator.onLine` می‌گرفت؛ Node 22 `navigator` دارد ولی `onLine` ندارد → سرور «آفلاین» رندر می‌کرد. مقدار اولیه ثابت `true` است و مقدار واقعی بعد از ساخت store فقط روی کلاینت اعمال می‌شود (zustand `getInitialState` را snapshot سرور می‌دهد). گارد: `store/src/slices/__tests__/sync-initial-state.test.ts`.
+- **#418 روی `/data-and-sync`:** `KpiCard` مقدار ReactNode را در `<p>` می‌گذاشت و `Badge` یک `<div>` است → parser پاراگراف را زود می‌بندد. حالا `<div>`. گارد در `one-kpi-card.test.ts`.
+- **`<main>` تودرتو:** ۴۴ فایل صفحه/loading دیگر `<main className="section">` ندارند (`.section` هیچ‌جا تعریف نشده بود). گارد: «exactly one <main>» در `dashboard-page-structure.test.ts`.
+- **`StorageSection`:** شمار ورودی‌های کش TanStack Query + `navigator.storage.estimate()`؛ پاک‌کردن = `resetQueries()` و هیچ چیز دیگر (outbox، پیش‌نویس و نشست جای دیگرند). `formatBytes` در `@hisabche/formatting`.
+- **breadcrumb:** کلید `common.details` در هیچ کاتالوگی نبود؛ اضافه شد (fa/af/en). گارد: `breadcrumb-keys.test.ts`.
+- ⚠️ یک اسکن ۴۷ کلید لفظیِ بدون fallback پیدا کرد که در کاتالوگ نیستند — بیشترشان نسبی به namespace (`useTranslations('blog')`) و مثبت کاذب‌اند؛ باید یکی‌یکی triage شوند.
+- ⚠️ ۱۵ فایل هنوز `toLocaleString('fa-AF')` دارند (حقوق، HR، فاکتور، قیف فروش…) — ratchet در `calendar-follows-language.test.ts` فقط اجازه‌ی کم‌شدن می‌دهد.

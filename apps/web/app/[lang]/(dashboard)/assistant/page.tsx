@@ -35,10 +35,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 
 export default function AssistantPage() {
   return (
-    <main className="section">
-      <Suspense fallback={null}>
-        <AiAssistantContainer />
-      </Suspense>
-    </main>
+    <Suspense fallback={null}>
+      <AiAssistantContainer />
+    </Suspense>
   )
 }

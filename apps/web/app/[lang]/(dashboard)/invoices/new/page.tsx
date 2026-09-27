@@ -22,9 +22,5 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 export default function Page() {
-  return (
-    <main className="section">
-      <InvoiceBuilderContainer />
-    </main>
-  )
+  return <InvoiceBuilderContainer />
 }

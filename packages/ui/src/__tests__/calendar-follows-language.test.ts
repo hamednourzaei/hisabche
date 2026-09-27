@@ -64,6 +64,34 @@ describe('no component decides the calendar for the reader', () => {
     expect(offenders).toEqual([])
   })
 
+  it('⚠️ hardcoded number locales only shrink (purchasing is off the list)', () => {
+    // `toLocaleString('fa-AF')` shows Afghan digits to an English reader. These
+    // files still do it and are reported debt; a new file doing it, or a fixed
+    // one regressing, fails here. Fix one → delete its line.
+    const KNOWN = new Set([
+      'components/ui/customers/AddCustomerModal.tsx',
+      'components/ui/customers/PaymentModal.tsx',
+      'components/ui/cycle-count/containers/cycle-count-container.tsx',
+      'components/ui/dashboard/sales-funnel.tsx',
+      'components/ui/human-resources/employee-detail-view.tsx',
+      'components/ui/human-resources/hr-view.tsx',
+      'components/ui/inventory-ops/containers/inventory-ops-container.tsx',
+      'components/ui/inventory-ops/inventory-ops-view.tsx',
+      'components/ui/invoice-builder/containers/invoice-preview-container.tsx',
+      'components/ui/invoice-detail/containers/invoice-detail-container.tsx',
+      'components/ui/landing-section.tsx',
+      'components/ui/team-and-payroll/employee-list-table.tsx',
+      'components/ui/team-and-payroll/payroll-list-table.tsx',
+      'components/ui/team-and-payroll/team-and-payroll-view.tsx',
+      'components/ui/warehouse-detail/containers/warehouse-detail-container.tsx',
+    ])
+    const offenders = files
+      .filter((file) => /toLocaleString\(\s*['"](fa|en|ps)/.test(code(file)))
+      .map((file) => file.slice(SRC.length + 1).replace(/\\/g, '/'))
+    expect(offenders.filter((file) => !KNOWN.has(file))).toEqual([])
+    expect(offenders).not.toContain('components/ui/purchasing/purchasing-view.tsx')
+  })
+
   it('⚠️ the shared helper takes a language, and requires it', () => {
     // A DEFAULT would leave every existing caller silently wrong and give the
     // compiler nothing to find. Required is the point.

@@ -41,10 +41,8 @@ export const dynamic = 'force-dynamic'
 // reads it.
 export default function WarehousePage() {
   return (
-    <main className="section">
-      <Suspense fallback={<WarehouseSkeleton />}>
-        <WarehouseTabsContainer />
-      </Suspense>
-    </main>
+    <Suspense fallback={<WarehouseSkeleton />}>
+      <WarehouseTabsContainer />
+    </Suspense>
   )
 }

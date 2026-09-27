@@ -106,6 +106,18 @@ describe('the dashboard route tree holds routes, not components', () => {
     expect(offending).toEqual([])
   })
 
+  it('⚠️ exactly one <main>: the layout owns it, a page never adds a second', () => {
+    // Every page used to wrap itself in `<main className="section">` inside the
+    // layout's own `<main>` — two main landmarks on every screen, and `.section`
+    // was defined nowhere.
+    const inLayout = webFiles.filter((f) => f.rel === 'dashboard-layout.tsx')
+    expect(inLayout.map((f) => (f.code.match(/<main\b/g) ?? []).length)).toEqual([1])
+    const offending = webFiles
+      .filter((f) => f.rel !== 'dashboard-layout.tsx' && /<main\b/.test(f.code))
+      .map((f) => f.rel)
+    expect(offending).toEqual([])
+  })
+
   it('⚠️ a server file renders a UI function as an element, never calls it', () => {
     // `customersSkeleton()` inside a server page is a CLIENT function invoked
     // on the server: Next logs «Attempted to call customersSkeleton() from the

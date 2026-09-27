@@ -80,14 +80,24 @@ const statusColors: Record<string, string> = {
   draft: 'text-gray-500 bg-gray-500/10',
 }
 
-const statusLabels: Record<string, string> = {
-  pending: 'در انتظار',
-  paid: 'پرداخت شده',
-  completed: 'تکمیل شده',
-  cancelled: 'لغو شده',
-  partial: 'بخشی پرداخت',
-  overdue: 'سررسید شده',
-  draft: 'پیش‌نویس',
+// Invoice statuses read their labels from the catalog (`invoices.<status>`),
+// the same words the invoice list uses — `pending` is «unpaid», not «awaiting».
+// They were Persian literals here, so English readers saw Persian in the bell.
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  pending: 'invoices.pending',
+  paid: 'invoices.paid',
+  completed: 'invoices.completed',
+  cancelled: 'invoices.cancelled',
+  partial: 'invoices.partial',
+  overdue: 'invoices.overdue',
+  draft: 'invoices.draft',
+}
+
+/** The words a group needs, translated by the caller (no hook at module level). */
+interface GroupLabels {
+  untitled: string
+  invoiceNumber: (number: string | number) => string
+  newActivity: string
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -129,7 +139,7 @@ function formatCurrency(amount: number, currency: string, locale: string): strin
 
 // ─── Group Notifications by Entity ─────────────────────────────────────────
 
-function groupNotifications(list: Notification[]): NotificationGroup[] {
+function groupNotifications(list: Notification[], labels: GroupLabels): NotificationGroup[] {
   if (!list || !Array.isArray(list) || list.length === 0) return []
 
   const map = new Map<string, Notification[]>()
@@ -152,7 +162,7 @@ function groupNotifications(list: Notification[]): NotificationGroup[] {
           key,
           entityId: '',
           entityType: 'invoice' as const,
-          entityLabel: 'بدون عنوان',
+          entityLabel: labels.untitled,
           entityUrl: '/dashboard',
           items: sorted,
           hasUnread: sorted.some((i) => !i.is_read),
@@ -169,8 +179,8 @@ function groupNotifications(list: Notification[]): NotificationGroup[] {
         entityId: latest.entity_id || '',
         entityType,
         entityLabel: metadata?.invoice_number
-          ? `فاکتور #${metadata.invoice_number}`
-          : latest.title || 'بدون عنوان',
+          ? labels.invoiceNumber(metadata.invoice_number)
+          : latest.title || labels.untitled,
         entityUrl: resolveEntityUrl(latest),
         items: sorted,
         hasUnread: sorted.some((i) => !i.is_read),
@@ -182,7 +192,7 @@ function groupNotifications(list: Notification[]): NotificationGroup[] {
         currency: metadata?.currency,
         status: metadata?.status,
         summary: {
-          title: latest.title || 'فعالیت جدید',
+          title: latest.title || labels.newActivity,
           icon: config.icon,
           color: config.color,
         },
@@ -278,7 +288,8 @@ const GroupCard = memo(function GroupCard({
   const locale = useIntlLocale()
   const { currency: userCurrency } = useCurrency()
   const statusColor = group.status ? statusColors[group.status] || '' : ''
-  const statusLabel = group.status ? statusLabels[group.status] || group.status : ''
+  const statusKey = group.status ? STATUS_LABEL_KEYS[group.status] : undefined
+  const statusLabel = statusKey ? t(statusKey as Parameters<typeof t>[0]) : (group.status ?? '')
   const config = entityConfig[group.entityType] || entityConfig.invoice
   const Icon = config.icon
 
@@ -386,11 +397,12 @@ GroupCard.displayName = 'GroupCard'
 // ─── Skeleton ───────────────────────────────────────────────────────────────
 
 const BellSkeleton = memo(function BellSkeleton() {
+  const t = useTranslations()
   return (
     <div
       className="space-y-1.5 md:space-y-2 p-1.5 md:p-2"
       role="status"
-      aria-label="در حال بارگذاری اعلان‌ها"
+      aria-label={t('notifications.loading')}
     >
       {[0, 1].map((i) => (
         <div key={i} className="p-2 md:p-3 border border-[hsl(var(--border-default))] rounded-xl">
@@ -459,7 +471,15 @@ export const NotificationBell = memo(function NotificationBell({
   const { mutate: markAsRead } = useMarkAsRead()
   const { mutate: markAllAsRead, isPending: isMarkingAll } = useMarkAllAsRead()
 
-  const groups = useMemo(() => groupNotifications(notifications), [notifications])
+  const groups = useMemo(
+    () =>
+      groupNotifications(notifications, {
+        untitled: t('notifications.untitled'),
+        invoiceNumber: (number) => t('notifications.invoiceNumber', { number: String(number) }),
+        newActivity: t('notifications.newActivity'),
+      }),
+    [notifications, t],
+  )
 
   const [tog, setTog] = useState<Record<string, boolean>>({})
 
@@ -530,7 +550,7 @@ export const NotificationBell = memo(function NotificationBell({
         <Bell className="size-5" aria-hidden="true" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -end-1 flex items-center justify-center min-w-[20px] h-[20px] px-1 text-[11px] font-bold text-white bg-[hsl(var(--color-destructive))] rounded-full shadow-sm shadow-[hsl(var(--color-destructive)/0.4)]">
-            {unreadCount > 99 ? '۹۹+' : unreadCount}
+            {unreadCount > 99 ? t('notifications.many') : unreadCount}
           </span>
         )}
       </button>

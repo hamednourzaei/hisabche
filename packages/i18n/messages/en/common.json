@@ -1574,6 +1574,7 @@
     "demoLogin": "Demo Login"
   },
   "common": {
+    "details": "Details",
     "yes": "Yes",
     "no": "No",
     "ok": "OK",
@@ -1666,7 +1667,9 @@
     "bulkPartialFailure": "{failed} could not be completed",
     "page_size": "Per page",
     "remove": "Remove",
-    "unknownDate": "Date unknown"
+    "unknownDate": "Date unknown",
+    "error": "Something went wrong. Please try again.",
+    "type": "Type"
   },
   "invoices": {
     "title": "Invoice",
@@ -1766,7 +1769,11 @@
     "totalAmount": "Total amount",
     "totalCount": "Invoice count",
     "pendingAmount": "Awaiting payment",
-    "paymentDate": "Settled on"
+    "paymentDate": "Settled on",
+    "noInvoicesDesc": "No invoices have been recorded yet.",
+    "pdf": "Download PDF",
+    "overdue": "Overdue",
+    "draft": "Draft"
   },
   "warehouse": {
     "title": "Warehouse",
@@ -1888,7 +1895,17 @@
     "profitPerUnit": "Profit per unit",
     "totalProfit": "Total stock profit",
     "amountLabel": "Amount",
-    "rateHint": "Enter the rate the way you say it, e.g. 1 dollar = 750 afghani."
+    "rateHint": "Enter the rate the way you say it, e.g. 1 dollar = 750 afghani.",
+    "addProductDescription": "Enter the new product’s name, unit, price and opening stock.",
+    "balance": "Balance",
+    "change": "Change",
+    "deleteConfirm": "Delete this product?",
+    "noMovements": "No movements recorded for this product.",
+    "notFound": "Product not found",
+    "onHand": "On hand",
+    "productNamePlaceholder": "Enter the product name",
+    "source": "Source",
+    "stockDrift": "Recorded stock does not match the sum of movements — the projection trigger has not run"
   },
   "customers": {
     "title": "Customers",
@@ -2027,7 +2044,15 @@
     "anonymous": "Unknown customer",
     "statsCoverage": "These figures cover the latest invoices and customers fetched, not the whole book",
     "statsCoverageInvoices": "invoices",
-    "statsCoverageCustomers": "customers"
+    "statsCoverageCustomers": "customers",
+    "health": "Health",
+    "lifetimeValue": "Lifetime value",
+    "newCustomerDetails": "New customer",
+    "noOpenDealsDesc": "This customer has no open invoices or deals in progress.",
+    "paymentDetails": "Customer payment recorded",
+    "recordPaymentFor": "Record payment for",
+    "topCustomer": "Top customer",
+    "totalSales": "Total sales"
   },
   "crm": {
     "type": "Type",
@@ -2115,7 +2140,12 @@
       "summary": "{done} done · {failed} not done · {total} total"
     },
     "customerAlreadyPicked": "Selected",
-    "keepEmployee": "Keep the current staff member"
+    "keepEmployee": "Keep the current staff member",
+    "customersSelectedCount": "{count} customers selected",
+    "markComplete": "Mark complete",
+    "startTask": "Start task",
+    "taskDone": "This task is complete",
+    "taskNotFound": "Task not found"
   },
   "payments": {
     "amount": "Amount",
@@ -2201,6 +2231,13 @@
     "storage": "Storage & Cache",
     "cache": "App Cache",
     "clearCache": "Clear Cache",
+    "cacheEntries": "Data read from the server",
+    "deviceStorage": "This app's storage on this device",
+    "storageOfQuota": "{used} of {quota}",
+    "storageMeasuring": "Measuring…",
+    "storageUnavailable": "This browser does not report storage size",
+    "cacheHint": "Only data read from the server is cleared and read again. Unsent changes, drafts and your sign-in are kept.",
+    "cacheCleared": "Cache cleared; open screens reload their data from the server",
     "memberSince": "Member Since",
     "notSet": "Not set",
     "lightMode": "Light mode",
@@ -2222,7 +2259,8 @@
     "stampSaved": "Stamp saved",
     "stampRemoved": "Stamp removed",
     "stampNoWorkspace": "Your business is still loading — try again in a moment.",
-    "profileSaved": "Your details were saved"
+    "profileSaved": "Your details were saved",
+    "backupFailed": "Backup download failed"
   },
   "sync": {
     "download": {
@@ -2292,7 +2330,9 @@
     "pickPlaceholder": "Select customer...",
     "noCustomers": "No customers found",
     "quickCreate": "New customer name",
-    "createError": "Error creating customer. Please try again."
+    "createError": "Error creating customer. Please try again.",
+    "phoneOptional": "Phone number (optional)",
+    "pickSupplierPlaceholder": "Choose a supplier..."
   },
   "dashboard": {
     "welcome": "Welcome",
@@ -2381,7 +2421,11 @@
     "daysBefore": "days",
     "chartHigh": "High in this range",
     "chartLow": "Low in this range",
-    "chartAverage": "Average for this range"
+    "chartAverage": "Average for this range",
+    "openSalesInvoices": "Sales invoices",
+    "openTodayInvoices": "Today's invoices",
+    "openUnpaidInvoices": "Unpaid invoices",
+    "openWarehouse": "Warehouse"
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -2417,7 +2461,14 @@
     "detailsArePriced": "Calculate line total from components",
     "toWhomBought": "Who did you buy from? (optional)",
     "supplier": "Supplier",
-    "weightGrams": "Weight (g)"
+    "weightGrams": "Weight (g)",
+    "addCustomItem": "Enter a custom item",
+    "customItemName": "Custom name (e.g. taxi fare)",
+    "discount": "Discount (optional)",
+    "howToPay": "Choose how it is paid",
+    "isPaid": "This invoice is paid",
+    "subtotal": "Subtotal before discount",
+    "whatSoldDesc": "Choose one or more items"
   },
   "payment": {
     "record": "Record Payment",
@@ -2485,7 +2536,10 @@
       "empty": {
         "title": "No journal entries yet",
         "subtitle": "Record your first entry to get started"
-      }
+      },
+      "entry": "Entry",
+      "openSource": "Open source document",
+      "source": "Source"
     },
     "trialBalance": {
       "title": "Trial Balance",
@@ -2584,7 +2638,13 @@
       "invoices": "invoices",
       "payrolls": "payslips",
       "otherCurrencies": "Documents in other currencies are not in these totals"
-    }
+    },
+    "closingBalance": "Closing balance",
+    "generalLedger": {
+      "empty": "No posted entries on this account in this period."
+    },
+    "openingBalance": "Opening balance",
+    "upTo": "to"
   },
   "hr": {
     "title": "Human Resources",
@@ -2691,7 +2751,12 @@
     "payroll_draft": "Draft",
     "payroll_approved": "Approved",
     "payroll_cancelled": "Cancelled",
-    "emailInvalid": "Not a valid email — it needs an @ and a domain."
+    "emailInvalid": "Not a valid email — it needs an @ and a domain.",
+    "accessEmail": "Sign-in email *",
+    "accessPassword": "Password (at least 8 characters) *",
+    "grantAccess": "Give them access to the site?",
+    "totalEmployees": "Employees",
+    "totalPayroll": "Total payroll"
   },
   "projects": {
     "title": "Projects",
@@ -2785,7 +2850,8 @@
     "pageAccess": "Page access",
     "pageAccessHint": "Ticked = this person may open the section. Unticked sections are locked in their menu and refused by the server.",
     "pageAccessSaved": "Page access saved.",
-    "pageAccessNotConfigured": "This feature is not enabled in the database yet."
+    "pageAccessNotConfigured": "This feature is not enabled in the database yet.",
+    "employee": "Employee"
   },
   "permissions": {
     "title": "Roles & Permissions",
@@ -2809,7 +2875,13 @@
       "budgets": "Budgets",
       "people": "Colleagues",
       "workspace": "Business & members"
-    }
+    },
+    "additiveBody": "Owner, Manager and Seller access comes from a fixed table the server actually enforces. Profiles can only add access, never remove it. If a cell is locked, unticking it would change nothing — and a control that does nothing is worse than none.",
+    "additiveTitle": "Why can’t the base roles be edited?",
+    "lockedCell": "Comes from the enforced access table and cannot be changed here.",
+    "noRoleMembers": "Nobody has this role.",
+    "roleMembers": "People with this role",
+    "subtitle": "Every module against every role. Changing a cell affects real access immediately."
   },
   "audit": {
     "title": "Audit",
@@ -2828,7 +2900,34 @@
     "logout": "Logout",
     "fromDate": "From date",
     "toDate": "To date",
-    "dateRangeSeparator": "to"
+    "dateRangeSeparator": "to",
+    "actor": "User",
+    "after": "After",
+    "allActors": "All users",
+    "allBranches": "All branches",
+    "allEntityTypes": "All records",
+    "before": "Before",
+    "branch": "Branch",
+    "changes": "Before / after",
+    "empty": "No recorded events in this range",
+    "emptyHint": "Change history is recorded only for administrative actions for now. See everyday events in the “My events” tab.",
+    "entityId": "Record ID",
+    "entityType": "Record type",
+    "field": "Field",
+    "noFieldDetail": "Field details were not recorded for this event.",
+    "noLogsHint": "Logs appear here as actions are performed",
+    "noRecordHistory": "No changes recorded for this record.",
+    "of": "of",
+    "recordHistory": "Change history of this record",
+    "refresh": "Refresh",
+    "retry": "Try again",
+    "role": "Role",
+    "search": "Search logs...",
+    "showing": "Showing",
+    "time": "Time",
+    "total": "Total",
+    "view": "View",
+    "viewChanges": "View"
   },
   "billing": {
     "limitReached": {
@@ -3005,7 +3104,15 @@
     "bell": "Notifications",
     "title": "Notifications",
     "empty": "No notifications",
-    "many": "99+"
+    "many": "99+",
+    "activities": "activities",
+    "emptyHint": "When something needs your attention, it will show up here.",
+    "markAllRead": "Mark all as read",
+    "viewAll": "View all activity",
+    "untitled": "Untitled",
+    "invoiceNumber": "Invoice #{number}",
+    "newActivity": "New activity",
+    "loading": "Loading notifications"
   },
   "time": {
     "justNow": "Just now",
@@ -3347,7 +3454,36 @@
     "no_match": "No requests with this status",
     "noWorkflowTitle": "No approval workflow has been defined yet",
     "noWorkflowHint": "Until an approval workflow is active, no document is routed here — invoices post directly.",
-    "defineWorkflow": "Define an approval workflow"
+    "defineWorkflow": "Define an approval workflow",
+    "action": "Action",
+    "actionError": "The action failed.",
+    "actionErrorTitle": "Action failed",
+    "approve": "Approve",
+    "confirmReject": "Confirm rejection",
+    "final": "Final",
+    "forbiddenError": "You are not allowed to take this action at this step.",
+    "inProgress": "In review",
+    "loadError": "This approval request could not be loaded.",
+    "pending": "Awaiting approval",
+    "reject": "Reject",
+    "rejectDescription": "Please explain why this request is rejected.",
+    "rejectPlaceholder": "e.g. The invoice amount does not match the contract...",
+    "rejectReason": "Reason for rejection",
+    "templates": {
+      "active": "Active",
+      "approver": "Approver",
+      "create": "Create template",
+      "description": "Without at least one active template, no invoice or purchase order enters the approval flow.",
+      "empty": "You have not created any templates yet",
+      "entityType": "Applies to",
+      "inactive": "Inactive",
+      "name": "Template name",
+      "namePlaceholder": "e.g. Approve invoices over 50,000",
+      "new": "New template",
+      "status": "Status",
+      "title": "Approval templates"
+    },
+    "title": "Approval flow"
   },
   "action": {
     "clear": "Clear",
@@ -3357,7 +3493,27 @@
     "cancel": "Cancel",
     "save": "Save",
     "edit": "Edit",
-    "close": "Close"
+    "close": "Close",
+    "actions": "Actions",
+    "add": "Add",
+    "backToEdit": "Back to edit",
+    "collapse": "Collapse",
+    "confirmCreate": "Confirm and create invoice",
+    "create": "Create",
+    "delete": "Delete",
+    "done": "Done",
+    "email": "Email",
+    "expand": "Expand",
+    "export": "Export",
+    "next": "Next",
+    "open": "Open",
+    "previewInvoice": "Preview invoice",
+    "previous": "Previous",
+    "print": "Print",
+    "remove": "Remove",
+    "search": "Search",
+    "share": "Share",
+    "view": "View"
   },
   "unit": {
     "piece": "pcs",
@@ -3534,7 +3690,8 @@
       "descriptionPlaceholder": "Type, or pick from stock",
       "pickProduct": "Pick from stock",
       "fromStock": "From stock — quantity will be reduced",
-      "noProducts": "No product found — the text will be used as typed"
+      "noProducts": "No product found — the text will be used as typed",
+      "searchProduct": "Search products…"
     },
     "column": {
       "addTitle": "Add column",
@@ -3822,7 +3979,8 @@
       "loadMembers": "Could not load members.",
       "updateRole": "Could not change the role.",
       "removeMember": "Could not remove the member.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "generic": "This section could not be loaded. Please try again."
     },
     "pagination": {
       "showing": "{from}–{to} of {total}",
@@ -5354,7 +5512,8 @@
     "deleteEmployee": "Delete employee",
     "chooseBranch": "Choose a branch",
     "branchFirstHint": "Add a branch first — every employee belongs to one.",
-    "salaryCurrency": "Salary currency"
+    "salaryCurrency": "Salary currency",
+    "profileNeedsAccount": "The employee was saved, but the access profile was not applied: they do not have a user account yet."
   },
   "role": {
     "owner": "Owner",
@@ -5826,5 +5985,58 @@
     "scaleItemDigitsHint": "How many digits after the prefix identify the product (usually 5).",
     "scaleDecimals": "Decimal places",
     "scaleDecimalsHint": "Weight in grams: 3 (i.e. kilograms). Price without decimals: 0."
+  },
+  "branch": {
+    "add": "Add branch",
+    "addTitle": "Add branch",
+    "allBranches": "All branches",
+    "code": "Branch code",
+    "codePlaceholder": "e.g. MAIN",
+    "empty": "No branches yet",
+    "emptyHint": "A single-location business can still have one branch, so its invoices and staff are assigned to it.",
+    "inactive": "Inactive",
+    "manager": "Branch manager (optional)",
+    "name": "Branch name",
+    "namePlaceholder": "e.g. Main branch",
+    "noManager": "Not set yet",
+    "noParent": "No parent — top-level branch",
+    "parent": "Parent branch (optional)",
+    "scope": "Branch",
+    "temporaryPosting": "Temporary",
+    "tree": "Branch structure"
+  },
+  "cycleCount": {
+    "cancel": "Cancel count",
+    "cancelReason": "Why cancel this count?",
+    "complete": "Complete count",
+    "completeWarning": "Completing records the differences as stock adjustments and writes shortages off the books at cost. This cannot be undone.",
+    "confirmComplete": "Yes, complete it",
+    "counted": "Counted",
+    "empty": "No counts opened yet",
+    "emptyHint": "When stock does not match the shelf, a count is the right way to correct it.",
+    "expected": "Expected",
+    "netLoss": "Net loss",
+    "notCounted": "Not counted",
+    "number": "Number",
+    "open": "Open",
+    "product": "Product",
+    "progress": "Counted",
+    "remainingHint": "Uncounted rows are left out of the adjustment — they are not treated as zero.",
+    "started": "Started",
+    "status": "Status",
+    "title": "Stock count",
+    "variance": "Variance"
+  },
+  "employee": {
+    "branches": "This employee's branches",
+    "noBranches": "No branches assigned to this employee.",
+    "primaryBranch": "Primary",
+    "unknownBranch": "Unknown branch"
+  },
+  "product": {
+    "nameRequired": "Product name is required"
+  },
+  "table": {
+    "columns": "Table settings"
   }
 }

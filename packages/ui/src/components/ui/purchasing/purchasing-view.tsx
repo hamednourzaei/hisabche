@@ -6,10 +6,11 @@ import Link from 'next/link'
 import { cn } from '../../../lib/utils'
 import { ShoppingCart, PackageCheck, Plus } from 'lucide-react'
 import type { PurchaseOrder } from '@hisabche/api'
-import { formatDate as formatIntlDate } from '@hisabche/formatting'
+import { formatDate as formatIntlDate, formatNumber } from '@hisabche/formatting'
 
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { useRouteLang } from '../../../hooks/use-locale-push'
+import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { localizePath } from '@hisabche/ui-contract'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -60,6 +61,7 @@ export const PurchasingView = memo(function PurchasingView({
   const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
 
   const lang = useRouteLang()
+  const intlLocale = useIntlLocale()
 
   const statusLabel = useMemo(
     () => (status: string) => {
@@ -80,7 +82,7 @@ export const PurchasingView = memo(function PurchasingView({
         <ShoppingCart className="size-6 text-[hsl(var(--color-primary))]" />
         <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">{t('nav.buy', 'خرید')}</h1>
         <span className="text-xs text-[hsl(var(--fg-tertiary))] bg-[hsl(var(--surface-muted))] px-2 py-1 rounded-full">
-          {orders.length.toLocaleString('fa-AF')}
+          {formatNumber(orders.length, intlLocale)}
         </span>
 
         {/* Opens the SAME invoice form as فروش, in purchase mode. There is no
