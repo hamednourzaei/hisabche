@@ -9,6 +9,8 @@ import type { PurchaseOrder } from '@hisabche/api'
 import { formatDate as formatIntlDate } from '@hisabche/formatting'
 
 import { useDateFormat } from '../../../hooks/use-date-format'
+import { useRouteLang } from '../../../hooks/use-locale-push'
+import { localizePath } from '@hisabche/ui-contract'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PurchasingView — Memoized · Performance Optimized
@@ -57,6 +59,8 @@ export const PurchasingView = memo(function PurchasingView({
   // ⚠️ The calendar follows the language; these were hardcoded to `'fa-AF'`.
   const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
 
+  const lang = useRouteLang()
+
   const statusLabel = useMemo(
     () => (status: string) => {
       const map: Record<string, string> = {
@@ -82,7 +86,7 @@ export const PurchasingView = memo(function PurchasingView({
         {/* Opens the SAME invoice form as فروش, in purchase mode. There is no
             separate purchase form — only a different transaction type. */}
         <Link
-          href="/quick-invoice?type=purchase"
+          href={localizePath('/quick-invoice?type=purchase', lang)}
           className="ms-auto inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--color-primary))] px-4 py-2 text-sm font-bold text-[hsl(var(--color-primary-fg))] transition-all hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]"
         >
           <Plus className="size-4" aria-hidden="true" />

@@ -657,3 +657,10 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 - **ریشه:** `warehouseSkeleton()` در `warehouse-client.tsx` (بدون `'use client'`، پس سرور) صدا زده می‌شد؛ نسخه‌ی اول بازنویسی همین را برای `customersSkeleton()` تکرار کرد. Next لاگ می‌کند «Attempted to call … from the server»، صفحه همچنان ۲۰۰ می‌دهد و tsc/vitest/`next build` همه سبزند. فقط `next start` + درخواست واقعی نشانش داد.
 - **رفع:** `<WarehouseSkeleton />` به‌جای `warehouseSkeleton()` (alias در import).
 - **گارد:** `dashboard-page-structure.test.ts` → «a server file renders a UI function as an element, never calls it» — injection-tested.
+
+## BUG-069 — تنظیم چاپگر رسید و بارکدخوان روی ویندوز و اندروید هیچ صفحه‌ای نداشت (۲۷ سپتامبر، دور سوم)
+
+- **ریشه:** `app-shell/src/app/providers.tsx` میزبان چاپگر را ثبت می‌کند (`registerReceiptPrinterHost`)، ولی `HardwareSection` فقط در `SettingsPage` وب سوار بود؛ صفحه‌ی تنظیمات app-shell نسخه‌ی خودش را داشت و این بخش را نداشت. یعنی دقیقاً روی دستگاهی که چاپگر دارد، هیچ‌جا برای انتخابش نبود (§۷٫۱).
+- **رفع:** `HardwareSection` از `@hisabche/ui/screens` export و در تنظیمات app-shell سوار شد. بقیه‌ی صفحه‌ی تنظیمات دسکتاپ میزبان‌محور می‌ماند (خروج با store امن دسکتاپ، زبان `setDesktopLanguage`، وضعیت SQLite، به‌روزرسانی).
+- **جانبی:** سه لینک برهنه (`/billing`، `/workflow-templates`، `/quick-invoice?type=purchase`) → `localizePath`. گارد `dashboard-page-structure.test.ts` حالا `href="/…"` برهنه را هم می‌گیرد — injection-tested.
+- **گزارش، نه تعمیر (§13):** `StorageSection` در تنظیمات وب «24 MB» ثابت نشان می‌دهد و دکمه‌ی پاک‌کردن کش فقط `console.log` می‌کند (G1). و سه فایل خالیِ ردیابی‌شده در `apps/desktop`: `cls`، `npm`، `electron-vite`.

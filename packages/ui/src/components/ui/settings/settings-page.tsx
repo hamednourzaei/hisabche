@@ -31,6 +31,8 @@ import {
   X,
 } from 'lucide-react'
 import { toIsoDay } from '@hisabche/formatting'
+import { localizePath } from '@hisabche/ui-contract'
+import { useRouteLang } from '../../../hooks/use-locale-push'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SettingsPage v3 — Memoized · Performance Optimized
@@ -800,10 +802,11 @@ const BillingSection = memo(function BillingSection() {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
     return v && v !== key ? v : (fallback ?? key)
   }
+  const lang = useRouteLang()
 
   return (
     <Link
-      href="/billing"
+      href={localizePath('/billing', lang)}
       className={cn(
         'flex items-center gap-3 rounded-2xl p-4 sm:p-5',
         'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
@@ -835,10 +838,11 @@ const WorkflowTemplatesSection = memo(function WorkflowTemplatesSection() {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
     return v && v !== key ? v : (fallback ?? key)
   }
+  const lang = useRouteLang()
 
   return (
     <Link
-      href="/workflow-templates"
+      href={localizePath('/workflow-templates', lang)}
       className={cn(
         'flex items-center gap-3 rounded-2xl p-4 sm:p-5',
         'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',

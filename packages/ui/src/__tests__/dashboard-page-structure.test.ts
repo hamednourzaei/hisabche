@@ -158,6 +158,17 @@ describe('shared screens navigate through the locale rule', () => {
     expect(offending).toEqual([])
   })
 
+  it('⚠️ no bare `href="/…"` link in a signed-in screen', () => {
+    // Public pages (landing, blog, docs, sign-in) always live under `[lang]` on
+    // web and build their prefix from the page locale. Signed-in screens also
+    // run on Windows/Android, so their links go through `localizePath`.
+    const PUBLIC = /^components[\\/]ui[\\/](landing|blog|docs|auth)[\\/]/
+    const offending = uiFiles
+      .filter((f) => !PUBLIC.test(f.rel))
+      .flatMap((f) => [...f.code.matchAll(/href=(?:"|\{\s*['`])\/[a-z]/g)].map(() => f.rel))
+    expect(offending).toEqual([])
+  })
+
   it("⚠️ no hard-coded 'fa' fallback for the route language", () => {
     // `params?.lang ?? 'fa'` is the exact line that sent Windows to /fa/….
     const offending = uiFiles

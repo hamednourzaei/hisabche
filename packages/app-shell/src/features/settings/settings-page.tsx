@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { LogOut } from 'lucide-react'
 
 import { Badge, Button, Card, cn } from '@/components/ui/primitives'
-import { BusinessStampSection } from '@hisabche/ui/screens'
+import { BusinessStampSection, HardwareSection } from '@hisabche/ui/screens'
 import { PageHeader } from '@/components/layout/page-header'
 import { useAuthStore, useCurrentUser } from '@/features/auth/auth.store'
 import { bridge } from '@/shared/lib/bridge'
@@ -57,6 +57,14 @@ export default function SettingsPage() {
             renders. Spans both columns because it is a full-width section. */}
         <div className="col-span-2">
           <BusinessStampSection />
+        </div>
+
+        {/* The scanner and receipt-printer settings are the shared section too.
+            The shell registers its printers at start-up (providers.tsx), and
+            this page is the only place a person can pick one — without it the
+            desktop printer host was registered and unreachable. */}
+        <div className="col-span-2">
+          <HardwareSection />
         </div>
 
         <Card>
