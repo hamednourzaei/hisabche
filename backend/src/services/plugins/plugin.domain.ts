@@ -25,23 +25,18 @@
 // A plugin extends the product. It does not become the product.
 // ============================================
 
+import { INTEGRATION_SCOPES, type IntegrationScope } from '@hisabche/validation'
 import type { Capability } from '../authorization'
 
-/** What a plugin can ask for. A closed set; adding one is a code change. */
-export const PLUGIN_SCOPES = [
-  'read:invoices',
-  'read:customers',
-  'read:products',
-  'read:reports',
-  'write:customers',
-  'write:products',
-  'write:invoices',
-  'subscribe:events',
-  'ui:widget',
-  'ui:page',
-] as const
+/**
+ * What a plugin can ask for. A closed set; adding one is a code change.
+ * The same list API keys draw from (@hisabche/validation), so an installed app
+ * and a key speak one permission language — and this file decides, for both,
+ * what each scope requires of the person granting it.
+ */
+export const PLUGIN_SCOPES = INTEGRATION_SCOPES
 
-export type PluginScope = (typeof PLUGIN_SCOPES)[number]
+export type PluginScope = IntegrationScope
 
 /**
  * The capability a scope requires of the INSTALLER.

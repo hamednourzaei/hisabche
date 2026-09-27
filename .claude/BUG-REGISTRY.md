@@ -693,3 +693,18 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 - **رفع:** ۱۸۴ کلید در سه زبان (کلید `invoices.noinvoicess` غلط تایپی بود → `invoices.noInvoices`؛ شمارش مشتری با ICU `{count}`). وضعیت‌های زنگ از `invoices.<status>` (همان برچسب فهرست فاکتور). bundle تایپ‌شده‌ی `sync` در `desktop-strings.ts`. bundle کوچک تایپ‌شده‌ی میزبان موبایل `host-strings.ts` (نه کاتالوگ ۹۳۵KB در باندل نیتیو).
 - **گارد:** `i18n-keys-exist.test.ts` (namespace-aware، روی ui/web/admin)، `desktop-keys.test.ts`، `host-strings.test.ts` — هر سه injection-tested.
 - **گزارش، نه تعمیر:** ۸ فایل هیچ مصرف‌کننده‌ای ندارند و کلیدهایشان عمداً اضافه نشد (فهرست `UNUSED_FILES` در گارد): customer-360-container، dashboard-invoices، invoice-360-container، landing-preview، landing/transform-scene، EntityActivityCard، permissions-view، approval-actions.
+
+## BUG-075 — ورود صورتحساب بانک: endpoint و هوک بود، هیچ صفحه‌ای صدایش نمی‌زد (۲۷ سپتامبر، دور پنجم)
+
+- **الگو:** §۷٫۱ (قانون هست، caller ندارد) + §۷٫۵ (پیامی که دروغ می‌گوید)
+- **ریشه:** `POST /finance/bank/statements` و `useImportStatement` ساخته شده بودند؛ `grep` صفر caller. حالت خالی صفحه‌ی بانک می‌گفت «صورتحساب بانک را وارد کنید» در حالی که هیچ راهی برای واردکردن نبود.
+- **رفع:** `lib/bank-statement-csv.ts` (تشخیص ستون از عنوان فارسی/دری/انگلیسی، تاریخ شمسی و ارقام فارسی، پول integer بدون float) + `ImportStatementPanel` در صفحه‌ی بانک. حساب از نقش `bank`/`cash`. **تا یک ردیف ناخوانا هست، چیزی ارسال نمی‌شود.** خطای خواندن حساب‌ها ≠ «حساب بانکی نداری».
+- **⚠️ واحد:** `banking.service` هر مبلغ را ×۱۰۰ می‌کند (مستقل از ارز)؛ واردکننده همان را می‌کند (`BANK_MINOR_DIGITS`)، وگرنه هیچ مبلغی تطبیق نمی‌خورد.
+- **گارد:** `bank-statement-csv.test.ts` (24) — injection-tested.
+
+## BUG-076 — طراحی کلید API: ۳۲ از ۵۴ فایل route فقط عضویت را چک می‌کنند (۲۷ سپتامبر، دور پنجم)
+
+- **یافته، نه باگ زنده:** فقط ۲۲ فایل `requireCapability` دارند. کلید API که فقط capability را باریک کند، روی بقیه‌ی route ها با تمام قدرت سازنده‌اش کار می‌کرد — و روی route هایی که فقط `authenticate` دارند (پروفایل، workspace ها، billing) حتی به `requireWorkspaceContext` نمی‌رسید.
+- **طراحی:** allowlist مسیر (`API_ROUTE_SCOPES`، الگوی Fastify نه URL) **داخل `authenticate`** تصمیم می‌گیرد، قبل از این‌که کلید «سازنده» شود؛ بعد workspace قفل و capability باریک می‌شود. هیچ DELETE، ثبت در دفتر، پول، اعضا یا مدیریت کلید در allowlist نیست.
+- **گارد:** `developer-platform.test.ts` (62، Fastify واقعی) + `developer-platform.pg.test.ts` (13، Postgres واقعی) — injection-tested.
+- **Migration:** `docs/developer-platform-migration.sql` — Post-migration verification query generated — PENDING HUMAN CONFIRMATION.

@@ -95,6 +95,10 @@ const TENANT_TABLES = [
   'ui_visibility_suggestions',
   'branches',
   'member_branches',
+  // docs/developer-platform-migration.sql — SELECT for owners/managers only.
+  'api_keys',
+  'webhook_endpoints',
+  'webhook_deliveries',
 ]
 
 function allMigrationSql(): string {

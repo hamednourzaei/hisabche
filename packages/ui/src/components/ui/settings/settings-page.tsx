@@ -30,6 +30,7 @@ import {
   Stamp,
   Upload,
   X,
+  Plug,
 } from 'lucide-react'
 import { formatBytes, formatNumber, toIsoDay } from '@hisabche/formatting'
 import { localizePath } from '@hisabche/ui-contract'
@@ -966,6 +967,44 @@ const WorkflowTemplatesSection = memo(function WorkflowTemplatesSection() {
 })
 WorkflowTemplatesSection.displayName = 'WorkflowTemplatesSection'
 
+// API keys and webhooks live on their own screen; settings is where an owner
+// looks for «connect another system», so the door is here.
+const DevelopersSection = memo(function DevelopersSection() {
+  const tOriginal = useTranslations()
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+    return v && v !== key ? v : (fallback ?? key)
+  }
+  const lang = useRouteLang()
+
+  return (
+    <Link
+      href={localizePath('/developers', lang)}
+      className={cn(
+        'flex items-center gap-3 rounded-2xl p-4 sm:p-5',
+        'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+        'transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))]',
+        'motion-reduce:transition-none',
+      )}
+    >
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[hsl(var(--color-primary)/0.1)] shrink-0">
+        <Plug className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-[hsl(var(--fg-primary))]">{t('developer.title')}</p>
+        <p className="text-sm text-[hsl(var(--fg-secondary))] truncate">
+          {t('developer.settingsLink')}
+        </p>
+      </div>
+      <ChevronLeft
+        className="size-4 text-[hsl(var(--fg-tertiary))] rtl:rotate-180 shrink-0"
+        aria-hidden="true"
+      />
+    </Link>
+  )
+})
+DevelopersSection.displayName = 'DevelopersSection'
+
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export const SettingsPage = memo(function SettingsPage() {
@@ -988,6 +1027,7 @@ export const SettingsPage = memo(function SettingsPage() {
       <BusinessStampSection />
       <BillingSection />
       <WorkflowTemplatesSection />
+      <DevelopersSection />
       <BackupSection />
       <HardwareSection />
       <PerformanceSection />

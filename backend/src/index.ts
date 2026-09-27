@@ -100,6 +100,7 @@ import { debugRoutes } from './routes/debug.routes'
 // ✅ اضافه کردن Activity Routes
 import { activityRoutes } from './routes/activity.routes'
 import adminRoutes from './routes/admin.routes'
+import { developerRoutes } from './routes/developer.routes'
 
 // ──────────────────────────────────────────────
 // Plugins & Scheduler
@@ -673,6 +674,8 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(billingRoutes)
   await server.register(referralRoutes)
   await server.register(blogRoutes)
+  // API keys and outbound webhooks (docs/developer-platform-migration.sql).
+  await server.register(developerRoutes)
   await server.register(adminRoutes)
 
   server.log.info('✅ All routes registered successfully')

@@ -10,6 +10,7 @@ import { supabase } from '../db'
 import { ActivityService } from './activity.service'
 import { NotificationService } from './notification.service'
 import { AuditService } from './audit.service'
+import { developerService } from './developer/developer.service'
 
 const auditService = new AuditService()
 
@@ -150,6 +151,19 @@ export async function logBusinessEvent(input: LogBusinessEventInput): Promise<vo
         ...(input.importance !== undefined ? { importance: input.importance } : {}),
       }),
     ]
+
+    // Outbound webhooks. Here for the same reason as the audit row: this is the
+    // one place every business event passes, so an event in the public
+    // catalogue exists exactly when the change really happened. emitEvent
+    // never throws and ignores events outside the catalogue.
+    tasks.push(
+      developerService.emitEvent({
+        workspaceId,
+        entityType: input.entityType,
+        action: input.action,
+        entityId: input.entityId,
+      }),
+    )
 
     if (input.notify !== false) {
       tasks.push(

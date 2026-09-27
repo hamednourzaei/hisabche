@@ -786,3 +786,24 @@ export {
   type BlogComment,
   type BlogMe,
 } from './hooks/blog'
+
+// ─── Developer platform (API keys, outbound webhooks) ─────
+export {
+  useDeveloperCatalog,
+  useApiKeys,
+  useCreateApiKey,
+  useRevokeApiKey,
+  useWebhookEndpoints,
+  useCreateWebhookEndpoint,
+  useUpdateWebhookEndpoint,
+  useDeleteWebhookEndpoint,
+  useRotateWebhookSecret,
+  useSendWebhookTest,
+  useWebhookDeliveries,
+  useRetryWebhookDelivery,
+  developerKeys,
+  type ApiKeyRow,
+  type WebhookEndpointRow,
+  type WebhookDeliveryRow,
+  type DeveloperCatalog,
+} from './hooks/developer'

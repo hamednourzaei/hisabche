@@ -72,6 +72,7 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | ---------------------------------------------------------------- | --------------------------------------------------- |
 | **وبلاگ: نقشه، تله‌ها، تصمیم‌ها (۲۶ سپتامبر)**                   | `.claude/SESSION-CACHE-2026-09-26-BLOG.md`          |
 | **Sync باینری، بارکد/چاپ، پرفورمنس DB، Cloudflare (۲۷ سپتامبر)** | `.claude/SESSION-CACHE-2026-09-27.md`               |
+| **کلید API، وب‌هوک، ورود صورتحساب بانک، مقایسه‌ی اکوسیستم**      | `.claude/research/ecosystem-gap-analysis.md`        |
 | **درس‌ها و باگ‌های سشن اخیر (۱۹ سپتامبر)**                       | `.claude/SESSION-CACHE-2026-09-19.md` — **اول این** |
 | درس‌ها و باگ‌های ۱۵–۱۷ سپتامبر                                   | `.claude/SESSION-CACHE-2026-09-17.md`               |
 | درس‌ها و باگ‌های اوایل سپتامبر                                   | `.claude/SESSION-CACHE-2026-09.md`                  |
@@ -231,6 +232,11 @@ cd apps/admin     && npx tsc --noEmit
 - سود هر کالا/فاکتور فقط از `AccountingService.getProfitReport / getProductProfits / getInvoiceMargins` (گارد: `profit-report.test.ts`). موجودی هر انبار از `warehouse-summary.domain.ts`؛ فاکتور `warehouseId` را می‌فرستد، وگرنه با چند انبار هیچ انباری حرکت نمی‌کند.
 - سقف اعتبار، مهلت پرداخت، تأمین‌کننده‌ی وصل و مدارک مشتری فقط از `backend/src/services/customer-profile` (گارد: `customer-profile-core.test.ts`). خواندن schema جدید قبل از اجرای migration باید `isMissingSchema` را چک کند و «پیکربندی نشده» برگرداند، نه ۵۰۰.
 - سود هر کالا/فاکتور فقط از `AccountingService` (`getProfitReport` / `getProductProfits` / `getInvoiceMargins`، قاعده در `accounting/profit-report.domain.ts`، گارد `profit-report.test.ts`). موجودی هر انبار از `inventory/warehouse-summary.domain.ts`؛ فاکتور باید `warehouseId` بفرستد، وگرنه با چند انبار موجودی هیچ انباری حرکت نمی‌کند.
+
+**پلتفرم توسعه‌دهنده (کلید API / وب‌هوک)**
+
+- ⚠️ **کلید API فقط route های `API_ROUTE_SCOPES` را باز می‌کند و این تصمیم داخل `authenticate` است**، نه بعدتر: ۳۲ فایل route فقط عضویت را چک می‌کنند و بعضی فقط `authenticate` دارند. route تازه‌ای که کلید باید برسد را **صریحاً** به allowlist اضافه کن — و باید `requireWorkspaceContext` داشته باشد (گارد: `developer-platform.test.ts`).
+- رویداد وب‌هوک فقط از `logBusinessEvent` می‌آید (`developerService.emitEvent`). رویداد جدید = نگاشت در `publicEventFor` + `WEBHOOK_EVENTS` + برچسب در هر سه زبان (`developers-screen.test.ts`). رویدادی که گیرنده scope خواندنش را ندارد منتشر نمی‌شود.
 
 ---
 

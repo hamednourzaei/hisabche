@@ -48,6 +48,7 @@ import {
   Stat,
   StatGrid,
 } from '../capability/capability-kit'
+import { ImportStatementPanel, type ImportStatementPanelProps } from './import-statement-panel'
 
 export interface BankViewProps {
   t: (key: string, fallback?: string) => string
@@ -65,6 +66,8 @@ export interface BankViewProps {
   onSelect: (statementId: string) => void
   onReconcile: (input: { statementLineId: string; bookEntryId: string }) => void
   onRefresh: () => void
+  /** The statement importer — bank/cash accounts, and what happens on submit. */
+  importer: Omit<ImportStatementPanelProps, 't'>
 }
 
 const CONFIDENCE_TONE: Record<string, string> = {
@@ -88,6 +91,7 @@ export const BankView = memo(function BankView({
   onSelect,
   onReconcile,
   onRefresh,
+  importer,
 }: BankViewProps) {
   const { date } = useDateFormat()
   const [search, setSearch] = useState('')
@@ -230,6 +234,8 @@ export const BankView = memo(function BankView({
       />
 
       {actionError ? <ErrorNote message={actionError} /> : null}
+
+      <ImportStatementPanel t={t} {...importer} />
 
       {reconciliation && !detailError ? (
         <StatGrid>

@@ -208,6 +208,11 @@ export { CustomerDetailContainer } from './components/ui/customers/containers/cu
 export { DashboardContainer } from './components/ui/dashboard/containers/dashboard-container'
 export { ReferralsContainer } from './components/ui/referrals/containers/referrals-container'
 export { ReferralsView, type ReferralsViewProps } from './components/ui/referrals/referrals-view'
+export { DevelopersContainer } from './components/ui/developers/containers/developers-container'
+export {
+  DevelopersView,
+  type DevelopersViewProps,
+} from './components/ui/developers/developers-view'
 export { warehouseContainer } from './components/ui/warehouse/containers/Warehouse-container'
 export { WarehouseTabsContainer } from './components/ui/warehouse/containers/warehouse-tabs-container'
 export { ProductDetailContainer } from './components/ui/warehouse-detail/containers/warehouse-detail-container'
