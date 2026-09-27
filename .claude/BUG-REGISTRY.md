@@ -639,3 +639,21 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 - **ریشه:** policy با نام بی‌پیشوند `auth_workspace_ids()` نوشته شد؛ `linter-2026-09-14-migration.sql` آن را به schema `private` برده بود. policy های قدیمی کار می‌کنند (به oid بسته‌اند) ولی هر policy جدید با نام بی‌پیشوند می‌شکند. تست pg سبز بود چون stub را در `public` ساخته بود.
 - **رفع:** دو CREATE POLICY صریح در یک DO (private، بعد public، وگرنه NOTICE). **گارد:** `product-barcodes.pg.test.ts` حالا شکل production (تابع در `private`) را هم اجرا می‌کند.
 - **درس:** migration جدیدی که به helper های RLS اشاره می‌کند، باید با `private.` یا تشخیص محل بنویسد؛ و تست pg باید شکل واقعیِ دیتابیس زنده را بسازد، نه شکل migration اولیه را.
+
+## BUG-066 — چهار فضای کاری روی ویندوز و اندروید خالی بودند (۲۷ سپتامبر، دور سوم)
+
+- **ریشه:** در `app-shell/src/app/app.tsx` مسیرهای `accounting-workspace`، `sales-workspace`، `inventory-workspace` و `people-workspace` همه `<DomainWorkspacePage />` را رندر می‌کردند؛ آن صفحه دامنه را از `:domain` می‌خواند که این مسیرها ندارند → `''` → container برای دامنه‌ی ناشناخته `null` برمی‌گرداند. وب هر صفحه را با دامنه‌ی صریح صدا می‌زد، پس فقط دسکتاپ/موبایل خالی بودند. `route-parity` سبز بود چون فقط وجود مسیر را می‌سنجد، نه اینکه چه چیزی به صفحه می‌رسد.
+- **رفع:** `<DomainWorkspacePage domain="accounting" />` و … ؛ صفحه `domain ?? params.domain`.
+- **گارد:** `route-parity.test.ts` → «a route that names a domain hands it to the screen» — injection-tested.
+
+## BUG-067 — لینک‌های مشترک روی دسکتاپ به `/fa/…` می‌رفتند و روی داشبورد می‌افتادند (۲۷ سپتامبر، دور سوم)
+
+- **ریشه:** شش جا زبان مسیر را با fallback ثابت `'fa'` می‌ساختند (`params?.lang ?? 'fa'`): تأییدها، breadcrumb، دیالوگ بارکد، لینک پلن در پشتیبان، و لینک «صفحه‌ی کامل» دستیار (`/${useLocale()}/assistant`). دسکتاپ `[lang]` ندارد، پس `/fa/invoices/…` به catch-all می‌خورد و کاربر بی‌صدا به داشبورد برمی‌گشت. در جهت مقابل، ۳۵ `router.push('/…')`/`replace` بدون پیشوند روی وب هر بار از redirect پراکسی رد می‌شدند (§۸ «هر router.push داخلی پیشوند locale می‌خواهد») — از جمله تعویض تب انبار و تیم.
+- **رفع:** یک قاعده: `localizePath(path, lang)` در `ui-contract` (پیشوند فقط وقتی زبان مسیر معلوم است، هرگز دوبار) + `useLocalePush` / `useLocaleReplace` / `useRouteLang` در `packages/ui/src/hooks/use-locale-push.ts`. `onNavigate` از `DomainWorkspaceContainer` و `DataAndSyncContainer` حذف شد — هر صفحه همان تابع را می‌داد و صفحه‌ی سرور اصلاً نمی‌تواند تابع بدهد.
+- **گارد:** `dashboard-page-structure.test.ts` (بدون `router.push('/…')` برهنه، بدون fallback `'fa'`) + `shell.test.ts` برای `localizePath` — injection-tested. `auth` عمداً مستثناست (عمومی، مقصد redirect خودش).
+
+## BUG-068 — تابع client از صفحه‌ی سرور صدا زده می‌شد؛ ۲۰۰ با خطای سرور (۲۷ سپتامبر، دور سوم)
+
+- **ریشه:** `warehouseSkeleton()` در `warehouse-client.tsx` (بدون `'use client'`، پس سرور) صدا زده می‌شد؛ نسخه‌ی اول بازنویسی همین را برای `customersSkeleton()` تکرار کرد. Next لاگ می‌کند «Attempted to call … from the server»، صفحه همچنان ۲۰۰ می‌دهد و tsc/vitest/`next build` همه سبزند. فقط `next start` + درخواست واقعی نشانش داد.
+- **رفع:** `<WarehouseSkeleton />` به‌جای `warehouseSkeleton()` (alias در import).
+- **گارد:** `dashboard-page-structure.test.ts` → «a server file renders a UI function as an element, never calls it» — injection-tested.

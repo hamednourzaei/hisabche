@@ -2,7 +2,6 @@
 'use client'
 
 import { EmployeeLeavePanel } from '../employee-leave-panel'
-import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   useEmployee,
@@ -14,10 +13,11 @@ import {
 import { EmployeeDetailView } from '../employee-detail-view'
 import { EmployeeBranchesPanel, type EmployeeBranch } from '../employee-branches-panel'
 import { RecordHistoryPanel } from '../../activity/record-history-panel'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 export function EmployeeDetailContainer({ id }: { id: string }) {
   const t = useTranslations()
-  const router = useRouter()
+  const push = useLocalePush()
   const { data: employee, isLoading } = useEmployee(id)
   const { data: payrolls, isLoading: isLoadingPayrolls } = usePayrolls(id)
   const { data: recordHistory, isLoading: historyLoading } = useRecordHistory('employee', id)
@@ -73,7 +73,7 @@ export function EmployeeDetailContainer({ id }: { id: string }) {
       isLoadingPayrolls={isLoadingPayrolls}
       onUpdate={handleUpdate}
       onAddPayment={handleAddPayment}
-      onBack={() => router.push('/team-and-payroll')} // G1: canonical people route
+      onBack={() => push('/team-and-payroll')} // G1: canonical people route
       extraSlot={
         <div className="mt-6 space-y-4">
           {/* Request #99 — days off: how many, why, from when to when. */}
@@ -86,7 +86,7 @@ export function EmployeeDetailContainer({ id }: { id: string }) {
               ((employee as { branches?: EmployeeBranch[] } | undefined)?.branches ??
                 []) as EmployeeBranch[]
             }
-            onOpenBranch={() => router.push('/team-and-payroll?tab=branches')}
+            onOpenBranch={() => push('/team-and-payroll?tab=branches')}
           />
           {/* H6 — the audit trail for this employee record. */}
           <RecordHistoryPanel

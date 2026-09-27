@@ -38,7 +38,7 @@
 import { useServerFieldErrors } from '../../../../hooks/use-server-field-errors'
 import type { PayrollRow } from '../payroll-list-table'
 import { useCallback, useMemo, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 
 import {
@@ -62,6 +62,7 @@ import {
 import { TeamAndPayrollView, type TeamTab } from '../team-and-payroll-view'
 import { BranchTreeView } from '../branch-tree-view'
 import { BranchForm, type BranchFormValues } from '../branch-form'
+import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 
 /** Anything that is not a known tab is «کارمندان» — what the menu entry means. */
 function tabFrom(value: string | null | undefined): TeamTab {
@@ -89,7 +90,8 @@ export function TeamAndPayrollContainer() {
     [tOriginal],
   )
 
-  const router = useRouter()
+  const localeReplace = useLocaleReplace()
+  const push = useLocalePush()
   const params = useSearchParams()
   const tab = tabFrom(params.get('tab'))
 
@@ -97,9 +99,9 @@ export function TeamAndPayrollContainer() {
     (next: TeamTab) => {
       // replace, not push: switching tabs is not a step the back button should
       // have to walk through one at a time.
-      router.replace(next === 'employees' ? '/team-and-payroll' : `/team-and-payroll?tab=${next}`)
+      localeReplace(next === 'employees' ? '/team-and-payroll' : `/team-and-payroll?tab=${next}`)
     },
-    [router],
+    [localeReplace],
   )
 
   // ─── Data ─────────────────────────────────────────────────────────────────
@@ -301,10 +303,7 @@ export function TeamAndPayrollContainer() {
 
   // G1 moved the employee detail route to /team-and-payroll/:id. This used to
   // push `/team-and-payroll/employee/:id`, which is not a route.
-  const handleViewEmployee = useCallback(
-    (id: string) => router.push(`/team-and-payroll/${id}`),
-    [router],
-  )
+  const handleViewEmployee = useCallback((id: string) => push(`/team-and-payroll/${id}`), [push])
 
   // ─── The «شعب» tab ────────────────────────────────────────────────────────
 

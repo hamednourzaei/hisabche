@@ -1,8 +1,7 @@
 // packages/ui/src/components/ui/dashboard/containers/dashboard-container.tsx
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import { useCallback, useState } from 'react'
 
 import { DashboardView } from '../dashboard-view'
@@ -15,6 +14,8 @@ import { DisplayBasisPicker, ExchangeRateForm } from '../display-basis-picker'
 import { AiAssistantLauncher } from '../../ai/ai-assistant-launcher'
 import { CURRENCY_CODES } from '@hisabche/validation'
 import { useSetExchangeRate } from '@hisabche/api'
+import { localizePath } from '@hisabche/ui-contract'
+import { useLocalePush, useRouteLang } from '../../../../hooks/use-locale-push'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -36,8 +37,8 @@ export function DashboardContainer() {
     },
     [tOriginal],
   )
-  const router = useRouter()
-  const locale = useLocale()
+  const push = useLocalePush()
+  const routeLang = useRouteLang()
 
   // ─── State ──────────────────────────────────────────────────────────────
 
@@ -72,9 +73,9 @@ export function DashboardContainer() {
 
   const handleAction = useCallback(
     (action: string) => {
-      router.push(action)
+      push(action)
     },
-    [router],
+    [push],
   )
 
   // ─── Render ─────────────────────────────────────────────────────────────
@@ -120,7 +121,7 @@ export function DashboardContainer() {
           approvals and unsent changes — and keeps the rest hidden until a real
           source exists. Under-showing is the safe direction; the alternative
           offers a door that refuses to open. */}
-      <WorkQueueContainer capabilities={[]} onNavigate={(route) => router.push(route)} />
+      <WorkQueueContainer capabilities={[]} onNavigate={(route) => push(route)} />
 
       {/* ─── T10 — «بر چه مبنایی ببینم» ────────────────────────────────
           A jeweller reads the day's takings in grams; a shop with dollar
@@ -130,9 +131,10 @@ export function DashboardContainer() {
       <div className="flex flex-col items-end gap-2">
         <div className="flex flex-wrap items-center justify-end gap-2">
           {/* T13 — renders nothing until a provider is configured. */}
-          {/* The locale prefix comes from the router, not from this package —
-              `useLocale` is next-intl's, which desktop shims. */}
-          <AiAssistantLauncher t={t} fullPageHref={`/${locale}/assistant`} />
+          {/* The prefix comes from the route: `useLocale()` is the UI
+              language, which desktop has too — `/fa/assistant` is a route
+              only web serves, so the link dropped desktop on the dashboard. */}
+          <AiAssistantLauncher t={t} fullPageHref={localizePath('/assistant', routeLang)} />
           <DisplayBasisPicker
             t={t}
             base={display.base}
@@ -204,7 +206,7 @@ export function DashboardContainer() {
         dateRange={dateRange}
         activitiesLoading={activitiesLoading}
         recentActivities={recentActivities}
-        onNavigate={(route) => router.push(route)}
+        onNavigate={(route) => push(route)}
         onInsightAction={handleAction}
         onDateRangeChange={handleDateRangeChange}
       />

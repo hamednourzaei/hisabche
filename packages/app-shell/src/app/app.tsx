@@ -160,10 +160,10 @@ const router = createHashRouter([
       // G1: `customer-list` and `product-list` are no longer destinations —
       // see the legacy block below. The lazy imports stay because nothing
       // deleted the pages; only their place in the menu changed.
-      { path: 'accounting-workspace', element: <DomainWorkspacePage /> },
-      { path: 'sales-workspace', element: <DomainWorkspacePage /> },
-      { path: 'inventory-workspace', element: <DomainWorkspacePage /> },
-      { path: 'people-workspace', element: <DomainWorkspacePage /> },
+      { path: 'accounting-workspace', element: <DomainWorkspacePage domain="accounting" /> },
+      { path: 'sales-workspace', element: <DomainWorkspacePage domain="sales" /> },
+      { path: 'inventory-workspace', element: <DomainWorkspacePage domain="inventory" /> },
+      { path: 'people-workspace', element: <DomainWorkspacePage domain="people" /> },
       { path: 'governance', element: <GovernancePage /> },
 
       // Web serves this at `/workflow-templates` and desktop only had

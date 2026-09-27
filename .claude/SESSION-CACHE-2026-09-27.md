@@ -86,3 +86,31 @@
 4. `stock-transfer-idempotency-migration.sql`
 5. `product-barcodes-migration.sql` (بعد از product-barcode-unique)
 6. VERIFY: `VERIFY-rpc-client-revoke.sql`، `VERIFY-write-functions.sql`
+
+## ۶. دور سوم — یک ساختار صفحه برای همه (BUG-066 تا BUG-068)
+
+**الگوی مرجع** (داشبورد، دریافت پول = `/invoices`، طرف حساب‌ها = `/customers`):
+
+```
+apps/web/app/[lang]/(dashboard)/<route>/page.tsx   metadata + <main className="section"><XContainer /></main>
+packages/ui/src/components/ui/<feature>/            containers/ (داده + ناوبری) · *-view.tsx · *-skeleton.tsx · index.ts
+packages/app-shell/src/features/<f>/<f>-page.tsx    export { XContainer as default } from '@hisabche/ui/screens'
+packages/ui-contract                                 قاعده‌ی خالص (مسیر، دامنه، نوار) — بدون React
+```
+
+| چه شد                                                                                                                  | کجا                                                                                 |
+| ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| قاعده‌ی پیشوند زبان                                                                                                    | `ui-contract/src/shell.ts` → `localizePath`؛ هوک: `ui/src/hooks/use-locale-push.ts` |
+| ۶ صفحه‌ی client با `onNavigate` → صفحه‌ی سرور + metadata از کلید i18n موجود                                            | `*-workspace`، `domain/[domain]`، `data-and-sync`                                   |
+| `customers-client`، `customer-detail-client`، `warehouse-client`، دو `skeleton.tsx`، `(dashboard)/page.tsx` سایه‌خورده | حذف؛ back مشتری داخل container                                                      |
+| ۳۵ ناوبری برهنه در `packages/ui`                                                                                       | `useLocalePush` / `useLocaleReplace`                                                |
+
+**تله‌ها:**
+
+- ⚠️ `(dashboard)/page.tsx` و `[lang]/page.tsx` هر دو `/fa` را resolve می‌کنند؛ Next لندینگ را سرو می‌کند و build خطا نمی‌دهد. فایل اولی فقط زنده بود چون `loading.tsx` و `/dashboard` از آن import می‌کردند.
+- ⚠️ `.section` هیچ‌جا تعریف نشده و `dashboard-layout.tsx` خودش `<main>` دارد → هر صفحه `<main>` تودرتو دارد (پیش‌موجود، ~۴۵ صفحه). گزارش شد، عوض نشد.
+- ⚠️ تست سبز و build سبز، خطای «client function from server» را نمی‌بینند؛ `next start` + curl دید (BUG-068).
+- وریفای مرورگر وارد‌شده: auth را با AES کلید dev و `hisabche-onboarding` را `{isCompleted:true}` بکار — وگرنه هر صفحه به `/onboarding` می‌رود.
+- `pnpm install` بعد از pull: `@hisabche/sync/wire` تا نصب نشود tsc اپ‌شل را قرمز می‌کند (وابستگی جدید main).
+
+**عمداً دست نخورد (میزبان‌محور، نه صفحه):** `dashboard-layout.tsx` (قاب وب)، `app-shell` → `settings-page` (نسخه/بروزرسانی/دیتابیس محلی از پل)، `sync-page` (صف SQLite محلی)، `login-page`. و `auth` در UI مشترک (مقصد redirect خودش).

@@ -4,16 +4,18 @@
 // packages/ui/src/components/ui/data-and-sync/containers/data-and-sync-container.tsx
 //
 // ---------------------------------------------------------------------------
-// NAVIGATION IS INJECTED, NOT IMPORTED
+// NAVIGATION IS OWNED HERE, NOT INJECTED
 //
-// This container runs inside Next's router on web and React Router on desktop.
-// Importing either would make the component mountable on exactly one of them,
-// which is the thing `@hisabche/ui/screens` exists to prevent. So the page
-// passes `onNavigate` and the shared component stays shared.
+// It used to arrive as an `onNavigate` prop, on the theory that importing a
+// router would tie the screen to one host. It does not: the shared shell build
+// aliases `next/navigation` to its React Router shim, and `useLocalePush` adds
+// the `[lang]` prefix only where one exists. Every page passed the identical
+// function, and a server `page.tsx` cannot pass a function at all.
 // ============================================
 
 import { memo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 import {
   asList,
   useConflicts,
@@ -26,13 +28,8 @@ import { useBackupStore, useSyncStore } from '@hisabche/store'
 
 import { DataAndSyncView } from '../data-and-sync-view'
 
-export interface DataAndSyncContainerProps {
-  onNavigate: (path: string) => void
-}
-
-export const DataAndSyncContainer = memo(function DataAndSyncContainer({
-  onNavigate,
-}: DataAndSyncContainerProps) {
+export const DataAndSyncContainer = memo(function DataAndSyncContainer() {
+  const onNavigate = useLocalePush()
   const translate = useTranslations()
   const t = useCallback(
     (key: string, fallback?: string): string => {

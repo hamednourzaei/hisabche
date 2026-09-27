@@ -73,3 +73,23 @@ describe('the shared UI routes to every page the product has', () => {
     expect(shellRoutes.size).toBeGreaterThan(30)
   })
 })
+
+describe('a route that names a domain hands it to the screen', () => {
+  // `/accounting-workspace` and its siblings have no `:domain` segment. They
+  // rendered the page that reads one, got `''`, and the container draws nothing
+  // for an unknown domain — four blank workspaces on Windows and Android while
+  // web, which passes each page its domain, worked.
+  const domains = ['accounting', 'sales', 'inventory', 'people']
+
+  it.each(domains)('⚠️ /%s-workspace passes its own domain', (domain) => {
+    const route = new RegExp(
+      `path:\\s*'${domain}-workspace',\\s*element:\\s*<DomainWorkspacePage\\s+domain="${domain}"`,
+    )
+    expect(router).toMatch(route)
+  })
+
+  it('the list above is every workspace route the shell has', () => {
+    const inRouter = [...router.matchAll(/path:\s*'(\w+)-workspace'/g)].map((m) => m[1]).sort()
+    expect(inRouter).toEqual([...domains].sort())
+  })
+})

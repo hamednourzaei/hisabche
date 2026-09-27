@@ -25,6 +25,7 @@ import { RecordHistoryPanel } from '../../activity/record-history-panel'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { useReceiptPrint } from '../../../../hooks/use-receipt-print'
+import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 
 /* ═══════════════════════════════════════════════════════════
    CONSTANTS
@@ -118,6 +119,8 @@ export function InvoiceDetailContainer() {
   // Printing is its own state — a failed print never touches the invoice.
   const { print: printReceipt, printing: printingReceipt } = useReceiptPrint()
   const router = useRouter()
+  const localeReplace = useLocaleReplace()
+  const push = useLocalePush()
   const { id } = useParams<{ id: string }>()
   const searchParams = useSearchParams()
   const documentRef = useRef<HTMLDivElement>(null)
@@ -148,8 +151,8 @@ export function InvoiceDetailContainer() {
   // ledger with the entry named in the URL rather than pretending a detail
   // route exists. H3 gives entries their own page; this link moves with it.
   const handleOpenJournalEntry = useCallback(
-    (entryId: string) => router.push(`/accounting?tab=journal&entry=${entryId}`),
-    [router],
+    (entryId: string) => push(`/accounting?tab=journal&entry=${entryId}`),
+    [push],
   )
 
   // ✅ فرض تک-workspace: اولین workspace کاربر — برای نمایش لوگو/مهر کسب‌وکار روی فاکتور
@@ -331,8 +334,17 @@ export function InvoiceDetailContainer() {
     if (action === 'png') handleExportPNG()
     // Auto-print after issuing: printed from the committed invoice just loaded.
     if (action === 'receipt' && display) void printReceipt(display)
-    router.replace(`/invoices/${id}`)
-  }, [searchParams, invoice, display, handlePrint, handleExportPNG, printReceipt, router, id])
+    localeReplace(`/invoices/${id}`)
+  }, [
+    searchParams,
+    invoice,
+    display,
+    handlePrint,
+    handleExportPNG,
+    printReceipt,
+    localeReplace,
+    id,
+  ])
 
   const handleSharePDF = useCallback(async () => {
     if (!invoice) return

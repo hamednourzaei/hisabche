@@ -78,6 +78,25 @@ function stripLocale(path: string, localeCodes: readonly string[]): string {
   return path
 }
 
+/**
+ * The address a shared screen navigates to, on the host it is running on.
+ *
+ * Web serves `/fa/invoices`; desktop and mobile serve `/invoices`. A screen
+ * knows the route (`/invoices`), and the host knows the language — web through
+ * its `[lang]` segment, the other hosts not at all. So the prefix goes on only
+ * when a language IS known.
+ *
+ * ⚠️ No default language. The first version of this rule lived inside the
+ * approvals screen and fell back to `'fa'`, so on Windows every button sent
+ * the user to `/fa/…` — a route desktop does not have — and the catch-all
+ * quietly dropped them on the dashboard.
+ */
+export function localizePath(path: string, lang: string | null | undefined): string {
+  if (!lang || !path.startsWith('/')) return path
+  if (path === `/${lang}` || path.startsWith(`/${lang}/`)) return path
+  return `/${lang}${path}`
+}
+
 /* ─── Domain workspaces ───────────────────────────────────────────────────── */
 
 export const DOMAINS = ['accounting', 'sales', 'inventory', 'people'] as const

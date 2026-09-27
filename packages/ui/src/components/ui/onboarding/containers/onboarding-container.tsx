@@ -1,7 +1,6 @@
 // packages/ui/src/components/ui/onboarding/containers/onboarding-container.tsx
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import {
   useOnboardingStore,
@@ -14,6 +13,7 @@ import {
 import { OnboardingPage } from '../onboarding-page'
 import { useCallback, useMemo, memo, useState } from 'react'
 import { useAuthStore } from '@hisabche/store'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    OnboardingContainer v3 — Memoized · Type-Safe · Persist Fix
@@ -40,7 +40,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
     return v && v !== key ? v : (fallback ?? key)
   }
-  const router = useRouter()
+  const push = useLocalePush()
   const lang = useLocale()
 
   const safeT = t
@@ -78,8 +78,8 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
 
   const handleComplete = useCallback(() => {
     completeOnboarding()
-    router.push('/dashboard')
-  }, [completeOnboarding, router])
+    push('/dashboard')
+  }, [completeOnboarding, push])
 
   // ✅ type-safe wrapper برای setterها
   const handleSetBusinessType = useCallback(

@@ -8,7 +8,6 @@
 // ============================================
 
 import { memo, useCallback, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   asList,
@@ -20,6 +19,7 @@ import {
   apiErrorMessage,
 } from '@hisabche/api'
 import { ConflictsView } from '../conflicts-view'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 export const ConflictsContainer = memo(function ConflictsContainer() {
   const translate = useTranslations()
@@ -28,7 +28,7 @@ export const ConflictsContainer = memo(function ConflictsContainer() {
     return value && value !== key ? value : (fallback ?? key)
   }
 
-  const router = useRouter()
+  const push = useLocalePush()
 
   const [status, setStatus] = useState<'open' | 'resolved' | 'all'>('open')
   const [chosenId, setChosenId] = useState<string | null>(null)
@@ -116,7 +116,7 @@ export const ConflictsContainer = memo(function ConflictsContainer() {
       onStatusChange={handleStatusChange}
       onSelect={handleSelect}
       onResolve={handleResolve}
-      onOpenRecord={(route) => router.push(route)}
+      onOpenRecord={(route) => push(route)}
       onRefresh={handleRefresh}
     />
   )

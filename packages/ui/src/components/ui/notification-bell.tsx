@@ -2,7 +2,6 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
-import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   Bell,
@@ -27,6 +26,7 @@ import { useNow } from '../../hooks/use-now'
 import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead } from '@hisabche/api'
 import type { Notification } from '@hisabche/api'
 import { timeAgo } from '../../lib/time-ago'
+import { useLocalePush } from '../../hooks/use-locale-push'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -439,7 +439,7 @@ export const NotificationBell = memo(function NotificationBell({
   className,
 }: NotificationBellProps) {
   const t = useTranslations()
-  const router = useRouter()
+  const push = useLocalePush()
   const [open, setOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -499,9 +499,9 @@ export const NotificationBell = memo(function NotificationBell({
         markAsRead([n.id])
       }
       setOpen(false)
-      router.push(resolveEntityUrl(n))
+      push(resolveEntityUrl(n))
     },
-    [markAsRead, router],
+    [markAsRead, push],
   )
 
   const handleMarkAllAsRead = useCallback(() => {
@@ -510,8 +510,8 @@ export const NotificationBell = memo(function NotificationBell({
 
   const handleViewAll = useCallback(() => {
     setOpen(false)
-    router.push('/activities')
-  }, [router])
+    push('/activities')
+  }, [push])
 
   return (
     <div className={cn('relative', className)}>

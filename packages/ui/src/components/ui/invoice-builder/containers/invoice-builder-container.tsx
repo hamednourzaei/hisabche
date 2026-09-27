@@ -5,7 +5,7 @@
 'use client'
 
 import { memo, useCallback, useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { COLUMN, currencyPrecision, moveColumn, type InvoiceColumn } from '@hisabche/validation'
 import { formatNumber } from '@hisabche/formatting'
 import {
@@ -34,9 +34,10 @@ import { useBarcodeScanner } from '../../../../hooks/use-barcode-scanner'
 import { planScan } from '../../../../lib/barcode/scan-into-invoice'
 import { lookupProductByBarcode } from '@hisabche/api'
 import type { Product } from '@hisabche/validation'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
-  const router = useRouter()
+  const push = useLocalePush()
   const searchParams = useSearchParams()
   const { setSaveStatus } = useSyncStore()
   const { t, locale, currency, ctx, summary, invalidRowIds, issues, items } = useInvoiceDraft()
@@ -208,8 +209,8 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
     setDueDate,
   })
 
-  const handleContinue = useCallback(() => router.push('/invoices/new/preview'), [router])
-  const handleBackToList = useCallback(() => router.push('/invoices'), [router])
+  const handleContinue = useCallback(() => push('/invoices/new/preview'), [push])
+  const handleBackToList = useCallback(() => push('/invoices'), [push])
 
   return (
     <>

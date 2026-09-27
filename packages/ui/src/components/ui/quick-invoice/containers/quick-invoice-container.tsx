@@ -2,7 +2,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo, memo } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { lookupProductByBarcode, useCreateInvoice } from '@hisabche/api'
 import type { Product } from '@hisabche/validation'
@@ -30,6 +30,7 @@ import type {
   TransactionType,
   InvoiceUnit,
 } from '../quick-invoice-page'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    QuickInvoiceContainer v2 — Memoized · Performance Optimized
@@ -38,7 +39,7 @@ import type {
 
 export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
   const t = useTranslations()
-  const router = useRouter()
+  const push = useLocalePush()
   const searchParams = useSearchParams()
   const createInvoice = useCreateInvoice()
   const { markInvoiceCreated } = useOnboardingStore()
@@ -304,8 +305,8 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
 
   const dismissCelebration = useCallback(() => {
     setShowCelebration(false)
-    router.push(createdInvoiceId ? `/invoices/${createdInvoiceId}` : '/invoices')
-  }, [createdInvoiceId, router])
+    push(createdInvoiceId ? `/invoices/${createdInvoiceId}` : '/invoices')
+  }, [createdInvoiceId, push])
 
   const handleCreate = useCallback(async () => {
     if (items.length === 0) return
@@ -405,11 +406,11 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
   ])
 
   const handleViewInvoice = useCallback(
-    () => router.push(`/invoices/${createdInvoiceId}`),
-    [createdInvoiceId, router],
+    () => push(`/invoices/${createdInvoiceId}`),
+    [createdInvoiceId, push],
   )
 
-  const handleViewAllInvoices = useCallback(() => router.push('/invoices'), [router])
+  const handleViewAllInvoices = useCallback(() => push('/invoices'), [push])
 
   return (
     <>

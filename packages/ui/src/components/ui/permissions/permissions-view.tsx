@@ -3,8 +3,8 @@
 
 import { cn } from '../../../lib/utils'
 import { Shield, Check, X, ArrowLeft } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import { memo } from 'react'
+import { useLocalePush } from '../../../hooks/use-locale-push'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PermissionsView v3 — Honest static explainer.
@@ -98,7 +98,7 @@ const RoleCard = memo(function RoleCard({ role }: { role: RoleCapability }) {
 RoleCard.displayName = 'RoleCard'
 
 export const PermissionsView = memo(function PermissionsView({ t }: PermissionsViewProps) {
-  const router = useRouter()
+  const push = useLocalePush()
   const roles = buildRoles(t)
 
   return (
@@ -130,7 +130,7 @@ export const PermissionsView = memo(function PermissionsView({ t }: PermissionsV
         // exported but never mounted. Workspace membership is managed from
         // Settings, which is where this button has to land until that page is
         // given a route in the navigation contract.
-        onClick={() => router.push('/settings')}
+        onClick={() => push('/settings')}
         className={cn(
           'inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold',
           'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] hover:brightness-110 transition',

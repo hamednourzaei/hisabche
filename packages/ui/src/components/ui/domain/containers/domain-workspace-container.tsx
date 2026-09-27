@@ -12,6 +12,7 @@
 
 import { memo, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 import { DOMAINS, NAV_CONTRACT, domainFor, type DomainId, type NavId } from '@hisabche/ui-contract'
 
 import { DomainWorkspaceView, type DomainDestination } from '../domain-workspace-view'
@@ -34,14 +35,13 @@ export interface DomainWorkspaceContainerProps {
    * since hiding a page nobody asked to hide would be a guess.
    */
   authorized?: readonly NavId[]
-  onNavigate: (path: string) => void
 }
 
 export const DomainWorkspaceContainer = memo(function DomainWorkspaceContainer({
   domain,
   authorized,
-  onNavigate,
 }: DomainWorkspaceContainerProps) {
+  const onNavigate = useLocalePush()
   const translate = useTranslations()
   const t = useCallback(
     (key: string, fallback?: string): string => {

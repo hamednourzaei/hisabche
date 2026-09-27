@@ -15,6 +15,7 @@ import { ProductDetailPage } from '../warehouse-detail-page'
 import { productDeleteRefusal } from '../../../../lib/warehouse/delete-refusal'
 import { STOCK_LABEL_KEY, STOCK_TONE, stockStateOf } from '../../../../lib/warehouse/stock-state'
 import { useToast } from '../../toast-provider'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 /**
  * ⚠️ WAS `'piece' | 'kg' | 'liter' | 'meter' | 'box'` — FIVE OF FIFTEEN.
@@ -75,6 +76,7 @@ type StockStatus = 'success' | 'warning' | 'destructive' | 'secondary'
 export function ProductDetailContainer() {
   const t = useTranslations()
   const router = useRouter()
+  const push = useLocalePush()
   const { id } = useParams<{ id: string }>()
 
   const { data: product, isLoading } = useProduct(id)
@@ -141,8 +143,8 @@ export function ProductDetailContainer() {
       toast.error(productDeleteRefusal(error, t))
       return
     }
-    router.push('/warehouse')
-  }, [id, deleteProduct, router, t, toast])
+    push('/warehouse')
+  }, [id, deleteProduct, push, t, toast])
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {

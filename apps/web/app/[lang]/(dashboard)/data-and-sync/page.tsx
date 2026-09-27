@@ -1,18 +1,20 @@
-// apps/web/app/[lang]/(dashboard)/data-and-sync/page.tsx
-'use client'
-
-// Thin, but a client component rather than the usual server page: the hub
-// links to its six areas, and the router that does the linking is
-// platform-specific. The shared container takes `onNavigate` so desktop can
-// hand it React Router instead.
-import { useParams, useRouter } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { DataAndSyncContainer } from '@hisabche/ui'
 
-export default function DataAndSyncPage() {
-  const router = useRouter()
-  const { lang } = useParams<{ lang: string }>()
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params
+  const t = await getTranslations({ locale: lang })
+  return {
+    title: t('nav.data_and_sync'),
+    description: t('nav.data_and_sync_description'),
+    robots: { index: false, follow: false },
+  }
+}
 
-  // Every dashboard route is locale-prefixed. Pushing a bare `/conflicts`
-  // would drop the language and bounce the user through the locale redirect.
-  return <DataAndSyncContainer onNavigate={(path) => router.push(`/${lang}${path}`)} />
+export default function DataAndSyncPage() {
+  return (
+    <main className="section">
+      <DataAndSyncContainer />
+    </main>
+  )
 }

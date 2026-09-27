@@ -1,4 +1,4 @@
-import { CustomerDetailClient } from './customer-detail-client'
+import { CustomerDetailContainer } from '@hisabche/ui'
 
 const titles: Record<string, string> = {
   fa: 'پرونده مشتری',
@@ -11,12 +11,11 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   return { title: titles[lang] || titles['fa'], robots: { index: false, follow: false } }
 }
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-
   return (
     <main className="section">
-      <CustomerDetailClient customerId={id} />
+      <CustomerDetailContainer customerId={id} />
     </main>
   )
 }

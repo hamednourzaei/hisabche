@@ -12,6 +12,7 @@ import {
   domainDestinations,
   domainFor,
   domainOf,
+  localizePath,
 } from '../shell'
 
 const LOCALES = ['fa', 'af', 'en']
@@ -144,5 +145,32 @@ describe('what a domain offers this actor', () => {
 
   it('returns nothing when the actor may reach nothing', () => {
     expect(domainDestinations('accounting', [])).toEqual([])
+  })
+})
+
+describe('localizePath — one route, the host decides the prefix', () => {
+  it('web: the language segment goes in front', () => {
+    expect(localizePath('/invoices/42', 'fa')).toBe('/fa/invoices/42')
+    expect(localizePath('/customers', 'af')).toBe('/af/customers')
+  })
+
+  it('⚠️ desktop and mobile: no language is known, so none is invented', () => {
+    // The approvals screen used to fall back to 'fa' here and sent Windows
+    // users to /fa/…, which the desktop router does not have.
+    expect(localizePath('/invoices/42', undefined)).toBe('/invoices/42')
+    expect(localizePath('/invoices/42', null)).toBe('/invoices/42')
+    expect(localizePath('/invoices/42', '')).toBe('/invoices/42')
+  })
+
+  it('never prefixes twice', () => {
+    expect(localizePath('/fa/invoices', 'fa')).toBe('/fa/invoices')
+    expect(localizePath('/fa', 'fa')).toBe('/fa')
+    // …but a route that merely starts with the same letters is still a route.
+    expect(localizePath('/faq', 'fa')).toBe('/fa/faq')
+  })
+
+  it('leaves relative and absolute URLs alone', () => {
+    expect(localizePath('?tab=products', 'fa')).toBe('?tab=products')
+    expect(localizePath('https://hisabche.com/x', 'fa')).toBe('https://hisabche.com/x')
   })
 })
