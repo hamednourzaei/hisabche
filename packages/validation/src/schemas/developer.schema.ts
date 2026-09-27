@@ -41,6 +41,8 @@ export const INTEGRATION_SCOPES = [
   'read:customers',
   'read:products',
   'read:reports',
+  'read:payments',
+  'read:inventory',
   'write:customers',
   'write:products',
   'write:invoices',
@@ -85,7 +87,7 @@ export type ApiKeyCreateInput = z.infer<typeof apiKeyCreateSchema>
  *
  * ⚠️ Only events whose resource an API key can READ. A payload is thin (type +
  * id); an event naming something the receiver cannot fetch is a notification
- * it cannot act on. Payments and purchase orders join when their read scopes do.
+ * it cannot act on. Purchase orders and sales orders join when their read scopes and lifecycles do.
  */
 export const WEBHOOK_EVENTS = [
   'invoice.created',
@@ -96,6 +98,12 @@ export const WEBHOOK_EVENTS = [
   'invoice.payment_recorded',
   'customer.created',
   'product.created',
+  'payment.recorded',
+  'payment.cancelled',
+  // From a database trigger on the stock projection, on the CROSSING of
+  // min_stock_level only (docs/developer-platform-02-migration.sql).
+  'inventory.low_stock',
+  'inventory.restocked',
 ] as const
 export type WebhookEventType = (typeof WEBHOOK_EVENTS)[number]
 
@@ -112,6 +120,10 @@ export const WEBHOOK_EVENT_RESOURCE: Record<
   'invoice.payment_recorded': { resource: 'invoice', scope: 'read:invoices' },
   'customer.created': { resource: 'customer', scope: 'read:customers' },
   'product.created': { resource: 'product', scope: 'read:products' },
+  'payment.recorded': { resource: 'payment', scope: 'read:payments' },
+  'payment.cancelled': { resource: 'payment', scope: 'read:payments' },
+  'inventory.low_stock': { resource: 'product', scope: 'read:products' },
+  'inventory.restocked': { resource: 'product', scope: 'read:products' },
 }
 
 /** A test delivery sent from the developer screen. Not subscribable. */
@@ -158,6 +170,12 @@ export type WebhookEndpointUpdateInput = z.infer<typeof webhookEndpointUpdateSch
 // ─── Signatures ──────────────────────────────────────────────────────────────
 
 export const WEBHOOK_SIGNATURE_HEADER = 'Hisabche-Signature'
+/**
+ * Present (value `true`) when the delivery is a replay a person asked for. The
+ * event id is the original one; a receiver that deduplicates on the id should
+ * let a replay through.
+ */
+export const WEBHOOK_REPLAY_HEADER = 'Hisabche-Replay'
 /** A delivery older than this is refused by `verifyWebhookSignature`. */
 export const WEBHOOK_TOLERANCE_SECONDS = 300
 

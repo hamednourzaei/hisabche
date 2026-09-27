@@ -6130,7 +6130,9 @@
       "write_customers": "ساخت و ویرایش مشتری",
       "write_products": "ساخت و ویرایش کالا",
       "write_invoices": "ساخت فاکتور",
-      "subscribe_events": "دریافت رویدادها"
+      "subscribe_events": "دریافت رویدادها",
+      "read_payments": "خواندن پرداخت‌ها",
+      "read_inventory": "خواندن موجودی انبارها"
     },
     "event": {
       "invoice_created": "فاکتور ساخته شد",
@@ -6140,14 +6142,32 @@
       "invoice_posted": "فاکتور در دفتر ثبت شد",
       "invoice_payment_recorded": "پرداخت فاکتور ثبت شد",
       "customer_created": "مشتری تازه",
-      "product_created": "کالای تازه"
+      "product_created": "کالای تازه",
+      "payment_recorded": "پرداخت ثبت شد",
+      "payment_cancelled": "پرداخت لغو شد",
+      "inventory_low_stock": "موجودی کالا به حد سفارش رسید",
+      "inventory_restocked": "موجودی کالا دوباره کافی شد"
     },
     "delivery": {
       "pending": "در صف",
       "delivering": "در حال ارسال",
       "succeeded": "تحویل شد",
       "failed": "ناموفق"
-    }
+    },
+    "showUsage": "مصرف",
+    "hideUsage": "بستن مصرف",
+    "usageNotConfigured": "گزارش مصرف هنوز روی سرور راه‌اندازی نشده است (اسکریپت دوم پایگاه داده اجرا نشده). کلید کار می‌کند؛ فقط درخواست‌ها ثبت نمی‌شوند.",
+    "usageTitle": "مصرف ۷ روز اخیر (شمارش دقیق)",
+    "usageEmpty": "این کلید در ۷ روز اخیر هیچ درخواستی نداشته است.",
+    "usageDay": "روز",
+    "usageRequests": "درخواست",
+    "usageClientErrors": "خطای ۴xx",
+    "usageServerErrors": "خطای ۵xx",
+    "usageAvgMs": "میانگین (ms)",
+    "recentRequests": "آخرین درخواست‌ها (حداکثر ۵۰ مورد — نمونه، نه آمار)",
+    "replay1d": "ارسال دوباره‌ی ۲۴ ساعت اخیر",
+    "replay7d": "ارسال دوباره‌ی ۷ روز اخیر",
+    "replayed": "تحویل‌هایی که دوباره در صف ارسال قرار گرفتند"
   },
   "webhook": {
     "urlMustBeHttps": "آدرس وب‌هوک باید با https:// شروع شود."

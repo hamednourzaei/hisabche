@@ -136,6 +136,19 @@ export async function pollWebhooks(): Promise<void> {
   }
 }
 
+const REQUEST_LOG_PURGE_MS = 6 * 3600_000
+
+/** Retention for the API request log (30 days). Quiet before migration 02. */
+export async function purgeApiRequestLogs(): Promise<void> {
+  try {
+    const purged = await developerService.purgeRequestLogs()
+    if (purged) console.log(`[api-keys] purged ${purged} request log rows`)
+  } catch (err) {
+    if (err instanceof NotConfiguredError) return
+    console.error('[api-keys] request log purge failed:', err)
+  }
+}
+
 export async function jobSchedulerPlugin(fastify: FastifyInstance) {
   // ✅ FIX: فاصله از ۶۰ ثانیه به ۱۰ دقیقه افزایش یافت.
   // بررسی شد که هیچ‌جای پروژه (نه route ها، نه scheduler، نه جای
@@ -154,9 +167,11 @@ export async function jobSchedulerPlugin(fastify: FastifyInstance) {
   // emailService.send — this only catches what that could not finish.
   const emailInterval = setInterval(() => void pollEmailOutbox(), EMAIL_POLL_MS)
   const webhookInterval = setInterval(() => void pollWebhooks(), WEBHOOK_POLL_MS)
+  const purgeInterval = setInterval(() => void purgeApiRequestLogs(), REQUEST_LOG_PURGE_MS)
   fastify.addHook('onClose', () => {
     clearInterval(interval)
     clearInterval(emailInterval)
     clearInterval(webhookInterval)
+    clearInterval(purgeInterval)
   })
 }

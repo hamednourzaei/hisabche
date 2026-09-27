@@ -69,6 +69,28 @@ export interface DeliveryRow {
   last_error: string | null
   created_at: string
   delivered_at: string | null
+  /**
+   * Set by replay_webhook_deliveries (migration 02). Only on rows returned by
+   * the claim function — never selected by name, so the delivery list keeps
+   * working on a database where 02 has not run yet.
+   */
+  replayed_at?: string | null | undefined
+}
+
+export interface RequestLogRow {
+  method: string
+  route: string
+  status: number
+  duration_ms: number
+  created_at: string
+}
+
+export interface UsageDay {
+  day: string
+  requests: number
+  client_errors: number
+  server_errors: number
+  avg_ms: number | null
 }
 
 const DELIVERY_COLUMNS =
@@ -372,6 +394,82 @@ export const developerRepository = {
     })
     check(error)
     return (data as string | null) ?? null
+  },
+
+  // ─── request log (migration 02) ────────────────────────────────────────────
+
+  async getKey(workspaceId: string, id: string): Promise<ApiKeyRow | null> {
+    const { data, error } = await supabase
+      .from('api_keys')
+      .select(KEY_COLUMNS)
+      .eq('workspace_id', workspaceId)
+      .eq('id', id)
+      .maybeSingle()
+    check(error)
+    return (data as ApiKeyRow | null) ?? null
+  },
+
+  async logRequest(row: {
+    workspace_id: string
+    key_id: string
+    method: string
+    route: string
+    status: number
+    duration_ms: number
+  }): Promise<void> {
+    const { error } = await supabase.from('api_request_logs').insert(row)
+    check(error)
+  },
+
+  /** Exact per-day counts (count(*) in SQL — never a page of rows). */
+  async usage(workspaceId: string, keyId: string, days: number): Promise<UsageDay[]> {
+    const { data, error } = await supabase.rpc('api_key_usage', {
+      p_workspace_id: workspaceId,
+      p_key_id: keyId,
+      p_days: days,
+    })
+    check(error)
+    return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+      day: String(r.day),
+      requests: Number(r.requests),
+      client_errors: Number(r.client_errors),
+      server_errors: Number(r.server_errors),
+      avg_ms: r.avg_ms === null ? null : Number(r.avg_ms),
+    }))
+  },
+
+  /** The latest requests, for reading — a sample by design, not a figure. */
+  async recentRequests(
+    workspaceId: string,
+    keyId: string,
+    limit: number,
+  ): Promise<RequestLogRow[]> {
+    const { data, error } = await supabase
+      .from('api_request_logs')
+      .select('method, route, status, duration_ms, created_at')
+      .eq('workspace_id', workspaceId)
+      .eq('key_id', keyId)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    check(error)
+    return (data ?? []) as RequestLogRow[]
+  },
+
+  async purgeRequestLogs(keepDays: number): Promise<number> {
+    const { data, error } = await supabase.rpc('purge_api_request_logs', { p_keep_days: keepDays })
+    check(error)
+    return Number(data ?? 0)
+  },
+
+  /** Requeue an endpoint's finished deliveries since `since`. 22023 = window too long. */
+  async replay(workspaceId: string, endpointId: string, since: string): Promise<number> {
+    const { data, error } = await supabase.rpc('replay_webhook_deliveries', {
+      p_workspace_id: workspaceId,
+      p_endpoint_id: endpointId,
+      p_since: since,
+    })
+    check(error)
+    return Number(data ?? 0)
   },
 }
 

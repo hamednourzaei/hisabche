@@ -71,3 +71,28 @@ Each of these needs a decision or credentials that only the owner can supply. Bu
 | 8   | An `Idempotency-Key` on `POST /api/invoices` for API-key callers (the header already exists for the web client)                          | proposed; the header is already accepted |
 | 9   | `payment.*` and `purchase_order.*` events, once a `read:payments` scope exists; events must stay readable by their receiver              | proposed                                 |
 | 10  | A "used by" line under each key (which routes it called in the last 24 hours) from the audit log, so an owner can revoke with confidence | proposed                                 |
+
+## 6. Platform roadmap (agreed 27 Sep 2026): layers, not 80 features
+
+The 80 ideas proposed in conversation reduce to seven shared layers. Each idea is a consumer of a layer, not a module of its own (G2).
+
+| Step | Layer                                                                                                                  | Status                                                                                                                                                   |
+| ---- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Public API surface + events + per-key limits + usage + replay                                                          | ✅ built. `docs/developer-platform-02-migration.sql`: **Post-migration verification query generated — PENDING HUMAN CONFIRMATION**                       |
+| 2    | Publishable key + order lifecycle (state machine first) + Order → server-priced invoice → stock → ledger + Website SDK | next. The security contract comes first: the browser never sets an amount or touches the ledger, and the public catalogue projection never includes cost |
+| 3    | Invoice widget, QR, customer portal (on the existing `invoice-public` token link)                                      | planned                                                                                                                                                  |
+| 4    | Evidence chain (the basis for Why Changed, Profit Leak and Money Journey)                                              | planned                                                                                                                                                  |
+| 5    | OAuth + marketplace                                                                                                    | waits on an app-review policy (product decision)                                                                                                         |
+| 6    | Sandbox workspace                                                                                                      | planned                                                                                                                                                  |
+
+What step 1 added:
+
+- **Scopes:** `read:payments` (`payment.read`) and `read:inventory` (`inventory.read`, quantities and sell prices only, no cost).
+- **Routes:** `GET /api/payments`, `/api/payments/:id`, `/api/warehouses` and `/api/warehouses/:id/stock`.
+- **Events:**
+  - `payment.recorded` and `payment.cancelled` come from `logBusinessEvent`.
+  - `inventory.low_stock` and `inventory.restocked` come from a trigger on the stock projection, fired on the **crossing** only. The trigger can never fail the sale.
+  - `order.*` is deliberately absent until the order lifecycle exists.
+- **Rate limiting:** one bucket per key (by hash) at 120 requests per minute, shared across instances.
+- **Request log:** records the route pattern, status and duration, never ids or query strings. Refusals are logged too. Usage is shown as exact per-day counts, plus the latest 50 requests labelled as a sample. Retention is 30 days.
+- **Replay:** an endpoint's finished deliveries can be replayed for up to 30 days back. Replays keep the original event id and carry a `Hisabche-Replay: true` header.

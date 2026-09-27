@@ -22,6 +22,7 @@ import type { LookupFunction } from 'node:net'
 import {
   WEBHOOK_EVENTS,
   WEBHOOK_PING_EVENT,
+  WEBHOOK_REPLAY_HEADER,
   WEBHOOK_SIGNATURE_HEADER,
   signWebhookPayload,
   type ApiKeyCreateInput,
@@ -63,7 +64,8 @@ export class DeveloperError extends Error {
       | 'WEBHOOK_URL_NOT_HTTPS'
       | 'WEBHOOK_URL_INVALID'
       | 'WEBHOOK_URL_PRIVATE'
-      | 'NOT_FOUND',
+      | 'NOT_FOUND'
+      | 'REPLAY_WINDOW_TOO_LONG',
     readonly statusCode: number,
     readonly detail?: Record<string, unknown>,
   ) {
@@ -87,6 +89,12 @@ const keyCacheKey = (hash: string) => `apikey:${hash}`
 const DELIVERY_BATCH = 20
 const DELIVERY_LEASE_SECONDS = 60
 const DELIVERY_TIMEOUT_MS = 10_000
+/** How far back a person may replay (the database enforces the same). */
+const REPLAY_WINDOW_MS = 30 * 86_400_000
+/** Latest requests shown per key — a sample to read, not a figure. */
+const RECENT_REQUESTS = 50
+/** Days of request log kept. */
+const REQUEST_LOG_KEEP_DAYS = 30
 /** What is kept of a receiver's error body — enough to debug, not a log sink. */
 const ERROR_TEXT_LIMIT = 300
 
@@ -206,6 +214,7 @@ export function createDeveloperService(
       [WEBHOOK_SIGNATURE_HEADER]: signature,
       'Hisabche-Event-Id': delivery.event_id,
       'Hisabche-Event-Type': delivery.event_type,
+      ...(delivery.replayed_at ? { [WEBHOOK_REPLAY_HEADER]: 'true' } : {}),
     })
     if (result.status !== null && isDelivered(result.status)) {
       await repo.completeDelivery(delivery.id, WORKER_ID, result.status)
@@ -393,6 +402,64 @@ export function createDeveloperService(
       const row = await repo.requeueDelivery(ctx.workspaceId, deliveryId)
       if (!row) throw new DeveloperError('NOT_FOUND', 404)
       return row
+    },
+
+    /** Replay one endpoint's finished deliveries since `since` (≤ 30 days). */
+    async replayEndpoint(
+      ctx: TenancyContext,
+      endpointId: string,
+      since: Date,
+    ): Promise<{ requeued: number }> {
+      if (!(await repo.getEndpoint(ctx.workspaceId, endpointId)))
+        throw new DeveloperError('NOT_FOUND', 404)
+      if (Date.now() - since.getTime() > REPLAY_WINDOW_MS)
+        throw new DeveloperError('REPLAY_WINDOW_TOO_LONG', 400)
+      return { requeued: await repo.replay(ctx.workspaceId, endpointId, since.toISOString()) }
+    },
+
+    // ─── request log ─────────────────────────────────────────────────────────
+
+    /**
+     * One API-key request, written after the response. Never awaited by the
+     * caller and never throws: a log must not slow down or fail a request.
+     * Before migration 02 there is no table — silently nothing.
+     */
+    recordRequest(input: {
+      workspaceId: string
+      keyId: string
+      method: string
+      route: string
+      status: number
+      durationMs: number
+    }): void {
+      repo
+        .logRequest({
+          workspace_id: input.workspaceId,
+          key_id: input.keyId,
+          method: input.method.slice(0, 10),
+          route: input.route.slice(0, 200),
+          status: input.status,
+          duration_ms: Math.max(0, input.durationMs),
+        })
+        .catch((err) => {
+          if (!(err instanceof NotConfiguredError))
+            console.error('[api-keys] request not logged:', err)
+        })
+    },
+
+    /** Exact per-day usage and the latest requests of one key. */
+    async keyUsage(ctx: TenancyContext, keyId: string, days = 7) {
+      if (!(await repo.getKey(ctx.workspaceId, keyId))) throw new DeveloperError('NOT_FOUND', 404)
+      const [daily, recent] = await Promise.all([
+        repo.usage(ctx.workspaceId, keyId, days),
+        repo.recentRequests(ctx.workspaceId, keyId, RECENT_REQUESTS),
+      ])
+      return { days, daily, recent }
+    },
+
+    /** Retention for the request log. Quiet before migration 02. */
+    async purgeRequestLogs(): Promise<number> {
+      return repo.purgeRequestLogs(REQUEST_LOG_KEEP_DAYS)
     },
 
     eventCatalogue() {

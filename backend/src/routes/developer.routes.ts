@@ -30,6 +30,8 @@ import {
 import { NotConfiguredError } from '../services/developer/developer.repository'
 
 const idParams = z.object({ id: z.string().uuid() })
+const usageQuery = z.object({ days: z.coerce.number().int().min(1).max(90).default(7) })
+const replayBody = z.object({ since: z.coerce.date() }).strict()
 
 export function buildDeveloperRoutes(service: DeveloperService) {
   return async function developerRoutes(fastify: FastifyInstance) {
@@ -107,6 +109,16 @@ export function buildDeveloperRoutes(service: DeveloperService) {
       }),
     )
 
+    fastify.get(
+      '/api/developer/keys/:id/usage',
+      { preHandler: guard },
+      handle(async (request, reply) => {
+        const { id } = idParams.parse(request.params)
+        const { days } = usageQuery.parse(request.query)
+        return reply.send(await service.keyUsage(request.tenancy, id, days))
+      }),
+    )
+
     // ─── webhooks ────────────────────────────────────────────────────────────
 
     fastify.get(
@@ -161,6 +173,16 @@ export function buildDeveloperRoutes(service: DeveloperService) {
       handle(async (request, reply) => {
         const { id } = idParams.parse(request.params)
         return reply.send(await service.sendTest(request.tenancy, id))
+      }),
+    )
+
+    fastify.post(
+      '/api/developer/webhooks/:id/replay',
+      { preHandler: guard },
+      handle(async (request, reply) => {
+        const { id } = idParams.parse(request.params)
+        const { since } = replayBody.parse(request.body)
+        return reply.send(await service.replayEndpoint(request.tenancy, id, since))
       }),
     )
 

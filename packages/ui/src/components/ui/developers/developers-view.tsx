@@ -13,13 +13,14 @@
 
 import { memo, useState } from 'react'
 import type { ApiKeyScope, WebhookEventType } from '@hisabche/validation'
-import type { ApiKeyRow, WebhookDeliveryRow, WebhookEndpointRow } from '@hisabche/api'
+import type { ApiKeyRow, ApiKeyUsage, WebhookDeliveryRow, WebhookEndpointRow } from '@hisabche/api'
 import { Copy, KeyRound, Loader2, RefreshCw, Send, Trash2, Webhook } from 'lucide-react'
 
 import { Badge } from '../badge'
 import { Button } from '../button'
 import { Card, CardContent } from '../card'
 import { Input } from '../input'
+import { KeyUsagePanel } from './key-usage-panel'
 
 type T = (key: string, fallback?: string) => string
 
@@ -43,6 +44,11 @@ export interface DevelopersViewProps {
   creatingKey: boolean
   onRevokeKey: (id: string) => void
   revokingKeyId: string | null
+  /** The key whose usage is open, and what its usage read returned. */
+  usageKeyId: string | null
+  onToggleUsage: (id: string | null) => void
+  usageState: SectionState
+  usage: ApiKeyUsage | null
 
   endpointsState: SectionState
   endpointsError: string | null
@@ -64,6 +70,8 @@ export interface DevelopersViewProps {
   deliveriesState: SectionState
   deliveries: WebhookDeliveryRow[]
   onRetryDelivery: (id: string) => void
+  /** Requeue the endpoint's finished deliveries of the last `days` days. */
+  onReplay: (id: string, days: 1 | 7) => void
 
   /** A key or secret to show ONCE; null when there is none. */
   revealed: { kind: 'key' | 'secret'; value: string } | null
@@ -263,6 +271,17 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
                             : ''}
                         </p>
                       </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          props.onToggleUsage(props.usageKeyId === key.id ? null : key.id)
+                        }
+                      >
+                        {props.usageKeyId === key.id
+                          ? t('developer.hideUsage')
+                          : t('developer.showUsage')}
+                      </Button>
                       {key.revoked_at ? (
                         <Badge variant="outline">{t('developer.revoked')}</Badge>
                       ) : (
@@ -274,6 +293,14 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
                         >
                           {t('developer.revoke')}
                         </Button>
+                      )}
+                      {props.usageKeyId === key.id && (
+                        <KeyUsagePanel
+                          t={t}
+                          formatDate={props.formatDate}
+                          state={props.usageState}
+                          usage={props.usage}
+                        />
                       )}
                     </li>
                   ))}
@@ -417,6 +444,22 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
                             onClick={() => props.onSelectEndpoint(open ? null : ep.id)}
                           >
                             {open ? t('developer.hideDeliveries') : t('developer.showDeliveries')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy}
+                            onClick={() => props.onReplay(ep.id, 1)}
+                          >
+                            {t('developer.replay1d')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy}
+                            onClick={() => props.onReplay(ep.id, 7)}
+                          >
+                            {t('developer.replay7d')}
                           </Button>
                           <Button
                             size="sm"

@@ -38,6 +38,9 @@ import {
   looksLikeApiKey,
   narrowCapabilities,
   publicEventFor,
+  rateLimitBucket,
+  isApiKeyBucket,
+  API_KEY_RATE_LIMIT_PER_MINUTE,
   webhookRetryDelaySeconds,
 } from '../services/developer/developer.domain'
 
@@ -147,13 +150,16 @@ describe('the route allowlist', () => {
   it('nothing that deletes, posts to the ledger, moves money or manages keys is listed', () => {
     for (const entry of Object.keys(API_ROUTE_SCOPES)) {
       expect(entry).not.toMatch(/^DELETE /)
-      expect(entry).not.toMatch(/ledger|payments|developer|members|workspaces|billing/)
+      expect(entry).not.toMatch(/ledger|developer|members|workspaces|billing|stock-transfers/)
+      // Money and stock are READ through a key, never moved by one.
+      if (/payments|warehouses/.test(entry)) expect(entry).toMatch(/^GET /)
     }
   })
 })
 
 // ─── 2. on a real Fastify ────────────────────────────────────────────────────
 
+const refusals = vi.hoisted(() => vi.fn())
 const principal = vi.hoisted(() => ({
   current: null as null | { id: string; workspaceId: string; createdBy: string; scopes: string[] },
 }))
@@ -164,7 +170,7 @@ vi.mock('../services/developer/developer.service', async () => {
   )
   return {
     ...actual,
-    developerService: { authenticateKey: async () => principal.current },
+    developerService: { authenticateKey: async () => principal.current, recordRequest: refusals },
   }
 })
 
@@ -190,6 +196,7 @@ describe('authenticate with an API key', async () => {
   afterAll(() => app.close())
   beforeEach(() => {
     seen.mockReset()
+    refusals.mockReset()
     principal.current = {
       id: 'k1',
       workspaceId: 'ws-1',
@@ -217,6 +224,15 @@ describe('authenticate with an API key', async () => {
     expect(res.statusCode).toBe(403)
     expect(res.json().code).toBe('API_KEY_ROUTE_NOT_ALLOWED')
     expect(seen).not.toHaveBeenCalled()
+    // …and the refusal is in the key's own log, with the route PATTERN.
+    expect(refusals).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keyId: 'k1',
+        workspaceId: 'ws-1',
+        route: '/api/workspaces',
+        status: 403,
+      }),
+    )
   })
 
   it('a read key cannot write or delete', async () => {
@@ -433,9 +449,26 @@ describe('the event path', () => {
         ['invoice', 'payment_recorded'],
         ['customer', 'created'],
         ['product', 'created'],
+        ['payment', 'payment_recorded'],
+        ['payment', 'cancelled'],
       ].map(([e, a]) => publicEventFor(e!, a!)),
     )
-    expect([...produced].sort()).toEqual([...WEBHOOK_EVENTS].sort())
+    // The rest come from the stock trigger — and only those.
+    const fromTrigger = WEBHOOK_EVENTS.filter((e) => e.startsWith('inventory.'))
+    expect(fromTrigger.sort()).toEqual(['inventory.low_stock', 'inventory.restocked'])
+    expect([...produced, ...fromTrigger].sort()).toEqual([...WEBHOOK_EVENTS].sort())
+    const trigger = readFileSync(
+      join(SRC, '..', '..', 'docs', 'developer-platform-02-migration.sql'),
+      'utf8',
+    )
+    for (const e of fromTrigger) expect(trigger).toContain(`v_type := '${e}'`)
+  })
+
+  it('the payments service really logs the two payment events', () => {
+    const payments = read('services', 'payments', 'payments.service.ts')
+    expect(payments).toContain("action: 'payment_recorded'")
+    expect(payments).toContain("entityType: 'payment'")
+    expect(payments).toContain("action: 'cancelled'")
   })
 })
 
@@ -534,13 +567,29 @@ describe('wiring', () => {
   const routeFiles = readdirSync(join(SRC, 'routes')).filter((f) => f.endsWith('.ts'))
   const routes = routeFiles.map((f) => read('routes', f)).join('\n')
 
+  // Routes registered under a prefix in index.ts are written without it, in
+  // their own file — looked up THERE, so a '/' in another file cannot match.
+  const PREFIXED: Record<string, string> = {
+    '/api/accounting': 'accounting.routes.ts',
+    '/api/payments': 'payments.routes.ts',
+  }
+  const escape = (text: string) => text.replace(/[/:]/g, '\\$&')
+
   it.each(Object.keys(API_ROUTE_SCOPES))('%s exists and runs requireWorkspaceContext', (entry) => {
     const [method, path] = entry.split(' ') as [string, string]
-    const accountingPath = path.replace(/^\/api\/accounting/, '')
+    const prefix = Object.keys(PREFIXED).find((p) => path === p || path.startsWith(`${p}/`))
+    const source = prefix ? read('routes', PREFIXED[prefix]!) : routes
+    const local = prefix ? path.slice(prefix.length) || '/' : path
     const pattern = new RegExp(
-      `fastify\\.${method.toLowerCase()}\\(\\s*'(${path.replace(/[/:]/g, '\\$&')}|${accountingPath.replace(/[/:]/g, '\\$&')})',[\\s\\S]{0,400}?requireWorkspaceContext`,
+      `fastify\\.${method.toLowerCase()}\\(\\s*'${escape(local)}',[\\s\\S]{0,400}?requireWorkspaceContext`,
     )
-    expect(pattern.test(routes)).toBe(true)
+    expect(pattern.test(source)).toBe(true)
+  })
+
+  it('index.ts registers those prefixes as the lookup assumes', () => {
+    const index = read('index.ts')
+    expect(index).toContain("server.register(accountingRoutes, { prefix: '/api/accounting' })")
+    expect(index).toContain("server.register(paymentsRoutes, { prefix: '/api/payments' })")
   })
 
   it('authenticate decides the route before the key becomes its creator', () => {
@@ -576,5 +625,114 @@ describe('wiring', () => {
       (dev.match(/fastify\.(get|post|patch|delete)\(/g) ?? []).length,
     )
     expect(read('index.ts')).toContain('server.register(developerRoutes)')
+  })
+})
+
+// ─── step 1: limits, request log, usage, replay ──────────────────────────────
+
+describe('the rate-limit bucket', () => {
+  it('a key is counted against itself, by hash — never the key, never the IP', () => {
+    const key = generateApiKey()
+    const bucket = rateLimitBucket(`Bearer ${key}`, '10.0.0.1')
+    expect(bucket).toBe(`apikey:${hashApiKey(key).slice(0, 32)}`)
+    expect(bucket).not.toContain(key)
+    expect(isApiKeyBucket(bucket)).toBe(true)
+    // Same key from another IP: same bucket.
+    expect(rateLimitBucket(`Bearer ${key}`, '10.0.0.2')).toBe(bucket)
+  })
+
+  it('a session or no header keeps the old bucket', () => {
+    expect(rateLimitBucket('Bearer eyJ.x.y', '10.0.0.1')).toBe('10.0.0.1')
+    expect(rateLimitBucket(undefined, 'anonymous')).toBe('anonymous')
+    expect(isApiKeyBucket('10.0.0.1')).toBe(false)
+  })
+
+  it('index.ts uses it, with the key budget', () => {
+    const index = read('index.ts')
+    expect(index).toContain('rateLimitBucket(request.headers.authorization,')
+    expect(index).toContain('isApiKeyBucket(key) ? API_KEY_RATE_LIMIT_PER_MINUTE : 100')
+    expect(API_KEY_RATE_LIMIT_PER_MINUTE).toBeGreaterThan(0)
+  })
+})
+
+describe('the request log', () => {
+  it('is written after the response, for key requests only', () => {
+    const index = read('index.ts')
+    const hook = index.slice(index.indexOf("server.addHook('onResponse'"))
+    expect(hook).toContain('const key = request.apiKey')
+    expect(hook).toContain('if (!key) return')
+    expect(hook).toContain('route: request.routeOptions.url')
+  })
+
+  it('never throws, and is silent before the migration', async () => {
+    const logRequest = vi.fn(async () => Promise.reject(new NotConfiguredError()))
+    const svc = createDeveloperService(fakeRepo({ logRequest } as Partial<Repo>), vi.fn())
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() =>
+      svc.recordRequest({
+        workspaceId: 'ws',
+        keyId: 'k',
+        method: 'GET',
+        route: '/x',
+        status: 200,
+        durationMs: 3,
+      }),
+    ).not.toThrow()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(logRequest).toHaveBeenCalled()
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
+  it('usage is refused for a key of another workspace', async () => {
+    const svc = createDeveloperService(
+      fakeRepo({ getKey: vi.fn(async () => null) } as Partial<Repo>),
+      vi.fn(),
+    )
+    await expect(
+      svc.keyUsage({ workspaceId: 'ws', userId: 'u', role: 'owner' }, 'foreign'),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+})
+
+describe('replay', () => {
+  const ctx = { workspaceId: 'ws', userId: 'u', role: 'owner' as const }
+
+  it('refuses a window longer than 30 days before touching the database', async () => {
+    const replay = vi.fn(async () => 0)
+    const svc = createDeveloperService(
+      fakeRepo({
+        getEndpoint: vi.fn(async () => ({ id: 'ep1' })),
+        replay,
+      } as unknown as Partial<Repo>),
+      vi.fn(),
+    )
+    await expect(
+      svc.replayEndpoint(ctx, 'ep1', new Date(Date.now() - 31 * 86_400_000)),
+    ).rejects.toMatchObject({
+      code: 'REPLAY_WINDOW_TOO_LONG',
+    })
+    expect(replay).not.toHaveBeenCalled()
+  })
+
+  it('a replayed delivery says so in a header, with the original event id', async () => {
+    const post = vi.fn(async () => ({ status: 200, error: null }))
+    const repo = fakeRepo({
+      claimDeliveries: vi.fn(async () => [{ ...delivery, replayed_at: '2026-09-27T00:00:00Z' }]),
+    })
+    await createDeveloperService(repo, post).drainWebhooks()
+    const [, , headers] = post.mock.calls[0] as unknown as [string, string, Record<string, string>]
+    expect(headers['Hisabche-Replay']).toBe('true')
+    expect(headers['Hisabche-Event-Id']).toBe('e1')
+  })
+
+  it('an ordinary delivery carries no replay header', async () => {
+    const post = vi.fn(async () => ({ status: 200, error: null }))
+    await createDeveloperService(
+      fakeRepo({ claimDeliveries: vi.fn(async () => [delivery]) }),
+      post,
+    ).drainWebhooks()
+    const [, , headers] = post.mock.calls[0] as unknown as [string, string, Record<string, string>]
+    expect(headers['Hisabche-Replay']).toBeUndefined()
   })
 })

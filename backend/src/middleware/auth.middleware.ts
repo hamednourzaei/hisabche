@@ -363,6 +363,16 @@ async function authenticateApiKey(request: FastifyRequest, reply: FastifyReply, 
 
   const decision = decideRoute(request.method, request.routeOptions.url, principal.scopes)
   if (!decision.allowed) {
+    // The refusal goes in the key's own log: «why is my integration getting
+    // 403?» is answered there. (An allowed request is logged in onResponse.)
+    developerService.recordRequest({
+      workspaceId: principal.workspaceId,
+      keyId: principal.id,
+      method: request.method,
+      route: request.routeOptions.url ?? 'unmatched',
+      status: 403,
+      durationMs: Math.round(reply.elapsedTime),
+    })
     return reply.status(403).send({
       error: 'Forbidden',
       code:

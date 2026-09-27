@@ -613,6 +613,7 @@ export {
   webhookEndpointCreateSchema,
   webhookEndpointUpdateSchema,
   WEBHOOK_SIGNATURE_HEADER,
+  WEBHOOK_REPLAY_HEADER,
   WEBHOOK_TOLERANCE_SECONDS,
   signWebhookPayload,
   verifyWebhookSignature,

@@ -6125,7 +6125,9 @@
       "write_customers": "Create and edit customers",
       "write_products": "Create and edit products",
       "write_invoices": "Create invoices",
-      "subscribe_events": "Receive events"
+      "subscribe_events": "Receive events",
+      "read_payments": "Read payments",
+      "read_inventory": "Read warehouse stock"
     },
     "event": {
       "invoice_created": "Invoice created",
@@ -6135,14 +6137,32 @@
       "invoice_posted": "Invoice posted to the ledger",
       "invoice_payment_recorded": "Invoice payment recorded",
       "customer_created": "New customer",
-      "product_created": "New product"
+      "product_created": "New product",
+      "payment_recorded": "Payment recorded",
+      "payment_cancelled": "Payment cancelled",
+      "inventory_low_stock": "Product stock reached its reorder level",
+      "inventory_restocked": "Product stock is sufficient again"
     },
     "delivery": {
       "pending": "Queued",
       "delivering": "Sending",
       "succeeded": "Delivered",
       "failed": "Failed"
-    }
+    },
+    "showUsage": "Usage",
+    "hideUsage": "Hide usage",
+    "usageNotConfigured": "Usage reporting is not set up on the server yet (the second database script has not been run). The key works; its requests are just not recorded.",
+    "usageTitle": "Usage over the last 7 days (exact counts)",
+    "usageEmpty": "This key made no requests in the last 7 days.",
+    "usageDay": "Day",
+    "usageRequests": "Requests",
+    "usageClientErrors": "4xx errors",
+    "usageServerErrors": "5xx errors",
+    "usageAvgMs": "Average (ms)",
+    "recentRequests": "Latest requests (at most 50 — a sample, not a total)",
+    "replay1d": "Resend last 24 hours",
+    "replay7d": "Resend last 7 days",
+    "replayed": "Deliveries put back in the queue"
   },
   "webhook": {
     "urlMustBeHttps": "The webhook URL must start with https://."

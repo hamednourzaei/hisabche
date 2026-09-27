@@ -114,6 +114,15 @@ export const API_ROUTE_SCOPES: Readonly<Record<string, ApiKeyScope>> = {
   'PATCH /api/products/:id': 'write:products',
 
   'GET /api/accounting/customer-debt': 'read:reports',
+
+  // Only the bare prefix: Fastify registers '/api/payments/' as a separate
+  // route, and that one stays closed.
+  'GET /api/payments': 'read:payments',
+  'GET /api/payments/:id': 'read:payments',
+
+  // Quantities and sell prices per warehouse — no cost (inventory.cost.read).
+  'GET /api/warehouses': 'read:inventory',
+  'GET /api/warehouses/:id/stock': 'read:inventory',
 }
 
 /** Which scopes a write scope also satisfies for reading. */
@@ -145,8 +154,13 @@ export function decideRoute(
 
 /**
  * The public event a business event becomes, or null for one that is not part
- * of the catalogue. Only the invoice form of a payment is published — the
- * payment itself has no read scope yet (see WEBHOOK_EVENTS).
+ * of the catalogue. A payment is published twice on purpose: once as itself
+ * (`payment.recorded`, read with `read:payments`) and once per invoice it
+ * settles (`invoice.payment_recorded`) — the payments service logs both.
+ *
+ * ⚠️ `inventory.*` is NOT here: those come from the database trigger on the
+ * stock projection (docs/developer-platform-02-migration.sql), because no
+ * service sees every stock writer.
  */
 export function publicEventFor(entityType: string, action: string): WebhookEventType | null {
   const map: Record<string, WebhookEventType> = {
@@ -158,6 +172,8 @@ export function publicEventFor(entityType: string, action: string): WebhookEvent
     'invoice.payment_recorded': 'invoice.payment_recorded',
     'customer.created': 'customer.created',
     'product.created': 'product.created',
+    'payment.payment_recorded': 'payment.recorded',
+    'payment.cancelled': 'payment.cancelled',
   }
   const type = map[`${entityType}.${action}`]
   return type && (WEBHOOK_EVENTS as readonly string[]).includes(type) ? type : null
@@ -251,4 +267,28 @@ export function checkWebhookUrl(raw: string): UrlCheck {
   }
   if (isIP(host) && isPrivateAddress(host)) return { ok: false, reason: 'PRIVATE_HOST' }
   return { ok: true, host }
+}
+
+// ─── Rate limit ──────────────────────────────────────────────────────────────
+
+/** Requests per minute for ONE key, shared by every instance (Redis store). */
+export const API_KEY_RATE_LIMIT_PER_MINUTE = 120
+
+/**
+ * The rate-limit bucket for a request, decided before authentication runs.
+ *
+ * A request carrying an API key is counted against THAT KEY, not the IP: an
+ * integration behind a shared office IP would otherwise spend the budget of
+ * every person in the office, and a key spread over many IPs would get a new
+ * budget per IP. The bucket is a hash — never the key itself (Redis keyspace).
+ * A made-up key still gets a bucket; that is what limits guessing.
+ */
+export function rateLimitBucket(authorization: string | undefined, fallback: string): string {
+  const token = authorization?.replace(/^Bearer\s+/i, '') ?? ''
+  if (looksLikeApiKey(token)) return `apikey:${hashApiKey(token).slice(0, 32)}`
+  return fallback
+}
+
+export function isApiKeyBucket(bucket: string): boolean {
+  return bucket.startsWith('apikey:')
 }

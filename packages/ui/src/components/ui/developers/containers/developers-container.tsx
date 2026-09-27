@@ -22,6 +22,8 @@ import {
   useUpdateWebhookEndpoint,
   useWebhookDeliveries,
   useWebhookEndpoints,
+  useApiKeyUsage,
+  useReplayWebhook,
 } from '@hisabche/api'
 
 import { useDateFormat } from '../../../../hooks/use-date-format'
@@ -68,6 +70,9 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
   const rotateSecret = useRotateWebhookSecret()
   const sendTest = useSendWebhookTest()
   const retryDelivery = useRetryWebhookDelivery()
+  const replay = useReplayWebhook()
+  const [usageKeyId, setUsageKeyId] = useState<string | null>(null)
+  const usage = useApiKeyUsage(usageKeyId)
 
   const [revealed, setRevealed] = useState<{ kind: 'key' | 'secret'; value: string } | null>(null)
   const [busyEndpointId, setBusyEndpointId] = useState<string | null>(null)
@@ -157,6 +162,21 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
       deliveriesState={sectionState(deliveries.isLoading, deliveries.error)}
       deliveries={deliveries.data ?? []}
       onRetryDelivery={(id) => retryDelivery.mutate(id, { onError: failed })}
+      usageKeyId={usageKeyId}
+      onToggleUsage={setUsageKeyId}
+      usageState={sectionState(usage.isLoading, usage.error)}
+      usage={usage.data ?? null}
+      onReplay={(id, days) =>
+        void onEndpoint(id, async () => {
+          const out = await replay.mutateAsync({
+            id,
+            since: new Date(Date.now() - days * 86_400_000).toISOString(),
+          })
+          setSelectedEndpointId(id)
+          // The count the database requeued — zero is said, not hidden.
+          toast.info(t('developer.replayed'), String(out.requeued))
+        })
+      }
       revealed={revealed}
       onDismissRevealed={() => setRevealed(null)}
       onCopy={(value) => {

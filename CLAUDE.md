@@ -236,7 +236,8 @@ cd apps/admin     && npx tsc --noEmit
 **پلتفرم توسعه‌دهنده (کلید API / وب‌هوک)**
 
 - ⚠️ **کلید API فقط route های `API_ROUTE_SCOPES` را باز می‌کند و این تصمیم داخل `authenticate` است**، نه بعدتر: ۳۲ فایل route فقط عضویت را چک می‌کنند و بعضی فقط `authenticate` دارند. route تازه‌ای که کلید باید برسد را **صریحاً** به allowlist اضافه کن — و باید `requireWorkspaceContext` داشته باشد (گارد: `developer-platform.test.ts`).
-- رویداد وب‌هوک فقط از `logBusinessEvent` می‌آید (`developerService.emitEvent`). رویداد جدید = نگاشت در `publicEventFor` + `WEBHOOK_EVENTS` + برچسب در هر سه زبان (`developers-screen.test.ts`). رویدادی که گیرنده scope خواندنش را ندارد منتشر نمی‌شود.
+- رویداد وب‌هوک از دو جا می‌آید و فقط از این دو: (۱) `logBusinessEvent` → `developerService.emitEvent` برای فاکتور، مشتری، کالا و پرداخت؛ (۲) تریگر `products_stock_webhook_trg` روی projection موجودی برای `inventory.low_stock` / `inventory.restocked` — فقط روی **عبور** از `min_stock_level`، و خطایش هرگز فروش را متوقف نمی‌کند. رویداد جدید = نگاشت + `WEBHOOK_EVENTS` + برچسب در هر سه زبان (`developers-screen.test.ts`). رویدادی که گیرنده scope خواندنش را ندارد منتشر نمی‌شود. **`order.*` تا تعریف state machine سفارش منتشر نمی‌شود.**
+- ⚠️ route با prefix (`/api/payments`) در Fastify دو الگوی جدا دارد: `/api/payments` و `/api/payments/`. allowlist فقط اولی را باز می‌کند؛ دومی بسته می‌ماند.
 
 ---
 

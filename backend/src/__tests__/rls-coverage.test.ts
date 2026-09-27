@@ -99,6 +99,7 @@ const TENANT_TABLES = [
   'api_keys',
   'webhook_endpoints',
   'webhook_deliveries',
+  'api_request_logs',
 ]
 
 function allMigrationSql(): string {

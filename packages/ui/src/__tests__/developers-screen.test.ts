@@ -53,12 +53,19 @@ describe('the screen', () => {
     expect(view).toContain("t('developer.forbidden')")
   })
 
-  it('the view takes props only — no data hook', () => {
-    // Types only from @hisabche/api; a value import would be a hook.
-    expect(view).toContain(
-      "import type { ApiKeyRow, WebhookDeliveryRow, WebhookEndpointRow } from '@hisabche/api'",
-    )
-    expect(view).not.toMatch(/^import \{[^}]*\} from '@hisabche\/api'/m)
+  it('the views take props only — no data hook', () => {
+    const panel = read('packages/ui/src/components/ui/developers/key-usage-panel.tsx')
+    for (const source of [view, panel]) {
+      // Types only from @hisabche/api; a value import would be a hook.
+      expect(source).toMatch(/^import type \{[^}]*\} from '@hisabche\/api'/m)
+      expect(source).not.toMatch(/^import \{[^}]*\} from '@hisabche\/api'/m)
+    }
+  })
+
+  it('usage before migration 02 is its own sentence, not an error or «no requests»', () => {
+    const panel = read('packages/ui/src/components/ui/developers/key-usage-panel.tsx')
+    expect(panel).toContain("if (state === 'not-configured')")
+    expect(panel).toContain("t('developer.usageNotConfigured')")
   })
 
   it('is reachable on every host and hidden from crawlers', () => {

@@ -236,3 +236,55 @@ export function useRetryWebhookDelivery() {
       qc.invalidateQueries({ queryKey: developerKeys.deliveries(ws, row.endpoint_id) }),
   })
 }
+
+export interface ApiKeyUsage {
+  days: number
+  /** Exact counts per day (count(*) on the server). */
+  daily: Array<{
+    day: string
+    requests: number
+    client_errors: number
+    server_errors: number
+    avg_ms: number | null
+  }>
+  /** The latest requests — a sample to read, not a figure. */
+  recent: Array<{
+    method: string
+    route: string
+    status: number
+    duration_ms: number
+    created_at: string
+  }>
+}
+
+export function useApiKeyUsage(keyId: string | null) {
+  const ready = useAuthReady()
+  const ws = useWorkspaceKey()
+  return useQuery({
+    queryKey: [...developerKeys.keys(ws), 'usage', keyId ?? ''] as const,
+    queryFn: async () => {
+      const body = (await apiClient.get(`/developer/keys/${keyId}/usage`))
+        .data as Partial<ApiKeyUsage> | null
+      return {
+        days: Number(body?.days ?? 7),
+        daily: asList<ApiKeyUsage['daily'][number]>(body?.daily),
+        recent: asList<ApiKeyUsage['recent'][number]>(body?.recent),
+      }
+    },
+    enabled: ready && !!keyId,
+    retry: false,
+  })
+}
+
+export function useReplayWebhook() {
+  const qc = useQueryClient()
+  const ws = useWorkspaceKey()
+  return useMutation({
+    mutationFn: async ({ id, since }: { id: string; since: string }) =>
+      (await apiClient.post(`/developer/webhooks/${id}/replay`, { since })).data as {
+        requeued: number
+      },
+    onSuccess: (_out, { id }) =>
+      qc.invalidateQueries({ queryKey: developerKeys.deliveries(ws, id) }),
+  })
+}

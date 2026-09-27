@@ -101,6 +101,12 @@ import { debugRoutes } from './routes/debug.routes'
 import { activityRoutes } from './routes/activity.routes'
 import adminRoutes from './routes/admin.routes'
 import { developerRoutes } from './routes/developer.routes'
+import {
+  API_KEY_RATE_LIMIT_PER_MINUTE,
+  isApiKeyBucket,
+  rateLimitBucket,
+} from './services/developer/developer.domain'
+import { developerService } from './services/developer/developer.service'
 
 // ──────────────────────────────────────────────
 // Plugins & Scheduler
@@ -251,6 +257,22 @@ server.addHook('onResponse', async (request, reply) => {
     },
     '📊 perf',
   )
+})
+
+// Every request made WITH AN API KEY is written to the key's request log
+// (docs/developer-platform-02-migration.sql): route PATTERN, status, duration.
+// Fire-and-forget — a log must never slow down or fail the response.
+server.addHook('onResponse', async (request, reply) => {
+  const key = request.apiKey
+  if (!key) return
+  developerService.recordRequest({
+    workspaceId: key.workspaceId,
+    keyId: key.id,
+    method: request.method,
+    route: request.routeOptions.url ?? 'unmatched',
+    status: reply.statusCode,
+    durationMs: Math.round(reply.elapsedTime),
+  })
 })
 
 server.addHook('onSend', async (request, reply, payload) => {
@@ -589,11 +611,12 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(rateLimit, {
     // One budget across all instances (Redis), not one per process.
     store: SharedRateLimitStore,
-    max: 100,
+    // An API key has its own bucket and budget (developer.domain.ts).
+    max: (_request, key) => (isApiKeyBucket(key) ? API_KEY_RATE_LIMIT_PER_MINUTE : 100),
     timeWindow: '1 minute',
     keyGenerator: (request) => {
       const userId = (request as any).userId
-      return userId || request.ip || 'anonymous'
+      return rateLimitBucket(request.headers.authorization, userId || request.ip || 'anonymous')
     },
     errorResponseBuilder: (_request, context) => {
       const afterMs =
