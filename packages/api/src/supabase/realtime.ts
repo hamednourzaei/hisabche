@@ -74,8 +74,101 @@ import { onSignedOut, supabaseClient } from './client'
 type Listener = () => void
 
 interface SharedChannel {
-  channel: RealtimeChannel
+  /** Null while the tab is hidden and the channel is paused (see below). */
+  channel: RealtimeChannel | null
   listeners: Set<Listener>
+  workspaceId: string
+  table: string
+}
+
+// ─── Hidden tabs do not hold channels (27 Sep 2026) ─────────────────────────
+//
+// Every open postgres_changes channel keeps Supabase Realtime polling the
+// replication slot — `realtime.list_changes` was the most-called statement in
+// pg_stat_statements (~90k calls). A tab left open in the background kept its
+// channels for hours, for a screen nobody was looking at.
+//
+// After HIDDEN_GRACE_MS hidden, the channels close; the listeners stay. When
+// the tab is visible again the channels reopen and every listener is told
+// «something may have changed» ONCE — it refetches, so nothing missed while
+// paused is lost. Realtime is an optimisation, never the source of truth.
+export const HIDDEN_GRACE_MS = 60_000
+let hiddenTimer: ReturnType<typeof setTimeout> | null = null
+let paused = false
+
+function openChannel(key: string, entry: SharedChannel): RealtimeChannel {
+  const { workspaceId, table, listeners } = entry
+  return supabaseClient
+    .channel(`hisabche-${workspaceId}-${table}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table,
+        // Server-side. Foreign rows are never sent, so they cannot be read
+        // off the socket and cannot trigger a spurious refetch.
+        filter: `workspace_id=eq.${workspaceId}`,
+      },
+      () => notify(key, listeners),
+    )
+    .subscribe()
+}
+
+function notify(key: string, listeners: Set<Listener>): void {
+  // A copy, because a listener may unsubscribe from inside its own
+  // callback — mutating the live set mid-iteration would skip the next.
+  for (const listener of [...listeners]) {
+    try {
+      listener()
+    } catch (err) {
+      // One bad listener must not stop the others from being told.
+      console.warn(`[realtime] listener for "${key}" threw:`, err)
+    }
+  }
+}
+
+function pauseAll(): void {
+  paused = true
+  for (const entry of shared.values()) {
+    if (!entry.channel) continue
+    void supabaseClient.removeChannel(entry.channel)
+    entry.channel = null
+  }
+}
+
+function resumeAll(): void {
+  if (!paused) return
+  paused = false
+  for (const [key, entry] of shared.entries()) {
+    if (entry.channel) continue
+    entry.channel = openChannel(key, entry)
+    // Catch up on whatever changed while nobody was listening.
+    notify(key, entry.listeners)
+  }
+}
+
+let visibilityHookInstalled = false
+
+function installVisibilityHook(): void {
+  if (visibilityHookInstalled || typeof document === 'undefined') return
+  visibilityHookInstalled = true
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      if (hiddenTimer === null) {
+        hiddenTimer = setTimeout(() => {
+          hiddenTimer = null
+          pauseAll()
+        }, HIDDEN_GRACE_MS)
+      }
+      return
+    }
+    if (hiddenTimer !== null) {
+      clearTimeout(hiddenTimer)
+      hiddenTimer = null
+    }
+    resumeAll()
+  })
 }
 
 /** One entry per table, for the lifetime of the tab. */
@@ -106,6 +199,7 @@ export async function subscribeToChannel(
   }
 
   installSignOutHook()
+  installVisibilityHook()
 
   // Keyed by BOTH, so two workspaces open in two tabs get two channels rather
   // than silently sharing one filtered for whichever subscribed first.
@@ -114,36 +208,10 @@ export async function subscribeToChannel(
   let entry = shared.get(key)
 
   if (!entry) {
-    const listeners = new Set<Listener>()
-
-    const channel = supabaseClient
-      .channel(`hisabche-${workspaceId}-${table}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table,
-          // Server-side. Foreign rows are never sent, so they cannot be read
-          // off the socket and cannot trigger a spurious refetch.
-          filter: `workspace_id=eq.${workspaceId}`,
-        },
-        () => {
-          // A copy, because a listener may unsubscribe from inside its own
-          // callback — mutating the live set mid-iteration would skip the next.
-          for (const listener of [...listeners]) {
-            try {
-              listener()
-            } catch (err) {
-              // One bad listener must not stop the others from being told.
-              console.warn(`[realtime] listener for "${key}" threw:`, err)
-            }
-          }
-        },
-      )
-      .subscribe()
-
-    entry = { channel, listeners }
+    entry = { channel: null, listeners: new Set<Listener>(), workspaceId, table }
+    // A subscriber that arrives while the tab is paused opens nothing until
+    // the tab is visible again; resumeAll() opens it then.
+    if (!paused) entry.channel = openChannel(key, entry)
     shared.set(key, entry)
   }
 
@@ -165,7 +233,7 @@ export async function subscribeToChannel(
       // keep paying for messages nobody is listening to.
       if (current.listeners.size === 0) {
         shared.delete(key)
-        void supabaseClient.removeChannel(current.channel)
+        if (current.channel) void supabaseClient.removeChannel(current.channel)
       }
     },
   }
@@ -183,7 +251,7 @@ export function closeWorkspaceChannels(workspaceId: string): void {
   for (const [key, entry] of [...shared.entries()]) {
     if (!key.startsWith(`${workspaceId}:`)) continue
     shared.delete(key)
-    void supabaseClient.removeChannel(entry.channel)
+    if (entry.channel) void supabaseClient.removeChannel(entry.channel)
   }
 }
 
@@ -191,7 +259,7 @@ export function closeWorkspaceChannels(workspaceId: string): void {
 function closeAllChannels(): void {
   for (const [key, entry] of [...shared.entries()]) {
     shared.delete(key)
-    void supabaseClient.removeChannel(entry.channel)
+    if (entry.channel) void supabaseClient.removeChannel(entry.channel)
   }
 }
 
@@ -231,15 +299,22 @@ function installSignOutHook(): void {
  */
 export function realtimeStats(): { channels: number; listeners: number } {
   let listeners = 0
-  for (const entry of shared.values()) listeners += entry.listeners.size
-  return { channels: shared.size, listeners }
+  let channels = 0
+  for (const entry of shared.values()) {
+    listeners += entry.listeners.size
+    if (entry.channel) channels++
+  }
+  return { channels, listeners }
 }
 
 /** Test-only reset. */
 export function __resetRealtimeForTests(): void {
   for (const entry of shared.values()) {
-    void supabaseClient.removeChannel(entry.channel)
+    if (entry.channel) void supabaseClient.removeChannel(entry.channel)
   }
   shared.clear()
   signOutHookInstalled = false
+  if (hiddenTimer !== null) clearTimeout(hiddenTimer)
+  hiddenTimer = null
+  paused = false
 }

@@ -30,7 +30,7 @@
 
 import { memo, useCallback, useMemo, useState } from 'react'
 import { ExternalLink } from 'lucide-react'
-import type { Conflict, FieldDivergence, ResolutionChoice } from '@hisabche/api'
+import type { ConflictSummary, FieldDivergence, ResolutionChoice } from '@hisabche/api'
 import {
   ActionButton,
   Badge,
@@ -56,9 +56,9 @@ type Translate = (key: string, fallback?: string) => string
 
 export interface ConflictsViewProps {
   t: Translate
-  conflicts: Conflict[]
+  conflicts: ConflictSummary[]
   status: 'open' | 'resolved' | 'all'
-  selected: Conflict | null
+  selected: ConflictSummary | null
   isLoading: boolean
   error: string | null
   actionError: string | null
@@ -130,7 +130,7 @@ function renderValue(t: Translate, value: unknown): string {
   return String(value)
 }
 
-function StatusBadge({ t, status }: { t: Translate; status: Conflict['status'] }) {
+function StatusBadge({ t, status }: { t: Translate; status: ConflictSummary['status'] }) {
   if (status === 'resolved') return <Badge tone="good">{t('conflicts.resolved')}</Badge>
   if (status === 'superseded') return <Badge tone="neutral">{t('conflicts.superseded')}</Badge>
   return <Badge tone="warn">{t('conflicts.open')}</Badge>
@@ -200,7 +200,7 @@ export const ConflictsView = memo(function ConflictsView({
     [onSelect],
   )
 
-  const columns = useMemo<TableColumn<Conflict>[]>(
+  const columns = useMemo<TableColumn<ConflictSummary>[]>(
     () => [
       {
         id: 'what',

@@ -224,8 +224,10 @@ export interface HttpRequestResponse {
   statusText: string
   headers: Record<string, string>
   data: string
-  /** Present only when the request asked for `responseType: 'bytes'`. */
+  /** Present only when the request asked for `responseType: 'bytes'` (desktop: IPC carries bytes). */
   bytes?: Uint8Array
+  /** The same bytes as base64 — for a host whose channel is JSON (Android WebView). */
+  bytesBase64?: string
 }
 
 // ============================================

@@ -124,6 +124,8 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
         if (err instanceof z.ZodError) {
           return reply.code(400).send({ error: 'Validation failed', details: err.errors })
         }
+        if (err instanceof ConflictError) return reply.code(409).send({ error: err.message })
+        if (err instanceof NotFoundError) return reply.code(404).send({ error: err.message })
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to update purchase order' })
       }

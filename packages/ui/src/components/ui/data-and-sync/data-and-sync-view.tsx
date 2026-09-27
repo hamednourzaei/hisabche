@@ -28,7 +28,7 @@
 
 import { memo } from 'react'
 import { useNow } from '../../../hooks/use-now'
-import type { Conflict, DuplicateSummary, MigrationJob, SyncOverview } from '@hisabche/api'
+import type { ConflictSummary, DuplicateSummary, MigrationJob, SyncOverview } from '@hisabche/api'
 import { useDateFormat } from '../../../hooks/use-date-format'
 
 import {
@@ -52,7 +52,7 @@ export interface DataAndSyncViewProps {
   /** null means "could not be read", which is not the same as zero. */
   conflictCount: number | null
   /** The open conflicts themselves, for the preview. null = not read. */
-  conflicts: Conflict[] | null
+  conflicts: ConflictSummary[] | null
   /** Last local backup (sync-center owns backups). null = never. */
   lastBackupAt: number | null
   lastMigration: MigrationJob | null

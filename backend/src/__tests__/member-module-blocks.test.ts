@@ -73,11 +73,23 @@ describe('the server applies it on every request', () => {
   it('requireWorkspaceContext restricts the role set by the member blocks', async () => {
     const { readFileSync } = await import('node:fs')
     const { join } = await import('node:path')
-    const src = readFileSync(join(__dirname, '..', 'middleware', 'workspace.middleware.ts'), 'utf8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/^\s*\/\/.*$/gm, '')
-    expect(src).toContain('capabilities: restrictByModuleBlocks(')
-    expect(src).toContain('memberModuleBlocks.forMember(resolved.workspaceId, userId)')
+    const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    const middleware = strip(
+      readFileSync(join(__dirname, '..', 'middleware', 'workspace.middleware.ts'), 'utf8'),
+    )
+    // Since 27 Sep 2026 the context is built in one place, with two read paths
+    // (one RPC, or the separate reads before its migration). BOTH must apply
+    // the blocks — workspace-access-one-trip.test.ts checks they agree.
+    const access = strip(
+      readFileSync(
+        join(__dirname, '..', 'services', 'authorization', 'workspace-access.service.ts'),
+        'utf8',
+      ),
+    )
+    expect(middleware).toContain('request.tenancy = await resolveWorkspaceAccess(')
+    expect(access.split('capabilities: restrictByModuleBlocks(').length - 1).toBe(2)
+    expect(access).toContain('memberModuleBlocks.forMember(resolved.workspaceId, userId)')
+    expect(access).toContain('parseBlocks(Array.isArray(payload.blocks) ? payload.blocks : [])')
   })
 })
 

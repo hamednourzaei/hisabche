@@ -40,6 +40,18 @@ export interface ActivityItemDto {
   actorRole?: ActorRole | null
 }
 
+/**
+ * What the feed and an entity's timeline read (27 Sep 2026) — every column
+ * they render, and NOT `entity_snapshot`: a JSON copy of the whole record at
+ * the time, never shown in a list, and it made each page of `select('*')` many
+ * times larger than the text on screen.
+ */
+export const ACTIVITY_COLUMNS =
+  'id, workspace_id, actor_id, actor_name, entity_type, entity_id, action, title, description, reference_number, icon, metadata, importance, is_read, is_pinned, is_archived, created_at, updated_at'
+
+/** Entity types whose summary is read from their table (batched). */
+const BATCHED_ENTITIES = new Set(['invoice', 'customer', 'product', 'payment'])
+
 export interface EntitySummaryDto {
   label: string
   subtitle?: string | undefined
@@ -307,7 +319,7 @@ export class ActivityService {
     try {
       let query = supabase
         .from('activities')
-        .select('*', { count: 'exact' })
+        .select(ACTIVITY_COLUMNS, { count: 'exact' })
         .eq('actor_id', userId)
         .order('created_at', { ascending: false })
         .limit(limit + 1)
@@ -381,17 +393,13 @@ export class ActivityService {
       // دیتابیس. با ۱۴ گروه این یعنی ۱۴ کوئری پشت‌سرهم و پاسخ ۳.۵ ثانیه‌ای.
       // حالا همه با هم موازی اجرا می‌شوند، پس زمان کل تقریباً برابر کندترین
       // کوئری است نه مجموع همه.
-      const summaryByKey = new Map<string, Partial<EntitySummaryDto> | null>()
-      await Promise.all(
-        Array.from(groups.keys()).map(async (key) => {
-          const [entityType, entityId] = key.split(':') as [string, string]
-          try {
-            summaryByKey.set(key, await this.getEntitySummary(entityType, entityId, workspaceId))
-          } catch (summaryError) {
-            console.warn(`⚠️ Failed to get summary for ${key}`, summaryError)
-            summaryByKey.set(key, null)
-          }
-        }),
+      // ⚠️ ONE QUERY PER TYPE, NOT PER ROW (27 Sep 2026). The parallel
+      // version still sent one query per group — thirty at once on a busy
+      // page, queued on the connection pool: /api/v1/activities took 4.6 s in
+      // production. `getEntitySummaries` reads each type with one `in()`.
+      const summaryByKey = await this.getEntitySummaries(
+        workspaceId,
+        Array.from(groups.keys()).map((key) => key.split(':') as [string, string]),
       )
 
       for (const [key, groupItems] of groups) {
@@ -476,14 +484,12 @@ export class ActivityService {
 
       return response
     } catch (error) {
+      // ⚠️ THROWN, NOT AN EMPTY FEED (27 Sep 2026, CLAUDE.md §7.3). This
+      // returned `{ data: [], total: 0 }` with a 200, which the route-level
+      // cache then kept: a broken query read as «nothing happened» for
+      // everyone until it expired.
       console.error('❌ [ActivityService] Unexpected error in getActivities:', error)
-      // ✅ به جای throw، خالی برگردان
-      return {
-        data: [],
-        nextCursor: null,
-        hasMore: false,
-        total: 0,
-      }
+      throw error
     }
   }
 
@@ -514,7 +520,7 @@ export class ActivityService {
 
     let query = supabase
       .from('activities')
-      .select('*')
+      .select(ACTIVITY_COLUMNS)
       .eq('workspace_id', ctx.workspaceId)
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
@@ -537,6 +543,123 @@ export class ActivityService {
       nextCursor: hasMore ? ((page[page.length - 1] as any)?.created_at ?? null) : null,
       hasMore,
     }
+  }
+
+  // ─── Entity summaries, batched ───────────────────────────────────────────
+  /**
+   * Summaries for many (type, id) pairs: one query per type, in parallel.
+   *
+   * ⚠️ PAYMENTS ARE READ FROM `payments` (27 Sep 2026). This read
+   * `transactions`, but payments have lived in `payments` since the AR/AP
+   * migration, so every payment in the activity feed showed no amount and
+   * logged «Payment not found».
+   *
+   * A missing row is a document deleted since its activity was written —
+   * normal, and silent. A failed query is logged once per type and those
+   * cards show without a summary; the feed itself still loads.
+   */
+  private async getEntitySummaries(
+    workspaceId: string,
+    pairs: Array<[string, string]>,
+  ): Promise<Map<string, Partial<EntitySummaryDto> | null>> {
+    const out = new Map<string, Partial<EntitySummaryDto> | null>()
+    const idsOf = (type: string) => [
+      ...new Set(pairs.filter(([t, id]) => t === type && id).map(([, id]) => id)),
+    ]
+
+    const read = async <T>(
+      type: string,
+      table: string,
+      columns: string,
+      toSummary: (row: T) => Partial<EntitySummaryDto>,
+    ) => {
+      const ids = idsOf(type)
+      if (ids.length === 0) return
+      const { data, error } = await supabase
+        .from(table)
+        .select(columns)
+        .eq('workspace_id', workspaceId)
+        .in('id', ids)
+      if (error) {
+        console.warn(`⚠️ [ActivityService] ${type} summaries unavailable:`, error.message)
+        return
+      }
+      for (const row of (data ?? []) as unknown as Array<T & { id: string }>) {
+        out.set(`${type}:${row.id}`, toSummary(row))
+      }
+    }
+
+    await Promise.all([
+      read<{
+        invoice_number: string | null
+        total: number | null
+        currency: string | null
+        status: string | null
+        type: string | null
+        customer: { full_name: string | null } | Array<{ full_name: string | null }> | null
+      }>(
+        'invoice',
+        'invoices',
+        'id, invoice_number, total, currency, status, type, customer:customers!fk_invoices_customer (full_name)',
+        (data) => {
+          const customer = Array.isArray(data.customer) ? data.customer[0] : data.customer
+          return {
+            label: `INV-${data.invoice_number || ''}`,
+            subtitle: customer?.full_name || undefined,
+            amount: data.total || undefined,
+            currency: data.currency || undefined,
+            status: data.status || undefined,
+            // فاکتورهای قدیمیِ بدون type فروش‌اند.
+            transactionType: (data.type as 'sale' | 'purchase' | null) ?? 'sale',
+          }
+        },
+      ),
+      read<{
+        full_name: string | null
+        phone: string | null
+        email: string | null
+        opening_balance: number | null
+      }>('customer', 'customers', 'id, full_name, phone, email, opening_balance', (data) => ({
+        label: data.full_name || '',
+        subtitle: data.phone || data.email || undefined,
+        amount: data.opening_balance || undefined,
+        currency: 'AFN',
+      })),
+      read<{
+        name: string
+        sku: string | null
+        quantity: number | null
+        sell_price: number | null
+        currency: string | null
+      }>('product', 'products', 'id, name, sku, quantity, sell_price, currency', (data) => ({
+        label: data.name,
+        subtitle: data.sku || `موجودی: ${data.quantity ?? 0}`,
+        amount: data.sell_price ?? undefined,
+        currency: data.currency || 'AFN',
+      })),
+      read<{
+        amount: number | null
+        currency: string | null
+        reference: string | null
+        notes: string | null
+      }>('payment', 'payments', 'id, amount, currency, reference, notes', (data) => ({
+        label: data.reference || 'پرداخت',
+        subtitle: data.notes || undefined,
+        amount: data.amount ?? undefined,
+        currency: data.currency || 'AFN',
+      })),
+    ])
+
+    // Other types carry no row to read — their summary is the route map.
+    for (const [type, id] of pairs) {
+      const key = `${type}:${id}`
+      if (out.has(key)) continue
+      out.set(
+        key,
+        BATCHED_ENTITIES.has(type) ? null : await this.getEntitySummary(type, id, workspaceId),
+      )
+    }
+    return out
   }
 
   // ─── Get Entity Summary ──────────────────────────────────────────────────
@@ -565,126 +688,11 @@ export class ActivityService {
         return null
       }
 
-      if (entityType === 'invoice') {
-        try {
-          const { data, error } = await supabase
-            .from('invoices')
-            .select(
-              `
-              id,
-              invoice_number,
-              total,
-              currency,
-              status,
-              type,
-              customer:customers!fk_invoices_customer (
-                full_name
-              )
-            `,
-            )
-            .eq('id', entityId)
-            .eq('workspace_id', workspaceId)
-            .maybeSingle()
-
-          if (error || !data) {
-            console.warn(`⚠️ Invoice not found: ${entityId}`, error?.message)
-            return null
-          }
-
-          const customer = Array.isArray(data.customer) ? data.customer[0] : data.customer
-
-          return {
-            label: `INV-${data.invoice_number || entityId.slice(0, 8)}`,
-            subtitle: customer?.full_name || undefined,
-            amount: data.total || undefined,
-            currency: data.currency || undefined,
-            status: data.status || undefined,
-            // فاکتورهای قدیمیِ بدون type فروش‌اند — همان قراردادی که
-            // invoice.service و analytics.service استفاده می‌کنند.
-            transactionType: (data.type as 'sale' | 'purchase' | null) ?? 'sale',
-          }
-        } catch (err) {
-          console.warn(`⚠️ Failed to fetch invoice ${entityId}:`, err)
-          return null
-        }
-      }
-
-      if (entityType === 'customer') {
-        try {
-          const { data, error } = await supabase
-            .from('customers')
-            .select('full_name, phone, email, opening_balance')
-            .eq('id', entityId)
-            .eq('workspace_id', workspaceId)
-            .maybeSingle()
-
-          if (error || !data) {
-            console.warn(`⚠️ Customer not found: ${entityId}`, error?.message)
-            return null
-          }
-
-          return {
-            label: data.full_name || entityId.slice(0, 8),
-            subtitle: data.phone || data.email || undefined,
-            amount: data.opening_balance || undefined,
-            currency: 'AFN',
-          }
-        } catch (err) {
-          console.warn(`⚠️ Failed to fetch customer ${entityId}:`, err)
-          return null
-        }
-      }
-
-      if (entityType === 'product') {
-        try {
-          const { data, error } = await supabase
-            .from('products')
-            .select('name, sku, quantity, sell_price, currency')
-            .eq('id', entityId)
-            .eq('workspace_id', workspaceId)
-            .maybeSingle()
-
-          if (error || !data) {
-            console.warn(`⚠️ Product not found: ${entityId}`, error?.message)
-            return null
-          }
-
-          return {
-            label: data.name,
-            subtitle: data.sku || `موجودی: ${data.quantity}`,
-            amount: data.sell_price,
-            currency: data.currency || 'AFN',
-          }
-        } catch (err) {
-          console.warn(`⚠️ Failed to fetch product ${entityId}:`, err)
-          return null
-        }
-      }
-
-      if (entityType === 'payment') {
-        try {
-          const { data, error } = await supabase
-            .from('transactions')
-            .select('amount, currency, description, reference')
-            .eq('id', entityId)
-            .eq('workspace_id', workspaceId)
-            .maybeSingle()
-
-          if (error || !data) {
-            console.warn(`⚠️ Payment not found: ${entityId}`, error?.message)
-            return null
-          }
-
-          return {
-            label: data.reference || 'پرداخت',
-            subtitle: data.description,
-            amount: data.amount,
-            currency: data.currency || 'AFN',
-          }
-        } catch (err) {
-          console.warn(`⚠️ Failed to fetch payment ${entityId}:`, err)
-          return null
-        }
+      // Invoices, customers, products and payments: the same batched read the
+      // feed uses, for one id.
+      if (BATCHED_ENTITIES.has(entityType)) {
+        const summaries = await this.getEntitySummaries(workspaceId, [[entityType, entityId]])
+        return summaries.get(`${entityType}:${entityId}`) ?? null
       }
 
       // ✅ Default fallback برای سایر entity types — نگاشت واقعی مسیر
@@ -775,9 +783,7 @@ export class ActivityService {
    * `head: true` exact count (راهنمای سشن §۷٫۴), no rows transferred. They
    * count events, the same unit as the unread badge.
    */
-  async getFilterCounts(
-    userId: string,
-  ): Promise<{
+  async getFilterCounts(userId: string): Promise<{
     all: number
     unread: number
     invoices: number

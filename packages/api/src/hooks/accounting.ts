@@ -14,6 +14,7 @@
 // ============================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { CreateJournalEntry } from '@hisabche/validation'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
@@ -230,8 +231,17 @@ export function useJournalEntries() {
 export function useCreateJournalEntry() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: any) => {
-      const { data } = await apiClient.post('/accounting/journal', input)
+    // ⚠️ One key per entry, made by the form and reused on retry: a lost
+    // response retried without it posted the entry twice (27 Sep 2026).
+    mutationFn: async ({
+      idempotencyKey,
+      ...input
+    }: CreateJournalEntry & { idempotencyKey?: string | undefined }) => {
+      const { data } = await apiClient.post(
+        '/accounting/journal',
+        input,
+        idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined,
+      )
       return data
     },
     onSuccess: () => {

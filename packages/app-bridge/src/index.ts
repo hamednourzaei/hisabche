@@ -37,3 +37,6 @@ export * from './push-routing'
 
 // Which entry may go now — see the file header.
 export * from './push-order'
+
+// Bytes across a JSON channel (Android WebView) — see the file header.
+export { base64ToBytes, bytesToBase64 } from './base64'

@@ -19,6 +19,14 @@ function isMissingTable(error: { code?: string } | null): boolean {
 
 type BlocksByUser = Record<string, string[]>
 
+/**
+ * Stored module keys → the blocks enforced. A key the server no longer knows
+ * is ignored, not enforced as nothing. Shared with resolveWorkspaceAccess.
+ */
+export function parseBlocks(keys: readonly unknown[]): string[] {
+  return keys.filter((k): k is string => typeof k === 'string' && BLOCKABLE_MODULES.includes(k))
+}
+
 export class MemberModuleBlocksService {
   private key(workspaceId: string) {
     return `permissions:${workspaceId}:member-module-blocks`
@@ -39,8 +47,7 @@ export class MemberModuleBlocksService {
 
     const byUser: BlocksByUser = {}
     for (const row of (data ?? []) as Array<{ user_id: string; module_key: string }>) {
-      // A key the server no longer knows is ignored, not enforced as nothing.
-      if (!BLOCKABLE_MODULES.includes(row.module_key)) continue
+      if (parseBlocks([row.module_key]).length === 0) continue
       ;(byUser[row.user_id] ??= []).push(row.module_key)
     }
 

@@ -102,14 +102,22 @@ export class ProductService {
     const fetchLimit = maxLimit + 1
     const dbSortBy = SORT_BY_MAP[sortBy] ?? sortBy ?? 'created_at'
 
+    const keyset = cursor ? decodeCursor(cursor, dbSortBy) : null
+    // ⚠️ THE TOTAL IS COUNTED ON THIS QUERY (27 Sep 2026). It came from a
+    // second HEAD request with `count: 'estimated'` over the WHOLE workspace:
+    // one extra round trip plus a planner EXPLAIN per list call, and with a
+    // search active the page count was the unfiltered one — «page 1 of 20»
+    // for three matches. PostgREST counts the filtered set and ignores the
+    // range, which is exactly the number the pager needs. On the keyset
+    // (cursor) path there is no total: a count after the cursor would be
+    // «rows remaining», not the size of the list.
     let query = supabase
       .from('products')
-      .select(PRODUCT_LIST_COLUMNS)
+      .select(PRODUCT_LIST_COLUMNS, keyset ? undefined : { count: 'exact' })
       .eq('workspace_id', workspaceId)
       .order(dbSortBy, { ascending: sortDirection === 'asc' })
       .order('id', { ascending: sortDirection === 'asc' })
 
-    const keyset = cursor ? decodeCursor(cursor, dbSortBy) : null
     // `page` used to be ignored: page 2 of the products table was page 1 again.
     const pageNumber = Number(page) || 1
     if (!keyset && pageNumber > 1) {
@@ -137,12 +145,8 @@ export class ProductService {
 
     if (keyset) query = applyKeyset(query, dbSortBy, sortDirection, keyset)
 
-    const [{ data, error }, { count }, summary] = await Promise.all([
+    const [{ data, error, count }, summary] = await Promise.all([
       query,
-      supabase
-        .from('products')
-        .select('id', { count: 'estimated', head: true })
-        .eq('workspace_id', workspaceId),
       includeSummary ? this.summarizeStock(workspaceId) : Promise.resolve(undefined),
     ])
 
@@ -165,7 +169,7 @@ export class ProductService {
       products,
       nextCursor,
       hasMore,
-      total: count || 0,
+      ...(keyset ? {} : { total: count ?? 0 }),
       limit: maxLimit,
       // Additive, and only when asked: pickers and searches keep the response
       // they had and do not pay for a full scan.

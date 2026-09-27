@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/accounting/tabs/JournalTab.tsx
 'use client'
 
-import { memo, useState, useCallback } from 'react'
+import { memo, useState, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
@@ -30,14 +30,27 @@ export const JournalTab = memo(function JournalTab() {
   const { data: accounts } = useAccounts()
   const { mutate: createJournalEntry, isPending } = useCreateJournalEntry()
 
-  const handleOpenDialog = useCallback(() => setIsDialogOpen(true), [])
+  // One key per entry being written: a retry of the same submit reuses it
+  // (the server answers with the first entry), a new entry gets a new one.
+  const entryKeyRef = useRef<string | null>(null)
+  const handleOpenDialog = useCallback(() => {
+    entryKeyRef.current = crypto.randomUUID()
+    setIsDialogOpen(true)
+  }, [])
   const handleCloseDialog = useCallback(() => setIsDialogOpen(false), [])
 
   const handleSubmit = useCallback(
     (input: CreateJournalEntryInput) => {
-      createJournalEntry(input, {
-        onSuccess: () => setIsDialogOpen(false),
-      })
+      entryKeyRef.current ??= crypto.randomUUID()
+      createJournalEntry(
+        { ...input, idempotencyKey: entryKeyRef.current },
+        {
+          onSuccess: () => {
+            entryKeyRef.current = null
+            setIsDialogOpen(false)
+          },
+        },
+      )
     },
     [createJournalEntry],
   )

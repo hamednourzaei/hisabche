@@ -39,6 +39,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
 import { sendFailure } from '../errors/http-failure'
 import { BlogError, BlogService } from '../services/blog'
+import { PUBLIC_EDGE_CACHE } from '../utils/edge-cache'
 
 /**
  * Which blog requests need no session. Read by the global auth hook in
@@ -214,7 +215,8 @@ export async function blogRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const q = listQuery.parse(request.query)
-        return reply.send(await service.listPublic(q))
+        const list = await service.listPublic(q)
+        return reply.header('Cache-Control', PUBLIC_EDGE_CACHE).send(list)
       } catch (err) {
         return fail(reply, err, 'Failed to list blog posts')
       }
@@ -227,7 +229,8 @@ export async function blogRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { locale, slug } = slugParams.parse(request.params)
-        return reply.send(await service.getPublic(locale, decodeURIComponent(slug)))
+        const post = await service.getPublic(locale, decodeURIComponent(slug))
+        return reply.header('Cache-Control', PUBLIC_EDGE_CACHE).send(post)
       } catch (err) {
         return fail(reply, err, 'Failed to fetch blog post')
       }
@@ -245,7 +248,8 @@ export async function blogRoutes(fastify: FastifyInstance) {
 
   fastify.get('/api/blog/sitemap', async (_request, reply) => {
     try {
-      return reply.send(await service.sitemap())
+      const sitemap = await service.sitemap()
+      return reply.header('Cache-Control', PUBLIC_EDGE_CACHE).send(sitemap)
     } catch (err) {
       return fail(reply, err, 'Failed to build the blog sitemap')
     }

@@ -23,8 +23,12 @@ const removeMany = jest.fn(async (table: string, ids: string[]) => {
   tables[table] = keep
   return removed
 })
-const query = jest.fn(async ({ table, where }: { table: string; where?: { id?: string } }) =>
-  (tables[table] ?? []).filter((row) => !where?.id || row.id === where.id),
+const query = jest.fn(
+  async ({ table, where }: { table: string; where?: Record<string, unknown> }) =>
+    // Every where-column must match, like the real SQLite query.
+    (tables[table] ?? []).filter((row) =>
+      Object.entries(where ?? {}).every(([k, v]) => row[k] === v),
+    ),
 )
 
 jest.mock('@/shared/lib/bridge', () => ({
@@ -304,6 +308,55 @@ describe('later pulls: only the change log travels', () => {
     await pullAll()
     expect(tables.product).toEqual([expect.objectContaining({ version: 5 })])
     expect(readCursor('ws-1')).toBe(99)
+  })
+})
+
+describe('invoice lines travel with their invoice', () => {
+  it('the device keeps exactly the server lines; an unsent local edit survives', async () => {
+    localStorage.setItem('hisabche.desktop.syncCursor:ws-1', '10')
+    tables.invoice_item = [
+      { id: u(801), invoice_id: u(800), product_name: 'removed on server', dirty: 0 },
+      { id: u(802), invoice_id: u(800), product_name: 'edited offline', dirty: 1 },
+    ]
+    get.mockResolvedValue(
+      asHsb(
+        encodePullPage({
+          changes: [
+            {
+              syncVersion: 11,
+              entityType: 'invoice',
+              entityId: u(800),
+              operation: 'update',
+              entityVersion: 3,
+              data: {
+                id: u(800),
+                total: 20,
+                version: 3,
+                items: [
+                  {
+                    id: u(803),
+                    invoice_id: u(800),
+                    product_name: 'چای',
+                    quantity: 2,
+                    unit_price: 10,
+                    total_price: 20,
+                  },
+                ],
+              },
+            },
+          ],
+          nextCursor: 11,
+          hasMore: false,
+          mustRehydrate: false,
+        }),
+      ),
+    )
+    await pullAll()
+    expect(tables.invoice_item!.map((r) => r.id).sort()).toEqual([u(802), u(803)].sort())
+    expect(tables.invoice_item!.find((r) => r.id === u(803))).toMatchObject({
+      quantity: 2,
+      total_price: 20,
+    })
   })
 })
 

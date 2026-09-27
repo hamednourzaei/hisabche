@@ -27,11 +27,7 @@ describe('realtime runs as the user', () => {
 
   it('the app registers the token source before any realtime user gets the client', () => {
     expect(read('api/src/supabase/client.ts')).toContain('setSupabaseTokenSource(')
-    for (const file of [
-      'supabase/realtime.ts',
-      'supabase/presence.ts',
-      'hooks/useRealtimeActivities.ts',
-    ]) {
+    for (const file of ['supabase/realtime.ts', 'supabase/presence.ts']) {
       const source = read(`api/src/${file}`)
       expect(source, file).toMatch(
         /import \{[^}]*supabaseClient[^}]*\} from '\.\.?\/(supabase\/)?client'/,

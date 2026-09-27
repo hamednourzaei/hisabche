@@ -149,7 +149,10 @@ describe('⚠️ the provider key never leaves the server', () => {
     const start = settings.indexOf('async getStatus')
     const body = settings.slice(start, settings.indexOf('async save'))
 
-    expect(body).toContain('hasApiKey: Boolean(')
+    // Stronger since 27 Sep 2026: the boolean comes from a filter, so the key
+    // is not even read into memory (ai-status-never-reads-key.test.ts).
+    expect(body).toContain('hasApiKey: keyed !== null')
+    expect(body).not.toContain('row.api_key')
     // No masking. A masked key is still a piece of a secret plus proof the
     // rest exists, and it invites a UI to hold something it should not.
     expect(body).not.toMatch(/\.slice\(|substring\(|\*{3}/)

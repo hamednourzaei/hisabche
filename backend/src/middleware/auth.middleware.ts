@@ -178,14 +178,21 @@ async function getSessionEpochSeconds(userId: string): Promise<number | null> {
   const cached = await memoryCache.getShared<{ at: number | null }>(cacheKey)
   if (cached) return cached.at
 
+  // ⚠️ maybeSingle, not single (27 Sep 2026). A user with no profile row got
+  // a 406 on EVERY request (visible in production perf logs as
+  // «rest:profiles 300ms (406)»). No row is a normal answer: no epoch.
   const { data, error } = await supabase
     .from('profiles')
     .select('sessions_valid_from')
     .eq('id', userId)
-    .single()
+    .maybeSingle()
 
   // 42703 = ستون وجود ندارد، PGRST204 = همان از نگاه PostgREST.
   const missingColumn = error?.code === '42703' || error?.code === 'PGRST204'
+  // ⚠️ ANY OTHER ERROR FAILS CLOSED. It used to fall through as «no epoch» and
+  // be CACHED — one failed read disabled «sign out everywhere» for the whole
+  // TTL. Now it is thrown (the request fails) and nothing is cached.
+  if (error && !missingColumn) throw new Error(`session epoch read failed: ${error.message}`)
   const raw = missingColumn
     ? null
     : ((data as { sessions_valid_from?: string | null })?.sessions_valid_from ?? null)

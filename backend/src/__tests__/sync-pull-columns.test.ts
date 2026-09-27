@@ -1,19 +1,14 @@
 // Lean pull payload (#153): every column a pull selects must exist, or every
 // pull becomes a 500. Checked against the migrations in docs/ — the source the
 // live schema is built from — and against what the desktop client reads.
-import { readdirSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../db', () => ({ supabase: {} }))
 
-const { PULL_COLUMNS } = await import('../services/sync.service')
-
-const DOCS = join(__dirname, '..', '..', '..', 'docs')
-const sql = readdirSync(DOCS)
-  .filter((f) => f.endsWith('.sql') && !f.startsWith('_'))
-  .map((f) => readFileSync(join(DOCS, f), 'utf8'))
-  .join('\n')
+const { PULL_COLUMNS, INVOICE_ITEM_COLUMNS } = await import('../services/sync.service')
+const { declaredColumns } = await import('./helpers/declared-columns')
 
 const TABLE: Record<string, string> = {
   product: 'products',
@@ -21,31 +16,6 @@ const TABLE: Record<string, string> = {
   invoice: 'invoices',
   transaction: 'transactions',
   time_entry: 'time_entries',
-}
-
-/** Every column declared for a table: CREATE TABLE bodies + ALTER … ADD COLUMN. */
-function declaredColumns(table: string): Set<string> {
-  const out = new Set<string>()
-  const create = new RegExp(
-    `CREATE TABLE (?:IF NOT EXISTS )?(?:public\\.)?${table}\\s*\\(([\\s\\S]*?)\\n\\);`,
-    'gi',
-  )
-  for (const m of sql.matchAll(create)) {
-    for (const line of m[1]!.split('\n')) {
-      const col = /^\s*"?([a-z_][a-z0-9_]*)"?\s+[a-z]/i.exec(line)?.[1]
-      if (col && !/^(constraint|primary|unique|foreign|check)$/i.test(col))
-        out.add(col.toLowerCase())
-    }
-  }
-  const alter = new RegExp(
-    `ALTER TABLE (?:IF EXISTS )?(?:ONLY )?(?:public\\.)?${table}\\b([^;]*);`,
-    'gi',
-  )
-  for (const m of sql.matchAll(alter)) {
-    for (const c of m[1]!.matchAll(/ADD COLUMN (?:IF NOT EXISTS )?"?(\w+)"?/gi))
-      out.add(c[1]!.toLowerCase())
-  }
-  return out
 }
 
 describe('sync pull columns', () => {
@@ -57,6 +27,12 @@ describe('sync pull columns', () => {
       expect(cols!.filter((c) => !declared.has(c))).toEqual([])
     },
   )
+
+  it('every invoice line column exists in the migrations', () => {
+    const declared = declaredColumns('invoice_items')
+    expect(declared.size).toBeGreaterThan(0)
+    expect(INVOICE_ITEM_COLUMNS.filter((c) => !declared.has(c))).toEqual([])
+  })
 
   it('every entity carries id, workspace_id and version', () => {
     for (const cols of Object.values(PULL_COLUMNS)) {

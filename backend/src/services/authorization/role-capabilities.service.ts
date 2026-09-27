@@ -28,6 +28,25 @@ function isMissingTable(error: { code?: string } | null): boolean {
   return !!error && (error.code === '42P01' || error.code === 'PGRST205')
 }
 
+/**
+ * Stored rows → overrides the domain understands. A role or capability the
+ * server no longer knows is dropped. Shared with resolveWorkspaceAccess, so the
+ * one-round-trip path filters exactly as this service does.
+ */
+export function parseOverrides(data: unknown): CapabilityOverride[] {
+  return ((data ?? []) as Array<{ role: string; capability: string; granted: boolean }>)
+    .filter(
+      (r) =>
+        (ROLES as readonly string[]).includes(r.role) &&
+        (CAPABILITIES as readonly string[]).includes(r.capability),
+    )
+    .map((r) => ({
+      role: r.role as WorkspaceRole,
+      capability: r.capability as Capability,
+      granted: r.granted === true,
+    }))
+}
+
 export class RoleCapabilitiesService {
   private key(workspaceId: string) {
     return `permissions:${workspaceId}:role-capabilities`
@@ -49,17 +68,7 @@ export class RoleCapabilitiesService {
     // revoked a capability would silently get it back while the read is down.
     if (error) throw new DatabaseError('Failed to read role capabilities', error)
 
-    const rows = ((data ?? []) as Array<{ role: string; capability: string; granted: boolean }>)
-      .filter(
-        (r) =>
-          (ROLES as readonly string[]).includes(r.role) &&
-          (CAPABILITIES as readonly string[]).includes(r.capability),
-      )
-      .map((r) => ({
-        role: r.role as WorkspaceRole,
-        capability: r.capability as Capability,
-        granted: r.granted === true,
-      }))
+    const rows = parseOverrides(data)
 
     await memoryCache.setShared(this.key(workspaceId), rows, 60)
     return rows

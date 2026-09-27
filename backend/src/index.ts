@@ -33,6 +33,7 @@ import { startInstanceHeartbeat } from './services/instance-registry'
 import { MONITOR_BANNER_CSS, MONITOR_BANNER_JS } from './docs/monitor-banner'
 import compress from '@fastify/compress'
 import { constants as zlibConstants } from 'node:zlib'
+import { COMPRESSIBLE_TYPES } from './utils/compress-types'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
 
@@ -107,6 +108,7 @@ import { jobSchedulerPlugin } from './plugins/job-scheduler.plugin'
 import { startScheduler } from './scheduler'
 import { getMetrics, enterMetricsContext } from './utils/request-metrics'
 import { slowestCalls, waitingMs } from './utils/supabase-fetch-metrics'
+import { trustedProxies } from './utils/trusted-proxies'
 
 // ──────────────────────────────────────────────
 // Environment
@@ -140,6 +142,9 @@ const server = Fastify({
         }),
   },
   connectionTimeout: 30000,
+  // The real client address behind Render's load balancer and Cloudflare —
+  // and ONLY behind them. See utils/trusted-proxies.ts.
+  trustProxy: trustedProxies(),
   // Logos and stamps are sent inline as base64 data URIs, which inflate the
   // payload by ~33%. Fastify's 1 MB default meant any photo over ~750 KB — an
   // ordinary phone camera shot — was rejected with a bare 413 before it ever
@@ -474,8 +479,7 @@ export async function buildServer(): Promise<typeof server> {
     brotliOptions: { params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 4 } },
     // The library defaults plus Hisabche Sync Binary. event-stream stays
     // excluded: a compressed SSE stream is buffered and stops being live.
-    customTypes:
-      /^text\/(?!event-stream)|(?:\+|\/)json(?:;|$)|(?:\+|\/)xml(?:;|$)|^application\/x-hisabche-sync(?:;|$)/,
+    customTypes: COMPRESSIBLE_TYPES,
   })
 
   // ─── 6.2 CORS ─────────────────────────────

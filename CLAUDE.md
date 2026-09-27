@@ -68,28 +68,29 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 
 ## ۴. دانش پروژه — کجا را باز کنی
 
-| سؤال                                                | فایل                                                |
-| --------------------------------------------------- | --------------------------------------------------- |
-| **وبلاگ: نقشه، تله‌ها، تصمیم‌ها (۲۶ سپتامبر)**      | `.claude/SESSION-CACHE-2026-09-26-BLOG.md`          |
-| **درس‌ها و باگ‌های سشن اخیر (۱۹ سپتامبر)**          | `.claude/SESSION-CACHE-2026-09-19.md` — **اول این** |
-| درس‌ها و باگ‌های ۱۵–۱۷ سپتامبر                      | `.claude/SESSION-CACHE-2026-09-17.md`               |
-| درس‌ها و باگ‌های اوایل سپتامبر                      | `.claude/SESSION-CACHE-2026-09.md`                  |
-| **فهرست باگ‌ها با ریشه و گارد**                     | `.claude/BUG-REGISTRY.md`                           |
-| **پرفورمنس، PageSpeed، لندینگ موبایل (۱۵ سپتامبر)** | `.claude/SESSION-CACHE-2026-09-15-PERF.md`          |
-| **درخواست‌های باز کاربر — قبل از هر کار**           | `.claude/USER-REQUESTS.md`                          |
-| بودجه/صندوق/حاکمیت/۵۰۰ها (۱۴ سپتامبر)               | `.claude/SESSION-CACHE-2026-09-14.md`               |
-| نقشه‌ی کل دانش                                      | `.claude/README.md`                                 |
-| باگ خوردم / چطور وریفای کنم                         | `.claude/DEBUG-PLAYBOOK.md`                         |
-| تله‌های قدیمی‌تر                                    | `.claude/SESSION-CACHE.md`                          |
-| چرا این‌طوری نوشته شده                              | `.claude/lessons-learned.md`                        |
-| الان چه کار می‌کند و چه نه                          | `.claude/STATE.md`                                  |
-| کد جدید کجا برود                                    | `.claude/architecture/core-modules.md`              |
-| کدام hook به کدام endpoint                          | `.claude/architecture/api-surface.md`               |
-| جدول‌ها و RLS                                       | `.claude/architecture/data-model.md`                |
-| Source of Truth / کدام migration اجرا شده           | `.claude/SESSION-2026-09-05-CONSOLIDATION.md`       |
-| migration/تست/commit چطور                           | `.claude/WORKFLOW.md`                               |
-| مقایسه با ERPNext و Odoo                            | `.claude/research/`                                 |
-| خواسته‌های محصول                                    | `.claude/detail.md`                                 |
+| سؤال                                                             | فایل                                                |
+| ---------------------------------------------------------------- | --------------------------------------------------- |
+| **وبلاگ: نقشه، تله‌ها، تصمیم‌ها (۲۶ سپتامبر)**                   | `.claude/SESSION-CACHE-2026-09-26-BLOG.md`          |
+| **Sync باینری، بارکد/چاپ، پرفورمنس DB، Cloudflare (۲۷ سپتامبر)** | `.claude/SESSION-CACHE-2026-09-27.md`               |
+| **درس‌ها و باگ‌های سشن اخیر (۱۹ سپتامبر)**                       | `.claude/SESSION-CACHE-2026-09-19.md` — **اول این** |
+| درس‌ها و باگ‌های ۱۵–۱۷ سپتامبر                                   | `.claude/SESSION-CACHE-2026-09-17.md`               |
+| درس‌ها و باگ‌های اوایل سپتامبر                                   | `.claude/SESSION-CACHE-2026-09.md`                  |
+| **فهرست باگ‌ها با ریشه و گارد**                                  | `.claude/BUG-REGISTRY.md`                           |
+| **پرفورمنس، PageSpeed، لندینگ موبایل (۱۵ سپتامبر)**              | `.claude/SESSION-CACHE-2026-09-15-PERF.md`          |
+| **درخواست‌های باز کاربر — قبل از هر کار**                        | `.claude/USER-REQUESTS.md`                          |
+| بودجه/صندوق/حاکمیت/۵۰۰ها (۱۴ سپتامبر)                            | `.claude/SESSION-CACHE-2026-09-14.md`               |
+| نقشه‌ی کل دانش                                                   | `.claude/README.md`                                 |
+| باگ خوردم / چطور وریفای کنم                                      | `.claude/DEBUG-PLAYBOOK.md`                         |
+| تله‌های قدیمی‌تر                                                 | `.claude/SESSION-CACHE.md`                          |
+| چرا این‌طوری نوشته شده                                           | `.claude/lessons-learned.md`                        |
+| الان چه کار می‌کند و چه نه                                       | `.claude/STATE.md`                                  |
+| کد جدید کجا برود                                                 | `.claude/architecture/core-modules.md`              |
+| کدام hook به کدام endpoint                                       | `.claude/architecture/api-surface.md`               |
+| جدول‌ها و RLS                                                    | `.claude/architecture/data-model.md`                |
+| Source of Truth / کدام migration اجرا شده                        | `.claude/SESSION-2026-09-05-CONSOLIDATION.md`       |
+| migration/تست/commit چطور                                        | `.claude/WORKFLOW.md`                               |
+| مقایسه با ERPNext و Odoo                                         | `.claude/research/`                                 |
+| خواسته‌های محصول                                                 | `.claude/detail.md`                                 |
 
 ---
 

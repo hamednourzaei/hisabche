@@ -1,19 +1,12 @@
 // packages/api/src/hooks/activity.ts
-// FIXED: حذف refetchInterval از هر سه هوک.
 //
-// چرا: useRealtimeActivities.ts (که در ActivityCenter کنار این
-// هوک‌ها استفاده می‌شود) از قبل به‌صورت زنده روی رویداد INSERT
-// جدول activities subscribe است و با هر ردیف جدید، مستقیماً
-// queryClient.setQueryData را صدا می‌زند (optimistic update) و
-// activityKeys.unread() را invalidate می‌کند. یعنی داده همیشه
-// از طریق Realtime تازه است؛ refetchInterval های ۱۵ و ۳۰ ثانیه‌ای
-// قبلی صرفاً بار اضافه به سرور می‌زدند بدون فایده‌ی واقعی.
-//
-// توجه: این هوک‌ها به‌تنهایی (بدون useRealtimeActivities در
-// کامپوننت والد) دیگر خودشان تازه نمی‌مانند. اگر در آینده جایی
-// این هوک بدون useRealtimeActivities استفاده شود، باید یا
-// useRealtimeActivities به همان‌جا اضافه شود یا یک staleTime/
-// polling محدود برگردانده شود.
+// ⚠️ HOW THIS FEED STAYS FRESH (corrected 27 Sep 2026). An earlier note here
+// said a realtime hook (useRealtimeActivities) kept it live. That hook was
+// never mounted anywhere and was not even exported — and it subscribed to
+// `activities` with NO workspace filter, i.e. every business's rows. It was
+// deleted. What actually refreshes these queries: a remount after staleTime
+// (web turns refetch-on-focus off globally), and the invalidations after
+// mark-as-read. No polling, and no realtime.
 'use client'
 
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
@@ -133,8 +126,7 @@ export function useActivities(filters?: ActivityFilter) {
     },
     enabled: authReady,
     staleTime: 30_000,
-    // ✅ FIX: بدون refetchInterval — Realtime (useRealtimeActivities)
-    // این نقش را ایفا می‌کند.
+    // No refetchInterval: refreshed on remount after staleTime (see top).
     placeholderData: [],
   })
 }
@@ -159,8 +151,7 @@ export function useInfiniteActivities(filters?: ActivityFilter) {
     initialPageParam: null as string | null,
     enabled: authReady,
     staleTime: 30_000,
-    // ✅ FIX: بدون refetchInterval — Realtime (useRealtimeActivities)
-    // این نقش را ایفا می‌کند.
+    // No refetchInterval: refreshed on remount after staleTime (see top).
   })
 }
 
@@ -176,9 +167,8 @@ export function useUnreadCount() {
     },
     enabled: authReady,
     staleTime: 30_000,
-    // ✅ FIX: بدون refetchInterval — useRealtimeActivities بعد از
-    // هر رویداد جدید، مستقیماً activityKeys.unread() را
-    // invalidateQueries می‌کند، پس این عدد همیشه تازه می‌ماند.
+    // No refetchInterval: refreshed on remount after staleTime, and
+    // invalidated by the mark-as-read mutations (see top).
     placeholderData: 0,
   })
 }

@@ -233,13 +233,16 @@ describe('GET /api/sync/snapshot', () => {
 })
 
 describe('compression covers the binary type', () => {
-  it('index.ts compresses application/x-hisabche-sync and still skips event-stream', () => {
+  // The real value, not the source text (a formatter reflow broke a text read).
+  it('compresses application/x-hisabche-sync and still skips event-stream', async () => {
+    const { COMPRESSIBLE_TYPES } = await import('../utils/compress-types')
+    expect(COMPRESSIBLE_TYPES.test(HSB_CONTENT_TYPE)).toBe(true)
+    expect(COMPRESSIBLE_TYPES.test('application/json; charset=utf-8')).toBe(true)
+    expect(COMPRESSIBLE_TYPES.test('text/event-stream')).toBe(false)
+  })
+
+  it('index.ts compresses with it', () => {
     const src = readFileSync(join(__dirname, '..', 'index.ts'), 'utf8')
-    const literal = /customTypes: (\/.*\/),/.exec(src)?.[1]
-    expect(literal).toBeDefined()
-    const re = new RegExp(literal!.slice(1, -1))
-    expect(re.test(HSB_CONTENT_TYPE)).toBe(true)
-    expect(re.test('application/json; charset=utf-8')).toBe(true)
-    expect(re.test('text/event-stream')).toBe(false)
+    expect(src).toContain('customTypes: COMPRESSIBLE_TYPES')
   })
 })

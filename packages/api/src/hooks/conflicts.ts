@@ -67,6 +67,13 @@ export interface Conflict {
   entityLabel: string | null
 }
 
+/**
+ * A row of the queue. The two full snapshots are only in the detail
+ * (`useConflict`): they are whole records, and the list shows only the fields
+ * that differ.
+ */
+export type ConflictSummary = Omit<Conflict, 'serverRow' | 'clientPayload'>
+
 export interface ResolveConflictInput {
   conflictId: string
   choice: ResolutionChoice
@@ -94,7 +101,7 @@ export function useConflicts(status: 'open' | 'resolved' | 'all' = 'open') {
     queryKey: conflictKeys.list(status),
     queryFn: async () => {
       const { data } = await apiClient.get('/conflicts', { params: { status } })
-      return asList<Conflict>(data)
+      return asList<ConflictSummary>(data)
     },
     enabled: allowed && ready,
     // Short, and refetched on focus: a conflict can arrive the moment another

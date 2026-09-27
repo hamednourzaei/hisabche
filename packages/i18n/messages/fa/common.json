@@ -1891,7 +1891,9 @@
     "unitFactorInvalid": "نام و ضریب تبدیل واحد را درست وارد کنید.",
     "currentStock": "موجودی فعلی",
     "profitPerUnit": "سود هر واحد",
-    "totalProfit": "سود کل موجودی"
+    "totalProfit": "سود کل موجودی",
+    "amountLabel": "مقدار",
+    "rateHint": "نرخ را همان‌طور که می‌گویید وارد کنید؛ مثلاً ۱ دالر = ۷۵۰ افغانی."
   },
   "customers": {
     "title": "مشتریان",

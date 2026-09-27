@@ -501,3 +501,83 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 
 - **یافته:** `drizzle.config.ts` و `packages/db/src/client.ts` connection string کامل (با رمز) pooler سوپابیس را داشتند (در `docs/HISABCHE_ARCHITECTURE.md` هم گزارش شده بود و رفع نشده بود).
 - **رفع کد:** drizzle فقط از env می‌خواند؛ `packages/db` (بی‌مصرف) حذف شد. **اقدام انسانی لازم:** رمز دیتابیس در Supabase باید **عوض (rotate)** شود — در تاریخچه‌ی git باقی است.
+
+## BUG-038 — pull باینری روی اندروید متن خوانده می‌شد (۲۷ سپتامبر)
+
+- **ریشه:** پل WebView اندروید JSON است؛ بدنه‌ی HSB (بایت) به‌صورت رشته رسید و decode شکست. دسکتاپ (IPC با `Uint8Array`) سالم بود، پس تست دسکتاپ چیزی نشان نمی‌داد.
+- **رفع:** `responseType: 'bytes'` → `bytesBase64` روی پل، `host-http-adapter.ts` هر دو را می‌فهمد. **گارد:** `sync-pull-android-bridge.test.ts` — injection-tested.
+
+## BUG-039 — sync مشتری روی ستون خیالی `name` می‌نوشت (۲۷ سپتامبر)
+
+- **ریشه:** `WRITABLE.customer` در `sync.service.ts` ستون `name` داشت؛ جدول `full_name` دارد → نام مشتریِ ویرایش‌شده‌ی آفلاین هرگز به سرور نمی‌رسید.
+- **رفع:** `full_name`. **گارد:** `sync-invariants.test.ts`.
+
+## BUG-040 — `deleted_at` روی products/customers (400 در لاگ سوپابیس) (۲۷ سپتامبر)
+
+- **ریشه:** MDM یک ستون بازنشستگی برای همه فرض می‌کرد؛ products/customers `is_active` دارند، فقط suppliers `deleted_at`. جدول از `config.table` دینامیک بود و grep ساده پیدایش نمی‌کرد.
+- **رفع:** `ENTITY_CONFIG.retiredBy` برای هر موجودیت. **گارد:** `no-phantom-deleted-at.test.ts` (عبارت‌های `.from()` + کانفیگ MDM) — injection-tested. ستون صوری اضافه **نشد**.
+
+## BUG-041 — `profiles` با `.single()` → ۴۰۶ و خطای کش‌شده (۲۷ سپتامبر)
+
+- **ریشه:** `.single()` روی پروفایلی که ممکن است نباشد = 406 PGRST116 در هر درخواست (۴۸ بار در لاگ)؛ در مسیر session-epoch خطا مثل «بدون قفل» خوانده و کش می‌شد.
+- **رفع:** `.maybeSingle()`؛ نبودِ ستون (42703/PGRST204) = مسیر پایه؛ هر خطای دیگر throw و کش نمی‌شود (fail closed).
+
+## BUG-042 — پرداخت‌های فید فعالیت از `transactions` خوانده می‌شد + N+1 (۲۷ سپتامبر)
+
+- **ریشه:** پرداخت‌ها از migration AR/AP در جدول `payments` هستند؛ فید هنوز `transactions` را می‌خواند → «Payment not found» پشت‌سرهم در لاگ Render و کارت پرداخت بدون مبلغ. هر گروه یک کوئری جدا داشت (۳۰ کوئری هم‌زمان، `/activities` ۴٫۶ ثانیه).
+- **رفع:** `getEntitySummaries` — یک `in()` برای هر نوع، پرداخت از `payments`. **گارد:** `activity-summaries-batched.test.ts`.
+
+## BUG-043 — سفارش خرید «دریافت‌شده» با PATCH برمی‌گشت یا دوباره دریافت می‌شد (۲۷ سپتامبر)
+
+- **ریشه:** PATCH وضعیت هر مقداری را می‌پذیرفت، از جمله `received` (بدون حرکت موجودی) یا برگرداندن `received` به `pending` (و دریافت دوباره).
+- **رفع:** `settablePurchaseOrderStatusSchema` بدون `received`؛ update شرطی `.neq('status','received')` → 409. **گارد:** `purchase-receive-once.test.ts`.
+
+## BUG-044 — سند دستی و بستن سال با retry دو بار ثبت می‌شد (۲۷ سپتامبر)
+
+- **ریشه:** POST `/journal` کلید نداشت؛ بستن سال فقط check-then-write بود — دو بستن هم‌زمان هر دو رد می‌شدند.
+- **رفع:** `sourceIdOf(workspace, kind, …parts)` → `source_id` روی ایندکس یکتای موجود `journal_entries_source_key`؛ کلاینت `Idempotency-Key` برای هر سند. **گارد:** `journal-idempotency.test.ts`.
+
+## BUG-045 — heartbeat استریم sync قبل از READY مسلح می‌شد (۲۷ سپتامبر)
+
+- **ریشه:** تایمر سکوت قبل از پردازش فریم دوباره تنظیم می‌شد → فریم کُند اول اتصال را می‌بست.
+- **رفع:** مسلح‌کردن بعد از پردازش فریم. **گارد:** `stream-client.test.ts`.
+
+## BUG-046 — `$$` در migration بلاگ به `$` تبدیل شد (۲۷ سپتامبر)
+
+- **ریشه:** ویرایش با `String.replace` در Node: `$$` در رشته‌ی جایگزین یعنی `$` → `AS $` و فایل SQL نامعتبر. فقط `blog.pg.test.ts` (Postgres واقعی) آن را گرفت؛ تست‌های متنی سبز بودند.
+- **رفع:** برگرداندن `$$`. **درس:** برای متن SQL از `split/join` یا ابزار Edit استفاده کن، نه `replace` با رشته‌ی جایگزین.
+
+## BUG-047 — `/api/ai/quota` کلید API را از دیتابیس می‌خواند (۲۷ سپتامبر)
+
+- **ریشه:** `getStatus` برای ساختن `hasApiKey: boolean` ستون `api_key` را select می‌کرد؛ هر کاربر در هر بار باز کردن، secret مالک از دیتابیس عبور می‌کرد (به کلاینت نمی‌رسید، ولی در لاگ سوپابیس دیده شد).
+- **رفع:** «کلید دارد؟» به‌صورت فیلتر `not.is.null`؛ ستون select نمی‌شود. **گارد:** `ai-status-never-reads-key.test.ts` + `explicit-columns-exist.test.ts`.
+
+## BUG-048 — `total` لیست کالا/مشتری با جستجو غلط بود (۲۷ سپتامبر)
+
+- **ریشه:** total از یک HEAD جدا با `count: 'estimated'` روی **کل** workspace می‌آمد (بدون فیلترها) → با جستجو «صفحه ۱ از ۲۰» برای سه نتیجه؛ به‌علاوه یک رفت‌وبرگشت و یک EXPLAIN در هر درخواست.
+- **رفع:** `count: 'exact'` روی همان کوئری فیلترشده (PostgREST range را نادیده می‌گیرد)؛ روی مسیر cursor بدون total.
+
+## BUG-049 — FEFO و گزارش انقضا روی ۱۰۰۰ دسته‌ی اول (۲۷ سپتامبر)
+
+- **ریشه:** `listBatches` با `.limit(5000)` — PostgREST بی‌صدا به max-rows (۱۰۰۰) می‌بُرد؛ برنامه‌ی FEFO و «ارزش منقضی» تصمیم‌اند (§۷٫۴). خطای خواندن `cost_layers` هم نادیده گرفته می‌شد (§۷٫۳).
+- **رفع:** `fetchAllPages` با ترتیب کامل (`id` آخر)، خطای هزینه throw، `in()` تکه‌تکه.
+
+## BUG-050 — نرخ ارز برای تاریخ قدیمی «پیدا نشد» (۲۷ سپتامبر)
+
+- **ریشه:** `getRateFor` جدیدترین ۱۰۰۰ نرخ را می‌خواند و در Node انتخاب می‌کرد → تاریخ قدیمی‌تر از نرخ هزارم = RATE_NOT_FOUND با وجود نرخ.
+- **رفع:** یک ردیف: `lte(rate_date) order desc limit 1`.
+
+## BUG-051 — فید فعالیت خطا را «هیچ اتفاقی نیفتاده» برمی‌گرداند (۲۷ سپتامبر)
+
+- **ریشه:** catch کلی در `getActivities` → `{ data: [], total: 0 }` با ۲۰۰، و کش route آن را نگه می‌داشت (§۷٫۳).
+- **رفع:** throw؛ `select('*')` هم به ستون‌های صریح (بدون `entity_snapshot`).
+
+## BUG-052 — `useRealtimeActivities`: کد مرده با اشتراک بدون فیلتر workspace (۲۷ سپتامبر)
+
+- **ریشه:** هوک export نشده و هیچ‌جا mount نشده بود، ولی کامنت‌های `activity.ts` می‌گفتند فید با آن زنده می‌ماند (پس polling حذف شده بود). خودش روی `activities` **بدون** `workspace_id` subscribe می‌کرد.
+- **رفع:** حذف (§۱۴)؛ کامنت‌ها با واقعیت (remount بعد از staleTime؛ وب refetch-on-focus را خاموش کرده) اصلاح شد.
+
+## BUG-053 — `request.ip` همیشه آدرس load balancer بود (۲۷ سپتامبر)
+
+- **ریشه:** Fastify بدون `trustProxy` → rate limiter و کلید refresh ناشناس برای همه‌ی کاربران خارج‌شده یک سطل مشترک داشتند؛ یک مهاجم ورود همه را قفل می‌کرد. `trustProxy: true` هم غلط است (IP را کلاینت انتخاب می‌کند).
+- **رفع:** `utils/trusted-proxies.ts` — فقط آدرس‌های خصوصی (LB رندر) + رنج‌های Cloudflare. **گارد:** `trusted-proxies.test.ts` (Fastify واقعی، header جعلی) — injection-tested.

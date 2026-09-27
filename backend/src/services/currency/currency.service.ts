@@ -77,7 +77,27 @@ export class CurrencyService {
    * time is what makes a restated figure impossible to defend.
    */
   async getRateFor(ctx: TenancyContext, currency: string, onDate: string) {
-    return rateFor(await this.listRates(ctx, currency), currency, onDate)
+    // ONE row: the newest quote on or before the date (27 Sep 2026). This
+    // used to load the currency's newest 1000 quotes and pick in Node — per
+    // currency, per revaluation — and a date older than the 1000th quote found
+    // no rate at all even when one existed.
+    const target = onDate.slice(0, 10)
+    const { data, error } = await supabase
+      .from('exchange_rates')
+      .select('currency_code, rate, rate_date')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('currency_code', currency)
+      .lte('rate_date', target)
+      .order('rate_date', { ascending: false })
+      .limit(1)
+    if (error) throw new DatabaseError('Failed to fetch the exchange rate', error)
+
+    const quotes = (data ?? []).map((row) => ({
+      currency: row.currency_code,
+      rate: Number(row.rate) || 0,
+      onDate: String(row.rate_date ?? '').slice(0, 10),
+    }))
+    return rateFor(quotes, currency, target)
   }
 
   /** Outstanding foreign-currency receivables and payables. */

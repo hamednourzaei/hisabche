@@ -17,11 +17,18 @@ function table(name: string) {
   const filters: Array<[string, unknown]> = []
   let op: 'select' | 'update' | 'insert' = 'select'
   let patch: Row = {}
-  const matches = () => filters.every(([k, v]) => state.order[k] === v)
+  const notFilters: Array<[string, unknown]> = []
+  const matches = () =>
+    filters.every(([k, v]) => state.order[k] === v) &&
+    notFilters.every(([k, v]) => state.order[k] !== v)
   const chain = {
     select: () => chain,
     eq: (k: string, v: unknown) => {
       filters.push([k, v])
+      return chain
+    },
+    neq: (k: string, v: unknown) => {
+      notFilters.push([k, v])
       return chain
     },
     update: (p: Row) => {
@@ -103,5 +110,40 @@ describe('receiveGoods — once', () => {
     state.failMovements = true
     await expect(service.receiveGoods(ctx, 'po')).rejects.toThrow(/stock movements/)
     expect(state.order.status).toBe('pending')
+  })
+})
+
+describe('a purchase order is never «received» except by receiving it', () => {
+  it('the schema refuses «received» on create and on edit', async () => {
+    const { createPurchaseOrderSchema, updatePurchaseOrderSchema } =
+      await import('@hisabche/validation')
+    expect(
+      updatePurchaseOrderSchema.safeParse({
+        id: '11111111-1111-4111-8111-111111111111',
+        status: 'received',
+      }).success,
+    ).toBe(false)
+    expect(
+      updatePurchaseOrderSchema.safeParse({
+        id: '11111111-1111-4111-8111-111111111111',
+        status: 'cancelled',
+      }).success,
+    ).toBe(true)
+    const create = createPurchaseOrderSchema.shape.status
+    expect(create.safeParse('received').success).toBe(false)
+  })
+
+  it('⚠️ a received order cannot be edited back to pending (it would be received twice)', async () => {
+    state.order.status = 'received'
+    await expect(
+      service.updatePurchaseOrder(ctx, 'po', { id: 'po', status: 'pending' } as never),
+    ).rejects.toThrow('PURCHASE_ORDER_ALREADY_RECEIVED')
+    expect(state.order.status).toBe('received')
+  })
+
+  it('an order that is not received changes status normally', async () => {
+    state.order.status = 'pending'
+    await service.updatePurchaseOrder(ctx, 'po', { id: 'po', status: 'approved' } as never)
+    expect(state.order.status).toBe('approved')
   })
 })

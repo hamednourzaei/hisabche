@@ -619,6 +619,7 @@ export {
   useOpenConflictCount,
   useResolveConflict,
   type Conflict,
+  type ConflictSummary,
   type ConflictEntity,
   type FieldDivergence,
   type ResolutionChoice,

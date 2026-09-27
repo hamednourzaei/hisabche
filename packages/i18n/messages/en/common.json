@@ -1886,7 +1886,9 @@
     "unitFactorInvalid": "Enter a name and a valid conversion factor.",
     "currentStock": "Current stock",
     "profitPerUnit": "Profit per unit",
-    "totalProfit": "Total stock profit"
+    "totalProfit": "Total stock profit",
+    "amountLabel": "Amount",
+    "rateHint": "Enter the rate the way you say it, e.g. 1 dollar = 750 afghani."
   },
   "customers": {
     "title": "Customers",

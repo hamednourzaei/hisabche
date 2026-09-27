@@ -222,6 +222,64 @@ async function attachCustomerNames(rows: Array<Record<string, unknown>>): Promis
   }
 }
 
+/**
+ * Make the device's lines of each invoice exactly the server's (the server
+ * sends them as `items` on every invoice row). Lines the server no longer has
+ * are removed — except one with an unsent local edit (`dirty`), which
+ * removeMany keeps. A row without an `items` array (an older server) leaves
+ * the device's lines untouched rather than reading as «no lines».
+ */
+async function storeInvoiceItems(invoices: Array<Record<string, unknown>>): Promise<number> {
+  const desktop = bridge()
+  if (!desktop) return 0
+  let written = 0
+  for (const invoice of invoices) {
+    if (!Array.isArray(invoice.items)) continue
+    const invoiceId = String(invoice.id)
+    const updatedAt = str(invoice.updated_at) ?? nowIso()
+    const items = (invoice.items as Array<Record<string, unknown>>).map((item) => ({
+      id: item.id,
+      invoice_id: invoiceId,
+      product_id: str(item.product_id),
+      product_name: str(item.product_name) ?? '',
+      quantity: num(item.quantity),
+      unit_price: num(item.unit_price),
+      discount: num(item.discount),
+      total_price: num(item.total_price),
+      updated_at: updatedAt,
+      dirty: 0,
+    }))
+    const keep = new Set(items.map((item) => String(item.id)))
+    const local = await desktop.db.query<Record<string, unknown>>({
+      table: 'invoice_item',
+      where: { invoice_id: invoiceId },
+      limit: 1000,
+    })
+    const stale = local.map((row) => String(row.id)).filter((id) => !keep.has(id))
+    if (stale.length > 0) await desktop.db.removeMany('invoice_item', stale)
+    if (items.length > 0) written += await desktop.db.upsertMany('invoice_item', items)
+  }
+  return written
+}
+
+/** The lines of invoices the server deleted (their header is gone too). */
+async function removeInvoiceItems(invoiceIds: string[]): Promise<void> {
+  const desktop = bridge()
+  if (!desktop) return
+  for (const invoiceId of invoiceIds) {
+    const local = await desktop.db.query<Record<string, unknown>>({
+      table: 'invoice_item',
+      where: { invoice_id: invoiceId },
+      limit: 1000,
+    })
+    if (local.length > 0)
+      await desktop.db.removeMany(
+        'invoice_item',
+        local.map((row) => String(row.id)),
+      )
+  }
+}
+
 /** Every row of one entity, walking /sync/snapshot to the end. */
 async function snapshotEntity(entity: DeltaEntity): Promise<number> {
   const desktop = bridge()
@@ -237,6 +295,7 @@ async function snapshotEntity(entity: DeltaEntity): Promise<number> {
     const rows = body.rows.map(FROM_LOG[entity])
     if (entity === 'invoice') await attachCustomerNames(rows)
     if (rows.length > 0) written += await desktop.db.upsertMany(entity, rows)
+    if (entity === 'invoice') written += await storeInvoiceItems(body.rows)
     if (!body.hasMore || !body.nextAfter) break
     after = body.nextAfter
   }
@@ -301,9 +360,17 @@ export async function applyChanges(page: PullPage): Promise<number> {
       // removed — unless this device still holds an unsent edit to it.
       await desktop.db.removeMany(entity, goneIds)
       written += goneIds.length
+      if (entity === 'invoice') await removeInvoiceItems(goneIds)
     }
 
     if (upserts.length > 0) written += await desktop.db.upsertMany(entity, upserts)
+    if (entity === 'invoice') {
+      written += await storeInvoiceItems(
+        mine
+          .filter((change) => change.operation !== 'delete' && change.data)
+          .map((change) => change.data as Record<string, unknown>),
+      )
+    }
   }
   return written
 }

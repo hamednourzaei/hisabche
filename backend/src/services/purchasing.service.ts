@@ -243,15 +243,23 @@ export class PurchasingService {
     }
     if (data.notes !== undefined) updates.notes = data.notes
 
-    const { data: order, error } = await supabase
+    // ⚠️ A RECEIVED ORDER'S STATUS IS FINAL. Edited back to «pending», it could
+    // be received again and its goods would arrive twice. The status is only
+    // changed on an order that is not received — in the same statement, so a
+    // concurrent receive cannot slip between a check and the write.
+    let query = supabase
       .from('purchase_orders')
       .update(updates)
       .eq('id', id)
       .eq('workspace_id', ctx.workspaceId)
-      .select(PO_LIST_COLUMNS)
-      .single()
+    if (data.status !== undefined) query = query.neq('status', 'received')
+    const { data: order, error } = await query.select(PO_LIST_COLUMNS).maybeSingle()
 
-    if (error || !order) throw new DatabaseError('Failed to update purchase order', error)
+    if (error) throw new DatabaseError('Failed to update purchase order', error)
+    if (!order) {
+      if (data.status !== undefined) throw new ConflictError('PURCHASE_ORDER_ALREADY_RECEIVED')
+      throw new NotFoundError('Purchase order')
+    }
 
     await this.invalidate(ctx.workspaceId)
     return order

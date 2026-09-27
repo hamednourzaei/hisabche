@@ -20,7 +20,7 @@ import {
   useDuplicateCounts,
   useMigrations,
   useSyncOverview,
-  type Conflict,
+  type ConflictSummary,
 } from '@hisabche/api'
 import { useBackupStore, useSyncStore } from '@hisabche/store'
 
@@ -79,7 +79,7 @@ export const DataAndSyncContainer = memo(function DataAndSyncContainer({
       pendingCount={pendingCount}
       lastSyncedAt={lastSyncedAt}
       conflictCount={conflictCount}
-      conflicts={conflictCount === null ? null : asList<Conflict>(conflicts.data)}
+      conflicts={conflictCount === null ? null : asList<ConflictSummary>(conflicts.data)}
       lastBackupAt={lastBackupAt}
       lastMigration={migrations.data?.[0] ?? null}
       migrationCount={migrations.data?.length ?? 0}

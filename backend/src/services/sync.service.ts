@@ -185,6 +185,47 @@ export const PULL_COLUMNS: Record<SyncEntity, readonly string[] | null> = {
   time_entry: null,
 }
 
+/** What a device stores of each invoice line. */
+export const INVOICE_ITEM_COLUMNS = [
+  'id',
+  'invoice_id',
+  'product_id',
+  'product_name',
+  'quantity',
+  'unit_price',
+  'discount',
+  'total_price',
+  'unit',
+  'unit_label',
+] as const
+
+/**
+ * Attach each invoice's lines as `items` (request: invoice lines in the
+ * offline copy, 27 Sep 2026). A separate query rather than a PostgREST embed:
+ * the invoice_items → invoices key was added NOT VALID, and an embed that does
+ * not resolve fails the WHOLE pull (CLAUDE.md §8). `invoice_items` carries no
+ * workspace column; it is scoped by invoice ids that were themselves read
+ * under the workspace filter, so nothing outside the workspace is reachable.
+ * A failed read throws (P0): never an invoice that looks like it has no lines.
+ */
+async function attachInvoiceItems(invoices: Record<string, unknown>[]): Promise<void> {
+  const ids = invoices.map((row) => row.id).filter((id): id is string => typeof id === 'string')
+  if (ids.length === 0) return
+  const { data, error } = await supabase
+    .from('invoice_items')
+    .select(INVOICE_ITEM_COLUMNS.join(', '))
+    .in('invoice_id', ids)
+  if (error) throw new Error(`sync invoice items failed: ${error.message}`)
+  const byInvoice = new Map<string, Record<string, unknown>[]>()
+  for (const item of (data ?? []) as unknown as Record<string, unknown>[]) {
+    const key = String(item.invoice_id)
+    const list = byInvoice.get(key) ?? []
+    list.push(item)
+    byInvoice.set(key, list)
+  }
+  for (const row of invoices) row.items = byInvoice.get(String(row.id)) ?? []
+}
+
 export interface SyncActor {
   userId: string
   workspaceId: string
@@ -672,6 +713,7 @@ export class SyncService {
     const rows = (data ?? []) as unknown as Record<string, unknown>[]
     const hasMore = rows.length > limit
     const page = hasMore ? rows.slice(0, limit) : rows
+    if (entity === 'invoice') await attachInvoiceItems(page)
     return {
       rows: page,
       nextAfter: hasMore ? String(page[page.length - 1]?.id ?? '') || null : null,
@@ -741,7 +783,9 @@ export class SyncService {
 
       // A column list built at runtime has no static row type; the rows are
       // plain records either way.
-      for (const row of (data ?? []) as unknown as Record<string, unknown>[]) {
+      const rows = (data ?? []) as unknown as Record<string, unknown>[]
+      if (type === 'invoice') await attachInvoiceItems(rows)
+      for (const row of rows) {
         loaded.set(`${type}:${row.id as string}`, row)
       }
     }

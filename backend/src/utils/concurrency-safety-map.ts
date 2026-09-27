@@ -342,14 +342,14 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   {
     routeFile: 'purchasing.routes.ts',
     route: 'PATCH /api/purchase-orders/:id',
-    mechanisms: ['last-write-wins'],
+    mechanisms: ['conditional-update'],
     evidence: [
+      { file: `${SVC}/purchasing.service.ts`, text: "query = query.neq('status', 'received')" },
       {
-        file: `${SVC}/purchasing.service.ts`,
-        text: 'if (data.status !== undefined) updates.status = data.status',
+        file: 'packages/validation/src/schemas/purchasing.schema.ts',
+        text: 'settablePurchaseOrderStatusSchema',
       },
     ],
-    gap: "Accepts status 'received' directly, which marks the order received WITHOUT moving stock; «receive» then refuses it.",
   },
   {
     routeFile: 'purchasing.routes.ts',
@@ -377,14 +377,19 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   {
     routeFile: 'accounting.routes.ts',
     route: 'POST /journal',
-    mechanisms: ['db-function'],
+    mechanisms: ['idempotency-key', 'db-function', 'unique-constraint'],
     evidence: [
+      { file: `${RT}/accounting.routes.ts`, text: 'idempotencyKey: readClientRequestId(request)' },
+      {
+        file: `${SVC}/accounting/accounting.service.ts`,
+        text: "sourceIdOf(ctx.workspaceId, 'manual', options.idempotencyKey)",
+      },
       {
         file: `${SVC}/accounting/accounting.repository.ts`,
         text: "supabase.rpc('accounting_post_journal_entry'",
       },
+      { file: SQL, text: 'journal_entries_source_key' },
     ],
-    gap: 'A manual entry has no idempotency key: a retried submit posts it twice.',
   },
   {
     routeFile: 'accounting.routes.ts',
@@ -415,11 +420,15 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   {
     routeFile: 'accounting.routes.ts',
     route: 'POST /year-end/close',
-    mechanisms: ['check-then-write'],
+    mechanisms: ['check-then-write', 'unique-constraint'],
     evidence: [
       { file: `${SVC}/accounting/accounting.service.ts`, text: 'YEAR_END_ALREADY_CLOSED' },
+      {
+        file: `${SVC}/accounting/accounting.service.ts`,
+        text: "sourceIdOf(ctx.workspaceId, 'year_end_close', plan.from, plan.to)",
+      },
+      { file: SQL, text: 'journal_entries_source_key' },
     ],
-    gap: 'Refuses a second close by reference lookup, not a unique write: two truly simultaneous closes can both pass.',
   },
 ]
 

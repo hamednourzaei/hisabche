@@ -64,7 +64,15 @@ function makeQuery(table: string) {
   return api
 }
 
-vi.mock('../db', () => ({ supabase: { from: (t: string) => makeQuery(t) } }))
+// No resolve_workspace_access here: the middleware takes the separate-reads
+// path, which is the one these fakes model (workspace-access-one-trip.test.ts
+// covers the RPC path).
+vi.mock('../db', () => ({
+  supabase: {
+    from: (t: string) => makeQuery(t),
+    rpc: async () => ({ data: null, error: { code: 'PGRST202', message: 'not found' } }),
+  },
+}))
 
 /* ── Cache: a Map with the same prefix-invalidation rule as memoryCache ── */
 

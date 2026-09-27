@@ -61,6 +61,11 @@ interface SettingsRow {
   updated_at: string | null
 }
 
+/** Everything the status shows. Deliberately without `api_key`. */
+const STATUS_COLUMNS =
+  'provider, base_url, model, system_prompt, topup_contact, is_enabled, updated_at'
+type StatusRow = Omit<SettingsRow, 'api_key'>
+
 /** The table is absent — the T13 migration has not been applied here. */
 const SCHEMA_ABSENT = new Set(['42P01', 'PGRST205', '42703', 'PGRST204'])
 
@@ -120,22 +125,21 @@ export class AiSettingsService {
     return (data as { api_key: string | null } | null)?.api_key || null
   }
 
-  /** What the admin panel renders. Never includes the key. */
+  /**
+   * What the admin panel — and every user's `/api/ai/quota` — renders. Never
+   * includes the key.
+   *
+   * ⚠️ AND NEVER READS IT (27 Sep 2026). This used to select `api_key` just to
+   * turn it into a boolean, so the secret crossed the wire from the database
+   * on every quota check by every user. «Is a key set» is asked as a filter
+   * instead: the row comes back only if `api_key` is non-null. Only when it
+   * does not is there a second read, to tell «no key» from «no settings».
+   */
   async getStatus(): Promise<AiProviderStatus | null> {
-    const { data, error } = await supabase
-      .from('ai_provider_settings')
-      .select(
-        'provider, base_url, model, api_key, system_prompt, topup_contact, is_enabled, updated_at',
-      )
-      .maybeSingle()
+    const keyed = await this.readStatusRow(true)
+    const row = keyed ?? (await this.readStatusRow(false))
+    if (!row) return null
 
-    if (error) {
-      if (SCHEMA_ABSENT.has(error.code)) return null
-      throw new DatabaseError('Failed to read AI provider settings', error)
-    }
-    if (!data) return null
-
-    const row = data as SettingsRow
     return {
       provider: row.provider as AiProvider,
       baseUrl: row.base_url,
@@ -143,10 +147,21 @@ export class AiSettingsService {
       systemPrompt: row.system_prompt ?? '',
       topupContact: row.topup_contact ?? '',
       isEnabled: row.is_enabled,
-      // ⚠️ A boolean. Never `row.api_key`, never a slice of it.
-      hasApiKey: Boolean(row.api_key),
+      // ⚠️ A boolean, from the filter — the key itself was never selected.
+      hasApiKey: keyed !== null,
       updatedAt: row.updated_at,
     }
+  }
+
+  private async readStatusRow(withKey: boolean): Promise<StatusRow | null> {
+    let query = supabase.from('ai_provider_settings').select(STATUS_COLUMNS)
+    if (withKey) query = query.not('api_key', 'is', null).neq('api_key', '')
+    const { data, error } = await query.maybeSingle()
+    if (error) {
+      if (SCHEMA_ABSENT.has(error.code)) return null
+      throw new DatabaseError('Failed to read AI provider settings', error)
+    }
+    return (data as StatusRow | null) ?? null
   }
 
   /**

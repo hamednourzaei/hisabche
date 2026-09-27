@@ -10,6 +10,7 @@
 // inventory can book entries without knowing a single account code.
 // ============================================
 
+import { createHash } from 'node:crypto'
 import {
   type AccountRole,
   type CreateAccount,
@@ -130,6 +131,21 @@ function toNodes(accounts: AccountRow[]): AccountNode[] {
 
 const REPORT_TTL_SECONDS = 120
 const ACCOUNTS_TTL_SECONDS = 300
+
+/**
+ * A stable UUID for (workspace, kind, …parts) — the `source_id` of an entry
+ * that has no document of its own (a manual entry's idempotency key, a
+ * year-end period). Deterministic, so the same request always maps to the same
+ * source and the unique index can refuse the second. RFC 4122 shape with the
+ * version nibble set to 5 (name-based, SHA hash).
+ */
+export function sourceIdOf(workspaceId: string, kind: string, ...parts: string[]): string {
+  const hex = createHash('sha256')
+    .update([workspaceId, kind, ...parts].join('\u0000'))
+    .digest('hex')
+  const variant = ((parseInt(hex[16]!, 16) & 0x3) | 0x8).toString(16)
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`
+}
 
 export class AccountingService implements LedgerPort {
   private readonly repo: AccountingRepository
@@ -466,7 +482,17 @@ export class AccountingService implements LedgerPort {
   async createJournalEntry(
     ctx: TenancyContext,
     data: CreateJournalEntry,
-    options: { status?: 'draft' | 'posted' | undefined } = {},
+    options: {
+      status?: 'draft' | 'posted' | undefined
+      /**
+       * The request's Idempotency-Key (27 Sep 2026). It becomes the entry's
+       * source, so the unique index «one live entry per source» makes a
+       * retried submit return the first entry instead of posting it twice.
+       */
+      idempotencyKey?: string | null | undefined
+      /** A source the caller owns (the year-end close). Wins over the key. */
+      source?: { type: string; id: string } | undefined
+    } = {},
   ) {
     const status = options.status ?? 'posted'
     const date = dateOnly(data.date)
@@ -480,8 +506,12 @@ export class AccountingService implements LedgerPort {
       description: data.description ?? '',
       reference: data.reference ?? '',
       status,
-      sourceType: 'manual',
-      sourceId: null,
+      sourceType: options.source?.type ?? 'manual',
+      sourceId:
+        options.source?.id ??
+        (options.idempotencyKey
+          ? sourceIdOf(ctx.workspaceId, 'manual', options.idempotencyKey)
+          : null),
       reversalOf: null,
       lines,
     })
@@ -995,12 +1025,25 @@ export class AccountingService implements LedgerPort {
     // `createJournalEntry` — the same door every other posting uses. It runs
     // the period lock and the postable-lines checks, which a closing entry
     // needs at least as much as an ordinary one.
-    return this.createJournalEntry(ctx, {
-      date: plan.to,
-      description: `Year-end close ${plan.from} — ${plan.to}`,
-      reference,
-      lines: plan.lines,
-    } as CreateJournalEntry)
+    // ⚠️ AND KEYED IN THE DATABASE (27 Sep 2026). The lookup above answers a
+    // second close with a clear message, but two closes at the SAME moment
+    // both pass it. The period as the entry's source puts them on the unique
+    // index «one live entry per source»: the second gets the first's entry.
+    return this.createJournalEntry(
+      ctx,
+      {
+        date: plan.to,
+        description: `Year-end close ${plan.from} — ${plan.to}`,
+        reference,
+        lines: plan.lines,
+      } as CreateJournalEntry,
+      {
+        source: {
+          type: 'year_end_close',
+          id: sourceIdOf(ctx.workspaceId, 'year_end_close', plan.from, plan.to),
+        },
+      },
+    )
   }
 
   /** Receivables and treasury reports. See operational-reports.ts. */

@@ -147,9 +147,14 @@ export async function aiChatRoutes(fastify: FastifyInstance) {
     { preHandler: [authenticate, requireWorkspaceContext] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const status = await settings.getStatus()
+        // Independent reads — together, not one after the other: each hop to
+        // the database is ~150–300 ms of network (perf logs, 27 Sep 2026).
+        const [status, quotaStatus] = await Promise.all([
+          settings.getStatus(),
+          quota.status(request.tenancy),
+        ])
         return reply.send({
-          quota: await quota.status(request.tenancy),
+          quota: quotaStatus,
           // Whether the button should appear at all.
           isConfigured: Boolean(status?.isEnabled && status.hasApiKey),
           topupContact: status?.topupContact ?? '',

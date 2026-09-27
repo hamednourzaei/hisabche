@@ -15,7 +15,7 @@ import {
   useConflict,
   useConflicts,
   useResolveConflict,
-  type Conflict,
+  type ConflictSummary,
   type ResolutionChoice,
   apiErrorMessage,
 } from '@hisabche/api'
@@ -35,7 +35,7 @@ export const ConflictsContainer = memo(function ConflictsContainer() {
   const [actionError, setActionError] = useState<string | null>(null)
 
   const conflicts = useConflicts(status)
-  const list = asList<Conflict>(conflicts.data)
+  const list = asList<ConflictSummary>(conflicts.data)
 
   // Nothing is selected by default. Unlike a bank statement, the first row here
   // is not the one somebody came for — opening a financial decision the person

@@ -21,6 +21,7 @@ import * as Sharing from 'expo-sharing'
 import Constants from 'expo-constants'
 import { Platform } from 'react-native'
 import {
+  bytesToBase64,
   isWebViewMethod,
   type AppInfo,
   type HttpRequestResponse,
@@ -186,17 +187,31 @@ const http = {
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
     headers?: Record<string, string>
     body?: string | null
+    responseType?: 'text' | 'bytes'
   }): Promise<HttpRequestResponse> => {
     const response = await fetch(input.url, {
       method: input.method,
       ...(input.headers ? { headers: input.headers } : {}),
       ...(input.body != null ? { body: input.body } : {}),
     })
-    const data = await response.text()
     const headers: Record<string, string> = {}
     response.headers.forEach((value: string, key: string) => {
       headers[key] = value
     })
+    // ⚠️ A BINARY BODY IS NEVER READ AS TEXT (27 Sep 2026). Sync pages arrive
+    // as Hisabche Sync Binary; `text()` would corrupt them and the shell's
+    // pull would fail on every sync. The bytes cross the JSON bridge as base64.
+    if (input.responseType === 'bytes') {
+      const bytes = new Uint8Array(await response.arrayBuffer())
+      return {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+        data: '',
+        bytesBase64: bytesToBase64(bytes),
+      }
+    }
+    const data = await response.text()
     // The shape is the contract's, field for field — `data`, not `body`, and
     // `statusText` carried through. A host that answers a slightly different
     // object is a host the shared UI reads wrong while tsc stays quiet.

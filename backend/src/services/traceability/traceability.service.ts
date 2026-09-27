@@ -8,6 +8,7 @@ import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
+import { fetchAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
 
 import {
@@ -110,21 +111,28 @@ export class TraceabilityService {
     ctx: TenancyContext,
     filters: { productId?: string; openOnly?: boolean } = {},
   ): Promise<StockBatch[]> {
-    let query = supabase
-      .from('stock_batches')
-      .select(BATCH_COLUMNS)
-      .eq('workspace_id', ctx.workspaceId)
-      // Soonest expiry first, nulls last — the FEFO order.
-      .order('expiry_date', { ascending: true, nullsFirst: false })
-      .order('received_on', { ascending: true })
-      .limit(5000)
-
-    if (filters.productId) query = query.eq('product_id', filters.productId)
-    if (filters.openOnly !== false) query = query.gt('remaining_qty', 0)
-
-    const { data, error } = await query
-    if (error) throw new DatabaseError('Failed to fetch batches', error)
-    return (data ?? []).map(mapBatch)
+    // ⚠️ EVERY open batch, in ordered pages (27 Sep 2026). This was
+    // `.limit(5000)`, which PostgREST silently caps at max-rows (1000) — and
+    // the FEFO plan and the expired-value report are DECISIONS computed over
+    // this list. `id` last makes the page order total, so no batch is seen
+    // twice or skipped. Per product, the order matches stock_batches_fefo_idx.
+    const data = await fetchAllPages((from, to) => {
+      let query = supabase
+        .from('stock_batches')
+        .select(BATCH_COLUMNS)
+        .eq('workspace_id', ctx.workspaceId)
+      if (filters.productId) query = query.eq('product_id', filters.productId)
+      if (filters.openOnly !== false) query = query.gt('remaining_qty', 0)
+      return (
+        query
+          // Soonest expiry first, nulls last — the FEFO order.
+          .order('expiry_date', { ascending: true, nullsFirst: false })
+          .order('received_on', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to)
+      )
+    }, 'Failed to fetch batches')
+    return data.map(mapBatch)
   }
 
   async receiveBatch(
@@ -450,13 +458,17 @@ export class TraceabilityService {
 
     const layerIds = [...new Set(batches.map((b) => b.costLayerId).filter(Boolean))] as string[]
 
+    // A failed cost read is an error, not «these goods cost nothing» — the
+    // expired value is a write-off figure (§7.3). Chunked: an `in()` with
+    // thousands of ids is a URL PostgREST refuses.
     const costs = new Map<string, number>()
-    if (layerIds.length > 0) {
-      const { data } = await supabase
+    for (let i = 0; i < layerIds.length; i += 200) {
+      const { data, error } = await supabase
         .from('cost_layers')
         .select('id, unit_cost')
         .eq('workspace_id', ctx.workspaceId)
-        .in('id', layerIds)
+        .in('id', layerIds.slice(i, i + 200))
+      if (error) throw new DatabaseError('Failed to read batch costs', error)
 
       for (const row of data ?? []) {
         costs.set(row.id, Math.round((Number(row.unit_cost) || 0) * 100))

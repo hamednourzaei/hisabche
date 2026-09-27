@@ -55,6 +55,14 @@ export interface ConflictRow {
   entityLabel: string | null
 }
 
+/**
+ * What the LIST carries (27 Sep 2026): everything but the two full row
+ * snapshots. `server_row` and `client_payload` are whole records and grow
+ * with the data; the queue shows only the fields that differ (`divergences`),
+ * and the decision is taken from `get()`, which reads both in full.
+ */
+export type ConflictSummary = Omit<ConflictRow, 'serverRow' | 'clientPayload'>
+
 /** Which column names each entity, for the types that have one. */
 const LABEL_COLUMNS: Partial<Record<ConflictEntity, { table: string; column: string }>> = {
   product: { table: 'products', column: 'name' },
@@ -62,10 +70,10 @@ const LABEL_COLUMNS: Partial<Record<ConflictEntity, { table: string; column: str
   invoice: { table: 'invoices', column: 'invoice_number' },
 }
 
-async function attachLabels(
+async function attachLabels<T extends { entityType: ConflictEntity; entityId: string }>(
   workspaceId: string,
-  rows: Omit<ConflictRow, 'entityLabel'>[],
-): Promise<ConflictRow[]> {
+  rows: T[],
+): Promise<(T & { entityLabel: string | null })[]> {
   const labels = new Map<string, string>()
 
   for (const [entity, target] of Object.entries(LABEL_COLUMNS)) {
@@ -117,6 +125,17 @@ function mapConflict(raw: Record<string, any>): Omit<ConflictRow, 'entityLabel'>
     createdAt: raw.created_at,
   }
 }
+
+function mapConflictSummary(raw: Record<string, any>): Omit<ConflictSummary, 'entityLabel'> {
+  const { serverRow: _server, clientPayload: _client, ...summary } = mapConflict(raw)
+  return summary
+}
+
+const LIST_COLUMNS = `
+  id, entity_type, entity_id, mutation_id, operation, server_version,
+  client_version, divergences, has_financial_divergence, status,
+  resolution, resolution_reason, resolved_by, resolved_at, created_at
+`
 
 const COLUMNS = `
   id, entity_type, entity_id, mutation_id, operation, server_version, server_row,
@@ -304,10 +323,13 @@ export class ConflictService {
     return { conflictId: data?.id }
   }
 
-  async list(ctx: TenancyContext, status: 'open' | 'resolved' | 'all' = 'open') {
+  async list(
+    ctx: TenancyContext,
+    status: 'open' | 'resolved' | 'all' = 'open',
+  ): Promise<ConflictSummary[]> {
     let query = supabase
       .from('sync_conflicts')
-      .select(COLUMNS)
+      .select(LIST_COLUMNS)
       .eq('workspace_id', ctx.workspaceId)
       .order('created_at', { ascending: false })
       .limit(200)
@@ -316,7 +338,7 @@ export class ConflictService {
 
     const { data, error } = await query
     if (error) throw new DatabaseError('Failed to fetch conflicts', error)
-    return attachLabels(ctx.workspaceId, (data ?? []).map(mapConflict))
+    return attachLabels(ctx.workspaceId, (data ?? []).map(mapConflictSummary))
   }
 
   async get(ctx: TenancyContext, id: string): Promise<ConflictRow> {

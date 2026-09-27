@@ -24,14 +24,29 @@ import {
   type MdmRecord,
 } from './mdm.domain'
 
-/** Where each entity lives, and what points at it. */
-const ENTITY_CONFIG: Record<
+/**
+ * Where each entity lives, what points at it, and how a record is retired.
+ *
+ * ⚠️ `retiredBy` (27 Sep 2026): products and customers have NO `deleted_at`
+ * — their soft delete is `is_active = false` (the same flag desktop sync and
+ * the lists read). The scan filtered `deleted_at IS NULL` for all three, so
+ * duplicate detection for products and customers failed with 42703 (400) on
+ * every run, and merging two of them failed writing a column that is not
+ * there. Suppliers do carry `deleted_at`.
+ */
+export const ENTITY_CONFIG: Record<
   MdmEntity,
-  { table: string; nameColumn: string; references: Array<{ table: string; column: string }> }
+  {
+    table: string
+    nameColumn: string
+    retiredBy: 'is_active' | 'deleted_at'
+    references: Array<{ table: string; column: string }>
+  }
 > = {
   customer: {
     table: 'customers',
     nameColumn: 'full_name',
+    retiredBy: 'is_active',
     references: [
       { table: 'invoices', column: 'customer_id' },
       { table: 'transactions', column: 'customer_id' },
@@ -41,6 +56,7 @@ const ENTITY_CONFIG: Record<
   supplier: {
     table: 'suppliers',
     nameColumn: 'name',
+    retiredBy: 'deleted_at',
     references: [
       { table: 'invoices', column: 'supplier_id' },
       { table: 'purchase_orders', column: 'supplier_id' },
@@ -50,6 +66,7 @@ const ENTITY_CONFIG: Record<
   product: {
     table: 'products',
     nameColumn: 'name',
+    retiredBy: 'is_active',
     references: [
       { table: 'invoice_items', column: 'product_id' },
       { table: 'stock_movements', column: 'product_id' },
@@ -73,12 +90,10 @@ export class MdmService {
         ? `id, ${config.nameColumn}, barcode, sku, created_at`
         : `id, ${config.nameColumn}, phone, email, created_at`
 
-    const { data, error } = await supabase
-      .from(config.table)
-      .select(columns)
-      .eq('workspace_id', ctx.workspaceId)
-      .is('deleted_at', null)
-      .limit(2000)
+    let query = supabase.from(config.table).select(columns).eq('workspace_id', ctx.workspaceId)
+    query =
+      config.retiredBy === 'is_active' ? query.eq('is_active', true) : query.is('deleted_at', null)
+    const { data, error } = await query.limit(2000)
 
     if (error) throw new DatabaseError('Failed to load records for duplicate detection', error)
 
@@ -231,7 +246,11 @@ export class MdmService {
 
     const { error: deleteError } = await supabase
       .from(config.table)
-      .update({ deleted_at: new Date().toISOString(), merged_into_id: input.survivorId })
+      .update(
+        config.retiredBy === 'is_active'
+          ? { is_active: false, merged_into_id: input.survivorId }
+          : { deleted_at: new Date().toISOString(), merged_into_id: input.survivorId },
+      )
       .eq('workspace_id', ctx.workspaceId)
       .eq('id', input.absorbedId)
 

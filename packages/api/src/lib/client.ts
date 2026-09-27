@@ -1,5 +1,13 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 import { getToken, tokenReady } from './tokenProvider'
+import {
+  activeBaseUrl,
+  canReplay,
+  configureEdgeFailover,
+  edgeFailoverConfig,
+  isEdgeFailure,
+  markEdgeDown,
+} from './edge-failover'
 import { readStorage, STORAGE_KEYS } from '../storage'
 // Side-effect import: auto-registers the browser adapter when localStorage
 // exists. On React Native the host app registers a SecureStore adapter.
@@ -93,6 +101,24 @@ export function isCollectionUrl(url: string | undefined): boolean {
 }
 
 const BASE_URL = publicEnv() || 'https://api.hisabche.com/api'
+
+/**
+ * The DIRECT Render address, used when the Cloudflare edge fails
+ * (lib/edge-failover.ts). Written out literally for the same bundler reason as
+ * publicEnv(). Unset → no failover, and nothing else changes.
+ */
+function publicFallbackEnv(): string | undefined {
+  const fromNext =
+    typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_FALLBACK_URL : undefined
+  const fromExpo =
+    typeof process !== 'undefined' ? process.env.EXPO_PUBLIC_API_FALLBACK_URL : undefined
+  return normalizeBaseUrl(fromNext || fromExpo)
+}
+
+{
+  const fallback = publicFallbackEnv()
+  if (fallback) configureEdgeFailover({ primary: BASE_URL, fallback })
+}
 const isDev = env.NODE_ENV !== 'production'
 
 // حداکثر زمانی که یک درخواست منتظر آماده شدن Auth Store می‌ماند (میلی‌ثانیه)
@@ -200,6 +226,10 @@ apiClient.interceptors.request.use(
     // این کار جلوی 401 کاذب ناشی از race بین mount شدن صفحه و hydrate شدن session را می‌گیرد
     await waitForTokenReady()
 
+    // The edge failed recently → the direct Render address (edge-failover.ts).
+    const base = activeBaseUrl(config.baseURL ?? apiClient.defaults.baseURL)
+    if (base !== undefined) config.baseURL = base
+
     // ⚠️ RENEW BEFORE SENDING, NOT AFTER THE 401.
     //
     // Supabase's auth log showed ~36 `GET /user` → 403 "token is expired" in
@@ -271,6 +301,29 @@ apiClient.interceptors.response.use(
     // response, so it read as NETWORK_ERROR — which the offline paths treat as
     // "the device is offline, queue it / read the device database".
     if (axios.isCancel(error)) return Promise.reject(error)
+
+    // ─── The Cloudflare edge failed → the direct address (edge-failover.ts) ─
+    const failover = edgeFailoverConfig()
+    const sent = error.config as (typeof error.config & { _edgeRetried?: boolean }) | undefined
+    if (
+      failover &&
+      sent &&
+      !sent._edgeRetried &&
+      normalizeBaseUrl(sent.baseURL) === failover.primary &&
+      isEdgeFailure({
+        hasResponse: Boolean(error.response),
+        status: error.response?.status,
+        contentType: String(error.response?.headers?.['content-type'] ?? ''),
+        code: error.code,
+      })
+    ) {
+      markEdgeDown()
+      if (canReplay(sent.method, sent.headers as Record<string, unknown> | undefined)) {
+        sent._edgeRetried = true
+        sent.baseURL = failover.fallback
+        return apiClient.request(sent)
+      }
+    }
 
     const responseData = error.response?.data as any
 

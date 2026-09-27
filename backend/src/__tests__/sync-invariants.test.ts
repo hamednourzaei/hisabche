@@ -35,6 +35,7 @@ function reset(): void {
     'customers',
     'products',
     'transactions',
+    'invoice_items',
     'sync_change_log',
     'sync_mutations',
   ]) {
@@ -662,6 +663,46 @@ describe('snapshot — a full rebuild carries versions and never skips a row', (
     await expect(syncService.snapshot(ACTOR.workspaceId, 'transaction', null, 10)).rejects.toThrow(
       /no snapshot/,
     )
+  })
+})
+
+describe('an invoice travels with its lines', () => {
+  it("pull and snapshot attach the invoice's own lines, and only those", async () => {
+    await syncService.push(ACTOR, [invoiceMutation({ mutationId: uuid(981), entityId: uuid(70) })])
+    tables
+      .get('invoice_items')!
+      .push(
+        {
+          id: uuid(71),
+          invoice_id: uuid(70),
+          product_name: 'چای',
+          quantity: 2,
+          unit_price: 5,
+          total_price: 10,
+        },
+        {
+          id: uuid(72),
+          invoice_id: uuid(99),
+          product_name: 'not this invoice',
+          quantity: 1,
+          unit_price: 1,
+          total_price: 1,
+        },
+      )
+    const page = await syncService.pull(ACTOR.workspaceId, 0, 10)
+    const change = page.changes.find((c) => c.entityId === uuid(70))
+    expect((change?.data as { items: Array<{ id: string }> }).items.map((i) => i.id)).toEqual([
+      uuid(71),
+    ])
+
+    const snap = await syncService.snapshot(ACTOR.workspaceId, 'invoice', null, 10)
+    expect((snap.rows[0] as { items: unknown[] }).items).toHaveLength(1)
+  })
+
+  it('a failed line read fails the pull — never an invoice that looks empty', async () => {
+    await syncService.push(ACTOR, [invoiceMutation({ mutationId: uuid(982), entityId: uuid(73) })])
+    failingReads.add('invoice_items')
+    await expect(syncService.pull(ACTOR.workspaceId, 0, 10)).rejects.toThrow(/invoice items failed/)
   })
 })
 

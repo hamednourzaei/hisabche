@@ -12,6 +12,14 @@ import { Plus, Check, ChevronRight, DollarSign, Package, Pencil, AlertTriangle }
 import type { Product, Currency } from '../../../lib/warehouse/warehouse-types'
 import { BASE_CODE, rateFromPair } from '../../../lib/warehouse/rate-from-pair'
 import { SelectField } from '../select-field'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../dialog'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    WarehouseView v5 — search moved onto the table toolbar
@@ -183,6 +191,11 @@ const WarehouseHeader = memo(function WarehouseHeader({
 WarehouseHeader.displayName = 'WarehouseHeader'
 
 // ─── CurrencyChips ─────────────────────────────────────────────────────────
+//
+// One chip per currency under the KPI cards. The afghani chip is the base and
+// only reads; every other chip is a button that opens the rate dialog for THAT
+// currency (owner's request, 27 Sep 2026: the rate form used to sit open in the
+// middle of the page, its selects stretched to full width).
 
 const CurrencyChips = memo(function CurrencyChips({
   t,
@@ -197,17 +210,94 @@ const CurrencyChips = memo(function CurrencyChips({
   totalValue: number | null
   onSetRate: (code: string, afnPerUnit: number | null) => void
 }) {
-  // «[amount] [unit] = [amount] [unit]» — the way a rate is said aloud
-  // (owner's request, 26 Sep 2026). The old form was fixed to «۱ X = … افغانی»
-  // and had no room for «۳٬۰۰۰ افغانی = ۱٬۰۰۰٬۰۰۰ تومان».
-  const units = [{ code: BASE_CODE, label: t('warehouse.currencyAFN', 'افغانی') }, ...currencies]
-  const [leftAmount, setLeftAmount] = useState('1')
-  const [leftCode, setLeftCode] = useState(currencies[0]?.code ?? BASE_CODE)
-  const [rightAmount, setRightAmount] = useState('')
-  const [rightCode, setRightCode] = useState(BASE_CODE)
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [editing, setEditing] = useState<Currency | null>(null)
 
   if (totalValue === null) return null
+
+  const chip = 'rounded-lg bg-[hsl(var(--surface-muted))] px-2 py-1'
+
+  return (
+    <>
+      <div
+        className="flex flex-wrap items-center gap-2 text-xs text-[hsl(var(--fg-secondary))]"
+        data-currency-chips=""
+      >
+        <span className={chip}>
+          {t('warehouse.currencyAFN', 'افغانی')}: {fmt(totalValue)}
+        </span>
+        {currencies.map((c) => (
+          <button
+            key={c.code}
+            type="button"
+            onClick={() => setEditing(c)}
+            aria-label={`${t('warehouse.rateForm', 'ثبت نرخ')} — ${c.label}`}
+            className={cn(
+              chip,
+              'inline-flex items-center gap-1.5 transition-colors hover:bg-[hsl(var(--surface-elevated))] hover:text-[hsl(var(--fg-primary))]',
+              FOCUS_RING,
+            )}
+          >
+            <span>
+              {c.label}:{' '}
+              {c.rate === null ? (
+                <span className="text-[hsl(var(--color-warning))]">
+                  {t('warehouse.enterRate', 'نرخ را وارد کنید')}
+                </span>
+              ) : (
+                fmt(totalValue * c.rate)
+              )}
+            </span>
+            <Pencil className="size-3 shrink-0 opacity-60" aria-hidden="true" />
+          </button>
+        ))}
+      </div>
+
+      {editing ? (
+        <RateDialog
+          t={t}
+          currency={editing}
+          currencies={currencies}
+          onClose={() => setEditing(null)}
+          onSave={(code, afnPerUnit) => {
+            onSetRate(code, afnPerUnit)
+            setEditing(null)
+          }}
+        />
+      ) : null}
+    </>
+  )
+})
+CurrencyChips.displayName = 'CurrencyChips'
+
+// ─── RateDialog ────────────────────────────────────────────────────────────
+//
+// «[amount] [unit] = [amount] [unit]» — the way a rate is said aloud: «۱ دالر
+// = ۷۵۰ افغانی», «۳٬۰۰۰ افغانی = ۱٬۰۰۰٬۰۰۰ تومان». Opens on the clicked
+// currency, pre-filled with its current rate; saving stores the rate and
+// closes the dialog.
+
+function RateDialog({
+  t,
+  currency,
+  currencies,
+  onClose,
+  onSave,
+}: {
+  t: (key: string, fallback?: string) => string
+  currency: Currency
+  currencies: Currency[]
+  onClose: () => void
+  onSave: (code: string, afnPerUnit: number) => void
+}) {
+  const units = [{ code: BASE_CODE, label: t('warehouse.currencyAFN', 'افغانی') }, ...currencies]
+  const unitOptions = units.map((u) => ({ value: u.code, label: u.label }))
+  const [leftAmount, setLeftAmount] = useState('1')
+  const [leftCode, setLeftCode] = useState(currency.code)
+  const [rightAmount, setRightAmount] = useState(
+    currency.afnPerUnit !== null ? String(currency.afnPerUnit) : '',
+  )
+  const [rightCode, setRightCode] = useState(BASE_CODE)
+  const [error, setError] = useState<string | null>(null)
 
   const submit = () => {
     const result = rateFromPair(
@@ -216,119 +306,117 @@ const CurrencyChips = memo(function CurrencyChips({
       (code) => currencies.find((c) => c.code === code)?.afnPerUnit ?? null,
     )
     if (!result.ok) {
-      setMessage({
-        ok: false,
-        text:
-          result.reason === 'same'
-            ? t('warehouse.rateSame', 'دو واحد باید متفاوت باشند.')
-            : result.reason === 'amount'
-              ? t('warehouse.rateAmount', 'هر دو مقدار باید بزرگ‌تر از صفر باشند.')
-              : t(
-                  'warehouse.rateBridge',
-                  'یکی از دو واحد باید افغانی باشد یا نرخش از قبل ثبت شده باشد.',
-                ),
-      })
+      setError(
+        result.reason === 'same'
+          ? t('warehouse.rateSame', 'دو واحد باید متفاوت باشند.')
+          : result.reason === 'amount'
+            ? t('warehouse.rateAmount', 'هر دو مقدار باید بزرگ‌تر از صفر باشند.')
+            : t(
+                'warehouse.rateBridge',
+                'یکی از دو واحد باید افغانی باشد یا نرخش از قبل ثبت شده باشد.',
+              ),
+      )
       return
     }
-    onSetRate(result.code, result.afnPerUnit)
-    setMessage({ ok: true, text: t('warehouse.rateSaved', 'نرخ ذخیره شد.') })
+    onSave(result.code, result.afnPerUnit)
   }
 
   const amountInput =
-    'h-9 w-28 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 text-sm tabular-nums'
-  const unitSelect =
-    'h-9 min-w-[96px] rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 text-sm'
-  const unitOptions = units.map((u) => ({ value: u.code, label: u.label }))
+    'h-10 w-full min-w-0 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 text-sm tabular-nums'
+  const unitSelect = 'h-10 w-32 shrink-0'
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-[hsl(var(--fg-secondary))]">
-        <span className="rounded-lg bg-[hsl(var(--surface-muted))] px-2 py-1">
-          {t('warehouse.currencyAFN', 'افغانی')}: {fmt(totalValue)}
-        </span>
-        {currencies.map((c) => (
-          <span key={c.code} className="rounded-lg bg-[hsl(var(--surface-muted))] px-2 py-1">
-            {c.label}:{' '}
-            {c.rate === null ? (
-              <span className="text-[hsl(var(--color-warning))]">
-                {t('warehouse.enterRate', 'نرخ را وارد کنید')}
-              </span>
-            ) : (
-              fmt(totalValue * c.rate)
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md" data-rate-dialog="">
+        <DialogHeader>
+          <DialogTitle>
+            {t('warehouse.rateForm', 'ثبت نرخ')} — {currency.label}
+          </DialogTitle>
+          <DialogDescription>
+            {t(
+              'warehouse.rateHint',
+              'نرخ را همان‌طور که می‌گویید وارد کنید؛ مثلاً ۱ دالر = ۷۵۰ افغانی.',
             )}
-          </span>
-        ))}
-      </div>
+          </DialogDescription>
+        </DialogHeader>
 
-      <form
-        data-rate-form=""
-        className="flex flex-wrap items-center gap-2 text-sm"
-        onSubmit={(event) => {
-          event.preventDefault()
-          submit()
-        }}
-      >
-        <span className="text-xs font-medium text-[hsl(var(--fg-secondary))]">
-          {t('warehouse.rateForm', 'ثبت نرخ')}:
-        </span>
-        <input
-          aria-label={t('warehouse.rateForm', 'ثبت نرخ')}
-          type="number"
-          min={0}
-          step="any"
-          inputMode="decimal"
-          dir="ltr"
-          value={leftAmount}
-          onChange={(e) => setLeftAmount(e.target.value)}
-          className={amountInput}
-        />
-        <SelectField
-          value={leftCode}
-          onChange={setLeftCode}
-          options={unitOptions}
-          className={unitSelect}
-        />
-        <span aria-hidden="true">=</span>
-        <input
-          aria-label={t('warehouse.rateForm', 'ثبت نرخ')}
-          type="number"
-          min={0}
-          step="any"
-          inputMode="decimal"
-          dir="ltr"
-          value={rightAmount}
-          onChange={(e) => setRightAmount(e.target.value)}
-          className={amountInput}
-        />
-        <SelectField
-          value={rightCode}
-          onChange={setRightCode}
-          options={unitOptions}
-          className={unitSelect}
-        />
-        <button
-          type="submit"
-          className="h-9 rounded-lg bg-[hsl(var(--color-primary))] px-3 text-sm font-medium text-[hsl(var(--color-primary-fg))]"
+        <form
+          data-rate-form=""
+          className="space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault()
+            submit()
+          }}
         >
-          {t('common.save', 'ذخیره')}
-        </button>
-        {message ? (
-          <span
-            role={message.ok ? 'status' : 'alert'}
-            className={
-              message.ok
-                ? 'text-xs text-[hsl(var(--color-success))]'
-                : 'text-xs text-[hsl(var(--color-destructive))]'
-            }
-          >
-            {message.text}
-          </span>
-        ) : null}
-      </form>
-    </div>
+          <div className="flex items-center gap-2">
+            <input
+              aria-label={t('warehouse.amountLabel', 'مقدار')}
+              type="number"
+              min={0}
+              step="any"
+              inputMode="decimal"
+              dir="ltr"
+              autoFocus
+              value={leftAmount}
+              onChange={(e) => setLeftAmount(e.target.value)}
+              className={amountInput}
+            />
+            <SelectField
+              value={leftCode}
+              onChange={setLeftCode}
+              options={unitOptions}
+              className={unitSelect}
+            />
+          </div>
+          <p className="text-center text-sm text-[hsl(var(--fg-tertiary))]" aria-hidden="true">
+            =
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              aria-label={t('warehouse.amountLabel', 'مقدار')}
+              type="number"
+              min={0}
+              step="any"
+              inputMode="decimal"
+              dir="ltr"
+              value={rightAmount}
+              onChange={(e) => setRightAmount(e.target.value)}
+              className={amountInput}
+            />
+            <SelectField
+              value={rightCode}
+              onChange={setRightCode}
+              options={unitOptions}
+              className={unitSelect}
+            />
+          </div>
+
+          {error ? (
+            <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+              {error}
+            </p>
+          ) : null}
+
+          <DialogFooter className="gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-10 rounded-lg border border-[hsl(var(--border-default))] px-4 text-sm"
+            >
+              {t('common.cancel', 'انصراف')}
+            </button>
+            <button
+              type="submit"
+              className="h-10 rounded-lg bg-[hsl(var(--color-primary))] px-4 text-sm font-medium text-[hsl(var(--color-primary-fg))]"
+            >
+              {t('common.save', 'ذخیره')}
+            </button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
-})
-CurrencyChips.displayName = 'CurrencyChips'
+}
 
 // ─── LoadingSkeleton ────────────────────────────────────────────────────────
 
@@ -413,7 +501,9 @@ export const WarehouseView = memo(function WarehouseView({
                 { value: BASE_CODE, label: 'AFN' },
                 ...currencies.map((c) => ({ value: c.code, label: c.code })),
               ]}
-              className="h-6 rounded-md border border-[hsl(var(--border-default))] bg-transparent px-1 text-[11px]"
+              // Currency-code sized (owner's request, 27 Sep 2026): SelectField is
+              // full-width by default and pushed the label «ارزش کل» to «ارز…».
+              className="h-6 w-auto shrink-0 gap-0.5 rounded-md border-transparent bg-transparent px-1 text-[11px] font-semibold hover:bg-[hsl(var(--surface-muted))] [&>svg]:size-3"
             />
           ) : (
             <span className="text-[11px] text-[hsl(var(--fg-tertiary))]">(AFN)</span>

@@ -127,14 +127,22 @@ export class CustomerService {
     const maxLimit = Math.min(limit, 100)
     const fetchLimit = maxLimit + 1
 
+    const keyset = cursor ? decodeCursor(cursor, sortBy) : null
+    // ⚠️ THE TOTAL IS COUNTED ON THIS QUERY (27 Sep 2026). It came from a
+    // second HEAD request with `count: 'estimated'` over the WHOLE workspace:
+    // one extra round trip plus a planner EXPLAIN per list call, and with a
+    // search active the page count was the unfiltered one — «page 1 of 20»
+    // for three matches. PostgREST counts the filtered set and ignores the
+    // range, which is exactly the number the pager needs. On the keyset
+    // (cursor) path there is no total: a count after the cursor would be
+    // «rows remaining», not the size of the list.
     let query = supabase
       .from('customers')
-      .select(LIST_COLUMNS)
+      .select(LIST_COLUMNS, keyset ? undefined : { count: 'exact' })
       .eq('workspace_id', workspaceId)
       .order(sortBy, { ascending: sortDirection === 'asc' })
       .order('id', { ascending: sortDirection === 'asc' })
 
-    const keyset = cursor ? decodeCursor(cursor, sortBy) : null
     // `page` used to be ignored: page 2 of the customers table was page 1 again.
     const pageNumber = Number(page) || 1
     if (!keyset && pageNumber > 1) {
@@ -153,14 +161,7 @@ export class CustomerService {
 
     if (keyset) query = applyKeyset(query, sortBy, sortDirection, keyset)
 
-    // ✅ موازی‌سازی: کوئری اصلی + count
-    const [queryResult, countResult] = await Promise.all([
-      query,
-      supabase
-        .from('customers')
-        .select('id', { count: 'estimated', head: true })
-        .eq('workspace_id', workspaceId),
-    ])
+    const queryResult = await query
 
     const { data, error } = queryResult
     if (error) throw new DatabaseError('Failed to fetch customers', error)
@@ -185,7 +186,7 @@ export class CustomerService {
       customers: role ? withRoles.filter((c) => matchesRole(c.role, role)) : withRoles,
       nextCursor,
       hasMore,
-      total: countResult.count || 0,
+      ...(keyset ? {} : { total: queryResult.count ?? 0 }),
       limit: maxLimit,
     }
 

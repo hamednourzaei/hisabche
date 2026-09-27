@@ -134,10 +134,14 @@ export async function updatesRoutes(fastify: FastifyInstance) {
         return (
           reply
             .header('Content-Type', 'text/yaml; charset=utf-8')
-            // ⚠️ SHORT CACHE, AND `must-revalidate`. A long one means a release
+            // ⚠️ SHORT CACHE. A long one means a release
             // is invisible for as long as it lasts, and the whole point of
             // pushing an update is that it arrives.
-            .header('Cache-Control', 'public, max-age=60, must-revalidate')
+            // `s-maxage` lets Cloudflare answer every installed copy's poll;
+            // `stale-if-error` keeps the feed up while Render is not — which is
+            // why `must-revalidate` went: it forbids exactly that. An old
+            // manifest during an outage only means «no update yet».
+            .header('Cache-Control', 'public, max-age=60, s-maxage=60, stale-if-error=86400')
             .send(toManifest(release))
         )
       } catch (err) {

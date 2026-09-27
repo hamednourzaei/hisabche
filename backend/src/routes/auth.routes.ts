@@ -203,7 +203,7 @@ async function getProfile(userId: string): Promise<{
   store_size?: string | null
   business_note?: string | null
 } | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('profiles')
     // The onboarding columns come from docs/onboarding-server-state-migration.sql.
     // Selected together so a single round-trip answers 'has this account
@@ -212,9 +212,23 @@ async function getProfile(userId: string): Promise<{
       'full_name, business_name, avatar_url, onboarding_completed_at, business_types, store_size, business_note',
     )
     .eq('id', userId)
-    .single()
+    // maybeSingle: no profile row is a normal answer (null), not a 406.
+    .maybeSingle()
 
-  return data
+  if (!error) return data
+  // The onboarding migration has not run: the base columns still answer.
+  if (error.code === '42703' || error.code === 'PGRST204') {
+    const base = await supabase
+      .from('profiles')
+      .select('full_name, business_name, avatar_url')
+      .eq('id', userId)
+      .maybeSingle()
+    if (base.error) throw new Error(`profile read failed: ${base.error.message}`)
+    return base.data
+  }
+  // ⚠️ A failed read is not «no profile»: returned as null it read as «setup
+  // not finished» and sent a set-up account back to onboarding.
+  throw new Error(`profile read failed: ${error.message}`)
 }
 
 // ─── Helper: Sanitize user (ترکیب auth.users + profiles) ──

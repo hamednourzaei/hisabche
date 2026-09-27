@@ -140,6 +140,7 @@ CREATE OR REPLACE FUNCTION public.blog_post_is_public(p_status text, p_published
 RETURNS boolean
 LANGUAGE sql
 STABLE
+SET search_path = public, pg_temp
 AS $$
   SELECT p_status = 'published'
       OR (p_status = 'scheduled' AND p_published_at IS NOT NULL AND p_published_at <= now())
@@ -224,6 +225,7 @@ CREATE TABLE IF NOT EXISTS public.blog_post_view_days (
 CREATE OR REPLACE FUNCTION public.blog_touch_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   NEW.updated_at := now();

@@ -28,6 +28,7 @@ import {
 import { AccountingService } from '../services/accounting'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
+import { readClientRequestId } from '../utils/client-request'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { branches } from '../services/branch'
@@ -240,7 +241,12 @@ export async function accountingRoutes(fastify: FastifyInstance) {
       try {
         const data = createJournalEntrySchema.parse(request.body)
         const { status } = request.query as { status?: 'draft' | 'posted' }
-        const entry = await accountingService.createJournalEntry(request.tenancy, data, { status })
+        // A retried submit (lost response, double click) returns the same
+        // entry instead of posting it twice — see createJournalEntry.
+        const entry = await accountingService.createJournalEntry(request.tenancy, data, {
+          status,
+          idempotencyKey: readClientRequestId(request),
+        })
         return reply.code(201).send(entry)
       } catch (err) {
         return fail(reply, err, 'Failed to create journal entry')

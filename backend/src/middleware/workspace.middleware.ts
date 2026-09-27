@@ -29,12 +29,10 @@
 // would travel with mutations and read as if it were part of the record.
 // ============================================
 
-import { roleCapabilities } from '../services/authorization/role-capabilities.service'
-import { memberModuleBlocks } from '../services/authorization/member-module-blocks.service'
-import { restrictByModuleBlocks } from '../services/authorization/authorization.domain'
 import { FastifyReply, FastifyRequest } from 'fastify'
 
-import { requireWorkspace, type TenancyContext } from '../services/tenancy.service'
+import { resolveWorkspaceAccess } from '../services/authorization/workspace-access.service'
+import { type TenancyContext } from '../services/tenancy.service'
 import { BaseError } from '../errors/base.error'
 import { rejectIfSubscriptionExpired } from './subscription.middleware'
 
@@ -72,17 +70,11 @@ export async function requireWorkspaceContext(request: FastifyRequest, reply: Fa
   }
 
   try {
-    const resolved = await requireWorkspace(userId, requestedWorkspaceId(request))
-    request.tenancy = {
-      ...resolved,
-      // The role's set, minus any modules the owner took away from THIS person.
-      // Only ever a subset; never applied to the owner (restrictByModuleBlocks).
-      capabilities: restrictByModuleBlocks(
-        resolved.role,
-        await roleCapabilities.effective(resolved.workspaceId, resolved.role),
-        await memberModuleBlocks.forMember(resolved.workspaceId, userId),
-      ),
-    }
+    // Membership, role, capabilities and page blocks — built ONCE per
+    // request, in one database round trip where the RPC exists
+    // (workspace-access.service). Every service downstream reads
+    // `request.tenancy`; none re-resolves membership.
+    request.tenancy = await resolveWorkspaceAccess(userId, requestedWorkspaceId(request))
   } catch (error) {
     const status = error instanceof BaseError ? error.statusCode : 500
     const message = error instanceof Error ? error.message : 'Workspace resolution failed'

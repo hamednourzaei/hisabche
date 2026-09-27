@@ -198,8 +198,18 @@ export async function requireWorkspace(
 ): Promise<TenancyContext> {
   if (!userId) throw new ForbiddenError('Not authenticated')
 
-  const authorized = await listAuthorizedWorkspaces(userId)
+  return chooseWorkspace(await listAuthorizedWorkspaces(userId), requestedWorkspaceId)
+}
 
+/**
+ * The choice itself, over memberships already read — shared by
+ * `requireWorkspace` and the one-round-trip `resolveWorkspaceAccess`, so the
+ * two paths cannot disagree about which book a request opens.
+ */
+export function chooseWorkspace(
+  authorized: TenancyContext[],
+  requestedWorkspaceId?: string | null,
+): TenancyContext {
   if (authorized.length === 0) {
     // Covers all of: never onboarded, removed from the workspace, has_access
     // revoked, suspended, and platform admin who is not a member.

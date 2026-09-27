@@ -76,7 +76,7 @@ describe('conflicts page structure', () => {
   })
 
   it('reads the list through asList()', () => {
-    expect(container).toContain('asList<Conflict>(conflicts.data)')
+    expect(container).toContain('asList<ConflictSummary>(conflicts.data)')
   })
 })
 
