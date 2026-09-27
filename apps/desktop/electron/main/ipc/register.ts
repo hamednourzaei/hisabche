@@ -17,6 +17,7 @@ import {
   dbResolveQueueSchema,
   dbSetWorkspaceSchema,
   dbUpsertSchema,
+  dbRemoveSchema,
   exportFileSchema,
   importFileSchema,
   printEscPosSchema,
@@ -30,7 +31,7 @@ import { sessionCan } from '@hisabche/auth-core'
 import type { AppInfo, ImportedFile } from '@hisabche/app-bridge'
 import * as db from '../db/database'
 import { secureDelete, secureGet, secureSet } from '../services/secure-store'
-import { printEscPos, printHtml } from '../services/printing'
+import { listPrinters, printEscPos, printHtml } from '../services/printing'
 import { checkForUpdates, downloadUpdate, quitAndInstall } from '../services/updater'
 import { writeExport } from '../services/files'
 import { httpRequest } from '../services/http'
@@ -146,6 +147,14 @@ export function registerIpcHandlers(): void {
     )(({ table, rows }, event) => db.upsertMany(table, rows)),
   )
   handle(
+    IPC.dbRemoveMany,
+    dbRemoveSchema,
+    authenticateAndAuthorize(
+      'record.update',
+      true,
+    )(({ table, ids }, event) => db.removeMany(table, ids)),
+  )
+  handle(
     IPC.dbEnqueue,
     dbEnqueueSchema,
     authenticateAndAuthorize('record.create', true)((input, event) => void db.enqueue(input)),
@@ -180,6 +189,11 @@ export function registerIpcHandlers(): void {
     IPC.printHtml,
     printHtmlSchema,
     authenticateAndAuthorize('record.create', true)((input, event) => printHtml(input)),
+  )
+  handle(
+    IPC.printListPrinters,
+    anySchema,
+    authenticateAndAuthorize('record.read', true)((_, event) => listPrinters()),
   )
   handle(
     IPC.printEscPos,

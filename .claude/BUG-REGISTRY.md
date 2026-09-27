@@ -460,3 +460,44 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
   `blog-web-seo.test.ts` — هر دو با همان ترتیب اصلاح شدند.
 - **درس:** در هر stripper، کامنت خطی را **اول** حذف کن؛ glob و مسیر در کامنت خطی عادی است.
 - **تست:** خودِ گارد؛ injection: `FOR ALL` روی `blog_posts_public_read` → قرمز.
+
+## BUG-030 — یک خطای موقت دیتابیس محصول/مشتری را از نسخه‌ی آفلاین دسکتاپ حذف می‌کرد (۲۷ سپتامبر)
+
+- **الگو:** §۷٫۳ «خطا و خالی‌بودن یک شاخه» — این‌بار در سینک.
+- **ریشه:** `hydrate` در `sync.service.ts` خطای کوئری را نادیده می‌گرفت → هر change با `data: null` می‌رفت؛ دسکتاپ `!change.data` را حذف می‌خواند و cursor را جلو می‌برد. `isBehindHorizon`، `currentCursor` و `readRow` هم خطا را «خالی» برمی‌گرداندند.
+- **رفع:** هر چهار تابع روی خطا throw می‌کنند → pull = 500، cursor جابه‌جا نمی‌شود. **گارد:** `sync-invariants.test.ts` (failingReads) — injection-tested.
+
+## BUG-031 — ویرایش نام مشتری در دسکتاپ آفلاین هیچ‌جا ثبت نمی‌شد (۲۷ سپتامبر)
+
+- **ریشه:** allow-list سینک `customer: ['name', …]` داشت؛ ستون واقعی `full_name` است. فیلتر `full_name` را بی‌صدا دور می‌انداخت و push «applied» جواب می‌داد.
+- **رفع:** `full_name`. **گارد:** `sync-invariants.test.ts` («renaming a customer writes full_name») — injection-tested.
+
+## BUG-032 — هر ویرایش آفلاین دسکتاپ «تعارض نسخه» می‌گرفت (۲۷ سپتامبر)
+
+- **ریشه:** بازسازی دسکتاپ از لیست‌های REST می‌آمد که `version` ندارند، و mapperهای pull هم `version` را نمی‌نوشتند → هر ردیف با نسخه‌ی پیش‌فرض ۱ ذخیره می‌شد؛ هر کالا/مشتری که روی سرور یک بار عوض شده بود، ویرایش آفلاینش رد می‌شد.
+- **رفع:** `GET /api/sync/snapshot` (ستون‌های سبک + version، keyset روی id) و `version` در همه‌ی mapperها. **گارد:** `sync-pull.test.ts` — injection-tested.
+
+## BUG-033 — دریافت کالا از سفارش خرید، موجودی را دو بار اضافه می‌کرد (۲۷ سپتامبر)
+
+- **ریشه:** `receiveGoods` وضعیت را چک نمی‌کرد و آخر کار می‌نوشت؛ `stock_movements` کلید منبع ندارد → دوبار کلیک / retry / دو دستگاه = دو برابر موجودی.
+- **رفع:** اول claim با update شرطی روی وضعیتِ خوانده‌شده؛ شکست حرکت موجودی → برگشت وضعیت (نه DELETE جبرانی). **گارد:** `purchase-receive-once.test.ts` — injection-tested.
+
+## BUG-034 — ورود/خروج نقدی صندوق با retry چند بار ثبت می‌شد (۲۷ سپتامبر)
+
+- **ریشه:** هوک `useRecordCashMovement` تا ۳ بار retry می‌کرد و insert کلید نداشت → یک پاسخ گم‌شده = تا ۴ حرکت نقدی.
+- **رفع:** `movementId` که فراخوان یک بار می‌سازد (مثل `transferId`)، 23505 → همان ردیف. **گارد:** `concurrency-safety-map.test.ts`.
+
+## BUG-035 — بارکد مشترک بین دو کالا «ناشناخته» خوانده می‌شد (۲۷ سپتامبر)
+
+- **ریشه:** `getByBarcode` با `.single()` پشت کش ۵ دقیقه‌ای: صفر ردیف، دو ردیف و خطا همه `null` → صندوق‌دار دعوت می‌شد کالای سوم بسازد؛ قیمت تا ۵ دقیقه کهنه. هیچ فرمی هم فیلد بارکد نداشت و یکتایی بارکد در دیتابیس enforce نمی‌شد.
+- **رفع:** `lookupByBarcode` با سه پاسخ (۲۰۰/۴۰۹/۴۰۴، خطا = ۵۰۰)، بدون کش؛ فیلد بارکد در سه فرم؛ `docs/product-barcode-unique-migration.sql`. **گارد:** `product-barcode.test.ts`.
+
+## BUG-036 — ذخیره‌ی ویرایش کالا بی‌صدا شکست می‌خورد (۲۷ سپتامبر)
+
+- **ریشه:** `handleSave(data).catch(() => undefined)` در `warehouse-detail-container.tsx` — هر خطا بلعیده می‌شد، فرم باز می‌ماند و چیزی نمی‌گفت.
+- **رفع:** toast با دلیل واقعی (`barcodeTakenMessage` ?? `apiErrorMessage`).
+
+## BUG-037 — رمز دیتابیس production داخل کد و git (۲۷ سپتامبر)
+
+- **یافته:** `drizzle.config.ts` و `packages/db/src/client.ts` connection string کامل (با رمز) pooler سوپابیس را داشتند (در `docs/HISABCHE_ARCHITECTURE.md` هم گزارش شده بود و رفع نشده بود).
+- **رفع کد:** drizzle فقط از env می‌خواند؛ `packages/db` (بی‌مصرف) حذف شد. **اقدام انسانی لازم:** رمز دیتابیس در Supabase باید **عوض (rotate)** شود — در تاریخچه‌ی git باقی است.

@@ -25,6 +25,8 @@ interface Row {
 
 const tables = new Map<string, Row[]>()
 let sequence = 0
+/** Tables whose READS fail, like a real outage or statement timeout (P0). */
+const failingReads = new Set<string>()
 
 function reset(): void {
   tables.clear()
@@ -39,6 +41,7 @@ function reset(): void {
     tables.set(name, [])
   }
   sequence = 0
+  failingReads.clear()
 }
 
 /** Mirrors the trigger in docs/sync-engine-migration.sql. */
@@ -71,7 +74,7 @@ function matches(row: Row, filters: Array<[string, unknown]>): boolean {
 function makeQuery(table: string) {
   const eqs: Array<[string, unknown]> = []
   let gtColumn: string | null = null
-  let gtValue = 0
+  let gtValue: number | string = 0
   let inColumn: string | null = null
   let inValues: unknown[] = []
   let limitN = Infinity
@@ -83,7 +86,12 @@ function makeQuery(table: string) {
 
   const selected = () => {
     let out = rows().filter((r) => matches(r, eqs))
-    if (gtColumn) out = out.filter((r) => Number(r[gtColumn!]) > gtValue)
+    if (gtColumn)
+      out = out.filter((r) =>
+        typeof gtValue === 'string'
+          ? String(r[gtColumn!]) > gtValue
+          : Number(r[gtColumn!]) > gtValue,
+      )
     if (inColumn) out = out.filter((r) => inValues.includes(r[inColumn!]))
     if (orderColumn) {
       out = [...out].sort((a, b) => {
@@ -101,9 +109,10 @@ function makeQuery(table: string) {
       eqs.push([column, value])
       return api
     },
-    gt: (column: string, value: number) => {
+    gt: (column: string, value: number | string) => {
       gtColumn = column
-      gtValue = Number(value)
+      // Strings compare as strings (keyset paging by uuid), numbers as numbers.
+      gtValue = typeof value === 'string' ? value : Number(value)
       return api
     },
     in: (column: string, values: unknown[]) => {
@@ -134,6 +143,7 @@ function makeQuery(table: string) {
     },
 
     maybeSingle: async () => {
+      if (failingReads.has(table)) return { data: null, error: { message: 'statement timeout' } }
       const found = selected()
       return { data: found[0] ?? null, error: null }
     },
@@ -153,7 +163,10 @@ function makeQuery(table: string) {
       data: unknown
       error: { code?: string; message: string } | null
     }> => {
-      if (!pending) return { data: selected(), error: null }
+      if (!pending) {
+        if (failingReads.has(table)) return { data: null, error: { message: 'statement timeout' } }
+        return { data: selected(), error: null }
+      }
 
       if (pending.kind === 'insert') {
         const incoming = Array.isArray(pending.values) ? pending.values : [pending.values!]
@@ -594,6 +607,131 @@ describe('the cursor is monotonic and never skips a change', () => {
 
     expect(removal).toBeDefined()
     expect(removal?.data).toBeNull()
+  })
+})
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   P0 — a failed read is an error, never an empty answer (27 Sep 2026)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+describe('snapshot — a full rebuild carries versions and never skips a row', () => {
+  it('walks every row in id order across pages, each with its version', async () => {
+    for (let i = 1; i <= 7; i++) {
+      await syncService.push(ACTOR, [
+        {
+          mutationId: uuid(700 + i),
+          entityType: 'customer',
+          entityId: uuid(800 + i),
+          operation: 'create',
+          payload: { full_name: `c${i}` },
+        },
+      ])
+    }
+    // One of them edited on the server, so its version is no longer 1.
+    await syncService.push(ACTOR, [
+      {
+        mutationId: uuid(799),
+        entityType: 'customer',
+        entityId: uuid(803),
+        operation: 'update',
+        expectedVersion: 1,
+        payload: { phone: '1' },
+      },
+    ])
+
+    const seen: Record<string, unknown>[] = []
+    let after: string | null = null
+    for (let i = 0; i < 10; i++) {
+      const page = await syncService.snapshot(ACTOR.workspaceId, 'customer', after, 3)
+      seen.push(...page.rows)
+      if (!page.hasMore) break
+      after = page.nextAfter
+    }
+    expect(seen.map((r) => r.id)).toEqual(Array.from({ length: 7 }, (_, i) => uuid(801 + i)))
+    expect(seen.find((r) => r.id === uuid(803))?.version).toBe(2)
+  })
+
+  it('a failed page throws — an empty snapshot would say «you have no customers»', async () => {
+    failingReads.add('customers')
+    await expect(syncService.snapshot(ACTOR.workspaceId, 'customer', null, 10)).rejects.toThrow(
+      /snapshot customer failed/,
+    )
+  })
+
+  it('refuses an entity with no declared columns', async () => {
+    await expect(syncService.snapshot(ACTOR.workspaceId, 'transaction', null, 10)).rejects.toThrow(
+      /no snapshot/,
+    )
+  })
+})
+
+describe('a descriptive edit reaches the column it names', () => {
+  it('⚠️ renaming a customer writes full_name (the column), not a phantom `name`', async () => {
+    const id = uuid(60)
+    await syncService.push(ACTOR, [
+      {
+        mutationId: uuid(961),
+        entityType: 'customer',
+        entityId: id,
+        operation: 'create',
+        payload: { full_name: 'احمد' },
+      },
+    ])
+    const { results } = await syncService.push(ACTOR, [
+      {
+        mutationId: uuid(962),
+        entityType: 'customer',
+        entityId: id,
+        operation: 'update',
+        expectedVersion: 1,
+        payload: { full_name: 'احمد کریمی' },
+      },
+    ])
+    expect(results[0]?.status).toBe('applied')
+    const row = tables.get('customers')!.find((r) => r.id === id)
+    expect(row?.full_name).toBe('احمد کریمی')
+  })
+})
+
+describe('a failed database read never reaches a client as data', () => {
+  it('⚠️ a failed row load fails the pull — it is never sent as data: null (a delete)', async () => {
+    await syncService.push(ACTOR, [invoiceMutation({ mutationId: uuid(994), entityId: uuid(53) })])
+    failingReads.add('invoices')
+
+    // Before the fix this resolved with `data: null` for the invoice; desktop
+    // treats that as a delete and moves its cursor past it.
+    await expect(syncService.pull(ACTOR.workspaceId, 0, 10)).rejects.toThrow(
+      /hydrate invoice failed/,
+    )
+  })
+
+  it('a failed horizon check fails the pull instead of reading as «not behind»', async () => {
+    await syncService.push(ACTOR, [invoiceMutation({ mutationId: uuid(995), entityId: uuid(54) })])
+    failingReads.add('sync_change_log')
+    await expect(syncService.pull(ACTOR.workspaceId, 5, 10)).rejects.toThrow(/horizon read failed/)
+  })
+
+  it('a failed cursor read throws instead of answering 0 («start over»)', async () => {
+    failingReads.add('sync_change_log')
+    await expect(syncService.currentCursor(ACTOR.workspaceId)).rejects.toThrow(/cursor read failed/)
+  })
+
+  it('a failed version read is a retryable server_error, not not_found', async () => {
+    await syncService.push(ACTOR, [invoiceMutation({ mutationId: uuid(996), entityId: uuid(55) })])
+    failingReads.add('invoices')
+    const { results } = await syncService.push(ACTOR, [
+      invoiceMutation({
+        mutationId: uuid(997),
+        entityId: uuid(55),
+        operation: 'update',
+        expectedVersion: 1,
+        payload: { notes: 'x' },
+      }),
+    ])
+    // Retryable, so the device sends it again — `not_found` would have told it
+    // to give up on a record that exists.
+    expect(results[0]).toMatchObject({ retryable: true })
+    expect(JSON.stringify(results[0])).not.toContain('not_found')
   })
 })
 

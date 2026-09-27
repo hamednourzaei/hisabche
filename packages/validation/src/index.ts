@@ -597,3 +597,5 @@ export {
   type SeoCheck,
   type SeoCheckId,
 } from './schemas/blog.schema'
+
+export { BARCODE_MAX_LENGTH, barcodeSchema, normalizeBarcode } from './schemas/barcode.schema'

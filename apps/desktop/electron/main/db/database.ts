@@ -26,7 +26,7 @@ type SqliteDatabase = {
   prepare(sql: string): {
     all(...params: unknown[]): unknown[]
     get(...params: unknown[]): unknown
-    run(...params: unknown[]): unknown
+    run(...params: unknown[]): { changes: number }
   }
   exec(sql: string): void
   pragma(sql: string): unknown
@@ -217,6 +217,26 @@ export function query<T>(input: QueryInput): T[] {
 // ============================================
 // Writes
 // ============================================
+
+/**
+ * Remove rows the server deleted (a `delete` in the change log).
+ *
+ * Only for tables with no soft-delete column of their own — products and
+ * customers are retired with `is_active = 0` instead, because a queued local
+ * change may still reference them. A `dirty` row is never removed: its unsent
+ * edit exists nowhere but here.
+ */
+export function removeMany(table: LocalTable, ids: string[]): number {
+  if (!db || ids.length === 0) return 0
+  const database = db
+  const remove = database.prepare(`DELETE FROM ${ident(table)} WHERE id = ? AND dirty = 0`)
+  const run = database.transaction((batch: string[]) => {
+    let removed = 0
+    for (const id of batch) removed += remove.run(id).changes
+    return removed
+  })
+  return run(ids)
+}
 
 export function upsertMany(table: LocalTable, rows: Array<Record<string, unknown>>): number {
   if (!db || rows.length === 0) return 0

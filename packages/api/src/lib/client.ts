@@ -21,6 +21,8 @@ export interface ApiError {
   details?: Record<string, string[]>
   /** PLAN_LIMIT_REACHED: which ceiling, how high, how much is used. */
   limit?: { feature: string; limit: number; used: number } | undefined
+  /** BARCODE_AMBIGUOUS: every product carrying the scanned barcode. */
+  candidates?: unknown[] | undefined
 }
 
 // ============================================
@@ -325,6 +327,10 @@ apiClient.interceptors.response.use(
               used: responseData.used,
             },
           }
+        : {}),
+      // BARCODE_AMBIGUOUS: the products the cashier must choose between.
+      ...(responseData?.code === 'BARCODE_AMBIGUOUS' && Array.isArray(responseData.products)
+        ? { candidates: responseData.products as unknown[] }
         : {}),
     }
 

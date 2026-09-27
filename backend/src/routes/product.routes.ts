@@ -86,6 +86,39 @@ export async function productRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /api/products/by-barcode/:code ────────────────
+  //
+  // The scanner's lookup. Exact match, never cached (a price must be current),
+  // and three distinct answers: 200 found, 409 ambiguous (the cashier picks —
+  // never silently the first), 404 unknown. A failed query is a 500, never a
+  // 404: «unknown barcode» invites creating a product that already exists.
+  // Declared before /:id so the static segment wins.
+  fastify.get(
+    '/api/products/by-barcode/:code',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { code } = request.params as { code: string }
+      try {
+        const result = await productService.lookupByBarcode(request.tenancy, code)
+        reply.header('cache-control', 'no-store')
+        if (result.status === 'found') return reply.send({ product: result.product })
+        if (result.status === 'ambiguous') {
+          return reply
+            .code(409)
+            .send({
+              error: 'BARCODE_AMBIGUOUS',
+              code: 'BARCODE_AMBIGUOUS',
+              products: result.products,
+            })
+        }
+        return reply.code(404).send({ error: 'BARCODE_NOT_FOUND', code: 'BARCODE_NOT_FOUND' })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to look up barcode' })
+      }
+    },
+  )
+
   // ─── GET /api/products/:id ─────────────────────────────
   fastify.get(
     '/api/products/:id',
@@ -133,6 +166,16 @@ export async function productRoutes(fastify: FastifyInstance) {
 
         return sendCreated(reply, product)
       } catch (err) {
+        // Another product in this workspace already carries this barcode.
+        // Named by field so the form takes the cashier straight to it.
+        if (err instanceof ConflictError && err.message === 'BARCODE_TAKEN') {
+          return reply.code(409).send({
+            error: 'BARCODE_TAKEN',
+            code: 'BARCODE_TAKEN',
+            message: 'BARCODE_TAKEN',
+            details: [{ path: ['barcode'], message: 'BARCODE_TAKEN' }],
+          })
+        }
         if (err instanceof IdempotencyUnavailableError) {
           return reply.code(503).send({ error: err.message, code: err.code })
         }
@@ -164,6 +207,16 @@ export async function productRoutes(fastify: FastifyInstance) {
 
         return reply.send(product)
       } catch (err) {
+        // Another product in this workspace already carries this barcode.
+        // Named by field so the form takes the cashier straight to it.
+        if (err instanceof ConflictError && err.message === 'BARCODE_TAKEN') {
+          return reply.code(409).send({
+            error: 'BARCODE_TAKEN',
+            code: 'BARCODE_TAKEN',
+            message: 'BARCODE_TAKEN',
+            details: [{ path: ['barcode'], message: 'BARCODE_TAKEN' }],
+          })
+        }
         if (err instanceof NotFoundError) {
           return reply.code(404).send({ error: err.message })
         }

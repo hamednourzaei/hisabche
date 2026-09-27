@@ -168,6 +168,8 @@ vi.mock('../utils/pagination', () => ({
   memoryCache: {
     get: async () => null,
     set: async () => undefined,
+    getShared: async () => null,
+    setShared: async () => undefined,
     invalidate: async (key: string) => {
       invalidateCalls.push(key)
     },

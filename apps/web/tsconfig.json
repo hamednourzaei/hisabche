@@ -23,7 +23,6 @@
       "@hisabche/validation": ["../../packages/validation/src/index.ts"],
       "@hisabche/api": ["../../packages/api/src/index.ts"],
       "@hisabche/analytics": ["../../packages/analytics/src/index.ts"],
-      "@hisabche/db": ["../../packages/db/src/index.ts"],
       "@hisabche/auth": ["../../packages/auth/src/index.ts"]
     }
   },

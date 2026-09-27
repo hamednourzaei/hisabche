@@ -396,3 +396,10 @@ export {
   authorizationText,
   type AuthorizationMessage,
 } from './lib/authorization-message'
+
+// ─── Barcode scanner + receipt printer (27 Sep 2026) ─────────────────────
+export {
+  registerReceiptPrinterHost,
+  type HostPrinter,
+  type ReceiptPrinterHost,
+} from './lib/print/printer-host'

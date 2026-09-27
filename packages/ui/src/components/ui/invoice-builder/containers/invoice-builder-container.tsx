@@ -22,6 +22,11 @@ import { useOversoldLines } from '../use-oversold-lines'
 import { CreditLimitWarning } from '../credit-limit-warning'
 import { useCustomerTerms } from '../use-customer-terms'
 import { InvoiceWarehouseSelect } from '../invoice-warehouse-select'
+import { BarcodeScanDialog, type ScanProblem } from '../barcode-scan-dialog'
+import { useBarcodeScanner } from '../../../../hooks/use-barcode-scanner'
+import { planScan } from '../../../../lib/barcode/scan-into-invoice'
+import { lookupProductByBarcode } from '@hisabche/api'
+import type { Product } from '@hisabche/validation'
 
 export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   const router = useRouter()
@@ -61,6 +66,60 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
     },
     [draft],
   )
+
+  // ─── Barcode scanner → invoice line ──────────────────────────────────────
+  // A scan fills a DRAFT line (same product + unit again → +1). Nothing is
+  // posted: stock, ledger and receivable move only when the invoice is issued.
+  const [scanProblem, setScanProblem] = useState<ScanProblem | null>(null)
+
+  const placeScanned = useCallback(
+    (product: Product) => {
+      // No id → nothing to link stock to; never a line that moves nothing.
+      if (!product.id) return
+      const unit = product.unit || 'piece'
+      const price = String(
+        (draft.transactionType === 'purchase' ? product.buyPrice : product.sellPrice) ?? '',
+      )
+      // Read the store at the moment of the scan: two scans a few ms apart
+      // must see each other's line, not the same render's snapshot.
+      const rows = useInvoiceDraftStore.getState().rows
+      const plan = planScan(rows, { id: product.id, name: product.name, price, unit })
+      if (plan.kind === 'increment') {
+        draft.setCell(plan.rowId, COLUMN.quantity, plan.quantity)
+        return
+      }
+      let rowId = plan.kind === 'fill' ? plan.rowId : null
+      if (!rowId) {
+        draft.addRow()
+        rowId = useInvoiceDraftStore.getState().rows.at(-1)?.id ?? null
+      }
+      if (!rowId) return
+      draft.setRowProduct(rowId, product.id, product.name, price)
+      draft.setCell(rowId, COLUMN.unit, unit)
+    },
+    [draft],
+  )
+
+  const handleScan = useCallback(
+    async (barcode: string) => {
+      const result = await lookupProductByBarcode(barcode)
+      if (result.status === 'found') {
+        placeScanned(result.product)
+        return
+      }
+      setScanProblem(
+        result.status === 'ambiguous'
+          ? { kind: 'ambiguous', barcode, products: result.products }
+          : result.status === 'unknown'
+            ? { kind: 'unknown', barcode: result.barcode }
+            : { kind: 'error', barcode: result.barcode, offline: result.offline },
+      )
+    },
+    [placeScanned],
+  )
+
+  // Paused while the dialog is open: the cashier is answering it.
+  useBarcodeScanner((scan) => void handleScan(scan.value), { enabled: scanProblem === null })
 
   const handleReplaceColumn = useCallback(
     (column: InvoiceColumn) => draft.updateColumn(column.id, column),
@@ -125,69 +184,84 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   const handleBackToList = useCallback(() => router.push('/invoices'), [router])
 
   return (
-    <InvoiceBuilderPage
-      t={t}
-      locale={locale}
-      columns={draft.columns}
-      rows={draft.rows}
-      ctx={ctx}
-      summary={summary}
-      invalidRowIds={invalidRowIds}
-      issues={issues}
-      stockWarning={
-        <>
-          <InvoiceWarehouseSelect
-            t={t}
-            transactionType={draft.transactionType}
-            value={draft.warehouseId}
-            onChange={setWarehouseId}
-          />
-          <OversoldWarning t={t} lines={oversoldLines} />
-          <CreditLimitWarning
-            t={t}
-            breach={creditBreachInfo}
-            formatMoney={(value) => formatNumber(value, locale, 2)}
-          />
-        </>
-      }
-      customers={draft.customers}
-      transactionType={draft.transactionType}
-      currency={currency}
-      rates={draft.rates}
-      date={draft.date}
-      dueDate={draft.dueDate}
-      notes={draft.notes}
-      discountValue={draft.discountValue}
-      discountType={draft.discountType}
-      taxRate={draft.taxRate}
-      onCellChange={draft.setCell}
-      onAddRow={draft.addRow}
-      onRemoveRow={draft.removeRow}
-      onDuplicateRow={draft.duplicateRow}
-      onRemoveLastRow={draft.removeLastRow}
-      onPickProduct={handlePickProduct}
-      onAddColumn={draft.addColumn}
-      onUpdateColumn={draft.updateColumn}
-      onReplaceColumn={handleReplaceColumn}
-      onRemoveColumn={draft.removeColumn}
-      onMoveColumn={handleMoveColumn}
-      onResetColumns={() => draft.resetColumns(currency)}
-      onAddCustomer={draft.addCustomer}
-      onRemoveCustomer={draft.removeCustomer}
-      onTransactionTypeChange={(type) => draft.setField('transactionType', type)}
-      onCurrencyChange={handleCurrencyChange}
-      onRateChange={draft.setRate}
-      onDateChange={(value) => draft.setField('date', value)}
-      onDueDateChange={(value) => draft.setField('dueDate', value)}
-      onNotesChange={(value) => draft.setField('notes', value)}
-      onDiscountValueChange={(value) => draft.setField('discountValue', value)}
-      onDiscountTypeChange={(type) => draft.setField('discountType', type)}
-      onTaxRateChange={(value) => draft.setField('taxRate', value)}
-      onSaveDraft={handleSaveDraft}
-      onContinue={handleContinue}
-      onBackToList={handleBackToList}
-      savingDraft={savingDraft}
-    />
+    <>
+      <BarcodeScanDialog
+        t={t}
+        problem={scanProblem}
+        onPick={(product) => {
+          setScanProblem(null)
+          placeScanned(product)
+        }}
+        onRetry={(barcode) => {
+          setScanProblem(null)
+          void handleScan(barcode)
+        }}
+        onClose={() => setScanProblem(null)}
+      />
+      <InvoiceBuilderPage
+        t={t}
+        locale={locale}
+        columns={draft.columns}
+        rows={draft.rows}
+        ctx={ctx}
+        summary={summary}
+        invalidRowIds={invalidRowIds}
+        issues={issues}
+        stockWarning={
+          <>
+            <InvoiceWarehouseSelect
+              t={t}
+              transactionType={draft.transactionType}
+              value={draft.warehouseId}
+              onChange={setWarehouseId}
+            />
+            <OversoldWarning t={t} lines={oversoldLines} />
+            <CreditLimitWarning
+              t={t}
+              breach={creditBreachInfo}
+              formatMoney={(value) => formatNumber(value, locale, 2)}
+            />
+          </>
+        }
+        customers={draft.customers}
+        transactionType={draft.transactionType}
+        currency={currency}
+        rates={draft.rates}
+        date={draft.date}
+        dueDate={draft.dueDate}
+        notes={draft.notes}
+        discountValue={draft.discountValue}
+        discountType={draft.discountType}
+        taxRate={draft.taxRate}
+        onCellChange={draft.setCell}
+        onAddRow={draft.addRow}
+        onRemoveRow={draft.removeRow}
+        onDuplicateRow={draft.duplicateRow}
+        onRemoveLastRow={draft.removeLastRow}
+        onPickProduct={handlePickProduct}
+        onAddColumn={draft.addColumn}
+        onUpdateColumn={draft.updateColumn}
+        onReplaceColumn={handleReplaceColumn}
+        onRemoveColumn={draft.removeColumn}
+        onMoveColumn={handleMoveColumn}
+        onResetColumns={() => draft.resetColumns(currency)}
+        onAddCustomer={draft.addCustomer}
+        onRemoveCustomer={draft.removeCustomer}
+        onTransactionTypeChange={(type) => draft.setField('transactionType', type)}
+        onCurrencyChange={handleCurrencyChange}
+        onRateChange={draft.setRate}
+        onDateChange={(value) => draft.setField('date', value)}
+        onDueDateChange={(value) => draft.setField('dueDate', value)}
+        onNotesChange={(value) => draft.setField('notes', value)}
+        onDiscountValueChange={(value) => draft.setField('discountValue', value)}
+        onDiscountTypeChange={(type) => draft.setField('discountType', type)}
+        onTaxRateChange={(value) => draft.setField('taxRate', value)}
+        onSaveDraft={handleSaveDraft}
+        onContinue={handleContinue}
+        onBackToList={handleBackToList}
+        savingDraft={savingDraft}
+      />
+    </>
   )
 })
 

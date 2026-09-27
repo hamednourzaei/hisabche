@@ -59,6 +59,8 @@ export function warehouseContainer() {
   const searchParams = useSearchParams()
   const addParam = searchParams?.get('add')
   const queryParam = searchParams?.get('q')
+  // «Unknown barcode → define this product» from the invoice scanner.
+  const barcodeParam = searchParams?.get('barcode') ?? undefined
   const warehouseParam = searchParams?.get('warehouse') ?? null
 
   const [search, setSearch] = useState(queryParam ?? '')
@@ -297,6 +299,7 @@ export function warehouseContainer() {
         open={showAddModal}
         onClose={handleCloseAddModal}
         onCreated={handleProductCreated}
+        initialBarcode={barcodeParam}
       />
       <WarehouseView {...viewProps} />
 

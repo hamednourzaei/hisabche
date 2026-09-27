@@ -77,7 +77,12 @@ const WRITABLE: Record<SyncEntity, readonly string[]> = {
   // ⚠️ `credit_limit` is a CREDIT DECISION, not a detail. Raised through this
   // road it would let a device extend its own customer's borrowing with no
   // check that anybody is allowed to, and no record of who did.
-  customer: ['id', 'name', 'phone', 'email', 'address', 'type', 'notes'],
+  //
+  // ⚠️ `full_name`, not `name` (27 Sep 2026). `customers` has no `name`
+  // column; the list said `name`, so the `full_name` desktop sends was dropped
+  // by the filter below and a customer renamed offline was renamed nowhere —
+  // the push still answered «applied».
+  customer: ['id', 'full_name', 'phone', 'email', 'address', 'type', 'notes'],
   product: [
     'id',
     'name',
@@ -110,6 +115,74 @@ const WRITABLE: Record<SyncEntity, readonly string[]> = {
     // set it could re-price work that has already been quoted.
     'description',
   ],
+}
+
+/**
+ * Columns a PULL sends, per entity — what a client actually stores, nothing
+ * more (request #153, «lean payload»). `select('*')` shipped search vectors,
+ * sync bookkeeping and every column added since, on every change, to every
+ * device. Each name here is checked against docs/*.sql by
+ * `sync-pull-columns.test.ts`: a column that does not exist would turn every
+ * pull into a 500 (loud, since P0 — but still broken).
+ *
+ * `version` and `workspace_id` travel for every entity: the first is the
+ * optimistic-concurrency token a later edit must send back, the second lets a
+ * client refuse a row that is not its workspace's.
+ *
+ * `null` = no client stores this entity yet; the whole row is sent until one
+ * does and names what it needs.
+ */
+export const PULL_COLUMNS: Record<SyncEntity, readonly string[] | null> = {
+  product: [
+    'id',
+    'workspace_id',
+    'version',
+    'name',
+    'barcode',
+    'sku',
+    'category',
+    'quantity',
+    'unit',
+    'min_stock_level',
+    'buy_price',
+    'sell_price',
+    'is_active',
+    'updated_at',
+  ],
+  customer: [
+    'id',
+    'workspace_id',
+    'version',
+    'full_name',
+    'phone',
+    'email',
+    'address',
+    'opening_balance',
+    'type',
+    'is_active',
+    'updated_at',
+  ],
+  invoice: [
+    'id',
+    'workspace_id',
+    'version',
+    'invoice_number',
+    'type',
+    'customer_id',
+    'date',
+    'subtotal',
+    'discount_total',
+    'tax_total',
+    'total',
+    'paid_amount',
+    'payment_method',
+    'currency',
+    'status',
+    'notes',
+    'updated_at',
+  ],
+  transaction: null,
+  time_entry: null,
 }
 
 export interface SyncActor {
@@ -463,12 +536,16 @@ export class SyncService {
     id: string,
     workspaceId: string,
   ): Promise<Record<string, unknown> | null> {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from(table)
       .select('*')
       .eq('id', id)
       .eq('workspace_id', workspaceId)
       .maybeSingle()
+    // A failed read is not «no such row»: answered as null it became
+    // `not_found` or a version of null, and a retryable outage was reported to
+    // the device as a permanent refusal.
+    if (error) throw new SyncError('server_error', `read ${table} failed: ${error.message}`)
     return (data as Record<string, unknown> | null) ?? null
   }
 
@@ -491,7 +568,7 @@ export class SyncService {
      ═══════════════════════════════════════════════════════════════════════ */
 
   async currentCursor(workspaceId: string): Promise<number> {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('sync_change_log')
       .select('sync_version')
       .eq('workspace_id', workspaceId)
@@ -499,6 +576,8 @@ export class SyncService {
       .limit(1)
       .maybeSingle()
 
+    // 0 means «nothing has ever changed here» — never «the query failed».
+    if (error) throw new Error(`sync cursor read failed: ${error.message}`)
     return Number(data?.sync_version ?? 0)
   }
 
@@ -555,8 +634,53 @@ export class SyncService {
     }
   }
 
+  /**
+   * One page of a full rebuild, in id order (request #153: «gap too big →
+   * snapshot → resume delta»).
+   *
+   * The same lean columns as a pull — including `version`, which the REST
+   * list endpoints do not return. A device seeded from those stored every row
+   * at the default version, and its first offline edit of anything the server
+   * had changed before was refused as a version conflict.
+   *
+   * Keyset by id, not offset: rows written during the walk cannot shift a page
+   * boundary and make a row be skipped. The caller reads the head BEFORE the
+   * walk, so anything written meanwhile is pulled again as a delta.
+   */
+  async snapshot(
+    workspaceId: string,
+    entity: SyncEntity,
+    after: string | null,
+    limit: number,
+  ): Promise<{ rows: Record<string, unknown>[]; nextAfter: string | null; hasMore: boolean }> {
+    const columns = PULL_COLUMNS[entity]
+    if (!columns) throw new SyncError('validation_failed', `no snapshot for ${entity}`)
+
+    let query = supabase
+      .from(ENTITY_TABLE[entity])
+      .select(columns.join(', '))
+      .eq('workspace_id', workspaceId)
+      .order('id', { ascending: true })
+      .limit(limit + 1)
+    if (after) query = query.gt('id', after)
+
+    const { data, error } = await query
+    // A failed page is an error, never an empty table — an empty snapshot
+    // would tell the device it has no customers (P0).
+    if (error) throw new Error(`sync snapshot ${entity} failed: ${error.message}`)
+
+    const rows = (data ?? []) as unknown as Record<string, unknown>[]
+    const hasMore = rows.length > limit
+    const page = hasMore ? rows.slice(0, limit) : rows
+    return {
+      rows: page,
+      nextAfter: hasMore ? String(page[page.length - 1]?.id ?? '') || null : null,
+      hasMore,
+    }
+  }
+
   private async isBehindHorizon(workspaceId: string, cursor: number): Promise<boolean> {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('sync_change_log')
       .select('sync_version')
       .eq('workspace_id', workspaceId)
@@ -564,6 +688,9 @@ export class SyncService {
       .limit(1)
       .maybeSingle()
 
+    // Read as «not behind», a failure let a client whose cursor HAD fallen off
+    // the log carry on pulling from a hole instead of rebuilding.
+    if (error) throw new Error(`sync horizon read failed: ${error.message}`)
     const oldest = Number(data?.sync_version ?? 0)
     // `cursor + 1 < oldest` means at least one change between them is gone.
     return oldest > 0 && cursor + 1 < oldest
@@ -575,6 +702,14 @@ export class SyncService {
    * Batched by entity type — one query per type, not one per change. A delete
    * carries `data: null`; so does a row that has since been removed, which is
    * the same instruction to the client either way.
+   *
+   * ⚠️ A FAILED QUERY THROWS — IT IS NEVER `data: null` (P0, 27 Sep 2026).
+   * The error used to be ignored, so every change in a failed type went out
+   * with `data: null`. Clients read that as a delete (desktop:
+   * `if (!change.data)`), removed the row from the offline copy and moved
+   * their cursor past it — one transient database error emptied products or
+   * customers until each row happened to change again. Throwing turns the
+   * pull into a 500; the cursor stays where it was and the next pull retries.
    */
   private async hydrate(
     workspaceId: string,
@@ -595,13 +730,18 @@ export class SyncService {
 
     const loaded = new Map<string, Record<string, unknown>>()
     for (const [type, ids] of byType) {
-      const { data } = await supabase
+      const columns = PULL_COLUMNS[type]
+      const { data, error } = await supabase
         .from(ENTITY_TABLE[type])
-        .select('*')
+        .select(columns ? columns.join(', ') : '*')
         .eq('workspace_id', workspaceId)
         .in('id', [...ids])
 
-      for (const row of (data ?? []) as Record<string, unknown>[]) {
+      if (error) throw new Error(`sync hydrate ${type} failed: ${error.message}`)
+
+      // A column list built at runtime has no static row type; the rows are
+      // plain records either way.
+      for (const row of (data ?? []) as unknown as Record<string, unknown>[]) {
         loaded.set(`${type}:${row.id as string}`, row)
       }
     }

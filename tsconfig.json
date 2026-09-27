@@ -6,7 +6,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "experimentalDecorators": true,
-"emitDecoratorMetadata": true,
+    "emitDecoratorMetadata": true,
     "resolveJsonModule": true,
     "allowJs": true,
     "checkJs": false,
@@ -31,8 +31,7 @@
       "@hisabche/i18n": ["./packages/i18n/src"],
       "@hisabche/store": ["./packages/store/src"],
       "@hisabche/validation": ["./packages/validation/src"],
-      "@hisabche/api": ["./packages/api/src"],
-      "@hisabche/db": ["./packages/db/src"]
+      "@hisabche/api": ["./packages/api/src"]
     }
   },
   "exclude": ["node_modules", "dist", ".next", ".expo"]

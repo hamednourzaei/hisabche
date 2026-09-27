@@ -32,6 +32,7 @@ import {
 import { startInstanceHeartbeat } from './services/instance-registry'
 import { MONITOR_BANNER_CSS, MONITOR_BANNER_JS } from './docs/monitor-banner'
 import compress from '@fastify/compress'
+import { constants as zlibConstants } from 'node:zlib'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
 
@@ -46,6 +47,7 @@ import { supabase } from './db'
 // ──────────────────────────────────────────────
 import { authRoutes } from './routes/auth.routes'
 import { syncRoutes } from './routes/sync.routes'
+import { syncStreamRoutes } from './routes/sync-stream.routes'
 import { invoiceRoutes } from './routes/invoice.routes'
 import { invoicePdfRoutes } from './routes/invoice-pdf.routes'
 import { invoicePublicRoutes } from './routes/invoice-public.routes'
@@ -464,7 +466,16 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(compress, {
     global: true,
     threshold: 1024,
-    encodings: ['gzip', 'deflate'],
+    // Brotli first for clients that accept it (every browser, Electron, RN's
+    // fetch). Quality 4, not the library's maximum 11: measured on a 500-row
+    // sync page, q11 costs ~80–380 ms per response against ~2 ms for q4, for
+    // a size q4 already brings within a few percent (wire-codec.test.ts).
+    encodings: ['br', 'gzip', 'deflate'],
+    brotliOptions: { params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 4 } },
+    // The library defaults plus Hisabche Sync Binary. event-stream stays
+    // excluded: a compressed SSE stream is buffered and stops being live.
+    customTypes:
+      /^text\/(?!event-stream)|(?:\+|\/)json(?:;|$)|(?:\+|\/)xml(?:;|$)|^application\/x-hisabche-sync(?:;|$)/,
   })
 
   // ─── 6.2 CORS ─────────────────────────────
@@ -598,6 +609,7 @@ export async function buildServer(): Promise<typeof server> {
 
   await server.register(authRoutes)
   await server.register(syncRoutes)
+  await server.register(syncStreamRoutes)
   await server.register(invoiceRoutes)
   await server.register(invoicePdfRoutes)
   await server.register(invoicePublicRoutes)

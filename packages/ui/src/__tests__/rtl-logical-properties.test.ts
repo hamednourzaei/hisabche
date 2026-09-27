@@ -304,8 +304,8 @@ const COLOUR_ALLOWED: Record<string, string> = {
     'Rendered by Satori into a static PNG on the server. There is no document, no stylesheet and no custom properties — an unresolved var() would render as nothing at all.',
   'apps/web/app/[lang]/layout.tsx':
     'theme-color meta and the pre-hydration background. Both are read by the browser chrome BEFORE any stylesheet loads, so a var() has nothing to resolve against.',
-  'apps/desktop/src/shared/print/invoice-template.ts':
-    'A standalone HTML document handed to the print process. It does not import globals.css, and printed output must not follow the app theme — a dark-mode invoice would print a black page.',
+  'packages/ui/src/lib/print/receipt-html.ts':
+    'A standalone HTML receipt handed to the printer (or a print frame). It does not import globals.css, and paper is white with black ink whatever the app theme — a dark-mode receipt would print a black strip on a thermal roll.',
   'packages/ui/src/components/ui/invoice-detail/containers/invoice-detail-container.tsx':
     'html2canvas backgroundColor: a rasteriser option, not CSS. The exported PNG needs an opaque white ground whatever theme the app is in.',
   'packages/ui/src/components/ui/chart.tsx':

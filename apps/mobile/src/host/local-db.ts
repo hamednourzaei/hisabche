@@ -104,6 +104,20 @@ export async function upsertMany(
   return statements.length
 }
 
+/** See the desktop implementation: server-deleted rows, never a dirty one. */
+export async function removeMany(table: LocalTable, ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0
+  const db = require_()
+  let removed = 0
+  await db.withTransactionAsync(async () => {
+    for (const id of ids) {
+      const result = await db.runAsync(`DELETE FROM "${table}" WHERE id = ? AND dirty = 0`, [id])
+      removed += result.changes
+    }
+  })
+  return removed
+}
+
 // ============================================
 // The write queue
 // ============================================

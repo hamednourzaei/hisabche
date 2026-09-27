@@ -38,13 +38,28 @@ export async function httpRequest(input: unknown): Promise<HttpRequestResponse> 
   const response = await fetch(parsed.url, {
     method: parsed.method,
     headers: parsed.headers ?? {},
-    ...(parsed.body != null ? { body: parsed.body } : {}),
+    ...(parsed.bodyBytes
+      ? { body: parsed.bodyBytes }
+      : parsed.body != null
+        ? { body: parsed.body }
+        : {}),
   })
 
   const headers: Record<string, string> = {}
   response.headers.forEach((value, key) => {
     headers[key] = value
   })
+
+  if (parsed.responseType === 'bytes') {
+    // Binary stays binary: `text()` would replace every non-UTF-8 byte.
+    return {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+      data: '',
+      bytes: new Uint8Array(await response.arrayBuffer()),
+    }
+  }
 
   return {
     status: response.status,

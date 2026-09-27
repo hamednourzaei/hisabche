@@ -9,6 +9,7 @@ import { useWorkspaces, useUpdateWorkspace, useWorkspaceBackup } from '@hisabche
 import { cn } from '../../../lib/utils'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { Switch } from '../switch'
+import { HardwareSection } from './hardware-section'
 import { useToast } from '../toast-provider'
 import {
   Shield,
@@ -888,6 +889,7 @@ export const SettingsPage = memo(function SettingsPage() {
       <BillingSection />
       <WorkflowTemplatesSection />
       <BackupSection />
+      <HardwareSection />
       <PerformanceSection />
       <SafetySection />
       <StorageSection />

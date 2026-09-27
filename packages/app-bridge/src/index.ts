@@ -34,3 +34,6 @@ export * from './local-sql'
 
 // Which road a queued write takes — see the file header.
 export * from './push-routing'
+
+// Which entry may go now — see the file header.
+export * from './push-order'

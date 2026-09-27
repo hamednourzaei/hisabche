@@ -97,6 +97,8 @@ export interface InvoiceDetailPageProps {
   isLoading: boolean
   onBack: () => void
   onPrint: () => void
+  onPrintReceipt?: (() => void) | undefined
+  printingReceipt?: boolean | undefined
   onSharePDF: () => void
   onWhatsApp: () => void
   onTelegram: () => void
@@ -138,6 +140,8 @@ export function InvoiceDetailPage({
   isLoading,
   onBack,
   onPrint,
+  onPrintReceipt,
+  printingReceipt,
   onSharePDF,
   onWhatsApp,
   onTelegram,
@@ -249,6 +253,8 @@ export function InvoiceDetailPage({
 
   const actions: InvoiceSidebarActions = {
     onPrint,
+    onPrintReceipt,
+    printingReceipt,
     onSharePDF,
     onWhatsApp,
     onTelegram,

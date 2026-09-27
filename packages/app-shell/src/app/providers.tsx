@@ -5,7 +5,7 @@
 import { createNotificationMutationCache, registerOfflineQueue } from '@hisabche/api'
 import React, { useEffect, useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ToastProvider } from '@hisabche/ui'
+import { registerReceiptPrinterHost, ToastProvider } from '@hisabche/ui'
 import { bindActiveWorkspace, useWorkspaceStore } from '@hisabche/store'
 
 import { useAuthStore } from '@/features/auth/auth.store'
@@ -36,6 +36,30 @@ if (typeof window !== 'undefined') {
       enqueue: (entry) => device.db.enqueue(entry),
       readRows: (table, search) =>
         device.db.query<Record<string, unknown>>({ table, search, limit: 500 }),
+      // The scanner asks the device first (instant, and the only answer
+      // offline). Two rows = ambiguous, so up to five are read, not one.
+      findByBarcode: (barcode) =>
+        device.db.query<Record<string, unknown>>({
+          table: 'product',
+          where: { barcode, is_active: 1 },
+          limit: 5,
+        }),
+    })
+
+    // Receipts print silently to the chosen printer — a host capability the
+    // browser build does not have (packages/ui/src/lib/print/printer-host.ts).
+    registerReceiptPrinterHost({
+      listPrinters: () => device.print.listPrinters(),
+      printHtml: ({ html, deviceName, silent, pageWidthMm, copies }) =>
+        device.print.html({
+          html,
+          silent,
+          pageWidthMm,
+          copies,
+          ...(deviceName ? { deviceName } : {}),
+        }),
+      printEscPos: ({ data, deviceName }) =>
+        device.print.escPos({ data, ...(deviceName ? { deviceName } : {}) }),
     })
   }
 }

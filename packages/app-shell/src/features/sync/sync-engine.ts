@@ -1,10 +1,17 @@
 // ============================================
-// Sync engine.
+// Sync engine (desktop).
 //
 // Two directions, deliberately separate:
-//   pull  server → SQLite: products/customers by the change-log cursor
-//         (full snapshot on first run), invoices as a recency window
-//   push  SQLite sync_queue → server, one idempotency key per queued row
+//   pull  server → SQLite: products, customers and invoices by the change-log
+//         cursor; a full rebuild through /sync/snapshot on first run or when
+//         the server says the cursor fell off the log (`mustRehydrate`)
+//   push  SQLite sync_queue → server, one idempotency key per queued row;
+//         money goes through the domain routes, never the row writer
+//
+// Pages travel as Hisabche Sync Binary when the server speaks it (`Accept`)
+// and as JSON when it does not — an older server answers JSON and this reads
+// it the same way. A WebSocket (`startSyncStream`) wakes the engine when the
+// workspace moves; it carries no data, so losing it only delays a sync.
 //
 // The queue shape mirrors the mobile outbox (clientId / entity / operation /
 // payload / attempts / status) so the two can be unified later without a
@@ -12,13 +19,23 @@
 // ============================================
 
 import type { QueryClient } from '@tanstack/react-query'
-import { invoiceKeys, customerKeys, productKeys, dashboardKeys, type ApiError } from '@hisabche/api'
+import {
+  invoiceKeys,
+  customerKeys,
+  productKeys,
+  dashboardKeys,
+  getToken,
+  type ApiError,
+} from '@hisabche/api'
+import { decodePullPage, decodeSnapshotPage, HSB_CONTENT_TYPE } from '@hisabche/sync/wire'
+import { connectSyncStream, streamUrl, type StreamHandle } from '@hisabche/sync/stream'
 
 import { useWorkspaceStore } from '@hisabche/store'
 
-import { apiClient } from '@/shared/lib/api'
+import { API_BASE_URL, apiClient } from '@/shared/lib/api'
 import { bridge } from '@/shared/lib/bridge'
 import {
+  createPushGate,
   routeFor,
   stripFinancialFields,
   type LocalTable,
@@ -27,111 +44,50 @@ import {
 
 const MAX_ATTEMPTS = 5
 
-interface PullSpec {
-  table: LocalTable
-  endpoint: string
-  /** Response key holding the array. */
-  collection: string
-  toRow: (record: Record<string, unknown>) => Record<string, unknown>
-}
-
 const num = (value: unknown): number =>
   typeof value === 'number' ? value : Number(value ?? 0) || 0
 const str = (value: unknown): string | null => (typeof value === 'string' ? value : null)
 const nowIso = (): string => new Date().toISOString()
 
-const PULL_SPECS: readonly PullSpec[] = [
-  {
-    table: 'product',
-    endpoint: '/products',
-    collection: 'products',
-    toRow: (r) => ({
-      id: r.id,
-      name: r.name,
-      barcode: str(r.barcode),
-      sku: str(r.sku),
-      category: str(r.category),
-      quantity: num(r.quantity),
-      unit: str(r.unit),
-      min_stock_level: num(r.minStockLevel),
-      buy_price: num(r.buyPrice),
-      sell_price: num(r.sellPrice),
-      is_active: r.isActive === false ? 0 : 1,
-      updated_at: str(r.updatedAt) ?? nowIso(),
-      dirty: 0,
-    }),
-  },
-  {
-    table: 'customer',
-    endpoint: '/customers',
-    collection: 'customers',
-    toRow: (r) => ({
-      id: r.id,
-      full_name: r.fullName,
-      phone: str(r.phone),
-      email: str(r.email),
-      address: typeof r.address === 'string' ? r.address : JSON.stringify(r.address ?? null),
-      opening_balance: num(r.openingBalance),
-      type: str(r.type),
-      is_active: r.isActive === false ? 0 : 1,
-      updated_at: str(r.updatedAt) ?? nowIso(),
-      dirty: 0,
-    }),
-  },
-  {
-    table: 'invoice',
-    endpoint: '/invoices',
-    collection: 'invoices',
-    toRow: (r) => ({
-      id: r.id,
-      invoice_number: str(r.invoiceNumber),
-      type: str(r.type) ?? 'sale',
-      customer_id: str(r.customerId),
-      customer_name: str(r.customerName),
-      date: str(r.date) ?? nowIso(),
-      subtotal: num(r.subtotal),
-      discount_total: num(r.discountTotal),
-      tax_total: num(r.taxTotal),
-      total: num(r.total),
-      paid_amount: num(r.paidAmount),
-      payment_method: str(r.paymentMethod),
-      currency: str(r.currency) ?? 'AFN',
-      status: str(r.status) ?? 'pending',
-      notes: str(r.notes),
-      updated_at: str(r.updatedAt) ?? nowIso(),
-      dirty: 0,
-    }),
-  },
-]
-
 // ============================================
 // Pull
 //
-// ⚠️ WHAT THIS REPLACED. Every sync fetched `page: 1, limit: 200` of each list.
-// The list endpoints cap `limit` at 100 and ignore `page`, so the offline copy
-// held the newest 100 products and customers and silently never the rest —
-// and downloaded those same 100 again on every sync.
+// ⚠️ WHAT THIS REPLACED, TWICE.
 //
-// Products and customers now follow the server's change log
-// (`GET /api/sync/pull`, cursor = sync_version): only what changed since the
-// last pull travels. The first pull — or one the server says is too old
-// (`mustRehydrate`) — takes a COMPLETE snapshot by walking the list cursor to
-// the end, then starts the log from the head read BEFORE the snapshot, so a
-// change made during it is pulled again rather than missed.
+// 1. Every sync fetched `page: 1, limit: 200` of each list. The list endpoints
+//    cap `limit` at 100 and ignore `page`, so the offline copy held the newest
+//    100 products and customers and never the rest.
+// 2. The rebuild then walked the REST list endpoints — which do not return
+//    `version`. Every row landed at the local default, so the first offline
+//    edit of anything the server had ever changed was refused as a version
+//    conflict. Invoices were a newest-100 window, re-downloaded on each sync.
 //
-// Invoices stay a recency window (newest 100): they are financial documents
-// read through their own endpoint (items, customer name), not raw log rows.
+// Now: a rebuild walks `/sync/snapshot` (the lean pull columns, `version`
+// included, keyset by id, every invoice), starting from the head read BEFORE
+// the walk so a change made during it is pulled again rather than missed; after
+// that only the change log travels. Customers are rebuilt first so an invoice
+// can take its customer's name from the device.
 // ============================================
 
-const DELTA_TABLES = { product: 'product', customer: 'customer' } as const
-type DeltaEntity = keyof typeof DELTA_TABLES
+/** Rebuild order matters: invoices read their customer's name from the device. */
+const DELTA_ENTITIES = ['customer', 'product', 'invoice'] as const
+type DeltaEntity = (typeof DELTA_ENTITIES)[number]
 
-const SNAPSHOT_PAGE = 100
-const SNAPSHOT_MAX_PAGES = 500
+/** Entities retired with is_active = 0 rather than removed (a queued change may reference them). */
+const RETIRED_NOT_REMOVED: ReadonlySet<DeltaEntity> = new Set(['customer', 'product'])
+
+const SNAPSHOT_PAGE = 500
+const SNAPSHOT_MAX_PAGES = 1000
 const DELTA_PAGE = 500
 const DELTA_MAX_PAGES = 200
 
-/** Rows from the change log are raw table rows (snake_case). */
+/**
+ * Server rows (snake_case, the lean pull columns) → local SQLite rows.
+ *
+ * ⚠️ `version` IS CARRIED. It is the optimistic-concurrency token an offline
+ * edit sends back as `expectedVersion`; a row stored without it is an edit the
+ * server will refuse.
+ */
 const FROM_LOG: Record<DeltaEntity, (r: Record<string, unknown>) => Record<string, unknown>> = {
   product: (r) => ({
     id: r.id,
@@ -144,8 +100,11 @@ const FROM_LOG: Record<DeltaEntity, (r: Record<string, unknown>) => Record<strin
     min_stock_level: num(r.min_stock_level),
     buy_price: num(r.buy_price),
     sell_price: num(r.sell_price),
-    is_active: r.is_active === false || r.deleted_at ? 0 : 1,
+    // `deleted_at` was read here too; no such column exists (a delete is a
+    // `delete` change), so it was always undefined. Guard: sync-pull-columns.test.ts.
+    is_active: r.is_active === false ? 0 : 1,
     updated_at: str(r.updated_at) ?? nowIso(),
+    version: num(r.version) || 1,
     dirty: 0,
   }),
   customer: (r) => ({
@@ -156,10 +115,50 @@ const FROM_LOG: Record<DeltaEntity, (r: Record<string, unknown>) => Record<strin
     address: typeof r.address === 'string' ? r.address : JSON.stringify(r.address ?? null),
     opening_balance: num(r.opening_balance),
     type: str(r.type),
-    is_active: r.is_active === false || r.deleted_at ? 0 : 1,
+    is_active: r.is_active === false ? 0 : 1,
     updated_at: str(r.updated_at) ?? nowIso(),
+    version: num(r.version) || 1,
     dirty: 0,
   }),
+  invoice: (r) => ({
+    id: r.id,
+    invoice_number: str(r.invoice_number),
+    type: str(r.type) ?? 'sale',
+    customer_id: str(r.customer_id),
+    date: str(r.date) ?? nowIso(),
+    subtotal: num(r.subtotal),
+    discount_total: num(r.discount_total),
+    tax_total: num(r.tax_total),
+    total: num(r.total),
+    paid_amount: num(r.paid_amount),
+    payment_method: str(r.payment_method),
+    currency: str(r.currency) ?? 'AFN',
+    status: str(r.status) ?? 'pending',
+    notes: str(r.notes),
+    updated_at: str(r.updated_at) ?? nowIso(),
+    version: num(r.version) || 1,
+    dirty: 0,
+  }),
+}
+
+/** Accept header: binary preferred, JSON understood. */
+const HSB_ACCEPT = `${HSB_CONTENT_TYPE}, application/json;q=0.5`
+
+/** GET a sync endpoint as bytes and return its body, binary or JSON. */
+async function getSyncBody<T>(
+  path: string,
+  params: Record<string, unknown>,
+  decodeBinary: (bytes: Uint8Array) => T,
+): Promise<T> {
+  const response = await apiClient.get<ArrayBuffer>(path, {
+    params,
+    headers: { Accept: HSB_ACCEPT },
+    responseType: 'arraybuffer',
+  })
+  const bytes = new Uint8Array(response.data)
+  const type = String((response.headers as Record<string, unknown>)['content-type'] ?? '')
+  if (type.includes(HSB_CONTENT_TYPE)) return decodeBinary(bytes)
+  return JSON.parse(new TextDecoder().decode(bytes)) as T
 }
 
 const cursorKey = (workspaceId: string) => `hisabche.desktop.syncCursor:${workspaceId}`
@@ -194,50 +193,54 @@ export interface PullPage {
   mustRehydrate: boolean
 }
 
-/** Every row of a list endpoint, walking its cursor to the end. */
-async function snapshotAll(spec: PullSpec): Promise<number> {
-  const desktop = bridge()
-  if (!desktop) return 0
-
-  let cursor: string | null = null
-  let written = 0
-  for (let page = 0; page < SNAPSHOT_MAX_PAGES; page++) {
-    const response: { data: Record<string, unknown> } = await apiClient.get(spec.endpoint, {
-      // Sorted by id, so the id cursor the endpoint hands back IS the sort key.
-      params: {
-        limit: SNAPSHOT_PAGE,
-        sortBy: 'id',
-        sortDirection: 'asc',
-        ...(cursor ? { cursor } : {}),
-      },
-    })
-    const collection = response.data[spec.collection]
-    if (!Array.isArray(collection) || collection.length === 0) break
-    written += await desktop.db.upsertMany(
-      spec.table,
-      (collection as Array<Record<string, unknown>>).map(spec.toRow),
-    )
-    const next = response.data.nextCursor
-    if (response.data.hasMore !== true || typeof next !== 'string') break
-    cursor = next
-  }
-  return written
+interface SnapshotPage {
+  rows: Array<Record<string, unknown>>
+  nextAfter: string | null
+  hasMore: boolean
 }
 
-/** The newest invoices, as a recency window (see above). */
-async function pullRecentInvoices(): Promise<number> {
+/** Invoices carry no customer name: keep the device's, or read the local customer's. */
+async function attachCustomerNames(rows: Array<Record<string, unknown>>): Promise<void> {
   const desktop = bridge()
-  const spec = PULL_SPECS.find((candidate) => candidate.table === 'invoice')
-  if (!desktop || !spec) return 0
-  const response = await apiClient.get<Record<string, unknown>>(spec.endpoint, {
-    params: { limit: SNAPSHOT_PAGE, sortDirection: 'desc' },
-  })
-  const collection = response.data[spec.collection]
-  if (!Array.isArray(collection)) return 0
-  return desktop.db.upsertMany(
-    spec.table,
-    (collection as Array<Record<string, unknown>>).map(spec.toRow),
-  )
+  if (!desktop) return
+  for (const row of rows) {
+    const [local] = await desktop.db.query<Record<string, unknown>>({
+      table: 'invoice',
+      where: { id: String(row.id) },
+      limit: 1,
+    })
+    let name = str(local?.customer_name)
+    if (!name && typeof row.customer_id === 'string') {
+      const [customer] = await desktop.db.query<Record<string, unknown>>({
+        table: 'customer',
+        where: { id: row.customer_id },
+        limit: 1,
+      })
+      name = str(customer?.full_name)
+    }
+    if (name) row.customer_name = name
+  }
+}
+
+/** Every row of one entity, walking /sync/snapshot to the end. */
+async function snapshotEntity(entity: DeltaEntity): Promise<number> {
+  const desktop = bridge()
+  if (!desktop) return 0
+  let after: string | null = null
+  let written = 0
+  for (let page = 0; page < SNAPSHOT_MAX_PAGES; page++) {
+    const body: SnapshotPage = await getSyncBody<SnapshotPage>(
+      '/sync/snapshot',
+      { entity, limit: SNAPSHOT_PAGE, ...(after ? { after } : {}) },
+      decodeSnapshotPage,
+    )
+    const rows = body.rows.map(FROM_LOG[entity])
+    if (entity === 'invoice') await attachCustomerNames(rows)
+    if (rows.length > 0) written += await desktop.db.upsertMany(entity, rows)
+    if (!body.hasMore || !body.nextAfter) break
+    after = body.nextAfter
+  }
+  return written
 }
 
 async function rehydrate(workspaceId: string | null): Promise<number> {
@@ -248,14 +251,13 @@ async function rehydrate(workspaceId: string | null): Promise<number> {
     const { data } = await apiClient.get<{ cursor: number }>('/sync/cursor')
     head = Number.isInteger(data.cursor) ? data.cursor : null
   } catch {
-    head = null // no change log on this server: snapshot every time
+    head = null
   }
 
   let written = 0
-  for (const table of Object.values(DELTA_TABLES)) {
-    const spec = PULL_SPECS.find((candidate) => candidate.table === table)
-    if (spec) written += await snapshotAll(spec)
-  }
+  for (const entity of DELTA_ENTITIES) written += await snapshotEntity(entity)
+  // Only a complete rebuild may start the log: a head recorded after a
+  // partial one would skip whatever the failed page held.
   if (workspaceId && head !== null) writeCursor(workspaceId, head)
   return written
 }
@@ -266,30 +268,42 @@ export async function applyChanges(page: PullPage): Promise<number> {
   if (!desktop) return 0
 
   let written = 0
-  for (const entity of Object.keys(DELTA_TABLES) as DeltaEntity[]) {
-    const table = DELTA_TABLES[entity]
+  for (const entity of DELTA_ENTITIES) {
     const mine = page.changes.filter((change) => change.entityType === entity)
+    if (mine.length === 0) continue
 
     const upserts = mine
       .filter((change) => change.operation !== 'delete' && change.data)
       .map((change) => FROM_LOG[entity](change.data as Record<string, unknown>))
+    if (entity === 'invoice') await attachCustomerNames(upserts)
 
-    // A delete (or a row gone since) retires the local row rather than
-    // erasing it: offline screens filter on is_active, and a queued local
-    // change may still reference it.
-    const retiredIds = mine
+    // ⚠️ `data: null` on a non-delete means ONLY «the row is gone since» — the
+    // server fails the whole pull on a read error instead of sending null
+    // (P0, 27 Sep 2026). Before that fix a transient database error landed
+    // here and retired live products.
+    const goneIds = mine
       .filter((change) => change.operation === 'delete' || !change.data)
       .map((change) => change.entityId)
-    for (const id of retiredIds) {
-      const [local] = await desktop.db.query<Record<string, unknown>>({
-        table,
-        where: { id },
-        limit: 1,
-      })
-      if (local) upserts.push({ ...local, is_active: 0, updated_at: nowIso(), dirty: 0 })
+
+    if (RETIRED_NOT_REMOVED.has(entity)) {
+      // Retired rather than erased: offline screens filter on is_active, and a
+      // queued local change may still reference the row.
+      for (const id of goneIds) {
+        const [local] = await desktop.db.query<Record<string, unknown>>({
+          table: entity,
+          where: { id },
+          limit: 1,
+        })
+        if (local) upserts.push({ ...local, is_active: 0, updated_at: nowIso(), dirty: 0 })
+      }
+    } else if (goneIds.length > 0) {
+      // Invoices have no soft-delete column: a server-deleted invoice is
+      // removed — unless this device still holds an unsent edit to it.
+      await desktop.db.removeMany(entity, goneIds)
+      written += goneIds.length
     }
 
-    if (upserts.length > 0) written += await desktop.db.upsertMany(table, upserts)
+    if (upserts.length > 0) written += await desktop.db.upsertMany(entity, upserts)
   }
   return written
 }
@@ -298,9 +312,11 @@ async function pullDelta(workspaceId: string, from: number): Promise<number> {
   let cursor = from
   let written = 0
   for (let round = 0; round < DELTA_MAX_PAGES; round++) {
-    const { data } = await apiClient.get<PullPage>('/sync/pull', {
-      params: { cursor, limit: DELTA_PAGE },
-    })
+    const data = await getSyncBody<PullPage>(
+      '/sync/pull',
+      { cursor, limit: DELTA_PAGE },
+      decodePullPage,
+    )
     if (data.mustRehydrate) return written + (await rehydrate(workspaceId))
 
     written += await applyChanges(data)
@@ -312,23 +328,38 @@ async function pullDelta(workspaceId: string, from: number): Promise<number> {
   return written
 }
 
+/**
+ * Bring the device up to the server.
+ *
+ * A failure is thrown, not swallowed into a fallback: the cursor stays where
+ * the last committed page put it, and the next sync (interval, reconnect,
+ * stream wake) retries from there. The old fallback re-downloaded everything
+ * on any error, which on a bad connection is the most expensive thing to do.
+ */
 export async function pullAll(): Promise<number> {
   const workspaceId = useWorkspaceStore.getState().workspaceId ?? null
   const stored = workspaceId ? readCursor(workspaceId) : null
+  if (workspaceId && stored !== null) return pullDelta(workspaceId, stored)
+  return rehydrate(workspaceId)
+}
 
-  let written = 0
-  try {
-    written +=
-      workspaceId && stored !== null
-        ? await pullDelta(workspaceId, stored)
-        : await rehydrate(workspaceId)
-  } catch {
-    // The change log is unavailable (older server, or a failed page): a full
-    // snapshot is slower but never wrong.
-    written += await rehydrate(null).catch(() => 0)
-  }
-  written += await pullRecentInvoices().catch(() => 0)
-  return written
+// ============================================
+// Wake-up stream
+// ============================================
+
+/**
+ * Keep a wake-up connection open for the active workspace. Every CURSOR the
+ * server sends past this device's cursor runs a sync. Returns a stop handle.
+ */
+export function startSyncStream(workspaceId: string, onWake: () => void): StreamHandle {
+  return connectSyncStream({
+    url: streamUrl(API_BASE_URL, workspaceId),
+    getToken: () => getToken(),
+    getCursor: () => readCursor(workspaceId) ?? 0,
+    onWake: (_reason, cursor) => {
+      if (cursor > (readCursor(workspaceId) ?? 0)) onWake()
+    },
+  })
 }
 
 // ============================================
@@ -421,22 +452,36 @@ async function pushVersioned(entry: QueueEntry): Promise<void> {
 }
 
 let running = false
+let again = false
 
-/** Drain the queue then refresh server state. Safe to call concurrently. */
+/**
+ * Drain the queue then refresh server state. Safe to call concurrently: a
+ * call that arrives while a sync runs is not dropped — it schedules exactly
+ * one more run afterwards, so a stream wake during a long pull still lands.
+ */
 export async function runSync(queryClient: QueryClient): Promise<void> {
   const desktop = bridge()
-  if (!desktop || running) return
+  if (!desktop) return
+  if (running) {
+    again = true
+    return
+  }
 
   running = true
   try {
     const queue = await desktop.db.queue()
+    // An entry never goes before the create it refers to (push-order.ts): a
+    // failed customer create keeps its invoice WAITING, not failed.
+    const gate = createPushGate(queue)
 
     for (const entry of queue) {
       if (entry.attempts >= MAX_ATTEMPTS) continue
+      if (gate.blockedBy(entry)) continue
 
       try {
         await pushEntry(entry)
         await desktop.db.resolveQueue(entry.clientId, 'done')
+        gate.markSent(entry)
       } catch (error) {
         const apiError = error as Partial<ApiError>
         await desktop.db.resolveQueue(entry.clientId, 'failed', apiError.message ?? 'SYNC_FAILED')
@@ -445,10 +490,19 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
       }
     }
 
-    await pullAll()
+    try {
+      await pullAll()
+    } catch {
+      // The cursor stayed at the last committed page; the next run (interval,
+      // reconnect, stream wake) resumes from there. Nothing to undo here.
+    }
     await invalidateAll(queryClient)
   } finally {
     running = false
+  }
+  if (again) {
+    again = false
+    await runSync(queryClient)
   }
 }
 

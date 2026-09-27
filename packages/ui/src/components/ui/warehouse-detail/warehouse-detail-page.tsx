@@ -39,6 +39,7 @@ type UnitType = string
 
 interface ProductData {
   name: string
+  barcode: string
   sellPrice: number
   buyPrice: number
   quantity: number
@@ -49,6 +50,7 @@ interface ProductData {
 
 interface ProductEditValues {
   name: string
+  barcode: string
   sellPrice: number
   buyPrice: number
   quantity: number
@@ -131,6 +133,7 @@ export function ProductDetailPage({
 }: ProductDetailPageProps) {
   const [editValues, setEditValues] = useState<ProductEditValues>({
     name: '',
+    barcode: '',
     sellPrice: 0,
     buyPrice: 0,
     quantity: 0,
@@ -144,6 +147,7 @@ export function ProductDetailPage({
     if (product) {
       setEditValues({
         name: product.name,
+        barcode: product.barcode,
         sellPrice: product.sellPrice,
         buyPrice: product.buyPrice,
         quantity: product.quantity,
@@ -301,6 +305,27 @@ export function ProductDetailPage({
                     {errors.name}
                   </p>
                 )}
+              </div>
+
+              {/* Barcode — a string, always (a leading zero is part of it) */}
+              <div>
+                <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-1.5">
+                  {t('barcode.label', 'بارکد')}
+                </label>
+                <input
+                  type="text"
+                  name="barcode"
+                  dir="ltr"
+                  autoComplete="off"
+                  value={editValues.barcode}
+                  onChange={(e) => handleEditChange('barcode', e.target.value)}
+                  // A scanner ends every code with Enter: it must not submit the form.
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.preventDefault()
+                  }}
+                  placeholder={t('barcode.hint', 'بارکد را اسکن یا تایپ کنید')}
+                  className={inputBase}
+                />
               </div>
 
               {/* Prices */}

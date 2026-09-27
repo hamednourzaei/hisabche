@@ -27,7 +27,6 @@
     "@hisabche/app-bridge": "workspace:*",
     "@hisabche/app-shell": "workspace:*",
     "@hisabche/auth-core": "workspace:*",
-    "@hisabche/db": "workspace:*",
     "@hisabche/formatting": "workspace:*",
     "@hisabche/i18n": "workspace:*",
     "@hisabche/mobile-ui": "workspace:*",

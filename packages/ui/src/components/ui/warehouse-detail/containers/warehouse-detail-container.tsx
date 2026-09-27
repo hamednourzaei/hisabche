@@ -7,7 +7,8 @@ import { useTranslations } from 'next-intl'
 // Margin and stock-value rules live in the domain layer so mobile derives the
 // same numbers rather than re-implementing them.
 import { profitPerUnit, stockValue, totalProfit } from '@hisabche/validation'
-import { useProduct, useUpdateProduct, useDeleteProduct } from '@hisabche/api'
+import { apiErrorMessage, useProduct, useUpdateProduct, useDeleteProduct } from '@hisabche/api'
+import { barcodeTakenMessage } from '../../../../lib/barcode/barcode-errors'
 import { ProductExpiryPanel } from '../product-expiry-panel'
 import { ProductDetailPage } from '../warehouse-detail-page'
 import { productDeleteRefusal } from '../../../../lib/warehouse/delete-refusal'
@@ -27,6 +28,7 @@ type UnitType = string
 
 interface ProductEditValues {
   name: string
+  barcode: string
   sellPrice: number
   buyPrice: number
   quantity: number
@@ -55,6 +57,7 @@ const toUnitType = (unit: string): UnitType => unit
 
 interface RawProduct {
   name?: string
+  barcode?: string | null | undefined
   sell_price?: number | string
   sellPrice?: number | string
   buy_price?: number | string
@@ -83,6 +86,7 @@ export function ProductDetailContainer() {
   const getProduct = useCallback(
     (p: RawProduct) => ({
       name: p.name ?? '',
+      barcode: p.barcode ?? '',
       sellPrice: num(p.sell_price ?? p.sellPrice),
       buyPrice: num(p.buy_price ?? p.buyPrice),
       quantity: num(p.quantity),
@@ -111,6 +115,7 @@ export function ProductDetailContainer() {
       await updateProduct.mutateAsync({
         id: id!,
         name: values.name.trim(),
+        barcode: values.barcode,
         sellPrice: num(values.sellPrice),
         buyPrice: num(values.buyPrice),
         quantity: Math.floor(num(values.quantity)),
@@ -167,7 +172,11 @@ export function ProductDetailContainer() {
   const onSave = useCallback(
     (data: ProductEditValues) => {
       // A refused save keeps the form open with what was typed.
-      void handleSave(data).catch(() => undefined)
+      // ⚠️ WAS `.catch(() => undefined)`: every failed save was swallowed, the
+      // form stayed open and nothing said why. Now the reason is shown.
+      void handleSave(data).catch((error: unknown) => {
+        toast.error(barcodeTakenMessage(error, t) ?? apiErrorMessage(error, t('common.error')))
+      })
     },
     [handleSave],
   )

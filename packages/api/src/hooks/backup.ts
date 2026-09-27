@@ -14,6 +14,7 @@
 import { useCallback } from 'react'
 
 import apiClient from '../lib/client'
+import { localDay } from '../lib/local-day'
 
 export interface WorkspaceBackupMeta {
   workspaceId: string
@@ -61,7 +62,8 @@ export function useDownloadWorkspaceBackup() {
       params: { format },
       responseType: 'blob',
     })
-    const stamp = new Date().toISOString().slice(0, 10)
+    // The owner's calendar day, not UTC — after 20:30 in Kabul UTC is already tomorrow.
+    const stamp = localDay()
     const url = URL.createObjectURL(response.data)
     try {
       const link = document.createElement('a')

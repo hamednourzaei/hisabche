@@ -4,7 +4,10 @@
 import { useEffect, useState, useCallback, useMemo, memo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { useCreateInvoice } from '@hisabche/api'
+import { lookupProductByBarcode, useCreateInvoice } from '@hisabche/api'
+import type { Product } from '@hisabche/validation'
+import { BarcodeScanDialog, type ScanProblem } from '../../invoice-builder/barcode-scan-dialog'
+import { useBarcodeScanner } from '../../../../hooks/use-barcode-scanner'
 import {
   useOnboardingStore,
   usePreferencesStore,
@@ -126,6 +129,58 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
   const removeItem = useCallback((key: string) => {
     setItems((prev) => prev.filter((item) => item.key !== key))
   }, [])
+
+  // ─── Barcode scanner (product step only) ─────────────────────────────────
+  // `addItem` ignores a product already on the list — right for a click, wrong
+  // for a scanner: scanning the second can of the same drink must count it.
+  const [scanProblem, setScanProblem] = useState<ScanProblem | null>(null)
+
+  const addScanned = useCallback((product: Product) => {
+    if (!product.id) return
+    const id = product.id
+    setItems((prev) => {
+      const same = prev.find((item) => item.product.id === id && item.unit !== 'custom')
+      if (same) {
+        const current = Number(same.quantity)
+        // An unreadable quantity is left for the cashier, not reset to 1.
+        if (!Number.isFinite(current)) return prev
+        return prev.map((item) =>
+          item.key === same.key
+            ? { ...item, quantity: String(Math.round((current + 1) * 1000) / 1000) }
+            : item,
+        )
+      }
+      const sellPrice = Number(product.sellPrice ?? 0)
+      return [
+        ...prev,
+        {
+          key: id,
+          product: { id, name: product.name, sellPrice, unit: product.unit ?? '' },
+          quantity: '1',
+          price: String(sellPrice),
+        },
+      ]
+    })
+  }, [])
+
+  const handleScan = useCallback(
+    async (barcode: string) => {
+      const result = await lookupProductByBarcode(barcode)
+      if (result.status === 'found') return addScanned(result.product)
+      setScanProblem(
+        result.status === 'ambiguous'
+          ? { kind: 'ambiguous', barcode, products: result.products }
+          : result.status === 'unknown'
+            ? { kind: 'unknown', barcode: result.barcode }
+            : { kind: 'error', barcode: result.barcode, offline: result.offline },
+      )
+    },
+    [addScanned],
+  )
+
+  useBarcodeScanner((scan) => void handleScan(scan.value), {
+    enabled: step === 'product' && scanProblem === null,
+  })
 
   const updateItemQuantity = useCallback((key: string, quantity: string) => {
     setItems((prev) => prev.map((item) => (item.key === key ? { ...item, quantity } : item)))
@@ -330,50 +385,65 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
   const handleViewAllInvoices = useCallback(() => router.push('/invoices'), [router])
 
   return (
-    <QuickInvoicePage
-      t={safeT}
-      elapsedFormatted={elapsedFormatted}
-      showSaved={false}
-      showCelebration={showCelebration}
-      step={step}
-      items={items}
-      selectedCustomer={selectedCustomer}
-      paymentType={paymentType}
-      paidNow={paidNow}
-      subtotal={subtotal}
-      discountValue={discountValue}
-      discountType={discountType}
-      total={total}
-      productName={productName}
-      paidAmount={paidAmount}
-      isPaid={isPaid}
-      createdInvoiceId={createdInvoiceId}
-      isPending={createInvoice.isPending}
-      onAddItem={addItem}
-      onAddCustomItem={addCustomItem}
-      onRemoveItem={removeItem}
-      onUpdateItemQuantity={updateItemQuantity}
-      onUpdateItemPrice={updateItemPrice}
-      transactionType={transactionType}
-      onTransactionTypeChange={setTransactionType}
-      onUpdateItemUnit={updateItemUnit}
-      onUpdateItemUnitLabel={updateItemUnitLabel}
-      onUpdateItemWeight={updateItemWeight}
-      onAddDetail={addDetail}
-      onUpdateDetail={updateDetail}
-      onRemoveDetail={removeDetail}
-      onSelectCustomer={setSelectedCustomer}
-      onPaymentTypeChange={setPaymentType}
-      onPaidNowChange={setPaidNow}
-      onDiscountValueChange={setDiscountValue}
-      onDiscountTypeChange={setDiscountType}
-      onIsPaidChange={setIsPaid}
-      onSetStep={setStep}
-      onConfirmCreate={handleCreate}
-      onDismissCelebration={dismissCelebration}
-      onViewInvoice={handleViewInvoice}
-      onViewAllInvoices={handleViewAllInvoices}
-    />
+    <>
+      <BarcodeScanDialog
+        t={safeT}
+        problem={scanProblem}
+        onPick={(product) => {
+          setScanProblem(null)
+          addScanned(product)
+        }}
+        onRetry={(barcode) => {
+          setScanProblem(null)
+          void handleScan(barcode)
+        }}
+        onClose={() => setScanProblem(null)}
+      />
+      <QuickInvoicePage
+        t={safeT}
+        elapsedFormatted={elapsedFormatted}
+        showSaved={false}
+        showCelebration={showCelebration}
+        step={step}
+        items={items}
+        selectedCustomer={selectedCustomer}
+        paymentType={paymentType}
+        paidNow={paidNow}
+        subtotal={subtotal}
+        discountValue={discountValue}
+        discountType={discountType}
+        total={total}
+        productName={productName}
+        paidAmount={paidAmount}
+        isPaid={isPaid}
+        createdInvoiceId={createdInvoiceId}
+        isPending={createInvoice.isPending}
+        onAddItem={addItem}
+        onAddCustomItem={addCustomItem}
+        onRemoveItem={removeItem}
+        onUpdateItemQuantity={updateItemQuantity}
+        onUpdateItemPrice={updateItemPrice}
+        transactionType={transactionType}
+        onTransactionTypeChange={setTransactionType}
+        onUpdateItemUnit={updateItemUnit}
+        onUpdateItemUnitLabel={updateItemUnitLabel}
+        onUpdateItemWeight={updateItemWeight}
+        onAddDetail={addDetail}
+        onUpdateDetail={updateDetail}
+        onRemoveDetail={removeDetail}
+        onSelectCustomer={setSelectedCustomer}
+        onPaymentTypeChange={setPaymentType}
+        onPaidNowChange={setPaidNow}
+        onDiscountValueChange={setDiscountValue}
+        onDiscountTypeChange={setDiscountType}
+        onIsPaidChange={setIsPaid}
+        onSetStep={setStep}
+        onConfirmCreate={handleCreate}
+        onDismissCelebration={dismissCelebration}
+        onViewInvoice={handleViewInvoice}
+        onViewAllInvoices={handleViewAllInvoices}
+      />
+    </>
   )
 })
 

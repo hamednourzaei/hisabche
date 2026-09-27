@@ -35,6 +35,7 @@ import { UnitSelect, toValidUnit } from '../units/unit-select'
 import { SelectField } from '../select-field'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { Switch } from '../switch'
+import { barcodeTakenMessage } from '../../../lib/barcode/barcode-errors'
 
 type T = (key: string, fallback?: string) => string
 
@@ -67,6 +68,7 @@ const blankUnit = {
 const blank = {
   name: '',
   sku: '',
+  barcode: '',
   unit: 'piece',
   quantity: '',
   buyPrice: '',
@@ -118,6 +120,8 @@ export function AddToWarehouseModal({
     )
 
   const failed = (err: unknown) => {
+    const taken = barcodeTakenMessage(err, t)
+    if (taken) return taken
     const code = (err as { response?: { data?: { code?: string; error?: string } } })?.response
       ?.data
     if (code?.code === 'UNIT_CUSTOM_MIGRATION_REQUIRED') {
@@ -173,6 +177,7 @@ export function AddToWarehouseModal({
       const product = await createProduct.mutateAsync({
         name: form.name.trim(),
         sku: form.sku.trim(),
+        barcode: form.barcode,
         unit,
         ...(seeded ? {} : { unitLabel: chosenUnit?.nameFa ?? chosenUnit?.name ?? '' }),
         quantity: number(form.quantity),
@@ -241,6 +246,25 @@ export function AddToWarehouseModal({
               onChange={(e) => set('sku', e.target.value)}
               dir="ltr"
               placeholder={t('warehouse.productCodeHint', 'برای تشخیص کالاهای هم‌نام')}
+              className={field}
+            />
+          </label>
+
+          <label className="space-y-1 text-sm">
+            <span className="text-[hsl(var(--fg-secondary))]">{t('barcode.label', 'بارکد')}</span>
+            <input
+              id="wh-product-barcode"
+              name="barcode"
+              value={form.barcode}
+              onChange={(e) => set('barcode', e.target.value)}
+              // A scanner ends every code with Enter: it must not submit the form.
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.preventDefault()
+              }}
+              dir="ltr"
+              inputMode="text"
+              autoComplete="off"
+              placeholder={t('barcode.hint', 'بارکد را اسکن یا تایپ کنید')}
               className={field}
             />
           </label>

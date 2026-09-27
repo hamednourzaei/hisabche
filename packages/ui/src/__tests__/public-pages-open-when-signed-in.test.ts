@@ -4,7 +4,7 @@
 // Public pages (home, blog, features, legal, docs…) are for everyone; only the
 // (dashboard) route group gates on sign-in.
 import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join, relative, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const WEB = join(__dirname, '../../../../apps/web')
@@ -39,7 +39,7 @@ describe('public pages stay open to a signed-in person', () => {
   const files = publicSources(LANG)
 
   it('finds the public pages it guards', () => {
-    const names = files.map((f) => relative(LANG, f))
+    const names = files.map((f) => relative(LANG, f).split(sep).join('/'))
     expect(names).toContain('page.tsx')
     expect(names.some((n) => n.startsWith('features/'))).toBe(true)
     expect(names.some((n) => n.startsWith('legal/'))).toBe(true)

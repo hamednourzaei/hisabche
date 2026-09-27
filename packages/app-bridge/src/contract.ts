@@ -17,6 +17,8 @@ export const IPC = {
   // Local SQLite cache
   dbQuery: 'db:query',
   dbUpsertMany: 'db:upsertMany',
+  /** Remove server-deleted rows. Never removes a row with an unsent local edit. */
+  dbRemoveMany: 'db:removeMany',
   dbEnqueue: 'db:enqueue',
   dbQueue: 'db:queue',
   dbResolveQueue: 'db:resolveQueue',
@@ -26,6 +28,8 @@ export const IPC = {
   // Native capabilities
   printHtml: 'print:html',
   printEscPos: 'print:escpos',
+  /** The system's printers, for the receipt-printer setting. */
+  printListPrinters: 'print:listPrinters',
   exportFile: 'file:export',
   importFile: 'file:import',
 
@@ -115,6 +119,11 @@ export const dbUpsertSchema = z.object({
   rows: z.array(z.record(z.unknown())).max(5000),
 })
 
+export const dbRemoveSchema = z.object({
+  table: localTableSchema,
+  ids: z.array(z.string().min(1).max(128)).max(5000),
+})
+
 export const queueOperationSchema = z.enum(['create', 'update', 'delete'])
 
 export const dbEnqueueSchema = z.object({
@@ -157,6 +166,13 @@ export const printHtmlSchema = z.object({
   landscape: z.boolean().default(false),
   silent: z.boolean().default(false),
   deviceName: z.string().max(200).optional(),
+  /**
+   * Receipt paper width (58/80 mm). Absent = a normal page (A4). With it the
+   * page is exactly the paper wide and exactly the receipt long, so a thermal
+   * printer does not feed a page's worth of blank paper.
+   */
+  pageWidthMm: z.number().int().min(40).max(120).optional(),
+  copies: z.number().int().min(1).max(5).optional(),
 })
 
 export const printEscPosSchema = z.object({
@@ -191,6 +207,16 @@ export const httpRequestSchema = z.object({
   // authenticated request was rejected and the UI rendered empty data.
   headers: z.record(z.string().max(8_192)).optional(),
   body: z.union([z.string().max(2_000_000), z.null()]).optional(),
+  // ⚠️ BINARY (request #153, Hisabche Sync Binary). `body`/`data` are text;
+  // a binary frame forced through `response.text()` is corrupted (every byte
+  // above 0x7F becomes U+FFFD). IPC carries a Uint8Array natively (structured
+  // clone), so bytes travel as bytes in both directions.
+  bodyBytes: z
+    .instanceof(Uint8Array)
+    .refine((b) => b.byteLength <= 2_000_000, 'body too large')
+    .optional(),
+  /** 'bytes' → the response body comes back in `bytes`, untouched. */
+  responseType: z.enum(['text', 'bytes']).optional(),
 })
 
 export interface HttpRequestResponse {
@@ -198,6 +224,8 @@ export interface HttpRequestResponse {
   statusText: string
   headers: Record<string, string>
   data: string
+  /** Present only when the request asked for `responseType: 'bytes'`. */
+  bytes?: Uint8Array
 }
 
 // ============================================
@@ -265,6 +293,12 @@ export interface HisabcheBridge {
       offset?: number
     }): Promise<T[]>
     upsertMany(table: LocalTable, rows: Array<Record<string, unknown>>): Promise<number>
+    /**
+     * Delete rows the SERVER deleted. A row still carrying an unsent local edit
+     * (`dirty = 1`) is kept: that edit exists nowhere else, and the push will
+     * surface the conflict. Returns how many rows were removed.
+     */
+    removeMany(table: LocalTable, ids: string[]): Promise<number>
     enqueue(input: {
       entity: LocalTable
       operation: 'create' | 'update' | 'delete'
@@ -291,7 +325,11 @@ export interface HisabcheBridge {
       landscape?: boolean
       silent?: boolean
       deviceName?: string
+      pageWidthMm?: number
+      copies?: number
     }): Promise<boolean>
+    /** The printers this machine has. Empty where the host cannot list them. */
+    listPrinters(): Promise<Array<{ name: string; displayName: string; isDefault: boolean }>>
     escPos(input: { data: string; deviceName?: string }): Promise<boolean>
   }
   files: {

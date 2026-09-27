@@ -21,6 +21,26 @@ export interface PrintHtmlInput {
   landscape: boolean
   silent: boolean
   deviceName?: string | undefined
+  pageWidthMm?: number | undefined
+  copies?: number | undefined
+}
+
+/** The system's printers (for the receipt-printer setting). */
+export async function listPrinters(): Promise<
+  Array<{ name: string; displayName: string; isDefault: boolean }>
+> {
+  const win = BrowserWindow.getAllWindows()[0]
+  if (!win) return []
+  const printers = await win.webContents.getPrintersAsync()
+  return printers.map((p) => ({
+    name: p.name,
+    displayName: p.displayName || p.name,
+    // Electron marks the default in options on Windows; `isDefault` where present.
+    isDefault: Boolean(
+      (p as { isDefault?: boolean }).isDefault ??
+      (p.options as Record<string, string> | undefined)?.['printer-is-default'] === 'true',
+    ),
+  }))
 }
 
 export async function printHtml(input: PrintHtmlInput): Promise<boolean> {
@@ -66,6 +86,23 @@ export async function printHtml(input: PrintHtmlInput): Promise<boolean> {
 
   try {
     await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(input.html)}`)
+
+    // A receipt: the page is the paper's width and the receipt's own length.
+    // Measured after layout (96 CSS px per inch), plus a small tail so the
+    // last line clears the cutter.
+    let pageSize: { width: number; height: number } | undefined
+    if (input.pageWidthMm) {
+      const heightPx = Number(
+        await win.webContents.executeJavaScript('document.documentElement.scrollHeight', true),
+      )
+      const heightMm = Number.isFinite(heightPx) && heightPx > 0 ? (heightPx * 25.4) / 96 + 8 : 200
+      // Electron takes microns.
+      pageSize = {
+        width: input.pageWidthMm * 1000,
+        height: Math.ceil(Math.max(heightMm, 40)) * 1000,
+      }
+    }
+
     return await new Promise<boolean>((resolve) => {
       win.webContents.print(
         {
@@ -73,8 +110,13 @@ export async function printHtml(input: PrintHtmlInput): Promise<boolean> {
           printBackground: true,
           landscape: input.landscape,
           ...(input.deviceName ? { deviceName: input.deviceName } : {}),
+          ...(pageSize ? { pageSize, margins: { marginType: 'none' as const } } : {}),
+          ...(input.copies ? { copies: input.copies } : {}),
         },
-        (success) => resolve(success),
+        (success, failureReason) => {
+          if (!success) console.error('[print] HTML job failed:', failureReason)
+          resolve(success)
+        },
       )
     })
   } finally {

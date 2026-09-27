@@ -23,10 +23,22 @@ import {
   syncPushRequestSchema,
 } from '@hisabche/validation'
 import { z } from 'zod'
+import {
+  decodeFrame,
+  encodeFrame,
+  encodePullPage,
+  encodeSnapshotPage,
+  HSB_CONTENT_TYPE,
+  Op,
+  wantsBinary,
+  WireError,
+  type WireValue,
+} from '@hisabche/sync/wire'
 
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { syncService, SyncError } from '../services/sync.service'
+import { cursorWatcher } from '../services/sync-stream'
 import { supabase } from '../db'
 import { summariseSync, type MutationRow } from '../services/sync-overview.domain'
 
@@ -52,7 +64,42 @@ function actorFrom(request: FastifyRequest, deviceId: string) {
   }
 }
 
+/**
+ * Send a Hisabche Sync Binary frame. JSON stays the default: only a client
+ * that asked for HSB in `Accept` gets it, so every build already in the field
+ * keeps working unchanged.
+ */
+function sendHsb(reply: FastifyReply, bytes: Uint8Array) {
+  return reply
+    .type(HSB_CONTENT_TYPE)
+    .send(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength))
+}
+
+/** 1 MiB: a full push batch (50 mutations) is a few KB; anything near this is not a batch. */
+const HSB_BODY_LIMIT = 1024 * 1024
+
 export async function syncRoutes(fastify: FastifyInstance) {
+  // Scoped to this plugin (registered without fastify-plugin), so no other
+  // route starts accepting binary bodies. A malformed frame is a 400 before any
+  // handler runs; a frame that is not a PUSH_BATCH is refused the same way.
+  fastify.addContentTypeParser(
+    HSB_CONTENT_TYPE,
+    { parseAs: 'buffer', bodyLimit: HSB_BODY_LIMIT },
+    (_request, body, done) => {
+      try {
+        const frame = decodeFrame(new Uint8Array(body as Buffer))
+        if (frame.op !== Op.PUSH_BATCH) throw new WireError('expected a PUSH_BATCH frame')
+        done(null, frame.body)
+      } catch (err) {
+        const error = new Error(`invalid_hsb_frame: ${(err as Error).message}`) as Error & {
+          statusCode: number
+        }
+        error.statusCode = 400
+        done(error, undefined)
+      }
+    },
+  )
+
   /* ═══════════════════════════════════════════════════════════════════════
      POST /api/sync/push
      ═══════════════════════════════════════════════════════════════════════ */
@@ -79,6 +126,9 @@ export async function syncRoutes(fastify: FastifyInstance) {
 
       try {
         const { results, currentCursor } = await syncService.push(actor, mutations)
+        // Other devices of this shop connected to THIS instance hear now, not
+        // on the next poll tick. Other instances see it within one tick.
+        cursorWatcher.nudge(actor.workspaceId)
 
         const applied = results.filter((r) => r.status === 'applied').length
         const duplicates = results.filter((r) => r.duplicate).length
@@ -105,6 +155,17 @@ export async function syncRoutes(fastify: FastifyInstance) {
         // 200 even with rejections. The batch itself succeeded; per-mutation
         // outcomes are in the body, and an HTTP error would tell the client to
         // retry the whole batch including the parts that already applied.
+        reply.header('vary', 'Accept')
+        if (wantsBinary(request.headers.accept)) {
+          return sendHsb(
+            reply.code(200),
+            encodeFrame(Op.PUSH_RESULT, {
+              batchId,
+              results,
+              currentCursor,
+            } as unknown as WireValue),
+          )
+        }
         return reply.code(200).send({ batchId, results, currentCursor })
       } catch (err) {
         request.log.error({ err, batchId }, 'sync push failed')
@@ -142,6 +203,8 @@ export async function syncRoutes(fastify: FastifyInstance) {
 
       try {
         const result = await syncService.pull(workspaceId, cursor, limit, deviceId)
+        const binary = wantsBinary(request.headers.accept)
+        const hsb = binary ? encodePullPage(result) : null
 
         request.log.info(
           {
@@ -153,6 +216,10 @@ export async function syncRoutes(fastify: FastifyInstance) {
             hasMore: result.hasMore,
             mustRehydrate: result.mustRehydrate,
             pullMs: Date.now() - started,
+            // Measured before compression — the number the binary decision and
+            // the lean-payload work are judged by (request #153).
+            format: binary ? 'hsb' : 'json',
+            bytes: hsb ? hsb.length : Buffer.byteLength(JSON.stringify(result)),
           },
           'sync pull',
         )
@@ -160,10 +227,48 @@ export async function syncRoutes(fastify: FastifyInstance) {
         // Never cached. A cached delta is a delta some other client already
         // consumed, and this response is per-cursor by definition.
         reply.header('cache-control', 'no-store')
+        reply.header('vary', 'Accept')
+        if (hsb) return sendHsb(reply.code(200), hsb)
         return reply.code(200).send(result)
       } catch (err) {
         request.log.error({ err, cursor }, 'sync pull failed')
         return reply.code(500).send({ error: 'sync_pull_failed' })
+      }
+    },
+  )
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     GET /api/sync/snapshot — one page of a full rebuild (request #153)
+     ═══════════════════════════════════════════════════════════════════════ */
+  const snapshotQuery = z.object({
+    entity: z.enum(['product', 'customer', 'invoice']),
+    after: z.string().uuid().optional(),
+    limit: z.coerce.number().int().min(1).max(1000).default(500),
+  })
+
+  fastify.get(
+    '/api/sync/snapshot',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = snapshotQuery.safeParse(request.query)
+      if (!parsed.success) {
+        return reply
+          .code(400)
+          .send({ error: 'invalid_snapshot_request', details: parsed.error.flatten() })
+      }
+      const { entity, after, limit } = parsed.data
+      const workspaceId = request.tenancy.workspaceId
+
+      try {
+        const page = await syncService.snapshot(workspaceId, entity, after ?? null, limit)
+        reply.header('cache-control', 'no-store')
+        reply.header('vary', 'Accept')
+        if (wantsBinary(request.headers.accept))
+          return sendHsb(reply.code(200), encodeSnapshotPage(page))
+        return reply.code(200).send(page)
+      } catch (err) {
+        request.log.error({ err, entity, after }, 'sync snapshot failed')
+        return reply.code(500).send({ error: 'sync_snapshot_failed' })
       }
     },
   )

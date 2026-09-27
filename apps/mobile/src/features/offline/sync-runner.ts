@@ -23,7 +23,12 @@
 
 import NetInfo from '@react-native-community/netinfo'
 import type { ApiError } from '@hisabche/api'
-import { routeFor, stripFinancialFields, type QueueEntry } from '@hisabche/app-bridge'
+import {
+  createPushGate,
+  routeFor,
+  stripFinancialFields,
+  type QueueEntry,
+} from '@hisabche/app-bridge'
 
 import { apiClient } from '../../shared/lib/api'
 import * as localDb from '../../host/local-db'
@@ -160,11 +165,17 @@ async function drain(): Promise<void> {
   if (!isConnected) return
 
   let sent = 0
+  // The same rule as desktop (push-order.ts): an entry waits for the create
+  // it refers to. Here it matters even more — a 4xx burns every remaining
+  // attempt, so an invoice sent before its customer existed was dead for good.
+  const gate = createPushGate(queued)
 
   for (const entry of pending) {
+    if (gate.blockedBy(entry)) continue
     try {
       await pushEntry(entry)
       await localDb.resolveQueue(entry.clientId, 'done')
+      gate.markSent(entry)
       sent += 1
     } catch (error) {
       const apiError = error as Partial<ApiError>

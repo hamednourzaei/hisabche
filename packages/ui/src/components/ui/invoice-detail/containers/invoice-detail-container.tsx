@@ -24,6 +24,7 @@ import { InvoiceRelatedPanel } from '../invoice-related-panel'
 import { RecordHistoryPanel } from '../../activity/record-history-panel'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDateFormat } from '../../../../hooks/use-date-format'
+import { useReceiptPrint } from '../../../../hooks/use-receipt-print'
 
 /* ═══════════════════════════════════════════════════════════
    CONSTANTS
@@ -114,6 +115,8 @@ export function InvoiceDetailContainer() {
   // ⚠️ THE CALENDAR FOLLOWS THE LANGUAGE. These were hardcoded to `'fa-AF'`,
   // so every reader got the Afghan solar calendar whatever they chose.
   const { date: fmtIntlDate } = useDateFormat()
+  // Printing is its own state — a failed print never touches the invoice.
+  const { print: printReceipt, printing: printingReceipt } = useReceiptPrint()
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
   const searchParams = useSearchParams()
@@ -326,8 +329,10 @@ export function InvoiceDetailContainer() {
     autoActionRef.current = true
     if (action === 'print') handlePrint()
     if (action === 'png') handleExportPNG()
+    // Auto-print after issuing: printed from the committed invoice just loaded.
+    if (action === 'receipt' && display) void printReceipt(display)
     router.replace(`/invoices/${id}`)
-  }, [searchParams, invoice, handlePrint, handleExportPNG, router, id])
+  }, [searchParams, invoice, display, handlePrint, handleExportPNG, printReceipt, router, id])
 
   const handleSharePDF = useCallback(async () => {
     if (!invoice) return
@@ -392,6 +397,8 @@ export function InvoiceDetailContainer() {
       isLoading={isLoading}
       onBack={() => router.back()}
       onPrint={handlePrint}
+      onPrintReceipt={display ? () => void printReceipt(display) : undefined}
+      printingReceipt={printingReceipt}
       onSharePDF={handleSharePDF}
       onWhatsApp={handleWhatsApp}
       onTelegram={handleTelegram}

@@ -1,174 +1,102 @@
 # Hisabche — Offline & Sync
 
-> Offline-first is the core product promise. Every platform writes to a
-> local store first and reconciles with the cloud when connectivity allows.
+> Rewritten 27 Sep 2026 (request #153). The previous version described a push
+> that took a table name and a WatermelonDB layer on web/mobile; neither exists.
+> This file describes the code as it is. Guards named here fail if it drifts.
 
-## Data Flow (device → server)
+## 0. The one rule
 
-```
-User creates invoice
-        │
-        ▼
-Local store (SQLite / WatermelonDb)
-        │  writes are immediate, app usable offline
-        ▼
-sync_queue (pending rows)
-        │  worker drains when online
-        ▼
-POST /api/sync/push   (create / update / delete per user+workspace)
-        │
-        ▼
-Server (Postgres)     ── conflict resolver ──►  resolved
-        │
-        ▼
-GET /api/sync/pull    (incremental, since sync_cursor)
-        ▼
-Local store           (authoritative pull overwrites local copy)
-```
+**PostgreSQL is the source of truth. Everything else is a copy or a signal.**
+A device reads from its local copy and writes through an outbox; the server
+decides. A WebSocket only says _when_ to look — never _what_ is true.
 
-## 1. Local Databases
+## 1. Where data lives on each platform
 
-### Desktop — SQLite (better-sqlite3), main process
+| Platform           | Local store                                                                                           | Sync                                                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Windows (Electron) | SQLite (better-sqlite3) in the main process, reached over IPC (`@hisabche/app-bridge` contract)       | pull by change-log cursor + push from `sync_queue` — `packages/app-shell/src/features/sync/sync-engine.ts` |
+| Android (Expo)     | SQLite (expo-sqlite) in the native host, same contract and same schema (`app-bridge/local-schema.ts`) | push from the same queue shape — `apps/mobile/src/features/offline/sync-runner.ts` (no pull yet)           |
+| Web                | none (persisted React Query cache only)                                                               | online only; a write without network fails there                                                           |
 
-`apps/desktop/electron/main/db/schema.ts` (`SCHEMA_VERSION = 1`).
+`packages/sync` is the shared **protocol** layer: the binary codec
+(`@hisabche/sync/wire`) and the wake-up client (`@hisabche/sync/stream`).
+`packages/db` / `packages/offline` (WatermelonDB) were never imported by any app
+and were deleted.
 
-Tables: `product, customer, invoice, invoice_item, transaction,
-inventory_movement, employee` + `sync_queue, sync_cursor, meta`.
+## 2. Reading: the change log
 
-Every data table carries:
+Every write to `products`, `customers`, `invoices`, `transactions`,
+`time_entries` is recorded by a database trigger into `sync_change_log`
+(`workspace_id`, monotonic `sync_version`, entity, operation, version) **in the
+same transaction** (`docs/sync-engine-migration.sql`). That includes writes made
+through the domain routes (an invoice issued on the web), not only sync pushes.
 
-- `updated_at` — cursor for incremental pull.
-- `dirty` (0/1) — 1 while a local change is still queued for push.
+| Endpoint                                           | Purpose                                                                                          |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `GET /api/sync/cursor`                             | the workspace head                                                                               |
+| `GET /api/sync/pull?cursor=N&limit=L`              | changes after N, in order, with the row data (lean columns: `PULL_COLUMNS` in `sync.service.ts`) |
+| `GET /api/sync/snapshot?entity=E&after=ID&limit=L` | a full rebuild, keyset by id, **with `version`**                                                 |
+| `WS /api/sync/stream`                              | wake-up only: `CURSOR {cursor}` when the head moves                                              |
 
-Sync markers: `sync_cursor(entity, last_pulled_at)` and
-`meta(key, value)`.
+Invariants (tests: `sync-invariants.test.ts`, `sync-pull.test.ts`):
 
-### Web / Mobile — WatermelonDb
+- The client advances its cursor **only after** a page is committed locally.
+- A failed database read is an **error** (HTTP 500), never an empty page and
+  never `data: null` (which clients read as a delete). P0, 27 Sep 2026.
+- `mustRehydrate` when the cursor has fallen off the pruned log → snapshot.
+- A rebuild reads the head **before** walking the snapshot, so a change made
+  during it is pulled again, not missed; a failed page records no cursor.
+- Desktop stores `version` from every row; an offline edit sends it back as
+  `expectedVersion`. (Before the snapshot endpoint, rows came from REST lists
+  without a version and every offline edit conflicted.)
 
-`packages/db/src/` — `SQLiteAdapter({ jsi: true })`, models
-`Invoice, Product, Customer` (`models/`), schema in `schema/`.
-`performSync()` = `syncDatabase(database)` (push + pull).
-Web entry: `packages/offline/database.web.ts`.
+## 3. Writing: the outbox
 
-## 2. Sync Queue
+- Each queued write has a `clientId` generated once and resent unchanged.
+- **Money goes through the domain routes** (`/api/invoices`, `/api/transactions`,
+  …) with `Idempotency-Key: clientId`; `routeFor` (`app-bridge/push-routing.ts`)
+  sends only descriptive edits (a customer's phone) to `POST /api/sync/push`,
+  whose `WRITABLE` allow-list refuses financial fields.
+- **Order**: an entry that refers to the id of a create still in the queue waits
+  for it (`app-bridge/push-order.ts`) — a failed customer create keeps its
+  invoice _waiting_, not permanently failed.
+- A retryable failure (network, 5xx, 408, 429) stays queued; a permanent 4xx is
+  marked failed and shown on the sync page for the person to resolve.
+- "Done" means the server **committed** it: the domain routes answer after the
+  database transaction, never before.
 
-### Web — server-persisted queue (`packages/db/src/sync-queue.ts`)
+## 4. Wire format: Hisabche Sync Binary (HSB)
 
-Items written to Supabase `sync_queue` table:
+`Content-Type` / `Accept: application/x-hisabche-sync`. JSON stays the default;
+a client opts in. Frame: `'H' 'S' version opcode u32LE-length body`. Values:
+tagged, little-endian, varint integers, UUIDs as 16 bytes, and a per-frame
+string table (each key and repeated value is spelled once). The pull page is
+positional (TL-style): `[nextCursor, flags, [[syncVersion, type, id, op, version, data]…]]`.
 
-```
-{ id, userId, entityType, entityId?, action: create|update|delete,
-  payload, status: pending|processing|completed|failed,
-  priority (0–10, default 5), retryCount, maxRetries (default 3),
-  errorMessage?, createdAt, processedAt? }
-```
+Measured on a 500-row page (`packages/sync/src/__tests__/wire-codec.test.ts`):
 
-`SyncQueue` drains in batches of 10; mirrors state to `@hisabche/store`
-sync slice (`addPending`, `setSyncing`, `setLastSynced`);
-UI: web `/sync-center`.
+|                                      | JSON    | HSB            |
+| ------------------------------------ | ------- | -------------- |
+| raw                                  | 232 KB  | 71 KB (−69%)   |
+| gzip                                 | 15.7 KB | 13.8 KB (−12%) |
+| brotli q4                            | 14.9 KB | 13.1 KB (−12%) |
+| CPU per round-trip, with compression | ~4.3 ms | ~6.0 ms        |
 
-### Desktop — local queue + IPC
+Honest reading: on the wire, after compression, HSB saves ~12%; raw it saves
+69% (memory, and uncompressed WebSocket frames). JS encoding costs more CPU than
+V8's native JSON. Responses are compressed with brotli (quality 4) or gzip.
 
-- `db:enqueue` pushes a local row/op into `sync_queue` (with `attempts`,
-  `status`, `last_error`).
-- Worker resolves the queue (`db:resolveQueue`) when online,
-  `db:query` for reads, `db:upsertMany` for pulls.
-- Queue indexed by `(status, created_at)`.
+## 5. Concurrency
 
-## 3. Pull / Push Protocol
+`backend/src/utils/concurrency-safety-map.ts` lists every money/stock route and
+what protects it (idempotency key, one Postgres function, conditional update,
+unique index, lease), with evidence the guard test checks. Known gaps are
+written there, not hidden.
 
-### Push (`POST /api/sync/push`)
+## 6. Not done yet
 
-- Receives a batch of queue items (create/update/delete) for
-  `{ userId, workspaceId }`.
-- Applies each op to the server tables; deletes remove rows by id + `user_id`.
-- Returns per-item status so the client can mark rows complete/failed.
-
-### Pull (`GET /api/sync/pull`)
-
-- `?table=product&since=<ISO>` → rows with `updated_at > since`
-  for that user/workspace.
-- Client stores `last_pulled_at` per entity in `sync_cursor`.
-- On the desktop, a pulled row **overwrites its local copy verbatim**
-  (server ids stay the primary key locally).
-
-## 4. Conflict Handling
-
-### Required strategy (accounting-grade: server authoritative for money)
-
-For an accounting system, **client_wins is wrong** for financial records:
-a stale offline client could overwrite server-confirmed totals (Debt,
-stock, invoice amounts). Therefore default resolution by **record class**:
-
-| Record class                                                                    | Default rule    | Why                                                                                                  |
-| ------------------------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------- |
-| **Financial / final** (invoice, completed payment, transaction, stock movement) | **SERVER_WINS** | server is source of truth once a record is confirmed; never let a stale client overwrite money/stock |
-| **Draft / working** (draft invoice, unsaved cart, customer edit-in-progress)    | **CLIENT_WINS** | the client's newest local edit wins; harmless pre-commit edits                                       |
-
-- `syncConfigSchema.conflictStrategy` still permits
-  `client_wins | server_wins | last_write_wins | manual` — but the
-  **project default must be `server_wins` for financial entities**, and the
-  web `SyncQueue` default of `client_wins` is a **known gap** to be migrated
-  (documented in AI_RULES.md — this is not optional for ledger tables).
-- Because server ids are reused locally, the pull path is idempotent
-  (server copy replaces local, a single id per row).
-- Desktop dirty flag prevents a pulled overwrite from clobbering a
-  _pending_ local change: **dirty rows must be pushed before** a competing
-  pull for the same id is applied. On conflict between a dirty local write
-  and the incoming server row:
-  - if the record is **financial/final** → server row wins (discard/flag the
-    local push, log conflict for manual review);
-  - if **draft** → keep local, re-enqueue.
-- Queue retries with `attempts`/`retryCount`; permanent-failed items keep
-  `last_error` for manual resolution (no automatic merge beyond
-  override).
-
-## 5. Retry Strategy
-
-| Param               | Default (schema)                                  | Note                                |
-| ------------------- | ------------------------------------------------- | ----------------------------------- |
-| `maxRetries`        | 3                                                 | `retryCount` increments per attempt |
-| `batchSize`         | 10                                                | items per push round                |
-| `syncIntervalMs`    | 30000                                             | min 5000; poll time                 |
-| `syncOnWifiOnly`    | false                                             | bandwidth guard                     |
-| `syncOnBatteryOnly` | false                                             | power guard                         |
-| `autoSync`          | true                                              | toggle                              |
-| `conflictStrategy`  | `server_wins` (financial) / `client_wins` (draft) | see §4                              |
-
-Web `SyncQueue` uses `maxRetries = 3`, batch 10. Stuck "processing" rows
-are re-queued on restart (in-progress items flagged failed).
-
-## 6. Event / Realtime
-
-- **Passive**: `@hisabche/api` supabase realtime
-  (`packages/api/src/supabase/realtime.ts`) pushes changes to open clients.
-- **Web hooks**: `useRealtime`, `useRealtimeActivities`,
-  `useOfflineActivities`.
-- **Desktop**: no websocket realtime — refresh/pull-only. Realtime is a
-  web/mobile nicety.
-
-## 7. Conflict Resolving Open Issues
-
-- **Dependency ordering**: creates referencing another pending create
-  (invoice → items) need the parent id first; the queue must keep
-  dependencies visible (not just status).
-- **Dirty pull clobber:** edge case risk when id conflict; current rule is
-  push-dirty-then-pull.
-
-## better-sqlite3 native rebuild
-
-`better-sqlite3` is a native module; on Windows desktop builds use
-`electron-builder install-app-deps` to rebuild for Electron's Node ABI
-(see RELEASE_PROCESS.md).
-
-## Not Guaranteed By Repo
-
-- Real server-side **conflict merge** for the record-class model above is
-  **not implemented**. Current code is largely override/`client_wins`; the
-  server-authoritative rule is the _target_ contract — implement it in the
-  sync engine + per-route domain checks, not silently skip.
-- Semantic domain conflicts (e.g. two sales decrementing the same stock)
-  are not data-layer resolved; they must be handled at the domain layer per
-  route.
-- WatermelonDb pull/push hookups for all entity types: web/mobile models
-  cover Invoice, Product, Customer only; other entities are server-direct.
+- Android pulls nothing (push only); it would use the same snapshot + pull.
+- Invoice line items are not mirrored on the device (the header is).
+- `sync_change_log` on production: confirm with
+  `select to_regclass('public.sync_change_log');` — if NULL, desktop takes a
+  snapshot on every sync (correct, slower).

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@hisabche/auth-core": "workspace:*",
+    "@hisabche/validation": "workspace:*",
     "@tanstack/react-query": "^5.45.0",
     "axios": "^1.7.2",
     "react-i18next": "^17.0.11",

@@ -191,6 +191,19 @@ const GLOBAL_REFERENCE_TABLES = ['units', 'currencies', 'blog_categories', 'blog
  */
 const PUBLIC_CONTENT_TABLES = ['blog_posts', 'blog_post_tags']
 
+/**
+ * The desktop update feed (docs/module-desktop-update-feed-migration.sql):
+ * one set of releases for every installation, read before anyone signs in.
+ * No workspace column. Paid for below: SELECT-only, and the body is exactly
+ * the publication flag — an unpublished build stays invisible.
+ */
+const RELEASE_FEED_TABLES = ['app_releases']
+
+const isReleaseFeed = (policy: string): boolean =>
+  RELEASE_FEED_TABLES.some((table) =>
+    new RegExp(`\\bON\\s+(?:public\\.)?${table}\\b`, 'i').test(policy),
+  )
+
 const isPublicContent = (policy: string): boolean =>
   PUBLIC_CONTENT_TABLES.some((table) => new RegExp(`\\bON\\s+${table}\\b`, 'i').test(policy))
 
@@ -278,6 +291,8 @@ describe('the policies restrict by workspace membership, not by nothing', () => 
       if (isPersonScoped(policy)) continue
       // Published blog content: SELECT-only, asserted below.
       if (isPublicContent(policy)) continue
+      // Desktop release feed: asserted below.
+      if (isReleaseFeed(policy)) continue
 
       const scoped =
         /workspace_members/i.test(policy) ||
@@ -286,6 +301,21 @@ describe('the policies restrict by workspace membership, not by nothing', () => 
         /%I/.test(policy)
 
       expect(scoped, `policy is not workspace-scoped:\n${policy.slice(0, 200)}`).toBe(true)
+    }
+  })
+
+  it('the release feed is SELECT-only and shows published builds only', () => {
+    const policies = (code.match(/CREATE\s+POLICY[\s\S]*?;/gi) ?? []).filter(isReleaseFeed)
+    expect(policies.length, 'release feed has no policy').toBeGreaterThan(0)
+    for (const policy of policies) {
+      expect(
+        /FOR\s+SELECT/i.test(policy),
+        `release feed policy is not SELECT-only:\n${policy}`,
+      ).toBe(true)
+      expect(
+        /USING\s*\(\s*is_published\s*\)/i.test(policy),
+        `release feed shows unpublished builds:\n${policy}`,
+      ).toBe(true)
     }
   })
 

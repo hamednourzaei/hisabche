@@ -20,6 +20,7 @@ import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
 import type { Product, CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validation'
+import { normalizeBarcode } from '@hisabche/validation'
 
 // ============================================
 // Query Keys
@@ -47,8 +48,59 @@ export interface StockSummary {
   outOfStockCount: number
 }
 
+/**
+ * What a scan resolved to. `error` is its own answer: a failed lookup must
+ * never read as `unknown`, which invites creating a product that exists.
+ */
+export type BarcodeLookup =
+  | { status: 'found'; product: Product; source: 'device' | 'server' }
+  | { status: 'ambiguous'; products: Product[] }
+  | { status: 'unknown'; barcode: string }
+  | { status: 'error'; barcode: string; offline: boolean }
+
+/**
+ * Resolve a scanned barcode: the device database first, then the server.
+ *
+ * Local-first (desktop): a hit is instant and works offline. A miss on the
+ * device is not proof — the product may have been added since the last sync —
+ * so the server is asked before «unknown» is said.
+ */
+export async function lookupProductByBarcode(raw: string): Promise<BarcodeLookup> {
+  const barcode = normalizeBarcode(raw)
+  // ⚠️ Never look up ''. «No barcode» is stored as '', so an empty code would
+  // match every product that has none and offer them all as candidates.
+  if (!barcode) return { status: 'unknown', barcode }
+  const device = getOfflineQueue()
+
+  if (device?.findByBarcode) {
+    try {
+      const rows = await device.findByBarcode(barcode)
+      if (rows.length === 1)
+        return { status: 'found', product: productFromRow(rows[0]!), source: 'device' }
+      if (rows.length > 1) return { status: 'ambiguous', products: rows.map(productFromRow) }
+    } catch {
+      // A device-database hiccup is not an answer; the server still is.
+    }
+  }
+
+  if (device?.isOffline()) return { status: 'error', barcode, offline: true }
+
+  try {
+    const { data } = await apiClient.get<{ product: Product }>(
+      `/products/by-barcode/${encodeURIComponent(barcode)}`,
+    )
+    return { status: 'found', product: data.product, source: 'server' }
+  } catch (error) {
+    const apiError = error as Partial<ApiError>
+    if (apiError.status === 404) return { status: 'unknown', barcode }
+    if (apiError.status === 409)
+      return { status: 'ambiguous', products: (apiError.candidates ?? []) as Product[] }
+    return { status: 'error', barcode, offline: apiError.code === 'NETWORK_ERROR' }
+  }
+}
+
 // ✅ گیت شده با authReady
-/** A device-database product row (sync-engine PULL_SPECS) in the API's shape. */
+/** A device-database product row (sync-engine FROM_LOG) in the API's shape. */
 function productFromRow(r: Record<string, unknown>): Product {
   return {
     id: String(r.id),

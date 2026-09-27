@@ -2,7 +2,7 @@
 // (CLAUDE.md §8, the hisabche-web skill). Source assertions with comments
 // stripped, so the prose that explains a rule cannot trip it.
 import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join, relative, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const ROOT = join(__dirname, '../../../..')
@@ -34,7 +34,7 @@ describe('ISR and static rendering', () => {
   const constant = /BLOG_REVALIDATE_SECONDS = (\d+)/.exec(read(join(WEB, 'lib/blog-api.ts')))?.[1]
 
   it('finds the seven blog pages', () => {
-    expect(pages.map((f) => relative(BLOG_APP, f)).sort()).toEqual(
+    expect(pages.map((f) => relative(BLOG_APP, f).split(sep).join('/')).sort()).toEqual(
       [
         '[slug]/page.tsx',
         'category/[slug]/page.tsx',

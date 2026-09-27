@@ -87,6 +87,7 @@ const db = {
 
   upsertMany: (table: LocalTable, rows: Array<Record<string, unknown>>): Promise<number> =>
     localDb.upsertMany(table, rows),
+  removeMany: (table: LocalTable, ids: string[]): Promise<number> => localDb.removeMany(table, ids),
 
   enqueue: (input: {
     entity: LocalTable
@@ -121,6 +122,11 @@ const print = {
   escPos: (): Promise<boolean> => {
     throw new Error('receipt printing needs a paired printer, which this build cannot open yet')
   },
+  // The Android print service picks the printer in its own dialog; this build
+  // has no list to offer, and says so with an empty one rather than a guess.
+  listPrinters: async (): Promise<
+    Array<{ name: string; displayName: string; isDefault: boolean }>
+  > => [],
 }
 
 // ─── files ────────────────────────────────────────────────────────────────
@@ -204,12 +210,14 @@ const HANDLERS: Record<string, (...args: never[]) => unknown> = {
   'secure.delete': secure.delete as never,
   'db.query': db.query as never,
   'db.upsertMany': db.upsertMany as never,
+  'db.removeMany': db.removeMany as never,
   'db.enqueue': db.enqueue as never,
   'db.queue': db.queue as never,
   'db.resolveQueue': db.resolveQueue as never,
   'db.setWorkspace': db.setWorkspace as never,
   'print.html': print.html as never,
   'print.escPos': print.escPos as never,
+  'print.listPrinters': print.listPrinters as never,
   'files.export': files.export as never,
   'files.import': files.import as never,
   'window.control': windowControl as never,

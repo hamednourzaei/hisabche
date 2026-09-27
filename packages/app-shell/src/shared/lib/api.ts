@@ -49,25 +49,37 @@ if (bridgeHttp) {
       }
     }
 
+    // A binary body (Hisabche Sync Binary) crosses IPC as bytes, never as a
+    // JSON-stringified object of numbered keys.
+    const bodyBytes = config.data instanceof Uint8Array ? config.data : undefined
     const body =
-      config.data !== undefined
+      config.data !== undefined && !bodyBytes
         ? typeof config.data === 'string'
           ? config.data
           : JSON.stringify(config.data)
         : null
+    const wantsBytes = config.responseType === 'arraybuffer'
 
     const res = await bridgeHttp.request({
       url,
       method: (config.method ?? 'get').toUpperCase() as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
       headers,
       body,
+      ...(bodyBytes ? { bodyBytes } : {}),
+      ...(wantsBytes ? { responseType: 'bytes' as const } : {}),
     })
 
     let data: unknown
-    try {
-      data = res.data ? JSON.parse(res.data) : null
-    } catch {
-      data = res.data
+    if (wantsBytes) {
+      // What axios gives for responseType 'arraybuffer' on the web: an ArrayBuffer.
+      const bytes = res.bytes ?? new Uint8Array(0)
+      data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+    } else {
+      try {
+        data = res.data ? JSON.parse(res.data) : null
+      } catch {
+        data = res.data
+      }
     }
 
     return {

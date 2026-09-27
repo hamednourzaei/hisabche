@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { bridge } from '@/shared/lib/bridge'
-import { runSync } from './sync-engine'
+import { runSync, startSyncStream } from './sync-engine'
 import type { QueueEntry } from '@hisabche/app-bridge'
 
 const QUEUE_KEY = ['desktop', 'sync', 'queue'] as const
@@ -85,10 +85,14 @@ export function useBackgroundSync(workspaceId: string | null): void {
     trigger()
     window.addEventListener('online', trigger)
     const timer = window.setInterval(trigger, BACKGROUND_INTERVAL_MS)
+    // Near-realtime: another device's sale reaches this one within seconds.
+    // The interval above stays as the floor — the stream only makes it sooner.
+    const stream = workspaceId ? startSyncStream(workspaceId, trigger) : null
 
     return () => {
       window.removeEventListener('online', trigger)
       window.clearInterval(timer)
+      stream?.stop()
     }
   }, [queryClient, workspaceId])
 }

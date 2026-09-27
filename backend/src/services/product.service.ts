@@ -5,7 +5,12 @@
 
 import { supabase } from '../db'
 import { scopes } from './authorization/scope.service'
-import { CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validation'
+import {
+  CreateProduct,
+  UpdateProduct,
+  ProductFilters,
+  normalizeBarcode,
+} from '@hisabche/validation'
 import { summarizeStock, type StockSummaryRow } from './inventory/stock-summary.domain'
 import { ConflictError, DatabaseError, NotFoundError, isFailedRead } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
@@ -19,6 +24,17 @@ import {
   IdempotencyUnavailableError,
   isMissingIdempotencySupport,
 } from '../utils/client-request'
+
+/** Characters that cannot break PostgREST's or() filter syntax. */
+const BARCODE_SAFE = /^[A-Za-z0-9._-]{3,64}$/
+
+/** A unique violation on the per-workspace barcode index. */
+function isBarcodeTaken(error: { code?: string; message?: string } | null | undefined): boolean {
+  return (
+    error?.code === '23505' &&
+    String(error.message ?? '').includes('products_workspace_barcode_key')
+  )
+}
 
 // ✅ Column Selection Constants
 const PRODUCT_LIST_COLUMNS = `
@@ -103,7 +119,16 @@ export class ProductService {
       query = query.limit(fetchLimit)
     }
 
-    if (search) query = query.ilike('name', `%${search}%`)
+    if (search) {
+      // Name, OR the exact barcode — so a scanner typing into the invoice
+      // row's product box finds the product (the search used to be name-only
+      // and a scanned code matched nothing). Only for text that is safe inside
+      // PostgREST's or() syntax; anything else searches the name alone.
+      const code = normalizeBarcode(search)
+      query = BARCODE_SAFE.test(code)
+        ? query.or(`name.ilike.%${code}%,barcode.eq.${code}`)
+        : query.ilike('name', `%${search}%`)
+    }
     if (category) query = query.eq('category', category)
     if (isActive !== undefined) query = query.eq('is_active', isActive)
     if (barcode) query = query.eq('barcode', barcode)
@@ -240,7 +265,7 @@ export class ProductService {
       .from('products')
       .insert({
         name: data.name,
-        barcode: data.barcode || '',
+        barcode: normalizeBarcode(data.barcode),
         sku: data.sku || '',
         category: data.category || 'general',
         description: data.description || '',
@@ -266,6 +291,10 @@ export class ProductService {
       .select(PRODUCT_LIST_COLUMNS)
       .single()
 
+    // The workspace already has this barcode on another product
+    // (docs/product-barcode-unique-migration.sql). Named, not a 500: the form
+    // can point at the barcode field.
+    if (isBarcodeTaken(error)) throw new ConflictError('BARCODE_TAKEN')
     if (error && clientRequestId) {
       if (error.code === '23505') {
         const winner = await this.findByClientRequestId(workspaceId, clientRequestId)
@@ -322,7 +351,7 @@ export class ProductService {
     const { workspaceId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.name !== undefined) updates.name = data.name
-    if (data.barcode !== undefined) updates.barcode = data.barcode
+    if (data.barcode !== undefined) updates.barcode = normalizeBarcode(data.barcode)
     if (data.sku !== undefined) updates.sku = data.sku
     if (data.category !== undefined) updates.category = data.category
     if (data.description !== undefined) updates.description = data.description
@@ -380,6 +409,7 @@ export class ProductService {
       .select(PRODUCT_LIST_COLUMNS)
       .single()
 
+    if (isBarcodeTaken(error)) throw new ConflictError('BARCODE_TAKEN')
     if (error) throw new DatabaseError('Failed to update product', error)
     if (!product) throw new NotFoundError('Product')
 
@@ -467,25 +497,40 @@ export class ProductService {
     return products
   }
 
-  // ─── Get Product by Barcode ──────────────────────────────────
-  async getByBarcode(ctx: TenancyContext, barcode: string) {
-    const { workspaceId } = ctx
-    const cacheKey = `product:barcode:${workspaceId}:${barcode}`
-    const cached = await memoryCache.get(cacheKey)
-    if (cached) return cached
+  // ─── Look a product up by its exact barcode (scanner) ────────
+  //
+  // ⚠️ THREE ANSWERS, NOT ONE (27 Sep 2026). This was `.single()` behind a
+  // 5-minute cache: no row, two rows and a failed query all came back as
+  // `null`, so a barcode shared by two products read as «unknown» and the
+  // cashier was invited to create a THIRD. It also served a price up to five
+  // minutes stale after an edit. Now: found / ambiguous (the cashier picks —
+  // never silently the first) / not found, and an error is thrown, not
+  // answered. Uncached: an exact match on an indexed column is cheap, and a
+  // price must be the current one.
+  async lookupByBarcode(
+    ctx: TenancyContext,
+    rawBarcode: string,
+  ): Promise<
+    | { status: 'found'; product: ReturnType<typeof mapProduct> }
+    | { status: 'ambiguous'; products: Array<ReturnType<typeof mapProduct>> }
+    | { status: 'not_found' }
+  > {
+    const barcode = normalizeBarcode(rawBarcode)
+    if (!barcode) return { status: 'not_found' }
 
     const { data, error } = await supabase
       .from('products')
       .select(PRODUCT_LIST_COLUMNS)
-      .eq('workspace_id', workspaceId)
+      .eq('workspace_id', ctx.workspaceId)
       .eq('barcode', barcode)
-      .single()
+      .eq('is_active', true)
+      .limit(5)
 
-    if (error || !data) return null
-
-    const result = mapProduct(data)
-    await memoryCache.set(cacheKey, result, 300)
-    return result
+    if (error) throw new DatabaseError('Failed to look up barcode', error)
+    const rows = (data ?? []).map(mapProduct)
+    if (rows.length === 0) return { status: 'not_found' }
+    if (rows.length > 1) return { status: 'ambiguous', products: rows }
+    return { status: 'found', product: rows[0]! }
   }
 
   // ─── Get Products by Category ────────────────────────────────
@@ -557,7 +602,6 @@ export class ProductService {
     await memoryCache.invalidate(`products:category:${workspaceId}:*`)
     await memoryCache.invalidate(`products:stats:${workspaceId}`)
     await memoryCache.invalidate(`product:${workspaceId}:*`)
-    await memoryCache.invalidate(`product:barcode:${workspaceId}:*`)
     await memoryCache.invalidate(`dashboard:${workspaceId}`)
   }
 

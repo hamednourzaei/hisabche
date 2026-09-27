@@ -40,6 +40,7 @@ import { PreviewItemsTable } from '../preview-items-table'
 import { OversoldWarning } from '../oversold-warning'
 import { useOversoldLines } from '../use-oversold-lines'
 import { planLimitMessage } from '../../../../lib/plan-limit-message'
+import { loadPrinterSettings } from '../../../../lib/print/printer-settings'
 
 const DEFAULT_DISPLAY: InvoiceDocumentDisplaySettings = {
   showSignature: true,
@@ -295,7 +296,13 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       // clearing empties `items`, and any re-render between the clear and the
       // push would otherwise bounce back to the builder.
       submittedRef.current = true
-      router.push(created.id ? `/invoices/${created.id}` : '/invoices')
+      // Auto-print (this device's receipt-printer setting): the detail page
+      // prints once the SERVER's invoice has loaded — the committed numbers,
+      // never the draft's. A printer failure there leaves this invoice as is.
+      // (An offline-queued invoice returned above: it has no number yet, so
+      // no receipt is printed for it.)
+      const receipt = loadPrinterSettings().autoPrint ? '?action=receipt' : ''
+      router.push(created.id ? `/invoices/${created.id}${receipt}` : '/invoices')
       // The column layout deliberately survives this — see the draft slice.
       clearDraft()
     } catch (cause) {

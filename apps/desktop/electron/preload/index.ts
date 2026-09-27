@@ -27,6 +27,7 @@ const bridge: HisabcheBridge = {
   db: {
     query: (input) => ipcRenderer.invoke(IPC.dbQuery, input),
     upsertMany: (table, rows) => ipcRenderer.invoke(IPC.dbUpsertMany, { table, rows }),
+    removeMany: (table, ids) => ipcRenderer.invoke(IPC.dbRemoveMany, { table, ids }),
     enqueue: (input) => ipcRenderer.invoke(IPC.dbEnqueue, input),
     queue: () => ipcRenderer.invoke(IPC.dbQueue, {}),
     resolveQueue: (clientId, status, error) =>
@@ -36,6 +37,7 @@ const bridge: HisabcheBridge = {
   print: {
     html: (input) => ipcRenderer.invoke(IPC.printHtml, input),
     escPos: (input) => ipcRenderer.invoke(IPC.printEscPos, input),
+    listPrinters: () => ipcRenderer.invoke(IPC.printListPrinters),
   },
   files: {
     export: (input) => ipcRenderer.invoke(IPC.exportFile, input),

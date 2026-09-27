@@ -70,6 +70,8 @@ export {
   useUpdateProduct,
   useDeleteProduct,
   productKeys,
+  lookupProductByBarcode,
+  type BarcodeLookup,
   type StockSummary,
 } from './hooks/products'
 

@@ -26,6 +26,12 @@ export interface OfflineQueue {
    * picker shows the stock the device last saw instead of "no products".
    */
   readRows?(table: 'product' | 'customer', search: string): Promise<Array<Record<string, unknown>>>
+  /**
+   * Active device-database products with exactly this (normalised) barcode.
+   * The scanner asks here FIRST: a cashier must not wait on the network for a
+   * product the device already has, and offline it is the only answer.
+   */
+  findByBarcode?(barcode: string): Promise<Array<Record<string, unknown>>>
 }
 
 let queue: OfflineQueue | null = null

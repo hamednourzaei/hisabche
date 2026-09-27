@@ -5,6 +5,7 @@ import { cn } from '../../../lib/utils'
 import { Switch } from '../switch'
 import {
   Printer,
+  ReceiptText,
   Share2,
   MessageCircle,
   Send,
@@ -30,6 +31,9 @@ export interface InvoiceSidebarStatus {
 
 export interface InvoiceSidebarActions {
   onPrint?: (() => void) | undefined
+  /** Thermal receipt (58/80 mm) — printed separately from the invoice itself. */
+  onPrintReceipt?: (() => void) | undefined
+  printingReceipt?: boolean | undefined
   onSharePDF?: (() => void) | undefined
   onWhatsApp?: (() => void) | undefined
   onTelegram?: (() => void) | undefined
@@ -219,6 +223,21 @@ export function InvoiceSidebar({
                 <div />
               )}
             </div>
+
+            {actions.onPrintReceipt ? (
+              <button
+                type="button"
+                onClick={actions.onPrintReceipt}
+                disabled={actions.printingReceipt}
+                data-print-receipt=""
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[hsl(var(--border-default))] p-2.5 text-sm text-[hsl(var(--fg-secondary))] transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] disabled:opacity-40"
+              >
+                <ReceiptText className="size-4" aria-hidden="true" />
+                {actions.printingReceipt
+                  ? t('receipt.printing', '…')
+                  : t('receipt.print', 'چاپ رسید')}
+              </button>
+            ) : null}
 
             {/* ✅ دکمه‌ی اصلی «اشتراک‌گذاری» — با کلیک، پنل کانال‌ها به‌صورت
                 شبکه‌ی فشرده باز می‌شود؛ به‌جای یک لیست عمودی طولانی که هر

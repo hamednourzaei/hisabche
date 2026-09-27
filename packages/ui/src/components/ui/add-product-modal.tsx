@@ -1,7 +1,7 @@
 'use client'
 
 import { UnitSelect, toValidUnit } from './units/unit-select'
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { DollarSign, Package, AlertTriangle, Loader2 } from 'lucide-react'
 import { Button } from './button'
@@ -12,11 +12,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 import { useCreateProduct } from '@hisabche/api'
 import { useSyncStore, useBackupStore } from '@hisabche/store'
+import { barcodeTakenMessage } from '../../lib/barcode/barcode-errors'
 
 type AddProductModalProps = {
   open: boolean
   onClose: () => void
   onCreated?: () => void
+  /** Prefilled from a scan the store did not know («unknown barcode → create»). */
+  initialBarcode?: string | undefined
 }
 
 /**
@@ -32,6 +35,7 @@ type UnitType = string
 
 type FormData = {
   name: string
+  barcode: string
   quantity: number
   buyPrice: number
   sellPrice: number
@@ -54,6 +58,7 @@ export const AddProductModal = memo(function AddProductModal({
   open,
   onClose,
   onCreated,
+  initialBarcode,
 }: AddProductModalProps) {
   const t = useTranslations()
   const createProduct = useCreateProduct()
@@ -62,6 +67,7 @@ export const AddProductModal = memo(function AddProductModal({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
   const [formData, setFormData] = useState<FormData>({
     name: '',
+    barcode: initialBarcode ?? '',
     quantity: 0,
     buyPrice: 0,
     sellPrice: 0,
@@ -69,6 +75,11 @@ export const AddProductModal = memo(function AddProductModal({
     minStock: 5,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // The modal stays mounted; a scan that opens it later brings its barcode.
+  useEffect(() => {
+    if (open && initialBarcode) setFormData((prev) => ({ ...prev, barcode: initialBarcode }))
+  }, [open, initialBarcode])
 
   const validate = useCallback((): boolean => {
     const newErrors: Record<string, string> = {}
@@ -122,6 +133,7 @@ export const AddProductModal = memo(function AddProductModal({
     try {
       const product = await createProduct.mutateAsync({
         name: formData.name.trim(),
+        barcode: formData.barcode,
         quantity: formData.quantity,
         buyPrice: formData.buyPrice,
         sellPrice: formData.sellPrice,
@@ -143,6 +155,7 @@ export const AddProductModal = memo(function AddProductModal({
 
       setFormData({
         name: '',
+        barcode: '',
         quantity: 0,
         buyPrice: 0,
         sellPrice: 0,
@@ -156,7 +169,8 @@ export const AddProductModal = memo(function AddProductModal({
       onClose()
     } catch (error) {
       console.error('Failed to create product:', error)
-      setErrors({ form: t('common.error') })
+      const taken = barcodeTakenMessage(error, t)
+      setErrors(taken ? { barcode: taken } : { form: t('common.error') })
       setSaveStatus('idle')
     } finally {
       setIsSubmitting(false)
@@ -166,6 +180,7 @@ export const AddProductModal = memo(function AddProductModal({
   const handleClose = useCallback(() => {
     setFormData({
       name: '',
+      barcode: '',
       quantity: 0,
       buyPrice: 0,
       sellPrice: 0,
@@ -231,6 +246,32 @@ export const AddProductModal = memo(function AddProductModal({
             </div>
             {errors.name && (
               <p className="text-sm text-[hsl(var(--color-destructive))]">{errors.name}</p>
+            )}
+          </div>
+
+          {/* Barcode — always a string; a scanner can type straight into it */}
+          <div className="space-y-2">
+            <Label htmlFor="product-barcode">{t('barcode.label')}</Label>
+            <Input
+              id="product-barcode"
+              name="barcode"
+              dir="ltr"
+              autoComplete="off"
+              value={formData.barcode}
+              onChange={(e) => handleChange('barcode', e.target.value)}
+              // A scanner ends every code with Enter; here that must not submit
+              // the half-filled form.
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.preventDefault()
+              }}
+              placeholder={t('barcode.hint')}
+              className={inputClass}
+              disabled={isPending}
+            />
+            {errors.barcode && (
+              <p className="text-sm text-[hsl(var(--color-destructive))]" role="alert">
+                {errors.barcode}
+              </p>
             )}
           </div>
 

@@ -21,6 +21,7 @@
     "@hisabche/formatting": "workspace:*",
     "@hisabche/i18n": "workspace:*",
     "@hisabche/store": "workspace:*",
+    "@hisabche/sync": "workspace:*",
     "@hisabche/ui": "workspace:*",
     "@hisabche/validation": "workspace:*",
     "@hookform/resolvers": "^3.3.4",
