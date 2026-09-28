@@ -121,6 +121,8 @@ export const developerRepository = {
     key_hash: string
     scopes: string[]
     expires_at: string | null
+    /** Set only for an installed OAuth app's token (migration 05). */
+    app_id?: string | undefined
   }): Promise<ApiKeyRow> {
     const { data, error } = await supabase.from('api_keys').insert(row).select(KEY_COLUMNS).single()
     check(error)

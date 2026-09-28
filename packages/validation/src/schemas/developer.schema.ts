@@ -390,3 +390,91 @@ export const ORDER_ERROR_CODES = [
   'ORDER_TOO_MANY_PENDING',
 ] as const
 export type OrderErrorCode = (typeof ORDER_ERROR_CODES)[number]
+
+// ─── OAuth apps (docs/developer-platform-05-oauth-migration.sql) ──────────────
+
+const redirectUri = z
+  .string()
+  .trim()
+  .max(500)
+  .refine(
+    (value) => {
+      try {
+        const url = new URL(value)
+        const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+        return (
+          !url.hash &&
+          !url.username &&
+          (url.protocol === 'https:' || (url.protocol === 'http:' && local))
+        )
+      } catch {
+        return false
+      }
+    },
+    { message: 'oauth.redirectUriInvalid' },
+  )
+
+export const oauthAppCreateSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80),
+    description: z.string().trim().max(1000).default(''),
+    homepageUrl: z.string().trim().url().startsWith('https://').max(500).optional(),
+    redirectUris: z
+      .array(redirectUri)
+      .min(1)
+      .max(10)
+      .transform((uris) => [...new Set(uris)]),
+    requestedScopes: z
+      .array(z.enum(API_KEY_SCOPES as unknown as [ApiKeyScope, ...ApiKeyScope[]]))
+      .min(1)
+      .transform((scopes) => [...new Set(scopes)]),
+  })
+  .strict()
+export type OAuthAppCreateInput = z.infer<typeof oauthAppCreateSchema>
+
+export const oauthAppUpdateSchema = oauthAppCreateSchema.partial().strict()
+export type OAuthAppUpdateInput = z.infer<typeof oauthAppUpdateSchema>
+
+export const OAUTH_APP_STATUSES = [
+  'private',
+  'in_review',
+  'published',
+  'rejected',
+  'suspended',
+] as const
+export type OAuthAppStatus = (typeof OAUTH_APP_STATUSES)[number]
+
+/**
+ * Every refusal the OAuth service can answer with (backend OAuthError codes).
+ * The UI shows `oauth.error.<CODE>` only for a code in this list — a code from
+ * the server is data, and `t()` throws on a key that does not exist.
+ */
+export const OAUTH_ERROR_CODES = [
+  'APP_NOT_FOUND',
+  'APP_NOT_AVAILABLE',
+  'APP_LOCKED',
+  'APP_PUBLISHED',
+  'REDIRECT_URI_NOT_REGISTERED',
+  'SCOPE_INVALID',
+  'SCOPE_NOT_REGISTERED',
+  'PKCE_REQUIRED',
+  'NO_SCOPE_GRANTED',
+  'CLIENT_INVALID',
+  'CODE_INVALID',
+  'PKCE_MISMATCH',
+  'INSTALLER_NOT_MEMBER',
+  'UNSUPPORTED_GRANT_TYPE',
+  'OAUTH_NOT_CONFIGURED',
+] as const
+export type OAuthErrorCode = (typeof OAUTH_ERROR_CODES)[number]
+
+// ─── Sandbox workspaces (docs/developer-platform-06-sandbox-migration.sql) ────
+
+/** Every refusal the sandbox service answers with; the UI words only these. */
+export const SANDBOX_ERROR_CODES = [
+  'SANDBOX_OF_SANDBOX',
+  'SANDBOX_NOT_MEMBER',
+  'SANDBOX_PARENT_NOT_FOUND',
+  'SANDBOX_NOT_CONFIGURED',
+] as const
+export type SandboxErrorCode = (typeof SANDBOX_ERROR_CODES)[number]

@@ -829,6 +829,34 @@ export {
   type OrderAction,
 } from './hooks/orders'
 
+// ─── OAuth apps and the marketplace ───────────────────────
+export {
+  useOAuthApps,
+  useCreateOAuthApp,
+  useSubmitOAuthApp,
+  useRotateOAuthSecret,
+  useDeleteOAuthApp,
+  useInstalledApps,
+  useUninstallApp,
+  useMarketplaceApps,
+  useOAuthConsent,
+  useApproveOAuth,
+  oauthKeys,
+  type OAuthAppRow,
+  type InstalledAppRow,
+  type MarketplaceAppRow,
+  type OAuthConsent,
+  type OAuthRequestParams,
+} from './hooks/oauth'
+
+// ─── Sandbox workspaces ───────────────────────────────────
+export {
+  useSandboxStatus,
+  useCreateSandbox,
+  sandboxKeys,
+  type SandboxStatus,
+} from './hooks/sandbox'
+
 // ─── Customer portal links ────────────────────────────────
 export {
   useCustomerPortalLinks,

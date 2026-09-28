@@ -4281,6 +4281,17 @@
         "load": "Could not load.",
         "upload": "Image upload failed."
       }
+    },
+    "oauthApps": {
+      "title": "OAuth apps",
+      "description": "Review and publish the apps businesses build for each other",
+      "hint": "Publishing lets every business install the app. Suspending stops new installs and token exchanges immediately.",
+      "empty": "No app has this status.",
+      "decide": {
+        "published": "Publish",
+        "rejected": "Reject",
+        "suspended": "Suspend"
+      }
     }
   },
   "till": {
@@ -6338,6 +6349,98 @@
       "return": "Return",
       "csv": "File import",
       "manual": "Manual entry"
+    }
+  },
+  "oauth": {
+    "title": "Connected apps (OAuth)",
+    "help": "Other apps can connect to this business with your permission — without you handing them an API key. Each app gets only the access you approve, and never more than you have yourself.",
+    "notConfigured": "Connected apps are not set up on the server yet (the fifth database script has not been run).",
+    "installedTitle": "Apps installed in this business",
+    "installedHelp": "Every app listed here can access this business's data right now. Uninstalling cuts its access immediately.",
+    "noInstalled": "No app has access to this business.",
+    "unknownApp": "Deleted app",
+    "uninstall": "Uninstall",
+    "installedAt": "Installed",
+    "marketplaceTitle": "App marketplace",
+    "marketplaceHelp": "Only apps the Hisabche team has reviewed and published are listed. To install one, go to its website; it sends you to Hisabche to approve it.",
+    "noMarketplace": "No app has been published to the marketplace yet.",
+    "publisher": "Publisher",
+    "unknownPublisher": "Unknown",
+    "visit": "Visit the app's website",
+    "appsTitle": "Apps you publish",
+    "appsHelp": "If you build apps for other businesses, register them here. A new app is private: it can be installed only on this business until you submit it for review and the Hisabche team publishes it.",
+    "noApps": "You have not registered an app yet.",
+    "clientId": "App ID (client_id)",
+    "reviewNote": "Review note",
+    "submit": "Submit for review",
+    "rotateSecret": "New app secret",
+    "integrationTitle": "Connecting your app",
+    "integrationHelp": "Send the user to the approval page with these parameters (PKCE with S256 only). After approval, a one-time code valid for 10 minutes comes back to your redirect_uri, and your server exchanges it for a token with this request.",
+    "newApp": "New app",
+    "appName": "App name",
+    "appNamePlaceholder": "e.g. Shop sync",
+    "appDescription": "Short description (optional)",
+    "homepage": "App website (https, optional)",
+    "redirectUris": "Redirect URIs (redirect_uri)",
+    "redirectUrisHelp": "One per line. https only (or http on localhost for testing), no #. The redirect must match one of these exactly.",
+    "scopes": "Access the app may ask for",
+    "createApp": "Register app",
+    "clientSecretCreated": "App secret (client_secret)",
+    "redirectUriInvalid": "A redirect URI must be https (or http on localhost) and must not contain #.",
+    "status": {
+      "private": "Private",
+      "in_review": "In review",
+      "published": "Published",
+      "rejected": "Rejected",
+      "suspended": "Suspended"
+    },
+    "error": {
+      "APP_NOT_FOUND": "This app was not found.",
+      "APP_NOT_AVAILABLE": "This app is not published yet, or is suspended, and cannot be installed on this business.",
+      "APP_LOCKED": "An app that is in review or published cannot be changed.",
+      "APP_PUBLISHED": "A published app cannot be deleted; other businesses have installed it.",
+      "REDIRECT_URI_NOT_REGISTERED": "The redirect address the app sent is not registered for it, so you are not being sent anywhere.",
+      "SCOPE_INVALID": "The app asked for an unknown access.",
+      "SCOPE_NOT_REGISTERED": "The app asked for access it did not declare when it was registered.",
+      "PKCE_REQUIRED": "The app's request is incomplete (PKCE with S256 is required).",
+      "NO_SCOPE_GRANTED": "You do not hold any of the requested access yourself, so you cannot give it to the app.",
+      "CLIENT_INVALID": "The app ID or secret is wrong.",
+      "CODE_INVALID": "The authorization code is invalid, expired or already used.",
+      "PKCE_MISMATCH": "The authorization code does not match the original request.",
+      "INSTALLER_NOT_MEMBER": "The person who approved the app is no longer a member of this business.",
+      "UNSUPPORTED_GRANT_TYPE": "This kind of token request is not supported.",
+      "OAUTH_NOT_CONFIGURED": "Connected apps are not set up on the server yet."
+    },
+    "consent": {
+      "title": "Allow access to your business",
+      "invalidRequest": "This request is incomplete or invalid (client_id, redirect_uri, scope and an S256 code_challenge are required). Let the app's developer know.",
+      "reviewed": "Reviewed by Hisabche",
+      "notReviewed": "This app has not been reviewed by the Hisabche team yet. Approve it only if you know who made it.",
+      "intoWorkspace": "The business the app gets access to",
+      "activeWorkspace": "Your active business",
+      "willGrant": "The app will be able to:",
+      "willNotGrant": "The app asked for these but will not get them:",
+      "willNotGrantHelp": "Because you do not hold them yourself. No app ever gets more access than the person who approved it.",
+      "revokeHint": "You can cut its access at any time from Developers → Apps installed in this business.",
+      "approve": "Approve and connect",
+      "deny": "Deny"
+    }
+  },
+  "sandbox": {
+    "title": "Sandbox",
+    "help": "A separate, empty business for testing integrations: its invoices, stock and ledger are completely apart from your real books. API keys, webhooks and apps you create there reach only the sandbox. Each manager has their own. It is not a copy of your real data; it starts empty.",
+    "notConfigured": "The sandbox is not set up on the server yet (the sixth database script has not been run).",
+    "youAreIn": "You are in a sandbox. Nothing recorded here reaches your real books.",
+    "back": "Back to the real business",
+    "noParent": "The business this sandbox belongs to is no longer available to you.",
+    "enter": "Open my sandbox",
+    "create": "Create a sandbox",
+    "notice": "Sandbox — the data here is for testing and is separate from your real books.",
+    "error": {
+      "SANDBOX_OF_SANDBOX": "A sandbox cannot have a sandbox of its own.",
+      "SANDBOX_NOT_MEMBER": "Only a member of this business can create a sandbox for it.",
+      "SANDBOX_PARENT_NOT_FOUND": "This business was not found.",
+      "SANDBOX_NOT_CONFIGURED": "The sandbox is not set up on the server yet."
     }
   }
 }

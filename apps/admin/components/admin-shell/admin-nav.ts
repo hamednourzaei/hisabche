@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  AppWindow,
   Building2,
   CreditCard,
   LayoutDashboard,
@@ -88,6 +89,16 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     titleKey: 'admin.blog.title',
     descriptionKey: 'admin.blog.description',
     endpoint: 'GET /admin/blog/posts',
+  },
+  {
+    // Added with OAuth apps (developer platform 05): both /admin/oauth-apps
+    // routes exist in backend/src/routes/oauth.routes.ts, behind platformAdminGuard.
+    id: 'oauthApps',
+    path: '/oauth-apps',
+    icon: AppWindow,
+    titleKey: 'admin.oauthApps.title',
+    descriptionKey: 'admin.oauthApps.description',
+    endpoint: 'GET /admin/oauth-apps',
   },
   {
     id: 'servers',

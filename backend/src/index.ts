@@ -104,6 +104,8 @@ import { developerRoutes } from './routes/developer.routes'
 import { ordersRoutes } from './routes/orders.routes'
 import { isPublicApiPath, storefrontRoutes } from './routes/storefront.routes'
 import { customerPortalRoutes } from './routes/customer-portal.routes'
+import { oauthRoutes } from './routes/oauth.routes'
+import { sandboxRoutes } from './routes/sandbox.routes'
 import { PUBLISHABLE_KEY_HEADER } from '@hisabche/validation'
 import {
   API_KEY_RATE_LIMIT_PER_MINUTE,
@@ -340,7 +342,9 @@ server.addHook('preHandler', async (request, reply) => {
   // The plan list is public by design — `usePlans()` is deliberately not
   // auth-gated so the landing page can quote the same prices `/billing` shows.
   // Without this entry every visitor's pricing section got a 401 and no price.
-  const exactPublicPaths = ['/api/billing/plans']
+  // `/api/oauth/token` is called by an app's SERVER with its client secret and
+  // a one-time code — there is no user session by definition (RFC 6749 §4.1.3).
+  const exactPublicPaths = ['/api/billing/plans', '/api/oauth/token']
   const path = url.split('?')[0]
 
   if (publicPaths.some((p) => url.startsWith(p))) return
@@ -735,6 +739,9 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(storefrontRoutes)
   // Customer portal links, and the portal itself (public, by token).
   await server.register(customerPortalRoutes)
+  // OAuth apps, consent, the token endpoint, the marketplace and its review.
+  await server.register(oauthRoutes)
+  await server.register(sandboxRoutes)
   await server.register(adminRoutes)
 
   server.log.info('✅ All routes registered successfully')

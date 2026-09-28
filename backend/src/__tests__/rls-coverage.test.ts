@@ -104,6 +104,7 @@ const TENANT_TABLES = [
   'sales_orders',
   'sales_order_items',
   'customer_portal_links',
+  'oauth_apps',
 ]
 
 function allMigrationSql(): string {

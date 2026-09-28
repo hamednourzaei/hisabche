@@ -20,7 +20,10 @@ import { Badge } from '../badge'
 import { Button } from '../button'
 import { Card, CardContent } from '../card'
 import { Input } from '../input'
+import { CheckList } from './check-list'
 import { KeyUsagePanel } from './key-usage-panel'
+import { OAuthAppsPanel, type OAuthAppsPanelProps } from './oauth-apps-panel'
+import { SandboxPanel, type SandboxPanelProps } from './sandbox-panel'
 import { StorefrontPanel, type StorefrontPanelProps } from './storefront-panel'
 
 type T = (key: string, fallback?: string) => string
@@ -74,10 +77,14 @@ export interface DevelopersViewProps {
   /** Requeue the endpoint's finished deliveries of the last `days` days. */
   onReplay: (id: string, days: 1 | 7) => void
 
-  /** A key or secret to show ONCE; null when there is none. */
   /** Selling from the owner's own website (publishable keys, settings). */
   storefront: Omit<StorefrontPanelProps, 't'>
-  revealed: { kind: 'key' | 'secret'; value: string } | null
+  /** OAuth apps: published by this business, installed in it, and the marketplace. */
+  oauth: Omit<OAuthAppsPanelProps, 't'>
+  /** A separate, empty workspace to test integrations in. */
+  sandbox: Omit<SandboxPanelProps, 't'>
+  /** A key or secret to show ONCE; null when there is none. */
+  revealed: { kind: 'key' | 'secret' | 'client-secret'; value: string } | null
   onDismissRevealed: () => void
   onCopy: (value: string) => void
   onRetry: () => void
@@ -126,46 +133,6 @@ function StateMessage({
   return null
 }
 
-function CheckList<V extends string>({
-  values,
-  selected,
-  onChange,
-  label,
-  name,
-}: {
-  values: V[]
-  selected: V[]
-  onChange: (next: V[]) => void
-  label: (value: V) => string
-  name: string
-}) {
-  return (
-    <div className="grid gap-2 sm:grid-cols-2" data-field={name}>
-      {values.map((value) => (
-        <label key={value} className="flex items-start gap-2 text-sm text-[hsl(var(--fg-primary))]">
-          <input
-            type="checkbox"
-            name={name}
-            className="mt-1"
-            checked={selected.includes(value)}
-            onChange={(e) =>
-              onChange(
-                e.target.checked ? [...selected, value] : selected.filter((v) => v !== value),
-              )
-            }
-          />
-          <span>
-            {label(value)}
-            <code className="ms-2 text-xs text-[hsl(var(--fg-tertiary))]" dir="ltr">
-              {value}
-            </code>
-          </span>
-        </label>
-      ))}
-    </div>
-  )
-}
-
 const DELIVERY_VARIANT: Record<
   WebhookDeliveryRow['status'],
   'secondary' | 'success' | 'warning' | 'destructive'
@@ -205,7 +172,9 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
             <p className="font-semibold text-[hsl(var(--fg-primary))]">
               {props.revealed.kind === 'key'
                 ? t('developer.keyCreated')
-                : t('developer.secretCreated')}
+                : props.revealed.kind === 'client-secret'
+                  ? t('oauth.clientSecretCreated')
+                  : t('developer.secretCreated')}
             </p>
             <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('developer.shownOnce')}</p>
             <div className="flex flex-wrap items-center gap-2">
@@ -231,7 +200,11 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
         </Card>
       )}
 
+      <SandboxPanel t={t} {...props.sandbox} />
+
       <StorefrontPanel t={t} {...props.storefront} />
+
+      <OAuthAppsPanel t={t} {...props.oauth} />
 
       {/* ─── API keys ─────────────────────────────────────────────────── */}
       <Card>

@@ -721,3 +721,10 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 
 - **ریشه‌ی خطر:** تست «هر route باز برای کلید `requireWorkspaceContext` دارد» preHandler نام‌دار را در **کل** فایل‌های route جست؛ `customer-profile.routes.ts` هم `const read = [authenticate, requireWorkspaceContext, …]` دارد، پس حذف آن از `orders.routes.ts` تست را قرمز نمی‌کرد (injection-test نشان داد).
 - **رفع:** اول فایلِ **یکتای** اعلام‌کننده‌ی route پیدا می‌شود، بعد هر دو چک در همان فایل. injection دوباره: قرمز.
+
+## BUG-079 — صفحه‌ی پورتال مشتری فقط namespace های CORE را می‌گرفت (۲۸ سپتامبر، فاز ۵)
+
+- **ریشه:** `apps/web/app/[lang]/portal/[token]` (فاز ۳) layout نداشت. root layout فقط `CORE_NAMESPACES` را می‌فرستد؛ پس اولین `t('portal.…')` در `PublicPortalContainer` throw می‌کرد و کل صفحه به error boundary می‌رفت. همه‌ی تست‌ها سبز بودند چون container را تست می‌کردند، نه درختِ پیامِ صفحه‌ی وب.
+- **رفع:** `portal/layout.tsx` با `ScopedMessages` (CORE + `portal` + `orders` — برای برچسب وضعیت سفارش). صفحه‌ی تازه‌ی رضایت OAuth هم همین را گرفت (CORE + `oauth` + `developer`).
+- **گارد:** `packages/ui/src/__tests__/public-page-namespaces.test.ts` — import های نسبیِ container را دنبال می‌کند، هر namespace ای که رشته‌ای نام برده جمع می‌کند و می‌خواهد layout همه را بفرستد. injection (حذف `orders` / `developer`): قرمز.
+- **درس:** صفحه‌ی بیرون از `(dashboard)` که container مشترک رندر می‌کند، باید layout با namespace های همان container داشته باشد.

@@ -209,6 +209,10 @@ export { DashboardContainer } from './components/ui/dashboard/containers/dashboa
 export { ReferralsContainer } from './components/ui/referrals/containers/referrals-container'
 export { ReferralsView, type ReferralsViewProps } from './components/ui/referrals/referrals-view'
 export { DevelopersContainer } from './components/ui/developers/containers/developers-container'
+export {
+  OAuthConsentContainer,
+  type OAuthAuthorizeQuery,
+} from './components/ui/developers/containers/oauth-consent-container'
 export { OrdersContainer } from './components/ui/orders/containers/orders-container'
 export { OrdersView, type OrdersViewProps } from './components/ui/orders/orders-view'
 export {
@@ -320,6 +324,7 @@ export {
   isRouteAllowedWhenExpired,
   billingHref,
 } from './components/ui/billing'
+export { SandboxNotice } from './components/ui/developers/sandbox-notice'
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'
 
 // ─── ✅ Activity Components ──────────────────────────────────────────────────

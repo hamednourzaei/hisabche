@@ -76,14 +76,14 @@ Each of these needs a decision or credentials that only the owner can supply. Bu
 
 The 80 ideas proposed in conversation reduce to seven shared layers. Each idea is a consumer of a layer, not a module of its own (G2).
 
-| Step | Layer                                                                                                                  | Status                                                                                                                                                   |
-| ---- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | Public API surface + events + per-key limits + usage + replay                                                          | ✅ built. `docs/developer-platform-02-migration.sql`: **Post-migration verification query generated — PENDING HUMAN CONFIRMATION**                       |
-| 2    | Publishable key + order lifecycle (state machine first) + Order → server-priced invoice → stock → ledger + Website SDK | next. The security contract comes first: the browser never sets an amount or touches the ledger, and the public catalogue projection never includes cost |
-| 3    | Invoice widget, QR, customer portal (on the existing `invoice-public` token link)                                      | planned                                                                                                                                                  |
-| 4    | Evidence chain (the basis for Why Changed, Profit Leak and Money Journey)                                              | planned                                                                                                                                                  |
-| 5    | OAuth + marketplace                                                                                                    | waits on an app-review policy (product decision)                                                                                                         |
-| 6    | Sandbox workspace                                                                                                      | planned                                                                                                                                                  |
+| Step | Layer                                                                                                                  | Status                                                                                                                             |
+| ---- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Public API surface + events + per-key limits + usage + replay                                                          | ✅ built. `docs/developer-platform-02-migration.sql`: **Post-migration verification query generated — PENDING HUMAN CONFIRMATION** |
+| 2    | Publishable key + order lifecycle (state machine first) + Order → server-priced invoice → stock → ledger + Website SDK | ✅ built (03 migration — PENDING HUMAN CONFIRMATION)                                                                               |
+| 3    | Invoice widget, QR, customer portal (on the existing `invoice-public` token link)                                      | ✅ built (04 migration — PENDING HUMAN CONFIRMATION)                                                                               |
+| 4    | Evidence chain (the basis for Why Changed, Profit Leak and Money Journey)                                              | ✅ built (no migration: reads existing cost layers)                                                                                |
+| 5    | OAuth + marketplace                                                                                                    | ✅ built (05 migration — PENDING HUMAN CONFIRMATION). Review policy: private by default, a platform admin publishes                |
+| 6    | Sandbox workspace                                                                                                      | ✅ built (06 migration — PENDING HUMAN CONFIRMATION)                                                                               |
 
 What step 1 added:
 
@@ -110,3 +110,26 @@ What step 1 added:
   - BUG-077 fixed: every public token link returned 401 until now.
   - Customer portal link: the link's maker is re-verified on every visit, and the balance comes from `getBalance`, so there is no second formula.
   - SDK token widgets: `renderInvoice` and `renderPortal`. The QR code and the public invoice page already existed.
+
+### Steps 4–5 (built)
+
+- **Step 4, evidence chain:** no migration; it reads the existing cost layers.
+  - `GET /api/accounting/evidence/invoices/:id` explains a single invoice's profit. The totals come from `buildProfitReport` and must equal `getInvoiceMargins`, so there is no second profit formula.
+  - `GET /api/accounting/evidence/products/:id` gives a product's money journey: `cost_consumptions` → `cost_layers` → source document.
+- **Step 5, OAuth and marketplace:** `docs/developer-platform-05-oauth-migration.sql`. Status: **PENDING HUMAN CONFIRMATION**.
+  - Flow: authorization code with PKCE (S256 only; plain and implicit are refused). Codes are stored as sha256, live 10 minutes, and are redeemed once by `redeem_oauth_code`, which is race-safe. A failed verifier burns the code.
+  - The access token **is** an `api_keys` row with `app_id`, so the route allowlist, scope narrowing, per-key rate limit, request log and revocation apply unchanged. Uninstalling an app means revoking its key. Deleting an app cascades to its tokens.
+  - The grant is recomputed at exchange time against what the installer holds **now**. An app never receives more than the person who approved it holds.
+  - Review policy (G4 default): a new app is private and installable only on its publisher's workspace. `in_review → published/rejected` is decided by a platform admin (admin panel → OAuth apps). A published app cannot be edited or deleted under its installers.
+  - Consent page: `/[lang]/oauth/authorize`, outside (dashboard). A signed-out visitor returns to the same request after login. Nobody is redirected until the server has confirmed the `redirect_uri` is registered.
+  - Not built: refresh tokens (a token lives until revoked, like an API key), and app-owned webhooks.
+
+### Step 6 (built)
+
+- **Sandbox:** `docs/developer-platform-06-sandbox-migration.sql`. Status: **PENDING HUMAN CONFIRMATION**.
+  - A sandbox **is** a workspace (`is_sandbox`, `sandbox_of`), not a new layer. Because it has its own `workspace_id`, RLS, API keys, webhooks and OAuth installations already isolate it. Nothing else had to learn the word "sandbox".
+  - One sandbox per business and person, created by `create_sandbox_workspace`. The workspace and its owner membership are written in one transaction. The function is race-safe and returns the existing sandbox on a second call.
+  - The flag is permanent (enforced by a trigger). A sandbox cannot have its own sandbox. If the real business is deleted, the sandbox stays a sandbox.
+  - A sandbox starts empty. It is **not** a copy: copying real customers would put real people's data where test keys can reach it.
+  - A "sandbox" banner appears on every page, in both shells. Entering and leaving go through `enterWorkspace`, which reloads the app, because the app has no in-place workspace switcher.
+  - Not built: a "reset sandbox" action (deleting a workspace's data has no safe single-statement path yet); keeping sandboxes out of platform metrics and billing.
