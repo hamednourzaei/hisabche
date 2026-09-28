@@ -94,6 +94,8 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
   conflicts: 'offline',
   'data-migration': 'data-and-backup',
   settings: 'data-and-backup',
+  developers: 'developers',
+  wallet: 'wallet',
   dashboard: 'getting-started',
 }
 

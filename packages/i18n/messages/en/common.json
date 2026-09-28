@@ -5471,7 +5471,86 @@
     "browseAll": "All articles",
     "breadcrumbHome": "Home",
     "helpFor": "Documentation for",
-    "openInApp": "Open in the app"
+    "openInApp": "Open in the app",
+    "barcodes": {
+      "title": "Barcodes and scanning",
+      "summary": "Several barcodes per product, scanning with a device or a camera, and scale labels.",
+      "seoTitle": "Barcodes and Barcode Scanners — Guide",
+      "seoDescription": "Barcodes in Hisabche: several barcodes per product, carton codes, scanning with a USB scanner or a phone camera, and reading scale labels on an invoice.",
+      "codes": {
+        "heading": "A product's barcodes",
+        "body1": "Each product has a main barcode, and you can add more: another supplier's code, a new packaging code or a carton code. Each code belongs to one product only.",
+        "body2": "An extra barcode can carry its own unit — scanning the carton code adds a carton, not a single item. Extra barcodes are recognised online; offline, only the main barcode."
+      },
+      "scan": {
+        "heading": "Scanning on an invoice",
+        "body1": "The invoice and quick-invoice pages have a «Scan barcode» button. USB and wireless scanners work without drivers; on a phone or laptop you can turn on the camera.",
+        "body2": "A barcode that is on no product adds no row and says so; one that is on several products asks you to pick the right one.",
+        "step1": "On the invoice page, press «Scan barcode».",
+        "step2": "Scan with the device, or type the code and press Enter; or turn on the camera and hold the barcode in front of it.",
+        "step3": "The product is added to the invoice in the right unit."
+      },
+      "scale": {
+        "heading": "Scale labels",
+        "body1": "A shop scale prints a barcode with the weight or the price inside it. With «Scale label» turned on in the hardware settings, scanning such a label adds the product with that weight.",
+        "body2": "When the label carries a price rather than a weight, the product's selling price is needed to work out the quantity; if it is missing, you are told and no row is added."
+      }
+    },
+    "wallet": {
+      "title": "Business wallet",
+      "summary": "Topping up the wallet and paying the subscription from it.",
+      "seoTitle": "Wallet and Subscription Payment — Guide",
+      "seoDescription": "The business wallet in Hisabche: top up by card transfer or foreign currency, file the tracking number and receipt, and activate a plan from the wallet balance.",
+      "what": {
+        "heading": "What the wallet is",
+        "body1": "Each business has one wallet, not each person: the balance belongs to the business and does not move when a colleague leaves. Each currency has its own balance.",
+        "body2": "Only the owner, or a manager allowed to manage the business, sees the wallet and pays from it. Every movement stays in the history with its date and the balance after it."
+      },
+      "topup": {
+        "heading": "Topping up",
+        "body1": "Payment methods are defined by Hisabche; each shows its own destination and instructions. Until one is defined, the page says so.",
+        "body2": "A top-up is a request: support checks the payment and credits the amount that actually arrived. Until it is approved you can withdraw it.",
+        "step1": "Open «Wallet» from the menu and choose a payment method.",
+        "step2": "Pay the amount to the destination shown.",
+        "step3": "File the amount, the tracking number and the date; card transfers also need the last four digits of the card. A receipt is optional.",
+        "step4": "Once approved, the balance shows on the same page."
+      },
+      "pay": {
+        "heading": "Paying the subscription from the wallet",
+        "body1": "On the «Plan & Billing» page, choosing a plan offers paying from the wallet. Paying activates the plan at once, without waiting for review.",
+        "body2": "The plan price is set by Hisabche, and the balance must be in the plan price's currency. The wallet stays open after a subscription has ended, so you can renew."
+      }
+    },
+    "developers": {
+      "title": "Developers and integrations",
+      "summary": "API keys, webhooks, selling from your own site, apps and a sandbox.",
+      "seoTitle": "API and Webhooks — Integration Guide",
+      "seoDescription": "Connecting to Hisabche: API keys with limited access, signed webhooks for events, selling from your own website with a public key, and a separate sandbox.",
+      "keys": {
+        "heading": "API keys",
+        "body1": "Each key is limited to this business and to the access you choose, and never exceeds its creator's own access. Keys belong to the business: all its managers see the same list.",
+        "body2": "A key is shown once. You can give it an expiry, revoke it at any time and see its use over the last seven days."
+      },
+      "webhooks": {
+        "heading": "Webhooks",
+        "body1": "When something happens — an invoice, a payment, a product reaching its reorder level — Hisabche sends a signed request to your https address.",
+        "body2": "Reject a message whose signature is wrong or that is more than five minutes old. Failed deliveries are listed and can be sent again; an address that keeps failing is switched off automatically."
+      },
+      "storefront": {
+        "heading": "Selling from your own website",
+        "body1": "With a public key, your website reads products and stock from Hisabche and places orders. Prices and totals are always set by Hisabche, never by the site.",
+        "body2": "A public key works only on the addresses you allow, and can only read the catalogue and place pending orders. Orders are confirmed by hand or automatically, as you choose."
+      },
+      "apps": {
+        "heading": "Apps and the app marketplace",
+        "body1": "An app you build for other businesses connects to a business's data only with its owner's consent, and only with the access the owner approved.",
+        "body2": "Every new version is reviewed before it is published. A business owner can remove an app at any time."
+      },
+      "sandbox": {
+        "heading": "Sandbox",
+        "body1": "Create a separate, empty business to test integrations: its invoices, stock and books are fully apart from your real accounts."
+      }
+    }
   },
   "ai": {
     "emptyHint": "For example: who owes the most? · what has reached its reorder point?",

@@ -123,7 +123,18 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'units', bodyCount: 3, stepCount: 3 },
       { id: 'insights', bodyCount: 2 },
     ],
-    related: ['invoices', 'pos', 'accounting'],
+    related: ['invoices', 'pos', 'accounting', 'barcodes'],
+    outbound: [{ href: '/features/inventory', labelKey: 'landing.featurePage.inventory.h1' }],
+  },
+  {
+    slug: 'barcodes',
+    group: 'stock',
+    sections: [
+      { id: 'codes', bodyCount: 2 },
+      { id: 'scan', bodyCount: 2, stepCount: 3 },
+      { id: 'scale', bodyCount: 2 },
+    ],
+    related: ['inventory', 'invoices', 'pos'],
     outbound: [{ href: '/features/inventory', labelKey: 'landing.featurePage.inventory.h1' }],
   },
   {
@@ -146,8 +157,18 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'cash', bodyCount: 3 },
       { id: 'closing', bodyCount: 3 },
     ],
-    related: ['inventory', 'customers', 'permissions'],
+    related: ['inventory', 'customers', 'permissions', 'barcodes'],
     outbound: [{ href: '/features/offline', labelKey: 'landing.featurePage.offline.h1' }],
+  },
+  {
+    slug: 'wallet',
+    group: 'money',
+    sections: [
+      { id: 'what', bodyCount: 2 },
+      { id: 'topup', bodyCount: 2, stepCount: 4 },
+      { id: 'pay', bodyCount: 2 },
+    ],
+    related: ['permissions', 'getting-started', 'accounting'],
   },
   {
     slug: 'offline',
@@ -178,7 +199,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'roles', bodyCount: 2 },
       { id: 'sod', bodyCount: 2 },
     ],
-    related: ['branches', 'pos', 'assistant'],
+    related: ['branches', 'pos', 'assistant', 'wallet', 'developers'],
   },
   {
     slug: 'assistant',
@@ -201,7 +222,19 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'csv', bodyCount: 3, stepCount: 3 },
       { id: 'offline', bodyCount: 2 },
     ],
-    related: ['getting-started', 'offline', 'accounting'],
+    related: ['getting-started', 'offline', 'accounting', 'developers'],
+  },
+  {
+    slug: 'developers',
+    group: 'platform',
+    sections: [
+      { id: 'keys', bodyCount: 2 },
+      { id: 'webhooks', bodyCount: 2 },
+      { id: 'storefront', bodyCount: 2 },
+      { id: 'apps', bodyCount: 2 },
+      { id: 'sandbox', bodyCount: 1 },
+    ],
+    related: ['permissions', 'data-and-backup', 'invoices'],
   },
 ]
 
