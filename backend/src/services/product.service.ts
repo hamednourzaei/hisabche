@@ -12,6 +12,7 @@ import {
   normalizeBarcode,
 } from '@hisabche/validation'
 import { summarizeStock, type StockSummaryRow } from './inventory/stock-summary.domain'
+import { stockEditWarehouse, type WarehouseRow } from './inventory/warehouse-summary.domain'
 import { ConflictError, DatabaseError, NotFoundError, isFailedRead } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
 import { mapProduct } from '../utils/product.mapper'
@@ -267,12 +268,16 @@ export class ProductService {
   ) {
     const { workspaceId, userId } = ctx
     const clientRequestId = options.clientRequestId ?? null
-    // Request #94 — «افزودن به انبار»: the opening stock lands in this warehouse.
+    // Request #94 — «افزودن به انبار»: the opening stock lands in a warehouse —
+    // the one named, or the business's only one (stockEditWarehouse).
     const openingWarehouseId =
-      (data as { warehouseId?: string | null }).warehouseId && (Number(data.quantity) || 0) > 0
-        ? ((data as { warehouseId?: string | null }).warehouseId as string)
+      (Number(data.quantity) || 0) > 0
+        ? await this.stockWarehouse(
+            workspaceId,
+            (data as { warehouseId?: string | null }).warehouseId,
+            'create',
+          )
         : null
-    if (openingWarehouseId) await this.assertWarehouse(workspaceId, openingWarehouseId)
 
     if (clientRequestId) {
       const existing = await this.findByClientRequestId(workspaceId, clientRequestId)
@@ -403,12 +408,21 @@ export class ProductService {
 
       const delta = target - (Number((current as { quantity: unknown }).quantity) || 0)
       if (delta !== 0) {
+        // ⚠️ INTO A WAREHOUSE. Recorded with none, a refill sat in «بدون انبار»
+        // while sales left the warehouse: 20 on the product page, −10 in the
+        // warehouse (BUG-080).
+        const warehouseId = await this.stockWarehouse(
+          workspaceId,
+          (data as { warehouseId?: string | null }).warehouseId,
+          'edit',
+        )
         const { error: movementError } = await supabase.from('stock_movements').insert({
           product_id: id,
           type: 'adjustment',
           quantity: delta,
           reference_type: 'product_edit',
           reference_id: id,
+          ...(warehouseId ? { to_warehouse_id: warehouseId } : {}),
           workspace_id: workspaceId,
           user_id: ctx.userId,
           notes: `stock set to ${target} from the product page`,
@@ -721,17 +735,21 @@ export class ProductService {
     await memoryCache.invalidate(`dashboard:${workspaceId}`)
   }
 
-  /** A warehouse id from a request must be this workspace's and not deleted. */
-  private async assertWarehouse(workspaceId: string, warehouseId: string): Promise<void> {
+  /** Where a product-page stock change lands — the rule is stockEditWarehouse. */
+  private async stockWarehouse(
+    workspaceId: string,
+    requested: string | null | undefined,
+    mode: 'edit' | 'create',
+  ): Promise<string | null> {
     const { data, error } = await supabase
       .from('warehouses')
-      .select('id')
+      .select('id, name, location, is_active')
       .eq('workspace_id', workspaceId)
-      .eq('id', warehouseId)
       .is('deleted_at', null)
-      .maybeSingle()
-    if (error) throw new DatabaseError('Failed to check the warehouse', error)
-    if (!data) throw new ValidationError('PRODUCT_WAREHOUSE_NOT_FOUND')
+    if (error) throw new DatabaseError('Failed to read the warehouses', error)
+    const choice = stockEditWarehouse((data ?? []) as WarehouseRow[], requested, mode)
+    if ('refusal' in choice) throw new ValidationError(choice.refusal)
+    return choice.warehouseId
   }
 }
 

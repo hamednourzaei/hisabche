@@ -63,7 +63,8 @@ export const createProductSchema = productSchema
   .extend({
     /**
      * Multi-warehouse: put this product's opening stock IN a warehouse.
-     * Omitted, the stock exists but sits in no warehouse («بدون انبار»).
+     * Omitted: the business's only warehouse, or — with several — none
+     * («بدون انبار»), to be moved with «افزودن کالا به انبار».
      */
     warehouseId: uuidSchema.nullable().optional(),
   })
@@ -76,6 +77,11 @@ export type CreateProduct = z.infer<typeof createProductSchema>
 
 export const updateProductSchema = productSchema.partial().extend({
   id: uuidSchema,
+  /**
+   * The warehouse a quantity change lands in. Required when the business has
+   * several (PRODUCT_WAREHOUSE_REQUIRED); omitted, its only warehouse.
+   */
+  warehouseId: uuidSchema.nullable().optional(),
 })
 
 export type UpdateProduct = z.infer<typeof updateProductSchema>

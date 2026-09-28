@@ -728,3 +728,14 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 - **رفع:** `portal/layout.tsx` با `ScopedMessages` (CORE + `portal` + `orders` — برای برچسب وضعیت سفارش). صفحه‌ی تازه‌ی رضایت OAuth هم همین را گرفت (CORE + `oauth` + `developer`).
 - **گارد:** `packages/ui/src/__tests__/public-page-namespaces.test.ts` — import های نسبیِ container را دنبال می‌کند، هر namespace ای که رشته‌ای نام برده جمع می‌کند و می‌خواهد layout همه را بفرستد. injection (حذف `orders` / `developer`): قرمز.
 - **درس:** صفحه‌ی بیرون از `(dashboard)` که container مشترک رندر می‌کند، باید layout با namespace های همان container داشته باشد.
+
+## BUG-080 — صفحه‌ی کالا «موجودی ۲۰»، انبار «تمام شده −۱۰» برای همان کالا (۲۸ سپتامبر)
+
+- **گزارش:** `/warehouse/846534ae-…` (kartoon) موجودی ۲۰ نشان می‌داد و همان کالا در انبار «haji joon» با −۱۰ و «تمام شده».
+- **ریشه (سه لایه):**
+  1. ویرایش موجودی از صفحه‌ی کالا (شارژ) حرکت `adjustment` را **بدون انبار** ثبت می‌کرد؛ فروش‌ها `warehouseId` می‌فرستند و از انبار کم می‌کنند. پس +۳۰ در «بدون انبار» و −۱۰ در haji joon ⇒ جمع ۲۰. هر دو عدد درست بودند و هیچ‌جا توضیح داده نمی‌شد.
+  2. `PATCH`/`DELETE /api/products/:id` کلید دستی `product:<ws>:<id>` را پاک می‌کرد، در حالی که middleware کلید را `product:<ws>:/api/products/<id>` می‌سازد — صفحه‌ی کالا بعد از هر ویرایش تا ۱۲۰ ثانیه عدد قدیمی نشان می‌داد (همان الگوی BUG-008).
+  3. `ValidationError` در `PATCH /api/products/:id` به ۵۰۰ می‌رسید.
+- **رفع:** قاعده‌ی `stockEditWarehouse` (warehouse-summary.domain): انبار نام‌برده؛ اگر فقط یک انبار ⇒ همان؛ اگر چند انبار ⇒ ویرایش رد می‌شود (`PRODUCT_WAREHOUSE_REQUIRED`) و فرم انبار را می‌پرسد؛ بدون انبار ⇒ هیچ‌جا. حرکت با `to_warehouse_id` ثبت می‌شود. صفحه‌ی کالا پنل «موجودی در هر انبار» دارد (جمع = انبارها + بدون انبار) و موجودیِ بدون انبار از همان‌جا با مسیر موجود `assignStock` منتقل می‌شود. route ها `invalidateMoneyCaches`؛ رد قاعده ⇒ ۴۰۰ با فیلد.
+- **داده‌ی موجود دست نخورد (§۱۲):** کاربر ۳۰ عددِ «بدون انبار» را از پنل به haji joon منتقل می‌کند ⇒ haji joon = ۲۰.
+- **گارد:** `backend/src/__tests__/product-stock-warehouse.test.ts`، `packages/ui/src/__tests__/product-warehouse-stock.test.ts` (injection: حذف `to_warehouse_id` ⇒ قرمز).

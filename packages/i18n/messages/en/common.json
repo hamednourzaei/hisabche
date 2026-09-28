@@ -1905,7 +1905,30 @@
     "onHand": "On hand",
     "productNamePlaceholder": "Enter the product name",
     "source": "Source",
-    "stockDrift": "Recorded stock does not match the sum of movements — the projection trigger has not run"
+    "stockDrift": "Recorded stock does not match the sum of movements — the projection trigger has not run",
+    "byWarehouse": {
+      "title": "Stock by warehouse",
+      "help": "«Current stock» is the sum of every warehouse and the stock in no warehouse.",
+      "loading": "Loading…",
+      "loadError": "The warehouse stock could not be read.",
+      "unassigned": "In no warehouse",
+      "total": "Total (current stock)",
+      "negativeHelp": "Negative means more was sold from this warehouse than was recorded in it — usually because the stock was recorded in no warehouse. Move it into this warehouse with the form below.",
+      "moveHelp": "This stock is in no warehouse. Which warehouse should it go to? (The total does not change.)",
+      "pickWarehouse": "Choose a warehouse",
+      "quantity": "Quantity",
+      "move": "Move to warehouse",
+      "moved": "Stock moved to the warehouse",
+      "moveFailed": "The move failed.",
+      "pickRequired": "Choose the warehouse",
+      "editWarehouse": "Which warehouse should this stock change be recorded in?",
+      "editOnly": "The stock change is recorded in this warehouse",
+      "error": {
+        "PRODUCT_WAREHOUSE_REQUIRED": "This business has several warehouses; say which one the stock change belongs to.",
+        "PRODUCT_WAREHOUSE_NOT_FOUND": "This warehouse was not found or is inactive.",
+        "PRODUCT_QUANTITY_INVALID": "The stock quantity is not valid."
+      }
+    }
   },
   "customers": {
     "title": "Customers",
