@@ -1930,7 +1930,10 @@
         "PRODUCT_WAREHOUSE_NOT_FOUND": "This warehouse was not found or is inactive.",
         "PRODUCT_QUANTITY_INVALID": "The stock quantity is not valid."
       }
-    }
+    },
+    "deactivateInstead": "Deactivate this product instead? Its sales and stock history stay, and it leaves the warehouse lists (including «Unassigned»).",
+    "deactivated": "Product deactivated and removed from the warehouse lists.",
+    "deactivateFailed": "Could not deactivate the product."
   },
   "customers": {
     "title": "Customers",

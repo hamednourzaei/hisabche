@@ -259,6 +259,17 @@ export class WarehouseService {
   // Not cached: these figures change with every sale, and the money caches do
   // not know the memory keys of this service.
 
+  /**
+   * The products the warehouse screens count: ACTIVE ones only.
+   *
+   * ⚠️ A product with sales or stock history cannot be deleted (it would
+   * orphan that history), so the refusal offers «deactivate instead». Reading
+   * inactive products here too meant a deactivated product stayed on every
+   * warehouse list and in «بدون انبار» — the advice had no effect and the
+   * person could not get rid of it (reported 28 Sep 2026). A deactivated
+   * product still has its own page and its history; it is no longer stock the
+   * business works with.
+   */
   private async readAllProducts(workspaceId: string): Promise<ProductStockRow[]> {
     const rows: ProductStockRow[] = []
     for (let from = 0; ; from += PAGE) {
@@ -266,6 +277,7 @@ export class WarehouseService {
         .from('products')
         .select('id, name, sku, unit, quantity, sell_price, buy_price, min_stock_level')
         .eq('workspace_id', workspaceId)
+        .eq('is_active', true)
         .order('id', { ascending: true })
         .range(from, from + PAGE - 1)
       if (error) throw new DatabaseError('Failed to read products', error)

@@ -22,7 +22,7 @@ import { ProductJourneyPanel } from '../product-journey-panel'
 import { ProductBarcodesPanel } from '../product-barcodes-panel'
 import { ProductWarehouseStockPanel } from '../product-warehouse-stock-panel'
 import { ProductDetailPage } from '../warehouse-detail-page'
-import { productDeleteRefusal } from '../../../../lib/warehouse/delete-refusal'
+import { isProductInUse, productDeleteRefusal } from '../../../../lib/warehouse/delete-refusal'
 import { STOCK_LABEL_KEY, STOCK_TONE, stockStateOf } from '../../../../lib/warehouse/stock-state'
 import { useToast } from '../../toast-provider'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
@@ -170,13 +170,34 @@ export function ProductDetailContainer() {
     try {
       await deleteProduct.mutateAsync(id!)
     } catch (error) {
-      // Stay on the product and say why (sales / stock history), instead of an
-      // unhandled rejection and a button that seems to do nothing.
-      toast.error(productDeleteRefusal(error, t))
+      // Sales or stock history: deleting would orphan it. The message used to
+      // say «deactivate instead» with no way to do so on this page — so the
+      // product could not be removed at all (reported 28 Sep 2026). Now the
+      // same step offers it; a deactivated product leaves the warehouse lists.
+      if (
+        isProductInUse(error) &&
+        confirm(`${productDeleteRefusal(error, t)}
+
+${t('warehouse.deactivateInstead')}`)
+      ) {
+        try {
+          await updateProduct.mutateAsync({ id: id!, isActive: false })
+        } catch {
+          toast.error(t('warehouse.deactivateFailed'))
+          return
+        }
+        void queryClient.invalidateQueries({ queryKey: warehouseKeys.all })
+        toast.success(t('warehouse.deactivated'))
+        push('/warehouse')
+        return
+      }
+      // Stay on the product and say why, instead of an unhandled rejection
+      // and a button that seems to do nothing.
+      if (!isProductInUse(error)) toast.error(productDeleteRefusal(error, t))
       return
     }
     push('/warehouse')
-  }, [id, deleteProduct, push, t, toast])
+  }, [id, deleteProduct, updateProduct, queryClient, push, t, toast])
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {

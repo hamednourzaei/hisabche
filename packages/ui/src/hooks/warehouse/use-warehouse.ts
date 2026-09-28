@@ -3,11 +3,17 @@
 
 import { useMemo, useCallback, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { useProducts, useDeleteProduct, useRealtime, type StockSummary } from '@hisabche/api'
+import {
+  useProducts,
+  useDeleteProduct,
+  useUpdateProduct,
+  useRealtime,
+  type StockSummary,
+} from '@hisabche/api'
 import { useSyncStore, useBackupStore } from '@hisabche/store'
 import { mapProducts } from '../../lib/warehouse/warehouse-mappers'
 import type { RawProduct } from '../../lib/warehouse/warehouse-types'
-import { productDeleteRefusal } from '../../lib/warehouse/delete-refusal'
+import { isProductInUse, productDeleteRefusal } from '../../lib/warehouse/delete-refusal'
 import { STOCK_LABEL_KEY, STOCK_TONE, stockStateOf } from '../../lib/warehouse/stock-state'
 import { useToast } from '../../components/ui/toast-provider'
 
@@ -18,6 +24,10 @@ export function useWarehouse(search: string) {
     limit: 100,
     sortDirection: 'desc',
     search,
+    // Active products only — the same set the summary below counts. A
+    // deactivated product (the way out when history forbids a delete) must
+    // leave the list, or «deactivate instead» changes nothing on screen.
+    isActive: true,
     // Stock value and stock-state counts come from the server, over EVERY
     // product. They used to be reduced here over this 100-row page, so a shop
     // with more products read the value of its newest hundred as «ارزش کل».
@@ -25,6 +35,7 @@ export function useWarehouse(search: string) {
   })
 
   const deleteProduct = useDeleteProduct()
+  const updateProduct = useUpdateProduct()
   const { setSaveStatus } = useSyncStore()
   const { moveToTrash } = useBackupStore()
   const toast = useToast()
@@ -67,8 +78,27 @@ export function useWarehouse(search: string) {
         // ⚠️ REFUSED IS NOT DELETED. The product used to go to the trash BEFORE
         // the request and stay there when the server refused (a product with
         // sales), the status stuck on «saving», and nothing said why.
+        // Sales or stock history: offer deactivation in the same step.
+        if (
+          isProductInUse(error) &&
+          confirm(`${productDeleteRefusal(error, t)}
+
+${t('warehouse.deactivateInstead')}`)
+        ) {
+          try {
+            await updateProduct.mutateAsync({ id: product.id, isActive: false })
+          } catch {
+            setSaveStatus('error')
+            toast.error(t('warehouse.deactivateFailed'))
+            return
+          }
+          setSaveStatus('saved')
+          toast.success(t('warehouse.deactivated'))
+          refetch()
+          return
+        }
         setSaveStatus('error')
-        toast.error(productDeleteRefusal(error, t))
+        if (!isProductInUse(error)) toast.error(productDeleteRefusal(error, t))
         return
       }
       moveToTrash({
@@ -80,7 +110,7 @@ export function useWarehouse(search: string) {
       setTimeout(() => setSaveStatus('idle'), 2000)
       refetch()
     },
-    [deleteProduct, moveToTrash, setSaveStatus, refetch, toast, t],
+    [deleteProduct, updateProduct, moveToTrash, setSaveStatus, refetch, toast, t],
   )
 
   return {
