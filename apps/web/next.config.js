@@ -140,7 +140,11 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          // camera=(self): the barcode scan dialog on the invoice pages reads codes
+          // with the phone/laptop camera (28 Sep 2026). Our own origin only — an
+          // embedded third-party frame still gets no camera, and the browser still
+          // asks the person before any page may use it.
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=()' },
           // ✅ اضافه شد: CSP Header
         ],
       },

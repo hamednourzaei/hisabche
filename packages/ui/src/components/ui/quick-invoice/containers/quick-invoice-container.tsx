@@ -22,7 +22,6 @@ import {
   quantityOfLabel,
   type ScaleLabel,
 } from '../../../../lib/barcode/scale-label'
-import { getCameraScanner } from '../../../../lib/barcode/camera-host'
 import type {
   QuickInvoicePageProps,
   InvoiceLineItem,
@@ -143,6 +142,7 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
   // `addItem` ignores a product already on the list — right for a click, wrong
   // for a scanner: scanning the second can of the same drink must count it.
   const [scanProblem, setScanProblem] = useState<ScanProblem | null>(null)
+  const [scanDialogOpen, setScanDialogOpen] = useState(false)
 
   /** `add`: one for an ordinary code; the weight for a scale label. */
   const addScanned = useCallback((product: Product, add = 1) => {
@@ -207,7 +207,7 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
   )
 
   useBarcodeScanner((scan) => void handleScan(scan.value), {
-    enabled: step === 'product' && scanProblem === null,
+    enabled: step === 'product' && scanProblem === null && !scanDialogOpen,
   })
 
   const updateItemQuantity = useCallback((key: string, quantity: string) => {
@@ -435,13 +435,12 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
       <QuickInvoicePage
         t={safeT}
         scanSlot={
-          getCameraScanner() ? (
-            <CameraScanButton
-              t={safeT}
-              onCode={(code) => void handleScan(code)}
-              disabled={scanProblem !== null}
-            />
-          ) : undefined
+          <CameraScanButton
+            t={safeT}
+            onCode={(code) => void handleScan(code)}
+            disabled={scanProblem !== null}
+            onOpenChange={setScanDialogOpen}
+          />
         }
         elapsedFormatted={elapsedFormatted}
         showSaved={false}

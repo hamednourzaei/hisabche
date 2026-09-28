@@ -79,6 +79,8 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   // A scan fills a DRAFT line (same product + unit again → +1). Nothing is
   // posted: stock, ledger and receivable move only when the invoice is issued.
   const [scanProblem, setScanProblem] = useState<ScanProblem | null>(null)
+  // The scan dialog takes the device's keystrokes itself while it is open.
+  const [scanDialogOpen, setScanDialogOpen] = useState(false)
 
   const placeScanned = useCallback(
     (product: Product, add = 1) => {
@@ -148,7 +150,9 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   )
 
   // Paused while the dialog is open: the cashier is answering it.
-  useBarcodeScanner((scan) => void handleScan(scan.value), { enabled: scanProblem === null })
+  useBarcodeScanner((scan) => void handleScan(scan.value), {
+    enabled: scanProblem === null && !scanDialogOpen,
+  })
 
   const handleReplaceColumn = useCallback(
     (column: InvoiceColumn) => draft.updateColumn(column.id, column),
@@ -247,6 +251,7 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
               t={t}
               onCode={(code) => void handleScan(code)}
               disabled={scanProblem !== null}
+              onOpenChange={setScanDialogOpen}
             />
             <InvoiceWarehouseSelect
               t={t}

@@ -6050,7 +6050,13 @@
     "extraUnit": "Unit (optional)",
     "extraAddFailed": "The barcode was not added.",
     "extraRemoveFailed": "The barcode was not removed.",
-    "extraUnitProduct": "The product’s own unit"
+    "extraUnitProduct": "The product’s own unit",
+    "scanButton": "Scan barcode",
+    "scanTitle": "Scan a barcode",
+    "scanHint": "Scan with a barcode scanner or type the code and press Enter. On a phone, turn on the camera.",
+    "scanAdd": "Add",
+    "cameraUnsupported": "This browser or device cannot reach a camera. Scan with a barcode scanner or type the code.",
+    "cameraFailed": "The camera did not start. Try again or type the code."
   },
   "receipt": {
     "print": "Print receipt",
