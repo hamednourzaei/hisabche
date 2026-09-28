@@ -28,6 +28,8 @@ import {
   API_KEY_PATTERN,
   API_KEY_PREFIX,
   WEBHOOK_EVENTS,
+  PUBLISHABLE_KEY_PATTERN,
+  PUBLISHABLE_KEY_PREFIX,
   WEBHOOK_EVENT_RESOURCE,
   type ApiKeyScope,
   type WebhookEnvelope,
@@ -123,6 +125,16 @@ export const API_ROUTE_SCOPES: Readonly<Record<string, ApiKeyScope>> = {
   // Quantities and sell prices per warehouse — no cost (inventory.cost.read).
   'GET /api/warehouses': 'read:inventory',
   'GET /api/warehouses/:id/stock': 'read:inventory',
+
+  // Orders: placed and moved along the lifecycle — never «paid» (it follows
+  // the invoice) and never deleted.
+  'GET /api/orders': 'read:orders',
+  'GET /api/orders/:id': 'read:orders',
+  'POST /api/orders': 'write:orders',
+  'POST /api/orders/:id/confirm': 'write:orders',
+  'POST /api/orders/:id/cancel': 'write:orders',
+  'POST /api/orders/:id/fulfill': 'write:orders',
+  'POST /api/orders/:id/invoice': 'write:orders',
 }
 
 /** Which scopes a write scope also satisfies for reading. */
@@ -130,6 +142,7 @@ const IMPLIED: Partial<Record<ApiKeyScope, ApiKeyScope>> = {
   'read:customers': 'write:customers',
   'read:products': 'write:products',
   'read:invoices': 'write:invoices',
+  'read:orders': 'write:orders',
 }
 
 export type RouteDecision =
@@ -291,4 +304,32 @@ export function rateLimitBucket(authorization: string | undefined, fallback: str
 
 export function isApiKeyBucket(bucket: string): boolean {
   return bucket.startsWith('apikey:')
+}
+
+// ─── Publishable keys (storefront) ───────────────────────────────────────────
+
+/** A new publishable key. Public by design; still unguessable, so it cannot be enumerated. */
+export function generatePublishableKey(): string {
+  return `${PUBLISHABLE_KEY_PREFIX}${randomBytes(32).toString('base64url')}`
+}
+
+export function looksLikePublishableKey(token: string): boolean {
+  return PUBLISHABLE_KEY_PATTERN.test(token)
+}
+
+/**
+ * May a browser on `origin` use this key?
+ *
+ * ⚠️ HONEST LIMIT: an Origin header proves nothing about a server-side
+ * caller, who can send any Origin or none. A publishable key is public; the
+ * origin list stops OTHER WEBSITES from embedding the shop in a browser, not a
+ * script from calling it. That is why the key can do so little: read what the
+ * shop already publishes, and place an order a person must confirm.
+ *
+ * No Origin header (a server, curl) → allowed. An Origin not on the list →
+ * refused.
+ */
+export function originAllowed(allowed: readonly string[], origin: string | undefined): boolean {
+  if (!origin) return true
+  return allowed.includes(origin)
 }

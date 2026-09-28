@@ -453,15 +453,27 @@ describe('the event path', () => {
         ['payment', 'cancelled'],
       ].map(([e, a]) => publicEventFor(e!, a!)),
     )
-    // The rest come from the stock trigger — and only those.
+    // The rest come from database functions — and only those.
     const fromTrigger = WEBHOOK_EVENTS.filter((e) => e.startsWith('inventory.'))
     expect(fromTrigger.sort()).toEqual(['inventory.low_stock', 'inventory.restocked'])
-    expect([...produced, ...fromTrigger].sort()).toEqual([...WEBHOOK_EVENTS].sort())
-    const trigger = readFileSync(
-      join(SRC, '..', '..', 'docs', 'developer-platform-02-migration.sql'),
+    const fromLifecycle = WEBHOOK_EVENTS.filter((e) => e.startsWith('order.'))
+    expect([...produced, ...fromTrigger, ...fromLifecycle].sort()).toEqual(
+      [...WEBHOOK_EVENTS].sort(),
+    )
+    const docs = join(SRC, '..', '..', 'docs')
+    const trigger = readFileSync(join(docs, 'developer-platform-02-migration.sql'), 'utf8')
+    for (const e of fromTrigger) expect(trigger).toContain(`v_type := '${e}'`)
+    // Every order event is one the lifecycle functions can emit: 'order.' ||
+    // the target state, the reversal, or order.created on creation.
+    const lifecycle = readFileSync(
+      join(docs, 'developer-platform-03-commerce-migration.sql'),
       'utf8',
     )
-    for (const e of fromTrigger) expect(trigger).toContain(`v_type := '${e}'`)
+    expect(lifecycle).toContain("ELSE 'order.' || p_to")
+    const states = ['confirmed', 'cancelled', 'invoiced', 'paid', 'fulfilled']
+    for (const e of fromLifecycle) {
+      expect(states.includes(e.slice('order.'.length)) || lifecycle.includes(`'${e}'`)).toBe(true)
+    }
   })
 
   it('the payments service really logs the two payment events', () => {
@@ -578,12 +590,26 @@ describe('wiring', () => {
   it.each(Object.keys(API_ROUTE_SCOPES))('%s exists and runs requireWorkspaceContext', (entry) => {
     const [method, path] = entry.split(' ') as [string, string]
     const prefix = Object.keys(PREFIXED).find((p) => path === p || path.startsWith(`${p}/`))
-    const source = prefix ? read('routes', PREFIXED[prefix]!) : routes
     const local = prefix ? path.slice(prefix.length) || '/' : path
-    const pattern = new RegExp(
+    const declaration = new RegExp(`fastify\\.${method.toLowerCase()}\\(\\s*'${escape(local)}',`)
+    // The ONE file that declares the route — a `const read` in another file
+    // must not vouch for this one.
+    const files = prefix
+      ? [PREFIXED[prefix]!]
+      : routeFiles.filter((f) => declaration.test(read('routes', f)))
+    expect(files.length).toBe(1)
+    const source = read('routes', files[0]!)
+    const inline = new RegExp(
       `fastify\\.${method.toLowerCase()}\\(\\s*'${escape(local)}',[\\s\\S]{0,400}?requireWorkspaceContext`,
     )
-    expect(pattern.test(source)).toBe(true)
+    // Or `preHandler: read` where `const read = [authenticate, requireWorkspaceContext, …]`.
+    const viaName = new RegExp(
+      `fastify\\.${method.toLowerCase()}\\(\\s*'${escape(local)}',\\s*\\{\\s*preHandler:\\s*(\\w+)`,
+    ).exec(source)?.[1]
+    const named =
+      viaName !== undefined &&
+      new RegExp(`const ${viaName} = \\[authenticate, requireWorkspaceContext\\b`).test(source)
+    expect(inline.test(source) || named).toBe(true)
   })
 
   it('index.ts registers those prefixes as the lookup assumes', () => {

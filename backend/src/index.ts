@@ -21,7 +21,7 @@
 import 'dotenv/config'
 
 import Fastify from 'fastify'
-import cors from '@fastify/cors'
+import cors, { type FastifyCorsOptions } from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
 import { SharedRateLimitStore } from './utils/shared-rate-limit-store'
 import { cacheService } from './services/cache.service'
@@ -101,6 +101,10 @@ import { debugRoutes } from './routes/debug.routes'
 import { activityRoutes } from './routes/activity.routes'
 import adminRoutes from './routes/admin.routes'
 import { developerRoutes } from './routes/developer.routes'
+import { ordersRoutes } from './routes/orders.routes'
+import { isPublicApiPath, storefrontRoutes } from './routes/storefront.routes'
+import { customerPortalRoutes } from './routes/customer-portal.routes'
+import { PUBLISHABLE_KEY_HEADER } from '@hisabche/validation'
 import {
   API_KEY_RATE_LIMIT_PER_MINUTE,
   isApiKeyBucket,
@@ -321,6 +325,14 @@ server.addHook('preHandler', async (request, reply) => {
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
     '/api/auth/verify-email',
+    // ⚠️ Deliberately public, and ONLY what is registered under it: the
+    // tokenised invoice view (invoice-public.routes.ts), the tokenised CRM task
+    // link (crm.routes.ts) and the storefront (storefront.routes.ts), each with
+    // its own check. Before this entry the global hook answered 401 to every
+    // one of them — the /public-invoice and /public-task pages have never
+    // worked for the person the link was sent to (BUG-077). A route added here
+    // must be public by design: storefront-orders.test.ts lists them all.
+    '/api/public/',
   ]
 
   // Exact-match public endpoints (no prefix matching: `/api/billing/plans` must
@@ -506,7 +518,7 @@ export async function buildServer(): Promise<typeof server> {
   })
 
   // ─── 6.2 CORS ─────────────────────────────
-  await server.register(cors, {
+  const APP_CORS: FastifyCorsOptions = {
     origin: isProduction
       ? [
           'https://hisabche.com',
@@ -558,6 +570,25 @@ export async function buildServer(): Promise<typeof server> {
     // یک رفت‌وبرگشت شبکه‌ی کامل تا سرور اضافه می‌کند. با کش ۲۴ ساعته‌ی
     // preflight، این رفت‌وبرگشت از مسیر تمام درخواست‌های بعدی حذف می‌شود.
     maxAge: 86400,
+  }
+
+  // ⚠️ /api/public/ IS CALLED FROM CUSTOMERS' OWN WEBSITES.
+  // The storefront, and the invoice / portal / task views a shop may embed.
+  // Their origins cannot be listed here: a publishable key carries its own
+  // list (storefront.routes.ts), and a token-addressed view is protected by
+  // the token, not by who asks. So these paths — and only these — answer any
+  // origin, WITHOUT credentials (no cookie or session ever rides along).
+  const STOREFRONT_CORS: FastifyCorsOptions = {
+    origin: true,
+    credentials: false,
+    methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Idempotency-Key', PUBLISHABLE_KEY_HEADER],
+    maxAge: 86400,
+  }
+
+  await server.register(cors, {
+    delegator: (request, callback) =>
+      callback(null, isPublicApiPath(request.url ?? '') ? STOREFRONT_CORS : APP_CORS),
   })
 
   // ─── 6.3 SWAGGER ──────────────────────────
@@ -699,6 +730,11 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(blogRoutes)
   // API keys and outbound webhooks (docs/developer-platform-migration.sql).
   await server.register(developerRoutes)
+  // Sales orders + storefront settings; and the public storefront API.
+  await server.register(ordersRoutes)
+  await server.register(storefrontRoutes)
+  // Customer portal links, and the portal itself (public, by token).
+  await server.register(customerPortalRoutes)
   await server.register(adminRoutes)
 
   server.log.info('✅ All routes registered successfully')

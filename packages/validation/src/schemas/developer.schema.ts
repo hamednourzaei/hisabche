@@ -43,9 +43,11 @@ export const INTEGRATION_SCOPES = [
   'read:reports',
   'read:payments',
   'read:inventory',
+  'read:orders',
   'write:customers',
   'write:products',
   'write:invoices',
+  'write:orders',
   'subscribe:events',
   'ui:widget',
   'ui:page',
@@ -104,6 +106,15 @@ export const WEBHOOK_EVENTS = [
   // min_stock_level only (docs/developer-platform-02-migration.sql).
   'inventory.low_stock',
   'inventory.restocked',
+  // From the order lifecycle functions — one per transition, in the same
+  // transaction (docs/developer-platform-03-commerce-migration.sql).
+  'order.created',
+  'order.confirmed',
+  'order.cancelled',
+  'order.invoiced',
+  'order.paid',
+  'order.payment_reversed',
+  'order.fulfilled',
 ] as const
 export type WebhookEventType = (typeof WEBHOOK_EVENTS)[number]
 
@@ -124,6 +135,13 @@ export const WEBHOOK_EVENT_RESOURCE: Record<
   'payment.cancelled': { resource: 'payment', scope: 'read:payments' },
   'inventory.low_stock': { resource: 'product', scope: 'read:products' },
   'inventory.restocked': { resource: 'product', scope: 'read:products' },
+  'order.created': { resource: 'sales_order', scope: 'read:orders' },
+  'order.confirmed': { resource: 'sales_order', scope: 'read:orders' },
+  'order.cancelled': { resource: 'sales_order', scope: 'read:orders' },
+  'order.invoiced': { resource: 'sales_order', scope: 'read:orders' },
+  'order.paid': { resource: 'sales_order', scope: 'read:orders' },
+  'order.payment_reversed': { resource: 'sales_order', scope: 'read:orders' },
+  'order.fulfilled': { resource: 'sales_order', scope: 'read:orders' },
 }
 
 /** A test delivery sent from the developer screen. Not subscribable. */
@@ -244,3 +262,131 @@ export async function verifyWebhookSignature(
     ? { valid: true, timestamp }
     : { valid: false, reason: 'mismatch' }
 }
+
+// ─── Storefront: publishable keys and orders ─────────────────────────────────
+//
+// THE SECURITY CONTRACT (docs/developer-platform-03-commerce-migration.sql):
+// a publishable key is PUBLIC — it sits in a website's HTML. It reads the
+// catalogue and availability and creates a PENDING order. The body of an order
+// carries product ids, quantities and contact details; every schema below is
+// `.strict()`, so a request that also sends a price, a total or a status is
+// REFUSED (400), never silently trimmed.
+
+export const PUBLISHABLE_KEY_PREFIX = 'hk_pub_'
+export const PUBLISHABLE_KEY_PATTERN = /^hk_pub_[A-Za-z0-9_-]{43}$/
+export const PUBLISHABLE_KEY_HEADER = 'Hisabche-Publishable-Key'
+
+/** An origin as a browser sends it: scheme + host (+ port), nothing else. */
+export const originSchema = z
+  .string()
+  .trim()
+  .max(200)
+  .refine(
+    (value) => {
+      try {
+        const url = new URL(value)
+        const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+        return (
+          (url.protocol === 'https:' || (url.protocol === 'http:' && local)) && url.origin === value
+        )
+      } catch {
+        return false
+      }
+    },
+    { message: 'storefront.originInvalid' },
+  )
+
+export const publishableKeyCreateSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80),
+    /** Sites allowed to call from a browser. At least one: a key for «anywhere» is not offered. */
+    allowedOrigins: z
+      .array(originSchema)
+      .min(1)
+      .max(20)
+      .transform((origins) => [...new Set(origins)]),
+  })
+  .strict()
+export type PublishableKeyCreateInput = z.infer<typeof publishableKeyCreateSchema>
+
+export const ORDER_STATUSES = [
+  'pending',
+  'confirmed',
+  'invoiced',
+  'paid',
+  'fulfilled',
+  'cancelled',
+] as const
+export type OrderStatus = (typeof ORDER_STATUSES)[number]
+
+export const storefrontSettingsSchema = z
+  .object({
+    orderConfirmation: z.enum(['manual', 'automatic']),
+    stockDisplay: z.enum(['availability', 'quantity']),
+    pendingExpiryHours: z.number().int().min(1).max(720),
+    maxItemsPerOrder: z.number().int().min(1).max(200),
+    maxPendingPerContact: z.number().int().min(1).max(100),
+  })
+  .strict()
+export type StorefrontSettings = z.infer<typeof storefrontSettingsSchema>
+
+/** What the platform uses when a workspace has saved nothing (G4). */
+export const STOREFRONT_DEFAULTS: StorefrontSettings = {
+  orderConfirmation: 'manual',
+  stockDisplay: 'availability',
+  pendingExpiryHours: 48,
+  maxItemsPerOrder: 50,
+  maxPendingPerContact: 5,
+}
+
+export const orderCreateSchema = z
+  .object({
+    items: z
+      .array(
+        z
+          .object({
+            productId: z.string().uuid(),
+            quantity: z.number().positive().max(100_000),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(200),
+    customer: z
+      .object({
+        name: z.string().trim().min(1).max(120),
+        phone: z
+          .string()
+          .trim()
+          .regex(/^[+0-9۰-۹٠-٩][0-9۰-۹٠-٩ ()-]{4,31}$/, { message: 'storefront.phoneInvalid' }),
+        email: z.string().trim().email().max(200).optional(),
+        note: z.string().trim().max(500).optional(),
+      })
+      .strict(),
+  })
+  .strict()
+export type OrderCreateInput = z.infer<typeof orderCreateSchema>
+
+/**
+ * Every refusal the order lifecycle can answer with. The backend maps each to
+ * an HTTP status (orders.domain.ts — typed against this list, so the two
+ * cannot drift) and every screen has a sentence for each (all three locales).
+ */
+export const ORDER_ERROR_CODES = [
+  'ORDER_NOT_FOUND',
+  'ORDER_TRANSITION_INVALID',
+  'ORDER_INVOICE_REQUIRED',
+  'ORDER_INSUFFICIENT_STOCK',
+  'ORDER_CUSTOMER_AMBIGUOUS',
+  'ORDER_CUSTOMER_REQUIRED',
+  'ORDER_PRODUCT_NOT_FOUND',
+  'ORDER_PRODUCT_NOT_PRICED',
+  'ORDER_QUANTITY_INVALID',
+  'ORDER_ITEMS_REQUIRED',
+  'ORDER_TOO_MANY_ITEMS',
+  'ORDER_CUSTOMER_NAME_REQUIRED',
+  'ORDER_CUSTOMER_PHONE_REQUIRED',
+  'ORDER_SOURCE_INVALID',
+  'ORDER_TOO_MANY_PENDING',
+] as const
+export type OrderErrorCode = (typeof ORDER_ERROR_CODES)[number]

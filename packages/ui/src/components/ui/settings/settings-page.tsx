@@ -31,6 +31,7 @@ import {
   Upload,
   X,
   Plug,
+  ShoppingBag,
 } from 'lucide-react'
 import { formatBytes, formatNumber, toIsoDay } from '@hisabche/formatting'
 import { localizePath } from '@hisabche/ui-contract'
@@ -1005,6 +1006,43 @@ const DevelopersSection = memo(function DevelopersSection() {
 })
 DevelopersSection.displayName = 'DevelopersSection'
 
+// Website and integration orders — the queue a storefront fills.
+const OrdersSection = memo(function OrdersSection() {
+  const tOriginal = useTranslations()
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+    return v && v !== key ? v : (fallback ?? key)
+  }
+  const lang = useRouteLang()
+
+  return (
+    <Link
+      href={localizePath('/orders', lang)}
+      className={cn(
+        'flex items-center gap-3 rounded-2xl p-4 sm:p-5',
+        'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+        'transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))]',
+        'motion-reduce:transition-none',
+      )}
+    >
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[hsl(var(--color-primary)/0.1)] shrink-0">
+        <ShoppingBag className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-[hsl(var(--fg-primary))]">{t('orders.title')}</p>
+        <p className="text-sm text-[hsl(var(--fg-secondary))] truncate">
+          {t('settings.ordersLink')}
+        </p>
+      </div>
+      <ChevronLeft
+        className="size-4 text-[hsl(var(--fg-tertiary))] rtl:rotate-180 shrink-0"
+        aria-hidden="true"
+      />
+    </Link>
+  )
+})
+OrdersSection.displayName = 'OrdersSection'
+
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export const SettingsPage = memo(function SettingsPage() {
@@ -1028,6 +1066,7 @@ export const SettingsPage = memo(function SettingsPage() {
       <BillingSection />
       <WorkflowTemplatesSection />
       <DevelopersSection />
+      <OrdersSection />
       <BackupSection />
       <HardwareSection />
       <PerformanceSection />

@@ -31,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../tabs'
 import { PaymentModal } from './PaymentModal'
 import { CustomerCrmPanel } from '../crm/customer-crm-panel'
 import { CustomerProfilePanel } from './customer-profile-panel'
+import { CustomerPortalPanel } from './customer-portal-panel'
 import { CustomerAccountingPanel, CustomerInsightsPanel } from './customer-analysis-panels'
 
 export interface CustomerInvoiceRow {
@@ -406,6 +407,7 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
 
         <TabsContent value="account">
           <CustomerProfilePanel customerId={customer.id} formatMoney={(value) => money(value)} />
+          <CustomerPortalPanel customerId={customer.id} />
         </TabsContent>
 
         <TabsContent value="crm">

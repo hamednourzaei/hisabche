@@ -26,6 +26,7 @@ import {
   WEBHOOK_SIGNATURE_HEADER,
   signWebhookPayload,
   type ApiKeyCreateInput,
+  type PublishableKeyCreateInput,
   type ApiKeyScope,
   type WebhookEndpointCreateInput,
   type WebhookEndpointUpdateInput,
@@ -40,11 +41,13 @@ import {
   checkWebhookUrl,
   displayPrefix,
   generateApiKey,
+  generatePublishableKey,
   grantForKey,
   hashApiKey,
   isDelivered,
   isPrivateAddress,
   looksLikeApiKey,
+  looksLikePublishableKey,
   publicEventFor,
   webhookRetryDelaySeconds,
 } from './developer.domain'
@@ -84,6 +87,14 @@ export interface ApiKeyPrincipal {
 
 const KEY_CACHE_SECONDS = 60
 const keyCacheKey = (hash: string) => `apikey:${hash}`
+const pubCacheKey = (hash: string) => `pubkey:${hash}`
+
+/** What a publishable key puts on a public request. */
+export interface PublishablePrincipal {
+  id: string
+  workspaceId: string
+  allowedOrigins: string[]
+}
 
 /** One claim per poll; each delivery is a request to somebody else's server. */
 const DELIVERY_BATCH = 20
@@ -272,8 +283,10 @@ export function createDeveloperService(
     async revokeKey(ctx: TenancyContext, id: string): Promise<void> {
       const revoked = await repo.revokeKey(ctx.workspaceId, id, ctx.userId)
       if (!revoked) throw new DeveloperError('NOT_FOUND', 404)
-      // Every instance stops accepting it now, not when its cache expires.
+      // Every instance stops accepting it now, not when its cache expires —
+      // whichever kind of key it was.
       await memoryCache.invalidate(keyCacheKey(revoked.key_hash))
+      await memoryCache.invalidate(pubCacheKey(revoked.key_hash))
     },
 
     /**
@@ -311,6 +324,46 @@ export function createDeveloperService(
           .touchKey(row.id)
           .catch((err) => console.error('[api-keys] last_used_at not recorded:', err))
       }
+      return principal
+    },
+
+    // ─── publishable keys (storefront) ────────────────────────────────────────
+
+    /** Publishable: shown again at any time (it is public by design). */
+    async createPublishableKey(ctx: TenancyContext, input: PublishableKeyCreateInput) {
+      const token = generatePublishableKey()
+      return repo.insertPublishableKey({
+        workspace_id: ctx.workspaceId,
+        created_by: ctx.userId,
+        name: input.name,
+        prefix: displayPrefix(token),
+        key_hash: hashApiKey(token),
+        public_token: token,
+        allowed_origins: input.allowedOrigins,
+      })
+    },
+
+    listPublishableKeys(ctx: TenancyContext) {
+      return repo.listPublishableKeys(ctx.workspaceId)
+    },
+
+    /** The storefront a publishable key opens, or null. Cached by hash for a minute. */
+    async authenticatePublishable(raw: string): Promise<PublishablePrincipal | null> {
+      if (!looksLikePublishableKey(raw)) return null
+      const hash = hashApiKey(raw)
+      const cached = await memoryCache.getShared<{ principal: PublishablePrincipal | null }>(
+        pubCacheKey(hash),
+      )
+      if (cached) return cached.principal
+      const row = await repo.findPublishableByHash(hash)
+      const principal = row
+        ? { id: row.id, workspaceId: row.workspace_id, allowedOrigins: row.allowed_origins }
+        : null
+      await memoryCache.setShared(pubCacheKey(hash), { principal }, KEY_CACHE_SECONDS)
+      if (row)
+        repo
+          .touchKey(row.id)
+          .catch((err) => console.error('[storefront] last_used_at not recorded:', err))
       return principal
     },
 

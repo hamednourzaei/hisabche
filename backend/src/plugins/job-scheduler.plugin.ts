@@ -6,6 +6,7 @@ import { claimJobs, completeJob, failJob, type ClaimedJob } from '../services/di
 import { emailService } from '../services/email.service'
 import { developerService } from '../services/developer/developer.service'
 import { NotConfiguredError } from '../services/developer/developer.repository'
+import { ordersService } from '../services/orders/orders.service'
 
 const jobService = new JobService()
 const notificationService = new NotificationService()
@@ -149,6 +150,19 @@ export async function purgeApiRequestLogs(): Promise<void> {
   }
 }
 
+const ORDER_EXPIRY_MS = 15 * 60_000
+
+/** Pending website orders nobody confirmed in time → cancelled («EXPIRED»). Quiet before migration 03. */
+export async function expirePendingOrders(): Promise<void> {
+  try {
+    const expired = await ordersService.expirePending()
+    if (expired) console.log(`[orders] expired ${expired} pending orders`)
+  } catch (err) {
+    if (err instanceof NotConfiguredError) return
+    console.error('[orders] expiry failed:', err)
+  }
+}
+
 export async function jobSchedulerPlugin(fastify: FastifyInstance) {
   // ✅ FIX: فاصله از ۶۰ ثانیه به ۱۰ دقیقه افزایش یافت.
   // بررسی شد که هیچ‌جای پروژه (نه route ها، نه scheduler، نه جای
@@ -168,10 +182,12 @@ export async function jobSchedulerPlugin(fastify: FastifyInstance) {
   const emailInterval = setInterval(() => void pollEmailOutbox(), EMAIL_POLL_MS)
   const webhookInterval = setInterval(() => void pollWebhooks(), WEBHOOK_POLL_MS)
   const purgeInterval = setInterval(() => void purgeApiRequestLogs(), REQUEST_LOG_PURGE_MS)
+  const orderExpiryInterval = setInterval(() => void expirePendingOrders(), ORDER_EXPIRY_MS)
   fastify.addHook('onClose', () => {
     clearInterval(interval)
     clearInterval(emailInterval)
     clearInterval(webhookInterval)
     clearInterval(purgeInterval)
+    clearInterval(orderExpiryInterval)
   })
 }

@@ -810,3 +810,30 @@ export {
   type DeveloperCatalog,
   type ApiKeyUsage,
 } from './hooks/developer'
+
+// ─── Sales orders and the storefront ──────────────────────
+export {
+  useOrders,
+  useOrder,
+  useOrderAction,
+  useStorefrontSettings,
+  useSaveStorefrontSettings,
+  usePublishableKeys,
+  useCreatePublishableKey,
+  useRevokePublishableKey,
+  orderKeys,
+  ORDERS_PAGE_SIZE,
+  type SalesOrderRow,
+  type SalesOrderLine,
+  type PublishableKeyRow,
+  type OrderAction,
+} from './hooks/orders'
+
+// ─── Customer portal links ────────────────────────────────
+export {
+  useCustomerPortalLinks,
+  useCreatePortalLink,
+  useRevokePortalLink,
+  portalKeys,
+  type PortalLinkRow,
+} from './hooks/customer-portal'

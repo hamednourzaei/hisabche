@@ -56,6 +56,7 @@ export { PublicTaskContainer } from './components/ui/crm/containers/public-task-
 export { ApprovalsContainer } from './components/ui/workflow/containers/approvals-container'
 export { ReferralsContainer } from './components/ui/referrals/containers/referrals-container'
 export { DevelopersContainer } from './components/ui/developers/containers/developers-container'
+export { OrdersContainer } from './components/ui/orders/containers/orders-container'
 export { WorkflowTemplatesContainer } from './components/ui/workflow/containers/workflow-templates-container'
 
 // ---------- Billing ----------
@@ -90,6 +91,7 @@ export { AuditContainer } from './components/ui/audit/containers/audit-container
 
 // ---------- Public (no-auth) ----------
 export { PublicInvoiceContainer } from './components/ui/invoice-detail/containers/public-invoice-container'
+export { PublicPortalContainer } from './components/ui/customers/containers/public-portal-container'
 
 // ---------- Tier 1/2 capabilities ----------
 // One container per NAV_CONTRACT destination. Web mounts these from its route

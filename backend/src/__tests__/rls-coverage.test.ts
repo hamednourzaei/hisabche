@@ -100,6 +100,10 @@ const TENANT_TABLES = [
   'webhook_endpoints',
   'webhook_deliveries',
   'api_request_logs',
+  'storefront_settings',
+  'sales_orders',
+  'sales_order_items',
+  'customer_portal_links',
 ]
 
 function allMigrationSql(): string {

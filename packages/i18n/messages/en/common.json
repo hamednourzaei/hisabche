@@ -2260,7 +2260,8 @@
     "stampRemoved": "Stamp removed",
     "stampNoWorkspace": "Your business is still loading — try again in a moment.",
     "profileSaved": "Your details were saved",
-    "backupFailed": "Backup download failed"
+    "backupFailed": "Backup download failed",
+    "ordersLink": "Orders from your website and integrations"
   },
   "sync": {
     "download": {
@@ -6127,7 +6128,9 @@
       "write_invoices": "Create invoices",
       "subscribe_events": "Receive events",
       "read_payments": "Read payments",
-      "read_inventory": "Read warehouse stock"
+      "read_inventory": "Read warehouse stock",
+      "read_orders": "Read orders",
+      "write_orders": "Place and advance orders"
     },
     "event": {
       "invoice_created": "Invoice created",
@@ -6141,7 +6144,14 @@
       "payment_recorded": "Payment recorded",
       "payment_cancelled": "Payment cancelled",
       "inventory_low_stock": "Product stock reached its reorder level",
-      "inventory_restocked": "Product stock is sufficient again"
+      "inventory_restocked": "Product stock is sufficient again",
+      "order_created": "Order placed",
+      "order_confirmed": "Order confirmed",
+      "order_cancelled": "Order cancelled",
+      "order_invoiced": "Order invoiced",
+      "order_paid": "Order paid",
+      "order_payment_reversed": "Order payment reversed",
+      "order_fulfilled": "Order delivered"
     },
     "delivery": {
       "pending": "Queued",
@@ -6166,5 +6176,126 @@
   },
   "webhook": {
     "urlMustBeHttps": "The webhook URL must start with https://."
+  },
+  "orders": {
+    "title": "Orders",
+    "description": "Orders from your website, integrations and the dashboard — from placed to delivered.",
+    "filterLabel": "Order status",
+    "filterAll": "All",
+    "listTitle": "Orders",
+    "count": "Count",
+    "loading": "Loading orders…",
+    "notConfigured": "Orders are not set up on the server yet (the third database script has not been run).",
+    "forbidden": "You are not allowed to see orders.",
+    "loadError": "Orders could not be loaded.",
+    "emptyAll": "No orders yet.",
+    "emptyFiltered": "No orders in this state.",
+    "emptyHint": "Orders from your website appear here once you create a storefront key on the Developers page.",
+    "prev": "Previous",
+    "next": "Next",
+    "detailTitle": "Order",
+    "expiresAt": "Cancelled if not confirmed by",
+    "cancelReason": "Cancellation reason",
+    "cancelReasonPlaceholder": "Reason for cancelling (optional)",
+    "expired": "Not confirmed in time",
+    "total": "Total",
+    "chooseCustomer": "Which customer should this order be invoiced to?",
+    "paidFollowsInvoice": "«Paid» follows this order’s invoice automatically.",
+    "actionFailed": "That did not work on the order.",
+    "number": "Number",
+    "customer": "Customer",
+    "statusLabel": "Status",
+    "sourceLabel": "Source",
+    "created": "Placed",
+    "status": {
+      "pending": "Awaiting confirmation",
+      "confirmed": "Confirmed",
+      "invoiced": "Invoiced",
+      "paid": "Paid",
+      "fulfilled": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "source": {
+      "website": "Website",
+      "api": "Integration (API)",
+      "dashboard": "Dashboard"
+    },
+    "action": {
+      "confirm": "Confirm order",
+      "cancel": "Cancel order",
+      "fulfill": "Mark delivered",
+      "invoice": "Create invoice"
+    },
+    "error": {
+      "ORDER_NOT_FOUND": "This order was not found.",
+      "ORDER_TRANSITION_INVALID": "This order does not allow that in its current state. Refresh the page.",
+      "ORDER_INVOICE_REQUIRED": "This step needs an invoice.",
+      "ORDER_INSUFFICIENT_STOCK": "There is not enough stock of one of the products.",
+      "ORDER_CUSTOMER_AMBIGUOUS": "More than one customer has this phone number. Choose the right customer.",
+      "ORDER_CUSTOMER_REQUIRED": "No customer has this phone number and you may not create one. Choose a customer.",
+      "ORDER_PRODUCT_NOT_FOUND": "One of the products was not found or is inactive.",
+      "ORDER_PRODUCT_NOT_PRICED": "One of the products has no sell price.",
+      "ORDER_QUANTITY_INVALID": "The quantity must be more than zero.",
+      "ORDER_ITEMS_REQUIRED": "An order needs at least one product.",
+      "ORDER_TOO_MANY_ITEMS": "This order has more items than the limit allows.",
+      "ORDER_CUSTOMER_NAME_REQUIRED": "The customer’s name is required.",
+      "ORDER_CUSTOMER_PHONE_REQUIRED": "The customer’s phone number is required.",
+      "ORDER_SOURCE_INVALID": "The order source is not valid.",
+      "ORDER_TOO_MANY_PENDING": "This customer has too many pending orders."
+    }
+  },
+  "storefront": {
+    "title": "Sell from your own website",
+    "help": "With a public key, your website reads products and availability from Hisabche and places orders. Prices and totals are always set by Hisabche, never by the website.",
+    "notConfigured": "The website storefront is not set up on the server yet (the third database script has not been run).",
+    "openOrders": "Open orders",
+    "confirmation": "Website order confirmation",
+    "confirmationManual": "Manual — I confirm each order",
+    "confirmationAutomatic": "Automatic — website orders arrive confirmed",
+    "stockDisplay": "Stock shown on the website",
+    "stockAvailability": "Only «in stock / out of stock»",
+    "stockQuantity": "The exact quantity",
+    "expiryHours": "Cancel unconfirmed orders after (hours)",
+    "maxPending": "Most pending orders per phone number",
+    "saveSettings": "Save settings",
+    "saved": "Storefront settings saved",
+    "keysTitle": "Website public keys",
+    "keysHelp": "This key is visible in your website’s code and can, on purpose, only read the catalogue and place pending orders. Never put a secret API key on a website.",
+    "noKeys": "You have not created a public key yet.",
+    "keyNamePlaceholder": "e.g. Main website",
+    "origins": "Allowed website addresses",
+    "originsHelp": "One per line, like https://myshop.com. A browser on any other site cannot use this key.",
+    "createKey": "Create public key",
+    "copySnippet": "Copy install code",
+    "originInvalid": "A website address looks like https://myshop.com.",
+    "phoneInvalid": "The phone number is not valid."
+  },
+  "portal": {
+    "panelTitle": "Customer account link",
+    "panelHelp": "With this link the customer sees their invoices, payments and balance without signing in. Anyone holding the link sees the same; send it only to the customer, and revoke it whenever you like.",
+    "loading": "Loading…",
+    "notConfigured": "Customer account links are not set up on the server yet (the fourth database script has not been run).",
+    "loadError": "The account could not be loaded.",
+    "noLinks": "No link has been made for this customer.",
+    "lastOpened": "Last opened",
+    "neverOpened": "Not opened yet",
+    "expires": "Expires",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "copyFailed": "Could not copy",
+    "revoke": "Revoke",
+    "actionFailed": "That did not work.",
+    "create": "Create account link",
+    "gone": "This link no longer works. Ask the seller for a new one.",
+    "youOwe": "Your balance due",
+    "settled": "Your account is settled",
+    "inCredit": "Your credit",
+    "invoices": "Invoices",
+    "noInvoices": "No invoices.",
+    "viewInvoice": "View",
+    "showingLatest": "Showing the latest 100.",
+    "payments": "Payments",
+    "noPayments": "No payments recorded.",
+    "orders": "Orders"
   }
 }

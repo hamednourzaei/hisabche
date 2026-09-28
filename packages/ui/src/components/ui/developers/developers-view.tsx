@@ -21,6 +21,7 @@ import { Button } from '../button'
 import { Card, CardContent } from '../card'
 import { Input } from '../input'
 import { KeyUsagePanel } from './key-usage-panel'
+import { StorefrontPanel, type StorefrontPanelProps } from './storefront-panel'
 
 type T = (key: string, fallback?: string) => string
 
@@ -74,6 +75,8 @@ export interface DevelopersViewProps {
   onReplay: (id: string, days: 1 | 7) => void
 
   /** A key or secret to show ONCE; null when there is none. */
+  /** Selling from the owner's own website (publishable keys, settings). */
+  storefront: Omit<StorefrontPanelProps, 't'>
   revealed: { kind: 'key' | 'secret'; value: string } | null
   onDismissRevealed: () => void
   onCopy: (value: string) => void
@@ -227,6 +230,8 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
           </CardContent>
         </Card>
       )}
+
+      <StorefrontPanel t={t} {...props.storefront} />
 
       {/* ─── API keys ─────────────────────────────────────────────────── */}
       <Card>

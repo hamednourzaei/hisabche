@@ -52,6 +52,8 @@ const SCOPE_REQUIRES: Record<PluginScope, Capability> = {
   'read:reports': 'report.operational.read',
   'read:payments': 'payment.read',
   'read:inventory': 'inventory.read',
+  'read:orders': 'invoice.read',
+  'write:orders': 'invoice.create',
   'write:customers': 'customer.write',
   'write:products': 'product.write',
   'write:invoices': 'invoice.create',

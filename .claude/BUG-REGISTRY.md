@@ -708,3 +708,16 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 - **طراحی:** allowlist مسیر (`API_ROUTE_SCOPES`، الگوی Fastify نه URL) **داخل `authenticate`** تصمیم می‌گیرد، قبل از این‌که کلید «سازنده» شود؛ بعد workspace قفل و capability باریک می‌شود. هیچ DELETE، ثبت در دفتر، پول، اعضا یا مدیریت کلید در allowlist نیست.
 - **گارد:** `developer-platform.test.ts` (62، Fastify واقعی) + `developer-platform.pg.test.ts` (13، Postgres واقعی) — injection-tested.
 - **Migration:** `docs/developer-platform-migration.sql` — Post-migration verification query generated — PENDING HUMAN CONFIRMATION.
+
+## BUG-077 — هر لینک عمومی ۴۰۱ می‌گرفت: فاکتور عمومی و کار CRM (۲۷ سپتامبر، دور ششم)
+
+- **الگو:** §۷٫۶ (کار نمی‌کند ولی کنسول ساکت است) + §۷٫۱
+- **ریشه:** `GET /api/public/invoices/:token` و `GET|PATCH /api/public/tasks/:token…` عمداً `authenticate` ندارند، ولی hook سراسری `preHandler` در `index.ts` هر مسیری را که در `publicPaths` نبود با `authenticate` می‌بست. `/api/public/` در آن فهرست نبود؛ پس صفحه‌های `/public-invoice/[token]` و `/public-task/[token]` (و QR روی فاکتور چاپی) برای کسی که لینک برایش فرستاده شده بود **هیچ‌وقت** کار نکرده‌اند.
+- **کشف:** هنگام ساخت storefront — گارد جدید «فهرست کامل مسیرهای `/api/public/`» سه مسیر CRM را پیدا کرد که کسی فکرش را نکرده بود.
+- **رفع:** `'/api/public/'` در `publicPaths` + CORS جدا برای همین پیشوند (هر origin، **بدون credentials**، متدهای GET/POST/PATCH).
+- **گارد:** `storefront-orders.test.ts` — فهرست بسته‌ی همه‌ی مسیرهای `/api/public/` (۹ مسیر)؛ مسیر جدید آن‌جا = تصمیم بازبینی‌شده. هیچ فایل storefront/invoice-public `authenticate` ندارد.
+
+## BUG-078 — گارد allowlist کلید API با `const read` فایل دیگری راضی می‌شد (۲۷ سپتامبر، دور ششم)
+
+- **ریشه‌ی خطر:** تست «هر route باز برای کلید `requireWorkspaceContext` دارد» preHandler نام‌دار را در **کل** فایل‌های route جست؛ `customer-profile.routes.ts` هم `const read = [authenticate, requireWorkspaceContext, …]` دارد، پس حذف آن از `orders.routes.ts` تست را قرمز نمی‌کرد (injection-test نشان داد).
+- **رفع:** اول فایلِ **یکتای** اعلام‌کننده‌ی route پیدا می‌شود، بعد هر دو چک در همان فایل. injection دوباره: قرمز.

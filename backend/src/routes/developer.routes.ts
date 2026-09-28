@@ -17,6 +17,7 @@ import {
   webhookEndpointUpdateSchema,
   WEBHOOK_EVENT_RESOURCE,
   API_KEY_SCOPES,
+  publishableKeyCreateSchema,
 } from '@hisabche/validation'
 
 import { authenticate } from '../middleware/auth.middleware'
@@ -116,6 +117,25 @@ export function buildDeveloperRoutes(service: DeveloperService) {
         const { id } = idParams.parse(request.params)
         const { days } = usageQuery.parse(request.query)
         return reply.send(await service.keyUsage(request.tenancy, id, days))
+      }),
+    )
+
+    // ─── publishable keys (storefront) ────────────────────────────────────────
+
+    fastify.get(
+      '/api/developer/storefront-keys',
+      { preHandler: guard },
+      handle(async (request, reply) =>
+        reply.send({ data: await service.listPublishableKeys(request.tenancy) }),
+      ),
+    )
+
+    fastify.post(
+      '/api/developer/storefront-keys',
+      { preHandler: guard },
+      handle(async (request, reply) => {
+        const input = publishableKeyCreateSchema.parse(request.body)
+        return reply.code(201).send(await service.createPublishableKey(request.tenancy, input))
       }),
     )
 

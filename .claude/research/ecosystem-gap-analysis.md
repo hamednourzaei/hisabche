@@ -96,3 +96,17 @@ What step 1 added:
 - **Rate limiting:** one bucket per key (by hash) at 120 requests per minute, shared across instances.
 - **Request log:** records the route pattern, status and duration, never ids or query strings. Refusals are logged too. Usage is shown as exact per-day counts, plus the latest 50 requests labelled as a sample. Retention is 30 days.
 - **Replay:** an endpoint's finished deliveries can be replayed for up to 30 days back. Replays keep the original event id and carry a `Hisabche-Replay: true` header.
+
+### Steps 2–3 (built)
+
+- **Step 2, commerce core:** `docs/developer-platform-03-commerce-migration.sql`. Status: **PENDING HUMAN CONFIRMATION**.
+  - A publishable key is a _kind_ of `api_keys` row, not a second key table. It is public, bound to an origin list, and can only read the catalogue and place a pending order.
+  - The order lifecycle is a database state machine: every transition is one function call and emits exactly one `order.*` event. "Paid" follows the order's invoice through a trigger, in both directions.
+  - Invoicing an order goes through `InvoiceService.create`, with the order's idempotency key. Customer resolution never guesses: two customers with the same phone are ambiguous, and a customer is only created by someone allowed to.
+  - The public gate is `/api/public/v1`. Request bodies are strict, so a price in the body is rejected with 400. `Idempotency-Key` is required.
+  - Browser SDK: `apps/web/public/sdk/v1.js`.
+  - Default settings (G4): manual confirmation, availability shown instead of quantities, 48-hour expiry, at most 5 pending orders per contact.
+- **Step 3, customer-facing:** `docs/developer-platform-04-portal-migration.sql`. Status: **PENDING HUMAN CONFIRMATION**.
+  - BUG-077 fixed: every public token link returned 401 until now.
+  - Customer portal link: the link's maker is re-verified on every visit, and the balance comes from `getBalance`, so there is no second formula.
+  - SDK token widgets: `renderInvoice` and `renderPortal`. The QR code and the public invoice page already existed.

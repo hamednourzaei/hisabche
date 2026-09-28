@@ -51,6 +51,20 @@ export interface EndpointRow {
   updated_at: string
 }
 
+export interface PublishableKeyRow {
+  id: string
+  name: string
+  prefix: string
+  public_token: string
+  allowed_origins: string[]
+  last_used_at: string | null
+  revoked_at: string | null
+  created_at: string
+}
+
+const PUBLISHABLE_COLUMNS =
+  'id, name, prefix, public_token, allowed_origins, last_used_at, revoked_at, created_at'
+
 const ENDPOINT_COLUMNS =
   'id, workspace_id, url, description, events, is_active, disabled_reason, consecutive_failures, created_at, updated_at'
 
@@ -118,6 +132,9 @@ export const developerRepository = {
       .from('api_keys')
       .select(KEY_COLUMNS)
       .eq('workspace_id', workspaceId)
+      // Secret keys only. By prefix, not by `kind`: this list must keep
+      // working on a database where migration 03 (which adds `kind`) has not run.
+      .like('prefix', 'hk_live_%')
       .order('created_at', { ascending: false })
     check(error)
     return (data ?? []) as ApiKeyRow[]
@@ -163,6 +180,54 @@ export const developerRepository = {
       .eq('id', id)
       .or(`last_used_at.is.null,last_used_at.lt.${cutoff}`)
     check(error)
+  },
+
+  // ─── publishable keys (migration 03) ───────────────────────────────────────
+
+  async insertPublishableKey(row: {
+    workspace_id: string
+    created_by: string
+    name: string
+    prefix: string
+    key_hash: string
+    public_token: string
+    allowed_origins: string[]
+  }): Promise<PublishableKeyRow> {
+    const { data, error } = await supabase
+      .from('api_keys')
+      // `storefront` is not an API scope and nothing reads it as one: a
+      // publishable key never reaches the secret-key path (different prefix,
+      // so a different hash). The column simply may not be empty.
+      .insert({ ...row, kind: 'publishable', scopes: ['storefront'], expires_at: null })
+      .select(PUBLISHABLE_COLUMNS)
+      .single()
+    check(error)
+    return data as PublishableKeyRow
+  },
+
+  async listPublishableKeys(workspaceId: string): Promise<PublishableKeyRow[]> {
+    const { data, error } = await supabase
+      .from('api_keys')
+      .select(PUBLISHABLE_COLUMNS)
+      .eq('workspace_id', workspaceId)
+      .eq('kind', 'publishable')
+      .order('created_at', { ascending: false })
+    check(error)
+    return (data ?? []) as PublishableKeyRow[]
+  },
+
+  async findPublishableByHash(
+    hash: string,
+  ): Promise<{ id: string; workspace_id: string; allowed_origins: string[] } | null> {
+    const { data, error } = await supabase
+      .from('api_keys')
+      .select('id, workspace_id, allowed_origins')
+      .eq('key_hash', hash)
+      .eq('kind', 'publishable')
+      .is('revoked_at', null)
+      .maybeSingle()
+    check(error)
+    return (data as { id: string; workspace_id: string; allowed_origins: string[] } | null) ?? null
   },
 
   // ─── endpoints ─────────────────────────────────────────────────────────────

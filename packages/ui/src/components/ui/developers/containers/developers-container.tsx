@@ -6,7 +6,7 @@
 // Every data hook of the developer screen lives here; the view takes props only.
 // ============================================
 
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   apiErrorMessage,
@@ -24,10 +24,18 @@ import {
   useWebhookEndpoints,
   useApiKeyUsage,
   useReplayWebhook,
+  apiClient,
+  useStorefrontSettings,
+  useSaveStorefrontSettings,
+  usePublishableKeys,
+  useCreatePublishableKey,
+  useRevokePublishableKey,
 } from '@hisabche/api'
+import { localizePath } from '@hisabche/ui-contract'
 
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { useToast } from '../../toast-provider'
+import { useRouteLang } from '../../../../hooks/use-locale-push'
 import { DevelopersView, type SectionState } from '../developers-view'
 
 function statusOf(error: unknown): number | undefined {
@@ -73,6 +81,24 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
   const replay = useReplayWebhook()
   const [usageKeyId, setUsageKeyId] = useState<string | null>(null)
   const usage = useApiKeyUsage(usageKeyId)
+
+  const storefrontSettings = useStorefrontSettings()
+  const saveStorefront = useSaveStorefrontSettings()
+  const publishableKeys = usePublishableKeys()
+  const createPublishable = useCreatePublishableKey()
+  const revokePublishable = useRevokePublishableKey()
+  const lang = useRouteLang()
+
+  // Where the SDK is served and which API it calls. Read in an effect, never
+  // during render (hydration). A packaged desktop app runs from file://, so
+  // the public site is the SDK's home there.
+  const [sdk, setSdk] = useState({ sdkUrl: '', apiBase: '' })
+  useEffect(() => {
+    const origin = window.location.protocol.startsWith('http')
+      ? window.location.origin
+      : 'https://hisabche.com'
+    setSdk({ sdkUrl: `${origin}/sdk/v1.js`, apiBase: apiClient.defaults.baseURL ?? '' })
+  }, [])
 
   const [revealed, setRevealed] = useState<{ kind: 'key' | 'secret'; value: string } | null>(null)
   const [busyEndpointId, setBusyEndpointId] = useState<string | null>(null)
@@ -184,6 +210,32 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
           ?.writeText(value)
           .then(() => toast.success(t('developer.copied')))
           .catch(failed)
+      }}
+      storefront={{
+        state: sectionState(
+          storefrontSettings.isLoading || publishableKeys.isLoading,
+          storefrontSettings.error ?? publishableKeys.error,
+        ),
+        settings: storefrontSettings.data ?? null,
+        savingSettings: saveStorefront.isPending,
+        onSaveSettings: (settings) =>
+          saveStorefront.mutate(settings, {
+            onSuccess: () => toast.success(t('storefront.saved')),
+            onError: failed,
+          }),
+        keys: publishableKeys.data ?? [],
+        creatingKey: createPublishable.isPending,
+        onCreateKey: (input) => createPublishable.mutate(input, { onError: failed }),
+        onRevokeKey: (id) => revokePublishable.mutate(id, { onError: failed }),
+        onCopy: (value) => {
+          navigator.clipboard
+            ?.writeText(value)
+            .then(() => toast.success(t('developer.copied')))
+            .catch(failed)
+        },
+        sdkUrl: sdk.sdkUrl,
+        apiBase: sdk.apiBase,
+        ordersHref: localizePath('/orders', lang),
       }}
       onRetry={() => {
         void catalog.refetch()
