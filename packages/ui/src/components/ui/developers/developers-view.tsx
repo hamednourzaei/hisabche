@@ -84,7 +84,10 @@ export interface DevelopersViewProps {
   /** A separate, empty workspace to test integrations in. */
   sandbox: Omit<SandboxPanelProps, 't'>
   /** A key or secret to show ONCE; null when there is none. */
-  revealed: { kind: 'key' | 'secret' | 'client-secret'; value: string } | null
+  revealed: {
+    kind: 'key' | 'secret' | 'client-secret' | 'app-webhook-secret'
+    value: string
+  } | null
   onDismissRevealed: () => void
   onCopy: (value: string) => void
   onRetry: () => void
@@ -174,7 +177,9 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
                 ? t('developer.keyCreated')
                 : props.revealed.kind === 'client-secret'
                   ? t('oauth.clientSecretCreated')
-                  : t('developer.secretCreated')}
+                  : props.revealed.kind === 'app-webhook-secret'
+                    ? t('oauth.webhookSecretCreated')
+                    : t('developer.secretCreated')}
             </p>
             <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('developer.shownOnce')}</p>
             <div className="flex flex-wrap items-center gap-2">

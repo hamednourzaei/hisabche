@@ -16,7 +16,16 @@
 // ============================================
 
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
-import { API_KEY_SCOPES, type ApiKeyScope } from '@hisabche/validation'
+import {
+  API_KEY_SCOPES,
+  API_VERSIONS,
+  WEBHOOK_EVENT_RESOURCE,
+  WEBHOOK_EVENTS,
+  type ApiKeyScope,
+  type AppHealthLevel,
+  type AppRiskFlag,
+  type WebhookEventType,
+} from '@hisabche/validation'
 
 export const CODE_TTL_MS = 10 * 60_000
 
@@ -103,7 +112,132 @@ export function mayInstall(
   return app.ownerWorkspaceId === workspaceId
 }
 
-/** Which edits a publisher may make: none while the app is live or under review. */
-export function mayEdit(status: AppStatus): boolean {
-  return status === 'private' || status === 'rejected'
+/** The app's webhook signing secret — the same shape as an endpoint's. */
+export function generateWebhookSecret(): string {
+  return `whsec_${randomBytes(32).toString('base64url')}`
+}
+
+// ─── Versions and installations ─────────────────────────────────────────────
+
+/** Can this platform still serve an app built against `apiVersion`? */
+export function isCompatible(apiVersion: string): boolean {
+  return (API_VERSIONS as readonly string[]).includes(apiVersion)
+}
+
+/**
+ * The events an installation actually subscribes to: those the app asked for
+ * AND whose resource the installer granted read access to. An event about
+ * invoices never reaches an app that may not read invoices.
+ */
+export function eventsForGrant(
+  events: readonly string[],
+  granted: readonly string[],
+): WebhookEventType[] {
+  return events.filter(
+    (e): e is WebhookEventType =>
+      (WEBHOOK_EVENTS as readonly string[]).includes(e) &&
+      granted.includes(WEBHOOK_EVENT_RESOURCE[e as WebhookEventType].scope),
+  )
+}
+
+/** What moving to another version changes, scope by scope. */
+export function scopeDiff(current: readonly string[], next: readonly string[]) {
+  return {
+    added: next.filter((s) => !current.includes(s)),
+    removed: current.filter((s) => !next.includes(s)),
+  }
+}
+
+/**
+ * Permissions disclosure: every scope with whether it reads or changes data,
+ * and every event the app would receive. Shown on the listing AND on the
+ * consent screen, from the same function.
+ */
+export function permissionDisclosure(scopes: readonly string[], events: readonly string[]) {
+  return {
+    scopes: scopes.map((scope) => ({
+      scope,
+      access: scope.startsWith('write:') ? ('write' as const) : ('read' as const),
+    })),
+    events: events.filter((e) => (WEBHOOK_EVENTS as readonly string[]).includes(e)),
+  }
+}
+
+// ─── Health ─────────────────────────────────────────────────────────────────
+
+/**
+ * Explicit thresholds (G4). Below MIN_SAMPLE a rate says nothing — one failed
+ * request of two is not «50% failing» — so the answer is «low volume», and no
+ * traffic at all is «no data», never «healthy» (راهنمای سشن §۷٫۵).
+ */
+export const HEALTH_THRESHOLDS = { minSample: 20, degraded: 0.05, failing: 0.25 } as const
+
+export interface HealthCounts {
+  requests24h: number
+  serverErrors24h: number
+  deliveries24h: number
+  failedDeliveries24h: number
+}
+
+export function appHealth(c: HealthCounts): {
+  level: AppHealthLevel
+  serverErrorRate: number | null
+  deliveryFailureRate: number | null
+} {
+  const rate = (bad: number, all: number) => (all >= HEALTH_THRESHOLDS.minSample ? bad / all : null)
+  const serverErrorRate = rate(c.serverErrors24h, c.requests24h)
+  const deliveryFailureRate = rate(c.failedDeliveries24h, c.deliveries24h)
+  if (c.requests24h + c.deliveries24h === 0)
+    return { level: 'no_data', serverErrorRate, deliveryFailureRate }
+  const worst = Math.max(serverErrorRate ?? -1, deliveryFailureRate ?? -1)
+  const level: AppHealthLevel =
+    worst < 0
+      ? 'low_volume'
+      : worst >= HEALTH_THRESHOLDS.failing
+        ? 'failing'
+        : worst >= HEALTH_THRESHOLDS.degraded
+          ? 'degraded'
+          : 'healthy'
+  return { level, serverErrorRate, deliveryFailureRate }
+}
+
+// ─── Security review ────────────────────────────────────────────────────────
+
+/** What an admin is shown about a version before publishing it. */
+export function riskFlags(input: {
+  version: {
+    redirect_uris: readonly string[]
+    requested_scopes: readonly string[]
+    webhook_url: string | null
+  }
+  previous: { requested_scopes: readonly string[] } | null
+  publisherVerified: boolean
+  openReports: number
+}): Array<{ flag: AppRiskFlag; detail: string[] }> {
+  const flags: Array<{ flag: AppRiskFlag; detail: string[] }> = []
+  const added = input.previous
+    ? scopeDiff(input.previous.requested_scopes, input.version.requested_scopes).added
+    : [...input.version.requested_scopes]
+  if (added.length > 0) flags.push({ flag: 'NEW_SCOPES', detail: added })
+  const writes = input.version.requested_scopes.filter((s) => s.startsWith('write:'))
+  if (writes.length > 0) flags.push({ flag: 'WRITE_SCOPES', detail: writes })
+  const local = input.version.redirect_uris.filter((u) => !u.startsWith('https://'))
+  if (local.length > 0) flags.push({ flag: 'LOCALHOST_REDIRECT', detail: local })
+  if (input.version.webhook_url) {
+    const hosts = new Set(input.version.redirect_uris.map((u) => hostOf(u)))
+    const hook = hostOf(input.version.webhook_url)
+    if (hook && !hosts.has(hook)) flags.push({ flag: 'WEBHOOK_HOST_MISMATCH', detail: [hook] })
+  }
+  if (!input.publisherVerified) flags.push({ flag: 'UNVERIFIED_PUBLISHER', detail: [] })
+  if (input.openReports > 0)
+    flags.push({ flag: 'OPEN_REPORTS', detail: [String(input.openReports)] })
+  return flags
+}
+
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).hostname
+  } catch {
+    return null
+  }
 }

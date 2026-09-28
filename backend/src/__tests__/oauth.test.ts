@@ -12,7 +12,6 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import {
   generateClientId,
   generateClientSecret,
-  mayEdit,
   mayInstall,
   parseScope,
   pkceMatches,
@@ -94,13 +93,6 @@ describe('apps', () => {
     expect(mayInstall(app('in_review'), 'other')).toBe(false)
     expect(mayInstall(app('suspended'), 'pub')).toBe(false)
   })
-
-  it('a reviewed app does not change under its installers', () => {
-    expect(mayEdit('private')).toBe(true)
-    expect(mayEdit('rejected')).toBe(true)
-    expect(mayEdit('published')).toBe(false)
-    expect(mayEdit('in_review')).toBe(false)
-  })
 })
 
 describe('the token endpoint', () => {
@@ -154,8 +146,11 @@ describe('wiring', () => {
   const routes = read('routes', 'oauth.routes.ts')
 
   it('the token is an API key tied to the app — no second token system', () => {
-    expect(service).toContain('await keys.insertKey({')
-    expect(service).toContain('app_id: app.id,')
+    // install_oauth_app writes the api_keys row (with app_id), the
+    // installation and its webhook endpoint in one transaction.
+    const exchangeBody = service.slice(service.indexOf('async exchange('))
+    expect(exchangeBody).toContain("rpc('install_oauth_app'")
+    expect(exchangeBody).toContain('p_key_hash: hashApiKey(token)')
   })
 
   it('the grant is recomputed at exchange against what the installer holds NOW', () => {
@@ -173,9 +168,20 @@ describe('wiring', () => {
     )
   })
 
-  it('an unregistered redirect_uri is refused before anything else is looked at', () => {
+  it('an unregistered redirect_uri is refused before a code exists or anyone is redirected', () => {
     const request = service.slice(service.indexOf('async function authorizationRequest'))
-    expect(request.indexOf('redirectUriRegistered(')).toBeLessThan(request.indexOf('mayInstall('))
+    expect(request.indexOf('redirectUriRegistered(config.redirect_uris')).toBeGreaterThan(-1)
+    const approve = service.slice(service.indexOf('async approve('))
+    expect(approve.indexOf('authorizationRequest(')).toBeLessThan(approve.indexOf('generateCode()'))
+  })
+
+  it('the redirect URIs checked are the INSTALLED config: the draft for the publisher, the published version for everyone else', () => {
+    const repo = read('services', 'oauth', 'oauth.repository.ts')
+    const live = repo.slice(repo.indexOf('export async function liveConfig'))
+    expect(live.indexOf('app.owner_workspace_id === workspaceId')).toBeLessThan(
+      live.indexOf('versionById(app.published_version_id)'),
+    )
+    expect(live).toContain('if (!app.published_version_id) return null')
   })
 
   it('consent and app management need workspace.manage; review needs a platform admin', () => {

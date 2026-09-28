@@ -105,6 +105,7 @@ import { ordersRoutes } from './routes/orders.routes'
 import { isPublicApiPath, storefrontRoutes } from './routes/storefront.routes'
 import { customerPortalRoutes } from './routes/customer-portal.routes'
 import { oauthRoutes } from './routes/oauth.routes'
+import { marketplaceRoutes } from './routes/marketplace.routes'
 import { sandboxRoutes } from './routes/sandbox.routes'
 import { PUBLISHABLE_KEY_HEADER } from '@hisabche/validation'
 import {
@@ -741,6 +742,7 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(customerPortalRoutes)
   // OAuth apps, consent, the token endpoint, the marketplace and its review.
   await server.register(oauthRoutes)
+  await server.register(marketplaceRoutes)
   await server.register(sandboxRoutes)
   await server.register(adminRoutes)
 

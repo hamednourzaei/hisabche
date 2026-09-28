@@ -30,6 +30,9 @@ const FILES = [
   `${DEV}/containers/oauth-consent-container.tsx`,
   `${DEV}/containers/developers-container.tsx`,
   `${DEV}/developers-view.tsx`,
+  `${DEV}/app-manage-panel.tsx`,
+  'packages/ui/src/components/ui/marketplace/marketplace-view.tsx',
+  'packages/ui/src/components/ui/marketplace/containers/marketplace-container.tsx',
 ]
 
 describe('the consent request', () => {
@@ -91,18 +94,34 @@ describe('words', () => {
       for (const c of OAUTH_ERROR_CODES) expect(lookup(oauth, `error.${c}`), c).toBeTypeOf('string')
       const used = new Set<string>()
       for (const file of FILES) {
-        for (const m of read(file).matchAll(/t\('(oauth\.[a-zA-Z_.]+)'/g)) used.add(m[1] as string)
+        for (const m of read(file).matchAll(
+          /t\('((?:oauth|marketplace|developer)\.[a-zA-Z_.]+)'/g,
+        )) {
+          used.add(m[1] as string)
+        }
       }
-      expect(used.size).toBeGreaterThan(40)
+      expect(used.size).toBeGreaterThan(120)
       expect([...used].filter((key) => typeof lookup(messages, key) !== 'string')).toEqual([])
     },
   )
 
   it('a server value is looked up only through the closed lists', () => {
     const labels = read('packages/ui/src/lib/oauth-labels.ts')
-    expect(labels).toContain('(OAUTH_APP_STATUSES as readonly string[]).includes(status)')
+    expect(labels).toContain('value && list.includes(value) ?')
+    for (const [list, prefix] of [
+      ['OAUTH_APP_STATUSES', 'oauth.status'],
+      ['APP_VERSION_STATUSES', 'oauth.versionStatus'],
+      ['APP_CATEGORIES', 'oauth.category'],
+      ['APP_HEALTH_LEVELS', 'oauth.health'],
+      ['APP_RISK_FLAGS', 'oauth.risk'],
+    ]) {
+      expect(labels).toContain(`closed(${list}, '${prefix}')`)
+    }
     expect(labels).toContain('(OAUTH_ERROR_CODES as readonly string[]).includes(code)')
-    for (const file of FILES) expect(read(file)).not.toMatch(/t\(`oauth\./)
+    // No server value is spliced into a key anywhere else — only the closed
+    // lists above, and the price interval / report reason, both closed enums.
+    for (const file of FILES)
+      expect(read(file)).not.toMatch(/t\(`(oauth\.(?!pricing\.per\.)|marketplace\.(?!reason\.))/)
   })
 })
 

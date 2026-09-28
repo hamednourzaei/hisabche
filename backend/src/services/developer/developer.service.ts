@@ -290,6 +290,18 @@ export function createDeveloperService(
     },
 
     /**
+     * Drop cached principals for these key hashes on every instance — after
+     * a change made outside revokeKey (an app update narrowing scopes, an
+     * admin revoking every installation of an app). The cache key is built
+     * here and nowhere else.
+     */
+    async forgetKeys(hashes: string[]): Promise<void> {
+      for (const hash of hashes) {
+        await memoryCache.invalidate(keyCacheKey(hash))
+      }
+    },
+
+    /**
      * The principal for a presented key, or null. Cached by HASH for a minute
      * in the shared cache, so revocation (which clears it) reaches every
      * instance at once.

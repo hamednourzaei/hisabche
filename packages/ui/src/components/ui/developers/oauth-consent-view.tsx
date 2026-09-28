@@ -16,11 +16,19 @@
 
 import { memo } from 'react'
 import type { OAuthConsent } from '@hisabche/api'
-import { AlertTriangle, CheckCircle2, Loader2, ShieldCheck, XCircle } from 'lucide-react'
+import {
+  AlertTriangle,
+  BadgeCheck,
+  CheckCircle2,
+  Loader2,
+  ShieldCheck,
+  XCircle,
+} from 'lucide-react'
 
 import { Badge } from '../badge'
 import { Button } from '../button'
 import { Card, CardContent } from '../card'
+import { appPriceLabel } from '../../../lib/oauth-labels'
 
 type T = (key: string, fallback?: string) => string
 
@@ -33,6 +41,8 @@ export type ConsentState =
 
 export interface OAuthConsentViewProps {
   t: T
+  /** The reader's language, for the price. */
+  lang: string
   state: ConsentState
   workspaceName: string
   approving: boolean
@@ -42,6 +52,7 @@ export interface OAuthConsentViewProps {
 }
 
 const scopeKey = (scope: string) => `developer.scope.${scope.replace(':', '_')}`
+const eventKey = (event: string) => `developer.event.${event.replace('.', '_')}`
 
 export const OAuthConsentView = memo(function OAuthConsentView(props: OAuthConsentViewProps) {
   const { t, state } = props
@@ -76,8 +87,25 @@ export const OAuthConsentView = memo(function OAuthConsentView(props: OAuthConse
               <p className="text-lg font-semibold text-[hsl(var(--fg-primary))]">
                 {state.consent.app.name}
               </p>
-              <p className="text-sm text-[hsl(var(--fg-secondary))]">
+              <p className="flex flex-wrap items-center gap-1 text-sm text-[hsl(var(--fg-secondary))]">
                 {t('oauth.publisher')}: {state.consent.app.publisher ?? t('oauth.unknownPublisher')}
+                {state.consent.app.publisherVerified ? (
+                  <Badge variant="success">
+                    <BadgeCheck className="size-3.5" aria-hidden="true" />
+                    {t('oauth.verified')}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary">{t('oauth.notVerified')}</Badge>
+                )}
+              </p>
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {state.consent.app.version ? (
+                  <span dir="ltr">{state.consent.app.version}</span>
+                ) : (
+                  t('oauth.draftInstall')
+                )}
+                {' · '}
+                {appPriceLabel(t, state.consent.app.pricing, props.lang)}
               </p>
               {state.consent.app.reviewed ? (
                 <Badge variant="success">
@@ -162,6 +190,40 @@ export const OAuthConsentView = memo(function OAuthConsentView(props: OAuthConse
                 </ul>
               </div>
             )}
+
+            {state.consent.disclosure.events.length > 0 && (
+              <p className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('marketplace.receivesEvents')}:{' '}
+                {state.consent.disclosure.events.map((e) => t(eventKey(e), e)).join('، ')}
+              </p>
+            )}
+            {state.consent.app.pricing.model === 'paid' && (
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {t('marketplace.billedByPublisher')}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-3 text-xs">
+              {state.consent.app.privacyUrl && (
+                <a
+                  href={state.consent.app.privacyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="underline-offset-4 hover:underline"
+                >
+                  {t('marketplace.privacy')}
+                </a>
+              )}
+              {state.consent.app.termsUrl && (
+                <a
+                  href={state.consent.app.termsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="underline-offset-4 hover:underline"
+                >
+                  {t('marketplace.terms')}
+                </a>
+              )}
+            </div>
 
             <p className="text-xs text-[hsl(var(--fg-tertiary))]">
               {t('oauth.consent.revokeHint')}

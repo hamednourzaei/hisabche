@@ -27,6 +27,8 @@
 
 import { z } from 'zod'
 
+import { currencyCodeSchema } from './common.schema'
+
 // ─── Scopes ──────────────────────────────────────────────────────────────────
 
 /**
@@ -432,8 +434,156 @@ export const oauthAppCreateSchema = z
   .strict()
 export type OAuthAppCreateInput = z.infer<typeof oauthAppCreateSchema>
 
-export const oauthAppUpdateSchema = oauthAppCreateSchema.partial().strict()
+// ─── The marketplace (docs/developer-platform-07-marketplace-migration.sql) ───
+
+export const APP_CATEGORIES = [
+  'accounting',
+  'sales',
+  'inventory',
+  'ecommerce',
+  'payments',
+  'crm',
+  'hr',
+  'reporting',
+  'communication',
+  'productivity',
+  'other',
+] as const
+export type AppCategory = (typeof APP_CATEGORIES)[number]
+
+/**
+ * API versions an app can target. An installation of a version targeting one
+ * that is no longer here is refused (APP_INCOMPATIBLE) — not left to fail
+ * request by request.
+ */
+export const API_VERSIONS = ['v1'] as const
+export type ApiVersion = (typeof API_VERSIONS)[number]
+
+export const APP_PRICE_INTERVALS = ['month', 'year', 'one_time'] as const
+export type AppPriceInterval = (typeof APP_PRICE_INTERVALS)[number]
+
+const httpsUrl = z.string().trim().url().startsWith('https://').max(1000)
+
+/**
+ * What an app costs, as DISCLOSED to installers. The publisher bills its own
+ * customers; Hisabche charges nothing and takes no share (see the gap
+ * analysis). Money in minor units, never a float.
+ */
+export const appPricingSchema = z.discriminatedUnion('model', [
+  z.object({ model: z.literal('free') }).strict(),
+  z
+    .object({
+      model: z.literal('paid'),
+      priceMinor: z.number().int().positive().max(1_000_000_000_000),
+      currency: currencyCodeSchema,
+      interval: z.enum(APP_PRICE_INTERVALS),
+    })
+    .strict(),
+])
+export type AppPricing = z.infer<typeof appPricingSchema>
+
+export const oauthAppUpdateSchema = oauthAppCreateSchema
+  .partial()
+  .extend({
+    slug: z
+      .string()
+      .trim()
+      .regex(/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/, 'oauth.slugInvalid')
+      .optional(),
+    tagline: z.string().trim().max(120).optional(),
+    category: z.enum(APP_CATEGORIES).optional(),
+    iconUrl: httpsUrl.nullable().optional(),
+    privacyUrl: httpsUrl.nullable().optional(),
+    termsUrl: httpsUrl.nullable().optional(),
+    installUrl: httpsUrl.nullable().optional(),
+    pricing: appPricingSchema.optional(),
+    /** Where the app receives its webhook events; null = no subscription. */
+    webhookUrl: httpsUrl.nullable().optional(),
+    webhookEvents: z
+      .array(z.enum(WEBHOOK_EVENTS))
+      .max(WEBHOOK_EVENTS.length)
+      .transform((events) => [...new Set(events)])
+      .optional(),
+    apiVersion: z.enum(API_VERSIONS).optional(),
+  })
+  .strict()
 export type OAuthAppUpdateInput = z.infer<typeof oauthAppUpdateSchema>
+
+export const appVersionSubmitSchema = z
+  .object({
+    version: z
+      .string()
+      .trim()
+      .regex(
+        /^(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})$/,
+        'oauth.versionInvalid',
+      ),
+    changelog: z.string().trim().min(1).max(5000),
+  })
+  .strict()
+export type AppVersionSubmitInput = z.infer<typeof appVersionSubmitSchema>
+
+export const APP_VERSION_STATUSES = ['in_review', 'published', 'rejected', 'superseded'] as const
+export type AppVersionStatus = (typeof APP_VERSION_STATUSES)[number]
+
+export const publisherProfileSchema = z
+  .object({
+    displayName: z.string().trim().min(1).max(80),
+    websiteUrl: httpsUrl.nullable().optional(),
+    supportEmail: z.string().trim().email().max(200).nullable().optional(),
+    bio: z.string().trim().max(1000).default(''),
+  })
+  .strict()
+export type PublisherProfileInput = z.infer<typeof publisherProfileSchema>
+
+export const APP_SCREENSHOT_LIMIT = 8
+export const appScreenshotSchema = z
+  .object({ url: httpsUrl, caption: z.string().trim().max(200).default('') })
+  .strict()
+export type AppScreenshotInput = z.infer<typeof appScreenshotSchema>
+
+export const appReviewSchema = z
+  .object({
+    rating: z.number().int().min(1).max(5),
+    body: z.string().trim().max(2000).default(''),
+  })
+  .strict()
+export type AppReviewInput = z.infer<typeof appReviewSchema>
+
+export const APP_REPORT_REASONS = [
+  'security',
+  'data_misuse',
+  'misleading',
+  'broken',
+  'spam',
+  'other',
+] as const
+export type AppReportReason = (typeof APP_REPORT_REASONS)[number]
+export const appReportSchema = z
+  .object({ reason: z.enum(APP_REPORT_REASONS), details: z.string().trim().max(2000).default('') })
+  .strict()
+export type AppReportInput = z.infer<typeof appReportSchema>
+
+/** How an app is doing, from exact counts of the last 24 hours. */
+export const APP_HEALTH_LEVELS = [
+  'no_data',
+  'low_volume',
+  'healthy',
+  'degraded',
+  'failing',
+] as const
+export type AppHealthLevel = (typeof APP_HEALTH_LEVELS)[number]
+
+/** What an admin is shown before publishing a version. */
+export const APP_RISK_FLAGS = [
+  'NEW_SCOPES',
+  'WRITE_SCOPES',
+  'LOCALHOST_REDIRECT',
+  'WEBHOOK_HOST_MISMATCH',
+  'UNVERIFIED_PUBLISHER',
+  'OPEN_REPORTS',
+] as const
+export type AppRiskFlag = (typeof APP_RISK_FLAGS)[number]
 
 export const OAUTH_APP_STATUSES = [
   'private',
@@ -452,8 +602,30 @@ export type OAuthAppStatus = (typeof OAUTH_APP_STATUSES)[number]
 export const OAUTH_ERROR_CODES = [
   'APP_NOT_FOUND',
   'APP_NOT_AVAILABLE',
-  'APP_LOCKED',
   'APP_PUBLISHED',
+  'APP_SUSPENDED',
+  'APP_INCOMPATIBLE',
+  'SLUG_TAKEN',
+  'LISTING_INCOMPLETE',
+  'PUBLISHER_REQUIRED',
+  'WEBHOOK_INCOMPLETE',
+  'WEBHOOK_URL_INVALID',
+  'VERSION_IN_REVIEW',
+  'VERSION_INVALID',
+  'VERSION_NOT_NEWER',
+  'VERSION_NOT_FOUND',
+  'VERSION_NOT_IN_REVIEW',
+  'VERSION_HAS_LOCALHOST',
+  'INSTALLATION_NOT_FOUND',
+  'INSTALLATION_NOT_ACTIVE',
+  'NO_UPDATE',
+  'SCREENSHOT_LIMIT',
+  'SCREENSHOT_NOT_FOUND',
+  'REVIEW_NOT_INSTALLED',
+  'REVIEW_OWN_APP',
+  'REVIEW_NOT_FOUND',
+  'REPORT_NOT_FOUND',
+  'PUBLISHER_NOT_FOUND',
   'REDIRECT_URI_NOT_REGISTERED',
   'SCOPE_INVALID',
   'SCOPE_NOT_REGISTERED',

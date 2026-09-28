@@ -13,7 +13,7 @@
 // ============================================
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { useApproveOAuth, useOAuthConsent, type OAuthRequestParams } from '@hisabche/api'
 import { useAuthStore, useWorkspaceStore } from '@hisabche/store'
 import { localizePath } from '@hisabche/ui-contract'
@@ -66,6 +66,7 @@ export const OAuthConsentContainer = memo(function OAuthConsentContainer({
     [tOriginal],
   )
   const lang = useRouteLang()
+  const locale = useLocale()
   const replace = useLocaleReplace()
   const hasHydrated = useAuthStore((s) => s.hasHydrated)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -106,6 +107,7 @@ export const OAuthConsentContainer = memo(function OAuthConsentContainer({
   return (
     <OAuthConsentView
       t={t}
+      lang={locale}
       state={state}
       workspaceName={workspaceName}
       approving={approve.isPending}

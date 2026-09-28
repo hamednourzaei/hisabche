@@ -214,6 +214,7 @@ export {
   type OAuthAuthorizeQuery,
 } from './components/ui/developers/containers/oauth-consent-container'
 export { OrdersContainer } from './components/ui/orders/containers/orders-container'
+export { MarketplaceContainer } from './components/ui/marketplace/containers/marketplace-container'
 export { OrdersView, type OrdersViewProps } from './components/ui/orders/orders-view'
 export {
   DevelopersView,

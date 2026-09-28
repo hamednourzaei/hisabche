@@ -32,12 +32,22 @@ import {
   useRevokePublishableKey,
   useOAuthApps,
   useCreateOAuthApp,
-  useSubmitOAuthApp,
+  useUpdateOAuthApp,
+  useAppVersions,
+  useSubmitAppVersion,
   useRotateOAuthSecret,
+  useRotateAppWebhookSecret,
   useDeleteOAuthApp,
+  useAppScreenshots,
+  useAddAppScreenshot,
+  useRemoveAppScreenshot,
+  useAppStats,
+  usePublisherProfile,
+  useSavePublisherProfile,
   useInstalledApps,
   useUninstallApp,
-  useMarketplaceApps,
+  useAppUpdatePreview,
+  useApplyAppUpdate,
   useSandboxStatus,
   useCreateSandbox,
 } from '@hisabche/api'
@@ -104,13 +114,27 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
 
   const oauthApps = useOAuthApps()
   const createApp = useCreateOAuthApp()
-  const submitApp = useSubmitOAuthApp()
+  const updateApp = useUpdateOAuthApp()
   const rotateAppSecret = useRotateOAuthSecret()
+  const rotateAppWebhookSecret = useRotateAppWebhookSecret()
   const deleteApp = useDeleteOAuthApp()
+  const [busyAppId, setBusyAppId] = useState<string | null>(null)
+  const [managedAppId, setManagedAppId] = useState<string | null>(null)
+  const [statsDays, setStatsDays] = useState<7 | 30>(7)
+  const versions = useAppVersions(managedAppId)
+  const submitVersion = useSubmitAppVersion()
+  const screenshots = useAppScreenshots(managedAppId)
+  const addScreenshot = useAddAppScreenshot()
+  const removeScreenshot = useRemoveAppScreenshot()
+  const appStats = useAppStats(managedAppId, statsDays)
+  const publisher = usePublisherProfile()
+  const savePublisher = useSavePublisherProfile()
   const installedApps = useInstalledApps()
   const uninstallApp = useUninstallApp()
-  const marketplace = useMarketplaceApps()
-  const [busyAppId, setBusyAppId] = useState<string | null>(null)
+  const [updateFor, setUpdateFor] = useState<string | null>(null)
+  const updatePreview = useAppUpdatePreview(updateFor)
+  const applyUpdate = useApplyAppUpdate()
+  const managedApp = (oauthApps.data ?? []).find((a) => a.id === managedAppId) ?? null
 
   const sandboxStatus = useSandboxStatus()
   const createSandbox = useCreateSandbox()
@@ -131,7 +155,7 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
   }, [])
 
   const [revealed, setRevealed] = useState<{
-    kind: 'key' | 'secret' | 'client-secret'
+    kind: 'key' | 'secret' | 'client-secret' | 'app-webhook-secret'
     value: string
   } | null>(null)
   const [busyEndpointId, setBusyEndpointId] = useState<string | null>(null)
@@ -306,6 +330,35 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
       oauth={{
         formatDate: dateTime,
         scopes: catalog.data?.scopes ?? [],
+        events: (catalog.data?.events ?? []).map((e) => e.type),
+        marketplaceHref: localizePath('/marketplace', lang),
+        listingHref: (slug) =>
+          `${localizePath('/marketplace', lang)}?app=${encodeURIComponent(slug)}`,
+        installedState: sectionState(installedApps.isLoading, installedApps.error),
+        installed: installedApps.data ?? [],
+        uninstallingId: uninstallApp.isPending ? (uninstallApp.variables ?? null) : null,
+        onUninstall: (id) => uninstallApp.mutate(id, { onError: oauthFailed }),
+        updateFor,
+        onReviewUpdate: setUpdateFor,
+        updateState: sectionState(updatePreview.isLoading, updatePreview.error),
+        updatePreview: updatePreview.data ?? null,
+        applyingUpdate: applyUpdate.isPending,
+        onApplyUpdate: (id) =>
+          applyUpdate.mutate(id, {
+            onSuccess: () => {
+              setUpdateFor(null)
+              toast.success(t('oauth.update.applied'))
+            },
+            onError: oauthFailed,
+          }),
+        publisherState: sectionState(publisher.isLoading, publisher.error),
+        publisher: publisher.data ?? null,
+        savingPublisher: savePublisher.isPending,
+        onSavePublisher: (input) =>
+          savePublisher.mutate(input, {
+            onSuccess: () => toast.success(t('oauth.publisherProfile.saved')),
+            onError: oauthFailed,
+          }),
         appsState: sectionState(oauthApps.isLoading || catalog.isLoading, oauthApps.error),
         apps: oauthApps.data ?? [],
         creatingApp: createApp.isPending,
@@ -316,19 +369,66 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
             onError: oauthFailed,
           }),
         busyAppId,
-        onSubmitApp: (id) => void onApp(id, () => submitApp.mutateAsync(id)),
         onRotateAppSecret: (id) =>
           void onApp(id, async () => {
             const out = await rotateAppSecret.mutateAsync(id)
             setRevealed({ kind: 'client-secret', value: out.clientSecret })
           }),
         onDeleteApp: (id) => void onApp(id, () => deleteApp.mutateAsync(id)),
-        installedState: sectionState(installedApps.isLoading, installedApps.error),
-        installed: installedApps.data ?? [],
-        uninstallingKeyId: uninstallApp.isPending ? (uninstallApp.variables ?? null) : null,
-        onUninstall: (keyId) => uninstallApp.mutate(keyId, { onError: failed }),
-        marketplaceState: sectionState(marketplace.isLoading, marketplace.error),
-        marketplace: marketplace.data ?? [],
+        managedAppId,
+        onManage: setManagedAppId,
+        manage: managedApp
+          ? {
+              saving: updateApp.isPending,
+              onSave: (patch) =>
+                updateApp.mutate(
+                  { id: managedApp.id, patch },
+                  {
+                    onSuccess: (out) => {
+                      toast.success(t('oauth.manage.saved'))
+                      // The app's webhook secret: in this response and nowhere else.
+                      if (out.webhookSecret) {
+                        setRevealed({ kind: 'app-webhook-secret', value: out.webhookSecret })
+                      }
+                    },
+                    onError: oauthFailed,
+                  },
+                ),
+              onRotateWebhookSecret: () =>
+                void onApp(managedApp.id, async () => {
+                  const out = await rotateAppWebhookSecret.mutateAsync(managedApp.id)
+                  setRevealed({ kind: 'app-webhook-secret', value: out.webhookSecret })
+                }),
+              listingHref: managedApp.slug
+                ? `${localizePath('/marketplace', lang)}?app=${encodeURIComponent(managedApp.slug)}`
+                : null,
+              versionsState: sectionState(versions.isLoading, versions.error),
+              versions: versions.data ?? [],
+              submitting: submitVersion.isPending,
+              onSubmitVersion: (input) =>
+                submitVersion.mutate(
+                  { appId: managedApp.id, ...input },
+                  {
+                    onSuccess: () => toast.success(t('oauth.manage.submitted')),
+                    onError: oauthFailed,
+                  },
+                ),
+              screenshotsState: sectionState(screenshots.isLoading, screenshots.error),
+              screenshots: screenshots.data ?? [],
+              addingScreenshot: addScreenshot.isPending,
+              onAddScreenshot: (input) =>
+                addScreenshot.mutate({ appId: managedApp.id, ...input }, { onError: oauthFailed }),
+              onRemoveScreenshot: (screenshotId) =>
+                removeScreenshot.mutate(
+                  { appId: managedApp.id, screenshotId },
+                  { onError: oauthFailed },
+                ),
+              statsState: sectionState(appStats.isLoading, appStats.error),
+              stats: appStats.data ?? null,
+              days: statsDays,
+              onDays: setStatsDays,
+            }
+          : null,
         // Locale-neutral on purpose: the site sends the visitor on to their own
         // language and keeps the query (next-intl, localePrefix 'always').
         authorizeUrl: sdk.site ? `${sdk.site}/oauth/authorize` : '',
