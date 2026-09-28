@@ -17,5 +17,6 @@ export const mapProducts = (
     minStockLevel: num(p.min_stock_level ?? p.minStockLevel ?? 5),
     unit: p.unit ?? t('warehouse.units.piece'),
     category: p.category ?? t('warehouse.categories.general'),
+    imageUrl: p.image_url || null,
   }))
 }

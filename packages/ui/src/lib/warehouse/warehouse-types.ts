@@ -12,6 +12,7 @@ export interface RawProduct {
   minStockLevel?: number | string
   unit?: string
   category?: string
+  image_url?: string | null
 }
 
 export interface Product {
@@ -23,6 +24,8 @@ export interface Product {
   minStockLevel: number
   unit: string
   category: string
+  /** The cover image (first of the gallery); null = none. */
+  imageUrl?: string | null | undefined
 }
 
 export interface Currency {

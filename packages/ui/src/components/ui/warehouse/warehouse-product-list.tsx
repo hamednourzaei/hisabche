@@ -75,7 +75,22 @@ function useProductColumns(
         locked: true,
         sortValue: (product) => product.name,
         render: (product) => (
-          <span className="font-medium text-[hsl(var(--fg-primary))]">{product.name}</span>
+          <span className="flex items-center gap-2">
+            {/* The cover (first gallery image). Fixed size so the row never
+                jumps when it loads; empty alt — the name beside it says it. */}
+            {product.imageUrl ? (
+              <img
+                src={product.imageUrl}
+                alt=""
+                width={32}
+                height={32}
+                loading="lazy"
+                decoding="async"
+                className="size-8 shrink-0 rounded-md object-cover"
+              />
+            ) : null}
+            <span className="font-medium text-[hsl(var(--fg-primary))]">{product.name}</span>
+          </span>
         ),
       },
       {

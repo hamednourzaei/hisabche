@@ -275,7 +275,7 @@ export class WarehouseService {
     for (let from = 0; ; from += PAGE) {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, sku, unit, quantity, sell_price, buy_price, min_stock_level')
+        .select('id, name, sku, unit, quantity, sell_price, buy_price, min_stock_level, image_url')
         .eq('workspace_id', workspaceId)
         .eq('is_active', true)
         .order('id', { ascending: true })

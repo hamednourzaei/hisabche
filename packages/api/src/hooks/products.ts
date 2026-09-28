@@ -18,6 +18,7 @@ import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/rea
 import apiClient, { type ApiError } from '../lib/client'
 import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
+import { asList } from '../lib/as-list'
 import { useRealtime } from './useRealtime'
 import type { Product, CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validation'
 import { normalizeBarcode } from '@hisabche/validation'
@@ -248,6 +249,100 @@ export function useRemoveProductBarcode(productId: string) {
       await apiClient.delete(`/products/${productId}/barcodes/${barcodeId}`)
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: productBarcodeKeys.of(productId) }),
+  })
+}
+
+// ─── Product images (docs/product-images-migration.sql) ─────────────
+// Up to 8 per product, ordered; the first is the product's cover, which every
+// product and warehouse list shows — so a change refreshes those lists too.
+
+export interface ProductImage {
+  id: string
+  productId: string
+  position: number
+  altText: string
+  url: string
+  createdAt: string
+}
+
+export const productImageKeys = {
+  of: (productId: string) => [...productKeys.all, 'images', productId] as const,
+}
+
+/** The most images a product may have — the database refuses a 9th. */
+export const PRODUCT_IMAGE_LIMIT = 8
+
+function useImageInvalidation(productId: string) {
+  const queryClient = useQueryClient()
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: productImageKeys.of(productId) })
+    void queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) })
+    void queryClient.invalidateQueries({ queryKey: productKeys.lists() })
+    // warehouseKeys.all, by value: warehouses.ts imports this module, so
+    // importing it back would be a cycle (CLAUDE.md §8).
+    void queryClient.invalidateQueries({ queryKey: ['warehouses'] })
+  }
+}
+
+export function useProductImages(productId: string | undefined) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: productImageKeys.of(productId ?? ''),
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.get<{ images?: unknown }>(`/products/${productId}/images`, {
+        signal,
+      })
+      return asList<ProductImage>(data?.images)
+    },
+    enabled: authReady && Boolean(productId),
+    // 503 (not configured) and 403 are answers, not blips.
+    retry: false,
+  })
+}
+
+export function useAddProductImage(productId: string) {
+  const invalidate = useImageInvalidation(productId)
+  return useMutation({
+    mutationFn: async (input: { base64: string; altText?: string | undefined }) => {
+      const { data } = await apiClient.post<ProductImage>(`/products/${productId}/images`, input)
+      return data
+    },
+    onSuccess: invalidate,
+  })
+}
+
+export function useRemoveProductImage(productId: string) {
+  const invalidate = useImageInvalidation(productId)
+  return useMutation({
+    mutationFn: async (imageId: string) => {
+      await apiClient.delete(`/products/${productId}/images/${imageId}`)
+    },
+    onSuccess: invalidate,
+  })
+}
+
+export function useReorderProductImages(productId: string) {
+  const invalidate = useImageInvalidation(productId)
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      await apiClient.put(`/products/${productId}/images/order`, { ids })
+    },
+    onSuccess: invalidate,
+  })
+}
+
+export function useSetProductImageAlt(productId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { imageId: string; altText: string }) => {
+      const { data } = await apiClient.patch<ProductImage>(
+        `/products/${productId}/images/${input.imageId}`,
+        { altText: input.altText },
+      )
+      return data
+    },
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: productImageKeys.of(productId) }),
   })
 }
 

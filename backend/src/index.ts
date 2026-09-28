@@ -93,6 +93,7 @@ import { manufacturingRoutes } from './routes/manufacturing.routes'
 import { purchasingRoutes } from './routes/purchasing.routes'
 import { billingRoutes } from './routes/billing.routes'
 import { walletRoutes } from './routes/wallet.routes'
+import { productImagesRoutes } from './routes/product-images.routes'
 import { referralRoutes } from './routes/referral.routes'
 import { blogRoutes, isPublicBlogRequest } from './routes/blog.routes'
 import { workflowRoutes } from './routes/workflow.routes'
@@ -681,6 +682,7 @@ export async function buildServer(): Promise<typeof server> {
   // The desktop update feed. Unauthenticated on purpose — see the module.
   await server.register(updatesRoutes)
   await server.register(productRoutes)
+  await server.register(productImagesRoutes)
   await server.register(customerRoutes)
   await server.register(customerProfileRoutes)
   await server.register(transactionRoutes)

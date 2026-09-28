@@ -33,6 +33,8 @@ export interface ProductStockRow {
   sell_price: number | string | null
   buy_price: number | string | null
   min_stock_level: number | string | null
+  /** The product's cover (its first gallery image); '' or null = none. */
+  image_url?: string | null | undefined
 }
 
 export interface WarehouseStockRow {
@@ -67,6 +69,8 @@ export interface WarehouseProduct {
   sellPrice: number
   buyPrice: number
   minStockLevel: number | null
+  /** The cover image, or null — the list shows a thumbnail when there is one. */
+  imageUrl: string | null
 }
 
 const num = (value: unknown) => Number(value) || 0
@@ -167,6 +171,7 @@ export function warehouseProducts(
           product.min_stock_level === null || product.min_stock_level === ''
             ? null
             : num(product.min_stock_level),
+        imageUrl: product.image_url || null,
       }))
       .sort((a, b) => a.name.localeCompare(b.name)),
     summary: summaryFor(rows),

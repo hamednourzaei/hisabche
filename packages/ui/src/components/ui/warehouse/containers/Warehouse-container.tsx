@@ -177,6 +177,7 @@ export function warehouseContainer() {
           minStockLevel: product.minStockLevel ?? 5,
           unit: product.unit,
           category: '',
+          imageUrl: product.imageUrl ?? null,
         })),
     [detail.data, search],
   )

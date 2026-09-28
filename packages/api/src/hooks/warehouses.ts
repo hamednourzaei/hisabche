@@ -40,6 +40,8 @@ export interface WarehouseProduct {
   sellPrice: number
   buyPrice: number
   minStockLevel: number | null
+  /** The cover image; null (or absent, from an older server) = none. */
+  imageUrl?: string | null | undefined
 }
 
 export interface WarehouseDetail {
