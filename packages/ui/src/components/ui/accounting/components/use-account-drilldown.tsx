@@ -15,10 +15,10 @@
 // ============================================
 
 import { useCallback, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useGeneralLedger } from '@hisabche/api'
 
 import { AccountLedgerDrawer } from './account-ledger-drawer'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 export interface DrillDownAccount {
   id: string
@@ -36,7 +36,7 @@ export function useAccountDrilldown(
   to: string,
   t: (key: string, fallback?: string) => string,
 ) {
-  const router = useRouter()
+  const push = useLocalePush()
   const [account, setAccount] = useState<DrillDownAccount | null>(null)
 
   // `enabled` inside the hook gates on the id, so a closed drawer issues no
@@ -61,7 +61,7 @@ export function useAccountDrilldown(
       // user just opened would hide the thing they asked to see.
       onNavigate={(route) => {
         close()
-        router.push(route)
+        push(route)
       }}
     />
   )

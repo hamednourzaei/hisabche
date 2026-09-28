@@ -8,7 +8,7 @@
 // `?warehouse=unassigned` is the stock that is in no warehouse yet.
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useWarehouse } from '../../../../hooks/warehouse/use-warehouse'
 import { WarehouseView } from '../warehouse-view'
@@ -31,6 +31,7 @@ import {
 import { WarehouseListTable, UNASSIGNED_WAREHOUSE_ID } from '../warehouse-list-table'
 import { AddWarehouseDialog, AssignStockDialog } from '../warehouse-dialogs'
 import { AddToWarehouseModal } from '../add-to-warehouse-modal'
+import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 
 /**
  * H4 — the server's own cap on `GET /products/:id/stock-history`.
@@ -51,7 +52,8 @@ const CHIP_CURRENCIES = [
 
 export function warehouseContainer() {
   const t = useTranslations()
-  const router = useRouter()
+  const localeReplace = useLocaleReplace()
+  const push = useLocalePush()
   const queryClient = useQueryClient()
 
   // ورودی از command palette — همان قرارداد صفحه‌ی مشتریان: `?add=true` مودال
@@ -86,9 +88,9 @@ export function warehouseContainer() {
   const openWarehouse = useCallback(
     (id: string | null) => {
       setSearch('')
-      router.replace(id ? `/warehouse?warehouse=${encodeURIComponent(id)}` : '/warehouse')
+      localeReplace(id ? `/warehouse?warehouse=${encodeURIComponent(id)}` : '/warehouse')
     },
-    [router],
+    [localeReplace],
   )
 
   // ─── H4 — stock history and reorder ──────────────────────────────────────
@@ -141,7 +143,7 @@ export function warehouseContainer() {
     [t],
   )
 
-  const handleNavigate = useCallback((id: string) => router.push(`/warehouse/${id}`), [router])
+  const handleNavigate = useCallback((id: string) => push(`/warehouse/${id}`), [push])
 
   const rates = useCurrencyStore((state) => state.rates)
   const setManualRate = useCurrencyStore((state) => state.setManualRate)
@@ -364,7 +366,7 @@ export function warehouseContainer() {
         onClose={() => setHistoryProduct(null)}
         onNavigate={(route) => {
           setHistoryProduct(null)
-          router.push(route)
+          push(route)
         }}
       />
     </>

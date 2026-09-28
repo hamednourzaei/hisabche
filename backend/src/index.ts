@@ -21,7 +21,7 @@
 import 'dotenv/config'
 
 import Fastify from 'fastify'
-import cors from '@fastify/cors'
+import cors, { type FastifyCorsOptions } from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
 import { SharedRateLimitStore } from './utils/shared-rate-limit-store'
 import { cacheService } from './services/cache.service'
@@ -100,6 +100,20 @@ import { debugRoutes } from './routes/debug.routes'
 // ✅ اضافه کردن Activity Routes
 import { activityRoutes } from './routes/activity.routes'
 import adminRoutes from './routes/admin.routes'
+import { developerRoutes } from './routes/developer.routes'
+import { ordersRoutes } from './routes/orders.routes'
+import { isPublicApiPath, storefrontRoutes } from './routes/storefront.routes'
+import { customerPortalRoutes } from './routes/customer-portal.routes'
+import { oauthRoutes } from './routes/oauth.routes'
+import { marketplaceRoutes } from './routes/marketplace.routes'
+import { sandboxRoutes } from './routes/sandbox.routes'
+import { PUBLISHABLE_KEY_HEADER } from '@hisabche/validation'
+import {
+  API_KEY_RATE_LIMIT_PER_MINUTE,
+  isApiKeyBucket,
+  rateLimitBucket,
+} from './services/developer/developer.domain'
+import { developerService } from './services/developer/developer.service'
 
 // ──────────────────────────────────────────────
 // Plugins & Scheduler
@@ -252,6 +266,22 @@ server.addHook('onResponse', async (request, reply) => {
   )
 })
 
+// Every request made WITH AN API KEY is written to the key's request log
+// (docs/developer-platform-02-migration.sql): route PATTERN, status, duration.
+// Fire-and-forget — a log must never slow down or fail the response.
+server.addHook('onResponse', async (request, reply) => {
+  const key = request.apiKey
+  if (!key) return
+  developerService.recordRequest({
+    workspaceId: key.workspaceId,
+    keyId: key.id,
+    method: request.method,
+    route: request.routeOptions.url ?? 'unmatched',
+    status: reply.statusCode,
+    durationMs: Math.round(reply.elapsedTime),
+  })
+})
+
 server.addHook('onSend', async (request, reply, payload) => {
   const duration = Date.now() - ((request as any).startTime || Date.now())
 
@@ -298,6 +328,14 @@ server.addHook('preHandler', async (request, reply) => {
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
     '/api/auth/verify-email',
+    // ⚠️ Deliberately public, and ONLY what is registered under it: the
+    // tokenised invoice view (invoice-public.routes.ts), the tokenised CRM task
+    // link (crm.routes.ts) and the storefront (storefront.routes.ts), each with
+    // its own check. Before this entry the global hook answered 401 to every
+    // one of them — the /public-invoice and /public-task pages have never
+    // worked for the person the link was sent to (BUG-077). A route added here
+    // must be public by design: storefront-orders.test.ts lists them all.
+    '/api/public/',
   ]
 
   // Exact-match public endpoints (no prefix matching: `/api/billing/plans` must
@@ -305,7 +343,9 @@ server.addHook('preHandler', async (request, reply) => {
   // The plan list is public by design — `usePlans()` is deliberately not
   // auth-gated so the landing page can quote the same prices `/billing` shows.
   // Without this entry every visitor's pricing section got a 401 and no price.
-  const exactPublicPaths = ['/api/billing/plans']
+  // `/api/oauth/token` is called by an app's SERVER with its client secret and
+  // a one-time code — there is no user session by definition (RFC 6749 §4.1.3).
+  const exactPublicPaths = ['/api/billing/plans', '/api/oauth/token']
   const path = url.split('?')[0]
 
   if (publicPaths.some((p) => url.startsWith(p))) return
@@ -483,7 +523,7 @@ export async function buildServer(): Promise<typeof server> {
   })
 
   // ─── 6.2 CORS ─────────────────────────────
-  await server.register(cors, {
+  const APP_CORS: FastifyCorsOptions = {
     origin: isProduction
       ? [
           'https://hisabche.com',
@@ -535,6 +575,25 @@ export async function buildServer(): Promise<typeof server> {
     // یک رفت‌وبرگشت شبکه‌ی کامل تا سرور اضافه می‌کند. با کش ۲۴ ساعته‌ی
     // preflight، این رفت‌وبرگشت از مسیر تمام درخواست‌های بعدی حذف می‌شود.
     maxAge: 86400,
+  }
+
+  // ⚠️ /api/public/ IS CALLED FROM CUSTOMERS' OWN WEBSITES.
+  // The storefront, and the invoice / portal / task views a shop may embed.
+  // Their origins cannot be listed here: a publishable key carries its own
+  // list (storefront.routes.ts), and a token-addressed view is protected by
+  // the token, not by who asks. So these paths — and only these — answer any
+  // origin, WITHOUT credentials (no cookie or session ever rides along).
+  const STOREFRONT_CORS: FastifyCorsOptions = {
+    origin: true,
+    credentials: false,
+    methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Idempotency-Key', PUBLISHABLE_KEY_HEADER],
+    maxAge: 86400,
+  }
+
+  await server.register(cors, {
+    delegator: (request, callback) =>
+      callback(null, isPublicApiPath(request.url ?? '') ? STOREFRONT_CORS : APP_CORS),
   })
 
   // ─── 6.3 SWAGGER ──────────────────────────
@@ -588,11 +647,12 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(rateLimit, {
     // One budget across all instances (Redis), not one per process.
     store: SharedRateLimitStore,
-    max: 100,
+    // An API key has its own bucket and budget (developer.domain.ts).
+    max: (_request, key) => (isApiKeyBucket(key) ? API_KEY_RATE_LIMIT_PER_MINUTE : 100),
     timeWindow: '1 minute',
     keyGenerator: (request) => {
       const userId = (request as any).userId
-      return userId || request.ip || 'anonymous'
+      return rateLimitBucket(request.headers.authorization, userId || request.ip || 'anonymous')
     },
     errorResponseBuilder: (_request, context) => {
       const afterMs =
@@ -673,6 +733,17 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(billingRoutes)
   await server.register(referralRoutes)
   await server.register(blogRoutes)
+  // API keys and outbound webhooks (docs/developer-platform-migration.sql).
+  await server.register(developerRoutes)
+  // Sales orders + storefront settings; and the public storefront API.
+  await server.register(ordersRoutes)
+  await server.register(storefrontRoutes)
+  // Customer portal links, and the portal itself (public, by token).
+  await server.register(customerPortalRoutes)
+  // OAuth apps, consent, the token endpoint, the marketplace and its review.
+  await server.register(oauthRoutes)
+  await server.register(marketplaceRoutes)
+  await server.register(sandboxRoutes)
   await server.register(adminRoutes)
 
   server.log.info('✅ All routes registered successfully')

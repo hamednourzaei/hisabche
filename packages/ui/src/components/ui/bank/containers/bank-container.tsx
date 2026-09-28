@@ -4,11 +4,13 @@
 // packages/ui/src/components/ui/bank/containers/bank-container.tsx
 // ============================================
 
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   asList,
+  useAccounts,
   useBankStatements,
+  useImportStatement,
   useMatchSuggestions,
   useReconcileLine,
   useReconciliation,
@@ -42,6 +44,26 @@ export const BankContainer = memo(function BankContainer() {
   const suggestions = useMatchSuggestions(selectedId ?? '')
   const reconciliation = useReconciliation(selectedId ?? '')
   const reconcile = useReconcileLine()
+  const importStatement = useImportStatement()
+  const accounts = useAccounts()
+  const [importError, setImportError] = useState<string | null>(null)
+
+  // Where a statement can belong: the posting accounts automatic posting uses
+  // for bank and cash. A group account can carry no posting of its own.
+  const bankAccounts = useMemo(
+    () =>
+      asList<{
+        id: string
+        code: string
+        name: string
+        role: string | null
+        isGroup: boolean
+        isActive: boolean
+      }>(accounts.data)
+        .filter((a) => (a.role === 'bank' || a.role === 'cash') && !a.isGroup && a.isActive)
+        .map(({ id, code, name }) => ({ id, code, name })),
+    [accounts.data],
+  )
 
   const handleReconcile = useCallback(
     (input: { statementLineId: string; bookEntryId: string }) => {
@@ -85,6 +107,23 @@ export const BankContainer = memo(function BankContainer() {
       onSelect={setChosenId}
       onReconcile={handleReconcile}
       onRefresh={handleRefresh}
+      importer={{
+        accounts: bankAccounts,
+        accountsLoading: accounts.isLoading,
+        accountsError: accounts.error
+          ? apiErrorMessage(accounts.error, t('common.loadError', 'دریافت انجام نشد'))
+          : null,
+        isImporting: importStatement.isPending,
+        error: importError,
+        onImport: (input) => {
+          setImportError(null)
+          importStatement.mutate(input, {
+            onSuccess: (created) => setChosenId(created.id),
+            onError: (err) =>
+              setImportError(apiErrorMessage(err, t('common.saveError', 'انجام نشد'))),
+          })
+        },
+      }}
     />
   )
 })

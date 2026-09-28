@@ -786,3 +786,115 @@ export {
   type BlogComment,
   type BlogMe,
 } from './hooks/blog'
+
+// ─── Developer platform (API keys, outbound webhooks) ─────
+export {
+  useDeveloperCatalog,
+  useApiKeys,
+  useCreateApiKey,
+  useRevokeApiKey,
+  useWebhookEndpoints,
+  useCreateWebhookEndpoint,
+  useUpdateWebhookEndpoint,
+  useDeleteWebhookEndpoint,
+  useRotateWebhookSecret,
+  useSendWebhookTest,
+  useWebhookDeliveries,
+  useRetryWebhookDelivery,
+  useApiKeyUsage,
+  useReplayWebhook,
+  developerKeys,
+  type ApiKeyRow,
+  type WebhookEndpointRow,
+  type WebhookDeliveryRow,
+  type DeveloperCatalog,
+  type ApiKeyUsage,
+} from './hooks/developer'
+
+// ─── Sales orders and the storefront ──────────────────────
+export {
+  useOrders,
+  useOrder,
+  useOrderAction,
+  useStorefrontSettings,
+  useSaveStorefrontSettings,
+  usePublishableKeys,
+  useCreatePublishableKey,
+  useRevokePublishableKey,
+  orderKeys,
+  ORDERS_PAGE_SIZE,
+  type SalesOrderRow,
+  type SalesOrderLine,
+  type PublishableKeyRow,
+  type OrderAction,
+} from './hooks/orders'
+
+// ─── OAuth apps and the marketplace ───────────────────────
+export {
+  useOAuthApps,
+  useCreateOAuthApp,
+  useUpdateOAuthApp,
+  useAppVersions,
+  useSubmitAppVersion,
+  useRotateOAuthSecret,
+  useRotateAppWebhookSecret,
+  useDeleteOAuthApp,
+  useAppScreenshots,
+  useAddAppScreenshot,
+  useRemoveAppScreenshot,
+  useAppStats,
+  usePublisherProfile,
+  useSavePublisherProfile,
+  useInstalledApps,
+  useUninstallApp,
+  useAppUpdatePreview,
+  useApplyAppUpdate,
+  useOAuthConsent,
+  useApproveOAuth,
+  useMarketplaceApps,
+  useMarketplaceApp,
+  useSaveAppReview,
+  useDeleteAppReview,
+  useReportApp,
+  oauthKeys,
+  type OAuthAppRow,
+  type AppVersionRow,
+  type AppScreenshot,
+  type PublisherProfile,
+  type AppStats,
+  type InstalledAppRow,
+  type AppUpdatePreview,
+  type PermissionDisclosure,
+  type MarketplaceAppRow,
+  type MarketplaceAppDetail,
+  type OAuthConsent,
+  type OAuthRequestParams,
+  type AppRiskFlagRow,
+} from './hooks/oauth'
+
+// ─── Sandbox workspaces ───────────────────────────────────
+export {
+  useSandboxStatus,
+  useCreateSandbox,
+  sandboxKeys,
+  type SandboxStatus,
+} from './hooks/sandbox'
+
+// ─── Customer portal links ────────────────────────────────
+export {
+  useCustomerPortalLinks,
+  useCreatePortalLink,
+  useRevokePortalLink,
+  portalKeys,
+  type PortalLinkRow,
+} from './hooks/customer-portal'
+
+// ─── Evidence (why a profit figure is what it is) ─────────
+export {
+  useInvoiceEvidence,
+  useProductJourney,
+  evidenceKeys,
+  type InvoiceEvidence,
+  type ProductJourney,
+  type EvidenceLayer,
+} from './hooks/evidence'

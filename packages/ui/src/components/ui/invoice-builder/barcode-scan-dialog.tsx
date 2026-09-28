@@ -12,7 +12,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { localizePath } from '@hisabche/ui-contract'
+import { useRouteLang } from '../../../hooks/use-locale-push'
 import type { Product } from '@hisabche/validation'
 import type { ScaleLabel } from '../../../lib/barcode/scale-label'
 
@@ -51,8 +52,7 @@ export function BarcodeScanDialog({
   onRetry,
   onClose,
 }: BarcodeScanDialogProps) {
-  const params = useParams<{ lang?: string }>()
-  const lang = params?.lang ?? 'fa'
+  const lang = useRouteLang()
   if (!problem) return null
   const code = problem.barcode
 
@@ -111,7 +111,9 @@ export function BarcodeScanDialog({
           {problem.kind === 'unknown' ? (
             <Button asChild>
               {/* The barcode is carried over; nothing about the product is guessed. */}
-              <Link href={`/${lang}/warehouse?add=true&barcode=${encodeURIComponent(code)}`}>
+              <Link
+                href={localizePath(`/warehouse?add=true&barcode=${encodeURIComponent(code)}`, lang)}
+              >
                 {t('barcode.createProduct')}
               </Link>
             </Button>

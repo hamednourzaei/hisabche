@@ -2,7 +2,6 @@
 'use client'
 
 import { memo, useCallback, useMemo } from 'react'
-import { useParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   asList,
@@ -16,24 +15,10 @@ import {
 import { ApprovalCard } from '../approval-timeline'
 import { ApprovalsView } from '../approvals-view'
 import { useToast } from '../../toast-provider'
-
-/**
- * ⚠️ Every internal link carries the locale prefix (راهنمای سشن، §وب).
- *
- * `router.push('/invoices/…')` from a page mounted at `/fa/approvals` lands on
- * `/invoices/…`, which does not exist — the app only serves `/[lang]/…`. So the
- * one button on an approval card that opens the document being approved went
- * to a 404, which is part of why «هیچ‌جا برای تأییدش وجود ندارد».
- */
-function useLocalePush(): (route: string) => void {
-  const router = useRouter()
-  const params = useParams<{ lang?: string }>()
-  const lang = typeof params?.lang === 'string' ? params.lang : 'fa'
-  return useCallback(
-    (route: string) => router.push(route.startsWith('/') ? `/${lang}${route}` : route),
-    [router, lang],
-  )
-}
+// ⚠️ Every internal link carries the locale prefix on web (راهنمای سشن، §وب):
+// `router.push('/invoices/…')` from `/fa/approvals` went to a 404. And none on
+// desktop, which has no `/fa/…` routes — see `localizePath`.
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 interface ApiErrorLike {
   status?: number

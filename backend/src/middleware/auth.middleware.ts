@@ -17,6 +17,9 @@ import { FastifyRequest, FastifyReply } from 'fastify'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { supabase } from '../db'
 import { memoryCache } from '../utils/pagination'
+import { decideRoute, looksLikeApiKey } from '../services/developer/developer.domain'
+import { NotConfiguredError } from '../services/developer/developer.repository'
+import { developerService, type ApiKeyPrincipal } from '../services/developer/developer.service'
 
 /**
  * The authenticated user IS Supabase's `User` — this middleware puts the
@@ -50,6 +53,12 @@ declare module 'fastify' {
      * third party (an AI provider included).
      */
     accessToken: string
+    /**
+     * Set only when the caller presented an API key instead of a session.
+     * `userId` is then the key's creator; `requireWorkspaceContext` pins the
+     * workspace to the key's and narrows capabilities to its scopes.
+     */
+    apiKey?: ApiKeyPrincipal | undefined
     // NOTE: there is deliberately no ambient `workspaceId` here. It used to
     // exist and had to be `''` when the user had none or had several, which is
     // a fail-open tenancy value. The authorized workspace lives on
@@ -242,6 +251,8 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
 
   const token = authHeader.replace('Bearer ', '')
 
+  if (looksLikeApiKey(token)) return authenticateApiKey(request, reply, token)
+
   // ✅ FIX: چک کش قبل از هر کوئری — await اضافه شد چون memoryCache.get
   // یک Promise برمی‌گرداند (wrapper روی cacheService.get که Redis-backed است)
   const cacheKey = authCacheKey(token)
@@ -326,6 +337,56 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   request.userId = user.id
   request.userRole = result.role
   request.accessToken = token
+}
+
+/**
+ * An API key (docs/developer-platform-migration.sql).
+ *
+ * ⚠️ THE ROUTE ALLOWLIST IS CHECKED HERE, IN AUTHENTICATION — not later.
+ * Many routes run `authenticate` alone (profile, workspaces, billing); if the
+ * check waited for `requireWorkspaceContext`, a key would reach every one of
+ * them as its creator. A key opens only the routes API_ROUTE_SCOPES names.
+ */
+async function authenticateApiKey(request: FastifyRequest, reply: FastifyReply, token: string) {
+  let principal: ApiKeyPrincipal | null
+  try {
+    principal = await developerService.authenticateKey(token)
+  } catch (err) {
+    if (err instanceof NotConfiguredError) principal = null
+    else {
+      request.log.error({ err }, 'api key lookup failed')
+      return reply.status(500).send({ error: 'Internal Server Error' })
+    }
+  }
+  if (!principal)
+    return reply.status(401).send({ error: 'Invalid or expired API key', code: 'API_KEY_INVALID' })
+
+  const decision = decideRoute(request.method, request.routeOptions.url, principal.scopes)
+  if (!decision.allowed) {
+    // The refusal goes in the key's own log: «why is my integration getting
+    // 403?» is answered there. (An allowed request is logged in onResponse.)
+    developerService.recordRequest({
+      workspaceId: principal.workspaceId,
+      keyId: principal.id,
+      method: request.method,
+      route: request.routeOptions.url ?? 'unmatched',
+      status: 403,
+      durationMs: Math.round(reply.elapsedTime),
+    })
+    return reply.status(403).send({
+      error: 'Forbidden',
+      code:
+        decision.reason === 'SCOPE_MISSING' ? 'API_KEY_SCOPE_MISSING' : 'API_KEY_ROUTE_NOT_ALLOWED',
+      ...(decision.scope ? { scope: decision.scope } : {}),
+    })
+  }
+
+  request.apiKey = principal
+  request.userId = principal.createdBy
+  // Role comes from the verified membership in requireWorkspaceContext.
+  request.userRole = ''
+  // Not a JWT: nothing may build a user-scoped database client from it.
+  request.accessToken = ''
 }
 
 export const authPreHandler = authenticate

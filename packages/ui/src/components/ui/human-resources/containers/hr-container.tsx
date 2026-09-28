@@ -1,7 +1,6 @@
 // packages/ui/src/components/ui/human-resources/containers/hr-container.tsx
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   useEmployees,
@@ -16,10 +15,11 @@ import { WorkspaceContainer } from '../../workspace/containers/workspace-contain
 import { useState } from 'react'
 import { Users, Building2 } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 export function HumanResourcesContainer() {
   const t = useTranslations()
-  const router = useRouter()
+  const push = useLocalePush()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState<'employees' | 'team'>('employees')
@@ -111,7 +111,7 @@ export function HumanResourcesContainer() {
           onCreate={handleCreate}
           onDelete={handleDelete}
           // G1: canonical people route — see notification-bell.
-          onView={(id) => router.push(`/team-and-payroll/${id}`)}
+          onView={(id) => push(`/team-and-payroll/${id}`)}
         />
       ) : (
         <WorkspaceContainer />

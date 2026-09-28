@@ -1,7 +1,8 @@
 // packages/ui/src/components/ui/settings/settings-page.tsx
 'use client'
 
-import { useState, useCallback, useMemo, useRef, memo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef, memo } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useBackupStore, useDeviceStore, useAuthStore } from '@hisabche/store'
@@ -29,8 +30,12 @@ import {
   Stamp,
   Upload,
   X,
+  Plug,
+  ShoppingBag,
 } from 'lucide-react'
-import { toIsoDay } from '@hisabche/formatting'
+import { formatBytes, formatNumber, toIsoDay } from '@hisabche/formatting'
+import { localizePath } from '@hisabche/ui-contract'
+import { useRouteLang } from '../../../hooks/use-locale-push'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SettingsPage v3 — Memoized · Performance Optimized
@@ -742,17 +747,97 @@ SafetySection.displayName = 'SafetySection'
 
 // ─── Storage Section ──────────────────────────────────────────────────────
 
+/**
+ * What this device keeps, and the one part of it that is safe to throw away.
+ *
+ * ⚠️ This section used to show a constant «24 MB» and a button that only
+ * logged to the console. Now both numbers are measured:
+ *
+ *   · «data read from the server» — the entries in the TanStack Query cache,
+ *     which is exactly what «clear cache» empties (`resetQueries`: the cached
+ *     answers go, open screens fetch theirs again);
+ *   · «this app's storage» — `navigator.storage.estimate()`, the browser's own
+ *     figure for this origin. A browser that does not report it says so rather
+ *     than showing a guess.
+ *
+ * Nothing else is touched. Unsent changes live in the outbox, drafts and the
+ * session in their own stores — clearing a read cache must never cost somebody
+ * an invoice they have not sent yet.
+ */
+type StorageEstimate =
+  | { state: 'measuring' }
+  | { state: 'unavailable' }
+  | { state: 'measured'; usage: number; quota: number | null }
+
 const StorageSection = memo(function StorageSection() {
   const tOriginal = useTranslations()
   const t = (key: string, fallback?: string): string => {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
     return v && v !== key ? v : (fallback ?? key)
   }
+  const locale = useIntlLocale()
+  const toast = useToast()
+  const queryClient = useQueryClient()
 
-  const handleClearCache = useCallback(() => {
-    // TODO: Implement cache clearing
-    console.log('Cache cleared')
+  const [entries, setEntries] = useState<number | null>(null)
+  const [estimate, setEstimate] = useState<StorageEstimate>({ state: 'measuring' })
+  const [clearing, setClearing] = useState(false)
+
+  // The cache size is read after mount and kept current: every fetch, removal
+  // and reset changes it, and the cache announces each one.
+  useEffect(() => {
+    const cache = queryClient.getQueryCache()
+    const read = () => setEntries(cache.getAll().length)
+    read()
+    return cache.subscribe(read)
+  }, [queryClient])
+
+  const measure = useCallback(async () => {
+    const storage = typeof navigator !== 'undefined' ? navigator.storage : undefined
+    if (!storage || typeof storage.estimate !== 'function') {
+      setEstimate({ state: 'unavailable' })
+      return
+    }
+    try {
+      const { usage, quota } = await storage.estimate()
+      if (typeof usage !== 'number') {
+        setEstimate({ state: 'unavailable' })
+        return
+      }
+      setEstimate({ state: 'measured', usage, quota: typeof quota === 'number' ? quota : null })
+    } catch {
+      setEstimate({ state: 'unavailable' })
+    }
   }, [])
+
+  useEffect(() => {
+    void measure()
+  }, [measure])
+
+  const handleClearCache = useCallback(async () => {
+    setClearing(true)
+    try {
+      // Refetch failures do not reject here — each open screen shows its own
+      // error state; the cache itself is already empty.
+      await queryClient.resetQueries()
+      toast.success(tOriginal('settings.cacheCleared'))
+    } finally {
+      setClearing(false)
+      void measure()
+    }
+  }, [queryClient, measure, toast, tOriginal])
+
+  const storageText =
+    estimate.state === 'measuring'
+      ? t('settings.storageMeasuring')
+      : estimate.state === 'unavailable'
+        ? t('settings.storageUnavailable')
+        : estimate.quota !== null
+          ? tOriginal('settings.storageOfQuota', {
+              used: formatBytes(estimate.usage, locale),
+              quota: formatBytes(estimate.quota, locale),
+            })
+          : formatBytes(estimate.usage, locale)
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
@@ -764,28 +849,43 @@ const StorageSection = memo(function StorageSection() {
           </h2>
         </div>
 
-        <div className="rounded-xl border border-[hsl(var(--border-default))] p-4 text-start">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm text-[hsl(var(--fg-secondary))]">{t('settings.cache')}</span>
-            <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border border-[hsl(var(--border-default))]">
-              24 MB
-            </span>
+        <dl className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] p-4 text-start">
+          <div className="flex items-center justify-between gap-3">
+            <dt className="text-sm text-[hsl(var(--fg-secondary))]">
+              {t('settings.cacheEntries')}
+            </dt>
+            <dd className="rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] px-2.5 py-0.5 text-xs font-medium tabular-nums text-[hsl(var(--fg-secondary))]">
+              {entries === null ? '—' : formatNumber(entries, locale)}
+            </dd>
           </div>
-          <button
-            type="button"
-            onClick={handleClearCache}
-            className={cn(
-              'inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium',
-              'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]',
-              'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
-              'transition-colors duration-150',
-              'motion-reduce:transition-none',
-            )}
-          >
-            <Trash2 className="size-4" aria-hidden="true" />
-            {t('settings.clearCache')}
-          </button>
-        </div>
+          <div className="flex items-center justify-between gap-3">
+            <dt className="text-sm text-[hsl(var(--fg-secondary))]">
+              {t('settings.deviceStorage')}
+            </dt>
+            <dd className="text-xs font-medium tabular-nums text-[hsl(var(--fg-secondary))]">
+              {storageText}
+            </dd>
+          </div>
+        </dl>
+
+        <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('settings.cacheHint')}</p>
+
+        <button
+          type="button"
+          onClick={() => void handleClearCache()}
+          disabled={clearing}
+          className={cn(
+            'inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium',
+            'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]',
+            'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+            'disabled:cursor-not-allowed disabled:opacity-60',
+            'transition-colors duration-150',
+            'motion-reduce:transition-none',
+          )}
+        >
+          <Trash2 className="size-4" aria-hidden="true" />
+          {t('settings.clearCache')}
+        </button>
       </div>
     </div>
   )
@@ -800,10 +900,11 @@ const BillingSection = memo(function BillingSection() {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
     return v && v !== key ? v : (fallback ?? key)
   }
+  const lang = useRouteLang()
 
   return (
     <Link
-      href="/billing"
+      href={localizePath('/billing', lang)}
       className={cn(
         'flex items-center gap-3 rounded-2xl p-4 sm:p-5',
         'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
@@ -835,10 +936,11 @@ const WorkflowTemplatesSection = memo(function WorkflowTemplatesSection() {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
     return v && v !== key ? v : (fallback ?? key)
   }
+  const lang = useRouteLang()
 
   return (
     <Link
-      href="/workflow-templates"
+      href={localizePath('/workflow-templates', lang)}
       className={cn(
         'flex items-center gap-3 rounded-2xl p-4 sm:p-5',
         'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
@@ -866,6 +968,81 @@ const WorkflowTemplatesSection = memo(function WorkflowTemplatesSection() {
 })
 WorkflowTemplatesSection.displayName = 'WorkflowTemplatesSection'
 
+// API keys and webhooks live on their own screen; settings is where an owner
+// looks for «connect another system», so the door is here.
+const DevelopersSection = memo(function DevelopersSection() {
+  const tOriginal = useTranslations()
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+    return v && v !== key ? v : (fallback ?? key)
+  }
+  const lang = useRouteLang()
+
+  return (
+    <Link
+      href={localizePath('/developers', lang)}
+      className={cn(
+        'flex items-center gap-3 rounded-2xl p-4 sm:p-5',
+        'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+        'transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))]',
+        'motion-reduce:transition-none',
+      )}
+    >
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[hsl(var(--color-primary)/0.1)] shrink-0">
+        <Plug className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-[hsl(var(--fg-primary))]">{t('developer.title')}</p>
+        <p className="text-sm text-[hsl(var(--fg-secondary))] truncate">
+          {t('developer.settingsLink')}
+        </p>
+      </div>
+      <ChevronLeft
+        className="size-4 text-[hsl(var(--fg-tertiary))] rtl:rotate-180 shrink-0"
+        aria-hidden="true"
+      />
+    </Link>
+  )
+})
+DevelopersSection.displayName = 'DevelopersSection'
+
+// Website and integration orders — the queue a storefront fills.
+const OrdersSection = memo(function OrdersSection() {
+  const tOriginal = useTranslations()
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+    return v && v !== key ? v : (fallback ?? key)
+  }
+  const lang = useRouteLang()
+
+  return (
+    <Link
+      href={localizePath('/orders', lang)}
+      className={cn(
+        'flex items-center gap-3 rounded-2xl p-4 sm:p-5',
+        'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+        'transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))]',
+        'motion-reduce:transition-none',
+      )}
+    >
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[hsl(var(--color-primary)/0.1)] shrink-0">
+        <ShoppingBag className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-[hsl(var(--fg-primary))]">{t('orders.title')}</p>
+        <p className="text-sm text-[hsl(var(--fg-secondary))] truncate">
+          {t('settings.ordersLink')}
+        </p>
+      </div>
+      <ChevronLeft
+        className="size-4 text-[hsl(var(--fg-tertiary))] rtl:rotate-180 shrink-0"
+        aria-hidden="true"
+      />
+    </Link>
+  )
+})
+OrdersSection.displayName = 'OrdersSection'
+
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export const SettingsPage = memo(function SettingsPage() {
@@ -888,6 +1065,8 @@ export const SettingsPage = memo(function SettingsPage() {
       <BusinessStampSection />
       <BillingSection />
       <WorkflowTemplatesSection />
+      <DevelopersSection />
+      <OrdersSection />
       <BackupSection />
       <HardwareSection />
       <PerformanceSection />

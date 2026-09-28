@@ -64,10 +64,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 
 export default function TeamAndPayrollPage() {
   return (
-    <main className="section">
-      <Suspense fallback={<div>در حال بارگذاری...</div>}>
-        <TeamAndPayrollContainer />
-      </Suspense>
-    </main>
+    <Suspense fallback={<div>در حال بارگذاری...</div>}>
+      <TeamAndPayrollContainer />
+    </Suspense>
   )
 }

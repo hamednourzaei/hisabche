@@ -766,7 +766,8 @@ export class WorkspaceService {
     await memoryCache.invalidate(this.getInvitesCacheKey(workspaceId))
   }
 
-  private async invalidateUserCache(userId: string) {
+  /** Public so a workspace created elsewhere (a sandbox) appears in the list at once. */
+  async invalidateUserCache(userId: string) {
     await memoryCache.invalidate(this.getUserWorkspacesCacheKey(userId))
   }
 }

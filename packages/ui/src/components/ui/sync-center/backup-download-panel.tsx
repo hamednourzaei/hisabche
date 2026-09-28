@@ -9,7 +9,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useParams } from 'next/navigation'
+import { localizePath } from '@hisabche/ui-contract'
+import { useRouteLang } from '../../../hooks/use-locale-push'
 import { useTranslations } from 'next-intl'
 import { Download, Loader2 } from 'lucide-react'
 import { useDownloadWorkspaceBackup, useSubscription, type BackupFileFormat } from '@hisabche/api'
@@ -18,7 +19,7 @@ import { Button } from '../button'
 
 export function BackupDownloadPanel() {
   const t = useTranslations()
-  const params = useParams<{ lang?: string }>()
+  const lang = useRouteLang()
   const download = useDownloadWorkspaceBackup()
   const { data: subscription } = useSubscription()
   const [busy, setBusy] = useState<BackupFileFormat | null>(null)
@@ -85,7 +86,7 @@ export function BackupDownloadPanel() {
         <p className="text-xs text-[hsl(var(--fg-tertiary))]">
           {t('sync.download.requiresPlan')}{' '}
           <a
-            href={`/${params?.lang ?? 'fa'}/billing`}
+            href={localizePath('/billing', lang)}
             className="font-medium text-[hsl(var(--color-primary))] hover:underline"
           >
             {t('sync.download.upgrade')}

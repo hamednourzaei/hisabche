@@ -46,6 +46,9 @@ const SettingsPage = lazy(() => import('@/features/settings/settings-page'))
 const SyncCenterPage = lazy(() => import('@/features/sync/sync-page'))
 const ApprovalsPage = lazy(() => import('@/features/approvals/approvals-page'))
 const ReferralsPage = lazy(() => import('@/features/referrals/referrals-page'))
+const DevelopersPage = lazy(() => import('@/features/developers/developers-page'))
+const OrdersPage = lazy(() => import('@/features/orders/orders-page'))
+const MarketplacePage = lazy(() => import('@/features/marketplace/marketplace-page'))
 const BillingPage = lazy(() => import('@/features/billing/billing-page'))
 const OnboardingPage = lazy(() => import('@/features/onboarding/onboarding-page'))
 const ManufacturingPage = lazy(() => import('@/features/manufacturing/manufacturing-page'))
@@ -69,6 +72,7 @@ const ConflictsPage = lazy(() => import('@/features/sync/conflicts-page'))
 const GovernancePage = lazy(() => import('@/features/permissions/governance-page'))
 const PublicTaskPage = lazy(() => import('@/features/public/public-task-page'))
 const PublicInvoicePage = lazy(() => import('@/features/public/public-invoice-page'))
+const PublicPortalPage = lazy(() => import('@/features/public/public-portal-page'))
 
 /** Carries the invoice id across the `/sales/:id` → `/invoices/:id` rename. */
 function LegacyInvoiceRedirect() {
@@ -130,6 +134,9 @@ const router = createHashRouter([
       { path: 'settings', element: <SettingsPage /> },
       { path: 'approvals', element: <ApprovalsPage /> },
       { path: 'referrals', element: <ReferralsPage /> },
+      { path: 'developers', element: <DevelopersPage /> },
+      { path: 'orders', element: <OrdersPage /> },
+      { path: 'marketplace', element: <MarketplacePage /> },
       { path: 'billing', element: <BillingPage /> },
       { path: 'onboarding', element: <OnboardingPage /> },
       { path: 'manufacturing', element: <ManufacturingPage /> },
@@ -160,10 +167,10 @@ const router = createHashRouter([
       // G1: `customer-list` and `product-list` are no longer destinations —
       // see the legacy block below. The lazy imports stay because nothing
       // deleted the pages; only their place in the menu changed.
-      { path: 'accounting-workspace', element: <DomainWorkspacePage /> },
-      { path: 'sales-workspace', element: <DomainWorkspacePage /> },
-      { path: 'inventory-workspace', element: <DomainWorkspacePage /> },
-      { path: 'people-workspace', element: <DomainWorkspacePage /> },
+      { path: 'accounting-workspace', element: <DomainWorkspacePage domain="accounting" /> },
+      { path: 'sales-workspace', element: <DomainWorkspacePage domain="sales" /> },
+      { path: 'inventory-workspace', element: <DomainWorkspacePage domain="inventory" /> },
+      { path: 'people-workspace', element: <DomainWorkspacePage domain="people" /> },
       { path: 'governance', element: <GovernancePage /> },
 
       // Web serves this at `/workflow-templates` and desktop only had
@@ -172,6 +179,7 @@ const router = createHashRouter([
       { path: 'workflow-templates', element: <WorkflowPage /> },
       { path: 'public-task/:token', element: <PublicTaskPage /> },
       { path: 'public-invoice/:token', element: <PublicInvoicePage /> },
+      { path: 'portal/:token', element: <PublicPortalPage /> },
 
       // Legacy desktop paths. Existing windows, deep links and the pinned
       // shortcuts users already have keep working rather than bouncing to the

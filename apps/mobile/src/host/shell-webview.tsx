@@ -23,6 +23,7 @@ import { CameraScanOverlay } from './camera-scan-overlay'
 import { useHostServices } from './use-host-services'
 
 import SHELL_HTML from '../../assets/shell/index.html'
+import { hostText } from './host-strings'
 
 const HOST_MARKER = "document.documentElement.setAttribute('data-host', 'mobile');"
 
@@ -185,16 +186,14 @@ export function ShellWebView(): React.JSX.Element {
   // Whatever goes wrong here, the person is left looking at nothing — and
   // «still loading», «the UI could not be unpacked» and «this build shipped no
   // UI» all render identically unless one of them is written down
-  // (راهنمای سشن §۷٫۶). The text is Persian because this screen appears
-  // before the shared UI — and its translations — exist.
+  // (راهنمای سشن §۷٫۶). The text comes from the host's own small bundle
+  // (host-strings.ts): this screen appears before the shared UI exists, but
+  // the person's language is already known.
   if (failure) {
     return (
       <View style={[styles.container, styles.loading]}>
-        <Text style={styles.failureTitle}>برنامه باز نشد</Text>
-        <Text style={styles.failureBody}>
-          فایل‌های برنامه روی این دستگاه باز نشدند. برنامه را ببندید و دوباره باز کنید؛ اگر باز هم
-          تکرار شد، نصب دوباره لازم است.
-        </Text>
+        <Text style={styles.failureTitle}>{hostText('openFailedTitle')}</Text>
+        <Text style={styles.failureBody}>{hostText('openFailedBody')}</Text>
         <Text style={styles.failureCode}>{failure}</Text>
       </View>
     )
@@ -252,7 +251,7 @@ export function ShellWebView(): React.JSX.Element {
         onHttpError={(event) => setFailure(`HTTP ${event.nativeEvent.statusCode}`)}
         renderError={() => (
           <View style={[styles.container, styles.loading]}>
-            <Text style={styles.failureTitle}>برنامه باز نشد</Text>
+            <Text style={styles.failureTitle}>{hostText('openFailedTitle')}</Text>
           </View>
         )}
         onNavigationStateChange={(state) => setCanGoBack(state.canGoBack)}

@@ -6,7 +6,6 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { CheckCheck } from 'lucide-react'
 import { formatCompactCount, type UiLanguage } from '@hisabche/formatting'
@@ -26,6 +25,7 @@ import { ActivityFeedList } from './ActivityFeedList'
 import { ActivitySkeleton } from './ActivitySkeleton'
 import { ActivityEmptyState } from './ActivityEmptyState'
 import { AuditContainer } from '../audit/containers/audit-container'
+import { useLocalePush } from '../../../hooks/use-locale-push'
 
 // ─── Filter mapping (kept exactly as before — this logic is correct) ───────
 
@@ -55,7 +55,7 @@ type SectionType = 'activity' | 'audit'
 
 export function ActivitiesPage() {
   const t = useTranslations()
-  const router = useRouter()
+  const push = useLocalePush()
   const [section, setSection] = useState<SectionType>('activity')
   const [filter, setFilter] = useState<FilterType>('all')
   const lang = useLocale() as UiLanguage
@@ -87,9 +87,9 @@ export function ActivitiesPage() {
   const handleActivityClick = useCallback(
     (_activity: ActivityItemDto, group: ActivityGroupDto) => {
       const route = group.entitySummary.route || '/dashboard'
-      router.push(route)
+      push(route)
     },
-    [router],
+    [push],
   )
 
   return (

@@ -639,3 +639,92 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 - **ریشه:** policy با نام بی‌پیشوند `auth_workspace_ids()` نوشته شد؛ `linter-2026-09-14-migration.sql` آن را به schema `private` برده بود. policy های قدیمی کار می‌کنند (به oid بسته‌اند) ولی هر policy جدید با نام بی‌پیشوند می‌شکند. تست pg سبز بود چون stub را در `public` ساخته بود.
 - **رفع:** دو CREATE POLICY صریح در یک DO (private، بعد public، وگرنه NOTICE). **گارد:** `product-barcodes.pg.test.ts` حالا شکل production (تابع در `private`) را هم اجرا می‌کند.
 - **درس:** migration جدیدی که به helper های RLS اشاره می‌کند، باید با `private.` یا تشخیص محل بنویسد؛ و تست pg باید شکل واقعیِ دیتابیس زنده را بسازد، نه شکل migration اولیه را.
+
+## BUG-066 — چهار فضای کاری روی ویندوز و اندروید خالی بودند (۲۷ سپتامبر، دور سوم)
+
+- **ریشه:** در `app-shell/src/app/app.tsx` مسیرهای `accounting-workspace`، `sales-workspace`، `inventory-workspace` و `people-workspace` همه `<DomainWorkspacePage />` را رندر می‌کردند؛ آن صفحه دامنه را از `:domain` می‌خواند که این مسیرها ندارند → `''` → container برای دامنه‌ی ناشناخته `null` برمی‌گرداند. وب هر صفحه را با دامنه‌ی صریح صدا می‌زد، پس فقط دسکتاپ/موبایل خالی بودند. `route-parity` سبز بود چون فقط وجود مسیر را می‌سنجد، نه اینکه چه چیزی به صفحه می‌رسد.
+- **رفع:** `<DomainWorkspacePage domain="accounting" />` و … ؛ صفحه `domain ?? params.domain`.
+- **گارد:** `route-parity.test.ts` → «a route that names a domain hands it to the screen» — injection-tested.
+
+## BUG-067 — لینک‌های مشترک روی دسکتاپ به `/fa/…` می‌رفتند و روی داشبورد می‌افتادند (۲۷ سپتامبر، دور سوم)
+
+- **ریشه:** شش جا زبان مسیر را با fallback ثابت `'fa'` می‌ساختند (`params?.lang ?? 'fa'`): تأییدها، breadcrumb، دیالوگ بارکد، لینک پلن در پشتیبان، و لینک «صفحه‌ی کامل» دستیار (`/${useLocale()}/assistant`). دسکتاپ `[lang]` ندارد، پس `/fa/invoices/…` به catch-all می‌خورد و کاربر بی‌صدا به داشبورد برمی‌گشت. در جهت مقابل، ۳۵ `router.push('/…')`/`replace` بدون پیشوند روی وب هر بار از redirect پراکسی رد می‌شدند (§۸ «هر router.push داخلی پیشوند locale می‌خواهد») — از جمله تعویض تب انبار و تیم.
+- **رفع:** یک قاعده: `localizePath(path, lang)` در `ui-contract` (پیشوند فقط وقتی زبان مسیر معلوم است، هرگز دوبار) + `useLocalePush` / `useLocaleReplace` / `useRouteLang` در `packages/ui/src/hooks/use-locale-push.ts`. `onNavigate` از `DomainWorkspaceContainer` و `DataAndSyncContainer` حذف شد — هر صفحه همان تابع را می‌داد و صفحه‌ی سرور اصلاً نمی‌تواند تابع بدهد.
+- **گارد:** `dashboard-page-structure.test.ts` (بدون `router.push('/…')` برهنه، بدون fallback `'fa'`) + `shell.test.ts` برای `localizePath` — injection-tested. `auth` عمداً مستثناست (عمومی، مقصد redirect خودش).
+
+## BUG-068 — تابع client از صفحه‌ی سرور صدا زده می‌شد؛ ۲۰۰ با خطای سرور (۲۷ سپتامبر، دور سوم)
+
+- **ریشه:** `warehouseSkeleton()` در `warehouse-client.tsx` (بدون `'use client'`، پس سرور) صدا زده می‌شد؛ نسخه‌ی اول بازنویسی همین را برای `customersSkeleton()` تکرار کرد. Next لاگ می‌کند «Attempted to call … from the server»، صفحه همچنان ۲۰۰ می‌دهد و tsc/vitest/`next build` همه سبزند. فقط `next start` + درخواست واقعی نشانش داد.
+- **رفع:** `<WarehouseSkeleton />` به‌جای `warehouseSkeleton()` (alias در import).
+- **گارد:** `dashboard-page-structure.test.ts` → «a server file renders a UI function as an element, never calls it» — injection-tested.
+
+## BUG-069 — تنظیم چاپگر رسید و بارکدخوان روی ویندوز و اندروید هیچ صفحه‌ای نداشت (۲۷ سپتامبر، دور سوم)
+
+- **ریشه:** `app-shell/src/app/providers.tsx` میزبان چاپگر را ثبت می‌کند (`registerReceiptPrinterHost`)، ولی `HardwareSection` فقط در `SettingsPage` وب سوار بود؛ صفحه‌ی تنظیمات app-shell نسخه‌ی خودش را داشت و این بخش را نداشت. یعنی دقیقاً روی دستگاهی که چاپگر دارد، هیچ‌جا برای انتخابش نبود (§۷٫۱).
+- **رفع:** `HardwareSection` از `@hisabche/ui/screens` export و در تنظیمات app-shell سوار شد. بقیه‌ی صفحه‌ی تنظیمات دسکتاپ میزبان‌محور می‌ماند (خروج با store امن دسکتاپ، زبان `setDesktopLanguage`، وضعیت SQLite، به‌روزرسانی).
+- **جانبی:** سه لینک برهنه (`/billing`، `/workflow-templates`، `/quick-invoice?type=purchase`) → `localizePath`. گارد `dashboard-page-structure.test.ts` حالا `href="/…"` برهنه را هم می‌گیرد — injection-tested.
+- **گزارش، نه تعمیر (§13):** `StorageSection` در تنظیمات وب «24 MB» ثابت نشان می‌دهد و دکمه‌ی پاک‌کردن کش فقط `console.log` می‌کند (G1). و سه فایل خالیِ ردیابی‌شده در `apps/desktop`: `cls`، `npm`، `electron-vite`.
+
+## BUG-070 — hydration #418 روی `/warehouse?tab=products` (۲۷ سپتامبر، دور چهارم)
+
+- **ریشه:** `useSyncStore` → `isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true`. Node 22 `navigator` سراسری دارد بدون `onLine` → سرور `undefined` (آفلاین) و badge «آفلاین» رندر می‌کرد؛ مرورگر آنلاین. zustand 4.5 `getInitialState()` را snapshot سرور می‌دهد، پس هر مقدار اولیه‌ی وابسته به محیط، mismatch است.
+- **رفع:** مقدار اولیه `true`؛ `setOnline(navigator.onLine)` بعد از `create()` و فقط روی کلاینت. **گارد:** `sync-initial-state.test.ts` (navigator بدون onLine و offline) — injection-tested.
+
+## BUG-071 — hydration #418 روی `/data-and-sync` (۲۷ سپتامبر، دور چهارم)
+
+- **ریشه:** `KpiCard` مقدار ReactNode را در `<p>` می‌پیچید؛ `Badge` یک `<div>` است. parser HTML پاراگراف را زود می‌بندد، DOM سرور با درخت کلاینت فرق می‌کند.
+- **رفع:** `<div>`. **گارد:** `one-kpi-card.test.ts` — injection-tested.
+
+## BUG-072 — `<main>` تودرتو در همه‌ی صفحه‌های داشبورد (۲۷ سپتامبر، دور چهارم)
+
+- **ریشه:** layout یک `<main>` دارد و ۴۴ صفحه/loading یک `<main className="section">` دیگر درونش می‌گذاشتند (`.section` تعریف نشده بود).
+- **رفع:** wrapper حذف؛ صفحه فقط container را برمی‌گرداند. **گارد:** «exactly one <main>» — injection-tested.
+
+## BUG-073 — `StorageSection` ساختگی و breadcrumb با کلید خام (۲۷ سپتامبر، دور چهارم)
+
+- **ریشه:** «24 MB» ثابت و دکمه‌ی `console.log` (G1). breadcrumb `t('common.details')` را صدا می‌زد که در هیچ کاتالوگی نبود → «common.details» روی صفحه‌ی هر رکورد.
+- **رفع:** شمار کش TanStack Query + `navigator.storage.estimate()`، پاک‌کردن با `resetQueries()`؛ کلید `common.details` در fa/af/en. `purchasing-view` هم دیگر `'fa-AF'` ثابت ندارد (`formatNumber` + `useIntlLocale`).
+- **گارد:** `settings-storage-section.test.ts`، `breadcrumb-keys.test.ts`، ratchet در `calendar-follows-language.test.ts` — همه injection-tested.
+
+## BUG-074 — ۱۸۵ کلید ترجمه در هیچ کاتالوگی نبود؛ زنگ اعلان کلید خام نشان می‌داد (۲۷ سپتامبر، دور چهارم)
+
+- **ریشه:** کلیدهایی که صفحه‌های زنده صدا می‌زدند (با namespace حل‌شده) در fa/af/en نبودند. ۲۲ تا بدون fallback → کلید خام روی صفحه (زنگ داشبورد: «notifications.markAllRead»، «notifications.viewAll»). ۱۶۳ تا با fallback فارسی → انگلیسی و دری‌خوان فارسی می‌دید. زنگ علاوه بر این وضعیت فاکتور، «بدون عنوان»، «فاکتور #»، «۹۹+» و aria-label را ثابت فارسی داشت.
+- **هم‌خانواده:** صفحه‌ی صف ارسال دسکتاپ/اندروید ۱۰ کلید `desktop` نداشت («sync.col.record» به‌عنوان سرستون). صفحه‌ی «برنامه باز نشد» و overlay دوربین موبایل فارسی ثابت بودند (با این استدلال غلط که «ترجمه هنوز وجود ندارد» — زبان انتخاب‌شده در secure store هست).
+- **رفع:** ۱۸۴ کلید در سه زبان (کلید `invoices.noinvoicess` غلط تایپی بود → `invoices.noInvoices`؛ شمارش مشتری با ICU `{count}`). وضعیت‌های زنگ از `invoices.<status>` (همان برچسب فهرست فاکتور). bundle تایپ‌شده‌ی `sync` در `desktop-strings.ts`. bundle کوچک تایپ‌شده‌ی میزبان موبایل `host-strings.ts` (نه کاتالوگ ۹۳۵KB در باندل نیتیو).
+- **گارد:** `i18n-keys-exist.test.ts` (namespace-aware، روی ui/web/admin)، `desktop-keys.test.ts`، `host-strings.test.ts` — هر سه injection-tested.
+- **گزارش، نه تعمیر:** ۸ فایل هیچ مصرف‌کننده‌ای ندارند و کلیدهایشان عمداً اضافه نشد (فهرست `UNUSED_FILES` در گارد): customer-360-container، dashboard-invoices، invoice-360-container، landing-preview، landing/transform-scene، EntityActivityCard، permissions-view، approval-actions.
+
+## BUG-075 — ورود صورتحساب بانک: endpoint و هوک بود، هیچ صفحه‌ای صدایش نمی‌زد (۲۷ سپتامبر، دور پنجم)
+
+- **الگو:** §۷٫۱ (قانون هست، caller ندارد) + §۷٫۵ (پیامی که دروغ می‌گوید)
+- **ریشه:** `POST /finance/bank/statements` و `useImportStatement` ساخته شده بودند؛ `grep` صفر caller. حالت خالی صفحه‌ی بانک می‌گفت «صورتحساب بانک را وارد کنید» در حالی که هیچ راهی برای واردکردن نبود.
+- **رفع:** `lib/bank-statement-csv.ts` (تشخیص ستون از عنوان فارسی/دری/انگلیسی، تاریخ شمسی و ارقام فارسی، پول integer بدون float) + `ImportStatementPanel` در صفحه‌ی بانک. حساب از نقش `bank`/`cash`. **تا یک ردیف ناخوانا هست، چیزی ارسال نمی‌شود.** خطای خواندن حساب‌ها ≠ «حساب بانکی نداری».
+- **⚠️ واحد:** `banking.service` هر مبلغ را ×۱۰۰ می‌کند (مستقل از ارز)؛ واردکننده همان را می‌کند (`BANK_MINOR_DIGITS`)، وگرنه هیچ مبلغی تطبیق نمی‌خورد.
+- **گارد:** `bank-statement-csv.test.ts` (24) — injection-tested.
+
+## BUG-076 — طراحی کلید API: ۳۲ از ۵۴ فایل route فقط عضویت را چک می‌کنند (۲۷ سپتامبر، دور پنجم)
+
+- **یافته، نه باگ زنده:** فقط ۲۲ فایل `requireCapability` دارند. کلید API که فقط capability را باریک کند، روی بقیه‌ی route ها با تمام قدرت سازنده‌اش کار می‌کرد — و روی route هایی که فقط `authenticate` دارند (پروفایل، workspace ها، billing) حتی به `requireWorkspaceContext` نمی‌رسید.
+- **طراحی:** allowlist مسیر (`API_ROUTE_SCOPES`، الگوی Fastify نه URL) **داخل `authenticate`** تصمیم می‌گیرد، قبل از این‌که کلید «سازنده» شود؛ بعد workspace قفل و capability باریک می‌شود. هیچ DELETE، ثبت در دفتر، پول، اعضا یا مدیریت کلید در allowlist نیست.
+- **گارد:** `developer-platform.test.ts` (62، Fastify واقعی) + `developer-platform.pg.test.ts` (13، Postgres واقعی) — injection-tested.
+- **Migration:** `docs/developer-platform-migration.sql` — Post-migration verification query generated — PENDING HUMAN CONFIRMATION.
+
+## BUG-077 — هر لینک عمومی ۴۰۱ می‌گرفت: فاکتور عمومی و کار CRM (۲۷ سپتامبر، دور ششم)
+
+- **الگو:** §۷٫۶ (کار نمی‌کند ولی کنسول ساکت است) + §۷٫۱
+- **ریشه:** `GET /api/public/invoices/:token` و `GET|PATCH /api/public/tasks/:token…` عمداً `authenticate` ندارند، ولی hook سراسری `preHandler` در `index.ts` هر مسیری را که در `publicPaths` نبود با `authenticate` می‌بست. `/api/public/` در آن فهرست نبود؛ پس صفحه‌های `/public-invoice/[token]` و `/public-task/[token]` (و QR روی فاکتور چاپی) برای کسی که لینک برایش فرستاده شده بود **هیچ‌وقت** کار نکرده‌اند.
+- **کشف:** هنگام ساخت storefront — گارد جدید «فهرست کامل مسیرهای `/api/public/`» سه مسیر CRM را پیدا کرد که کسی فکرش را نکرده بود.
+- **رفع:** `'/api/public/'` در `publicPaths` + CORS جدا برای همین پیشوند (هر origin، **بدون credentials**، متدهای GET/POST/PATCH).
+- **گارد:** `storefront-orders.test.ts` — فهرست بسته‌ی همه‌ی مسیرهای `/api/public/` (۹ مسیر)؛ مسیر جدید آن‌جا = تصمیم بازبینی‌شده. هیچ فایل storefront/invoice-public `authenticate` ندارد.
+
+## BUG-078 — گارد allowlist کلید API با `const read` فایل دیگری راضی می‌شد (۲۷ سپتامبر، دور ششم)
+
+- **ریشه‌ی خطر:** تست «هر route باز برای کلید `requireWorkspaceContext` دارد» preHandler نام‌دار را در **کل** فایل‌های route جست؛ `customer-profile.routes.ts` هم `const read = [authenticate, requireWorkspaceContext, …]` دارد، پس حذف آن از `orders.routes.ts` تست را قرمز نمی‌کرد (injection-test نشان داد).
+- **رفع:** اول فایلِ **یکتای** اعلام‌کننده‌ی route پیدا می‌شود، بعد هر دو چک در همان فایل. injection دوباره: قرمز.
+
+## BUG-079 — صفحه‌ی پورتال مشتری فقط namespace های CORE را می‌گرفت (۲۸ سپتامبر، فاز ۵)
+
+- **ریشه:** `apps/web/app/[lang]/portal/[token]` (فاز ۳) layout نداشت. root layout فقط `CORE_NAMESPACES` را می‌فرستد؛ پس اولین `t('portal.…')` در `PublicPortalContainer` throw می‌کرد و کل صفحه به error boundary می‌رفت. همه‌ی تست‌ها سبز بودند چون container را تست می‌کردند، نه درختِ پیامِ صفحه‌ی وب.
+- **رفع:** `portal/layout.tsx` با `ScopedMessages` (CORE + `portal` + `orders` — برای برچسب وضعیت سفارش). صفحه‌ی تازه‌ی رضایت OAuth هم همین را گرفت (CORE + `oauth` + `developer`).
+- **گارد:** `packages/ui/src/__tests__/public-page-namespaces.test.ts` — import های نسبیِ container را دنبال می‌کند، هر namespace ای که رشته‌ای نام برده جمع می‌کند و می‌خواهد layout همه را بفرستد. injection (حذف `orders` / `developer`): قرمز.
+- **درس:** صفحه‌ی بیرون از `(dashboard)` که container مشترک رندر می‌کند، باید layout با namespace های همان container داشته باشد.

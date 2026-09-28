@@ -62,8 +62,10 @@ describe('#91 profit & loss', () => {
     expect(tab).toContain('useProfitReportsByCurrency(from, to, primaryCurrency)')
     expect(tab).toContain('useCurrencyStore((state) => state.primaryCurrency)')
     expect(table).toContain('<DataTable')
-    expect(table).toContain("router.push('/team-and-payroll')")
-    expect(table).toContain("router.push('/till')")
+    // Links go through the locale rule (`useLocalePush`), not a bare router.
+    expect(table).toContain("push('/team-and-payroll')")
+    expect(table).toContain("push('/till')")
+    expect(table).not.toContain('router.push(')
     expect(table).toContain('percent(totals.netMarginPercent)')
     expect(table).not.toMatch(/\.reduce\(/)
   })

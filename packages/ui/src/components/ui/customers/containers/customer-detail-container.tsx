@@ -42,21 +42,26 @@ import { useDateFormat } from '../../../../hooks/use-date-format'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { CustomerDetailView } from '../customer-detail-view'
 import { RecordHistoryPanel } from '../../activity/record-history-panel'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 const INVOICE_PAGE_SIZE = 20
 
-export function CustomerDetailContainer({
-  customerId,
-  onBack,
-}: {
-  customerId: string
-  onBack: () => void
-}) {
+export function CustomerDetailContainer({ customerId }: { customerId: string }) {
   const t = useTranslations()
   const router = useRouter()
+  const push = useLocalePush()
   const locale = useIntlLocale()
   const { date: formatDate } = useDateFormat()
   const [payOpen, setPayOpen] = useState(false)
+
+  // Back restores the list the person came from — its filters and scroll —
+  // through real history; a profile opened from a link has nothing to go back
+  // to, so it falls back to the list. This lived in the web page while desktop
+  // always jumped to the list, so the same button behaved differently per host.
+  const onBack = useCallback(() => {
+    if (window.history.length > 1) router.back()
+    else push('/customers')
+  }, [router, push])
   const [invoicePage, setInvoicePage] = useState(1)
 
   const customerQuery = useCustomer(customerId)
@@ -215,8 +220,8 @@ export function CustomerDetailContainer({
       onOpenPayment={() => setPayOpen(true)}
       onClosePayment={() => setPayOpen(false)}
       onPaymentSuccess={refetchMoney}
-      onNewInvoice={() => router.push('/invoices/new')}
-      onOpenInvoice={(id) => router.push(`/invoices/${id}`)}
+      onNewInvoice={() => push('/invoices/new')}
+      onOpenInvoice={(id) => push(`/invoices/${id}`)}
       onExport={handleExport}
       activity={activityQuery.data ?? null}
       activityLoading={activityQuery.isLoading}

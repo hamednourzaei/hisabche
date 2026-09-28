@@ -32,3 +32,5 @@ export {
 } from './digits'
 
 export { formatCompactCount } from './compact'
+
+export { formatBytes } from './bytes'

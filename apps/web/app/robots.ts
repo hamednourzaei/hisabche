@@ -11,7 +11,8 @@ import { SITE_URL } from './[lang]/i18n-config'
  *    Google's own guidance. Only `/_next/data/` (RSC payloads, never a landing
  *    page) is excluded.
  *
- * 2. Token-gated pages that render real customer data — /public-invoice/[token]
+ * 2. Token-gated pages that render real customer data — /public-invoice/[token],
+ *    /portal/[token]
  *    and /public-task/[token] — are disallowed. They already emit
  *    `robots: { index: false }`, but a meta tag only takes effect *after* the
  *    crawler has fetched and parsed the page, i.e. after a shopkeeper's invoice
@@ -29,8 +30,10 @@ export default function robots(): MetadataRoute.Robots {
     // Token-shared customer data — must not be fetched at all.
     '/public-invoice/',
     '/public-task/',
+    '/portal/',
     '/*/public-invoice/',
     '/*/public-task/',
+    '/*/portal/',
     // Authenticated surfaces.
     '/*/dashboard',
     '/*/invoices',
@@ -41,6 +44,11 @@ export default function robots(): MetadataRoute.Robots {
     '/*/crm',
     '/*/tasks',
     '/*/referrals',
+    '/*/developers',
+    '/*/orders',
+    '/*/marketplace',
+    '/oauth/',
+    '/*/oauth/',
     '/*/accounting',
     '/*/purchasing',
     '/*/manufacturing',

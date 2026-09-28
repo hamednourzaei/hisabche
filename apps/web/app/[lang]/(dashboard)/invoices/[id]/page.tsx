@@ -1,70 +1,66 @@
-import { InvoiceDetailContainer } from "@hisabche/ui";
+import { InvoiceDetailContainer } from '@hisabche/ui'
 
 const titles: Record<string, string> = {
-  "fa": "جزئیات فاکتور",
-  "af": "جزئیات فاکتور",
-  "en": "Invoice Details",
-};
+  fa: 'جزئیات فاکتور',
+  af: 'جزئیات فاکتور',
+  en: 'Invoice Details',
+}
 
 const descriptions: Record<string, string> = {
-  "fa": "مشاهده، ویرایش، چاپ و دانلود فاکتور در حسابچه. مدیریت اقلام، پرداخت‌ها و وضعیت فاکتور.",
-  "af": "مشاهده، ویرایش، چاپ و دانلود فاکتور در حسابچه. مدیریت اقلام، پرداخت‌ها و وضعیت فاکتور.",
-  "en": "View, edit, print and download invoice in Hisabche. Manage items, payments and invoice status.",
-};
+  fa: 'مشاهده، ویرایش، چاپ و دانلود فاکتور در حسابچه. مدیریت اقلام، پرداخت‌ها و وضعیت فاکتور.',
+  af: 'مشاهده، ویرایش، چاپ و دانلود فاکتور در حسابچه. مدیریت اقلام، پرداخت‌ها و وضعیت فاکتور.',
+  en: 'View, edit, print and download invoice in Hisabche. Manage items, payments and invoice status.',
+}
 
 const keywords: Record<string, string[]> = {
-  "fa": [
-    "جزئیات فاکتور",
-    "ویرایش فاکتور",
-    "چاپ فاکتور",
-    "دانلود PDF",
-    "اقلام فاکتور",
-    "پرداخت فاکتور",
-    "وضعیت فاکتور",
-    "حسابچه",
-    "مشاهده فاکتور",
-    "فاکتور فروش",
+  fa: [
+    'جزئیات فاکتور',
+    'ویرایش فاکتور',
+    'چاپ فاکتور',
+    'دانلود PDF',
+    'اقلام فاکتور',
+    'پرداخت فاکتور',
+    'وضعیت فاکتور',
+    'حسابچه',
+    'مشاهده فاکتور',
+    'فاکتور فروش',
   ],
-  "af": [
-    "جزئیات فاکتور",
-    "ویرایش فاکتور",
-    "چاپ فاکتور",
-    "دانلود PDF",
-    "اقلام فاکتور",
-    "پرداخت فاکتور",
-    "وضعیت فاکتور",
-    "حسابچه",
-    "مشاهده فاکتور",
-    "فاکتور فروش",
+  af: [
+    'جزئیات فاکتور',
+    'ویرایش فاکتور',
+    'چاپ فاکتور',
+    'دانلود PDF',
+    'اقلام فاکتور',
+    'پرداخت فاکتور',
+    'وضعیت فاکتور',
+    'حسابچه',
+    'مشاهده فاکتور',
+    'فاکتور فروش',
   ],
-  "en": [
-    "invoice details",
-    "edit invoice",
-    "print invoice",
-    "download PDF",
-    "invoice items",
-    "invoice payment",
-    "invoice status",
-    "hisabche",
-    "view invoice",
-    "sales invoice",
+  en: [
+    'invoice details',
+    'edit invoice',
+    'print invoice',
+    'download PDF',
+    'invoice items',
+    'invoice payment',
+    'invoice status',
+    'hisabche',
+    'view invoice',
+    'sales invoice',
   ],
-};
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
-  const { lang } = await params;
+  const { lang } = await params
   return {
-    title: titles[lang] || titles["fa"],
-    description: descriptions[lang] || descriptions["fa"],
-    keywords: keywords[lang] || keywords["fa"],
+    title: titles[lang] || titles['fa'],
+    description: descriptions[lang] || descriptions['fa'],
+    keywords: keywords[lang] || keywords['fa'],
     robots: { index: false, follow: false },
-  };
+  }
 }
 
 export default function Page() {
-  return (
-    <main className="section">
-      <InvoiceDetailContainer />
-    </main>
-  );
+  return <InvoiceDetailContainer />
 }

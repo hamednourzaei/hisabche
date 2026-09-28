@@ -1,21 +1,16 @@
-// apps/web/app/[lang]/(dashboard)/accounting-workspace/page.tsx
-'use client'
-
 // Thin by design. A dynamic `[domain]` route would be one file instead of
 // four, but `nav-destinations.test.ts` proves a destination reaches a screen by
 // looking for its page file — and it cannot see a folder called `[domain]`.
 // Four files a guard can check beat one file it cannot.
-import { useParams, useRouter } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { DomainWorkspaceContainer } from '@hisabche/ui'
 
-export default function AccountingWorkspacePage() {
-  const router = useRouter()
-  const { lang } = useParams<{ lang: string }>()
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params
+  const t = await getTranslations({ locale: lang })
+  return { title: t('domain.accounting'), robots: { index: false, follow: false } }
+}
 
-  return (
-    <DomainWorkspaceContainer
-      domain="accounting"
-      onNavigate={(path) => router.push(`/${lang}${path}`)}
-    />
-  )
+export default function AccountingWorkspacePage() {
+  return <DomainWorkspaceContainer domain="accounting" />
 }

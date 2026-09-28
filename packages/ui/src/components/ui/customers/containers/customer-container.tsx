@@ -4,12 +4,13 @@
 'use client'
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { customersView } from '../customer-view'
 import { fmt } from '../../../../lib/customers/customers-format'
 import type { CustomerWithDebt } from '../../../../lib/customers/customers-types'
 import { useCustomersData } from '../../../../hooks/customers/use-customers-data'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 // ============================================================
 // 📦 Typeهای محلی
@@ -24,7 +25,7 @@ type CustomerWithInvoices = CustomerWithDebt & {
 // ============================================================
 
 export function CustomersContainer() {
-  const router = useRouter()
+  const push = useLocalePush()
 
   // همه / مشتری / تأمین‌کننده. Sent to the server rather than filtered here:
   // the role is derived from invoice history, which the client does not hold.
@@ -116,10 +117,7 @@ export function CustomersContainer() {
   // Each customer gets its own address. Rendering the profile inline left the
   // URL on /customers, so the record could not be linked, bookmarked, or
   // reopened with the browser's back button.
-  const handleSelectCustomer = useCallback(
-    (id: string) => router.push(`/customers/${id}`),
-    [router],
-  )
+  const handleSelectCustomer = useCallback((id: string) => push(`/customers/${id}`), [push])
 
   const handleClearSelection = useCallback(() => {
     setSelectedCustomerId(null)

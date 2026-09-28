@@ -4,7 +4,6 @@
 import { useLedgerNumber } from './ledger-table'
 import { memo, useState, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { useRouter } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import { formatDate as formatIntlDate } from '@hisabche/formatting'
 
@@ -12,6 +11,7 @@ import { cn } from '../../../../lib/utils'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { routeForEntity } from '../../../../lib/entity-route'
 import type { JournalEntry, Account } from '@hisabche/api'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 interface JournalEntryRowProps {
   entry: JournalEntry
@@ -43,7 +43,7 @@ export const JournalEntryRow = memo(function JournalEntryRow({
   // The reader's calendar — see the helper above.
   const { lang } = useDateFormat()
 
-  const router = useRouter()
+  const push = useLocalePush()
   const n = useLedgerNumber()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -155,7 +155,7 @@ export const JournalEntryRow = memo(function JournalEntryRow({
               {sourceRoute ? (
                 <button
                   type="button"
-                  onClick={() => router.push(sourceRoute)}
+                  onClick={() => push(sourceRoute)}
                   className="rounded text-xs text-[hsl(var(--color-primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]"
                 >
                   {safeT('accounting.journal.openSource', 'مشاهده سند مبدأ')} —{' '}

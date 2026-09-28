@@ -110,6 +110,8 @@ export interface ProductDetailPageProps {
   onDelete: () => void
   /** Expiry (request #95) — the batches panel, rendered by the container. */
   expiry?: React.ReactNode
+  /** The product's money journey (evidence chain), rendered by the container. */
+  journey?: React.ReactNode
   /** The product's extra barcodes (27 Sep 2026), rendered by the container. */
   barcodes?: React.ReactNode
 }
@@ -132,6 +134,7 @@ export function ProductDetailPage({
   onSave,
   onDelete,
   expiry,
+  journey,
   barcodes,
 }: ProductDetailPageProps) {
   const [editValues, setEditValues] = useState<ProductEditValues>({
@@ -475,6 +478,7 @@ export function ProductDetailPage({
 
       {barcodes}
       {expiry}
+      {journey}
     </div>
   )
 }

@@ -86,3 +86,41 @@
 4. `stock-transfer-idempotency-migration.sql`
 5. `product-barcodes-migration.sql` (بعد از product-barcode-unique)
 6. VERIFY: `VERIFY-rpc-client-revoke.sql`، `VERIFY-write-functions.sql`
+
+## ۶. دور سوم — یک ساختار صفحه برای همه (BUG-066 تا BUG-068)
+
+**الگوی مرجع** (داشبورد، دریافت پول = `/invoices`، طرف حساب‌ها = `/customers`):
+
+```
+apps/web/app/[lang]/(dashboard)/<route>/page.tsx   metadata + <XContainer />   (تنها <main> مال layout است)
+packages/ui/src/components/ui/<feature>/            containers/ (داده + ناوبری) · *-view.tsx · *-skeleton.tsx · index.ts
+packages/app-shell/src/features/<f>/<f>-page.tsx    export { XContainer as default } from '@hisabche/ui/screens'
+packages/ui-contract                                 قاعده‌ی خالص (مسیر، دامنه، نوار) — بدون React
+```
+
+| چه شد                                                                                                                  | کجا                                                                                 |
+| ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| قاعده‌ی پیشوند زبان                                                                                                    | `ui-contract/src/shell.ts` → `localizePath`؛ هوک: `ui/src/hooks/use-locale-push.ts` |
+| ۶ صفحه‌ی client با `onNavigate` → صفحه‌ی سرور + metadata از کلید i18n موجود                                            | `*-workspace`، `domain/[domain]`، `data-and-sync`                                   |
+| `customers-client`، `customer-detail-client`، `warehouse-client`، دو `skeleton.tsx`، `(dashboard)/page.tsx` سایه‌خورده | حذف؛ back مشتری داخل container                                                      |
+| ۳۵ ناوبری برهنه در `packages/ui`                                                                                       | `useLocalePush` / `useLocaleReplace`                                                |
+
+**تله‌ها:**
+
+- ⚠️ `(dashboard)/page.tsx` و `[lang]/page.tsx` هر دو `/fa` را resolve می‌کنند؛ Next لندینگ را سرو می‌کند و build خطا نمی‌دهد. فایل اولی فقط زنده بود چون `loading.tsx` و `/dashboard` از آن import می‌کردند.
+- ⚠️ `.section` هیچ‌جا تعریف نشده و `dashboard-layout.tsx` خودش `<main>` دارد → هر صفحه `<main>` تودرتو دارد (پیش‌موجود، ~۴۵ صفحه). گزارش شد، عوض نشد.
+- ⚠️ تست سبز و build سبز، خطای «client function from server» را نمی‌بینند؛ `next start` + curl دید (BUG-068).
+- وریفای مرورگر وارد‌شده: auth را با AES کلید dev و `hisabche-onboarding` را `{isCompleted:true}` بکار — وگرنه هر صفحه به `/onboarding` می‌رود.
+- `pnpm install` بعد از pull: `@hisabche/sync/wire` تا نصب نشود tsc اپ‌شل را قرمز می‌کند (وابستگی جدید main).
+
+**عمداً دست نخورد (میزبان‌محور، نه صفحه):** `dashboard-layout.tsx` (قاب وب)، `app-shell` → `settings-page` (نسخه/بروزرسانی/دیتابیس محلی از پل)، `sync-page` (صف SQLite محلی)، `login-page`. و `auth` در UI مشترک (مقصد redirect خودش).
+
+## ۷. دور چهارم — پیگیری یافته‌های باز (BUG-070 تا BUG-073)
+
+- **#418 روی `/warehouse?tab=products`:** `useSyncStore` مقدار اولیه‌ی `isOnline` را از `navigator.onLine` می‌گرفت؛ Node 22 `navigator` دارد ولی `onLine` ندارد → سرور «آفلاین» رندر می‌کرد. مقدار اولیه ثابت `true` است و مقدار واقعی بعد از ساخت store فقط روی کلاینت اعمال می‌شود (zustand `getInitialState` را snapshot سرور می‌دهد). گارد: `store/src/slices/__tests__/sync-initial-state.test.ts`.
+- **#418 روی `/data-and-sync`:** `KpiCard` مقدار ReactNode را در `<p>` می‌گذاشت و `Badge` یک `<div>` است → parser پاراگراف را زود می‌بندد. حالا `<div>`. گارد در `one-kpi-card.test.ts`.
+- **`<main>` تودرتو:** ۴۴ فایل صفحه/loading دیگر `<main className="section">` ندارند (`.section` هیچ‌جا تعریف نشده بود). گارد: «exactly one <main>» در `dashboard-page-structure.test.ts`.
+- **`StorageSection`:** شمار ورودی‌های کش TanStack Query + `navigator.storage.estimate()`؛ پاک‌کردن = `resetQueries()` و هیچ چیز دیگر (outbox، پیش‌نویس و نشست جای دیگرند). `formatBytes` در `@hisabche/formatting`.
+- **breadcrumb:** کلید `common.details` در هیچ کاتالوگی نبود؛ اضافه شد (fa/af/en). گارد: `breadcrumb-keys.test.ts`.
+- ⚠️ یک اسکن ۴۷ کلید لفظیِ بدون fallback پیدا کرد که در کاتالوگ نیستند — بیشترشان نسبی به namespace (`useTranslations('blog')`) و مثبت کاذب‌اند؛ باید یکی‌یکی triage شوند.
+- ⚠️ ۱۵ فایل هنوز `toLocaleString('fa-AF')` دارند (حقوق، HR، فاکتور، قیف فروش…) — ratchet در `calendar-follows-language.test.ts` فقط اجازه‌ی کم‌شدن می‌دهد.

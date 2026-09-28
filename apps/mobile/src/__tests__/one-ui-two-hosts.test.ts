@@ -236,9 +236,11 @@ describe('the WebView opens the UI from disk, not from a URL', () => {
   it('⚠️ a blank screen says why, in the language of the person holding it', () => {
     // «Still loading», «the UI could not be unpacked» and «this build shipped
     // no UI» render identically unless one of them is written down (§7.6).
-    // Persian, because this screen appears BEFORE the shared UI and its
-    // translations exist.
-    expect(webview).toContain('برنامه باز نشد')
+    // In the person's language: the host's own bundle (host-strings.ts) —
+    // this screen appears BEFORE the shared UI and its catalogs, but the
+    // chosen language is already in secure storage.
+    expect(webview).toContain("hostText('openFailedTitle')")
+    expect(webview).not.toContain('برنامه باز نشد')
     expect(webview).toContain('onError=')
     expect(webview).toContain('renderError=')
   })

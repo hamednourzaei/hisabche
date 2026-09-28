@@ -66,7 +66,28 @@ interface DesktopBundle {
   >
   customers: Record<'title' | 'name' | 'phone' | 'balance' | 'debt' | 'credit' | 'settled', string>
   accounting: Record<'title' | 'income' | 'expense' | 'trialBalance' | 'profitLoss', string>
-  sync: Record<'title' | 'pending' | 'failed' | 'syncNow' | 'queueEmpty' | 'localOnly', string>
+  sync: Record<'title' | 'pending' | 'failed' | 'syncNow' | 'queueEmpty' | 'localOnly', string> & {
+    // The outbox screen (features/sync/sync-page.tsx). These were used and
+    // never defined, so Windows and Android showed «sync.col.record» as a
+    // column heading. `stage` and `entity`/`op` are read with a computed key,
+    // so every value of their unions is listed — tsc then refuses a missing one.
+    col: Record<'record' | 'operation' | 'stage' | 'reason' | 'time', string>
+    stage: Record<'queued' | 'sending' | 'retrying' | 'rejected' | 'committed', string>
+    entity: Record<
+      | 'product'
+      | 'customer'
+      | 'invoice'
+      | 'invoice_item'
+      | 'transaction'
+      | 'inventory_movement'
+      | 'employee',
+      string
+    >
+    op: Record<'create' | 'update' | 'delete', string>
+    rejectedHint: string
+    committedTitle: string
+    committedHint: string
+  }
 }
 
 const faIR: DesktopBundle = {
@@ -181,6 +202,29 @@ const faIR: DesktopBundle = {
     syncNow: 'همگام‌سازی اکنون',
     queueEmpty: 'همه‌چیز همگام است',
     localOnly: 'پایگاه‌داده محلی در دسترس نیست — فقط آنلاین',
+    col: { record: 'رکورد', operation: 'عملیات', stage: 'مرحله', reason: 'دلیل', time: 'زمان' },
+    stage: {
+      queued: 'در صف',
+      sending: 'در حال ارسال',
+      retrying: 'تلاش دوباره',
+      rejected: 'رد شد',
+      committed: 'ثبت شد',
+    },
+    entity: {
+      product: 'کالا',
+      customer: 'مشتری',
+      invoice: 'فاکتور',
+      invoice_item: 'ردیف فاکتور',
+      transaction: 'پرداخت',
+      inventory_movement: 'حرکت انبار',
+      employee: 'کارمند',
+    },
+    op: { create: 'ایجاد', update: 'ویرایش', delete: 'حذف' },
+    rejectedHint:
+      'سرور این تغییرها را نپذیرفت. تا خودتان «تلاش دوباره» را نزنید دوباره فرستاده نمی‌شوند — دلیل هر کدام در ستون «دلیل» آمده است.',
+    committedTitle: 'ثبت‌شده در این نشست',
+    committedHint:
+      'این تغییرها به سرور رسیده‌اند و از صف خارج شده‌اند؛ این فهرست فقط تا بستن برنامه می‌ماند.',
   },
 }
 
@@ -189,6 +233,10 @@ const faAF: DesktopBundle = {
   nav: { ...faIR.nav, sales: 'فروشات', inventory: 'گدام' },
   sales: { ...faIR.sales, title: 'فروشات', newInvoice: 'بل جدید', print: 'چاپ بل' },
   inventory: { ...faIR.inventory, title: 'گدام', product: 'جنس' },
+  sync: {
+    ...faIR.sync,
+    entity: { ...faIR.sync.entity, product: 'جنس', inventory_movement: 'حرکت گدام' },
+  },
 }
 
 const en: DesktopBundle = {
@@ -303,6 +351,35 @@ const en: DesktopBundle = {
     syncNow: 'Sync now',
     queueEmpty: 'Everything is in sync',
     localOnly: 'Local database unavailable — online only',
+    col: {
+      record: 'Record',
+      operation: 'Operation',
+      stage: 'Stage',
+      reason: 'Reason',
+      time: 'Time',
+    },
+    stage: {
+      queued: 'Queued',
+      sending: 'Sending',
+      retrying: 'Retrying',
+      rejected: 'Rejected',
+      committed: 'Saved',
+    },
+    entity: {
+      product: 'Product',
+      customer: 'Customer',
+      invoice: 'Invoice',
+      invoice_item: 'Invoice line',
+      transaction: 'Payment',
+      inventory_movement: 'Stock movement',
+      employee: 'Employee',
+    },
+    op: { create: 'Create', update: 'Edit', delete: 'Delete' },
+    rejectedHint:
+      'The server refused these changes. They are not sent again until you press “Try again” — each one’s reason is in the Reason column.',
+    committedTitle: 'Saved this session',
+    committedHint:
+      'These changes reached the server and left the queue; this list lasts until the app is closed.',
   },
 }
 

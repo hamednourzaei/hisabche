@@ -9,7 +9,6 @@
 'use client'
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Check, Pencil, Printer } from 'lucide-react'
 import { useCreateInvoice, useWorkspaces } from '@hisabche/api'
 import {
@@ -41,6 +40,7 @@ import { OversoldWarning } from '../oversold-warning'
 import { useOversoldLines } from '../use-oversold-lines'
 import { planLimitMessage } from '../../../../lib/plan-limit-message'
 import { loadPrinterSettings } from '../../../../lib/print/printer-settings'
+import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 
 const DEFAULT_DISPLAY: InvoiceDocumentDisplaySettings = {
   showSignature: true,
@@ -49,7 +49,8 @@ const DEFAULT_DISPLAY: InvoiceDocumentDisplaySettings = {
 }
 
 export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
-  const router = useRouter()
+  const localeReplace = useLocaleReplace()
+  const push = useLocalePush()
   const createInvoice = useCreateInvoice()
   const toast = useToast()
   const { markInvoiceCreated } = useOnboardingStore()
@@ -87,8 +88,8 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
   // rendering an empty document.
   useEffect(() => {
     if (submittedRef.current) return
-    if (items.length === 0) router.replace('/invoices/new')
-  }, [items.length, router])
+    if (items.length === 0) localeReplace('/invoices/new')
+  }, [items.length, localeReplace])
 
   const { data: workspaces } = useWorkspaces()
   const workspace = Array.isArray(workspaces)
@@ -278,7 +279,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         )
         submittedRef.current = true
         clearDraft()
-        router.push('/invoices')
+        push('/invoices')
         return
       }
 
@@ -302,7 +303,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       // (An offline-queued invoice returned above: it has no number yet, so
       // no receipt is printed for it.)
       const receipt = loadPrinterSettings().autoPrint ? '?action=receipt' : ''
-      router.push(created.id ? `/invoices/${created.id}${receipt}` : '/invoices')
+      push(created.id ? `/invoices/${created.id}${receipt}` : '/invoices')
       // The column layout deliberately survives this — see the draft slice.
       clearDraft()
     } catch (cause) {
@@ -336,7 +337,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     addAuditEntry,
     setSaveStatus,
     clearDraft,
-    router,
+    push,
     t,
     toast,
   ])
@@ -473,7 +474,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => router.push('/invoices/new')}
+              onClick={() => push('/invoices/new')}
               disabled={createInvoice.isPending}
               fullWidth
               className="gap-1.5"
@@ -508,7 +509,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={() => router.push('/invoices/new')}
+            onClick={() => push('/invoices/new')}
             disabled={createInvoice.isPending}
             className="h-12 shrink-0 px-4"
           >

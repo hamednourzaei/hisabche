@@ -4,6 +4,9 @@ import { NotificationService } from '../services/notification.service'
 import { supabase } from '../db'
 import { claimJobs, completeJob, failJob, type ClaimedJob } from '../services/distributed-work'
 import { emailService } from '../services/email.service'
+import { developerService } from '../services/developer/developer.service'
+import { NotConfiguredError } from '../services/developer/developer.repository'
+import { ordersService } from '../services/orders/orders.service'
 
 const jobService = new JobService()
 const notificationService = new NotificationService()
@@ -115,6 +118,51 @@ export async function pollEmailOutbox(): Promise<void> {
   }
 }
 
+const WEBHOOK_POLL_MS = 30_000
+
+/**
+ * Outbound webhooks (docs/developer-platform-migration.sql). Every instance
+ * polls; each delivery is claimed by one of them (FOR UPDATE SKIP LOCKED) and
+ * only the holder may record its outcome. Quiet before the migration.
+ */
+export async function pollWebhooks(): Promise<void> {
+  try {
+    const counts = await developerService.drainWebhooks()
+    if (counts.sent || counts.failed) {
+      console.log(`[webhooks] sent=${counts.sent} failed=${counts.failed}`)
+    }
+  } catch (err) {
+    if (err instanceof NotConfiguredError) return
+    console.error('[webhooks] poll failed:', err)
+  }
+}
+
+const REQUEST_LOG_PURGE_MS = 6 * 3600_000
+
+/** Retention for the API request log (30 days). Quiet before migration 02. */
+export async function purgeApiRequestLogs(): Promise<void> {
+  try {
+    const purged = await developerService.purgeRequestLogs()
+    if (purged) console.log(`[api-keys] purged ${purged} request log rows`)
+  } catch (err) {
+    if (err instanceof NotConfiguredError) return
+    console.error('[api-keys] request log purge failed:', err)
+  }
+}
+
+const ORDER_EXPIRY_MS = 15 * 60_000
+
+/** Pending website orders nobody confirmed in time → cancelled («EXPIRED»). Quiet before migration 03. */
+export async function expirePendingOrders(): Promise<void> {
+  try {
+    const expired = await ordersService.expirePending()
+    if (expired) console.log(`[orders] expired ${expired} pending orders`)
+  } catch (err) {
+    if (err instanceof NotConfiguredError) return
+    console.error('[orders] expiry failed:', err)
+  }
+}
+
 export async function jobSchedulerPlugin(fastify: FastifyInstance) {
   // ✅ FIX: فاصله از ۶۰ ثانیه به ۱۰ دقیقه افزایش یافت.
   // بررسی شد که هیچ‌جای پروژه (نه route ها، نه scheduler، نه جای
@@ -132,8 +180,14 @@ export async function jobSchedulerPlugin(fastify: FastifyInstance) {
   // each row is claimed by one of them. Almost every email is sent at once by
   // emailService.send — this only catches what that could not finish.
   const emailInterval = setInterval(() => void pollEmailOutbox(), EMAIL_POLL_MS)
+  const webhookInterval = setInterval(() => void pollWebhooks(), WEBHOOK_POLL_MS)
+  const purgeInterval = setInterval(() => void purgeApiRequestLogs(), REQUEST_LOG_PURGE_MS)
+  const orderExpiryInterval = setInterval(() => void expirePendingOrders(), ORDER_EXPIRY_MS)
   fastify.addHook('onClose', () => {
     clearInterval(interval)
     clearInterval(emailInterval)
+    clearInterval(webhookInterval)
+    clearInterval(purgeInterval)
+    clearInterval(orderExpiryInterval)
   })
 }

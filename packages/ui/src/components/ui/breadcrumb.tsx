@@ -23,12 +23,13 @@
 // ============================================
 
 import Link from 'next/link'
-import { useParams, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { ChevronLeft, Home } from 'lucide-react'
 
-import { breadcrumbsFor } from '@hisabche/ui-contract'
+import { breadcrumbsFor, localizePath } from '@hisabche/ui-contract'
 import { cn } from '../../lib/utils'
+import { useRouteLang } from '../../hooks/use-locale-push'
 
 /** Kept in step with `apps/web/app/[lang]/i18n-config.ts`. */
 const LOCALES = ['fa', 'af', 'en'] as const
@@ -37,14 +38,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export function Breadcrumb({ className }: { className?: string }) {
   const pathname = usePathname()
-  const params = useParams<{ lang?: string }>()
+  const lang = useRouteLang()
   const t = useTranslations()
 
-  const lang = typeof params?.lang === 'string' ? params.lang : 'fa'
-
-  // Every link has to carry the locale back. A bare `/invoices` bounces the
-  // user through the locale redirect and loses their place.
-  const withLocale = (path: string) => `/${lang}${path}`
+  // Every link carries the locale back on web — a bare `/invoices` bounces the
+  // user through the locale redirect — and none on desktop, which has no
+  // `/fa/…` routes (this used to default to 'fa' there).
+  const withLocale = (path: string) => localizePath(path, lang)
 
   const crumbs = breadcrumbsFor(pathname ?? '', LOCALES)
 

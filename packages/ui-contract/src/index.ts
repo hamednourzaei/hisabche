@@ -52,6 +52,7 @@ export {
   DOMAINS,
   DOMAIN_SPECS,
   breadcrumbsFor,
+  localizePath,
   domainFor,
   domainOf,
   domainDestinations,

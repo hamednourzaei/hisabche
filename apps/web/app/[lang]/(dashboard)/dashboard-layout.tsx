@@ -16,6 +16,7 @@ import {
   RouteProgress,
   SubscriptionLockNotice,
   SubscriptionLockDialog,
+  SandboxNotice,
   useSubscriptionLocked,
   isRouteAllowedWhenExpired,
   useHeaderPeople,
@@ -493,6 +494,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         />
 
         <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
+          <SandboxNotice />
           <Breadcrumb className="mb-4" />
           {routeLocked ? <SubscriptionLockNotice /> : children}
         </main>

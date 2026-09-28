@@ -35,6 +35,7 @@ import { resolveWorkspaceAccess } from '../services/authorization/workspace-acce
 import { type TenancyContext } from '../services/tenancy.service'
 import { BaseError } from '../errors/base.error'
 import { rejectIfSubscriptionExpired } from './subscription.middleware'
+import { narrowCapabilities } from '../services/developer/developer.domain'
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -69,12 +70,29 @@ export async function requireWorkspaceContext(request: FastifyRequest, reply: Fa
     return reply.status(401).send({ error: 'Unauthorized', code: 'UNAUTHORIZED' })
   }
 
+  // ⚠️ An API key belongs to ONE workspace. A header naming another is refused,
+  // not quietly replaced: the integration is misconfigured and should hear so.
+  const key = request.apiKey
+  const requested = requestedWorkspaceId(request)
+  if (key && requested && requested !== key.workspaceId) {
+    return reply.status(403).send({ error: 'Forbidden', code: 'API_KEY_WORKSPACE_MISMATCH' })
+  }
+
   try {
     // Membership, role, capabilities and page blocks — built ONCE per
     // request, in one database round trip where the RPC exists
     // (workspace-access.service). Every service downstream reads
     // `request.tenancy`; none re-resolves membership.
-    request.tenancy = await resolveWorkspaceAccess(userId, requestedWorkspaceId(request))
+    request.tenancy = await resolveWorkspaceAccess(userId, key ? key.workspaceId : requested)
+    // A key is its creator (still a verified member — resolved above exactly
+    // as for a session), cut down to the key's scopes. Without a resolved set
+    // `holds()` would fall back to the role defaults, so an empty one is used.
+    if (key) {
+      request.tenancy = {
+        ...request.tenancy,
+        capabilities: narrowCapabilities(request.tenancy.capabilities ?? new Set(), key.scopes),
+      }
+    }
   } catch (error) {
     const status = error instanceof BaseError ? error.statusCode : 500
     const message = error instanceof Error ? error.message : 'Workspace resolution failed'

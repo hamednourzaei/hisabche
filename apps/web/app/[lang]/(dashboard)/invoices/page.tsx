@@ -80,10 +80,8 @@ export const dynamic = 'force-dynamic'
 
 export default function InvoicesPage() {
   return (
-    <main className="section">
-      <Suspense fallback={<InvoicesSkeleton />}>
-        <InvoicesContainer />
-      </Suspense>
-    </main>
+    <Suspense fallback={<InvoicesSkeleton />}>
+      <InvoicesContainer />
+    </Suspense>
   )
 }

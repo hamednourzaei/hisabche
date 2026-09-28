@@ -29,7 +29,6 @@
 
 import { memo, useCallback, useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { useRouter } from 'next/navigation'
 
 import { asList, useAuditTrail, useBranches, useWorkspaceMembers } from '@hisabche/api'
 import { useWorkspaceStore } from '@hisabche/store'
@@ -37,6 +36,7 @@ import { resolveIntlLocale, type UiLanguage } from '@hisabche/formatting'
 
 import { AuditTrailTab, type AuditRow } from '../../activity/audit-trail-tab'
 import { routeForEntity } from '../../../../lib/entity-route'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 /** The entity types the audit trail actually records, for the filter. */
 const ENTITY_TYPES = [
@@ -58,7 +58,7 @@ export const AuditContainer = memo(function AuditContainer() {
     [tOriginal],
   )
 
-  const router = useRouter()
+  const push = useLocalePush()
   const locale = resolveIntlLocale(useLocale() as UiLanguage)
 
   const [entityType, setEntityType] = useState('')
@@ -129,9 +129,9 @@ export const AuditContainer = memo(function AuditContainer() {
   const handleOpenRecord = useCallback(
     (type: string, id: string) => {
       const route = routeForEntity(type, id)
-      if (route) router.push(route)
+      if (route) push(route)
     },
-    [router],
+    [push],
   )
 
   const branchOptions = useMemo(

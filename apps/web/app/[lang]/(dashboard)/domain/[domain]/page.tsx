@@ -1,20 +1,22 @@
-// apps/web/app/[lang]/(dashboard)/domain/[domain]/page.tsx
-'use client'
-
-// One route for all four domains. Four near-identical page files would be four
-// places to forget when a domain is added; the contract already knows the list,
-// and the container validates the segment.
-import { useParams, useRouter } from 'next/navigation'
+// One route for all four domains; the contract knows the list and the
+// container validates the segment. It is user input: an unknown domain renders
+// nothing, so the title falls back to the generic home label.
+import { getTranslations } from 'next-intl/server'
 import { DomainWorkspaceContainer } from '@hisabche/ui'
+import { DOMAINS } from '@hisabche/ui-contract'
 
-export default function DomainWorkspacePage() {
-  const router = useRouter()
-  const params = useParams<{ lang: string; domain: string }>()
+type Params = Promise<{ lang: string; domain: string }>
 
-  return (
-    <DomainWorkspaceContainer
-      domain={params.domain ?? ''}
-      onNavigate={(path) => router.push(`/${params.lang}${path}`)}
-    />
-  )
+export async function generateMetadata({ params }: { params: Params }) {
+  const { lang, domain } = await params
+  const t = await getTranslations({ locale: lang })
+  return {
+    title: (DOMAINS as readonly string[]).includes(domain) ? t(`domain.${domain}`) : t('nav.today'),
+    robots: { index: false, follow: false },
+  }
+}
+
+export default async function DomainWorkspacePage({ params }: { params: Params }) {
+  const { domain } = await params
+  return <DomainWorkspaceContainer domain={domain} />
 }

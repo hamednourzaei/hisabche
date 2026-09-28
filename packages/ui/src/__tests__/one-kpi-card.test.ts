@@ -248,3 +248,16 @@ describe('what the card promises about the numbers', () => {
     expect(kpi).toContain('hsl(var(--color-success)')
   })
 })
+
+describe('KpiCard markup is valid HTML for any value', () => {
+  it('⚠️ a ReactNode value is wrapped in a <div>, never a <p>', () => {
+    // A Badge renders a <div>; inside a <p> the HTML parser closes the
+    // paragraph early, the server DOM differs from the client tree and React
+    // throws #418 (/data-and-sync).
+    const kpi = code(readFileSync(join(UI_ROOT, 'kpi-card.tsx'), 'utf8'))
+    expect(kpi).toMatch(
+      /<div className=\{cn\('mt-1\.5 text-lg sm:mt-2 sm:text-xl', STAT_VALUE\)\}>\{value\}<\/div>/,
+    )
+    expect(kpi).not.toMatch(/<p[^>]*>\{value\}<\/p>/)
+  })
+})

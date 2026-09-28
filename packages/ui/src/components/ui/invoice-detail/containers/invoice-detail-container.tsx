@@ -20,11 +20,13 @@ import {
 import { useSubscriptionLocked } from '../../billing/subscription-lock'
 import { InvoiceDetailPage, type InvoiceDetailDisplay } from '../invoice-detail-page'
 import InvoicePDFDownload from '../InvoicePDFDownload'
+import { InvoiceEvidencePanel } from '../invoice-evidence-panel'
 import { InvoiceRelatedPanel } from '../invoice-related-panel'
 import { RecordHistoryPanel } from '../../activity/record-history-panel'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { useReceiptPrint } from '../../../../hooks/use-receipt-print'
+import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 
 /* ═══════════════════════════════════════════════════════════
    CONSTANTS
@@ -118,6 +120,8 @@ export function InvoiceDetailContainer() {
   // Printing is its own state — a failed print never touches the invoice.
   const { print: printReceipt, printing: printingReceipt } = useReceiptPrint()
   const router = useRouter()
+  const localeReplace = useLocaleReplace()
+  const push = useLocalePush()
   const { id } = useParams<{ id: string }>()
   const searchParams = useSearchParams()
   const documentRef = useRef<HTMLDivElement>(null)
@@ -148,8 +152,8 @@ export function InvoiceDetailContainer() {
   // ledger with the entry named in the URL rather than pretending a detail
   // route exists. H3 gives entries their own page; this link moves with it.
   const handleOpenJournalEntry = useCallback(
-    (entryId: string) => router.push(`/accounting?tab=journal&entry=${entryId}`),
-    [router],
+    (entryId: string) => push(`/accounting?tab=journal&entry=${entryId}`),
+    [push],
   )
 
   // ✅ فرض تک-workspace: اولین workspace کاربر — برای نمایش لوگو/مهر کسب‌وکار روی فاکتور
@@ -331,8 +335,17 @@ export function InvoiceDetailContainer() {
     if (action === 'png') handleExportPNG()
     // Auto-print after issuing: printed from the committed invoice just loaded.
     if (action === 'receipt' && display) void printReceipt(display)
-    router.replace(`/invoices/${id}`)
-  }, [searchParams, invoice, display, handlePrint, handleExportPNG, printReceipt, router, id])
+    localeReplace(`/invoices/${id}`)
+  }, [
+    searchParams,
+    invoice,
+    display,
+    handlePrint,
+    handleExportPNG,
+    printReceipt,
+    localeReplace,
+    id,
+  ])
 
   const handleSharePDF = useCallback(async () => {
     if (!invoice) return
@@ -406,6 +419,8 @@ export function InvoiceDetailContainer() {
       onExportPNG={handleExportPNG}
       exportingPNG={exportingPNG}
       pdfDownloadSlot={invoice ? <InvoicePDFDownload invoice={invoice} /> : null}
+      // «Why this profit?» — loads only when the person opens it.
+      evidenceSlot={display && id ? <InvoiceEvidencePanel invoiceId={id} /> : null}
       // H2 — rendered only once the invoice itself has loaded. Fetching the
       // related records for an id that turns out not to exist would show an
       // empty payments panel beside a «فاکتور پیدا نشد» message.

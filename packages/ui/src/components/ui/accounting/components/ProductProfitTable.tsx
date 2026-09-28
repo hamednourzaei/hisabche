@@ -13,13 +13,13 @@
 // ============================================
 
 import { memo, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { AlertTriangle } from 'lucide-react'
 import type { ProductProfitRow, ProfitReport } from '@hisabche/api'
 
 import { cn } from '../../../../lib/utils'
 import { DataTable, matchesSearch, type TableColumn } from '../../data-table'
 import { EmptyState } from '../../empty-state'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 type T = (key: string, fallback?: string) => string
 
@@ -35,7 +35,7 @@ export const ProductProfitTable = memo(function ProductProfitTable({
   money: (value: number) => string
   num: (value: number) => string
 }) {
-  const router = useRouter()
+  const push = useLocalePush()
   const [search, setSearch] = useState('')
 
   const percent = (value: number | null) => (value === null ? '—' : `${num(value)}٪`)
@@ -183,7 +183,7 @@ export const ProductProfitTable = memo(function ProductProfitTable({
         rows={rows}
         columns={columns}
         rowKey={(row) => row.productId ?? `name:${row.name}`}
-        onRowClick={() => router.push('/till')}
+        onRowClick={() => push('/till')}
         searchValue={search}
         onSearchChange={setSearch}
         minWidthClass="min-w-[520px]"
@@ -201,7 +201,7 @@ export const ProductProfitTable = memo(function ProductProfitTable({
           t('accounting.profit.totalRevenue', 'جمع فروش خالص'),
           money(totals.revenue),
           `${num(totals.invoiceCount)} ${t('accounting.profit.invoices', 'فاکتور')}`,
-          () => router.push('/till'),
+          () => push('/till'),
         )}
         {footerRow(t('accounting.profit.totalCost', 'جمع بهای تمام‌شده'), money(totals.cost))}
         {footerRow(
@@ -215,7 +215,7 @@ export const ProductProfitTable = memo(function ProductProfitTable({
           t('accounting.profit.salaries', 'حقوق کارمندان'),
           money(totals.salaries),
           `${num(totals.payrollCount)} ${t('accounting.profit.payrolls', 'فیش حقوق')}`,
-          () => router.push('/team-and-payroll'),
+          () => push('/team-and-payroll'),
         )}
         <div
           className={cn(

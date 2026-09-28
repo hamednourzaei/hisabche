@@ -46,7 +46,7 @@ export { ActivitiesPage } from './components/ui/activity/ActivitiesPage'
 export { SyncCenterContainer } from './components/ui/sync-center/containers/sync-center-container'
 
 // ---------- Settings ----------
-export { SettingsPage, BusinessStampSection } from './components/ui/settings'
+export { SettingsPage, BusinessStampSection, HardwareSection } from './components/ui/settings'
 
 // ---------- CRM ----------
 export { CrmContainer } from './components/ui/crm/containers/crm-container'
@@ -55,6 +55,9 @@ export { PublicTaskContainer } from './components/ui/crm/containers/public-task-
 // ---------- Workflow / Approvals ----------
 export { ApprovalsContainer } from './components/ui/workflow/containers/approvals-container'
 export { ReferralsContainer } from './components/ui/referrals/containers/referrals-container'
+export { DevelopersContainer } from './components/ui/developers/containers/developers-container'
+export { OrdersContainer } from './components/ui/orders/containers/orders-container'
+export { MarketplaceContainer } from './components/ui/marketplace/containers/marketplace-container'
 export { WorkflowTemplatesContainer } from './components/ui/workflow/containers/workflow-templates-container'
 
 // ---------- Billing ----------
@@ -89,6 +92,7 @@ export { AuditContainer } from './components/ui/audit/containers/audit-container
 
 // ---------- Public (no-auth) ----------
 export { PublicInvoiceContainer } from './components/ui/invoice-detail/containers/public-invoice-container'
+export { PublicPortalContainer } from './components/ui/customers/containers/public-portal-container'
 
 // ---------- Tier 1/2 capabilities ----------
 // One container per NAV_CONTRACT destination. Web mounts these from its route

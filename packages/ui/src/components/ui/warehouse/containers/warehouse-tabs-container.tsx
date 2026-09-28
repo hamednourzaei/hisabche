@@ -35,11 +35,12 @@
 // ============================================
 
 import { useCallback } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 
 import { ProductListContainer } from '../../products/containers/product-list-container'
 import { warehouseContainer } from './Warehouse-container'
+import { useLocaleReplace } from '../../../../hooks/use-locale-push'
 
 export type WarehouseTab = 'stock' | 'products'
 
@@ -76,7 +77,7 @@ export function warehouseTabFrom(value: string | null | undefined): WarehouseTab
 }
 
 export function WarehouseTabsContainer() {
-  const router = useRouter()
+  const localeReplace = useLocaleReplace()
   const params = useSearchParams()
   const translate = useTranslations()
 
@@ -96,9 +97,9 @@ export function WarehouseTabsContainer() {
     (tab: WarehouseTab) => {
       // replace, not push: switching tabs is not something the back button
       // should have to walk through one step at a time.
-      router.replace(tab === 'stock' ? '/warehouse' : `/warehouse?tab=${tab}`)
+      localeReplace(tab === 'stock' ? '/warehouse' : `/warehouse?tab=${tab}`)
     },
-    [router],
+    [localeReplace],
   )
 
   const tabs: { id: WarehouseTab; label: string }[] = [

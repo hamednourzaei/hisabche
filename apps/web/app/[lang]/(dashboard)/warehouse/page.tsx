@@ -1,5 +1,6 @@
 // apps/web/app/[lang]/(dashboard)/warehouse/page.tsx
-import { WarehouseClient } from './warehouse-client'
+import { Suspense } from 'react'
+import { WarehouseTabsContainer, warehouseSkeleton as WarehouseSkeleton } from '@hisabche/ui'
 
 const titles: Record<string, string> = { fa: 'انبار', af: 'گدام', en: 'Warehouse' }
 const descriptions: Record<string, string> = {
@@ -34,6 +35,14 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 // per-workspace, so it was never cacheable as static HTML.
 export const dynamic = 'force-dynamic'
 
+// The tabs (stock and the product catalogue, where `/product-list` redirects)
+// live in `@hisabche/ui` so desktop has them too. The boundary is here rather
+// than inside the container: `useSearchParams` suspends, and the container
+// reads it.
 export default function WarehousePage() {
-  return <WarehouseClient />
+  return (
+    <Suspense fallback={<WarehouseSkeleton />}>
+      <WarehouseTabsContainer />
+    </Suspense>
+  )
 }

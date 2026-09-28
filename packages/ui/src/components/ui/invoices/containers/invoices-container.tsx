@@ -2,12 +2,12 @@
 'use client'
 
 import { useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { useInvoicesPage } from '../../../../hooks/invoices/use-invoices-page'
 import { InvoicesView } from '../invoices-view'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 export function InvoicesContainer() {
-  const router = useRouter()
+  const push = useLocalePush()
 
   const {
     invoices,
@@ -26,24 +26,20 @@ export function InvoicesContainer() {
     safeT,
   } = useInvoicesPage()
 
-  const handleNavigateInvoice = useCallback(
-    (id: string) => router.push(`/invoices/${id}`),
-    [router],
-  )
+  const handleNavigateInvoice = useCallback((id: string) => push(`/invoices/${id}`), [push])
 
   // H2 — the party's name in the table reaches the party's profile.
-  const handleNavigateParty = useCallback((id: string) => router.push(`/customers/${id}`), [router])
+  const handleNavigateParty = useCallback((id: string) => push(`/customers/${id}`), [push])
 
   const handleNavigateInvoiceAction = useCallback(
-    (id: string, action: 'pdf' | 'print' | 'png') =>
-      router.push(`/invoices/${id}?action=${action}`),
-    [router],
+    (id: string, action: 'pdf' | 'print' | 'png') => push(`/invoices/${id}?action=${action}`),
+    [push],
   )
 
   // «فاکتور جدید» opens the two-stage builder. `/quick-invoice` still exists
   // and still works — it is the fast path for a one-line cash sale, reachable
   // from the command palette and the FAB, and every bookmark to it is intact.
-  const handleNewInvoice = useCallback(() => router.push('/invoices/new'), [router])
+  const handleNewInvoice = useCallback(() => push('/invoices/new'), [push])
 
   return (
     <InvoicesView
