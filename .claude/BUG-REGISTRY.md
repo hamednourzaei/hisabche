@@ -747,3 +747,10 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 - **فیکس:** رد به‌خاطر سابقه → همان‌جا confirm «غیرفعال شود؟» → `PATCH isActive:false`. فهرست‌ها و نماهای انبار فقط کالای فعال (هم‌سو با `summarizeStock` که از قبل فقط فعال‌ها را می‌شمرد).
 - **گارد:** `packages/ui/src/__tests__/product-delete-refusal.test.ts` (injection-test شد).
 - **باز:** صفحه‌ای برای دیدن/فعال‌کردن دوباره‌ی کالای غیرفعال نیست.
+
+## BUG-082 — بیلد Vercel شکست: هوک React در گراف سرور (۲۸ سپتامبر)
+
+- **علامت:** `next build` → «You're importing a module that depends on `useEffect` into a React Server Component module» روی `packages/api/src/hooks/transactions.ts` و `lib/intent-key.ts`.
+- **ریشه:** `wallet-format.ts` (تابع‌های ساده، بدون `'use client'`) از barrel `@hisabche/api` import می‌کرد و از barrel `@hisabche/ui` صادر می‌شد؛ `sitemap.ts` و صفحه‌ی عمومی `public-task` (سرور) آن barrel را import می‌کنند → کل هوک‌های api وارد گراف سرور شدند. tsc و همه‌ی تست‌ها سبز بودند.
+- **فیکس:** `'use client'` روی `wallet-format.ts`.
+- **گارد:** `packages/ui/src/__tests__/index-exports-server-safe.test.ts` — هر ماژولی که barrel ui صادر می‌کند و `@hisabche/api` را import می‌کند باید `'use client'` باشد (injection-test شد). اثبات: `next build` محلی سبز، ۱۰۴ صفحه.

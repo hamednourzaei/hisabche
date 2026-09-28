@@ -1,3 +1,5 @@
+'use client'
+
 // ============================================
 // packages/ui/src/components/ui/wallet/wallet-format.ts
 //
