@@ -803,4 +803,147 @@ export class AccountingRepository {
       )),
     }
   }
+
+  // ─── Evidence (the chain behind a profit figure) ──────────────────────────
+
+  /**
+   * Everything behind ONE invoice's profit: its profit sources (the same rows
+   * the report reads), each cost consumption with the layer it drew from,
+   * the journal entry it posted and the payments that settled it.
+   */
+  async invoiceEvidenceSources(workspaceId: string, invoiceId: string) {
+    const sources = await this.profitSourcesForInvoices(workspaceId, [invoiceId])
+    const invoice = sources.invoices[0]
+    if (!invoice) return null
+
+    const consumptionRows = await this.pages<Record<string, any>>('cost consumptions', (a, b) =>
+      supabase
+        .from('cost_consumptions')
+        .select('id, consumer_id, product_id, layer_id, quantity, unit_cost, amount, is_estimated')
+        .eq('workspace_id', workspaceId)
+        .eq('consumer_type', 'invoice')
+        .eq('consumer_id', invoiceId)
+        .order('id', { ascending: true })
+        .range(a, b),
+    )
+    const layerIds = [
+      ...new Set(consumptionRows.map((r) => r.layer_id).filter(Boolean)),
+    ] as string[]
+    const layers = new Map<string, Record<string, any>>()
+    for (let i = 0; i < layerIds.length; i += 200) {
+      const { data, error } = await supabase
+        .from('cost_layers')
+        .select('id, source_type, source_id, unit_cost, entry_date')
+        .eq('workspace_id', workspaceId)
+        .in('id', layerIds.slice(i, i + 200))
+      if (error) throw new DatabaseError('Failed to read cost layers', error)
+      for (const row of data ?? []) layers.set(String(row.id), row)
+    }
+
+    const [journal, allocations] = await Promise.all([
+      supabase
+        .from('journal_entries')
+        .select('id, entry_number, status')
+        .eq('workspace_id', workspaceId)
+        .eq('source_type', 'invoice')
+        .eq('source_id', invoiceId),
+      this.pages<Record<string, any>>('payment allocations', (a, b) =>
+        supabase
+          .from('payment_allocations')
+          .select('id, payment_id, amount')
+          .eq('workspace_id', workspaceId)
+          .eq('invoice_id', invoiceId)
+          .order('id', { ascending: true })
+          .range(a, b),
+      ),
+    ])
+    if (journal.error) throw new DatabaseError('Failed to read journal entries', journal.error)
+
+    // Only allocations of POSTED payments settle anything.
+    const paymentIds = [...new Set(allocations.map((a) => String(a.payment_id)))]
+    const posted = new Set<string>()
+    for (let i = 0; i < paymentIds.length; i += 200) {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'posted')
+        .in('id', paymentIds.slice(i, i + 200))
+      if (error) throw new DatabaseError('Failed to read payments', error)
+      for (const row of data ?? []) posted.add(String(row.id))
+    }
+
+    return {
+      invoice,
+      lines: sources.lines,
+      consumptions: consumptionRows.map((row) => {
+        const layer = row.layer_id ? layers.get(String(row.layer_id)) : undefined
+        return {
+          invoiceId: String(row.consumer_id),
+          productId: String(row.product_id),
+          quantity: Number(row.quantity) || 0,
+          unitCost: Number(row.unit_cost) || 0,
+          amount: Number(row.amount) || 0,
+          isEstimated: row.is_estimated === true,
+          layer: layer
+            ? {
+                sourceType: String(layer.source_type),
+                sourceId: layer.source_id ? String(layer.source_id) : null,
+                unitCost: Number(layer.unit_cost) || 0,
+                entryDate: String(layer.entry_date),
+              }
+            : null,
+        }
+      }),
+      ledger: (journal.data ?? []).map((row) => ({
+        id: String(row.id),
+        entryNumber: row.entry_number ? String(row.entry_number) : null,
+        status: String(row.status),
+      })),
+      payments: allocations
+        .filter((a) => posted.has(String(a.payment_id)))
+        .map((a) => ({ paymentId: String(a.payment_id), amount: Number(a.amount) || 0 })),
+    }
+  }
+
+  /** A product's cost layers (all — what remains is on the shelf) and its consumptions in [from, to]. */
+  async productJourneySources(workspaceId: string, productId: string, from: string, to: string) {
+    const [layers, consumptions] = await Promise.all([
+      this.pages<Record<string, any>>('cost layers', (a, b) =>
+        supabase
+          .from('cost_layers')
+          .select('id, source_type, received_qty, remaining_qty, unit_cost, currency, entry_date')
+          .eq('workspace_id', workspaceId)
+          .eq('product_id', productId)
+          .order('id', { ascending: true })
+          .range(a, b),
+      ),
+      this.pages<Record<string, any>>('cost consumptions', (a, b) =>
+        supabase
+          .from('cost_consumptions')
+          .select('id, consumer_type, quantity, amount')
+          .eq('workspace_id', workspaceId)
+          .eq('product_id', productId)
+          .gte('entry_date', from)
+          .lte('entry_date', to)
+          .order('id', { ascending: true })
+          .range(a, b),
+      ),
+    ])
+    return {
+      layers: layers.map((row) => ({
+        sourceType: String(row.source_type),
+        receivedQty: Number(row.received_qty) || 0,
+        remainingQty: Number(row.remaining_qty) || 0,
+        unitCost: Number(row.unit_cost) || 0,
+        currency: String(row.currency || 'AFN'),
+        entryDate: String(row.entry_date),
+      })),
+      consumptions: consumptions.map((row) => ({
+        consumerType: String(row.consumer_type),
+        quantity: Number(row.quantity) || 0,
+        amount: Number(row.amount) || 0,
+      })),
+    }
+  }
 }

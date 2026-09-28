@@ -57,6 +57,12 @@ import {
 } from './accounting.reports'
 import { getCashFlow, getCustomerDebtReport } from './operational-reports'
 import { buildProfitReport, invoiceMargins, type ProfitReport } from './profit-report.domain'
+import {
+  explainInvoiceProfit,
+  productJourney,
+  type InvoiceEvidence,
+  type ProductJourney,
+} from './evidence.domain'
 import { carryForward, planClosing, type AccountBalance } from './year-end.domain'
 import type {
   LedgerPort,
@@ -786,6 +792,49 @@ export class AccountingService implements LedgerPort {
   async getInvoiceMargins(ctx: TenancyContext, invoiceIds: string[]) {
     const sources = await this.repo.profitSourcesForInvoices(ctx.workspaceId, invoiceIds)
     return invoiceMargins(sources.invoices, sources.lines, sources.consumptions)
+  }
+
+  /**
+   * The chain behind one invoice's profit (evidence.domain.ts): lines, the
+   * shared discount, each cost with the layer and document it came from, the
+   * journal entry and the payments. Totals are buildProfitReport's.
+   */
+  async explainInvoiceProfit(ctx: TenancyContext, invoiceId: string): Promise<InvoiceEvidence> {
+    const sources = await this.repo.invoiceEvidenceSources(ctx.workspaceId, invoiceId)
+    if (!sources) throw new NotFoundError('Invoice')
+    return explainInvoiceProfit(sources)
+  }
+
+  /**
+   * A product's money journey in [from, to] in one currency: bought (cost
+   * layers), sold (consumptions), still on hand, and the report's revenue
+   * and profit for it — never converted between currencies.
+   */
+  async productJourney(
+    ctx: TenancyContext,
+    productId: string,
+    fromDate: string,
+    toDate: string,
+    currency: string,
+  ): Promise<ProductJourney> {
+    const from = dateOnly(fromDate)
+    const to = dateOnly(toDate)
+    if (from > to) throw new ValidationError('PROFIT_REPORT_RANGE_INVALID')
+    const [sources, journey] = await Promise.all([
+      this.repo.profitSources(ctx.workspaceId, from, to),
+      this.repo.productJourneySources(ctx.workspaceId, productId, from, to),
+    ])
+    const row = buildProfitReport({ from, to, currency, ...sources, payrolls: [] }).products.find(
+      (p) => p.productId === productId,
+    )
+    return productJourney({
+      productId,
+      currency,
+      layers: journey.layers,
+      consumptions: journey.consumptions,
+      revenue: row?.revenue ?? 0,
+      profit: row?.profit ?? 0,
+    })
   }
 
   async getIncomeStatement(

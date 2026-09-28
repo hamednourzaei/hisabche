@@ -6297,5 +6297,47 @@
     "payments": "Payments",
     "noPayments": "No payments recorded.",
     "orders": "Orders"
+  },
+  "evidence": {
+    "invoiceTitle": "Where does this profit come from?",
+    "journeyTitle": "This product’s money journey (last 12 months)",
+    "journeyHelp": "How much was bought, how much left with sales, how much is still on the shelf — at cost, and only in the selected currency.",
+    "show": "Show",
+    "hide": "Hide",
+    "loading": "Gathering the evidence…",
+    "forbidden": "Profit and cost are not open to your role.",
+    "loadError": "The evidence could not be loaded.",
+    "grossSales": "Gross sales",
+    "discount": "Discount",
+    "netSales": "Net sales",
+    "cost": "Cost",
+    "grossProfit": "Gross profit",
+    "margin": "Margin",
+    "estimatedSource": "Estimated — no recorded stock was there when it was sold",
+    "ledger": "Journal entry",
+    "noLedger": "Not posted to the ledger yet",
+    "paid": "Paid",
+    "bought": "Bought / received",
+    "soldAtCost": "Gone out (at cost)",
+    "onHand": "Still on hand",
+    "revenue": "Sales revenue",
+    "warning": {
+      "COST_MISSING": "Part of the sale has no recorded cost; this profit is overstated.",
+      "COST_ESTIMATED": "Part of the cost is estimated (not enough stock was recorded when it was sold).",
+      "NOT_POSTED": "This invoice is not posted to the ledger yet."
+    },
+    "source": {
+      "purchase": "Purchase",
+      "purchase_order": "Purchase order",
+      "opening": "Opening stock",
+      "adjustment": "Stock adjustment",
+      "production": "Production",
+      "reversal": "Reversal",
+      "invoice": "Sales invoice",
+      "transfer": "Warehouse transfer",
+      "return": "Return",
+      "csv": "File import",
+      "manual": "Manual entry"
+    }
   }
 }

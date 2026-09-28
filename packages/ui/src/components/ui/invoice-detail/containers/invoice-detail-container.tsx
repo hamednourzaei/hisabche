@@ -20,6 +20,7 @@ import {
 import { useSubscriptionLocked } from '../../billing/subscription-lock'
 import { InvoiceDetailPage, type InvoiceDetailDisplay } from '../invoice-detail-page'
 import InvoicePDFDownload from '../InvoicePDFDownload'
+import { InvoiceEvidencePanel } from '../invoice-evidence-panel'
 import { InvoiceRelatedPanel } from '../invoice-related-panel'
 import { RecordHistoryPanel } from '../../activity/record-history-panel'
 import { useQueryClient } from '@tanstack/react-query'
@@ -418,6 +419,8 @@ export function InvoiceDetailContainer() {
       onExportPNG={handleExportPNG}
       exportingPNG={exportingPNG}
       pdfDownloadSlot={invoice ? <InvoicePDFDownload invoice={invoice} /> : null}
+      // «Why this profit?» — loads only when the person opens it.
+      evidenceSlot={display && id ? <InvoiceEvidencePanel invoiceId={id} /> : null}
       // H2 — rendered only once the invoice itself has loaded. Fetching the
       // related records for an id that turns out not to exist would show an
       // empty payments panel beside a «فاکتور پیدا نشد» message.

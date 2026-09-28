@@ -837,3 +837,13 @@ export {
   portalKeys,
   type PortalLinkRow,
 } from './hooks/customer-portal'
+
+// ─── Evidence (why a profit figure is what it is) ─────────
+export {
+  useInvoiceEvidence,
+  useProductJourney,
+  evidenceKeys,
+  type InvoiceEvidence,
+  type ProductJourney,
+  type EvidenceLayer,
+} from './hooks/evidence'

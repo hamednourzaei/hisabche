@@ -592,6 +592,70 @@ export async function accountingRoutes(fastify: FastifyInstance) {
 
   // ─── GET /year-end/plan ──────────────────────────────────
   //
+  // ─── GET /evidence/invoices/:id ──────────────────────────
+  // «Why is this invoice's profit what it is?» — lines, the shared discount,
+  // each cost with the layer and document it came from, the journal entry and
+  // the payments (services/accounting/evidence.domain.ts). Same totals as the
+  // profit report, by construction.
+  fastify.get(
+    '/evidence/invoices/:id',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+      schema: {
+        params: toJsonSchema(z.object({ id: z.string().uuid() })),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        return reply.send(await accountingService.explainInvoiceProfit(request.tenancy, id))
+      } catch (err) {
+        return fail(reply, err, 'Failed to explain the invoice')
+      }
+    },
+  )
+
+  // ─── GET /evidence/products/:id ──────────────────────────
+  // A product's money journey in one currency: bought, sold, on hand, profit.
+  fastify.get(
+    '/evidence/products/:id',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+      schema: {
+        params: toJsonSchema(z.object({ id: z.string().uuid() })),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const { fromDate, toDate, currency } = request.query as {
+          fromDate?: string
+          toDate?: string
+          currency?: string
+        }
+        if (!fromDate || !toDate) return reply.code(400).send({ error: 'DATE_RANGE_REQUIRED' })
+        if (!currency || !/^[A-Z]{3}$/.test(currency)) {
+          return reply.code(400).send({ error: 'CURRENCY_REQUIRED' })
+        }
+        return reply.send(
+          await accountingService.productJourney(request.tenancy, id, fromDate, toDate, currency),
+        )
+      } catch (err) {
+        return fail(reply, err, 'Failed to build the product journey')
+      }
+    },
+  )
+
   // What closing the year WOULD post. GET, and free of side effects, so an
   // accountant can look as often as they like before approving it.
   fastify.get(

@@ -10,6 +10,7 @@ import { profitPerUnit, stockValue, totalProfit } from '@hisabche/validation'
 import { apiErrorMessage, useProduct, useUpdateProduct, useDeleteProduct } from '@hisabche/api'
 import { barcodeTakenMessage } from '../../../../lib/barcode/barcode-errors'
 import { ProductExpiryPanel } from '../product-expiry-panel'
+import { ProductJourneyPanel } from '../product-journey-panel'
 import { ProductBarcodesPanel } from '../product-barcodes-panel'
 import { ProductDetailPage } from '../warehouse-detail-page'
 import { productDeleteRefusal } from '../../../../lib/warehouse/delete-refusal'
@@ -204,6 +205,7 @@ export function ProductDetailContainer() {
       onDelete={handleDelete}
       barcodes={id ? <ProductBarcodesPanel t={safeT} productId={id} /> : null}
       expiry={id ? <ProductExpiryPanel t={safeT} productId={id} /> : null}
+      journey={id ? <ProductJourneyPanel t={safeT} productId={id} /> : null}
     />
   )
 }
