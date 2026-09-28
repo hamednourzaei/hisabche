@@ -17,6 +17,8 @@ import { StockHistoryService } from '../services/inventory/stock-history.service
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { ConflictError, NotFoundError } from '../errors/database.error'
+import { ValidationError } from '../errors/validation.error'
+import { invalidateMoneyCaches } from '../utils/money-cache'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 // ✅ تنظیمات برای حذف $schema از خروجی
@@ -24,6 +26,23 @@ const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
   delete result.$schema
   return result
+}
+
+/** Which field a product refusal is about, so the form can point at it. */
+const REFUSAL_FIELD: Record<string, string> = {
+  PRODUCT_WAREHOUSE_REQUIRED: 'warehouseId',
+  PRODUCT_WAREHOUSE_NOT_FOUND: 'warehouseId',
+  PRODUCT_QUANTITY_INVALID: 'quantity',
+}
+
+function sendRefusal(reply: FastifyReply, err: ValidationError) {
+  const field = REFUSAL_FIELD[err.message]
+  return reply.code(400).send({
+    error: err.message,
+    code: err.message,
+    message: err.message,
+    ...(field ? { details: [{ path: [field], message: err.message }] } : {}),
+  })
 }
 
 export async function productRoutes(fastify: FastifyInstance) {
@@ -234,11 +253,9 @@ export async function productRoutes(fastify: FastifyInstance) {
           clientRequestId: readClientRequestId(request),
         })
 
-        // Invalidation keys must match the cache identity exactly — these were
-        // userId-keyed, which after the switch to workspace keys would leave
-        // every stale entry in place forever.
-        await clearCache(`products:${workspaceId}:*`)
-        await clearCache(`low-stock:${workspaceId}:*`)
+        // Opening stock moves the stock figures and their value: every cached
+        // view of them goes (money-cache.ts owns the key shapes).
+        await invalidateMoneyCaches(workspaceId)
 
         return sendCreated(reply, product)
       } catch (err) {
@@ -252,6 +269,7 @@ export async function productRoutes(fastify: FastifyInstance) {
             details: [{ path: ['barcode'], message: 'BARCODE_TAKEN' }],
           })
         }
+        if (err instanceof ValidationError) return sendRefusal(reply, err)
         if (err instanceof IdempotencyUnavailableError) {
           return reply.code(503).send({ error: err.message, code: err.code })
         }
@@ -274,12 +292,11 @@ export async function productRoutes(fastify: FastifyInstance) {
         const { workspaceId } = request.tenancy
         const product = await productService.update(id, request.tenancy, body)
 
-        // Invalidation keys must match the cache identity exactly — these were
-        // userId-keyed, which after the switch to workspace keys would leave
-        // every stale entry in place forever.
-        await clearCache(`product:${workspaceId}:${id}`)
-        await clearCache(`products:${workspaceId}:*`)
-        await clearCache(`low-stock:${workspaceId}:*`)
+        // ⚠️ `product:<ws>:<id>` matched NOTHING: the middleware keys the page
+        // as `product:<ws>:/api/products/<id>`, so after a stock edit the
+        // product page served the old quantity for two minutes. The one place
+        // that knows the key shapes clears them (BUG-008, BUG-080).
+        await invalidateMoneyCaches(workspaceId)
 
         return reply.send(product)
       } catch (err) {
@@ -293,6 +310,9 @@ export async function productRoutes(fastify: FastifyInstance) {
             details: [{ path: ['barcode'], message: 'BARCODE_TAKEN' }],
           })
         }
+        // A rule refused the edit (which warehouse, a bad quantity): a 400
+        // with its reason — it used to fall through to a bare 500.
+        if (err instanceof ValidationError) return sendRefusal(reply, err)
         if (err instanceof NotFoundError) {
           return reply.code(404).send({ error: err.message })
         }
@@ -314,12 +334,8 @@ export async function productRoutes(fastify: FastifyInstance) {
         const { workspaceId } = request.tenancy
         await productService.delete(id, request.tenancy)
 
-        // Invalidation keys must match the cache identity exactly — these were
-        // userId-keyed, which after the switch to workspace keys would leave
-        // every stale entry in place forever.
-        await clearCache(`product:${workspaceId}:${id}`)
-        await clearCache(`products:${workspaceId}:*`)
-        await clearCache(`low-stock:${workspaceId}:*`)
+        // Same as an edit: the hand-built `product:<ws>:<id>` matched nothing.
+        await invalidateMoneyCaches(workspaceId)
 
         return reply.code(204).send()
       } catch (err) {

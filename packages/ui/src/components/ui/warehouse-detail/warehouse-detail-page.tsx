@@ -19,6 +19,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { MoneyInput } from '../money-input'
+import { SelectField } from '../select-field'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ProductDetailPage v3 — Hisabche Design Language
@@ -57,6 +58,8 @@ interface ProductEditValues {
   minStockLevel: number
   category: string
   unit: UnitType
+  /** Where a quantity change lands (BUG-080). '' = not chosen. */
+  warehouseId: string
 }
 
 /**
@@ -114,6 +117,13 @@ export interface ProductDetailPageProps {
   journey?: React.ReactNode
   /** The product's extra barcodes (27 Sep 2026), rendered by the container. */
   barcodes?: React.ReactNode
+  /** Where the stock is, per warehouse (BUG-080), rendered by the container. */
+  stockPlaces?: React.ReactNode
+  /**
+   * The business's warehouses. A quantity change lands in one: with several,
+   * the person picks it; with one, it is that one; with none, nowhere.
+   */
+  stockWarehouses: Array<{ id: string; name: string }>
 }
 
 export function ProductDetailPage({
@@ -136,6 +146,8 @@ export function ProductDetailPage({
   expiry,
   journey,
   barcodes,
+  stockPlaces,
+  stockWarehouses,
 }: ProductDetailPageProps) {
   const [editValues, setEditValues] = useState<ProductEditValues>({
     name: '',
@@ -146,6 +158,7 @@ export function ProductDetailPage({
     minStockLevel: 0,
     category: 'general',
     unit: 'piece',
+    warehouseId: '',
   })
   const [errors, setErrors] = useState<Partial<Record<keyof ProductEditValues, string>>>({})
 
@@ -160,6 +173,7 @@ export function ProductDetailPage({
         minStockLevel: product.minStockLevel,
         category: product.category,
         unit: toUnitType(product.unit),
+        warehouseId: '',
       })
     }
   }, [product])
@@ -180,9 +194,13 @@ export function ProductDetailPage({
       newErrors.quantity = t('validation.min', 'مقدار نمی‌تواند منفی باشد')
     if (editValues.minStockLevel < 0)
       newErrors.minStockLevel = t('validation.min', 'مقدار نمی‌تواند منفی باشد')
+    if (quantityChanged && stockWarehouses.length > 1 && !editValues.warehouseId)
+      newErrors.warehouseId = t('warehouse.byWarehouse.pickRequired')
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
+
+  const quantityChanged = !!product && editValues.quantity !== product.quantity
 
   const handleSubmit = () => {
     if (validateForm()) onSave(editValues)
@@ -400,6 +418,33 @@ export function ProductDetailPage({
                   />
                 </div>
               </div>
+
+              {/* Where a quantity change lands (BUG-080): never «no warehouse»
+                  when the business has warehouses. */}
+              {quantityChanged && stockWarehouses.length > 1 && (
+                <div data-field="warehouseId">
+                  <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-1.5">
+                    {t('warehouse.byWarehouse.editWarehouse')}
+                  </label>
+                  <SelectField
+                    name="warehouseId"
+                    value={editValues.warehouseId}
+                    onChange={(value) => handleEditChange('warehouseId', value)}
+                    placeholder={t('warehouse.byWarehouse.pickWarehouse')}
+                    options={stockWarehouses.map((w) => ({ value: w.id, label: w.name }))}
+                  />
+                  {errors.warehouseId && (
+                    <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]" role="alert">
+                      {errors.warehouseId}
+                    </p>
+                  )}
+                </div>
+              )}
+              {quantityChanged && stockWarehouses.length === 1 && (
+                <p className="text-xs text-[hsl(var(--fg-secondary))]">
+                  {t('warehouse.byWarehouse.editOnly')}: {stockWarehouses[0]?.name}
+                </p>
+              )}
             </div>
           ) : (
             /* ── View Mode ── */
@@ -476,6 +521,7 @@ export function ProductDetailPage({
         />
       </KpiGrid>
 
+      {stockPlaces}
       {barcodes}
       {expiry}
       {journey}

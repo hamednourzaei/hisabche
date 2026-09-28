@@ -211,6 +211,19 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     },
   )
 
+  fastify.get(
+    '/api/products/:id/warehouse-breakdown',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        return reply.send(await warehouseService.productBreakdown(request.tenancy, id))
+      } catch (err) {
+        return failWarehouse(reply, err, 'Failed to read where the product is')
+      }
+    },
+  )
+
   fastify.post(
     '/api/warehouses/:id/assign',
     { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')] },

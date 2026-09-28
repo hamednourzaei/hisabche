@@ -53,6 +53,7 @@ export const warehouseKeys = {
   all: ['warehouses'] as const,
   overview: () => [...warehouseKeys.all, 'overview'] as const,
   detail: (id: string) => [...warehouseKeys.all, 'detail', id] as const,
+  product: (id: string) => [...warehouseKeys.all, 'product', id] as const,
 }
 
 const emptySummary: StockSummary = {
@@ -133,5 +134,34 @@ export function useAssignWarehouseStock(warehouseId: string) {
       queryClient.invalidateQueries({ queryKey: warehouseKeys.all })
       queryClient.invalidateQueries({ queryKey: productKeys.all })
     },
+  })
+}
+
+/** Where one product's stock is (GET /products/:id/warehouse-breakdown). */
+export interface ProductWarehouseBreakdown {
+  /** The product total — the figure the product page shows. */
+  total: number
+  /** Every live warehouse and this product's quantity there. */
+  warehouses: Array<{ id: string; name: string; quantity: number }>
+  /** In no warehouse. total − Σ warehouses; may be negative. */
+  unassigned: number
+}
+
+export function useProductWarehouseBreakdown(productId: string | null) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: warehouseKeys.product(productId ?? ''),
+    queryFn: async (): Promise<ProductWarehouseBreakdown> => {
+      const { data } = await apiClient.get<Partial<ProductWarehouseBreakdown>>(
+        `/products/${productId}/warehouse-breakdown`,
+      )
+      return {
+        total: Number(data?.total ?? 0),
+        warehouses: asList<ProductWarehouseBreakdown['warehouses'][number]>(data?.warehouses),
+        unassigned: Number(data?.unassigned ?? 0),
+      }
+    },
+    enabled: authReady && !!productId,
+    staleTime: 10_000,
   })
 }

@@ -26,8 +26,10 @@ describe('opening stock into a warehouse', () => {
   })
 
   it('the warehouse must belong to this workspace', () => {
-    expect(body).toContain('await this.assertWarehouse(workspaceId, openingWarehouseId)')
-    const assert = product.slice(product.indexOf('private async assertWarehouse'))
+    // The opening warehouse is chosen by stockEditWarehouse (BUG-080) over
+    // this workspace's live warehouses only.
+    expect(body).toContain('await this.stockWarehouse(')
+    const assert = product.slice(product.indexOf('private async stockWarehouse'))
     expect(assert.slice(0, 500)).toContain(".eq('workspace_id', workspaceId)")
     expect(assert.slice(0, 500)).toContain(".is('deleted_at', null)")
   })

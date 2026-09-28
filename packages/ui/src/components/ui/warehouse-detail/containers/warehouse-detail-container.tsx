@@ -7,11 +7,20 @@ import { useTranslations } from 'next-intl'
 // Margin and stock-value rules live in the domain layer so mobile derives the
 // same numbers rather than re-implementing them.
 import { profitPerUnit, stockValue, totalProfit } from '@hisabche/validation'
-import { apiErrorMessage, useProduct, useUpdateProduct, useDeleteProduct } from '@hisabche/api'
+import {
+  apiErrorMessage,
+  useProduct,
+  useProductWarehouseBreakdown,
+  useUpdateProduct,
+  useDeleteProduct,
+  warehouseKeys,
+} from '@hisabche/api'
+import { useQueryClient } from '@tanstack/react-query'
 import { barcodeTakenMessage } from '../../../../lib/barcode/barcode-errors'
 import { ProductExpiryPanel } from '../product-expiry-panel'
 import { ProductJourneyPanel } from '../product-journey-panel'
 import { ProductBarcodesPanel } from '../product-barcodes-panel'
+import { ProductWarehouseStockPanel } from '../product-warehouse-stock-panel'
 import { ProductDetailPage } from '../warehouse-detail-page'
 import { productDeleteRefusal } from '../../../../lib/warehouse/delete-refusal'
 import { STOCK_LABEL_KEY, STOCK_TONE, stockStateOf } from '../../../../lib/warehouse/stock-state'
@@ -38,6 +47,7 @@ interface ProductEditValues {
   minStockLevel: number
   category: string
   unit: UnitType
+  warehouseId: string
 }
 
 const num = (v: unknown): number => {
@@ -72,6 +82,20 @@ interface RawProduct {
   unit?: string
 }
 
+/** The server's refusals of a stock edit — a CLOSED list, each worded in fa/af/en. */
+const STOCK_REFUSALS = [
+  'PRODUCT_WAREHOUSE_REQUIRED',
+  'PRODUCT_WAREHOUSE_NOT_FOUND',
+  'PRODUCT_QUANTITY_INVALID',
+] as const
+
+function stockRefusal(error: unknown, t: (key: string) => string): string | null {
+  const code = (error as { response?: { data?: { code?: unknown } } } | null)?.response?.data?.code
+  return typeof code === 'string' && (STOCK_REFUSALS as readonly string[]).includes(code)
+    ? t(`warehouse.byWarehouse.error.${code}`)
+    : null
+}
+
 type StockStatus = 'success' | 'warning' | 'destructive' | 'secondary'
 
 export function ProductDetailContainer() {
@@ -83,6 +107,8 @@ export function ProductDetailContainer() {
   const { data: product, isLoading } = useProduct(id)
   const updateProduct = useUpdateProduct()
   const deleteProduct = useDeleteProduct()
+  const breakdown = useProductWarehouseBreakdown(id ?? null)
+  const queryClient = useQueryClient()
   const toast = useToast()
 
   const [editing, setEditing] = useState(false)
@@ -128,10 +154,15 @@ export function ProductDetailContainer() {
           'general' | 'food' | 'electronics' | 'clothing' | 'construction' | 'medicine',
         // Refused rather than defaulted — see toValidUnit (T2).
         unit: toValidUnit(values.unit) ?? undefined,
+        // Where a quantity change lands (BUG-080); the server picks the only
+        // warehouse itself and refuses a missing one when there are several.
+        ...(values.warehouseId ? { warehouseId: values.warehouseId } : {}),
       })
+      // The stock moved: the per-warehouse figures are stale too.
+      void queryClient.invalidateQueries({ queryKey: warehouseKeys.all })
       setEditing(false)
     },
-    [id, updateProduct],
+    [id, updateProduct, queryClient],
   )
 
   const handleDelete = useCallback(async () => {
@@ -179,7 +210,11 @@ export function ProductDetailContainer() {
       // ⚠️ WAS `.catch(() => undefined)`: every failed save was swallowed, the
       // form stayed open and nothing said why. Now the reason is shown.
       void handleSave(data).catch((error: unknown) => {
-        toast.error(barcodeTakenMessage(error, t) ?? apiErrorMessage(error, t('common.error')))
+        toast.error(
+          barcodeTakenMessage(error, t) ??
+            stockRefusal(error, t) ??
+            apiErrorMessage(error, t('common.error')),
+        )
       })
     },
     [handleSave],
@@ -204,6 +239,8 @@ export function ProductDetailContainer() {
       onSave={onSave}
       onDelete={handleDelete}
       barcodes={id ? <ProductBarcodesPanel t={safeT} productId={id} /> : null}
+      stockPlaces={id ? <ProductWarehouseStockPanel t={safeT} productId={id} fmt={fmt} /> : null}
+      stockWarehouses={(breakdown.data?.warehouses ?? []).map((w) => ({ id: w.id, name: w.name }))}
       expiry={id ? <ProductExpiryPanel t={safeT} productId={id} /> : null}
       journey={id ? <ProductJourneyPanel t={safeT} productId={id} /> : null}
     />

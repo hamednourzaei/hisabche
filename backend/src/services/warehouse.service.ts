@@ -34,6 +34,7 @@ import { memoryCache } from '../utils/pagination'
 import type { TenancyContext } from './tenancy.service'
 import {
   checkAssign,
+  productWarehouseBreakdown,
   unassignedQuantities,
   warehouseOverview,
   warehouseProducts,
@@ -386,6 +387,36 @@ export class WarehouseService {
 
     await this.invalidate(ctx.workspaceId)
     return { assigned: input.quantity }
+  }
+
+  /**
+   * Where one product's stock is: each live warehouse, and what is in none.
+   * The product page shows it beside the total so the two figures explain
+   * each other (BUG-080).
+   */
+  async productBreakdown(ctx: TenancyContext, productId: string) {
+    const [warehouses, product, stock] = await Promise.all([
+      this.liveWarehouses(ctx.workspaceId),
+      supabase
+        .from('products')
+        .select('quantity')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', productId)
+        .maybeSingle(),
+      supabase
+        .from('warehouse_stock')
+        .select('warehouse_id, product_id, quantity')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('product_id', productId),
+    ])
+    if (product.error) throw new DatabaseError('Failed to read the product', product.error)
+    if (!product.data) throw new NotFoundError('Product')
+    if (stock.error) throw new DatabaseError('Failed to read the product stock', stock.error)
+    return productWarehouseBreakdown(
+      Number((product.data as { quantity: unknown }).quantity) || 0,
+      warehouses,
+      (stock.data ?? []) as WarehouseStockRow[],
+    )
   }
 
   // ─── Stock reads ──────────────────────────────────────────────

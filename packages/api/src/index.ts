@@ -760,6 +760,8 @@ export {
   useCreateWarehouse,
   useUpdateWarehouse,
   useAssignWarehouseStock,
+  useProductWarehouseBreakdown,
+  type ProductWarehouseBreakdown,
   warehouseKeys,
   type WarehouseOverview,
   type WarehouseOverviewItem,
