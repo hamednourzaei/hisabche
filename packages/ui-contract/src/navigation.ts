@@ -39,6 +39,7 @@ export type NavId =
   | 'referrals'
   | 'workflow-templates'
   | 'billing'
+  | 'wallet'
   | 'governance'
   // The till. Somewhere a person STANDS, which is why it is primary and the
   // rest of this batch is not.
@@ -406,6 +407,16 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     labelKey: 'nav.billing',
     descriptionKey: 'nav.billing_description',
     path: '/billing',
+    group: 'system',
+  },
+  {
+    // The business's wallet (one per workspace): top up, then pay the plan
+    // from it. Beside billing because that is what it is for.
+    id: 'wallet',
+    emoji: '👛',
+    labelKey: 'nav.wallet',
+    descriptionKey: 'nav.wallet_description',
+    path: '/wallet',
     group: 'system',
   },
   {

@@ -28,6 +28,7 @@ describe('routes open while expired', () => {
     '/en/invoices',
     '/af/invoices/abc-123',
     '/fa/billing',
+    '/en/wallet',
     '/',
     '/invoices/42',
   ])('%s stays open', (path) => expect(isRouteAllowedWhenExpired(path)).toBe(true))
@@ -39,6 +40,7 @@ describe('routes open while expired', () => {
     '/af/settings',
     '/warehouse',
     '/fa/billingx',
+    '/fa/walletx',
   ])('%s is locked', (path) => expect(isRouteAllowedWhenExpired(path)).toBe(false))
 })
 

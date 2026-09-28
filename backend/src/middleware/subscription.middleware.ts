@@ -49,8 +49,11 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
  * - `/api/auth/`    — signing in and out, session and profile: an expired
  *                      business must still be able to reach /billing.
  * - `/api/billing/` — renewing IS the way out of the lock.
+ * - `/api/wallet/`  — so is topping up the wallet and paying the plan from it.
+ *                      Every wallet write is a guarded Postgres function; the
+ *                      lock is about business data, not about paying.
  */
-const ALLOWED_PREFIXES = ['/api/auth/', '/api/billing/'] as const
+const ALLOWED_PREFIXES = ['/api/auth/', '/api/billing/', '/api/wallet/'] as const
 
 /**
  * POST routes that only READ. Each was checked to write nothing:

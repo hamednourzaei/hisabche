@@ -41,6 +41,7 @@ export default function robots(): MetadataRoute.Robots {
     '/*/warehouse',
     '/*/settings',
     '/*/billing',
+    '/*/wallet',
     '/*/crm',
     '/*/tasks',
     '/*/referrals',

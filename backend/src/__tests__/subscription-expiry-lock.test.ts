@@ -138,6 +138,7 @@ async function buildApp(): Promise<FastifyInstance> {
   app.patch('/api/invoices/:id', guarded, ok)
   app.delete('/api/invoices/:id', guarded, ok)
   app.post('/api/billing/upgrade', guarded, ok)
+  app.post('/api/wallet/pay-upgrade', guarded, ok)
   app.post('/api/operations/budgets/check', guarded, ok)
   app.post('/api/sync/lease', guarded, ok)
   app.patch(
@@ -201,6 +202,11 @@ describe('expired workspace', () => {
 
   it('still allows billing/renewal', async () => {
     const res = await app.inject({ method: 'POST', url: '/api/billing/upgrade' })
+    expect(res.statusCode).toBe(200)
+  })
+
+  it('still allows paying from the wallet — the other way out', async () => {
+    const res = await app.inject({ method: 'POST', url: '/api/wallet/pay-upgrade' })
     expect(res.statusCode).toBe(200)
   })
 

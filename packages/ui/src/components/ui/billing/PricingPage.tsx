@@ -56,6 +56,7 @@ import { SelectField } from '../select-field'
 import { Button } from '../button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../card'
 import { cn } from '../../../lib/utils'
+import { WalletPayOption } from '../wallet/wallet-pay-option'
 
 type Interval = 'month' | 'year'
 
@@ -269,7 +270,17 @@ export function PricingPage({ currentPlan, isTrial, pendingRequest }: PricingPag
             </CardTitle>
             <CardDescription>{t('billing.request.howItWorks')}</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Paid from the wallet: activated at once, in one server
+                transaction. Only for a plan the product prices — a
+                negotiated plan has no amount to debit. */}
+            {chosen.plan !== 'free' && priceFor(chosen, interval) !== null ? (
+              <WalletPayOption
+                plan={chosen.plan}
+                interval={interval}
+                planCurrency={chosen.currency}
+              />
+            ) : null}
             <form
               className="space-y-3"
               onSubmit={(event) => {

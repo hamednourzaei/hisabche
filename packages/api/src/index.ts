@@ -393,6 +393,27 @@ export {
   type CurrentSubscription,
 } from './hooks/billing'
 
+// ─── Wallet (one per business) ─────────────────────────────
+export {
+  useWallet,
+  useWalletTransactions,
+  useWalletTopups,
+  useRequestWalletTopup,
+  useCancelWalletTopup,
+  usePayUpgradeFromWallet,
+  walletKeys,
+  type WalletBalance,
+  type WalletMethodKind,
+  type WalletPaymentMethod,
+  type WalletTransaction,
+  type WalletTransactionKind,
+  type WalletTopup,
+  type WalletTopupStatus,
+  type WalletOverview,
+  type WalletTopupInput,
+  type WalletPayResult,
+} from './hooks/wallet'
+
 // ─── Notifications ─────────────────────────────────────────
 export {
   useNotifications,

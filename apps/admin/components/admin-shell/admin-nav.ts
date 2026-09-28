@@ -9,6 +9,7 @@ import {
   Server,
   Sparkles,
   Users,
+  WalletCards,
 } from 'lucide-react'
 
 /**
@@ -79,6 +80,16 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     titleKey: 'admin.ai.title',
     descriptionKey: 'admin.ai.description',
     endpoint: 'GET /ai/config',
+  },
+  {
+    // Added with the business wallets (wallet-01): every /admin/wallet/* route
+    // exists in backend/src/routes/wallet.routes.ts, behind platformAdminGuard.
+    id: 'wallet',
+    path: '/wallet',
+    icon: WalletCards,
+    titleKey: 'admin.wallet.pageTitle',
+    descriptionKey: 'admin.wallet.description',
+    endpoint: 'GET /admin/wallet/topups',
   },
   {
     // Added with the blog (26 Sep 2026): every /admin/blog/* route exists in

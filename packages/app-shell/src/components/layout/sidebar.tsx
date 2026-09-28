@@ -81,6 +81,7 @@ const DESKTOP_ROUTES = new Set([
   '/data-and-sync',
   '/data-migration',
   '/billing',
+  '/wallet',
   '/governance',
 ])
 

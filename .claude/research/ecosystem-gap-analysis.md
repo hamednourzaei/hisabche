@@ -165,3 +165,22 @@ The comparison set is the app stores of Shopify, Xero, QuickBooks (Intuit), Zoho
 3. A policy decision on the share, and on refunds and tax.
 
 Building a "revenue share" number without money moving would be a claim with nothing behind it (G1). The pricing columns and the disclosure are the part that is true today.
+
+## 8. Business wallet (28 Sep 2026) — against the incumbents
+
+|                              | Odoo                                          | ERPNext                    | Shopify (billing)                                                                 | Hisabche wallet-01                                                                                                                                      |
+| ---------------------------- | --------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prepaid balance per business | Customer credit / wallet module (per partner) | Advance payments per party | Store credit for the merchant's customers; the merchant pays the platform by card | **One wallet per workspace, one balance per currency**                                                                                                  |
+| Top-up                       | Online gateway                                | Payment Entry              | Card only                                                                         | **Manual: card-to-card / foreign currency into a method the platform defines, tracking number + receipt, admin approval** (gateways cannot serve IR/AF) |
+| Pay the subscription from it | — (SaaS billed by card)                       | —                          | —                                                                                 | **Debit + upgrade request + activation in one Postgres transaction**                                                                                    |
+| Ledger                       | Journal items                                 | GL entries                 | —                                                                                 | Append-only `wallet_transactions` (trigger), `balance_after` per row, balance written only by functions, CHECK ≥ 0                                      |
+| Admin correction             | Manual journal                                | Journal Entry              | —                                                                                 | `wallet_adjust` with a required note; never below zero                                                                                                  |
+
+Decisions and why:
+
+- **Per workspace, not per user.** Money belongs to the business; a member leaving must not take the balance with them (rule 1).
+- **The price is the server's.** `pay-upgrade` carries no amount; `priceOf` from `plan-pricing.ts` (rule 3).
+- **The admin credits what actually arrived**, not what was declared — the declared amount stays on the request for the record.
+- **A rejected/withdrawn tracking number can be filed again** (partial unique index on pending/approved only); an approved one never twice.
+- **The wallet stays open while the subscription is expired** (`/api/wallet/` in the expiry allowlist, `/wallet` in the read-only routes): it is a way out of the lock, like `/billing`.
+- Not built: a payment gateway (none serves both markets), refunds out of the wallet (a policy decision for the owner), paying invoices/orders from the wallet (future `sales_orders`, phase 3 design).

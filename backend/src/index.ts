@@ -92,6 +92,7 @@ import { crmRoutes } from './routes/crm.routes'
 import { manufacturingRoutes } from './routes/manufacturing.routes'
 import { purchasingRoutes } from './routes/purchasing.routes'
 import { billingRoutes } from './routes/billing.routes'
+import { walletRoutes } from './routes/wallet.routes'
 import { referralRoutes } from './routes/referral.routes'
 import { blogRoutes, isPublicBlogRequest } from './routes/blog.routes'
 import { workflowRoutes } from './routes/workflow.routes'
@@ -731,6 +732,7 @@ export async function buildServer(): Promise<typeof server> {
 
   await server.register(jobSchedulerPlugin)
   await server.register(billingRoutes)
+  await server.register(walletRoutes)
   await server.register(referralRoutes)
   await server.register(blogRoutes)
   // API keys and outbound webhooks (docs/developer-platform-migration.sql).

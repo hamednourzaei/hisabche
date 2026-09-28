@@ -31,6 +31,8 @@ const READ_ONLY_ROUTES: readonly RegExp[] = [
   // An invoice by id — but never the builder at /invoices/new.
   /^\/invoices\/(?!new(?:\/|$))[^/]+\/?$/,
   /^\/billing\/?$/,
+  // Topping up and paying the plan from the wallet is the other way out.
+  /^\/wallet\/?$/,
 ]
 
 /** Is this path (with or without a /fa|/af|/en prefix) open while expired? */
