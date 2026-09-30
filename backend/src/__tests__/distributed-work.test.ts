@@ -88,9 +88,24 @@ describe('⚠️ nothing in the process runs background work unguarded', () => {
   it('every cron task goes through runScheduledOnce', () => {
     const src = code('scheduler/index.ts')
     const crons = src.match(/cron\.schedule\(/g) ?? []
-    const guarded = src.match(/await run(TrialExpiration|EventRecovery)Tick\(\)/g) ?? []
+
+    // ⚠️ The tick name is matched by SHAPE, not from an allow-list of the two
+    // that existed when this test was written. The first version listed them —
+    // `run(TrialExpiration|EventRecovery)Tick` — and adding the depreciation pass
+    // made it fail with `expected [ …(2) ] to have a length of 3`. That is the
+    // wrong failure: the guard's job is to prove EVERY cron is claimed once, and
+    // a new safe cron should not need its name added to a list to be allowed to
+    // exist. Matching `await run\w+Tick\()` proves the property instead.
+    const guarded = src.match(/await run\w+Tick\(\)/g) ?? []
+
     expect(crons.length).toBeGreaterThan(0)
     expect(guarded).toHaveLength(crons.length)
+
+    // And the claim itself is still required — a tick that exists but does not
+    // claim would satisfy the count above and post twice on two instances.
+    const claimCalls = src.match(/runScheduledOnce\(/g) ?? []
+    expect(claimCalls.length).toBeGreaterThanOrEqual(crons.length)
+
     expect(src).not.toMatch(/trialWorker\.run\(\)\s*\n\s*\}\s*catch/)
   })
 

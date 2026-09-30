@@ -6,14 +6,15 @@
 // own, and whether a delegate inherits authority they do not hold.
 // ============================================
 
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import {
   describeProgress,
-  escalatedRole,
   nextStepAfter,
   resolveApprovers,
-  shouldEscalate,
   tierFor,
   type ApprovalTier,
   type Member,
@@ -216,34 +217,25 @@ describe('what happens next', () => {
 
 /* ─── Escalation ──────────────────────────────────────────────────────────── */
 
-describe('escalation', () => {
-  const policy = { afterHours: 24, toRole: 'owner' as const }
-  const since = '2026-01-01T00:00:00.000Z'
-  /** `hours` AFTER `since` — not an hour of the following day. */
-  const at = (hours: number) => new Date(Date.parse(since) + hours * 3_600_000)
+// ⚠️ MOVED to `escalation.domain.ts` on 30 September 2026 — capability #68.
+//
+// The tests that lived here covered `shouldEscalate` and `escalatedRole`, which
+// were correct and called by nothing. The replacements are in
+// `escalation-and-compensation.test.ts`, and they cover the same three
+// boundaries PLUS the one the old pair never checked: whether the target role
+// holds anybody at all. `escalatedRole('manager', {toRole: 'owner'})` returned
+// `'owner'` in a workspace with no owner, so the document escalated into an
+// empty room and sat there forever with a log entry saying it had moved.
 
-  it('does not fire before the deadline', () => {
-    expect(shouldEscalate(policy, since, at(23))).toBe(false)
-  })
-
-  it('fires exactly at it', () => {
-    expect(shouldEscalate(policy, since, at(24))).toBe(true)
-  })
-
-  it('is disabled by a zero', () => {
-    expect(shouldEscalate({ afterHours: 0, toRole: 'owner' }, since, at(99))).toBe(false)
-  })
-
-  it('ignores an unreadable timestamp instead of escalating on it', () => {
-    // Escalating because a date could not be parsed would raise the bar on a
-    // document for a reason nobody could explain.
-    expect(shouldEscalate(policy, 'not a date', at(99))).toBe(false)
-  })
-
-  it('RAISES the required role and never lowers it', () => {
-    // An escalation that could lower the bar would let a document nobody
-    // approved for two days become approvable by somebody junior.
-    expect(escalatedRole('owner', { afterHours: 1, toRole: 'seller' })).toBe('owner')
-    expect(escalatedRole('seller', { afterHours: 1, toRole: 'owner' })).toBe('owner')
+describe('escalation is owned by escalation.domain', () => {
+  it('the old functions are gone from approval.domain', () => {
+    // A source assertion rather than an import, because an import of a removed
+    // export fails at compile time and would take the whole file with it.
+    const source = readFileSync(
+      join(__dirname, '..', 'services/workflow/approval.domain.ts'),
+      'utf8',
+    )
+    expect(source).not.toMatch(/export function shouldEscalate/)
+    expect(source).not.toMatch(/export function escalatedRole/)
   })
 })

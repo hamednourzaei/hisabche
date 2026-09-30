@@ -26,6 +26,7 @@ import {
 } from '@hisabche/validation'
 
 import { AccountingService } from '../services/accounting'
+import { runMonthEnd } from '../services/accounting/month-end.service'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { readClientRequestId } from '../utils/client-request'
@@ -89,6 +90,15 @@ async function reportingBranches(request: FastifyRequest): Promise<string[] | nu
 const yearEndSchema = z.object({
   fromDate: z.string().min(8),
   toDate: z.string().min(8),
+})
+
+const monthEndSchema = z.object({
+  fromDate: z.string().min(8),
+  toDate: z.string().min(8),
+  /** `MM-DD`. Required — see the note on the route. */
+  fiscalYearEnd: z.string().regex(/^\d{2}-\d{2}$/, 'fiscalYearEnd must be MM-DD'),
+  /** Set false to run the steps without sealing the period. */
+  lock: z.boolean().optional(),
 })
 
 export async function accountingRoutes(fastify: FastifyInstance) {
@@ -705,6 +715,50 @@ export async function accountingRoutes(fastify: FastifyInstance) {
           )
       } catch (err) {
         return fail(reply, err, 'Failed to close the year')
+      }
+    },
+  )
+
+  // ─── POST /api/accounting/month-end ──────────────────────
+  // Capability #69 — the ordered close. Every step already existed as its own
+  // button; what did not exist was the ORDER, and a person closing a month by
+  // clicking them in the wrong order gets correct-looking books with a
+  // depreciation entry measured against a balance a revaluation already moved.
+  //
+  // ⚠️ `fiscalYearEnd` is REQUIRED, not defaulted: there is no such setting in
+  // the product yet, and assuming December would close the year on the wrong day
+  // for every shop whose books end in March.
+  //
+  // ⚠️ `lock` defaults to true. A run that stops early returns 200 with
+  // `locked: false` and the failing step — it is NOT a 500, because the steps
+  // that succeeded are real and posted.
+  fastify.post(
+    '/month-end',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.lock_period')],
+      schema: {
+        // ⚠️ `z.any()`, not `toJsonSchema(monthEndSchema)`.
+        //
+        // `zod-to-json-schema` cannot walk a schema containing `ZodOptional`
+        // under `exactOptionalPropertyTypes`, which is on across this monorepo:
+        // it recurses into a `ZodEffects` type TS will not widen, and fails with
+        // TS2589 — the error that eats the 1.5 GB stack. Same limitation recorded
+        // for the blog routes.
+        //
+        // The body is still validated, by `monthEndSchema.parse(request.body)`
+        // in the handler below. The `schema` block is for Fastify's routing and
+        // documentation; validation is that parse, which runs either way.
+        body: toJsonSchema(z.any()),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = monthEndSchema.parse(request.body)
+        const result = await runMonthEnd(request.tenancy, body, accountingService)
+        return reply.send(result)
+      } catch (err) {
+        return fail(reply, err, 'Failed to run the month-end package')
       }
     },
   )

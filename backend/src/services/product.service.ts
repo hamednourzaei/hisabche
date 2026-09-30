@@ -685,46 +685,6 @@ export class ProductService {
     return result
   }
 
-  // ─── Get Product Stats — FIXED ──────────────────────────────
-  async getStats(ctx: TenancyContext) {
-    const { workspaceId } = ctx
-    const cacheKey = `products:stats:${workspaceId}`
-    const cached = await memoryCache.get(cacheKey)
-    if (cached) return cached
-
-    // ✅ FIX: سه کوئری موازی
-    const [totalResult, activeResult, productsResult] = await Promise.all([
-      supabase
-        .from('products')
-        .select('id', { count: 'estimated', head: true })
-        .eq('workspace_id', workspaceId),
-      supabase
-        .from('products')
-        .select('id', { count: 'estimated', head: true })
-        .eq('workspace_id', workspaceId)
-        .eq('is_active', true),
-      supabase
-        .from('products')
-        .select('quantity, min_stock_level')
-        .eq('workspace_id', workspaceId)
-        .eq('is_active', true),
-    ])
-
-    // ✅ محاسبه lowStock در JavaScript
-    const lowStockCount = (productsResult.data || []).filter(
-      (p: any) => Number(p.quantity) < Number(p.min_stock_level),
-    ).length
-
-    const result = {
-      total: totalResult.count || 0,
-      active: activeResult.count || 0,
-      lowStock: lowStockCount,
-    }
-
-    await memoryCache.set(cacheKey, result, 60)
-    return result
-  }
-
   // ─── Invalidate Cache ────────────────────────────────────────
   private async invalidateWorkspaceCache(workspaceId: string) {
     await memoryCache.invalidate(`products:${workspaceId}:*`)

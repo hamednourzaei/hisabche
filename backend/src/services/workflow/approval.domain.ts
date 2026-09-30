@@ -210,38 +210,18 @@ export function describeProgress(steps: readonly WorkflowStep[], currentStep: nu
 
 /* ─── When nobody acts ────────────────────────────────────────────────────── */
 
-export interface EscalationPolicy {
-  /** Hours before an unanswered step escalates. 0 disables it. */
-  afterHours: number
-  /** Who it escalates to. */
-  toRole: WorkspaceRole
-}
-
-/**
- * Has this step waited long enough to escalate?
- *
- * `now` is a parameter rather than `Date.now()` so the boundary is testable —
- * a rule that fires "after 24 hours" has to be checked at 23, 24 and 25, and a
- * function that reads the clock itself can only be checked at whatever time
- * the suite happens to run.
- */
-export function shouldEscalate(policy: EscalationPolicy, waitingSince: string, now: Date): boolean {
-  if (!(policy.afterHours > 0)) return false
-
-  const since = new Date(waitingSince)
-  if (Number.isNaN(since.getTime())) return false
-
-  const hours = (now.getTime() - since.getTime()) / 3_600_000
-  return hours >= policy.afterHours
-}
-
-/**
- * Escalation RAISES the required role; it never lowers it.
- *
- * An escalation that could reduce the bar would let a document nobody approved
- * for two days become approvable by somebody junior — which is the opposite of
- * what waiting should mean.
- */
-export function escalatedRole(current: WorkspaceRole, policy: EscalationPolicy): WorkspaceRole {
-  return ROLE_RANK[policy.toRole] > ROLE_RANK[current] ? policy.toRole : current
-}
+// ⚠️ Escalation moved to `./escalation.domain.ts` on 30 September 2026, which is
+// capability #68 of the Business OS. `shouldEscalate` and `escalatedRole` lived
+// here, complete and tested, with no caller in the repository — the `§7.1`
+// pattern of "correct code nobody can find". They were on the unwired register
+// until the new module gave them one.
+//
+// ⚠️ THE NEW VERSION CHECKS SOMETHING THESE NEVER DID: whether the target role
+// HOLDS ANYBODY. `escalatedRole('manager', {toRole: 'owner'})` returned `'owner'`
+// whether an owner existed or not, so a shop with no owner escalated a document
+// into an empty room and the workflow sat there forever with a log entry saying
+// it had moved. `decideEscalation` reports `NO_ONE_TO_ESCALATE_TO` instead.
+//
+// The ROLE_ORDER ladder is also spelled out there rather than derived from
+// `ROLE_RANK`, because "higher" for escalation is a different question from
+// "higher" for capability checks.

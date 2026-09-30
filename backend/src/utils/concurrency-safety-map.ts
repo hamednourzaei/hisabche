@@ -455,6 +455,51 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
       { file: SQL, text: 'journal_entries_source_key' },
     ],
   },
+  {
+    // Capability #69 — the month-end package.
+    //
+    // ⚠️ EVERY STEP IS INDIVIDUALLY IDEMPOTENT, and that is the whole claim
+    // here — there is no transaction spanning the five engines, because a
+    // transaction across depreciation, revaluation, repost, the year-end close
+    // and a period lock is not something Postgres can give across those
+    // boundaries. What it has instead:
+    //
+    //   depreciation   posted_at IS NULL, plus the ledger's already_posted
+    //   revaluation    upsert on (workspace_id, as_of); reverses the last run
+    //   cost repost    planRepost emits nothing when the recomputation agrees,
+    //                  and the source id is stable per document+line+product
+    //   year-end       the same check-then-write + unique index as above
+    //   period lock    setPeriodLock re-reads the whole set before writing
+    //
+    // ⚠️ `check-then-write` is listed FIRST and honestly, because it is the
+    // weakest of the seven and it is what stops a second caller from opening a
+    // run at all. Two genuinely simultaneous runs could still interleave; every
+    // individual step above would then find its work already done. That is a
+    // materially weaker guarantee than `db-function` gives elsewhere in this
+    // map, and the reason is stated rather than glossed (§13).
+    routeFile: 'accounting.routes.ts',
+    route: 'POST /month-end',
+    mechanisms: ['check-then-write', 'state-idempotent'],
+    evidence: [
+      // The stop condition: a failed step withholds the lock.
+      {
+        file: `${SVC}/accounting/month-end.domain.ts`,
+        text: "code: 'MONTH_END_STEP_FAILED'",
+      },
+      // Depreciation: the query that makes a second run find nothing to do.
+      {
+        file: `${SVC}/assets/assets.service.ts`,
+        text: ".is('posted_at', null)",
+      },
+      // Revaluation: one row per workspace+date, so a re-run replaces it.
+      { file: SQL, text: 'fx_revaluations' },
+      // Repost: an adjustment exists only when the recomputation disagrees.
+      {
+        file: `${SVC}/inventory-costing/repost.domain.ts`,
+        text: 'if (differenceMinor !== 0)',
+      },
+    ],
+  },
 ]
 
 /** Route files whose every mutating handler must appear above. */

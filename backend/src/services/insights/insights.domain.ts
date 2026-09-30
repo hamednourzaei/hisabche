@@ -25,17 +25,19 @@
 // which is the property that makes an explanation trustworthy at all.
 // ============================================
 
+import { round2 } from '../../utils/money'
+
+/** Rounding moved to `utils/money` in Phase 0. Re-exported: this module's
+ *  twenty-two call sites and any consumer of the figure would otherwise both
+ *  depend on a helper that could move again. */
+export { round2 }
+
 export interface PeriodTotals {
   from: string
   to: string
   revenue: number
   costOfGoodsSold: number
   invoiceCount: number
-}
-
-export function round2(value: number): number {
-  if (!Number.isFinite(value)) return 0
-  return Math.round(value * 100) / 100
 }
 
 export function grossProfit(totals: PeriodTotals): number {

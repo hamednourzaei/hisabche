@@ -10,6 +10,16 @@
 // a debt figure anyone can overwrite is not a debt figure.
 // ============================================
 
+import { minor, round2 } from '../../utils/money'
+
+/**
+ * Both helpers moved to `utils/money` in Phase 0 — one implementation, guarded
+ * by `money-primitive-guard.test.ts`. Re-exported because `services/payments`
+ * is the module other services import them from, and `supplier.service` among
+ * them.
+ */
+export { round2, minor }
+
 export type PaymentDirection = 'in' | 'out'
 export type PartyType = 'customer' | 'supplier'
 
@@ -26,16 +36,6 @@ export interface OpenInvoice {
 export interface AllocationRequest {
   invoiceId: string
   amount: number
-}
-
-export function round2(value: number): number {
-  if (!Number.isFinite(value)) return 0
-  return Math.round(value * 100) / 100
-}
-
-/** Money is compared as integer minor units; floats do not compare equal. */
-function minor(value: number): number {
-  return Math.round((Number.isFinite(value) ? value : 0) * 100)
 }
 
 export function outstandingOf(invoice: OpenInvoice): number {

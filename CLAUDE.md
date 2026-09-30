@@ -68,30 +68,33 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 
 ## ۴. دانش پروژه — کجا را باز کنی
 
-| سؤال                                                             | فایل                                                |
-| ---------------------------------------------------------------- | --------------------------------------------------- |
-| **وبلاگ: نقشه، تله‌ها، تصمیم‌ها (۲۶ سپتامبر)**                   | `.claude/SESSION-CACHE-2026-09-26-BLOG.md`          |
-| **Sync باینری، بارکد/چاپ، پرفورمنس DB، Cloudflare (۲۷ سپتامبر)** | `.claude/SESSION-CACHE-2026-09-27.md`               |
-| **کلید API، وب‌هوک، ورود صورتحساب بانک، مقایسه‌ی اکوسیستم**      | `.claude/research/ecosystem-gap-analysis.md`        |
-| **درس‌ها و باگ‌های سشن اخیر (۱۹ سپتامبر)**                       | `.claude/SESSION-CACHE-2026-09-19.md` — **اول این** |
-| درس‌ها و باگ‌های ۱۵–۱۷ سپتامبر                                   | `.claude/SESSION-CACHE-2026-09-17.md`               |
-| درس‌ها و باگ‌های اوایل سپتامبر                                   | `.claude/SESSION-CACHE-2026-09.md`                  |
-| **فهرست باگ‌ها با ریشه و گارد**                                  | `.claude/BUG-REGISTRY.md`                           |
-| **پرفورمنس، PageSpeed، لندینگ موبایل (۱۵ سپتامبر)**              | `.claude/SESSION-CACHE-2026-09-15-PERF.md`          |
-| **درخواست‌های باز کاربر — قبل از هر کار**                        | `.claude/USER-REQUESTS.md`                          |
-| بودجه/صندوق/حاکمیت/۵۰۰ها (۱۴ سپتامبر)                            | `.claude/SESSION-CACHE-2026-09-14.md`               |
-| نقشه‌ی کل دانش                                                   | `.claude/README.md`                                 |
-| باگ خوردم / چطور وریفای کنم                                      | `.claude/DEBUG-PLAYBOOK.md`                         |
-| تله‌های قدیمی‌تر                                                 | `.claude/SESSION-CACHE.md`                          |
-| چرا این‌طوری نوشته شده                                           | `.claude/lessons-learned.md`                        |
-| الان چه کار می‌کند و چه نه                                       | `.claude/STATE.md`                                  |
-| کد جدید کجا برود                                                 | `.claude/architecture/core-modules.md`              |
-| کدام hook به کدام endpoint                                       | `.claude/architecture/api-surface.md`               |
-| جدول‌ها و RLS                                                    | `.claude/architecture/data-model.md`                |
-| Source of Truth / کدام migration اجرا شده                        | `.claude/SESSION-2026-09-05-CONSOLIDATION.md`       |
-| migration/تست/commit چطور                                        | `.claude/WORKFLOW.md`                               |
-| مقایسه با ERPNext و Odoo                                         | `.claude/research/`                                 |
-| خواسته‌های محصول                                                 | `.claude/detail.md`                                 |
+| سؤال                                                             | فایل                                                       |
+| ---------------------------------------------------------------- | ---------------------------------------------------------- |
+| **وبلاگ: نقشه، تله‌ها، تصمیم‌ها (۲۶ سپتامبر)**                   | `.claude/SESSION-CACHE-2026-09-26-BLOG.md`                 |
+| **Sync باینری، بارکد/چاپ، پرفورمنس DB، Cloudflare (۲۷ سپتامبر)** | `.claude/SESSION-CACHE-2026-09-27.md`                      |
+| **Business OS ۱۵۰ قابلیت: نقشه، فازبندی، درس‌ها (۳۰ سپتامبر)**   | `.claude/BUSINESS-OS-SPEC.md` · `BUSINESS-OS-EXECUTION.md` |
+| **درس‌های فازهای ۰–۴ Business OS (۳۰ سپتامبر)**                  | `.claude/SESSION-CACHE-2026-09-30-BUSINESS-OS.md`          |
+| **باگ‌های Business OS (BOS-01 تا BOS-15)**                       | `.claude/BUG-REGISTRY.md` — بخش انتهایی                    |
+| **کلید API، وب‌هوک، ورود صورتحساب بانک، مقایسه‌ی اکوسیستم**      | `.claude/research/ecosystem-gap-analysis.md`               |
+| **درس‌ها و باگ‌های سشن اخیر (۱۹ سپتامبر)**                       | `.claude/SESSION-CACHE-2026-09-19.md` — **اول این**        |
+| درس‌ها و باگ‌های ۱۵–۱۷ سپتامبر                                   | `.claude/SESSION-CACHE-2026-09-17.md`                      |
+| درس‌ها و باگ‌های اوایل سپتامبر                                   | `.claude/SESSION-CACHE-2026-09.md`                         |
+| **فهرست باگ‌ها با ریشه و گارد**                                  | `.claude/BUG-REGISTRY.md`                                  |
+| **پرفورمنس، PageSpeed، لندینگ موبایل (۱۵ سپتامبر)**              | `.claude/SESSION-CACHE-2026-09-15-PERF.md`                 |
+| **درخواست‌های باز کاربر — قبل از هر کار**                        | `.claude/USER-REQUESTS.md`                                 |
+| بودجه/صندوق/حاکمیت/۵۰۰ها (۱۴ سپتامبر)                            | `.claude/SESSION-CACHE-2026-09-14.md`                      |
+| نقشه‌ی کل دانش                                                   | `.claude/README.md`                                        |
+| باگ خوردم / چطور وریفای کنم                                      | `.claude/DEBUG-PLAYBOOK.md`                                |
+| تله‌های قدیمی‌تر                                                 | `.claude/SESSION-CACHE.md`                                 |
+| چرا این‌طوری نوشته شده                                           | `.claude/lessons-learned.md`                               |
+| الان چه کار می‌کند و چه نه                                       | `.claude/STATE.md`                                         |
+| کد جدید کجا برود                                                 | `.claude/architecture/core-modules.md`                     |
+| کدام hook به کدام endpoint                                       | `.claude/architecture/api-surface.md`                      |
+| جدول‌ها و RLS                                                    | `.claude/architecture/data-model.md`                       |
+| Source of Truth / کدام migration اجرا شده                        | `.claude/SESSION-2026-09-05-CONSOLIDATION.md`              |
+| migration/تست/commit چطور                                        | `.claude/WORKFLOW.md`                                      |
+| مقایسه با ERPNext و Odoo                                         | `.claude/research/`                                        |
+| خواسته‌های محصول                                                 | `.claude/detail.md`                                        |
 
 ---
 
@@ -224,6 +227,22 @@ cd apps/admin     && npx tsc --noEmit
 - `\n` و `\r` داخل رشته‌ی پایتون در heredoc به کاراکتر واقعی تبدیل می‌شوند و فایل را خراب می‌کنند. برای فایل بزرگ از ابزار Write استفاده کن.
 - در تست، برای رشته‌های پر از metacharacter از `toContain` استفاده کن نه `toMatch` — الگوی نامعتبر تست را «no tests» می‌کند، نه قرمز.
 - Jest ≠ Vitest: `expect(x, 'message')` فقط vitest است.
+- ⚠️ **`vi.mock` نسبت به فایل تست resolve می‌شود، نه ماژول.** در `src/__tests__/` مسیر `../services/x` است، نه `../x`. نسخه‌ی اول `repost-service.test.ts` سرویس واقعی را بار کرد و به یک `supabase` واقعی رسید — با خطایی که ربطی به mock نداشت.
+- ⚠️ **تاریخ را در fixture بساز، رشونه نکن.** `` `2026-09-${1+days}` `` با `days=30` می‌شود `2026-09-31` و JS **بی‌صدا** به ۱ اکتبر تبدیلش می‌کند. درست: `new Date(Date.UTC(2026, 8, 1+days)).toISOString().slice(0,10)`.
+- ⚠️ **قبل از fixture، یک مقدار واقعی بخوان.** `OpenInvoice.total` **major** است؛ با `100_000` فکر می‌کردم minor است یعنی ۱۰۰ میلیون، و دو تست آستانه بی‌صدا `remind` برگرداندند.
+
+**موتورهای تجاری (Business OS)**
+
+- ⚠️ **«قابلیت هست» یعنی یک caller در کلاینت دارد.** #۶۵ موتور و route کامل داشت و صفر مصرف‌کننده — الگوی §۷٫۱. گارد `unwired-capability.test.ts` دفتر صریح نگه می‌دارد و **برای سبزشدن باید ردیف حذف شود**.
+- ⚠️ **یک job runtime، نه یکی به‌ازای قابلیت.** مالک: `distributed-work.ts` + `email-outbox.ts`. `queue.ts` و `queue/pdf-queue.ts` حذف شدند (صفر caller). guard: `job-authority-guard.test.ts`.
+- ⚠️ **مقدارِ «صفر» گاهی باید `null` باشد و آن‌وقت باید صریح باشد.** `if (score < minScore)` با `minScore: 0` هرگز برقرار نمی‌شود — «خاموش با آستانه‌ی صفر» در عمل «روشن» بود. حالت غیرفعال، **شرط جداگانه** است.
+- ⚠️ **صفر باورپذیرترین و فاجعه‌بارترین عددی است که یک موتور قیمت می‌سازد.** خطِ بدون quote باید `null` برگردد، نه `0` — وگرنه کالا رایگان با فاکتوری که درست جمع می‌شد.
+- ⚠️ **دو ثابتِ یک مقیاس را کنار هم بنویس.** وزن ریسک تأمین‌کننده `(days/14)×100` بود و آستانه‌ی باند ۴۵، پس تأمین‌کننده‌ای که همیشه یک هفته دیر می‌رسید «پایین» گزارش می‌شد.
+- ⚠️ **دقیقاً روی آستانه یعنی ریسک.** `<` نه `<=` — مرزی که تعریف خودش را استثنا کند، مرزی نیست که بشود درباره‌اش فکر کرد.
+- ⚠️ **دو تابع هم‌نام با واحد متفاوت را یکی نکن.** `accounting.sumMinorUnits` (minor) و `money.sumRounded` (major) هر دو درست‌اند. اسم گمراه‌کننده را عوض کن، رفتار را نه.
+- ⚠️ **محدودیت تخفیف روی مشتری، فروش نقدی را هم شامل می‌شود مگر صریح نگیری.** نبودِ `customerId` **هیچ** شرطی را برآورده نمی‌کند — عضویت نیست.
+- `zodToJsonSchema` با `exactOptionalPropertyTypes` در `TS2589` می‌افتد (استک ۱٫۵ گیگ). body را `z.any()` بگذار و در handler با `schema.parse()` اعتبارسنجی کن.
+- گارد با **فهرست بسته** باید به‌ازای هر عضو جدید ویرایش شود — و آن لحظه‌ای است که کسی «تست را شل می‌کند» به‌جای «قاعده را درست می‌کند». شکل را تطبیق بده (`/await run\w+Tick\(\)/g`)، نه اسم را.
 
 **هسته‌ها (CRM / Payments)**
 

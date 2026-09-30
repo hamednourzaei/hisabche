@@ -9,6 +9,17 @@
 
 import type { AccountRole } from '@hisabche/validation'
 
+import { round2 } from '../../utils/money'
+
+/**
+ * Rounding lives in `utils/money` now — one implementation, guarded by
+ * `money-primitive-guard.test.ts`. Re-exported here because nine modules and
+ * the ledger's own reports already import it from this module, and a
+ * consolidation that breaks nine call sites to win four lines is not a
+ * consolidation.
+ */
+export { round2 }
+
 export type AccountRootType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'
 
 /**
@@ -57,11 +68,19 @@ export function toMinorUnits(value: number): number {
   return Math.round(value * 100)
 }
 
-export function round2(value: number): number {
-  if (!Number.isFinite(value)) return 0
-  return Math.round(value * 100) / 100
-}
-
+/**
+ * ⚠️ NOT the same function as `utils/money.sumMinorUnits`, and the difference is
+ * the point.
+ *
+ * This one returns MINOR units — an integer. The ledger compares and posts in
+ * minor units, so a sum that came back in major units would be off by 100×.
+ * `utils/money.sumMinorUnits` returns MAJOR units, because its callers round a
+ * displayed figure.
+ *
+ * Merging these would be the exact mistake this consolidation exists to avoid:
+ * two same-named functions returning different units is precisely why four
+ * identical `round2` copies were survivable in the first place.
+ */
 export function sumMinorUnits(values: number[]): number {
   return values.reduce((total, value) => total + toMinorUnits(value), 0)
 }

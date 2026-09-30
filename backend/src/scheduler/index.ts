@@ -13,6 +13,7 @@ import cron from 'node-cron'
 import { TrialExpirationWorker } from '../workers/trial-expiration.worker'
 import { eventService } from '../services/event.service'
 import { runScheduledOnce, slotOf } from '../services/distributed-work'
+import { runDepreciationPosting } from '../workers/depreciation-posting.worker'
 
 const trialWorker = new TrialExpirationWorker()
 
@@ -58,6 +59,31 @@ export async function runEventRecoveryTick(now: Date = new Date()): Promise<bool
   )
 }
 
+/**
+ * Capability #70 — the daily depreciation pass, once per UTC day across all
+ * instances.
+ *
+ * ⚠️ DAILY, not monthly, and that is deliberate. `postDue` measures against each
+ * row's own `on_date`, so a daily run posts one period and a run that missed ten
+ * days posts ten — on their own accounting dates. Monthly scheduling would mean
+ * a shop that was down on the 1st posted a whole month on the 2nd, and the whole
+ * point of a precomputed schedule is that a late run is still correct.
+ *
+ * The daily cost is one indexed read of rows that are already `posted_at IS
+ * NULL` — normally zero.
+ */
+export async function runDepreciationTick(now: Date = new Date()): Promise<boolean> {
+  return runScheduledOnce('depreciation-posting', slotOf(DAY_SECONDS, now), async () => {
+    const result = await runDepreciationPosting()
+    if (result.posted > 0 || result.errors.length > 0) {
+      console.log(
+        `⏰ Depreciation: workspaces=${result.workspaces} posted=${result.posted} ` +
+          `skipped=${result.skipped} errors=${result.errors.length}`,
+      )
+    }
+  })
+}
+
 export function startScheduler() {
   console.log('🔄 Starting scheduler...')
 
@@ -96,6 +122,21 @@ export function startScheduler() {
       }
     },
     { timezone: SCHEDULER_TIMEZONE, name: 'event-log-recovery' },
+  )
+
+  // ─── Depreciation Posting (#۷۰) ──────────────
+  // روزی یک‌بار، UTC. هر ردیف با `posted_at IS NULL` در تاریخ خودش ثبت می‌شود،
+  // پس یک اجرای دیرهنگام هم درست است — فقط دیر است.
+  cron.schedule(
+    '15 0 * * *',
+    async () => {
+      try {
+        await runDepreciationTick()
+      } catch (err) {
+        console.error('❌ Depreciation posting failed:', err)
+      }
+    },
+    { timezone: SCHEDULER_TIMEZONE, name: 'depreciation-posting' },
   )
 
   console.log('✅ Scheduler started.')

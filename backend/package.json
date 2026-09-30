@@ -24,7 +24,6 @@
     "@hisabche/validation": "workspace:*",
     "@react-pdf/renderer": "^4.5.1",
     "@supabase/supabase-js": "^2.105.4",
-    "bullmq": "^5.76.8",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.10.0",

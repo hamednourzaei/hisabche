@@ -10,6 +10,8 @@
 // what a shortfall is worth.
 // ============================================
 
+import { round2 } from '../../utils/money'
+
 export type CostingMethod = 'fifo' | 'avco' | 'standard'
 export type NegativeStockPolicy = 'block' | 'allow'
 
@@ -50,10 +52,19 @@ export function roundQty(value: number): number {
   return Math.round(value * 10_000) / 10_000
 }
 
-export function roundMoney(value: number): number {
-  if (!Number.isFinite(value)) return 0
-  return Math.round(value * 100) / 100
-}
+/**
+ * ⚠️ An ALIAS, not a second implementation. `roundMoney` was byte-identical to
+ * `round2`; Phase 0 moved the body to `utils/money` and kept this name because
+ * `repost.domain` and `stock-count.domain` import it from here.
+ *
+ * The name is kept because the MEANING differs at the call site even though the
+ * arithmetic does not: `roundQty` handles a quantity, `roundMoney` handles a
+ * cost. A reader seeing `round2(layerValue)` would have to open the file to
+ * learn it was money.
+ */
+const roundMoney = round2
+
+export { roundMoney }
 
 /** Oldest arrival first; the row's own creation order breaks a same-day tie. */
 export function fifoOrder(layers: CostLayer[]): CostLayer[] {
