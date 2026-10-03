@@ -9,6 +9,7 @@ import { Plan } from '@hisabche/validation'
 import { BillingService } from './billing.service'
 import { memoryCache } from '../utils/pagination'
 import { DatabaseError } from '../errors/database.error'
+import { countBusinesses } from './workspace-counts'
 
 // ✅ Types
 export interface Entitlements {
@@ -307,16 +308,14 @@ export class EntitlementService {
         // workspace quota has never been enforced. Corrected to the real
         // column — workspaces are counted by owner, not by membership, since
         // being a seller in someone else's shop is not running a business.
-        const { count, error } = await supabase
-          .from('workspaces')
-          .select('id', { count: 'exact', head: true })
-          .eq('owner_id', userId)
+        // Sandboxes are not businesses and do not use up the quota.
+        const { count, error } = await countBusinesses((query) => query.eq('owner_id', userId))
 
         if (error) {
           throw new DatabaseError(`Failed to count owned workspaces for usage limit`, error)
         }
 
-        const current = count ?? 0
+        const current = count
         if (current >= limit) {
           return {
             allowed: false,

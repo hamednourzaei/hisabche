@@ -1,133 +1,177 @@
 // packages/ui/src/components/ui/manufacturing/containers/manufacturing-container.tsx
-"use client";
+'use client'
 
-import { useState, useCallback, useMemo, memo } from "react";
-import { useTranslations } from "next-intl";
+import { memo, useCallback, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import {
+  apiErrorMessage,
   useBOMs,
-  useWorkOrders,
-  useCompleteWorkOrder,
-  useCreateBOM,
   useCreateWorkOrder,
   useProducts,
-} from "@hisabche/api";
-import { ManufacturingView, type ManufacturingTabId } from "../manufacturing-view";
-import { CreateBomDialog, type CreateBomInput } from "../components/CreateBomDialog";
-import { CreateWorkOrderDialog, type CreateWorkOrderInput } from "../components/CreateWorkOrderDialog";
+  useWorkOrders,
+  type BOM,
+  type WorkOrder,
+} from '@hisabche/api'
+
+import { useIntlLocale } from '../../../../hooks/use-intl-locale'
+import { ManufacturingView, type ManufacturingTabId } from '../manufacturing-view'
+import {
+  CreateWorkOrderDialog,
+  type CreateWorkOrderInput,
+} from '../components/CreateWorkOrderDialog'
+import { ManufacturingReportView } from '../manufacturing-report'
+import { ProductionEditor, type ProductionEditorTarget } from '../production-editor'
+import { ProductionHistory } from '../production-history'
+import { manufacturingErrorText } from '../manufacturing-errors'
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ManufacturingContainer — Memoized · Performance Optimized
-   ✅ memo · useCallback · safeT wrapper
+   ManufacturingContainer — the manufacturing page.
+
+   The page is the tables until someone makes or edits something; then it is
+   the production form (the same one a product's page opens), and it comes
+   back to the tables when that is done.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+interface EditorState {
+  mode: 'produce' | 'definition'
+  product: ProductionEditorTarget | null
+  workOrderId?: string
+  quantity?: number
+}
+
 export const ManufacturingContainer = memo(function ManufacturingContainer() {
-  const tOriginal = useTranslations();
-  const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
-    return v && v !== key ? v : (fallback ?? key);
-  };
+  const tOriginal = useTranslations()
+  const locale = useIntlLocale()
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+      return v && v !== key ? v : (fallback ?? key)
+    },
+    [tOriginal],
+  )
 
+  const [activeTab, setActiveTab] = useState<ManufacturingTabId>('boms')
+  const [editor, setEditor] = useState<EditorState | null>(null)
+  const [isWorkOrderDialogOpen, setIsWorkOrderDialogOpen] = useState(false)
 
-
-  const [activeTab, setActiveTab] = useState<ManufacturingTabId>("boms");
-  const [isBomDialogOpen, setIsBomDialogOpen] = useState(false);
-  const [isWorkOrderDialogOpen, setIsWorkOrderDialogOpen] = useState(false);
-
-  const { data: boms, isLoading: isBomsLoading, error: bomsError } = useBOMs();
+  const { data: boms, isLoading: isBomsLoading, error: bomsError } = useBOMs()
   const {
     data: workOrders,
     isLoading: isWorkOrdersLoading,
     error: workOrdersError,
-  } = useWorkOrders();
+  } = useWorkOrders()
 
-  const { data: productsData } = useProducts({ limit: 200, isActive: true });
+  // The planning dialog's product list. Planning is a convenience, not a
+  // decision made from this list, so one page of active products is enough;
+  // the production form itself searches the whole catalogue.
+  const { data: productsData } = useProducts({ limit: 200, isActive: true })
+  const { mutate: createWorkOrder, isPending: isCreatingWorkOrder } = useCreateWorkOrder()
 
-  const { mutate: completeWorkOrder, isPending, variables: completingId } = useCompleteWorkOrder();
-  const { mutate: createBom, isPending: isCreatingBom } = useCreateBOM();
-  const { mutate: createWorkOrder, isPending: isCreatingWorkOrder } = useCreateWorkOrder();
-
-  const isLoading = activeTab === "boms" ? isBomsLoading : isWorkOrdersLoading;
-  const error = activeTab === "boms" ? bomsError : workOrdersError;
+  const isLoading = activeTab === 'boms' ? isBomsLoading : isWorkOrdersLoading
+  const error = activeTab === 'boms' ? bomsError : workOrdersError
+  const errorCode = error ? apiErrorMessage(error, '') : ''
+  const errorText = error
+    ? manufacturingErrorText(
+        t,
+        errorCode,
+        t('manufacturing.loadFailed', 'اطلاعات تولید خوانده نشد.'),
+      )
+    : null
 
   const productOptions = useMemo(
     () =>
       (productsData?.products ?? [])
         .filter((p): p is typeof p & { id: string } => !!p.id)
         .map((p) => ({ id: p.id, name: p.name, unit: p.unit })),
-    [productsData]
-  );
+    [productsData],
+  )
 
   const bomOptions = useMemo(
-    () => (boms ?? []).map((b) => ({ id: b.id, productId: b.productId, version: b.version })),
-    [boms]
-  );
+    () =>
+      (boms ?? [])
+        .filter((b) => b.isActive)
+        .map((b) => ({ id: b.id, productId: b.productId, version: b.version })),
+    [boms],
+  )
 
-  const handleTabChange = useCallback((tab: ManufacturingTabId) => setActiveTab(tab), []);
+  const handleProduce = useCallback(() => setEditor({ mode: 'produce', product: null }), [])
 
-  const handleCompleteWorkOrder = useCallback(
-    (id: string) => completeWorkOrder(id),
-    [completeWorkOrder]
-  );
+  const handleEditDefinition = useCallback((bom: BOM) => {
+    if (!bom.product) return
+    setEditor({
+      mode: 'definition',
+      product: { productId: bom.productId, productName: bom.product.name },
+    })
+  }, [])
 
-  const handleOpenCreateBom = useCallback(() => setIsBomDialogOpen(true), []);
-  const handleCloseCreateBom = useCallback(() => setIsBomDialogOpen(false), []);
-  const handleOpenCreateWorkOrder = useCallback(() => setIsWorkOrderDialogOpen(true), []);
-  const handleCloseCreateWorkOrder = useCallback(() => setIsWorkOrderDialogOpen(false), []);
+  const handleCompleteWorkOrder = useCallback((workOrder: WorkOrder) => {
+    if (!workOrder.product) return
+    setEditor({
+      mode: 'produce',
+      product: { productId: workOrder.productId, productName: workOrder.product.name },
+      workOrderId: workOrder.id,
+      quantity: workOrder.quantity,
+    })
+  }, [])
 
-  const handleSubmitBom = useCallback(
-    (input: CreateBomInput) => {
-      createBom(input, {
-        onSuccess: () => setIsBomDialogOpen(false),
-      });
-    },
-    [createBom]
-  );
+  const closeEditor = useCallback(() => setEditor(null), [])
 
   const handleSubmitWorkOrder = useCallback(
     (input: CreateWorkOrderInput) => {
-      createWorkOrder(input, {
-        onSuccess: () => setIsWorkOrderDialogOpen(false),
-      });
+      createWorkOrder(input, { onSuccess: () => setIsWorkOrderDialogOpen(false) })
     },
-    [createWorkOrder]
-  );
+    [createWorkOrder],
+  )
+
+  if (editor) {
+    return (
+      <ProductionEditor
+        t={t}
+        locale={locale}
+        mode={editor.mode}
+        product={editor.product}
+        workOrderId={editor.workOrderId}
+        initialQuantity={editor.quantity}
+        onDone={() => {
+          // After a run, land where the result is.
+          if (editor.mode === 'produce') setActiveTab('history')
+          closeEditor()
+        }}
+        onCancel={closeEditor}
+      />
+    )
+  }
 
   return (
     <>
       <ManufacturingView
         t={t}
+        locale={locale}
         activeTab={activeTab}
-        onTabChange={handleTabChange}
+        onTabChange={setActiveTab}
         boms={boms ?? []}
         workOrders={workOrders ?? []}
         isLoading={isLoading}
-        error={error?.message || null}
-        completingId={isPending ? completingId ?? null : null}
+        error={errorText}
+        onProduce={handleProduce}
+        onEditDefinition={handleEditDefinition}
         onCompleteWorkOrder={handleCompleteWorkOrder}
-        onOpenCreateBom={handleOpenCreateBom}
-        onOpenCreateWorkOrder={handleOpenCreateWorkOrder}
-      />
-
-      <CreateBomDialog
-        t={t}
-        isOpen={isBomDialogOpen}
-        onClose={handleCloseCreateBom}
-        onSubmit={handleSubmitBom}
-        isSubmitting={isCreatingBom}
-        products={productOptions}
+        onOpenCreateWorkOrder={() => setIsWorkOrderDialogOpen(true)}
+        history={<ProductionHistory t={t} locale={locale} />}
+        report={<ManufacturingReportView t={t} locale={locale} />}
       />
 
       <CreateWorkOrderDialog
         t={t}
         isOpen={isWorkOrderDialogOpen}
-        onClose={handleCloseCreateWorkOrder}
+        onClose={() => setIsWorkOrderDialogOpen(false)}
         onSubmit={handleSubmitWorkOrder}
         isSubmitting={isCreatingWorkOrder}
         products={productOptions}
         boms={bomOptions}
       />
     </>
-  );
-});
+  )
+})
 
-ManufacturingContainer.displayName = "ManufacturingContainer";
+ManufacturingContainer.displayName = 'ManufacturingContainer'

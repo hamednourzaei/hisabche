@@ -267,11 +267,14 @@ export class HumanResourcesService {
   private async currentBranches(workspaceId: string, employeeId: string) {
     const { data, error } = await supabase
       .from('employee_branch_assignments')
-      .select('branch_id, is_primary, started_at, branch:branches(id, name, code)')
+      .select('branch_id, is_primary, starts_at, branch:branches(id, name, code)')
       .eq('workspace_id', workspaceId)
       .eq('employee_id', employeeId)
       // An assignment that has ended is history, not a current posting.
-      .is('ended_at', null)
+      // ⚠️ The columns are starts_at / ends_at (phase-d-01). This read named
+      // started_at / ended_at, failed with 42703 on every call, and the catch
+      // below turned that into «no branches» on every profile (BUG-088).
+      .is('ends_at', null)
       .order('is_primary', { ascending: false })
 
     if (error) {
@@ -291,7 +294,7 @@ export class HumanResourcesService {
         branchName: branch?.name ?? null,
         branchCode: branch?.code ?? null,
         isPrimary: Boolean(row.is_primary),
-        startedAt: row.started_at ?? null,
+        startedAt: row.starts_at ?? null,
       }
     })
   }

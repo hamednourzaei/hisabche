@@ -3,6 +3,7 @@
 // FIXED: Reduced cache TTL for real-time updates
 // ============================================
 
+import { resolveTimeZone } from '../utils/local-day'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
@@ -124,7 +125,10 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const kpis = await analyticsService.getDashboardKpis(request.tenancy)
+        // The device's zone decides where «today» starts; validated, with an
+        // explicit default (utils/local-day.ts).
+        const timeZone = resolveTimeZone((request.query as { tz?: unknown } | undefined)?.tz)
+        const kpis = await analyticsService.getDashboardKpis(request.tenancy, timeZone)
         const validated = DashboardKPIsSchema.parse(kpis)
         return reply.send(validated)
       } catch (err) {

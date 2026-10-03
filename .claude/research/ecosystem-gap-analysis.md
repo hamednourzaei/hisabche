@@ -184,3 +184,74 @@ Decisions and why:
 - **A rejected/withdrawn tracking number can be filed again** (partial unique index on pending/approved only); an approved one never twice.
 - **The wallet stays open while the subscription is expired** (`/api/wallet/` in the expiry allowlist, `/wallet` in the read-only routes): it is a way out of the lock, like `/billing`.
 - Not built: a payment gateway (none serves both markets), refunds out of the wallet (a policy decision for the owner), paying invoices/orders from the wallet (future `sales_orders`, phase 3 design).
+
+## 9. Product images (28 Sep – 3 Oct 2026) — against the incumbents
+
+|                       | Odoo                             | ERPNext                     | Shopify           | Hisabche                                                                                                        |
+| --------------------- | -------------------------------- | --------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------- |
+| Images per product    | 1 main + extra media (eCommerce) | 1 image + website slideshow | up to 250         | **up to 8**, ordered                                                                                            |
+| Cover                 | main image field                 | `image` field               | first by position | **position 0, written to `products.image_url` by the database functions** — every existing reader keeps working |
+| Alt text              | on website media                 | no                          | yes               | **yes, per image (≤ 200)**                                                                                      |
+| File check            | extension / mimetype             | extension                   | server-side       | **type sniffed from the bytes; random path; 2 MB; jpeg/png/webp/avif**                                          |
+| Cap under concurrency | n/a                              | n/a                         | n/a               | lock on the product row; a racer gets `PRODUCT_IMAGE_LIMIT`, not a raw duplicate-key                            |
+
+Decisions: 8 is enough for a catalogue and keeps a product page light; the bucket is public because the
+storefront and (later) the marketplace show these images; add/remove/reorder are functions because each
+touches `product_images` AND the cover (rule 4). Not built: image resizing/thumbnails (the list shows the
+original at 32px — fine up to the 2 MB cap, worth revisiting if lists get slow), drag-and-drop ordering.
+
+## 10. Goods marketplace (3 Oct 2026) — infrastructure, OFF by default
+
+|                | Shopify / Shop         | Odoo eCommerce     | Basalam / Digikala (IR)    | Hisabche goods-marketplace-01                                                                                        |
+| -------------- | ---------------------- | ------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Who lists      | a merchant's own store | one company's site | many sellers, platform-run | **any business on Hisabche, from its own products**                                                                  |
+| Price          | product price          | pricelist          | seller's price             | **stated per listing by the seller** (`price_minor` + currency) — never derived from the product's sell or buy price |
+| Cost exposure  | n/a                    | n/a                | n/a                        | impossible by construction: no cost column on the table, and the public select names its columns one by one          |
+| Launch control | n/a                    | module install     | n/a                        | **platform switch, default false**; off = public API 404, pages 404 + noindex, nothing in the sitemap                |
+| Trust          | reviews                | —                  | seller badges              | `verified`, written only by a platform admin; suspension (seller or listing) with a reason the seller reads          |
+| Buying         | checkout               | checkout           | checkout                   | **none yet — a showcase.** The page says «contact the seller»                                                        |
+
+Decisions:
+
+- **Showcase first.** No text in fa/af/en claims ordering, payment or delivery (guarded), because none exists.
+- **Public = five conditions**, in one place (`MarketService.publicListings`): switch on, seller active, listing active, not hidden/suspended, product active.
+- **Three locales, one content.** A listing is written once and served under /fa, /af, /en with hreflang; the chrome is translated, the seller's text is not.
+- **`IRT` in structured data** is stated as IRR × 10 (exact, definitional); a code with no ISO equivalent gets no `Offer` rather than a wrong one.
+
+### The order and payment path — DESIGN ONLY, nothing built
+
+The pieces already exist; the marketplace must reuse them, not grow a second order system (G2):
+
+1. **Order = `sales_orders`** (developer-platform-03). `create_sales_order` already takes lines, prices them on the server and
+   emits `order.created`. A marketplace order is the same row with `source = 'marketplace'` and the BUYER identified by
+   phone/name (as the storefront does), in the SELLER's workspace. No new table.
+2. **Price at order time** comes from `marketplace_listings.price_minor` (the seller's stated price), locked into the order
+   line — not from `products.sell_price`. This is the one change `create_sales_order` needs: a price source parameter.
+3. **Payment**, two honest options, each a decision for the owner:
+   - **Off-platform** (cash/transfer to the seller): the order is confirmed by the seller, exactly like a storefront order
+     today. Needs nothing new. This is the first step.
+   - **Through the platform wallet**: the buyer needs a wallet — today a wallet belongs to a _workspace_, so only
+     businesses could pay this way (B2B). A consumer wallet would be a new, per-person ledger: a real scope decision.
+     Flow: debit buyer wallet → hold → seller confirms/ships → release to seller wallet minus the platform fee, all in
+     one Postgres function per step, on the existing append-only `wallet_transactions`.
+4. **Open decisions (the owner's):** platform fee %, who bears refunds, hold period, whether consumers get wallets,
+   dispute handling. Until these are set, no «buy» button is drawn anywhere.
+5. **Stock:** `transition_sales_order` already moves stock on fulfilment; `availability`/`quantity` on a listing stay the
+   seller's statement and are NOT auto-synced to stock (a seller may not want to publish stock levels).
+
+## 11. Developer platform 08 (3 Oct 2026) — against the incumbents
+
+|                        | Shopify                                          | Google / GitHub OAuth | Stripe test mode       | Hisabche 08                                                                                                       |
+| ---------------------- | ------------------------------------------------ | --------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Access token           | offline tokens do not expire; online tokens ~24h | ~1h                   | n/a                    | **1h** for new installs (old installs keep theirs)                                                                |
+| Refresh                | expiring offline tokens (opt-in) rotate          | rotation optional     | n/a                    | **always rotated**; reuse of a spent token revokes the family and the access token (RFC 6819 §5.2.2.3)            |
+| Revocation             | uninstall                                        | RFC 7009 endpoint     | n/a                    | `POST /api/oauth/revoke`; unknown token still answers 200                                                         |
+| Test environment reset | new dev store                                    | n/a                   | «delete all test data» | **retire and replace** — nothing deleted; only for `is_sandbox`                                                   |
+| Listing images         | uploaded to the platform                         | n/a                   | n/a                    | uploaded (bytes sniffed, random name) — a reviewed listing's images can no longer change on someone else's server |
+
+Decisions: the access token stays the same `api_keys` row (rotated in place) so an installation, its scopes and its webhook
+endpoint survive a refresh; the grant is recomputed against the installer's CURRENT access on every refresh; a sandbox is
+left out of platform metrics and of the plan's business quota.
+
+**Not built — the owner's decision:** app billing / revenue share. Needs: the platform's percentage, who bears a refund,
+payout schedule and currency. The wallet ledger (wallet-01) is the natural place for it once those are set.

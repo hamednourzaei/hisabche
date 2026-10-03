@@ -245,7 +245,7 @@ function ImageTile({
           className="aspect-square w-full rounded-md border border-[hsl(var(--border-default))] object-cover"
         />
         {isFirst ? (
-          <span className="absolute start-1 top-1 rounded bg-[hsl(var(--color-primary))] px-1.5 text-[10px] text-[hsl(var(--color-primary-foreground))]">
+          <span className="absolute start-1 top-1 rounded bg-[hsl(var(--color-primary))] px-1.5 text-[10px] text-[hsl(var(--color-primary-fg))]">
             {t('productImages.cover')}
           </span>
         ) : null}

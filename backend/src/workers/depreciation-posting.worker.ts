@@ -75,7 +75,9 @@ export async function runDepreciationPosting(asOf?: string): Promise<Depreciatio
   const { data: owed, error } = await supabase
     .from('asset_depreciation_schedule')
     .select('workspace_id')
-    .eq('cancelled_at', null)
+    // .is, not .eq: PostgREST sends .eq(col, null) as `= null`, which is never
+    // true — the worker found no schedule row at all and posted nothing (BUG-084).
+    .is('cancelled_at', null)
     .is('posted_at', null)
     .lte('on_date', dueDate)
     .limit(1000)

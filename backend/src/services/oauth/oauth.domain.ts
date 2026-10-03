@@ -241,3 +241,19 @@ function hostOf(url: string): string | null {
     return null
   }
 }
+
+// ─── Token lifetimes (developer-platform-08) ────────────────────────────────
+
+/** An access token lives one hour; the refresh token renews it. */
+export const ACCESS_TOKEN_SECONDS = 60 * 60
+/** A refresh token lives thirty days from its last rotation. */
+export const REFRESH_TOKEN_SECONDS = 30 * 24 * 60 * 60
+
+/** A refresh token: shown once, stored only as its SHA-256. */
+export function generateRefreshToken(): string {
+  return `hk_refresh_${randomBytes(32).toString('hex')}`
+}
+
+export function looksLikeRefreshToken(value: string): boolean {
+  return /^hk_refresh_[0-9a-f]{64}$/.test(value)
+}

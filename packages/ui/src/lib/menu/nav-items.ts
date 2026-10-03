@@ -44,6 +44,7 @@ import {
   DatabaseZap,
   Gift,
   PiggyBank,
+  Store,
 } from 'lucide-react'
 import {
   COMMAND_CONTRACT,
@@ -115,6 +116,7 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   'workflow-templates': Workflow,
   billing: CreditCard,
   wallet: PiggyBank,
+  'market-seller': Store,
   governance: ShieldCheck,
   assistant: Sparkles,
 }

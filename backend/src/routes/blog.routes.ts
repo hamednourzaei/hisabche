@@ -39,6 +39,17 @@ import { authenticate } from '../middleware/auth.middleware'
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
 import { sendFailure } from '../errors/http-failure'
 import { BlogError, BlogService } from '../services/blog'
+import { createBrief, getBrief, PLATFORM_SCOPE } from '../services/blog/brief.service'
+import { getContentJob, getDraft, listDrafts } from '../services/blog/draft.service'
+import {
+  DEFAULT_WRITER_PROMPT,
+  WRITER_PROMPT_MAX,
+  getWriterPrompt,
+  resetWriterPrompt,
+  saveWriterPrompt,
+} from '../services/blog/writer-prompt'
+import { decideInternalLink, listSuggestions } from '../services/blog/internal-links.service'
+import { JobService } from '../services/job.service'
 import { PUBLIC_EDGE_CACHE } from '../utils/edge-cache'
 
 /**
@@ -188,8 +199,16 @@ const moderationQuery = z.object({
 const kindParams = z.object({ kind: z.enum(['categories', 'tags']) })
 const kindIdParams = kindParams.extend({ id: z.string().uuid() })
 
+// ⚠️ A topic that becomes a Tavily query and a brief. Bounded so a pasted
+// document is rejected at the door, not searched for.
+const briefInputSchema = z.object({
+  topic: z.string().trim().min(3).max(200),
+  locale: blogLocaleSchema,
+})
+
 export async function blogRoutes(fastify: FastifyInstance) {
   const service = new BlogService()
+  const jobService = new JobService()
 
   const fail = (reply: FastifyReply, err: unknown, fallback: string) => {
     if (err instanceof BlogError) {
@@ -441,6 +460,171 @@ export async function blogRoutes(fastify: FastifyInstance) {
       return reply.code(201).send(await service.uploadImage(input))
     } catch (err) {
       return fail(reply, err, 'Failed to upload image')
+    }
+  })
+
+  // ─── content intelligence (admin only) ─────────────────────────────────────
+  //
+  // ⚠️ These are the CALLER the research pipeline was missing. Until these two
+  // routes existed, `CONTENT_RESEARCH` was a handler nobody could reach —
+  // correct code with no door (§7.1). The POST creates one brief + one job; a
+  // double-click returns the FIRST brief, because the database's partial unique
+  // index on active topics — not a pre-read — is what makes that race-safe.
+  // The GET is the progress read: brief, every attempt, the real sources.
+
+  fastify.post(
+    '/api/admin/blog/intelligence/briefs',
+    {
+      preHandler: admin.preHandler,
+      // Each POST costs a Tavily run (×3 locales) plus a provider call. A human
+      // planning articles does not need more than a few a minute; a runaway
+      // script must not be able to bill either.
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+    },
+    async (request, reply) => {
+      try {
+        const input = briefInputSchema.parse(request.body)
+        const created = await createBrief({ ...input, actorId: userOf(request) })
+        return reply.code(created.existing ? 200 : 201).send(created)
+      } catch (err) {
+        return fail(reply, err, 'Failed to start research')
+      }
+    },
+  )
+
+  fastify.get('/api/admin/blog/intelligence/briefs/:id', admin, async (request, reply) => {
+    try {
+      const { id } = idParams.parse(request.params)
+      return reply.send(await getBrief(id))
+    } catch (err) {
+      return fail(reply, err, 'Failed to read the brief')
+    }
+  })
+
+  // ⚠️ A JOB, NOT A SYNC CALL — and the first version of this route was
+  // synchronous, which was wrong twice: it duplicated the CONTENT_DRAFT handler
+  // (two paths into the same generation, G2), and a draft takes up to 180 s of
+  // provider time, which Render's proxy cuts off long before. The click
+  // enqueues; the admin polls GET …/drafts, exactly like the research pass.
+  // The rate limit is the held-down-button guard; the version unique index is
+  // the double-click guard.
+  fastify.post(
+    '/api/admin/blog/intelligence/briefs/:id/draft',
+    {
+      preHandler: admin.preHandler,
+      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = idParams.parse(request.params)
+        // The brief must exist and be researched before a draft job is worth
+        // enqueueing — a job that fails 10 ms later on a missing brief is a
+        // round-trip through the queue for an error this route can answer now.
+        await getBrief(id)
+        const job = await jobService.create({
+          job_type: 'CONTENT_DRAFT',
+          payload: { briefId: id, userId: userOf(request), workspaceId: PLATFORM_SCOPE },
+          max_retries: 1,
+        })
+        return reply.code(202).send({ jobId: job.id, briefId: id })
+      } catch (err) {
+        return fail(reply, err, 'Failed to start draft generation')
+      }
+    },
+  )
+
+  fastify.get('/api/admin/blog/intelligence/briefs/:id/drafts', admin, async (request, reply) => {
+    try {
+      const { id } = idParams.parse(request.params)
+      return reply.send({ drafts: await listDrafts(id) })
+    } catch (err) {
+      return fail(reply, err, 'Failed to list drafts')
+    }
+  })
+
+  fastify.get('/api/admin/blog/intelligence/drafts/:id', admin, async (request, reply) => {
+    try {
+      const { id } = idParams.parse(request.params)
+      return reply.send(await getDraft(id))
+    } catch (err) {
+      return fail(reply, err, 'Failed to read the draft')
+    }
+  })
+
+  // The state of ONE content job, so the editor's button can say «failed, and
+  // why» instead of spinning forever. Only content jobs are readable here — a
+  // job id of another kind answers 404, never its payload.
+  fastify.get('/api/admin/blog/intelligence/jobs/:id', admin, async (request, reply) => {
+    try {
+      const { id } = idParams.parse(request.params)
+      const job = await getContentJob(id)
+      if (!job) return reply.code(404).send({ error: 'JOB_NOT_FOUND', code: 'JOB_NOT_FOUND' })
+      return reply.send(job)
+    } catch (err) {
+      return fail(reply, err, 'Failed to read the job')
+    }
+  })
+
+  // ─── the editable writer prompt ────────────────────────────────────────────
+  //
+  // The EDITORIAL prompt of the one-click article (voice, structure, audience).
+  // The output contract is code and is not here — see writer-prompt.ts. The
+  // default is sent along so the editor can show «reset» without a second call.
+
+  fastify.get('/api/admin/blog/intelligence/prompt', admin, async (_request, reply) => {
+    try {
+      return reply.send({
+        ...(await getWriterPrompt()),
+        defaultPrompt: DEFAULT_WRITER_PROMPT,
+        maxLength: WRITER_PROMPT_MAX,
+      })
+    } catch (err) {
+      return fail(reply, err, 'Failed to read the writer prompt')
+    }
+  })
+
+  const promptSchema = z.object({ prompt: z.string().trim().min(50).max(WRITER_PROMPT_MAX) })
+
+  fastify.put('/api/admin/blog/intelligence/prompt', admin, async (request, reply) => {
+    try {
+      const { prompt } = promptSchema.parse(request.body)
+      return reply.send(await saveWriterPrompt(prompt, userOf(request)))
+    } catch (err) {
+      return fail(reply, err, 'Failed to save the writer prompt')
+    }
+  })
+
+  fastify.delete('/api/admin/blog/intelligence/prompt', admin, async (_request, reply) => {
+    try {
+      return reply.send(await resetWriterPrompt())
+    } catch (err) {
+      return fail(reply, err, 'Failed to reset the writer prompt')
+    }
+  })
+
+  // ⚠️ NO SYNC POST FOR LINKS. Suggesting costs one provider call of up to
+  // 120 s — the same proxy-timeout flaw the sync draft route had. The
+  // CONTENT_DRAFT job already runs suggestions after a passed gate; this is
+  // the read side and the human decision.
+
+  fastify.get('/api/admin/blog/intelligence/drafts/:id/links', admin, async (request, reply) => {
+    try {
+      const { id } = idParams.parse(request.params)
+      return reply.send({ suggestions: await listSuggestions(id) })
+    } catch (err) {
+      return fail(reply, err, 'Failed to list link suggestions')
+    }
+  })
+
+  const linkDecisionSchema = z.object({ decision: z.enum(['accepted', 'rejected']) })
+
+  fastify.patch('/api/admin/blog/intelligence/links/:id', admin, async (request, reply) => {
+    try {
+      const { id } = idParams.parse(request.params)
+      const { decision } = linkDecisionSchema.parse(request.body)
+      return reply.send(await decideInternalLink(id, decision, userOf(request)))
+    } catch (err) {
+      return fail(reply, err, 'Failed to record the decision')
     }
   })
 }

@@ -51,6 +51,7 @@ const OrdersPage = lazy(() => import('@/features/orders/orders-page'))
 const MarketplacePage = lazy(() => import('@/features/marketplace/marketplace-page'))
 const BillingPage = lazy(() => import('@/features/billing/billing-page'))
 const WalletPage = lazy(() => import('@/features/wallet/wallet-page'))
+const MarketSellerPage = lazy(() => import('@/features/market/market-seller-page'))
 const OnboardingPage = lazy(() => import('@/features/onboarding/onboarding-page'))
 const ManufacturingPage = lazy(() => import('@/features/manufacturing/manufacturing-page'))
 const TeamAndPayrollPage = lazy(() => import('@/features/team-and-payroll/tap-page'))
@@ -140,6 +141,7 @@ const router = createHashRouter([
       { path: 'marketplace', element: <MarketplacePage /> },
       { path: 'billing', element: <BillingPage /> },
       { path: 'wallet', element: <WalletPage /> },
+      { path: 'market-seller', element: <MarketSellerPage /> },
       { path: 'onboarding', element: <OnboardingPage /> },
       { path: 'manufacturing', element: <ManufacturingPage /> },
       { path: 'assistant', element: <AssistantPage /> },

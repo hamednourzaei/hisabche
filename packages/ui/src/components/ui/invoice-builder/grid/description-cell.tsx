@@ -33,7 +33,12 @@ import { useProducts } from '@hisabche/api'
 import { useInvoiceDraftStore } from '@hisabche/store'
 
 import { cn } from '../../../../lib/utils'
-import { productPrice, readProducts, type PickerProduct } from '../../../../lib/invoices/products'
+import {
+  productCost,
+  productPrice,
+  readProducts,
+  type PickerProduct,
+} from '../../../../lib/invoices/products'
 import { useInvoiceWarehouseStock } from '../../../../hooks/invoices/use-invoice-warehouse-stock'
 
 export interface DescriptionCellProps {
@@ -46,6 +51,14 @@ export interface DescriptionCellProps {
   t: (key: string, fallback?: string) => string
   locale: string
   onChange: (value: string) => void
+  /**
+   * What a picked product is being picked AS. `'sale'` (the default) is an
+   * invoice line: priced at the sell price, and not pickable on a sale once it
+   * is out of stock. `'component'` is something a product is made of: costed at
+   * what was paid for it, and always pickable — being out of a material is a
+   * reason to buy it, not a reason to hide it from the recipe.
+   */
+  pickAs?: 'sale' | 'component' | undefined
   onPickProduct: (product: { id: string; name: string; price: string; unit: string }) => void
   onKeyDown: (event: KeyboardEvent<HTMLElement>, rowIndex: number, columnIndex: number) => void
 }
@@ -74,6 +87,7 @@ export const DescriptionCell = memo(function DescriptionCell({
   onChange,
   onPickProduct,
   onKeyDown,
+  pickAs = 'sale',
 }: DescriptionCellProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -112,6 +126,7 @@ export const DescriptionCell = memo(function DescriptionCell({
         ? product.quantity
         : null
   const isExhausted = (product: PickerProduct) => {
+    if (pickAs === 'component') return false
     const stock = stockOf(product)
     return transactionType !== 'purchase' && typeof stock === 'number' && stock <= 0
   }
@@ -188,7 +203,7 @@ export const DescriptionCell = memo(function DescriptionCell({
 
   const pick = (product: PickerProduct) => {
     if (isExhausted(product)) return
-    const price = productPrice(product)
+    const price = pickAs === 'component' ? productCost(product) : productPrice(product)
     onPickProduct({
       id: product.id,
       name: product.name,

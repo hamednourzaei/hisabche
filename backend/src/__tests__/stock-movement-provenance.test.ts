@@ -64,7 +64,6 @@ function code(source: string): string {
 const WRITERS: { file: string; label: string }[] = [
   { file: 'invoice.service.ts', label: 'invoice' },
   { file: 'purchasing.service.ts', label: 'purchase order' },
-  { file: 'manufacturing.service.ts', label: 'work order' },
 ]
 
 describe('a stock movement names the document that caused it', () => {
@@ -79,6 +78,28 @@ describe('a stock movement names the document that caused it', () => {
     // invoice.service was in.
     expect(types).toBeGreaterThan(0)
     expect(ids).toBe(types)
+  })
+
+  // Production no longer inserts movements from TypeScript: the run, its
+  // snapshot, the cost layers and the two movements are one database function
+  // (docs/manufacturing-01-migration.sql). The same rule holds there, read from
+  // the SQL — and the service must not grow a second writer beside it.
+  it('work order movements are written by manufacturing_complete, each with its reference_id', () => {
+    const sql = readFileSync(
+      join(SERVICES, '..', '..', '..', 'docs', 'manufacturing-01-migration.sql'),
+      'utf8',
+    ).replace(/^\s*--.*$/gm, '')
+    const inserts = sql.match(/INSERT INTO stock_movements \(([\s\S]*?)\)/g) ?? []
+
+    expect(inserts).toHaveLength(2)
+    for (const insert of inserts) {
+      expect(insert).toContain('reference_type')
+      expect(insert).toContain('reference_id')
+      // …and names a warehouse column: an unattributed movement is how a
+      // product reads 20 while its warehouse reads −10 (BUG-080).
+      expect(insert).toMatch(/from_warehouse_id|to_warehouse_id/)
+    }
+    expect(code(read('manufacturing.service.ts'))).not.toContain("from('stock_movements')")
   })
 
   it('invoice movements carry the invoice id, not just the word', () => {

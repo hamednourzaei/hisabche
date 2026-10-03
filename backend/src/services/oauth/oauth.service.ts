@@ -39,14 +39,18 @@ import {
 import { developerService, type DeveloperService } from '../developer/developer.service'
 import type { TenancyContext } from '../tenancy.service'
 import {
+  ACCESS_TOKEN_SECONDS,
   CHALLENGE,
   CODE_TTL_MS,
+  REFRESH_TOKEN_SECONDS,
   eventsForGrant,
   generateClientId,
   generateClientSecret,
   generateCode,
+  generateRefreshToken,
   generateWebhookSecret,
   isCompatible,
+  looksLikeRefreshToken,
   mayInstall,
   parseScope,
   permissionDisclosure,
@@ -83,6 +87,25 @@ export function createOAuthService(
     const app = await appById(id)
     if (!app || app.owner_workspace_id !== ctx.workspaceId)
       throw new OAuthError('APP_NOT_FOUND', 404)
+    return app
+  }
+
+  /** The app whose server is calling, by its client id and secret — or invalid_client. */
+  async function clientApp(clientId: string, clientSecret: string): Promise<AppRow> {
+    const { data: appRow, error } = await supabase
+      .from('oauth_apps')
+      .select(`${APP_COLUMNS}, client_secret_hash`)
+      .eq('client_id', clientId)
+      .maybeSingle()
+    check(error)
+    const app = appRow as unknown as (AppRow & { client_secret_hash: string }) | null
+    if (
+      !app ||
+      app.status === 'suspended' ||
+      !sameDigest(sha256Hex(clientSecret), app.client_secret_hash)
+    ) {
+      throw new OAuthError('CLIENT_INVALID', 401, 'invalid_client')
+    }
     return app
   }
 
@@ -535,20 +558,7 @@ export function createOAuthService(
       if (input.grantType !== 'authorization_code') {
         throw new OAuthError('UNSUPPORTED_GRANT_TYPE', 400, 'unsupported_grant_type')
       }
-      const { data: appRow, error } = await supabase
-        .from('oauth_apps')
-        .select(`${APP_COLUMNS}, client_secret_hash`)
-        .eq('client_id', input.clientId)
-        .maybeSingle()
-      check(error)
-      const app = appRow as unknown as (AppRow & { client_secret_hash: string }) | null
-      if (
-        !app ||
-        app.status === 'suspended' ||
-        !sameDigest(sha256Hex(input.clientSecret), app.client_secret_hash)
-      ) {
-        throw new OAuthError('CLIENT_INVALID', 401, 'invalid_client')
-      }
+      const app = await clientApp(input.clientId, input.clientSecret)
 
       const { data: redeemed, error: redeemError } = await supabase.rpc('redeem_oauth_code', {
         p_code_hash: sha256Hex(input.code),
@@ -593,7 +603,8 @@ export function createOAuthService(
       const events = eventsForGrant(config.webhook_events, grant.granted)
 
       const token = generateApiKey()
-      const { error: installError } = await supabase.rpc('install_oauth_app', {
+      const refreshToken = generateRefreshToken()
+      const install = {
         p_app: app.id,
         p_workspace: code.workspace_id,
         p_user: code.user_id,
@@ -604,9 +615,129 @@ export function createOAuthService(
         p_scopes: grant.granted,
         p_webhook_url: events.length > 0 ? config.webhook_url : null,
         p_events: events,
+      }
+      const withRefresh = await supabase.rpc('install_oauth_app_with_refresh', {
+        ...install,
+        p_refresh_hash: sha256Hex(refreshToken),
+        p_access_seconds: ACCESS_TOKEN_SECONDS,
+        p_refresh_seconds: REFRESH_TOKEN_SECONDS,
       })
+      if (!withRefresh.error) {
+        return {
+          access_token: token,
+          token_type: 'Bearer' as const,
+          expires_in: ACCESS_TOKEN_SECONDS,
+          refresh_token: refreshToken,
+          scope: grant.granted.join(' '),
+        }
+      }
+      // developer-platform-08 not run on this database: the token is issued
+      // as before — it does not expire and there is no refresh token. Said by
+      // the ABSENCE of expires_in / refresh_token in the response (RFC 6749
+      // §5.1 makes both optional), never by a refresh token that cannot work.
+      if (!['PGRST202', '42883'].includes(withRefresh.error.code ?? '')) check(withRefresh.error)
+      const { error: installError } = await supabase.rpc('install_oauth_app', install)
       check(installError)
       return { access_token: token, token_type: 'Bearer' as const, scope: grant.granted.join(' ') }
+    },
+
+    /**
+     * refresh_token → a new access token AND a new refresh token (rotation).
+     * Presenting a refresh token a second time is treated as theft: the
+     * database revokes the whole family and the access token, and that is
+     * committed before this answers invalid_grant.
+     */
+    async refresh(input: { refreshToken: string; clientId: string; clientSecret: string }) {
+      const app = await clientApp(input.clientId, input.clientSecret)
+      if (!looksLikeRefreshToken(input.refreshToken)) {
+        throw new OAuthError('REFRESH_INVALID', 400, 'invalid_grant')
+      }
+      const refreshHash = sha256Hex(input.refreshToken)
+
+      // Read only to recompute the grant; the function re-checks everything
+      // under a lock and is what decides.
+      const { data: found, error: findError } = await supabase
+        .from('oauth_refresh_tokens')
+        .select('workspace_id, installation:app_installations!inner(installed_by, key_id, status)')
+        .eq('token_hash', refreshHash)
+        .eq('app_id', app.id)
+        .maybeSingle()
+      check(findError)
+      const row = found as unknown as {
+        workspace_id: string
+        installation: { installed_by: string; key_id: string | null; status: string }
+      } | null
+      if (!row) throw new OAuthError('REFRESH_INVALID', 400, 'invalid_grant')
+
+      // The grant is recomputed against what the installer holds NOW, and
+      // against the version live NOW — the same rule as at exchange.
+      let ctx: TenancyContext
+      try {
+        ctx = await resolveWorkspaceAccess(row.installation.installed_by, row.workspace_id)
+      } catch {
+        throw new OAuthError('INSTALLER_NOT_MEMBER', 400, 'invalid_grant')
+      }
+      const config = await liveConfig(app, row.workspace_id)
+      if (!config) throw new OAuthError('APP_NOT_AVAILABLE', 400, 'invalid_grant')
+      let current: ApiKeyScope[] = []
+      if (row.installation.key_id) {
+        const { data: key, error: keyError } = await supabase
+          .from('api_keys')
+          .select('scopes')
+          .eq('id', row.installation.key_id)
+          .maybeSingle()
+        check(keyError)
+        current = ((key as { scopes?: string[] } | null)?.scopes ?? []) as ApiKeyScope[]
+      }
+      const grant = grantForKey(
+        current.filter((s) => config.requested_scopes.includes(s)),
+        (cap: Capability) => holds(ctx, cap),
+      )
+      if (grant.granted.length === 0) throw new OAuthError('NO_SCOPE_GRANTED', 400, 'invalid_scope')
+
+      const token = generateApiKey()
+      const nextRefresh = generateRefreshToken()
+      const { data, error } = await supabase.rpc('rotate_oauth_refresh_token', {
+        p_app: app.id,
+        p_refresh_hash: refreshHash,
+        p_new_refresh_hash: sha256Hex(nextRefresh),
+        p_new_prefix: displayPrefix(token),
+        p_new_key_hash: hashApiKey(token),
+        p_scopes: grant.granted,
+        p_access_seconds: ACCESS_TOKEN_SECONDS,
+        p_refresh_seconds: REFRESH_TOKEN_SECONDS,
+      })
+      if (error?.message?.includes('OAUTH_REFRESH_INVALID')) {
+        throw new OAuthError('REFRESH_INVALID', 400, 'invalid_grant')
+      }
+      check(error)
+      const out = ((data ?? []) as Array<{ old_key_hash: string | null; reused: boolean }>)[0]
+      // The old access token must stop on every instance now, not in a minute.
+      if (out?.old_key_hash) await developer.forgetKeys([out.old_key_hash])
+      if (!out || out.reused) throw new OAuthError('REFRESH_REUSED', 400, 'invalid_grant')
+      return {
+        access_token: token,
+        token_type: 'Bearer' as const,
+        expires_in: ACCESS_TOKEN_SECONDS,
+        refresh_token: nextRefresh,
+        scope: grant.granted.join(' '),
+      }
+    },
+
+    /**
+     * RFC 7009: the app gives its token up. The family and the access token
+     * go, which ends the installation. An unknown token is NOT an error — the
+     * answer is the same, so a caller learns nothing about which tokens exist.
+     */
+    async revoke(input: { token: string; clientId: string; clientSecret: string }): Promise<void> {
+      const app = await clientApp(input.clientId, input.clientSecret)
+      if (!looksLikeRefreshToken(input.token)) return
+      const { data, error } = await supabase.rpc('revoke_oauth_refresh_token', {
+        p_app: app.id,
+        p_refresh_hash: sha256Hex(input.token),
+      })
+      check(error)
+      if (typeof data === 'string' && data) await developer.forgetKeys([data])
     },
 
     // ─── platform review ─────────────────────────────────────────────────────

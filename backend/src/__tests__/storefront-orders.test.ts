@@ -340,6 +340,12 @@ describe('everything under /api/public/ is public by design', () => {
     'GET /api/public/v1/orders/:token',
     // The customer's own account (customer-portal.routes.ts).
     'GET /api/public/portal/:token',
+    // The goods marketplace (market-public.routes.ts): 404 MARKET_DISABLED
+    // until a platform admin turns the switch on; never a cost or buy price.
+    'GET /api/public/market/listings',
+    'GET /api/public/market/sellers/:seller',
+    'GET /api/public/market/sellers/:seller/listings/:slug',
+    'GET /api/public/market/sitemap',
   ]
 
   const routeFiles = readdirSync(join(SRC, 'routes')).filter((f) => f.endsWith('.ts'))
@@ -359,7 +365,11 @@ describe('everything under /api/public/ is public by design', () => {
   })
 
   it('no file that declares one authenticates', () => {
-    for (const file of ['storefront.routes.ts', 'invoice-public.routes.ts']) {
+    for (const file of [
+      'storefront.routes.ts',
+      'invoice-public.routes.ts',
+      'market-public.routes.ts',
+    ]) {
       expect(read('routes', file)).not.toMatch(/\bauthenticate\b/)
     }
   })

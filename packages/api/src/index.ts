@@ -358,14 +358,25 @@ export {
 // ─── Manufacturing ────────────────────────────────────────
 export {
   useBOMs,
-  useCreateBOM,
   useWorkOrders,
   useCreateWorkOrder,
-  useCompleteWorkOrder,
+  useProductionDefinition,
+  useSaveProductionDefinition,
+  useProduce,
+  useProductionRuns,
+  useProductionRun,
+  useManufacturingReport,
   manufacturingKeys,
+  mapBom,
+  mapWorkOrder,
   type BOM,
-  type BOMItem,
   type WorkOrder,
+  type ProductionDefinition,
+  type ProductionRun,
+  type ProductionRunDetail,
+  type ProductionRunLine,
+  type ProduceResult,
+  type ManufacturingReport,
 } from './hooks/manufacturing'
 
 // ─── Purchasing ───────────────────────────────────────────
@@ -421,6 +432,27 @@ export {
   type WalletTopupInput,
   type WalletPayResult,
 } from './hooks/wallet'
+
+// ─── Goods marketplace (seller side + shared public types) ──
+export {
+  useMarketSeller,
+  useSaveMarketSellerProfile,
+  useSaveMarketListing,
+  useDeleteMarketListing,
+  marketKeys,
+  type MarketPublicSeller,
+  type MarketPublicListing,
+  type MarketPublicListingDetail,
+  type MarketPublicList,
+  type MarketSitemap,
+  type MarketAvailability,
+  type MarketSellerProfile,
+  type MarketSellerProfileInput,
+  type MarketListing,
+  type MarketListingInput,
+  type MarketListingStatus,
+  type MarketSellerOverview,
+} from './hooks/market'
 
 // ─── Notifications ─────────────────────────────────────────
 export {
@@ -872,6 +904,7 @@ export {
   useDeleteOAuthApp,
   useAppScreenshots,
   useAddAppScreenshot,
+  useUploadAppImage,
   useRemoveAppScreenshot,
   useAppStats,
   usePublisherProfile,
@@ -907,6 +940,7 @@ export {
 export {
   useSandboxStatus,
   useCreateSandbox,
+  useResetSandbox,
   sandboxKeys,
   type SandboxStatus,
 } from './hooks/sandbox'

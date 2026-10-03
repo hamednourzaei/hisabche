@@ -46,14 +46,25 @@ const approveBody = z
     code_challenge_method: z.literal('S256'),
   })
   .strict()
+const clientCredentials = {
+  client_id: z.string().min(1).max(100),
+  client_secret: z.string().min(1).max(200),
+}
 const tokenBody = z.object({
   grant_type: z.string(),
   code: z.string().min(1).max(200),
   redirect_uri: z.string().min(1).max(500),
-  client_id: z.string().min(1).max(100),
-  client_secret: z.string().min(1).max(200),
   code_verifier: z.string().min(1).max(200),
+  ...clientCredentials,
 })
+// grant_type=refresh_token (RFC 6749 §6): the refresh token and the client.
+const refreshBody = z.object({
+  grant_type: z.literal('refresh_token'),
+  refresh_token: z.string().min(1).max(200),
+  ...clientCredentials,
+})
+// RFC 7009 §2.1.
+const revokeBody = z.object({ token: z.string().min(1).max(200), ...clientCredentials })
 const note = z.string().trim().max(1000).optional()
 const appStatusBody = z
   .object({
@@ -271,6 +282,28 @@ export function buildOAuthRoutes(oauth: OAuthService) {
       async (request: FastifyRequest, reply: FastifyReply) => {
         // RFC 6749 §5.1: a token response is never cached.
         reply.header('Cache-Control', 'no-store').header('Pragma', 'no-cache')
+        const tokenFailure = (err: unknown) => {
+          if (err instanceof OAuthError && err.oauth) {
+            return reply
+              .code(err.statusCode)
+              .send({ error: err.oauth, error_description: err.code })
+          }
+          return oauthFailure(fastify, reply, err)
+        }
+        const refresh = refreshBody.safeParse(request.body)
+        if (refresh.success) {
+          try {
+            return reply.send(
+              await oauth.refresh({
+                refreshToken: refresh.data.refresh_token,
+                clientId: refresh.data.client_id,
+                clientSecret: refresh.data.client_secret,
+              }),
+            )
+          } catch (err) {
+            return tokenFailure(err)
+          }
+        }
         const parsed = tokenBody.safeParse(request.body)
         if (!parsed.success) {
           return reply
@@ -289,6 +322,33 @@ export function buildOAuthRoutes(oauth: OAuthService) {
               codeVerifier: b.code_verifier,
             }),
           )
+        } catch (err) {
+          return tokenFailure(err)
+        }
+      },
+    )
+
+    // RFC 7009. The app gives its token up; the installation ends. Always 200
+    // for a well-formed request from a real client — an unknown token is not
+    // an error, so nothing about which tokens exist can be learned here.
+    fastify.post(
+      '/api/oauth/revoke',
+      { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } },
+      async (request: FastifyRequest, reply: FastifyReply) => {
+        reply.header('Cache-Control', 'no-store').header('Pragma', 'no-cache')
+        const parsed = revokeBody.safeParse(request.body)
+        if (!parsed.success) {
+          return reply
+            .code(400)
+            .send({ error: 'invalid_request', error_description: 'missing or malformed parameter' })
+        }
+        try {
+          await oauth.revoke({
+            token: parsed.data.token,
+            clientId: parsed.data.client_id,
+            clientSecret: parsed.data.client_secret,
+          })
+          return reply.code(200).send({})
         } catch (err) {
           if (err instanceof OAuthError && err.oauth) {
             return reply

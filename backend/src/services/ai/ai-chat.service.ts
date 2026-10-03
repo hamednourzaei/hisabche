@@ -41,6 +41,7 @@ import type { TenancyContext } from '../tenancy.service'
 import { AiQuotaService, type QuotaStatus } from './ai-quota.service'
 import { AiSettingsService, type AiProvider, type AiProviderConfig } from './ai-settings.service'
 import { ReportingReader, REPORTING_VIEWS, type ReportingResult } from './reporting-reader'
+import { callProvider } from './provider-client'
 
 export interface AskResult {
   answer: string
@@ -96,14 +97,6 @@ export function providerEndpoint(provider: AiProvider, baseUrl: string | null): 
 }
 
 /** What the provider said, for OUR log — never the client's. Bounded, key-free. */
-async function providerErrorDetail(response: Response): Promise<string> {
-  try {
-    return (await response.text()).slice(0, 500)
-  } catch {
-    return ''
-  }
-}
-
 /** The server lacks what it needs to read AS THE USER (SUPABASE_ANON_KEY). */
 export class AiReaderNotConfiguredError extends BaseError {
   constructor() {
@@ -263,7 +256,7 @@ export class AiChatService {
     const delays = [1000, 3000]
     for (let attempt = 0; ; attempt++) {
       try {
-        return await this.callOnce(config, system, user)
+        return await callProvider(config, { system, user })
       } catch (err) {
         const status = (err as { providerStatus?: number }).providerStatus
         const retryable = status === 429 || (status !== undefined && status >= 500)
@@ -280,83 +273,6 @@ export class AiChatService {
         await new Promise((resolve) => setTimeout(resolve, wait))
       }
     }
-  }
-
-  private async callOnce(config: AiProviderConfig, system: string, user: string): Promise<string> {
-    const timeout = AbortSignal.timeout(60_000)
-
-    if (config.provider === 'anthropic') {
-      const response = await fetch(providerEndpoint('anthropic', config.baseUrl), {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': config.apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: config.model,
-          max_tokens: 2048,
-          system,
-          messages: [{ role: 'user', content: user }],
-        }),
-        signal: timeout,
-      })
-
-      if (!response.ok) {
-        // ⚠️ The provider's body is NOT forwarded to the client: it can echo
-        // request content and, on some errors, key metadata. It IS logged —
-        // without it a 400 has no reason anywhere.
-        throw await this.providerError(config, response)
-      }
-
-      const body = (await response.json()) as { content?: { text?: string }[] }
-      return body.content?.map((part) => part.text ?? '').join('') ?? ''
-    }
-
-    const response = await fetch(providerEndpoint('openai', config.baseUrl), {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        max_tokens: 2048,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-      }),
-      signal: timeout,
-    })
-
-    if (!response.ok) throw await this.providerError(config, response)
-
-    const body = (await response.json()) as {
-      choices?: { message?: { content?: string } }[]
-    }
-    return body.choices?.[0]?.message?.content ?? ''
-  }
-
-  private async providerError(
-    config: AiProviderConfig,
-    response: Response,
-  ): Promise<ValidationError> {
-    const detail = await providerErrorDetail(response)
-    console.error(
-      `[ai] provider ${config.provider} (${config.model}) at ${providerEndpoint(config.provider, config.baseUrl)} answered ${response.status}: ${detail}`,
-    )
-    const error = new ValidationError(`AI_PROVIDER_ERROR: ${response.status}`)
-    const extra = error as ValidationError & {
-      providerDetail?: string
-      providerStatus?: number
-      retryAfterMs?: number
-    }
-    extra.providerDetail = detail
-    extra.providerStatus = response.status
-    const retryAfter = Number(response.headers.get('retry-after'))
-    if (Number.isFinite(retryAfter) && retryAfter > 0) extra.retryAfterMs = retryAfter * 1000
-    return error
   }
 
   /**

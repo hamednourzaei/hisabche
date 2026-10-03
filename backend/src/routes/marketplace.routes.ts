@@ -36,6 +36,7 @@ const idParams = z.object({ id: z.string().uuid() })
 const appParams = z.object({ app: z.string().min(1).max(100) })
 const appIdParams = z.object({ app: z.string().uuid() })
 const screenshotParams = z.object({ id: z.string().uuid(), screenshotId: z.string().uuid() })
+const imageBody = z.object({ base64: z.string().min(1) })
 const workspaceParams = z.object({ workspaceId: z.string().uuid() })
 const listQuery = z.object({
   category: z.enum(APP_CATEGORIES).optional(),
@@ -168,6 +169,18 @@ export function buildMarketplaceRoutes(marketplace: MarketplaceService) {
               appScreenshotSchema.parse(request.body),
             ),
           )
+      }),
+    )
+
+    // An icon or a screenshot as a FILE: stored, and its URL answered. The
+    // publisher then saves that URL through the icon / screenshot fields.
+    fastify.post(
+      '/api/developer/apps/:id/images',
+      { preHandler: manage },
+      handle(async (request, reply) => {
+        const { id } = idParams.parse(request.params)
+        const { base64 } = imageBody.parse(request.body)
+        return reply.code(201).send(await marketplace.uploadImage(request.tenancy, id, base64))
       }),
     )
 

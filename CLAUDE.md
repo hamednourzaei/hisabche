@@ -74,6 +74,11 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **Sync باینری، بارکد/چاپ، پرفورمنس DB، Cloudflare (۲۷ سپتامبر)** | `.claude/SESSION-CACHE-2026-09-27.md`                      |
 | **Business OS ۱۵۰ قابلیت: نقشه، فازبندی، درس‌ها (۳۰ سپتامبر)**   | `.claude/BUSINESS-OS-SPEC.md` · `BUSINESS-OS-EXECUTION.md` |
 | **درس‌های فازهای ۰–۴ Business OS (۳۰ سپتامبر)**                  | `.claude/SESSION-CACHE-2026-09-30-BUSINESS-OS.md`          |
+| **🔴 مسائل باز امروز — این را اول بخوان**                        | `.claude/SESSION-CACHE-2026-09-30-FINDINGS.md`             |
+| **کیف پول، عکس کالا، بازار کالا، refresh token، دری (۳ اکتبر)**  | `.claude/SESSION-CACHE-2026-10-03.md`                      |
+| **ساخت و تولید: مدل، نقشه، آنچه ساخته نشد (۴ اکتبر)**            | `.claude/SESSION-CACHE-2026-10-04-MANUFACTURING.md`        |
+| **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                     | `.claude/DARI-GLOSSARY.md`                                 |
+| **کوئری‌های تشخیصی دیتابیس زنده**                                | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`            |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                       | `.claude/BUG-REGISTRY.md` — بخش انتهایی                    |
 | **کلید API، وب‌هوک، ورود صورتحساب بانک، مقایسه‌ی اکوسیستم**      | `.claude/research/ecosystem-gap-analysis.md`               |
 | **درس‌ها و باگ‌های سشن اخیر (۱۹ سپتامبر)**                       | `.claude/SESSION-CACHE-2026-09-19.md` — **اول این**        |
@@ -233,6 +238,7 @@ cd apps/admin     && npx tsc --noEmit
 
 **موتورهای تجاری (Business OS)**
 
+- ⚠️ **«وصل است» یعنی از یک route / job / worker به آن می‌رسی — نه اینکه جایی اسمش آمده.** دفتر `unwired-capability` با تعریف «یک mention بیرون از فایل» #۶۸ را WIRED می‌دانست، چون یک سرویسِ خودش‌بی‌مصرف آن را import می‌کرد؛ و سقف «حداکثر ۲ ردیف» ۲۱ موتور Business OS را بیرون دفتر نگه داشته بود. حالا گراف import از entry point ها پیموده می‌شود و هر `*.domain.ts`/`*.service.ts` دسترس‌ناپذیر **باید** در دفتر باشد. قبل از گفتنِ «فاز X انجام شد» همین تست را بخوان.
 - ⚠️ **«قابلیت هست» یعنی یک caller در کلاینت دارد.** #۶۵ موتور و route کامل داشت و صفر مصرف‌کننده — الگوی §۷٫۱. گارد `unwired-capability.test.ts` دفتر صریح نگه می‌دارد و **برای سبزشدن باید ردیف حذف شود**.
 - ⚠️ **یک job runtime، نه یکی به‌ازای قابلیت.** مالک: `distributed-work.ts` + `email-outbox.ts`. `queue.ts` و `queue/pdf-queue.ts` حذف شدند (صفر caller). guard: `job-authority-guard.test.ts`.
 - ⚠️ **مقدارِ «صفر» گاهی باید `null` باشد و آن‌وقت باید صریح باشد.** `if (score < minScore)` با `minScore: 0` هرگز برقرار نمی‌شود — «خاموش با آستانه‌ی صفر» در عمل «روشن» بود. حالت غیرفعال، **شرط جداگانه** است.
@@ -242,6 +248,10 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **دو تابع هم‌نام با واحد متفاوت را یکی نکن.** `accounting.sumMinorUnits` (minor) و `money.sumRounded` (major) هر دو درست‌اند. اسم گمراه‌کننده را عوض کن، رفتار را نه.
 - ⚠️ **محدودیت تخفیف روی مشتری، فروش نقدی را هم شامل می‌شود مگر صریح نگیری.** نبودِ `customerId` **هیچ** شرطی را برآورده نمی‌کند — عضویت نیست.
 - `zodToJsonSchema` با `exactOptionalPropertyTypes` در `TS2589` می‌افتد (استک ۱٫۵ گیگ). body را `z.any()` بگذار و در handler با `schema.parse()` اعتبارسنجی کن.
+- ⚠️ **در این پوسته heredoc و `node -e` با backtick/`$`/بک‌اسلش خراب می‌شوند** (۶+ بار در یک سشن). اسکریپت را با Write بنویس و `node file.js` اجرا کن؛ برای یک خط، Edit.
+- ⚠️ **migration با اجرا اثبات می‌شود، نه با خواندن.** `content-intelligence-01` خطای نحوی داشت و تست‌های source-assertion سبز بودند (BUG-090). هر `docs/*-migration.sql` یک `*.pg.test.ts` می‌خواهد که آن را **دو بار** روی Postgres واقعی اجرا کند.
+- ⚠️ **حذف‌کننده‌ی کامنت بلوکی، رشته‌ی اسلش‌ستاره را کامنت می‌بیند** و کد بین دو رشته را می‌خورد (`robots.ts`). برای چنین فایلی فقط کامنت ابتدای خط.
+- **تست رقابتی پیام خطا را هم بسنجد**، نه فقط تعداد موفق‌ها — وگرنه بدون قفل هم سبز می‌ماند.
 - گارد با **فهرست بسته** باید به‌ازای هر عضو جدید ویرایش شود — و آن لحظه‌ای است که کسی «تست را شل می‌کند» به‌جای «قاعده را درست می‌کند». شکل را تطبیق بده (`/await run\w+Tick\(\)/g`)، نه اسم را.
 
 **هسته‌ها (CRM / Payments)**
@@ -253,6 +263,15 @@ cd apps/admin     && npx tsc --noEmit
 - سقف اعتبار، مهلت پرداخت، تأمین‌کننده‌ی وصل و مدارک مشتری فقط از `backend/src/services/customer-profile` (گارد: `customer-profile-core.test.ts`). خواندن schema جدید قبل از اجرای migration باید `isMissingSchema` را چک کند و «پیکربندی نشده» برگرداند، نه ۵۰۰.
 - سود هر کالا/فاکتور فقط از `AccountingService` (`getProfitReport` / `getProductProfits` / `getInvoiceMargins`، قاعده در `accounting/profit-report.domain.ts`، گارد `profit-report.test.ts`). موجودی هر انبار از `inventory/warehouse-summary.domain.ts`؛ فاکتور باید `warehouseId` بفرستد، وگرنه با چند انبار موجودی هیچ انباری حرکت نمی‌کند.
 
+**ساخت و تولید (۴ اکتبر)**
+
+- **یک هسته:** بها فقط `computeProductionCost` (`packages/validation/src/schemas/manufacturing-cost.ts`)؛ ذخیره‌ی فرمول و ثبت تولید فقط با `manufacturing_save_bom` / `manufacturing_complete` (`.rpc()`). صفحه‌ی تولید، صفحه‌ی کالا، گزارش و داشبورد همه از همان هوک‌ها و همان `ProductionEditor` می‌خوانند — محاسبه‌ی دوم نساز (گارد: `manufacturing-screen.test.ts`).
+- ⚠️ **گردکردن قیمت ≠ گردکردن بها.** فاکتور بهای واحد را به اعشار ارز گرد می‌کند؛ بهای تولید ۴ رقم اعشار می‌گیرد (`productionMoneyContext`)، وگرنه با ارز بدون اعشار هر گرم ۰٫۰۶ صفر می‌شود (BUG-094).
+- ⚠️ **فرمولِ استفاده‌شده ویرایش نمی‌شود، بازنگری می‌شود** (ردیف تازه، `version+1`). تاریخچه و گزارش فقط `work_order_lines` (snapshot) را می‌خوانند، هرگز BOM فعلی یا قیمت امروز کالا.
+- ⚠️ **«تکمیل» یعنی تولید.** `status: 'completed'` از PATCH رد می‌شود؛ تنها راه `POST /api/manufacturing/produce` است (BUG-092).
+- ⚠️ **پیام سرور کلید ترجمه نیست مگر در فهرست بسته باشد** (`manufacturing-errors.ts`)؛ `t()` روی پیام ناشناخته صفحه را می‌اندازد.
+- تولید **ONLINE_ONLY** است و **سند دفتر کل نمی‌زند** (WIP/سربار تصمیم صاحب کار است) — ادعای خلافش نکن.
+
 **پلتفرم توسعه‌دهنده (کلید API / وب‌هوک)**
 
 - ⚠️ **کلید API فقط route های `API_ROUTE_SCOPES` را باز می‌کند و این تصمیم داخل `authenticate` است**، نه بعدتر: ۳۲ فایل route فقط عضویت را چک می‌کنند و بعضی فقط `authenticate` دارند. route تازه‌ای که کلید باید برسد را **صریحاً** به allowlist اضافه کن — و باید `requireWorkspaceContext` داشته باشد (گارد: `developer-platform.test.ts`).
@@ -261,6 +280,25 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **توکن برنامه‌ی OAuth خودش یک ردیف `api_keys` با `app_id` است** — سیستم توکن دوم نساز. حذف نصب = باطل‌کردن همان کلید (تریگر `api_keys_end_app_installation_trg` نصب را می‌بندد و endpoint را برمی‌دارد، از هر مسیری). نصب/به‌روزرسانی/ارسال و انتشار نسخه فقط با تابع‌های migration 07. هر نسخه snapshot پیش‌نویس است؛ کسب‌وکار ناشر پیش‌نویس را آزمایش می‌کند و بقیه فقط نسخه‌ی منتشرشده را می‌گیرند (`liveConfig`). بعد از تغییر scope کلید، `developerService.forgetKeys` — کلید کش را حدس نزن. grant هنگام exchange دوباره با دسترسیِ **فعلی** نصب‌کننده حساب می‌شود. تا سرور `redirect_uri` را تأیید نکرده، به هیچ‌جا redirect نکن (open redirect).
 - **Sandbox یک workspace است** (`is_sandbox`/`sandbox_of`، migration 06)، نه لایه‌ی تازه — ایزوله‌بودنش از همان `workspace_id` می‌آید. فقط با `create_sandbox_workspace` ساخته می‌شود؛ ورود/خروج فقط با `enterWorkspace` (`packages/ui/src/lib/enter-workspace.ts`)؛ نشانش `<SandboxNotice />` در هر دو shell است.
 - ⚠️ **صفحه‌ی وب بیرون از `(dashboard)` فقط namespace هایی را دارد که layoutش می‌دهد** (root فقط CORE). container مشترکی که آن‌جا رندر می‌شود باید layout با `ScopedMessages` و namespace های خودش داشته باشد، وگرنه اولین `t()` صفحه را می‌اندازد (BUG-079، گارد `public-page-namespaces.test.ts`).
+
+**وب عمومی، robots و سه پلتفرم (از باگ‌های ۳ اکتبر)**
+
+- ⚠️ **ستاره در robots.txt اسلش را هم می‌پذیرد.** قانونِ «ستاره، اسلش، invoices» یعنی «هر چیزی، بعد `/invoices`» و `/fa/docs/invoices` و `/fa/blog/accounting-…` را هم می‌بندد (BUG-085: ۲۱ صفحه‌ی راهنما در سایت‌مپ و بسته در robots). `robots.ts` هر قانون زبان‌دار را لنگرشده بیرون می‌دهد (`/fa/invoices`). گارد خروجی واقعی: `robots-does-not-block-public.test.ts`.
+- ⚠️ **سایت‌مپ نشانی noindex یا ۴۰۴ نمی‌دهد.** نشانی‌ای که وجودش به داده بسته است (هاب وبلاگ بدون مقاله، بازارِ خاموش) در سایت‌مپ هم با همان داده شرطی می‌شود (BUG-086).
+- ⚠️ **بعد از هر تغییر در robots / sitemap / metadata، بازرسی HTTP واقعی** روی `web-prod` (پورت ۳۱۱۱): سایت‌مپ → هر صفحه (کد، robots، canonical، hreflang، title، h1، JSON-LD، لینک‌ها) و هر مسیر خصوصی (noindex). با سوئیت کاملاً سبز ۲۴ مشکل پیدا کرد.
+- ⚠️ **ماژولی که barrel `@hisabche/ui` صادر می‌کند و `@hisabche/api` را import می‌کند باید `'use client'` باشد** — وگرنه `next build` می‌افتد و tsc/تست سبز می‌مانند (BUG-082، گارد `index-exports-server-safe.test.ts`). تابع چنین ماژولی را از server component هم نمی‌شود صدا زد.
+- ⚠️ **قابلیتی که منبع بیرونی می‌خواهد (عکس https، دوربین) را در سه جا چک کن:** هدرهای `apps/web/next.config.js` (`Permissions-Policy`)، CSP در `apps/desktop/electron/main/index.ts` (`img-src`)، و host موبایل. عکس کالا در ویندوز بلاک بود و دوربین در وب (BUG-089).
+- ⚠️ **سه پلتفرم با هم:** هر صفحه‌ی `(dashboard)` وب باید در `packages/app-shell/src/app/app.tsx` هم route داشته باشد (ویندوز و موبایل همان بسته را نشان می‌دهند) و در `DESKTOP_ROUTES` + `navigation.ts`. «اسکریپت Supabase» جزو تعریفِ تمام‌شدن است.
+
+**دیتابیس (از باگ‌های ۳ اکتبر)**
+
+- ⚠️ **`.eq('col', null)` هرگز** — PostgREST آن را `= NULL` می‌فرستد و صفر ردیف برمی‌گرداند؛ mock سبز می‌ماند. `.is('col', null)` (بار سوم؛ گارد `no-eq-null-filter.test.ts`).
+- ⚠️ **نام ستون را از فایل migration بخوان.** `started_at` به‌جای `starts_at` ⇒ ۴۲۷۰۳ بلعیده‌شده ⇒ هر کارمند «بدون شعبه» (BUG-088). `node scripts/check-schema-drift.mjs`؛ خروجی‌اش را با grep در `docs/*.sql` تأیید کن.
+- ⚠️ **«امروز» = نیمه‌شب محلی، نه UTC.** `backend/src/utils/local-day.ts`؛ منطقه از دستگاه، اعتبارسنجی‌شده، پیش‌فرض صریح، و جزو کلید کش (BUG-087).
+- ⚠️ **sandbox یک workspace است و در هر شمارشی می‌آید.** کسب‌وکارها را فقط با `services/workspace-counts.ts` بشمار. ستونِ یک migration اختیاری fallback می‌خواهد (۴۲۷۰۳ → بدون فیلتر)، نه صفر.
+- ⚠️ **تابعی که هم ابطال می‌کند هم باید خطا بدهد، نتیجه را برمی‌گرداند** — `RAISE` ابطال را rollback می‌کند (`rotate_oauth_refresh_token` → `reused`).
+- ⚠️ **ریست/خالی‌کردن = بازنشسته‌کردن و ساختن دوباره، نه DELETE** از جدول‌های tenant (`reset_sandbox_workspace`).
+- **پول بازار و کیف پول:** قیمت را فروشنده صریح می‌دهد (`price_minor`)، قیمت پلن فقط از `plan-pricing.ts`؛ ستون بها/خرید در هیچ خواندن عمومی نیست (`PUBLIC_LISTING_SELECT` فهرست بسته است).
 
 ---
 

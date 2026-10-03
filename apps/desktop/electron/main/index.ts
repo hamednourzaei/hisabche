@@ -54,7 +54,11 @@ function applyContentSecurityPolicy(): void {
           "default-src 'self'; " +
             "script-src 'self'; " +
             "style-src 'self' 'unsafe-inline'; " +
-            "img-src 'self' data: blob:; " +
+            // https: for images only — product images, app icons and screenshots
+            // live in public storage. Without it every one of them was blocked in
+            // the packaged Windows app (3 Oct 2026). An image cannot run code;
+            // script-src stays 'self'.
+            "img-src 'self' data: blob: https:; " +
             "font-src 'self' data:; " +
             "connect-src 'self' https: wss:;",
         ],

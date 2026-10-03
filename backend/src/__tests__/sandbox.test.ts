@@ -86,6 +86,7 @@ describe('routes', () => {
     create: vi.fn(async (): Promise<{ id: string; name: string; created: boolean }> => {
       throw new SandboxError('SANDBOX_OF_SANDBOX', 409)
     }),
+    reset: vi.fn(async (): Promise<{ id: string; name: string }> => ({ id: 'new', name: 'x' })),
   }
   const app = Fastify()
   // The real preHandlers need a real session; the wiring test below proves
@@ -103,6 +104,19 @@ describe('routes', () => {
     const res = await app.inject({ method: 'POST', url: '/api/developer/sandbox' })
     expect(res.statusCode).toBe(409)
     expect(res.json()).toEqual({ error: 'SANDBOX_OF_SANDBOX', code: 'SANDBOX_OF_SANDBOX' })
+  })
+
+  it('a reset answers with the NEW sandbox; a refusal keeps its code', async () => {
+    const ok = await app.inject({ method: 'POST', url: '/api/developer/sandbox/reset' })
+    expect(ok.statusCode).toBe(200)
+    expect(ok.json()).toEqual({ id: 'new', name: 'x' })
+    fake.reset.mockRejectedValueOnce(new SandboxError('SANDBOX_RESET_NOT_A_SANDBOX', 409))
+    const refused = await app.inject({ method: 'POST', url: '/api/developer/sandbox/reset' })
+    expect(refused.statusCode).toBe(409)
+    expect(refused.json()).toEqual({
+      error: 'SANDBOX_RESET_NOT_A_SANDBOX',
+      code: 'SANDBOX_RESET_NOT_A_SANDBOX',
+    })
   })
 
   it('created is 201, returned is 200', async () => {

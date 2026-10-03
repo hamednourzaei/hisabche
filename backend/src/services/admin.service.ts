@@ -29,6 +29,7 @@ import { BillingService, PLANS } from './billing.service'
 import { Plan, SubscriptionStatus, planEnum, subscriptionStatusEnum } from '@hisabche/validation'
 import { DatabaseError, NotFoundError, ConflictError, isFailedRead } from '../errors/database.error'
 import { ForbiddenError } from '../errors/auth.error'
+import { countBusinesses } from './workspace-counts'
 
 // ─── Column projections ──────────────────────────────────────
 // Deliberate exclusions: workspaces.logo_url / stamp_url (multi-MB data URIs),
@@ -197,6 +198,15 @@ export class AdminService {
       }
     }
 
+    /** Same contract as countOf (0 on failure), with sandboxes left out. */
+    const businesses = async (narrow?: Parameters<typeof countBusinesses>[0]): Promise<number> => {
+      try {
+        return (await countBusinesses(narrow)).count
+      } catch {
+        return 0
+      }
+    }
+
     const [
       totalWorkspaces,
       activeWorkspaces,
@@ -210,10 +220,12 @@ export class AdminService {
       trialSubscriptions,
       subscriptionsWithWorkspace,
     ] = await Promise.all([
-      countOf('workspaces'),
-      countOf('workspaces', (q) => q.eq('is_active', true)),
-      countOf('workspaces', (q) => q.gte('created_at', startOfToday)),
-      countOf('workspaces', (q) => q.gte('created_at', startOfMonth)),
+      // Businesses, not workspaces: a developer's sandbox is a test space and
+      // would otherwise inflate every one of these four figures.
+      businesses(),
+      businesses((q) => q.eq('is_active', true)),
+      businesses((q) => q.gte('created_at', startOfToday)),
+      businesses((q) => q.gte('created_at', startOfMonth)),
 
       // Active seats, not raw rows: a suspended or access-revoked member is not
       // a member for any purpose that matters.

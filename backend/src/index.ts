@@ -90,9 +90,12 @@ import { operationsRoutes } from './routes/operations.routes'
 import { migrationRoutes } from './routes/migration.routes'
 import { crmRoutes } from './routes/crm.routes'
 import { manufacturingRoutes } from './routes/manufacturing.routes'
+import { automationRoutes } from './routes/automation.routes'
 import { purchasingRoutes } from './routes/purchasing.routes'
 import { billingRoutes } from './routes/billing.routes'
 import { walletRoutes } from './routes/wallet.routes'
+import { marketRoutes } from './routes/market.routes'
+import { marketPublicRoutes } from './routes/market-public.routes'
 import { productImagesRoutes } from './routes/product-images.routes'
 import { referralRoutes } from './routes/referral.routes'
 import { blogRoutes, isPublicBlogRequest } from './routes/blog.routes'
@@ -347,7 +350,7 @@ server.addHook('preHandler', async (request, reply) => {
   // Without this entry every visitor's pricing section got a 401 and no price.
   // `/api/oauth/token` is called by an app's SERVER with its client secret and
   // a one-time code — there is no user session by definition (RFC 6749 §4.1.3).
-  const exactPublicPaths = ['/api/billing/plans', '/api/oauth/token']
+  const exactPublicPaths = ['/api/billing/plans', '/api/oauth/token', '/api/oauth/revoke']
   const path = url.split('?')[0]
 
   if (publicPaths.some((p) => url.startsWith(p))) return
@@ -720,6 +723,7 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(migrationRoutes, { prefix: '/api/migrations' })
   await server.register(crmRoutes)
   await server.register(manufacturingRoutes)
+  await server.register(automationRoutes)
   await server.register(purchasingRoutes)
   await server.register(workflowRoutes)
 
@@ -735,6 +739,8 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(jobSchedulerPlugin)
   await server.register(billingRoutes)
   await server.register(walletRoutes)
+  await server.register(marketRoutes)
+  await server.register(marketPublicRoutes)
   await server.register(referralRoutes)
   await server.register(blogRoutes)
   // API keys and outbound webhooks (docs/developer-platform-migration.sql).

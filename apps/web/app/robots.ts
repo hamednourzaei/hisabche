@@ -1,6 +1,6 @@
 // apps/web/app/robots.ts
 import type { MetadataRoute } from 'next'
-import { SITE_URL } from './[lang]/i18n-config'
+import { SITE_URL, locales } from './[lang]/i18n-config'
 
 /**
  * Two things this file must get right, both of which it previously got wrong
@@ -42,6 +42,7 @@ export default function robots(): MetadataRoute.Robots {
     '/*/settings',
     '/*/billing',
     '/*/wallet',
+    '/*/market-seller',
     '/*/crm',
     '/*/tasks',
     '/*/referrals',
@@ -92,11 +93,29 @@ export default function robots(): MetadataRoute.Robots {
     '/test.html',
   ]
 
+  // ⚠️ THE STAR IN robots.txt MATCHES SLASHES TOO. The list above is written
+  // with a leading star meaning «the locale, then invoices» — but a crawler
+  // reads it as «anything, then /invoices», so it also blocked
+  // /fa/docs/invoices, /fa/docs/customers, /fa/docs/accounting, … (21
+  // documentation pages that the sitemap lists) and any blog article whose
+  // slug starts with one of these words (/fa/blog/accounting-…). Found by a
+  // real-HTTP audit, 3 Oct 2026 (BUG-085).
+  //
+  // So each locale rule is emitted ANCHORED to a real locale: /fa/invoices,
+  // /af/invoices, /en/invoices. The list keeps its star spelling because that
+  // is what a person adding a route writes (and what the guards read).
+  const LOCALE_WILDCARD = '/*/'
+  const anchored = disallow.flatMap((rule) =>
+    rule.startsWith(LOCALE_WILDCARD)
+      ? locales.map((locale) => `/${locale}/${rule.slice(LOCALE_WILDCARD.length)}`)
+      : [rule],
+  )
+
   return {
     rules: [
-      { userAgent: '*', allow: '/', disallow },
-      { userAgent: 'Googlebot', allow: '/', disallow },
-      { userAgent: 'Bingbot', allow: '/', disallow },
+      { userAgent: '*', allow: '/', disallow: anchored },
+      { userAgent: 'Googlebot', allow: '/', disallow: anchored },
+      { userAgent: 'Bingbot', allow: '/', disallow: anchored },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
     // No `host:` directive. It is not part of the robots.txt standard — it was a

@@ -14,6 +14,8 @@ export interface PickerProduct {
   sku?: string | null
   sell_price?: number | null
   sellPrice?: number | null
+  buy_price?: number | null
+  buyPrice?: number | null
   unit?: string | null
   quantity?: number | null
 }
@@ -25,6 +27,14 @@ export function readProducts(data: unknown): PickerProduct[] {
   const shape = data as { products?: unknown; data?: unknown; items?: unknown }
   const list = shape.products ?? shape.data ?? shape.items
   return Array.isArray(list) ? (list as PickerProduct[]) : []
+}
+
+/**
+ * What the business PAID for it, whichever casing the row came back in — the
+ * figure a production component is costed at. 0 when it was never recorded.
+ */
+export function productCost(product: PickerProduct): number {
+  return Number(product.buyPrice ?? product.buy_price ?? 0) || 0
 }
 
 /** The sell price, whichever casing the row came back in. */

@@ -40,6 +40,7 @@ export type NavId =
   | 'workflow-templates'
   | 'billing'
   | 'wallet'
+  | 'market-seller'
   | 'governance'
   // The till. Somewhere a person STANDS, which is why it is primary and the
   // rest of this batch is not.
@@ -418,6 +419,16 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     descriptionKey: 'nav.wallet_description',
     path: '/wallet',
     group: 'system',
+  },
+  {
+    // The business as a seller on the goods marketplace. The marketplace is
+    // OFF by default; the screen says so until a platform admin turns it on.
+    id: 'market-seller',
+    emoji: '🏪',
+    labelKey: 'nav.market_seller',
+    descriptionKey: 'nav.market_seller_description',
+    path: '/market-seller',
+    group: 'work',
   },
   {
     // ⚠️ A ROUTE NOW, NOT ONLY A FLOATING BUTTON.

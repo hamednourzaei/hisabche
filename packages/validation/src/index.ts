@@ -290,6 +290,34 @@ export {
   type CreateProductionPlan,
 } from './schemas/manufacturing.schema'
 
+export {
+  AUTOMATION_FAILURE_POLICIES,
+  automationCadenceSchema,
+  createRecurringInvoiceSchema,
+  updateAutomationSchema,
+  type AutomationCadence,
+  type CreateRecurringInvoice,
+  type UpdateAutomation,
+} from './schemas/automation.schema'
+
+export {
+  UNIT_COST_DECIMALS,
+  asProductionColumns,
+  computeProductionCost,
+  laborCost,
+  produceSchema,
+  productionColumns,
+  productionMoneyContext,
+  saveProductionDefinitionSchema,
+  type ProduceInput,
+  type ProductionCost,
+  type ProductionCostInput,
+  type ProductionCostLine,
+  type ProductionLabor,
+  type ProductionOtherCost,
+  type SaveProductionDefinition,
+} from './schemas/manufacturing-cost'
+
 // ---------- HR ----------
 export {
   departmentSchema,

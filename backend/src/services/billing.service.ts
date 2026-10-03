@@ -18,6 +18,7 @@ export { PLAN_PRICING, intervalOfPeriod }
 import { referralService } from './referral'
 import { PLAN_LIMIT_DEFAULTS } from './plan-limit-defaults'
 import { effectiveLimits } from './plan-limits.service'
+import { countBusinesses } from './workspace-counts'
 
 /**
  * How a usage counter is scoped. Workspace-owned tables (the shared book) are
@@ -439,6 +440,15 @@ export class BillingService {
     const cfg = USAGE_TABLES[feature]
     if (!cfg) return 0 // unknown meters don't gate anything
 
+    if (cfg.scope === 'owner') {
+      // Businesses the person owns. A sandbox is a test space, not a business:
+      // counted here it used up the free plan's one business.
+      const owned = await countBusinesses((query) => query.eq('owner_id', userId))
+      if (owned.error)
+        throw new DatabaseError(`Failed to count ${feature} for usage limit`, owned.error)
+      return owned.count
+    }
+
     let query = supabase.from(cfg.table).select('id', { count: 'exact', head: true })
 
     if (cfg.scope === 'workspace') {
@@ -451,8 +461,6 @@ export class BillingService {
         )
       }
       query = query.eq('workspace_id', workspaceId)
-    } else {
-      query = query.eq('owner_id', userId)
     }
 
     const { count, error } = await query

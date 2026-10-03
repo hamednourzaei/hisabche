@@ -223,7 +223,11 @@ export function useDashboardKPIs() {
   return useQuery({
     queryKey: dashboardKeys.kpis(),
     queryFn: async (): Promise<DashboardKPIs> => {
-      const { data } = await apiClient.get('/analytics/dashboard')
+      // «Today» starts at this device's midnight, not the server's (UTC):
+      // a sale at 01:00 in Tehran was counted as yesterday's (BUG-087).
+      // Read inside the query — it runs only in the browser.
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+      const { data } = await apiClient.get('/analytics/dashboard', { params: tz ? { tz } : {} })
       return data
     },
     enabled: authReady,

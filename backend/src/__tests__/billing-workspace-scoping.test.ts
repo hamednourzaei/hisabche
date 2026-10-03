@@ -329,13 +329,23 @@ describe('D2 — the seat quota is per workspace', () => {
 
 describe('D3 — the workspace quota counts OWNERSHIP', () => {
   it('blocks a user who already owns the plan maximum', async () => {
-    rowsOf('workspaces').push({ id: WS_A, owner_id: U_FREE })
+    rowsOf('workspaces').push({ id: WS_A, owner_id: U_FREE, is_sandbox: false })
 
     const result = await ent.canPerformAction(ctxFor(U_FREE, WS_A), 'create_workspace')
     // Free allows 1 workspace; U_FREE owns exactly one. The broken query
     // errored, read the count as 0, and allowed unlimited workspaces.
     expect(result.allowed).toBe(false)
     expect(result.reason).toContain('limit of 1')
+  })
+
+  it('a sandbox is not a business: it does not use up the quota', async () => {
+    // The free plan allows one business. A developer's sandbox of someone
+    // else's shop (or of their own) is a test space — counted, it refused the
+    // person their first real business.
+    rowsOf('workspaces').push({ id: 'ws-sandbox', owner_id: U_FREE, is_sandbox: true })
+
+    const result = await ent.canPerformAction(ctxFor(U_FREE, WS_A), 'create_workspace')
+    expect(result.allowed).toBe(true)
   })
 
   it('allows a user who owns nothing', async () => {
@@ -359,7 +369,7 @@ describe('D3 — the workspace quota counts OWNERSHIP', () => {
   })
 
   it('the query filters by owner_id — asserted on the query, not the outcome', async () => {
-    rowsOf('workspaces').push({ id: WS_A, owner_id: U_FREE })
+    rowsOf('workspaces').push({ id: WS_A, owner_id: U_FREE, is_sandbox: false })
     await ent.canPerformAction(ctxFor(U_FREE, WS_A), 'create_workspace').catch(() => undefined)
 
     const workspaceCounts = queryLog.filter((q) => q.table === 'workspaces')
@@ -483,7 +493,7 @@ describe('D5 — cache invalidation covers the workspace scope', () => {
     }
     rowsOf('transactions').push({ id: 'tx-1', workspace_id: WS_A, user_id: U_FREE })
     rowsOf('workspace_members').push({ id: 'm1', workspace_id: WS_A, user_id: U_FREE })
-    rowsOf('workspaces').push({ id: WS_A, owner_id: U_FREE })
+    rowsOf('workspaces').push({ id: WS_A, owner_id: U_FREE, is_sandbox: false })
 
     const report = await billing.getUsageReport(U_FREE, WS_A)
 

@@ -20,7 +20,10 @@ import { barcodeTakenMessage } from '../../../../lib/barcode/barcode-errors'
 import { ProductExpiryPanel } from '../product-expiry-panel'
 import { ProductJourneyPanel } from '../product-journey-panel'
 import { ProductBarcodesPanel } from '../product-barcodes-panel'
+import { ProductImagesPanel } from '../product-images-panel'
 import { ProductWarehouseStockPanel } from '../product-warehouse-stock-panel'
+import { ProductManufacturingPanel } from '../../manufacturing/product-manufacturing-panel'
+import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { ProductDetailPage } from '../warehouse-detail-page'
 import { isProductInUse, productDeleteRefusal } from '../../../../lib/warehouse/delete-refusal'
 import { STOCK_LABEL_KEY, STOCK_TONE, stockStateOf } from '../../../../lib/warehouse/stock-state'
@@ -199,6 +202,7 @@ ${t('warehouse.deactivateInstead')}`)
     push('/warehouse')
   }, [id, deleteProduct, updateProduct, queryClient, push, t, toast])
 
+  const locale = useIntlLocale()
   const safeT = useCallback(
     (key: string, fallback?: string) => {
       const v = t(key)
@@ -260,7 +264,22 @@ ${t('warehouse.deactivateInstead')}`)
       onSave={onSave}
       onDelete={handleDelete}
       barcodes={id ? <ProductBarcodesPanel t={safeT} productId={id} /> : null}
+      images={
+        id ? (
+          <ProductImagesPanel t={safeT} productId={id} productName={product?.name ?? ''} />
+        ) : null
+      }
       stockPlaces={id ? <ProductWarehouseStockPanel t={safeT} productId={id} fmt={fmt} /> : null}
+      manufacturing={
+        id ? (
+          <ProductManufacturingPanel
+            t={safeT}
+            locale={locale}
+            productId={id}
+            productName={product?.name ?? ''}
+          />
+        ) : null
+      }
       stockWarehouses={(breakdown.data?.warehouses ?? []).map((w) => ({ id: w.id, name: w.name }))}
       expiry={id ? <ProductExpiryPanel t={safeT} productId={id} /> : null}
       journey={id ? <ProductJourneyPanel t={safeT} productId={id} /> : null}

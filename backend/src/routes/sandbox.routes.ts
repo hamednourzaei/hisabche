@@ -3,6 +3,7 @@
 //
 // Anyone in a workspace         GET  /api/developer/sandbox   (which side of the line am I on?)
 // Owner/manager (workspace.manage) POST /api/developer/sandbox (my sandbox of this business)
+//                               POST /api/developer/sandbox/reset (retire this sandbox, get a new one)
 //
 // ⚠️ Not open to an API key (API_ROUTE_SCOPES): a key belongs to one
 // workspace and cannot mint another.
@@ -56,6 +57,14 @@ export function buildSandboxRoutes(sandbox: SandboxService) {
         const out = await sandbox.create(request.tenancy)
         return reply.code(out.created ? 201 : 200).send(out)
       }),
+    )
+
+    // Called from INSIDE the sandbox: retire it and answer with a new, empty
+    // one. The database refuses a workspace that is not a sandbox.
+    fastify.post(
+      '/api/developer/sandbox/reset',
+      { preHandler: manage },
+      handle(async (request, reply) => reply.send(await sandbox.reset(request.tenancy))),
     )
   }
 }

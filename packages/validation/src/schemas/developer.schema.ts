@@ -636,6 +636,11 @@ export const OAUTH_ERROR_CODES = [
   'PKCE_MISMATCH',
   'INSTALLER_NOT_MEMBER',
   'UNSUPPORTED_GRANT_TYPE',
+  // developer-platform-08: rotating refresh tokens, and uploaded app images.
+  'REFRESH_INVALID',
+  'REFRESH_REUSED',
+  'IMAGE_INVALID',
+  'IMAGE_TOO_LARGE',
   'OAUTH_NOT_CONFIGURED',
 ] as const
 export type OAuthErrorCode = (typeof OAUTH_ERROR_CODES)[number]
@@ -647,6 +652,9 @@ export const SANDBOX_ERROR_CODES = [
   'SANDBOX_OF_SANDBOX',
   'SANDBOX_NOT_MEMBER',
   'SANDBOX_PARENT_NOT_FOUND',
+  // developer-platform-08: reset (retire and replace).
+  'SANDBOX_NOT_FOUND',
+  'SANDBOX_RESET_NOT_A_SANDBOX',
   'SANDBOX_NOT_CONFIGURED',
 ] as const
 export type SandboxErrorCode = (typeof SANDBOX_ERROR_CODES)[number]

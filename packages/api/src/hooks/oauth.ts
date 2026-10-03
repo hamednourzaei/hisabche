@@ -391,6 +391,20 @@ export function useAddAppScreenshot() {
   })
 }
 
+/**
+ * Upload an icon or a screenshot (png, jpeg or webp, up to 1 MB) and get its
+ * URL back; that URL is then saved through the icon or screenshot fields.
+ */
+export function useUploadAppImage() {
+  return useMutation({
+    mutationFn: async (input: { appId: string; base64: string }) =>
+      (
+        (await apiClient.post(`/developer/apps/${input.appId}/images`, { base64: input.base64 }))
+          .data as { url: string }
+      ).url,
+  })
+}
+
 export function useRemoveAppScreenshot() {
   const qc = useQueryClient()
   return useMutation({

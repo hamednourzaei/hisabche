@@ -912,3 +912,88 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 - **تصمیم:** حذف. **گاردی که ۴۰ بار الکی قرمز می‌شود، حذف می‌شود و حذف‌شده هیچ‌چیز
   را محافظت نمی‌کند.** دو ایراد واقعی که در همین مسیر پیدا شد (`getStats` مرده،
   `round2` پنج‌گانه) با grep پیدا می‌شدند، نه با گارد.
+
+## BUG-083 — عکس کالا در main بدون caller و با توکن ناموجود (۳ اکتبر)
+
+- **علامت:** کامیت `d64a167e` پنل `ProductImagesPanel`، هوک‌ها، route و migration را ثبت کرد، ولی هیچ صفحه‌ای پنل را mount نمی‌کرد و `productImages.*` در هیچ زبانی نبود؛ `design-token-existence.test.ts` هم قرمز بود (`--color-primary-foreground` وجود ندارد).
+- **ریشه:** کار نیمه‌تمام سشن ۲۸ سپتامبر همان‌طور که بود کامیت شد (الگوی §۷٫۱).
+- **فیکس:** پنل در صفحه‌ی کالا mount شد (`images` slot)، متن‌ها در fa/af/en، توکن → `--color-primary-fg`.
+- **گارد:** `packages/ui/src/__tests__/product-images-panel.test.ts` (injection-test شد).
+- **یادداشت محیط:** تست‌های `*.pg.test.ts` گاهی با «win32 error 225» می‌افتند — Defender باینری `postgres.exe` تازه‌نصب‌شده را بلاک می‌کند؛ اجرای دوباره سبز است. exclusion اضافه نشد.
+
+## BUG-084 — worker استهلاک هیچ‌وقت هیچ ردیفی پیدا نمی‌کرد (۳ اکتبر)
+
+- **علامت:** `depreciation-posting.worker.ts` (کامیت `09ba70c0`) → `.eq('cancelled_at', null)`.
+- **ریشه:** PostgREST آن را `cancelled_at = NULL` می‌فرستد که هرگز true نیست ⇒ صفر ردیف، بدون خطا. mock در تست فیلتر را اعمال نمی‌کند، پس سبز بود. **بار سوم** همین اشتباه (`deleted_at` در انبارها، `customer_id` در پرداخت‌ها).
+- **فیکس:** `.is('cancelled_at', null)`.
+- **گارد:** `backend/src/__tests__/no-eq-null-filter.test.ts` — کل `backend/src` را می‌گردد (injection-test شد).
+- **باز:** همان کوئری `.limit(1000)` دارد؛ اگر ۱۰۰۰ ردیف معوق از یک کسب‌وکار باشد، بقیه در آن اجرا دیده نمی‌شوند (اجرای بعدی می‌بیند).
+- **بررسی اسکریپت:** همه‌ی جدول/تابع/ستون‌هایی که دو کامیت `d64a167e` و `09ba70c0` می‌خوانند در `docs/` تعریف دارند؛ اسکریپت تازه‌ای لازم نبود.
+
+## BUG-085 — robots.txt صفحه‌های راهنما و مقاله‌های وبلاگ را می‌بست (۳ اکتبر)
+
+- **علامت (HTTP واقعی روی بیلد production):** ۲۱ نشانی `/{fa,af,en}/docs/{invoices,customers,accounting,wallet,permissions,assistant,developers}` هم در سایت‌مپ بودند و هم در robots.txt بسته — در Search Console: «Submitted URL blocked by robots.txt».
+- **ریشه:** قانون‌ها به شکل «ستاره، اسلش، نام route» نوشته شده بودند به معنی «زبان و بعد route». ولی ستاره در robots.txt اسلش را هم می‌پذیرد، پس قانونِ invoices داشبورد، `/fa/docs/invoices` و هر مقاله‌ی وبلاگ با slug شروع‌شونده با همین کلمه‌ها (`/fa/blog/accounting-…`) را هم می‌بست.
+- **فیکس:** `apps/web/app/robots.ts` هر قانونِ زبان‌دار را به سه قانونِ لنگرشده تبدیل می‌کند (`/fa/invoices`، `/af/invoices`، `/en/invoices`). فهرست منبع همان املای قبلی را دارد (گاردهای دیگر آن را می‌خوانند).
+- **گارد:** `packages/ui/src/__tests__/robots-does-not-block-public.test.ts` — خروجی واقعی `robots()` را با قاعده‌ی تطبیق گوگل روی نشانی‌های عمومی می‌سنجد (injection-test شد).
+
+## BUG-086 — `/blog` در سایت‌مپ ولی noindex (۳ اکتبر)
+
+- **علامت:** `/{fa,af,en}/blog` در سایت‌مپ و هم‌زمان `<meta robots="noindex, follow">` — «Submitted URL marked noindex».
+- **ریشه:** هاب وبلاگ ورودی ثابت سایت‌مپ بود؛ صفحه وقتی مقاله‌ای منتشر نشده عمداً noindex است (روی سایت زنده `total: 0`).
+- **فیکس:** هاب از فهرست ثابت برداشته شد و در `blogEntries()` فقط برای زبانی که مقاله‌ی منتشرشده دارد اضافه می‌شود.
+- **گارد:** `blog-web-seo.test.ts`.
+- **ابزار بازرسی:** اسکریپت HTTP واقعی (سایت‌مپ → هر صفحه: کد، robots، canonical، hreflang، title، description، h1، main، JSON-LD، لینک‌های داخلی؛ و هر مسیر خصوصی: noindex). نتیجه‌ی نهایی: ۹۹ صفحه‌ی عمومی، ۱۴۴ لینک، ۱۷۱ مسیر خصوصی، صفر مشکل.
+
+## BUG-087 — «امروز» داشبورد با نیمه‌شب UTC بریده می‌شد (۳ اکتبر)
+
+- **علامت (گزارش ۲۷ سپتامبر):** دو فروش در یک روز محلی (۱۲۵٬۰۰۰٬۰۰۰ و ۳٬۰۰۰٬۰۰۰)؛ داشبورد امروز را ۳٬۰۰۰٬۰۰۰ نشان می‌داد.
+- **ریشه:** `startOfTodayISO()` با `setUTCHours(0,0,0,0)`؛ نیمه‌شب UTC در تهران ۰۳:۳۰ است.
+- **فیکس:** `backend/src/utils/local-day.ts` — منطقه از دستگاه (`?tz=`)، اعتبارسنجی، پیش‌فرض صریح `Asia/Tehran`، جزو کلید کش.
+- **گارد:** `backend/src/__tests__/local-day.test.ts` (شامل روز تغییر ساعت تابستانی).
+- **باز:** مرز ماه هنوز با ساعت سرور.
+
+## BUG-088 — شعبه‌های کارمند همیشه «هیچ» (۳ اکتبر)
+
+- **ریشه:** `human-resources.service.currentBranches` ستون‌های `started_at`/`ended_at` را می‌خواند؛ جدول `starts_at`/`ends_at` دارد ⇒ ۴۲۷۰۳ ⇒ catch ⇒ `[]` (§۷٫۳).
+- **فیکس:** نام‌های درست. **گارد:** `employee-branch-columns.test.ts` — نام‌ها را با خودِ فایل migration مقایسه می‌کند (injection-test شد).
+- **یافته‌ی جانبی:** `interactions.opportunity_id` را هیچ اسکریپتی نمی‌سازد و هیچ کدی نمی‌نویسد؛ خواندنش نبودِ ستون را تحمل می‌کند.
+
+## BUG-089 — ویندوز عکس‌ها را بلاک می‌کرد؛ وب دوربین را (۳ اکتبر)
+
+- **ریشه:** CSP بسته‌ی Electron `img-src 'self' data: blob:` ⇒ عکس کالا و عکس برنامه (https) در ویندوز دیده نمی‌شد. و `Permissions-Policy: camera=()` در وب دوربین را کامل می‌بست.
+- **فیکس:** `img-src … https:` (فقط عکس؛ `script-src 'self'` ماند) و `camera=(self)`.
+- **گارد:** `product-images-panel.test.ts` و `camera-scan-button.test.tsx`.
+
+## BUG-090 — اسکریپت content-intelligence-01 اصلاً اجرا نمی‌شد (۴ اکتبر)
+
+- **ریشه:** سه خط توضیح بدون `--` وسط `CREATE TABLE blog_sources` ⇒ خطای نحوی؛ ۰۲ تا ۰۴ هم چون جدول‌های ۰۱ نبود می‌افتادند. تست‌ها فقط متن فایل را می‌خواندند (source-assertion) و سبز بودند.
+- **فیکس:** سه خط توضیح شدند.
+- **گارد:** `content-intelligence.pg.test.ts` — پنج اسکریپت، به ترتیب، هر کدام **دو بار** روی Postgres واقعی + VERIFY. روی دیتابیس زنده هم اجرا و VERIFY شد (۲۷/۲۷ ok).
+
+## BUG-091 — تکمیل دستور تولید اتمیک نبود و انبار نداشت (۴ اکتبر)
+
+- **ریشه:** `completeWorkOrder` با چند فراخوان جدا: مصرف لایه‌ها، ورود محصول، تغییر وضعیت، درج حرکت‌ها. خطا وسط راه = مواد مصرف‌شده و هیچ محصولی. حرکت‌ها `from/to_warehouse_id` نداشتند (همان BUG-080).
+- **فیکس:** تابع `manufacturing_complete` — یک تراکنش، idempotent با کلید، حرکت‌ها با انبار.
+- **گارد:** `manufacturing.pg.test.ts` («leaves NOTHING behind»، «ONE run»، انبار هر دو حرکت). injection: برداشتن چک کلید ⇒ دو تست قرمز.
+
+## BUG-092 — PATCH وضعیت، دستور تولید را بدون تولید «تکمیل» می‌کرد (۴ اکتبر)
+
+- **ریشه:** `updateWorkOrder` هر `status` را می‌نوشت، از جمله `completed`؛ و ردیف تکمیل‌شده هم قابل ویرایش بود.
+- **فیکس:** `completed` از PATCH رد می‌شود (`WORK_ORDER_COMPLETE_VIA_PRODUCE`)؛ ردیف تکمیل‌شده `WORK_ORDER_NOT_EDITABLE`.
+
+## BUG-093 — لیست فرمول‌ها و دستورها camelCase تایپ شده بود، snake_case می‌آمد (۴ اکتبر)
+
+- **ریشه:** `GET /boms` و `/work-orders` ردیف خام می‌فرستند؛ هوک آن را `BOM` با `productId` تایپ کرده بود ⇒ همیشه undefined، و `bom.productId.slice(0, 8)` برای کالای حذف‌شده صفحه را می‌انداخت.
+- **فیکس:** `mapBom` / `mapWorkOrder`؛ کالای حذف‌شده = «کالا حذف شده».
+- **گارد:** `packages/api/src/__tests__/manufacturing-row-mapping.test.ts`.
+
+## BUG-094 — بهای زیر یک واحد پول صفر می‌شد (۴ اکتبر، قبل از انتشار گرفته شد)
+
+- **ریشه:** `rowTotal` فاکتور بهای واحد را به اعشار ارز گرد می‌کند؛ افغانی اعشار ندارد ⇒ ۱۰ گرم × ۰٫۰۶ = ۰.
+- **فیکس:** context بهای تولید با ۴ رقم اعشار (`productionMoneyContext`)، همان `rowTotal`.
+- **گارد:** `manufacturing-cost.test.ts` («not rounded away»).
+
+## BUG-095 — شمارش دستورهای تولید تخمینی بود (۴ اکتبر)
+
+- **ریشه:** `count: 'estimated'` در `getWorkOrderStats` (الگوی §۷٫۴). **فیکس:** `exact`.

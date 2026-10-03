@@ -160,8 +160,13 @@ invoice.create
 payment.record
   → ledger.postDocument  (صندوق/دریافتنی)
 
-purchasing.receiveGoods / manufacturing.completeWorkOrder
+purchasing.receiveGoods
   → costing.recordReceipt / recordIssue  (ارزش موجودی حفظ می‌شود)
+
+manufacturing.produce
+  → manufacturing_complete (Postgres، یک تراکنش)
+      → inventory_consume_layers / inventory_receive_layer  (همان هسته‌ی بها)
+      → stock_movements با انبار  ·  work_order_lines (snapshot)
 ```
 
 ## ۱۱. ترتیب لایه‌ها (غیرقابل‌جابه‌جایی)

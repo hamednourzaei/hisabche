@@ -57,8 +57,13 @@ describe('GET /api/boms', () => {
     expect(constant(svc, 'BOM_COLUMNS')).not.toContain('notes')
   })
 
-  it('create does not always write notes (it would 42703 before the migration)', () => {
-    expect(method(svc, 'createBom')).not.toContain("notes: data.notes ?? ''")
+  // `createBom` is gone: a definition is written by the database function
+  // manufacturing_save_bom (one transaction, revisions). What must stay true is
+  // that the service never goes back to inserting the two tables itself.
+  it('a definition is written by the database function, never by two inserts', () => {
+    expect(method(svc, 'saveDefinition')).toContain("rpc('manufacturing_save_bom'")
+    expect(svc).not.toContain(".from('bom_items').insert")
+    expect(svc).not.toContain(".from('bom_items').delete")
   })
 })
 

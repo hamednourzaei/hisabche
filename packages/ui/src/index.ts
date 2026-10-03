@@ -319,6 +319,7 @@ export { toPersianNumbers, toArabicNumbers, usePersianNumbers } from './lib/pers
 // ---------- Types ----------
 export { PricingContainer, BillingContainer, BillingStatusContainer } from './components/ui/billing'
 export { WalletContainer } from './components/ui/wallet/wallet-container'
+export { MarketSellerContainer } from './components/ui/market/market-seller-container'
 export {
   walletMoney,
   walletAmountToMinor,

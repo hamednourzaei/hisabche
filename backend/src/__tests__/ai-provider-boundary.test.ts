@@ -168,15 +168,27 @@ describe('⚠️ the provider key never leaves the server', () => {
   })
 
   it('the provider error body is not forwarded to the client', () => {
-    const chat = code(join(AI, 'ai-chat.service.ts'))
+    // ⚠️ READ IN ONE PLACE ACROSS THE WHOLE AI MODULE, not just in the chat
+    // service. On 30 September 2026 the two provider `fetch` paths moved out of
+    // `ai-chat.service.ts` into `provider-client.ts` so the content pipeline would
+    // not need a second copy — and these assertions failed, correctly.
+    //
+    // They were NOT weakened to pass. The count and the message moved to the
+    // package as a whole, which is the STRICT reading: before, one file could
+    // read a provider body; now, one file can; and a third module adding its own
+    // `response.text()` is still what fails.
+    const wholeModule = ['ai-chat.service.ts', 'provider-client.ts', 'reporting-reader.ts']
+      .map((file) => code(join(AI, file)))
+      .join('\n')
+
     // A provider error body can echo the request and, on some failures,
     // key metadata.
-    expect(chat).toContain('AI_PROVIDER_ERROR')
-    // Read in ONE place — for the server log and the admin's «test» — and the
-    // error a user's question fails with carries only the status code.
-    expect(chat.match(/response\.text\(\)/g) ?? []).toHaveLength(1)
-    expect(chat).toMatch(/async function providerErrorDetail[\s\S]{0,160}response\.text\(\)/)
-    expect(chat).toContain('new ValidationError(`AI_PROVIDER_ERROR: ${response.status}`)')
+    expect(wholeModule).toContain('AI_PROVIDER_ERROR')
+    expect(wholeModule.match(/response\.text\(\)/g) ?? []).toHaveLength(1)
+
+    const client = code(join(AI, 'provider-client.ts'))
+    expect(client).toMatch(/async function providerErrorDetail[\s\S]{0,160}response\.text\(\)/)
+    expect(client).toContain('new ValidationError(`AI_PROVIDER_ERROR: ${response.status}`)')
     // The detail reaches a client only through the admin-guarded test route.
     const routes = code(join(__dirname, '..', 'routes', 'ai-chat.routes.ts'))
     expect(routes).not.toContain('providerDetail')

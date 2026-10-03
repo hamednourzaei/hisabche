@@ -76,10 +76,15 @@ describe('crawling', () => {
     expect(robots).not.toMatch(/['"]\/\*?\/?blog/)
   })
 
-  it('the sitemap lists /blog and the API’s articles', () => {
+  it('the sitemap lists the API’s articles, and the hub only where one is published', () => {
     const sitemap = read(join(WEB, 'app/sitemap.ts'))
-    expect(sitemap).toContain("{ path: '/blog' }")
     expect(sitemap).toContain('fetchBlogSitemap()')
+    // BUG-086: the hub was a static entry, so with no article published it was
+    // submitted while the page itself said noindex («Submitted URL marked
+    // noindex»). It is now listed per language that has a published article.
+    expect(sitemap).not.toContain("{ path: '/blog' }")
+    expect(sitemap).toContain('result.data.posts.some((post) => post.locale === locale)')
+    expect(sitemap).toContain("url: localeUrl(locale, '/blog')")
   })
 
   it('the footer links every public page to the blog hub', () => {

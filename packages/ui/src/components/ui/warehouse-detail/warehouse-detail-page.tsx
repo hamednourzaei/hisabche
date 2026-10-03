@@ -117,8 +117,12 @@ export interface ProductDetailPageProps {
   journey?: React.ReactNode
   /** The product's extra barcodes (27 Sep 2026), rendered by the container. */
   barcodes?: React.ReactNode
+  /** The product's images (28 Sep 2026), rendered by the container. */
+  images?: React.ReactNode
   /** Where the stock is, per warehouse (BUG-080), rendered by the container. */
   stockPlaces?: React.ReactNode
+  /** What the product is made of, its cost and its production history. */
+  manufacturing?: React.ReactNode
   /**
    * The business's warehouses. A quantity change lands in one: with several,
    * the person picks it; with one, it is that one; with none, nowhere.
@@ -146,7 +150,9 @@ export function ProductDetailPage({
   expiry,
   journey,
   barcodes,
+  images,
   stockPlaces,
+  manufacturing,
   stockWarehouses,
 }: ProductDetailPageProps) {
   const [editValues, setEditValues] = useState<ProductEditValues>({
@@ -522,6 +528,8 @@ export function ProductDetailPage({
       </KpiGrid>
 
       {stockPlaces}
+      {manufacturing}
+      {images}
       {barcodes}
       {expiry}
       {journey}

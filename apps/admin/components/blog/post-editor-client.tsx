@@ -27,6 +27,7 @@ import {
   type BlogSaveResult,
 } from '@/hooks/use-admin-blog'
 
+import { AiArticleButton } from './ai-article-button'
 import { BlogEditor } from './blog-editor'
 import { SeoPanel, type SeoFields } from './seo-panel'
 
@@ -141,6 +142,9 @@ export function PostEditorClient({ id }: { id: string | null }) {
     }
   })
   const [loadedId, setLoadedId] = useState<string | null>(null)
+  // Bumped when a generated article is applied: the editor reads its content
+  // once, at mount, so new content needs a new mount.
+  const [aiVersion, setAiVersion] = useState(0)
   const [result, setResult] = useState<BlogSaveResult | null>(null)
   const [error, setError] = useState<unknown>(null)
 
@@ -254,6 +258,35 @@ export function PostEditorClient({ id }: { id: string | null }) {
                 {t('admin.blog.fields.author')}: {current.authorName}
               </span>
             ) : null}
+            <span className="ms-auto">
+              <AiArticleButton
+                locale={form.locale}
+                topic={form.title}
+                onApply={(article) => {
+                  // ⚠️ `status` and `publishedAt` are NOT touched: a generated
+                  // article stays whatever the form was (a draft, for a new
+                  // post) until a person saves or publishes it.
+                  const category = (categories.data ?? []).find(
+                    (item) => item.name === article.categoryName,
+                  )
+                  patch({
+                    title: article.title,
+                    excerpt: article.excerpt,
+                    html: article.html,
+                    json: article.json,
+                    faq: article.faq,
+                    metaTitle: article.metaTitle,
+                    metaDescription: article.metaDescription,
+                    focusKeyword: article.focusKeyword,
+                    keywords: article.keywords.join('، '),
+                    // An existing post keeps its slug: changing it would break its URL.
+                    ...(id ? {} : { slug: article.slug }),
+                    ...(category ? { categoryId: category.id } : {}),
+                  })
+                  setAiVersion((value) => value + 1)
+                }}
+              />
+            </span>
           </div>
           <label className="block space-y-1">
             <span className="text-xs text-muted-foreground">{t('admin.blog.fields.title')}</span>
@@ -282,7 +315,7 @@ export function PostEditorClient({ id }: { id: string | null }) {
 
         <div data-field="contentHtml">
           <BlogEditor
-            key={loadedId ?? 'new'}
+            key={`${loadedId ?? 'new'}:${aiVersion}`}
             locale={form.locale}
             initialContent={form.json}
             onChange={({ html, json }) => patch({ html, json })}

@@ -24,9 +24,18 @@ import type {
 } from '@hisabche/validation'
 import { APP_SCREENSHOT_LIMIT } from '@hisabche/validation'
 
+import { randomUUID } from 'node:crypto'
+
 import { supabase } from '../../db'
+import { IMAGE_EXTENSION, sniffImageType } from '../blog/blog.domain'
+import { NotConfiguredError } from '../developer/developer.repository'
 import type { TenancyContext } from '../tenancy.service'
 import { appHealth, permissionDisclosure } from './oauth.domain'
+
+/** developer-platform-08: icons and screenshots, public, png/jpeg/webp, 1 MB. */
+export const APP_IMAGE_BUCKET = 'app-images'
+export const APP_IMAGE_MAX_BYTES = 1024 * 1024
+const APP_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 import {
   APP_COLUMNS,
   OAuthError,
@@ -441,6 +450,41 @@ export function createMarketplaceService() {
     },
 
     screenshots: screenshotsOf,
+
+    /**
+     * Store an icon or a screenshot and answer with its public URL — which the
+     * publisher then saves through the existing icon / screenshot fields.
+     *
+     * The type is decided by the BYTES (png, jpeg or webp), never by a name or
+     * a claimed type; the object's name is random. Until now these two fields
+     * took any https URL, so a listing's images lived on someone else's server
+     * and could change after review.
+     */
+    async uploadImage(
+      ctx: TenancyContext,
+      appId: string,
+      base64: string,
+    ): Promise<{ url: string }> {
+      await ownApp(ctx, appId)
+      const bytes = Buffer.from(base64, 'base64')
+      const mime = sniffImageType(bytes)
+      if (bytes.length === 0 || !mime || !APP_IMAGE_TYPES.includes(mime)) {
+        throw new OAuthError('IMAGE_INVALID', 415)
+      }
+      if (bytes.length > APP_IMAGE_MAX_BYTES) throw new OAuthError('IMAGE_TOO_LARGE', 413)
+      const path = `${randomUUID()}.${IMAGE_EXTENSION[mime]}`
+      const upload = await supabase.storage.from(APP_IMAGE_BUCKET).upload(path, bytes, {
+        contentType: mime,
+        upsert: false,
+        cacheControl: '31536000',
+      })
+      if (upload.error) {
+        // The bucket comes with developer-platform-08.
+        if (/bucket not found/i.test(upload.error.message)) throw new NotConfiguredError()
+        throw Object.assign(new Error(upload.error.message), { code: 'STORAGE' })
+      }
+      return { url: supabase.storage.from(APP_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl }
+    },
 
     /** Into the first free position; the database's (app, position) key refuses a ninth. */
     async addScreenshot(ctx: TenancyContext, appId: string, input: AppScreenshotInput) {

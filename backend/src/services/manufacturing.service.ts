@@ -1,8 +1,25 @@
 // ============================================
 // backend/src/services/manufacturing.service.ts
 //
-// Bills of materials, work orders, and what a finished good actually cost to
-// make.
+// The manufacturing domain: a product's definition (BOM / recipe), a production
+// run, its history and its report — for any product of any trade.
+//
+// ONE CORE. The manufacturing page, a product's own page, the report and the
+// dashboard card all read and write through this file; the cost is computed by
+// `computeProductionCost` (@hisabche/validation) and nowhere else, and the two
+// multi-table writes are database functions (docs/manufacturing-01-migration.sql)
+// because supabase-js has no transaction.
+//
+// It owns no inventory and no ledger: stock moves through the costing core's
+// own functions, called from inside `manufacturing_complete`.
+//
+// ---------------------------------------------------------------------------
+// HISTORY (why the older comments below talk about `completeWorkOrder`)
+//
+// Completion used to be several separate calls from here — issue, receive,
+// update, insert movements — so a failure half way left components consumed
+// and nothing produced, and the movements named no warehouse. That method is
+// gone; `produce` replaces it.
 //
 // ---------------------------------------------------------------------------
 // WHAT CHANGED
@@ -25,9 +42,22 @@
 // of manufacturing accounting.
 // ============================================
 
+import {
+  asProductionColumns,
+  computeProductionCost,
+  type InvoiceGridRow,
+  type ProduceInput,
+  type ProductionCostLine,
+  type ProductionLabor,
+  type SaveProductionDefinition,
+} from '@hisabche/validation'
 import { supabase } from '../db'
-import { costing } from './inventory-costing'
+import { domainErrorCode } from './inventory-costing/costing.repository'
+import { stockEditWarehouse, type WarehouseRow } from './inventory/warehouse-summary.domain'
+import { BaseError } from '../errors/base.error'
 import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
+import { ValidationError } from '../errors/validation.error'
+import { invalidateMoneyCaches } from '../utils/money-cache'
 import { memoryCache } from '../utils/pagination'
 import type { TenancyContext } from './tenancy.service'
 import { logBusinessEvent } from './event-log.service'
@@ -38,11 +68,14 @@ import { logBusinessEvent } from './event-log.service'
 // it answered 42703 — not a PGRST200, so the embed fallback did not catch it —
 // and GET /api/boms returned 500 for every workspace. The column is added by
 // docs/phase-t4b-bom-notes-migration.sql (PENDING HUMAN CONFIRMATION).
-const BOM_COLUMNS = 'id, product_id, version, is_active, created_at, updated_at'
-const BOM_ITEM_COLUMNS = 'id, bom_id, raw_material_id, quantity, unit_cost'
+const BOM_COLUMNS =
+  'id, product_id, version, is_active, created_at, updated_at, currency, unit_cost, components_cost, labor_cost, other_cost'
+const BOM_ITEM_COLUMNS =
+  'id, bom_id, raw_material_id, quantity, unit_cost, kind, label, unit, line_total, position, cells'
 const WORK_ORDER_COLUMNS =
   'id, product_id, quantity, bom_id, status, start_date, end_date, created_at, updated_at'
-const WORK_ORDER_MINIMAL = 'id, product_id, quantity, status, start_date'
+const WORK_ORDER_MINIMAL =
+  'id, product_id, quantity, status, start_date, bom_id, bom_version, currency, unit_cost, total_cost, calculated_total, override_total, add_to_inventory, warehouse_id, produced_on, completed_at'
 
 // ---------------------------------------------------------------------------
 // T4 — WHY /manufacturing RETURNED 500
@@ -105,6 +138,257 @@ async function productsByIdInWorkspace(
 
   if (error) throw new DatabaseError('Failed to fetch products for manufacturing', error)
   return new Map((data ?? []).map((prod: NamedProduct) => [prod.id, prod]))
+}
+
+/** PostgREST/Postgres codes for «docs/manufacturing-01-migration.sql has not been run». */
+const MISSING_SCHEMA = new Set(['42703', '42P01', '42883', 'PGRST202', 'PGRST204', 'PGRST205'])
+
+/** Refusals that are about the state of a record, not the shape of the request. */
+const CONFLICT_CODES = new Set([
+  'WORK_ORDER_ALREADY_COMPLETED',
+  'WORK_ORDER_CANCELLED',
+  'INVENTORY_INSUFFICIENT_STOCK',
+])
+
+/**
+ * The manufacturing schema is not in this database yet. Said as itself — 503
+ * with a code the screen can explain — rather than as a 500 or, worse, as an
+ * empty list that reads «you have made nothing».
+ */
+export class ManufacturingNotConfiguredError extends BaseError {
+  constructor() {
+    super('MANUFACTURING_MIGRATION_PENDING', 503)
+    this.name = 'ManufacturingNotConfiguredError'
+  }
+}
+
+const RUN_COLUMNS =
+  'id, product_id, quantity, status, bom_id, bom_version, currency, components_cost, labor_cost, other_cost, unit_cost, calculated_total, override_total, override_reason, total_cost, actual_material_cost, labor_workers, labor_minutes, add_to_inventory, consume_components, warehouse_id, notes, produced_on, completed_at, completed_by'
+
+interface BomItemRow {
+  id: string
+  raw_material_id: string | null
+  quantity: number | string
+  unit_cost: number | string | null
+  kind: string | null
+  label: string | null
+  unit: string | null
+  line_total: number | string | null
+  cells: Record<string, string> | null
+}
+
+interface RunRow {
+  id: string
+  product_id: string
+  quantity: number | string
+  status: string
+  bom_id: string | null
+  bom_version: number | null
+  currency: string | null
+  components_cost: number | string | null
+  labor_cost: number | string | null
+  other_cost: number | string | null
+  unit_cost: number | string | null
+  calculated_total: number | string | null
+  override_total: number | string | null
+  override_reason: string | null
+  total_cost: number | string | null
+  actual_material_cost: number | string | null
+  labor_workers: number | string | null
+  labor_minutes: number | string | null
+  add_to_inventory: boolean | null
+  consume_components: boolean | null
+  warehouse_id: string | null
+  notes: string | null
+  produced_on: string | null
+  completed_at: string | null
+  completed_by: string | null
+}
+
+interface RunLineRow {
+  id: string
+  kind: 'component' | 'labor' | 'cost'
+  product_id: string | null
+  label: string | null
+  unit: string | null
+  quantity_per_unit: number | string
+  quantity: number | string
+  unit_cost: number | string
+  total: number | string
+  actual_cost: number | string | null
+  is_estimated: boolean | null
+  cells: Record<string, string> | null
+}
+
+export interface ProductionDefinition {
+  bomId: string
+  productId: string
+  version: number
+  currency: string | null
+  columns: unknown[]
+  rows: Array<{ id: string; productId?: string; values: Record<string, string> }>
+  otherCosts: Array<{ label: string; amount: number }>
+  labor: {
+    workers: number | null
+    minutes: number | null
+    hourlyRate: number | null
+    cost: number | null
+  }
+  notes: string
+  /** Per ONE unit, as the server derived it when the definition was saved. */
+  cost: { componentsCost: number; laborCost: number; otherCost: number; unitCost: number }
+  /** productId → today's buy price, for the stocked components. */
+  currentCosts: Record<string, number>
+  updatedAt: string | null
+}
+
+export interface ProductionRun {
+  id: string
+  productId: string
+  productName: string | null
+  quantity: number
+  currency: string | null
+  bomId: string | null
+  bomVersion: number | null
+  /** Per ONE unit. */
+  componentsCost: number
+  laborCost: number
+  otherCost: number
+  unitCost: number
+  /** The run. */
+  calculatedTotal: number
+  overrideTotal: number | null
+  overrideReason: string | null
+  totalCost: number
+  actualMaterialCost: number | null
+  laborWorkers: number | null
+  laborMinutes: number | null
+  addToInventory: boolean
+  consumeComponents: boolean
+  warehouseId: string | null
+  warehouseName: string | null
+  notes: string | null
+  producedOn: string | null
+  completedAt: string | null
+  completedBy: string | null
+}
+
+export interface ProductionRunLine {
+  id: string
+  kind: 'component' | 'labor' | 'cost'
+  productId: string | null
+  label: string
+  unit: string | null
+  quantityPerUnit: number
+  quantity: number
+  unitCost: number
+  total: number
+  actualCost: number | null
+  isEstimated: boolean
+  cells: Record<string, string>
+}
+
+export interface ProductionReport {
+  from: string
+  to: string
+  totals: {
+    runs: number
+    quantity: number
+    totalCost: number
+    componentsCost: number
+    laborCost: number
+    otherCost: number
+    laborMinutes: number
+  }
+  products: Array<{
+    productId: string
+    name: string
+    runs: number
+    quantity: number
+    totalCost: number
+    firstUnitCost: number
+    lastUnitCost: number
+  }>
+  materials: Array<{
+    key: string
+    productId: string | null
+    name: string
+    unit: string | null
+    quantity: number
+    value: number
+    runs: number
+    products: number
+    previousCost: number
+    currentCost: number
+    change: number
+    changePercent: number | null
+  }>
+}
+
+/** null stays null: «not recorded» is not zero. */
+function numberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function laborPayload(labor: ProductionLabor | undefined) {
+  return {
+    workers: labor?.workers ?? null,
+    minutes: labor?.minutes ?? null,
+    hourly_rate: labor?.hourlyRate ?? null,
+    cost_input: labor?.cost ?? null,
+  }
+}
+
+function linePayload(line: ProductionCostLine) {
+  return {
+    kind: line.kind,
+    product_id: line.productId,
+    label: line.label,
+    quantity: line.quantity,
+    unit: line.unit,
+    unit_cost: line.unitCost,
+    line_total: line.lineTotal,
+    position: line.position,
+    cells: line.cells,
+  }
+}
+
+function mapRun(
+  row: RunRow,
+  products: Map<string, NamedProduct>,
+  warehouses: Map<string, string>,
+): ProductionRun {
+  return {
+    id: row.id,
+    productId: row.product_id,
+    // null, not a placeholder: a product that is gone reads as absent.
+    productName: products.get(row.product_id)?.name ?? null,
+    quantity: Number(row.quantity) || 0,
+    currency: row.currency,
+    bomId: row.bom_id,
+    bomVersion: row.bom_version,
+    componentsCost: Number(row.components_cost) || 0,
+    laborCost: Number(row.labor_cost) || 0,
+    otherCost: Number(row.other_cost) || 0,
+    unitCost: Number(row.unit_cost) || 0,
+    calculatedTotal: Number(row.calculated_total) || 0,
+    overrideTotal: numberOrNull(row.override_total),
+    overrideReason: row.override_reason,
+    totalCost: Number(row.total_cost) || 0,
+    actualMaterialCost: numberOrNull(row.actual_material_cost),
+    laborWorkers: numberOrNull(row.labor_workers),
+    laborMinutes: numberOrNull(row.labor_minutes),
+    addToInventory: row.add_to_inventory === true,
+    consumeComponents: row.consume_components === true,
+    warehouseId: row.warehouse_id,
+    warehouseName: row.warehouse_id ? (warehouses.get(row.warehouse_id) ?? null) : null,
+    notes: row.notes,
+    producedOn: row.produced_on,
+    completedAt: row.completed_at,
+    completedBy: row.completed_by,
+  }
 }
 
 export class ManufacturingService {
@@ -203,111 +487,6 @@ export class ManufacturingService {
     }))
   }
 
-  async createBom(ctx: TenancyContext, data: any) {
-    const { workspaceId, userId } = ctx
-
-    const { data: bom, error } = await supabase
-      .from('boms')
-      .insert({
-        product_id: data.productId,
-        version: data.version ?? 1,
-        // Written only when supplied: until the notes migration runs, an
-        // always-present `notes` key made every BOM create fail with 42703.
-        ...(data.notes !== undefined ? { notes: data.notes } : {}),
-        is_active: data.isActive !== false,
-        workspace_id: workspaceId,
-        user_id: userId,
-      })
-      .select(BOM_COLUMNS)
-      .single()
-
-    if (error) throw new DatabaseError('Failed to create bill of materials', error)
-
-    const items = (data.items ?? []).map((item: any) => ({
-      bom_id: bom.id,
-      raw_material_id: item.rawMaterialId,
-      quantity: item.quantity,
-      unit_cost: item.unitCost ?? 0,
-      workspace_id: workspaceId,
-      user_id: userId,
-    }))
-
-    if (items.length > 0) {
-      const { error: itemsError } = await supabase.from('bom_items').insert(items)
-      if (itemsError) {
-        await supabase.from('boms').delete().eq('id', bom.id).eq('workspace_id', workspaceId)
-        throw new DatabaseError('Failed to create BOM items', itemsError)
-      }
-    }
-
-    await this.invalidate(workspaceId)
-    return bom
-  }
-
-  async updateBom(ctx: TenancyContext, id: string, data: any) {
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (data.version !== undefined) updates.version = data.version
-    if (data.notes !== undefined) updates.notes = data.notes
-    if (data.isActive !== undefined) updates.is_active = data.isActive
-
-    const { data: bom, error } = await supabase
-      .from('boms')
-      .update(updates)
-      .eq('id', id)
-      .eq('workspace_id', ctx.workspaceId)
-      .select(BOM_COLUMNS)
-      .single()
-
-    if (error) throw new DatabaseError('Failed to update bill of materials', error)
-
-    if (data.items) {
-      await supabase.from('bom_items').delete().eq('bom_id', id).eq('workspace_id', ctx.workspaceId)
-
-      const items = data.items.map((item: any) => ({
-        bom_id: id,
-        raw_material_id: item.rawMaterialId,
-        quantity: item.quantity,
-        unit_cost: item.unitCost ?? 0,
-        workspace_id: ctx.workspaceId,
-        user_id: ctx.userId,
-      }))
-
-      if (items.length > 0) {
-        const { error: itemsError } = await supabase.from('bom_items').insert(items)
-        if (itemsError) throw new DatabaseError('Failed to replace BOM items', itemsError)
-      }
-    }
-
-    await this.invalidate(ctx.workspaceId)
-    return bom
-  }
-
-  async getBom(ctx: TenancyContext, id: string) {
-    const cacheKey = this.key(ctx.workspaceId, 'bom', id)
-
-    const cached = await memoryCache.get(cacheKey)
-    if (cached) return cached
-
-    const { data, error } = await supabase
-      .from('boms')
-      .select(
-        `
-        ${BOM_COLUMNS},
-        product:products(id, name, unit),
-        items:bom_items(${BOM_ITEM_COLUMNS}, raw_material:products(id, name, unit, buy_price))
-      `,
-      )
-      .eq('id', id)
-      .eq('workspace_id', ctx.workspaceId)
-      .maybeSingle()
-
-    if (error) throw new DatabaseError('Failed to fetch bill of materials', error)
-    if (!data) throw new NotFoundError('Bill of materials')
-
-    await memoryCache.set(cacheKey, data, 300)
-    return data
-  }
-
   // ─── Work orders ─────────────────────────────────────────────
 
   async listWorkOrders(ctx: TenancyContext, status?: string) {
@@ -349,7 +528,7 @@ export class ManufacturingService {
   private async listWorkOrdersWithoutEmbeds(ctx: TenancyContext, status?: string) {
     let orderQuery = supabase
       .from('work_orders')
-      .select('id, product_id, quantity, status, start_date, bom_id')
+      .select(WORK_ORDER_MINIMAL)
       .eq('workspace_id', ctx.workspaceId)
       .order('created_at', { ascending: false })
 
@@ -386,7 +565,16 @@ export class ManufacturingService {
     }))
   }
 
-  async createWorkOrder(ctx: TenancyContext, data: any) {
+  async createWorkOrder(
+    ctx: TenancyContext,
+    data: {
+      productId: string
+      quantity: number
+      bomId?: string | undefined
+      startDate?: string | undefined
+      endDate?: string | undefined
+    },
+  ) {
     const { workspaceId, userId } = ctx
 
     const { data: workOrder, error } = await supabase
@@ -421,9 +609,24 @@ export class ManufacturingService {
     return workOrder
   }
 
-  async updateWorkOrder(ctx: TenancyContext, id: string, data: any) {
+  async updateWorkOrder(
+    ctx: TenancyContext,
+    id: string,
+    data: {
+      status?: string | undefined
+      quantity?: number | undefined
+      startDate?: string | undefined
+      endDate?: string | undefined
+    },
+  ) {
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (data.status !== undefined) updates.status = data.status
+    if (data.status !== undefined) {
+      // ⚠️ «completed» is not a status a PATCH may set: it used to be, and it
+      // marked an order done with nothing consumed and nothing produced.
+      // Completion is `produce`, which does the work the word claims.
+      if (data.status === 'completed') throw new ValidationError('WORK_ORDER_COMPLETE_VIA_PRODUCE')
+      updates.status = data.status
+    }
     if (data.quantity !== undefined) updates.quantity = data.quantity
     if (data.startDate !== undefined) updates.start_date = data.startDate
     if (data.endDate !== undefined) updates.end_date = data.endDate
@@ -433,198 +636,543 @@ export class ManufacturingService {
       .update(updates)
       .eq('id', id)
       .eq('workspace_id', ctx.workspaceId)
+      // A finished run is history; it is not edited.
+      .neq('status', 'completed')
       .select(WORK_ORDER_COLUMNS)
-      .single()
+      .maybeSingle()
 
     if (error) throw new DatabaseError('Failed to update work order', error)
+    if (!workOrder) throw new ConflictError('WORK_ORDER_NOT_EDITABLE')
 
     await this.invalidate(ctx.workspaceId)
     return workOrder
   }
 
-  async getWorkOrder(ctx: TenancyContext, id: string) {
-    const cacheKey = this.key(ctx.workspaceId, 'work-order', id)
-
-    const cached = await memoryCache.get(cacheKey)
-    if (cached) return cached
-
-    const { data, error } = await supabase
-      .from('work_orders')
-      .select(
-        `
-        ${WORK_ORDER_COLUMNS},
-        product:products(id, name, unit),
-        bom:boms(id, version, items:bom_items(${BOM_ITEM_COLUMNS}))
-      `,
-      )
-      .eq('id', id)
-      .eq('workspace_id', ctx.workspaceId)
-      .maybeSingle()
-
-    if (error) throw new DatabaseError('Failed to fetch work order', error)
-    if (!data) throw new NotFoundError('Work order')
-
-    await memoryCache.set(cacheKey, data, 300)
-    return data
-  }
+  // ─── The definition (BOM / recipe) ───────────────────────────
 
   /**
-   * The work order is finished: consume the components, produce the goods.
+   * A product's active definition, shaped for the editor: the grid's columns
+   * and rows exactly as they were saved, the other costs, the labour, and the
+   * cost the SERVER derived from them.
    *
-   * The order matters and is the whole of manufacturing accounting:
-   *
-   *   1. ISSUE each component through the costing core, at what the consumed
-   *      layers actually cost.
-   *   2. RECEIVE the finished goods as a cost layer worth exactly that total,
-   *      divided across the units made.
-   *
-   * Value is conserved. The version this replaces did neither: the finished
-   * quantity was added to stock with no cost behind it, and the components
-   * were never consumed — so making ten units created inventory value out of
-   * nothing and left the raw materials on the shelf.
-   *
-   * Both halves are idempotent per work order, so a retry after a lost
-   * response neither consumes the components twice nor produces the goods
-   * twice.
+   * `currentCosts` is each stocked component's buy price TODAY, beside the cost
+   * the definition was saved with — so «this material got dearer» is visible
+   * where the definition is edited, and the person decides whether to take it.
    */
-  async completeWorkOrder(ctx: TenancyContext, id: string) {
-    const { workspaceId } = ctx
-
-    const { data: workOrder, error } = await supabase
-      .from('work_orders')
+  async getDefinition(
+    ctx: TenancyContext,
+    productId: string,
+  ): Promise<ProductionDefinition | null> {
+    const { data: bom, error } = await supabase
+      .from('boms')
       .select(
-        `
-        id, product_id, quantity, status, bom_id,
-        bom:boms(id, items:bom_items(id, raw_material_id, quantity))
-      `,
+        'id, product_id, version, currency, columns, notes, labor_workers, labor_minutes, labor_hourly_rate, labor_cost_input, components_cost, labor_cost, other_cost, unit_cost, updated_at',
       )
-      .eq('id', id)
-      .eq('workspace_id', workspaceId)
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('product_id', productId)
+      .eq('is_active', true)
+      .order('version', { ascending: false })
+      .limit(1)
       .maybeSingle()
 
-    if (error) throw new DatabaseError('Failed to fetch work order', error)
-    if (!workOrder) throw new NotFoundError('Work order')
-    if (workOrder.status === 'completed') throw new ConflictError('WORK_ORDER_ALREADY_COMPLETED')
+    if (error) throw this.readFailure('Failed to fetch the production definition', error)
+    if (!bom) return null
 
-    const produced = Number(workOrder.quantity) || 0
-    if (produced <= 0) throw new ConflictError('WORK_ORDER_QUANTITY_INVALID')
+    const { data: items, error: itemError } = await supabase
+      .from('bom_items')
+      .select(BOM_ITEM_COLUMNS)
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('bom_id', bom.id)
+      .order('position', { ascending: true })
+    if (itemError) throw this.readFailure('Failed to fetch the definition lines', itemError)
 
-    const today = new Date().toISOString().slice(0, 10)
-    const components = ((workOrder as any).bom?.items ?? []) as Array<{
-      id: string
-      raw_material_id: string
-      quantity: number
-    }>
-
-    // ─── 1. Consume the components ──────────────────────────
-    let materialCost = 0
-
-    for (const component of components) {
-      const required = (Number(component.quantity) || 0) * produced
-      if (!component.raw_material_id || required <= 0) continue
-
-      const result = await costing.recordIssue(ctx, {
-        productId: component.raw_material_id,
-        quantity: required,
-        entryDate: today,
-        consumerType: 'adjustment',
-        consumerId: id,
-        consumerLine: component.id,
-      })
-
-      materialCost += result.totalCost
-    }
-
-    // ─── 2. Produce the finished goods ──────────────────────
-    // Priced at what the components cost, per unit made. A finished good
-    // costing zero because its BOM was empty is a real answer — it says the
-    // bill of materials has not been filled in — and it is left visible
-    // rather than papered over with a guess.
-    await costing.recordReceipt(ctx, {
-      productId: workOrder.product_id,
-      quantity: produced,
-      unitCost: materialCost / produced,
-      entryDate: today,
-      sourceType: 'adjustment',
-      sourceId: id,
-      sourceLine: 'finished-goods',
-    })
-
-    const { error: updateError } = await supabase
-      .from('work_orders')
-      .update({
-        status: 'completed',
-        end_date: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .eq('workspace_id', workspaceId)
-
-    if (updateError) throw new DatabaseError('Failed to update work order', updateError)
-
-    // ─── PHASE C — production is two stock movements, not a recount ──────────
-    //
-    // This used to read the cost layers' on-hand figure and copy it onto
-    // `products.quantity`. Like the purchase-receipt path, it wrote NO movement
-    // row, so `stock_movements` — the source of truth for inventory — knew
-    // nothing about anything ever being manufactured or consumed.
-    //
-    // Production is two movements per run, and they must both exist or the
-    // value in the warehouse changes out of nothing (lesson 16): the raw
-    // materials LEAVE, and the finished goods ARRIVE.
-    //
-    // `products.quantity` is not written here any more; the projection trigger
-    // maintains it from these rows.
-    const movements: Record<string, unknown>[] = []
-
-    if (workOrder.product_id) {
-      movements.push({
-        product_id: workOrder.product_id,
-        type: 'production',
-        quantity: produced,
-        reference_type: 'work_order',
-        reference_id: id,
-        workspace_id: workspaceId,
-        user_id: ctx.userId,
-      })
-    }
-
-    for (const component of components) {
-      // Same guard and same arithmetic as the costing loop above — a component
-      // that was issued must be a component that moved, and the two figures
-      // disagreeing is exactly the drift this phase exists to remove.
-      const required = (Number(component.quantity) || 0) * produced
-      if (!component.raw_material_id || required <= 0) continue
-
-      movements.push({
-        product_id: component.raw_material_id,
-        type: 'consumption',
-        // Negative: these left the shelf to become the product above.
-        quantity: -required,
-        reference_type: 'work_order',
-        reference_id: id,
-        workspace_id: workspaceId,
-        user_id: ctx.userId,
-      })
-    }
-
-    if (movements.length > 0) {
-      const { error: movementError } = await supabase.from('stock_movements').insert(movements)
-
-      if (movementError) {
-        throw new DatabaseError('Failed to record stock movements for work order', movementError)
+    const lines = (items ?? []) as BomItemRow[]
+    const componentIds = lines.map((line) => line.raw_material_id).filter(Boolean) as string[]
+    const currentCosts: Record<string, number> = {}
+    const names = new Map<string, string>()
+    if (componentIds.length > 0) {
+      const { data: products, error: productError } = await supabase
+        .from('products')
+        .select('id, name, buy_price')
+        .eq('workspace_id', ctx.workspaceId)
+        .in('id', [...new Set(componentIds)])
+      if (productError) throw new DatabaseError('Failed to fetch component prices', productError)
+      for (const product of products ?? []) {
+        currentCosts[product.id] = Number(product.buy_price) || 0
+        names.set(product.id, product.name)
       }
     }
 
+    return {
+      bomId: bom.id,
+      productId: bom.product_id,
+      version: Number(bom.version) || 1,
+      currency: bom.currency ?? null,
+      columns: Array.isArray(bom.columns) ? bom.columns : [],
+      rows: lines
+        .filter((line) => line.kind !== 'cost')
+        .map((line) => ({
+          id: line.id,
+          ...(line.raw_material_id ? { productId: line.raw_material_id } : {}),
+          // A definition written before the grid existed has no cells; its
+          // three numbers are the row.
+          values:
+            line.cells && Object.keys(line.cells).length > 0
+              ? line.cells
+              : {
+                  description: line.label || names.get(line.raw_material_id ?? '') || '',
+                  quantity: String(Number(line.quantity) || 0),
+                  unitPrice: String(Number(line.unit_cost) || 0),
+                  ...(line.unit ? { unit: line.unit } : {}),
+                },
+        })),
+      otherCosts: lines
+        .filter((line) => line.kind === 'cost')
+        .map((line) => ({ label: line.label ?? '', amount: Number(line.line_total) || 0 })),
+      labor: {
+        workers: numberOrNull(bom.labor_workers),
+        minutes: numberOrNull(bom.labor_minutes),
+        hourlyRate: numberOrNull(bom.labor_hourly_rate),
+        cost: numberOrNull(bom.labor_cost_input),
+      },
+      notes: bom.notes ?? '',
+      cost: {
+        componentsCost: Number(bom.components_cost) || 0,
+        laborCost: Number(bom.labor_cost) || 0,
+        otherCost: Number(bom.other_cost) || 0,
+        unitCost: Number(bom.unit_cost) || 0,
+      },
+      currentCosts,
+      updatedAt: bom.updated_at ?? null,
+    }
+  }
+
+  /**
+   * Save a product's definition. The cost is derived HERE from the rows — a
+   * total in the request is not read — and written by one database function,
+   * which revises instead of editing when a run already used the definition.
+   */
+  async saveDefinition(ctx: TenancyContext, input: SaveProductionDefinition) {
+    const cost = computeProductionCost({
+      currency: input.currency,
+      columns: asProductionColumns(input.columns),
+      rows: input.rows as InvoiceGridRow[],
+      rates: input.rates,
+      otherCosts: input.otherCosts,
+      labor: input.labor,
+      quantity: 1,
+    })
+
+    const { data, error } = await supabase.rpc('manufacturing_save_bom', {
+      p_workspace_id: ctx.workspaceId,
+      p_user_id: ctx.userId,
+      p_payload: {
+        product_id: input.productId,
+        bom_id: input.bomId ?? null,
+        currency: input.currency,
+        columns: input.columns,
+        notes: input.notes ?? null,
+        labor: laborPayload(input.labor),
+        components_cost: cost.componentsCost,
+        labor_cost: cost.laborCost,
+        other_cost: cost.otherCost,
+        unit_cost: cost.unitCost,
+        lines: cost.lines.map(linePayload),
+      },
+    })
+    if (error) throw this.writeFailure('Failed to save the production definition', error)
+
+    const result = (data ?? {}) as { bom_id: string; version: number; revised: boolean }
+    await this.invalidate(ctx.workspaceId)
+
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'bom',
+      entityId: result.bom_id,
+      action: result.revised ? 'revised' : 'saved',
+      title: result.revised ? 'فرمول ساخت بازنگری شد' : 'فرمول ساخت ذخیره شد',
+      metadata: { productId: input.productId, version: result.version, unitCost: cost.unitCost },
+      notify: false,
+    }).catch((err) => console.error('[ManufacturingService] logBusinessEvent failed:', err))
+
+    return { bomId: result.bom_id, version: result.version, revised: result.revised, cost }
+  }
+
+  // ─── Production ──────────────────────────────────────────────
+
+  /**
+   * Record one production run.
+   *
+   *   authorise (route) → validate → cost (server) → definition (optional)
+   *   → manufacturing_complete: record + snapshot + components out + goods in,
+   *     one transaction, through the costing core.
+   *
+   * ⚠️ IDEMPOTENT. A retry with the same key returns the run it already made;
+   * the key is checked BEFORE the definition is touched, so a retry cannot
+   * write a second revision either.
+   */
+  async produce(ctx: TenancyContext, input: ProduceInput) {
+    const { workspaceId, userId } = ctx
+
+    const { data: existing, error: existingError } = await supabase
+      .from('work_orders')
+      .select('id, quantity, total_cost')
+      .eq('workspace_id', workspaceId)
+      .eq('idempotency_key', input.idempotencyKey)
+      .maybeSingle()
+    if (existingError) throw this.readFailure('Failed to check the production run', existingError)
+    if (existing) {
+      return {
+        status: 'already_completed' as const,
+        workOrderId: existing.id as string,
+        quantity: Number(existing.quantity) || 0,
+        totalCost: Number(existing.total_cost) || 0,
+      }
+    }
+
+    const cost = computeProductionCost({
+      currency: input.currency,
+      columns: asProductionColumns(input.columns),
+      rows: input.rows as InvoiceGridRow[],
+      rates: input.rates,
+      otherCosts: input.otherCosts,
+      labor: input.labor,
+      quantity: input.quantity,
+      overrideTotal: input.overrideTotal,
+    })
+
+    // Where the goods land. The rule is the product page's own
+    // (stockEditWarehouse): the named warehouse, the only one, or — with
+    // several and none named — a refusal. Never a guess, and never «no
+    // warehouse» for a business that has them.
+    const warehouseId = input.addToInventory
+      ? await this.inventoryWarehouse(workspaceId, input.warehouseId)
+      : null
+
+    let bomId = input.bomId ?? null
+    let bomVersion: number | null = null
+    if (input.saveDefinition) {
+      const saved = await this.saveDefinition(ctx, {
+        productId: input.productId,
+        currency: input.currency,
+        columns: input.columns,
+        rows: input.rows,
+        rates: input.rates,
+        otherCosts: input.otherCosts,
+        labor: input.labor,
+        ...(input.notes !== undefined ? { notes: input.notes } : {}),
+        ...(input.bomId ? { bomId: input.bomId } : {}),
+      })
+      bomId = saved.bomId
+      bomVersion = saved.version
+    } else if (bomId) {
+      const { data: bom, error: bomError } = await supabase
+        .from('boms')
+        .select('version')
+        .eq('workspace_id', workspaceId)
+        .eq('id', bomId)
+        .maybeSingle()
+      if (bomError) throw this.readFailure('Failed to read the definition', bomError)
+      if (!bom) throw new NotFoundError('Bill of materials')
+      bomVersion = Number(bom.version) || null
+    }
+
+    const { data, error } = await supabase.rpc('manufacturing_complete', {
+      p_workspace_id: workspaceId,
+      p_user_id: userId,
+      p_payload: {
+        idempotency_key: input.idempotencyKey,
+        work_order_id: input.workOrderId ?? null,
+        product_id: input.productId,
+        bom_id: bomId,
+        bom_version: bomVersion,
+        quantity: cost.quantity,
+        currency: input.currency,
+        columns: input.columns,
+        notes: input.notes ?? null,
+        produced_on: input.producedOn ?? new Date().toISOString().slice(0, 10),
+        labor: laborPayload(input.labor),
+        components_cost: cost.componentsCost,
+        labor_cost: cost.laborCost,
+        other_cost: cost.otherCost,
+        unit_cost: cost.unitCost,
+        calculated_total: cost.calculatedTotal,
+        override_total: cost.overrideTotal,
+        override_reason: cost.overrideTotal !== null ? (input.overrideReason ?? null) : null,
+        total_cost: cost.total,
+        add_to_inventory: input.addToInventory,
+        consume_components: input.addToInventory && input.consumeComponents,
+        warehouse_id: warehouseId,
+        lines: cost.lines.map(linePayload),
+      },
+    })
+    if (error) throw this.writeFailure('Failed to record the production run', error)
+
+    const result = (data ?? {}) as Record<string, unknown>
+    const workOrderId = String(result.work_order_id)
+
     await this.invalidate(workspaceId)
+    // Stock and stock value changed: the same caches a sale or a purchase clears.
+    if (input.addToInventory) await invalidateMoneyCaches(workspaceId)
+
+    logBusinessEvent({
+      userId,
+      workspaceId,
+      entityType: 'work_order',
+      entityId: workOrderId,
+      action: 'completed',
+      title: 'تولید ثبت شد',
+      metadata: {
+        productId: input.productId,
+        quantity: cost.quantity,
+        totalCost: cost.total,
+        addToInventory: input.addToInventory,
+        warehouseId,
+      },
+      notify: false,
+    }).catch((err) => console.error('[ManufacturingService] logBusinessEvent failed:', err))
+
+    if (cost.overrideTotal !== null) {
+      // Its own audit row: «who changed the figure, from what, to what, why»
+      // must be findable without reading every production event.
+      logBusinessEvent({
+        userId,
+        workspaceId,
+        entityType: 'work_order',
+        entityId: workOrderId,
+        action: 'cost_overridden',
+        title: 'جمع بهای تولید دستی تغییر کرد',
+        metadata: {
+          calculatedTotal: cost.calculatedTotal,
+          overrideTotal: cost.overrideTotal,
+          reason: input.overrideReason ?? null,
+        },
+        notify: false,
+      }).catch((err) => console.error('[ManufacturingService] logBusinessEvent failed:', err))
+    }
 
     return {
-      success: true,
-      workOrderId: id,
-      produced,
-      materialCost: Math.round(materialCost * 100) / 100,
-      unitCost: Math.round((materialCost / produced) * 100) / 100,
+      status: (result.status as 'completed' | 'already_completed') ?? 'completed',
+      workOrderId,
+      quantity: cost.quantity,
+      totalCost: cost.total,
+      unitCost: cost.effectiveUnitCost,
+      actualMaterialCost: numberOrNull(result.actual_material_cost),
+      bomId,
+      bomVersion,
     }
+  }
+
+  private async inventoryWarehouse(
+    workspaceId: string,
+    requested: string | null | undefined,
+  ): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('warehouses')
+      .select('id, name, location, is_active')
+      .eq('workspace_id', workspaceId)
+      .is('deleted_at', null)
+    if (error) throw new DatabaseError('Failed to read the warehouses', error)
+    const choice = stockEditWarehouse((data ?? []) as WarehouseRow[], requested, 'edit')
+    if ('refusal' in choice) throw new ValidationError(choice.refusal)
+    return choice.warehouseId
+  }
+
+  // ─── History ─────────────────────────────────────────────────
+
+  /** Completed runs, newest first, a page at a time. */
+  async listRuns(
+    ctx: TenancyContext,
+    options: { productId?: string | undefined; limit: number; offset: number },
+  ): Promise<{ runs: ProductionRun[]; total: number }> {
+    let query = supabase
+      .from('work_orders')
+      .select(RUN_COLUMNS, { count: 'exact' })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false, nullsFirst: false })
+      .range(options.offset, options.offset + options.limit - 1)
+    if (options.productId) query = query.eq('product_id', options.productId)
+
+    const { data, error, count } = await query
+    if (error) throw this.readFailure('Failed to fetch production history', error)
+
+    const rows = (data ?? []) as unknown as RunRow[]
+    const [products, warehouses] = await Promise.all([
+      productsByIdInWorkspace(
+        ctx.workspaceId,
+        rows.map((row) => row.product_id),
+      ),
+      this.warehouseNames(
+        ctx.workspaceId,
+        rows.map((row) => row.warehouse_id).filter(Boolean) as string[],
+      ),
+    ])
+
+    return {
+      runs: rows.map((row) => mapRun(row, products, warehouses)),
+      total: count ?? rows.length,
+    }
+  }
+
+  /** One run with its snapshot lines — what it was made of, on that day. */
+  async getRun(
+    ctx: TenancyContext,
+    id: string,
+  ): Promise<ProductionRun & { lines: ProductionRunLine[] }> {
+    const { data, error } = await supabase
+      .from('work_orders')
+      .select(RUN_COLUMNS)
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', id)
+      .maybeSingle()
+    if (error) throw this.readFailure('Failed to fetch the production run', error)
+    if (!data) throw new NotFoundError('Work order')
+
+    const row = data as unknown as RunRow
+    const { data: lines, error: lineError } = await supabase
+      .from('work_order_lines')
+      .select(
+        'id, kind, position, product_id, label, unit, quantity_per_unit, quantity, unit_cost, total, actual_cost, is_estimated, cells',
+      )
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('work_order_id', id)
+      .order('position', { ascending: true })
+    if (lineError) throw this.readFailure('Failed to fetch the production lines', lineError)
+
+    const lineRows = (lines ?? []) as RunLineRow[]
+    const [products, warehouses] = await Promise.all([
+      productsByIdInWorkspace(ctx.workspaceId, [
+        row.product_id,
+        ...(lineRows.map((line) => line.product_id).filter(Boolean) as string[]),
+      ]),
+      this.warehouseNames(ctx.workspaceId, row.warehouse_id ? [row.warehouse_id] : []),
+    ])
+
+    return {
+      ...mapRun(row, products, warehouses),
+      lines: lineRows.map((line) => ({
+        id: line.id,
+        kind: line.kind,
+        productId: line.product_id,
+        label: line.label || products.get(line.product_id ?? '')?.name || '',
+        unit: line.unit,
+        quantityPerUnit: Number(line.quantity_per_unit) || 0,
+        quantity: Number(line.quantity) || 0,
+        unitCost: Number(line.unit_cost) || 0,
+        total: Number(line.total) || 0,
+        actualCost: numberOrNull(line.actual_cost),
+        isEstimated: line.is_estimated === true,
+        cells: line.cells ?? {},
+      })),
+    }
+  }
+
+  private async warehouseNames(workspaceId: string, ids: readonly string[]) {
+    const unique = [...new Set(ids)]
+    if (unique.length === 0) return new Map<string, string>()
+    const { data, error } = await supabase
+      .from('warehouses')
+      .select('id, name')
+      .eq('workspace_id', workspaceId)
+      .in('id', unique)
+    if (error) throw new DatabaseError('Failed to fetch warehouses for manufacturing', error)
+    return new Map((data ?? []).map((row: { id: string; name: string }) => [row.id, row.name]))
+  }
+
+  // ─── Reporting ───────────────────────────────────────────────
+
+  /**
+   * What was made in a period and what it cost, aggregated in the database
+   * from the snapshot lines. Not cached on failure, and a failure is not an
+   * empty report.
+   */
+  async report(
+    ctx: TenancyContext,
+    range: { from: string; to: string; productId?: string | undefined },
+  ): Promise<ProductionReport> {
+    const cacheKey = this.key(
+      ctx.workspaceId,
+      'report',
+      range.from,
+      range.to,
+      range.productId ?? 'all',
+    )
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached as ProductionReport
+
+    const { data, error } = await supabase.rpc('manufacturing_report', {
+      p_workspace_id: ctx.workspaceId,
+      p_from: range.from,
+      p_to: range.to,
+      p_product_id: range.productId ?? null,
+    })
+    if (error) throw this.readFailure('Failed to build the manufacturing report', error)
+
+    const raw = (data ?? {}) as Record<string, any>
+    const totals = (raw.totals ?? {}) as Record<string, unknown>
+    const report: ProductionReport = {
+      from: range.from,
+      to: range.to,
+      totals: {
+        runs: Number(totals.runs) || 0,
+        quantity: Number(totals.quantity) || 0,
+        totalCost: Number(totals.total_cost) || 0,
+        componentsCost: Number(totals.components_cost) || 0,
+        laborCost: Number(totals.labor_cost) || 0,
+        otherCost: Number(totals.other_cost) || 0,
+        laborMinutes: Number(totals.labor_minutes) || 0,
+      },
+      products: (Array.isArray(raw.products) ? raw.products : []).map(
+        (row: Record<string, unknown>) => ({
+          productId: String(row.product_id),
+          name: (row.name as string | null) ?? '',
+          runs: Number(row.runs) || 0,
+          quantity: Number(row.quantity) || 0,
+          totalCost: Number(row.total_cost) || 0,
+          firstUnitCost: Number(row.first_unit_cost) || 0,
+          lastUnitCost: Number(row.last_unit_cost) || 0,
+        }),
+      ),
+      materials: (Array.isArray(raw.materials) ? raw.materials : []).map(
+        (row: Record<string, unknown>) => ({
+          key: String(row.key),
+          productId: (row.product_id as string | null) ?? null,
+          name: (row.name as string | null) ?? '',
+          unit: (row.unit as string | null) ?? null,
+          quantity: Number(row.quantity) || 0,
+          value: Number(row.value) || 0,
+          runs: Number(row.runs) || 0,
+          products: Number(row.products) || 0,
+          previousCost: Number(row.previous_cost) || 0,
+          currentCost: Number(row.current_cost) || 0,
+          change: Number(row.change) || 0,
+          // null = there was no previous cost to compare with — not «0% change».
+          changePercent: numberOrNull(row.change_percent),
+        }),
+      ),
+    }
+
+    await memoryCache.set(cacheKey, report, 60)
+    return report
+  }
+
+  // ─── Errors ──────────────────────────────────────────────────
+
+  /** The schema of docs/manufacturing-01-migration.sql is not there yet. */
+  private readFailure(message: string, error: { code?: string; message?: string }) {
+    if (MISSING_SCHEMA.has(error.code ?? '')) return new ManufacturingNotConfiguredError()
+    return new DatabaseError(message, error)
+  }
+
+  /** A refusal raised by the database function is the caller's to read. */
+  private writeFailure(message: string, error: { code?: string; message?: string }) {
+    if (MISSING_SCHEMA.has(error.code ?? '')) return new ManufacturingNotConfiguredError()
+    const code = domainErrorCode(error)
+    if (!code) return new DatabaseError(message, error)
+    if (CONFLICT_CODES.has(code)) return new ConflictError(code)
+    return new ValidationError(code)
   }
 
   async getWorkOrderStats(ctx: TenancyContext) {
@@ -636,7 +1184,7 @@ export class ManufacturingService {
     const countFor = (status: string) =>
       supabase
         .from('work_orders')
-        .select('id', { count: 'estimated', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('workspace_id', ctx.workspaceId)
         .eq('status', status)
 

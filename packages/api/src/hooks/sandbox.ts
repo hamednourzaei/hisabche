@@ -52,3 +52,15 @@ export function useCreateSandbox() {
       qc.invalidateQueries({ queryKey: sandboxKeys.status(getActiveWorkspaceId() ?? '') }),
   })
 }
+
+/**
+ * Start the ACTIVE sandbox again, empty. The server retires it and answers
+ * with a new one (nothing is deleted); the caller switches to the new id.
+ * Refused for anything that is not a sandbox.
+ */
+export function useResetSandbox() {
+  return useMutation({
+    mutationFn: async () =>
+      (await apiClient.post('/developer/sandbox/reset')).data as { id: string; name: string },
+  })
+}

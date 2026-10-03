@@ -32,6 +32,8 @@ const REFUSALS: Array<[SandboxErrorCode, number]> = [
   ['SANDBOX_OF_SANDBOX', 409],
   ['SANDBOX_NOT_MEMBER', 403],
   ['SANDBOX_PARENT_NOT_FOUND', 404],
+  ['SANDBOX_RESET_NOT_A_SANDBOX', 409],
+  ['SANDBOX_NOT_FOUND', 404],
 ]
 
 function check(error: { code?: string; message?: string } | null): void {
@@ -112,6 +114,26 @@ export function createSandboxService(
       if (!row) throw new Error('create_sandbox_workspace returned no row')
       // The workspace list is cached per user; the new one must be in it now.
       if (row.created) await workspaces.invalidateUserCache(ctx.userId)
+      return row
+    },
+
+    /**
+     * Start the active sandbox again, empty — by RETIRING it and making a new
+     * one (developer-platform-08). Nothing is deleted: the old sandbox's keys
+     * are revoked, its members removed and its link to the business cut, so
+     * it is unreachable. The database refuses anything that is not a sandbox.
+     * Returns the NEW sandbox; the caller must switch to it.
+     */
+    async reset(ctx: TenancyContext): Promise<{ id: string; name: string }> {
+      const { data, error } = await supabase.rpc('reset_sandbox_workspace', {
+        p_sandbox: ctx.workspaceId,
+        p_user: ctx.userId,
+      })
+      check(error)
+      const row = ((data ?? []) as Array<{ id: string; name: string }>)[0]
+      if (!row) throw new Error('reset_sandbox_workspace returned no row')
+      // The retired sandbox left this person's list and a new one joined it.
+      await workspaces.invalidateUserCache(ctx.userId)
       return row
     },
   }

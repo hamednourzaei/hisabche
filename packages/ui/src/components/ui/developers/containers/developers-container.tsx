@@ -40,6 +40,7 @@ import {
   useDeleteOAuthApp,
   useAppScreenshots,
   useAddAppScreenshot,
+  useUploadAppImage,
   useRemoveAppScreenshot,
   useAppStats,
   usePublisherProfile,
@@ -50,6 +51,7 @@ import {
   useApplyAppUpdate,
   useSandboxStatus,
   useCreateSandbox,
+  useResetSandbox,
 } from '@hisabche/api'
 import { localizePath } from '@hisabche/ui-contract'
 
@@ -58,6 +60,7 @@ import { useToast } from '../../toast-provider'
 import { useRouteLang } from '../../../../hooks/use-locale-push'
 import { oauthErrorMessage } from '../../../../lib/oauth-labels'
 import { enterWorkspace } from '../../../../lib/enter-workspace'
+import { fileToBase64 } from '../../wallet/wallet-format'
 import { sandboxErrorMessage } from '../../../../lib/sandbox-labels'
 import { DevelopersView, type SectionState } from '../developers-view'
 
@@ -125,6 +128,7 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
   const submitVersion = useSubmitAppVersion()
   const screenshots = useAppScreenshots(managedAppId)
   const addScreenshot = useAddAppScreenshot()
+  const uploadImage = useUploadAppImage()
   const removeScreenshot = useRemoveAppScreenshot()
   const appStats = useAppStats(managedAppId, statsDays)
   const publisher = usePublisherProfile()
@@ -138,6 +142,7 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
 
   const sandboxStatus = useSandboxStatus()
   const createSandbox = useCreateSandbox()
+  const resetSandbox = useResetSandbox()
 
   // Where the SDK is served and which API it calls. Read in an effect, never
   // during render (hydration). A packaged desktop app runs from file://, so
@@ -317,9 +322,20 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
         state: sectionState(sandboxStatus.isLoading, sandboxStatus.error),
         status: sandboxStatus.data ?? null,
         creating: createSandbox.isPending,
-        error: createSandbox.error
-          ? sandboxErrorMessage(t, createSandbox.error, t('developer.actionFailed'))
-          : null,
+        error:
+          (createSandbox.error ?? resetSandbox.error)
+            ? sandboxErrorMessage(
+                t,
+                createSandbox.error ?? resetSandbox.error,
+                t('developer.actionFailed'),
+              )
+            : null,
+        resetting: resetSandbox.isPending,
+        onReset: () =>
+          resetSandbox.mutate(undefined, {
+            // The old sandbox is retired; carry on in the new one.
+            onSuccess: (out) => enterWorkspace(out.id, out.name),
+          }),
         onCreate: () =>
           createSandbox.mutate(undefined, {
             // Straight in: the reason for making one is to use it.
@@ -416,6 +432,16 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
               screenshotsState: sectionState(screenshots.isLoading, screenshots.error),
               screenshots: screenshots.data ?? [],
               addingScreenshot: addScreenshot.isPending,
+              uploadingImage: uploadImage.isPending,
+              onUploadImage: async (file) => {
+                try {
+                  const base64 = await fileToBase64(file)
+                  return await uploadImage.mutateAsync({ appId: managedApp.id, base64 })
+                } catch (error) {
+                  oauthFailed(error)
+                  return null
+                }
+              },
               onAddScreenshot: (input) =>
                 addScreenshot.mutate({ appId: managedApp.id, ...input }, { onError: oauthFailed }),
               onRemoveScreenshot: (screenshotId) =>

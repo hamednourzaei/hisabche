@@ -65,6 +65,9 @@ export interface AppManagePanelProps {
   screenshots: AppScreenshot[]
   addingScreenshot: boolean
   onAddScreenshot: (input: { url: string; caption: string }) => void
+  /** Upload an image file and resolve with its URL; null when it was refused (the reason is shown by the caller). */
+  onUploadImage: (file: File) => Promise<string | null>
+  uploadingImage: boolean
   onRemoveScreenshot: (id: string) => void
 
   statsState: SectionState
@@ -248,6 +251,14 @@ export const AppManagePanel = memo(function AppManagePanel(props: AppManagePanel
               value={iconUrl}
               placeholder="https://"
               onChange={(e) => setIconUrl(e.target.value)}
+            />
+            <ImageUpload
+              label={t('oauth.manage.uploadImage')}
+              busy={props.uploadingImage}
+              onFile={async (file) => {
+                const url = await props.onUploadImage(file)
+                if (url) setIconUrl(url)
+              }}
             />
           </Field>
           <Field label={t('oauth.homepage')}>
@@ -479,6 +490,16 @@ export const AppManagePanel = memo(function AppManagePanel(props: AppManagePanel
               aria-label={t('oauth.manage.screenshotUrl')}
               onChange={(e) => setShotUrl(e.target.value)}
             />
+            <div className="sm:col-span-3">
+              <ImageUpload
+                label={t('oauth.manage.uploadImage')}
+                busy={props.uploadingImage}
+                onFile={async (file) => {
+                  const url = await props.onUploadImage(file)
+                  if (url) setShotUrl(url)
+                }}
+              />
+            </div>
             <Input
               name="caption"
               value={shotCaption}
@@ -666,3 +687,35 @@ export const AppManagePanel = memo(function AppManagePanel(props: AppManagePanel
 })
 
 AppManagePanel.displayName = 'AppManagePanel'
+
+/**
+ * Pick an image file. The server decides the type from the bytes and stores
+ * it; the field above is then filled with the stored URL — so the listing's
+ * images are ours, and cannot change behind a reviewed URL.
+ */
+function ImageUpload({
+  label,
+  busy,
+  onFile,
+}: {
+  label: string
+  busy: boolean
+  onFile: (file: File) => Promise<void>
+}) {
+  return (
+    <label className="mt-1 inline-flex cursor-pointer items-center gap-2 text-xs text-[hsl(var(--color-primary))]">
+      <input
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="sr-only"
+        disabled={busy}
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          event.target.value = ''
+          if (file) void onFile(file)
+        }}
+      />
+      <span className="underline">{label}</span>
+    </label>
+  )
+}

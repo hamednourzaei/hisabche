@@ -27,6 +27,9 @@ export interface SandboxPanelProps {
   error: string | null
   onCreate: () => void
   onEnter: (id: string, name: string) => void
+  resetting: boolean
+  /** Only offered inside a sandbox: retire it and continue in a new, empty one. */
+  onReset: () => void
 }
 
 export const SandboxPanel = memo(function SandboxPanel(props: SandboxPanelProps) {
@@ -74,6 +77,21 @@ export const SandboxPanel = memo(function SandboxPanel(props: SandboxPanelProps)
                 ) : (
                   <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('sandbox.noParent')}</p>
                 )}
+                {/* Only where it can apply: the server refuses a real business,
+                    and this button is not drawn in one. */}
+                <div className="space-y-1 pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    loading={props.resetting}
+                    onClick={() => {
+                      if (confirm(t('sandbox.resetConfirm'))) props.onReset()
+                    }}
+                  >
+                    {t('sandbox.reset')}
+                  </Button>
+                  <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('sandbox.resetHint')}</p>
+                </div>
               </div>
             ) : own ? (
               <Button size="sm" onClick={() => props.onEnter(own.id, own.name)}>

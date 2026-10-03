@@ -8,6 +8,7 @@ import {
   ScrollText,
   Server,
   Sparkles,
+  Store,
   Users,
   WalletCards,
 } from 'lucide-react'
@@ -90,6 +91,16 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     titleKey: 'admin.wallet.pageTitle',
     descriptionKey: 'admin.wallet.description',
     endpoint: 'GET /admin/wallet/topups',
+  },
+  {
+    // Added with the goods marketplace (goods-marketplace-01): every
+    // /admin/market/* route exists in backend/src/routes/market.routes.ts.
+    id: 'market',
+    path: '/market',
+    icon: Store,
+    titleKey: 'admin.market.pageTitle',
+    descriptionKey: 'admin.market.description',
+    endpoint: 'GET /admin/market',
   },
   {
     // Added with the blog (26 Sep 2026): every /admin/blog/* route exists in

@@ -55,6 +55,8 @@ export interface InvoiceItemsGridProps {
   onDuplicateRow: (rowId: string) => void
   /** Rows the user must fix before the invoice can be confirmed. */
   invalidRowIds: ReadonlySet<string>
+  /** See `DescriptionCell.pickAs`. Absent = an invoice line. */
+  pickAs?: 'sale' | 'component' | undefined
 }
 
 /**
@@ -113,6 +115,7 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
   onRemoveRow,
   onDuplicateRow,
   invalidRowIds,
+  pickAs,
 }: InvoiceItemsGridProps) {
   const shown = useMemo(() => visibleColumns(columns), [columns])
   const totals = useMemo(() => columnTotals(rows, columns, ctx), [rows, columns, ctx])
@@ -333,6 +336,7 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
                                     onCellChange(row.id, COLUMN.description, next)
                                   }
                                   onPickProduct={(product) => onPickProduct(row.id, product)}
+                                  pickAs={pickAs}
                                   onKeyDown={handleKeyDown}
                                 />
                               ),

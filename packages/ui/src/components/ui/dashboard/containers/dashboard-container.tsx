@@ -16,6 +16,9 @@ import { CURRENCY_CODES } from '@hisabche/validation'
 import { useSetExchangeRate } from '@hisabche/api'
 import { localizePath } from '@hisabche/ui-contract'
 import { useLocalePush, useRouteLang } from '../../../../hooks/use-locale-push'
+import { toIsoDay } from '@hisabche/formatting'
+import { useIntlLocale } from '../../../../hooks/use-intl-locale'
+import { ManufacturingDashboardCard } from '../../manufacturing/manufacturing-dashboard-card'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -38,6 +41,7 @@ export function DashboardContainer() {
     [tOriginal],
   )
   const push = useLocalePush()
+  const intlLocale = useIntlLocale()
   const routeLang = useRouteLang()
 
   // ─── State ──────────────────────────────────────────────────────────────
@@ -209,6 +213,14 @@ export function DashboardContainer() {
         onNavigate={(route) => push(route)}
         onInsightAction={handleAction}
         onDateRangeChange={handleDateRangeChange}
+      />
+
+      <ManufacturingDashboardCard
+        t={t}
+        locale={intlLocale}
+        from={toIsoDay(dateRange.from)}
+        to={toIsoDay(dateRange.to)}
+        onOpen={() => push('/manufacturing')}
       />
     </>
   )

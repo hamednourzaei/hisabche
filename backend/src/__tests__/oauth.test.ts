@@ -199,9 +199,11 @@ describe('wiring', () => {
     }
   })
 
-  it('only /api/oauth/token is public, and no oauth route is open to API keys', async () => {
+  it('only the token and revoke endpoints are public, and no oauth route is open to API keys', async () => {
+    // Both are called by the APP'S SERVER, which proves itself with its client
+    // secret — there is no user session to authenticate (RFC 6749 §3.2, RFC 7009).
     expect(read('index.ts')).toContain(
-      "const exactPublicPaths = ['/api/billing/plans', '/api/oauth/token']",
+      "const exactPublicPaths = ['/api/billing/plans', '/api/oauth/token', '/api/oauth/revoke']",
     )
     const { API_ROUTE_SCOPES } = await import('../services/developer/developer.domain')
     expect(

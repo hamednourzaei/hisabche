@@ -3,6 +3,7 @@ import { type MetadataRoute } from 'next'
 import { DOCS_ARTICLES } from '@hisabche/ui'
 
 import { fetchBlogSitemap } from '../lib/blog-api'
+import { fetchMarketSitemap } from '../lib/market-api'
 import { locales, localeUrl, localeToBcp47, defaultLocale, isLocale } from './[lang]/i18n-config'
 
 // Only public, indexable pages. `/pricing`, `/login`, `/signup`, `/forgot-password`,
@@ -18,8 +19,10 @@ const routes = [
   { path: '' },
   { path: '/about' },
   { path: '/contact' },
-  // The blog hub. Articles, categories and tags come from the API below.
-  { path: '/blog' },
+  // The blog hub is NOT here: it is listed by blogEntries(), and only for a
+  // language that has a published article. With none, the hub is noindex
+  // (a thin page), and a sitemap must not submit a noindex URL — Search
+  // Console reports it as «Submitted URL marked noindex» (BUG-086).
   // Feature pages — see app/[lang]/features/[slug]/page.tsx for why these two
   // and no others.
   { path: '/features/customer-debt' },
@@ -82,7 +85,61 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   entries.push(...(await blogEntries()))
+  entries.push(...(await marketEntries()))
   return entries
+}
+
+/**
+ * The goods marketplace — ONLY while a platform admin has it switched on.
+ *
+ * Off (the default) the API answers `enabled: false` and nothing is listed:
+ * the pages are 404 + noindex, and a sitemap must not list a URL that answers
+ * 404. On, it lists the hub, each seller with a public listing, and each
+ * public listing with its real `updatedAt`, in all three languages with their
+ * hreflang alternates.
+ *
+ * Failure is handled like the blog's: at runtime it throws (the last good
+ * sitemap keeps being served); only during `next build` it is skipped.
+ */
+async function marketEntries(): Promise<MetadataRoute.Sitemap> {
+  let result: Awaited<ReturnType<typeof fetchMarketSitemap>>
+  try {
+    result = await fetchMarketSitemap()
+  } catch (error) {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      console.warn(
+        '[sitemap] market API unreachable during build — market entries added on revalidation',
+        error,
+      )
+      return []
+    }
+    throw error
+  }
+  if (result.kind !== 'ok' || !result.data.enabled) return []
+
+  const pages: Array<{ path: string; lastModified?: string }> = [
+    { path: '/market' },
+    ...result.data.sellers.map((seller) => ({ path: `/market/${seller.slug}` })),
+    ...result.data.listings.map((listing) => ({
+      path: `/market/${listing.seller}/${listing.slug}`,
+      lastModified: listing.updatedAt,
+    })),
+  ]
+
+  const out: MetadataRoute.Sitemap = []
+  for (const page of pages) {
+    const languages: Record<string, string> = {}
+    for (const locale of locales) languages[localeToBcp47[locale]] = localeUrl(locale, page.path)
+    languages['x-default'] = localeUrl(defaultLocale, page.path)
+    for (const locale of locales) {
+      out.push({
+        url: localeUrl(locale, page.path),
+        ...(page.lastModified ? { lastModified: page.lastModified } : {}),
+        alternates: { languages },
+      })
+    }
+  }
+  return out
 }
 
 /**
@@ -114,6 +171,21 @@ async function blogEntries(): Promise<MetadataRoute.Sitemap> {
   if (result.kind !== 'ok') return []
 
   const out: MetadataRoute.Sitemap = []
+
+  // The hub, for each language that has something published — the same rule
+  // that decides whether the hub page itself is indexable (listMetadata).
+  const hubLocales = locales.filter((locale) =>
+    result.data.posts.some((post) => post.locale === locale),
+  )
+  const hubLanguages: Record<string, string> = {}
+  for (const locale of hubLocales) hubLanguages[localeToBcp47[locale]] = localeUrl(locale, '/blog')
+  for (const locale of hubLocales) {
+    out.push({
+      url: localeUrl(locale, '/blog'),
+      ...(hubLocales.length > 1 ? { alternates: { languages: hubLanguages } } : {}),
+    })
+  }
+
   for (const post of result.data.posts) {
     if (!isLocale(post.locale)) continue
     const path = `/blog/${encodeURIComponent(post.slug)}`

@@ -3,6 +3,7 @@
 // Hisabche v2.5 — FULLY OPTIMIZED with RPC + Fallback
 // ============================================
 
+import { DEFAULT_BUSINESS_TIME_ZONE, startOfLocalDayISO } from '../utils/local-day'
 import { supabase } from '../db'
 import type { TenancyContext } from './tenancy.service'
 import { DateRange } from '@hisabche/validation'
@@ -28,13 +29,6 @@ function endOfDayExclusive(endDate: string): string {
   const d = new Date(endDate)
   if (Number.isNaN(d.getTime())) return endDate
   d.setUTCDate(d.getUTCDate() + 1)
-  d.setUTCHours(0, 0, 0, 0)
-  return d.toISOString()
-}
-
-// شروع امروز به وقت UTC — برای محاسبه‌ی «فروش امروز» در JS.
-function startOfTodayISO(): string {
-  const d = new Date()
   d.setUTCHours(0, 0, 0, 0)
   return d.toISOString()
 }
@@ -129,9 +123,15 @@ export function bucketKpisByCurrency(
 
 export class AnalyticsService {
   // ─── Dashboard KPIs — OPTIMIZED with RPC + Parallel Queries ───
-  async getDashboardKpis(ctx: TenancyContext) {
+  /**
+   * `timeZone` decides where «today» starts (utils/local-day.ts). It is part
+   * of the cache key: two people of one business in different zones do not
+   * share a «today».
+   */
+  async getDashboardKpis(ctx: TenancyContext, timeZone: string = DEFAULT_BUSINESS_TIME_ZONE) {
     const { workspaceId } = ctx
-    const cacheKey = `dashboard:v2:${workspaceId}`
+    const todayStartISO = startOfLocalDayISO(timeZone)
+    const cacheKey = `dashboard:v3:${workspaceId}:${timeZone}`
 
     return withCacheKey(cacheKey, 60_000, async () => {
       // ⚠️ AGGREGATED IN POSTGRES FIRST. The row path below is capped by
@@ -143,7 +143,7 @@ export class AnalyticsService {
         const firstOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
         const aggregate = await fetchDashboardAggregate(
           workspaceId,
-          startOfTodayISO(),
+          todayStartISO,
           firstOfThisMonth,
           firstOfPrevMonth,
         )
@@ -223,7 +223,7 @@ export class AnalyticsService {
       // می‌شوند درست کار می‌کردند. چون آن تابع SQL در ریپو نیست و قابل
       // اصلاح نبود، این مقدار هم مثل بقیه از خودِ فاکتورها محاسبه می‌شود تا
       // رفتارش با کارت‌های سالم یکسان باشد.
-      const todayStart = startOfTodayISO()
+      const todayStart = todayStartISO
       const todayInvoicesList = invoices.filter(
         (inv) => inv.date && new Date(inv.date).toISOString() >= todayStart,
       )
