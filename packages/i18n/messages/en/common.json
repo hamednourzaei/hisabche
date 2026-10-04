@@ -1496,7 +1496,9 @@
     "analysis": "Business analysis",
     "analysis_description": "Who owes you, which supplier delivers late, and where you break even",
     "promotions": "Promotions",
-    "promotions_description": "Percentage or fixed discounts for products and customers"
+    "promotions_description": "Percentage or fixed discounts for products and customers",
+    "campaigns": "Campaigns",
+    "campaigns_description": "Email messages and surveys for customers"
   },
   "dateRange": {
     "today": "Today",
@@ -6033,6 +6035,11 @@
       "retire": {
         "heading": "Changing or ending a promotion",
         "body1": "A promotion is not edited or deleted; you retire it and make a new one if needed. That way the price on an old invoice can always be explained."
+      },
+      "lists": {
+        "heading": "Price lists",
+        "body1": "A price list is a set of special prices in one currency, for example “Wholesale”. A customer on the list is offered those prices when a product is picked on a sale invoice, and the list name shows beside the product.",
+        "body2": "A product that is not on the list sells at its own price, the list only applies to an invoice in the same currency, and promotions are taken off the list price. A customer is on one list only."
       }
     },
     "installments": {
@@ -6043,7 +6050,7 @@
       "what": {
         "heading": "What installments are",
         "body1": "When a customer pays the balance of an invoice over several months, you can split that balance into monthly parts so each part has its own due date.",
-        "body2": "An installment plan is only a schedule. Payments are still recorded with “Record payment”, and no late fee is charged."
+        "body2": "An installment plan is only a schedule. Payments are still recorded with “Record payment”, and the plan itself charges no fee."
       },
       "make": {
         "heading": "Splitting an invoice",
@@ -6056,6 +6063,11 @@
         "heading": "Following the parts",
         "body1": "Each payment recorded for the invoice is taken off the oldest part first. The table shows which part is paid, which is not due yet and which is overdue by how many days.",
         "body2": "You can remove the plan; recorded payments are not touched."
+      },
+      "lateFees": {
+        "heading": "Late fees",
+        "body1": "If a manager has turned the late fee rule on, the “Late fee” section of an invoice shows what is past due and what fee can be charged: a fixed amount for every 30 full days late, or a percentage of the overdue amount.",
+        "body2": "A fee is never charged automatically; a manager charges it, and a separate sale invoice is issued to the same customer. The fee is worked out on the unpaid amount, not the whole invoice, and each period is charged only once."
       }
     },
     "attendance": {
@@ -6107,6 +6119,36 @@
         "body1": "Searching and reading customers, products, warehouse stock, invoices, payments, orders and the customer debt report; creating and editing a customer; placing an order; and requesting an invoice or a change of an order’s state.",
         "body2": "Every list returns at most 50 rows per page. Each call the assistant makes is recorded in that key’s usage log."
       }
+    },
+    "campaigns": {
+      "title": "Customer campaigns and surveys",
+      "summary": "Send a message or an NPS survey by email to a group of customers.",
+      "seoTitle": "Guide to email campaigns and NPS surveys in Hisabche",
+      "seoDescription": "Campaigns in Hisabche: send a message or an NPS survey by email to every customer, those with overdue invoices, recent buyers or inactive customers, and see the delivery state and the NPS score.",
+      "what": {
+        "heading": "What a campaign is",
+        "body1": "A campaign is one email sent to a group of your own customers: all of them, those with an overdue invoice, those who bought recently, or those who have not bought for a while.",
+        "body2": "There are two kinds: a “message”, which is only your text, and an “NPS survey”, which asks under your text how likely the customer is to recommend you."
+      },
+      "send": {
+        "heading": "Sending a campaign",
+        "body1": "Before sending you see how many customers will get the email and how many will not — because they have no email address or asked not to be written to. Sending takes a separate confirmation.",
+        "body2": "Once sent, a campaign is no longer edited. The state of each email is what the mail service reports: in the queue, sent, or not delivered.",
+        "step1": "On the Campaigns page press “New campaign” and choose the type, the group and the language.",
+        "step2": "Write the subject and the text; wherever you write {name} the customer’s name appears.",
+        "step3": "Save the draft and look at the audience count.",
+        "step4": "Press “Send” and confirm."
+      },
+      "nps": {
+        "heading": "The NPS survey",
+        "body1": "From the link in the email, with no account, the customer gives a score from 0 to 10 and may say why. Each customer answers once, and the survey can be answered for 60 days.",
+        "body2": "Scores of 9 and 10 are “promoters”, 7 and 8 “passives”, and 0 to 6 “detractors”. The NPS is the share of promoters minus the share of detractors.",
+        "body3": "Beside the score you always see how many people answered. Until somebody answers, no score is shown."
+      },
+      "optout": {
+        "heading": "Opting out",
+        "body1": "Every email carries an “I do not want these messages” link. A customer who uses it is left out of later campaigns, and that shows in the campaign’s report."
+      }
     }
   },
   "ai": {
@@ -6125,7 +6167,10 @@
     "remaining": "Questions left",
     "notConfiguredTitle": "The assistant is not enabled yet",
     "notConfiguredBody": "A platform administrator has to configure the AI provider before this works. Until then this page cannot answer.",
-    "openFullPage": "Open full page"
+    "openFullPage": "Open full page",
+    "modeAsk": "Ask the books",
+    "modeTranslate": "Translate a document",
+    "modeRead": "Read a document"
   },
   "display": {
     "basis": "Show amounts in",
@@ -7657,7 +7702,8 @@
       "breakEven": "Break-even",
       "cohorts": "Customer return",
       "workingCapital": "Working capital",
-      "reports": "Report builder"
+      "reports": "Report builder",
+      "benchmark": "Comparison"
     },
     "collections": {
       "open": "Open invoices",
@@ -7801,7 +7847,7 @@
     "count": "Number of parts",
     "firstDueDate": "First part due",
     "save": "Split into installments",
-    "hint": "The invoice’s current balance is split into equal monthly parts; the rounding remainder goes on the first one. Payments are still recorded with “Record payment”. No late fee is charged.",
+    "hint": "The invoice’s current balance is split into equal monthly parts; the rounding remainder goes on the first one. Payments are still recorded with “Record payment”. The plan charges no fee; late fees have their own section.",
     "errors": {
       "general": "That did not work. Try again.",
       "INSTALLMENT_COUNT_INVALID": "That number of parts does not work for this amount.",
@@ -7928,7 +7974,7 @@
   },
   "shifts": {
     "title": "Shifts",
-    "hint": "Named working hours, for recording attendance quickly. A shift assigns nobody to anything and does not change pay.",
+    "hint": "Named working hours, for recording attendance quickly and for the shift plan. Defining a shift assigns nobody by itself and does not change pay.",
     "show": "Show",
     "hide": "Close",
     "loading": "Loading…",
@@ -8187,5 +8233,400 @@
       "AI_REQUEST_EXPIRED": "This request waited more than a day and can no longer be approved.",
       "AI_REQUESTS_MIGRATION_PENDING": "This section is not enabled on the database yet. The ai-action-requests-01 script has to be run."
     }
+  },
+  "campaigns": {
+    "title": "Campaigns",
+    "subtitle": "A message or a survey, by email, to a group of your own customers",
+    "add": "New campaign",
+    "forbidden": "Campaigns are for managers and the owner.",
+    "emailNotConfigured": "Sending email is not configured on the server; until it is, no campaign is sent. You can still write drafts and see the audience.",
+    "empty": "No campaign has been made yet.",
+    "note": "Messages go by email, only to customers who have an email address and have not asked to stop. Every email carries an “I do not want these messages” link. A sent campaign is not edited or deleted.",
+    "newTitle": "New campaign",
+    "name": "Campaign name (for you only)",
+    "kind": "Type",
+    "segment": "For whom",
+    "segmentDays": "How many days",
+    "language": "Email language",
+    "subject": "Email subject",
+    "body": "Message",
+    "bodyHint": "Wherever you write {name}, that customer’s name appears.",
+    "bodyHintNps": "Wherever you write {name}, that customer’s name appears. The “how likely are you to recommend us?” question and the 0–10 scores are added under your text.",
+    "saveDraft": "Save draft",
+    "cancel": "Cancel",
+    "launch": "Send",
+    "launchConfirm": "An email goes to {count} customers and can no longer be changed. Continue?",
+    "launchYes": "Yes, send",
+    "discard": "Discard the draft",
+    "kinds": {
+      "message": "Message",
+      "nps": "NPS survey"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "sent": "Sent",
+      "cancelled": "Discarded"
+    },
+    "segments": {
+      "all": "Every customer",
+      "overdue": "Customers with an overdue invoice",
+      "recent_buyers": "Customers who bought recently",
+      "inactive": "Customers who have not bought for a while"
+    },
+    "languages": {
+      "fa": "Persian",
+      "af": "Dari",
+      "en": "English"
+    },
+    "preview": {
+      "total": "Customers in this group",
+      "sendable": "Will get an email",
+      "noEmail": "Have no email address",
+      "invalidEmail": "Invalid address",
+      "optedOut": "Asked not to be written to",
+      "nobody": "No customer is in this group.",
+      "tooLarge": "This group is larger than one campaign allows ({limit} customers). Choose a smaller group.",
+      "nobodyReachable": "None of the customers in this group has a usable email address."
+    },
+    "delivery": {
+      "queued": "Emails written",
+      "sent": "Sent",
+      "pending": "In the queue",
+      "failed": "Not delivered",
+      "skipped": "{noEmail} customers had no email address and {optedOut} had asked not to be written to.",
+      "unknown": "the state of {count} emails is not known"
+    },
+    "nps": {
+      "title": "NPS",
+      "noAnswers": "Nobody has answered yet, so there is no score.",
+      "breakdown": "{promoters} promoters · {passives} passives · {detractors} detractors",
+      "answered": "{respondents} answers from {population} emails"
+    },
+    "errors": {
+      "general": "That did not work. Try again.",
+      "CAMPAIGN_EMAIL_NOT_CONFIGURED": "Sending email is not configured on the server.",
+      "CAMPAIGN_NO_RECIPIENTS": "No customer is in this group.",
+      "CAMPAIGN_NOBODY_REACHABLE": "None of the customers in this group has a usable email address.",
+      "CAMPAIGN_AUDIENCE_TOO_LARGE": "This group is larger than one campaign allows.",
+      "CAMPAIGN_ALREADY_SENT": "This campaign has already been sent.",
+      "CAMPAIGN_SEGMENT_DAYS": "Enter the number of days for this group.",
+      "CAMPAIGNS_MIGRATION_PENDING": "Campaigns are not enabled on the database yet. The campaigns-01 script has to be run."
+    }
+  },
+  "feedback": {
+    "loading": "Opening…",
+    "invalidLink": "This link is not valid.",
+    "loadFailed": "The page could not be opened. Try again in a moment.",
+    "alreadyAnswered": "Your answer has already been recorded. Thank you.",
+    "thanks": "Your answer has been recorded. Thank you.",
+    "expired": "The time to answer this survey has passed.",
+    "question": "How likely are you to recommend us to others?",
+    "low": "0 = not at all",
+    "high": "10 = certainly",
+    "commentPlaceholder": "Tell us why, if you like (optional)",
+    "submitFailed": "Not recorded. Try again.",
+    "submit": "Send my answer",
+    "unsubscribed": "You will no longer get emails from this business.",
+    "unsubscribeQuestion": "Do you want to stop getting emails from this business?",
+    "unsubscribe": "I do not want these messages any more"
+  },
+  "priceLists": {
+    "title": "Price lists",
+    "subtitle": "Special prices on some products for the customers on a list",
+    "add": "New price list",
+    "forbidden": "You are not allowed to see price lists.",
+    "empty": "No price list has been made yet.",
+    "retired": "Retired",
+    "always": "No time limit",
+    "productCount": "{count} products",
+    "customerCount": "{count} customers",
+    "open": "Prices and customers",
+    "close": "Close",
+    "retire": "Retire",
+    "reactivate": "Reactivate",
+    "note": "A price list only sets the suggested price when a product is picked on a sale invoice; the seller can still change the price, and earlier invoices are not touched. A product that is not on the list sells at its own price. Promotions apply on top of the list price.",
+    "newTitle": "New price list",
+    "name": "Name",
+    "namePlaceholder": "e.g. Wholesale",
+    "currency": "Currency",
+    "validFrom": "From",
+    "validTo": "Until",
+    "noLimit": "No limit",
+    "currencyHint": "Every price on this list is in this currency, and the list only applies to an invoice in the same currency.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading…",
+    "prices": "Prices",
+    "noPrices": "No product has a price on this list yet.",
+    "ownPrice": "Own price: {price}",
+    "takeOff": "Remove",
+    "customers": "Customers on this list",
+    "noCustomers": "No customer is on this list yet.",
+    "retiredNoCustomers": "Customers cannot be added to a retired list.",
+    "oneListPerCustomer": "A customer is on one list only; adding them here takes them off their previous list.",
+    "priceForUnit": "Price per {unit} in {currency}",
+    "priceIn": "Price in {currency}",
+    "addPrice": "Add price",
+    "searchProduct": "Search products…",
+    "searchCustomer": "Search customers…",
+    "searchFailed": "Search failed.",
+    "searching": "Searching…",
+    "nothingFound": "Nothing found.",
+    "errors": {
+      "general": "That did not work. Try again.",
+      "incomplete": "Enter the name and currency of the list.",
+      "PRICE_LIST_NAME_TAKEN": "Another active list already has this name.",
+      "PRICE_LIST_WINDOW_INVERTED": "The end date cannot be before the start date.",
+      "PRICE_LIST_PRODUCT_NOT_FOUND": "The selected product was not found.",
+      "PRICE_LIST_PRODUCT_TWICE": "A product appears twice.",
+      "PRICE_LIST_PRICE_TOO_SMALL": "The price is too small.",
+      "PRICE_LIST_RETIRED": "This list is retired.",
+      "PRICE_LISTS_MIGRATION_PENDING": "Price lists are not enabled on the database yet. The price-lists-01 script must be run."
+    }
+  },
+  "lateFees": {
+    "title": "Late fee",
+    "show": "Show",
+    "hide": "Close",
+    "loading": "Loading…",
+    "forbidden": "Only a manager or the owner can set or charge late fees.",
+    "policyOff": "Late fees are off for this business; no fee is worked out.",
+    "policyFixed": "Rule: {amount} {currency} for every {days} full days late.",
+    "policyPercent": "Rule: {percent}% of the overdue amount, once.",
+    "policyGrace": "Nothing is charged until {days} days after the due date.",
+    "policyCap": "Cap: {percent}% of the overdue amount.",
+    "blocked": {
+      "off": "Until the late fee rule is turned on, there is nothing to charge.",
+      "other_currency": "The late fee rule is a fixed amount in another currency and does not apply to this invoice.",
+      "not_sale": "A late fee is only for a sale invoice.",
+      "cancelled": "This invoice is cancelled.",
+      "no_customer": "This invoice has no customer; a fee cannot be charged to nobody.",
+      "no_due_date": "This invoice has neither a due date nor an installment plan, so it cannot be late.",
+      "fee_invoice": "This invoice is itself a late fee; no fee is charged on it."
+    },
+    "nothingLate": "Nothing is past due, or it is still within the grace days.",
+    "what": "For",
+    "wholeInvoice": "Whole invoice",
+    "installment": "Installment {seq}",
+    "dueDate": "Due",
+    "daysLate": "Days late",
+    "overdue": "Overdue",
+    "charged": "Charged",
+    "chargeable": "Can be charged",
+    "capped": "capped",
+    "history": "Fees charged",
+    "lateBy": "{days} days late",
+    "notIssued": "invoice not issued",
+    "charge": "Charge fee: {amount} {currency}",
+    "finish": "Issue the unfinished fee invoice",
+    "confirm": "A sale invoice of {amount} {currency} will be issued to this customer. Continue?",
+    "confirmYes": "Yes, charge it",
+    "cancel": "Cancel",
+    "note": "A fee is never charged automatically. Charging issues a separate sale invoice to the customer, which is paid or cancelled like any other invoice. Each period is charged only once.",
+    "editPolicy": "Set the late fee rule",
+    "policyTitle": "Late fee rule",
+    "policyScope": "This rule is for every sale invoice of the business, not only this one.",
+    "enabled": "Late fees are on",
+    "basis": "How it is worked out",
+    "bases": {
+      "per_period": "A fixed amount per period",
+      "percentage": "A percentage of the overdue amount"
+    },
+    "amountPerPeriod": "Amount for every {days} full days late",
+    "currency": "Currency",
+    "percentOfOverdue": "Percent of the overdue amount (once)",
+    "graceDays": "Grace after the due date (days)",
+    "maxShare": "Fee cap (percent of the overdue amount)",
+    "currencyHint": "A fixed amount is only charged on an invoice in the same currency; it is not converted.",
+    "percentHint": "The percentage is of what is still unpaid and past its due date, not of the whole invoice.",
+    "savePolicy": "Save rule",
+    "errors": {
+      "general": "That did not work. Try again.",
+      "incomplete": "Enter the values correctly.",
+      "LATE_FEE_NOTHING_TO_ASSESS": "There is nothing to charge; the fee for this period was already charged.",
+      "LATE_FEE_AMOUNT_REQUIRED": "Enter the fee amount.",
+      "LATE_FEE_CURRENCY_REQUIRED": "Choose the currency of the amount.",
+      "LATE_FEE_PERCENT_REQUIRED": "Enter the fee percentage.",
+      "LATE_FEES_MIGRATION_PENDING": "Late fees are not enabled on the database yet. The late-fees-01 script must be run."
+    }
+  },
+  "aiTranslate": {
+    "intro": "Paste the text of an invoice, a statement or a letter. Numbers, dates and document numbers are not touched: they are set aside before the translation and put back exactly as they were.",
+    "from": "From",
+    "to": "To",
+    "languages": {
+      "fa": "Persian",
+      "af": "Dari",
+      "en": "English"
+    },
+    "source": "Document text",
+    "sourcePlaceholder": "Paste the text here…",
+    "counter": "{used} of {max} characters",
+    "translate": "Translate",
+    "working": "Translating…",
+    "result": "Translation into {language}",
+    "translation": "Translation",
+    "original": "Original",
+    "copy": "Copy translation",
+    "copied": "Copied",
+    "figuresKept": "{count} numbers, dates or document numbers were carried over from the original unchanged.",
+    "note": "A translation does not replace the original document and is not saved. Each translation uses one of the assistant’s monthly allowance.",
+    "errors": {
+      "general": "The translation did not work. Try again.",
+      "TRANSLATE_SAME_LOCALE": "The source and target languages are the same.",
+      "TRANSLATE_TOO_LONG": "The text is longer than 8,000 characters. Translate it in sections.",
+      "TRANSLATE_NOTHING_TO_TRANSLATE": "There is no text to translate.",
+      "TRANSLATE_FIGURE_ALTERED": "The translation was refused because the document’s figures were moved or dropped in it. Try again, or use a shorter text.",
+      "TRANSLATE_UNSUPPORTED_LOCALE": "This language is not supported.",
+      "AI_NOT_CONFIGURED": "The assistant is not enabled yet; the platform administrator has to set up the AI provider.",
+      "AI_QUOTA_EXCEEDED": "Your monthly allowance is used up.",
+      "AI_PROVIDER_BUSY": "The AI service is busy. Try again in a moment.",
+      "AI_PROVIDER_ERROR": "The AI service did not answer. Try again in a moment."
+    }
+  },
+  "aiRead": {
+    "intro": "Take a picture of a receipt or a purchase bill. The assistant reads the amount, date, number and seller into a draft that you review. Nothing is written to the books until you record it yourself.",
+    "pick": "Picture of the document",
+    "pickHint": "JPEG, PNG or WebP, up to 4 MB and one page. A PDF is not read.",
+    "reading": "Reading the document…",
+    "reviewTitle": "Review the draft",
+    "reviewHint": "Compare every value with the paper and correct it where needed. What is recorded is what you see here.",
+    "lowTotal": "The total was read with low confidence; check it against the document.",
+    "unknownKind": "The type of this document was not recognised. Make sure it is a receipt or a purchase bill before recording it.",
+    "total": "Total",
+    "printedAs": "On the document: {text}",
+    "currency": "Currency",
+    "currencyRead": "{currency} was read from the document; change it if that is wrong.",
+    "currencyNotRead": "The currency was not read from the document; choose it yourself.",
+    "issuedOn": "Document date",
+    "dateNotRead": "The date was not read; choose it yourself.",
+    "documentNumber": "Document number",
+    "description": "What was bought",
+    "defaultDescription": "Purchase per receipt",
+    "defaultDescriptionNumbered": "Purchase per document {number}",
+    "supplier": "Supplier",
+    "changeSupplier": "Change",
+    "searchSupplier": "Search suppliers…",
+    "searchSupplierHint": "Type at least two letters of the supplier’s name.",
+    "searchFailed": "Search failed.",
+    "searching": "Searching…",
+    "noSupplierFound": "You have no supplier with this name. Add them under Suppliers first.",
+    "needSupplier": "To record it, choose the supplier from your own list.",
+    "taxRead": "Tax read from the document: {amount}. Enter the total as it is printed.",
+    "unrecognised": "Lines that were read but had no place",
+    "notRead": "not read",
+    "confidence": {
+      "high": "High confidence",
+      "medium": "Medium confidence",
+      "low": "Low confidence"
+    },
+    "record": "Record purchase invoice: {amount} {currency}",
+    "recordPlain": "Record purchase invoice",
+    "discard": "Discard the draft",
+    "recorded": "The purchase invoice was recorded.",
+    "openInvoice": "Open the invoice",
+    "another": "Read another document",
+    "note": "The picture is not kept. Each reading uses one of the assistant’s monthly allowance. Keep the original document.",
+    "errors": {
+      "general": "That did not work. Try again.",
+      "INGEST_NO_PROVIDER": "Document reading is not enabled yet; the platform administrator has to set up the AI provider.",
+      "INGEST_UNSUPPORTED_TYPE": "This kind of file cannot be read. Choose a JPEG, PNG or WebP picture.",
+      "INGEST_TOO_LARGE": "The picture is larger than 4 MB.",
+      "INGEST_UNREADABLE": "The total could not be read from this picture. Take a clearer one, or record the document by hand.",
+      "INGEST_TOTAL_TOO_SMALL": "The amount is too small.",
+      "AI_QUOTA_EXCEEDED": "Your monthly allowance is used up.",
+      "AI_PROVIDER_BUSY": "The AI service is busy. Try again in a moment.",
+      "AI_PROVIDER_ERROR": "The AI service did not answer. Try again in a moment."
+    }
+  },
+  "shiftPlan": {
+    "title": "Shift plan",
+    "hint": "Who is planned for which shift on this day, beside what the attendance sheet recorded.",
+    "show": "Show",
+    "hide": "Close",
+    "loading": "Loading…",
+    "forbidden": "Only a manager or the owner can see the shift plan.",
+    "forDay": "Plan for {date}",
+    "summary": "{planned} planned · {worked} present · {absent} absent or on leave · {unrecorded} with no attendance recorded",
+    "empty": "Nobody is planned for this day.",
+    "actual": {
+      "worked": "Present",
+      "open": "Still at work",
+      "absent": "Absent",
+      "leave": "On leave",
+      "unrecorded": "Attendance not recorded"
+    },
+    "cancel": "Cancel",
+    "noShifts": "To plan someone, first define a shift under “Shifts”.",
+    "noEmployees": "No employee has been added yet.",
+    "employee": "Employee",
+    "shift": "Shift",
+    "choose": "Choose",
+    "days": "For how many days",
+    "onlyThisDay": "This day only",
+    "daysFromHere": "{count} days from this day",
+    "assign": "Plan",
+    "note": "A shift plan records no attendance and changes no pay. “Attendance not recorded” means nothing was entered on the sheet, not that the employee was absent. A plan is not edited; cancel it and make a new one.",
+    "errors": {
+      "general": "That did not work. Try again.",
+      "SHIFT_ASSIGNMENT_OVERLAP": "On one of these days this employee already has a shift that overlaps this one. No day was planned.",
+      "SHIFT_ASSIGNMENT_SHIFT_NOT_FOUND": "This shift was not found.",
+      "SHIFT_ASSIGNMENT_SHIFT_RETIRED": "This shift is retired.",
+      "SHIFT_ASSIGNMENT_DAYS_INVALID": "The number of days is not valid.",
+      "SHIFT_ASSIGNMENTS_MIGRATION_PENDING": "The shift plan is not enabled on the database yet. The shift-assignments-01 script must be run."
+    }
+  },
+  "dashboardBuilder": {
+    "newTitle": "New dashboard",
+    "needReports": "A dashboard is made of saved reports. Build a report above first.",
+    "name": "Dashboard name",
+    "pickReports": "Reports on this dashboard (in the order you pick them, up to 6)",
+    "width": "Width",
+    "widths": {
+      "1": "One third",
+      "2": "Two thirds",
+      "3": "Full width"
+    },
+    "hint": "A dashboard makes no figure of its own; each tile is a saved report, read from live data when the dashboard is opened.",
+    "save": "Save dashboard",
+    "savedTitle": "Dashboards",
+    "empty": "No dashboard has been made yet.",
+    "retire": "Retire",
+    "retiredReport": "Retired report",
+    "retiredReportHint": "The report on this tile was retired after the dashboard was made. Retire the dashboard and make a new one.",
+    "errors": {
+      "general": "That did not work. Try again.",
+      "DASHBOARD_EMPTY": "Pick at least one report.",
+      "DASHBOARD_UNKNOWN_REPORT": "One of the reports you picked no longer exists.",
+      "DASHBOARD_DUPLICATE_REPORT": "A report was picked twice.",
+      "DASHBOARD_POSITION_CLASH": "Two reports were put in the same place.",
+      "DASHBOARD_NAME_TAKEN": "Another active dashboard already has this name.",
+      "DASHBOARDS_MIGRATION_PENDING": "Dashboards are not enabled on the database yet. The report-dashboards-01 script must be run."
+    }
+  },
+  "benchmark": {
+    "title": "Compared with the other businesses on this service",
+    "what": "Your sale invoices per day over the last {days} days, beside the other businesses that use Hisabche.",
+    "own": "You",
+    "perDay": "sale invoices a day",
+    "noFigure": "No sales",
+    "peerMedian": "Median of the others",
+    "peerCount": "Businesses compared",
+    "peerCountHint": "other than you, with at least one sale in the period",
+    "unavailable": {
+      "NO_SELF_FIGURE": "You recorded no sale invoice in the last {days} days, so there is no figure of yours to compare.",
+      "NOT_ENOUGH_PEERS": "Only {count} other businesses had sales in this period. A comparison needs at least {min}; until then no figure of theirs is shown.",
+      "NO_PEERS": "There is no other business to compare with in this period."
+    },
+    "direction": {
+      "above": "You are {delta} invoices a day above the median of the others.",
+      "below": "You are {delta} invoices a day below the median of the others.",
+      "level": "You are level with the median of the others."
+    },
+    "percentile": "{percent}% of them issue fewer invoices than you.",
+    "note": "This compares you only with businesses on this service — not with your market or trade. No single business’s figure is shown: only a median and a count, and only when there are at least {min}. How many invoices a business issues depends on its size and kind, and is not a measure of doing well or badly.",
+    "forbidden": "You are not allowed to see this comparison.",
+    "notSetUp": "The comparison is not enabled on the database yet. The benchmark-01 script must be run.",
+    "failed": "The comparison could not be read. Try again."
   }
 }

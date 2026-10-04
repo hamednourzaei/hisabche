@@ -100,7 +100,11 @@ export function useRetireReport() {
   return useMutation({
     mutationFn: async (id: string) =>
       (await apiClient.patch(`/custom-reports/${id}/retire`, {})).data,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: customReportKeys.list() }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: customReportKeys.list() })
+      // The dashboards that name it now show that tile as retired.
+      void queryClient.invalidateQueries({ queryKey: reportDashboardKeys.all })
+    },
   })
 }
 
@@ -115,5 +119,68 @@ export function useReportRun(id: string | null) {
     },
     enabled: ready && !!id,
     staleTime: 0,
+  })
+}
+
+// ─── Dashboards (#146): saved reports arranged on one screen ───────────────
+//
+//   GET   /report-dashboards
+//   POST  /report-dashboards              { name, tiles: [{ reportId, span }] }
+//   PATCH /report-dashboards/:id/retire
+//
+// A dashboard has no run of its own: each tile is run as a report.
+
+export interface ReportDashboardTile {
+  reportId: string
+  position: number
+  span: 1 | 2 | 3
+  /** Null when the report was retired after the dashboard was made. */
+  reportName: string | null
+}
+
+export interface ReportDashboard {
+  id: string
+  name: string
+  tiles: ReportDashboardTile[]
+}
+
+export const reportDashboardKeys = { all: ['report-dashboards'] as const }
+
+export function useReportDashboards() {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: reportDashboardKeys.all,
+    queryFn: async (): Promise<ReportDashboard[]> => {
+      const { data } = await apiClient.get<{ dashboards: ReportDashboard[] }>('/report-dashboards')
+      return asList<ReportDashboard>(data?.dashboards).map((dashboard) => ({
+        ...dashboard,
+        tiles: asList<ReportDashboardTile>(dashboard.tiles),
+      }))
+    },
+    enabled: ready,
+    staleTime: 60_000,
+  })
+}
+
+export function useSaveReportDashboard() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      name: string
+      tiles: Array<{ reportId: string; span: 1 | 2 | 3 }>
+    }) => {
+      const { data } = await apiClient.post<ReportDashboard>('/report-dashboards', input)
+      return { ...data, tiles: asList<ReportDashboardTile>(data?.tiles) }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: reportDashboardKeys.all }),
+  })
+}
+
+export function useRetireReportDashboard() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) =>
+      (await apiClient.patch(`/report-dashboards/${id}/retire`, {})).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: reportDashboardKeys.all }),
   })
 }

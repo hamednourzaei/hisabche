@@ -195,6 +195,11 @@ export const ProductSearchSheet = memo(function ProductSearchSheet({
                                 {picked.base.toLocaleString(locale)}
                               </span>
                             ) : null}
+                            {picked.listName ? (
+                              <span dir="auto" className="ms-2">
+                                {picked.listName}
+                              </span>
+                            ) : null}
                           </span>
                         </span>
                         {typeof product.quantity === 'number' ? (

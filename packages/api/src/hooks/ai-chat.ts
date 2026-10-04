@@ -93,6 +93,45 @@ export function useAskAi() {
   })
 }
 
+// ─── Document translation (#20) ───────────────────────────────────────
+
+export interface DocumentTranslation {
+  /** The translation, with the figures of the source put back. */
+  text: string
+  /** The document as it was sent — a translation is not an original. */
+  source: string
+  from: 'fa' | 'af' | 'en'
+  to: 'fa' | 'af' | 'en'
+  /** How many numbers, dates and document numbers were protected. */
+  figuresSpotted: number
+}
+
+/**
+ * Translate the text of a financial document. The server refuses (422, with a
+ * `TRANSLATE_…` code) rather than return a translation whose figures changed.
+ */
+export function useTranslateDocument() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: {
+      text: string
+      from: DocumentTranslation['from']
+      to: DocumentTranslation['to']
+    }): Promise<DocumentTranslation> => {
+      const { data } = await apiClient.post<{ translation: DocumentTranslation }>(
+        '/ai/translate',
+        input,
+      )
+      return data.translation
+    },
+    onSettled: () => {
+      // A translation spends the same allowance as a question.
+      queryClient.invalidateQueries({ queryKey: aiKeys.availability() })
+    },
+  })
+}
+
 // ─── Platform admin ───────────────────────────────────────────────────
 
 export interface AiConfigStatus {

@@ -22,6 +22,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { analysisService } from '../services/analysis/analysis.service'
+import { benchmarkService } from '../services/analytics/benchmark.service'
 
 const OPERATIONAL = [
   authenticate,
@@ -52,6 +53,23 @@ function fail(fastify: FastifyInstance, reply: FastifyReply, err: unknown, fallb
 }
 
 export async function analysisRoutes(fastify: FastifyInstance) {
+  // How this business compares with the others on this deployment (#135).
+  // Only a median, a percentile and a count ever leave the server.
+  fastify.get(
+    '/api/analysis/benchmark',
+    { preHandler: OPERATIONAL },
+    async (request: FastifyRequest, reply) => {
+      try {
+        return reply.send(await benchmarkService.invoiceRate(request.tenancy))
+      } catch (err) {
+        if (err instanceof BaseError && err.statusCode === 503) {
+          return reply.code(503).send({ error: err.name, message: err.message })
+        }
+        return fail(fastify, reply, err, 'Failed to build the comparison')
+      }
+    },
+  )
+
   // Who to remind today, and how firmly.
   fastify.get(
     '/api/analysis/collections',

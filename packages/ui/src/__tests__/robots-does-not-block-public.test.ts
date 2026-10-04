@@ -89,6 +89,7 @@ describe('the app and token pages stay blocked', () => {
       '/market-seller',
       '/analysis',
       '/promotions',
+      '/campaigns',
       '/marketplace',
       '/developers',
       '/public-invoice/abc',

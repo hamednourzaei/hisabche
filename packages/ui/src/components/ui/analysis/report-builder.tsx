@@ -11,15 +11,15 @@
 // grouping is added for you.
 // ⚠️ A capped result says so: «۵۰۰ ردیف از ۱٬۲۰۵».
 // ⚠️ A report holds no results. Every run reads live data.
+//
+// The run itself is shown by `ReportRunView`, which a dashboard tile uses too.
 // ============================================
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { formatNumber } from '@hisabche/formatting'
 import {
   apiErrorMessage,
   useReportCatalog,
-  useReportRun,
   useRetireReport,
   useSaveReport,
   useSavedReports,
@@ -28,28 +28,23 @@ import {
 } from '@hisabche/api'
 
 import { cn } from '../../../lib/utils'
-import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { Button } from '../button'
+import { DashboardBuilder } from './dashboard-builder'
+import {
+  REPORT_DIMENSIONS,
+  REPORT_ERROR_CODES,
+  REPORT_MEASURES,
+  ReportRunView,
+  isKnown as known,
+} from './report-run-view'
 
-export const REPORT_DIMENSIONS = ['month', 'quarter', 'customer', 'currency'] as const
-export const REPORT_MEASURES = ['count', 'outstanding', 'collected'] as const
-export const REPORT_ERROR_CODES = [
-  'REPORT_NOT_RUNNABLE',
-  'REPORT_NAME_TAKEN',
-  'REPORT_NO_MEASURES',
-  'REPORT_TOO_MANY_DIMENSIONS',
-  'REPORT_NON_ADDITIVE_IN_TIME',
-  'REPORTS_MIGRATION_PENDING',
-] as const
+export { REPORT_DIMENSIONS, REPORT_ERROR_CODES, REPORT_MEASURES }
 
 const card =
   'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]'
-const th = 'px-3 py-2.5 text-start text-xs font-medium text-[hsl(var(--fg-secondary))]'
-const td = 'px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]'
 
 export function ReportBuilder() {
   const t = useTranslations('reportBuilder')
-  const locale = useIntlLocale()
   const catalog = useReportCatalog()
   const reports = useSavedReports()
   const save = useSaveReport()
@@ -59,7 +54,6 @@ export function ReportBuilder() {
   const [groupBy, setGroupBy] = useState<ReportDimension[]>([])
   const [measures, setMeasures] = useState<ReportMeasure[]>(['count'])
   const [selected, setSelected] = useState<string | null>(null)
-  const run = useReportRun(selected)
 
   const message = (error: unknown): string => {
     const raw = apiErrorMessage(error, '')
@@ -68,8 +62,6 @@ export function ReportBuilder() {
   }
   const toggle = <T,>(list: T[], item: T): T[] =>
     list.includes(item) ? list.filter((other) => other !== item) : [...list, item]
-  const known = <T extends string>(value: string, list: readonly T[]): value is T =>
-    (list as readonly string[]).includes(value)
 
   const dimensions = (catalog.data?.dimensions ?? []).filter((key) => known(key, REPORT_DIMENSIONS))
   const offered = (catalog.data?.measures ?? []).filter((measure) =>
@@ -203,77 +195,10 @@ export function ReportBuilder() {
         ) : null}
       </section>
 
-      {selected ? (
-        run.isLoading ? (
-          <div className="h-24 animate-pulse rounded-xl bg-[hsl(var(--surface-muted))]" />
-        ) : run.error || !run.data ? (
-          <p role="alert" className={cn(card, 'p-4 text-sm text-[hsl(var(--color-destructive))]')}>
-            {message(run.error)}
-          </p>
-        ) : run.data.rows.length === 0 ? (
-          <p className={cn(card, 'p-6 text-center text-sm text-[hsl(var(--fg-secondary))]')}>
-            {t('noRows')}
-          </p>
-        ) : (
-          <section className="space-y-2">
-            <div className={cn(card, 'overflow-x-auto')}>
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                    {run.data.report.groupBy.map((dimension) => (
-                      <th key={dimension} className={th}>
-                        {known(dimension, REPORT_DIMENSIONS)
-                          ? t(`dimensionNames.${dimension}`)
-                          : dimension}
-                      </th>
-                    ))}
-                    {run.data.report.measures.map((measure) => (
-                      <th key={measure} className={th}>
-                        {known(measure, REPORT_MEASURES) ? t(`measureNames.${measure}`) : measure}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {run.data.rows.map((row, index) => (
-                    <tr key={index} className="border-b border-[hsl(var(--border-default))]">
-                      {run.data.report.groupBy.map((dimension) => (
-                        <td
-                          key={dimension}
-                          className={cn(td, dimension !== 'customer' && 'tabular-nums')}
-                        >
-                          {dimension === 'customer'
-                            ? (row.customerName ??
-                              (row.dimensions.customer ? '—' : t('noCustomer')))
-                            : (row.dimensions[dimension] ?? '—')}
-                        </td>
-                      ))}
-                      {run.data.report.measures.map((measure) => (
-                        <td key={measure} className={cn(td, 'tabular-nums')}>
-                          {formatNumber(
-                            row.values[measure] ?? 0,
-                            locale,
-                            measure === 'count' ? 0 : 2,
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {run.data.totalRows > run.data.rows.length ? (
-              <p className="text-xs text-[hsl(var(--color-warning))]">
-                {t('capped', {
-                  shown: formatNumber(run.data.rows.length, locale, 0),
-                  total: formatNumber(run.data.totalRows, locale, 0),
-                })}
-              </p>
-            ) : null}
-            <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('live')}</p>
-          </section>
-        )
-      ) : null}
+      {selected ? <ReportRunView reportId={selected} /> : null}
+
+      {/* Saved reports arranged on one screen (#146). */}
+      <DashboardBuilder reports={reports.data ?? []} />
     </div>
   )
 }

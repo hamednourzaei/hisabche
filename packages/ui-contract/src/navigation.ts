@@ -43,6 +43,7 @@ export type NavId =
   | 'market-seller'
   | 'analysis'
   | 'promotions'
+  | 'campaigns'
   | 'governance'
   // The till. Somewhere a person STANDS, which is why it is primary and the
   // rest of this batch is not.
@@ -454,6 +455,16 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     group: 'work',
   },
   {
+    // A message, or an NPS question, sent by email to a group of the
+    // business's own customers. Managers and the owner.
+    id: 'campaigns',
+    emoji: '📣',
+    labelKey: 'nav.campaigns',
+    descriptionKey: 'nav.campaigns_description',
+    path: '/campaigns',
+    group: 'work',
+  },
+  {
     // ⚠️ A ROUTE NOW, NOT ONLY A FLOATING BUTTON.
     //
     // The assistant used to be reachable only from a button on the dashboard.
@@ -674,6 +685,7 @@ export const NAV_MODULE: Readonly<Record<string, string>> = {
   '/promotions': 'invoices',
   '/sales-workspace': 'parties',
   '/customers': 'parties',
+  '/campaigns': 'parties',
   '/till': 'payments',
   '/warehouse': 'inventory',
   '/inventory-workspace': 'inventory',

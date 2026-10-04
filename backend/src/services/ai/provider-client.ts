@@ -27,6 +27,9 @@
 //   1. `maxTokens` is a DEFAULT here, not a decision. A research summary needs
 //      more than a chat answer. The old 2048 stays the default so nothing that
 //      called it before changes.
+//   3. `image` is ONE picture handed to the model beside the text (document
+//      reading, #16). It is sent and forgotten: nothing here stores it, and the
+//      error path logs the provider's answer, which does not echo an image.
 //   2. A provider failure throws `AI_PROVIDER_ERROR` with a REDACTED detail. The
 //      provider's body is logged, never returned — it can echo the request, which
 //      for content intelligence is an unpublished draft.
@@ -71,7 +74,14 @@ export function buildProviderEndpoint(provider: AiProvider, baseUrl: string | nu
  */
 export async function callProvider(
   config: AiProviderConfig,
-  input: { system: string; user: string; maxTokens?: number; timeoutMs?: number },
+  input: {
+    system: string
+    user: string
+    maxTokens?: number
+    timeoutMs?: number
+    /** One image for the model to look at, base64 without a data: prefix. */
+    image?: { mediaType: string; base64: string } | undefined
+  },
 ): Promise<string> {
   const maxTokens = input.maxTokens ?? 2048
   const signal = AbortSignal.timeout(input.timeoutMs ?? 60_000)
@@ -88,7 +98,24 @@ export async function callProvider(
         model: config.model,
         max_tokens: maxTokens,
         system: input.system,
-        messages: [{ role: 'user', content: input.user }],
+        messages: [
+          {
+            role: 'user',
+            content: input.image
+              ? [
+                  {
+                    type: 'image',
+                    source: {
+                      type: 'base64',
+                      media_type: input.image.mediaType,
+                      data: input.image.base64,
+                    },
+                  },
+                  { type: 'text', text: input.user },
+                ]
+              : input.user,
+          },
+        ],
       }),
       signal,
     })
@@ -110,7 +137,20 @@ export async function callProvider(
       max_tokens: maxTokens,
       messages: [
         { role: 'system', content: input.system },
-        { role: 'user', content: input.user },
+        {
+          role: 'user',
+          content: input.image
+            ? [
+                { type: 'text', text: input.user },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${input.image.mediaType};base64,${input.image.base64}`,
+                  },
+                },
+              ]
+            : input.user,
+        },
       ],
     }),
     signal,

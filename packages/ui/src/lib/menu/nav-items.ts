@@ -47,6 +47,7 @@ import {
   Store,
   LineChart,
   Percent,
+  Megaphone,
 } from 'lucide-react'
 import {
   COMMAND_CONTRACT,
@@ -121,6 +122,7 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   'market-seller': Store,
   analysis: LineChart,
   promotions: Percent,
+  campaigns: Megaphone,
   governance: ShieldCheck,
   assistant: Sparkles,
 }

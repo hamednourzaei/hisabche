@@ -7,33 +7,40 @@
 
 ## پیدا کردن جواب — جدول مسیریابی
 
-| سوال                                                                                | فایل                                                                                                 |
-| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **«کدام موتور Business OS واقعاً وصل است؟ فاکتور تکراری»**                          | [SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md](SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md)     |
-| **«ساخت و تولید چطور کار می‌کند؟ چه چیزی ساخته نشد؟»**                              | [SESSION-CACHE-2026-10-04-MANUFACTURING.md](SESSION-CACHE-2026-10-04-MANUFACTURING.md) — **اول این** |
-| **«آخرین سشن چه شد؟ کیف پول، عکس کالا، بازار، refresh token، دری»**                 | [SESSION-CACHE-2026-10-03.md](SESSION-CACHE-2026-10-03.md) — **اول این**                             |
-| **«کلید دری (af) را چطور بنویسم؟»**                                                 | [DARI-GLOSSARY.md](DARI-GLOSSARY.md)                                                                 |
-| **«robots / sitemap / noindex / بازرسی HTTP همه‌ی صفحه‌ها»**                        | [SESSION-CACHE-2026-10-03.md](SESSION-CACHE-2026-10-03.md) §۲٫۱–۲٫۳                                  |
-| **«الان کجای فازها هستیم؟ چه چیزی نیمه‌تمام است؟»**                                 | [HANDOFF-PHASES-G-TO-O.md](HANDOFF-PHASES-G-TO-O.md)                                                 |
-| **به باگ خوردم / چطور وریفای کنم؟**                                                 | [DEBUG-PLAYBOOK.md](DEBUG-PLAYBOOK.md) — اول این                                                     |
-| «الان چه چیزی کار می‌کند و چه چیزی نه؟»                                             | [STATE.md](STATE.md)                                                                                 |
-| «چرا این‌طوری نوشته شده؟» / «قبلاً چه اشتباهی شد؟»                                  | [lessons-learned.md](lessons-learned.md) — ۹۲ درس                                                    |
-| «کد جدید را کجا بگذارم؟»                                                            | [architecture/core-modules.md](architecture/core-modules.md)                                         |
-| «چه روتی هست؟ کدام hook به کدام endpoint می‌زند؟»                                   | [architecture/api-surface.md](architecture/api-surface.md)                                           |
-| «جدول‌ها چه شکلی‌اند؟ RLS چطور کار می‌کند؟»                                         | [architecture/data-model.md](architecture/data-model.md)                                             |
-| «چطور migration بزنم / تست کنم / commit کنم؟»                                       | [WORKFLOW.md](WORKFLOW.md)                                                                           |
-| **«Source of Truth هر داده کدام است؟»**                                             | [SESSION-2026-09-05-CONSOLIDATION.md](SESSION-2026-09-05-CONSOLIDATION.md)                           |
-| «کدام migration اجرا شده و کدام نه؟»                                                | [SESSION-2026-09-05-CONSOLIDATION.md](SESSION-2026-09-05-CONSOLIDATION.md)                           |
-| «سشن قبل چه شد؟»                                                                    | [SESSION-2026-08-31.md](SESSION-2026-08-31.md)                                                       |
-| «فازهای نقشه‌راه UX چه شد؟ چه چیزی عمداً ساخته نشد؟»                                | [SESSION-2026-08-31-PHASES.md](SESSION-2026-08-31-PHASES.md)                                         |
-| «قرارداد وضعیت / فهرست / نما / صف کار کجاست؟»                                       | `packages/ui-contract/src/{work-state,list-engine,entity-views,work-queue,shell}.ts`                 |
-| «کندی، بودجه‌ی عملکرد»                                                              | [architecture/performance-policy.md](architecture/performance-policy.md)                             |
-| **«PageSpeed / LCP / TBT / لندینگ موبایل / RTL ریبون»**                             | [SESSION-CACHE-2026-09-15-PERF.md](SESSION-CACHE-2026-09-15-PERF.md)                                 |
-| **«شکست بی‌صدا: کوئری غیرفعال، فیلد ناموجود، data.error، بردن کاربر سر فیلد خراب»** | [SESSION-CACHE-2026-09-19.md](SESSION-CACHE-2026-09-19.md)                                           |
-| **«سئو، SEMrush، canonical، robots، CORS، هشدار موجودی»**                           | [SESSION-CACHE-2026-09-17.md](SESSION-CACHE-2026-09-17.md)                                           |
-| «جایگاه‌یابی محصول؛ کدام قابلیت واقعاً وجود دارد»                                   | [POSITIONING-2026-09-15.md](POSITIONING-2026-09-15.md)                                               |
-| «مقایسه با ERPNext/Odoo»                                                            | [research/](research/)                                                                               |
-| محصول، خواسته‌های اصلی                                                              | [detail.md](detail.md)                                                                               |
+| سوال                                                                                  | فایل                                                                                                          |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **«کاربر چطور می‌خواهد کار انجام شود؟ چه چیزی ممنوع است؟ گزارش پایانی چه شکلی است؟»** | [skills/hisabche-session-rules](skills/hisabche-session-rules/SKILL.md) — **هر سشن، اول این**                 |
+| **«یک قابلیت تازه را از دیتابیس تا سه پلتفرم چطور تحویل بدهم؟»**                      | [skills/hisabche-feature-delivery](skills/hisabche-feature-delivery/SKILL.md)                                 |
+| **«migration + VERIFY + تست Postgres واقعی را چطور بنویسم؟»**                         | [skills/hisabche-migrations](skills/hisabche-migrations/SKILL.md)                                             |
+| **«چند فایل را در این پوسته چطور امن ویرایش کنم؟ کلید سه‌زبانه؟»**                    | [skills/hisabche-scripted-edits](skills/hisabche-scripted-edits/SKILL.md)                                     |
+| **«وریفای، lint و بیلد سایت/ویندوز/اندروید»**                                         | [skills/hisabche-release-build](skills/hisabche-release-build/SKILL.md)                                       |
+| **«AI، ایمیل، MCP، خواندن سند، اتصال به سرویس بیرونی»**                               | [skills/hisabche-ai-and-integrations](skills/hisabche-ai-and-integrations/SKILL.md)                           |
+| **«Gap Closure: فهرست قیمت، جریمه، OCR، ترجمه، شیفت، داشبورد، مقایسه»**               | [SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md](SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md) — «دور پنجم» |
+| **«کدام موتور Business OS واقعاً وصل است؟ فاکتور تکراری»**                            | [SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md](SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md)              |
+| **«ساخت و تولید چطور کار می‌کند؟ چه چیزی ساخته نشد؟»**                                | [SESSION-CACHE-2026-10-04-MANUFACTURING.md](SESSION-CACHE-2026-10-04-MANUFACTURING.md) — **اول این**          |
+| **«آخرین سشن چه شد؟ کیف پول، عکس کالا، بازار، refresh token، دری»**                   | [SESSION-CACHE-2026-10-03.md](SESSION-CACHE-2026-10-03.md) — **اول این**                                      |
+| **«کلید دری (af) را چطور بنویسم؟»**                                                   | [DARI-GLOSSARY.md](DARI-GLOSSARY.md)                                                                          |
+| **«robots / sitemap / noindex / بازرسی HTTP همه‌ی صفحه‌ها»**                          | [SESSION-CACHE-2026-10-03.md](SESSION-CACHE-2026-10-03.md) §۲٫۱–۲٫۳                                           |
+| **«الان کجای فازها هستیم؟ چه چیزی نیمه‌تمام است؟»**                                   | [HANDOFF-PHASES-G-TO-O.md](HANDOFF-PHASES-G-TO-O.md)                                                          |
+| **به باگ خوردم / چطور وریفای کنم؟**                                                   | [DEBUG-PLAYBOOK.md](DEBUG-PLAYBOOK.md) — اول این                                                              |
+| «الان چه چیزی کار می‌کند و چه چیزی نه؟»                                               | [STATE.md](STATE.md)                                                                                          |
+| «چرا این‌طوری نوشته شده؟» / «قبلاً چه اشتباهی شد؟»                                    | [lessons-learned.md](lessons-learned.md) — ۱۱۴ درس                                                            |
+| «کد جدید را کجا بگذارم؟»                                                              | [architecture/core-modules.md](architecture/core-modules.md)                                                  |
+| «چه روتی هست؟ کدام hook به کدام endpoint می‌زند؟»                                     | [architecture/api-surface.md](architecture/api-surface.md)                                                    |
+| «جدول‌ها چه شکلی‌اند؟ RLS چطور کار می‌کند؟»                                           | [architecture/data-model.md](architecture/data-model.md)                                                      |
+| «چطور migration بزنم / تست کنم / commit کنم؟»                                         | [WORKFLOW.md](WORKFLOW.md)                                                                                    |
+| **«Source of Truth هر داده کدام است؟»**                                               | [SESSION-2026-09-05-CONSOLIDATION.md](SESSION-2026-09-05-CONSOLIDATION.md)                                    |
+| «کدام migration اجرا شده و کدام نه؟»                                                  | [SESSION-2026-09-05-CONSOLIDATION.md](SESSION-2026-09-05-CONSOLIDATION.md)                                    |
+| «سشن قبل چه شد؟»                                                                      | [SESSION-2026-08-31.md](SESSION-2026-08-31.md)                                                                |
+| «فازهای نقشه‌راه UX چه شد؟ چه چیزی عمداً ساخته نشد؟»                                  | [SESSION-2026-08-31-PHASES.md](SESSION-2026-08-31-PHASES.md)                                                  |
+| «قرارداد وضعیت / فهرست / نما / صف کار کجاست؟»                                         | `packages/ui-contract/src/{work-state,list-engine,entity-views,work-queue,shell}.ts`                          |
+| «کندی، بودجه‌ی عملکرد»                                                                | [architecture/performance-policy.md](architecture/performance-policy.md)                                      |
+| **«PageSpeed / LCP / TBT / لندینگ موبایل / RTL ریبون»**                               | [SESSION-CACHE-2026-09-15-PERF.md](SESSION-CACHE-2026-09-15-PERF.md)                                          |
+| **«شکست بی‌صدا: کوئری غیرفعال، فیلد ناموجود، data.error، بردن کاربر سر فیلد خراب»**   | [SESSION-CACHE-2026-09-19.md](SESSION-CACHE-2026-09-19.md)                                                    |
+| **«سئو، SEMrush، canonical، robots، CORS، هشدار موجودی»**                             | [SESSION-CACHE-2026-09-17.md](SESSION-CACHE-2026-09-17.md)                                                    |
+| «جایگاه‌یابی محصول؛ کدام قابلیت واقعاً وجود دارد»                                     | [POSITIONING-2026-09-15.md](POSITIONING-2026-09-15.md)                                                        |
+| «مقایسه با ERPNext/Odoo»                                                              | [research/](research/)                                                                                        |
+| محصول، خواسته‌های اصلی                                                                | [detail.md](detail.md)                                                                                        |
 
 ---
 

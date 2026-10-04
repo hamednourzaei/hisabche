@@ -366,7 +366,7 @@ export type DashboardProblem = 'EMPTY' | 'UNKNOWN_REPORT' | 'DUPLICATE_REPORT' |
 
 export function validateDashboard(
   definition: DashboardDefinition,
-  savedReports: readonly SavedReport[],
+  savedReports: readonly Pick<SavedReport, 'key'>[],
 ): DashboardProblem[] {
   const problems: DashboardProblem[] = []
   const known = new Set(savedReports.map((r) => r.key))

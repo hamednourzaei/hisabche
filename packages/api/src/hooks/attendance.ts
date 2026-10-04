@@ -138,3 +138,74 @@ export function useMarkAttendance() {
       queryClient.invalidateQueries({ queryKey: attendanceKeys.day(input.date) }),
   })
 }
+
+// ─── Shift assignments (#101): who is PLANNED for which shift on a day ──────
+//
+//   GET  /shift-assignments?date=YYYY-MM-DD
+//   POST /shift-assignments              { employeeId, shiftId, fromDate, days }
+//   POST /shift-assignments/:id/cancel
+//
+// A plan, not attendance. `actual: 'unrecorded'` = nothing on the sheet for that
+// person — which is not «absent».
+
+export interface PlannedShift {
+  id: string
+  employeeId: string
+  employeeName: string
+  shiftId: string
+  shiftName: string
+  startsAt: string
+  endsAt: string
+  actual: 'worked' | 'open' | 'absent' | 'leave' | 'unrecorded'
+  checkIn: string | null
+  checkOut: string | null
+}
+
+export interface ShiftDayPlan {
+  date: string
+  assignments: PlannedShift[]
+  summary: { planned: number; worked: number; absent: number; unrecorded: number }
+}
+
+export const shiftPlanKeys = {
+  all: ['shift-assignments'] as const,
+  day: (date: string) => [...shiftPlanKeys.all, date] as const,
+}
+
+export function useShiftPlan(date: string, enabled = true) {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: shiftPlanKeys.day(date),
+    queryFn: async (): Promise<ShiftDayPlan> => {
+      const { data } = await apiClient.get<ShiftDayPlan>('/shift-assignments', {
+        params: { date },
+      })
+      return { ...data, assignments: asList<PlannedShift>(data?.assignments) }
+    },
+    enabled: ready && enabled && !!date,
+    // Read beside the attendance sheet, which changes under it.
+    staleTime: 0,
+  })
+}
+
+export function useAssignShift() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      employeeId: string
+      shiftId: string
+      fromDate: string
+      days: number
+    }) => (await apiClient.post<{ planned: string[] }>('/shift-assignments', input)).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: shiftPlanKeys.all }),
+  })
+}
+
+export function useCancelShiftAssignment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { id: string }) =>
+      (await apiClient.post<{ id: string }>(`/shift-assignments/${input.id}/cancel`, {})).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: shiftPlanKeys.all }),
+  })
+}

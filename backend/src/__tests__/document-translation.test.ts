@@ -110,15 +110,14 @@ describe('N15 — the model is given pinned text and the source figures go back'
   it('reports how many figures were protected', async () => {
     const result = await translateDocument(SOURCE, 'en', 'fa', honest)
 
-    // ⚠️ FIVE, and every one of them is a whole value:
-    //   2026-0042 · 2026-09-15 · 125,000 · 10,000 — plus the document number's
-    //   own digits where the date broke at the hyphen.
+    // ⚠️ FOUR, and every one of them is a whole value:
+    //   2026-0042 · 2026-09-15 · 125,000 · 10,000
     //
-    // This was SEVEN before the pattern was fixed: `\s` swallowed the newline,
-    // so the count included matches that were really line breaks. The count is
-    // only useful if each unit is a number, so under-counting a broken match is
-    // right and counting a newline is not.
-    expect(result.kind === 'translated' && result.figuresSpotted).toBe(5)
+    // This was SEVEN when `\s` swallowed the newline, then FIVE while a bare dot
+    // in the pattern matched any character — «2026-09» was one match and «-15»
+    // another. A date and a document number are now one figure each, so the
+    // count is the number of values a person would point at.
+    expect(result.kind === 'translated' && result.figuresSpotted).toBe(4)
   })
 
   it('every protected figure is a whole value, not a fragment', () => {

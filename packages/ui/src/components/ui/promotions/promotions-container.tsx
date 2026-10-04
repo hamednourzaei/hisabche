@@ -12,6 +12,9 @@
 // ⚠️ There is no edit and no delete: a changed rule is a NEW promotion, and the
 // old one is retired, so the price on an old invoice still reads as it did.
 // ⚠️ «Not set up», «failed» and «none yet» are three different sentences.
+//
+// Price lists (#19) sit under the promotions on this screen — both decide the
+// price a product is suggested at (see price-lists-panel.tsx).
 // ============================================
 
 import { useState } from 'react'
@@ -40,6 +43,7 @@ import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { Button } from '../button'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { SelectField } from '../select-field'
+import { PriceListsPanel } from './price-lists-panel'
 
 /** Server and schema refusals with a translation. Anything else: the general message. */
 export const PROMOTION_ERROR_CODES = [
@@ -160,6 +164,8 @@ export function PromotionsContainer() {
         </p>
       ) : null}
       <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('note')}</p>
+
+      <PriceListsPanel />
     </div>
   )
 }

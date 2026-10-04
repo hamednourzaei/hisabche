@@ -30,6 +30,7 @@ import { Button } from '../button'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { SelectField } from '../select-field'
 import { ShiftManager } from './shift-manager'
+import { ShiftPlan } from './shift-plan'
 
 /** Server refusals with a translation. Anything else gets the general message. */
 export const ATTENDANCE_ERROR_CODES = [
@@ -190,6 +191,9 @@ export function AttendanceSheet() {
           <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('note')}</p>
         </>
       )}
+
+      {/* Who is planned for this day, beside what was recorded (#101). */}
+      <ShiftPlan date={date} employees={sheet.data?.rows ?? []} shifts={activeShifts} />
 
       <ShiftManager />
     </div>

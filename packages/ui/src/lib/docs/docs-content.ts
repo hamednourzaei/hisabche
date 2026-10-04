@@ -121,12 +121,24 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
     related: ['invoices', 'customers', 'accounting'],
   },
   {
+    slug: 'campaigns',
+    group: 'sell',
+    sections: [
+      { id: 'what', bodyCount: 2 },
+      { id: 'send', bodyCount: 2, stepCount: 4 },
+      { id: 'nps', bodyCount: 3 },
+      { id: 'optout', bodyCount: 1 },
+    ],
+    related: ['customers', 'invoices', 'promotions'],
+  },
+  {
     slug: 'promotions',
     group: 'sell',
     sections: [
       { id: 'what', bodyCount: 2 },
       { id: 'make', bodyCount: 2, stepCount: 3 },
       { id: 'retire', bodyCount: 1 },
+      { id: 'lists', bodyCount: 2 },
     ],
     related: ['invoices', 'customers', 'installments'],
   },
@@ -137,6 +149,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'what', bodyCount: 2 },
       { id: 'make', bodyCount: 1, stepCount: 3 },
       { id: 'follow', bodyCount: 2 },
+      { id: 'lateFees', bodyCount: 2 },
     ],
     related: ['invoices', 'customers', 'promotions'],
   },
@@ -156,7 +169,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'balance', bodyCount: 2 },
       { id: 'overdue', bodyCount: 1 },
     ],
-    related: ['invoices', 'accounting', 'pos'],
+    related: ['invoices', 'accounting', 'pos', 'campaigns'],
     outbound: [
       { href: '/features/customer-debt', labelKey: 'landing.featurePage.customerDebt.h1' },
     ],

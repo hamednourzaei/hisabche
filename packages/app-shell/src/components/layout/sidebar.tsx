@@ -85,6 +85,7 @@ const DESKTOP_ROUTES = new Set([
   '/market-seller',
   '/analysis',
   '/promotions',
+  '/campaigns',
   '/governance',
 ])
 

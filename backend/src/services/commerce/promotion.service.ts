@@ -19,6 +19,7 @@
 // ============================================
 
 import {
+  priceListPricing,
   promotionInputSchema,
   promotionsFor,
   quotePrice,
@@ -33,6 +34,7 @@ import { DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { selectAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
+import { PriceListsNotConfiguredError, priceListService } from './price-list.service'
 
 const MISSING_SCHEMA = new Set(['42703', '42P01', 'PGRST204', 'PGRST205'])
 const COLUMNS =
@@ -140,8 +142,9 @@ export class PromotionService {
   }
 
   /**
-   * What one sale line would cost today: the product's own sell price, less the
-   * promotions that are live, cover it, and can be applied in `currency`.
+   * What one sale line would cost today: the price on the customer's price list
+   * when one applies (else the product's own sell price), less the promotions
+   * that are live, cover it, and can be applied in `currency`.
    */
   async quote(
     ctx: TenancyContext,
@@ -157,22 +160,46 @@ export class PromotionService {
     if (!product) throw new NotFoundError('Product')
 
     const promotions = promotionsFor(await this.list(ctx, { activeOnly: true }), input.currency)
+    const today = new Date().toISOString().slice(0, 10)
+    const onList = priceListPricing(
+      await this.customerPriceList(ctx, input.customerId),
+      input.productId,
+      input.currency,
+      today,
+    )
     const quote = quotePrice(
       {
         productId: input.productId,
         kind: 'sale',
         customerId: input.customerId,
+        priceListId: onList.priceListId,
         quantity: input.quantity,
       },
       // No floor is passed: the shop has configured none, and absent means none.
       {
         productId: input.productId,
         baseUnitPrice: Number((product as { sell_price: unknown }).sell_price),
+        listPrices: onList.listPrices,
       },
       promotions,
-      new Date().toISOString().slice(0, 10),
+      today,
     )
     return { ...quote, currency: input.currency }
+  }
+
+  /**
+   * The list the customer buys on. A walk-in has none, and before the price-list
+   * migration nobody has one — both are «no list», which is true. Any other
+   * failure is a failure: a quote is not made on a list that could not be read.
+   */
+  private async customerPriceList(ctx: TenancyContext, customerId: string | null) {
+    if (!customerId) return null
+    try {
+      return await priceListService.forCustomer(ctx, customerId)
+    } catch (error) {
+      if (error instanceof PriceListsNotConfiguredError) return null
+      throw error
+    }
   }
 
   /** Every product and customer a promotion names must belong to this workspace. */

@@ -346,6 +346,11 @@ describe('everything under /api/public/ is public by design', () => {
     'GET /api/public/market/sellers/:seller',
     'GET /api/public/market/sellers/:seller/listings/:slug',
     'GET /api/public/market/sitemap',
+    // A campaign recipient's own page (campaigns.routes.ts): the unguessable
+    // token from their email opens it; it names the business and nobody else.
+    'GET /api/public/feedback/:token',
+    'POST /api/public/feedback/:token/answer',
+    'POST /api/public/feedback/:token/unsubscribe',
   ]
 
   const routeFiles = readdirSync(join(SRC, 'routes')).filter((f) => f.endsWith('.ts'))

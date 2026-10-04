@@ -9,8 +9,8 @@
 // here from what the invoice still owes, oldest installment first. There is no
 // second record of a payment to drift from the first.
 //
-// ⚠️ NO LATE FEE IS CHARGED OR SHOWN (#124). A fee is a ledger entry and a
-// shop's decision; the engine's default is off and there is no setting for it.
+// ⚠️ NO LATE FEE IS CHARGED HERE (#124). A fee is a shop's decision, made by a
+// manager through late-fee.service.ts, which reads this plan and the policy.
 //
 // The split is the domain's (`planSchedule`); the write is one Postgres
 // function (`installments_save`), which re-checks under a lock that the parts

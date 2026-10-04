@@ -39,8 +39,19 @@ import { Sparkles } from 'lucide-react'
 import { useAiAvailability, useAskAi, type AiQuotaExceeded } from '@hisabche/api'
 
 import { AiAssistantPanel } from '../ai-assistant-panel'
+import { DocumentReadTool } from '../document-read-tool'
+import { DocumentTranslateTool } from '../document-translate-tool'
 import { cn } from '../../../../lib/utils'
 import { aiErrorText } from '../../../../lib/ai-error-text'
+
+const ASSISTANT_MODES = ['ask', 'translate', 'read'] as const
+type AssistantMode = (typeof ASSISTANT_MODES)[number]
+
+const MODE_LABEL: Record<AssistantMode, { key: string; fallback: string }> = {
+  ask: { key: 'ai.modeAsk', fallback: 'پرسش از دفترها' },
+  translate: { key: 'ai.modeTranslate', fallback: 'ترجمه‌ی سند' },
+  read: { key: 'ai.modeRead', fallback: 'خواندن سند' },
+}
 
 export function AiAssistantContainer() {
   // ⚠️ RESOLVED HERE, NOT PASSED IN. Every other container in this package
@@ -68,6 +79,9 @@ export function AiAssistantContainer() {
 
   const [messages, setMessages] = React.useState<ThreadMessageLike[]>([])
   const [exceeded, setExceeded] = React.useState<AiQuotaExceeded | null>(null)
+  // Asking the books, translating a document (#20) or reading a picture of one
+  // (#16). Same provider, same allowance.
+  const [mode, setMode] = React.useState<AssistantMode>('ask')
 
   const { data: availability, isLoading } = useAiAvailability()
   const ask = useAskAi()
@@ -157,21 +171,28 @@ export function AiAssistantContainer() {
   const spent = exceeded !== null
 
   return (
-    <Shell t={tr} remaining={quota?.remaining ?? null}>
-      <AiAssistantPanel
-        t={tr}
-        messages={messages}
-        isRunning={ask.isPending}
-        onSend={send}
-        disabled={spent}
-        notice={
-          spent ? (
-            <p className="text-xs leading-relaxed text-[hsl(var(--color-warning))]">
-              {tr('ai.quotaExceeded', 'سهم پرسش‌های شما تمام شده است.')} {availability.topupContact}
-            </p>
-          ) : undefined
-        }
-      />
+    <Shell t={tr} remaining={quota?.remaining ?? null} mode={mode} onMode={setMode}>
+      {mode === 'translate' ? (
+        <DocumentTranslateTool topupContact={availability.topupContact} />
+      ) : mode === 'read' ? (
+        <DocumentReadTool topupContact={availability.topupContact} />
+      ) : (
+        <AiAssistantPanel
+          t={tr}
+          messages={messages}
+          isRunning={ask.isPending}
+          onSend={send}
+          disabled={spent}
+          notice={
+            spent ? (
+              <p className="text-xs leading-relaxed text-[hsl(var(--color-warning))]">
+                {tr('ai.quotaExceeded', 'سهم پرسش‌های شما تمام شده است.')}{' '}
+                {availability.topupContact}
+              </p>
+            ) : undefined
+          }
+        />
+      )}
     </Shell>
   )
 }
@@ -180,10 +201,15 @@ export function AiAssistantContainer() {
 function Shell({
   t,
   remaining,
+  mode,
+  onMode,
   children,
 }: {
   t: (key: string, fallback?: string) => string
   remaining?: number | null
+  /** Given only when the assistant is usable: an unconfigured page has one thing to say. */
+  mode?: AssistantMode
+  onMode?: (mode: AssistantMode) => void
   children: React.ReactNode
 }) {
   return (
@@ -214,6 +240,28 @@ function Shell({
           </span>
         ) : null}
       </header>
+
+      {mode && onMode ? (
+        <div role="tablist" className="flex shrink-0 gap-2">
+          {ASSISTANT_MODES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={mode === value}
+              onClick={() => onMode(value)}
+              className={cn(
+                'min-h-11 rounded-full px-4 text-sm',
+                mode === value
+                  ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]'
+                  : 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
+              )}
+            >
+              {t(MODE_LABEL[value].key, MODE_LABEL[value].fallback)}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div
         className={cn(

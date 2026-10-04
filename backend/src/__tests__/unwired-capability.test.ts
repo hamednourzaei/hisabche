@@ -210,7 +210,10 @@ const REGISTER: Capability[] = [
       'packages/validation/src/schemas/pricing.ts so the server (POST ' +
       '/api/promotions/quote) and the invoice builder (price of a picked product) use ' +
       'ONE quotePrice. Promotions are saved by docs/promotions-01-migration.sql and ' +
-      'managed on /promotions. NOT wired: price lists (#19 — no table), bundles (the ' +
+      'managed on /promotions. Price lists (#19): docs/price-lists-01-migration.sql, ' +
+      'commerce/price-list.service.ts, /api/price-lists, the panel on /promotions; the ' +
+      'quote and the invoice builder read the customer’s list through priceListPricing. ' +
+      'NOT wired: bundles (the ' +
       'schema refuses the kind), a price floor (no setting; absent means none), and ' +
       'applyPrice — the invoice still takes each line price from the request, because a ' +
       'person may always edit a price.',
@@ -223,9 +226,12 @@ const REGISTER: Capability[] = [
     note:
       'Wired on 4 October 2026 (#123): PUT /api/invoices/:id/installments splits what an ' +
       'invoice owes with planSchedule and saves it through installments_save ' +
-      '(docs/installments-01-migration.sql); the invoice page shows the plan. NOT wired, ' +
-      'on purpose: late fees and blocking (#124 — overdueInstallments, decideBlock). A ' +
-      'fee is a ledger entry and a shop decision; there is no setting and the default is off.',
+      '(docs/installments-01-migration.sql); the invoice page shows the plan. Late fees ' +
+      '(#124): commerce/late-fee.service.ts asks overdueInstallments what is owed under ' +
+      'the workspace policy (docs/late-fees-01-migration.sql, default off) and, when a ' +
+      'manager says so, issues the fee as a sale invoice through InvoiceService.create. ' +
+      'NOT wired, on purpose: blocking a sale to a late customer (decideBlock) and any ' +
+      'automatic charge.',
     status: 'WIRED',
   },
   {
@@ -298,22 +304,39 @@ const REGISTER: Capability[] = [
     id: '#135 Benchmark',
     file: 'services/analytics/benchmark.domain.ts',
     symbols: ['benchmark'],
-    note: NOTHING_REACHES_IT + ' And the product has no external data to benchmark against.',
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026 for ONE figure: GET /api/analysis/benchmark → ' +
+      'analytics/benchmark.service.ts compares sale invoices per day (30 days, from ' +
+      'benchmark_sale_counts — docs/benchmark-01-migration.sql) with the other ' +
+      'businesses on this deployment. Below MIN_PEERS nothing is published. NOT wired: ' +
+      'margins and DSO (they need every business’s profit report) and peerFactsFrom. ' +
+      'There is no external data; the basis is always SAME_DEPLOYMENT_PEERS_ONLY.',
+    status: 'WIRED',
   },
   {
     id: '#16 #30 #48 #49 Document ingestion',
     file: 'services/ingest/ingest.domain.ts',
     symbols: ['checkIngestable', 'toDraft'],
-    note: NOTHING_REACHES_IT + ' No OCR provider is configured either.',
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026: ingest/ingest.service.ts reads ONE picture through the ' +
+      'configured AI provider (POST /api/ingest/read → a draft, nothing written) and ' +
+      'records the draft a person corrected as a purchase invoice (POST ' +
+      '/api/ingest/confirm → InvoiceService.create). Not configured = NO_PROVIDER. NOT ' +
+      'wired: PDFs and multi-page documents, stored source files, bank statements (#48), ' +
+      'and capture from a connector (#30). Never exercised against a live provider.',
+    status: 'WIRED',
   },
   {
     id: '#20 Document translation',
     file: 'services/ingest/translate.domain.ts',
     symbols: ['pinFigures'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026: POST /api/ai/translate → ingest/translate.service.ts → ' +
+      'translateDocument, with the configured AI provider as the translator and the ' +
+      'same monthly allowance as a question. The pinner now sees Persian and ' +
+      'Arabic-Indic digits and treats a date or document number as one figure. Never ' +
+      'exercised against a live provider.',
+    status: 'WIRED',
   },
   {
     id: '#3 #9 #13 #18 Customer risk',
@@ -332,9 +355,9 @@ const REGISTER: Capability[] = [
     note:
       'Wired on 4 October 2026 in part: customerHealth (#108) and loyaltyTier (#109) ' +
       'are read from a customer’s own invoices by GET /api/analysis/customers/:id/risk ' +
-      'and shown on the customer page. NOT wired: netPromoterScore (#106) — there is ' +
-      'no survey, no response table and no channel to ask a customer, so there is no ' +
-      'score to compute.',
+      'and shown on the customer page. netPromoterScore (#106) is computed by ' +
+      'campaigns/campaign.service.ts from the answers customers give to an NPS ' +
+      'campaign (docs/campaigns-01-migration.sql, /campaigns, public /feedback/:token).',
     status: 'WIRED',
   },
   {
@@ -381,7 +404,9 @@ const REGISTER: Capability[] = [
       'invoice_outstanding view — with three measures (count, outstanding, collected), ' +
       'always per currency. Anything else is refused at save (REPORT_NOT_RUNNABLE). NOT ' +
       'wired: the other seven datasets, the profit and cost measures (they belong to the ' +
-      'accounting core), and the dashboard builder (#146 — validateDashboard has no caller).',
+      'accounting core). Dashboards (#146): reporting/dashboard.service.ts saves an ' +
+      'arrangement of saved reports after validateDashboard ' +
+      '(docs/report-dashboards-01-migration.sql); each tile is run as a report.',
     status: 'WIRED',
   },
   {
@@ -408,8 +433,10 @@ const REGISTER: Capability[] = [
       'hours and problems come from attendanceFor. Shifts (#101) followed the same day: ' +
       'payroll/shift.service.ts (docs/work-shifts-01-migration.sql) validates with ' +
       'validateShifts and the sheet records a day «by shift». Notes (#103): ' +
-      'notes.service.ts (docs/entity-notes-01-migration.sql) uses validateNote. NOT wired: ' +
-      'assigning a person to a shift (a roster). Attendance feeds nothing into payroll, by rule.',
+      'notes.service.ts (docs/entity-notes-01-migration.sql) uses validateNote. The plan ' +
+      '(who is assigned to which shift on a day) is payroll/shift-assignment.service.ts ' +
+      '(docs/shift-assignments-01-migration.sql), shown beside the sheet. Attendance and ' +
+      'the plan feed nothing into payroll, by rule.',
     status: 'WIRED',
   },
 

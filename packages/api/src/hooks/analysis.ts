@@ -167,6 +167,7 @@ export const analysisKeys = {
   breakEven: (from: string, to: string, currency: string, other: number | null) =>
     [...analysisKeys.all, 'break-even', from, to, currency, other] as const,
   cohorts: () => [...analysisKeys.all, 'cohorts'] as const,
+  benchmark: () => [...analysisKeys.all, 'benchmark'] as const,
   workingCapital: (from: string, to: string, currency: string) =>
     [...analysisKeys.all, 'working-capital', from, to, currency] as const,
 }
@@ -271,5 +272,40 @@ export function useCohorts(options: { enabled?: boolean } = {}) {
     },
     enabled: authReady && options.enabled !== false,
     staleTime: 5 * 60_000,
+  })
+}
+
+// ─── Comparison with the other businesses on this service (#135) ───────────
+//
+//   GET /analysis/benchmark
+//
+// One figure — sale invoices per day — and only a median, a percentile and a
+// count of the others. Below `minPeers` there is no comparison, and
+// `unavailable` says why.
+
+export interface PeerBenchmark {
+  metric: 'invoiceRatePerDay'
+  periodDays: number
+  /** Null when the business sold nothing in the period. */
+  own: number | null
+  peerMedian: number | null
+  percentile: number | null
+  peerCount: number
+  minPeers: number
+  unavailable: null | 'NO_SELF_FIGURE' | 'NOT_ENOUGH_PEERS' | 'NO_PEERS'
+  delta: number | null
+  direction: 'above' | 'below' | 'level' | null
+}
+
+export function usePeerBenchmark() {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: analysisKeys.benchmark(),
+    queryFn: async (): Promise<PeerBenchmark> =>
+      (await apiClient.get<PeerBenchmark>('/analysis/benchmark')).data,
+    enabled: ready,
+    staleTime: 10 * 60_000,
+    // A failed read is shown as a failure; it is not retried into a long spinner.
+    retry: false,
   })
 }

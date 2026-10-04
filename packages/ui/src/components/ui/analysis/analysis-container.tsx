@@ -35,10 +35,12 @@ import { useLocalePush } from '../../../hooks/use-locale-push'
 import { DateRangePicker, type DateRange } from '../dashboard/date-range-picker'
 import { MoneyInput } from '../money-input'
 import { Tabs, TabsList, TabsTrigger } from '../tabs'
+import { PeerBenchmark } from './peer-benchmark'
 import { ReportBuilder } from './report-builder'
 
 type T = (key: string, fallback?: string) => string
-type Section = 'collections' | 'suppliers' | 'breakEven' | 'cohorts' | 'workingCapital' | 'reports'
+type Section =
+  'collections' | 'suppliers' | 'breakEven' | 'cohorts' | 'workingCapital' | 'benchmark' | 'reports'
 
 const card =
   'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]'
@@ -102,6 +104,7 @@ export function AnalysisContainer() {
     { id: 'breakEven', label: t('analysis.tabs.breakEven', 'نقطه‌ی سربه‌سر') },
     { id: 'cohorts', label: t('analysis.tabs.cohorts', 'بازگشت مشتری') },
     { id: 'workingCapital', label: t('analysis.tabs.workingCapital', 'سرمایه در گردش') },
+    { id: 'benchmark', label: t('analysis.tabs.benchmark', 'مقایسه') },
     { id: 'reports', label: t('analysis.tabs.reports', 'گزارش‌ساز') },
   ]
 
@@ -137,6 +140,7 @@ export function AnalysisContainer() {
       {section === 'breakEven' ? <BreakEven t={t} locale={locale} /> : null}
       {section === 'cohorts' ? <Cohorts t={t} locale={locale} /> : null}
       {section === 'workingCapital' ? <WorkingCapital t={t} locale={locale} /> : null}
+      {section === 'benchmark' ? <PeerBenchmark /> : null}
       {section === 'reports' ? <ReportBuilder /> : null}
     </div>
   )

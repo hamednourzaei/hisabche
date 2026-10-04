@@ -369,6 +369,11 @@ export const DescriptionCell = memo(function DescriptionCell({
                             {t('invoiceBuilder.grid.promotion', 'تخفیف')}
                           </span>
                         ) : null}
+                        {pickAs === 'sale' && promoPrice(product).listName ? (
+                          <span className="shrink-0 rounded bg-[hsl(var(--color-primary)/0.1)] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--color-primary))]">
+                            {promoPrice(product).listName}
+                          </span>
+                        ) : null}
                         {product.sku ? (
                           <span
                             dir="ltr"

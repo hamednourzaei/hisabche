@@ -98,12 +98,17 @@ import { analysisRoutes } from './routes/analysis.routes'
 import { installmentRoutes } from './routes/installments.routes'
 import { attendanceRoutes } from './routes/attendance.routes'
 import { promotionRoutes } from './routes/promotions.routes'
+import { priceListRoutes } from './routes/price-lists.routes'
+import { lateFeeRoutes } from './routes/late-fees.routes'
+import { translateRoutes } from './routes/translate.routes'
+import { ingestRoutes } from './routes/ingest.routes'
 import { notesRoutes } from './routes/notes.routes'
 import { financingRoutes } from './routes/financing.routes'
 import { customFieldRoutes } from './routes/custom-fields.routes'
 import { customReportRoutes } from './routes/custom-reports.routes'
 import { snapshotRoutes } from './routes/snapshots.routes'
 import { mcpRoutes } from './routes/mcp.routes'
+import { campaignRoutes } from './routes/campaigns.routes'
 import { purchasingRoutes } from './routes/purchasing.routes'
 import { billingRoutes } from './routes/billing.routes'
 import { walletRoutes } from './routes/wallet.routes'
@@ -748,12 +753,17 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(installmentRoutes)
   await server.register(attendanceRoutes)
   await server.register(promotionRoutes)
+  await server.register(priceListRoutes)
+  await server.register(lateFeeRoutes)
+  await server.register(translateRoutes)
+  await server.register(ingestRoutes)
   await server.register(notesRoutes)
   await server.register(financingRoutes)
   await server.register(customFieldRoutes)
   await server.register(customReportRoutes)
   await server.register(snapshotRoutes)
   await server.register(mcpRoutes)
+  await server.register(campaignRoutes)
   await server.register(purchasingRoutes)
   await server.register(workflowRoutes)
 

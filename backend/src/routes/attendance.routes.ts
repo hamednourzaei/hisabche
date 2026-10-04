@@ -12,6 +12,15 @@
 //   POST  /api/shifts                 manager and up
 //   PATCH /api/shifts/:id/active      manager and up   { isActive }
 //
+// …and who is PLANNED for which shift on a day, beside what was recorded:
+//
+//   GET  /api/shift-assignments?date=YYYY-MM-DD      manager and up
+//   POST /api/shift-assignments                      manager and up   { employeeId, shiftId, fromDate, days }
+//   POST /api/shift-assignments/:id/cancel           manager and up
+//
+// A plan is not attendance: nothing here records a day or changes pay, and an
+// assignment is cancelled, never deleted.
+//
 // Manager and up, read from `request.tenancy.role`: who came to work, and
 // when, is a record about named people.
 // ============================================
@@ -23,6 +32,10 @@ import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { MARKABLE_STATUSES, attendanceService } from '../services/payroll/attendance.service'
+import {
+  MAX_ASSIGNMENT_DAYS,
+  shiftAssignmentService,
+} from '../services/payroll/shift-assignment.service'
 import { shiftService } from '../services/payroll/shift.service'
 import { requireRole } from '../services/tenancy.service'
 
@@ -129,6 +142,57 @@ export async function attendanceRoutes(fastify: FastifyInstance) {
         return reply.send(await shiftService.setActive(request.tenancy, id, isActive))
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to update the shift')
+      }
+    },
+  )
+
+  // ─── Shift assignments (#101, the plan) ────────────────────
+
+  fastify.get(
+    '/api/shift-assignments',
+    { preHandler: MEMBER },
+    async (request: FastifyRequest, reply) => {
+      try {
+        requireRole(request.tenancy, 'manager')
+        const { date } = z.object({ date: isoDay }).parse(request.query)
+        return reply.send(await shiftAssignmentService.day(request.tenancy, date))
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to read the shift plan')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/shift-assignments',
+    { preHandler: MEMBER },
+    async (request: FastifyRequest, reply) => {
+      try {
+        requireRole(request.tenancy, 'manager')
+        const input = z
+          .object({
+            employeeId: z.string().uuid(),
+            shiftId: z.string().uuid(),
+            fromDate: isoDay,
+            days: z.number().int().min(1).max(MAX_ASSIGNMENT_DAYS).default(1),
+          })
+          .parse(request.body)
+        return reply.code(201).send(await shiftAssignmentService.assign(request.tenancy, input))
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to save the shift plan')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/shift-assignments/:id/cancel',
+    { preHandler: MEMBER },
+    async (request: FastifyRequest, reply) => {
+      try {
+        requireRole(request.tenancy, 'manager')
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        return reply.send(await shiftAssignmentService.cancel(request.tenancy, id))
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to cancel the assignment')
       }
     },
   )

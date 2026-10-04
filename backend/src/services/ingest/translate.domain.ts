@@ -59,10 +59,23 @@ export const SUPPORTED_LOCALES: readonly SupportedLocale[] = ['fa', 'af', 'en']
  * So grouping is written explicitly, the decimal separator is outside the
  * class, and nothing here uses `\s` — every separator is a named one.
  */
+/**
+ * A digit in any of the three scripts a document here is written in: ASCII,
+ * Persian (۰–۹) and Arabic-Indic (٠–٩). The first version matched ASCII only,
+ * so «۱۲۵٬۰۰۰ افغانی» was not a figure, was sent to the model as prose, and
+ * nothing checked that it came back unchanged. The decimal separator is a dot
+ * or the Persian «٫», written as a class — a bare dot in the pattern string
+ * matched ANY character.
+ *
+ * A date or a document number («2026-09-15», «2026-0042», «۱۴۰۵/۰۷/۱۲») is one
+ * figure: digit groups joined by a hyphen or a slash are tried first, so a
+ * model can never reorder the parts of a date.
+ */
 const FIGURE_PATTERN = new RegExp(
-  '(-?(?:\\d{1,3}(?:[,\u066C\u00A0\u0020]\\d{3})+|\\d+)(?:\.\\d+)?%?)' +
-    '|([\$\u20AC\u00A3\u06BC\u060B\u20B9][\u0020\u0009]*-?(?:\\d{1,3}(?:[,\u066C\u00A0\u0020]\\d{3})+|\\d+)(?:\.\\d+)?)' +
-    '|(ماه|سال|روز|شماره[\u0020\u0009]*\\d+)',
+  '([0-9\u06F0-\u06F9\u0660-\u0669]+(?:[-/][0-9\u06F0-\u06F9\u0660-\u0669]+)+)|' +
+    '(-?(?:[0-9\u06F0-\u06F9\u0660-\u0669]{1,3}(?:[,\u066C\u00A0\u0020][0-9\u06F0-\u06F9\u0660-\u0669]{3})+|[0-9\u06F0-\u06F9\u0660-\u0669]+)(?:[.\u066B][0-9\u06F0-\u06F9\u0660-\u0669]+)?%?)' +
+    '|([$\u20AC\u00A3\u06BC\u060B\u20B9][\u0020\u0009]*-?(?:[0-9\u06F0-\u06F9\u0660-\u0669]{1,3}(?:[,\u066C\u00A0\u0020][0-9\u06F0-\u06F9\u0660-\u0669]{3})+|[0-9\u06F0-\u06F9\u0660-\u0669]+)(?:[.\u066B][0-9\u06F0-\u06F9\u0660-\u0669]+)?)' +
+    '|(ماه|سال|روز|شماره[\u0020\u0009]*[0-9\u06F0-\u06F9\u0660-\u0669]+)',
   'g',
 )
 

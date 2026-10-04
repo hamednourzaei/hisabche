@@ -432,3 +432,110 @@ export function promotionsFor(saved: readonly SavedPromotion[], currency: string
       validTo: promotion.validTo,
     }))
 }
+
+// ─── Price lists (#19) ──────────────────────────────────────────────────────
+//
+// A price list is a named set of product prices in ONE currency, optionally
+// between two days; a customer can be put on one list.
+//
+// ⚠️ ONE RULE FOR «DOES THIS LIST PRICE THIS LINE», used by the server's quote
+// and by the invoice builder: the list is active, today is inside its window,
+// and it is in the invoice's currency. A list in another currency is LEFT OUT,
+// not converted — the same rule as a fixed-amount promotion.
+//
+// ⚠️ A product that is not on the list keeps its own price. The list is an
+// override, not a catalogue: being absent from it does not make a product
+// unsellable or free.
+
+export const priceListInputSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80),
+    /** Every price on the list is in this currency. */
+    currency: z.string().trim().length(3),
+    validFrom: isoDayOrNull,
+    validTo: isoDayOrNull,
+  })
+  .superRefine((value, ctx) => {
+    if (value.validFrom && value.validTo && value.validFrom > value.validTo) {
+      ctx.addIssue({ code: 'custom', path: ['validTo'], message: 'PRICE_LIST_WINDOW_INVERTED' })
+    }
+  })
+
+export type PriceListInput = z.infer<typeof priceListInputSchema>
+
+/** The most prices one request may set. A longer list is saved in several. */
+export const MAX_PRICE_LIST_CHANGES = 500
+
+export const priceListItemsSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        productId: z.string().uuid(),
+        /** The price in the list's currency. `null` takes the product off the list. */
+        unitPrice: z.number().positive().max(1_000_000_000_000).nullable(),
+      }),
+    )
+    .min(1)
+    .max(MAX_PRICE_LIST_CHANGES),
+})
+
+export type PriceListItemsInput = z.infer<typeof priceListItemsSchema>
+
+export interface SavedPriceList extends PriceListInput {
+  id: string
+  isActive: boolean
+  createdAt: string
+  /** Products priced on the list. */
+  itemCount: number
+  /** Customers who buy on it. */
+  customerCount: number
+}
+
+/** The list a customer is on, with the prices it sets — what a line is priced from. */
+export interface CustomerPriceList {
+  id: string
+  name: string
+  currency: string
+  validFrom: string | null
+  validTo: string | null
+  isActive: boolean
+  prices: readonly { productId: string; unitPrice: number }[]
+}
+
+/** Whether the list prices a line of an invoice in `currency` on `today`. */
+export function priceListApplies(
+  list: Pick<CustomerPriceList, 'isActive' | 'currency' | 'validFrom' | 'validTo'>,
+  currency: string,
+  today: string,
+): boolean {
+  if (!list.isActive || list.currency !== currency) return false
+  if (list.validFrom && today < list.validFrom) return false
+  if (list.validTo && today > list.validTo) return false
+  return true
+}
+
+/**
+ * The two halves of the engine's input that a price list decides: which list
+ * the request is quoted on, and the per-list price of the product.
+ *
+ * A list that does not apply, or does not carry the product, contributes
+ * nothing — the product's own price stands.
+ */
+export function priceListPricing(
+  list: CustomerPriceList | null | undefined,
+  productId: string,
+  currency: string,
+  today: string,
+): {
+  priceListId: string | null
+  listPrices: { priceListId: string; unitPrice: number }[]
+} {
+  if (!list || !priceListApplies(list, currency, today))
+    return { priceListId: null, listPrices: [] }
+  const entry = list.prices.find((price) => price.productId === productId)
+  if (!entry || !(entry.unitPrice > 0)) return { priceListId: null, listPrices: [] }
+  return {
+    priceListId: list.id,
+    listPrices: [{ priceListId: list.id, unitPrice: entry.unitPrice }],
+  }
+}

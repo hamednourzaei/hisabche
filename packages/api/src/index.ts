@@ -371,6 +371,8 @@ export {
   type CohortAnalysis,
   type WorkingCapitalAnalysis,
   type ReminderTone,
+  usePeerBenchmark,
+  type PeerBenchmark,
 } from './hooks/analysis'
 
 // ─── Installment plan of an invoice (#123) ────────────────
@@ -383,6 +385,19 @@ export {
   type InstallmentLine,
 } from './hooks/installments'
 
+// ─── Late payment fees (#124) ─────────────────────────────
+export {
+  useLateFeePolicy,
+  useSaveLateFeePolicy,
+  useLateFeePreview,
+  useAssessLateFee,
+  lateFeeKeys,
+  type LateFeePreview,
+  type LateFeeLine,
+  type LateFeeAssessment,
+  type LateFeeState,
+} from './hooks/late-fees'
+
 // ─── Daily attendance sheet (#100) ────────────────────────
 export {
   useAttendanceSheet,
@@ -392,6 +407,12 @@ export {
   useCreateWorkShift,
   useSetWorkShiftActive,
   shiftKeys,
+  useShiftPlan,
+  useAssignShift,
+  useCancelShiftAssignment,
+  shiftPlanKeys,
+  type PlannedShift,
+  type ShiftDayPlan,
   type WorkShift,
   type AttendanceSheet,
   type AttendanceSheetRow,
@@ -407,6 +428,19 @@ export {
   useSetPromotionActive,
   promotionKeys,
 } from './hooks/promotions'
+
+// ─── Price lists (#19) ────────────────────────────────────
+export {
+  usePriceLists,
+  usePriceList,
+  useCustomerPriceList,
+  useSavePriceList,
+  useSetPriceListActive,
+  useSetPriceListItems,
+  useAssignPriceList,
+  priceListKeys,
+  type PriceListDetail,
+} from './hooks/price-lists'
 
 // ─── Notes on a record (#103) ─────────────────────────────
 export {
@@ -457,6 +491,12 @@ export {
   useRetireReport,
   useReportRun,
   customReportKeys,
+  useReportDashboards,
+  useSaveReportDashboard,
+  useRetireReportDashboard,
+  reportDashboardKeys,
+  type ReportDashboard,
+  type ReportDashboardTile,
   type ReportCatalog,
   type SavedReport,
   type ReportRun,
@@ -483,6 +523,29 @@ export {
   type AiActionRequest,
   type AiRequestStatus,
 } from './hooks/ai-requests'
+
+// ─── Customer campaigns and NPS (#106, #112) ──────────────
+export {
+  useCampaigns,
+  useCampaignDetail,
+  useCampaignPreview,
+  useCreateCampaign,
+  useLaunchCampaign,
+  useCancelCampaign,
+  useFeedbackView,
+  useAnswerFeedback,
+  useUnsubscribeFeedback,
+  campaignKeys,
+  type Campaign,
+  type CampaignInput,
+  type CampaignKind,
+  type CampaignSegment,
+  type CampaignLanguage,
+  type CampaignChannel,
+  type CampaignPreview,
+  type CampaignDetail,
+  type FeedbackView,
+} from './hooks/campaigns'
 
 // ─── Saved views (#87, #89) ───────────────────────────────
 export {
@@ -904,6 +967,7 @@ export {
   aiKeys,
   useAiAvailability,
   useAskAi,
+  useTranslateDocument,
   useAiConfig,
   useSaveAiConfig,
   useSetAiQuota,
@@ -912,7 +976,19 @@ export {
   type AiAnswer,
   type AiQuotaExceeded,
   type AiConfigStatus,
+  type DocumentTranslation,
 } from './hooks/ai-chat'
+
+// ─── Reading a photographed document (#16) ───
+export {
+  useReadDocument,
+  useConfirmDocument,
+  type DocumentReading,
+  type DocumentDraft,
+  type ReadField,
+  type ReadConfidence,
+  type ConfirmDocumentInput,
+} from './hooks/ingest'
 
 // ─── Inventory & intelligence operations (T11) ───
 export {

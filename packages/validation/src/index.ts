@@ -329,6 +329,16 @@ export {
   type SaveProductionDefinition,
 } from './schemas/manufacturing-cost'
 
+// ---------- Late payment fee policy (#124) ----------
+export {
+  lateFeePolicySchema,
+  LATE_FEE_BASES,
+  LATE_FEE_PERIOD_DAYS,
+  type LateFeeBasisName,
+  type LateFeePolicy,
+  type LateFeePolicyInput,
+} from './schemas/late-fee'
+
 // ---------- Pricing & promotions (shared engine) ----------
 export {
   quotePrice,
@@ -339,6 +349,15 @@ export {
   promotionInputSchema,
   promotionsFor,
   SAVABLE_PROMOTION_KINDS,
+  priceListInputSchema,
+  priceListItemsSchema,
+  priceListApplies,
+  priceListPricing,
+  MAX_PRICE_LIST_CHANGES,
+  type PriceListInput,
+  type PriceListItemsInput,
+  type SavedPriceList,
+  type CustomerPriceList,
   type PriceRequest,
   type PriceQuote,
   type ProductPricing,

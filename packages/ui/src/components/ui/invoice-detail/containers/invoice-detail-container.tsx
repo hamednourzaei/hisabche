@@ -22,6 +22,7 @@ import { InvoiceDetailPage, type InvoiceDetailDisplay } from '../invoice-detail-
 import InvoicePDFDownload from '../InvoicePDFDownload'
 import { InvoiceEvidencePanel } from '../invoice-evidence-panel'
 import { InvoiceInstallmentsPanel } from '../invoice-installments-panel'
+import { InvoiceLateFeePanel } from '../invoice-late-fee-panel'
 import { InvoiceRelatedPanel } from '../invoice-related-panel'
 import { RecordHistoryPanel } from '../../activity/record-history-panel'
 import { useQueryClient } from '@tanstack/react-query'
@@ -426,6 +427,8 @@ export function InvoiceDetailContainer() {
           <div className="space-y-4">
             {/* When the unpaid part is due, in parts (#123). Sales only. */}
             {display.type === 'sale' ? <InvoiceInstallmentsPanel invoiceId={id} /> : null}
+            {/* What a late payment costs, and charging it (#124). Sales only. */}
+            {display.type === 'sale' ? <InvoiceLateFeePanel invoiceId={id} /> : null}
             <InvoiceEvidencePanel invoiceId={id} />
           </div>
         ) : null

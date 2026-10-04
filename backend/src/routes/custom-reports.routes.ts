@@ -9,6 +9,14 @@
 //   GET   /api/custom-reports/:id/run      run it against live data
 //   PATCH /api/custom-reports/:id/retire
 //
+// …and dashboards (#146) — arrangements of those saved reports:
+//
+//   GET   /api/report-dashboards
+//   POST  /api/report-dashboards              { name, tiles: [{ reportId, span }] }
+//   PATCH /api/report-dashboards/:id/retire
+//
+// A dashboard has no run of its own: each tile is run as a report.
+//
 // All behind `report.operational.read`: a report shows what is owed and
 // collected, which is what that capability already lets a person see.
 // ============================================
@@ -20,6 +28,7 @@ import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { dashboardService } from '../services/reporting/dashboard.service'
 import { reportService } from '../services/reporting/report.service'
 
 const REPORTS = [
@@ -103,6 +112,46 @@ export async function customReportRoutes(fastify: FastifyInstance) {
         return reply.send({ ok: true })
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to retire the report')
+      }
+    },
+  )
+
+  // ─── Dashboards (#146) ─────────────────────────────────────
+
+  fastify.get(
+    '/api/report-dashboards',
+    { preHandler: REPORTS },
+    async (request: FastifyRequest, reply) => {
+      try {
+        return reply.send({ dashboards: await dashboardService.list(request.tenancy) })
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to read dashboards')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/report-dashboards',
+    { preHandler: REPORTS },
+    async (request: FastifyRequest, reply) => {
+      try {
+        return reply.code(201).send(await dashboardService.save(request.tenancy, request.body))
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to save the dashboard')
+      }
+    },
+  )
+
+  fastify.patch(
+    '/api/report-dashboards/:id/retire',
+    { preHandler: REPORTS },
+    async (request: FastifyRequest, reply) => {
+      try {
+        const { id } = idParams.parse(request.params)
+        await dashboardService.retire(request.tenancy, id)
+        return reply.send({ ok: true })
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to retire the dashboard')
       }
     },
   )

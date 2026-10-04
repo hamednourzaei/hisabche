@@ -18,6 +18,22 @@ Rollback/Mitigation؛ (۲) Verification Query جدا. **انسان** آن‌ها
 
 ---
 
+## ۰٫۵. روش کار — خواسته‌های ثابت صاحب پروژه
+
+- **commit و push نکن.** صاحب پروژه خودش انجام می‌دهد.
+- **subagent نساز.** کار را خودت انجام بده.
+- **تا همه‌ی کار تمام نشده بیلد نگیر**، و وسط کار نپرس «کدام فاز».
+- **بک‌اند، وب، ویندوز، موبایل و اسکریپت Supabase با هم تمام می‌شوند.**
+- ترتیب پایان هر دور: وریفای کامل → eslint روی فایل‌های تغییرکرده (از پوشه‌ی همان پکیج) → بیلدها →
+  درس‌ها در `.claude/` و همین فایل → گزارش فارسی با جدول و عددهای واقعی.
+- وضعیت‌های مجاز گزارش: `VERIFIED_COMPLETE` · `IMPLEMENTED_NOT_LIVE_VERIFIED` ·
+  `BLOCKED_EXTERNAL_CREDENTIAL` · `BLOCKED_BY_EXISTING_SYSTEM` · `NOT_APPLICABLE` · `FAILED`.
+  بدون HTTP یا دیتابیس واقعی، هیچ چیز `VERIFIED_COMPLETE` نیست.
+
+جزئیات: `.claude/skills/hisabche-session-rules/SKILL.md`.
+
+---
+
 ## ۱. پنج قانونی که همه‌چیز بر آن‌هاست
 
 1. **`workspace_id` تنها مرز امنیتی است.** `user_id` می‌گوید چه کسی کاری کرد و **هرگز** فیلتر نیست. سرویس‌ها `TenancyContext` می‌گیرند، نه `userId`.
@@ -68,40 +84,42 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 
 ## ۴. دانش پروژه — کجا را باز کنی
 
-| سؤال                                                                | فایل                                                                 |
-| ------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| **وبلاگ: نقشه، تله‌ها، تصمیم‌ها (۲۶ سپتامبر)**                      | `.claude/SESSION-CACHE-2026-09-26-BLOG.md`                           |
-| **Sync باینری، بارکد/چاپ، پرفورمنس DB، Cloudflare (۲۷ سپتامبر)**    | `.claude/SESSION-CACHE-2026-09-27.md`                                |
-| **Business OS ۱۵۰ قابلیت: نقشه، فازبندی، درس‌ها (۳۰ سپتامبر)**      | `.claude/BUSINESS-OS-SPEC.md` · `BUSINESS-OS-EXECUTION.md`           |
-| **درس‌های فازهای ۰–۴ Business OS (۳۰ سپتامبر)**                     | `.claude/SESSION-CACHE-2026-09-30-BUSINESS-OS.md`                    |
-| **🔴 مسائل باز امروز — این را اول بخوان**                           | `.claude/SESSION-CACHE-2026-09-30-FINDINGS.md`                       |
-| **کیف پول، عکس کالا، بازار کالا، refresh token، دری (۳ اکتبر)**     | `.claude/SESSION-CACHE-2026-10-03.md`                                |
-| **Business OS: کدام موتور واقعاً وصل است؛ فاکتور تکراری (۴ اکتبر)** | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md`             |
-| **صفحه‌ی تحلیل، آنچه از ۱۵۰ قابلیت وصل نشد و چرا (۴ اکتبر)**        | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md` — «دور دوم» |
-| **ساخت و تولید: مدل، نقشه، آنچه ساخته نشد (۴ اکتبر)**               | `.claude/SESSION-CACHE-2026-10-04-MANUFACTURING.md`                  |
-| **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                        | `.claude/DARI-GLOSSARY.md`                                           |
-| **کوئری‌های تشخیصی دیتابیس زنده**                                   | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                      |
-| **باگ‌های Business OS (BOS-01 تا BOS-15)**                          | `.claude/BUG-REGISTRY.md` — بخش انتهایی                              |
-| **کلید API، وب‌هوک، ورود صورتحساب بانک، مقایسه‌ی اکوسیستم**         | `.claude/research/ecosystem-gap-analysis.md`                         |
-| **درس‌ها و باگ‌های سشن اخیر (۱۹ سپتامبر)**                          | `.claude/SESSION-CACHE-2026-09-19.md` — **اول این**                  |
-| درس‌ها و باگ‌های ۱۵–۱۷ سپتامبر                                      | `.claude/SESSION-CACHE-2026-09-17.md`                                |
-| درس‌ها و باگ‌های اوایل سپتامبر                                      | `.claude/SESSION-CACHE-2026-09.md`                                   |
-| **فهرست باگ‌ها با ریشه و گارد**                                     | `.claude/BUG-REGISTRY.md`                                            |
-| **پرفورمنس، PageSpeed، لندینگ موبایل (۱۵ سپتامبر)**                 | `.claude/SESSION-CACHE-2026-09-15-PERF.md`                           |
-| **درخواست‌های باز کاربر — قبل از هر کار**                           | `.claude/USER-REQUESTS.md`                                           |
-| بودجه/صندوق/حاکمیت/۵۰۰ها (۱۴ سپتامبر)                               | `.claude/SESSION-CACHE-2026-09-14.md`                                |
-| نقشه‌ی کل دانش                                                      | `.claude/README.md`                                                  |
-| باگ خوردم / چطور وریفای کنم                                         | `.claude/DEBUG-PLAYBOOK.md`                                          |
-| تله‌های قدیمی‌تر                                                    | `.claude/SESSION-CACHE.md`                                           |
-| چرا این‌طوری نوشته شده                                              | `.claude/lessons-learned.md`                                         |
-| الان چه کار می‌کند و چه نه                                          | `.claude/STATE.md`                                                   |
-| کد جدید کجا برود                                                    | `.claude/architecture/core-modules.md`                               |
-| کدام hook به کدام endpoint                                          | `.claude/architecture/api-surface.md`                                |
-| جدول‌ها و RLS                                                       | `.claude/architecture/data-model.md`                                 |
-| Source of Truth / کدام migration اجرا شده                           | `.claude/SESSION-2026-09-05-CONSOLIDATION.md`                        |
-| migration/تست/commit چطور                                           | `.claude/WORKFLOW.md`                                                |
-| مقایسه با ERPNext و Odoo                                            | `.claude/research/`                                                  |
-| خواسته‌های محصول                                                    | `.claude/detail.md`                                                  |
+| سؤال                                                                  | فایل                                                                  |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **وبلاگ: نقشه، تله‌ها، تصمیم‌ها (۲۶ سپتامبر)**                        | `.claude/SESSION-CACHE-2026-09-26-BLOG.md`                            |
+| **Sync باینری، بارکد/چاپ، پرفورمنس DB، Cloudflare (۲۷ سپتامبر)**      | `.claude/SESSION-CACHE-2026-09-27.md`                                 |
+| **Business OS ۱۵۰ قابلیت: نقشه، فازبندی، درس‌ها (۳۰ سپتامبر)**        | `.claude/BUSINESS-OS-SPEC.md` · `BUSINESS-OS-EXECUTION.md`            |
+| **درس‌های فازهای ۰–۴ Business OS (۳۰ سپتامبر)**                       | `.claude/SESSION-CACHE-2026-09-30-BUSINESS-OS.md`                     |
+| **🔴 مسائل باز امروز — این را اول بخوان**                             | `.claude/SESSION-CACHE-2026-09-30-FINDINGS.md`                        |
+| **کیف پول، عکس کالا، بازار کالا، refresh token، دری (۳ اکتبر)**       | `.claude/SESSION-CACHE-2026-10-03.md`                                 |
+| **Business OS: کدام موتور واقعاً وصل است؛ فاکتور تکراری (۴ اکتبر)**   | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md`              |
+| **صفحه‌ی تحلیل، آنچه از ۱۵۰ قابلیت وصل نشد و چرا (۴ اکتبر)**          | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md` — «دور دوم»  |
+| **ساخت و تولید: مدل، نقشه، آنچه ساخته نشد (۴ اکتبر)**                 | `.claude/SESSION-CACHE-2026-10-04-MANUFACTURING.md`                   |
+| **Gap Closure: فهرست قیمت، جریمه، OCR، ترجمه، شیفت، داشبورد، مقایسه** | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md` — «دور پنجم» |
+| **همه‌ی درس‌ها با شماره (۱–۱۱۴)**                                     | `.claude/lessons-learned.md`                                          |
+| **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                            |
+| **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                       |
+| **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                               |
+| **کلید API، وب‌هوک، ورود صورتحساب بانک، مقایسه‌ی اکوسیستم**           | `.claude/research/ecosystem-gap-analysis.md`                          |
+| **درس‌ها و باگ‌های سشن اخیر (۱۹ سپتامبر)**                            | `.claude/SESSION-CACHE-2026-09-19.md` — **اول این**                   |
+| درس‌ها و باگ‌های ۱۵–۱۷ سپتامبر                                        | `.claude/SESSION-CACHE-2026-09-17.md`                                 |
+| درس‌ها و باگ‌های اوایل سپتامبر                                        | `.claude/SESSION-CACHE-2026-09.md`                                    |
+| **فهرست باگ‌ها با ریشه و گارد**                                       | `.claude/BUG-REGISTRY.md`                                             |
+| **پرفورمنس، PageSpeed، لندینگ موبایل (۱۵ سپتامبر)**                   | `.claude/SESSION-CACHE-2026-09-15-PERF.md`                            |
+| **درخواست‌های باز کاربر — قبل از هر کار**                             | `.claude/USER-REQUESTS.md`                                            |
+| بودجه/صندوق/حاکمیت/۵۰۰ها (۱۴ سپتامبر)                                 | `.claude/SESSION-CACHE-2026-09-14.md`                                 |
+| نقشه‌ی کل دانش                                                        | `.claude/README.md`                                                   |
+| باگ خوردم / چطور وریفای کنم                                           | `.claude/DEBUG-PLAYBOOK.md`                                           |
+| تله‌های قدیمی‌تر                                                      | `.claude/SESSION-CACHE.md`                                            |
+| چرا این‌طوری نوشته شده                                                | `.claude/lessons-learned.md`                                          |
+| الان چه کار می‌کند و چه نه                                            | `.claude/STATE.md`                                                    |
+| کد جدید کجا برود                                                      | `.claude/architecture/core-modules.md`                                |
+| کدام hook به کدام endpoint                                            | `.claude/architecture/api-surface.md`                                 |
+| جدول‌ها و RLS                                                         | `.claude/architecture/data-model.md`                                  |
+| Source of Truth / کدام migration اجرا شده                             | `.claude/SESSION-2026-09-05-CONSOLIDATION.md`                         |
+| migration/تست/commit چطور                                             | `.claude/WORKFLOW.md`                                                 |
+| مقایسه با ERPNext و Odoo                                              | `.claude/research/`                                                   |
+| خواسته‌های محصول                                                      | `.claude/detail.md`                                                   |
 
 ---
 
@@ -110,6 +128,17 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 **Skills** (`.claude/skills/`) — `hisabche-` + یکی از:
 `architecture` · `auth` · `backend` · `code-review` · `database` · `debugging` ·
 `desktop` · `i18n` · `lessons` · `mobile` · `offline` · `testing` · `ui` · `web`
+
+و شش مهارتِ «چطور کار را جلو ببرم» (۴ اکتبر) — **`session-rules` را هر سشن اول بخوان**:
+
+| مهارت                          | کِی                                                                |
+| ------------------------------ | ------------------------------------------------------------------ |
+| `hisabche-session-rules`       | شروع هر سشن و قبل از پایان هر نوبت: ممنوع‌ها، ترتیب کار، شکل گزارش |
+| `hisabche-feature-delivery`    | هر «اضافه کن / وصل کن / بساز»: از دیتابیس تا سه پلتفرم             |
+| `hisabche-migrations`          | قبل از هر `docs/*-migration.sql`                                   |
+| `hisabche-scripted-edits`      | قبل از هر ویرایش چندفایلی، کلید i18n، یا متن با بک‌اسلش/بک‌تیک     |
+| `hisabche-release-build`       | فقط وقتی همه‌ی کار تمام شد: وریفای، lint، بیلدها                   |
+| `hisabche-ai-and-integrations` | AI، ایمیل، MCP، خواندن سند، اتصال بیرونی                           |
 
 **Commands**: `/verify` · `/review` · `/db-migration` · `/i18n-check` · `/security-audit`
 
@@ -273,6 +302,29 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **`postgres.js`: `${json}::jsonb` رشته را دوباره encode می‌کند** → `::text::jsonb`. تست رقابتی باید نتیجه‌ی **موفق** را هم بسنجد (هر دو درخواست می‌توانند با یک fixture خراب شکست بخورند و تست سبز بماند).
 - ⚠️ **`<select>` خام ممنوع** — `SelectField` (گارد `select-consistency.test.ts`).
 - ⚠️ **بیلد ویندوز پشت پروکسی:** `electron-builder --win -c.electronDist=node_modules/electron/dist` — `@electron/get` برای checksum به npmmirror می‌رود و قطع می‌شود.
+
+**دروازه‌ی MCP و دسترسی‌های Supabase (۴ اکتبر)**
+
+- **MCP یک آداپتور است، نه بک‌اند دوم.** `POST /mcp` (`routes/mcp.routes.ts`) هر ابزار را با `fastify.inject` و **همان کلید API** به مسیر Public API خودش می‌فرستد. هر ابزار = یک کلید از `API_ROUTE_SCOPES`؛ پوشه‌ی `services/mcp` فقط جدول `ai_action_requests` را می‌خواند و ابزار SQL وجود ندارد (گارد: `mcp-gateway.test.ts`). ابزار تازه = اول مسیرش را به allowlist کلیدها اضافه کن.
+- **تأیید با سرور و با آدم است.** ابزار `financial`/`destructive` اجرا نمی‌شود؛ درخواست می‌شود و مدیر در «توسعه‌دهندگان» تأییدش می‌کند. اجرا با session همان شخص و `Idempotency-Key = mcp-<id>`. هیچ `confirmed: true` ای در هیچ قراردادی نیست.
+- ⚠️ **مسیری که خودش احراز می‌کند باید در `exactPublicPaths` (`index.ts`) باشد.** hook سراسری کلید API را به allowlist محدود می‌کند؛ `/mcp` با همه‌ی تست‌های سبز روی سرور واقعی ۴۰۳ می‌داد، چون تست روی سرور خالی سوار بود.
+- ⚠️ **در Supabase هر جدول تازه با ALL برای `service_role`، `anon` و `authenticated` به دنیا می‌آید.** `GRANT SELECT, INSERT` روی آن چیزی را کم نمی‌کند — اول `REVOKE ALL … FROM service_role`. سه migration همین را داشتند و VERIFY کاربر `ok: false` داد، در حالی که تست محلی سبز بود. هر `*.pg.test.ts` باید `ALTER DEFAULT PRIVILEGES … GRANT ALL` را در setup داشته باشد.
+- ⚠️ **backtick در کامنت SQL داخل template literal فایل تست را می‌شکند** و pre-commit را قرمز می‌کند.
+- ⚠️ **عدد انتظار تست را با دست حساب کن** (BUG-096: بهره‌ی وام ~۱۰۰٪ اصل، و تست همان را قفل کرده بود). کنار عدد دقیق یک assert مقیاسی بگذار.
+- جدول «فقط افزودن» را با **trigger** ببند (`entity_notes`، `data_snapshots`؛ forward-only برای `ai_action_requests`)، نه فقط با نبودِ route.
+- بیلد اندروید روی این دستگاه گاهی در `createBundleReleaseJsAndAssets` یا `packageRelease` می‌افتد و با اجرای دوباره رد می‌شود (قفل فایل). پیش از دیباگ، یک بار دیگر اجرا کن.
+
+**قیمت، جریمه، سند و مقایسه (۴ اکتبر، Gap Closure)**
+
+- **فهرست قیمت زیر تخفیف‌هاست** (`/promotions`) و یک قاعده دارد: `priceListPricing` در `pricing.ts` — سرور (`promotion.service.quote`) و فاکتورساز (`usePromotionPricer`) هر دو همان را صدا می‌زنند. کالای بیرون از فهرست قیمت خودش را دارد؛ فهرستِ ارز دیگر کنار گذاشته می‌شود، تبدیل نمی‌شود.
+- **جریمه‌ی دیرکرد = یک فاکتور فروش معمولی** از `InvoiceService.create`؛ قاعده فقط `overdueInstallments`. اول ردیف `late_fee_assessments` (unique روی فاکتور/قسط/دوره)، بعد فاکتور با کلید قطعی. هیچ job ای جریمه نمی‌زند و جریمه روی فاکتورِ جریمه حساب نمی‌شود.
+- **ترجمه و خواندن سند provider تازه ندارند:** همان AI تنظیم‌شده و همان `callProvider` (ورودی `image`). متن و عکس در `ai_query_log` ذخیره نمی‌شود. `read` چیزی نمی‌نویسد؛ `confirm` فقط عددهای آدم را می‌گیرد.
+- ⚠️ **`\d` رقم فارسی را نمی‌بیند و نقطه‌ی برهنه در رشته‌ی regex هر کاراکتری است.** هر الگویی که عدد سند را می‌گیرد باید `[0-9۰-۹٠-٩]` و `[.٫]` صریح داشته باشد (`translate.domain`، `printedAmountToMinor`).
+- ⚠️ **`\uXXXX` که با Write نوشته شود کاراکتر واقعی می‌شود.** NBSP نامرئی در یک کلاس regex با «تمیزکردن» بی‌صدا رفتار را عوض کرد. escape را با `String.fromCharCode(92)` در فایل بساز و تستش را از کد کاراکتر.
+- ⚠️ **بعد از هر دور، eslint را روی فایل‌های تغییرکرده از پوشه‌ی همان پکیج اجرا کن** — pre-commit فایل ویرایش‌شده را با خطاهای قدیمی‌اش هم می‌سنجد.
+- **برنامه‌ی شیفت حضور نیست** («حضور ثبت نشده» ≠ غایب). **داشبورد عددی نمی‌سازد** — هر خانه یک گزارش ذخیره‌شده با همان `ReportRunView`. **مقایسه** فقط «فاکتور فروش در روز» است و زیر ۱۰ هم‌تراز چیزی منتشر نمی‌کند؛ خروجی rpc را هم با `selectAllPages` بخوان.
+- ⚠️ **بیلد اندروید = اول shell، بعد Gradle** (`pnpm run android:release`). `gradle.mjs assembleRelease` به‌تنهایی با `BUILD SUCCESSFUL` و همه‌ی taskها `UP-TO-DATE` تمام می‌شود و APK قدیمی را دست‌نخورده می‌گذارد — تاریخ فایل APK را نگاه کن، نه پیام Gradle را.
+- **چارچوب اتصال‌ها ساخته نشده** (۱۵ تعریف، صفر adapter، صفر اعتبارنامه) — صفحه‌ای برایش نساز.
 
 **هسته‌ها (CRM / Payments)**
 

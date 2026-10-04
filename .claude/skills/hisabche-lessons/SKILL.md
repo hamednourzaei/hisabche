@@ -382,3 +382,34 @@ creator-less ones as a warning.
 **Rule:** when a guard blocks, check whether it is measuring the thing you
 actually care about. Sharpen it; do not delete it, and do not shrug and
 override it.
+
+---
+
+## Lessons 95–114 (4 October 2026) live in `.claude/lessons-learned.md`
+
+They are written in Persian with the defect behind each one. In one line each:
+
+- 95 — finish every phase, then build; never the other way round.
+- 96 — a route test on a bare server does not see the global auth hook.
+- 97 — on Supabase a new table starts with ALL for every API role: REVOKE first.
+- 98 — append-only is a trigger, not the absence of a route.
+- 99 — two people at once: a unique index or an advisory lock, and a test that reads the loser’s error.
+- 100 — two-step write without a transaction: claim, act with a deterministic key, mark.
+- 101 — work the expected number out by hand; add a scale assertion.
+- 102 — money without its currency is silently wrong; a fixed amount is never converted.
+- 103 — `\d` does not see Persian digits; a bare dot in a regex string is any character.
+- 104 — a unicode escape written with the Write tool becomes the real, invisible character.
+- 105 — no heredocs; edit scripts are idempotent and retry their writes.
+- 106 — a file you touch is linted with its old errors; lint from the package folder.
+- 107 — «BUILD SUCCESSFUL» is not proof; the artifact’s timestamp is.
+- 108 — a new capability reuses the existing provider, quota and outbox.
+- 109 — nothing a model produced reaches the books without a person.
+- 110 — nothing to show is not a reason to build a page.
+- 111 — an rpc result is capped at a thousand rows too.
+- 112 — add to an existing page; extract a shared renderer instead of copying.
+- 113 — «empty» says why, and «not recorded» is never «negative».
+- 114 — prove a guard by injecting the fault — not while a build is running.
+
+The working method those lessons add up to is in the six skills
+`hisabche-session-rules`, `-feature-delivery`, `-migrations`, `-scripted-edits`,
+`-release-build` and `-ai-and-integrations`.

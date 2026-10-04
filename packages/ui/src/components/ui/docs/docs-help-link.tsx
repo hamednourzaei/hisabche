@@ -98,6 +98,7 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
   manufacturing: 'manufacturing',
   analysis: 'business-analysis',
   promotions: 'promotions',
+  campaigns: 'campaigns',
   wallet: 'wallet',
   dashboard: 'getting-started',
 }
