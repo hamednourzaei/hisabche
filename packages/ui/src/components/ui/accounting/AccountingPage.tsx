@@ -11,6 +11,8 @@ import { JournalTab } from './tabs/JournalTab'
 import { TrialBalanceTab } from './tabs/TrialBalanceTab'
 import { BalanceSheetTab } from './tabs/BalanceSheetTab'
 import { IncomeStatementTab } from './tabs/IncomeStatementTab'
+import { MonthEndTab } from './tabs/MonthEndTab'
+import { FinancingTab } from './tabs/FinancingTab'
 import { BranchScopeProvider } from '../branch/branch-scope'
 
 const VALID_TABS: AccountingTabId[] = [
@@ -19,6 +21,8 @@ const VALID_TABS: AccountingTabId[] = [
   'trialBalance',
   'balanceSheet',
   'incomeStatement',
+  'monthEnd',
+  'financing',
 ]
 const DEFAULT_TAB: AccountingTabId = 'accounts'
 
@@ -151,6 +155,8 @@ export function AccountingPage() {
           {activeTab === 'trialBalance' && <TrialBalanceTab />}
           {activeTab === 'balanceSheet' && <BalanceSheetTab />}
           {activeTab === 'incomeStatement' && <IncomeStatementTab />}
+          {activeTab === 'monthEnd' && <MonthEndTab />}
+          {activeTab === 'financing' && <FinancingTab />}
         </div>
       </div>
     </BranchScopeProvider>

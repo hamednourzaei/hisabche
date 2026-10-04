@@ -23,6 +23,8 @@ import { ProductBarcodesPanel } from '../product-barcodes-panel'
 import { ProductImagesPanel } from '../product-images-panel'
 import { ProductWarehouseStockPanel } from '../product-warehouse-stock-panel'
 import { ProductManufacturingPanel } from '../../manufacturing/product-manufacturing-panel'
+import { EntityNotes } from '../../entity-notes'
+import { CustomFieldsPanel } from '../../custom-fields-panel'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { ProductDetailPage } from '../warehouse-detail-page'
 import { isProductInUse, productDeleteRefusal } from '../../../../lib/warehouse/delete-refusal'
@@ -272,12 +274,18 @@ ${t('warehouse.deactivateInstead')}`)
       stockPlaces={id ? <ProductWarehouseStockPanel t={safeT} productId={id} fmt={fmt} /> : null}
       manufacturing={
         id ? (
-          <ProductManufacturingPanel
-            t={safeT}
-            locale={locale}
-            productId={id}
-            productName={product?.name ?? ''}
-          />
+          <div className="space-y-4">
+            <ProductManufacturingPanel
+              t={safeT}
+              locale={locale}
+              productId={id}
+              productName={product?.name ?? ''}
+            />
+            {/* What colleagues wrote about this product (#103). */}
+            <EntityNotes entityType="product" entityId={id} />
+            {/* The business's own fields on a product (#141–#143). */}
+            <CustomFieldsPanel entity="product" entityId={id} />
+          </div>
         ) : null
       }
       stockWarehouses={(breakdown.data?.warehouses ?? []).map((w) => ({ id: w.id, name: w.name }))}

@@ -203,7 +203,10 @@ describe('wiring', () => {
     // Both are called by the APP'S SERVER, which proves itself with its client
     // secret — there is no user session to authenticate (RFC 6749 §3.2, RFC 7009).
     expect(read('index.ts')).toContain(
-      "const exactPublicPaths = ['/api/billing/plans', '/api/oauth/token', '/api/oauth/revoke']",
+      // `/mcp` joined this list on 4 October 2026: the MCP gateway checks the
+      // integration credential itself (mcp-gateway.test.ts). No OTHER oauth
+      // path is public.
+      "const exactPublicPaths = ['/api/billing/plans', '/api/oauth/token', '/api/oauth/revoke', '/mcp']",
     )
     const { API_ROUTE_SCOPES } = await import('../services/developer/developer.domain')
     expect(

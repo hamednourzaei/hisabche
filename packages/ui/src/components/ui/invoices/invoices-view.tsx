@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useCallback, useEffect, useMemo } from 'react'
+import { memo, useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { cn } from '../../../lib/utils'
 import { FOCUS_RING } from '../focus-ring'
 import { EmptyState } from '../empty-state'
@@ -52,6 +52,8 @@ interface InvoicesViewProps {
   onNavigateParty?: ((id: string) => void) | undefined
   onNavigateInvoiceAction: (id: string, action: 'pdf' | 'print' | 'png') => void
   onNewInvoice: () => void
+  /** Rendered beside the export button (the recurring-invoices entry). */
+  toolbarExtra?: ReactNode
   /**
    * Returns a promise so bulk delete can await each call and report which
    * invoices actually went. A `void` signature would make every item look
@@ -540,6 +542,7 @@ export const InvoicesView = memo(function InvoicesView({
   onNavigateParty,
   onNavigateInvoiceAction,
   onNewInvoice,
+  toolbarExtra,
   onDeleteInvoice,
   statusVariant,
   typeFilter = 'all',
@@ -591,7 +594,10 @@ export const InvoicesView = memo(function InvoicesView({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <TypeFilter t={t} value={typeFilter} onChange={onTypeFilterChange} />
-        <ExportButton t={t} invoices={statsInvoices} />
+        <div className="flex flex-wrap items-center gap-2">
+          {toolbarExtra}
+          <ExportButton t={t} invoices={statsInvoices} />
+        </div>
       </div>
 
       {statsSummary && statsSummary.count > 0 && <BentoStats t={t} stats={stats} />}

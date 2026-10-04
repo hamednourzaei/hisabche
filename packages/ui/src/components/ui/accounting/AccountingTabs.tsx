@@ -3,11 +3,25 @@
 
 import { memo } from 'react'
 import { useTranslations } from 'next-intl'
-import { Wallet, BookOpen, Scale, FileBarChart, TrendingUp } from 'lucide-react'
+import {
+  Wallet,
+  BookOpen,
+  Scale,
+  FileBarChart,
+  TrendingUp,
+  CalendarCheck,
+  Landmark,
+} from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger } from '../tabs'
 
 export type AccountingTabId =
-  'accounts' | 'journal' | 'trialBalance' | 'balanceSheet' | 'incomeStatement'
+  | 'accounts'
+  | 'journal'
+  | 'trialBalance'
+  | 'balanceSheet'
+  | 'incomeStatement'
+  | 'monthEnd'
+  | 'financing'
 
 interface TabConfig {
   id: AccountingTabId
@@ -41,6 +55,18 @@ const TABS: TabConfig[] = [
     icon: TrendingUp,
     labelKey: 'accounting.tabs.incomeStatement',
     labelFallback: 'سود و زیان',
+  },
+  {
+    id: 'monthEnd',
+    icon: CalendarCheck,
+    labelKey: 'accounting.tabs.monthEnd',
+    labelFallback: 'بستن ماه',
+  },
+  {
+    id: 'financing',
+    icon: Landmark,
+    labelKey: 'accounting.tabs.financing',
+    labelFallback: 'وام و سرمایه‌گذاری',
   },
 ]
 

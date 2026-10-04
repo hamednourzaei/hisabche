@@ -10,7 +10,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Pencil, Printer } from 'lucide-react'
-import { useCreateInvoice, useWorkspaces } from '@hisabche/api'
+import { useCreateInvoice, useCreateRecurringInvoice, useWorkspaces } from '@hisabche/api'
 import {
   useBackupStore,
   useInvoiceDraftStore,
@@ -41,6 +41,13 @@ import { useOversoldLines } from '../use-oversold-lines'
 import { planLimitMessage } from '../../../../lib/plan-limit-message'
 import { loadPrinterSettings } from '../../../../lib/print/printer-settings'
 import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
+import {
+  INITIAL_RECURRENCE,
+  RecurrencePanel,
+  cadenceFor,
+  scheduleCalendarFor,
+  type RecurrenceValue,
+} from '../recurrence-panel'
 
 const DEFAULT_DISPLAY: InvoiceDocumentDisplaySettings = {
   showSignature: true,
@@ -52,6 +59,8 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
   const localeReplace = useLocaleReplace()
   const push = useLocalePush()
   const createInvoice = useCreateInvoice()
+  const createRecurring = useCreateRecurringInvoice()
+  const [recurrence, setRecurrence] = useState<RecurrenceValue>(INITIAL_RECURRENCE)
   const toast = useToast()
   const { markInvoiceCreated } = useOnboardingStore()
   const preferences = usePreferencesStore()
@@ -218,6 +227,15 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
 
   const handleConfirm = useCallback(async () => {
     if (issues.length || items.length === 0 || paymentBlocked) return
+    // Decided BEFORE the invoice is created: an interval that is not a number
+    // must stop the confirm, not be discovered after the sale is recorded.
+    const cadence = recurrence.enabled
+      ? cadenceFor(recurrence, draft.date, scheduleCalendarFor(locale))
+      : null
+    if (recurrence.enabled && !cadence) {
+      setError(t('invoiceBuilder.recurrence.invalid', 'تعداد روز باید عددی بین ۱ تا ۳۶۶ باشد.'))
+      return
+    }
     setError(null)
     setSaveStatus('saving')
 
@@ -259,6 +277,68 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         ...(invoiceNotes ? { notes: invoiceNotes } : {}),
         items,
       })
+
+      // The invoice just confirmed becomes the template of the arrangement —
+      // the same lines, without this one's dates and payments. Only for an
+      // invoice the server has actually recorded: one queued offline has not
+      // been accepted yet, and an arrangement cannot be queued.
+      if (cadence && !created.pendingSync) {
+        const dueInDays = draft.dueDate
+          ? Math.max(
+              0,
+              Math.round(
+                (Date.parse(draft.dueDate.slice(0, 10)) - Date.parse(draft.date.slice(0, 10))) /
+                  86_400_000,
+              ),
+            )
+          : undefined
+        try {
+          await createRecurring.mutateAsync({
+            name:
+              recurrence.name.trim() ||
+              `${primaryCustomer?.name ?? t('invoiceBuilder.recurrence.defaultName', 'فاکتور تکراری')}`,
+            cadence,
+            ...(dueInDays !== undefined ? { dueInDays } : {}),
+            invoice: {
+              type: draft.transactionType,
+              ...(draft.warehouseId ? { warehouseId: draft.warehouseId } : {}),
+              subtotal: summary.subtotal,
+              discountTotal: summary.discountTotal,
+              discountType: draft.discountType,
+              taxRate: Number(draft.taxRate) || 0,
+              taxTotal: summary.taxTotal,
+              total: summary.total,
+              currency,
+              ...(primaryCustomer?.id ? { customerId: primaryCustomer.id } : {}),
+              ...(invoiceNotes ? { notes: invoiceNotes } : {}),
+              items,
+            },
+          })
+          toast.success(
+            t('invoiceBuilder.recurrence.saved', 'این فاکتور از نوبت بعد خودکار صادر می‌شود.'),
+          )
+        } catch {
+          // The invoice IS recorded; only the repeat was not set up. Said as
+          // exactly that — not as a failed invoice, and not silently.
+          toast.warning(
+            t(
+              'invoiceBuilder.recurrence.failedTitle',
+              'فاکتور ثبت شد، ولی تکرار خودکار تنظیم نشد.',
+            ),
+            t(
+              'invoiceBuilder.recurrence.failedHint',
+              'می‌توانید دوباره از یک فاکتور تازه آن را روشن کنید.',
+            ),
+          )
+        }
+      } else if (cadence && created.pendingSync) {
+        toast.warning(
+          t(
+            'invoiceBuilder.recurrence.offline',
+            'تکرار خودکار فقط با اینترنت تنظیم می‌شود؛ این فاکتور تکرار نخواهد شد.',
+          ),
+        )
+      }
 
       if (primaryCustomer) {
         preferences.setLastCustomer(primaryCustomer.name, primaryCustomer.id)
@@ -332,6 +412,11 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     paymentEntries,
     paymentBlocked,
     createInvoice,
+    createRecurring,
+    recurrence,
+    locale,
+    toast,
+    t,
     preferences,
     markInvoiceCreated,
     addAuditEntry,
@@ -451,6 +536,15 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
               </p>
             </div>
           ) : null}
+
+          <RecurrencePanel
+            t={t}
+            value={recurrence}
+            onChange={setRecurrence}
+            invoiceDate={draft.date}
+            calendar={scheduleCalendarFor(locale)}
+            disabled={createInvoice.isPending}
+          />
 
           {error ? (
             <p

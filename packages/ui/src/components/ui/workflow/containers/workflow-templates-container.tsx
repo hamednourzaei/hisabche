@@ -1,27 +1,33 @@
 // packages/ui/src/components/ui/workflow/containers/workflow-templates-container.tsx
-"use client";
+'use client'
 
-import { memo, useCallback } from "react";
-import { useTranslations } from "next-intl";
-import { useWorkflows, useCreateWorkflow, type WorkflowEntityType, type WorkflowStep } from "@hisabche/api";
-import { WorkflowTemplatesView } from "../workflow-templates-view";
+import { memo, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
+import {
+  useWorkflows,
+  useCreateWorkflow,
+  type WorkflowEntityType,
+  type WorkflowStep,
+} from '@hisabche/api'
+import { WorkflowTemplatesView } from '../workflow-templates-view'
+import { EscalationPolicyEditor } from '../escalation-policy-editor'
 
 export const WorkflowTemplatesContainer = memo(function WorkflowTemplatesContainer() {
-  const tOriginal = useTranslations();
+  const tOriginal = useTranslations()
   const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
-    return v && v !== key ? v : (fallback ?? key);
-  };
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+    return v && v !== key ? v : (fallback ?? key)
+  }
 
-  const { data, isLoading } = useWorkflows();
-  const { mutateAsync: createWorkflow, isPending } = useCreateWorkflow();
+  const { data, isLoading } = useWorkflows()
+  const { mutateAsync: createWorkflow, isPending } = useCreateWorkflow()
 
   const handleCreate = useCallback(
     async (input: { name: string; entity_type: WorkflowEntityType; steps: WorkflowStep[] }) => {
-      await createWorkflow(input);
+      await createWorkflow(input)
     },
-    [createWorkflow]
-  );
+    [createWorkflow],
+  )
 
   return (
     <WorkflowTemplatesView
@@ -30,8 +36,9 @@ export const WorkflowTemplatesContainer = memo(function WorkflowTemplatesContain
       isLoading={isLoading}
       isCreating={isPending}
       onCreate={handleCreate}
+      renderEscalation={(workflow) => <EscalationPolicyEditor t={t} workflowId={workflow.id} />}
     />
-  );
-});
+  )
+})
 
-WorkflowTemplatesContainer.displayName = "WorkflowTemplatesContainer";
+WorkflowTemplatesContainer.displayName = 'WorkflowTemplatesContainer'

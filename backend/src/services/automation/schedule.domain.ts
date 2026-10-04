@@ -34,6 +34,8 @@
 // default, which is not expressible for «run whatever you like».
 // ============================================
 
+import { isMonthlySlot, type ScheduleCalendar } from '@hisabche/validation'
+
 /** The closed set of things automation can do. Each names an existing operation. */
 export type ActionType =
   /** Capability #64 — raise a draft invoice from a standing arrangement. */
@@ -65,7 +67,11 @@ export type ScheduleCadence =
   /** Every N days from a start date. */
   | { kind: 'interval'; everyDays: number; from: string }
   /** A named monthly slot, so the 1st stays the 1st across months of 28 days. */
-  | { kind: 'monthly'; dayOfMonth: number; from: string }
+  /**
+   * …in a named calendar. Absent = Gregorian, which is what every row saved
+   * before the field existed meant.
+   */
+  | { kind: 'monthly'; dayOfMonth: number; from: string; calendar?: ScheduleCalendar | undefined }
 
 export interface Automation {
   id: string
@@ -210,7 +216,6 @@ export function shouldRun(
  */
 export function isDueOn(automation: Automation, on: string): boolean {
   const day = on.slice(0, 10)
-  const [year, month, dayOfMonth] = day.split('-').map(Number)
   const cadence = automation.cadence
 
   switch (cadence.kind) {
@@ -228,10 +233,10 @@ export function isDueOn(automation: Automation, on: string): boolean {
 
     case 'monthly': {
       if (day < cadence.from.slice(0, 10)) return false
-      // ⚠️ CLAMP TO THE LAST DAY, not skip the month. See the header.
-      const lastDay = new Date(Date.UTC(year!, month!, 0)).getUTCDate()
-      const effective = Math.min(cadence.dayOfMonth, lastDay)
-      return dayOfMonth === effective
+      // ⚠️ CLAMP TO THE LAST DAY, not skip the month — and count the days in
+      // the cadence's OWN calendar: the 1st of a solar Hijri month is the 21st
+      // to 23rd of a Gregorian one.
+      return isMonthlySlot(day, cadence.dayOfMonth, cadence.calendar ?? 'gregory')
     }
 
     default:

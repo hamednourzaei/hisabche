@@ -35,7 +35,13 @@
 // ============================================
 
 import { createInvoiceSchema, type CreateInvoice } from '@hisabche/validation'
-import type { AutomationCadence, UpdateAutomation } from '@hisabche/validation'
+import {
+  addIsoDays,
+  monthBounds,
+  type AutomationCadence,
+  type ScheduleCalendar,
+  type UpdateAutomation,
+} from '@hisabche/validation'
 
 import { supabase } from '../../db'
 import { BaseError } from '../../errors/base.error'
@@ -44,6 +50,9 @@ import { ValidationError } from '../../errors/validation.error'
 import { sourceIdOf } from '../../utils/deterministic-id'
 import { logBusinessEvent } from '../event-log.service'
 import { InvoiceService } from '../invoice.service'
+import { AccountingService } from '../accounting'
+import { runMonthEnd } from '../accounting/month-end.service'
+import { holds } from '../authorization/authorization.domain'
 import { requireWorkspace, type TenancyContext } from '../tenancy.service'
 import {
   afterFailure,
@@ -58,7 +67,7 @@ import {
 const MISSING_SCHEMA = new Set(['42703', '42P01', 'PGRST204', 'PGRST205'])
 
 /** The actions this backend can actually perform. A closed set, on purpose. */
-export const EXECUTABLE_ACTIONS: readonly ActionType[] = ['recurring_invoice']
+export const EXECUTABLE_ACTIONS: readonly ActionType[] = ['recurring_invoice', 'month_end']
 
 /** How far back a missed slot is still issued. Older ones are recorded, not run. */
 export const MAX_CATCH_UP_DAYS = 35
@@ -80,7 +89,14 @@ interface AutomationRow {
   action_type: string
   cadence: AutomationCadence
   conditions: Automation['conditions']
-  payload: { invoice?: Record<string, unknown>; dueInDays?: number | null }
+  payload: {
+    invoice?: Record<string, unknown>
+    dueInDays?: number | null
+    /** month_end: the month (1–12, in the cadence's calendar) that ends the fiscal year. */
+    fiscalYearEndMonth?: number
+    /** month_end: seal the period after the steps succeed. */
+    lock?: boolean
+  }
   enabled: boolean
   on_failure: 'stop' | 'keep' | 'ignore'
   max_attempts: number
@@ -114,6 +130,8 @@ export interface AutomationView {
     currency: string | null
     customerId: string | null
   }
+  /** For a month-end arrangement: what it was told. Null for anything else. */
+  monthEnd: { fiscalYearEndMonth: number; lock: boolean } | null
   createdAt: string
 }
 
@@ -186,6 +204,13 @@ function toView(row: AutomationRow, today: string): AutomationView {
       currency: typeof invoice.currency === 'string' ? invoice.currency : null,
       customerId: typeof invoice.customerId === 'string' ? invoice.customerId : null,
     },
+    monthEnd:
+      row.action_type === 'month_end'
+        ? {
+            fiscalYearEndMonth: Number(row.payload?.fiscalYearEndMonth) || 0,
+            lock: row.payload?.lock !== false,
+          }
+        : null,
     createdAt: row.created_at,
   }
 }
@@ -220,14 +245,19 @@ export function invoiceForSlot(
   } = template
   return createInvoiceSchema.parse({
     ...rest,
-    date: slot,
-    ...(dueInDays !== null && dueInDays !== undefined ? { dueDate: addDays(slot, dueInDays) } : {}),
+    // The invoice schema takes an instant, not a calendar day: midnight UTC of
+    // the slot, so the issue date is the slot in every reader's calendar maths.
+    date: `${slot}T00:00:00.000Z`,
+    ...(dueInDays !== null && dueInDays !== undefined
+      ? { dueDate: `${addDays(slot, dueInDays)}T00:00:00.000Z` }
+      : {}),
     paidAmount: 0,
   }) as CreateInvoice
 }
 
 export class AutomationService {
   private readonly invoices = new InvoiceService()
+  private readonly accounting = new AccountingService()
 
   private failure(message: string, error: { code?: string; message?: string }): BaseError {
     if (MISSING_SCHEMA.has(error.code ?? '')) return new AutomationNotConfiguredError()
@@ -296,6 +326,71 @@ export class AutomationService {
       action: 'created',
       title: 'فاکتور تکراری تعریف شد',
       metadata: { name: row.name, cadence: row.cadence },
+      notify: false,
+    }).catch((err) => console.error('[AutomationService] logBusinessEvent failed:', err))
+
+    return toView(row, today)
+  }
+
+  /**
+   * Capability #58 — close each month automatically, on the 1st of the next.
+   *
+   * ⚠️ THE YEAR END IS STATED, NOT ASSUMED. The product has no fiscal-year
+   * setting, and December is wrong for a shop whose year ends in Esfand or in
+   * March. So the person switching this on says which month ends their year,
+   * in their own calendar, and that answer lives on the arrangement.
+   *
+   * One per workspace: two would close the same month twice a night.
+   */
+  async createMonthEnd(
+    ctx: TenancyContext,
+    input: { calendar: ScheduleCalendar; fiscalYearEndMonth: number; lock: boolean },
+  ): Promise<AutomationView> {
+    const today = isoDay(new Date())
+
+    const { data: existing, error: existingError } = await supabase
+      .from('automations')
+      .select('id')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('action_type', 'month_end')
+      .is('archived_at', null)
+      .limit(1)
+    if (existingError) throw this.failure('Failed to read automations', existingError)
+    if ((existing ?? []).length > 0) throw new ConflictError('AUTOMATION_MONTH_END_EXISTS')
+
+    const { data, error } = await supabase
+      .from('automations')
+      .insert({
+        workspace_id: ctx.workspaceId,
+        name: 'month-end',
+        action_type: 'month_end',
+        cadence: {
+          kind: 'monthly',
+          dayOfMonth: 1,
+          calendar: input.calendar,
+          from: addIsoDays(today, 1),
+        },
+        conditions: null,
+        payload: { fiscalYearEndMonth: input.fiscalYearEndMonth, lock: input.lock },
+        enabled: true,
+        on_failure: 'stop',
+        max_attempts: 3,
+        last_checked_on: today,
+        created_by: ctx.userId,
+      })
+      .select(AUTOMATION_COLUMNS)
+      .single()
+    if (error) throw this.failure('Failed to create the automation', error)
+
+    const row = data as unknown as AutomationRow
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'automation',
+      entityId: row.id,
+      action: 'created',
+      title: 'بستن خودکار ماه روشن شد',
+      metadata: { ...input },
       notify: false,
     }).catch((err) => console.error('[AutomationService] logBusinessEvent failed:', err))
 
@@ -542,12 +637,19 @@ export class AutomationService {
       }
       // The creator, with the access they have TODAY — or a refusal.
       const actor = await requireWorkspace(row.created_by, row.workspace_id)
-      const documentId = await this.issueInvoice(actor, row, slot)
+      const documentId =
+        automation.action.type === 'month_end'
+          ? await this.closeMonth(actor, row, slot)
+          : await this.issueInvoice(actor, row, slot)
 
-      const recorded = await this.record(row, slot, 'ran', 'OK', startedAt, {
-        type: 'invoice',
-        id: documentId,
-      })
+      const recorded = await this.record(
+        row,
+        slot,
+        'ran',
+        'OK',
+        startedAt,
+        automation.action.type === 'month_end' ? undefined : { type: 'invoice', id: documentId },
+      )
       if (!recorded) return { outcome: 'already_ran' }
 
       await supabase
@@ -591,6 +693,49 @@ export class AutomationService {
 
       return { outcome: 'failed', reason, disabled: policy.disable }
     }
+  }
+
+  /**
+   * Capability #58 — close the month that ended the day before `slot`.
+   *
+   * The slot is the 1st of a month in the arrangement's calendar; the period
+   * is the whole month before it, in that same calendar. Every step is the
+   * existing month-end package (`runMonthEnd`) — depreciation, revaluation,
+   * the year-end close when this month ends the fiscal year, and the lock.
+   *
+   * ⚠️ A PACKAGE THAT STOPPED EARLY IS A FAILURE HERE. `runMonthEnd` returns
+   * 200 with `failedAt` for a person to read; a scheduled run has nobody
+   * reading, so it is recorded as failed, with the step, and the failure
+   * policy applies — a close that silently did half its work is the most
+   * expensive kind of quiet failure in this product.
+   */
+  private async closeMonth(actor: TenancyContext, row: AutomationRow, slot: string): Promise<null> {
+    if (!holds(actor, 'ledger.lock_period'))
+      throw new ValidationError('AUTOMATION_ACTOR_NOT_ALLOWED')
+
+    const calendar: ScheduleCalendar =
+      row.cadence.kind === 'monthly' ? (row.cadence.calendar ?? 'gregory') : 'gregory'
+    const yearEndMonth = Number(row.payload?.fiscalYearEndMonth)
+    if (!Number.isInteger(yearEndMonth) || yearEndMonth < 1 || yearEndMonth > 12) {
+      throw new ValidationError('AUTOMATION_FISCAL_YEAR_END_MISSING')
+    }
+
+    const period = monthBounds(addIsoDays(slot, -1), calendar)
+    const summary = await runMonthEnd(
+      actor,
+      {
+        fromDate: period.from,
+        toDate: period.to,
+        // Required by the package and unused once `closesYear` is stated.
+        fiscalYearEnd: period.to.slice(5, 10),
+        closesYear: period.month === yearEndMonth,
+        lock: row.payload?.lock !== false,
+      },
+      this.accounting,
+    )
+    if (summary.failedAt)
+      throw new ValidationError(`MONTH_END_FAILED_AT_${summary.failedAt.toUpperCase()}`)
+    return null
   }
 
   private async issueInvoice(actor: TenancyContext, row: AutomationRow, slot: string) {

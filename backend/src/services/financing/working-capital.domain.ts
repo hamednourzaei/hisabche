@@ -176,8 +176,14 @@ export function accruedInterest(
     return { accruedMinor: 0, days: Math.max(0, days) }
   }
 
+  // ⚠️ principal × (rate ÷ 100) × (days ÷ 365). Two mistakes lived here until
+  // 4 October 2026 (BUG-096), with a test that had locked the wrong figure in:
+  // the rate was used as 12 instead of 0.12, and the result was divided by
+  // `chargesPerYear` — so a 12% loan of 1,000,000 «accrued» 997,260 in a year.
+  // How OFTEN interest is charged does not change how much simple interest has
+  // accrued over a number of days; it only decides the instalment (below).
   const accrued = Math.round(
-    (facility.principalMinor * facility.annualRatePercent * days) / (365 * facility.chargesPerYear),
+    (facility.principalMinor * facility.annualRatePercent * days) / (365 * 100),
   )
 
   return { accruedMinor: Math.max(0, accrued), days }

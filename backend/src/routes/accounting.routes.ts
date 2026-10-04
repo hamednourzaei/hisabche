@@ -99,6 +99,12 @@ const monthEndSchema = z.object({
   fiscalYearEnd: z.string().regex(/^\d{2}-\d{2}$/, 'fiscalYearEnd must be MM-DD'),
   /** Set false to run the steps without sealing the period. */
   lock: z.boolean().optional(),
+  /**
+   * Whether this period ends the fiscal year, when the caller knows — a screen
+   * in the solar Hijri calendar does, and `fiscalYearEnd` (a Gregorian `MM-DD`)
+   * cannot express «Esfand». See `MonthEndInput.closesYear`.
+   */
+  closesYear: z.boolean().optional(),
 })
 
 export async function accountingRoutes(fastify: FastifyInstance) {

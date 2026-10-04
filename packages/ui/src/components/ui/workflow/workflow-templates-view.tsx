@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/workflow/workflow-templates-view.tsx
 'use client'
 
-import { memo, useState, useCallback } from 'react'
+import { memo, useState, useCallback, type ReactNode } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { cn } from '../../../lib/utils'
 import { ListChecks, Plus, X } from 'lucide-react'
@@ -20,6 +20,8 @@ interface WorkflowTemplatesViewProps {
     entity_type: WorkflowEntityType
     steps: WorkflowStep[]
   }) => Promise<void>
+  /** The escalation control of one workflow (it fetches and saves on its own). */
+  renderEscalation?: ((workflow: Workflow) => ReactNode) | undefined
 }
 
 export const WorkflowTemplatesView = memo(function WorkflowTemplatesView({
@@ -28,6 +30,7 @@ export const WorkflowTemplatesView = memo(function WorkflowTemplatesView({
   isLoading,
   isCreating,
   onCreate,
+  renderEscalation,
 }: WorkflowTemplatesViewProps) {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [name, setName] = useState('')
@@ -184,6 +187,11 @@ export const WorkflowTemplatesView = memo(function WorkflowTemplatesView({
                 <th className="px-4 py-3 text-center font-medium text-[hsl(var(--fg-secondary))] text-xs">
                   {t('workflow.templates.status', 'وضعیت')}
                 </th>
+                {renderEscalation ? (
+                  <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
+                    {t('workflow.escalation.title', 'ارجاع خودکار')}
+                  </th>
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -207,6 +215,7 @@ export const WorkflowTemplatesView = memo(function WorkflowTemplatesView({
                         : t('workflow.templates.inactive', 'غیرفعال')}
                     </span>
                   </td>
+                  {renderEscalation ? <td className="px-4 py-3">{renderEscalation(w)}</td> : null}
                 </tr>
               ))}
             </tbody>

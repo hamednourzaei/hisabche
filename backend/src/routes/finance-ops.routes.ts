@@ -262,6 +262,21 @@ export async function financeOpsRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // #62 — for each unmatched line, the account lines like it usually land in.
+  // A suggestion with its evidence; nothing is posted.
+  fastify.get(
+    '/bank/statements/:id/categories',
+    { preHandler: read, schema: { response: { 200: toJsonSchema(z.any()) } } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        return reply.send(await bankingService.getCategorySuggestions(request.tenancy, id))
+      } catch (err) {
+        return fail(reply, err, 'Failed to build category suggestions')
+      }
+    },
+  )
+
   fastify.post(
     '/bank/reconcile',
     {

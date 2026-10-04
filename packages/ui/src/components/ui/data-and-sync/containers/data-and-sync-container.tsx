@@ -27,6 +27,7 @@ import {
 import { useBackupStore, useSyncStore } from '@hisabche/store'
 
 import { DataAndSyncView } from '../data-and-sync-view'
+import { DataSnapshotsPanel } from '../data-snapshots-panel'
 
 export const DataAndSyncContainer = memo(function DataAndSyncContainer() {
   const onNavigate = useLocalePush()
@@ -83,6 +84,7 @@ export const DataAndSyncContainer = memo(function DataAndSyncContainer() {
       syncOverview={syncOverview.isError ? null : (syncOverview.data ?? null)}
       duplicates={duplicates.isError ? null : (duplicates.data ?? null)}
       isLoading={migrations.isLoading}
+      snapshotsSlot={<DataSnapshotsPanel />}
       error={migrations.error ? (migrations.error as Error).message : null}
       onNavigate={onNavigate}
       onRefresh={handleRefresh}

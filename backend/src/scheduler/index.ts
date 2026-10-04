@@ -14,6 +14,8 @@ import { TrialExpirationWorker } from '../workers/trial-expiration.worker'
 import { eventService } from '../services/event.service'
 import { runScheduledOnce, slotOf } from '../services/distributed-work'
 import { runDepreciationPosting } from '../workers/depreciation-posting.worker'
+import { automationService } from '../services/automation/automation.service'
+import { escalationService } from '../services/workflow/escalation.service'
 
 const trialWorker = new TrialExpirationWorker()
 
@@ -84,6 +86,45 @@ export async function runDepreciationTick(now: Date = new Date()): Promise<boole
   })
 }
 
+/**
+ * Capability #63 — the standing arrangements a business defined (recurring
+ * invoices), once per UTC day across all instances.
+ *
+ * ⚠️ DAILY, AND LATE IS FINE. Each arrangement remembers the last day it was
+ * evaluated and the pass walks every day after it, so a run that missed the 1st
+ * issues the 1st's invoice the next morning, dated the 1st. The invoice itself
+ * is idempotent per (arrangement, day), so a pass retried after a crash issues
+ * nothing twice.
+ */
+export async function runAutomationTick(now: Date = new Date()): Promise<boolean> {
+  return runScheduledOnce('automation-daily', slotOf(DAY_SECONDS, now), async () => {
+    const result = await automationService.runDue(now.toISOString().slice(0, 10))
+    if (result.ran > 0 || result.failed > 0) {
+      console.log(
+        `⏰ Automation: evaluated=${result.evaluated} ran=${result.ran} ` +
+          `skipped=${result.skipped} failed=${result.failed}`,
+      )
+    }
+  })
+}
+
+/**
+ * Capability #68 — approvals nobody answered, once per hour across all
+ * instances. A step past its workflow's policy gains a higher role allowed to
+ * act on it, and those people are told. Nothing is approved by this.
+ */
+export async function runEscalationTick(now: Date = new Date()): Promise<boolean> {
+  return runScheduledOnce('workflow-escalation', slotOf(60 * 60, now), async () => {
+    const result = await escalationService.runDue(now)
+    if (result.escalated > 0 || result.noOne > 0) {
+      console.log(
+        `⏰ Escalation: checked=${result.checked} escalated=${result.escalated} ` +
+          `no-one=${result.noOne}`,
+      )
+    }
+  })
+}
+
 export function startScheduler() {
   console.log('🔄 Starting scheduler...')
 
@@ -137,6 +178,36 @@ export function startScheduler() {
       }
     },
     { timezone: SCHEDULER_TIMEZONE, name: 'depreciation-posting' },
+  )
+
+  // ─── Standing arrangements (#۶۳ فاکتور تکراری) ──────────────
+  // روزی یک‌بار، UTC، بعد از استهلاک. اجرای دیرهنگام هم درست است: هر قرار
+  // روزهای ازدست‌رفته را خودش می‌پیماید و فاکتور را به تاریخ همان روز می‌زند.
+  cron.schedule(
+    '30 0 * * *',
+    async () => {
+      try {
+        await runAutomationTick()
+      } catch (err) {
+        console.error('❌ Automation pass failed:', err)
+      }
+    },
+    { timezone: SCHEDULER_TIMEZONE, name: 'automation-daily' },
+  )
+
+  // ─── Approval escalation (#۶۸) ──────────────
+  // هر ساعت، دقیقه‌ی ۵. فقط گردش‌کارهایی که سیاست ارجاع دارند خوانده می‌شوند؛
+  // بدون سیاست، هیچ کاری نمی‌کند.
+  cron.schedule(
+    '5 * * * *',
+    async () => {
+      try {
+        await runEscalationTick()
+      } catch (err) {
+        console.error('❌ Escalation pass failed:', err)
+      }
+    },
+    { timezone: SCHEDULER_TIMEZONE, name: 'workflow-escalation' },
   )
 
   console.log('✅ Scheduler started.')

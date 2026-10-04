@@ -68,38 +68,40 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 
 ## ۴. دانش پروژه — کجا را باز کنی
 
-| سؤال                                                             | فایل                                                       |
-| ---------------------------------------------------------------- | ---------------------------------------------------------- |
-| **وبلاگ: نقشه، تله‌ها، تصمیم‌ها (۲۶ سپتامبر)**                   | `.claude/SESSION-CACHE-2026-09-26-BLOG.md`                 |
-| **Sync باینری، بارکد/چاپ، پرفورمنس DB، Cloudflare (۲۷ سپتامبر)** | `.claude/SESSION-CACHE-2026-09-27.md`                      |
-| **Business OS ۱۵۰ قابلیت: نقشه، فازبندی، درس‌ها (۳۰ سپتامبر)**   | `.claude/BUSINESS-OS-SPEC.md` · `BUSINESS-OS-EXECUTION.md` |
-| **درس‌های فازهای ۰–۴ Business OS (۳۰ سپتامبر)**                  | `.claude/SESSION-CACHE-2026-09-30-BUSINESS-OS.md`          |
-| **🔴 مسائل باز امروز — این را اول بخوان**                        | `.claude/SESSION-CACHE-2026-09-30-FINDINGS.md`             |
-| **کیف پول، عکس کالا، بازار کالا، refresh token، دری (۳ اکتبر)**  | `.claude/SESSION-CACHE-2026-10-03.md`                      |
-| **ساخت و تولید: مدل، نقشه، آنچه ساخته نشد (۴ اکتبر)**            | `.claude/SESSION-CACHE-2026-10-04-MANUFACTURING.md`        |
-| **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                     | `.claude/DARI-GLOSSARY.md`                                 |
-| **کوئری‌های تشخیصی دیتابیس زنده**                                | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`            |
-| **باگ‌های Business OS (BOS-01 تا BOS-15)**                       | `.claude/BUG-REGISTRY.md` — بخش انتهایی                    |
-| **کلید API، وب‌هوک، ورود صورتحساب بانک، مقایسه‌ی اکوسیستم**      | `.claude/research/ecosystem-gap-analysis.md`               |
-| **درس‌ها و باگ‌های سشن اخیر (۱۹ سپتامبر)**                       | `.claude/SESSION-CACHE-2026-09-19.md` — **اول این**        |
-| درس‌ها و باگ‌های ۱۵–۱۷ سپتامبر                                   | `.claude/SESSION-CACHE-2026-09-17.md`                      |
-| درس‌ها و باگ‌های اوایل سپتامبر                                   | `.claude/SESSION-CACHE-2026-09.md`                         |
-| **فهرست باگ‌ها با ریشه و گارد**                                  | `.claude/BUG-REGISTRY.md`                                  |
-| **پرفورمنس، PageSpeed، لندینگ موبایل (۱۵ سپتامبر)**              | `.claude/SESSION-CACHE-2026-09-15-PERF.md`                 |
-| **درخواست‌های باز کاربر — قبل از هر کار**                        | `.claude/USER-REQUESTS.md`                                 |
-| بودجه/صندوق/حاکمیت/۵۰۰ها (۱۴ سپتامبر)                            | `.claude/SESSION-CACHE-2026-09-14.md`                      |
-| نقشه‌ی کل دانش                                                   | `.claude/README.md`                                        |
-| باگ خوردم / چطور وریفای کنم                                      | `.claude/DEBUG-PLAYBOOK.md`                                |
-| تله‌های قدیمی‌تر                                                 | `.claude/SESSION-CACHE.md`                                 |
-| چرا این‌طوری نوشته شده                                           | `.claude/lessons-learned.md`                               |
-| الان چه کار می‌کند و چه نه                                       | `.claude/STATE.md`                                         |
-| کد جدید کجا برود                                                 | `.claude/architecture/core-modules.md`                     |
-| کدام hook به کدام endpoint                                       | `.claude/architecture/api-surface.md`                      |
-| جدول‌ها و RLS                                                    | `.claude/architecture/data-model.md`                       |
-| Source of Truth / کدام migration اجرا شده                        | `.claude/SESSION-2026-09-05-CONSOLIDATION.md`              |
-| migration/تست/commit چطور                                        | `.claude/WORKFLOW.md`                                      |
-| مقایسه با ERPNext و Odoo                                         | `.claude/research/`                                        |
-| خواسته‌های محصول                                                 | `.claude/detail.md`                                        |
+| سؤال                                                                | فایل                                                                 |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **وبلاگ: نقشه، تله‌ها، تصمیم‌ها (۲۶ سپتامبر)**                      | `.claude/SESSION-CACHE-2026-09-26-BLOG.md`                           |
+| **Sync باینری، بارکد/چاپ، پرفورمنس DB، Cloudflare (۲۷ سپتامبر)**    | `.claude/SESSION-CACHE-2026-09-27.md`                                |
+| **Business OS ۱۵۰ قابلیت: نقشه، فازبندی، درس‌ها (۳۰ سپتامبر)**      | `.claude/BUSINESS-OS-SPEC.md` · `BUSINESS-OS-EXECUTION.md`           |
+| **درس‌های فازهای ۰–۴ Business OS (۳۰ سپتامبر)**                     | `.claude/SESSION-CACHE-2026-09-30-BUSINESS-OS.md`                    |
+| **🔴 مسائل باز امروز — این را اول بخوان**                           | `.claude/SESSION-CACHE-2026-09-30-FINDINGS.md`                       |
+| **کیف پول، عکس کالا، بازار کالا، refresh token، دری (۳ اکتبر)**     | `.claude/SESSION-CACHE-2026-10-03.md`                                |
+| **Business OS: کدام موتور واقعاً وصل است؛ فاکتور تکراری (۴ اکتبر)** | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md`             |
+| **صفحه‌ی تحلیل، آنچه از ۱۵۰ قابلیت وصل نشد و چرا (۴ اکتبر)**        | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md` — «دور دوم» |
+| **ساخت و تولید: مدل، نقشه، آنچه ساخته نشد (۴ اکتبر)**               | `.claude/SESSION-CACHE-2026-10-04-MANUFACTURING.md`                  |
+| **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                        | `.claude/DARI-GLOSSARY.md`                                           |
+| **کوئری‌های تشخیصی دیتابیس زنده**                                   | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                      |
+| **باگ‌های Business OS (BOS-01 تا BOS-15)**                          | `.claude/BUG-REGISTRY.md` — بخش انتهایی                              |
+| **کلید API، وب‌هوک، ورود صورتحساب بانک، مقایسه‌ی اکوسیستم**         | `.claude/research/ecosystem-gap-analysis.md`                         |
+| **درس‌ها و باگ‌های سشن اخیر (۱۹ سپتامبر)**                          | `.claude/SESSION-CACHE-2026-09-19.md` — **اول این**                  |
+| درس‌ها و باگ‌های ۱۵–۱۷ سپتامبر                                      | `.claude/SESSION-CACHE-2026-09-17.md`                                |
+| درس‌ها و باگ‌های اوایل سپتامبر                                      | `.claude/SESSION-CACHE-2026-09.md`                                   |
+| **فهرست باگ‌ها با ریشه و گارد**                                     | `.claude/BUG-REGISTRY.md`                                            |
+| **پرفورمنس، PageSpeed، لندینگ موبایل (۱۵ سپتامبر)**                 | `.claude/SESSION-CACHE-2026-09-15-PERF.md`                           |
+| **درخواست‌های باز کاربر — قبل از هر کار**                           | `.claude/USER-REQUESTS.md`                                           |
+| بودجه/صندوق/حاکمیت/۵۰۰ها (۱۴ سپتامبر)                               | `.claude/SESSION-CACHE-2026-09-14.md`                                |
+| نقشه‌ی کل دانش                                                      | `.claude/README.md`                                                  |
+| باگ خوردم / چطور وریفای کنم                                         | `.claude/DEBUG-PLAYBOOK.md`                                          |
+| تله‌های قدیمی‌تر                                                    | `.claude/SESSION-CACHE.md`                                           |
+| چرا این‌طوری نوشته شده                                              | `.claude/lessons-learned.md`                                         |
+| الان چه کار می‌کند و چه نه                                          | `.claude/STATE.md`                                                   |
+| کد جدید کجا برود                                                    | `.claude/architecture/core-modules.md`                               |
+| کدام hook به کدام endpoint                                          | `.claude/architecture/api-surface.md`                                |
+| جدول‌ها و RLS                                                       | `.claude/architecture/data-model.md`                                 |
+| Source of Truth / کدام migration اجرا شده                           | `.claude/SESSION-2026-09-05-CONSOLIDATION.md`                        |
+| migration/تست/commit چطور                                           | `.claude/WORKFLOW.md`                                                |
+| مقایسه با ERPNext و Odoo                                            | `.claude/research/`                                                  |
+| خواسته‌های محصول                                                    | `.claude/detail.md`                                                  |
 
 ---
 
@@ -254,6 +256,24 @@ cd apps/admin     && npx tsc --noEmit
 - **تست رقابتی پیام خطا را هم بسنجد**، نه فقط تعداد موفق‌ها — وگرنه بدون قفل هم سبز می‌ماند.
 - گارد با **فهرست بسته** باید به‌ازای هر عضو جدید ویرایش شود — و آن لحظه‌ای است که کسی «تست را شل می‌کند» به‌جای «قاعده را درست می‌کند». شکل را تطبیق بده (`/await run\w+Tick\(\)/g`)، نه اسم را.
 
+**تحلیل کسب‌وکار (۴ اکتبر)**
+
+- **یک سرویس خواندنی:** `backend/src/services/analysis/analysis.service.ts` هیچ چیزی حساب نمی‌کند؛ ردیف می‌خواند و به دامنه می‌دهد. صفحه `/analysis` و `CustomerRiskNote` (داخل `CustomerCrmPanel`) تنها مصرف‌کننده‌اند — صفحه‌ی تحلیل دوم نساز.
+- ⚠️ **جمع پول بدون ارز، بی‌صدا غلط است.** `invoice_outstanding` ستون `currency` دارد؛ هر جمعی روی آن یا به تفکیک ارز است یا با فیلتر یک ارز. fixture مالی حداقل **دو ارز** داشته باشد — با یک ارز این باگ سبز می‌ماند.
+- ⚠️ **ورودیِ نداشته را صفر نده؛ خروجی‌اش را حذف کن.** «موجودی نقد» یک عدد قابل‌خواندن نیست، پس نسبت آنی در پاسخ سرمایه در گردش **وجود ندارد**.
+- ⚠️ **سری ماهانه ماه‌های خالی را صفر دارد**، وگرنه مشتری‌ای که دیگر نمی‌خرد «ثابت» خوانده می‌شود.
+- موتور «خودکار» بانک (`decideAutoMatches`) فقط **یادداشت** می‌گذارد (`review`)؛ تطبیق همچنان فقط با کلیک است.
+
+**اقساط، حضور و غیاب، تخفیف (۴ اکتبر)**
+
+- **قسط برنامه‌ی زمانی است، نه پرداخت.** «پرداخت‌شده»‌ی هر قسط از مانده‌ی فاکتور مشتق می‌شود (`commerce/installment.service.ts`)؛ نوشتن فقط با `installments_save`. جریمه‌ی دیرکرد عمداً وصل نیست.
+- **یک `quotePrice`** در `packages/validation/src/schemas/pricing.ts` برای سرور و فاکتورساز (`usePromotionPricer`). تخفیف **بازنشسته** می‌شود؛ ویرایش و حذف ندارد. مبلغ ثابت همیشه ارز دارد و روی ارز دیگر اعمال نمی‌شود.
+- **برگه‌ی حضور و غیاب** فقط از `payroll/attendance.service.ts` (`/api/attendance-sheet`). «ثبت‌نشده» ≠ غایب؛ روز باز ساعت ندارد. به حقوق وصل نیست.
+- ⚠️ **مسیر قدیمی‌ای که «وجود دارد» را قبل از تکیه‌کردن بخوان:** `GET /api/attendance/:id?month=` با `${month}-31` برای ماه کوتاه ۵۰۰ می‌دهد و مالکیت کارمند را چک نمی‌کند.
+- ⚠️ **`postgres.js`: `${json}::jsonb` رشته را دوباره encode می‌کند** → `::text::jsonb`. تست رقابتی باید نتیجه‌ی **موفق** را هم بسنجد (هر دو درخواست می‌توانند با یک fixture خراب شکست بخورند و تست سبز بماند).
+- ⚠️ **`<select>` خام ممنوع** — `SelectField` (گارد `select-consistency.test.ts`).
+- ⚠️ **بیلد ویندوز پشت پروکسی:** `electron-builder --win -c.electronDist=node_modules/electron/dist` — `@electron/get` برای checksum به npmmirror می‌رود و قطع می‌شود.
+
 **هسته‌ها (CRM / Payments)**
 
 - داده‌ی CRM را فقط از `backend/src/services/crm` (index/port) بخوان؛ هیچ سرویس دیگری جدول `interactions`/`opportunities` را مستقیم نمی‌خواند (`crm-core.test.ts` گارد است). در UI برای تصویر CRM یک مشتری `CustomerCrmPanel` را بگذار، دوباره نساز.
@@ -271,6 +291,13 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **«تکمیل» یعنی تولید.** `status: 'completed'` از PATCH رد می‌شود؛ تنها راه `POST /api/manufacturing/produce` است (BUG-092).
 - ⚠️ **پیام سرور کلید ترجمه نیست مگر در فهرست بسته باشد** (`manufacturing-errors.ts`)؛ `t()` روی پیام ناشناخته صفحه را می‌اندازد.
 - تولید **ONLINE_ONLY** است و **سند دفتر کل نمی‌زند** (WIP/سربار تصمیم صاحب کار است) — ادعای خلافش نکن.
+
+**زمان‌بندی و فاکتور تکراری (۴ اکتبر)**
+
+- **یک اجراکننده:** `automation.service` از `runAutomationTick` (`scheduler/index.ts`) — کِی و آیا را `schedule.domain` می‌گوید، خودِ کار را سرویس همان دامنه انجام می‌دهد (فاکتور تکراری = `InvoiceService.create`). اجراکننده هیچ فاکتور، حرکت انبار یا سند دفتری از خودش نمی‌نویسد.
+- ⚠️ **اکشن تازه = عضو تازه در `EXECUTABLE_ACTIONS` + شاخه‌ی اجرا + تست.** نام در union کافی نیست: اجرای اکشنِ بدون شاخه `AUTOMATION_ACTION_NOT_SUPPORTED` ثبت می‌کند، بی‌صدا رد نمی‌شود.
+- ⚠️ **`isoDateSchema` instant است** (`…T00:00:00.000Z`)، نه `YYYY-MM-DD`. بدنه‌ای که برای schema فاکتور می‌سازی را با خودِ schema تست کن.
+- هر صفحه یا قابلیت تازه: راهنمای عمومی در `DOCS_ARTICLES` (خودکار در سایت‌مپ) + لینک از یک مقاله‌ی مرتبط + `ROUTE_DOCS_MAP`.
 
 **پلتفرم توسعه‌دهنده (کلید API / وب‌هوک)**
 

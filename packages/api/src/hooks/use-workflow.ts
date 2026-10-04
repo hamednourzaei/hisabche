@@ -253,3 +253,49 @@ export function usePerformWorkflowAction() {
     },
   })
 }
+
+// ─── Escalation (capability #68) ────────────────────────────────────────────
+//   GET|PUT /v1/workflows/:id/escalation   the policy of one workflow
+// Off (`afterHours: null`) until someone sets it. Escalation widens who may act
+// on a waiting step; it never approves anything.
+
+export interface EscalationPolicy {
+  /** null = escalation is off for this workflow. */
+  afterHours: number | null
+  toRole: 'manager' | 'owner' | null
+  maxTimes: number
+}
+
+export function useEscalationPolicy(workflowId: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: [...workflowKeys.template(workflowId), 'escalation'] as const,
+    queryFn: async (): Promise<EscalationPolicy> => {
+      const { data } = await apiClient.get<EscalationPolicy>(
+        `/v1/workflows/${workflowId}/escalation`,
+      )
+      return data
+    },
+    enabled: authReady && !!workflowId,
+    staleTime: 120_000,
+    retry: false,
+  })
+}
+
+export function useSetEscalationPolicy() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (
+      input: { workflowId: string } & EscalationPolicy,
+    ): Promise<EscalationPolicy> => {
+      const { workflowId, ...policy } = input
+      const { data } = await apiClient.put<EscalationPolicy>(
+        `/v1/workflows/${workflowId}/escalation`,
+        policy,
+      )
+      return data
+    },
+    onSuccess: (_data, input) =>
+      void queryClient.invalidateQueries({ queryKey: workflowKeys.template(input.workflowId) }),
+  })
+}

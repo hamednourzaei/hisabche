@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import { useInvoicesPage } from '../../../../hooks/invoices/use-invoices-page'
 import { InvoicesView } from '../invoices-view'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
+import { RecurringInvoicesButton } from '../recurring-invoices'
 
 export function InvoicesContainer() {
   const push = useLocalePush()
@@ -57,6 +58,7 @@ export function InvoicesContainer() {
       onNavigateParty={handleNavigateParty}
       onNavigateInvoiceAction={handleNavigateInvoiceAction}
       onNewInvoice={handleNewInvoice}
+      toolbarExtra={<RecurringInvoicesButton t={safeT} />}
       onDeleteInvoice={handleDeleteInvoice}
       statusVariant={statusVariant}
       typeFilter={typeFilter}

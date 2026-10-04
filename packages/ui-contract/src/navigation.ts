@@ -41,6 +41,8 @@ export type NavId =
   | 'billing'
   | 'wallet'
   | 'market-seller'
+  | 'analysis'
+  | 'promotions'
   | 'governance'
   // The till. Somewhere a person STANDS, which is why it is primary and the
   // rest of this batch is not.
@@ -431,6 +433,27 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     group: 'work',
   },
   {
+    // Four questions answered from rows the business already has: who to
+    // remind, which supplier is late, where each product breaks even, and
+    // which customers came back. Read-only; nothing is sent to anyone.
+    id: 'analysis',
+    emoji: '🔎',
+    labelKey: 'nav.analysis',
+    descriptionKey: 'nav.analysis_description',
+    path: '/analysis',
+    group: 'work',
+  },
+  {
+    // Rules that lower the suggested price of a sale line. Managers make and
+    // retire them; every seller's invoice applies them when a product is picked.
+    id: 'promotions',
+    emoji: '🏷️',
+    labelKey: 'nav.promotions',
+    descriptionKey: 'nav.promotions_description',
+    path: '/promotions',
+    group: 'work',
+  },
+  {
     // ⚠️ A ROUTE NOW, NOT ONLY A FLOATING BUTTON.
     //
     // The assistant used to be reachable only from a button on the dashboard.
@@ -648,6 +671,7 @@ export function splitForBudget<T>(
 // every request, so a locked page opened by URL answers 403 either way.
 export const NAV_MODULE: Readonly<Record<string, string>> = {
   '/invoices': 'invoices',
+  '/promotions': 'invoices',
   '/sales-workspace': 'parties',
   '/customers': 'parties',
   '/till': 'payments',

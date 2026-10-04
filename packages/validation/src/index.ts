@@ -291,6 +291,17 @@ export {
 } from './schemas/manufacturing.schema'
 
 export {
+  SCHEDULE_CALENDARS,
+  addIsoDays,
+  calendarDay,
+  isLastDayOfMonth,
+  isMonthlySlot,
+  monthBounds,
+  type CalendarDay,
+  type ScheduleCalendar,
+} from './schemas/calendar-day'
+
+export {
   AUTOMATION_FAILURE_POLICIES,
   automationCadenceSchema,
   createRecurringInvoiceSchema,
@@ -317,6 +328,27 @@ export {
   type ProductionOtherCost,
   type SaveProductionDefinition,
 } from './schemas/manufacturing-cost'
+
+// ---------- Pricing & promotions (shared engine) ----------
+export {
+  quotePrice,
+  applyPrice,
+  basePriceFor,
+  isLiveOn,
+  covers as promotionCovers,
+  promotionInputSchema,
+  promotionsFor,
+  SAVABLE_PROMOTION_KINDS,
+  type PriceRequest,
+  type PriceQuote,
+  type ProductPricing,
+  type Promotion,
+  type PromotionKind,
+  type PromotionInput,
+  type SavedPromotion,
+  type AppliedPromotion,
+  type StackingMode,
+} from './schemas/pricing'
 
 // ---------- HR ----------
 export {

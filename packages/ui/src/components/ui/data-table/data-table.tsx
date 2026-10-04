@@ -10,6 +10,7 @@
 import { memo, useMemo, type ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
+import { SavedViewsMenu } from './saved-views-menu'
 import { SortableHeader } from './sortable-header'
 import { TableToolbar } from './table-toolbar'
 import { VISIBILITY_CLASS, type TableColumn } from './table-types'
@@ -82,7 +83,27 @@ function DataTableInner<T>({
         onToggleColumn={state.toggleColumn}
         searchValue={searchValue}
         onSearchChange={onSearchChange}
-        actions={actions}
+        actions={
+          <>
+            <SavedViewsMenu
+              t={t}
+              tableId={tableId}
+              current={{
+                hiddenIds: state.hiddenIds,
+                sortId: state.sortId,
+                sortDirection: state.sortDirection,
+                search: searchValue ?? '',
+              }}
+              onApply={(look) => {
+                state.applyLook(look)
+                // A table whose search lives elsewhere has no handler; the
+                // view's columns and sort still apply.
+                onSearchChange?.(look.search)
+              }}
+            />
+            {actions}
+          </>
+        }
       />
 
       {bulkBar}

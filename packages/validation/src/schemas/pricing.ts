@@ -1,3 +1,7 @@
+// ⚠️ SHARED: the server quotes with this and the invoice builder prices a picked
+// product with this — one arithmetic, so a promotion cannot mean one thing on
+// the screen and another on the server. Moved here from
+// backend/src/services/commerce/pricing.domain.ts on 4 October 2026.
 // ============================================
 // Capability #19, #114, #115, #116, #117, #120 — pricing and promotion.
 // Engine N1.
@@ -42,6 +46,8 @@
 // capped). The default is `exclusive` because the failure of stacking is silent
 // and the failure of not stacking is a conversation the shop can have.
 // ============================================
+
+import { z } from 'zod'
 
 /** How a price is expressed. Matches the `CURRENCY_CODES` policy elsewhere. */
 export type PricingCurrency = 'AFN' | 'USD' | 'PKR' | 'IRR' | 'IRT' | (string & {})
@@ -351,4 +357,78 @@ export function applyPrice(
       unitPrice: fromMinor(quote.unitPriceMinor),
     }
   })
+}
+
+// ─── What a person may save ─────────────────────────────────────────────────
+//
+// ⚠️ `bundle` IS NOT SAVABLE. The engine carries the kind, but pricing a
+// bundle needs the whole basket and this quotes one line; saving one would
+// store a promotion that silently behaves as a fixed amount.
+
+export const SAVABLE_PROMOTION_KINDS = ['percentage', 'fixed_amount'] as const
+
+const isoDayOrNull = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .nullable()
+  .default(null)
+
+export const promotionInputSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80),
+    kind: z.enum(SAVABLE_PROMOTION_KINDS),
+    /** Percent (0–100] for `percentage`; an amount in `currency` for `fixed_amount`. */
+    value: z.number().positive(),
+    /** Required for `fixed_amount`: an amount without a currency is not an amount. */
+    currency: z.string().trim().length(3).nullable().default(null),
+    stacking: z.enum(['exclusive', 'stacking']).default('exclusive'),
+    /** Null = every product. An empty list is refused: it would cover nothing. */
+    productIds: z.array(z.string().uuid()).min(1).max(500).nullable().default(null),
+    /** Null = every customer, walk-ins included. A list excludes walk-ins. */
+    customerIds: z.array(z.string().uuid()).min(1).max(500).nullable().default(null),
+    validFrom: isoDayOrNull,
+    validTo: isoDayOrNull,
+  })
+  .superRefine((value, ctx) => {
+    if (value.kind === 'percentage' && value.value > 100) {
+      ctx.addIssue({ code: 'custom', path: ['value'], message: 'PROMOTION_PERCENT_OVER_100' })
+    }
+    if (value.kind === 'fixed_amount' && !value.currency) {
+      ctx.addIssue({ code: 'custom', path: ['currency'], message: 'PROMOTION_CURRENCY_REQUIRED' })
+    }
+    if (value.validFrom && value.validTo && value.validFrom > value.validTo) {
+      ctx.addIssue({ code: 'custom', path: ['validTo'], message: 'PROMOTION_WINDOW_INVERTED' })
+    }
+  })
+
+export type PromotionInput = z.infer<typeof promotionInputSchema>
+
+/** A saved promotion as the API returns it. */
+export interface SavedPromotion extends PromotionInput {
+  id: string
+  isActive: boolean
+  createdAt: string
+}
+
+/**
+ * The saved promotions that can price a line in `currency`, as the engine's
+ * own `Promotion`.
+ *
+ * ⚠️ A fixed amount in another currency is LEFT OUT, not converted: «50 off»
+ * saved in dollars is not 50 afghani off.
+ */
+export function promotionsFor(saved: readonly SavedPromotion[], currency: string): Promotion[] {
+  return saved
+    .filter((promotion) => promotion.isActive)
+    .filter((promotion) => promotion.kind === 'percentage' || promotion.currency === currency)
+    .map((promotion) => ({
+      id: promotion.id,
+      kind: promotion.kind,
+      stacking: promotion.stacking,
+      value: promotion.value,
+      productIds: promotion.productIds,
+      customerIds: promotion.customerIds,
+      validFrom: promotion.validFrom,
+      validTo: promotion.validTo,
+    }))
 }

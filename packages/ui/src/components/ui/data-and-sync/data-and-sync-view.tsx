@@ -62,6 +62,8 @@ export interface DataAndSyncViewProps {
   /** Duplicate candidates per entity. null = not read (or no access). */
   duplicates: DuplicateSummary[] | null
   isLoading: boolean
+  /** Markers of the data's state (#42–#46), passed in by the container. */
+  snapshotsSlot?: React.ReactNode
   error: string | null
   onNavigate: (path: string) => void
   onRefresh: () => void
@@ -105,6 +107,7 @@ export const DataAndSyncView = memo(function DataAndSyncView({
   syncOverview,
   duplicates,
   isLoading,
+  snapshotsSlot,
   error,
   onNavigate,
   onRefresh,
@@ -477,6 +480,8 @@ export const DataAndSyncView = memo(function DataAndSyncView({
           </ul>
         ) : null}
       </details>
+
+      {snapshotsSlot}
     </CapabilityPage>
   )
 })

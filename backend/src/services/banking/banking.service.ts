@@ -10,7 +10,14 @@ import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import { fetchAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
-import { learnPatterns, learnedBonus } from './match-learning.domain'
+import { learnPatterns, learnedBonus, normaliseDescription } from './match-learning.domain'
+import { decideAutoMatches, type AutoMatchSettings } from './auto-match.domain'
+import {
+  categorize,
+  type CategorizationVerdict,
+  type CategoryHistory,
+  type CategoryRoot,
+} from './categorization.domain'
 
 import {
   statementLineKey,
@@ -44,6 +51,15 @@ function mapLine(raw: Record<string, any>): StatementLine {
     matchedTo: raw.matched_to ?? null,
   }
 }
+
+/**
+ * The bar a suggestion must clear to be marked «ready to confirm»: the bank's
+ * own reference matched (tier `certain`, score ≥ 0.95), one candidate only, and
+ * not a bank charge. This marks; it never matches.
+ */
+const CATEGORY_ROOTS = ['asset', 'liability', 'equity', 'revenue', 'expense'] as const
+
+const REVIEW_ASSIST: AutoMatchSettings = { minScore: 0.95, allowedTiers: ['certain'] }
 
 export class BankingService {
   private async invalidate(workspaceId: string) {
@@ -344,7 +360,172 @@ export class BankingService {
       }
     })
 
-    return { statementId, suggestions }
+    // ─── #55 — which suggestions a person can confirm without a second look ──
+    //
+    // ⚠️ NOTHING IS MATCHED HERE. The engine's verdict is attached to each
+    // suggestion as `review`; a person still confirms every match. What it adds
+    // is the reason a suggestion needs care — above all «this is the bank's own
+    // charge», which must be recorded as a difference and not matched to a
+    // customer's invoice.
+    const verdicts = decideAutoMatches(
+      suggestions,
+      REVIEW_ASSIST,
+      Object.fromEntries(lines.map((line) => [line.id, line.description ?? ''])),
+    )
+    const verdictOf = new Map(verdicts.decisions.map((decision) => [decision.lineId, decision]))
+
+    return {
+      statementId,
+      suggestions: suggestions.map((suggestion) => {
+        const verdict = verdictOf.get(suggestion.statementLineId)
+        return {
+          ...suggestion,
+          review:
+            verdict?.kind === 'auto'
+              ? ({ kind: 'ready' } as const)
+              : ({ kind: 'check', reason: verdict?.reason ?? 'NO_SUGGESTION' } as const),
+        }
+      }),
+    }
+  }
+
+  // ─── #62 — which account a line like this usually lands in ──────────────
+
+  /**
+   * For every UNMATCHED line of a statement: the account this workspace's own
+   * confirmed reconciliations kept putting lines like it in.
+   *
+   * ⚠️ NOTHING IS POSTED AND NOTHING IS MATCHED. This is a suggestion with its
+   * evidence (how many past lines, which descriptions); a person records the
+   * entry.
+   *
+   * The history is the SAME one matching learns from — lines a person
+   * reconciled — read for a different question. A line reconciled to a journal
+   * entry «landed in» that entry's other account; an entry with more than one
+   * other account says nothing about where one line went and is left out.
+   */
+  async getCategorySuggestions(
+    ctx: TenancyContext,
+    statementId: string,
+  ): Promise<{
+    statementId: string
+    /** How many reconciled lines the suggestions were learned from. */
+    historySize: number
+    lines: Array<{
+      lineId: string
+      onDate: string
+      description: string
+      amountMinor: number
+      verdict: CategorizationVerdict
+    }>
+  }> {
+    const { data: statement, error } = await supabase
+      .from('bank_statements')
+      .select('id, account_id')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', statementId)
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to fetch the statement', error)
+    if (!statement) throw new NotFoundError('Bank statement')
+
+    const lines = (await this.loadLines(ctx, statementId)).filter((line) => !line.matchedTo)
+    const history = await this.categoryHistory(ctx, statement.account_id)
+
+    return {
+      statementId,
+      historySize: history.length,
+      lines: lines.map((line) => ({
+        lineId: line.id,
+        onDate: line.onDate,
+        description: line.description,
+        amountMinor: line.amountMinor,
+        verdict: categorize(
+          {
+            direction: line.amountMinor >= 0 ? 'in' : 'out',
+            description: normaliseDescription(line.description),
+          },
+          history,
+        ),
+      })),
+    }
+  }
+
+  /** Reconciled lines of this bank account, each with the ONE other account of its entry. */
+  private async categoryHistory(
+    ctx: TenancyContext,
+    bankAccountId: string,
+  ): Promise<CategoryHistory[]> {
+    const reconciled = await fetchAllPages(
+      (from, to) =>
+        supabase
+          .from('bank_statement_lines')
+          .select('id, description, amount_minor, matched_to, matched_kind')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('matched_kind', 'journal')
+          .not('matched_to', 'is', null)
+          .order('id', { ascending: true })
+          .range(from, to),
+      'Failed to read reconciled lines',
+    )
+    if (reconciled.length === 0) return []
+
+    const entryIds = [
+      ...new Set(reconciled.map((row: Record<string, any>) => String(row.matched_to))),
+    ]
+    const otherAccount = new Map<string, string | null>()
+    const CHUNK = 200
+    for (let index = 0; index < entryIds.length; index += CHUNK) {
+      const { data, error } = await supabase
+        .from('journal_lines')
+        .select('journal_id, account_id')
+        .eq('workspace_id', ctx.workspaceId)
+        .in('journal_id', entryIds.slice(index, index + CHUNK))
+      if (error) throw new DatabaseError('Failed to read journal lines', error)
+      for (const row of (data ?? []) as Array<{ journal_id: string; account_id: string | null }>) {
+        if (!row.account_id || row.account_id === bankAccountId) continue
+        // A second, different other-account makes the entry say nothing about
+        // where ONE bank line went: null, and it is skipped below.
+        const seen = otherAccount.get(row.journal_id)
+        otherAccount.set(
+          row.journal_id,
+          seen === undefined || seen === row.account_id ? row.account_id : null,
+        )
+      }
+    }
+
+    const accountIds = [...new Set([...otherAccount.values()].filter((id): id is string => !!id))]
+    const accounts = new Map<string, { name: string; root: CategoryRoot }>()
+    for (let index = 0; index < accountIds.length; index += CHUNK) {
+      const { data, error } = await supabase
+        .from('accounts')
+        .select('id, name, type')
+        // Re-applied here: these ids came from journal lines, and an account
+        // name must never be read across the workspace boundary.
+        .eq('workspace_id', ctx.workspaceId)
+        .in('id', accountIds.slice(index, index + CHUNK))
+      if (error) throw new DatabaseError('Failed to read accounts', error)
+      for (const row of (data ?? []) as Array<{ id: string; name: string; type: string }>) {
+        // An account whose type is not one of the five roots is not guessed at.
+        if ((CATEGORY_ROOTS as readonly string[]).includes(row.type)) {
+          accounts.set(row.id, { name: row.name, root: row.type as CategoryRoot })
+        }
+      }
+    }
+
+    const history: CategoryHistory[] = []
+    for (const row of reconciled as Array<Record<string, any>>) {
+      const accountId = otherAccount.get(String(row.matched_to))
+      const account = accountId ? accounts.get(accountId) : undefined
+      if (!accountId || !account) continue
+      history.push({
+        direction: Number(row.amount_minor) >= 0 ? 'in' : 'out',
+        description: normaliseDescription(String(row.description ?? '')),
+        accountId,
+        accountName: account.name,
+        root: account.root,
+      })
+    }
+    return history
   }
 
   /**

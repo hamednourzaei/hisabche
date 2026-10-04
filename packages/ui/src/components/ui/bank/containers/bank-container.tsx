@@ -19,6 +19,7 @@ import {
   apiErrorMessage,
 } from '@hisabche/api'
 import { BankView } from '../bank-view'
+import { BankCategorySuggestions } from '../bank-category-suggestions'
 
 export const BankContainer = memo(function BankContainer() {
   const translate = useTranslations()
@@ -93,6 +94,7 @@ export const BankContainer = memo(function BankContainer() {
       statements={statementList}
       selectedId={selectedId}
       suggestions={asList<MatchSuggestion>(suggestions.data?.suggestions)}
+      categorySlot={selectedId ? <BankCategorySuggestions statementId={selectedId} /> : null}
       reconciliation={reconciliation.data ?? null}
       isLoading={statements.isLoading}
       isDetailLoading={Boolean(selectedId) && (suggestions.isLoading || reconciliation.isLoading)}

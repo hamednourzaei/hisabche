@@ -19,7 +19,8 @@ import { Input } from '../../input'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../../sheet'
 import { Skeleton } from '../../skeleton'
 import { cn } from '../../../../lib/utils'
-import { productPrice, readProducts, type PickerProduct } from '../../../../lib/invoices/products'
+import { readProducts, type PickerProduct } from '../../../../lib/invoices/products'
+import { usePromotionPricer } from '../../../../hooks/invoices/use-promotion-pricer'
 
 export interface ProductSearchSheetProps {
   t: (key: string, fallback?: string) => string
@@ -39,6 +40,8 @@ export const ProductSearchSheet = memo(function ProductSearchSheet({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
+  // The sell price, less the promotions live today (see the hook).
+  const promoPrice = usePromotionPricer()
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(search.trim()), 300)
@@ -156,7 +159,8 @@ export const ProductSearchSheet = memo(function ProductSearchSheet({
             ) : (
               <ul>
                 {products.map((product) => {
-                  const price = productPrice(product)
+                  const picked = promoPrice(product)
+                  const price = picked.price
                   return (
                     <li key={product.id}>
                       <button
@@ -186,6 +190,11 @@ export const ProductSearchSheet = memo(function ProductSearchSheet({
                             className="block text-xs tabular-nums text-[hsl(var(--fg-tertiary))]"
                           >
                             {Number(price ?? 0).toLocaleString(locale)}
+                            {picked.discounted ? (
+                              <span className="ms-2 line-through opacity-70">
+                                {picked.base.toLocaleString(locale)}
+                              </span>
+                            ) : null}
                           </span>
                         </span>
                         {typeof product.quantity === 'number' ? (

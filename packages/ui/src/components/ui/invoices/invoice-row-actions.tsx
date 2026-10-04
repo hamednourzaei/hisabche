@@ -18,6 +18,9 @@ import {
 import type { Invoice } from '../../../lib/invoices/invoices-types'
 import { buildInvoiceShareUrl } from '../invoice-detail/invoice-document'
 import { buildInvoiceShareMessage } from '@hisabche/ui-contract'
+import { Button } from '../button'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../dialog'
+import { UndoDisclosure } from '../undo-disclosure'
 
 interface InvoiceRowActionsProps {
   inv: Invoice
@@ -39,6 +42,7 @@ export const InvoiceRowActions = memo(function InvoiceRowActions({
 }: InvoiceRowActionsProps) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -173,13 +177,42 @@ export const InvoiceRowActions = memo(function InvoiceRowActions({
             )}
             onClick={() => {
               setOpen(false)
-              onDelete(inv.id)
+              setConfirming(true)
             }}
           >
             <Trash2 className="size-4" /> {t('action.delete', 'حذف')}
           </button>
         </div>
       )}
+
+      {/* ⚠️ «حذف» used to act the instant it was pressed — on a button that
+          cancels an invoice, reverses its ledger entry and puts its stock back.
+          It now asks, and says what it will do BEFORE it does it (#81). */}
+      <Dialog open={confirming} onOpenChange={setConfirming}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {t('invoices.deleteConfirmTitle', 'این فاکتور حذف شود؟')} #{inv.invoiceNumber}
+            </DialogTitle>
+          </DialogHeader>
+          {confirming ? <UndoDisclosure t={t} route="DELETE /invoices/:id" /> : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirming(false)}>
+              {t('action.cancel', 'انصراف')}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                setConfirming(false)
+                void onDelete(inv.id)
+              }}
+            >
+              {t('action.delete', 'حذف')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 })

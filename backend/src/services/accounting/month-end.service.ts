@@ -78,6 +78,14 @@ export interface MonthEndInput {
    * across this monorepo: `lock?: boolean` rejects an explicit `undefined`.
    */
   lock?: boolean | undefined
+  /**
+   * Whether this period closes the fiscal year, when the caller already
+   * knows. The scheduled close passes it: `monthEndsFiscalYear` compares
+   * GREGORIAN months, and a shop that keeps solar Hijri months ends its year
+   * with Esfand — a month that starts in February and ends in March, on a
+   * day that moves. Absent, the `fiscalYearEnd` rule decides as before.
+   */
+  closesYear?: boolean | undefined
 }
 
 /**
@@ -99,7 +107,8 @@ export async function runMonthEnd(
   const plan: MonthEndPlan = {
     fromDate: input.fromDate.slice(0, 10),
     toDate: input.toDate.slice(0, 10),
-    closesYear: monthEndsFiscalYear(input.fromDate.slice(0, 10), input.fiscalYearEnd),
+    closesYear:
+      input.closesYear ?? monthEndsFiscalYear(input.fromDate.slice(0, 10), input.fiscalYearEnd),
   }
 
   // ── 1. Depreciation ───────────────────────────────────────

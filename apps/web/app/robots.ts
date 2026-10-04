@@ -43,6 +43,8 @@ export default function robots(): MetadataRoute.Robots {
     '/*/billing',
     '/*/wallet',
     '/*/market-seller',
+    '/*/analysis',
+    '/*/promotions',
     '/*/crm',
     '/*/tasks',
     '/*/referrals',

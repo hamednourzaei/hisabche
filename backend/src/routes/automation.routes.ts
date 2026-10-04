@@ -13,7 +13,11 @@
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { createRecurringInvoiceSchema, updateAutomationSchema } from '@hisabche/validation'
+import {
+  SCHEDULE_CALENDARS,
+  createRecurringInvoiceSchema,
+  updateAutomationSchema,
+} from '@hisabche/validation'
 
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
@@ -61,6 +65,30 @@ export async function automationRoutes(fastify: FastifyInstance) {
         return reply.code(201).send(created)
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to create the recurring invoice')
+      }
+    },
+  )
+
+  // Capability #58 — close each month automatically. Sealing a period is the
+  // same decision as closing one by hand, so it takes the same capability.
+  fastify.post(
+    '/api/automations/month-end',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.lock_period')],
+    },
+    async (request: FastifyRequest, reply) => {
+      try {
+        const input = z
+          .object({
+            calendar: z.enum(SCHEDULE_CALENDARS),
+            fiscalYearEndMonth: z.number().int().min(1).max(12),
+            lock: z.boolean().default(true),
+          })
+          .parse(request.body)
+        const created = await automationService.createMonthEnd(request.tenancy, input)
+        return reply.code(201).send(created)
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to set up the automatic month-end')
       }
     },
   )

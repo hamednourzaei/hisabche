@@ -115,7 +115,12 @@ export type AutoMatchReport = {
  * work for the person doing it.
  */
 export function decideAutoMatches(
-  suggestions: readonly MatchSuggestion[],
+  // Only what the decision reads: a suggestion enriched by the caller (a
+  // learned-pattern reason, say) is still a suggestion.
+  suggestions: readonly Pick<
+    MatchSuggestion,
+    'statementLineId' | 'bookEntryId' | 'score' | 'confidence' | 'isAmbiguous'
+  >[],
   settings: AutoMatchSettings = DEFAULT_AUTO_MATCH_SETTINGS,
   /**
    * The bank's own description per statement line.

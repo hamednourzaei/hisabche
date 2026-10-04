@@ -57,7 +57,7 @@ export type PayrollRecord = PayrollRow
  * `statusFilter` kept its name and its two original values so nothing that
  * already passes it breaks; 'branches' is the third.
  */
-export type TeamTab = 'employees' | 'branches' | 'payroll'
+export type TeamTab = 'employees' | 'branches' | 'payroll' | 'attendance'
 
 /** A branch as the employee form's picker needs it. */
 export interface BranchOption {
@@ -89,6 +89,8 @@ interface TeamAndPayrollViewProps {
   branches?: BranchOption[]
   /** Rendered as the «شعب» tab's body — the tree, supplied by the container. */
   branchesTab?: React.ReactNode
+  /** The daily attendance sheet (#100), passed in by the container. */
+  attendanceTab?: React.ReactNode
   /** Surfaced instead of being swallowed: a failed save must say why. */
   employeeFormError?: string | null
   /**
@@ -169,6 +171,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
   onDeleteEmployee,
   branches = [],
   branchesTab,
+  attendanceTab,
   employeeFormError,
   employeeFieldErrors = {},
   permissionProfiles = [],
@@ -413,6 +416,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               ['employees', t('team.employees', 'کارمندان')],
               ['branches', t('team.branches', 'شعب')],
               ['payroll', t('team.payroll', 'حقوق')],
+              ['attendance', t('team.attendance', 'حضور و غیاب')],
             ] as [TeamTab, string][]
           ).map(([id, label]) => (
             <button
@@ -891,6 +895,8 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
       */}
       {statusFilter === 'branches' ? (
         <div>{branchesTab}</div>
+      ) : statusFilter === 'attendance' ? (
+        <div>{attendanceTab}</div>
       ) : (
         <>
           {/* Content Grid */}

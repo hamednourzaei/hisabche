@@ -22,6 +22,7 @@ import { Card, CardContent } from '../card'
 import { Input } from '../input'
 import { CheckList } from './check-list'
 import { KeyUsagePanel } from './key-usage-panel'
+import { AiAssistantsPanel } from './ai-assistants-panel'
 import { OAuthAppsPanel, type OAuthAppsPanelProps } from './oauth-apps-panel'
 import { SandboxPanel, type SandboxPanelProps } from './sandbox-panel'
 import { StorefrontPanel, type StorefrontPanelProps } from './storefront-panel'
@@ -210,6 +211,9 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
       <StorefrontPanel t={t} {...props.storefront} />
 
       <OAuthAppsPanel t={t} {...props.oauth} />
+
+      {/* Connecting an AI assistant over MCP, and approving what it asks for. */}
+      <AiAssistantsPanel />
 
       {/* ─── API keys ─────────────────────────────────────────────────── */}
       <Card>

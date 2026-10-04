@@ -97,11 +97,57 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'columns', bodyCount: 3, stepCount: 3 },
       { id: 'payment', bodyCount: 3 },
     ],
-    related: ['customers', 'inventory', 'accounting'],
+    related: [
+      'customers',
+      'inventory',
+      'accounting',
+      'recurring-invoices',
+      'promotions',
+      'installments',
+    ],
     outbound: [
       { href: '/features/customer-debt', labelKey: 'landing.featurePage.customerDebt.h1' },
       { href: '/features/invoicing', labelKey: 'landing.featurePage.invoicing.h1' },
     ],
+  },
+  {
+    slug: 'recurring-invoices',
+    group: 'sell',
+    sections: [
+      { id: 'what', bodyCount: 2 },
+      { id: 'setup', bodyCount: 2, stepCount: 3 },
+      { id: 'manage', bodyCount: 2 },
+    ],
+    related: ['invoices', 'customers', 'accounting'],
+  },
+  {
+    slug: 'promotions',
+    group: 'sell',
+    sections: [
+      { id: 'what', bodyCount: 2 },
+      { id: 'make', bodyCount: 2, stepCount: 3 },
+      { id: 'retire', bodyCount: 1 },
+    ],
+    related: ['invoices', 'customers', 'installments'],
+  },
+  {
+    slug: 'installments',
+    group: 'sell',
+    sections: [
+      { id: 'what', bodyCount: 2 },
+      { id: 'make', bodyCount: 1, stepCount: 3 },
+      { id: 'follow', bodyCount: 2 },
+    ],
+    related: ['invoices', 'customers', 'promotions'],
+  },
+  {
+    slug: 'attendance',
+    group: 'team',
+    sections: [
+      { id: 'sheet', bodyCount: 2, stepCount: 3 },
+      { id: 'meaning', bodyCount: 2 },
+    ],
+    related: ['permissions', 'branches'],
   },
   {
     slug: 'customers',
@@ -123,7 +169,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'units', bodyCount: 3, stepCount: 3 },
       { id: 'insights', bodyCount: 2 },
     ],
-    related: ['invoices', 'pos', 'accounting', 'barcodes'],
+    related: ['invoices', 'pos', 'accounting', 'barcodes', 'manufacturing'],
     outbound: [{ href: '/features/inventory', labelKey: 'landing.featurePage.inventory.h1' }],
   },
   {
@@ -138,6 +184,18 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
     outbound: [{ href: '/features/inventory', labelKey: 'landing.featurePage.inventory.h1' }],
   },
   {
+    slug: 'manufacturing',
+    group: 'stock',
+    sections: [
+      { id: 'what', bodyCount: 2 },
+      { id: 'make', bodyCount: 2, stepCount: 4 },
+      { id: 'stock', bodyCount: 2 },
+      { id: 'history', bodyCount: 2 },
+    ],
+    related: ['inventory', 'barcodes', 'accounting'],
+    outbound: [{ href: '/features/inventory', labelKey: 'landing.featurePage.inventory.h1' }],
+  },
+  {
     slug: 'accounting',
     group: 'money',
     sections: [
@@ -145,8 +203,19 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'closing', bodyCount: 1 },
       { id: 'currency', bodyCount: 2 },
     ],
-    related: ['invoices', 'customers', 'branches'],
+    related: ['invoices', 'customers', 'branches', 'business-analysis'],
     outbound: [{ href: '/features/daybook', labelKey: 'landing.featurePage.daybook.h1' }],
+  },
+  {
+    slug: 'business-analysis',
+    group: 'money',
+    sections: [
+      { id: 'collections', bodyCount: 2 },
+      { id: 'suppliers', bodyCount: 2 },
+      { id: 'breakEven', bodyCount: 2, stepCount: 3 },
+      { id: 'cohorts', bodyCount: 2 },
+    ],
+    related: ['accounting', 'customers', 'invoices'],
   },
   {
     slug: 'pos',
@@ -199,7 +268,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'roles', bodyCount: 2 },
       { id: 'sod', bodyCount: 2 },
     ],
-    related: ['branches', 'pos', 'assistant', 'wallet', 'developers'],
+    related: ['branches', 'pos', 'assistant', 'wallet', 'developers', 'attendance'],
   },
   {
     slug: 'assistant',
@@ -225,6 +294,17 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
     related: ['getting-started', 'offline', 'accounting', 'developers'],
   },
   {
+    slug: 'ai-assistants',
+    group: 'platform',
+    sections: [
+      { id: 'what', bodyCount: 2 },
+      { id: 'connect', bodyCount: 2, stepCount: 4 },
+      { id: 'safety', bodyCount: 3 },
+      { id: 'tools', bodyCount: 2 },
+    ],
+    related: ['developers', 'permissions', 'assistant'],
+  },
+  {
     slug: 'developers',
     group: 'platform',
     sections: [
@@ -234,7 +314,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'apps', bodyCount: 2 },
       { id: 'sandbox', bodyCount: 1 },
     ],
-    related: ['permissions', 'data-and-backup', 'invoices'],
+    related: ['permissions', 'data-and-backup', 'invoices', 'ai-assistants'],
   },
 ]
 

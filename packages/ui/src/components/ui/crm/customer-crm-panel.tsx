@@ -19,6 +19,9 @@ import { useCustomerCrm } from '@hisabche/api'
 import { formatNumber } from '@hisabche/formatting'
 
 import { cn } from '../../../lib/utils'
+import { CustomerRiskNote } from '../analysis/customer-risk-note'
+import { EntityNotes } from '../entity-notes'
+import { CustomFieldsPanel } from '../custom-fields-panel'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 
@@ -87,6 +90,8 @@ export function CustomerCrmPanel({
 
   return (
     <section className={cn('space-y-4', className)}>
+      {/* How this customer has been paying — the server's verdict, with its reason. */}
+      <CustomerRiskNote customerId={customerId} />
       {/* The product's KPI row — this panel had a local `stat()` helper. */}
       <KpiGrid>
         <KpiCard
@@ -206,6 +211,11 @@ export function CustomerCrmPanel({
           )}
         </div>
       </div>
+
+      {/* What colleagues wrote about this customer (#103). */}
+      <EntityNotes entityType="customer" entityId={customerId} />
+      {/* The business's own fields on a customer (#141–#143). */}
+      <CustomFieldsPanel entity="customer" entityId={customerId} />
 
       {onOpenCrm && (
         <div className="text-center">

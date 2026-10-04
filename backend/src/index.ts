@@ -91,6 +91,19 @@ import { migrationRoutes } from './routes/migration.routes'
 import { crmRoutes } from './routes/crm.routes'
 import { manufacturingRoutes } from './routes/manufacturing.routes'
 import { automationRoutes } from './routes/automation.routes'
+import { escalationRoutes } from './routes/escalation.routes'
+import { compensationRoutes } from './routes/compensation.routes'
+import { savedViewsRoutes } from './routes/saved-views.routes'
+import { analysisRoutes } from './routes/analysis.routes'
+import { installmentRoutes } from './routes/installments.routes'
+import { attendanceRoutes } from './routes/attendance.routes'
+import { promotionRoutes } from './routes/promotions.routes'
+import { notesRoutes } from './routes/notes.routes'
+import { financingRoutes } from './routes/financing.routes'
+import { customFieldRoutes } from './routes/custom-fields.routes'
+import { customReportRoutes } from './routes/custom-reports.routes'
+import { snapshotRoutes } from './routes/snapshots.routes'
+import { mcpRoutes } from './routes/mcp.routes'
 import { purchasingRoutes } from './routes/purchasing.routes'
 import { billingRoutes } from './routes/billing.routes'
 import { walletRoutes } from './routes/wallet.routes'
@@ -350,7 +363,11 @@ server.addHook('preHandler', async (request, reply) => {
   // Without this entry every visitor's pricing section got a 401 and no price.
   // `/api/oauth/token` is called by an app's SERVER with its client secret and
   // a one-time code — there is no user session by definition (RFC 6749 §4.1.3).
-  const exactPublicPaths = ['/api/billing/plans', '/api/oauth/token', '/api/oauth/revoke']
+  // `/mcp` authenticates the integration credential ITSELF (mcp.routes.ts): this
+  // hook would hold an API key to the route allowlist, and the gateway is not a
+  // Public API route — it is the door to them. Every tool call it makes goes
+  // back through this hook, on a route the allowlist does name.
+  const exactPublicPaths = ['/api/billing/plans', '/api/oauth/token', '/api/oauth/revoke', '/mcp']
   const path = url.split('?')[0]
 
   if (publicPaths.some((p) => url.startsWith(p))) return
@@ -724,6 +741,19 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(crmRoutes)
   await server.register(manufacturingRoutes)
   await server.register(automationRoutes)
+  await server.register(escalationRoutes)
+  await server.register(compensationRoutes)
+  await server.register(savedViewsRoutes)
+  await server.register(analysisRoutes)
+  await server.register(installmentRoutes)
+  await server.register(attendanceRoutes)
+  await server.register(promotionRoutes)
+  await server.register(notesRoutes)
+  await server.register(financingRoutes)
+  await server.register(customFieldRoutes)
+  await server.register(customReportRoutes)
+  await server.register(snapshotRoutes)
+  await server.register(mcpRoutes)
   await server.register(purchasingRoutes)
   await server.register(workflowRoutes)
 

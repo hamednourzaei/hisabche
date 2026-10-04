@@ -58,6 +58,8 @@ export interface BankViewProps {
   reconciliation: ReconciliationSummary | null
   isLoading: boolean
   isDetailLoading: boolean
+  /** #62 — account suggestions for the unmatched lines, passed in by the container. */
+  categorySlot?: React.ReactNode
   /** A failed detail read must not render as «no suggestions». */
   detailError: string | null
   error: string | null
@@ -81,6 +83,7 @@ export const BankView = memo(function BankView({
   statements,
   selectedId,
   suggestions,
+  categorySlot,
   reconciliation,
   isLoading,
   isDetailLoading,
@@ -159,6 +162,14 @@ export const BankView = memo(function BankView({
             </Badge>
             {suggestion.isAmbiguous ? (
               <Badge tone="warn">{t('bank.ambiguous', 'مبهم — بیش از یک گزینه')}</Badge>
+            ) : null}
+            {suggestion.review?.kind === 'check' && suggestion.review.reason === 'BANK_CHARGE' ? (
+              <Badge tone="warn">
+                {t('bank.review_bank_charge', 'احتمالاً کارمزد بانک — تطبیق ندهید')}
+              </Badge>
+            ) : null}
+            {suggestion.review?.kind === 'ready' ? (
+              <Badge tone="good">{t('bank.review_ready', 'شماره‌ی مرجع بانک یکی است')}</Badge>
             ) : null}
           </span>
         ),
@@ -353,6 +364,8 @@ export const BankView = memo(function BankView({
                 }
               />
             </ListSection>
+
+            {categorySlot}
           </>
         )
       ) : null}

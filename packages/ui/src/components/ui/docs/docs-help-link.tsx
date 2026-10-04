@@ -95,6 +95,9 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
   'data-migration': 'data-and-backup',
   settings: 'data-and-backup',
   developers: 'developers',
+  manufacturing: 'manufacturing',
+  analysis: 'business-analysis',
+  promotions: 'promotions',
   wallet: 'wallet',
   dashboard: 'getting-started',
 }

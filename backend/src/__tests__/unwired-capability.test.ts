@@ -163,89 +163,136 @@ const REGISTER: Capability[] = [
     file: 'services/workflow/escalation.domain.ts',
     symbols: ['decideEscalation', 'compensationFor'],
     note:
-      'Recorded as WIRED on 30 September — wrongly. Its only importers are ' +
-      '`approval.domain.ts` and `compensation.service.ts`, and no route, job or ' +
-      'worker imports either path to it. Nothing escalates anything.',
-    status: 'WRITTEN_NOT_WIRED',
+      'Recorded as WIRED on 30 September — wrongly: its only importers were ' +
+      '`approval.domain.ts` and `compensation.service.ts`, which nothing reached. ' +
+      'Really wired on 4 October 2026: escalation.service runs `decideEscalation` ' +
+      'hourly from scheduler/index.ts, and the approval action honours the result.',
+    status: 'WIRED',
   },
   {
     id: '#81 Compensation service',
     file: 'services/workflow/compensation.service.ts',
     symbols: [],
-    note: 'A service with no route and no job. See the row above.',
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026: GET /api/compensation (compensation.routes.ts) answers ' +
+      '«what will undoing this do», and the invoice delete confirmation shows it.',
+    status: 'WIRED',
   },
   {
     id: '#62 Bank categorization',
     file: 'services/banking/categorization.domain.ts',
     symbols: ['categorize'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026 as a suggestion: GET /api/finance/bank/statements/:id/' +
+      'categories runs categorize over each UNMATCHED line, against history read from ' +
+      'lines a person reconciled to a journal entry with exactly one other account. ' +
+      'Nothing is posted. Still missing: recording the suggested entry in one click.',
+    status: 'WIRED',
   },
   {
     id: '#55 Bank auto-match',
     file: 'services/banking/auto-match.domain.ts',
     symbols: ['decideAutoMatches'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026 as a NOTE, not as automation: getSuggestions attaches ' +
+      'the verdict to each suggestion (`review`: ready, or the reason it needs care — ' +
+      'above all BANK_CHARGE). Nothing is matched without a click. Still missing: a ' +
+      'per-workspace threshold setting; until one exists the bar is the fixed ' +
+      'REVIEW_ASSIST (certain tier, score ≥ 0.95).',
+    status: 'WIRED',
   },
   {
     id: '#19 #114–#117 #120 Pricing & promotion',
-    file: 'services/commerce/pricing.domain.ts',
-    symbols: ['quotePrice', 'applyPrice'],
-    note: NOTHING_REACHES_IT + ' The invoice still takes each line price from the request.',
-    status: 'WRITTEN_NOT_WIRED',
+    file: 'services/commerce/promotion.service.ts',
+    symbols: ['promotionService'],
+    note:
+      'Wired on 4 October 2026 (#114–#117). The engine moved to ' +
+      'packages/validation/src/schemas/pricing.ts so the server (POST ' +
+      '/api/promotions/quote) and the invoice builder (price of a picked product) use ' +
+      'ONE quotePrice. Promotions are saved by docs/promotions-01-migration.sql and ' +
+      'managed on /promotions. NOT wired: price lists (#19 — no table), bundles (the ' +
+      'schema refuses the kind), a price floor (no setting; absent means none), and ' +
+      'applyPrice — the invoice still takes each line price from the request, because a ' +
+      'person may always edit a price.',
+    status: 'WIRED',
   },
   {
     id: '#123 #124 Installments & late fees',
     file: 'services/commerce/installment.domain.ts',
     symbols: ['planSchedule', 'decideBlock'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026 (#123): PUT /api/invoices/:id/installments splits what an ' +
+      'invoice owes with planSchedule and saves it through installments_save ' +
+      '(docs/installments-01-migration.sql); the invoice page shows the plan. NOT wired, ' +
+      'on purpose: late fees and blocking (#124 — overdueInstallments, decideBlock). A ' +
+      'fee is a ledger entry and a shop decision; there is no setting and the default is off.',
+    status: 'WIRED',
   },
   {
     id: '#51 #53 #66 Collections',
     file: 'services/collections/collections.domain.ts',
     symbols: ['collectionsFor', 'planPayments'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026 as a READ: GET /api/analysis/collections runs ' +
+      'collectionsFor over every open sale invoice with the default schedule. Still ' +
+      'missing: per-workspace reminder settings, a record of reminders sent (so every ' +
+      'invoice is judged against its first step), sending anything, and planPayments ' +
+      '(promise-to-pay).',
+    status: 'WIRED',
   },
   {
     id: '#38 #125 #126 Working capital & financing',
     file: 'services/financing/working-capital.domain.ts',
     symbols: ['workingCapital', 'instalment'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026 as a READ: GET /api/analysis/working-capital gives DSO, ' +
+      'DPO, DIO and the cash cycle for one currency and one period. Cash is NOT an ' +
+      'input (there is no single cash-and-bank balance), so the quick ratio is left out. ' +
+      'Loans and investments (#125 #126) were wired the same day as REGISTERS: ' +
+      'financing.service.ts reads docs/financing-01-migration.sql and shows accruedInterest, ' +
+      'instalment and summarisePortfolio in the accounting screen. Nothing posts to the ' +
+      "ledger — which accounts a loan or its interest belongs in is the owner's decision.",
+    status: 'WIRED',
   },
   {
     id: '#10 #15 #19 Supplier intelligence',
     file: 'services/supplier/supplier-intelligence.domain.ts',
     symbols: ['scoreSupplier', 'supplierConcentration'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026: GET /api/analysis/suppliers. Punctuality is scored ' +
+      'only for orders with an expected delivery date; no price list exists, so the ' +
+      'price-drift signal reads as no premium.',
+    status: 'WIRED',
   },
   {
     id: '#57 #58 #63 #64 #112 Scheduled automation',
     file: 'services/automation/schedule.domain.ts',
     symbols: ['shouldRun', 'isDueOn'],
     note:
-      NOTHING_REACHES_IT +
-      ' No table of schedules exists, so nothing recurring can be defined by a user.',
-    status: 'WRITTEN_NOT_WIRED',
+      'Wired on 4 October 2026 for #63 (recurring invoice): automation.service runs it ' +
+      'nightly from scheduler/index.ts and the routes in automation.routes.ts define it. ' +
+      'Of its five action types only `recurring_invoice` is executable — #58, #64 and ' +
+      '#112 are still names in a union, and running one records ' +
+      'AUTOMATION_ACTION_NOT_SUPPORTED rather than pretending.',
+    status: 'WIRED',
   },
   {
     id: '#130 #131 Cohorts, funnels, segments',
     file: 'services/analytics/cohort.domain.ts',
     symbols: ['buildCohorts', 'buildFunnel'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026 for cohorts only: GET /api/analysis/cohorts. ' +
+      'evaluateSegment and buildFunnel still have no caller.',
+    status: 'WIRED',
   },
   {
     id: '#133 #134 Break-even & scenarios',
     file: 'services/analytics/break-even.domain.ts',
     symbols: ['breakEven', 'runScenario'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026 for break-even only: GET /api/analysis/break-even over ' +
+      "the accounting core's profit report. runScenario still has no caller.",
+    status: 'WIRED',
   },
   {
     id: '#135 Benchmark',
@@ -272,22 +319,37 @@ const REGISTER: Capability[] = [
     id: '#3 #9 #13 #18 Customer risk',
     file: 'services/customers/customer-risk.domain.ts',
     symbols: ['customerRisk'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026: GET /api/analysis/customers/:id/risk. The credit ' +
+      'limit is not passed (null = unknown), and broken promises are not counted ' +
+      'because promises to pay are not recorded anywhere.',
+    status: 'WIRED',
   },
   {
     id: '#106 #108 #109 NPS, health, loyalty',
     file: 'services/customers/nps.domain.ts',
     symbols: ['netPromoterScore', 'loyaltyTier'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026 in part: customerHealth (#108) and loyaltyTier (#109) ' +
+      'are read from a customer’s own invoices by GET /api/analysis/customers/:id/risk ' +
+      'and shown on the customer page. NOT wired: netPromoterScore (#106) — there is ' +
+      'no survey, no response table and no channel to ask a customer, so there is no ' +
+      'score to compute.',
+    status: 'WIRED',
   },
   {
     id: '#42–#46 Snapshots',
     file: 'services/portability/snapshot.domain.ts',
     symbols: ['buildSnapshot'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026: portability/snapshot.service.ts takes a marker — ' +
+      'exact row counts of the workspace, built with buildSnapshot (restorable: ' +
+      'false, with its limitations) and stored by ' +
+      'docs/data-snapshots-01-migration.sql — and compares one with now, after ' +
+      'checkReadable. Shown in the data-and-backup screen. NOT wired: the archive ' +
+      'layout (ARCHIVE_LAYOUT) and any point-in-time VIEW of documents; a marker ' +
+      'holds counts only.',
+    status: 'WIRED',
   },
   {
     id: '#21–#35 #137 #147 Connector framework',
@@ -300,29 +362,55 @@ const REGISTER: Capability[] = [
     id: '#141 #142 #143 Custom objects & formulas',
     file: 'services/extensions/extension.domain.ts',
     symbols: ['parseFormula', 'evaluateFormula'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026: extensions/custom-fields.service.ts lets a business add ' +
+      'its own fields to a customer, supplier or product (docs/custom-fields-01-migration.sql); ' +
+      'a formula field is checked with parseFormula when made and computed with ' +
+      'evaluateFormula when read. Shown by CustomFieldsPanel on the customer and product ' +
+      'pages. NOT wired: whole custom OBJECTS (a new kind of record) — only fields on the ' +
+      'three existing kinds; and the money field type.',
+    status: 'WIRED',
   },
   {
     id: '#145 #146 Report & dashboard builder',
     file: 'services/reporting/dataset.domain.ts',
     symbols: ['validateReport', 'validateDashboard'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026 (#145), narrowly: reporting/report.service.ts saves a ' +
+      'report after validateReport and RUNS one dataset — sale invoices, from the ' +
+      'invoice_outstanding view — with three measures (count, outstanding, collected), ' +
+      'always per currency. Anything else is refused at save (REPORT_NOT_RUNNABLE). NOT ' +
+      'wired: the other seven datasets, the profit and cost measures (they belong to the ' +
+      'accounting core), and the dashboard builder (#146 — validateDashboard has no caller).',
+    status: 'WIRED',
   },
   {
     id: '#144 Workflow builder',
     file: 'services/workflow/builder.domain.ts',
     symbols: ['validateDefinition'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026 as a CHECK: createWorkflow reads a template as the ' +
+      "builder's definition (templateProblems in workflow.service.ts) and refuses one " +
+      'with no step, two steps in one position, or a step nobody is named to approve, ' +
+      'before it writes. NOT wired: the drawn builder itself — action, delay and form ' +
+      'steps, branching on refusal, and versioning (versionFor, ' +
+      'editAffectsRunningDocuments). The stored model is a linear chain of approvals ' +
+      '(workflow_steps); a graph needs its own tables and its own runner.',
+    status: 'WIRED',
   },
   {
     id: '#100 #101 #103 Attendance, shifts, notes',
     file: 'services/customers/attendance.domain.ts',
     symbols: ['attendanceFor', 'payableHours'],
-    note: NOTHING_REACHES_IT,
-    status: 'WRITTEN_NOT_WIRED',
+    note:
+      'Wired on 4 October 2026 (#100): the daily sheet — GET/PUT /api/attendance-sheet ' +
+      '(payroll/attendance.service.ts) and the «حضور و غیاب» tab of team-and-payroll; ' +
+      'hours and problems come from attendanceFor. Shifts (#101) followed the same day: ' +
+      'payroll/shift.service.ts (docs/work-shifts-01-migration.sql) validates with ' +
+      'validateShifts and the sheet records a day «by shift». Notes (#103): ' +
+      'notes.service.ts (docs/entity-notes-01-migration.sql) uses validateNote. NOT wired: ' +
+      'assigning a person to a shift (a roster). Attendance feeds nothing into payroll, by rule.',
+    status: 'WIRED',
   },
 
   // ── Found by the reachability walk itself (4 October 2026) ────────────────

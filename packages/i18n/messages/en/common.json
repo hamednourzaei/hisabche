@@ -1492,7 +1492,11 @@
     "wallet": "Wallet",
     "wallet_description": "Business balance, top-ups and paying the plan",
     "market_seller": "My marketplace shop",
-    "market_seller_description": "Seller profile and product listings on the Hisabche marketplace"
+    "market_seller_description": "Seller profile and product listings on the Hisabche marketplace",
+    "analysis": "Business analysis",
+    "analysis_description": "Who owes you, which supplier delivers late, and where you break even",
+    "promotions": "Promotions",
+    "promotions_description": "Percentage or fixed discounts for products and customers"
   },
   "dateRange": {
     "today": "Today",
@@ -1777,7 +1781,55 @@
     "noInvoicesDesc": "No invoices have been recorded yet.",
     "pdf": "Download PDF",
     "overdue": "Overdue",
-    "draft": "Draft"
+    "draft": "Draft",
+    "recurring": {
+      "title": "Recurring invoices",
+      "monthlyOn": "Every month, on day",
+      "every": "Every",
+      "days": "days",
+      "once": "Once",
+      "loadFailed": "Recurring invoices could not be loaded.",
+      "empty": "You have no recurring invoices yet. When confirming an invoice, turn on “Repeat this invoice automatically”.",
+      "active": "Active",
+      "stopped": "Stopped",
+      "next": "Next",
+      "noNext": "No further occurrence.",
+      "last": "Last issued",
+      "updateFailed": "The change was not saved.",
+      "pause": "Pause",
+      "resume": "Resume",
+      "issued": "Today’s invoice was issued.",
+      "notIssued": "The invoice was not issued.",
+      "runFailed": "Could not issue.",
+      "runNow": "Issue now",
+      "history": "History",
+      "removeFailed": "Not removed.",
+      "confirmRemove": "Yes, remove",
+      "removeHint": "Only the arrangement is removed; invoices already issued stay where they are.",
+      "historyFailed": "The history could not be loaded.",
+      "historyEmpty": "No occurrence has come up yet.",
+      "outcome": {
+        "ran": "Issued",
+        "skipped": "Skipped",
+        "failed": "Failed"
+      },
+      "reasons": {
+        "OK": "Done.",
+        "TOO_LATE": "The occurrence was too old and was not issued.",
+        "DISABLED": "It was stopped.",
+        "PAUSED": "You paused it.",
+        "ARCHIVED": "It was removed.",
+        "FAILED_TOO_OFTEN": "It failed several times in a row and was stopped. Check the history, fix the cause and press Resume.",
+        "AUTOMATION_ALREADY_RAN_TODAY": "Today’s invoice was already issued.",
+        "AUTOMATION_MIGRATION_PENDING": "Recurring invoices are not enabled on the database yet. The automation-01 script has to be run.",
+        "AUTOMATION_ACTION_NOT_SUPPORTED": "This kind of task cannot be run yet.",
+        "AUTOMATION_TEMPLATE_MISSING": "The invoice template of this arrangement was not found.",
+        "INVENTORY_INSUFFICIENT_STOCK": "There was not enough stock."
+      },
+      "calendarPersian": "solar Hijri",
+      "calendarGregory": "Gregorian"
+    },
+    "deleteConfirmTitle": "Delete this invoice?"
   },
   "warehouse": {
     "title": "Warehouse",
@@ -2527,7 +2579,9 @@
       "journal": "Journal",
       "trialBalance": "Trial Balance",
       "balanceSheet": "Balance Sheet",
-      "incomeStatement": "Income Statement"
+      "incomeStatement": "Income Statement",
+      "monthEnd": "Month-end",
+      "financing": "Loans & investments"
     },
     "accounts": {
       "title": "Chart of Accounts",
@@ -2675,7 +2729,48 @@
       "empty": "No posted entries on this account in this period."
     },
     "openingBalance": "Opening balance",
-    "upTo": "to"
+    "upTo": "to",
+    "monthEnd": {
+      "yearEndTitle": "Which month ends your fiscal year?",
+      "yearEndPlaceholder": "Choose a month",
+      "yearEndHint": "Closing that month also closes the year’s profit and loss accounts. Nothing is assumed; you choose.",
+      "yearEndIs": "Fiscal year ends:",
+      "lock": "Lock the period after closing",
+      "nowTitle": "Close last month",
+      "steps": "In order: depreciation, currency revaluation, cost recalculation, year-end close (if this month ends the year), period lock. It stops at the first failure.",
+      "run": "Close this month",
+      "needYearEnd": "First choose the month that ends your fiscal year.",
+      "runFailed": "The month could not be closed.",
+      "saveFailed": "Not saved.",
+      "stopped": "It stopped part-way; the period is not locked. See the step that failed.",
+      "doneLocked": "The month is closed and the period is locked.",
+      "doneOpen": "The steps ran; the period is not locked.",
+      "step": {
+        "depreciation": "Depreciation",
+        "fx_revaluation": "Currency revaluation",
+        "cost_repost": "Cost recalculation",
+        "year_end_close": "Year-end close",
+        "period_lock": "Period lock"
+      },
+      "status": {
+        "ok": "Done",
+        "nothing_to_do": "Nothing to do",
+        "failed": "Failed"
+      },
+      "autoTitle": "Close every month automatically",
+      "autoLoadFailed": "The automatic close status could not be loaded.",
+      "autoOn": "On.",
+      "autoStopped": "Stopped; check the failure history.",
+      "autoOff": "Off. When on, each month is closed on the first day of the next.",
+      "next": "Next:",
+      "autoTurnOn": "Turn on",
+      "autoTurnOff": "Turn off",
+      "autoSaved": "Automatic month-end is on.",
+      "errors": {
+        "AUTOMATION_MONTH_END_EXISTS": "Automatic month-end is already on.",
+        "AUTOMATION_MIGRATION_PENDING": "Scheduling is not enabled on the database yet. The automation-01 script has to be run."
+      }
+    }
   },
   "hr": {
     "title": "Human Resources",
@@ -3680,7 +3775,29 @@
       "status": "Status",
       "title": "Approval templates"
     },
-    "title": "Approval flow"
+    "title": "Approval flow",
+    "escalation": {
+      "title": "Automatic escalation",
+      "after": "If unanswered for",
+      "hours": "hours",
+      "hoursTo": "hours, let",
+      "role": "Role",
+      "roleManager": "Manager",
+      "roleOwner": "Owner",
+      "refer": "act too",
+      "turnOff": "Turn off",
+      "turnedOff": "Automatic escalation was turned off.",
+      "saved": "Automatic escalation was saved.",
+      "saveFailed": "Not saved.",
+      "loadFailed": "The escalation setting could not be loaded.",
+      "invalid": "The number of hours must be greater than zero.",
+      "onHint": "On. The higher role can also approve or reject and is notified; nothing is approved automatically.",
+      "offHint": "Off: the approval waits for its own role only.",
+      "errors": {
+        "ESCALATION_MIGRATION_PENDING": "Automatic escalation is not enabled on the database yet. The workflow-escalation-01 script has to be run.",
+        "ESCALATION_ROLE_REQUIRED": "Choose the role to escalate to."
+      }
+    }
   },
   "action": {
     "clear": "Clear",
@@ -3888,7 +4005,8 @@
       "pickProduct": "Pick from stock",
       "fromStock": "From stock — quantity will be reduced",
       "noProducts": "No product found — the text will be used as typed",
-      "searchProduct": "Search products…"
+      "searchProduct": "Search products…",
+      "promotion": "Promo"
     },
     "column": {
       "addTitle": "Add column",
@@ -4025,7 +4143,22 @@
     "warehouseOut": "Shipping warehouse",
     "warehouseNone": "Choose warehouse",
     "warehouseMissing": "Without a warehouse, the product total changes but no warehouse's stock does.",
-    "savedOffline": "The invoice is saved on this device and will be recorded as soon as you are back online."
+    "savedOffline": "The invoice is saved on this device and will be recorded as soon as you are back online.",
+    "recurrence": {
+      "title": "Repeat this invoice automatically",
+      "kind": "Repeat",
+      "monthly": "Every month, on this day",
+      "interval": "Every few days",
+      "everyDays": "Every how many days",
+      "name": "A name for this arrangement (optional)",
+      "invalid": "The number of days must be between 1 and 366.",
+      "hint": "From the next occurrence, this invoice is issued automatically with the same lines, unpaid. You can stop it from the invoices page.",
+      "defaultName": "Recurring invoice",
+      "saved": "This invoice will be issued automatically from the next occurrence.",
+      "failedTitle": "The invoice was recorded, but the repeat was not set up.",
+      "failedHint": "You can turn it on again from a new invoice.",
+      "offline": "A repeat can only be set up online; this invoice will not repeat."
+    }
   },
   "admin": {
     "limits": {
@@ -4818,7 +4951,22 @@
       "badAmount": "This number could not be read.",
       "submit": "Save statement",
       "importing": "Saving…"
-    }
+    },
+    "review_bank_charge": "Probably a bank charge — do not match",
+    "review_ready": "The bank reference is the same",
+    "category_title": "Suggested account for unmatched lines",
+    "category_hint": "Learned from the reconciliations you confirmed earlier. A suggestion only; no entry is recorded.",
+    "category_failed": "The account suggestions could not be loaded.",
+    "category_none_open": "Every line of this statement has been matched.",
+    "category_no_history": "There is no history to learn from yet. Once you have matched a few bank lines to ledger entries, accounts are suggested here.",
+    "category_date": "Date",
+    "category_line": "Bank description",
+    "category_amount": "Amount",
+    "category_account": "Suggested account",
+    "category_evidence": "{share}% of {count} similar earlier lines",
+    "category_ambiguous": "History is split between two accounts:",
+    "category_insufficient": "Not enough history ({count} of the {minimum} lines needed)",
+    "category_no_pattern": "No similar line in the history"
   },
   "budgets": {
     "title": "Budgets",
@@ -5780,6 +5928,185 @@
         "heading": "Sandbox",
         "body1": "Create a separate, empty business to test integrations: its invoices, stock and books are fully apart from your real accounts."
       }
+    },
+    "manufacturing": {
+      "title": "Manufacturing",
+      "summary": "What a product costs to make, recording production, adding it to stock, and material cost changes.",
+      "seoTitle": "Manufacturing and Production Cost — Guide",
+      "seoDescription": "Manufacturing in Hisabche: a product’s components and materials with your own columns, labour and other costs, the cost of one unit, adding the product to a warehouse, and a report of materials that got dearer or cheaper.",
+      "what": {
+        "heading": "What manufacturing is for",
+        "body1": "Anything you make, assemble or prepare yourself — a device, a repaired part, a dish — has a recipe: what it is made of and what each part costs.",
+        "body2": "One form serves every trade. You enter components and materials like invoice lines; pick them from your products or type a name freely, and add or remove any column you need."
+      },
+      "make": {
+        "heading": "Making a product",
+        "body1": "Every quantity is entered for making one unit. Workers, time, pay and other costs such as packaging or transport are optional. The cost of one unit and the total are worked out for you.",
+        "body2": "You choose the currency, and each row has its own unit. If you set the total by hand you must say why; the calculated total is kept beside it.",
+        "step1": "Open «Manufacturing» from the menu and press «Make a product».",
+        "step2": "Choose the product, or create a new one, and set the currency.",
+        "step3": "Enter the components and materials with quantity, unit and unit cost; add labour and other costs if you have them.",
+        "step4": "Enter how many you are making and press «Record production»."
+      },
+      "stock": {
+        "heading": "Adding to a warehouse",
+        "body1": "At the bottom of the form is a switch, «Add to a warehouse?». Off, only the cost is recorded and no stock figure changes. On, you choose the warehouse — or create one right there — and the product is added to stock at its production cost.",
+        "body2": "You can also have the materials that were picked from your products taken out of the same warehouse. If a material is short, nothing is recorded and you are told so."
+      },
+      "history": {
+        "heading": "History and report",
+        "body1": "Each production stays in the history with that day’s components and prices; a material getting dearer later does not change what earlier production cost. A recipe that has been used gets a new version when you edit it.",
+        "body2": "On each product’s page you see its manufacturing section and can correct it. The production report shows what was made in a period, which materials were used most, and whose cost went up or down."
+      }
+    },
+    "recurring-invoices": {
+      "title": "Recurring invoices",
+      "summary": "Issue the same invoice automatically every month or every few days.",
+      "seoTitle": "Recurring Invoices — Guide",
+      "seoDescription": "Recurring invoices in Hisabche: make an invoice repeat when you record it so it is issued automatically every month or every few days; pause, resume and a history of every occurrence.",
+      "what": {
+        "heading": "What a recurring invoice is",
+        "body1": "For things that are the same each time — rent, a subscription, a monthly contract — you need not write the invoice again. Record it once and say it repeats.",
+        "body2": "On each occurrence the same invoice, with the same lines, is issued dated that day and unpaid; you record the payment yourself, as for any invoice. A purchase invoice can repeat as well."
+      },
+      "setup": {
+        "heading": "Making an invoice repeat",
+        "body1": "The repeat is set when you confirm an invoice: the invoice on screen becomes the template. Choose «Every month, on this day» or «Every few days».",
+        "body2": "The first automatic issue is the next occurrence; the invoice you are recording now is this one’s. Setting up a repeat needs an internet connection.",
+        "step1": "Write the invoice as usual and go to the confirm page.",
+        "step2": "Turn on «Repeat this invoice automatically» and choose how often.",
+        "step3": "Press «Confirm and record invoice»."
+      },
+      "manage": {
+        "heading": "Pause, resume and history",
+        "body1": "On the invoices page, «Recurring invoices» lists your arrangements: each one’s next occurrence, pause and resume, issue now, and remove. Removing an arrangement does not remove the invoices it issued.",
+        "body2": "Every occurrence stays in the history — issued, skipped or failed, with the reason. If issuing fails several times in a row the arrangement is stopped and you are notified, so you can fix the cause and resume it."
+      }
+    },
+    "business-analysis": {
+      "title": "Business analysis",
+      "summary": "Collections, supplier delays, break-even and returning customers.",
+      "seoTitle": "Business analysis guide for Hisabche",
+      "seoDescription": "The business analysis page in Hisabche: overdue invoices to follow up, supplier delays and concentration, the break-even quantity of each product, and customers who return in later months.",
+      "collections": {
+        "heading": "Collections",
+        "body1": "This section lists sale invoices that are past due and still have a balance, most overdue first. Each one carries a suggested reminder tone: friendly, formal, firm or final notice.",
+        "body2": "The list is for your own follow-up; the app sends nothing to the customer. When it is empty, the page says whether you have no open invoices or none has reached a reminder date yet."
+      },
+      "suppliers": {
+        "heading": "Suppliers",
+        "body1": "From your purchase orders it works out how many days, on average, each supplier delivers after the promised date and how many orders never arrived. A supplier with too few orders stays “unknown”.",
+        "body2": "If a large share of your purchases goes through one supplier, or a product is bought from a single source, it shows here. An order without a promised delivery date is left out of the delay measure."
+      },
+      "breakEven": {
+        "heading": "Break-even",
+        "body1": "For each product it shows how many units must be sold, at the current gross profit, to cover the fixed costs of the range.",
+        "body2": "Recorded salaries are counted automatically. You enter other fixed costs such as rent yourself; until you do, the page says the figures are lower than reality.",
+        "step1": "Choose the date range.",
+        "step2": "Enter the other fixed costs for that range.",
+        "step3": "Compare the “break-even quantity” column with what each product actually sold."
+      },
+      "cohorts": {
+        "heading": "Customer return",
+        "body1": "Customers are grouped by the month of their first purchase, and for each group you see how many bought again in the following months.",
+        "body2": "Sales without a customer are not in this table, and a month that has not arrived yet stays blank, not zero."
+      }
+    },
+    "promotions": {
+      "title": "Promotions",
+      "summary": "A percentage or fixed discount applied when a product is picked on a sale invoice.",
+      "seoTitle": "Guide to promotions in Hisabche",
+      "seoDescription": "Promotions in Hisabche: a percentage or a fixed amount off, for all or some products and customers, with an optional date range; applied to the suggested price when a product is picked on a sale invoice.",
+      "what": {
+        "heading": "What a promotion does",
+        "body1": "A promotion is a rule that lowers the suggested price of a product when it is picked on a sale invoice: a percentage, or a fixed amount off each unit in a named currency.",
+        "body2": "It can cover every product and customer or only some, always or between two dates. The seller can still change the price, and earlier invoices do not change."
+      },
+      "make": {
+        "heading": "Making a promotion",
+        "body1": "Managers and the owner make promotions. For a fixed amount you also choose the currency; such a promotion only applies to an invoice in that currency.",
+        "body2": "If you choose specific customers, sales without a customer do not get the promotion. When several promotions fit one product only the largest applies, unless you turned on “Add to other promotions”.",
+        "step1": "On the Promotions page, press “New promotion”.",
+        "step2": "Enter the name, type and value, and limit it to products, customers or dates if needed.",
+        "step3": "Save; from then on a covered product shows a “Promo” tag on the sale invoice."
+      },
+      "retire": {
+        "heading": "Changing or ending a promotion",
+        "body1": "A promotion is not edited or deleted; you retire it and make a new one if needed. That way the price on an old invoice can always be explained."
+      }
+    },
+    "installments": {
+      "title": "Invoice installments",
+      "summary": "Split the balance of a sale invoice into monthly parts.",
+      "seoTitle": "Guide to invoice installments in Hisabche",
+      "seoDescription": "Invoice installments in Hisabche: split the balance of a sale invoice into equal monthly parts and see which part is paid and which is overdue.",
+      "what": {
+        "heading": "What installments are",
+        "body1": "When a customer pays the balance of an invoice over several months, you can split that balance into monthly parts so each part has its own due date.",
+        "body2": "An installment plan is only a schedule. Payments are still recorded with “Record payment”, and no late fee is charged."
+      },
+      "make": {
+        "heading": "Splitting an invoice",
+        "body1": "The current balance is split into equal parts and the rounding remainder goes on the first one, so the parts add up to exactly the balance.",
+        "step1": "Open the sale invoice and show the “Installments” section.",
+        "step2": "Choose the number of parts and the due date of the first one.",
+        "step3": "Press “Split into installments”. Later parts fall on the same day of each following month."
+      },
+      "follow": {
+        "heading": "Following the parts",
+        "body1": "Each payment recorded for the invoice is taken off the oldest part first. The table shows which part is paid, which is not due yet and which is overdue by how many days.",
+        "body2": "You can remove the plan; recorded payments are not touched."
+      }
+    },
+    "attendance": {
+      "title": "Attendance",
+      "summary": "The daily sheet of check-ins, check-outs, leave and absence.",
+      "seoTitle": "Guide to employee attendance in Hisabche",
+      "seoDescription": "Attendance in Hisabche: a daily sheet to record each employee’s check-in and check-out, leave and absence, with hours worked and the count of present and absent staff.",
+      "sheet": {
+        "heading": "The daily sheet",
+        "body1": "In “Team and payroll”, the “Attendance” tab shows every employee for one day. Managers and the owner see and record it.",
+        "body2": "Each employee has one row per day; recording again corrects that row.",
+        "step1": "Choose the day (today by default).",
+        "step2": "For each employee press “Check in now”, or type the time.",
+        "step3": "When they leave press “Check out now”; or record leave or absence."
+      },
+      "meaning": {
+        "heading": "What the figures mean",
+        "body1": "An employee with nothing recorded is “not recorded”, not absent. A day with a check-in and no check-out stays “not checked out yet” and shows no hours.",
+        "body2": "Attendance does not change anyone’s pay automatically."
+      }
+    },
+    "ai-assistants": {
+      "title": "Connect an AI assistant (MCP)",
+      "summary": "Connect Claude, ChatGPT, Gemini or Cursor to Hisabche over the MCP protocol.",
+      "seoTitle": "Connect an AI assistant to Hisabche with MCP",
+      "seoDescription": "How to connect Claude, ChatGPT, Gemini and Cursor to Hisabche over MCP: creating an API key, the connection address, the available tools, and human approval for financial actions.",
+      "what": {
+        "heading": "What MCP is in Hisabche",
+        "body1": "MCP is a standard protocol AI assistants use to connect to software. With it you can ask your assistant which customer owes money, how much of a product is in stock, or to find an invoice.",
+        "body2": "The assistant works through the same public API of Hisabche: the same key, the same access and the same rules. It has no separate way into your data, and sees only the business the key belongs to."
+      },
+      "connect": {
+        "heading": "Connecting an assistant",
+        "body1": "The connection uses an API key that you create and can revoke at any time. Limit the key to what the assistant needs — for example, only reading customers and invoices.",
+        "body2": "The connection address is shown on the Developers page, in the “AI assistants” section.",
+        "step1": "On the Developers page, create an API key with the access you need.",
+        "step2": "In your assistant, add an HTTP MCP connection and enter the connection address.",
+        "step3": "Put the key in that connection as an Authorization header with a Bearer value.",
+        "step4": "Ask the assistant to list its tools; it sees only the tools the key allows."
+      },
+      "safety": {
+        "heading": "Safety and human approval",
+        "body1": "Reading, and low-risk actions such as adding a customer, are carried out directly. Actions that move money or stock or cannot be undone — issuing an invoice, confirming, fulfilling and cancelling an order — are not carried out when the assistant asks.",
+        "body2": "Such a request waits in the approval queue until a manager or the owner approves or rejects it inside Hisabche. On approval the action is done in that person’s name, once. A request left unanswered for a day can no longer be approved.",
+        "body3": "An assistant cannot approve on your behalf, see another business, or reach the database directly."
+      },
+      "tools": {
+        "heading": "Available tools",
+        "body1": "Searching and reading customers, products, warehouse stock, invoices, payments, orders and the customer debt report; creating and editing a customer; placing an order; and requesting an invoice or a change of an order’s state.",
+        "body2": "Every list returns at most 50 rows per page. Each call the assistant makes is recorded in that key’s usage log."
+      }
     }
   },
   "ai": {
@@ -5957,7 +6284,8 @@
     "chooseBranch": "Choose a branch",
     "branchFirstHint": "Add a branch first — every employee belongs to one.",
     "salaryCurrency": "Salary currency",
-    "profileNeedsAccount": "The employee was saved, but the access profile was not applied: they do not have a user account yet."
+    "profileNeedsAccount": "The employee was saved, but the access profile was not applied: they do not have a user account yet.",
+    "attendance": "Attendance"
   },
   "role": {
     "owner": "Owner",
@@ -6487,7 +6815,23 @@
     "nameRequired": "Product name is required"
   },
   "table": {
-    "columns": "Table settings"
+    "columns": "Table settings",
+    "views": {
+      "title": "Saved views",
+      "loadFailed": "Views could not be loaded.",
+      "empty": "You have not saved a view yet.",
+      "sharedWithYou": "shared",
+      "share": "Share with colleagues",
+      "unshare": "Stop sharing with colleagues",
+      "saveFailed": "Not saved.",
+      "namePlaceholder": "Name for the current view",
+      "shareOnSave": "Let colleagues see this view too",
+      "save": "Save the current view",
+      "errors": {
+        "SAVED_VIEW_NAME_TAKEN": "You already have a view with this name. Choose another.",
+        "SAVED_VIEWS_MIGRATION_PENDING": "Saved views are not enabled on the database yet. The saved-views-01 script has to be run."
+      }
+    }
   },
   "developer": {
     "title": "Developers and integrations",
@@ -7288,6 +7632,560 @@
       "listingDescription": "{title} from {seller} on the Hisabche marketplace.",
       "quantity": "{count} available",
       "howToBuy": "To buy, contact the seller."
+    }
+  },
+  "undo": {
+    "unknown": "We could not confirm exactly what this changes. Continue with care.",
+    "touchesBooks": "A reversing entry is recorded in the books; the first entry is not erased.",
+    "irreversible": "This cannot be undone afterwards.",
+    "reversible": "If it was a mistake, it can be corrected with a new entry.",
+    "kind": {
+      "invoice_create": "The invoice is cancelled; its ledger entry is reversed and its goods return to stock.",
+      "invoice_cancel": "A cancelled invoice cannot be brought back; its number was issued and its entries were reversed.",
+      "payment_record": "The payment is cancelled; its allocations are returned and a mirror entry is posted.",
+      "payment_cancel": "A cancelled payment cannot be reinstated; record a new payment instead.",
+      "purchase_order_create": "The purchase order is cancelled and the budget it had reserved is released.",
+      "stock_adjust": "An opposite stock movement is recorded, referring to this one.",
+      "budget_commit": "The budget commitment is released; its trace stays in the history."
+    }
+  },
+  "analysis": {
+    "failed": "This section could not be loaded. Try again.",
+    "tabs": {
+      "collections": "Collections",
+      "suppliers": "Suppliers",
+      "breakEven": "Break-even",
+      "cohorts": "Customer return",
+      "workingCapital": "Working capital",
+      "reports": "Report builder"
+    },
+    "collections": {
+      "open": "Open invoices",
+      "outstanding": "Outstanding",
+      "toRemind": "To remind today",
+      "nothingOwed": "You have no unpaid sale invoices.",
+      "nothingDue": "You have open invoices, but none has reached a reminder date yet.",
+      "customer": "Customer",
+      "invoice": "Invoice",
+      "amount": "Outstanding",
+      "daysLate": "Days late",
+      "tone": "Reminder tone",
+      "walkIn": "Sale without a customer",
+      "note": "This list is for your own follow-up; the app sends nothing to the customer. The tone follows the days late: 3, 15, 45 and 75 days.",
+      "tones": {
+        "courtesy": "Friendly reminder",
+        "formal": "Formal",
+        "firm": "Firm",
+        "final": "Final notice"
+      }
+    },
+    "suppliers": {
+      "noOrders": "No purchase order has been recorded yet. This analysis is built from purchase orders.",
+      "concentrationTitle": "Purchase concentration",
+      "concentrationSupplier": "This supplier’s share of your total purchases",
+      "concentrationProduct": "This product is bought from a single supplier",
+      "supplier": "Supplier",
+      "band": "Risk",
+      "orders": "Orders",
+      "late": "Average delay (days)",
+      "why": "Reason",
+      "tooFew": "Too few orders to judge",
+      "noPromise": "orders have no promised delivery date and were left out of the delay measure. Enter that date on the order for an accurate measure.",
+      "bands": {
+        "low": "Low",
+        "moderate": "Moderate",
+        "high": "High",
+        "unknown": "Unknown"
+      },
+      "signals": {
+        "LATE_DELIVERY": "Late delivery",
+        "PRICE_DRIFT": "Rising price",
+        "INACTIVITY": "No recent purchase",
+        "UNRECEIVED": "Order never received"
+      }
+    },
+    "breakEven": {
+      "other": "Other fixed costs (rent, utilities…)",
+      "empty": "No sale was recorded in this range.",
+      "fixed": "Fixed costs in the range",
+      "lowerBound": "Only salaries are counted. Until you enter the other fixed costs, the real break-even quantity is higher than these figures.",
+      "product": "Product",
+      "sold": "Sold (quantity)",
+      "contribution": "Gross profit",
+      "margin": "Margin",
+      "quantity": "Break-even quantity",
+      "reasons": {
+        "NO_REVENUE": "No sales",
+        "NO_CONTRIBUTION": "Cannot break even at this price",
+        "NO_FIXED_COSTS": "No fixed cost recorded"
+      }
+    },
+    "cohorts": {
+      "empty": "You have no sale to a recorded customer yet. Sales without a customer are not part of this analysis.",
+      "month": "Month of first purchase",
+      "size": "Customers",
+      "first": "Same month",
+      "after": "Month",
+      "note": "Each row is the customers whose first purchase fell in that (Gregorian) month; each column is how many bought again in the following months. «…» means that month has not arrived yet."
+    },
+    "risk": {
+      "title": "Payment behaviour",
+      "failed": "This customer’s payment behaviour could not be loaded.",
+      "averageLate": "Average delay (days)",
+      "bands": {
+        "healthy": "Pays on time",
+        "watch": "Watch",
+        "at_risk": "At risk",
+        "unknown": "Unknown"
+      },
+      "signals": {
+        "RECENT_LATE": "Recent payments were late",
+        "TREND": "Delays are growing",
+        "GROWING_DEBT": "Debt is growing",
+        "BROKEN_PROMISE": "A promised payment was not kept"
+      },
+      "reasons": {
+        "NEVER_BOUGHT": "Has not bought yet",
+        "TOO_FEW_SETTLED": "Too few settled invoices to judge",
+        "NO_SETTLED_INVOICES": "Has not settled any invoice yet"
+      },
+      "healthTitle": "Buying trend",
+      "loyaltyTitle": "History",
+      "health": {
+        "growing": "Growing",
+        "steady": "Steady",
+        "shrinking": "Shrinking",
+        "dormant": "No purchase in over six months"
+      },
+      "loyalty": {
+        "new": "New customer",
+        "regular": "Regular customer",
+        "loyal": "Loyal customer",
+        "champion": "Top customer"
+      }
+    },
+    "workingCapital": {
+      "dso": "Days to collect",
+      "dio": "Days stock is held",
+      "dpo": "Days to pay suppliers",
+      "ccc": "Cash cycle (days)",
+      "receivables": "Owed by customers",
+      "payables": "Owed to suppliers",
+      "inventory": "Stock at cost",
+      "net": "Working capital (without cash)",
+      "incomplete": "Not enough sales, purchases or cost of goods sold were recorded in this range; a ratio that cannot be computed is shown as “—”, not zero.",
+      "negativeIsGood": "A negative cash cycle is good: you collect from sales before you pay your suppliers.",
+      "otherCurrencies": "Documents in these currencies are not in these figures",
+      "note": "Cash and bank balances are not part of this calculation. Receivables and payables are today’s balances; sales and purchases belong to the selected range."
+    }
+  },
+  "installments": {
+    "title": "Installments",
+    "show": "Show",
+    "hide": "Close",
+    "loading": "Loading…",
+    "seq": "Part",
+    "dueDate": "Due",
+    "amount": "Amount",
+    "paid": "Paid",
+    "status": "Status",
+    "statusPaid": "Paid",
+    "statusLate": "{days} days overdue",
+    "statusDue": "Not due yet",
+    "clear": "Remove the installment plan",
+    "clearConfirm": "Remove the installment plan? Recorded payments are not touched.",
+    "clearYes": "Remove",
+    "cancel": "Cancel",
+    "nothingOwed": "This invoice has no balance to split.",
+    "noPlan": "This invoice has no installment plan. Current balance:",
+    "count": "Number of parts",
+    "firstDueDate": "First part due",
+    "save": "Split into installments",
+    "hint": "The invoice’s current balance is split into equal monthly parts; the rounding remainder goes on the first one. Payments are still recorded with “Record payment”. No late fee is charged.",
+    "errors": {
+      "general": "That did not work. Try again.",
+      "INSTALLMENT_COUNT_INVALID": "That number of parts does not work for this amount.",
+      "INSTALLMENT_NOTHING_OWED": "This invoice has no balance.",
+      "INSTALLMENT_SUM_MISMATCH": "The invoice balance has just changed. Refresh the page and split it again.",
+      "INSTALLMENTS_MIGRATION_PENDING": "Installments are not enabled on the database yet. The installments-01 script has to be run."
+    }
+  },
+  "attendance": {
+    "date": "Day",
+    "forbidden": "The attendance sheet is for managers and the owner.",
+    "loadFailed": "The attendance sheet could not be loaded. Try again.",
+    "noEmployees": "No employee has been added yet. Add employees in the “Employees” tab first.",
+    "employee": "Employee",
+    "status": "Status",
+    "checkIn": "In",
+    "checkOut": "Out",
+    "hours": "Hours worked",
+    "actions": "Record",
+    "note": "Times are recorded in this device’s local time. Attendance does not change anyone’s pay automatically.",
+    "notRecorded": "Not recorded",
+    "stillIn": "Not checked out yet",
+    "checkInNow": "Check in now",
+    "checkOutNow": "Check out now",
+    "saveTimes": "Save times",
+    "markPresent": "Present",
+    "markLeave": "Leave",
+    "markAbsent": "Absent",
+    "summary": {
+      "present": "Present",
+      "absent": "Absent",
+      "leave": "Leave and holiday",
+      "stillIn": "Still at work",
+      "notRecorded": "Not recorded"
+    },
+    "statuses": {
+      "present": "Present",
+      "absent": "Absent",
+      "leave": "On leave",
+      "holiday": "Holiday",
+      "open": "Not checked out yet"
+    },
+    "errors": {
+      "general": "Not recorded. Try again.",
+      "ATTENDANCE_TIME_INVALID": "That time is not valid.",
+      "ATTENDANCE_CHECK_OUT_WITHOUT_CHECK_IN": "Record the check-in time first.",
+      "ATTENDANCE_CHECK_OUT_BEFORE_CHECK_IN": "The check-out time cannot be before the check-in time."
+    },
+    "shiftPicker": "Shift for quick recording",
+    "shiftNone": "No shift",
+    "byShift": "By shift"
+  },
+  "promotions": {
+    "title": "Promotions",
+    "subtitle": "Rules that lower the suggested price of a product when it is picked on a sale invoice",
+    "add": "New promotion",
+    "forbidden": "You are not allowed to see promotions.",
+    "empty": "No promotion has been defined yet.",
+    "retired": "Retired",
+    "always": "No time limit",
+    "stacks": "Adds to other promotions",
+    "retire": "Retire",
+    "reactivate": "Activate again",
+    "note": "A promotion only changes the suggested price when a product is picked on a sale invoice; the seller can still change the price, and earlier invoices are not touched. A promotion is not edited or deleted: to change one, retire it and make a new one.",
+    "scopeProducts": "{count} products",
+    "scopeCustomers": "{count} customers",
+    "allProducts": "Every product",
+    "allCustomers": "Every customer, including sales without a customer",
+    "newTitle": "New promotion",
+    "name": "Name",
+    "kind": "Type",
+    "kinds": {
+      "percentage": "Percentage",
+      "fixed_amount": "Fixed amount off each unit"
+    },
+    "percent": "Percent",
+    "amount": "Amount",
+    "currency": "Currency",
+    "validFrom": "From",
+    "validTo": "Until",
+    "noLimit": "No limit",
+    "stackingLabel": "Add to other promotions",
+    "stackingHint": "When off, of the promotions that fit one product only the largest is applied.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "forProducts": "For which products?",
+    "forCustomers": "For which customers?",
+    "onlyTheseProducts": "Only these products:",
+    "onlyTheseCustomers": "Only these customers (sales without a customer are not included):",
+    "remove": "Remove",
+    "searchProduct": "Search products…",
+    "searchCustomer": "Search customers…",
+    "searchFailed": "The search failed.",
+    "searching": "Searching…",
+    "nothingFound": "Nothing found.",
+    "errors": {
+      "general": "That did not work. Try again.",
+      "incomplete": "Enter a name and a valid value.",
+      "PROMOTION_PERCENT_OVER_100": "A percentage cannot be more than 100.",
+      "PROMOTION_CURRENCY_REQUIRED": "Choose the currency of the fixed amount.",
+      "PROMOTION_WINDOW_INVERTED": "The end date cannot be before the start date.",
+      "PROMOTION_PRODUCT_NOT_FOUND": "One of the chosen products was not found.",
+      "PROMOTION_CUSTOMER_NOT_FOUND": "One of the chosen customers was not found.",
+      "PROMOTIONS_MIGRATION_PENDING": "Promotions are not enabled on the database yet. The promotions-01 script has to be run."
+    }
+  },
+  "notes": {
+    "title": "Notes",
+    "show": "Show",
+    "hide": "Close",
+    "loading": "Loading…",
+    "forbidden": "You are not allowed to see these notes.",
+    "placeholder": "Write a note for your colleagues…",
+    "permanent": "A note cannot be edited or deleted once it is saved.",
+    "add": "Save note",
+    "empty": "No note has been written yet.",
+    "mine": "written by you",
+    "errors": {
+      "general": "That did not work. Try again.",
+      "NOTE_EMPTY_BODY": "The note is empty.",
+      "NOTE_BODY_TOO_LONG": "The note is too long.",
+      "NOTES_MIGRATION_PENDING": "Notes are not enabled on the database yet. The entity-notes-01 script has to be run."
+    }
+  },
+  "shifts": {
+    "title": "Shifts",
+    "hint": "Named working hours, for recording attendance quickly. A shift assigns nobody to anything and does not change pay.",
+    "show": "Show",
+    "hide": "Close",
+    "loading": "Loading…",
+    "empty": "No shift has been defined yet.",
+    "retired": "Retired",
+    "retire": "Retire",
+    "reactivate": "Activate again",
+    "hours": "{hours} working hours",
+    "breakLabel": "{minutes} min break",
+    "name": "Shift name",
+    "startsAt": "Starts",
+    "endsAt": "Ends",
+    "breakMinutes": "Break (minutes)",
+    "add": "Add shift",
+    "errors": {
+      "general": "That did not work. Try again.",
+      "SHIFT_INVALID_TIMES": "The end time must be after the start time, on the same day.",
+      "SHIFT_BREAK_LONGER_THAN_SHIFT": "The break must be shorter than the shift itself.",
+      "SHIFT_NAME_TAKEN": "You already have an active shift with this name.",
+      "SHIFTS_MIGRATION_PENDING": "Shifts are not enabled on the database yet. The work-shifts-01 script has to be run."
+    }
+  },
+  "financing": {
+    "notLedger": "These two lists are kept beside the books and post no journal entry. Interest is a calculation, and the value of a holding is the figure you enter yourself.",
+    "forbidden": "This section is for people who can see the books.",
+    "currency": "Currency",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "reopen": "Reopen",
+    "closed": "Closed",
+    "loans": {
+      "title": "Loans",
+      "add": "New loan",
+      "kind": "Type",
+      "kinds": {
+        "loan": "A loan we took",
+        "receivable_facility": "A loan we gave"
+      },
+      "counterparty": "Counterparty",
+      "principal": "Principal",
+      "rate": "Annual rate (%)",
+      "frequency": "Payment frequency",
+      "frequencies": {
+        "1": "Once a year",
+        "2": "Every six months",
+        "4": "Every three months",
+        "12": "Monthly"
+      },
+      "startDate": "Start date",
+      "endDate": "End date",
+      "noEnd": "No end date",
+      "empty": "No loan has been recorded yet.",
+      "accrued": "Interest to date",
+      "term": "Term",
+      "instalment": "Instalment",
+      "days": "{days} days",
+      "noInstalment": "No end date",
+      "note": "Interest is simple and based on actual days; it does not replace your agreement with the lender."
+    },
+    "holdings": {
+      "title": "Investments",
+      "add": "New investment",
+      "label": "Name",
+      "cost": "Cost",
+      "value": "Current value",
+      "empty": "No investment has been recorded yet.",
+      "difference": "Value less cost",
+      "valuedOn": "Last valued on",
+      "revalue": "New value",
+      "note": "Value less cost is not a “return”: dividends, fees and money moved in or out are not part of it."
+    },
+    "errors": {
+      "general": "That did not work. Try again.",
+      "incomplete": "Enter the name and the amounts correctly.",
+      "FINANCING_DATES_INVERTED": "The end date must be after the start date.",
+      "FINANCING_AMOUNT_INVALID": "That amount is not valid.",
+      "FINANCING_VALUE_NEEDS_DATE": "A new value needs its date.",
+      "FINANCING_MIGRATION_PENDING": "This section is not enabled on the database yet. The financing-01 script has to be run."
+    }
+  },
+  "customFields": {
+    "title": "Custom fields",
+    "show": "Show",
+    "hide": "Close",
+    "loading": "Loading…",
+    "forbidden": "Making and retiring fields is for managers and the owner.",
+    "yes": "Yes",
+    "no": "No",
+    "empty": "Empty",
+    "computed": "computed",
+    "retire": "Retire",
+    "save": "Save",
+    "saved": "Saved",
+    "manage": "Manage fields",
+    "doneManaging": "Done",
+    "manageHint": "A new field is added to every record of this kind. A field is not deleted; it is retired and what was entered in it is kept. A technical name is used once.",
+    "fieldLabel": "Field title",
+    "fieldKey": "Technical name (lower-case letters)",
+    "fieldType": "Type",
+    "keyRule": "The technical name must start with a lower-case letter and contain only letters, digits and _.",
+    "choices": "Choices (separate with commas)",
+    "formula": "Formula",
+    "formulaHint": "With + − × ÷ and brackets, over these number fields:",
+    "formulaNoNumbers": "Make a number field first to write a formula.",
+    "required": "Must be filled in",
+    "addField": "Add field",
+    "none": {
+      "customer": "No custom field has been defined for customers yet.",
+      "supplier": "No custom field has been defined for suppliers yet.",
+      "product": "No custom field has been defined for products yet."
+    },
+    "types": {
+      "text": "Text",
+      "number": "Number",
+      "date": "Date",
+      "boolean": "Yes / no",
+      "choice": "Choice from a list",
+      "formula": "Formula"
+    },
+    "formulaProblems": {
+      "MISSING_VALUE": "One of the formula’s fields is empty",
+      "DIVIDE_BY_ZERO": "Division by zero",
+      "NOT_A_NUMBER": "Cannot be computed",
+      "UNKNOWN_FIELD": "The formula names a field that is no longer active",
+      "UNKNOWN_OPERATOR": "The formula has an unknown operator",
+      "UNBALANCED": "The formula’s brackets do not match",
+      "EMPTY": "The formula is empty"
+    },
+    "errors": {
+      "general": "That did not work. Try again.",
+      "CUSTOM_FIELD_INVALID": "This field’s value is not valid",
+      "CUSTOM_FIELD_REQUIRED": "This field must be filled in",
+      "CUSTOM_FIELD_UNKNOWN": "This field no longer exists. Refresh the page.",
+      "CUSTOM_FIELD_KEY_TAKEN": "This technical name has been used before (even by a retired field). Choose another.",
+      "CUSTOM_FIELD_LIMIT_REACHED": "You have reached the limit of custom fields.",
+      "CUSTOM_FIELD_CHOICES_REQUIRED": "Enter at least one choice.",
+      "CUSTOM_FIELD_FORMULA_EMPTY": "The formula is empty.",
+      "CUSTOM_FIELD_FORMULA_UNKNOWN_FIELD": "The formula names a field that does not exist or is not a number.",
+      "CUSTOM_FIELD_FORMULA_UNKNOWN_OPERATOR": "The formula has an unknown operator.",
+      "CUSTOM_FIELD_FORMULA_UNBALANCED": "The formula’s brackets do not match.",
+      "CUSTOM_FIELDS_MIGRATION_PENDING": "Custom fields are not enabled on the database yet. The custom-fields-01 script has to be run."
+    }
+  },
+  "reportBuilder": {
+    "newTitle": "New report",
+    "name": "Report name",
+    "measures": "What to count",
+    "groupBy": "Grouped by",
+    "hint": "These reports are built on sale invoices. A money figure always comes per currency (added for you). “Outstanding” cannot be added up over months or quarters.",
+    "save": "Save and run",
+    "savedTitle": "Saved reports",
+    "empty": "You have not saved a report yet.",
+    "retire": "Remove",
+    "noRows": "This report has no rows: no sale invoice has been recorded yet.",
+    "noCustomer": "Sale without a customer",
+    "capped": "Showing {shown} of {total} rows.",
+    "live": "A report stores no results; it is built from the data as it is now, every time.",
+    "measureNames": {
+      "count": "Invoices",
+      "outstanding": "Outstanding",
+      "collected": "Collected"
+    },
+    "dimensionNames": {
+      "month": "Month",
+      "quarter": "Quarter",
+      "customer": "Customer",
+      "currency": "Currency"
+    },
+    "errors": {
+      "general": "That did not work. Try again.",
+      "REPORT_NOT_RUNNABLE": "This combination cannot be run.",
+      "REPORT_NAME_TAKEN": "You already have a report with this name.",
+      "REPORT_NO_MEASURES": "Choose at least one thing to count.",
+      "REPORT_TOO_MANY_DIMENSIONS": "Too many groupings; three at most, counting currency.",
+      "REPORT_NON_ADDITIVE_IN_TIME": "“Outstanding” cannot be added up over months or quarters. Remove the time grouping.",
+      "REPORTS_MIGRATION_PENDING": "The report builder is not enabled on the database yet. The saved-reports-01 script has to be run."
+    }
+  },
+  "snapshots": {
+    "title": "Data markers",
+    "notBackup": "A marker is not a backup: nothing is copied and nothing can be restored from it. It only records how many invoices, payments, entries and so on you had at this moment, so you can later see what was added.",
+    "show": "Show",
+    "hide": "Close",
+    "loading": "Loading…",
+    "forbidden": "This section is for managers and the owner.",
+    "label": "Marker name",
+    "labelPlaceholder": "For example: end of year 2026",
+    "take": "Record the state right now",
+    "empty": "No marker has been recorded yet.",
+    "notReadable": "This marker was recorded under a newer data structure and is not compared with the current state.",
+    "what": "What",
+    "then": "At the marker",
+    "now": "Now",
+    "added": "Change",
+    "limits": "This comparison gives counts only. Renamed accounts, corrected customer and product details, changed settings and documents deleted later are not visible in it. “—” means that figure is not known.",
+    "tables": {
+      "journal_entries": "Journal entries",
+      "journal_lines": "Journal lines",
+      "accounts": "Accounts",
+      "invoices": "Invoices",
+      "invoice_items": "Invoice lines",
+      "payments": "Payments",
+      "payment_allocations": "Payment allocations",
+      "customers": "Customers",
+      "suppliers": "Suppliers",
+      "products": "Products"
+    },
+    "errors": {
+      "general": "That did not work. Try again.",
+      "SNAPSHOTS_MIGRATION_PENDING": "This section is not enabled on the database yet. The data-snapshots-01 script has to be run."
+    }
+  },
+  "aiConnect": {
+    "title": "AI assistants",
+    "subtitle": "Connect Claude, ChatGPT, Gemini, Cursor or any MCP-compatible assistant to Hisabche.",
+    "show": "Show",
+    "hide": "Close",
+    "forbidden": "Approving an assistant’s requests is for managers and the owner.",
+    "endpoint": "Connection address (MCP)",
+    "step1": "Create an API key on this page and give it only the access the assistant needs.",
+    "step2": "In your assistant, add an HTTP MCP connection with the address above.",
+    "step3": "Put the key in that connection’s settings as “Authorization: Bearer”. To cut access, revoke the key.",
+    "safety": "The assistant sees only what the key allows, and only in this business. Actions that move money or stock are not carried out until you approve them here.",
+    "queueTitle": "Requests waiting for your approval",
+    "queueEmpty": "No request is waiting for approval.",
+    "argumentsLabel": "What the assistant asked for (as it was sent):",
+    "approveConfirm": "This will be done in your name, right now. Continue?",
+    "approveYes": "Yes, do it",
+    "cancel": "Cancel",
+    "approve": "Approve and run",
+    "reject": "Reject",
+    "historyTitle": "Recent requests",
+    "tools": {
+      "create_invoice": "Issue an invoice",
+      "confirm_order": "Confirm an order",
+      "fulfill_order": "Fulfil an order (takes goods out of stock)",
+      "invoice_order": "Invoice an order",
+      "cancel_order": "Cancel an order"
+    },
+    "risks": {
+      "financial": "Financial",
+      "destructive": "Cannot be undone"
+    },
+    "statuses": {
+      "pending": "Waiting for approval",
+      "approved": "Running",
+      "executed": "Done",
+      "failed": "Not done",
+      "rejected": "Rejected",
+      "expired": "Expired"
+    },
+    "errors": {
+      "general": "That did not work. Try again.",
+      "AI_REQUEST_ALREADY_DECIDED": "This request has already been approved or rejected.",
+      "AI_REQUEST_EXPIRED": "This request waited more than a day and can no longer be approved.",
+      "AI_REQUESTS_MIGRATION_PENDING": "This section is not enabled on the database yet. The ai-action-requests-01 script has to be run."
     }
   }
 }

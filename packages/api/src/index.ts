@@ -355,6 +355,170 @@ export {
   type CustomerCrmSummary,
 } from './hooks/crm'
 
+// ─── Business analysis ────────────────────────────────────
+export {
+  useCollectionsWorklist,
+  useCustomerRisk,
+  useSupplierAnalysis,
+  useBreakEven,
+  useCohorts,
+  useWorkingCapital,
+  analysisKeys,
+  type CollectionsWorklist,
+  type CustomerRisk,
+  type SupplierAnalysis,
+  type BreakEvenAnalysis,
+  type CohortAnalysis,
+  type WorkingCapitalAnalysis,
+  type ReminderTone,
+} from './hooks/analysis'
+
+// ─── Installment plan of an invoice (#123) ────────────────
+export {
+  useInstallmentPlan,
+  useSaveInstallmentPlan,
+  useClearInstallmentPlan,
+  installmentKeys,
+  type InstallmentPlan,
+  type InstallmentLine,
+} from './hooks/installments'
+
+// ─── Daily attendance sheet (#100) ────────────────────────
+export {
+  useAttendanceSheet,
+  useMarkAttendance,
+  attendanceKeys,
+  useWorkShifts,
+  useCreateWorkShift,
+  useSetWorkShiftActive,
+  shiftKeys,
+  type WorkShift,
+  type AttendanceSheet,
+  type AttendanceSheetRow,
+  type AttendanceRecord,
+  type AttendanceMarkInput,
+  type AttendanceMarkStatus,
+} from './hooks/attendance'
+
+// ─── Promotions (#114–#117) ───────────────────────────────
+export {
+  usePromotions,
+  useSavePromotion,
+  useSetPromotionActive,
+  promotionKeys,
+} from './hooks/promotions'
+
+// ─── Notes on a record (#103) ─────────────────────────────
+export {
+  useEntityNotes,
+  useAddEntityNote,
+  noteKeys,
+  type EntityNote,
+  type NoteEntityType,
+} from './hooks/notes'
+
+// ─── Loans and investments (#125 #126) ────────────────────
+export {
+  useLoanFacilities,
+  useCreateLoanFacility,
+  useSetLoanFacilityActive,
+  useInvestmentHoldings,
+  useCreateInvestmentHolding,
+  useUpdateInvestmentHolding,
+  financingKeys,
+  type LoanFacility,
+  type LoanFacilities,
+  type LoanFacilityInput,
+  type FacilityKind,
+  type InvestmentHolding,
+  type InvestmentHoldings,
+} from './hooks/financing'
+
+// ─── Custom fields (#141–#143) ────────────────────────────
+export {
+  useCustomFieldRecord,
+  useSaveCustomFieldValues,
+  useDefineCustomField,
+  useSetCustomFieldActive,
+  customFieldKeys,
+  type CustomField,
+  type CustomFieldRecord,
+  type CustomFieldInput,
+  type CustomFieldEntity,
+  type CustomFieldType,
+  type CustomFieldValue,
+} from './hooks/custom-fields'
+
+// ─── Report builder (#145) ────────────────────────────────
+export {
+  useReportCatalog,
+  useSavedReports,
+  useSaveReport,
+  useRetireReport,
+  useReportRun,
+  customReportKeys,
+  type ReportCatalog,
+  type SavedReport,
+  type ReportRun,
+  type ReportDimension,
+  type ReportMeasure,
+} from './hooks/custom-reports'
+
+// ─── Data snapshots (#42–#46) ─────────────────────────────
+export {
+  useDataSnapshots,
+  useTakeDataSnapshot,
+  useDataSnapshotComparison,
+  snapshotKeys,
+  type DataSnapshot,
+  type DataSnapshotComparison,
+} from './hooks/snapshots'
+
+// ─── AI assistants (MCP): the approval queue ──────────────
+export {
+  useAiActionRequests,
+  useDecideAiActionRequest,
+  mcpEndpointUrl,
+  aiRequestKeys,
+  type AiActionRequest,
+  type AiRequestStatus,
+} from './hooks/ai-requests'
+
+// ─── Saved views (#87, #89) ───────────────────────────────
+export {
+  useSavedViews,
+  useCreateSavedView,
+  useUpdateSavedView,
+  useRemoveSavedView,
+  savedViewKeys,
+  type SavedView,
+  type SavedViewLook,
+} from './hooks/saved-views'
+
+// ─── Undo disclosure (#81) ────────────────────────────────
+export {
+  useCompensationPlan,
+  type CompensationAnswer,
+  type CompensationKind,
+} from './hooks/compensation'
+
+// ─── Automations (recurring invoices) ─────────────────────
+export {
+  useAutomations,
+  useCreateRecurringInvoice,
+  useUpdateAutomation,
+  useRemoveAutomation,
+  useAutomationRuns,
+  useRunAutomationNow,
+  useRunMonthEnd,
+  useCreateMonthEndAutomation,
+  automationKeys,
+  type Automation,
+  type AutomationRun,
+  type MonthEndResult,
+  type MonthEndStep,
+} from './hooks/automations'
+
 // ─── Manufacturing ────────────────────────────────────────
 export {
   useBOMs,
@@ -516,7 +680,10 @@ export {
   useWorkflowInstance,
   useStartWorkflowInstance,
   usePerformWorkflowAction,
+  useEscalationPolicy,
+  useSetEscalationPolicy,
   workflowKeys,
+  type EscalationPolicy,
   type Workflow,
   type WorkflowStep,
   type WorkflowInstance,
@@ -578,6 +745,9 @@ export {
   bankKeys,
   useBankStatements,
   useMatchSuggestions,
+  useBankCategorySuggestions,
+  type BankCategorySuggestions,
+  type BankCategoryVerdict,
   useReconciliation,
   useImportStatement,
   useReconcileLine,

@@ -33,7 +33,7 @@ import {
   type PriceRequest,
   type ProductPricing,
   type Promotion,
-} from '../services/commerce/pricing.domain'
+} from '@hisabche/validation'
 
 const AS_OF = '2026-09-30'
 

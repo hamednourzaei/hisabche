@@ -42,6 +42,19 @@ export interface MatchSuggestion {
   confidence: 'certain' | 'likely' | 'possible'
   /** More than one plausible partner. Must not be auto-applied. */
   isAmbiguous: boolean
+  /**
+   * The server's note for the person confirming: `ready` = the bank's own
+   * reference matched one entry; otherwise the reason it needs a second look.
+   * Nothing is ever matched without a click.
+   */
+  review?:
+    | { kind: 'ready' }
+    | {
+        kind: 'check'
+        reason:
+          'BELOW_THRESHOLD' | 'AMBIGUOUS' | 'TIER_NOT_ALLOWED' | 'NO_SUGGESTION' | 'BANK_CHARGE'
+      }
+    | undefined
 }
 
 export interface ReconciliationSummary {
@@ -126,6 +139,52 @@ export function useMatchSuggestions(statementId: string) {
     enabled: ready && Boolean(statementId),
     // Recomputed from scratch each time and only meaningful next to the
     // current match state, so it is not cached across a reconciling session.
+    staleTime: 0,
+  })
+}
+
+/** #62 — which account an unmatched line usually lands in. A suggestion, never a posting. */
+export interface BankCategorySuggestion {
+  accountId: string
+  accountName: string
+  root: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'
+  /** The share of this business's own history that went to this account, 0–1. */
+  confidence: number
+  sampleSize: number
+  because: string[]
+}
+
+export type BankCategoryVerdict =
+  | { kind: 'categorized'; suggestion: BankCategorySuggestion }
+  | { kind: 'insufficient_history'; sampleSize: number; minimum: number }
+  | { kind: 'ambiguous'; candidates: BankCategorySuggestion[] }
+  | { kind: 'no_pattern' }
+
+export interface BankCategorySuggestions {
+  statementId: string
+  historySize: number
+  lines: Array<{
+    lineId: string
+    onDate: string
+    description: string
+    amountMinor: number
+    verdict: BankCategoryVerdict
+  }>
+}
+
+export function useBankCategorySuggestions(statementId: string) {
+  const ready = useAuthReady()
+
+  return useQuery({
+    queryKey: [...bankKeys.all, 'categories', statementId] as const,
+    queryFn: async (): Promise<BankCategorySuggestions> => {
+      const { data } = await apiClient.get<BankCategorySuggestions>(
+        `/finance/bank/statements/${statementId}/categories`,
+      )
+      return { ...data, lines: asList<BankCategorySuggestions['lines'][number]>(data?.lines) }
+    },
+    enabled: ready && Boolean(statementId),
+    // Only meaningful beside the current match state, like the suggestions.
     staleTime: 0,
   })
 }

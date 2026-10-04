@@ -33,13 +33,9 @@ import { useProducts } from '@hisabche/api'
 import { useInvoiceDraftStore } from '@hisabche/store'
 
 import { cn } from '../../../../lib/utils'
-import {
-  productCost,
-  productPrice,
-  readProducts,
-  type PickerProduct,
-} from '../../../../lib/invoices/products'
+import { productCost, readProducts, type PickerProduct } from '../../../../lib/invoices/products'
 import { useInvoiceWarehouseStock } from '../../../../hooks/invoices/use-invoice-warehouse-stock'
+import { usePromotionPricer } from '../../../../hooks/invoices/use-promotion-pricer'
 
 export interface DescriptionCellProps {
   value: string
@@ -201,9 +197,12 @@ export const DescriptionCell = memo(function DescriptionCell({
     if (open) searchRef.current?.focus()
   }, [open])
 
+  // A sale line is priced with the live promotions; a component is costed.
+  const promoPrice = usePromotionPricer()
+
   const pick = (product: PickerProduct) => {
     if (isExhausted(product)) return
-    const price = pickAs === 'component' ? productCost(product) : productPrice(product)
+    const price = pickAs === 'component' ? productCost(product) : promoPrice(product).price
     onPickProduct({
       id: product.id,
       name: product.name,
@@ -365,6 +364,11 @@ export const DescriptionCell = memo(function DescriptionCell({
                     >
                       <span className="flex min-w-0 items-center gap-1.5">
                         <span className="min-w-0 truncate">{product.name}</span>
+                        {pickAs === 'sale' && promoPrice(product).discounted ? (
+                          <span className="shrink-0 rounded bg-[hsl(var(--color-success)/0.12)] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--color-success))]">
+                            {t('invoiceBuilder.grid.promotion', 'تخفیف')}
+                          </span>
+                        ) : null}
                         {product.sku ? (
                           <span
                             dir="ltr"

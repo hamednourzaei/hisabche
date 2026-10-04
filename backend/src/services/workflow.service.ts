@@ -20,6 +20,13 @@ import type {
 } from '@hisabche/validation'
 import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
 import { ForbiddenError } from '../errors/auth.error'
+import { escalationService } from './workflow/escalation.service'
+import { ValidationError } from '../errors/validation.error'
+import {
+  validateDefinition,
+  type DefinitionProblem,
+  type WorkflowDefinition,
+} from './workflow/builder.domain'
 
 // ✅ Column Selection Constants
 const WORKFLOW_COLUMNS =
@@ -44,6 +51,47 @@ interface StepWithWorkflowId {
   workflow_id: string
   step_order: number
   approver_role: string
+}
+
+/**
+ * What is wrong with a template BEFORE it is saved (#144).
+ *
+ * A template is a chain of approvals. It is read as the builder's own
+ * definition — each step an approval that leads to the next, the last one
+ * ending the workflow — and checked with the builder's rules, so a template
+ * with no step, two steps in the same position, or a step nobody is named to
+ * approve is refused when it is made. Found later, it is a document frozen in
+ * «awaiting approval» with nobody able to approve it.
+ */
+export function templateProblems(input: {
+  name: string
+  entity_type: string
+  steps: ReadonlyArray<{ step_order: number; approver_role?: string | null }>
+}): DefinitionProblem[] {
+  const ordered = [...input.steps].sort((a, b) => a.step_order - b.step_order)
+  const definition: WorkflowDefinition = {
+    key: 'template',
+    name: input.name,
+    version: 1,
+    enabled: true,
+    appliesTo: input.entity_type as WorkflowDefinition['appliesTo'],
+    steps: ordered.map((step, index) => {
+      const next = ordered[index + 1]
+      return {
+        id: String(step.step_order),
+        name: String(step.step_order),
+        kind: 'approval' as const,
+        // The builder only asks whether a role is named; which roles exist is
+        // the schema's rule. An empty role is passed through as «none».
+        ...(step.approver_role
+          ? { requiredRole: step.approver_role as 'owner' | 'manager' | 'seller' }
+          : {}),
+        nextOnApproval: next ? String(next.step_order) : null,
+        nextOnRefusal: null,
+      }
+    }),
+  }
+  return [...new Set(validateDefinition(definition))]
 }
 
 export class WorkflowService {
@@ -76,6 +124,11 @@ export class WorkflowService {
 
   /* ─── Create workflow template with steps ─── */
   async createWorkflow(workspaceId: string, input: CreateWorkflowInput): Promise<Workflow> {
+    // Checked before anything is written: the template and its steps are two
+    // inserts, and a refused template must leave neither behind.
+    const problems = templateProblems(input)
+    if (problems.length > 0) throw new ValidationError(`WORKFLOW_${problems[0]}`)
+
     const { data: workflow, error: wfError } = await supabase
       .from('workflows')
       .insert({
@@ -479,7 +532,21 @@ export class WorkflowService {
     // The default is gone; so is the branch that made it dangerous.
     //
     // Owner keeps its override because owner IS a real workspace role.
-    const canAct = userRole === 'owner' || userRole === (currentStep.approver_role as string)
+    let canAct = userRole === 'owner' || userRole === (currentStep.approver_role as string)
+
+    // Capability #68: a step that waited past its workflow's policy gains a
+    // second role allowed to act on it. Asked only when the actor's own role
+    // does not match, so an approval by the step's own role costs no extra
+    // read — and on a database without the escalation columns the answer is
+    // simply «none».
+    if (!canAct) {
+      const escalatedRole = await escalationService.escalatedRoleFor(
+        ctx.workspaceId,
+        input.instance_id,
+        currentStepNumber,
+      )
+      canAct = escalatedRole !== null && escalatedRole === userRole
+    }
 
     if (!canAct) {
       throw new ForbiddenError(

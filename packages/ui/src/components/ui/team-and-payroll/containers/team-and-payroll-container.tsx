@@ -61,12 +61,13 @@ import {
 
 import { TeamAndPayrollView, type TeamTab } from '../team-and-payroll-view'
 import { BranchTreeView } from '../branch-tree-view'
+import { AttendanceSheet } from '../attendance-sheet'
 import { BranchForm, type BranchFormValues } from '../branch-form'
 import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 
 /** Anything that is not a known tab is «کارمندان» — what the menu entry means. */
 function tabFrom(value: string | null | undefined): TeamTab {
-  return value === 'branches' || value === 'payroll' ? value : 'employees'
+  return value === 'branches' || value === 'payroll' || value === 'attendance' ? value : 'employees'
 }
 
 /** The server's message, or a generic fallback. Never a swallowed error. */
@@ -370,6 +371,7 @@ export function TeamAndPayrollContainer() {
       branches={branches}
       permissionProfiles={permissionProfiles}
       branchesTab={branchesTab}
+      attendanceTab={tab === 'attendance' ? <AttendanceSheet /> : null}
       employeeFormError={employeeFormError}
       employeeFieldErrors={employeeFields.fields}
     />

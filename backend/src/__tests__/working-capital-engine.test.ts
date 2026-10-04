@@ -155,18 +155,19 @@ describe('N3 — interest accrues on the days it actually ran', () => {
     ...over,
   })
 
-  it('a full year at 12% monthly-charging is about 120,000', () => {
-    // ⚠️ 364 days, not 365: 1 Jan → 31 Dec is 364 days elapsed. The figure is
-    // principal × rate × days ÷ (365 × chargesPerYear) = 1,000,000 × 0.12 ×
-    // 364 ÷ (365 × 12) = 997,260.27.
+  it('a year at 12% on 1,000,000 accrues about 120,000 — not the principal', () => {
+    // 364 days elapsed from 1 Jan to 31 Dec: 1,000,000 × 0.12 × 364 ÷ 365 =
+    // 119,671.23.
     //
-    // The first version of this test asserted 120,000, which is 365 days of a
-    // 12% loan charged MONTHLY — a number the arithmetic never produces for this
-    // window, because the divisor is 365 × 12 rather than 12.
+    // ⚠️ BUG-096: this test used to assert 997,260.27 — the engine took the
+    // rate as 12 rather than 0.12 and divided by `chargesPerYear`, and the
+    // assertion was written from the engine's output. A year of interest that
+    // is the size of the loan is the check that would have caught it.
     const result = accruedInterest(facility(), '2026-01-01', '2026-12-31')
 
     expect(result.days).toBe(364)
-    expect(result.accruedMinor).toBe(99_726_027)
+    expect(result.accruedMinor).toBe(11_967_123)
+    expect(result.accruedMinor).toBeLessThan(facility().principalMinor * 0.13)
   })
 
   it('accrues only from the START of the facility, not from the window', () => {
@@ -183,22 +184,22 @@ describe('N3 — interest accrues on the days it actually ran', () => {
     expect(result.days).toBeLessThan(364)
   })
 
-  it('a quarterly facility charges a THIRD of the monthly one', () => {
-    // ⚠️ `chargesPerYear` is the field this engine exists for. 12 ÷ 4 = 3, so a
-    // quarterly charge is a third of a monthly one over the same 364 days.
-    //
-    // ⚠️ The comparison is made on the PRINCIPAL, not on the already-rounded
-    // monthly figure. Rounding is not linear: 99,726,027 ÷ 3 rounds to
-    // 33,242,009, while the unrounded quarterly figure rounds to 299,178,082 —
-    // and asserting one against the other would be asserting that rounding
-    // commutes with division, which it does not. The first version did exactly
-    // that and failed for a reason that had nothing to do with the engine.
+  it('how often interest is CHARGED does not change how much has accrued', () => {
+    // Simple interest over a number of days is the same whether the lender
+    // collects it monthly or quarterly. The frequency decides the instalment,
+    // not the accrual — the old engine divided by it and tripled the figure.
     const monthly = accruedInterest(facility({ chargesPerYear: 12 }), '2026-01-01', '2026-12-31')
     const quarterly = accruedInterest(facility({ chargesPerYear: 4 }), '2026-01-01', '2026-12-31')
 
-    expect(quarterly.accruedMinor).toBe(299_178_082)
-    // Same ratio, within one unit of rounding.
-    expect(Math.abs(quarterly.accruedMinor / monthly.accruedMinor - 3)).toBeLessThan(0.0001)
+    expect(quarterly.accruedMinor).toBe(monthly.accruedMinor)
+  })
+
+  it('half the days accrue half the interest', () => {
+    const year = accruedInterest(facility(), '2026-01-01', '2026-12-31')
+    const half = accruedInterest(facility(), '2026-01-01', '2026-07-02')
+
+    expect(half.days).toBe(182)
+    expect(Math.abs(half.accruedMinor * 2 - year.accruedMinor)).toBeLessThanOrEqual(1)
   })
 
   it('a window entirely before the loan exists accrues nothing', () => {

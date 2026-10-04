@@ -8,13 +8,18 @@
 
 import { z } from 'zod'
 
+import { SCHEDULE_CALENDARS } from './calendar-day'
+
 const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'validation.date')
 
 /**
  * When an arrangement runs.
  *
- *   monthly   a named day of the month — the 31st runs on the last day of a
- *             shorter month rather than skipping it
+ *   monthly   a named day of the month, IN A NAMED CALENDAR — a shop that
+ *             keeps solar Hijri months means the 1st of Mehr, not the 1st of
+ *             October. The 31st runs on the last day of a shorter month
+ *             rather than skipping it. `calendar` defaults to Gregorian only
+ *             so rows saved before it existed keep their meaning.
  *   interval  every N days from a start date
  *   once      on one date
  */
@@ -22,6 +27,7 @@ export const automationCadenceSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('monthly'),
     dayOfMonth: z.number().int().min(1).max(31),
+    calendar: z.enum(SCHEDULE_CALENDARS).default('gregory'),
     from: isoDay,
   }),
   z.object({

@@ -64,6 +64,8 @@ export { WorkflowTemplatesContainer } from './components/ui/workflow/containers/
 export { BillingContainer } from './components/ui/billing'
 export { WalletContainer } from './components/ui/wallet/wallet-container'
 export { MarketSellerContainer } from './components/ui/market/market-seller-container'
+export { AnalysisContainer } from './components/ui/analysis/analysis-container'
+export { PromotionsContainer } from './components/ui/promotions/promotions-container'
 
 // ---------- Onboarding ----------
 export { OnboardingContainer } from './components/ui/onboarding/containers/onboarding-container'

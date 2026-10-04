@@ -45,6 +45,8 @@ import {
   Gift,
   PiggyBank,
   Store,
+  LineChart,
+  Percent,
 } from 'lucide-react'
 import {
   COMMAND_CONTRACT,
@@ -117,6 +119,8 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   billing: CreditCard,
   wallet: PiggyBank,
   'market-seller': Store,
+  analysis: LineChart,
+  promotions: Percent,
   governance: ShieldCheck,
   assistant: Sparkles,
 }
