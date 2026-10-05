@@ -130,7 +130,7 @@ export class WorkspaceService {
     // the thing actually goes wrong.
     const { error: membershipError } = await supabase
       .from('workspace_members')
-      .insert({ workspace_id: workspace.id, user_id: userId, role: 'owner' })
+      .insert({ workspace_id: workspace.id, user_id: userId, role: 'owner', has_access: true })
 
     if (membershipError) {
       // ⚠️ The workspace row already exists at this point and is NOT deleted.
@@ -162,13 +162,31 @@ export class WorkspaceService {
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as WorkspaceWithRole[]
 
-    // ✅ دو کوئری موازی
-    const [membersResult, workspacesResult] = await Promise.all([
-      supabase.from('workspace_members').select('workspace_id, role').eq('user_id', userId),
-      supabase.from('workspaces').select(WORKSPACE_COLUMNS).in('id', []), // placeholder, با members پر می‌شود
-    ])
+    // ⚠️ THE SAME RULE THE SERVER AUTHORIZES WITH.
+    //
+    // This listed every membership row; `resolveWorkspaceAccess` lets a person
+    // in only where `has_access = true` and they are not suspended. A
+    // workspace on this list and not on that one is a trap: the app keeps it
+    // as the active workspace (the server «still lists it») and every request
+    // then answers 403. That is how a sandbox whose owner row had no
+    // `has_access` looked like «all my data is gone, and there is no way
+    // out» — the way out is itself behind a request that was refused.
+    //
+    // Oldest membership first, as `listAuthorizedWorkspaces` orders them: the
+    // first workspace is the one the app falls back to, and it must be the
+    // same one on every load.
+    const { data: members, error: membersError } = await supabase
+      .from('workspace_members')
+      .select('workspace_id, role')
+      .eq('user_id', userId)
+      .eq('has_access', true)
+      .is('suspended_at', null)
+      .order('joined_at', { ascending: true })
 
-    const members = membersResult.data || []
+    // A failed read is not «you have no workspace»: the app clears the active
+    // workspace on an empty answer. Never cached.
+    if (membersError) throw new DatabaseError('Failed to fetch workspaces', membersError)
+
     if (!members || members.length === 0) {
       await memoryCache.set(cacheKey, [], 60)
       return []
@@ -176,21 +194,17 @@ export class WorkspaceService {
 
     const workspaceIds = members.map((m: any) => m.workspace_id)
 
-    // ✅ گرفتن workspaces با workspaceIds
-    const { data: workspaces } = await supabase
+    const { data: workspaces, error: workspacesError } = await supabase
       .from('workspaces')
       .select(WORKSPACE_COLUMNS)
       .in('id', workspaceIds)
 
-    const roleMap: Record<string, string> = {}
-    for (const m of members) {
-      roleMap[m.workspace_id] = m.role
-    }
+    if (workspacesError) throw new DatabaseError('Failed to fetch workspaces', workspacesError)
 
-    const result = (workspaces || []).map((w: any) => ({
-      ...w,
-      myRole: roleMap[w.id] || 'member',
-    }))
+    const byId = new Map((workspaces || []).map((w: any) => [w.id, w]))
+    const result = members
+      .filter((m: any) => byId.has(m.workspace_id))
+      .map((m: any) => ({ ...byId.get(m.workspace_id), myRole: m.role || 'member' }))
 
     await memoryCache.set(cacheKey, result, 60) // 1 minute
     return result
@@ -549,9 +563,12 @@ export class WorkspaceService {
 
     // ✅ دو کوئری موازی برای insert و update
     await Promise.all([
-      supabase
-        .from('workspace_members')
-        .insert({ workspace_id: invite.workspace_id, user_id: userId, role: invite.role }),
+      supabase.from('workspace_members').insert({
+        workspace_id: invite.workspace_id,
+        user_id: userId,
+        role: invite.role,
+        has_access: true,
+      }),
       supabase
         .from('workspace_invites')
         .update({

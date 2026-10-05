@@ -161,3 +161,22 @@ describe('every hub, with one word', () => {
     }
   })
 })
+
+describe('a comment is not page text', () => {
+  // Wrapping the tab bar in an element left its `//` comment INSIDE the JSX,
+  // where it is text: the sentence was printed above every hub.
+  it.each(['hub-tabs.tsx', 'hub-branch.tsx', 'segmented-control.tsx', 'page-hub.tsx'])(
+    '%s has no line comment directly inside an element',
+    (file) => {
+      const lines = read('packages', 'ui', 'src', 'components', 'ui', file).split('\n')
+      const stray = lines.filter((line, index) => {
+        if (!/^\s*\/\/ /.test(line)) return false
+        let before = index - 1
+        while (before >= 0 && /^\s*(\/\/.*)?$/.test(lines[before] ?? '')) before -= 1
+        const previous = (lines[before] ?? '').trim()
+        return previous.startsWith('<') && previous.endsWith('>') && !previous.endsWith('/>')
+      })
+      expect(stray).toEqual([])
+    },
+  )
+})

@@ -180,6 +180,9 @@ function refreshOnce(): Promise<string | null> {
  * has ended (HTTP 402). Stable — the backend guard in
  * `backend/src/middleware/subscription.middleware.ts` sends exactly this.
  */
+/** The header the server reads the requested workspace from (workspace.middleware.ts). */
+export const WORKSPACE_HEADER = 'x-workspace-id'
+
 export const SUBSCRIPTION_EXPIRED_CODE = 'SUBSCRIPTION_EXPIRED'
 
 // Same shape as onUnauthorized: the store registers it, so this package never
@@ -259,6 +262,20 @@ apiClient.interceptors.request.use(
     } else {
       devLog('[API Client] no token — unauthenticated request')
     }
+
+    // ⚠️ WHICH BUSINESS — on every request.
+    //
+    // The server accepts a requested workspace in `x-workspace-id` and checks
+    // it against the membership. Nothing ever sent it. With ONE workspace the
+    // server picks it; with two it refuses every request («an explicit
+    // workspace must be selected», 403). Creating a sandbox gives a person
+    // their second workspace — so pressing «محیط آزمایشی» locked the owner
+    // out of the sandbox AND of their real books, on every screen, and the
+    // notice with the way back is itself read through a refused request.
+    //
+    // A request, not an authorization: the server still decides.
+    const workspace = getActiveWorkspaceId()
+    if (workspace && !config.headers[WORKSPACE_HEADER]) config.headers[WORKSPACE_HEADER] = workspace
 
     // ✅ زبان از لایه‌ی storage خوانده می‌شود (localStorage روی وب،
     // SecureStore روی موبایل) — این فایل دیگر پلتفرم را نمی‌شناسد.

@@ -42,8 +42,8 @@ export function HubTabs<T extends string>({ label, items, active, onSelect }: Hu
 
   return (
     <div data-hub-tabs="">
-      // Centred, and only as wide as its items; it scrolls sideways on a narrow // screen instead
-      of wrapping.
+      {/* Centred, and only as wide as its items; it scrolls sideways on a narrow
+          screen instead of wrapping. */}
       <nav aria-label={label} className="flex justify-center overflow-x-auto">
         <div
           ref={bar}

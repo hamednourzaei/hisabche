@@ -69,7 +69,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
-        cacheMiddleware({ scope: 'user', ttl: 120, keyPrefix: 'workflows' }),
+        cacheMiddleware({ scope: 'member', ttl: 120, keyPrefix: 'workflows' }),
       ],
       schema: {
         querystring: toJsonSchema(workflowFiltersSchema),
@@ -98,7 +98,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
-        cacheMiddleware({ scope: 'user', ttl: 120, keyPrefix: 'workflow' }),
+        cacheMiddleware({ scope: 'member', ttl: 120, keyPrefix: 'workflow' }),
       ],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
@@ -210,7 +210,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'workflow-instances' }),
+        cacheMiddleware({ scope: 'member', ttl: 60, keyPrefix: 'workflow-instances' }),
       ],
       schema: {
         querystring: toJsonSchema(instanceFiltersSchema),
@@ -239,7 +239,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'workflow-instance' }),
+        cacheMiddleware({ scope: 'member', ttl: 60, keyPrefix: 'workflow-instance' }),
       ],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
