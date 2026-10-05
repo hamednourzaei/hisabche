@@ -345,8 +345,9 @@ export const ManufacturingView = memo(function ManufacturingView({
         // Opening a tab opens its first part.
         onSelect={(next) => onTabChange(MANUFACTURING_GROUPS[next][0])}
       />
-      <div>
+      <>
         <SegmentedControl
+          branch
           label={t('manufacturing.partsLabel', 'نما')}
           options={MANUFACTURING_GROUPS[group].map((value) => ({
             value,
@@ -355,7 +356,7 @@ export const ManufacturingView = memo(function ManufacturingView({
           value={activeTab as (typeof MANUFACTURING_GROUPS)[ManufacturingGroup][number]}
           onChange={onTabChange}
         />
-      </div>
+      </>
 
       {activeTab === 'history' ? <div className={shell}>{history}</div> : null}
       {activeTab === 'report' ? report : null}

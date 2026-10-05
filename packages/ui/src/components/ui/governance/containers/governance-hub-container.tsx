@@ -119,6 +119,7 @@ export const GovernanceHubContainer = memo(function GovernanceHubContainer() {
           onSelect={(next) => select(GOVERNANCE_GROUPS[next][0])}
         />
         <SegmentedControl
+          branch
           label={t('governance.hub_title', 'حاکمیت سازمان')}
           options={GOVERNANCE_GROUPS[governanceGroupOf(active)].map((value) => ({
             value,

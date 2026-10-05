@@ -156,6 +156,7 @@ export function AnalysisContainer() {
         {/* A group with one part needs no second switch. */}
         {ANALYSIS_GROUPS[group].length > 1 ? (
           <SegmentedControl
+            branch
             label={t('analysis.partsLabel', 'نما')}
             options={ANALYSIS_GROUPS[group].map((value) => ({
               value,

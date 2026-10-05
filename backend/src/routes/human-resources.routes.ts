@@ -419,11 +419,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
         await clearCache('payrolls:*')
         return reply.send(payroll)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to update payroll' })
+        return sendFailure(reply, fastify.log, err, 'Failed to update payroll')
       }
     },
   )
@@ -505,11 +501,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
         await clearCache('leaves:*')
         return reply.send(leave)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to update leave' })
+        return sendFailure(reply, fastify.log, err, 'Failed to update leave')
       }
     },
   )

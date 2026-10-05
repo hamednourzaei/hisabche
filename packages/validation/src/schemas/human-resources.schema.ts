@@ -229,6 +229,14 @@ export const updatePayrollSchema = payrollSchema.partial().extend({
 
 export type UpdatePayroll = z.infer<typeof updatePayrollSchema>
 
+/**
+ * A paid salary is in the books: its status, date and note no longer change.
+ * The server refuses the write and the screens offer no button — one rule.
+ */
+export function isPayrollFinal(status: string | null | undefined): boolean {
+  return status === 'paid'
+}
+
 // ============================================
 // Leave (مرخصی)
 // ============================================

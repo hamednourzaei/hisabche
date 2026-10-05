@@ -63,3 +63,26 @@ export function useCreatePayroll() {
     onSuccess: () => qc.invalidateQueries({ queryKey: payrollKeys.all }),
   })
 }
+
+/**
+ * Settle one salary: «پرداخت شد» (with the day it was paid) or «پرداخت نشد»
+ * (with the reason, which the server requires).
+ *
+ * ⚠️ The route existed with no caller: a salary recorded as a draft had no
+ * way, on any screen, to become paid.
+ */
+export function useSettlePayroll() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (values: {
+      id: string
+      status: 'paid' | 'cancelled'
+      paymentDate?: string | undefined
+      notes?: string | undefined
+    }) => {
+      const { data } = await apiClient.patch(`/payrolls/${values.id}`, values)
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: payrollKeys.all }),
+  })
+}

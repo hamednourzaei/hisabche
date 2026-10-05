@@ -28,6 +28,8 @@ import { SelectField } from '../select-field'
 import { SUPPORTED_CURRENCIES } from '@hisabche/store'
 import { PhoneInput } from '../../ui/phone-input'
 import { MoneyInput } from '../../ui/money-input'
+import { PayrollOutcome } from '../team-and-payroll/payroll-outcome'
+import { useDateFormat } from '../../../hooks/use-date-format'
 import { toIsoDay } from '@hisabche/formatting'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -418,6 +420,7 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
 
   const timeline = useMemo(() => (employee ? generateTimeline(employee, t) : []), [employee, t])
 
+  const { date: fmtDay } = useDateFormat()
   const sortedPayrolls = useMemo(
     () =>
       [...payrolls].sort((a, b) =>
@@ -697,17 +700,19 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
             {sortedPayrolls.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between rounded-xl border border-[hsl(var(--border-default))] p-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border-default))] p-3"
               >
                 <span className="flex min-w-0 flex-col text-xs text-[hsl(var(--fg-secondary))]">
-                  <span className="tabular-nums">{p.payment_date || p.period_start}</span>
-                  {p.notes && (
+                  <span className="text-sm font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+                    {Number(p.net_salary).toLocaleString('fa-AF')} {p.currency || 'AFN'}
+                  </span>
+                  <span className="tabular-nums">{fmtDay(p.payment_date || p.period_start)}</span>
+                  {p.notes && p.status !== 'cancelled' && (
                     <span className="truncate text-[hsl(var(--fg-tertiary))]">{p.notes}</span>
                   )}
                 </span>
-                <span className="text-sm font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-                  {Number(p.net_salary).toLocaleString('fa-AF')} {p.currency || 'AFN'}
-                </span>
+                {/* Paid or not, why not, and the two buttons that decide it. */}
+                <PayrollOutcome t={t} row={p} />
               </div>
             ))}
           </div>

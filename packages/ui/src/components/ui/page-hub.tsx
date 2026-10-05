@@ -84,6 +84,7 @@ export function PageHub({ label, sectionsLabel, loadingLabel, tabs }: PageHubPro
       {/* A tab with one screen needs no switch. */}
       {sections.length > 1 && section ? (
         <SegmentedControl
+          branch
           label={sectionsLabel}
           options={sections.map((candidate) => ({ value: candidate.id, label: candidate.label }))}
           value={section.id}

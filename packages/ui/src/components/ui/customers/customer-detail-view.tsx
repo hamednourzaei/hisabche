@@ -371,6 +371,7 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
             onSelect={(next) => setTab(CUSTOMER_TAB_GROUPS[next][0])}
           />
           <SegmentedControl
+            branch
             label={t('groupsLabel')}
             options={CUSTOMER_TAB_GROUPS[group].map((value) => ({
               value,

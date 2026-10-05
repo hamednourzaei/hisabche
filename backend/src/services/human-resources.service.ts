@@ -16,7 +16,8 @@ import {
   CreateLeave,
   UpdateLeave,
 } from '@hisabche/validation'
-import { DatabaseError, NotFoundError } from '../errors/database.error'
+import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
+import { ValidationError } from '../errors/validation.error'
 import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
@@ -64,8 +65,10 @@ const PAYROLL_COLUMNS = `
   overtime_hours, overtime_rate, overtime_amount, tax_amount, net_salary,
   currency, status, payment_date, notes, created_at
 `
+// `notes` is on the list: it is what the payment was for, and — on a salary
+// that was not paid — why. The list column showed «—» for every row without it.
 const PAYROLL_MINIMAL =
-  'id, employee_id, period_start, period_end, net_salary, status, payment_date, currency'
+  'id, employee_id, period_start, period_end, net_salary, status, payment_date, currency, notes'
 
 const LEAVE_COLUMNS = `
   id, employee_id, leave_type, start_date, end_date, total_days,
@@ -621,25 +624,71 @@ export class HumanResourcesService {
 
     if (error) throw new DatabaseError('Failed to create payroll', error)
 
+    // A salary recorded as already paid reaches the books too. Only the PATCH
+    // path booked, so «ثبت پرداخت» on an employee — which creates the row as
+    // `paid` — never produced a journal entry.
+    //
+    // The row is written; a booking failure must not turn that into a 500 the
+    // owner answers by recording the same salary twice.
+    if (data.status === 'paid') {
+      try {
+        await this.bookPayroll(ctx, payroll as Record<string, unknown>)
+      } catch (bookingError) {
+        console.error(
+          `[HumanResources] payroll ${String((payroll as { id?: unknown }).id)} recorded as paid but not booked:`,
+          bookingError,
+        )
+      }
+    }
+
     await this.invalidatePayrollCache(workspaceId, data.employeeId)
     return payroll
   }
 
   async updatePayrollStatus(ctx: TenancyContext, id: string, data: UpdatePayroll) {
     const { workspaceId, userId } = ctx
+    const reason = (data.notes ?? '').trim()
+    // «پرداخت نشد» without a reason is the question the owner asks three
+    // months later with nobody left to answer it.
+    if (data.status === 'cancelled' && reason === '') {
+      throw new ValidationError('PAYROLL_REASON_REQUIRED: say why this salary was not paid')
+    }
+
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.status !== undefined) updates.status = data.status
     if (data.paymentDate !== undefined) updates.payment_date = data.paymentDate
+    // A salary marked paid with no date was paid now, not «never».
+    else if (data.status === 'paid') updates.payment_date = new Date().toISOString()
+    if (data.notes !== undefined) updates.notes = reason || null
 
+    // ⚠️ The rule is in the WHERE clause, not in a read before it: two people
+    // settling the same salary at once cannot both pass. A paid salary has a
+    // journal entry behind it, so it is never moved back (`isPayrollFinal`).
     const { data: payroll, error } = await supabase
       .from('payrolls')
       .update(updates)
       .eq('id', id)
       .eq('workspace_id', workspaceId)
+      .or('status.is.null,status.neq.paid')
       .select(PAYROLL_COLUMNS)
-      .single()
+      .maybeSingle()
 
     if (error) throw new DatabaseError('Failed to update payroll', error)
+
+    if (!payroll) {
+      // Nothing matched: either it is not this business's, or it is paid.
+      const { data: existing, error: readError } = await supabase
+        .from('payrolls')
+        .select('id, status')
+        .eq('id', id)
+        .eq('workspace_id', workspaceId)
+        .maybeSingle()
+      if (readError) throw new DatabaseError('Failed to read payroll', readError)
+      if (!existing) throw new NotFoundError('Payroll')
+      throw new ConflictError(
+        'PAYROLL_ALREADY_PAID: a paid salary is in the books and cannot be changed',
+      )
+    }
 
     // ─── J4 — A PAID SALARY REACHES THE BOOKS ────────────────────────────────
     //
@@ -948,15 +997,27 @@ export class HumanResourcesService {
       }
     }
 
-    const { data: leave, error } = await supabase
-      .from('leaves')
-      .update(updates)
-      .eq('id', id)
-      .eq('workspace_id', workspaceId)
-      .select(LEAVE_COLUMNS)
-      .single()
+    // A decision is made once. The rule is in the WHERE clause, so two people
+    // deciding the same request at once cannot both pass — and an approval is
+    // never quietly turned into a rejection after the person has taken the days.
+    let write = supabase.from('leaves').update(updates).eq('id', id).eq('workspace_id', workspaceId)
+    if (data.status !== undefined) write = write.eq('status', 'pending')
+
+    const { data: leave, error } = await write.select(LEAVE_COLUMNS).maybeSingle()
 
     if (error) throw new DatabaseError('Failed to update leave', error)
+
+    if (!leave) {
+      const { data: existing, error: readError } = await supabase
+        .from('leaves')
+        .select('id')
+        .eq('id', id)
+        .eq('workspace_id', workspaceId)
+        .maybeSingle()
+      if (readError) throw new DatabaseError('Failed to read leave', readError)
+      if (!existing) throw new NotFoundError('Leave')
+      throw new ConflictError('LEAVE_ALREADY_DECIDED: this leave request has already been decided')
+    }
 
     await this.invalidateLeaveCache(workspaceId)
 

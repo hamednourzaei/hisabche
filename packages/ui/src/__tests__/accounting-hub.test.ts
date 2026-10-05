@@ -175,7 +175,7 @@ describe('the lists are the shared table', () => {
     expect(journal).toContain(
       'onRowClick={(entry) => setOpenId((current) => (current === entry.id ? null : entry.id))}',
     )
-    expect(journal).toContain('defaultOpen />')
+    expect(journal.split(/\s+/).join(' ')).toContain('defaultOpen />')
     // Not the old stack of accordions.
     expect(journal).not.toContain('{entries.map((entry) => (')
   })

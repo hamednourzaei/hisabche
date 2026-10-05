@@ -11,9 +11,21 @@
 // lives in the address; this one changes what the screen you are on shows.
 //
 // Do not draw another one. Pass `options`, `value`, `onChange`.
+//
+// `branch` — this switch is the one that belongs to the hub tab it is under:
+// it is placed in the middle of the page, right below the nearest `HubTabs`
+// above it, with a line from the selected tab to each choice. With no tab bar
+// above it the prop does nothing. ONE branch switch per tab.
+//
+// ⚠️ A choice never wraps. On a narrow screen the words and the padding get
+// smaller (`clamp`) — «فهرست‌های قیمت» on two lines makes a row of pills into
+// a ragged block.
 // ============================================
 
+import { createPortal } from 'react-dom'
+
 import { cn } from '../../lib/utils'
+import { useNearestBranchSlot } from './hub-branch'
 
 export interface SegmentedOption<T extends string> {
   value: T
@@ -27,6 +39,8 @@ export interface SegmentedControlProps<T extends string> {
   value: T
   onChange: (value: T) => void
   className?: string | undefined
+  /** The switch of the selected hub tab: drawn under the tabs, joined by lines. */
+  branch?: boolean | undefined
 }
 
 export function SegmentedControl<T extends string>({
@@ -35,13 +49,15 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   className,
+  branch = false,
 }: SegmentedControlProps<T>) {
-  return (
+  const { anchor, slot } = useNearestBranchSlot(branch)
+  const control = (
     <div
       role="radiogroup"
       aria-label={label}
       className={cn(
-        'flex w-fit gap-1 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-1',
+        'flex w-fit max-w-full gap-1 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-1',
         className,
       )}
     >
@@ -55,7 +71,7 @@ export function SegmentedControl<T extends string>({
             aria-checked={active}
             onClick={() => onChange(option.value)}
             className={cn(
-              'rounded-lg px-4 py-1.5 text-sm font-medium transition-colors motion-reduce:transition-none',
+              'whitespace-nowrap rounded-lg px-[clamp(0.5rem,2.6vw,1rem)] py-1.5 text-[clamp(0.6875rem,3vw,0.875rem)] font-medium transition-colors motion-reduce:transition-none',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
               active
                 ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]'
@@ -67,5 +83,17 @@ export function SegmentedControl<T extends string>({
         )
       })}
     </div>
+  )
+
+  // Not the tab's own switch, or no tab bar above it: where it was written.
+  if (slot === undefined) return control
+  // The anchor marks where it was written; the switch itself is drawn under
+  // the tabs. Before the slot is found only the anchor renders — on the
+  // server too.
+  return (
+    <>
+      <span ref={anchor} hidden data-branch-anchor="" />
+      {slot ? createPortal(control, slot) : null}
+    </>
   )
 }

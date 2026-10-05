@@ -80,7 +80,8 @@ describe('the comparison is gone', () => {
     // …nor a page of its own: its address opens the section, on every platform.
     // (/sync-center stays — on Windows it is the device's own outbox screen.)
     const config = read('apps', 'web', 'next.config.js')
-    const router = read('packages', 'app-shell', 'src', 'app', 'app.tsx')
+    // Flattened: the formatter wraps a long route over several lines.
+    const router = read('packages', 'app-shell', 'src', 'app', 'app.tsx').split(/\s+/).join(' ')
     for (const path of folded.filter((item) => item !== '/sync-center')) {
       const name = path.slice(1)
       expect(

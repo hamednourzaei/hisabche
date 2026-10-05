@@ -211,6 +211,7 @@ export function PromotionsContainer() {
       </header>
 
       <SegmentedControl
+        branch
         label={t('sectionsLabel')}
         value={section}
         onChange={setSection}

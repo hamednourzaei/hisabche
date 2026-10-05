@@ -14,11 +14,12 @@
 // Use both for any new hub. Do not draw another tab bar.
 // ============================================
 
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
 
 import { cn } from '../../lib/utils'
+import { HubBranchStrip } from './hub-branch'
 
 export interface HubTabItem<T extends string> {
   id: T
@@ -35,43 +36,50 @@ export interface HubTabsProps<T extends string> {
 }
 
 export function HubTabs<T extends string>({ label, items, active, onSelect }: HubTabsProps<T>) {
+  const bar = useRef<HTMLDivElement>(null)
   // One tab is not a choice.
   if (items.length < 2) return null
 
   return (
-    // Centred, and only as wide as its items; it scrolls sideways on a narrow
-    // screen instead of wrapping.
-    <nav aria-label={label} className="flex justify-center overflow-x-auto">
-      <div
-        role="tablist"
-        className="flex w-fit gap-1 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.5)] p-1"
-      >
-        {items.map((item) => {
-          const Icon = item.icon
-          const selected = item.id === active
-          return (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              onClick={() => onSelect(item.id)}
-              className={cn(
-                'inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] px-4 text-sm',
-                'transition-colors motion-reduce:transition-none',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.5)]',
-                selected
-                  ? 'bg-[hsl(var(--surface-elevated))] font-medium text-[hsl(var(--fg-primary))] shadow-sm'
-                  : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
-              )}
-            >
-              {Icon ? <Icon className="size-4" aria-hidden="true" /> : null}
-              {item.label}
-            </button>
-          )
-        })}
-      </div>
-    </nav>
+    <div data-hub-tabs="">
+      // Centred, and only as wide as its items; it scrolls sideways on a narrow // screen instead
+      of wrapping.
+      <nav aria-label={label} className="flex justify-center overflow-x-auto">
+        <div
+          ref={bar}
+          role="tablist"
+          className="flex w-fit gap-1 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.5)] p-1"
+        >
+          {items.map((item) => {
+            const Icon = item.icon
+            const selected = item.id === active
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => onSelect(item.id)}
+                className={cn(
+                  'inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] px-[clamp(0.625rem,3vw,1rem)] text-[clamp(0.75rem,3.2vw,0.875rem)]',
+                  'transition-colors motion-reduce:transition-none',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.5)]',
+                  selected
+                    ? 'bg-[hsl(var(--surface-elevated))] font-medium text-[hsl(var(--fg-primary))] shadow-sm'
+                    : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
+                )}
+              >
+                {Icon ? <Icon className="size-4 shrink-0" aria-hidden="true" /> : null}
+                {item.label}
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+      {/* The selected tab's own switch is drawn here, joined to it by lines
+          (`<SegmentedControl branch />`). Nothing is drawn when there is none. */}
+      <HubBranchStrip tabs={bar} />
+    </div>
   )
 }
 

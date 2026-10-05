@@ -177,6 +177,7 @@ function WarehouseHub() {
         ) : (
           <>
             <SegmentedControl
+              branch
               label={t('warehouseHub.sectionsLabel')}
               options={STOCK_SECTIONS.map((value) => ({
                 value,

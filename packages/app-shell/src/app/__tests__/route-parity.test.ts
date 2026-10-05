@@ -42,7 +42,10 @@ const canonical = (route: string): string =>
     .replace(/\[[^\]]+\]/g, ':param')
     .replace(/:[A-Za-z_]+/g, ':param')
 
-const router = readFileSync(routerFile, 'utf8')
+// One line per route however the formatter wrapped it: a long `<Navigate>` is
+// broken over four lines, and a guard matching the one-line form went red on
+// routes that were there.
+const router = readFileSync(routerFile, 'utf8').split(/\s+/).join(' ').split(', }').join(' }')
 const shellRoutes = new Set(
   [...router.matchAll(/path:\s*'([^']+)'/g)].map((match) => canonical(match[1] ?? '')),
 )

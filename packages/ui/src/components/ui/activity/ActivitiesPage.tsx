@@ -158,6 +158,7 @@ export function ActivitiesPage() {
           {/* ─── Filter tabs (no search — removed at the owner's request) ─── */}
           <div className="space-y-2 md:space-y-3 lg:space-y-4 pb-3 md:pb-4 lg:pb-5 pt-3 md:pt-4 lg:pt-5">
             <SegmentedControl
+              branch
               label={t('activity.filter.all')}
               options={ACTIVITY_FILTERS.map((value) => {
                 const count = filterCounts?.[value]

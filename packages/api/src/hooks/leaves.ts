@@ -74,3 +74,24 @@ export function useCreateLeave() {
     },
   })
 }
+
+/**
+ * Approve or reject a leave request.
+ *
+ * ⚠️ Every leave is created `pending` and `PATCH /api/leaves/:id` had no
+ * caller, so every leave stayed «در انتظار» for ever.
+ */
+export function useDecideLeave() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: { id: string; status: 'approved' | 'rejected' }): Promise<Leave> => {
+      const { data } = await apiClient.patch(`/leaves/${input.id}`, input)
+      return data
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: leaveKeys.all })
+      void qc.invalidateQueries({ queryKey: ['employees'] })
+    },
+  })
+}

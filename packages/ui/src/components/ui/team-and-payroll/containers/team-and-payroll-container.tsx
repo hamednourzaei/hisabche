@@ -150,9 +150,10 @@ function TeamHub() {
         onSelect={selectTab}
       />
 
-      <div className="mx-auto max-w-5xl">
+      <>
         {tab === 'pay' ? (
           <SegmentedControl
+            branch
             label={t('teamHub.sectionsLabel')}
             options={paySections.map((value) => ({
               value,
@@ -163,6 +164,7 @@ function TeamHub() {
           />
         ) : (
           <SegmentedControl
+            branch
             label={t('teamHub.sectionsLabel')}
             options={TEAM_SECTIONS.map((value) => ({
               value,
@@ -172,7 +174,7 @@ function TeamHub() {
             onChange={selectTeam}
           />
         )}
-      </div>
+      </>
 
       <div role="tabpanel">
         {tab === 'pay' && pay === 'timesheets' ? (

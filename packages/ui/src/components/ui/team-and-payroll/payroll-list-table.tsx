@@ -18,7 +18,7 @@ import { memo, useMemo, useState } from 'react'
 import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 import { EmptyState } from '../empty-state'
 import { useDateFormat } from '../../../hooks/use-date-format'
-import { cn } from '../../../lib/utils'
+import { PayrollOutcome } from './payroll-outcome'
 
 export interface PayrollRow {
   id: string
@@ -31,13 +31,6 @@ export interface PayrollRow {
   currency?: string | null
   status?: string | null
   notes?: string | null
-}
-
-const STATUS_TONE: Record<string, string> = {
-  paid: 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]',
-  approved: 'bg-[hsl(var(--color-info)/0.12)] text-[hsl(var(--color-info))]',
-  draft: 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
-  cancelled: 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]',
 }
 
 export function payrollEmployeeName(row: PayrollRow): string {
@@ -121,16 +114,10 @@ export const PayrollListTable = memo(function PayrollListTable({
         labelKey: 'team.status',
         labelFallback: 'وضعیت',
         sortValue: (row) => row.status ?? '',
-        render: (row) => (
-          <span
-            className={cn(
-              'rounded-full px-2 py-0.5 text-xs font-medium',
-              STATUS_TONE[row.status ?? ''] ?? STATUS_TONE.draft,
-            )}
-          >
-            {t(`hr.payroll_${row.status ?? 'draft'}`, row.status ?? '—')}
-          </span>
-        ),
+        align: 'end',
+        locked: true,
+        // Paid or not, why not, and the two buttons that decide it.
+        render: (row) => <PayrollOutcome t={t} row={row} />,
       },
     ],
     [fmtDay, t],
@@ -152,7 +139,7 @@ export const PayrollListTable = memo(function PayrollListTable({
         : {})}
       searchValue={search}
       onSearchChange={setSearch}
-      minWidthClass="min-w-[420px]"
+      minWidthClass="min-w-[560px]"
       emptyState={
         <EmptyState
           icon="invoice"

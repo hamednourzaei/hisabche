@@ -398,6 +398,7 @@ export {
   type Payroll,
   type CreatePayroll,
   type UpdatePayroll,
+  isPayrollFinal,
   type Leave,
   type CreateLeave,
   type UpdateLeave,

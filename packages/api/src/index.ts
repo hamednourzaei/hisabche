@@ -271,7 +271,13 @@ export {
 } from './hooks/workspace'
 
 // ─── Payroll ──────────────────────────────────────────────
-export { usePayrolls, usePayrollSummary, useCreatePayroll, payrollKeys } from './hooks/payroll'
+export {
+  usePayrolls,
+  usePayrollSummary,
+  useCreatePayroll,
+  useSettlePayroll,
+  payrollKeys,
+} from './hooks/payroll'
 
 // ─── Referrals ────────────────────────────────────────────
 export {
@@ -286,6 +292,7 @@ export {
 export {
   useLeaves,
   useCreateLeave,
+  useDecideLeave,
   leaveKeys,
   type Leave,
   type LeaveType,

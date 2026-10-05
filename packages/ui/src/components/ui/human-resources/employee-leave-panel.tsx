@@ -10,8 +10,15 @@
 // ============================================
 
 import { memo, useCallback, useMemo, useState } from 'react'
-import { CalendarDays, Plus, X } from 'lucide-react'
-import { useCreateLeave, useLeaves, type LeaveType } from '@hisabche/api'
+import { CalendarDays, CircleCheck, CircleX, Plus, X } from 'lucide-react'
+import {
+  apiErrorMessage,
+  useCreateLeave,
+  useDecideLeave,
+  useLeaves,
+  type Leave,
+  type LeaveType,
+} from '@hisabche/api'
 
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { Switch } from '../switch'
@@ -33,6 +40,89 @@ const STATUS_TONE: Record<string, string> = {
   approved: 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]',
   rejected: 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]',
   cancelled: 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
+}
+
+const DECIDE_BUTTON =
+  'inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] border transition-colors disabled:opacity-50'
+
+/**
+ * The state of one leave request and, while it is still waiting, the two
+ * buttons that decide it. Once decided the buttons leave: a recorded decision
+ * is not a toggle, and the server refuses a second one.
+ */
+function LeaveDecision({
+  t,
+  leave,
+}: {
+  t: (key: string, fallback?: string) => string
+  leave: Leave
+}) {
+  const decide = useDecideLeave()
+  const [failure, setFailure] = useState<string | null>(null)
+
+  const run = async (status: 'approved' | 'rejected') => {
+    setFailure(null)
+    try {
+      await decide.mutateAsync({ id: leave.id, status })
+    } catch (err) {
+      const message = apiErrorMessage(err, t('hr.leaveDecideError', 'ثبت نشد. دوباره تلاش کنید.'))
+      setFailure(
+        message.startsWith('LEAVE_ALREADY_DECIDED')
+          ? t('hr.leaveAlreadyDecided', 'درباره‌ی این مرخصی قبلاً تصمیم گرفته شده است.')
+          : message,
+      )
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1" data-leave-decision={leave.status}>
+      <div className="flex items-center gap-2">
+        <span
+          className={cn(
+            'rounded-full px-2 py-0.5 text-xs font-medium',
+            STATUS_TONE[leave.status] ?? STATUS_TONE.pending,
+          )}
+        >
+          {t(`hr.leaveStatus_${leave.status}`, leave.status)}
+        </span>
+        {leave.status === 'pending' ? (
+          <>
+            <button
+              type="button"
+              className={cn(
+                DECIDE_BUTTON,
+                'border-[hsl(var(--color-success)/0.4)] text-[hsl(var(--color-success))] hover:bg-[hsl(var(--color-success)/0.12)]',
+              )}
+              aria-label={t('hr.leaveApprove', 'تأیید مرخصی')}
+              title={t('hr.leaveApprove', 'تأیید مرخصی')}
+              disabled={decide.isPending}
+              onClick={() => void run('approved')}
+            >
+              <CircleCheck className="size-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={cn(
+                DECIDE_BUTTON,
+                'border-[hsl(var(--color-destructive)/0.4)] text-[hsl(var(--color-destructive))] hover:bg-[hsl(var(--color-destructive)/0.12)]',
+              )}
+              aria-label={t('hr.leaveReject', 'رد مرخصی')}
+              title={t('hr.leaveReject', 'رد مرخصی')}
+              disabled={decide.isPending}
+              onClick={() => void run('rejected')}
+            >
+              <CircleX className="size-4" aria-hidden="true" />
+            </button>
+          </>
+        ) : null}
+      </div>
+      {failure ? (
+        <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+          {failure}
+        </p>
+      ) : null}
+    </div>
+  )
 }
 
 const FIELD =
@@ -334,14 +424,7 @@ export const EmployeeLeavePanel = memo(function EmployeeLeavePanel({
                   <p className="truncate text-xs text-[hsl(var(--fg-secondary))]">{leave.reason}</p>
                 )}
               </div>
-              <span
-                className={cn(
-                  'rounded-full px-2 py-0.5 text-xs font-medium',
-                  STATUS_TONE[leave.status] ?? STATUS_TONE.pending,
-                )}
-              >
-                {t(`hr.leaveStatus_${leave.status}`, leave.status)}
-              </span>
+              <LeaveDecision t={t} leave={leave} />
             </div>
           ))}
         </div>

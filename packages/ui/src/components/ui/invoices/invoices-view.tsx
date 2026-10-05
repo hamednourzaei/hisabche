@@ -200,6 +200,7 @@ const TypeFilter = memo(function TypeFilter({
       options={options.map((option) => ({ value: option.key, label: option.label }))}
       value={value}
       onChange={onChange}
+      branch
     />
   )
 })
@@ -601,8 +602,9 @@ export const InvoicesView = memo(function InvoicesView({
       <InvoicesHeader t={t} onNewInvoice={onNewInvoice} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Drawn under the hub's tabs (`branch`), not in this row. */}
         <TypeFilter t={t} value={typeFilter} onChange={onTypeFilterChange} />
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="ms-auto flex flex-wrap items-center gap-2">
           {toolbarExtra}
           <ExportButton t={t} invoices={statsInvoices} />
         </div>

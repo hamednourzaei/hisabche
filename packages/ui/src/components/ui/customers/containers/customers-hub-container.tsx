@@ -89,6 +89,7 @@ function CustomersHub() {
         {active === 'outreach' ? (
           <>
             <SegmentedControl
+              branch
               label={t('customersHub.sectionsLabel')}
               options={sections.map((value) => ({
                 value,
