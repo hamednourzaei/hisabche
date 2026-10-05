@@ -55,6 +55,8 @@ export interface InvoicesQueryParams {
   search?: string
   type?: 'sale' | 'purchase'
   status?: 'pending' | 'completed' | 'cancelled' | 'partial'
+  branchId?: string
+  warehouseId?: string
   customerId?: string | undefined
   supplierId?: string
   currency?: 'AFN' | 'USD' | 'PKR' | 'IRR'

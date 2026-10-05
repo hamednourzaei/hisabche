@@ -1,5 +1,7 @@
 'use client'
 
+import { SegmentedControl } from '../segmented-control'
+import { INVOICE_STATUS_FILTERS } from '../../../lib/invoices/invoices-format'
 import { memo, useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { cn } from '../../../lib/utils'
 import { FOCUS_RING } from '../focus-ring'
@@ -19,6 +21,7 @@ import type { InvoiceListSummary } from '@hisabche/api'
 import {
   BulkActionBar,
   DataTable,
+  TableFilterSelect,
   useBulkAction,
   useRowSelection,
   type TableColumn,
@@ -64,6 +67,24 @@ interface InvoicesViewProps {
   /** Filters on the canonical `invoice.type`, never on display text. */
   typeFilter?: InvoiceTypeFilter | undefined
   onTypeFilterChange?: ((value: InvoiceTypeFilter) => void) | undefined
+  /** `'all'`, or one of `INVOICE_STATUS_FILTERS`. Applies inside whichever type is open. */
+  statusFilter?: string | undefined
+  onStatusFilterChange?: ((value: string) => void) | undefined
+  /**
+   * The places an invoice can belong to. A filter is offered only for a list
+   * that has something to choose from — a business with no branches sees none.
+   */
+  branches?: readonly InvoicePlaceOption[] | undefined
+  branchFilter?: string | undefined
+  onBranchFilterChange?: ((value: string) => void) | undefined
+  warehouses?: readonly InvoicePlaceOption[] | undefined
+  warehouseFilter?: string | undefined
+  onWarehouseFilterChange?: ((value: string) => void) | undefined
+}
+
+export interface InvoicePlaceOption {
+  id: string
+  name: string
 }
 
 export type InvoiceTypeFilter = 'all' | 'sale' | 'purchase'
@@ -174,33 +195,12 @@ const TypeFilter = memo(function TypeFilter({
   ]
 
   return (
-    <div
-      role="radiogroup"
-      aria-label={t('invoices.type', 'نوع')}
-      className="flex w-fit gap-1 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-1"
-    >
-      {options.map((option) => {
-        const active = value === option.key
-        return (
-          <button
-            key={option.key}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(option.key)}
-            className={cn(
-              'rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
-              active
-                ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]'
-                : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
-            )}
-          >
-            {option.label}
-          </button>
-        )
-      })}
-    </div>
+    <SegmentedControl
+      label={t('invoices.type', 'نوع')}
+      options={options.map((option) => ({ value: option.key, label: option.label }))}
+      value={value}
+      onChange={onChange}
+    />
   )
 })
 TypeFilter.displayName = 'TypeFilter'
@@ -547,6 +547,14 @@ export const InvoicesView = memo(function InvoicesView({
   statusVariant,
   typeFilter = 'all',
   onTypeFilterChange,
+  statusFilter = 'all',
+  onStatusFilterChange,
+  branches = [],
+  branchFilter = 'all',
+  onBranchFilterChange,
+  warehouses = [],
+  warehouseFilter = 'all',
+  onWarehouseFilterChange,
 }: InvoicesViewProps) {
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(total / filters.limit)),
@@ -611,6 +619,52 @@ export const InvoicesView = memo(function InvoicesView({
         onRowClick={(inv) => onNavigateInvoice(inv.id)}
         searchValue={searchValue}
         onSearchChange={onSearchChange}
+        // The status filter sits in the table's own toolbar, beside search, saved
+        // views and column settings: it changes what this table holds.
+        actions={
+          onStatusFilterChange ? (
+            <>
+              <TableFilterSelect
+                label={t('invoices.status', 'وضعیت')}
+                value={statusFilter}
+                onChange={onStatusFilterChange}
+                options={[
+                  { value: 'all', label: t('invoices.filterAll', 'همه') },
+                  ...INVOICE_STATUS_FILTERS.map((status) => ({
+                    value: status,
+                    label: t(`invoices.${status}`, status),
+                  })),
+                ]}
+              />
+              {/* By branch and by warehouse — offered only when there is one to choose. */}
+              {onBranchFilterChange && branches.length > 0 ? (
+                <TableFilterSelect
+                  label={t('invoices.branch', 'شعبه')}
+                  value={branchFilter}
+                  onChange={onBranchFilterChange}
+                  options={[
+                    { value: 'all', label: t('invoices.allBranches', 'همه‌ی شعبه‌ها') },
+                    ...branches.map((branch) => ({ value: branch.id, label: branch.name })),
+                  ]}
+                />
+              ) : null}
+              {onWarehouseFilterChange && warehouses.length > 0 ? (
+                <TableFilterSelect
+                  label={t('invoices.warehouse', 'انبار')}
+                  value={warehouseFilter}
+                  onChange={onWarehouseFilterChange}
+                  options={[
+                    { value: 'all', label: t('invoices.allWarehouses', 'همه‌ی انبارها') },
+                    ...warehouses.map((warehouse) => ({
+                      value: warehouse.id,
+                      label: warehouse.name,
+                    })),
+                  ]}
+                />
+              ) : null}
+            </>
+          ) : undefined
+        }
         minWidthClass="min-w-[420px] sm:min-w-[720px]"
         selectedIds={selection.selectedIds}
         onToggleRow={selection.toggleRow}

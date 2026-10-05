@@ -2,8 +2,8 @@
 // ⚠️ EVERY PAGE THE PRODUCT HAS, ON EVERY MACHINE IT RUNS ON.
 //
 // One shared UI only means one product if that UI routes to every page. An
-// audit found four that web had and nothing else did — `/assistant`,
-// `/operations`, `/stock-count`, `/domain/:id` — so Windows and Android were
+// audit found three that web had and nothing else did — `/assistant`,
+// `/operations`, `/stock-count` — so Windows and Android were
 // quietly missing features their users had been told about.
 //
 // Nothing else catches it: each app compiles, each test suite is green, and a
@@ -60,7 +60,7 @@ describe('the shared UI routes to every page the product has', () => {
   it('⚠️ covers the pages the audit found missing, by name', () => {
     // Named so a future refactor that drops one of them fails loudly rather
     // than quietly shrinking the product on two platforms.
-    for (const route of ['/assistant', '/operations', '/stock-count', '/domain/:param']) {
+    for (const route of ['/assistant', '/operations', '/stock-count']) {
       expect(shellRoutes.has(route)).toBe(true)
     }
   })
@@ -74,22 +74,47 @@ describe('the shared UI routes to every page the product has', () => {
   })
 })
 
-describe('a route that names a domain hands it to the screen', () => {
-  // `/accounting-workspace` and its siblings have no `:domain` segment. They
-  // rendered the page that reads one, got `''`, and the container draws nothing
-  // for an unknown domain — four blank workspaces on Windows and Android while
-  // web, which passes each page its domain, worked.
-  const domains = ['accounting', 'sales', 'inventory', 'people']
+describe('an address that was only a redirect still leads somewhere — on every platform', () => {
+  // Every page that became a tab or a section of another page keeps its
+  // address: the web redirects it in next.config.js and the shell has a route
+  // for each. The two lists must be the same list: an address that redirects
+  // on the web and 404s on Windows is the bug this file exists for.
+  const config = readFileSync(join(repoRoot, 'apps', 'web', 'next.config.js'), 'utf8')
+  const block = config.slice(config.indexOf('const moved = ['), config.indexOf('return moved.map('))
+  const moved = [...block.matchAll(/\['([\w\-/:]+)', '([\w\-/:?=&]+)'\],/g)].map(
+    (match) => [match[1] as string, match[2] as string] as const,
+  )
 
-  it.each(domains)('⚠️ /%s-workspace passes its own domain', (domain) => {
-    const route = new RegExp(
-      `path:\\s*'${domain}-workspace',\\s*element:\\s*<DomainWorkspacePage\\s+domain="${domain}"`,
-    )
-    expect(router).toMatch(route)
+  it('the web declares them, and this test can see them', () => {
+    expect(moved).toHaveLength(25)
+    expect(moved).toContainEqual(['product-list', 'warehouse?tab=products'])
   })
 
-  it('the list above is every workspace route the shell has', () => {
-    const inRouter = [...router.matchAll(/path:\s*'(\w+)-workspace'/g)].map((m) => m[1]).sort()
-    expect(inRouter).toEqual([...domains].sort())
+  it.each(moved)('/%s goes to /%s in the shell too', (from, to) => {
+    // The employee page carries its id through a small component; every
+    // other address is a plain <Navigate>.
+    if (from === 'human-resources/:id') {
+      expect(router).toContain(
+        "{ path: 'human-resources/:id', element: <LegacyEmployeeRedirect /> }",
+      )
+      return
+    }
+    expect(router).toContain(`{ path: '${from}', element: <Navigate to="/${to}" replace /> }`)
+  })
+
+  it('none of them is a page any more', () => {
+    for (const [from] of moved) {
+      const first = '/' + from.split('/')[0]
+      expect(webRoutes.some((route) => route === first || route.startsWith(first + '/'))).toBe(
+        false,
+      )
+    }
+  })
+
+  it('every one of them opens a page that exists', () => {
+    for (const [, to] of moved) {
+      const target = '/' + (to.split('?')[0] ?? '').replace(/:[a-z]+/g, ':param')
+      expect(webRoutes).toContain(target)
+    }
   })
 })

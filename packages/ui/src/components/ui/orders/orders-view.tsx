@@ -20,8 +20,7 @@ import { ShoppingBag } from 'lucide-react'
 
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { formatSelectedMoney } from '../../../lib/money-display'
-import { DataTable, type TableColumn } from '../data-table'
-import { SegmentedFilter } from '../segmented-filter'
+import { DataTable, TableFilterSelect, type TableColumn } from '../data-table'
 import { CustomerPicker } from '../customer-picker'
 import {
   ActionButton,
@@ -165,16 +164,6 @@ export const OrdersView = memo(function OrdersView(props: OrdersViewProps) {
     <CapabilityPage>
       <CapabilityHeader title={t('orders.title')} description={t('orders.description')} />
 
-      <SegmentedFilter
-        label={t('orders.filterLabel')}
-        value={props.status}
-        onChange={props.onStatusChange}
-        options={FILTERS.map((value) => ({
-          value,
-          label: value === 'all' ? t('orders.filterAll') : t(`orders.status.${value}`),
-        }))}
-      />
-
       <ListSection
         title={t('orders.listTitle')}
         description={`${t('orders.count')}: ${props.total}`}
@@ -195,6 +184,22 @@ export const OrdersView = memo(function OrdersView(props: OrdersViewProps) {
           <>
             <DataTable
               tableId="sales-orders"
+              // The status filter sits in the table's own toolbar, as on /invoices.
+              actions={
+                <TableFilterSelect
+                  label={t('orders.filterLabel')}
+                  value={props.status}
+                  onChange={(next) => {
+                    const known = FILTERS.find((value) => value === next)
+                    if (known) props.onStatusChange(known)
+                  }}
+                  allValue="all"
+                  options={FILTERS.map((value) => ({
+                    value,
+                    label: value === 'all' ? t('orders.filterAll') : t(`orders.status.${value}`),
+                  }))}
+                />
+              }
               t={t}
               rows={props.rows}
               columns={columns}

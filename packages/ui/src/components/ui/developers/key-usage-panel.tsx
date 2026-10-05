@@ -12,6 +12,7 @@
 // ============================================
 
 import { memo } from 'react'
+import { SearchableTable } from '../data-table'
 import type { ApiKeyUsage } from '@hisabche/api'
 
 import { Badge } from '../badge'
@@ -56,36 +57,71 @@ export const KeyUsagePanel = memo(function KeyUsagePanel({
       {usage.daily.length === 0 ? (
         <p className="text-[hsl(var(--fg-secondary))]">{t('developer.usageEmpty')}</p>
       ) : (
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="text-[hsl(var(--fg-tertiary))]">
-              <th className="text-start font-normal">{t('developer.usageDay')}</th>
-              <th className="text-end font-normal">{t('developer.usageRequests')}</th>
-              <th className="text-end font-normal">{t('developer.usageClientErrors')}</th>
-              <th className="text-end font-normal">{t('developer.usageServerErrors')}</th>
-              <th className="text-end font-normal">{t('developer.usageAvgMs')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usage.daily.map((d) => (
-              <tr key={d.day}>
-                <td>{formatDate(d.day)}</td>
-                <td className="text-end tabular-nums" dir="ltr">
-                  {d.requests}
-                </td>
-                <td className="text-end tabular-nums" dir="ltr">
-                  {d.client_errors}
-                </td>
-                <td className="text-end tabular-nums" dir="ltr">
-                  {d.server_errors}
-                </td>
-                <td className="text-end tabular-nums" dir="ltr">
-                  {d.avg_ms ?? '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <SearchableTable
+          tableId="developer-key-usage"
+          rows={usage.daily}
+          rowKey={(day) => day.day}
+          words={(day) => [formatDate(day.day)]}
+          empty={t('developer.usageEmpty')}
+          columns={[
+            {
+              id: 'day',
+              labelKey: 'developer.usageDay',
+              labelFallback: t('developer.usageDay'),
+              locked: true,
+              sortValue: (day) => day.day,
+              render: (day) => formatDate(day.day),
+            },
+            {
+              id: 'requests',
+              labelKey: 'developer.usageRequests',
+              labelFallback: t('developer.usageRequests'),
+              align: 'end',
+              sortValue: (day) => day.requests,
+              render: (day) => (
+                <span className="tabular-nums" dir="ltr">
+                  {day.requests}
+                </span>
+              ),
+            },
+            {
+              id: 'clientErrors',
+              labelKey: 'developer.usageClientErrors',
+              labelFallback: t('developer.usageClientErrors'),
+              align: 'end',
+              sortValue: (day) => day.client_errors,
+              render: (day) => (
+                <span className="tabular-nums" dir="ltr">
+                  {day.client_errors}
+                </span>
+              ),
+            },
+            {
+              id: 'serverErrors',
+              labelKey: 'developer.usageServerErrors',
+              labelFallback: t('developer.usageServerErrors'),
+              align: 'end',
+              sortValue: (day) => day.server_errors,
+              render: (day) => (
+                <span className="tabular-nums" dir="ltr">
+                  {day.server_errors}
+                </span>
+              ),
+            },
+            {
+              id: 'avgMs',
+              labelKey: 'developer.usageAvgMs',
+              labelFallback: t('developer.usageAvgMs'),
+              align: 'end',
+              sortValue: (day) => day.avg_ms ?? null,
+              render: (day) => (
+                <span className="tabular-nums" dir="ltr">
+                  {day.avg_ms ?? '—'}
+                </span>
+              ),
+            },
+          ]}
+        />
       )}
 
       {usage.recent.length > 0 && (

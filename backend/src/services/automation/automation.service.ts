@@ -54,9 +54,12 @@ import { AccountingService } from '../accounting'
 import { runMonthEnd } from '../accounting/month-end.service'
 import { holds } from '../authorization/authorization.domain'
 import { requireWorkspace, type TenancyContext } from '../tenancy.service'
+import { resolveTimeZone } from '../../utils/local-day'
 import {
   afterFailure,
+  evaluationDay,
   isDueOn,
+  isTimed,
   shouldRun,
   type ActionType,
   type Automation,
@@ -344,9 +347,22 @@ export class AutomationService {
    */
   async createMonthEnd(
     ctx: TenancyContext,
-    input: { calendar: ScheduleCalendar; fiscalYearEndMonth: number; lock: boolean },
+    input: {
+      calendar: ScheduleCalendar
+      fiscalYearEndMonth: number
+      lock: boolean
+      /** When it runs: the day of the month, from which day on, and at what time. */
+      dayOfMonth?: number | undefined
+      from?: string | undefined
+      atMinute?: number | undefined
+      timeZone?: string | undefined
+    },
   ): Promise<AutomationView> {
     const today = isoDay(new Date())
+    const tomorrow = addIsoDays(today, 1)
+    // Never a start in the past: a past start would close months on creation.
+    const from =
+      input.from && input.from.slice(0, 10) > tomorrow ? input.from.slice(0, 10) : tomorrow
 
     const { data: existing, error: existingError } = await supabase
       .from('automations')
@@ -366,9 +382,12 @@ export class AutomationService {
         action_type: 'month_end',
         cadence: {
           kind: 'monthly',
-          dayOfMonth: 1,
+          dayOfMonth: input.dayOfMonth ?? 1,
           calendar: input.calendar,
-          from: addIsoDays(today, 1),
+          from,
+          ...(input.atMinute !== undefined && input.timeZone
+            ? { atMinute: input.atMinute, timeZone: input.timeZone }
+            : {}),
         },
         conditions: null,
         payload: { fiscalYearEndMonth: input.fiscalYearEndMonth, lock: input.lock },
@@ -401,7 +420,15 @@ export class AutomationService {
     const today = isoDay(new Date())
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (patch.name !== undefined) updates.name = patch.name
-    if (patch.cadence !== undefined) updates.cadence = patch.cadence
+    if (patch.cadence !== undefined) {
+      const cadence = patch.cadence
+      // A time of day needs a zone the server knows; an unknown one becomes the
+      // business default rather than a time nobody can name.
+      updates.cadence =
+        cadence.kind === 'monthly' && cadence.atMinute !== undefined
+          ? { ...cadence, timeZone: resolveTimeZone(cadence.timeZone) }
+          : cadence
+    }
     if (patch.enabled !== undefined) {
       updates.enabled = patch.enabled
       if (patch.enabled) {
@@ -514,7 +541,15 @@ export class AutomationService {
    * Evaluate every live arrangement for every day since it was last evaluated.
    * One arrangement failing never stops the others.
    */
-  async runDue(today: string = isoDay(new Date())): Promise<{
+  /**
+   * One pass. `timed: false` (the daily pass) takes every automation with no
+   * time of day; `timed: true` (every five minutes) takes only those that name
+   * one. The two sets are disjoint, so no automation is ever in both passes.
+   */
+  async runDue(
+    today: string = isoDay(new Date()),
+    options: { timed?: boolean; now?: Date } = {},
+  ): Promise<{
     evaluated: number
     ran: number
     skipped: number
@@ -538,9 +573,13 @@ export class AutomationService {
 
       const rows = (data ?? []) as unknown as AutomationRow[]
       for (const row of rows) {
+        const cadence = toAutomation(row).cadence
+        if (isTimed(cadence) !== (options.timed ?? false)) continue
+        // A timed automation has its own «today»: not before its minute.
+        const day = evaluationDay(cadence, today, options.now ?? new Date())
         totals.evaluated += 1
         try {
-          for (const slot of this.slotsToEvaluate(row, today)) {
+          for (const slot of this.slotsToEvaluate(row, day)) {
             const result = await this.executeSlot(row, slot.day, { tooLate: slot.tooLate })
             if (result.outcome === 'ran') totals.ran += 1
             else if (result.outcome === 'skipped') totals.skipped += 1
@@ -550,11 +589,14 @@ export class AutomationService {
               if (result.disabled) break
             }
           }
-          await supabase
-            .from('automations')
-            .update({ last_checked_on: today })
-            .eq('id', row.id)
-            .eq('workspace_id', row.workspace_id)
+          // Never backwards: a timed day can be the one before the UTC day.
+          if (!row.last_checked_on || day > row.last_checked_on) {
+            await supabase
+              .from('automations')
+              .update({ last_checked_on: day })
+              .eq('id', row.id)
+              .eq('workspace_id', row.workspace_id)
+          }
         } catch (err) {
           totals.failed += 1
           console.error(`[automation] ${row.workspace_id}/${row.id} could not be evaluated:`, err)
@@ -720,7 +762,9 @@ export class AutomationService {
       throw new ValidationError('AUTOMATION_FISCAL_YEAR_END_MISSING')
     }
 
-    const period = monthBounds(addIsoDays(slot, -1), calendar)
+    // The month BEFORE the one the slot falls in — not «the month of the day
+    // before the slot», which on any day but the 1st is the month still open.
+    const period = monthBounds(addIsoDays(monthBounds(slot, calendar).from, -1), calendar)
     const summary = await runMonthEnd(
       actor,
       {

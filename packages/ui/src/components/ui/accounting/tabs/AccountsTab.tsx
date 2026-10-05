@@ -1,17 +1,21 @@
 // packages/ui/src/components/ui/accounting/tabs/AccountsTab.tsx
 'use client'
 
+// The chart of accounts — the shared DataTable, like every other list: search,
+// saved views, column settings, and a type filter in the table's own toolbar.
+
 import { memo, useState, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
 import { useAccounts, useCreateAccount } from '@hisabche/api'
-import { AccountRow } from '../components/AccountRow'
-import { LedgerHead, LedgerTable, LedgerTh } from '../components/ledger-table'
+import { ACCOUNT_TYPES, AccountStatusMark, AccountTypeBadge } from '../components/AccountRow'
 import { CreateAccountDialog, type CreateAccountInput } from '../components/CreateAccountDialog'
 import { ExportButton, type ExportColumn } from '../components/ExportButton'
+import { DateRangePicker } from '../components/DateRangePicker'
 import { AccountingSkeleton } from '../AccountingSkeleton'
 import { AccountingEmptyState } from '../AccountingEmptyState'
+import { DataTable, TableFilterSelect, matchesSearch, type TableColumn } from '../../data-table'
 import type { Account } from '@hisabche/api'
 
 const exportColumns: ExportColumn<Account>[] = [
@@ -21,15 +25,88 @@ const exportColumns: ExportColumn<Account>[] = [
   { key: 'isActive', header: 'وضعیت', accessor: (a) => (a.isActive ? 'فعال' : 'غیرفعال') },
 ]
 
+const ALL = 'all'
+
+/**
+ * Whether an account was opened inside the period. With no period set, every
+ * account passes. An account with no recorded opening date cannot be placed in
+ * ANY period, so a set period leaves it out rather than guessing.
+ */
+export function openedWithin(createdAt: string | null, from: string, to: string): boolean {
+  if (!from && !to) return true
+  if (!createdAt) return false
+  const day = createdAt.slice(0, 10)
+  return (!from || day >= from) && (!to || day <= to)
+}
+
+const COLUMNS: TableColumn<Account>[] = [
+  {
+    id: 'code',
+    labelKey: 'accounting.accounts.code',
+    labelFallback: 'کد',
+    sortValue: (account) => account.code,
+    render: (account) => (
+      <span className="font-mono text-xs text-[hsl(var(--fg-secondary))]" dir="ltr">
+        {account.code}
+      </span>
+    ),
+  },
+  {
+    id: 'name',
+    labelKey: 'accounting.accounts.name',
+    labelFallback: 'نام',
+    locked: true,
+    sortValue: (account) => account.name,
+    render: (account) => <span className="font-medium">{account.name}</span>,
+  },
+  {
+    id: 'type',
+    labelKey: 'accounting.accounts.type',
+    labelFallback: 'نوع',
+    sortValue: (account) => ACCOUNT_TYPES.indexOf(account.type as (typeof ACCOUNT_TYPES)[number]),
+    render: (account) => <AccountTypeBadge type={account.type} />,
+  },
+  {
+    id: 'status',
+    labelKey: 'accounting.accounts.status',
+    labelFallback: 'وضعیت',
+    sortValue: (account) => (account.isActive ? 0 : 1),
+    render: (account) => <AccountStatusMark isActive={account.isActive} />,
+  },
+]
+
 export const AccountsTab = memo(function AccountsTab() {
   const t = useTranslations()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState(ALL)
+  // Accounts OPENED in this period. Both empty = every account.
+  const [openedFrom, setOpenedFrom] = useState('')
+  const [openedTo, setOpenedTo] = useState('')
   const { data: accounts, isLoading } = useAccounts()
   const { mutate: createAccount, isPending } = useCreateAccount()
+
+  // A missing key renders its fallback, never the key.
+  const safeT = useCallback(
+    (key: string, fallback?: string): string => {
+      const value = t(key as never)
+      return value && value !== key ? value : (fallback ?? key)
+    },
+    [t],
+  )
 
   const parentOptions = useMemo(
     () => (accounts || []).map((a) => ({ id: a.id, label: `${a.code} - ${a.name}` })),
     [accounts],
+  )
+
+  const rows = useMemo(
+    () =>
+      (accounts ?? [])
+        .filter((account) => typeFilter === ALL || account.type === typeFilter)
+        .filter((account) => openedWithin(account.createdAt, openedFrom, openedTo))
+        .filter((account) => matchesSearch(search, [account.code, account.name])),
+    [accounts, search, typeFilter, openedFrom, openedTo],
   )
 
   const handleOpenDialog = useCallback(() => setIsDialogOpen(true), [])
@@ -50,8 +127,15 @@ export const AccountsTab = memo(function AccountsTab() {
         <h2 className="text-xs md:text-sm lg:text-base font-semibold text-[hsl(var(--fg-primary))]">
           {t('accounting.accounts.title')}
         </h2>
-        <div className="flex items-center gap-1.5 md:gap-2">
-          <ExportButton data={accounts || []} columns={exportColumns} filename="accounts" />
+        <div className="flex flex-wrap items-end justify-end gap-1.5 md:gap-2">
+          <DateRangePicker
+            from={openedFrom}
+            to={openedTo}
+            onFromChange={setOpenedFrom}
+            onToChange={setOpenedTo}
+          />
+          {/* The export follows what is on screen: the same filters. */}
+          <ExportButton data={rows} columns={exportColumns} filename="accounts" />
           <button
             type="button"
             onClick={handleOpenDialog}
@@ -68,28 +152,49 @@ export const AccountsTab = memo(function AccountsTab() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto p-3 md:p-4">
         {isLoading ? (
           <AccountingSkeleton />
-        ) : !accounts || accounts.length === 0 ? (
-          <AccountingEmptyState
-            title={t('accounting.accounts.empty.title')}
-            subtitle={t('accounting.accounts.empty.subtitle')}
-          />
         ) : (
-          <LedgerTable caption={t('accounting.tabs.accounts')}>
-            <LedgerHead>
-              <LedgerTh>{t('accounting.accounts.code')}</LedgerTh>
-              <LedgerTh>{t('accounting.accounts.name')}</LedgerTh>
-              <LedgerTh>{t('accounting.accounts.type')}</LedgerTh>
-              <LedgerTh>{t('accounting.accounts.status')}</LedgerTh>
-            </LedgerHead>
-            <tbody>
-              {accounts.map((account) => (
-                <AccountRow key={account.id} account={account} />
-              ))}
-            </tbody>
-          </LedgerTable>
+          <DataTable
+            tableId="accounts"
+            t={safeT}
+            rows={rows}
+            columns={COLUMNS}
+            rowKey={(account) => account.id}
+            searchValue={search}
+            onSearchChange={setSearch}
+            actions={
+              <TableFilterSelect
+                label={t('accounting.accounts.type')}
+                value={typeFilter}
+                onChange={setTypeFilter}
+                allValue={ALL}
+                options={[
+                  { value: ALL, label: safeT('common.all', 'همه') },
+                  ...ACCOUNT_TYPES.map((type) => ({
+                    value: type as string,
+                    label: t(`accounting.accountTypes.${type}`),
+                  })),
+                ]}
+              />
+            }
+            minWidthClass="min-w-[420px]"
+            emptyState={
+              // «No accounts yet» only when there really are none; otherwise the
+              // filter or the search emptied the table.
+              (accounts ?? []).length === 0 ? (
+                <AccountingEmptyState
+                  title={t('accounting.accounts.empty.title')}
+                  subtitle={t('accounting.accounts.empty.subtitle')}
+                />
+              ) : (
+                <AccountingEmptyState
+                  title={safeT('accounting.accounts.noMatch', 'حسابی با این فیلتر نیست')}
+                />
+              )
+            }
+          />
         )}
       </div>
 

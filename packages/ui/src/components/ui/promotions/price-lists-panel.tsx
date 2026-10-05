@@ -17,7 +17,7 @@
 // ⚠️ «Not set up», «failed» and «none yet» are three different sentences.
 // ============================================
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { formatNumber } from '@hisabche/formatting'
 import { useCurrencyStore } from '@hisabche/store'
@@ -42,6 +42,7 @@ import { productPrice, readProducts } from '../../../lib/invoices/products'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { Button } from '../button'
+import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { SelectField } from '../select-field'
 import { unitLabel as labelOfUnit } from '../units/unit-select'
@@ -75,6 +76,18 @@ export function PriceListsPanel() {
   const setActive = useSetPriceListActive()
   const [adding, setAdding] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  // The shared table speaks whole keys with a fallback; this screen's own `t`
+  // is scoped. Same catalogue, and a missing column label never throws.
+  const translateAll = useTranslations()
+  const tableT = (key: string, fallback?: string): string => {
+    try {
+      const value = translateAll(key as Parameters<typeof translateAll>[0])
+      return value && value !== key ? value : (fallback ?? key)
+    } catch {
+      return fallback ?? key
+    }
+  }
 
   const errorText: ErrorText = (error) => {
     const raw = apiErrorMessage(error, '')
@@ -88,6 +101,92 @@ export function PriceListsPanel() {
     list.validFrom || list.validTo
       ? `${list.validFrom ? date(list.validFrom) : '…'} – ${list.validTo ? date(list.validTo) : '…'}`
       : t('always')
+
+  // The same table the invoice list uses: search, saved views, column settings.
+  const columns: TableColumn<SavedPriceList>[] = [
+    {
+      id: 'name',
+      labelKey: 'priceLists.name',
+      labelFallback: 'نام',
+      locked: true,
+      sortValue: (list) => list.name,
+      render: (list) => (
+        <span className="font-medium text-[hsl(var(--fg-primary))]">{list.name}</span>
+      ),
+    },
+    {
+      id: 'currency',
+      labelKey: 'priceLists.currency',
+      labelFallback: 'ارز',
+      sortValue: (list) => list.currency,
+      render: (list) => <span dir="ltr">{list.currency}</span>,
+    },
+    {
+      id: 'products',
+      labelKey: 'priceLists.columns.products',
+      labelFallback: 'کالا',
+      sortValue: (list) => list.itemCount,
+      render: (list) => <span className="tabular-nums">{count(list.itemCount)}</span>,
+    },
+    {
+      id: 'customers',
+      labelKey: 'priceLists.columns.customers',
+      labelFallback: 'مشتری',
+      sortValue: (list) => list.customerCount,
+      render: (list) => <span className="tabular-nums">{count(list.customerCount)}</span>,
+    },
+    {
+      id: 'validity',
+      labelKey: 'priceLists.columns.validity',
+      labelFallback: 'اعتبار',
+      showFrom: 'md',
+      sortValue: (list) => list.validTo ?? '',
+      render: (list) => <span className="text-[hsl(var(--fg-secondary))]">{window(list)}</span>,
+    },
+    {
+      id: 'status',
+      labelKey: 'priceLists.columns.status',
+      labelFallback: 'وضعیت',
+      sortValue: (list) => (list.isActive ? 0 : 1),
+      render: (list) => (
+        <span
+          className={cn(
+            'rounded-full px-2 py-0.5 text-xs',
+            list.isActive
+              ? 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]'
+              : 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
+          )}
+        >
+          {list.isActive ? t('active') : t('retired')}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      labelKey: 'priceLists.columns.actions',
+      labelFallback: 'عملیات',
+      locked: true,
+      align: 'end',
+      render: (list) => (
+        // The row opens the list; these buttons must not also do that.
+        <span className="flex justify-end gap-1" onClick={(event) => event.stopPropagation()}>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={setActive.isPending && setActive.variables?.id === list.id}
+            onClick={() => setActive.mutate({ id: list.id, isActive: !list.isActive })}
+          >
+            {list.isActive ? t('retire') : t('reactivate')}
+          </Button>
+        </span>
+      ),
+    },
+  ]
+  const rows = useMemo(
+    () => (lists.data ?? []).filter((list) => matchesSearch(search, [list.name, list.currency])),
+    [lists.data, search],
+  )
+  const opened = (lists.data ?? []).find((list) => list.id === openId) ?? null
 
   return (
     <section className="space-y-3" aria-labelledby="price-lists-title">
@@ -125,54 +224,43 @@ export function PriceListsPanel() {
           {t('empty')}
         </p>
       ) : (
-        <ul className="space-y-2">
-          {lists.data.map((list) => (
-            <li key={list.id} className={cn(card, 'p-4')}>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-2 font-medium text-[hsl(var(--fg-primary))]">
-                    {list.name}
-                    <span
-                      dir="ltr"
-                      className="rounded-full bg-[hsl(var(--color-primary)/0.1)] px-2 py-0.5 text-xs text-[hsl(var(--color-primary))]"
-                    >
-                      {list.currency}
-                    </span>
-                    {!list.isActive ? (
-                      <span className="rounded-full bg-[hsl(var(--surface-muted))] px-2 py-0.5 text-xs text-[hsl(var(--fg-secondary))]">
-                        {t('retired')}
-                      </span>
-                    ) : null}
-                  </p>
-                  <p className={cn('mt-1', faint)}>
-                    {t('productCount', { count: count(list.itemCount) })}
-                    {' · '}
-                    {t('customerCount', { count: count(list.customerCount) })}
-                    {' · '}
-                    {window(list)}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  aria-expanded={openId === list.id}
-                  onClick={() => setOpenId(openId === list.id ? null : list.id)}
-                >
-                  {openId === list.id ? t('close') : t('open')}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={setActive.isPending && setActive.variables?.id === list.id}
-                  onClick={() => setActive.mutate({ id: list.id, isActive: !list.isActive })}
-                >
-                  {list.isActive ? t('retire') : t('reactivate')}
+        <>
+          <DataTable
+            tableId="price-lists"
+            t={tableT}
+            rows={rows}
+            columns={columns}
+            rowKey={(list) => list.id}
+            // Pressing a row opens its prices and customers under the table.
+            onRowClick={(list) => setOpenId(openId === list.id ? null : list.id)}
+            searchValue={search}
+            onSearchChange={setSearch}
+            minWidthClass="min-w-[420px] sm:min-w-[640px]"
+            emptyState={
+              <p className="p-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
+                {t('nothingFound')}
+              </p>
+            }
+          />
+          {opened ? (
+            <div className={cn(card, 'p-4')}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-semibold text-[hsl(var(--fg-primary))]">
+                  {opened.name}{' '}
+                  <span dir="ltr" className="text-xs font-normal text-[hsl(var(--fg-secondary))]">
+                    {opened.currency}
+                  </span>
+                </h3>
+                <Button size="sm" variant="ghost" onClick={() => setOpenId(null)}>
+                  {t('close')}
                 </Button>
               </div>
-              {openId === list.id ? <PriceListEditor list={list} errorText={errorText} /> : null}
-            </li>
-          ))}
-        </ul>
+              <PriceListEditor list={opened} errorText={errorText} />
+            </div>
+          ) : (
+            <p className={faint}>{t('openHint')}</p>
+          )}
+        </>
       )}
       {setActive.error ? (
         <p role="alert" className={danger}>

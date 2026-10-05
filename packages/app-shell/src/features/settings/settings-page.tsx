@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { LogOut } from 'lucide-react'
 
 import { Badge, Button, Card, cn } from '@/components/ui/primitives'
-import { BusinessStampSection, HardwareSection } from '@hisabche/ui/screens'
+import { BusinessStampSection, HardwareSection, SettingsHubContainer } from '@hisabche/ui/screens'
 import { PageHeader } from '@/components/layout/page-header'
 import { useAuthStore, useCurrentUser } from '@/features/auth/auth.store'
 import { bridge } from '@/shared/lib/bridge'
@@ -18,7 +18,14 @@ import type { AppInfo } from '@hisabche/app-bridge'
 
 import { UpdateSection } from './update-section'
 
+/** The same hub as the web, around this renderer's own settings screen. */
 export default function SettingsPage() {
+  return <SettingsHubContainer general={renderDesktopSettings} />
+}
+
+const renderDesktopSettings = () => <DesktopSettings />
+
+function DesktopSettings() {
   const { t, i18n } = useTranslation('desktop')
   const user = useCurrentUser()
   const logout = useAuthStore((s) => s.logout)

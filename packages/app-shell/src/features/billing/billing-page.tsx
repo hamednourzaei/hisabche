@@ -1,1 +1,1 @@
-export { BillingContainer as default } from '@hisabche/ui/screens'
+export { BillingHubContainer as default } from '@hisabche/ui/screens'

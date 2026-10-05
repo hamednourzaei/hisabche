@@ -1,16 +1,9 @@
 // ============================================
 // Batch, serial and expiry hooks — TanStack Query
 //
-// ---------------------------------------------------------------------------
-// AN EXPIRED BATCH IS A REFUSAL, NOT A WARNING
-//
-// `usePlanIssue` returns the batches an issue WOULD draw from and consumes
-// nothing. Batches that have expired appear in `blockedByExpiry` — they are
-// not offered as a choice an operator can override in the UI. Medicine sold
-// past its date is not a data-quality problem.
-//
-// Shortfall is reported as a shortfall. It is never clamped to zero: stock the
-// shop does not have must read as missing, not as fulfilled.
+// The «issue plan» hook is gone with its screen (owner's order, 4 Oct 2026).
+// The route `POST /operations/batches/plan-issue` is still served and tested;
+// nothing in the interface calls it.
 // ============================================
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -22,7 +15,6 @@ import { localDay } from '../lib/local-day'
 // ═══ Types ═══
 
 export type ExpiryState = 'no_expiry' | 'fresh' | 'near_expiry' | 'expired'
-export type AllocationStrategy = 'fifo' | 'fefo' | 'manual'
 export type SerialStatus = 'in_stock' | 'sold' | 'returned' | 'scrapped'
 
 export interface StockBatch {
@@ -73,20 +65,6 @@ export interface ExpiryReport {
   buckets: ExpiryBucket[]
   /** Minor units the balance sheet counts and the shop can no longer sell. */
   expiredValueMinor: number
-}
-
-export interface AllocationPlan {
-  allocations: Array<{
-    batchId: string
-    batchNumber: string
-    quantity: number
-    expiryDate: string | null
-    costLayerId: string | null
-  }>
-  /** What no usable batch could cover. Never clamped to zero. */
-  shortfall: number
-  strategy: AllocationStrategy
-  blockedByExpiry: Array<{ batchId: string; batchNumber: string; quantity: number }>
 }
 
 export const expiryKeys = {
@@ -168,29 +146,6 @@ export function useLotTrail(consumerType: string, consumerId: string) {
 }
 
 // ═══ Mutations ═══
-
-/**
- * Which batches an issue would take. FEFO by default.
- *
- * A mutation because it takes a body, not because it writes: it consumes
- * nothing. Never cached — a plan built against stock as it was five minutes
- * ago is a plan against stock that may already be sold.
- */
-export function usePlanIssue() {
-  return useMutation({
-    mutationFn: async (input: {
-      productId: string
-      quantity: number
-      strategy?: AllocationStrategy
-      asOf?: string
-      manual?: Array<{ batchId: string; quantity: number }>
-    }) => {
-      const { data } = await apiClient.post('/operations/batches/plan-issue', input)
-      return data as AllocationPlan
-    },
-    retry: false,
-  })
-}
 
 export function useReceiveBatch() {
   const queryClient = useQueryClient()

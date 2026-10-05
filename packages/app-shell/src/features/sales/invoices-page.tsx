@@ -7,8 +7,8 @@
 // ============================================
 
 import React from 'react'
-import { InvoicesContainer } from '@hisabche/ui/screens'
+import { SalesHubContainer } from '@hisabche/ui/screens'
 
 export default function InvoicesPage() {
-  return <InvoicesContainer />
+  return <SalesHubContainer />
 }

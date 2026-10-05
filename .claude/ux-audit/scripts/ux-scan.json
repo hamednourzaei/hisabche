@@ -1,0 +1,4665 @@
+[
+  {
+    "route": "/",
+    "pageFile": "apps/web/app/[lang]/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "LandingPage",
+    "containerFile": "packages/ui/src/components/ui/landing/landing-page.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/landing/landing-page.tsx",
+        "lines": 87
+      },
+      {
+        "file": "packages/ui/src/components/ui/navigation/navigation-registry.tsx",
+        "lines": 61
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/cinematic-hero.tsx",
+        "lines": 228
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/compare-scene.tsx",
+        "lines": 59
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/cta-scene.tsx",
+        "lines": 94
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/faq-scene.tsx",
+        "lines": 438
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/chapter-scene.tsx",
+        "lines": 235
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/landing-shell.tsx",
+        "lines": 97
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/modules-scene.tsx",
+        "lines": 130
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/pricing-scene.tsx",
+        "lines": 574
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/security-scene.tsx",
+        "lines": 108
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/site-footer-view.tsx",
+        "lines": 265
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/system-scene.tsx",
+        "lines": 115
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/trust-bar-scene.tsx",
+        "lines": 109
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/use-scroll-narrative-store.ts",
+        "lines": 257
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/landing-primitives.tsx",
+        "lines": 136
+      },
+      {
+        "file": "packages/ui/src/components/ui/landing/chapter-visuals.tsx",
+        "lines": 192
+      },
+      {
+        "file": "packages/ui/src/components/ui/navigation/top-nav.tsx",
+        "lines": 394
+      }
+    ],
+    "totalLines": 3579,
+    "queries": [
+      "useSceneObserver",
+      "useNow",
+      "useScrollNarrative",
+      "useActiveSection",
+      "useNavigation",
+      "useSignedInAfterMount",
+      "useAuthStore"
+    ],
+    "mutations": ["usePlans"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 2,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": null,
+    "docsArticle": "invoices",
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/about",
+    "pageFile": "apps/web/app/[lang]/about/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/accept-invite",
+    "pageFile": "apps/web/app/[lang]/accept-invite/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/accounting",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/accounting/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "AccountingPage",
+    "containerFile": "packages/ui/src/components/ui/accounting/AccountingPage.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/accounting/AccountingPage.tsx",
+        "lines": 167
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/AccountingTabs.tsx",
+        "lines": 106
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/tabs/AccountsTab.tsx",
+        "lines": 106
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/tabs/JournalTab.tsx",
+        "lines": 109
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/tabs/TrialBalanceTab.tsx",
+        "lines": 178
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/tabs/BalanceSheetTab.tsx",
+        "lines": 229
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/tabs/IncomeStatementTab.tsx",
+        "lines": 410
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/tabs/MonthEndTab.tsx",
+        "lines": 300
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/tabs/FinancingTab.tsx",
+        "lines": 651
+      },
+      {
+        "file": "packages/ui/src/components/ui/branch/branch-scope.tsx",
+        "lines": 110
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/components/AccountRow.tsx",
+        "lines": 91
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/components/ledger-table.tsx",
+        "lines": 252
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/components/CreateAccountDialog.tsx",
+        "lines": 207
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/components/ExportButton.tsx",
+        "lines": 90
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/AccountingSkeleton.tsx",
+        "lines": 32
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/AccountingEmptyState.tsx",
+        "lines": 46
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/components/JournalEntryRow.tsx",
+        "lines": 176
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/components/CreateJournalEntryDialog.tsx",
+        "lines": 300
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/components/DateRangePicker.tsx",
+        "lines": 69
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/components/use-account-drilldown.tsx",
+        "lines": 71
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/components/ProductProfitTable.tsx",
+        "lines": 261
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/recurrence-panel.tsx",
+        "lines": 169
+      }
+    ],
+    "totalLines": 4130,
+    "queries": [
+      "useAccounts",
+      "useJournalEntries",
+      "useTrialBalance",
+      "useLedgerNumber",
+      "useAccountDrilldown",
+      "useBranchScope",
+      "useBalanceSheet",
+      "useCurrencyStore",
+      "useIncomeStatement",
+      "useProfitReportsByCurrency",
+      "useAutomations",
+      "useInvestmentHoldings",
+      "useLoanFacilities",
+      "useBranches",
+      "useGeneralLedger"
+    ],
+    "mutations": [
+      "usePostUnpostedInvoices",
+      "useCreateAccount",
+      "useCreateJournalEntry",
+      "useCreateMonthEndAutomation",
+      "useRemoveAutomation",
+      "useRunMonthEnd",
+      "useCreateInvestmentHolding",
+      "useCreateLoanFacility",
+      "useSetLoanFacilityActive",
+      "useUpdateInvestmentHolding"
+    ],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 31,
+    "tables": 7,
+    "linksTo": ["/till", "/team-and-payroll"],
+    "nav": "money",
+    "module": "accounting",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "accounting",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": true
+    },
+    "linkedFrom": ["/invoices/[id]"]
+  },
+  {
+    "route": "/accounting-workspace",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/accounting-workspace/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": "domain.accounting",
+    "container": "DomainWorkspaceContainer",
+    "containerFile": "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx",
+        "lines": 98
+      },
+      {
+        "file": "packages/ui/src/components/ui/domain/domain-workspace-view.tsx",
+        "lines": 123
+      },
+      {
+        "file": "packages/ui/src/components/ui/work-queue/containers/work-queue-container.tsx",
+        "lines": 78
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      },
+      {
+        "file": "packages/ui/src/components/ui/work-queue/work-queue-panel.tsx",
+        "lines": 82
+      }
+    ],
+    "totalLines": 924,
+    "queries": ["useConflicts", "useWorkflowInstances", "useSyncStore"],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 4,
+    "tables": 3,
+    "linksTo": [],
+    "nav": "accounting-workspace",
+    "module": "accounting",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "accounting",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/activities",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/activities/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "ActivitiesPage",
+    "containerFile": "packages/ui/src/components/ui/activity/ActivitiesPage.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/activity/ActivitiesPage.tsx",
+        "lines": 217
+      },
+      {
+        "file": "packages/ui/src/components/ui/activity/ActivityFeedList.tsx",
+        "lines": 108
+      },
+      {
+        "file": "packages/ui/src/components/ui/activity/ActivitySkeleton.tsx",
+        "lines": 80
+      },
+      {
+        "file": "packages/ui/src/components/ui/activity/ActivityEmptyState.tsx",
+        "lines": 27
+      },
+      {
+        "file": "packages/ui/src/components/ui/audit/containers/audit-container.tsx",
+        "lines": 181
+      },
+      {
+        "file": "packages/ui/src/components/ui/activity/ActivityGroupCard.tsx",
+        "lines": 304
+      },
+      {
+        "file": "packages/ui/src/components/ui/activity/ActivityGroupTable.tsx",
+        "lines": 179
+      },
+      {
+        "file": "packages/ui/src/components/ui/activity/audit-trail-tab.tsx",
+        "lines": 493
+      }
+    ],
+    "totalLines": 1589,
+    "queries": [
+      "useInfiniteActivities",
+      "useUnreadCount",
+      "useUnreadActivityCount",
+      "useActivityFilterCounts",
+      "useAuditLogs",
+      "useAuditTrail",
+      "useBranches",
+      "useWorkspaceMembers",
+      "useWorkspaceStore",
+      "useNow"
+    ],
+    "mutations": ["useMarkAllAsRead", "useMarkAllActivitiesAsRead"],
+    "tabs": ["activity", "audit", "all", "unread", "invoices", "payments", "customers"],
+    "dialogs": 0,
+    "formControls": 4,
+    "tables": 5,
+    "linksTo": [],
+    "nav": "events",
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/analysis",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/analysis/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "AnalysisContainer",
+    "containerFile": "packages/ui/src/components/ui/analysis/analysis-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/analysis/analysis-container.tsx",
+        "lines": 679
+      },
+      {
+        "file": "packages/ui/src/components/ui/dashboard/date-range-picker.tsx",
+        "lines": 486
+      },
+      {
+        "file": "packages/ui/src/components/ui/analysis/peer-benchmark.tsx",
+        "lines": 100
+      },
+      {
+        "file": "packages/ui/src/components/ui/analysis/report-builder.tsx",
+        "lines": 205
+      },
+      {
+        "file": "packages/ui/src/components/ui/analysis/dashboard-builder.tsx",
+        "lines": 254
+      },
+      {
+        "file": "packages/ui/src/components/ui/analysis/report-run-view.tsx",
+        "lines": 123
+      }
+    ],
+    "totalLines": 1847,
+    "queries": [
+      "useCurrencyStore",
+      "useBreakEven",
+      "useCohorts",
+      "useCollectionsWorklist",
+      "useSupplierAnalysis",
+      "useWorkingCapital",
+      "useFocusTrap",
+      "usePeerBenchmark",
+      "useReportCatalog",
+      "useReportDashboards",
+      "useReportRun"
+    ],
+    "mutations": [
+      "useRetireReport",
+      "useSaveReport",
+      "useSavedReports",
+      "useRetireReportDashboard",
+      "useSaveReportDashboard"
+    ],
+    "tabs": [
+      "collections",
+      "suppliers",
+      "breakEven",
+      "cohorts",
+      "workingCapital",
+      "benchmark",
+      "reports"
+    ],
+    "dialogs": 0,
+    "formControls": 7,
+    "tables": 5,
+    "linksTo": ["/invoices"],
+    "nav": "analysis",
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "business-analysis",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": true
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/approvals",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/approvals/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "ApprovalsContainer",
+    "containerFile": "packages/ui/src/components/ui/workflow/containers/approvals-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/workflow/containers/approvals-container.tsx",
+        "lines": 174
+      },
+      {
+        "file": "packages/ui/src/components/ui/workflow/approval-timeline.tsx",
+        "lines": 449
+      },
+      {
+        "file": "packages/ui/src/components/ui/workflow/approvals-view.tsx",
+        "lines": 167
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      }
+    ],
+    "totalLines": 1333,
+    "queries": [
+      "useWorkflowInstances",
+      "useWorkflowInstanceDetail",
+      "useWorkflow",
+      "useWorkflows",
+      "usePerformWorkflowAction"
+    ],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 5,
+    "tables": 4,
+    "linksTo": ["/invoices", "/workflow-templates"],
+    "nav": "approvals",
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/assets",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/assets/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "AssetsContainer",
+    "containerFile": "packages/ui/src/components/ui/assets/containers/assets-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/assets/containers/assets-container.tsx",
+        "lines": 77
+      },
+      {
+        "file": "packages/ui/src/components/ui/assets/assets-view.tsx",
+        "lines": 414
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-table/index.ts",
+        "lines": 16
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      }
+    ],
+    "totalLines": 1050,
+    "queries": [
+      "useAssetSchedule",
+      "useAssets",
+      "useRowSelection",
+      "useBulkAction",
+      "useTableState"
+    ],
+    "mutations": ["usePostDepreciation"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 4,
+    "tables": 8,
+    "linksTo": [],
+    "nav": "assets",
+    "module": "accounting",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "accounting",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/assistant",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/assistant/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "AiAssistantContainer",
+    "containerFile": "packages/ui/src/components/ui/ai/containers/ai-assistant-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/ai/containers/ai-assistant-container.tsx",
+        "lines": 279
+      },
+      {
+        "file": "packages/ui/src/components/ui/ai/ai-assistant-panel.tsx",
+        "lines": 207
+      },
+      {
+        "file": "packages/ui/src/components/ui/ai/document-read-tool.tsx",
+        "lines": 439
+      },
+      {
+        "file": "packages/ui/src/components/ui/ai/document-translate-tool.tsx",
+        "lines": 199
+      }
+    ],
+    "totalLines": 1124,
+    "queries": [
+      "useAiAvailability",
+      "useExternalStoreRuntime",
+      "useCurrencyStore",
+      "useSupplierSearch"
+    ],
+    "mutations": ["useAskAi", "useConfirmDocument", "useReadDocument", "useTranslateDocument"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 11,
+    "tables": 0,
+    "linksTo": ["/invoices"],
+    "nav": "assistant",
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": true
+    },
+    "linkedFrom": ["/dashboard"]
+  },
+  {
+    "route": "/bank",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/bank/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "BankContainer",
+    "containerFile": "packages/ui/src/components/ui/bank/containers/bank-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/bank/containers/bank-container.tsx",
+        "lines": 134
+      },
+      {
+        "file": "packages/ui/src/components/ui/bank/bank-view.tsx",
+        "lines": 377
+      },
+      {
+        "file": "packages/ui/src/components/ui/bank/bank-category-suggestions.tsx",
+        "lines": 135
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-table/index.ts",
+        "lines": 16
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      },
+      {
+        "file": "packages/ui/src/components/ui/bank/import-statement-panel.tsx",
+        "lines": 247
+      }
+    ],
+    "totalLines": 1452,
+    "queries": [
+      "useAccounts",
+      "useBankStatements",
+      "useMatchSuggestions",
+      "useReconcileLine",
+      "useReconciliation",
+      "useBankCategorySuggestions",
+      "useRowSelection",
+      "useBulkAction",
+      "useTableState"
+    ],
+    "mutations": ["useImportStatement"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 7,
+    "tables": 9,
+    "linksTo": [],
+    "nav": "bank",
+    "module": "accounting",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "accounting",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/billing",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/billing/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "BillingContainer",
+    "containerFile": "packages/ui/src/components/ui/billing/containers/BillingContainer.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/billing/containers/BillingContainer.tsx",
+        "lines": 291
+      },
+      {
+        "file": "packages/ui/src/components/ui/billing/PricingPage.tsx",
+        "lines": 384
+      },
+      {
+        "file": "packages/ui/src/components/ui/wallet/wallet-pay-option.tsx",
+        "lines": 100
+      }
+    ],
+    "totalLines": 775,
+    "queries": [
+      "useSubscription",
+      "useTrialStatus",
+      "useUsage",
+      "useUpgradeRequests",
+      "useUpgrade",
+      "useWallet"
+    ],
+    "mutations": [
+      "useCancelUpgradeRequest",
+      "useCancelSubscription",
+      "usePlans",
+      "usePayUpgradeFromWallet"
+    ],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 5,
+    "tables": 1,
+    "linksTo": ["/wallet"],
+    "nav": "billing",
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": true
+    },
+    "linkedFrom": ["/settings", "/sync-center"]
+  },
+  {
+    "route": "/blog",
+    "pageFile": "apps/web/app/[lang]/blog/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/blog/[slug]",
+    "pageFile": "apps/web/app/[lang]/blog/[slug]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": null,
+    "container": "BlogArticleView",
+    "containerFile": "packages/ui/src/components/ui/blog/blog-article-view.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/blog/blog-article-view.tsx",
+        "lines": 250
+      },
+      {
+        "file": "packages/ui/src/components/ui/blog/blog-post-actions.tsx",
+        "lines": 425
+      },
+      {
+        "file": "packages/ui/src/components/ui/blog/blog-post-card.tsx",
+        "lines": 66
+      }
+    ],
+    "totalLines": 741,
+    "queries": ["useBlogComments", "useBlogMe", "useSignedInAfterMount"],
+    "mutations": ["useAddBlogComment", "useSetBlogRating", "useSetBlogReaction"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 3,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/blog/category/[slug]",
+    "pageFile": "apps/web/app/[lang]/blog/category/[slug]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/blog/category/[slug]/page/[page]",
+    "pageFile": "apps/web/app/[lang]/blog/category/[slug]/page/[page]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/blog/page/[page]",
+    "pageFile": "apps/web/app/[lang]/blog/page/[page]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/blog/tag/[slug]",
+    "pageFile": "apps/web/app/[lang]/blog/tag/[slug]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/blog/tag/[slug]/page/[page]",
+    "pageFile": "apps/web/app/[lang]/blog/tag/[slug]/page/[page]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/budgets",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/budgets/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "BudgetsContainer",
+    "containerFile": "packages/ui/src/components/ui/budgets/containers/budgets-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/budgets/containers/budgets-container.tsx",
+        "lines": 191
+      },
+      {
+        "file": "packages/ui/src/components/ui/budgets/budgets-view.tsx",
+        "lines": 1531
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-table/index.ts",
+        "lines": 16
+      },
+      {
+        "file": "packages/ui/src/components/ui/accounting/components/ExportButton.tsx",
+        "lines": 90
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      }
+    ],
+    "totalLines": 2371,
+    "queries": [
+      "useBudgetReport",
+      "useAccounts",
+      "useArchiveBudget",
+      "useBranches",
+      "useBudgetRevisions",
+      "useCheckSpend",
+      "useReviseBudget",
+      "useMyCapabilities",
+      "useRowSelection",
+      "useBulkAction",
+      "useTableState"
+    ],
+    "mutations": ["useApproveBudget", "useSaveBudget", "useSubmitBudget"],
+    "tabs": [],
+    "dialogs": 2,
+    "formControls": 13,
+    "tables": 6,
+    "linksTo": [],
+    "nav": "budgets",
+    "module": "budgets",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "accounting",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/campaigns",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/campaigns/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "CampaignsContainer",
+    "containerFile": "packages/ui/src/components/ui/campaigns/campaigns-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/campaigns/campaigns-container.tsx",
+        "lines": 501
+      }
+    ],
+    "totalLines": 501,
+    "queries": ["useCampaignDetail", "useCampaignPreview", "useCampaigns"],
+    "mutations": ["useCancelCampaign", "useCreateCampaign", "useLaunchCampaign"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 8,
+    "tables": 0,
+    "linksTo": [],
+    "nav": "campaigns",
+    "module": "parties",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "campaigns",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": true
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/conflicts",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/conflicts/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "ConflictsContainer",
+    "containerFile": "packages/ui/src/components/ui/conflicts/containers/conflicts-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/conflicts/containers/conflicts-container.tsx",
+        "lines": 126
+      },
+      {
+        "file": "packages/ui/src/components/ui/conflicts/conflicts-view.tsx",
+        "lines": 585
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-table/index.ts",
+        "lines": 16
+      }
+    ],
+    "totalLines": 1270,
+    "queries": ["useConflict", "useConflicts", "useRowSelection", "useBulkAction", "useTableState"],
+    "mutations": ["useResolveConflict"],
+    "tabs": [],
+    "dialogs": 1,
+    "formControls": 4,
+    "tables": 8,
+    "linksTo": [],
+    "nav": "conflicts",
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "offline",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/contact",
+    "pageFile": "apps/web/app/[lang]/contact/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/customers",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/customers/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "CustomersContainer",
+    "containerFile": "packages/ui/src/components/ui/customers/containers/customer-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/customers/containers/customer-container.tsx",
+        "lines": 186
+      },
+      {
+        "file": "packages/ui/src/components/ui/customers/customer-view.tsx",
+        "lines": 654
+      },
+      {
+        "file": "packages/ui/src/components/ui/customers/customer-view.types.ts",
+        "lines": 71
+      },
+      {
+        "file": "packages/ui/src/components/ui/customers/customer-stats.tsx",
+        "lines": 108
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-table/index.ts",
+        "lines": 16
+      },
+      {
+        "file": "packages/ui/src/components/ui/customers/AddCustomerModal.tsx",
+        "lines": 311
+      },
+      {
+        "file": "packages/ui/src/components/ui/customers/PaymentModal.tsx",
+        "lines": 270
+      },
+      {
+        "file": "packages/ui/src/components/ui/customers/containers/customer-workspace-container.tsx",
+        "lines": 82
+      }
+    ],
+    "totalLines": 1698,
+    "queries": [
+      "useCustomersData",
+      "useRowSelection",
+      "useCustomerColumns",
+      "useBulkAction",
+      "useTableState",
+      "useSyncStore",
+      "useBackupStore",
+      "useCustomer",
+      "useInvoices",
+      "useInteractions",
+      "useOpportunities"
+    ],
+    "mutations": [
+      "useCreateCustomer",
+      "useCreateInvoice",
+      "useCreateTransaction",
+      "useRecordPayment"
+    ],
+    "tabs": [],
+    "dialogs": 2,
+    "formControls": 5,
+    "tables": 3,
+    "linksTo": [],
+    "nav": "buyers",
+    "module": "parties",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "customers",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": ["/customers/[id]", "/invoices"]
+  },
+  {
+    "route": "/customers/[id]",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/customers/[id]/page.tsx",
+    "area": "app",
+    "dynamic": true,
+    "titleKey": null,
+    "container": "CustomerDetailContainer",
+    "containerFile": "packages/ui/src/components/ui/customers/containers/customer-detail-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/customers/containers/customer-detail-container.tsx",
+        "lines": 243
+      },
+      {
+        "file": "packages/ui/src/components/ui/customers/customer-detail-view.tsx",
+        "lines": 769
+      },
+      {
+        "file": "packages/ui/src/components/ui/activity/record-history-panel.tsx",
+        "lines": 137
+      },
+      {
+        "file": "packages/ui/src/components/ui/customers/PaymentModal.tsx",
+        "lines": 270
+      },
+      {
+        "file": "packages/ui/src/components/ui/crm/customer-crm-panel.tsx",
+        "lines": 234
+      },
+      {
+        "file": "packages/ui/src/components/ui/customers/customer-profile-panel.tsx",
+        "lines": 474
+      },
+      {
+        "file": "packages/ui/src/components/ui/customers/customer-portal-panel.tsx",
+        "lines": 142
+      },
+      {
+        "file": "packages/ui/src/components/ui/customers/customer-analysis-panels.tsx",
+        "lines": 333
+      }
+    ],
+    "totalLines": 2602,
+    "queries": [
+      "useCustomer",
+      "useInvoices",
+      "usePartyActivity",
+      "usePartyLedger",
+      "usePartySummary",
+      "useSyncStore",
+      "useBackupStore",
+      "useCustomerCrm",
+      "useCustomerDocuments",
+      "useCustomerProfile",
+      "useSupplierSearch",
+      "useCustomerPortalLinks",
+      "useCustomerAccounting",
+      "useCustomerInsights"
+    ],
+    "mutations": [
+      "useRecordHistory",
+      "useOpenInvoices",
+      "usePayments",
+      "useCreateTransaction",
+      "useRecordPayment",
+      "useRemoveCustomerDocument",
+      "useUpdateCustomerTerms",
+      "useUploadCustomerDocument",
+      "useCreatePortalLink",
+      "useRevokePortalLink",
+      "usePostInvoiceToLedger"
+    ],
+    "tabs": [
+      "statement",
+      "invoices",
+      "payments",
+      "activity",
+      "insights",
+      "accounting",
+      "account",
+      "crm",
+      "history"
+    ],
+    "dialogs": 1,
+    "formControls": 7,
+    "tables": 5,
+    "linksTo": ["/customers", "/invoices/new", "/invoices", "/portal"],
+    "nav": null,
+    "module": "parties",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "customers",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": true
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/dashboard",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/dashboard/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "DashboardContainer",
+    "containerFile": "packages/ui/src/components/ui/dashboard/containers/dashboard-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/dashboard/containers/dashboard-container.tsx",
+        "lines": 228
+      },
+      {
+        "file": "packages/ui/src/components/ui/dashboard/dashboard-view.tsx",
+        "lines": 689
+      },
+      {
+        "file": "packages/ui/src/components/ui/work-queue/containers/work-queue-container.tsx",
+        "lines": 78
+      },
+      {
+        "file": "packages/ui/src/components/ui/dashboard/date-range-picker.tsx",
+        "lines": 486
+      },
+      {
+        "file": "packages/ui/src/components/ui/dashboard/display-basis-picker.tsx",
+        "lines": 327
+      },
+      {
+        "file": "packages/ui/src/components/ui/ai/ai-assistant-launcher.tsx",
+        "lines": 222
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/manufacturing-dashboard-card.tsx",
+        "lines": 119
+      },
+      {
+        "file": "packages/ui/src/components/ui/dashboard/sales-chart.tsx",
+        "lines": 328
+      },
+      {
+        "file": "packages/ui/src/components/ui/dashboard/sales-funnel.tsx",
+        "lines": 439
+      },
+      {
+        "file": "packages/ui/src/components/ui/work-queue/work-queue-panel.tsx",
+        "lines": 82
+      },
+      {
+        "file": "packages/ui/src/components/ui/ai/ai-assistant-panel.tsx",
+        "lines": 207
+      }
+    ],
+    "totalLines": 3205,
+    "queries": [
+      "useDashboardData",
+      "useDisplayBasis",
+      "useConflicts",
+      "useWorkflowInstances",
+      "useSyncStore",
+      "useFocusTrap",
+      "useAiAvailability",
+      "useManufacturingReport",
+      "useIsReducedMotion",
+      "useExternalStoreRuntime"
+    ],
+    "mutations": ["useSetExchangeRate", "useAskAi"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 8,
+    "tables": 0,
+    "linksTo": ["/assistant", "/manufacturing"],
+    "nav": "today",
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "getting-started",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": ["/onboarding"]
+  },
+  {
+    "route": "/data-and-sync",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/data-and-sync/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": "nav.data_and_sync",
+    "container": "DataAndSyncContainer",
+    "containerFile": "packages/ui/src/components/ui/data-and-sync/containers/data-and-sync-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/data-and-sync/containers/data-and-sync-container.tsx",
+        "lines": 96
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-and-sync/data-and-sync-view.tsx",
+        "lines": 520
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-and-sync/data-snapshots-panel.tsx",
+        "lines": 194
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      },
+      {
+        "file": "packages/ui/src/components/ui/state/work-state.tsx",
+        "lines": 146
+      }
+    ],
+    "totalLines": 1499,
+    "queries": [
+      "useConflicts",
+      "useDuplicateCounts",
+      "useMigrations",
+      "useSyncOverview",
+      "useBackupStore",
+      "useSyncStore",
+      "useNow",
+      "useDataSnapshotComparison",
+      "useDataSnapshots",
+      "useTakeDataSnapshot"
+    ],
+    "mutations": ["useOpenConflictCount"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 5,
+    "tables": 4,
+    "linksTo": [],
+    "nav": "data-and-sync",
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "offline",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": true
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/data-migration",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/data-migration/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "DataMigrationContainer",
+    "containerFile": "packages/ui/src/components/ui/data-migration/containers/data-migration-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/data-migration/containers/data-migration-container.tsx",
+        "lines": 270
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-migration/data-migration-view.tsx",
+        "lines": 597
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      }
+    ],
+    "totalLines": 1410,
+    "queries": ["useCommitMigration", "useDryRun", "useMigrations", "useScanMigration"],
+    "mutations": ["useCancelMigration", "useSaveMapping"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 9,
+    "tables": 8,
+    "linksTo": [],
+    "nav": "data-migration",
+    "module": "workspace",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "data-and-backup",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/developers",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/developers/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "DevelopersContainer",
+    "containerFile": "packages/ui/src/components/ui/developers/containers/developers-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/developers/containers/developers-container.tsx",
+        "lines": 479
+      },
+      {
+        "file": "packages/ui/src/components/ui/wallet/wallet-format.ts",
+        "lines": 97
+      },
+      {
+        "file": "packages/ui/src/components/ui/developers/developers-view.tsx",
+        "lines": 606
+      },
+      {
+        "file": "packages/ui/src/components/ui/developers/check-list.tsx",
+        "lines": 50
+      },
+      {
+        "file": "packages/ui/src/components/ui/developers/key-usage-panel.tsx",
+        "lines": 118
+      },
+      {
+        "file": "packages/ui/src/components/ui/developers/ai-assistants-panel.tsx",
+        "lines": 236
+      },
+      {
+        "file": "packages/ui/src/components/ui/developers/oauth-apps-panel.tsx",
+        "lines": 600
+      },
+      {
+        "file": "packages/ui/src/components/ui/developers/sandbox-panel.tsx",
+        "lines": 116
+      },
+      {
+        "file": "packages/ui/src/components/ui/developers/storefront-panel.tsx",
+        "lines": 281
+      }
+    ],
+    "totalLines": 2583,
+    "queries": [
+      "useApiKeys",
+      "useDeveloperCatalog",
+      "useRetryWebhookDelivery",
+      "useWebhookDeliveries",
+      "useWebhookEndpoints",
+      "useApiKeyUsage",
+      "useReplayWebhook",
+      "useStorefrontSettings",
+      "useOAuthApps",
+      "useAppVersions",
+      "useAppScreenshots",
+      "useAppStats",
+      "useUninstallApp",
+      "useAppUpdatePreview",
+      "useSandboxStatus",
+      "useAiActionRequests",
+      "useDecideAiActionRequest"
+    ],
+    "mutations": [
+      "useCreateApiKey",
+      "useCreateWebhookEndpoint",
+      "useDeleteWebhookEndpoint",
+      "useRevokeApiKey",
+      "useRotateWebhookSecret",
+      "useSendWebhookTest",
+      "useUpdateWebhookEndpoint",
+      "useSaveStorefrontSettings",
+      "usePublishableKeys",
+      "useCreatePublishableKey",
+      "useRevokePublishableKey",
+      "useCreateOAuthApp",
+      "useUpdateOAuthApp",
+      "useSubmitAppVersion",
+      "useRotateOAuthSecret",
+      "useRotateAppWebhookSecret",
+      "useDeleteOAuthApp",
+      "useAddAppScreenshot",
+      "useUploadAppImage",
+      "useRemoveAppScreenshot",
+      "usePublisherProfile",
+      "useSavePublisherProfile",
+      "useInstalledApps",
+      "useApplyAppUpdate",
+      "useCreateSandbox",
+      "useResetSandbox"
+    ],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 12,
+    "tables": 1,
+    "linksTo": ["/orders", "/marketplace"],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": true,
+    "docsArticle": "developers",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": true
+    },
+    "linkedFrom": ["/settings"]
+  },
+  {
+    "route": "/docs",
+    "pageFile": "apps/web/app/[lang]/docs/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/docs/[slug]",
+    "pageFile": "apps/web/app/[lang]/docs/[slug]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/domain/[domain]",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/domain/[domain]/page.tsx",
+    "area": "app",
+    "dynamic": true,
+    "titleKey": "nav.today",
+    "container": "DomainWorkspaceContainer",
+    "containerFile": "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx",
+        "lines": 98
+      },
+      {
+        "file": "packages/ui/src/components/ui/domain/domain-workspace-view.tsx",
+        "lines": 123
+      },
+      {
+        "file": "packages/ui/src/components/ui/work-queue/containers/work-queue-container.tsx",
+        "lines": 78
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      },
+      {
+        "file": "packages/ui/src/components/ui/work-queue/work-queue-panel.tsx",
+        "lines": 82
+      }
+    ],
+    "totalLines": 924,
+    "queries": ["useConflicts", "useWorkflowInstances", "useSyncStore"],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 4,
+    "tables": 3,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/expiry",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/expiry/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "ExpiryContainer",
+    "containerFile": "packages/ui/src/components/ui/expiry/containers/expiry-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/expiry/containers/expiry-container.tsx",
+        "lines": 75
+      },
+      {
+        "file": "packages/ui/src/components/ui/expiry/expiry-view.tsx",
+        "lines": 382
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-table/index.ts",
+        "lines": 16
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      }
+    ],
+    "totalLines": 1016,
+    "queries": [
+      "useBatches",
+      "useExpiryReport",
+      "useRowSelection",
+      "useBulkAction",
+      "useTableState"
+    ],
+    "mutations": ["usePlanIssue"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 4,
+    "tables": 7,
+    "linksTo": [],
+    "nav": "expiry",
+    "module": "inventory",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "inventory",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/features/[slug]",
+    "pageFile": "apps/web/app/[lang]/features/[slug]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/feedback/[token]",
+    "pageFile": "apps/web/app/[lang]/feedback/[token]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": null,
+    "container": "FeedbackContainer",
+    "containerFile": "packages/ui/src/components/ui/campaigns/feedback-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/campaigns/feedback-container.tsx",
+        "lines": 175
+      }
+    ],
+    "totalLines": 175,
+    "queries": ["useAnswerFeedback", "useFeedbackView", "useUnsubscribeFeedback"],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 1,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/forgot-password",
+    "pageFile": "apps/web/app/[lang]/forgot-password/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/governance",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/governance/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "GovernanceHubContainer",
+    "containerFile": "packages/ui/src/components/ui/governance/containers/governance-hub-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/governance/containers/governance-hub-container.tsx",
+        "lines": 288
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      },
+      {
+        "file": "packages/ui/src/components/ui/workspace/containers/workspace-container.tsx",
+        "lines": 71
+      },
+      {
+        "file": "packages/ui/src/components/ui/permissions/containers/permissions-container.tsx",
+        "lines": 124
+      },
+      {
+        "file": "packages/ui/src/components/ui/workflow/containers/approvals-container.tsx",
+        "lines": 174
+      },
+      {
+        "file": "packages/ui/src/components/ui/audit/containers/audit-container.tsx",
+        "lines": 181
+      },
+      {
+        "file": "packages/ui/src/components/ui/governance/containers/governance-container.tsx",
+        "lines": 87
+      },
+      {
+        "file": "packages/ui/src/components/ui/docs/docs-help-link.tsx",
+        "lines": 182
+      },
+      {
+        "file": "packages/ui/src/components/ui/workspace/workspace-page.tsx",
+        "lines": 306
+      },
+      {
+        "file": "packages/ui/src/components/ui/permissions/permission-matrix-view.tsx",
+        "lines": 320
+      },
+      {
+        "file": "packages/ui/src/components/ui/workflow/approval-timeline.tsx",
+        "lines": 449
+      },
+      {
+        "file": "packages/ui/src/components/ui/workflow/approvals-view.tsx",
+        "lines": 167
+      },
+      {
+        "file": "packages/ui/src/components/ui/activity/audit-trail-tab.tsx",
+        "lines": 493
+      },
+      {
+        "file": "packages/ui/src/components/ui/governance/governance-view.tsx",
+        "lines": 411
+      }
+    ],
+    "totalLines": 3796,
+    "queries": [
+      "useAuditTrail",
+      "usePermissionMatrix",
+      "useSoD",
+      "useSoDOverrides",
+      "useWorkflowInstances",
+      "useWorkspaceMembers",
+      "useWorkspaceStore",
+      "useWorkspaces",
+      "useRoleMembers",
+      "useWorkflowInstanceDetail",
+      "useWorkflow",
+      "useWorkflows",
+      "usePerformWorkflowAction",
+      "useAuditLogs",
+      "useBranches",
+      "useAuthStore"
+    ],
+    "mutations": ["useSetPermissionCell", "useSaveSoD", "useRemoveMember", "useUpdateMemberRole"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 13,
+    "tables": 11,
+    "linksTo": ["/invoices", "/workflow-templates"],
+    "nav": "governance",
+    "module": "workspace",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "permissions",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/inventory-workspace",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/inventory-workspace/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": "domain.inventory",
+    "container": "DomainWorkspaceContainer",
+    "containerFile": "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx",
+        "lines": 98
+      },
+      {
+        "file": "packages/ui/src/components/ui/domain/domain-workspace-view.tsx",
+        "lines": 123
+      },
+      {
+        "file": "packages/ui/src/components/ui/work-queue/containers/work-queue-container.tsx",
+        "lines": 78
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      },
+      {
+        "file": "packages/ui/src/components/ui/work-queue/work-queue-panel.tsx",
+        "lines": 82
+      }
+    ],
+    "totalLines": 924,
+    "queries": ["useConflicts", "useWorkflowInstances", "useSyncStore"],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 4,
+    "tables": 3,
+    "linksTo": [],
+    "nav": "inventory-workspace",
+    "module": "inventory",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "inventory",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/invoices",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/invoices/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "InvoicesContainer",
+    "containerFile": "packages/ui/src/components/ui/invoices/containers/invoices-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/invoices/containers/invoices-container.tsx",
+        "lines": 69
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoices/invoices-view.tsx",
+        "lines": 663
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoices/recurring-invoices.tsx",
+        "lines": 378
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoices/invoices-skeleton.tsx",
+        "lines": 96
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoices/invoice-row-actions.tsx",
+        "lines": 221
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-table/index.ts",
+        "lines": 16
+      }
+    ],
+    "totalLines": 1443,
+    "queries": [
+      "useInvoicesPage",
+      "useBulkAction",
+      "useRowSelection",
+      "useInvoiceStats",
+      "useInvoiceColumns",
+      "useAutomationRuns",
+      "useAutomations",
+      "useTableState"
+    ],
+    "mutations": ["useRemoveAutomation", "useRunAutomationNow", "useUpdateAutomation"],
+    "tabs": [],
+    "dialogs": 2,
+    "formControls": 0,
+    "tables": 4,
+    "linksTo": ["/customers", "/invoices/new"],
+    "nav": "get-paid",
+    "module": "invoices",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "invoices",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": true
+    },
+    "linkedFrom": [
+      "/analysis",
+      "/approvals",
+      "/assistant",
+      "/customers/[id]",
+      "/governance",
+      "/invoices/new",
+      "/invoices/new/preview",
+      "/quick-invoice"
+    ]
+  },
+  {
+    "route": "/invoices/[id]",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/invoices/[id]/page.tsx",
+    "area": "app",
+    "dynamic": true,
+    "titleKey": null,
+    "container": "InvoiceDetailContainer",
+    "containerFile": "packages/ui/src/components/ui/invoice-detail/containers/invoice-detail-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/containers/invoice-detail-container.tsx",
+        "lines": 569
+      },
+      {
+        "file": "packages/ui/src/components/ui/billing/subscription-lock.tsx",
+        "lines": 106
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/invoice-detail-page.tsx",
+        "lines": 329
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/InvoicePDFDownload.tsx",
+        "lines": 66
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/invoice-evidence-panel.tsx",
+        "lines": 139
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/invoice-installments-panel.tsx",
+        "lines": 219
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/invoice-late-fee-panel.tsx",
+        "lines": 442
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/invoice-related-panel.tsx",
+        "lines": 410
+      },
+      {
+        "file": "packages/ui/src/components/ui/activity/record-history-panel.tsx",
+        "lines": 137
+      },
+      {
+        "file": "packages/ui/src/components/ui/workflow/approval-timeline.tsx",
+        "lines": 449
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/invoice-document.tsx",
+        "lines": 636
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/invoice-sidebar.tsx",
+        "lines": 360
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/record-payment-form.tsx",
+        "lines": 255
+      }
+    ],
+    "totalLines": 4117,
+    "queries": [
+      "useInvoice",
+      "useWorkspaces",
+      "useWorkflowInstance",
+      "useWorkflowInstanceDetail",
+      "useWorkflow",
+      "usePerformWorkflowAction",
+      "useInvoiceRelated",
+      "useSubscriptionLocked",
+      "useReceiptPrint",
+      "useCORS",
+      "useSubscription",
+      "useSubscriptionLockStore",
+      "useInvoiceEvidence",
+      "useCurrencyStore",
+      "useLateFeePreview"
+    ],
+    "mutations": [
+      "useRecordHistory",
+      "useRecordPayment",
+      "useCancelPayment",
+      "usePostInvoiceToLedger",
+      "useClearInstallmentPlan",
+      "useInstallmentPlan",
+      "useSaveInstallmentPlan",
+      "useAssessLateFee",
+      "useSaveLateFeePolicy"
+    ],
+    "tabs": [],
+    "dialogs": 1,
+    "formControls": 12,
+    "tables": 3,
+    "linksTo": ["/accounting"],
+    "nav": null,
+    "module": "invoices",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "invoices",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": true
+    },
+    "linkedFrom": ["/customers/[id]", "/invoices/new", "/invoices/new/preview", "/invoices"]
+  },
+  {
+    "route": "/invoices/new",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/invoices/new/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "InvoiceBuilderContainer",
+    "containerFile": "packages/ui/src/components/ui/invoice-builder/containers/invoice-builder-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/containers/invoice-builder-container.tsx",
+        "lines": 313
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/invoice-builder-page.tsx",
+        "lines": 495
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/oversold-warning.tsx",
+        "lines": 43
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/use-oversold-lines.ts",
+        "lines": 88
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/credit-limit-warning.tsx",
+        "lines": 52
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/use-customer-terms.ts",
+        "lines": 67
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/invoice-warehouse-select.tsx",
+        "lines": 73
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/barcode-scan-dialog.tsx",
+        "lines": 134
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/camera-scan-button.tsx",
+        "lines": 204
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/column-dialog.tsx",
+        "lines": 400
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/customer-panel.tsx",
+        "lines": 288
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/invoice-summary-panel.tsx",
+        "lines": 184
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/table-settings-dialog.tsx",
+        "lines": 206
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/grid/grid-toolbar.tsx",
+        "lines": 145
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/grid/invoice-items-grid.tsx",
+        "lines": 431
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/mobile/columns-sheet.tsx",
+        "lines": 210
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/mobile/invoice-builder-mobile.tsx",
+        "lines": 655
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/mobile/item-editor-sheet.tsx",
+        "lines": 255
+      }
+    ],
+    "totalLines": 4243,
+    "queries": [
+      "useInvoiceDraft",
+      "useCurrencyStore",
+      "useInvoiceDraftStore",
+      "useSyncStore",
+      "useOversoldLines",
+      "useCustomerTerms",
+      "useBarcodeScanner",
+      "useProducts",
+      "useProductsByIds",
+      "useCustomerProfile",
+      "useWarehouseOverview"
+    ],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 7,
+    "formControls": 9,
+    "tables": 1,
+    "linksTo": ["/invoices/new/preview", "/invoices", "/warehouse"],
+    "nav": null,
+    "module": "invoices",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "invoices",
+    "robotsBlocked": true,
+    "states": {
+      "loading": false,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": ["/customers/[id]", "/invoices/new/preview", "/invoices"]
+  },
+  {
+    "route": "/invoices/new/preview",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/invoices/new/preview/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "InvoicePreviewContainer",
+    "containerFile": "packages/ui/src/components/ui/invoice-builder/containers/invoice-preview-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/containers/invoice-preview-container.tsx",
+        "lines": 631
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/invoice-document.tsx",
+        "lines": 636
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/invoice-payment-section.tsx",
+        "lines": 457
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/invoice-sidebar.tsx",
+        "lines": 360
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/preview-items-table.tsx",
+        "lines": 217
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/oversold-warning.tsx",
+        "lines": 43
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/use-oversold-lines.ts",
+        "lines": 88
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/recurrence-panel.tsx",
+        "lines": 169
+      }
+    ],
+    "totalLines": 2601,
+    "queries": [
+      "useWorkspaces",
+      "useBackupStore",
+      "useInvoiceDraftStore",
+      "useOnboardingStore",
+      "usePreferencesStore",
+      "useSyncStore",
+      "useInvoiceDraft",
+      "useOversoldLines",
+      "useProducts",
+      "useProductsByIds"
+    ],
+    "mutations": ["useCreateInvoice", "useCreateRecurringInvoice"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 2,
+    "tables": 2,
+    "linksTo": ["/invoices/new", "/invoices"],
+    "nav": null,
+    "module": "invoices",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "invoices",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": ["/invoices/new"]
+  },
+  {
+    "route": "/legal/accessibility",
+    "pageFile": "apps/web/app/[lang]/legal/accessibility/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/legal/cookies",
+    "pageFile": "apps/web/app/[lang]/legal/cookies/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/legal/copyright",
+    "pageFile": "apps/web/app/[lang]/legal/copyright/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/legal/data-deletion",
+    "pageFile": "apps/web/app/[lang]/legal/data-deletion/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/legal/disclaimer",
+    "pageFile": "apps/web/app/[lang]/legal/disclaimer/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/legal/gdpr",
+    "pageFile": "apps/web/app/[lang]/legal/gdpr/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/legal/privacy",
+    "pageFile": "apps/web/app/[lang]/legal/privacy/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/legal/refund",
+    "pageFile": "apps/web/app/[lang]/legal/refund/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/legal/security",
+    "pageFile": "apps/web/app/[lang]/legal/security/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/legal/terms",
+    "pageFile": "apps/web/app/[lang]/legal/terms/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/login",
+    "pageFile": "apps/web/app/[lang]/login/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": ["/oauth/authorize"]
+  },
+  {
+    "route": "/manufacturing",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/manufacturing/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "ManufacturingContainer",
+    "containerFile": "packages/ui/src/components/ui/manufacturing/containers/manufacturing-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/containers/manufacturing-container.tsx",
+        "lines": 178
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/manufacturing-view.tsx",
+        "lines": 375
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/components/CreateWorkOrderDialog.tsx",
+        "lines": 266
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/manufacturing-report.tsx",
+        "lines": 341
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/production-editor.tsx",
+        "lines": 935
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/production-history.tsx",
+        "lines": 287
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/manufacturing-errors.ts",
+        "lines": 43
+      },
+      {
+        "file": "packages/ui/src/components/ui/dashboard/date-range-picker.tsx",
+        "lines": 486
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/unit-text.ts",
+        "lines": 12
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/column-dialog.tsx",
+        "lines": 400
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/table-settings-dialog.tsx",
+        "lines": 206
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/grid/grid-toolbar.tsx",
+        "lines": 145
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/grid/invoice-items-grid.tsx",
+        "lines": 431
+      },
+      {
+        "file": "packages/ui/src/components/ui/warehouse/warehouse-dialogs.tsx",
+        "lines": 271
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/use-production-draft.ts",
+        "lines": 372
+      }
+    ],
+    "totalLines": 4748,
+    "queries": [
+      "useBOMs",
+      "useProducts",
+      "useWorkOrders",
+      "useManufacturingReport",
+      "useProductionDraft",
+      "useCurrencyStore",
+      "useProduce",
+      "useProductionDefinition",
+      "useWarehouseOverview",
+      "useProductionRun",
+      "useProductionRuns",
+      "useFocusTrap"
+    ],
+    "mutations": ["useCreateWorkOrder", "useCreateWarehouse", "useSaveProductionDefinition"],
+    "tabs": ["boms", "history", "report"],
+    "dialogs": 5,
+    "formControls": 19,
+    "tables": 6,
+    "linksTo": [],
+    "nav": "production",
+    "module": "inventory",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "manufacturing",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": true
+    },
+    "linkedFrom": ["/dashboard"]
+  },
+  {
+    "route": "/market",
+    "pageFile": "apps/web/app/[lang]/market/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": "market.public.title",
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/market-seller",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/market-seller/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "MarketSellerContainer",
+    "containerFile": "packages/ui/src/components/ui/market/market-seller-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/market/market-seller-container.tsx",
+        "lines": 501
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      },
+      {
+        "file": "packages/ui/src/components/ui/wallet/wallet-format.ts",
+        "lines": 97
+      },
+      {
+        "file": "packages/ui/src/components/ui/docs/docs-help-link.tsx",
+        "lines": 182
+      }
+    ],
+    "totalLines": 1323,
+    "queries": [],
+    "mutations": [
+      "useDeleteMarketListing",
+      "useMarketSeller",
+      "useSaveMarketListing",
+      "useSaveMarketSellerProfile"
+    ],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 9,
+    "tables": 4,
+    "linksTo": [],
+    "nav": "market-seller",
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": true
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/market/[seller]",
+    "pageFile": "apps/web/app/[lang]/market/[seller]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": "market.public.sellerTitle",
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/market/[seller]/[listing]",
+    "pageFile": "apps/web/app/[lang]/market/[seller]/[listing]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/marketplace",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/marketplace/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "MarketplaceContainer",
+    "containerFile": "packages/ui/src/components/ui/marketplace/containers/marketplace-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/marketplace/containers/marketplace-container.tsx",
+        "lines": 137
+      },
+      {
+        "file": "packages/ui/src/components/ui/marketplace/marketplace-view.tsx",
+        "lines": 668
+      }
+    ],
+    "totalLines": 805,
+    "queries": ["useReportApp"],
+    "mutations": [
+      "useDeleteAppReview",
+      "useMarketplaceApp",
+      "useMarketplaceApps",
+      "useSaveAppReview"
+    ],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 7,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": true
+    },
+    "linkedFrom": ["/developers"]
+  },
+  {
+    "route": "/oauth/authorize",
+    "pageFile": "apps/web/app/[lang]/oauth/authorize/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "OAuthConsentContainer",
+    "containerFile": "packages/ui/src/components/ui/developers/containers/oauth-consent-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/developers/containers/oauth-consent-container.tsx",
+        "lines": 141
+      },
+      {
+        "file": "packages/ui/src/components/ui/developers/oauth-consent-view.tsx",
+        "lines": 256
+      }
+    ],
+    "totalLines": 397,
+    "queries": ["useOAuthConsent", "useAuthStore", "useWorkspaceStore"],
+    "mutations": ["useApproveOAuth"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": ["/login"],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/onboarding",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/onboarding/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "OnboardingContainer",
+    "containerFile": "packages/ui/src/components/ui/onboarding/containers/onboarding-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/onboarding/containers/onboarding-container.tsx",
+        "lines": 153
+      },
+      {
+        "file": "packages/ui/src/components/ui/onboarding/onboarding-page.tsx",
+        "lines": 695
+      },
+      {
+        "file": "packages/ui/src/components/ui/onboarding/searchable-option-list.tsx",
+        "lines": 156
+      }
+    ],
+    "totalLines": 1004,
+    "queries": ["useOnboardingStore", "useCurrencyStore", "useAuthStore", "useCurrencies"],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 2,
+    "tables": 0,
+    "linksTo": ["/dashboard"],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/operations",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/operations/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "InventoryOpsContainer",
+    "containerFile": "packages/ui/src/components/ui/inventory-ops/containers/inventory-ops-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/inventory-ops/containers/inventory-ops-container.tsx",
+        "lines": 41
+      },
+      {
+        "file": "packages/ui/src/components/ui/inventory-ops/inventory-ops-view.tsx",
+        "lines": 296
+      }
+    ],
+    "totalLines": 337,
+    "queries": [
+      "useCashForecast",
+      "useDeadStock",
+      "useReorderSuggestions",
+      "useShiftHistory",
+      "useStaleOpportunities"
+    ],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 4,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": true,
+    "docsArticle": "inventory",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": false,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/orders",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/orders/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "OrdersContainer",
+    "containerFile": "packages/ui/src/components/ui/orders/containers/orders-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/orders/containers/orders-container.tsx",
+        "lines": 110
+      },
+      {
+        "file": "packages/ui/src/components/ui/orders/orders-view.tsx",
+        "lines": 347
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-table/index.ts",
+        "lines": 16
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      }
+    ],
+    "totalLines": 1016,
+    "queries": [
+      "useOrder",
+      "useOrderAction",
+      "useOrders",
+      "useRowSelection",
+      "useBulkAction",
+      "useTableState"
+    ],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 5,
+    "tables": 6,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": true
+    },
+    "linkedFrom": ["/developers", "/settings"]
+  },
+  {
+    "route": "/people-workspace",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/people-workspace/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": "domain.people",
+    "container": "DomainWorkspaceContainer",
+    "containerFile": "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx",
+        "lines": 98
+      },
+      {
+        "file": "packages/ui/src/components/ui/domain/domain-workspace-view.tsx",
+        "lines": 123
+      },
+      {
+        "file": "packages/ui/src/components/ui/work-queue/containers/work-queue-container.tsx",
+        "lines": 78
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      },
+      {
+        "file": "packages/ui/src/components/ui/work-queue/work-queue-panel.tsx",
+        "lines": 82
+      }
+    ],
+    "totalLines": 924,
+    "queries": ["useConflicts", "useWorkflowInstances", "useSyncStore"],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 4,
+    "tables": 3,
+    "linksTo": [],
+    "nav": "people-workspace",
+    "module": "people",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "permissions",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/portal/[token]",
+    "pageFile": "apps/web/app/[lang]/portal/[token]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": null,
+    "container": "PublicPortalContainer",
+    "containerFile": "packages/ui/src/components/ui/customers/containers/public-portal-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/customers/containers/public-portal-container.tsx",
+        "lines": 197
+      }
+    ],
+    "totalLines": 197,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": ["/public-invoice"],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/promotions",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/promotions/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "PromotionsContainer",
+    "containerFile": "packages/ui/src/components/ui/promotions/promotions-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/promotions/promotions-container.tsx",
+        "lines": 414
+      },
+      {
+        "file": "packages/ui/src/components/ui/promotions/price-lists-panel.tsx",
+        "lines": 557
+      },
+      {
+        "file": "packages/ui/src/components/ui/units/unit-select.tsx",
+        "lines": 221
+      }
+    ],
+    "totalLines": 1192,
+    "queries": [
+      "useCurrencyStore",
+      "useCustomers",
+      "useProducts",
+      "usePromotions",
+      "usePriceList",
+      "usePriceLists",
+      "useUnits"
+    ],
+    "mutations": [
+      "useSavePromotion",
+      "useSetPromotionActive",
+      "useAssignPriceList",
+      "useSavePriceList",
+      "useSetPriceListActive",
+      "useSetPriceListItems"
+    ],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 13,
+    "tables": 0,
+    "linksTo": [],
+    "nav": "promotions",
+    "module": "invoices",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "promotions",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": true
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/public-invoice/[token]",
+    "pageFile": "apps/web/app/[lang]/public-invoice/[token]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": null,
+    "container": "PublicInvoiceContainer",
+    "containerFile": "packages/ui/src/components/ui/invoice-detail/containers/public-invoice-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/containers/public-invoice-container.tsx",
+        "lines": 141
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/invoice-document.tsx",
+        "lines": 636
+      }
+    ],
+    "totalLines": 777,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 1,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/public-task/[token]",
+    "pageFile": "apps/web/app/[lang]/public-task/[token]/page.tsx",
+    "area": "public",
+    "dynamic": true,
+    "titleKey": null,
+    "container": "PublicTaskContainer",
+    "containerFile": "packages/ui/src/components/ui/crm/containers/public-task-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/crm/containers/public-task-container.tsx",
+        "lines": 232
+      },
+      {
+        "file": "packages/ui/src/components/ui/crm/task-customer-outcomes.tsx",
+        "lines": 372
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-table/index.ts",
+        "lines": 16
+      }
+    ],
+    "totalLines": 620,
+    "queries": ["useRowSelection", "useBulkAction", "useTableState"],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 1,
+    "tables": 4,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/purchasing",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/purchasing/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "PurchasingContainer",
+    "containerFile": "packages/ui/src/components/ui/purchasing/containers/purchasing-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/purchasing/containers/purchasing-container.tsx",
+        "lines": 40
+      },
+      {
+        "file": "packages/ui/src/components/ui/purchasing/purchasing-view.tsx",
+        "lines": 206
+      }
+    ],
+    "totalLines": 246,
+    "queries": ["usePurchaseOrders"],
+    "mutations": ["useReceiveGoods"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 1,
+    "linksTo": ["/quick-invoice"],
+    "nav": "buy",
+    "module": "inventory",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": false,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/quick-invoice",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/quick-invoice/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "QuickInvoiceContainer",
+    "containerFile": "packages/ui/src/components/ui/quick-invoice/containers/quick-invoice-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/quick-invoice/containers/quick-invoice-container.tsx",
+        "lines": 492
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/barcode-scan-dialog.tsx",
+        "lines": 134
+      },
+      {
+        "file": "packages/ui/src/components/ui/quick-invoice/quick-invoice-page.tsx",
+        "lines": 1434
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-builder/camera-scan-button.tsx",
+        "lines": 204
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/invoice-document.tsx",
+        "lines": 636
+      },
+      {
+        "file": "packages/ui/src/components/ui/invoice-detail/invoice-sidebar.tsx",
+        "lines": 360
+      }
+    ],
+    "totalLines": 3260,
+    "queries": [
+      "useBarcodeScanner",
+      "useOnboardingStore",
+      "usePreferencesStore",
+      "useSyncStore",
+      "useBackupStore",
+      "useWorkspaces"
+    ],
+    "mutations": ["useCreateInvoice"],
+    "tabs": [],
+    "dialogs": 2,
+    "formControls": 9,
+    "tables": 1,
+    "linksTo": ["/invoices", "/warehouse"],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": true,
+    "docsArticle": "invoices",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": ["/purchasing"]
+  },
+  {
+    "route": "/referrals",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/referrals/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "ReferralsContainer",
+    "containerFile": "packages/ui/src/components/ui/referrals/containers/referrals-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/referrals/containers/referrals-container.tsx",
+        "lines": 73
+      },
+      {
+        "file": "packages/ui/src/components/ui/referrals/referrals-view.tsx",
+        "lines": 352
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-table/index.ts",
+        "lines": 16
+      }
+    ],
+    "totalLines": 441,
+    "queries": ["useReferralOverview", "useRowSelection", "useBulkAction", "useTableState"],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 1,
+    "tables": 3,
+    "linksTo": [],
+    "nav": "referrals",
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": true
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/reset-password",
+    "pageFile": "apps/web/app/[lang]/reset-password/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/sales-workspace",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/sales-workspace/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": "domain.sales",
+    "container": "DomainWorkspaceContainer",
+    "containerFile": "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx",
+        "lines": 98
+      },
+      {
+        "file": "packages/ui/src/components/ui/domain/domain-workspace-view.tsx",
+        "lines": 123
+      },
+      {
+        "file": "packages/ui/src/components/ui/work-queue/containers/work-queue-container.tsx",
+        "lines": 78
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      },
+      {
+        "file": "packages/ui/src/components/ui/work-queue/work-queue-panel.tsx",
+        "lines": 82
+      }
+    ],
+    "totalLines": 924,
+    "queries": ["useConflicts", "useWorkflowInstances", "useSyncStore"],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 4,
+    "tables": 3,
+    "linksTo": [],
+    "nav": "sales-workspace",
+    "module": "parties",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/settings",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/settings/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "SettingsPage",
+    "containerFile": "packages/ui/src/components/ui/settings/settings-page.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/settings/settings-page.tsx",
+        "lines": 1080
+      },
+      {
+        "file": "packages/ui/src/components/ui/settings/hardware-section.tsx",
+        "lines": 415
+      }
+    ],
+    "totalLines": 1495,
+    "queries": [
+      "useBackupStore",
+      "useDeviceStore",
+      "useAuthStore",
+      "useWorkspaces",
+      "useWorkspaceBackup",
+      "useBarcodeScanner"
+    ],
+    "mutations": ["useUpdateWorkspace"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 14,
+    "tables": 0,
+    "linksTo": ["/billing", "/workflow-templates", "/developers", "/orders"],
+    "nav": "settings",
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "data-and-backup",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/signup",
+    "pageFile": "apps/web/app/[lang]/signup/page.tsx",
+    "area": "public",
+    "dynamic": false,
+    "titleKey": null,
+    "container": null,
+    "containerFile": null,
+    "files": [],
+    "totalLines": 0,
+    "queries": [],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": null,
+    "docsArticle": null,
+    "robotsBlocked": null,
+    "states": {
+      "loading": false,
+      "error": false,
+      "empty": false,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/stock-count",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/stock-count/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "CycleCountContainer",
+    "containerFile": "packages/ui/src/components/ui/cycle-count/containers/cycle-count-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/cycle-count/containers/cycle-count-container.tsx",
+        "lines": 92
+      },
+      {
+        "file": "packages/ui/src/components/ui/cycle-count/cycle-count-view.tsx",
+        "lines": 394
+      }
+    ],
+    "totalLines": 486,
+    "queries": ["useCycleCount", "useCycleCounts", "useProducts"],
+    "mutations": ["useCancelCycleCount", "useCompleteCycleCount", "useRecordCount"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 2,
+    "linksTo": [],
+    "nav": null,
+    "module": null,
+    "inSidebar": false,
+    "inAppShell": true,
+    "docsArticle": "inventory",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/sync-center",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/sync-center/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "SyncCenterContainer",
+    "containerFile": "packages/ui/src/components/ui/sync-center/containers/sync-center-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/sync-center/containers/sync-center-container.tsx",
+        "lines": 93
+      },
+      {
+        "file": "packages/ui/src/components/ui/sync-center/sync-center-page.tsx",
+        "lines": 338
+      },
+      {
+        "file": "packages/ui/src/components/ui/sync-center/backup-download-panel.tsx",
+        "lines": 105
+      }
+    ],
+    "totalLines": 536,
+    "queries": ["useSyncStore", "useBackupStore", "useDownloadWorkspaceBackup", "useSubscription"],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 0,
+    "tables": 0,
+    "linksTo": ["/billing"],
+    "nav": "sync",
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": false,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/tasks",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/tasks/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "CrmContainer",
+    "containerFile": "packages/ui/src/components/ui/crm/containers/crm-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/crm/containers/crm-container.tsx",
+        "lines": 155
+      },
+      {
+        "file": "packages/ui/src/components/ui/crm/crm-view.tsx",
+        "lines": 533
+      },
+      {
+        "file": "packages/ui/src/components/ui/crm/customer-multi-picker.tsx",
+        "lines": 332
+      },
+      {
+        "file": "packages/ui/src/components/ui/crm/task-detail-modal.tsx",
+        "lines": 280
+      },
+      {
+        "file": "packages/ui/src/components/ui/crm/task-stats-chart.tsx",
+        "lines": 57
+      }
+    ],
+    "totalLines": 1357,
+    "queries": ["useInteractions", "useSubjectSuggestions", "useEmployees", "useCustomers"],
+    "mutations": [
+      "useCreateInteraction",
+      "useUpdateInteractionStatus",
+      "useRecordCustomerOutcome",
+      "useCreateCustomer"
+    ],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 8,
+    "tables": 1,
+    "linksTo": [],
+    "nav": "follow-up",
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/team-and-payroll",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/team-and-payroll/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "TeamAndPayrollContainer",
+    "containerFile": "packages/ui/src/components/ui/team-and-payroll/containers/team-and-payroll-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/team-and-payroll/containers/team-and-payroll-container.tsx",
+        "lines": 380
+      },
+      {
+        "file": "packages/ui/src/components/ui/team-and-payroll/payroll-list-table.tsx",
+        "lines": 171
+      },
+      {
+        "file": "packages/ui/src/components/ui/team-and-payroll/team-and-payroll-view.tsx",
+        "lines": 953
+      },
+      {
+        "file": "packages/ui/src/components/ui/team-and-payroll/branch-tree-view.tsx",
+        "lines": 265
+      },
+      {
+        "file": "packages/ui/src/components/ui/team-and-payroll/attendance-sheet.tsx",
+        "lines": 379
+      },
+      {
+        "file": "packages/ui/src/components/ui/team-and-payroll/branch-form.tsx",
+        "lines": 183
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-table/index.ts",
+        "lines": 16
+      },
+      {
+        "file": "packages/ui/src/components/ui/team-and-payroll/employee-list-table.tsx",
+        "lines": 239
+      },
+      {
+        "file": "packages/ui/src/components/ui/team-and-payroll/shift-manager.tsx",
+        "lines": 187
+      },
+      {
+        "file": "packages/ui/src/components/ui/team-and-payroll/shift-plan.tsx",
+        "lines": 256
+      }
+    ],
+    "totalLines": 3029,
+    "queries": [
+      "useServerFieldErrors",
+      "useBranches",
+      "useBranchTree",
+      "useEmployees",
+      "usePermissionMatrix",
+      "useWorkspaces",
+      "useAttendanceSheet",
+      "useWorkShifts",
+      "useRowSelection",
+      "useBulkAction",
+      "useTableState",
+      "useShiftPlan"
+    ],
+    "mutations": [
+      "useCreateEmployee",
+      "useAssignProfile",
+      "useCreateBranch",
+      "useCreateMemberDirect",
+      "useDeleteEmployee",
+      "usePayrolls",
+      "usePayrollSummary",
+      "useMarkAttendance",
+      "useCreateWorkShift",
+      "useSetWorkShiftActive",
+      "useAssignShift",
+      "useCancelShiftAssignment"
+    ],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 37,
+    "tables": 8,
+    "linksTo": ["/team-and-payroll/employee"],
+    "nav": "coworkers",
+    "module": "people",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "branches",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": true
+    },
+    "linkedFrom": ["/accounting", "/team-and-payroll/[id]"]
+  },
+  {
+    "route": "/team-and-payroll/[id]",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/team-and-payroll/[id]/page.tsx",
+    "area": "app",
+    "dynamic": true,
+    "titleKey": null,
+    "container": "EmployeeDetailContainer",
+    "containerFile": "packages/ui/src/components/ui/human-resources/containers/employee-detail-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/human-resources/containers/employee-detail-container.tsx",
+        "lines": 107
+      },
+      {
+        "file": "packages/ui/src/components/ui/human-resources/employee-leave-panel.tsx",
+        "lines": 354
+      },
+      {
+        "file": "packages/ui/src/components/ui/human-resources/employee-detail-view.tsx",
+        "lines": 768
+      },
+      {
+        "file": "packages/ui/src/components/ui/human-resources/employee-branches-panel.tsx",
+        "lines": 105
+      },
+      {
+        "file": "packages/ui/src/components/ui/activity/record-history-panel.tsx",
+        "lines": 137
+      }
+    ],
+    "totalLines": 1471,
+    "queries": ["useEmployee", "useLeaves"],
+    "mutations": [
+      "useUpdateEmployee",
+      "usePayrolls",
+      "useCreatePayroll",
+      "useRecordHistory",
+      "useCreateLeave"
+    ],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 10,
+    "tables": 0,
+    "linksTo": ["/team-and-payroll"],
+    "nav": null,
+    "module": "people",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "branches",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": ["/team-and-payroll"]
+  },
+  {
+    "route": "/till",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/till/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "TillContainer",
+    "containerFile": "packages/ui/src/components/ui/till/containers/till-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/till/containers/till-container.tsx",
+        "lines": 193
+      },
+      {
+        "file": "packages/ui/src/components/ui/till/till-view.tsx",
+        "lines": 958
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-table/index.ts",
+        "lines": 16
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      }
+    ],
+    "totalLines": 1710,
+    "queries": [
+      "useCashFlow",
+      "useCurrentSession",
+      "useSession",
+      "useSessionLedger",
+      "useRowSelection",
+      "useBulkAction",
+      "useTableState"
+    ],
+    "mutations": [
+      "useOpenSession",
+      "useOpenSessions",
+      "useRecordCashMovement",
+      "useSetTillSuspended",
+      "useCloseSession"
+    ],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 4,
+    "tables": 7,
+    "linksTo": [],
+    "nav": "till",
+    "module": "payments",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "pos",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": ["/accounting"]
+  },
+  {
+    "route": "/timesheets",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/timesheets/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "TimesheetsContainer",
+    "containerFile": "packages/ui/src/components/ui/timesheets/containers/timesheets-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/timesheets/containers/timesheets-container.tsx",
+        "lines": 114
+      },
+      {
+        "file": "packages/ui/src/components/ui/timesheets/timesheets-view.tsx",
+        "lines": 403
+      },
+      {
+        "file": "packages/ui/src/components/ui/data-table/index.ts",
+        "lines": 16
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      }
+    ],
+    "totalLines": 1076,
+    "queries": [
+      "useBillingPreview",
+      "useLogTime",
+      "useProjectProfitability",
+      "useProjects",
+      "useTimesheetSummary",
+      "useRowSelection",
+      "useBulkAction",
+      "useTableState"
+    ],
+    "mutations": [],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 7,
+    "tables": 7,
+    "linksTo": [],
+    "nav": "timesheets",
+    "module": "people",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "permissions",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": false
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/wallet",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/wallet/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "WalletContainer",
+    "containerFile": "packages/ui/src/components/ui/wallet/wallet-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/wallet/wallet-container.tsx",
+        "lines": 483
+      },
+      {
+        "file": "packages/ui/src/components/ui/capability/capability-kit.tsx",
+        "lines": 543
+      },
+      {
+        "file": "packages/ui/src/components/ui/wallet/wallet-format.ts",
+        "lines": 97
+      },
+      {
+        "file": "packages/ui/src/components/ui/docs/docs-help-link.tsx",
+        "lines": 182
+      }
+    ],
+    "totalLines": 1305,
+    "queries": ["useRequestWalletTopup", "useWallet", "useWalletTopups", "useWalletTransactions"],
+    "mutations": ["useCancelWalletTopup"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 8,
+    "tables": 5,
+    "linksTo": [],
+    "nav": "wallet",
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "wallet",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": true
+    },
+    "linkedFrom": ["/billing"]
+  },
+  {
+    "route": "/warehouse",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/warehouse/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "WarehouseTabsContainer",
+    "containerFile": "packages/ui/src/components/ui/warehouse/containers/warehouse-tabs-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/warehouse/containers/warehouse-tabs-container.tsx",
+        "lines": 140
+      },
+      {
+        "file": "packages/ui/src/components/ui/products/containers/product-list-container.tsx",
+        "lines": 91
+      },
+      {
+        "file": "packages/ui/src/components/ui/warehouse/containers/Warehouse-container.tsx",
+        "lines": 376
+      },
+      {
+        "file": "packages/ui/src/components/ui/products/product-list-view.tsx",
+        "lines": 246
+      },
+      {
+        "file": "packages/ui/src/components/ui/warehouse/warehouse-view.tsx",
+        "lines": 603
+      },
+      {
+        "file": "packages/ui/src/components/ui/warehouse/stock-history-drawer.tsx",
+        "lines": 269
+      },
+      {
+        "file": "packages/ui/src/components/ui/warehouse/warehouse-list-table.tsx",
+        "lines": 188
+      },
+      {
+        "file": "packages/ui/src/components/ui/warehouse/warehouse-dialogs.tsx",
+        "lines": 271
+      },
+      {
+        "file": "packages/ui/src/components/ui/warehouse/add-to-warehouse-modal.tsx",
+        "lines": 459
+      }
+    ],
+    "totalLines": 2643,
+    "queries": [
+      "useListEngine",
+      "useProducts",
+      "useSyncStore",
+      "useWarehouse",
+      "useCurrencyStore",
+      "useStockHistory",
+      "useWarehouseDetail",
+      "useWarehouseOverview",
+      "useUnits"
+    ],
+    "mutations": [
+      "useAssignWarehouseStock",
+      "useCreateWarehouse",
+      "useUpdateWarehouse",
+      "useCreatePurchaseOrder",
+      "useCreateProduct",
+      "useCreateUnit",
+      "useReceiveBatch"
+    ],
+    "tabs": ["stock", "products"],
+    "dialogs": 4,
+    "formControls": 26,
+    "tables": 4,
+    "linksTo": [],
+    "nav": "stock",
+    "module": "inventory",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "inventory",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": false
+    },
+    "linkedFrom": ["/invoices/new", "/quick-invoice", "/warehouse/[id]"]
+  },
+  {
+    "route": "/warehouse/[id]",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/warehouse/[id]/page.tsx",
+    "area": "app",
+    "dynamic": true,
+    "titleKey": null,
+    "container": "ProductDetailContainer",
+    "containerFile": "packages/ui/src/components/ui/warehouse-detail/containers/warehouse-detail-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/warehouse-detail/containers/warehouse-detail-container.tsx",
+        "lines": 297
+      },
+      {
+        "file": "packages/ui/src/components/ui/units/unit-select.tsx",
+        "lines": 221
+      },
+      {
+        "file": "packages/ui/src/components/ui/warehouse-detail/product-expiry-panel.tsx",
+        "lines": 180
+      },
+      {
+        "file": "packages/ui/src/components/ui/warehouse-detail/product-journey-panel.tsx",
+        "lines": 107
+      },
+      {
+        "file": "packages/ui/src/components/ui/warehouse-detail/product-barcodes-panel.tsx",
+        "lines": 156
+      },
+      {
+        "file": "packages/ui/src/components/ui/warehouse-detail/product-images-panel.tsx",
+        "lines": 302
+      },
+      {
+        "file": "packages/ui/src/components/ui/warehouse-detail/product-warehouse-stock-panel.tsx",
+        "lines": 167
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/product-manufacturing-panel.tsx",
+        "lines": 201
+      },
+      {
+        "file": "packages/ui/src/components/ui/warehouse-detail/warehouse-detail-page.tsx",
+        "lines": 539
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/production-editor.tsx",
+        "lines": 935
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/production-history.tsx",
+        "lines": 287
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/unit-text.ts",
+        "lines": 12
+      },
+      {
+        "file": "packages/ui/src/components/ui/manufacturing/manufacturing-errors.ts",
+        "lines": 43
+      }
+    ],
+    "totalLines": 3447,
+    "queries": [
+      "useProduct",
+      "useProductWarehouseBreakdown",
+      "useUnits",
+      "useBatches",
+      "useProductJourney",
+      "useCurrency",
+      "useProductBarcodes",
+      "useProductImages",
+      "useReorderProductImages",
+      "useProductionDefinition",
+      "useProductionDraft",
+      "useCurrencyStore",
+      "useProduce",
+      "useWarehouseOverview",
+      "useProductionRun",
+      "useProductionRuns"
+    ],
+    "mutations": [
+      "useUpdateProduct",
+      "useDeleteProduct",
+      "useUpdateBatchDates",
+      "useAddProductBarcode",
+      "useRemoveProductBarcode",
+      "useAddProductImage",
+      "useRemoveProductImage",
+      "useSetProductImageAlt",
+      "useAssignWarehouseStock",
+      "useCreateWarehouse",
+      "useSaveProductionDefinition"
+    ],
+    "tabs": [],
+    "dialogs": 1,
+    "formControls": 17,
+    "tables": 1,
+    "linksTo": ["/warehouse"],
+    "nav": null,
+    "module": "inventory",
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": "inventory",
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": true,
+      "notSetUp": true
+    },
+    "linkedFrom": []
+  },
+  {
+    "route": "/workflow-templates",
+    "pageFile": "apps/web/app/[lang]/(dashboard)/workflow-templates/page.tsx",
+    "area": "app",
+    "dynamic": false,
+    "titleKey": null,
+    "container": "WorkflowTemplatesContainer",
+    "containerFile": "packages/ui/src/components/ui/workflow/containers/workflow-templates-container.tsx",
+    "files": [
+      {
+        "file": "packages/ui/src/components/ui/workflow/containers/workflow-templates-container.tsx",
+        "lines": 45
+      },
+      {
+        "file": "packages/ui/src/components/ui/workflow/workflow-templates-view.tsx",
+        "lines": 230
+      },
+      {
+        "file": "packages/ui/src/components/ui/workflow/escalation-policy-editor.tsx",
+        "lines": 174
+      }
+    ],
+    "totalLines": 449,
+    "queries": ["useWorkflows", "useEscalationPolicy"],
+    "mutations": ["useCreateWorkflow", "useSetEscalationPolicy"],
+    "tabs": [],
+    "dialogs": 0,
+    "formControls": 3,
+    "tables": 1,
+    "linksTo": [],
+    "nav": "workflow-templates",
+    "module": null,
+    "inSidebar": true,
+    "inAppShell": true,
+    "docsArticle": null,
+    "robotsBlocked": true,
+    "states": {
+      "loading": true,
+      "error": true,
+      "empty": true,
+      "forbidden": false,
+      "notSetUp": true
+    },
+    "linkedFrom": ["/approvals", "/governance", "/settings"]
+  }
+]

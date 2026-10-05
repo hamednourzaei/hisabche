@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
 import { useInvoices, useDeleteInvoice } from '@hisabche/api'
 import { mapInvoices } from '../../lib/invoices/invoices-mappers'
-import { STATUS_MAP } from '../../lib/invoices/invoices-format'
+import { INVOICE_STATUS_FILTERS, STATUS_MAP } from '../../lib/invoices/invoices-format'
 import type { InvoicesQueryParams } from '../../lib/invoices/invoices-types'
 import { parseInvoiceFilters } from '../../lib/invoices/invoice-filter-link'
 
@@ -111,6 +111,50 @@ export function useInvoicesPage() {
     [],
   )
 
+  /**
+   * Show only invoices in one status — in whichever of «همه / فروش / خرید» is
+   * open. Sent to the server, like the type: the table holds one page, so
+   * filtering here would filter ten rows and call it the answer.
+   */
+  const handleStatusFilterChange = useCallback(
+    (value: string) =>
+      setFilters((prev) => {
+        const next = { ...prev, page: 1 }
+        const status = INVOICE_STATUS_FILTERS.find((known) => known === value)
+        if (!status) {
+          delete next.status
+          return next
+        }
+        return { ...next, status }
+      }),
+    [],
+  )
+
+  /**
+   * Only one branch's / one warehouse's invoices. Sent to the server like the
+   * status: the table holds one page. `'all'` clears it.
+   */
+  const handlePlaceFilterChange = useCallback(
+    (key: 'branchId' | 'warehouseId', value: string) =>
+      setFilters((prev) => {
+        const next = { ...prev, page: 1 }
+        if (!value || value === 'all') {
+          delete next[key]
+          return next
+        }
+        return { ...next, [key]: value }
+      }),
+    [],
+  )
+  const handleBranchFilterChange = useCallback(
+    (value: string) => handlePlaceFilterChange('branchId', value),
+    [handlePlaceFilterChange],
+  )
+  const handleWarehouseFilterChange = useCallback(
+    (value: string) => handlePlaceFilterChange('warehouseId', value),
+    [handlePlaceFilterChange],
+  )
+
   const handleClearFilters = useCallback(() => setFilters(DEFAULT_FILTERS), [])
 
   const handlePageChange = useCallback(
@@ -152,6 +196,12 @@ export function useInvoicesPage() {
     statusVariant,
     typeFilter: (filters.type ?? 'all') as 'all' | 'sale' | 'purchase',
     handleTypeFilterChange,
+    statusFilter: filters.status ?? 'all',
+    handleStatusFilterChange,
+    branchFilter: filters.branchId ?? 'all',
+    handleBranchFilterChange,
+    warehouseFilter: filters.warehouseId ?? 'all',
+    handleWarehouseFilterChange,
     handleSearchChange,
     handleClearFilters,
     handlePageChange,

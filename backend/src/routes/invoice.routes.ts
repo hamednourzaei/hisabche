@@ -16,11 +16,15 @@ import { ActivityService } from '../services/activity.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { resolveBranchContext } from '../middleware/branch.middleware'
+import { branches } from '../services/branch'
 import { BaseError } from '../errors/base.error'
 import { sendFailure } from '../errors/http-failure'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { invalidateMoneyCaches } from '../utils/money-cache'
 import { PlanLimitError } from '../services/plan-limits.service'
+
+/** Anything that is not a uuid is ignored, never passed to a query. */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const invoiceService = new InvoiceService()
 const invoiceRelatedService = new InvoiceRelatedService()
@@ -44,6 +48,8 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           search: q.search ?? '',
           type: (q.type as 'sale' | 'purchase') || undefined,
           status: q.status || undefined,
+          branchId: UUID_PATTERN.test(q.branchId ?? '') ? q.branchId : undefined,
+          warehouseId: UUID_PATTERN.test(q.warehouseId ?? '') ? q.warehouseId : undefined,
           // H1 — the dashboard's «بدهی مشتریان» card links here. Read as a
           // string: `?outstanding=false` must not switch the filter ON, which
           // is what a plain truthiness check on a query string would do.
@@ -66,9 +72,16 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           sortDirection: (q.sortDirection as 'asc' | 'desc') ?? 'desc',
         }
 
+        // A branch in the filter is a REQUEST, like the one on create: a member
+        // restricted to other branches is refused, not shown someone else's sales.
+        if (filters.branchId) await branches.resolveActive(request.tenancy, filters.branchId)
+
         const result = await invoiceService.list(request.tenancy, filters as any)
         return reply.send(result)
       } catch (err: any) {
+        if (err instanceof BaseError && err.statusCode < 500) {
+          return reply.code(err.statusCode).send({ error: err.message, code: err.message })
+        }
         fastify.log.error(err)
         return reply.code(500).send({ error: err.message })
       }
@@ -147,6 +160,12 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           supplierId: body.supplierId,
           date: body.date,
           dueDate: body.dueDate,
+          // ⚠️ FORWARDED. This mapping dropped `warehouseId`: the form chose a
+          // warehouse, the service was ready to move that warehouse's stock,
+          // and the id never arrived — every invoice moved no warehouse at all.
+          ...(UUID_PATTERN.test(String(body.warehouseId ?? ''))
+            ? { warehouseId: body.warehouseId as string }
+            : {}),
           subtotal: body.subtotal ?? 0,
           discountTotal: body.discountTotal ?? 0,
           discountType: body.discountType ?? 'fixed',
@@ -209,7 +228,14 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         // echoed into a query.
         const clientRequestId = readClientRequestId(request)
 
-        const invoice = await invoiceService.create(request.tenancy, data, request.branchId, {
+        // The form names the branch in the body (so a queued offline sale keeps
+        // it); the header/query form still works. Either way it is checked
+        // against the member's own branches before it is written.
+        const branchId = UUID_PATTERN.test(String(body.branchId ?? ''))
+          ? await branches.resolveActive(request.tenancy, body.branchId as string)
+          : request.branchId
+
+        const invoice = await invoiceService.create(request.tenancy, data, branchId, {
           clientRequestId,
         })
 

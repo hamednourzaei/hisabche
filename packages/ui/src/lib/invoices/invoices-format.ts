@@ -20,6 +20,14 @@ export const fmtDate = (d: string, lang: string): string => {
   }
 }
 
+/**
+ * The statuses the invoice table can be filtered by — every one is a value the
+ * server stores on an invoice and filters on (`?status=`). A status invoices do
+ * not have is not offered: a filter that can only ever return nothing is a lie.
+ */
+export const INVOICE_STATUS_FILTERS = ['pending', 'partial', 'completed', 'cancelled'] as const
+export type InvoiceStatusFilter = (typeof INVOICE_STATUS_FILTERS)[number]
+
 export const STATUS_MAP: Record<string, 'success' | 'warning' | 'destructive' | 'secondary'> = {
   completed: 'success',
   pending: 'warning',

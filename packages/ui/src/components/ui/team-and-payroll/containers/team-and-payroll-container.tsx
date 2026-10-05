@@ -37,7 +37,7 @@
 
 import { useServerFieldErrors } from '../../../../hooks/use-server-field-errors'
 import type { PayrollRow } from '../payroll-list-table'
-import { useCallback, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 
@@ -59,15 +59,50 @@ import {
   apiErrorFields,
 } from '@hisabche/api'
 
+import { Users, Wallet } from 'lucide-react'
+import { useMyCapabilities } from '@hisabche/api'
+import { isNavLocked } from '@hisabche/ui-contract'
 import { TeamAndPayrollView, type TeamTab } from '../team-and-payroll-view'
 import { BranchTreeView } from '../branch-tree-view'
 import { AttendanceSheet } from '../attendance-sheet'
 import { BranchForm, type BranchFormValues } from '../branch-form'
 import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
+import { HubTabs, useHubSection, useHubTab } from '../../hub-tabs'
+import { SegmentedControl } from '../../segmented-control'
 
-/** Anything that is not a known tab is «کارمندان» — what the menu entry means. */
-function tabFrom(value: string | null | undefined): TeamTab {
-  return value === 'branches' || value === 'payroll' || value === 'attendance' ? value : 'employees'
+const TimesheetsContainer = lazy(() =>
+  import('../../timesheets/containers/timesheets-container').then((m) => ({
+    default: m.TimesheetsContainer,
+  })),
+)
+
+//
+// Four pill tabs and a separate page became two tabs, each with one switch:
+//
+//   تیم            who works here   — کارمندان · شعب
+//   حقوق و حضور    what they are paid and when they worked
+//                                   — حقوق · حضور و غیاب · ساعات کار (was /timesheets)
+//
+// ⚠️ THE SAME SCREENS. The first four are this file's own screen, told which
+// part to show; «ساعات کار» mounts the container that owns it. The bar, the
+// switch and the address handling are the shared `HubTabs` /
+// `SegmentedControl` / `useHubTab` / `useHubSection`.
+
+export const TEAM_HUB_TABS = ['team', 'pay'] as const
+export const TEAM_SECTIONS = ['employees', 'branches'] as const
+export const PAY_SECTIONS = ['payroll', 'attendance', 'timesheets'] as const
+
+/** The address «ساعات کار» used to live at — the key of its lock in `NAV_MODULE`. */
+export const TIMESHEETS_SOURCE = '/timesheets'
+
+const HUB_TAB_ICON = { team: Users, pay: Wallet } as const
+
+/** Where an old `?tab=` value lives now; null when it is not an old value. */
+export function teamAddressOf(oldTab: string | null): string | null {
+  if (oldTab === 'branches') return '/team-and-payroll?view=branches'
+  if (oldTab === 'payroll') return '/team-and-payroll?tab=pay'
+  if (oldTab === 'attendance') return '/team-and-payroll?tab=pay&view=attendance'
+  return null
 }
 
 /** The server's message, or a generic fallback. Never a swallowed error. */
@@ -82,6 +117,84 @@ function employeeFieldsMessage(error: unknown, fallback: string): string | null 
 }
 
 export function TeamAndPayrollContainer() {
+  return <TeamHub />
+}
+
+function TeamHub() {
+  const t = useTranslations()
+  const blocked = useMyCapabilities().data?.blockedModules ?? []
+  const paySections = PAY_SECTIONS.filter(
+    (section) => section !== 'timesheets' || !isNavLocked(TIMESHEETS_SOURCE, blocked),
+  )
+  const [tab, selectTab] = useHubTab(TEAM_HUB_TABS)
+  const [team, selectTeam] = useHubSection(TEAM_SECTIONS)
+  const [pay, selectPay] = useHubSection(paySections)
+
+  const params = useSearchParams()
+  const localeReplace = useLocaleReplace()
+  const moved = teamAddressOf(params.get('tab'))
+  useEffect(() => {
+    if (moved) localeReplace(moved)
+  }, [moved, localeReplace])
+
+  return (
+    <div className="space-y-4">
+      <HubTabs
+        label={t('teamHub.label')}
+        items={TEAM_HUB_TABS.map((id) => ({
+          id,
+          label: t(`teamHub.tabs.${id}`),
+          icon: HUB_TAB_ICON[id],
+        }))}
+        active={tab}
+        onSelect={selectTab}
+      />
+
+      <div className="mx-auto max-w-5xl">
+        {tab === 'pay' ? (
+          <SegmentedControl
+            label={t('teamHub.sectionsLabel')}
+            options={paySections.map((value) => ({
+              value,
+              label: t(`teamHub.sections.${value}`),
+            }))}
+            value={pay}
+            onChange={selectPay}
+          />
+        ) : (
+          <SegmentedControl
+            label={t('teamHub.sectionsLabel')}
+            options={TEAM_SECTIONS.map((value) => ({
+              value,
+              label: t(`teamHub.sections.${value}`),
+            }))}
+            value={team}
+            onChange={selectTeam}
+          />
+        )}
+      </div>
+
+      <div role="tabpanel">
+        {tab === 'pay' && pay === 'timesheets' ? (
+          <Suspense
+            fallback={
+              <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
+                {t('teamHub.loading')}
+              </p>
+            }
+          >
+            <TimesheetsContainer />
+          </Suspense>
+        ) : (
+          <TeamAndPayrollScreen section={tab === 'pay' ? pay : team} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** The screen itself: the hub says which part shows. */
+function TeamAndPayrollScreen({ section }: { section: TeamTab | 'timesheets' }) {
   const tOriginal = useTranslations()
   const t = useCallback(
     (key: string, fallback?: string): string => {
@@ -91,19 +204,9 @@ export function TeamAndPayrollContainer() {
     [tOriginal],
   )
 
-  const localeReplace = useLocaleReplace()
   const push = useLocalePush()
-  const params = useSearchParams()
-  const tab = tabFrom(params.get('tab'))
-
-  const setTab = useCallback(
-    (next: TeamTab) => {
-      // replace, not push: switching tabs is not a step the back button should
-      // have to walk through one at a time.
-      localeReplace(next === 'employees' ? '/team-and-payroll' : `/team-and-payroll?tab=${next}`)
-    },
-    [localeReplace],
-  )
+  // «ساعات کار» is mounted by the hub itself; here it never arrives.
+  const tab: TeamTab = section === 'timesheets' ? 'employees' : section
 
   // ─── Data ─────────────────────────────────────────────────────────────────
 
@@ -364,7 +467,6 @@ export function TeamAndPayrollContainer() {
       isLoadingEmployees={isLoadingEmployees}
       isLoadingPayroll={isLoadingPayroll}
       statusFilter={tab}
-      onStatusChange={setTab}
       onViewEmployee={handleViewEmployee}
       onCreateEmployee={handleCreateEmployee}
       onDeleteEmployee={handleDeleteEmployee}

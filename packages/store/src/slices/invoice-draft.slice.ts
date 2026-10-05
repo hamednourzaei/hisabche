@@ -59,6 +59,8 @@ export interface InvoiceDraftState {
    * uses the only warehouse, or none.
    */
   warehouseId: string | null
+  /** The branch this invoice is written in; null = the business as a whole. */
+  branchId: string | null
   notes: string
   paymentMethod: 'cash' | 'credit'
   isPaid: boolean
@@ -147,6 +149,7 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
       columns: defaultColumns(INITIAL_CURRENCY),
       columnsInitialised: false,
       warehouseId: null,
+      branchId: null,
       rates: {},
       ...blankDraft(defaultColumns(INITIAL_CURRENCY)),
 
@@ -362,6 +365,7 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
         date: state.date,
         dueDate: state.dueDate,
         warehouseId: state.warehouseId,
+        branchId: state.branchId,
         notes: state.notes,
         paymentMethod: state.paymentMethod,
         isPaid: state.isPaid,

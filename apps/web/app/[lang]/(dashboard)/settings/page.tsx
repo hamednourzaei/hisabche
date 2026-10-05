@@ -1,4 +1,4 @@
-import { SettingsPage } from '@hisabche/ui'
+import { SettingsHubContainer } from '@hisabche/ui'
 
 const titles: Record<string, string> = {
   fa: 'تنظیمات',
@@ -62,5 +62,5 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 export default function Page() {
-  return <SettingsPage />
+  return <SettingsHubContainer />
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useLocale, useTranslations } from 'next-intl'
+import { SearchableTable } from '../../data-table'
 import {
   useSubscription,
   useTrialStatus,
@@ -184,58 +185,75 @@ export function BillingContainer() {
               {t('billing.request.noHistory')}
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px] text-sm">
-                <thead>
-                  <tr className="border-b border-[hsl(var(--border-default))] text-xs text-[hsl(var(--fg-tertiary))]">
-                    <th className="px-2 py-2 text-start font-medium">
-                      {t('billing.request.col.date')}
-                    </th>
-                    <th className="px-2 py-2 text-start font-medium">
-                      {t('billing.request.col.event')}
-                    </th>
-                    <th className="px-2 py-2 text-start font-medium">
-                      {t('billing.request.col.plan')}
-                    </th>
-                    <th className="px-2 py-2 text-end font-medium">
-                      {t('billing.request.col.amount')}
-                    </th>
-                    <th className="px-2 py-2 text-start font-medium">
-                      {t('billing.request.col.until')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.events.map((event: SubscriptionEvent) => (
-                    <tr
-                      key={event.id}
-                      className="border-b border-[hsl(var(--border-default)/0.5)] last:border-0"
-                    >
-                      <td className="whitespace-nowrap px-2 py-2 tabular-nums">
-                        {formatDate(event.created_at, lang)}
-                      </td>
-                      <td className="px-2 py-2">
-                        {t(`billing.request.events.${event.event}`)}
-                        {event.note ? (
-                          <span className="block text-xs text-[hsl(var(--fg-tertiary))]">
-                            {event.note}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="px-2 py-2">
-                        {event.plan ? t(`billing.plans.${event.plan}.name`) : '—'}
-                      </td>
-                      <td className="px-2 py-2 text-end tabular-nums">
-                        {money(event.amount_minor, event.currency)}
-                      </td>
-                      <td className="whitespace-nowrap px-2 py-2 tabular-nums">
-                        {event.period_end ? formatDate(event.period_end, lang) : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <SearchableTable<SubscriptionEvent>
+              tableId="billing-history"
+              rows={history.events}
+              rowKey={(event) => event.id}
+              words={(event) => [t(`billing.request.events.${event.event}`), event.note ?? '']}
+              empty={t('billing.request.noHistory')}
+              minWidthClass="min-w-[520px]"
+              columns={[
+                {
+                  id: 'date',
+                  labelKey: 'billing.request.col.date',
+                  labelFallback: t('billing.request.col.date'),
+                  sortValue: (event) => event.created_at,
+                  render: (event) => (
+                    <span className="whitespace-nowrap tabular-nums">
+                      {formatDate(event.created_at, lang)}
+                    </span>
+                  ),
+                },
+                {
+                  id: 'event',
+                  labelKey: 'billing.request.col.event',
+                  labelFallback: t('billing.request.col.event'),
+                  locked: true,
+                  sortValue: (event) => event.event,
+                  render: (event) => (
+                    <>
+                      {t(`billing.request.events.${event.event}`)}
+                      {event.note ? (
+                        <span className="block text-xs text-[hsl(var(--fg-tertiary))]">
+                          {event.note}
+                        </span>
+                      ) : null}
+                    </>
+                  ),
+                },
+                {
+                  id: 'plan',
+                  labelKey: 'billing.request.col.plan',
+                  labelFallback: t('billing.request.col.plan'),
+                  sortValue: (event) => event.plan ?? '',
+                  render: (event) => (event.plan ? t(`billing.plans.${event.plan}.name`) : '—'),
+                },
+                {
+                  id: 'amount',
+                  labelKey: 'billing.request.col.amount',
+                  labelFallback: t('billing.request.col.amount'),
+                  align: 'end',
+                  sortValue: (event) => event.amount_minor,
+                  render: (event) => (
+                    <span className="tabular-nums">
+                      {money(event.amount_minor, event.currency)}
+                    </span>
+                  ),
+                },
+                {
+                  id: 'until',
+                  labelKey: 'billing.request.col.until',
+                  labelFallback: t('billing.request.col.until'),
+                  showFrom: 'md',
+                  sortValue: (event) => event.period_end,
+                  render: (event) => (
+                    <span className="whitespace-nowrap tabular-nums">
+                      {event.period_end ? formatDate(event.period_end, lang) : '—'}
+                    </span>
+                  ),
+                },
+              ]}
+            />
           )}
         </CardContent>
       </Card>

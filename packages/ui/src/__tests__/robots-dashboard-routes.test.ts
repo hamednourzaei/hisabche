@@ -14,7 +14,7 @@ describe('robots.txt covers the authenticated app', () => {
     const routes = readdirSync(DASHBOARD).filter((name) =>
       statSync(join(DASHBOARD, name)).isDirectory(),
     )
-    expect(routes.length).toBeGreaterThan(30)
+    expect(routes.length).toBeGreaterThan(20)
     expect(routes.filter((route) => !robots.includes(`'/*/${route}'`))).toEqual([])
   })
 

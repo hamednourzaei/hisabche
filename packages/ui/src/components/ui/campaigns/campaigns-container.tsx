@@ -15,7 +15,7 @@
 // ⚠️ No answers = no score, said in words; it is never drawn as 0.
 // ============================================
 
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { formatNumber } from '@hisabche/formatting'
 import {
@@ -38,6 +38,7 @@ import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { useRouteLang } from '../../../hooks/use-locale-push'
 import { Button } from '../button'
 import { KpiCard, KpiGrid } from '../kpi-card'
+import { DataTable, TableFilterSelect, matchesSearch, type TableColumn } from '../data-table'
 import { SelectField } from '../select-field'
 
 export const CAMPAIGN_ERROR_CODES = [
@@ -77,6 +78,74 @@ export function CampaignsContainer() {
   const known = <T extends string>(value: string, list: readonly T[]): value is T =>
     (list as readonly string[]).includes(value)
   const emailReady = campaigns.data?.channel.email.configured === true
+
+  // The shared table speaks in whole keys with a fallback.
+  const translate = useTranslations()
+  const tableT = useCallback(
+    (key: string, fallback?: string): string => {
+      const value = translate(key as never)
+      return value && value !== key ? value : (fallback ?? key)
+    },
+    [translate],
+  )
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const all = campaigns.data?.campaigns
+  const rows = useMemo(
+    () =>
+      (all ?? [])
+        .filter((campaign) => statusFilter === 'all' || campaign.status === statusFilter)
+        .filter((campaign) => matchesSearch(search, [campaign.name, campaign.subject])),
+    [all, search, statusFilter],
+  )
+  const open = selected ? (all ?? []).find((campaign) => campaign.id === selected) : undefined
+
+  const columns: TableColumn<Campaign>[] = [
+    {
+      id: 'name',
+      labelKey: 'campaigns.name',
+      labelFallback: t('name'),
+      locked: true,
+      sortValue: (campaign) => campaign.name,
+      render: (campaign) => <span className="font-medium">{campaign.name}</span>,
+    },
+    {
+      id: 'kind',
+      labelKey: 'campaigns.kind',
+      labelFallback: t('kind'),
+      sortValue: (campaign) => campaign.kind,
+      render: (campaign) => (
+        <span className="rounded-full bg-[hsl(var(--color-primary)/0.1)] px-2 py-0.5 text-xs text-[hsl(var(--color-primary))]">
+          {known(campaign.kind, CAMPAIGN_KIND_KEYS) ? t(`kinds.${campaign.kind}`) : campaign.kind}
+        </span>
+      ),
+    },
+    {
+      id: 'status',
+      labelKey: 'common.status',
+      labelFallback: 'وضعیت',
+      sortValue: (campaign) => campaign.status,
+      render: (campaign) => (
+        <span className="rounded-full bg-[hsl(var(--surface-muted))] px-2 py-0.5 text-xs text-[hsl(var(--fg-secondary))]">
+          {known(campaign.status, CAMPAIGN_STATUS_KEYS)
+            ? t(`statuses.${campaign.status}`)
+            : campaign.status}
+        </span>
+      ),
+    },
+    {
+      id: 'date',
+      labelKey: 'common.date',
+      labelFallback: 'تاریخ',
+      align: 'end',
+      sortValue: (campaign) => campaign.sentAt ?? campaign.createdAt,
+      render: (campaign) => (
+        <span className="whitespace-nowrap text-xs text-[hsl(var(--fg-tertiary))]">
+          {date(campaign.sentAt ?? campaign.createdAt)}
+        </span>
+      ),
+    },
+  ]
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5 px-4">
@@ -120,43 +189,49 @@ export function CampaignsContainer() {
         <p role="alert" className={cn(card, 'p-4 text-sm text-[hsl(var(--color-destructive))]')}>
           {errorText(campaigns.error)}
         </p>
-      ) : campaigns.data.campaigns.length === 0 ? (
-        <p className={cn(card, 'p-6 text-center text-sm text-[hsl(var(--fg-secondary))]')}>
-          {t('empty')}
-        </p>
       ) : (
-        <ul className="space-y-2">
-          {campaigns.data.campaigns.map((campaign) => (
-            <li key={campaign.id} className={cn(card, 'p-4')}>
-              <button
-                type="button"
-                onClick={() =>
-                  setSelected((current) => (current === campaign.id ? null : campaign.id))
-                }
-                className="flex w-full flex-wrap items-center gap-2 text-start"
-                aria-expanded={selected === campaign.id}
-              >
-                <span className="font-medium text-[hsl(var(--fg-primary))]">{campaign.name}</span>
-                <span className="rounded-full bg-[hsl(var(--color-primary)/0.1)] px-2 py-0.5 text-xs text-[hsl(var(--color-primary))]">
-                  {known(campaign.kind, CAMPAIGN_KIND_KEYS)
-                    ? t(`kinds.${campaign.kind}`)
-                    : campaign.kind}
-                </span>
-                <span className="rounded-full bg-[hsl(var(--surface-muted))] px-2 py-0.5 text-xs text-[hsl(var(--fg-secondary))]">
-                  {known(campaign.status, CAMPAIGN_STATUS_KEYS)
-                    ? t(`statuses.${campaign.status}`)
-                    : campaign.status}
-                </span>
-                <span className="ms-auto text-xs text-[hsl(var(--fg-tertiary))]">
-                  {date(campaign.sentAt ?? campaign.createdAt)}
-                </span>
-              </button>
-              {selected === campaign.id ? (
-                <CampaignPanel campaign={campaign} emailReady={emailReady} errorText={errorText} />
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        <>
+          <DataTable
+            tableId="campaigns"
+            t={tableT}
+            rows={rows}
+            columns={columns}
+            rowKey={(campaign) => campaign.id}
+            // A row opens its campaign under the table; pressing it again closes it.
+            onRowClick={(campaign) =>
+              setSelected((current) => (current === campaign.id ? null : campaign.id))
+            }
+            searchValue={search}
+            onSearchChange={setSearch}
+            actions={
+              <TableFilterSelect
+                label={tableT('common.status', 'وضعیت')}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                allValue="all"
+                options={[
+                  { value: 'all', label: tableT('common.all', 'همه') },
+                  ...CAMPAIGN_STATUS_KEYS.map((status) => ({
+                    value: status as string,
+                    label: t(`statuses.${status}`),
+                  })),
+                ]}
+              />
+            }
+            minWidthClass="min-w-[420px]"
+            emptyState={
+              <p className="p-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
+                {campaigns.data.campaigns.length === 0 ? t('empty') : t('noMatch')}
+              </p>
+            }
+          />
+          {open ? (
+            <section className={cn(card, 'p-4')} aria-label={open.name}>
+              <h2 className="font-semibold text-[hsl(var(--fg-primary))]">{open.name}</h2>
+              <CampaignPanel campaign={open} emailReady={emailReady} errorText={errorText} />
+            </section>
+          ) : null}
+        </>
       )}
       <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('note')}</p>
     </div>

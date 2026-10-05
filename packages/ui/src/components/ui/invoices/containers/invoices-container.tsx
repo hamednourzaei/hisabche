@@ -1,7 +1,8 @@
 // packages/ui/src/containers/invoices-container.tsx
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
+import { asList, useBranches, useWarehouseOverview, type Branch } from '@hisabche/api'
 import { useInvoicesPage } from '../../../../hooks/invoices/use-invoices-page'
 import { InvoicesView } from '../invoices-view'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
@@ -21,11 +22,33 @@ export function InvoicesContainer() {
     statusVariant,
     typeFilter,
     handleTypeFilterChange,
+    statusFilter,
+    branchFilter,
+    handleBranchFilterChange,
+    warehouseFilter,
+    handleWarehouseFilterChange,
+    handleStatusFilterChange,
     handleSearchChange,
     handlePageChange,
     handleDeleteInvoice,
     safeT,
   } = useInvoicesPage()
+
+  // The places an invoice can belong to — what the table's two filters offer.
+  const branchList = useBranches().data
+  const warehouseList = useWarehouseOverview().data?.warehouses
+  const branchOptions = useMemo(
+    () => asList<Branch>(branchList).map((branch) => ({ id: branch.id, name: branch.name })),
+    [branchList],
+  )
+  const warehouseOptions = useMemo(
+    () =>
+      asList<{ id: string; name: string }>(warehouseList).map((warehouse) => ({
+        id: warehouse.id,
+        name: warehouse.name,
+      })),
+    [warehouseList],
+  )
 
   const handleNavigateInvoice = useCallback((id: string) => push(`/invoices/${id}`), [push])
 
@@ -63,6 +86,14 @@ export function InvoicesContainer() {
       statusVariant={statusVariant}
       typeFilter={typeFilter}
       onTypeFilterChange={handleTypeFilterChange}
+      statusFilter={statusFilter}
+      onStatusFilterChange={handleStatusFilterChange}
+      branches={branchOptions}
+      branchFilter={branchFilter}
+      onBranchFilterChange={handleBranchFilterChange}
+      warehouses={warehouseOptions}
+      warehouseFilter={warehouseFilter}
+      onWarehouseFilterChange={handleWarehouseFilterChange}
     />
   )
 }

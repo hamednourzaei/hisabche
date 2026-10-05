@@ -423,6 +423,9 @@ const SCREENS: Screen[] = [
         'searching',
         'nothingFound',
       ],
+      'priceLists.columns.': ['products', 'customers', 'validity', 'status', 'actions'],
+      'priceLists.active': [''],
+      'priceLists.openHint': [''],
       'priceLists.errors.': [
         'general',
         'incomplete',
@@ -482,6 +485,10 @@ const SCREENS: Screen[] = [
         'nothingFound',
       ],
       'promotions.kinds.': ['percentage', 'fixed_amount'],
+      'promotions.columns.': ['value', 'scope', 'validity', 'status', 'actions'],
+      'promotions.active': [''],
+      'promotions.sectionsLabel': [''],
+      'promotions.sections.': ['promotions', 'lists'],
       'promotions.errors.': [
         'general',
         'incomplete',
@@ -694,6 +701,25 @@ const SCREENS: Screen[] = [
         'CUSTOM_FIELD_FORMULA_UNBALANCED',
         'CUSTOM_FIELDS_MIGRATION_PENDING',
       ],
+    },
+  },
+  {
+    name: 'sales and purchase hub (UX phase ز)',
+    file: join(UI, 'invoices', 'containers', 'sales-hub-container.tsx'),
+    prefixes: ['salesHub.'],
+    dynamic: {
+      'salesHub.': ['label', 'loading'],
+      'salesHub.tabs.': ['invoices', 'pricing'],
+    },
+  },
+  {
+    name: 'warehouse hub (UX)',
+    file: join(UI, 'warehouse', 'containers', 'warehouse-tabs-container.tsx'),
+    prefixes: ['warehouseHub.'],
+    dynamic: {
+      'warehouseHub.': ['label', 'loading', 'sectionsLabel'],
+      'warehouseHub.tabs.': ['stock', 'expiry'],
+      'warehouseHub.sections.': ['warehouses', 'products'],
     },
   },
   {
@@ -962,9 +988,24 @@ const SCREENS: Screen[] = [
     },
   },
   {
-    name: 'accounting tabs',
-    file: join(UI, 'accounting', 'AccountingTabs.tsx'),
+    // The seven-tab bar is gone; the hub labels its sections with the same keys.
+    name: 'accounting hub sections',
+    file: join(UI, 'accounting', 'AccountingPage.tsx'),
     prefixes: ['accounting.tabs.'],
+    dynamic: {
+      'accounting.tabs.': [
+        'accounts',
+        'journal',
+        'monthEnd',
+        'bank',
+        'assets',
+        'financing',
+        'trialBalance',
+        'balanceSheet',
+        'incomeStatement',
+        'budgets',
+      ],
+    },
   },
 ]
 

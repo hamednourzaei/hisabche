@@ -145,7 +145,7 @@ export const DataAndSyncView = memo(function DataAndSyncView({
         conflictCount={conflictCount ?? 0}
         hasError={Boolean(error)}
         isLoading={isLoading}
-        onAction={() => onNavigate('/conflicts')}
+        onAction={() => onNavigate('/data-and-sync?tab=details&view=conflicts')}
         actionLabelKey="dataSync.open_conflicts"
       />
 
@@ -154,7 +154,11 @@ export const DataAndSyncView = memo(function DataAndSyncView({
         aria-label={t('dataSync.summary', 'خلاصه‌ی وضعیت')}
         className="grid grid-cols-2 gap-3 lg:grid-cols-4"
       >
-        <button type="button" className="text-start" onClick={() => onNavigate('/sync-center')}>
+        <button
+          type="button"
+          className="text-start"
+          onClick={() => onNavigate('/data-and-sync?tab=details')}
+        >
           <Stat
             label={t('dataSync.sync_title', 'همگام‌سازی')}
             value={
@@ -182,10 +186,18 @@ export const DataAndSyncView = memo(function DataAndSyncView({
             }
           />
         </button>
-        <button type="button" className="text-start" onClick={() => onNavigate('/sync-center')}>
+        <button
+          type="button"
+          className="text-start"
+          onClick={() => onNavigate('/data-and-sync?tab=details')}
+        >
           <Stat label={t('dataSync.pending', 'در صف ارسال')} value={String(pendingCount)} />
         </button>
-        <button type="button" className="text-start" onClick={() => onNavigate('/conflicts')}>
+        <button
+          type="button"
+          className="text-start"
+          onClick={() => onNavigate('/data-and-sync?tab=details&view=conflicts')}
+        >
           <Stat
             label={t('dataSync.conflicts_title', 'تعارض‌ها')}
             value={conflictCount === null ? '—' : String(conflictCount)}
@@ -196,7 +208,11 @@ export const DataAndSyncView = memo(function DataAndSyncView({
             }
           />
         </button>
-        <button type="button" className="text-start" onClick={() => onNavigate('/data-migration')}>
+        <button
+          type="button"
+          className="text-start"
+          onClick={() => onNavigate('/data-and-sync?tab=details&view=migration')}
+        >
           <Stat
             label={t('dataSync.last_migration', 'آخرین انتقال')}
             value={
@@ -221,7 +237,7 @@ export const DataAndSyncView = memo(function DataAndSyncView({
         title={t('dataSync.sync_title', 'همگام‌سازی')}
         description={t('dataSync.sync_hint', 'وضعیت اتصال و تغییرهایی که هنوز نرفته‌اند.')}
         action={
-          <ActionButton variant="quiet" onClick={() => onNavigate('/sync-center')}>
+          <ActionButton variant="quiet" onClick={() => onNavigate('/data-and-sync?tab=details')}>
             {t('dataSync.open_sync', 'مرکز همگام‌سازی')}
           </ActionButton>
         }
@@ -261,7 +277,10 @@ export const DataAndSyncView = memo(function DataAndSyncView({
           'رکوردهایی که روی دو دستگاه تغییر کرده‌اند و باید یکی انتخاب شود.',
         )}
         action={
-          <ActionButton variant="quiet" onClick={() => onNavigate('/conflicts')}>
+          <ActionButton
+            variant="quiet"
+            onClick={() => onNavigate('/data-and-sync?tab=details&view=conflicts')}
+          >
             {t('dataSync.open_conflicts', 'بازبینی تعارض‌ها')}
           </ActionButton>
         }
@@ -315,7 +334,7 @@ export const DataAndSyncView = memo(function DataAndSyncView({
           'مشتریان و کالاها را از فایل موجود وارد کنید — با پیش‌نمایش پیش از ثبت.',
         )}
         action={
-          <ActionButton onClick={() => onNavigate('/data-migration')}>
+          <ActionButton onClick={() => onNavigate('/data-and-sync?tab=details&view=migration')}>
             {t('dataSync.open_migration', 'شروع انتقال')}
           </ActionButton>
         }

@@ -28,7 +28,7 @@
 import { memo, useCallback, useMemo } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { ShieldCheck, Users, KeyRound, ClipboardCheck, Scale, History } from 'lucide-react'
+import { ShieldCheck, Users, KeyRound, ClipboardCheck, Scale } from 'lucide-react'
 import {
   asList,
   useAuditTrail,
@@ -43,6 +43,8 @@ import { useWorkspaceStore } from '@hisabche/store'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { CapabilityHeader, CapabilityPage, Panel, Stat } from '../../capability/capability-kit'
 import { Skeleton } from '../../skeleton'
+import { HubTabs } from '../../hub-tabs'
+import { SegmentedControl } from '../../segmented-control'
 import { WorkspaceContainer } from '../../workspace/containers/workspace-container'
 import { PermissionsContainer } from '../../permissions/containers/permissions-container'
 import { ApprovalsContainer } from '../../workflow/containers/approvals-container'
@@ -52,13 +54,17 @@ import { GovernanceContainer } from './governance-container'
 const TABS = ['overview', 'members', 'permissions', 'approvals', 'sod', 'audit'] as const
 type GovernanceTab = (typeof TABS)[number]
 
-const TAB_ICON: Record<GovernanceTab, typeof ShieldCheck> = {
-  overview: ShieldCheck,
-  members: Users,
-  permissions: KeyRound,
-  approvals: ClipboardCheck,
-  sod: Scale,
-  audit: History,
+/** The six parts in two groups — two tabs on top, one switch under them. */
+export const GOVERNANCE_GROUPS = {
+  people: ['overview', 'members', 'permissions'],
+  control: ['approvals', 'sod', 'audit'],
+} as const
+export type GovernanceGroup = keyof typeof GOVERNANCE_GROUPS
+const GOVERNANCE_GROUP_ORDER: readonly GovernanceGroup[] = ['people', 'control']
+const GOVERNANCE_GROUP_ICON = { people: Users, control: Scale } as const
+
+export function governanceGroupOf(tab: string): GovernanceGroup {
+  return (GOVERNANCE_GROUPS.control as readonly string[]).includes(tab) ? 'control' : 'people'
 }
 
 function isTab(value: string | null): value is GovernanceTab {
@@ -100,38 +106,28 @@ export const GovernanceHubContainer = memo(function GovernanceHubContainer() {
         )}
       />
 
-      <nav
-        aria-label={t('governance.hub_title', 'حاکمیت سازمان')}
-        className="-mx-1 overflow-x-auto px-1"
-      >
-        <div
-          role="tablist"
-          className="flex min-w-max gap-1 rounded-xl bg-[hsl(var(--surface-muted)/0.5)] p-1"
-        >
-          {TABS.map((tab) => {
-            const Icon = TAB_ICON[tab]
-            const selected = tab === active
-            return (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                onClick={() => select(tab)}
-                className={
-                  'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.5)] ' +
-                  (selected
-                    ? 'bg-[hsl(var(--surface-elevated))] font-medium text-[hsl(var(--fg-primary))] shadow-sm'
-                    : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]')
-                }
-              >
-                <Icon className="size-4" aria-hidden="true" />
-                {t(`governance.tab_${tab}`, tab)}
-              </button>
-            )
-          })}
-        </div>
-      </nav>
+      <div className="space-y-3">
+        <HubTabs
+          label={t('governance.hub_title', 'حاکمیت سازمان')}
+          items={GOVERNANCE_GROUP_ORDER.map((id) => ({
+            id,
+            label: t(`governance.group_${id}`, id),
+            icon: GOVERNANCE_GROUP_ICON[id],
+          }))}
+          active={governanceGroupOf(active)}
+          // Opening a tab opens its first part.
+          onSelect={(next) => select(GOVERNANCE_GROUPS[next][0])}
+        />
+        <SegmentedControl
+          label={t('governance.hub_title', 'حاکمیت سازمان')}
+          options={GOVERNANCE_GROUPS[governanceGroupOf(active)].map((value) => ({
+            value,
+            label: t(`governance.tab_${value}`, value),
+          }))}
+          value={active as (typeof GOVERNANCE_GROUPS)[GovernanceGroup][number]}
+          onChange={select}
+        />
+      </div>
 
       <div role="tabpanel">
         {active === 'overview' ? <GovernanceOverview t={t} onOpen={select} /> : null}

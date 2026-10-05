@@ -16,6 +16,8 @@ import { useLocalePush } from '../../../../hooks/use-locale-push'
 interface JournalEntryRowProps {
   entry: JournalEntry
   accounts: Account[]
+  /** Start with the lines showing — the journal table opens an entry this way. */
+  defaultOpen?: boolean | undefined
 }
 
 // ⚠️ THE CALENDAR IS NOT A CONSTANT. This was pinned to `'fa-AF'`, so an
@@ -38,6 +40,7 @@ function formatDate(date: string, lang: string): string {
 export const JournalEntryRow = memo(function JournalEntryRow({
   entry,
   accounts,
+  defaultOpen = false,
 }: JournalEntryRowProps) {
   const t = useTranslations()
   // The reader's calendar — see the helper above.
@@ -45,7 +48,7 @@ export const JournalEntryRow = memo(function JournalEntryRow({
 
   const push = useLocalePush()
   const n = useLedgerNumber()
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(defaultOpen)
 
   const toggle = useCallback(() => setIsOpen((prev) => !prev), [])
 

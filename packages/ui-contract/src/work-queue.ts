@@ -58,7 +58,7 @@ export const WORK_ITEMS: readonly WorkItemSpec[] = [
     kind: 'conflicts',
     urgency: 'blocking',
     labelKey: 'workQueue.conflicts',
-    path: '/conflicts',
+    path: '/data-and-sync?tab=details&view=conflicts',
     capability: null,
   },
   {
@@ -72,7 +72,7 @@ export const WORK_ITEMS: readonly WorkItemSpec[] = [
     kind: 'unmatched_bank',
     urgency: 'due',
     labelKey: 'workQueue.unmatched_bank',
-    path: '/bank',
+    path: '/accounting?tab=treasury',
     // Reconciling a bank line writes to the ledger.
     capability: 'ledger.post',
   },
@@ -89,7 +89,7 @@ export const WORK_ITEMS: readonly WorkItemSpec[] = [
     kind: 'expiring_stock',
     urgency: 'due',
     labelKey: 'workQueue.expiring_stock',
-    path: '/expiry',
+    path: '/warehouse?tab=expiry',
     capability: 'inventory.read',
   },
   {

@@ -42,6 +42,7 @@ import { AiAssistantPanel } from '../ai-assistant-panel'
 import { DocumentReadTool } from '../document-read-tool'
 import { DocumentTranslateTool } from '../document-translate-tool'
 import { cn } from '../../../../lib/utils'
+import { SegmentedControl } from '../../segmented-control'
 import { aiErrorText } from '../../../../lib/ai-error-text'
 
 const ASSISTANT_MODES = ['ask', 'translate', 'read'] as const
@@ -242,25 +243,16 @@ function Shell({
       </header>
 
       {mode && onMode ? (
-        <div role="tablist" className="flex shrink-0 gap-2">
-          {ASSISTANT_MODES.map((value) => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              aria-selected={mode === value}
-              onClick={() => onMode(value)}
-              className={cn(
-                'min-h-11 rounded-full px-4 text-sm',
-                mode === value
-                  ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]'
-                  : 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
-              )}
-            >
-              {t(MODE_LABEL[value].key, MODE_LABEL[value].fallback)}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          label={t('ai.title', 'دستیار')}
+          options={ASSISTANT_MODES.map((value) => ({
+            value,
+            label: t(MODE_LABEL[value].key, MODE_LABEL[value].fallback),
+          }))}
+          value={mode}
+          onChange={onMode}
+          className="shrink-0"
+        />
       ) : null}
 
       <div

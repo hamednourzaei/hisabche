@@ -1836,7 +1836,11 @@
       "calendarPersian": "شمسی",
       "calendarGregory": "میلادی"
     },
-    "deleteConfirmTitle": "این فاکتور حذف شود؟"
+    "deleteConfirmTitle": "این فاکتور حذف شود؟",
+    "branch": "شعبه",
+    "warehouse": "انبار",
+    "allBranches": "همه‌ی شعبه‌ها",
+    "allWarehouses": "همه‌ی انبارها"
   },
   "warehouse": {
     "title": "انبار",
@@ -2178,7 +2182,8 @@
       "new": "وظیفه جدید",
       "create": "ثبت وظیفه",
       "contentPlaceholder": "توضیحات (اختیاری)",
-      "typeLabel": "نوع"
+      "typeLabel": "نوع",
+      "noMatch": "وظیفه‌ای با این فیلتر نیست"
     },
     "opportunities": {
       "empty": "هیچ فرصت فروشی ثبت نشده",
@@ -2599,7 +2604,10 @@
       "balanceSheet": "ترازنامه",
       "incomeStatement": "سود و زیان",
       "monthEnd": "بستن ماه",
-      "financing": "وام و سرمایه‌گذاری"
+      "financing": "وام و سرمایه‌گذاری",
+      "assets": "دارایی‌های ثابت",
+      "bank": "مغایرت بانکی",
+      "budgets": "بودجه"
     },
     "accounts": {
       "title": "فهرست حساب‌ها",
@@ -2617,7 +2625,8 @@
       "empty": {
         "title": "هنوز حسابی ثبت نشده",
         "subtitle": "اولین حساب خود را اضافه کنید"
-      }
+      },
+      "noMatch": "حسابی با این فیلتر نیست"
     },
     "journal": {
       "title": "ثبت‌های روزنامه",
@@ -2642,7 +2651,8 @@
       },
       "entry": "سند",
       "openSource": "مشاهده سند مبدأ",
-      "source": "مبدأ"
+      "source": "مبدأ",
+      "noMatch": "سندی با این جست‌وجو نیست"
     },
     "trialBalance": {
       "title": "تراز آزمایشی",
@@ -2787,7 +2797,18 @@
       "errors": {
         "AUTOMATION_MONTH_END_EXISTS": "بستن خودکار ماه از قبل روشن است.",
         "AUTOMATION_MIGRATION_PENDING": "زمان‌بندی هنوز روی پایگاه داده فعال نشده است. اسکریپت automation-01 باید اجرا شود."
-      }
+      },
+      "scheduleTitle": "زمان اجرای بستن خودکار",
+      "month": "ماه",
+      "year": "سال",
+      "day": "روز",
+      "hour": "ساعت",
+      "minute": "دقیقه",
+      "scheduleHint": "از همین ماه به بعد، هر ماه در همین روز و ساعت (به وقت این دستگاه) ماه قبل بسته می‌شود. دقت اجرا پنج دقیقه است.",
+      "schedulePast": "این ماه گذشته است؛ ماه یا سال دیگری انتخاب کنید.",
+      "runsAt": "ساعت",
+      "scheduleSave": "ذخیره‌ی زمان اجرا",
+      "scheduleSaved": "زمان اجرای بستن خودکار ذخیره شد."
     }
   },
   "hr": {
@@ -3622,7 +3643,14 @@
       "open": "گزارش کامل",
       "mostUsed": "پرمصرف‌ترین ماده",
       "biggestMove": "بیشترین تغییر بها"
-    }
+    },
+    "groupsLabel": "بخش",
+    "partsLabel": "نما",
+    "groups": {
+      "make": "ساخت",
+      "records": "سوابق"
+    },
+    "noMatch": "چیزی با این فیلتر نیست"
   },
   "purchasing": {
     "title": "خرید",
@@ -3791,7 +3819,8 @@
       "namePlaceholder": "مثلاً: تأیید فاکتورهای بالای ۵۰۰۰۰",
       "new": "الگوی تازه",
       "status": "وضعیت",
-      "title": "الگوهای تأیید"
+      "title": "الگوهای تأیید",
+      "noMatch": "الگویی با این فیلتر نیست"
     },
     "title": "فرآیند تأیید",
     "escalation": {
@@ -3815,7 +3844,11 @@
         "ESCALATION_MIGRATION_PENDING": "ارجاع خودکار هنوز روی پایگاه داده فعال نشده است. اسکریپت workflow-escalation-01 باید اجرا شود.",
         "ESCALATION_ROLE_REQUIRED": "نقشی که به آن ارجاع می‌شود را انتخاب کنید."
       }
-    }
+    },
+    "started": "شروع",
+    "step": "مرحله",
+    "oldest_waiting": "قدیمی‌ترین انتظار",
+    "days": "روز"
   },
   "action": {
     "clear": "پاک کردن",
@@ -4165,7 +4198,9 @@
       "failedTitle": "فاکتور ثبت شد، ولی تکرار خودکار تنظیم نشد.",
       "failedHint": "می‌توانید دوباره از یک فاکتور تازه آن را روشن کنید.",
       "offline": "تکرار خودکار فقط با اینترنت تنظیم می‌شود؛ این فاکتور تکرار نخواهد شد."
-    }
+    },
+    "branch": "شعبه",
+    "branchNone": "کل کسب‌وکار"
   },
   "admin": {
     "limits": {
@@ -4867,7 +4902,13 @@
     "suspend": "تعلیق",
     "resume": "ادامه",
     "error_POS_SUSPEND_MIGRATION_REQUIRED": "تعلیق صندوق هنوز در پایگاه داده فعال نشده (migration اجرا نشده).",
-    "error_POS_VARIANCE_REASON_REQUIRED": "برای اختلاف صندوق توضیح بنویسید."
+    "error_POS_VARIANCE_REASON_REQUIRED": "برای اختلاف صندوق توضیح بنویسید.",
+    "unnamed": "بدون نام",
+    "rename": "ویرایش نام صندوق",
+    "name": "نام صندوق",
+    "rename_hint": "فقط نام قابل ویرایش است؛ پول و تراکنش‌های صندوق تغییر نمی‌کند. برای کنار گذاشتن صندوق، آن را ببندید.",
+    "error_POS_LABEL_MIGRATION_REQUIRED": "نام‌گذاری صندوق هنوز روی دیتابیس فعال نشده است.",
+    "error_POS_LABEL_INVALID": "نام صندوق باید بین ۱ تا ۸۰ نویسه باشد."
   },
   "assets": {
     "title": "دارایی‌های ثابت",
@@ -4894,14 +4935,23 @@
     "active": "فعال",
     "disposed": "واگذارشده",
     "empty_title": "هنوز دارایی ثابتی ثبت نشده",
-    "empty_hint": "دارایی ثابت از فاکتور خرید یا از تنظیمات حسابداری ثبت می‌شود.",
+    "empty_hint": "با «افزودن دارایی» اولین دارایی ثابت را ثبت کنید.",
     "method_straight_line": "خط مستقیم",
     "method_declining": "نزولی",
     "method_declining_then_straight": "نزولی سپس خط مستقیم",
     "stat_total": "تعداد دارایی‌ها",
     "stat_active_cost": "بهای تمام‌شده‌ی دارایی‌های فعال",
     "no_match": "دارایی‌ای با این فیلتر نیست",
-    "schedule_empty": "دوره‌ای در جدول نیست"
+    "schedule_empty": "دوره‌ای در جدول نیست",
+    "add": "افزودن دارایی",
+    "acquired_on": "تاریخ خرید",
+    "first_period_on": "اولین دوره‌ی استهلاک",
+    "add_hint": "مبلغ‌ها به ارز دفاتر است. هر دوره یک ماه است و جدول استهلاک همان لحظه ساخته می‌شود.",
+    "dispose": "واگذاری دارایی",
+    "disposed_on": "تاریخ واگذاری",
+    "proceeds": "مبلغ دریافتی از واگذاری",
+    "dispose_hint": "واگذاری بقیه‌ی جدول استهلاک را لغو می‌کند و سود یا زیان را در دفتر ثبت می‌کند. برگشت‌پذیر نیست.",
+    "dispose_confirm": "ثبت واگذاری"
   },
   "bank": {
     "title": "مغایرت‌گیری بانکی",
@@ -5159,29 +5209,32 @@
   },
   "expiry": {
     "title": "انقضا و بچ",
-    "subtitle": "کالای منقضی، نزدیک انقضا، و برنامه‌ی مصرف",
+    "subtitle": "کالای منقضی، نزدیک انقضا و سالم",
     "report": "گزارش انقضا",
     "as_of": "تا تاریخ",
     "expired_value": "ارزش کالای منقضی",
     "expired_value_hint": "در ترازنامه هست، قابل فروش نیست.",
     "batches": "بچ",
     "batch": "بچ",
-    "product": "کالا",
     "quantity": "مقدار",
     "expiry_date": "تاریخ انقضا",
     "days_remaining": "روز باقی‌مانده",
-    "plan_title": "برنامه‌ی مصرف",
-    "plan_hint": "نشان می‌دهد از کدام بچ برداشته می‌شود — چیزی مصرف نمی‌کند. پیش‌فرض FEFO.",
-    "plan_action": "محاسبه",
-    "shortfall": "کسری",
-    "blocked": "به دلیل انقضا کنار گذاشته شد",
     "empty_title": "بچی ثبت نشده",
     "empty_hint": "بچ هنگام دریافت کالای تاریخ‌دار ثبت می‌شود.",
     "state_expired": "منقضی",
     "state_near_expiry": "نزدیک انقضا",
     "state_fresh": "سالم",
     "state_no_expiry": "بدون انقضا",
-    "no_match": "بچی با این فیلتر نیست"
+    "no_match": "بچی با این فیلتر نیست",
+    "unhealthy": "ناسالم",
+    "nearest": "نزدیک‌ترین انقضا",
+    "nearest_none": "ندارد",
+    "days": "روز",
+    "edit_expiry": "ویرایش انقضا",
+    "save_failed": "ذخیره نشد. دوباره تلاش کنید.",
+    "warehouse": "انبار",
+    "no_warehouse": "بدون انبار",
+    "all_warehouses": "همه‌ی انبارها"
   },
   "conflicts": {
     "title": "تعارض‌های آفلاین",
@@ -5320,7 +5373,9 @@
     "tab_permissions": "نقش‌ها و دسترسی‌ها",
     "tab_approvals": "تأییدها",
     "tab_sod": "تفکیک وظایف",
-    "tab_audit": "گزارش فعالیت"
+    "tab_audit": "گزارش فعالیت",
+    "group_people": "سازمان",
+    "group_control": "کنترل"
   },
   "migration": {
     "title": "انتقال داده",
@@ -5522,19 +5577,6 @@
     "expiring_stock": "کالای نزدیک به انقضا",
     "low_stock": "کالای رو به اتمام",
     "pending_sync": "تغییر ارسال‌نشده"
-  },
-  "domain": {
-    "accounting": "حسابداری",
-    "sales": "فروش",
-    "inventory": "انبار",
-    "people": "کارکنان",
-    "destinations": "بخش‌ها",
-    "no_access": "دسترسی به این بخش ندارید",
-    "no_access_hint": "از مالک کارگاه بخواهید دسترسی این بخش را برای شما باز کند.",
-    "accounting_description": "دفتر، بانک، بودجه و دارایی‌ها",
-    "sales_description": "صندوق، فاکتورها، مشتریان و پیگیری",
-    "inventory_description": "موجودی، خرید، انقضا و تولید",
-    "people_description": "کارکنان، حقوق، ساعت کاری و دسترسی‌ها"
   },
   "products": {
     "title": "کالاها",
@@ -6273,7 +6315,9 @@
     "stockValue": "ارزش (به قیمت تمام‌شده)",
     "suggested": "پیشنهاد",
     "value": "ارزش",
-    "variance": "اختلاف"
+    "variance": "اختلاف",
+    "sectionsLabel": "بخش",
+    "loadFailed": "این بخش خوانده نشد."
   },
   "productUnits": {
     "add": "افزودن واحد",
@@ -6452,7 +6496,12 @@
     "closingBalance": "مانده‌ی پایانی",
     "tabAccount": "اعتبار و مدارک",
     "tabAccounting": "حسابداری",
-    "tabInsights": "تحلیل"
+    "tabInsights": "تحلیل",
+    "groupsLabel": "بخش‌های مشتری",
+    "groups": {
+      "money": "مالی",
+      "relationship": "رابطه"
+    }
   },
   "crmPanel": {
     "loading": "در حال بارگذاری…",
@@ -6575,7 +6624,12 @@
         "title": "بدون فعالیت",
         "body": "این مشتری در ۱۲ ماه اخیر فروش، دریافت یا طلبی ندارد."
       }
-    }
+    },
+    "filterAll": "همه",
+    "posted": "ثبت‌شده",
+    "colAmount": "مبلغ",
+    "noMatch": "سندی با این فیلتر نیست",
+    "openDocument": "باز کردن سند"
   },
   "people": {
     "whoIsOnline": "چه کسانی آنلاین هستند",
@@ -6853,7 +6907,8 @@
     "started": "شروع",
     "status": "وضعیت",
     "title": "شمارش انبار",
-    "variance": "اختلاف"
+    "variance": "اختلاف",
+    "noLines": "کالایی با این جست‌وجو نیست"
   },
   "employee": {
     "branches": "شعبه‌های این کارمند",
@@ -6991,7 +7046,8 @@
     "recentRequests": "آخرین درخواست‌ها (حداکثر ۵۰ مورد — نمونه، نه آمار)",
     "replay1d": "ارسال دوباره‌ی ۲۴ ساعت اخیر",
     "replay7d": "ارسال دوباره‌ی ۷ روز اخیر",
-    "replayed": "تحویل‌هایی که دوباره در صف ارسال قرار گرفتند"
+    "replayed": "تحویل‌هایی که دوباره در صف ارسال قرار گرفتند",
+    "scopes": "دسترسی‌ها"
   },
   "webhook": {
     "urlMustBeHttps": "آدرس وب‌هوک باید با https:// شروع شود."
@@ -7828,7 +7884,15 @@
       "negativeIsGood": "چرخه‌ی نقد منفی خوب است: یعنی پیش از آنکه به تأمین‌کننده بپردازید، پول فروش را گرفته‌اید.",
       "otherCurrencies": "سندهای این ارزها در این عددها نیست",
       "note": "موجودی نقد و بانک در این محاسبه نیست. طلب و بدهی مانده‌ی امروز است و فروش و خرید مربوط به بازه‌ی انتخاب‌شده."
-    }
+    },
+    "groupsLabel": "بخش",
+    "partsLabel": "نما",
+    "groups": {
+      "money": "پول",
+      "market": "بازار",
+      "reports": "گزارش‌ساز"
+    },
+    "noMatch": "چیزی با این جست‌وجو نیست"
   },
   "installments": {
     "title": "اقساط",
@@ -7903,7 +7967,8 @@
     },
     "shiftPicker": "شیفت برای ثبت سریع",
     "shiftNone": "بدون شیفت",
-    "byShift": "طبق شیفت"
+    "byShift": "طبق شیفت",
+    "noMatch": "کسی با این فیلتر نیست"
   },
   "promotions": {
     "title": "تخفیف‌ها",
@@ -7957,6 +8022,19 @@
       "PROMOTION_PRODUCT_NOT_FOUND": "یکی از کالاهای انتخاب‌شده پیدا نشد.",
       "PROMOTION_CUSTOMER_NOT_FOUND": "یکی از مشتریان انتخاب‌شده پیدا نشد.",
       "PROMOTIONS_MIGRATION_PENDING": "تخفیف‌ها هنوز روی پایگاه داده فعال نشده است. اسکریپت promotions-01 باید اجرا شود."
+    },
+    "active": "فعال",
+    "columns": {
+      "value": "مقدار",
+      "scope": "برای",
+      "validity": "اعتبار",
+      "status": "وضعیت",
+      "actions": "عملیات"
+    },
+    "sectionsLabel": "بخش‌های قیمت‌گذاری",
+    "sections": {
+      "promotions": "تخفیف‌ها",
+      "lists": "فهرست‌های قیمت"
     }
   },
   "notes": {
@@ -8059,7 +8137,8 @@
       "FINANCING_AMOUNT_INVALID": "مبلغ درست نیست.",
       "FINANCING_VALUE_NEEDS_DATE": "ارزش تازه باید تاریخ داشته باشد.",
       "FINANCING_MIGRATION_PENDING": "این بخش هنوز روی پایگاه داده فعال نشده است. اسکریپت financing-01 باید اجرا شود."
-    }
+    },
+    "sectionsLabel": "بخش"
   },
   "customFields": {
     "title": "فیلدهای اختصاصی",
@@ -8316,7 +8395,8 @@
       "CAMPAIGN_ALREADY_SENT": "این کمپین قبلاً فرستاده شده است.",
       "CAMPAIGN_SEGMENT_DAYS": "تعداد روز را برای این گروه وارد کنید.",
       "CAMPAIGNS_MIGRATION_PENDING": "کمپین‌ها هنوز روی پایگاه داده فعال نشده است. اسکریپت campaigns-01 باید اجرا شود."
-    }
+    },
+    "noMatch": "کمپینی با این فیلتر نیست"
   },
   "feedback": {
     "loading": "در حال باز کردن…",
@@ -8387,6 +8467,15 @@
       "PRICE_LIST_PRICE_TOO_SMALL": "قیمت خیلی کوچک است.",
       "PRICE_LIST_RETIRED": "این فهرست بازنشسته است.",
       "PRICE_LISTS_MIGRATION_PENDING": "فهرست قیمت هنوز روی پایگاه داده فعال نشده است. اسکریپت price-lists-01 باید اجرا شود."
+    },
+    "active": "فعال",
+    "openHint": "برای دیدن قیمت‌ها و مشتریان یک فهرست، روی ردیف آن بزنید.",
+    "columns": {
+      "products": "کالا",
+      "customers": "مشتری",
+      "validity": "اعتبار",
+      "status": "وضعیت",
+      "actions": "عملیات"
     }
   },
   "lateFees": {
@@ -8633,5 +8722,104 @@
     "forbidden": "شما اجازه‌ی دیدن این مقایسه را ندارید.",
     "notSetUp": "مقایسه هنوز روی پایگاه داده فعال نشده است. اسکریپت benchmark-01 باید اجرا شود.",
     "failed": "مقایسه خوانده نشد. دوباره تلاش کنید."
+  },
+  "salesHub": {
+    "label": "بخش‌های فروش و خرید",
+    "loading": "در حال بارگذاری…",
+    "tabs": {
+      "invoices": "فاکتورها",
+      "pricing": "قیمت و تخفیف"
+    }
+  },
+  "warehouseHub": {
+    "label": "انبار",
+    "loading": "در حال بارگذاری…",
+    "tabs": {
+      "stock": "موجودی",
+      "expiry": "انقضا"
+    },
+    "sectionsLabel": "نمای موجودی",
+    "sections": {
+      "warehouses": "انبارها",
+      "products": "کالاها",
+      "reorder": "پیشنهاد سفارش",
+      "deadStock": "کالای راکد"
+    }
+  },
+  "accountingHub": {
+    "label": "حسابداری",
+    "tabs": {
+      "books": "دفترها",
+      "reports": "گزارش‌ها",
+      "treasury": "دارایی و بانک"
+    },
+    "booksLabel": "بخش دفترها",
+    "reportsLabel": "نوع گزارش"
+  },
+  "customersHub": {
+    "label": "مشتریان",
+    "loading": "در حال بارگذاری…",
+    "tabs": {
+      "customers": "مشتریان",
+      "outreach": "پیگیری و کمپین"
+    },
+    "sectionsLabel": "بخش",
+    "sections": {
+      "followUp": "پیگیری فروش",
+      "campaigns": "کمپین‌ها",
+      "stale": "فرصت‌های راکد"
+    }
+  },
+  "teamHub": {
+    "label": "تیم و حقوق",
+    "loading": "در حال بارگذاری…",
+    "tabs": {
+      "team": "تیم",
+      "pay": "حقوق و حضور"
+    },
+    "sectionsLabel": "بخش",
+    "sections": {
+      "employees": "کارمندان",
+      "branches": "شعب",
+      "payroll": "حقوق",
+      "attendance": "حضور و غیاب",
+      "timesheets": "کارکرد"
+    }
+  },
+  "approvalsHub": {
+    "label": "تأییدها",
+    "loading": "در حال بارگذاری…",
+    "tabs": {
+      "requests": "در انتظار تأیید",
+      "workflows": "گردش‌کارها"
+    }
+  },
+  "dataHub": {
+    "sectionsLabel": "بخش",
+    "loading": "در حال بارگذاری…",
+    "tabs": {
+      "overview": "وضعیت",
+      "details": "جزئیات"
+    }
+  },
+  "billingHub": {
+    "sectionsLabel": "بخش",
+    "loading": "در حال بارگذاری…",
+    "tabs": {
+      "plan": "اشتراک",
+      "money": "کیف پول و معرفی"
+    }
+  },
+  "settingsHub": {
+    "sectionsLabel": "بخش",
+    "loading": "در حال بارگذاری…",
+    "tabs": {
+      "general": "عمومی",
+      "integrations": "اتصال‌ها"
+    },
+    "sections": {
+      "developers": "توسعه‌دهندگان",
+      "marketplace": "بازار برنامه‌ها"
+    }
   }
 }

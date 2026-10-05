@@ -32,7 +32,7 @@ import { ListChecks, ShieldCheck, ShieldHalf, TriangleAlert } from 'lucide-react
 import type { SoDMode, SoDOverride, SoDRule, SoDSettings } from '@hisabche/api'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { DataTable, matchesSearch, type TableColumn } from '../data-table'
-import { SegmentedFilter } from '../segmented-filter'
+import { SegmentedControl } from '../segmented-control'
 import {
   ActionButton,
   Badge,
@@ -340,7 +340,7 @@ export const GovernanceView = memo(function GovernanceView({
             title={t('governance.rules', 'قواعد')}
             description={t('governance.rules_hint', 'هر قاعده جدا خاموش می‌شود، نه همه با هم.')}
             action={
-              <SegmentedFilter
+              <SegmentedControl
                 label={t('common.status', 'وضعیت')}
                 value={ruleFilter}
                 onChange={setRuleFilter}

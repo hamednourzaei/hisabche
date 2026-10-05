@@ -1831,7 +1831,11 @@
       "calendarPersian": "solar Hijri",
       "calendarGregory": "Gregorian"
     },
-    "deleteConfirmTitle": "Delete this invoice?"
+    "deleteConfirmTitle": "Delete this invoice?",
+    "branch": "Branch",
+    "warehouse": "Warehouse",
+    "allBranches": "All branches",
+    "allWarehouses": "All warehouses"
   },
   "warehouse": {
     "title": "Warehouse",
@@ -2173,7 +2177,8 @@
       "new": "New task",
       "create": "Create task",
       "contentPlaceholder": "Notes (optional)",
-      "typeLabel": "Type"
+      "typeLabel": "Type",
+      "noMatch": "No task matches this filter"
     },
     "opportunities": {
       "empty": "No sales opportunities recorded",
@@ -2583,7 +2588,10 @@
       "balanceSheet": "Balance Sheet",
       "incomeStatement": "Income Statement",
       "monthEnd": "Month-end",
-      "financing": "Loans & investments"
+      "financing": "Loans & investments",
+      "assets": "Fixed assets",
+      "bank": "Bank reconciliation",
+      "budgets": "Budgets"
     },
     "accounts": {
       "title": "Chart of Accounts",
@@ -2601,7 +2609,8 @@
       "empty": {
         "title": "No accounts yet",
         "subtitle": "Add your first account to get started"
-      }
+      },
+      "noMatch": "No account matches this filter"
     },
     "journal": {
       "title": "Journal Entries",
@@ -2626,7 +2635,8 @@
       },
       "entry": "Entry",
       "openSource": "Open source document",
-      "source": "Source"
+      "source": "Source",
+      "noMatch": "No entry matches this search"
     },
     "trialBalance": {
       "title": "Trial Balance",
@@ -2771,7 +2781,18 @@
       "errors": {
         "AUTOMATION_MONTH_END_EXISTS": "Automatic month-end is already on.",
         "AUTOMATION_MIGRATION_PENDING": "Scheduling is not enabled on the database yet. The automation-01 script has to be run."
-      }
+      },
+      "scheduleTitle": "When the automatic close runs",
+      "month": "Month",
+      "year": "Year",
+      "day": "Day",
+      "hour": "Hour",
+      "minute": "Minute",
+      "scheduleHint": "From that month on, the previous month is closed every month on this day at this time (this device’s clock). It runs within five minutes of it.",
+      "schedulePast": "That month has passed; choose another month or year.",
+      "runsAt": "at",
+      "scheduleSave": "Save run time",
+      "scheduleSaved": "The automatic close will run at the new time."
     }
   },
   "hr": {
@@ -3656,7 +3677,14 @@
       "open": "Full report",
       "mostUsed": "Most used material",
       "biggestMove": "Biggest cost change"
-    }
+    },
+    "groupsLabel": "Section",
+    "partsLabel": "View",
+    "groups": {
+      "make": "Make",
+      "records": "Records"
+    },
+    "noMatch": "Nothing matches this filter"
   },
   "purchasing": {
     "title": "Purchasing",
@@ -3775,7 +3803,8 @@
       "namePlaceholder": "e.g. Approve invoices over 50,000",
       "new": "New template",
       "status": "Status",
-      "title": "Approval templates"
+      "title": "Approval templates",
+      "noMatch": "No workflow matches this filter"
     },
     "title": "Approval flow",
     "escalation": {
@@ -3799,7 +3828,11 @@
         "ESCALATION_MIGRATION_PENDING": "Automatic escalation is not enabled on the database yet. The workflow-escalation-01 script has to be run.",
         "ESCALATION_ROLE_REQUIRED": "Choose the role to escalate to."
       }
-    }
+    },
+    "started": "Started",
+    "step": "Step",
+    "oldest_waiting": "Oldest waiting",
+    "days": "days"
   },
   "action": {
     "clear": "Clear",
@@ -4160,7 +4193,9 @@
       "failedTitle": "The invoice was recorded, but the repeat was not set up.",
       "failedHint": "You can turn it on again from a new invoice.",
       "offline": "A repeat can only be set up online; this invoice will not repeat."
-    }
+    },
+    "branch": "Branch",
+    "branchNone": "Whole business"
   },
   "admin": {
     "limits": {
@@ -4862,7 +4897,13 @@
     "suspend": "Suspend",
     "resume": "Resume",
     "error_POS_SUSPEND_MIGRATION_REQUIRED": "Suspending tills isn't enabled on the database yet (migration not run).",
-    "error_POS_VARIANCE_REASON_REQUIRED": "Explain the till difference."
+    "error_POS_VARIANCE_REASON_REQUIRED": "Explain the till difference.",
+    "unnamed": "Unnamed",
+    "rename": "Edit till name",
+    "name": "Till name",
+    "rename_hint": "Only the name can be edited; the till’s money and transactions do not change. To retire a till, close it.",
+    "error_POS_LABEL_MIGRATION_REQUIRED": "Till names are not enabled on the database yet.",
+    "error_POS_LABEL_INVALID": "A till name must be 1 to 80 characters."
   },
   "assets": {
     "title": "Fixed assets",
@@ -4889,14 +4930,23 @@
     "active": "Active",
     "disposed": "Disposed",
     "empty_title": "No fixed assets yet",
-    "empty_hint": "An asset is created from a purchase invoice or from accounting settings.",
+    "empty_hint": "Use “Add asset” to record the first fixed asset.",
     "method_straight_line": "Straight line",
     "method_declining": "Declining balance",
     "method_declining_then_straight": "Declining, then straight line",
     "stat_total": "Assets",
     "stat_active_cost": "Cost of active assets",
     "no_match": "No assets match this filter",
-    "schedule_empty": "No periods in the schedule"
+    "schedule_empty": "No periods in the schedule",
+    "add": "Add asset",
+    "acquired_on": "Acquired on",
+    "first_period_on": "First depreciation period",
+    "add_hint": "Amounts are in the currency of the books. A period is one month, and the schedule is built at once.",
+    "dispose": "Dispose of asset",
+    "disposed_on": "Disposed on",
+    "proceeds": "Proceeds from disposal",
+    "dispose_hint": "Disposal cancels the rest of the schedule and books the gain or loss. It cannot be undone.",
+    "dispose_confirm": "Record disposal"
   },
   "bank": {
     "title": "Bank reconciliation",
@@ -5154,29 +5204,32 @@
   },
   "expiry": {
     "title": "Expiry and batches",
-    "subtitle": "What has expired, what is close, and what an issue would take",
+    "subtitle": "What has expired, what is close, and what is fine",
     "report": "Expiry report",
     "as_of": "As of",
     "expired_value": "Value of expired stock",
     "expired_value_hint": "On the balance sheet, and unsellable.",
     "batches": "batches",
     "batch": "Batch",
-    "product": "Product",
     "quantity": "Quantity",
     "expiry_date": "Expires",
     "days_remaining": "Days left",
-    "plan_title": "Issue plan",
-    "plan_hint": "Shows which batches would be drawn from, and consumes nothing. FEFO by default.",
-    "plan_action": "Plan",
-    "shortfall": "Shortfall",
-    "blocked": "Set aside because it has expired",
     "empty_title": "No batches recorded",
     "empty_hint": "A batch is recorded when dated goods are received.",
     "state_expired": "Expired",
     "state_near_expiry": "Near expiry",
     "state_fresh": "Fresh",
     "state_no_expiry": "No expiry",
-    "no_match": "No batches match this filter"
+    "no_match": "No batches match this filter",
+    "unhealthy": "Unhealthy",
+    "nearest": "Nearest expiry",
+    "nearest_none": "None",
+    "days": "days",
+    "edit_expiry": "Edit expiry",
+    "save_failed": "Not saved. Try again.",
+    "warehouse": "Warehouse",
+    "no_warehouse": "No warehouse",
+    "all_warehouses": "All warehouses"
   },
   "conflicts": {
     "title": "Offline conflicts",
@@ -5315,7 +5368,9 @@
     "tab_permissions": "Roles & permissions",
     "tab_approvals": "Approvals",
     "tab_sod": "Separation of duties",
-    "tab_audit": "Activity log"
+    "tab_audit": "Activity log",
+    "group_people": "Organisation",
+    "group_control": "Control"
   },
   "migration": {
     "title": "Data migration",
@@ -5517,19 +5572,6 @@
     "expiring_stock": "products expiring soon",
     "low_stock": "products running low",
     "pending_sync": "changes not yet sent"
-  },
-  "domain": {
-    "accounting": "Accounting",
-    "sales": "Sales",
-    "inventory": "Inventory",
-    "people": "People",
-    "destinations": "Sections",
-    "no_access": "You do not have access here",
-    "no_access_hint": "Ask the workspace owner to open this section for you.",
-    "accounting_description": "Ledger, bank, budgets and assets",
-    "sales_description": "Till, invoices, customers and follow-ups",
-    "inventory_description": "Stock, purchasing, expiry and production",
-    "people_description": "Staff, payroll, timesheets and access"
   },
   "products": {
     "title": "Products",
@@ -6268,7 +6310,9 @@
     "stockValue": "Value (at cost)",
     "suggested": "Suggested",
     "value": "Value",
-    "variance": "Variance"
+    "variance": "Variance",
+    "sectionsLabel": "Section",
+    "loadFailed": "This part could not be read."
   },
   "productUnits": {
     "add": "Add a unit",
@@ -6447,7 +6491,12 @@
     "closingBalance": "Closing balance",
     "tabAccount": "Credit & documents",
     "tabAccounting": "Accounting",
-    "tabInsights": "Insights"
+    "tabInsights": "Insights",
+    "groupsLabel": "Customer sections",
+    "groups": {
+      "money": "Money",
+      "relationship": "Relationship"
+    }
   },
   "crmPanel": {
     "loading": "Loading…",
@@ -6570,7 +6619,12 @@
         "title": "No activity",
         "body": "No sales, receipts or balance in the last 12 months."
       }
-    }
+    },
+    "filterAll": "All",
+    "posted": "Posted",
+    "colAmount": "Amount",
+    "noMatch": "No document matches this filter",
+    "openDocument": "Open document"
   },
   "people": {
     "whoIsOnline": "Who is online",
@@ -6848,7 +6902,8 @@
     "started": "Started",
     "status": "Status",
     "title": "Stock count",
-    "variance": "Variance"
+    "variance": "Variance",
+    "noLines": "No product matches this search"
   },
   "employee": {
     "branches": "This employee's branches",
@@ -6986,7 +7041,8 @@
     "recentRequests": "Latest requests (at most 50 — a sample, not a total)",
     "replay1d": "Resend last 24 hours",
     "replay7d": "Resend last 7 days",
-    "replayed": "Deliveries put back in the queue"
+    "replayed": "Deliveries put back in the queue",
+    "scopes": "Scopes"
   },
   "webhook": {
     "urlMustBeHttps": "The webhook URL must start with https://."
@@ -7823,7 +7879,15 @@
       "negativeIsGood": "A negative cash cycle is good: you collect from sales before you pay your suppliers.",
       "otherCurrencies": "Documents in these currencies are not in these figures",
       "note": "Cash and bank balances are not part of this calculation. Receivables and payables are today’s balances; sales and purchases belong to the selected range."
-    }
+    },
+    "groupsLabel": "Section",
+    "partsLabel": "View",
+    "groups": {
+      "money": "Money",
+      "market": "Market",
+      "reports": "Report builder"
+    },
+    "noMatch": "Nothing matches this search"
   },
   "installments": {
     "title": "Installments",
@@ -7898,7 +7962,8 @@
     },
     "shiftPicker": "Shift for quick recording",
     "shiftNone": "No shift",
-    "byShift": "By shift"
+    "byShift": "By shift",
+    "noMatch": "Nobody matches this filter"
   },
   "promotions": {
     "title": "Promotions",
@@ -7952,6 +8017,19 @@
       "PROMOTION_PRODUCT_NOT_FOUND": "One of the chosen products was not found.",
       "PROMOTION_CUSTOMER_NOT_FOUND": "One of the chosen customers was not found.",
       "PROMOTIONS_MIGRATION_PENDING": "Promotions are not enabled on the database yet. The promotions-01 script has to be run."
+    },
+    "active": "Active",
+    "columns": {
+      "value": "Value",
+      "scope": "For",
+      "validity": "Valid",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "sectionsLabel": "Pricing sections",
+    "sections": {
+      "promotions": "Discounts",
+      "lists": "Price lists"
     }
   },
   "notes": {
@@ -8054,7 +8132,8 @@
       "FINANCING_AMOUNT_INVALID": "That amount is not valid.",
       "FINANCING_VALUE_NEEDS_DATE": "A new value needs its date.",
       "FINANCING_MIGRATION_PENDING": "This section is not enabled on the database yet. The financing-01 script has to be run."
-    }
+    },
+    "sectionsLabel": "Section"
   },
   "customFields": {
     "title": "Custom fields",
@@ -8311,7 +8390,8 @@
       "CAMPAIGN_ALREADY_SENT": "This campaign has already been sent.",
       "CAMPAIGN_SEGMENT_DAYS": "Enter the number of days for this group.",
       "CAMPAIGNS_MIGRATION_PENDING": "Campaigns are not enabled on the database yet. The campaigns-01 script has to be run."
-    }
+    },
+    "noMatch": "No campaign matches this filter"
   },
   "feedback": {
     "loading": "Opening…",
@@ -8382,6 +8462,15 @@
       "PRICE_LIST_PRICE_TOO_SMALL": "The price is too small.",
       "PRICE_LIST_RETIRED": "This list is retired.",
       "PRICE_LISTS_MIGRATION_PENDING": "Price lists are not enabled on the database yet. The price-lists-01 script must be run."
+    },
+    "active": "Active",
+    "openHint": "Press a row to see the prices and customers of that list.",
+    "columns": {
+      "products": "Products",
+      "customers": "Customers",
+      "validity": "Valid",
+      "status": "Status",
+      "actions": "Actions"
     }
   },
   "lateFees": {
@@ -8628,5 +8717,104 @@
     "forbidden": "You are not allowed to see this comparison.",
     "notSetUp": "The comparison is not enabled on the database yet. The benchmark-01 script must be run.",
     "failed": "The comparison could not be read. Try again."
+  },
+  "salesHub": {
+    "label": "Selling and buying",
+    "loading": "Loading…",
+    "tabs": {
+      "invoices": "Invoices",
+      "pricing": "Prices and discounts"
+    }
+  },
+  "warehouseHub": {
+    "label": "Warehouse",
+    "loading": "Loading…",
+    "tabs": {
+      "stock": "Stock",
+      "expiry": "Expiry"
+    },
+    "sectionsLabel": "Stock view",
+    "sections": {
+      "warehouses": "Warehouses",
+      "products": "Products",
+      "reorder": "Reorder suggestions",
+      "deadStock": "Dead stock"
+    }
+  },
+  "accountingHub": {
+    "label": "Accounting",
+    "tabs": {
+      "books": "Books",
+      "reports": "Reports",
+      "treasury": "Assets & bank"
+    },
+    "booksLabel": "Books section",
+    "reportsLabel": "Report"
+  },
+  "customersHub": {
+    "label": "Customers",
+    "loading": "Loading…",
+    "tabs": {
+      "customers": "Customers",
+      "outreach": "Follow-up & campaigns"
+    },
+    "sectionsLabel": "Section",
+    "sections": {
+      "followUp": "Follow Up",
+      "campaigns": "Campaigns",
+      "stale": "Stale opportunities"
+    }
+  },
+  "teamHub": {
+    "label": "Team & payroll",
+    "loading": "Loading…",
+    "tabs": {
+      "team": "Team",
+      "pay": "Pay & time"
+    },
+    "sectionsLabel": "Section",
+    "sections": {
+      "employees": "Employees",
+      "branches": "Branches",
+      "payroll": "Payroll",
+      "attendance": "Attendance",
+      "timesheets": "Timesheets"
+    }
+  },
+  "approvalsHub": {
+    "label": "Approvals",
+    "loading": "Loading…",
+    "tabs": {
+      "requests": "Awaiting approval",
+      "workflows": "Workflows"
+    }
+  },
+  "dataHub": {
+    "sectionsLabel": "Section",
+    "loading": "Loading…",
+    "tabs": {
+      "overview": "Status",
+      "details": "Details"
+    }
+  },
+  "billingHub": {
+    "sectionsLabel": "Section",
+    "loading": "Loading…",
+    "tabs": {
+      "plan": "Plan",
+      "money": "Wallet & referrals"
+    }
+  },
+  "settingsHub": {
+    "sectionsLabel": "Section",
+    "loading": "Loading…",
+    "tabs": {
+      "general": "General",
+      "integrations": "Integrations"
+    },
+    "sections": {
+      "developers": "Developers",
+      "marketplace": "App marketplace"
+    }
   }
 }

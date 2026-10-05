@@ -72,7 +72,7 @@ const PAGE_IMPORTS = new Set([
 describe('the dashboard route tree holds routes, not components', () => {
   it('found the pages', () => {
     // Without this the suite passes vacuously the day the path changes.
-    expect(pages.length).toBeGreaterThan(40)
+    expect(pages.length).toBeGreaterThan(25)
   })
 
   it('⚠️ no local component beside a page (no *-client.tsx, no skeleton.tsx)', () => {

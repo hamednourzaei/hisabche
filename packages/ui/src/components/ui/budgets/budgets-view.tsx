@@ -45,7 +45,7 @@ import { formatSelectedMoney } from '../../../lib/money-display'
 import { formatMoney } from '@hisabche/formatting'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { DataTable, matchesSearch, type TableColumn } from '../data-table'
-import { SegmentedFilter } from '../segmented-filter'
+import { SegmentedControl } from '../segmented-control'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../sheet'
 import { Skeleton } from '../skeleton'
 import { ExportButton } from '../accounting/components/ExportButton'
@@ -404,7 +404,7 @@ export const BudgetsView = memo(function BudgetsView(props: BudgetsViewProps) {
       {props.actionError ? <ErrorNote message={props.actionError} /> : null}
 
       <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
-        <SegmentedFilter
+        <SegmentedControl
           label={t('budgets.type', 'نوع')}
           value={filters.type}
           onChange={(type) => onFiltersChange({ ...filters, type })}
@@ -1262,7 +1262,7 @@ function CreateBudget({
       </SheetHeader>
 
       <Field label={t('budgets.name', 'عنوان')} value={name} onChange={setName} disabled={isBusy} />
-      <SegmentedFilter
+      <SegmentedControl
         label={t('budgets.type', 'نوع')}
         value={type}
         onChange={(next) => {
@@ -1362,7 +1362,7 @@ function CreateBudget({
       {months > 1 ? (
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">{t('budgets.distribution', 'توزیع')}</legend>
-          <SegmentedFilter
+          <SegmentedControl
             label={t('budgets.distribution', 'توزیع')}
             value={custom ? 'custom' : 'equal'}
             onChange={(v) => setCustom(v === 'custom')}

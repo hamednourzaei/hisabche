@@ -1,4 +1,4 @@
-import { InvoicesContainer, InvoicesSkeleton } from '@hisabche/ui'
+import { SalesHubContainer, InvoicesSkeleton } from '@hisabche/ui'
 import { Suspense } from 'react'
 
 const titles: Record<string, string> = {
@@ -81,7 +81,7 @@ export const dynamic = 'force-dynamic'
 export default function InvoicesPage() {
   return (
     <Suspense fallback={<InvoicesSkeleton />}>
-      <InvoicesContainer />
+      <SalesHubContainer />
     </Suspense>
   )
 }

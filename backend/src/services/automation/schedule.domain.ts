@@ -71,7 +71,15 @@ export type ScheduleCadence =
    * …in a named calendar. Absent = Gregorian, which is what every row saved
    * before the field existed meant.
    */
-  | { kind: 'monthly'; dayOfMonth: number; from: string; calendar?: ScheduleCalendar | undefined }
+  | {
+      kind: 'monthly'
+      dayOfMonth: number
+      from: string
+      calendar?: ScheduleCalendar | undefined
+      /** Minute of the day (0–1439) in `timeZone`; absent = the daily pass. */
+      atMinute?: number | undefined
+      timeZone?: string | undefined
+    }
 
 export interface Automation {
   id: string
@@ -214,6 +222,54 @@ export function shouldRun(
  * year. A monthly slot on the 31st runs on the 28th of a short month, and says
  * so, rather than not running at all.
  */
+/** Whether this cadence names a time of day (and so belongs to the timed pass). */
+export function isTimed(cadence: ScheduleCadence): boolean {
+  return cadence.kind === 'monthly' && cadence.atMinute !== undefined && !!cadence.timeZone
+}
+
+/** The calendar day and minute-of-day in an IANA zone; null for a zone Intl does not know. */
+export function localClock(timeZone: string, now: Date): { day: string; minute: number } | null {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(now)
+    const read = (type: string) => parts.find((part) => part.type === type)?.value ?? ''
+    const day = `${read('year')}-${read('month')}-${read('day')}`
+    const minute = Number(read('hour')) * 60 + Number(read('minute'))
+    return /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isFinite(minute) ? { day, minute } : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The latest day a cadence may be evaluated for at `now`.
+ *
+ * A cadence with no time of day is evaluated for the UTC day, as always. A
+ * TIMED one is evaluated for its own local day — but only once its minute has
+ * come; before that, «today» has not happened yet for it and the answer is
+ * yesterday. So a slot on the 5th at 18:30 runs on the first pass at or after
+ * 18:30 local on the 5th, and never before.
+ *
+ * ⚠️ An unknown zone falls back to the UTC day rather than never running.
+ */
+export function evaluationDay(cadence: ScheduleCadence, utcToday: string, now: Date): string {
+  if (cadence.kind !== 'monthly' || cadence.atMinute === undefined || !cadence.timeZone) {
+    return utcToday
+  }
+  const local = localClock(cadence.timeZone, now)
+  if (!local) return utcToday
+  if (local.minute >= cadence.atMinute) return local.day
+  const before = new Date(Date.parse(`${local.day}T00:00:00Z`) - 86_400_000)
+  return before.toISOString().slice(0, 10)
+}
+
 export function isDueOn(automation: Automation, on: string): boolean {
   const day = on.slice(0, 10)
   const cadence = automation.cadence

@@ -34,13 +34,35 @@ import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { useLocalePush } from '../../../hooks/use-locale-push'
 import { DateRangePicker, type DateRange } from '../dashboard/date-range-picker'
 import { MoneyInput } from '../money-input'
-import { Tabs, TabsList, TabsTrigger } from '../tabs'
+import { SearchableTable } from '../data-table'
+import { HubTabs } from '../hub-tabs'
+import { SegmentedControl } from '../segmented-control'
 import { PeerBenchmark } from './peer-benchmark'
 import { ReportBuilder } from './report-builder'
 
 type T = (key: string, fallback?: string) => string
 type Section =
   'collections' | 'suppliers' | 'breakEven' | 'cohorts' | 'workingCapital' | 'benchmark' | 'reports'
+
+/**
+ * The seven parts in three groups, behind two switches — the row of
+ * seven tabs is gone. The parts themselves are unchanged.
+ */
+export const ANALYSIS_GROUPS = {
+  money: ['collections', 'workingCapital', 'breakEven'],
+  market: ['suppliers', 'cohorts', 'benchmark'],
+  reports: ['reports'],
+} as const
+export type AnalysisGroup = keyof typeof ANALYSIS_GROUPS
+const GROUP_ORDER: readonly AnalysisGroup[] = ['money', 'market', 'reports']
+
+/** The group a part belongs to. */
+export function analysisGroupOf(section: string): AnalysisGroup {
+  return (
+    GROUP_ORDER.find((group) => (ANALYSIS_GROUPS[group] as readonly string[]).includes(section)) ??
+    'money'
+  )
+}
 
 const card =
   'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]'
@@ -97,6 +119,7 @@ export function AnalysisContainer() {
   }
   const locale = useIntlLocale()
   const [section, setSection] = useState<Section>('collections')
+  const group = analysisGroupOf(section)
 
   const sections: Array<{ id: Section; label: string }> = [
     { id: 'collections', label: t('analysis.tabs.collections', 'وصول مطالبات') },
@@ -122,18 +145,27 @@ export function AnalysisContainer() {
         </p>
       </header>
 
-      <Tabs value={section} onValueChange={(value) => setSection(value as Section)}>
-        <TabsList
-          aria-label={t('nav.analysis', 'تحلیل کسب‌وکار')}
-          className="w-full flex-nowrap justify-start overflow-x-auto md:w-auto"
-        >
-          {sections.map((item) => (
-            <TabsTrigger key={item.id} value={item.id}>
-              {item.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="space-y-3">
+        <HubTabs
+          label={t('analysis.groupsLabel', 'بخش')}
+          items={GROUP_ORDER.map((id) => ({ id, label: t(`analysis.groups.${id}`, id) }))}
+          active={group}
+          // Opening a tab opens its first part.
+          onSelect={(next) => setSection(ANALYSIS_GROUPS[next][0])}
+        />
+        {/* A group with one part needs no second switch. */}
+        {ANALYSIS_GROUPS[group].length > 1 ? (
+          <SegmentedControl
+            label={t('analysis.partsLabel', 'نما')}
+            options={ANALYSIS_GROUPS[group].map((value) => ({
+              value,
+              label: sections.find((item) => item.id === value)?.label ?? value,
+            }))}
+            value={section as (typeof ANALYSIS_GROUPS)[AnalysisGroup][number]}
+            onChange={setSection}
+          />
+        ) : null}
+      </div>
 
       {section === 'collections' ? <Collections t={t} locale={locale} /> : null}
       {section === 'suppliers' ? <Suppliers t={t} locale={locale} /> : null}
@@ -194,54 +226,73 @@ function Collections({ t, locale }: { t: T; locale: string }) {
               )}
         </Empty>
       ) : (
-        <div className={cn(card, 'overflow-x-auto')}>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                <th className={th}>{t('analysis.collections.customer', 'مشتری')}</th>
-                <th className={th}>{t('analysis.collections.invoice', 'فاکتور')}</th>
-                <th className={th}>{t('analysis.collections.amount', 'مانده')}</th>
-                <th className={th}>{t('analysis.collections.daysLate', 'روز تأخیر')}</th>
-                <th className={th}>{t('analysis.collections.tone', 'لحن یادآوری')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.actions.map((action) => (
-                <tr
-                  key={action.invoiceId}
-                  className="cursor-pointer border-b border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted)/0.5)]"
-                  onClick={() => push(`/invoices/${action.invoiceId}`)}
+        <SearchableTable
+          empty={t('analysis.noMatch', 'چیزی با این جست‌وجو نیست')}
+          tableId="analysis-collections"
+          rows={data.actions}
+          rowKey={(action) => action.invoiceId}
+          onRowClick={(action) => push(`/invoices/${action.invoiceId}`)}
+          words={(action) => [action.customerName ?? '', action.invoiceNumber]}
+          columns={[
+            {
+              id: 'customer',
+              labelKey: 'analysis.collections.customer',
+              labelFallback: 'مشتری',
+              locked: true,
+              sortValue: (action) => action.customerName ?? '',
+              render: (action) =>
+                action.customerName ?? t('analysis.collections.walkIn', 'فروش بدون مشتری'),
+            },
+            {
+              id: 'invoice',
+              labelKey: 'analysis.collections.invoice',
+              labelFallback: 'فاکتور',
+              sortValue: (action) => action.invoiceNumber,
+              render: (action) => <span className="tabular-nums">{action.invoiceNumber}</span>,
+            },
+            {
+              id: 'amount',
+              labelKey: 'analysis.collections.amount',
+              labelFallback: 'مانده',
+              align: 'end',
+              sortValue: (action) => action.outstanding,
+              render: (action) => (
+                <span className="tabular-nums">
+                  {formatNumber(action.outstanding, locale, 2)}{' '}
+                  <span className="text-xs text-[hsl(var(--fg-tertiary))]">{action.currency}</span>
+                </span>
+              ),
+            },
+            {
+              id: 'daysLate',
+              labelKey: 'analysis.collections.daysLate',
+              labelFallback: 'روز تأخیر',
+              align: 'end',
+              sortValue: (action) => action.daysLate,
+              render: (action) => (
+                <span className="tabular-nums">{formatNumber(action.daysLate, locale, 0)}</span>
+              ),
+            },
+            {
+              id: 'tone',
+              labelKey: 'analysis.collections.tone',
+              labelFallback: 'لحن یادآوری',
+              sortValue: (action) => (ANALYSIS_TONES as readonly string[]).indexOf(action.tone),
+              render: (action) => (
+                <span
+                  className={cn(
+                    'rounded-full px-2 py-0.5 text-xs font-medium',
+                    toneClass[action.tone],
+                  )}
                 >
-                  <td className={td}>
-                    {action.customerName ?? t('analysis.collections.walkIn', 'فروش بدون مشتری')}
-                  </td>
-                  <td className={cn(td, 'tabular-nums')}>{action.invoiceNumber}</td>
-                  <td className={cn(td, 'tabular-nums')}>
-                    {formatNumber(action.outstanding, locale, 2)}{' '}
-                    <span className="text-xs text-[hsl(var(--fg-tertiary))]">
-                      {action.currency}
-                    </span>
-                  </td>
-                  <td className={cn(td, 'tabular-nums')}>
-                    {formatNumber(action.daysLate, locale, 0)}
-                  </td>
-                  <td className={td}>
-                    <span
-                      className={cn(
-                        'rounded-full px-2 py-0.5 text-xs font-medium',
-                        toneClass[action.tone],
-                      )}
-                    >
-                      {(ANALYSIS_TONES as readonly string[]).includes(action.tone)
-                        ? t(`analysis.collections.tones.${action.tone}`, action.tone)
-                        : action.tone}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  {(ANALYSIS_TONES as readonly string[]).includes(action.tone)
+                    ? t(`analysis.collections.tones.${action.tone}`, action.tone)
+                    : action.tone}
+                </span>
+              ),
+            },
+          ]}
+        />
       )}
       <p className="text-xs text-[hsl(var(--fg-tertiary))]">
         {t(
@@ -314,55 +365,84 @@ function Suppliers({ t, locale }: { t: T; locale: string }) {
         </div>
       ) : null}
 
-      <div className={cn(card, 'overflow-x-auto')}>
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-              <th className={th}>{t('analysis.suppliers.supplier', 'تأمین‌کننده')}</th>
-              <th className={th}>{t('analysis.suppliers.band', 'ریسک')}</th>
-              <th className={th}>{t('analysis.suppliers.orders', 'سفارش')}</th>
-              <th className={th}>{t('analysis.suppliers.late', 'میانگین تأخیر (روز)')}</th>
-              <th className={th}>{t('analysis.suppliers.why', 'دلیل')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.suppliers.map((supplier) => (
-              <tr
-                key={supplier.supplierId}
-                className="border-b border-[hsl(var(--border-default))]"
-              >
-                <td className={td}>{supplier.name}</td>
-                <td className={cn(td, 'font-medium', bandClass[supplier.band])}>
-                  {(ANALYSIS_SUPPLIER_BANDS as readonly string[]).includes(supplier.band)
-                    ? t(`analysis.suppliers.bands.${supplier.band}`, supplier.band)
-                    : supplier.band}
-                </td>
-                <td className={cn(td, 'tabular-nums')}>
-                  {formatNumber(supplier.evidence.purchases, locale, 0)}
-                </td>
-                <td className={cn(td, 'tabular-nums')}>
-                  {supplier.evidence.averageDaysLate === null
-                    ? '—'
-                    : formatNumber(supplier.evidence.averageDaysLate, locale, 0)}
-                </td>
-                <td className={cn(td, 'text-xs text-[hsl(var(--fg-secondary))]')}>
-                  {supplier.signals.length === 0
-                    ? supplier.band === 'unknown'
-                      ? t('analysis.suppliers.tooFew', 'سفارش کافی برای قضاوت نیست')
-                      : '—'
-                    : supplier.signals
-                        .map((signal) =>
-                          (ANALYSIS_SUPPLIER_SIGNALS as readonly string[]).includes(signal.key)
-                            ? t(`analysis.suppliers.signals.${signal.key}`, signal.key)
-                            : signal.key,
-                        )
-                        .join('، ')}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <SearchableTable
+        empty={t('analysis.noMatch', 'چیزی با این جست‌وجو نیست')}
+        tableId="analysis-suppliers"
+        rows={data.suppliers}
+        rowKey={(supplier) => supplier.supplierId}
+        words={(supplier) => [supplier.name]}
+        columns={[
+          {
+            id: 'supplier',
+            labelKey: 'analysis.suppliers.supplier',
+            labelFallback: 'تأمین‌کننده',
+            locked: true,
+            sortValue: (supplier) => supplier.name,
+            render: (supplier) => <span className="font-medium">{supplier.name}</span>,
+          },
+          {
+            id: 'band',
+            labelKey: 'analysis.suppliers.band',
+            labelFallback: 'ریسک',
+            sortValue: (supplier) =>
+              (ANALYSIS_SUPPLIER_BANDS as readonly string[]).indexOf(supplier.band),
+            render: (supplier) => (
+              <span className={cn('font-medium', bandClass[supplier.band])}>
+                {(ANALYSIS_SUPPLIER_BANDS as readonly string[]).includes(supplier.band)
+                  ? t(`analysis.suppliers.bands.${supplier.band}`, supplier.band)
+                  : supplier.band}
+              </span>
+            ),
+          },
+          {
+            id: 'orders',
+            labelKey: 'analysis.suppliers.orders',
+            labelFallback: 'سفارش',
+            align: 'end',
+            sortValue: (supplier) => supplier.evidence.purchases,
+            render: (supplier) => (
+              <span className="tabular-nums">
+                {formatNumber(supplier.evidence.purchases, locale, 0)}
+              </span>
+            ),
+          },
+          {
+            id: 'late',
+            labelKey: 'analysis.suppliers.late',
+            labelFallback: 'میانگین تأخیر (روز)',
+            align: 'end',
+            sortValue: (supplier) => supplier.evidence.averageDaysLate,
+            render: (supplier) => (
+              <span className="tabular-nums">
+                {supplier.evidence.averageDaysLate === null
+                  ? '—'
+                  : formatNumber(supplier.evidence.averageDaysLate, locale, 0)}
+              </span>
+            ),
+          },
+          {
+            id: 'why',
+            labelKey: 'analysis.suppliers.why',
+            labelFallback: 'دلیل',
+            showFrom: 'md',
+            render: (supplier) => (
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {supplier.signals.length === 0
+                  ? supplier.band === 'unknown'
+                    ? t('analysis.suppliers.tooFew', 'سفارش کافی برای قضاوت نیست')
+                    : '—'
+                  : supplier.signals
+                      .map((signal) =>
+                        (ANALYSIS_SUPPLIER_SIGNALS as readonly string[]).includes(signal.key)
+                          ? t(`analysis.suppliers.signals.${signal.key}`, signal.key)
+                          : signal.key,
+                      )
+                      .join('، ')}
+              </span>
+            ),
+          },
+        ]}
+      />
 
       {data.ordersWithoutPromisedDate > 0 ? (
         <p className="text-xs text-[hsl(var(--fg-tertiary))]">
@@ -436,57 +516,83 @@ function BreakEven({ t, locale }: { t: T; locale: string }) {
               )}
             </p>
           ) : null}
-          <div className={cn(card, 'overflow-x-auto')}>
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                  <th className={th}>{t('analysis.breakEven.product', 'کالا')}</th>
-                  <th className={th}>{t('analysis.breakEven.sold', 'فروش (تعداد)')}</th>
-                  <th className={th}>{t('analysis.breakEven.contribution', 'سود ناخالص')}</th>
-                  <th className={th}>{t('analysis.breakEven.margin', 'حاشیه')}</th>
-                  <th className={th}>{t('analysis.breakEven.quantity', 'تعداد سربه‌سر')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analysis.data.rows.map((row, index) => (
-                  <tr
-                    key={row.productId ?? `row-${index}`}
-                    className="border-b border-[hsl(var(--border-default))]"
-                  >
-                    <td className={td}>{row.name}</td>
-                    <td className={cn(td, 'tabular-nums')}>
-                      {formatNumber(row.quantity, locale, 3)}
-                    </td>
-                    <td className={cn(td, 'tabular-nums')}>{money(row.contribution)}</td>
-                    <td className={cn(td, 'tabular-nums')}>
-                      {row.contributionPercent === null
-                        ? '—'
-                        : `${formatNumber(row.contributionPercent, locale, 1)}٪`}
-                    </td>
-                    <td className={cn(td, 'tabular-nums')}>
-                      {row.breakEvenQuantity !== null ? (
-                        formatNumber(row.breakEvenQuantity, locale, 0)
-                      ) : (
-                        // Null is «cannot be reached / not computable», and the
-                        // reason is said — it is never shown as zero.
-                        <span className="text-xs text-[hsl(var(--fg-tertiary))]">
-                          {row.breakEvenReason &&
-                          (ANALYSIS_BREAK_EVEN_REASONS as readonly string[]).includes(
+          <SearchableTable
+            empty={t('analysis.noMatch', 'چیزی با این جست‌وجو نیست')}
+            tableId="analysis-break-even"
+            rows={analysis.data.rows}
+            rowKey={(row, index) => row.productId ?? `row-${index}`}
+            words={(row) => [row.name]}
+            columns={[
+              {
+                id: 'product',
+                labelKey: 'analysis.breakEven.product',
+                labelFallback: 'کالا',
+                locked: true,
+                sortValue: (row) => row.name,
+                render: (row) => <span className="font-medium">{row.name}</span>,
+              },
+              {
+                id: 'sold',
+                labelKey: 'analysis.breakEven.sold',
+                labelFallback: 'فروش (تعداد)',
+                align: 'end',
+                sortValue: (row) => row.quantity,
+                render: (row) => (
+                  <span className="tabular-nums">{formatNumber(row.quantity, locale, 3)}</span>
+                ),
+              },
+              {
+                id: 'contribution',
+                labelKey: 'analysis.breakEven.contribution',
+                labelFallback: 'سود ناخالص',
+                align: 'end',
+                sortValue: (row) => row.contribution,
+                render: (row) => <span className="tabular-nums">{money(row.contribution)}</span>,
+              },
+              {
+                id: 'margin',
+                labelKey: 'analysis.breakEven.margin',
+                labelFallback: 'حاشیه',
+                align: 'end',
+                showFrom: 'md',
+                sortValue: (row) => row.contributionPercent,
+                render: (row) => (
+                  <span className="tabular-nums">
+                    {row.contributionPercent === null
+                      ? '—'
+                      : `${formatNumber(row.contributionPercent, locale, 1)}٪`}
+                  </span>
+                ),
+              },
+              {
+                id: 'quantity',
+                labelKey: 'analysis.breakEven.quantity',
+                labelFallback: 'تعداد سربه‌سر',
+                align: 'end',
+                sortValue: (row) => row.breakEvenQuantity,
+                // Null is «cannot be reached / not computable», and the reason is
+                // said — it is never shown as zero.
+                render: (row) =>
+                  row.breakEvenQuantity !== null ? (
+                    <span className="tabular-nums">
+                      {formatNumber(row.breakEvenQuantity, locale, 0)}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                      {row.breakEvenReason &&
+                      (ANALYSIS_BREAK_EVEN_REASONS as readonly string[]).includes(
+                        row.breakEvenReason,
+                      )
+                        ? t(
+                            `analysis.breakEven.reasons.${row.breakEvenReason}`,
                             row.breakEvenReason,
                           )
-                            ? t(
-                                `analysis.breakEven.reasons.${row.breakEvenReason}`,
-                                row.breakEvenReason,
-                              )
-                            : '—'}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        : '—'}
+                    </span>
+                  ),
+              },
+            ]}
+          />
         </>
       )}
     </div>

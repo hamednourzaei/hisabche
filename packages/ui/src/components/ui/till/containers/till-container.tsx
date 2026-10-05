@@ -22,6 +22,8 @@ import {
   useSession,
   useSessionLedger,
   useSetTillSuspended,
+  useSetTillLabel,
+  useTillLabels,
   useCloseSession,
   apiErrorMessage,
 } from '@hisabche/api'
@@ -42,6 +44,22 @@ export const TillContainer = memo(function TillContainer() {
   const cashMovement = useRecordCashMovement()
   const setSuspended = useSetTillSuspended()
   const closeSession = useCloseSession()
+  const labels = useTillLabels()
+  const setLabel = useSetTillLabel()
+  const { mutateAsync: saveLabel } = setLabel
+
+  // The dialog shows what the server said; a known code gets its own sentence.
+  const handleRenameTill = async (sessionId: string, label: string | null) => {
+    try {
+      await saveLabel({ sessionId, label })
+    } catch (err) {
+      const message = apiErrorMessage(err, t('common.saveError', 'انجام نشد'))
+      const known = ['POS_LABEL_MIGRATION_REQUIRED', 'POS_LABEL_INVALID'].find((code) =>
+        message.includes(code),
+      )
+      throw new Error(known ? t(`till.error_${known}`, message) : message, { cause: err })
+    }
+  }
 
   // Selected till: the caller's own open till unless another row was clicked.
   const [selectedTillId, setSelectedTillId] = useState<string | null>(null)
@@ -173,6 +191,8 @@ export const TillContainer = memo(function TillContainer() {
       }
       onSetSuspended={handleSetSuspended}
       onCloseTill={handleCloseTill}
+      tillLabels={labels.data?.labels ?? {}}
+      onRenameTill={handleRenameTill}
       actionError={actionError}
       onRefresh={handleRefresh}
       onOpen={handleOpen}

@@ -362,6 +362,43 @@ export async function posRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /sessions/labels · PATCH /sessions/:id/label ──
+  // The name of a till — the one thing about it a person may edit.
+  fastify.get(
+    '/sessions/labels',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.create')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send(await posService.sessionLabels(request.tenancy))
+      } catch (err) {
+        return fail(reply, err, 'Failed to read the till names')
+      }
+    },
+  )
+
+  fastify.patch(
+    '/sessions/:id/label',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.create')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { label } = z
+          .object({ label: z.string().trim().min(1).max(80).nullable() })
+          .strict()
+          .parse(request.body)
+        return reply.send(await posService.setLabel(request.tenancy, id, label))
+      } catch (err) {
+        return fail(reply, err, 'Failed to name the till')
+      }
+    },
+  )
+
   // ─── GET /sessions/abandoned ───────────────────────────
   // Drawers open far longer than a shift. Surfaced, never auto-closed.
   fastify.get(

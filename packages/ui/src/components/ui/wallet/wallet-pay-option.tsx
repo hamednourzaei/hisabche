@@ -82,7 +82,7 @@ export function WalletPayOption({
         <p className="text-[hsl(var(--fg-secondary))]">
           {t('wallet.pay.noBalance', { currency: planCurrency })}{' '}
           <Link
-            href={localizePath('/wallet', routeLang)}
+            href={localizePath('/billing?tab=money', routeLang)}
             className="text-[hsl(var(--color-primary))] underline"
           >
             {t('wallet.pay.topUp')}

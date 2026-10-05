@@ -429,6 +429,11 @@ export const invoiceSchema = z.object({
   customerId: uuidSchema.optional(),
   /** Multi-warehouse: the warehouse this invoice's goods leave (sale) or arrive at (purchase). */
   warehouseId: uuidSchema.nullable().optional(),
+  /**
+   * The branch this invoice belongs to. A REQUEST: the server checks it against
+   * the member's own branches. Absent = the business as a whole.
+   */
+  branchId: uuidSchema.nullable().optional(),
   supplierId: uuidSchema.optional(),
   supplierName: nonEmptyStringSchema.optional(),
 
@@ -569,6 +574,9 @@ export type UpdateInvoice = z.infer<typeof updateInvoiceSchema>
 
 export const invoiceFiltersSchema = z.object({
   search: z.string().optional(),
+  /** Only invoices written in this branch / moving stock in this warehouse. */
+  branchId: uuidSchema.optional(),
+  warehouseId: uuidSchema.optional(),
   type: z.enum(['sale', 'purchase']).optional(),
   status: invoiceStatusSchema.optional(), // ✅ استفاده از invoiceStatusSchema
   customerId: uuidSchema.optional(),

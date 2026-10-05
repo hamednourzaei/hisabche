@@ -11,6 +11,9 @@ import {
   useAssetSchedule,
   useAssets,
   usePostDepreciation,
+  useCreateAsset,
+  useDisposeAsset,
+  type CreateAssetInput,
   type DepreciationRunResult,
   type FixedAsset,
   type ScheduleRow,
@@ -32,6 +35,31 @@ export const AssetsContainer = memo(function AssetsContainer() {
   const assets = useAssets()
   const schedule = useAssetSchedule(selectedId ?? '')
   const postDepreciation = usePostDepreciation()
+  const createAsset = useCreateAsset()
+  const disposeAsset = useDisposeAsset()
+  const { mutateAsync: saveAsset } = createAsset
+  const { mutateAsync: saveDisposal } = disposeAsset
+
+  // The dialog shows what the server said — never a swallowed error.
+  const handleCreate = async (input: CreateAssetInput) => {
+    try {
+      const created = await saveAsset(input)
+      setSelectedId(created.id)
+    } catch (err) {
+      throw new Error(apiErrorMessage(err, t('common.saveError', 'انجام نشد')), { cause: err })
+    }
+  }
+  const handleDispose = async (input: {
+    assetId: string
+    onDate: string
+    proceedsMinor: number
+  }) => {
+    try {
+      await saveDisposal(input)
+    } catch (err) {
+      throw new Error(apiErrorMessage(err, t('common.saveError', 'انجام نشد')), { cause: err })
+    }
+  }
 
   const handleRun = useCallback(() => {
     setActionError(null)
@@ -69,6 +97,9 @@ export const AssetsContainer = memo(function AssetsContainer() {
       onSelect={setSelectedId}
       onRunDepreciation={handleRun}
       onRefresh={handleRefresh}
+      onCreate={handleCreate}
+      onDispose={handleDispose}
+      isSaving={createAsset.isPending || disposeAsset.isPending}
     />
   )
 })

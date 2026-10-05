@@ -23,7 +23,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..
 const UI = join(ROOT, 'packages', 'ui', 'src', 'components', 'ui')
 
 /** The directories this session added. Each one is new work, held to the rule. */
-const GOVERNED = ['state', 'work-queue', 'data-and-sync', 'data-migration', 'domain', 'entity']
+const GOVERNED = ['state', 'work-queue', 'data-and-sync', 'data-migration', 'entity']
 
 function filesIn(directory: string): string[] {
   let entries: string[]

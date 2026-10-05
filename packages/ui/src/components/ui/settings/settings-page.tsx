@@ -940,7 +940,7 @@ const WorkflowTemplatesSection = memo(function WorkflowTemplatesSection() {
 
   return (
     <Link
-      href={localizePath('/workflow-templates', lang)}
+      href={localizePath('/approvals?tab=workflows', lang)}
       className={cn(
         'flex items-center gap-3 rounded-2xl p-4 sm:p-5',
         'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',

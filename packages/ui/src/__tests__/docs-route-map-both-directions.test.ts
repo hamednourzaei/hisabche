@@ -44,7 +44,9 @@ const DASHBOARD = join(
 /** Does this product route render a page? */
 function routeExists(route: string): boolean {
   // A route may be nested (`a/b`), and the segment folder must hold a page.
-  return existsSync(join(DASHBOARD, ...route.split('/'), 'page.tsx'))
+  // A key may name one section of a page (`a?tab=b`): the page must exist.
+  const page = route.split('?')[0] ?? ''
+  return existsSync(join(DASHBOARD, ...page.split('/'), 'page.tsx'))
 }
 
 /** What `docs-client` builds: the FIRST product route mapped to each slug. */
@@ -63,7 +65,7 @@ describe('the map is anchored at both ends', () => {
   })
 
   it('has a plausible number of entries', () => {
-    expect(Object.keys(ROUTE_DOCS_MAP).length).toBeGreaterThan(20)
+    expect(Object.keys(ROUTE_DOCS_MAP).length).toBeGreaterThan(15)
   })
 
   it('⚠️ every product route in the map is a real route', () => {

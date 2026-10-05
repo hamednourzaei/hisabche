@@ -17,7 +17,7 @@
 // list's data is in step with the server.
 // ============================================
 
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { PAGE_SIZES } from '@hisabche/ui-contract'
 
 import type { ListEngine } from '../../../hooks/use-list-engine'
@@ -30,17 +30,10 @@ import {
   EmptyState,
   ErrorNote,
   Loading,
-  Panel,
   SelectField,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '../capability/capability-kit'
+import { DataTable, type TableColumn } from '../data-table'
 import { WorkStateBadge } from '../state/work-state'
-import { Input } from '../input'
 
 export interface ProductListViewProps {
   t: (key: string, fallback?: string) => string
@@ -53,14 +46,11 @@ export interface ProductListViewProps {
   isLoading: boolean
   error: string | null
   onRefresh: () => void
+  /** The product's own page — a row opens it. */
+  onOpen?: ((productId: string) => void) | undefined
 }
 
-/** Only fields the server can order by. */
-const COLUMNS: ReadonlyArray<{ field: string; labelKey: string; fallback: string }> = [
-  { field: 'name', labelKey: 'products.name', fallback: 'نام کالا' },
-  { field: 'sku', labelKey: 'products.sku', fallback: 'کد' },
-  { field: 'quantity', labelKey: 'products.quantity', fallback: 'موجودی' },
-]
+const isLow = (product: ProductRow) => (product.quantity ?? 0) <= (product.minStockLevel ?? 0)
 
 export const ProductListView = memo(function ProductListView({
   t,
@@ -72,8 +62,52 @@ export const ProductListView = memo(function ProductListView({
   isLoading,
   error,
   onRefresh,
+  onOpen,
 }: ProductListViewProps) {
   const { state } = engine
+
+  const columns = useMemo<TableColumn<ProductRow>[]>(
+    () => [
+      {
+        id: 'name',
+        labelKey: 'products.name',
+        labelFallback: 'نام کالا',
+        locked: true,
+        sortValue: (product) => product.name,
+        render: (product) => <span className="font-medium">{product.name}</span>,
+      },
+      {
+        id: 'sku',
+        labelKey: 'products.sku',
+        labelFallback: 'کد',
+        sortValue: (product) => product.sku ?? null,
+        render: (product) => <span dir="ltr">{product.sku || '—'}</span>,
+      },
+      {
+        id: 'quantity',
+        labelKey: 'products.quantity',
+        labelFallback: 'موجودی',
+        sortValue: (product) => product.quantity ?? 0,
+        render: (product) => (
+          <>
+            {/* The count is stated as text as well as a colour —
+                §1.7, never colour alone. */}
+            <Badge tone={isLow(product) ? 'warn' : 'neutral'}>
+              <span dir="ltr" className="tabular-nums">
+                {product.quantity ?? 0}
+              </span>
+            </Badge>
+            {isLow(product) ? (
+              <span className="ms-2 text-xs text-[hsl(var(--fg-tertiary))]">
+                {t('products.low_stock', 'رو به اتمام')}
+              </span>
+            ) : null}
+          </>
+        ),
+      },
+    ],
+    [t],
+  )
 
   return (
     <CapabilityPage>
@@ -101,110 +135,38 @@ export const ProductListView = memo(function ProductListView({
         />
       ) : null}
 
-      <Panel title={t('common.search', 'جست‌وجو')}>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[200px] flex-1">
-            <Input
-              label={t('products.search_label', 'نام یا کد کالا')}
-              value={state.search}
-              onChange={(event) => engine.setSearch(event.target.value)}
+      {/* The shared table — the same search, saved views and column settings as
+          every other list. Search is sent to the server: the table holds one
+          page. It stays mounted while a page loads, so typing keeps its focus. */}
+      <DataTable
+        tableId="products"
+        t={t}
+        rows={rows}
+        columns={columns}
+        rowKey={(product) => product.id}
+        onRowClick={onOpen ? (product) => onOpen(product.id) : undefined}
+        searchValue={state.search}
+        onSearchChange={engine.setSearch}
+        minWidthClass="min-w-[420px]"
+        emptyState={
+          isLoading ? (
+            <Loading label={t('common.loading', 'در حال بارگذاری…')} />
+          ) : (
+            <EmptyState
+              title={
+                engine.isFiltered
+                  ? t('products.no_match', 'کالایی با این جست‌وجو پیدا نشد')
+                  : t('products.empty', 'هنوز کالایی ثبت نشده')
+              }
+              description={
+                engine.isFiltered
+                  ? t('products.no_match_hint', 'جست‌وجو را تغییر دهید یا پاکش کنید.')
+                  : t('products.empty_hint', 'اولین کالا را از صفحه‌ی موجودی اضافه کنید.')
+              }
             />
-          </div>
-
-          <div className="w-32">
-            <SelectField
-              label={t('common.page_size', 'تعداد در صفحه')}
-              value={String(state.pageSize)}
-              onChange={(value) => engine.setPageSize(Number(value))}
-              options={PAGE_SIZES.map((size) => ({ value: String(size), label: String(size) }))}
-            />
-          </div>
-
-          {engine.isFiltered ? (
-            <ActionButton variant="quiet" onClick={engine.reset}>
-              {t('common.clear', 'پاک کردن')}
-            </ActionButton>
-          ) : null}
-        </div>
-      </Panel>
-
-      {isLoading ? <Loading label={t('common.loading', 'در حال بارگذاری…')} /> : null}
-
-      {!isLoading && rows.length === 0 ? (
-        <EmptyState
-          title={
-            engine.isFiltered
-              ? t('products.no_match', 'کالایی با این جست‌وجو پیدا نشد')
-              : t('products.empty', 'هنوز کالایی ثبت نشده')
-          }
-          description={
-            engine.isFiltered
-              ? t('products.no_match_hint', 'جست‌وجو را تغییر دهید یا پاکش کنید.')
-              : t('products.empty_hint', 'اولین کالا را از صفحه‌ی موجودی اضافه کنید.')
-          }
-        />
-      ) : null}
-
-      {rows.length > 0 ? (
-        <Panel title={t('products.list', 'فهرست')}>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {COLUMNS.map((column) => {
-                  const direction = engine.sortIndicator(column.field)
-                  return (
-                    <TableHead key={column.field}>
-                      <button
-                        type="button"
-                        onClick={() => engine.toggleSort(column.field)}
-                        aria-sort={
-                          direction === 'asc'
-                            ? 'ascending'
-                            : direction === 'desc'
-                              ? 'descending'
-                              : 'none'
-                        }
-                        className="flex items-center gap-1 text-start"
-                      >
-                        {t(column.labelKey, column.fallback)}
-                        <span aria-hidden="true">
-                          {direction === 'asc' ? '↑' : direction === 'desc' ? '↓' : ''}
-                        </span>
-                      </button>
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {rows.map((product) => {
-                const low = (product.quantity ?? 0) <= (product.minStockLevel ?? 0)
-                return (
-                  <TableRow key={product.id}>
-                    <TableCell>{product.name}</TableCell>
-                    <TableCell dir="ltr">{product.sku || '—'}</TableCell>
-                    <TableCell>
-                      {/* The count is stated as text as well as a colour —
-                          §1.7, never colour alone. */}
-                      <Badge tone={low ? 'warn' : 'neutral'}>
-                        <span dir="ltr" className="tabular-nums">
-                          {product.quantity ?? 0}
-                        </span>
-                      </Badge>
-                      {low ? (
-                        <span className="ms-2 text-xs text-[hsl(var(--fg-tertiary))]">
-                          {t('products.low_stock', 'رو به اتمام')}
-                        </span>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </Panel>
-      ) : null}
+          )
+        }
+      />
 
       {engine.pageCount > 1 ? (
         <div className="flex items-center justify-between gap-3">
@@ -232,12 +194,22 @@ export const ProductListView = memo(function ProductListView({
         </div>
       ) : null}
 
-      <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-        {t('common.total', 'مجموع')}:{' '}
-        <span dir="ltr" className="tabular-nums">
-          {total}
-        </span>
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+          {t('common.total', 'مجموع')}:{' '}
+          <span dir="ltr" className="tabular-nums">
+            {total}
+          </span>
+        </p>
+        <div className="w-32">
+          <SelectField
+            label={t('common.page_size', 'تعداد در صفحه')}
+            value={String(state.pageSize)}
+            onChange={(value) => engine.setPageSize(Number(value))}
+            options={PAGE_SIZES.map((size) => ({ value: String(size), label: String(size) }))}
+          />
+        </div>
+      </div>
     </CapabilityPage>
   )
 })

@@ -46,6 +46,10 @@ import { cn } from '../../../lib/utils'
  * entry gets no «?» at all — an icon linking to an article that does not
  * answer the question is worse than none, because the reader spends the click
  * finding that out.
+ *
+ * A key with a query (`invoices?tab=pricing`) is a section of a page. It never
+ * matches a pathname — the page itself decides the «?» — and exists so the
+ * article's «باز کردن در برنامه» opens the section the article is about.
  */
 export const ROUTE_DOCS_MAP: Record<string, string> = {
   // Sales
@@ -57,31 +61,18 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
   // link for their article. `till` covers the POS screen that does exist.
   'quick-invoice': 'invoices',
   customers: 'customers',
-  'customer-list': 'customers',
-  crm: 'customers',
 
   // Stock
   warehouse: 'inventory',
-  'inventory-workspace': 'inventory',
-  'product-list': 'inventory',
   'stock-count': 'inventory',
-  expiry: 'inventory',
   operations: 'inventory',
 
   // Money
   accounting: 'accounting',
-  'accounting-workspace': 'accounting',
   till: 'pos',
-  bank: 'accounting',
-  budgets: 'accounting',
-  assets: 'accounting',
 
   // Team
-  permissions: 'permissions',
   governance: 'permissions',
-  'people-workspace': 'permissions',
-  'human-resources': 'permissions',
-  timesheets: 'permissions',
   // ⚠️ `branches` IS NOT A ROUTE. Branch management is a TAB on
   // `/team-and-payroll` (`?tab=branches`, see its container). The key here was
   // `branches`, which is the only product route mapped to the `branches`
@@ -91,15 +82,14 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
 
   // Platform
   'data-and-sync': 'offline',
-  conflicts: 'offline',
-  'data-migration': 'data-and-backup',
+  'data-and-sync?tab=details&view=migration': 'data-and-backup',
   settings: 'data-and-backup',
   developers: 'developers',
   manufacturing: 'manufacturing',
   analysis: 'business-analysis',
-  promotions: 'promotions',
-  campaigns: 'campaigns',
-  wallet: 'wallet',
+  'invoices?tab=pricing': 'promotions',
+  'customers?tab=outreach&view=campaigns': 'campaigns',
+  'billing?tab=money': 'wallet',
   dashboard: 'getting-started',
 }
 

@@ -124,8 +124,8 @@ export const accountingKeys = {
    * one are different answers to the same question, so sharing a key would
    * render one under the other's heading.
    */
-  trialBalance: (date: string, branchId: string | null = null) =>
-    [...accountingKeys.all, 'trialBalance', date, branchId ?? 'all'] as const,
+  trialBalance: (date: string, branchId: string | null = null, fromDate = '') =>
+    [...accountingKeys.all, 'trialBalance', fromDate || 'start', date, branchId ?? 'all'] as const,
   balanceSheet: (date: string, branchId: string | null = null) =>
     [...accountingKeys.all, 'balanceSheet', date, branchId ?? 'all'] as const,
   incomeStatement: (from: string, to: string, branchId: string | null = null) =>
@@ -251,7 +251,11 @@ export function useCreateJournalEntry() {
   })
 }
 
-export function useTrialBalance(date: string, branchId: string | null = null) {
+/**
+ * `fromDate` empty = from the first entry in the books (the classic «as at»
+ * trial balance). With a start date, only that period's movements are summed.
+ */
+export function useTrialBalance(date: string, branchId: string | null = null, fromDate = '') {
   const authReady = useAuthReady()
 
   // ✅ FIX: subscription realtime برای journal_lines — چون
@@ -264,13 +268,13 @@ export function useTrialBalance(date: string, branchId: string | null = null) {
     // K4 — the branch is part of the KEY. A trial balance for one branch and
     // the consolidated one are two different answers; sharing a cache key
     // would show the branch figure under an «all branches» heading.
-    queryKey: accountingKeys.trialBalance(date, branchId),
+    queryKey: accountingKeys.trialBalance(date, branchId, fromDate),
     queryFn: async (): Promise<TrialBalanceResult> => {
       const { data } = await apiClient.get('/accounting/trial-balance', {
         // `undefined`, not `null` — axios drops an undefined param and
         // serialises a null one as the string "null", which the server would
         // then treat as a branch id and match nothing.
-        params: { date, branchId: branchId ?? undefined },
+        params: { date, fromDate: fromDate || undefined, branchId: branchId ?? undefined },
       })
       return data
     },

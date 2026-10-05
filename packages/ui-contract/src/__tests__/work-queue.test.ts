@@ -29,8 +29,10 @@ describe('the specs are honest', () => {
     // A work item is a verb with a destination. One that leads nowhere is a
     // complaint.
     const paths = new Set(NAV_CONTRACT.map((item) => item.path))
+    // The verb may happen in one tab of a page: the page is what must exist.
     for (const item of WORK_ITEMS) {
-      expect(paths.has(item.path), `${item.kind} -> ${item.path}`).toBe(true)
+      const page = item.path.split('?')[0] ?? ''
+      expect(paths.has(page), `${item.kind} -> ${item.path}`).toBe(true)
     }
   })
 

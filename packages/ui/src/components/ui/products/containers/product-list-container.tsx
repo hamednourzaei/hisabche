@@ -25,6 +25,7 @@ import { useProducts } from '@hisabche/api'
 import { useSyncStore } from '@hisabche/store'
 
 import { useListEngine } from '../../../../hooks/use-list-engine'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 import { ProductListView } from '../product-list-view'
 
 export const ProductListContainer = memo(function ProductListContainer() {
@@ -38,6 +39,9 @@ export const ProductListContainer = memo(function ProductListContainer() {
   )
 
   const { isOnline, pendingCount } = useSyncStore()
+  const push = useLocalePush()
+  // The same product page a row of the warehouse table opens.
+  const openProduct = useCallback((id: string) => push(`/warehouse/${id}`), [push])
 
   const [total, setTotal] = useState<number | undefined>(undefined)
 
@@ -75,6 +79,7 @@ export const ProductListContainer = memo(function ProductListContainer() {
       isLoading={products.isLoading}
       error={products.error ? (products.error as Error).message : null}
       onRefresh={() => products.refetch()}
+      onOpen={openProduct}
     />
   )
 })

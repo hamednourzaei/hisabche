@@ -770,6 +770,8 @@ export {
   useAbandonedSessions,
   useOpenSessions,
   useSetTillSuspended,
+  useTillLabels,
+  useSetTillLabel,
   useOpenSession,
   useRecordOrder,
   useRecordCashMovement,
@@ -894,7 +896,6 @@ export {
   useSerials,
   useExpiryReport,
   useLotTrail,
-  usePlanIssue,
   useReceiveBatch,
   useUpdateBatchDates,
   useReceiveSerials,
@@ -904,8 +905,6 @@ export {
   type ExpiryState,
   type ExpiryBucket,
   type ExpiryReport,
-  type AllocationPlan,
-  type AllocationStrategy,
 } from './hooks/expiry'
 
 // ─── Offline conflicts ────────────────────────────────────

@@ -1,1 +1,1 @@
-export { ApprovalsContainer as default } from '@hisabche/ui/screens'
+export { ApprovalsHubContainer as default } from '@hisabche/ui/screens'

@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server'
-import { DataAndSyncContainer } from '@hisabche/ui'
+import { DataHubContainer } from '@hisabche/ui'
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params
@@ -12,5 +12,5 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 export default function DataAndSyncPage() {
-  return <DataAndSyncContainer />
+  return <DataHubContainer />
 }

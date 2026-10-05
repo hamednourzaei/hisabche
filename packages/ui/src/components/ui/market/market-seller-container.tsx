@@ -34,6 +34,7 @@ import {
 import { CURRENCY_CODES } from '@hisabche/validation'
 
 import { ProductPicker } from '../product-picker'
+import { SearchableTable } from '../data-table'
 import {
   ActionButton,
   Badge,
@@ -46,12 +47,6 @@ import {
   Loading,
   Panel,
   SelectField,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '../capability/capability-kit'
 import { statusOf, walletAmountToMinor, walletDigits, walletMoney } from '../wallet/wallet-format'
 
@@ -268,77 +263,104 @@ function Listings({
         />
       ) : null}
 
-      {listings.length === 0 ? (
-        <EmptyState title={t('market.listings.empty')} />
-      ) : (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('market.listing.title')}</TableHead>
-                <TableHead className="text-end">{t('market.listing.price')}</TableHead>
-                <TableHead>{t('market.listing.status')}</TableHead>
-                <TableHead>{t('market.listing.availability')}</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {listings.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>
-                    <span className="font-medium">{row.title}</span>
-                    {isPublic(row) ? (
-                      <a
-                        href={`${SITE}/${lang}/market/${profile.slug}/${row.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block text-xs text-[hsl(var(--color-primary))] underline"
-                      >
-                        {t('market.listings.view')}
-                      </a>
-                    ) : (
-                      // §7.5: «not shown» is said, with the reason nearest to hand.
-                      <span className="block text-xs text-[hsl(var(--fg-tertiary))]">
-                        {row.suspended
-                          ? t('market.listings.suspended', { reason: row.suspendedReason ?? '—' })
-                          : t('market.listings.notPublic')}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell dir="ltr" className="text-end tabular-nums">
-                    {walletMoney(row.priceMinor, row.currency, lang)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge tone={STATUS_TONE[row.status]}>{t(`market.status.${row.status}`)}</Badge>
-                    {row.isHidden ? (
-                      <span className="ms-1 text-xs text-[hsl(var(--fg-tertiary))]">
-                        {t('market.listing.hidden')}
-                      </span>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>{t(`market.availability.${row.availability}`)}</TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-2">
-                      <ActionButton variant="quiet" onClick={() => setEditing(row)}>
-                        {t('market.listings.edit')}
-                      </ActionButton>
-                      <ActionButton
-                        variant="danger"
-                        disabled={remove.isPending}
-                        onClick={() => {
-                          if (confirm(t('market.listings.deleteConfirm'))) remove.mutate(row.id)
-                        }}
-                      >
-                        {t('market.listings.delete')}
-                      </ActionButton>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      {/* The shared table: search, saved views, column settings. */}
+      <SearchableTable<MarketListing>
+        tableId="market-listings"
+        rows={listings}
+        rowKey={(row) => row.id}
+        words={(row) => [row.title]}
+        empty={<EmptyState title={t('market.listings.empty')} />}
+        columns={[
+          {
+            id: 'title',
+            labelKey: 'market.listing.title',
+            labelFallback: t('market.listing.title'),
+            locked: true,
+            sortValue: (row) => row.title,
+            render: (row) => (
+              <>
+                <span className="font-medium">{row.title}</span>
+                {isPublic(row) ? (
+                  <a
+                    href={`${SITE}/${lang}/market/${profile.slug}/${row.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-xs text-[hsl(var(--color-primary))] underline"
+                  >
+                    {t('market.listings.view')}
+                  </a>
+                ) : (
+                  // §7.5: «not shown» is said, with the reason nearest to hand.
+                  <span className="block text-xs text-[hsl(var(--fg-tertiary))]">
+                    {row.suspended
+                      ? t('market.listings.suspended', { reason: row.suspendedReason ?? '—' })
+                      : t('market.listings.notPublic')}
+                  </span>
+                )}
+              </>
+            ),
+          },
+          {
+            id: 'price',
+            labelKey: 'market.listing.price',
+            labelFallback: t('market.listing.price'),
+            align: 'end',
+            sortValue: (row) => row.priceMinor,
+            render: (row) => (
+              <span dir="ltr" className="tabular-nums">
+                {walletMoney(row.priceMinor, row.currency, lang)}
+              </span>
+            ),
+          },
+          {
+            id: 'status',
+            labelKey: 'market.listing.status',
+            labelFallback: t('market.listing.status'),
+            sortValue: (row) => row.status,
+            render: (row) => (
+              <>
+                <Badge tone={STATUS_TONE[row.status]}>{t(`market.status.${row.status}`)}</Badge>
+                {row.isHidden ? (
+                  <span className="ms-1 text-xs text-[hsl(var(--fg-tertiary))]">
+                    {t('market.listing.hidden')}
+                  </span>
+                ) : null}
+              </>
+            ),
+          },
+          {
+            id: 'availability',
+            labelKey: 'market.listing.availability',
+            labelFallback: t('market.listing.availability'),
+            showFrom: 'md',
+            sortValue: (row) => row.availability,
+            render: (row) => t(`market.availability.${row.availability}`),
+          },
+          {
+            id: 'actions',
+            labelKey: 'common.actions',
+            labelFallback: 'عملیات',
+            locked: true,
+            align: 'end',
+            render: (row) => (
+              <div className="flex justify-end gap-2">
+                <ActionButton variant="quiet" onClick={() => setEditing(row)}>
+                  {t('market.listings.edit')}
+                </ActionButton>
+                <ActionButton
+                  variant="danger"
+                  disabled={remove.isPending}
+                  onClick={() => {
+                    if (confirm(t('market.listings.deleteConfirm'))) remove.mutate(row.id)
+                  }}
+                >
+                  {t('market.listings.delete')}
+                </ActionButton>
+              </div>
+            ),
+          },
+        ]}
+      />
       {remove.isError ? <ErrorNote message={marketErrorText(remove.error, t)} /> : null}
     </ListSection>
   )

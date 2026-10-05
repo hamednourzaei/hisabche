@@ -1,22 +1,13 @@
 // ============================================
-// The global frame, and the domain hubs inside it.
+// The global frame.
 // ============================================
 
 import { describe, expect, it } from 'vitest'
 
-import { NAV_CONTRACT, type NavId } from '../navigation'
-import {
-  DOMAINS,
-  DOMAIN_SPECS,
-  breadcrumbsFor,
-  domainDestinations,
-  domainFor,
-  domainOf,
-  localizePath,
-} from '../shell'
+import { NAV_CONTRACT } from '../navigation'
+import { breadcrumbsFor, localizePath } from '../shell'
 
 const LOCALES = ['fa', 'af', 'en']
-const ALL_NAV = NAV_CONTRACT.map((item) => item.id)
 
 describe('breadcrumbs are derived from the contract', () => {
   it('gives the root a single, unlinked crumb', () => {
@@ -35,7 +26,7 @@ describe('breadcrumbs are derived from the contract', () => {
     // The old breadcrumb stripped af and en but not fa. Persian is the locale
     // nearly everybody uses, so on almost every page the trail read
     // `home > fa > budgets` — a language code rendered as a place.
-    const crumbs = breadcrumbsFor('/fa/budgets', LOCALES)
+    const crumbs = breadcrumbsFor('/fa/till', LOCALES)
     expect(crumbs.map((c) => c.segment)).not.toContain('fa')
     expect(crumbs).toHaveLength(2)
   })
@@ -46,22 +37,24 @@ describe('breadcrumbs are derived from the contract', () => {
   })
 
   it('does not mistake a real segment for a locale', () => {
-    // `/bank` must not lose its segment just because it sits where a locale
+    // `/till` must not lose its segment just because it sits where a locale
     // would.
-    const crumbs = breadcrumbsFor('/bank', LOCALES)
+    const crumbs = breadcrumbsFor('/till', LOCALES)
     expect(crumbs).toHaveLength(2)
-    expect(crumbs[1]?.labelKey).toBe('nav.bank')
+    expect(crumbs[1]?.labelKey).toBe(NAV_CONTRACT.find((item) => item.path === '/till')?.labelKey)
+    expect(crumbs[1]?.labelKey).toMatch(/^nav\./)
   })
 
   it('never links the last crumb — you are already there', () => {
-    const crumbs = breadcrumbsFor('/fa/budgets', LOCALES)
+    const crumbs = breadcrumbsFor('/fa/till', LOCALES)
     expect(crumbs.at(-1)?.path).toBeUndefined()
     expect(crumbs[0]?.path).toBe('/dashboard')
   })
 
   it('takes its labels from NAV_CONTRACT, so a rename cannot drift', () => {
-    const budgets = NAV_CONTRACT.find((item) => item.id === 'budgets')
-    expect(breadcrumbsFor('/budgets', LOCALES).at(-1)?.labelKey).toBe(budgets?.labelKey)
+    const till = NAV_CONTRACT.find((item) => item.id === 'till')
+    expect(till?.labelKey).toEqual(expect.any(String))
+    expect(breadcrumbsFor('/till', LOCALES).at(-1)?.labelKey).toBe(till?.labelKey)
   })
 
   it('keeps an unknown segment rather than dropping it', () => {
@@ -73,78 +66,9 @@ describe('breadcrumbs are derived from the contract', () => {
   })
 
   it('uses i18n keys throughout, never text', () => {
-    for (const crumb of breadcrumbsFor('/fa/bank', LOCALES)) {
+    for (const crumb of breadcrumbsFor('/fa/till', LOCALES)) {
       if (crumb.labelKey !== '') expect(crumb.labelKey).toMatch(/^nav\./)
     }
-  })
-})
-
-describe('domain workspaces', () => {
-  it('covers every declared domain exactly once', () => {
-    expect(DOMAIN_SPECS.map((domain) => domain.id).sort()).toEqual([...DOMAINS].sort())
-  })
-
-  it('advertises only destinations that exist', () => {
-    // A domain hub linking to a deleted page is worse than no hub.
-    for (const domain of DOMAIN_SPECS) {
-      for (const nav of domain.destinations) {
-        expect(ALL_NAV, `${domain.id} -> ${nav}`).toContain(nav)
-      }
-    }
-  })
-
-  it('draws its primary actions from its own destinations', () => {
-    for (const domain of DOMAIN_SPECS) {
-      for (const action of domain.primaryActions) {
-        expect(domain.destinations).toContain(action)
-      }
-    }
-  })
-
-  it('never files one destination under two domains', () => {
-    const seen = new Set<NavId>()
-    for (const domain of DOMAIN_SPECS) {
-      for (const nav of domain.destinations) {
-        expect(seen.has(nav), `${nav} is in two domains`).toBe(false)
-        seen.add(nav)
-      }
-    }
-  })
-
-  it('leaves system destinations out of every domain', () => {
-    // "Import customers" under Sales is where nobody would look for it.
-    expect(domainOf('data-migration')).toBeNull()
-    expect(domainOf('sync')).toBeNull()
-    expect(domainOf('settings')).toBeNull()
-  })
-
-  it('finds the domain of a business destination', () => {
-    expect(domainOf('bank')).toBe('accounting')
-    expect(domainOf('till')).toBe('sales')
-  })
-
-  it('throws on an unknown domain rather than returning something empty', () => {
-    // An empty hub would render as a domain with no pages, which reads as a
-    // broken product rather than as a programming error.
-    expect(() => domainFor('nonsense' as never)).toThrow()
-  })
-})
-
-describe('what a domain offers this actor', () => {
-  it('hides destinations they are not authorized for', () => {
-    const visible = domainDestinations('accounting', ['bank', 'budgets'])
-    expect(visible).toEqual(['bank', 'budgets'])
-  })
-
-  it('keeps the declared order rather than the caller order', () => {
-    // So the same domain reads the same way for everyone who can see the same
-    // pages.
-    const visible = domainDestinations('accounting', ['budgets', 'bank', 'money'])
-    expect(visible).toEqual(['money', 'bank', 'budgets'])
-  })
-
-  it('returns nothing when the actor may reach nothing', () => {
-    expect(domainDestinations('accounting', [])).toEqual([])
   })
 })
 

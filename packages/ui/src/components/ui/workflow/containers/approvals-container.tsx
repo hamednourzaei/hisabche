@@ -125,7 +125,12 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
 })
 ApprovalInstanceCard.displayName = 'ApprovalInstanceCard'
 
-export const ApprovalsContainer = memo(function ApprovalsContainer() {
+export const ApprovalsContainer = memo(function ApprovalsContainer({
+  onDefineWorkflow,
+}: {
+  /** Where «تعریف گردش‌کار» goes. Absent = the workflows page, as before. */
+  onDefineWorkflow?: (() => void) | undefined
+}) {
   const tOriginal = useTranslations()
   const t = (key: string, fallback?: string): string => {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
@@ -153,6 +158,10 @@ export const ApprovalsContainer = memo(function ApprovalsContainer() {
       pendingInstances.map((instance) => ({
         id: instance.id,
         status: instance.status,
+        entityType: instance.entity_type,
+        currentStep: instance.current_step,
+        totalSteps: instance.total_steps,
+        startedAt: instance.started_at ?? null,
         card: <ApprovalInstanceCard instance={instance} t={t} />,
       })),
     [pendingInstances, t],
@@ -166,7 +175,7 @@ export const ApprovalsContainer = memo(function ApprovalsContainer() {
       items={items}
       onRetry={() => void refetch()}
       hasActiveWorkflow={hasActiveWorkflow}
-      onDefineWorkflow={() => push('/workflow-templates')}
+      onDefineWorkflow={onDefineWorkflow ?? (() => push('/approvals?tab=workflows'))}
     />
   )
 })

@@ -3,47 +3,46 @@
 // ============================================
 // packages/ui/src/components/ui/expiry/expiry-view.tsx
 //
-// Batches, expiry and what an issue would consume.
+// Batches and their expiry.
 //
 // ---------------------------------------------------------------------------
-// EXPIRED IS SHOWN FIRST, AND IS A REFUSAL
+// EXPIRED IS SHOWN FIRST
 //
-// Expired stock leads the report because it is the only group whose deadline
-// has already passed. Next to it is what that stock is WORTH — the gap between
-// what the balance sheet counts and what the shop can actually sell is the
-// figure a write-off decision needs, and neither number alone gives it.
-//
-// The issue plan shows expired batches under `blockedByExpiry`, not as an
-// option with a warning. There is no override control on this screen, because
-// medicine sold past its date is not a data-quality problem.
-//
-// A shortfall is shown as a shortfall. Stock the shop does not have must read
-// as missing, never as a plan that quietly covers less than was asked for.
+// Expired stock leads the table because it is the only group whose deadline
+// has already passed. Beside the quantities is what that stock is WORTH — the
+// gap between what the balance sheet counts and what the shop can actually
+// sell is the figure a write-off decision needs.
 //
 // ---------------------------------------------------------------------------
-// LAYOUT — the invoices list structure: header, state filter, stat strip, one
-// shared DataTable of every batch (expired first), then the issue planner.
+// LAYOUT — the invoices list structure: header, four figures, one shared
+// DataTable of every batch with its filters in the table's own toolbar.
+//
+// ⚠️ THE FOUR FIGURES ARE ALWAYS ON SCREEN. They used to be rendered only once
+// the report had arrived, and as many as the server returned groups — so they
+// popped in, two today and five tomorrow. Now there are four cards from the
+// first paint; while the report loads each says «…», and when it could not be
+// read each says «—». Neither is a number.
+//
+// ⚠️ A ROW OPENS ITS PRODUCT; «ویرایش» CORRECTS THE DATE. Dates only — a batch's
+// quantity belongs to the movements that made it.
+//
+// ⚠️ THE WAREHOUSE FILTER IS OFFERED ONLY WHEN THERE IS MORE THAN ONE PLACE TO
+// CHOOSE. A batch received before warehouses existed is in none; it is listed
+// under «بدون انبار», never guessed into one.
+//
+// The «issue plan» calculator that sat under the table is gone (owner's order,
+// 4 Oct 2026): it asked for a product id by hand and changed nothing.
 // ============================================
 
 import { memo, useMemo, useState } from 'react'
-import {
-  AlertTriangle,
-  Clock,
-  Infinity as InfinityIcon,
-  Leaf,
-  PackageX,
-  type LucideIcon,
-} from 'lucide-react'
-import type {
-  AllocationPlan,
-  ExpiryBucket,
-  ExpiryReport,
-  ExpiryState,
-  StockBatch,
-} from '@hisabche/api'
+import { CalendarClock, Leaf, PackageX, Pencil, ShieldAlert } from 'lucide-react'
+import type { ExpiryBucket, ExpiryReport, ExpiryState, StockBatch } from '@hisabche/api'
 import { useDateFormat } from '../../../hooks/use-date-format'
-import { DataTable, matchesSearch, type TableColumn } from '../data-table'
-import { SegmentedFilter } from '../segmented-filter'
+import { formatSelectedMoney } from '../../../lib/money-display'
+import { BentoStats, type BentoStat } from '../bento-stats'
+import { DataTable, TableFilterSelect, matchesSearch, type TableColumn } from '../data-table'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../dialog'
+import { JalaliDatePicker } from '../jalali-datepicker'
 import {
   ActionButton,
   Badge,
@@ -51,26 +50,22 @@ import {
   CapabilityPage,
   EmptyState,
   ErrorNote,
-  Field,
   ListSection,
   Loading,
-  Money,
-  NumberField,
-  Panel,
-  Stat,
-  StatGrid,
 } from '../capability/capability-kit'
 
 export interface ExpiryViewProps {
   t: (key: string, fallback?: string) => string
   report: ExpiryReport | null
   batches: StockBatch[]
-  plan: AllocationPlan | null
+  /** The business's warehouses — the names behind a batch's `warehouseId`. */
+  warehouses: ReadonlyArray<{ id: string; name: string }>
   isLoading: boolean
   error: string | null
-  actionError: string | null
-  isBusy: boolean
-  onPlanIssue: (input: { productId: string; quantity: number }) => void
+  isSaving: boolean
+  /** Resolves when the date is stored; rejects with the reason when it is not. */
+  onSaveExpiry: (batchId: string, expiryDate: string | null) => Promise<void>
+  onOpenProduct: (productId: string) => void
   onRefresh: () => void
 }
 
@@ -81,55 +76,145 @@ const STATE_TONE: Record<ExpiryState, string> = {
   no_expiry: 'neutral',
 }
 
-const STATE_ICON: Record<ExpiryState, LucideIcon> = {
-  expired: AlertTriangle,
-  near_expiry: Clock,
-  fresh: Leaf,
-  no_expiry: InfinityIcon,
-}
-
 // Expired first. The server already orders the buckets this way; the view
 // states the order it depends on rather than trusting an array's shape.
-const STATE_ORDER: ExpiryState[] = ['expired', 'near_expiry', 'fresh', 'no_expiry']
+export const EXPIRY_STATE_ORDER: ExpiryState[] = ['expired', 'near_expiry', 'fresh', 'no_expiry']
 
-type StateFilter = 'all' | ExpiryState
+const ALL = 'all'
+/** A batch that is in no warehouse. A filter value, never a warehouse id. */
+export const NO_WAREHOUSE = 'none'
 
-type BatchRow = ExpiryBucket['batches'][number] & { state: ExpiryState }
+type BatchRow = ExpiryBucket['batches'][number] & {
+  state: ExpiryState
+  warehouseId: string | null
+}
+
+/**
+ * The four figures, from the report's groups.
+ *
+ * «ناسالم» is what cannot be sold as usual: expired, plus what will be within
+ * the near-expiry window. `nearestDays` is the closest date still ahead — null
+ * when no dated batch is left to expire.
+ */
+export function expiryFigures(buckets: readonly ExpiryBucket[]): {
+  fresh: number
+  unhealthy: number
+  nearestDays: number | null
+} {
+  const quantity = (state: ExpiryState) =>
+    buckets.find((bucket) => bucket.state === state)?.totalQuantity ?? 0
+  const ahead = buckets
+    .flatMap((bucket) => bucket.batches)
+    .map((batch) => batch.daysRemaining)
+    .filter((days): days is number => days !== null && days >= 0)
+  return {
+    fresh: quantity('fresh'),
+    unhealthy: quantity('expired') + quantity('near_expiry'),
+    nearestDays: ahead.length > 0 ? Math.min(...ahead) : null,
+  }
+}
 
 export const ExpiryView = memo(function ExpiryView({
   t,
   report,
   batches,
-  plan,
+  warehouses,
   isLoading,
   error,
-  actionError,
-  isBusy,
-  onPlanIssue,
+  isSaving,
+  onSaveExpiry,
+  onOpenProduct,
   onRefresh,
 }: ExpiryViewProps) {
   const { date } = useDateFormat()
-  const [productId, setProductId] = useState('')
-  const [quantity, setQuantity] = useState(1)
-  const [stateFilter, setStateFilter] = useState<StateFilter>('all')
+  const [stateFilter, setStateFilter] = useState(ALL)
+  const [warehouseFilter, setWarehouseFilter] = useState(ALL)
   const [search, setSearch] = useState('')
+  const [editing, setEditing] = useState<BatchRow | null>(null)
+  const [draft, setDraft] = useState('')
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const buckets = useMemo(
     () =>
       [...(report?.buckets ?? [])].sort(
-        (a, b) => STATE_ORDER.indexOf(a.state) - STATE_ORDER.indexOf(b.state),
+        (a, b) => EXPIRY_STATE_ORDER.indexOf(a.state) - EXPIRY_STATE_ORDER.indexOf(b.state),
       ),
     [report],
+  )
+
+  // The report names a batch; the batch list says where it is.
+  const warehouseOfBatch = useMemo(
+    () => new Map(batches.map((batch) => [batch.id, batch.warehouseId ?? null])),
+    [batches],
+  )
+  const warehouseName = useMemo(
+    () => new Map(warehouses.map((warehouse) => [warehouse.id, warehouse.name])),
+    [warehouses],
   )
 
   const rows = useMemo<BatchRow[]>(
     () =>
       buckets
-        .filter((bucket) => stateFilter === 'all' || bucket.state === stateFilter)
-        .flatMap((bucket) => bucket.batches.map((batch) => ({ ...batch, state: bucket.state })))
-        .filter((batch) => matchesSearch(search, [batch.batchNumber, batch.productId])),
-    [buckets, search, stateFilter],
+        .filter((bucket) => stateFilter === ALL || bucket.state === stateFilter)
+        .flatMap((bucket) =>
+          bucket.batches.map((batch) => ({
+            ...batch,
+            state: bucket.state,
+            warehouseId: warehouseOfBatch.get(batch.batchId) ?? null,
+          })),
+        )
+        .filter(
+          (batch) =>
+            warehouseFilter === ALL ||
+            (warehouseFilter === NO_WAREHOUSE
+              ? batch.warehouseId === null
+              : batch.warehouseId === warehouseFilter),
+        )
+        .filter((batch) =>
+          matchesSearch(search, [
+            batch.batchNumber,
+            batch.productId,
+            batch.warehouseId ? (warehouseName.get(batch.warehouseId) ?? '') : '',
+          ]),
+        ),
+    [buckets, search, stateFilter, warehouseFilter, warehouseOfBatch, warehouseName],
   )
+
+  const stats = useMemo<BentoStat[]>(() => {
+    const figures = report ? expiryFigures(report.buckets) : null
+    // Loading says «…»; a report that could not be read says «—».
+    const pending = isLoading ? '…' : '—'
+    return [
+      {
+        id: 'fresh',
+        icon: Leaf,
+        label: t('expiry.state_fresh', 'سالم'),
+        text: figures ? String(figures.fresh) : pending,
+      },
+      {
+        id: 'unhealthy',
+        icon: ShieldAlert,
+        label: t('expiry.unhealthy', 'ناسالم'),
+        text: figures ? String(figures.unhealthy) : pending,
+      },
+      {
+        id: 'expiredValue',
+        icon: PackageX,
+        label: t('expiry.expired_value', 'ارزش کالای منقضی'),
+        text: report ? formatSelectedMoney(report.expiredValueMinor / 100) : pending,
+      },
+      {
+        id: 'nearest',
+        icon: CalendarClock,
+        label: t('expiry.nearest', 'نزدیک‌ترین انقضا'),
+        text: !figures
+          ? pending
+          : figures.nearestDays === null
+            ? t('expiry.nearest_none', 'ندارد')
+            : `${figures.nearestDays} ${t('expiry.days', 'روز')}`,
+      },
+    ]
+  }, [isLoading, report, t])
 
   const columns = useMemo<TableColumn<BatchRow>[]>(
     () => [
@@ -137,7 +222,7 @@ export const ExpiryView = memo(function ExpiryView({
         id: 'state',
         labelKey: 'common.status',
         labelFallback: 'وضعیت',
-        sortValue: (row) => STATE_ORDER.indexOf(row.state),
+        sortValue: (row) => EXPIRY_STATE_ORDER.indexOf(row.state),
         render: (row) => (
           <Badge tone={STATE_TONE[row.state]}>{t(`expiry.state_${row.state}`, row.state)}</Badge>
         ),
@@ -151,6 +236,20 @@ export const ExpiryView = memo(function ExpiryView({
         render: (row) => (
           <span className="font-mono text-xs" dir="ltr">
             {row.batchNumber}
+          </span>
+        ),
+      },
+      {
+        id: 'warehouse',
+        labelKey: 'expiry.warehouse',
+        labelFallback: 'انبار',
+        showFrom: 'md',
+        sortValue: (row) => (row.warehouseId ? (warehouseName.get(row.warehouseId) ?? '') : ''),
+        render: (row) => (
+          <span className="text-[hsl(var(--fg-secondary))]">
+            {row.warehouseId
+              ? (warehouseName.get(row.warehouseId) ?? '—')
+              : t('expiry.no_warehouse', 'بدون انبار')}
           </span>
         ),
       },
@@ -195,19 +294,52 @@ export const ExpiryView = memo(function ExpiryView({
             </span>
           ),
       },
+      {
+        id: 'edit',
+        labelKey: 'expiry.edit_expiry',
+        labelFallback: 'ویرایش انقضا',
+        locked: true,
+        align: 'end',
+        render: (row) => (
+          <button
+            type="button"
+            onClick={(event) => {
+              // The row itself opens the product.
+              event.stopPropagation()
+              setSaveError(null)
+              setDraft(row.expiryDate ?? '')
+              setEditing(row)
+            }}
+            aria-label={`${t('expiry.edit_expiry', 'ویرایش انقضا')} — ${row.batchNumber}`}
+            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--surface-muted))]"
+          >
+            <Pencil className="size-3.5" aria-hidden="true" />
+            {t('common.edit', 'ویرایش')}
+          </button>
+        ),
+      },
     ],
-    [date, t],
+    [date, t, warehouseName],
   )
 
-  const filterOptions = useMemo(
+  const stateOptions = useMemo(
     () => [
-      { value: 'all' as StateFilter, label: t('common.all', 'همه') },
-      ...STATE_ORDER.map((state) => ({
-        value: state as StateFilter,
+      { value: ALL, label: t('common.all', 'همه') },
+      ...EXPIRY_STATE_ORDER.map((state) => ({
+        value: state as string,
         label: t(`expiry.state_${state}`, state),
       })),
     ],
     [t],
+  )
+
+  const warehouseOptions = useMemo(
+    () => [
+      { value: ALL, label: t('expiry.all_warehouses', 'همه‌ی انبارها') },
+      ...warehouses.map((warehouse) => ({ value: warehouse.id, label: warehouse.name })),
+      { value: NO_WAREHOUSE, label: t('expiry.no_warehouse', 'بدون انبار') },
+    ],
+    [t, warehouses],
   )
 
   // «Nothing recorded» is said only when the data actually loaded and holds no
@@ -215,11 +347,29 @@ export const ExpiryView = memo(function ExpiryView({
   const hasNoBatches =
     batches.length === 0 && buckets.every((bucket) => bucket.batches.length === 0)
 
+  const save = async () => {
+    if (!editing) return
+    try {
+      await onSaveExpiry(editing.batchId, draft || null)
+      setEditing(null)
+    } catch (reason) {
+      setSaveError(
+        reason instanceof Error && reason.message
+          ? reason.message
+          : t('expiry.save_failed', 'ذخیره نشد. دوباره تلاش کنید.'),
+      )
+    }
+  }
+
+  const subtitle = t('expiry.subtitle', 'کالای منقضی، نزدیک انقضا و سالم')
+
   return (
     <CapabilityPage>
       <CapabilityHeader
         title={t('expiry.title', 'انقضا و بچ')}
-        description={t('expiry.subtitle', 'کالای منقضی، نزدیک انقضا، و برنامه‌ی مصرف')}
+        description={
+          report ? `${subtitle} · ${t('expiry.as_of', 'تا تاریخ')}: ${date(report.asOf)}` : subtitle
+        }
         action={
           <ActionButton variant="quiet" onClick={onRefresh} disabled={isLoading}>
             {t('common.refresh', 'تازه‌سازی')}
@@ -227,46 +377,7 @@ export const ExpiryView = memo(function ExpiryView({
         }
       />
 
-      {actionError ? <ErrorNote message={actionError} /> : null}
-
-      {report ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <SegmentedFilter
-            label={t('common.status', 'وضعیت')}
-            value={stateFilter}
-            options={filterOptions}
-            onChange={setStateFilter}
-          />
-          <span className="text-xs text-[hsl(var(--fg-tertiary))]">
-            {t('expiry.as_of', 'تا تاریخ')}: {date(report.asOf)}
-          </span>
-        </div>
-      ) : null}
-
-      {report ? (
-        <StatGrid>
-          <Stat
-            icon={PackageX}
-            label={t('expiry.expired_value', 'ارزش کالای منقضی')}
-            value={
-              <Money
-                minor={report.expiredValueMinor}
-                tone={report.expiredValueMinor > 0 ? 'bad' : 'muted'}
-              />
-            }
-            hint={t('expiry.expired_value_hint', 'در ترازنامه هست، قابل فروش نیست.')}
-          />
-          {buckets.map((bucket) => (
-            <Stat
-              key={bucket.state}
-              icon={STATE_ICON[bucket.state]}
-              label={t(`expiry.state_${bucket.state}`, bucket.state)}
-              value={bucket.totalQuantity}
-              hint={`${bucket.batches.length} ${t('expiry.batches', 'بچ')}`}
-            />
-          ))}
-        </StatGrid>
-      ) : null}
+      <BentoStats t={t} stats={stats} />
 
       <ListSection title={t('expiry.report', 'گزارش انقضا')}>
         {isLoading ? (
@@ -284,8 +395,29 @@ export const ExpiryView = memo(function ExpiryView({
             rows={rows}
             columns={columns}
             rowKey={(row) => `${row.state}-${row.batchId}`}
+            onRowClick={(row) => onOpenProduct(row.productId)}
             searchValue={search}
             onSearchChange={setSearch}
+            actions={
+              <>
+                <TableFilterSelect
+                  label={t('common.status', 'وضعیت')}
+                  value={stateFilter}
+                  onChange={setStateFilter}
+                  options={stateOptions}
+                  allValue={ALL}
+                />
+                {warehouses.length > 0 ? (
+                  <TableFilterSelect
+                    label={t('expiry.warehouse', 'انبار')}
+                    value={warehouseFilter}
+                    onChange={setWarehouseFilter}
+                    options={warehouseOptions}
+                    allValue={ALL}
+                  />
+                ) : null}
+              </>
+            }
             minWidthClass="min-w-[420px] sm:min-w-[640px]"
             emptyState={
               hasNoBatches ? (
@@ -305,75 +437,37 @@ export const ExpiryView = memo(function ExpiryView({
         )}
       </ListSection>
 
-      <Panel
-        title={t('expiry.plan_title', 'برنامه‌ی مصرف')}
-        description={t(
-          'expiry.plan_hint',
-          'نشان می‌دهد از کدام بچ برداشته می‌شود — چیزی مصرف نمی‌کند. پیش‌فرض FEFO.',
-        )}
-      >
-        <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto]">
-          <Field
-            label={t('expiry.product', 'کالا')}
-            value={productId}
-            onChange={setProductId}
-            disabled={isBusy}
-            dir="ltr"
-          />
-          <NumberField
-            label={t('expiry.quantity', 'مقدار')}
-            value={quantity}
-            onChange={setQuantity}
-            min={1}
-            disabled={isBusy}
-          />
-          <ActionButton
-            className="self-end"
-            disabled={isBusy || productId.trim() === '' || quantity <= 0}
-            onClick={() => onPlanIssue({ productId: productId.trim(), quantity })}
-          >
-            {t('expiry.plan_action', 'محاسبه')}
-          </ActionButton>
-        </div>
+      {editing ? (
+        <Dialog open onOpenChange={(open) => !open && setEditing(null)}>
+          <DialogContent className="sm:max-w-sm" data-expiry-edit="">
+            <DialogHeader>
+              <DialogTitle>
+                {t('expiry.edit_expiry', 'ویرایش انقضا')} —{' '}
+                <span dir="ltr" className="font-mono text-sm">
+                  {editing.batchNumber}
+                </span>
+              </DialogTitle>
+            </DialogHeader>
 
-        {plan ? (
-          <div className="mt-4 space-y-3 text-sm">
-            {plan.shortfall > 0 ? (
-              <ErrorNote message={`${t('expiry.shortfall', 'کسری')}: ${plan.shortfall}`} />
-            ) : null}
+            <JalaliDatePicker
+              value={draft}
+              onChange={setDraft}
+              placeholder={t('expiry.expiry_date', 'تاریخ انقضا')}
+            />
 
-            <ul className="divide-y divide-[hsl(var(--border-default))]">
-              {plan.allocations.map((allocation) => (
-                <li
-                  key={allocation.batchId}
-                  className="flex items-center justify-between gap-3 py-2"
-                >
-                  <span className="font-mono text-xs" dir="ltr">
-                    {allocation.batchNumber}
-                    {allocation.expiryDate ? ` · ${allocation.expiryDate}` : ''}
-                  </span>
-                  <span className="tabular-nums">{allocation.quantity}</span>
-                </li>
-              ))}
-            </ul>
+            {saveError ? <ErrorNote message={saveError} /> : null}
 
-            {plan.blockedByExpiry.length > 0 ? (
-              <div>
-                <p className="mb-1 text-xs text-[hsl(var(--color-destructive))]">
-                  {t('expiry.blocked', 'به دلیل انقضا کنار گذاشته شد')}
-                </p>
-                <ul className="text-xs text-[hsl(var(--fg-tertiary))]">
-                  {plan.blockedByExpiry.map((blocked) => (
-                    <li key={blocked.batchId} dir="ltr" className="font-mono">
-                      {blocked.batchNumber} · {blocked.quantity}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </Panel>
+            <DialogFooter className="gap-2">
+              <ActionButton variant="quiet" onClick={() => setEditing(null)} disabled={isSaving}>
+                {t('common.cancel', 'انصراف')}
+              </ActionButton>
+              <ActionButton onClick={() => void save()} disabled={isSaving}>
+                {t('common.save', 'ذخیره')}
+              </ActionButton>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </CapabilityPage>
   )
 })

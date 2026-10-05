@@ -19,7 +19,8 @@ import {
   type ActivityItemDto,
   type ActivityFilter,
 } from '@hisabche/api'
-import { Tabs, TabsList, TabsTrigger } from '../tabs'
+import { HubTabs } from '../hub-tabs'
+import { SegmentedControl } from '../segmented-control'
 import { Badge } from '../badge'
 import { ActivityFeedList } from './ActivityFeedList'
 import { ActivitySkeleton } from './ActivitySkeleton'
@@ -52,6 +53,14 @@ const filterGroupsByType = (groups: ActivityGroupDto[], filter: FilterType): Act
 // ─── Main Page Component ──────────────────────────────────────────────────────
 
 type SectionType = 'activity' | 'audit'
+export const ACTIVITY_SECTIONS: readonly SectionType[] = ['activity', 'audit']
+export const ACTIVITY_FILTERS: readonly FilterType[] = [
+  'all',
+  'unread',
+  'invoices',
+  'payments',
+  'customers',
+]
 
 export function ActivitiesPage() {
   const t = useTranslations()
@@ -130,12 +139,15 @@ export function ActivitiesPage() {
       </div>
 
       {/* ─── Section switch: activity feed vs audit log ────── */}
-      <Tabs value={section} onValueChange={(v) => setSection(v as SectionType)}>
-        <TabsList className="w-full md:w-auto">
-          <TabsTrigger value="activity">{t('nav.events')}</TabsTrigger>
-          <TabsTrigger value="audit">{t('nav.history')}</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <HubTabs
+        label={t('nav.events')}
+        items={ACTIVITY_SECTIONS.map((id) => ({
+          id,
+          label: id === 'audit' ? t('nav.history') : t('nav.events'),
+        }))}
+        active={section}
+        onSelect={setSection}
+      />
 
       {section === 'audit' ? (
         <div className="pt-3 md:pt-4 lg:pt-5">
@@ -145,30 +157,22 @@ export function ActivitiesPage() {
         <>
           {/* ─── Filter tabs (no search — removed at the owner's request) ─── */}
           <div className="space-y-2 md:space-y-3 lg:space-y-4 pb-3 md:pb-4 lg:pb-5 pt-3 md:pt-4 lg:pt-5">
-            <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
-              <TabsList className="w-full md:w-auto flex-nowrap md:flex-wrap justify-start">
-                <TabsTrigger value="all">
-                  {t('activity.filter.all')}
-                  <TabCount count={filterCounts?.all} lang={lang} />
-                </TabsTrigger>
-                <TabsTrigger value="unread">
-                  {t('activity.filter.unread')}
-                  <TabCount count={filterCounts?.unread} lang={lang} />
-                </TabsTrigger>
-                <TabsTrigger value="invoices">
-                  {t('activity.filter.invoices')}
-                  <TabCount count={filterCounts?.invoices} lang={lang} />
-                </TabsTrigger>
-                <TabsTrigger value="payments">
-                  {t('activity.filter.payments')}
-                  <TabCount count={filterCounts?.payments} lang={lang} />
-                </TabsTrigger>
-                <TabsTrigger value="customers">
-                  {t('activity.filter.customers')}
-                  <TabCount count={filterCounts?.customers} lang={lang} />
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <SegmentedControl
+              label={t('activity.filter.all')}
+              options={ACTIVITY_FILTERS.map((value) => {
+                const count = filterCounts?.[value]
+                return {
+                  value,
+                  // The count rides in the label, as it did on the tab.
+                  label: count
+                    ? `${t(`activity.filter.${value}`)} (${formatCompactCount(count, lang)})`
+                    : t(`activity.filter.${value}`),
+                }
+              })}
+              value={filter}
+              onChange={setFilter}
+              className="max-w-full flex-wrap"
+            />
           </div>
 
           {/* ─── Body ───────────────────────────────────────────── */}
@@ -201,16 +205,3 @@ export function ActivitiesPage() {
 }
 
 ActivitiesPage.displayName = 'ActivitiesPage'
-
-/** A tab badge: exact, and short past 999 («1.3k»). Nothing until known, or when zero. */
-function TabCount({ count, lang }: { count: number | undefined; lang: UiLanguage }) {
-  if (!count) return null
-  return (
-    <span
-      className="font-normal tabular-nums text-[hsl(var(--fg-tertiary))]"
-      data-tab-count={count}
-    >
-      ({formatCompactCount(count, lang)})
-    </span>
-  )
-}

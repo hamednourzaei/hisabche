@@ -125,6 +125,28 @@ export async function runEscalationTick(now: Date = new Date()): Promise<boolean
   })
 }
 
+const TIMED_AUTOMATION_SECONDS = 5 * 60
+
+/**
+ * Automations that name a time of day (the automatic month-end), once per
+ * five minutes across all instances. The daily pass never touches these and
+ * this pass never touches the others, so nothing is evaluated by both.
+ */
+export async function runTimedAutomationTick(now: Date = new Date()): Promise<boolean> {
+  return runScheduledOnce('automation-timed', slotOf(TIMED_AUTOMATION_SECONDS, now), async () => {
+    const result = await automationService.runDue(now.toISOString().slice(0, 10), {
+      timed: true,
+      now,
+    })
+    if (result.ran > 0 || result.failed > 0) {
+      console.log(
+        `⏰ Timed automation: evaluated=${result.evaluated} ran=${result.ran} ` +
+          `skipped=${result.skipped} failed=${result.failed}`,
+      )
+    }
+  })
+}
+
 export function startScheduler() {
   console.log('🔄 Starting scheduler...')
 
@@ -193,6 +215,20 @@ export function startScheduler() {
       }
     },
     { timezone: SCHEDULER_TIMEZONE, name: 'automation-daily' },
+  )
+
+  // ─── Timed automations (بستن خودکار ماه در ساعت تعیین‌شده) ──────────────
+  // هر پنج دقیقه. فقط خودکارهایی که ساعت دارند؛ بقیه در گذر روزانه‌اند.
+  cron.schedule(
+    '*/5 * * * *',
+    async () => {
+      try {
+        await runTimedAutomationTick()
+      } catch (err) {
+        console.error('❌ Timed automation pass failed:', err)
+      }
+    },
+    { timezone: SCHEDULER_TIMEZONE, name: 'automation-timed' },
   )
 
   // ─── Approval escalation (#۶۸) ──────────────

@@ -5,7 +5,7 @@ import { memo, useCallback, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { toIsoDay } from '@hisabche/formatting'
 import { useTrialBalance } from '@hisabche/api'
-import { SingleDatePicker } from '../components/DateRangePicker'
+import { DateRangePicker } from '../components/DateRangePicker'
 import { ExportButton, type ExportColumn } from '../components/ExportButton'
 import { AccountingSkeleton } from '../AccountingSkeleton'
 import { AccountingEmptyState } from '../AccountingEmptyState'
@@ -35,8 +35,11 @@ export const TrialBalanceTab = memo(function TrialBalanceTab() {
   const t = useTranslations()
   const n = useLedgerNumber()
   const [date, setDate] = useState(() => toIsoDay(new Date()))
+  // Empty = from the first entry in the books, which is what the report has
+  // always meant. A start date narrows it to that period's movements.
+  const [fromDate, setFromDate] = useState('')
   const { branchId } = useBranchScope()
-  const { data, isLoading } = useTrialBalance(date, branchId)
+  const { data, isLoading } = useTrialBalance(date, branchId, fromDate)
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {
@@ -46,10 +49,10 @@ export const TrialBalanceTab = memo(function TrialBalanceTab() {
     [t],
   )
 
-  // H3 — `''` as the start: a trial balance is stated AS AT a date, over all
-  // time up to it, so the drill-down must open the same unbounded window. A
-  // start date here would show fewer lines than the figure was built from.
-  const drilldown = useAccountDrilldown('', date, safeT)
+  // H3 — the drill-down opens the SAME window the figures were built from:
+  // the chosen start (or none), up to the chosen end. A different window here
+  // would show lines that do not add up to the row that was pressed.
+  const drilldown = useAccountDrilldown(fromDate, date, safeT)
 
   // The totals come from the server, which summed them in the same query that
   // produced the rows. Re-adding the visible rows here would agree with itself
@@ -85,12 +88,13 @@ export const TrialBalanceTab = memo(function TrialBalanceTab() {
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-end gap-3">
           <BranchSwitcher t={safeT} />
-          <SingleDatePicker
-            value={date}
-            onChange={setDate}
-            label={t('accounting.trialBalance.asOf')}
+          <DateRangePicker
+            from={fromDate}
+            to={date}
+            onFromChange={setFromDate}
+            onToChange={setDate}
           />
           <ExportButton
             data={rows}

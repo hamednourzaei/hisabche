@@ -50,7 +50,8 @@ export const usePreferencesStore = create<PreferencesState>()(
     {
       name: 'hisabche-preferences',
       storage: createJSONStorage(() => {
-        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') return localStorage
+        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined')
+          return localStorage
         return { getItem: () => null, setItem: () => {}, removeItem: () => {} }
       }),
     },

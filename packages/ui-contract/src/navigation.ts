@@ -26,44 +26,25 @@ export type NavId =
   | 'sell'
   | 'get-paid'
   | 'stock'
-  | 'buy'
   | 'money'
   // secondary — people
   | 'buyers'
-  | 'follow-up'
   | 'coworkers'
   // secondary — work
   // `projects` is gone: the module was deleted, not hidden.
   | 'production'
   | 'approvals'
-  | 'referrals'
-  | 'workflow-templates'
   | 'billing'
-  | 'wallet'
   | 'market-seller'
   | 'analysis'
-  | 'promotions'
-  | 'campaigns'
   | 'governance'
   // The till. Somewhere a person STANDS, which is why it is primary and the
   // rest of this batch is not.
   | 'till'
-  // Month-end work. Real destinations, but nobody opens them daily.
-  | 'expiry'
-  | 'budgets'
-  | 'timesheets'
-  | 'assets'
-  | 'bank'
-  | 'conflicts'
   // secondary — system
   // G1: 'customer-list', 'product-list' and 'team' removed — their routes now
   // redirect to /customers, /warehouse?tab=products and /team-and-payroll.
-  | 'accounting-workspace'
-  | 'sales-workspace'
-  | 'inventory-workspace'
-  | 'people-workspace'
   | 'data-and-sync'
-  | 'data-migration'
   | 'settings'
   | 'history'
   | 'events'
@@ -146,14 +127,6 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     path: '/customers',
     group: 'people',
   },
-  {
-    id: 'follow-up',
-    emoji: '🤝',
-    labelKey: 'nav.followUp',
-    descriptionKey: 'nav.followUp_description',
-    path: '/tasks',
-    group: 'people',
-  },
   // team (/human-resources) is gone from navigation: colleagues and payroll
   // are one section now (/team-and-payroll), and having both entries meant two
   // places to add the same person. The route still resolves.
@@ -167,15 +140,6 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     labelKey: 'nav.approvals',
     descriptionKey: 'nav.approvals_description',
     path: '/approvals',
-    group: 'work',
-  },
-
-  {
-    id: 'referrals',
-    emoji: '🎁',
-    labelKey: 'nav.referrals',
-    descriptionKey: 'nav.referrals_description',
-    path: '/referrals',
     group: 'work',
   },
 
@@ -196,14 +160,6 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     path: '/activities',
     group: 'system',
   },
-  {
-    id: 'sync',
-    emoji: '🔄',
-    labelKey: 'nav.sync',
-    descriptionKey: 'nav.sync_description',
-    path: '/sync-center',
-    group: 'system',
-  },
 
   // ── Destinations added by the Tier 1 and Tier 2 sweep ──
   //
@@ -219,63 +175,6 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     descriptionKey: 'nav.till_description',
     path: '/till',
     group: 'primary',
-  },
-  {
-    id: 'expiry',
-    emoji: '⏳',
-    labelKey: 'nav.expiry',
-    descriptionKey: 'nav.expiry_description',
-    path: '/expiry',
-    group: 'work',
-  },
-  {
-    id: 'budgets',
-    emoji: '🎯',
-    labelKey: 'nav.budgets',
-    descriptionKey: 'nav.budgets_description',
-    path: '/budgets',
-    group: 'work',
-  },
-  {
-    id: 'timesheets',
-    emoji: '⏱️',
-    labelKey: 'nav.timesheets',
-    descriptionKey: 'nav.timesheets_description',
-    path: '/timesheets',
-    group: 'work',
-  },
-  {
-    id: 'assets',
-    emoji: '🏗️',
-    labelKey: 'nav.assets',
-    descriptionKey: 'nav.assets_description',
-    path: '/assets',
-    group: 'work',
-  },
-  {
-    id: 'bank',
-    emoji: '🏦',
-    labelKey: 'nav.bank',
-    descriptionKey: 'nav.bank_description',
-    path: '/bank',
-    group: 'work',
-  },
-
-  // Offline conflicts.
-  //
-  // Next to sync, because that is what it is about: a row here is a sale or a
-  // payment that has NOT been recorded, waiting on a decision, and there is
-  // nowhere else to make it. Not a notification — a destination.
-  //
-  // For an offline-first product this is the screen that says whether the
-  // books can be trusted.
-  {
-    id: 'conflicts',
-    emoji: '⚖️',
-    labelKey: 'nav.conflicts',
-    descriptionKey: 'nav.conflicts_description',
-    path: '/conflicts',
-    group: 'system',
   },
 
   // ─── G1 — `customer-list` and `product-list` removed from the contract ────
@@ -294,42 +193,6 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
   // `ProductListContainer` are both of them. Deleting either to tidy a menu
   // would drop that guard to one without the guard noticing.
 
-  // PHASE 7 — a way into each business domain. These are not new features;
-  // each is a map of destinations that already exist, in a fixed order, so
-  // "somewhere in the menu" becomes muscle memory.
-  {
-    id: 'accounting-workspace',
-    emoji: '📒',
-    labelKey: 'domain.accounting',
-    descriptionKey: 'domain.accounting_description',
-    path: '/accounting-workspace',
-    group: 'work',
-  },
-  {
-    id: 'sales-workspace',
-    emoji: '🧾',
-    labelKey: 'domain.sales',
-    descriptionKey: 'domain.sales_description',
-    path: '/sales-workspace',
-    group: 'work',
-  },
-  {
-    id: 'inventory-workspace',
-    emoji: '📦',
-    labelKey: 'domain.inventory',
-    descriptionKey: 'domain.inventory_description',
-    path: '/inventory-workspace',
-    group: 'work',
-  },
-  {
-    id: 'people-workspace',
-    emoji: '👥',
-    labelKey: 'domain.people',
-    descriptionKey: 'domain.people_description',
-    path: '/people-workspace',
-    group: 'work',
-  },
-
   // The hub §20 asks for. It does NOT replace sync-center, conflicts or
   // data-migration — those are six distinct areas that fail differently, and
   // merging them into one page with one spinner is the mistake. This is the
@@ -340,18 +203,6 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     labelKey: 'nav.data_and_sync',
     descriptionKey: 'nav.data_and_sync_description',
     path: '/data-and-sync',
-    group: 'system',
-  },
-
-  // Bringing an existing business in. Sits beside conflicts rather than in
-  // 'work' because it is something a shop does once, near the start, not part
-  // of anybody's week.
-  {
-    id: 'data-migration',
-    emoji: '📥',
-    labelKey: 'nav.data_migration',
-    descriptionKey: 'nav.data_migration_description',
-    path: '/data-migration',
     group: 'system',
   },
 
@@ -390,37 +241,11 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     group: 'work',
   },
   {
-    id: 'buy',
-    emoji: '🧺',
-    labelKey: 'nav.buy',
-    descriptionKey: 'nav.buy_description',
-    path: '/purchasing',
-    group: 'work',
-  },
-  {
-    id: 'workflow-templates',
-    emoji: '🧭',
-    labelKey: 'nav.workflow_templates',
-    descriptionKey: 'nav.workflow_templates_description',
-    path: '/workflow-templates',
-    group: 'work',
-  },
-  {
     id: 'billing',
     emoji: '💳',
     labelKey: 'nav.billing',
     descriptionKey: 'nav.billing_description',
     path: '/billing',
-    group: 'system',
-  },
-  {
-    // The business's wallet (one per workspace): top up, then pay the plan
-    // from it. Beside billing because that is what it is for.
-    id: 'wallet',
-    emoji: '👛',
-    labelKey: 'nav.wallet',
-    descriptionKey: 'nav.wallet_description',
-    path: '/wallet',
     group: 'system',
   },
   {
@@ -442,26 +267,6 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     labelKey: 'nav.analysis',
     descriptionKey: 'nav.analysis_description',
     path: '/analysis',
-    group: 'work',
-  },
-  {
-    // Rules that lower the suggested price of a sale line. Managers make and
-    // retire them; every seller's invoice applies them when a product is picked.
-    id: 'promotions',
-    emoji: '🏷️',
-    labelKey: 'nav.promotions',
-    descriptionKey: 'nav.promotions_description',
-    path: '/promotions',
-    group: 'work',
-  },
-  {
-    // A message, or an NPS question, sent by email to a group of the
-    // business's own customers. Managers and the owner.
-    id: 'campaigns',
-    emoji: '📣',
-    labelKey: 'nav.campaigns',
-    descriptionKey: 'nav.campaigns_description',
-    path: '/campaigns',
     group: 'work',
   },
   {
@@ -683,22 +488,17 @@ export function splitForBudget<T>(
 export const NAV_MODULE: Readonly<Record<string, string>> = {
   '/invoices': 'invoices',
   '/promotions': 'invoices',
-  '/sales-workspace': 'parties',
   '/customers': 'parties',
   '/campaigns': 'parties',
   '/till': 'payments',
   '/warehouse': 'inventory',
-  '/inventory-workspace': 'inventory',
   '/expiry': 'inventory',
   '/manufacturing': 'inventory',
-  '/purchasing': 'inventory',
   '/accounting': 'accounting',
-  '/accounting-workspace': 'accounting',
   '/bank': 'accounting',
   '/assets': 'accounting',
   '/budgets': 'budgets',
   '/team-and-payroll': 'people',
-  '/people-workspace': 'people',
   '/timesheets': 'people',
   '/governance': 'workspace',
   '/data-migration': 'workspace',

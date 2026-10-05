@@ -2,6 +2,8 @@
 'use client'
 
 import { KpiCard, KpiGrid } from '../kpi-card'
+import { DataTable, TableFilterSelect, matchesSearch, type TableColumn } from '../data-table'
+import { SegmentedControl } from '../segmented-control'
 import { memo, useMemo, useState, useCallback } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { formatDate as formatIntlDate } from '@hisabche/formatting'
@@ -10,8 +12,6 @@ import { cn } from '../../../lib/utils'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import {
   Handshake,
-  MessageSquare,
-  BarChart3,
   Plus,
   X,
   ClipboardList,
@@ -73,6 +73,9 @@ interface CrmViewProps {
 }
 
 const INTERACTION_TYPES = ['call', 'meeting', 'email', 'note'] as const
+
+/** The order a task moves through. */
+const TASK_STATUSES: readonly TaskStatus[] = ['pending', 'in_progress', 'completed']
 
 const STATUS_LABEL_KEY: Record<TaskStatus, [string, string]> = {
   pending: ['crm.status.pending', 'در حال انتظار'],
@@ -190,6 +193,123 @@ export const CrmView = memo(function CrmView({
       }
     }, [interactions, t])
 
+  const [taskSearch, setTaskSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+
+  const taskRows = useMemo(
+    () =>
+      interactions
+        .filter((task) => statusFilter === 'all' || task.status === statusFilter)
+        .filter((task) =>
+          matchesSearch(taskSearch, [
+            task.subject,
+            task.employeeName ?? '',
+            ...(task.customers ?? []).flatMap((customer) => [
+              customer.name ?? '',
+              customer.phone ?? '',
+            ]),
+          ]),
+        ),
+    [interactions, statusFilter, taskSearch],
+  )
+
+  const taskColumns = useMemo<TableColumn<Interaction>[]>(
+    () => [
+      {
+        id: 'employee',
+        labelKey: 'crm.employee',
+        labelFallback: 'نام پرسنل',
+        sortValue: (task) => task.employeeName ?? '',
+        render: (task) => <span className="whitespace-nowrap">{task.employeeName || '-'}</span>,
+      },
+      {
+        id: 'customerCount',
+        labelKey: 'crm.customerCount',
+        labelFallback: 'تعداد مشتری',
+        showFrom: 'md',
+        sortValue: (task) => (task.customers ?? []).length,
+        render: (task) => (
+          <span className="inline-flex items-center gap-1 text-xs text-[hsl(var(--fg-secondary))]">
+            <Users className="size-3.5" />
+            {(task.customers ?? []).length}
+          </span>
+        ),
+      },
+      {
+        id: 'phone',
+        labelKey: 'crm.customerPhone',
+        labelFallback: 'شماره مشتری',
+        showFrom: 'md',
+        render: (task) => {
+          const all = task.customers ?? []
+          const first = all[0]
+          return (
+            <span className="whitespace-nowrap text-xs text-[hsl(var(--fg-secondary))]">
+              {first?.phone ? (
+                <>
+                  {first.phone}
+                  {all.length > 1 ? (
+                    <span className="text-[hsl(var(--fg-tertiary))]"> +{all.length - 1}</span>
+                  ) : null}
+                </>
+              ) : (
+                '-'
+              )}
+            </span>
+          )
+        },
+      },
+      {
+        id: 'subject',
+        labelKey: 'crm.interactions.subject',
+        labelFallback: 'موضوع',
+        locked: true,
+        sortValue: (task) => task.subject,
+        render: (task) => <span className="font-medium">{task.subject}</span>,
+      },
+      {
+        id: 'type',
+        labelKey: 'crm.interactions.typeLabel',
+        labelFallback: 'نوع',
+        showFrom: 'md',
+        sortValue: (task) => task.type,
+        render: (task) => (
+          <span className="text-xs text-[hsl(var(--fg-secondary))]">
+            {t(`crm.interactions.type.${task.type}`, task.type)}
+          </span>
+        ),
+      },
+      {
+        id: 'date',
+        labelKey: 'crm.interactions.date',
+        labelFallback: 'تاریخ',
+        sortValue: (task) => task.interactionDate,
+        render: (task) => (
+          <span className="whitespace-nowrap text-xs text-[hsl(var(--fg-secondary))]">
+            {formatDate(lang, task.interactionDate)}
+          </span>
+        ),
+      },
+      {
+        id: 'status',
+        labelKey: 'crm.process',
+        labelFallback: 'فرایند',
+        sortValue: (task) => TASK_STATUSES.indexOf(task.status),
+        render: (task) => (
+          <span
+            className={cn(
+              'rounded-full px-2 py-0.5 text-xs font-medium',
+              STATUS_BADGE_MAP[task.status],
+            )}
+          >
+            {t(...STATUS_LABEL_KEY[task.status])}
+          </span>
+        ),
+      },
+    ],
+    [lang, t],
+  )
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4">
       {/* Header */}
@@ -200,39 +320,22 @@ export const CrmView = memo(function CrmView({
         </h1>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-[hsl(var(--border-default))]">
-        <button
-          type="button"
-          onClick={() => onTabChange('interactions')}
-          className={cn(
-            'flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-            activeTab === 'interactions'
-              ? 'border-[hsl(var(--color-primary))] text-[hsl(var(--color-primary))]'
-              : 'border-transparent text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))]',
-          )}
-        >
-          <MessageSquare className="size-4" />
-          {t('crm.tabs.interactions', 'تعاملات')}
-        </button>
-        <button
-          type="button"
-          onClick={() => onTabChange('opportunities')}
-          className={cn(
-            'flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-            activeTab === 'opportunities'
-              ? 'border-[hsl(var(--color-primary))] text-[hsl(var(--color-primary))]'
-              : 'border-transparent text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))]',
-          )}
-        >
-          <BarChart3 className="size-4" />
-          {t('crm.tabs.stats', 'آمار تعاملات')}
-        </button>
+      {/* One part on screen at a time — the shared switch, not a second tab bar. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <SegmentedControl
+          label={t('nav.followUp', 'پیگیری فروش')}
+          value={activeTab}
+          onChange={onTabChange}
+          options={[
+            { value: 'interactions', label: t('crm.tabs.interactions', 'تعاملات') },
+            { value: 'opportunities', label: t('crm.tabs.stats', 'آمار تعاملات') },
+          ]}
+        />
         {activeTab === 'interactions' && (
           <button
             type="button"
             onClick={() => setIsFormOpen((v) => !v)}
-            className="ms-auto mb-1 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold text-white bg-[hsl(var(--color-primary))] hover:brightness-110 transition-all"
+            className="ms-auto inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold text-white bg-[hsl(var(--color-primary))] hover:brightness-110 transition-all"
           >
             {isFormOpen ? <X className="size-4" /> : <Plus className="size-4" />}
             {t('crm.interactions.new', 'وظیفه جدید')}
@@ -364,97 +467,45 @@ export const CrmView = memo(function CrmView({
                 />
               ))}
             </div>
-          ) : interactions.length === 0 ? (
-            <div className="p-12 text-center">
-              <ClipboardList className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]" />
-              <p className="text-[hsl(var(--fg-secondary))]">
-                {t('crm.interactions.empty', 'هیچ وظیفه‌ای ثبت نشده')}
-              </p>
-            </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                    <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                      {t('crm.employee', 'نام پرسنل')}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                      {t('crm.customerCount', 'تعداد مشتری')}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                      {t('crm.customerPhone', 'شماره مشتری')}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                      {t('crm.interactions.subject', 'موضوع')}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                      {t('crm.interactions.type', 'نوع')}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                      {t('crm.interactions.date', 'تاریخ')}
-                    </th>
-                    <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                      {t('crm.process', 'فرایند')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {interactions.map((interaction) => {
-                    const custs = interaction.customers ?? []
-                    const first = custs[0]
-                    const extra = custs.length - 1
-                    return (
-                      <tr
-                        key={interaction.id}
-                        onClick={() => setSelectedTaskId(interaction.id)}
-                        className="cursor-pointer border-b border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted)/0.5)] transition-colors"
-                      >
-                        <td className="px-4 py-3 text-[hsl(var(--fg-primary))] whitespace-nowrap">
-                          {interaction.employeeName || '-'}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))]">
-                          <span className="inline-flex items-center gap-1">
-                            <Users className="size-3.5" />
-                            {custs.length}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] whitespace-nowrap">
-                          {first?.phone ? (
-                            <>
-                              {first.phone}
-                              {extra > 0 && (
-                                <span className="text-[hsl(var(--fg-tertiary))]"> +{extra}</span>
-                              )}
-                            </>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-[hsl(var(--fg-primary))]">
-                          {interaction.subject}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))]">
-                          {t(`crm.interactions.type.${interaction.type}`, interaction.type)}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] whitespace-nowrap">
-                          {formatDate(lang, interaction.interactionDate)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              'px-2 py-0.5 rounded-full text-xs font-medium',
-                              STATUS_BADGE_MAP[interaction.status],
-                            )}
-                          >
-                            {t(...STATUS_LABEL_KEY[interaction.status])}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+            <div className="p-3 md:p-4">
+              <DataTable
+                tableId="crm-tasks"
+                t={t}
+                rows={taskRows}
+                columns={taskColumns}
+                rowKey={(task) => task.id}
+                // A row opens the task — the same detail as before.
+                onRowClick={(task) => setSelectedTaskId(task.id)}
+                searchValue={taskSearch}
+                onSearchChange={setTaskSearch}
+                actions={
+                  <TableFilterSelect
+                    label={t('crm.process', 'فرایند')}
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                    allValue="all"
+                    options={[
+                      { value: 'all', label: t('common.all', 'همه') },
+                      ...TASK_STATUSES.map((status) => ({
+                        value: status as string,
+                        label: t(...STATUS_LABEL_KEY[status]),
+                      })),
+                    ]}
+                  />
+                }
+                minWidthClass="min-w-[520px]"
+                emptyState={
+                  <div className="p-12 text-center">
+                    <ClipboardList className="mx-auto mb-3 size-12 text-[hsl(var(--fg-tertiary))]" />
+                    <p className="text-[hsl(var(--fg-secondary))]">
+                      {interactions.length === 0
+                        ? t('crm.interactions.empty', 'هیچ وظیفه‌ای ثبت نشده')
+                        : t('crm.interactions.noMatch', 'وظیفه‌ای با این فیلتر نیست')}
+                    </p>
+                  </div>
+                }
+              />
             </div>
           )}
         </div>

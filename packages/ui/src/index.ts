@@ -191,6 +191,7 @@ export { ProductDetailPage } from './components/ui/warehouse-detail'
 
 // ---------- Pages — Invoices ----------
 export { InvoicesContainer } from './components/ui/invoices/containers/invoices-container'
+export { SalesHubContainer } from './components/ui/invoices/containers/sales-hub-container'
 export { InvoicesView } from './components/ui/invoices/invoices-view'
 export { InvoicesSkeleton } from './components/ui/invoices/invoices-skeleton'
 export { InvoiceDetailPage } from './components/ui/invoice-detail/invoice-detail-page'
@@ -279,16 +280,13 @@ export {
   type ManufacturingTabId,
 } from './components/ui/manufacturing/manufacturing-view'
 
-// ---------- Purchasing ----------
-export { PurchasingContainer } from './components/ui/purchasing/containers/purchasing-container'
-export { PurchasingView } from './components/ui/purchasing/purchasing-view'
-
 // ---------- Workflow / Approvals ----------
 export { ApprovalsContainer } from './components/ui/workflow/containers/approvals-container'
 export { ApprovalsView } from './components/ui/workflow/approvals-view'
 export { ApprovalCard } from './components/ui/workflow/approval-timeline'
 export { ApprovalActions } from './components/ui/workflow/approval-actions'
 export { WorkflowTemplatesContainer } from './components/ui/workflow/containers/workflow-templates-container'
+export { ApprovalsHubContainer } from './components/ui/workflow/containers/approvals-hub-container'
 export { WorkflowTemplatesView } from './components/ui/workflow/workflow-templates-view'
 
 // ---------- Workspace ----------
@@ -323,6 +321,7 @@ export { MarketSellerContainer } from './components/ui/market/market-seller-cont
 export { AnalysisContainer } from './components/ui/analysis/analysis-container'
 export { PromotionsContainer } from './components/ui/promotions/promotions-container'
 export { CampaignsContainer } from './components/ui/campaigns/campaigns-container'
+export { CustomersHubContainer } from './components/ui/customers/containers/customers-hub-container'
 export { FeedbackContainer } from './components/ui/campaigns/feedback-container'
 export {
   walletMoney,
@@ -364,12 +363,11 @@ export { DataMigrationContainer } from './components/ui/data-migration/container
 export { DataMigrationView } from './components/ui/data-migration/data-migration-view'
 export { WorkStateBadge, WorkStateNote } from './components/ui/state/work-state'
 export { DataAndSyncContainer } from './components/ui/data-and-sync/containers/data-and-sync-container'
+export { DataHubContainer } from './components/ui/data-and-sync/containers/data-hub-container'
 export { DataAndSyncView } from './components/ui/data-and-sync/data-and-sync-view'
 export { WorkQueuePanel } from './components/ui/work-queue/work-queue-panel'
 export { WorkQueueContainer } from './components/ui/work-queue/containers/work-queue-container'
 export { useListEngine, type ListEngine } from './hooks/use-list-engine'
-export { DomainWorkspaceContainer } from './components/ui/domain/containers/domain-workspace-container'
-export { DomainWorkspaceView } from './components/ui/domain/domain-workspace-view'
 export { Entity360 } from './components/ui/entity/entity-360'
 export { CustomerListContainer } from './components/ui/customers/containers/customer-list-container'
 export { CustomerListView } from './components/ui/customers/customer-list-view'
@@ -431,3 +429,5 @@ export {
 } from './lib/print/printer-host'
 // The phone's camera as a barcode scanner (the host registers it).
 export { registerCameraScanner, type CameraScannerHost } from './lib/barcode/camera-host'
+export { BillingHubContainer } from './components/ui/billing/containers/billing-hub-container'
+export { SettingsHubContainer } from './components/ui/settings/settings-hub-container'

@@ -34,13 +34,66 @@
 // `/warehouse?tab=products`.
 // ============================================
 
-import { useCallback } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { Hourglass, Warehouse as WarehouseIcon } from 'lucide-react'
+import { useMyCapabilities } from '@hisabche/api'
+import { isNavLocked } from '@hisabche/ui-contract'
 
 import { ProductListContainer } from '../../products/containers/product-list-container'
 import { warehouseContainer } from './Warehouse-container'
 import { useLocaleReplace } from '../../../../hooks/use-locale-push'
+import { HubTabs, useHubSection, useHubTab } from '../../hub-tabs'
+import { SegmentedControl } from '../../segmented-control'
+
+// «پیشنهاد سفارش» and «کالای راکد» (were on /operations): the same products.
+const OpsSectionContainer = lazy(() =>
+  import('../../inventory-ops/containers/inventory-ops-container').then((m) => ({
+    default: m.OpsSectionContainer,
+  })),
+)
+
+const ExpiryContainer = lazy(() =>
+  import('../../expiry/containers/expiry-container').then((m) => ({ default: m.ExpiryContainer })),
+)
+
+//
+// «انبار» at one address: `/warehouse`. Two tabs, and only two:
+//
+//   stock    what we have — «انبارها» (each warehouse, opened from its row) or
+//            «کالاها» (every product). One switch, one part on screen at a time.
+//   expiry   batches and what is about to expire (was /expiry)
+//
+// ⚠️ A HUB OVER THE SCREENS THAT ALREADY EXIST. Every part mounts the container
+// that owns it; the hub fetches nothing. The bar, the switch and the address
+// handling are the shared `HubTabs` / `SegmentedControl` / `useHubTab` /
+// `useHubSection`.
+//
+// ⚠️ «شمارش انبار» (/stock-count) IS NOT HERE, ON PURPOSE. Nothing in the
+// product can START a count — `useCreateCycleCount` has no caller — so its list
+// is a table nobody can add to. It stays at its own address until that is
+// decided; see .claude/ux-audit/00-PROPOSAL.md.
+//
+// ⚠️ /operations is not here either: it is reorder and dead stock mixed with
+// till shifts and stale sales opportunities — not one job.
+
+export const WAREHOUSE_HUB_TABS = ['stock', 'expiry'] as const
+export type WarehouseHubTab = (typeof WAREHOUSE_HUB_TABS)[number]
+
+/** The address each tab used to live at — the key of its lock in `NAV_MODULE`. */
+export const WAREHOUSE_HUB_SOURCE: Record<WarehouseHubTab, string> = {
+  stock: '/warehouse',
+  expiry: '/expiry',
+}
+
+export const STOCK_SECTIONS = ['warehouses', 'products', 'reorder', 'deadStock'] as const
+export type StockSection = (typeof STOCK_SECTIONS)[number]
+
+/** `?warehouse=` names an open warehouse; the product list has no use for it. */
+const STOCK_SECTION_CLEARS = ['warehouse'] as const
+
+const TAB_ICON = { stock: WarehouseIcon, expiry: Hourglass } as const
 
 export type WarehouseTab = 'stock' | 'products'
 
@@ -77,63 +130,80 @@ export function warehouseTabFrom(value: string | null | undefined): WarehouseTab
 }
 
 export function WarehouseTabsContainer() {
-  const localeReplace = useLocaleReplace()
+  return <WarehouseHub />
+}
+
+function WarehouseHub() {
+  const t = useTranslations()
+  const blocked = useMyCapabilities().data?.blockedModules ?? []
+  const offered = WAREHOUSE_HUB_TABS.filter(
+    (tab) => !isNavLocked(WAREHOUSE_HUB_SOURCE[tab], blocked),
+  )
+  const [active, select] = useHubTab(offered)
+  const [section, selectSection] = useHubSection(STOCK_SECTIONS, STOCK_SECTION_CLEARS)
+
+  // The catalogue's old address, `?tab=products`, is a section now.
   const params = useSearchParams()
-  const translate = useTranslations()
-
-  // Same fallback shape the other containers use: a missing key renders the
-  // Persian label rather than the key itself.
-  const t = useCallback(
-    (key: string, fallback: string): string => {
-      const value = translate(key as Parameters<typeof translate>[0])
-      return value && value !== key ? value : fallback
-    },
-    [translate],
-  )
-
-  const active = warehouseTabFrom(params.get('tab'))
-
-  const select = useCallback(
-    (tab: WarehouseTab) => {
-      // replace, not push: switching tabs is not something the back button
-      // should have to walk through one step at a time.
-      localeReplace(tab === 'stock' ? '/warehouse' : `/warehouse?tab=${tab}`)
-    },
-    [localeReplace],
-  )
-
-  const tabs: { id: WarehouseTab; label: string }[] = [
-    { id: 'stock', label: t('nav.stock', 'موجودی') },
-    { id: 'products', label: t('nav.product_list', 'کاتالوگ کالا') },
-  ]
+  const localeReplace = useLocaleReplace()
+  const oldCatalogueAddress = params.get('tab') === 'products'
+  useEffect(() => {
+    if (oldCatalogueAddress) localeReplace('/warehouse?view=products')
+  }, [oldCatalogueAddress, localeReplace])
 
   return (
-    <div>
-      <div
-        role="tablist"
-        aria-label={t('nav.stock', 'انبار')}
-        className="mb-4 flex gap-1 border-b border-border"
-      >
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={active === tab.id}
-            onClick={() => select(tab.id)}
-            className={
-              active === tab.id
-                ? '-mb-px border-b-2 border-primary px-4 py-2 text-sm font-semibold text-foreground'
-                : '-mb-px border-b-2 border-transparent px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground'
+    <div className="space-y-4">
+      <HubTabs
+        label={t('warehouseHub.label')}
+        items={offered.map((tab) => ({
+          id: tab,
+          label: t(`warehouseHub.tabs.${tab}`),
+          icon: TAB_ICON[tab],
+        }))}
+        active={active}
+        onSelect={select}
+      />
+
+      <div role="tabpanel" className="space-y-4">
+        {active === 'expiry' ? (
+          <Suspense
+            fallback={
+              <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
+                {t('warehouseHub.loading')}
+              </p>
             }
           >
-            {tab.label}
-          </button>
-        ))}
+            <ExpiryContainer />
+          </Suspense>
+        ) : (
+          <>
+            <SegmentedControl
+              label={t('warehouseHub.sectionsLabel')}
+              options={STOCK_SECTIONS.map((value) => ({
+                value,
+                label: t(`warehouseHub.sections.${value}`),
+              }))}
+              value={section}
+              onChange={selectSection}
+            />
+            {/* Both branches are ELEMENTS. See WarehouseStockTab above for why. */}
+            {section === 'reorder' || section === 'deadStock' ? (
+              <Suspense
+                fallback={
+                  <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
+                    {t('warehouseHub.loading')}
+                  </p>
+                }
+              >
+                <OpsSectionContainer section={section} />
+              </Suspense>
+            ) : section === 'products' ? (
+              <ProductListContainer />
+            ) : (
+              <WarehouseStockTab />
+            )}
+          </>
+        )}
       </div>
-
-      {/* Both branches are ELEMENTS. See WarehouseStockTab above for why. */}
-      {active === 'products' ? <ProductListContainer /> : <WarehouseStockTab />}
     </div>
   )
 }

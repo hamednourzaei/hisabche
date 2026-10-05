@@ -10,6 +10,7 @@
 // ============================================
 
 import { useMemo, useState } from 'react'
+import { SearchableTable } from '../data-table'
 import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react'
 import { formatNumber, toIsoDay } from '@hisabche/formatting'
 import { presetRange } from '@hisabche/ui-contract'
@@ -23,8 +24,6 @@ import { manufacturingErrorText } from './manufacturing-errors'
 type T = (key: string, fallback?: string) => string
 type Material = ManufacturingReport['materials'][number]
 
-const th = 'px-3 py-2.5 text-start text-xs font-medium text-[hsl(var(--fg-secondary))]'
-const td = 'px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]'
 const card =
   'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]'
 
@@ -192,49 +191,89 @@ export function ManufacturingReportView({
                 'به ترتیب ارزش مصرف. بهای قبلی و فعلی همان است که روز تولید ثبت شده.',
               )}
             </p>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-y border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                    <th className={th}>{t('manufacturing.report.material', 'ماده / قطعه')}</th>
-                    <th className={th}>{t('manufacturing.report.used', 'مقدار مصرف')}</th>
-                    <th className={th}>{t('manufacturing.report.value', 'ارزش مصرف')}</th>
-                    <th className={cn(th, 'hidden md:table-cell')}>
-                      {t('manufacturing.report.previous', 'بهای قبلی')}
-                    </th>
-                    <th className={th}>{t('manufacturing.report.current', 'بهای فعلی')}</th>
-                    <th className={th}>{t('manufacturing.report.change', 'تغییر')}</th>
-                    <th className={cn(th, 'hidden md:table-cell')}>
-                      {t('manufacturing.report.usedIn', 'در چند محصول')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.materials.map((row) => (
-                    <tr key={row.key} className="border-b border-[hsl(var(--border-default))]">
-                      <td className={td}>
+            <div className="px-3 pb-3">
+              <SearchableTable
+                tableId="manufacturing-report-materials"
+                rows={data.materials}
+                rowKey={(row) => row.key}
+                words={(row) => [row.name]}
+                empty={t('manufacturing.noMatch', 'چیزی با این فیلتر نیست')}
+                columns={[
+                  {
+                    id: 'material',
+                    labelKey: 'manufacturing.report.material',
+                    labelFallback: 'ماده / قطعه',
+                    locked: true,
+                    sortValue: (row) => row.name,
+                    render: (row) => (
+                      <span className="font-medium">
                         {row.name || t('manufacturing.history.unnamed', 'بدون نام')}
-                      </td>
-                      <td className={cn(td, 'tabular-nums')}>
+                      </span>
+                    ),
+                  },
+                  {
+                    id: 'used',
+                    labelKey: 'manufacturing.report.used',
+                    labelFallback: 'مقدار مصرف',
+                    align: 'end',
+                    sortValue: (row) => row.quantity,
+                    render: (row) => (
+                      <span className="tabular-nums">
                         {formatNumber(row.quantity, locale, 4)} {unitText(t, row.unit)}
-                      </td>
-                      <td className={cn(td, 'tabular-nums')}>{money(row.value)}</td>
-                      <td className={cn(td, 'hidden tabular-nums md:table-cell')}>
+                      </span>
+                    ),
+                  },
+                  {
+                    id: 'value',
+                    labelKey: 'manufacturing.report.value',
+                    labelFallback: 'ارزش مصرف',
+                    align: 'end',
+                    sortValue: (row) => row.value,
+                    render: (row) => <span className="tabular-nums">{money(row.value)}</span>,
+                  },
+                  {
+                    id: 'previous',
+                    labelKey: 'manufacturing.report.previous',
+                    labelFallback: 'بهای قبلی',
+                    align: 'end',
+                    showFrom: 'md',
+                    sortValue: (row) => row.previousCost,
+                    render: (row) => (
+                      <span className="tabular-nums">
                         {row.changePercent === null && row.previousCost === row.currentCost
                           ? '—'
                           : money(row.previousCost)}
-                      </td>
-                      <td className={cn(td, 'tabular-nums')}>{money(row.currentCost)}</td>
-                      <td className={td}>
-                        <Change t={t} locale={locale} row={row} />
-                      </td>
-                      <td className={cn(td, 'hidden tabular-nums md:table-cell')}>
-                        {formatNumber(row.products, locale, 0)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </span>
+                    ),
+                  },
+                  {
+                    id: 'current',
+                    labelKey: 'manufacturing.report.current',
+                    labelFallback: 'بهای فعلی',
+                    align: 'end',
+                    sortValue: (row) => row.currentCost,
+                    render: (row) => <span className="tabular-nums">{money(row.currentCost)}</span>,
+                  },
+                  {
+                    id: 'change',
+                    labelKey: 'manufacturing.report.change',
+                    labelFallback: 'تغییر',
+                    sortValue: (row) => row.changePercent,
+                    render: (row) => <Change t={t} locale={locale} row={row} />,
+                  },
+                  {
+                    id: 'usedIn',
+                    labelKey: 'manufacturing.report.usedIn',
+                    labelFallback: 'در چند محصول',
+                    align: 'end',
+                    showFrom: 'md',
+                    sortValue: (row) => row.products,
+                    render: (row) => (
+                      <span className="tabular-nums">{formatNumber(row.products, locale, 0)}</span>
+                    ),
+                  },
+                ]}
+              />
             </div>
           </section>
 
@@ -243,42 +282,69 @@ export function ManufacturingReportView({
               <h3 className="px-4 py-4 text-sm font-semibold text-[hsl(var(--fg-primary))]">
                 {t('manufacturing.report.byProduct', 'به تفکیک محصول')}
               </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-y border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                      <th className={th}>{t('manufacturing.history.product', 'محصول')}</th>
-                      <th className={th}>
-                        {t('manufacturing.report.quantity', 'تعداد ساخته‌شده')}
-                      </th>
-                      <th className={th}>{t('manufacturing.report.totalCost', 'بهای کل تولید')}</th>
-                      <th className={th}>
-                        {t('manufacturing.report.firstUnit', 'بهای واحد، اولین تولید')}
-                      </th>
-                      <th className={th}>
-                        {t('manufacturing.report.lastUnit', 'بهای واحد، آخرین تولید')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.products.map((row) => (
-                      <tr
-                        key={row.productId}
-                        className="border-b border-[hsl(var(--border-default))]"
-                      >
-                        <td className={td}>
+              <div className="px-3 pb-3">
+                <SearchableTable
+                  tableId="manufacturing-report-products"
+                  rows={data.products}
+                  rowKey={(row) => row.productId}
+                  words={(row) => [row.name]}
+                  empty={t('manufacturing.noMatch', 'چیزی با این فیلتر نیست')}
+                  columns={[
+                    {
+                      id: 'product',
+                      labelKey: 'manufacturing.history.product',
+                      labelFallback: 'محصول',
+                      locked: true,
+                      sortValue: (row) => row.name,
+                      render: (row) => (
+                        <span className="font-medium">
                           {row.name || t('manufacturing.history.productGone', 'کالا حذف شده')}
-                        </td>
-                        <td className={cn(td, 'tabular-nums')}>
+                        </span>
+                      ),
+                    },
+                    {
+                      id: 'quantity',
+                      labelKey: 'manufacturing.report.quantity',
+                      labelFallback: 'تعداد ساخته‌شده',
+                      align: 'end',
+                      sortValue: (row) => row.quantity,
+                      render: (row) => (
+                        <span className="tabular-nums">
                           {formatNumber(row.quantity, locale, 4)}
-                        </td>
-                        <td className={cn(td, 'tabular-nums')}>{money(row.totalCost)}</td>
-                        <td className={cn(td, 'tabular-nums')}>{money(row.firstUnitCost)}</td>
-                        <td className={cn(td, 'tabular-nums')}>{money(row.lastUnitCost)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </span>
+                      ),
+                    },
+                    {
+                      id: 'totalCost',
+                      labelKey: 'manufacturing.report.totalCost',
+                      labelFallback: 'بهای کل تولید',
+                      align: 'end',
+                      sortValue: (row) => row.totalCost,
+                      render: (row) => <span className="tabular-nums">{money(row.totalCost)}</span>,
+                    },
+                    {
+                      id: 'firstUnit',
+                      labelKey: 'manufacturing.report.firstUnit',
+                      labelFallback: 'بهای واحد، اولین تولید',
+                      align: 'end',
+                      showFrom: 'md',
+                      sortValue: (row) => row.firstUnitCost,
+                      render: (row) => (
+                        <span className="tabular-nums">{money(row.firstUnitCost)}</span>
+                      ),
+                    },
+                    {
+                      id: 'lastUnit',
+                      labelKey: 'manufacturing.report.lastUnit',
+                      labelFallback: 'بهای واحد، آخرین تولید',
+                      align: 'end',
+                      sortValue: (row) => row.lastUnitCost,
+                      render: (row) => (
+                        <span className="tabular-nums">{money(row.lastUnitCost)}</span>
+                      ),
+                    },
+                  ]}
+                />
               </div>
             </section>
           )}

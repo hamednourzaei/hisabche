@@ -10,22 +10,19 @@
 // page (`productId`). A page at a time: the history is not loaded whole.
 // ============================================
 
-import { Fragment, useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { useState } from 'react'
 import { formatNumber } from '@hisabche/formatting'
 import { apiErrorMessage, useProductionRun, useProductionRuns } from '@hisabche/api'
 
-import { cn } from '../../../lib/utils'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { Button } from '../button'
+import { SearchableTable } from '../data-table'
 import { unitText } from './unit-text'
 import { manufacturingErrorText } from './manufacturing-errors'
 
 type T = (key: string, fallback?: string) => string
 
 const PAGE = 20
-const th = 'px-3 py-2.5 text-start text-xs font-medium text-[hsl(var(--fg-secondary))]'
-const td = 'px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]'
 
 export function ProductionHistory({
   t,
@@ -78,97 +75,109 @@ export function ProductionHistory({
     )
   }
 
-  const columnCount = productId ? 6 : 7
+  type Run = (typeof rows)[number]
+  const productGone = t('manufacturing.history.productGone', 'کالا حذف شده')
+  const open = openId ? rows.find((run) => run.id === openId) : undefined
 
   return (
-    <div>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-              <th className={th}>{t('manufacturing.history.date', 'تاریخ')}</th>
-              {productId ? null : (
-                <th className={th}>{t('manufacturing.history.product', 'محصول')}</th>
-              )}
-              <th className={th}>{t('manufacturing.history.quantity', 'تعداد')}</th>
-              <th className={th}>{t('manufacturing.history.unitCost', 'بهای هر واحد')}</th>
-              <th className={th}>{t('manufacturing.history.total', 'جمع')}</th>
-              <th className={cn(th, 'hidden md:table-cell')}>
-                {t('manufacturing.history.warehouse', 'انبار')}
-              </th>
-              <th className={th}>
-                <span className="sr-only">{t('manufacturing.history.details', 'جزئیات')}</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((run) => {
-              const open = openId === run.id
-              const unit = run.quantity > 0 ? run.totalCost / run.quantity : 0
-              return (
-                <Fragment key={run.id}>
-                  <tr className="border-b border-[hsl(var(--border-default))]">
-                    <td className={cn(td, 'whitespace-nowrap')}>
-                      {run.producedOn ? date(run.producedOn) : '—'}
-                    </td>
-                    {productId ? null : (
-                      <td className={td}>
-                        {run.productName ?? t('manufacturing.history.productGone', 'کالا حذف شده')}
-                      </td>
-                    )}
-                    <td className={cn(td, 'tabular-nums')}>
-                      {formatNumber(run.quantity, locale, 4)}
-                    </td>
-                    <td className={cn(td, 'tabular-nums')}>{money(unit)}</td>
-                    <td className={cn(td, 'tabular-nums')}>
-                      {money(run.totalCost)}{' '}
-                      <span className="text-xs text-[hsl(var(--fg-tertiary))]">
-                        {run.currency
-                          ? t(`currency.${run.currency.toLowerCase()}`, run.currency)
-                          : ''}
-                      </span>
-                      {run.overrideTotal !== null ? (
-                        <span className="ms-1 rounded-full bg-[hsl(var(--color-warning)/0.15)] px-1.5 py-0.5 text-[10px] text-[hsl(var(--fg-primary))]">
-                          {t('manufacturing.history.overridden', 'دستی')}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className={cn(td, 'hidden md:table-cell')}>
-                      {run.addToInventory
-                        ? (run.warehouseName ??
-                          t('manufacturing.history.noWarehouse', 'بدون انبار'))
-                        : t('manufacturing.history.notStocked', 'به انبار نرفته')}
-                    </td>
-                    <td className={td}>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-expanded={open}
-                        aria-label={t('manufacturing.history.details', 'جزئیات')}
-                        onClick={() => setOpenId(open ? null : run.id)}
-                      >
-                        {open ? (
-                          <ChevronUp className="size-4" aria-hidden="true" />
-                        ) : (
-                          <ChevronDown className="size-4" aria-hidden="true" />
-                        )}
-                      </Button>
-                    </td>
-                  </tr>
-                  {open ? (
-                    <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.4)]">
-                      <td colSpan={columnCount} className="px-3 py-3">
-                        <RunDetail t={t} locale={locale} id={run.id} />
-                      </td>
-                    </tr>
-                  ) : null}
-                </Fragment>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+    <div className="p-3 md:p-4">
+      {/* One page from the server in the shared table; a row opens that run's
+          snapshot under it. */}
+      <SearchableTable<Run>
+        tableId="manufacturing-history"
+        rows={rows}
+        rowKey={(run) => run.id}
+        onRowClick={(run) => setOpenId((current) => (current === run.id ? null : run.id))}
+        words={(run) => [run.productName ?? productGone, run.warehouseName ?? '']}
+        empty={t('manufacturing.noMatch', 'چیزی با این فیلتر نیست')}
+        columns={[
+          {
+            id: 'date',
+            labelKey: 'manufacturing.history.date',
+            labelFallback: 'تاریخ',
+            sortValue: (run) => run.producedOn,
+            render: (run) => (
+              <span className="whitespace-nowrap">
+                {run.producedOn ? date(run.producedOn) : '—'}
+              </span>
+            ),
+          },
+          // On a product's own page every row is that product.
+          ...(productId
+            ? []
+            : [
+                {
+                  id: 'product',
+                  labelKey: 'manufacturing.history.product',
+                  labelFallback: 'محصول',
+                  locked: true,
+                  sortValue: (run: Run) => run.productName ?? '',
+                  render: (run: Run) => (
+                    <span className="font-medium">{run.productName ?? productGone}</span>
+                  ),
+                },
+              ]),
+          {
+            id: 'quantity',
+            labelKey: 'manufacturing.history.quantity',
+            labelFallback: 'تعداد',
+            align: 'end',
+            sortValue: (run) => run.quantity,
+            render: (run) => (
+              <span className="tabular-nums">{formatNumber(run.quantity, locale, 4)}</span>
+            ),
+          },
+          {
+            id: 'unitCost',
+            labelKey: 'manufacturing.history.unitCost',
+            labelFallback: 'بهای هر واحد',
+            align: 'end',
+            showFrom: 'md',
+            sortValue: (run) => (run.quantity > 0 ? run.totalCost / run.quantity : 0),
+            render: (run) => (
+              <span className="tabular-nums">
+                {money(run.quantity > 0 ? run.totalCost / run.quantity : 0)}
+              </span>
+            ),
+          },
+          {
+            id: 'total',
+            labelKey: 'manufacturing.history.total',
+            labelFallback: 'جمع',
+            align: 'end',
+            sortValue: (run) => run.totalCost,
+            render: (run) => (
+              <span className="tabular-nums">
+                {money(run.totalCost)}{' '}
+                <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                  {run.currency ? t(`currency.${run.currency.toLowerCase()}`, run.currency) : ''}
+                </span>
+                {run.overrideTotal !== null ? (
+                  <span className="ms-1 rounded-full bg-[hsl(var(--color-warning)/0.15)] px-1.5 py-0.5 text-[10px] text-[hsl(var(--fg-primary))]">
+                    {t('manufacturing.history.overridden', 'دستی')}
+                  </span>
+                ) : null}
+              </span>
+            ),
+          },
+          {
+            id: 'warehouse',
+            labelKey: 'manufacturing.history.warehouse',
+            labelFallback: 'انبار',
+            showFrom: 'md',
+            render: (run) =>
+              run.addToInventory
+                ? (run.warehouseName ?? t('manufacturing.history.noWarehouse', 'بدون انبار'))
+                : t('manufacturing.history.notStocked', 'به انبار نرفته'),
+          },
+        ]}
+      />
+
+      {open ? (
+        <div className="mt-3 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.4)] p-3">
+          <RunDetail t={t} locale={locale} id={open.id} />
+        </div>
+      ) : null}
 
       {total > PAGE ? (
         <div className="flex items-center justify-between gap-2 p-3 text-xs text-[hsl(var(--fg-secondary))]">

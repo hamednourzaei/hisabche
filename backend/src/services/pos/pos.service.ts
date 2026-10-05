@@ -88,6 +88,15 @@ function mapMovement(raw: Record<string, any>): CashMovement {
   }
 }
 
+/**
+ * 42703 — the SELECT named a column Postgres does not have; PGRST204 — the
+ * UPDATE named one PostgREST's schema cache does not have. Either way the
+ * till-name migration has not been run.
+ */
+function isMissingLabelColumn(error: { code?: string | null }): boolean {
+  return error.code === '42703' || error.code === 'PGRST204'
+}
+
 export class PosService {
   private async invalidate(workspaceId: string) {
     await memoryCache.invalidate(`pos:${workspaceId}`)
@@ -951,6 +960,60 @@ export class PosService {
 
     await this.invalidate(ctx.workspaceId)
     return mapSession(data)
+  }
+
+  /**
+   * The names people gave their tills (docs/pos-session-label-01-migration.sql).
+   *
+   * A SEPARATE read, on purpose: `label` is not in SESSION_COLUMNS, so a
+   * database that has not run the migration keeps every other till read
+   * working and answers «names are not set up» here instead of a 500.
+   */
+  async sessionLabels(
+    ctx: TenancyContext,
+  ): Promise<{ configured: boolean; labels: Record<string, string> }> {
+    const { data, error } = await supabase
+      .from('pos_sessions')
+      .select('id, label')
+      .eq('workspace_id', ctx.workspaceId)
+      .in('status', ['open', 'suspended', 'closing'])
+      .not('label', 'is', null)
+
+    if (error) {
+      if (isMissingLabelColumn(error)) return { configured: false, labels: {} }
+      throw new DatabaseError('Failed to read the till names', error)
+    }
+    const labels: Record<string, string> = {}
+    for (const row of (data ?? []) as Array<{ id: string; label: string | null }>) {
+      if (row.label) labels[row.id] = row.label
+    }
+    return { configured: true, labels }
+  }
+
+  /** Name a till, or take its name away (`null`). The name is the whole change. */
+  async setLabel(ctx: TenancyContext, sessionId: string, label: string | null) {
+    // Scoped to the workspace: another business's till answers «not found».
+    await this.getSession(ctx, sessionId)
+
+    const { data, error } = await supabase
+      .from('pos_sessions')
+      .update({ label })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', sessionId)
+      .select('id, label')
+      .maybeSingle()
+
+    if (error) {
+      if (isMissingLabelColumn(error)) throw new ConflictError('POS_LABEL_MIGRATION_REQUIRED')
+      // 23514: the 1–80 character check.
+      if (error.code === '23514') throw new ValidationError('POS_LABEL_INVALID')
+      throw new DatabaseError('Failed to name the till', error)
+    }
+    if (!data) throw new NotFoundError('PosSession')
+
+    await this.invalidate(ctx.workspaceId)
+    const row = data as { id: string; label: string | null }
+    return { id: row.id, label: row.label }
   }
 
   async findAbandonedSessions(

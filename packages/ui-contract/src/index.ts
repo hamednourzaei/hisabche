@@ -48,18 +48,7 @@ export {
   type IntelligenceRefusal,
 } from './intelligence'
 
-export {
-  DOMAINS,
-  DOMAIN_SPECS,
-  breadcrumbsFor,
-  localizePath,
-  domainFor,
-  domainOf,
-  domainDestinations,
-  type Crumb,
-  type DomainId,
-  type DomainSpec,
-} from './shell'
+export { breadcrumbsFor, localizePath, type Crumb } from './shell'
 
 export {
   DENSITIES,

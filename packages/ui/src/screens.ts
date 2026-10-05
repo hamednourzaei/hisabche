@@ -20,14 +20,15 @@ export { DashboardContainer } from './components/ui/dashboard/containers/dashboa
 
 // ---------- Sales & purchasing ----------
 export { InvoicesContainer } from './components/ui/invoices/containers/invoices-container'
+export { SalesHubContainer } from './components/ui/invoices/containers/sales-hub-container'
 export { InvoiceDetailContainer } from './components/ui/invoice-detail/containers/invoice-detail-container'
 export { QuickInvoiceContainer } from './components/ui/quick-invoice/containers/quick-invoice-container'
 export { InvoiceBuilderContainer } from './components/ui/invoice-builder/containers/invoice-builder-container'
 export { InvoicePreviewContainer } from './components/ui/invoice-builder/containers/invoice-preview-container'
-export { PurchasingContainer } from './components/ui/purchasing/containers/purchasing-container'
 
 // ---------- Customers ----------
 export { CustomersContainer } from './components/ui/customers/containers/customer-container'
+export { CustomersHubContainer } from './components/ui/customers/containers/customers-hub-container'
 export { CustomerDetailContainer } from './components/ui/customers/containers/customer-detail-container'
 
 // ---------- Inventory ----------
@@ -59,9 +60,11 @@ export { DevelopersContainer } from './components/ui/developers/containers/devel
 export { OrdersContainer } from './components/ui/orders/containers/orders-container'
 export { MarketplaceContainer } from './components/ui/marketplace/containers/marketplace-container'
 export { WorkflowTemplatesContainer } from './components/ui/workflow/containers/workflow-templates-container'
+export { ApprovalsHubContainer } from './components/ui/workflow/containers/approvals-hub-container'
 
 // ---------- Billing ----------
 export { BillingContainer } from './components/ui/billing'
+export { BillingHubContainer } from './components/ui/billing/containers/billing-hub-container'
 export { WalletContainer } from './components/ui/wallet/wallet-container'
 export { MarketSellerContainer } from './components/ui/market/market-seller-container'
 export { AnalysisContainer } from './components/ui/analysis/analysis-container'
@@ -109,8 +112,8 @@ export { BankContainer } from './components/ui/bank/containers/bank-container'
 export { BudgetsContainer } from './components/ui/budgets/containers/budgets-container'
 export { DataMigrationContainer } from './components/ui/data-migration/containers/data-migration-container'
 export { DataAndSyncContainer } from './components/ui/data-and-sync/containers/data-and-sync-container'
+export { DataHubContainer } from './components/ui/data-and-sync/containers/data-hub-container'
 export { WorkQueueContainer } from './components/ui/work-queue/containers/work-queue-container'
-export { DomainWorkspaceContainer } from './components/ui/domain/containers/domain-workspace-container'
 export { CustomerListContainer } from './components/ui/customers/containers/customer-list-container'
 export { Invoice360Container } from './components/ui/invoice-detail/containers/invoice-360-container'
 export { Customer360Container } from './components/ui/customers/containers/customer-360-container'
@@ -134,3 +137,4 @@ export { GovernanceHubContainer } from './components/ui/governance/containers/go
 export { AiAssistantContainer } from './components/ui/ai/containers/ai-assistant-container'
 export { CycleCountContainer } from './components/ui/cycle-count/containers/cycle-count-container'
 export { InventoryOpsContainer } from './components/ui/inventory-ops/containers/inventory-ops-container'
+export { SettingsHubContainer } from './components/ui/settings/settings-hub-container'

@@ -11,6 +11,7 @@
 // ============================================
 
 import { KpiCard } from '../kpi-card'
+import { SearchableTable, type TableColumn } from '../data-table'
 import { useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import {
@@ -27,7 +28,9 @@ import { CURRENCY_SIGN, formatMoney, formatNumber, type KnownCurrency } from '@h
 
 import { cn } from '../../../lib/utils'
 import { GHOST_ICON_BUTTON } from '../button-classes'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../tabs'
+import { HubTabs } from '../hub-tabs'
+import { SegmentedControl } from '../segmented-control'
+import { Tabs, TabsContent } from '../tabs'
 import { PaymentModal } from './PaymentModal'
 import { CustomerCrmPanel } from '../crm/customer-crm-panel'
 import { CustomerProfilePanel } from './customer-profile-panel'
@@ -93,11 +96,43 @@ const outlineBtn =
   'inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-[hsl(var(--border-default))] px-4 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] disabled:opacity-50'
 const primaryBtn =
   'inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[hsl(var(--color-primary))] px-5 text-sm font-bold text-[hsl(var(--color-primary-fg))] shadow-sm transition hover:brightness-110'
-const th = 'px-3 py-2 text-start text-xs font-medium text-[hsl(var(--fg-tertiary))]'
-const td = 'px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]'
 
 // Statuses with a label under customer360.status (desktop's next-intl shim has no `t.has`).
 const KNOWN_STATUS = new Set(['paid', 'pending', 'completed', 'cancelled', 'draft'])
+
+/**
+ * The nine tabs of this page, in two groups — what was in a row of
+ * nine is one of two tabs and a switch. The parts themselves are unchanged.
+ *
+ *   money          the account — صورت‌حساب · فاکتورها · پرداخت‌ها · حسابداری
+ *   relationship   the customer — فعالیت · تحلیل · CRM · اعتبار و مدارک · تاریخچه
+ */
+export const CUSTOMER_TAB_GROUPS = {
+  money: ['statement', 'invoices', 'payments', 'accounting'],
+  relationship: ['activity', 'insights', 'crm', 'account', 'history'],
+} as const
+export type CustomerTabGroup = keyof typeof CUSTOMER_TAB_GROUPS
+const CUSTOMER_GROUPS: readonly CustomerTabGroup[] = ['money', 'relationship']
+
+/** The label key of each part — the same words the nine tabs carried. */
+const TAB_LABEL = {
+  statement: 'tabStatement',
+  invoices: 'tabSales',
+  payments: 'tabPayments',
+  accounting: 'tabAccounting',
+  activity: 'tabActivity',
+  insights: 'tabInsights',
+  crm: 'tabCrm',
+  account: 'tabAccount',
+  history: 'tabHistory',
+} as const
+
+/** The group a part belongs to; an unknown value is the first group. */
+export function customerGroupOf(tab: string): CustomerTabGroup {
+  return (CUSTOMER_TAB_GROUPS.relationship as readonly string[]).includes(tab)
+    ? 'relationship'
+    : 'money'
+}
 
 function isKnown(currency: string): currency is KnownCurrency {
   return currency in CURRENCY_SIGN
@@ -108,6 +143,7 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
   const tc = useTranslations()
   const { customer, summary, locale } = props
   const [tab, setTab] = useState('statement')
+  const group = customerGroupOf(tab)
 
   // Print / «Save as PDF» prints the statement: switch to it, then print after the render.
   const printStatement = () => {
@@ -326,17 +362,24 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
       {/* ── Statement / invoices / payments ─────────────────────────────── */}
       <Tabs value={tab} onValueChange={setTab} className={cn(card, 'p-3 sm:p-4')}>
         <p className="mb-2 hidden text-base font-bold print:block">{t('statementTitle')}</p>
-        <TabsList className="mb-3 flex-wrap print:hidden">
-          <TabsTrigger value="statement">{t('tabStatement')}</TabsTrigger>
-          <TabsTrigger value="invoices">{t('tabSales')}</TabsTrigger>
-          <TabsTrigger value="payments">{t('tabPayments')}</TabsTrigger>
-          <TabsTrigger value="activity">{t('tabActivity')}</TabsTrigger>
-          <TabsTrigger value="insights">{t('tabInsights')}</TabsTrigger>
-          <TabsTrigger value="accounting">{t('tabAccounting')}</TabsTrigger>
-          <TabsTrigger value="account">{t('tabAccount')}</TabsTrigger>
-          <TabsTrigger value="crm">{t('tabCrm')}</TabsTrigger>
-          <TabsTrigger value="history">{t('tabHistory')}</TabsTrigger>
-        </TabsList>
+        <div className="mb-3 space-y-3 print:hidden">
+          <HubTabs
+            label={t('groupsLabel')}
+            items={CUSTOMER_GROUPS.map((id) => ({ id, label: t(`groups.${id}`) }))}
+            active={group}
+            // Opening a group opens its first part.
+            onSelect={(next) => setTab(CUSTOMER_TAB_GROUPS[next][0])}
+          />
+          <SegmentedControl
+            label={t('groupsLabel')}
+            options={CUSTOMER_TAB_GROUPS[group].map((value) => ({
+              value,
+              label: t(TAB_LABEL[value]),
+            }))}
+            value={tab as (typeof CUSTOMER_TAB_GROUPS)[CustomerTabGroup][number]}
+            onChange={setTab}
+          />
+        </div>
 
         <TabsContent value="statement">
           <Statement {...props} money={money} />
@@ -347,41 +390,7 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
         </TabsContent>
 
         <TabsContent value="payments">
-          {props.payments.length === 0 ? (
-            <Empty text={t('noPayments')} />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[36rem] text-sm">
-                <thead>
-                  <tr className="border-b border-[hsl(var(--border-default))]">
-                    <th className={th}>{t('colDate')}</th>
-                    <th className={th}>{t('colReference')}</th>
-                    <th className={th}>{t('colType')}</th>
-                    <th className={th}>{t('colMethod')}</th>
-                    <th className={cn(th, 'text-end')}>{t('colTotal')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {props.payments.map((payment) => (
-                    <tr
-                      key={payment.id}
-                      className="border-b border-[hsl(var(--border-default)/0.6)]"
-                    >
-                      <td className={td}>{props.formatDate(payment.entryDate)}</td>
-                      <td className={td}>{payment.paymentNumber ?? '—'}</td>
-                      <td className={td}>
-                        {t(`kind.${payment.direction === 'in' ? 'payment_in' : 'payment_out'}`)}
-                      </td>
-                      <td className={td}>{payment.method}</td>
-                      <td className={cn(td, 'text-end tabular-nums')}>
-                        {money(payment.amount, payment.currency)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <PaymentsTable {...props} money={money} />
         </TabsContent>
 
         <TabsContent value="activity">
@@ -431,139 +440,258 @@ function Statement(props: CustomerDetailViewProps & { money: Money }) {
 
   // Newest first on screen; the running balance is the server's, after each row.
   const rows = [...ledger.movements].reverse()
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[40rem] text-sm">
-        <thead>
-          <tr className="border-b border-[hsl(var(--border-default))]">
-            <th className={th}>{t('colDate')}</th>
-            <th className={th}>{t('colType')}</th>
-            <th className={th}>{t('colReference')}</th>
-            <th className={cn(th, 'text-end')}>{t('colDebit')}</th>
-            <th className={cn(th, 'text-end')}>{t('colCredit')}</th>
-            <th className={cn(th, 'text-end')}>{t('colBalance')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => {
-            // Debit raises what they owe us (a sale, or money we paid out).
-            const debit = row.kind === 'sale' || row.kind === 'payment_out'
-            const clickable = row.sourceType === 'invoice' && row.sourceId
-            return (
-              <tr
-                key={`${row.sourceId ?? row.reference}-${index}`}
-                className="border-b border-[hsl(var(--border-default)/0.6)]"
-              >
-                <td className={td}>{props.formatDate(row.date)}</td>
-                <td className={td}>{t(`kind.${row.kind}`)}</td>
-                <td className={td}>
-                  {clickable ? (
-                    <button
-                      type="button"
-                      onClick={() => props.onOpenInvoice(row.sourceId!)}
-                      className="font-medium text-[hsl(var(--color-primary))] hover:underline"
-                    >
-                      {row.reference}
-                    </button>
-                  ) : (
-                    row.reference
-                  )}
-                </td>
-                <td className={cn(td, 'text-end tabular-nums')}>
-                  {debit ? props.money(row.amount, row.currency) : '—'}
-                </td>
-                <td className={cn(td, 'text-end tabular-nums')}>
-                  {debit ? '—' : props.money(row.amount, row.currency)}
-                </td>
-                <td
-                  className={cn(
-                    td,
-                    'text-end font-medium tabular-nums',
-                    row.balance > 0 && 'text-[hsl(var(--color-destructive))]',
-                  )}
-                >
-                  {props.money(row.balance)}
-                </td>
-              </tr>
-            )
-          })}
-          {ledger.openingBalance !== 0 && (
-            <tr>
-              <td className={td} colSpan={5}>
-                {tc('customers.openingBalance')}
-              </td>
-              <td className={cn(td, 'text-end tabular-nums')}>
-                {props.money(ledger.openingBalance)}
-              </td>
-            </tr>
+  type Movement = (typeof rows)[number]
+  // Debit raises what they owe us (a sale, or money we paid out).
+  const isDebit = (row: Movement) => row.kind === 'sale' || row.kind === 'payment_out'
+  const columns: TableColumn<Movement>[] = [
+    {
+      id: 'date',
+      labelKey: 'customer360.colDate',
+      labelFallback: t('colDate'),
+      sortValue: (row) => row.date,
+      render: (row) => props.formatDate(row.date),
+    },
+    {
+      id: 'kind',
+      labelKey: 'customer360.colType',
+      labelFallback: t('colType'),
+      sortValue: (row) => row.kind,
+      render: (row) => t(`kind.${row.kind}`),
+    },
+    {
+      id: 'reference',
+      labelKey: 'customer360.colReference',
+      labelFallback: t('colReference'),
+      locked: true,
+      sortValue: (row) => row.reference,
+      render: (row) => (
+        <span
+          className={
+            row.sourceType === 'invoice' && row.sourceId
+              ? 'font-medium text-[hsl(var(--color-primary))]'
+              : undefined
+          }
+        >
+          {row.reference}
+        </span>
+      ),
+    },
+    {
+      id: 'debit',
+      labelKey: 'customer360.colDebit',
+      labelFallback: t('colDebit'),
+      align: 'end',
+      sortValue: (row) => (isDebit(row) ? row.amount : null),
+      render: (row) => (
+        <span className="tabular-nums">
+          {isDebit(row) ? props.money(row.amount, row.currency) : '—'}
+        </span>
+      ),
+    },
+    {
+      id: 'credit',
+      labelKey: 'customer360.colCredit',
+      labelFallback: t('colCredit'),
+      align: 'end',
+      sortValue: (row) => (isDebit(row) ? null : row.amount),
+      render: (row) => (
+        <span className="tabular-nums">
+          {isDebit(row) ? '—' : props.money(row.amount, row.currency)}
+        </span>
+      ),
+    },
+    {
+      id: 'balance',
+      labelKey: 'customer360.colBalance',
+      labelFallback: t('colBalance'),
+      align: 'end',
+      render: (row) => (
+        <span
+          className={cn(
+            'font-medium tabular-nums',
+            row.balance > 0 && 'text-[hsl(var(--color-destructive))]',
           )}
-        </tbody>
-      </table>
+        >
+          {props.money(row.balance)}
+        </span>
+      ),
+    },
+  ]
+  return (
+    <div className="space-y-2">
+      <SearchableTable
+        tableId="customer-statement"
+        rows={rows}
+        columns={columns}
+        rowKey={(row, index) => `${row.sourceId ?? row.reference}-${index}`}
+        // A row that came from an invoice opens that invoice.
+        onRowClick={(row) => {
+          if (row.sourceType === 'invoice' && row.sourceId) props.onOpenInvoice(row.sourceId)
+        }}
+        words={(row) => [row.reference, t(`kind.${row.kind}`), props.formatDate(row.date)]}
+        empty={t('statementEmpty')}
+      />
+      {ledger.openingBalance !== 0 ? (
+        <p className="flex justify-between gap-3 px-3 text-sm text-[hsl(var(--fg-secondary))]">
+          <span>{tc('customers.openingBalance')}</span>
+          <span className="tabular-nums">{props.money(ledger.openingBalance)}</span>
+        </p>
+      ) : null}
     </div>
+  )
+}
+
+function PaymentsTable(props: CustomerDetailViewProps & { money: Money }) {
+  const t = useTranslations('customer360')
+  const kindOf = (payment: PaymentRecord) =>
+    t(`kind.${payment.direction === 'in' ? 'payment_in' : 'payment_out'}`)
+  const columns: TableColumn<PaymentRecord>[] = [
+    {
+      id: 'date',
+      labelKey: 'customer360.colDate',
+      labelFallback: t('colDate'),
+      sortValue: (payment) => payment.entryDate,
+      render: (payment) => props.formatDate(payment.entryDate),
+    },
+    {
+      id: 'reference',
+      labelKey: 'customer360.colReference',
+      labelFallback: t('colReference'),
+      locked: true,
+      sortValue: (payment) => payment.paymentNumber ?? '',
+      render: (payment) => payment.paymentNumber ?? '—',
+    },
+    {
+      id: 'kind',
+      labelKey: 'customer360.colType',
+      labelFallback: t('colType'),
+      sortValue: (payment) => payment.direction,
+      render: (payment) => kindOf(payment),
+    },
+    {
+      id: 'method',
+      labelKey: 'customer360.colMethod',
+      labelFallback: t('colMethod'),
+      showFrom: 'md',
+      sortValue: (payment) => payment.method,
+      render: (payment) => payment.method,
+    },
+    {
+      id: 'amount',
+      labelKey: 'customer360.colTotal',
+      labelFallback: t('colTotal'),
+      align: 'end',
+      sortValue: (payment) => payment.amount,
+      render: (payment) => (
+        <span className="tabular-nums">{props.money(payment.amount, payment.currency)}</span>
+      ),
+    },
+  ]
+  return (
+    <SearchableTable
+      tableId="customer-payments"
+      rows={props.payments}
+      columns={columns}
+      rowKey={(payment) => payment.id}
+      words={(payment) => [payment.paymentNumber, payment.method, kindOf(payment)]}
+      empty={t('noPayments')}
+    />
   )
 }
 
 function InvoicesTable(props: CustomerDetailViewProps & { money: Money }) {
   const t = useTranslations('customer360')
-  if (props.invoices.length === 0) return <Empty text={t('noInvoices')} />
+  const statusOf = (invoice: CustomerInvoiceRow) =>
+    KNOWN_STATUS.has(invoice.status) ? t(`status.${invoice.status}`) : invoice.status
+  const remainingOf = (invoice: CustomerInvoiceRow) =>
+    Math.max(0, invoice.total - invoice.paidAmount)
+  const columns: TableColumn<CustomerInvoiceRow>[] = [
+    {
+      id: 'reference',
+      labelKey: 'customer360.colReference',
+      labelFallback: t('colReference'),
+      locked: true,
+      sortValue: (invoice) => invoice.invoiceNumber,
+      render: (invoice) => (
+        <span className="font-medium text-[hsl(var(--color-primary))]">
+          {t(`kind.${invoice.type}`)} #{invoice.invoiceNumber}
+        </span>
+      ),
+    },
+    {
+      id: 'date',
+      labelKey: 'customer360.colDate',
+      labelFallback: t('colDate'),
+      sortValue: (invoice) => invoice.date,
+      render: (invoice) => props.formatDate(invoice.date),
+    },
+    {
+      id: 'due',
+      labelKey: 'customer360.colDue',
+      labelFallback: t('colDue'),
+      showFrom: 'md',
+      sortValue: (invoice) => invoice.dueDate || null,
+      render: (invoice) => (invoice.dueDate ? props.formatDate(invoice.dueDate) : '—'),
+    },
+    {
+      id: 'status',
+      labelKey: 'customer360.colStatus',
+      labelFallback: t('colStatus'),
+      sortValue: (invoice) => invoice.status,
+      render: (invoice) => statusOf(invoice),
+    },
+    {
+      id: 'total',
+      labelKey: 'customer360.colTotal',
+      labelFallback: t('colTotal'),
+      align: 'end',
+      sortValue: (invoice) => invoice.total,
+      render: (invoice) => (
+        <span className="tabular-nums">{props.money(invoice.total, invoice.currency)}</span>
+      ),
+    },
+    {
+      id: 'paid',
+      labelKey: 'customer360.colPaid',
+      labelFallback: t('colPaid'),
+      align: 'end',
+      showFrom: 'md',
+      sortValue: (invoice) => invoice.paidAmount,
+      render: (invoice) => (
+        <span className="tabular-nums">{props.money(invoice.paidAmount, invoice.currency)}</span>
+      ),
+    },
+    {
+      id: 'remaining',
+      labelKey: 'customer360.colRemaining',
+      labelFallback: t('colRemaining'),
+      align: 'end',
+      sortValue: (invoice) => remainingOf(invoice),
+      render: (invoice) => (
+        <span
+          className={cn(
+            'font-medium tabular-nums',
+            remainingOf(invoice) > 0 && 'text-[hsl(var(--color-destructive))]',
+          )}
+        >
+          {props.money(remainingOf(invoice), invoice.currency)}
+        </span>
+      ),
+    },
+  ]
   const pages = Math.max(1, Math.ceil(props.invoicesTotal / props.invoicePageSize))
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[44rem] text-sm">
-          <thead>
-            <tr className="border-b border-[hsl(var(--border-default))]">
-              <th className={th}>{t('colReference')}</th>
-              <th className={th}>{t('colDate')}</th>
-              <th className={th}>{t('colDue')}</th>
-              <th className={th}>{t('colStatus')}</th>
-              <th className={cn(th, 'text-end')}>{t('colTotal')}</th>
-              <th className={cn(th, 'text-end')}>{t('colPaid')}</th>
-              <th className={cn(th, 'text-end')}>{t('colRemaining')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {props.invoices.map((invoice) => {
-              const remaining = Math.max(0, invoice.total - invoice.paidAmount)
-              return (
-                <tr
-                  key={invoice.id}
-                  onClick={() => props.onOpenInvoice(invoice.id)}
-                  className="cursor-pointer border-b border-[hsl(var(--border-default)/0.6)] hover:bg-[hsl(var(--surface-muted)/0.5)]"
-                >
-                  <td className={cn(td, 'font-medium text-[hsl(var(--color-primary))]')}>
-                    {t(`kind.${invoice.type}`)} #{invoice.invoiceNumber}
-                  </td>
-                  <td className={td}>{props.formatDate(invoice.date)}</td>
-                  <td className={td}>
-                    {invoice.dueDate ? props.formatDate(invoice.dueDate) : '—'}
-                  </td>
-                  <td className={td}>
-                    {KNOWN_STATUS.has(invoice.status)
-                      ? t(`status.${invoice.status}`)
-                      : invoice.status}
-                  </td>
-                  <td className={cn(td, 'text-end tabular-nums')}>
-                    {props.money(invoice.total, invoice.currency)}
-                  </td>
-                  <td className={cn(td, 'text-end tabular-nums')}>
-                    {props.money(invoice.paidAmount, invoice.currency)}
-                  </td>
-                  <td
-                    className={cn(
-                      td,
-                      'text-end font-medium tabular-nums',
-                      remaining > 0 && 'text-[hsl(var(--color-destructive))]',
-                    )}
-                  >
-                    {props.money(remaining, invoice.currency)}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* One page from the server; the search looks through this page. */}
+      <SearchableTable
+        tableId="customer-invoices"
+        rows={props.invoices}
+        columns={columns}
+        rowKey={(invoice) => invoice.id}
+        onRowClick={(invoice) => props.onOpenInvoice(invoice.id)}
+        words={(invoice) => [invoice.invoiceNumber, statusOf(invoice)]}
+        empty={t('noInvoices')}
+      />
       {pages > 1 && (
         <div className="flex items-center justify-between gap-2 text-sm">
           <button
@@ -723,41 +851,62 @@ function Activity(props: CustomerDetailViewProps & { money: Money }) {
         <h3 className="mb-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
           {t('topProducts')}
         </h3>
-        {products.length === 0 ? (
-          <Empty text={t('noProducts')} />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[36rem] text-sm">
-              <thead>
-                <tr className="border-b border-[hsl(var(--border-default))]">
-                  <th className={th}>{t('colProduct')}</th>
-                  <th className={cn(th, 'text-end')}>{t('colQuantity')}</th>
-                  <th className={cn(th, 'text-end')}>{t('colAmount')}</th>
-                  <th className={cn(th, 'text-end')}>{t('colInvoices')}</th>
-                  <th className={th}>{t('colLastSold')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((p) => (
-                  <tr
-                    key={p.productId ?? p.name}
-                    className="border-b border-[hsl(var(--border-default)/0.5)]"
-                  >
-                    <td className={td}>{p.name}</td>
-                    <td className={cn(td, 'text-end tabular-nums')}>
-                      {formatNumber(p.quantity, props.locale)} {p.unit}
-                    </td>
-                    <td className={cn(td, 'text-end tabular-nums')}>{props.money(p.amount)}</td>
-                    <td className={cn(td, 'text-end tabular-nums')}>
-                      {formatNumber(p.invoiceCount, props.locale)}
-                    </td>
-                    <td className={td}>{props.formatDate(p.lastSoldAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <SearchableTable
+          tableId="customer-products"
+          rows={products}
+          columns={[
+            {
+              id: 'name',
+              labelKey: 'customer360.colProduct',
+              labelFallback: t('colProduct'),
+              locked: true,
+              sortValue: (p) => p.name,
+              render: (p) => <span className="font-medium">{p.name}</span>,
+            },
+            {
+              id: 'quantity',
+              labelKey: 'customer360.colQuantity',
+              labelFallback: t('colQuantity'),
+              align: 'end',
+              sortValue: (p) => p.quantity,
+              render: (p) => (
+                <span className="tabular-nums">
+                  {formatNumber(p.quantity, props.locale)} {p.unit}
+                </span>
+              ),
+            },
+            {
+              id: 'amount',
+              labelKey: 'customer360.colAmount',
+              labelFallback: t('colAmount'),
+              align: 'end',
+              sortValue: (p) => p.amount,
+              render: (p) => <span className="tabular-nums">{props.money(p.amount)}</span>,
+            },
+            {
+              id: 'invoices',
+              labelKey: 'customer360.colInvoices',
+              labelFallback: t('colInvoices'),
+              align: 'end',
+              showFrom: 'md',
+              sortValue: (p) => p.invoiceCount,
+              render: (p) => (
+                <span className="tabular-nums">{formatNumber(p.invoiceCount, props.locale)}</span>
+              ),
+            },
+            {
+              id: 'lastSold',
+              labelKey: 'customer360.colLastSold',
+              labelFallback: t('colLastSold'),
+              showFrom: 'md',
+              sortValue: (p) => p.lastSoldAt,
+              render: (p) => props.formatDate(p.lastSoldAt),
+            },
+          ]}
+          rowKey={(p) => p.productId ?? p.name}
+          words={(p) => [p.name]}
+          empty={t('noProducts')}
+        />
       </section>
     </div>
   )

@@ -12,6 +12,7 @@
 // ============================================
 
 import { memo, useState } from 'react'
+import { SearchableTable } from '../data-table'
 import type { ApiKeyScope, WebhookEventType } from '@hisabche/validation'
 import type { ApiKeyRow, ApiKeyUsage, WebhookDeliveryRow, WebhookEndpointRow } from '@hisabche/api'
 import { Copy, KeyRound, Loader2, RefreshCw, Send, Trash2, Webhook } from 'lucide-react'
@@ -235,64 +236,93 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
 
           {props.keysState === 'ready' && (
             <>
-              {props.keys.length === 0 ? (
-                <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('developer.noKeys')}</p>
-              ) : (
-                <ul className="divide-y divide-[hsl(var(--border-default))]">
-                  {props.keys.map((key) => (
-                    <li key={key.id} className="flex flex-wrap items-center gap-3 py-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-[hsl(var(--fg-primary))]">{key.name}</p>
-                        <p className="text-xs text-[hsl(var(--fg-tertiary))]" dir="ltr">
+              {/* The shared table. A row opens that key's usage under it. */}
+              <SearchableTable
+                tableId="developer-keys"
+                rows={props.keys}
+                rowKey={(key) => key.id}
+                onRowClick={(key) =>
+                  props.onToggleUsage(props.usageKeyId === key.id ? null : key.id)
+                }
+                words={(key) => [key.name, key.prefix]}
+                empty={t('developer.noKeys')}
+                columns={[
+                  {
+                    id: 'name',
+                    labelKey: 'developer.keyName',
+                    labelFallback: t('developer.keyName'),
+                    locked: true,
+                    sortValue: (key) => key.name,
+                    render: (key) => (
+                      <>
+                        <span className="font-medium">{key.name}</span>
+                        <span className="block text-xs text-[hsl(var(--fg-tertiary))]" dir="ltr">
                           {key.prefix}…
-                        </p>
-                        <p className="text-xs text-[hsl(var(--fg-secondary))]">
-                          {key.scopes.map((s) => t(scopeKey(s))).join('، ')}
-                        </p>
-                        <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                          {key.last_used_at
-                            ? `${t('developer.lastUsed')}: ${props.formatDate(key.last_used_at)}`
-                            : t('developer.neverUsed')}
-                          {key.expires_at
-                            ? ` · ${t('developer.expires')}: ${props.formatDate(key.expires_at)}`
-                            : ''}
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          props.onToggleUsage(props.usageKeyId === key.id ? null : key.id)
-                        }
-                      >
-                        {props.usageKeyId === key.id
-                          ? t('developer.hideUsage')
-                          : t('developer.showUsage')}
-                      </Button>
-                      {key.revoked_at ? (
+                        </span>
+                      </>
+                    ),
+                  },
+                  {
+                    id: 'scopes',
+                    labelKey: 'developer.scopes',
+                    labelFallback: t('developer.scopes'),
+                    showFrom: 'md',
+                    render: (key) => (
+                      <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                        {key.scopes.map((scope) => t(scopeKey(scope))).join('، ')}
+                      </span>
+                    ),
+                  },
+                  {
+                    id: 'lastUsed',
+                    labelKey: 'developer.lastUsed',
+                    labelFallback: t('developer.lastUsed'),
+                    sortValue: (key) => key.last_used_at ?? null,
+                    render: (key) => (
+                      <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                        {key.last_used_at
+                          ? props.formatDate(key.last_used_at)
+                          : t('developer.neverUsed')}
+                        {key.expires_at
+                          ? ` · ${t('developer.expires')}: ${props.formatDate(key.expires_at)}`
+                          : ''}
+                      </span>
+                    ),
+                  },
+                  {
+                    id: 'actions',
+                    labelKey: 'common.actions',
+                    labelFallback: 'عملیات',
+                    locked: true,
+                    align: 'end',
+                    render: (key) =>
+                      key.revoked_at ? (
                         <Badge variant="outline">{t('developer.revoked')}</Badge>
                       ) : (
                         <Button
                           size="sm"
                           variant="destructive"
                           loading={props.revokingKeyId === key.id}
-                          onClick={() => props.onRevokeKey(key.id)}
+                          onClick={(event) => {
+                            // The row itself opens the usage.
+                            event.stopPropagation()
+                            props.onRevokeKey(key.id)
+                          }}
                         >
                           {t('developer.revoke')}
                         </Button>
-                      )}
-                      {props.usageKeyId === key.id && (
-                        <KeyUsagePanel
-                          t={t}
-                          formatDate={props.formatDate}
-                          state={props.usageState}
-                          usage={props.usage}
-                        />
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
+                      ),
+                  },
+                ]}
+              />
+              {props.usageKeyId && props.keys.some((key) => key.id === props.usageKeyId) ? (
+                <KeyUsagePanel
+                  t={t}
+                  formatDate={props.formatDate}
+                  state={props.usageState}
+                  usage={props.usage}
+                />
+              ) : null}
 
               <form
                 className="space-y-3 border-t border-[hsl(var(--border-default))] pt-4"

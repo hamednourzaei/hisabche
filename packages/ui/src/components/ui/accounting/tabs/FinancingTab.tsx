@@ -37,6 +37,7 @@ import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { Button } from '../../button'
 import { JalaliDatePicker } from '../../jalali-datepicker'
 import { SelectField } from '../../select-field'
+import { SegmentedControl } from '../../segmented-control'
 
 export const FINANCING_ERROR_CODES = [
   'FINANCING_DATES_INVERTED',
@@ -59,8 +60,11 @@ const amountOf = (text: string): number | null => {
   return text.trim() !== '' && Number.isFinite(value) && value >= 0 ? value : null
 }
 
+export const FINANCING_SECTIONS = ['loans', 'holdings'] as const
+
 export function FinancingTab() {
   const t = useTranslations('financing')
+  const [section, setSection] = useState<(typeof FINANCING_SECTIONS)[number]>('loans')
   const tCurrency = useTranslations('currency')
 
   const errorText = (error: unknown): string => {
@@ -78,8 +82,18 @@ export function FinancingTab() {
   return (
     <div className="space-y-6">
       <p className={cn(card, 'p-3 text-xs text-[hsl(var(--fg-secondary))]')}>{t('notLedger')}</p>
-      <Loans errorText={errorText} currencies={currencies} />
-      <Holdings errorText={errorText} currencies={currencies} />
+      {/* Two registers, one on screen at a time. */}
+      <SegmentedControl
+        label={t('sectionsLabel')}
+        options={FINANCING_SECTIONS.map((value) => ({ value, label: t(`${value}.title`) }))}
+        value={section}
+        onChange={setSection}
+      />
+      {section === 'holdings' ? (
+        <Holdings errorText={errorText} currencies={currencies} />
+      ) : (
+        <Loans errorText={errorText} currencies={currencies} />
+      )}
     </div>
   )
 }

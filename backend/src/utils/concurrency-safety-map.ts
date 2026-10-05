@@ -221,6 +221,15 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     mechanisms: ['conditional-update'],
     evidence: [{ file: `${SVC}/pos/pos.service.ts`, text: ".eq('status', session.status)" }],
   },
+  {
+    // The till's NAME: one text column on one row, no money and no derived
+    // figure. Two people renaming at once leave the later name — which is the
+    // right answer for a label.
+    routeFile: 'pos.routes.ts',
+    route: 'PATCH /sessions/:id/label',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/pos/pos.service.ts`, text: '.update({ label })' }],
+  },
 
   // ─── Offline sync ────────────────────────────────────────────────────────
   {

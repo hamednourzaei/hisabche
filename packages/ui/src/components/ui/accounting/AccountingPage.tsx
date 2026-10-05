@@ -1,11 +1,10 @@
 // packages/ui/src/components/ui/accounting/AccountingPage.tsx
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { lazy, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { usePostUnpostedInvoices, type PostUnpostedSummary } from '@hisabche/api'
-import { AccountingTabs, type AccountingTabId } from './AccountingTabs'
 import { AccountsTab } from './tabs/AccountsTab'
 import { JournalTab } from './tabs/JournalTab'
 import { TrialBalanceTab } from './tabs/TrialBalanceTab'
@@ -14,20 +13,75 @@ import { IncomeStatementTab } from './tabs/IncomeStatementTab'
 import { MonthEndTab } from './tabs/MonthEndTab'
 import { FinancingTab } from './tabs/FinancingTab'
 import { BranchScopeProvider } from '../branch/branch-scope'
+import { BookOpen, FileBarChart, Landmark } from 'lucide-react'
+import { PageHub } from '../page-hub'
+import { useLocaleReplace } from '../../../hooks/use-locale-push'
 
-const VALID_TABS: AccountingTabId[] = [
-  'accounts',
-  'journal',
+//
+// Seven tabs in a row became two, each with one switch:
+//
+//   دفترها     what is written — حساب‌ها · دفتر روزنامه · بستن ماه · وام و سرمایه‌گذاری
+//   گزارش‌ها   what is read    — تراز آزمایشی · ترازنامه · سود و زیان
+//
+// ⚠️ THE SAME SEVEN SCREENS. Every section mounts the tab component that
+// already owned it; the hub fetches nothing. The bar, the switch and the
+// address handling are the shared `HubTabs` / `SegmentedControl` /
+// `useHubTab` / `useHubSection`.
+//
+// ⚠️ THE OLD ADDRESSES STILL OPEN THE RIGHT SCREEN. `?tab=journal`, the
+// address every link in the product was written with, is sent to its section.
+
+// «دارایی‌های ثابت» (was /assets) is a section of «دفترها»: it mounts its own container.
+const AssetsContainer = lazy(() =>
+  import('../assets/containers/assets-container').then((m) => ({ default: m.AssetsContainer })),
+)
+
+const BankContainer = lazy(() =>
+  import('../bank/containers/bank-container').then((m) => ({ default: m.BankContainer })),
+)
+const BudgetsContainer = lazy(() =>
+  import('../budgets/containers/budgets-container').then((m) => ({ default: m.BudgetsContainer })),
+)
+
+export const ACCOUNTING_HUB_TABS = ['books', 'treasury', 'reports'] as const
+export const ACCOUNTING_BOOK_SECTIONS = ['accounts', 'journal', 'monthEnd'] as const
+/** What the business holds and owes outside the day-to-day books. */
+export const ACCOUNTING_TREASURY_SECTIONS = ['bank', 'assets', 'financing'] as const
+export const ACCOUNTING_REPORT_SECTIONS = [
   'trialBalance',
   'balanceSheet',
   'incomeStatement',
-  'monthEnd',
-  'financing',
-]
-const DEFAULT_TAB: AccountingTabId = 'accounts'
+  'budgets',
+] as const
 
-function isValidTab(value: string | null): value is AccountingTabId {
-  return value !== null && (VALID_TABS as string[]).includes(value)
+/** Section → the page it came from (its lock in `NAV_MODULE`). */
+export const ACCOUNTING_SECTION_SOURCE: Partial<Record<string, string>> = {
+  bank: '/bank',
+  assets: '/assets',
+  budgets: '/budgets',
+}
+
+const HUB_TAB_ICON = { books: BookOpen, treasury: Landmark, reports: FileBarChart } as const
+/** Where an old `?tab=` value lives now; null when it is not an old value. */
+export function accountingAddressOf(oldTab: string | null): string | null {
+  const place = (tab: string, sections: readonly string[], section: string) => {
+    const query = [
+      tab === 'books' ? '' : `tab=${tab}`,
+      section === sections[0] ? '' : `view=${section}`,
+    ]
+      .filter(Boolean)
+      .join('&')
+    return query ? `/accounting?${query}` : '/accounting'
+  }
+  for (const [tab, sections] of [
+    ['books', ACCOUNTING_BOOK_SECTIONS],
+    ['treasury', ACCOUNTING_TREASURY_SECTIONS],
+    ['reports', ACCOUNTING_REPORT_SECTIONS],
+  ] as const) {
+    const section = (sections as readonly string[]).find((candidate) => candidate === oldTab)
+    if (section) return place(tab, sections, section)
+  }
+  return null
 }
 
 /**
@@ -107,60 +161,84 @@ function PostUnpostedAction() {
 }
 
 export function AccountingPage() {
+  return <AccountingHub />
+}
+
+function AccountingHub() {
   const t = useTranslations()
-  const router = useRouter()
-  const pathname = usePathname()
+
   const searchParams = useSearchParams()
+  const localeReplace = useLocaleReplace()
+  const moved = accountingAddressOf(searchParams.get('tab'))
+  useEffect(() => {
+    if (moved) localeReplace(moved)
+  }, [moved, localeReplace])
 
-  const activeTab = useMemo<AccountingTabId>(() => {
-    const tabParam = searchParams.get('tab')
-    return isValidTab(tabParam) ? tabParam : DEFAULT_TAB
-  }, [searchParams])
-
-  const handleTabChange = useCallback(
-    (tab: AccountingTabId) => {
-      const params = new URLSearchParams(searchParams.toString())
-      params.set('tab', tab)
-      router.push(`${pathname}?${params.toString()}`, { scroll: false })
-    },
-    [router, pathname, searchParams],
-  )
+  const screen: Record<string, () => React.ReactNode> = {
+    accounts: () => <AccountsTab />,
+    journal: () => <JournalTab />,
+    monthEnd: () => <MonthEndTab />,
+    bank: () => <BankContainer />,
+    assets: () => <AssetsContainer />,
+    financing: () => <FinancingTab />,
+    trialBalance: () => <TrialBalanceTab />,
+    balanceSheet: () => <BalanceSheetTab />,
+    incomeStatement: () => <IncomeStatementTab />,
+    budgets: () => <BudgetsContainer />,
+  }
+  const sectionsOf = (ids: readonly string[]) =>
+    ids.map((id) => ({
+      id,
+      label: t(`accounting.tabs.${id}` as Parameters<typeof t>[0]),
+      source: ACCOUNTING_SECTION_SOURCE[id],
+      // Every screen sits in the same card the tabs always had.
+      render: () => (
+        <div className="min-h-[400px] overflow-hidden rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-0 md:rounded-2xl">
+          {screen[id]?.()}
+        </div>
+      ),
+    }))
 
   return (
-    // K4 — the selected branch is shared by every report on this page, and
-    // lives only as long as the page. Deliberately not global: a branch chosen
-    // here must not silently re-scope the warehouse screen opened next.
     <BranchScopeProvider>
-      <div className="flex flex-col h-full w-full max-w-3xl md:max-w-4xl lg:max-w-6xl mx-auto px-3 md:px-4 lg:px-6">
-        {/* ─── Header ─────────────────────────────────────────── */}
-        <div className="pb-3 md:pb-4 lg:pb-5">
-          <h1 className="font-bold text-[hsl(var(--fg-primary))] text-lg md:text-xl lg:text-2xl">
+      <div className="mx-auto flex h-full w-full max-w-3xl flex-col gap-3 px-3 md:max-w-4xl md:gap-4 md:px-4 lg:max-w-6xl lg:px-6">
+        <div>
+          <h1 className="text-lg font-bold text-[hsl(var(--fg-primary))] md:text-xl lg:text-2xl">
             {t('nav.money')}
           </h1>
-          <p className="text-sm text-[hsl(var(--fg-tertiary))] mt-0.5 md:mt-1">
+          <p className="mt-0.5 text-sm text-[hsl(var(--fg-tertiary))] md:mt-1">
             {t('nav.money_description')}
           </p>
           <PostUnpostedAction />
         </div>
 
-        {/* ─── Tabs ───────────────────────────────────────────── */}
-        <div className="pb-3 md:pb-4">
-          <AccountingTabs activeTab={activeTab} onTabChange={handleTabChange} />
-        </div>
-
-        {/* ─── Body ───────────────────────────────────────────── */}
-        <div className="flex-1 min-h-[400px] md:min-h-[500px] lg:min-h-[600px] rounded-xl md:rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] overflow-hidden mb-4 md:mb-6">
-          {activeTab === 'accounts' && <AccountsTab />}
-          {activeTab === 'journal' && <JournalTab />}
-          {activeTab === 'trialBalance' && <TrialBalanceTab />}
-          {activeTab === 'balanceSheet' && <BalanceSheetTab />}
-          {activeTab === 'incomeStatement' && <IncomeStatementTab />}
-          {activeTab === 'monthEnd' && <MonthEndTab />}
-          {activeTab === 'financing' && <FinancingTab />}
-        </div>
+        <PageHub
+          label={t('accountingHub.label')}
+          sectionsLabel={t('accountingHub.booksLabel')}
+          loadingLabel={t('common.loading')}
+          tabs={[
+            {
+              id: 'books',
+              label: t('accountingHub.tabs.books'),
+              icon: HUB_TAB_ICON.books,
+              sections: sectionsOf(ACCOUNTING_BOOK_SECTIONS),
+            },
+            {
+              id: 'treasury',
+              label: t('accountingHub.tabs.treasury'),
+              icon: HUB_TAB_ICON.treasury,
+              sections: sectionsOf(ACCOUNTING_TREASURY_SECTIONS),
+            },
+            {
+              id: 'reports',
+              label: t('accountingHub.tabs.reports'),
+              icon: HUB_TAB_ICON.reports,
+              sections: sectionsOf(ACCOUNTING_REPORT_SECTIONS),
+            },
+          ]}
+        />
       </div>
     </BranchScopeProvider>
   )
 }
-
 AccountingPage.displayName = 'AccountingPage'

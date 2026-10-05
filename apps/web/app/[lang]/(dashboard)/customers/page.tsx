@@ -1,8 +1,5 @@
 import { Suspense } from 'react'
-import {
-  customersPage as CustomersContainer,
-  customersSkeleton as CustomersSkeleton,
-} from '@hisabche/ui'
+import { CustomersHubContainer, customersSkeleton as CustomersSkeleton } from '@hisabche/ui'
 
 const titles: Record<string, string> = { fa: 'مشتریان', af: 'مشتریان', en: 'Customers' }
 const descriptions: Record<string, string> = {
@@ -36,7 +33,7 @@ export const dynamic = 'force-dynamic'
 export default function CustomersPage() {
   return (
     <Suspense fallback={<CustomersSkeleton />}>
-      <CustomersContainer />
+      <CustomersHubContainer />
     </Suspense>
   )
 }

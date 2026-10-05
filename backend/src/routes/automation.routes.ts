@@ -11,6 +11,7 @@
 // real validation is the invoice's own schema inside the service.
 // ============================================
 
+import { resolveTimeZone } from '../utils/local-day'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import {
@@ -83,9 +84,24 @@ export async function automationRoutes(fastify: FastifyInstance) {
             calendar: z.enum(SCHEDULE_CALENDARS),
             fiscalYearEndMonth: z.number().int().min(1).max(12),
             lock: z.boolean().default(true),
+            dayOfMonth: z.number().int().min(1).max(31).default(1),
+            from: z
+              .string()
+              .regex(/^\d{4}-\d{2}-\d{2}$/)
+              .optional(),
+            atMinute: z.number().int().min(0).max(1439).optional(),
+            timeZone: z.string().min(1).max(64).optional(),
           })
+          .strict()
           .parse(request.body)
-        const created = await automationService.createMonthEnd(request.tenancy, input)
+        const created = await automationService.createMonthEnd(request.tenancy, {
+          ...input,
+          // A time of day needs a zone the server knows; an unknown one becomes
+          // the business default rather than a time nobody can name.
+          ...(input.atMinute !== undefined
+            ? { timeZone: resolveTimeZone(input.timeZone) }
+            : { timeZone: undefined }),
+        })
         return reply.code(201).send(created)
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to set up the automatic month-end')

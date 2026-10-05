@@ -200,6 +200,11 @@ export function useCreateMonthEndAutomation() {
       calendar: 'gregory' | 'persian'
       fiscalYearEndMonth: number
       lock: boolean
+      /** When it runs — day of the month, from which ISO day, minute of the day, IANA zone. */
+      dayOfMonth?: number | undefined
+      from?: string | undefined
+      atMinute?: number | undefined
+      timeZone?: string | undefined
     }): Promise<Automation> => {
       const { data } = await apiClient.post<Automation>('/automations/month-end', input)
       return data

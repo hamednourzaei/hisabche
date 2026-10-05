@@ -22,13 +22,14 @@
 
 import { memo, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { toIsoDay } from '@hisabche/formatting'
+import { formatNumber, toIsoDay } from '@hisabche/formatting'
 import { addIsoDays, calendarDay, monthBounds, type ScheduleCalendar } from '@hisabche/validation'
 import {
   apiErrorMessage,
   useAutomations,
   useCreateMonthEndAutomation,
   useRemoveAutomation,
+  useUpdateAutomation,
   useRunMonthEnd,
   type MonthEndResult,
 } from '@hisabche/api'
@@ -61,6 +62,29 @@ function daysInEachMonth(today: string, calendar: ScheduleCalendar): string[] {
   return Array.from({ length: 12 }, (_, index) => byMonth.get(index + 1) ?? today)
 }
 
+/** The runner looks every five minutes, so a minute is offered in fives. */
+export const RUN_MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55] as const
+
+/**
+ * The months an automatic close may START in: this one and the next thirteen,
+ * each with its own first ISO day, in the reader's calendar.
+ */
+export function startMonths(
+  today: string,
+  calendar: ScheduleCalendar,
+): Array<{ year: number; month: number; from: string }> {
+  const months: Array<{ year: number; month: number; from: string }> = []
+  let cursor = monthBounds(today, calendar)
+  for (let index = 0; index < 14; index += 1) {
+    const { year, month } = calendarDay(cursor.from, calendar)
+    months.push({ year, month, from: cursor.from })
+    cursor = monthBounds(addIsoDays(cursor.to, 1), calendar)
+  }
+  return months
+}
+
+const two = (value: number) => String(value).padStart(2, '0')
+
 export const MonthEndTab = memo(function MonthEndTab() {
   const t = useTranslations()
   const locale = useIntlLocale()
@@ -83,6 +107,22 @@ export const MonthEndTab = memo(function MonthEndTab() {
   )
 
   const [yearEndMonth, setYearEndMonth] = useState('')
+
+  // ── When the automatic close runs: month, year, day, hour, minute ──
+  // Starts on the 1st of next month at 00:00 — what «automatic» has always
+  // meant here — until the person says otherwise.
+  const months = useMemo(() => startMonths(today, calendar), [today, calendar])
+  const next = months[1] ?? months[0]
+  const [runMonth, setRunMonth] = useState(() => String(next?.month ?? 1))
+  const [runYear, setRunYear] = useState(() => String(next?.year ?? ''))
+  const [runDay, setRunDay] = useState('1')
+  const [runHour, setRunHour] = useState('0')
+  const [runMinute, setRunMinute] = useState('0')
+  const years = useMemo(() => [...new Set(months.map((entry) => entry.year))], [months])
+  // The first ISO day of the chosen month; undefined when that month is past.
+  const runFrom = months.find(
+    (entry) => entry.year === Number(runYear) && entry.month === Number(runMonth),
+  )?.from
   const [lock, setLock] = useState(true)
   const [result, setResult] = useState<MonthEndResult | null>(null)
 
@@ -90,6 +130,7 @@ export const MonthEndTab = memo(function MonthEndTab() {
   const automations = useAutomations()
   const createAutomatic = useCreateMonthEndAutomation()
   const removeAutomatic = useRemoveAutomation()
+  const updateAutomatic = useUpdateAutomation()
 
   const automatic = (automations.data ?? []).find((row) => row.actionType === 'month_end') ?? null
   const yearEnd = Number(yearEndMonth)
@@ -129,6 +170,85 @@ export const MonthEndTab = memo(function MonthEndTab() {
         </div>
         <p className="text-xs text-[hsl(var(--fg-tertiary))]">
           {t('accounting.monthEnd.yearEndHint')}
+        </p>
+
+        {/* ── When the automatic close runs — one horizontal row ── */}
+        <h3 className="pt-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
+          {t('accounting.monthEnd.scheduleTitle')}
+        </h3>
+        <div className="flex flex-nowrap items-end gap-2 overflow-x-auto pb-1" data-run-schedule="">
+          <div className="w-36 shrink-0">
+            <span className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
+              {t('accounting.monthEnd.month')}
+            </span>
+            <SelectField
+              name="runMonth"
+              aria-label={t('accounting.monthEnd.month')}
+              value={runMonth}
+              onChange={setRunMonth}
+              options={monthNames.map((name, index) => ({ value: String(index + 1), label: name }))}
+            />
+          </div>
+          <div className="w-28 shrink-0">
+            <span className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
+              {t('accounting.monthEnd.year')}
+            </span>
+            <SelectField
+              name="runYear"
+              aria-label={t('accounting.monthEnd.year')}
+              value={runYear}
+              onChange={setRunYear}
+              options={years.map((year) => ({
+                value: String(year),
+                label: new Intl.NumberFormat(locale, { useGrouping: false }).format(year),
+              }))}
+            />
+          </div>
+          <div className="w-24 shrink-0">
+            <span className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
+              {t('accounting.monthEnd.day')}
+            </span>
+            <SelectField
+              name="dayOfMonth"
+              aria-label={t('accounting.monthEnd.day')}
+              value={runDay}
+              onChange={setRunDay}
+              options={Array.from({ length: 31 }, (_, index) => ({
+                value: String(index + 1),
+                label: formatNumber(index + 1, locale, 0),
+              }))}
+            />
+          </div>
+          <div className="w-24 shrink-0">
+            <span className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
+              {t('accounting.monthEnd.hour')}
+            </span>
+            <SelectField
+              name="runHour"
+              aria-label={t('accounting.monthEnd.hour')}
+              value={runHour}
+              onChange={setRunHour}
+              options={Array.from({ length: 24 }, (_, hour) => ({
+                value: String(hour),
+                label: two(hour),
+              }))}
+            />
+          </div>
+          <div className="w-24 shrink-0">
+            <span className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
+              {t('accounting.monthEnd.minute')}
+            </span>
+            <SelectField
+              name="runMinute"
+              aria-label={t('accounting.monthEnd.minute')}
+              value={runMinute}
+              onChange={setRunMinute}
+              options={RUN_MINUTES.map((minute) => ({ value: String(minute), label: two(minute) }))}
+            />
+          </div>
+        </div>
+        <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+          {runFrom ? t('accounting.monthEnd.scheduleHint') : t('accounting.monthEnd.schedulePast')}
         </p>
       </section>
 
@@ -251,6 +371,16 @@ export const MonthEndTab = memo(function MonthEndTab() {
                   {t('accounting.monthEnd.next')} {date(automatic.nextRunOn)}
                 </>
               ) : null}
+              {automatic.cadence.kind === 'monthly' && automatic.cadence.atMinute !== undefined ? (
+                <>
+                  {' · '}
+                  {t('accounting.monthEnd.runsAt')}{' '}
+                  <span dir="ltr" className="tabular-nums">
+                    {two(Math.floor(automatic.cadence.atMinute / 60))}:
+                    {two(automatic.cadence.atMinute % 60)}
+                  </span>
+                </>
+              ) : null}
             </p>
             <Button
               type="button"
@@ -265,6 +395,37 @@ export const MonthEndTab = memo(function MonthEndTab() {
             >
               {t('accounting.monthEnd.autoTurnOff')}
             </Button>
+            {/* An automatic close that is already on takes the new time in place —
+                no need to turn it off and on again. */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="ms-2"
+              disabled={!runFrom || updateAutomatic.isPending}
+              loading={updateAutomatic.isPending}
+              onClick={() =>
+                updateAutomatic.mutate(
+                  {
+                    id: automatic.id,
+                    cadence: {
+                      kind: 'monthly',
+                      calendar,
+                      dayOfMonth: Number(runDay),
+                      from: runFrom ?? today,
+                      atMinute: Number(runHour) * 60 + Number(runMinute),
+                      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    },
+                  },
+                  {
+                    onSuccess: () => toast.success(t('accounting.monthEnd.scheduleSaved')),
+                    onError: (error) => say(error, 'saveFailed'),
+                  },
+                )
+              }
+            >
+              {t('accounting.monthEnd.scheduleSave')}
+            </Button>
           </div>
         ) : (
           <div className="mt-2 space-y-2">
@@ -275,11 +436,20 @@ export const MonthEndTab = memo(function MonthEndTab() {
               type="button"
               variant="outline"
               size="sm"
-              disabled={!hasYearEnd || createAutomatic.isPending}
+              disabled={!hasYearEnd || !runFrom || createAutomatic.isPending}
               loading={createAutomatic.isPending}
               onClick={() =>
                 createAutomatic.mutate(
-                  { calendar, fiscalYearEndMonth: yearEnd, lock },
+                  {
+                    calendar,
+                    fiscalYearEndMonth: yearEnd,
+                    lock,
+                    dayOfMonth: Number(runDay),
+                    ...(runFrom ? { from: runFrom } : {}),
+                    atMinute: Number(runHour) * 60 + Number(runMinute),
+                    // The time is the person's own clock: the zone of this device.
+                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                  },
                   {
                     onSuccess: () => toast.success(t('accounting.monthEnd.autoSaved')),
                     onError: (error) => say(error, 'saveFailed'),

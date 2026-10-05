@@ -1434,3 +1434,17 @@ p,
   background: hsl(var(--surface-muted));
   font-weight: 700;
 }
+
+/* ─── A select is a dropdown, not a dialog ────────────────────────────────
+   Radix locks <body> while a select is open (overflow hidden, position
+   relative, a margin where the scrollbar was). That froze the page and, on a
+   scrolled page, sent the sticky dashboard header back to the top of the
+   document — out of sight. `Select` marks <html data-select-open> while one
+   is open, and the lock is undone under that mark only. A dialog still locks.
+   See components/ui/select.tsx. */
+html[data-select-open] body[data-scroll-locked] {
+  overflow: visible !important;
+  position: static !important;
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+}

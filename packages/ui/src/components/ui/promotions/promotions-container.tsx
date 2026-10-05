@@ -17,7 +17,7 @@
 // price a product is suggested at (see price-lists-panel.tsx).
 // ============================================
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { formatNumber } from '@hisabche/formatting'
 import { useCurrencyStore } from '@hisabche/store'
@@ -41,7 +41,9 @@ import { readProducts } from '../../../lib/invoices/products'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { Button } from '../button'
+import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 import { JalaliDatePicker } from '../jalali-datepicker'
+import { SegmentedControl } from '../segmented-control'
 import { SelectField } from '../select-field'
 import { PriceListsPanel } from './price-lists-panel'
 
@@ -73,6 +75,20 @@ export function PromotionsContainer() {
   const promotions = usePromotions()
   const setActive = useSetPromotionActive()
   const [adding, setAdding] = useState(false)
+  const [search, setSearch] = useState('')
+  // Promotions and price lists are two lists; one is on screen at a time.
+  const [section, setSection] = useState<'promotions' | 'lists'>('promotions')
+  // The shared table speaks whole keys with a fallback; this screen's own `t`
+  // is scoped. Same catalogue, and a missing column label never throws.
+  const translateAll = useTranslations()
+  const tableT = (key: string, fallback?: string): string => {
+    try {
+      const value = translateAll(key as Parameters<typeof translateAll>[0])
+      return value && value !== key ? value : (fallback ?? key)
+    } catch {
+      return fallback ?? key
+    }
+  }
 
   const errorText = (error: unknown): string => {
     const raw = apiErrorMessage(error, '')
@@ -91,6 +107,97 @@ export function PromotionsContainer() {
         : t('allCustomers'),
     ].join(' · ')
 
+  const window = (promotion: SavedPromotion) =>
+    promotion.validFrom || promotion.validTo
+      ? `${promotion.validFrom ? date(promotion.validFrom) : '…'} – ${promotion.validTo ? date(promotion.validTo) : '…'}`
+      : t('always')
+  const amount = (promotion: SavedPromotion) =>
+    promotion.kind === 'percentage'
+      ? `${formatNumber(promotion.value, locale, 2)}٪`
+      : `${formatNumber(promotion.value, locale, 2)} ${promotion.currency ?? ''}`
+
+  // The same table the invoice list uses: search, saved views, column settings.
+  const columns: TableColumn<SavedPromotion>[] = [
+    {
+      id: 'name',
+      labelKey: 'promotions.name',
+      labelFallback: 'نام',
+      locked: true,
+      sortValue: (promotion) => promotion.name,
+      render: (promotion) => (
+        <span className="font-medium text-[hsl(var(--fg-primary))]">{promotion.name}</span>
+      ),
+    },
+    {
+      id: 'value',
+      labelKey: 'promotions.columns.value',
+      labelFallback: 'مقدار',
+      sortValue: (promotion) => promotion.value,
+      render: (promotion) => <span className="tabular-nums">{amount(promotion)}</span>,
+    },
+    {
+      id: 'scope',
+      labelKey: 'promotions.columns.scope',
+      labelFallback: 'برای',
+      showFrom: 'md',
+      render: (promotion) => (
+        <span className="text-[hsl(var(--fg-secondary))]">
+          {scope(promotion)}
+          {promotion.stacking === 'stacking' ? ` · ${t('stacks')}` : ''}
+        </span>
+      ),
+    },
+    {
+      id: 'validity',
+      labelKey: 'promotions.columns.validity',
+      labelFallback: 'اعتبار',
+      showFrom: 'md',
+      sortValue: (promotion) => promotion.validTo ?? '',
+      render: (promotion) => (
+        <span className="text-[hsl(var(--fg-secondary))]">{window(promotion)}</span>
+      ),
+    },
+    {
+      id: 'status',
+      labelKey: 'promotions.columns.status',
+      labelFallback: 'وضعیت',
+      sortValue: (promotion) => (promotion.isActive ? 0 : 1),
+      render: (promotion) => (
+        <span
+          className={cn(
+            'rounded-full px-2 py-0.5 text-xs',
+            promotion.isActive
+              ? 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]'
+              : 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
+          )}
+        >
+          {promotion.isActive ? t('active') : t('retired')}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      labelKey: 'promotions.columns.actions',
+      labelFallback: 'عملیات',
+      locked: true,
+      align: 'end',
+      render: (promotion) => (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={setActive.isPending && setActive.variables?.id === promotion.id}
+          onClick={() => setActive.mutate({ id: promotion.id, isActive: !promotion.isActive })}
+        >
+          {promotion.isActive ? t('retire') : t('reactivate')}
+        </Button>
+      ),
+    },
+  ]
+  const rows = useMemo(
+    () => (promotions.data ?? []).filter((promotion) => matchesSearch(search, [promotion.name])),
+    [promotions.data, search],
+  )
+
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5 px-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -98,12 +205,28 @@ export function PromotionsContainer() {
           <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">{t('title')}</h1>
           <p className="mt-1 text-sm text-[hsl(var(--fg-tertiary))]">{t('subtitle')}</p>
         </div>
-        {!adding ? <Button onClick={() => setAdding(true)}>{t('add')}</Button> : null}
+        {section === 'promotions' && !adding ? (
+          <Button onClick={() => setAdding(true)}>{t('add')}</Button>
+        ) : null}
       </header>
 
-      {adding ? <PromotionForm onDone={() => setAdding(false)} errorText={errorText} /> : null}
+      <SegmentedControl
+        label={t('sectionsLabel')}
+        value={section}
+        onChange={setSection}
+        options={[
+          { value: 'promotions', label: t('sections.promotions') },
+          { value: 'lists', label: t('sections.lists') },
+        ]}
+      />
 
-      {promotions.isLoading ? (
+      {section === 'lists' ? <PriceListsPanel /> : null}
+
+      {section === 'promotions' && adding ? (
+        <PromotionForm onDone={() => setAdding(false)} errorText={errorText} />
+      ) : null}
+
+      {section !== 'promotions' ? null : promotions.isLoading ? (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-14 animate-pulse rounded-xl bg-[hsl(var(--surface-muted))]" />
@@ -118,54 +241,30 @@ export function PromotionsContainer() {
           {t('empty')}
         </p>
       ) : (
-        <ul className="space-y-2">
-          {promotions.data.map((promotion) => (
-            <li key={promotion.id} className={cn(card, 'flex flex-wrap items-center gap-3 p-4')}>
-              <div className="min-w-0 flex-1">
-                <p className="flex flex-wrap items-center gap-2 font-medium text-[hsl(var(--fg-primary))]">
-                  {promotion.name}
-                  <span className="rounded-full bg-[hsl(var(--color-primary)/0.1)] px-2 py-0.5 text-xs tabular-nums text-[hsl(var(--color-primary))]">
-                    {promotion.kind === 'percentage'
-                      ? `${formatNumber(promotion.value, locale, 2)}٪`
-                      : `${formatNumber(promotion.value, locale, 2)} ${promotion.currency ?? ''}`}
-                  </span>
-                  {!promotion.isActive ? (
-                    <span className="rounded-full bg-[hsl(var(--surface-muted))] px-2 py-0.5 text-xs text-[hsl(var(--fg-secondary))]">
-                      {t('retired')}
-                    </span>
-                  ) : null}
-                </p>
-                <p className="mt-1 text-xs text-[hsl(var(--fg-tertiary))]">
-                  {scope(promotion)}
-                  {' · '}
-                  {promotion.validFrom || promotion.validTo
-                    ? `${promotion.validFrom ? date(promotion.validFrom) : '…'} – ${promotion.validTo ? date(promotion.validTo) : '…'}`
-                    : t('always')}
-                  {promotion.stacking === 'stacking' ? ` · ${t('stacks')}` : ''}
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={setActive.isPending && setActive.variables?.id === promotion.id}
-                onClick={() =>
-                  setActive.mutate({ id: promotion.id, isActive: !promotion.isActive })
-                }
-              >
-                {promotion.isActive ? t('retire') : t('reactivate')}
-              </Button>
-            </li>
-          ))}
-        </ul>
+        <DataTable
+          tableId="promotions"
+          t={tableT}
+          rows={rows}
+          columns={columns}
+          rowKey={(promotion) => promotion.id}
+          searchValue={search}
+          onSearchChange={setSearch}
+          minWidthClass="min-w-[420px] sm:min-w-[640px]"
+          emptyState={
+            <p className="p-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
+              {t('nothingFound')}
+            </p>
+          }
+        />
       )}
-      {setActive.error ? (
+      {section === 'promotions' && setActive.error ? (
         <p role="alert" className="text-sm text-[hsl(var(--color-destructive))]">
           {errorText(setActive.error)}
         </p>
       ) : null}
-      <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('note')}</p>
-
-      <PriceListsPanel />
+      {section === 'promotions' ? (
+        <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('note')}</p>
+      ) : null}
     </div>
   )
 }

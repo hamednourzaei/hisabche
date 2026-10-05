@@ -41,7 +41,73 @@ import { useTranslations } from 'next-intl'
 import { cn } from '../../lib/utils'
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, SearchIcon } from 'lucide-react'
 
-const Select = SelectPrimitive.Root
+/**
+ * The root of every select in the product.
+ *
+ * ⚠️ A SELECT IS A DROPDOWN, NOT A DIALOG — AND RADIX TREATS IT AS ONE.
+ *
+ * Radix locks the page while a select is open: it sets `overflow: hidden` and
+ * `position: relative` on <body> and swallows every wheel and touch-move
+ * outside the list. Two things followed, on every page:
+ *
+ *   1. the page froze — it could not be scrolled until the list was closed;
+ *   2. if the page had been scrolled, the dashboard header VANISHED. The
+ *      header is `position: sticky`; with `overflow: hidden` on <body>, body
+ *      becomes its scroll container, body is not scrolled, so the header went
+ *      back to the top of the document — off screen.
+ *
+ * So this root does two things while a select is open:
+ *
+ *   · marks <html data-select-open>, and `globals.css` undoes the body lock
+ *     under that mark — the header stays where it is and nothing shifts;
+ *   · closes the list on the first wheel or touch-move outside it, the way a
+ *     native dropdown does, so the next movement scrolls the page.
+ *
+ * A dialog still locks the page: the mark is set by selects only.
+ */
+function Select({
+  open: openProp,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) {
+  const [innerOpen, setInnerOpen] = React.useState(defaultOpen ?? false)
+  const open = openProp ?? innerOpen
+
+  const setOpen = React.useCallback(
+    (next: boolean) => {
+      setInnerOpen(next)
+      onOpenChange?.(next)
+    },
+    [onOpenChange],
+  )
+
+  React.useEffect(() => {
+    if (!open) return
+    const root = document.documentElement
+    // Counted, not a boolean: one select can open while another is closing.
+    root.dataset.selectOpen = String(Number(root.dataset.selectOpen ?? '0') + 1)
+
+    const closeOnScroll = (event: Event) => {
+      const target = event.target
+      // Scrolling the list itself is not scrolling the page.
+      if (target instanceof Element && target.closest('[data-select-content]')) return
+      setOpen(false)
+    }
+    window.addEventListener('wheel', closeOnScroll, { capture: true, passive: true })
+    window.addEventListener('touchmove', closeOnScroll, { capture: true, passive: true })
+
+    return () => {
+      window.removeEventListener('wheel', closeOnScroll, { capture: true })
+      window.removeEventListener('touchmove', closeOnScroll, { capture: true })
+      const left = Number(root.dataset.selectOpen ?? '1') - 1
+      if (left > 0) root.dataset.selectOpen = String(left)
+      else delete root.dataset.selectOpen
+    }
+  }, [open, setOpen])
+
+  return <SelectPrimitive.Root {...props} open={open} onOpenChange={setOpen} />
+}
 const SelectGroup = SelectPrimitive.Group
 const SelectValue = SelectPrimitive.Value
 
@@ -236,6 +302,8 @@ const SelectContent = React.forwardRef<
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
+        // The mark `Select` looks for: a wheel inside the list scrolls the list.
+        data-select-content=""
         ref={ref}
         position={position}
         className={cn(

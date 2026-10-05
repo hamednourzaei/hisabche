@@ -24,9 +24,19 @@ describe('#89 till page', () => {
     expect(view).toContain("t('till.add_till'")
     expect(view).toContain('onRowClick={(item) => onSelectTill(item.sessionId)}')
     expect(view).toContain("t('till.add_cash'")
+    // The transactions are the shared table: search and the type filter live
+    // in its own toolbar, and there is no hand-made table or card list left.
     const ledger = view.slice(view.indexOf("t('till.ledger_title'"))
-    expect(ledger.indexOf('value={ledgerSearch}')).toBeLessThan(ledger.indexOf('<table'))
-    expect(ledger.indexOf('<SegmentedFilter')).toBeLessThan(ledger.indexOf('<table'))
+    expect(ledger).toContain('tableId="till-ledger"')
+    expect(ledger).toContain('searchValue={ledgerSearch}')
+    expect(ledger).toContain('<TableFilterSelect')
+    expect(view).not.toContain('<table')
+    expect(view).not.toContain('<SegmentedFilter')
+    // «افزودن صندوق» is the page's own action and opens a dialog — once.
+    expect(view.split("t('till.add_till'").length - 1).toBe(2)
+    expect(view).toContain('data-add-till=""')
+    // The chart's range is the shared switch.
+    expect(view).toContain('<SegmentedControl')
     expect(container).toContain('useOpenSessions()')
     expect(container).toContain("kind: 'cash_in'")
   })

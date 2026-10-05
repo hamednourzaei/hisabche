@@ -4,68 +4,73 @@
 // packages/ui/src/components/ui/expiry/containers/expiry-container.tsx
 // ============================================
 
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import {
+  apiErrorMessage,
   asList,
   useBatches,
   useExpiryReport,
-  usePlanIssue,
-  type AllocationPlan,
+  useUpdateBatchDates,
+  useWarehouseOverview,
   type StockBatch,
-  apiErrorMessage,
 } from '@hisabche/api'
+
+import { useLocalePush } from '../../../../hooks/use-locale-push'
 import { ExpiryView } from '../expiry-view'
 
 export const ExpiryContainer = memo(function ExpiryContainer() {
   const translate = useTranslations()
-  const t = (key: string, fallback?: string): string => {
-    const value = translate(key as Parameters<typeof translate>[0])
-    return value && value !== key ? value : (fallback ?? key)
-  }
-
-  const [plan, setPlan] = useState<AllocationPlan | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const value = translate(key as Parameters<typeof translate>[0])
+      return value && value !== key ? value : (fallback ?? key)
+    },
+    [translate],
+  )
+  const push = useLocalePush()
 
   const report = useExpiryReport()
   const batches = useBatches()
-  const planIssue = usePlanIssue()
-
-  const handlePlanIssue = useCallback(
-    (input: { productId: string; quantity: number }) => {
-      setActionError(null)
-      // Cleared first. A plan left on screen from a previous product, next to a
-      // new product's name, is a plan somebody will act on.
-      setPlan(null)
-      planIssue.mutate(input, {
-        onSuccess: setPlan,
-        onError: (err) => {
-          const message = apiErrorMessage(err, t('common.saveError', 'انجام نشد'))
-          setActionError(message)
-        },
-      })
-    },
-    [planIssue],
-  )
+  const warehouses = useWarehouseOverview()
+  const updateDates = useUpdateBatchDates()
 
   const handleRefresh = useCallback(() => {
-    setActionError(null)
-    setPlan(null)
     report.refetch()
     batches.refetch()
   }, [batches, report])
+
+  // The mutation invalidates every expiry read, so the table, the four figures
+  // and the product's own expiry panel all follow the new date.
+  const { mutateAsync } = updateDates
+  const handleSaveExpiry = useCallback(
+    async (batchId: string, expiryDate: string | null) => {
+      try {
+        await mutateAsync({ batchId, expiryDate })
+      } catch (err) {
+        throw new Error(
+          apiErrorMessage(err, t('expiry.save_failed', 'ذخیره نشد. دوباره تلاش کنید.')),
+          { cause: err },
+        )
+      }
+    },
+    [mutateAsync, t],
+  )
+
+  // The same product page a row of the warehouse table opens.
+  const openProduct = useCallback((productId: string) => push(`/warehouse/${productId}`), [push])
 
   return (
     <ExpiryView
       t={t}
       report={report.data ?? null}
       batches={asList<StockBatch>(batches.data)}
-      plan={plan}
+      warehouses={asList<{ id: string; name: string }>(warehouses.data?.warehouses)}
       isLoading={report.isLoading}
       error={report.error ? (report.error as Error).message : null}
-      actionError={actionError}
-      isBusy={planIssue.isPending}
-      onPlanIssue={handlePlanIssue}
+      isSaving={updateDates.isPending}
+      onSaveExpiry={handleSaveExpiry}
+      onOpenProduct={openProduct}
       onRefresh={handleRefresh}
     />
   )

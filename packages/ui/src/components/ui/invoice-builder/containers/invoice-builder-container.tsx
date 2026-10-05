@@ -22,6 +22,7 @@ import { useOversoldLines } from '../use-oversold-lines'
 import { CreditLimitWarning } from '../credit-limit-warning'
 import { useCustomerTerms } from '../use-customer-terms'
 import { InvoiceWarehouseSelect } from '../invoice-warehouse-select'
+import { InvoiceBranchSelect } from '../invoice-branch-select'
 import { BarcodeScanDialog, type ScanProblem } from '../barcode-scan-dialog'
 import { CameraScanButton } from '../camera-scan-button'
 import {
@@ -204,6 +205,10 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
     (value: string | null) => draft.setField('warehouseId', value),
     [draft],
   )
+  const setBranchId = useCallback(
+    (value: string | null) => draft.setField('branchId', value),
+    [draft],
+  )
   const creditBreachInfo = useCustomerTerms({
     customerId: draft.customers[0]?.id,
     transactionType: draft.transactionType,
@@ -253,6 +258,7 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
               disabled={scanProblem !== null}
               onOpenChange={setScanDialogOpen}
             />
+            <InvoiceBranchSelect t={t} value={draft.branchId} onChange={setBranchId} />
             <InvoiceWarehouseSelect
               t={t}
               transactionType={draft.transactionType}

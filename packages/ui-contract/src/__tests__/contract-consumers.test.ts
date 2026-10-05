@@ -74,7 +74,6 @@ const CONTRACTS: ReadonlyArray<{ symbol: string; definedIn: RegExp }> = [
   { symbol: 'Entity360', definedIn: /entity-360\.tsx$/ },
   { symbol: 'WorkStateNote', definedIn: /work-state\.tsx$/ },
   { symbol: 'WorkStateBadge', definedIn: /work-state\.tsx$/ },
-  { symbol: 'WorkQueueContainer', definedIn: /work-queue-container\.tsx$/ },
 ]
 
 /**

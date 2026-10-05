@@ -29,6 +29,13 @@ export const automationCadenceSchema = z.discriminatedUnion('kind', [
     dayOfMonth: z.number().int().min(1).max(31),
     calendar: z.enum(SCHEDULE_CALENDARS).default('gregory'),
     from: isoDay,
+    /**
+     * Run at this minute of the day (0–1439) in `timeZone`, not at the daily
+     * pass. Absent = the daily pass, which is what every earlier row means.
+     * The runner looks every five minutes, so that is the precision.
+     */
+    atMinute: z.number().int().min(0).max(1439).optional(),
+    timeZone: z.string().min(1).max(64).optional(),
   }),
   z.object({
     kind: z.literal('interval'),

@@ -22,7 +22,7 @@
 // inventing another set of tiles.
 // ============================================
 
-import { NAV_CONTRACT, type NavId } from './navigation'
+import { NAV_CONTRACT } from './navigation'
 
 /* ─── Breadcrumbs ─────────────────────────────────────────────────────────── */
 
@@ -95,90 +95,4 @@ export function localizePath(path: string, lang: string | null | undefined): str
   if (!lang || !path.startsWith('/')) return path
   if (path === `/${lang}` || path.startsWith(`/${lang}/`)) return path
   return `/${lang}${path}`
-}
-
-/* ─── Domain workspaces ───────────────────────────────────────────────────── */
-
-export const DOMAINS = ['accounting', 'sales', 'inventory', 'people'] as const
-export type DomainId = (typeof DOMAINS)[number]
-
-export interface DomainSpec {
-  readonly id: DomainId
-  readonly labelKey: string
-  /** Destinations that belong to this domain, in the order they are offered. */
-  readonly destinations: readonly NavId[]
-  /** The one or two things somebody opens this domain to DO. */
-  readonly primaryActions: readonly NavId[]
-}
-
-/**
- * Which destinations belong to which domain.
- *
- * Every id here must exist in NAV_CONTRACT — `shell.test.ts` holds that, so a
- * domain cannot advertise a page that was deleted.
- *
- * Note what is absent: there is no `manufacturing` domain and no `purchasing`
- * domain, even though both have screens. Neither has enough destinations to be
- * worth a hub of its own, and a domain page listing one link is worse than the
- * link.
- */
-export const DOMAIN_SPECS: readonly DomainSpec[] = [
-  {
-    id: 'accounting',
-    labelKey: 'domain.accounting',
-    destinations: ['money', 'bank', 'budgets', 'assets', 'approvals', 'governance'],
-    primaryActions: ['money'],
-  },
-  {
-    id: 'sales',
-    labelKey: 'domain.sales',
-    // 'sell' is a command-palette ACTION, not a destination — there is no
-    // page at /sell. A hub linking to it would be a dead door.
-    destinations: ['till', 'get-paid', 'buyers', 'follow-up'],
-    primaryActions: ['till'],
-  },
-  {
-    id: 'inventory',
-    labelKey: 'domain.inventory',
-    destinations: ['stock', 'buy', 'expiry', 'production'],
-    primaryActions: ['stock'],
-  },
-  {
-    id: 'people',
-    labelKey: 'domain.people',
-    // G1: 'team' (/human-resources) folded into 'coworkers'
-    // (/team-and-payroll). They listed the same people twice, and the People
-    // workspace showed both as separate destinations.
-    destinations: ['coworkers', 'timesheets'],
-    primaryActions: ['coworkers'],
-  },
-]
-
-export function domainFor(id: DomainId): DomainSpec {
-  const spec = DOMAIN_SPECS.find((domain) => domain.id === id)
-  if (!spec) throw new Error(`unknown domain: ${id}`)
-  return spec
-}
-
-/**
- * Which domain a destination belongs to, if any.
- *
- * Returns null rather than guessing. Plenty of destinations — settings, sync,
- * conflicts, data migration — deliberately belong to no business domain, and
- * forcing them into one would put "import customers" under Sales where nobody
- * would look for it.
- */
-export function domainOf(nav: NavId): DomainId | null {
-  return DOMAIN_SPECS.find((domain) => domain.destinations.includes(nav))?.id ?? null
-}
-
-/**
- * The destinations of a domain, filtered to what this actor may reach.
- *
- * ⚠️ A rendering filter, not authorization. Each destination's own routes
- * enforce their capabilities server-side; this only avoids offering a door
- * that will refuse to open.
- */
-export function domainDestinations(id: DomainId, authorized: readonly NavId[]): readonly NavId[] {
-  return domainFor(id).destinations.filter((nav) => authorized.includes(nav))
 }

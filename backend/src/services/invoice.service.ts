@@ -165,6 +165,8 @@ function applyInvoiceListFilters<Q extends InvoiceFilterable<Q>>(
   if (filters.search) q = q.ilike('invoice_number', `%${filters.search}%`)
   if (filters.type) q = q.eq('type', filters.type)
   if (filters.status) q = q.eq('status', filters.status)
+  if (filters.branchId) q = q.eq('branch_id', filters.branchId)
+  if (filters.warehouseId) q = q.eq('warehouse_id', filters.warehouseId)
   // H1 — the rule is imported, not restated. See outstanding.domain.ts.
   if (filters.outstanding) q = q.or(OUTSTANDING_OR_FILTER)
   if (filters.customerId) q = q.eq('customer_id', filters.customerId)

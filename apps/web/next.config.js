@@ -83,6 +83,44 @@ const nextConfig = {
     serverActions: { bodySizeLimit: '2mb' },
   },
 
+  // Addresses that are no longer a page. Each one is a tab or a section of the
+  // page that holds the same data, and the old address opens it there. The same
+  // pairs are routes in packages/app-shell (guard: route-parity.test.ts).
+  async redirects() {
+    const moved = [
+      ['crm', 'customers?tab=outreach'],
+      ['sales-followup', 'customers?tab=outreach'],
+      ['tasks', 'customers?tab=outreach'],
+      ['campaigns', 'customers?tab=outreach&view=campaigns'],
+      ['customer-list', 'customers'],
+      ['product-list', 'warehouse?tab=products'],
+      ['expiry', 'warehouse?tab=expiry'],
+      ['human-resources', 'team-and-payroll'],
+      ['human-resources/:id', 'team-and-payroll/:id'],
+      ['timesheets', 'team-and-payroll?tab=pay&view=timesheets'],
+      ['permissions', 'governance?tab=permissions'],
+      ['purchasing', 'invoices?type=purchase'],
+      ['promotions', 'invoices?tab=pricing'],
+      ['bank', 'accounting?tab=treasury'],
+      ['assets', 'accounting?tab=treasury&view=assets'],
+      ['budgets', 'accounting?tab=reports&view=budgets'],
+      ['workflow-templates', 'approvals?tab=workflows'],
+      ['conflicts', 'data-and-sync?tab=details&view=conflicts'],
+      ['data-migration', 'data-and-sync?tab=details&view=migration'],
+      ['wallet', 'billing?tab=money'],
+      ['referrals', 'billing?tab=money&view=referrals'],
+      ['accounting-workspace', 'accounting'],
+      ['sales-workspace', 'invoices'],
+      ['inventory-workspace', 'warehouse'],
+      ['people-workspace', 'team-and-payroll'],
+    ]
+    return moved.map(([from, to]) => ({
+      source: '/:lang(fa|af|en)/' + from,
+      destination: '/:lang/' + to,
+      permanent: true,
+    }))
+  },
+
   async headers() {
     return [
       {
@@ -106,10 +144,19 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
         ],
       },
-      {
-        source: '/_next/static/:path*',
-        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
-      },
+      // ⚠️ PRODUCTION ONLY. A built chunk has its content in its name, so it can
+      // be kept for a year. A development chunk does not: with this header the
+      // browser kept serving a chunk whose module had been edited or deleted, and
+      // every page died with «X is not a function» / «module factory is not
+      // available» until a hard refresh — restarting the server changed nothing.
+      ...(process.env.NODE_ENV === 'production'
+        ? [
+            {
+              source: '/_next/static/:path*',
+              headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+            },
+          ]
+        : []),
       {
         // Landing pages. These were previously keyed on '/en' and '/' — but the
         // proxy runs with `localePrefix: 'always'`, so '/' is a redirect and

@@ -34,6 +34,7 @@
 // ============================================
 
 import * as React from 'react'
+import { SearchableTable } from '../data-table'
 
 import { AlertTriangle, ClipboardList } from 'lucide-react'
 
@@ -43,7 +44,6 @@ import { Badge } from '../badge'
 import { Button } from '../button'
 import { EmptyState } from '../empty-state'
 import { Input } from '../input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../table'
 import { cn } from '../../../lib/utils'
 
 export interface CycleCountViewProps {
@@ -119,50 +119,68 @@ export function CycleCountView({
           {t('cycleCount.title', 'شمارش انبار')}
         </h2>
 
-        {counts.length === 0 ? (
-          <EmptyState
-            title={t('cycleCount.empty', 'هنوز شمارشی باز نشده')}
-            description={t(
-              'cycleCount.emptyHint',
-              'وقتی موجودی با قفسه نمی‌خواند، شمارش راه درست اصلاح است.',
-            )}
-          />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('cycleCount.number', 'شماره')}</TableHead>
-                <TableHead>{t('cycleCount.status', 'وضعیت')}</TableHead>
-                <TableHead>{t('cycleCount.started', 'شروع')}</TableHead>
-                <TableHead>{t('cycleCount.netLoss', 'خالص زیان')}</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {counts.map((count) => (
-                <TableRow key={count.id}>
-                  <TableCell>{count.count_number ?? '—'}</TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_VARIANT[count.status] ?? 'secondary'}>
-                      {t(`cycleCount.status_${count.status}`, count.status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{count.started_at ? fmtDate(count.started_at) : '—'}</TableCell>
-                  <TableCell className="tabular-nums">
-                    {/* Null means «not priced yet» — the count is still open.
-                        Showing 0 would read as «no loss found». */}
-                    {count.net_loss === null ? '—' : fmtMoney(count.net_loss)}
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="outline" size="sm" onClick={() => onOpenCount(count.id)}>
-                      {t('cycleCount.open', 'باز کردن')}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+        {/* The shared table; a row opens that count below. */}
+        <SearchableTable<CycleCount>
+          tableId="cycle-counts"
+          rows={counts}
+          rowKey={(count) => count.id}
+          onRowClick={(count) => onOpenCount(count.id)}
+          words={(count) => [
+            count.count_number ?? '',
+            t(`cycleCount.status_${count.status}`, count.status),
+          ]}
+          empty={
+            <EmptyState
+              title={t('cycleCount.empty', 'هنوز شمارشی باز نشده')}
+              description={t(
+                'cycleCount.emptyHint',
+                'وقتی موجودی با قفسه نمی‌خواند، شمارش راه درست اصلاح است.',
+              )}
+            />
+          }
+          columns={[
+            {
+              id: 'number',
+              labelKey: 'cycleCount.number',
+              labelFallback: 'شماره',
+              locked: true,
+              sortValue: (count) => count.count_number ?? '',
+              render: (count) => count.count_number ?? '—',
+            },
+            {
+              id: 'status',
+              labelKey: 'cycleCount.status',
+              labelFallback: 'وضعیت',
+              sortValue: (count) => count.status,
+              render: (count) => (
+                <Badge variant={STATUS_VARIANT[count.status] ?? 'secondary'}>
+                  {t(`cycleCount.status_${count.status}`, count.status)}
+                </Badge>
+              ),
+            },
+            {
+              id: 'started',
+              labelKey: 'cycleCount.started',
+              labelFallback: 'شروع',
+              sortValue: (count) => count.started_at ?? null,
+              render: (count) => (count.started_at ? fmtDate(count.started_at) : '—'),
+            },
+            {
+              id: 'netLoss',
+              labelKey: 'cycleCount.netLoss',
+              labelFallback: 'خالص زیان',
+              align: 'end',
+              sortValue: (count) => count.net_loss,
+              // Null means «not priced yet» — the count is still open. Showing 0
+              // would read as «no loss found».
+              render: (count) => (
+                <span className="tabular-nums">
+                  {count.net_loss === null ? '—' : fmtMoney(count.net_loss)}
+                </span>
+              ),
+            },
+          ]}
+        />
       </section>
 
       {/* ── The open count ─────────────────────────────────────────── */}
@@ -177,28 +195,69 @@ export function CycleCountView({
             </span>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('cycleCount.product', 'کالا')}</TableHead>
-                <TableHead>{t('cycleCount.expected', 'انتظار')}</TableHead>
-                <TableHead>{t('cycleCount.counted', 'شمرده‌شده')}</TableHead>
-                <TableHead>{t('cycleCount.variance', 'اختلاف')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {lines.map((line) => (
-                <CountLineRow
-                  key={line.id}
-                  t={t}
-                  line={line}
-                  productName={productName}
-                  disabled={Boolean(isBusy) || activeCount.status === 'completed'}
-                  onRecord={onRecord}
-                />
-              ))}
-            </TableBody>
-          </Table>
+          <SearchableTable<CycleCountLine>
+            tableId="cycle-count-lines"
+            rows={lines}
+            rowKey={(line) => line.id}
+            words={(line) => [productName(line.product_id)]}
+            empty={t('cycleCount.noLines', 'کالایی با این جست‌وجو نیست')}
+            columns={[
+              {
+                id: 'product',
+                labelKey: 'cycleCount.product',
+                labelFallback: 'کالا',
+                locked: true,
+                sortValue: (line) => productName(line.product_id),
+                render: (line) => (
+                  <span className="font-medium">{productName(line.product_id)}</span>
+                ),
+              },
+              {
+                id: 'expected',
+                labelKey: 'cycleCount.expected',
+                labelFallback: 'انتظار',
+                align: 'end',
+                sortValue: (line) => line.expected_qty,
+                render: (line) => <span className="tabular-nums">{line.expected_qty}</span>,
+              },
+              {
+                id: 'counted',
+                labelKey: 'cycleCount.counted',
+                labelFallback: 'شمرده‌شده',
+                locked: true,
+                sortValue: (line) => line.counted_qty,
+                render: (line) => (
+                  <CountedInput
+                    // A line recorded elsewhere shows its new figure.
+                    key={`${line.id}-${line.counted_qty ?? 'none'}`}
+                    t={t}
+                    line={line}
+                    disabled={Boolean(isBusy) || activeCount.status === 'completed'}
+                    onRecord={onRecord}
+                  />
+                ),
+              },
+              {
+                id: 'variance',
+                labelKey: 'cycleCount.variance',
+                labelFallback: 'اختلاف',
+                align: 'end',
+                sortValue: (line) => (line.counted_qty === null ? null : (line.variance_qty ?? 0)),
+                render: (line) => (
+                  <span
+                    className={cn(
+                      'tabular-nums',
+                      line.variance_qty
+                        ? 'font-semibold text-[hsl(var(--color-destructive))]'
+                        : 'text-[hsl(var(--fg-tertiary))]',
+                    )}
+                  >
+                    {line.counted_qty === null ? '—' : (line.variance_qty ?? 0)}
+                  </span>
+                ),
+              },
+            ]}
+          />
 
           {activeCount.status !== 'completed' && activeCount.status !== 'cancelled' ? (
             <div className="mt-4 space-y-3">
@@ -329,16 +388,15 @@ function Figure({
   )
 }
 
-function CountLineRow({
+/** The «شمرده‌شده» cell: typed here, committed when the field is left. */
+function CountedInput({
   t,
   line,
-  productName,
   disabled,
   onRecord,
 }: {
   t: CycleCountViewProps['t']
   line: CycleCountLine
-  productName: (productId: string) => string
   disabled: boolean
   onRecord: (productId: string, countedQty: number) => void
 }) {
@@ -359,34 +417,18 @@ function CountLineRow({
   }
 
   return (
-    <TableRow>
-      <TableCell>{productName(line.product_id)}</TableCell>
-      <TableCell className="tabular-nums">{line.expected_qty}</TableCell>
-      <TableCell>
-        <Input
-          type="number"
-          inputMode="decimal"
-          min={0}
-          step="any"
-          value={draft}
-          disabled={disabled}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={commit}
-          placeholder={t('cycleCount.notCounted', 'شمرده نشده')}
-          className="h-9 w-28"
-        />
-      </TableCell>
-      <TableCell
-        className={cn(
-          'tabular-nums',
-          line.variance_qty
-            ? 'font-semibold text-[hsl(var(--color-destructive))]'
-            : 'text-[hsl(var(--fg-tertiary))]',
-        )}
-      >
-        {line.counted_qty === null ? '—' : (line.variance_qty ?? 0)}
-      </TableCell>
-    </TableRow>
+    <Input
+      type="number"
+      inputMode="decimal"
+      min={0}
+      step="any"
+      value={draft}
+      disabled={disabled}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      placeholder={t('cycleCount.notCounted', 'شمرده نشده')}
+      className="h-9 w-28"
+    />
   )
 }
 

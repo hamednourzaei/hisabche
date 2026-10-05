@@ -1,36 +1,53 @@
 // packages/ui/src/components/ui/manufacturing/manufacturing-view.tsx
 'use client'
 
-import { memo, useMemo, type ReactNode } from 'react'
-import {
-  BarChart3,
-  Check,
-  ClipboardList,
-  Factory,
-  History,
-  Layers,
-  Pencil,
-  Plus,
-} from 'lucide-react'
+import { memo, useMemo, useState, type ReactNode } from 'react'
+import { Check, ClipboardList, Factory, History, Layers, Pencil, Plus } from 'lucide-react'
 import type { BOM, WorkOrder } from '@hisabche/api'
 import { formatDate as formatIntlDate, formatNumber } from '@hisabche/formatting'
 
 import { cn } from '../../../lib/utils'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { Button } from '../button'
+import { DataTable, TableFilterSelect, matchesSearch, type TableColumn } from '../data-table'
+import { HubTabs } from '../hub-tabs'
+import { SegmentedControl } from '../segmented-control'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ManufacturingView — the manufacturing page.
 
-   Four tabs over ONE domain: the definitions, the planned orders, what was
-   actually made, and the report. «ساخت محصول» is always one press away,
-   whichever tab is open.
+   Four parts over ONE domain: two tabs on top and ONE switch under them, the
+   way /customers is laid out (owner's request, 5 Oct 2026 — the row of four
+   tabs is gone):
+
+     ساخت      what is defined and planned   — فرمول‌های ساخت · دستورهای تولید
+     سوابق     what was actually made        — تاریخچه‌ی تولید · گزارش
+
+   The tabs are the shared `HubTabs`, the switch the shared `SegmentedControl`,
+   and the two lists the shared
+   `DataTable`. «ساخت محصول» is always one press away, whichever part is open.
 
    Presentational: rows come in as props; the history and the report are
    handed in as nodes because they page and fetch on their own.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export type ManufacturingTabId = 'boms' | 'workOrders' | 'history' | 'report'
+
+/** The two groups, and the parts under each. */
+export const MANUFACTURING_GROUPS = {
+  make: ['boms', 'workOrders'],
+  records: ['history', 'report'],
+} as const
+export type ManufacturingGroup = keyof typeof MANUFACTURING_GROUPS
+const GROUPS: readonly ManufacturingGroup[] = ['make', 'records']
+const GROUP_ICON = { make: Layers, records: History } as const
+
+/** The group a part belongs to. */
+export function manufacturingGroupOf(tab: ManufacturingTabId): ManufacturingGroup {
+  return (MANUFACTURING_GROUPS.records as readonly string[]).includes(tab) ? 'records' : 'make'
+}
+
+export const WORK_ORDER_STATUSES = ['planned', 'in_progress', 'completed', 'cancelled'] as const
 
 interface ManufacturingViewProps {
   t: (key: string, fallback?: string) => string
@@ -55,8 +72,6 @@ const STATUS_BADGE_MAP: Record<string, string> = {
   completed: 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]',
   cancelled: 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]',
 }
-
-const th = 'px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs'
 
 function formatDate(lang: string, date: string | null): string {
   if (!date) return '-'
@@ -84,6 +99,12 @@ export const ManufacturingView = memo(function ManufacturingView({
   report,
 }: ManufacturingViewProps) {
   const { lang: dateLang } = useDateFormat()
+  const [bomSearch, setBomSearch] = useState('')
+  const [bomFilter, setBomFilter] = useState('all')
+  const [orderSearch, setOrderSearch] = useState('')
+  const [orderFilter, setOrderFilter] = useState('all')
+
+  const group = manufacturingGroupOf(activeTab)
 
   const statusLabel = useMemo(
     () => (status: string) => {
@@ -98,15 +119,191 @@ export const ManufacturingView = memo(function ManufacturingView({
     [t],
   )
 
-  const tabs: Array<{ id: ManufacturingTabId; label: string; icon: typeof Layers }> = [
-    { id: 'boms', label: t('manufacturing.tabs.boms', 'فرمول‌های ساخت'), icon: Layers },
+  const partLabel: Record<ManufacturingTabId, string> = {
+    boms: t('manufacturing.tabs.boms', 'فرمول‌های ساخت'),
+    workOrders: t('manufacturing.tabs.workOrders', 'دستورهای تولید'),
+    history: t('manufacturing.tabs.history', 'تاریخچه‌ی تولید'),
+    report: t('manufacturing.tabs.report', 'گزارش'),
+  }
+  const productGone = t('manufacturing.history.productGone', 'کالا حذف شده')
+
+  const bomRows = boms
+    .filter((bom) => bomFilter === 'all' || bom.isActive === (bomFilter === 'active'))
+    .filter((bom) => matchesSearch(bomSearch, [bom.product?.name ?? productGone]))
+  const orderRows = workOrders
+    .filter((workOrder) => orderFilter === 'all' || workOrder.status === orderFilter)
+    .filter((workOrder) =>
+      matchesSearch(orderSearch, [
+        workOrder.product?.name ?? productGone,
+        statusLabel(workOrder.status),
+      ]),
+    )
+
+  const bomColumns: TableColumn<BOM>[] = [
     {
-      id: 'workOrders',
-      label: t('manufacturing.tabs.workOrders', 'دستورهای تولید'),
-      icon: ClipboardList,
+      id: 'product',
+      labelKey: 'manufacturing.boms.product',
+      labelFallback: 'محصول',
+      locked: true,
+      sortValue: (bom) => bom.product?.name ?? '',
+      render: (bom) => <span className="font-medium">{bom.product?.name ?? productGone}</span>,
     },
-    { id: 'history', label: t('manufacturing.tabs.history', 'تاریخچه‌ی تولید'), icon: History },
-    { id: 'report', label: t('manufacturing.tabs.report', 'گزارش'), icon: BarChart3 },
+    {
+      id: 'version',
+      labelKey: 'manufacturing.boms.version',
+      labelFallback: 'نسخه',
+      showFrom: 'md',
+      sortValue: (bom) => bom.version,
+      render: (bom) => (
+        <span className="text-xs text-[hsl(var(--fg-secondary))]">
+          {formatNumber(bom.version, locale, 0)}
+        </span>
+      ),
+    },
+    {
+      id: 'items',
+      labelKey: 'manufacturing.boms.itemsCount',
+      labelFallback: 'تعداد اقلام',
+      showFrom: 'md',
+      sortValue: (bom) => bom.itemsCount,
+      render: (bom) => (
+        <span className="text-xs text-[hsl(var(--fg-secondary))]">
+          {formatNumber(bom.itemsCount, locale, 0)}
+        </span>
+      ),
+    },
+    {
+      id: 'unitCost',
+      labelKey: 'manufacturing.boms.unitCost',
+      labelFallback: 'بهای واحد',
+      align: 'end',
+      sortValue: (bom) => bom.unitCost,
+      render: (bom) => (
+        <span className="text-xs tabular-nums">
+          {formatNumber(bom.unitCost, locale, 4)}{' '}
+          {bom.currency ? t(`currency.${bom.currency.toLowerCase()}`, bom.currency) : ''}
+        </span>
+      ),
+    },
+    {
+      id: 'status',
+      labelKey: 'manufacturing.boms.status',
+      labelFallback: 'وضعیت',
+      sortValue: (bom) => (bom.isActive ? 0 : 1),
+      render: (bom) => (
+        <span
+          className={cn(
+            'rounded-full px-2 py-0.5 text-xs font-medium',
+            bom.isActive ? STATUS_BADGE_MAP.completed : STATUS_BADGE_MAP.cancelled,
+          )}
+        >
+          {bom.isActive
+            ? t('manufacturing.boms.active', 'فعال')
+            : t('manufacturing.boms.inactive', 'غیرفعال')}
+        </span>
+      ),
+    },
+    {
+      id: 'edit',
+      labelKey: 'manufacturing.panel.edit',
+      labelFallback: 'ویرایش فرمول',
+      locked: true,
+      align: 'end',
+      // Only the active revision is editable: an old one is history, and
+      // editing the product's definition always starts from the current.
+      render: (bom) =>
+        bom.isActive && bom.product ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t('manufacturing.panel.edit', 'ویرایش فرمول')}
+            onClick={() => onEditDefinition(bom)}
+          >
+            <Pencil className="size-4" aria-hidden="true" />
+          </Button>
+        ) : null,
+    },
+  ]
+
+  const orderColumns: TableColumn<WorkOrder>[] = [
+    {
+      id: 'product',
+      labelKey: 'manufacturing.workOrders.product',
+      labelFallback: 'محصول',
+      locked: true,
+      sortValue: (workOrder) => workOrder.product?.name ?? '',
+      render: (workOrder) => (
+        <span className="font-medium">{workOrder.product?.name ?? productGone}</span>
+      ),
+    },
+    {
+      id: 'quantity',
+      labelKey: 'manufacturing.workOrders.quantity',
+      labelFallback: 'تعداد',
+      align: 'end',
+      sortValue: (workOrder) => workOrder.quantity,
+      render: (workOrder) => (
+        <span className="text-xs tabular-nums text-[hsl(var(--fg-secondary))]">
+          {formatNumber(workOrder.quantity, locale, 4)}
+        </span>
+      ),
+    },
+    {
+      id: 'status',
+      labelKey: 'manufacturing.workOrders.status',
+      labelFallback: 'وضعیت',
+      sortValue: (workOrder) => workOrder.status,
+      render: (workOrder) => (
+        <span
+          className={cn(
+            'rounded-full px-2 py-0.5 text-xs font-medium',
+            STATUS_BADGE_MAP[workOrder.status] || STATUS_BADGE_MAP.planned,
+          )}
+        >
+          {statusLabel(workOrder.status)}
+        </span>
+      ),
+    },
+    {
+      id: 'startDate',
+      labelKey: 'manufacturing.workOrders.startDate',
+      labelFallback: 'تاریخ شروع',
+      showFrom: 'sm',
+      sortValue: (workOrder) => workOrder.startDate,
+      render: (workOrder) => (
+        <span className="whitespace-nowrap text-xs text-[hsl(var(--fg-secondary))]">
+          {formatDate(dateLang, workOrder.startDate)}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      labelKey: 'manufacturing.workOrders.actions',
+      labelFallback: 'عملیات',
+      locked: true,
+      align: 'end',
+      // «تکمیل» opens the production form: completing an order IS producing
+      // it — components, cost, stock — not flipping a status. A finished order
+      // has no button at all.
+      render: (workOrder) =>
+        workOrder.status !== 'completed' &&
+        workOrder.status !== 'cancelled' &&
+        workOrder.product ? (
+          <button
+            type="button"
+            onClick={() => onCompleteWorkOrder(workOrder)}
+            className={cn(
+              'inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium',
+              'border border-[hsl(var(--color-success)/0.4)] text-[hsl(var(--color-success))]',
+              'hover:bg-[hsl(var(--color-success)/0.08)]',
+            )}
+          >
+            <Check className="size-3.5" aria-hidden="true" />
+            {t('manufacturing.workOrders.complete', 'تکمیل')}
+          </button>
+        ) : null,
+    },
   ]
 
   const shell =
@@ -136,236 +333,140 @@ export const ManufacturingView = memo(function ManufacturingView({
         </div>
       </div>
 
-      {/* Tabs */}
-      <div
-        role="tablist"
-        className="flex items-center gap-1 overflow-x-auto border-b border-[hsl(var(--border-default))]"
-      >
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            onClick={() => onTabChange(tab.id)}
-            className={cn(
-              'flex shrink-0 items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-              activeTab === tab.id
-                ? 'border-[hsl(var(--color-primary))] text-[hsl(var(--color-primary))]'
-                : 'border-transparent text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))]',
-            )}
-          >
-            <tab.icon className="size-4" aria-hidden="true" />
-            {tab.label}
-          </button>
-        ))}
+      {/* Like /customers: two tabs on top, ONE switch under them. */}
+      <HubTabs
+        label={t('manufacturing.groupsLabel', 'بخش')}
+        items={GROUPS.map((id) => ({
+          id,
+          label: t(`manufacturing.groups.${id}`, id),
+          icon: GROUP_ICON[id],
+        }))}
+        active={group}
+        // Opening a tab opens its first part.
+        onSelect={(next) => onTabChange(MANUFACTURING_GROUPS[next][0])}
+      />
+      <div>
+        <SegmentedControl
+          label={t('manufacturing.partsLabel', 'نما')}
+          options={MANUFACTURING_GROUPS[group].map((value) => ({
+            value,
+            label: partLabel[value],
+          }))}
+          value={activeTab as (typeof MANUFACTURING_GROUPS)[ManufacturingGroup][number]}
+          onChange={onTabChange}
+        />
       </div>
 
       {activeTab === 'history' ? <div className={shell}>{history}</div> : null}
       {activeTab === 'report' ? report : null}
 
       {activeTab === 'boms' || activeTab === 'workOrders' ? (
-        <>
-          {/* A failed read is shown as a failure — never as an empty table. */}
-          {error ? (
-            <div
-              role="alert"
-              className="rounded-2xl border border-[hsl(var(--color-destructive)/0.3)] bg-[hsl(var(--color-destructive)/0.05)] p-4 text-center text-[hsl(var(--color-destructive))]"
-            >
-              {error}
-            </div>
-          ) : (
-            <div className={shell}>
-              {isLoading ? (
-                <div className="p-8 space-y-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className="h-12 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse"
-                    />
-                  ))}
-                </div>
-              ) : activeTab === 'boms' ? (
-                boms.length === 0 ? (
-                  <div className="p-12 text-center">
-                    <Layers
-                      className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]"
-                      aria-hidden="true"
-                    />
-                    <p className="text-[hsl(var(--fg-secondary))] mb-3">
-                      {t('manufacturing.boms.empty', 'هیچ فرمول ساختی ثبت نشده')}
-                    </p>
-                    <Button type="button" size="sm" onClick={onProduce}>
-                      <Plus className="size-4" aria-hidden="true" />
-                      {t('manufacturing.produce', 'ساخت محصول')}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                          <th className={th}>{t('manufacturing.boms.product', 'محصول')}</th>
-                          <th className={th}>{t('manufacturing.boms.version', 'نسخه')}</th>
-                          <th className={th}>
-                            {t('manufacturing.boms.itemsCount', 'تعداد اقلام')}
-                          </th>
-                          <th className={th}>{t('manufacturing.boms.unitCost', 'بهای واحد')}</th>
-                          <th className={cn(th, 'text-center')}>
-                            {t('manufacturing.boms.status', 'وضعیت')}
-                          </th>
-                          <th className={th}>
-                            <span className="sr-only">
-                              {t('manufacturing.panel.edit', 'ویرایش فرمول')}
-                            </span>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {boms.map((bom) => (
-                          <tr
-                            key={bom.id}
-                            className="border-b border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted)/0.5)] transition-colors"
-                          >
-                            <td className="px-4 py-3 text-[hsl(var(--fg-primary))]">
-                              {bom.product?.name ??
-                                t('manufacturing.history.productGone', 'کالا حذف شده')}
-                            </td>
-                            <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))]">
-                              {formatNumber(bom.version, locale, 0)}
-                            </td>
-                            <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))]">
-                              {formatNumber(bom.itemsCount, locale, 0)}
-                            </td>
-                            <td className="px-4 py-3 text-xs tabular-nums text-[hsl(var(--fg-primary))]">
-                              {formatNumber(bom.unitCost, locale, 4)}{' '}
-                              {bom.currency
-                                ? t(`currency.${bom.currency.toLowerCase()}`, bom.currency)
-                                : ''}
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <span
-                                className={cn(
-                                  'px-2 py-0.5 rounded-full text-xs font-medium',
-                                  bom.isActive
-                                    ? STATUS_BADGE_MAP.completed
-                                    : STATUS_BADGE_MAP.cancelled,
-                                )}
-                              >
-                                {bom.isActive
-                                  ? t('manufacturing.boms.active', 'فعال')
-                                  : t('manufacturing.boms.inactive', 'غیرفعال')}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              {/* Only the active revision is editable: an old
-                                  one is history, and editing the product's
-                                  definition always starts from the current. */}
-                              {bom.isActive && bom.product ? (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  aria-label={t('manufacturing.panel.edit', 'ویرایش فرمول')}
-                                  onClick={() => onEditDefinition(bom)}
-                                >
-                                  <Pencil className="size-4" aria-hidden="true" />
-                                </Button>
-                              ) : null}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )
-              ) : workOrders.length === 0 ? (
-                <div className="p-12 text-center">
-                  <ClipboardList
-                    className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]"
-                    aria-hidden="true"
-                  />
-                  <p className="text-[hsl(var(--fg-secondary))] mb-3">
-                    {t('manufacturing.workOrders.empty', 'هیچ دستور تولیدی ثبت نشده')}
-                  </p>
+        // A failed read is shown as a failure — never as an empty table.
+        error ? (
+          <div
+            role="alert"
+            className="rounded-2xl border border-[hsl(var(--color-destructive)/0.3)] bg-[hsl(var(--color-destructive)/0.05)] p-4 text-center text-[hsl(var(--color-destructive))] text-sm"
+          >
+            {error}
+          </div>
+        ) : isLoading ? (
+          <div className={cn(shell, 'space-y-3 p-8')}>
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="h-12 animate-pulse rounded-xl bg-[hsl(var(--surface-muted))]"
+              />
+            ))}
+          </div>
+        ) : activeTab === 'boms' ? (
+          <DataTable
+            tableId="manufacturing-boms"
+            t={t}
+            rows={bomRows}
+            columns={bomColumns}
+            rowKey={(bom) => bom.id}
+            searchValue={bomSearch}
+            onSearchChange={setBomSearch}
+            actions={
+              <TableFilterSelect
+                label={t('manufacturing.boms.status', 'وضعیت')}
+                value={bomFilter}
+                onChange={setBomFilter}
+                allValue="all"
+                options={[
+                  { value: 'all', label: t('common.all', 'همه') },
+                  { value: 'active', label: t('manufacturing.boms.active', 'فعال') },
+                  { value: 'inactive', label: t('manufacturing.boms.inactive', 'غیرفعال') },
+                ]}
+              />
+            }
+            minWidthClass="min-w-[420px]"
+            emptyState={
+              <div className="p-12 text-center">
+                <Layers
+                  className="mx-auto mb-3 size-12 text-[hsl(var(--fg-tertiary))]"
+                  aria-hidden="true"
+                />
+                <p className="mb-3 text-[hsl(var(--fg-secondary))]">
+                  {boms.length === 0
+                    ? t('manufacturing.boms.empty', 'هیچ فرمول ساختی ثبت نشده')
+                    : t('manufacturing.noMatch', 'چیزی با این فیلتر نیست')}
+                </p>
+                {boms.length === 0 ? (
+                  <Button type="button" size="sm" onClick={onProduce}>
+                    <Plus className="size-4" aria-hidden="true" />
+                    {t('manufacturing.produce', 'ساخت محصول')}
+                  </Button>
+                ) : null}
+              </div>
+            }
+          />
+        ) : (
+          <DataTable
+            tableId="manufacturing-work-orders"
+            t={t}
+            rows={orderRows}
+            columns={orderColumns}
+            rowKey={(workOrder) => workOrder.id}
+            searchValue={orderSearch}
+            onSearchChange={setOrderSearch}
+            actions={
+              <TableFilterSelect
+                label={t('manufacturing.workOrders.status', 'وضعیت')}
+                value={orderFilter}
+                onChange={setOrderFilter}
+                allValue="all"
+                options={[
+                  { value: 'all', label: t('common.all', 'همه') },
+                  ...WORK_ORDER_STATUSES.map((status) => ({
+                    value: status as string,
+                    label: statusLabel(status),
+                  })),
+                ]}
+              />
+            }
+            minWidthClass="min-w-[420px]"
+            emptyState={
+              <div className="p-12 text-center">
+                <ClipboardList
+                  className="mx-auto mb-3 size-12 text-[hsl(var(--fg-tertiary))]"
+                  aria-hidden="true"
+                />
+                <p className="mb-3 text-[hsl(var(--fg-secondary))]">
+                  {workOrders.length === 0
+                    ? t('manufacturing.workOrders.empty', 'هیچ دستور تولیدی ثبت نشده')
+                    : t('manufacturing.noMatch', 'چیزی با این فیلتر نیست')}
+                </p>
+                {workOrders.length === 0 ? (
                   <Button type="button" variant="outline" size="sm" onClick={onOpenCreateWorkOrder}>
                     <Plus className="size-4" aria-hidden="true" />
                     {t('manufacturing.workOrders.create', 'دستور تولید جدید')}
                   </Button>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                        <th className={th}>{t('manufacturing.workOrders.product', 'محصول')}</th>
-                        <th className={th}>{t('manufacturing.workOrders.quantity', 'تعداد')}</th>
-                        <th className={th}>{t('manufacturing.workOrders.status', 'وضعیت')}</th>
-                        <th className={cn(th, 'hidden sm:table-cell')}>
-                          {t('manufacturing.workOrders.startDate', 'تاریخ شروع')}
-                        </th>
-                        <th className={cn(th, 'text-center')}>
-                          {t('manufacturing.workOrders.actions', 'عملیات')}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {workOrders.map((workOrder) => (
-                        <tr
-                          key={workOrder.id}
-                          className="border-b border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted)/0.5)] transition-colors"
-                        >
-                          <td className="px-4 py-3 text-[hsl(var(--fg-primary))]">
-                            {workOrder.product?.name ??
-                              t('manufacturing.history.productGone', 'کالا حذف شده')}
-                          </td>
-                          <td className="px-4 py-3 text-xs tabular-nums text-[hsl(var(--fg-secondary))]">
-                            {formatNumber(workOrder.quantity, locale, 4)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={cn(
-                                'px-2 py-0.5 rounded-full text-xs font-medium',
-                                STATUS_BADGE_MAP[workOrder.status] || STATUS_BADGE_MAP.planned,
-                              )}
-                            >
-                              {statusLabel(workOrder.status)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] hidden sm:table-cell whitespace-nowrap">
-                            {formatDate(dateLang, workOrder.startDate)}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {/* «تکمیل» opens the production form: completing an
-                                order IS producing it — components, cost, stock —
-                                not flipping a status. A finished order has no
-                                button at all. */}
-                            {workOrder.status !== 'completed' &&
-                            workOrder.status !== 'cancelled' &&
-                            workOrder.product ? (
-                              <button
-                                type="button"
-                                onClick={() => onCompleteWorkOrder(workOrder)}
-                                className={cn(
-                                  'inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium',
-                                  'border border-[hsl(var(--color-success)/0.4)] text-[hsl(var(--color-success))]',
-                                  'hover:bg-[hsl(var(--color-success)/0.08)]',
-                                )}
-                              >
-                                <Check className="size-3.5" aria-hidden="true" />
-                                {t('manufacturing.workOrders.complete', 'تکمیل')}
-                              </button>
-                            ) : null}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-        </>
+                ) : null}
+              </div>
+            }
+          />
+        )
       ) : null}
     </div>
   )

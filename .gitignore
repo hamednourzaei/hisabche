@@ -65,3 +65,6 @@ coverage
 *.tsbuildinfo
 .vercel
 .env*.local
+
+# Graphify knowledge graph (generated; rebuild with /graphify . --update)
+graphify-out/

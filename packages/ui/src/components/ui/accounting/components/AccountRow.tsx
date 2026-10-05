@@ -1,16 +1,14 @@
 // packages/ui/src/components/ui/accounting/components/AccountRow.tsx
 'use client'
 
+// The two cells of an account that carry meaning beyond their text — its type
+// and whether it is active. The chart of accounts is the shared DataTable now;
+// these are what its columns render.
+
 import { memo } from 'react'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../../../lib/utils'
 import type { Account } from '@hisabche/api'
-
-import { LedgerRow, LedgerTd } from './ledger-table'
-
-interface AccountRowProps {
-  account: Account
-}
 
 /**
  * ⚠️ TOKENS, NOT RAW TAILWIND COLOURS.
@@ -42,49 +40,56 @@ const TYPE_TONE: Record<string, string> = {
 
 const FALLBACK_TONE = 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-tertiary))]'
 
-export const AccountRow = memo(function AccountRow({ account }: AccountRowProps) {
+/** The account types, in the order of the accounting identity. */
+export const ACCOUNT_TYPES = ['asset', 'liability', 'equity', 'revenue', 'expense'] as const
+
+export const AccountTypeBadge = memo(function AccountTypeBadge({
+  type,
+}: {
+  type: Account['type']
+}) {
   const t = useTranslations()
-  const tone = TYPE_TONE[account.type] ?? FALLBACK_TONE
-
   return (
-    <LedgerRow>
-      <LedgerTd mono muted>
-        {account.code}
-      </LedgerTd>
+    <span
+      className={cn(
+        'whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium',
+        TYPE_TONE[type] ?? FALLBACK_TONE,
+      )}
+    >
+      {t(`accounting.accountTypes.${type}`)}
+    </span>
+  )
+})
 
-      <LedgerTd strong>{account.name}</LedgerTd>
-
-      <LedgerTd>
-        <span className={cn('whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium', tone)}>
-          {t(`accounting.accountTypes.${account.type}`)}
+/**
+ * A dot alone carried the active/inactive state, with the meaning only in an
+ * aria-label. Colour is not information on its own — someone who cannot
+ * distinguish these two sees an identical dot either way — so the inactive
+ * state says so in text.
+ */
+export const AccountStatusMark = memo(function AccountStatusMark({
+  isActive,
+}: {
+  isActive: boolean
+}) {
+  const t = useTranslations()
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        aria-hidden
+        className={cn(
+          'inline-block size-2 rounded-full',
+          isActive ? 'bg-[hsl(var(--color-success))]' : 'bg-[hsl(var(--fg-tertiary))]',
+        )}
+      />
+      {!isActive && (
+        <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+          {t('accounting.accounts.inactive')}
         </span>
-      </LedgerTd>
-
-      <LedgerTd>
-        {/*
-          A dot alone carried the active/inactive state, with the meaning only
-          in an aria-label. Colour is not information on its own — someone who
-          cannot distinguish these two sees an identical dot either way — so the
-          inactive state now says so in text.
-        */}
-        <span className="inline-flex items-center gap-1.5">
-          <span
-            aria-hidden
-            className={cn(
-              'inline-block size-2 rounded-full',
-              account.isActive ? 'bg-[hsl(var(--color-success))]' : 'bg-[hsl(var(--fg-tertiary))]',
-            )}
-          />
-          {!account.isActive && (
-            <span className="text-xs text-[hsl(var(--fg-tertiary))]">
-              {t('accounting.accounts.inactive')}
-            </span>
-          )}
-          <span className="sr-only">
-            {account.isActive ? t('accounting.accounts.active') : t('accounting.accounts.inactive')}
-          </span>
-        </span>
-      </LedgerTd>
-    </LedgerRow>
+      )}
+      <span className="sr-only">
+        {isActive ? t('accounting.accounts.active') : t('accounting.accounts.inactive')}
+      </span>
+    </span>
   )
 })

@@ -4,6 +4,7 @@
 import { memo, useState, useCallback, type ReactNode } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { cn } from '../../../lib/utils'
+import { DataTable, TableFilterSelect, matchesSearch, type TableColumn } from '../data-table'
 import { ListChecks, Plus, X } from 'lucide-react'
 import type { Workflow, WorkflowEntityType, ApproverRole, WorkflowStep } from '@hisabche/api'
 
@@ -47,6 +48,70 @@ export const WorkflowTemplatesView = memo(function WorkflowTemplatesView({
     setName('')
     setIsFormOpen(false)
   }, [name, entityType, approverRole, onCreate])
+
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const rows = workflows
+    .filter(
+      (workflow) => statusFilter === 'all' || workflow.is_active === (statusFilter === 'active'),
+    )
+    .filter((workflow) =>
+      matchesSearch(search, [
+        workflow.name,
+        t(`workflow.entityType.${workflow.entity_type}`, workflow.entity_type),
+      ]),
+    )
+  const columns: TableColumn<Workflow>[] = [
+    {
+      id: 'name',
+      labelKey: 'workflow.templates.name',
+      labelFallback: 'نام الگو',
+      locked: true,
+      sortValue: (workflow) => workflow.name,
+      render: (workflow) => <span className="font-medium">{workflow.name}</span>,
+    },
+    {
+      id: 'entityType',
+      labelKey: 'workflow.templates.entityType',
+      labelFallback: 'روی چه چیزی',
+      sortValue: (workflow) => workflow.entity_type,
+      render: (workflow) => (
+        <span className="text-xs text-[hsl(var(--fg-secondary))]">
+          {t(`workflow.entityType.${workflow.entity_type}`, workflow.entity_type)}
+        </span>
+      ),
+    },
+    {
+      id: 'status',
+      labelKey: 'workflow.templates.status',
+      labelFallback: 'وضعیت',
+      sortValue: (workflow) => (workflow.is_active ? 0 : 1),
+      render: (workflow) => (
+        <span
+          className={cn(
+            'rounded-full px-2 py-0.5 text-xs font-medium',
+            workflow.is_active
+              ? 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]'
+              : 'bg-[hsl(var(--fg-tertiary)/0.12)] text-[hsl(var(--fg-tertiary))]',
+          )}
+        >
+          {workflow.is_active
+            ? t('workflow.templates.active', 'فعال')
+            : t('workflow.templates.inactive', 'غیرفعال')}
+        </span>
+      ),
+    },
+    ...(renderEscalation
+      ? [
+          {
+            id: 'escalation',
+            labelKey: 'workflow.escalation.title',
+            labelFallback: 'ارجاع خودکار',
+            render: (workflow: Workflow) => renderEscalation(workflow),
+          } satisfies TableColumn<Workflow>,
+        ]
+      : []),
+  ]
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto px-4">
@@ -167,59 +232,42 @@ export const WorkflowTemplatesView = memo(function WorkflowTemplatesView({
               />
             ))}
           </div>
-        ) : workflows.length === 0 ? (
-          <div className="p-12 text-center">
-            <ListChecks className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]" />
-            <p className="text-[hsl(var(--fg-secondary))]">
-              {t('workflow.templates.empty', 'هنوز هیچ الگویی نساخته‌اید')}
-            </p>
-          </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                  {t('workflow.templates.name', 'نام الگو')}
-                </th>
-                <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                  {t('workflow.templates.entityType', 'روی چه چیزی')}
-                </th>
-                <th className="px-4 py-3 text-center font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                  {t('workflow.templates.status', 'وضعیت')}
-                </th>
-                {renderEscalation ? (
-                  <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                    {t('workflow.escalation.title', 'ارجاع خودکار')}
-                  </th>
-                ) : null}
-              </tr>
-            </thead>
-            <tbody>
-              {workflows.map((w) => (
-                <tr key={w.id} className="border-b border-[hsl(var(--border-default))]">
-                  <td className="px-4 py-3 text-[hsl(var(--fg-primary))]">{w.name}</td>
-                  <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))]">
-                    {t(`workflow.entityType.${w.entity_type}`, w.entity_type)}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={cn(
-                        'px-2 py-0.5 rounded-full text-xs font-medium',
-                        w.is_active
-                          ? 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]'
-                          : 'bg-[hsl(var(--fg-tertiary)/0.12)] text-[hsl(var(--fg-tertiary))]',
-                      )}
-                    >
-                      {w.is_active
-                        ? t('workflow.templates.active', 'فعال')
-                        : t('workflow.templates.inactive', 'غیرفعال')}
-                    </span>
-                  </td>
-                  {renderEscalation ? <td className="px-4 py-3">{renderEscalation(w)}</td> : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="p-3 md:p-4">
+            <DataTable
+              tableId="workflow-templates"
+              t={t}
+              rows={rows}
+              columns={columns}
+              rowKey={(workflow) => workflow.id}
+              searchValue={search}
+              onSearchChange={setSearch}
+              actions={
+                <TableFilterSelect
+                  label={t('workflow.templates.status', 'وضعیت')}
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  allValue="all"
+                  options={[
+                    { value: 'all', label: t('common.all', 'همه') },
+                    { value: 'active', label: t('workflow.templates.active', 'فعال') },
+                    { value: 'inactive', label: t('workflow.templates.inactive', 'غیرفعال') },
+                  ]}
+                />
+              }
+              minWidthClass="min-w-[420px]"
+              emptyState={
+                <div className="p-12 text-center">
+                  <ListChecks className="mx-auto mb-3 size-12 text-[hsl(var(--fg-tertiary))]" />
+                  <p className="text-[hsl(var(--fg-secondary))]">
+                    {workflows.length === 0
+                      ? t('workflow.templates.empty', 'هنوز هیچ الگویی نساخته‌اید')
+                      : t('workflow.templates.noMatch', 'الگویی با این فیلتر نیست')}
+                  </p>
+                </div>
+              }
+            />
+          </div>
         )}
       </div>
     </div>

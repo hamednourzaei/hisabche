@@ -4,27 +4,10 @@ import { KpiCard } from '../kpi-card'
 import { SUPPORTED_CURRENCIES } from '@hisabche/store'
 import { SelectField } from '../select-field'
 import { Switch } from '../switch'
-import { cn } from '../../../lib/utils'
-import {
-  Users,
-  Wallet,
-  Briefcase,
-  Clock,
-  TrendingUp,
-  Download,
-  Filter,
-  Plus,
-  Trash2,
-  Eye,
-  Calendar,
-  Building2,
-  AlertCircle,
-} from 'lucide-react'
+import { Users, Wallet, Briefcase, Clock, Plus, Trash2 } from 'lucide-react'
 import { useState, useMemo, useCallback, memo } from 'react'
 import { EmployeeListTable, type EmployeeRow } from './employee-list-table'
 import { PayrollListTable, type PayrollRow } from './payroll-list-table'
-import { useDateFormat } from '../../../hooks/use-date-format'
-import { JalaliDatePicker } from '../jalali-datepicker'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TeamAndPayrollView v1 — Complete Team & Payroll Module
@@ -75,7 +58,6 @@ interface TeamAndPayrollViewProps {
   isLoadingEmployees: boolean
   isLoadingPayroll: boolean
   statusFilter?: TeamTab
-  onStatusChange?: (status: TeamTab) => void
   onViewEmployee?: (id: string) => void
   onCreateEmployee?: (
     values: Record<string, unknown>,
@@ -116,38 +98,6 @@ interface TeamAndPayrollViewProps {
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const EMPLOYEE_STATUSES: {
-  value: EmployeeStatus
-  label: string
-  color: string
-  icon: React.ElementType
-}[] = [
-  {
-    value: 'active',
-    label: 'فعال',
-    color: 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]',
-    icon: Users,
-  },
-  {
-    value: 'inactive',
-    label: 'غیرفعال',
-    color: 'bg-[hsl(var(--fg-tertiary)/0.12)] text-[hsl(var(--fg-tertiary))]',
-    icon: Users,
-  },
-  {
-    value: 'terminated',
-    label: 'اخراج',
-    color: 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]',
-    icon: Trash2,
-  },
-  {
-    value: 'on_leave',
-    label: 'مرخصی',
-    color: 'bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]',
-    icon: Clock,
-  },
-]
-
 /** G2 — one class for every field in the employee form, so they cannot drift. */
 const FORM_FIELD =
   'rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]'
@@ -165,7 +115,6 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
   isLoadingEmployees,
   isLoadingPayroll,
   statusFilter = 'employees',
-  onStatusChange,
   onViewEmployee,
   onCreateEmployee,
   onDeleteEmployee,
@@ -407,36 +356,6 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
           </button>
         )}
       </div>
-
-      {/* ─── G2 — three tabs ─────────────────────────────────────────────── */}
-      {onStatusChange && (
-        <div role="tablist" aria-label={t('nav.teamPayroll', 'تیم و حقوق')} className="flex gap-2">
-          {(
-            [
-              ['employees', t('team.employees', 'کارمندان')],
-              ['branches', t('team.branches', 'شعب')],
-              ['payroll', t('team.payroll', 'حقوق')],
-              ['attendance', t('team.attendance', 'حضور و غیاب')],
-            ] as [TeamTab, string][]
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={statusFilter === id}
-              onClick={() => onStatusChange(id)}
-              className={cn(
-                'rounded-full px-4 py-2 text-sm font-medium transition-colors',
-                statusFilter === id
-                  ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]'
-                  : 'border border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted))]',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* KPI Cards */}
       <div className="flex gap-4 flex-wrap">

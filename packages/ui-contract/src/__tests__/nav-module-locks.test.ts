@@ -17,9 +17,27 @@ const serverModules = [
 ].map((m) => m[1])
 
 describe('NAV_MODULE', () => {
-  it('every mapped path is a real menu destination', () => {
+  it('every mapped path is a menu destination, or a page that became a section', () => {
+    // A section of a hub is hidden by the lock its own page had, so those keys
+    // stay in the map after the page left the menu. The list is closed: a key
+    // that is neither is a typo that locks nothing.
+    const sections = [
+      '/promotions',
+      '/campaigns',
+      '/expiry',
+      '/bank',
+      '/assets',
+      '/budgets',
+      '/timesheets',
+      '/data-migration',
+    ]
     const paths = new Set(NAV_CONTRACT.map((i) => i.path))
-    for (const path of Object.keys(NAV_MODULE)) expect(paths.has(path)).toBe(true)
+    const unknown = Object.keys(NAV_MODULE).filter(
+      (path) => !paths.has(path) && !sections.includes(path),
+    )
+    expect(unknown).toEqual([])
+    // …and none is both: a page in the menu is not also a section.
+    expect(sections.filter((path) => paths.has(path))).toEqual([])
   })
 
   it('every module is one the server knows', () => {

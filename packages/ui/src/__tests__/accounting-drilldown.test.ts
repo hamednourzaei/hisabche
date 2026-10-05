@@ -9,7 +9,7 @@
 // Three reports drill into the same endpoint, and two of them are «as at a
 // date» while one covers a period:
 //
-//   Trial Balance    — as at `date`, all time up to it   → from = ''
+//   Trial Balance    — from the chosen start (none by default) to `date` → from = fromDate
 //   Balance Sheet    — as at `date`, all time up to it   → from = ''
 //   Income Statement — from `from` to `to`               → from = from
 //
@@ -39,15 +39,27 @@ function drilldownCall(source: string): string {
 }
 
 describe('each report drills into its own period', () => {
-  it.each([
-    ['TrialBalanceTab.tsx', "''", 'date'],
-    ['BalanceSheetTab.tsx', "''", 'date'],
-  ])('%s is an «as at» report: unbounded start, %s → %s', (file, from, to) => {
-    // A start date on an «as at» report would show FEWER lines than the figure
-    // was built from — the balance is cumulative over all time up to `date`.
-    const args = drilldownCall(read(file))
-    expect(args.startsWith(from)).toBe(true)
-    expect(args).toContain(to)
+  it.each([['BalanceSheetTab.tsx', "''", 'date']])(
+    '%s is an «as at» report: unbounded start, %s → %s',
+    (file, from, to) => {
+      // A start date on an «as at» report would show FEWER lines than the figure
+      // was built from — the balance is cumulative over all time up to `date`.
+      const args = drilldownCall(read(file))
+      expect(args.startsWith(from)).toBe(true)
+      expect(args).toContain(to)
+    },
+  )
+
+  it('TrialBalanceTab.tsx drills into the window it asked the server for', () => {
+    // The start is the reader's choice now (empty = from the first entry). What
+    // matters is that the drawer and the figures use the SAME start and end.
+    const source = read('TrialBalanceTab.tsx')
+    const args = drilldownCall(source)
+    expect(args.startsWith('fromDate')).toBe(true)
+    expect(args).toContain('date')
+    expect(source).toContain('useTrialBalance(date, branchId, fromDate)')
+    // …and it still opens unbounded: the report people know.
+    expect(source).toContain("const [fromDate, setFromDate] = useState('')")
   })
 
   it('IncomeStatementTab.tsx is a PERIOD report: both ends bound', () => {

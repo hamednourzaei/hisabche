@@ -47,7 +47,6 @@ const NON_NAV_ROUTES = new Set([
   // destination of its own.
   '/invoices/new',
   '/invoices/new/preview',
-  '/purchasing',
   '/manufacturing',
   // G1: /human-resources is now a 308 to /team-and-payroll and is no longer a
   // push target anywhere. It stays listed because the ROUTE still resolves —

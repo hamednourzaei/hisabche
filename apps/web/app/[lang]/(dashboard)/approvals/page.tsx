@@ -1,4 +1,4 @@
-import { ApprovalsContainer } from '@hisabche/ui'
+import { ApprovalsHubContainer } from '@hisabche/ui'
 import { Suspense } from 'react'
 
 const titles: Record<string, string> = {
@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 export default function ApprovalsPage() {
   return (
     <Suspense fallback={<div>در حال بارگذاری...</div>}>
-      <ApprovalsContainer />
+      <ApprovalsHubContainer />
     </Suspense>
   )
 }

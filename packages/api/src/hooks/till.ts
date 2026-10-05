@@ -97,6 +97,7 @@ export const tillKeys = {
   abandoned: () => [...tillKeys.all, 'abandoned'] as const,
   ledger: (id: string) => [...tillKeys.all, 'ledger', id] as const,
   cashFlow: (days: number) => [...tillKeys.all, 'cash-flow', days] as const,
+  labels: () => [...tillKeys.all, 'labels'] as const,
 }
 
 export interface CashFlowDay {
@@ -361,6 +362,38 @@ export function useSetTillSuspended() {
       return data as PosSession
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: tillKeys.all }),
+  })
+}
+
+export interface TillLabels {
+  /** false = the till-name migration has not been run on this database. */
+  configured: boolean
+  /** Session id → the name a person gave that till. Unnamed tills are absent. */
+  labels: Record<string, string>
+}
+
+/** The names of the open tills. */
+export function useTillLabels() {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: tillKeys.labels(),
+    queryFn: async (): Promise<TillLabels> => {
+      const { data } = await apiClient.get('/pos/sessions/labels')
+      return data as TillLabels
+    },
+    enabled: authReady,
+  })
+}
+
+/** Name a till, or clear its name with `null`. */
+export function useSetTillLabel() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ sessionId, label }: { sessionId: string; label: string | null }) => {
+      const { data } = await apiClient.patch(`/pos/sessions/${sessionId}/label`, { label })
+      return data as { id: string; label: string | null }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: tillKeys.labels() }),
   })
 }
 

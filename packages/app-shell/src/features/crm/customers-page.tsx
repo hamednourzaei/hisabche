@@ -3,8 +3,8 @@
 // ============================================
 
 import React from 'react'
-import { CustomersContainer } from '@hisabche/ui/screens'
+import { CustomersHubContainer } from '@hisabche/ui/screens'
 
 export default function CustomersPage() {
-  return <CustomersContainer />
+  return <CustomersHubContainer />
 }
