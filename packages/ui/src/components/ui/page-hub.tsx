@@ -25,7 +25,7 @@ import { isNavLocked } from '@hisabche/ui-contract'
 
 import { usePageLook } from '../../lib/page-look'
 import { HubTabs, useHubSection, useHubTab } from './hub-tabs'
-import { PageCustomizer } from './page-customizer'
+import { RegisterCustomizer } from './register-customizer'
 import { SegmentedControl } from './segmented-control'
 
 export interface PageHubSection {
@@ -99,9 +99,7 @@ export function PageHub({ label, sectionsLabel, loadingLabel, tabs, lookId }: Pa
   return (
     <div className="relative space-y-4">
       {lookId ? (
-        <PageCustomizer
-          className="absolute end-0 top-0.5 z-10"
-          t={(key) => t(key)}
+        <RegisterCustomizer
           groups={[
             {
               look,

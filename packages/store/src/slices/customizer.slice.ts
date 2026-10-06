@@ -2,7 +2,6 @@ import { create } from 'zustand'
 
 export interface CustomizerGroupData {
   title?: string
-  lookId: string
   look: any // To avoid strict coupling with ui package here
   items: { id: string; label: string }[]
   keepOne?: boolean

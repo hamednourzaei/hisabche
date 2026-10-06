@@ -443,3 +443,5 @@ export {
 export { NoAccessNotice } from './components/ui/no-access-notice'
 
 export { GlobalPageCustomizer } from './components/ui/global-page-customizer'
+
+export { RegisterCustomizer } from './components/ui/register-customizer'

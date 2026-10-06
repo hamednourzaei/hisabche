@@ -10,8 +10,8 @@ import { DateRangePicker, type DateRange, type PresetKey } from '../date-range-p
 import { isNavLocked } from '@hisabche/ui-contract'
 import { useMyCapabilities } from '@hisabche/api'
 import { usePageLook } from '../../../../lib/page-look'
-import { NAV_ITEMS } from '../../../../lib/menu/nav-items'
-import { PageCustomizer } from '../../page-customizer'
+// import { NAV_ITEMS } from '../../../../lib/menu/nav-items'
+import { RegisterCustomizer } from '../../register-customizer'
 import { useDashboardData } from '../../../../hooks/dashboard/use-dashboard-data'
 import { fmt } from '../../../../lib/dashboard/dashboard-format'
 import { useDisplayBasis } from '../../../../hooks/dashboard/use-display-basis'
@@ -75,7 +75,7 @@ export function DashboardContainer() {
   // Their own choice (lib/page-look), never a permission. A part that is off
   // is not mounted below and not fetched by `useDashboardData`.
   const look = usePageLook('dashboard')
-  const menuLook = usePageLook('menu')
+  // const menuLook = usePageLook('menu')
   const access = useMyCapabilities().data
   const hiddenByRole = access?.hiddenModules ?? []
   const may = (capability: string) =>
@@ -179,8 +179,7 @@ export function DashboardContainer() {
               only web serves, so the link dropped desktop on the dashboard. */}
           {/* The wrench: what this person shows on the dashboard and in their
               menu. Only parts their role includes are offered. */}
-          <PageCustomizer
-            t={t}
+          <RegisterCustomizer
             groups={[
               {
                 title: t('pageLook.dashboardParts', 'بخش‌های داشبورد'),
@@ -189,14 +188,6 @@ export function DashboardContainer() {
                   id,
                   label: t(`pageLook.dashboard.${id}`, id),
                 })),
-              },
-              {
-                title: t('pageLook.menu', 'منو'),
-                look: menuLook,
-                items: NAV_ITEMS.filter(
-                  (item) =>
-                    !MENU_ALWAYS.includes(item.path) && !isNavLocked(item.path, hiddenByRole),
-                ).map((item) => ({ id: item.path, label: t(item.labelKey, item.path) })),
               },
             ]}
           />

@@ -1,12 +1,16 @@
 const fs = require('fs')
-let code = fs.readFileSync('packages/ui/src/components/ui/dashboard-header.tsx', 'utf8')
+let code = fs.readFileSync(
+  'packages/ui/src/components/ui/dashboard/containers/dashboard-container.tsx',
+  'utf8',
+)
 
-if (!code.includes('import { GlobalPageCustomizer }')) {
-  code = code.replace(
-    "import { useTranslations } from 'next-intl'",
-    "import { useTranslations } from 'next-intl'\nimport { GlobalPageCustomizer } from './global-page-customizer'",
-  )
-}
-code = code.replace('<div id="global-page-customizer-slot"></div>', '<GlobalPageCustomizer />')
+code = code.replace(
+  "const menuLook = usePageLook('menu')",
+  "// const menuLook = usePageLook('menu')",
+)
+code = code.replace(
+  "import { NAV_ITEMS } from '../../../../lib/menu/nav-items'",
+  "// import { NAV_ITEMS } from '../../../../lib/menu/nav-items'",
+)
 
-fs.writeFileSync('packages/ui/src/components/ui/dashboard-header.tsx', code)
+fs.writeFileSync('packages/ui/src/components/ui/dashboard/containers/dashboard-container.tsx', code)
