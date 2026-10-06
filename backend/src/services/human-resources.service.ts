@@ -366,6 +366,20 @@ export class HumanResourcesService {
       await this.assignPrimaryBranch(ctx, emp.id, data.branchId)
     }
 
+    if (data.attendanceMethod) {
+      const { error: credError } = await supabase.from('attendance_credentials').insert({
+        workspace_id: workspaceId,
+        employee_id: emp.id,
+        credential_type: data.attendanceMethod,
+        credential_identifier: data.attendanceCredential || null,
+        status: 'active',
+      })
+      if (credError) {
+        // Log but don't fail employee creation
+        console.error('Failed to create attendance credentials', credError)
+      }
+    }
+
     await this.invalidateEmployeeCache(workspaceId)
 
     logBusinessEvent({

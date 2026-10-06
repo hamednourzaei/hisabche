@@ -30,9 +30,15 @@ import { cn } from '../../../lib/utils'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { Button } from '../button'
 
-/** The tools that can land in the queue — the gateway's risky ones. */
+/**
+ * What can land in the queue: the gateway's risky tools, and the operations of
+ * the in-app assistant (it queues its plain writes too).
+ */
 export const AI_REQUEST_TOOLS = [
   'create_invoice',
+  'register_payment',
+  'create_customer',
+  'update_customer',
   'confirm_order',
   'fulfill_order',
   'invoice_order',
@@ -49,7 +55,10 @@ export const AI_REQUEST_STATUSES = [
 export const AI_REQUEST_ERROR_CODES = [
   'AI_REQUEST_ALREADY_DECIDED',
   'AI_REQUEST_EXPIRED',
+  'AI_REQUEST_NOT_ALLOWED',
   'AI_REQUESTS_MIGRATION_PENDING',
+  'AI_PIPELINE_DISABLED',
+  'AI_RUN_NOT_PROPOSED',
 ] as const
 
 const card =
@@ -148,6 +157,11 @@ export function AiAssistantsPanel() {
                         {dateTime(request.createdAt)}
                       </span>
                     </p>
+                    {request.run ? (
+                      <p dir="auto" className="text-xs text-[hsl(var(--fg-secondary))]">
+                        {t('inApp')}: {request.run.requestText}
+                      </p>
+                    ) : null}
                     <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('argumentsLabel')}</p>
                     <pre
                       dir="ltr"

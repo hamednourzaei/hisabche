@@ -26,6 +26,8 @@ const toJsonSchema = (schema: any) => {
   return result
 }
 
+import { requireCapability } from '../middleware/authorize.middleware'
+
 export async function customerRoutes(fastify: FastifyInstance) {
   const customerService = new CustomerService()
 
@@ -37,6 +39,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireCapability('customer.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'customers' }),
       ],
       // ❌ حذف: schema: { querystring: ... }
@@ -86,6 +89,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireCapability('customer.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'customer' }),
       ],
     },
@@ -105,7 +109,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/customers',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.write')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -133,7 +137,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/customers/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.write')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -173,7 +177,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/customers/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.write')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -197,6 +201,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireCapability('customer.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'customer-balance' }),
       ],
     },

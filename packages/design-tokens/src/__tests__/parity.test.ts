@@ -188,11 +188,14 @@ describe('PARITY: scales', () => {
   })
 })
 
-describe('PARITY: desktop density is lifted verbatim from apps/desktop/src/styles.css', () => {
-  const desktopCss = readFileSync(resolve(here, '../../../../apps/desktop/src/styles.css'), 'utf8')
+describe('PARITY: desktop density is lifted verbatim from packages/app-shell/src/styles.css', () => {
+  const desktopCss = readFileSync(
+    resolve(here, '../../../../packages/app-shell/src/styles.css'),
+    'utf8',
+  )
   const readDesktop = (name: string): number => {
     const m = new RegExp(`${name}\\s*:\\s*(\\d+)px`).exec(desktopCss)
-    if (!m) throw new Error(`${name} not found in desktop styles.css`)
+    if (!m) throw new Error(`${name} not found in app-shell styles.css`)
     return Number(m[1])
   }
 

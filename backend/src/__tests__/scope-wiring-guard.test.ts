@@ -71,10 +71,9 @@ describe('the guard reaches every shared business entity, not just invoices', ()
   // The four types `scope.service.ts` knows how to read. Each one is a row a
   // colleague can address by id, and each mutating method on it has to ask.
   it.each([
-    [
-      'customer.service.ts',
-      '  async update(id: string, ctx: TenancyContext, data: UpdateCustomer): Promise<Customer> {',
-    ],
+    // The signature wraps since it took the write's condition
+    // (`expectedUpdatedAt`): pinned to the opening line, as invoice delete is.
+    ['customer.service.ts', '  async update(\n'],
     ['customer.service.ts', '  async delete(id: string, ctx: TenancyContext): Promise<void> {'],
     [
       'product.service.ts',

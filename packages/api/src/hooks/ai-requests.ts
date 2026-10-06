@@ -1,6 +1,7 @@
 // ============================================
-// The person's side of the MCP gateway: actions an AI assistant asked for that
-// need approval.
+// THE approval queue: actions an AI assistant asked for that need a person —
+// an outside assistant (MCP, with an API key) or the in-app one (a pipeline
+// run). One list, one approve, one reject.
 //
 //   GET  /ai-requests[?pending=1]
 //   POST /ai-requests/:id/approve
@@ -14,6 +15,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import apiClient from '../lib/client'
 import { asList } from '../lib/as-list'
+import { aiKeys } from './ai-chat'
+import type { AiPipelineRun } from './ai-pipeline'
 import { useAuthReady } from './useAuthReady'
 
 export type AiRequestStatus =
@@ -21,14 +24,19 @@ export type AiRequestStatus =
 
 export interface AiActionRequest {
   id: string
-  keyId: string
+  /** The API key that asked — null for the in-app assistant. */
+  keyId: string | null
+  /** The in-app run it belongs to — null for an API key. */
+  runId: string | null
   tool: string
-  risk: 'financial' | 'destructive'
+  risk: 'write' | 'financial' | 'destructive'
   arguments: Record<string, unknown>
   status: AiRequestStatus
   resultStatus: number | null
   decidedAt: string | null
   createdAt: string
+  /** An in-app request carries its run: the diff a person agrees to. */
+  run?: AiPipelineRun
 }
 
 export const aiRequestKeys = {
@@ -60,6 +68,9 @@ export function useAiActionRequests(requested = true) {
   })
 }
 
+/** A run in one of these states wrote to the books. */
+const WROTE: ReadonlyArray<AiPipelineRun['status']> = ['executed', 'needs_review']
+
 export function useDecideAiActionRequest() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -69,8 +80,17 @@ export function useDecideAiActionRequest() {
       input.decision === 'approve'
         ? (await apiClient.post<AiActionRequest>(`/ai-requests/${input.id}/approve`, {})).data
         : (await apiClient.post<AiActionRequest>(`/ai-requests/${input.id}/reject`, {})).data,
+    onSuccess: (request) => {
+      // An approved action changed invoices, balances, stock and the dashboard
+      // at once: everything is refetched rather than a list of keys guessed.
+      const wrote = request.run ? WROTE.includes(request.run.status) : request.status === 'executed'
+      if (wrote) void queryClient.invalidateQueries()
+    },
     // Settled, not only succeeded: a refused approval («already decided») also
     // means the list on screen is out of date.
-    onSettled: () => queryClient.invalidateQueries({ queryKey: aiRequestKeys.list() }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: aiRequestKeys.list() })
+      void queryClient.invalidateQueries({ queryKey: aiKeys.availability() })
+    },
   })
 }

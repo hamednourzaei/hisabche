@@ -77,6 +77,8 @@ export const employeeSchema = z.object({
   employmentType: z
     .enum(['full_time', 'part_time', 'contractor', 'intern', 'consultant'])
     .default('full_time'),
+  attendanceMethod: z.string().optional().nullable(),
+  attendanceCredential: z.string().optional().nullable(),
   // A calendar DAY, not an instant: the form sends YYYY-MM-DD, and requiring a
   // full datetime rejected every new employee with a 400 ("body/hireDate must
   // match format date-time"). A datetime is still accepted.

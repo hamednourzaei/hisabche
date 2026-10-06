@@ -45,7 +45,13 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { decideRoute } from '../services/developer/developer.domain'
 import { developerService, type ApiKeyPrincipal } from '../services/developer/developer.service'
-import { mcpRequestService, type AiActionRequest } from '../services/mcp/mcp-request.service'
+import { ForbiddenError } from '../errors/auth.error'
+import { PipelineService } from '../services/ai/pipeline/pipeline.service'
+import {
+  mayDecideRequest,
+  mcpRequestService,
+  type AiActionRequest,
+} from '../services/mcp/mcp-request.service'
 import { runRoute, type RouteAnswer } from '../services/mcp/own-route'
 import {
   MCP_CONTRACT_VERSION,
@@ -56,6 +62,7 @@ import {
   RISK_NEEDS_APPROVAL,
   inputSchemaOf,
   toolByName,
+  type McpHttpCall,
   type McpTool,
 } from '../services/mcp/mcp-tools'
 import { requireRole } from '../services/tenancy.service'
@@ -377,10 +384,16 @@ export async function mcpRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── The person's side: the queue of requests awaiting approval ───────────
+  // ─── The person's side: THE approval queue ────────────────────────────────
+  //
+  // One queue for everything an assistant asked for that a person must agree
+  // to — an outside assistant with an API key (above) or the in-app assistant
+  // (a pipeline run). One rule for who may decide (`mayDecideRequest`), one
+  // claim (`mcpRequestService.decide`), and these three routes.
 
   const MEMBER = [authenticate, requireWorkspaceContext]
   const idParams = z.object({ id: z.string().uuid() })
+  const pipeline = new PipelineService()
 
   function fail(reply: FastifyReply, err: unknown, fallback: string) {
     if (err instanceof z.ZodError) {
@@ -389,10 +402,33 @@ export async function mcpRoutes(fastify: FastifyInstance) {
         .send({ error: 'Bad Request', message: err.errors[0]?.message ?? 'Validation failed' })
     }
     if (err instanceof BaseError && (err.statusCode < 500 || err.statusCode === 503)) {
-      return reply.code(err.statusCode).send({ error: err.name, message: err.message })
+      const code = /^[A-Z][A-Z_]{4,}/.exec(err.message)?.[0]
+      return reply
+        .code(err.statusCode)
+        .send({ error: err.name, message: err.message, ...(code ? { code } : {}) })
     }
     fastify.log.error(err)
     return reply.code(500).send({ error: 'Internal Server Error', message: fallback })
+  }
+
+  /**
+   * The request, if this person may decide it.
+   *
+   * A request that exists but is not theirs to decide is refused (403), not
+   * hidden: they were shown it, and «not found» would read as a broken link.
+   */
+  async function decidable(request: FastifyRequest, id: string): Promise<AiActionRequest> {
+    const found = await mcpRequestService.get(request.tenancy, id)
+    // An in-app request needs the capability of its operation; an MCP tool
+    // names a route that checks its own when it runs as the approver.
+    const capability = found.runId ? PipelineService.capabilityOf(found.tool) : null
+    if (found.runId && !capability) {
+      throw new ForbiddenError('AI_REQUEST_NOT_ALLOWED')
+    }
+    if (!mayDecideRequest(request.tenancy, found, capability)) {
+      throw new ForbiddenError('AI_REQUEST_NOT_ALLOWED')
+    }
+    return found
   }
 
   fastify.get(
@@ -404,8 +440,17 @@ export async function mcpRoutes(fastify: FastifyInstance) {
         const { pending } = z
           .object({ pending: z.enum(['0', '1']).optional() })
           .parse(request.query)
+        const requests = await mcpRequestService.list(request.tenancy, {
+          pendingOnly: pending === '1',
+        })
+        // An in-app request carries its run, so it is shown as the diff a
+        // person agrees to rather than as raw arguments.
+        const runs = await pipeline.viewsFor(request.tenancy, requests)
         return reply.send({
-          requests: await mcpRequestService.list(request.tenancy, { pendingOnly: pending === '1' }),
+          requests: requests.map((entry) => ({
+            ...entry,
+            ...(entry.runId && runs.has(entry.runId) ? { run: runs.get(entry.runId) } : {}),
+          })),
         })
       } catch (err) {
         return fail(reply, err, 'Failed to read requests')
@@ -418,9 +463,13 @@ export async function mcpRoutes(fastify: FastifyInstance) {
     { preHandler: MEMBER },
     async (request: FastifyRequest, reply) => {
       try {
-        requireRole(request.tenancy, 'manager')
         const { id } = idParams.parse(request.params)
-        return reply.send(await mcpRequestService.decide(request.tenancy, id, 'rejected'))
+        await decidable(request, id)
+        const rejected = await mcpRequestService.decide(request.tenancy, id, 'rejected')
+        const run = rejected.runId
+          ? await pipeline.markRejected(request.tenancy, rejected.runId)
+          : null
+        return reply.send({ ...rejected, ...(run ? { run } : {}) })
       } catch (err) {
         return fail(reply, err, 'Failed to reject the request')
       }
@@ -432,8 +481,21 @@ export async function mcpRoutes(fastify: FastifyInstance) {
     { preHandler: MEMBER },
     async (request: FastifyRequest, reply) => {
       try {
-        requireRole(request.tenancy, 'manager')
         const { id } = idParams.parse(request.params)
+        const asked = await decidable(request, id)
+        // The requests the server sends itself are sent AS THE APPROVER, in
+        // the business the request was approved in.
+        const send = (call: McpHttpCall) =>
+          runRoute(fastify, call, request.headers.authorization ?? '', request.tenancy.workspaceId)
+
+        if (asked.runId) {
+          // The business's switch is checked BEFORE the claim: a request that
+          // is refused here stays pending and can be approved once it is on.
+          await pipeline.assertEnabled(request.tenancy)
+          const claimed = await mcpRequestService.decide(request.tenancy, id, 'approved')
+          const run = await pipeline.runClaimed(request.tenancy, send, claimed, false)
+          return reply.send({ ...(await mcpRequestService.get(request.tenancy, id)), run })
+        }
 
         const claimed = await mcpRequestService.decide(request.tenancy, id, 'approved')
         const tool = toolByName(claimed.tool)
@@ -450,19 +512,12 @@ export async function mcpRoutes(fastify: FastifyInstance) {
           )
         }
 
-        // Run the route AS THE PERSON APPROVING: their session, their
-        // capabilities. The request id is the idempotency key, so a retried
-        // approval cannot issue a second invoice.
-        const answer = await runRoute(
-          fastify,
-          { ...tool.call(args.data as Record<string, unknown>), idempotencyKey: `mcp-${id}` },
-          request.headers.authorization ?? '',
-          // ⚠️ The business the request was approved IN. The approval was
-          // already recorded above; without this, an approver who has a second
-          // workspace had the action refused (403) AFTER being claimed — an
-          // approved request that never ran and could not be approved again.
-          request.tenancy.workspaceId,
-        )
+        // The request id is the idempotency key, so a retried approval cannot
+        // issue a second invoice.
+        const answer = await send({
+          ...tool.call(args.data as Record<string, unknown>),
+          idempotencyKey: `mcp-${id}`,
+        })
         const ok = answer.httpStatus >= 200 && answer.httpStatus < 300
         return reply.send(
           await mcpRequestService.finish(request.tenancy, id, {

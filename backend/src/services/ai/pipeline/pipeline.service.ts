@@ -18,6 +18,12 @@
 // the same code that serves the screens. This file imports no invoice, payment
 // or customer service and never names a business table.
 //
+// ⚠️ IT HAS NO APPROVAL OF ITS OWN. A proposal becomes a row of THE approval
+// queue (services/mcp/mcp-request.service — the same one an outside assistant's
+// requests wait in). Who may approve, the claim that makes «once» true, and the
+// approve / reject routes are that queue's. This file is told «this request was
+// claimed» (`runClaimed`) and does the run's part: execute, verify, audit.
+//
 // ⚠️ WHOSE SESSION. Investigation runs as the person who asked. Execution runs
 // as the person who APPROVED — their capabilities, their segregation-of-duties
 // record. Usually that is the same person; when the requester may not do the
@@ -34,6 +40,12 @@ import { ConflictError, NotFoundError } from '../../../errors/database.error'
 import { ValidationError } from '../../../errors/validation.error'
 import { holds, roleAtLeast, type Capability } from '../../authorization'
 import type { McpHttpCall } from '../../mcp/mcp-tools'
+import {
+  mayDecideRequest,
+  mcpRequestService,
+  type AiActionRequest,
+  type McpRequestService,
+} from '../../mcp/mcp-request.service'
 import { isOk, type RouteAnswer } from '../../mcp/own-route'
 import type { TenancyContext } from '../../tenancy.service'
 import { AiChatService } from '../ai-chat.service'
@@ -43,6 +55,7 @@ import { AiSettingsService, type AiProviderConfig } from '../ai-settings.service
 import {
   MAX_OPTIONS,
   OPERATION_SPECS,
+  PIPELINE_OPERATIONS,
   UNDERSTAND_PROMPT,
   applyAnswers,
   mayAutoApprove,
@@ -109,6 +122,8 @@ export interface RunView {
   entityType: PipelineRun['entityType']
   entityId: string | null
   createdAt: string
+  /** Its row in THE approval queue — what approve and reject are called with. */
+  requestId: string | null
   /** Whether THIS caller may approve it now. For showing the button only. */
   canApprove: boolean
   /** The requester may not run it themselves: a manager or owner must approve. */
@@ -171,13 +186,21 @@ export class PipelineService {
     private readonly quota = new AiQuotaService(),
     private readonly model: ModelCaller = (config, system, user) =>
       new AiChatService().complete(config, system, user),
+    /** THE approval queue. The pipeline adds to it and is told when a row is claimed. */
+    private readonly queue: McpRequestService = mcpRequestService,
   ) {}
 
   // ─── The switch ───────────────────────────────────────────────────────────
 
   async readSettings(ctx: TenancyContext) {
     const { settings, available } = await this.repo.getSettings(ctx.workspaceId)
-    return { ...settings, available, canManage: roleAtLeast(ctx.role, 'owner') }
+    return {
+      ...settings,
+      available,
+      canManage: roleAtLeast(ctx.role, 'owner'),
+      // Whether the queue of what awaits a decision is theirs to read.
+      canDecide: roleAtLeast(ctx.role, 'manager'),
+    }
   }
 
   /** Owner only: this decides whether an assistant may change the books at all. */
@@ -185,6 +208,11 @@ export class PipelineService {
     if (!roleAtLeast(ctx.role, 'owner')) throw new ForbiddenError('AI_PIPELINE_OWNER_ONLY')
     await this.repo.saveSettings(ctx, settings)
     return this.readSettings(ctx)
+  }
+
+  /** The kill switch: refuses when the business has the pipeline off. */
+  async assertEnabled(ctx: TenancyContext): Promise<void> {
+    await this.enabledSettings(ctx)
   }
 
   private async enabledSettings(ctx: TenancyContext): Promise<PipelineSettings> {
@@ -336,7 +364,7 @@ export class PipelineService {
           questions: planned.questions,
         },
       )
-      if (!waiting) throw new ConflictError('AI_RUN_ALREADY_DECIDED')
+      if (!waiting) throw new ConflictError('AI_RUN_NOT_WAITING')
       return this.view(ctx, waiting)
     }
 
@@ -348,6 +376,19 @@ export class PipelineService {
       warnings: planned.proposal.warnings.map((warning) => warning.code),
       exactMatches: planned.proposal.exactMatches,
     })
+
+    // ─── Into THE approval queue ───
+    // A dry run is never queued: there is nothing anybody could approve.
+    const spec = OPERATION_SPECS[operation]
+    const request = run.dryRun
+      ? null
+      : await this.queue.createForRun(ctx, {
+          runId: run.id,
+          tool: operation,
+          risk: spec.financial ? 'financial' : 'write',
+          arguments: planned.command as unknown as Record<string, unknown>,
+        })
+
     const proposed = await this.repo.move(
       ctx.workspaceId,
       run.id,
@@ -361,19 +402,20 @@ export class PipelineService {
         proposal: planned.proposal,
       },
     )
-    if (!proposed) throw new ConflictError('AI_RUN_ALREADY_DECIDED')
+    if (!proposed) throw new ConflictError('AI_RUN_NOT_WAITING')
     await this.repo.addStep(proposed, 'propose', 'ok', ctx.userId, {
       changes: planned.proposal.changes.length,
       dryRun: proposed.dryRun,
+      requestId: request?.id ?? null,
     })
 
-    const requesterHolds = holds(ctx, OPERATION_SPECS[operation].capability)
-    if (!proposed.dryRun && mayAutoApprove(settings, planned.proposal, requesterHolds)) {
-      return this.execute(ctx, runner, proposed, true)
+    // Approval by rule goes through the SAME claim a person's approval does.
+    if (request && mayAutoApprove(settings, planned.proposal, holds(ctx, spec.capability))) {
+      const claimed = await this.queue.decide(ctx, request.id, 'approved')
+      return this.runClaimed(ctx, runner, claimed, true)
     }
     return this.view(ctx, proposed)
   }
-
   /**
    * Read what the plan needs, through the app's own routes, as the requester.
    *
@@ -463,61 +505,46 @@ export class PipelineService {
     return { customer, products, openInvoices, duplicates }
   }
 
-  // ─── Approve, reject ──────────────────────────────────────────────────────
+  // ─── After the queue decided ──────────────────────────────────────────────
+
+  /** The capability an in-app request needs, or null when its tool is not ours. */
+  static capabilityOf(tool: string): Capability | null {
+    return (PIPELINE_OPERATIONS as readonly string[]).includes(tool)
+      ? OPERATION_SPECS[tool as PipelineOperation].capability
+      : null
+  }
 
   /**
+   * Run the proposal of a request the queue has just CLAIMED.
+   *
+   * ⚠️ Called only with a request whose status the queue moved to `approved`
+   * for this caller — that conditional update is the one claim there is, so
+   * this can run at most once per request. The run is moved forward under the
+   * same condition, and the queue is told the outcome at the end.
+   *
    * @param runner sends requests AS THE APPROVER — the write is theirs.
    */
-  async approve(ctx: TenancyContext, runner: RouteRunner, runId: string): Promise<RunView> {
-    await this.enabledSettings(ctx)
-    const run = await this.mustFind(ctx, runId)
-    if (run.dryRun) throw new ConflictError('AI_RUN_IS_DRY_RUN')
-    if (run.status !== 'proposed') throw new ConflictError('AI_RUN_ALREADY_DECIDED')
-    return this.execute(ctx, runner, run, false)
-  }
-
-  async reject(ctx: TenancyContext, runId: string): Promise<RunView> {
-    const run = await this.mustFind(ctx, runId)
-    const rejected = await this.repo.move(ctx.workspaceId, run.id, ['needs_input', 'proposed'], {
-      status: 'rejected',
-    })
-    if (!rejected) throw new ConflictError('AI_RUN_ALREADY_DECIDED')
-    await this.repo.addStep(rejected, 'confirm', 'stopped', ctx.userId, { rejected: true })
-    return this.view(ctx, rejected)
-  }
-
-  /** May this person approve this run? The existing permission model decides. */
-  private mayApprove(ctx: TenancyContext, run: PipelineRun): boolean {
-    if (!run.operation) return false
-    // The capability of the operation itself, as resolved for THIS member
-    // (role, the business's overrides, a custom role, personal blocks).
-    if (!holds(ctx, OPERATION_SPECS[run.operation].capability)) return false
-    // Their own request, or — for somebody else's — a manager or owner.
-    return run.requestedBy === ctx.userId || roleAtLeast(ctx.role, 'manager')
-  }
-
-  private async execute(
+  async runClaimed(
     ctx: TenancyContext,
     runner: RouteRunner,
-    run: PipelineRun,
+    request: AiActionRequest,
     auto: boolean,
   ): Promise<RunView> {
-    if (!run.operation || !run.command) throw new ConflictError('AI_RUN_ALREADY_DECIDED')
-    if (!this.mayApprove(ctx, run)) {
-      await this.repo.addStep(run, 'confirm', 'stopped', ctx.userId, { reason: 'NOT_ALLOWED' })
-      throw new ForbiddenError('AI_RUN_APPROVAL_NOT_ALLOWED')
+    const refuse = async (code: string): Promise<never> => {
+      await this.queue.finish(ctx, request.id, { ok: false, httpStatus: 409, body: { code } })
+      throw new ConflictError(code)
     }
+    if (!request.runId) return refuse('AI_RUN_NOT_PROPOSED')
+    const run = await this.repo.getRun(ctx.workspaceId, request.runId)
+    if (!run || run.dryRun || run.status !== 'proposed') return refuse('AI_RUN_NOT_PROPOSED')
 
-    // The claim. Exactly one approval gets a row back; the rest stop here.
     const claimed = await this.repo.move(ctx.workspaceId, run.id, ['proposed'], {
       status: 'approved',
       approvedBy: ctx.userId,
       autoApproved: auto,
     })
-    if (!claimed || !claimed.command || !claimed.operation) {
-      throw new ConflictError('AI_RUN_ALREADY_DECIDED')
-    }
-    await this.repo.addStep(claimed, 'confirm', 'ok', ctx.userId, { auto })
+    if (!claimed || !claimed.command || !claimed.operation) return refuse('AI_RUN_NOT_PROPOSED')
+    await this.repo.addStep(claimed, 'confirm', 'ok', ctx.userId, { auto, requestId: request.id })
 
     // ─── Execute: the same route a person uses, with the run's own key ───
     let answer: RouteAnswer
@@ -525,7 +552,7 @@ export class PipelineService {
       answer = await runner(toHttpCall(claimed.command, claimed.id))
     } catch (err) {
       console.error('[PipelineService] execution threw:', err)
-      return this.finish(ctx, claimed, 'execute', 'failed', {
+      return this.finish(ctx, claimed, request, 'execute', 'failed', {
         status: 'failed',
         reasonCode: 'EXECUTION_ERROR',
       })
@@ -536,6 +563,7 @@ export class PipelineService {
       return this.finish(
         ctx,
         claimed,
+        request,
         'execute',
         'failed',
         {
@@ -578,6 +606,7 @@ export class PipelineService {
     return this.finish(
       ctx,
       claimed,
+      request,
       'verify',
       mismatches.length === 0 ? 'ok' : 'failed',
       {
@@ -597,6 +626,31 @@ export class PipelineService {
     )
   }
 
+  /** The queue rejected this run's request: the run is over. */
+  async markRejected(ctx: TenancyContext, runId: string): Promise<RunView | null> {
+    const rejected = await this.repo.move(ctx.workspaceId, runId, ['proposed'], {
+      status: 'rejected',
+    })
+    if (!rejected) return null
+    await this.repo.addStep(rejected, 'confirm', 'stopped', ctx.userId, { rejected: true })
+    return this.view(ctx, rejected)
+  }
+
+  /**
+   * Give up a run that is still asking questions. Not an approval decision:
+   * nothing was proposed yet, so nothing is in the queue.
+   */
+  async cancel(ctx: TenancyContext, runId: string): Promise<RunView> {
+    const run = await this.repo.getRun(ctx.workspaceId, runId)
+    if (!run || run.requestedBy !== ctx.userId) throw new NotFoundError('AI run')
+    const cancelled = await this.repo.move(ctx.workspaceId, run.id, ['needs_input'], {
+      status: 'rejected',
+    })
+    if (!cancelled) throw new ConflictError('AI_RUN_NOT_WAITING')
+    await this.repo.addStep(cancelled, 'ask', 'stopped', ctx.userId, { cancelled: true })
+    return this.view(ctx, cancelled)
+  }
+
   /** After the route committed, the audit trail must not turn a done write into an error. */
   private async afterWrite(write: () => Promise<unknown>): Promise<void> {
     try {
@@ -606,9 +660,11 @@ export class PipelineService {
     }
   }
 
+  /** Close the run AND its row in the queue, with the same outcome. */
   private async finish(
     ctx: TenancyContext,
     run: PipelineRun,
+    request: AiActionRequest,
     stage: 'execute' | 'verify',
     outcome: PipelineStep['outcome'],
     patch: Parameters<PipelineRepository['move']>[3],
@@ -616,26 +672,33 @@ export class PipelineService {
   ): Promise<RunView> {
     await this.afterWrite(() => this.repo.addStep(run, stage, outcome, ctx.userId, detail))
     const finished = await this.repo.move(ctx.workspaceId, run.id, ['approved'], patch)
+    const wrote = patch.status === 'executed' || patch.status === 'needs_review'
+    await this.afterWrite(() =>
+      this.queue.finish(ctx, request.id, {
+        ok: wrote,
+        httpStatus: patch.resultStatus ?? (wrote ? 200 : 500),
+        body: patch.result ?? (patch.reasonCode ? { code: patch.reasonCode } : null),
+      }),
+    )
     return this.view(ctx, finished ?? run)
   }
 
   // ─── Reading ──────────────────────────────────────────────────────────────
 
-  async get(ctx: TenancyContext, runId: string): Promise<RunView> {
-    return this.view(ctx, await this.mustFind(ctx, runId))
-  }
-
-  /** One's own recent runs, plus — for whoever could decide them — what awaits a decision. */
-  async list(ctx: TenancyContext): Promise<RunView[]> {
-    const own = await this.repo.listRuns(ctx.workspaceId, { requestedBy: ctx.userId })
-    const waiting = roleAtLeast(ctx.role, 'manager')
-      ? await this.repo.listRuns(ctx.workspaceId, { awaitingDecision: true })
-      : []
-    const seen = new Set<string>()
-    const runs = [...waiting, ...own]
-      .filter((run) => (seen.has(run.id) ? false : (seen.add(run.id), true)))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    return runs.map((run) => this.toView(ctx, run, []))
+  /**
+   * The runs behind these queue rows, as views — for the one queue's list, so
+   * an in-app request is shown as its diff rather than as raw arguments.
+   */
+  async viewsFor(
+    ctx: TenancyContext,
+    requests: readonly AiActionRequest[],
+  ): Promise<Map<string, RunView>> {
+    const byRun = new Map<string, AiActionRequest>()
+    for (const request of requests) if (request.runId) byRun.set(request.runId, request)
+    const runs = await this.repo.getRuns(ctx.workspaceId, [...byRun.keys()])
+    return new Map(
+      runs.map((run) => [run.id, this.toView(ctx, run, byRun.get(run.id) ?? null, [])]),
+    )
   }
 
   /** A run this person may look at: their own, or any when they could decide it. */
@@ -670,11 +733,27 @@ export class PipelineService {
   }
 
   private async view(ctx: TenancyContext, run: PipelineRun): Promise<RunView> {
-    return this.toView(ctx, run, await this.repo.steps(ctx.workspaceId, run.id))
+    const [steps, requests] = await Promise.all([
+      this.repo.steps(ctx.workspaceId, run.id),
+      run.status === 'understanding' || run.status === 'needs_input' || run.dryRun
+        ? Promise.resolve(new Map<string, AiActionRequest>())
+        : this.queue.byRuns(ctx, [run.id]),
+    ])
+    return this.toView(ctx, run, requests.get(run.id) ?? null, steps)
   }
 
-  private toView(ctx: TenancyContext, run: PipelineRun, steps: PipelineStep[]): RunView {
-    const open = run.status === 'proposed' && !run.dryRun
+  private toView(
+    ctx: TenancyContext,
+    run: PipelineRun,
+    request: AiActionRequest | null,
+    steps: PipelineStep[],
+  ): RunView {
+    const waiting = run.status === 'proposed' && !run.dryRun && request?.status === 'pending'
+    // THE rule of the queue — the same call the approve route makes.
+    const may =
+      waiting && request && run.operation
+        ? mayDecideRequest(ctx, request, OPERATION_SPECS[run.operation].capability)
+        : false
     return {
       id: run.id,
       requestText: run.requestText,
@@ -693,13 +772,13 @@ export class PipelineService {
       entityType: run.entityType,
       entityId: run.entityId,
       createdAt: run.createdAt,
-      canApprove: open && this.mayApprove(ctx, run),
-      needsApprover: open && run.requestedBy === ctx.userId && !this.mayApprove(ctx, run),
+      requestId: request?.id ?? null,
+      canApprove: may,
+      needsApprover: Boolean(waiting) && run.requestedBy === ctx.userId && !may,
       steps,
     }
   }
 }
-
 /** A refusal the route can say as one (4xx), as opposed to a fault. */
 export const isPipelineRefusal = (err: unknown): err is BaseError =>
   err instanceof BaseError && (err.statusCode < 500 || err.statusCode === 503)

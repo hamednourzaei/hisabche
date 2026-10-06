@@ -58,3 +58,5 @@ export {
 // Mirrors the active workspace into @hisabche/api so realtime can scope its
 // subscriptions. Call once at app start-up.
 export { bindActiveWorkspace } from './bind-active-workspace'
+
+export { useCustomizerStore, type CustomizerGroupData } from './slices/customizer.slice'

@@ -4,8 +4,9 @@
 // Asking the assistant to DO something (`ai_pipeline_v2`).
 //
 // A request in words becomes a RUN. The server understands it, asks for what is
-// missing, and answers with a proposal — a diff. Nothing is written until a
-// person approves, and what is written goes through the same route the screens
+// missing, and answers with a proposal — a diff. The proposal waits in THE
+// approval queue (hooks/ai-requests.ts): approving and rejecting are that
+// queue's, not this file's. Nothing is written until a person approves, and what is written goes through the same route the screens
 // use. The shapes here are the server's (`RunView` in pipeline.service.ts).
 // ============================================
 
@@ -100,6 +101,8 @@ export interface AiPipelineRun {
   entityType: 'invoice' | 'payment' | 'customer' | null
   entityId: string | null
   createdAt: string
+  /** Its row in the approval queue — what approve and reject are called with. */
+  requestId: string | null
   /** Whether the signed-in person may approve it. The server decides again on approval. */
   canApprove: boolean
   /** The requester may not run it themselves: a manager or owner must approve. */
@@ -114,12 +117,13 @@ export interface AiPipelineSettings {
   available: boolean
   /** Whether the signed-in person may change these (the owner). */
   canManage: boolean
+  /** Whether the approval queue is theirs to read (a manager or the owner). */
+  canDecide: boolean
 }
 
 export const aiPipelineKeys = {
   all: ['ai-pipeline'] as const,
   settings: () => [...aiPipelineKeys.all, 'settings'] as const,
-  runs: () => [...aiPipelineKeys.all, 'runs'] as const,
 }
 
 export function useAiPipelineSettings() {
@@ -151,22 +155,6 @@ export function useSaveAiPipelineSettings() {
   })
 }
 
-/** Runs of one's own, plus — for a manager or owner — what awaits a decision. */
-export function useAiPipelineRuns(options: { enabled?: boolean | undefined } = {}) {
-  const ready = useAuthReady()
-  return useQuery({
-    queryKey: aiPipelineKeys.runs(),
-    queryFn: async (): Promise<AiPipelineRun[]> => {
-      const { data } = await apiClient.get<{ runs: AiPipelineRun[] }>('/ai/pipeline/runs')
-      return Array.isArray(data?.runs) ? data.runs : []
-    },
-    enabled: ready && options.enabled !== false,
-    // A decision somebody is waiting for: never shown from a stale copy.
-    staleTime: 0,
-    meta: { persist: false },
-  })
-}
-
 /** The run a response carries. */
 const runOf = (data: unknown): AiPipelineRun => (data as { run: AiPipelineRun }).run
 
@@ -182,8 +170,8 @@ function useRunMutation<Input>(send: (input: Input) => Promise<AiPipelineRun>) {
   return useMutation({
     mutationFn: send,
     onSuccess: (run) => {
+      // A clean non-financial change may have run by rule, right here.
       if (WROTE.includes(run.status)) void queryClient.invalidateQueries()
-      else void queryClient.invalidateQueries({ queryKey: aiPipelineKeys.runs() })
     },
     onSettled: () => {
       // A run spends one unit of the monthly allowance.
@@ -226,16 +214,10 @@ export function useAnswerAiPipelineRun() {
   )
 }
 
-export function useApproveAiPipelineRun() {
+/** Give up a run that is still asking questions. Nothing was proposed yet. */
+export function useCancelAiPipelineRun() {
   return useRunMutation(async (runId: string) => {
-    const { data } = await apiClient.post(`/ai/pipeline/runs/${runId}/approve`)
-    return runOf(data)
-  })
-}
-
-export function useRejectAiPipelineRun() {
-  return useRunMutation(async (runId: string) => {
-    const { data } = await apiClient.post(`/ai/pipeline/runs/${runId}/reject`)
+    const { data } = await apiClient.post(`/ai/pipeline/runs/${runId}/cancel`)
     return runOf(data)
   })
 }

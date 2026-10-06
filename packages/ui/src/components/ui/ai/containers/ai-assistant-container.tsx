@@ -36,8 +36,14 @@ import { useTranslations } from 'next-intl'
 import type { ThreadMessageLike } from '@assistant-ui/react'
 import { Sparkles } from 'lucide-react'
 
-import { useAiAvailability, useAskAi, type AiQuotaExceeded } from '@hisabche/api'
+import {
+  useAiAvailability,
+  useAiPipelineSettings,
+  useAskAi,
+  type AiQuotaExceeded,
+} from '@hisabche/api'
 
+import { AiActionTool } from '../ai-action-tool'
 import { AiAssistantPanel } from '../ai-assistant-panel'
 import { DocumentReadTool } from '../document-read-tool'
 import { DocumentTranslateTool } from '../document-translate-tool'
@@ -45,11 +51,12 @@ import { cn } from '../../../../lib/utils'
 import { SegmentedControl } from '../../segmented-control'
 import { aiErrorText } from '../../../../lib/ai-error-text'
 
-const ASSISTANT_MODES = ['ask', 'translate', 'read'] as const
+const ASSISTANT_MODES = ['ask', 'do', 'translate', 'read'] as const
 type AssistantMode = (typeof ASSISTANT_MODES)[number]
 
 const MODE_LABEL: Record<AssistantMode, { key: string; fallback: string }> = {
   ask: { key: 'ai.modeAsk', fallback: 'پرسش از دفترها' },
+  do: { key: 'ai.modeDo', fallback: 'انجام کار' },
   translate: { key: 'ai.modeTranslate', fallback: 'ترجمه‌ی سند' },
   read: { key: 'ai.modeRead', fallback: 'خواندن سند' },
 }
@@ -86,6 +93,12 @@ export function AiAssistantContainer() {
 
   const { data: availability, isLoading } = useAiAvailability()
   const ask = useAskAi()
+  // «انجام کار» is offered when the business turned it on — or to the owner,
+  // who is the one person that can. Nobody else is shown a mode that can only
+  // tell them it is off.
+  const { data: pipeline } = useAiPipelineSettings()
+  const offersActions = pipeline?.enabled === true || pipeline?.canManage === true
+  const modes = ASSISTANT_MODES.filter((value) => value !== 'do' || offersActions)
 
   const send = React.useCallback(
     (text: string) => {
@@ -172,8 +185,10 @@ export function AiAssistantContainer() {
   const spent = exceeded !== null
 
   return (
-    <Shell t={tr} remaining={quota?.remaining ?? null} mode={mode} onMode={setMode}>
-      {mode === 'translate' ? (
+    <Shell t={tr} remaining={quota?.remaining ?? null} mode={mode} modes={modes} onMode={setMode}>
+      {mode === 'do' && offersActions ? (
+        <AiActionTool topupContact={availability.topupContact} />
+      ) : mode === 'translate' ? (
         <DocumentTranslateTool topupContact={availability.topupContact} />
       ) : mode === 'read' ? (
         <DocumentReadTool topupContact={availability.topupContact} />
@@ -203,6 +218,7 @@ function Shell({
   t,
   remaining,
   mode,
+  modes,
   onMode,
   children,
 }: {
@@ -210,6 +226,8 @@ function Shell({
   remaining?: number | null
   /** Given only when the assistant is usable: an unconfigured page has one thing to say. */
   mode?: AssistantMode
+  /** The modes this person is offered, in order. */
+  modes?: readonly AssistantMode[]
   onMode?: (mode: AssistantMode) => void
   children: React.ReactNode
 }) {
@@ -245,7 +263,7 @@ function Shell({
       {mode && onMode ? (
         <SegmentedControl
           label={t('ai.title', 'دستیار')}
-          options={ASSISTANT_MODES.map((value) => ({
+          options={(modes ?? ASSISTANT_MODES).map((value) => ({
             value,
             label: t(MODE_LABEL[value].key, MODE_LABEL[value].fallback),
           }))}

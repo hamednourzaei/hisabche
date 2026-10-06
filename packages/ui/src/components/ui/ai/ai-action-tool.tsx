@@ -14,6 +14,11 @@
 // as the person who approved. So what is rendered below the request is exactly
 // what will be sent — the server builds the diff from the command it stores.
 //
+// ⚠️ APPROVAL IS THE QUEUE'S. A proposal is a row of the one approval queue
+// (`useAiActionRequests` / `useDecideAiActionRequest`) — the same one an outside
+// assistant's requests wait in, and the same one «توسعه‌دهندگان» lists. This
+// screen has no approve of its own.
+//
 // ⚠️ OFF IS SAID, NOT HIDDEN. The feature is off until the owner turns it on;
 // the owner sees the switch here, everybody else is told who can.
 // ============================================
@@ -22,11 +27,11 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { formatNumber } from '@hisabche/formatting'
 import {
-  useAiPipelineRuns,
+  useAiActionRequests,
   useAiPipelineSettings,
   useAnswerAiPipelineRun,
-  useApproveAiPipelineRun,
-  useRejectAiPipelineRun,
+  useCancelAiPipelineRun,
+  useDecideAiActionRequest,
   useSaveAiPipelineSettings,
   useStartAiPipelineRun,
   type AiPipelineChange,
@@ -55,9 +60,12 @@ export const ACTION_ERROR_CODES = [
   'AI_QUOTA_EXCEEDED',
   'AI_PROVIDER_BUSY',
   'AI_RUN_ALREADY_DECIDED',
-  'AI_RUN_APPROVAL_NOT_ALLOWED',
-  'AI_RUN_IS_DRY_RUN',
+  'AI_RUN_NOT_PROPOSED',
   'AI_RUN_NOT_WAITING',
+  'AI_REQUEST_ALREADY_DECIDED',
+  'AI_REQUEST_EXPIRED',
+  'AI_REQUEST_NOT_ALLOWED',
+  'AI_REQUESTS_MIGRATION_PENDING',
   'AI_RUN_NOT_YOURS',
 ] as const
 
@@ -157,10 +165,12 @@ export function AiActionTool({ topupContact }: { topupContact?: string | undefin
   const saveSettings = useSaveAiPipelineSettings()
   const start = useStartAiPipelineRun()
   const answer = useAnswerAiPipelineRun()
-  const approve = useApproveAiPipelineRun()
-  const reject = useRejectAiPipelineRun()
+  const cancel = useCancelAiPipelineRun()
+  // THE approval queue: this screen's approve and reject are its, and what
+  // waits for a manager is read from it.
+  const decide = useDecideAiActionRequest()
   const enabled = settings?.enabled === true
-  const { data: runs } = useAiPipelineRuns({ enabled })
+  const { data: queue } = useAiActionRequests(enabled && settings?.canDecide === true)
 
   const [request, setRequest] = useState('')
   const [dryRun, setDryRun] = useState(false)
@@ -227,7 +237,22 @@ export function AiActionTool({ topupContact }: { topupContact?: string | undefin
         ? t(`fields.${change.field}`)
         : change.field
 
-  const busy = start.isPending || answer.isPending || approve.isPending || reject.isPending
+  /** Approve or reject in the queue; the answer carries the run as it now stands. */
+  const decideRun = (target: AiPipelineRun, decision: 'approve' | 'reject', current: boolean) => {
+    if (!target.requestId) return
+    setFailure(null)
+    decide.mutate(
+      { id: target.requestId, decision },
+      {
+        onSuccess: (request) => {
+          if (current && request.run) setRun(request.run)
+        },
+        onError: (error: unknown) => setFailure(error),
+      },
+    )
+  }
+
+  const busy = start.isPending || answer.isPending || cancel.isPending || decide.isPending
 
   if (isLoading || !settings) {
     return (
@@ -274,10 +299,11 @@ export function AiActionTool({ topupContact }: { topupContact?: string | undefin
     )
   }
 
-  // Somebody else's proposal that this person could decide.
-  const waiting = (runs ?? []).filter(
-    (entry) => entry.status === 'proposed' && entry.canApprove && entry.id !== run?.id,
-  )
+  // In-app proposals waiting in the queue that this person could decide.
+  const waiting = (queue ?? [])
+    .filter((entry) => entry.status === 'pending' && entry.run?.canApprove === true)
+    .map((entry) => entry.run as AiPipelineRun)
+    .filter((entry) => entry.id !== run?.id)
   const tooLong = request.length > ACTION_MAX_CHARACTERS
 
   return (
@@ -334,8 +360,9 @@ export function AiActionTool({ topupContact }: { topupContact?: string | undefin
           fieldLabel={fieldLabel}
           busy={busy}
           onAnswer={(answers) => answer.mutate({ runId: run.id, answers }, settle)}
-          onApprove={() => approve.mutate(run.id, settle)}
-          onReject={() => reject.mutate(run.id, settle)}
+          onCancel={() => cancel.mutate(run.id, settle)}
+          onApprove={() => decideRun(run, 'approve', true)}
+          onReject={() => decideRun(run, 'reject', true)}
           onOpen={(route) => push(route)}
         />
       ) : null}
@@ -354,8 +381,9 @@ export function AiActionTool({ topupContact }: { topupContact?: string | undefin
               fieldLabel={fieldLabel}
               busy={busy}
               onAnswer={() => undefined}
-              onApprove={() => approve.mutate(entry.id, settle)}
-              onReject={() => reject.mutate(entry.id, settle)}
+              onCancel={() => undefined}
+              onApprove={() => decideRun(entry, 'approve', false)}
+              onReject={() => decideRun(entry, 'reject', false)}
               onOpen={(route) => push(route)}
             />
           ))}
@@ -413,6 +441,7 @@ function RunCard({
   fieldLabel,
   busy,
   onAnswer,
+  onCancel,
   onApprove,
   onReject,
   onOpen,
@@ -423,6 +452,8 @@ function RunCard({
   fieldLabel: (change: AiPipelineChange) => string
   busy: boolean
   onAnswer: (answers: Record<string, string>) => void
+  /** Give up a run that is still asking — not a decision of the queue. */
+  onCancel: () => void
   onApprove: () => void
   onReject: () => void
   onOpen: (route: string) => void
@@ -498,7 +529,7 @@ function RunCard({
             <Button onClick={() => onAnswer(answers)} disabled={busy || !answered} loading={busy}>
               {t('continue')}
             </Button>
-            <Button variant="outline" onClick={onReject} disabled={busy}>
+            <Button variant="outline" onClick={onCancel} disabled={busy}>
               {t('cancel')}
             </Button>
           </div>

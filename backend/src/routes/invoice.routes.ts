@@ -15,6 +15,7 @@ import { InvoiceRelatedService } from '../services/invoices/invoice-related.serv
 import { ActivityService } from '../services/activity.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { resolveBranchContext } from '../middleware/branch.middleware'
 import { branches } from '../services/branch'
 import { BaseError } from '../errors/base.error'
@@ -38,6 +39,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireCapability('invoice.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'invoices' }),
       ],
     },
@@ -103,7 +105,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/invoices/:id/related',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.read')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -126,6 +128,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireCapability('invoice.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'invoice' }),
       ],
     },
@@ -147,7 +150,12 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/invoices',
     {
-      preHandler: [authenticate, requireWorkspaceContext, resolveBranchContext],
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('invoice.create'),
+        resolveBranchContext,
+      ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -297,7 +305,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/invoices/post-unposted',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.update')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -326,7 +334,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/invoices/:id/post-to-ledger',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.update')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -348,7 +356,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/invoices/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.update')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -400,7 +408,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/invoices/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.delete')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {

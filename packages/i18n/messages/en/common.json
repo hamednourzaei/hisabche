@@ -1226,7 +1226,7 @@
         "example2": "Which products are running low?",
         "example3": "Which invoices are still unpaid?",
         "example4": "What is each customer's balance?",
-        "note": "The assistant reads only this business’s data and never changes anything."
+        "note": "The assistant reads only this business’s own data; it can change the books only when the owner has switched that on."
       },
       "multi": {
         "label": "Multi-business",
@@ -6297,7 +6297,8 @@
     "openFullPage": "Open full page",
     "modeAsk": "Ask the books",
     "modeTranslate": "Translate a document",
-    "modeRead": "Read a document"
+    "modeRead": "Read a document",
+    "modeDo": "Do something"
   },
   "display": {
     "basis": "Show amounts in",
@@ -8384,11 +8385,15 @@
       "confirm_order": "Confirm an order",
       "fulfill_order": "Fulfil an order (takes goods out of stock)",
       "invoice_order": "Invoice an order",
-      "cancel_order": "Cancel an order"
+      "cancel_order": "Cancel an order",
+      "register_payment": "Record a payment",
+      "create_customer": "Create a customer",
+      "update_customer": "Edit a customer"
     },
     "risks": {
       "financial": "Financial",
-      "destructive": "Cannot be undone"
+      "destructive": "Cannot be undone",
+      "write": "Change"
     },
     "statuses": {
       "pending": "Waiting for approval",
@@ -8401,9 +8406,14 @@
     "errors": {
       "general": "That did not work. Try again.",
       "AI_REQUEST_ALREADY_DECIDED": "This request has already been approved or rejected.",
+      "AI_RUN_ALREADY_DECIDED": "This request has already been approved or rejected.",
       "AI_REQUEST_EXPIRED": "This request waited more than a day and can no longer be approved.",
-      "AI_REQUESTS_MIGRATION_PENDING": "This section is not enabled on the database yet. The ai-action-requests-01 script has to be run."
-    }
+      "AI_REQUESTS_MIGRATION_PENDING": "This section is not enabled on the database yet. The ai-action-requests-01 script has to be run.",
+      "AI_REQUEST_NOT_ALLOWED": "Your role may not decide this request.",
+      "AI_PIPELINE_DISABLED": "Actions by the assistant are off.",
+      "AI_RUN_NOT_PROPOSED": "This request can no longer be run."
+    },
+    "inApp": "In-app assistant"
   },
   "campaigns": {
     "title": "Campaigns",
@@ -8930,5 +8940,176 @@
     "deniedTitle": "You do not have access to this part",
     "deniedBody": "Your role in this business does not include this part. If you need it, ask the owner of the business to change your access.",
     "goHome": "Back to the dashboard"
+  },
+  "aiAction": {
+    "intro": "Write what you want. The assistant first shows what will change; nothing is saved until you approve.",
+    "loading": "Loading…",
+    "request": "Request",
+    "requestPlaceholder": "e.g. Invoice Ahmad Karimi for two kilos of green tea",
+    "submit": "Check it",
+    "dryRun": "Preview only",
+    "dryRunHint": "In preview, the proposal is built but can never be approved or run.",
+    "dryRunDone": "This was a preview; nothing was saved and this proposal will not run.",
+    "offTitle": "Actions by the assistant are off",
+    "offOwner": "When on, members can ask the assistant to issue an invoice, record a payment, or create and edit a customer. Every change is shown first and runs only after a person approves it.",
+    "offMember": "Only the owner of the business can switch this on.",
+    "notAvailable": "This is not ready on the server yet. Please tell support.",
+    "turnOn": "Switch on",
+    "turnOff": "Switch off",
+    "autoApprove": "Run non-financial changes automatically",
+    "autoApproveHint": "Only creating and editing a customer, only when everything was found exactly and there is nothing to warn about. Invoices and payments always need approval.",
+    "waitingTitle": "Waiting for your approval",
+    "continue": "Continue",
+    "cancel": "Cancel",
+    "approve": "Approve and run",
+    "reject": "Reject",
+    "choose": "Choose",
+    "open": "Open",
+    "trail": "Steps taken",
+    "done": "Done.",
+    "doneAuto": "Done automatically.",
+    "needsReview": "It was saved, but the result is not what was proposed. Please review it.",
+    "needsApprover": "Your role may not do this. A manager or the owner must approve it.",
+    "mismatch": "{field}: expected {expected}, saved {actual}",
+    "walkIn": "Walk-in customer",
+    "empty": "Empty",
+    "yes": "Yes",
+    "no": "No",
+    "line": "{quantity} {unit} × {unitPrice} = {total}",
+    "autoAllocation": "The oldest open invoices",
+    "proposalTitle": {
+      "create": "This will be saved",
+      "update": "This will change"
+    },
+    "operations": {
+      "create_invoice": "Sales invoice",
+      "register_payment": "Payment received",
+      "create_customer": "New customer",
+      "update_customer": "Edit customer",
+      "unknown": "Request"
+    },
+    "status": {
+      "understanding": "Checking",
+      "needs_input": "Needs your answer",
+      "proposed": "Ready to approve",
+      "approved": "Running",
+      "executed": "Done",
+      "failed": "Not done",
+      "needs_review": "Needs review",
+      "rejected": "Rejected",
+      "refused": "Cannot be done"
+    },
+    "fields": {
+      "customer": "Customer",
+      "currency": "Currency",
+      "total": "Total",
+      "notes": "Note",
+      "amount": "Amount",
+      "method": "Payment method",
+      "appliedTo": "Applied to",
+      "reference": "Reference",
+      "fullName": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "address": "Address",
+      "type": "Customer type",
+      "isActive": "Active"
+    },
+    "methods": {
+      "cash": "Cash",
+      "bank": "Bank",
+      "mobile_money": "Mobile money",
+      "other": "Other"
+    },
+    "customerTypes": {
+      "cash": "Cash",
+      "credit": "Credit"
+    },
+    "questions": {
+      "customer": {
+        "missing": "For which customer?",
+        "not_found": "No customer named “{subject}” was found. Write the right name.",
+        "ambiguous": "Which “{subject}”?"
+      },
+      "items": {
+        "missing": "Which goods, and how much?"
+      },
+      "product": {
+        "not_found": "No product named “{subject}” was found. Write the right name.",
+        "ambiguous": "Which “{subject}”?"
+      },
+      "quantity": {
+        "missing": "How much “{subject}”?"
+      },
+      "unitPrice": {
+        "missing": "“{subject}” has no sell price. What is the unit price?"
+      },
+      "amount": {
+        "missing": "What amount?"
+      },
+      "invoice": {
+        "not_found": "Invoice “{subject}” is not among what this customer owes. What should it settle?"
+      },
+      "fullName": {
+        "missing": "What is the customer’s name?"
+      },
+      "changes": {
+        "missing": "What should change?"
+      }
+    },
+    "warnings": {
+      "INSUFFICIENT_STOCK": "There are {onHand} of “{product}” and {asked} were asked for. The invoice is saved and the stock goes short.",
+      "INEXACT_MATCH": "The name was not exactly what you wrote; make sure the right record was picked.",
+      "POSSIBLE_DUPLICATE": "A customer named “{name}” already exists.",
+      "NO_OPEN_INVOICES": "This customer has no open invoice; the amount stays as an advance.",
+      "AMOUNT_EXCEEDS_DEBT": "The amount ({amount}) is more than what is owed ({owed}); the rest stays as an advance.",
+      "AMOUNT_EXCEEDS_INVOICE": "The amount ({amount}) is more than invoice {invoice} still owes ({outstanding}); the rest stays as an advance.",
+      "DEFAULT_CURRENCY": "No currency was stated; {currency} was assumed."
+    },
+    "reasons": {
+      "UNSUPPORTED_REQUEST": "For now only four things are possible: a sales invoice, a payment received, a new customer and an edit to a customer — one at a time.",
+      "NOT_ALLOWED": "Your role may not see what this needs.",
+      "NOTHING_TO_CHANGE": "Everything is already so; there is nothing to change.",
+      "INVALID_CUSTOMER_DETAILS": "The customer’s details are not valid. Check the name, phone and email.",
+      "MODEL_UNAVAILABLE": "The AI model did not answer. Try again in a moment.",
+      "INVESTIGATION_FAILED": "The information this needs could not be read. Try again.",
+      "EXECUTION_ERROR": "It was not saved. Look at the list before trying again.",
+      "CUSTOMER_CHANGED": "This customer was edited after the proposal was made. Ask again.",
+      "CAPABILITY_REQUIRED": "The approver’s role may not do this.",
+      "general": "It was not done."
+    },
+    "stages": {
+      "understand": "Understanding",
+      "authorize": "Checking access",
+      "investigate": "Reading the books",
+      "ask": "Asking",
+      "validate": "Validating",
+      "propose": "Proposing",
+      "confirm": "Approval",
+      "execute": "Running",
+      "verify": "Checking the result"
+    },
+    "outcomes": {
+      "ok": "Done",
+      "stopped": "Stopped",
+      "failed": "Failed"
+    },
+    "errors": {
+      "AI_PIPELINE_DISABLED": "Actions by the assistant are off.",
+      "AI_PIPELINE_MIGRATION_REQUIRED": "This is not ready on the server yet.",
+      "AI_PIPELINE_OWNER_ONLY": "Only the owner of the business can change this.",
+      "AI_NOT_CONFIGURED": "The assistant is not set up yet.",
+      "AI_QUOTA_EXCEEDED": "This month’s assistant allowance is used up.",
+      "AI_PROVIDER_BUSY": "The AI model is busy right now. Try again in a moment.",
+      "AI_RUN_NOT_WAITING": "This request is not waiting for an answer.",
+      "AI_RUN_NOT_YOURS": "Only the person who asked can answer.",
+      "general": "It was not done. Try again.",
+      "AI_RUN_NOT_PROPOSED": "This request can no longer be run.",
+      "AI_REQUEST_ALREADY_DECIDED": "This request has already been decided.",
+      "AI_RUN_ALREADY_DECIDED": "This request has already been decided.",
+      "AI_REQUEST_EXPIRED": "This request is too old. Ask again.",
+      "AI_REQUEST_NOT_ALLOWED": "Your role may not approve this.",
+      "AI_REQUESTS_MIGRATION_PENDING": "The approval queue is not ready on the server yet."
+    }
   }
 }

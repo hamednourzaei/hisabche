@@ -221,29 +221,21 @@ export class PipelineRepository {
     return data ? mapRun(data as unknown as Row) : null
   }
 
-  /** The newest runs: one person's own, or everybody's that awaits a decision. */
-  async listRuns(
-    workspaceId: string,
-    filter: { requestedBy: string } | { awaitingDecision: true },
-    limit = 20,
-  ): Promise<PipelineRun[]> {
-    let query = supabase
+  /** These runs of this business, in no particular order. */
+  async getRuns(workspaceId: string, ids: readonly string[]): Promise<PipelineRun[]> {
+    if (ids.length === 0) return []
+    const { data, error } = await supabase
       .from('ai_pipeline_runs')
       .select(RUN_COLUMNS)
       .eq('workspace_id', workspaceId)
-    query =
-      'requestedBy' in filter
-        ? query.eq('requested_by', filter.requestedBy)
-        : query.eq('status', 'proposed').eq('dry_run', false)
-    const { data, error } = await query.order('created_at', { ascending: false }).limit(limit)
+      .in('id', [...ids])
     if (error) {
-      // No table yet means no runs yet — the list is empty, the feature is off.
+      // No table yet means no runs yet.
       if (isMissingSchema(error)) return []
       throw new DatabaseError('Failed to read the AI runs', error)
     }
     return ((data ?? []) as unknown as Row[]).map(mapRun)
   }
-
   /**
    * Move a run forward — only from one of `from`.
    *

@@ -121,6 +121,7 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **Gap Closure: فهرست قیمت، جریمه، OCR، ترجمه، شیفت، داشبورد، مقایسه** | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md` — «دور پنجم»       |
 | **بازبینی UX: هر صفحه یک فایل، پیشنهاد ادغام و فازها (۴ اکتبر)**      | `.claude/ux-audit/README.md` · `00-PROPOSAL.md` — **منتظر تأیید**           |
 | **هاب‌ها، خط‌های تب←سوییچ، حقوق/مرخصی، sandbox 403 (۵ اکتبر)**        | `.claude/SESSION-CACHE-2026-10-05-UX.md` · BUG-097…099 در `BUG-REGISTRY.md` |
+| **پایپ‌لاین AI: شکاف‌ها، برنامه، وضعیت پیاده‌سازی (۶ اکتبر)**         | `.claude/ai-pipeline/00-GAP-AND-PLAN.md` · `01-STATUS.md`                   |
 | **همه‌ی درس‌ها با شماره (۱–۱۱۴)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
@@ -386,6 +387,11 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **ردیفِ مشترک بین همه‌ی کسب‌وکارها (`workspace_id IS NULL`) را هرگز از داخل یک کسب‌وکار ننویس** (BUG-105).
 - **مجوز > نمای شخصی (۶ اکتبر).** مجوز را سرور و نقش تعیین می‌کند؛ صفحه‌ی ممنوع mount نمی‌شود (`isRouteDenied` + `NoAccessNotice` در هر دو پوسته)، در منو نیست و prefetch نمی‌شود. نمای شخصی را خودِ شخص با آچار (`PageCustomizer`) تعیین می‌کند و فقط روی دستگاه است (`usePageLook`، کلید `user.workspace`). ⚠️ `look.shows(id)` برای **رسم**، `look.active(id)` برای **`enabled`** — پنهان یعنی mount نشدن و fetch نشدن، نه `display:none`. هاب تازه: `<PageHub lookId="…">`.
 - ⚠️ **پاسخی که به دسترسیِ شخص بستگی دارد:** رقم غیرمجاز را صفر کن **و** در `hidden` نام ببر (کلاینت کارت را حذف می‌کند، صفر نمی‌کشد)، و کش route را `member` بگذار نه `workspace` (`dashboard-visibility.domain.ts`).
+- **پایپ‌لاین AI (`ai_pipeline_v2`، ۶ اکتبر) یک هماهنگ‌کننده است، نه موتور دوم.** `services/ai/pipeline` سه فایل دارد (domain خالص، repository فقط سه جدول خودش + `ai_query_log`، service). هر خواندن و نوشتنِ داده‌ی کسب‌وکار با `runRoute` (`services/mcp/own-route.ts`، مشترک با MCP) از **route خودِ برنامه** و با نشست یک آدم رد می‌شود؛ هیچ سرویس فاکتور/پرداخت/مشتری import نمی‌شود. بررسی با نشست درخواست‌کننده، **اجرا با نشست تأییدکننده**. عملیات تازه = عضو `PIPELINE_OPERATIONS` + CHECK در migration + شاخه‌ی `plan`/`toHttpCall`/`verifyOutcome` + برچسب سه زبان. گارد: `packages/ui/src/__tests__/ai-action-tool.test.ts`.
+- ⚠️ **مدل فقط نام عملیات و فیلد پر می‌کند.** id، route، workspace و «حدس» از draft حذف می‌شوند (`parseIntent`)؛ انتخابِ کاربر باید یکی از گزینه‌های پیشنهادشده باشد (`applyAnswers`)؛ کالای بی‌قیمت **پرسیده می‌شود، صفر فروخته نمی‌شود**؛ مشتریِ نام‌برده‌ی پیدانشده سؤال است، نه فروش نقدیِ بی‌نام.
+- ⚠️ **«یک بار اجرا» = وضعیت در WHERE** (`repo.move(…, ['proposed'], …)`) + trigger رو‌به‌جلو + `Idempotency-Key = aip-<runId>`. dry-run هرگز تأیید نمی‌شود (trigger). عملیات مالی هرگز auto-approve نمی‌شود، هر چه تنظیم بگوید (`mayAutoApprove`). سهمیه = یک ردیف `ai_query_log` به‌ازای هر run، نه هر فراخوانی مدل.
+- ⚠️ **تغییری که پیشنهاد و بعداً تأیید می‌شود باید شرطی نوشته شود.** `CustomerService.update(…, { expectedUpdatedAt })` فقط اگر ردیف همان باشد می‌نویسد، وگرنه `CUSTOMER_CHANGED` (۴۰۹). `PATCH /api/customers/:id` حالا رد را با کد خودش برمی‌گرداند، نه ۵۰۰.
+- ⚠️ **`POST /api/invoices` و `POST|PATCH|DELETE /api/customers` در route هیچ `requireCapability` ندارند** (فقط عضویت؛ ویرایش مشتری در سرویس `scopes.assertMay` دارد، ساخت فاکتور ندارد). نقش سفارشیِ «فاکتور: نمی‌بیند» منو را پنهان می‌کند ولی HTTP مستقیم را نمی‌بندد. پایپ‌لاین خودش `holds()` را می‌سنجد؛ خودِ routeها هنوز باز و **گزارش‌شده، اصلاح‌نشده**‌اند.
 - **چارچوب اتصال‌ها ساخته نشده** (۱۵ تعریف، صفر adapter، صفر اعتبارنامه) — صفحه‌ای برایش نساز.
 
 **هسته‌ها (CRM / Payments)**

@@ -49,6 +49,7 @@ import { supabase } from './db'
 import { authRoutes } from './routes/auth.routes'
 import { syncRoutes } from './routes/sync.routes'
 import { syncStreamRoutes } from './routes/sync-stream.routes'
+import cmsRoutes from './routes/cms.routes'
 import { invoiceRoutes } from './routes/invoice.routes'
 import { invoicePdfRoutes } from './routes/invoice-pdf.routes'
 import { invoicePublicRoutes } from './routes/invoice-public.routes'
@@ -705,6 +706,7 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(authRoutes)
   await server.register(syncRoutes)
   await server.register(syncStreamRoutes)
+  await server.register(cmsRoutes)
   await server.register(invoiceRoutes)
   await server.register(invoicePdfRoutes)
   await server.register(invoicePublicRoutes)

@@ -441,3 +441,5 @@ export {
   type CustomizerItem,
 } from './components/ui/page-customizer'
 export { NoAccessNotice } from './components/ui/no-access-notice'
+
+export { GlobalPageCustomizer } from './components/ui/global-page-customizer'

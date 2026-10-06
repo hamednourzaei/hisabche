@@ -72,6 +72,10 @@ vi.mock('../middleware/workspace.middleware', () => ({
   },
 }))
 
+vi.mock('../services/developer/developer.service', () => ({
+  developerService: { authenticateKey: async () => null, recordRequest: () => undefined },
+}))
+
 vi.mock('../services/ai/provider-client', () => ({
   callProvider: async (_config: unknown, input: { system: string; user: string }) => {
     state.modelCalls.push(input)
@@ -127,6 +131,17 @@ vi.mock('../db', () => {
         const row: Row = {
           id: `00000000-0000-4000-8000-${String(state.nextId++).padStart(12, '0')}`,
           created_at: stamp(),
+          ...(table === 'ai_action_requests'
+            ? {
+                status: 'pending',
+                key_id: null,
+                run_id: null,
+                result_status: null,
+                result: null,
+                decided_by: null,
+                decided_at: null,
+              }
+            : {}),
           ...(table === 'ai_pipeline_runs'
             ? {
                 status: 'understanding',
@@ -185,6 +200,7 @@ vi.mock('../db', () => {
 })
 
 import { aiPipelineRoutes } from '../routes/ai-pipeline.routes'
+import { mcpRoutes } from '../routes/mcp.routes'
 
 const OWNER = 'session-owner'
 const MANAGER = 'session-manager'
@@ -283,7 +299,8 @@ beforeEach(async () => {
 
   server = Fastify()
   server.addHook('preHandler', async (request) => {
-    if (request.url.startsWith('/api/ai/pipeline')) return
+    if (request.url.startsWith('/api/ai/pipeline') || request.url.startsWith('/api/ai-requests'))
+      return
     reached.push({
       method: request.method,
       url: request.url,
@@ -361,6 +378,8 @@ beforeEach(async () => {
   server.get('/api/payments/:id', async () => payment)
 
   await server.register(aiPipelineRoutes)
+  // THE approval queue lives beside the MCP gateway: one pair of routes for both origins.
+  await server.register(mcpRoutes)
   await server.ready()
 })
 
@@ -386,8 +405,13 @@ const start = async (session: string, request: string, dryRun = false) => {
   const response = await call('POST', '/api/ai/pipeline/runs', session, { request, dryRun })
   return { response, run: (response.json() as { run?: Row }).run as Row }
 }
-const approve = (session: string, id: unknown) =>
-  call('POST', `/api/ai/pipeline/runs/${id}/approve`, session)
+/** Approve or reject in THE queue: addressed by the request the run was queued as. */
+const decide = (session: string, run: Row, decision: 'approve' | 'reject') =>
+  call('POST', `/api/ai-requests/${String(run.requestId)}/${decision}`, session)
+const approve = (session: string, run: Row) => decide(session, run, 'approve')
+const queue = async (session: string) =>
+  ((await call('GET', '/api/ai-requests?pending=1', session)).json() as { requests?: Row[] })
+    .requests ?? []
 const writes = () => reached.filter((entry) => entry.method !== 'GET')
 const stages = (run: Row) =>
   (run.steps as Array<{ stage: string; outcome: string }>).map(
@@ -435,7 +459,7 @@ describe('the switch', () => {
       enabled: false,
       autoApproveNonFinancial: false,
     })
-    expect((await approve(SELLER, run.id)).json().code).toBe('AI_PIPELINE_DISABLED')
+    expect((await approve(SELLER, run)).json().code).toBe('AI_PIPELINE_DISABLED')
     expect(writes()).toEqual([])
   })
 })
@@ -477,7 +501,7 @@ describe('create_customer, end to end', () => {
   it('on approval runs the customer route as the approver, once, with the run as its key', async () => {
     state.replies.push(reply('create_customer', { fullName: 'محمود رحیمی' }))
     const { run } = await start(SELLER, 'مشتری محمود رحیمی را بساز')
-    const done = (await approve(SELLER, run.id)).json().run as Row
+    const done = (await approve(SELLER, run)).json().run as Row
 
     expect(writes()).toEqual([
       {
@@ -506,16 +530,14 @@ describe('create_customer, end to end', () => {
       reply('create_customer', { fullName: 'کریم' }),
     )
     const first = (await start(SELLER, 'محمود را بساز')).run
-    await approve(SELLER, first.id)
-    const again = await approve(SELLER, first.id)
+    await approve(SELLER, first)
+    const again = await approve(SELLER, first)
     expect(again.statusCode).toBe(409)
-    expect(again.json().code).toBe('AI_RUN_ALREADY_DECIDED')
+    expect(again.json().code).toBe('AI_REQUEST_ALREADY_DECIDED')
 
     const second = (await start(SELLER, 'کریم را بساز')).run
-    expect(
-      (await call('POST', `/api/ai/pipeline/runs/${second.id}/reject`, SELLER)).json().run.status,
-    ).toBe('rejected')
-    expect((await approve(SELLER, second.id)).statusCode).toBe(409)
+    expect((await decide(SELLER, second, 'reject')).json().run.status).toBe('rejected')
+    expect((await approve(SELLER, second)).statusCode).toBe(409)
     expect(writes()).toHaveLength(1)
   })
 })
@@ -527,9 +549,10 @@ describe('a dry run', () => {
     const { run } = await start(OWNER, 'محمود را بساز', true)
     // Auto-approval is ON here and the proposal is clean: a dry run still does not run.
     expect(run).toMatchObject({ status: 'proposed', dryRun: true, canApprove: false })
-    const refused = await approve(OWNER, run.id)
-    expect(refused.statusCode).toBe(409)
-    expect(refused.json().code).toBe('AI_RUN_IS_DRY_RUN')
+    // It was never queued: there is no request anybody could approve.
+    expect(run.requestId).toBeNull()
+    expect(tables.get('ai_action_requests') ?? []).toEqual([])
+    expect(await queue(OWNER)).toEqual([])
     expect(writes()).toEqual([])
   })
 })
@@ -610,13 +633,13 @@ describe('create_invoice: money needs a person, and runs once', () => {
 
   it('five approvals at once issue ONE invoice', async () => {
     const { run } = await start(SELLER, 'برای احمد کریمی دو کیلو چای سبز فاکتور کن')
-    const settled = await Promise.all(Array.from({ length: 5 }, () => approve(SELLER, run.id)))
+    const settled = await Promise.all(Array.from({ length: 5 }, () => approve(SELLER, run)))
     expect(settled.map((response) => response.statusCode).sort()).toEqual([200, 409, 409, 409, 409])
     expect(
       settled
         .filter((response) => response.statusCode === 409)
         .map((response) => response.json().code),
-    ).toEqual(Array(4).fill('AI_RUN_ALREADY_DECIDED'))
+    ).toEqual(Array(4).fill('AI_REQUEST_ALREADY_DECIDED'))
     const posts = writes()
     expect(posts).toHaveLength(1)
     expect(posts[0]).toMatchObject({ url: '/api/invoices', key: `aip-${run.id}` })
@@ -635,7 +658,7 @@ describe('create_invoice: money needs a person, and runs once', () => {
   it('when the books do not say what was agreed, the run says «needs review»', async () => {
     books.invoiceTotalOverride = 90
     const { run } = await start(SELLER, 'برای احمد کریمی دو کیلو چای سبز فاکتور کن')
-    const done = (await approve(SELLER, run.id)).json().run as Row
+    const done = (await approve(SELLER, run)).json().run as Row
     expect(done.status).toBe('needs_review')
     expect((done.result as { mismatches: Row[] }).mismatches).toEqual([
       { field: 'total', expected: 900, actual: 90 },
@@ -660,26 +683,42 @@ describe('who may approve', () => {
     const { run } = await start(CLERK, 'برای احمد کریمی یک کیلو چای سبز فاکتور کن')
     expect(run).toMatchObject({ status: 'proposed', canApprove: false, needsApprover: true })
 
-    const own = await approve(CLERK, run.id)
+    const own = await approve(CLERK, run)
     expect(own.statusCode).toBe(403)
-    expect(own.json().code).toBe('AI_RUN_APPROVAL_NOT_ALLOWED')
+    expect(own.json().code).toBe('AI_REQUEST_NOT_ALLOWED')
+    // …and a refused approval did not use the request up.
+    expect(tables.get('ai_action_requests')?.[0]?.status).toBe('pending')
     expect(writes()).toEqual([])
 
     // The manager sees it waiting, and the write carries the MANAGER's session.
-    const waiting = (await call('GET', '/api/ai/pipeline/runs', MANAGER)).json().runs as Row[]
-    expect(waiting.map((entry) => entry.id)).toEqual([run.id])
-    expect(waiting[0]?.canApprove).toBe(true)
-    const done = (await approve(MANAGER, run.id)).json().run as Row
+    const waiting = await queue(MANAGER)
+    expect(waiting.map((entry) => entry.id)).toEqual([run.requestId])
+    expect(waiting[0]).toMatchObject({
+      tool: 'create_invoice',
+      risk: 'financial',
+      keyId: null,
+      runId: run.id,
+    })
+    expect(waiting[0]?.run).toMatchObject({ id: run.id, canApprove: true, proposal: run.proposal })
+    const done = (await approve(MANAGER, run)).json().run as Row
     expect(done).toMatchObject({ status: 'executed', approvedBy: 'manager' })
     expect(writes()[0]?.authorization).toBe(`Bearer ${MANAGER}`)
-    // The refusal is in the audit trail too.
-    expect(stages(done)).toContain('confirm:stopped')
+    // The queue row and the run closed together, with the same outcome.
+    expect(tables.get('ai_action_requests')?.[0]).toMatchObject({
+      status: 'executed',
+      decided_by: 'manager',
+      result_status: 201,
+    })
   })
 
-  it('a seller cannot approve another seller’s run, nor even read it', async () => {
+  it('a seller cannot approve another seller’s run, nor see it in their list', async () => {
     const { run } = await start(CLERK, 'برای احمد کریمی یک کیلو چای سبز فاکتور کن')
-    expect((await approve(SELLER, run.id)).statusCode).toBe(404)
-    expect((await call('GET', `/api/ai/pipeline/runs/${run.id}`, SELLER)).statusCode).toBe(404)
+    const refused = await approve(SELLER, run)
+    expect(refused.statusCode).toBe(403)
+    expect(refused.json().code).toBe('AI_REQUEST_NOT_ALLOWED')
+    expect((await decide(SELLER, run, 'reject')).statusCode).toBe(403)
+    // The queue is a manager's to read.
+    expect((await call('GET', '/api/ai-requests', SELLER)).statusCode).toBe(403)
     expect(writes()).toEqual([])
   })
 
@@ -688,9 +727,9 @@ describe('who may approve', () => {
     tables
       .get('ai_pipeline_settings')
       ?.push({ workspace_id: OTHER_WS, enabled: true, auto_approve_non_financial: false })
-    expect((await call('GET', `/api/ai/pipeline/runs/${run.id}`, STRANGER)).statusCode).toBe(404)
-    expect((await approve(STRANGER, run.id)).statusCode).toBe(404)
-    expect((await call('GET', '/api/ai/pipeline/runs', STRANGER)).json().runs).toEqual([])
+    expect((await approve(STRANGER, run)).statusCode).toBe(404)
+    expect((await decide(STRANGER, run, 'reject')).statusCode).toBe(404)
+    expect(await queue(STRANGER)).toEqual([])
     expect(writes()).toEqual([])
   })
 
@@ -723,7 +762,7 @@ describe('register_payment and update_customer', () => {
     )
     const { run } = await start(SELLER, 'احمد کریمی ۲۵۰ افغانی بابت فاکتور INV-0007 داد')
     expect(run.status).toBe('proposed')
-    const done = (await approve(SELLER, run.id)).json().run as Row
+    const done = (await approve(SELLER, run)).json().run as Row
     expect(writes()).toEqual([
       {
         method: 'POST',
@@ -784,7 +823,7 @@ describe('register_payment and update_customer', () => {
     // Meanwhile, somebody saves the customer.
     Object.assign(books.customers[0] as Row, { phone: '0788555444', updatedAt: 'v2' })
 
-    const done = (await approve(SELLER, run.id)).json().run as Row
+    const done = (await approve(SELLER, run)).json().run as Row
     expect(done).toMatchObject({
       status: 'failed',
       reasonCode: 'CUSTOMER_CHANGED',
@@ -838,5 +877,112 @@ describe('what the pipeline will not do', () => {
     const long = await call('POST', '/api/ai/pipeline/runs', OWNER, { request: 'x'.repeat(2001) })
     expect(long.statusCode).toBe(400)
     expect(state.modelCalls).toHaveLength(0)
+  })
+})
+
+describe('ONE approval queue for both assistants', () => {
+  beforeEach(async () => {
+    await enable()
+  })
+
+  it('an in-app proposal and an outside assistant’s request wait in the same list', async () => {
+    state.replies.push(reply('create_customer', { fullName: 'محمود' }))
+    const { run } = await start(SELLER, 'محمود را بساز')
+    // What the MCP gateway stores when a key asks for something risky.
+    tables.get('ai_action_requests')?.push({
+      id: '00000000-0000-4000-8000-00000000aaaa',
+      workspace_id: WS,
+      key_id: 'key-1',
+      run_id: null,
+      requested_by: 'seller',
+      tool: 'cancel_order',
+      risk: 'destructive',
+      arguments: { orderId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' },
+      status: 'pending',
+      result_status: null,
+      result: null,
+      decided_by: null,
+      decided_at: null,
+      created_at: new Date(Date.UTC(2026, 9, 6, 9)).toISOString(),
+    })
+
+    const waiting = await queue(MANAGER)
+    expect(waiting.map((entry) => entry.tool).sort()).toEqual(['cancel_order', 'create_customer'])
+    const inApp = waiting.find((entry) => entry.runId === run.id)
+    expect(inApp).toMatchObject({ risk: 'write', keyId: null })
+    expect((inApp?.run as Row).proposal).toEqual(run.proposal)
+    // The outside request has no run to show: it is shown as what was sent.
+    expect(waiting.find((entry) => entry.keyId === 'key-1')?.run).toBeUndefined()
+  })
+
+  it('the person who asked through a key cannot approve it themselves; their own in-app request they can', async () => {
+    tables.set('ai_action_requests', [
+      {
+        id: '00000000-0000-4000-8000-00000000bbbb',
+        workspace_id: WS,
+        key_id: 'key-1',
+        run_id: null,
+        requested_by: 'seller',
+        tool: 'create_invoice',
+        risk: 'financial',
+        arguments: { invoice: {} },
+        status: 'pending',
+        result_status: null,
+        result: null,
+        decided_by: null,
+        decided_at: null,
+        created_at: new Date(Date.UTC(2026, 9, 6, 9)).toISOString(),
+      },
+    ])
+    const viaKey = await call(
+      'POST',
+      '/api/ai-requests/00000000-0000-4000-8000-00000000bbbb/approve',
+      SELLER,
+    )
+    expect(viaKey.statusCode).toBe(403)
+    expect(viaKey.json().code).toBe('AI_REQUEST_NOT_ALLOWED')
+
+    state.replies.push(reply('create_customer', { fullName: 'محمود' }))
+    const { run } = await start(SELLER, 'محمود را بساز')
+    expect((await approve(SELLER, run)).json().run.status).toBe('executed')
+  })
+
+  it('rejecting in the queue ends the run, and it cannot be approved afterwards', async () => {
+    state.replies.push(reply('create_customer', { fullName: 'محمود' }))
+    const { run } = await start(SELLER, 'محمود را بساز')
+    const rejected = (await decide(MANAGER, run, 'reject')).json() as Row
+    expect(rejected).toMatchObject({ status: 'rejected', decidedBy: 'manager' })
+    expect((rejected.run as Row).status).toBe('rejected')
+    const late = await approve(SELLER, run)
+    expect(late.statusCode).toBe(409)
+    expect(late.json().code).toBe('AI_REQUEST_ALREADY_DECIDED')
+    expect(writes()).toEqual([])
+  })
+
+  it('approval by rule goes through the same queue row', async () => {
+    await enable(true)
+    state.replies.push(reply('create_customer', { fullName: 'محمود' }))
+    const { run } = await start(SELLER, 'محمود را بساز')
+    expect(run).toMatchObject({ status: 'executed', autoApproved: true })
+    expect(tables.get('ai_action_requests')).toHaveLength(1)
+    expect(tables.get('ai_action_requests')?.[0]).toMatchObject({
+      id: run.requestId,
+      run_id: run.id,
+      status: 'executed',
+      decided_by: 'seller',
+    })
+  })
+
+  it('an unfinished run is cancelled by the person who asked — it was never in the queue', async () => {
+    state.replies.push(reply('create_invoice', {}))
+    const { run } = await start(SELLER, 'یک فاکتور بزن')
+    expect(run.status).toBe('needs_input')
+    expect((await call('POST', `/api/ai/pipeline/runs/${run.id}/cancel`, MANAGER)).statusCode).toBe(
+      404,
+    )
+    const cancelled = (await call('POST', `/api/ai/pipeline/runs/${run.id}/cancel`, SELLER)).json()
+      .run as Row
+    expect(cancelled.status).toBe('rejected')
+    expect(tables.get('ai_action_requests') ?? []).toEqual([])
   })
 })

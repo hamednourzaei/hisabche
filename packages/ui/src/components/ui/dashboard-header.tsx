@@ -811,6 +811,7 @@ export const DashboardHeader = memo(function DashboardHeader({
           >
             {isDark ? IconSun : IconMoon}
           </button>
+          <div id="global-page-customizer-slot"></div>
           {variant === 'dashboard' && <NotificationBell />}
           {/* ⚠️ NO SECOND «YOU» AT THIS END OF THE BAR. The account menu used
               to sit here as an avatar while the pill at the other end said the

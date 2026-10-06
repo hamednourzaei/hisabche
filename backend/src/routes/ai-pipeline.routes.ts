@@ -7,11 +7,13 @@
 //   GET  /api/ai/pipeline/settings          any member (so the screen knows)
 //   PUT  /api/ai/pipeline/settings          owner
 //   POST /api/ai/pipeline/runs              start a run from a request in words
-//   GET  /api/ai/pipeline/runs              one's own, plus what awaits a decision
-//   GET  /api/ai/pipeline/runs/:id
 //   POST /api/ai/pipeline/runs/:id/answers  the requester fills what was missing
-//   POST /api/ai/pipeline/runs/:id/approve  runs the proposal AS THE APPROVER
-//   POST /api/ai/pipeline/runs/:id/reject
+//   POST /api/ai/pipeline/runs/:id/cancel   the requester gives up an unfinished run
+//
+// ⚠️ THERE IS NO APPROVE ROUTE HERE. A proposal waits in THE approval queue and
+// is approved or rejected at /api/ai-requests/:id/approve|reject (mcp.routes.ts)
+// — the same routes, the same rule and the same claim as a request from an
+// outside assistant.
 //
 // ⚠️ A SESSION, NEVER AN API KEY. These routes are not in `API_ROUTE_SCOPES`,
 // so an integration credential cannot reach them: an outside assistant goes
@@ -144,31 +146,6 @@ export async function aiPipelineRoutes(fastify: FastifyInstance) {
     },
   )
 
-  fastify.get(
-    '/api/ai/pipeline/runs',
-    { preHandler: MEMBER },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        return reply.send({ runs: await pipeline.list(request.tenancy) })
-      } catch (err) {
-        return fail(request, reply, err, 'Failed to read the AI runs')
-      }
-    },
-  )
-
-  fastify.get(
-    '/api/ai/pipeline/runs/:id',
-    { preHandler: MEMBER },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const { id } = idParams.parse(request.params)
-        return reply.send({ run: await pipeline.get(request.tenancy, id) })
-      } catch (err) {
-        return fail(request, reply, err, 'Failed to read the AI run')
-      }
-    },
-  )
-
   fastify.post(
     '/api/ai/pipeline/runs/:id/answers',
     { preHandler: MEMBER },
@@ -186,30 +163,14 @@ export async function aiPipelineRoutes(fastify: FastifyInstance) {
   )
 
   fastify.post(
-    '/api/ai/pipeline/runs/:id/approve',
+    '/api/ai/pipeline/runs/:id/cancel',
     { preHandler: MEMBER },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = idParams.parse(request.params)
-        // The runner carries the APPROVER's session: the write is theirs.
-        return reply.send({
-          run: await pipeline.approve(request.tenancy, runnerFor(request), id),
-        })
+        return reply.send({ run: await pipeline.cancel(request.tenancy, id) })
       } catch (err) {
-        return fail(request, reply, err, 'Failed to approve the AI run')
-      }
-    },
-  )
-
-  fastify.post(
-    '/api/ai/pipeline/runs/:id/reject',
-    { preHandler: MEMBER },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const { id } = idParams.parse(request.params)
-        return reply.send({ run: await pipeline.reject(request.tenancy, id) })
-      } catch (err) {
-        return fail(request, reply, err, 'Failed to reject the AI run')
+        return fail(request, reply, err, 'Failed to cancel the AI run')
       }
     },
   )

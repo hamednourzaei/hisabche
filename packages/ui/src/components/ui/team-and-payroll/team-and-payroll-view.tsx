@@ -160,6 +160,8 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
     email: '',
     address: '',
     employmentType: 'full_time',
+    attendanceMethod: '',
+    attendanceCredential: '',
     // ─── Sign-in access ───
     // `hasAccess` false is the DEFAULT and the common case: most people on a
     // payroll never open the software. See the section in the form below.
@@ -199,6 +201,8 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
         email: '',
         address: '',
         employmentType: 'full_time',
+        attendanceMethod: '',
+        attendanceCredential: '',
         hasAccess: false,
         accessEmail: '',
         accessPassword: '',
@@ -271,6 +275,10 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
           salary: form.salary ? Number(form.salary) : 0,
           salaryCurrency: form.salaryCurrency,
           employmentType: form.employmentType,
+          ...(form.attendanceMethod ? { attendanceMethod: form.attendanceMethod } : {}),
+          ...(form.attendanceCredential.trim()
+            ? { attendanceCredential: form.attendanceCredential.trim() }
+            : {}),
           // Optional personal fields: '' is "not given" and is not sent, so the
           // server's enum/email/date validation never sees an empty string.
           ...(form.nationalId.trim() ? { nationalId: form.nationalId.trim() } : {}),
@@ -729,6 +737,64 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               />
               {fieldError('address')}
             </label>
+
+            {/* ━━━ Attendance Settings ━━━ */}
+            <div className="sm:col-span-2 mt-2 border-t border-[hsl(var(--border-default))] pt-4">
+              <h4 className="text-sm font-medium text-[hsl(var(--fg-primary))] mb-3">
+                {t('attendance.settings', 'تنظیمات حضور و غیاب (دستگاه)')}
+              </h4>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                    {t('attendance.method', 'روش احراز هویت')}
+                  </span>
+                  <SelectField
+                    value={form.attendanceMethod}
+                    onChange={(value) => setField('attendanceMethod')(value)}
+                    data-field="attendanceMethod"
+                    options={[
+                      { value: '', label: t('common.none', 'ندارد / ثبت دستی') },
+                      {
+                        value: 'fingerprint',
+                        label: t('attendance.method_fingerprint', 'اثر انگشت'),
+                      },
+                      { value: 'face', label: t('attendance.method_face', 'تشخیص چهره') },
+                      { value: 'card', label: t('attendance.method_card', 'کارت (RFID)') },
+                      { value: 'pin', label: t('attendance.method_pin', 'رمز عبور / PIN') },
+                    ]}
+                    disabled={isSubmitting}
+                  />
+                </label>
+
+                {form.attendanceMethod &&
+                  form.attendanceMethod !== 'fingerprint' &&
+                  form.attendanceMethod !== 'face' && (
+                    <label className="flex flex-col gap-1.5">
+                      <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                        {t('attendance.credential', 'شناسه / شماره کارت')}
+                      </span>
+                      <input
+                        value={form.attendanceCredential}
+                        onChange={(e) => setField('attendanceCredential')(e.target.value)}
+                        name="attendanceCredential"
+                        className={FORM_FIELD}
+                        dir="ltr"
+                        disabled={isSubmitting}
+                        placeholder={form.attendanceMethod === 'card' ? '123456789' : 'PIN...'}
+                      />
+                    </label>
+                  )}
+
+                {(form.attendanceMethod === 'fingerprint' || form.attendanceMethod === 'face') && (
+                  <div className="flex items-center text-xs text-[hsl(var(--fg-secondary))] mt-6">
+                    {t(
+                      'attendance.biometricHint',
+                      'پس از ثبت کارمند، بیومتریک باید مستقیماً روی دستگاه تعریف شود.',
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
 
             <label className="flex flex-col gap-1.5">
               <span className="text-xs text-[hsl(var(--fg-secondary))]">

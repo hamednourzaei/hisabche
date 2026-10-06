@@ -997,11 +997,9 @@ export {
   aiPipelineKeys,
   useAiPipelineSettings,
   useSaveAiPipelineSettings,
-  useAiPipelineRuns,
   useStartAiPipelineRun,
   useAnswerAiPipelineRun,
-  useApproveAiPipelineRun,
-  useRejectAiPipelineRun,
+  useCancelAiPipelineRun,
   type AiPipelineOperation,
   type AiPipelineStatus,
   type AiPipelineQuestion,
@@ -1244,3 +1242,5 @@ export {
   type ProductJourney,
   type EvidenceLayer,
 } from './hooks/evidence'
+
+export { useCmsRemoteContent, type CmsGlobals } from './hooks/cms/remote-content'
