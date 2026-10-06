@@ -36,6 +36,9 @@ interface WarehouseViewProps {
   /** A second, quieter action beside it — «افزودن کالا به انبار» in a warehouse. */
   secondaryActionLabel?: string | undefined
   onSecondaryAction?: (() => void) | undefined
+  /** «انتقال موجودی» — only inside a warehouse, to another one. */
+  transferActionLabel?: string | undefined
+  onTransferAction?: (() => void) | undefined
   /** Header title/subtitle; default «موجودی». A warehouse passes its own name. */
   title?: string | undefined
   description?: string | undefined
@@ -99,6 +102,8 @@ const WarehouseHeader = memo(function WarehouseHeader({
   actionLabel,
   secondaryActionLabel,
   onSecondaryAction,
+  transferActionLabel,
+  onTransferAction,
   title,
   description,
   onBack,
@@ -109,6 +114,8 @@ const WarehouseHeader = memo(function WarehouseHeader({
   actionLabel: string
   secondaryActionLabel?: string | undefined
   onSecondaryAction?: (() => void) | undefined
+  transferActionLabel?: string | undefined
+  onTransferAction?: (() => void) | undefined
   title: string
   description: string
   onBack?: (() => void) | undefined
@@ -154,6 +161,20 @@ const WarehouseHeader = memo(function WarehouseHeader({
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+        {transferActionLabel && onTransferAction ? (
+          <button
+            type="button"
+            onClick={onTransferAction}
+            data-transfer-stock-open=""
+            className={cn(
+              'inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full border border-[hsl(var(--border-default))] px-4 text-sm font-medium sm:min-h-[40px]',
+              'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]',
+              FOCUS_RING,
+            )}
+          >
+            {transferActionLabel}
+          </button>
+        ) : null}
         {secondaryActionLabel && onSecondaryAction ? (
           <button
             type="button"
@@ -442,6 +463,8 @@ export const WarehouseView = memo(function WarehouseView({
   actionLabel,
   secondaryActionLabel,
   onSecondaryAction,
+  transferActionLabel,
+  onTransferAction,
   title,
   description,
   onBack,
@@ -543,6 +566,8 @@ export const WarehouseView = memo(function WarehouseView({
         actionLabel={actionLabel ?? t('warehouse.addWarehouse', 'افزودن انبار')}
         secondaryActionLabel={secondaryActionLabel}
         onSecondaryAction={onSecondaryAction}
+        transferActionLabel={transferActionLabel}
+        onTransferAction={onTransferAction}
         title={title ?? t('nav.stock', 'موجودی')}
         description={description ?? t('nav.stock_description', 'چه چیزی داریم و چه چیزی کم است')}
         onBack={onBack}

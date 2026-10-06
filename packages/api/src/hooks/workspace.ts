@@ -98,6 +98,54 @@ export function useInviteMember() {
   })
 }
 
+export interface PendingInvite {
+  id: string
+  email: string
+  role: string
+  status: 'pending' | 'accepted' | 'cancelled' | 'expired' | string
+  expires_at: string | null
+}
+
+/**
+ * The invitations of a business. Admins only on the server; pass `enabled`
+ * false for anybody else so a refusal is not drawn as «no invitations».
+ *
+ * ⚠️ `GET /workspaces/:id/invites` had no caller: an invitation, once sent,
+ * could be neither seen nor withdrawn.
+ */
+export function useWorkspaceInvites(workspaceId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: [...workspaceKeys.all, 'invites', workspaceId ?? 'none'] as const,
+    queryFn: async (): Promise<PendingInvite[]> => {
+      const { data } = await apiClient.get(`/workspaces/${workspaceId}/invites`)
+      return Array.isArray(data) ? (data as PendingInvite[]) : []
+    },
+    enabled: enabled && !!workspaceId,
+    staleTime: 30_000,
+  })
+}
+
+export function useCancelInvite() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ workspaceId, inviteId }: { workspaceId: string; inviteId: string }) => {
+      await apiClient.delete(`/workspaces/${workspaceId}/invites/${inviteId}`)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: workspaceKeys.all }),
+  })
+}
+
+/** Leave a business you are a member of. The owner cannot (409). */
+export function useLeaveWorkspace() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (workspaceId: string) => {
+      await apiClient.post(`/workspaces/${workspaceId}/leave`)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: workspaceKeys.all }),
+  })
+}
+
 export function useRemoveMember() {
   const qc = useQueryClient()
   return useMutation({

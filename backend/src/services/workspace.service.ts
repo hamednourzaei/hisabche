@@ -13,7 +13,7 @@ import {
   CreateMemberDirect,
   MAX_WORKSPACE_MEMBERS,
 } from '@hisabche/validation'
-import { DatabaseError } from '../errors/database.error'
+import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 import { emailService } from './email.service'
 import crypto from 'crypto'
@@ -402,9 +402,18 @@ export class WorkspaceService {
       .eq('user_id', userId)
       .single()
 
-    if (!m || m.role === 'owner') throw new DatabaseError('Cannot leave')
+    // Refusals a person can read, not a 500.
+    if (!m) throw new NotFoundError('Membership')
+    // A business with no owner belongs to nobody: ownership is handed over first.
+    if (m.role === 'owner') throw new ConflictError('WORKSPACE_OWNER_CANNOT_LEAVE')
 
-    await supabase.from('workspace_members').delete().eq('id', m.id)
+    const { error: leaveError } = await supabase
+      .from('workspace_members')
+      .delete()
+      .eq('id', m.id)
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', userId)
+    if (leaveError) throw new DatabaseError('Failed to leave workspace', leaveError)
 
     // ✅ Invalidate cache
     await this.invalidateWorkspaceCache(workspaceId)
@@ -591,7 +600,19 @@ export class WorkspaceService {
   async cancelInvite(userId: string, workspaceId: string, inviteId: string) {
     await this.requireRole(userId, workspaceId, 'admin')
 
-    await supabase.from('workspace_invites').update({ status: 'cancelled' }).eq('id', inviteId)
+    // ⚠️ SCOPED TO THIS WORKSPACE. It matched on the invite id alone: an admin of
+    // one business could cancel any invitation of ANY business by its id. And
+    // only a pending one — an accepted invitation is a member now, not an invite.
+    const { data: cancelled, error } = await supabase
+      .from('workspace_invites')
+      .update({ status: 'cancelled' })
+      .eq('id', inviteId)
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'pending')
+      .select('id')
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to cancel invite', error)
+    if (!cancelled) throw new NotFoundError('Invite')
 
     // ✅ Invalidate cache
     await this.invalidateInviteCache(workspaceId)
@@ -607,7 +628,9 @@ export class WorkspaceService {
       .from('workspace_invites')
       .select('id, status')
       .eq('id', inviteId)
-      .single()
+      // The same scope as cancelling: this business's invitation only.
+      .eq('workspace_id', workspaceId)
+      .maybeSingle()
 
     if (!inv || !['pending', 'expired'].includes(inv.status)) {
       throw new DatabaseError('Cannot resend')
@@ -627,6 +650,7 @@ export class WorkspaceService {
         expires_at: expiresAt.toISOString(),
       })
       .eq('id', inviteId)
+      .eq('workspace_id', workspaceId)
 
     // ✅ Invalidate cache
     await this.invalidateInviteCache(workspaceId)

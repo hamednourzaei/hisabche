@@ -3,12 +3,12 @@
 // ============================================
 
 import { z } from 'zod'
-import { 
-  uuidSchema, 
-  nonEmptyStringSchema, 
-  optionalStringSchema, 
+import {
+  uuidSchema,
+  nonEmptyStringSchema,
+  optionalStringSchema,
   positiveNumberSchema,
-  isoDateSchema
+  isoDateSchema,
 } from './common.schema'
 
 // ============================================
@@ -46,11 +46,14 @@ export type UpdateGodam = z.infer<typeof updatewarehouseSchema>
 
 export const stockTransferSchema = z.object({
   productId: uuidSchema,
-  fromGodamId: uuidSchema,   // ✅ اصلاح شده
-  toGodamId: uuidSchema,     // ✅ اصلاح شده
+  // ⚠️ The names `warehouse.service#transferStock` reads. They were
+  // `fromGodamId` / `toGodamId` here: the service then compared
+  // `undefined === undefined` and refused EVERY transfer as «same warehouse».
+  // The route could not have worked, and no screen called it to find out.
+  fromWarehouseId: uuidSchema,
+  toWarehouseId: uuidSchema,
   quantity: positiveNumberSchema,
   notes: optionalStringSchema,
-  date: isoDateSchema.default(() => new Date().toISOString()),
 })
 
 export type StockTransfer = z.infer<typeof stockTransferSchema>

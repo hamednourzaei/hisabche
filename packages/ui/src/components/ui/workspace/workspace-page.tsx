@@ -12,9 +12,27 @@ import {
   type WorkspaceMember,
   type WorkspaceRole,
 } from '@hisabche/store'
-import { useRemoveMember, useUpdateMemberRole } from '@hisabche/api'
+import {
+  apiErrorMessage,
+  useCancelInvite,
+  useLeaveWorkspace,
+  useRemoveMember,
+  useUpdateMemberRole,
+  useWorkspaceInvites,
+} from '@hisabche/api'
+import { useDateFormat } from '../../../hooks/use-date-format'
 import { InviteModal } from '../invite-modal'
-import { Users, UserPlus, Crown, Shield, User, X, LockKeyhole } from 'lucide-react'
+import {
+  Users,
+  UserPlus,
+  Crown,
+  Shield,
+  User,
+  X,
+  LockKeyhole,
+  LogOut,
+  MailQuestion,
+} from 'lucide-react'
 import { MemberPageAccess } from './member-page-access'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -148,7 +166,11 @@ export const WorkspacePage = memo(function WorkspacePage() {
   const userId = useAuthStore((s) => s.user?.id)
   const removeMember = useRemoveMember()
   const updateRole = useUpdateMemberRole()
+  const cancelInvite = useCancelInvite()
+  const leaveWorkspace = useLeaveWorkspace()
+  const { date: fmtDay } = useDateFormat()
   const [showInvite, setShowInvite] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
     if (userId) fetchWorkspace(userId)
@@ -171,13 +193,18 @@ export const WorkspacePage = memo(function WorkspacePage() {
   const isOwner = currentUserRole === 'owner'
   const isAdmin = isOwner || currentUserRole === 'admin'
 
+  // Invitations are an admin's to see; for anybody else the request is not made
+  // at all — a refusal must not be drawn as «no invitations».
+  const invites = useWorkspaceInvites(workspaceId, isAdmin)
+  const pendingInvites = (invites.data ?? []).filter((invite) => invite.status === 'pending')
+
   const refresh = useCallback(() => {
     if (userId) fetchWorkspace(userId)
   }, [userId, fetchWorkspace])
 
   const handleRemove = useCallback(
     async (memberId: string) => {
-      if (!confirm(safeT('workspace.confirmRemove'))) return
+      if (!confirm(safeT('workspace.removeConfirm'))) return
       try {
         await removeMember.mutateAsync({ workspaceId: workspaceId!, memberId })
         refresh()
@@ -199,6 +226,40 @@ export const WorkspacePage = memo(function WorkspacePage() {
     },
     [workspaceId, updateRole, refresh, safeT],
   )
+
+  const handleCancelInvite = useCallback(
+    async (inviteId: string) => {
+      if (!workspaceId) return
+      if (!confirm(safeT('workspace.cancelInviteConfirm'))) return
+      setNotice(null)
+      try {
+        await cancelInvite.mutateAsync({ workspaceId, inviteId })
+      } catch (err) {
+        setNotice(apiErrorMessage(err, safeT('workspace.cancelInviteFailed')))
+      }
+    },
+    [workspaceId, cancelInvite, safeT],
+  )
+
+  const handleLeave = useCallback(async () => {
+    if (!workspaceId) return
+    if (!confirm(safeT('workspace.leaveConfirm'))) return
+    setNotice(null)
+    try {
+      await leaveWorkspace.mutateAsync(workspaceId)
+      // The business that was active is no longer this person's. Forget it and
+      // start over: the next load asks the server which ones are left.
+      useWorkspaceStore.setState({ workspaceId: null, workspaceName: '', members: [] })
+      window.location.reload()
+    } catch (err) {
+      const message = apiErrorMessage(err, safeT('workspace.leaveFailed'))
+      setNotice(
+        message.includes('WORKSPACE_OWNER_CANNOT_LEAVE')
+          ? safeT('workspace.ownerCannotLeave')
+          : safeT('workspace.leaveFailed'),
+      )
+    }
+  }, [workspaceId, leaveWorkspace, safeT])
 
   const memberRows = useMemo(
     () =>
@@ -275,6 +336,109 @@ export const WorkspacePage = memo(function WorkspacePage() {
           )}
         </div>
       </div>
+
+      {notice ? (
+        <p
+          role="alert"
+          className="rounded-xl border border-[hsl(var(--color-destructive)/0.3)] bg-[hsl(var(--color-destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--color-destructive))]"
+        >
+          {notice}
+        </p>
+      ) : null}
+
+      {/* Invitations that were sent and not accepted yet — and the way to
+          withdraw one. They could be neither seen nor cancelled. */}
+      {isAdmin ? (
+        <div
+          className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]"
+          data-pending-invites=""
+        >
+          <div className="p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <MailQuestion className="size-5 text-[hsl(var(--color-primary))]" />
+              <h2 className="text-lg font-semibold text-[hsl(var(--fg-primary))]">
+                {safeT('workspace.pendingInvites')}
+                {invites.isSuccess ? ` (${pendingInvites.length})` : ''}
+              </h2>
+            </div>
+            {invites.isLoading ? (
+              <div className="h-12 animate-pulse rounded-xl bg-[hsl(var(--surface-muted))]" />
+            ) : invites.isError ? (
+              <p
+                role="alert"
+                className="py-4 text-center text-sm text-[hsl(var(--color-destructive))]"
+              >
+                {safeT('workspace.invitesFailed')}
+              </p>
+            ) : pendingInvites.length === 0 ? (
+              <p className="py-4 text-center text-sm text-[hsl(var(--fg-tertiary))]">
+                {safeT('workspace.noPendingInvites')}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {pendingInvites.map((invite) => (
+                  <div
+                    key={invite.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border-default))] p-3"
+                  >
+                    <div className="min-w-0">
+                      <p
+                        dir="ltr"
+                        className="truncate text-start text-sm font-medium text-[hsl(var(--fg-primary))]"
+                      >
+                        {invite.email}
+                      </p>
+                      <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                        {roleLabel(invite.role)}
+                        {invite.expires_at
+                          ? ` · ${safeT('workspace.inviteExpires')} ${fmtDay(invite.expires_at)}`
+                          : ''}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleCancelInvite(invite.id)}
+                      disabled={cancelInvite.isPending}
+                      className="inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-full border border-[hsl(var(--color-destructive)/0.4)] px-3 text-xs font-medium text-[hsl(var(--color-destructive))] hover:bg-[hsl(var(--color-destructive)/0.08)] disabled:opacity-50"
+                    >
+                      <X className="size-3.5" aria-hidden="true" />
+                      {safeT('workspace.cancelInvite')}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Leaving. The owner cannot: a business with no owner belongs to nobody. */}
+      {!isOwner && workspaceId ? (
+        <div
+          className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]"
+          data-leave-workspace=""
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 p-6">
+            <div className="min-w-0 space-y-1">
+              <h3 className="font-semibold text-[hsl(var(--fg-primary))]">
+                {safeT('workspace.leaveTitle')}
+              </h3>
+              <p className="text-sm text-[hsl(var(--fg-secondary))]">
+                {safeT('workspace.leaveHint')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleLeave()}
+              disabled={leaveWorkspace.isPending}
+              className="inline-flex min-h-10 items-center gap-2 whitespace-nowrap rounded-full border border-[hsl(var(--color-destructive)/0.4)] px-4 text-sm font-medium text-[hsl(var(--color-destructive))] hover:bg-[hsl(var(--color-destructive)/0.08)] disabled:opacity-50"
+            >
+              <LogOut className="size-4" aria-hidden="true" />
+              {safeT('workspace.leave')}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Permissions */}
       <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">

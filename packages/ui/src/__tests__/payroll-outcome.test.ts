@@ -46,7 +46,10 @@ describe('one rule: a paid salary is final', () => {
 
   it('the server refuses it in the WHERE clause, not in a read before the write', () => {
     expect(settle).toContain(".or('status.is.null,status.neq.paid')")
-    expect(settle).toContain("throw new ConflictError('PAYROLL_ALREADY_PAID")
+    // Flattened: the formatter wraps the long message onto its own line.
+    expect(settle.split(/\s+/).join(' ')).toContain(
+      "throw new ConflictError( 'PAYROLL_ALREADY_PAID",
+    )
     expect(settle.indexOf('.update(updates)')).toBeLessThan(settle.indexOf(".select('id, status')"))
   })
 })

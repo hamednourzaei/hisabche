@@ -21,6 +21,7 @@ import { useCurrencyStore } from '@hisabche/store'
 import {
   productKeys,
   useAssignWarehouseStock,
+  useTransferStock,
   useCreateWarehouse,
   warehouseKeys,
   useUpdateWarehouse,
@@ -29,7 +30,7 @@ import {
   useWarehouseOverview,
 } from '@hisabche/api'
 import { WarehouseListTable, UNASSIGNED_WAREHOUSE_ID } from '../warehouse-list-table'
-import { AddWarehouseDialog, AssignStockDialog } from '../warehouse-dialogs'
+import { AddWarehouseDialog, AssignStockDialog, TransferStockDialog } from '../warehouse-dialogs'
 import { AddToWarehouseModal } from '../add-to-warehouse-modal'
 import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 
@@ -76,6 +77,7 @@ export function warehouseContainer() {
   } | null>(null)
   const updateWarehouse = useUpdateWarehouse()
   const [showAssign, setShowAssign] = useState(false)
+  const [showTransfer, setShowTransfer] = useState(false)
   const [showAddToWarehouse, setShowAddToWarehouse] = useState(false)
 
   const overview = useWarehouseOverview()
@@ -84,6 +86,7 @@ export function warehouseContainer() {
   const unassignedDetail = useWarehouseDetail(showAssign ? UNASSIGNED_WAREHOUSE_ID : null)
   const createWarehouse = useCreateWarehouse()
   const assignStock = useAssignWarehouseStock(warehouseParam ?? '')
+  const transferStock = useTransferStock()
 
   const openWarehouse = useCallback(
     (id: string | null) => {
@@ -257,6 +260,9 @@ export function warehouseContainer() {
             : {
                 secondaryActionLabel: safeT('warehouse.assignTitle', 'افزودن کالا به انبار'),
                 onSecondaryAction: () => setShowAssign(true),
+                // To another warehouse. The route had no button anywhere.
+                transferActionLabel: safeT('warehouse.transferStock', 'انتقال موجودی'),
+                onTransferAction: () => setShowTransfer(true),
               }),
           products: warehouseProducts,
           isLoading: detail.isLoading,
@@ -335,6 +341,27 @@ export function warehouseContainer() {
           warehouseId={detail.data.warehouse.id}
           warehouseName={detail.data.warehouse.name}
           onCreated={refreshStock}
+        />
+      ) : null}
+
+      {inWarehouse && !isUnassigned && detail.data?.warehouse ? (
+        <TransferStockDialog
+          t={safeT}
+          fmt={fmt}
+          open={showTransfer}
+          onClose={() => setShowTransfer(false)}
+          warehouseName={warehouseName}
+          products={detail.data.products ?? []}
+          targets={(overview.data?.warehouses ?? [])
+            .filter((item) => item.isActive && item.id !== detail.data?.warehouse?.id)
+            .map((item) => ({ id: item.id, name: item.name }))}
+          isPending={transferStock.isPending}
+          onTransfer={(input) =>
+            transferStock.mutateAsync({
+              ...input,
+              fromWarehouseId: detail.data?.warehouse?.id ?? '',
+            })
+          }
         />
       ) : null}
 

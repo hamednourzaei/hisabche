@@ -198,7 +198,13 @@ export class WarehouseService {
    */
   async transferStock(
     ctx: TenancyContext,
-    data: any,
+    data: {
+      productId: string
+      fromWarehouseId: string
+      toWarehouseId: string
+      quantity: number
+      notes?: string | undefined
+    },
     options: { idempotencyKey?: string | null | undefined } = {},
   ) {
     const quantity = Number(data.quantity) || 0

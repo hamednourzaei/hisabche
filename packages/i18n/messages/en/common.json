@@ -1993,7 +1993,14 @@
     },
     "deactivateInstead": "Deactivate this product instead? Its sales and stock history stay, and it leaves the warehouse lists (including «Unassigned»).",
     "deactivated": "Product deactivated and removed from the warehouse lists.",
-    "deactivateFailed": "Could not deactivate the product."
+    "deactivateFailed": "Could not deactivate the product.",
+    "transferHint": "The quantity leaves this warehouse and arrives in the other; the product total does not change.",
+    "transferAction": "Transfer",
+    "transferNothing": "There is nothing in this warehouse to transfer.",
+    "transferNoTarget": "There is no other warehouse to transfer to. Add a warehouse first.",
+    "transferInsufficient": "That is more than this product has in the source warehouse.",
+    "transferNotes": "Notes (optional)",
+    "transferDone": "Transferred."
   },
   "customers": {
     "title": "Customers",
@@ -3023,7 +3030,21 @@
     "pageAccessHint": "Ticked = this person may open the section. Unticked sections are locked in their menu and refused by the server.",
     "pageAccessSaved": "Page access saved.",
     "pageAccessNotConfigured": "This feature is not enabled in the database yet.",
-    "employee": "Employee"
+    "employee": "Employee",
+    "removeFailed": "Could not remove. Try again.",
+    "roleChangeFailed": "Could not change the role. Try again.",
+    "pendingInvites": "Pending invitations",
+    "noPendingInvites": "No invitation is waiting to be accepted.",
+    "invitesFailed": "Could not read the invitations.",
+    "cancelInvite": "Cancel invitation",
+    "cancelInviteConfirm": "Cancel this invitation? Its link will stop working.",
+    "cancelInviteFailed": "Could not cancel the invitation. Try again.",
+    "inviteExpires": "Valid until",
+    "leaveTitle": "Leave this business",
+    "leaveHint": "After leaving you no longer have access to this business unless you are invited again.",
+    "leaveFailed": "Could not leave. Try again.",
+    "ownerCannotLeave": "The owner cannot leave. Hand ownership to someone else first.",
+    "defaultName": "My business"
   },
   "permissions": {
     "title": "Roles & Permissions",
@@ -5728,6 +5749,14 @@
         "body1": "Hisabche suggests what to reorder based on your real sales.",
         "body2": "The dead-stock list shows what has not moved for a while and how much money is tied up in it."
       },
+      "transfer": {
+        "heading": "Moving goods between warehouses",
+        "body1": "With more than one warehouse, you can move a quantity of a product from one to another. The product total does not change; only where it is.",
+        "body2": "A transfer larger than what the source warehouse holds is refused, and every transfer stays in the product history.",
+        "step1": "On the stock page, open the source warehouse.",
+        "step2": "Press “Transfer stock” and choose the product and the destination warehouse.",
+        "step3": "Enter the quantity and press “Transfer”."
+      },
       "seoTitle": "Inventory guide — stock, units and stock counts",
       "seoDescription": "Inventory in Hisabche: stock on hand from real movements, buying and selling in several units, stock counts and reorder suggestions."
     },
@@ -5847,6 +5876,14 @@
         "heading": "Separation of duties",
         "body1": "You can require that one person does not do both halves of a task — whoever raises an invoice does not also record its payment.",
         "body2": "For a one-person shop, leaving this off is the right answer. A control that refuses the owner their own till teaches them to share a login, and that destroys every other control at once."
+      },
+      "invites": {
+        "heading": "Invitations and leaving a business",
+        "body1": "An invitation you sent that has not been accepted yet is listed on the members page under “Pending invitations”. If it was sent by mistake you can cancel it; its link stops working.",
+        "body2": "Any member can leave a business themselves. The owner cannot, because a business is never left without an owner.",
+        "step1": "Open the members section.",
+        "step2": "To cancel an invitation, press “Cancel invitation” beside it.",
+        "step3": "To leave the business, press “Leave” at the bottom of the same page."
       },
       "seoTitle": "Staff Permissions and Access Levels — Guide",
       "seoDescription": "Staff permissions in Hisabche: what each role opens up, and how to require that one person does not both raise and approve a task."

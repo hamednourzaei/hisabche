@@ -107,43 +107,44 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 
 ## ۴. دانش پروژه — کجا را باز کنی
 
-| سؤال                                                                  | فایل                                                                  |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **وبلاگ: نقشه، تله‌ها، تصمیم‌ها (۲۶ سپتامبر)**                        | `.claude/SESSION-CACHE-2026-09-26-BLOG.md`                            |
-| **Sync باینری، بارکد/چاپ، پرفورمنس DB، Cloudflare (۲۷ سپتامبر)**      | `.claude/SESSION-CACHE-2026-09-27.md`                                 |
-| **Business OS ۱۵۰ قابلیت: نقشه، فازبندی، درس‌ها (۳۰ سپتامبر)**        | `.claude/BUSINESS-OS-SPEC.md` · `BUSINESS-OS-EXECUTION.md`            |
-| **درس‌های فازهای ۰–۴ Business OS (۳۰ سپتامبر)**                       | `.claude/SESSION-CACHE-2026-09-30-BUSINESS-OS.md`                     |
-| **🔴 مسائل باز امروز — این را اول بخوان**                             | `.claude/SESSION-CACHE-2026-09-30-FINDINGS.md`                        |
-| **کیف پول، عکس کالا، بازار کالا، refresh token، دری (۳ اکتبر)**       | `.claude/SESSION-CACHE-2026-10-03.md`                                 |
-| **Business OS: کدام موتور واقعاً وصل است؛ فاکتور تکراری (۴ اکتبر)**   | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md`              |
-| **صفحه‌ی تحلیل، آنچه از ۱۵۰ قابلیت وصل نشد و چرا (۴ اکتبر)**          | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md` — «دور دوم»  |
-| **ساخت و تولید: مدل، نقشه، آنچه ساخته نشد (۴ اکتبر)**                 | `.claude/SESSION-CACHE-2026-10-04-MANUFACTURING.md`                   |
-| **Gap Closure: فهرست قیمت، جریمه، OCR، ترجمه، شیفت، داشبورد، مقایسه** | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md` — «دور پنجم» |
-| **بازبینی UX: هر صفحه یک فایل، پیشنهاد ادغام و فازها (۴ اکتبر)**      | `.claude/ux-audit/README.md` · `00-PROPOSAL.md` — **منتظر تأیید**     |
-| **همه‌ی درس‌ها با شماره (۱–۱۱۴)**                                     | `.claude/lessons-learned.md`                                          |
-| **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                            |
-| **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                       |
-| **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                               |
-| **کلید API، وب‌هوک، ورود صورتحساب بانک، مقایسه‌ی اکوسیستم**           | `.claude/research/ecosystem-gap-analysis.md`                          |
-| **درس‌ها و باگ‌های سشن اخیر (۱۹ سپتامبر)**                            | `.claude/SESSION-CACHE-2026-09-19.md` — **اول این**                   |
-| درس‌ها و باگ‌های ۱۵–۱۷ سپتامبر                                        | `.claude/SESSION-CACHE-2026-09-17.md`                                 |
-| درس‌ها و باگ‌های اوایل سپتامبر                                        | `.claude/SESSION-CACHE-2026-09.md`                                    |
-| **فهرست باگ‌ها با ریشه و گارد**                                       | `.claude/BUG-REGISTRY.md`                                             |
-| **پرفورمنس، PageSpeed، لندینگ موبایل (۱۵ سپتامبر)**                   | `.claude/SESSION-CACHE-2026-09-15-PERF.md`                            |
-| **درخواست‌های باز کاربر — قبل از هر کار**                             | `.claude/USER-REQUESTS.md`                                            |
-| بودجه/صندوق/حاکمیت/۵۰۰ها (۱۴ سپتامبر)                                 | `.claude/SESSION-CACHE-2026-09-14.md`                                 |
-| نقشه‌ی کل دانش                                                        | `.claude/README.md`                                                   |
-| باگ خوردم / چطور وریفای کنم                                           | `.claude/DEBUG-PLAYBOOK.md`                                           |
-| تله‌های قدیمی‌تر                                                      | `.claude/SESSION-CACHE.md`                                            |
-| چرا این‌طوری نوشته شده                                                | `.claude/lessons-learned.md`                                          |
-| الان چه کار می‌کند و چه نه                                            | `.claude/STATE.md`                                                    |
-| کد جدید کجا برود                                                      | `.claude/architecture/core-modules.md`                                |
-| کدام hook به کدام endpoint                                            | `.claude/architecture/api-surface.md`                                 |
-| جدول‌ها و RLS                                                         | `.claude/architecture/data-model.md`                                  |
-| Source of Truth / کدام migration اجرا شده                             | `.claude/SESSION-2026-09-05-CONSOLIDATION.md`                         |
-| migration/تست/commit چطور                                             | `.claude/WORKFLOW.md`                                                 |
-| مقایسه با ERPNext و Odoo                                              | `.claude/research/`                                                   |
-| خواسته‌های محصول                                                      | `.claude/detail.md`                                                   |
+| سؤال                                                                  | فایل                                                                        |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **وبلاگ: نقشه، تله‌ها، تصمیم‌ها (۲۶ سپتامبر)**                        | `.claude/SESSION-CACHE-2026-09-26-BLOG.md`                                  |
+| **Sync باینری، بارکد/چاپ، پرفورمنس DB، Cloudflare (۲۷ سپتامبر)**      | `.claude/SESSION-CACHE-2026-09-27.md`                                       |
+| **Business OS ۱۵۰ قابلیت: نقشه، فازبندی، درس‌ها (۳۰ سپتامبر)**        | `.claude/BUSINESS-OS-SPEC.md` · `BUSINESS-OS-EXECUTION.md`                  |
+| **درس‌های فازهای ۰–۴ Business OS (۳۰ سپتامبر)**                       | `.claude/SESSION-CACHE-2026-09-30-BUSINESS-OS.md`                           |
+| **🔴 مسائل باز امروز — این را اول بخوان**                             | `.claude/SESSION-CACHE-2026-09-30-FINDINGS.md`                              |
+| **کیف پول، عکس کالا، بازار کالا، refresh token، دری (۳ اکتبر)**       | `.claude/SESSION-CACHE-2026-10-03.md`                                       |
+| **Business OS: کدام موتور واقعاً وصل است؛ فاکتور تکراری (۴ اکتبر)**   | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md`                    |
+| **صفحه‌ی تحلیل، آنچه از ۱۵۰ قابلیت وصل نشد و چرا (۴ اکتبر)**          | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md` — «دور دوم»        |
+| **ساخت و تولید: مدل، نقشه، آنچه ساخته نشد (۴ اکتبر)**                 | `.claude/SESSION-CACHE-2026-10-04-MANUFACTURING.md`                         |
+| **Gap Closure: فهرست قیمت، جریمه، OCR، ترجمه، شیفت، داشبورد، مقایسه** | `.claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md` — «دور پنجم»       |
+| **بازبینی UX: هر صفحه یک فایل، پیشنهاد ادغام و فازها (۴ اکتبر)**      | `.claude/ux-audit/README.md` · `00-PROPOSAL.md` — **منتظر تأیید**           |
+| **هاب‌ها، خط‌های تب←سوییچ، حقوق/مرخصی، sandbox 403 (۵ اکتبر)**        | `.claude/SESSION-CACHE-2026-10-05-UX.md` · BUG-097…099 در `BUG-REGISTRY.md` |
+| **همه‌ی درس‌ها با شماره (۱–۱۱۴)**                                     | `.claude/lessons-learned.md`                                                |
+| **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
+| **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
+| **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |
+| **کلید API، وب‌هوک، ورود صورتحساب بانک، مقایسه‌ی اکوسیستم**           | `.claude/research/ecosystem-gap-analysis.md`                                |
+| **درس‌ها و باگ‌های سشن اخیر (۱۹ سپتامبر)**                            | `.claude/SESSION-CACHE-2026-09-19.md` — **اول این**                         |
+| درس‌ها و باگ‌های ۱۵–۱۷ سپتامبر                                        | `.claude/SESSION-CACHE-2026-09-17.md`                                       |
+| درس‌ها و باگ‌های اوایل سپتامبر                                        | `.claude/SESSION-CACHE-2026-09.md`                                          |
+| **فهرست باگ‌ها با ریشه و گارد**                                       | `.claude/BUG-REGISTRY.md`                                                   |
+| **پرفورمنس، PageSpeed، لندینگ موبایل (۱۵ سپتامبر)**                   | `.claude/SESSION-CACHE-2026-09-15-PERF.md`                                  |
+| **درخواست‌های باز کاربر — قبل از هر کار**                             | `.claude/USER-REQUESTS.md`                                                  |
+| بودجه/صندوق/حاکمیت/۵۰۰ها (۱۴ سپتامبر)                                 | `.claude/SESSION-CACHE-2026-09-14.md`                                       |
+| نقشه‌ی کل دانش                                                        | `.claude/README.md`                                                         |
+| باگ خوردم / چطور وریفای کنم                                           | `.claude/DEBUG-PLAYBOOK.md`                                                 |
+| تله‌های قدیمی‌تر                                                      | `.claude/SESSION-CACHE.md`                                                  |
+| چرا این‌طوری نوشته شده                                                | `.claude/lessons-learned.md`                                                |
+| الان چه کار می‌کند و چه نه                                            | `.claude/STATE.md`                                                          |
+| کد جدید کجا برود                                                      | `.claude/architecture/core-modules.md`                                      |
+| کدام hook به کدام endpoint                                            | `.claude/architecture/api-surface.md`                                       |
+| جدول‌ها و RLS                                                         | `.claude/architecture/data-model.md`                                        |
+| Source of Truth / کدام migration اجرا شده                             | `.claude/SESSION-2026-09-05-CONSOLIDATION.md`                               |
+| migration/تست/commit چطور                                             | `.claude/WORKFLOW.md`                                                       |
+| مقایسه با ERPNext و Odoo                                              | `.claude/research/`                                                         |
+| خواسته‌های محصول                                                      | `.claude/detail.md`                                                         |
 
 ---
 
@@ -365,6 +366,18 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **وضعیتی که هیچ دکمه‌ای عوضش نمی‌کند، بن‌بست است.** `PATCH /api/payrolls/:id` و `PATCH /api/leaves/:id` سال‌ها بی‌caller بودند: هر حقوق «پیش‌نویس» و هر مرخصی «در انتظار» می‌ماند. بعد از هر route نوشتنیِ تازه `node scripts/audit-unwired-routes.mjs` را اجرا کن. حقوق: فقط `PayrollOutcome` + `useSettlePayroll`؛ «پرداخت‌شده» نهایی است (`isPayrollFinal`، رد در شرط WHERE)، «پرداخت نشد» دلیل می‌خواهد. دو راهِ رسیدن به یک وضعیت باید همان اثر جانبی را داشته باشند (حقوقی که از اول `paid` ثبت می‌شد سند دفتر نمی‌زد).
 - ⚠️ **گاردِ `toContain` روی یک خط بلند با formatter قرمز می‌شود** — منبع را اول تخت کن (`.split(/\s+/).join(' ')`).
 - **خط‌های تب ← سوییچ:** `HubTabs` خودش نوار خط و slot را زیر نوارش می‌کشد (`HubBranchStrip` در `hub-branch.tsx`)؛ سوییچِ همان تب فقط `branch` می‌گیرد (`<SegmentedControl branch />`) و با portal وسط صفحه، زیر تب‌ها می‌نشیند. خط، slot یا wrapper دستی نکش. **هر تب فقط یک سوییچِ `branch`** — سوییچ داخلیِ صفحه‌ی زیرِ تبِ سوییچ‌دار سر جایش می‌ماند. روی همه‌ی هاب‌ها فعال است. ⚠️ گزینه‌ی سوییچ و تب هرگز wrap نمی‌شود — `whitespace-nowrap` + `clamp()`، نه `flex-wrap`. ⚠️ `useCallback` ای که `ref.current` می‌خواند را React Compiler رد می‌کند؛ تابع سطح ماژول + effect.
+- ⚠️ **کلاینت روی هر درخواست می‌گوید کدام کسب‌وکار: هدر `x-workspace-id`** (`packages/api/src/lib/client.ts` از `getActiveWorkspaceId()`). سرور بدون آن، برای کسی که بیش از یک workspace دارد **هر درخواست را ۴۰۳ می‌کند** (`chooseWorkspace`). هیچ کلاینتی نمی‌فرستاد و sandbox — دومین workspace همان آدم — کل حساب را روی سایت زنده قفل کرد (BUG-099). هدر باید در `allowedHeaders` بک‌اند هم باشد و **بک‌اند قبل از وب منتشر شود**. گارد: `active-workspace-travels.test.ts`.
+- ⚠️ **قابلیتی که تعداد چیزی را از ۱ به ۲ می‌برد (workspace، شعبه، انبار، ارز)، حالتِ «دو تا» را با HTTP واقعی امتحان کن.** fixture تک‌تایی این دسته باگ را سبز نگه می‌دارد.
+- ⚠️ **دو پاسخ سرور درباره‌ی یک چیز، یک قاعده:** `GET /workspaces` همان `has_access = true AND suspended_at IS NULL` مسیر مجوز را می‌سنجد؛ وگرنه کلاینت workspace ای را نگه می‌دارد که سرور رد می‌کند. خطای خواندن throw می‌شود، «هیچ نداری» نیست.
+- ⚠️ **کش `scope: 'user'` روی routeِ `requireWorkspaceContext` ممنوع** — داده‌ی یک workspace را در دیگریِ همان آدم نشان می‌دهد. `scope: 'member'` یا `'workspace'`.
+- ⚠️ **عضویت را با `has_access` صریح بساز** (کد و تابع SQL)؛ به default ستون تکیه نکن (`docs/FIX-403.sql`).
+- ⚠️ **اول FINDING، بعد migration.** حدس درباره‌ی دیتابیس زنده را با یک کوئری خواندنی بسنج؛ کدِ ۴۰۳ را از **بدنه‌ی پاسخ** بخوان (`code`)، نه از عدد.
+- ⚠️ **راه خروج را پشت همان درخواستی نگذار که ممکن است رد شود** (`SandboxNotice`).
+- ⚠️ **`authenticate` یعنی «حساب دارد»، نه «اجازه دارد».** route ای که نه `requireWorkspaceContext` دارد نه `platformAdminGuard`، فقط حق دارد داده‌ی خودِ همان کاربر را بخواند/بنویسد. ده route نقش سراسری و لاگ رویداد همین‌طور باز بودند (BUG-101).
+- ⚠️ **سرور وقتی خودش را صدا می‌زند (`fastify.inject`) هم باید workspace را بگوید** — نشست آدم workspace ندارد (BUG-100، تأیید MCP).
+- ⚠️ **route بی‌caller را قبل از تکیه‌کردن اجرا کن — ممکن است هرگز کار نکرده باشد.** انتقال بین انبارها: schema می‌گفت `fromGodamId` و سرویس `fromWarehouseId` می‌خواند (پارامتر `any`)، پس هر انتقال «همان انبار» رد می‌شد (BUG-102). پارامتر سرویس را `any` نگذار.
+- ⚠️ **هر `.eq('id', …)` روی جدول tenant، `.eq('workspace_id', …)` هم می‌خواهد** — چک نقش در workspace خودت، مجوزِ دست‌زدن به ردیفِ workspace دیگر نیست (لغو دعوت، BUG-103).
+- ⚠️ **لندینگ، راهنما و وبلاگ ایستا/ISR هستند؛ Streaming SSR (`<Suspense>`) رویشان نگذار.** روی لندینگ اندازه‌گیری شده: LCP را ۲ ثانیه عقب انداخت و CLS ساخت؛ روی وبلاگ صفحه را dynamic می‌کند. Streaming فقط برای صفحه‌ای است که **در هر درخواست** منتظر داده‌ی کند می‌ماند.
 - **چارچوب اتصال‌ها ساخته نشده** (۱۵ تعریف، صفر adapter، صفر اعتبارنامه) — صفحه‌ای برایش نساز.
 
 **هسته‌ها (CRM / Payments)**

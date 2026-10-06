@@ -1005,3 +1005,67 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 - **اصلاح:** `principal × rate ÷ 100 × days ÷ 365`. دفعات پرداخت فقط قسط را تعیین می‌کند، نه بهره‌ی انباشته را.
 - **گارد:** `working-capital-engine.test.ts` — عدد درست (۱۱۹٬۶۷۱٫۲۳)، «بهره‌ی یک سال کمتر از ۱۳٪ اصل»، «دفعات پرداخت بهره را عوض نمی‌کند»، «نصف روزها = نصف بهره».
 - **درس:** عدد انتظار تست را **با دست** حساب کن، نه از خروجی کد. و یک assert مقیاسی («بهره‌ی سالانه‌ی ۱۲٪ نمی‌تواند هم‌اندازه‌ی اصل باشد») کنار عدد دقیق بگذار — عدد دقیق غلط را هم قفل می‌کند.
+
+## BUG-097 — حقوق و مرخصی راهی برای تغییر وضعیت نداشتند (۵ اکتبر)
+
+**نشانه:** هر حقوق «پیش‌نویس» و هر مرخصی «در انتظار» می‌ماند؛ هیچ دکمه‌ای نبود.
+**ریشه:** `PATCH /api/payrolls/:id` و `PATCH /api/leaves/:id` وجود داشتند و صفر caller داشتند (§۷٫۱). همچنین حقوقی که از
+اول `paid` ثبت می‌شد سند دفتر نمی‌زد (فقط مسیر PATCH می‌زد).
+**رفع:** `PayrollOutcome` + `useSettlePayroll`، `useDecideLeave`؛ قاعده در شرط WHERE (`PAYROLL_ALREADY_PAID`، `LEAVE_ALREADY_DECIDED`).
+**گارد:** `packages/ui/src/__tests__/payroll-outcome.test.ts` · ممیزی `node scripts/audit-unwired-routes.mjs`.
+
+## BUG-098 — کامنت کد بالای همه‌ی هاب‌ها چاپ می‌شد (۵ اکتبر)
+
+**نشانه:** متن «// Centred, and only as wide as its items…» بالای همه‌ی صفحه‌ها.
+**ریشه:** `<nav>` نوار تب داخل یک `<div>` پیچیده شد و کامنت `//` که قبلاً بیرون JSX بود، داخل JSX افتاد و متن شد. tsc، eslint و ۱۸۱۸ تست ساکت ماندند.
+**رفع:** `{/* … */}`. **گارد:** `hub-branch.test.ts` → «a comment is not page text» (injection-test شد).
+
+## BUG-099 — «محیط آزمایشی» کل حساب را قفل می‌کرد: ۴۰۳ روی همه‌چیز، بدون راه برگشت (۵ اکتبر، روی سایت زنده)
+
+**نشانه:** بعد از زدن دکمه‌ی محیط آزمایشی، همه‌ی داده‌ها «صفر» و هر درخواست ۴۰۳؛ نوار «برگشت به کسب‌وکار اصلی» هم دیده نمی‌شد.
+**ریشه (واقعی):** سرور workspace درخواستی را از هدر `x-workspace-id` می‌خواند و **هیچ کلاینتی آن را نمی‌فرستاد**. با یک workspace سرور
+خودش انتخاب می‌کند؛ با دو تا `chooseWorkspace` هر درخواستِ بی‌انتخاب را ۴۰۳ می‌کند («an explicit workspace must be selected»). sandbox
+دومین workspace همان آدم است — پس هم sandbox و هم کسب‌وکار واقعی قفل شدند. نوار خروج (`SandboxNotice`) هم از یک درخواستِ ردشده خوانده می‌شد.
+**این قابلیت از روز اول برای هیچ‌کس کار نکرده بود** — و برای هر کاربرِ چند-workspace (دعوت‌شده به کسب‌وکار دوم) هم همین‌طور.
+**حدس اولِ غلط:** `has_access` بدون default. VERIFY کاربر نشان داد default سر جایش است. آن اصلاح‌ها (06b، insertهای صریح) درست و بی‌ضررند ولی علت نبودند.
+**رفع:**
+
+1. `packages/api/src/lib/client.ts` — `x-workspace-id = getActiveWorkspaceId()` روی هر درخواست؛ `backend/src/index.ts` — همان هدر در `allowedHeaders`.
+2. `getMyWorkspaces` با همان قاعده‌ی مجوز (`has_access = true`، `suspended_at IS NULL`، قدیمی‌ترین اول) و خطا = throw، نه «هیچ نداری».
+3. `workflow.routes.ts` — چهار کش `scope: 'user'` روی routeِ workspace‌دار → `scope: 'member'` (داده‌ی یک workspace در دیگری دیده می‌شد).
+4. `docs/developer-platform-06b-sandbox-access-migration.sql` — `has_access` صریح + تعمیر. اجرا و VERIFY شد (`ok: true`، ۵ اکتبر).
+   **گارد:** `backend/src/__tests__/active-workspace-travels.test.ts` · `developer-platform-06b.pg.test.ts` (Postgres واقعی، ستون بدون default).
+   ⚠️ **ترتیب انتشار:** بک‌اند باید **قبل از** وب منتشر شود؛ وبِ تازه با بک‌اندِ قدیمی = هدرِ ناشناخته در CORS = قطع کامل (BUG-006).
+
+## BUG-100 — کار تأییدشده‌ی دستیار (MCP) برای مدیرِ دوکسب‌وکاره اجرا نمی‌شد (۶ اکتبر، با ممیزی پیدا شد)
+
+**ریشه:** `POST /api/ai-requests/:id/approve` اول تأیید را ثبت می‌کند (claim) و بعد route را با `fastify.inject` و نشست تأییدکننده
+صدا می‌زند — بدون `x-workspace-id`. تأییدکننده‌ای که workspace دوم دارد (مثلاً یک sandbox) ۴۰۳ می‌گرفت، **بعد از** ثبت تأیید:
+درخواستی «تأییدشده» که هرگز اجرا نشد و دوباره هم قابل تأیید نبود.
+**رفع:** `runRoute(…, workspaceId)` در `backend/src/routes/mcp.routes.ts`. **گارد:** `active-workspace-travels.test.ts`.
+
+## BUG-101 — نوشتن روی نقش‌های سراسری و لاگ رویداد فقط «ورود» می‌خواست (۶ اکتبر، با ممیزی پیدا شد)
+
+**ریشه:** ۶ route در `permission.routes.ts` (seed، ساخت/ویرایش/حذف نقش، دادن/گرفتن نقش از **هر** user id) و ۴ route در
+`event.routes.ts` (emit، process، seed، cleanup) فقط `authenticate` داشتند. هر حسابی می‌توانست صدایشان بزند؛ هیچ صفحه‌ای
+صدایشان نمی‌زند. خواندن نقش‌ها و مجوزهای یک کاربر دیگر هم همین‌طور.
+**رفع:** `platformAdminGuard` روی همه. **گارد:** همان فایل تست («a signed-in user is not a platform administrator»).
+**درس:** `authenticate` یعنی «یک حساب دارد»، نه «اجازه دارد». route بدون `requireWorkspaceContext` و بدون `platformAdminGuard`
+باید دلیل صریح داشته باشد (فقط داده‌ی خودِ همان کاربر).
+
+## BUG-102 — انتقال بین انبارها در سرور هرگز نمی‌توانست کار کند (۶ اکتبر، هنگام ساختن دکمه‌اش پیدا شد)
+
+**ریشه:** `stockTransferSchema` فیلدها را `fromGodamId`/`toGodamId` می‌نامید و `warehouse.service#transferStock`
+`data.fromWarehouseId`/`data.toWarehouseId` را می‌خواند. هر دو `undefined` بودند، پس `undefined === undefined` و هر انتقال با
+`WAREHOUSE_TRANSFER_SAME_WAREHOUSE` رد می‌شد. پارامتر سرویس `any` بود، پس tsc ساکت ماند؛ هیچ صفحه‌ای هم صدایش نمی‌زد.
+مسیر فقط عضویت می‌خواست، نه `product.write`.
+**رفع:** یک نام در schema و سرویس (تایپ‌شده، نه `any`)، `requireCapability('product.write')`، `TransferStockDialog` + `useTransferStock` با کلید idempotency.
+
+## BUG-103 — لغو/ارسال دوباره‌ی دعوت فقط با شناسه‌ی دعوت کار می‌کرد (IDOR) (۶ اکتبر)
+
+**ریشه:** `cancelInvite` و `resendInvite` نقش را در workspace خودِ درخواست‌کننده می‌سنجیدند و بعد `.eq('id', inviteId)` — بدون
+`workspace_id`. مدیر کسب‌وکار A می‌توانست دعوتِ کسب‌وکار B را لغو یا دوباره فعال کند.
+**رفع:** `.eq('workspace_id', workspaceId)` (و برای لغو `.eq('status','pending')` + ۴۰۴). `leaveWorkspace` حالا ۴۰۹
+`WORKSPACE_OWNER_CANNOT_LEAVE` می‌دهد، نه ۵۰۰.
+**همان‌جا:** صفحه‌ی اعضا `t('workspace.confirmRemove')` و `workspace.defaultName` را صدا می‌زد که وجود نداشتند — حذف عضو صفحه را می‌انداخت.
+**گارد هر دو:** `packages/ui/src/__tests__/routes-that-got-a-button.test.ts`.

@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 import { getToken, tokenReady } from './tokenProvider'
+import { getActiveWorkspaceId } from './active-workspace'
 import {
   activeBaseUrl,
   canReplay,

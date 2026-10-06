@@ -143,7 +143,9 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/stock-transfers',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      // Moving goods is a stock write, like assigning them — it asked only for
+      // membership.
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')],
       schema: {
         body: toJsonSchema(stockTransferSchema),
         response: {

@@ -139,6 +139,36 @@ export function useAssignWarehouseStock(warehouseId: string) {
   })
 }
 
+/**
+ * Move a quantity of one product from one warehouse to another.
+ *
+ * ⚠️ `POST /stock-transfers` had no caller. The key makes a retry after a lost
+ * answer the SAME movement, so the goods move once.
+ */
+export function useTransferStock() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      productId: string
+      fromWarehouseId: string
+      toWarehouseId: string
+      quantity: number
+      notes?: string | undefined
+      idempotencyKey: string
+    }) => {
+      const { idempotencyKey, ...body } = input
+      const { data } = await apiClient.post('/stock-transfers', body, {
+        headers: { 'Idempotency-Key': idempotencyKey },
+      })
+      return data as { success: boolean; transferred: number }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: warehouseKeys.all })
+      queryClient.invalidateQueries({ queryKey: productKeys.all })
+    },
+  })
+}
+
 /** Where one product's stock is (GET /products/:id/warehouse-breakdown). */
 export interface ProductWarehouseBreakdown {
   /** The product total — the figure the product page shows. */

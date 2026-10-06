@@ -180,6 +180,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
     sections: [
       { id: 'source', bodyCount: 2 },
       { id: 'units', bodyCount: 3, stepCount: 3 },
+      { id: 'transfer', bodyCount: 2, stepCount: 3 },
       { id: 'insights', bodyCount: 2 },
     ],
     related: ['invoices', 'pos', 'accounting', 'barcodes', 'manufacturing'],
@@ -279,6 +280,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
     group: 'team',
     sections: [
       { id: 'roles', bodyCount: 2 },
+      { id: 'invites', bodyCount: 2, stepCount: 3 },
       { id: 'sod', bodyCount: 2 },
     ],
     related: ['branches', 'pos', 'assistant', 'wallet', 'developers', 'attendance'],

@@ -268,3 +268,215 @@ export function AssignStockDialog({
     </Dialog>
   )
 }
+
+/**
+ * «انتقال موجودی» — move a quantity of one product from the open warehouse to
+ * another. The product total does not change; the server moves both sides in
+ * one transaction and refuses more than the source holds.
+ *
+ * The quantity is in the product's own unit, shown beside the field — the same
+ * unit the warehouse counts it in.
+ */
+export function TransferStockDialog({
+  t,
+  fmt,
+  open,
+  onClose,
+  warehouseName,
+  products,
+  targets,
+  onTransfer,
+  isPending,
+}: {
+  t: T
+  fmt: (v: number) => string
+  open: boolean
+  onClose: () => void
+  /** The source: the warehouse that is open. */
+  warehouseName: string
+  /** What the source holds. */
+  products: WarehouseProduct[]
+  /** Every OTHER live warehouse. */
+  targets: Array<{ id: string; name: string }>
+  onTransfer: (input: {
+    productId: string
+    toWarehouseId: string
+    quantity: number
+    notes?: string | undefined
+    idempotencyKey: string
+  }) => Promise<unknown>
+  isPending: boolean
+}) {
+  const available = products.filter((product) => product.quantity > 0)
+  const [productId, setProductId] = useState('')
+  const [targetId, setTargetId] = useState('')
+  const [quantity, setQuantity] = useState('')
+  const [notes, setNotes] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  // One key per opening of the dialog: pressing «انتقال» twice, or a retry after
+  // a lost answer, is the same movement.
+  const [requestKey, setRequestKey] = useState('')
+
+  useEffect(() => {
+    if (open) {
+      setProductId('')
+      setTargetId('')
+      setQuantity('')
+      setNotes('')
+      setError(null)
+      setRequestKey(crypto.randomUUID())
+    }
+  }, [open])
+
+  const selected = available.find((product) => product.id === productId)
+  const amount = Number(quantity)
+  const valid =
+    !!selected && !!targetId && Number.isFinite(amount) && amount > 0 && amount <= selected.quantity
+
+  const submit = async () => {
+    if (!selected || !targetId) return
+    setError(null)
+    try {
+      await onTransfer({
+        productId: selected.id,
+        toWarehouseId: targetId,
+        quantity: amount,
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
+        idempotencyKey: requestKey,
+      })
+      onClose()
+    } catch (err) {
+      const body = (err as { response?: { data?: { code?: string; error?: string } } })?.response
+        ?.data
+      const code = `${body?.code ?? ''} ${body?.error ?? ''}`
+      setError(
+        code.includes('WAREHOUSE_INSUFFICIENT_STOCK')
+          ? t(
+              'warehouse.transferInsufficient',
+              'این مقدار بیشتر از موجودی این کالا در انبار مبدأ است.',
+            )
+          : t('warehouse.saveFailed', 'ذخیره نشد. دوباره تلاش کنید.'),
+      )
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => (next ? null : onClose())}>
+      <DialogContent className="max-w-md" data-transfer-stock="">
+        <DialogHeader>
+          <DialogTitle>
+            {t('warehouse.transferStock', 'انتقال موجودی')}: {warehouseName}
+          </DialogTitle>
+          <DialogDescription>
+            {t(
+              'warehouse.transferHint',
+              'کالا از این انبار کم و به انبار مقصد اضافه می‌شود؛ کل موجودی کالا تغییر نمی‌کند.',
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        {targets.length === 0 ? (
+          <p className="py-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
+            {t(
+              'warehouse.transferNoTarget',
+              'انبار دیگری برای انتقال وجود ندارد. اول یک انبار اضافه کنید.',
+            )}
+          </p>
+        ) : available.length === 0 ? (
+          <p className="py-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
+            {t('warehouse.transferNothing', 'در این انبار کالایی برای انتقال نیست.')}
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <div className="space-y-1 text-sm">
+              <label
+                htmlFor="warehouse-transfer-product"
+                className="text-[hsl(var(--fg-secondary))]"
+              >
+                {t('warehouse.name', 'نام')}
+              </label>
+              <SelectField
+                id="warehouse-transfer-product"
+                value={productId}
+                onChange={setProductId}
+                placeholder={t('warehouse.chooseProduct', 'انتخاب کالا')}
+                options={available.map((product) => ({
+                  value: product.id,
+                  label: `${product.name} — ${fmt(product.quantity)} ${product.unit}`,
+                }))}
+              />
+            </div>
+            <div className="space-y-1 text-sm">
+              <label
+                htmlFor="warehouse-transfer-target"
+                className="text-[hsl(var(--fg-secondary))]"
+              >
+                {t('warehouse.toWarehouse', 'به انبار')}
+              </label>
+              <SelectField
+                id="warehouse-transfer-target"
+                value={targetId}
+                onChange={setTargetId}
+                placeholder={t('warehouse.toWarehouse', 'به انبار')}
+                options={targets.map((target) => ({ value: target.id, label: target.name }))}
+              />
+            </div>
+            <label className="block space-y-1 text-sm">
+              <span className="text-[hsl(var(--fg-secondary))]">
+                {t('warehouse.transferQuantity', 'مقدار انتقال')}
+                {selected ? ` (${selected.unit})` : ''}
+              </span>
+              <input
+                id="warehouse-transfer-quantity"
+                name="quantity"
+                type="number"
+                min={0}
+                max={selected?.quantity}
+                inputMode="decimal"
+                dir="ltr"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className={input}
+              />
+            </label>
+            {selected ? (
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {t('warehouse.assignMax', 'حداکثر')}: {fmt(selected.quantity)} {selected.unit}
+              </p>
+            ) : null}
+            <label className="block space-y-1 text-sm">
+              <span className="text-[hsl(var(--fg-secondary))]">
+                {t('warehouse.transferNotes', 'توضیحات (اختیاری)')}
+              </span>
+              <input
+                id="warehouse-transfer-notes"
+                name="notes"
+                maxLength={500}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className={input}
+              />
+            </label>
+            {error ? (
+              <p role="alert" className="text-sm text-[hsl(var(--color-destructive))]">
+                {error}
+              </p>
+            ) : null}
+          </div>
+        )}
+        <DialogFooter className="gap-2">
+          <button type="button" onClick={onClose} className={quiet}>
+            {t('common.cancel', 'انصراف')}
+          </button>
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={isPending || !valid}
+            className={primary}
+          >
+            {t('warehouse.transferAction', 'انتقال')}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

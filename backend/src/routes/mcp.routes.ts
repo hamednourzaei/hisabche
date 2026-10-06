@@ -96,12 +96,19 @@ async function runRoute(
   fastify: FastifyInstance,
   call: McpHttpCall,
   authorization: string,
+  /**
+   * Which business, when `authorization` is a PERSON's session. An API key
+   * carries its own workspace and needs none; a session does not, and a
+   * person with two workspaces (a sandbox is one) is refused without it.
+   */
+  workspaceId?: string,
 ): Promise<RouteAnswer> {
   const response = await fastify.inject({
     method: call.method,
     url: call.url,
     headers: {
       authorization,
+      ...(workspaceId ? { 'x-workspace-id': workspaceId } : {}),
       ...(call.body !== undefined ? { 'content-type': 'application/json' } : {}),
       ...(call.idempotencyKey ? { 'idempotency-key': call.idempotencyKey } : {}),
     },
@@ -491,6 +498,11 @@ export async function mcpRoutes(fastify: FastifyInstance) {
           fastify,
           { ...tool.call(args.data as Record<string, unknown>), idempotencyKey: `mcp-${id}` },
           request.headers.authorization ?? '',
+          // ⚠️ The business the request was approved IN. The approval was
+          // already recorded above; without this, an approver who has a second
+          // workspace had the action refused (403) AFTER being claimed — an
+          // approved request that never ran and could not be approved again.
+          request.tenancy.workspaceId,
         )
         const ok = answer.httpStatus >= 200 && answer.httpStatus < 300
         return reply.send(
