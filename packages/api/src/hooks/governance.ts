@@ -131,12 +131,15 @@ export function useMyCapabilities() {
         role?: string
         capabilities?: unknown
         blockedModules?: unknown
+        hiddenModules?: unknown
       } | null
       return {
         role: typeof body?.role === 'string' ? body.role : null,
         capabilities: asList<string>(body?.capabilities),
         // Modules the owner took away from this person; the menus lock them.
         blockedModules: asList<string>(body?.blockedModules),
+        // Modules the person's role does not include: left out of the menus.
+        hiddenModules: asList<string>(body?.hiddenModules),
       }
     },
     enabled: ready && !!workspaceId,

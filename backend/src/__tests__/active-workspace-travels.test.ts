@@ -129,7 +129,10 @@ describe('the server tells ITSELF which business, too', () => {
   // second workspace was refused AFTER the approval had been recorded.
   it('an approved MCP action runs in the workspace it was approved in', () => {
     const routes = code(read('backend', 'src', 'routes', 'mcp.routes.ts'))
-    expect(routes).toContain("...(workspaceId ? { 'x-workspace-id': workspaceId } : {})")
+    // The call itself lives in one module, shared with the in-app AI pipeline.
+    expect(code(read('backend', 'src', 'services', 'mcp', 'own-route.ts'))).toContain(
+      "...(workspaceId ? { 'x-workspace-id': workspaceId } : {})",
+    )
     const approve = routes.slice(routes.indexOf("'/api/ai-requests/:id/approve'"))
     expect(approve).toContain('request.tenancy.workspaceId, )')
   })

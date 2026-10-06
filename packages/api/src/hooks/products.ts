@@ -360,10 +360,23 @@ export function useProduct(id: string | undefined) {
 }
 
 /**
- * Several products by id — each one its own cached detail query, shared with
- * `useProduct`. For the invoice form's stock check: a list query with a limit
- * (the old `useProducts({ limit: 100 })`) silently skipped every product past
- * the first hundred, so an oversell on those raised no warning at all.
+ * Several products by id, for the invoice form's stock check: a list query
+ * with a limit (the old `useProducts({ limit: 100 })`) silently skipped every
+ * product past the first hundred, so an oversell on those raised no warning.
+ *
+ * ⚠️ ALWAYS THE SERVER'S ANSWER OF NOW — never a remembered one.
+ *
+ * The question is «is there enough left to sell this?», and the answer changes
+ * the moment another employee sells the last one. It used to share the
+ * product-detail query: a quantity read up to five minutes earlier (and, with
+ * the device cache, up to a week earlier) decided whether the warning showed.
+ * So it has its own key, is stale at once, is fetched on every mount, is
+ * dropped from memory when the form closes, and is never written to the
+ * device. Realtime still refetches it while the form is open.
+ *
+ * The server remains the authority: a sale past zero is recorded and a
+ * conflict is raised for a person (pos/negative-stock.domain). This is what
+ * makes sure the person SEES it coming.
  */
 export function useProductsByIds(ids: readonly string[]) {
   const authReady = useAuthReady()
@@ -371,12 +384,18 @@ export function useProductsByIds(ids: readonly string[]) {
 
   return useQueries({
     queries: ids.map((id) => ({
-      queryKey: productKeys.detail(id),
+      queryKey: [...productKeys.detail(id), 'on-hand'] as const,
       queryFn: async () => {
         const { data } = await apiClient.get<Product>(`/products/${id}`)
         return data
       },
       enabled: authReady && !!id,
+      staleTime: 0,
+      gcTime: 0,
+      refetchOnMount: 'always' as const,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      meta: { persist: false },
     })),
   })
 }

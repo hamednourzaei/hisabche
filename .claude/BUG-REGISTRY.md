@@ -1069,3 +1069,38 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 `WORKSPACE_OWNER_CANNOT_LEAVE` می‌دهد، نه ۵۰۰.
 **همان‌جا:** صفحه‌ی اعضا `t('workspace.confirmRemove')` و `workspace.defaultName` را صدا می‌زد که وجود نداشتند — حذف عضو صفحه را می‌انداخت.
 **گارد هر دو:** `packages/ui/src/__tests__/routes-that-got-a-button.test.ts`.
+
+## BUG-104 — «پروفایل دسترسی» هیچ اثری روی سرور نداشت (۶ اکتبر، هنگام ساختن نقش سفارشی پیدا شد)
+
+**نشانه:** مالک برای کارمند پروفایل «حسابدار» یا «فقط مشاهده» انتخاب می‌کرد و هیچ‌چیز عوض نمی‌شد.
+**ریشه:** پروفایل یک ردیف `user_roles` → `role_permissions` بود. تنها خواننده‌اش `permission.service.hasPermission` بود که هیچ گاردی
+صدایش نمی‌زد؛ `holds()` فقط `tenancy.capabilities` را می‌خواند = نقش پایه (owner/manager/seller) + override + بلاک. ماتریس روی صفحه
+می‌نوشت «بلافاصله اعمال می‌شود». الگوی §۷٫۱، در خودِ سیستم مجوز.
+**رفع:** `customRoleAccess` (domain) + `resolveEffectiveAccess` (یک تابع برای هر دو مسیر) در `workspace-access.service.ts`؛ نقشِ ساخته‌ی
+همان کسب‌وکار **جایگزین** مجموعه‌ی نقش پایه می‌شود (نه افزوده). RPC تازه: `docs/workspace-access-rpc-02-custom-role-migration.sql`
+— تا اجرا نشده، بک‌اند نقش را با یک hop اضافه می‌خواند (هرگز رد نمی‌کند).
+**گارد:** `workspace-access-custom-role.pg.test.ts` (Postgres واقعی) · `workspace-access-one-trip.test.ts` · `packages/ui/src/__tests__/custom-roles.test.ts`.
+
+## BUG-105 — مالک یک کسب‌وکار می‌توانست پروفایل مشترک همه‌ی کسب‌وکارها را عوض کند (۶ اکتبر)
+
+**ریشه:** `setCell` نقش را با «سیستمی یا مال من» پیدا می‌کرد و هر چیزی که owner/manager/seller نبود را در `role_permissions` می‌نوشت —
+از جمله پروفایل‌های سراسری (`accountant`، `cashier`، … با `workspace_id IS NULL`). یک مالک «حسابدار» را برای کل پلتفرم تغییر می‌داد.
+(تا BUG-104 رفع نشده بود این نوشتن اثر اجرایی نداشت؛ با رفع آن خطرناک می‌شد.)
+**رفع:** `PERMISSION_TEMPLATE_READONLY` قبل از نوشتن؛ الگوها فقط نقطه‌ی شروعِ «نقش جدید» هستند و ستون ماتریس نیستند.
+
+## BUG-106 — داشبورد دو درخواستِ بی‌مصرف در هر بارگذاری می‌زد (۶ اکتبر)
+
+`useDashboardData` «۵ فاکتور آخر» و «۱۰۰ کالای اول» را می‌خواند تا `recentInvoices` و `lowStockItems` بسازد؛ container هیچ‌کدام را
+استفاده نمی‌کرد. حذف شد. **گارد:** `personal-view.test.ts` («two reads nothing showed…»).
+
+## BUG-107 — رقم‌های داشبورد به هر عضوی داده می‌شد (۶ اکتبر)
+
+`GET /api/analytics/dashboard`، `/api/analytics/sales`، `/api/ai/insights` فقط `requireWorkspaceContext` داشتند. نقشِ بدون فاکتور
+فروش کل و بدهی مشتریان را می‌گرفت؛ هر کارمندی ارزش انبار به **بهای خرید** را (چیزی که صفحه‌ی کالا از او پنهان می‌کند).
+**رفع:** `dashboard-visibility.domain.ts` (ماسک + `hidden`)، کش `member`، `requireCapability` روی sales و insights.
+**اثر روی کاربران فعلی:** کارت «ارزش کل انبار» برای نقش «کارمند» دیگر نشان داده نمی‌شود. **گارد:** `dashboard-visibility.test.ts`.
+
+## BUG-108 — صفحه‌ی ممنوع mount و prefetch می‌شد (۶ اکتبر)
+
+صفحه‌ای که نقش شامل آن نبود با نشانی مستقیم باز می‌شد و همه‌ی درخواست‌هایش ۴۰۳ می‌گرفت؛ prefetch وب هم هر ۲۰ مسیر منو را گرم می‌کرد.
+**رفع:** `isRouteDenied` + `NoAccessNotice` در هر دو پوسته؛ فیلتر prefetch. **گارد:** `personal-view.test.ts`.

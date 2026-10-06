@@ -15,7 +15,7 @@ import {
   cacheOwner,
   createPersistedQueryCache,
   createQueryCachePersister,
-} from './persisted-query-cache'
+} from '@hisabche/api/src/lib/persisted-query-cache'
 
 // Publish the active workspace into @hisabche/api, which scopes every realtime
 // subscription to one business. At module scope rather than in an effect:

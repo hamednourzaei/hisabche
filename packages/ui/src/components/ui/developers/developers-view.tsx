@@ -15,13 +15,14 @@ import { memo, useState } from 'react'
 import { SearchableTable } from '../data-table'
 import type { ApiKeyScope, WebhookEventType } from '@hisabche/validation'
 import type { ApiKeyRow, ApiKeyUsage, WebhookDeliveryRow, WebhookEndpointRow } from '@hisabche/api'
-import { Copy, KeyRound, Loader2, RefreshCw, Send, Trash2, Webhook } from 'lucide-react'
+import { KeyRound, Loader2, RefreshCw, Send, Trash2, Webhook } from 'lucide-react'
 
 import { Badge } from '../badge'
 import { Button } from '../button'
 import { Card, CardContent } from '../card'
 import { Input } from '../input'
 import { CheckList } from './check-list'
+import { SecretRevealDialog } from './secret-reveal-dialog'
 import { KeyUsagePanel } from './key-usage-panel'
 import { AiAssistantsPanel } from './ai-assistants-panel'
 import { OAuthAppsPanel, type OAuthAppsPanelProps } from './oauth-apps-panel'
@@ -171,41 +172,24 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
         <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('developer.description')}</p>
       </header>
 
-      {props.revealed && (
-        <Card className="border-[hsl(var(--color-warning)/0.4)]">
-          <CardContent className="space-y-3 p-4">
-            <p className="font-semibold text-[hsl(var(--fg-primary))]">
-              {props.revealed.kind === 'key'
-                ? t('developer.keyCreated')
-                : props.revealed.kind === 'client-secret'
-                  ? t('oauth.clientSecretCreated')
-                  : props.revealed.kind === 'app-webhook-secret'
-                    ? t('oauth.webhookSecretCreated')
-                    : t('developer.secretCreated')}
-            </p>
-            <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('developer.shownOnce')}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <code
-                dir="ltr"
-                className="min-w-0 flex-1 break-all rounded-lg bg-[hsl(var(--surface-muted))] px-3 py-2 text-xs"
-              >
-                {props.revealed.value}
-              </code>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => props.onCopy(props.revealed?.value ?? '')}
-              >
-                <Copy className="size-4" aria-hidden="true" />
-                {t('developer.copy')}
-              </Button>
-              <Button size="sm" onClick={props.onDismissRevealed}>
-                {t('developer.savedIt')}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Shown once, in front of the person — it used to appear at the top of
+          this long page while they were at the form near the bottom. */}
+      <SecretRevealDialog
+        t={t}
+        title={
+          !props.revealed
+            ? ''
+            : props.revealed.kind === 'key'
+              ? t('developer.keyCreated')
+              : props.revealed.kind === 'client-secret'
+                ? t('oauth.clientSecretCreated')
+                : props.revealed.kind === 'app-webhook-secret'
+                  ? t('oauth.webhookSecretCreated')
+                  : t('developer.secretCreated')
+        }
+        value={props.revealed?.value ?? null}
+        onDone={props.onDismissRevealed}
+      />
 
       <SandboxPanel t={t} {...props.sandbox} />
 
@@ -356,7 +340,12 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
                   selected={keyScopes}
                   onChange={setKeyScopes}
                   label={(s) => t(scopeKey(s))}
+                  allLabel={t('developer.allScopes')}
+                  noneLabel={t('developer.noScopes')}
                 />
+                <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                  {t('developer.allScopesHint')}
+                </p>
                 <Input
                   name="expiresInDays"
                   type="number"

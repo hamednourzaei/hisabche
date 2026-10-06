@@ -213,6 +213,7 @@ function AccountingHub() {
         </div>
 
         <PageHub
+          lookId="accounting"
           label={t('accountingHub.label')}
           sectionsLabel={t('accountingHub.booksLabel')}
           loadingLabel={t('common.loading')}

@@ -58,6 +58,7 @@ function SettingsHub({ general }: { general: () => ReactNode }) {
   const t = useTranslations()
   return (
     <PageHub
+      lookId="settings"
       label={t('nav.settings')}
       sectionsLabel={t('settingsHub.sectionsLabel')}
       loadingLabel={t('settingsHub.loading')}

@@ -30,7 +30,9 @@
 // ============================================
 
 import { supabase } from '../../db'
-import { DatabaseError, NotFoundError } from '../../errors/database.error'
+import { randomUUID } from 'node:crypto'
+
+import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
@@ -70,6 +72,16 @@ export interface MatrixRole {
   isEnforcedBase: boolean
   /** Only workspace-owned roles may be edited freely. */
   workspaceId: string | null
+  /**
+   * A role this business made: its holder gets exactly what it grants, it can
+   * be renamed, shaped and deleted here, and it is what a new employee is given.
+   */
+  isCustom: boolean
+  /**
+   * One of the platform's shared profiles (حسابدار، صندوق‌دار، …). Read-only
+   * for every business — a starting point to copy a custom role from.
+   */
+  isTemplate: boolean
 }
 
 export interface MatrixCell {
@@ -175,6 +187,8 @@ export class PermissionMatrixService {
       isSystem: row.is_system === true,
       isEnforcedBase: isEnforcedRole(row.code ?? ''),
       workspaceId: row.workspace_id ?? null,
+      isCustom: row.workspace_id === ctx.workspaceId,
+      isTemplate: !row.workspace_id && !isEnforcedRole(row.code ?? ''),
     }))
 
     const cells: MatrixCell[] = []
@@ -207,7 +221,10 @@ export class PermissionMatrixService {
           // Enforced roles are now editable in both directions (the owner's
           // lock is refused on save, with a reason). A profile cell whose base
           // already reaches the top rung is still not a control.
-          editable: role.isEnforcedBase ? true : baseLevel !== maxLevel,
+          //
+          // A template is the platform's row, shared by every business: never
+          // editable from inside one of them.
+          editable: role.isTemplate ? false : role.isEnforcedBase ? true : baseLevel !== maxLevel,
         })
       }
     }
@@ -317,6 +334,18 @@ export class PermissionMatrixService {
       return this.matrix(ctx)
     }
 
+    // ⚠️ ONLY THIS BUSINESS'S OWN ROLE IS WRITTEN BELOW.
+    //
+    // The role was matched with «system OR mine», and anything that was not
+    // owner/manager/seller fell through to `role_permissions` — including the
+    // platform's shared profiles. One owner changing «حسابدار» changed it for
+    // every business on the platform.
+    if ((role as Record<string, any>).workspace_id !== ctx.workspaceId) {
+      throw new ValidationError(
+        'PERMISSION_TEMPLATE_READONLY: this is a shared template; make your own role from it.',
+      )
+    }
+
     const wanted = capabilitiesForLevel(module, input.level)
     const moduleCapabilities = capabilitiesForLevel(module, 'full')
 
@@ -406,13 +435,23 @@ export class PermissionMatrixService {
 
     const { data: role, error: roleError } = await supabase
       .from('roles')
-      .select('id, code')
+      .select('id, code, workspace_id')
       .eq('id', input.roleId)
       .or(`workspace_id.is.null,workspace_id.eq.${ctx.workspaceId}`)
       .maybeSingle()
 
     if (roleError) throw new DatabaseError('Failed to fetch the role', roleError)
     if (!role) throw new NotFoundError('Role')
+
+    // Only a role this business made can be given to a person. A base role is
+    // the membership itself, and a shared template grants nothing here — it
+    // used to be «assignable» and changed no behaviour at all.
+    const assigned = role as Record<string, any> & { workspace_id?: string | null }
+    if (assigned.workspace_id !== undefined && assigned.workspace_id !== ctx.workspaceId) {
+      throw new ValidationError(
+        'PERMISSION_ROLE_NOT_ASSIGNABLE: choose a role made in this business.',
+      )
+    }
 
     if (input.replaceExisting) {
       // Only the profile roles are cleared. The row matching the member's own
@@ -451,6 +490,169 @@ export class PermissionMatrixService {
 
     await this.invalidate(ctx.workspaceId)
     return { success: true }
+  }
+
+  // ─── Custom roles ───────────────────────────────────────────────────────────
+
+  private requireOwner(ctx: TenancyContext): void {
+    if (ctx.role !== 'owner') {
+      throw new ValidationError('PERMISSION_MATRIX_FORBIDDEN: only the owner may manage roles.')
+    }
+  }
+
+  /** This business's own role, or 404 — never a shared row, never another business's. */
+  private async ownRole(ctx: TenancyContext, roleId: string) {
+    const { data, error } = await supabase
+      .from('roles')
+      .select('id, name, workspace_id')
+      .eq('id', roleId)
+      .eq('workspace_id', ctx.workspaceId)
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to fetch the role', error)
+    if (!data) throw new NotFoundError('Role')
+    return data as { id: string; name: string; workspace_id: string }
+  }
+
+  /**
+   * Make a role for this business. With `templateRoleId` it starts with that
+   * role's grants (a shared template, or one of this business's own); without
+   * it, it starts with nothing — its holder sees only the home screen until
+   * the owner opens modules for it.
+   */
+  async createRole(
+    ctx: TenancyContext,
+    input: { name: string; templateRoleId?: string | undefined },
+  ): Promise<PermissionMatrix> {
+    this.requireOwner(ctx)
+    const name = input.name.trim()
+    if (name.length === 0 || name.length > 60)
+      throw new ValidationError('PERMISSION_ROLE_NAME_INVALID')
+
+    let grantIds: string[] = []
+    if (input.templateRoleId) {
+      const { data: template, error: templateError } = await supabase
+        .from('roles')
+        .select('id, code')
+        .eq('id', input.templateRoleId)
+        .or(`workspace_id.is.null,workspace_id.eq.${ctx.workspaceId}`)
+        .maybeSingle()
+      if (templateError) throw new DatabaseError('Failed to fetch the template', templateError)
+      if (!template) throw new NotFoundError('Template role')
+
+      const { data: grants, error: grantsError } = await supabase
+        .from('role_permissions')
+        .select('permission_id')
+        .eq('role_id', input.templateRoleId)
+      if (grantsError) throw new DatabaseError('Failed to read the template grants', grantsError)
+      grantIds = ((grants ?? []) as Array<{ permission_id: string }>).map((g) => g.permission_id)
+    }
+
+    const { data: created, error: createError } = await supabase
+      .from('roles')
+      .insert({
+        // The code is an identifier nobody types; the name is what people see.
+        code: `custom_${randomUUID().replace(/-/g, '').slice(0, 12)}`,
+        name,
+        description: null,
+        is_system: false,
+        workspace_id: ctx.workspaceId,
+      })
+      .select('id')
+      .single()
+    if (createError || !created) throw new DatabaseError('Failed to create the role', createError)
+    const roleId = (created as { id: string }).id
+
+    if (grantIds.length > 0) {
+      const { error: copyError } = await supabase.from('role_permissions').upsert(
+        grantIds.map((permission_id) => ({ role_id: roleId, permission_id })),
+        { onConflict: 'role_id,permission_id', ignoreDuplicates: true },
+      )
+      // The role exists with FEWER grants than asked — the safe direction — and
+      // the owner is told, rather than a half-copied role passing as the template.
+      if (copyError)
+        throw new DatabaseError('The role was created but its grants were not copied', copyError)
+    }
+
+    void logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'role',
+      entityId: roleId,
+      action: 'created',
+      title: `نقش «${name}» ساخته شد`,
+      metadata: { name, templateRoleId: input.templateRoleId ?? null },
+      notify: false,
+    })
+
+    await this.invalidate(ctx.workspaceId)
+    return this.matrix(ctx)
+  }
+
+  async renameRole(ctx: TenancyContext, roleId: string, name: string): Promise<PermissionMatrix> {
+    this.requireOwner(ctx)
+    const next = name.trim()
+    if (next.length === 0 || next.length > 60)
+      throw new ValidationError('PERMISSION_ROLE_NAME_INVALID')
+    await this.ownRole(ctx, roleId)
+
+    const { error } = await supabase
+      .from('roles')
+      .update({ name: next })
+      .eq('id', roleId)
+      .eq('workspace_id', ctx.workspaceId)
+    if (error) throw new DatabaseError('Failed to rename the role', error)
+
+    await this.invalidate(ctx.workspaceId)
+    return this.matrix(ctx)
+  }
+
+  /**
+   * Delete a role nobody holds.
+   *
+   * ⚠️ REFUSED WHILE SOMEBODY HOLDS IT. Without the role its holder falls back
+   * to their base role — which may be WIDER than the role that was limiting
+   * them. Deleting must never be how somebody gains access; the owner moves
+   * those people to another role first.
+   */
+  async deleteRole(ctx: TenancyContext, roleId: string): Promise<PermissionMatrix> {
+    this.requireOwner(ctx)
+    const role = await this.ownRole(ctx, roleId)
+
+    const { count, error: countError } = await supabase
+      .from('user_roles')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('role_id', roleId)
+    if (countError) throw new DatabaseError('Failed to count the role holders', countError)
+    if ((count ?? 0) > 0) throw new ConflictError('PERMISSION_ROLE_IN_USE')
+
+    // Grants first: if the second write fails, what is left is a role that
+    // grants nothing — the safe direction.
+    const { error: grantsError } = await supabase
+      .from('role_permissions')
+      .delete()
+      .eq('role_id', roleId)
+    if (grantsError) throw new DatabaseError('Failed to remove the role grants', grantsError)
+
+    const { error } = await supabase
+      .from('roles')
+      .delete()
+      .eq('id', roleId)
+      .eq('workspace_id', ctx.workspaceId)
+    if (error) throw new DatabaseError('Failed to delete the role', error)
+
+    void logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'role',
+      entityId: roleId,
+      action: 'deleted',
+      title: `نقش «${role.name}» حذف شد`,
+      notify: false,
+    })
+
+    await this.invalidate(ctx.workspaceId)
+    return this.matrix(ctx)
   }
 
   /** Who holds this role in this workspace — the matrix's drill-down (H5). */

@@ -11,7 +11,7 @@ function builder(table: string) {
   tableReads.push(table)
   const result = () => tables[table] ?? { data: [], error: null }
   const q: Record<string, unknown> = {}
-  for (const m of ['select', 'eq', 'is', 'order', 'in']) q[m] = () => q
+  for (const m of ['select', 'eq', 'is', 'order', 'in', 'limit']) q[m] = () => q
   q.then = (resolve: (v: unknown) => void) => resolve(result())
   return q
 }
@@ -40,7 +40,12 @@ beforeEach(() => {
 describe('resolveWorkspaceAccess — one round trip', () => {
   it('uses only the RPC: no table is read', async () => {
     rpc.mockResolvedValue({
-      data: { memberships: [{ workspace_id: WS_A, role: 'seller' }], overrides: [], blocks: [] },
+      data: {
+        memberships: [{ workspace_id: WS_A, role: 'seller' }],
+        overrides: [],
+        blocks: [],
+        custom_role: null,
+      },
       error: null,
     })
     const ctx = await resolveWorkspaceAccess(USER, null)
@@ -59,6 +64,7 @@ describe('resolveWorkspaceAccess — one round trip', () => {
           { role: 'seller', capability: 'ledger.read', granted: true },
         ],
         blocks: [],
+        custom_role: null,
       },
       error: null,
     })
@@ -123,6 +129,7 @@ describe('resolveWorkspaceAccess — before the migration', () => {
         memberships: [{ workspace_id: WS_A, role: 'seller' }],
         overrides,
         blocks: ['accounting'],
+        custom_role: null,
       },
       error: null,
     })
@@ -147,5 +154,64 @@ describe('resolveWorkspaceAccess — before the migration', () => {
       [...(viaReads.capabilities ?? [])].sort(),
     )
     expect(viaRpc.role).toBe(viaReads.role)
+  })
+})
+
+describe('resolveWorkspaceAccess — a custom role', () => {
+  // A role this business made for itself. It used to be a row nothing read.
+  it('the function returned it: applied, and still one round trip', async () => {
+    rpc.mockResolvedValue({
+      data: {
+        memberships: [{ workspace_id: WS_A, role: 'seller' }],
+        overrides: [],
+        blocks: [],
+        custom_role: { id: 'r1', capabilities: ['inventory.read', 'product.read'] },
+      },
+      error: null,
+    })
+    const ctx = await resolveWorkspaceAccess(USER, WS_A)
+    expect(ctx.capabilities?.has('product.read')).toBe(true)
+    // A seller can issue an invoice; a holder of this role cannot.
+    expect(ctx.capabilities?.has('invoice.create')).toBe(false)
+    expect(ctx.hiddenModules).toContain('invoices')
+    expect(tableReads).toEqual([])
+  })
+
+  it('⚠️ a function from before the migration did not look — the role is read, never skipped', async () => {
+    rpc.mockResolvedValue({
+      data: { memberships: [{ workspace_id: WS_A, role: 'seller' }], overrides: [], blocks: [] },
+      error: null,
+    })
+    tables = {
+      user_roles: { data: [{ role_id: 'r1' }], error: null },
+      role_permissions: { data: [{ permission: { code: 'ledger.read' } }], error: null },
+    }
+    const ctx = await resolveWorkspaceAccess(USER, WS_A)
+    expect(tableReads).toEqual(['user_roles', 'role_permissions'])
+    expect(ctx.capabilities?.has('ledger.read')).toBe(true)
+    expect(ctx.capabilities?.has('invoice.create')).toBe(false)
+  })
+
+  it('…and for the owner nothing is read at all: a role never narrows the owner', async () => {
+    rpc.mockResolvedValue({
+      data: { memberships: [{ workspace_id: WS_A, role: 'owner' }], overrides: [], blocks: [] },
+      error: null,
+    })
+    const ctx = await resolveWorkspaceAccess(USER, WS_A)
+    expect(tableReads).toEqual([])
+    expect(ctx.capabilities?.has('ledger.lock_period')).toBe(true)
+  })
+
+  it('a failed role read throws — it is never read as «no role», which would widen access', async () => {
+    rpc.mockResolvedValue({
+      data: { memberships: [{ workspace_id: WS_A, role: 'seller' }], overrides: [], blocks: [] },
+      error: null,
+    })
+    tables = {
+      user_roles: { data: null, error: { code: '57014', message: 'canceling statement' } },
+    }
+    await expect(resolveWorkspaceAccess(USER, WS_A)).rejects.toThrow(
+      'Failed to read the custom role',
+    )
   })
 })

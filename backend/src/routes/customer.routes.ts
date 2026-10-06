@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { createCustomerSchema, updateCustomerSchema } from '@hisabche/validation'
 import { CustomerService } from '../services/customer.service'
+import { BaseError } from '../errors/base.error'
 import {
   IdempotencyUnavailableError,
   readClientRequestId,
@@ -137,13 +138,31 @@ export async function customerRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const body = request.body as any
-        const customer = await customerService.update(id, request.tenancy, body)
+        // `expectedUpdatedAt` is not a field of the customer: it is the
+        // condition of the write (see CustomerService.update).
+        const { expectedUpdatedAt, ...body } = (request.body ?? {}) as Parameters<
+          CustomerService['update']
+        >[2] & { expectedUpdatedAt?: unknown }
+        const customer = await customerService.update(
+          id,
+          request.tenancy,
+          body,
+          typeof expectedUpdatedAt === 'string' || expectedUpdatedAt === null
+            ? { expectedUpdatedAt }
+            : {},
+        )
         // `customer:${id}` matched no key (the route cache is keyed
         // `customer:<workspace>:<url>`), so an edited customer stayed stale.
         await invalidateMoneyCaches(request.tenancy.workspaceId)
         return reply.send(customer)
       } catch (err) {
+        // A refusal (not allowed, changed meanwhile) is said as one; only a
+        // fault is a 500.
+        if (err instanceof BaseError && err.statusCode < 500) {
+          return reply
+            .code(err.statusCode)
+            .send({ error: err.name, code: err.message, message: err.message })
+        }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to update customer' })
       }

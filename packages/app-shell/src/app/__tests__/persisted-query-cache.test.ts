@@ -12,7 +12,7 @@ import {
   cacheOwner,
   createPersistedQueryCache,
   createQueryCachePersister,
-} from '../persisted-query-cache'
+} from '@hisabche/api/src/lib/persisted-query-cache'
 
 /** The persister throttles writes by one second. */
 const flushWrites = () => new Promise((resolve) => setTimeout(resolve, 1100))
@@ -122,4 +122,32 @@ describe('cacheOwner', () => {
     expect(cacheOwner('alice', null)).toBeNull()
     expect(cacheOwner(null, 'shop-1')).toBeNull()
   })
+})
+
+describe('⚠️ a figure somebody decides on is never the answer from before', () => {
+  // Employee 1 sells the last unit. Employee 2 opens the invoice form: the
+  // stock check must be the server's answer of now, not this device's copy.
+  it('a query marked `persist: false` is not written to the device', async () => {
+    const first = launch()
+    await first.cache.setOwner(ALICE_SHOP)
+    await first.client.fetchQuery({
+      queryKey: ['products', 'detail', 'p1', 'on-hand'],
+      queryFn: () => ({ quantity: 1 }),
+      meta: { persist: false },
+    })
+    await first.client.fetchQuery({
+      queryKey: ['products', 'detail', 'p1'],
+      queryFn: () => ({ name: 'kartoon' }),
+    })
+    await flushWrites()
+
+    expect(window.localStorage.getItem(PERSISTED_CACHE_KEY) ?? '').not.toContain('on-hand')
+
+    const second = launch()
+    await second.cache.setOwner(ALICE_SHOP)
+    // The stock check starts with NOTHING — it has to ask the server.
+    expect(second.client.getQueryState(['products', 'detail', 'p1', 'on-hand'])).toBeUndefined()
+    // …while an ordinary answer is still shown at once.
+    expect(second.client.getQueryData(['products', 'detail', 'p1'])).toEqual({ name: 'kartoon' })
+  }, 10_000)
 })

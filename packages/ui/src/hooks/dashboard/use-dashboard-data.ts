@@ -2,30 +2,18 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useTranslations } from 'next-intl'
 import {
   useDashboardKPIs,
   useAIInsights,
   useDashboardSales,
-  useInvoices,
   useRealtime,
-  useProducts,
   useActivities,
 } from '@hisabche/api'
-import { mapRecentInvoices, mapLowStockItems } from '../../lib/dashboard/dashboard-mappers'
 import { getTodayDate, getDaysAgo } from '../../lib/dashboard/dashboard-utils'
 import type { DateRange } from '../../components/ui/dashboard/date-range-picker'
-import type { ProductsResponse, RawInvoice } from '../../lib/dashboard/dashboard-types'
 import { toIsoDay } from '@hisabche/formatting'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
-
-interface RecentInvoice {
-  id: string
-  customer: string
-  total: number
-  date: string
-}
 
 // ─── Main Hook ────────────────────────────────────────────────────────────
 
@@ -36,14 +24,34 @@ function shiftDay(isoDay: string, days: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function useDashboardData(dateRange: DateRange) {
-  const t = useTranslations()
+/**
+ * Which parts of the dashboard the person is looking at. A part that is off
+ * is not fetched and holds no live subscription — hiding it is how somebody
+ * who never reads it stops paying for it.
+ */
+export interface DashboardParts {
+  kpis: boolean
+  chart: boolean
+  insights: boolean
+  activities: boolean
+}
 
+const ALL_PARTS: DashboardParts = { kpis: true, chart: true, insights: true, activities: true }
+
+export function useDashboardData(dateRange: DateRange, parts: DashboardParts = ALL_PARTS) {
   // ─── Data Fetching ──────────────────────────────────────────────────────
 
-  const { data: kpis, isPending: kpiLoading, refetch: refetchKpis } = useDashboardKPIs()
+  const {
+    data: kpis,
+    isPending: kpiLoading,
+    refetch: refetchKpis,
+  } = useDashboardKPIs({ enabled: parts.kpis })
 
-  const { data: insights, isPending: insightsLoading, refetch: refetchInsights } = useAIInsights()
+  const {
+    data: insights,
+    isPending: insightsLoading,
+    refetch: refetchInsights,
+  } = useAIInsights({ enabled: parts.insights })
 
   // ⚠️ LOCAL calendar days. `toISOString()` is UTC: local midnight east of
   // Greenwich is the PREVIOUS day there, so every range started a day early
@@ -55,10 +63,14 @@ export function useDashboardData(dateRange: DateRange) {
     data: salesData,
     isPending: salesLoading,
     refetch: refetchSales,
-  } = useDashboardSales({
-    from: fromDate,
-    to: toDate,
-  })
+  } = useDashboardSales(
+    {
+      from: fromDate,
+      to: toDate,
+    },
+    // The range total is a KPI card AND the chart: read while either is shown.
+    { enabled: parts.kpis || parts.chart },
+  )
 
   // ─── The period before the selected one, of the same length ───────────────
   //
@@ -70,56 +82,35 @@ export function useDashboardData(dateRange: DateRange) {
     1,
     Math.round((new Date(toDate).getTime() - new Date(fromDate).getTime()) / 86_400_000) + 1,
   )
-  const { data: previousSalesData, isPending: previousSalesLoading } = useDashboardSales({
-    from: shiftDay(fromDate, -rangeDays),
-    to: shiftDay(fromDate, -1),
-  })
+  const { data: previousSalesData, isPending: previousSalesLoading } = useDashboardSales(
+    {
+      from: shiftDay(fromDate, -rangeDays),
+      to: shiftDay(fromDate, -1),
+    },
+    // Only the KPI card compares with the period before.
+    { enabled: parts.kpis },
+  )
 
   // `null` while unknown, never 0 — zero is a measurement.
   const rangeSalesTotal = typeof salesData?.total === 'number' ? salesData.total : null
   const previousRangeSalesTotal =
     typeof previousSalesData?.total === 'number' ? previousSalesData.total : null
 
-  const {
-    data: invoicesData,
-    isLoading: invoicesLoading,
-    refetch: refetchInvoices,
-  } = useInvoices({
-    page: 1,
-    limit: 5,
-    sortDirection: 'desc',
+  const { data: activitiesData, isPending: activitiesLoading } = useActivities(undefined, {
+    enabled: parts.activities,
   })
-
-  const {
-    data: productsData,
-    isLoading: productsLoading,
-    refetch: refetchProducts,
-  } = useProducts({
-    page: 1,
-    limit: 100,
-    sortDirection: 'desc',
-  })
-
-  const { data: activitiesData, isPending: activitiesLoading } = useActivities()
 
   // ─── Realtime Subscriptions ─────────────────────────────────────────────
 
-  useRealtime({
-    table: 'invoices',
-    queryKey: ['invoices'],
-  })
-
+  // Anything under the `dashboard` key follows a new invoice — while a part
+  // that reads it is shown.
   useRealtime({
     table: 'invoices',
     queryKey: ['dashboard'],
+    enabled: parts.kpis || parts.chart || parts.insights,
   })
 
   // ─── Data Transformations ──────────────────────────────────────────────
-
-  const recentInvoices: RecentInvoice[] = useMemo(() => {
-    const invoices = (invoicesData?.invoices || []) as unknown as RawInvoice[]
-    return mapRecentInvoices(invoices, (key) => t(key))
-  }, [invoicesData, t])
 
   const salesChartData = useMemo(() => {
     if (
@@ -137,11 +128,6 @@ export function useDashboardData(dateRange: DateRange) {
     }
     return []
   }, [salesData])
-
-  const lowStockItems = useMemo(() => {
-    const products = (productsData as ProductsResponse)?.products
-    return mapLowStockItems(products)
-  }, [productsData])
 
   const pendingPaymentsCount = useMemo(() => {
     return kpis?.pendingPaymentsCount ?? 0
@@ -165,23 +151,17 @@ export function useDashboardData(dateRange: DateRange) {
     previousRangeSalesTotal,
     rangeDays,
     rangeLoading: salesLoading || previousSalesLoading,
-    recentInvoices,
     recentActivities: Array.isArray(activitiesData) ? activitiesData : [],
-    lowStockItems,
     pendingPaymentsCount,
     customerGrowth,
     lowStockAlerts,
-    isLoading: kpiLoading || salesLoading || invoicesLoading || productsLoading,
+    isLoading: kpiLoading || salesLoading,
     kpiLoading,
     insightsLoading,
     chartLoading: salesLoading,
-    invLoading: invoicesLoading,
-    prodLoading: productsLoading,
     activitiesLoading,
     refetchKpis,
     refetchInsights,
     refetchSales,
-    refetchInvoices,
-    refetchProducts,
   }
 }

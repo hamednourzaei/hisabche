@@ -46,6 +46,7 @@ import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { decideRoute } from '../services/developer/developer.domain'
 import { developerService, type ApiKeyPrincipal } from '../services/developer/developer.service'
 import { mcpRequestService, type AiActionRequest } from '../services/mcp/mcp-request.service'
+import { runRoute, type RouteAnswer } from '../services/mcp/own-route'
 import {
   MCP_CONTRACT_VERSION,
   MCP_PROTOCOL_VERSIONS,
@@ -55,7 +56,6 @@ import {
   RISK_NEEDS_APPROVAL,
   inputSchemaOf,
   toolByName,
-  type McpHttpCall,
   type McpTool,
 } from '../services/mcp/mcp-tools'
 import { requireRole } from '../services/tenancy.service'
@@ -84,47 +84,6 @@ export function errorCodeFor(httpStatus: number): McpErrorCode {
   if (httpStatus === 503) return 'SERVICE_UNAVAILABLE'
   if (httpStatus >= 400 && httpStatus < 500) return 'VALIDATION_ERROR'
   return 'INTERNAL_ERROR'
-}
-
-interface RouteAnswer {
-  httpStatus: number
-  body: unknown
-}
-
-/** Send one Public API request through the server's own router. */
-async function runRoute(
-  fastify: FastifyInstance,
-  call: McpHttpCall,
-  authorization: string,
-  /**
-   * Which business, when `authorization` is a PERSON's session. An API key
-   * carries its own workspace and needs none; a session does not, and a
-   * person with two workspaces (a sandbox is one) is refused without it.
-   */
-  workspaceId?: string,
-): Promise<RouteAnswer> {
-  const response = await fastify.inject({
-    method: call.method,
-    url: call.url,
-    headers: {
-      authorization,
-      ...(workspaceId ? { 'x-workspace-id': workspaceId } : {}),
-      ...(call.body !== undefined ? { 'content-type': 'application/json' } : {}),
-      ...(call.idempotencyKey ? { 'idempotency-key': call.idempotencyKey } : {}),
-    },
-    ...(call.body !== undefined ? { payload: JSON.stringify(call.body) } : {}),
-  })
-  return { httpStatus: response.statusCode, body: parseJson(response.body) }
-}
-
-/** A route's answer as JSON; a non-JSON answer is not passed on as if it were data. */
-function parseJson(text: string): unknown {
-  if (!text) return null
-  try {
-    return JSON.parse(text)
-  } catch {
-    return null
-  }
 }
 
 /** The MCP `tools/call` result for an envelope. */

@@ -1,6 +1,12 @@
 // ============================================
 // The last answers, on this device — shown at once, then refreshed.
 //
+// ONE module for every renderer: the Windows/mobile shell and the web app.
+// ⚠️ NOT exported from the package barrel, on purpose. It pulls in the two
+// persister libraries; from the barrel they would ride in the bundle of every
+// page, the public landing included. Import it by its own path:
+//   import(...) from '@hisabche/api/src/lib/persisted-query-cache'
+//
 // Opening the app used to start every number at a skeleton: the query cache
 // lived only in memory, so each launch waited on the network before showing
 // anything, even though nothing may have changed since yesterday. Now the
@@ -26,7 +32,7 @@
 // persisted and never served as data (§۷٫۳).
 // ============================================
 
-import type { QueryClient } from '@tanstack/react-query'
+import { defaultShouldDehydrateQuery, type Query, type QueryClient } from '@tanstack/react-query'
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
 import {
   persistQueryClientRestore,
@@ -46,6 +52,19 @@ const CACHE_VERSION = 'v1'
 export const PERSISTED_CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7
 
 export const PERSISTED_CACHE_KEY = 'hisabche-query-cache'
+
+/**
+ * What may be written to the device.
+ *
+ * ⚠️ NOT A FIGURE SOMEBODY DECIDES ON. «Is there enough stock to sell this?»
+ * must be the server's answer of this minute: another employee may have sold
+ * the last one since this device last looked. A query marked
+ * `meta: { persist: false }` is never saved and so never restored — on top of
+ * the default rule (successful queries only; an error is never persisted).
+ */
+export function shouldPersistQuery(query: Query): boolean {
+  return defaultShouldDehydrateQuery(query) && query.meta?.persist !== false
+}
 
 export function createQueryCachePersister(storage: Storage | undefined): Persister {
   return createSyncStoragePersister({
@@ -110,7 +129,12 @@ export function createPersistedQueryCache(client: QueryClient, persister: Persis
     // The owner changed again while restoring — the newer call owns the cache.
     if (mine !== generation) return
 
-    unsubscribe = persistQueryClientSubscribe({ queryClient: client, persister, buster })
+    unsubscribe = persistQueryClientSubscribe({
+      queryClient: client,
+      persister,
+      buster,
+      dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
+    })
   }
 
   return { setOwner }

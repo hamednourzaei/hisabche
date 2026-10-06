@@ -22,6 +22,8 @@ export {
   capabilitiesOf,
   holds,
   effectiveCapabilities,
+  customRoleAccess,
+  type CustomRoleAccess,
   OWNER_LOCKED_CAPABILITIES,
   type CapabilityOverride,
   deniedFields,

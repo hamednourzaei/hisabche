@@ -3069,12 +3069,37 @@
       "people": "Colleagues",
       "workspace": "Business & members"
     },
-    "additiveBody": "Owner, Manager and Seller access comes from a fixed table the server actually enforces. Profiles can only add access, never remove it. If a cell is locked, unticking it would change nothing — and a control that does nothing is worse than none.",
-    "additiveTitle": "Why can’t the base roles be edited?",
-    "lockedCell": "Comes from the enforced access table and cannot be changed here.",
+    "lockedCell": "This cell cannot be changed.",
     "noRoleMembers": "Nobody has this role.",
     "roleMembers": "People with this role",
-    "subtitle": "Every module against every role. Changing a cell affects real access immediately."
+    "subtitle": "For each role, decide whether it does not see a part, only sees it, or sees and changes it. Every cell takes effect at once.",
+    "part": "Part",
+    "level": {
+      "none": "Does not see",
+      "read": "Sees only",
+      "write": "Sees and changes",
+      "full": "Full"
+    },
+    "levelHint": {
+      "none": "The part is not in their menu and cannot be opened.",
+      "read": "They can open and read it; they change nothing.",
+      "write": "They can also add and edit.",
+      "full": "They can also delete and configure that part."
+    },
+    "baseRole": {
+      "owner": "Owner",
+      "manager": "Manager",
+      "seller": "Employee"
+    },
+    "newRoleHint": "Make a role for your own business — “Storekeeper”, say. Whoever is given it sees exactly what you set in its column.",
+    "startFrom": "Start from",
+    "startEmpty": "Empty (sees no part)",
+    "createRole": "Create role",
+    "deleteRole": "Delete role",
+    "deleteRoleConfirm": "Delete this role?",
+    "roleInUse": "Somebody still holds this role. Move those people to another role first, then delete it.",
+    "templateReadonly": "This is a shared template and cannot be changed. Make your own role from it.",
+    "ownerOnly": "Only the owner of the business can change roles and access."
   },
   "audit": {
     "title": "Audit",
@@ -6434,7 +6459,10 @@
     "branchFirstHint": "Add a branch first — every employee belongs to one.",
     "salaryCurrency": "Salary currency",
     "profileNeedsAccount": "The employee was saved, but the access profile was not applied: they do not have a user account yet.",
-    "attendance": "Attendance"
+    "attendance": "Attendance",
+    "memberRole": "Role",
+    "memberRoleHint": "Each role shows exactly the parts you set for it under “Access”.",
+    "memberRoleNoCustom": "You have not made a role yet. Make one under “Governance → Access” to choose it here."
   },
   "role": {
     "owner": "Owner",
@@ -7102,7 +7130,11 @@
     "replay1d": "Resend last 24 hours",
     "replay7d": "Resend last 7 days",
     "replayed": "Deliveries put back in the queue",
-    "scopes": "Scopes"
+    "scopes": "Scopes",
+    "allScopes": "No limit (all permissions)",
+    "noScopes": "None",
+    "allScopesHint": "“No limit” means every permission in this list. A key never gets more than your own access, and no key can delete an invoice, post to the ledger or move money.",
+    "copyFailed": "Could not copy. The value is selected; press Ctrl+C."
   },
   "webhook": {
     "urlMustBeHttps": "The webhook URL must start with https://."
@@ -8876,5 +8908,27 @@
       "developers": "Developers",
       "marketplace": "App marketplace"
     }
+  },
+  "pageLook": {
+    "open": "Customize this page",
+    "title": "Customize this page",
+    "hint": "Anything you switch off is hidden for you only, and is no longer loaded either. Nobody’s access changes.",
+    "reset": "Restore defaults",
+    "done": "Done",
+    "dashboardParts": "Dashboard parts",
+    "menu": "Menu",
+    "dashboard": {
+      "workQueue": "Waiting work",
+      "kpis": "Figure cards",
+      "chart": "Sales chart",
+      "insights": "Smart suggestions",
+      "activities": "Recent activity",
+      "manufacturing": "Production summary"
+    }
+  },
+  "access": {
+    "deniedTitle": "You do not have access to this part",
+    "deniedBody": "Your role in this business does not include this part. If you need it, ask the owner of the business to change your access.",
+    "goHome": "Back to the dashboard"
   }
 }

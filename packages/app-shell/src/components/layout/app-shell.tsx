@@ -10,6 +10,9 @@
 
 import { Suspense, useCallback } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useMyCapabilities } from '@hisabche/api'
+import { isRouteDenied } from '@hisabche/ui/menu'
+import { NoAccessNotice } from '@hisabche/ui'
 import { useTranslations } from 'next-intl'
 
 import {
@@ -47,6 +50,13 @@ export function AppShell() {
   // Same gate as web's dashboard layout: expired → only dashboard, invoices
   // (view) and billing render; the server refuses writes either way.
   const routeLocked = useSubscriptionLocked() && !isRouteAllowedWhenExpired(location.pathname)
+  // Same as web: a page the role does not include (or the owner blocked for
+  // this person) is not mounted — «دسترسی ندارید» is drawn instead.
+  const access = useMyCapabilities().data
+  const routeDenied = isRouteDenied(location.pathname, [
+    ...(access?.blockedModules ?? []),
+    ...(access?.hiddenModules ?? []),
+  ])
 
   // ⚠️ NEITHER OF THESE WAS EVER MOUNTED. Both hooks were written with the sync
   // engine and nothing called them, so the device database was never filled
@@ -96,7 +106,13 @@ export function AppShell() {
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 pb-20 lg:pb-4">
           <SandboxNotice />
           <Suspense fallback={<RouteFallback />}>
-            {routeLocked ? <SubscriptionLockNotice hashRouter /> : <Outlet />}
+            {routeLocked ? (
+              <SubscriptionLockNotice hashRouter />
+            ) : routeDenied ? (
+              <NoAccessNotice onHome={() => navigate('/')} />
+            ) : (
+              <Outlet />
+            )}
           </Suspense>
         </main>
       </div>

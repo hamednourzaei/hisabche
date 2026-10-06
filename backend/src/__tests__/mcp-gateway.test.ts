@@ -183,12 +183,10 @@ beforeEach(async () => {
   })
   server.post('/api/invoices', async (request, reply) => {
     note(request)
-    return reply
-      .code(500)
-      .send({
-        error: 'Internal Server Error',
-        message: 'relation "invoices" does not exist at character 15',
-      })
+    return reply.code(500).send({
+      error: 'Internal Server Error',
+      message: 'relation "invoices" does not exist at character 15',
+    })
   })
   await server.register(mcpRoutes)
   await server.ready()
@@ -276,14 +274,18 @@ describe('the registry is the Public API’s allowlist, named', () => {
     const registry = strip(
       readFileSync(join(__dirname, '..', 'services', 'mcp', 'mcp-tools.ts'), 'utf8'),
     )
-    for (const source of [gateway, registry]) {
+    // The call through the server's own router: shared with the in-app pipeline.
+    const ownRoute = strip(
+      readFileSync(join(__dirname, '..', 'services', 'mcp', 'own-route.ts'), 'utf8'),
+    )
+    for (const source of [gateway, registry, ownRoute]) {
       expect(source).not.toContain('supabase')
       expect(source).not.toContain('.rpc(')
       expect(source).not.toContain("from '../db'")
     }
     // Only the request QUEUE may talk to the database, and only to its own table.
     const files = readdirSync(join(__dirname, '..', 'services', 'mcp'))
-    expect(files.sort()).toEqual(['mcp-request.service.ts', 'mcp-tools.ts'])
+    expect(files.sort()).toEqual(['mcp-request.service.ts', 'mcp-tools.ts', 'own-route.ts'])
     const queue = strip(
       readFileSync(join(__dirname, '..', 'services', 'mcp', 'mcp-request.service.ts'), 'utf8'),
     )

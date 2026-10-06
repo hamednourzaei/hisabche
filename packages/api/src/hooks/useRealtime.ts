@@ -8,6 +8,11 @@ import { useAuthReady } from './useAuthReady'
 interface RealtimeOptions {
   table: string
   queryKey: string[]
+  /**
+   * False = open no channel. A part of a page the person hid, or may not see,
+   * must not keep a live subscription refreshing a query nobody reads.
+   */
+  enabled?: boolean | undefined
 }
 
 /**
@@ -29,7 +34,7 @@ export function useActiveWorkspaceId(): string | null {
 
 // ✅ گیت شده با authReady: قبل از آماده شدن session، subscribe نمی‌کند
 // (جلوگیری از تلاش برای اتصال realtime با یک client که هنوز session ندارد)
-export function useRealtime({ table, queryKey }: RealtimeOptions) {
+export function useRealtime({ table, queryKey, enabled = true }: RealtimeOptions) {
   const queryClient = useQueryClient()
   const authReady = useAuthReady()
   // The active workspace scopes the subscription. Without it the client
@@ -44,6 +49,7 @@ export function useRealtime({ table, queryKey }: RealtimeOptions) {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!authReady) return
+    if (!enabled) return
     // No workspace yet (signing in, or still loading) — subscribe to nothing
     // rather than to everything. The effect re-runs when it arrives.
     if (!workspaceId) return
@@ -85,5 +91,5 @@ export function useRealtime({ table, queryKey }: RealtimeOptions) {
     // open, and after leaving that workspace, for one they are no longer a
     // member of.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table, authReady, workspaceId]) // ← queryClient و queryKey عمداً حذف شده‌اند (به دلیل رفرنس ناپایدار)
+  }, [table, authReady, workspaceId, enabled]) // ← queryClient و queryKey عمداً حذف شده‌اند (به دلیل رفرنس ناپایدار)
 }

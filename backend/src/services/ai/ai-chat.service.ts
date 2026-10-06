@@ -276,6 +276,15 @@ export class AiChatService {
   }
 
   /**
+   * One model call for the action pipeline (services/ai/pipeline), with the
+   * same retry policy as a question. The pipeline owns what is asked; this
+   * file stays the only one that talks to a provider.
+   */
+  complete(config: AiProviderConfig, system: string, user: string): Promise<string> {
+    return this.call(config, system, user)
+  }
+
+  /**
    * One tiny real call with the given settings — the admin's «test» button.
    * Platform-admin only (routes/ai-chat.routes.ts), so the provider's own
    * message may be shown: the admin owns the key it is about.

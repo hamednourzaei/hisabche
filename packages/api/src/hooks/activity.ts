@@ -106,7 +106,10 @@ export const activityKeys = {
 // ═══ Hooks ═══
 
 // ─── Get Activities ──────────────────────────────────────────────────────
-export function useActivities(filters?: ActivityFilter) {
+export function useActivities(
+  filters?: ActivityFilter,
+  options: { enabled?: boolean | undefined } = {},
+) {
   const authReady = useAuthReady()
 
   return useQuery({
@@ -124,7 +127,7 @@ export function useActivities(filters?: ActivityFilter) {
       )
       return Array.isArray(data) ? data : (data?.data ?? [])
     },
-    enabled: authReady,
+    enabled: authReady && options.enabled !== false,
     staleTime: 30_000,
     // No refetchInterval: refreshed on remount after staleTime (see top).
     placeholderData: [],

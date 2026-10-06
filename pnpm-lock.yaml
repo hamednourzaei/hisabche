@@ -950,9 +950,15 @@ importers:
       '@hisabche/validation':
         specifier: workspace:*
         version: link:../validation
+      '@tanstack/query-sync-storage-persister':
+        specifier: ~5.101.4
+        version: 5.101.4
       '@tanstack/react-query':
         specifier: ^5.45.0
         version: 5.101.4(react@19.2.6)
+      '@tanstack/react-query-persist-client':
+        specifier: ~5.101.4
+        version: 5.101.4(@tanstack/react-query@5.101.4(react@19.2.6))(react@19.2.6)
       axios:
         specifier: ^1.7.2
         version: 1.19.0

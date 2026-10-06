@@ -125,4 +125,4 @@ export const MORE_ICON = EllipsisVertical
 export const COMMAND_ITEMS: CommandItem[] = [...COMMAND_CONTRACT]
 
 /** Whether a destination is locked for someone with these blocked modules (see ui-contract NAV_MODULE). */
-export { isNavLocked } from '@hisabche/ui-contract'
+export { isNavLocked, isRouteDenied } from '@hisabche/ui-contract'

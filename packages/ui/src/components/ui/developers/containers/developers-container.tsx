@@ -61,6 +61,7 @@ import { useRouteLang } from '../../../../hooks/use-locale-push'
 import { oauthErrorMessage } from '../../../../lib/oauth-labels'
 import { enterWorkspace } from '../../../../lib/enter-workspace'
 import { fileToBase64 } from '../../wallet/wallet-format'
+import { copyText } from '../../../../lib/copy-text'
 import { sandboxErrorMessage } from '../../../../lib/sandbox-labels'
 import { DevelopersView, type SectionState } from '../developers-view'
 
@@ -287,10 +288,9 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
       revealed={revealed}
       onDismissRevealed={() => setRevealed(null)}
       onCopy={(value) => {
-        navigator.clipboard
-          ?.writeText(value)
-          .then(() => toast.success(t('developer.copied')))
-          .catch(failed)
+        void copyText(value).then((done) =>
+          done ? toast.success(t('developer.copied')) : toast.error(t('developer.copyFailed')),
+        )
       }}
       storefront={{
         state: sectionState(
@@ -309,10 +309,9 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
         onCreateKey: (input) => createPublishable.mutate(input, { onError: failed }),
         onRevokeKey: (id) => revokePublishable.mutate(id, { onError: failed }),
         onCopy: (value) => {
-          navigator.clipboard
-            ?.writeText(value)
-            .then(() => toast.success(t('developer.copied')))
-            .catch(failed)
+          void copyText(value).then((done) =>
+            done ? toast.success(t('developer.copied')) : toast.error(t('developer.copyFailed')),
+          )
         },
         sdkUrl: sdk.sdkUrl,
         apiBase: sdk.apiBase,
@@ -460,10 +459,9 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
         authorizeUrl: sdk.site ? `${sdk.site}/oauth/authorize` : '',
         tokenUrl: `${sdk.apiBase}/oauth/token`,
         onCopy: (value) => {
-          navigator.clipboard
-            ?.writeText(value)
-            .then(() => toast.success(t('developer.copied')))
-            .catch(failed)
+          void copyText(value).then((done) =>
+            done ? toast.success(t('developer.copied')) : toast.error(t('developer.copyFailed')),
+          )
         },
       }}
       onRetry={() => {

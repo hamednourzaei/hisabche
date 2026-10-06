@@ -15,6 +15,8 @@ import { useTranslations } from 'next-intl'
 import { authorizationText } from '../../../../lib/authorization-message'
 
 import {
+  useCreateCustomRole,
+  useDeleteCustomRole,
   usePermissionMatrix,
   useRoleMembers,
   useSetPermissionCell,
@@ -56,6 +58,21 @@ function messageOf(
       'مالک همیشه دسترسی مدیریت اعضا و تنظیمات کسب‌وکار را حفظ می‌کند؛ این سطح برای مالک قابل کاهش نیست.',
     )
   }
+  if (String(raw).includes('PERMISSION_ROLE_IN_USE')) {
+    return t(
+      'permissions.roleInUse',
+      'این نقش هنوز به کسی داده شده است. اول آن افراد را به نقش دیگری ببرید، بعد حذف کنید.',
+    )
+  }
+  if (String(raw).includes('PERMISSION_TEMPLATE_READONLY')) {
+    return t(
+      'permissions.templateReadonly',
+      'این یک الگوی مشترک است و قابل تغییر نیست. از روی آن یک نقش برای خودتان بسازید.',
+    )
+  }
+  if (String(raw).includes('PERMISSION_MATRIX_FORBIDDEN')) {
+    return t('permissions.ownerOnly', 'فقط مالک کسب‌وکار می‌تواند نقش‌ها و دسترسی‌ها را تغییر دهد.')
+  }
   if (String(raw).includes('PERMISSION_MIGRATION_REQUIRED')) {
     return t(
       'permissions.migrationRequired',
@@ -77,6 +94,8 @@ export const PermissionsContainer = memo(function PermissionsContainer() {
 
   const { data: matrix, isLoading, error: loadError } = usePermissionMatrix()
   const setCell = useSetPermissionCell()
+  const createRole = useCreateCustomRole()
+  const deleteRole = useDeleteCustomRole()
 
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
   const { data: roleMembers = [] } = useRoleMembers(selectedRoleId ?? undefined)
@@ -98,6 +117,30 @@ export const PermissionsContainer = memo(function PermissionsContainer() {
     [setCell, t],
   )
 
+  const handleCreateRole = useCallback(
+    (input: { name: string; templateRoleId?: string | undefined }) => {
+      setSaveError(null)
+      createRole.mutate(input, {
+        onError: (error) =>
+          setSaveError(messageOf(error, t('common.saveError', 'ذخیره ناموفق بود'), t)),
+      })
+    },
+    [createRole, t],
+  )
+
+  const handleDeleteRole = useCallback(
+    (roleId: string) => {
+      if (!confirm(t('permissions.deleteRoleConfirm', 'این نقش حذف شود؟'))) return
+      setSaveError(null)
+      deleteRole.mutate(roleId, {
+        onSuccess: () => setSelectedRoleId((current) => (current === roleId ? null : current)),
+        onError: (error) =>
+          setSaveError(messageOf(error, t('common.saveError', 'ذخیره ناموفق بود'), t)),
+      })
+    },
+    [deleteRole, t],
+  )
+
   const toggleRole = useCallback(
     (roleId: string) => setSelectedRoleId((current) => (current === roleId ? null : roleId)),
     [],
@@ -110,7 +153,10 @@ export const PermissionsContainer = memo(function PermissionsContainer() {
       roles={matrix?.roles ?? []}
       cells={matrix?.cells ?? []}
       isLoading={isLoading}
-      isSaving={setCell.isPending}
+      isSaving={setCell.isPending || deleteRole.isPending}
+      onCreateRole={handleCreateRole}
+      onDeleteRole={handleDeleteRole}
+      isCreatingRole={createRole.isPending}
       error={saveError ?? (loadError ? messageOf(loadError, '', t) : null)}
       onSetCell={handleSetCell}
       onSelectRole={toggleRole}

@@ -123,6 +123,9 @@ export {
   useSetPermissionCell,
   useAssignProfile,
   useRoleMembers,
+  useCreateCustomRole,
+  useRenameCustomRole,
+  useDeleteCustomRole,
   permissionMatrixKeys,
   type AccessLevel,
   type MatrixModule,
@@ -988,6 +991,27 @@ export {
   type AiConfigStatus,
   type DocumentTranslation,
 } from './hooks/ai-chat'
+
+// ─── AI action pipeline (ai_pipeline_v2) ───
+export {
+  aiPipelineKeys,
+  useAiPipelineSettings,
+  useSaveAiPipelineSettings,
+  useAiPipelineRuns,
+  useStartAiPipelineRun,
+  useAnswerAiPipelineRun,
+  useApproveAiPipelineRun,
+  useRejectAiPipelineRun,
+  type AiPipelineOperation,
+  type AiPipelineStatus,
+  type AiPipelineQuestion,
+  type AiPipelineChange,
+  type AiPipelineWarning,
+  type AiPipelineProposal,
+  type AiPipelineStep,
+  type AiPipelineRun,
+  type AiPipelineSettings,
+} from './hooks/ai-pipeline'
 
 // ─── Reading a photographed document (#16) ───
 export {

@@ -49,6 +49,12 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
+      // As long as the device cache may be shown (PERSISTED_CACHE_MAX_AGE_MS, a
+      // week): with the default five minutes, a screen left for six came back
+      // as a skeleton, and a screen not visited this session was dropped from
+      // the device on the next save. Written as a number so this file does not
+      // import the persister libraries into every public page.
+      gcTime: 1000 * 60 * 60 * 24 * 7,
       retry: 1,
       refetchOnWindowFocus: false,
     },

@@ -138,6 +138,12 @@ export interface TenancyContext {
    * back to the defaults.
    */
   readonly capabilities?: ReadonlySet<string> | undefined
+  /**
+   * Modules this person's CUSTOM ROLE does not let them see. A rendering hint
+   * for the menus (sent with /governance/my-capabilities); what is enforced is
+   * `capabilities`. Absent for a base role.
+   */
+  readonly hiddenModules?: readonly string[] | undefined
 }
 
 interface MembershipRow {

@@ -20,9 +20,12 @@
 import { Suspense, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { useMyCapabilities } from '@hisabche/api'
+import { useTranslations } from 'next-intl'
 import { isNavLocked } from '@hisabche/ui-contract'
 
+import { usePageLook } from '../../lib/page-look'
 import { HubTabs, useHubSection, useHubTab } from './hub-tabs'
+import { PageCustomizer } from './page-customizer'
 import { SegmentedControl } from './segmented-control'
 
 export interface PageHubSection {
@@ -46,6 +49,12 @@ export interface PageHubProps {
   sectionsLabel: string
   loadingLabel: string
   tabs: readonly PageHubTab[]
+  /**
+   * A stable name for this hub. With it, the hub shows the wrench and the
+   * person may hide sections for themselves (lib/page-look): a hidden section
+   * is not offered and its container is never mounted.
+   */
+  lookId?: string | undefined
 }
 
 /** The tabs this person may open, each with only the sections they may open. */
@@ -63,9 +72,24 @@ export function offeredHubTabs(
     .filter((tab) => tab.sections.length > 0)
 }
 
-export function PageHub({ label, sectionsLabel, loadingLabel, tabs }: PageHubProps) {
+/** A section's id in the look: unique across the hub's tabs. */
+export const hubLookId = (tabId: string, sectionId: string) => `${tabId}/${sectionId}`
+
+export function PageHub({ label, sectionsLabel, loadingLabel, tabs, lookId }: PageHubProps) {
+  const t = useTranslations()
   const blocked = useMyCapabilities().data?.blockedModules ?? []
-  const offered = offeredHubTabs(tabs, blocked)
+  // Permission first: only what the person MAY open…
+  const allowed = offeredHubTabs(tabs, blocked)
+  const look = usePageLook(`hub:${lookId ?? 'none'}`)
+  // …then their own choice among it. Never the other way round.
+  const offered = lookId
+    ? allowed
+        .map((tab) => ({
+          ...tab,
+          sections: tab.sections.filter((section) => look.shows(hubLookId(tab.id, section.id))),
+        }))
+        .filter((tab) => tab.sections.length > 0)
+    : allowed
   const [activeId, select] = useHubTab(offered.map((tab) => tab.id))
   const active = offered.find((tab) => tab.id === activeId) ?? offered[0]
   const sections = active?.sections ?? []
@@ -73,7 +97,25 @@ export function PageHub({ label, sectionsLabel, loadingLabel, tabs }: PageHubPro
   const section = sections.find((candidate) => candidate.id === sectionId) ?? sections[0]
 
   return (
-    <div className="space-y-4">
+    <div className="relative space-y-4">
+      {lookId ? (
+        <PageCustomizer
+          className="absolute end-0 top-0.5 z-10"
+          t={(key) => t(key)}
+          groups={[
+            {
+              look,
+              keepOne: true,
+              items: allowed.flatMap((tab) =>
+                tab.sections.map((section) => ({
+                  id: hubLookId(tab.id, section.id),
+                  label: tab.sections.length > 1 ? `${tab.label} — ${section.label}` : tab.label,
+                })),
+              ),
+            },
+          ]}
+        />
+      ) : null}
       <HubTabs
         label={label}
         items={offered.map((tab) => ({ id: tab.id, label: tab.label, icon: tab.icon }))}

@@ -42,6 +42,7 @@ function BillingHub() {
   const t = useTranslations()
   return (
     <PageHub
+      lookId="billing"
       label={t('nav.billing')}
       sectionsLabel={t('billingHub.sectionsLabel')}
       loadingLabel={t('billingHub.loading')}

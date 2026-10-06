@@ -431,3 +431,13 @@ export {
 export { registerCameraScanner, type CameraScannerHost } from './lib/barcode/camera-host'
 export { BillingHubContainer } from './components/ui/billing/containers/billing-hub-container'
 export { SettingsHubContainer } from './components/ui/settings/settings-hub-container'
+
+// A personal view of a page, the wrench that edits it, and what is drawn
+// instead of a page their role does not include.
+export { usePageLook, lookOwner, type PageLook } from './lib/page-look'
+export {
+  PageCustomizer,
+  type CustomizerGroup,
+  type CustomizerItem,
+} from './components/ui/page-customizer'
+export { NoAccessNotice } from './components/ui/no-access-notice'

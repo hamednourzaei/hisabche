@@ -53,6 +53,7 @@ function DataHub() {
   const t = useTranslations()
   return (
     <PageHub
+      lookId="data"
       label={t('nav.data_and_sync')}
       sectionsLabel={t('dataHub.sectionsLabel')}
       loadingLabel={t('dataHub.loading')}

@@ -11,6 +11,13 @@ import { AnalyticsService } from '../services/analytics.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
+import { holds } from '../services/authorization'
+import {
+  DASHBOARD_FIGURE_GROUPS,
+  hiddenDashboardGroups,
+  maskDashboardKpis,
+} from '../services/analytics/dashboard-visibility.domain'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -93,6 +100,9 @@ const DashboardKPIsSchema = z.object({
     .default({}),
   currencies: z.array(z.string()).default([]),
   mixedCurrency: z.boolean().default(false),
+  // Figure groups this person may not be told (dashboard-visibility.domain):
+  // their fields are zero AND named here, so the client leaves the card out.
+  hidden: z.array(z.enum(DASHBOARD_FIGURE_GROUPS)).default([]),
 })
 
 const DateRangeSchema = z.object({
@@ -115,7 +125,10 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
-        cacheMiddleware({ scope: 'workspace', ttl: 30, keyPrefix: 'dashboard' }),
+        // Per MEMBER, not per workspace: the answer now depends on what the
+        // person may see, and a shared entry would hand one member's figures
+        // to the next.
+        cacheMiddleware({ scope: 'member', ttl: 30, keyPrefix: 'dashboard' }),
       ],
       schema: {
         response: {
@@ -129,7 +142,14 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
         // explicit default (utils/local-day.ts).
         const timeZone = resolveTimeZone((request.query as { tz?: unknown } | undefined)?.tz)
         const kpis = await analyticsService.getDashboardKpis(request.tenancy, timeZone)
-        const validated = DashboardKPIsSchema.parse(kpis)
+        // Computed once for the business (the service caches it); what THIS
+        // person may be told is decided here, after it.
+        const validated = DashboardKPIsSchema.parse(
+          maskDashboardKpis(
+            kpis as Record<string, unknown>,
+            hiddenDashboardGroups((capability) => holds(request.tenancy, capability)),
+          ),
+        )
         return reply.send(validated)
       } catch (err) {
         if (err instanceof z.ZodError) {
@@ -153,6 +173,8 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        // The sales series IS the invoices, summed by day.
+        requireCapability('invoice.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 30, keyPrefix: 'sales' }),
       ],
       schema: {

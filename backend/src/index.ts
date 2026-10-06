@@ -61,6 +61,7 @@ import { warehouseRoutes } from './routes/warehouse.routes'
 import { cycleCountRoutes } from './routes/cycle-count.routes'
 import { unitsRoutes } from './routes/units.routes'
 import { aiChatRoutes } from './routes/ai-chat.routes'
+import { aiPipelineRoutes } from './routes/ai-pipeline.routes'
 import { productUnitsRoutes } from './routes/product-units.routes'
 import { currenciesRoutes } from './routes/currencies.routes'
 import { inventoryInsightsRoutes } from './routes/inventory-insights.routes'
@@ -718,6 +719,7 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(cycleCountRoutes)
   await server.register(unitsRoutes)
   await server.register(aiChatRoutes)
+  await server.register(aiPipelineRoutes)
   await server.register(productUnitsRoutes)
   await server.register(currenciesRoutes)
   await server.register(inventoryInsightsRoutes)

@@ -37,6 +37,10 @@ export interface MatrixRole {
    */
   isEnforcedBase: boolean
   workspaceId: string | null
+  /** A role this business made: its holder gets exactly what its column says. */
+  isCustom?: boolean | undefined
+  /** A shared starting point for a new role — read-only, never assigned. */
+  isTemplate?: boolean | undefined
 }
 
 export interface MatrixCell {
@@ -102,6 +106,36 @@ export function useSetPermissionCell() {
       queryClient.invalidateQueries({ queryKey: ['permissions'] })
     },
   })
+}
+
+/** The server answers every role change with the whole matrix, recomputed. */
+function useMatrixMutation<TInput>(run: (input: TInput) => Promise<unknown>) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: TInput) => unwrap<PermissionMatrix>(await run(input)),
+    onSuccess: (matrix) => {
+      queryClient.setQueryData(permissionMatrixKeys.matrix(), matrix)
+      queryClient.invalidateQueries({ queryKey: ['permissions'] })
+    },
+  })
+}
+
+/** Make a role for this business, optionally starting from another role's grants. */
+export function useCreateCustomRole() {
+  return useMatrixMutation((input: { name: string; templateRoleId?: string | undefined }) =>
+    apiClient.post('/permissions/roles', input),
+  )
+}
+
+export function useRenameCustomRole() {
+  return useMatrixMutation((input: { roleId: string; name: string }) =>
+    apiClient.patch(`/permissions/roles/${input.roleId}`, { name: input.name }),
+  )
+}
+
+/** Delete a role nobody holds (the server refuses one that is in use). */
+export function useDeleteCustomRole() {
+  return useMatrixMutation((roleId: string) => apiClient.delete(`/permissions/roles/${roleId}`))
 }
 
 /** Give a person a profile. Takes a USER id — see the server for why. */

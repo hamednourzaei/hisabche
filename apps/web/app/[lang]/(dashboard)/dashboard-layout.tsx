@@ -5,6 +5,8 @@ import type { ReactNode } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore, useThemeStore, useOnboardingStore, useWorkspaceStore } from '@hisabche/store'
 import { useMyCapabilities } from '@hisabche/api'
+import { isRouteDenied } from '@hisabche/ui-contract'
+import { NoAccessNotice, usePageLook } from '@hisabche/ui'
 import { useTranslations, useLocale } from 'next-intl'
 import {
   DashboardHeader,
@@ -75,12 +77,22 @@ function cap(value: string): string {
  * painting competes with the render the user is waiting for, which would make
  * the FIRST screen slower to fix the second one.
  */
-function usePrefetchRoutes(locale: string) {
+/**
+ * ⚠️ `skipKey` — module keys and paths this person will not open: a page their
+ * role does not include, one the owner blocked for them, one they hid for
+ * themselves. Warming those is a request for something that will never be
+ * shown — and, for a denied page, a request the server should not be asked.
+ */
+function usePrefetchRoutes(locale: string, deniedKey: string, hiddenPathsKey: string) {
   const router = useRouter()
 
   useEffect(() => {
     const prefix = `/${locale}`
-    const paths = [...new Set(NAV_ITEMS.map((item) => item.path))]
+    const denied = deniedKey ? deniedKey.split(',') : []
+    const hiddenPaths = hiddenPathsKey ? hiddenPathsKey.split(',') : []
+    const paths = [...new Set(NAV_ITEMS.map((item) => item.path))].filter(
+      (path) => !isNavLocked(path, denied) && !hiddenPaths.includes(path),
+    )
     let cancelled = false
     let index = 0
 
@@ -197,6 +209,23 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   // explains instead of opening onto a 403. A string so memos re-run only when
   // the set changes.
   const blockedKey = (useMyCapabilities().data?.blockedModules ?? []).join(',')
+  // Parts this person's ROLE does not include («نمی‌بیند»): not in the menu at
+  // all. A per-person block stays visible and locked; a role simply has no such
+  // page.
+  const hiddenKey = (useMyCapabilities().data?.hiddenModules ?? []).join(',')
+  // Pages this person hid from their OWN menu (lib/page-look). Not a
+  // permission: the address still opens.
+  const menuLook = usePageLook('menu')
+  const menuHiddenKey = menuLook.hiddenIds.join(',')
+  // A page the role does not include, or the owner blocked for this person:
+  // drawn as «دسترسی ندارید» instead of being mounted. The server refuses its
+  // data either way; this spares the person a screen of errors and the server
+  // twenty refusals.
+  const routeDenied = isRouteDenied(
+    (pathname ?? '').replace(new RegExp(`^/${locale}(?=/|$)`), ''),
+    [...blockedOf(blockedKey), ...blockedOf(hiddenKey)],
+  )
+  usePrefetchRoutes(locale, [blockedKey, hiddenKey].filter(Boolean).join(','), menuHiddenKey)
   const toast = useToast()
   // ⚠️ The workspace was loaded only by the workspace settings page, so for
   // anyone who never opened it `workspaceId` was null and realtime subscribed
@@ -217,7 +246,6 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const subscriptionLocked = useSubscriptionLocked()
   const routeLocked = subscriptionLocked && !isRouteAllowedWhenExpired(pathname ?? '')
 
-  usePrefetchRoutes(locale)
   useRedirectGuard(locale)
 
   const activeNav = optimisticPath ?? pathname
@@ -292,14 +320,18 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
 
   const primaryItems = useMemo(
     () =>
-      PRIMARY_ITEMS.map((item) => ({
+      PRIMARY_ITEMS.filter(
+        (item) =>
+          !isNavLocked(item.path, blockedOf(hiddenKey)) &&
+          !menuHiddenKey.split(',').includes(item.path),
+      ).map((item) => ({
         id: item.id,
         icon: item.icon,
         label: t(item.labelKey),
         path: item.path,
         locked: isNavLocked(item.path, blockedOf(blockedKey)),
       })),
-    [t, blockedKey],
+    [t, blockedKey, hiddenKey, menuHiddenKey],
   )
 
   const moreGroups = useMemo(
@@ -308,15 +340,21 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         id: g.id,
         label: t(g.labelKey),
         icon: g.icon,
-        items: g.items.map((item) => ({
-          id: item.id,
-          icon: item.icon,
-          label: t(item.labelKey),
-          path: item.path,
-          locked: isNavLocked(item.path, blockedOf(blockedKey)),
-        })),
-      })),
-    [t, blockedKey],
+        items: g.items
+          .filter(
+            (item) =>
+              !isNavLocked(item.path, blockedOf(hiddenKey)) &&
+              !menuHiddenKey.split(',').includes(item.path),
+          )
+          .map((item) => ({
+            id: item.id,
+            icon: item.icon,
+            label: t(item.labelKey),
+            path: item.path,
+            locked: isNavLocked(item.path, blockedOf(blockedKey)),
+          })),
+      })).filter((g) => g.items.length > 0),
+    [t, blockedKey, hiddenKey, menuHiddenKey],
   )
 
   // ✅ صفحه‌های قابل جستجو — از همان NAV_ITEMS ساخته می‌شوند تا با منو
@@ -496,7 +534,14 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
           <SandboxNotice />
           <Breadcrumb className="mb-4" />
-          {routeLocked ? <SubscriptionLockNotice /> : children}
+          {routeLocked ? (
+            <SubscriptionLockNotice />
+          ) : routeDenied ? (
+            // The page is NOT mounted: none of its queries run.
+            <NoAccessNotice onHome={() => router.push(withLocale('/dashboard'))} />
+          ) : (
+            children
+          )}
         </main>
 
         {/* The invoice builder owns the bottom of the screen on mobile: it

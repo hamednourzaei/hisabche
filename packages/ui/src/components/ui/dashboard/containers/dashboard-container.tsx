@@ -7,6 +7,11 @@ import { useCallback, useState } from 'react'
 import { DashboardView } from '../dashboard-view'
 import { WorkQueueContainer } from '../../work-queue/containers/work-queue-container'
 import { DateRangePicker, type DateRange, type PresetKey } from '../date-range-picker'
+import { isNavLocked } from '@hisabche/ui-contract'
+import { useMyCapabilities } from '@hisabche/api'
+import { usePageLook } from '../../../../lib/page-look'
+import { NAV_ITEMS } from '../../../../lib/menu/nav-items'
+import { PageCustomizer } from '../../page-customizer'
 import { useDashboardData } from '../../../../hooks/dashboard/use-dashboard-data'
 import { fmt } from '../../../../lib/dashboard/dashboard-format'
 import { useDisplayBasis } from '../../../../hooks/dashboard/use-display-basis'
@@ -25,6 +30,19 @@ import { ManufacturingDashboardCard } from '../../manufacturing/manufacturing-da
 type Translate = (key: string) => string
 
 // ─── Main Container ──────────────────────────────────────────────────────
+
+/** What a person may switch off on their own dashboard. Stable ids, never positions. */
+export const DASHBOARD_PARTS = [
+  'workQueue',
+  'kpis',
+  'chart',
+  'insights',
+  'activities',
+  'manufacturing',
+] as const
+
+/** Never hidden from the menu: the way home, and the way to undo anything. */
+export const MENU_ALWAYS: readonly string[] = ['/dashboard', '/settings']
 
 export function DashboardContainer() {
   const tOriginal = useTranslations()
@@ -53,6 +71,17 @@ export function DashboardContainer() {
     return { from: weekAgo, to: today }
   })
 
+  // ─── What this person shows on their dashboard ────────────────────────────
+  // Their own choice (lib/page-look), never a permission. A part that is off
+  // is not mounted below and not fetched by `useDashboardData`.
+  const look = usePageLook('dashboard')
+  const menuLook = usePageLook('menu')
+  const access = useMyCapabilities().data
+  const hiddenByRole = access?.hiddenModules ?? []
+  const may = (capability: string) =>
+    access === undefined || access.capabilities.includes(capability)
+  const mayInsights = may('invoice.read') && may('customer.read') && may('product.read')
+
   // ─── Data ──────────────────────────────────────────────────────────────
 
   const {
@@ -67,7 +96,15 @@ export function DashboardContainer() {
     insightsLoading,
     chartLoading,
     activitiesLoading,
-  } = useDashboardData(dateRange)
+  } = useDashboardData(dateRange, {
+    kpis: look.active('kpis'),
+    // Permission first, then the person's own choice. While the capabilities
+    // are not known yet the read is tried (the server decides); once they are,
+    // a part the role does not include is never asked for.
+    chart: look.active('chart') && may('invoice.read'),
+    insights: look.active('insights') && mayInsights,
+    activities: look.active('activities'),
+  })
 
   // ─── Callbacks ──────────────────────────────────────────────────────────
 
@@ -125,7 +162,9 @@ export function DashboardContainer() {
           approvals and unsent changes — and keeps the rest hidden until a real
           source exists. Under-showing is the safe direction; the alternative
           offers a door that refuses to open. */}
-      <WorkQueueContainer capabilities={[]} onNavigate={(route) => push(route)} />
+      {look.shows('workQueue') ? (
+        <WorkQueueContainer capabilities={[]} onNavigate={(route) => push(route)} />
+      ) : null}
 
       {/* ─── T10 — «بر چه مبنایی ببینم» ────────────────────────────────
           A jeweller reads the day's takings in grams; a shop with dollar
@@ -138,6 +177,29 @@ export function DashboardContainer() {
           {/* The prefix comes from the route: `useLocale()` is the UI
               language, which desktop has too — `/fa/assistant` is a route
               only web serves, so the link dropped desktop on the dashboard. */}
+          {/* The wrench: what this person shows on the dashboard and in their
+              menu. Only parts their role includes are offered. */}
+          <PageCustomizer
+            t={t}
+            groups={[
+              {
+                title: t('pageLook.dashboardParts', 'بخش‌های داشبورد'),
+                look,
+                items: DASHBOARD_PARTS.map((id) => ({
+                  id,
+                  label: t(`pageLook.dashboard.${id}`, id),
+                })),
+              },
+              {
+                title: t('pageLook.menu', 'منو'),
+                look: menuLook,
+                items: NAV_ITEMS.filter(
+                  (item) =>
+                    !MENU_ALWAYS.includes(item.path) && !isNavLocked(item.path, hiddenByRole),
+                ).map((item) => ({ id: item.path, label: t(item.labelKey, item.path) })),
+              },
+            ]}
+          />
           <AiAssistantLauncher t={t} fullPageHref={localizePath('/assistant', routeLang)} />
           <DisplayBasisPicker
             t={t}
@@ -213,15 +275,24 @@ export function DashboardContainer() {
         onNavigate={(route) => push(route)}
         onInsightAction={handleAction}
         onDateRangeChange={handleDateRangeChange}
+        show={{
+          kpis: look.shows('kpis'),
+          chart: look.shows('chart') && may('invoice.read'),
+          insights: look.shows('insights') && mayInsights,
+          activities: look.shows('activities'),
+        }}
+        hiddenFigures={kpis?.hidden ?? []}
       />
 
-      <ManufacturingDashboardCard
-        t={t}
-        locale={intlLocale}
-        from={toIsoDay(dateRange.from)}
-        to={toIsoDay(dateRange.to)}
-        onOpen={() => push('/manufacturing')}
-      />
+      {look.shows('manufacturing') ? (
+        <ManufacturingDashboardCard
+          t={t}
+          locale={intlLocale}
+          from={toIsoDay(dateRange.from)}
+          to={toIsoDay(dateRange.to)}
+          onOpen={() => push('/manufacturing')}
+        />
+      ) : null}
     </>
   )
 }

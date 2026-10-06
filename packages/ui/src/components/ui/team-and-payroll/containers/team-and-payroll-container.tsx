@@ -250,7 +250,10 @@ function TeamAndPayrollScreen({ section }: { section: TeamTab | 'timesheets' }) 
   // Profiles are the ones that widen — Accountant, Sales Manager, and so on.
   const { data: matrix } = usePermissionMatrix()
   const permissionProfiles = useMemo(
-    () => (Array.isArray(matrix?.roles) ? matrix.roles : []).filter((role) => !role.isEnforcedBase),
+    // Only a role THIS business made: a shared template grants nothing when
+    // assigned, and offering it here was a choice that changed no behaviour.
+    () =>
+      (Array.isArray(matrix?.roles) ? matrix.roles : []).filter((role) => role.isCustom === true),
     [matrix],
   )
 

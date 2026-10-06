@@ -504,6 +504,20 @@ export const NAV_MODULE: Readonly<Record<string, string>> = {
   '/data-migration': 'workspace',
 }
 
+/**
+ * Whether an address the person is AT belongs to a module they may not open.
+ *
+ * `isNavLocked` answers for a menu destination (`/invoices`); a person can be
+ * at `/invoices/new` or `/customers/<id>`. The page is the first segment. The
+ * caller strips the locale: the web serves `/fa/invoices`, the others
+ * `/invoices`.
+ */
+export function isRouteDenied(pathname: string, deniedModules: readonly string[]): boolean {
+  if (deniedModules.length === 0) return false
+  const first = (pathname.split('?')[0] ?? '').split('/').filter(Boolean)[0]
+  return first !== undefined && isNavLocked(`/${first}`, deniedModules)
+}
+
 /** Whether this destination is locked for someone with these blocked modules. */
 export function isNavLocked(path: string, blockedModules: readonly string[]): boolean {
   if (blockedModules.length === 0) return false

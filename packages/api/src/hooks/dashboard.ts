@@ -38,6 +38,11 @@ export interface DashboardKPIs {
   totalSales: number
   customerDebt: number
   warehouseValue: number
+  /**
+   * Figure groups the server did not tell this person (their fields are zero).
+   * The card is left out — a zero would read as a measurement.
+   */
+  hidden?: Array<'sales' | 'customers' | 'stock' | 'stockValue'> | undefined
 }
 
 export interface AIInsight {
@@ -210,15 +215,22 @@ interface DashboardSalesParams {
 // lowStockAlerts از products) به سه جدول متفاوت وابسته‌اند.
 // هر تغییری در هرکدام، بلافاصله همان queryKey (dashboardKeys.kpis())
 // را invalidate می‌کند.
-export function useDashboardKPIs() {
+/** A read of the dashboard that a page may switch off (a part the person hid). */
+export interface DashboardReadOptions {
+  enabled?: boolean | undefined
+}
+
+export function useDashboardKPIs(options: DashboardReadOptions = {}) {
   const authReady = useAuthReady()
+  const enabled = options.enabled !== false
 
   // ✅ FIX: useRealtime فقط string[] قبول می‌کند، ولی
   // dashboardKeys.kpis() شامل مقادیر ثابت رشته‌ای است — همان‌طور
   // که هست کار می‌کند. اینجا فقط برای type safety صریح تبدیل شده.
-  useRealtime({ table: 'invoices', queryKey: dashboardKeys.kpis() as unknown as string[] })
-  useRealtime({ table: 'customers', queryKey: dashboardKeys.kpis() as unknown as string[] })
-  useRealtime({ table: 'products', queryKey: dashboardKeys.kpis() as unknown as string[] })
+  const kpisKey = dashboardKeys.kpis() as unknown as string[]
+  useRealtime({ table: 'invoices', queryKey: kpisKey, enabled })
+  useRealtime({ table: 'customers', queryKey: kpisKey, enabled })
+  useRealtime({ table: 'products', queryKey: kpisKey, enabled })
 
   return useQuery({
     queryKey: dashboardKeys.kpis(),
@@ -230,7 +242,7 @@ export function useDashboardKPIs() {
       const { data } = await apiClient.get('/analytics/dashboard', { params: tz ? { tz } : {} })
       return data
     },
-    enabled: authReady,
+    enabled: authReady && enabled,
     staleTime: 60_000,
     // ✅ FIX: بدون refetchInterval — Realtime جایگزین polling شده.
     // staleTime بالاتر رفته چون دیگر polling دوره‌ای پشتوانه نیست؛
@@ -242,12 +254,14 @@ export function useDashboardKPIs() {
 // ✅ گیت شده با authReady
 // ✅ FIX: AI insights از ترکیب چند منبع ساخته می‌شود (فاکتورها،
 // مشتریان، موجودی)، پس همان سه جدول را subscribe می‌کنیم.
-export function useAIInsights() {
+export function useAIInsights(options: DashboardReadOptions = {}) {
   const authReady = useAuthReady()
+  const enabled = options.enabled !== false
 
-  useRealtime({ table: 'invoices', queryKey: dashboardKeys.insights() as unknown as string[] })
-  useRealtime({ table: 'customers', queryKey: dashboardKeys.insights() as unknown as string[] })
-  useRealtime({ table: 'products', queryKey: dashboardKeys.insights() as unknown as string[] })
+  const insightsKey = dashboardKeys.insights() as unknown as string[]
+  useRealtime({ table: 'invoices', queryKey: insightsKey, enabled })
+  useRealtime({ table: 'customers', queryKey: insightsKey, enabled })
+  useRealtime({ table: 'products', queryKey: insightsKey, enabled })
 
   return useQuery({
     queryKey: dashboardKeys.insights(),
@@ -255,7 +269,7 @@ export function useAIInsights() {
       const { data } = await apiClient.get('/ai/insights')
       return asList<AIInsight>(data)
     },
-    enabled: authReady,
+    enabled: authReady && enabled,
     staleTime: 120_000,
     // ✅ FIX: بدون refetchInterval — به Realtime تکیه می‌شود.
   })
@@ -263,8 +277,12 @@ export function useAIInsights() {
 
 // ✅ گیت شده با authReady
 // ✅ FIX: چارت فروش فقط به invoices وابسته است.
-export function useDashboardSales(params?: DashboardSalesParams) {
+export function useDashboardSales(
+  params?: DashboardSalesParams,
+  options: DashboardReadOptions = {},
+) {
   const authReady = useAuthReady()
+  const enabled = options.enabled !== false
 
   // ✅ اصلاح: استفاده از تاریخ محلی
   const today = getTodayDate()
@@ -287,6 +305,7 @@ export function useDashboardSales(params?: DashboardSalesParams) {
   useRealtime({
     table: 'invoices',
     queryKey: dashboardKeys.sales(queryParams) as unknown as string[],
+    enabled,
   })
 
   return useQuery({
@@ -344,7 +363,7 @@ export function useDashboardSales(params?: DashboardSalesParams) {
       const fallbackData = [{ label: 'امروز', value: 0, date: todayDate }]
       return { data: fallbackData, chartData: fallbackData, total: 0, average: 0 }
     },
-    enabled: authReady,
+    enabled: authReady && enabled,
     staleTime: 120_000,
     // ✅ FIX: بدون refetchInterval — به Realtime تکیه می‌شود.
   })

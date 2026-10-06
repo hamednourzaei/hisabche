@@ -2,7 +2,8 @@
 'use client'
 
 import React, { useEffect, useRef, memo } from 'react'
-import { useThemeStore, useAuthStore, useDeviceStore } from '@hisabche/store'
+import { useQueryClient } from '@tanstack/react-query'
+import { useThemeStore, useAuthStore, useDeviceStore, useWorkspaceStore } from '@hisabche/store'
 
 let analyticsLoaded = false
 
@@ -70,6 +71,51 @@ const ThemeInitializer = memo(function ThemeInitializer({
   return <>{children}</>
 })
 ThemeInitializer.displayName = 'ThemeInitializer'
+
+// ─── Device cache ──────────────────────────────────────────────────────────
+
+/**
+ * The last answers, kept on this device: a reload or a return to a screen shows
+ * the previous numbers at once, and the normal refetch replaces only what
+ * changed. The same module the Windows and mobile shell use.
+ *
+ * ⚠️ Loaded on demand, and only for somebody signed in (or just signed out —
+ * that is when the cache must be wiped). An anonymous visitor on the landing
+ * never downloads it.
+ * ⚠️ Before the store has hydrated, «no user» means «not read yet»; treating
+ * it as a sign-out would wipe the cache on every load.
+ */
+const DeviceCache = memo(function DeviceCache() {
+  const client = useQueryClient()
+  const hasHydrated = useAuthStore((s) => s.hasHydrated)
+  const userId = useAuthStore((s) => s.user?.id ?? null)
+  const workspaceId = useWorkspaceStore((s) => s.workspaceId)
+  const cache = useRef<{ setOwner: (owner: string | null) => Promise<void> } | null>(null)
+
+  useEffect(() => {
+    if (!hasHydrated) return
+    // Nobody signed in and nothing loaded: there is nothing to wipe either.
+    if (!userId && !cache.current) return
+    let cancelled = false
+    void import('@hisabche/api/src/lib/persisted-query-cache')
+      .then((persisted) => {
+        if (cancelled) return
+        cache.current ??= persisted.createPersistedQueryCache(
+          client,
+          persisted.createQueryCachePersister(window.localStorage),
+        )
+        return cache.current.setOwner(persisted.cacheOwner(userId, workspaceId))
+      })
+      // A device cache is a convenience: without it the app fetches as before.
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [client, hasHydrated, userId, workspaceId])
+
+  return null
+})
+DeviceCache.displayName = 'DeviceCache'
 
 // ─── Auth Initializer ──────────────────────────────────────────────────────
 
@@ -144,6 +190,7 @@ export const HeavyProviders = memo(function HeavyProviders({
   return (
     <>
       <AnalyticsBootstrap />
+      <DeviceCache />
       <ThemeInitializer>
         <AuthInitializer>{children}</AuthInitializer>
       </ThemeInitializer>

@@ -162,3 +162,63 @@ describe('every word on these three exists in all three languages', () => {
     }
   })
 })
+
+describe('a new API key can actually be taken away', () => {
+  // The value was shown in a card at the top of a long page while the person
+  // was at the form near the bottom: they saw only the prefix in the list.
+  const view = ui('developers', 'developers-view.tsx')
+  const dialog = ui('developers', 'secret-reveal-dialog.tsx')
+  const copy = code(read('packages', 'ui', 'src', 'lib', 'copy-text.ts'))
+
+  it('is shown in a dialog, not in a card up the page', () => {
+    expect(view).toContain('<SecretRevealDialog')
+    expect(view).not.toContain('{props.revealed && (')
+  })
+
+  it('is not thrown away by a click outside — it is shown once', () => {
+    expect(dialog).toContain('onInteractOutside={(event) => event.preventDefault()}')
+    expect(dialog).toContain('onEscapeKeyDown={(event) => event.preventDefault()}')
+    expect(dialog).toContain('showCloseButton={false}')
+  })
+
+  it('«کپی» says whether it worked, and leaves the value selected either way', () => {
+    expect(dialog).toContain("setState(done ? 'copied' : 'failed')")
+    expect(dialog).toContain('field.current?.select()')
+    expect(dialog).toContain("t('developer.copyFailed')")
+  })
+
+  it('copying has a second way where the clipboard API is missing or refused', () => {
+    expect(copy).toContain('navigator.clipboard?.writeText')
+    expect(copy).toContain("return document.execCommand('copy')")
+    // …and the screen no longer calls the clipboard directly.
+    expect(ui('developers', 'containers', 'developers-container.tsx')).not.toContain(
+      'navigator.clipboard',
+    )
+  })
+
+  it('«بدون محدودیت» is every scope the list offers — one press, and it can be undone', () => {
+    const list = ui('developers', 'check-list.tsx')
+    expect(list).toContain('onClick={() => onChange(all ? [] : [...values])}')
+    expect(view).toContain("allLabel={t('developer.allScopes')}")
+    expect(view).toContain("t('developer.allScopesHint')")
+  })
+
+  it('every word exists in all three languages', () => {
+    for (const lang of ['fa', 'af', 'en']) {
+      const words = JSON.parse(read('packages', 'i18n', 'messages', lang, 'common.json')).developer
+      for (const key of [
+        'allScopes',
+        'noScopes',
+        'allScopesHint',
+        'copyFailed',
+        'shownOnce',
+        'savedIt',
+        'copy',
+        'copied',
+        'keyCreated',
+      ]) {
+        expect(words[key], `${lang} developer.${key}`).toEqual(expect.any(String))
+      }
+    }
+  })
+})

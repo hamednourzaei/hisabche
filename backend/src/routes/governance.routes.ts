@@ -187,13 +187,26 @@ export async function governanceRoutes(fastify: FastifyInstance) {
         // Modules the owner took away from this person — the menus lock them.
         // A rendering hint like the set below; the capabilities are what the
         // server enforces.
+        //
+        // Two reasons a module is left out, one list: the owner blocked it for
+        // this person, or their custom role does not include it («نمی‌بیند»).
         blockedModules:
           request.tenancy.role === 'owner'
             ? []
-            : await memberModuleBlocks.forMember(
-                request.tenancy.workspaceId,
-                request.tenancy.userId,
-              ),
+            : [
+                ...new Set([
+                  ...(await memberModuleBlocks.forMember(
+                    request.tenancy.workspaceId,
+                    request.tenancy.userId,
+                  )),
+                  ...(request.tenancy.hiddenModules ?? []),
+                ]),
+              ],
+        // Modules this person's ROLE does not include at all («نمی‌بیند»). The
+        // menus leave these out entirely; a per-person block above is drawn
+        // locked instead, so the owner's one-off decision stays visible.
+        hiddenModules:
+          request.tenancy.role === 'owner' ? [] : [...(request.tenancy.hiddenModules ?? [])],
         // The EFFECTIVE set — defaults with this workspace's changes applied.
         capabilities: request.tenancy.capabilities
           ? [...request.tenancy.capabilities]

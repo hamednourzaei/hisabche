@@ -187,6 +187,7 @@ export {
   splitForBudget,
   NAV_MODULE,
   isNavLocked,
+  isRouteDenied,
 } from './navigation'
 
 export {

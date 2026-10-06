@@ -6,7 +6,7 @@
 import { supabase } from '../db'
 import { scopes } from './authorization/scope.service'
 import { CreateCustomer, UpdateCustomer, CustomerFilters } from '@hisabche/validation'
-import { DatabaseError, NotFoundError } from '../errors/database.error'
+import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
 import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
@@ -396,7 +396,21 @@ export class CustomerService {
   }
 
   // ─── Update ──────────────────────────────────────────────
-  async update(id: string, ctx: TenancyContext, data: UpdateCustomer): Promise<Customer> {
+  /**
+   * `expectedUpdatedAt` makes the write conditional: it lands only if the row
+   * is still the one the caller read (compare-and-set on `updated_at`), and
+   * answers CUSTOMER_CHANGED otherwise. Absent = unconditional, as before;
+   * `null` = «it had never been edited when I read it».
+   *
+   * A change that was PROPOSED to a person and approved later (the AI
+   * pipeline) must not overwrite what a colleague saved in between.
+   */
+  async update(
+    id: string,
+    ctx: TenancyContext,
+    data: UpdateCustomer,
+    options: { expectedUpdatedAt?: string | null | undefined } = {},
+  ): Promise<Customer> {
     // Workspace alone is not enough on a row addressed by id. Before this, any
     // member of the workspace could mutate any row in it by knowing an id —
     // including one raised by a colleague in a branch they do not hold.
@@ -413,16 +427,29 @@ export class CustomerService {
     if (data.isActive !== undefined) updates.is_active = data.isActive
     if (data.type !== undefined) updates.type = data.type
 
-    const { data: customer, error } = await supabase
+    const conditional = options.expectedUpdatedAt !== undefined
+    let write = supabase
       .from('customers')
       .update(updates)
       .eq('id', id)
       .eq('workspace_id', workspaceId)
-      .select(DETAIL_COLUMNS)
-      .single()
+    if (typeof options.expectedUpdatedAt === 'string') {
+      write = write.eq('updated_at', options.expectedUpdatedAt)
+    } else if (options.expectedUpdatedAt === null) {
+      write = write.is('updated_at', null)
+    }
+
+    // A conditional write that matched no row is a refusal, not a failure:
+    // `assertMay` above already proved the customer exists.
+    const { data: customer, error } = conditional
+      ? await write.select(DETAIL_COLUMNS).maybeSingle()
+      : await write.select(DETAIL_COLUMNS).single()
 
     if (error) throw new DatabaseError('Failed to update customer', error)
-    if (!customer) throw new DatabaseError('Customer not found')
+    if (!customer) {
+      if (conditional) throw new ConflictError('CUSTOMER_CHANGED')
+      throw new DatabaseError('Customer not found')
+    }
 
     // ✅ Clear cache
     await this.invalidateCache(workspaceId, id)

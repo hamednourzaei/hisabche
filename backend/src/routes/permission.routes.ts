@@ -461,6 +461,56 @@ export async function permissionRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── Custom roles: POST / PATCH / DELETE /api/permissions/roles ─────────
+  // A role this business makes for itself. The owner decides (the service
+  // refuses anybody else); `member.manage` is the capability the page needs.
+  const roleGuard = [authenticate, requireWorkspaceContext, requireCapability('member.manage')]
+  const roleIdParams = z.object({ roleId: z.string().uuid() })
+  const roleNameBody = z.object({ name: z.string().trim().min(1).max(60) }).strict()
+
+  fastify.post(
+    '/api/permissions/roles',
+    { preHandler: roleGuard, schema: { response: { 201: toJsonSchema(z.any()) } } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = roleNameBody
+          .extend({ templateRoleId: z.string().uuid().optional() })
+          .strict()
+          .parse(request.body)
+        return reply.code(201).send(await permissionMatrix.createRole(request.tenancy, body))
+      } catch (err) {
+        return failMatrix(reply, err, 'Failed to create the role')
+      }
+    },
+  )
+
+  fastify.patch(
+    '/api/permissions/roles/:roleId',
+    { preHandler: roleGuard, schema: { response: { 200: toJsonSchema(z.any()) } } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { roleId } = roleIdParams.parse(request.params)
+        const { name } = roleNameBody.parse(request.body)
+        return reply.send(await permissionMatrix.renameRole(request.tenancy, roleId, name))
+      } catch (err) {
+        return failMatrix(reply, err, 'Failed to rename the role')
+      }
+    },
+  )
+
+  fastify.delete(
+    '/api/permissions/roles/:roleId',
+    { preHandler: roleGuard, schema: { response: { 200: toJsonSchema(z.any()) } } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { roleId } = roleIdParams.parse(request.params)
+        return reply.send(await permissionMatrix.deleteRole(request.tenancy, roleId))
+      } catch (err) {
+        return failMatrix(reply, err, 'Failed to delete the role')
+      }
+    },
+  )
+
   // ─── GET /api/permissions/roles/:roleId/members ─────────
   // H5 will link a matrix column to the people who hold it.
   fastify.get(

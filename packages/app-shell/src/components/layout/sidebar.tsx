@@ -18,6 +18,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslations } from 'next-intl'
 import { BottomNav, DashboardSidebar } from '@hisabche/ui'
 import { MORE_GROUPS, MORE_ICON, PRIMARY_ITEMS, isNavLocked } from '@hisabche/ui/menu'
+import { usePageLook } from '@hisabche/ui'
 import { useMyCapabilities } from '@hisabche/api'
 import { useToast } from '@hisabche/ui'
 
@@ -90,18 +91,29 @@ export function Sidebar() {
   // so the menu does not silently shrink and nobody wonders where a page went.
   // A string, so the memos below re-run only when the set actually changes.
   const blockedKey = (useMyCapabilities().data?.blockedModules ?? []).join(',')
+  // Parts this person's ROLE does not include («نمی‌بیند»): not in the menu at
+  // all. A per-person block stays visible and locked; a role simply has no such
+  // page.
+  const hiddenKey = (useMyCapabilities().data?.hiddenModules ?? []).join(',')
+  // Pages this person hid from their OWN menu (lib/page-look). Not a permission.
+  const menuHiddenKey = usePageLook('menu').hiddenIds.join(',')
   const toast = useToast()
 
   const primaryItems = useMemo(
     () =>
-      PRIMARY_ITEMS.filter((item) => DESKTOP_ROUTES.has(item.path)).map((item) => ({
+      PRIMARY_ITEMS.filter(
+        (item) =>
+          DESKTOP_ROUTES.has(item.path) &&
+          !isNavLocked(item.path, blockedOf(hiddenKey)) &&
+          !menuHiddenKey.split(',').includes(item.path),
+      ).map((item) => ({
         id: item.id,
         icon: item.icon,
         label: t(item.labelKey),
         path: item.path,
         locked: isNavLocked(item.path, blockedOf(blockedKey)),
       })),
-    [t, blockedKey],
+    [t, blockedKey, hiddenKey, menuHiddenKey],
   )
 
   const moreGroups = useMemo(
@@ -111,7 +123,12 @@ export function Sidebar() {
         icon: group.icon,
         label: t(group.labelKey),
         items: group.items
-          .filter((item) => DESKTOP_ROUTES.has(item.path))
+          .filter(
+            (item) =>
+              DESKTOP_ROUTES.has(item.path) &&
+              !isNavLocked(item.path, blockedOf(hiddenKey)) &&
+              !menuHiddenKey.split(',').includes(item.path),
+          )
           .map((item) => ({
             id: item.id,
             icon: item.icon,
@@ -120,7 +137,7 @@ export function Sidebar() {
             locked: isNavLocked(item.path, blockedOf(blockedKey)),
           })),
       })).filter((group) => group.items.length > 0),
-    [t, blockedKey],
+    [t, blockedKey, hiddenKey, menuHiddenKey],
   )
 
   // `/` is the dashboard route on desktop; the contract calls it `/dashboard`.

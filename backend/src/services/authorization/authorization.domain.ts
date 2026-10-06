@@ -549,6 +549,60 @@ export const MODULE_READ_DEPENDENCIES: Readonly<Record<string, readonly Capabili
  */
 export const BLOCK_FLOOR: readonly Capability[] = ['report.operational.read']
 
+// ─── A custom role ───────────────────────────────────────────────────────────
+//
+// A role the owner made for THIS business («انباردار», «حسابدار شعبه»). Its
+// holder gets exactly what the role says — it REPLACES the base role's set,
+// it is not added on top of it. Otherwise «انباردار: فاکتور = نمی‌بیند» would
+// still let them issue invoices, because every base role can.
+//
+// ⚠️ It used to do NOTHING. A profile was a row in `user_roles`, the matrix
+// said «takes effect on the next request», and `holds()` never read it: the
+// «پروفایل دسترسی» chosen for an employee changed no behaviour at all.
+
+export interface CustomRoleAccess {
+  /** What the server enforces for a holder of this role. */
+  capabilities: Set<Capability>
+  /** Modules the role does not let them see at all — the menus leave them out. */
+  hiddenModules: string[]
+}
+
+/**
+ * What a custom role's grants add up to.
+ *
+ * `granted` is what `role_permissions` holds for the role; anything the server
+ * no longer knows is dropped. Two things are added to it and nothing else:
+ *   · the floor every member needs (BLOCK_FLOOR) — without it the app cannot
+ *     even ask which pages it may show;
+ *   · the READS a granted module cannot work without (an invoice form needs
+ *     the product and customer lists). Only reads, and only for a module the
+ *     role actually has.
+ * A module with none of its own capabilities granted is HIDDEN, even when a
+ * dependency lets its list be read: seeing the page and reading a list for
+ * another page's form are different things.
+ */
+export function customRoleAccess(granted: readonly string[]): CustomRoleAccess {
+  const own = new Set<Capability>(
+    granted.filter((code): code is Capability =>
+      (CAPABILITIES as readonly string[]).includes(code),
+    ),
+  )
+  const capabilities = new Set<Capability>([...own, ...BLOCK_FLOOR])
+  const hiddenModules: string[] = []
+
+  for (const module of PERMISSION_MODULES) {
+    const has = capabilitiesForLevel(module, 'full').some((capability) => own.has(capability))
+    if (!has) {
+      hiddenModules.push(module.key)
+      continue
+    }
+    for (const dependency of MODULE_READ_DEPENDENCIES[module.key] ?? []) {
+      capabilities.add(dependency)
+    }
+  }
+  return { capabilities, hiddenModules }
+}
+
 /** Every module key a block may name. */
 export const BLOCKABLE_MODULES: readonly string[] = PERMISSION_MODULES.map((m) => m.key)
 

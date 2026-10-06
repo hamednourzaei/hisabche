@@ -555,61 +555,60 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                     </span>
                   </label>
 
+                  {/* ONE question: which role. A role made in «دسترسی‌ها» decides
+                      exactly what this person sees; «مدیر» and «کارمند» are the two
+                      every business has. Nothing else is asked about access. */}
                   <label className="flex flex-col gap-1.5 sm:col-span-2">
                     <span className="text-xs text-[hsl(var(--fg-secondary))]">
-                      {t('team.accessRole', 'سطح دسترسی')}
+                      {t('team.memberRole', 'نقش')}
                     </span>
                     <SelectField
-                      value={form.accessRole}
-                      onChange={(value) =>
-                        setAccess({ accessRole: value as 'admin' | 'member' | 'viewer' })
+                      value={
+                        form.permissionProfileId
+                          ? `role:${form.permissionProfileId}`
+                          : `base:${form.accessRole}`
                       }
+                      onChange={(value) =>
+                        value.startsWith('role:')
+                          ? setForm((p) => ({
+                              ...p,
+                              accessRole: 'member',
+                              permissionProfileId: value.slice(5),
+                            }))
+                          : setForm((p) => ({
+                              ...p,
+                              accessRole: value === 'base:admin' ? 'admin' : 'member',
+                              permissionProfileId: '',
+                            }))
+                      }
+                      data-field="permissionProfileId"
                       options={[
-                        { value: 'viewer', label: t('team.roleViewer', 'فقط مشاهده') },
-                        { value: 'member', label: t('team.roleMember', 'کارمند') },
-                        { value: 'admin', label: t('team.roleAdmin', 'مدیر') },
+                        ...permissionProfiles.map((profile) => ({
+                          value: `role:${profile.id}`,
+                          label: profile.name,
+                        })),
+                        { value: 'base:member', label: t('team.roleMember', 'کارمند') },
+                        { value: 'base:admin', label: t('team.roleAdmin', 'مدیر') },
                       ]}
                       className={FORM_FIELD}
                       disabled={isSubmitting}
                     />
+                    <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                      {permissionProfiles.length === 0
+                        ? t(
+                            'team.memberRoleNoCustom',
+                            'هنوز نقشی نساخته‌اید. در «حاکمیت ← دسترسی‌ها» نقش بسازید تا این‌جا انتخابش کنید.',
+                          )
+                        : t(
+                            'team.memberRoleHint',
+                            'هر نقش دقیقاً همان بخش‌هایی را نشان می‌دهد که در «دسترسی‌ها» برایش تعیین کرده‌اید.',
+                          )}
+                    </span>
+                    {fieldError('permissionProfileId')}
                   </label>
                 </div>
               ) : null}
             </div>
-
-            {/*
-              ─── G3 — the permission profile ────────────────────────────────
-              Disabled when no profiles are loaded rather than rendered as an
-              empty dropdown, and labelled with what it actually does: a
-              profile is a grant in `user_roles`, which only means something
-              once the person has a login. Most employees do not.
-            */}
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs text-[hsl(var(--fg-secondary))]">
-                {t('team.permissionProfile', 'پروفایل دسترسی')}
-              </span>
-              <SelectField
-                value={form.permissionProfileId}
-                onChange={(value) => setField('permissionProfileId')(value)}
-                data-field="permissionProfileId"
-                options={[
-                  { value: '', label: t('team.noProfile', 'بدون پروفایل') },
-                  ...permissionProfiles.map((profile) => ({
-                    value: profile.id,
-                    label: profile.name,
-                  })),
-                ]}
-                className={FORM_FIELD}
-                disabled={isSubmitting || permissionProfiles.length === 0}
-              />
-              <span className="text-xs text-[hsl(var(--fg-tertiary))]">
-                {t(
-                  'team.permissionProfileHint',
-                  'فقط برای کارمندی اعمال می‌شود که حساب کاربری دارد.',
-                )}
-              </span>
-              {fieldError('permissionProfileId')}
-            </label>
 
             <label className="flex flex-col gap-1.5">
               <span className="text-xs text-[hsl(var(--fg-secondary))]">

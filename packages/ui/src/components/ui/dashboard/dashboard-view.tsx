@@ -66,6 +66,16 @@ interface DashboardViewProps {
   onNavigate: (route: string) => void
   onInsightAction: (action: string) => void
   onDateRangeChange: (range: DateRange, preset: PresetKey) => void
+  /**
+   * Which parts the person shows (their own choice). Absent = all. A part
+   * that is off is not rendered here and was not fetched by the container.
+   */
+  show?: { kpis: boolean; chart: boolean; insights: boolean; activities: boolean } | undefined
+  /**
+   * Figure groups the SERVER did not tell this person (their role does not
+   * include them). Those cards are left out, never drawn as zero.
+   */
+  hiddenFigures?: readonly string[] | undefined
 }
 
 // ─── Lazy Load Components ─────────────────────────────────────────────────
@@ -434,6 +444,8 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     onNavigate,
     onInsightAction,
     onDateRangeChange,
+    show,
+    hiddenFigures = [],
   } = props
 
   // ─── The range card ───────────────────────────────────────────────────
@@ -491,92 +503,103 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
       {/* Level 2: KPI cards — `KpiGrid`, the same row `/invoices`,
           `/warehouse` and `/customers` draw. A local grid here is what made
           the dashboard look like a different page. */}
-      <KpiGrid>
-        {/* ✅ این دو کارت روندشان را از داده‌ی نمودار می‌گیرند، پس تا وقتی آن
+      {show?.kpis === false ? null : (
+        <KpiGrid>
+          {/* ✅ این دو کارت روندشان را از داده‌ی نمودار می‌گیرند، پس تا وقتی آن
             کوئری کامل نشده باید skeleton نشان دهند؛ وگرنه یک لحظه با
             trend=null رندر می‌شوند و خط خنثی (نه اسپارک‌لاین) دیده می‌شود. */}
-        {/* H1 — every figure opens the rows it was computed from.
+          {/* H1 — every figure opens the rows it was computed from.
             `invoiceListHref` and the list's own parser come from one table
             (invoice-filter-link.ts), so a card cannot link to a filter the
             list ignores. */}
-        <KpiCard
-          icon={TrendingUp}
-          label={t('dashboard.totalSales', 'فروش کل')}
-          value={fmt(totalSales)}
-          delta={monthlyGrowth ?? null}
-          deltaLabel={t('dashboard.vsLastMonth', 'نسبت به ماه گذشته')}
-          showEmptyDelta
-          isLoading={kpiLoading}
-          onOpen={() => onNavigate(invoiceListHref('totalSales'))}
-          openLabel={t('dashboard.openSalesInvoices', 'فاکتورهای فروش')}
-        />
-        <KpiCard
-          icon={Wallet}
-          label={rangeLabel}
-          value={fmt(rangeSalesTotal ?? 0)}
-          delta={rangeChange}
-          {...(rangeChangeLabel ? { deltaLabel: rangeChangeLabel } : {})}
-          showEmptyDelta
-          isLoading={rangeLoading || rangeSalesTotal === null}
-          onOpen={() => onNavigate(invoiceListHref(rangeIsToday ? 'todaySales' : 'totalSales'))}
-          openLabel={t('dashboard.openTodayInvoices', 'فاکتورهای امروز')}
-        />
-        <KpiCard
-          icon={CreditCard}
-          label={t('dashboard.customerDebt', 'بدهی مشتریان')}
-          value={fmt(customerDebt)}
-          delta={null}
-          // ⚠️ Debt is the one card here where rising is BAD. It carries no
-          // comparison today, so nothing is coloured — but the flag is set so
-          // a future delta cannot inherit «up is green».
-          invertDelta
-          showEmptyDelta
-          isLoading={kpiLoading}
-          onOpen={() => onNavigate(invoiceListHref('customerDebt'))}
-          openLabel={t('dashboard.openUnpaidInvoices', 'فاکتورهای تسویه‌نشده')}
-        />
-        <KpiCard
-          icon={Boxes}
-          label={t('dashboard.warehouseValue', 'ارزش کل انبار')}
-          value={fmt(warehouseValue)}
-          delta={null}
-          showEmptyDelta
-          isLoading={kpiLoading}
-          onOpen={() => onNavigate('/warehouse')}
-          openLabel={t('dashboard.openWarehouse', 'انبار')}
-        />
-      </KpiGrid>
+          {hiddenFigures.includes('sales') ? null : (
+            <KpiCard
+              icon={TrendingUp}
+              label={t('dashboard.totalSales', 'فروش کل')}
+              value={fmt(totalSales)}
+              delta={monthlyGrowth ?? null}
+              deltaLabel={t('dashboard.vsLastMonth', 'نسبت به ماه گذشته')}
+              showEmptyDelta
+              isLoading={kpiLoading}
+              onOpen={() => onNavigate(invoiceListHref('totalSales'))}
+              openLabel={t('dashboard.openSalesInvoices', 'فاکتورهای فروش')}
+            />
+          )}
+          {hiddenFigures.includes('sales') ? null : (
+            <KpiCard
+              icon={Wallet}
+              label={rangeLabel}
+              value={fmt(rangeSalesTotal ?? 0)}
+              delta={rangeChange}
+              {...(rangeChangeLabel ? { deltaLabel: rangeChangeLabel } : {})}
+              showEmptyDelta
+              isLoading={rangeLoading || rangeSalesTotal === null}
+              onOpen={() => onNavigate(invoiceListHref(rangeIsToday ? 'todaySales' : 'totalSales'))}
+              openLabel={t('dashboard.openTodayInvoices', 'فاکتورهای امروز')}
+            />
+          )}
+          {hiddenFigures.includes('customers') ? null : (
+            <KpiCard
+              icon={CreditCard}
+              label={t('dashboard.customerDebt', 'بدهی مشتریان')}
+              value={fmt(customerDebt)}
+              delta={null}
+              // ⚠️ Debt is the one card here where rising is BAD. It carries no
+              // comparison today, so nothing is coloured — but the flag is set so
+              // a future delta cannot inherit «up is green».
+              invertDelta
+              showEmptyDelta
+              isLoading={kpiLoading}
+              onOpen={() => onNavigate(invoiceListHref('customerDebt'))}
+              openLabel={t('dashboard.openUnpaidInvoices', 'فاکتورهای تسویه‌نشده')}
+            />
+          )}
+          {hiddenFigures.includes('stockValue') ? null : (
+            <KpiCard
+              icon={Boxes}
+              label={t('dashboard.warehouseValue', 'ارزش کل انبار')}
+              value={fmt(warehouseValue)}
+              delta={null}
+              showEmptyDelta
+              isLoading={kpiLoading}
+              onOpen={() => onNavigate('/warehouse')}
+              openLabel={t('dashboard.openWarehouse', 'انبار')}
+            />
+          )}
+        </KpiGrid>
+      )}
 
       {/* Level 3: Chart + AI Insights (عمودی، جای قبلی صورت‌حساب‌های اخیر) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        <div className="lg:col-span-2">
-          <div
-            className={cn(
-              'rounded-2xl border border-[hsl(var(--border-default))]',
-              'bg-[hsl(var(--surface-elevated))]',
-              'p-4 sm:p-5',
-            )}
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[hsl(var(--border-default)/0.6)] pb-3 mb-4">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                {view === 'chart' ? (
-                  <TrendingUp
-                    className="size-4 sm:size-5 text-[hsl(var(--color-primary))]"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <Filter
-                    className="size-4 sm:size-5 text-[hsl(var(--color-primary))]"
-                    aria-hidden="true"
-                  />
-                )}
-                <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
-                  {t('dashboard.salesChartTitle', 'نمودار فروش')}
-                </h2>
-              </div>
+        {show?.chart === false ? null : (
+          <div className="lg:col-span-2">
+            <div
+              className={cn(
+                'rounded-2xl border border-[hsl(var(--border-default))]',
+                'bg-[hsl(var(--surface-elevated))]',
+                'p-4 sm:p-5',
+              )}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[hsl(var(--border-default)/0.6)] pb-3 mb-4">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  {view === 'chart' ? (
+                    <TrendingUp
+                      className="size-4 sm:size-5 text-[hsl(var(--color-primary))]"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Filter
+                      className="size-4 sm:size-5 text-[hsl(var(--color-primary))]"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
+                    {t('dashboard.salesChartTitle', 'نمودار فروش')}
+                  </h2>
+                </div>
 
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                {/*
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  {/*
                   ⚠️ A SEGMENTED CONTROL WITH WORDS, NOT TWO BARE ICONS.
 
                   An icon-only pair forces the reader to decode a picture: a
@@ -585,29 +608,29 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
                   `aria-pressed` states the selection for a screen reader; the
                   LABEL states it for everyone else.
                 */}
-                <div
-                  role="group"
-                  aria-label={t('dashboard.viewSwitch', 'نمای نمودار')}
-                  className={cn(
-                    'inline-flex items-center gap-0.5 rounded-lg p-0.5',
-                    'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]',
-                  )}
-                >
-                  <ViewTab
-                    icon={TrendingUp}
-                    label={t('dashboard.viewTrend', 'روند فروش')}
-                    active={view === 'chart'}
-                    onClick={() => setView('chart')}
-                  />
-                  <ViewTab
-                    icon={Filter}
-                    label={t('dashboard.viewFunnel', 'قیف تبدیل')}
-                    active={view === 'funnel'}
-                    onClick={() => setView('funnel')}
-                  />
-                </div>
+                  <div
+                    role="group"
+                    aria-label={t('dashboard.viewSwitch', 'نمای نمودار')}
+                    className={cn(
+                      'inline-flex items-center gap-0.5 rounded-lg p-0.5',
+                      'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]',
+                    )}
+                  >
+                    <ViewTab
+                      icon={TrendingUp}
+                      label={t('dashboard.viewTrend', 'روند فروش')}
+                      active={view === 'chart'}
+                      onClick={() => setView('chart')}
+                    />
+                    <ViewTab
+                      icon={Filter}
+                      label={t('dashboard.viewFunnel', 'قیف تبدیل')}
+                      active={view === 'funnel'}
+                      onClick={() => setView('funnel')}
+                    />
+                  </div>
 
-                {/*
+                  {/*
                   ⚠️ THE RANGE PICKER STAYS ON BOTH VIEWS.
 
                   An earlier version hid it on the funnel, reasoning that a
@@ -617,70 +640,75 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
                   that drives it would leave the reader unable to see — or
                   change — the period the numbers belong to.
                 */}
-                <DateRangePicker
-                  value={dateRange}
-                  onChange={onDateRangeChange}
-                  t={t}
-                  disabled={chartLoading}
-                />
+                  <DateRangePicker
+                    value={dateRange}
+                    onChange={onDateRangeChange}
+                    t={t}
+                    disabled={chartLoading}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/*
+              {/*
               One body, two views. `min-h` so switching does not make the card
               jump, and a short fade so the swap reads as one surface changing
               rather than two cards replacing each other.
             */}
-            <div
-              key={view}
-              className={cn(
-                'relative min-h-[200px] w-full',
-                'animate-in fade-in-0 duration-200 motion-reduce:animate-none',
-              )}
-            >
-              {view === 'chart' ? (
-                <LazySalesChart
-                  data={salesChartData}
-                  isLoading={chartLoading}
-                  fmt={fmt}
-                  height={180}
-                  previousPeriodTotal={previousRangeSalesTotal ?? 0}
-                  currentPeriodTotal={rangeSalesTotal ?? 0}
-                  // `/reports` was never a route — the chart's "full report" link
-                  // 404'd on web and would have redirected to the dashboard on
-                  // desktop's catch-all. Accounting («پول و سود») is the destination
-                  // the navigation contract actually gives for revenue detail.
-                  onViewFullReport={() => onNavigate('/accounting')}
-                />
-              ) : (
-                <SalesFunnel
-                  data={salesChartData}
-                  total={totalSales}
-                  fmt={fmt}
-                  isLoading={chartLoading}
-                  height={180}
-                  t={t}
-                />
-              )}
+              <div
+                key={view}
+                className={cn(
+                  'relative min-h-[200px] w-full',
+                  'animate-in fade-in-0 duration-200 motion-reduce:animate-none',
+                )}
+              >
+                {view === 'chart' ? (
+                  <LazySalesChart
+                    data={salesChartData}
+                    isLoading={chartLoading}
+                    fmt={fmt}
+                    height={180}
+                    previousPeriodTotal={previousRangeSalesTotal ?? 0}
+                    currentPeriodTotal={rangeSalesTotal ?? 0}
+                    // `/reports` was never a route — the chart's "full report" link
+                    // 404'd on web and would have redirected to the dashboard on
+                    // desktop's catch-all. Accounting («پول و سود») is the destination
+                    // the navigation contract actually gives for revenue detail.
+                    onViewFullReport={() => onNavigate('/accounting')}
+                  />
+                ) : (
+                  <SalesFunnel
+                    data={salesChartData}
+                    total={totalSales}
+                    fmt={fmt}
+                    isLoading={chartLoading}
+                    height={180}
+                    t={t}
+                  />
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        <div className="lg:col-span-1">
-          <AIInsightsPanel
-            insights={insights}
-            isLoading={insightsLoading}
-            onAction={onInsightAction}
-          />
-        </div>
+        {show?.insights === false ? null : (
+          <div className="lg:col-span-1">
+            <AIInsightsPanel
+              insights={insights}
+              isLoading={insightsLoading}
+              onAction={onInsightAction}
+            />
+          </div>
+        )}
       </div>
 
       {/* Level 4: Recent Activities — انتهای صفحه */}
-      <RecentActivities
-        groups={recentActivities}
-        isLoading={activitiesLoading}
-        onNavigate={onNavigate}
-      />
+      {show?.activities === false ? null : (
+        <RecentActivities
+          groups={recentActivities}
+          isLoading={activitiesLoading}
+          onNavigate={onNavigate}
+        />
+      )}
     </div>
   )
 })

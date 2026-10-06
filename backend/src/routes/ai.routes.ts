@@ -10,6 +10,7 @@ import { AIService } from '../services/ai.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -52,6 +53,13 @@ export async function aiRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        // The suggestions are written FROM invoices, customers and stock —
+        // «فلان مشتری بدهکار است» is that data, in a sentence. All three, or
+        // none: one cached answer per business must not tell a member what
+        // their role keeps from them.
+        requireCapability('invoice.read'),
+        requireCapability('customer.read'),
+        requireCapability('product.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 300, keyPrefix: 'insights' }),
       ],
       schema: {
