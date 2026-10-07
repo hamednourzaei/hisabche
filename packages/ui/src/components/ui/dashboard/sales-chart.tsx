@@ -135,44 +135,6 @@ export const SalesChart = memo(function SalesChart({
     return <ChartSkeleton height={height} />
   }
 
-  // Empty state with motivation
-  if (!hasData || allZero) {
-    return (
-      <section
-        className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-8"
-        style={{ height }}
-        aria-label={t('dashboard.salesChart.emptyAria')}
-      >
-        <div className="rounded-full bg-[hsl(var(--color-primary)/0.1)] p-4">
-          <FileText className="h-8 w-8 text-[hsl(var(--color-primary))]" />
-        </div>
-        <div className="text-center">
-          {/* ⚠️ «IN THIS PERIOD», NOT «EVER».
-              This said «هنوز فروشی ثبت نشده است» — a claim about the whole
-              history — while the data behind it is one window. A shop whose
-              last sale was three weeks ago was told it had never sold
-              anything, and went looking for a bug in its invoices.
-
-              `allZero` is the same window with real rows that all total zero,
-              which is also «in this period», not «never». */}
-          <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
-            {t('dashboard.noSalesInPeriod')}
-          </p>
-          <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">
-            {t('dashboard.tryWiderRange')}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onViewFullReport}
-          className="mt-2 text-sm font-medium text-[hsl(var(--color-primary))] hover:underline focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] rounded-md px-2 py-1"
-        >
-          {t('dashboard.createInvoice')}
-        </button>
-      </section>
-    )
-  }
-
   // Determine animation duration based on device and preference
   const animationDuration = isMobile ? 0 : isReducedMotion ? 0 : 200
 
