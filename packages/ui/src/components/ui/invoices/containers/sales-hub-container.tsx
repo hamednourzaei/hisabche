@@ -59,6 +59,7 @@ export function SalesHubContainer() {
 
 function SalesHub() {
   const t = useTranslations('salesHub')
+  const tGlobal = useTranslations()
   const blocked = useMyCapabilities().data?.blockedModules ?? []
   const offered = SALES_HUB_TABS.filter((tab) => !isNavLocked(SALES_HUB_SOURCE[tab], blocked))
   const look = usePageLook('hub:invoices')
@@ -69,12 +70,12 @@ function SalesHub() {
       <RegisterCustomizer
         groups={[
           {
-            title: t('pageLook.hubSections' as any),
+            title: tGlobal('pageLook.hubSections' as any),
             look,
             keepOne: true,
             items: SALES_HUB_TABS.map((tab) => ({
               id: hubLookId(tab, tab),
-              label: t(`salesHub.tabs.${tab}` as any),
+              label: t(`tabs.${tab}` as any),
             })),
           },
         ]}
