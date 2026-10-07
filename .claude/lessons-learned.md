@@ -1208,3 +1208,10 @@ OCR دو مرحله است: `read` هیچ چیزی نمی‌نویسد؛ `confir
 
 شرط ارز در `priceListApplies` را موقتاً برداشتم؛ دقیقاً یک تست قرمز شد و بعد برگرداندم. این تنها راهی
 است که بدانی تست واقعاً همان قاعده را می‌سنجد. برگرداندن با **فایل پشتیبان خودت**، نه `git checkout`.
+
+## 2026-10-07 - Wrench Customizer & next-intl Scoping
+- **Wrench Customizer**: Custom hubs (manual tabs/sections) must explicitly use <RegisterCustomizer> to expose their toggles to the Global Page Customizer. Relying on <PageHub> alone misses customized pages.
+- **next-intl Scoping**: When using a scoped namespace like useTranslations('salesHub'), passing global keys like pageLook.hubSections will fail because they get prefixed with salesHub.. Always instantiate a separate const tGlobal = useTranslations() for global keys when inside a scoped component.
+- **Browser Storage Quota**: Never display 
+avigator.storage.estimate().quota directly to end users of a web app. It returns the OS disk quota allocation for the browser (e.g. 10.7 GB), which looks like a massive resource hog. Display only usage.
+- **Chart Empty States vs. Zero Values**: For line/area trend charts, rendering a flat line at y=0 is usually preferred over replacing the chart with an empty state ("No data"). It provides visual continuity for the user.
