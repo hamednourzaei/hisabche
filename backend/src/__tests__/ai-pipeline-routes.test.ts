@@ -125,7 +125,7 @@ vi.mock('../db', () => {
     const filters: Array<(row: Row) => boolean> = []
     let mode: 'select' | 'insert' | 'update' | 'upsert' = 'select'
     let payload: Row = {}
-    const stamp = () => new Date(Date.UTC(2026, 9, 6, 8, 0, 0, state.clock++)).toISOString()
+    const stamp = () => new Date(Date.now() + state.clock++).toISOString()
     const run = () => {
       if (mode === 'insert') {
         const row: Row = {
@@ -403,7 +403,13 @@ const enable = (autoApproveNonFinancial = false) =>
 
 const start = async (session: string, request: string, dryRun = false) => {
   const response = await call('POST', '/api/ai/pipeline/runs', session, { request, dryRun })
-  return { response, run: (response.json() as { run?: Row }).run as Row }
+  const json = response.json() as any
+  if (!json.run)
+    require('fs').writeFileSync(
+      'C:\\Users\\hamed\\Desktop\\hisabche\\backend-error.log',
+      JSON.stringify(json, null, 2),
+    )
+  return { response, run: json.run as Row }
 }
 /** Approve or reject in THE queue: addressed by the request the run was queued as. */
 const decide = (session: string, run: Row, decision: 'approve' | 'reject') =>
@@ -903,7 +909,7 @@ describe('ONE approval queue for both assistants', () => {
       result: null,
       decided_by: null,
       decided_at: null,
-      created_at: new Date(Date.UTC(2026, 9, 6, 9)).toISOString(),
+      created_at: new Date(Date.now()).toISOString(),
     })
 
     const waiting = await queue(MANAGER)
@@ -931,7 +937,7 @@ describe('ONE approval queue for both assistants', () => {
         result: null,
         decided_by: null,
         decided_at: null,
-        created_at: new Date(Date.UTC(2026, 9, 6, 9)).toISOString(),
+        created_at: new Date(Date.now()).toISOString(),
       },
     ])
     const viaKey = await call(

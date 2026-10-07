@@ -23,7 +23,7 @@ const cacheContent = `
 - \`sitemap.ts\` correctly implements \`hreflang\` alternates, respects \`noindex\` flags, handles API failures gracefully during build, and limits \`lastModified\` dates to actual content changes to preserve crawl budget.
 
 **Status:**
-- Test orchestration script deployed to run Web Typecheck, Mobile Tests, Desktop Tests, Backend Tests and produce verifiable Final Decision documents.
+- test orchestration script deployed. Also fixed a Time Bomb test bug in ai-pipeline-routes.test.ts where mocked AI requests instantly expired due to hardcoded 2026-10-06 dates. to run Web Typecheck, Mobile Tests, Desktop Tests, Backend Tests and produce verifiable Final Decision documents.
 `;
 
 fs.writeFileSync(path.join(sessionDir, '2026-10-07-responsive-seo-cache.md'), cacheContent);
