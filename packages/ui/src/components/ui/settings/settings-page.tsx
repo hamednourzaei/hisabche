@@ -769,7 +769,7 @@ type StorageEstimate =
   | { state: 'unavailable' }
   | { state: 'measured'; usage: number; quota: number | null }
 
-const StorageSection = memo(function StorageSection() {
+export const StorageSection = memo(function StorageSection() {
   const tOriginal = useTranslations()
   const t = (key: string, fallback?: string): string => {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
