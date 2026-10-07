@@ -1,0 +1,5 @@
+feature,subfeature,verified
+Tenancy,Workspace Isolation,PARTIAL
+Sync,Offline Outbox,VERIFIED
+Financial,Ledger Posting,VERIFIED
+Invoices,Creation,VERIFIED

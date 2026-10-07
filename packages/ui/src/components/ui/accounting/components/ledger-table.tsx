@@ -20,7 +20,7 @@
 //
 // 2. NO TABULAR FIGURES.
 //
-//    Proportional digits are different widths, so a right-aligned column of
+//    Proportional digits are different widths, so a end-aligned column of
 //    them does not line up — a 1 is narrower than a 8, and the decimal points
 //    wander. On a ledger that is the single most important typographic
 //    property, and it was a one-class fix nobody had made.
@@ -57,7 +57,7 @@ import { cn } from '../../../../lib/utils'
 export const CELL = 'px-4 py-2.5'
 
 /**
- * `tabular-nums` is the load-bearing class. Without it a right-aligned money
+ * `tabular-nums` is the load-bearing class. Without it a end-aligned money
  * column does not align, because proportional digits have different widths.
  */
 export const NUMERIC = 'text-end tabular-nums'

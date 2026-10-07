@@ -27,9 +27,9 @@ export function Drawer({ t, open, onClose, title, children, width = 'w-[480px]' 
       {/* Panel */}
       <div
         className={cn(
-          'fixed top-0 right-0 z-[var(--z-modal)] h-full',
+          'fixed top-0 end-0 z-[var(--z-modal)] h-full',
           'bg-[hsl(var(--surface-elevated))]',
-          'border-l border-[hsl(var(--border-default))]',
+          'border-s border-[hsl(var(--border-default))]',
           'shadow-[var(--shadow-premium)]',
           'animate-fade-in-up',
           width,

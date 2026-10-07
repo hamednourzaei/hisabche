@@ -1,0 +1,5 @@
+ID,Feature,Behavior,Type,Current Coverage,Why Missing,Priority,Dependency,Expected Evidence
+N-001,Sync/Offline,Optimistic Concurrency Conflict,INTEGRATION,Unit,Need cross-module verification,P0,Backend deployed,Conflict correctly stored and surfaced
+N-002,Tenancy,Cross-workspace access attempt,SECURITY,Integration,No dedicated breach test,P0,None,403 Forbidden with zero data exposure
+N-003,Invoices,Canonical Offline Invoice creation to Sync,E2E,None,Only canonical workflow needs E2E,P1,Backend deployed,Invoice appears in DB post-sync
+N-004,RBAC,Role enforcement on mutations,API,None,Lacking API-level auth checks,P1,None,API responds 403 for unauthorized role

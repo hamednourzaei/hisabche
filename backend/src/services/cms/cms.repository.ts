@@ -83,7 +83,9 @@ export class CmsRepository {
 
   async getPage(id: string): Promise<CmsPageRow> {
     const { data, error } = await this.db.from('cms_pages').select('*').eq('id', id).single()
-    if (error || !data) throw new NotFoundError('CMS_PAGE_NOT_FOUND')
+    if (error && error.code === 'PGRST116') throw new NotFoundError('CMS_PAGE_NOT_FOUND')
+    if (error) throw error
+    if (!data) throw new NotFoundError('CMS_PAGE_NOT_FOUND')
     return data as CmsPageRow
   }
 
@@ -94,7 +96,9 @@ export class CmsRepository {
       .eq('locale', locale)
       .eq('slug', slug)
       .single()
-    if (error || !data) throw new NotFoundError('CMS_PAGE_NOT_FOUND')
+    if (error && error.code === 'PGRST116') throw new NotFoundError('CMS_PAGE_NOT_FOUND')
+    if (error) throw error
+    if (!data) throw new NotFoundError('CMS_PAGE_NOT_FOUND')
     return data as CmsPageRow
   }
 
@@ -111,7 +115,9 @@ export class CmsRepository {
       .eq('id', id)
       .select('*')
       .single()
-    if (error || !page) throw new NotFoundError('CMS_PAGE_NOT_FOUND')
+    if (error && error.code === 'PGRST116') throw new NotFoundError('CMS_PAGE_NOT_FOUND')
+    if (error) throw error
+    if (!page) throw new NotFoundError('CMS_PAGE_NOT_FOUND')
     return page as CmsPageRow
   }
 
@@ -135,7 +141,9 @@ export class CmsRepository {
 
   async getMedia(id: string): Promise<CmsMediaRow> {
     const { data, error } = await this.db.from('cms_media').select('*').eq('id', id).single()
-    if (error || !data) throw new NotFoundError('CMS_MEDIA_NOT_FOUND')
+    if (error && error.code === 'PGRST116') throw new NotFoundError('CMS_MEDIA_NOT_FOUND')
+    if (error) throw error
+    if (!data) throw new NotFoundError('CMS_MEDIA_NOT_FOUND')
     return data as CmsMediaRow
   }
 
@@ -152,7 +160,9 @@ export class CmsRepository {
       .eq('id', id)
       .select('*')
       .single()
-    if (error || !media) throw new NotFoundError('CMS_MEDIA_NOT_FOUND')
+    if (error && error.code === 'PGRST116') throw new NotFoundError('CMS_MEDIA_NOT_FOUND')
+    if (error) throw error
+    if (!media) throw new NotFoundError('CMS_MEDIA_NOT_FOUND')
     return media as CmsMediaRow
   }
 

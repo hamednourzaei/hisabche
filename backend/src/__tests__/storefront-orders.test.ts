@@ -329,6 +329,8 @@ describe('invoicing an order', () => {
 describe('everything under /api/public/ is public by design', () => {
   // The complete list. A new entry here is a decision, reviewed as one.
   const EXPECTED = [
+    'GET /api/public/cms/globals/:locale',
+    'GET /api/public/cms/pages/:locale/:slug',
     'GET /api/public/invoices/:token',
     // The CRM task link shared with a staff member who has no account.
     'GET /api/public/tasks/:token',

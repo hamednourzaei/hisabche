@@ -1,0 +1,3 @@
+test_id,feature,behavior,runner,execution_status,result,quality,evidence
+T-1,Sync/Offline,Codec bytes,vitest,EXECUTED,PASS,HIGH,Repository
+T-2,Sync/Offline,Codec CPU,vitest,EXECUTED,PASS,HIGH,Repository

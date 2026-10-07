@@ -1,0 +1,16 @@
+behavior_id,feature,behavior,layer,evidence,execution_status,confidence
+CRIT-01,"Workspace Tenancy","Cross-tenant API mutation blocked",API/CONTRACT,"cross-tenant-rls-financial-write.test.ts:4",VERIFIED,HIGH
+CRIT-02,"Workspace Tenancy","Direct RLS context write isolation",SECURITY/DATA,"cross-tenant-rls-financial-write.test.ts:11",PARTIAL,MEDIUM
+CRIT-03,"Workspace Tenancy","Client workspace_id manipulation rejected",API/CONTRACT,"active-workspace-breach.test.ts:4",VERIFIED,HIGH
+CRIT-04,"Workspace Tenancy","Zero financial side-effects on denied tenant write",INTEGRATION,"cross-tenant-rls-financial-write.test.ts:18",VERIFIED,HIGH
+CRIT-05,"Sync","Offline invoice creation into outbox queue",INTEGRATION,"offline-invoice-sync.test.ts:4",VERIFIED,HIGH
+CRIT-06,"Sync","Stale version rejected without data loss",INTEGRATION,"offline-invoice-sync.test.ts:4",VERIFIED,HIGH
+CRIT-07,"Sync","Duplicate mutation idempotent retry",INTEGRATION,"offline-invoice-sync.test.ts:19",VERIFIED,HIGH
+CRIT-08,"Financial Ledger","Double-entry debit equals credit invariant",INTEGRATION,"financial-ledger-integrity.test.ts:5",VERIFIED,HIGH
+CRIT-09,"Financial Ledger","Duplicate financial operation idempotency",INTEGRATION,"financial-ledger-integrity.test.ts:11",VERIFIED,HIGH
+CRIT-10,"Financial Ledger","Concurrent invoice finalization single post",SECURITY/DATA,"financial-ledger-integrity.test.ts:17",VERIFIED,HIGH
+CRIT-11,"Financial Ledger","Atomic rollback leaves no partial rows",SECURITY/DATA,"financial-ledger-integrity.test.ts:23",VERIFIED,HIGH
+CRIT-12,"Financial Ledger","Finalized invoice locked against stale edits",SECURITY/DATA,"financial-ledger-integrity.test.ts:29",VERIFIED,HIGH
+CRIT-13,"Financial Ledger","Strict workspace isolation on ledger mutations",SECURITY/DATA,"financial-ledger-integrity.test.ts:35",VERIFIED,HIGH
+CRIT-14,"Database Migrations","Postgres migrations apply cleanly",SECURITY/DATA,"Postgres migration runner",UNKNOWN,LOW
+CRIT-15,"Mobile Build","Hermes mobile engine bundle compilation",INTEGRATION,"hermesc build pipeline",UNKNOWN,LOW

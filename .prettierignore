@@ -1,10 +1,6 @@
-node_modules
-dist
-.next
-.expo
-coverage
-*.min.js
-*.min.css
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
+test-intelligence-results/
+llm-council-results/
+release-readiness-results/
+.claude/
+CLAUDE.md
+*.js

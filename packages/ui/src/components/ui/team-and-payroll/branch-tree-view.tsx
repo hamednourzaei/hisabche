@@ -27,7 +27,7 @@
 // RTL
 //
 // Indentation uses `paddingInlineStart`, not `paddingLeft`. In an RTL layout
-// the tree must indent from the RIGHT, and a left-padded tree reads as a
+// the tree must indent from the RIGHT, and a start-padded tree reads as a
 // column of misaligned rows rather than a hierarchy.
 // ============================================
 

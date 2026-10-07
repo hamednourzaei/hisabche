@@ -601,6 +601,7 @@ export async function buildServer(): Promise<typeof server> {
       // Which business the request is for. The client sends it on every
       // request; without it here the browser blocks them all (BUG-006).
       'x-workspace-id',
+      'etag',
     ],
     // ✅ FIX (کندی): بدون maxAge مرورگر برای هر درخواست یک OPTIONS جداگانه
     // می‌فرستد (در لاگ‌ها به‌وضوح دیده می‌شود). خود OPTIONS سریع است، اما

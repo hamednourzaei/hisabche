@@ -344,7 +344,7 @@ const LedgerItem = React.forwardRef<
           </span>
         )}
 
-        {/* Shortcut — right-aligned */}
+        {/* Shortcut — end-aligned */}
         {shortcut && (
           <span
             className={cn(

@@ -135,6 +135,12 @@ const config: Config = {
         'heading-3': 'var(--font-heading-3)',
         body: 'var(--font-body)',
         'body-large': 'var(--font-body-large)',
+        xl: 'clamp(1.125rem, 2.5vw, 1.25rem)',
+        '2xl': 'clamp(1.25rem, 3vw, 1.5rem)',
+        '3xl': 'clamp(1.5rem, 4vw, 1.875rem)',
+        '4xl': 'clamp(1.875rem, 5vw, 2.25rem)',
+        '5xl': 'clamp(2rem, 6vw, 3rem)',
+        '6xl': 'clamp(2.25rem, 7vw, 3.75rem)',
       },
 
       lineHeight: {

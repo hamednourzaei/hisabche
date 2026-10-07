@@ -192,7 +192,7 @@ describe('the funnel card layout', () => {
   it('⚠️ the bar is laid out with logical properties, not left/right', () => {
     // RTL: a bar pinned to `left` grows away from the label in Persian.
     expect(funnel).toContain('inset-y-0 start-0')
-    expect(funnel).not.toMatch(/\binset-y-0 left-0\b/)
+    expect(funnel).not.toMatch(/\binset-y-0 start-0\b/)
   })
 
   it('hovering is reachable from the keyboard too', () => {

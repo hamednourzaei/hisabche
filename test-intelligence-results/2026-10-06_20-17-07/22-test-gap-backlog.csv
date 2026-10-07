@@ -1,0 +1,2 @@
+TEST ID,FEATURE,BEHAVIOR,LAYER,PRIORITY
+G-001,Inventory,Cost valuation concurrency,INTEGRATION,P1

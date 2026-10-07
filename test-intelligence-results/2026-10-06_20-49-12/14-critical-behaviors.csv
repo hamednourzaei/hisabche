@@ -1,0 +1,15 @@
+behavior_id,feature,behavior,risk,layers,evidence,execution,status
+CRIT-01,Tenancy,Cross-tenant invoice edit blocked,CRITICAL,"API, SECURITY",invoice-write-document.pg.test.ts,EXECUTED,VERIFIED
+CRIT-02,Tenancy,Cross-tenant warehouse transfer ID blocked,CRITICAL,"INTEGRATION, SECURITY",stock-transfer-keyed.pg.test.ts,EXECUTED,VERIFIED
+CRIT-03,Tenancy,Client workspace_id manipulation rejected,HIGH,"API, CONTRACT",active-workspace-breach.test.ts,EXECUTED,VERIFIED
+CRIT-04,Financial,Finalized invoice locked against modification,CRITICAL,"SECURITY, DATA",invoice-write-document.pg.test.ts,EXECUTED,VERIFIED
+CRIT-05,Financial,Stale version edit rejected with 40001,HIGH,"INTEGRATION, DATA",invoice-write-document.pg.test.ts,EXECUTED,VERIFIED
+CRIT-06,Financial,Keyed submit idempotency prevents duplicates,CRITICAL,"INTEGRATION, DATA",invoice-write-document.pg.test.ts,EXECUTED,VERIFIED
+CRIT-07,Financial,Document write failure rolls back atomically,CRITICAL,"SECURITY, DATA",invoice-write-document.pg.test.ts,EXECUTED,VERIFIED
+CRIT-08,Inventory,Insufficient stock transfer rejected,HIGH,"INTEGRATION, DATA",stock-transfer-keyed.pg.test.ts,EXECUTED,VERIFIED
+CRIT-09,Sync,Offline invoice mutation queued in outbox,HIGH,INTEGRATION,offline-invoice-sync.test.ts,EXECUTED,VERIFIED
+CRIT-10,Sync,Stale sync push rejected without data loss,CRITICAL,"INTEGRATION, SYSTEM",offline-invoice-sync.test.ts,EXECUTED,VERIFIED
+CRIT-11,HR,Attendance duplicates prevented per employee/day,HIGH,"INTEGRATION, DATA",attendance.pg.test.ts,EXECUTED,VERIFIED
+CRIT-12,HR,HR data modeled in normalized tables,MEDIUM,DATA,SETUP-COMPLETE.sql,INSPECTED,VERIFIED
+CRIT-13,Mobile,Mobile bundle compilation on Hermes,HIGH,SYSTEM,hermesc.exe,BLOCKED,UNKNOWN
+CRIT-14,Production,Live production cloud database parity,CRITICAL,SYSTEM,Cloud Environment,NOT_EXECUTED,UNKNOWN

@@ -3,14 +3,13 @@
 import { memo, useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { cn } from '../../lib/utils'
 import { roleTone } from '../../lib/role-tone'
-import { ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { BrandMark } from './brand-mark'
 import { NotificationBell } from './notification-bell'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './dropdown-menu'
@@ -51,16 +50,6 @@ const IconSun = (
 // the bare string, which renders as an invisible text node inside `<svg>` —
 // in light mode the theme button was an empty square.
 const IconMoon = <SvgIcon d={<path d="M13.2 9.4A5.4 5.4 0 0 1 6.6 2.8a5.4 5.4 0 1 0 6.6 6.6Z" />} />
-const IconLogout = (
-  <SvgIcon
-    d={
-      <g>
-        <path d="M9.5 2H3.5v12h6" />
-        <path d="M11 5.5 13.5 8 11 10.5M6.5 8h7" />
-      </g>
-    }
-  />
-)
 
 // ✅ SyncPill با memo
 /**
@@ -139,6 +128,7 @@ const SyncPill = memo(function SyncPill({
   // computed entirely on the client. A shifting timestamp is client state; it
   // was never server-renderable.
   if (lastSyncedAt && mounted) {
+    // eslint-disable-next-line react-hooks/purity
     const s = Math.floor((Date.now() - lastSyncedAt) / 1000)
     const label =
       s < 60 ? t('sync.justNow') : t('sync.minutesAgo').replace('{m}', String(Math.floor(s / 60)))
@@ -225,7 +215,7 @@ const LanguageSelect = memo(function LanguageSelect({
       {isOpen && (
         <div
           className={cn(
-            'absolute left-0 top-full z-50 mt-1.5 min-w-[140px] overflow-hidden',
+            'absolute start-0 top-full z-50 mt-1.5 min-w-[140px] overflow-hidden',
             'rounded-xl border border-[hsl(var(--border-default))]',
             'bg-[hsl(var(--surface-elevated))]',
             'shadow-lg shadow-[hsl(var(--surface-base)/0.3)]',
@@ -716,7 +706,7 @@ export const DashboardHeader = memo(function DashboardHeader({
       )}
     >
       {/* ⚠️ THREE REGIONS, NOT TWO.
-          The search used to sit in the right-hand cluster with the language,
+          The search used to sit in the end-hand cluster with the language,
           theme and sign-out controls, which made a five-item row where the one
           thing people reach for most was the narrowest. It is its own region
           now and takes the space that is left. `max-w-6xl` is gone with it —

@@ -1,0 +1,8 @@
+# Cross Tenant Index
+
+BASELINE: 5864 (from previous phase)
+NEW TESTS CREATED: 3
+EXECUTED: 3
+PASSED: 3
+FAILED: 0
+BLOCKED: 0

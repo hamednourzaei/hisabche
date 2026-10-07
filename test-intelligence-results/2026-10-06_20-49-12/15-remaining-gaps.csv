@@ -1,0 +1,6 @@
+gap_id,domain,description,priority,recommendation
+GAP-01,Mobile,Hermesc.exe execution failure on Windows,P1,Resolve Windows Hermes toolchain without upgrading Expo/RN
+GAP-02,Design Tokens,CSS formatting string mismatch in parity.test.ts,P2,Normalize decimal precision in test assertion
+GAP-03,Admin UI,CMS components physical margin/padding classes,P3,Replace mr-2 with me-2 in CMS client components
+GAP-04,Backend Test,MCP route test expects trailing comma in string,P3,Adjust test regex to match formatted TypeScript code
+GAP-05,Production,Production cloud database deployment parity,P0,Execute verified migrations against cloud Supabase

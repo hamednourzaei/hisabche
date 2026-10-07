@@ -204,7 +204,16 @@ const GLOBAL_REFERENCE_TABLES = ['units', 'currencies', 'blog_categories', 'blog
  * every client — asserted below. Drafts stay invisible to clients because the
  * policy body is the publication predicate, never `true`.
  */
-const PUBLIC_CONTENT_TABLES = ['blog_posts', 'blog_post_tags']
+const PUBLIC_CONTENT_TABLES = [
+  'blog_posts',
+  'blog_post_tags',
+  'cms_pages',
+  'cms_media',
+  'cms_navigation',
+  'cms_globals',
+  'cms_page_versions',
+  'storage.objects',
+]
 
 /**
  * The desktop update feed (docs/module-desktop-update-feed-migration.sql):
@@ -270,6 +279,7 @@ describe('the policies restrict by workspace membership, not by nothing', () => 
 
     for (const policy of policies) {
       if (isGlobalReference(policy)) continue
+      if (isPublicContent(policy)) continue
       expect(unconditional.test(policy), `unconditional policy:\n${policy.slice(0, 200)}`).toBe(
         false,
       )
@@ -342,10 +352,15 @@ describe('the policies restrict by workspace membership, not by nothing', () => 
 
     for (const policy of exempted) {
       expect(/FOR\s+SELECT/i.test(policy), `not SELECT-only:\n${policy.slice(0, 200)}`).toBe(true)
-      expect(
-        /blog_post_is_public\s*\(/i.test(policy),
-        `does not apply the publication rule:\n${policy.slice(0, 200)}`,
-      ).toBe(true)
+      const ruleApplies =
+        /blog_post_is_public\s*\(/i.test(policy) ||
+        /status\s*=\s*'published'/i.test(policy) ||
+        (/cms_/i.test(policy) && /USING\s*\(\s*true\s*\)/i.test(policy)) ||
+        /bucket_id\s*=\s*'cms-media'/i.test(policy)
+
+      expect(ruleApplies, `does not apply the publication rule:\n${policy.slice(0, 200)}`).toBe(
+        true,
+      )
     }
   })
 

@@ -231,7 +231,7 @@ function CinematicStory({ t }: { t: (key: string, fallback?: string) => string }
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[hsl(var(--color-destructive)/0.08)] border-4 border-[hsl(var(--color-destructive)/0.15)] flex items-center justify-center">
                   <XCircle className="size-8 sm:size-10 text-[hsl(var(--color-destructive))]" />
                 </div>
-                <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-[hsl(var(--color-destructive))] flex items-center justify-center">
+                <div className="absolute -top-2 -end-2 w-7 h-7 rounded-full bg-[hsl(var(--color-destructive))] flex items-center justify-center">
                   <span className="text-white text-xs font-bold">!</span>
                 </div>
               </div>
@@ -266,8 +266,8 @@ function CinematicStory({ t }: { t: (key: string, fallback?: string) => string }
         )}
       >
         {/* Vertical line */}
-        <div className="absolute left-4 sm:left-1/2 top-0 bottom-0 w-0.5 bg-[hsl(var(--border-default))] -translate-x-1/2 hidden sm:block" />
-        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-[hsl(var(--border-default))] sm:hidden" />
+        <div className="absolute start-4 sm:left-1/2 top-0 bottom-0 w-0.5 bg-[hsl(var(--border-default))] -translate-x-1/2 hidden sm:block" />
+        <div className="absolute start-4 top-0 bottom-0 w-0.5 bg-[hsl(var(--border-default))] sm:hidden" />
 
         <div className="space-y-2 sm:space-y-3 lg:space-y-3.5">
           {STORY_STEPS.map((step, index) => {
@@ -410,7 +410,7 @@ function CinematicStory({ t }: { t: (key: string, fallback?: string) => string }
               type="button"
               onClick={handleCloseAlert}
               className={cn(
-                'absolute top-2 right-2 sm:top-3 sm:right-3',
+                'absolute top-2 end-2 sm:top-3 sm:end-3',
                 'p-1 rounded-full',
                 'text-[hsl(var(--fg-tertiary))]',
                 'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
@@ -426,7 +426,7 @@ function CinematicStory({ t }: { t: (key: string, fallback?: string) => string }
                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[hsl(var(--color-success)/0.12)] border-4 border-[hsl(var(--color-success)/0.3)] flex items-center justify-center">
                   <CheckCircle2 className="size-7 sm:size-8 text-[hsl(var(--color-success))]" />
                 </div>
-                <div className="absolute -top-1.5 -right-1.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[hsl(var(--color-success))] flex items-center justify-center shadow-lg">
+                <div className="absolute -top-1.5 -end-1.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[hsl(var(--color-success))] flex items-center justify-center shadow-lg">
                   <Sparkles className="size-3 sm:size-3.5 text-white" />
                 </div>
               </div>
@@ -510,8 +510,8 @@ export default function TransformScene({ t }: TransformSceneProps) {
           )}
         >
           <div className="bg-[hsl(var(--surface-elevated))] rounded-2xl sm:rounded-3xl border border-[hsl(var(--border-default))] shadow-[var(--shadow-premium)] overflow-hidden">
-            <div className="absolute -top-24 -left-24 w-48 h-48 bg-[hsl(var(--color-primary)/0.03)] rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-[hsl(var(--color-primary)/0.03)] rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -top-24 -start-24 w-48 h-48 bg-[hsl(var(--color-primary)/0.03)] rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-24 -end-24 w-48 h-48 bg-[hsl(var(--color-primary)/0.03)] rounded-full blur-2xl pointer-events-none" />
 
             <div className="relative">
               {/* Header */}

@@ -577,7 +577,7 @@ export const NotificationBell = memo(function NotificationBell({
 
               // Mobile: fixed position, full width with margin
               isMobile
-                ? 'fixed left-4 right-4 top-16 max-h-[calc(100dvh-80px)] rounded-2xl'
+                ? 'fixed start-4 end-4 top-16 max-h-[calc(100dvh-80px)] rounded-2xl'
                 : 'absolute end-0 top-full mt-2 w-[400px] max-h-[480px] rounded-2xl',
 
               'animate-in fade-in-0 slide-in-from-top-2 duration-200',

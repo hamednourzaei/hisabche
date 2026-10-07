@@ -1,0 +1,2 @@
+test_id,runner,command,discovered,executed,duration,result,failure_class,evidence
+TH-TEN-001,vitest,pnpm --filter backend test -- active-workspace-breach.test.ts,YES,YES,3ms,PASS,NONE,Runner log

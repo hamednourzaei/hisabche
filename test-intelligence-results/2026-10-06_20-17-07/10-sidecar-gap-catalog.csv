@@ -1,0 +1,2 @@
+test_id,feature,behavior,missing_failure_dimension,recommended_sidecar_layer
+T-OLD-1,Inventory,Decrement,Negative boundary,UNIT

@@ -1,0 +1,4 @@
+test_id,feature,layer,file,line,discovered,executed,result,duration,failure_class,evidence
+TH-SEC-001,Workspace Tenancy,API/CONTRACT,backend/src/__tests__/cross-tenant-rls-financial-write.test.ts,4,YES,YES,PASS,1ms,NONE,Runner log
+TH-SEC-002,Workspace Tenancy,SECURITY/DATA,backend/src/__tests__/cross-tenant-rls-financial-write.test.ts,11,YES,YES,PASS,1ms,NONE,Runner log
+TH-SEC-003,Workspace Tenancy,INTEGRATION,backend/src/__tests__/cross-tenant-rls-financial-write.test.ts,18,YES,YES,PASS,1ms,NONE,Runner log

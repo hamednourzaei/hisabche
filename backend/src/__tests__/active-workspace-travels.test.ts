@@ -134,7 +134,7 @@ describe('the server tells ITSELF which business, too', () => {
       "...(workspaceId ? { 'x-workspace-id': workspaceId } : {})",
     )
     const approve = routes.slice(routes.indexOf("'/api/ai-requests/:id/approve'"))
-    expect(approve).toContain('request.tenancy.workspaceId, )')
+    expect(approve).toContain('request.tenancy.workspaceId)')
   })
 })
 

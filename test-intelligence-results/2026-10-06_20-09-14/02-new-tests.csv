@@ -1,0 +1,2 @@
+test_id,feature,behavior,layer,file,line,created,runner_discovered,executed,result,priority
+TH-TEN-001,Workspace Tenancy,Cross-tenant breach attempt,SECURITY/DATA/PERFORMANCE,backend/src/__tests__/active-workspace-breach.test.ts,4,YES,YES,YES,PASS,P0

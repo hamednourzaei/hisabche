@@ -1,0 +1,2 @@
+original_test_id,original_file,original_line,feature,behavior,original_layer,sidecar_status,sidecar_test_id,sidecar_file,sidecar_line,sidecar_layer,sidecar_behavior,comprehensive_status,comprehensive_test_id,comprehensive_file,comprehensive_line,comprehensive_layer,comprehensive_behavior,evidence
+T-AW-1,backend/src/__tests__/active-workspace.test.ts,10,Workspace Tenancy,Workspace assignment,INTEGRATION,CREATED_AND_EXECUTED,TH-TEN-001,backend/src/__tests__/active-workspace-breach.test.ts,4,SECURITY/DATA/PERFORMANCE,Cross-tenant breach attempt,NOT_APPLICABLE,,,,,,Runner log

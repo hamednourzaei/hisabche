@@ -502,6 +502,13 @@ const REGISTER: Capability[] = [
     note: 'No importer. Webhooks are delivered by services/developer.',
     status: 'WRITTEN_NOT_WIRED',
   },
+  {
+    id: 'Attendance domain',
+    file: 'services/attendance/attendance.domain.ts',
+    symbols: [],
+    note: NOTHING_REACHES_IT,
+    status: 'WRITTEN_NOT_WIRED',
+  },
 ]
 
 describe('the register of written-but-unwired capabilities is honest', () => {

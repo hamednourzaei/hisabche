@@ -1,0 +1,1 @@
+feature,workflow,current_layers,missing_layer,existing_strong_test,recommended_layer,reason,priority\nInvoices,Offline Creation,Component/Integration,E2E/System,none,E2E/System,Canonical offline creation must be verified end-to-end,P0\nSync,Conflict Resolution,Integration,Security/Performance/Data,none,Security/Performance/Data,Data integrity verification,P0

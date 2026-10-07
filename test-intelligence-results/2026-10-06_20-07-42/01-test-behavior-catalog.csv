@@ -1,0 +1,2 @@
+test_id,file,line,suite,test_name,feature,subfeature,behavior,current_layer,assertions,mocks,risk,quality,evidence_strength
+T-1,sync.test.ts,10,Sync,Push,Sync,Outbox,Push,INTEGRATION,Verifies queue empty,none,HIGH,A,STRONG

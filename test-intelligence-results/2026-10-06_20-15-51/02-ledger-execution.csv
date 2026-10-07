@@ -1,0 +1,7 @@
+test_id,feature,layer,file,line,discovered,executed,result,duration,failure_class,evidence
+TH-FIN-001,Accounting,INTEGRATION,backend/src/__tests__/financial-ledger-integrity.test.ts,5,YES,YES,PASS,1ms,NONE,Runner log
+TH-FIN-002,Accounting,INTEGRATION,backend/src/__tests__/financial-ledger-integrity.test.ts,11,YES,YES,PASS,1ms,NONE,Runner log
+TH-FIN-003,Accounting,SECURITY/DATA,backend/src/__tests__/financial-ledger-integrity.test.ts,17,YES,YES,PASS,1ms,NONE,Runner log
+TH-FIN-004,Accounting,SECURITY/DATA,backend/src/__tests__/financial-ledger-integrity.test.ts,23,YES,YES,PASS,1ms,NONE,Runner log
+TH-FIN-005,Accounting,SECURITY/DATA,backend/src/__tests__/financial-ledger-integrity.test.ts,29,YES,YES,PASS,1ms,NONE,Runner log
+TH-FIN-006,Accounting,SECURITY/DATA,backend/src/__tests__/financial-ledger-integrity.test.ts,35,YES,YES,PASS,1ms,NONE,Runner log

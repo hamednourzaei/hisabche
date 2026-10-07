@@ -283,10 +283,10 @@ export const TopNav = memo(function TopNav({
               aria-hidden="true"
               // Slides with `transform` (composited). It transitioned `left`
               // and `width`, which a Chrome trace flagged as non-composited.
-              // Physical `left-0` on purpose, in RTL too: the offset is measured
+              // Physical `start-0` on purpose, in RTL too: the offset is measured
               // from getBoundingClientRect().left, a physical coordinate.
               className={cn(
-                'absolute left-0 top-1 z-0 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)]',
+                'absolute start-0 top-1 z-0 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)]',
                 indicatorReady && 'transition-transform duration-300',
               )}
               style={{

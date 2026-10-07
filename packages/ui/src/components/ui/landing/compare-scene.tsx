@@ -3,7 +3,7 @@
 // "From scattered methods to one real system": the old way of keeping books
 // beside what the product does instead. SERVER COMPONENT — never hydrated.
 //
-// No competitor is named, and every right-hand cell is a shipped capability
+// No competitor is named, and every end-hand cell is a shipped capability
 // (connected posting, offline apps, role permissions, audit trail).
 // Rendered as a two-column grid, not a <table>: it must fit a 360px phone
 // without scrolling sideways (landing-i18n-keys.test.ts, mobile-first guard).

@@ -37,7 +37,7 @@ const data = {
 }
 
 describe('receipt HTML', () => {
-  it('is sized for the paper and right-to-left', () => {
+  it('is sized for the paper and end-to-left', () => {
     const html = renderReceiptHtml(data, labels, { widthMm: 80, direction: 'rtl', lang: 'fa' })
     expect(html).toContain('@page { size: 80mm auto; margin: 0; }')
     expect(html).toContain('dir="rtl"')
