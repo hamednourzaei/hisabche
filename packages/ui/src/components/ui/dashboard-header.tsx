@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './dropdown-menu'
+import { GlobalPageCustomizer } from './global-page-customizer'
 import { useTranslations } from 'next-intl'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -781,6 +782,7 @@ export const DashboardHeader = memo(function DashboardHeader({
 
         {/* ── Controls ── */}
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+          <GlobalPageCustomizer />
           <LanguageSelect currentLang={currentLang} onChange={onToggleLang} />
           <button
             type="button"
