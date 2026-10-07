@@ -22,6 +22,9 @@ import { useTranslations } from 'next-intl'
 import { ClipboardCheck, ListChecks } from 'lucide-react'
 
 import { HubTabs, useHubTab } from '../../hub-tabs'
+import { usePageLook } from '../../../../lib/page-look'
+import { RegisterCustomizer } from '../../register-customizer'
+import { hubLookId } from '../../page-hub'
 import { ApprovalsContainer } from './approvals-container'
 
 const WorkflowTemplatesContainer = lazy(() =>
@@ -41,10 +44,24 @@ export function ApprovalsHubContainer() {
 
 function ApprovalsHub() {
   const t = useTranslations()
+  const look = usePageLook('hub:approvals')
   const [active, select] = useHubTab(APPROVALS_HUB_TABS)
 
   return (
-    <div className="space-y-4">
+    <div className="relative space-y-4">
+      <RegisterCustomizer
+        groups={[
+          {
+            title: t('pageLook.hubSections' as any),
+            look,
+            keepOne: true,
+            items: APPROVALS_HUB_TABS.map((tab) => ({
+              id: hubLookId(tab, tab),
+              label: t(`approvalsHub.tabs.${tab}` as any),
+            })),
+          },
+        ]}
+      />
       <HubTabs
         label={t('approvalsHub.label')}
         items={APPROVALS_HUB_TABS.map((tab) => ({

@@ -44,6 +44,9 @@ import { useDateFormat } from '../../../../hooks/use-date-format'
 import { CapabilityHeader, CapabilityPage, Panel, Stat } from '../../capability/capability-kit'
 import { Skeleton } from '../../skeleton'
 import { HubTabs } from '../../hub-tabs'
+import { usePageLook } from '../../../../lib/page-look'
+import { RegisterCustomizer } from '../../register-customizer'
+import { hubLookId } from '../../page-hub'
 import { SegmentedControl } from '../../segmented-control'
 import { WorkspaceContainer } from '../../workspace/containers/workspace-container'
 import { PermissionsContainer } from '../../permissions/containers/permissions-container'
@@ -96,6 +99,8 @@ export const GovernanceHubContainer = memo(function GovernanceHubContainer() {
     [pathname, router, searchParams],
   )
 
+  const look = usePageLook('hub:governance')
+
   return (
     <CapabilityPage>
       <CapabilityHeader
@@ -106,7 +111,20 @@ export const GovernanceHubContainer = memo(function GovernanceHubContainer() {
         )}
       />
 
-      <div className="space-y-3">
+      <div className="relative space-y-3">
+        <RegisterCustomizer
+          groups={[
+            {
+              title: t('pageLook.hubSections' as any),
+              look,
+              keepOne: true,
+              items: TABS.map((tab) => ({
+                id: hubLookId(governanceGroupOf(tab), tab),
+                label: t(`governance.tab_${tab}` as any),
+              })),
+            },
+          ]}
+        />
         <HubTabs
           label={t('governance.hub_title', 'حاکمیت سازمان')}
           items={GOVERNANCE_GROUP_ORDER.map((id) => ({

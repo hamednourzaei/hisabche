@@ -24,6 +24,9 @@ import { useTranslations } from 'next-intl'
 import { Megaphone, Users } from 'lucide-react'
 import { useMyCapabilities } from '@hisabche/api'
 import { isNavLocked } from '@hisabche/ui-contract'
+import { usePageLook } from '../../../../lib/page-look'
+import { RegisterCustomizer } from '../../register-customizer'
+import { hubLookId } from '../../page-hub'
 
 import { HubTabs, useHubSection, useHubTab } from '../../hub-tabs'
 import { SegmentedControl } from '../../segmented-control'
@@ -64,16 +67,48 @@ export function CustomersHubContainer() {
 function CustomersHub() {
   const t = useTranslations()
   const blocked = useMyCapabilities().data?.blockedModules ?? []
-  const sections = OUTREACH_SECTIONS.filter(
+  const allowedSections = OUTREACH_SECTIONS.filter(
     (section) => !isNavLocked(OUTREACH_SOURCE[section], blocked),
   )
-  // A tab with nothing this person may open is not a tab.
-  const offered = CUSTOMERS_HUB_TABS.filter((tab) => tab !== 'outreach' || sections.length > 0)
+  const allowedTabs = CUSTOMERS_HUB_TABS.filter(
+    (tab) => tab !== 'outreach' || allowedSections.length > 0,
+  )
+
+  const look = usePageLook('hub:customers')
+
+  const sections = allowedSections.filter((sec) => look.shows(hubLookId('outreach', sec)))
+  const offered = allowedTabs.filter((tab) =>
+    tab === 'customers' ? look.shows(hubLookId('customers', 'customers')) : sections.length > 0,
+  )
+
   const [active, select] = useHubTab(offered)
   const [section, selectSection] = useHubSection(sections)
 
   return (
-    <div className="space-y-4">
+    <div className="relative space-y-4">
+      <RegisterCustomizer
+        groups={[
+          {
+            title: t('pageLook.hubSections' as any),
+            look,
+            keepOne: true,
+            items: [
+              ...(allowedTabs.includes('customers')
+                ? [
+                    {
+                      id: hubLookId('customers', 'customers'),
+                      label: t('customersHub.tabs.customers'),
+                    },
+                  ]
+                : []),
+              ...allowedSections.map((sec) => ({
+                id: hubLookId('outreach', sec),
+                label: t(`customersHub.sections.${sec}`),
+              })),
+            ],
+          },
+        ]}
+      />
       <HubTabs
         label={t('customersHub.label')}
         items={offered.map((tab) => ({

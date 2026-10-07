@@ -45,6 +45,9 @@ import { ProductListContainer } from '../../products/containers/product-list-con
 import { warehouseContainer } from './Warehouse-container'
 import { useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { HubTabs, useHubSection, useHubTab } from '../../hub-tabs'
+import { usePageLook } from '../../../../lib/page-look'
+import { RegisterCustomizer } from '../../register-customizer'
+import { hubLookId } from '../../page-hub'
 import { SegmentedControl } from '../../segmented-control'
 
 // «پیشنهاد سفارش» and «کالای راکد» (were on /operations): the same products.
@@ -136,11 +139,20 @@ export function WarehouseTabsContainer() {
 function WarehouseHub() {
   const t = useTranslations()
   const blocked = useMyCapabilities().data?.blockedModules ?? []
-  const offered = WAREHOUSE_HUB_TABS.filter(
+
+  const allowedTabs = WAREHOUSE_HUB_TABS.filter(
     (tab) => !isNavLocked(WAREHOUSE_HUB_SOURCE[tab], blocked),
   )
+  const look = usePageLook('hub:warehouse')
+
+  const offeredStockSections = STOCK_SECTIONS.filter((sec) => look.shows(hubLookId('stock', sec)))
+  const offered = allowedTabs.filter((tab) => {
+    if (tab === 'expiry') return look.shows(hubLookId('expiry', 'expiry'))
+    return offeredStockSections.length > 0
+  })
+
   const [active, select] = useHubTab(offered)
-  const [section, selectSection] = useHubSection(STOCK_SECTIONS, STOCK_SECTION_CLEARS)
+  const [section, selectSection] = useHubSection(offeredStockSections, STOCK_SECTION_CLEARS)
 
   // The catalogue's old address, `?tab=products`, is a section now.
   const params = useSearchParams()
@@ -151,7 +163,27 @@ function WarehouseHub() {
   }, [oldCatalogueAddress, localeReplace])
 
   return (
-    <div className="space-y-4">
+    <div className="relative space-y-4">
+      <RegisterCustomizer
+        groups={[
+          {
+            title: t('pageLook.hubSections' as any),
+            look,
+            keepOne: true,
+            items: [
+              ...(allowedTabs.includes('expiry')
+                ? [{ id: hubLookId('expiry', 'expiry'), label: t('warehouseHub.tabs.expiry') }]
+                : []),
+              ...(allowedTabs.includes('stock')
+                ? STOCK_SECTIONS.map((sec) => ({
+                    id: hubLookId('stock', sec),
+                    label: t(`warehouseHub.sections.${sec}`),
+                  }))
+                : []),
+            ],
+          },
+        ]}
+      />
       <HubTabs
         label={t('warehouseHub.label')}
         items={offered.map((tab) => ({

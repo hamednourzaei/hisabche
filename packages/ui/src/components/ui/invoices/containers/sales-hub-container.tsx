@@ -30,6 +30,9 @@ import { useMyCapabilities } from '@hisabche/api'
 import { isNavLocked } from '@hisabche/ui-contract'
 
 import { HubTabs, useHubTab } from '../../hub-tabs'
+import { usePageLook } from '../../../../lib/page-look'
+import { RegisterCustomizer } from '../../register-customizer'
+import { hubLookId } from '../../page-hub'
 import { InvoicesContainer } from './invoices-container'
 
 const PromotionsContainer = lazy(() =>
@@ -58,10 +61,24 @@ function SalesHub() {
   const t = useTranslations('salesHub')
   const blocked = useMyCapabilities().data?.blockedModules ?? []
   const offered = SALES_HUB_TABS.filter((tab) => !isNavLocked(SALES_HUB_SOURCE[tab], blocked))
+  const look = usePageLook('hub:invoices')
   const [active, select] = useHubTab(offered)
 
   return (
-    <div className="space-y-4">
+    <div className="relative space-y-4">
+      <RegisterCustomizer
+        groups={[
+          {
+            title: t('pageLook.hubSections' as any),
+            look,
+            keepOne: true,
+            items: SALES_HUB_TABS.map((tab) => ({
+              id: hubLookId(tab, tab),
+              label: t(`salesHub.tabs.${tab}` as any),
+            })),
+          },
+        ]}
+      />
       <HubTabs
         label={t('label')}
         items={offered.map((tab) => ({ id: tab, label: t(`tabs.${tab}`), icon: TAB_ICON[tab] }))}

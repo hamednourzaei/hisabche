@@ -102,6 +102,7 @@ export function PageHub({ label, sectionsLabel, loadingLabel, tabs, lookId }: Pa
         <RegisterCustomizer
           groups={[
             {
+              title: t('pageLook.hubSections' as any),
               look,
               keepOne: true,
               items: allowed.flatMap((tab) =>
