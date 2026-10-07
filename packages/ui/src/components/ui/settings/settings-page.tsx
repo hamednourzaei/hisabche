@@ -832,12 +832,7 @@ const StorageSection = memo(function StorageSection() {
       ? t('settings.storageMeasuring')
       : estimate.state === 'unavailable'
         ? t('settings.storageUnavailable')
-        : estimate.quota !== null
-          ? tOriginal('settings.storageOfQuota', {
-              used: formatBytes(estimate.usage, locale),
-              quota: formatBytes(estimate.quota, locale),
-            })
-          : formatBytes(estimate.usage, locale)
+        : formatBytes(estimate.usage, locale)
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
