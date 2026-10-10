@@ -153,13 +153,16 @@ describe('no metric nobody measured', () => {
     },
   )
 
-  it('the hero shows facts about the software instead', () => {
-    const hero = scenes.find((s) => s.name === 'cinematic-hero.tsx')!.source
-    // Each of these is checkable inside the product rather than counted.
-    expect(hero).toContain('landing.factOffline')
-    expect(hero).toContain('landing.factLedger')
+  it('the hero states the product and counts nothing', () => {
+    const hero = readFileSync(join(LANDING, 'journey', 'journey-hero.tsx'), 'utf8')
+    // The headline says what the software is; no customer count, no rating.
+    expect(hero).toContain('landing.headline')
     expect(hero).not.toContain('landing.statRating')
     expect(hero).not.toContain('landing.statStores')
+    // The invoice in the picture is marked as a sample, and its one figure is
+    // the catalogue's own sample amount.
+    expect(hero).toContain("sample: t('landing.visual.example')")
+    expect(hero).toContain('amount: formatDemoAmount(saleTotal(), locale),')
   })
 
   it('the trust bar says what it is BUILT for, not who trusts it', () => {

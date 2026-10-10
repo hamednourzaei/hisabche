@@ -1351,7 +1351,67 @@
         }
       }
     },
-    "navDashboard": "Dashboard"
+    "navDashboard": "Dashboard",
+    "transformAuto": "Auto",
+    "transformStatusDone": "Done",
+    "transformStatusRunning": "Processing",
+    "transformStatusAuto": "Auto-matched",
+    "transformClose": "Close",
+    "transformCompleteTitle": "Balance Sheet Balanced",
+    "transformCompleteDesc": "Double-entry accounting record posted without error.",
+    "transformBadge1": "Cloud Processing",
+    "transformBadge2": "No Discrepancy",
+    "transformStartNow": "Start Now",
+    "journey": {
+      "label": "The path of one invoice, from print to report",
+      "end": "Start",
+      "skip": "Skip the story",
+      "ready": "Your automation is ready",
+      "readySub": "You recorded it once; payment, till, stock, ledger and report updated themselves. Start now.",
+      "printing": "A sale is recorded and its invoice prints. Scroll down and see where it goes.",
+      "recorded": "Recorded",
+      "say": {
+        "pay": "Cash, credit or part of it — pick one and the customer balance updates itself.",
+        "cash": "The money is in the till now.",
+        "stock": "Stock went down with this same sale.",
+        "post": "The double-entry voucher posted itself.",
+        "report": "Today's report is ready from these same records."
+      },
+      "counter": "Stop {current} of {total}",
+      "summary": "Text summary of the path of one sample invoice",
+      "currency": {
+        "toman": "toman",
+        "afghani": "AFN"
+      },
+      "screen": {
+        "money": "{amount} {unit}",
+        "change": "{before} → {after}",
+        "invoice": "Invoice {id}",
+        "waiting": "Waiting for the invoice",
+        "total": "Invoice total",
+        "paid": "Paid",
+        "remaining": "Remaining",
+        "customerBalance": "Customer balance",
+        "received": "Cash received",
+        "drawerBefore": "Till, before the sale",
+        "drawerAfter": "Till, now",
+        "item": {
+          "first": "Tea, carton",
+          "second": "Sugar, sack"
+        },
+        "debit": "Debit",
+        "credit": "Credit",
+        "account": {
+          "cash": "Cash",
+          "receivable": "Accounts receivable",
+          "salesRevenue": "Sales revenue"
+        },
+        "balanced": "Debits equal credits",
+        "sales": "Sales",
+        "receivables": "Receivables",
+        "unitsSold": "Units sold"
+      }
+    }
   },
   "nav": {
     "dashboard": "Dashboard",

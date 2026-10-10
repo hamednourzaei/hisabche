@@ -181,7 +181,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         answerKey: 'faq.acc4A',
         fallbackQuestion: '',
         fallbackAnswer: '',
-        relatedLink: '#ledger',
+        relatedLink: '#hero',
         relatedLabelKey: 'landing.faq.related.reports',
         relatedFallback: 'گزارش‌های لحظه‌ای',
       },

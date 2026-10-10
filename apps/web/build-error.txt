@@ -1,0 +1,159 @@
+$ next build
+Warning: Custom Cache-Control headers detected for the following routes:
+  - /_next/static/:path*
+
+Setting a custom Cache-Control header can break Next.js development behavior.
+▲ Next.js 16.2.6 (Turbopack)
+- Environments: .env.local
+- Experiments (use with caution):
+  ✓ inlineCss
+  ✓ optimizeCss
+  · optimizePackageImports
+  · serverActions
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 18.9s
+  Running TypeScript ...
+  Finished TypeScript in 32.3s ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/131) ...
+  Generating static pages using 15 workers (32/131) 
+  Generating static pages using 15 workers (65/131) 
+  Generating static pages using 15 workers (98/131) 
+✓ Generating static pages using 15 workers (131/131) in 2.9s
+  Finalizing page optimization ...
+
+Route (app)                                   Revalidate  Expire
+┌ ○ /_not-found
+├ ● /[lang]                                           1h      1y
+│ ├ /fa                                               1h      1y
+│ ├ /af                                               1h      1y
+│ └ /en                                               1h      1y
+├ ● /[lang]/about
+│ ├ /fa/about
+│ ├ /af/about
+│ └ /en/about
+├ ƒ /[lang]/accept-invite
+├ ƒ /[lang]/accounting
+├ ƒ /[lang]/activities
+├ ƒ /[lang]/analysis
+├ ƒ /[lang]/approvals
+├ ƒ /[lang]/assistant
+├ ƒ /[lang]/billing
+├ ● /[lang]/blog
+├ ● /[lang]/blog/[slug]
+├ ● /[lang]/blog/category/[slug]
+├ ● /[lang]/blog/category/[slug]/page/[page]
+├ ● /[lang]/blog/page/[page]
+├ ● /[lang]/blog/tag/[slug]
+├ ● /[lang]/blog/tag/[slug]/page/[page]
+├ ● /[lang]/contact
+│ ├ /fa/contact
+│ ├ /af/contact
+│ └ /en/contact
+├ ƒ /[lang]/customers
+├ ƒ /[lang]/customers/[id]
+├ ƒ /[lang]/dashboard
+├ ƒ /[lang]/data-and-sync
+├ ƒ /[lang]/developers
+├ ƒ /[lang]/docs
+├ ● /[lang]/docs/[slug]                               1h      1y
+│ ├ /fa/docs/getting-started                          1h      1y
+│ ├ /fa/docs/invoices                                 1h      1y
+│ ├ /fa/docs/recurring-invoices                       1h      1y
+│ └ [+63 more paths]
+├ ● /[lang]/features/[slug]                           1h      1y
+│ ├ /fa/features/shop-accounting                      1h      1y
+│ ├ /fa/features/invoicing                            1h      1y
+│ ├ /fa/features/inventory                            1h      1y
+│ └ [+15 more paths]
+├ ƒ /[lang]/feedback/[token]
+├ ƒ /[lang]/forgot-password
+├ ƒ /[lang]/governance
+├ ƒ /[lang]/invoices
+├ ƒ /[lang]/invoices/[id]
+├ ƒ /[lang]/invoices/new
+├ ƒ /[lang]/invoices/new/preview
+├ ● /[lang]/landing-lab
+│ ├ /fa/landing-lab
+│ ├ /af/landing-lab
+│ └ /en/landing-lab
+├ ● /[lang]/legal/accessibility
+│ ├ /fa/legal/accessibility
+│ ├ /af/legal/accessibility
+│ └ /en/legal/accessibility
+├ ● /[lang]/legal/cookies
+│ ├ /fa/legal/cookies
+│ ├ /af/legal/cookies
+│ └ /en/legal/cookies
+├ ● /[lang]/legal/copyright
+│ ├ /fa/legal/copyright
+│ ├ /af/legal/copyright
+│ └ /en/legal/copyright
+├ ● /[lang]/legal/data-deletion
+│ ├ /fa/legal/data-deletion
+│ ├ /af/legal/data-deletion
+│ └ /en/legal/data-deletion
+├ ● /[lang]/legal/disclaimer
+│ ├ /fa/legal/disclaimer
+│ ├ /af/legal/disclaimer
+│ └ /en/legal/disclaimer
+├ ● /[lang]/legal/gdpr
+│ ├ /fa/legal/gdpr
+│ ├ /af/legal/gdpr
+│ └ /en/legal/gdpr
+├ ● /[lang]/legal/privacy
+│ ├ /fa/legal/privacy
+│ ├ /af/legal/privacy
+│ └ /en/legal/privacy
+├ ● /[lang]/legal/refund
+│ ├ /fa/legal/refund
+│ ├ /af/legal/refund
+│ └ /en/legal/refund
+├ ● /[lang]/legal/security
+│ ├ /fa/legal/security
+│ ├ /af/legal/security
+│ └ /en/legal/security
+├ ● /[lang]/legal/terms
+│ ├ /fa/legal/terms
+│ ├ /af/legal/terms
+│ └ /en/legal/terms
+├ ƒ /[lang]/login
+├ ƒ /[lang]/manufacturing
+├ ● /[lang]/market
+├ ƒ /[lang]/market-seller
+├ ● /[lang]/market/[seller]
+├ ● /[lang]/market/[seller]/[listing]
+├ ƒ /[lang]/marketplace
+├ ƒ /[lang]/oauth/authorize
+├ ƒ /[lang]/onboarding
+├ ƒ /-/opengraph-image
+├ ƒ /[lang]/operations
+├ ƒ /[lang]/orders
+├ ƒ /[lang]/portal/[token]
+├ ƒ /[lang]/public-invoice/[token]
+├ ƒ /[lang]/public-task/[token]
+├ ƒ /[lang]/quick-invoice
+├ ƒ /[lang]/reset-password
+├ ƒ /[lang]/settings
+├ ƒ /[lang]/signup
+├ ƒ /[lang]/stock-count
+├ ƒ /[lang]/sync-center
+├ ƒ /[lang]/team-and-payroll
+├ ƒ /[lang]/team-and-payroll/[id]
+├ ƒ /[lang]/till
+├ ƒ /[lang]/warehouse
+├ ƒ /[lang]/warehouse/[id]
+├ ƒ /api/revalidate
+├ ○ /robots.txt
+└ ○ /sitemap.xml                                     10m      1y
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+$ node scripts/copy-standalone-assets.js
+[copy-standalone-assets] copied public/ and .next/static/ into .next/standalone/apps/web

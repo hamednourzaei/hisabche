@@ -88,38 +88,46 @@ export default function ModulesScene({ t, localePrefix }: ModulesSceneProps) {
           description={t('landing.modules.desc')}
         />
 
-        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {GROUPS.map(({ key, icon: Icon, items }) => (
             <div
               key={key}
-              className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)] p-4 sm:p-5"
+              className="group relative flex flex-col overflow-hidden rounded-3xl bg-[hsl(var(--surface-muted))] p-6 shadow-sm ring-1 ring-[hsl(var(--border-default))] transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-[hsl(var(--color-primary)/0.1)] hover:ring-[hsl(var(--color-primary)/0.3)] animate-in fade-in zoom-in-95 duration-700"
             >
-              <h3 className="mb-3 flex items-center gap-2 font-semibold text-[hsl(var(--fg-primary))]">
-                <Icon className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-                {t(`landing.modules.group.${key}`)}
-              </h3>
-              <ul className="flex flex-wrap gap-1.5">
-                {items.map((item) => {
-                  const label = t(`landing.modules.item.${item.key}`)
-                  const chip =
-                    'block rounded-md bg-[hsl(var(--surface-muted))] px-2 py-1 text-sm text-[hsl(var(--fg-secondary))]'
-                  return (
-                    <li key={item.key}>
-                      {item.href ? (
-                        <NextLink
-                          prefetch={false}
-                          href={`${routePrefix}${item.href}`}
-                          className={`${chip} underline decoration-[hsl(var(--color-primary)/0.4)] underline-offset-4 hover:text-[hsl(var(--color-primary))]`}
-                        >
-                          {label}
-                        </NextLink>
-                      ) : (
-                        <span className={chip}>{label}</span>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
+              {/* Background Glow */}
+              <div className="absolute -inset-4 bg-gradient-to-br from-[hsl(var(--color-primary)/0.15)] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+
+              <div className="relative">
+                <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-[hsl(var(--color-primary)/0.1)] ring-1 ring-[hsl(var(--color-primary)/0.2)]">
+                  <Icon className="size-6 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+                </div>
+                <h3 className="mb-4 text-lg font-bold text-[hsl(var(--fg-primary))]">
+                  {t(`landing.modules.group.${key}`)}
+                </h3>
+                <ul className="flex flex-wrap gap-2">
+                  {items.map((item) => {
+                    const label = t(`landing.modules.item.${item.key}`)
+                    const chip =
+                      'inline-flex items-center rounded-lg bg-[hsl(var(--surface-elevated))] border border-[hsl(var(--border-default))] px-3 py-1.5 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors group-hover/item:border-[hsl(var(--color-primary)/0.4)] group-hover/item:bg-[hsl(var(--color-primary)/0.05)] group-hover/item:text-[hsl(var(--color-primary))]'
+
+                    return (
+                      <li key={item.key} className="group/item">
+                        {item.href ? (
+                          <NextLink
+                            prefetch={false}
+                            href={`${routePrefix}${item.href}`}
+                            className={chip}
+                          >
+                            {label}
+                          </NextLink>
+                        ) : (
+                          <span className={chip}>{label}</span>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
             </div>
           ))}
         </div>

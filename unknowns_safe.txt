@@ -1,0 +1,28 @@
+# Accounting & Finance Audit
+# AI & Content Domain Audit
+چت هوش مصنوعی و پایپ‌لاین (AI Chat & MCP Pipeline)
+بلاگ و هوش محتوایی (Blog & Content Intelligence)
+سیستم مدیریت محتوا (CMS)
+کمپین‌ها و نظرسنجی (Campaigns & NPS)
+هوش مالی و پیش‌بینی (Financial Intelligence)
+لیست ویژگی‌های یافت شده
+مدیریت و لیست مشتریان (Customers)
+پروفایل ۳۶۰ درجه مشتری
+سیستم CRM و مدیریت تسک‌ها
+پورتال عمومی مشتری (Customer Portal)
+برنامه ریفرال (Referral System)
+وصول مطالبات و سلامت مالی (Collections)
+Backend
+Tests
+حضور و غیاب (Attendance)
+# Inventory & Manufacturing Audit
+﻿# Platform & Sync Audit
+1
+2
+3
+4
+5
+1. Invoices (فاکتور فروش و خرید)
+2. POS / Till (صندوق فروشگاهی)
+3. Payments & Customer 360
+4. Customer Portal

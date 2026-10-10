@@ -8,7 +8,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 // id not listed here — after the landing was restructured the list still named
 // pain/transform/testimonials, so «حسابداری», «آفلاین» and «امنیت» never lit up
 // (guard: landing-i18n-keys.test.ts › landing section menu).
-export type SectionId = 'hero' | 'features' | 'ledger' | 'offline' | 'security'
+export type SectionId = 'hero' | 'features' | 'offline' | 'security'
 
 export type NarrativeState =
   'frustration' | 'confusion' | 'clarity' | 'confidence' | 'trust' | 'action'
@@ -29,20 +29,33 @@ interface ScrollState {
 const SECTION_MAP = {
   hero: { y: 0.05, narrative: 'frustration' },
   features: { y: 0.2, narrative: 'confusion' },
-  ledger: { y: 0.4, narrative: 'confidence' },
   offline: { y: 0.6, narrative: 'clarity' },
   security: { y: 0.8, narrative: 'trust' },
 } as const satisfies Record<SectionId, SectionMeta>
 
 export const VALID_SECTION_IDS = Object.keys(SECTION_MAP) as SectionId[]
 
-export const NARRATIVE_COLORS: Record<NarrativeState, string> = {
-  frustration: '#A855F7',
-  confusion: '#EF4444',
-  clarity: '#10B981',
-  confidence: '#06B6D4',
-  trust: '#8B5CF6',
-  action: '#EC4899',
+/**
+ * The six moods, as CSS custom properties rather than literals.
+ *
+ * These were six raw hex values (frustration #A855F7 … action #EC4899) and the
+ * colour guard carried a standing exemption for this file, because the
+ * stylesheet had no token to put them in and `--color-purple` is an alias of
+ * `--color-primary` — mapping them onto what existed would have collapsed four
+ * of the six to the same teal and flattened the arc. `--narrative-*` now
+ * exists in globals.css for both themes, so the exemption is gone.
+ *
+ * The value is a Tailwind arbitrary class, not an hsl() string: callers
+ * already write `bg-[...]`, and interpolating a colour string there is what
+ * put hex into className in the first place.
+ */
+export const NARRATIVE_COLOR_CLASS: Record<NarrativeState, string> = {
+  frustration: 'hsl(var(--narrative-frustration))',
+  confusion: 'hsl(var(--narrative-confusion))',
+  clarity: 'hsl(var(--narrative-clarity))',
+  confidence: 'hsl(var(--narrative-confidence))',
+  trust: 'hsl(var(--narrative-trust))',
+  action: 'hsl(var(--narrative-action))',
 }
 
 const INITIAL_STATE: ScrollState = {
@@ -249,8 +262,4 @@ export function useActiveSection(): Pick<ScrollState, 'activeSection' | 'narrati
   }, [])
 
   return { activeSection: section, narrativeState: narrative }
-}
-
-export function getActiveNodeColor(state: NarrativeState): string {
-  return NARRATIVE_COLORS[state]
 }

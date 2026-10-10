@@ -33,7 +33,7 @@ export function CmsPagesClient() {
           href="/cms/pages/new"
           className="inline-flex h-10 items-center justify-center rounded-lg bg-[hsl(var(--color-primary))] px-4 text-sm font-medium text-white transition-colors hover:bg-[hsl(var(--color-primary-hover))]"
         >
-          <Plus className="mr-2 size-4" aria-hidden="true" />
+          <Plus className="me-2 size-4" aria-hidden="true" />
           {t('cms.pages.create')}
         </Link>
       </div>

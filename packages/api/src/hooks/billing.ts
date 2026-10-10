@@ -140,10 +140,15 @@ export function usePlans() {
   return useQuery({
     queryKey: billingKeys.plans(),
     queryFn: async (): Promise<BillingPlan[]> => {
-      const { data } = await apiClient.get('/billing/plans')
-      return asList<BillingPlan>(data)
+      try {
+        const { data } = await apiClient.get('/billing/plans')
+        return asList<BillingPlan>(data)
+      } catch {
+        return []
+      }
     },
     staleTime: 10 * 60 * 1000, // ۱۰ دقیقه
+    retry: false,
   })
 }
 

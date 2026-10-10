@@ -1104,3 +1104,10 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 
 صفحه‌ای که نقش شامل آن نبود با نشانی مستقیم باز می‌شد و همه‌ی درخواست‌هایش ۴۰۳ می‌گرفت؛ prefetch وب هم هر ۲۰ مسیر منو را گرم می‌کرد.
 **رفع:** `isRouteDenied` + `NoAccessNotice` در هر دو پوسته؛ فیلتر prefetch. **گارد:** `personal-view.test.ts`.
+
+### 2026-10-07
+- **Wrench Customizer Hub Defect**: Pages that bypass <PageHub> (Sales, Governance, Customers, Warehouse, Approvals) lacked the RegisterCustomizer hook, causing the global customizer to only show the main sidebar menu and missing page-specific toggles. Fixed by injecting RegisterCustomizer.
+- **Next-Intl Signature & Namespace**: Added useTranslations('salesHub') but incorrectly passed global customizer keys to it, breaking i18n for the Sales Hub wrench. Fixed by using a globally scoped 	Global.
+- **Sales Chart allZero Empty State**: A 7-day period with no sales showed an empty state instead of a zero-value line. Fixed by removing the !hasData || allZero early return in sales-chart.tsx.
+- **Settings Storage Quota Scare**: SettingsPage showed a 10.7 GB "Quota" read from 
+avigator.storage.estimate(). Removed the quota display entirely to prevent user alarm; now it only shows actual bytes used.

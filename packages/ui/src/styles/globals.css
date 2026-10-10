@@ -87,6 +87,24 @@
   --border-strong: 206 26% 26%;
 
   /* ═══════════════════════════════════════════════════════════════════════════
+     NARRATIVE PALETTE — the landing scroll narrative
+     ═══════════════════════════════════════════════════════════════════════════ */
+  /* Six CATEGORICAL hues, not six shades of one: frustration → confusion →
+     clarity → confidence → trust → action is the emotional arc of the page,
+     and collapsing four of them onto --color-primary (--color-purple is an
+     alias of it) destroyed the arc. These are the only tokens in the system
+     that are not semantic — they name a MOOD, and a mood has no single
+     correct value, so each theme picks its own. Dark values are tuned for the
+     dark surfaces, light values for the light surfaces; every one is ≥ 4.5:1
+     as text on its own theme's --surface-base. */
+  --narrative-frustration: 280 70% 68%;
+  --narrative-confusion: 0 84% 68%;
+  --narrative-clarity: 152 76% 48%;
+  --narrative-confidence: 190 90% 58%;
+  --narrative-trust: 258 85% 74%;
+  --narrative-action: 330 82% 68%;
+
+  /* ═══════════════════════════════════════════════════════════════════════════
      RADII
      ═══════════════════════════════════════════════════════════════════════════ */
   --radius-xs: 6px;
@@ -213,6 +231,14 @@
   --color-primary-fg: 0 0% 100%;
   --color-primary-hover: 172 80% 18%;
   --color-primary-light: 170 65% 35%;
+  /* Same six moods, tuned for a light ground: the dark values measured 1.9:1
+     (frustration) and 2.1:1 (clarity) here, so each one drops lightness. */
+  --narrative-frustration: 280 60% 42%;
+  --narrative-confusion: 0 70% 44%;
+  --narrative-clarity: 152 72% 26%;
+  --narrative-confidence: 196 82% 28%;
+  --narrative-trust: 258 66% 48%;
+  --narrative-action: 330 68% 42%;
   /* Status colours as TEXT on their own 12% tint over this ground. The dark
      theme's values measured 2.5:1 (success) and 2.8:1 (warning) here —
      PageSpeed flagged the «Available» badges. All ≥ 4.5:1 below. */

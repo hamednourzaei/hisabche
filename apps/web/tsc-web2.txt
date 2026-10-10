@@ -1,0 +1,6 @@
+npm warn Unknown user config "python". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+.next/types/validator.ts(467,39): error TS2307: Cannot find module '../../app/[lang]/landing-lab/page.js' or its corresponding type declarations.
+app/[lang]/page.tsx(232,12): error TS2375: Type '{ locale: "fa" | "af" | "en"; copy: { nav: { home: string; modules: string; system: string; ledger: string; offline: string; trust: string; dashboard: string; menuOpen: string; menuClose: string; logoAlt: string; }; ... 16 more ...; footer: { ...; }; }; initialVariant: string | undefined; canonicalLanding: Element; }' is not assignable to type 'VariantCommandCenterProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'initialVariant' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.

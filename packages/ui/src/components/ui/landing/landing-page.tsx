@@ -14,17 +14,16 @@
 import { getTranslations } from 'next-intl/server'
 
 import { NavigationRegistry } from '../navigation/navigation-registry'
-import CinematicHero from './cinematic-hero'
 import CompareScene from './compare-scene'
 import CTAScene from './cta-scene'
 import FaqScene from './faq-scene'
+import { JourneyHero } from './journey/journey-hero'
 import ChapterScene from './chapter-scene'
 import { LandingShell } from './landing-shell'
 import ModulesScene from './modules-scene'
 import PricingScene from './pricing-scene'
 import SecurityScene from './security-scene'
 import SiteFooterView from './site-footer-view'
-import SystemScene from './system-scene'
 import TrustBarScene from './trust-bar-scene'
 
 export async function LandingPage({ locale }: { locale: string }) {
@@ -35,10 +34,15 @@ export async function LandingPage({ locale }: { locale: string }) {
   const t = (key: string, fallback?: string): string =>
     translate.has(key as Key) ? translate(key as Key) : (fallback ?? key)
 
+  // A sentence with {placeholders} is handed over unformatted; the journey fills
+  // it in itself, once per figure.
+  const raw = (key: string): string =>
+    translate.has(key as Key) ? String(translate.raw(key as Key)) : key
+
   return (
     <LandingShell>
       <NavigationRegistry id="hero">
-        <CinematicHero t={t} locale={locale} />
+        <JourneyHero t={t} raw={raw} locale={locale} />
       </NavigationRegistry>
 
       {/* Story order (IA of 15 Sep 2026): one system → how an operation flows →
@@ -48,18 +52,9 @@ export async function LandingPage({ locale }: { locale: string }) {
         <ModulesScene t={t} localePrefix={locale} />
       </NavigationRegistry>
 
-      <SystemScene t={t} />
-
-      <NavigationRegistry id="ledger">
-        <ChapterScene t={t} localePrefix={locale} chapter="ledger" muted />
-      </NavigationRegistry>
-      <ChapterScene t={t} localePrefix={locale} chapter="money" />
-      <ChapterScene t={t} localePrefix={locale} chapter="inventory" muted />
-
       <NavigationRegistry id="offline">
         <ChapterScene t={t} localePrefix={locale} chapter="offline" />
       </NavigationRegistry>
-      <ChapterScene t={t} localePrefix={locale} chapter="reports" muted />
 
       <TrustBarScene t={t} />
 
@@ -68,7 +63,6 @@ export async function LandingPage({ locale }: { locale: string }) {
       <NavigationRegistry id="security">
         <SecurityScene t={t} />
       </NavigationRegistry>
-      <ChapterScene t={t} localePrefix={locale} chapter="multi" />
 
       <CompareScene t={t} />
 

@@ -6,8 +6,9 @@ import { Briefcase, Factory, Store, Truck } from 'lucide-react'
 import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TrustBarScene v8 — four business scenarios, then every business type as a
-   static list. The marquee (two infinitely animated ribbons) is gone: PageSpeed
+   TrustBarScene v9 — four business scenarios. The list of every business type
+   moved to the boards on the walls of the journey hall (`journey-industries.ts`).
+   Before that it was a static list here, and before that a marquee: The marquee (two infinitely animated ribbons) is gone: PageSpeed
    counted 85–90 animated elements on the landing, and a list you have to wait
    for is worse to scan than one you can read.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -15,37 +16,6 @@ import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-pri
 export interface TrustBarSceneProps {
   t: (key: string, fallback?: string) => string
 }
-
-// Only business types whose day-to-day workflow the product covers (stock,
-// invoices, till, purchasing, production). Hotels, clinics, fuel stations and
-// the like were listed before — nothing here handles bookings, patients or
-// pumps, so saying it is "built for" them was not true.
-const INDUSTRIES = [
-  { key: 'retail', fallback: 'Retail Store' },
-  { key: 'wholesale', fallback: 'Wholesale' },
-  { key: 'supermarket', fallback: 'Supermarket' },
-  { key: 'grocery', fallback: 'Grocery Store' },
-  { key: 'pharmacy', fallback: 'Pharmacy' },
-  { key: 'restaurant', fallback: 'Restaurant' },
-  { key: 'bakery', fallback: 'Bakery' },
-  { key: 'boutique', fallback: 'Boutique' },
-  { key: 'fashion', fallback: 'Fashion Store' },
-  { key: 'cosmetics', fallback: 'Cosmetics Store' },
-  { key: 'electronics', fallback: 'Electronics Store' },
-  { key: 'mobile', fallback: 'Mobile Shop' },
-  { key: 'computer', fallback: 'Computer Store' },
-  { key: 'hardware', fallback: 'Hardware Store' },
-  { key: 'construction', fallback: 'Building Materials' },
-  { key: 'furniture', fallback: 'Furniture Store' },
-  { key: 'home', fallback: 'Home Appliances' },
-  { key: 'stationery', fallback: 'Stationery' },
-  { key: 'bookstore', fallback: 'Bookstore' },
-  { key: 'autoParts', fallback: 'Auto Parts' },
-  { key: 'service', fallback: 'Service Business' },
-  { key: 'distribution', fallback: 'Distribution' },
-  { key: 'warehouse', fallback: 'Warehouse' },
-  { key: 'manufacturing', fallback: 'Manufacturing' },
-]
 
 /** What each kind of business runs in the product — the modules, not a promise. */
 const SCENARIOS: Array<{ key: string; icon: LucideIcon }> = [
@@ -85,20 +55,6 @@ export default function TrustBarScene({ t }: TrustBarSceneProps) {
               <p className="text-pretty text-sm leading-relaxed text-[hsl(var(--fg-secondary))]">
                 {t(`landing.industries.${key}.desc`)}
               </p>
-            </li>
-          ))}
-        </ul>
-
-        <p className="mb-3 mt-8 text-center text-sm font-medium text-[hsl(var(--fg-tertiary))] sm:mt-10">
-          {t('landing.industries.all')}
-        </p>
-        <ul className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2">
-          {INDUSTRIES.map(({ key, fallback }) => (
-            <li
-              key={key}
-              className="rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] px-3 py-1 text-xs font-medium text-[hsl(var(--fg-secondary))] sm:text-sm"
-            >
-              {t(`landing.industry.${key}`, fallback)}
             </li>
           ))}
         </ul>

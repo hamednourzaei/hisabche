@@ -1,4 +1,3 @@
-// apps/web/app/[lang]/page.tsx
 import { LandingPage } from '@hisabche/ui/landing/landing-page'
 import { BILLING_CURRENCY } from '@hisabche/ui-contract'
 import { ScopedMessages } from './scoped-messages'
@@ -67,90 +66,58 @@ const pageConfig = {
     schemaOperatingSystem: 'Web, iOS, Android',
   },
   af: {
-    // ⚠️ THIS TITLE MUST NOT MATCH THE PERSIAN ONE, CHARACTER FOR CHARACTER.
-    //
-    // It did, and Search Console reported /fa as «Duplicate, Google chose a
-    // different canonical than user». Both pages declared the correct
-    // self-canonical and correct hreflang — that was never the problem.
-    // Google compares what it can read: two pages whose <title> and headline
-    // are the same sentence in the same script look like one page served
-    // twice, and it picks one.
-    //
-    // The rest of this block was already Dari — گدام, انترنت, ویب, قرض. Only
-    // the two strings that reach <title> and og:title had been copied across
-    // unchanged, which is exactly the pair Google weighs most.
     title: 'نرم‌افزار حسابداری آنلاین و آفلاین برای افغانستان — حسابچه',
     description:
       'نرم‌افزار حسابداری آنلاین و آفلاین برای تجارت‌های افغانستان: فروش، خرید، گدام، صندوق و حسابداری دوطرفه در یک سیستم؛ آنلاین در ویب و بدون انترنت در اپ.',
     keywords: [
-      'حسابداری',
       'نرم‌افزار حسابداری',
+      'حسابداری افغانستان',
+      'سیستم فروش',
       'مدیریت گدام',
-      'فاکتور',
-      'مدیریت قرض',
+      'صندوق',
+      'مدیریت تجارت',
       'حسابچه',
       'hisabche',
-      'نرم‌افزار حسابداری رایگان',
-      'مدیریت تجارت',
-      'گدامداری',
-      // The searches this page should actually win, and which the Persian
-      // list has no reason to carry.
-      'حسابداری افغانستان',
-      'نرم‌افزار حسابداری افغانی',
-      'حسابداری به افغانی',
       'حسابداری آنلاین',
       'حسابداری آفلاین',
-      'فاکتور آنلاین',
-      'مدیریت مشتریان',
     ],
-    ogTitle: 'نرم‌افزار حسابداری آنلاین و آفلاین برای افغانستان — حسابچه',
-    ogDescription:
-      'فروش، خرید، گدام، صندوق و حسابداری دوطرفه در یک سیستم یکپارچه — حتی بدون انترنت.',
+    ogTitle: 'نرم‌افزار حسابداری آنلاین و آفلاین افغانستان — حسابچه',
+    ogDescription: 'فروش، خرید، گدام، صندوق و حسابداری دوطرفه در یک سیستم؛ حتی بدون انترنت.',
     siteName: 'حسابچه',
     ogLocale: 'fa_AF',
-    schemaName: 'حسابچه',
-    schemaAlternateName: 'Hisabche',
+    schemaName: 'حسابچه افغانستان',
+    schemaAlternateName: 'Hisabche AF',
     schemaDescription:
-      'سیستم مدیریت تجارت با حسابداری دوطرفه، فروش، گدام و گزارش مالی برای تجارت‌های کوچک و متوسط',
+      'سیستم مدیریت تجارت با حسابداری دوطرفه، فروش، گدام و راپور مالی برای تجارت‌های کوچک و متوسط',
     schemaOperatingSystem: 'Web, iOS, Android',
   },
   en: {
-    title: 'Online and Offline Accounting Software — Hisabche',
+    title: 'Offline-First Accounting & Business OS — Hisabche',
     description:
-      'Online and offline accounting software for small and mid-sized businesses: sales, purchasing, inventory, cash and double-entry accounting in one system.',
+      'The offline-first business OS: sales, inventory, till, CRM, and double-entry accounting in one system. Works in the browser, survives without internet.',
     keywords: [
       'accounting software',
-      'free accounting',
+      'offline-first',
+      'business OS',
       'inventory management',
+      'POS',
       'invoicing',
-      'debt management',
       'hisabche',
-      'free accounting software',
-      'business management',
-      'warehouse management',
-      'online accounting',
-      'offline accounting',
-      'online invoicing',
-      'customer management',
+      'double-entry accounting',
+      'cloud accounting',
     ],
-    ogTitle: 'Online and Offline Accounting Software — Hisabche',
+    ogTitle: 'Offline-First Accounting & Business OS — Hisabche',
     ogDescription:
-      'Sales, purchasing, inventory, cash and double-entry accounting in one integrated system — even offline.',
+      'Sales, inventory, till, CRM, and double-entry accounting in one system — even without internet.',
     siteName: 'Hisabche',
     ogLocale: 'en_US',
     schemaName: 'Hisabche',
-    schemaAlternateName: 'حسابچه',
+    schemaAlternateName: 'Hisabche',
     schemaDescription:
-      'Business management system with double-entry accounting, sales, inventory and financial reporting for small and mid-sized businesses',
+      'Offline-first business operating system with double-entry accounting, sales, inventory, and financial reporting for SMBs.',
     schemaOperatingSystem: 'Web, iOS, Android',
   },
-} satisfies Record<'fa' | 'af' | 'en', PageConfigEntry>
-
-function getPageConfig(lang: string): PageConfigEntry {
-  // Falls back to the default locale (fa), matching every other route — the
-  // previous `?? pageConfig.en` disagreed with the layout and the legal pages.
-  return pageConfig[resolveLocale(lang)]
-}
+} as const satisfies Record<string, PageConfigEntry>
 
 export async function generateMetadata({
   params,
@@ -158,83 +125,68 @@ export async function generateMetadata({
   params: Promise<{ lang: string }>
 }): Promise<Metadata> {
   const { lang } = await params
-  const config = getPageConfig(lang)
+  const locale = resolveLocale(lang)
+  const config = pageConfig[locale]
+  const path = localePath(locale, '/')
 
   return {
     title: config.title,
     description: config.description,
-    keywords: config.keywords,
-    // `localePrefix: 'always'` (proxy.ts) means the fa home page is served at
-    // /fa, not /. The old `canonical: "/"` therefore pointed the highest-traffic
-    // locale's self-referencing canonical at a 307 redirect.
+    keywords: config.keywords.join(', '),
     alternates: {
-      canonical: localePath(lang),
-      languages: languageAlternates(),
+      canonical: localeUrl(locale, '/'),
+      languages: languageAlternates(path),
     },
     openGraph: {
       title: config.ogTitle,
       description: config.ogDescription,
-      url: localeUrl(lang),
+      url: localeUrl(locale, '/'),
       siteName: config.siteName,
       locale: config.ogLocale,
       type: 'website',
-      // Image comes from app/[lang]/opengraph-image.tsx — see the note in
-      // layout.tsx. /og-image.png did not exist.
+      images: [
+        {
+          url: localeUrl(locale, '/api/og'),
+          width: 1200,
+          height: 630,
+          alt: config.ogTitle,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
       title: config.ogTitle,
       description: config.ogDescription,
-    },
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        'max-video-preview': -1,
-        'max-image-preview': 'large',
-        'max-snippet': -1,
-      },
+      images: [localeUrl(locale, '/api/og')],
+      creator: '@hisabche',
     },
   }
 }
 
 function JsonLd({ lang }: { lang: string }) {
-  const config = getPageConfig(lang)
+  const locale = resolveLocale(lang)
+  const config = pageConfig[locale]
+
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: config.schemaName,
+    alternateName: config.schemaAlternateName,
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: config.schemaOperatingSystem,
+    description: config.schemaDescription,
+    url: localeUrl(locale, '/'),
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: BILLING_CURRENCY[locale as keyof typeof BILLING_CURRENCY],
+    },
+  }
 
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: JSON.stringify({
-          '@context': 'https://schema.org',
-          '@type': 'SoftwareApplication',
-          '@id': `${localeUrl(lang)}/#software`,
-          name: config.schemaName,
-          alternateName: config.schemaAlternateName,
-          description: config.schemaDescription,
-          url: localeUrl(lang),
-          // `inLanguage` must be a BCP-47 tag; the route segment "af" is
-          // Afrikaans, so Dari content was being declared as Afrikaans.
-          inLanguage: localeToBcp47[resolveLocale(lang)],
-          applicationCategory: 'BusinessApplication',
-          operatingSystem: config.schemaOperatingSystem,
-          publisher: { '@id': `${SITE_URL}/#organization` },
-          // The free tier is real (see PLANS in packages/ui .../pricing-scene.tsx).
-          // Currency was "USD" while every price on the page is rendered in
-          // افغانی, so the schema contradicted the visible pricing table. The
-          // code now comes from BILLING_CURRENCY — the single declaration the
-          // pricing table also reads — so the two cannot drift apart again.
-          offers: { '@type': 'Offer', price: '0', priceCurrency: BILLING_CURRENCY },
-          // REMOVED: `aggregateRating: { ratingValue: "4.9", ratingCount: "340" }`.
-          // There is no review or rating system anywhere in this codebase — the
-          // numbers were hardcoded marketing copy. Google requires
-          // AggregateRating to reflect genuinely collected, visible reviews;
-          // emitting invented ones is a structured-data spam violation that
-          // risks a manual action against the whole domain.
-        }),
-      }}
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
     />
   )
 }
@@ -246,26 +198,14 @@ export function generateStaticParams() {
 
 export default async function RootPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params
-  setRequestLocale(resolveLocale(lang))
+  const locale = resolveLocale(lang)
+  setRequestLocale(locale)
 
   return (
     <>
       <JsonLd lang={lang} />
       <ScopedMessages lang={lang} namespaces="landing-client">
-        {/* ⚠️ NO <Suspense> AROUND THE LANDING. With a boundary here, React put
-            a spinner first in the HTML and the whole page — <h1> and the LCP
-            image included — inside `<div hidden id="S:0">`, revealed by an
-            inline `$RC` script at the END of the document. The image was
-            downloaded by ~450 ms but painted at ~2.5 s (PageSpeed mobile
-            "element render delay 2,050 ms"), and the spinner→page swap was
-            desktop's CLS 0.02. LandingPage is statically prerendered: there is
-            nothing to wait for, so it renders inline. */}
-        {/* ⚠️ NO AUTH REDIRECT HERE. An `AuthGate` used to wrap the landing
-            and `router.replace('/dashboard')` anyone with a stored session, so
-            a signed-in person could never read the home page. The header shows
-            them a «Dashboard» button instead (TopNav, after mount); sign-in and
-            onboarding gating belong to the (dashboard) layout, which has them. */}
-        <LandingPage locale={resolveLocale(lang)} />
+        <LandingPage locale={locale} />
       </ScopedMessages>
     </>
   )

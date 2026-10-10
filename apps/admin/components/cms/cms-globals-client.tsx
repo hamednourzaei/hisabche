@@ -78,7 +78,7 @@ export function CmsGlobalsClient() {
               disabled={!editKey || !editValue || saveMutation.isPending}
               className="inline-flex h-10 items-center justify-center rounded-lg bg-[hsl(var(--color-primary))] px-4 text-sm font-medium text-white transition-colors hover:bg-[hsl(var(--color-primary-hover))] disabled:opacity-50"
             >
-              <Save className="mr-2 size-4" />
+              <Save className="me-2 size-4" />
               Save & Publish
             </button>
           </div>

@@ -25,8 +25,10 @@ import {
    TransformScene v21 — Cinematic Story · Only activates when visible
    ═══════════════════════════════════════════════════════════════════════════ */
 
+import { useTranslations } from 'next-intl'
+
 export interface TransformSceneProps {
-  t: (key: string, fallback?: string) => string
+  t?: ((key: string, fallback?: string) => string) | undefined
 }
 
 // ─── Story Steps ──────────────────────────────────────────────────────────
@@ -51,7 +53,7 @@ const STORY_STEPS: StoryStep[] = [
     labelFallback: 'ثبت فروش',
     descriptionKey: 'landing.transformStep.sale.desc',
     descriptionFallback: 'فروش را ثبت می‌کنی',
-    color: 'text-blue-400',
+    color: 'text-[hsl(var(--color-info))]',
     beforeLabelKey: 'landing.transformStep.sale.before',
     beforeLabelFallback: 'ثبت دستی با کاغذ',
   },
@@ -128,7 +130,7 @@ const STORY_STEPS: StoryStep[] = [
     labelFallback: 'آرامش',
     descriptionKey: 'landing.transformStep.smile.desc',
     descriptionFallback: 'همه‌چیز تحت کنترل است',
-    color: 'text-green-400',
+    color: 'text-[hsl(var(--color-success))]',
     beforeLabelKey: 'landing.transformStep.smile.before',
     beforeLabelFallback: 'استرس و سردرگمی',
   },
@@ -266,7 +268,7 @@ function CinematicStory({ t }: { t: (key: string, fallback?: string) => string }
         )}
       >
         {/* Vertical line */}
-        <div className="absolute start-4 sm:left-1/2 top-0 bottom-0 w-0.5 bg-[hsl(var(--border-default))] -translate-x-1/2 hidden sm:block" />
+        <div className="absolute start-4 sm:start-1/2 top-0 bottom-0 w-0.5 bg-[hsl(var(--border-default))] -translate-x-1/2 hidden sm:block" />
         <div className="absolute start-4 top-0 bottom-0 w-0.5 bg-[hsl(var(--border-default))] sm:hidden" />
 
         <div className="space-y-2 sm:space-y-3 lg:space-y-3.5">
@@ -477,7 +479,19 @@ function CinematicStory({ t }: { t: (key: string, fallback?: string) => string }
 
 // ─── Main Component ──────────────────────────────────────────────────────
 
-export default function TransformScene({ t }: TransformSceneProps) {
+export default function TransformScene({ t: externalT }: TransformSceneProps = {}) {
+  const intlT = useTranslations()
+  const t =
+    externalT ??
+    ((key: string, fallback?: string) => {
+      try {
+        const res = intlT(key as any)
+        return typeof res === 'string' && res !== key ? res : (fallback ?? key)
+      } catch {
+        return fallback ?? key
+      }
+    })
+
   const { ref, state } = useSceneObserver<HTMLDivElement>({
     // افزایش threshold برای فعال‌سازی دیرتر - فقط وقتی 35٪ از بخش دیده شد
     threshold: 0.6,

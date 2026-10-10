@@ -75,7 +75,7 @@ export function CmsPageEditorClient({ isNew, pageId }: EditorProps) {
                   : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]'
               }`}
             >
-              <Layout className="mr-2 size-4" />
+              <Layout className="me-2 size-4" />
               {t('cms.pages.contentTab')}
             </button>
             <button
@@ -86,18 +86,18 @@ export function CmsPageEditorClient({ isNew, pageId }: EditorProps) {
                   : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]'
               }`}
             >
-              <Settings className="mr-2 size-4" />
+              <Settings className="me-2 size-4" />
               {t('cms.pages.settingsTab')}
             </button>
           </div>
 
-          <div className="ml-4 h-6 w-px bg-[hsl(var(--border-default))]"></div>
+          <div className="ms-4 h-6 w-px bg-[hsl(var(--border-default))]"></div>
 
           <button
             onClick={() => {}}
-            className="ml-2 inline-flex h-9 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-white px-4 text-sm font-medium text-[hsl(var(--fg-primary))] transition-colors hover:bg-[hsl(var(--surface-muted))]"
+            className="ms-2 inline-flex h-9 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] bg-white px-4 text-sm font-medium text-[hsl(var(--fg-primary))] transition-colors hover:bg-[hsl(var(--surface-muted))]"
           >
-            <Eye className="mr-2 size-4" />
+            <Eye className="me-2 size-4" />
             {t('common.preview')}
           </button>
 
@@ -106,7 +106,7 @@ export function CmsPageEditorClient({ isNew, pageId }: EditorProps) {
             disabled={saveMutation.isPending}
             className="inline-flex h-9 items-center justify-center rounded-lg bg-[hsl(var(--color-primary))] px-4 text-sm font-medium text-white transition-colors hover:bg-[hsl(var(--color-primary-hover))] disabled:opacity-50"
           >
-            <Save className="mr-2 size-4" />
+            <Save className="me-2 size-4" />
             {t('common.save')}
           </button>
         </div>
@@ -114,8 +114,8 @@ export function CmsPageEditorClient({ isNew, pageId }: EditorProps) {
 
       {/* WORKSPACE */}
       <div className="flex flex-1 overflow-hidden">
-        {/* LEFT PANEL: Editor */}
-        <div className="w-[400px] shrink-0 border-r border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] overflow-y-auto">
+        {/* PANEL: Editor */}
+        <div className="w-[400px] shrink-0 border-e border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] overflow-y-auto">
           {activeTab === 'settings' ? (
             <div className="p-6 space-y-6">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-[hsl(var(--fg-tertiary))]">

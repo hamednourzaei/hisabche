@@ -1362,7 +1362,67 @@
         }
       }
     },
-    "navDashboard": "داشبورد"
+    "navDashboard": "داشبورد",
+    "transformAuto": "خودکار",
+    "transformStatusDone": "تکمیل شده",
+    "transformStatusRunning": "در حال پردازش",
+    "transformStatusAuto": "تطبیق خودکار",
+    "transformClose": "بستن",
+    "transformCompleteTitle": "ترازنامه متوازن شد",
+    "transformCompleteDesc": "سند حسابداری دوطرفه بدون خطا ثبت شد.",
+    "transformBadge1": "پردازش ابری",
+    "transformBadge2": "بدون مغایرت",
+    "transformStartNow": "همین حالا شروع کنید",
+    "journey": {
+      "label": "مسیر یک فاکتور از چاپ تا راپور",
+      "end": "شروع",
+      "skip": "گذشتن از داستان",
+      "ready": "اتوماسیون شما آماده است",
+      "readySub": "یک بار ثبت کردید؛ پرداخت، صندوق، موجودی، دفتر کل و راپور خودشان به‌روز شدند. همین حالا شروع کنید.",
+      "printing": "یک فروش ثبت می‌شود و فاکتورش چاپ می‌شود. پایین بروید و ببینید به کجاها می‌رسد.",
+      "recorded": "ثبت شد",
+      "say": {
+        "pay": "نقد، نسیه یا قسمتی؛ هر کدام را بزنید، باقی‌مانده‌ی مشتری خودش تازه می‌شود.",
+        "cash": "پول همین حالا داخل صندوق شد.",
+        "stock": "موجودی جنس با همین فروش کم شد.",
+        "post": "سند حسابداری دوطرفه خودش ثبت شد.",
+        "report": "راپور امروز از همین رکوردها آماده است."
+      },
+      "counter": "ایستگاه {current} از {total}",
+      "summary": "خلاصه‌ی متنی مسیر یک فاکتور نمونه",
+      "currency": {
+        "toman": "تومان",
+        "afghani": "افغانی"
+      },
+      "screen": {
+        "money": "{amount} {unit}",
+        "change": "{before} ← {after}",
+        "invoice": "فاکتور {id}",
+        "waiting": "منتظر فاکتور",
+        "total": "جمع فاکتور",
+        "paid": "پرداخت‌شده",
+        "remaining": "باقی‌مانده",
+        "customerBalance": "باقی‌مانده‌ی مشتری",
+        "received": "دریافت نقد",
+        "drawerBefore": "صندوق، پیش از فروش",
+        "drawerAfter": "صندوق، حالا",
+        "item": {
+          "first": "کارتن چای",
+          "second": "بوری بوره"
+        },
+        "debit": "بدهکار",
+        "credit": "بستانکار",
+        "account": {
+          "cash": "صندوق",
+          "receivable": "حساب‌های دریافتنی",
+          "salesRevenue": "درآمد فروش"
+        },
+        "balanced": "بدهکار و بستانکار برابر است",
+        "sales": "فروش",
+        "receivables": "طلب‌ها",
+        "unitsSold": "تعداد فروخته‌شده"
+      }
+    }
   },
   "nav": {
     "dashboard": "داشبورد",

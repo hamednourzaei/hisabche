@@ -127,6 +127,15 @@ const config: Config = {
       fontFamily: {
         sans: ['var(--font-sans)'],
         mono: ['var(--font-mono)'],
+        // ⚠️ THE LANDING USES BOTH, AND NEITHER WAS DECLARED. `font-serif` fell
+        // through to Tailwind's default `ui-serif` stack, which renders Persian
+        // and Dari in a Latin face — so the "editorial" and "financial
+        // instrument" variants looked identical to the sans ones. Declared
+        // SYSTEM stacks, not webfonts: a second downloaded family would cost
+        // LCP and INP on the one page that has a hard performance gate, and the
+        // two editorial variants are built on Georgia's figures anyway.
+        serif: ['Georgia', 'Times New Roman', 'Times', 'serif'],
+        display: ['Georgia', 'Times New Roman', 'Times', 'serif'],
       },
 
       fontSize: {

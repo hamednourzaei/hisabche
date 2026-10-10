@@ -101,10 +101,6 @@ const ALLOWED: Record<string, { classes: string[]; why: string }> = {
     classes: ['left-1/2'],
     why: 'Centring the «محبوب‌ترین» ribbon over the card, paired with -translate-x-1/2.',
   },
-  'packages/ui/src/components/ui/landing/cinematic-hero.tsx': {
-    classes: ['left-1/2', 'start-0', 'end-0'],
-    why: 'Decorative orbit: four dots at the compass points of a concentric ring, aria-hidden. The geometry is physical and does not mirror.',
-  },
   'packages/ui/src/components/ui/notification-bell.tsx': {
     classes: ['start-4', 'end-4'],
     why: 'Both edges at once — the mobile panel is inset equally from each side. The desktop branch beside it already uses end-0.',
@@ -310,8 +306,6 @@ const COLOUR_ALLOWED: Record<string, string> = {
     'html2canvas backgroundColor: a rasteriser option, not CSS. The exported PNG needs an opaque white ground whatever theme the app is in.',
   'packages/ui/src/components/ui/chart.tsx':
     "A SELECTOR, not a colour: [&_.recharts-dot[stroke='#fff']] matches the literal attribute Recharts writes. Changing it stops the rule matching.",
-  'packages/ui/src/components/ui/landing/use-scroll-narrative-store.ts':
-    'NARRATIVE_COLORS is a six-way CATEGORICAL palette for the landing scroll narrative (frustration, confusion, clarity, confidence, trust, action). The stylesheet has no token for pink, red or violet, and --color-purple is aliased to --color-primary, so mapping these onto tokens would collapse four of the six to the same teal. Needs six real tokens first — see the report.',
 }
 
 describe('colours come from tokens, not literals', () => {

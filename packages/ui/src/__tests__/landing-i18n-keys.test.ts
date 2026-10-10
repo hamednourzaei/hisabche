@@ -248,7 +248,7 @@ describe('landing is mobile-first', () => {
 // silently put them back into the client bundle.
 describe('static landing sections stay server components', () => {
   it.each([
-    'cinematic-hero.tsx',
+    'journey/journey-hero.tsx',
     'system-scene.tsx',
     'chapter-scene.tsx',
     'modules-scene.tsx',
@@ -273,7 +273,7 @@ describe('static landing sections stay server components', () => {
 // On slow 4G that download also competed with the LCP image (mobile LCP 4.1 s).
 describe('landing links do not prefetch other routes', () => {
   it.each([
-    'landing/cinematic-hero.tsx',
+    'landing/journey/journey-hero.tsx',
     'landing/cta-scene.tsx',
     'landing/modules-scene.tsx',
     'landing/pricing-scene.tsx',

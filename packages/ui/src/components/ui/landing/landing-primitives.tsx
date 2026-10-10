@@ -133,3 +133,70 @@ export function ForwardArrow({ className }: { className?: string | undefined }) 
     </>
   )
 }
+
+/** Editorial rule for journal & newspaper typography paradigms */
+export function EditorialRule({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        'my-8 w-full border-t border-[hsl(var(--border-default))] border-dashed opacity-60',
+        className,
+      )}
+    />
+  )
+}
+
+/** Industrial frame with corner accents for telemetry / control room paradigms */
+export function TelemetryFrame({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'relative rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-6',
+        className,
+      )}
+    >
+      <div className="pointer-events-none absolute -top-1 -start-1 size-2 border-t-2 border-s-2 border-[hsl(var(--color-primary))]" />
+      <div className="pointer-events-none absolute -top-1 -end-1 size-2 border-t-2 border-e-2 border-[hsl(var(--color-primary))]" />
+      <div className="pointer-events-none absolute -bottom-1 -start-1 size-2 border-b-2 border-s-2 border-[hsl(var(--color-primary))]" />
+      <div className="pointer-events-none absolute -bottom-1 -end-1 size-2 border-b-2 border-e-2 border-[hsl(var(--color-primary))]" />
+      {children}
+    </div>
+  )
+}
+
+/** Strict 12-column Swiss layout container */
+export function SwissColumnGrid({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return <div className={cn('grid grid-cols-1 md:grid-cols-12 gap-6', className)}>{children}</div>
+}
+
+/** Horological luxury precision bezel frame */
+export function HorologicalBezel({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'relative rounded-2xl border border-[hsl(var(--border-default))] bg-gradient-to-b from-[hsl(var(--surface-elevated))] to-[hsl(var(--surface-base))] p-8 shadow-sm',
+        className,
+      )}
+    >
+      {children}
+    </div>
+  )
+}
