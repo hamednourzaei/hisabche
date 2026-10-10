@@ -149,6 +149,7 @@ export function JourneyHero({ t, raw, locale }: JourneyHeroProps) {
       summaryLabel={t('landing.journey.summary')}
       skipLabel={t('landing.journey.skip')}
       recordedLabel={t('landing.journey.recorded')}
+      signLabel={t('landing.journey.sign')}
       invoice={{
         brand: t('app.name'),
         title: t('invoices.saleInvoice'),

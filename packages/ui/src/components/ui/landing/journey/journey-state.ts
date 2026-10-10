@@ -31,6 +31,8 @@ export interface JourneyState {
   invoice: InvoiceLabels | null
   /** What a gate's sign says once its machine has recorded the invoice. */
   recorded: string
+  /** The name on the great board behind the core. */
+  sign: string
   /** One board per station, in station order. */
   screens: ScreenModel[]
   /** The kinds of business named on the boards along the walls. */
@@ -48,6 +50,7 @@ export const journeyState: JourneyState = {
   stations: 5,
   invoice: null,
   recorded: '',
+  sign: '',
   screens: [],
   industries: [],
   free: { top: 0, bottom: 1 },

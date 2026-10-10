@@ -59,6 +59,8 @@ export interface JourneyStageProps {
   invoice: InvoiceLabels
   /** «ثبت شد» — shown on a board once its station has the invoice. */
   recordedLabel: string
+  /** The name on the great board at the end of the hall. */
+  signLabel: string
 }
 
 /** How much page one beat of the story takes: enough that a wheel notch is a step, not a jump. */
@@ -110,6 +112,7 @@ export function JourneyStage(props: JourneyStageProps) {
     journeyState.stations = stops.length
     journeyState.invoice = props.invoice
     journeyState.recorded = props.recordedLabel
+    journeyState.sign = props.signLabel
     journeyState.screens = props.screens
     journeyState.industries = props.industries
     journeyState.bubble = bubbleRef.current
@@ -129,7 +132,14 @@ export function JourneyStage(props: JourneyStageProps) {
       window.removeEventListener('scroll', onScroll)
       journeyState.bubble = null
     }
-  }, [stops.length, props.invoice, props.recordedLabel, props.screens, props.industries])
+  }, [
+    stops.length,
+    props.invoice,
+    props.recordedLabel,
+    props.signLabel,
+    props.screens,
+    props.industries,
+  ])
 
   // Tell the scene which band of the frame no text covers, so its camera
   // composes the subject there instead of behind the headline or the caption.

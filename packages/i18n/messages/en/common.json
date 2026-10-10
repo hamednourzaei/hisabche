@@ -1410,7 +1410,8 @@
         "sales": "Sales",
         "receivables": "Receivables",
         "unitsSold": "Units sold"
-      }
+      },
+      "sign": "Business OS Hisabche"
     }
   },
   "nav": {

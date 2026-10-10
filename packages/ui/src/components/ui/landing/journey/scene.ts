@@ -416,7 +416,7 @@ const setup: SceneSetup = (runtime) => {
     grain = (grain * 16807) % 2147483647
     return grain / 2147483647
   }
-  const tilePixels = mobile ? 256 : 512
+  const tilePixels = 512
   const tiles = painted(tilePixels, tilePixels, (ctx) => {
     const cell = tilePixels / 4
     const tile = base.clone().lerp(light, 0.1)
@@ -549,8 +549,56 @@ const setup: SceneSetup = (runtime) => {
     }
   }
   // The shop front behind the core, and a window in the wall behind the camera.
-  frames.push([0, 4.6, hall.back + 0.03, hall.halfWidth * 1.3 + 0.4, 6.4, 0.1, 0, 0])
-  panes.push([0, 4.6, hall.back + 0.09, hall.halfWidth * 1.3, 6, 1, 0, 0])
+  frames.push([
+    0,
+    4.6,
+    hall.back + 0.03,
+    hall.halfWidth * 1.3 + 0.4,
+    (hall.halfWidth * 1.3 * 340) / 1024 + 0.4,
+    0.1,
+    0,
+    0,
+  ])
+  // The great board behind the core carries the name of the whole thing.
+  const nameCanvas = document.createElement('canvas')
+  nameCanvas.width = 1024
+  nameCanvas.height = 340
+  const nameTexture = new THREE.CanvasTexture(nameCanvas)
+  nameTexture.colorSpace = THREE.SRGBColorSpace
+  const paintName = () => {
+    const ctx = nameCanvas.getContext('2d')
+    if (!ctx) return
+    ctx.fillStyle = css(deep)
+    ctx.fillRect(0, 0, 1024, 340)
+    ctx.strokeStyle = css(busy.clone().lerp(base, 0.35))
+    ctx.lineWidth = 6
+    ctx.strokeRect(14, 14, 996, 312)
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = css(busy.clone().lerp(lamp, 0.25))
+    const family = getComputedStyle(document.body).fontFamily
+    let size = 132
+    ctx.font = `800 ${size}px ${family}`
+    const wide = ctx.measureText(journeyState.sign).width
+    if (wide > 900) size *= 900 / wide
+    ctx.font = `800 ${size}px ${family}`
+    ctx.fillText(journeyState.sign, 512, 176)
+    nameTexture.needsUpdate = true
+  }
+  paintName()
+  void document.fonts?.ready.then(paintName)
+  scene.add(
+    at(
+      glow(
+        hall.halfWidth * 1.3,
+        (hall.halfWidth * 1.3 * 340) / 1024,
+        lit(grey.setScalar(1).clone(), nameTexture),
+      ),
+      0,
+      4.6,
+      hall.back + 0.09,
+    ),
+  )
   frames.push([0, 5, hall.front - 0.03, 8.4, 4.4, 0.1, 0, 0])
   panes.push([0, 5, hall.front - 0.09, 8, 4, 1, Math.PI, 0])
 
@@ -581,8 +629,8 @@ const setup: SceneSetup = (runtime) => {
   if (trades.length > 0 && signs.length > 0) {
     const columns = 6
     const rows = Math.ceil(trades.length / columns)
-    const cellW = mobile ? 170 : 340
-    const cellH = mobile ? 128 : 256
+    const cellW = mobile ? 256 : 340
+    const cellH = mobile ? 192 : 256
     const sheet = painted(columns * cellW, rows * cellH, (ctx) => {
       const family = getComputedStyle(document.body).fontFamily
       ctx.textAlign = 'center'
@@ -1601,12 +1649,12 @@ const setup: SceneSetup = (runtime) => {
     shell.forEach((material) => {
       material.opacity = gone
     })
-    haloMaterial.opacity = (0.05 + (recorded / stations) * 0.12) * gone + blast * 0.2
+    haloMaterial.opacity = (0.05 + (recorded / stations) * 0.12) * gone + blast * 0.1
     heart.scale.setScalar(hum * (1 + flash * 0.8))
     heart.rotation.set(time * 0.4, time * 0.6, 0)
     cage.rotation.set(-time * 0.3, time * 0.2, 0)
     cage.scale.setScalar(1 + blast * 1.1)
-    halo.scale.setScalar(hum + blast * 0.9)
+    halo.scale.setScalar(hum + blast * 0.35)
     rings.forEach((ring, index) => {
       // Each ring turns on its own axis, faster the more stops have fed it.
       const turnBy = time * (0.3 + index * 0.2 + (recorded / stations) * 0.8) * (1 + flash * 3)
@@ -1615,7 +1663,7 @@ const setup: SceneSetup = (runtime) => {
         index === 1 ? turnBy : 0.5,
         index === 2 ? turnBy : 0,
       )
-      ring.scale.setScalar(1 + blast * (0.5 + index * 0.25))
+      ring.scale.setScalar(1 + blast * (0.2 + index * 0.1))
     })
     fins.forEach(({ piece, x, y }) => {
       piece.position.set(x * (1 + blast * 1.4), y * (1 + blast * 1.4), 0)

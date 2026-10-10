@@ -64,13 +64,15 @@ export function createSceneRuntime(canvas: HTMLCanvasElement): SceneRuntime {
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
-    antialias: !light,
+    antialias: true,
     alpha: true,
     powerPreference: light ? 'low-power' : 'high-performance',
   })
   // No post-processing anywhere: one extra full-screen pass per frame is the
   // quickest way for a landing page to lose its interaction budget.
-  renderer.setPixelRatio(Math.min(light ? 1.25 : 1.75, window.devicePixelRatio || 1))
+  // A phone screen is dense: below about 1.75 device pixels per pixel the edges
+  // and the text on the boards are visibly soft.
+  renderer.setPixelRatio(Math.min(light ? 1.75 : 2, window.devicePixelRatio || 1))
   renderer.outputColorSpace = THREE.SRGBColorSpace
 
   const scene = new THREE.Scene()

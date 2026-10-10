@@ -283,13 +283,16 @@ export const TopNav = memo(function TopNav({
               aria-hidden="true"
               // Slides with `transform` (composited). It transitioned `left`
               // and `width`, which a Chrome trace flagged as non-composited.
-              // Physical `start-0` on purpose, in RTL too: the offset is measured
-              // from getBoundingClientRect().left, a physical coordinate.
+              // ⚠️ Anchored at the PHYSICAL left edge, in RTL too: the offset is
+              // measured from getBoundingClientRect().left. It was `start-0`, which
+              // in a right-to-left page is the right edge — so the pill sat a whole
+              // list-width away from the item it marks.
               className={cn(
-                'absolute start-0 top-1 z-0 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)]',
+                'absolute top-1 z-0 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)]',
                 indicatorReady && 'transition-transform duration-300',
               )}
               style={{
+                left: 0,
                 width: indicatorStyle.width || 0,
                 transform: `translateX(${indicatorStyle.offset || 0}px)`,
               }}
