@@ -337,6 +337,7 @@ export {
   billingHref,
 } from './components/ui/billing'
 export { SandboxNotice } from './components/ui/developers/sandbox-notice'
+export { BookCurrencySync } from './components/ui/book-currency-sync'
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'
 
 // ─── ✅ Activity Components ──────────────────────────────────────────────────

@@ -35,8 +35,10 @@ import {
   normalizeText,
   type MigrationEntity,
   parseDateIso,
+  normalizeDigits,
 } from './migration.domain'
 import { parseJalaliIso } from './jalali.domain'
+import { warehouseOfStockField } from './stock-fields'
 import { ENTITY_FIELDS, businessKeys, type FieldSpec } from './migration.entities'
 
 export type FindingSeverity = 'fatal' | 'warning' | 'info'
@@ -59,6 +61,11 @@ export interface CandidateRow {
   keys: Array<{ kind: string; key: string; strength: 'strong' | 'weak' }>
   /** A fatal finding anywhere on the row means it is not importable. */
   importable: boolean
+  /**
+   * This row is not a product of its own: it is the stock of the product on
+   * THAT row in another warehouse (stock-import.domain.ts).
+   */
+  stockOf?: number | undefined
 }
 
 export interface ValidationResult {
@@ -77,12 +84,17 @@ export interface ValidationResult {
 /** `mapping` is target field → source column index. Absent fields are absent. */
 export type ColumnMapping = Record<string, number>
 
+// Fields that are codes — compared exactly, by people and by machines.
+const CODE_FIELDS = new Set(['sku', 'barcode', 'invoiceNumber', 'externalId'])
+
 function coerce(
   spec: FieldSpec,
   raw: string,
   row: number,
   column: string,
   findings: Finding[],
+  /** For a date: whether this COLUMN writes the day first. */
+  dayFirst?: boolean,
 ): string | number | boolean | undefined {
   const text = normalizeText(raw)
 
@@ -95,6 +107,19 @@ function coerce(
 
   switch (spec.kind) {
     case 'money': {
+      // ⚠️ «10.00$ = 800.00» is TWO amounts — a foreign balance and its value at
+      // some rate. Stripped of everything but digits it reads as one number
+      // that is neither. Which of the two is meant is not ours to choose.
+      if (text.includes('=')) {
+        findings.push({
+          severity: 'fatal',
+          row,
+          column,
+          code: 'MONEY_UNREADABLE',
+          detail: 'TWO_AMOUNTS',
+        })
+        return undefined
+      }
       const parsed = parseMoneyMinor(text)
       if (!parsed.ok) {
         // Money that cannot be read is fatal even on an optional field. A
@@ -146,7 +171,7 @@ function coerce(
         return undefined
       }
       // A workbook date arrives as `2026-10-01` or `2026-10-01 14:30`.
-      const parsed = parseDateIso(text.split(' ')[0] ?? text)
+      const parsed = parseDateIso(text.split(' ')[0] ?? text, dayFirst)
       if (!parsed.ok) {
         findings.push({
           severity: 'fatal',
@@ -221,7 +246,9 @@ function coerce(
       if (text !== raw.trim()) {
         findings.push({ severity: 'info', row, column, code: 'TEXT_NORMALISED' })
       }
-      return text
+      // ⚠️ A code is matched and scanned in ASCII digits. «۱۰۰۱» kept as it
+      // was written would never match the 1001 a scanner or another file gives.
+      return CODE_FIELDS.has(spec.key) ? normalizeDigits(text) : text
     }
   }
 }
@@ -235,6 +262,37 @@ function coerce(
  * would be dead wiring, and the ambiguity rule it encodes is the part worth
  * having settled before invoices arrive.
  */
+/** Group names that mean «these owe us»: the only ledger rows that are customers. */
+const CUSTOMER_GROUPS = [
+  'debtor',
+  'customer',
+  'receivable',
+  'client',
+  'بدهکار',
+  'مشتری',
+  'دریافتنی',
+].map(comparisonKey)
+const CREDIT_SIDES = ['cr', 'credit', 'creditor', 'بستانکار', 'بس'].map(comparisonKey)
+
+/**
+ * Whether a column of `a/b/yyyy` dates writes the day first.
+ *
+ * true or false only when the cells prove it (a first part above 12, or a
+ * second part above 12) and never both ways; otherwise undefined.
+ */
+export function columnDayFirst(cells: readonly string[]): boolean | undefined {
+  let dayFirst = false
+  let monthFirst = false
+  for (const cell of cells) {
+    const parts = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(normalizeDigits(normalizeText(cell)))
+    if (!parts) continue
+    if (Number(parts[1]) > 12) dayFirst = true
+    if (Number(parts[2]) > 12) monthFirst = true
+  }
+  if (dayFirst === monthFirst) return undefined
+  return dayFirst
+}
+
 export function validateRows(
   entity: MigrationEntity,
   headers: string[],
@@ -257,8 +315,26 @@ export function validateRows(
     })
   }
 
+  // Warehouse quantity columns (one column per warehouse) are mapped by
+  // warehouse, not by field name.
+  const stockColumns =
+    entity === 'product'
+      ? Object.entries(mapping).filter(([field]) => warehouseOfStockField(field) !== null)
+      : []
+
+  // ⚠️ A STOCK SHEET has no product names: «code, warehouse, quantity» for
+  // products that already exist. The name is then not a missing column — the
+  // sheet is not introducing products. Each row must find its product by code,
+  // and one that does not is refused where the catalogue is known (the service).
+  const stockSheet =
+    entity === 'product' &&
+    mapping['name'] === undefined &&
+    (mapping['sku'] !== undefined || mapping['barcode'] !== undefined) &&
+    (mapping['quantity'] !== undefined || stockColumns.length > 0)
+
   const missingRequired = specs
     .filter((spec) => spec.required && mapping[spec.key] === undefined)
+    .filter((spec) => !(stockSheet && spec.key === 'name'))
     .map((spec) => spec.key)
 
   for (const field of missingRequired) {
@@ -271,6 +347,17 @@ export function validateRows(
     })
   }
 
+  // ⚠️ 03/04/2026 is two different days, and a row cannot say which. A
+  // COLUMN can: one cell reading 25/04/2026 settles every other cell in it,
+  // because nobody mixes the two orders in one column. Where no cell settles
+  // it the order stays unknown and those rows are refused, as before.
+  const dayFirstOf = new Map<string, boolean | undefined>()
+  for (const spec of specs) {
+    const column = mapping[spec.key]
+    if (spec.kind !== 'date' || column === undefined) continue
+    dayFirstOf.set(spec.key, columnDayFirst(rows.map((cells) => cells[column] ?? '')))
+  }
+
   rows.forEach((cells, index) => {
     const row = index + 1
     const before = findings.length
@@ -281,17 +368,112 @@ export function validateRows(
       if (column === undefined) continue
 
       const raw = cells[column] ?? ''
-      const value = coerce(spec, raw, row, headers[column] ?? `#${column}`, findings)
+      const value = coerce(
+        spec,
+        raw,
+        row,
+        headers[column] ?? `#${column}`,
+        findings,
+        dayFirstOf.get(spec.key),
+      )
       if (value !== undefined) values[spec.key] = value
     }
 
+    for (const [field, column] of stockColumns) {
+      const value = coerce(
+        { key: field, kind: 'decimal', required: false, aliases: [] },
+        cells[column] ?? '',
+        row,
+        headers[column] ?? `#${column}`,
+        findings,
+      )
+      if (value !== undefined) values[field] = value
+    }
+
     const rowFindings = findings.slice(before)
-    const importable =
-      missingRequired.length === 0 && !rowFindings.some((finding) => finding.severity === 'fatal')
+
+    // ⚠️ A CONTINUATION ROW is not a broken record. Exports write a party's
+    // second address, or the components of a bill of materials, on rows
+    // UNDER it with the name cell left empty. Those rows belong to the row
+    // above; reporting each as «required field empty» buried the real
+    // problems of a file under dozens of false ones. They are still not
+    // imported — and they say why.
+    // A row under a product that names one of its COMPONENTS: it has no product
+    // name because it is not a product. It is kept (the formula is read from
+    // it) and is not imported as a product.
+    const componentRow =
+      entity === 'product' &&
+      String(values['bomComponent'] ?? '') !== '' &&
+      String(values['name'] ?? '') === '' &&
+      rowFindings.every(
+        (finding) => finding.severity !== 'fatal' || finding.code === 'REQUIRED_FIELD_EMPTY',
+      )
+    if (componentRow) {
+      for (const finding of rowFindings) {
+        if (finding.code !== 'REQUIRED_FIELD_EMPTY') continue
+        finding.severity = 'info'
+        finding.code = 'BOM_COMPONENT_ROW'
+      }
+    }
+
+    const continuation =
+      entity !== 'invoice' &&
+      // Nothing this importer reads is on the row — only columns it does not
+      // use. A row with a phone and no name is NOT this: it is a customer with
+      // its name missing, and stays the error it is.
+      Object.keys(values).length === 0 &&
+      cells.some((cell) => (cell ?? '').trim() !== '') &&
+      rowFindings.some((finding) => finding.code === 'REQUIRED_FIELD_EMPTY') &&
+      rowFindings.every(
+        (finding) => finding.severity !== 'fatal' || finding.code === 'REQUIRED_FIELD_EMPTY',
+      )
+    if (continuation) {
+      for (const finding of rowFindings) {
+        if (finding.code !== 'REQUIRED_FIELD_EMPTY') continue
+        finding.severity = 'info'
+        finding.code = 'ROW_CONTINUATION'
+      }
+    }
+
+    let importable =
+      !continuation &&
+      !componentRow &&
+      missingRequired.length === 0 &&
+      !rowFindings.some((finding) => finding.severity === 'fatal')
+
+    if (entity === 'customer' && importable) {
+      // ⚠️ ONLY THE CUSTOMERS OF A LEDGER. With a group column, a row is
+      // imported when its group names a debtor; a supplier, a bank account or
+      // an expense head is left out and named — never turned into a customer.
+      const group = comparisonKey(String(values['ledgerGroup'] ?? ''))
+      if (group !== '' && !CUSTOMER_GROUPS.some((word) => group.includes(word))) {
+        findings.push({
+          severity: 'warning',
+          row,
+          column: null,
+          code: 'ROW_NOT_A_CUSTOMER',
+          detail: String(values['ledgerGroup']),
+        })
+        importable = false
+      }
+
+      // ⚠️ A CREDIT balance is money WE owe. The opening balance here is what
+      // the customer owes; importing a credit as that would invert it.
+      const side = comparisonKey(String(values['balanceSide'] ?? ''))
+      if (importable && values['openingBalance'] !== undefined && CREDIT_SIDES.includes(side)) {
+        findings.push({ severity: 'warning', row, column: null, code: 'OPENING_BALANCE_IS_CREDIT' })
+        importable = false
+      }
+      // The same fact written as a column of its own: «مانده بستانکار».
+      if (importable && Number(values['creditBalance']) > 0) {
+        findings.push({ severity: 'warning', row, column: null, code: 'OPENING_BALANCE_IS_CREDIT' })
+        importable = false
+      }
+    }
 
     // A row where every mapped cell was blank is an empty line, not a record.
     // Reported so the count adds up, never imported.
-    if (Object.keys(values).length === 0) {
+    if (Object.keys(values).length === 0 && !continuation) {
       findings.push({ severity: 'warning', row, column: null, code: 'ROW_EMPTY' })
       candidates.push({ row, values, keys: [], importable: false })
       return
@@ -308,29 +490,60 @@ export function validateRows(
   // Two rows sharing a strong key are the same object written twice. The
   // SECOND one is flagged, not the first: the first occurrence is what the
   // user will recognise, and flagging both makes the report unreadable.
+  //
+  // ⚠️ EXCEPT a product's stock in ANOTHER warehouse. «Rice · Main · 100» and
+  // «Rice · Second · 45» are one product in two buildings, not rice written
+  // twice. With a warehouse on both rows and the two differing, the second is
+  // the first's stock there; the same product AND warehouse twice is still a
+  // repeat, and which of its two quantities is right is not ours to pick.
   const seen = new Map<string, number>()
+  const warehousesOf = new Map<number, Set<string>>()
+  const warehouseOf = (candidate: CandidateRow) =>
+    entity === 'product' ? comparisonKey(String(candidate.values['warehouse'] ?? '')) : ''
   let duplicateInFile = 0
 
   for (const candidate of candidates) {
     if (!candidate.importable) continue
-    for (const key of candidate.keys) {
-      if (key.strength !== 'strong') continue
-      const first = seen.get(key.key)
-      if (first === undefined) {
-        seen.set(key.key, candidate.row)
-        continue
-      }
-      duplicateInFile += 1
-      candidate.importable = false
+    const here = warehouseOf(candidate)
+    const strong = candidate.keys.filter((key) => key.strength === 'strong')
+    // A product with no code is known only by its name. That is too weak to
+    // call two rows the same product — unless both also say which warehouse,
+    // which is what a per-warehouse stock list looks like.
+    const identities =
+      strong.length > 0 || here === ''
+        ? strong
+        : candidate.keys.filter((key) => key.kind === 'name')
+
+    const first = identities.map((key) => seen.get(key.key)).find((row) => row !== undefined)
+    if (first === undefined) {
+      for (const key of identities) seen.set(key.key, candidate.row)
+      warehousesOf.set(candidate.row, new Set(here === '' ? [] : [here]))
+      continue
+    }
+
+    candidate.importable = false
+    const known = warehousesOf.get(first) ?? new Set<string>()
+    if (here !== '' && known.size > 0 && !known.has(here)) {
+      known.add(here)
+      candidate.stockOf = first
       findings.push({
-        severity: 'warning',
+        severity: 'info',
         row: candidate.row,
         column: null,
-        code: 'DUPLICATE_IN_FILE',
+        code: 'STOCK_ROW_FOR_WAREHOUSE',
         detail: `${first}`,
       })
-      break
+      continue
     }
+
+    duplicateInFile += 1
+    findings.push({
+      severity: 'warning',
+      row: candidate.row,
+      column: null,
+      code: here !== '' && known.has(here) ? 'DUPLICATE_STOCK_ROW' : 'DUPLICATE_IN_FILE',
+      detail: `${first}`,
+    })
   }
 
   const counts = {
@@ -355,6 +568,11 @@ export interface DryRunSummary {
   needsReview: number
   /** Sum of the money fields that WOULD be written. Minor units. */
   financialImpactMinor: Record<string, number>
+  /** Production formulas that will be written for the products of this file. */
+  boms?: number | undefined
+  /** Opening stock that will be written: every unit, and how many (product, warehouse) pairs. */
+  stockUnits?: number | undefined
+  stockPlacements?: number | undefined
   /** Stated on every dry run, because the user is about to be asked to trust it. */
   productionDataChanged: false
 }

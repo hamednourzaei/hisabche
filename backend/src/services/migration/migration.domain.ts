@@ -170,15 +170,33 @@ export function detectDelimiter(firstLine: string): string {
  * usually a stray delimiter in an address — something the user can fix once
  * they are told which row.
  */
-export function parseDelimited(input: string, delimiter?: string): ParsedTable {
+/**
+ * Every record of a delimited file, exactly as wide as it was written.
+ *
+ * `parseDelimited` takes the FIRST line as the header and cuts every later
+ * row to its width. That is right for a table and wrong for a report: a CSV
+ * that opens with a one-cell title («Sales by Customer Detail») had every row
+ * under it cut to one cell before anything could look for the real header.
+ * The look for a header row reads these instead.
+ */
+export function readRecords(
+  input: string,
+  delimiter?: string,
+): { delimiter: string; records: string[][] } {
   // A leading BOM would otherwise become part of the first header name, and
   // then that header matches no mapping rule and the whole first column looks
   // unrecognised.
   const text = input.charCodeAt(0) === 0xfeff ? input.slice(1) : input
 
-  const firstBreak = text.search(/\r?\n/)
-  const firstLine = firstBreak === -1 ? text : text.slice(0, firstBreak)
-  const sep = delimiter ?? detectDelimiter(firstLine)
+  // The delimiter is read from the richest of the first lines: a report
+  // often opens with a title, which has none.
+  const opening = text.split(/\r?\n/, 12)
+  const richest = opening.reduce(
+    (best, line) =>
+      (line.match(/[,;\t|]/g) ?? []).length > (best.match(/[,;\t|]/g) ?? []).length ? line : best,
+    opening[0] ?? '',
+  )
+  const sep = delimiter ?? detectDelimiter(richest)
 
   const records: string[][] = []
   let row: string[] = []
@@ -232,6 +250,12 @@ export function parseDelimited(input: string, delimiter?: string): ParsedTable {
   }
 
   if (field !== '' || row.length > 0) endRow()
+
+  return { delimiter: sep, records }
+}
+
+export function parseDelimited(input: string, delimiter?: string): ParsedTable {
+  const { delimiter: sep, records } = readRecords(input, delimiter)
 
   const headerRow = records.shift() ?? []
   const headers = headerRow.map((cell) => cell.trim())

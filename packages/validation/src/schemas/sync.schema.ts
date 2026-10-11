@@ -70,7 +70,9 @@ export const syncConfigSchema = z.object({
   syncIntervalMs: z.number().int().min(5000).default(30000),
   maxRetries: z.number().int().min(1).max(10).default(3),
   batchSize: z.number().int().min(1).max(100).default(10),
-  conflictStrategy: z.enum(['client_wins', 'server_wins', 'last_write_wins', 'manual']).default('client_wins'),
+  conflictStrategy: z
+    .enum(['client_wins', 'server_wins', 'last_write_wins', 'manual'])
+    .default('client_wins'),
   syncOnWifiOnly: z.boolean().default(false),
   syncOnBatteryOnly: z.boolean().default(false),
 })

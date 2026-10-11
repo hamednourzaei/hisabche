@@ -16,6 +16,7 @@
 //   analytics     exact counts per day, installs, and health
 // ============================================
 
+import { BILLING_CURRENCY } from '@hisabche/ui-contract'
 import { memo, useState } from 'react'
 import {
   API_VERSIONS,
@@ -136,7 +137,7 @@ export const AppManagePanel = memo(function AppManagePanel(props: AppManagePanel
   const [termsUrl, setTermsUrl] = useState(app.terms_url ?? '')
   const [installUrl, setInstallUrl] = useState(app.install_url ?? '')
   const [paid, setPaid] = useState(app.pricing_model === 'paid')
-  const [currency, setCurrency] = useState<string>(app.price_currency ?? 'AFN')
+  const [currency, setCurrency] = useState<string>(app.price_currency ?? BILLING_CURRENCY)
   const [interval, setInterval] = useState<AppPriceInterval>(app.price_interval ?? 'month')
   const [price, setPrice] = useState(
     app.price_minor !== null && app.price_currency

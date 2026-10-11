@@ -3,6 +3,7 @@
 // FIXED: TypeScript type for getBalance return
 // ============================================
 
+import { baseCurrencyOf } from './base-currency'
 import { supabase } from '../db'
 import { scopes } from './authorization/scope.service'
 import { CreateCustomer, UpdateCustomer, CustomerFilters } from '@hisabche/validation'
@@ -10,7 +11,7 @@ import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.
 import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
-import { partyBalance } from './payments'
+import { partyBalancesByCurrency } from './payments'
 import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
 import {
   asReplay,
@@ -40,7 +41,17 @@ interface CustomerWithBalance extends Customer {
 
 interface BalanceResult {
   customerId: string
+  /** The currency the books are kept in — the currency of `balance`. */
+  currency: string
+  /**
+   * What they owe IN THE BOOKS CURRENCY. It used to be every transaction
+   * added together whatever its currency: 100 dollars and 10,000 afghani
+   * answered 10,100. Other currencies are in `balances`, never in here.
+   */
   balance: number
+  /** One row per currency the customer has a transaction in; books currency first. */
+  balances: Array<{ currency: string; balance: number }>
+  /** They owe something, in any currency. */
   isDebtor: boolean
 }
 
@@ -350,16 +361,10 @@ export class CustomerService {
         customer_id: customer.id,
         type: 'sale',
         amount: opening,
-        // ⚠️ 'AFN' IS THE SYSTEM DEFAULT, NOT A MISTAKE HERE.
-        //
-        // There is no per-workspace currency column; `currency.service.ts`
-        // falls back to the same literal (`input.baseCurrency ?? 'AFN'`), so
-        // this row agrees with how the rest of the product reads it. Changing
-        // it to a workspace setting is a real improvement and a product
-        // decision — a books currency is not something to invent here, and
-        // guessing a different unit on a real amount would be worse than the
-        // shared default.
-        currency: 'AFN',
+        // The opening balance is in the currency this business keeps its
+        // books in (services/base-currency.ts). It used to be the literal
+        // 'AFN', which was right only for a business whose books are in AFN.
+        currency: await baseCurrencyOf(workspaceId),
         description: 'Credit sale - opening balance',
         workspace_id: workspaceId,
         user_id: userId,
@@ -568,12 +573,12 @@ export class CustomerService {
     // when it is genuinely shorter than requested.
     // ═══════════════════════════════════════════════════════════════════════
     const PAGE = 1000
-    const transactions: Array<{ type: string; amount: unknown }> = []
+    const transactions: Array<{ type: string; amount: unknown; currency?: string | null }> = []
 
     for (let from = 0; ; from += PAGE) {
       const { data: page, error } = await supabase
         .from('transactions_view')
-        .select('type, amount')
+        .select('type, amount, currency')
         .eq('customer_id', customerId)
         // Ordered, so paging is deterministic. Without it PostgreSQL may
         // return rows in any order and a row can be seen twice or never.
@@ -595,11 +600,13 @@ export class CustomerService {
     //   receipt  money arrived from them   → owes less
     //   payment  money we paid out to them → owes more (we settled our side)
     //   return   we credited them          → owes less
-    const balance = partyBalance(
+    const bookCurrency = await baseCurrencyOf(workspaceId)
+    const balances = partyBalancesByCurrency(
       (transactions ?? []).map((tx) => ({
         date: '',
         reference: '',
         amount: Number(tx.amount) || 0,
+        ...(tx.currency ? { currency: tx.currency } : {}),
         kind:
           tx.type === 'sale'
             ? ('sale' as const)
@@ -609,12 +616,16 @@ export class CustomerService {
                 ? ('payment_out' as const)
                 : ('return' as const),
       })),
+      bookCurrency,
     )
 
+    const balance = balances[0]?.balance ?? 0
     const result: BalanceResult = {
       customerId,
+      currency: bookCurrency,
       balance,
-      isDebtor: balance > 0,
+      balances,
+      isDebtor: balances.some((entry) => entry.balance > 0),
     }
 
     await memoryCache.set(cacheKey, result, 120)

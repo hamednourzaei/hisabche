@@ -27,6 +27,8 @@ import {
   useMigrations,
   useSaveMapping,
   useScanMigration,
+  useWarehouseOverview,
+  asList,
   type DryRunSummary,
   type Finding,
   type ImportInspection,
@@ -48,6 +50,9 @@ const TARGET_FIELDS: Record<MigrationEntity, string[]> = {
     'address',
     'notes',
     'openingBalance',
+    'creditBalance',
+    'balanceSide',
+    'ledgerGroup',
     'type',
     'externalId',
   ],
@@ -62,6 +67,10 @@ const TARGET_FIELDS: Record<MigrationEntity, string[]> = {
     'sellPrice',
     'wholesalePrice',
     'minStockLevel',
+    'warehouse',
+    'bomComponent',
+    'bomQuantity',
+    'bomUnit',
     'externalId',
   ],
   invoice: [
@@ -77,8 +86,15 @@ const TARGET_FIELDS: Record<MigrationEntity, string[]> = {
     'unitPrice',
     'lineTotal',
     'total',
+    'discount',
+    'tax',
+    'taxRate',
+    'invoiceDiscount',
+    'invoiceTax',
     'paidAmount',
     'currency',
+    'warehouse',
+    'branch',
     'notes',
   ],
 }
@@ -108,6 +124,11 @@ function toBase64(buffer: ArrayBuffer): string {
   return btoa(binary)
 }
 
+/** No answer at all came back: the connection dropped, or the request timed out. */
+function isUnanswered(error: unknown): boolean {
+  return (error as { response?: unknown } | null)?.response === undefined
+}
+
 function messageOf(error: unknown): string | null {
   const response = (error as { response?: { data?: { error?: string } } })?.response?.data?.error
   return response ?? (error as Error)?.message ?? null
@@ -134,6 +155,8 @@ export const DataMigrationContainer = memo(function DataMigrationContainer() {
   const [seen, setSeen] = useState<ImportInspection | null>(null)
   /** Which sheet of a workbook is being imported now; null for a text file. */
   const [sheetName, setSheetName] = useState<string | null>(null)
+  /** The currency of invoices whose rows name none. Chosen by the person, never assumed. */
+  const [currency, setCurrency] = useState('')
 
   const history = useMigrations()
   const inspect = useInspectImport()
@@ -217,6 +240,15 @@ export const DataMigrationContainer = memo(function DataMigrationContainer() {
             scanAs(kind, inspection, file.name)
           },
           onError: (error) => {
+            if (isUnanswered(error)) {
+              setActionError(
+                t(
+                  'migration.error_offline',
+                  'اتصال برقرار نشد. اینترنت را بررسی کنید و دوباره بزنید؛ چیزی ثبت نشده است.',
+                ),
+              )
+              return
+            }
             const message = messageOf(error) ?? ''
             const known = FILE_ERRORS.find((code) => message.includes(code))
             setActionError(known ? t(`migration.error_${known}`, message) : message || null)
@@ -289,37 +321,98 @@ export const DataMigrationContainer = memo(function DataMigrationContainer() {
     setActionError(null)
 
     dryRun.mutate(
-      { id: job.id, content },
+      { id: job.id, content, ...(currency ? { currency } : {}) },
       {
         onSuccess: (result) => {
           setJob(result.job)
           setDryRunResult(result.dryRun)
           setFindings(result.findings)
         },
-        onError: (error) => setActionError(messageOf(error)),
+        onError: (error) =>
+          setActionError(
+            isUnanswered(error)
+              ? t(
+                  'migration.error_offline',
+                  'اتصال برقرار نشد. اینترنت را بررسی کنید و دوباره بزنید؛ چیزی ثبت نشده است.',
+                )
+              : messageOf(error),
+          ),
       },
     )
-  }, [job, content, dryRun])
+  }, [job, content, currency, dryRun, t])
 
   const handleCommit = useCallback(() => {
     if (!job || content === null) return
     setActionError(null)
+    const file = content
 
-    commit.mutate(
-      { id: job.id, content },
-      {
-        onSuccess: (result) => {
-          setJob(result)
-          // The file has done its work. Dropped from memory the moment the
-          // rows exist, so the tab is not holding a customer list for the rest
-          // of the session.
-          setContent(null)
+    // A large import is done in pieces: each request does a bounded part and
+    // answers «importing» with how far it got. So the screen keeps asking, and
+    // shows the count going up, until the answer is something else.
+    const step = (id: string) => {
+      commit.mutate(
+        { id, content: file },
+        {
+          onSuccess: (result) => {
+            setJob(result)
+            if (result.status === 'importing') {
+              step(result.id)
+              return
+            }
+            // The file has done its work. Dropped from memory the moment the
+            // rows exist, so the tab is not holding a customer list for the
+            // rest of the session.
+            setContent(null)
+            history.refetch()
+          },
+          onError: (error) => {
+            const message = messageOf(error) ?? ''
+            // ⚠️ The one step where «no answer» does not mean «nothing happened».
+            // The request may have reached the server and be running — or done.
+            // So the list is read again, and the person is told the truth: look
+            // at the result below, and if it is not finished, give the same file
+            // again — what is already in is not imported twice.
+            if (
+              isUnanswered(error) ||
+              message.includes('MIGRATION_BUSY') ||
+              message.includes('MIGRATION_CLOSED')
+            ) {
+              history.refetch()
+              setActionError(
+                t(
+                  'migration.error_commit_interrupted',
+                  'پاسخ ورود نرسید. ممکن است ورود انجام شده یا در حال انجام باشد؛ نتیجه را در فهرست پایین ببینید. اگر کامل نشده بود همان فایل را دوباره بدهید — آنچه وارد شده دوباره وارد نمی‌شود.',
+                ),
+              )
+              return
+            }
+            setActionError(message || null)
+          },
         },
-        onError: (error) => setActionError(messageOf(error)),
-      },
-    )
-  }, [job, content, commit])
+      )
+    }
+    step(job.id)
+  }, [job, content, commit, history, t])
 
+  // An import left «importing» by a server that went away: closed from the
+  // list, so it does not sit there for ever.
+  const handleCloseJob = useCallback(
+    (id: string) => {
+      setActionError(null)
+      cancel.mutate(id, {
+        onSuccess: () => history.refetch(),
+        onError: (error) => {
+          const message = messageOf(error) ?? ''
+          setActionError(
+            message.includes('MIGRATION_BUSY')
+              ? t('migration.error_MIGRATION_BUSY', message)
+              : message || null,
+          )
+        },
+      })
+    },
+    [cancel, history, t],
+  )
   const handleCancel = useCallback(() => {
     if (!job) return
     setActionError(null)
@@ -342,7 +435,29 @@ export const DataMigrationContainer = memo(function DataMigrationContainer() {
     commit.isPending ||
     cancel.isPending
 
-  const targetFields = useMemo(() => TARGET_FIELDS[entity], [entity])
+  // A product file may give its stock as a column per warehouse. Each of this
+  // business's warehouses is then something a column can be connected to.
+  const warehouses = useWarehouseOverview()
+  const stockFields = useMemo(
+    () =>
+      entity === 'product'
+        ? asList<{ id: string; name: string; isActive: boolean }>(warehouses.data?.warehouses)
+            .filter((warehouse) => warehouse.isActive !== false)
+            .map((warehouse) => ({
+              field: `warehouseStock:${warehouse.id}`,
+              label: `${t('migration.field_warehouseStock', 'موجودی در')} ${warehouse.name}`,
+            }))
+        : [],
+    [entity, warehouses.data, t],
+  )
+  const targetFields = useMemo(
+    () => [...TARGET_FIELDS[entity], ...stockFields.map((entry) => entry.field)],
+    [entity, stockFields],
+  )
+  const fieldLabels = useMemo(
+    () => Object.fromEntries(stockFields.map((entry) => [entry.field, entry.label])),
+    [stockFields],
+  )
 
   return (
     <DataMigrationView
@@ -351,6 +466,7 @@ export const DataMigrationContainer = memo(function DataMigrationContainer() {
       job={job}
       entity={entity}
       targetFields={targetFields}
+      fieldLabels={fieldLabels}
       isLoading={history.isLoading}
       isBusy={isBusy}
       error={history.error ? (history.error as Error).message : null}
@@ -373,6 +489,8 @@ export const DataMigrationContainer = memo(function DataMigrationContainer() {
       }))}
       activeSheet={sheetName}
       onSheetChange={handleSheetChange}
+      currency={currency}
+      onCurrencyChange={setCurrency}
       dryRun={dryRunResult}
       findings={findings}
       onPickFile={handlePickFile}
@@ -381,6 +499,7 @@ export const DataMigrationContainer = memo(function DataMigrationContainer() {
       onDryRun={handleDryRun}
       onCommit={handleCommit}
       onCancel={handleCancel}
+      onCloseJob={handleCloseJob}
       onReset={reset}
       onRefresh={handleRefresh}
     />

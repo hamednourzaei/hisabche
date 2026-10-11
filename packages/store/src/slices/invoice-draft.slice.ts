@@ -26,7 +26,7 @@ import {
   type InvoiceGridRow,
 } from '@hisabche/validation'
 
-import type { CurrencyCode } from './currency.slice'
+import { useCurrencyStore, type CurrencyCode } from './currency.slice'
 
 export interface InvoiceDraftCustomer {
   id: string
@@ -124,7 +124,9 @@ function withTrailingBlank(rows: InvoiceGridRow[], columns: InvoiceColumn[]): In
  * only a starting point — `initColumns` re-keys it to the user's actual
  * currency on first mount, before anything is typed.
  */
-const INITIAL_CURRENCY: CurrencyCode = 'AFN'
+// The currency this device knows the books are kept in (kept in step with the
+// server by BookCurrencySync) — not a currency named in this file.
+const INITIAL_CURRENCY: CurrencyCode = useCurrencyStore.getState().primaryCurrency
 
 function blankDraft(columns: InvoiceColumn[]) {
   return {

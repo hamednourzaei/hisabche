@@ -18,6 +18,7 @@ import { useTranslations } from 'next-intl'
 import {
   RouteProgress,
   SandboxNotice,
+  BookCurrencySync,
   SubscriptionLockDialog,
   SubscriptionLockNotice,
   isRouteAllowedWhenExpired,
@@ -105,6 +106,7 @@ export function AppShell() {
             covers the last 5rem, so the page must be able to scroll past it. */}
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 pb-20 lg:pb-4">
           <SandboxNotice />
+          <BookCurrencySync />
           <Suspense fallback={<RouteFallback />}>
             {routeLocked ? (
               <SubscriptionLockNotice hashRouter />

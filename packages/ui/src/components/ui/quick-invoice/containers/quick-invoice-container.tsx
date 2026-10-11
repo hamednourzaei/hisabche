@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/quick-invoice/containers/quick-invoice-container.tsx
 'use client'
 
+import type { CreateInvoice } from '@hisabche/validation'
 import { useEffect, useState, useCallback, useMemo, memo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -327,7 +328,11 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
         total,
         paidAmount,
         paymentMethod: paymentType === 'cash' ? 'cash' : 'credit',
-        currency: (preferences.lastCurrency as 'AFN' | 'USD' | 'PKR' | 'IRR') ?? 'AFN',
+        // The currency last chosen on this device, when there is one;
+        // otherwise none is sent and the server uses the books currency.
+        ...(preferences.lastCurrency
+          ? { currency: preferences.lastCurrency as NonNullable<CreateInvoice['currency']> }
+          : {}),
         customerId: selectedCustomer?.id || undefined,
         items: items.map((item) => {
           // parseFloat, not parseInt: a gram-priced line can be 12.5.

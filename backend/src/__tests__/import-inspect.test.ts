@@ -199,6 +199,54 @@ describe('reading an .xlsx workbook', () => {
     expect(code(zip({ 'readme.txt': 'not a workbook' }))).toBe('XLSX_NOT_A_WORKBOOK')
   })
 
+  it('⚠️ reads a workbook the way spreadsheet programs really write one', () => {
+    // Everything a hand-made fixture leaves out and a real file has: rich
+    // text in the string table, preserved spaces, an empty self-closing row
+    // and cell, a formula with its cached value, a custom date format, a
+    // boolean, an absolute relationship target — and, on the second sheet,
+    // the namespace prefix some libraries put on every tag.
+    const file = zip({
+      'xl/workbook.xml':
+        '<?xml version="1.0"?><workbook xmlns="main" xmlns:r="rel"><sheets>' +
+        '<sheet name="فروش" sheetId="1" r:id="rId1"/><sheet name="Other" sheetId="2" r:id="rId2"/>' +
+        '</sheets></workbook>',
+      'xl/_rels/workbook.xml.rels':
+        '<Relationships><Relationship Id="rId1" Type="t" Target="/xl/worksheets/sheet1.xml"/>' +
+        '<Relationship Id="rId2" Type="t" Target="worksheets/sheet2.xml"/></Relationships>',
+      'xl/sharedStrings.xml':
+        '<sst count="4" uniqueCount="4">' +
+        '<si><t>تاریخ</t></si>' +
+        '<si><r><rPr><b/></rPr><t>مبلغ</t></r><r><t xml:space="preserve"> کل</t></r></si>' +
+        '<si><t>چای &amp; قند</t><rPh><t>phonetic</t></rPh></si>' +
+        '<si><t>شرح</t></si>' +
+        '</sst>',
+      'xl/styles.xml':
+        '<styleSheet><numFmts count="1"><numFmt numFmtId="164" formatCode="yyyy/mm/dd"/></numFmts>' +
+        '<cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="164" applyNumberFormat="1"/></cellXfs></styleSheet>',
+      'xl/worksheets/sheet1.xml':
+        '<worksheet><dimension ref="A1:D3"/><sheetData>' +
+        '<row r="1" spans="1:4"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>3</v></c><c r="C1" t="s"><v>1</v></c><c r="D1" t="inlineStr"><is><t>نقد</t></is></c></row>' +
+        '<row r="2"/>' +
+        '<row r="3"><c r="A3" s="1"><v>46296</v></c><c r="B3" t="s"><v>2</v></c><c r="C3"><f>2*150+90</f><v>390</v></c><c r="D3" t="b"><v>1</v></c></row>' +
+        '<row r="4"><c r="A4" s="1"/><c r="C4"><v>12.5</v></c></row>' +
+        '</sheetData><mergeCells count="1"><mergeCell ref="A5:B5"/></mergeCells></worksheet>',
+      'xl/worksheets/sheet2.xml':
+        '<x:worksheet xmlns:x="main"><x:sheetData><x:row r="1"><x:c r="A1" t="inlineStr"><x:is><x:t>name</x:t></x:is></x:c></x:row>' +
+        '<x:row r="2"><x:c r="A2"><x:v>7</x:v></x:c></x:row></x:sheetData></x:worksheet>',
+    })
+
+    const [sales, other] = readXlsx(file)
+
+    expect(sales?.name).toBe('فروش')
+    expect(sales?.rows).toEqual([
+      ['تاریخ', 'شرح', 'مبلغ کل', 'نقد'],
+      // The date cell is a date; the formula is its last computed value.
+      ['2026-10-01', 'چای & قند', '390', 'true'],
+      ['', '', '12.5', ''],
+    ])
+    expect(other?.rows).toEqual([['name'], ['7']])
+  })
+
   it('quotes what CSV needs quoted, so a cell with a comma stays one cell', () => {
     expect(rowsToCsv([['a,b', 'he said "hi"', 'plain']])).toBe('"a,b","he said ""hi""",plain')
   })

@@ -276,7 +276,6 @@ export const HumanResourcesView = memo(function HumanResourcesView({
           hireDate: data.hireDate ? `${data.hireDate}T00:00:00Z` : new Date().toISOString(),
           salary: data.salary ? Number(data.salary) : 0,
           employmentType: 'full_time',
-          salaryCurrency: 'AFN',
         },
         grantAccess
           ? { email: accessEmail.trim(), password: accessPassword, role: accessRole }

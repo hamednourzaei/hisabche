@@ -16,6 +16,7 @@
 // change reported profit.
 // ============================================
 
+import { describeBaseCurrency, setBaseCurrency } from '../services/base-currency'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
@@ -88,6 +89,8 @@ const rateSchema = z.object({
   rate: z.number().positive(),
   onDate: z.string().min(8),
 })
+
+const baseCurrencySchema = z.object({ currency: z.string().regex(/^[A-Z]{3}$/) })
 
 const revalueSchema = z.object({
   asOf: z.string().min(8),
@@ -322,6 +325,40 @@ export async function financeOpsRoutes(fastify: FastifyInstance) {
   )
 
   // ══════════════════════════════════════════ CURRENCY
+
+  // The currency this business keeps its books in. Whoever may read an
+  // invoice may read it (every money form needs it); only the owner may set
+  // it, and only while the books are empty (services/base-currency.ts).
+  fastify.get(
+    '/currency/base',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.read')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send(await describeBaseCurrency(request.tenancy.workspaceId))
+      } catch (err) {
+        return fail(reply, err, 'Failed to read the base currency')
+      }
+    },
+  )
+
+  fastify.put(
+    '/currency/base',
+    {
+      preHandler: configure,
+      schema: { body: toJsonSchema(baseCurrencySchema), response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = baseCurrencySchema.parse(request.body)
+        return reply.send(await setBaseCurrency(request.tenancy, body.currency))
+      } catch (err) {
+        return fail(reply, err, 'Failed to save the base currency')
+      }
+    },
+  )
 
   fastify.get(
     '/currency/rates',

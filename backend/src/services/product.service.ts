@@ -264,10 +264,19 @@ export class ProductService {
   async create(
     ctx: TenancyContext,
     data: CreateProduct,
-    options: { clientRequestId?: string | null } = {},
+    options: {
+      clientRequestId?: string | null
+      /**
+       * The opening stock, warehouse by warehouse. When given it IS the opening
+       * stock: `data.quantity` is not also written, so the two cannot add up.
+       */
+      openingStock?: readonly OpeningStockEntry[] | undefined
+    } = {},
   ) {
     const { workspaceId, userId } = ctx
     const clientRequestId = options.clientRequestId ?? null
+    const split = (options.openingStock ?? []).filter((entry) => entry.quantity !== 0)
+    if (split.length > 0) return this.createWithOpeningStock(ctx, data, clientRequestId, split)
     // Request #94 — «افزودن به انبار»: the opening stock lands in a warehouse —
     // the one named, or the business's only one (stockEditWarehouse).
     const openingWarehouseId =
@@ -361,6 +370,118 @@ export class ProductService {
     }).catch((err) => console.error('[ProductService] logBusinessEvent failed:', err))
 
     return mapProduct(product)
+  }
+
+  /**
+   * A product whose opening stock sits in SEVERAL warehouses.
+   *
+   * The product row is written with no quantity, and every warehouse's share
+   * arrives as its own «product_opening» movement — in ONE insert statement,
+   * so either every warehouse has its stock or none has. The product total is
+   * then the sum the trigger makes of those rows, and each warehouse can be
+   * counted against the figure it was given.
+   */
+  private async createWithOpeningStock(
+    ctx: TenancyContext,
+    data: CreateProduct,
+    clientRequestId: string | null,
+    entries: readonly OpeningStockEntry[],
+  ): Promise<ReturnType<typeof mapProduct>> {
+    await this.assertOpeningStock(ctx.workspaceId, entries)
+
+    const made = await this.create(ctx, { ...data, quantity: 0 }, { clientRequestId })
+    // ⚠️ A REPLAY IS NOT «done». The first attempt may have made the product
+    // and died before its stock landed; `recordOpeningStock` writes it only if
+    // the product has never been stocked, so a true replay changes nothing.
+    await this.recordOpeningStock(ctx, String((made as { id: string }).id), entries)
+    return made
+  }
+
+  /** Every warehouse named is a live one of THIS business; no quantity is negative. */
+  private async assertOpeningStock(
+    workspaceId: string,
+    entries: readonly OpeningStockEntry[],
+  ): Promise<void> {
+    const { data, error } = await supabase
+      .from('warehouses')
+      .select('id, name, location, is_active')
+      .eq('workspace_id', workspaceId)
+      .is('deleted_at', null)
+    if (error) throw new DatabaseError('Failed to read the warehouses', error)
+
+    const seen = new Set<string>()
+    for (const entry of entries) {
+      if (!Number.isFinite(entry.quantity) || entry.quantity < 0) {
+        throw new ValidationError('PRODUCT_QUANTITY_INVALID')
+      }
+      if (seen.has(entry.warehouseId)) throw new ValidationError('PRODUCT_WAREHOUSE_REPEATED')
+      seen.add(entry.warehouseId)
+      const choice = stockEditWarehouse((data ?? []) as WarehouseRow[], entry.warehouseId, 'create')
+      if ('refusal' in choice) throw new ValidationError(choice.refusal)
+    }
+  }
+
+  /**
+   * Put a product's OPENING stock into its warehouses — once.
+   *
+   * Opening stock is where the count starts. A product that already has a
+   * quantity, or any movement behind it, has started: restating its «opening»
+   * figure would add stock that sales and counts have since moved. Such a
+   * product is left exactly as it is and the answer says so; correcting it is
+   * a stock count or an adjustment, which are different acts.
+   *
+   * @returns whether the stock was written.
+   */
+  async recordOpeningStock(
+    ctx: TenancyContext,
+    productId: string,
+    entries: readonly OpeningStockEntry[],
+  ): Promise<{ written: boolean }> {
+    const wanted = entries.filter((entry) => entry.quantity !== 0)
+    if (wanted.length === 0) return { written: false }
+
+    await scopes.assertMay(ctx, 'product', productId, 'product.write')
+    await this.assertOpeningStock(ctx.workspaceId, wanted)
+
+    const { data: product, error: readError } = await supabase
+      .from('products')
+      .select('id, quantity')
+      .eq('id', productId)
+      .eq('workspace_id', ctx.workspaceId)
+      .maybeSingle()
+    if (readError) throw new DatabaseError('Failed to read product stock', readError)
+    if (!product) throw new NotFoundError('Product')
+
+    const { count, error: countError } = await supabase
+      .from('stock_movements')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('product_id', productId)
+    // A failed read is not «never stocked»: writing on the strength of it
+    // could double a stock that is already there.
+    if (countError) throw new DatabaseError('Failed to read the stock movements', countError)
+
+    const started =
+      (Number((product as { quantity: unknown }).quantity) || 0) !== 0 || (count ?? 0) > 0
+    if (started) return { written: false }
+
+    const { error } = await supabase.from('stock_movements').insert(
+      wanted.map((entry) => ({
+        product_id: productId,
+        type: 'purchase',
+        quantity: entry.quantity,
+        reference_type: 'product_opening',
+        reference_id: productId,
+        to_warehouse_id: entry.warehouseId,
+        workspace_id: ctx.workspaceId,
+        user_id: ctx.userId,
+        notes: 'opening stock',
+      })),
+    )
+    if (error) throw new DatabaseError('Failed to record the opening stock', error)
+
+    await this.invalidateWorkspaceCache(ctx.workspaceId)
+    return { written: true }
   }
 
   // ─── Update ──────────────────────────────────────────────────
@@ -711,6 +832,12 @@ export class ProductService {
     if ('refusal' in choice) throw new ValidationError(choice.refusal)
     return choice.warehouseId
   }
+}
+
+/** One warehouse's share of a product's opening stock. */
+export interface OpeningStockEntry {
+  warehouseId: string
+  quantity: number
 }
 
 export default ProductService

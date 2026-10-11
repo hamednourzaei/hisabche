@@ -11,6 +11,7 @@ import { cn } from '../../../lib/utils'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { Switch } from '../switch'
 import { HardwareSection } from './hardware-section'
+import { BookCurrencySection } from './book-currency-section'
 import { useToast } from '../toast-provider'
 import {
   Shield,
@@ -1058,6 +1059,7 @@ export const SettingsPage = memo(function SettingsPage() {
 
       <AccountSection />
       <BusinessStampSection />
+      <BookCurrencySection />
       <BillingSection />
       <WorkflowTemplatesSection />
       <DevelopersSection />

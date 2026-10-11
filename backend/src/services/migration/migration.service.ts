@@ -32,6 +32,7 @@
 // make the history lie about what happened in the workspace.
 // ============================================
 
+import { baseCurrencyOf } from '../base-currency'
 import { selectAllPages } from '../../utils/fetch-all-pages'
 import { createHash } from 'node:crypto'
 
@@ -43,13 +44,37 @@ import {
   isFailedRead,
 } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
+import { ForbiddenError } from '../../errors/auth.error'
+import { IdempotencyUnavailableError } from '../../utils/client-request'
 import type { TenancyContext } from '../tenancy.service'
 import { InvoiceService } from '../invoice.service'
 import { inferMappingFromContent } from './column-shape.domain'
+import { ManufacturingService } from '../manufacturing.service'
+import { ProductService } from '../product.service'
+import { CustomerService } from '../customer.service'
+import { CURRENCY_CODES, productCategorySchema, unitSchema } from '@hisabche/validation'
+import type { NamedPlace } from './places.domain'
+import {
+  planStock,
+  stockTotals,
+  warehouseColumns,
+  warehouseOfStockField,
+  type ProductStock,
+  type StockPlan,
+} from './stock-import.domain'
+import { productionColumns, saveProductionDefinitionSchema } from '@hisabche/validation'
+import {
+  planBoms,
+  resolveBoms,
+  toProductionRows,
+  type BomPlan,
+  type CatalogueProduct,
+} from './bom-import.domain'
 import { createInvoiceSchema } from '@hisabche/validation'
 import {
   groupInvoiceRows,
   resolveInvoiceParties,
+  resolveInvoicePlaces,
   toInvoiceBody,
   type InvoiceDraft,
   type KnownParty,
@@ -108,6 +133,14 @@ export interface MigrationDiscovery {
   sample: string[][]
   /** Fields connected from what a column HOLDS, not from its name. */
   inferred?: string[] | undefined
+  /** The currency chosen for invoices whose rows name none. */
+  defaultCurrency?: string | undefined
+  /**
+   * Product rows whose product already had stock when the file was checked:
+   * their opening stock is NOT written, and the check afterwards does not
+   * expect it.
+   */
+  stockLeftAlone?: number[] | undefined
 }
 
 export interface MigrationJob {
@@ -174,6 +207,34 @@ const SAMPLE_ROWS = 5
  *  requests. */
 const BATCH_SIZE = 200
 
+/**
+ * How much ONE commit request does before it answers.
+ *
+ * An import used to be a single request: thirty thousand invoices, each one
+ * a round trip to the invoice service, inside one HTTP call that the platform
+ * cuts off long before it ends — leaving a job «importing» for ever. Now a
+ * request does a bounded piece and answers `importing`; the client asks
+ * again, and the job picks up where the record says it stopped.
+ *
+ * Mutable so a test can make a chunk three rows long.
+ */
+export const IMPORT_LIMITS = {
+  /** Wall-clock budget of one request. */
+  budgetMs: 20_000,
+  invoicesPerRequest: 100,
+  rowsPerRequest: 1_000,
+  /**
+   * A run that has not said anything for this long is taken to be dead (the
+   * server restarted, the connection was cut) and may be taken over.
+   */
+  staleAfterMs: 120_000,
+  /** How often a running chunk writes its progress down. */
+  heartbeatEvery: 25,
+}
+
+/** `error_code` while a chunk is running: the lease. Cleared when the chunk ends. */
+const RUNNING = 'MIGRATION_RUNNING'
+
 export class MigrationService {
   /* ─── Intake ────────────────────────────────────────────────────────────── */
 
@@ -228,6 +289,16 @@ export class MigrationService {
         mapping[suggestion.targetField] = index
       }
     })
+
+    // A column headed with the name of one of this business's warehouses is
+    // the quantity in that warehouse (one row per product, a column each).
+    if (input.entity === 'product') {
+      const { warehouses } = await this.places(ctx)
+      Object.assign(
+        mapping,
+        warehouseColumns(table.headers, warehouses, new Set(Object.values(mapping))),
+      )
+    }
 
     // What the names did not connect, the contents may: a column of phone
     // numbers, the only column of dates, quantity × price = amount. Only
@@ -312,8 +383,23 @@ export class MigrationService {
     const fields = new Set(ENTITY_FIELDS[job.entity].map((spec) => spec.key))
     const clean: ColumnMapping = {}
 
+    // ⚠️ The id inside a warehouse column's key came from the client. It is
+    // matched against this business's own warehouses — an id from another
+    // business, or one that was deleted, is refused here rather than at the
+    // moment stock would have been written into it.
+    const stockFields = Object.keys(mapping).filter((field) => warehouseOfStockField(field))
+    const ownWarehouses =
+      job.entity === 'product' && stockFields.length > 0
+        ? new Set((await this.places(ctx)).warehouses.map((warehouse) => warehouse.id))
+        : new Set<string>()
+
     for (const [field, column] of Object.entries(mapping)) {
-      if (!fields.has(field)) throw new ValidationError('MIGRATION_UNKNOWN_TARGET_FIELD')
+      const warehouseId = warehouseOfStockField(field)
+      if (warehouseId !== null) {
+        if (!ownWarehouses.has(warehouseId)) {
+          throw new ValidationError('MIGRATION_WAREHOUSE_UNKNOWN')
+        }
+      } else if (!fields.has(field)) throw new ValidationError('MIGRATION_UNKNOWN_TARGET_FIELD')
       if (!Number.isInteger(column) || column < 0 || column >= headerCount) {
         throw new ValidationError('MIGRATION_COLUMN_OUT_OF_RANGE')
       }
@@ -344,20 +430,27 @@ export class MigrationService {
     ctx: TenancyContext,
     id: string,
     content: string,
+    currency?: string | undefined,
   ): Promise<{ job: MigrationJob; dryRun: DryRunSummary; findings: Finding[] }> {
     this.assertMayImport(ctx)
     const job = await this.get(ctx, id)
     this.assertOpen(job)
     await this.assertSameFile(ctx, id, content)
 
+    if (currency !== undefined && !(CURRENCY_CODES as readonly string[]).includes(currency)) {
+      throw new ValidationError('MIGRATION_CURRENCY_UNSUPPORTED')
+    }
+    const defaultCurrency = currency ?? job.discovery?.defaultCurrency ?? null
+
     const parsed = this.parseAgainstJob(job, content)
     const { candidates } = parsed
     let findings = parsed.findings
     let summary: DryRunSummary
+    const stockLeftAlone: number[] = []
 
     if (job.entity === 'invoice') {
       // Rows become documents first; what is counted is invoices, not rows.
-      const plan = await this.planInvoices(ctx, candidates)
+      const plan = await this.planInvoices(ctx, candidates, defaultCurrency)
       findings = [...findings, ...plan.findings]
       summary = {
         entity: 'invoice',
@@ -372,14 +465,48 @@ export class MigrationService {
         productionDataChanged: false,
       }
     } else {
-      const existingKeys = await this.existingKeys(ctx, job.entity)
-      summary = dryRun(job.entity, candidates, existingKeys)
+      // Decided BEFORE the count: which rows are an existing record, and
+      // whether each product's stock has a warehouse to go into.
+      const prepared = await this.prepareRows(ctx, job.entity, candidates)
+      findings = [...findings, ...prepared.findings]
+      summary = dryRun(job.entity, candidates, new Set(prepared.existing.keys()))
+
+      if (prepared.stock) {
+        // A product that already has stock keeps it: its opening figure is not
+        // restated. Said now, and remembered for the check after the import.
+        const stocked = await this.stockedProducts(ctx, [...prepared.targetOfRow.values()])
+        for (const [row, target] of prepared.targetOfRow) {
+          if (!prepared.stock.byRow.has(row) || !stocked.has(target)) continue
+          stockLeftAlone.push(row)
+          prepared.stock.byRow.delete(row)
+          findings.push({ severity: 'info', row, column: null, code: 'PRODUCT_ALREADY_STOCKED' })
+        }
+        const totals = stockTotals(prepared.stock)
+        if (totals.units > 0) {
+          summary = { ...summary, stockUnits: totals.units, stockPlacements: totals.placements }
+        }
+      }
+
+      if (job.entity === 'product') {
+        const formulas = await this.planProductBoms(ctx, candidates)
+        findings = [...findings, ...formulas.findings]
+        if (formulas.plans.length > 0) summary = { ...summary, boms: formulas.plans.length }
+      }
     }
 
     const updated = await this.update(ctx, id, {
       status: summary.toCreate + summary.toUpdate > 0 ? 'ready' : 'validating',
       findings: findings.slice(0, 2000),
       dry_run: summary,
+      ...(job.discovery && (defaultCurrency || job.entity === 'product')
+        ? {
+            discovery: {
+              ...job.discovery,
+              ...(defaultCurrency ? { defaultCurrency } : {}),
+              ...(job.entity === 'product' ? { stockLeftAlone } : {}),
+            },
+          }
+        : {}),
     })
 
     return { job: updated, dryRun: summary, findings }
@@ -402,94 +529,230 @@ export class MigrationService {
 
     if (!job.dryRun) throw new ConflictError('MIGRATION_NOT_SIMULATED')
     await this.assertSameFile(ctx, id, content)
+    await this.claimRun(ctx, id)
 
-    const claimed = await supabase
+    const deadline = Date.now() + IMPORT_LIMITS.budgetMs
+    try {
+      const { candidates } = this.parseAgainstJob(job, content)
+      return job.entity === 'invoice'
+        ? await this.commitInvoices(ctx, job, candidates, deadline)
+        : await this.commitRows(ctx, job, candidates, deadline)
+    } catch (error) {
+      // What was written before the failure stays written AND recorded; the
+      // job says it failed, with the reason, and holds no lease.
+      // The count comes from the record of what was made, not from a counter
+      // this request was keeping in memory when it fell over.
+      const made = await this.countLedger(ctx, id).catch(() => null)
+      await this.update(ctx, id, {
+        status: 'failed',
+        error_code: error instanceof Error ? error.message.slice(0, 200) : 'UNKNOWN',
+        ...(made ? { rows_created: made.created, rows_updated: made.updated } : {}),
+      }).catch(() => undefined)
+      throw error
+    }
+  }
+
+  /**
+   * Take the right to run this job — or be told somebody else has it.
+   *
+   * Three ways in, each ONE conditional update, so two requests arriving
+   * together cannot both win:
+   *
+   *   • a first commit: nobody has committed yet;
+   *   • the next chunk: the job is importing and no chunk holds it;
+   *   • a takeover: a chunk holds it but has been silent for longer than
+   *     `staleAfterMs` — the run died and left the lease behind.
+   *
+   * Anything else is a live run in another request: `MIGRATION_BUSY`.
+   */
+  private async claimRun(ctx: TenancyContext, id: string): Promise<void> {
+    const now = new Date()
+    const mine = () =>
+      supabase
+        .from('migration_jobs')
+        .update({ status: 'importing', error_code: RUNNING, updated_at: now.toISOString() })
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', id)
+
+    const first = await supabase
       .from('migration_jobs')
-      .update({ status: 'importing', committed_at: new Date().toISOString() })
+      .update({
+        status: 'importing',
+        error_code: RUNNING,
+        committed_at: now.toISOString(),
+        updated_at: now.toISOString(),
+      })
       .eq('workspace_id', ctx.workspaceId)
       .eq('id', id)
       .is('committed_at', null)
       .select('id')
+    if (first.error) throw new DatabaseError('Failed to start the import', first.error)
+    if ((first.data ?? []).length > 0) return
 
-    if (claimed.error) throw new DatabaseError('Failed to start the import', claimed.error)
-    if ((claimed.data ?? []).length === 0) throw new ConflictError('MIGRATION_ALREADY_COMMITTED')
+    const next = await mine().eq('status', 'importing').is('error_code', null).select('id')
+    if (next.error) throw new DatabaseError('Failed to continue the import', next.error)
+    if ((next.data ?? []).length > 0) return
 
-    const { candidates } = this.parseAgainstJob(job, content)
-    if (job.entity === 'invoice') return this.commitInvoices(ctx, job, candidates)
+    const stale = new Date(now.getTime() - IMPORT_LIMITS.staleAfterMs).toISOString()
+    const takeover = await mine()
+      .eq('status', 'importing')
+      .eq('error_code', RUNNING)
+      .lt('updated_at', stale)
+      .select('id')
+    if (takeover.error) throw new DatabaseError('Failed to resume the import', takeover.error)
+    if ((takeover.data ?? []).length > 0) return
 
+    throw new ConflictError('MIGRATION_BUSY')
+  }
+
+  /**
+   * Customers and products: one bounded piece of the importable rows.
+   *
+   * Where to start is read from the job itself — the rows already created,
+   * updated or skipped — so a second request, or a run taken over after a
+   * crash, goes on from the last progress written rather than from the top.
+   */
+  private async commitRows(
+    ctx: TenancyContext,
+    job: MigrationJob,
+    candidates: CandidateRow[],
+    deadline: number,
+  ): Promise<MigrationJob> {
+    // The same decisions the preview made, made again from the database as
+    // it is NOW: which rows are an existing record, and where stock goes.
+    const prepared = await this.prepareRows(ctx, job.entity, candidates)
     const importable = candidates.filter((candidate) => candidate.importable)
+    const notImportable = candidates.length - importable.length
+    const leftAlone = new Set(job.discovery?.stockLeftAlone ?? [])
 
-    let created = 0
-    let updatedCount = 0
-    let skipped = candidates.length - importable.length
+    let created = job.rowsCreated
+    let updatedCount = job.rowsUpdated
+    let skipped = job.rowsSkipped
+    const start = created + updatedCount + skipped
+    const ledger = await this.mappedIdentities(ctx, job.entity)
 
-    try {
-      const alreadyMapped = await this.mappedIdentities(ctx, job.entity)
+    let at = start
+    for (; at < importable.length; at++) {
+      if (at - start >= IMPORT_LIMITS.rowsPerRequest || Date.now() >= deadline) break
 
-      for (let start = 0; start < importable.length; start += BATCH_SIZE) {
-        const batch = importable.slice(start, start + BATCH_SIZE)
+      const candidate = importable[at] as CandidateRow
+      const strong = candidate.keys.find((key) => key.strength === 'strong')?.key ?? null
+      // A row with no code or phone has no identity of its own; within THIS
+      // run it is «row N of this job», which is enough to never write it twice.
+      const identity = strong ?? `row:${job.id}:${candidate.row}`
 
-        for (const candidate of batch) {
-          const identity = candidate.keys.find((key) => key.strength === 'strong')?.key ?? null
-
-          // Already imported by an earlier run of this same source row: the
-          // identity ledger says which Hisabche row it became, so this run
-          // updates that one instead of creating a twin.
-          const existingTarget = identity ? alreadyMapped.get(identity) : undefined
-
-          const written = existingTarget
-            ? await this.updateEntity(ctx, job.entity, existingTarget, candidate.values)
-            : await this.createEntity(ctx, job.entity, candidate.values)
-
-          if (written === null) {
-            skipped += 1
-            continue
-          }
-
-          if (existingTarget) updatedCount += 1
-          else created += 1
-
-          if (identity) {
-            await this.recordIdentity(ctx, {
-              migrationId: id,
-              entity: job.entity,
-              identity,
-              row: candidate.row,
-              targetId: written,
-              outcome: existingTarget ? 'updated' : 'created',
-            })
-            alreadyMapped.set(identity, written)
-          }
-        }
+      // ⚠️ ALREADY WRITTEN BY THIS RUN. Progress is noted every few rows, so a
+      // run that died is resumed a little before where it stopped. Those rows
+      // are counted as what they were, and nothing is done to them again — a
+      // second pass would turn a «created» into an «updated» and take the row
+      // out of what a rollback may remove.
+      const done = ledger.get(identity)
+      if (done && done.migrationId === job.id) {
+        if (done.outcome === 'updated') updatedCount += 1
+        else created += 1
+        continue
       }
-    } catch (error) {
-      await this.update(ctx, id, {
-        status: 'failed',
-        error_code: error instanceof Error ? error.message.slice(0, 200) : 'UNKNOWN',
+
+      // The existing record: the one the database holds under this row's own
+      // key, or — when the key has since been edited there — the one an
+      // earlier import of this identity became.
+      const existingTarget =
+        prepared.targetOfRow.get(candidate.row) ?? (strong ? done?.targetId : undefined)
+      const stock = leftAlone.has(candidate.row)
+        ? undefined
+        : prepared.stock?.byRow.get(candidate.row)
+
+      const written = existingTarget
+        ? await this.updateEntity(ctx, job.entity, existingTarget, candidate.values, stock)
+        : await this.createEntity(
+            ctx,
+            job.entity,
+            candidate.values,
+            stock,
+            `mig-row-${createHash('sha256').update(`${job.id}|${candidate.row}`).digest('hex').slice(0, 32)}`,
+          )
+
+      if (written === null) skipped += 1
+      else {
+        if (existingTarget) updatedCount += 1
+        else created += 1
+
+        await this.recordIdentity(ctx, {
+          migrationId: job.id,
+          entity: job.entity,
+          identity,
+          row: candidate.row,
+          targetId: written,
+          outcome: existingTarget ? 'updated' : 'created',
+        })
+        ledger.set(identity, {
+          targetId: written,
+          migrationId: job.id,
+          outcome: existingTarget ? 'updated' : 'created',
+        })
+      }
+
+      // Progress is written down as the work goes, so a run that dies loses at
+      // most the rows since the last note — and keeps its lease alive meanwhile.
+      if ((at + 1 - start) % IMPORT_LIMITS.heartbeatEvery === 0) {
+        await this.update(ctx, job.id, {
+          rows_created: created,
+          rows_updated: updatedCount,
+          rows_skipped: skipped,
+        })
+      }
+    }
+
+    if (at < importable.length) {
+      // More to do: say how far it got and let go of the lease.
+      return this.update(ctx, job.id, {
+        status: 'importing',
+        error_code: null,
         rows_created: created,
         rows_updated: updatedCount,
         rows_skipped: skipped,
       })
-      throw error
     }
 
-    // ─── Reconcile ────────────────────────────────────────────────────────
-    //
-    // Counted from the ledger, not from the loop's own variables. A counter
-    // incremented next to the write it is counting proves nothing: it says the
-    // code reached that line, not that a row exists.
-    const actual = await this.countLedger(ctx, id)
-    const expected = {
-      created: job.dryRun.toCreate,
-      updated: job.dryRun.toUpdate,
+    if (job.entity === 'product') {
+      // The products exist now, so their formulas can name them. Bounded by the
+      // same clock: if it runs out the job stays «importing», and the next
+      // request comes straight back here — a formula already written is seen
+      // and skipped.
+      const finished = await this.writeProductBoms(ctx, candidates, deadline)
+      if (!finished) {
+        return this.update(ctx, job.id, {
+          status: 'importing',
+          error_code: null,
+          rows_created: created,
+          rows_updated: updatedCount,
+          rows_skipped: skipped,
+        })
+      }
     }
-    const result = reconcile(expected, actual)
 
-    return this.update(ctx, id, {
+    const actual = await this.countLedger(ctx, job.id)
+    // ⚠️ STOCK IS CHECKED WHERE IT IS — per product AND warehouse, read back
+    // from the movements. One total could be right while two warehouses each
+    // hold the other's figure.
+    const stock = prepared.stock
+      ? await this.reconcileStock(ctx, job.id, prepared.stock, leftAlone)
+      : null
+    const result = reconcile(
+      {
+        created: job.dryRun?.toCreate ?? 0,
+        updated: job.dryRun?.toUpdate ?? 0,
+        ...(stock ? stock.expected : {}),
+      },
+      { ...actual, ...(stock ? stock.actual : {}) },
+    )
+
+    return this.update(ctx, job.id, {
       status: result.matched ? 'completed' : 'completed_with_warnings',
+      error_code: null,
       rows_created: created,
       rows_updated: updatedCount,
-      rows_skipped: skipped,
+      rows_skipped: skipped + notImportable,
       reconciliation: result,
       completed_at: new Date().toISOString(),
     })
@@ -626,6 +889,8 @@ export class MigrationService {
         : ([
             ['stock_movements', 'product_id'],
             ['invoice_items', 'product_id'],
+            // A formula written for it (by this import or by a person) holds it.
+            ['boms', 'product_id'],
           ] as const)
 
     for (const [table, column] of sources) {
@@ -778,7 +1043,43 @@ export class MigrationService {
     this.assertMayImport(ctx)
     const job = await this.get(ctx, id)
     this.assertOpen(job)
-    return this.update(ctx, id, { status: 'cancelled', completed_at: new Date().toISOString() })
+
+    if (job.status !== 'importing') {
+      return this.update(ctx, id, { status: 'cancelled', completed_at: new Date().toISOString() })
+    }
+
+    // ⚠️ An import that has started has WRITTEN things. Closing it is not
+    // «cancelled» (that would read as «nothing happened»): it is an
+    // interrupted import, and what it made stays on record — to be finished
+    // by giving the file again, or undone by rolling the job back.
+    //
+    // A chunk that is still running is not closed underneath itself: the same
+    // lease rule as a commit.
+    const stale = new Date(Date.now() - IMPORT_LIMITS.staleAfterMs).toISOString()
+    const close = () =>
+      supabase
+        .from('migration_jobs')
+        .update({
+          status: 'failed',
+          error_code: 'MIGRATION_INTERRUPTED',
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', id)
+        .eq('status', 'importing')
+
+    // Nobody holds it …
+    let closed = await close().is('error_code', null).select(COLUMNS)
+    // … or whoever held it has been silent too long to still be there.
+    if (!closed.error && (closed.data ?? []).length === 0) {
+      closed = await close().eq('error_code', RUNNING).lt('updated_at', stale).select(COLUMNS)
+    }
+
+    if (closed.error) throw new DatabaseError('Failed to close the import', closed.error)
+    const row = (closed.data ?? [])[0]
+    if (!row) throw new ConflictError('MIGRATION_BUSY')
+    return mapJob(row)
   }
 
   /* ─── Internals ─────────────────────────────────────────────────────────── */
@@ -795,7 +1096,11 @@ export class MigrationService {
    * Rows → invoices, with the customer and products each one names looked up
    * in this business. Reads only.
    */
-  private async planInvoices(ctx: TenancyContext, candidates: CandidateRow[]) {
+  private async planInvoices(
+    ctx: TenancyContext,
+    candidates: CandidateRow[],
+    defaultCurrency: string | null,
+  ) {
     const grouped = groupInvoiceRows(candidates)
 
     const [customers, products] = await Promise.all([
@@ -838,6 +1143,34 @@ export class MigrationService {
       products: knownProducts,
     })
 
+    const places = await this.places(ctx)
+    const placeFindings = resolveInvoicePlaces(grouped.drafts, {
+      ...places,
+      currencies: CURRENCY_CODES,
+      defaultCurrency,
+    })
+
+    // ⚠️ CLOSED: an invoice in a currency other than the books currency.
+    //
+    // The invoice itself would be written correctly — and its ledger entry
+    // would not: the ledger has no currency and books the figure as it stands
+    // (100 USD as 100), which month-end revaluation then «corrects» with an
+    // exchange gain that never happened (01-CURRENCY-AUDIT.md, DEFECT-CUR-02).
+    // Until a document carries its rate, importing one writes a wrong entry
+    // per invoice. Refused here, by name, rather than imported and wrong.
+    const base = await baseCurrencyOf(ctx.workspaceId)
+    for (const draft of grouped.drafts) {
+      if (!draft.importable || !draft.currency || draft.currency === base) continue
+      draft.importable = false
+      placeFindings.push({
+        severity: 'warning',
+        row: draft.firstRow,
+        column: null,
+        code: 'INVOICE_FOREIGN_CURRENCY_CLOSED',
+        detail: draft.currency,
+      })
+    }
+
     // An invoice this business already imported (from this file or another)
     // is not imported again.
     const mapped = await this.mappedIdentities(ctx, 'invoice')
@@ -848,7 +1181,7 @@ export class MigrationService {
       drafts: grouped.drafts,
       fresh,
       alreadyImported: ready.length - fresh.length,
-      findings: [...grouped.findings, ...partyFindings],
+      findings: [...grouped.findings, ...partyFindings, ...placeFindings],
     }
   }
 
@@ -857,52 +1190,59 @@ export class MigrationService {
    * same path a person typing it takes: numbering, stock, costing, the ledger
    * and the payment are that service's, not written a second time here.
    *
-   * The idempotency key is derived from the job and the document, so a commit
-   * that is retried after a crash creates nothing twice.
+   * The idempotency key is derived from the document, so a commit that is
+   * retried after a crash — even as a new job — creates nothing twice.
    */
   private async commitInvoices(
     ctx: TenancyContext,
     job: MigrationJob,
     candidates: CandidateRow[],
+    deadline: number,
   ): Promise<MigrationJob> {
     const invoices = new InvoiceService()
-    let created = 0
-    let plan: Awaited<ReturnType<MigrationService['planInvoices']>> | null = null
+    const plan = await this.planInvoices(ctx, candidates, job.discovery?.defaultCurrency ?? null)
 
-    try {
-      plan = await this.planInvoices(ctx, candidates)
+    // What is left is simply what has not been recorded yet: an invoice made
+    // by an earlier chunk (or an earlier, dead run) is in the record and so
+    // is not in `fresh`. No cursor to lose.
+    let done = 0
+    for (const draft of plan.fresh) {
+      if (done >= IMPORT_LIMITS.invoicesPerRequest || Date.now() >= deadline) break
 
-      for (const draft of plan.fresh) {
-        const body = createInvoiceSchema.parse(toInvoiceBody(draft))
-        const invoice = await invoices.create(ctx, body, null, {
-          clientRequestId: this.invoiceRequestId(job.id, draft),
-        })
-        await this.recordIdentity(ctx, {
-          migrationId: job.id,
-          entity: 'invoice',
-          identity: draft.identity,
-          row: draft.firstRow,
-          targetId: String((invoice as { id: string }).id),
-          outcome: 'created',
-        })
-        created += 1
-      }
-    } catch (error) {
-      await this.update(ctx, job.id, {
-        status: 'failed',
-        error_code: error instanceof Error ? error.message.slice(0, 200) : 'UNKNOWN',
-        rows_created: created,
-        rows_updated: 0,
-        rows_skipped: 0,
+      const body = createInvoiceSchema.parse(toInvoiceBody(draft))
+      // The branch travels beside the body, as it does for a typed invoice.
+      const invoice = await invoices.create(ctx, body, draft.branchId, {
+        clientRequestId: this.invoiceRequestId(draft),
       })
-      throw error
+      await this.recordIdentity(ctx, {
+        migrationId: job.id,
+        entity: 'invoice',
+        identity: draft.identity,
+        row: draft.firstRow,
+        targetId: String((invoice as { id: string }).id),
+        outcome: 'created',
+      })
+      done += 1
+
+      if (done % IMPORT_LIMITS.heartbeatEvery === 0) {
+        await this.update(ctx, job.id, { rows_created: job.rowsCreated + done })
+      }
     }
 
-    const actual = await this.countLedger(ctx, job.id)
-    const result = reconcile({ created: job.dryRun?.toCreate ?? 0, updated: 0 }, actual)
+    if (done < plan.fresh.length) {
+      return this.update(ctx, job.id, {
+        status: 'importing',
+        error_code: null,
+        rows_created: job.rowsCreated + done,
+      })
+    }
+
+    const result = await this.reconcileInvoices(ctx, job, plan.drafts)
+    const created = result.lines.find((line) => line.measure === 'invoices')?.hisabcheValue ?? 0
 
     return this.update(ctx, job.id, {
       status: result.matched ? 'completed' : 'completed_with_warnings',
+      error_code: null,
       rows_created: created,
       rows_updated: 0,
       rows_skipped: plan.drafts.length - created,
@@ -911,9 +1251,168 @@ export class MigrationService {
     })
   }
 
-  private invoiceRequestId(jobId: string, draft: InvoiceDraft): string {
-    const digest = createHash('sha256').update(draft.identity).digest('hex').slice(0, 24)
-    return `mig-${jobId}-${digest}`
+  /**
+   * What the file said, against what is now in the books — read back, not
+   * remembered.
+   *
+   * «Two invoices were created» proves that two calls returned. It does not
+   * prove the business is owed what the file says it is owed. So the invoices
+   * this job made are READ from the database and their figures set beside the
+   * source's: how many, how many lines, the total, what was paid, and what is
+   * still receivable. Any difference makes the job «completed with warnings»
+   * and is shown line by line.
+   */
+  private async reconcileInvoices(ctx: TenancyContext, job: MigrationJob, drafts: InvoiceDraft[]) {
+    const records = await selectAllPages((lo, hi) =>
+      supabase
+        .from('migration_records')
+        .select('source_identity, target_id')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('migration_id', job.id)
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
+    if (records.error) throw new DatabaseError('Failed to reconcile the migration', records.error)
+
+    const made = new Map<string, string>()
+    for (const row of records.data ?? [])
+      made.set(String(row.source_identity), String(row.target_id))
+
+    const source = drafts.filter((draft) => made.has(draft.identity))
+    const expected = {
+      invoices: source.length,
+      lines: source.reduce((sum, draft) => sum + draft.lines.length, 0),
+      totalMinor: source.reduce((sum, draft) => sum + draft.totalMinor, 0),
+      paidMinor: source.reduce(
+        (sum, draft) => sum + Math.min(draft.paidMinor, draft.totalMinor),
+        0,
+      ),
+      receivableMinor: source.reduce(
+        (sum, draft) => sum + Math.max(0, draft.totalMinor - draft.paidMinor),
+        0,
+      ),
+    }
+
+    const ids = [...made.values()]
+    const actual = { invoices: 0, lines: 0, totalMinor: 0, paidMinor: 0, receivableMinor: 0 }
+    for (let start = 0; start < ids.length; start += BATCH_SIZE) {
+      const chunk = ids.slice(start, start + BATCH_SIZE)
+      const [headers, items] = await Promise.all([
+        supabase
+          .from('invoices')
+          .select('id, total, paid_amount')
+          .eq('workspace_id', ctx.workspaceId)
+          .in('id', chunk),
+        supabase
+          .from('invoice_items')
+          .select('id', { count: 'exact', head: true })
+          .in('invoice_id', chunk),
+      ])
+      if (headers.error)
+        throw new DatabaseError('Failed to read the imported invoices', headers.error)
+      if (items.error) throw new DatabaseError('Failed to count the imported lines', items.error)
+
+      for (const row of headers.data ?? []) {
+        const total = Math.round((Number(row.total) || 0) * 100)
+        const paid = Math.round((Number(row.paid_amount) || 0) * 100)
+        actual.invoices += 1
+        actual.totalMinor += total
+        actual.paidMinor += paid
+        actual.receivableMinor += Math.max(0, total - paid)
+      }
+      actual.lines += items.count ?? 0
+    }
+
+    return reconcile(expected, actual)
+  }
+
+  /**
+   * ⚠️ FROM THE DOCUMENT ALONE — not from the job.
+   *
+   * A commit can die between «the invoice was created» and «it was written
+   * down as imported»: the connection drops, the server is restarted. The
+   * person then does the only thing they can — gives the same file again,
+   * which is a NEW job. A key that carried the job id would be a new key, and
+   * that invoice would be created a second time. Keyed by what the document
+   * is, the second attempt is answered with the first invoice.
+   */
+  private invoiceRequestId(draft: InvoiceDraft): string {
+    const digest = createHash('sha256').update(draft.identity).digest('hex').slice(0, 32)
+    return `mig-inv-${digest}`
+  }
+  /** Every product of the business, as the formula reader needs it. Reads only. */
+  private async catalogue(ctx: TenancyContext): Promise<CatalogueProduct[]> {
+    const { data, error } = await selectAllPages((lo, hi) =>
+      supabase
+        .from('products')
+        .select('id, name, buy_price')
+        .eq('workspace_id', ctx.workspaceId)
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
+    if (error) throw new DatabaseError('Failed to read the products', error)
+    return (data ?? []).map((row) => ({
+      id: String(row.id),
+      name: String(row.name ?? ''),
+      buyPrice:
+        row.buy_price === null || row.buy_price === undefined ? null : Number(row.buy_price),
+    }))
+  }
+
+  /** The formulas a product file carries, tied to the catalogue as it is now. */
+  private async planProductBoms(ctx: TenancyContext, candidates: CandidateRow[]) {
+    const { plans, findings } = planBoms(candidates)
+    if (plans.length === 0) return { plans, findings }
+
+    const incoming = candidates
+      .filter((candidate) => candidate.importable)
+      .map((candidate) => String(candidate.values['name'] ?? ''))
+    const resolved = resolveBoms(plans, await this.catalogue(ctx), incoming)
+    return { plans, findings: [...findings, ...resolved] }
+  }
+
+  /**
+   * Write the formulas — each through `ManufacturingService.saveDefinition`,
+   * the path the production screen itself saves through. The cost of a
+   * formula is that service's to work out; nothing is computed here.
+   *
+   * A product that ALREADY has a formula is left alone: importing a file
+   * twice must not put a second version over one a person may have edited.
+   *
+   * @returns false when the clock ran out before the last formula.
+   */
+  private async writeProductBoms(
+    ctx: TenancyContext,
+    candidates: CandidateRow[],
+    deadline: number,
+  ): Promise<boolean> {
+    const { plans } = planBoms(candidates)
+    if (plans.length === 0) return true
+
+    // Read AFTER the product rows were written: the file's own products are
+    // in the catalogue now and are found by name like any other.
+    resolveBoms(plans, await this.catalogue(ctx))
+    const manufacturing = new ManufacturingService()
+
+    for (const plan of plans) {
+      if (Date.now() >= deadline) return false
+      // Two products share the name, or it was not created: nothing to attach to.
+      if (!plan.productId) continue
+      if (await manufacturing.getDefinition(ctx, plan.productId)) continue
+      await manufacturing.saveDefinition(ctx, this.toDefinition(plan, plan.productId))
+    }
+    return true
+  }
+
+  private toDefinition(plan: BomPlan, productId: string) {
+    // The same default an invoice gets when nothing names a currency.
+    const currency = 'AFN' as const
+    return saveProductionDefinitionSchema.parse({
+      productId,
+      currency,
+      columns: productionColumns(currency),
+      rows: toProductionRows(plan),
+    })
   }
 
   private assertMayImport(ctx: TenancyContext) {
@@ -984,8 +1483,16 @@ export class MigrationService {
    * four thousand single-row lookups is four thousand round trips, and the set
    * does not change while a dry run is computing.
    */
-  private async existingKeys(ctx: TenancyContext, entity: MigrationEntity): Promise<Set<string>> {
-    const keys = new Set<string>()
+  private async existingTargets(
+    ctx: TenancyContext,
+    entity: MigrationEntity,
+  ): Promise<Map<string, string | null>> {
+    // key → the ONE row that holds it, or null when several do.
+    const targets = new Map<string, string | null>()
+    const note = (key: string, id: string) => {
+      const held = targets.get(key)
+      targets.set(key, held === undefined || held === id ? id : null)
+    }
     if (entity === 'invoice') throw new ValidationError('MIGRATION_ENTITY_UNSUPPORTED')
 
     if (entity === 'customer') {
@@ -993,7 +1500,7 @@ export class MigrationService {
       const { data, error } = await selectAllPages((lo, hi) =>
         supabase
           .from('customers')
-          .select('phone, email, full_name')
+          .select('id, phone, email, full_name')
           .eq('workspace_id', ctx.workspaceId)
           .order('id', { ascending: true })
           .range(lo, hi),
@@ -1002,18 +1509,19 @@ export class MigrationService {
       if (error) throw new DatabaseError('Failed to read existing customers', error)
 
       for (const row of data ?? []) {
+        const id = String(row.id)
         const phone = normalizePhone(row.phone ?? '')
-        if (phone) keys.add(`phone:${phone}`)
+        if (phone) note(`phone:${phone}`, id)
         const email = (row.email ?? '').trim().toLowerCase()
-        if (email) keys.add(`email:${email}`)
+        if (email) note(`email:${email}`, id)
         const name = comparisonKey(row.full_name ?? '')
-        if (name) keys.add(`name:${name}`)
+        if (name) note(`name:${name}`, id)
       }
     } else {
       const { data, error } = await selectAllPages((lo, hi) =>
         supabase
           .from('products')
-          .select('sku, barcode, name')
+          .select('id, sku, barcode, name')
           .eq('workspace_id', ctx.workspaceId)
           .order('id', { ascending: true })
           .range(lo, hi),
@@ -1022,27 +1530,224 @@ export class MigrationService {
       if (error) throw new DatabaseError('Failed to read existing products', error)
 
       for (const row of data ?? []) {
+        const id = String(row.id)
         const sku = comparisonKey(row.sku ?? '')
-        if (sku) keys.add(`sku:${sku}`)
+        if (sku) note(`sku:${sku}`, id)
         const barcode = comparisonKey(row.barcode ?? '')
-        if (barcode) keys.add(`barcode:${barcode}`)
+        if (barcode) note(`barcode:${barcode}`, id)
         const name = comparisonKey(row.name ?? '')
-        if (name) keys.add(`name:${name}`)
+        if (name) note(`name:${name}`, id)
       }
     }
 
-    return keys
+    return targets
+  }
+
+  /**
+   * What the preview AND the commit both decide before a row is counted or
+   * written — so the two cannot disagree:
+   *
+   *   • which existing record a row is (by its own code, phone or email). It
+   *     used to be decided twice: the preview said «update» from the database,
+   *     the commit looked only at earlier imports and CREATED a second record
+   *     for anything typed in by hand;
+   *   • a row whose keys point at two different records is neither;
+   *   • for products, where each one's opening stock goes.
+   */
+  private async prepareRows(
+    ctx: TenancyContext,
+    entity: MigrationEntity,
+    candidates: CandidateRow[],
+  ) {
+    const findings: Finding[] = []
+    const existing = await this.existingTargets(ctx, entity)
+    const targetOfRow = new Map<number, string>()
+
+    for (const candidate of candidates) {
+      if (!candidate.importable) continue
+      const held = new Set<string | null>()
+      for (const key of candidate.keys) {
+        if (key.strength === 'strong' && existing.has(key.key))
+          held.add(existing.get(key.key) ?? null)
+      }
+      const [only] = [...held]
+
+      if (held.size === 0) {
+        // A stock row names a product only by its code. With no such product
+        // there is nothing to put the stock on — and nothing to create it from.
+        if (entity === 'product' && String(candidate.values['name'] ?? '') === '') {
+          findings.push({
+            severity: 'warning',
+            row: candidate.row,
+            column: null,
+            code: 'PRODUCT_NOT_FOUND_FOR_STOCK',
+          })
+          candidate.importable = false
+        }
+        continue
+      }
+      if (held.size > 1 || only === null || only === undefined) {
+        findings.push({
+          severity: 'warning',
+          row: candidate.row,
+          column: null,
+          code: 'EXISTING_MATCH_AMBIGUOUS',
+        })
+        candidate.importable = false
+        continue
+      }
+      targetOfRow.set(candidate.row, only)
+    }
+
+    let stock: StockPlan | null = null
+    if (entity === 'product') {
+      const places = await this.places(ctx)
+      stock = planStock(candidates, places.warehouses)
+      findings.push(...stock.findings)
+      for (const candidate of candidates) {
+        if (stock.refused.has(candidate.row)) candidate.importable = false
+      }
+    }
+
+    return { existing, targetOfRow, stock, findings }
+  }
+
+  /** Of these products, the ones that already have a quantity or any stock movement. */
+  private async stockedProducts(ctx: TenancyContext, ids: string[]): Promise<Set<string>> {
+    const stocked = new Set<string>()
+    const unique = [...new Set(ids)]
+    for (let at = 0; at < unique.length; at += 150) {
+      const chunk = unique.slice(at, at + 150)
+      const [products, movements] = await Promise.all([
+        supabase
+          .from('products')
+          .select('id, quantity')
+          .eq('workspace_id', ctx.workspaceId)
+          .in('id', chunk),
+        selectAllPages((lo, hi) =>
+          supabase
+            .from('stock_movements')
+            .select('product_id')
+            .eq('workspace_id', ctx.workspaceId)
+            .in('product_id', chunk)
+            .order('id', { ascending: true })
+            .range(lo, hi),
+        ),
+      ])
+      if (products.error) throw new DatabaseError('Failed to read product stock', products.error)
+      if (movements.error) {
+        throw new DatabaseError('Failed to read the stock movements', movements.error)
+      }
+      for (const row of products.data ?? []) {
+        if ((Number(row.quantity) || 0) !== 0) stocked.add(String(row.id))
+      }
+      for (const row of movements.data ?? []) stocked.add(String(row.product_id))
+    }
+    return stocked
+  }
+
+  /**
+   * The opening stock this import was to write, against what the movements
+   * say is there — per product and warehouse.
+   *
+   *   stockUnits       every unit, summed;
+   *   stockPlacements  how many (product, warehouse) pairs hold EXACTLY their figure.
+   *
+   * A pair holding a different figure fails the second line even when the
+   * units happen to add up.
+   */
+  private async reconcileStock(
+    ctx: TenancyContext,
+    migrationId: string,
+    plan: StockPlan,
+    leftAlone: ReadonlySet<number>,
+  ) {
+    const { data: records, error } = await selectAllPages((lo, hi) =>
+      supabase
+        .from('migration_records')
+        .select('source_row, target_id')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('migration_id', migrationId)
+        .order('id', { ascending: true })
+        .range(lo, hi),
+    )
+    if (error) throw new DatabaseError('Failed to reconcile the migration', error)
+
+    const wanted = new Map<string, number>()
+    let unplaced = 0
+    const productIds: string[] = []
+    const unplacedIds: string[] = []
+    for (const record of records ?? []) {
+      const row = Number(record.source_row)
+      const stock = leftAlone.has(row) ? undefined : plan.byRow.get(row)
+      if (!stock) continue
+      const productId = String(record.target_id)
+      if (stock.entries.length > 0) productIds.push(productId)
+      for (const entry of stock.entries) {
+        wanted.set(`${productId}|${entry.warehouseId}`, entry.quantity)
+      }
+      if (stock.unplaced > 0) {
+        unplaced += stock.unplaced
+        unplacedIds.push(productId)
+      }
+    }
+
+    const held = new Map<string, number>()
+    for (let at = 0; at < productIds.length; at += 150) {
+      const chunk = productIds.slice(at, at + 150)
+      const { data, error: readError } = await selectAllPages((lo, hi) =>
+        supabase
+          .from('stock_movements')
+          .select('product_id, to_warehouse_id, quantity')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('reference_type', 'product_opening')
+          .in('product_id', chunk)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      )
+      if (readError) throw new DatabaseError('Failed to read the opening stock', readError)
+      for (const row of data ?? []) {
+        const key = `${String(row.product_id)}|${String(row.to_warehouse_id ?? '')}`
+        held.set(key, (held.get(key) ?? 0) + (Number(row.quantity) || 0))
+      }
+    }
+
+    // A business with no warehouses keeps the figure on the product itself.
+    let unplacedHeld = 0
+    for (let at = 0; at < unplacedIds.length; at += 150) {
+      const { data, error: readError } = await supabase
+        .from('products')
+        .select('id, quantity')
+        .eq('workspace_id', ctx.workspaceId)
+        .in('id', unplacedIds.slice(at, at + 150))
+      if (readError) throw new DatabaseError('Failed to read product stock', readError)
+      for (const row of data ?? []) unplacedHeld += Number(row.quantity) || 0
+    }
+
+    let wantedUnits = unplaced
+    let exact = 0
+    for (const [key, quantity] of wanted) {
+      wantedUnits += quantity
+      if (Math.abs((held.get(key) ?? 0) - quantity) < 1e-6) exact += 1
+    }
+    let heldUnits = unplacedHeld
+    for (const quantity of held.values()) heldUnits += quantity
+
+    return {
+      expected: { stockUnits: wantedUnits, stockPlacements: wanted.size },
+      actual: { stockUnits: heldUnits, stockPlacements: exact },
+    }
   }
 
   /** Source identity → the Hisabche row it already became. */
   private async mappedIdentities(
     ctx: TenancyContext,
     entity: MigrationEntity,
-  ): Promise<Map<string, string>> {
+  ): Promise<Map<string, { targetId: string; migrationId: string; outcome: string }>> {
     const { data, error } = await selectAllPages((lo, hi) =>
       supabase
         .from('migration_records')
-        .select('source_identity, target_id')
+        .select('source_identity, target_id, migration_id, outcome')
         .eq('workspace_id', ctx.workspaceId)
         .eq('source_entity_type', entity)
         .order('id', { ascending: true })
@@ -1051,8 +1756,14 @@ export class MigrationService {
 
     if (error) throw new DatabaseError('Failed to read the migration ledger', error)
 
-    const map = new Map<string, string>()
-    for (const row of data ?? []) map.set(row.source_identity, row.target_id)
+    const map = new Map<string, { targetId: string; migrationId: string; outcome: string }>()
+    for (const row of data ?? []) {
+      map.set(String(row.source_identity), {
+        targetId: String(row.target_id),
+        migrationId: String(row.migration_id),
+        outcome: String(row.outcome),
+      })
+    }
     return map
   }
 
@@ -1122,64 +1833,164 @@ export class MigrationService {
     return typeof minor === 'number' ? minor / 100 : 0
   }
 
+  /**
+   * ⚠️ THROUGH THE PRODUCT'S OWN SERVICES — not into the tables.
+   *
+   * This used to be two inserts. A product arrived with a quantity written
+   * straight onto its row: in no warehouse, with no stock movement behind it,
+   * so the first sale took the figure negative in a building that had never
+   * held the goods. A customer arrived with an opening balance that no
+   * transaction recorded, so the «balance» on the row and the customer's
+   * statement disagreed from the first day.
+   *
+   * `ProductService.create` puts opening stock in a warehouse as a movement;
+   * `CustomerService.create` records the opening balance as what it is. An
+   * imported record is now indistinguishable from one typed in — which is the
+   * only way every screen that reads it can be right.
+   *
+   * @returns the new id, or null when the row is skipped (said in the dry run).
+   */
   private async createEntity(
     ctx: TenancyContext,
     entity: MigrationEntity,
     values: Record<string, string | number | boolean>,
+    stock: ProductStock | undefined,
+    requestId: string,
   ): Promise<string | null> {
     // An invoice is never written as a table row: it goes through the invoice service.
     if (entity === 'invoice') throw new ValidationError('MIGRATION_ENTITY_UNSUPPORTED')
-    const row =
-      entity === 'customer'
-        ? {
-            full_name: String(values['fullName'] ?? ''),
-            phone: String(values['phone'] ?? ''),
-            email: String(values['email'] ?? ''),
+
+    if (entity === 'customer') {
+      const made = await this.keyed(requestId, (options) =>
+        new CustomerService().create(
+          ctx,
+          {
+            fullName: String(values['fullName'] ?? ''),
+            phone: values['phone'] ? String(values['phone']) : null,
+            email: values['email'] ? String(values['email']) : '',
             address: values['address'] ? String(values['address']) : null,
             notes: String(values['notes'] ?? ''),
-            opening_balance: this.toMajor(values['openingBalance']),
-            // Imported customers are cash by default. Marking one `credit`
-            // makes its opening balance a debt, and a guess that creates debts
-            // is not a guess this importer gets to make.
+            openingBalance: this.toMajor(values['openingBalance']),
             type: values['type'] === 'credit' ? 'credit' : 'cash',
-            is_active: true,
-          }
-        : {
-            name: String(values['name'] ?? ''),
-            sku: String(values['sku'] ?? ''),
-            barcode: String(values['barcode'] ?? ''),
-            category: String(values['category'] ?? 'general'),
-            unit: String(values['unit'] ?? 'piece'),
-            quantity: typeof values['quantity'] === 'number' ? values['quantity'] : 0,
-            min_stock_level:
-              typeof values['minStockLevel'] === 'number' ? values['minStockLevel'] : 5,
-            buy_price: this.toMajor(values['buyPrice']),
-            sell_price: this.toMajor(values['sellPrice']),
-            wholesale_price:
-              values['wholesalePrice'] === undefined
-                ? null
-                : this.toMajor(values['wholesalePrice']),
-            is_active: true,
-          }
+            isActive: true,
+          },
+          options,
+        ),
+      )
+      return String(made.id)
+    }
 
-    const { data, error } = await supabase
-      .from(entity === 'customer' ? 'customers' : 'products')
-      .insert({ ...row, workspace_id: ctx.workspaceId, user_id: ctx.userId })
-      .select('id')
-      .single()
+    // A stock row for a product that does not exist was refused before this;
+    // a product is never made out of a code and a quantity.
+    if (String(values['name'] ?? '') === '') return null
 
-    // A single rejected row does not fail the migration. It is counted as
-    // skipped and the run continues — failure isolation, so one bad address
-    // does not cost the other 3,999 rows.
-    if (error || !data) return null
-    return data.id as string
+    // A unit or a category the product does not have a name for is kept as
+    // the text the file gave, not forced into the nearest one.
+    const unit = unitSchema.safeParse(String(values['unit'] ?? '').toLowerCase())
+    const category = productCategorySchema.safeParse(String(values['category'] ?? '').toLowerCase())
+
+    const made = await this.keyed(requestId, (options) =>
+      new ProductService().create(
+        ctx,
+        {
+          name: String(values['name'] ?? ''),
+          sku: String(values['sku'] ?? ''),
+          barcode: String(values['barcode'] ?? ''),
+          category: category.success ? category.data : 'general',
+          unit: unit.success ? unit.data : 'piece',
+          ...(!unit.success && values['unit']
+            ? { unitLabel: String(values['unit']).slice(0, 40) }
+            : {}),
+          // Only a business with no warehouses keeps a figure on the product
+          // itself; everywhere else the stock arrives warehouse by warehouse.
+          quantity: stock?.unplaced ?? 0,
+          minStockLevel: typeof values['minStockLevel'] === 'number' ? values['minStockLevel'] : 5,
+          buyPrice: this.toMajor(values['buyPrice']),
+          sellPrice: this.toMajor(values['sellPrice']),
+          ...(values['wholesalePrice'] === undefined
+            ? {}
+            : { wholesalePrice: this.toMajor(values['wholesalePrice']) }),
+          isActive: true,
+        },
+        { ...options, openingStock: stock?.entries },
+      ),
+    )
+    return String((made as { id: string }).id)
   }
 
+  /**
+   * A keyed create, so a row whose response was lost is answered with the
+   * record it already made instead of a second one. A database that has not
+   * had the idempotency migration cannot honour the key; the row is then
+   * written without it, exactly as it was before this existed.
+   */
+  private async keyed<T>(
+    requestId: string,
+    run: (options: { clientRequestId?: string | null }) => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await run({ clientRequestId: requestId })
+    } catch (error) {
+      if (error instanceof IdempotencyUnavailableError) return run({})
+      throw error
+    }
+  }
+
+  /** The warehouses and branches of this business, by name. Reads only. */
+  private async places(
+    ctx: TenancyContext,
+  ): Promise<{ warehouses: NamedPlace[]; branches: NamedPlace[] }> {
+    const [warehouses, branches] = await Promise.all([
+      supabase
+        .from('warehouses')
+        .select('id, name, is_active')
+        .eq('workspace_id', ctx.workspaceId)
+        .is('deleted_at', null),
+      supabase.from('branches').select('id, name').eq('workspace_id', ctx.workspaceId),
+    ])
+    // A business that has never set up warehouses or branches has none; a
+    // read that FAILED is not that, and is not allowed to look like it.
+    const missing = (code: string | undefined) =>
+      ['42P01', 'PGRST205', '42703', 'PGRST204'].includes(code ?? '')
+    if (warehouses.error && !missing(warehouses.error.code)) {
+      throw new DatabaseError('Failed to read the warehouses', warehouses.error)
+    }
+    if (branches.error && !missing(branches.error.code)) {
+      throw new DatabaseError('Failed to read the branches', branches.error)
+    }
+    return {
+      warehouses: (warehouses.data ?? [])
+        .filter((row) => row.is_active !== false)
+        .map((row) => ({ id: String(row.id), name: String(row.name ?? '') })),
+      branches: (branches.data ?? []).map((row) => ({
+        id: String(row.id),
+        name: String(row.name ?? ''),
+      })),
+    }
+  }
+
+  /**
+   * ⚠️ THROUGH THE SAME SERVICES AS A CREATE.
+   *
+   * This was a raw UPDATE: no scope check (any importer could rewrite a
+   * record of a branch they do not hold), no cache dropped, and a quantity
+   * written straight over `products.quantity` — a figure that is a projection
+   * of the stock movements, so the next movement silently undid it.
+   *
+   * What an update never touches: a customer's opening balance and a
+   * product's stock that has already started. Both are where the books
+   * BEGAN; restating them from a second file would rewrite a figure that
+   * sales and payments have since moved. A product that has never been
+   * stocked does get its opening stock — once (ProductService.recordOpeningStock).
+   *
+   * @returns the id, or null when this importer may not touch the record.
+   */
   private async updateEntity(
     ctx: TenancyContext,
     entity: MigrationEntity,
     targetId: string,
     values: Record<string, string | number | boolean>,
+    stock: ProductStock | undefined,
   ): Promise<string | null> {
     // An invoice is never written as a table row: it goes through the invoice service.
     if (entity === 'invoice') throw new ValidationError('MIGRATION_ENTITY_UNSUPPORTED')
@@ -1187,45 +1998,57 @@ export class MigrationService {
     // "the export did not say", not "set this to empty" — overwriting a phone
     // number the shopkeeper typed by hand with a blank from a partial export
     // is data loss dressed up as an update.
-    const patch: Record<string, unknown> = {}
-    const set = (column: string, value: unknown) => {
-      if (value !== undefined && value !== '') patch[column] = value
+    const said = (key: string): string | undefined => {
+      const value = values[key]
+      return value === undefined || value === '' ? undefined : String(value)
     }
 
-    if (entity === 'customer') {
-      set('full_name', values['fullName'])
-      set('phone', values['phone'])
-      set('email', values['email'])
-      set('address', values['address'])
-      set('notes', values['notes'])
-      // Opening balance is NEVER updated. It is the state of the account when
-      // the books began; a second import restating it would silently rewrite
-      // a balance that transactions have since moved.
-    } else {
-      set('name', values['name'])
-      set('sku', values['sku'])
-      set('barcode', values['barcode'])
-      set('category', values['category'])
-      set('unit', values['unit'])
-      if (typeof values['quantity'] === 'number') patch['quantity'] = values['quantity']
-      if (typeof values['buyPrice'] === 'number')
-        patch['buy_price'] = this.toMajor(values['buyPrice'])
-      if (typeof values['sellPrice'] === 'number') {
-        patch['sell_price'] = this.toMajor(values['sellPrice'])
+    try {
+      if (entity === 'customer') {
+        const patch = {
+          ...(said('fullName') ? { fullName: said('fullName') as string } : {}),
+          ...(said('phone') ? { phone: said('phone') as string } : {}),
+          ...(said('email') ? { email: said('email') as string } : {}),
+          ...(said('address') ? { address: said('address') as string } : {}),
+          ...(said('notes') ? { notes: said('notes') as string } : {}),
+        }
+        if (Object.keys(patch).length > 0)
+          await new CustomerService().update(targetId, ctx, { id: targetId, ...patch })
+        return targetId
       }
+
+      const unit = unitSchema.safeParse(String(values['unit'] ?? '').toLowerCase())
+      const category = productCategorySchema.safeParse(
+        String(values['category'] ?? '').toLowerCase(),
+      )
+      const patch = {
+        ...(said('name') ? { name: said('name') as string } : {}),
+        ...(said('sku') ? { sku: said('sku') as string } : {}),
+        ...(said('barcode') ? { barcode: said('barcode') as string } : {}),
+        ...(category.success ? { category: category.data } : {}),
+        ...(unit.success ? { unit: unit.data } : {}),
+        ...(typeof values['buyPrice'] === 'number'
+          ? { buyPrice: this.toMajor(values['buyPrice']) }
+          : {}),
+        ...(typeof values['sellPrice'] === 'number'
+          ? { sellPrice: this.toMajor(values['sellPrice']) }
+          : {}),
+        ...(typeof values['wholesalePrice'] === 'number'
+          ? { wholesalePrice: this.toMajor(values['wholesalePrice']) }
+          : {}),
+      }
+      const products = new ProductService()
+      if (Object.keys(patch).length > 0)
+        await products.update(targetId, ctx, { id: targetId, ...patch })
+      if (stock && stock.entries.length > 0) {
+        await products.recordOpeningStock(ctx, targetId, stock.entries)
+      }
+      return targetId
+    } catch (error) {
+      // Not this importer's to change, or gone since the file was checked:
+      // that row is skipped and the rest of the file goes on.
+      if (error instanceof ForbiddenError || error instanceof NotFoundError) return null
+      throw error
     }
-
-    if (Object.keys(patch).length === 0) return targetId
-
-    const { data, error } = await supabase
-      .from(entity === 'customer' ? 'customers' : 'products')
-      .update(patch)
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('id', targetId)
-      .select('id')
-      .single()
-
-    if (error || !data) return null
-    return data.id as string
   }
 }

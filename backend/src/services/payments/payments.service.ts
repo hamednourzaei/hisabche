@@ -9,6 +9,7 @@
 // and it keeps whatever was overpaid as an advance instead of losing it.
 // ============================================
 
+import { baseCurrencyOf } from '../base-currency'
 import { ConflictError, NotFoundError } from '../../errors/database.error'
 import {
   asReplay,
@@ -46,6 +47,10 @@ import {
   type PartyProduct,
   type PartySummary,
   type PaymentDirection,
+  partyBalancesByCurrency,
+  summarizePartyByCurrency,
+  type SummaryInvoice,
+  type SummaryPayment,
 } from './payments.domain'
 import { PaymentsRepository, domainErrorCode, type PaymentRow } from './payments.repository'
 
@@ -215,7 +220,7 @@ export class PaymentsService {
           partyType: input.partyType,
           partyId: input.partyId,
           amount,
-          currency: input.currency ?? 'AFN',
+          currency: input.currency ?? (await baseCurrencyOf(ctx.workspaceId)),
           method: input.method ?? 'cash',
           entryDate,
           reference: input.reference ?? '',
@@ -510,6 +515,7 @@ export class PaymentsService {
           kind: (invoice.type === 'purchase' ? 'purchase' : 'sale') as LedgerMovement['kind'],
           amount: Number(invoice.total) || 0,
           reference,
+          ...(invoice.currency ? { currency: String(invoice.currency) } : {}),
           key: `i:${invoice.id}`,
         }
       }),
@@ -527,22 +533,43 @@ export class PaymentsService {
             : 'payment_out') as LedgerMovement['kind'],
           amount: Number(payment.amount) || 0,
           reference: payment.payment_number ?? payment.id,
+          ...(payment.currency ? { currency: String(payment.currency) } : {}),
           key: `p:${payment.id}`,
         }
       }),
     ]
 
-    // The running balance starts from the opening balance, not from zero.
+    // The running balance starts from the opening balance, not from zero —
+    // and the opening balance is in the books currency, so it is carried only
+    // by the rows of that currency.
     const opening = round2(openingBalance)
+    const bookCurrency = await baseCurrencyOf(ctx.workspaceId)
+    const balances = partyBalancesByCurrency(movements, bookCurrency, opening)
     return {
       partyType,
       partyId,
       openingBalance: opening,
-      movements: runningLedger(movements).map((row) => {
+      movements: runningLedger(
+        movements.map((movement) => ({ ...movement, currency: movement.currency || bookCurrency })),
+      ).map((row) => {
         const { key, ...rest } = row as typeof row & { key: string }
-        return { ...rest, balance: round2(rest.balance + opening), ...sources.get(key) }
+        const carried = rest.currency === bookCurrency ? opening : 0
+        return {
+          ...rest,
+          balance: round2(rest.balance + carried),
+          ...sources.get(key),
+          currency: rest.currency,
+        }
       }),
-      balance: round2(partyBalance(movements) + opening),
+      /** The currency the books are kept in. */
+      currency: bookCurrency,
+      /**
+       * ⚠️ IN THE BOOKS CURRENCY ONLY. It used to be every movement added
+       * together whatever its currency. What the party owes in another
+       * currency is in `balances`, beside this — never inside it.
+       */
+      balance: balances[0]?.balance ?? opening,
+      balances,
     }
   }
 
@@ -556,32 +583,48 @@ export class PaymentsService {
     partyType: PartyType,
     partyId: string,
     asOf: string = today(),
-  ): Promise<PartySummary> {
+  ): Promise<
+    PartySummary & {
+      bookCurrency: string
+      byCurrency: Array<PartySummary & { currency: string }>
+    }
+  > {
     const { invoices, payments, openingBalance } = await this.repo.partyMovements(
       ctx.workspaceId,
       partyType,
       partyId,
     )
-    return summarizeParty(
-      invoices.map((invoice) => ({
-        id: invoice.id,
-        type: invoice.type === 'purchase' ? 'purchase' : 'sale',
-        status: String(invoice.status ?? ''),
-        total: Number(invoice.total) || 0,
-        paidAmount: Number(invoice.paid_amount) || 0,
-        invoiceDate: String(invoice.date ?? '').slice(0, 10),
-        dueDate: String(invoice.due_date ?? '').slice(0, 10),
-        currency: String(invoice.currency ?? ''),
-      })),
-      payments.map((payment) => ({
-        direction: payment.direction === 'out' ? 'out' : 'in',
-        amount: Number(payment.amount) || 0,
-        entryDate: String(payment.entry_date ?? '').slice(0, 10),
-        currency: String(payment.currency ?? ''),
-      })),
-      asOf,
-      openingBalance,
-    )
+    const summaryInvoices: SummaryInvoice[] = invoices.map((invoice) => ({
+      id: invoice.id,
+      type: invoice.type === 'purchase' ? 'purchase' : 'sale',
+      status: String(invoice.status ?? ''),
+      total: Number(invoice.total) || 0,
+      paidAmount: Number(invoice.paid_amount) || 0,
+      invoiceDate: String(invoice.date ?? '').slice(0, 10),
+      dueDate: String(invoice.due_date ?? '').slice(0, 10),
+      currency: String(invoice.currency ?? ''),
+    }))
+    const summaryPayments: SummaryPayment[] = payments.map((payment) => ({
+      direction: payment.direction === 'out' ? 'out' : 'in',
+      amount: Number(payment.amount) || 0,
+      entryDate: String(payment.entry_date ?? '').slice(0, 10),
+      currency: String(payment.currency ?? ''),
+    }))
+    const bookCurrency = await baseCurrencyOf(ctx.workspaceId)
+    return {
+      ...summarizeParty(summaryInvoices, summaryPayments, asOf, openingBalance),
+      // ⚠️ The figures above add every document whatever its currency (and
+      // list the currencies they mixed). `byCurrency` is the same summary
+      // once per currency — the one a screen can show when there are several.
+      bookCurrency,
+      byCurrency: summarizePartyByCurrency(
+        summaryInvoices,
+        summaryPayments,
+        asOf,
+        openingBalance,
+        bookCurrency,
+      ),
+    }
   }
 
   /**

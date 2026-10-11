@@ -28,14 +28,17 @@ export const STATUS_COLOR_CLASSES: Record<string, string> = {
 }
 
 export function formatAmount(amount: number, currency: string | undefined, locale: string): string {
+  // No currency named: the number alone. A label this card picked for it
+  // would be a claim about money nobody made.
+  if (!currency) return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(amount)
   try {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: currency || 'AFN',
+      currency,
       maximumFractionDigits: 0,
     }).format(amount)
   } catch {
-    return `${amount} ${currency || 'AFN'}`
+    return `${amount} ${currency}`
   }
 }
 

@@ -2,6 +2,7 @@
 // backend/src/routes/transaction.routes.ts
 // ============================================
 
+import { baseCurrencyOf } from '../services/base-currency'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { supabase } from '../db'
 import { selectAllPages } from '../utils/fetch-all-pages'
@@ -16,7 +17,7 @@ import {
 // The payments core: the one place money moving between the business and a
 // party is recorded. `payments` is the shared instance the rest of the backend
 // books through — see services/payments/index.ts.
-import { partyBalance, payments as paymentsService } from '../services/payments'
+import { partyBalancesByCurrency, payments as paymentsService } from '../services/payments'
 import { BaseError } from '../errors/base.error'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { failRoute } from '../utils/route-failure'
@@ -314,7 +315,7 @@ export async function transactionRoutes(fastify: FastifyInstance) {
           supplier_id: body.supplierId ?? null,
           type: body.type,
           amount: body.amount,
-          currency: body.currency ?? 'AFN',
+          currency: body.currency ?? (await baseCurrencyOf(request.tenancy.workspaceId)),
           description: body.description ?? '',
           reference: body.reference ?? '',
           date: body.date ?? new Date().toISOString(),
@@ -385,11 +386,15 @@ export async function transactionRoutes(fastify: FastifyInstance) {
       // The arithmetic is no longer written here at all. `partyBalance` is the
       // one definition of what each movement means, it is unit-tested, and a
       // third copy of these four lines is how a third disagreement starts.
-      const balance = partyBalance(
+      // ⚠️ PER CURRENCY. The rows were read WITH their currency and then
+      // added without it: 100 dollars and 10,000 afghani made 10,100.
+      const bookCurrency = await baseCurrencyOf(workspaceId)
+      const balances = partyBalancesByCurrency(
         (data ?? []).map((tx) => ({
           date: '',
           reference: '',
           amount: Number(tx.amount) || 0,
+          ...(tx.currency ? { currency: String(tx.currency) } : {}),
           kind:
             tx.type === 'sale'
               ? ('sale' as const)
@@ -401,12 +406,17 @@ export async function transactionRoutes(fastify: FastifyInstance) {
                     ? ('purchase' as const)
                     : ('return' as const),
         })),
+        bookCurrency,
       )
+      // In the books currency only; the other currencies are beside it.
+      const balance = balances[0]?.balance ?? 0
 
       return {
         customerId,
+        currency: bookCurrency,
         balance,
-        isDebtor: balance > 0,
+        balances,
+        isDebtor: balances.some((entry) => entry.balance > 0),
         transactions: data ?? [],
       }
     },

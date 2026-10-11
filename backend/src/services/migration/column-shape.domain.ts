@@ -50,7 +50,9 @@ const MOSTLY = 0.8
 const isDate = (cell: string): boolean => {
   if (parseJalaliIso(cell).ok) return true
   // A workbook date-time arrives as `2026-10-01 14:30`.
-  return parseDateIso(cell.split(' ')[0] ?? cell).ok
+  const parsed = parseDateIso(cell.split(' ')[0] ?? cell)
+  // 03/04/2026 is a date whichever way round it is read.
+  return parsed.ok || parsed.reason === 'AMBIGUOUS_ORDER'
 }
 const isPhone = (cell: string): boolean => {
   if (!/^[+0-9۰-۹٠-٩\s()-]+$/.test(cell)) return false

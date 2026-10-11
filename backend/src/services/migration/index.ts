@@ -55,9 +55,18 @@ export {
 } from './inspect.domain'
 export { jalaliToGregorian, parseJalaliIso } from './jalali.domain'
 export { inferMappingFromContent, type InferredMapping } from './column-shape.domain'
+export { currencyCodeOf, matchPlace, stockWarehouseFor, type NamedPlace } from './places.domain'
+export {
+  planBoms,
+  resolveBoms,
+  toProductionRows,
+  type BomPlan,
+  type CatalogueProduct,
+} from './bom-import.domain'
 export {
   groupInvoiceRows,
   resolveInvoiceParties,
+  resolveInvoicePlaces,
   toInvoiceBody,
   type InvoiceDraft,
 } from './invoice-import.domain'
@@ -75,4 +84,9 @@ export {
   type ValidationResult,
 } from './migration.validate'
 
-export { MigrationService, type MigrationDiscovery, type MigrationJob } from './migration.service'
+export {
+  IMPORT_LIMITS,
+  MigrationService,
+  type MigrationDiscovery,
+  type MigrationJob,
+} from './migration.service'

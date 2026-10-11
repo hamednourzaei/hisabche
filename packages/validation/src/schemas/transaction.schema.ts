@@ -14,7 +14,11 @@ export const transactionSchema = z.object({
   supplierId: uuidSchema.optional(),
   type: transactionTypeSchema,
   amount: positiveNumberSchema,
-  currency: currencyCodeSchema.default('AFN'),
+  // ⚠️ NO DEFAULT. A document that names no currency is in the currency the
+  // business keeps its books in, and only the server knows which that is
+  // (services/base-currency.ts). A default here stamped 'AFN' on the body
+  // before the service ever saw that none had been chosen.
+  currency: currencyCodeSchema.optional(),
   description: optionalStringSchema,
   reference: optionalStringSchema,
   date: isoDateSchema,
@@ -31,7 +35,6 @@ export const createTransactionSchema = transactionSchema.omit({
 })
 
 export type CreateTransaction = z.infer<typeof createTransactionSchema>
-
 
 // ============================================
 // Transaction Filters — اضافه کردن cursor

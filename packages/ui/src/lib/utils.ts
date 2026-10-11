@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from 'clsx'
+import type { CurrencyCode } from '@hisabche/store'
 import { twMerge } from 'tailwind-merge'
 
 import { resolveIntlLocale } from '@hisabche/formatting'
@@ -24,7 +25,7 @@ export function cn(...inputs: ClassValue[]): string {
  */
 export function formatCurrency(
   amount: number,
-  currency: 'AFN' | 'USD' | 'PKR' | 'IRR',
+  currency: CurrencyCode,
   locale: 'fa-AF' | 'en' = 'fa-AF',
 ): string {
   // `NaN` and `Infinity` do not throw here, but they render as "NaN ؋" beside

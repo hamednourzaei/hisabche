@@ -3,6 +3,7 @@
 // FIXED: Added cache, pagination, count: estimated, projection
 // ============================================
 
+import { baseCurrencyOf } from './base-currency'
 import { supabase } from '../db'
 import {
   CreateDepartment,
@@ -344,7 +345,8 @@ export class HumanResourcesService {
         employment_type: data.employmentType,
         hire_date: data.hireDate,
         salary: data.salary,
-        salary_currency: data.salaryCurrency,
+        // None named = the currency this business keeps its books in.
+        salary_currency: data.salaryCurrency ?? (await baseCurrencyOf(ctx.workspaceId)),
         bank_account: data.bankAccount || null,
         bank_name: data.bankName || null,
         notes: data.notes || null,
@@ -613,7 +615,8 @@ export class HumanResourcesService {
         overtime_amount: overtimeAmount,
         tax_amount: data.taxAmount,
         net_salary: netSalary,
-        currency: data.currency,
+        // None named = the currency this business keeps its books in.
+        currency: data.currency ?? (await baseCurrencyOf(ctx.workspaceId)),
         // ═══════════════════════════════════════════════════════════════════
         // ⚠️ THE CALLER'S STATUS AND PAYMENT DATE USED TO BE DISCARDED.
         //

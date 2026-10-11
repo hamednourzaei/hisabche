@@ -3,13 +3,13 @@
 // ============================================
 
 import { z } from 'zod'
-import { 
-  uuidSchema, 
-  nonEmptyStringSchema, 
-  optionalStringSchema, 
+import {
+  uuidSchema,
+  nonEmptyStringSchema,
+  optionalStringSchema,
   positiveNumberSchema,
   isoDateSchema,
-  nonNegativeNumberSchema
+  nonNegativeNumberSchema,
 } from './common.schema'
 
 // ============================================
@@ -21,11 +21,13 @@ export const bomSchema = z.object({
   productId: uuidSchema,
   version: z.number().int().min(1).default(1),
   isActive: z.boolean().default(true),
-  items: z.array(z.object({
-    rawMaterialId: uuidSchema,
-    quantity: positiveNumberSchema,
-    unitCost: nonNegativeNumberSchema.default(0),
-  })),
+  items: z.array(
+    z.object({
+      rawMaterialId: uuidSchema,
+      quantity: positiveNumberSchema,
+      unitCost: nonNegativeNumberSchema.default(0),
+    }),
+  ),
   createdAt: isoDateSchema.optional(),
   updatedAt: isoDateSchema.optional(),
 })

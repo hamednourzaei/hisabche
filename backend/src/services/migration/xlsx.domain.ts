@@ -39,6 +39,8 @@ export interface XlsxSheet {
 
 /** What one part may inflate to. A workbook that needs more is not a ledger export. */
 const MAX_PART_BYTES = 64 * 1024 * 1024
+/** How many sheets a workbook may list. */
+const MAX_SHEETS = 60
 
 /* ─── ZIP ─────────────────────────────────────────────────────────────────── */
 
@@ -93,7 +95,20 @@ function readDirectory(file: Buffer): Map<string, ZipEntry> {
   return entries
 }
 
+/**
+ * A part with the namespace prefixes taken off its TAG names.
+ *
+ * Excel writes `<row>`; some libraries that produce workbooks write
+ * `<x:row>`. Both are the same element. Without this such a workbook read as
+ * having no rows at all, and was refused as empty — a wrong reason, for a
+ * file that opens perfectly well. Attributes (`r:id`) are left as they are.
+ */
 function readPart(file: Buffer, entries: Map<string, ZipEntry>, name: string): string | null {
+  const xml = readRawPart(file, entries, name)
+  return xml === null ? null : xml.replace(/<(\/?)[A-Za-z][A-Za-z0-9]*:/g, '<$1')
+}
+
+function readRawPart(file: Buffer, entries: Map<string, ZipEntry>, name: string): string | null {
   const entry = entries.get(name)
   if (!entry) return null
 
@@ -311,7 +326,11 @@ export function readXlsx(file: Buffer): XlsxSheet[] {
   const date1904 = /<workbookPr\s[^>]*date1904="(?:1|true)"/.test(workbook)
 
   const sheets: XlsxSheet[] = []
-  for (const tag of workbook.matchAll(/<sheet\s[^>]*>/g)) {
+  const listed = [...workbook.matchAll(/<sheet\s[^>]*>/g)]
+  // A workbook of thousands of sheets is not a ledger; it is a way to keep the
+  // reader busy for ever.
+  if (listed.length > MAX_SHEETS) throw new XlsxError('XLSX_TOO_LARGE')
+  for (const tag of listed) {
     const path = relations.get(attribute(tag[0], 'r:id') ?? '')
     const xml = path ? readPart(file, entries, path) : null
     // A chart sheet or a missing part has no rows to give.

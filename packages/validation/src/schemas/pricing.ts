@@ -47,10 +47,11 @@
 // and the failure of not stacking is a conversation the shop can have.
 // ============================================
 
+import type { CURRENCY_CODES } from './common.schema'
 import { z } from 'zod'
 
 /** How a price is expressed. Matches the `CURRENCY_CODES` policy elsewhere. */
-export type PricingCurrency = 'AFN' | 'USD' | 'PKR' | 'IRR' | 'IRT' | (string & {})
+export type PricingCurrency = (typeof CURRENCY_CODES)[number] | (string & {})
 
 /** Which side of the trade this price is for. Direction decides the arithmetic. */
 export type PriceKind = 'sale' | 'purchase'

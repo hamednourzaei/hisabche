@@ -31,7 +31,7 @@ export function customersStats({
   totalDebt,
   topCustomerName,
   topCustomerAmount,
-  currency = 'AFN',
+  currency = '',
   customersDelta = null,
   salesDelta = null,
   debtDelta = null,

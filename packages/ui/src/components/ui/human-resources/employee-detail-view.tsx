@@ -613,7 +613,7 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
           <Field
             icon={Banknote}
             label={t('hr.salary', 'معاش')}
-            value={`${(employee.salary || 0).toLocaleString('fa-AF')} ${employee.salary_currency || 'AFN'}`}
+            value={`${(employee.salary || 0).toLocaleString('fa-AF')} ${employee.salary_currency || ''}`}
             field="salary"
             editable
             type="number"
@@ -685,7 +685,7 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
             t={t}
             onSubmit={handleAddPayment}
             onCancel={() => setShowAddPayment(false)}
-            defaultCurrency={employee.salary_currency || 'AFN'}
+            defaultCurrency={employee.salary_currency || ''}
           />
         )}
 
@@ -704,7 +704,7 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
               >
                 <span className="flex min-w-0 flex-col text-xs text-[hsl(var(--fg-secondary))]">
                   <span className="text-sm font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-                    {Number(p.net_salary).toLocaleString('fa-AF')} {p.currency || 'AFN'}
+                    {Number(p.net_salary).toLocaleString('fa-AF')} {p.currency || ''}
                   </span>
                   <span className="tabular-nums">{fmtDay(p.payment_date || p.period_start)}</span>
                   {p.notes && p.status !== 'cancelled' && (

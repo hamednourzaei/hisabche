@@ -195,7 +195,8 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
                 })),
               }
             : {}),
-          currency: body.currency ?? 'AFN',
+          // None named = the business's books currency, decided by the service.
+          ...(body.currency ? { currency: body.currency } : {}),
           notes: body.notes ?? '',
           reference: body.reference ?? '',
           invoiceNumber: body.invoiceNumber,

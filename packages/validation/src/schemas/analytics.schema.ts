@@ -27,23 +27,29 @@ export const salesSummarySchema = z.object({
   totalPaid: z.number(),
   totalUnpaid: z.number(),
   byCurrency: z.record(z.number()),
-  byPeriod: z.array(z.object({
-    period: z.string(),
-    revenue: z.number(),
-    count: z.number(),
-  })),
-  topProducts: z.array(z.object({
-    productId: uuidSchema,
-    productName: z.string(),
-    quantity: z.number(),
-    revenue: z.number(),
-  })),
-  topCustomers: z.array(z.object({
-    customerId: uuidSchema,
-    customerName: z.string(),
-    revenue: z.number(),
-    invoiceCount: z.number(),
-  })),
+  byPeriod: z.array(
+    z.object({
+      period: z.string(),
+      revenue: z.number(),
+      count: z.number(),
+    }),
+  ),
+  topProducts: z.array(
+    z.object({
+      productId: uuidSchema,
+      productName: z.string(),
+      quantity: z.number(),
+      revenue: z.number(),
+    }),
+  ),
+  topCustomers: z.array(
+    z.object({
+      customerId: uuidSchema,
+      customerName: z.string(),
+      revenue: z.number(),
+      invoiceCount: z.number(),
+    }),
+  ),
 })
 
 export type SalesSummary = z.infer<typeof salesSummarySchema>
@@ -57,18 +63,22 @@ export const inventorySummarySchema = z.object({
   totalStockValue: z.number(),
   lowStockProducts: z.number(),
   outOfStockProducts: z.number(),
-  byCategory: z.array(z.object({
-    category: z.string(),
-    count: z.number(),
-    totalValue: z.number(),
-  })),
-  topMovements: z.array(z.object({
-    productId: uuidSchema,
-    productName: z.string(),
-    movementType: z.string(),
-    quantity: z.number(),
-    date: z.string(),
-  })),
+  byCategory: z.array(
+    z.object({
+      category: z.string(),
+      count: z.number(),
+      totalValue: z.number(),
+    }),
+  ),
+  topMovements: z.array(
+    z.object({
+      productId: uuidSchema,
+      productName: z.string(),
+      movementType: z.string(),
+      quantity: z.number(),
+      date: z.string(),
+    }),
+  ),
 })
 
 export type InventorySummary = z.infer<typeof inventorySummarySchema>
@@ -83,12 +93,14 @@ export const financialSummarySchema = z.object({
   netProfit: z.number(),
   accountsReceivable: z.number(),
   accountsPayable: z.number(),
-  cashFlow: z.array(z.object({
-    period: z.string(),
-    inflow: z.number(),
-    outflow: z.number(),
-    net: z.number(),
-  })),
+  cashFlow: z.array(
+    z.object({
+      period: z.string(),
+      inflow: z.number(),
+      outflow: z.number(),
+      net: z.number(),
+    }),
+  ),
   byAccountType: z.record(z.number()),
 })
 
@@ -106,11 +118,13 @@ export const dashboardKpisSchema = z.object({
   pendingPayments: z.number(),
   activeCustomers: z.number(),
   lowStockAlerts: z.number(),
-  recentActivity: z.array(z.object({
-    type: z.string(),
-    message: z.string(),
-    timestamp: z.string(),
-  })),
+  recentActivity: z.array(
+    z.object({
+      type: z.string(),
+      message: z.string(),
+      timestamp: z.string(),
+    }),
+  ),
 })
 
 export type DashboardKpis = z.infer<typeof dashboardKpisSchema>

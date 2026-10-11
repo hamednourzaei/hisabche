@@ -1,3 +1,4 @@
+import type { CurrencyCode } from '@hisabche/store'
 // packages/ui/src/lib/invoices/invoices-types.ts
 
 export interface RawInvoice {
@@ -59,7 +60,7 @@ export interface InvoicesQueryParams {
   warehouseId?: string
   customerId?: string | undefined
   supplierId?: string
-  currency?: 'AFN' | 'USD' | 'PKR' | 'IRR'
+  currency?: CurrencyCode
   dateFrom?: string
   dateTo?: string
   minTotal?: number

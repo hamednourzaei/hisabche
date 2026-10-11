@@ -61,6 +61,44 @@ export interface FieldSpec {
  */
 const CUSTOMER_FIELDS: FieldSpec[] = [
   {
+    // A parties list often has two balance columns: «مانده بدهکار» (they owe
+    // us) and «مانده بستانکار» (we owe them). The second is read for one
+    // reason: a row that has it is NOT a customer who owes, and is left out.
+    key: 'creditBalance',
+    kind: 'money',
+    required: false,
+    aliases: ['مانده بستانکار', 'بستانکار', 'credit balance', 'payable balance'],
+  },
+  {
+    // An accounting package exports EVERY ledger account in one sheet — the
+    // customers, the suppliers, the bank, the rent. This column says which is
+    // which, and only the customers among them are imported as customers.
+    key: 'ledgerGroup',
+    kind: 'text',
+    required: false,
+    maxLength: 120,
+    aliases: ['group name', 'group', 'ledger group', 'under', 'account group', 'گروه حساب', 'گروه'],
+  },
+  {
+    // Which side an opening balance is on. Without it a balance WE owe would
+    // be imported as one owed to us.
+    key: 'balanceSide',
+    kind: 'text',
+    required: false,
+    maxLength: 20,
+    aliases: [
+      'dr/cr',
+      'dr cr',
+      'ledger opening balance - dr/cr',
+      'opening balance - dr/cr',
+      'debit/credit',
+      'balance type',
+      'ماهیت',
+      'بدهکار/بستانکار',
+      'تشخیص',
+    ],
+  },
+  {
     key: 'fullName',
     kind: 'text',
     required: true,
@@ -105,7 +143,17 @@ const CUSTOMER_FIELDS: FieldSpec[] = [
     kind: 'email',
     required: false,
     maxLength: 200,
-    aliases: ['email', 'e mail', 'mail', 'email address', 'ایمیل', 'پست الکترونیک'],
+    aliases: [
+      'main email',
+      'e-mail',
+      'email id',
+      'email',
+      'e mail',
+      'mail',
+      'email address',
+      'ایمیل',
+      'پست الکترونیک',
+    ],
   },
   {
     key: 'address',
@@ -135,6 +183,12 @@ const CUSTOMER_FIELDS: FieldSpec[] = [
     kind: 'money',
     required: false,
     aliases: [
+      'balance total',
+      'مانده بدهکار',
+      'بدهکار',
+      'debit balance',
+      'ledger - opening balance',
+      'ledger opening balance',
       'opening balance',
       'balance',
       'due',
@@ -176,11 +230,80 @@ const CUSTOMER_FIELDS: FieldSpec[] = [
 
 const PRODUCT_FIELDS: FieldSpec[] = [
   {
+    // Which warehouse the opening stock is in. Matched to the business's own
+    // warehouses by name; never created from a file.
+    key: 'warehouse',
+    kind: 'text',
+    required: false,
+    maxLength: 120,
+    aliases: [
+      'warehouse',
+      'warehouse name',
+      'godown',
+      'store',
+      'stock location',
+      'location',
+      'انبار',
+      'نام انبار',
+      'گدام',
+      'محل انبار',
+    ],
+  },
+  {
+    // A component of the product's formula: on the product's own row, and on
+    // the rows under it. See bom-import.domain.ts.
+    key: 'bomComponent',
+    kind: 'text',
+    required: false,
+    maxLength: 300,
+    aliases: [
+      'bom component - item name',
+      'bom component',
+      'component',
+      'component name',
+      'component item',
+      'raw material',
+      'material',
+      'ingredient',
+      'ماده اولیه',
+      'مواد اولیه',
+      'جزء',
+      'نام جزء',
+      'قطعه',
+      'نام ماده',
+    ],
+  },
+  {
+    key: 'bomQuantity',
+    kind: 'decimal',
+    required: false,
+    aliases: [
+      'bom component - quantity',
+      'component quantity',
+      'component qty',
+      'qty per unit',
+      'مقدار مصرف',
+      'مقدار جزء',
+      'تعداد جزء',
+      'ضریب مصرف',
+    ],
+  },
+  {
+    key: 'bomUnit',
+    kind: 'text',
+    required: false,
+    maxLength: 40,
+    aliases: ['bom component - unit', 'component unit', 'واحد جزء', 'واحد مصرف'],
+  },
+  {
     key: 'name',
     kind: 'text',
     required: true,
     maxLength: 200,
     aliases: [
+      'جنس',
+      'نام جنس',
+      'شرح کالا',
       'name',
       'product',
       'product name',
@@ -200,7 +323,20 @@ const PRODUCT_FIELDS: FieldSpec[] = [
     kind: 'text',
     required: false,
     maxLength: 120,
-    aliases: ['sku', 'code', 'item code', 'product code', 'reference', 'ref', 'کد', 'کد کالا'],
+    aliases: [
+      'internal reference',
+      'item code',
+      'کد کالا',
+      'کد جنس',
+      'sku',
+      'code',
+      'item code',
+      'product code',
+      'reference',
+      'ref',
+      'کد',
+      'کد کالا',
+    ],
   },
   {
     key: 'barcode',
@@ -221,19 +357,44 @@ const PRODUCT_FIELDS: FieldSpec[] = [
     kind: 'text',
     required: false,
     maxLength: 40,
-    aliases: ['unit', 'uom', 'unit of measure', 'measure', 'واحد'],
+    aliases: [
+      'usage unit',
+      'unit of measure',
+      'uom',
+      'unit',
+      'units',
+      'uom',
+      'unit of measure',
+      'measure',
+      'واحد',
+    ],
   },
   {
     key: 'quantity',
     kind: 'number',
     required: false,
-    aliases: ['quantity', 'qty', 'stock', 'on hand', 'available', 'موجودی', 'تعداد', 'مقدار'],
+    aliases: [
+      'stock on hand',
+      'quantity on hand',
+      'on hand',
+      'qty on hand',
+      'quantity',
+      'qty',
+      'stock',
+      'on hand',
+      'available',
+      'موجودی',
+      'تعداد',
+      'مقدار',
+    ],
   },
   {
     key: 'buyPrice',
     kind: 'money',
     required: false,
     aliases: [
+      'purchase rate',
+      'cost',
       'buy price',
       'cost',
       'cost price',
@@ -249,6 +410,9 @@ const PRODUCT_FIELDS: FieldSpec[] = [
     kind: 'money',
     required: false,
     aliases: [
+      'rate',
+      'sales price',
+      'selling rate',
       'sell price',
       'price',
       'sale price',
@@ -298,12 +462,30 @@ const PRODUCT_FIELDS: FieldSpec[] = [
  */
 const INVOICE_FIELDS: FieldSpec[] = [
   {
+    key: 'warehouse',
+    kind: 'text',
+    required: false,
+    maxLength: 120,
+    aliases: ['warehouse', 'warehouse name', 'godown', 'store', 'انبار', 'نام انبار', 'گدام'],
+  },
+  {
+    key: 'branch',
+    kind: 'text',
+    required: false,
+    maxLength: 120,
+    aliases: ['branch', 'branch name', 'outlet', 'shop', 'شعبه', 'نام شعبه', 'نمایندگی', 'فروشگاه'],
+  },
+  {
     key: 'invoiceNumber',
     kind: 'text',
     required: false,
     maxLength: 80,
     aliases: [
+      'num',
+      'no',
       'invoice number',
+      'voucher number',
+      'voucher no',
       'invoice no',
       'invoice #',
       'invoice id',
@@ -332,6 +514,7 @@ const INVOICE_FIELDS: FieldSpec[] = [
     aliases: [
       'date',
       'invoice date',
+      'voucher date',
       'sale date',
       'order date',
       'document date',
@@ -358,11 +541,16 @@ const INVOICE_FIELDS: FieldSpec[] = [
     required: false,
     maxLength: 200,
     aliases: [
+      'contact name',
+      'customer',
+      'contact',
       'customer',
       'customer name',
       'client',
       'client name',
       'party',
+      'party name',
+      'bill to',
       'buyer',
       'supplier',
       'supplier name',
@@ -398,6 +586,9 @@ const INVOICE_FIELDS: FieldSpec[] = [
     required: false,
     maxLength: 300,
     aliases: [
+      'product service',
+      'description',
+      'شرح کالا',
       'item',
       'item name',
       'product',
@@ -421,7 +612,16 @@ const INVOICE_FIELDS: FieldSpec[] = [
     kind: 'text',
     required: false,
     maxLength: 120,
-    aliases: ['sku', 'item code', 'product code', 'code', 'کد کالا', 'کد', 'کد محصول'],
+    aliases: [
+      'inventory item code',
+      'sku',
+      'item code',
+      'product code',
+      'code',
+      'کد کالا',
+      'کد',
+      'کد محصول',
+    ],
   },
   {
     key: 'barcode',
@@ -441,6 +641,9 @@ const INVOICE_FIELDS: FieldSpec[] = [
     kind: 'money',
     required: false,
     aliases: [
+      'unit amount',
+      'sales price',
+      'فی',
       'unit price',
       'price',
       'rate',
@@ -459,6 +662,7 @@ const INVOICE_FIELDS: FieldSpec[] = [
     required: false,
     aliases: [
       'line total',
+      'taxable value',
       'amount',
       'line amount',
       'row total',
@@ -487,6 +691,56 @@ const INVOICE_FIELDS: FieldSpec[] = [
     ],
   },
   {
+    key: 'discount',
+    kind: 'money',
+    required: false,
+    aliases: ['discount', 'discount amount', 'line discount', 'تخفیف', 'مبلغ تخفیف', 'تخفیف ردیف'],
+  },
+  {
+    key: 'tax',
+    kind: 'money',
+    required: false,
+    aliases: [
+      'tax amount',
+      'tax',
+      'vat',
+      'tax amount',
+      'vat amount',
+      'gst',
+      'مالیات',
+      'ارزش افزوده',
+      'مالیات بر ارزش افزوده',
+      'مبلغ مالیات',
+    ],
+  },
+  {
+    key: 'taxRate',
+    kind: 'decimal',
+    required: false,
+    aliases: ['tax %', 'tax rate', 'vat %', 'vat rate', 'gst %', 'درصد مالیات', 'نرخ مالیات'],
+  },
+  {
+    key: 'invoiceDiscount',
+    kind: 'money',
+    required: false,
+    aliases: ['invoice discount', 'total discount', 'تخفیف فاکتور', 'تخفیف کل', 'جمع تخفیف'],
+  },
+  {
+    key: 'invoiceTax',
+    kind: 'money',
+    required: false,
+    aliases: ['invoice tax', 'total tax', 'مالیات فاکتور', 'مالیات کل', 'جمع مالیات'],
+  },
+  {
+    // Written by the importer itself for a printed-invoice form that carries
+    // no number: «these rows are one document».
+    key: 'groupKey',
+    kind: 'text',
+    required: false,
+    maxLength: 80,
+    aliases: ['invoice group'],
+  },
+  {
     key: 'paidAmount',
     kind: 'money',
     required: false,
@@ -507,7 +761,8 @@ const INVOICE_FIELDS: FieldSpec[] = [
     key: 'currency',
     kind: 'text',
     required: false,
-    maxLength: 3,
+    // Long enough for the word, not only the code: «دلار آمریکا».
+    maxLength: 30,
     aliases: ['currency', 'currency code', 'ارز', 'واحد پول'],
   },
   {
@@ -549,19 +804,42 @@ export interface MappingSuggestion {
  * whichever column happens to come first — so the more informative header
  * loses to the vaguer one purely by position.
  */
+/**
+ * A column name as it is compared.
+ *
+ * Packages decorate their headers: Xero stars the required ones and runs the
+ * words together («*ContactName», «*InvoiceDate»). Neither is part of the
+ * name. Applied to HEADERS only — a customer called «McDonald» is not two words.
+ */
+export function headerKey(header: string): string {
+  return comparisonKey(
+    header
+      .replace(/^[*\s]+|[*\s]+$/g, '')
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/[/_]+/g, ' '),
+  )
+}
+
+// Words that name almost any column of text. They may claim a field, but only
+// after a column that says what it is («Item Name» before «Description»).
+const GENERIC_ALIASES = new Set(
+  ['description', 'title', 'details', 'شرح', 'توضیحات'].map(comparisonKey),
+)
+
 function scoreHeader(header: string, spec: FieldSpec): { score: number; specificity: number } {
-  const key = comparisonKey(header)
+  const key = headerKey(header)
   const none = { score: 0, specificity: 0 }
   if (key === '') return none
 
-  const candidates = [comparisonKey(spec.key), ...spec.aliases.map(comparisonKey)]
+  const candidates = [headerKey(spec.key), ...spec.aliases.map(headerKey)]
 
   let best = none
   for (const alias of candidates) {
     if (alias === '') continue
 
     if (alias === key) {
-      if (alias.length > best.specificity) best = { score: 1, specificity: alias.length }
+      const specificity = GENERIC_ALIASES.has(alias) ? 1 : alias.length
+      if (specificity > best.specificity) best = { score: 1, specificity }
       continue
     }
 

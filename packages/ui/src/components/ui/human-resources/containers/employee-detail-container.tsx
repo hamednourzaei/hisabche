@@ -57,7 +57,9 @@ export function EmployeeDetailContainer({ id }: { id: string }) {
       overtimeRate: 0,
       taxAmount: 0,
       netSalary: values.amount,
-      currency: values.currency || employee?.salary_currency || 'AFN',
+      ...(values.currency || employee?.salary_currency
+        ? { currency: values.currency || employee?.salary_currency }
+        : {}),
       ...(values.notes ? { notes: values.notes } : {}),
       status: 'paid',
       paymentDate: isoDate,

@@ -121,7 +121,6 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
           total,
           paidAmount: 0,
           paymentMethod: 'credit',
-          currency: 'AFN',
           customerId: customer.id,
           items: [
             {

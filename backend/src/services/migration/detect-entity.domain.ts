@@ -44,6 +44,12 @@ interface Signal {
   weight: number
   /** Matched against the normalised header: equal to it, or contained in it. */
   words: string[]
+  /**
+   * Only a header that IS the word counts. For words too plain to mean
+   * anything inside a longer header: «تاریخ» is an invoice column, «تاریخ ثبت»
+   * on a customer list is not.
+   */
+  exact?: boolean
 }
 
 // Weights: 3 = says it outright, 2 = strong, 1 = fits but proves little.
@@ -98,6 +104,46 @@ const SIGNALS: Signal[] = [
     words: ['تخفیف', 'مالیات', 'فی', 'نرخ', 'discount', 'tax', 'vat', 'unit price', 'rate'],
   },
 
+  {
+    entity: 'invoice',
+    weight: 3,
+    words: ['voucher number', 'voucher no', 'voucher #', 'document number', 'doc no'],
+  },
+  {
+    entity: 'invoice',
+    weight: 2,
+    words: [
+      'voucher date',
+      'party name',
+      'taxable value',
+      'invoice total',
+      'line total',
+      'bill to',
+      'نام خریدار',
+      'شرح کالا',
+      'مبلغ ردیف',
+    ],
+  },
+  {
+    entity: 'invoice',
+    weight: 1,
+    exact: true,
+    words: [
+      'date',
+      'amount',
+      'qty',
+      'quantity',
+      'total',
+      'description',
+      'invoice',
+      'تاریخ',
+      'مبلغ',
+      'تعداد',
+      'شرح',
+      'جمع',
+    ],
+  },
+
   // ── A person or a company ──
   {
     entity: 'customer',
@@ -141,7 +187,38 @@ const SIGNALS: Signal[] = [
     words: ['مانده حساب', 'بدهی', 'طلب', 'شهر', 'opening balance', 'balance', 'city'],
   },
 
+  {
+    entity: 'customer',
+    weight: 2,
+    words: [
+      'group name',
+      'ledger name',
+      'ledger group',
+      'pan/it no',
+      'gstin',
+      'gstin/uin',
+      'mailing name',
+      'گروه حساب',
+      'کد ملی',
+      'شناسه ملی',
+      'کد اقتصادی',
+    ],
+  },
+
   // ── A thing on a shelf ──
+  {
+    entity: 'product',
+    weight: 3,
+    words: [
+      'name of bom',
+      'bom component',
+      'unit of manufacture',
+      'stock item',
+      'ماده اولیه',
+      'مواد اولیه',
+      'فرمول ساخت',
+    ],
+  },
   {
     entity: 'product',
     weight: 3,
@@ -241,7 +318,9 @@ export function detectEntity(
     for (const kind of DETECTABLE_ENTITIES) {
       // The strongest signal a header gives for a kind counts once.
       const best = KEYED.filter(
-        (signal) => signal.entity === kind && signal.keys.some((word) => names(key, word)),
+        (signal) =>
+          signal.entity === kind &&
+          signal.keys.some((word) => (signal.exact ? key === word : names(key, word))),
       ).reduce((max, signal) => Math.max(max, signal.weight), 0)
       if (best > 0) add(kind, best, header)
     }

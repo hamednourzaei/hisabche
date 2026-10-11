@@ -4,12 +4,13 @@
 
 import { z } from 'zod'
 import {
+  currencyCodeSchema,
   uuidSchema,
   nonEmptyStringSchema,
   optionalStringSchema,
   positiveNumberSchema,
   isoDateSchema,
-  nonNegativeNumberSchema
+  nonNegativeNumberSchema,
 } from './common.schema'
 
 // ============================================
@@ -24,8 +25,12 @@ export const projectSchema = z.object({
   startDate: isoDateSchema.optional(),
   endDate: isoDateSchema.optional(),
   budget: nonNegativeNumberSchema.default(0),
-  currency: z.enum(['AFN', 'USD', 'PKR', 'IRR']).default('AFN'),
-  status: z.enum(['planning', 'in_progress', 'on_hold', 'completed', 'cancelled']).default('planning'),
+  // The one currency catalogue, and no default: none named = the books
+  // currency, decided by the server.
+  currency: currencyCodeSchema.optional(),
+  status: z
+    .enum(['planning', 'in_progress', 'on_hold', 'completed', 'cancelled'])
+    .default('planning'),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
   progress: z.number().int().min(0).max(100).default(0),
   tags: z.array(z.string()).default([]),

@@ -97,7 +97,8 @@ export const employeeSchema = z.object({
    * contract — `currency-policy.test.ts` keeps it in step with
    * `FRACTION_DIGITS` in @hisabche/formatting.
    */
-  salaryCurrency: currencyCodeSchema.default('AFN'),
+  // No default: none named = the books currency, decided by the server.
+  salaryCurrency: currencyCodeSchema.optional(),
   bankAccount: optionalStringSchema,
   bankName: optionalStringSchema,
 
@@ -205,7 +206,8 @@ export const payrollSchema = z.object({
   netSalary: nonNegativeNumberSchema,
   /** Each payment states its OWN currency — a salary can be paid in a
    * different one from the contract. Same catalogue as everywhere else. */
-  currency: currencyCodeSchema.default('AFN'),
+  // No default: none named = the books currency, decided by the server.
+  currency: currencyCodeSchema.optional(),
   status: z.enum(['draft', 'approved', 'paid', 'cancelled']).default('draft'),
   paymentDate: isoDateSchema.optional().nullable(),
   notes: optionalStringSchema,

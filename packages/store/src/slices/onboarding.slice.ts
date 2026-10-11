@@ -54,7 +54,9 @@ const initialState: Omit<
   step: 0,
   businessType: null,
   storeSize: null,
-  defaultCurrency: 'AFN',
+  // Nothing is chosen for the person: the wizard's button stays disabled
+  // until they pick, and what they pick becomes the books currency.
+  defaultCurrency: '' as Currency,
   language: 'fa-AF',
   hasAddedProduct: false,
   hasAddedCustomer: false,

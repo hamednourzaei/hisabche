@@ -93,6 +93,11 @@ export interface DryRunSummary {
   needsReview: number
   /** Minor units, keyed by target field. */
   financialImpactMinor: Record<string, number>
+  /** Production formulas that will be written for the products of this file. */
+  boms?: number | undefined
+  /** Opening stock that will be written: every unit, and how many (product, warehouse) pairs. */
+  stockUnits?: number | undefined
+  stockPlacements?: number | undefined
   productionDataChanged: false
 }
 
@@ -261,8 +266,20 @@ export function useDryRun() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, content }: { id: string; content: string }) => {
-      const { data } = await apiClient.post(`/migrations/${id}/dry-run`, { content })
+    mutationFn: async ({
+      id,
+      content,
+      currency,
+    }: {
+      id: string
+      content: string
+      /** For invoices whose rows name no currency. */
+      currency?: string | undefined
+    }) => {
+      const { data } = await apiClient.post(`/migrations/${id}/dry-run`, {
+        content,
+        ...(currency ? { currency } : {}),
+      })
       return data as { job: MigrationJob; dryRun: DryRunSummary; findings: Finding[] }
     },
     retry: false,

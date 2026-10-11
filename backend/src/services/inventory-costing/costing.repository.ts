@@ -8,6 +8,7 @@
 // and two sales of the last unit both read "1 available" before either writes.
 // ============================================
 
+import { baseCurrencyOf } from '../base-currency'
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
 import type { TenancyContext } from '../tenancy.service'
@@ -132,7 +133,7 @@ export class CostingRepository {
         warehouse_id: request.warehouseId ?? null,
         quantity: request.quantity,
         unit_cost: request.unitCost,
-        currency: request.currency ?? 'AFN',
+        currency: request.currency ?? (await baseCurrencyOf(ctx.workspaceId)),
         entry_date: request.entryDate,
         source_type: request.sourceType,
         source_id: request.sourceId,

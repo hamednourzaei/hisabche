@@ -126,7 +126,6 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
         partyType: 'customer',
         partyId: parsed.data.customerId,
         amount: parsed.data.amount,
-        currency: 'AFN',
         entryDate: toIsoDay(new Date()),
         // The invoice the shopkeeper picked, settled explicitly. Without this
         // the server settles the oldest open invoices first, which is the right

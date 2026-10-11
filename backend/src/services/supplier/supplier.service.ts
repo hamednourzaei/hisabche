@@ -230,8 +230,15 @@ export class SupplierService {
         openInvoiceCount: openInvoices.length,
       },
       openInvoices,
-      /** Positive means WE owe them. */
+      /** The currency the books are kept in — the currency of `balance`. */
+      currency: ledger.currency,
+      /** Positive means WE owe them — in the books currency only. */
       balance: -ledger.balance,
+      /** What we owe in each currency; never one figure across them. */
+      balances: ledger.balances.map((entry) => ({
+        currency: entry.currency,
+        balance: -entry.balance,
+      })),
       movements: ledger.movements,
     }
 

@@ -16,7 +16,9 @@ import {
 
 export const aiQuerySchema = z.object({
   question: nonEmptyStringSchema,
-  context: z.enum(['general', 'sales', 'inventory', 'accounting', 'hr', 'projects']).default('general'),
+  context: z
+    .enum(['general', 'sales', 'inventory', 'accounting', 'hr', 'projects'])
+    .default('general'),
   language: z.enum(['fa', 'en', 'ps']).default('fa'),
 })
 
@@ -29,10 +31,12 @@ export type AIQuery = z.infer<typeof aiQuerySchema>
 export const aiResponseSchema = z.object({
   answer: z.string(),
   confidence: z.number().min(0).max(1),
-  sources: z.array(z.object({
-    type: z.string(),
-    description: z.string(),
-  })),
+  sources: z.array(
+    z.object({
+      type: z.string(),
+      description: z.string(),
+    }),
+  ),
   suggestions: z.array(nonEmptyStringSchema),
   data: z.record(z.unknown()).optional(),
 })

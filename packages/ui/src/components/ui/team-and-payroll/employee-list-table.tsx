@@ -158,7 +158,7 @@ export const EmployeeListTable = memo(function EmployeeListTable({
         render: (row) => (
           <span className="tabular-nums font-medium">
             {typeof row.salary === 'number'
-              ? `${row.salary.toLocaleString('fa-AF')} ${row.salary_currency || 'AFN'}`
+              ? `${row.salary.toLocaleString('fa-AF')} ${row.salary_currency || ''}`
               : '—'}
           </span>
         ),

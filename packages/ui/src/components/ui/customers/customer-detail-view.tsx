@@ -24,6 +24,7 @@ import {
   Printer,
 } from 'lucide-react'
 import type { PartyActivity, PartyLedger, PartySummary, PaymentRecord } from '@hisabche/api'
+import { asList } from '@hisabche/api'
 import { CURRENCY_SIGN, formatMoney, formatNumber, type KnownCurrency } from '@hisabche/formatting'
 
 import { cn } from '../../../lib/utils'
@@ -275,6 +276,37 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
           {t('mixedCurrency', { currencies: summary.currencies.join('، ') })}
         </p>
       )}
+
+      {/* With several currencies the cards below add unlike things. This is
+          the picture that is true: what is owed in each currency, apart. */}
+      {summary &&
+        summary.currencies.length > 1 &&
+        asList<PartySummary & { currency: string }>(summary.byCurrency).length > 0 && (
+          <ul
+            aria-label={t('byCurrency')}
+            className="flex flex-col gap-2 rounded-xl border border-[hsl(var(--border-default))] p-3 text-sm"
+          >
+            {asList<PartySummary & { currency: string }>(summary.byCurrency).map((row) => (
+              <li key={row.currency} className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <span className="min-w-12 font-semibold text-[hsl(var(--fg-primary))]">
+                  {row.currency}
+                </span>
+                <span className="text-[hsl(var(--fg-secondary))]">
+                  {t('receivable')}:{' '}
+                  <span className="tabular-nums">{formatNumber(row.receivable, locale, 2)}</span>
+                </span>
+                <span className="text-[hsl(var(--fg-secondary))]">
+                  {t('payable')}:{' '}
+                  <span className="tabular-nums">{formatNumber(row.payable, locale, 2)}</span>
+                </span>
+                <span className="font-medium text-[hsl(var(--fg-primary))]">
+                  {t('netBalance')}:{' '}
+                  <span className="tabular-nums">{formatNumber(row.netBalance, locale, 2)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
 
       {/* ── The money picture ─────────────────────────────────────────────── */}
       {summary && (

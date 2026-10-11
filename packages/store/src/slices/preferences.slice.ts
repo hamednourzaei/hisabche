@@ -21,7 +21,8 @@ interface PreferencesState {
 export const usePreferencesStore = create<PreferencesState>()(
   persist(
     (set, get) => ({
-      lastCurrency: 'AFN',
+      // Empty until the person picks one: the books currency is the server's.
+      lastCurrency: '',
       lastCustomer: null,
       lastCustomerId: null,
       lastTaxRate: 0,

@@ -170,3 +170,49 @@ export function convertVia(
   const inBase = amount * fromRate
   return inBase / toRate
 }
+
+/* ─── The books currency ──────────────────────────────────────────────────── */
+
+export interface BaseCurrency {
+  /** The currency this business keeps its books in. */
+  currency: string
+  /** False once any financial document exists. */
+  changeable: boolean
+  /** False until the database can store it. */
+  configurable: boolean
+}
+
+export const baseCurrencyKeys = { all: ['base-currency'] as const }
+
+/**
+ * The currency this business keeps its books in — from the server.
+ *
+ * ⚠️ There is no client-side default. While it has not loaded, `data` is
+ * undefined and a screen shows that it is loading; it does not fall back to a
+ * currency of its own choosing.
+ */
+export function useBaseCurrency() {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: baseCurrencyKeys.all,
+    queryFn: async (): Promise<BaseCurrency> => {
+      const { data } = await apiClient.get<BaseCurrency>('/finance/currency/base')
+      return data
+    },
+    enabled: ready,
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useSetBaseCurrency() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (currency: string): Promise<BaseCurrency> => {
+      const { data } = await apiClient.put<BaseCurrency>('/finance/currency/base', { currency })
+      return data
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(baseCurrencyKeys.all, data)
+    },
+  })
+}

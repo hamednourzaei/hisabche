@@ -4,6 +4,7 @@
 // Exchange rates, and what foreign balances are worth today.
 // ============================================
 
+import { baseCurrencyOf } from '../base-currency'
 import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError } from '../../errors/database.error'
@@ -156,7 +157,7 @@ export class CurrencyService {
     }
 
     const asOf = input.asOf.slice(0, 10)
-    const base = input.baseCurrency ?? 'AFN'
+    const base = input.baseCurrency ?? (await baseCurrencyOf(ctx.workspaceId))
     const balances = await this.openBalances(ctx, base)
 
     // Rates supplied explicitly win; otherwise the stored quote for the date.

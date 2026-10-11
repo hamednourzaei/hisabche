@@ -1,6 +1,8 @@
 // packages/ui/src/components/ui/onboarding/containers/onboarding-container.tsx
 'use client'
 
+import { useToast } from '../../toast-provider'
+import { apiErrorMessage, useSetBaseCurrency } from '@hisabche/api'
 import { useLocale, useTranslations } from 'next-intl'
 import {
   useOnboardingStore,
@@ -97,6 +99,8 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
   )
 
   const setPrimaryCurrency = useCurrencyStore((s) => s.setPrimaryCurrency)
+  const saveBookCurrency = useSetBaseCurrency()
+  const toast = useToast()
 
   // The wizard's answer used to stop here: `defaultCurrency` was written to the
   // onboarding store and NOTHING read it back. Every amount in the product is
@@ -123,8 +127,25 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
       }
       setDefaultCurrency(currency as Currency)
       setPrimaryCurrency(currency)
+      // ⚠️ AND ON THE SERVER. The two lines above live in this device's
+      // storage; the books currency is `workspaces.base_currency`. Without
+      // this the choice was real on one phone and nowhere else — invoices
+      // with no currency were still recorded in the server's default. A
+      // refusal is said, not swallowed: the business may already have
+      // documents, and then the books currency can no longer change.
+      saveBookCurrency.mutate(currency, {
+        onError: (error) => {
+          const message = apiErrorMessage(error, '')
+          toast.error(
+            message.includes('BASE_CURRENCY_LOCKED')
+              ? tOriginal('onboarding.bookCurrencyLocked')
+              : tOriginal('onboarding.bookCurrencyFailed'),
+          )
+        },
+      })
     },
-    [setDefaultCurrency, setPrimaryCurrency],
+    // eslint-plugin: `t` is rebuilt each render and reads only the translator.
+    [setDefaultCurrency, setPrimaryCurrency, saveBookCurrency, toast, tOriginal],
   )
 
   return (

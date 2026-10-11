@@ -154,6 +154,14 @@ export interface PartySummary {
   lastSaleAt: string | null
   lastPaymentAt: string | null
   currencies: string[]
+  /** The currency the books are kept in. */
+  bookCurrency?: string | undefined
+  /**
+   * The same summary once per currency. When `currencies` has more than one
+   * entry the figures above are a sum of unlike things; THESE are the ones a
+   * screen shows.
+   */
+  byCurrency?: Array<PartySummary & { currency: string }> | undefined
 }
 
 export interface PartyLedgerRow {

@@ -3,6 +3,7 @@
 // FIXED: Added cache, Promise.all, parallel queries
 // ============================================
 
+import { baseCurrencyOf } from './base-currency'
 import { supabase } from '../db'
 import {
   CreateProject,
@@ -87,7 +88,8 @@ export class ProjectService {
         start_date: data.startDate || null,
         end_date: data.endDate || null,
         budget: data.budget,
-        currency: data.currency,
+        // None named = the currency this business keeps its books in.
+        currency: data.currency ?? (await baseCurrencyOf(ctx.workspaceId)),
         status: data.status,
         priority: data.priority,
         tags: data.tags || [],

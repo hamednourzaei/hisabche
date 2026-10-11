@@ -31,7 +31,7 @@ import {
 import { decodePullPage, decodeSnapshotPage, HSB_CONTENT_TYPE } from '@hisabche/sync/wire'
 import { connectSyncStream, streamUrl, type StreamHandle } from '@hisabche/sync/stream'
 
-import { useWorkspaceStore } from '@hisabche/store'
+import { useCurrencyStore, useWorkspaceStore } from '@hisabche/store'
 
 import { API_BASE_URL, apiClient } from '@/shared/lib/api'
 import { bridge } from '@/shared/lib/bridge'
@@ -133,7 +133,9 @@ const FROM_LOG: Record<DeltaEntity, (r: Record<string, unknown>) => Record<strin
     total: num(r.total),
     paid_amount: num(r.paid_amount),
     payment_method: str(r.payment_method),
-    currency: str(r.currency) ?? 'AFN',
+    // A row that names no currency is in the books currency — the one this
+    // device was told by the server, not a currency named in this file.
+    currency: str(r.currency) ?? useCurrencyStore.getState().primaryCurrency,
     status: str(r.status) ?? 'pending',
     notes: str(r.notes),
     updated_at: str(r.updated_at) ?? nowIso(),

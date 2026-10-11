@@ -95,7 +95,7 @@ export const PayrollListTable = memo(function PayrollListTable({
         sortValue: (row) => Number(row.net_salary) || 0,
         render: (row) => (
           <span className="font-medium tabular-nums">
-            {(Number(row.net_salary) || 0).toLocaleString('fa-AF')} {row.currency || 'AFN'}
+            {(Number(row.net_salary) || 0).toLocaleString('fa-AF')} {row.currency || ''}
           </span>
         ),
       },

@@ -23,6 +23,7 @@
 // implies otherwise would be the fake progress the directive forbids.
 // ============================================
 
+import { CURRENCY_CODES } from '@hisabche/validation'
 import { memo, useMemo, useRef, useState } from 'react'
 import type { DryRunSummary, Finding, MigrationEntity, MigrationJob } from '@hisabche/api'
 
@@ -54,6 +55,8 @@ export interface DataMigrationViewProps {
   history: MigrationJob[]
   job: MigrationJob | null
   targetFields: string[]
+  /** Labels of fields that are not fixed names — a quantity column per warehouse. */
+  fieldLabels?: Record<string, string> | undefined
   isLoading: boolean
   isBusy: boolean
   error: string | null
@@ -71,6 +74,9 @@ export interface DataMigrationViewProps {
   sheets: Array<{ name: string; entity: MigrationEntity | null; rowCount: number }>
   activeSheet: string | null
   onSheetChange: (name: string) => void
+  /** The currency of invoices whose rows name none; '' until chosen. */
+  currency: string
+  onCurrencyChange: (code: string) => void
   dryRun: DryRunSummary | null
   findings: Finding[]
   onPickFile: (file: File) => void
@@ -80,6 +86,8 @@ export interface DataMigrationViewProps {
   onDryRun: () => void
   onCommit: () => void
   onCancel: () => void
+  /** Close an import left «importing» in the list. */
+  onCloseJob: (id: string) => void
   onReset: () => void
   onRefresh: () => void
 }
@@ -107,6 +115,7 @@ export const DataMigrationView = memo(function DataMigrationView({
   history,
   job,
   targetFields,
+  fieldLabels,
   isLoading,
   isBusy,
   error,
@@ -118,6 +127,8 @@ export const DataMigrationView = memo(function DataMigrationView({
   sheets,
   activeSheet,
   onSheetChange,
+  currency,
+  onCurrencyChange,
   onPickFile,
   onEntityChange,
   entity,
@@ -125,6 +136,7 @@ export const DataMigrationView = memo(function DataMigrationView({
   onDryRun,
   onCommit,
   onCancel,
+  onCloseJob,
   onReset,
   onRefresh,
 }: DataMigrationViewProps) {
@@ -144,6 +156,8 @@ export const DataMigrationView = memo(function DataMigrationView({
     [discovery, t],
   )
 
+  const labelOf = (field: string): string =>
+    fieldLabels?.[field] ?? t(`migration.field_${field}`, field)
   const fatalCount = findings.filter((finding) => finding.severity === 'fatal').length
   const warningCount = findings.filter((finding) => finding.severity === 'warning').length
   const infoCount = findings.filter((finding) => finding.severity === 'info').length
@@ -269,9 +283,7 @@ export const DataMigrationView = memo(function DataMigrationView({
                     'migration.inferred_fields',
                     'این ستون‌ها از روی محتوایشان وصل شدند، نه از روی نامشان — در مرحله‌ی بعد نگاهشان کنید:',
                   )}{' '}
-                  {(job?.discovery?.inferred ?? [])
-                    .map((field) => t(`migration.field_${field}`, field))
-                    .join('، ')}
+                  {(job?.discovery?.inferred ?? []).map((field) => labelOf(field)).join('، ')}
                 </p>
               ) : null}
             </div>
@@ -308,6 +320,18 @@ export const DataMigrationView = memo(function DataMigrationView({
                 { value: 'customer', label: t('migration.entity_customer', 'مشتریان') },
                 { value: 'product', label: t('migration.entity_product', 'کالاها') },
                 { value: 'invoice', label: t('migration.entity_invoice', 'فاکتورها') },
+              ]}
+            />
+          ) : null}
+          {detection && entity === 'invoice' ? (
+            <SelectField
+              label={t('migration.currency', 'مبلغ‌های این فایل به چه ارزی است؟')}
+              value={currency}
+              onChange={onCurrencyChange}
+              disabled={isBusy}
+              options={[
+                { value: '', label: t('migration.currency_choose', 'انتخاب کنید') },
+                ...CURRENCY_CODES.map((code) => ({ value: code, label: code })),
               ]}
             />
           ) : null}
@@ -393,7 +417,7 @@ export const DataMigrationView = memo(function DataMigrationView({
             {targetFields.map((field) => (
               <SelectField
                 key={field}
-                label={t(`migration.field_${field}`, field)}
+                label={labelOf(field)}
                 value={job?.mapping[field] === undefined ? '__none' : String(job.mapping[field])}
                 onChange={(value) =>
                   onMappingChange(field, value === '__none' ? null : Number(value))
@@ -487,6 +511,21 @@ export const DataMigrationView = memo(function DataMigrationView({
         <Panel title={t('migration.step_dry_run', '۵ — پیش‌نمایش و تأیید')}>
           <StatGrid>
             <Stat label={t('migration.to_create', 'ساخته می‌شود')} value={`+${dryRun.toCreate}`} />
+            {dryRun.boms ? (
+              <Stat label={t('migration.boms', 'فرمول ساخت')} value={`+${dryRun.boms}`} />
+            ) : null}
+            {dryRun.stockUnits ? (
+              <Stat
+                label={t('migration.stock_units', 'موجودی اول')}
+                value={`+${dryRun.stockUnits}`}
+              />
+            ) : null}
+            {dryRun.stockPlacements ? (
+              <Stat
+                label={t('migration.stock_placements', 'در چند جا')}
+                value={String(dryRun.stockPlacements)}
+              />
+            ) : null}
             <Stat
               label={t('migration.to_update', 'به‌روز می‌شود')}
               value={String(dryRun.toUpdate)}
@@ -513,7 +552,7 @@ export const DataMigrationView = memo(function DataMigrationView({
                     .filter(([, value]) => value !== 0)
                     .map(([field, value]) => (
                       <TableRow key={field}>
-                        <TableCell>{t(`migration.field_${field}`, field)}</TableCell>
+                        <TableCell>{labelOf(field)}</TableCell>
                         <TableCell>
                           <Money minor={value} />
                         </TableCell>
@@ -669,9 +708,28 @@ export const DataMigrationView = memo(function DataMigrationView({
                       {row.rowsUpdated}
                     </TableCell>
                     <TableCell>
-                      <Badge tone={STATUS_TONE[row.status] ?? 'neutral'}>
-                        {t(`migration.status_${row.status}`, row.status)}
-                      </Badge>
+                      <span className="inline-flex flex-wrap items-center gap-2">
+                        <Badge tone={STATUS_TONE[row.status] ?? 'neutral'}>
+                          {t(`migration.status_${row.status}`, row.status)}
+                        </Badge>
+                        {row.errorCode === 'MIGRATION_INTERRUPTED' ? (
+                          <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                            {t('migration.error_MIGRATION_INTERRUPTED', row.errorCode)}
+                          </span>
+                        ) : null}
+                        {/* Not the import on screen now: one left behind by a
+                            server that went away. */}
+                        {row.status === 'importing' && row.id !== job?.id ? (
+                          <ActionButton
+                            variant="quiet"
+                            className="min-h-8 px-3 text-xs"
+                            disabled={isBusy}
+                            onClick={() => onCloseJob(row.id)}
+                          >
+                            {t('migration.close_job', 'بستن')}
+                          </ActionButton>
+                        ) : null}
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))}

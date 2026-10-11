@@ -146,9 +146,9 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
     branchId: '',
     permissionProfileId: '',
     salary: '',
-    // «مدیر بتونه با هر ارزی حقوق بده» — the contract currency. AFN is the
-    // default, not an assumption baked into the field.
-    salaryCurrency: 'AFN',
+    // «مدیر بتونه با هر ارزی حقوق بده» — the contract currency. Empty until
+    // chosen: with none, the server uses the currency the books are kept in.
+    salaryCurrency: '',
     hireDate: '',
     // The same fields the employee detail page shows. A detail page that lists
     // «کد ملی / تاریخ تولد / جنسیت / تماس / ایمیل / آدرس / نوع قرارداد» which
@@ -192,7 +192,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
         branchId: '',
         permissionProfileId: '',
         salary: '',
-        salaryCurrency: 'AFN',
+        salaryCurrency: '',
         hireDate: '',
         nationalId: '',
         dateOfBirth: '',
@@ -273,7 +273,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
           position: form.position.trim() || undefined,
           hireDate: form.hireDate,
           salary: form.salary ? Number(form.salary) : 0,
-          salaryCurrency: form.salaryCurrency,
+          ...(form.salaryCurrency ? { salaryCurrency: form.salaryCurrency } : {}),
           employmentType: form.employmentType,
           ...(form.attendanceMethod ? { attendanceMethod: form.attendanceMethod } : {}),
           ...(form.attendanceCredential.trim()

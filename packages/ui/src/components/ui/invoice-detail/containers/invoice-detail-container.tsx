@@ -212,7 +212,7 @@ export function InvoiceDetailContainer() {
       date: inv.date as string,
       dueDate: (getField(inv.dueDate, inv.due_date) as string | undefined) ?? null,
       status: inv.status as string,
-      currency: (inv.currency as string) ?? 'AFN',
+      currency: (inv.currency as string) ?? '',
       subtotal: (inv.subtotal as number) ?? 0,
       total: (inv.total as number) ?? 0,
       customerName: (getField(inv.customerName, inv.customer_name) as string) ?? '',
@@ -280,7 +280,7 @@ export function InvoiceDetailContainer() {
 
   const buildMessage = useCallback(
     (inv: Record<string, unknown>) =>
-      `🧾 ${t('invoices.title')}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n📅 ${fmtIntlDate(inv.date as string)}\n${getField(inv.customerName, inv.customer_name) ? `👤 ${getField(inv.customerName, inv.customer_name)}\n` : ''}💰 *${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || 'AFN'}*\n📌 ${t(`invoices.${(inv.status as string) || 'pending'}`)}`,
+      `🧾 ${t('invoices.title')}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n📅 ${fmtIntlDate(inv.date as string)}\n${getField(inv.customerName, inv.customer_name) ? `👤 ${getField(inv.customerName, inv.customer_name)}\n` : ''}💰 *${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || ''}*\n📌 ${t(`invoices.${(inv.status as string) || 'pending'}`)}`,
     [t, fmtIntlDate],
   )
 
@@ -385,7 +385,7 @@ export function InvoiceDetailContainer() {
     if (!invoice) return
     const inv = invoice as unknown as Record<string, unknown>
     window.open(
-      `mailto:?subject=${encodeURIComponent(`${t('invoices.title')} #${getField(inv.invoiceNumber, inv.invoice_number)}`)}&body=${encodeURIComponent(`${t('invoices.title')}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n${t('invoices.date')}: ${fmtIntlDate(inv.date as string)}\n${t('invoices.total')}: ${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || 'AFN'}`)}`,
+      `mailto:?subject=${encodeURIComponent(`${t('invoices.title')} #${getField(inv.invoiceNumber, inv.invoice_number)}`)}&body=${encodeURIComponent(`${t('invoices.title')}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n${t('invoices.date')}: ${fmtIntlDate(inv.date as string)}\n${t('invoices.total')}: ${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || ''}`)}`,
       '_blank',
     )
   }, [invoice, t, fmtIntlDate])

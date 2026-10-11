@@ -28,7 +28,7 @@ export const mapInvoices = (rawInvoices: RawInvoice[] | undefined, lang: string)
       isoDate: inv.date ?? inv.created_at ?? '',
       status: inv.status ?? '',
       total: inv.total ?? 0,
-      currency: inv.currency ?? 'AFN',
+      currency: inv.currency ?? '',
       type: inv.type ?? 'sale',
       customerName: inv.customerName ?? inv.customer?.full_name ?? '',
       // H2 — carried so the name in the table can be a link to the party.

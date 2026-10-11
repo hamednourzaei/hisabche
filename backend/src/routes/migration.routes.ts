@@ -94,6 +94,12 @@ const profileIdSchema = z.object({ profileId: z.string().uuid() })
 const entitySchema = z.enum(MIGRATION_ENTITIES)
 
 const contentBodySchema = z.object({ content: contentSchema })
+// The currency chosen for invoices whose rows name none. Checked against the
+// product's own list in the service.
+const dryRunBodySchema = z.object({
+  content: contentSchema,
+  currency: z.string().trim().length(3).optional(),
+})
 
 export async function migrationRoutes(fastify: FastifyInstance) {
   const service = new MigrationService()
@@ -203,13 +209,15 @@ export async function migrationRoutes(fastify: FastifyInstance) {
     '/:id/dry-run',
     {
       preHandler: guarded,
-      schema: { body: toJsonSchema(contentBodySchema), response: { 200: toJsonSchema(z.any()) } },
+      schema: { body: toJsonSchema(dryRunBodySchema), response: { 200: toJsonSchema(z.any()) } },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const body = contentBodySchema.parse(request.body)
-        return reply.send(await service.validate(request.tenancy, id, body.content))
+        const body = dryRunBodySchema.parse(request.body)
+        return reply.send(
+          await service.validate(request.tenancy, id, body.content, body.currency?.toUpperCase()),
+        )
       } catch (err) {
         return fail(reply, err, 'Failed to simulate the import')
       }

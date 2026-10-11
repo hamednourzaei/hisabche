@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/quick-invoice/quick-invoice-page.tsx
 'use client'
 
+import { useBookCurrency } from '../../../hooks/use-book-currency'
 import { SelectField } from '../select-field'
 import { cn } from '../../../lib/utils'
 import {
@@ -799,6 +800,7 @@ const PriceStep = memo(function PriceStep({
   onBack: () => void
   onNext: () => void
 }) {
+  const bookCurrency = useBookCurrency()
   const hasItems = items.length > 0
 
   return (
@@ -860,7 +862,7 @@ const PriceStep = memo(function PriceStep({
                     : 'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]',
                 )}
               >
-                {dt === 'fixed' ? 'AFN' : '%'}
+                {dt === 'fixed' ? (bookCurrency ?? '') : '%'}
               </button>
             ))}
           </div>
@@ -1008,6 +1010,7 @@ const PreviewStep = memo(function PreviewStep({
   onConfirm: () => void
 }) {
   const [display, setDisplay] = useState<InvoiceDocumentDisplaySettings>(DEFAULT_PREVIEW_DISPLAY)
+  const bookCurrency = useBookCurrency()
 
   // ✅ فرض تک-workspace: اولین workspace کاربر — برای نمایش لوگو/مهر کسب‌وکار روی پیش‌نمایش فاکتور
   const { data: workspaces } = useWorkspaces()
@@ -1053,12 +1056,21 @@ const PreviewStep = memo(function PreviewStep({
             amount: parseFloat(d.amount) || 0,
           })),
       })),
-      currency: 'AFN',
+      currency: bookCurrency ?? '',
       subtotal: total,
       total,
       paidAmount,
     }),
-    [items, selectedCustomer, total, paidAmount, t, currentWorkspace, transactionType],
+    [
+      items,
+      selectedCustomer,
+      total,
+      paidAmount,
+      t,
+      currentWorkspace,
+      transactionType,
+      bookCurrency,
+    ],
   )
 
   return (
@@ -1078,7 +1090,7 @@ const PreviewStep = memo(function PreviewStep({
       <div className="space-y-4">
         <InvoiceSidebar
           t={t}
-          summary={{ total, paidAmount, currency: 'AFN' }}
+          summary={{ total, paidAmount, currency: bookCurrency ?? '' }}
           display={display}
           onDisplayChange={(key, value) => setDisplay((prev) => ({ ...prev, [key]: value }))}
         />

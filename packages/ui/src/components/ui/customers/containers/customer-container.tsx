@@ -3,6 +3,7 @@
 
 'use client'
 
+import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -25,6 +26,7 @@ type CustomerWithInvoices = CustomerWithDebt & {
 // ============================================================
 
 export function CustomersContainer() {
+  const bookCurrency = useBookCurrency()
   const push = useLocalePush()
 
   // همه / مشتری / تأمین‌کننده. Sent to the server rather than filtered here:
@@ -177,7 +179,7 @@ export function CustomersContainer() {
     onClosePayment: handleClosePayment,
     onPaymentSuccess: handlePaymentSuccess,
     onNewCreditInvoice: () => {},
-    currency: 'AFN',
+    currency: bookCurrency ?? '',
   })
 }
 

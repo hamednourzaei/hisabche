@@ -12,6 +12,7 @@
 // party name, the workspace id and the transaction type (sale | purchase).
 // ============================================
 
+import { baseCurrencyOf } from './base-currency'
 import { randomUUID } from 'node:crypto'
 import { PaymentsService } from './payments/payments.service'
 import { supabase } from '../db'
@@ -873,6 +874,12 @@ export class InvoiceService {
       data.paidAmount && data.total && data.paidAmount >= data.total ? 'completed' : 'pending'
     const direction: 1 | -1 = data.type === 'purchase' ? 1 : -1
 
+    // An invoice that names no currency is in the currency this business
+    // keeps its books in — a stored value, not the letters 'AFN'. Read HERE,
+    // after a replayed request has already been answered: a replay reads
+    // nothing and writes nothing.
+    const bookCurrency = data.currency || (await baseCurrencyOf(workspaceId))
+
     const header = {
       id: invoiceId,
       invoice_number: invoiceNumber,
@@ -908,7 +915,7 @@ export class InvoiceService {
       // follows from the allocations the way every other screen expects.
       paid_amount: 0,
       payment_method: data.paymentMethod || 'cash',
-      currency: data.currency || 'AFN',
+      currency: bookCurrency,
       // ⚠️ J3 — THIS LINE IS THE CONFLATION, and it is kept deliberately.
       //
       // `completed` is a DOCUMENT word being set by whether the invoice was
@@ -1182,7 +1189,7 @@ export class InvoiceService {
         invoiceNumber,
         type: data.type ?? 'sale',
         total: money.total,
-        currency: data.currency ?? 'AFN',
+        currency: bookCurrency,
         status: isHeld ? AWAITING_APPROVAL_STATUS : 'issued',
       },
       notify: false,
@@ -1260,7 +1267,8 @@ export class InvoiceService {
         partyId,
         amount: tranche.amount,
         entryDate: (data.date ?? new Date().toISOString()).slice(0, 10),
-        currency: data.currency ?? 'AFN',
+        // None named = the books currency; the payments service decides it.
+        ...(data.currency ? { currency: data.currency } : {}),
         method: tranche.method,
         reference: tranche.reference,
         // What the person typed beside the amount (transfer number, bank…).

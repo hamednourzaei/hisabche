@@ -214,10 +214,18 @@ export interface LedgerMovement {
   kind: 'sale' | 'purchase' | 'payment_in' | 'payment_out' | 'return'
   amount: number
   reference: string
+  /** The currency of the amount. Absent = the currency the books are kept in. */
+  currency?: string | undefined
 }
 
 /**
  * A party's running balance. Positive means they owe us.
+ *
+ * ⚠️ ONE CURRENCY AT A TIME. This adds amounts; it does not know what they
+ * are amounts OF. Handed a 100-dollar sale and a 10,000-afghani sale it
+ * answers 10,100, which is a number of nothing. Every caller that may hold
+ * more than one currency goes through `partyBalancesByCurrency`, which calls
+ * this once per currency.
  *
  * The signs are the whole point. The balance this replaces ADDED receipts to
  * the customer's debt: taking money from a customer made them owe more. A
@@ -247,13 +255,63 @@ export function partyBalance(movements: LedgerMovement[]): number {
   return round2(balance)
 }
 
-/** The ledger with a running balance on each row, oldest first. */
+export interface CurrencyBalance {
+  currency: string
+  /** Positive: they owe us, in THIS currency. */
+  balance: number
+}
+
+/**
+ * What a party owes, currency by currency — never one figure across them.
+ *
+ * A movement that names no currency is in the books currency, and so is the
+ * opening balance. The books currency is always first and always present
+ * (a zero there is an answer); any other currency appears when the party has
+ * a movement in it.
+ */
+export function partyBalancesByCurrency(
+  movements: LedgerMovement[],
+  bookCurrency: string,
+  openingBalance = 0,
+): CurrencyBalance[] {
+  const groups = new Map<string, LedgerMovement[]>([[bookCurrency, []]])
+  for (const movement of movements) {
+    const currency = movement.currency || bookCurrency
+    const rows = groups.get(currency)
+    if (rows) rows.push(movement)
+    else groups.set(currency, [movement])
+  }
+
+  return [...groups.entries()]
+    .map(([currency, rows]) => ({
+      currency,
+      balance: round2(partyBalance(rows) + (currency === bookCurrency ? openingBalance : 0)),
+    }))
+    .sort((a, b) =>
+      a.currency === bookCurrency
+        ? -1
+        : b.currency === bookCurrency
+          ? 1
+          : a.currency < b.currency
+            ? -1
+            : 1,
+    )
+}
+
+/**
+ * The ledger with a running balance on each row, oldest first.
+ *
+ * The balance on a row runs over the rows of ITS OWN currency: a dollar
+ * payment moves the dollar balance and leaves the afghani one where it was.
+ */
 export function runningLedger(movements: LedgerMovement[]) {
   const ordered = [...movements].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
-  let balance = 0
+  const running = new Map<string, number>()
 
   return ordered.map((movement) => {
-    balance = partyBalance([{ ...movement }]) + balance
+    const key = movement.currency ?? ''
+    const balance = partyBalance([{ ...movement }]) + (running.get(key) ?? 0)
+    running.set(key, balance)
     return { ...movement, balance: round2(balance) }
   })
 }
@@ -406,6 +464,40 @@ export interface MonthlyActivity {
  * `asOf`, oldest first, with empty months present (a gap is information).
  * Cancelled invoices are already excluded by the reader.
  */
+/**
+ * The same summary, once per currency the party has documents in.
+ *
+ * `summarizeParty` adds every invoice it is given; given two currencies its
+ * totals are a sum of unlike things (it says so in `currencies`). This is the
+ * figure a screen can actually show: one row per currency, each internally
+ * consistent. The opening balance belongs to the books currency.
+ */
+export function summarizePartyByCurrency(
+  invoices: SummaryInvoice[],
+  payments: SummaryPayment[],
+  asOf: string,
+  openingBalance: number,
+  bookCurrency: string,
+): Array<PartySummary & { currency: string }> {
+  const of = (currency: string) => currency || bookCurrency
+  const present = new Set<string>([
+    bookCurrency,
+    ...invoices.map((invoice) => of(invoice.currency)),
+    ...payments.map((payment) => of(payment.currency)),
+  ])
+  return [...present]
+    .sort((a, b) => (a === bookCurrency ? -1 : b === bookCurrency ? 1 : a < b ? -1 : 1))
+    .map((currency) => ({
+      currency,
+      ...summarizeParty(
+        invoices.filter((invoice) => of(invoice.currency) === currency),
+        payments.filter((payment) => of(payment.currency) === currency),
+        asOf,
+        currency === bookCurrency ? openingBalance : 0,
+      ),
+    }))
+}
+
 export function monthlyActivity(
   invoices: Array<{ type: string; total: number; invoiceDate: string }>,
   payments: Array<{ direction: PaymentDirection; amount: number; entryDate: string }>,

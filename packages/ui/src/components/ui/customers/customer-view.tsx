@@ -510,7 +510,7 @@ export function customersView(props: CustomersViewProps) {
     onNewCreditInvoice,
     roleFilter = 'all',
     onRoleFilterChange,
-    currency = 'AFN',
+    currency = '',
     customersDelta = null,
     salesDelta = null,
     debtDelta = null,
