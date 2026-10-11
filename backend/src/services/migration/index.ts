@@ -40,6 +40,29 @@ export {
 } from './migration.entities'
 
 export {
+  DETECTABLE_ENTITIES,
+  detectEntity,
+  type DetectableEntity,
+  type EntityDetection,
+} from './detect-entity.domain'
+export { readXlsx, rowsToCsv, serialToIso, XlsxError, type XlsxSheet } from './xlsx.domain'
+export {
+  findHeaderRow,
+  inspectUpload,
+  InspectionError,
+  type SheetInspection,
+  type UploadInspection,
+} from './inspect.domain'
+export { jalaliToGregorian, parseJalaliIso } from './jalali.domain'
+export { inferMappingFromContent, type InferredMapping } from './column-shape.domain'
+export {
+  groupInvoiceRows,
+  resolveInvoiceParties,
+  toInvoiceBody,
+  type InvoiceDraft,
+} from './invoice-import.domain'
+
+export {
   dryRun,
   reconcile,
   validateRows,

@@ -37,7 +37,7 @@
  * service would create a second financial truth — the thing the whole
  * architecture exists to prevent. Customers and products post nothing.
  */
-export const MIGRATION_ENTITIES = ['customer', 'product'] as const
+export const MIGRATION_ENTITIES = ['customer', 'product', 'invoice'] as const
 export type MigrationEntity = (typeof MIGRATION_ENTITIES)[number]
 
 export const MIGRATION_STATUSES = [
@@ -307,11 +307,18 @@ export function normalizeDigits(value: string): string {
  * not is the single most common reason a duplicate is missed.
  */
 export function normalizeText(value: string): string {
-  return value
-    .normalize('NFKC')
-    .replace(/[\u200b-\u200f\u202a-\u202e\u2060\ufeff]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return (
+    value
+      .normalize('NFKC')
+      // ⚠️ NOT U+200C. The zero-width non-joiner is the Persian half-space:
+      // «می‌شود», «عمده‌فروشی». It was stripped with the truly invisible marks,
+      // so every imported name lost it and was stored misspelt. It is removed
+      // only for COMPARISON (see comparisonKey), where «می‌شود» and «میشود»
+      // should be one word.
+      .replace(/[\u200b\u200d-\u200f\u202a-\u202e\u2060\ufeff]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+  )
 }
 
 /**
@@ -324,6 +331,7 @@ export function normalizeText(value: string): string {
  */
 export function comparisonKey(value: string): string {
   return normalizeDigits(normalizeText(value))
+    .replace(/\u200c/g, '')
     .toLowerCase()
     .replace(/[_/\\.]+/g, ' ')
     .replace(/[,'"`،؛()[\]-]/g, '')

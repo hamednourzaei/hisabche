@@ -66,3 +66,24 @@ empty) · Playwright matrix · visual assertions · `3d-living-scene-verificatio
 Lighthouse, LCP/CLS, fps, `renderer.info`, texture memory, bundle size, production
 build, `/af` in a browser, light theme, tablet sizes, landscape phone, reduced
 motion with the OS setting (only simulated in the page), WebGL disabled.
+
+## Third round (11 Oct 2026) — stopped by the owner before verification finished
+
+Written, typechecked, linted and unit-tested (163 / 163), but NOT seen in a browser:
+
+- connection state in the machine (`link`: offline on the way to the stock station,
+  restoring as its gate opens); hall lamps and wall boards go amber, a sheet of light
+  crosses the hall on reconnect, a status chip says so in words;
+- desktop only: shadow map from the key light and a `RoomEnvironment` reflection;
+- the sheet shrinks when it would cover more than a tenth of the active board
+  (checked ten times a second); the peak is written to `canvas.dataset.cover`;
+- the bubble types its line; it is shown on phones too (was tablet and up);
+- no WebGL / context lost: the station's board is drawn as markup in the frame;
+- phones: wider lens (58°), and at the stock station the camera pans to the dock.
+
+`apps/web/scripts/landing-scene-verify.mjs` measures all of this with Playwright. One
+run against a production build was interrupted: 12 of 15 size/language runs finished
+(9 stops each), every one reporting 4 console errors whose text was not saved, and
+`verify-results.json` was never written. The screenshots in `shots/` are from that
+build, which predates the phone changes above. No Lighthouse run exists.
+`docs/landing/3d-living-scene-verification.md` was not written.

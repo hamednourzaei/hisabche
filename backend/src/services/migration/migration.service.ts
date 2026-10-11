@@ -44,6 +44,17 @@ import {
 } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import type { TenancyContext } from '../tenancy.service'
+import { InvoiceService } from '../invoice.service'
+import { inferMappingFromContent } from './column-shape.domain'
+import { createInvoiceSchema } from '@hisabche/validation'
+import {
+  groupInvoiceRows,
+  resolveInvoiceParties,
+  toInvoiceBody,
+  type InvoiceDraft,
+  type KnownParty,
+  type KnownProduct,
+} from './invoice-import.domain'
 
 import {
   checkIntake,
@@ -78,6 +89,7 @@ import {
   reconcile,
   validateRows,
   type ColumnMapping,
+  type CandidateRow,
   type DryRunSummary,
   type Finding,
   type ReconciliationLine,
@@ -94,6 +106,8 @@ export interface MigrationDiscovery {
   suggestions: MappingSuggestion[]
   /** First few rows, so the user can see what they uploaded. */
   sample: string[][]
+  /** Fields connected from what a column HOLDS, not from its name. */
+  inferred?: string[] | undefined
 }
 
 export interface MigrationJob {
@@ -215,6 +229,14 @@ export class MigrationService {
       }
     })
 
+    // What the names did not connect, the contents may: a column of phone
+    // numbers, the only column of dates, quantity × price = amount. Only
+    // where there is ONE answer — and each such field is named, so the screen
+    // can ask the person to look at it.
+    const fromContent = inferMappingFromContent(input.entity, table.headers, table.rows, mapping)
+    Object.assign(mapping, fromContent.mapping)
+    discovery.inferred = fromContent.inferred
+
     const { data, error } = await supabase
       .from('migration_jobs')
       .insert({
@@ -233,7 +255,15 @@ export class MigrationService {
       .select(COLUMNS)
       .single()
 
-    if (error) throw new DatabaseError('Failed to create the migration job', error)
+    if (error) {
+      // 23514 on an invoice job: the database still lists only customers and
+      // products. Said by name — docs/data-migration-invoices-01-migration.sql —
+      // rather than as a 500 nobody can act on.
+      if (error.code === '23514' && input.entity === 'invoice') {
+        throw new ConflictError('MIGRATION_INVOICE_SCHEMA_REQUIRED')
+      }
+      throw new DatabaseError('Failed to create the migration job', error)
+    }
     return mapJob(data)
   }
 
@@ -320,9 +350,31 @@ export class MigrationService {
     this.assertOpen(job)
     await this.assertSameFile(ctx, id, content)
 
-    const { candidates, findings } = this.parseAgainstJob(job, content)
-    const existingKeys = await this.existingKeys(ctx, job.entity)
-    const summary = dryRun(job.entity, candidates, existingKeys)
+    const parsed = this.parseAgainstJob(job, content)
+    const { candidates } = parsed
+    let findings = parsed.findings
+    let summary: DryRunSummary
+
+    if (job.entity === 'invoice') {
+      // Rows become documents first; what is counted is invoices, not rows.
+      const plan = await this.planInvoices(ctx, candidates)
+      findings = [...findings, ...plan.findings]
+      summary = {
+        entity: 'invoice',
+        toCreate: plan.fresh.length,
+        toUpdate: 0,
+        toSkip: plan.alreadyImported,
+        needsReview: plan.drafts.filter((draft) => !draft.importable).length,
+        financialImpactMinor: {
+          invoiceTotal: plan.fresh.reduce((sum, draft) => sum + draft.totalMinor, 0),
+          paid: plan.fresh.reduce((sum, draft) => sum + draft.paidMinor, 0),
+        },
+        productionDataChanged: false,
+      }
+    } else {
+      const existingKeys = await this.existingKeys(ctx, job.entity)
+      summary = dryRun(job.entity, candidates, existingKeys)
+    }
 
     const updated = await this.update(ctx, id, {
       status: summary.toCreate + summary.toUpdate > 0 ? 'ready' : 'validating',
@@ -363,6 +415,8 @@ export class MigrationService {
     if ((claimed.data ?? []).length === 0) throw new ConflictError('MIGRATION_ALREADY_COMMITTED')
 
     const { candidates } = this.parseAgainstJob(job, content)
+    if (job.entity === 'invoice') return this.commitInvoices(ctx, job, candidates)
+
     const importable = candidates.filter((candidate) => candidate.importable)
 
     let created = 0
@@ -502,7 +556,21 @@ export class MigrationService {
     const job = await this.get(ctx, id)
     const plan = await this.planRollback(ctx, id)
 
-    if (plan.deletable.length > 0) {
+    if (job.entity === 'invoice') {
+      // ⚠️ THROUGH THE INVOICE SERVICE, one by one. An imported invoice posted
+      // an entry, moved stock and may have recorded a payment; removing its row
+      // from the table would leave all three behind. `delete` gives them back.
+      const invoices = new InvoiceService()
+      for (const invoiceId of plan.deletable) {
+        await invoices.delete(invoiceId, ctx)
+        await supabase
+          .from('migration_records')
+          .delete()
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('migration_id', id)
+          .eq('target_id', invoiceId)
+      }
+    } else if (plan.deletable.length > 0) {
       const { error } = await supabase
         .from(job.entity === 'customer' ? 'customers' : 'products')
         .delete()
@@ -545,7 +613,9 @@ export class MigrationService {
     ids: string[],
   ): Promise<Map<string, number>> {
     const counts = new Map<string, number>()
-    if (ids.length === 0) return counts
+    // What depends on an imported invoice (its entry, its stock, its payment)
+    // is undone WITH it by the invoice service, so nothing holds it back here.
+    if (ids.length === 0 || entity === 'invoice') return counts
 
     const sources =
       entity === 'customer'
@@ -674,6 +744,7 @@ export class MigrationService {
    * export-then-import is a duplication machine.
    */
   async exportCsv(ctx: TenancyContext, entity: MigrationEntity): Promise<string> {
+    if (entity === 'invoice') throw new ValidationError('MIGRATION_EXPORT_UNSUPPORTED')
     const columns = EXPORT_COLUMNS[entity]
 
     // The WHOLE table (27 Sep 2026): an export cut at PostgREST's 1000 rows lost the rest silently.
@@ -720,6 +791,131 @@ export class MigrationService {
    * different blast radius. This mirrors `product.write`, which a seller also
    * does not hold.
    */
+  /**
+   * Rows → invoices, with the customer and products each one names looked up
+   * in this business. Reads only.
+   */
+  private async planInvoices(ctx: TenancyContext, candidates: CandidateRow[]) {
+    const grouped = groupInvoiceRows(candidates)
+
+    const [customers, products] = await Promise.all([
+      selectAllPages((lo, hi) =>
+        supabase
+          .from('customers')
+          .select('id, full_name, phone')
+          .eq('workspace_id', ctx.workspaceId)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      ),
+      selectAllPages((lo, hi) =>
+        supabase
+          .from('products')
+          .select('id, name, sku, barcode')
+          .eq('workspace_id', ctx.workspaceId)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      ),
+    ])
+    // A failed lookup is not «nobody by that name»: every invoice would be
+    // refused for an unknown customer, with the real cause hidden.
+    if (customers.error) throw new DatabaseError('Failed to read customers', customers.error)
+    if (products.error) throw new DatabaseError('Failed to read products', products.error)
+
+    const knownCustomers: KnownParty[] = (customers.data ?? []).map((row) => ({
+      id: String(row.id),
+      name: String(row.full_name ?? ''),
+      phone: row.phone ? String(row.phone) : null,
+    }))
+    const knownProducts: KnownProduct[] = (products.data ?? []).map((row) => ({
+      id: String(row.id),
+      name: String(row.name ?? ''),
+      sku: row.sku ? String(row.sku) : null,
+      barcode: row.barcode ? String(row.barcode) : null,
+    }))
+
+    const partyFindings = resolveInvoiceParties(grouped.drafts, {
+      customers: knownCustomers,
+      products: knownProducts,
+    })
+
+    // An invoice this business already imported (from this file or another)
+    // is not imported again.
+    const mapped = await this.mappedIdentities(ctx, 'invoice')
+    const ready = grouped.drafts.filter((draft) => draft.importable)
+    const fresh = ready.filter((draft) => !mapped.has(draft.identity))
+
+    return {
+      drafts: grouped.drafts,
+      fresh,
+      alreadyImported: ready.length - fresh.length,
+      findings: [...grouped.findings, ...partyFindings],
+    }
+  }
+
+  /**
+   * Create the invoices of a job — each through `InvoiceService.create`, the
+   * same path a person typing it takes: numbering, stock, costing, the ledger
+   * and the payment are that service's, not written a second time here.
+   *
+   * The idempotency key is derived from the job and the document, so a commit
+   * that is retried after a crash creates nothing twice.
+   */
+  private async commitInvoices(
+    ctx: TenancyContext,
+    job: MigrationJob,
+    candidates: CandidateRow[],
+  ): Promise<MigrationJob> {
+    const invoices = new InvoiceService()
+    let created = 0
+    let plan: Awaited<ReturnType<MigrationService['planInvoices']>> | null = null
+
+    try {
+      plan = await this.planInvoices(ctx, candidates)
+
+      for (const draft of plan.fresh) {
+        const body = createInvoiceSchema.parse(toInvoiceBody(draft))
+        const invoice = await invoices.create(ctx, body, null, {
+          clientRequestId: this.invoiceRequestId(job.id, draft),
+        })
+        await this.recordIdentity(ctx, {
+          migrationId: job.id,
+          entity: 'invoice',
+          identity: draft.identity,
+          row: draft.firstRow,
+          targetId: String((invoice as { id: string }).id),
+          outcome: 'created',
+        })
+        created += 1
+      }
+    } catch (error) {
+      await this.update(ctx, job.id, {
+        status: 'failed',
+        error_code: error instanceof Error ? error.message.slice(0, 200) : 'UNKNOWN',
+        rows_created: created,
+        rows_updated: 0,
+        rows_skipped: 0,
+      })
+      throw error
+    }
+
+    const actual = await this.countLedger(ctx, job.id)
+    const result = reconcile({ created: job.dryRun?.toCreate ?? 0, updated: 0 }, actual)
+
+    return this.update(ctx, job.id, {
+      status: result.matched ? 'completed' : 'completed_with_warnings',
+      rows_created: created,
+      rows_updated: 0,
+      rows_skipped: plan.drafts.length - created,
+      reconciliation: result,
+      completed_at: new Date().toISOString(),
+    })
+  }
+
+  private invoiceRequestId(jobId: string, draft: InvoiceDraft): string {
+    const digest = createHash('sha256').update(draft.identity).digest('hex').slice(0, 24)
+    return `mig-${jobId}-${digest}`
+  }
+
   private assertMayImport(ctx: TenancyContext) {
     if (ctx.role !== 'owner' && ctx.role !== 'manager') {
       throw new ConflictError('MIGRATION_FORBIDDEN')
@@ -790,6 +986,7 @@ export class MigrationService {
    */
   private async existingKeys(ctx: TenancyContext, entity: MigrationEntity): Promise<Set<string>> {
     const keys = new Set<string>()
+    if (entity === 'invoice') throw new ValidationError('MIGRATION_ENTITY_UNSUPPORTED')
 
     if (entity === 'customer') {
       // EVERY existing key (27 Sep 2026): with only the first 1000, an import into a larger book created twins of the rest.
@@ -930,6 +1127,8 @@ export class MigrationService {
     entity: MigrationEntity,
     values: Record<string, string | number | boolean>,
   ): Promise<string | null> {
+    // An invoice is never written as a table row: it goes through the invoice service.
+    if (entity === 'invoice') throw new ValidationError('MIGRATION_ENTITY_UNSUPPORTED')
     const row =
       entity === 'customer'
         ? {
@@ -982,6 +1181,8 @@ export class MigrationService {
     targetId: string,
     values: Record<string, string | number | boolean>,
   ): Promise<string | null> {
+    // An invoice is never written as a table row: it goes through the invoice service.
+    if (entity === 'invoice') throw new ValidationError('MIGRATION_ENTITY_UNSUPPORTED')
     // Only fields the source actually supplied are written. A blank cell means
     // "the export did not say", not "set this to empty" — overwriting a phone
     // number the shopkeeper typed by hand with a blank from a partial export

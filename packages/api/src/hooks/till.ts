@@ -397,6 +397,22 @@ export function useSetTillLabel() {
   })
 }
 
+/**
+ * Remove a till that was opened and never used. The server refuses
+ * (`POS_SESSION_IN_USE`) once it has seen an order, cash or a settlement —
+ * that one is closed, not removed.
+ */
+export function useRemoveTill() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      const { data } = await apiClient.delete(`/pos/sessions/${sessionId}`)
+      return data as { id: string }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: tillKeys.all }),
+  })
+}
+
 export function useVoidOrder() {
   const queryClient = useQueryClient()
 

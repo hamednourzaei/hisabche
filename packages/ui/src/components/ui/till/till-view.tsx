@@ -40,6 +40,7 @@ import {
   Pencil,
   Plus,
   ShoppingCart,
+  Trash2,
   Wallet,
 } from 'lucide-react'
 import type {
@@ -98,6 +99,8 @@ export interface TillViewProps {
   tillLabels: Record<string, string>
   /** Resolves when the name is stored; rejects with the reason when it is not. */
   onRenameTill: (sessionId: string, label: string | null) => Promise<void>
+  /** Remove a till that was never used; the server refuses one that has seen money. */
+  onRemoveTill: (sessionId: string) => void
   /** «افزودن مبلغ به صندوق» — a cash_in on the selected till. */
   onAddCash: (input: { amountMinor: number; reason: string }) => void
   /** The drawer as a ledger, from the server. Last balance = expected cash. */
@@ -196,6 +199,7 @@ export const TillView = memo(function TillView({
   onCloseTill,
   tillLabels,
   onRenameTill,
+  onRemoveTill,
   ledger,
   isLedgerLoading,
   ledgerError,
@@ -246,6 +250,8 @@ export const TillView = memo(function TillView({
       setIsRenaming(false)
     }
   }
+  // Row «حذف»: the till waiting for a yes.
+  const [removing, setRemoving] = useState<AbandonedSession | null>(null)
   // Row «بستن»: the till being counted, and the count.
   const [closing, setClosing] = useState<AbandonedSession | null>(null)
   const [countedMinor, setCountedMinor] = useState(0)
@@ -541,6 +547,16 @@ export const TillView = memo(function TillView({
               }}
             >
               {t('till.close_action', 'بستن صندوق')}
+            </ActionButton>
+            <ActionButton
+              variant="quiet"
+              className="min-h-8 px-3 text-xs"
+              disabled={isBusy}
+              aria-label={t('till.remove_title', 'حذف صندوق')}
+              onClick={() => setRemoving(item)}
+            >
+              <Trash2 className="me-1 size-3.5" aria-hidden="true" />
+              {t('common.delete', 'حذف')}
             </ActionButton>
           </span>
         ),
@@ -955,6 +971,38 @@ export const TillView = memo(function TillView({
         </ListSection>
       ) : null}
 
+      {removing ? (
+        <Dialog open onOpenChange={(open) => !open && setRemoving(null)}>
+          <DialogContent className="sm:max-w-sm" data-remove-till="">
+            <DialogHeader>
+              <DialogTitle>{t('till.remove_title', 'حذف صندوق')}</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-[hsl(var(--fg-secondary))]">
+              {tillLabels[removing.sessionId] ?? dateTime(removing.openedAt)}
+            </p>
+            <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+              {t(
+                'till.remove_hint',
+                'فقط صندوقی حذف می‌شود که هیچ فروش، نقد یا پرداختی در آن ثبت نشده باشد. صندوقی که پول دیده است باید بسته شود.',
+              )}
+            </p>
+            <DialogFooter className="gap-2">
+              <ActionButton variant="quiet" onClick={() => setRemoving(null)} disabled={isBusy}>
+                {t('common.cancel', 'انصراف')}
+              </ActionButton>
+              <ActionButton
+                disabled={isBusy}
+                onClick={() => {
+                  onRemoveTill(removing.sessionId)
+                  setRemoving(null)
+                }}
+              >
+                {t('common.delete', 'حذف')}
+              </ActionButton>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
       {renaming ? (
         <Dialog open onOpenChange={(open) => !open && setRenaming(null)}>
           <DialogContent className="sm:max-w-sm" data-rename-till="">

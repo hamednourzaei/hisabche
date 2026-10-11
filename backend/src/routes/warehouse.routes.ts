@@ -133,8 +133,8 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
         await clearCache('warehouses:*')
         return reply.code(204).send()
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to delete warehouse' })
+        // A refusal («it still holds stock») is an answer, not a server fault.
+        return sendFailure(reply, fastify.log, err, 'Failed to delete warehouse')
       }
     },
   )

@@ -188,6 +188,11 @@ export async function customerRoutes(fastify: FastifyInstance) {
         await invalidateMoneyCaches(request.tenancy.workspaceId)
         return reply.code(204).send()
       } catch (err) {
+        // A refusal («this customer has invoices») is an answer, not a server
+        // fault: it used to arrive as a bare 500 with no reason in it.
+        if (err instanceof BaseError && err.statusCode < 500) {
+          return reply.code(err.statusCode).send({ error: err.message })
+        }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to delete customer' })
       }

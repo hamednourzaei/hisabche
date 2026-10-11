@@ -399,6 +399,24 @@ export async function posRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── DELETE /sessions/:id ──────────────────────────────
+  // A till opened by mistake. Refused (409) once it has seen any money.
+  fastify.delete(
+    '/sessions/:id',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.create')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        return reply.send(await posService.removeUnusedSession(request.tenancy, id))
+      } catch (err) {
+        return fail(reply, err, 'Failed to remove the till')
+      }
+    },
+  )
+
   // ─── GET /sessions/abandoned ───────────────────────────
   // Drawers open far longer than a shift. Surfaced, never auto-closed.
   fastify.get(

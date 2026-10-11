@@ -78,9 +78,29 @@ describe('a till has a name — and only the name is editable', () => {
     expect(container).toContain('useSetTillLabel()')
   })
 
-  it('there is no delete: a till is retired by closing it', () => {
-    expect(view).not.toMatch(/onDeleteTill|till\.delete/)
-    expect(routes).not.toContain("fastify.delete(\n    '/sessions")
+  // The owner asked (11 Oct 2026) for a way to get rid of a till opened by
+  // mistake. The rule did not flip — it gained its other half: a till that has
+  // seen money is still retired by closing it; only an unused one is removed.
+  it('only a till that was never used is removed; one that saw money is closed', () => {
+    const flat = service.split(/\s+/).join(' ')
+    // Refused on any content, before the delete …
+    expect(flat).toContain(
+      'contents.orders.length > 0 || contents.movements.length > 0 || contents.settlements.length > 0',
+    )
+    expect(flat).toContain("throw new ConflictError('POS_SESSION_IN_USE')")
+    // … and the delete itself cannot take a till that was closed meanwhile.
+    expect(flat).toContain(
+      ".delete() .eq('workspace_id', ctx.workspaceId) .eq('id', sessionId) .in('status', ['open', 'suspended'])",
+    )
+    // One removal, and it goes through that method.
+    expect(service.split(".from('pos_sessions')\n      .delete()").length - 1).toBeLessThanOrEqual(
+      1,
+    )
+    expect(flat.split(".from('pos_sessions') .delete()").length - 1).toBe(1)
+    expect(routes).toContain('posService.removeUnusedSession(request.tenancy, id)')
+    // The screen says which tills this is for, and what to do with the others.
+    expect(view).toContain("'till.remove_hint'")
+    expect(container).toContain("'POS_SESSION_IN_USE'")
   })
 
   it('every new word exists in all three languages', () => {
@@ -93,6 +113,9 @@ describe('a till has a name — and only the name is editable', () => {
         'rename_hint',
         'error_POS_LABEL_MIGRATION_REQUIRED',
         'error_POS_LABEL_INVALID',
+        'remove_title',
+        'remove_hint',
+        'error_POS_SESSION_IN_USE',
       ]) {
         expect(words.till[key], `${lang} till.${key}`).toEqual(expect.any(String))
       }

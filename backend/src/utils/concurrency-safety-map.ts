@@ -175,7 +175,11 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     routeFile: 'pos.routes.ts',
     route: 'POST /orders/:id/void',
     mechanisms: ['state-idempotent'],
-    evidence: [{ file: `${SVC}/pos/pos.service.ts`, text: ".update({ status: 'voided' })" }],
+    evidence: [
+      { file: `${SVC}/pos/pos.service.ts`, text: ".update({ status: 'voided' })" },
+      // Only a completed order moves, so two voids at once are still one.
+      { file: `${SVC}/pos/pos.service.ts`, text: ".eq('status', 'completed')" },
+    ],
   },
   {
     routeFile: 'pos.routes.ts',
@@ -229,6 +233,15 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     route: 'PATCH /sessions/:id/label',
     mechanisms: ['last-write-wins'],
     evidence: [{ file: `${SVC}/pos/pos.service.ts`, text: '.update({ label })' }],
+  },
+  {
+    // Removing a till that was never used. The status rides in the WHERE, so
+    // one closed in the meantime is left alone; an order arriving in the same
+    // gap is stopped by the foreign key from `pos_orders`.
+    routeFile: 'pos.routes.ts',
+    route: 'DELETE /sessions/:id',
+    mechanisms: ['conditional-update'],
+    evidence: [{ file: `${SVC}/pos/pos.service.ts`, text: ".in('status', ['open', 'suspended'])" }],
   },
 
   // ─── Offline sync ────────────────────────────────────────────────────────

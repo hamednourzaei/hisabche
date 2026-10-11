@@ -22,9 +22,14 @@
 // serve back by accident, and the size ceiling is enforced on the decoded
 // string rather than on a Content-Length header the sender chose.
 //
-// The cost is honest and stated in the UI: only text formats, and only files
-// that fit in memory. A dump restore or an xlsx would need real isolation, and
-// offering it before that exists is the fake-import the directive forbids.
+// The cost is honest and stated in the UI: only files that fit in memory. A
+// dump restore would need real isolation, and offering it before that exists
+// is the fake-import the directive forbids.
+//
+// An .xlsx workbook is the one binary format accepted, and only by `/inspect`:
+// it is read in memory under the same row, column and cell ceilings (plus a
+// cap on what any part may inflate to), no formula is evaluated, and what
+// comes out is CSV text — so from there on it IS a text import.
 // ============================================
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
@@ -36,6 +41,8 @@ import {
   INTAKE_LIMITS,
   MIGRATION_ENTITIES,
   MIGRATION_SOURCE_TYPES,
+  InspectionError,
+  inspectUpload,
 } from '../services/migration'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
@@ -60,6 +67,23 @@ const createSchema = z.object({
   filename: z.string().min(1).max(260),
   content: contentSchema,
 })
+
+// Exactly one of the two: text for CSV/TSV, base64 for a workbook. The base64
+// bound is the byte ceiling grown by the 4/3 the encoding costs.
+const inspectSchema = z
+  .object({
+    filename: z.string().min(1).max(260),
+    content: contentSchema.optional(),
+    contentBase64: z
+      .string()
+      .min(1)
+      .max(Math.ceil((INTAKE_LIMITS.maxBytes * 4) / 3) + 4)
+      .optional(),
+  })
+  .strict()
+  .refine((body) => (body.content === undefined) !== (body.contentBase64 === undefined), {
+    message: 'MIGRATION_INSPECT_ONE_SOURCE',
+  })
 
 const mappingSchema = z.object({
   mapping: z.record(z.string(), z.number().int().min(0)),
@@ -108,6 +132,33 @@ export async function migrationRoutes(fastify: FastifyInstance) {
         return reply.send(await service.get(request.tenancy, id))
       } catch (err) {
         return fail(reply, err, 'Failed to fetch the migration')
+      }
+    },
+  )
+
+  // The first look: what kind of data is this, and (for a workbook) its rows
+  // as text. Creates no job and writes nothing — the person has not agreed
+  // to import anything yet.
+  fastify.post(
+    '/inspect',
+    { preHandler: guarded, schema: { response: { 200: toJsonSchema(z.any()) } } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = inspectSchema.parse(request.body)
+        return reply.send(
+          inspectUpload({
+            filename: body.filename,
+            text: body.content,
+            base64: body.contentBase64,
+          }),
+        )
+      } catch (err) {
+        // A file the reader refuses is the sender's problem, said by its code.
+        if (err instanceof InspectionError) return reply.code(400).send({ error: err.code })
+        if (err instanceof z.ZodError) {
+          return reply.code(400).send({ error: 'MIGRATION_INSPECT_INVALID' })
+        }
+        return fail(reply, err, 'Failed to read the file')
       }
     },
   )

@@ -1299,6 +1299,15 @@ export class InvoiceService {
     // so a database without the column does not fail the whole update.
     const cancelling = data.status === 'cancelled'
 
+    // A cancelled document is one whose effects are gone, not one with a
+    // different label. This used to change the status and leave the entry, the
+    // stock and the payment exactly where they were. Done before the status is
+    // written, so a refusal (closed period, shared payment) cancels nothing.
+    if (cancelling && currentInvoice?.status !== 'cancelled') {
+      const settledBy = await this.paymentsSettlingOnly(ctx, id)
+      await this.reverseEffects(ctx, id, settledBy, 'لغو فاکتور')
+    }
+
     // ─── PHASE F — `paidAmount` is no longer accepted from a PATCH ───────────
     //
     // It used to be written straight through: `updates.paid_amount =
@@ -1469,7 +1478,32 @@ export class InvoiceService {
     // Written down BEFORE the delete succeeds, so a second attempt by the same
     // person is still seen even if the first half-failed. `recordAction` never
     // throws — a missing index weakens a future check, it does not fail work.
+    // Decided BEFORE anything moves: a payment that also settles another
+    // invoice cannot be undone as part of removing this one.
+    const settledBy = await this.paymentsSettlingOnly(ctx, id)
+
     await sod.recordAction(ctx, 'invoice.delete', 'invoice', id)
+
+    // ⚠️ THE DOCUMENT IS UNDONE BEFORE IT IS REMOVED. This used to be the two
+    // deletes below and nothing else: the journal entry stayed in the books,
+    // the goods stayed gone from the shelf, and the payment stayed received —
+    // all three pointing at an invoice that no longer existed.
+    await this.reverseEffects(ctx, id, settledBy, 'حذف فاکتور')
+
+    // Rows that exist only as parts of this document go with it. Neither table
+    // has a foreign key to `invoices`, so nothing removed them: the tax lines
+    // of a deleted sale stayed in the tax report, and its instalment plan
+    // stayed due.
+    for (const part of ['invoice_tax_lines', 'invoice_installments'] as const) {
+      const { error: partError } = await supabase
+        .from(part)
+        .delete()
+        .eq('workspace_id', workspaceId)
+        .eq('invoice_id', id)
+      if (partError && !isMissingSchemaError(partError)) {
+        throw new DatabaseError(`Failed to remove the invoice ${part}`, partError)
+      }
+    }
 
     await supabase.from('invoice_items').delete().eq('invoice_id', id)
     const { error } = await supabase
@@ -1490,6 +1524,126 @@ export class InvoiceService {
       ...(options.override ? { metadata: { overrideReason: options.override.reason } } : {}),
       notify: false,
     })
+  }
+
+  /**
+   * The payments that settle this invoice and nothing else.
+   *
+   * ⚠️ REFUSES a payment shared with another invoice. Cancelling it would
+   * un-settle a document nobody asked to touch; leaving it would keep money
+   * allocated to an invoice that is gone. Neither is this method's to choose,
+   * so the person is told to deal with the payment first.
+   */
+  private async paymentsSettlingOnly(ctx: TenancyContext, invoiceId: string): Promise<string[]> {
+    const { data: own, error: ownError } = await supabase
+      .from('payment_allocations')
+      .select('payment_id')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('invoice_id', invoiceId)
+
+    if (ownError) {
+      // Before the payments core is installed there is nothing to unwind.
+      if (isMissingSchemaError(ownError)) return []
+      throw new DatabaseError('Failed to read the invoice payments', ownError)
+    }
+
+    const paymentIds = [
+      ...new Set(((own ?? []) as Array<{ payment_id: string }>).map((row) => row.payment_id)),
+    ]
+    if (paymentIds.length === 0) return []
+
+    const { data: all, error: allError } = await supabase
+      .from('payment_allocations')
+      .select('payment_id, invoice_id')
+      .eq('workspace_id', ctx.workspaceId)
+      .in('payment_id', paymentIds)
+
+    if (allError) throw new DatabaseError('Failed to read the payment allocations', allError)
+
+    const shared = ((all ?? []) as Array<{ invoice_id: string }>).some(
+      (row) => row.invoice_id !== invoiceId,
+    )
+    if (shared) throw new ConflictError('INVOICE_PAYMENT_SHARED')
+
+    for (const paymentId of paymentIds) {
+      await scopes.assertMay(ctx, 'payment', paymentId, 'payment.cancel')
+    }
+    return paymentIds
+  }
+
+  /**
+   * Give back everything a posted invoice moved: its journal entry, its
+   * payments, its stock and the cost layers it drew from.
+   *
+   * Each step is idempotent on its own (the ledger reverses a posted entry
+   * once, the stock reversal is the negative of the NET recorded so far, a
+   * cancelled payment holds no allocation), so a run that stopped half-way is
+   * finished by running it again — never doubled.
+   *
+   * The ledger goes first: it is the step that can be refused (a closed
+   * period, separation of duties), and refusing must leave nothing changed.
+   *
+   * A document that was never posted (held for approval) has nothing in any of
+   * the four places, and every step is a no-op for it.
+   */
+  private async reverseEffects(
+    ctx: TenancyContext,
+    invoiceId: string,
+    paymentIds: readonly string[],
+    reason: string,
+  ): Promise<void> {
+    await ledger.reverseDocument(ctx, 'invoice', invoiceId, { reason })
+
+    for (const paymentId of paymentIds) {
+      await this.payments.cancelPayment(ctx, paymentId, reason)
+    }
+
+    const giveBack = await this.reversalOfRecordedMovements(ctx, invoiceId)
+    if (giveBack.length > 0) {
+      const { error } = await supabase.from('stock_movements').insert(giveBack)
+      if (error) throw new DatabaseError('Failed to return the invoice stock', error)
+    }
+
+    // A sale's consumed layers get their quantities back. A purchase's own
+    // layers are NOT unwound here — later sales may already have drawn from
+    // them, which is a revaluation and not a release (same limit as an edit).
+    await costing
+      .releaseDocument(ctx, 'invoice', invoiceId)
+      .catch((err) => console.error('[InvoiceService] cost release failed:', err))
+
+    await this.releaseClaims(ctx, invoiceId)
+  }
+
+  /**
+   * Let go of what the invoice had CLAIMED: the serial numbers it sold and the
+   * hours it billed.
+   *
+   * Both are single rows that say «taken by invoice X». With the invoice
+   * undone they said it about a document that no longer counts — a unit that
+   * is back on the shelf by quantity and still «sold» by serial, and working
+   * hours that could never be billed again.
+   *
+   * A database without these features has nothing to release.
+   */
+  private async releaseClaims(ctx: TenancyContext, invoiceId: string): Promise<void> {
+    const { error: serialError } = await supabase
+      .from('stock_serials')
+      .update({ status: 'in_stock', invoice_id: null, sold_on: null })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('invoice_id', invoiceId)
+      .eq('status', 'sold')
+    if (serialError && !isMissingSchemaError(serialError)) {
+      throw new DatabaseError('Failed to return the serial numbers', serialError)
+    }
+
+    const { error: timeError } = await supabase
+      .from('time_entries')
+      .update({ invoice_id: null })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('invoice_id', invoiceId)
+    if (timeError && !isMissingSchemaError(timeError)) {
+      throw new DatabaseError('Failed to release the billed time', timeError)
+    }
   }
 
   // ─── Invalidate Cache ────────────────────────────────────────────────────

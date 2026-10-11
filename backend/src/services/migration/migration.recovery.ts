@@ -178,6 +178,8 @@ export function applyProfile(
  * round trip needs no manual mapping at all.
  */
 export const EXPORT_COLUMNS: Record<MigrationEntity, readonly string[]> = {
+  // Invoices are not exported from here: the invoices screen has its own export.
+  invoice: [],
   customer: ['externalId', 'fullName', 'phone', 'email', 'address', 'notes', 'type'],
   product: [
     'externalId',

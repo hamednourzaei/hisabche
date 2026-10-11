@@ -129,6 +129,20 @@ export class WarehouseService {
   }
 
   async deleteWarehouse(ctx: TenancyContext, id: string): Promise<void> {
+    // ⚠️ REFUSED WHILE IT HOLDS STOCK. Removing it used to hide the building
+    // and leave its `warehouse_stock` rows behind: the product total still
+    // counted goods that no screen could show or move any more. The way out
+    // is to transfer the stock first — which is what the message says.
+    const { count, error: stockError } = await supabase
+      .from('warehouse_stock')
+      .select('product_id', { count: 'exact', head: true })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('warehouse_id', id)
+      .neq('quantity', 0)
+
+    if (stockError) throw new DatabaseError('Failed to check the warehouse stock', stockError)
+    if ((count ?? 0) > 0) throw new ConflictError('WAREHOUSE_HAS_STOCK')
+
     const { error } = await supabase
       .from('warehouses')
       .update({ deleted_at: new Date().toISOString() })

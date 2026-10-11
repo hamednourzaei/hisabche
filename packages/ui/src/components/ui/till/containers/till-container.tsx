@@ -23,6 +23,7 @@ import {
   useSessionLedger,
   useSetTillSuspended,
   useSetTillLabel,
+  useRemoveTill,
   useTillLabels,
   useCloseSession,
   apiErrorMessage,
@@ -47,6 +48,7 @@ export const TillContainer = memo(function TillContainer() {
   const labels = useTillLabels()
   const setLabel = useSetTillLabel()
   const { mutateAsync: saveLabel } = setLabel
+  const removeTill = useRemoveTill()
 
   // The dialog shows what the server said; a known code gets its own sentence.
   const handleRenameTill = async (sessionId: string, label: string | null) => {
@@ -94,6 +96,7 @@ export const TillContainer = memo(function TillContainer() {
         'POS_SESSION_ALREADY_OPEN',
         'POS_SUSPEND_MIGRATION_REQUIRED',
         'POS_VARIANCE_REASON_REQUIRED',
+        'POS_SESSION_IN_USE',
       ]
       setActionError(code && known.includes(code) ? t(`till.error_${code}`, message) : message)
     },
@@ -152,6 +155,14 @@ export const TillContainer = memo(function TillContainer() {
     [refreshAll, report, setSuspended],
   )
 
+  const handleRemoveTill = useCallback(
+    (sessionId: string) => {
+      setActionError(null)
+      removeTill.mutate(sessionId, { onSuccess: refreshAll, onError: report })
+    },
+    [refreshAll, removeTill, report],
+  )
+
   const handleCloseTill = useCallback(
     (input: { sessionId: string; countedCashMinor: number; varianceReason?: string }) => {
       setActionError(null)
@@ -187,12 +198,14 @@ export const TillContainer = memo(function TillContainer() {
         openSession.isPending ||
         cashMovement.isPending ||
         setSuspended.isPending ||
+        removeTill.isPending ||
         closeSession.isPending
       }
       onSetSuspended={handleSetSuspended}
       onCloseTill={handleCloseTill}
       tillLabels={labels.data?.labels ?? {}}
       onRenameTill={handleRenameTill}
+      onRemoveTill={handleRemoveTill}
       actionError={actionError}
       onRefresh={handleRefresh}
       onOpen={handleOpen}

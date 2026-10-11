@@ -34,7 +34,9 @@ import {
   normalizePhone,
   normalizeText,
   type MigrationEntity,
+  parseDateIso,
 } from './migration.domain'
+import { parseJalaliIso } from './jalali.domain'
 import { ENTITY_FIELDS, businessKeys, type FieldSpec } from './migration.entities'
 
 export type FindingSeverity = 'fatal' | 'warning' | 'info'
@@ -123,6 +125,40 @@ function coerce(
         findings.push({ severity: 'warning', row, column, code: 'NUMBER_NEGATIVE' })
       }
       return parsed.minor!
+    }
+
+    case 'decimal': {
+      // Three places: enough for grams of a kilogram, exact as an integer.
+      const parsed = parseMoneyMinor(text, 3)
+      if (!parsed.ok) {
+        findings.push({ severity: 'fatal', row, column, code: 'NUMBER_UNREADABLE' })
+        return undefined
+      }
+      return parsed.minor! / 1000
+    }
+
+    case 'date': {
+      // The calendar is read from the year: 1403 can only be Solar Hijri.
+      const jalali = parseJalaliIso(text)
+      if (jalali.ok) return jalali.iso
+      if (jalali.reason === 'OUT_OF_RANGE') {
+        findings.push({ severity: 'fatal', row, column, code: 'DATE_UNREADABLE', detail: text })
+        return undefined
+      }
+      // A workbook date arrives as `2026-10-01` or `2026-10-01 14:30`.
+      const parsed = parseDateIso(text.split(' ')[0] ?? text)
+      if (!parsed.ok) {
+        findings.push({
+          severity: 'fatal',
+          row,
+          column,
+          // 03/04/2026 is two different days; which one is not ours to pick.
+          code: parsed.reason === 'AMBIGUOUS_ORDER' ? 'DATE_AMBIGUOUS' : 'DATE_UNREADABLE',
+          detail: text,
+        })
+        return undefined
+      }
+      return parsed.iso!
     }
 
     case 'boolean': {

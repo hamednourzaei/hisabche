@@ -486,9 +486,33 @@ export class CustomerService {
       .maybeSingle()
 
     if (linkedError) throw new DatabaseError('Failed to check customer transactions', linkedError)
-    if (linked) {
-      throw new DatabaseError('Customer has transactions, cannot delete')
+    if (linked) throw new ConflictError('CUSTOMER_HAS_TRANSACTIONS')
+
+    // ⚠️ `transactions` is the OLD ledger. Invoices and payments are where a
+    // customer's history lives now, and neither was looked at: a customer with
+    // a hundred invoices and an unpaid balance was deleted, and every one of
+    // those documents was left pointing at nobody (there is no foreign key
+    // from `invoices` to `customers` to stop it).
+    const [invoiced, paid] = await Promise.all([
+      supabase
+        .from('invoices')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+        .eq('customer_id', id),
+      supabase
+        .from('payments')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+        .eq('party_type', 'customer')
+        .eq('party_id', id),
+    ])
+    if (invoiced.error) throw new DatabaseError('Failed to check customer invoices', invoiced.error)
+    if ((invoiced.count ?? 0) > 0) throw new ConflictError('CUSTOMER_HAS_INVOICES')
+    // Before the payments core is installed there are no payments to hold.
+    if (paid.error && !['42P01', 'PGRST205'].includes(paid.error.code ?? '')) {
+      throw new DatabaseError('Failed to check customer payments', paid.error)
     }
+    if ((paid.count ?? 0) > 0) throw new ConflictError('CUSTOMER_HAS_PAYMENTS')
 
     const { error } = await supabase
       .from('customers')

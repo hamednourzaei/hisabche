@@ -470,11 +470,36 @@ export class PosService {
    * facts, and a till whose voids leave no trace is a till nobody can audit.
    */
   async voidOrder(ctx: TenancyContext, orderId: string): Promise<void> {
+    const { data: order, error: orderError } = await supabase
+      .from('pos_orders')
+      .select('id, session_id, status')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', orderId)
+      .maybeSingle()
+
+    if (orderError) throw new DatabaseError('Failed to read the order', orderError)
+    if (!order) throw new NotFoundError('PosOrder')
+
+    const found = order as { session_id: string; status: string }
+    // Voiding twice is one void, not an error.
+    if (found.status === 'voided') return
+
+    // ⚠️ ONLY WHILE THE TILL IS OPEN. A closed till has been counted and its
+    // totals posted to the ledger from the orders it held THEN. Voiding one
+    // afterwards changed the session's figures and left the entry as it was —
+    // the till and the books disagreeing, with nothing to say why. It also
+    // answered «voided» for an order id that did not exist.
+    const session = await this.getSession(ctx, found.session_id)
+    if (session.status !== 'open' && session.status !== 'suspended') {
+      throw new ConflictError('POS_SESSION_NOT_OPEN')
+    }
+
     const { error } = await supabase
       .from('pos_orders')
       .update({ status: 'voided' })
       .eq('workspace_id', ctx.workspaceId)
       .eq('id', orderId)
+      .eq('status', 'completed')
 
     if (error) throw new DatabaseError('Failed to void the order', error)
     await this.invalidate(ctx.workspaceId)
@@ -991,6 +1016,54 @@ export class PosService {
   }
 
   /** Name a till, or take its name away (`null`). The name is the whole change. */
+  /**
+   * Remove a till that was opened and never used.
+   *
+   * ⚠️ ONLY AN EMPTY ONE. A till that has rung up a sale, taken or given cash,
+   * or settled a payment is a record of money and is CLOSED, never removed —
+   * that rule has not changed. What this covers is the drawer opened by
+   * mistake: one row, no order, no movement, nothing in the ledger, and until
+   * now no way to get rid of it.
+   *
+   * The status is part of the WHERE, so a till closed (and posted) between the
+   * check and the delete is not removed; an order that lands in that same gap
+   * is caught by the foreign key and answered the same way.
+   */
+  async removeUnusedSession(ctx: TenancyContext, sessionId: string): Promise<{ id: string }> {
+    const session = await this.getSession(ctx, sessionId)
+    if (session.status !== 'open' && session.status !== 'suspended') {
+      throw new ConflictError('POS_SESSION_IN_USE')
+    }
+
+    const contents = await this.loadContents(ctx, sessionId, session)
+    if (
+      contents.orders.length > 0 ||
+      contents.movements.length > 0 ||
+      contents.settlements.length > 0
+    ) {
+      throw new ConflictError('POS_SESSION_IN_USE')
+    }
+
+    const { data, error } = await supabase
+      .from('pos_sessions')
+      .delete()
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', sessionId)
+      .in('status', ['open', 'suspended'])
+      .select('id')
+      .maybeSingle()
+
+    if (error) {
+      // 23503: something now points at this till — it is in use after all.
+      if (error.code === '23503') throw new ConflictError('POS_SESSION_IN_USE')
+      throw new DatabaseError('Failed to remove the till', error)
+    }
+    if (!data) throw new ConflictError('POS_SESSION_IN_USE')
+
+    await this.invalidate(ctx.workspaceId)
+    return { id: sessionId }
+  }
+
   async setLabel(ctx: TenancyContext, sessionId: string, label: string | null) {
     // Scoped to the workspace: another business's till answers «not found».
     await this.getSession(ctx, sessionId)

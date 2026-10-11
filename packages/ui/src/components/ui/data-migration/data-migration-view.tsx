@@ -59,6 +59,18 @@ export interface DataMigrationViewProps {
   error: string | null
   actionError: string | null
   fileName: string | null
+  /** What the server made of the chosen file; null before one is chosen. */
+  detection: {
+    entity: MigrationEntity | null
+    confidence: 'high' | 'medium' | 'low'
+    skippedRows: number
+    /** Sheets of the workbook that hold no table (a chart, a page of notes). */
+    ignoredSheets: string[]
+  } | null
+  /** The readable sheets of a workbook; one or none for a single table. */
+  sheets: Array<{ name: string; entity: MigrationEntity | null; rowCount: number }>
+  activeSheet: string | null
+  onSheetChange: (name: string) => void
   dryRun: DryRunSummary | null
   findings: Finding[]
   onPickFile: (file: File) => void
@@ -102,6 +114,10 @@ export const DataMigrationView = memo(function DataMigrationView({
   fileName,
   dryRun,
   findings,
+  detection,
+  sheets,
+  activeSheet,
+  onSheetChange,
   onPickFile,
   onEntityChange,
   entity,
@@ -164,34 +180,22 @@ export const DataMigrationView = memo(function DataMigrationView({
 
       {/* ─── Step 1 — what, and from where ──────────────────────────────── */}
 
-      <Panel title={t('migration.step_source', '۱ — منبع داده')}>
+      <Panel title={t('migration.step_source', '۱ — فایل شما')}>
         <div className="space-y-4">
-          <SelectField
-            label={t('migration.entity', 'چه چیزی وارد می‌شود؟')}
-            value={entity}
-            onChange={(value) => onEntityChange(value as MigrationEntity)}
-            disabled={Boolean(job)}
-            options={[
-              { value: 'customer', label: t('migration.entity_customer', 'مشتریان') },
-              { value: 'product', label: t('migration.entity_product', 'کالاها') },
-            ]}
-          />
-
           <div className="space-y-2">
             <p className="text-sm text-[hsl(var(--fg-tertiary))]">
               {t(
                 'migration.format_hint',
-                'فایل CSV یا TSV با کدگذاری UTF-8. فایل اکسل را از خود اکسل با «ذخیره به‌صورت CSV» بگیرید.',
+                'فایل اکسل (xlsx)، CSV یا TSV — با هر چیدمانی. لازم نیست بگویید چه چیزی در آن است؛ نوع داده و ستون‌ها از خود فایل تشخیص داده می‌شود و هر ستونی که شناخته نشد را خودتان وصل می‌کنید.',
               )}
             </p>
-
             {/* The native input is never shown: it cannot be styled, and its
                 own button carries an untranslatable OS label. The project's
                 own Button opens it. */}
             <input
               ref={fileInput}
               type="file"
-              accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"
+              accept=".xlsx,.csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="sr-only"
               onChange={(event) => {
                 const file = event.target.files?.[0]
@@ -220,6 +224,93 @@ export const DataMigrationView = memo(function DataMigrationView({
               ) : null}
             </div>
           </div>
+
+          {/* Nothing below is asked BEFORE a file is given: the file says what it is. */}
+          {detection ? (
+            <div
+              data-import-detection={detection.entity ?? 'unsure'}
+              className={
+                detection.entity === null
+                  ? 'space-y-1 rounded-xl border border-[hsl(var(--color-warning)/0.5)] bg-[hsl(var(--color-warning)/0.08)] p-3 text-sm text-[hsl(var(--fg-primary))]'
+                  : 'space-y-1 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.4)] p-3 text-sm text-[hsl(var(--fg-primary))]'
+              }
+            >
+              <p className="font-medium">
+                {detection.entity === null
+                  ? t(
+                      'migration.detected_unsure',
+                      'نوع این فایل با اطمینان تشخیص داده نشد. از فهرست زیر انتخاب کنید.',
+                    )
+                  : t(`migration.detected_${detection.entity}`, detection.entity)}
+              </p>
+              {detection.entity === 'invoice' ? (
+                <p className="text-xs text-[hsl(var(--fg-secondary))]">
+                  {t(
+                    'migration.invoice_effect',
+                    'هر فاکتور مثل فاکتوری که خودتان ثبت کنید وارد می‌شود: موجودی کالاهای شناخته‌شده را جابه‌جا می‌کند و در دفتر ثبت می‌شود. مشتری باید از قبل در برنامه باشد.',
+                  )}
+                </p>
+              ) : null}
+              {detection.skippedRows > 0 ? (
+                <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                  {t('migration.rows_skipped', 'سطرهای بالای جدول (عنوان و توضیح) کنار گذاشته شد:')}{' '}
+                  <bdi>{detection.skippedRows}</bdi>
+                </p>
+              ) : null}
+              {detection.ignoredSheets.length > 0 ? (
+                <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                  {t('migration.sheets_ignored', 'این شیت‌ها خوانده نشدند:')}{' '}
+                  <bdi>{detection.ignoredSheets.join('، ')}</bdi>
+                </p>
+              ) : null}
+              {(job?.discovery?.inferred ?? []).length > 0 ? (
+                <p className="text-xs text-[hsl(var(--color-warning))]">
+                  {t(
+                    'migration.inferred_fields',
+                    'این ستون‌ها از روی محتوایشان وصل شدند، نه از روی نامشان — در مرحله‌ی بعد نگاهشان کنید:',
+                  )}{' '}
+                  {(job?.discovery?.inferred ?? [])
+                    .map((field) => t(`migration.field_${field}`, field))
+                    .join('، ')}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {sheets.length > 1 ? (
+            <SelectField
+              label={t('migration.sheet', 'کدام شیت الان وارد شود؟')}
+              value={activeSheet ?? ''}
+              onChange={onSheetChange}
+              disabled={isBusy}
+              options={sheets.map((sheet) => ({
+                value: sheet.name,
+                label: `${sheet.name} — ${
+                  sheet.entity
+                    ? t(`migration.entity_${sheet.entity}`, sheet.entity)
+                    : t('migration.entity_unknown', 'نامشخص')
+                }`,
+              }))}
+            />
+          ) : null}
+
+          {detection ? (
+            <SelectField
+              label={
+                detection.entity === null
+                  ? t('migration.entity', 'چه چیزی وارد می‌شود؟')
+                  : t('migration.entity_correct', 'تشخیص درست نیست؟ نوع را عوض کنید')
+              }
+              value={entity}
+              onChange={(value) => onEntityChange(value as MigrationEntity)}
+              disabled={isBusy}
+              options={[
+                { value: 'customer', label: t('migration.entity_customer', 'مشتریان') },
+                { value: 'product', label: t('migration.entity_product', 'کالاها') },
+                { value: 'invoice', label: t('migration.entity_invoice', 'فاکتورها') },
+              ]}
+            />
+          ) : null}
         </div>
       </Panel>
 

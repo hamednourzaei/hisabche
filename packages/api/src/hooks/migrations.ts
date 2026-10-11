@@ -30,7 +30,7 @@ import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
 
-export type MigrationEntity = 'customer' | 'product'
+export type MigrationEntity = 'customer' | 'product' | 'invoice'
 export type MigrationSourceType = 'csv' | 'tsv'
 
 export type MigrationStatus =
@@ -70,6 +70,8 @@ export interface MigrationDiscovery {
   source: SourceGuess
   suggestions: MappingSuggestion[]
   sample: string[][]
+  /** Fields connected from what a column holds, not from its name. */
+  inferred?: string[] | undefined
 }
 
 export type FindingSeverity = 'fatal' | 'warning' | 'info'
@@ -163,6 +165,54 @@ export function useMigration(id: string | null) {
 }
 
 // ═══ Mutations ═══
+
+/** One table of an upload: a text file, or one sheet of a workbook. */
+export interface ImportTable {
+  sourceType: MigrationSourceType
+  content: string
+  headers: string[]
+  rowCount: number
+  skippedRows: number
+  detection: { entity: MigrationEntity | null; confidence: 'high' | 'medium' | 'low' }
+}
+
+/** What the server made of a file on first look. */
+export interface ImportInspection {
+  /** Every readable sheet of a workbook, in order. Empty for a text file. */
+  sheets: Array<ImportTable & { name: string }>
+  /** What to hand the scan: a workbook comes back as CSV text. */
+  sourceType: MigrationSourceType
+  content: string
+  /** For a workbook: the sheet that was read and the ones that were not. */
+  sheet: { name: string; ignored: string[] } | null
+  headers: string[]
+  rowCount: number
+  /** Title lines above the table that were left out. */
+  skippedRows: number
+  detection: {
+    /** null = the server would not choose; the person does. */
+    entity: MigrationEntity | null
+    confidence: 'high' | 'medium' | 'low'
+  }
+}
+
+/**
+ * The first look at a file: what kind of data it holds, and — for an .xlsx
+ * workbook — its rows as text. Creates nothing on the server.
+ */
+export function useInspectImport() {
+  return useMutation({
+    mutationFn: async (input: {
+      filename: string
+      content?: string | undefined
+      contentBase64?: string | undefined
+    }) => {
+      const { data } = await apiClient.post('/migrations/inspect', input)
+      return data as ImportInspection
+    },
+    retry: false,
+  })
+}
 
 /** Upload and scan. The response is everything the discovery step shows. */
 export function useScanMigration() {

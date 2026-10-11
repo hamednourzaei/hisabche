@@ -29,7 +29,18 @@ import {
   type MigrationEntity,
 } from './migration.domain'
 
-export type FieldKind = 'text' | 'money' | 'number' | 'boolean' | 'phone' | 'email' | 'enum'
+export type FieldKind =
+  | 'text'
+  | 'money'
+  | 'number'
+  /** A quantity that may have a fraction: 2.5 kilograms. */
+  | 'decimal'
+  /** A day, Gregorian or Solar Hijri; stored as a Gregorian ISO day. */
+  | 'date'
+  | 'boolean'
+  | 'phone'
+  | 'email'
+  | 'enum'
 
 export interface FieldSpec {
   /** The name used in the mapping and in every report. */
@@ -277,7 +288,239 @@ const PRODUCT_FIELDS: FieldSpec[] = [
   },
 ]
 
+/**
+ * One ROW of an invoice file. Most exports write a row per line and repeat
+ * the invoice number; `invoice-import.domain.ts` groups them into documents.
+ *
+ * Only the date is required: a number, a customer and even a product name
+ * are things real files leave out, and each has a stated meaning when absent
+ * (its own invoice, a sale with no customer, a line of text).
+ */
+const INVOICE_FIELDS: FieldSpec[] = [
+  {
+    key: 'invoiceNumber',
+    kind: 'text',
+    required: false,
+    maxLength: 80,
+    aliases: [
+      'invoice number',
+      'invoice no',
+      'invoice #',
+      'invoice id',
+      'invoice',
+      'number',
+      'no',
+      'bill number',
+      'bill no',
+      'receipt no',
+      'document number',
+      'doc no',
+      'شماره فاکتور',
+      'شماره',
+      'شماره سند',
+      'فاکتور',
+      'شماره بل',
+      'نمبر بل',
+      'نمبر فاکتور',
+      'نمبر',
+    ],
+  },
+  {
+    key: 'date',
+    kind: 'date',
+    required: true,
+    aliases: [
+      'date',
+      'invoice date',
+      'sale date',
+      'order date',
+      'document date',
+      'issued',
+      'issue date',
+      'تاریخ',
+      'تاریخ فاکتور',
+      'تاریخ فروش',
+      'تاریخ خرید',
+      'تاریخ سند',
+      'تاریخ صدور',
+    ],
+  },
+  {
+    key: 'type',
+    kind: 'text',
+    required: false,
+    maxLength: 40,
+    aliases: ['type', 'invoice type', 'kind', 'نوع', 'نوع فاکتور', 'نوع سند'],
+  },
+  {
+    key: 'customerName',
+    kind: 'text',
+    required: false,
+    maxLength: 200,
+    aliases: [
+      'customer',
+      'customer name',
+      'client',
+      'client name',
+      'party',
+      'buyer',
+      'supplier',
+      'supplier name',
+      'vendor',
+      'مشتری',
+      'نام مشتری',
+      'طرف حساب',
+      'نام طرف حساب',
+      'خریدار',
+      'تامین کننده',
+      'فروشنده',
+    ],
+  },
+  {
+    key: 'customerPhone',
+    kind: 'phone',
+    required: false,
+    aliases: [
+      'phone',
+      'mobile',
+      'customer phone',
+      'tel',
+      'تلفن',
+      'موبایل',
+      'شماره تماس',
+      'نمبر تماس',
+      'تلفن مشتری',
+    ],
+  },
+  {
+    key: 'itemName',
+    kind: 'text',
+    required: false,
+    maxLength: 300,
+    aliases: [
+      'item',
+      'item name',
+      'product',
+      'product name',
+      'description',
+      'details',
+      'goods',
+      'کالا',
+      'نام کالا',
+      'محصول',
+      'نام محصول',
+      'شرح',
+      'شرح کالا',
+      'جنس',
+      'نام جنس',
+      'توضیح کالا',
+    ],
+  },
+  {
+    key: 'sku',
+    kind: 'text',
+    required: false,
+    maxLength: 120,
+    aliases: ['sku', 'item code', 'product code', 'code', 'کد کالا', 'کد', 'کد محصول'],
+  },
+  {
+    key: 'barcode',
+    kind: 'text',
+    required: false,
+    maxLength: 120,
+    aliases: ['barcode', 'ean', 'upc', 'بارکد'],
+  },
+  {
+    key: 'quantity',
+    kind: 'decimal',
+    required: false,
+    aliases: ['quantity', 'qty', 'count', 'units', 'تعداد', 'مقدار'],
+  },
+  {
+    key: 'unitPrice',
+    kind: 'money',
+    required: false,
+    aliases: [
+      'unit price',
+      'price',
+      'rate',
+      'unit cost',
+      'each',
+      'فی',
+      'قیمت واحد',
+      'قیمت',
+      'نرخ',
+      'بهای واحد',
+    ],
+  },
+  {
+    key: 'lineTotal',
+    kind: 'money',
+    required: false,
+    aliases: [
+      'line total',
+      'amount',
+      'line amount',
+      'row total',
+      'extended price',
+      'مبلغ',
+      'مبلغ ردیف',
+      'جمع ردیف',
+      'قیمت کل',
+    ],
+  },
+  {
+    key: 'total',
+    kind: 'money',
+    required: false,
+    aliases: [
+      'total',
+      'grand total',
+      'invoice total',
+      'total amount',
+      'net total',
+      'جمع کل',
+      'مبلغ کل',
+      'مجموع',
+      'جمع فاکتور',
+      'قابل پرداخت',
+    ],
+  },
+  {
+    key: 'paidAmount',
+    kind: 'money',
+    required: false,
+    aliases: [
+      'paid',
+      'paid amount',
+      'amount paid',
+      'payment',
+      'received',
+      'پرداخت شده',
+      'پرداختی',
+      'مبلغ پرداختی',
+      'دریافتی',
+      'رسید',
+    ],
+  },
+  {
+    key: 'currency',
+    kind: 'text',
+    required: false,
+    maxLength: 3,
+    aliases: ['currency', 'currency code', 'ارز', 'واحد پول'],
+  },
+  {
+    key: 'notes',
+    kind: 'text',
+    required: false,
+    maxLength: 1000,
+    aliases: ['notes', 'note', 'memo', 'remarks', 'comment', 'یادداشت', 'توضیحات', 'ملاحظات'],
+  },
+]
+
 export const ENTITY_FIELDS: Record<MigrationEntity, FieldSpec[]> = {
+  invoice: INVOICE_FIELDS,
   customer: CUSTOMER_FIELDS,
   product: PRODUCT_FIELDS,
 }
@@ -443,6 +686,11 @@ export function businessKeys(
     const value = (raw ?? '').trim()
     if (value !== '') keys.push({ kind, key: `${kind}:${value}`, strength })
   }
+
+  // A ROW of an invoice file is a line, not a document: rows that share an
+  // invoice number are meant to, so no row-level key may mark them duplicates.
+  // The document's identity is decided where rows are grouped.
+  if (entity === 'invoice') return keys
 
   push('external', values['externalId'] ? comparisonKey(values['externalId']) : '', 'strong')
 
