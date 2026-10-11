@@ -667,6 +667,40 @@ export class AccountingRepository {
     }))
   }
 
+  /**
+   * How complete the books are: invoices that should be in the ledger and are
+   * not, and when the last entry was posted.
+   *
+   * Each figure is null when it could not be READ — «could not count» must
+   * never be shown as «none».
+   */
+  async booksStatus(
+    workspaceId: string,
+  ): Promise<{ unpostedInvoices: number | null; lastPostedAt: string | null }> {
+    const [unposted, last] = await Promise.all([
+      supabase
+        .from('invoices')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+        .gt('total', 0)
+        .not('status', 'in', '(cancelled,pending)')
+        .or('document_status.is.null,document_status.neq.posted'),
+      supabase
+        .from('journal_entries')
+        .select('posted_at')
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'posted')
+        .order('posted_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ])
+    return {
+      unpostedInvoices: unposted.error ? null : (unposted.count ?? 0),
+      lastPostedAt:
+        last.error || !last.data ? null : ((last.data as { posted_at?: string }).posted_at ?? null),
+    }
+  }
+
   // ─── Profit report (request #91) ──────────────────────────────────────────
   // Paged and chunked: a report someone decides on never reads one page.
 
@@ -697,7 +731,7 @@ export class AccountingRepository {
         this.pages<Record<string, any>>('cost consumptions', (from, to) =>
           supabase
             .from('cost_consumptions')
-            .select('id, consumer_id, product_id, amount, is_estimated')
+            .select('id, consumer_id, product_id, quantity, amount, is_estimated')
             .eq('workspace_id', workspaceId)
             .eq('consumer_type', 'invoice')
             .in('consumer_id', chunk)
@@ -719,6 +753,7 @@ export class AccountingRepository {
       consumptions: consumptions.map((row) => ({
         invoiceId: row.consumer_id ? String(row.consumer_id) : null,
         productId: String(row.product_id),
+        quantity: Number(row.quantity) || 0,
         amount: Number(row.amount) || 0,
         isEstimated: row.is_estimated === true,
       })),

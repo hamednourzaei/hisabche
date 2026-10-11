@@ -117,10 +117,11 @@ export interface BreakEvenAnalysis {
     quantity: number
     revenue: number
     cost: number
-    contribution: number
+    /** null when the product was sold with no recorded cost. */
+    contribution: number | null
     contributionPercent: number | null
     breakEvenQuantity: number | null
-    breakEvenReason: 'NO_REVENUE' | 'NO_CONTRIBUTION' | 'NO_FIXED_COSTS' | null
+    breakEvenReason: 'NO_REVENUE' | 'NO_CONTRIBUTION' | 'NO_FIXED_COSTS' | 'COST_UNKNOWN' | null
   }>
 }
 

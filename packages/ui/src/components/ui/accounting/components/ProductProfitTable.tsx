@@ -39,8 +39,16 @@ export const ProductProfitTable = memo(function ProductProfitTable({
   const [search, setSearch] = useState('')
 
   const percent = (value: number | null) => (value === null ? '—' : `${num(value)}٪`)
-  const tone = (value: number) =>
-    value < 0 ? 'text-[hsl(var(--color-destructive))]' : 'text-[hsl(var(--color-success))]'
+  // A profit nobody can compute has no colour: it is neither a gain nor a loss.
+  const tone = (value: number | null) =>
+    value === null
+      ? 'text-[hsl(var(--fg-secondary))]'
+      : value < 0
+        ? 'text-[hsl(var(--color-destructive))]'
+        : 'text-[hsl(var(--color-success))]'
+  /** A profit, or the words «cannot be calculated» — never a number built on a missing cost. */
+  const profitText = (value: number | null) =>
+    value === null ? t('accounting.profit.unknown', 'قابل محاسبه نیست') : money(value)
 
   const rows = useMemo(
     () => report.products.filter((row) => matchesSearch(search, [row.name])),
@@ -65,7 +73,7 @@ export const ProductProfitTable = memo(function ProductProfitTable({
                   row.costMissing
                     ? t(
                         'accounting.profit.costMissing',
-                        'بهای تمام‌شده ثبت نشده؛ سود بیشتر از واقع است',
+                        'بهای تمام‌شده‌ی بخشی از فروش این کالا ثبت نشده؛ سودش قابل محاسبه نیست',
                       )
                     : t('accounting.profit.costEstimated', 'بخشی از بها تخمینی است')
                 }
@@ -105,10 +113,10 @@ export const ProductProfitTable = memo(function ProductProfitTable({
         labelKey: 'accounting.profit.colProfit',
         labelFallback: 'سود / زیان',
         align: 'end',
-        sortValue: (row) => row.profit,
+        sortValue: (row) => row.profit ?? -Infinity,
         render: (row) => (
           <span className={cn('font-medium tabular-nums', tone(row.profit))}>
-            {money(row.profit)}
+            {profitText(row.profit)}
           </span>
         ),
       },
@@ -206,11 +214,23 @@ export const ProductProfitTable = memo(function ProductProfitTable({
         {footerRow(t('accounting.profit.totalCost', 'جمع بهای تمام‌شده'), money(totals.cost))}
         {footerRow(
           t('accounting.profit.grossProfit', 'سود ناخالص'),
-          money(totals.grossProfit),
+          profitText(totals.grossProfit),
           undefined,
           undefined,
           tone(totals.grossProfit),
         )}
+        {totals.grossProfit === null ? (
+          <>
+            {footerRow(
+              t('accounting.profit.knownProfit', 'سودِ فروش‌های دارای بها'),
+              money(totals.knownGrossProfit),
+            )}
+            {footerRow(
+              t('accounting.profit.uncostedRevenue', 'فروشِ بدون بهای ثبت‌شده'),
+              money(totals.uncostedRevenue),
+            )}
+          </>
+        ) : null}
         {footerRow(
           t('accounting.profit.salaries', 'حقوق کارمندان'),
           money(totals.salaries),
@@ -220,9 +240,11 @@ export const ProductProfitTable = memo(function ProductProfitTable({
         <div
           className={cn(
             'flex flex-wrap items-center justify-between gap-3 px-4 py-3',
-            totals.netProfit < 0
-              ? 'bg-[hsl(var(--color-destructive)/0.06)]'
-              : 'bg-[hsl(var(--color-success)/0.06)]',
+            totals.netProfit === null
+              ? 'bg-[hsl(var(--color-warning)/0.08)]'
+              : totals.netProfit < 0
+                ? 'bg-[hsl(var(--color-destructive)/0.06)]'
+                : 'bg-[hsl(var(--color-success)/0.06)]',
           )}
         >
           <span className="text-base font-semibold text-[hsl(var(--fg-primary))]">
@@ -236,11 +258,20 @@ export const ProductProfitTable = memo(function ProductProfitTable({
               {percent(totals.netMarginPercent)}
             </span>
             <span className={cn('text-xl font-bold tabular-nums', tone(totals.netProfit))}>
-              {money(totals.netProfit)}
+              {profitText(totals.netProfit)}
             </span>
           </span>
         </div>
       </div>
+
+      {totals.grossProfit === null ? (
+        <p role="status" className="text-xs text-[hsl(var(--color-warning))]">
+          {t(
+            'accounting.profit.unknownNote',
+            'بهای تمام‌شده‌ی بخشی از فروش این بازه ثبت نشده است. تا ثبت نشود، سود ناخالص و سود خالص قابل محاسبه نیست؛ فروش، سود نیست.',
+          )}
+        </p>
+      ) : null}
 
       {report.otherCurrencies.length > 0 ? (
         <p className="text-xs text-[hsl(var(--color-warning))]">

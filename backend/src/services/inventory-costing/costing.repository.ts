@@ -11,10 +11,12 @@
 import { baseCurrencyOf } from '../base-currency'
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
+import { selectAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
 
 import type { CostLayer, CostingMethod, NegativeStockPolicy } from './costing.domain'
 import type { IssueRequest, IssueResult, ReceiptRequest, ValuationRow } from './costing.port'
+import type { StockPosition } from './unvalued-stock.domain'
 
 export interface InventorySettings {
   costingMethod: CostingMethod
@@ -204,6 +206,71 @@ export class CostingRepository {
       value: Number(row.value) || 0,
       averageCost: Number(row.average_cost) || 0,
     }))
+  }
+
+  /**
+   * Every product that holds stock, beside what its open layers hold. Every
+   * row is read (pages of 1000): a capped read would report the products past
+   * the cap as fully valued.
+   */
+  async stockPositions(workspaceId: string): Promise<StockPosition[]> {
+    const [products, layers] = await Promise.all([
+      selectAllPages((lo, hi) =>
+        supabase
+          .from('products')
+          .select('id, name, quantity, buy_price')
+          .eq('workspace_id', workspaceId)
+          .gt('quantity', 0)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      ),
+      selectAllPages((lo, hi) =>
+        supabase
+          .from('cost_layers')
+          .select('id, product_id, remaining_qty')
+          .eq('workspace_id', workspaceId)
+          .gt('remaining_qty', 0)
+          .order('id', { ascending: true })
+          .range(lo, hi),
+      ),
+    ])
+    if (products.error) throw new DatabaseError('Failed to read product stock', products.error)
+    if (layers.error) throw new DatabaseError('Failed to read cost layers', layers.error)
+
+    const layered = new Map<string, number>()
+    for (const row of (layers.data ?? []) as Array<Record<string, unknown>>) {
+      const id = String(row.product_id)
+      layered.set(id, (layered.get(id) ?? 0) + (Number(row.remaining_qty) || 0))
+    }
+    return ((products.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      productId: String(row.id),
+      name: String(row.name ?? ''),
+      quantity: Number(row.quantity) || 0,
+      buyPrice: Number(row.buy_price) || 0,
+      layeredQuantity: layered.get(String(row.id)) ?? 0,
+    }))
+  }
+
+  /** One product's stock beside its open layers; null when it is not this business's. */
+  async stockPosition(workspaceId: string, productId: string): Promise<StockPosition | null> {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name, quantity, buy_price')
+      .eq('workspace_id', workspaceId)
+      .eq('id', productId)
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to read product stock', error)
+    if (!data) return null
+
+    const layers = await this.openLayers(workspaceId, productId)
+    const row = data as Record<string, unknown>
+    return {
+      productId: String(row.id),
+      name: String(row.name ?? ''),
+      quantity: Number(row.quantity) || 0,
+      buyPrice: Number(row.buy_price) || 0,
+      layeredQuantity: layers.reduce((sum, layer) => sum + layer.remainingQty, 0),
+    }
   }
 
   /** The trail: which layers paid for this document, and at what price. */

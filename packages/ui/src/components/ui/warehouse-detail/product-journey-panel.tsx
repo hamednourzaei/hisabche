@@ -96,7 +96,10 @@ export function ProductJourneyPanel({ t, productId }: { t: T; productId: string 
           <div className="flex justify-between gap-2 font-medium">
             <dt>{t('evidence.grossProfit')}</dt>
             <dd className="tabular-nums" dir="ltr">
-              {money(journey.data.profit)}
+              {/* null = part of what was sold has no recorded cost. */}
+              {journey.data.profit === null
+                ? t('evidence.profitUnknown')
+                : money(journey.data.profit)}
             </dd>
           </div>
         </dl>

@@ -13,7 +13,7 @@
 // ============================================
 
 import { baseCurrencyOf } from './base-currency'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { PaymentsService } from './payments/payments.service'
 import { supabase } from '../db'
 import { sod } from './authorization'
@@ -196,6 +196,27 @@ export type LedgerPostResult =
 /** A list from a row that may carry it under either key, or not at all. */
 function asArray(value: unknown): any[] {
   return Array.isArray(value) ? value : []
+}
+
+/**
+ * The ledger key of the cost a sale was given after it was posted.
+ *
+ * ⚠️ A UUID, derived from the invoice id. `journal_entries.source_id` is a
+ * uuid column: a readable key like «invoice:<id>:late-cost» is refused by
+ * Postgres, and the in-memory test database accepts it without a word. The
+ * same invoice always yields the same key, which is what makes the entry
+ * idempotent and lets a deletion find it.
+ */
+export function lateCostKey(invoiceId: string): string {
+  const hex = createHash('sha256').update(`late-cost:${invoiceId}`).digest('hex')
+  // Version 5 / RFC 4122 variant bits, so it is a well-formed UUID.
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    `5${hex.slice(13, 16)}`,
+    `${((parseInt(hex.slice(16, 18), 16) & 0x3f) | 0x80).toString(16)}${hex.slice(18, 20)}`,
+    hex.slice(20, 32),
+  ].join('-')
 }
 
 export class InvoiceService {
@@ -1601,6 +1622,9 @@ export class InvoiceService {
     reason: string,
   ): Promise<void> {
     await ledger.reverseDocument(ctx, 'invoice', invoiceId, { reason })
+    // The cost a sale was given later is its own entry (costUncostedSale); it
+    // goes with the sale.
+    await ledger.reverseDocument(ctx, 'cost_repost', lateCostKey(invoiceId), { reason })
 
     for (const paymentId of paymentIds) {
       await this.payments.cancelPayment(ctx, paymentId, reason)
@@ -2861,6 +2885,147 @@ export class InvoiceService {
       excluded,
       skipped,
       nextCursor: rows.length === batchSize ? rows[rows.length - 1]!.id : null,
+    }
+  }
+
+  /**
+   * Give a sale the cost of goods it was booked without.
+   *
+   * ⚠️ WHY (INV-000077). A sale of stock that had no cost layer was posted with
+   * revenue only. Once that stock has a cost (a purchase recorded late, or the
+   * unvalued stock valued), this draws the sale's units from the layers and
+   * posts the cost as ITS OWN ENTRY — the original entry is never rewritten.
+   *
+   * What is posted is the difference between the cost the layers now say and
+   * the cost the ledger already holds for this sale, read from the ledger. So
+   * a retry after a failure half-way posts exactly what is still missing, and
+   * a second call posts nothing.
+   */
+  async costUncostedSale(
+    id: string,
+    ctx: TenancyContext,
+  ): Promise<{
+    status: 'costed' | 'nothing_to_cost' | 'still_uncosted' | 'not_postable' | 'ledger_incomplete'
+    /** The cost the consumed layers hold for this sale now. */
+    cost: number
+    /** What this call added to the ledger. */
+    posted: number
+    /** Cost the layers hold that the ledger does not, and this call could not post. */
+    unposted: number
+    uncostedProducts: string[]
+  }> {
+    await scopes.assertMay(ctx, 'invoice', id, 'invoice.update')
+    const invoice: any = await this.getById(id, ctx)
+    const none = { cost: 0, posted: 0, unposted: 0, uncostedProducts: [] as string[] }
+
+    const status = String(invoice?.status ?? '')
+    if (
+      String(invoice?.type ?? 'sale') !== 'sale' ||
+      status === 'cancelled' ||
+      status === AWAITING_APPROVAL_STATUS
+    ) {
+      return { status: 'not_postable', ...none }
+    }
+
+    const items = asArray(invoice?.items ?? invoice?.invoice_items).map((item: any) => ({
+      id: item.id,
+      productId: item.productId ?? item.product_id ?? null,
+      warehouseId: item.warehouseId ?? item.warehouse_id ?? null,
+      quantity: Number(item.quantity) || 0,
+    }))
+    const date = String(invoice?.date ?? '')
+
+    const entryDate = date ? date.slice(0, 10) : new Date().toISOString().slice(0, 10)
+    const drawn = new Set(
+      (await costing.explainDocumentCost(ctx, 'invoice', id)).lines.map((row) =>
+        String(row.consumerLine ?? ''),
+      ),
+    )
+
+    // ⚠️ THE UNITS THIS SALE TOOK ARE GONE. The layers open today belong to the
+    // stock still on the shelf; drawing an old sale from them would leave that
+    // stock without a cost. So each line that never drew its cost is first
+    // COVERED — by layers the shelf does not need, or by a layer of its own at
+    // the product's purchase price — and only a covered line is issued.
+    const uncosted: string[] = []
+    const toIssue: typeof items = []
+    for (const [index, item] of items.entries()) {
+      if (!item.productId || item.quantity <= 0) continue
+      const line = String(item.id ?? index)
+      if (drawn.has(line)) continue
+      const { covered } = await costing.coverSoldUnits(ctx, {
+        productId: item.productId,
+        quantity: item.quantity,
+        entryDate,
+        sourceLine: `sale:${id}:${line}`,
+      })
+      if (covered) toIssue.push(item)
+      else uncosted.push(String(item.productId))
+    }
+    await this.applyCosting(ctx, id, 'sale', toIssue, entryDate, uncosted)
+    const cost = (await costing.explainDocumentCost(ctx, 'invoice', id)).totalCost
+    const uncostedProducts = [...new Set(uncosted)]
+
+    const { accounts, missing } = await ledger.ensureAccountsForRoles(ctx, ['cogs', 'inventory'])
+    if (missing.length > 0 || !accounts.cogs || !accounts.inventory) {
+      return { status: 'ledger_incomplete', cost, posted: 0, unposted: cost, uncostedProducts }
+    }
+
+    const key = lateCostKey(id)
+    const held = await ledger.postedOnAccount(
+      ctx,
+      [
+        { sourceType: 'invoice', sourceId: id },
+        { sourceType: 'cost_repost', sourceId: key },
+      ],
+      accounts.cogs,
+    )
+    const owed = Math.round((cost - held) * 100) / 100
+    if (owed <= 0) {
+      return {
+        status: uncostedProducts.length > 0 ? 'still_uncosted' : 'nothing_to_cost',
+        cost,
+        posted: 0,
+        unposted: 0,
+        uncostedProducts,
+      }
+    }
+
+    const outcome = await ledger.postDocument(ctx, {
+      sourceType: 'cost_repost',
+      sourceId: key,
+      date: date ? date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      description: `بهای تمام‌شده‌ی فاکتور فروش ${
+        invoice?.invoiceNumber ?? invoice?.invoice_number ?? id.slice(0, 8)
+      }`,
+      reference: id,
+      lines: [
+        { accountId: accounts.cogs, debit: owed, credit: 0 },
+        { accountId: accounts.inventory, debit: 0, credit: owed },
+      ],
+    })
+    // One late-cost entry per sale. A second round of late costing finds the
+    // key taken; what it could not post is said, never dropped.
+    if (outcome.status !== 'posted') {
+      return { status: 'ledger_incomplete', cost, posted: 0, unposted: owed, uncostedProducts }
+    }
+    void logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'invoice',
+      entityId: id,
+      action: 'cost_recorded',
+      title: 'بهای تمام‌شده‌ی فاکتور در دفتر ثبت شد',
+      metadata: { cost: owed, uncostedProducts },
+      notify: false,
+    }).catch((err) => console.error('[InvoiceService] logBusinessEvent failed:', err))
+
+    return {
+      status: uncostedProducts.length > 0 ? 'still_uncosted' : 'costed',
+      cost,
+      posted: owed,
+      unposted: 0,
+      uncostedProducts,
     }
   }
 

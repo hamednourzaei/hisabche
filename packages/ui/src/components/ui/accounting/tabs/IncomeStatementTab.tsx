@@ -14,6 +14,7 @@ import { useCurrencyStore } from '@hisabche/store'
 import { cn } from '../../../../lib/utils'
 import { useIncomeStatement, useProfitReportsByCurrency, type TrialBalance } from '@hisabche/api'
 import { ProductProfitTable } from '../components/ProductProfitTable'
+import { UnvaluedStockNotice } from '../components/UnvaluedStockNotice'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { DateRangePicker } from '../components/DateRangePicker'
 import { ExportButton, type ExportColumn } from '../components/ExportButton'
@@ -283,12 +284,16 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
                           <span
                             className={cn(
                               'block font-semibold tabular-nums',
-                              net >= 0
-                                ? 'text-[hsl(var(--color-success))]'
-                                : 'text-[hsl(var(--color-destructive))]',
+                              net === null
+                                ? 'text-[hsl(var(--fg-secondary))]'
+                                : net >= 0
+                                  ? 'text-[hsl(var(--color-success))]'
+                                  : 'text-[hsl(var(--color-destructive))]',
                             )}
                           >
-                            {moneyIn(net, report.currency)}
+                            {net === null
+                              ? safeT('accounting.profit.unknown', 'قابل محاسبه نیست')
+                              : moneyIn(net, report.currency)}
                           </span>
                         </button>
                       )
@@ -302,6 +307,7 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
                   </p>
                 </div>
               ) : null}
+              <UnvaluedStockNotice currency={selectedReport.currency} />
               <ProductProfitTable t={safeT} report={selectedReport} money={money} num={num} />
             </>
           )}

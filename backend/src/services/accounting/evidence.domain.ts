@@ -21,6 +21,7 @@
 import {
   buildProfitReport,
   lineRevenues,
+  type CostStatus,
   type ProfitConsumption,
   type ProfitInvoice,
   type ProfitLine,
@@ -46,8 +47,11 @@ export interface InvoiceEvidence {
   grossSales: number
   discount: number
   netSales: number
+  /** The cost that is recorded — a part of the cost when `costStatus` is partial/unknown. */
   cost: number
-  grossProfit: number
+  costStatus: CostStatus
+  /** null when the cost of what was sold is not fully known. */
+  grossProfit: number | null
   marginPercent: number | null
   lines: Array<{
     productId: string | null
@@ -56,7 +60,10 @@ export interface InvoiceEvidence {
     grossRevenue: number
     netRevenue: number
     cost: number
-    profit: number
+    profit: number | null
+    costStatus: CostStatus
+    /** Units of this line's product sold on the invoice with no cost behind them. */
+    uncostedQuantity: number
     costMissing: boolean
     costEstimated: boolean
     sources: Array<{
@@ -122,7 +129,9 @@ export function explainInvoiceProfit(input: {
       grossRevenue: round2(line.totalPrice),
       netRevenue,
       cost,
-      profit: round2(netRevenue - cost),
+      profit: productRow?.costMissing ? null : round2(netRevenue - cost),
+      costStatus: productRow?.costStatus ?? 'none',
+      uncostedQuantity: round2((productRow?.uncostedQuantity ?? 0) * share),
       costMissing: productRow?.costMissing ?? false,
       costEstimated: productRow?.costEstimated ?? false,
       sources: sources.map((c) => ({
@@ -147,6 +156,7 @@ export function explainInvoiceProfit(input: {
     discount: round2(grossSales - netSales),
     netSales,
     cost: report.totals.cost,
+    costStatus: report.totals.costStatus,
     grossProfit: report.totals.grossProfit,
     marginPercent: report.totals.netMarginPercent,
     lines: lineViews,
@@ -178,7 +188,8 @@ export interface ProductJourney {
   onHand: { quantity: number; value: number }
   /** The report's revenue and profit for this product in the same window. */
   revenue: number
-  profit: number
+  /** null when part of what was sold has no recorded cost — never 0 in its place. */
+  profit: number | null
 }
 
 export function productJourney(input: {
@@ -193,7 +204,7 @@ export function productJourney(input: {
   }>
   consumptions: Array<{ consumerType: string; quantity: number; amount: number }>
   revenue: number
-  profit: number
+  profit: number | null
 }): ProductJourney {
   const layers = input.layers.filter((l) => l.currency === input.currency)
   const bySource = new Map<string, { quantity: number; amount: number }>()
@@ -237,6 +248,6 @@ export function productJourney(input: {
       value: sum(layers, (l) => l.remainingQty * l.unitCost),
     },
     revenue: round2(input.revenue),
-    profit: round2(input.profit),
+    profit: input.profit === null ? null : round2(input.profit),
   }
 }

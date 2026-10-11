@@ -82,6 +82,7 @@ export const ANALYSIS_BREAK_EVEN_REASONS = [
   'NO_REVENUE',
   'NO_CONTRIBUTION',
   'NO_FIXED_COSTS',
+  'COST_UNKNOWN',
 ] as const
 
 function Failed({ t, error }: { t: T; error: unknown }) {
@@ -548,7 +549,13 @@ function BreakEven({ t, locale }: { t: T; locale: string }) {
                 labelFallback: 'سود ناخالص',
                 align: 'end',
                 sortValue: (row) => row.contribution,
-                render: (row) => <span className="tabular-nums">{money(row.contribution)}</span>,
+                // Null = the cost was never recorded. Revenue is not shown in
+                // its place.
+                render: (row) => (
+                  <span className="tabular-nums">
+                    {row.contribution === null ? '—' : money(row.contribution)}
+                  </span>
+                ),
               },
               {
                 id: 'margin',

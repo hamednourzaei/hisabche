@@ -122,7 +122,10 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **بازبینی UX: هر صفحه یک فایل، پیشنهاد ادغام و فازها (۴ اکتبر)**      | `.claude/ux-audit/README.md` · `00-PROPOSAL.md` — **منتظر تأیید**           |
 | **هاب‌ها، خط‌های تب←سوییچ، حقوق/مرخصی، sandbox 403 (۵ اکتبر)**        | `.claude/SESSION-CACHE-2026-10-05-UX.md` · BUG-097…099 در `BUG-REGISTRY.md` |
 | **پایپ‌لاین AI: شکاف‌ها، برنامه، وضعیت پیاده‌سازی (۶ اکتبر)**         | `.claude/ai-pipeline/00-GAP-AND-PLAN.md` · `01-STATUS.md`                   |
-| **همه‌ی درس‌ها با شماره (۱–۱۱۴)**                                     | `.claude/lessons-learned.md`                                                |
+| **سود، بهای تمام‌شده، تراز آزمایشی: «نامعلوم، صفر نیست» (۱۱ اکتبر)** | `.claude/accounting-integrity/00-SPEC.md` · `SESSION-CACHE-2026-10-11-INTEGRITY.md` |
+| **یکپارچگی دیتابیس: هشت قاعده، فازها، خروجی FINDING (۱۱ اکتبر)**     | `.claude/db-integrity/00-SPEC.md` · `docs/FINDING-db-integrity.sql` — **منتظر خروجی**  |
+| **ارز دفاتر و ممیزی چندارزی؛ ورود فایل (۱۱ اکتبر)**                    | `.claude/reverse-and-import/01-CURRENCY-AUDIT.md` · `00-SPEC.md`                         |
+| **همه‌ی درس‌ها با شماره (۱–۱۱۹)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |
@@ -443,6 +446,28 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **`baseCurrencyOf` بعد از پاسخ replay خوانده می‌شود** — درخواست تکراری چیزی نمی‌خواند.
 - ⚠️ **FINDING را هم اجرا کن:** `FINDING-multi-currency.sql` در اجرای محلی یک خطای واقعی داشت (alias در عبارت `ORDER BY`).
 - ⚠️ **سریال تاریخ اکسل:** مبدأ ۳۰ دسامبر ۱۸۹۹ (اکسل ۱۹۰۰ را کبیسه می‌داند)؛ سیستم ۱۹۰۴ هم ۱٬۴۶۲ روز جلوتر. تاریخ را از **استایل سلول** بشناس، نه از بزرگی عدد.
+
+**نامعلوم، صفر نیست (۱۱ اکتبر)** — جزئیات: `.claude/accounting-integrity/00-SPEC.md`
+
+- ⚠️ **بهای ثبت‌نشده `null` است، نه `0`.** فاکتور INV-000077 «بها ۰ · سود ۴۵۰٬۰۰۰ · ۱۰۰٪» نشان می‌داد. `buildProfitReport` حالا `costStatus` می‌دهد (`none·known·estimated·partial·unknown`) و برای `partial`/`unknown` سود و حاشیه `null` است. هیچ‌جا `profit ?? 0` ننویس (گارد: `packages/ui/src/__tests__/unknown-is-not-zero.test.ts`، کل UI و بک‌اند را اسکن می‌کند).
+- ⚠️ **پرچم هشدار را نسنج؛ عددی را بسنج که آدم می‌خواند.** تست قدیمی `{ cost: 0, costMissing: true }` را تأیید می‌کرد و به سود نگاه نمی‌کرد — صفر را قفل کرده بود.
+- ⚠️ **fixture را از راهی بساز که کاربر واقعاً می‌رود.** همه‌ی تست‌های بها با فاکتور خرید شروع می‌شدند؛ «کالا را با موجودی بساز و بفروش» fixture نداشت. `cost-unknown-is-not-zero.test.ts` یک ماتریس است: هر راه ورود موجودی × فروش. راه تازه = سطر تازه.
+- **لایه‌ی بها از سه جا:** فاکتور خرید، دریافت سفارش خرید، و موجودی اولِ کالا با قیمت خرید (`ProductService#valueOpeningStock`). بدون قیمت خرید **لایه نساز** — لایه‌ی صفر یعنی «۱۰۰٪ تأییدشده».
+- **موجودیِ بی‌لایه و فروشِ بی‌بها با اقدام صریح درست می‌شوند**، نه خودکار: `POST /api/inventory/unvalued/value` و `POST /api/invoices/:id/cost` (سند جدا با `cost_repost`، مبلغ = بهای لایه‌ها − آنچه دفتر دارد). واحد فروخته‌شده از لایه‌ی قفسه نمی‌خورد (`coverSoldUnits`).
+- ⚠️ **`journal_entries.source_id` از نوع `uuid` است.** کلید خوانا («invoice:…:late-cost») را Postgres رد می‌کند و دیتابیس ساختگیِ تست بی‌صدا می‌پذیرد. کلید قطعی = UUID مشتق (`lateCostKey`). نوع ستون را از اسکیما بخوان.
+- **تراز آزمایشی سمت می‌گوید، نه علامت:** `debitBalance`/`creditBalance` از سرور؛ `n(row.balance)` در آن صفحه ممنوع. مانده‌ی خلاف ماهیت فقط `abnormal` علامت می‌خورد، اصلاح نمی‌شود.
+- ⚠️ **دو فرمول برای یک عدد:** `insights.periodTotals` سود را از `invoices.total` (با مالیات، همه‌ی ارزها) حساب می‌کرد، کنار `buildProfitReport`. حالا همان گزارش را صدا می‌زند. قبل از نوشتن جمع تازه، بگرد ببین هسته همان را دارد یا نه.
+- **باز مانده:** موجودی اول سند دفتر ندارد (نقش «سرمایه‌ی افتتاحیه» نیست)؛ `getFinancialSummary` غلط و بی‌مصرف است؛ بها به تفکیک انبار نیست.
+
+**یکپارچگی دیتابیس (۱۱ اکتبر)** — جزئیات: `.claude/db-integrity/00-SPEC.md`
+
+- ⚠️ **هیچ قیدی قبل از FINDING.** `docs/FINDING-db-integrity.sql` (۱۵ بلوک، فقط SELECT) می‌شمارد چند ردیف همین حالا هر قاعده را می‌شکند. تا خروجی‌اش نیامده، migration قید ننویس. ویرایشگر SQL فقط نتیجه‌ی آخرین دستور را نشان می‌دهد — هر بلوک جدا.
+- ⚠️ **در این اسکیما خیلی از ارجاع‌ها اصلاً FK ندارند** (`payment_allocations.invoice_id`، `cost_layers.product_id`، `cost_consumptions.layer_id`، `journal_entries.reversal_of`) و `workspace_id` روی جدول‌های مالی nullable و بی‌FK است. به «FK هست» تکیه نکن؛ با `pg_constraint` بسنج.
+- **توازن سند فقط در تابع `accounting_post_journal_entry` سنجیده می‌شود**، نه با تریگر. هر `INSERT` مستقیم در `journal_lines` دفتر را نامتوازن می‌کند — همیشه از `ledger.postDocument`.
+- **جدول‌های مرده:** `ledger_entries`، `sync_queue`، `sync_logs`، `journal_lines_archive` صفر خواننده دارند. منبع حسابداری `journal_entries` + `journal_lines` است. چیزی روی آن‌ها نساز.
+- **`user_id` حذف نمی‌شود** (می‌گوید چه کسی نوشت)؛ مشکل nullable‌بودنِ `workspace_id` است. backfill از `user_id` برای عضوِ دو کسب‌وکار حدس است (§12).
+- ⚠️ **۶۶ ستون `timestamp` بدون منطقه‌ی زمانی** (خروجی واقعی F3). `workspace_invites.expires_at` یکی از آن‌هاست. تبدیل، فرضِ «در چه منطقه‌ای نوشته شده» می‌خواهد — اول بسنج.
+
 
 **هسته‌ها (CRM / Payments)**
 

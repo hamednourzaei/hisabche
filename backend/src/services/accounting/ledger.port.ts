@@ -82,6 +82,18 @@ export interface LedgerPort {
     options: { date?: string | undefined; reason: string },
   ): Promise<LedgerPostingOutcome | { status: 'nothing_to_reverse' }>
 
+  /**
+   * What the POSTED entries of these documents put on one account: debits less
+   * credits. Read from the ledger itself, so a caller can post the difference
+   * between what the books hold and what they should — and a retry posts
+   * nothing twice.
+   */
+  postedOnAccount(
+    ctx: TenancyContext,
+    sources: ReadonlyArray<{ sourceType: LedgerSourceType; sourceId: string }>,
+    accountId: string,
+  ): Promise<number>
+
   /** The account ids behind the roles a caller needs, by role not by code. */
   resolveAccountsByRole(
     ctx: TenancyContext,

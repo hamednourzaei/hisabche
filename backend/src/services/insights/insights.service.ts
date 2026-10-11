@@ -15,6 +15,7 @@ import { AccountingService } from '../accounting'
 import { DatabaseError } from '../../errors/database.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
+import { baseCurrencyOf } from '../base-currency'
 
 import {
   buildExplanation,
@@ -23,10 +24,18 @@ import {
   explainChange,
   grossMargin,
   grossProfit,
+  knownGrossMargin,
+  knownGrossProfit,
   round2,
   type LineForReview,
   type PeriodTotals,
 } from './insights.domain'
+
+/** A period's totals with its profit — null when the cost behind it is incomplete. */
+export type PeriodSummary = PeriodTotals & {
+  grossProfit: number | null
+  grossMarginPercent: number | null
+}
 
 export class InsightsService {
   private key(workspaceId: string, ...parts: string[]) {
@@ -42,68 +51,35 @@ export class InsightsService {
    * the shop restocked.
    */
   private async periodTotals(ctx: TenancyContext, from: string, to: string): Promise<PeriodTotals> {
-    const [invoices, consumptions] = await Promise.all([
-      // Every row (27 Sep 2026): a .limit(N) here was cut to 1000 by PostgREST, and this feeds a total.
-      selectAllPages((lo, hi) =>
-        supabase
-          .from('invoices')
-          .select('id, total')
-          .eq('workspace_id', ctx.workspaceId)
-          .eq('type', 'sale')
-          .gte('date', from)
-          .lte('date', to)
-          .order('id', { ascending: true })
-          .range(lo, hi),
-      ),
-      selectAllPages((lo, hi) =>
-        supabase
-          .from('cost_consumptions')
-          .select('amount')
-          .eq('workspace_id', ctx.workspaceId)
-          .eq('consumer_type', 'invoice')
-          .gte('entry_date', from)
-          .lte('entry_date', to)
-          .order('id', { ascending: true })
-          .range(lo, hi),
-      ),
-    ])
-
-    if (invoices.error) throw new DatabaseError('Failed to read invoices', invoices.error)
-    if (consumptions.error) {
-      throw new DatabaseError('Failed to read cost consumptions', consumptions.error)
-    }
-
-    const rows = invoices.data ?? []
-
+    // ⚠️ THE ACCOUNTING CORE'S REPORT, not a second sum. This used to add up
+    // `invoices.total` (tax included, every currency together) and subtract
+    // every consumption, so a sale with no cost counted as pure profit and a
+    // dollar invoice was added to an afghani one.
+    const currency = await baseCurrencyOf(ctx.workspaceId)
+    const report = await new AccountingService().getProfitReport(ctx, from, to, currency)
     return {
       from,
       to,
-      revenue: round2(rows.reduce((sum, row) => sum + (Number(row.total) || 0), 0)),
-      costOfGoodsSold: round2(
-        (consumptions.data ?? []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0),
-      ),
-      invoiceCount: rows.length,
+      revenue: report.totals.revenue,
+      costOfGoodsSold: report.totals.cost,
+      invoiceCount: report.totals.invoiceCount,
+      costKnown: report.totals.grossProfit !== null,
+      currency,
     }
   }
 
   /** Profit and margin for one period. */
-  async getPeriodSummary(
-    ctx: TenancyContext,
-    from: string,
-    to: string,
-  ): Promise<PeriodTotals & { grossProfit: number; grossMarginPercent: number | null }> {
+  async getPeriodSummary(ctx: TenancyContext, from: string, to: string): Promise<PeriodSummary> {
     const cacheKey = this.key(ctx.workspaceId, 'summary', from, to)
 
-    const cached = await memoryCache.get<
-      PeriodTotals & { grossProfit: number; grossMarginPercent: number | null }
-    >(cacheKey)
+    const cached = await memoryCache.get<PeriodSummary>(cacheKey)
     if (cached) return cached
 
     const totals = await this.periodTotals(ctx, from, to)
     const result = {
       ...totals,
-      grossProfit: grossProfit(totals),
-      grossMarginPercent: grossMargin(totals),
+      grossProfit: knownGrossProfit(totals),
+      grossMarginPercent: knownGrossMargin(totals),
     }
 
     await memoryCache.set(cacheKey, result, 300)
@@ -143,6 +119,9 @@ export class InsightsService {
         previousMarginPercent: grossMargin(before),
         change: compare('grossProfit', grossProfit(before), grossProfit(now)).absolute,
         changePercent: compare('grossProfit', grossProfit(before), grossProfit(now)).percent,
+        // 1 when either period sold goods with no recorded cost: the profits
+        // above are then overstated and the comparison is not a finding.
+        costIncomplete: now.costKnown === false || before.costKnown === false ? 1 : 0,
       },
       contributors: breakdown.contributors,
     })

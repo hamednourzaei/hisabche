@@ -309,7 +309,12 @@ export class AIService {
 
     let answer = `${statusEmoji} ${statusText} خالص این ماه: ${Math.abs(netProfit).toLocaleString()} افغانی. `
     answer += `درآمد: ${revenue.toLocaleString()}، هزینه: ${expenses.toLocaleString()}. `
-    answer += `سود ناخالص: ${grossProfit.toLocaleString()}`
+    // Revenue is not profit: with part of the cost unrecorded there is no
+    // gross profit to state.
+    answer +=
+      grossProfit === null
+        ? 'سود ناخالص قابل محاسبه نیست: بهای تمام‌شده‌ی بخشی از فروش ثبت نشده است'
+        : `سود ناخالص: ${grossProfit.toLocaleString()}`
     // A margin is genuinely absent on zero revenue. Rendering it as 0% would
     // invite the wrong conclusion, so it is simply not claimed.
     answer += marginPercent === null ? '.' : ` (حاشیه ${marginPercent}٪).`

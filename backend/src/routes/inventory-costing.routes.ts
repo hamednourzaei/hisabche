@@ -20,6 +20,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
+import { invalidateMoneyCaches } from '../utils/money-cache'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -150,6 +151,41 @@ export async function inventoryCostingRoutes(fastify: FastifyInstance) {
         )
       } catch (err) {
         return fail(reply, err, 'Failed to preview cost')
+      }
+    },
+  )
+
+  // ─── GET /unvalued — stock with no cost layer behind it ─
+  // Not cached: it is read to decide whether to value, and again right after.
+  fastify.get(
+    '/unvalued',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.cost.read')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send(await costingService.getUnvaluedStock(request.tenancy))
+      } catch (err) {
+        return fail(reply, err, 'Failed to read unvalued stock')
+      }
+    },
+  )
+
+  // ─── POST /unvalued/value — value it at each product's purchase price ─
+  fastify.post(
+    '/unvalued/value',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.configure')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const result = await costingService.valueUnvaluedStock(request.tenancy)
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.send(result)
+      } catch (err) {
+        return fail(reply, err, 'Failed to value stock')
       }
     },
   )

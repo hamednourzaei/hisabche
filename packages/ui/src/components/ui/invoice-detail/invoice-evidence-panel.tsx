@@ -14,7 +14,7 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Scale } from 'lucide-react'
-import { apiErrorMessage, useInvoiceEvidence } from '@hisabche/api'
+import { apiErrorMessage, useCostInvoice, useInvoiceEvidence } from '@hisabche/api'
 
 import { formatSelectedAmount } from '../../../lib/money-display'
 import { evidenceSourceLabel } from '../../../lib/evidence-labels'
@@ -30,6 +30,10 @@ export function InvoiceEvidencePanel({ invoiceId }: { invoiceId: string }) {
   const evidence = useInvoiceEvidence(invoiceId, open)
   const status = (evidence.error as { response?: { status?: number } } | null)?.response?.status
   const money = (value: number) => formatSelectedAmount(value)
+  const costInvoice = useCostInvoice()
+  // The cost of part of the sale was never recorded: there is no profit to
+  // show, and revenue must not stand in for it (INV-000077).
+  const costKnown = evidence.data ? evidence.data.grossProfit !== null : true
 
   return (
     <section className="space-y-3 rounded-2xl border border-[hsl(var(--border-default))] p-4">
@@ -63,8 +67,6 @@ export function InvoiceEvidencePanel({ invoiceId }: { invoiceId: string }) {
                 ['evidence.grossSales', evidence.data.grossSales],
                 ['evidence.discount', -evidence.data.discount],
                 ['evidence.netSales', evidence.data.netSales],
-                ['evidence.cost', -evidence.data.cost],
-                ['evidence.grossProfit', evidence.data.grossProfit],
               ] as const
             ).map(([key, value]) => (
               <div key={key} className="flex justify-between gap-2">
@@ -74,12 +76,46 @@ export function InvoiceEvidencePanel({ invoiceId }: { invoiceId: string }) {
                 </dd>
               </div>
             ))}
-            {evidence.data.marginPercent !== null && (
-              <div className="flex justify-between gap-2">
-                <dt className="text-[hsl(var(--fg-secondary))]">{t('evidence.margin')}</dt>
+
+            {/* The cost: a figure when it is known, the word «unknown» when no
+                unit has one, and «recorded part» when only some do. */}
+            <div className="flex justify-between gap-2">
+              <dt className="text-[hsl(var(--fg-secondary))]">
+                {evidence.data.costStatus === 'partial'
+                  ? t('evidence.costRecordedPart')
+                  : t('evidence.cost')}
+              </dt>
+              {evidence.data.costStatus === 'unknown' ? (
+                <dd className="font-medium text-[hsl(var(--color-warning))]">
+                  {t('evidence.costUnknown')}
+                </dd>
+              ) : (
+                <dd className="tabular-nums" dir="ltr">
+                  {money(-evidence.data.cost)} {evidence.data.currency}
+                </dd>
+              )}
+            </div>
+
+            <div className="flex justify-between gap-2 font-medium">
+              <dt className="text-[hsl(var(--fg-secondary))]">{t('evidence.grossProfit')}</dt>
+              {evidence.data.grossProfit === null ? (
+                <dd className="text-[hsl(var(--color-warning))]">{t('evidence.unknown')}</dd>
+              ) : (
+                <dd className="tabular-nums" dir="ltr">
+                  {money(evidence.data.grossProfit)} {evidence.data.currency}
+                </dd>
+              )}
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-[hsl(var(--fg-secondary))]">{t('evidence.margin')}</dt>
+              {evidence.data.marginPercent === null ? (
+                <dd className="text-[hsl(var(--fg-secondary))]">
+                  {costKnown ? '—' : t('evidence.unknown')}
+                </dd>
+              ) : (
                 <dd dir="ltr">{evidence.data.marginPercent}%</dd>
-              </div>
-            )}
+              )}
+            </div>
           </dl>
 
           {evidence.data.warnings.map((w) => (
@@ -91,6 +127,32 @@ export function InvoiceEvidencePanel({ invoiceId }: { invoiceId: string }) {
             </p>
           ))}
 
+          {!costKnown && (
+            <div className="space-y-2 rounded-lg border border-[hsl(var(--border-default))] p-3">
+              <p className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('evidence.costActionHint')}
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={costInvoice.isPending}
+                onClick={() => costInvoice.mutate(invoiceId)}
+              >
+                {costInvoice.isPending ? t('evidence.costWorking') : t('evidence.costAction')}
+              </Button>
+              {costInvoice.isSuccess && (
+                <p role="status" className="text-xs text-[hsl(var(--fg-secondary))]">
+                  {t(`evidence.costResult.${costInvoice.data.status}`)}
+                </p>
+              )}
+              {costInvoice.isError && (
+                <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+                  {apiErrorMessage(costInvoice.error, t('evidence.costFailed'))}
+                </p>
+              )}
+            </div>
+          )}
+
           <ul className="space-y-2">
             {evidence.data.lines.map((line, i) => (
               <li
@@ -101,13 +163,30 @@ export function InvoiceEvidencePanel({ invoiceId }: { invoiceId: string }) {
                   <span>
                     {line.name} <span dir="ltr">× {line.quantity}</span>
                   </span>
-                  <span className="tabular-nums" dir="ltr">
-                    {money(line.profit)}
-                  </span>
+                  {line.profit === null ? (
+                    <span className="text-[hsl(var(--color-warning))]">
+                      {t('evidence.unknown')}
+                    </span>
+                  ) : (
+                    <span className="tabular-nums" dir="ltr">
+                      {money(line.profit)}
+                    </span>
+                  )}
                 </p>
                 <p className="text-xs text-[hsl(var(--fg-tertiary))]">
                   {t('evidence.netSales')}: <span dir="ltr">{money(line.netRevenue)}</span> ·{' '}
-                  {t('evidence.cost')}: <span dir="ltr">{money(line.cost)}</span>
+                  {t('evidence.cost')}:{' '}
+                  {line.costStatus === 'unknown' ? (
+                    t('evidence.costUnknown')
+                  ) : (
+                    <span dir="ltr">{money(line.cost)}</span>
+                  )}
+                  {line.uncostedQuantity > 0 ? (
+                    <>
+                      {' · '}
+                      {t('evidence.uncostedUnits')}: <span dir="ltr">{line.uncostedQuantity}</span>
+                    </>
+                  ) : null}
                 </p>
                 {line.sources.map((src, j) => (
                   <p key={j} className="text-xs text-[hsl(var(--fg-secondary))]">

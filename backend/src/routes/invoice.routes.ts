@@ -354,6 +354,32 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── POST /api/invoices/:id/cost ────────────────────────
+  // Give a sale that was booked with no cost of goods its cost, from the
+  // layers its stock has now. Idempotent — see InvoiceService#costUncostedSale.
+  fastify.post(
+    '/api/invoices/:id/cost',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.update')],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const result = await invoiceService.costUncostedSale(id, request.tenancy)
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.send(result)
+      } catch (err) {
+        fastify.log.error(err)
+        const status = (err as { statusCode?: number })?.statusCode ?? 500
+        const message = err instanceof Error ? err.message : ''
+        const code = /^[A-Z][A-Z_]{5,}/.exec(message)?.[0]
+        return reply
+          .code(status)
+          .send({ error: status < 500 && message ? message : 'Failed to cost the invoice', code })
+      }
+    },
+  )
+
   fastify.patch(
     '/api/invoices/:id',
     {

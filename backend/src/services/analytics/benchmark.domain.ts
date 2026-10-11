@@ -218,7 +218,11 @@ export function peerFactsFrom(
 
   return {
     workspaceId,
-    grossMarginPercent: revenue === 0 ? null : Math.round((grossProfit / revenue) * 10000) / 100,
+    // A profit built on a missing cost is not a margin to compare with anybody's.
+    grossMarginPercent:
+      revenue === 0 || grossProfit === null
+        ? null
+        : Math.round((grossProfit / revenue) * 10000) / 100,
     netMarginPercent,
     invoiceRatePerDay:
       daysInPeriod > 0 ? Math.round((report.totals.invoiceCount / daysInPeriod) * 100) / 100 : null,

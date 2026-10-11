@@ -40,6 +40,13 @@ export {
   type NegativeStockPolicy,
 } from './costing.domain'
 
+export {
+  findUnvaluedStock,
+  type StockPosition,
+  type UnvaluedRow,
+  type UnvaluedStock,
+} from './unvalued-stock.domain'
+
 import { CostingService } from './costing.service'
 
 /** The one instance other cores cost through. */

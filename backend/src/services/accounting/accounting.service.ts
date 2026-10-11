@@ -22,6 +22,7 @@ import { ConflictError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
+import { baseCurrencyOf } from '../base-currency'
 import { sod } from '../authorization'
 import { logBusinessEvent } from '../event-log.service'
 
@@ -666,6 +667,26 @@ export class AccountingService implements LedgerPort {
     }
   }
 
+  async postedOnAccount(
+    ctx: TenancyContext,
+    sources: ReadonlyArray<{ sourceType: LedgerSourceType; sourceId: string }>,
+    accountId: string,
+  ): Promise<number> {
+    let total = 0
+    for (const source of sources) {
+      const entry = await this.repo.findEntryBySource(
+        ctx.workspaceId,
+        source.sourceType,
+        source.sourceId,
+      )
+      if (!entry || entry.status !== 'posted') continue
+      for (const line of entry.lines) {
+        if (line.accountId === accountId) total += line.debit - line.credit
+      }
+    }
+    return Math.round(total * 100) / 100
+  }
+
   // ─── Reports ──────────────────────────────────────────────────────────────
 
   async getTrialBalance(
@@ -696,10 +717,24 @@ export class AccountingService implements LedgerPort {
     )
     if (cached) return cached as any
 
-    const rows = toTrialBalance(
-      await this.repo.ledgerTotals(ctx.workspaceId, fromDate, toDate, branchIds),
-    )
-    const result = { rows, ...trialBalanceTotals(rows), fromDate, toDate, branchIds }
+    const [totals, currency, books] = await Promise.all([
+      this.repo.ledgerTotals(ctx.workspaceId, fromDate, toDate, branchIds),
+      // The ledger is kept in the books currency and in nothing else:
+      // journal lines carry no currency of their own, so this is the one
+      // currency every figure on the report is in.
+      baseCurrencyOf(ctx.workspaceId),
+      this.repo.booksStatus(ctx.workspaceId),
+    ])
+    const rows = toTrialBalance(totals)
+    const result = {
+      rows,
+      ...trialBalanceTotals(rows),
+      fromDate,
+      toDate,
+      branchIds,
+      currency,
+      books,
+    }
 
     await memoryCache.set(cacheKey, result, REPORT_TTL_SECONDS)
     return result
@@ -777,14 +812,17 @@ export class AccountingService implements LedgerPort {
     const sources = await this.repo.profitSources(ctx.workspaceId, from, to)
     const currencies = [...new Set(sources.invoices.map((invoice) => invoice.currency))]
     return currencies.flatMap((currency) =>
-      buildProfitReport({ from, to, currency, ...sources, payrolls: [] }).products.map((row) => ({
-        key:
-          currencies.length > 1
-            ? `${row.productId ?? row.name}:${currency}`
-            : (row.productId ?? row.name),
-        label: currencies.length > 1 ? `${row.name} (${currency})` : row.name,
-        value: row.profit,
-      })),
+      buildProfitReport({ from, to, currency, ...sources, payrolls: [] })
+        .products // A product whose cost is not known has no profit to explain a change with.
+        .flatMap((row) => (row.profit === null ? [] : [{ ...row, profit: row.profit }]))
+        .map((row) => ({
+          key:
+            currencies.length > 1
+              ? `${row.productId ?? row.name}:${currency}`
+              : (row.productId ?? row.name),
+          label: currencies.length > 1 ? `${row.name} (${currency})` : row.name,
+          value: row.profit,
+        })),
     )
   }
 
@@ -833,7 +871,8 @@ export class AccountingService implements LedgerPort {
       layers: journey.layers,
       consumptions: journey.consumptions,
       revenue: row?.revenue ?? 0,
-      profit: row?.profit ?? 0,
+      // No sales of it in the window is a real 0; sold without a cost is null.
+      profit: row ? row.profit : 0,
     })
   }
 

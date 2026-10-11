@@ -40,6 +40,8 @@ const product = (over: Partial<ProductProfitRow> = {}): ProductProfitRow => ({
   cost: 400,
   profit: 600,
   marginPercent: 60,
+  costStatus: 'known',
+  uncostedQuantity: 0,
   costMissing: false,
   costEstimated: false,
   ...over,
@@ -56,6 +58,9 @@ const report = (
   totals: {
     revenue: 1000,
     cost: 400,
+    costStatus: 'known',
+    uncostedRevenue: 0,
+    knownGrossProfit: 600,
     grossProfit: 600,
     salaries: 500,
     netProfit: 100,

@@ -1215,3 +1215,29 @@ OCR دو مرحله است: `read` هیچ چیزی نمی‌نویسد؛ `confir
 - **Browser Storage Quota**: Never display 
 avigator.storage.estimate().quota directly to end users of a web app. It returns the OS disk quota allocation for the browser (e.g. 10.7 GB), which looks like a massive resource hog. Display only usage.
 - **Chart Empty States vs. Zero Values**: For line/area trend charts, rendering a flat line at y=0 is usually preferred over replacing the chart with an empty state ("No data"). It provides visual continuity for the user.
+
+## ۱۱ اکتبر ۲۰۲۶ — نامعلوم، صفر نیست
+
+### ۱۱۵. پرچم هشدار را نسنج؛ عددی را بسنج که آدم می‌خواند
+
+تست قدیمی `{ cost: 0, costMissing: true }` را تأیید می‌کرد. پرچم درست بود و صفحه «سود ۴۵۰٬۰۰۰ · ۱۰۰٪» نشان می‌داد.
+برای هر مقدار «نداریم»، assert روی **همان فیلدی** باشد که رندر می‌شود: `profit: null`، `marginPercent: null`.
+
+### ۱۱۶. fixture را از راهی بساز که کاربر می‌رود
+
+همه‌ی تست‌های بها با فاکتور خرید شروع می‌شدند. دکاندار کالا را با موجودی می‌سازد و می‌فروشد. برای هر «حالتِ بعد از X»
+بپرس: X از چند راه می‌تواند اتفاق بیفتد؟ و یک ماتریس بنویس، نه یک سناریو.
+
+### ۱۱۷. سند اصلاحی = تفاوت با خودِ دفتر
+
+مبلغی که «این بار حساب کردم» بعد از یک شکستِ نیمه‌راه صفر می‌شود و سند هرگز ثبت نمی‌شود. مبلغ را از
+(آنچه باید باشد) − (آنچه دفتر دارد) بگیر؛ آن‌وقت تلاش دوم دقیقاً کمبود را ثبت می‌کند و تلاش سوم هیچ.
+
+### ۱۱۸. نوع ستون را از اسکیما بخوان، نه از تستِ سبز
+
+`source_id uuid`. دیتابیس ساختگی رشته می‌پذیرد. کلید قطعیِ خوانا را به UUID مشتق تبدیل کن.
+
+### ۱۱۹. قید دیتابیس بعد از FINDING
+
+قاعده را نمی‌شود روی ردیف‌هایی گذاشت که نقضش می‌کنند. اول شمارش فقط‌خواندنی، بعد `NOT VALID`، بعد `VALIDATE`.
+و خودِ FINDING روی Postgres واقعی اجرا شود قبل از اینکه به دست آدم برسد.

@@ -10,8 +10,9 @@
 //                       lines by total_price. Tax is not the business's money.
 //   cost of a line    = the costing core's consumption for that invoice and
 //                       product (cost_consumptions, consumer_type 'invoice').
-//                       A sale with no consumption is flagged `costMissing`,
-//                       never shown as 100% margin by accident.
+//                       A sale with no consumption has an UNKNOWN cost, and
+//                       unknown is not zero: its profit and margin are null,
+//                       never «revenue» and «100%» (INV-000077, 11 Oct 2026).
 //   salaries          = GROSS payroll cost (base + bonuses + overtime) of the
 //                       payrolls whose period ends in the range. Deductions
 //                       and tax are withheld from the employee, not saved by
@@ -42,6 +43,26 @@ export interface ProfitConsumption {
   productId: string
   amount: number
   isEstimated: boolean
+  /** Units this consumption covered. Absent ⇒ taken to cover the whole sale. */
+  quantity?: number | undefined
+}
+
+/**
+ * How much is known about what the goods cost.
+ *
+ *   none       nothing stocked was sold (a service, a text line): no cost exists
+ *   known      every unit drew its cost from a real layer — a layer bought at
+ *              zero is a known zero, which is not the same as «no layer»
+ *   estimated  part was priced at the last cost paid (stock was not there)
+ *   partial    some units have a cost and some have none
+ *   unknown    no unit has a cost
+ *
+ * Only `none`, `known` and `estimated` produce a profit figure.
+ */
+export type CostStatus = 'none' | 'known' | 'estimated' | 'partial' | 'unknown'
+
+export function isCostDeterminate(status: CostStatus): boolean {
+  return status === 'none' || status === 'known' || status === 'estimated'
 }
 
 export interface ProfitPayroll {
@@ -56,11 +77,16 @@ export interface ProductProfitRow {
   name: string
   quantity: number
   revenue: number
+  /** The cost that IS recorded. With `costMissing` it is a part, not the cost. */
   cost: number
-  profit: number
-  /** profit / revenue × 100; null when revenue is 0. */
+  /** null when the cost is not fully known — revenue is not profit. */
+  profit: number | null
+  /** profit / revenue × 100; null when revenue is 0 or the cost is not known. */
   marginPercent: number | null
-  /** Sold, but the costing core recorded no cost: profit is overstated. */
+  costStatus: CostStatus
+  /** Units sold with no cost behind them. */
+  uncostedQuantity: number
+  /** `costStatus` is partial or unknown. */
   costMissing: boolean
   /** Part of the cost was estimated (stock was not there when sold). */
   costEstimated: boolean
@@ -73,10 +99,17 @@ export interface ProfitReport {
   products: ProductProfitRow[]
   totals: {
     revenue: number
+    /** The cost that is recorded; a part of the cost when `costStatus` is partial/unknown. */
     cost: number
-    grossProfit: number
+    costStatus: CostStatus
+    /** Net sales of the rows whose cost is not fully known. */
+    uncostedRevenue: number
+    /** Revenue − cost over the rows whose cost IS known. Always a real figure. */
+    knownGrossProfit: number
+    /** null when any sold product has no known cost. */
+    grossProfit: number | null
     salaries: number
-    netProfit: number
+    netProfit: number | null
     netMarginPercent: number | null
     invoiceCount: number
     payrollCount: number
@@ -86,6 +119,8 @@ export interface ProfitReport {
 }
 
 const round2 = (value: number) => Math.round(value * 100) / 100
+/** Quantities carry four decimals; below this two quantities are the same. */
+const QUANTITY_EPSILON = 0.00005
 const percent = (part: number, whole: number) => (whole === 0 ? null : round2((part / whole) * 100))
 
 /** Net sales of each line: the invoice discount is shared by line value. */
@@ -114,21 +149,42 @@ export function buildProfitReport(input: {
       .map((invoice) => [invoice.id, invoice]),
   )
 
-  const costByLine = new Map<string, { amount: number; estimated: boolean }>()
+  const costByLine = new Map<
+    string,
+    { amount: number; estimated: boolean; quantity: number; quantityKnown: boolean }
+  >()
   for (const row of input.consumptions) {
     if (!row.invoiceId || !inCurrency.has(row.invoiceId)) continue
     const key = `${row.invoiceId}:${row.productId}`
-    const current = costByLine.get(key) ?? { amount: 0, estimated: false }
+    const current = costByLine.get(key) ?? {
+      amount: 0,
+      estimated: false,
+      quantity: 0,
+      quantityKnown: true,
+    }
     current.amount += row.amount
     current.estimated ||= row.isEstimated
+    if (row.quantity === undefined) current.quantityKnown = false
+    else current.quantity += row.quantity
     costByLine.set(key, current)
   }
 
-  const byProduct = new Map<string, ProductProfitRow>()
+  type Tally = ProductProfitRow & { costedDocuments: number; uncostedDocuments: number }
+  const byProduct = new Map<string, Tally>()
   const linesByInvoice = new Map<string, ProfitLine[]>()
   for (const line of input.lines) {
     if (!inCurrency.has(line.invoiceId)) continue
     linesByInvoice.set(line.invoiceId, [...(linesByInvoice.get(line.invoiceId) ?? []), line])
+  }
+
+  // Units of each product on each invoice: what a consumption has to cover.
+  const soldByKey = new Map<string, number>()
+  for (const [invoiceId, lines] of linesByInvoice) {
+    for (const line of lines) {
+      if (!line.productId) continue
+      const key = `${invoiceId}:${line.productId}`
+      soldByKey.set(key, (soldByKey.get(key) ?? 0) + line.quantity)
+    }
   }
 
   const costCounted = new Set<string>()
@@ -146,9 +202,13 @@ export function buildProfitReport(input: {
           cost: 0,
           profit: 0,
           marginPercent: null,
+          costStatus: 'none',
+          uncostedQuantity: 0,
           costMissing: false,
           costEstimated: false,
-        } satisfies ProductProfitRow)
+          costedDocuments: 0,
+          uncostedDocuments: 0,
+        } satisfies Tally)
       row.quantity += line.quantity
       row.revenue += revenues.get(line) ?? 0
       if (line.productId) {
@@ -157,11 +217,21 @@ export function buildProfitReport(input: {
         const cost = costByLine.get(costKey)
         if (!costCounted.has(costKey)) {
           costCounted.add(costKey)
+          const sold = soldByKey.get(costKey) ?? 0
           if (cost) {
             row.cost += cost.amount
             row.costEstimated ||= cost.estimated
+            row.costedDocuments += 1
+            // A consumption that covers fewer units than were sold leaves the
+            // rest without a cost.
+            const short = cost.quantityKnown ? sold - cost.quantity : 0
+            if (short > QUANTITY_EPSILON) {
+              row.uncostedQuantity += short
+              row.uncostedDocuments += 1
+            }
           } else {
-            row.costMissing = true
+            row.uncostedQuantity += sold
+            row.uncostedDocuments += 1
           }
         }
       }
@@ -169,14 +239,44 @@ export function buildProfitReport(input: {
     }
   }
 
-  const products = [...byProduct.values()]
-    .map((row) => {
+  const products: ProductProfitRow[] = [...byProduct.values()]
+    .map(({ costedDocuments, uncostedDocuments, ...row }) => {
       const revenue = round2(row.revenue)
       const cost = round2(row.cost)
-      const profit = round2(revenue - cost)
-      return { ...row, revenue, cost, profit, marginPercent: percent(profit, revenue) }
+      const costStatus: CostStatus =
+        row.productId === null
+          ? 'none'
+          : uncostedDocuments > 0
+            ? costedDocuments > 0
+              ? 'partial'
+              : 'unknown'
+            : row.costEstimated
+              ? 'estimated'
+              : 'known'
+      const determinate = isCostDeterminate(costStatus)
+      const profit = determinate ? round2(revenue - cost) : null
+      return {
+        ...row,
+        revenue,
+        cost,
+        profit,
+        marginPercent: profit === null ? null : percent(profit, revenue),
+        costStatus,
+        uncostedQuantity: round2(row.uncostedQuantity),
+        costMissing: !determinate,
+      }
     })
-    .sort((a, b) => b.profit - a.profit)
+    // Best profit first; a row whose profit is not known goes last, in the
+    // order of what was sold.
+    .sort((a, b) =>
+      a.profit === null || b.profit === null
+        ? a.profit === null && b.profit === null
+          ? b.revenue - a.revenue
+          : a.profit === null
+            ? 1
+            : -1
+        : b.profit - a.profit,
+    )
 
   const payrollsInCurrency = input.payrolls.filter((payroll) => payroll.currency === input.currency)
   const salaries = round2(
@@ -187,8 +287,25 @@ export function buildProfitReport(input: {
   )
   const revenue = round2(products.reduce((sum, row) => sum + row.revenue, 0))
   const cost = round2(products.reduce((sum, row) => sum + row.cost, 0))
-  const grossProfit = round2(revenue - cost)
-  const netProfit = round2(grossProfit - salaries)
+  const undetermined = products.filter((row) => row.costMissing)
+  const stocked = products.filter((row) => row.costStatus !== 'none')
+  const costStatus: CostStatus =
+    stocked.length === 0
+      ? 'none'
+      : undetermined.length === stocked.length &&
+          stocked.every((row) => row.costStatus === 'unknown')
+        ? 'unknown'
+        : undetermined.length > 0
+          ? 'partial'
+          : stocked.some((row) => row.costStatus === 'estimated')
+            ? 'estimated'
+            : 'known'
+  const uncostedRevenue = round2(undetermined.reduce((sum, row) => sum + row.revenue, 0))
+  const knownGrossProfit = round2(
+    products.reduce((sum, row) => (row.profit === null ? sum : sum + row.profit), 0),
+  )
+  const grossProfit = isCostDeterminate(costStatus) ? round2(revenue - cost) : null
+  const netProfit = grossProfit === null ? null : round2(grossProfit - salaries)
 
   const others = new Map<string, { invoices: number; payrolls: number }>()
   for (const invoice of input.invoices) {
@@ -212,10 +329,13 @@ export function buildProfitReport(input: {
     totals: {
       revenue,
       cost,
+      costStatus,
+      uncostedRevenue,
+      knownGrossProfit,
       grossProfit,
       salaries,
       netProfit,
-      netMarginPercent: percent(netProfit, revenue),
+      netMarginPercent: netProfit === null ? null : percent(netProfit, revenue),
       invoiceCount: inCurrency.size,
       payrollCount: payrollsInCurrency.length,
     },
@@ -223,19 +343,22 @@ export function buildProfitReport(input: {
   }
 }
 
+export interface InvoiceMargin {
+  revenue: number
+  cost: number
+  /** null when the cost is not fully known: the margin is not 100%, it is unknown. */
+  marginPercent: number | null
+  costStatus: CostStatus
+  costMissing: boolean
+}
+
 /** Margin of each invoice (for the till): profit % of its net sales. */
 export function invoiceMargins(
   invoices: ProfitInvoice[],
   lines: ProfitLine[],
   consumptions: ProfitConsumption[],
-): Map<
-  string,
-  { revenue: number; cost: number; marginPercent: number | null; costMissing: boolean }
-> {
-  const result = new Map<
-    string,
-    { revenue: number; cost: number; marginPercent: number | null; costMissing: boolean }
-  >()
+): Map<string, InvoiceMargin> {
+  const result = new Map<string, InvoiceMargin>()
   for (const invoice of invoices) {
     const report = buildProfitReport({
       from: '',
@@ -250,6 +373,7 @@ export function invoiceMargins(
       revenue: report.totals.revenue,
       cost: report.totals.cost,
       marginPercent: report.totals.netMarginPercent,
+      costStatus: report.totals.costStatus,
       costMissing: report.products.some((row) => row.costMissing),
     })
   }

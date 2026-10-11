@@ -93,6 +93,14 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     evidence: [{ file: SQL, text: 'journal_entries_source_key' }],
   },
   {
+    // The cost a sale is given late: one ledger entry per sale, keyed by a
+    // UUID derived from the invoice, and one consumption per invoice line.
+    routeFile: 'invoice.routes.ts',
+    route: 'POST /api/invoices/:id/cost',
+    mechanisms: ['unique-constraint'],
+    evidence: [{ file: SQL, text: 'journal_entries_source_key' }],
+  },
+  {
     routeFile: 'invoice.routes.ts',
     route: 'PATCH /api/invoices/:id',
     mechanisms: ['conditional-update', 'db-function'],

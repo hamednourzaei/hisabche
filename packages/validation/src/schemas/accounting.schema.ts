@@ -159,6 +159,15 @@ export const trialBalanceRowSchema = z.object({
   credit: z.number(),
   /** Signed on the account's natural side: positive means a normal balance. */
   balance: z.number(),
+  /**
+   * The closing balance on the side it actually sits — exactly one of the two
+   * is non-zero. A trial balance states a side, not a sign: «−10,220,000» on a
+   * cash account says nothing a bookkeeper can read.
+   */
+  debitBalance: z.number(),
+  creditBalance: z.number(),
+  /** The balance sits on the side opposite the account's nature (cash in credit). */
+  abnormal: z.boolean(),
 })
 
 export type TrialBalanceRow = z.infer<typeof trialBalanceRowSchema>

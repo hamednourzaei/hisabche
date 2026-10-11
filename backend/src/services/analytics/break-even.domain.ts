@@ -46,7 +46,8 @@ export interface BreakEvenRow {
   revenue: number
   cost: number
   /** revenue − cost. What each unit contributes toward the fixed costs. */
-  contribution: number
+  /** null when the product was sold with no recorded cost. */
+  contribution: number | null
   /** contribution / revenue, or null when there is no revenue. */
   contributionPercent: number | null
   /**
@@ -56,7 +57,7 @@ export interface BreakEvenRow {
    */
   breakEvenQuantity: number | null
   /** Why it is null, so the UI can say why rather than showing a blank. */
-  breakEvenReason: 'NO_REVENUE' | 'NO_CONTRIBUTION' | 'NO_FIXED_COSTS' | null
+  breakEvenReason: 'NO_REVENUE' | 'NO_CONTRIBUTION' | 'NO_FIXED_COSTS' | 'COST_UNKNOWN' | null
 }
 
 /**
@@ -98,6 +99,17 @@ export function breakEven(report: ProfitReport, fixedCosts: FixedCosts): BreakEv
   const isLowerBound = other === null
 
   const rows: BreakEvenRow[] = report.products.map((product) => {
+    // Revenue less a cost nobody recorded is not a contribution: it would make
+    // every unit look like pure profit and the break-even quantity far too low.
+    if (product.costMissing) {
+      return {
+        ...base(product),
+        contribution: null,
+        contributionPercent: null,
+        breakEvenQuantity: null,
+        breakEvenReason: 'COST_UNKNOWN',
+      }
+    }
     const contribution = round2(product.revenue - product.cost)
     const contributionPercent =
       product.revenue === 0 ? null : round2((contribution / product.revenue) * 100)
@@ -215,9 +227,12 @@ export function runScenario(report: ProfitReport, change: ScenarioChange): Scena
   const before = {
     revenue: baseTotals.revenue,
     cost: baseTotals.cost,
-    grossProfit: round2(baseTotals.grossProfit),
-    netProfit: baseTotals.netProfit,
+    grossProfit: round2(baseTotals.revenue - baseTotals.cost),
+    netProfit: round2(baseTotals.revenue - baseTotals.cost - baseTotals.salaries),
   }
+  // The recorded cost is only part of the cost: every figure below would be
+  // built on revenue that is not profit.
+  const costKnown = baseTotals.grossProfit !== null
 
   const factor = 1 + change.percent / 100
   let revenue = before.revenue
@@ -266,10 +281,13 @@ export function runScenario(report: ProfitReport, change: ScenarioChange): Scena
   //
   // Every OTHER change multiplies revenue, so it needs revenue to exist.
   const needsRevenue = change.kind !== 'salary_change'
-  const meaningful = needsRevenue ? before.revenue !== 0 : true
+  const hasBase = needsRevenue ? before.revenue !== 0 : true
+  const meaningful = costKnown && hasBase
   const reason = meaningful
     ? null
-    : 'no revenue in the period, so a percentage of it is not a number'
+    : !costKnown
+      ? 'the cost of part of the goods sold is not recorded, so the profit is not known'
+      : 'no revenue in the period, so a percentage of it is not a number'
 
   return {
     before,

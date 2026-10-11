@@ -49,6 +49,12 @@ const LEDGER: Record<string, Record<string, Way>> = {
       'DELETE /api/invoices/:id',
       'reverse-invoice.test.ts',
     ),
+    // The cost given to a sale late is its own entry; deleting the sale
+    // reverses it with the rest.
+    '/api/invoices/:id/cost': proven(
+      'DELETE /api/invoices/:id',
+      'cost-unknown-is-not-zero.test.ts',
+    ),
   },
   'payments.routes.ts': {
     '/': unproven('POST /:id/cancel'),
@@ -206,6 +212,6 @@ describe('every way forward has a decided way back', () => {
       for (const way of Object.values(ways)) counts[way.kind]++
     }
     // Written down so a change to the register is a change someone reads.
-    expect(counts).toEqual({ proven: 8, unproven: 14, none: 16, inert: 14 })
+    expect(counts).toEqual({ proven: 9, unproven: 14, none: 16, inert: 14 })
   })
 })

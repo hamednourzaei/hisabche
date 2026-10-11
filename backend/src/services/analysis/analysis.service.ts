@@ -138,6 +138,8 @@ export interface WorkingCapitalAnalysis {
   netWorkingCapital: number
   revenue: number
   costOfGoodsSold: number
+  /** False when part of what was sold has no recorded cost: `costOfGoodsSold` is then a part. */
+  costOfGoodsSoldKnown: boolean
   purchases: number
   /** Currencies that have documents in the range and are not in these figures. */
   otherCurrencies: string[]
@@ -603,6 +605,7 @@ export class AnalysisService {
         (Date.parse(`${input.to}T00:00:00Z`) - Date.parse(`${input.from}T00:00:00Z`)) / 86_400_000,
       ) + 1
 
+    const costKnown = report.totals.grossProfit !== null
     const metrics = workingCapital({
       revenueMinor: toMinor(report.totals.revenue),
       costOfGoodsSoldMinor: toMinor(report.totals.cost),
@@ -621,9 +624,13 @@ export class AnalysisService {
       daysInPeriod,
       dso: metrics.dso,
       dpo: metrics.dpo,
-      dio: metrics.dio,
-      cashConversionCycle: metrics.cashConversionCycle,
-      operatingCycle: metrics.operatingCycle,
+      // Days of stock are stock over the cost of what was sold. With part of
+      // that cost unrecorded the figure — and every cycle built on it — is
+      // not known, and is not shown as a number.
+      dio: costKnown ? metrics.dio : null,
+      cashConversionCycle: costKnown ? metrics.cashConversionCycle : null,
+      operatingCycle: costKnown ? metrics.operatingCycle : null,
+      costOfGoodsSoldKnown: costKnown,
       receivables: receivablesMinor / 100,
       payables: payablesMinor / 100,
       inventoryAtCost: inventoryMinor / 100,

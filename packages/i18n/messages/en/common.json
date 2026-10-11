@@ -2729,7 +2729,33 @@
       "balance": "Balance",
       "empty": {
         "title": "No trial balance data"
-      }
+      },
+      "asOfDate": "as of {date}",
+      "kind": "Unadjusted — account movements and balances from the general ledger",
+      "group": "Group",
+      "turnoverDebit": "Debit movement",
+      "turnoverCredit": "Credit movement",
+      "debitBalance": "Debit balance",
+      "creditBalance": "Credit balance",
+      "accounts": "{count} accounts",
+      "totalDebit": "Total debit",
+      "totalCredit": "Total credit",
+      "difference": "Difference",
+      "ledgerBalanced": "The ledger is in balance",
+      "currency": "Currency: {currency}",
+      "currencyNote": "The ledger is kept in the books currency only. Documents in another currency are not broken out here.",
+      "abnormal": "Unusual balance",
+      "abnormalHint": "This account’s balance is on the side opposite its nature; review its entries.",
+      "abnormalCount": "{count} accounts have an unusual balance",
+      "show": "Accounts shown",
+      "withBalance": "With a balance",
+      "allAccounts": "All",
+      "proofNote": "A balanced trial balance only shows that debits equal credits; it does not prove entries are classified correctly or complete.",
+      "unposted": "{count} invoices are not in the ledger yet; this trial balance does not include them.",
+      "unpostedUnknown": "The number of invoices not yet in the ledger could not be read.",
+      "allPosted": "Every invoice is in the ledger",
+      "lastEntry": "Last entry: {date}",
+      "noneWithBalance": "No account has a balance."
     },
     "balanceSheet": {
       "title": "Balance Sheet",
@@ -2806,7 +2832,7 @@
       "colCost": "Cost of goods",
       "colProfit": "Profit / loss",
       "colMargin": "Margin",
-      "costMissing": "No cost recorded; profit is overstated",
+      "costMissing": "Part of this product’s sales has no recorded cost; its profit cannot be calculated",
       "costEstimated": "Part of the cost is estimated",
       "empty": "No sales in this period",
       "totalRevenue": "Total net sales",
@@ -2816,7 +2842,11 @@
       "netProfit": "Net profit",
       "invoices": "invoices",
       "payrolls": "payslips",
-      "otherCurrencies": "Documents in other currencies are not in these totals"
+      "otherCurrencies": "Documents in other currencies are not in these totals",
+      "unknown": "Cannot be calculated",
+      "knownProfit": "Profit on sales with a recorded cost",
+      "uncostedRevenue": "Sales with no recorded cost",
+      "unknownNote": "Part of this period’s sales has no recorded cost of goods. Until it is recorded, gross and net profit cannot be calculated — sales are not profit."
     },
     "closingBalance": "Closing balance",
     "generalLedger": {
@@ -2875,6 +2905,19 @@
       "runsAt": "at",
       "scheduleSave": "Save run time",
       "scheduleSaved": "The automatic close will run at the new time."
+    },
+    "unvalued": {
+      "title": "Stock with no cost",
+      "ready": "{products} products ({quantity} units) are on the shelf with no recorded cost; their sales are booked with no cost of goods.",
+      "value": "Value at each product’s own purchase price: {value} {currency}.",
+      "blocked": "{products} products ({quantity} units) have no purchase price and are not valued. Enter the purchase price on the product.",
+      "action": "Value at the product’s purchase price",
+      "confirm": "From now on, sales of these products are costed at this price. Continue?",
+      "confirmAction": "Yes, value them",
+      "cancel": "Cancel",
+      "working": "Saving…",
+      "done": "{valued} products valued.",
+      "failed": "The stock could not be valued."
     }
   },
   "hr": {
@@ -7475,7 +7518,7 @@
     "onHand": "Still on hand",
     "revenue": "Sales revenue",
     "warning": {
-      "COST_MISSING": "Part of the sale has no recorded cost; this profit is overstated.",
+      "COST_MISSING": "Part of this sale has no recorded cost of goods; the profit of this invoice cannot be calculated.",
       "COST_ESTIMATED": "Part of the cost is estimated (not enough stock was recorded when it was sold).",
       "NOT_POSTED": "This invoice is not posted to the ledger yet."
     },
@@ -7491,7 +7534,23 @@
       "return": "Return",
       "csv": "File import",
       "manual": "Manual entry"
-    }
+    },
+    "unknown": "Cannot be calculated",
+    "costUnknown": "Unknown",
+    "costRecordedPart": "Recorded cost (part of the sale)",
+    "uncostedUnits": "Units with no cost",
+    "costAction": "Record the cost from the product’s purchase price",
+    "costActionHint": "The cost of this sale is taken from the purchase price on the product and posted as a separate journal entry. The invoice’s own entry is not changed.",
+    "costWorking": "Saving…",
+    "costResult": {
+      "costed": "The cost of goods for this invoice was recorded.",
+      "still_uncosted": "Some products on this invoice have no purchase price. Enter the purchase price on the product first.",
+      "nothing_to_cost": "There was nothing to record.",
+      "ledger_incomplete": "The cost was calculated but its entry was not posted to the ledger.",
+      "not_postable": "A cost cannot be recorded for this invoice."
+    },
+    "costFailed": "The cost could not be recorded.",
+    "profitUnknown": "Cannot be calculated"
   },
   "oauth": {
     "title": "Connected apps (OAuth)",
@@ -8102,7 +8161,8 @@
       "reasons": {
         "NO_REVENUE": "No sales",
         "NO_CONTRIBUTION": "Cannot break even at this price",
-        "NO_FIXED_COSTS": "No fixed cost recorded"
+        "NO_FIXED_COSTS": "No fixed cost recorded",
+        "COST_UNKNOWN": "No recorded cost"
       }
     },
     "cohorts": {

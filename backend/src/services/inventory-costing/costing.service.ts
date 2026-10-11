@@ -25,6 +25,7 @@ import {
   type ConsumptionPlan,
 } from './costing.domain'
 import { CostingRepository, domainErrorCode, type InventorySettings } from './costing.repository'
+import { findUnvaluedStock, type UnvaluedStock } from './unvalued-stock.domain'
 import type {
   CostingPort,
   CostingSourceType,
@@ -145,6 +146,92 @@ export class CostingService implements CostingPort {
     const rows = await this.repo.valuation(ctx.workspaceId, productId)
     await memoryCache.set(cacheKey, rows, 60)
     return rows
+  }
+
+  // ─── Stock with no cost behind it ─────────────────────────────────────────
+
+  /** What is on the shelf with no cost layer, and whether it can be valued. */
+  async getUnvaluedStock(ctx: TenancyContext): Promise<UnvaluedStock> {
+    return findUnvaluedStock(await this.repo.stockPositions(ctx.workspaceId))
+  }
+
+  /**
+   * Give unvalued stock its cost layer, at the purchase price on the product.
+   *
+   * An ACT, done by a person who has seen the list — never a background repair.
+   * It changes what every later sale of these units is reported to have cost.
+   * Products with no purchase price are left alone and reported back.
+   *
+   * Sales already booked without a cost are NOT touched: each is costed by its
+   * own explicit step (InvoiceService#costUncostedSale).
+   */
+  async valueUnvaluedStock(ctx: TenancyContext): Promise<{
+    valued: number
+    quantity: number
+    value: number
+    blocked: UnvaluedStock['blocked']
+  }> {
+    if (ctx.role !== 'owner' && ctx.role !== 'manager') {
+      throw new ConflictError('INVENTORY_SETTINGS_FORBIDDEN')
+    }
+    const found = await this.getUnvaluedStock(ctx)
+    const day = new Date().toISOString().slice(0, 10)
+
+    let valued = 0
+    let quantity = 0
+    let value = 0
+    for (const row of found.rows) {
+      if (row.status !== 'ready' || row.unitCost === null) continue
+      await this.recordReceipt(ctx, {
+        productId: row.productId,
+        warehouseId: null,
+        quantity: row.quantity,
+        unitCost: row.unitCost,
+        entryDate: day,
+        sourceType: 'opening',
+        sourceId: row.productId,
+        // The gap is part of the key: the same gap valued twice (a double
+        // click) is one layer, and a later, different gap is a new one.
+        sourceLine: `unvalued:${day}:${row.quantity}`,
+      })
+      valued += 1
+      quantity += row.quantity
+      value += row.value ?? 0
+    }
+    return { valued, quantity, value: roundMoney(value), blocked: found.blocked }
+  }
+
+  /**
+   * Make sure units that were SOLD with no cost have a layer to draw it from.
+   *
+   * Layers beyond what the shelf holds are units that already left: they cover
+   * the sale as they are. What they do not cover gets a layer of its own at the
+   * product's purchase price, dated the day of the sale. With no purchase price
+   * nothing is written and the sale stays uncosted — unknown, not zero.
+   */
+  async coverSoldUnits(
+    ctx: TenancyContext,
+    request: { productId: string; quantity: number; entryDate: string; sourceLine: string },
+  ): Promise<{ covered: boolean }> {
+    const position = await this.repo.stockPosition(ctx.workspaceId, request.productId)
+    if (!position) return { covered: false }
+
+    const surplus = Math.max(0, position.layeredQuantity - Math.max(0, position.quantity))
+    const short = Math.round((request.quantity - surplus) * 10_000) / 10_000
+    if (short <= 0) return { covered: true }
+    if (!(position.buyPrice > 0)) return { covered: false }
+
+    await this.recordReceipt(ctx, {
+      productId: request.productId,
+      warehouseId: null,
+      quantity: short,
+      unitCost: position.buyPrice,
+      entryDate: request.entryDate,
+      sourceType: 'opening',
+      sourceId: request.productId,
+      sourceLine: request.sourceLine,
+    })
+    return { covered: true }
   }
 
   // ─── Queries ──────────────────────────────────────────────────────────────

@@ -72,6 +72,11 @@ export interface TrialBalance {
   credit: number
   /** Signed on the account's natural side: negative is a real reversed balance. */
   balance: number
+  /** The closing balance on the side it sits; exactly one is non-zero. */
+  debitBalance: number
+  creditBalance: number
+  /** On the side opposite the account's nature — worth a look, not an error. */
+  abnormal: boolean
 }
 
 /**
@@ -84,8 +89,16 @@ export interface TrialBalanceResult {
   totalDebit: number
   totalCredit: number
   difference: number
+  totalDebitBalance: number
+  totalCreditBalance: number
+  accountsWithBalance: number
+  abnormalAccounts: number
   fromDate: string | null
   toDate: string
+  /** The books currency: the one currency every figure here is in. */
+  currency: string
+  /** null in a field means it could not be read — not zero, not «never». */
+  books: { unpostedInvoices: number | null; lastPostedAt: string | null }
 }
 
 export interface BalanceSheet {
@@ -354,14 +367,25 @@ export function useIncomeStatement(from: string, to: string, branchId: string | 
 // (GET /accounting/profit-report). Under `payments` so every invoice and
 // payment mutation — which invalidate paymentKeys.all — refreshes it.
 
+/**
+ * How much is known about what the goods cost. `partial` and `unknown` mean
+ * there is NO profit figure — unknown is not zero.
+ */
+export type CostStatus = 'none' | 'known' | 'estimated' | 'partial' | 'unknown'
+
 export interface ProductProfitRow {
   productId: string | null
   name: string
   quantity: number
   revenue: number
+  /** The cost that is recorded; only part of the cost when `costMissing`. */
   cost: number
-  profit: number
+  /** null when the cost is not fully known. */
+  profit: number | null
   marginPercent: number | null
+  costStatus: CostStatus
+  /** Units sold with no cost behind them. */
+  uncostedQuantity: number
   costMissing: boolean
   costEstimated: boolean
 }
@@ -374,9 +398,15 @@ export interface ProfitReport {
   totals: {
     revenue: number
     cost: number
-    grossProfit: number
+    costStatus: CostStatus
+    /** Net sales of the products whose cost is not fully known. */
+    uncostedRevenue: number
+    /** Profit over the products whose cost IS known. */
+    knownGrossProfit: number
+    /** null when any sold product has no known cost. */
+    grossProfit: number | null
     salaries: number
-    netProfit: number
+    netProfit: number | null
     netMarginPercent: number | null
     invoiceCount: number
     payrollCount: number

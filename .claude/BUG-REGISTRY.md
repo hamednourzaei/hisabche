@@ -1111,3 +1111,39 @@ debug APK بدون JS ی جاسازی‌شده است و از Metro می‌خو�
 - **Sales Chart allZero Empty State**: A 7-day period with no sales showed an empty state instead of a zero-value line. Fixed by removing the !hasData || allZero early return in sales-chart.tsx.
 - **Settings Storage Quota Scare**: SettingsPage showed a 10.7 GB "Quota" read from 
 avigator.storage.estimate(). Removed the quota display entirely to prevent user alarm; now it only shows actual bytes used.
+
+## BUG-109 — فاکتور «بهای تمام‌شده ۰ · سود = فروش · حاشیه ۱۰۰٪» (۱۱ اکتبر، INV-000077)
+
+**ریشه (دو لایه):** (۱) لایه‌ی بها فقط از فاکتور خرید و دریافت سفارش خرید نوشته می‌شد؛ کالایی که با موجودی و قیمت خرید
+ساخته می‌شد هیچ لایه‌ای نداشت، پس فروشش `INVENTORY_INSUFFICIENT_STOCK` می‌گرفت و بدون consumption ثبت می‌شد.
+(۲) `buildProfitReport` نبودِ consumption را `cost: 0` برمی‌گرداند و سود = فروش.
+**رفع:** `CostStatus` و سود `null`؛ `ProductService#valueOpeningStock`؛ `GET/POST /api/inventory/unvalued[/value]`؛
+`POST /api/invoices/:id/cost`. **گارد:** `cost-unknown-is-not-zero.test.ts` (ماتریس «راه ورود موجودی × فروش»).
+**چرا تست‌ها ندیدند:** fixtureها همیشه با خرید شروع می‌شدند و تنها تستِ «بدون بها» خودِ صفر را تأیید می‌کرد.
+
+## BUG-110 — تراز آزمایشی مانده را علامت‌دار نشان می‌داد («−۱۰٬۲۲۰٬۰۰۰» برای صندوق) (۱۱ اکتبر)
+
+**رفع:** `debitBalance` / `creditBalance` / `abnormal` از سرور؛ صفحه دو ستون مانده دارد و جمعشان را. **گارد:** `trial-balance-sides.test.ts`.
+
+## BUG-111 — سربه‌سر، سناریو، مقایسه با هم‌ترازها و DIO روی سودِ ساخته از بهای ناقص (۱۱ اکتبر)
+
+`contribution = revenue − 0` تعداد سربه‌سر را خیلی کم نشان می‌داد. **رفع:** `COST_UNKNOWN`، `meaningful: false`، `null`.
+**گارد:** همان فایل + اسکن `profit|marginPercent|contribution ?? 0` در `unknown-is-not-zero.test.ts`.
+
+## BUG-112 — «سود دوره» دو فرمول داشت (۱۱ اکتبر)
+
+`insights.periodTotals` جمع `invoices.total` (با مالیات، همه‌ی ارزها با هم) را منهای همه‌ی consumptionها می‌کرد، کنار
+`buildProfitReport`. **رفع:** همان گزارش را به ارز دفاتر صدا می‌زند.
+
+## BUG-113 — «از تاریخ / از تاریخ» در انتخاب بازه (۱۱ اکتبر)
+
+placeholder همان برچسبِ بالای فیلد بود. **رفع:** `DateRangePicker` placeholder عمومی می‌گیرد.
+
+## BUG-114 — کلید متنی برای `journal_entries.source_id` که `uuid` است (۱۱ اکتبر، قبل از انتشار گرفته شد)
+
+دیتابیس ساختگیِ تست هر رشته‌ای را می‌پذیرد. **رفع:** `lateCostKey` یک UUID مشتق می‌سازد؛ تست شکلش را می‌سنجد.
+⚠️ `repost.service.ts:232` همین اشتباه را دارد و **رفع نشده** (مبحث دیتابیس، N1).
+
+## BUG-115 — فیلتر روی `invoices.deleted_at` که وجود ندارد (۱۱ اکتبر، همان روز)
+
+`booksStatus` آن را اضافه کرده بود؛ شمارش همیشه «خوانده نشد» می‌شد. **گارد موجود** `no-phantom-deleted-at.test.ts` گرفت.

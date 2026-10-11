@@ -31,7 +31,9 @@ export const SingleDatePicker = memo(function SingleDatePicker({
         value={value}
         onChange={onChange}
         locale={locale}
-        placeholder={label || t('accounting.dateRange.date')}
+        // The label is already above the field; repeating it inside read as
+        // «از تاریخ / از تاریخ».
+        placeholder={t('accounting.dateRange.date')}
         className="h-10 text-sm"
       />
     </div>

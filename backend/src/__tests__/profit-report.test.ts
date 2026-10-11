@@ -90,6 +90,9 @@ describe('profit report', () => {
     expect(report.totals).toEqual({
       revenue: 1000,
       cost: 600,
+      costStatus: 'known',
+      uncostedRevenue: 0,
+      knownGrossProfit: 400,
       grossProfit: 400,
       salaries: 250,
       netProfit: 150,
@@ -107,7 +110,19 @@ describe('profit report', () => {
       consumptions: [],
       payrolls: [],
     })
-    expect(report.products[0]).toMatchObject({ cost: 0, costMissing: true })
+    // Unknown is not zero: no profit, no margin (INV-000077).
+    expect(report.products[0]).toMatchObject({
+      cost: 0,
+      costMissing: true,
+      costStatus: 'unknown',
+      profit: null,
+      marginPercent: null,
+    })
+    expect(report.totals).toMatchObject({
+      grossProfit: null,
+      netProfit: null,
+      netMarginPercent: null,
+    })
   })
 
   it('two lines of one product on one invoice count its cost once', () => {
@@ -157,6 +172,7 @@ describe('till margins', () => {
       revenue: 1000,
       cost: 750,
       marginPercent: 25,
+      costStatus: 'known',
       costMissing: false,
     })
     expect(margins.get('i2')?.costMissing).toBe(true)

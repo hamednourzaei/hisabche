@@ -38,6 +38,22 @@ export interface PeriodTotals {
   revenue: number
   costOfGoodsSold: number
   invoiceCount: number
+  /**
+   * False when part of what was sold has no recorded cost. The profit is then
+   * NOT revenue − costOfGoodsSold; it is not known.
+   */
+  costKnown?: boolean | undefined
+  /** The one currency these figures are in. */
+  currency?: string | undefined
+}
+
+/** The profit, or null when the cost behind it is incomplete. */
+export function knownGrossProfit(totals: PeriodTotals): number | null {
+  return totals.costKnown === false ? null : grossProfit(totals)
+}
+
+export function knownGrossMargin(totals: PeriodTotals): number | null {
+  return totals.costKnown === false ? null : grossMargin(totals)
 }
 
 export function grossProfit(totals: PeriodTotals): number {

@@ -6,12 +6,13 @@
 // only then is the chain assembled — it reads every cost layer behind a sale.
 // ============================================
 
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { apiClient } from '../lib/client'
 import { asList } from '../lib/as-list'
 import { getActiveWorkspaceId } from '../lib/active-workspace'
 import { useAuthReady } from './useAuthReady'
+import type { CostStatus } from './accounting'
 
 export interface EvidenceLayer {
   sourceType: string
@@ -27,7 +28,9 @@ export interface InvoiceEvidence {
   discount: number
   netSales: number
   cost: number
-  grossProfit: number
+  costStatus: CostStatus
+  /** null when the cost of what was sold is not fully known. */
+  grossProfit: number | null
   marginPercent: number | null
   lines: Array<{
     productId: string | null
@@ -36,7 +39,9 @@ export interface InvoiceEvidence {
     grossRevenue: number
     netRevenue: number
     cost: number
-    profit: number
+    profit: number | null
+    costStatus: CostStatus
+    uncostedQuantity: number
     costMissing: boolean
     costEstimated: boolean
     sources: Array<{
@@ -68,7 +73,8 @@ export interface ProductJourney {
   }
   onHand: { quantity: number; value: number }
   revenue: number
-  profit: number
+  /** null when part of what was sold has no recorded cost. */
+  profit: number | null
 }
 
 export const evidenceKeys = {
@@ -128,5 +134,89 @@ export function useProductJourney(
     },
     enabled: ready && requested && !!productId,
     retry: false,
+  })
+}
+
+/** What `POST /invoices/:id/cost` answers. */
+export interface CostInvoiceResult {
+  status: 'costed' | 'nothing_to_cost' | 'still_uncosted' | 'not_postable' | 'ledger_incomplete'
+  cost: number
+  posted: number
+  unposted: number
+  uncostedProducts: string[]
+}
+
+/**
+ * Give a sale that was booked with no cost of goods its cost, from the
+ * product's purchase price. An act the person presses; the server posts it as
+ * its own journal entry, once.
+ */
+export function useCostInvoice() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (invoiceId: string) =>
+      (await apiClient.post(`/invoices/${invoiceId}/cost`)).data as CostInvoiceResult,
+    onSuccess: async (_result, invoiceId) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: evidenceKeys.invoice(invoiceId) }),
+        queryClient.invalidateQueries({ queryKey: ['accounting'] }),
+        queryClient.invalidateQueries({ queryKey: ['payments'] }),
+        queryClient.invalidateQueries({ queryKey: unvaluedStockKey }),
+      ])
+    },
+  })
+}
+
+// ─── Stock with no cost behind it ────────────────────────────────────────────
+
+export interface UnvaluedStock {
+  rows: Array<{
+    productId: string
+    name: string
+    quantity: number
+    unitCost: number | null
+    value: number | null
+    status: 'ready' | 'no_buy_price'
+  }>
+  ready: { products: number; quantity: number; value: number }
+  blocked: { products: number; quantity: number }
+}
+
+const unvaluedStockKey = ['accounting', 'unvalued-stock'] as const
+
+/** Stock on the shelf with no cost layer. Read fresh: it decides an action. */
+export function useUnvaluedStock(requested = true) {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: unvaluedStockKey,
+    queryFn: async () => {
+      const body = (await apiClient.get('/inventory/unvalued')).data as UnvaluedStock
+      return { ...body, rows: asList<UnvaluedStock['rows'][number]>(body?.rows) }
+    },
+    enabled: ready && requested,
+    staleTime: 0,
+    retry: false,
+    meta: { persist: false },
+  })
+}
+
+/** Value that stock at each product's own purchase price. */
+export function useValueUnvaluedStock() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () =>
+      (await apiClient.post('/inventory/unvalued/value')).data as {
+        valued: number
+        quantity: number
+        value: number
+        blocked: UnvaluedStock['blocked']
+      },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: unvaluedStockKey }),
+        queryClient.invalidateQueries({ queryKey: ['accounting'] }),
+        queryClient.invalidateQueries({ queryKey: ['payments'] }),
+      ])
+    },
   })
 }

@@ -19,6 +19,7 @@ import { mapProduct } from '../utils/product.mapper'
 import { memoryCache } from '../utils/pagination'
 import type { TenancyContext } from './tenancy.service'
 import { logBusinessEvent } from './event-log.service'
+import { costing } from './inventory-costing'
 import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
 import {
   asReplay,
@@ -356,6 +357,15 @@ export class ProductService {
       }
     }
 
+    // The opening stock's COST, beside its quantity. Without this layer every
+    // sale of these units was booked with no cost of goods (INV-000077).
+    const openingQuantity = Number(data.quantity) || 0
+    if (product && openingQuantity > 0) {
+      await this.valueOpeningStock(ctx, String((product as { id: string }).id), data.buyPrice, [
+        { warehouseId: openingWarehouseId, quantity: openingQuantity },
+      ])
+    }
+
     await this.invalidateWorkspaceCache(workspaceId)
 
     logBusinessEvent({
@@ -395,6 +405,47 @@ export class ProductService {
     // the product has never been stocked, so a true replay changes nothing.
     await this.recordOpeningStock(ctx, String((made as { id: string }).id), entries)
     return made
+  }
+
+  /**
+   * Write the cost layer of a product's opening stock — what was paid for the
+   * units it starts with, so a sale of them has a cost of goods.
+   *
+   * ⚠️ ONLY WHEN THE PRICE IS KNOWN. A product entered without a purchase price
+   * gets NO layer: a layer at zero would state «these cost nothing», and the
+   * sale would read as a confirmed 100% margin. With no layer the sale's cost
+   * is reported as unknown, which is what it is.
+   *
+   * A failure here does not undo the product: the units then show up in the
+   * unvalued-stock list (CostingService#getUnvaluedStock), where they can be
+   * valued. It is logged, never swallowed into a silent zero.
+   */
+  private async valueOpeningStock(
+    ctx: TenancyContext,
+    productId: string,
+    buyPrice: unknown,
+    entries: ReadonlyArray<{ warehouseId: string | null; quantity: number }>,
+  ): Promise<void> {
+    const unitCost = Number(buyPrice) || 0
+    if (unitCost <= 0) return
+    const entryDate = new Date().toISOString().slice(0, 10)
+    for (const entry of entries) {
+      if (!(entry.quantity > 0)) continue
+      try {
+        await costing.recordReceipt(ctx, {
+          productId,
+          warehouseId: entry.warehouseId,
+          quantity: entry.quantity,
+          unitCost,
+          entryDate,
+          sourceType: 'opening',
+          sourceId: productId,
+          sourceLine: entry.warehouseId ?? 'none',
+        })
+      } catch (err) {
+        console.error(`[ProductService] opening cost layer failed for product ${productId}:`, err)
+      }
+    }
   }
 
   /** Every warehouse named is a live one of THIS business; no quantity is negative. */
@@ -445,7 +496,7 @@ export class ProductService {
 
     const { data: product, error: readError } = await supabase
       .from('products')
-      .select('id, quantity')
+      .select('id, quantity, buy_price')
       .eq('id', productId)
       .eq('workspace_id', ctx.workspaceId)
       .maybeSingle()
@@ -479,6 +530,13 @@ export class ProductService {
       })),
     )
     if (error) throw new DatabaseError('Failed to record the opening stock', error)
+
+    await this.valueOpeningStock(
+      ctx,
+      productId,
+      (product as { buy_price?: unknown }).buy_price,
+      wanted.map((entry) => ({ warehouseId: entry.warehouseId, quantity: entry.quantity })),
+    )
 
     await this.invalidateWorkspaceCache(ctx.workspaceId)
     return { written: true }
