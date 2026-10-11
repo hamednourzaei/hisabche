@@ -10,8 +10,9 @@
 //      fetched together.
 //   3. The scene runs only while the canvas is on screen and the tab is visible.
 //
-// No WebGL, or a context that fails to start: the canvas stays empty and the
-// page is exactly as readable as before. There is no error state to show.
+// No WebGL, a context that fails to start, or one that is lost later: the
+// canvas stays empty and `onUnavailable` tells the page, which shows its own
+// version of the picture. Nothing throws and nothing is logged.
 
 import { useEffect, useRef } from 'react'
 
@@ -38,6 +39,11 @@ export interface SceneCanvasProps {
    * horizontal lane, a set of stations) passes its own reader.
    */
   progress?: (() => number) | undefined
+  /**
+   * Called when there will be no picture: no WebGL on this device, or the
+   * graphics context was lost. The page shows its own version of the story.
+   */
+  onUnavailable?: (() => void) | undefined
   className?: string | undefined
 }
 
@@ -65,15 +71,17 @@ function whenIdle(run: () => void): () => void {
   return () => window.clearTimeout(id)
 }
 
-export function SceneCanvas({ label, load, progress, className }: SceneCanvasProps) {
+export function SceneCanvas({ label, load, progress, onUnavailable, className }: SceneCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   // Read through a ref so a new function identity never rebuilds the renderer.
   const progressRef = useRef(progress)
   const loadRef = useRef(load)
+  const unavailableRef = useRef(onUnavailable)
 
   useEffect(() => {
     progressRef.current = progress
     loadRef.current = load
+    unavailableRef.current = onUnavailable
   })
 
   useEffect(() => {
@@ -86,7 +94,11 @@ export function SceneCanvas({ label, load, progress, className }: SceneCanvasPro
     const cancelIdle = whenIdle(() => {
       void Promise.all([import('./runtime'), loadRef.current()])
         .then(([runtimeModule, sceneModule]) => {
-          if (cancelled || !runtimeModule.isWebGLAvailable()) return
+          if (cancelled) return
+          if (!runtimeModule.isWebGLAvailable()) {
+            unavailableRef.current?.()
+            return
+          }
 
           const runtime = runtimeModule.createSceneRuntime(canvas)
           const draw = sceneModule.default(runtime)
@@ -117,16 +129,26 @@ export function SceneCanvas({ label, load, progress, className }: SceneCanvasPro
           })
           watcher.observe(canvas)
           document.addEventListener('visibilitychange', wake)
+          // The driver took the context away (memory pressure, a sleeping GPU):
+          // stop drawing and let the page tell the story itself.
+          const onLost = (event: Event) => {
+            event.preventDefault()
+            onScreen = false
+            unavailableRef.current?.()
+          }
+          canvas.addEventListener('webglcontextlost', onLost)
 
           stop = () => {
             watcher.disconnect()
             document.removeEventListener('visibilitychange', wake)
+            canvas.removeEventListener('webglcontextlost', onLost)
             if (frame !== 0) cancelAnimationFrame(frame)
             runtime.dispose()
           }
         })
         .catch(() => {
-          // The scene is decoration over a page that already reads without it.
+          // The scene could not be built; the page tells the story itself.
+          unavailableRef.current?.()
         })
     })
 

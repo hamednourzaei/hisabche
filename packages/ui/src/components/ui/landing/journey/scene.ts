@@ -27,6 +27,7 @@
 // only when what it shows changes.
 
 import * as THREE from 'three'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 
 import type { SceneSetup } from '../three/scene-canvas'
@@ -339,6 +340,32 @@ const setup: SceneSetup = (runtime) => {
   scene.add(pool, pool.target)
   const rim = new THREE.PointLight(busy, 2.2, 8, 0)
   if (!mobile) scene.add(rim)
+  // On a desktop with cores to spare: real shadows from the key light, and a
+  // room for the glossy floor and the metal to reflect. The environment is
+  // built here from a few boxes — nothing is downloaded.
+  const rich = runtime.mode === 'desktop' && (navigator.hardwareConcurrency ?? 4) > 4
+  if (rich) {
+    const prefilter = new THREE.PMREMGenerator(renderer)
+    const room = new RoomEnvironment()
+    scene.environment = prefilter.fromScene(room, 0.04).texture
+    scene.environmentIntensity = 0.28
+    room.dispose()
+    prefilter.dispose()
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    key.castShadow = true
+    key.shadow.mapSize.set(1024, 1024)
+    key.shadow.bias = -0.0006
+    key.shadow.normalBias = 0.03
+    // A tight box round the station being worked at, not the whole hall.
+    key.shadow.camera.left = -9
+    key.shadow.camera.right = 9
+    key.shadow.camera.top = 9
+    key.shadow.camera.bottom = -9
+    key.shadow.camera.near = 1
+    key.shadow.camera.far = 40
+    scene.add(key.target)
+  }
 
   const at = <T extends THREE.Object3D>(object: T, x: number, y: number, z: number): T => {
     object.position.set(x, y, z)
@@ -396,7 +423,8 @@ const setup: SceneSetup = (runtime) => {
     color: base.clone().multiplyScalar(0.2),
     map: soft,
     transparent: true,
-    opacity: 0.55,
+    // Where real shadows fall, the soft disc is only a touch of contact.
+    opacity: rich ? 0.28 : 0.55,
     depthWrite: false,
   })
   const flat = new THREE.PlaneGeometry(1, 1)
@@ -620,7 +648,26 @@ const setup: SceneSetup = (runtime) => {
   repeat(cube, matte(trim), legs)
   repeat(cube, matte(dark), monitors)
   repeat(cube, matte(dark, 0.9), beams)
-  repeat(flat, lit(lamp), lamps)
+  const lampMaterial = lit(lamp.clone())
+  repeat(flat, lampMaterial, lamps)
+  // When the connection comes back, a sheet of light crosses the hall in the
+  // direction the page reads.
+  const wave = new THREE.Mesh(
+    flat,
+    new THREE.MeshBasicMaterial({
+      color: done,
+      transparent: true,
+      opacity: 0.2,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    }),
+  )
+  wave.rotation.y = Math.PI / 2
+  wave.scale.set(length, H, 1)
+  wave.visible = false
+  scene.add(at(wave, 0, H / 2, centre))
+  let wallMaterial: THREE.MeshBasicMaterial | null = null
 
   // The kinds of business the product is built for, one to a board. All the
   // names are painted on a single texture and all the boards are a single
@@ -684,6 +731,7 @@ const setup: SceneSetup = (runtime) => {
     wallBoards.setIndex(order)
     const boardMaterial = lit(grey.setScalar(0.8).clone(), sheet)
     boardMaterial.side = THREE.DoubleSide
+    wallMaterial = boardMaterial
     scene.add(new THREE.Mesh(wallBoards, boardMaterial))
   }
 
@@ -931,6 +979,7 @@ const setup: SceneSetup = (runtime) => {
     showing: number
   }
   const boards: Board[] = []
+  const boardFrames: (THREE.Group | undefined)[] = []
   const anisotropy = renderer.capabilities.getMaxAnisotropy()
   for (let index = 0; index < stations; index++) {
     const group = new THREE.Group()
@@ -1119,6 +1168,7 @@ const setup: SceneSetup = (runtime) => {
       // Tipped toward the road, as a board hung above head height is.
       frame.rotation.x = 0.12
       group.add(at(frame, 0, 5.02, -1.86))
+      boardFrames[index] = frame
       boards.push({ model, ctx: canvas.getContext('2d'), texture, showing: -1 })
       own = texture
     }
@@ -1218,6 +1268,29 @@ const setup: SceneSetup = (runtime) => {
   // Where each clerk's head is, for turning it to the agent and for the bubble.
   scene.updateMatrixWorld(true)
   const heads = clerks.map((clerk) => clerk.head.getWorldPosition(new THREE.Vector3()))
+  // The four corners of each station's board, for checking that the carried
+  // sheet is not standing in front of it.
+  const boardCorners = Array.from({ length: stations }, (_, index) => {
+    const frame = boardFrames[index]
+    if (!frame) return undefined
+    return [
+      new THREE.Vector3(-1.84, -1.15, 0.08),
+      new THREE.Vector3(1.84, -1.15, 0.08),
+      new THREE.Vector3(1.84, 1.15, 0.08),
+      new THREE.Vector3(-1.84, 1.15, 0.08),
+    ].map((corner) => frame.localToWorld(corner))
+  })
+  if (rich) {
+    for (const root of [agent.root, ...machines.map((machine) => machine.group)]) {
+      root.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
+          child.castShadow = !child.material.transparent
+          child.receiveShadow = true
+        }
+      })
+    }
+    floor.receiveShadow = true
+  }
   // An arrow over the head of whoever is speaking, so the bubble is plainly theirs.
   const pointerShape = new THREE.ConeGeometry(0.17, 0.36, 14)
   const pointerMaterial = lit(busy.clone())
@@ -1364,6 +1437,57 @@ const setup: SceneSetup = (runtime) => {
   /** The projection as it was last set, so it is set again only when it changes. */
   const view = { width: 0, height: 0, shift: 0, lift: 0 }
   const bubble = { on: false, x: -1, y: -1 }
+  /** A rectangle on screen, in the camera's own −1…1 units. */
+  interface Box {
+    x0: number
+    x1: number
+    y0: number
+    y1: number
+  }
+  const probe = new THREE.Vector3()
+  const boardBox: Box = { x0: 0, x1: 0, y0: 0, y1: 0 }
+  const sheetBox: Box = { x0: 0, x1: 0, y0: 0, y1: 0 }
+  const open = (box: Box) => {
+    box.x0 = Infinity
+    box.y0 = Infinity
+    box.x1 = -Infinity
+    box.y1 = -Infinity
+  }
+  /** Grow `box` to take in a point of the scene as the camera sees it. */
+  const take = (box: Box, x: number, y: number, z: number) => {
+    probe.set(x, y, z).project(camera)
+    box.x0 = Math.min(box.x0, probe.x)
+    box.x1 = Math.max(box.x1, probe.x)
+    box.y0 = Math.min(box.y0, probe.y)
+    box.y1 = Math.max(box.y1, probe.y)
+  }
+  /** How much of the board the sheet covers, 0 → 1, with the sheet at `scale`. */
+  const covered = (corners: THREE.Vector3[], turn: number, scale: number) => {
+    open(boardBox)
+    for (const corner of corners) take(boardBox, corner.x, corner.y, corner.z)
+    open(sheetBox)
+    const dx = Math.cos(turn) * 0.75 * scale
+    const dz = -Math.sin(turn) * 0.75 * scale
+    const dy = SHEET_HALF * scale
+    take(sheetBox, here.x - dx, here.y - dy, here.z - dz)
+    take(sheetBox, here.x + dx, here.y - dy, here.z + dz)
+    take(sheetBox, here.x + dx, here.y + dy, here.z + dz)
+    take(sheetBox, here.x - dx, here.y + dy, here.z - dz)
+    const wide = Math.min(boardBox.x1, sheetBox.x1) - Math.max(boardBox.x0, sheetBox.x0)
+    const tall = Math.min(boardBox.y1, sheetBox.y1) - Math.max(boardBox.y0, sheetBox.y0)
+    const area = (boardBox.x1 - boardBox.x0) * (boardBox.y1 - boardBox.y0)
+    return wide > 0 && tall > 0 && area > 0 ? (wide * tall) / area : 0
+  }
+  /** The sheet is drawn smaller while it would otherwise stand in front of the board. */
+  let shrink = 1
+  let shrinkWanted = 1
+  let sinceCheck = 1
+  /** The most of the active board the sheet has covered since that station began. */
+  let peak = 0
+  let peakOf = -1
+  /** 0: connected. 1: not — the hall's own lights go amber and low. */
+  let dim = 0
+  let ticks = 0
   let story = -1
   let before = 0
   /** +1 while the visitor moves on through the story, −1 while they go back. */
@@ -1683,6 +1807,25 @@ const setup: SceneSetup = (runtime) => {
     spill.position.x = pool.target.position.x
     spill.position.z = pool.target.position.z
     rim.position.set(ax, 2.7, az + 1.4)
+    if (rich) {
+      key.target.position.copy(pool.target.position)
+      key.position.set(pool.target.position.x + 5 * flow, 13, pool.target.position.z + 7)
+    }
+
+    // The connection. Without it the hall's lamps and wall boards go amber and
+    // low — the stations keep working. When it returns a sheet of light
+    // crosses the hall and everything is as it was.
+    const back = snap.link === 'restoring' ? clamp01((t - GATE_AT) / (ARRIVE_AT - GATE_AT)) : 0
+    const dimWanted = snap.link === 'offline' ? 1 : snap.link === 'restoring' ? 1 - back : 0
+    dim += (dimWanted - dim) * drift
+    lampMaterial.color
+      .copy(lamp)
+      .lerp(warm, dim * 0.75)
+      .multiplyScalar(1 - dim * 0.45)
+    if (wallMaterial) wallMaterial.color.setScalar(0.8).lerp(warm, dim * 0.6)
+    // No sweep under reduced motion: the hall is simply connected again.
+    wave.visible = snap.link === 'restoring' && time > 0
+    wave.position.x = flow * hall.halfWidth * (back * 2 - 1)
 
     // ── Camera ──
     // Each beat has an authored shot. The frame is fitted to the part of the
@@ -1693,6 +1836,13 @@ const setup: SceneSetup = (runtime) => {
     const height = canvas.clientHeight || 1
     const aspect = width / height
     const portrait = aspect < 0.8
+    // A tall narrow screen sees through a wider lens, so the station, its
+    // board and the people at it all fit without the camera backing far away.
+    const lens = portrait ? 58 : 45
+    if (camera.fov !== lens) {
+      camera.fov = lens
+      view.width = 0
+    }
     const free = journeyState.free
     const room = free.bottom - free.top
     let middle = (free.top + free.bottom) / 2
@@ -1716,9 +1866,19 @@ const setup: SceneSetup = (runtime) => {
         wantAim.set(ax, 2.5, az - 2.5)
       } else {
         shotPose(shot, (t - GATE_AT) / (RECORDED_AT - GATE_AT), portrait, framing)
-        const wide = fitDistance(mobile ? 4.3 : 5.4, 5.3, camera.fov, aspect, room)
+        // Once the stock station has recorded, the story is at its dock: the
+        // camera looks along to where the van is loaded and drives off.
+        const dockside = id === 'stock' && t >= RECORDED_AT
+        const pan = dockside ? (portrait ? 3.4 : 1.6) : 0
+        const wide = fitDistance(
+          (mobile ? 4.3 : 5.4) + (dockside && portrait ? 3 : 0),
+          5.3,
+          camera.fov,
+          aspect,
+          room,
+        )
         eyeOffset(framing, Math.min(MAX_DISTANCE, Math.max(framing.distance, wide)), road, offset)
-        wantAim.set(stop.x, 3.75, stop.z - 0.7)
+        wantAim.set(stop.x - road * pan, 3.75 - (dockside && portrait ? 0.9 : 0), stop.z - 0.7)
       }
     } else {
       // The core has a shot of its own: straight on, close, nothing between
@@ -1750,6 +1910,42 @@ const setup: SceneSetup = (runtime) => {
       view.height = height
     }
 
+    // The sheet must not stand in front of the board it is being recorded on.
+    // Ten times a second (not every frame) the two are projected; if the
+    // sheet would cover more than a tenth of the board it is drawn smaller,
+    // and grows back only once it is well clear.
+    sinceCheck += step
+    if (time === 0 || sinceCheck >= 0.1) {
+      sinceCheck = 0
+      const corners = snap.station !== null && t >= GATE_AT ? boardCorners[snap.station] : undefined
+      if (corners) {
+        camera.updateMatrixWorld()
+        const full = covered(corners, turn, size)
+        if (full > 0.1) shrinkWanted = 0.6
+        else if (full < 0.04) shrinkWanted = 1
+        if (peakOf !== snap.station) {
+          peakOf = snap.station ?? -1
+          peak = 0
+        }
+        peak = Math.max(peak, covered(corners, turn, size * (time === 0 ? shrinkWanted : shrink)))
+      } else {
+        shrinkWanted = 1
+      }
+    }
+    shrink += (shrinkWanted - shrink) * drift
+    invoice.scale.setScalar(size * shrink)
+
+    // Once a second, what the renderer is doing — for measuring, not for show.
+    if (++ticks % 60 === 1) {
+      const told = renderer.domElement.dataset
+      told.calls = String(renderer.info.render.calls)
+      told.triangles = String(renderer.info.render.triangles)
+      told.textures = String(renderer.info.memory.textures)
+      told.geometries = String(renderer.info.memory.geometries)
+      told.cover = peak.toFixed(3)
+      told.beat = String(beat)
+    }
+
     // The speech bubble stands over the head of whoever is speaking.
     const element = journeyState.bubble
     if (element) {
@@ -1759,7 +1955,9 @@ const setup: SceneSetup = (runtime) => {
         anchor.copy(speaker)
         anchor.y += 1.05
         anchor.project(camera)
-        const x = Math.round(Math.min(width - 180, Math.max(180, (anchor.x * 0.5 + 0.5) * width)))
+        // Kept whole on screen: half the bubble's width in from either edge.
+        const half = Math.min(176, width * 0.44)
+        const x = Math.round(Math.min(width - half, Math.max(half, (anchor.x * 0.5 + 0.5) * width)))
         const y = Math.round(
           Math.min(height * 0.62, Math.max(170, (-anchor.y * 0.5 + 0.5) * height)),
         )

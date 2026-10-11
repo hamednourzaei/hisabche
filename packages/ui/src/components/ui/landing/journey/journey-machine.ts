@@ -36,6 +36,14 @@ export const LEAVE_AT = 0.8
 export const BURST_AT = 0.42
 export const FINALE_AT = 0.8
 
+/**
+ * On the way to this station the connection drops: work goes on, on the device,
+ * and is sent when the connection is back — which it is as the gate opens.
+ */
+export const OFFLINE_ON_THE_WAY_TO: JourneyStationId = 'stock'
+export const OFFLINE_AT = 0.04
+export type LinkState = 'online' | 'offline' | 'restoring'
+
 export type GateState = 'closed' | 'open' | 'passed'
 export type ZoneState = 'visited' | 'current' | 'upcoming'
 
@@ -55,6 +63,8 @@ export interface JourneySnapshot {
   finished: boolean
   /** The core has burst: the closing invitation may show. */
   invited: boolean
+  /** Whether the shop is connected: it keeps working when it is not. */
+  link: LinkState
 }
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0))
@@ -80,6 +90,7 @@ function blank(stations: number): JourneySnapshot {
     zones: Array.from({ length: stations }, (): ZoneState => 'upcoming'),
     finished: false,
     invited: false,
+    link: 'online',
   }
 }
 
@@ -108,6 +119,13 @@ export function journeyInto(
   out.recorded = recorded
   out.finished = beat > stations
   out.invited = beat > stations && local >= FINALE_AT
+  const cut = station !== null && JOURNEY_STATIONS[station] === OFFLINE_ON_THE_WAY_TO
+  out.link =
+    !cut || local < OFFLINE_AT || local >= ARRIVE_AT
+      ? 'online'
+      : local < GATE_AT
+        ? 'offline'
+        : 'restoring'
   out.gates.length = stations
   out.zones.length = stations
   for (let index = 0; index < stations; index++) {

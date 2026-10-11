@@ -11,9 +11,13 @@ import { describe, expect, it } from 'vitest'
 
 import { JOURNEY_INDUSTRIES } from '../components/ui/landing/journey/journey-industries'
 import {
+  ARRIVE_AT,
   BURST_AT,
   FINALE_AT,
+  GATE_AT,
   JOURNEY_STATIONS,
+  OFFLINE_AT,
+  OFFLINE_ON_THE_WAY_TO,
   journeyAt,
   journeyInto,
   newJourneySnapshot,
@@ -280,6 +284,36 @@ describe('the ending waits for the core', () => {
       expect(journeyInto(progress, N, snap)).toEqual(journeyAt(progress, N))
       expect(snap.gates).toBe(gates)
     }
+  })
+})
+
+describe('the connection drops once, and the shop keeps working', () => {
+  const N = JOURNEY_STATIONS.length
+  const stock = JOURNEY_STATIONS.indexOf(OFFLINE_ON_THE_WAY_TO)
+  const on = (station: number, local: number) => journeyAt((station + 1 + local) / (N + 2), N)
+
+  it('offline on the way to one station, catching up as its gate opens, connected at the counter', () => {
+    expect(stock).toBeGreaterThanOrEqual(0)
+    expect(on(stock, OFFLINE_AT / 2).link).toBe('online')
+    expect(on(stock, (OFFLINE_AT + GATE_AT) / 2).link).toBe('offline')
+    expect(on(stock, (GATE_AT + ARRIVE_AT) / 2).link).toBe('restoring')
+    expect(on(stock, ARRIVE_AT + 0.02).link).toBe('online')
+    // The station still records the sale afterwards: nothing was lost.
+    expect(on(stock, 0.9).recorded).toBe(stock + 1)
+  })
+
+  it('nowhere else in the story', () => {
+    for (let step = 0; step <= 700; step++) {
+      const now = journeyAt(step / 700, N)
+      if (now.station !== stock) expect(now.link, String(step)).toBe('online')
+    }
+  })
+
+  it('scrolling back through it gives the same states in reverse', () => {
+    const forward = Array.from({ length: 101 }, (_, step) => on(stock, step / 101).link)
+    const backward = Array.from({ length: 101 }, (_, step) => on(stock, (100 - step) / 101).link)
+    expect(backward.reverse()).toEqual(forward)
+    expect(new Set(forward)).toEqual(new Set(['online', 'offline', 'restoring']))
   })
 })
 

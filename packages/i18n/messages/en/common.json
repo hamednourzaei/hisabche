@@ -1411,7 +1411,8 @@
         "receivables": "Receivables",
         "unitsSold": "Units sold"
       },
-      "sign": "Business OS Hisabche"
+      "sign": "Business OS Hisabche",
+      "offline": "Offline — recording continues on the device"
     }
   },
   "nav": {

@@ -58,14 +58,21 @@ describe('the headline does not wait for the picture', () => {
     expect(canvas).toContain("document.visibilityState !== 'visible'")
     expect(canvas).toContain("matchMedia('(prefers-reduced-motion: reduce)')")
     expect(canvas).toContain('runtime.dispose()')
+    // No picture is said out loud to the page, never thrown and never left blank.
+    expect(canvas).toContain("canvas.addEventListener('webglcontextlost', onLost)")
+    expect(canvas.split('unavailableRef.current?.()').length - 1).toBe(3)
+    expect(stage).toContain('{flat && board ? (')
   })
 
   it('a beat changes React state; a scroll frame does not', () => {
     // The fill of the route is written straight to the element.
     expect(stage).toContain('fillRef.current.style.width = reach')
-    // Two states, both of which change only at a boundary of the story: the beat,
-    // and whether the core has burst.
-    expect(stage.split('useState').length - 1).toBe(3)
+    // Every state changes only at a boundary of the story (beat, burst, connection),
+    // once (no picture on this device), or a few times a second while a line is
+    // typed — none of them on a scroll frame.
+    expect(stage.split('useState').length - 1).toBe(6)
+    expect(stage).toContain('setLink(now.link)')
+    expect(stage).toContain('}, 70)')
     expect(stage).toContain('setInvited(now.invited)')
   })
 })

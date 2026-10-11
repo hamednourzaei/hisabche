@@ -23,7 +23,13 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 
 import { SceneCanvas, spanProgress } from '../three/scene-canvas'
 import type { IndustrySign } from './journey-industries'
-import { journeyAt, journeyReduce, progressForBeat, type JourneyEvent } from './journey-machine'
+import {
+  journeyAt,
+  journeyReduce,
+  progressForBeat,
+  type JourneyEvent,
+  type LinkState,
+} from './journey-machine'
 import type { ScreenModel } from './journey-screens'
 import { journeyState, type InvoiceLabels } from './journey-state'
 
@@ -59,6 +65,9 @@ export interface JourneyStageProps {
   invoice: InvoiceLabels
   /** «ثبت شد» — shown on a board once its station has the invoice. */
   recordedLabel: string
+  /** What the shop says about its connection while it is down, and while it catches up. */
+  offlineLabel: string
+  syncingLabel: string
   /** The name on the great board at the end of the hall. */
   signLabel: string
 }
@@ -105,6 +114,11 @@ export function JourneyStage(props: JourneyStageProps) {
   const columnRef = useRef<HTMLSpanElement | null>(null)
   const [beat, setBeat] = useState(0)
   const [invited, setInvited] = useState(false)
+  const [link, setLink] = useState<LinkState>('online')
+  /** No 3D picture on this device: the frame shows the station's board as markup. */
+  const [flat, setFlat] = useState(false)
+  /** How many characters of the clerk's line the bubble has typed so far. */
+  const [typed, setTyped] = useState(0)
   const beats = stops.length + 2
   const ending = beat === beats - 1
 
@@ -125,6 +139,7 @@ export function JourneyStage(props: JourneyStageProps) {
       const now = journeyAt(progress, stops.length)
       setBeat(now.beat)
       setInvited(now.invited)
+      setLink(now.link)
     }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -166,6 +181,24 @@ export function JourneyStage(props: JourneyStageProps) {
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
   }, [beat, ending])
+
+  const speaking = beat >= 1 && !ending ? (stops[beat - 1]?.say ?? '') : ''
+  // The bubble types its line out, a few characters at a time — and shows it
+  // whole at once for a reader who has asked for less motion.
+  useEffect(() => {
+    const whole = speaking.length
+    if (whole === 0 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const settle = window.setTimeout(() => setTyped(whole), 0)
+      return () => window.clearTimeout(settle)
+    }
+    let shown = 0
+    const timer = window.setInterval(() => {
+      shown = Math.min(whole, shown + 2)
+      setTyped(shown)
+      if (shown >= whole) window.clearInterval(timer)
+    }, 70)
+    return () => window.clearInterval(timer)
+  }, [speaking])
 
   const goTo = (progress: number) => {
     const wrap = wrapRef.current
@@ -209,7 +242,7 @@ export function JourneyStage(props: JourneyStageProps) {
       : beat === index + 1
         ? 'bg-[hsl(var(--color-primary))] ring-4 ring-[hsl(var(--color-primary)/0.25)]'
         : 'bg-[hsl(var(--border-strong))]'
-  const speaking = beat >= 1 && !ending ? (stops[beat - 1]?.say ?? '') : ''
+  const board = beat >= 1 && !ending ? props.screens[beat - 1] : undefined
 
   return (
     <div ref={wrapRef} style={{ height: `${beats * BEAT_HEIGHT}dvh` }} className="relative">
@@ -221,6 +254,10 @@ export function JourneyStage(props: JourneyStageProps) {
           label={props.label}
           load={() => import('./scene')}
           progress={() => spanProgress(wrapRef.current)}
+          onUnavailable={() => {
+            frameRef.current?.removeAttribute('data-scene')
+            setFlat(true)
+          }}
           className="absolute inset-0 size-full"
         />
 
@@ -233,6 +270,41 @@ export function JourneyStage(props: JourneyStageProps) {
         >
           <div ref={heroRef}>{props.hero}</div>
         </div>
+
+        {/* No 3D picture: the station's board, as it would hang in the hall, in markup. */}
+        {flat && board ? (
+          <div className="absolute inset-x-0 top-28 flex justify-center px-4 md:top-24">
+            <dl className="w-full max-w-md rounded-2xl border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))] p-5 shadow-lg">
+              <div className="mb-3 flex items-baseline justify-between gap-3 border-b-2 border-[hsl(var(--color-success))] pb-2">
+                <dt className="text-lg font-bold text-[hsl(var(--fg-primary))]">{board.title}</dt>
+                <dd className="text-xs text-[hsl(var(--fg-tertiary))]">{board.note}</dd>
+              </div>
+              {board.rows.map((row) => (
+                <div key={row.label} className="flex items-baseline justify-between gap-3 py-1.5">
+                  <dt className="text-sm text-[hsl(var(--fg-secondary))]">{row.label}</dt>
+                  <dd className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+                    <bdi>{row.value}</bdi> <bdi>{row.extra}</bdi>
+                  </dd>
+                </div>
+              ))}
+              <div className="mt-2 text-xs font-semibold text-[hsl(var(--color-success))]">
+                {board.foot}
+              </div>
+            </dl>
+          </div>
+        ) : null}
+
+        {/* The connection: said in words too, not only by the hall going amber. */}
+        <p
+          role="status"
+          className={
+            link === 'online'
+              ? 'hidden'
+              : 'absolute inset-x-0 top-28 mx-auto w-fit rounded-full border border-[hsl(var(--color-warning)/0.5)] bg-[hsl(var(--surface-elevated)/0.92)] px-4 py-1.5 text-xs font-semibold text-[hsl(var(--color-warning))] md:top-20'
+          }
+        >
+          {link === 'offline' ? props.offlineLabel : props.syncingLabel}
+        </p>
 
         {/* The route. A row under the header on a phone, a column at the side from a tablet up. */}
         <nav
@@ -309,8 +381,8 @@ export function JourneyStage(props: JourneyStageProps) {
               <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-[hsl(var(--fg-secondary))] sm:text-base sm:leading-7">
                 {stop.desc}
               </p>
-              {/* On a phone the clerk's line is part of the caption; from a tablet up it is the bubble over the clerk. */}
-              <p className="mx-auto mt-2 max-w-md rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.85)] px-4 py-2 text-sm leading-6 text-[hsl(var(--fg-primary))] md:[[data-scene=on]_&]:hidden">
+              {/* The clerk's line is the bubble over the clerk. Where there is no 3D picture to hold a bubble, it is here in the caption. */}
+              <p className="mx-auto mt-2 max-w-md rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.85)] px-4 py-2 text-sm leading-6 text-[hsl(var(--fg-primary))] [[data-scene=on]_&]:hidden">
                 {stop.say}
               </p>
             </div>
@@ -322,9 +394,10 @@ export function JourneyStage(props: JourneyStageProps) {
           ref={bubbleRef}
           aria-hidden="true"
           style={{ left: 0, top: 0, opacity: 0 }}
-          className="pointer-events-none absolute hidden max-w-xs rounded-2xl border border-[hsl(var(--color-primary)/0.4)] bg-[hsl(var(--surface-elevated))] px-4 py-2 text-center text-sm leading-6 text-[hsl(var(--fg-primary))] shadow-lg transition-opacity duration-300 md:block"
+          className="pointer-events-none absolute w-max max-w-[min(20rem,84vw)] rounded-2xl border border-[hsl(var(--color-primary)/0.4)] bg-[hsl(var(--surface-elevated))] px-4 py-2 text-center text-sm leading-6 text-[hsl(var(--fg-primary))] shadow-lg transition-opacity duration-300"
         >
-          {speaking}
+          <span>{speaking.slice(0, typed)}</span>
+          <span className="invisible">{speaking.slice(typed)}</span>
         </p>
         <p className="sr-only" aria-live="polite">
           {speaking}
