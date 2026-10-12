@@ -150,7 +150,9 @@ export class PaymentsRepository {
 
     const { data, error } = await supabase
       .from('invoice_outstanding')
-      .select('invoice_id, invoice_number, total, allocated, due_date, invoice_date, type')
+      .select(
+        'invoice_id, invoice_number, total, allocated, due_date, invoice_date, type, currency',
+      )
       .eq('workspace_id', workspaceId)
       .eq(partyColumn, partyId)
       .eq('type', invoiceType)
@@ -166,6 +168,7 @@ export class PaymentsRepository {
       allocated: Number(row.allocated) || 0,
       dueDate: String(row.due_date ?? '').slice(0, 10),
       invoiceDate: String(row.invoice_date ?? '').slice(0, 10),
+      currency: row.currency ? String(row.currency) : null,
     }))
   }
 
@@ -203,7 +206,7 @@ export class PaymentsRepository {
     const { data, error } = await supabase
       .from('invoice_outstanding')
       .select(
-        'invoice_id, invoice_number, total, allocated, due_date, invoice_date, type, customer_id, supplier_id',
+        'invoice_id, invoice_number, total, allocated, due_date, invoice_date, type, customer_id, supplier_id, currency',
       )
       // The tenancy boundary. An id from another workspace simply does not
       // come back, so it is reported as unknown rather than settled.
@@ -223,6 +226,7 @@ export class PaymentsRepository {
       customerId: row.customer_id ?? null,
       supplierId: row.supplier_id ?? null,
       type: String(row.type ?? ''),
+      currency: row.currency ? String(row.currency) : null,
     }))
   }
 

@@ -37,6 +37,7 @@ import {
   rankPartyProducts,
   summarizeParty,
   unallocatedOf,
+  settlesInCurrency,
   validateAllocations,
   type AgingBuckets,
   type AllocationRequest,
@@ -165,7 +166,10 @@ export class PaymentsService {
     // invoice creation wrote `paid_amount` directly instead, and that is the
     // second writer that produced «مبلغ پرداخت‌شده با مجموع پرداخت‌ها یکی
     // نیست» on a real sale.
-    const invoices = explicit
+    const bookCurrency = await baseCurrencyOf(ctx.workspaceId)
+    const currency = input.currency ?? bookCurrency
+
+    const candidates = explicit
       ? await this.repo.openInvoicesByIds(
           ctx.workspaceId,
           input.allocations!.map((a) => a.invoiceId),
@@ -173,6 +177,23 @@ export class PaymentsService {
       : input.partyId
         ? await this.repo.openInvoicesFor(ctx.workspaceId, input.partyType, input.partyId)
         : []
+
+    // ─── A PAYMENT SETTLES INVOICES OF ITS OWN CURRENCY (DEFECT-CUR-03) ─────
+    //
+    // Named invoices in another currency are REFUSED: the person asked for
+    // something that cannot be done, and must be told. With no invoice named
+    // («he paid me 500»), the money goes to what the party owes in that
+    // currency and the rest stays as credit — an afghani payment never eats a
+    // dollar debt because it happened to be the oldest.
+    if (
+      explicit &&
+      candidates.some((invoice) => !settlesInCurrency(invoice, currency, bookCurrency))
+    ) {
+      throw new ValidationError('PAYMENT_ALLOCATION_CURRENCY_MISMATCH')
+    }
+    const invoices = candidates.filter((invoice) =>
+      settlesInCurrency(invoice, currency, bookCurrency),
+    )
 
     // ⚠️ AN INVOICE ADDRESSED BY ID MUST BELONG TO THE PARTY BEING CREDITED.
     //
@@ -220,7 +241,7 @@ export class PaymentsService {
           partyType: input.partyType,
           partyId: input.partyId,
           amount,
-          currency: input.currency ?? (await baseCurrencyOf(ctx.workspaceId)),
+          currency,
           method: input.method ?? 'cash',
           entryDate,
           reference: input.reference ?? '',

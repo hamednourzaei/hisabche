@@ -123,7 +123,7 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **هاب‌ها، خط‌های تب←سوییچ، حقوق/مرخصی، sandbox 403 (۵ اکتبر)**        | `.claude/SESSION-CACHE-2026-10-05-UX.md` · BUG-097…099 در `BUG-REGISTRY.md` |
 | **پایپ‌لاین AI: شکاف‌ها، برنامه، وضعیت پیاده‌سازی (۶ اکتبر)**         | `.claude/ai-pipeline/00-GAP-AND-PLAN.md` · `01-STATUS.md`                   |
 | **سود، بهای تمام‌شده، تراز آزمایشی: «نامعلوم، صفر نیست» (۱۱ اکتبر)** | `.claude/accounting-integrity/00-SPEC.md` · `SESSION-CACHE-2026-10-11-INTEGRITY.md` |
-| **یکپارچگی دیتابیس: هشت قاعده، فازها، خروجی FINDING (۱۱ اکتبر)**     | `.claude/db-integrity/00-SPEC.md` · `docs/FINDING-db-integrity.sql` — **منتظر خروجی**  |
+| **یکپارچگی دیتابیس: هشت قاعده، فازها، خروجی FINDING (۱۱ اکتبر)**     | `.claude/db-integrity/00-SPEC.md` · `docs/db-integrity-01-migration.sql` — **منتظر اجرا و VERIFY** |
 | **ارز دفاتر و ممیزی چندارزی؛ ورود فایل (۱۱ اکتبر)**                    | `.claude/reverse-and-import/01-CURRENCY-AUDIT.md` · `00-SPEC.md`                         |
 | **همه‌ی درس‌ها با شماره (۱–۱۱۹)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
@@ -466,6 +466,12 @@ cd apps/admin     && npx tsc --noEmit
 - **توازن سند فقط در تابع `accounting_post_journal_entry` سنجیده می‌شود**، نه با تریگر. هر `INSERT` مستقیم در `journal_lines` دفتر را نامتوازن می‌کند — همیشه از `ledger.postDocument`.
 - **جدول‌های مرده:** `ledger_entries`، `sync_queue`، `sync_logs`، `journal_lines_archive` صفر خواننده دارند. منبع حسابداری `journal_entries` + `journal_lines` است. چیزی روی آن‌ها نساز.
 - **`user_id` حذف نمی‌شود** (می‌گوید چه کسی نوشت)؛ مشکل nullable‌بودنِ `workspace_id` است. backfill از `user_id` برای عضوِ دو کسب‌وکار حدس است (§12).
+- **فاز ۱ نوشته شد (۱۲ اکتبر):** `docs/db-integrity-01-migration.sql` + `VERIFY-db-integrity-01.sql` + `db-integrity-01.pg.test.ts`. خط دفتر نامنفی و یک‌طرفه؛ سند ثبت‌شده متوازن (تریگر **deferred** — تابع ثبت سرصفحه و خط‌ها را در یک تراکنش می‌نویسد)؛ لایه‌ی بها در بازه؛ ارز تخصیص = ارز فاکتور؛ ۱۸ FK گم‌شده. تا VERIFY نیامده «اجراشده» حساب نکن.
+- ⚠️ **قیدی که ردیف قدیمی نقضش می‌کند `NOT VALID` می‌ماند، ردیف حذف نمی‌شود.** ۱۵ تخصیص به فاکتورِ حذف‌شده روی دیتابیس زنده هست؛ FK برای ردیف تازه اجرا می‌شود و VERIFY همان یکی را `ok: false` نشان می‌دهد — انتظار همین است.
+- ⚠️ **خروجی FINDING را تا کد دنبال کن.** «۱۵ خط فاکتور بی‌workspace» یک عدد نبود؛ `InvoiceService#buildItemRows` اصلاً `workspace_id` نمی‌نوشت. قید دیتابیس بدون اصلاح نویسنده = ۵۰۰ برای کاربر.
+- **پرداخت فقط فاکتورِ هم‌ارز خودش را تسویه می‌کند** (`settlesInCurrency`): فاکتورِ نام‌برده‌ی غیرهم‌ارز رد می‌شود (`PAYMENT_ALLOCATION_CURRENCY_MISMATCH`)؛ بدون نام، فقط بدهی همان ارز پر می‌شود. فاکتور بی‌ارز = ارز دفاتر.
+- **کالای دارای لایه‌ی بها حذف نمی‌شود** (مثل کالای دارای حرکت) — با FK تازه، حذفش خطای دیتابیس می‌شد.
+- **بیرون از ۰۱ ماند، با دلیل:** `workspace_id NOT NULL` بیرون از دفتر، حذف `DEFAULT 'AFN'` (`ProductService.create` ارز کالا را نمی‌فرستد)، FK ترکیبی، `timestamptz`، حذف پنج جدول خالی.
 - ⚠️ **۶۶ ستون `timestamp` بدون منطقه‌ی زمانی** (خروجی واقعی F3). `workspace_invites.expires_at` یکی از آن‌هاست. تبدیل، فرضِ «در چه منطقه‌ای نوشته شده» می‌خواهد — اول بسنج.
 
 

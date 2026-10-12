@@ -31,6 +31,22 @@ export interface OpenInvoice {
   /** The day the money is due. Falls back to the invoice date when unset. */
   dueDate: string
   invoiceDate: string
+  /** The invoice's own currency; null/absent = the books currency. */
+  currency?: string | null | undefined
+}
+
+/**
+ * Whether a payment in `paymentCurrency` may settle this invoice.
+ *
+ * 100 afghani paid does not reduce a debt of 100 dollars. An invoice with no
+ * currency of its own is in the books currency.
+ */
+export function settlesInCurrency(
+  invoice: Pick<OpenInvoice, 'currency'>,
+  paymentCurrency: string,
+  bookCurrency: string,
+): boolean {
+  return (invoice.currency || bookCurrency) === paymentCurrency
 }
 
 export interface AllocationRequest {

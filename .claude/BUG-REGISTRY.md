@@ -1147,3 +1147,13 @@ placeholder همان برچسبِ بالای فیلد بود. **رفع:** `DateR
 ## BUG-115 — فیلتر روی `invoices.deleted_at` که وجود ندارد (۱۱ اکتبر، همان روز)
 
 `booksStatus` آن را اضافه کرده بود؛ شمارش همیشه «خوانده نشد» می‌شد. **گارد موجود** `no-phantom-deleted-at.test.ts` گرفت.
+
+## BUG-116 — خط فاکتور بدون `workspace_id` نوشته می‌شد (۱۲ اکتبر، با FINDING روی دیتابیس زنده پیدا شد)
+
+`InvoiceService#buildItemRows` ستون tenant را اصلاً نمی‌نوشت؛ ۱۵ ردیف روی دیتابیس زنده. فیلتر `workspace_id` آن‌ها را
+نمی‌دید. **رفع:** پارامتر اجباری `workspaceId`؛ backfill از فاکتور والد در `db-integrity-01`. **گارد:** `db-integrity-code.test.ts`.
+
+## BUG-117 — پرداخت می‌توانست فاکتورِ ارز دیگر را تسویه کند (DEFECT-CUR-03) (۱۲ اکتبر)
+
+روی دیتابیس زنده صفر مورد بود، ولی نه کد جلویش را می‌گرفت نه دیتابیس. **رفع:** `settlesInCurrency` در سرویس + تریگر
+`payment_allocations_same_currency_trg`. **گارد:** `db-integrity-code.test.ts`، `db-integrity-01.pg.test.ts`.

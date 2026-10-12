@@ -71,6 +71,11 @@ const SORT_BY_MAP: Record<string, string> = {
   minStockLevel: 'min_stock_level',
 }
 
+/** PostgREST / Postgres saying the table is not there (costing not installed). */
+function isMissingTable(error: { code?: string } | null): boolean {
+  return error?.code === '42P01' || error?.code === 'PGRST205'
+}
+
 export class ProductService {
   // ─── Cache Keys ──────────────────────────────────────────────
   //
@@ -662,9 +667,18 @@ export class ProductService {
     // It used to be `count: 'estimated'` with the error ignored: a failed read
     // left `count` null, `null && …` is false, and the delete went ahead. An
     // existence check, and a read that fails refuses (lesson 3).
-    const [sold, moved] = await Promise.all([
+    const [sold, moved, costed] = await Promise.all([
       supabase.from('invoice_items').select('id').eq('product_id', id).limit(1).maybeSingle(),
       supabase.from('stock_movements').select('id').eq('product_id', id).limit(1).maybeSingle(),
+      // Opening stock entered with a purchase price leaves a cost layer even
+      // when no movement was written (a business with no warehouses).
+      supabase
+        .from('cost_layers')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .eq('product_id', id)
+        .limit(1)
+        .maybeSingle(),
     ])
 
     if (sold.error) throw new DatabaseError('Failed to check product sales', sold.error)
@@ -672,6 +686,12 @@ export class ProductService {
     // A conflict, not a server fault: the person can deactivate the product instead.
     if (sold.data) throw new ConflictError('PRODUCT_HAS_INVOICE_ITEMS')
     if (moved.data) throw new ConflictError('PRODUCT_HAS_STOCK_MOVEMENTS')
+    // A failed read is not «no history»: deleting on the strength of it would
+    // orphan the layer. A database without the costing tables has none.
+    if (costed.error && !isMissingTable(costed.error)) {
+      throw new DatabaseError('Failed to check product cost history', costed.error)
+    }
+    if (costed.data) throw new ConflictError('PRODUCT_HAS_STOCK_MOVEMENTS')
 
     const { error } = await supabase
       .from('products')

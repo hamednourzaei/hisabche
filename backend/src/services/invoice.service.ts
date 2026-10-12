@@ -980,7 +980,7 @@ export class InvoiceService {
     }
 
     const lines = data.items ?? []
-    const itemRows = this.buildItemRows(lines, invoiceId, userId)
+    const itemRows = this.buildItemRows(lines, invoiceId, userId, ctx.workspaceId)
     // A purchase moves stock too — it just moves it the other way. ⚠️ NOT WHILE
     // THE DOCUMENT IS HELD: `postApprovedInvoice` moves it on approval, and
     // moving it here too moved every held invoice's stock twice.
@@ -1770,10 +1770,15 @@ export class InvoiceService {
     items: any[],
     invoiceId: string,
     userId: string,
+    workspaceId: string,
   ): Array<Record<string, unknown> & { id: string }> {
     return items.map((item) => ({
       id: randomUUID(),
       invoice_id: invoiceId,
+      // ⚠️ The tenant column, on every line. It was left out here, so lines
+      // written by this path had no workspace at all (15 on the live database,
+      // FINDING-db-integrity A1) and no workspace filter could see them.
+      workspace_id: workspaceId,
       product_id: item.productId,
       product_name: item.productName || '',
       quantity: item.quantity,
@@ -2033,7 +2038,7 @@ export class InvoiceService {
       (await this.invoiceWarehouseId(ctx.workspaceId, invoiceId)) ??
       (await this.soleWarehouseId(ctx.workspaceId))
 
-    const itemRows = this.buildItemRows(items, invoiceId, ctx.userId)
+    const itemRows = this.buildItemRows(items, invoiceId, ctx.userId, ctx.workspaceId)
     const movementRows = await this.planStockMovements(
       items,
       ctx,
