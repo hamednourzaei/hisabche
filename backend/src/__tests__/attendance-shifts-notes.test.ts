@@ -31,6 +31,8 @@ import {
   MAX_NOTE_LENGTH,
   NOTABLE_ENTITIES,
   attendanceFor,
+  crossesMidnight,
+  shiftMinutes,
   minutesOf,
   payableHours,
   validateNote,
@@ -149,18 +151,37 @@ describe('#101 — a shift roster that cannot be worked', () => {
     expect(validateShifts([shift()], [shift()])).toEqual([])
   })
 
-  it('a shift ending before it starts is invalid', () => {
-    expect(validateShifts([shift({ startsAt: '16:00', endsAt: '08:00' })], [])).toContain(
+  it('a shift that ends earlier than it starts ends the next day (12 October decision)', () => {
+    expect(validateShifts([shift({ startsAt: '22:00', endsAt: '06:00' })], [])).toEqual([])
+    expect(crossesMidnight({ startsAt: '22:00', endsAt: '06:00' })).toBe(true)
+    expect(crossesMidnight({ startsAt: '08:00', endsAt: '16:00' })).toBe(false)
+    expect(shiftMinutes({ startsAt: '22:00', endsAt: '06:00' })).toBe(480)
+  })
+
+  it('⚠️ a shift of equal times is refused: zero hours and twenty-four look the same', () => {
+    expect(validateShifts([shift({ startsAt: '08:00', endsAt: '08:00' })], [])).toContain(
       'INVALID_TIMES',
     )
   })
 
-  it('an overnight shift is NOT accepted', () => {
-    // ⚠️ These shops are day shops. Reading 16:00→08:00 as overnight would bill
-    // sixteen hours for one shift.
-    expect(validateShifts([shift({ startsAt: '16:00', endsAt: '08:00' })], [])).toContain(
-      'INVALID_TIMES',
+  it('the break of a night shift is measured against the night, not a negative number', () => {
+    expect(
+      validateShifts([shift({ startsAt: '22:00', endsAt: '06:00', breakMinutes: 60 })], []),
+    ).toEqual([])
+    expect(
+      validateShifts([shift({ startsAt: '22:00', endsAt: '06:00', breakMinutes: 480 })], []),
+    ).toContain('BREAK_LONGER_THAN_SHIFT')
+  })
+
+  it('a night shift overlaps the evening shift it runs into', () => {
+    const problems = validateShifts(
+      [
+        shift({ id: 'evening', startsAt: '16:00', endsAt: '23:00' }),
+        shift({ id: 'night', startsAt: '22:00', endsAt: '06:00' }),
+      ],
+      [],
     )
+    expect(problems).toContain('OVERLAPS_ANOTHER')
   })
 
   it('a break longer than the shift is refused', () => {
@@ -239,10 +260,41 @@ describe('#101 — a break comes off the top and cannot go negative', () => {
     expect(hours).toBe(0)
   })
 
-  it('an invalid shift pays nothing rather than guessing', () => {
+  it('an unreadable shift pays nothing rather than guessing', () => {
     expect(
-      payableHours({ id: 's', name: 'S', startsAt: '17:00', endsAt: '09:00', breakMinutes: 0 }),
+      payableHours({ id: 's', name: 'S', startsAt: '25:00', endsAt: '09:00', breakMinutes: 0 }),
     ).toBe(0)
+    expect(
+      payableHours({ id: 's', name: 'S', startsAt: '09:00', endsAt: '09:00', breakMinutes: 0 }),
+    ).toBe(0)
+  })
+
+  it('a night shift pays its hours through midnight, less the break', () => {
+    // 22:00 → 06:00 is eight hours; by hand: 2 before midnight + 6 after.
+    expect(
+      payableHours({ id: 's', name: 'S', startsAt: '22:00', endsAt: '06:00', breakMinutes: 30 }),
+    ).toBe(7.5)
+  })
+
+  it('⚠️ a day is a night only when it SAYS so', () => {
+    const base = { employeeId: 'e', date: '2026-10-12', status: 'present' as const }
+    // Not said: an exit before the arrival is still a typing error.
+    expect(attendanceFor({ ...base, checkIn: '22:00', checkOut: '06:00' })).toMatchObject({
+      workedHours: null,
+      issue: 'CHECK_OUT_BEFORE_CHECK_IN',
+    })
+    // Said: eight hours, no issue.
+    expect(
+      attendanceFor({ ...base, checkIn: '22:00', checkOut: '06:00', endsNextDay: true }),
+    ).toEqual({ status: 'present', workedHours: 8, isOpen: false, issue: null })
+    // Said, but the exit is not earlier: that would be a day or more.
+    expect(
+      attendanceFor({ ...base, checkIn: '08:00', checkOut: '16:00', endsNextDay: true }),
+    ).toMatchObject({ workedHours: null, issue: 'CHECK_OUT_BEFORE_CHECK_IN' })
+    // Said, and still at work: open, with no hours yet.
+    expect(
+      attendanceFor({ ...base, checkIn: '22:00', checkOut: null, endsNextDay: true }),
+    ).toMatchObject({ workedHours: null, isOpen: true })
   })
 })
 

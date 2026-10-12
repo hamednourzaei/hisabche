@@ -77,9 +77,9 @@ describe('shifts', () => {
     expect(tables.work_shifts![0]).toMatchObject({ workspace_id: WS, created_by: 'u1' })
   })
 
-  it('a shift across midnight, an impossible time and a break as long as the shift are refused before the database', async () => {
+  it('a zero-length shift, an impossible time and a break as long as the shift are refused before the database', async () => {
     await expect(
-      service.create(ctx, { ...morning, startsAt: '22:00', endsAt: '06:00' }),
+      service.create(ctx, { ...morning, startsAt: '08:00', endsAt: '08:00' }),
     ).rejects.toThrow('SHIFT_INVALID_TIMES')
     await expect(service.create(ctx, { ...morning, startsAt: '25:00' })).rejects.toThrow(
       'SHIFT_INVALID_TIMES',
@@ -88,6 +88,17 @@ describe('shifts', () => {
       'SHIFT_BREAK_LONGER_THAN_SHIFT',
     )
     expect(tables.work_shifts).toEqual([])
+  })
+
+  it('a shift across midnight is a night shift, with its hours through midnight', async () => {
+    const night = await service.create(ctx, {
+      ...morning,
+      name: 'شب',
+      startsAt: '22:00',
+      endsAt: '06:00',
+      breakMinutes: 0,
+    })
+    expect(night).toMatchObject({ startsAt: '22:00', endsAt: '06:00', payableHours: 8 })
   })
 
   it('a name already in use is said as such, not as a server error', async () => {

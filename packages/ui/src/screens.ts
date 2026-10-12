@@ -47,7 +47,13 @@ export { ActivitiesPage } from './components/ui/activity/ActivitiesPage'
 export { SyncCenterContainer } from './components/ui/sync-center/containers/sync-center-container'
 
 // ---------- Settings ----------
-export { SettingsPage, BusinessStampSection, HardwareSection } from './components/ui/settings'
+export {
+  SettingsPage,
+  BusinessStampSection,
+  HardwareSection,
+  WorkplaceTimeZoneSection,
+  BookCurrencySection,
+} from './components/ui/settings'
 
 // ---------- CRM ----------
 export { CrmContainer } from './components/ui/crm/containers/crm-container'

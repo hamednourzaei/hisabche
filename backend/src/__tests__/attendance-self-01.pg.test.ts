@@ -49,7 +49,7 @@ async function link(
   const [row] = await sql`
     SELECT * FROM public.attendance_link_create(
       ${options.workspace ?? WS_A}, ${employee}, ${MANAGER}, ${token()}, NULL,
-      ${options.daysBack ?? 0}, ${options.autoApply ?? false}, 'Asia/Kabul'
+      ${options.daysBack ?? 0}, ${options.autoApply ?? false}
     )
   `
   return row as { id: string; token: string; revoked_at: Date | null }
@@ -65,7 +65,8 @@ async function submit(
 ) {
   const [row] = await sql`
     SELECT public.attendance_submit(
-      ${linkId}, ${date}::date, ${status}, ${checkIn}::time, ${checkOut}::time, NULL, ${key}
+      ${linkId}, ${date}::date, ${status}, ${checkIn}::time, ${checkOut}::time, NULL, ${key},
+      'Asia/Kabul'
     ) AS out
   `
   return row!.out as { id: string; state: string; replayed: boolean }
@@ -104,6 +105,11 @@ beforeAll(async () => {
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
 
     CREATE TABLE workspaces (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL);
+    CREATE TABLE branches (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      workspace_id uuid NOT NULL,
+      name text NOT NULL
+    );
     CREATE TABLE employees (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       workspace_id uuid,
@@ -201,8 +207,8 @@ describe('docs/attendance-self-01-migration.sql', () => {
         await refusal(
           () => sql`
             INSERT INTO public.attendance_links
-              (workspace_id, employee_id, token, created_by, time_zone)
-            VALUES (${WS_A}, ${EMP_A}, ${token()}, ${MANAGER}, 'Asia/Kabul')
+              (workspace_id, employee_id, token, created_by)
+            VALUES (${WS_A}, ${EMP_A}, ${token()}, ${MANAGER})
           `,
         ),
       ).toContain('attendance_links_one_live')
@@ -238,7 +244,7 @@ describe('docs/attendance-self-01-migration.sql', () => {
         await refusal(
           () => sql`
             SELECT * FROM public.attendance_link_create(
-              ${WS_A}, ${EMP_A}, ${MANAGER}, 'short', NULL, 0, false, 'Asia/Kabul')
+              ${WS_A}, ${EMP_A}, ${MANAGER}, 'short', NULL, 0, false)
           `,
         ),
       ).toContain('token')
@@ -335,7 +341,7 @@ describe('docs/attendance-self-01-migration.sql', () => {
       )
       const [expired] = await sql`
         SELECT * FROM public.attendance_link_create(
-          ${WS_A}, ${EMP_A}, ${MANAGER}, ${token()}, now() - interval '1 minute', 0, true, 'Asia/Kabul')
+          ${WS_A}, ${EMP_A}, ${MANAGER}, ${token()}, now() - interval '1 minute', 0, true)
       `
       expect(
         await refusal(() => submit(expired!.id, '2026-10-08', 'present', '08:00', null)),
@@ -356,6 +362,7 @@ describe('docs/attendance-self-01-migration.sql', () => {
         sql`date = '2026-10-10'`,
         sql`status = 'leave', check_in = NULL, check_out = NULL`,
         sql`received_at = now() - interval '1 day'`,
+        sql`time_zone = 'Asia/Tehran'`,
         sql`employee_id = ${EMP_A2}`,
       ]) {
         expect(
@@ -486,6 +493,37 @@ describe('docs/attendance-self-01-migration.sql', () => {
       `
       expect(row!.state).toBe('pending')
     })
+  })
+
+  it('the zone belongs to the workplace: born NULL on business and branch, written on each submission', async () => {
+    const [ws] = await sql`SELECT time_zone FROM public.workspaces WHERE id = ${WS_A}`
+    expect(ws!.time_zone).toBeNull()
+    const [branch] = await sql`
+      INSERT INTO public.branches (workspace_id, name) VALUES (${WS_A}, 'Herat') RETURNING time_zone
+    `
+    expect(branch!.time_zone).toBeNull()
+    await sql`UPDATE public.workspaces SET time_zone = 'Asia/Kabul' WHERE id = ${WS_B}`
+    expect(
+      await refusal(() => sql`UPDATE public.workspaces SET time_zone = '' WHERE id = ${WS_B}`),
+    ).toContain('workspaces_time_zone_check')
+
+    const columns = await sql`
+      SELECT table_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND column_name = 'time_zone' ORDER BY table_name
+    `
+    // …and NOT on the link: the device that made a link says nothing about where the work is.
+    expect(columns.map((row) => row.table_name)).toEqual([
+      'attendance_submissions',
+      'branches',
+      'workspaces',
+    ])
+
+    const made = await link(EMP_A)
+    const out = await submit(made.id, '2026-10-20', 'absent', null, null)
+    const [row] = await sql`
+      SELECT time_zone FROM public.attendance_submissions WHERE id = ${out.id}
+    `
+    expect(row!.time_zone).toBe('Asia/Kabul')
   })
 
   it('attendance.source takes NULL and employee_link, nothing else', async () => {

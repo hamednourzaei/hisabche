@@ -47,8 +47,12 @@ jest.mock('@hisabche/api', () => ({
   dashboardKeys: {},
   getToken: () => 'token',
 }))
+// The engine stamps a row that names no currency with the books currency this
+// device was told by the server (useCurrencyStore). The mock had only the
+// workspace store, so every pulled invoice threw on `undefined.getState`.
 jest.mock('@hisabche/store', () => ({
   useWorkspaceStore: { getState: () => ({ workspaceId: 'ws-1' }) },
+  useCurrencyStore: { getState: () => ({ primaryCurrency: 'AFN' }) },
 }))
 
 import { applyChanges, pullAll, readCursor } from '../sync-engine'

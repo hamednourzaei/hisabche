@@ -2,10 +2,11 @@
 // An employee's personal attendance link, and what they send through it
 // (backend/src/routes/attendance-link.routes.ts).
 //
-//   GET    /attendance-links?employeeId=          → { link | null }
+//   GET    /attendance-links?employeeId=          → { link | null, workplace }
 //   POST   /attendance-links                      → link (revokes the live one)
 //   DELETE /attendance-links/:id
-//   GET    /attendance-submissions?date=          → { configured, pending, fromLink }
+//   DELETE /attendance-links/phone/:employeeId     forget the registered phone
+//   GET    /attendance-submissions?date=          → { configured, pending, fromLink, fromDevice }
 //   POST   /attendance-submissions/:id/decision   → { id, state, employeeId, date }
 //
 // `link.state` comes from the server (active / expired / revoked) — the client
@@ -33,7 +34,17 @@ export interface AttendanceLink {
   daysBack: number
   /** A day nobody has recorded is written at once; otherwise a manager decides. */
   autoApply: boolean
-  timeZone: string
+  /** Each submission must be confirmed by the registered phone's own lock. */
+  requireUnlock: boolean
+}
+
+/** The link, and whose clock it reads: the employee's branch, else the business. */
+export interface AttendanceLinkStatus {
+  link: AttendanceLink | null
+  /** The employee's registered phone — when, never its key. Null = none. */
+  phone: { registeredAt: string; lastUsedAt: string | null } | null
+  /** A null zone = none has been set; no link can be made until one is. */
+  workplace: { timeZone: string | null; source: 'branch' | 'workspace' | null }
 }
 
 export interface AttendanceSubmission {
@@ -43,6 +54,10 @@ export interface AttendanceSubmission {
   status: 'present' | 'absent' | 'leave'
   checkIn: string | null
   checkOut: string | null
+  /** The exit is on the day after `date`. */
+  endsNextDay: boolean
+  /** The registered phone's lock confirmed it. */
+  unlocked: boolean
   note: string | null
   /** The server's clock when it arrived. */
   receivedAt: string
@@ -55,6 +70,8 @@ export interface AttendanceDaySubmissions {
   pending: AttendanceSubmission[]
   /** Employees whose record for this day came from their link. */
   fromLink: string[]
+  /** Employees whose record for this day was written by a terminal. */
+  fromDevice: string[]
 }
 
 export const attendanceLinkKeys = {
@@ -70,11 +87,18 @@ export function useAttendanceLink(employeeId: string | null) {
   const ready = useAuthReady()
   return useQuery({
     queryKey: attendanceLinkKeys.employee(employeeId ?? ''),
-    queryFn: async (): Promise<AttendanceLink | null> => {
-      const { data } = await apiClient.get<{ link: AttendanceLink | null }>('/attendance-links', {
+    queryFn: async (): Promise<AttendanceLinkStatus> => {
+      const { data } = await apiClient.get<AttendanceLinkStatus>('/attendance-links', {
         params: { employeeId },
       })
-      return data?.link ?? null
+      return {
+        link: data?.link ?? null,
+        phone: data?.phone ?? null,
+        workplace: {
+          timeZone: data?.workplace?.timeZone ?? null,
+          source: data?.workplace?.source ?? null,
+        },
+      }
     },
     enabled: ready && !!employeeId,
     retry: false,
@@ -92,10 +116,10 @@ export function useCreateAttendanceLink() {
       expiresOn: string | null
       daysBack: number
       autoApply: boolean
-      timeZone: string
+      requireUnlock: boolean
     }) => (await apiClient.post<AttendanceLink>('/attendance-links', input)).data,
     onSuccess: (link) =>
-      queryClient.setQueryData(attendanceLinkKeys.employee(link.employeeId), link),
+      queryClient.invalidateQueries({ queryKey: attendanceLinkKeys.employee(link.employeeId) }),
   })
 }
 
@@ -106,7 +130,19 @@ export function useRevokeAttendanceLink() {
       await apiClient.delete(`/attendance-links/${input.id}`)
     },
     onSuccess: (_void, input) =>
-      queryClient.setQueryData(attendanceLinkKeys.employee(input.employeeId), null),
+      queryClient.invalidateQueries({ queryKey: attendanceLinkKeys.employee(input.employeeId) }),
+  })
+}
+
+/** Forget the employee's registered phone, so another can be registered through the link. */
+export function useForgetAttendancePhone() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (employeeId: string) => {
+      await apiClient.delete(`/attendance-links/phone/${employeeId}`)
+    },
+    onSettled: (_void, _error, employeeId) =>
+      queryClient.invalidateQueries({ queryKey: attendanceLinkKeys.employee(employeeId) }),
   })
 }
 
@@ -123,6 +159,7 @@ export function useAttendanceSubmissions(date: string, enabled = true) {
         configured: data?.configured === true,
         pending: asList<AttendanceSubmission>(data?.pending),
         fromLink: asList<string>(data?.fromLink),
+        fromDevice: asList<string>(data?.fromDevice),
       }
     },
     enabled: ready && enabled && !!date,

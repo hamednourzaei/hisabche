@@ -2,7 +2,7 @@
 // Daily attendance sheet (#100).
 //
 //   GET /attendance-sheet?date=YYYY-MM-DD
-//   PUT /attendance-sheet   { employeeId, date, status, checkIn, checkOut, note }
+//   PUT /attendance-sheet   { employeeId, date, status, checkIn, checkOut, endsNextDay, note }
 //
 // `record: null` = nothing recorded for that employee on that day — which is
 // not «absent». `result.workedHours: null` = an open day; it has no hours yet.
@@ -21,6 +21,8 @@ export interface AttendanceRecord {
   status: AttendanceMarkStatus | 'open'
   checkIn: string | null
   checkOut: string | null
+  /** The exit is on the day after the record's date (a night shift). */
+  endsNextDay: boolean
   note: string | null
   result: {
     workedHours: number | null
@@ -55,6 +57,8 @@ export interface AttendanceMarkInput {
   status: AttendanceMarkStatus
   checkIn: string | null
   checkOut: string | null
+  /** Said by a person, never inferred from the times. */
+  endsNextDay?: boolean | undefined
   note: string | null
 }
 

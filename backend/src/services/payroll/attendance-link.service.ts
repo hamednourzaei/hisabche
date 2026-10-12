@@ -18,9 +18,10 @@
 // ⚠️ THE PUBLIC VIEW IS A CLOSED LIST. Name, position, the business name and
 // this person's own days. No salary, phone, id number, or anybody else.
 //
-// ⚠️ «TODAY» AND «NOW» ARE THE LINK'S ZONE ON THE SERVER'S CLOCK — never the
-// employee's device. The zone was fixed by the manager's device when the link
-// was made, which is the «shop's own local time» the sheet already records in.
+// ⚠️ «TODAY» AND «NOW» ARE THE WORKPLACE'S ZONE ON THE SERVER'S CLOCK — never
+// the employee's device, and not the manager's either. The zone is resolved on
+// every visit (workplace-time-zone.ts): the employee's branch, else the
+// business. A business with no zone has no links: nothing is assumed.
 //
 // Nothing here touches payroll.
 // ============================================
@@ -36,14 +37,23 @@ import { resolveWorkspaceAccess } from '../authorization/workspace-access.servic
 import { isMissingSchema } from '../blog/blog.domain'
 import { minutesOf } from '../customers/attendance.domain'
 import { requireRole, type TenancyContext } from '../tenancy.service'
+import { unlockEnrollmentMessage, unlockSubmissionMessage } from '@hisabche/validation'
+
+import { browserOrigins } from '../../utils/browser-origins'
+import { timeZoneForEmployee, type EmployeeTimeZone } from '../workplace-time-zone'
 import {
   addDays,
-  isIanaTimeZone,
   isoDayIn,
   linkState,
   normalizeClock,
   type AttendanceLinkState,
 } from './attendance-link.domain'
+import {
+  challengeOf,
+  fromBase64Url,
+  verifyAssertion,
+  verifyEnrollment,
+} from './phone-unlock.domain'
 
 /** attendance-self-01 has not been run. The sheet itself keeps working. */
 export class AttendanceSelfNotConfiguredError extends BaseError {
@@ -71,10 +81,44 @@ interface LinkRow {
   revoked_at: string | null
   days_back: number
   auto_apply: boolean
-  time_zone: string
+  require_unlock: boolean
 }
 const LINK_COLUMNS =
-  'id, workspace_id, employee_id, token, created_by, created_at, expires_at, last_used_at, revoked_at, days_back, auto_apply, time_zone'
+  'id, workspace_id, employee_id, token, created_by, created_at, expires_at, last_used_at, revoked_at, days_back, auto_apply, require_unlock'
+
+interface PhoneKeyRow {
+  id: string
+  credential_id: string
+  public_key: string
+  algorithm: number
+  created_at: string
+  last_used_at: string | null
+}
+const PHONE_KEY_COLUMNS = 'id, credential_id, public_key, algorithm, created_at, last_used_at'
+
+/** The registered phone, as a manager sees it. Never the key itself. */
+export interface AttendancePhone {
+  registeredAt: string
+  lastUsedAt: string | null
+}
+
+/** What the phone sends when it registers. All base64url. */
+export interface PhoneEnrollInput {
+  credentialId: string
+  publicKey: string
+  algorithm: number
+  clientDataJSON: string
+  authenticatorData: string
+  clientRequestId: string
+}
+
+/** What the phone sends with a submission. All base64url. */
+export interface PhoneAssertionInput {
+  credentialId: string
+  clientDataJSON: string
+  authenticatorData: string
+  signature: string
+}
 
 export interface AttendanceLink {
   id: string
@@ -86,7 +130,17 @@ export interface AttendanceLink {
   lastUsedAt: string | null
   daysBack: number
   autoApply: boolean
-  timeZone: string
+  /** Each submission must be confirmed by the registered phone's own lock. */
+  requireUnlock: boolean
+}
+
+/** What the manager's dialog shows: the link, and whose clock it will read. */
+export interface AttendanceLinkStatus {
+  link: AttendanceLink | null
+  /** The employee's registered phone, or null when none is. */
+  phone: AttendancePhone | null
+  /** Null zone = none has been set, and no link can be made until one is. */
+  workplace: EmployeeTimeZone
 }
 
 interface SubmissionRow {
@@ -96,13 +150,15 @@ interface SubmissionRow {
   status: string
   check_in: string | null
   check_out: string | null
+  ends_next_day: boolean
+  proof: string | null
   note: string | null
   received_at: string
   state: string
   decision_note: string | null
 }
 const SUBMISSION_COLUMNS =
-  'id, employee_id, date, status, check_in, check_out, note, received_at, state, decision_note'
+  'id, employee_id, date, status, check_in, check_out, ends_next_day, proof, note, received_at, state, decision_note'
 
 export interface AttendanceSubmission {
   id: string
@@ -111,6 +167,10 @@ export interface AttendanceSubmission {
   status: SelfStatus
   checkIn: string | null
   checkOut: string | null
+  /** The exit is on the day after `date`. */
+  endsNextDay: boolean
+  /** The registered phone's lock confirmed it. */
+  unlocked: boolean
   note: string | null
   /** The server's clock when it arrived. */
   receivedAt: string
@@ -130,9 +190,20 @@ export interface AttendanceSelfView {
   allowedFrom: string
   allowedTo: string
   autoApply: boolean
+  /**
+   * `required`: nothing is accepted without the phone's lock.
+   * `credentialId`: the registered phone's key id (not a secret), or null
+   * when no phone is registered yet.
+   */
+  unlock: { required: boolean; credentialId: string | null }
   days: Array<{
     date: string
-    record: null | { status: string; checkIn: string | null; checkOut: string | null }
+    record: null | {
+      status: string
+      checkIn: string | null
+      checkOut: string | null
+      endsNextDay: boolean
+    }
     submissions: Array<Omit<AttendanceSubmission, 'employeeId' | 'date'>>
   }>
 }
@@ -142,8 +213,10 @@ export interface SelfSubmitInput {
   status: string
   checkIn: string | null
   checkOut: string | null
+  endsNextDay?: boolean | undefined
   note: string | null
   clientRequestId: string
+  unlock?: PhoneAssertionInput | null | undefined
 }
 
 const hhmm = (value: string | null | undefined) => (value ? String(value).slice(0, 5) : null)
@@ -173,7 +246,7 @@ function toLink(row: LinkRow, now: Date): AttendanceLink {
     lastUsedAt: row.last_used_at,
     daysBack: row.days_back,
     autoApply: row.auto_apply,
-    timeZone: row.time_zone,
+    requireUnlock: row.require_unlock === true,
   }
 }
 
@@ -185,6 +258,8 @@ function toSubmission(row: SubmissionRow): AttendanceSubmission {
     status: row.status as SelfStatus,
     checkIn: hhmm(row.check_in),
     checkOut: hhmm(row.check_out),
+    endsNextDay: row.ends_next_day === true,
+    unlocked: row.proof === 'device_unlock',
     note: row.note,
     receivedAt: row.received_at,
     state: row.state as AttendanceSubmission['state'],
@@ -193,12 +268,31 @@ function toSubmission(row: SubmissionRow): AttendanceSubmission {
 }
 
 export class AttendanceLinkService {
-  constructor(private readonly clock: () => Date = () => new Date()) {}
+  constructor(
+    private readonly clock: () => Date = () => new Date(),
+    /** The pages a phone's signature may come from. */
+    private readonly origins: readonly string[] = browserOrigins(
+      process.env.NODE_ENV === 'production',
+    ),
+  ) {}
+
+  /** The employee's registered phone key, or null. */
+  private async phoneKey(workspaceId: string, employeeId: string): Promise<PhoneKeyRow | null> {
+    const { data, error } = await supabase
+      .from('attendance_phone_keys')
+      .select(PHONE_KEY_COLUMNS)
+      .eq('workspace_id', workspaceId)
+      .eq('employee_id', employeeId)
+      .is('revoked_at', null)
+      .maybeSingle()
+    check(error, 'Failed to read the registered phone')
+    return (data as PhoneKeyRow | null) ?? null
+  }
 
   // ─── for managers ─────────────────────────────────────────────────────────
 
   /** The employee's link that is not revoked (it may have expired), or null. */
-  async current(ctx: TenancyContext, employeeId: string): Promise<AttendanceLink | null> {
+  async current(ctx: TenancyContext, employeeId: string): Promise<AttendanceLinkStatus> {
     const { data, error } = await supabase
       .from('attendance_links')
       .select(LINK_COLUMNS)
@@ -207,28 +301,51 @@ export class AttendanceLinkService {
       .is('revoked_at', null)
       .maybeSingle()
     check(error, 'Failed to read the attendance link')
-    return data ? toLink(data as LinkRow, this.clock()) : null
+    const key = await this.phoneKey(ctx.workspaceId, employeeId)
+    return {
+      link: data ? toLink(data as LinkRow, this.clock()) : null,
+      phone: key ? { registeredAt: key.created_at, lastUsedAt: key.last_used_at ?? null } : null,
+      workplace: await timeZoneForEmployee(ctx.workspaceId, employeeId),
+    }
+  }
+
+  /**
+   * Forget the employee's phone, so another can be registered through the
+   * link. The old phone's signatures stop being accepted at once.
+   */
+  async forgetPhone(ctx: TenancyContext, employeeId: string): Promise<void> {
+    const { data, error } = await supabase
+      .from('attendance_phone_keys')
+      .update({ revoked_at: this.clock().toISOString(), revoked_by: ctx.userId })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('employee_id', employeeId)
+      .is('revoked_at', null)
+      .select('id')
+    check(error, 'Failed to forget the registered phone')
+    if ((data ?? []).length === 0) throw new NotFoundError('Registered phone')
   }
 
   async create(
     ctx: TenancyContext,
     input: {
       employeeId: string
-      /** The last day the link works, `YYYY-MM-DD` in `timeZone`. Null = no end. */
+      /** The last day the link works, `YYYY-MM-DD` where the employee works. Null = no end. */
       expiresOn: string | null
       daysBack: number
       autoApply: boolean
-      timeZone: string
+      requireUnlock?: boolean | undefined
     },
   ): Promise<AttendanceLink> {
-    if (!isIanaTimeZone(input.timeZone)) throw new ValidationError('ATTENDANCE_TIME_ZONE_INVALID')
+    // Whose «today»? If nobody has said, a link would have to guess — refuse.
+    const workplace = await timeZoneForEmployee(ctx.workspaceId, input.employeeId)
+    if (!workplace.timeZone) throw new ConflictError('ATTENDANCE_TIME_ZONE_NOT_SET')
     if (!Number.isInteger(input.daysBack) || input.daysBack < 0 || input.daysBack > MAX_DAYS_BACK) {
       throw new ValidationError('ATTENDANCE_DAYS_BACK_INVALID')
     }
     const now = this.clock()
     let expiresAt: string | null = null
     if (input.expiresOn !== null) {
-      if (input.expiresOn < isoDayIn(input.timeZone, now)) {
+      if (input.expiresOn < isoDayIn(workplace.timeZone, now)) {
         throw new ValidationError('ATTENDANCE_LINK_EXPIRY_IN_PAST')
       }
       // Through the end of that day wherever the shop is: the first instant
@@ -246,7 +363,7 @@ export class AttendanceLinkService {
       p_expires_at: expiresAt,
       p_days_back: input.daysBack,
       p_auto_apply: input.autoApply,
-      p_time_zone: input.timeZone,
+      p_require_unlock: input.requireUnlock === true,
     })
     if (raised(error, 'ATTENDANCE_EMPLOYEE_NOT_FOUND')) throw new NotFoundError('Employee')
     check(error, 'Failed to make the attendance link')
@@ -275,7 +392,14 @@ export class AttendanceLinkService {
   async forDay(
     ctx: TenancyContext,
     date: string,
-  ): Promise<{ configured: boolean; pending: AttendanceSubmission[]; fromLink: string[] }> {
+  ): Promise<{
+    configured: boolean
+    pending: AttendanceSubmission[]
+    /** Employees whose record for this day came from their own link. */
+    fromLink: string[]
+    /** Employees whose record for this day was written by a terminal. */
+    fromDevice: string[]
+  }> {
     const pending = await selectAllPages<SubmissionRow, { message: string; code?: string }>(
       (from, to) =>
         supabase
@@ -289,32 +413,40 @@ export class AttendanceLinkService {
           .range(from, to),
     )
     if (pending.error && isMissingSchema(pending.error)) {
-      return { configured: false, pending: [], fromLink: [] }
+      return { configured: false, pending: [], fromLink: [], fromDevice: [] }
     }
     if (pending.error) throw new DatabaseError('Failed to read submissions', pending.error)
 
+    // Who wrote each of the day's records, when it was not a person on the
+    // sheet: the sheet says so, so «the manager marked it», «the employee said
+    // so» and «the device saw them» are never one picture.
     const marked = await selectAllPages<
-      { employee_id: string },
+      { employee_id: string; source: string },
       { message: string; code?: string }
     >((from, to) =>
       supabase
         .from('attendance')
-        .select('employee_id')
+        .select('employee_id, source')
         .eq('workspace_id', ctx.workspaceId)
         .eq('date', date)
-        .eq('source', 'employee_link')
+        .in('source', ['employee_link', 'device'])
         .order('id', { ascending: true })
         .range(from, to),
     )
     if (marked.error && isMissingSchema(marked.error)) {
-      return { configured: false, pending: [], fromLink: [] }
+      return { configured: false, pending: [], fromLink: [], fromDevice: [] }
     }
     if (marked.error) throw new DatabaseError('Failed to read attendance sources', marked.error)
 
     return {
       configured: true,
       pending: (pending.data ?? []).map(toSubmission),
-      fromLink: (marked.data ?? []).map((row) => row.employee_id),
+      fromLink: (marked.data ?? [])
+        .filter((row) => row.source === 'employee_link')
+        .map((row) => row.employee_id),
+      fromDevice: (marked.data ?? [])
+        .filter((row) => row.source === 'device')
+        .map((row) => row.employee_id),
     }
   }
 
@@ -358,7 +490,9 @@ export class AttendanceLinkService {
    * one that is unknown, revoked, expired or orphaned. Which of those it was
    * is none of the holder's business.
    */
-  private async resolve(token: string): Promise<{ link: LinkRow; ctx: TenancyContext } | null> {
+  private async resolve(
+    token: string,
+  ): Promise<{ link: LinkRow; ctx: TenancyContext; timeZone: string } | null> {
     if (!/^[0-9a-f]{64}$/.test(token)) return null
     const { data, error } = await supabase
       .from('attendance_links')
@@ -379,19 +513,23 @@ export class AttendanceLinkService {
     } catch {
       return null
     }
-    return { link, ctx }
+    // The zone was set when the link was made and cannot be unset; a link
+    // that has none now cannot say what day it is, so it is not offered.
+    const { timeZone } = await timeZoneForEmployee(link.workspace_id, link.employee_id)
+    if (!timeZone) return null
+    return { link, ctx, timeZone }
   }
 
-  private window(link: LinkRow) {
-    const today = isoDayIn(link.time_zone, this.clock())
+  private window(link: LinkRow, timeZone: string) {
+    const today = isoDayIn(timeZone, this.clock())
     return { today, from: addDays(today, -link.days_back), to: today }
   }
 
   async view(token: string): Promise<AttendanceSelfView | null> {
     const found = await this.resolve(token)
     if (!found) return null
-    const { link, ctx } = found
-    const { today, from, to } = this.window(link)
+    const { link, ctx, timeZone } = found
+    const { today, from, to } = this.window(link, timeZone)
 
     const [employee, business, records, submissions] = await Promise.all([
       supabase
@@ -403,7 +541,7 @@ export class AttendanceLinkService {
       supabase.from('workspaces').select('name').eq('id', ctx.workspaceId).maybeSingle(),
       supabase
         .from('attendance')
-        .select('id, date, status, check_in, check_out')
+        .select('id, date, status, check_in, check_out, ends_next_day')
         .eq('workspace_id', ctx.workspaceId)
         .eq('employee_id', link.employee_id)
         .gte('date', from)
@@ -431,7 +569,7 @@ export class AttendanceLinkService {
 
     const recordByDay = new Map<
       string,
-      { status: string; checkIn: string | null; checkOut: string | null }
+      { status: string; checkIn: string | null; checkOut: string | null; endsNextDay: boolean }
     >()
     for (const row of (records.data ?? []) as Array<Record<string, unknown>>) {
       const day = String(row.date).slice(0, 10)
@@ -441,6 +579,7 @@ export class AttendanceLinkService {
           status: String(row.status ?? 'present'),
           checkIn: hhmm(row.check_in as string | null),
           checkOut: hhmm(row.check_out as string | null),
+          endsNextDay: row.ends_next_day === true,
         })
       }
     }
@@ -458,7 +597,7 @@ export class AttendanceLinkService {
     }
 
     const clock = new Intl.DateTimeFormat('en-GB', {
-      timeZone: link.time_zone,
+      timeZone: timeZone,
       hourCycle: 'h23',
       hour: '2-digit',
       minute: '2-digit',
@@ -468,14 +607,70 @@ export class AttendanceLinkService {
       businessName: (business.data as { name?: string } | null)?.name ?? null,
       employeeName: [person.first_name, person.last_name].filter(Boolean).join(' '),
       position: person.position,
-      timeZone: link.time_zone,
+      timeZone: timeZone,
       today,
       now: clock,
       allowedFrom: from,
       allowedTo: to,
       autoApply: link.auto_apply,
+      unlock: {
+        required: link.require_unlock === true,
+        credentialId:
+          (await this.phoneKey(link.workspace_id, link.employee_id))?.credential_id ?? null,
+      },
       days,
     }
+  }
+
+  /**
+   * Register the phone the employee is holding. Once, and first come: while a
+   * phone is registered, another cannot be — a manager forgets the old one.
+   * Null = the link is not there.
+   */
+  async enrollPhone(token: string, input: PhoneEnrollInput): Promise<AttendancePhone | null> {
+    const found = await this.resolve(token)
+    if (!found) return null
+    const { link } = found
+
+    const clientDataJSON = fromBase64Url(input.clientDataJSON, 2048)
+    const authenticatorData = fromBase64Url(input.authenticatorData, 2048)
+    const publicKey = fromBase64Url(input.publicKey, 1024)
+    if (!clientDataJSON || !authenticatorData || !publicKey) {
+      throw new ValidationError('ATTENDANCE_UNLOCK_MALFORMED')
+    }
+    if (!/^[A-Za-z0-9_-]{16,1400}$/.test(input.credentialId)) {
+      throw new ValidationError('ATTENDANCE_UNLOCK_MALFORMED')
+    }
+    const verdict = verifyEnrollment({
+      clientDataJSON,
+      authenticatorData,
+      publicKey,
+      algorithm: input.algorithm,
+      challenge: challengeOf(unlockEnrollmentMessage(token, input.clientRequestId)),
+      origins: this.origins,
+    })
+    if (!verdict.ok) throw new ValidationError(verdict.problem)
+
+    if (await this.phoneKey(link.workspace_id, link.employee_id)) {
+      throw new ConflictError('ATTENDANCE_PHONE_ALREADY_REGISTERED')
+    }
+    const { data, error } = await supabase
+      .from('attendance_phone_keys')
+      .insert({
+        workspace_id: link.workspace_id,
+        employee_id: link.employee_id,
+        credential_id: input.credentialId,
+        public_key: input.publicKey,
+        algorithm: verdict.algorithm,
+        created_at: this.clock().toISOString(),
+      })
+      .select(PHONE_KEY_COLUMNS)
+      .single()
+    // Two phones at the same instant: the unique index let one through.
+    if (error?.code === '23505') throw new ConflictError('ATTENDANCE_PHONE_ALREADY_REGISTERED')
+    check(error, 'Failed to register the phone')
+    const row = data as PhoneKeyRow
+    return { registeredAt: row.created_at, lastUsedAt: row.last_used_at ?? null }
   }
 
   /** Null = the link is not there (404). A broken rule throws its code. */
@@ -485,8 +680,8 @@ export class AttendanceLinkService {
   ): Promise<{ id: string; state: AttendanceSubmission['state']; replayed: boolean } | null> {
     const found = await this.resolve(token)
     if (!found) return null
-    const { link } = found
-    const { from, to } = this.window(link)
+    const { link, timeZone } = found
+    const { from, to } = this.window(link, timeZone)
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date) || addDays(input.date, 0) !== input.date) {
       throw new ValidationError('ATTENDANCE_DATE_INVALID')
@@ -514,12 +709,55 @@ export class AttendanceLinkService {
       if (start === null || (checkOut !== null && end === null)) {
         throw new ValidationError('ATTENDANCE_TIME_INVALID')
       }
-      if (end !== null && end <= start) {
+      // An exit earlier than the arrival is a night only when the employee
+      // says so; said, it must really be earlier.
+      const night = input.endsNextDay === true
+      if (end !== null && (night ? end >= start : end <= start)) {
         throw new ValidationError('ATTENDANCE_CHECK_OUT_BEFORE_CHECK_IN')
       }
     }
+    const endsNextDay = present && checkOut !== null && input.endsNextDay === true
     const note = (input.note ?? '').trim() || null
     if (note && note.length > 500) throw new ValidationError('ATTENDANCE_NOTE_TOO_LONG')
+
+    // The phone's lock, when the link asks for it. The signature covers this
+    // very form (as it was sent), so it cannot be moved onto another day.
+    let proof: string | null = null
+    if (link.require_unlock) {
+      const key = await this.phoneKey(link.workspace_id, link.employee_id)
+      if (!key) throw new ConflictError('ATTENDANCE_PHONE_NOT_REGISTERED')
+      if (!input.unlock) throw new ValidationError('ATTENDANCE_UNLOCK_REQUIRED')
+      const clientDataJSON = fromBase64Url(input.unlock.clientDataJSON, 2048)
+      const authenticatorData = fromBase64Url(input.unlock.authenticatorData, 2048)
+      const signature = fromBase64Url(input.unlock.signature, 1024)
+      const publicKey = fromBase64Url(key.public_key, 1024)
+      if (!clientDataJSON || !authenticatorData || !signature || !publicKey) {
+        throw new ValidationError('ATTENDANCE_UNLOCK_MALFORMED')
+      }
+      if (input.unlock.credentialId !== key.credential_id) {
+        throw new ValidationError('ATTENDANCE_UNLOCK_SIGNATURE_INVALID')
+      }
+      const verdict = verifyAssertion({
+        clientDataJSON,
+        authenticatorData,
+        signature,
+        publicKey,
+        algorithm: key.algorithm,
+        challenge: challengeOf(
+          unlockSubmissionMessage(token, {
+            date: input.date,
+            status: input.status,
+            checkIn: input.checkIn,
+            checkOut: input.checkOut,
+            endsNextDay: input.endsNextDay === true,
+            clientRequestId: input.clientRequestId,
+          }),
+        ),
+        origins: this.origins,
+      })
+      if (!verdict.ok) throw new ValidationError(verdict.problem)
+      proof = 'device_unlock'
+    }
 
     const call = () =>
       supabase.rpc('attendance_submit', {
@@ -528,8 +766,12 @@ export class AttendanceLinkService {
         p_status: input.status,
         p_check_in: checkIn,
         p_check_out: checkOut,
+        p_ends_next_day: endsNextDay,
         p_note: note,
         p_client_request_id: input.clientRequestId,
+        // Written on the submission: the zone this day was judged in.
+        p_time_zone: timeZone,
+        p_proof: proof,
       })
 
     let { data, error } = await call()
@@ -537,7 +779,20 @@ export class AttendanceLinkService {
     // Asking again answers with what it wrote.
     if (raised(error, 'ATTENDANCE_SUBMISSION_REPLAY')) ({ data, error } = await call())
     if (raised(error, 'ATTENDANCE_LINK_NOT_FOUND')) return null
+    if (raised(error, 'ATTENDANCE_UNLOCK_REQUIRED')) {
+      throw new ValidationError('ATTENDANCE_UNLOCK_REQUIRED')
+    }
     check(error, 'Failed to record the submission')
+    if (proof) {
+      // When the phone last vouched for something. Not worth failing the
+      // submission over: it is already written.
+      await supabase
+        .from('attendance_phone_keys')
+        .update({ last_used_at: this.clock().toISOString() })
+        .eq('workspace_id', link.workspace_id)
+        .eq('employee_id', link.employee_id)
+        .is('revoked_at', null)
+    }
     return data as { id: string; state: AttendanceSubmission['state']; replayed: boolean }
   }
 }

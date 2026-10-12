@@ -7,7 +7,13 @@ import { useTranslation } from 'react-i18next'
 import { LogOut } from 'lucide-react'
 
 import { Badge, Button, Card, cn } from '@/components/ui/primitives'
-import { BusinessStampSection, HardwareSection, SettingsHubContainer } from '@hisabche/ui/screens'
+import {
+  BookCurrencySection,
+  BusinessStampSection,
+  HardwareSection,
+  SettingsHubContainer,
+  WorkplaceTimeZoneSection,
+} from '@hisabche/ui/screens'
 import { PageHeader } from '@/components/layout/page-header'
 import { useAuthStore, useCurrentUser } from '@/features/auth/auth.store'
 import { bridge } from '@/shared/lib/bridge'
@@ -72,6 +78,23 @@ function DesktopSettings() {
             desktop printer host was registered and unreachable. */}
         <div className="col-span-2">
           <HardwareSection />
+        </div>
+
+        {/* The currency this business keeps its books in — one stored value on
+            the server, the shared section. It was only on the web: a business
+            set up from this app could see its books currency nowhere and
+            choose it nowhere. (The buttons further down pick how THIS DEVICE
+            shows money; they are not the books.) */}
+        <div className="col-span-2">
+          <BookCurrencySection />
+        </div>
+
+        {/* Where the business is — the zone «today» is read in for its
+            employees. The shared section, as on the web: without it a business
+            run from the Windows or phone app could never set its zone, and so
+            could never make an attendance link. */}
+        <div className="col-span-2">
+          <WorkplaceTimeZoneSection />
         </div>
 
         <Card>

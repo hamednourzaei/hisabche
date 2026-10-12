@@ -55,6 +55,7 @@ const markBody = z.object({
   status: z.enum(MARKABLE_STATUSES),
   checkIn: time,
   checkOut: time,
+  endsNextDay: z.boolean().default(false),
   note: z.string().trim().max(500).nullable().default(null),
 })
 

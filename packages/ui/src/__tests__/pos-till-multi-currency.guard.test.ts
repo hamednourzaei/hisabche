@@ -86,7 +86,7 @@ describe('Guard: i18n completeness across fa, af, en', () => {
     'till.col_currency',
     'till.currency',
     'till.filter_currency',
-    'till.all_currencies',
+    'till.select_a_till',
     'till.error_POS_CURRENCY_MISMATCH',
     'till.error_POS_CURRENCY_SCHEMA_REQUIRED',
     'till.foreign_not_posted',

@@ -24,4 +24,14 @@ SELECT
       FROM pg_constraint
      WHERE conname = 'customers_declared_role_check'
        AND conrelid = 'public.customers'::regclass
+  ), false) AS ok
+UNION ALL
+SELECT
+  'function customer_invoice_roles exists, closed to anon/authenticated' AS check_name,
+  COALESCE((
+    SELECT NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+       AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+      FROM pg_proc p
+     WHERE p.pronamespace = 'public'::regnamespace
+       AND p.proname = 'customer_invoice_roles'
   ), false) AS ok;

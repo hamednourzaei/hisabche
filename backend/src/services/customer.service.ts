@@ -14,6 +14,7 @@ import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
 import { partyBalancesByCurrency } from './payments'
 import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
+import { selectAllPages } from '../utils/fetch-all-pages'
 import {
   asReplay,
   IdempotencyUnavailableError,
@@ -203,6 +204,25 @@ export class CustomerService {
     const fetchLimit = maxLimit + 1
 
     const keyset = cursor ? decodeCursor(cursor, sortBy) : null
+
+    // «مشتری / تأمین‌کننده» is a filter over the whole list, and the role is not
+    // a column: it has its own path, which filters first and cuts the page after.
+    if (role) {
+      const byRole = await this.listByRole(workspaceId, {
+        search,
+        isActive,
+        hasBalance,
+        type,
+        role,
+        maxLimit,
+        page: Number(page) || 1,
+        keyset,
+        sortBy,
+        sortDirection,
+      })
+      await memoryCache.set(cacheKey, byRole, 30)
+      return byRole
+    }
     // ⚠️ THE TOTAL IS COUNTED ON THIS QUERY (27 Sep 2026). It came from a
     // second HEAD request with `count: 'estimated'` over the WHOLE workspace:
     // one extra round trip plus a planner EXPLAIN per list call, and with a
@@ -297,7 +317,7 @@ export class CustomerService {
     })
 
     const result = {
-      customers: role ? withRoles.filter((c) => matchesRole(c.role, role)) : withRoles,
+      customers: withRoles,
       nextCursor,
       hasMore,
       ...(keyset ? {} : { total: totalCount ?? 0 }),
@@ -327,11 +347,22 @@ export class CustomerService {
     const roles = new Map<string, PartyRole>()
     if (customerIds.length === 0) return roles
 
-    const { data } = await supabase
-      .from('invoices')
-      .select('customer_id, type')
-      .eq('workspace_id', workspaceId)
-      .in('customer_id', customerIds)
+    // Every invoice of these parties, not the first thousand: one busy customer
+    // on the page used to fill the response and leave the others «no dealings».
+    // And a failed read is a failure — it was read as «nobody has a role».
+    const { data, error } = await selectAllPages<
+      { customer_id: string | null; type?: string | null },
+      { message: string; code?: string }
+    >((from, to) =>
+      supabase
+        .from('invoices')
+        .select('customer_id, type')
+        .eq('workspace_id', workspaceId)
+        .in('customer_id', customerIds)
+        .order('id', { ascending: true })
+        .range(from, to),
+    )
+    if (error) throw new DatabaseError('Failed to read party roles', error)
 
     for (const row of data ?? []) {
       const id = (row as { customer_id: string | null }).customer_id
@@ -343,6 +374,155 @@ export class CustomerService {
     }
 
     return roles
+  }
+
+  /**
+   * What every party of the workspace has done with us, from their invoices.
+   *
+   * One grouped row per party from `customer_invoice_roles`
+   * (customer-declared-role-01), read in pages by key. Before that script is
+   * run the same answer is built from the invoices themselves — slower, and
+   * exactly as complete.
+   */
+  private async workspaceRoles(workspaceId: string): Promise<Map<string, PartyRole>> {
+    const roles = new Map<string, PartyRole>()
+    const PAGE = 1000
+
+    for (let after: string | null = null; ;) {
+      const { data, error } = await supabase.rpc('customer_invoice_roles', {
+        p_workspace: workspaceId,
+        p_after: after,
+        p_limit: PAGE,
+      })
+      if (error) {
+        if (['PGRST202', '42883'].includes((error as { code?: string }).code ?? '')) {
+          return this.workspaceRolesFromInvoices(workspaceId)
+        }
+        throw new DatabaseError('Failed to read party roles', error)
+      }
+      const page = (data ?? []) as Array<{
+        customer_id: string
+        has_sale: boolean
+        has_purchase: boolean
+      }>
+      for (const row of page) {
+        let role: PartyRole = 'none'
+        if (row.has_sale) role = mergeRole(role, 'buyer')
+        if (row.has_purchase) role = mergeRole(role, 'seller')
+        roles.set(row.customer_id, role)
+      }
+      if (page.length < PAGE) return roles
+      after = page[page.length - 1]?.customer_id ?? null
+      if (after === null) return roles
+    }
+  }
+
+  private async workspaceRolesFromInvoices(workspaceId: string): Promise<Map<string, PartyRole>> {
+    const roles = new Map<string, PartyRole>()
+    const { data, error } = await selectAllPages<
+      { customer_id: string | null; type?: string | null },
+      { message: string; code?: string }
+    >((from, to) =>
+      supabase
+        .from('invoices')
+        .select('customer_id, type')
+        .eq('workspace_id', workspaceId)
+        .order('id', { ascending: true })
+        .range(from, to),
+    )
+    if (error) throw new DatabaseError('Failed to read party roles', error)
+    for (const row of data ?? []) {
+      if (!row.customer_id) continue
+      const seen = roles.get(row.customer_id) ?? 'none'
+      roles.set(row.customer_id, mergeRole(seen, row.type === 'purchase' ? 'seller' : 'buyer'))
+    }
+    return roles
+  }
+
+  /**
+   * The list narrowed to buyers or to sellers.
+   *
+   * ⚠️ FILTER FIRST, CUT THE PAGE AFTER. The role is declared_role merged with
+   * what the invoices say — not a column a query can filter on. It used to be
+   * applied to the one page the database had already cut, so with more parties
+   * than a page a supplier simply was not in the suppliers tab, the page held
+   * fewer rows than asked for, and the total was the count of everybody.
+   * Every party that passes the other filters is read (in pages, in order),
+   * the role decides, and only then is a page taken. The total is exact.
+   */
+  private async listByRole(
+    workspaceId: string,
+    input: {
+      search?: string | undefined
+      isActive?: boolean | undefined
+      hasBalance?: boolean | undefined
+      type?: 'cash' | 'credit' | undefined
+      role: 'buyer' | 'seller'
+      maxLimit: number
+      page: number
+      keyset: ReturnType<typeof decodeCursor>
+      sortBy: string
+      sortDirection: 'asc' | 'desc'
+    },
+  ) {
+    const { search, isActive, hasBalance, type, role, maxLimit, page, keyset, sortBy } = input
+    const ascending = input.sortDirection === 'asc'
+
+    const read = (columns: string) =>
+      selectAllPages<CustomerRow, { message: string; code?: string }>((from, to) => {
+        let query = supabase
+          .from('customers')
+          .select(columns)
+          .eq('workspace_id', workspaceId)
+          .order(sortBy, { ascending })
+          .order('id', { ascending })
+        if (search) query = query.ilike('full_name', `%${search}%`)
+        if (isActive !== undefined) query = query.eq('is_active', isActive)
+        if (hasBalance !== undefined) {
+          query = hasBalance ? query.gt('opening_balance', 0) : query.eq('opening_balance', 0)
+        }
+        if (type !== undefined) query = query.eq('type', type)
+        if (keyset) query = applyKeyset(query, sortBy, input.sortDirection, keyset)
+        return query.range(from, to) as unknown as PromiseLike<{
+          data: CustomerRow[] | null
+          error: { message: string; code?: string } | null
+        }>
+      })
+
+    let rows = await read(LIST_COLUMNS)
+    if (rows.error && isMissingColumnError(rows.error, 'declared_role')) {
+      rows = await read(LIST_COLUMNS_LEGACY)
+    }
+    if (rows.error) throw new DatabaseError('Failed to fetch customers', rows.error)
+
+    const derived = await this.workspaceRoles(workspaceId)
+    const matching = (rows.data ?? [])
+      .map((row) => {
+        const mapped = mapCustomer(row)
+        return {
+          row,
+          customer: {
+            ...mapped,
+            role: resolveEffectiveRole(mapped.declaredRole, derived.get(mapped.id) ?? 'none'),
+          },
+        }
+      })
+      .filter((entry) => matchesRole(entry.customer.role, role))
+
+    // After a cursor the rows already start past it; a page number is an offset.
+    const offset = keyset ? 0 : (Math.max(1, page) - 1) * maxLimit
+    const slice = matching.slice(offset, offset + maxLimit)
+    const hasMore = matching.length > offset + maxLimit
+    const last = slice[slice.length - 1]
+
+    return {
+      customers: slice.map((entry) => entry.customer),
+      nextCursor:
+        hasMore && last ? encodeCursor(last.row as Record<string, unknown>, sortBy) : null,
+      hasMore,
+      ...(keyset ? {} : { total: matching.length }),
+      limit: maxLimit,
+    }
   }
 
   // ─── Get By ID ──────────────────────────────────────────

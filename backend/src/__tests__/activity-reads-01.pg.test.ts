@@ -192,6 +192,15 @@ describe('docs/activity-reads-01-migration.sql', () => {
     const [counts] = await sql`SELECT public.activity_get_filter_counts(${WS_A}, ${USER_B}) AS c`
     expect(Number(counts!.c.unread)).toBe(beforeB + 1)
     expect(Number(counts!.c.all)).toBe(beforeB + 1)
+    // B's one event is a customer event, and unread: it is in the per-tab unread.
+    expect(counts!.c.unreadBy).toEqual({ invoices: 0, payments: 0, customers: beforeB + 1 })
+
+    // A read everything: A's per-tab unread is zero on every tab, while the
+    // totals of A's tabs are not.
+    const [mineCounts] =
+      await sql`SELECT public.activity_get_filter_counts(${WS_A}, ${USER_A}) AS c`
+    expect(mineCounts!.c.unreadBy).toEqual({ invoices: 0, payments: 0, customers: 0 })
+    expect(Number(mineCounts!.c.all)).toBeGreaterThan(0)
   })
 
   it('concurrent mark_all calls both succeed and row count is correct', async () => {

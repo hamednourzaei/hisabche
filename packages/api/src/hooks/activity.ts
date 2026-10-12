@@ -182,6 +182,11 @@ export interface ActivityFilterCounts {
   invoices: number
   payments: number
   customers: number
+  /**
+   * Unread of each typed tab. «Mark all as read» on a tab is offered only
+   * while THAT tab has something unread — not while it merely has events.
+   */
+  unreadBy: { invoices: number; payments: number; customers: number }
 }
 
 /**

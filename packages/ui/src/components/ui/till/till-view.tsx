@@ -78,6 +78,11 @@ export interface TillViewProps {
   totals: SessionTotals | null
   isSessionLoading?: boolean
   sessionError?: string | null
+  /**
+   * The selected till is not this workspace's (or does not exist). Kept apart
+   * from `sessionError`: «the read failed» is not «there is no such till».
+   */
+  sessionNotFound?: boolean
   /** Every open till in the workspace. */
   tills: AbandonedSession[]
   /** Kept apart from `tills`: a failed read must not read as «none». */
@@ -96,15 +101,24 @@ export interface TillViewProps {
   actionError: string | null
   closeNotice?: string | null
   onRefresh: () => void
-  /** «افزودن صندوق» — opens a till with its opening float, name and currency. */
-  onOpen: (input: { openingFloatMinor: number; label?: string; currency?: string }) => void
+  /**
+   * «افزودن صندوق» — opens a till with its opening float, name and currency.
+   * Resolves true once the server has opened it; false when it refused (the
+   * reason is in `actionError`). The form stays as typed until then.
+   */
+  onOpen: (input: {
+    openingFloatMinor: number
+    label?: string
+    currency?: string
+  }) => Promise<boolean>
   /** Row actions: «تعلیق» / «ادامه» and «بستن». */
   onSetSuspended: (sessionId: string, suspended: boolean) => void
+  /** Resolves true once closed; false when refused — the count is kept. */
   onCloseTill: (input: {
     sessionId: string
     countedCashMinor: number
     varianceReason?: string
-  }) => void
+  }) => Promise<boolean>
   /** Session id → the name a person gave that till. */
   tillLabels: Record<string, string>
   /** Resolves when the name is stored; rejects with the reason when it is not. */
@@ -116,7 +130,9 @@ export interface TillViewProps {
     kind: 'cash_in' | 'cash_out'
     amountMinor: number
     reason: string
-  }) => void
+    /** Made once per form fill and resent unchanged, so a retry is the same movement. */
+    movementId: string
+  }) => Promise<boolean>
   /** The drawer as a ledger, from the server. Last balance = expected cash. */
   ledger: DrawerEntry[]
   isLedgerLoading: boolean
@@ -199,6 +215,7 @@ export const TillView = memo(function TillView({
   totals,
   isSessionLoading = false,
   sessionError = null,
+  sessionNotFound = false,
   tills,
   tillsError,
   isTillsLoading,
@@ -261,6 +278,14 @@ export const TillView = memo(function TillView({
     }
   }, [bookCurrency, currencyDraft])
 
+  // ⚠️ MINOR UNITS BELONG TO A CURRENCY. 100.00 afghani is 10000 minor; kept
+  // across a switch to a currency with no decimals it would open the till with
+  // ten thousand. Changing the currency empties the amount.
+  const chooseCurrency = (next: string) => {
+    if (next !== currencyDraft) setFloatMinor(0)
+    setCurrencyDraft(next)
+  }
+
   const currencyOptions = useMemo(() => {
     return CURRENCY_CODES.filter((code) => code in FRACTION_DIGITS).map((code) => ({
       value: code,
@@ -273,6 +298,14 @@ export const TillView = memo(function TillView({
   const [movementKind, setMovementKind] = useState<'cash_in' | 'cash_out'>('cash_in')
   const [movementAmountMinor, setMovementAmountMinor] = useState(0)
   const [movementReason, setMovementReason] = useState('')
+  // One id per form fill. It is renewed only after the server has recorded
+  // the movement, so pressing «ثبت» again after a lost answer is the SAME
+  // movement to the server, never a second one in the drawer.
+  const [movementRequestId, setMovementRequestId] = useState('')
+  const openMovementForm = () => {
+    setMovementRequestId((current) => current || crypto.randomUUID())
+    setMovementOpen(true)
+  }
 
   const [tillSearch, setTillSearch] = useState('')
   // «ویرایش»: the till being named, the draft and what the server said.
@@ -325,6 +358,20 @@ export const TillView = memo(function TillView({
   const yesterday = dailyCashFlow[dailyCashFlow.length - 2] ?? { inMinor: 0, outMinor: 0 }
 
   const eventCount = ledger.filter((entry) => entry.kind !== 'opening_float').length
+
+  // «+13% نسبت به روز قبل» is a claim about two loaded days. While the
+  // aggregate is loading or its read failed there is nothing to compare.
+  const cashFlowKnown = !isCashFlowLoading && !cashFlowError
+
+  // On the list no till is selected, so there is no balance to show. That is
+  // not «no till is open»: say which of the two it is, and nothing while the
+  // list itself is still loading or could not be read.
+  const noTillHint =
+    isTillsLoading || tillsError
+      ? undefined
+      : tills.length > 0
+        ? t('till.select_a_till', 'یک صندوق را انتخاب کنید')
+        : t('till.no_open_session', 'صندوقی باز نیست')
 
   // Kinds of cash event in this session, counted from the drawer ledger.
   const distribution = useMemo(() => {
@@ -686,7 +733,11 @@ export const TillView = memo(function TillView({
               <Money minor={today.inMinor} currency={selectedCurrency} />
             )
           }
-          hint={<DeltaHint t={t} now={today.inMinor} before={yesterday.inMinor} goodWhenUp />}
+          hint={
+            cashFlowKnown ? (
+              <DeltaHint t={t} now={today.inMinor} before={yesterday.inMinor} goodWhenUp />
+            ) : undefined
+          }
         />
         <Stat
           icon={ArrowUpRight}
@@ -701,7 +752,14 @@ export const TillView = memo(function TillView({
             )
           }
           hint={
-            <DeltaHint t={t} now={today.outMinor} before={yesterday.outMinor} goodWhenUp={false} />
+            cashFlowKnown ? (
+              <DeltaHint
+                t={t}
+                now={today.outMinor}
+                before={yesterday.outMinor}
+                goodWhenUp={false}
+              />
+            ) : undefined
           }
         />
         <Stat
@@ -722,7 +780,7 @@ export const TillView = memo(function TillView({
           hint={
             session && totals
               ? t('till.expected_hint', 'محاسبه‌ی سرور — قابل ویرایش نیست')
-              : t('till.no_open_session', 'صندوقی باز نیست')
+              : noTillHint
           }
         />
         <Stat
@@ -758,7 +816,7 @@ export const TillView = memo(function TillView({
               {t('till.back_to_tills', '← صندوق‌ها')}
             </ActionButton>
             {session && session.status === 'open' ? (
-              <ActionButton onClick={() => setMovementOpen(true)} disabled={isBusy}>
+              <ActionButton onClick={openMovementForm} disabled={isBusy}>
                 <Plus className="me-1 size-4" aria-hidden="true" />
                 {t('till.add_cash', 'ثبت تراکنش نقدی')}
               </ActionButton>
@@ -767,7 +825,14 @@ export const TillView = memo(function TillView({
 
           {isSessionLoading ? (
             <Loading label={t('common.loading', 'در حال بارگذاری…')} />
-          ) : sessionError || !session || !totals ? (
+          ) : sessionError && !sessionNotFound ? (
+            // The read failed. That is not «there is no such till».
+            <ErrorNote
+              message={sessionError}
+              onRetry={onRefresh}
+              retryLabel={t('common.retry', 'تلاش دوباره')}
+            />
+          ) : sessionNotFound || !session || !totals ? (
             <EmptyState
               icon="search"
               title={t('till.not_found', 'صندوق مورد نظر یافت نشد.')}
@@ -895,16 +960,27 @@ export const TillView = memo(function TillView({
                   </div>
                   <div className="flex gap-2">
                     <ActionButton
-                      disabled={isBusy || movementAmountMinor <= 0 || movementReason.trim() === ''}
+                      disabled={
+                        isBusy ||
+                        !movementRequestId ||
+                        movementAmountMinor <= 0 ||
+                        movementReason.trim() === ''
+                      }
                       onClick={() => {
-                        onRecordMovement({
+                        // Closed and emptied only once the server has it. A
+                        // refusal keeps the amount and the reason on screen.
+                        void onRecordMovement({
                           kind: movementKind,
                           amountMinor: movementAmountMinor,
                           reason: movementReason.trim(),
+                          movementId: movementRequestId,
+                        }).then((recorded) => {
+                          if (!recorded) return
+                          setMovementOpen(false)
+                          setMovementAmountMinor(0)
+                          setMovementReason('')
+                          setMovementRequestId('')
                         })
-                        setMovementOpen(false)
-                        setMovementAmountMinor(0)
-                        setMovementReason('')
                       }}
                     >
                       {t('till.add_cash_confirm', 'ثبت')}
@@ -935,7 +1011,11 @@ export const TillView = memo(function TillView({
                     t={t}
                     rows={pagedRows}
                     columns={ledgerColumns}
-                    rowKey={(entry) => `${entry.at}-${entry.kind}-${entry.amountMinor}`}
+                    // The balance after it tells apart two movements of the
+                    // same kind and amount in the same second.
+                    rowKey={(entry) =>
+                      `${entry.sourceId ?? ''}-${entry.at}-${entry.kind}-${entry.amountMinor}-${entry.balanceMinor}`
+                    }
                     searchValue={ledgerSearch}
                     onSearchChange={(value) => {
                       setLedgerSearch(value)
@@ -1010,86 +1090,20 @@ export const TillView = memo(function TillView({
               )}
             </ListSection>
           )}
-        </div>
-      ) : (
-        /* ─── LIST STATE (default) ─── */
-        <>
-          <div className="grid gap-4 lg:grid-cols-5">
-            <div className="min-w-0 lg:col-span-3">
-              <Panel
-                title={t('till.cash_flow_title', 'جریان نقدی')}
-                description={t(
-                  'till.cash_flow_hint',
-                  'دریافت و پرداخت نقدی همه‌ی صندوق‌ها و فاکتورها، به تفکیک روز.',
-                )}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <SegmentedControl
-                    label={t('till.cash_flow_range', 'بازه')}
-                    value={String(cashFlowDays) as CashFlowRange}
-                    onChange={(next) => onCashFlowDaysChange(Number(next) as 7 | 30 | 90)}
-                    options={[
-                      { value: '7', label: t('till.range_7', '۷ روز') },
-                      { value: '30', label: t('till.range_30', '۳۰ روز') },
-                      { value: '90', label: t('till.range_90', '۹۰ روز') },
-                    ]}
-                  />
-                  {availableCurrencies && availableCurrencies.length > 1 ? (
-                    <TableFilterSelect
-                      label={t('till.filter_currency', 'ارز')}
-                      value={selectedCurrency ?? ''}
-                      onChange={(cur) => onSelectCurrency?.(cur)}
-                      allValue=""
-                      options={[
-                        { value: '', label: t('till.all_currencies', 'همه‌ی ارزها') },
-                        ...availableCurrencies.map((c) => ({
-                          value: c,
-                          label: t(`currency.${c.toLowerCase()}`, c),
-                        })),
-                      ]}
-                    />
-                  ) : null}
-                </div>
-                <div className="mt-3">
-                  {isCashFlowLoading ? (
-                    <Skeleton className="h-60 w-full rounded-xl" />
-                  ) : cashFlowError ? (
-                    <ErrorNote
-                      message={cashFlowError}
-                      onRetry={onRefresh}
-                      retryLabel={t('common.retry', 'تلاش دوباره')}
-                    />
-                  ) : dailyCashFlow.every((d) => d.inMinor === 0 && d.outMinor === 0) ? (
-                    <EmptyState
-                      icon="search"
-                      title={t('till.cash_flow_empty', 'در این بازه جریان نقدی ثبت نشده')}
-                    />
-                  ) : (
-                    <CashFlowChart
-                      data={chartData}
-                      labels={{
-                        in: t('till.filter_in', 'ورود'),
-                        out: t('till.filter_out', 'خروج'),
-                        net: t('till.net_session', 'خالص جریان نقد'),
-                      }}
-                      fmt={(v) =>
-                        selectedCurrency && selectedCurrency in FRACTION_DIGITS
-                          ? formatMoney(v, selectedCurrency as KnownCurrency, documentIntlLocale())
-                          : formatSelectedMoney(v)
-                      }
-                      height={240}
-                    />
-                  )}
-                </div>
-              </Panel>
-            </div>
-
-            <div className="min-w-0 lg:col-span-2">
+          {/* What kinds of cash event THIS till has seen. It was on the list,
+              where no till is selected, and said «صندوقی باز نیست» there
+              whatever was open. */}
+          {session && totals && !sessionNotFound ? (
+            <div className="min-w-0">
               <Panel title={t('till.distribution_title', 'توزیع تراکنش‌ها')}>
-                {!session ? (
-                  <EmptyState icon="search" title={t('till.no_open_session', 'صندوقی باز نیست')} />
-                ) : isLedgerLoading ? (
+                {isLedgerLoading ? (
                   <Skeleton className="mx-auto size-44 rounded-full" />
+                ) : ledgerError ? (
+                  <ErrorNote
+                    message={ledgerError}
+                    onRetry={onRefresh}
+                    retryLabel={t('common.retry', 'تلاش دوباره')}
+                  />
                 ) : distribution.length === 0 ? (
                   <EmptyState
                     icon="search"
@@ -1124,6 +1138,80 @@ export const TillView = memo(function TillView({
                     </ul>
                   </div>
                 )}
+              </Panel>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        /* ─── LIST STATE (default) ─── */
+        <>
+          <div className="grid gap-4">
+            <div className="min-w-0">
+              <Panel
+                title={t('till.cash_flow_title', 'جریان نقدی')}
+                description={t(
+                  'till.cash_flow_hint',
+                  'دریافت و پرداخت نقدی همه‌ی صندوق‌ها و فاکتورها، به تفکیک روز.',
+                )}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <SegmentedControl
+                    label={t('till.cash_flow_range', 'بازه')}
+                    value={String(cashFlowDays) as CashFlowRange}
+                    onChange={(next) => onCashFlowDaysChange(Number(next) as 7 | 30 | 90)}
+                    options={[
+                      { value: '7', label: t('till.range_7', '۷ روز') },
+                      { value: '30', label: t('till.range_30', '۳۰ روز') },
+                      { value: '90', label: t('till.range_90', '۹۰ روز') },
+                    ]}
+                  />
+                  {availableCurrencies && availableCurrencies.length > 1 ? (
+                    // One currency at a time. There is no «all currencies»:
+                    // afghani and dollars on one axis is not a total, and the
+                    // option used to show the books currency under that name.
+                    <TableFilterSelect
+                      label={t('till.filter_currency', 'ارز')}
+                      value={selectedCurrency ?? ''}
+                      onChange={(cur) => onSelectCurrency?.(cur)}
+                      allValue={bookCurrency ?? ''}
+                      options={availableCurrencies.map((c) => ({
+                        value: c,
+                        label: t(`currency.${c.toLowerCase()}`, c),
+                      }))}
+                    />
+                  ) : null}
+                </div>
+                <div className="mt-3">
+                  {isCashFlowLoading ? (
+                    <Skeleton className="h-60 w-full rounded-xl" />
+                  ) : cashFlowError ? (
+                    <ErrorNote
+                      message={cashFlowError}
+                      onRetry={onRefresh}
+                      retryLabel={t('common.retry', 'تلاش دوباره')}
+                    />
+                  ) : dailyCashFlow.every((d) => d.inMinor === 0 && d.outMinor === 0) ? (
+                    <EmptyState
+                      icon="search"
+                      title={t('till.cash_flow_empty', 'در این بازه جریان نقدی ثبت نشده')}
+                    />
+                  ) : (
+                    <CashFlowChart
+                      data={chartData}
+                      labels={{
+                        in: t('till.filter_in', 'ورود'),
+                        out: t('till.filter_out', 'خروج'),
+                        net: t('till.net_session', 'خالص جریان نقد'),
+                      }}
+                      fmt={(v) =>
+                        selectedCurrency && selectedCurrency in FRACTION_DIGITS
+                          ? formatMoney(v, selectedCurrency as KnownCurrency, documentIntlLocale())
+                          : formatSelectedMoney(v)
+                      }
+                      height={240}
+                    />
+                  )}
+                </div>
               </Panel>
             </div>
           </div>
@@ -1177,12 +1265,16 @@ export const TillView = memo(function TillView({
                   <ActionButton
                     disabled={isBusy || (closeVariance !== 0 && varianceReason.trim() === '')}
                     onClick={() => {
-                      onCloseTill({
+                      // The count stays until the till is closed: a refusal
+                      // (a variance with no reason, a lost connection) must
+                      // not make a person count the drawer again.
+                      void onCloseTill({
                         sessionId: closing.sessionId,
                         countedCashMinor: countedMinor,
                         ...(varianceReason.trim() ? { varianceReason: varianceReason.trim() } : {}),
+                      }).then((closed) => {
+                        if (closed) setClosing(null)
                       })
-                      setClosing(null)
                     }}
                   >
                     {t('till.close_action', 'بستن صندوق')}
@@ -1301,7 +1393,7 @@ export const TillView = memo(function TillView({
             <SelectField
               label={t('till.currency', 'ارز / واحد')}
               value={currencyDraft}
-              onChange={setCurrencyDraft}
+              onChange={chooseCurrency}
               options={currencyOptions}
               disabled={isBusy || !bookCurrency}
             />
@@ -1312,20 +1404,25 @@ export const TillView = memo(function TillView({
               currency={currencyDraft}
               disabled={isBusy}
             />
+            {actionError ? <ErrorNote message={actionError} /> : null}
             <DialogFooter className="gap-2">
               <ActionButton variant="quiet" onClick={() => setAddTillOpen(false)} disabled={isBusy}>
                 {t('common.cancel', 'انصراف')}
               </ActionButton>
               <ActionButton
                 onClick={() => {
-                  onOpen({
+                  // The dialog closes when the till exists — not when the
+                  // button was pressed. A refusal leaves what was typed.
+                  void onOpen({
                     openingFloatMinor: floatMinor,
                     ...(labelDraft.trim() ? { label: labelDraft.trim() } : {}),
                     ...(currencyDraft ? { currency: currencyDraft } : {}),
+                  }).then((opened) => {
+                    if (!opened) return
+                    setAddTillOpen(false)
+                    setFloatMinor(0)
+                    setLabelDraft('')
                   })
-                  setAddTillOpen(false)
-                  setFloatMinor(0)
-                  setLabelDraft('')
                 }}
                 disabled={isBusy || !bookCurrency || !currencyDraft}
               >

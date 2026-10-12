@@ -11,6 +11,12 @@
 // ============================================
 
 import type { FastifyInstance } from 'fastify'
+import { createHash, generateKeyPairSync, randomBytes, sign } from 'node:crypto'
+import {
+  unlockEnrollmentMessage,
+  unlockSubmissionMessage,
+  type UnlockSubmissionFields,
+} from '@hisabche/validation'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { FakeDatabase, createFakeDb, fakeId, type Row } from './helpers/fake-supabase'
@@ -74,7 +80,7 @@ function registerFunctions() {
       revoked_at: null,
       days_back: args.p_days_back,
       auto_apply: args.p_auto_apply,
-      time_zone: args.p_time_zone,
+      require_unlock: args.p_require_unlock === true,
     }
     db.seed('attendance_links', [link])
     return [link]
@@ -90,6 +96,9 @@ function registerFunctions() {
       .find((row) => row.link_id === link.id && row.client_request_id === args.p_client_request_id)
     if (before) return { id: before.id, state: before.state, replayed: true }
 
+    if (link.require_unlock && args.p_proof !== 'device_unlock') {
+      throw new Error('ATTENDANCE_UNLOCK_REQUIRED')
+    }
     const present = args.p_status === 'present'
     const taken = db
       .rows('attendance')
@@ -108,6 +117,7 @@ function registerFunctions() {
           date: args.p_date,
           check_in: present ? args.p_check_in : null,
           check_out: present ? args.p_check_out : null,
+          ends_next_day: args.p_ends_next_day === true,
           status: args.p_status,
           notes: args.p_note,
           user_id: link.created_by,
@@ -128,8 +138,11 @@ function registerFunctions() {
         status: args.p_status,
         check_in: present ? args.p_check_in : null,
         check_out: present ? args.p_check_out : null,
+        ends_next_day: args.p_ends_next_day === true,
+        proof: args.p_proof ?? null,
         note: args.p_note,
         received_at: new Date().toISOString(),
+        time_zone: args.p_time_zone,
         state,
         decided_by: null,
         decision_note: null,
@@ -191,8 +204,8 @@ function resetWorld() {
   db.queries.length = 0
 
   db.seed('workspaces', [
-    { id: SHOP, name: 'Kabul Shop', base_currency: 'AFN' },
-    { id: OTHER, name: 'Other Shop', base_currency: 'USD' },
+    { id: SHOP, name: 'Kabul Shop', base_currency: 'AFN', time_zone: 'Asia/Kabul' },
+    { id: OTHER, name: 'Other Shop', base_currency: 'USD', time_zone: 'Asia/Tehran' },
   ])
   db.seed('workspace_members', [
     member(SHOP, OWNER.id, 'owner'),
@@ -245,7 +258,7 @@ async function makeLink(
     method: 'POST',
     url: '/api/attendance-links',
     headers: as(user, shop),
-    payload: { employeeId: AHMAD, timeZone: 'Asia/Kabul', ...body },
+    payload: { employeeId: AHMAD, ...body },
   })
   return { status: res.statusCode, body: res.json() }
 }
@@ -313,7 +326,7 @@ describe('who may do what', () => {
     const made = await makeLink()
     for (const [method, url, payload] of [
       ['GET', `/api/attendance-links?employeeId=${AHMAD}`, undefined],
-      ['POST', '/api/attendance-links', { employeeId: AHMAD, timeZone: 'Asia/Kabul' }],
+      ['POST', '/api/attendance-links', { employeeId: AHMAD }],
       ['DELETE', `/api/attendance-links/${made.body.id}`, undefined],
       ['GET', '/api/attendance-submissions?date=2026-10-12', undefined],
     ] as const) {
@@ -344,7 +357,12 @@ describe('who may do what', () => {
       url: `/api/attendance-links?employeeId=${AHMAD}`,
       headers: as(STRANGER, OTHER),
     })
-    expect(read.json()).toEqual({ link: null })
+    // Nothing of ours: no link, and their own business's zone — not ours.
+    expect(read.json()).toEqual({
+      link: null,
+      phone: null,
+      workplace: { timeZone: 'Asia/Tehran', source: 'workspace' },
+    })
     const revoke = await app.inject({
       method: 'DELETE',
       url: `/api/attendance-links/${mine.body.id}`,
@@ -389,6 +407,7 @@ describe('what the link holder sees', () => {
         'position',
         'timeZone',
         'today',
+        'unlock',
       ].sort(),
     )
     expect(view).toMatchObject({
@@ -561,6 +580,7 @@ describe('what the employee may send', () => {
       status: 'present',
       checkIn: '08:05',
       checkOut: null,
+      endsNextDay: false,
     })
   })
 
@@ -682,6 +702,22 @@ describe('the manager and what was sent', () => {
     const day = await forDay(today)
     expect(day.pending).toEqual([])
     expect(day.fromLink).toEqual([AHMAD])
+    expect(day.fromDevice).toEqual([])
+
+    // A record a terminal wrote is named as such — and not as the employee's own.
+    db.rows('attendance').push({
+      id: fakeId('att'),
+      employee_id: TASNIM,
+      workspace_id: SHOP,
+      date: today,
+      status: 'present',
+      check_in: '08:00',
+      check_out: null,
+      source: 'device',
+    })
+    const withDevice = await forDay(today)
+    expect(withDevice.fromDevice).toEqual([TASNIM])
+    expect(withDevice.fromLink).toEqual([AHMAD])
 
     const again = await decide(id, { decision: 'reject', note: 'changed my mind' })
     expect(again.statusCode).toBe(409)
@@ -731,13 +767,17 @@ describe('the manager and what was sent', () => {
       url: `/api/attendance-links?employeeId=${TASNIM}`,
       headers: as(OWNER),
     })
-    expect(other.json()).toEqual({ link: null })
+    expect(other.json()).toEqual({
+      link: null,
+      phone: null,
+      workplace: { timeZone: 'Asia/Kabul', source: 'workspace' },
+    })
   })
 
-  it('a link is refused for a zone nobody knows, an expiry in the past, or more than a week back', async () => {
-    expect((await makeLink({ timeZone: 'Mars/Olympus' })).body.code).toBe(
-      'ATTENDANCE_TIME_ZONE_INVALID',
-    )
+  it('a link is refused for an expiry in the past, more than a week back, or a zone sent from the device', async () => {
+    // The zone is the workplace's. A client that sends one is sending
+    // something this route no longer takes.
+    expect((await makeLink({ timeZone: 'Asia/Tokyo' })).status).toBe(400)
     expect((await makeLink({ expiresOn: '2020-01-01' })).body.code).toBe(
       'ATTENDANCE_LINK_EXPIRY_IN_PAST',
     )
@@ -772,7 +812,12 @@ describe('before attendance-self-01 is run', () => {
       headers: as(OWNER),
     })
     expect(day.statusCode).toBe(200)
-    expect(day.json()).toEqual({ configured: false, pending: [], fromLink: [] })
+    expect(day.json()).toEqual({
+      configured: false,
+      pending: [],
+      fromLink: [],
+      fromDevice: [],
+    })
 
     const read = await app.inject({
       method: 'GET',
@@ -820,5 +865,539 @@ describe('the public routes are rate-limited per address', () => {
     expect(codes.slice(0, 10)).toEqual(Array(10).fill(400))
     expect(codes.slice(10)).toEqual([429, 429])
     expect(db.rows('attendance_submissions').length).toBe(0)
+  })
+})
+
+describe('whose clock: the workplace, never a device', () => {
+  const BRANCH_TOKYO = 'dddddddd-0000-4000-8000-00000000000d'
+  const BRANCH_PLAIN = 'dddddddd-0000-4000-8000-00000000000e'
+  const BRANCH_THEIRS = 'dddddddd-0000-4000-8000-00000000000f'
+
+  const post = (employee: string, branch: string) => ({
+    id: fakeId('post'),
+    workspace_id: SHOP,
+    employee_id: employee,
+    branch_id: branch,
+    is_primary: true,
+    starts_at: '2026-01-01',
+    ends_at: null,
+  })
+  const branchRow = (id: string, workspace: string, name: string, zone: string | null) => ({
+    id,
+    workspace_id: workspace,
+    code: name,
+    name,
+    time_zone: zone,
+    deleted_at: null,
+  })
+  const zones = (user = OWNER, shop = SHOP) =>
+    app.inject({ method: 'GET', url: '/api/workplace/time-zone', headers: as(user, shop) })
+  const setZone = (payload: unknown, user = OWNER, shop = SHOP) =>
+    app.inject({
+      method: 'PUT',
+      url: '/api/workplace/time-zone',
+      headers: as(user, shop),
+      payload: payload as Record<string, unknown>,
+    })
+  const setBranch = (id: string, payload: unknown, user = OWNER, shop = SHOP) =>
+    app.inject({
+      method: 'PUT',
+      url: `/api/workplace/branches/${id}/time-zone`,
+      headers: as(user, shop),
+      payload: payload as Record<string, unknown>,
+    })
+
+  beforeEach(() => {
+    db.seed('branches', [
+      branchRow(BRANCH_TOKYO, SHOP, 'Tokyo office', 'Asia/Tokyo'),
+      branchRow(BRANCH_PLAIN, SHOP, 'Herat', null),
+      branchRow(BRANCH_THEIRS, OTHER, 'Elsewhere', null),
+    ])
+    db.seed('employee_branch_assignments', [])
+  })
+
+  it('⚠️ a business with no zone has no links — nothing is assumed, and the screen is told why', async () => {
+    db.rows('workspaces').find((row) => row.id === SHOP)!.time_zone = null
+
+    const made = await makeLink()
+    expect(made.status).toBe(409)
+    expect(made.body.code).toBe('ATTENDANCE_TIME_ZONE_NOT_SET')
+    expect(db.rows('attendance_links').length).toBe(0)
+
+    const read = await app.inject({
+      method: 'GET',
+      url: `/api/attendance-links?employeeId=${AHMAD}`,
+      headers: as(OWNER),
+    })
+    expect(read.json()).toEqual({
+      link: null,
+      phone: null,
+      workplace: { timeZone: null, source: null },
+    })
+    expect((await zones()).json()).toMatchObject({ timeZone: null, configurable: true })
+  })
+
+  it('the zone of the business is the zone of the employee, until their branch has its own', async () => {
+    const first = await makeLink()
+    expect((await publicGet(first.body.token)).json().timeZone).toBe('Asia/Kabul')
+
+    // Posted to a branch with no zone of its own: still the business's.
+    db.seed('employee_branch_assignments', [post(AHMAD, BRANCH_PLAIN)])
+    expect((await publicGet(first.body.token)).json().timeZone).toBe('Asia/Kabul')
+
+    // Posted to the Tokyo office: Tokyo's — on the SAME link, at the next visit.
+    db.rows('employee_branch_assignments')[0]!.branch_id = BRANCH_TOKYO
+    const view = (await publicGet(first.body.token)).json()
+    expect(view.timeZone).toBe('Asia/Tokyo')
+    const status = await app.inject({
+      method: 'GET',
+      url: `/api/attendance-links?employeeId=${AHMAD}`,
+      headers: as(OWNER),
+    })
+    expect(status.json().workplace).toEqual({ timeZone: 'Asia/Tokyo', source: 'branch' })
+
+    // A posting that has ended is history, not where they work.
+    db.rows('employee_branch_assignments')[0]!.ends_at = '2026-06-01'
+    expect((await publicGet(first.body.token)).json().timeZone).toBe('Asia/Kabul')
+  })
+
+  it('«today» follows the zone: at 20:00 UTC it is already tomorrow in Tokyo and still today in Kabul... by the server clock', async () => {
+    const link = (await makeLink()).body
+    const kabul = (await publicGet(link.token)).json()
+    db.seed('employee_branch_assignments', [post(AHMAD, BRANCH_TOKYO)])
+    const tokyo = (await publicGet(link.token)).json()
+
+    // Kabul is UTC+4:30 and Tokyo UTC+9: Tokyo's clock is 4 h 30 min ahead,
+    // whatever the moment this test runs.
+    const minutes = (clock: string) => Number(clock.slice(0, 2)) * 60 + Number(clock.slice(3))
+    const ahead = (minutes(tokyo.now) - minutes(kabul.now) + 1440) % 1440
+    expect([269, 270, 271]).toContain(ahead)
+    // The day is the same or Tokyo's is one later — never earlier.
+    const dayGap = (Date.parse(tokyo.today) - Date.parse(kabul.today)) / 86_400_000
+    expect([0, 1]).toContain(dayGap)
+    expect(dayGap).toBe(minutes(tokyo.now) < minutes(kabul.now) ? 1 : 0)
+  })
+
+  it('each submission keeps the zone its day was judged in', async () => {
+    const link = (await makeLink()).body
+    const kabulDay = (await publicGet(link.token)).json().today as string
+    await send(link.token, { date: kabulDay, status: 'absent' })
+
+    db.seed('employee_branch_assignments', [post(AHMAD, BRANCH_TOKYO)])
+    const tokyoDay = (await publicGet(link.token)).json().today as string
+    await send(link.token, { date: tokyoDay, status: 'leave' })
+
+    expect(db.rows('attendance_submissions').map((row) => row.time_zone)).toEqual([
+      'Asia/Kabul',
+      'Asia/Tokyo',
+    ])
+  })
+
+  it('only the owner moves the clock; a manager may read it; a zone nobody knows is refused', async () => {
+    db.rows('workspace_members').find((row) => row.user_id === SELLER.id)!.role = 'manager'
+
+    const read = await zones(SELLER)
+    expect(read.statusCode).toBe(200)
+    expect(read.json()).toEqual({
+      timeZone: 'Asia/Kabul',
+      configurable: true,
+      branches: [
+        { id: BRANCH_PLAIN, name: 'Herat', timeZone: null },
+        { id: BRANCH_TOKYO, name: 'Tokyo office', timeZone: 'Asia/Tokyo' },
+      ],
+    })
+    expect((await setZone({ timeZone: 'Asia/Tehran' }, SELLER)).statusCode).toBe(403)
+    expect((await setBranch(BRANCH_PLAIN, { timeZone: 'Asia/Tehran' }, SELLER)).statusCode).toBe(
+      403,
+    )
+
+    for (const bad of ['Mars/Olympus', '', 'x'.repeat(65)]) {
+      expect((await setZone({ timeZone: bad })).statusCode, bad).toBe(400)
+    }
+    expect((await setZone({ timeZone: 'Mars/Olympus' })).json().code).toBe('TIME_ZONE_INVALID')
+    expect((await setZone({})).statusCode).toBe(400)
+    expect(db.rows('workspaces').find((row) => row.id === SHOP)!.time_zone).toBe('Asia/Kabul')
+
+    const saved = await setZone({ timeZone: 'Asia/Tehran' })
+    expect(saved.statusCode).toBe(200)
+    expect(saved.json()).toEqual({ timeZone: 'Asia/Tehran' })
+    expect(db.rows('workspaces').find((row) => row.id === SHOP)!.time_zone).toBe('Asia/Tehran')
+    // The other business is untouched.
+    expect(db.rows('workspaces').find((row) => row.id === OTHER)!.time_zone).toBe('Asia/Tehran')
+  })
+
+  it('a branch takes a zone of its own, gives it back with null, and never one of another business', async () => {
+    expect((await setBranch(BRANCH_PLAIN, { timeZone: 'Europe/Istanbul' })).json()).toEqual({
+      id: BRANCH_PLAIN,
+      timeZone: 'Europe/Istanbul',
+    })
+    expect((await setBranch(BRANCH_PLAIN, { timeZone: null })).json()).toEqual({
+      id: BRANCH_PLAIN,
+      timeZone: null,
+    })
+    expect((await setBranch(BRANCH_PLAIN, { timeZone: 'Nowhere/Land' })).statusCode).toBe(400)
+
+    const theirs = await setBranch(BRANCH_THEIRS, { timeZone: 'Asia/Kabul' })
+    expect(theirs.statusCode).toBe(404)
+    expect(db.rows('branches').find((row) => row.id === BRANCH_THEIRS)!.time_zone).toBeNull()
+
+    // …and the list a member of the other business reads has only its own branch.
+    const list = (await zones(STRANGER, OTHER)).json()
+    expect(list.branches.map((row: Row) => row.id)).toEqual([BRANCH_THEIRS])
+  })
+
+  it('before the migration: the zone screen says «not configurable», the sheet still works', async () => {
+    db.fail('workspaces', { code: '42703', message: 'column workspaces.time_zone does not exist' })
+    const read = await zones()
+    expect(read.statusCode).toBe(200)
+    expect(read.json()).toEqual({ timeZone: null, configurable: false, branches: [] })
+
+    // No zone can be read, so no link can be made — said, not guessed.
+    const made = await makeLink()
+    expect(made.status).toBe(409)
+    expect(made.body.code).toBe('ATTENDANCE_TIME_ZONE_NOT_SET')
+
+    const sheet = await app.inject({
+      method: 'GET',
+      url: '/api/attendance-sheet?date=2026-10-12',
+      headers: as(OWNER),
+    })
+    expect(sheet.statusCode).toBe(200)
+  })
+})
+
+// ─── nights, and the phone's own lock (attendance-02) ───────────────────────
+
+describe('a night is said, never inferred', () => {
+  async function fresh(body: Record<string, unknown> = {}) {
+    const made = await makeLink({ autoApply: true, ...body })
+    const view = (await publicGet(made.body.token)).json()
+    return { token: made.body.token as string, today: view.today as string }
+  }
+
+  it('⚠️ 22:00 → 06:00 is refused as a typing error until the employee says it ends the next day', async () => {
+    const { token, today } = await fresh()
+    const plain = await send(token, {
+      date: today,
+      status: 'present',
+      checkIn: '22:00',
+      checkOut: '06:00',
+    })
+    expect(plain.statusCode).toBe(400)
+    expect(plain.json().code).toBe('ATTENDANCE_CHECK_OUT_BEFORE_CHECK_IN')
+    expect(db.rows('attendance')).toHaveLength(0)
+
+    const night = await send(token, {
+      date: today,
+      status: 'present',
+      checkIn: '22:00',
+      checkOut: '06:00',
+      endsNextDay: true,
+    })
+    expect(night.statusCode).toBe(201)
+    expect(db.rows('attendance')).toMatchObject([
+      { check_in: '22:00', check_out: '06:00', ends_next_day: true },
+    ])
+    expect((await publicGet(token)).json().days[0].record).toMatchObject({ endsNextDay: true })
+  })
+
+  it('said about a day that ends the same day, it is refused too', async () => {
+    const { token, today } = await fresh()
+    const res = await send(token, {
+      date: today,
+      status: 'present',
+      checkIn: '08:00',
+      checkOut: '16:00',
+      endsNextDay: true,
+    })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().code).toBe('ATTENDANCE_CHECK_OUT_BEFORE_CHECK_IN')
+  })
+
+  it('the sheet: a manager records a night, and its hours run through midnight', async () => {
+    const mark = (body: Record<string, unknown>) =>
+      app.inject({
+        method: 'PUT',
+        url: '/api/attendance-sheet',
+        headers: as(OWNER),
+        payload: { employeeId: AHMAD, date: '2026-09-01', status: 'present', ...body },
+      })
+    const refused = await mark({ checkIn: '22:00', checkOut: '06:00' })
+    expect(refused.statusCode).toBe(400)
+    const night = await mark({ checkIn: '22:00', checkOut: '06:00', endsNextDay: true })
+    expect(night.statusCode).toBe(200)
+    expect(night.json()).toMatchObject({
+      endsNextDay: true,
+      result: { workedHours: 8, issue: null, isOpen: false },
+    })
+    // Corrected back to a day shift: the mark goes with it.
+    const day = await mark({ checkIn: '08:00', checkOut: '16:00' })
+    expect(day.json()).toMatchObject({ endsNextDay: false, result: { workedHours: 8 } })
+    expect(db.rows('attendance')[0]).toMatchObject({ ends_next_day: false })
+  })
+})
+
+describe('the phone in the hand', () => {
+  const ORIGIN = 'http://localhost:3039'
+  const sha = (value: Buffer | string) => createHash('sha256').update(value).digest()
+
+  /** A stand-in for a phone: a real P-256 key, and real signatures. */
+  function phone(origin = ORIGIN) {
+    const { publicKey, privateKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' })
+    const credentialId = randomBytes(24).toString('base64url')
+    const authData = (flags: number) =>
+      Buffer.concat([sha(new URL(origin).hostname), Buffer.from([flags]), Buffer.alloc(4)])
+    const clientData = (type: string, message: string) =>
+      Buffer.from(
+        JSON.stringify({ type, challenge: sha(message).toString('base64url'), origin }),
+        'utf8',
+      )
+    return {
+      credentialId,
+      enroll(token: string, clientRequestId: string, flags = 0x05) {
+        return {
+          credentialId,
+          publicKey: publicKey.export({ format: 'der', type: 'spki' }).toString('base64url'),
+          algorithm: -7,
+          clientDataJSON: clientData(
+            'webauthn.create',
+            unlockEnrollmentMessage(token, clientRequestId),
+          ).toString('base64url'),
+          authenticatorData: authData(flags).toString('base64url'),
+          clientRequestId,
+        }
+      },
+      sign(token: string, fields: UnlockSubmissionFields, flags = 0x05) {
+        const client = clientData('webauthn.get', unlockSubmissionMessage(token, fields))
+        const data = authData(flags)
+        return {
+          credentialId,
+          clientDataJSON: client.toString('base64url'),
+          authenticatorData: data.toString('base64url'),
+          signature: sign('sha256', Buffer.concat([data, sha(client)]), privateKey).toString(
+            'base64url',
+          ),
+        }
+      },
+    }
+  }
+
+  const register = (token: string, payload: Record<string, unknown>) =>
+    app.inject({
+      method: 'POST',
+      url: `/api/public/attendance/${token}/phone`,
+      remoteAddress: address(),
+      payload,
+    })
+
+  async function locked() {
+    const made = await makeLink({ autoApply: true, requireUnlock: true })
+    const view = (await publicGet(made.body.token)).json()
+    return { token: made.body.token as string, today: view.today as string, view }
+  }
+  const form = (today: string, clientRequestId: string): UnlockSubmissionFields => ({
+    date: today,
+    status: 'present',
+    checkIn: '08:00',
+    checkOut: null,
+    endsNextDay: false,
+    clientRequestId,
+  })
+
+  it('a link says whether it asks for the lock, and whether a phone is registered', async () => {
+    const plain = await makeLink()
+    expect(plain.body.requireUnlock).toBe(false)
+    expect((await publicGet(plain.body.token)).json().unlock).toEqual({
+      required: false,
+      credentialId: null,
+    })
+    const { view } = await locked()
+    expect(view.unlock).toEqual({ required: true, credentialId: null })
+  })
+
+  it('⚠️ required and no phone registered: nothing is accepted, and the reason is said', async () => {
+    const { token, today } = await locked()
+    const res = await send(token, { date: today, status: 'present', checkIn: '08:00' })
+    expect(res.statusCode).toBe(409)
+    expect(res.json().code).toBe('ATTENDANCE_PHONE_NOT_REGISTERED')
+    expect(db.rows('attendance_submissions')).toHaveLength(0)
+  })
+
+  it('⚠️ registered, then a signed submission is written with its proof — unsigned is refused', async () => {
+    const { token, today } = await locked()
+    const mine = phone()
+    const enrolled = await register(token, mine.enroll(token, requestId()))
+    expect(enrolled.statusCode).toBe(201)
+    expect(Object.keys(enrolled.json()).sort()).toEqual(['lastUsedAt', 'registeredAt'])
+    expect((await publicGet(token)).json().unlock).toEqual({
+      required: true,
+      credentialId: mine.credentialId,
+    })
+    // What is stored is the public key and its id. Nothing else was sent.
+    expect(Object.keys(db.rows('attendance_phone_keys')[0]!).sort()).toEqual(
+      [
+        'algorithm',
+        'created_at',
+        'credential_id',
+        'employee_id',
+        'id',
+        'public_key',
+        'workspace_id',
+      ].sort(),
+    )
+
+    const unsigned = await send(token, { date: today, status: 'present', checkIn: '08:00' })
+    expect(unsigned.statusCode).toBe(400)
+    expect(unsigned.json().code).toBe('ATTENDANCE_UNLOCK_REQUIRED')
+
+    const id = requestId()
+    const signed = await send(token, {
+      ...form(today, id),
+      unlock: mine.sign(token, form(today, id)),
+    })
+    expect(signed.statusCode).toBe(201)
+    expect(db.rows('attendance_submissions')).toMatchObject([{ proof: 'device_unlock' }])
+    expect(db.rows('attendance')).toMatchObject([{ check_in: '08:00', source: 'employee_link' }])
+    expect(db.rows('attendance_phone_keys')[0]!.last_used_at).toBeTruthy()
+
+    // The manager sees that a phone is registered — never its key.
+    const status = await app.inject({
+      method: 'GET',
+      url: `/api/attendance-links?employeeId=${AHMAD}`,
+      headers: as(OWNER),
+    })
+    expect(Object.keys(status.json().phone).sort()).toEqual(['lastUsedAt', 'registeredAt'])
+    expect(JSON.stringify(status.json())).not.toContain(mine.credentialId)
+  })
+
+  it('⚠️ a signature is good for the form it was made for, and no other', async () => {
+    const { token, today } = await locked()
+    const mine = phone()
+    await register(token, mine.enroll(token, requestId()))
+    const id = requestId()
+    const signature = mine.sign(token, form(today, id))
+
+    const attempts: Array<[Record<string, unknown>, string]> = [
+      // Another time on the same signature.
+      [{ ...form(today, id), checkIn: '07:00', unlock: signature }, 'CHALLENGE_MISMATCH'],
+      // The same form under another request id.
+      [
+        { ...form(today, id), clientRequestId: requestId(), unlock: signature },
+        'CHALLENGE_MISMATCH',
+      ],
+      // A tap without the fingerprint, face or PIN (user present, not verified).
+      [{ ...form(today, id), unlock: mine.sign(token, form(today, id), 0x01) }, 'NOT_VERIFIED'],
+      // Another phone's key signing the right form.
+      [
+        {
+          ...form(today, id),
+          unlock: { ...phone().sign(token, form(today, id)), credentialId: mine.credentialId },
+        },
+        'SIGNATURE_INVALID',
+      ],
+      // Made on somebody else's page.
+      [
+        {
+          ...form(today, id),
+          unlock: {
+            ...phone('https://evil.example').sign(token, form(today, id)),
+            credentialId: mine.credentialId,
+          },
+        },
+        'ORIGIN_NOT_ALLOWED',
+      ],
+      [{ ...form(today, id), unlock: { ...signature, signature: '!!!' } }, 'MALFORMED'],
+    ]
+    for (const [payload, code] of attempts) {
+      const res = await send(token, payload)
+      expect(res.statusCode, code).toBe(400)
+      expect(res.json().code, code).toBe(`ATTENDANCE_UNLOCK_${code}`)
+    }
+    expect(db.rows('attendance_submissions')).toHaveLength(0)
+    expect(db.rows('attendance')).toHaveLength(0)
+
+    // The untouched form with its own signature still goes through.
+    const good = await send(token, { ...form(today, id), unlock: signature })
+    expect(good.statusCode).toBe(201)
+  })
+
+  it('⚠️ first come: a second phone is refused until a manager forgets the first', async () => {
+    const { token, today } = await locked()
+    const first = phone()
+    const second = phone()
+    expect((await register(token, first.enroll(token, requestId()))).statusCode).toBe(201)
+    const again = await register(token, second.enroll(token, requestId()))
+    expect(again.statusCode).toBe(409)
+    expect(again.json().code).toBe('ATTENDANCE_PHONE_ALREADY_REGISTERED')
+
+    // Only a manager of THIS shop may forget it.
+    const stranger = await app.inject({
+      method: 'DELETE',
+      url: `/api/attendance-links/phone/${AHMAD}`,
+      headers: as(STRANGER, OTHER),
+    })
+    expect(stranger.statusCode).toBe(404)
+    const forgotten = await app.inject({
+      method: 'DELETE',
+      url: `/api/attendance-links/phone/${AHMAD}`,
+      headers: as(OWNER),
+    })
+    expect(forgotten.statusCode).toBe(204)
+    // Kept, marked — not deleted.
+    expect(db.rows('attendance_phone_keys')).toHaveLength(1)
+    expect(db.rows('attendance_phone_keys')[0]!.revoked_at).toBeTruthy()
+
+    // The forgotten phone no longer vouches for anything…
+    const id = requestId()
+    const stale = await send(token, {
+      ...form(today, id),
+      unlock: first.sign(token, form(today, id)),
+    })
+    expect(stale.statusCode).toBe(409)
+    // …and the second can now be registered and used.
+    expect((await register(token, second.enroll(token, requestId()))).statusCode).toBe(201)
+    const fresh = await send(token, {
+      ...form(today, id),
+      unlock: second.sign(token, form(today, id)),
+    })
+    expect(fresh.statusCode).toBe(201)
+  })
+
+  it('registration: a key that is not what it claims, or made elsewhere, is not stored', async () => {
+    const { token } = await locked()
+    const mine = phone()
+    const id = requestId()
+    const good = mine.enroll(token, id)
+    const cases: Array<[Record<string, unknown>, string]> = [
+      [{ ...good, algorithm: -8 }, 'ATTENDANCE_UNLOCK_KEY_UNSUPPORTED'],
+      [{ ...good, algorithm: -257 }, 'ATTENDANCE_UNLOCK_KEY_UNSUPPORTED'],
+      [
+        { ...good, publicKey: randomBytes(64).toString('base64url') },
+        'ATTENDANCE_UNLOCK_KEY_UNSUPPORTED',
+      ],
+      [{ ...mine.enroll(token, id, 0x01) }, 'ATTENDANCE_UNLOCK_NOT_VERIFIED'],
+      [{ ...good, clientRequestId: requestId() }, 'ATTENDANCE_UNLOCK_CHALLENGE_MISMATCH'],
+      [
+        { ...phone('https://evil.example').enroll(token, id) },
+        'ATTENDANCE_UNLOCK_ORIGIN_NOT_ALLOWED',
+      ],
+      // A signature's client data is not a registration's.
+      [
+        { ...good, clientDataJSON: mine.sign(token, form('2026-01-01', id)).clientDataJSON },
+        'ATTENDANCE_UNLOCK_WRONG_CEREMONY',
+      ],
+    ]
+    for (const [payload, code] of cases) {
+      const res = await register(token, payload)
+      expect(res.statusCode, code).toBe(400)
+      expect(res.json().code, code).toBe(code)
+    }
+    expect(db.rows('attendance_phone_keys')).toHaveLength(0)
+    // A body that tries to carry anything of a face or a finger is refused whole.
+    const extra = await register(token, { ...good, faceImage: 'AAAA' })
+    expect(extra.statusCode).toBe(400)
+    expect(db.rows('attendance_phone_keys')).toHaveLength(0)
+    // An unknown token is «not found», like every other public call.
+    expect((await register('0'.repeat(64), good)).statusCode).toBe(404)
   })
 })

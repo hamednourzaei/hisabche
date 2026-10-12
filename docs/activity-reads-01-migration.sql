@@ -189,7 +189,14 @@ BEGIN
     'unread', count(*) FILTER (WHERE r.activity_id IS NULL)::integer,
     'invoices', count(*) FILTER (WHERE a.entity_type = 'invoice')::integer,
     'payments', count(*) FILTER (WHERE a.entity_type = 'payment')::integer,
-    'customers', count(*) FILTER (WHERE a.entity_type = 'customer')::integer
+    'customers', count(*) FILTER (WHERE a.entity_type = 'customer')::integer,
+    -- Unread per tab: «mark all as read» on the invoices tab is offered only
+    -- while an invoice event is unread, not while any invoice event exists.
+    'unreadBy', jsonb_build_object(
+      'invoices', count(*) FILTER (WHERE r.activity_id IS NULL AND a.entity_type = 'invoice')::integer,
+      'payments', count(*) FILTER (WHERE r.activity_id IS NULL AND a.entity_type = 'payment')::integer,
+      'customers', count(*) FILTER (WHERE r.activity_id IS NULL AND a.entity_type = 'customer')::integer
+    )
   ) INTO v_result
   FROM public.activities a
   LEFT JOIN public.activity_reads r

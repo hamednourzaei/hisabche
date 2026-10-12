@@ -123,9 +123,12 @@ export function ActivitiesPage() {
   // `locallyReadIds` off again counted every opened event twice.
   const effectiveUnreadCount = unreadCount
 
+  // What «mark all as read» would mark on THIS tab. On a typed tab that is the
+  // tab's own unread — its total said «there are invoice events», and the
+  // button stayed lit with nothing left to mark. Not loaded yet = not offered.
   const currentTabUnread = useMemo(() => {
     if (filter === 'all' || filter === 'unread') return effectiveUnreadCount
-    return filterCounts?.[filter] ?? 0
+    return filterCounts?.unreadBy?.[filter] ?? 0
   }, [filter, effectiveUnreadCount, filterCounts])
 
   const handleFilterChange = useCallback((newFilter: FilterType) => {

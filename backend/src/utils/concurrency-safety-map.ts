@@ -196,9 +196,15 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     evidence: [
       { file: `${RT}/pos.routes.ts`, text: 'movementId: z.string().uuid().optional()' },
       { file: `${SVC}/pos/pos.service.ts`, text: "error?.code === '23505' && input.movementId" },
+      // Made once per form fill and kept until the server has recorded the
+      // movement — a new id per click made a retry a second movement.
       {
-        file: 'packages/ui/src/components/ui/till/containers/till-container.tsx',
-        text: 'movementId: crypto.randomUUID()',
+        file: 'packages/ui/src/components/ui/till/till-view.tsx',
+        text: 'setMovementRequestId((current) => current || crypto.randomUUID())',
+      },
+      {
+        file: 'packages/ui/src/components/ui/till/till-view.tsx',
+        text: 'movementId: movementRequestId,',
       },
     ],
   },

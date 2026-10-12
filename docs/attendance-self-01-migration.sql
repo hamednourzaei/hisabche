@@ -21,14 +21,34 @@
 -- 256 random bits, hex, plain. The link is its maker narrowed to one employee;
 -- the application re-checks the maker's membership on every visit.
 --
--- Times are `time`, the day is `date`, as `attendance` itself. The shop's zone
--- is not stored anywhere in this schema, so each link carries the zone of the
--- device that made it — the same «the shop's own local time» the sheet uses.
+-- Times are `time`, the day is `date`, as `attendance` itself.
+--
+-- WHOSE CLOCK. «Today» for an employee is today where they WORK, not where the
+-- manager's phone was when the link was made:
+--     the branch the employee is posted to   (branches.time_zone, optional)
+--  →  the business                           (workspaces.time_zone)
+--  →  nothing: no link can be made until the owner chooses one.
+-- Both columns are born NULL. Nothing is backfilled and nothing is guessed —
+-- a business in Kabul and one in Tehran look the same from here.
+-- The zone a day was judged in is written on each submission, so changing the
+-- business's zone later never re-reads the past.
 --
 -- Nothing here touches payroll.
 -- ============================================================================
 
 BEGIN;
+
+-- attendance-02 replaces functions and constraints of this file. Running this
+-- file again after it would put the older ones back, so it refuses.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'attendance' AND column_name = 'ends_next_day'
+  ) THEN
+    RAISE EXCEPTION 'attendance-02 has been applied: this file must not be run again. Run docs/attendance-02-migration.sql instead (it is safe to repeat).';
+  END IF;
+END $$;
 
 SET LOCAL lock_timeout = '5s';
 
@@ -38,7 +58,25 @@ ALTER TABLE public.attendance ADD COLUMN IF NOT EXISTS source text;
 ALTER TABLE public.attendance DROP CONSTRAINT IF EXISTS attendance_source_check;
 ALTER TABLE public.attendance
   ADD CONSTRAINT attendance_source_check
-  CHECK (source IS NULL OR source = 'employee_link');
+  -- 'device' is written by attendance-devices-01. It is allowed here already
+  -- so that running this script again after that one does not refuse the rows
+  -- a device wrote.
+  CHECK (source IS NULL OR source IN ('employee_link', 'device'));
+
+-- ─── where the business is ──────────────────────────────────────────────────
+-- IANA names («Asia/Kabul»); validated by the application before they are
+-- written. A branch with no zone of its own is in its business's zone.
+ALTER TABLE public.workspaces ADD COLUMN IF NOT EXISTS time_zone text;
+ALTER TABLE public.workspaces DROP CONSTRAINT IF EXISTS workspaces_time_zone_check;
+ALTER TABLE public.workspaces
+  ADD CONSTRAINT workspaces_time_zone_check
+  CHECK (time_zone IS NULL OR char_length(time_zone) BETWEEN 1 AND 64);
+
+ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS time_zone text;
+ALTER TABLE public.branches DROP CONSTRAINT IF EXISTS branches_time_zone_check;
+ALTER TABLE public.branches
+  ADD CONSTRAINT branches_time_zone_check
+  CHECK (time_zone IS NULL OR char_length(time_zone) BETWEEN 1 AND 64);
 
 -- ─── attendance_links ───────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.attendance_links (
@@ -54,10 +92,11 @@ CREATE TABLE IF NOT EXISTS public.attendance_links (
   -- How many days before today the employee may pick. 0 = today only.
   days_back     smallint NOT NULL DEFAULT 0 CHECK (days_back BETWEEN 0 AND 7),
   -- Apply a submission at once when the day has no record. Off unless asked.
-  auto_apply    boolean NOT NULL DEFAULT false,
-  -- IANA name; validated by the application before it is written.
-  time_zone     text NOT NULL CHECK (char_length(time_zone) BETWEEN 1 AND 64)
+  auto_apply    boolean NOT NULL DEFAULT false
 );
+-- An earlier draft of this script kept the zone of the device that made the
+-- link here. The zone belongs to the workplace; see «WHOSE CLOCK» above.
+ALTER TABLE public.attendance_links DROP COLUMN IF EXISTS time_zone;
 
 -- One live link per employee. «Make a new link» revokes the old one first.
 CREATE UNIQUE INDEX IF NOT EXISTS attendance_links_one_live
@@ -81,6 +120,9 @@ CREATE TABLE IF NOT EXISTS public.attendance_submissions (
   note               text CHECK (note IS NULL OR char_length(note) <= 500),
   -- The server's clock, whatever time the employee typed.
   received_at        timestamptz NOT NULL DEFAULT now(),
+  -- The zone «today» was judged in when this arrived. A snapshot: history
+  -- does not move when the business later changes its zone.
+  time_zone          text NOT NULL CHECK (char_length(time_zone) BETWEEN 1 AND 64),
   state              text NOT NULL DEFAULT 'pending'
                      CHECK (state IN ('pending', 'applied', 'approved', 'rejected')),
   decided_by         uuid,
@@ -134,6 +176,7 @@ BEGIN
      OR NEW.check_out IS DISTINCT FROM OLD.check_out
      OR NEW.note IS DISTINCT FROM OLD.note
      OR NEW.received_at IS DISTINCT FROM OLD.received_at
+     OR NEW.time_zone IS DISTINCT FROM OLD.time_zone
      OR NEW.client_request_id IS DISTINCT FROM OLD.client_request_id THEN
     RAISE EXCEPTION 'ATTENDANCE_SUBMISSION_APPEND_ONLY' USING ERRCODE = 'P0001';
   END IF;
@@ -153,6 +196,9 @@ CREATE TRIGGER attendance_submissions_guard_trg
   FOR EACH ROW EXECUTE FUNCTION public.attendance_submissions_guard();
 
 -- ─── make a link (revoking the live one) ────────────────────────────────────
+-- The eight-argument draft took the device's zone; it must not stay callable.
+DROP FUNCTION IF EXISTS public.attendance_link_create(uuid, uuid, uuid, text, timestamptz, integer, boolean, text);
+DROP FUNCTION IF EXISTS public.attendance_submit(uuid, date, text, time, time, text, uuid);
 CREATE OR REPLACE FUNCTION public.attendance_link_create(
   p_workspace   uuid,
   p_employee    uuid,
@@ -160,8 +206,7 @@ CREATE OR REPLACE FUNCTION public.attendance_link_create(
   p_token       text,
   p_expires_at  timestamptz,
   p_days_back   integer,
-  p_auto_apply  boolean,
-  p_time_zone   text
+  p_auto_apply  boolean
 )
 RETURNS SETOF public.attendance_links
 LANGUAGE plpgsql
@@ -189,10 +234,10 @@ BEGIN
 
   RETURN QUERY
   INSERT INTO public.attendance_links
-    (workspace_id, employee_id, token, created_by, expires_at, days_back, auto_apply, time_zone)
+    (workspace_id, employee_id, token, created_by, expires_at, days_back, auto_apply)
   VALUES
     (p_workspace, p_employee, p_token, p_user, p_expires_at,
-     COALESCE(p_days_back, 0), COALESCE(p_auto_apply, false), p_time_zone)
+     COALESCE(p_days_back, 0), COALESCE(p_auto_apply, false))
   RETURNING *;
 END;
 $$;
@@ -208,7 +253,8 @@ CREATE OR REPLACE FUNCTION public.attendance_submit(
   p_check_in           time,
   p_check_out          time,
   p_note               text,
-  p_client_request_id  uuid
+  p_client_request_id  uuid,
+  p_time_zone          text
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -263,10 +309,10 @@ BEGIN
   BEGIN
     INSERT INTO public.attendance_submissions
       (workspace_id, employee_id, link_id, date, status, check_in, check_out, note,
-       state, client_request_id)
+       state, client_request_id, time_zone)
     VALUES
       (v_link.workspace_id, v_link.employee_id, v_link.id, p_date, p_status, v_in, v_out,
-       p_note, v_state, p_client_request_id)
+       p_note, v_state, p_client_request_id, p_time_zone)
     RETURNING id INTO v_id;
   EXCEPTION WHEN unique_violation THEN
     -- The same form, sent twice at the same instant. Undo this attempt's
@@ -363,15 +409,15 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.attendance_submissions_guard() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.attendance_link_create(uuid, uuid, uuid, text, timestamptz, integer, boolean, text)
+REVOKE ALL ON FUNCTION public.attendance_link_create(uuid, uuid, uuid, text, timestamptz, integer, boolean)
   FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.attendance_submit(uuid, date, text, time, time, text, uuid)
+REVOKE ALL ON FUNCTION public.attendance_submit(uuid, date, text, time, time, text, uuid, text)
   FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.attendance_submission_decide(uuid, uuid, uuid, text, text)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.attendance_link_create(uuid, uuid, uuid, text, timestamptz, integer, boolean, text)
+GRANT EXECUTE ON FUNCTION public.attendance_link_create(uuid, uuid, uuid, text, timestamptz, integer, boolean)
   TO service_role;
-GRANT EXECUTE ON FUNCTION public.attendance_submit(uuid, date, text, time, time, text, uuid)
+GRANT EXECUTE ON FUNCTION public.attendance_submit(uuid, date, text, time, time, text, uuid, text)
   TO service_role;
 GRANT EXECUTE ON FUNCTION public.attendance_submission_decide(uuid, uuid, uuid, text, text)
   TO service_role;
@@ -388,13 +434,17 @@ NOTIFY pgrst, 'reload schema';
 --
 --   BEGIN;
 --   DROP FUNCTION IF EXISTS public.attendance_submission_decide(uuid, uuid, uuid, text, text);
---   DROP FUNCTION IF EXISTS public.attendance_submit(uuid, date, text, time, time, text, uuid);
---   DROP FUNCTION IF EXISTS public.attendance_link_create(uuid, uuid, uuid, text, timestamptz, integer, boolean, text);
+--   DROP FUNCTION IF EXISTS public.attendance_submit(uuid, date, text, time, time, text, uuid, text);
+--   DROP FUNCTION IF EXISTS public.attendance_link_create(uuid, uuid, uuid, text, timestamptz, integer, boolean);
 --   DROP TABLE IF EXISTS public.attendance_submissions;
 --   DROP FUNCTION IF EXISTS public.attendance_submissions_guard();
 --   DROP TABLE IF EXISTS public.attendance_links;
 --   ALTER TABLE public.attendance DROP CONSTRAINT IF EXISTS attendance_source_check;
 --   ALTER TABLE public.attendance DROP COLUMN IF EXISTS source;
+--   ALTER TABLE public.branches DROP CONSTRAINT IF EXISTS branches_time_zone_check;
+--   ALTER TABLE public.branches DROP COLUMN IF EXISTS time_zone;
+--   ALTER TABLE public.workspaces DROP CONSTRAINT IF EXISTS workspaces_time_zone_check;
+--   ALTER TABLE public.workspaces DROP COLUMN IF EXISTS time_zone;
 --   COMMIT;
 --
 -- VERIFY: docs/VERIFY-attendance-self-01.sql

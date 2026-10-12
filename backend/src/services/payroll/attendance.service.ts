@@ -22,7 +22,7 @@
 // ============================================
 
 import { supabase } from '../../db'
-import { DatabaseError, NotFoundError } from '../../errors/database.error'
+import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { selectAllPages } from '../../utils/fetch-all-pages'
 import {
@@ -44,6 +44,8 @@ export interface AttendanceMark {
   /** `HH:MM`, the shop's own local time. Null = not recorded. */
   checkIn: string | null
   checkOut: string | null
+  /** The exit is on the day after `date`. Only a person says so. */
+  endsNextDay?: boolean | undefined
   note: string | null
 }
 
@@ -57,6 +59,7 @@ export interface SheetRow {
     status: AttendanceStatus
     checkIn: string | null
     checkOut: string | null
+    endsNextDay: boolean
     note: string | null
     result: DayResult
   }
@@ -84,7 +87,30 @@ interface AttendanceRow {
   check_out: string | null
   status: string | null
   notes: string | null
+  /** attendance-02. Absent before it: every record then ends the same day. */
+  ends_next_day?: boolean | null
 }
+
+const DAY_COLUMNS = 'id, employee_id, date, check_in, check_out, status, notes'
+const NIGHT_COLUMNS = `${DAY_COLUMNS}, ends_next_day`
+
+/** The one optional column is missing — and nothing else is wrong. */
+function nightMissing(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false
+  return (
+    (error.code === '42703' || error.code === 'PGRST204') &&
+    (error.message ?? '').includes('ends_next_day')
+  )
+}
+
+interface MarkValues {
+  status: string
+  check_in: string | null
+  check_out: string | null
+  notes: string | null
+  ends_next_day: boolean
+}
+const withoutNight = ({ ends_next_day: _night, ...rest }: MarkValues) => rest
 
 const hhmm = (value: string | null | undefined) => (value ? String(value).slice(0, 5) : null)
 const KNOWN: readonly string[] = ['present', 'absent', 'leave', 'holiday', 'open']
@@ -100,12 +126,14 @@ function toRecord(row: AttendanceRow): NonNullable<SheetRow['record']> {
     status,
     checkIn,
     checkOut,
+    endsNextDay: row.ends_next_day === true,
     note: row.notes,
     result: attendanceFor({
       employeeId: row.employee_id,
       date: row.date,
       checkIn,
       checkOut,
+      endsNextDay: row.ends_next_day === true,
       status,
     }),
   }
@@ -128,16 +156,23 @@ export class AttendanceService {
     )
     if (employees.error) throw new DatabaseError('Failed to read employees', employees.error)
 
-    const records = await selectAllPages<AttendanceRow, { message: string; code?: string }>(
-      (from, to) =>
-        supabase
-          .from('attendance')
-          .select('id, employee_id, date, check_in, check_out, status, notes')
-          .eq('workspace_id', ctx.workspaceId)
-          .eq('date', date)
-          .order('id', { ascending: true })
-          .range(from, to),
-    )
+    const read = (columns: string) =>
+      selectAllPages<AttendanceRow, { message: string; code?: string }>(
+        (from, to) =>
+          supabase
+            .from('attendance')
+            .select(columns)
+            .eq('workspace_id', ctx.workspaceId)
+            .eq('date', date)
+            .order('id', { ascending: true })
+            .range(from, to) as unknown as PromiseLike<{
+            data: AttendanceRow[] | null
+            error: { message: string; code?: string } | null
+          }>,
+      )
+    let records = await read(NIGHT_COLUMNS)
+    // Before attendance-02 the column is not there, and no record is a night.
+    if (nightMissing(records.error)) records = await read(DAY_COLUMNS)
     if (records.error) throw new DatabaseError('Failed to read attendance', records.error)
 
     // If a legacy database holds two rows for one employee and day, the FIRST
@@ -190,11 +225,13 @@ export class AttendanceService {
     if (checkOut !== null && checkIn === null)
       throw new ValidationError('ATTENDANCE_CHECK_OUT_WITHOUT_CHECK_IN')
 
+    const endsNextDay = present && checkOut !== null && input.endsNextDay === true
     const verdict = attendanceFor({
       employeeId: input.employeeId,
       date: input.date,
       checkIn,
       checkOut,
+      endsNextDay,
       status: input.status,
     })
     if (verdict.issue === 'CHECK_OUT_BEFORE_CHECK_IN') {
@@ -210,27 +247,37 @@ export class AttendanceService {
     if (employeeError) throw new DatabaseError('Failed to read the employee', employeeError)
     if (!employee) throw new NotFoundError('Employee')
 
-    const values = {
+    const values: MarkValues = {
       status: input.status,
       check_in: checkIn,
       check_out: checkOut,
       notes: input.note,
+      ends_next_day: endsNextDay,
     }
 
     const existing = await this.find(ctx.workspaceId, input.employeeId, input.date)
     if (existing) return this.update(ctx.workspaceId, existing.id, values)
 
-    const { data, error } = await supabase
-      .from('attendance')
-      .insert({
-        ...values,
-        employee_id: input.employeeId,
-        date: input.date,
-        workspace_id: ctx.workspaceId,
-        user_id: ctx.userId,
-      })
-      .select('id, employee_id, date, check_in, check_out, status, notes')
-      .single()
+    const insert = (night: boolean) =>
+      supabase
+        .from('attendance')
+        .insert({
+          ...(night ? values : withoutNight(values)),
+          employee_id: input.employeeId,
+          date: input.date,
+          workspace_id: ctx.workspaceId,
+          user_id: ctx.userId,
+        })
+        .select(night ? NIGHT_COLUMNS : DAY_COLUMNS)
+        .single()
+
+    let { data, error } = await insert(true)
+    if (nightMissing(error)) {
+      // attendance-02 has not been run. A day that ends the same day is
+      // written as before; a night cannot be, and is not written as a day.
+      if (values.ends_next_day) throw new ConflictError('ATTENDANCE_NIGHT_NOT_CONFIGURED')
+      ;({ data, error } = await insert(false))
+    }
 
     if (error) {
       // Somebody else recorded the same day a moment ago: theirs is the row,
@@ -241,7 +288,7 @@ export class AttendanceService {
       }
       throw new DatabaseError('Failed to record attendance', error)
     }
-    return toRecord(data as AttendanceRow)
+    return toRecord(data as unknown as AttendanceRow)
   }
 
   private async find(workspaceId: string, employeeId: string, date: string) {
@@ -257,16 +304,26 @@ export class AttendanceService {
     return ((data ?? []) as Array<{ id: string }>)[0] ?? null
   }
 
-  private async update(workspaceId: string, id: string, values: Record<string, unknown>) {
-    const { data, error } = await supabase
-      .from('attendance')
-      .update({ ...values, updated_at: new Date().toISOString() })
-      .eq('workspace_id', workspaceId)
-      .eq('id', id)
-      .select('id, employee_id, date, check_in, check_out, status, notes')
-      .single()
+  private async update(workspaceId: string, id: string, values: MarkValues) {
+    const write = (night: boolean) =>
+      supabase
+        .from('attendance')
+        .update({
+          ...(night ? values : withoutNight(values)),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('workspace_id', workspaceId)
+        .eq('id', id)
+        .select(night ? NIGHT_COLUMNS : DAY_COLUMNS)
+        .single()
+
+    let { data, error } = await write(true)
+    if (nightMissing(error)) {
+      if (values.ends_next_day) throw new ConflictError('ATTENDANCE_NIGHT_NOT_CONFIGURED')
+      ;({ data, error } = await write(false))
+    }
     if (error) throw new DatabaseError('Failed to update attendance', error)
-    return toRecord(data as AttendanceRow)
+    return toRecord(data as unknown as AttendanceRow)
   }
 }
 

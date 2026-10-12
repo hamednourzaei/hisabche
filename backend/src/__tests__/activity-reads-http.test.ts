@@ -165,6 +165,11 @@ function registerRpcs() {
       invoices: acts.filter((a) => a.entity_type === 'invoice').length,
       payments: acts.filter((a) => a.entity_type === 'payment').length,
       customers: acts.filter((a) => a.entity_type === 'customer').length,
+      unreadBy: {
+        invoices: acts.filter((a) => a.entity_type === 'invoice' && !readIds.has(a.id)).length,
+        payments: acts.filter((a) => a.entity_type === 'payment' && !readIds.has(a.id)).length,
+        customers: acts.filter((a) => a.entity_type === 'customer' && !readIds.has(a.id)).length,
+      },
     }
   })
 
@@ -531,6 +536,22 @@ describe('activity reads over HTTP', () => {
     })
     expect(markAllRes.statusCode).toBe(200)
     expect(markAllRes.json().marked).toBe(1)
+
+    // Per tab: nothing left to mark on invoices, one on payments. This is the
+    // number «mark all as read» is offered by — the tab's total (1 invoice
+    // event) would have kept the button lit with nothing to do.
+    const counts = await app.inject({
+      method: 'GET',
+      url: '/api/v1/activities/counts',
+      headers: as(USER_A),
+    })
+    expect(counts.json()).toMatchObject({
+      all: 2,
+      unread: 1,
+      invoices: 1,
+      payments: 1,
+      unreadBy: { invoices: 0, payments: 1, customers: 0 },
+    })
 
     // Unread count is now 1 (the payment is still unread)
     const countRes = await app.inject({

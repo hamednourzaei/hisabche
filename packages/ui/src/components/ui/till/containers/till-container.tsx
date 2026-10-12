@@ -91,7 +91,21 @@ export const TillContainer = memo(function TillContainer() {
   }, [bookCurrency, tills.data])
 
   const [selectedCurrency, setSelectedCurrency] = useState<string | undefined>(undefined)
-  const activeCurrency = selectedCurrency ?? bookCurrency
+  // On one till's page the day's figures are that till's currency: a dollar
+  // till under «today's receipts» in afghani would be two currencies on one
+  // screen with one label. On the list it is the one the person picked.
+  const tillCurrency = selectedTillId
+    ? (selected.data?.session?.currency ??
+      (tills.data ?? []).find((till) => till.sessionId === selectedTillId)?.currency)
+    : undefined
+  const activeCurrency = tillCurrency ?? (selectedCurrency || bookCurrency)
+
+  // What the server said, or a sentence of ours — never the transport's own
+  // «Request failed with status code 500».
+  const said = (failure: unknown): string | null =>
+    failure ? apiErrorMessage(failure, t('common.loadError', 'خطا در بارگذاری')) : null
+  const sessionNotFound =
+    (selected.error as { response?: { status?: number } } | null)?.response?.status === 404
   const cashFlow = useCashFlow(cashFlowDays, activeCurrency)
 
   /**
@@ -118,41 +132,44 @@ export const TillContainer = memo(function TillContainer() {
   )
 
   const handleOpen = useCallback(
-    (input: { openingFloatMinor: number; label?: string; currency?: string }) => {
+    async (input: { openingFloatMinor: number; label?: string; currency?: string }) => {
       setActionError(null)
       setCloseNotice(null)
-      openSession.mutate(input, {
-        onSuccess: (session: { id?: string } | undefined) => {
-          if (session?.id) push(`/till?till=${session.id}`)
-          void tills.refetch()
-        },
-        onError: report,
-      })
+      try {
+        const session = await openSession.mutateAsync(input)
+        if (session?.id) push(`/till?till=${session.id}`)
+        void tills.refetch()
+        return true
+      } catch (err) {
+        report(err)
+        return false
+      }
     },
     [openSession, push, report, tills],
   )
 
   const handleRecordMovement = useCallback(
-    (input: { kind: 'cash_in' | 'cash_out'; amountMinor: number; reason: string }) => {
-      if (!selectedTillId) return
+    async (input: {
+      kind: 'cash_in' | 'cash_out'
+      amountMinor: number
+      reason: string
+      movementId: string
+    }) => {
+      if (!selectedTillId) return false
       setActionError(null)
       setCloseNotice(null)
-      cashMovement.mutate(
-        {
-          sessionId: selectedTillId,
-          movementId: crypto.randomUUID(),
-          ...input,
-        },
-        {
-          onSuccess: () => {
-            void ledger.refetch()
-            void tills.refetch()
-            void selected.refetch()
-            void cashFlow.refetch()
-          },
-          onError: report,
-        },
-      )
+      try {
+        // The id came with the form: sending it again is the same movement.
+        await cashMovement.mutateAsync({ sessionId: selectedTillId, ...input })
+        void ledger.refetch()
+        void tills.refetch()
+        void selected.refetch()
+        void cashFlow.refetch()
+        return true
+      } catch (err) {
+        report(err)
+        return false
+      }
     },
     [cashFlow, cashMovement, ledger, report, selected, selectedTillId, tills],
   )
@@ -188,24 +205,26 @@ export const TillContainer = memo(function TillContainer() {
   )
 
   const handleCloseTill = useCallback(
-    (input: { sessionId: string; countedCashMinor: number; varianceReason?: string }) => {
+    async (input: { sessionId: string; countedCashMinor: number; varianceReason?: string }) => {
       setActionError(null)
       setCloseNotice(null)
-      closeSession.mutate(input, {
-        onSuccess: (res: any) => {
-          refreshAll()
-          if (res?.ledger?.status === 'not_posted') {
-            setCloseNotice(
-              t(
-                'till.foreign_not_posted',
-                'ثبت در دفتر کل انجام نشد (ارز خارجی در دفتر کل پشتیبانی نمی‌شود).',
-              ),
-            )
-          }
-          if (selectedTillId === input.sessionId) push('/till')
-        },
-        onError: report,
-      })
+      try {
+        const closed = await closeSession.mutateAsync(input)
+        refreshAll()
+        if (closed?.ledger?.status === 'not_posted') {
+          setCloseNotice(
+            t(
+              'till.foreign_not_posted',
+              'ثبت در دفتر کل انجام نشد (ارز خارجی در دفتر کل پشتیبانی نمی‌شود).',
+            ),
+          )
+        }
+        if (selectedTillId === input.sessionId) push('/till')
+        return true
+      } catch (err) {
+        report(err)
+        return false
+      }
     },
     [closeSession, push, refreshAll, report, selectedTillId, t],
   )
@@ -228,9 +247,10 @@ export const TillContainer = memo(function TillContainer() {
       session={selectedTillId ? (selected.data?.session ?? null) : null}
       totals={selectedTillId ? (selected.data?.totals ?? null) : null}
       isSessionLoading={selectedTillId ? selected.isLoading : false}
-      sessionError={selectedTillId && selected.error ? (selected.error as Error).message : null}
+      sessionError={selectedTillId ? said(selected.error) : null}
+      sessionNotFound={Boolean(selectedTillId) && sessionNotFound}
       tills={tills.data ?? []}
-      tillsError={tills.error ? (tills.error as Error).message : null}
+      tillsError={said(tills.error)}
       isTillsLoading={tills.isLoading}
       selectedTillId={selectedTillId}
       onSelectTill={(id) => push(`/till?till=${id}`)}
@@ -240,7 +260,7 @@ export const TillContainer = memo(function TillContainer() {
       selectedCurrency={activeCurrency}
       onSelectCurrency={setSelectedCurrency}
       isLoading={current.isLoading}
-      error={current.error ? (current.error as Error).message : null}
+      error={said(current.error)}
       isBusy={
         openSession.isPending ||
         cashMovement.isPending ||
@@ -260,12 +280,12 @@ export const TillContainer = memo(function TillContainer() {
       onRecordMovement={handleRecordMovement}
       ledger={ledger.data?.entries ?? []}
       isLedgerLoading={!!selectedTillId && ledger.isLoading}
-      ledgerError={ledger.error ? (ledger.error as Error).message : null}
+      ledgerError={said(ledger.error)}
       dailyCashFlow={cashFlow.data ?? []}
       cashFlowDays={cashFlowDays}
       onCashFlowDaysChange={setCashFlowDays}
       isCashFlowLoading={cashFlow.isLoading}
-      cashFlowError={cashFlow.error ? (cashFlow.error as Error).message : null}
+      cashFlowError={said(cashFlow.error)}
     />
   )
 })

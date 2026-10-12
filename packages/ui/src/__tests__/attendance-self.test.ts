@@ -125,15 +125,28 @@ describe('the link dialog', () => {
     expect(dialog).not.toContain('Date.now()')
   })
 
-  it('the device is read after mount: origin, zone and the share sheet', () => {
+  it('the device gives the origin and the share sheet, after mount — and NOT the zone', () => {
     const effect = dialog.slice(dialog.indexOf('useEffect(() => { setDevice({'))
     expect(effect.startsWith('useEffect(() => { setDevice({')).toBe(true)
     expect(dialog.split('window.location').length - 1).toBe(2)
-    expect(dialog.split('resolvedOptions().timeZone').length - 1).toBe(1)
     expect(dialog.indexOf('window.location')).toBeGreaterThan(dialog.indexOf('useEffect(() => {'))
-    // No zone, no link: the button waits rather than sending a guess.
-    expect(dialog).toContain('disabled={create.isPending || !device.timeZone}')
-    expect(dialog).not.toMatch(/timeZone: ['"]Asia\//)
+    // The zone is the workplace's, from the server. Nothing here reads a clock.
+    expect(dialog).not.toContain('resolvedOptions')
+    expect(dialog).not.toContain('getTimezoneOffset')
+    expect(dialog).not.toMatch(/timeZone: /)
+    expect(dialog).toContain('const zone = workplace?.timeZone ?? null')
+  })
+
+  it('⚠️ no zone, no link: the button waits and the dialog says where to set one', () => {
+    expect(dialog).toContain('disabled={create.isPending || !zone}')
+    expect(dialog).toContain('if (!employee || !zone) return')
+    expect(dialog).toContain('data-workplace-zone-missing')
+    expect(dialog).toContain("href={localizePath('/settings', lang)}")
+    expect([...ATTENDANCE_LINK_ERROR_CODES]).toContain('ATTENDANCE_TIME_ZONE_NOT_SET')
+    // The link request carries no zone of the client's.
+    const hook = code(HOOK)
+    const create = hook.slice(hook.indexOf('export function useCreateAttendanceLink'))
+    expect(create.slice(0, create.indexOf('apiClient.post'))).not.toContain('timeZone')
   })
 
   it('the link points at the public page, with the language of the reader', () => {
@@ -238,6 +251,53 @@ describe('the route', () => {
   })
 })
 
+describe('Settings → time zone', () => {
+  const SECTION = 'packages/ui/src/components/ui/settings/workplace-time-zone-section.tsx'
+  const section = code(SECTION)
+
+  it('⚠️ has no default: the stored zone or nothing — the device zone is only offered', () => {
+    expect(section).toContain("const value = chosen ?? current ?? ''")
+    expect(section).toContain('data-time-zone-unset')
+    // The device's zone becomes the choice only when a person presses the button.
+    expect(section.split('setChosen(device.zone)').length - 1).toBe(1)
+    expect(section).toContain('onClick={() => setChosen(device.zone)}')
+    for (const place of ['Asia/', 'Europe/', 'America/', 'UTC'])
+      expect(section).not.toContain(place)
+    expect(section).toContain('const [chosen, setChosen] = useState<string | null>(null)')
+  })
+
+  it('reads the device after mount, and treats a failed read as a failure', () => {
+    expect(section.indexOf('resolvedOptions')).toBeGreaterThan(section.indexOf('useEffect(() => {'))
+    expect(section.indexOf('supportedValuesOf')).toBeGreaterThan(
+      section.indexOf('useEffect(() => {'),
+    )
+    expect(section).toContain(') : zones.isError || !zones.data ? (')
+    expect(section).toContain("{t('unreadable')}")
+  })
+
+  it('a branch can be «same as the business», which is sent as null — never as a zone', () => {
+    expect(section).toContain('timeZone: next === INHERIT ? null : next')
+    expect(section).toContain('value={branch.timeZone ?? INHERIT}')
+  })
+
+  it('⚠️ is in BOTH shells: the Windows and phone app has its own settings screen, which must mount it too', () => {
+    // The shell renders its own «general» settings, not the web page. A
+    // section added only to the web page does not exist on Windows or the
+    // phone — and without a zone no attendance link can be made there.
+    const shell = code('packages/app-shell/src/features/settings/settings-page.tsx')
+    expect(shell).toContain('<WorkplaceTimeZoneSection />')
+    expect(shell).toContain("from '@hisabche/ui/screens'")
+    expect(readFileSync(join(UI, 'screens.ts'), 'utf8')).toContain('WorkplaceTimeZoneSection,')
+  })
+
+  it('is mounted in settings, and a server code is translated only from the closed list', () => {
+    expect(code('packages/ui/src/components/ui/settings/settings-page.tsx')).toContain(
+      '<WorkplaceTimeZoneSection />',
+    )
+    expect(section).toContain("return code ? t(code) : t('failed')")
+  })
+})
+
 describe.each(['fa', 'af', 'en'])('messages in %s', (lang) => {
   const all = messages(lang)
 
@@ -265,6 +325,26 @@ describe.each(['fa', 'af', 'en'])('messages in %s', (lang) => {
       'attendance.submissions.pendingCount',
       'attendance.submissions.summary',
       'common.retry',
+      ...[
+        'title',
+        'description',
+        'loading',
+        'unreadable',
+        'notSet',
+        'choose',
+        'save',
+        'saved',
+        'failed',
+        'ownerOnly',
+        'deviceZone',
+        'useDeviceZone',
+        'branchesTitle',
+        'branchesHelp',
+        'branchZone',
+        'sameAsBusiness',
+        'TIME_ZONE_INVALID',
+        'TIME_ZONE_SCHEMA_REQUIRED',
+      ].map((key) => `settings.timeZone.${key}`),
       ...['active', 'expired', 'revoked'].map((state) => `attendance.link.state.${state}`),
       ...['pending', 'applied', 'approved', 'rejected'].map(
         (state) => `attendanceSelf.states.${state}`,
@@ -289,6 +369,8 @@ describe.each(['fa', 'af', 'en'])('messages in %s', (lang) => {
       ['attendance.submissions.title', '{name}'],
       ['attendance.submissions.pendingCount', '{count}'],
       ['attendanceSelf.zoneNote', '{zone}'],
+      ['settings.timeZone.deviceZone', '{zone}'],
+      ['settings.timeZone.branchZone', '{name}'],
       ['attendanceSelf.rejectedBecause', '{reason}'],
     ] as const) {
       expect(String(at(all, key)), key).toContain(placeholder)

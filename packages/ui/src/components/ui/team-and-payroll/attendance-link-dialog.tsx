@@ -11,13 +11,16 @@
 // server, in the same call.
 // ⚠️ THE STATE COMES FROM THE SERVER (`link.state`). This dialog compares no
 // dates to decide whether a link works.
-// ⚠️ THE ZONE IS THIS DEVICE'S — the same «shop's own local time» the sheet
-// records in — read in an effect, never during render.
+// ⚠️ THE ZONE IS THE WORKPLACE'S, FROM THE SERVER: the employee's branch, else
+// the business (Settings → «منطقه‌ی زمانی»). This dialog reads no zone from the
+// device. When none is set there is nothing to make a link with, and the dialog
+// says where to set it instead of offering a button that would be refused.
 // ⚠️ Copy goes through `copyText`, which says whether the text really reached
 // the clipboard.
 // ============================================
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useLocale, useTranslations } from 'next-intl'
 import { Copy, Send } from 'lucide-react'
 import {
@@ -30,6 +33,7 @@ import { localizePath } from '@hisabche/ui-contract'
 
 import { copyText } from '../../../lib/copy-text'
 import { useDateFormat } from '../../../hooks/use-date-format'
+import { useRouteLang } from '../../../hooks/use-locale-push'
 import { Button } from '../button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../dialog'
 import { JalaliDatePicker } from '../jalali-datepicker'
@@ -41,7 +45,7 @@ import { useToast } from '../toast-provider'
 export const ATTENDANCE_LINK_ERROR_CODES = [
   'ATTENDANCE_SELF_NOT_CONFIGURED',
   'ATTENDANCE_LINK_EXPIRY_IN_PAST',
-  'ATTENDANCE_TIME_ZONE_INVALID',
+  'ATTENDANCE_TIME_ZONE_NOT_SET',
   'ATTENDANCE_NOT_FOUND',
 ] as const
 
@@ -63,6 +67,7 @@ export function AttendanceLinkDialog({
   const t = useTranslations('attendance')
   const tCommon = useTranslations('common')
   const locale = useLocale()
+  const lang = useRouteLang()
   const toast = useToast()
   const { dateTime, date: formatDay } = useDateFormat()
 
@@ -76,11 +81,10 @@ export function AttendanceLinkDialog({
   const [failure, setFailure] = useState<string | null>(null)
 
   // The public page lives on the website; a packaged desktop app runs from
-  // file://, so the public site is the link's home there. The zone and the
-  // share sheet are the device's too. All three are read after mount.
-  const [device, setDevice] = useState<{ origin: string; timeZone: string; canShare: boolean }>({
+  // file://, so the public site is the link's home there. The share sheet is
+  // the device's too. Both are read after mount.
+  const [device, setDevice] = useState<{ origin: string; canShare: boolean }>({
     origin: '',
-    timeZone: '',
     canShare: false,
   })
   useEffect(() => {
@@ -88,7 +92,6 @@ export function AttendanceLinkDialog({
       origin: window.location.protocol.startsWith('http')
         ? window.location.origin
         : 'https://hisabche.com',
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? '',
       canShare: typeof navigator.share === 'function',
     })
   }, [])
@@ -109,14 +112,16 @@ export function AttendanceLinkDialog({
   }
 
   const status = (link.error as { response?: { status?: number } } | null)?.response?.status
-  const current = link.data ?? null
+  const current = link.data?.link ?? null
+  const workplace = link.data?.workplace ?? null
+  const zone = workplace?.timeZone ?? null
   const live = current?.state === 'active'
   const url = current
     ? `${device.origin}${localizePath(`/my-attendance/${current.token}`, locale)}`
     : ''
 
   const make = () => {
-    if (!employee || !device.timeZone) return
+    if (!employee || !zone) return
     setFailure(null)
     create.mutate(
       {
@@ -124,7 +129,6 @@ export function AttendanceLinkDialog({
         expiresOn: expiresOn || null,
         daysBack: Number(daysBack),
         autoApply,
-        timeZone: device.timeZone,
       },
       { onError: (error) => setFailure(explain(error)) },
     )
@@ -205,7 +209,6 @@ export function AttendanceLinkDialog({
                     <dd>{current.autoApply ? t('link.autoApplyOn') : t('link.autoApplyOff')}</dd>
                   </div>
                 </dl>
-                <p className={hint}>{t('link.timeZone', { zone: current.timeZone })}</p>
 
                 {live ? (
                   <div className={field}>
@@ -300,9 +303,28 @@ export function AttendanceLinkDialog({
                 </span>
               </label>
 
-              {device.timeZone ? (
-                <p className={hint}>{t('link.timeZone', { zone: device.timeZone })}</p>
-              ) : null}
+              {zone ? (
+                <p className={hint} data-workplace-zone={workplace?.source ?? ''}>
+                  {t('link.timeZone', { zone })}{' '}
+                  {workplace?.source === 'branch'
+                    ? t('link.zoneFromBranch')
+                    : t('link.zoneFromBusiness')}
+                </p>
+              ) : (
+                <p
+                  role="alert"
+                  data-workplace-zone-missing
+                  className="text-sm text-[hsl(var(--color-warning))]"
+                >
+                  {t('link.zoneMissing')}{' '}
+                  <Link
+                    href={localizePath('/settings', lang)}
+                    className="font-medium underline underline-offset-4"
+                  >
+                    {t('link.zoneSettings')}
+                  </Link>
+                </p>
+              )}
               {current ? <p className={hint}>{t('link.recreateHelp')}</p> : null}
 
               {failure ? (
@@ -311,7 +333,7 @@ export function AttendanceLinkDialog({
                 </p>
               ) : null}
 
-              <Button disabled={create.isPending || !device.timeZone} onClick={make}>
+              <Button disabled={create.isPending || !zone} onClick={make}>
                 {current ? t('link.recreate') : t('link.create')}
               </Button>
             </section>

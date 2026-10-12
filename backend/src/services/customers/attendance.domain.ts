@@ -39,6 +39,11 @@ export interface AttendanceDay {
   /** `HH:MM` local, or null when the day has not started or has no check-in. */
   checkIn: string | null
   checkOut: string | null
+  /**
+   * The exit is on the calendar day AFTER `date`. A person (or a planned night
+   * shift) says so; it is never read off the times.
+   */
+  endsNextDay?: boolean | undefined
   status: AttendanceStatus
   note?: string | null
 }
@@ -104,10 +109,29 @@ export function attendanceFor(day: AttendanceDay): DayResult {
     return { status: day.status, workedHours: null, isOpen: true, issue: 'NO_CHECK_OUT' }
   }
 
+  if (day.endsNextDay === true && outMinutes !== null) {
+    // A night: said outright, so the hours run through midnight. An exit that
+    // is not earlier than the arrival would be a day or more — not a night.
+    if (outMinutes >= inMinutes) {
+      return {
+        status: day.status,
+        workedHours: null,
+        isOpen: false,
+        issue: 'CHECK_OUT_BEFORE_CHECK_IN',
+      }
+    }
+    return {
+      status: day.status,
+      workedHours: Math.round(((outMinutes + 1440 - inMinutes) / 60) * 100) / 100,
+      isOpen: false,
+      issue: null,
+    }
+  }
+
   if (outMinutes !== null && outMinutes < inMinutes) {
-    // ⚠️ AN OUT BEFORE AN IN IS A DATA ERROR, NOT A NIGHT SHIFT. Shops here do
-    // not run shifts across midnight, and reading it as one would turn a typo
-    // into twenty hours.
+    // ⚠️ AN OUT BEFORE AN IN IS A DATA ERROR, NOT A NIGHT SHIFT — unless the
+    // record SAYS it ends the next day (above). Reading it off the times would
+    // turn a typo into twenty hours.
     return {
       status: day.status,
       workedHours: null,
@@ -168,17 +192,14 @@ export function validateShifts(
       continue
     }
 
-    if (end <= start) {
-      // ⚠️ A shift that ends before it starts is a typo, not an overnight. This
-      // product's shops are day shops, and reading it as overnight would bill
-      // twenty hours.
+    if (end === start) {
+      // Zero hours and twenty-four cannot be told apart. An end EARLIER than
+      // the start is a shift that ends the next day (`shiftMinutes`).
       problems.push('INVALID_TIMES')
+      continue
     }
 
-    if (
-      shift.breakMinutes < 0 ||
-      (end !== null && start !== null && end - start > 0 && shift.breakMinutes >= end - start)
-    ) {
+    if (shift.breakMinutes < 0 || shift.breakMinutes >= shiftMinutes(shift)) {
       problems.push('BREAK_LONGER_THAN_SHIFT')
     }
   }
@@ -186,7 +207,10 @@ export function validateShifts(
   // ⚠️ SORTED FIRST, so the overlap check is order-independent — a roster
   // entered bottom-up and one entered top-down must give the same answer.
   const sorted = [...dayShifts]
-    .map((s) => ({ shift: s, start: minutesOf(s.startsAt) ?? 0, end: minutesOf(s.endsAt) ?? 0 }))
+    .map((s) => {
+      const start = minutesOf(s.startsAt) ?? 0
+      return { shift: s, start, end: start + shiftMinutes(s) }
+    })
     .sort((a, b) => a.start - b.start)
 
   for (let i = 1; i < sorted.length; i += 1) {
@@ -214,12 +238,23 @@ export function validateShifts(
  * hours and a negative salary line.
  */
 export function payableHours(shift: ShiftDefinition): number {
+  const minutes = Math.max(0, shiftMinutes(shift) - Math.max(0, shift.breakMinutes))
+  return Math.round((minutes / 60) * 100) / 100
+}
+
+/** True when the shift's end is on the day after its start. */
+export function crossesMidnight(shift: Pick<ShiftDefinition, 'startsAt' | 'endsAt'>): boolean {
   const start = minutesOf(shift.startsAt)
   const end = minutesOf(shift.endsAt)
-  if (start === null || end === null || end <= start) return 0
+  return start !== null && end !== null && end < start
+}
 
-  const minutes = Math.max(0, end - start - Math.max(0, shift.breakMinutes))
-  return Math.round((minutes / 60) * 100) / 100
+/** Minutes from start to end; through midnight when the end is earlier. 0 = unreadable. */
+export function shiftMinutes(shift: Pick<ShiftDefinition, 'startsAt' | 'endsAt'>): number {
+  const start = minutesOf(shift.startsAt)
+  const end = minutesOf(shift.endsAt)
+  if (start === null || end === null || end === start) return 0
+  return end > start ? end - start : end + 1440 - start
 }
 
 // ─── Internal notes (#103) ───────────────────────────────────────────────────

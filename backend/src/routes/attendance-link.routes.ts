@@ -1,8 +1,13 @@
 // ============================================
 // backend/src/routes/attendance-link.routes.ts
 //
+// Where the business is (the zone «today» is read in):
+//   GET    /api/workplace/time-zone                   business + branches   manager
+//   PUT    /api/workplace/time-zone                   { timeZone }          owner
+//   PUT    /api/workplace/branches/:id/time-zone      { timeZone | null }   owner
+//
 // Manager and up (the role the attendance sheet itself requires):
-//   GET    /api/attendance-links?employeeId=          the employee's link, or null
+//   GET    /api/attendance-links?employeeId=          { link | null, workplace }
 //   POST   /api/attendance-links                      make one (revokes the live one)
 //   DELETE /api/attendance-links/:id                  revoke
 //   GET    /api/attendance-submissions?date=          what employees sent, undecided
@@ -30,6 +35,11 @@ import {
   type AttendanceLinkService,
 } from '../services/payroll/attendance-link.service'
 import { requireRole } from '../services/tenancy.service'
+import {
+  describeWorkplaceTimeZones,
+  setBranchTimeZone,
+  setWorkspaceTimeZone,
+} from '../services/workplace-time-zone'
 
 const MEMBER = [authenticate, requireWorkspaceContext]
 const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -42,7 +52,7 @@ const createBody = z
     expiresOn: isoDay.nullable().default(null),
     daysBack: z.number().int().min(0).max(MAX_DAYS_BACK).default(0),
     autoApply: z.boolean().default(false),
-    timeZone: z.string().min(1).max(64),
+    requireUnlock: z.boolean().default(false),
   })
   .strict()
 
@@ -61,7 +71,29 @@ const submitBody = z
     status: z.string().max(20),
     checkIn: z.string().max(8).nullable().default(null),
     checkOut: z.string().max(8).nullable().default(null),
+    endsNextDay: z.boolean().default(false),
     note: z.string().max(2000).nullable().default(null),
+    clientRequestId: z.string().uuid(),
+    unlock: z
+      .object({
+        credentialId: z.string().max(1400),
+        clientDataJSON: z.string().max(3000),
+        authenticatorData: z.string().max(3000),
+        signature: z.string().max(1500),
+      })
+      .strict()
+      .nullable()
+      .default(null),
+  })
+  .strict()
+
+const enrollBody = z
+  .object({
+    credentialId: z.string().max(1400),
+    publicKey: z.string().max(1500),
+    algorithm: z.number().int(),
+    clientDataJSON: z.string().max(3000),
+    authenticatorData: z.string().max(3000),
     clientRequestId: z.string().uuid(),
   })
   .strict()
@@ -103,6 +135,45 @@ export function buildAttendanceLinkRoutes(links: AttendanceLinkService) {
         }
       }
 
+    // ─── where the business is ──────────────────────────────────────────────
+
+    fastify.get(
+      '/api/workplace/time-zone',
+      { preHandler: MEMBER },
+      handle(async (request, reply) => {
+        requireRole(request.tenancy, 'manager')
+        return reply.send(await describeWorkplaceTimeZones(request.tenancy.workspaceId))
+      }),
+    )
+
+    fastify.put(
+      '/api/workplace/time-zone',
+      { preHandler: MEMBER },
+      handle(async (request, reply) => {
+        // Moving «today» for every employee is the owner's decision.
+        requireRole(request.tenancy, 'owner')
+        const { timeZone } = z
+          .object({ timeZone: z.string().min(1).max(64) })
+          .strict()
+          .parse(request.body)
+        return reply.send(await setWorkspaceTimeZone(request.tenancy.workspaceId, timeZone))
+      }),
+    )
+
+    fastify.put(
+      '/api/workplace/branches/:id/time-zone',
+      { preHandler: MEMBER },
+      handle(async (request, reply) => {
+        requireRole(request.tenancy, 'owner')
+        const { id } = idParams.parse(request.params)
+        const { timeZone } = z
+          .object({ timeZone: z.string().min(1).max(64).nullable() })
+          .strict()
+          .parse(request.body)
+        return reply.send(await setBranchTimeZone(request.tenancy.workspaceId, id, timeZone))
+      }),
+    )
+
     // ─── managers ───────────────────────────────────────────────────────────
 
     fastify.get(
@@ -111,7 +182,7 @@ export function buildAttendanceLinkRoutes(links: AttendanceLinkService) {
       handle(async (request, reply) => {
         requireRole(request.tenancy, 'manager')
         const { employeeId } = z.object({ employeeId: z.string().uuid() }).parse(request.query)
-        return reply.send({ link: await links.current(request.tenancy, employeeId) })
+        return reply.send(await links.current(request.tenancy, employeeId))
       }),
     )
 
@@ -133,6 +204,18 @@ export function buildAttendanceLinkRoutes(links: AttendanceLinkService) {
         requireRole(request.tenancy, 'manager')
         const { id } = idParams.parse(request.params)
         await links.revoke(request.tenancy, id)
+        return reply.code(204).send()
+      }),
+    )
+
+    // Forget the employee's registered phone, so a new one can be registered.
+    fastify.delete(
+      '/api/attendance-links/phone/:id',
+      { preHandler: MEMBER },
+      handle(async (request, reply) => {
+        requireRole(request.tenancy, 'manager')
+        const { id } = idParams.parse(request.params)
+        await links.forgetPhone(request.tenancy, id)
         return reply.code(204).send()
       }),
     )
@@ -182,6 +265,20 @@ export function buildAttendanceLinkRoutes(links: AttendanceLinkService) {
         const result = await links.submit(parsed.data.token, submitBody.parse(request.body))
         if (!result) return reply.code(404).send(NOT_FOUND)
         return reply.code(result.replayed ? 200 : 201).send(result)
+      }),
+    )
+
+    // The employee registers the phone in their hand. Few tries: it is a
+    // once-per-phone step, not something a page repeats.
+    fastify.post(
+      '/api/public/attendance/:token/phone',
+      { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
+      handle(async (request, reply) => {
+        const parsed = tokenParams.safeParse(request.params)
+        if (!parsed.success) return reply.code(404).send(NOT_FOUND)
+        const phone = await links.enrollPhone(parsed.data.token, enrollBody.parse(request.body))
+        if (!phone) return reply.code(404).send(NOT_FOUND)
+        return reply.code(201).send(phone)
       }),
     )
   }

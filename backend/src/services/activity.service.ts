@@ -841,6 +841,8 @@ export class ActivityService {
     invoices: number
     payments: number
     customers: number
+    /** Unread of each typed tab. */
+    unreadBy: { invoices: number; payments: number; customers: number }
   }> {
     const { userId, workspaceId } = ctx
     const cacheKey = `activities:counts:${userId}:${workspaceId}`
@@ -875,19 +877,38 @@ export class ActivityService {
           number,
           number,
         ]
-        const fallbackResult = { all, unread: all, invoices, payments, customers }
+        // Nobody has read anything yet: unread per tab is the tab itself.
+        const fallbackResult = {
+          all,
+          unread: all,
+          invoices,
+          payments,
+          customers,
+          unreadBy: { invoices, payments, customers },
+        }
         await memoryCache.set(cacheKey, fallbackResult, 10)
         return fallbackResult
       }
       throw new DatabaseError('Failed to count activities', error)
     }
 
-    const result = data as {
-      all: number
-      unread: number
-      invoices: number
-      payments: number
-      customers: number
+    // Shaped here, not cast: a database that still has the first draft of the
+    // function answers without `unreadBy`, and «missing» must not reach the
+    // screen as a number.
+    const raw = (data ?? {}) as Record<string, unknown>
+    const by = (raw.unreadBy ?? null) as Record<string, unknown> | null
+    if (!by) throw new DatabaseError('activity_get_filter_counts returned no per-tab unread')
+    const result = {
+      all: Number(raw.all) || 0,
+      unread: Number(raw.unread) || 0,
+      invoices: Number(raw.invoices) || 0,
+      payments: Number(raw.payments) || 0,
+      customers: Number(raw.customers) || 0,
+      unreadBy: {
+        invoices: Number(by.invoices) || 0,
+        payments: Number(by.payments) || 0,
+        customers: Number(by.customers) || 0,
+      },
     }
     await memoryCache.set(cacheKey, result, 10)
     return result

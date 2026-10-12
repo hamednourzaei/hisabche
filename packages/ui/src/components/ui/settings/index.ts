@@ -6,3 +6,5 @@ export { SettingsPage } from './settings-page'
 // receipt printer host, the camera scanner).
 export { BusinessStampSection } from './settings-page'
 export { HardwareSection } from './hardware-section'
+export { WorkplaceTimeZoneSection } from './workplace-time-zone-section'
+export { BookCurrencySection } from './book-currency-section'

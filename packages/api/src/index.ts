@@ -413,6 +413,34 @@ export {
   type LateFeeState,
 } from './hooks/late-fees'
 
+// ─── Where the business is: the zone «today» is read in ───
+export {
+  useWorkplaceTimeZones,
+  useSetWorkspaceTimeZone,
+  useSetBranchTimeZone,
+  workplaceTimeZoneKeys,
+  type WorkplaceTimeZones,
+} from './hooks/workplace-time-zone'
+
+// ─── Attendance terminals (fingerprint / face / card) ─────
+export {
+  useAttendanceDevices,
+  useRegisterAttendanceDevice,
+  useRotateAttendanceDeviceKey,
+  useRevokeAttendanceDevice,
+  useUnmatchedDeviceUsers,
+  useDeviceIdentities,
+  useMapDeviceIdentity,
+  attendanceDeviceKeys,
+  type AttendanceDevice,
+  type AttendanceDeviceMethod,
+  type AttendanceDeviceList,
+  type AttendanceDeviceInput,
+  type UnmatchedDeviceUser,
+  type DeviceIdentity,
+  type DeviceSettlement,
+} from './hooks/attendance-devices'
+
 // ─── An employee's personal attendance link ───────────────
 export {
   useAttendanceLink,
@@ -422,6 +450,7 @@ export {
   useDecideAttendanceSubmission,
   attendanceLinkKeys,
   type AttendanceLink,
+  type AttendanceLinkStatus,
   type AttendanceSubmission,
   type AttendanceDaySubmissions,
 } from './hooks/attendance-links'

@@ -19,17 +19,6 @@ export function linkState(
   return 'active'
 }
 
-/** A zone this runtime knows. No fallback: an unknown zone is refused, not replaced. */
-export function isIanaTimeZone(value: unknown): value is string {
-  if (typeof value !== 'string' || value.length === 0 || value.length > 64) return false
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone: value })
-    return true
-  } catch {
-    return false
-  }
-}
-
 /** The calendar day it is in `timeZone` at `instant`, as `YYYY-MM-DD` (Gregorian). */
 export function isoDayIn(timeZone: string, instant: Date): string {
   const parts = new Intl.DateTimeFormat('en-US', {

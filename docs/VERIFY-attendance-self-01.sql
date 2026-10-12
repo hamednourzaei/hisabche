@@ -44,6 +44,29 @@ checks (name, ok, detail) AS (
                     AND column_name = 'source'),
          'NULL = recorded on the sheet'
   UNION ALL
+  SELECT t.tbl || '.time_zone exists',
+         EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_schema = 'public' AND table_name = t.tbl
+                    AND column_name = 'time_zone'),
+         t.note
+    FROM (VALUES
+      ('workspaces', 'NULL until the owner chooses one'),
+      ('branches', 'NULL = the zone of the business'),
+      ('attendance_submissions', 'the zone the day was judged in')
+    ) AS t (tbl, note)
+  UNION ALL
+  SELECT 'attendance_links has no zone of its own',
+         NOT EXISTS (SELECT 1 FROM information_schema.columns
+                      WHERE table_schema = 'public' AND table_name = 'attendance_links'
+                        AND column_name = 'time_zone'),
+         'the zone belongs to the workplace'
+  UNION ALL
+  SELECT 'the draft functions that took a device zone are gone',
+         (SELECT COUNT(*) FROM pg_proc p
+           WHERE p.pronamespace = 'public'::regnamespace
+             AND p.proname IN ('attendance_link_create', 'attendance_submit')) = 2,
+         'exactly one of each'
+  UNION ALL
   SELECT 'check attendance_source_check',
          EXISTS (SELECT 1 FROM pg_constraint
                   WHERE conname = 'attendance_source_check'

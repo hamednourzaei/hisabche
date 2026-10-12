@@ -44,6 +44,7 @@ import { GHOST_ICON_BUTTON } from '../button-classes'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { SelectField } from '../select-field'
 import { DataTable, TableFilterSelect, matchesSearch, type TableColumn } from '../data-table'
+import { AttendanceDevices } from './attendance-devices'
 import { AttendanceLinkDialog } from './attendance-link-dialog'
 import { AttendanceSubmissionsDialog } from './attendance-submissions-dialog'
 import { ShiftManager } from './shift-manager'
@@ -84,6 +85,7 @@ export function AttendanceSheet() {
   const pendingOf = (employeeId: string) =>
     (sent.data?.pending ?? []).filter((submission) => submission.employeeId === employeeId)
   const cameFromLink = (employeeId: string) => (sent.data?.fromLink ?? []).includes(employeeId)
+  const cameFromDevice = (employeeId: string) => (sent.data?.fromDevice ?? []).includes(employeeId)
   const [linkFor, setLinkFor] = useState<{ id: string; name: string } | null>(null)
   const [reviewing, setReviewing] = useState<string | null>(null)
   const mark = useMarkAttendance()
@@ -209,6 +211,11 @@ export function AttendanceSheet() {
             {row.record && cameFromLink(row.employeeId) ? (
               <span data-from-link className="block text-[hsl(var(--fg-tertiary))]">
                 {t('fromLink')}
+              </span>
+            ) : null}
+            {row.record && cameFromDevice(row.employeeId) ? (
+              <span data-from-device className="block text-[hsl(var(--fg-tertiary))]">
+                {t('fromDevice')}
               </span>
             ) : null}
           </span>
@@ -513,6 +520,11 @@ export function AttendanceSheet() {
       <ShiftPlan date={date} employees={sheet.data?.rows ?? []} shifts={activeShifts} />
 
       <ShiftManager />
+
+      {/* Fingerprint / face / card terminals that write onto this sheet. */}
+      <AttendanceDevices
+        employees={(sheet.data?.rows ?? []).map((row) => ({ id: row.employeeId, name: row.name }))}
+      />
 
       <AttendanceLinkDialog employee={linkFor} onClose={() => setLinkFor(null)} />
       {(() => {

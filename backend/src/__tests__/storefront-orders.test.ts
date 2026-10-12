@@ -348,6 +348,13 @@ describe('everything under /api/public/ is public by design', () => {
     // write — a submission, which is a request and not a record.
     'GET /api/public/attendance/:token',
     'POST /api/public/attendance/:token',
+    // …and registering the phone in the employee's hand: a PUBLIC key only
+    // (no fingerprint or face can be sent), once per employee, five tries a minute.
+    'POST /api/public/attendance/:token/phone',
+    // A terminal's events (attendance-device.routes.ts): the device key is
+    // the credential (stored only as a hash), it is rate-limited, a batch is
+    // one write, and what it carries is «who, when» — never biometric data.
+    'POST /api/public/attendance-devices/events',
     // The goods marketplace (market-public.routes.ts): 404 MARKET_DISABLED
     // until a platform admin turns the switch on; never a cost or buy price.
     'GET /api/public/market/listings',
