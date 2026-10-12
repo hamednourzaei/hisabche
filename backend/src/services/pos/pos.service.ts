@@ -16,6 +16,7 @@ import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
 import { logBusinessEvent } from '../event-log.service'
 import { AccountingService, ledger } from '../accounting'
+import { baseCurrencyOf } from '../base-currency'
 
 import {
   buildDrawerLedger,
@@ -50,19 +51,6 @@ const SESSION_COLUMNS =
 // database where phase-m-01 had not been applied.
 const HISTORY_COLUMNS = `${SESSION_COLUMNS}, expected_cash_minor, cash_sales_minor, cash_in_minor, cash_out_minor, variance_minor`
 
-function mapSession(raw: Record<string, any>): PosSession {
-  return {
-    id: raw.id,
-    status: raw.status,
-    openingFloatMinor: Number(raw.opening_float_minor) || 0,
-    openedAt: raw.opened_at,
-    openedBy: raw.opened_by,
-    closedAt: raw.closed_at ?? null,
-    closedBy: raw.closed_by ?? null,
-    countedCashMinor: raw.counted_cash_minor === null ? null : Number(raw.counted_cash_minor),
-  }
-}
-
 function mapOrder(raw: Record<string, any>): PosOrder {
   return {
     id: raw.id,
@@ -88,13 +76,43 @@ function mapMovement(raw: Record<string, any>): CashMovement {
   }
 }
 
+function mapSession(raw: Record<string, any>, defaultCurrency?: string): PosSession {
+  return {
+    id: raw.id,
+    currency: raw.currency ?? defaultCurrency ?? undefined,
+    label: raw.label ?? undefined,
+    status: raw.status,
+    openingFloatMinor: Number(raw.opening_float_minor) || 0,
+    openedAt: raw.opened_at,
+    openedBy: raw.opened_by,
+    closedAt: raw.closed_at ?? null,
+    closedBy: raw.closed_by ?? null,
+    countedCashMinor: raw.counted_cash_minor === null ? null : Number(raw.counted_cash_minor),
+  }
+}
+
 /**
  * 42703 — the SELECT named a column Postgres does not have; PGRST204 — the
  * UPDATE named one PostgREST's schema cache does not have. Either way the
  * till-name migration has not been run.
  */
-function isMissingLabelColumn(error: { code?: string | null }): boolean {
-  return error.code === '42703' || error.code === 'PGRST204'
+type ColumnError = { code?: string | null; message?: string | null; details?: string | null }
+
+function isMissingColumn(error: ColumnError, column: string): boolean {
+  if (error.code !== '42703' && error.code !== 'PGRST204') return false
+  return `${error.message ?? ''} ${error.details ?? ''}`.includes(column)
+}
+
+function isMissingLabelColumn(error: ColumnError): boolean {
+  return isMissingColumn(error, 'label')
+}
+
+/**
+ * pos-till-currency-01 has not been run. ⚠️ By NAME: `label` is optional in
+ * the same way, and a bare 42703 for one was being read as the other.
+ */
+function isMissingCurrencyColumn(error: ColumnError): boolean {
+  return isMissingColumn(error, 'currency')
 }
 
 export class PosService {
@@ -114,56 +132,175 @@ export class PosService {
    */
   async openSession(
     ctx: TenancyContext,
-    input: { openingFloatMinor: number; branchId?: string | null | undefined },
+    input: {
+      openingFloatMinor: number
+      branchId?: string | null | undefined
+      label?: string | null | undefined
+      currency?: string | undefined
+    },
   ): Promise<PosSession> {
     if (input.openingFloatMinor < 0) throw new ValidationError('POS_COUNT_NEGATIVE')
 
-    const { data, error } = await supabase
+    const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
+    const targetCurrency = input.currency ? input.currency.toUpperCase() : booksCurrency
+
+    let labelValue: string | null = null
+    if (input.label !== undefined && input.label !== null) {
+      const trimmed = input.label.trim()
+      if (trimmed.length > 0) {
+        if (trimmed.length > 80) throw new ValidationError('POS_LABEL_INVALID')
+        labelValue = trimmed
+      }
+    }
+
+    const payload: Record<string, any> = {
+      workspace_id: ctx.workspaceId,
+      branch_id: input.branchId ?? null,
+      status: 'open',
+      opening_float_minor: input.openingFloatMinor,
+      opened_by: ctx.userId,
+      // NULL = the books currency, exactly as every till opened before
+      // pos-till-currency-01. Writing the code here would let one person hold
+      // two open books-currency tills (the index compares NULL and 'AFN' as
+      // different), and it keeps this insert working on a database without
+      // the column.
+      ...(targetCurrency === booksCurrency ? {} : { currency: targetCurrency }),
+    }
+    if (labelValue !== null) {
+      payload.label = labelValue
+    }
+
+    let data: Record<string, any> | null = null
+    let error: any = null
+
+    const initial = await supabase
       .from('pos_sessions')
-      .insert({
-        workspace_id: ctx.workspaceId,
-        branch_id: input.branchId ?? null,
-        status: 'open',
-        opening_float_minor: input.openingFloatMinor,
-        opened_by: ctx.userId,
-      })
-      .select(SESSION_COLUMNS)
+      .insert(payload)
+      .select(`${SESSION_COLUMNS}, currency`)
       .single()
+
+    data = initial.data as Record<string, any> | null
+    error = initial.error
+
+    if (error && isMissingCurrencyColumn(error)) {
+      if (targetCurrency !== booksCurrency) {
+        throw new ValidationError('POS_CURRENCY_SCHEMA_REQUIRED')
+      }
+      delete payload.currency
+      const retry = await supabase
+        .from('pos_sessions')
+        .insert(payload)
+        .select(SESSION_COLUMNS)
+        .single()
+      data = retry.data ? { ...retry.data, currency: booksCurrency } : null
+      error = retry.error
+    }
+
+    if (error && isMissingLabelColumn(error)) {
+      if (labelValue !== null) {
+        throw new ConflictError('POS_LABEL_MIGRATION_REQUIRED')
+      }
+      delete payload.label
+      const retry = await supabase
+        .from('pos_sessions')
+        .insert(payload)
+        .select(SESSION_COLUMNS)
+        .single()
+      data = retry.data as Record<string, any> | null
+      error = retry.error
+    }
 
     if (error) {
       if (error.code === '23505') throw new ConflictError('POS_SESSION_ALREADY_OPEN')
+      if (error.code === '23514') {
+        if (labelValue !== null) throw new ValidationError('POS_LABEL_INVALID')
+        throw new ValidationError('POS_CURRENCY_INVALID')
+      }
       throw new DatabaseError('Failed to open the till session', error)
     }
 
     await this.invalidate(ctx.workspaceId)
-    return mapSession(data)
+    // The currency this till was opened in is known here whatever columns the
+    // fallback read brought back.
+    const result = {
+      ...mapSession(data as Record<string, any>, booksCurrency),
+      currency: targetCurrency,
+    }
+    if (labelValue !== null && !result.label) {
+      result.label = labelValue
+    }
+    return result
   }
 
   async getSession(ctx: TenancyContext, sessionId: string): Promise<PosSession> {
-    const { data, error } = await supabase
+    const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
+    let data: Record<string, any> | null = null
+    let error: any = null
+
+    const res = await supabase
       .from('pos_sessions')
-      .select(SESSION_COLUMNS)
+      .select(`${SESSION_COLUMNS}, currency`)
       .eq('workspace_id', ctx.workspaceId)
       .eq('id', sessionId)
       .maybeSingle()
 
+    data = res.data as Record<string, any> | null
+    error = res.error
+
+    if (error && isMissingCurrencyColumn(error)) {
+      const fallback = await supabase
+        .from('pos_sessions')
+        .select(SESSION_COLUMNS)
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', sessionId)
+        .maybeSingle()
+      data = fallback.data as Record<string, any> | null
+      error = fallback.error
+    }
+
     if (error) throw new DatabaseError('Failed to fetch the till session', error)
     if (!data) throw new NotFoundError('Till session')
-    return mapSession(data)
+    return mapSession(data, booksCurrency)
   }
 
   /** The caller's own open session, if they have one. */
-  async getOpenSession(ctx: TenancyContext): Promise<PosSession | null> {
-    const { data, error } = await supabase
+  async getOpenSession(ctx: TenancyContext, currency?: string): Promise<PosSession | null> {
+    const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
+
+    // ⚠️ SEVERAL, NOT ONE. With a till per currency the same person may hold
+    // more than one open till; `.maybeSingle()` here answered 500 the moment a
+    // second one was opened. Read them all and choose.
+    const withCurrency = await supabase
       .from('pos_sessions')
-      .select(SESSION_COLUMNS)
+      .select(`${SESSION_COLUMNS}, currency`)
       .eq('workspace_id', ctx.workspaceId)
       .eq('opened_by', ctx.userId)
       .eq('status', 'open')
-      .maybeSingle()
+      .order('opened_at', { ascending: true })
+      .limit(50)
+    let res: { data: unknown; error: ColumnError | null } = withCurrency
+    if (res.error && isMissingCurrencyColumn(res.error)) {
+      // Before pos-till-currency-01: every till is in the books currency.
+      res = await supabase
+        .from('pos_sessions')
+        .select(SESSION_COLUMNS)
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('opened_by', ctx.userId)
+        .eq('status', 'open')
+        .order('opened_at', { ascending: true })
+        .limit(50)
+    }
+    if (res.error) throw new DatabaseError('Failed to fetch the open session', res.error)
 
-    if (error) throw new DatabaseError('Failed to fetch the open session', error)
-    return data ? mapSession(data) : null
+    const sessions = ((res.data ?? []) as Record<string, any>[]).map((row) =>
+      mapSession(row, booksCurrency),
+    )
+    // Asked for a currency: that till or none. Not asked: the books-currency
+    // till, as before there were others; failing that, the oldest.
+    const wanted = currency ?? booksCurrency
+    const match = sessions.find((session) => session.currency === wanted)
+    if (match || currency) return match ?? null
+    return sessions[0] ?? null
   }
 
   /**
@@ -182,11 +319,15 @@ export class PosService {
   ): Promise<CashSettlement[]> {
     const PAGE = 1000
     const rows: Record<string, any>[] = []
+    const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
+    const sessionCurrency = session.currency ?? booksCurrency
 
     for (let from = 0; ; from += PAGE) {
       let query = supabase
         .from('payments')
-        .select('id, payment_number, direction, amount, created_at, recorded_by:created_by')
+        .select(
+          'id, payment_number, direction, amount, currency, created_at, recorded_by:created_by',
+        )
         .eq('workspace_id', ctx.workspaceId)
         .eq('method', 'cash')
         .eq('status', 'posted')
@@ -206,7 +347,11 @@ export class PosService {
     }
 
     return rows
-      .filter((row) => row.recorded_by === session.openedBy)
+      .filter(
+        (row) =>
+          row.recorded_by === session.openedBy &&
+          (row.currency ?? booksCurrency) === sessionCurrency,
+      )
       .map((row) => ({
         id: row.id,
         paymentNumber: row.payment_number ?? '',
@@ -402,12 +547,30 @@ export class PosService {
       changeMinor: number
       payments: Array<{ method: PaymentMethod; amountMinor: number }>
       invoiceId?: string | null | undefined
+      currency?: string | undefined
     },
   ): Promise<PosOrder> {
     const session = await this.getSession(ctx, sessionId)
 
     const problems = validateOrder(session, input)
     if (problems.length > 0) throw new ValidationError(problems.join(', '))
+
+    if (input.invoiceId) {
+      const { data: inv, error: invError } = await supabase
+        .from('invoices')
+        .select('currency')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', input.invoiceId)
+        .maybeSingle()
+      if (invError) throw new DatabaseError('Failed to read the invoice of the order', invError)
+      if (!inv) throw new NotFoundError('Invoice')
+      const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
+      const invCurrency = inv?.currency ?? booksCurrency
+      const sessionCurrency = session.currency ?? booksCurrency
+      if (invCurrency !== sessionCurrency) {
+        throw new ValidationError('POS_CURRENCY_MISMATCH')
+      }
+    }
 
     // One transaction, in the database.
     //
@@ -518,6 +681,7 @@ export class PosService {
        * no key, one lost response put the same cash in the drawer four times.
        */
       movementId?: string | undefined
+      currency?: string | undefined
     },
   ): Promise<CashMovement> {
     const session = await this.getSession(ctx, sessionId)
@@ -681,7 +845,12 @@ export class PosService {
       varianceReason?: string | undefined
       force?: boolean | undefined
     },
-  ): Promise<{ session: PosSession; totals: SessionTotals; posted: boolean }> {
+  ): Promise<{
+    session: PosSession
+    totals: SessionTotals
+    posted: boolean
+    ledger?: { status: string; reason?: string }
+  }> {
     const session = await this.getSession(ctx, sessionId)
     const { orders, movements, settlements } = await this.loadContents(ctx, sessionId, session)
     const totals = summarise(session, orders, movements, settlements)
@@ -730,10 +899,26 @@ export class PosService {
 
     if (error) throw new DatabaseError('Failed to close the till session', error)
 
-    const posted = await this.postSession(ctx, closed, finalTotals)
+    const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
+    const isForeign = session.currency && session.currency !== booksCurrency
+
+    let posted = false
+    let ledgerResult: { status: string; reason?: string }
+    if (isForeign) {
+      posted = false
+      ledgerResult = { status: 'not_posted', reason: 'POS_FOREIGN_CURRENCY_NOT_IN_LEDGER' }
+    } else {
+      posted = await this.postSession(ctx, closed, finalTotals)
+      ledgerResult = { status: posted ? 'posted' : 'not_posted' }
+    }
 
     await this.invalidate(ctx.workspaceId)
-    return { session: mapSession(data), totals: finalTotals, posted }
+    return {
+      session: mapSession(data, session.currency ?? booksCurrency),
+      totals: finalTotals,
+      posted,
+      ledger: ledgerResult,
+    }
   }
 
   /**
@@ -876,7 +1061,10 @@ export class PosService {
    * completed till orders (net of change). Card and transfer never touched a
    * drawer and are not counted.
    */
-  async cashFlow(ctx: TenancyContext, days: number, offsetMinutes: number) {
+  async cashFlow(ctx: TenancyContext, days: number, offsetMinutes: number, currency?: string) {
+    const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
+    const targetCurrency = currency ?? booksCurrency
+
     const now = Date.now() + offsetMinutes * 60_000
     const today = new Date(now).toISOString().slice(0, 10)
     const since = new Date(
@@ -896,11 +1084,28 @@ export class PosService {
       return rows
     }
 
+    const sessionCurrencies = new Map<string, string>()
+    for (let from = 0; ; from += 1000) {
+      const page = await supabase
+        .from('pos_sessions')
+        .select('id, currency')
+        .eq('workspace_id', ctx.workspaceId)
+        .order('id')
+        .range(from, from + 999)
+      // Before pos-till-currency-01 every till is in the books currency.
+      if (page.error && isMissingCurrencyColumn(page.error)) break
+      if (page.error) throw new DatabaseError('Failed to read the tills', page.error)
+      for (const row of page.data ?? []) {
+        sessionCurrencies.set(row.id, row.currency ?? booksCurrency)
+      }
+      if ((page.data ?? []).length < 1000) break
+    }
+
     const [payments, movements, orders] = await Promise.all([
       pageAll((from, to) =>
         supabase
           .from('payments')
-          .select('id, direction, amount, created_at')
+          .select('id, direction, amount, currency, created_at')
           .eq('workspace_id', ctx.workspaceId)
           .eq('method', 'cash')
           .eq('status', 'posted')
@@ -911,7 +1116,7 @@ export class PosService {
       pageAll((from, to) =>
         supabase
           .from('pos_cash_movements')
-          .select('id, kind, amount_minor, created_at')
+          .select('id, session_id, kind, amount_minor, created_at')
           .eq('workspace_id', ctx.workspaceId)
           .gte('created_at', since)
           .order('id')
@@ -921,7 +1126,7 @@ export class PosService {
         supabase
           .from('pos_orders')
           .select(
-            'id, change_minor, status, created_at, payments:pos_order_payments(method, amount_minor)',
+            'id, session_id, change_minor, status, created_at, payments:pos_order_payments(method, amount_minor)',
           )
           .eq('workspace_id', ctx.workspaceId)
           .eq('status', 'completed')
@@ -931,16 +1136,26 @@ export class PosService {
       ),
     ])
 
+    const filteredPayments = payments.filter(
+      (p) => (p.currency ?? booksCurrency) === targetCurrency,
+    )
+    const filteredMovements = movements.filter(
+      (m) => (sessionCurrencies.get(m.session_id) ?? booksCurrency) === targetCurrency,
+    )
+    const filteredOrders = orders.filter(
+      (o) => (sessionCurrencies.get(o.session_id) ?? booksCurrency) === targetCurrency,
+    )
+
     const events: CashEvent[] = [
-      ...payments.map((p) => ({
+      ...filteredPayments.map((p) => ({
         at: p.created_at,
         amountMinor: (p.direction === 'out' ? -1 : 1) * Math.round((Number(p.amount) || 0) * 100),
       })),
-      ...movements.map((m) => ({
+      ...filteredMovements.map((m) => ({
         at: m.created_at,
         amountMinor: (m.kind === 'cash_out' ? -1 : 1) * (Number(m.amount_minor) || 0),
       })),
-      ...orders.map((o) => ({
+      ...filteredOrders.map((o) => ({
         at: o.created_at,
         amountMinor:
           ((o.payments ?? []) as Array<{ method: string; amount_minor: number }>)
@@ -950,7 +1165,11 @@ export class PosService {
       })),
     ]
 
-    return { days: dailyCashFlow(events, days, today, offsetMinutes), today }
+    return {
+      days: dailyCashFlow(events, days, today, offsetMinutes),
+      today,
+      currency: targetCurrency,
+    }
   }
 
   /** Every open or suspended till of the workspace, with its expected cash (the till list). */
@@ -1094,18 +1313,36 @@ export class PosService {
     staleAfterHours = 24,
     statuses: SessionStatus[] = ['open'],
   ) {
-    const { data, error } = await supabase
+    const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
+    let rows: Record<string, any>[] | null = null
+    let error: any = null
+
+    const res = await supabase
       .from('pos_sessions')
-      .select(SESSION_COLUMNS)
+      .select(`${SESSION_COLUMNS}, currency`)
       .eq('workspace_id', ctx.workspaceId)
       .in('status', statuses)
       .limit(200)
 
+    rows = res.data as Record<string, any>[] | null
+    error = res.error
+
+    if (error && isMissingCurrencyColumn(error)) {
+      const fallback = await supabase
+        .from('pos_sessions')
+        .select(SESSION_COLUMNS)
+        .eq('workspace_id', ctx.workspaceId)
+        .in('status', statuses)
+        .limit(200)
+      rows = fallback.data as Record<string, any>[] | null
+      error = fallback.error
+    }
+
     if (error) throw new DatabaseError('Failed to look for abandoned sessions', error)
 
     const sessions = await Promise.all(
-      (data ?? []).map(async (row) => {
-        const session = mapSession(row)
+      (rows ?? []).map(async (row) => {
+        const session = mapSession(row, booksCurrency)
         const contents = await this.loadContents(ctx, session.id, session)
         return { session, ...contents }
       }),

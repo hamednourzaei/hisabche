@@ -101,6 +101,7 @@ export { AuditContainer } from './components/ui/audit/containers/audit-container
 // ---------- Public (no-auth) ----------
 export { PublicInvoiceContainer } from './components/ui/invoice-detail/containers/public-invoice-container'
 export { PublicPortalContainer } from './components/ui/customers/containers/public-portal-container'
+export { AttendanceSelfContainer } from './components/ui/team-and-payroll/containers/attendance-self-container'
 
 // ---------- Tier 1/2 capabilities ----------
 // One container per NAV_CONTRACT destination. Web mounts these from its route

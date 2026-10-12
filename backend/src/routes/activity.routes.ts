@@ -1,7 +1,6 @@
-// backend/src/routes/activity.routes.ts
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { ActivityService } from '../services/activity.service'
+import { ActivityService, ActivityReadsNotConfiguredError } from '../services/activity.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
@@ -15,6 +14,14 @@ const activityFiltersSchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
   cursor: z.string().optional(),
   page: z.coerce.number().min(1).optional(),
+})
+
+const markReadBodySchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+})
+
+const markAllReadSchema = z.object({
+  filter: z.enum(['all', 'unread', 'invoices', 'payments', 'customers']).optional(),
 })
 
 export async function activityRoutes(fastify: FastifyInstance) {
@@ -41,9 +48,11 @@ export async function activityRoutes(fastify: FastifyInstance) {
         })
 
         return reply.send(result)
-      } catch (err: any) {
+      } catch (err: unknown) {
         fastify.log.error(err)
-        return reply.code(500).send({ error: err.message })
+        return reply
+          .status(500)
+          .send({ error: 'Failed to fetch activities', code: 'ACTIVITIES_FETCH_FAILED' })
       }
     },
   )
@@ -63,9 +72,11 @@ export async function activityRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         return reply.send(await activityService.getFilterCounts(request.tenancy))
-      } catch (err) {
+      } catch (err: unknown) {
         fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to count activities' })
+        return reply
+          .status(500)
+          .send({ error: 'Failed to count activities', code: 'ACTIVITIES_COUNT_FAILED' })
       }
     },
   )
@@ -84,9 +95,11 @@ export async function activityRoutes(fastify: FastifyInstance) {
       try {
         const count = await activityService.getUnreadCount(request.tenancy)
         return reply.send({ count })
-      } catch (err: any) {
+      } catch (err: unknown) {
         fastify.log.error(err)
-        return reply.code(500).send({ error: err.message })
+        return reply
+          .status(500)
+          .send({ error: 'Failed to get unread count', code: 'ACTIVITIES_UNREAD_COUNT_FAILED' })
       }
     },
   )
@@ -99,18 +112,36 @@ export async function activityRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { ids } = request.body as { ids: string[] }
-        const { userId } = request.tenancy
+        const parsed = markReadBodySchema.safeParse(request.body)
+        if (!parsed.success) {
+          return reply.status(400).send({
+            error: 'VALIDATION_ERROR',
+            code: 'VALIDATION_ERROR',
+            details: parsed.error.issues,
+          })
+        }
 
-        await activityService.markAsRead(request.tenancy, ids)
+        const { ids } = parsed.data
+        const { userId, workspaceId } = request.tenancy
+
+        const marked = await activityService.markAsRead(request.tenancy, ids)
         await clearCache(`activities:${userId}:*`)
         await clearCache(`activities-unread:${userId}:*`)
         await clearCache(`activities-counts:${userId}:*`)
 
-        return reply.send({ success: true })
-      } catch (err: any) {
+        return reply.send({ success: true, marked })
+      } catch (err: unknown) {
+        if (err instanceof ActivityReadsNotConfiguredError) {
+          return reply.status(503).send({
+            error: 'ACTIVITY_READS_NOT_CONFIGURED',
+            code: 'ACTIVITY_READS_NOT_CONFIGURED',
+          })
+        }
         fastify.log.error(err)
-        return reply.code(500).send({ error: err.message })
+        return reply.status(500).send({
+          error: 'Failed to mark activities as read',
+          code: 'ACTIVITIES_MARK_READ_FAILED',
+        })
       }
     },
   )
@@ -123,17 +154,36 @@ export async function activityRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { userId } = request.tenancy
+        const queryParsed = markAllReadSchema.safeParse(request.query)
+        const bodyParsed = markAllReadSchema.safeParse(request.body ?? {})
+        if (!queryParsed.success && !bodyParsed.success) {
+          return reply.status(400).send({
+            error: 'VALIDATION_ERROR',
+            code: 'VALIDATION_ERROR',
+          })
+        }
+        const filter = queryParsed.data?.filter || bodyParsed.data?.filter
 
-        await activityService.markAllAsRead(request.tenancy)
+        const { userId, workspaceId } = request.tenancy
+
+        const marked = await activityService.markAllAsRead(request.tenancy, filter)
         await clearCache(`activities:${userId}:*`)
         await clearCache(`activities-unread:${userId}:*`)
         await clearCache(`activities-counts:${userId}:*`)
 
-        return reply.send({ success: true })
-      } catch (err: any) {
+        return reply.send({ success: true, marked })
+      } catch (err: unknown) {
+        if (err instanceof ActivityReadsNotConfiguredError) {
+          return reply.status(503).send({
+            error: 'ACTIVITY_READS_NOT_CONFIGURED',
+            code: 'ACTIVITY_READS_NOT_CONFIGURED',
+          })
+        }
         fastify.log.error(err)
-        return reply.code(500).send({ error: err.message })
+        return reply.status(500).send({
+          error: 'Failed to mark all activities as read',
+          code: 'ACTIVITIES_MARK_ALL_READ_FAILED',
+        })
       }
     },
   )
@@ -147,15 +197,20 @@ export async function activityRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const { userId } = request.tenancy
+        const { userId, workspaceId } = request.tenancy
 
         await activityService.deleteActivity(request.tenancy, id)
         await clearCache(`activities:${userId}:*`)
+        await clearCache(`activities-unread:${userId}:*`)
+        await clearCache(`activities-counts:${userId}:*`)
 
         return reply.code(204).send()
-      } catch (err: any) {
+      } catch (err: unknown) {
         fastify.log.error(err)
-        return reply.code(500).send({ error: err.message })
+        return reply.status(500).send({
+          error: 'Failed to delete activity',
+          code: 'ACTIVITIES_DELETE_FAILED',
+        })
       }
     },
   )

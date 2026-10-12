@@ -37,7 +37,15 @@ describe('a till has a name — and only the name is editable', () => {
     expect(service).toContain(
       'if (isMissingLabelColumn(error)) return { configured: false, labels: {} }',
     )
-    expect(service).toContain("return error.code === '42703' || error.code === 'PGRST204'")
+    // Missing = one of the two codes AND the column's own name in the message.
+    // A bare 42703 was read as «label is missing» when it was `currency` that
+    // was — the two optional columns answered for each other.
+    expect(service).toContain(
+      "if (error.code !== '42703' && error.code !== 'PGRST204') return false",
+    )
+    expect(service).toContain("return isMissingColumn(error, 'label')")
+    expect(service).toContain("return isMissingColumn(error, 'currency')")
+    expect(service).toContain('.includes(column)')
   })
 
   it('naming checks the till belongs to this workspace, and says when the script is missing', () => {

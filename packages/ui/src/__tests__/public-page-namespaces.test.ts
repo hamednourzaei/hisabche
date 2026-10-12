@@ -67,6 +67,10 @@ function layoutNamespaces(route: string): Set<string> {
 
 const ROUTES: Array<{ route: string; container: string }> = [
   { route: 'portal', container: 'components/ui/customers/containers/public-portal-container.tsx' },
+  {
+    route: 'my-attendance',
+    container: 'components/ui/team-and-payroll/containers/attendance-self-container.tsx',
+  },
   { route: 'oauth', container: 'components/ui/developers/containers/oauth-consent-container.tsx' },
 ]
 

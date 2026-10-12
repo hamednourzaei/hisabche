@@ -130,12 +130,14 @@ describe('every hub, with one word', () => {
 
   // The switch that belongs to the selected tab, in every hub. One per tab:
   // two in one slot would be two rows of choices under the tabs.
+  // Note: hubs with 2 tabs that each have their own branch switch (never rendered
+  // simultaneously) register 2 (team-and-payroll, customers).
   it.each([
     ['invoices/invoices-view.tsx', 1],
     ['promotions/promotions-container.tsx', 1],
     ['page-hub.tsx', 1],
     ['warehouse/containers/warehouse-tabs-container.tsx', 1],
-    ['customers/containers/customers-hub-container.tsx', 1],
+    ['customers/containers/customers-hub-container.tsx', 2],
     ['customers/customer-detail-view.tsx', 1],
     ['team-and-payroll/containers/team-and-payroll-container.tsx', 2],
     ['governance/containers/governance-hub-container.tsx', 1],

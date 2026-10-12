@@ -7,6 +7,8 @@ import { useAuthStore } from '@hisabche/store'
 import { useTranslations } from 'next-intl'
 import { BrandMark } from './brand-mark'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip'
+import { formatCompactCount } from '@hisabche/formatting'
+import { useRouteLang } from '../../hooks/use-locale-push'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DashboardSidebar v7.3 — Memoized · Performance Optimized
@@ -226,6 +228,7 @@ const NavRow = memo(function NavRow({
   onClick: () => void
   collapsed?: boolean
 }) {
+  const routeLang = useRouteLang()
   // ⚠️ `> 0`, not `!= null`. A badge says «something is waiting for you»; a
   // grey circle reading «۰» says the opposite while still drawing the eye.
   const badge = item.badge != null && item.badge > 0 ? item.badge : null
@@ -280,8 +283,10 @@ const NavRow = memo(function NavRow({
             'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
             'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]',
           )}
+          title={String(badge)}
+          aria-label={String(badge)}
         >
-          {badge}
+          {formatCompactCount(badge, routeLang)}
         </span>
       ) : null}
     </button>

@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   type LucideIcon,
 } from 'lucide-react'
+import { formatCompactCount } from '@hisabche/formatting'
+import { useRouteLang } from '../../../hooks/use-locale-push'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    InsightCard v4 — Mobile-optimized · Desktop pixel-perfect
@@ -139,6 +141,7 @@ const AlertBadge = memo(function AlertBadge({
   count: number
   severity: 'low' | 'medium' | 'high'
 }) {
+  const lang = useRouteLang()
   const severityStyles = {
     low: 'bg-[hsl(var(--color-warning)/0.2)] text-[hsl(var(--color-warning))]',
     medium: 'bg-[hsl(var(--color-destructive)/0.2)] text-[hsl(var(--color-destructive))]',
@@ -151,9 +154,11 @@ const AlertBadge = memo(function AlertBadge({
         'inline-flex items-center gap-0.5 sm:gap-1 rounded-full px-1.5 sm:px-2 py-0.5 text-[8px] sm:text-[10px] font-medium',
         severityStyles[severity],
       )}
+      title={String(count)}
+      aria-label={String(count)}
     >
       <AlertTriangle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-      {count}
+      {formatCompactCount(count, lang)}
     </span>
   )
 })

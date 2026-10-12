@@ -2069,6 +2069,9 @@
     "subtitle": "Manage customer credits and debts",
     "creditInvoice": "Credit Invoice",
     "addCustomer": "Add New Customer",
+    "addSupplier": "Add Supplier",
+    "error_CUSTOMER_DECLARED_ROLE_SCHEMA_REQUIRED": "Database schema does not support declared role yet. Run the migration first.",
+    "error_CUSTOMER_DECLARED_ROLE_INVALID": "Invalid declared party role.",
     "searchPlaceholder": "Search customers…",
     "debtor": "Debtor",
     "settled": "Settled",
@@ -3440,7 +3443,7 @@
     "bell": "Notifications",
     "title": "Notifications",
     "empty": "No notifications",
-    "many": "99+",
+    "unreadCountBadge": "{count} unread notifications",
     "activities": "activities",
     "emptyHint": "When something needs your attention, it will show up here.",
     "markAllRead": "Mark all as read",
@@ -3895,6 +3898,7 @@
   "activity": {
     "title": "Activities",
     "new": "new",
+    "newCountBadge": "{count} new activities",
     "markAllRead": "Mark all as read",
     "search": "Search activities",
     "unread": "Unread",
@@ -5095,7 +5099,21 @@
     "error_POS_LABEL_INVALID": "A till name must be 1 to 80 characters.",
     "remove_title": "Remove till",
     "remove_hint": "Only a till with no sale, cash movement or payment can be removed. A till that has seen money must be closed instead.",
-    "error_POS_SESSION_IN_USE": "This till has transactions and cannot be removed. Count it and close it instead."
+    "error_POS_SESSION_IN_USE": "This till has transactions and cannot be removed. Count it and close it instead.",
+    "back_to_tills": "← Tills",
+    "direction_in": "Cash in",
+    "direction_out": "Cash out",
+    "col_currency": "Currency",
+    "currency": "Currency / Unit",
+    "filter_currency": "Currency",
+    "all_currencies": "All currencies",
+    "error_POS_CURRENCY_MISMATCH": "Transaction currency does not match the till currency.",
+    "error_POS_CURRENCY_SCHEMA_REQUIRED": "Database schema is not ready for till currency (migration required).",
+    "foreign_not_posted": "Not posted to ledger (foreign currency is not supported in the ledger).",
+    "not_found": "Till not found.",
+    "movement_direction": "Direction",
+    "record_movement": "Record cash movement",
+    "unattached_invoice_payment": "Cash invoice payment was not attached because no open till exists in this currency."
   },
   "assets": {
     "title": "Fixed assets",
@@ -6819,7 +6837,9 @@
       "money": "Money",
       "relationship": "Relationship"
     },
-    "byCurrency": "By currency"
+    "byCurrency": "By currency",
+    "colCurrency": "Currency",
+    "totalsTitle": "Totals by currency"
   },
   "crmPanel": {
     "loading": "Loading…",
@@ -8302,12 +8322,77 @@
       "general": "Not recorded. Try again.",
       "ATTENDANCE_TIME_INVALID": "That time is not valid.",
       "ATTENDANCE_CHECK_OUT_WITHOUT_CHECK_IN": "Record the check-in time first.",
-      "ATTENDANCE_CHECK_OUT_BEFORE_CHECK_IN": "The check-out time cannot be before the check-in time."
+      "ATTENDANCE_CHECK_OUT_BEFORE_CHECK_IN": "The check-out time cannot be before the check-in time.",
+      "ATTENDANCE_SUBMISSION_DECIDED": "Somebody else has just decided this one.",
+      "ATTENDANCE_REJECTION_REASON_REQUIRED": "Write a reason to reject.",
+      "ATTENDANCE_SELF_NOT_CONFIGURED": "This feature is not enabled on the database yet.",
+      "ATTENDANCE_LINK_EXPIRY_IN_PAST": "The end date cannot be in the past.",
+      "ATTENDANCE_TIME_ZONE_INVALID": "This device's time zone was not recognised.",
+      "ATTENDANCE_NOT_FOUND": "Not found. Refresh the page."
     },
     "shiftPicker": "Shift for quick recording",
     "shiftNone": "No shift",
     "byShift": "By shift",
-    "noMatch": "Nobody matches this filter"
+    "noMatch": "Nobody matches this filter",
+    "openFile": "{name}'s file",
+    "fromLink": "Entered by the employee",
+    "link": {
+      "open": "Attendance link for {name}",
+      "title": "Attendance link for {name}",
+      "help": "With this link the employee records their own presence, absence or leave. It shows only their name and their own days — no pay, no other employee.",
+      "loading": "Reading…",
+      "loadFailed": "The link could not be read. Try again.",
+      "notConfigured": "This feature is not enabled on the database yet.",
+      "none": "No link has been made for this employee yet.",
+      "expiresOn": "Valid through",
+      "expiresOnHelp": "Empty = no end, until you revoke it.",
+      "daysBack": "Which days they may record",
+      "daysBackToday": "Today only",
+      "daysBackOption": "Today and up to {count} days back",
+      "autoApply": "A day nobody has recorded goes onto the sheet at once",
+      "autoApplyHelp": "Off: everything the employee sends waits for your approval. A day you recorded is never changed automatically.",
+      "autoApplyOn": "Empty days are recorded at once",
+      "autoApplyOff": "Every entry needs approval",
+      "timeZone": "The time and «today» are measured in {zone}, not by the employee's phone.",
+      "create": "Make the link",
+      "recreate": "Make a new link",
+      "recreateHelp": "Making a new link stops the previous one.",
+      "revoke": "Revoke link",
+      "revoked": "The link was revoked.",
+      "url": "Link address",
+      "copy": "Copy",
+      "share": "Send",
+      "shareText": "Your attendance link",
+      "copied": "Link copied.",
+      "copyFailed": "Could not copy. Select the address and copy it by hand.",
+      "stateLabel": "State",
+      "state": {
+        "active": "Active",
+        "expired": "Expired",
+        "revoked": "Revoked"
+      },
+      "createdAt": "Made on",
+      "lastUsedAt": "Last used",
+      "neverUsed": "Not opened yet",
+      "validUntil": "Valid until",
+      "noExpiry": "No end"
+    },
+    "submissions": {
+      "pendingCount": "{count} waiting for approval",
+      "summary": "Waiting for approval",
+      "title": "What {name} sent",
+      "help": "Approving replaces that day's record with what the employee sent. Rejecting leaves the sheet alone and shows the employee your reason.",
+      "sent": "The employee sent",
+      "onSheet": "On the sheet now",
+      "nothingOnSheet": "Nothing recorded",
+      "receivedAt": "Received at",
+      "employeeNote": "Employee's note",
+      "approve": "Approve",
+      "reject": "Reject",
+      "reason": "Reason for rejecting",
+      "reasonPlaceholder": "A reason is required to reject",
+      "empty": "Nothing is waiting."
+    }
   },
   "promotions": {
     "title": "Promotions",
@@ -9361,6 +9446,62 @@
       "AI_REQUEST_EXPIRED": "This request is too old. Ask again.",
       "AI_REQUEST_NOT_ALLOWED": "Your role may not approve this.",
       "AI_REQUESTS_MIGRATION_PENDING": "The approval queue is not ready on the server yet."
+    }
+  },
+  "attendanceSelf": {
+    "title": "My attendance",
+    "loading": "Reading…",
+    "gone": "This link is not valid. Ask your manager for a new one.",
+    "failed": "Could not be read. Check the connection and try again.",
+    "retry": "Try again",
+    "today": "Today",
+    "day": "Day",
+    "status": "Status",
+    "statuses": {
+      "present": "Present",
+      "absent": "Absent",
+      "leave": "Leave",
+      "holiday": "Holiday",
+      "open": "Still in"
+    },
+    "checkIn": "Check-in time",
+    "checkOut": "Check-out time",
+    "checkOutHelp": "Leave it empty if you are still at work.",
+    "now": "Now",
+    "note": "Note (optional)",
+    "submit": "Record",
+    "sending": "Sending…",
+    "zoneNote": "Times are in {zone}.",
+    "nightNote": "A shift that crosses midnight is recorded by the manager.",
+    "autoApplyOn": "If nothing is recorded for that day yet, it is recorded at once; otherwise it waits for your manager.",
+    "autoApplyOff": "What you send goes onto the sheet after your manager approves it.",
+    "result": {
+      "applied": "Recorded.",
+      "pending": "Sent — waiting for your manager.",
+      "unknown": "No answer came back. We do not know whether it arrived; reading the status again."
+    },
+    "onSheet": "On the sheet",
+    "nothingRecorded": "Nothing recorded",
+    "stillIn": "Still in",
+    "sent": "What you sent",
+    "states": {
+      "pending": "Waiting for approval",
+      "applied": "Recorded",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "rejectedBecause": "Reason: {reason}",
+    "errors": {
+      "general": "Not recorded. Try again.",
+      "RATE_LIMITED": "Too many tries in a row. Wait a minute.",
+      "ATTENDANCE_DATE_IN_FUTURE": "A day that has not come cannot be recorded.",
+      "ATTENDANCE_DATE_NOT_ALLOWED": "This day is outside what your manager allowed.",
+      "ATTENDANCE_DATE_INVALID": "The date is not valid.",
+      "ATTENDANCE_STATUS_NOT_ALLOWED": "Only the manager can record this status.",
+      "ATTENDANCE_CHECK_IN_REQUIRED": "Enter the check-in time.",
+      "ATTENDANCE_TIME_INVALID": "The time is not valid.",
+      "ATTENDANCE_CHECK_OUT_BEFORE_CHECK_IN": "Check-out must be after check-in.",
+      "ATTENDANCE_NOTE_TOO_LONG": "The note is longer than 500 characters."
     }
   }
 }

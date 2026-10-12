@@ -20,6 +20,7 @@ import { sendFailure } from '../errors/http-failure'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
+import { currencyCodeSchema } from '@hisabche/validation'
 
 import { PosService } from '../services/pos'
 import { authenticate } from '../middleware/auth.middleware'
@@ -35,6 +36,8 @@ const toJsonSchema = (schema: any) => {
 const openSchema = z.object({
   openingFloatMinor: z.number().int().min(0),
   branchId: z.string().uuid().nullable().optional(),
+  label: z.string().trim().min(1).max(80).nullable().optional(),
+  currency: currencyCodeSchema.optional(),
 })
 
 const orderSchema = z.object({
@@ -43,6 +46,7 @@ const orderSchema = z.object({
   totalMinor: z.number().int(),
   changeMinor: z.number().int().min(0).default(0),
   invoiceId: z.string().uuid().nullable().optional(),
+  currency: currencyCodeSchema.optional(),
   payments: z
     .array(
       z.object({
@@ -59,6 +63,7 @@ const movementSchema = z.object({
   reason: z.string().min(1).max(300),
   /** Idempotency key, made once by the caller. Optional for older desktop builds. */
   movementId: z.string().uuid().optional(),
+  currency: currencyCodeSchema.optional(),
 })
 
 const closeSchema = z.object({
@@ -84,7 +89,10 @@ export async function posRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const session = await posService.getOpenSession(request.tenancy)
+        const query = z
+          .object({ currency: currencyCodeSchema.optional() })
+          .parse(request.query ?? {})
+        const session = await posService.getOpenSession(request.tenancy, query.currency)
         if (!session) return reply.send({ session: null })
         return reply.send({
           session,
@@ -198,10 +206,16 @@ export async function posRoutes(fastify: FastifyInstance) {
               .refine((d) => d === 7 || d === 30 || d === 90)
               .default(7),
             offsetMinutes: z.coerce.number().int().min(-720).max(840).default(270),
+            currency: currencyCodeSchema.optional(),
           })
           .parse(request.query ?? {})
         return reply.send(
-          await posService.cashFlow(request.tenancy, query.days, query.offsetMinutes),
+          await posService.cashFlow(
+            request.tenancy,
+            query.days,
+            query.offsetMinutes,
+            query.currency,
+          ),
         )
       } catch (err) {
         return fail(reply, err, 'Failed to build the cash flow')

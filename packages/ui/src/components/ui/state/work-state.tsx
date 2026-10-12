@@ -31,6 +31,8 @@ import {
 import { Badge as UiBadge } from '../badge'
 import { Button } from '../button'
 import { Card, CardContent } from '../card'
+import { formatCompactCount } from '@hisabche/formatting'
+import { useRouteLang } from '../../../hooks/use-locale-push'
 
 /** Contract tone → the project's own Badge variant. One mapping, one place. */
 const TONE_VARIANT: Record<
@@ -59,6 +61,7 @@ export interface WorkStateProps extends WorkStateInput {
  * need.
  */
 export const WorkStateBadge = memo(function WorkStateBadge({ t, ...input }: WorkStateProps) {
+  const lang = useRouteLang()
   const message = describeWorkState(input)
   if (!isWorthShowing(message.state)) return null
 
@@ -74,8 +77,13 @@ export const WorkStateBadge = memo(function WorkStateBadge({ t, ...input }: Work
       <UiBadge variant={TONE_VARIANT[message.tone]}>
         {t(message.labelKey)}
         {message.count !== null ? (
-          <span className="ms-1 tabular-nums" dir="ltr">
-            {message.count}
+          <span
+            className="ms-1 tabular-nums"
+            dir="ltr"
+            title={String(message.count)}
+            aria-label={String(message.count)}
+          >
+            {formatCompactCount(message.count, lang)}
           </span>
         ) : null}
       </UiBadge>

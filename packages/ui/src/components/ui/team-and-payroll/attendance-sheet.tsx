@@ -10,26 +10,42 @@
 // ⚠️ «ثبت‌نشده» IS ITS OWN STATE. An employee nobody has marked is not absent.
 // ⚠️ AN OPEN DAY HAS NO HOURS — the cell says «هنوز خارج نشده», never 0.
 // ⚠️ Attendance does not change anybody's pay; the note under the table says so.
+//
+// The employee's NAME is a link to their file; the day lives in the address
+// (`?date=`), so Back returns to the same day. Beside each row: the employee's
+// personal link (share), and — when they have sent something nobody has decided
+// — a marker that opens it.
+// ⚠️ A PENDING REQUEST IS NOT A RECORD. It has its own number above the table
+// and never counts as «present».
 // ============================================
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { formatNumber, toIsoDay } from '@hisabche/formatting'
+import { Share2 } from 'lucide-react'
+import { formatNumber } from '@hisabche/formatting'
 import {
   apiErrorMessage,
   useAttendanceSheet,
+  useAttendanceSubmissions,
   useMarkAttendance,
   useWorkShifts,
   type AttendanceMarkStatus,
   type AttendanceSheetRow,
 } from '@hisabche/api'
+import { localizePath } from '@hisabche/ui-contract'
 
 import { cn } from '../../../lib/utils'
+import { useAddressDay } from '../../../hooks/use-address-day'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
+import { useRouteLang } from '../../../hooks/use-locale-push'
 import { Button } from '../button'
+import { GHOST_ICON_BUTTON } from '../button-classes'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { SelectField } from '../select-field'
 import { DataTable, TableFilterSelect, matchesSearch, type TableColumn } from '../data-table'
+import { AttendanceLinkDialog } from './attendance-link-dialog'
+import { AttendanceSubmissionsDialog } from './attendance-submissions-dialog'
 import { ShiftManager } from './shift-manager'
 import { ShiftPlan } from './shift-plan'
 
@@ -57,8 +73,19 @@ const nowHHMM = () => {
 export function AttendanceSheet() {
   const t = useTranslations('attendance')
   const locale = useIntlLocale()
-  const [date, setDate] = useState(() => toIsoDay(new Date()))
+  const lang = useRouteLang()
+  // In the address, so the way back from an employee's file is the same day.
+  const [date, setDate] = useAddressDay()
   const sheet = useAttendanceSheet(date)
+  // Read beside the sheet and never in its way: before attendance-self-01 is
+  // run this answers «not configured», and a failure here leaves the sheet as
+  // it is — the share button says why when it is opened.
+  const sent = useAttendanceSubmissions(date)
+  const pendingOf = (employeeId: string) =>
+    (sent.data?.pending ?? []).filter((submission) => submission.employeeId === employeeId)
+  const cameFromLink = (employeeId: string) => (sent.data?.fromLink ?? []).includes(employeeId)
+  const [linkFor, setLinkFor] = useState<{ id: string; name: string } | null>(null)
+  const [reviewing, setReviewing] = useState<string | null>(null)
   const mark = useMarkAttendance()
   const [failedFor, setFailedFor] = useState<string | null>(null)
   // The shift a day is recorded by. A failed or not-yet-set-up read simply
@@ -147,7 +174,15 @@ export function AttendanceSheet() {
       sortValue: (row) => row.name,
       render: (row) => (
         <>
-          <span className="font-medium">{row.name || '—'}</span>
+          {/* Only the name navigates; nothing else in the row does. */}
+          <Link
+            href={localizePath(`/team-and-payroll/${row.employeeId}`, lang)}
+            aria-label={t('openFile', { name: row.name })}
+            data-employee-file
+            className="rounded-sm font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.5)]"
+          >
+            {row.name || '—'}
+          </Link>
           {row.position ? (
             <span className="block text-xs text-[hsl(var(--fg-tertiary))]">{row.position}</span>
           ) : null}
@@ -171,6 +206,11 @@ export function AttendanceSheet() {
             ) : (
               <span className="font-medium">{known ? t(`statuses.${status}`) : status}</span>
             )}
+            {row.record && cameFromLink(row.employeeId) ? (
+              <span data-from-link className="block text-[hsl(var(--fg-tertiary))]">
+                {t('fromLink')}
+              </span>
+            ) : null}
           </span>
         )
       },
@@ -243,9 +283,20 @@ export function AttendanceSheet() {
         const status = record?.status
         const busy = busyFor(row)
         const { checkIn, checkOut } = timesOf(row)
+        const waiting = pendingOf(row.employeeId).length
         return (
           <div className="space-y-1">
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {waiting > 0 ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  data-pending-submissions
+                  onClick={() => setReviewing(row.employeeId)}
+                >
+                  {t('submissions.pendingCount', { count: formatNumber(waiting, locale, 0) })}
+                </Button>
+              ) : null}
               {atWork(row) ? (
                 <>
                   {shift && !record ? (
@@ -318,6 +369,16 @@ export function AttendanceSheet() {
                   {t('markAbsent')}
                 </Button>
               ) : null}
+              <button
+                type="button"
+                data-share-attendance-link
+                aria-label={t('link.open', { name: row.name })}
+                title={t('link.open', { name: row.name })}
+                onClick={() => setLinkFor({ id: row.employeeId, name: row.name })}
+                className={GHOST_ICON_BUTTON}
+              >
+                <Share2 className="size-4" aria-hidden="true" />
+              </button>
             </div>
             {failedFor === row.employeeId && mark.error ? (
               <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
@@ -397,6 +458,18 @@ export function AttendanceSheet() {
                 </dd>
               </div>
             ))}
+            {/* Requests, not records: shown only when there are some, and never
+                added to «present». */}
+            {(sent.data?.pending.length ?? 0) > 0 ? (
+              <div className={cn(card, 'p-3')} data-pending-summary>
+                <dt className="text-xs text-[hsl(var(--fg-secondary))]">
+                  {t('submissions.summary')}
+                </dt>
+                <dd className="mt-1 text-lg font-semibold tabular-nums text-[hsl(var(--color-warning))]">
+                  {formatNumber(sent.data?.pending.length ?? 0, locale, 0)}
+                </dd>
+              </div>
+            ) : null}
           </dl>
 
           {/* The shared table: search, saved views, column settings, and a
@@ -440,6 +513,20 @@ export function AttendanceSheet() {
       <ShiftPlan date={date} employees={sheet.data?.rows ?? []} shifts={activeShifts} />
 
       <ShiftManager />
+
+      <AttendanceLinkDialog employee={linkFor} onClose={() => setLinkFor(null)} />
+      {(() => {
+        const row = (sheet.data?.rows ?? []).find((item) => item.employeeId === reviewing)
+        return (
+          <AttendanceSubmissionsDialog
+            employee={row ? { id: row.employeeId, name: row.name } : null}
+            date={date}
+            record={row?.record ?? null}
+            submissions={row ? pendingOf(row.employeeId) : []}
+            onClose={() => setReviewing(null)}
+          />
+        )
+      })()}
     </div>
   )
 }

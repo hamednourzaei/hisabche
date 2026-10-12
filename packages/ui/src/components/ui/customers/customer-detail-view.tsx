@@ -11,9 +11,13 @@
 // ============================================
 
 import { KpiCard } from '../kpi-card'
-import { SearchableTable, type TableColumn } from '../data-table'
+import { DataTable, SearchableTable, type TableColumn } from '../data-table'
 import { useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
+import {
+  getStatementTotals,
+  type StatementTotalsRow,
+} from '../../../lib/customers/statement-totals'
 import {
   AlertTriangle,
   ChevronRight,
@@ -550,6 +554,90 @@ function Statement(props: CustomerDetailViewProps & { money: Money }) {
       ),
     },
   ]
+  const currencyTotals = getStatementTotals(props.summary, ledger)
+
+  const totalColumns: TableColumn<StatementTotalsRow>[] = [
+    {
+      id: 'currency',
+      labelKey: 'customer360.colCurrency',
+      labelFallback: t('colCurrency'),
+      sortValue: (row) => row.currency,
+      render: (row) => (
+        <span className="font-medium text-[hsl(var(--fg-primary))]">{row.currency || '—'}</span>
+      ),
+    },
+    {
+      id: 'totalSales',
+      labelKey: 'customer360.totalSales',
+      labelFallback: t('totalSales'),
+      align: 'end',
+      sortValue: (row) => row.totalSales,
+      render: (row) => (
+        <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
+          {row.totalSales != null ? props.money(row.totalSales, row.currency) : '—'}
+        </span>
+      ),
+    },
+    {
+      id: 'totalPurchases',
+      labelKey: 'customer360.totalPurchases',
+      labelFallback: t('totalPurchases'),
+      align: 'end',
+      sortValue: (row) => row.totalPurchases,
+      render: (row) => (
+        <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
+          {row.totalPurchases != null ? props.money(row.totalPurchases, row.currency) : '—'}
+        </span>
+      ),
+    },
+    {
+      id: 'totalReceived',
+      labelKey: 'customer360.totalReceived',
+      labelFallback: t('totalReceived'),
+      align: 'end',
+      sortValue: (row) => row.totalReceived,
+      render: (row) => (
+        <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
+          {row.totalReceived != null ? props.money(row.totalReceived, row.currency) : '—'}
+        </span>
+      ),
+    },
+    {
+      id: 'totalPaid',
+      labelKey: 'customer360.totalPaid',
+      labelFallback: t('totalPaid'),
+      align: 'end',
+      sortValue: (row) => row.totalPaid,
+      render: (row) => (
+        <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
+          {row.totalPaid != null ? props.money(row.totalPaid, row.currency) : '—'}
+        </span>
+      ),
+    },
+    {
+      id: 'netBalance',
+      labelKey: 'customer360.colBalance',
+      labelFallback: t('colBalance'),
+      align: 'end',
+      sortValue: (row) => row.netBalance,
+      render: (row) => (
+        <span
+          className={cn(
+            'font-medium tabular-nums',
+            row.netBalance != null && row.netBalance > 0 && 'text-[hsl(var(--color-destructive))]',
+          )}
+        >
+          {row.netBalance != null ? props.money(row.netBalance, row.currency) : '—'}
+        </span>
+      ),
+    },
+  ]
+
+  const tableT = (key: string, fallback?: string): string => {
+    const value = tc(key as never)
+    return value && value !== key ? value : (fallback ?? key)
+  }
+
   return (
     <div className="space-y-2">
       <SearchableTable
@@ -570,6 +658,20 @@ function Statement(props: CustomerDetailViewProps & { money: Money }) {
           <span className="tabular-nums">{props.money(ledger.openingBalance)}</span>
         </p>
       ) : null}
+      {currencyTotals.length > 0 && (
+        <div className="mt-6 space-y-2">
+          <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+            {t('totalsTitle')}
+          </h3>
+          <DataTable
+            tableId="customer-statement-totals"
+            t={tableT}
+            rows={currencyTotals}
+            columns={totalColumns}
+            rowKey={(row) => row.currency}
+          />
+        </div>
+      )}
     </div>
   )
 }

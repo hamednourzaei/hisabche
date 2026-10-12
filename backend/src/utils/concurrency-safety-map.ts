@@ -530,6 +530,48 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
       },
     ],
   },
+  // ─── Activities ──────────────────────────────────────────────────────────
+  {
+    routeFile: 'activity.routes.ts',
+    route: 'PATCH /api/v1/activities/mark-read',
+    mechanisms: ['db-function'],
+    evidence: [
+      {
+        file: `${SVC}/activity.service.ts`,
+        text: "supabase.rpc('activity_mark_read'",
+      },
+      {
+        file: 'docs/activity-reads-01-migration.sql',
+        text: 'CREATE OR REPLACE FUNCTION public.activity_mark_read(',
+      },
+    ],
+  },
+  {
+    routeFile: 'activity.routes.ts',
+    route: 'PATCH /api/v1/activities/mark-all-read',
+    mechanisms: ['db-function'],
+    evidence: [
+      {
+        file: `${SVC}/activity.service.ts`,
+        text: "supabase.rpc('activity_mark_all_read'",
+      },
+      {
+        file: 'docs/activity-reads-01-migration.sql',
+        text: 'CREATE OR REPLACE FUNCTION public.activity_mark_all_read(',
+      },
+    ],
+  },
+  {
+    routeFile: 'activity.routes.ts',
+    route: 'DELETE /api/v1/activities/:id',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      {
+        file: `${SVC}/activity.service.ts`,
+        text: '.delete()',
+      },
+    ],
+  },
 ]
 
 /** Route files whose every mutating handler must appear above. */

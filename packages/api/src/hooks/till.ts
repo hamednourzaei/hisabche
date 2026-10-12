@@ -25,6 +25,8 @@ export type PosPaymentMethod = 'cash' | 'card' | 'transfer' | 'credit' | 'other'
 
 export interface PosSession {
   id: string
+  currency?: string | undefined
+  label?: string | null | undefined
   status: 'open' | 'suspended' | 'closing' | 'closed' | 'force_closed'
   /** Minor units. Every money figure on this screen is an integer. */
   openingFloatMinor: number
@@ -71,6 +73,8 @@ export interface DrawerLedger {
 
 export interface AbandonedSession {
   sessionId: string
+  label?: string | null | undefined
+  currency?: string | undefined
   /** 'open' or 'suspended' in the till list. */
   status?: PosSession['status']
   openedBy: string
@@ -96,7 +100,8 @@ export const tillKeys = {
   session: (id: string) => [...tillKeys.all, 'session', id] as const,
   abandoned: () => [...tillKeys.all, 'abandoned'] as const,
   ledger: (id: string) => [...tillKeys.all, 'ledger', id] as const,
-  cashFlow: (days: number) => [...tillKeys.all, 'cash-flow', days] as const,
+  cashFlow: (days: number, currency?: string) =>
+    [...tillKeys.all, 'cash-flow', days, currency ?? ''] as const,
   labels: () => [...tillKeys.all, 'labels'] as const,
 }
 
@@ -110,15 +115,17 @@ export interface CashFlowDay {
 // ═══ Queries ═══
 
 /** Daily cash in/out/net, aggregated on the server from real movements. */
-export function useCashFlow(days: 7 | 30 | 90) {
+export function useCashFlow(days: 7 | 30 | 90, currency?: string) {
   const ready = useAuthReady()
 
   return useQuery({
-    queryKey: tillKeys.cashFlow(days),
+    queryKey: tillKeys.cashFlow(days, currency),
     queryFn: async () => {
       // The browser's own offset, so «today» is the shop's day.
       const offsetMinutes = -new Date().getTimezoneOffset()
-      const { data } = await apiClient.get('/pos/cash-flow', { params: { days, offsetMinutes } })
+      const { data } = await apiClient.get('/pos/cash-flow', {
+        params: { days, offsetMinutes, ...(currency ? { currency } : {}) },
+      })
       return asList<CashFlowDay>((data as { days?: unknown } | null)?.days)
     },
     enabled: ready,
@@ -222,7 +229,12 @@ export function useOpenSession() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (input: { openingFloatMinor: number; branchId?: string | null }) => {
+    mutationFn: async (input: {
+      openingFloatMinor: number
+      branchId?: string | null
+      label?: string | null
+      currency?: string
+    }) => {
       const { data } = await apiClient.post('/pos/sessions', input)
       return data as PosSession
     },
@@ -276,6 +288,7 @@ export function useRecordCashMovement() {
        * second movement.
        */
       movementId: string
+      currency?: string
     }) => {
       const { data } = await apiClient.post(`/pos/sessions/${sessionId}/cash`, body)
       return data
@@ -283,6 +296,8 @@ export function useRecordCashMovement() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: tillKeys.session(variables.sessionId) })
       queryClient.invalidateQueries({ queryKey: tillKeys.current() })
+      queryClient.invalidateQueries({ queryKey: tillKeys.ledger(variables.sessionId) })
+      queryClient.invalidateQueries({ queryKey: tillKeys.all })
     },
   })
 }
@@ -342,7 +357,12 @@ export function useCloseSession() {
       force?: boolean
     }) => {
       const { data } = await apiClient.post(`/pos/sessions/${sessionId}/close`, body)
-      return data as { session: PosSession; totals: SessionTotals; posted: boolean }
+      return data as {
+        session: PosSession
+        totals: SessionTotals
+        posted: boolean
+        ledger?: { status: string; reason?: string }
+      }
     },
     retry: false,
     onSuccess: () => {

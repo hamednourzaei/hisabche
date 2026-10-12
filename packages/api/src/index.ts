@@ -413,6 +413,19 @@ export {
   type LateFeeState,
 } from './hooks/late-fees'
 
+// ─── An employee's personal attendance link ───────────────
+export {
+  useAttendanceLink,
+  useCreateAttendanceLink,
+  useRevokeAttendanceLink,
+  useAttendanceSubmissions,
+  useDecideAttendanceSubmission,
+  attendanceLinkKeys,
+  type AttendanceLink,
+  type AttendanceSubmission,
+  type AttendanceDaySubmissions,
+} from './hooks/attendance-links'
+
 // ─── Daily attendance sheet (#100) ────────────────────────
 export {
   useAttendanceSheet,

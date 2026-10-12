@@ -34,8 +34,26 @@ function statementsOnActivities(src: string): string[] {
 describe('activity feed — workspace boundary', () => {
   it('every statement that filters by actor also filters by workspace', () => {
     const byActor = statementsOnActivities(service).filter((s) => s.includes(".eq('actor_id'"))
-    expect(byActor.length).toBeGreaterThanOrEqual(6)
+    // The list, the two counts used before activity-reads-01 is run, and
+    // delete. Marking and the per-person counts moved into SQL functions —
+    // the next test holds those to the same pair.
+    expect(byActor.length).toBe(4)
     for (const s of byActor) expect(s, s.slice(0, 160)).toContain(".eq('workspace_id'")
+  })
+
+  it('⚠️ the SQL functions that mark and count stay inside the same personal feed', () => {
+    const migration = readFileSync(
+      join(__dirname, '..', '..', '..', 'docs', 'activity-reads-01-migration.sql'),
+      'utf8',
+    )
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('--'))
+      .join('\n')
+      .split(/\s+/)
+      .join(' ')
+    const scoped = 'a.workspace_id = p_workspace AND a.actor_id = p_user'
+    expect(migration.split('FROM public.activities a').length - 1).toBe(5)
+    expect(migration.split(scoped).length - 1).toBe(5)
   })
 
   it('no personal route runs without a resolved workspace', () => {

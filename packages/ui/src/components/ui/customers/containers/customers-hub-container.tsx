@@ -47,6 +47,9 @@ const CampaignsContainer = lazy(() =>
 export const CUSTOMERS_HUB_TABS = ['customers', 'outreach'] as const
 export type CustomersHubTab = (typeof CUSTOMERS_HUB_TABS)[number]
 
+export const CUSTOMER_ROLES = ['all', 'buyer', 'seller'] as const
+export type CustomerRole = (typeof CUSTOMER_ROLES)[number]
+
 export const OUTREACH_SECTIONS = ['followUp', 'campaigns', 'stale'] as const
 export type OutreachSection = (typeof OUTREACH_SECTIONS)[number]
 
@@ -82,6 +85,7 @@ function CustomersHub() {
   )
 
   const [active, select] = useHubTab(offered)
+  const [role, selectRole] = useHubSection(CUSTOMER_ROLES)
   const [section, selectSection] = useHubSection(sections)
 
   return (
@@ -89,7 +93,7 @@ function CustomersHub() {
       <RegisterCustomizer
         groups={[
           {
-            title: t('pageLook.hubSections' as any),
+            title: t('pageLook.hubSections' as never),
             look,
             keepOne: true,
             items: [
@@ -150,7 +154,19 @@ function CustomersHub() {
             </Suspense>
           </>
         ) : (
-          <CustomersContainer />
+          <>
+            <SegmentedControl
+              branch
+              label={t('customers.role.label')}
+              options={CUSTOMER_ROLES.map((value) => ({
+                value,
+                label: t(`customers.role.${value}`),
+              }))}
+              value={role}
+              onChange={selectRole}
+            />
+            <CustomersContainer role={role} />
+          </>
         )}
       </div>
     </div>

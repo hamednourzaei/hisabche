@@ -2,7 +2,7 @@
 // 🎯 Control Center v7 — Production-Ready, Mobile-First, RTL, Offline-Ready
 'use client'
 
-import { memo, useState, useEffect, useMemo, useCallback, Suspense } from 'react'
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
 import { cn } from '../../../lib/utils'
 import { Plus, Download, User, AlertCircle } from 'lucide-react'
 import { exportToCSV } from '../../../lib/export'
@@ -85,64 +85,6 @@ function filterCustomers(customers: CustomerWithDebt[], search: string): Custome
 // 🧩 Sub-components (هر کدام < ۲۰ خط)
 // ============================================================
 
-export type PartyRoleFilterValue = 'all' | 'buyer' | 'seller'
-
-/**
- * همه / مشتری / تأمین‌کننده.
- *
- * Deliberately the same control as the invoice list's type filter: both answer
- * "which direction of trade am I looking at", and giving them different shapes
- * would make the same question look like two different features.
- */
-const PartyRoleFilter = memo(function PartyRoleFilter({
-  t,
-  value,
-  onChange,
-}: {
-  t: (key: string, fallback?: string) => string
-  value: PartyRoleFilterValue
-  onChange?: ((value: PartyRoleFilterValue) => void) | undefined
-}) {
-  if (!onChange) return null
-
-  const options: { key: PartyRoleFilterValue; label: string }[] = [
-    { key: 'all', label: t('customers.role.all', 'همه') },
-    { key: 'buyer', label: t('customers.role.buyer', 'مشتری') },
-    { key: 'seller', label: t('customers.role.seller', 'تأمین‌کننده') },
-  ]
-
-  return (
-    <div
-      role="radiogroup"
-      aria-label={t('customers.role.label', 'نوع طرف حساب')}
-      className="flex w-fit gap-1 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-1"
-    >
-      {options.map((option) => {
-        const active = value === option.key
-        return (
-          <button
-            key={option.key}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(option.key)}
-            className={cn(
-              'rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
-              active
-                ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]'
-                : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
-            )}
-          >
-            {option.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-})
-PartyRoleFilter.displayName = 'PartyRoleFilter'
-
 /** هدر صفحه */
 function CustomersHeader({
   t,
@@ -150,13 +92,20 @@ function CustomersHeader({
   totalCustomers,
   debtorCount,
   onOpenAddModal,
+  role = 'all',
 }: {
   t: (key: string, fallback?: string) => string
   isMobile: boolean
   totalCustomers: number
   debtorCount: number
   onOpenAddModal: () => void
+  role?: 'all' | 'buyer' | 'seller' | undefined
 }) {
+  const isSupplier = role === 'seller'
+  const buttonLabel = isSupplier
+    ? t('customers.addSupplier', 'افزودن تأمین‌کننده')
+    : t('customers.addCustomer', 'افزودن مشتری')
+
   return (
     <div className="flex items-center justify-between">
       <div>
@@ -176,12 +125,10 @@ function CustomersHeader({
       <button
         onClick={onOpenAddModal}
         className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-all duration-150"
-        aria-label={t('customers.addCustomer', 'افزودن مشتری')}
+        aria-label={buttonLabel}
       >
         <Plus className="size-4" />
-        <span className={cn(isMobile && 'hidden sm:inline')}>
-          {t('customers.addCustomer', 'افزودن مشتری')}
-        </span>
+        <span className={cn(isMobile && 'hidden sm:inline')}>{buttonLabel}</span>
       </button>
     </div>
   )
@@ -508,8 +455,7 @@ export function customersView(props: CustomersViewProps) {
     onClosePayment,
     onPaymentSuccess,
     onNewCreditInvoice,
-    roleFilter = 'all',
-    onRoleFilterChange,
+    role = 'all',
     currency = '',
     customersDelta = null,
     salesDelta = null,
@@ -590,7 +536,12 @@ export function customersView(props: CustomersViewProps) {
     <div className="space-y-3 sm:space-y-4">
       {/* مودال‌ها با Lazy Load */}
       <Suspense fallback={null}>
-        <AddCustomerModal open={showAddModal} onClose={onCloseAddModal} onCreated={() => {}} />
+        <AddCustomerModal
+          open={showAddModal}
+          onClose={onCloseAddModal}
+          onCreated={() => {}}
+          initialRole={role === 'seller' ? 'seller' : 'buyer'}
+        />
         <PaymentModal
           open={showPaymentModal}
           onClose={onClosePayment}
@@ -607,6 +558,7 @@ export function customersView(props: CustomersViewProps) {
         totalCustomers={totalCustomers}
         debtorCount={debtorCount}
         onOpenAddModal={onOpenAddModal}
+        role={role}
       />
 
       {/* KPI — بنتو گرید */}
@@ -625,11 +577,6 @@ export function customersView(props: CustomersViewProps) {
         topCustomerDelta,
         coverage: statsCoverage,
       })}
-
-      {/* همه / مشتری / تأمین‌کننده — همان الگوی سوییچ صفحه‌ی فاکتورها.
-          نقش از جهت فاکتورها مشتق می‌شود، نه از یک ستون در دیتابیس، پس یک
-          طرف حساب که هم می‌خرد هم می‌فروشد در هر دو فیلتر دیده می‌شود. */}
-      <PartyRoleFilter t={t} value={roleFilter} onChange={onRoleFilterChange} />
 
       {/* محتوای اصلی */}
       <CustomersContent

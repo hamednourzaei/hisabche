@@ -342,6 +342,12 @@ describe('everything under /api/public/ is public by design', () => {
     'GET /api/public/v1/orders/:token',
     // The customer's own account (customer-portal.routes.ts).
     'GET /api/public/portal/:token',
+    // An employee's own attendance, by the link their manager made
+    // (attendance-link.routes.ts): a closed list of fields about ONE person,
+    // the maker's membership re-checked on every visit, rate-limited, and one
+    // write — a submission, which is a request and not a record.
+    'GET /api/public/attendance/:token',
+    'POST /api/public/attendance/:token',
     // The goods marketplace (market-public.routes.ts): 404 MARKET_DISABLED
     // until a platform admin turns the switch on; never a cost or buy price.
     'GET /api/public/market/listings',

@@ -12,7 +12,7 @@ import { SITE_URL, locales } from './[lang]/i18n-config'
  *    page) is excluded.
  *
  * 2. Token-gated pages that render real customer data — /public-invoice/[token],
- *    /portal/[token]
+ *    /portal/[token], /my-attendance/[token]
  *    and /public-task/[token] — are disallowed. They already emit
  *    `robots: { index: false }`, but a meta tag only takes effect *after* the
  *    crawler has fetched and parsed the page, i.e. after a shopkeeper's invoice
@@ -31,10 +31,12 @@ export default function robots(): MetadataRoute.Robots {
     '/public-invoice/',
     '/public-task/',
     '/portal/',
+    '/my-attendance/',
     '/feedback/',
     '/*/public-invoice/',
     '/*/public-task/',
     '/*/portal/',
+    '/*/my-attendance/',
     '/*/feedback/',
     // Authenticated surfaces.
     '/*/dashboard',

@@ -38,6 +38,7 @@ import {
 import { toIsoDay } from '@hisabche/formatting'
 
 import { exportToCSV } from '../../../../lib/export'
+import { getStatementTotals } from '../../../../lib/customers/statement-totals'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { CustomerDetailView } from '../customer-detail-view'
@@ -148,9 +149,18 @@ export function CustomerDetailContainer({ customerId }: { customerId: string }) 
 
   const handleExport = useCallback(() => {
     const ledger = ledgerQuery.data
+    const summary = summaryQuery.data
     if (!customer || !ledger) return
     const kind = (k: string) => t(`customer360.kind.${k}`)
-    const rows = [
+    const rows: Array<{
+      date: string
+      type: string | number
+      reference: string | number
+      debit: string | number
+      credit: string | number
+      balance: string | number
+      currency: string
+    }> = [
       {
         date: '',
         type: t('customers.openingBalance'),
@@ -173,6 +183,50 @@ export function CustomerDetailContainer({ customerId }: { customerId: string }) 
         }
       }),
     ]
+
+    const effectiveTotals = getStatementTotals(summary, ledger)
+
+    if (effectiveTotals.length > 0) {
+      rows.push({
+        date: '',
+        type: '',
+        reference: '',
+        debit: '',
+        credit: '',
+        balance: '',
+        currency: '',
+      })
+      rows.push({
+        date: t('customer360.totalsTitle'),
+        type: '',
+        reference: '',
+        debit: '',
+        credit: '',
+        balance: '',
+        currency: '',
+      })
+      rows.push({
+        date: t('customer360.colCurrency'),
+        type: t('customer360.totalSales'),
+        reference: t('customer360.totalPurchases'),
+        debit: t('customer360.totalReceived'),
+        credit: t('customer360.totalPaid'),
+        balance: t('customer360.colBalance'),
+        currency: '',
+      })
+      for (const row of effectiveTotals) {
+        rows.push({
+          date: row.currency,
+          type: row.totalSales != null ? row.totalSales : '—',
+          reference: row.totalPurchases != null ? row.totalPurchases : '—',
+          debit: row.totalReceived != null ? row.totalReceived : '—',
+          credit: row.totalPaid != null ? row.totalPaid : '—',
+          balance: row.netBalance != null ? row.netBalance : '—',
+          currency: '',
+        })
+      }
+    }
+
     exportToCSV(
       rows,
       [
@@ -182,11 +236,11 @@ export function CustomerDetailContainer({ customerId }: { customerId: string }) 
         { key: 'debit', label: t('customer360.colDebit') },
         { key: 'credit', label: t('customer360.colCredit') },
         { key: 'balance', label: t('customer360.colBalance') },
-        { key: 'currency', label: 'currency' },
+        { key: 'currency', label: t('customer360.colCurrency') },
       ],
       `statement-${customer.name}-${toIsoDay(new Date())}`,
     )
-  }, [customer, ledgerQuery.data, t])
+  }, [customer, ledgerQuery.data, summaryQuery.data, t])
 
   const refetchMoney = useCallback(() => {
     void summaryQuery.refetch()

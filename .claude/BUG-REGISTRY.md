@@ -1157,3 +1157,18 @@ placeholder همان برچسبِ بالای فیلد بود. **رفع:** `DateR
 
 روی دیتابیس زنده صفر مورد بود، ولی نه کد جلویش را می‌گرفت نه دیتابیس. **رفع:** `settlesInCurrency` در سرویس + تریگر
 `payment_allocations_same_currency_trg`. **گارد:** `db-integrity-code.test.ts`، `db-integrity-01.pg.test.ts`.
+
+## BUG-118 — با دو صندوق بازِ یک نفر، «صندوق فعلی» ۵۰۰ می‌داد (۱۲ اکتبر، در مرور پیدا شد، پیش از انتشار)
+
+`PosService#getOpenSession` با `.maybeSingle()` می‌خواند و «یک صندوق به‌ازای هر ارز» دومی را ممکن کرد. **رفع:** همه خوانده و
+انتخاب می‌شود. **گارد:** `pos-till-currency-http.test.ts` («with an AFN and a USD till open…»).
+
+## BUG-119 — درخواستِ rate-limit‌شده ۵۰۰ می‌گرفت، نه ۴۲۹ (قدیمی، کل سرور)
+
+`errorResponseBuilder` در `backend/src/index.ts` شیء بدون `statusCode` برمی‌گرداند؛ error handler آن را ۵۰۰ می‌خواند.
+**رفع:** `statusCode: 429` و `code: RATE_LIMITED`. **گارد:** `attendance-self-http.test.ts` (آخرین تست).
+
+## BUG-120 — برداشتن `actor_id` از فید رخدادها (۱۲ اکتبر، در مرور پیدا شد، پیش از انتشار)
+
+برای «خوانده‌شدن به‌ازای هر نفر» فیلتر شخصی از فهرست، شمارش و **حذف** برداشته شده بود. **رفع:** برگشت، و پنج تابع SQL هم در
+همان مجموعه می‌شمارند. **گارد:** `activity-feed-workspace-scoped.test.ts` (حالا SQL را هم می‌خواند)، `activity-reads-01.pg.test.ts`.

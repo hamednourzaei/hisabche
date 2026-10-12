@@ -25,8 +25,9 @@ import { useIntlLocale } from '../../hooks/use-intl-locale'
 import { useNow } from '../../hooks/use-now'
 import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead } from '@hisabche/api'
 import type { Notification } from '@hisabche/api'
+import { formatCompactCount } from '@hisabche/formatting'
 import { timeAgo } from '../../lib/time-ago'
-import { useLocalePush } from '../../hooks/use-locale-push'
+import { useLocalePush, useRouteLang } from '../../hooks/use-locale-push'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -452,6 +453,7 @@ export const NotificationBell = memo(function NotificationBell({
 }: NotificationBellProps) {
   const t = useTranslations()
   const push = useLocalePush()
+  const routeLang = useRouteLang()
   const [open, setOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -549,8 +551,12 @@ export const NotificationBell = memo(function NotificationBell({
       >
         <Bell className="size-5" aria-hidden="true" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -end-1 flex items-center justify-center min-w-[20px] h-[20px] px-1 text-[11px] font-bold text-white bg-[hsl(var(--color-destructive))] rounded-full shadow-sm shadow-[hsl(var(--color-destructive)/0.4)]">
-            {unreadCount > 99 ? t('notifications.many') : unreadCount}
+          <span
+            className="absolute -top-1 -end-1 flex items-center justify-center min-w-[20px] h-[20px] px-1 text-[11px] font-bold text-white bg-[hsl(var(--color-destructive))] rounded-full shadow-sm shadow-[hsl(var(--color-destructive)/0.4)]"
+            title={t('notifications.unreadCountBadge', { count: unreadCount })}
+            aria-label={t('notifications.unreadCountBadge', { count: unreadCount })}
+          >
+            {formatCompactCount(unreadCount, routeLang)}
           </span>
         )}
       </button>
@@ -590,8 +596,12 @@ export const NotificationBell = memo(function NotificationBell({
                   {t('notifications.title')}
                 </h3>
                 {unreadCount > 0 && (
-                  <span className="shrink-0 text-[8px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]">
-                    {unreadCount}
+                  <span
+                    className="shrink-0 text-[8px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]"
+                    title={t('notifications.unreadCountBadge', { count: unreadCount })}
+                    aria-label={t('notifications.unreadCountBadge', { count: unreadCount })}
+                  >
+                    {formatCompactCount(unreadCount, routeLang)}
                   </span>
                 )}
               </div>

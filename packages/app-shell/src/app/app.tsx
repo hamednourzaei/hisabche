@@ -63,6 +63,7 @@ const GovernancePage = lazy(() => import('@/features/permissions/governance-page
 const PublicTaskPage = lazy(() => import('@/features/public/public-task-page'))
 const PublicInvoicePage = lazy(() => import('@/features/public/public-invoice-page'))
 const PublicPortalPage = lazy(() => import('@/features/public/public-portal-page'))
+const AttendanceSelfPage = lazy(() => import('@/features/public/attendance-self-page'))
 
 /** Carries the invoice id across the `/sales/:id` → `/invoices/:id` rename. */
 function LegacyInvoiceRedirect() {
@@ -140,6 +141,7 @@ const router = createHashRouter([
       { path: 'public-task/:token', element: <PublicTaskPage /> },
       { path: 'public-invoice/:token', element: <PublicInvoicePage /> },
       { path: 'portal/:token', element: <PublicPortalPage /> },
+      { path: 'my-attendance/:token', element: <AttendanceSelfPage /> },
 
       // Legacy desktop paths. Existing windows, deep links and the pinned
       // shortcuts users already have keep working rather than bouncing to the

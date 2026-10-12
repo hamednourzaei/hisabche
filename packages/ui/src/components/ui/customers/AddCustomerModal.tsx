@@ -5,8 +5,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslations } from 'next-intl'
-import { useCreateCustomer, useCreateInvoice } from '@hisabche/api'
+import { apiErrorMessage, useCreateCustomer, useCreateInvoice } from '@hisabche/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../dialog'
+import { SegmentedControl } from '../segmented-control'
 import { ProductPicker } from '../product-picker'
 import { PhoneInput } from '../phone-input'
 import { MoneyInput } from '../money-input'
@@ -38,6 +39,7 @@ interface AddCustomerModalProps {
   open: boolean
   onClose: () => void
   onCreated?: () => void
+  initialRole?: 'buyer' | 'seller' | 'both' | undefined
 }
 
 const inputBase =
@@ -47,7 +49,12 @@ const outlineBtn =
 const primaryBtn =
   'inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-bold text-white bg-[hsl(var(--color-primary))] shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed motion-reduce:transition-none'
 
-export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalProps) {
+export function AddCustomerModal({
+  open,
+  onClose,
+  onCreated,
+  initialRole = 'buyer',
+}: AddCustomerModalProps) {
   const t = useTranslations()
   const createCustomer = useCreateCustomer()
   const createInvoice = useCreateInvoice()
@@ -61,6 +68,15 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
   const [error, setError] = useState<string | null>(null)
   const [showSaved, setShowSaved] = useState(false)
   const [phoneValue, setPhoneValue] = useState('')
+  const [prevOpen, setPrevOpen] = useState(open)
+  const [role, setRole] = useState<'buyer' | 'seller' | 'both'>(initialRole)
+
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open) {
+      setRole(initialRole)
+    }
+  }
 
   const total = useMemo(() => toNum(unitPrice) * Math.max(1, toNum(qty)), [unitPrice, qty])
 
@@ -86,8 +102,9 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
     setUnitPrice('')
     setError(null)
     setPhoneValue('')
+    setRole(initialRole)
     onClose()
-  }, [reset, onClose])
+  }, [reset, onClose, initialRole])
 
   const onSubmit = async (data: CustomerFormValues) => {
     setError(null)
@@ -100,6 +117,7 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
         phone: phoneValue || undefined,
         openingBalance: 0,
         isActive: true,
+        declaredRole: role,
       })
 
       addAuditEntry({
@@ -144,9 +162,16 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
 
       onCreated?.()
       close()
-    } catch {
+    } catch (err) {
       setSaveStatus('error')
-      setError(t('common.saveError'))
+      const msg = apiErrorMessage(err, t('common.saveError'))
+      let userMessage = msg
+      if (msg.includes('CUSTOMER_DECLARED_ROLE_SCHEMA_REQUIRED')) {
+        userMessage = t('customers.error_CUSTOMER_DECLARED_ROLE_SCHEMA_REQUIRED')
+      } else if (msg.includes('CUSTOMER_DECLARED_ROLE_INVALID')) {
+        userMessage = t('customers.error_CUSTOMER_DECLARED_ROLE_INVALID')
+      }
+      setError(userMessage)
       setTimeout(() => setSaveStatus('idle'), 2000)
     }
   }
@@ -170,10 +195,22 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
         )}
 
         <DialogHeader>
-          <DialogTitle>{t('customers.addCustomer')}</DialogTitle>
+          <DialogTitle>
+            {role === 'seller' ? t('customers.addSupplier') : t('customers.addCustomer')}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <SegmentedControl
+            label={t('customers.role.label')}
+            options={[
+              { value: 'buyer', label: t('customers.role.buyer') },
+              { value: 'seller', label: t('customers.role.seller') },
+              { value: 'both', label: t('customers.role.both') },
+            ]}
+            value={role}
+            onChange={(next) => setRole(next as 'buyer' | 'seller' | 'both')}
+          />
           {/* Name */}
           <div>
             <div className="relative">

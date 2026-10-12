@@ -64,6 +64,7 @@ export const customerSchema = z.object({
   openingBalance: z.number().default(0),
   isActive: z.boolean().default(true),
   type: z.enum(['cash', 'credit']).default('cash'), // ✅ جدید
+  declaredRole: z.enum(['buyer', 'seller', 'both']).nullish(),
   createdAt: z.string().datetime().optional(),
   updatedAt: z.string().datetime().optional(),
 })

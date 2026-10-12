@@ -8,6 +8,7 @@ import { supabase } from '../db'
 import { scopes } from './authorization/scope.service'
 import { CreateCustomer, UpdateCustomer, CustomerFilters } from '@hisabche/validation'
 import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
+import { ValidationError } from '../errors/validation.error'
 import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
@@ -21,7 +22,34 @@ import {
 } from '../utils/client-request'
 
 // ✅ Types
-interface Customer {
+export type DeclaredRole = 'buyer' | 'seller' | 'both'
+
+export const VALID_DECLARED_ROLES = new Set<string>(['buyer', 'seller', 'both'])
+
+export function assertDeclaredRole(role: unknown): asserts role is DeclaredRole | null | undefined {
+  if (role === undefined || role === null) return
+  if (typeof role !== 'string' || !VALID_DECLARED_ROLES.has(role)) {
+    throw new ValidationError('CUSTOMER_DECLARED_ROLE_INVALID')
+  }
+}
+
+export interface CustomerRow {
+  id: string
+  full_name: string
+  phone: string
+  email: string
+  address: string | null
+  notes: string
+  opening_balance: number
+  is_active: boolean
+  type: string
+  declared_role?: DeclaredRole | null
+  created_at: string
+  updated_at: string | null
+  [key: string]: unknown
+}
+
+export interface Customer {
   id: string
   fullName: string
   phone: string
@@ -31,8 +59,10 @@ interface Customer {
   openingBalance: number
   isActive: boolean
   type: string
+  declaredRole: DeclaredRole | null
+  role?: PartyRole
   createdAt: string
-  updatedAt: string
+  updatedAt: string | null
 }
 
 interface CustomerWithBalance extends Customer {
@@ -63,18 +93,45 @@ interface BalanceResult {
 export type PartyRole = 'none' | 'buyer' | 'seller' | 'both'
 
 /** Roles accumulate; seeing a second kind of invoice promotes the party. */
-function mergeRole(current: PartyRole, incoming: 'buyer' | 'seller'): PartyRole {
+export function mergeRole(current: PartyRole, incoming: 'buyer' | 'seller'): PartyRole {
   if (current === 'none') return incoming
   if (current === incoming) return current
   return 'both'
 }
 
+/**
+ * Effective role = declared role merged with the derived role from invoices.
+ * Declared seller + a sale invoice -> both.
+ * Declared buyer + no invoice -> buyer.
+ * Nothing declared (null) + purchase invoice -> seller.
+ * Nothing declared + no invoice -> none.
+ */
+export function resolveEffectiveRole(
+  declaredRole: DeclaredRole | null | undefined,
+  derivedRole: PartyRole,
+): PartyRole {
+  if (!declaredRole) return derivedRole
+  if (derivedRole === 'none') return declaredRole
+  if (declaredRole === 'both' || derivedRole === 'both') return 'both'
+  if (declaredRole === derivedRole) return declaredRole
+  return 'both'
+}
+
 /** A 'both' party legitimately matches a buyer filter AND a seller filter. */
-function matchesRole(role: PartyRole, filter: 'buyer' | 'seller'): boolean {
+export function matchesRole(role: PartyRole, filter: 'buyer' | 'seller'): boolean {
   return role === filter || role === 'both'
 }
 
-function mapCustomer(raw: Record<string, any>): Customer {
+export function isMissingColumnError(error: unknown, column = 'declared_role'): boolean {
+  if (!error || typeof error !== 'object') return false
+  const err = error as { code?: string; message?: string; details?: string; hint?: string }
+  const isMissingCode = err.code === '42703' || err.code === 'PGRST204'
+  if (!isMissingCode) return false
+  const msg = `${err.message ?? ''} ${err.details ?? ''} ${err.hint ?? ''}`
+  return msg.includes(column)
+}
+
+export function mapCustomer(raw: CustomerRow): Customer {
   return {
     id: raw.id,
     fullName: raw.full_name,
@@ -85,13 +142,20 @@ function mapCustomer(raw: Record<string, any>): Customer {
     openingBalance: raw.opening_balance,
     isActive: raw.is_active,
     type: raw.type,
+    declaredRole: raw.declared_role ?? null,
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
   }
 }
 
-const LIST_COLUMNS = 'id, full_name, phone, email, opening_balance, is_active, type, created_at'
+const LIST_COLUMNS =
+  'id, full_name, phone, email, opening_balance, is_active, type, declared_role, created_at'
+const LIST_COLUMNS_LEGACY =
+  'id, full_name, phone, email, opening_balance, is_active, type, created_at'
+
 const DETAIL_COLUMNS =
+  'id, full_name, phone, email, address, notes, opening_balance, is_active, type, declared_role, created_at, updated_at'
+const DETAIL_COLUMNS_LEGACY =
   'id, full_name, phone, email, address, notes, opening_balance, is_active, type, created_at, updated_at'
 
 export class CustomerService {
@@ -172,32 +236,71 @@ export class CustomerService {
 
     if (keyset) query = applyKeyset(query, sortBy, sortDirection, keyset)
 
-    const queryResult = await query
+    let rawRows: CustomerRow[] | null
+    let queryError: unknown
+    let totalCount: number | null | undefined
 
-    const { data, error } = queryResult
-    if (error) throw new DatabaseError('Failed to fetch customers', error)
+    const primaryResult = await query
+    if (primaryResult.error && isMissingColumnError(primaryResult.error, 'declared_role')) {
+      let fallbackQuery = supabase
+        .from('customers')
+        .select(LIST_COLUMNS_LEGACY, keyset ? undefined : { count: 'exact' })
+        .eq('workspace_id', workspaceId)
+        .order(sortBy, { ascending: sortDirection === 'asc' })
+        .order('id', { ascending: sortDirection === 'asc' })
 
-    const hasMore = (data?.length || 0) > maxLimit
-    const items = hasMore ? data.slice(0, maxLimit) : data
-    const last =
-      items && items.length > 0 ? (items[items.length - 1] as Record<string, unknown>) : null
+      if (!keyset && pageNumber > 1) {
+        const offset = (pageNumber - 1) * maxLimit
+        fallbackQuery = fallbackQuery.range(offset, offset + maxLimit)
+      } else {
+        fallbackQuery = fallbackQuery.limit(fetchLimit)
+      }
+
+      if (search) fallbackQuery = fallbackQuery.ilike('full_name', `%${search}%`)
+      if (isActive !== undefined) fallbackQuery = fallbackQuery.eq('is_active', isActive)
+      if (hasBalance !== undefined) {
+        fallbackQuery = hasBalance
+          ? fallbackQuery.gt('opening_balance', 0)
+          : fallbackQuery.eq('opening_balance', 0)
+      }
+      if (type !== undefined) fallbackQuery = fallbackQuery.eq('type', type)
+
+      if (keyset) fallbackQuery = applyKeyset(fallbackQuery, sortBy, sortDirection, keyset)
+      const fallbackResult = await fallbackQuery
+      rawRows = fallbackResult.data as CustomerRow[] | null
+      queryError = fallbackResult.error
+      totalCount = fallbackResult.count
+    } else {
+      rawRows = primaryResult.data as CustomerRow[] | null
+      queryError = primaryResult.error
+      totalCount = primaryResult.count
+    }
+
+    if (queryError) throw new DatabaseError('Failed to fetch customers', queryError)
+
+    const allRows = rawRows ?? []
+    const hasMore = allRows.length > maxLimit
+    const items = hasMore ? allRows.slice(0, maxLimit) : allRows
+    const last = items.length > 0 ? (items[items.length - 1] as Record<string, unknown>) : null
     const nextCursor = hasMore && last ? encodeCursor(last, sortBy) : null
 
     const roles = await this.resolveRoles(
       workspaceId,
-      (items || []).map((row) => (row as { id: string }).id),
+      items.map((row) => row.id),
     )
 
-    const withRoles = (items || []).map((row) => {
+    const withRoles = items.map((row) => {
       const mapped = mapCustomer(row)
-      return { ...mapped, role: roles.get(mapped.id) ?? 'none' }
+      const derived = roles.get(mapped.id) ?? 'none'
+      const role = resolveEffectiveRole(mapped.declaredRole, derived)
+      return { ...mapped, role }
     })
 
     const result = {
       customers: role ? withRoles.filter((c) => matchesRole(c.role, role)) : withRoles,
       nextCursor,
       hasMore,
-      ...(keyset ? {} : { total: queryResult.count ?? 0 }),
+      ...(keyset ? {} : { total: totalCount ?? 0 }),
       limit: maxLimit,
     }
 
@@ -261,12 +364,29 @@ export class CustomerService {
       this.getBalance(id, ctx),
     ])
 
-    const { data: customer, error } = customerResult
-    if (error || !customer) throw new DatabaseError('Customer not found', error)
+    let rawCustomer: CustomerRow | null = customerResult.data as CustomerRow | null
+    let customerError = customerResult.error
 
+    if (customerError && isMissingColumnError(customerError, 'declared_role')) {
+      const fallback = await supabase
+        .from('customers')
+        .select(DETAIL_COLUMNS_LEGACY)
+        .eq('id', id)
+        .eq('workspace_id', workspaceId)
+        .single()
+      rawCustomer = fallback.data as CustomerRow | null
+      customerError = fallback.error
+    }
+
+    if (customerError || !rawCustomer) throw new DatabaseError('Customer not found', customerError)
+
+    const roles = await this.resolveRoles(workspaceId, [id])
+    const derived = roles.get(id) ?? 'none'
+    const mapped = mapCustomer(rawCustomer)
     const result: CustomerWithBalance = {
-      ...mapCustomer(customer),
-      balance: balanceResult.balance, // ✅ حالا TypeScript می‌داند balance وجود دارد
+      ...mapped,
+      role: resolveEffectiveRole(mapped.declaredRole, derived),
+      balance: balanceResult.balance,
     }
 
     await memoryCache.set(cacheKey, result, 300)
@@ -275,17 +395,31 @@ export class CustomerService {
 
   // ─── Create ──────────────────────────────────────────────
   private async findByClientRequestId(workspaceId: string, key: string): Promise<Customer | null> {
-    const { data, error } = await supabase
+    const first = await supabase
       .from('customers')
       .select(DETAIL_COLUMNS)
       .eq('workspace_id', workspaceId)
       .eq('client_request_id', key)
       .maybeSingle()
+
+    let rawCustomer: CustomerRow | null = first.data as CustomerRow | null
+    let error = first.error
+
+    if (error && isMissingColumnError(error, 'declared_role')) {
+      const fallback = await supabase
+        .from('customers')
+        .select(DETAIL_COLUMNS_LEGACY)
+        .eq('workspace_id', workspaceId)
+        .eq('client_request_id', key)
+        .maybeSingle()
+      rawCustomer = fallback.data as CustomerRow | null
+      error = fallback.error
+    }
     if (error) {
       if (isMissingIdempotencySupport(error)) throw new IdempotencyUnavailableError('customer')
       throw new DatabaseError('Failed to look up the request', error)
     }
-    return data ? mapCustomer(data) : null
+    return rawCustomer ? mapCustomer(rawCustomer) : null
   }
 
   async create(
@@ -296,6 +430,8 @@ export class CustomerService {
     const { workspaceId, userId } = ctx
     const clientRequestId = options.clientRequestId ?? null
 
+    assertDeclaredRole((data as { declaredRole?: unknown }).declaredRole)
+
     // A replayed offline create answers with the customer it already made —
     // before the opening-balance transaction below could be written twice.
     if (clientRequestId) {
@@ -303,25 +439,48 @@ export class CustomerService {
       if (existing) return asReplay(existing)
     }
 
-    const { data: customer, error } = await supabase
+    const insertPayload: Record<string, unknown> = {
+      full_name: data.fullName,
+      phone: data.phone || '',
+      email: data.email || '',
+      address: data.address || null,
+      notes: data.notes || '',
+      opening_balance: data.openingBalance || 0,
+      is_active: data.isActive !== false,
+      type: data.type || 'cash',
+      // workspace_id scopes the row; user_id records who created it. Both
+      // are written, and only the first is ever a filter.
+      workspace_id: workspaceId,
+      user_id: userId,
+      ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
+    }
+
+    if (data.declaredRole) {
+      insertPayload.declared_role = data.declaredRole
+    }
+
+    const first = await supabase
       .from('customers')
-      .insert({
-        full_name: data.fullName,
-        phone: data.phone || '',
-        email: data.email || '',
-        address: data.address || null,
-        notes: data.notes || '',
-        opening_balance: data.openingBalance || 0,
-        is_active: data.isActive !== false,
-        type: data.type || 'cash',
-        // workspace_id scopes the row; user_id records who created it. Both
-        // are written, and only the first is ever a filter.
-        workspace_id: workspaceId,
-        user_id: userId,
-        ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
-      })
+      .insert(insertPayload)
       .select(DETAIL_COLUMNS)
       .single()
+
+    let rawCustomer: CustomerRow | null = first.data as CustomerRow | null
+    let error = first.error
+
+    if (error && isMissingColumnError(error, 'declared_role')) {
+      if (data.declaredRole) {
+        throw new ValidationError('CUSTOMER_DECLARED_ROLE_SCHEMA_REQUIRED')
+      }
+      delete insertPayload.declared_role
+      const fallback = await supabase
+        .from('customers')
+        .insert(insertPayload)
+        .select(DETAIL_COLUMNS_LEGACY)
+        .single()
+      rawCustomer = fallback.data as CustomerRow | null
+      error = fallback.error
+    }
 
     if (error && clientRequestId) {
       if (error.code === '23505') {
@@ -330,7 +489,9 @@ export class CustomerService {
       }
       if (isMissingIdempotencySupport(error)) throw new IdempotencyUnavailableError('customer')
     }
-    if (error) throw new DatabaseError('Failed to create customer', error)
+    if (error || !rawCustomer) throw new DatabaseError('Failed to create customer', error)
+
+    const customer = mapCustomer(rawCustomer)
 
     // ═══════════════════════════════════════════════════════════════════════
     // THE OPENING BALANCE OF A CREDIT PARTY
@@ -392,12 +553,12 @@ export class CustomerService {
       entityType: 'customer',
       entityId: customer.id,
       action: 'created',
-      title: `مشتری جدید: ${customer.full_name}`,
+      title: `مشتری جدید: ${customer.fullName}`,
       description: customer.phone || customer.email || undefined,
       notify: false,
     }).catch((err) => console.error('[CustomerService] logBusinessEvent failed:', err))
 
-    return mapCustomer(customer)
+    return customer
   }
 
   // ─── Update ──────────────────────────────────────────────
@@ -416,6 +577,8 @@ export class CustomerService {
     data: UpdateCustomer,
     options: { expectedUpdatedAt?: string | null | undefined } = {},
   ): Promise<Customer> {
+    assertDeclaredRole((data as { declaredRole?: unknown }).declaredRole)
+
     // Workspace alone is not enough on a row addressed by id. Before this, any
     // member of the workspace could mutate any row in it by knowing an id —
     // including one raised by a colleague in a branch they do not hold.
@@ -431,6 +594,7 @@ export class CustomerService {
     if (data.notes !== undefined) updates.notes = data.notes
     if (data.isActive !== undefined) updates.is_active = data.isActive
     if (data.type !== undefined) updates.type = data.type
+    if (data.declaredRole !== undefined) updates.declared_role = data.declaredRole
 
     const conditional = options.expectedUpdatedAt !== undefined
     let write = supabase
@@ -446,12 +610,37 @@ export class CustomerService {
 
     // A conditional write that matched no row is a refusal, not a failure:
     // `assertMay` above already proved the customer exists.
-    const { data: customer, error } = conditional
+    const first = conditional
       ? await write.select(DETAIL_COLUMNS).maybeSingle()
       : await write.select(DETAIL_COLUMNS).single()
 
+    let rawCustomer: CustomerRow | null = first.data as CustomerRow | null
+    let error = first.error
+
+    if (error && isMissingColumnError(error, 'declared_role')) {
+      if (data.declaredRole !== undefined && data.declaredRole !== null) {
+        throw new ValidationError('CUSTOMER_DECLARED_ROLE_SCHEMA_REQUIRED')
+      }
+      delete updates.declared_role
+      let fallbackWrite = supabase
+        .from('customers')
+        .update(updates)
+        .eq('id', id)
+        .eq('workspace_id', workspaceId)
+      if (typeof options.expectedUpdatedAt === 'string') {
+        fallbackWrite = fallbackWrite.eq('updated_at', options.expectedUpdatedAt)
+      } else if (options.expectedUpdatedAt === null) {
+        fallbackWrite = fallbackWrite.is('updated_at', null)
+      }
+      const retry = conditional
+        ? await fallbackWrite.select(DETAIL_COLUMNS_LEGACY).maybeSingle()
+        : await fallbackWrite.select(DETAIL_COLUMNS_LEGACY).single()
+      rawCustomer = retry.data as CustomerRow | null
+      error = retry.error
+    }
+
     if (error) throw new DatabaseError('Failed to update customer', error)
-    if (!customer) {
+    if (!rawCustomer) {
       if (conditional) throw new ConflictError('CUSTOMER_CHANGED')
       throw new DatabaseError('Customer not found')
     }
@@ -459,7 +648,7 @@ export class CustomerService {
     // ✅ Clear cache
     await this.invalidateCache(workspaceId, id)
 
-    return mapCustomer(customer)
+    return mapCustomer(rawCustomer)
   }
 
   // ─── Delete ──────────────────────────────────────────────

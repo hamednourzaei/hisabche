@@ -9,6 +9,16 @@ import { supabase } from '../db'
 import type { TenancyContext } from './tenancy.service'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
+import { isMissingSchema } from './blog/blog.domain'
+
+export class ActivityReadsNotConfiguredError extends Error {
+  readonly code = 'ACTIVITY_READS_NOT_CONFIGURED'
+  readonly statusCode = 503
+  constructor() {
+    super('ACTIVITY_READS_NOT_CONFIGURED')
+    this.name = 'ActivityReadsNotConfiguredError'
+  }
+}
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
@@ -230,15 +240,6 @@ export class ActivityService {
 
   // ─── Create Activity ─────────────────────────────────────────────────────
   async createActivity(input: CreateActivityInput) {
-    console.log('📝 [ActivityService] Creating activity:', {
-      entityType: input.entityType,
-      entityId: input.entityId,
-      action: input.action,
-      title: input.title,
-      actorName: input.actorName,
-      workspaceId: input.workspaceId,
-    })
-
     if (!input.actorId) {
       throw new DatabaseError('actorId is required')
     }
@@ -271,12 +272,10 @@ export class ActivityService {
       .single()
 
     if (error) {
-      console.error('❌ [ActivityService] Failed to create activity:', error)
       throw new DatabaseError('Failed to create activity', error)
     }
 
-    console.log('✅ [ActivityService] Activity created:', data.id)
-    await this.invalidateCache(input.actorId)
+    await this.invalidateCache(input.workspaceId, input.actorId)
 
     return data
   }
@@ -311,12 +310,43 @@ export class ActivityService {
     try {
       const cached = await memoryCache.get(cacheKey)
       if (cached) return cached as PaginatedActivitiesResponse
-    } catch (cacheError) {
-      // اگر کش مشکل داشت، ادامه بده
-      console.warn('⚠️ Cache error, continuing without cache:', cacheError)
+    } catch {
+      // Continuing without cache if cache error occurs
     }
 
     const limit = Math.min(filters?.limit || 20, 100)
+    const page = Math.max(1, Number(filters?.page) || 1)
+    const offset = !filters?.cursor && page > 1 ? (page - 1) * limit : 0
+
+    let unreadIdsFilter: string[] | null = null
+
+    if (filters?.unread) {
+      const { data: unreadIds, error: unreadIdsErr } = await supabase.rpc(
+        'activity_get_unread_ids',
+        {
+          p_workspace: workspaceId,
+          p_user: userId,
+          p_type: filters.type ?? null,
+          p_limit: limit + 1,
+          p_offset: offset,
+        },
+      )
+      if (unreadIdsErr) {
+        if (!isMissingSchema(unreadIdsErr)) {
+          throw new DatabaseError('Failed to fetch unread activity IDs', unreadIdsErr)
+        }
+      } else if (Array.isArray(unreadIds)) {
+        unreadIdsFilter = unreadIds.map((r: any) => (typeof r === 'string' ? r : r.id))
+        if (unreadIdsFilter.length === 0) {
+          return {
+            data: [],
+            nextCursor: null,
+            hasMore: false,
+            total: 0,
+          }
+        }
+      }
+    }
 
     try {
       let query = supabase
@@ -331,25 +361,18 @@ export class ActivityService {
         .order('created_at', { ascending: false })
         .limit(limit + 1)
 
-      // ✅ FIX: این endpoint فقط cursor را می‌شناخت، ولی UI صفحه‌محور است
-      // («۱ / ۳») و page می‌فرستد — پس همیشه همان صفحه‌ی اول برمی‌گشت و
-      // دکمه‌ی «صفحه بعد» کاری نمی‌کرد.
-      const page = Math.max(1, Number(filters?.page) || 1)
-      if (!filters?.cursor && page > 1) {
-        const offset = (page - 1) * limit
-        query = query.range(offset, offset + limit)
-      }
-
-      if (filters?.cursor) {
-        query = query.lt('created_at', filters.cursor)
-      }
-
-      if (filters?.type) {
-        query = query.eq('entity_type', filters.type)
-      }
-
-      if (filters?.unread) {
-        query = query.eq('is_read', false)
+      if (unreadIdsFilter !== null) {
+        query = query.in('id', unreadIdsFilter)
+      } else {
+        if (!filters?.cursor && page > 1) {
+          query = query.range(offset, offset + limit)
+        }
+        if (filters?.cursor) {
+          query = query.lt('created_at', filters.cursor)
+        }
+        if (filters?.type) {
+          query = query.eq('entity_type', filters.type)
+        }
       }
 
       if (filters?.search) {
@@ -359,7 +382,6 @@ export class ActivityService {
       const { data: activities, error, count } = await query
 
       if (error) {
-        console.error('❌ [ActivityService] Failed to fetch activities:', error)
         throw new DatabaseError('Failed to fetch activities', error)
       }
 
@@ -373,9 +395,43 @@ export class ActivityService {
         }
       }
 
+      // On the unread tab the query above was narrowed to ONE PAGE of ids, so
+      // its exact count is the page, not the tab. The total is the same
+      // per-person count the badge shows.
+      let total = count || 0
+      if (unreadIdsFilter !== null) {
+        const { data: unreadTotal, error: unreadTotalErr } = await supabase.rpc(
+          'activity_get_unread_count',
+          { p_workspace: workspaceId, p_user: userId, p_filter: filters?.type ?? null },
+        )
+        if (unreadTotalErr) {
+          throw new DatabaseError('Failed to count unread activities', unreadTotalErr)
+        }
+        total = Number(unreadTotal) || 0
+      }
+
       const hasMore = activities.length > limit
       const items = hasMore ? activities.slice(0, limit) : activities
       const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.created_at : null
+
+      const itemIds = items.map((i) => i.id)
+      let readSet = new Set<string>()
+      if (itemIds.length > 0) {
+        const { data: readRows, error: readRowsErr } = await supabase
+          .from('activity_reads')
+          .select('activity_id')
+          .eq('workspace_id', workspaceId)
+          .eq('user_id', userId)
+          .in('activity_id', itemIds)
+
+        if (readRowsErr) {
+          if (!isMissingSchema(readRowsErr)) {
+            throw new DatabaseError('Failed to read activity reads', readRowsErr)
+          }
+        } else if (readRows) {
+          readSet = new Set(readRows.map((r: any) => r.activity_id))
+        }
+      }
 
       const groups = new Map<string, any[]>()
       for (const activity of items) {
@@ -395,15 +451,6 @@ export class ActivityService {
         items.map((item) => item.actor_id as string),
       )
 
-      // ✅ FIX (کندی): getEntitySummary قبلاً داخل حلقه با await صدا زده
-      // می‌شد، یعنی برای هر گروه یک رفت‌وبرگشت جداگانه و **ترتیبی** به
-      // دیتابیس. با ۱۴ گروه این یعنی ۱۴ کوئری پشت‌سرهم و پاسخ ۳.۵ ثانیه‌ای.
-      // حالا همه با هم موازی اجرا می‌شوند، پس زمان کل تقریباً برابر کندترین
-      // کوئری است نه مجموع همه.
-      // ⚠️ ONE QUERY PER TYPE, NOT PER ROW (27 Sep 2026). The parallel
-      // version still sent one query per group — thirty at once on a busy
-      // page, queued on the connection pool: /api/v1/activities took 4.6 s in
-      // production. `getEntitySummaries` reads each type with one `in()`.
       const summaryByKey = await this.getEntitySummaries(
         workspaceId,
         Array.from(groups.keys()).map((key) => key.split(':') as [string, string]),
@@ -420,7 +467,7 @@ export class ActivityService {
         // خلاصه‌ها بالاتر به‌صورت موازی گرفته شده‌اند.
         const summary = summaryByKey.get(key) ?? null
 
-        const unreadCount = sortedItems.filter((i) => !i.is_read).length
+        const unreadCount = sortedItems.filter((i) => !readSet.has(i.id)).length
 
         result.push({
           entityType: entityType as ActivityGroupDto['entityType'],
@@ -456,7 +503,7 @@ export class ActivityService {
             // `null`, never a default role — see `ActivityItemDto.actorRole`.
             actorRole: actorRoles.get(item.actor_id) ?? null,
             timestamp: item.created_at,
-            isRead: item.is_read,
+            isRead: readSet.has(item.id),
             importance: item.importance || 0,
           })),
           unreadCount,
@@ -480,7 +527,7 @@ export class ActivityService {
         data: result,
         nextCursor,
         hasMore,
-        total: count || 0,
+        total,
       }
 
       try {
@@ -739,60 +786,54 @@ export class ActivityService {
   }
 
   // ─── Mark as Read ────────────────────────────────────────────────────────
-  async markAsRead(ctx: { workspaceId: string; userId: string }, ids: string[]) {
-    const { userId } = ctx
-    console.log('📝 [ActivityService] Marking as read:', ids)
+  async markAsRead(ctx: { workspaceId: string; userId: string }, ids: string[]): Promise<number> {
+    const { workspaceId, userId } = ctx
 
     if (!ids || ids.length === 0) {
-      console.warn('⚠️ [ActivityService] No ids provided for markAsRead')
-      return
+      return 0
     }
 
-    const { error } = await supabase
-      .from('activities')
-      .update({ is_read: true })
-      .in('id', ids)
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('actor_id', userId)
+    const { data, error } = await supabase.rpc('activity_mark_read', {
+      p_workspace: workspaceId,
+      p_user: userId,
+      p_ids: ids,
+    })
 
     if (error) {
-      console.error('❌ [ActivityService] Failed to mark as read:', error)
+      if (isMissingSchema(error)) throw new ActivityReadsNotConfiguredError()
       throw new DatabaseError('Failed to mark activities as read', error)
     }
 
-    console.log(`✅ [ActivityService] Marked ${ids.length} activities as read`)
-    await this.invalidateCache(userId)
+    await this.invalidateCache(workspaceId, userId)
+    return (data as number) ?? 0
   }
 
   // ─── Mark All as Read ────────────────────────────────────────────────────
-  async markAllAsRead(ctx: { workspaceId: string; userId: string }) {
-    const { userId } = ctx
-    console.log('📝 [ActivityService] Marking all as read for user:', userId)
+  async markAllAsRead(
+    ctx: { workspaceId: string; userId: string },
+    filter?: string | undefined,
+  ): Promise<number> {
+    const { workspaceId, userId } = ctx
 
-    const { error } = await supabase
-      .from('activities')
-      .update({ is_read: true })
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('actor_id', userId)
-      .eq('is_read', false)
+    const { data, error } = await supabase.rpc('activity_mark_all_read', {
+      p_workspace: workspaceId,
+      p_user: userId,
+      p_filter: filter ?? null,
+    })
 
     if (error) {
-      console.error('❌ [ActivityService] Failed to mark all as read:', error)
+      if (isMissingSchema(error)) throw new ActivityReadsNotConfiguredError()
       throw new DatabaseError('Failed to mark all activities as read', error)
     }
 
-    console.log(`✅ [ActivityService] Marked all activities as read for user: ${userId}`)
-    await this.invalidateCache(userId)
+    await this.invalidateCache(workspaceId, userId)
+    return (data as number) ?? 0
   }
 
-  // ─── Get Unread Count ────────────────────────────────────────────────────
+  // ─── Get Filter Counts ───────────────────────────────────────────────────
   /**
    * The five tab badges of /activities, EXACT.
-   *
-   * ⚠️ The page counted the groups it had LOADED — the first page — so «همه
-   * (12)» meant «12 on screen», not the account. Each count here is a
-   * `head: true` exact count (راهنمای سشن §۷٫۴), no rows transferred. They
-   * count events, the same unit as the unread badge.
+   * Computed via single RPC returning exact counts per user in the workspace.
    */
   async getFilterCounts(ctx: { workspaceId: string; userId: string }): Promise<{
     all: number
@@ -806,82 +847,114 @@ export class ActivityService {
     const cached = await memoryCache.get(cacheKey)
     if (cached !== null) return cached as Awaited<ReturnType<ActivityService['getFilterCounts']>>
 
-    const base = () =>
-      supabase
-        .from('activities')
-        .select('id', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId)
-        .eq('actor_id', userId)
-    const results = await Promise.all([
-      base(),
-      base().eq('is_read', false),
-      base().eq('entity_type', 'invoice'),
-      base().eq('entity_type', 'payment'),
-      base().eq('entity_type', 'customer'),
-    ])
-    const failed = results.find((r) => r.error)
-    if (failed?.error) throw new DatabaseError('Failed to count activities', failed.error)
-    const [all, unread, invoices, payments, customers] = results.map((r) => r.count ?? 0) as [
-      number,
-      number,
-      number,
-      number,
-      number,
-    ]
-    const result = { all, unread, invoices, payments, customers }
+    const { data, error } = await supabase.rpc('activity_get_filter_counts', {
+      p_workspace: workspaceId,
+      p_user: userId,
+    })
+
+    if (error) {
+      if (isMissingSchema(error)) {
+        // Fallback before migration: all items in workspace are unread
+        const base = () =>
+          supabase
+            .from('activities')
+            .select('id', { count: 'exact', head: true })
+            .eq('workspace_id', workspaceId)
+            .eq('actor_id', userId)
+        const results = await Promise.all([
+          base(),
+          base().eq('entity_type', 'invoice'),
+          base().eq('entity_type', 'payment'),
+          base().eq('entity_type', 'customer'),
+        ])
+        const failed = results.find((r) => r.error)
+        if (failed?.error) throw new DatabaseError('Failed to count activities', failed.error)
+        const [all, invoices, payments, customers] = results.map((r) => r.count ?? 0) as [
+          number,
+          number,
+          number,
+          number,
+        ]
+        const fallbackResult = { all, unread: all, invoices, payments, customers }
+        await memoryCache.set(cacheKey, fallbackResult, 10)
+        return fallbackResult
+      }
+      throw new DatabaseError('Failed to count activities', error)
+    }
+
+    const result = data as {
+      all: number
+      unread: number
+      invoices: number
+      payments: number
+      customers: number
+    }
     await memoryCache.set(cacheKey, result, 10)
     return result
   }
 
+  // ─── Get Unread Count ────────────────────────────────────────────────────
   async getUnreadCount(ctx: { workspaceId: string; userId: string }): Promise<number> {
     const { userId, workspaceId } = ctx
     const cacheKey = `activities:unread:${userId}:${workspaceId}`
     const cached = await memoryCache.get(cacheKey)
     if (cached !== null) return cached as number
 
-    const { count, error } = await supabase
-      .from('activities')
-      .select('id', { count: 'exact', head: true })
-      .eq('workspace_id', workspaceId)
-      .eq('actor_id', userId)
-      .eq('is_read', false)
+    const { data, error } = await supabase.rpc('activity_get_unread_count', {
+      p_workspace: workspaceId,
+      p_user: userId,
+      p_filter: null,
+    })
 
     if (error) {
-      console.error('❌ [ActivityService] Failed to get unread count:', error)
+      if (isMissingSchema(error)) {
+        const { count, error: countErr } = await supabase
+          .from('activities')
+          .select('id', { count: 'exact', head: true })
+          .eq('workspace_id', workspaceId)
+          .eq('actor_id', userId)
+        if (countErr) throw new DatabaseError('Failed to get unread count', countErr)
+        const unread = count ?? 0
+        await memoryCache.set(cacheKey, unread, 10)
+        return unread
+      }
       throw new DatabaseError('Failed to get unread count', error)
     }
 
-    const result = count || 0
+    const result = (data as number) ?? 0
     await memoryCache.set(cacheKey, result, 10)
     return result
   }
 
   // ─── Delete Activity ─────────────────────────────────────────────────────
-  async deleteActivity(ctx: { workspaceId: string; userId: string }, id: string) {
-    const { userId } = ctx
-    console.log('📝 [ActivityService] Deleting activity:', id)
+  async deleteActivity(ctx: { workspaceId: string; userId: string }, id: string): Promise<void> {
+    const { userId, workspaceId } = ctx
 
     const { error } = await supabase
       .from('activities')
       .delete()
       .eq('id', id)
-      .eq('workspace_id', ctx.workspaceId)
+      .eq('workspace_id', workspaceId)
       .eq('actor_id', userId)
 
     if (error) {
-      console.error('❌ [ActivityService] Failed to delete activity:', error)
       throw new DatabaseError('Failed to delete activity', error)
     }
 
-    console.log(`✅ [ActivityService] Deleted activity: ${id}`)
-    await this.invalidateCache(userId)
+    await this.invalidateCache(workspaceId, userId)
   }
 
   // ─── Invalidate Cache ────────────────────────────────────────────────────
-  private async invalidateCache(userId: string) {
-    await memoryCache.invalidate(`activities:${userId}:*`)
-    await memoryCache.invalidate(`activities:unread:${userId}`)
-    await memoryCache.invalidate(`activities:counts:${userId}`)
+  async invalidateCache(workspaceId: string, userId?: string): Promise<void> {
+    if (userId) {
+      await memoryCache.invalidate(`activities:${userId}:${workspaceId}:*`)
+      await memoryCache.invalidate(`activities:unread:${userId}:${workspaceId}`)
+      await memoryCache.invalidate(`activities:counts:${userId}:${workspaceId}`)
+    } else {
+      await memoryCache.invalidate(`activities:*:${workspaceId}:*`)
+      await memoryCache.invalidate(`activities:unread:*:${workspaceId}`)
+      await memoryCache.invalidate(`activities:counts:*:${workspaceId}`)
+    }
   }
 }
 

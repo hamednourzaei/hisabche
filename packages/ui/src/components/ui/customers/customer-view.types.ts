@@ -59,9 +59,8 @@ export interface CustomersViewProps {
 
   // Actions
   onNewCreditInvoice: () => void
-  /** همه / مشتری / تأمین‌کننده — نقش از جهت فاکتورها مشتق می‌شود. */
-  roleFilter?: 'all' | 'buyer' | 'seller' | undefined
-  onRoleFilterChange?: ((value: 'all' | 'buyer' | 'seller') => void) | undefined
+  /** همه / مشتری / تأمین‌کننده — سوییچ نقش بالای تب‌ها. */
+  role?: 'all' | 'buyer' | 'seller' | undefined
 
   // Configuration
   currency?: string

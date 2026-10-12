@@ -114,10 +114,12 @@ export interface PosSession {
   openingFloatMinor: number
   openedAt: string
   openedBy: string
-  closedAt?: string | null
-  closedBy?: string | null
+  closedAt?: string | null | undefined
+  closedBy?: string | null | undefined
   /** Minor units. What a person physically counted at close. */
-  countedCashMinor?: number | null
+  countedCashMinor?: number | null | undefined
+  currency?: string | undefined
+  label?: string | null | undefined
 }
 
 // ─── What should be in the drawer ────────────────────────────────────────────
@@ -274,6 +276,7 @@ export type PosRuleCode =
   | 'POS_VARIANCE_REASON_REQUIRED'
   | 'POS_MOVEMENT_REASON_REQUIRED'
   | 'POS_FORCE_CLOSE_FORBIDDEN'
+  | 'POS_CURRENCY_MISMATCH'
 
 /**
  * Whether an order may be taken.
@@ -284,11 +287,20 @@ export type PosRuleCode =
  */
 export function validateOrder(
   session: PosSession,
-  order: { totalMinor: number; payments: PosPayment[]; changeMinor: number },
+  order: {
+    totalMinor: number
+    payments: PosPayment[]
+    changeMinor: number
+    currency?: string | undefined
+  },
 ): PosRuleCode[] {
   const problems: PosRuleCode[] = []
 
   if (session.status !== 'open') problems.push('POS_SESSION_NOT_OPEN')
+
+  if (order.currency && session.currency && order.currency !== session.currency) {
+    problems.push('POS_CURRENCY_MISMATCH')
+  }
 
   if (order.payments.some((payment) => payment.amountMinor < 0)) {
     problems.push('POS_PAYMENT_NEGATIVE')
@@ -309,7 +321,7 @@ export function validateOrder(
 
 export function validateMovement(
   session: PosSession,
-  movement: { amountMinor: number; reason: string },
+  movement: { amountMinor: number; reason: string; currency?: string | undefined },
 ): PosRuleCode[] {
   const problems: PosRuleCode[] = []
 
@@ -322,6 +334,10 @@ export function validateMovement(
   }
 
   if (movement.amountMinor <= 0) problems.push('POS_PAYMENT_NEGATIVE')
+
+  if (movement.currency && session.currency && movement.currency !== session.currency) {
+    problems.push('POS_CURRENCY_MISMATCH')
+  }
 
   return problems
 }
@@ -389,6 +405,8 @@ export interface AbandonedSession {
   /** What the orders say should be in a drawer nobody can reach. */
   expectedCashMinor: number
   orderCount: number
+  currency?: string | undefined
+  label?: string | null | undefined
 }
 
 /**
@@ -428,6 +446,8 @@ export function findAbandoned(
         entry.settlements ?? [],
       ),
       orderCount: entry.orders.filter((order) => order.status === 'completed').length,
+      currency: entry.session.currency,
+      label: entry.session.label,
     }))
     .filter((entry) => entry.hoursOpen >= staleAfterHours)
     .sort((a, b) => b.hoursOpen - a.hoursOpen)

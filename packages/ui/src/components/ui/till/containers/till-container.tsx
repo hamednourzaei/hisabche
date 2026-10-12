@@ -11,7 +11,8 @@
 // suspended/resumed or counted and closed. Bank transfers are not offered here.
 // ============================================
 
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   useCashFlow,
@@ -28,6 +29,8 @@ import {
   useCloseSession,
   apiErrorMessage,
 } from '@hisabche/api'
+import { useLocalePush } from '../../../../hooks/use-locale-push'
+import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import { TillView } from '../till-view'
 
 export const TillContainer = memo(function TillContainer() {
@@ -38,6 +41,13 @@ export const TillContainer = memo(function TillContainer() {
   }
 
   const [actionError, setActionError] = useState<string | null>(null)
+  const [closeNotice, setCloseNotice] = useState<string | null>(null)
+
+  const searchParams = useSearchParams()
+  const tillParam = searchParams.get('till')
+  const push = useLocalePush()
+
+  const bookCurrency = useBookCurrency()
 
   const current = useCurrentSession()
   const tills = useOpenSessions()
@@ -63,21 +73,26 @@ export const TillContainer = memo(function TillContainer() {
     }
   }
 
-  // Selected till: the caller's own open till unless another row was clicked.
-  const [selectedTillId, setSelectedTillId] = useState<string | null>(null)
-  const ownId = current.data?.session?.id ?? null
-  const firstId = tills.data?.[0]?.sessionId ?? null
-  const tillIds = tills.data?.map((till) => till.sessionId) ?? []
-  const stillOpen = selectedTillId !== null && tillIds.includes(selectedTillId)
-  const activeId = stillOpen ? selectedTillId : (ownId ?? firstId)
-  useEffect(() => {
-    if (selectedTillId !== null && tills.data && !stillOpen) setSelectedTillId(null)
-  }, [selectedTillId, stillOpen, tills.data])
+  // Selected till: driven by URL ?till=<id>
+  const selectedTillId = tillParam ?? null
 
-  const selected = useSession(activeId ?? '')
-  const ledger = useSessionLedger(activeId)
+  const selected = useSession(selectedTillId ?? '')
+  const ledger = useSessionLedger(selectedTillId)
   const [cashFlowDays, setCashFlowDays] = useState<7 | 30 | 90>(7)
-  const cashFlow = useCashFlow(cashFlowDays)
+
+  // Currencies across open tills + books currency
+  const availableCurrencies = useMemo(() => {
+    const set = new Set<string>()
+    if (bookCurrency) set.add(bookCurrency)
+    for (const till of tills.data ?? []) {
+      if (till.currency) set.add(till.currency)
+    }
+    return Array.from(set)
+  }, [bookCurrency, tills.data])
+
+  const [selectedCurrency, setSelectedCurrency] = useState<string | undefined>(undefined)
+  const activeCurrency = selectedCurrency ?? bookCurrency
+  const cashFlow = useCashFlow(cashFlowDays, activeCurrency)
 
   /**
    * Server refusals are shown verbatim rather than replaced with a generic
@@ -86,9 +101,6 @@ export const TillContainer = memo(function TillContainer() {
    */
   const report = useCallback(
     (err: unknown) => {
-      // The CODE is matched below, so it is read from `data.error` directly — a
-      // server that sends a code AND a sentence must not hide the code.
-      // A real fallback, not '': an empty string renders an empty red box.
       const message = apiErrorMessage(err, t('common.saveError', 'انجام نشد'))
       const rawCode = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
       const code = /^([A-Z][A-Z_]{5,})/.exec(rawCode ?? message ?? '')?.[1]
@@ -97,6 +109,8 @@ export const TillContainer = memo(function TillContainer() {
         'POS_SUSPEND_MIGRATION_REQUIRED',
         'POS_VARIANCE_REASON_REQUIRED',
         'POS_SESSION_IN_USE',
+        'POS_CURRENCY_MISMATCH',
+        'POS_CURRENCY_SCHEMA_REQUIRED',
       ]
       setActionError(code && known.includes(code) ? t(`till.error_${code}`, message) : message)
     },
@@ -104,29 +118,31 @@ export const TillContainer = memo(function TillContainer() {
   )
 
   const handleOpen = useCallback(
-    (openingFloatMinor: number) => {
+    (input: { openingFloatMinor: number; label?: string; currency?: string }) => {
       setActionError(null)
-      openSession.mutate(
-        { openingFloatMinor },
-        {
-          onSuccess: (session: { id?: string } | undefined) => {
-            if (session?.id) setSelectedTillId(session.id)
-            void tills.refetch()
-          },
-          onError: report,
+      setCloseNotice(null)
+      openSession.mutate(input, {
+        onSuccess: (session: { id?: string } | undefined) => {
+          if (session?.id) push(`/till?till=${session.id}`)
+          void tills.refetch()
         },
-      )
+        onError: report,
+      })
     },
-    [openSession, report, tills],
+    [openSession, push, report, tills],
   )
 
-  const handleAddCash = useCallback(
-    (input: { amountMinor: number; reason: string }) => {
-      if (!activeId) return
+  const handleRecordMovement = useCallback(
+    (input: { kind: 'cash_in' | 'cash_out'; amountMinor: number; reason: string }) => {
+      if (!selectedTillId) return
       setActionError(null)
+      setCloseNotice(null)
       cashMovement.mutate(
-        // One id per submitted movement; the hook's retries reuse it.
-        { sessionId: activeId, kind: 'cash_in', movementId: crypto.randomUUID(), ...input },
+        {
+          sessionId: selectedTillId,
+          movementId: crypto.randomUUID(),
+          ...input,
+        },
         {
           onSuccess: () => {
             void ledger.refetch()
@@ -138,7 +154,7 @@ export const TillContainer = memo(function TillContainer() {
         },
       )
     },
-    [activeId, cashFlow, cashMovement, ledger, report, selected, tills],
+    [cashFlow, cashMovement, ledger, report, selected, selectedTillId, tills],
   )
 
   const refreshAll = useCallback(() => {
@@ -150,6 +166,7 @@ export const TillContainer = memo(function TillContainer() {
   const handleSetSuspended = useCallback(
     (sessionId: string, suspended: boolean) => {
       setActionError(null)
+      setCloseNotice(null)
       setSuspended.mutate({ sessionId, suspended }, { onSuccess: refreshAll, onError: report })
     },
     [refreshAll, report, setSuspended],
@@ -158,40 +175,70 @@ export const TillContainer = memo(function TillContainer() {
   const handleRemoveTill = useCallback(
     (sessionId: string) => {
       setActionError(null)
-      removeTill.mutate(sessionId, { onSuccess: refreshAll, onError: report })
+      setCloseNotice(null)
+      removeTill.mutate(sessionId, {
+        onSuccess: () => {
+          refreshAll()
+          if (selectedTillId === sessionId) push('/till')
+        },
+        onError: report,
+      })
     },
-    [refreshAll, removeTill, report],
+    [push, refreshAll, removeTill, report, selectedTillId],
   )
 
   const handleCloseTill = useCallback(
     (input: { sessionId: string; countedCashMinor: number; varianceReason?: string }) => {
       setActionError(null)
-      closeSession.mutate(input, { onSuccess: refreshAll, onError: report })
+      setCloseNotice(null)
+      closeSession.mutate(input, {
+        onSuccess: (res: any) => {
+          refreshAll()
+          if (res?.ledger?.status === 'not_posted') {
+            setCloseNotice(
+              t(
+                'till.foreign_not_posted',
+                'ثبت در دفتر کل انجام نشد (ارز خارجی در دفتر کل پشتیبانی نمی‌شود).',
+              ),
+            )
+          }
+          if (selectedTillId === input.sessionId) push('/till')
+        },
+        onError: report,
+      })
     },
-    [closeSession, refreshAll, report],
+    [closeSession, push, refreshAll, report, selectedTillId, t],
   )
 
   const handleRefresh = useCallback(() => {
     setActionError(null)
+    setCloseNotice(null)
     current.refetch()
     tills.refetch()
-    if (activeId) {
+    if (selectedTillId) {
       selected.refetch()
       ledger.refetch()
     }
     cashFlow.refetch()
-  }, [activeId, cashFlow, current, ledger, selected, tills])
+  }, [cashFlow, current, ledger, selected, selectedTillId, tills])
 
   return (
     <TillView
       t={t}
-      session={activeId ? (selected.data?.session ?? null) : null}
-      totals={activeId ? (selected.data?.totals ?? null) : null}
+      session={selectedTillId ? (selected.data?.session ?? null) : null}
+      totals={selectedTillId ? (selected.data?.totals ?? null) : null}
+      isSessionLoading={selectedTillId ? selected.isLoading : false}
+      sessionError={selectedTillId && selected.error ? (selected.error as Error).message : null}
       tills={tills.data ?? []}
       tillsError={tills.error ? (tills.error as Error).message : null}
       isTillsLoading={tills.isLoading}
-      selectedTillId={activeId}
-      onSelectTill={setSelectedTillId}
+      selectedTillId={selectedTillId}
+      onSelectTill={(id) => push(`/till?till=${id}`)}
+      onBackToList={() => push('/till')}
+      bookCurrency={bookCurrency}
+      availableCurrencies={availableCurrencies}
+      selectedCurrency={activeCurrency}
+      onSelectCurrency={setSelectedCurrency}
       isLoading={current.isLoading}
       error={current.error ? (current.error as Error).message : null}
       isBusy={
@@ -207,11 +254,12 @@ export const TillContainer = memo(function TillContainer() {
       onRenameTill={handleRenameTill}
       onRemoveTill={handleRemoveTill}
       actionError={actionError}
+      closeNotice={closeNotice}
       onRefresh={handleRefresh}
       onOpen={handleOpen}
-      onAddCash={handleAddCash}
+      onRecordMovement={handleRecordMovement}
       ledger={ledger.data?.entries ?? []}
-      isLedgerLoading={!!activeId && ledger.isLoading}
+      isLedgerLoading={!!selectedTillId && ledger.isLoading}
       ledgerError={ledger.error ? (ledger.error as Error).message : null}
       dailyCashFlow={cashFlow.data ?? []}
       cashFlowDays={cashFlowDays}

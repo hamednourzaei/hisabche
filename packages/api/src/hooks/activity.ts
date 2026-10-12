@@ -204,20 +204,49 @@ export function useActivityFilterCounts() {
 }
 
 // ─── Mark As Read ────────────────────────────────────────────────────────
+/**
+ * Mark events as read. The caller sends only ids that are unread for this
+ * person, so the two badges can drop by that many at once; a refused request
+ * puts them back, and either way the server's own figures replace the guess.
+ */
 export function useMarkAsRead() {
   const queryClient = useQueryClient()
 
-  return useMutation({
+  type Snapshot = { unread: number | undefined; counts: ActivityFilterCounts | undefined }
+
+  return useMutation<void, Error, string[], Snapshot>({
     mutationFn: async (ids: string[]) => {
       if (!ids || ids.length === 0) return
       await apiClient.patch('/v1/activities/mark-read', { ids })
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: activityKeys.all })
-      queryClient.invalidateQueries({ queryKey: activityKeys.unread() })
+    onMutate: async (ids) => {
+      await queryClient.cancelQueries({ queryKey: activityKeys.unread() })
+      const unread = queryClient.getQueryData<number>(activityKeys.unread())
+      const counts = queryClient.getQueryData<ActivityFilterCounts>(activityKeys.counts())
+      const less = (value: number) => Math.max(0, value - ids.length)
+      if (typeof unread === 'number') {
+        queryClient.setQueryData<number>(activityKeys.unread(), less(unread))
+      }
+      if (counts) {
+        queryClient.setQueryData<ActivityFilterCounts>(activityKeys.counts(), {
+          ...counts,
+          unread: less(counts.unread),
+        })
+      }
+      return { unread, counts }
     },
-    onError: (error) => {
-      console.error('Failed to mark activity as read:', error)
+    onError: (_error, _ids, snapshot) => {
+      if (!snapshot) return
+      if (typeof snapshot.unread === 'number') {
+        queryClient.setQueryData<number>(activityKeys.unread(), snapshot.unread)
+      }
+      if (snapshot.counts) {
+        queryClient.setQueryData<ActivityFilterCounts>(activityKeys.counts(), snapshot.counts)
+      }
+    },
+    onSettled: () => {
+      // `all` is the prefix of the list, the unread count and the tab counts.
+      queryClient.invalidateQueries({ queryKey: activityKeys.all })
     },
   })
 }
@@ -226,9 +255,15 @@ export function useMarkAsRead() {
 export function useMarkAllAsRead() {
   const queryClient = useQueryClient()
 
-  return useMutation({
-    mutationFn: async () => {
-      await apiClient.patch('/v1/activities/mark-all-read')
+  return useMutation<void, Error, string | undefined | void>({
+    mutationFn: async (filter?: string | undefined | void) => {
+      await apiClient.patch(
+        '/v1/activities/mark-all-read',
+        {},
+        {
+          params: filter && filter !== 'all' ? { filter } : undefined,
+        },
+      )
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: activityKeys.all })

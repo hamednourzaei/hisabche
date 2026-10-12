@@ -38,7 +38,12 @@ import { SelectField as SharedSelectField } from '../select-field'
 import React from 'react'
 
 import { cn } from '../../../lib/utils'
-import { formatSelectedMoney, formatSelectedAmount } from '../../../lib/money-display'
+import {
+  formatSelectedMoney,
+  formatSelectedAmount,
+  documentIntlLocale,
+} from '../../../lib/money-display'
+import { formatMoney, FRACTION_DIGITS, type KnownCurrency } from '@hisabche/formatting'
 import { Badge as UiBadge } from '../badge'
 import { Button } from '../button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../card'
@@ -59,6 +64,7 @@ export const Money = React.memo(function Money({
   signed = false,
   tone,
   className,
+  currency,
 }: {
   minor: number
   /** Show an explicit + on positives, where the sign IS the meaning. */
@@ -66,8 +72,14 @@ export const Money = React.memo(function Money({
   /** 'auto' colours by sign; otherwise say it explicitly. */
   tone?: 'auto' | 'good' | 'bad' | 'muted' | undefined
   className?: string
+  currency?: string | undefined
 }) {
   const resolved = tone === 'auto' ? (minor > 0 ? 'good' : minor < 0 ? 'bad' : 'muted') : tone
+
+  const digits =
+    currency && currency in FRACTION_DIGITS ? FRACTION_DIGITS[currency as KnownCurrency] : 2
+  const factor = 10 ** digits
+  const major = minor / factor
 
   return (
     <span
@@ -81,7 +93,9 @@ export const Money = React.memo(function Money({
       )}
     >
       {signed && minor > 0 ? '+' : ''}
-      {formatSelectedMoney(minor / 100)}
+      {currency && currency in FRACTION_DIGITS
+        ? formatMoney(major, currency as KnownCurrency, documentIntlLocale())
+        : formatSelectedMoney(major)}
     </span>
   )
 })
@@ -273,12 +287,18 @@ export function MinorInput({
   onChange,
   label,
   disabled,
+  currency,
 }: {
   value: number
   onChange: (minor: number) => void
   label: string
   disabled?: boolean
+  currency?: string | undefined
 }) {
+  const digits =
+    currency && currency in FRACTION_DIGITS ? FRACTION_DIGITS[currency as KnownCurrency] : 2
+  const factor = 10 ** digits
+
   return (
     <Input
       label={label}
@@ -287,10 +307,10 @@ export function MinorInput({
       dir="ltr"
       disabled={disabled}
       className="tabular-nums"
-      value={Number.isFinite(value) ? value / 100 : 0}
+      value={Number.isFinite(value) ? value / factor : 0}
       onChange={(event) => {
         const major = Number(event.target.value)
-        onChange(Number.isFinite(major) ? Math.round(major * 100) : 0)
+        onChange(Number.isFinite(major) ? Math.round(major * factor) : 0)
       }}
     />
   )
@@ -396,6 +416,7 @@ export function Field({
   disabled,
   type = 'text',
   dir,
+  name,
 }: {
   label: string
   value: string
@@ -403,10 +424,12 @@ export function Field({
   disabled?: boolean
   type?: string
   dir?: 'ltr' | 'rtl'
+  name?: string
 }) {
   return (
     <Input
       label={label}
+      name={name}
       type={type}
       dir={dir}
       disabled={disabled}

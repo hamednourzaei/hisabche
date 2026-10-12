@@ -68,7 +68,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
           type: query.type === 'cash' ? 'cash' : query.type === 'credit' ? 'credit' : undefined,
           hasBalance:
             query.hasBalance === 'true' ? true : query.hasBalance === 'false' ? false : undefined,
-          // ❌ حذف: phone و email (در CustomerFilters وجود ندارند)
+          role: query.role === 'buyer' ? 'buyer' : query.role === 'seller' ? 'seller' : undefined,
         })
 
         return reply.send(result)
@@ -124,6 +124,13 @@ export async function customerRoutes(fastify: FastifyInstance) {
         if (err instanceof IdempotencyUnavailableError) {
           return reply.code(503).send({ error: err.message, code: err.code })
         }
+        if (err instanceof BaseError && err.statusCode < 500) {
+          return reply.code(err.statusCode).send({
+            error: err.message,
+            code: err.message,
+            message: err.message,
+          })
+        }
         fastify.log.error(err)
         return reply.code(500).send({
           error: 'Failed to create customer',
@@ -165,7 +172,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
         if (err instanceof BaseError && err.statusCode < 500) {
           return reply
             .code(err.statusCode)
-            .send({ error: err.name, code: err.message, message: err.message })
+            .send({ error: err.message, code: err.message, message: err.message })
         }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to update customer' })

@@ -99,6 +99,7 @@ import { savedViewsRoutes } from './routes/saved-views.routes'
 import { analysisRoutes } from './routes/analysis.routes'
 import { installmentRoutes } from './routes/installments.routes'
 import { attendanceRoutes } from './routes/attendance.routes'
+import { attendanceLinkRoutes } from './routes/attendance-link.routes'
 import { promotionRoutes } from './routes/promotions.routes'
 import { priceListRoutes } from './routes/price-lists.routes'
 import { lateFeeRoutes } from './routes/late-fees.routes'
@@ -692,7 +693,14 @@ export async function buildServer(): Promise<typeof server> {
         typeof context.after === 'number'
           ? context.after
           : parseInt(String(context.after), 10) || 60000
+      // ⚠️ `statusCode` IS WHAT MAKES THIS A 429. The plugin throws whatever
+      // this returns; without it the error handler below read «no status» as
+      // 500, so every rate-limited request on the server answered «Internal
+      // Server Error» instead of «slow down».
       return {
+        statusCode: 429,
+        code: 'RATE_LIMITED',
+        message: 'Too many requests',
         success: false,
         error: 'Too many requests',
         retryAfter: Math.ceil(afterMs / 1000),
@@ -760,6 +768,8 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(analysisRoutes)
   await server.register(installmentRoutes)
   await server.register(attendanceRoutes)
+  // An employee's personal attendance link, and the page behind it (public, by token).
+  await server.register(attendanceLinkRoutes)
   await server.register(promotionRoutes)
   await server.register(priceListRoutes)
   await server.register(lateFeeRoutes)

@@ -24,6 +24,8 @@ import {
 import { Badge as UiBadge } from '../badge'
 import { Button } from '../button'
 import { Card, CardContent, CardHeader, CardTitle } from '../card'
+import { formatCompactCount } from '@hisabche/formatting'
+import { useRouteLang } from '../../../hooks/use-locale-push'
 
 const URGENCY_VARIANT: Record<WorkItemUrgency, 'destructive' | 'warning' | 'outline'> = {
   blocking: 'destructive',
@@ -45,6 +47,7 @@ export const WorkQueuePanel = memo(function WorkQueuePanel({
   capabilities,
   onNavigate,
 }: WorkQueuePanelProps) {
+  const lang = useRouteLang()
   const items = buildWorkQueue(counts, capabilities)
   if (!hasWork(items)) return null
 
@@ -59,8 +62,13 @@ export const WorkQueuePanel = memo(function WorkQueuePanel({
             <li key={item.kind} className="flex flex-wrap items-center justify-between gap-3">
               <span className="flex items-center gap-2">
                 <UiBadge variant={URGENCY_VARIANT[item.urgency]}>
-                  <span className="tabular-nums" dir="ltr">
-                    {item.count}
+                  <span
+                    className="tabular-nums"
+                    dir="ltr"
+                    title={String(item.count)}
+                    aria-label={String(item.count)}
+                  >
+                    {formatCompactCount(item.count, lang)}
                   </span>
                 </UiBadge>
                 <span className="text-sm text-[hsl(var(--fg-secondary))]">{t(item.labelKey)}</span>
