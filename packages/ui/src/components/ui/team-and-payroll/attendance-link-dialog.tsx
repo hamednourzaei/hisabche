@@ -17,6 +17,10 @@
 // says where to set it instead of offering a button that would be refused.
 // ⚠️ Copy goes through `copyText`, which says whether the text really reached
 // the clipboard.
+// ⚠️ «CONFIRMED BY THE PHONE'S LOCK» is the phone's own fingerprint, face or
+// PIN. Nothing of a body reaches Hisabche — only a public key. What this dialog
+// shows about the registered phone is WHEN, never the key; forgetting it is the
+// only way another phone can be registered.
 // ============================================
 
 import { useEffect, useState } from 'react'
@@ -27,6 +31,7 @@ import {
   apiErrorMessage,
   useAttendanceLink,
   useCreateAttendanceLink,
+  useForgetAttendancePhone,
   useRevokeAttendanceLink,
 } from '@hisabche/api'
 import { localizePath } from '@hisabche/ui-contract'
@@ -74,10 +79,12 @@ export function AttendanceLinkDialog({
   const link = useAttendanceLink(employee?.id ?? null)
   const create = useCreateAttendanceLink()
   const revoke = useRevokeAttendanceLink()
+  const forgetPhone = useForgetAttendancePhone()
 
   const [expiresOn, setExpiresOn] = useState('')
   const [daysBack, setDaysBack] = useState('0')
   const [autoApply, setAutoApply] = useState(false)
+  const [requireUnlock, setRequireUnlock] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
 
   // The public page lives on the website; a packaged desktop app runs from
@@ -102,6 +109,7 @@ export function AttendanceLinkDialog({
     setExpiresOn('')
     setDaysBack('0')
     setAutoApply(false)
+    setRequireUnlock(false)
     setFailure(null)
   }, [employeeId])
 
@@ -113,6 +121,7 @@ export function AttendanceLinkDialog({
 
   const status = (link.error as { response?: { status?: number } } | null)?.response?.status
   const current = link.data?.link ?? null
+  const phone = link.data?.phone ?? null
   const workplace = link.data?.workplace ?? null
   const zone = workplace?.timeZone ?? null
   const live = current?.state === 'active'
@@ -129,6 +138,7 @@ export function AttendanceLinkDialog({
         expiresOn: expiresOn || null,
         daysBack: Number(daysBack),
         autoApply,
+        requireUnlock,
       },
       { onError: (error) => setFailure(explain(error)) },
     )
@@ -208,6 +218,20 @@ export function AttendanceLinkDialog({
                     <dt className="text-[hsl(var(--fg-tertiary))]">{t('link.autoApply')}</dt>
                     <dd>{current.autoApply ? t('link.autoApplyOn') : t('link.autoApplyOff')}</dd>
                   </div>
+                  <div>
+                    <dt className="text-[hsl(var(--fg-tertiary))]">{t('link.requireUnlock')}</dt>
+                    <dd data-link-unlock={current.requireUnlock ? 'on' : 'off'}>
+                      {current.requireUnlock ? t('link.unlockOn') : t('link.unlockOff')}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[hsl(var(--fg-tertiary))]">{t('link.phoneLabel')}</dt>
+                    <dd data-link-phone={phone ? 'registered' : 'none'}>
+                      {phone
+                        ? t('link.phoneRegistered', { date: formatDay(phone.registeredAt) })
+                        : t('link.phoneNone')}
+                    </dd>
+                  </div>
                 </dl>
 
                 {live ? (
@@ -259,6 +283,29 @@ export function AttendanceLinkDialog({
               <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('link.none')}</p>
             )}
 
+            {phone && employee ? (
+              <section
+                data-phone-forget
+                className="space-y-2 rounded-xl border border-[hsl(var(--border-default))] p-3"
+              >
+                <p className={hint}>{t('link.phoneForgetHelp')}</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={forgetPhone.isPending}
+                  onClick={() => {
+                    setFailure(null)
+                    forgetPhone.mutate(employee.id, {
+                      onSuccess: () => toast.success(t('link.phoneForgotten')),
+                      onError: (error) => setFailure(explain(error)),
+                    })
+                  }}
+                >
+                  {t('link.phoneForget')}
+                </Button>
+              </section>
+            ) : null}
+
             <section className="space-y-3">
               <div className={field}>
                 <span className={label}>{t('link.expiresOn')}</span>
@@ -300,6 +347,21 @@ export function AttendanceLinkDialog({
                     {t('link.autoApply')}
                   </span>
                   <span className={`block ${hint}`}>{t('link.autoApplyHelp')}</span>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3">
+                <Switch
+                  name="requireUnlock"
+                  checked={requireUnlock}
+                  onCheckedChange={setRequireUnlock}
+                  aria-label={t('link.requireUnlock')}
+                />
+                <span className="space-y-1">
+                  <span className="block text-sm text-[hsl(var(--fg-primary))]">
+                    {t('link.requireUnlock')}
+                  </span>
+                  <span className={`block ${hint}`}>{t('link.requireUnlockHelp')}</span>
                 </span>
               </label>
 

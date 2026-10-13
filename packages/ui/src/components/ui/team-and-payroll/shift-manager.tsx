@@ -93,6 +93,14 @@ export function ShiftManager() {
                       <span className="tabular-nums text-[hsl(var(--fg-secondary))]" dir="ltr">
                         {shift.startsAt}–{shift.endsAt}
                       </span>
+                      {shift.endsAt < shift.startsAt ? (
+                        <span
+                          data-night-shift
+                          className="rounded-full bg-[hsl(var(--surface-elevated))] px-2 py-0.5 text-xs text-[hsl(var(--fg-secondary))]"
+                        >
+                          {t('endsNextDay')}
+                        </span>
+                      ) : null}
                       {!shift.isActive ? (
                         <span className="rounded-full bg-[hsl(var(--surface-elevated))] px-2 py-0.5 text-xs text-[hsl(var(--fg-secondary))]">
                           {t('retired')}
@@ -161,9 +169,23 @@ export function ShiftManager() {
                 className={cn(field, 'w-24 tabular-nums')}
               />
             </label>
+            {startsAt && endsAt && endsAt < startsAt ? (
+              <p
+                data-night-shift-note
+                className="basis-full text-xs text-[hsl(var(--fg-secondary))]"
+              >
+                {t('nightNote')}
+              </p>
+            ) : null}
             <Button
               size="sm"
-              disabled={create.isPending || name.trim().length === 0 || !startsAt || !endsAt}
+              disabled={
+                create.isPending ||
+                name.trim().length === 0 ||
+                !startsAt ||
+                !endsAt ||
+                startsAt === endsAt
+              }
               onClick={() =>
                 create.mutate(
                   { name, startsAt, endsAt, breakMinutes: Number(breakMinutes) || 0 },

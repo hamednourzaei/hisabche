@@ -8348,7 +8348,8 @@
       "ATTENDANCE_SELF_NOT_CONFIGURED": "This feature is not enabled on the database yet.",
       "ATTENDANCE_LINK_EXPIRY_IN_PAST": "The end date cannot be in the past.",
       "ATTENDANCE_NOT_FOUND": "Not found. Refresh the page.",
-      "ATTENDANCE_TIME_ZONE_NOT_SET": "The business has no time zone. Choose one in Settings first."
+      "ATTENDANCE_TIME_ZONE_NOT_SET": "The business has no time zone. Choose one in Settings first.",
+      "ATTENDANCE_NIGHT_NOT_CONFIGURED": "Night shifts are not switched on for this account yet."
     },
     "shiftPicker": "Shift for quick recording",
     "shiftNone": "No shift",
@@ -8399,7 +8400,17 @@
       "zoneFromBranch": "(from this employee's branch)",
       "zoneFromBusiness": "(the business's time zone)",
       "zoneMissing": "The business has no time zone yet; without one there is no saying which day «today» is for the employee.",
-      "zoneSettings": "Set it in Settings"
+      "zoneSettings": "Set it in Settings",
+      "requireUnlock": "Confirm with the phone’s lock",
+      "requireUnlockHelp": "Every submission must be confirmed by that phone’s own lock: fingerprint, face or the phone’s PIN, whichever the phone has. The fingerprint and face never leave the phone; Hisabche keeps only a public key. The first phone registered through this link counts as this employee’s phone.",
+      "unlockOn": "Required",
+      "unlockOff": "Not required",
+      "phoneLabel": "Registered phone",
+      "phoneRegistered": "Registered on {date}",
+      "phoneNone": "Not registered yet",
+      "phoneForget": "Forget this phone",
+      "phoneForgetHelp": "If the employee changed phones or the wrong phone was registered, forget it so a new one can be registered through the same link. The old phone stops confirming anything.",
+      "phoneForgotten": "Phone forgotten. The employee can register a new one."
     },
     "submissions": {
       "pendingCount": "{count} waiting for approval",
@@ -8415,7 +8426,9 @@
       "reject": "Reject",
       "reason": "Reason for rejecting",
       "reasonPlaceholder": "A reason is required to reject",
-      "empty": "Nothing is waiting."
+      "empty": "Nothing is waiting.",
+      "unlocked": "Confirmed with the employee’s phone lock",
+      "notUnlocked": "Not confirmed with a phone lock"
     },
     "devices": {
       "title": "Attendance devices",
@@ -8495,10 +8508,30 @@
         "ATTENDANCE_DEVICE_NOT_FOUND": "Not found. Refresh the page.",
         "ATTENDANCE_DEVICE_USER_INVALID": "Enter the number on the device.",
         "ATTENDANCE_DEVICE_USER_TAKEN": "This number was just connected to somebody else.",
-        "TIME_ZONE_INVALID": "This time zone was not recognised."
+        "TIME_ZONE_INVALID": "This time zone was not recognised.",
+        "ATTENDANCE_DEVICE_NOTHING_HELD": "Nothing is left to accept; somebody may have just decided it."
+      },
+      "heldTitle": "Readings kept back",
+      "heldHelp": "The device sent these for a day somebody had already recorded, so nothing was changed. If the device is right, accept it for that day; the day’s current record is replaced by what the device saw.",
+      "heldEmpty": "Nothing has been kept back.",
+      "heldLoadFailed": "The kept-back readings could not be read.",
+      "heldColEmployee": "Employee and day",
+      "heldColDevice": "What the device saw",
+      "heldColRecord": "What the sheet says",
+      "heldAccept": "Use the device’s reading",
+      "heldAccepted": "The day was replaced with the device’s reading.",
+      "heldRecordGone": "No record on the sheet",
+      "heldNextDay": "next day",
+      "heldDeviceGone": "Unknown device",
+      "heldDirection": {
+        "in": "in",
+        "out": "out"
       }
     },
-    "fromDevice": "Recorded by a device"
+    "fromDevice": "Recorded by a device",
+    "nightColumn": "Night shift",
+    "endsNextDay": "left the next day",
+    "saveAsNight": "Save as leaving the next day"
   },
   "promotions": {
     "title": "Promotions",
@@ -8608,7 +8641,9 @@
       "SHIFT_BREAK_LONGER_THAN_SHIFT": "The break must be shorter than the shift itself.",
       "SHIFT_NAME_TAKEN": "You already have an active shift with this name.",
       "SHIFTS_MIGRATION_PENDING": "Shifts are not enabled on the database yet. The work-shifts-01 script has to be run."
-    }
+    },
+    "endsNextDay": "until the next day",
+    "nightNote": "The end is earlier than the start; this shift runs into the next day."
   },
   "financing": {
     "notLedger": "These two lists are kept beside the books and post no journal entry. Interest is a calculation, and the value of a holding is the figure you enter yourself.",
@@ -9578,7 +9613,7 @@
     "submit": "Record",
     "sending": "Sending…",
     "zoneNote": "Times are in {zone}.",
-    "nightNote": "A shift that crosses midnight is recorded by the manager.",
+    "nightNote": "If your shift ran past midnight, enter the time you left and switch on “I left the next day”. If you are still at work, leave the check-out empty.",
     "autoApplyOn": "If nothing is recorded for that day yet, it is recorded at once; otherwise it waits for your manager.",
     "autoApplyOff": "What you send goes onto the sheet after your manager approves it.",
     "result": {
@@ -9607,7 +9642,27 @@
       "ATTENDANCE_CHECK_IN_REQUIRED": "Enter the check-in time.",
       "ATTENDANCE_TIME_INVALID": "The time is not valid.",
       "ATTENDANCE_CHECK_OUT_BEFORE_CHECK_IN": "Check-out must be after check-in.",
-      "ATTENDANCE_NOTE_TOO_LONG": "The note is longer than 500 characters."
+      "ATTENDANCE_NOTE_TOO_LONG": "The note is longer than 500 characters.",
+      "ATTENDANCE_PHONE_NOT_REGISTERED": "Register this phone first.",
+      "ATTENDANCE_PHONE_ALREADY_REGISTERED": "Another phone is already registered for you. Ask your manager to forget it so you can register this one.",
+      "ATTENDANCE_UNLOCK_REQUIRED": "This link accepts nothing without the phone’s lock.",
+      "ATTENDANCE_UNLOCK_FAILED": "The phone’s confirmation was not accepted. Try again with the phone you registered."
+    },
+    "endsNextDay": "I left the next day (night shift)",
+    "nextDay": "next day",
+    "unlock": {
+      "title": "This link works with your phone’s lock",
+      "enrollHelp": "Register this phone once. After that, each time you send something the phone asks for its own fingerprint, face or PIN.",
+      "enroll": "Register this phone",
+      "enrolling": "Waiting for the phone…",
+      "enrolled": "This phone is registered.",
+      "enrollUnknown": "No answer came back. If the phone was registered, it shows here.",
+      "registered": "Your phone is registered.",
+      "confirmHint": "When you send, the phone asks for its own fingerprint, face or PIN.",
+      "unsupported": "This browser cannot confirm with the phone’s lock. Open the link in the phone’s own browser (Chrome or Safari) and make sure the phone has a screen lock.",
+      "cancelled": "It was not confirmed. Please try again.",
+      "privacy": "Your fingerprint and face never leave the phone and are not sent to Hisabche.",
+      "mark": "Confirmed with the phone’s lock"
     }
   }
 }

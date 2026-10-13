@@ -55,6 +55,7 @@ export const ATTENDANCE_ERROR_CODES = [
   'ATTENDANCE_TIME_INVALID',
   'ATTENDANCE_CHECK_OUT_WITHOUT_CHECK_IN',
   'ATTENDANCE_CHECK_OUT_BEFORE_CHECK_IN',
+  'ATTENDANCE_NIGHT_NOT_CONFIGURED',
 ] as const
 export const ATTENDANCE_STATUSES = ['present', 'absent', 'leave', 'holiday', 'open'] as const
 /** The filter value for «nobody recorded this person yet». Never a status. */
@@ -108,6 +109,8 @@ export function AttendanceSheet() {
     status: AttendanceMarkStatus,
     checkIn: string | null,
     checkOut: string | null,
+    /** The exit is on the day after. Only ever passed from a control that says so. */
+    endsNextDay = false,
   ) => {
     setFailedFor(null)
     mark.mutate(
@@ -117,6 +120,7 @@ export function AttendanceSheet() {
         status,
         checkIn,
         checkOut,
+        endsNextDay,
         note: row.record?.note ?? null,
       },
       {
@@ -152,6 +156,10 @@ export function AttendanceSheet() {
     }
   const setTime = (row: AttendanceSheetRow, field: 'checkIn' | 'checkOut', value: string) =>
     setDrafts((current) => ({ ...current, [draftKey(row)]: { ...timesOf(row), [field]: value } }))
+  // `HH:MM` compares as text. An exit earlier than the arrival is either a
+  // typing error or a night — and only a person can say which.
+  const endsEarlier = (checkIn: string, checkOut: string) =>
+    checkIn !== '' && checkOut !== '' && checkOut < checkIn
   const atWork = (row: AttendanceSheetRow) =>
     !row.record || row.record.status === 'present' || row.record.status === 'open'
   const busyFor = (row: AttendanceSheetRow) =>
@@ -261,6 +269,21 @@ export function AttendanceSheet() {
         ),
     },
     {
+      id: 'night',
+      labelKey: 'attendance.nightColumn',
+      labelFallback: t('nightColumn'),
+      showFrom: 'md',
+      sortValue: (row) => (row.record?.endsNextDay ? 1 : 0),
+      render: (row) =>
+        row.record?.endsNextDay ? (
+          <span data-ends-next-day className="text-xs text-[hsl(var(--fg-secondary))]">
+            {t('endsNextDay')}
+          </span>
+        ) : (
+          ''
+        ),
+    },
+    {
       id: 'hours',
       labelKey: 'attendance.hours',
       labelFallback: t('hours'),
@@ -311,7 +334,16 @@ export function AttendanceSheet() {
                       size="sm"
                       variant="outline"
                       disabled={busy}
-                      onClick={() => submit(row, 'present', shift.startsAt, shift.endsAt)}
+                      onClick={() =>
+                        submit(
+                          row,
+                          'present',
+                          shift.startsAt,
+                          shift.endsAt,
+                          // A shift defined across midnight is a night by definition.
+                          endsEarlier(shift.startsAt, shift.endsAt),
+                        )
+                      }
                     >
                       {t('byShift')}
                     </Button>
@@ -336,14 +368,28 @@ export function AttendanceSheet() {
                   ) : null}
                   {checkIn &&
                   (checkIn !== (record?.checkIn ?? '') || checkOut !== (record?.checkOut ?? '')) ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => submit(row, 'present', checkIn, checkOut || null)}
-                    >
-                      {t('saveTimes')}
-                    </Button>
+                    endsEarlier(checkIn, checkOut) ? (
+                      // Saved as typed it would be refused as a mistake. The
+                      // button names the other reading, and a person presses it.
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        data-save-night
+                        onClick={() => submit(row, 'present', checkIn, checkOut, true)}
+                      >
+                        {t('saveAsNight')}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => submit(row, 'present', checkIn, checkOut || null)}
+                      >
+                        {t('saveTimes')}
+                      </Button>
+                    )
                   ) : null}
                 </>
               ) : (

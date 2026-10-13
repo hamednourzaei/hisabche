@@ -215,3 +215,69 @@ describe.each(['fa', 'af', 'en'])('messages in %s', (lang) => {
     }
   })
 })
+
+// ─── readings kept back (attendance-02) ─────────────────────────────────────
+
+describe('readings kept back', () => {
+  const HELD = 'packages/ui/src/components/ui/team-and-payroll/attendance-held-dialog.tsx'
+  const held = code(HELD)
+
+  it('the count on the panel opens the list — it is no longer only a number', () => {
+    expect(panel).toContain('data-device-held onClick={() => setReviewingHeld(true)}')
+    expect(panel).toContain('<AttendanceHeldDialog open={reviewingHeld}')
+  })
+
+  it('open = fetched, never from a cache; a failed read is not «nothing kept back»', () => {
+    expect(held).toContain('const held = useHeldDeviceDays(open)')
+    const hooks = hook.slice(hook.indexOf('export function useHeldDeviceDays'))
+    const body = hooks.slice(0, hooks.indexOf('export function useAcceptHeldDeviceDay'))
+    expect(body).toContain('enabled: ready && enabled')
+    expect(body).toContain('staleTime: 0')
+    expect(body).toContain('gcTime: 0')
+    expect(body).toContain('meta: { persist: false }')
+    const failed = held.indexOf(') : held.error || !held.data ? (')
+    expect(failed).toBeGreaterThan(-1)
+    expect(held.indexOf("{t('heldEmpty')}")).toBeGreaterThan(failed)
+  })
+
+  it('⚠️ shows both sides and decides nothing: no clock, no day arithmetic', () => {
+    expect(held).toContain('data-held-readings')
+    expect(held).toContain('data-held-record')
+    expect(held).not.toContain('new Date(')
+    expect(held).not.toContain('Date.now(')
+    // «Next day» is the word of the server, per reading and per record.
+    expect(held).toContain('{reading.nextDay ? (')
+    expect(held).toContain('{row.record.endsNextDay ? (')
+  })
+
+  it('⚠️ accepting is one day, one button, and is refreshed whether it worked or not', () => {
+    expect(held).toContain('{ employeeId: row.employeeId, day: row.day },')
+    expect(held.split('accept.mutate(').length - 1).toBe(1)
+    const accept = hook.slice(hook.indexOf('export function useAcceptHeldDeviceDay'))
+    expect(accept).toContain('onSettled: () => {')
+    expect(accept).toContain('queryClient.invalidateQueries({ queryKey: attendanceKeys.all })')
+    expect(held).toContain('<DataTable tableId="attendance-held"')
+    expect(held).not.toContain('<table')
+  })
+
+  it.each(['fa', 'af', 'en'])(
+    'every key of the dialog exists in %s, and names no brand',
+    (lang) => {
+      const all = messages(lang)
+      const keys = [
+        ...[...held.matchAll(/\bt\(\s*'([A-Za-z0-9_.]+)'/g)].map(
+          (match) => `attendance.devices.${match[1]}`,
+        ),
+        ...['in', 'out'].map((direction) => `attendance.devices.heldDirection.${direction}`),
+        'attendance.devices.errors.ATTENDANCE_DEVICE_NOTHING_HELD',
+        'attendance.devices.heldColEmployee',
+        'attendance.devices.heldColDevice',
+        'attendance.devices.heldColRecord',
+      ]
+      expect(keys.length).toBeGreaterThan(14)
+      expect([...new Set(keys)].filter((key) => typeof at(all, key) !== 'string')).toEqual([])
+      const lower = held.toLowerCase()
+      for (const brand of BRANDS) expect(lower, brand).not.toContain(brand)
+    },
+  )
+})

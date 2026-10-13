@@ -200,7 +200,8 @@ describe('the public page', () => {
   })
 
   it('a dead link has one sentence, whatever killed it', () => {
-    expect(page.split("setLoad({ kind: 'gone' })").length - 1).toBe(2)
+    // Reading, sending and registering the phone: each can meet a dead link.
+    expect(page.split("setLoad({ kind: 'gone' })").length - 1).toBe(3)
     expect(page).toContain("{t('gone')}")
   })
 
@@ -374,6 +375,180 @@ describe.each(['fa', 'af', 'en'])('messages in %s', (lang) => {
       ['attendanceSelf.rejectedBecause', '{reason}'],
     ] as const) {
       expect(String(at(all, key)), key).toContain(placeholder)
+    }
+  })
+})
+
+// ─── nights, and the lock of the phone (attendance-02) ──────────────────────
+
+describe('the lock of the phone', () => {
+  const page = code(SELF)
+  const lib = code('packages/ui/src/lib/phone-unlock.ts')
+  const dialog = code(LINK)
+
+  it('⚠️ nothing of a body is read or sent: no camera, no image, no template', () => {
+    for (const source of [page, lib]) {
+      const lower = source.toLowerCase()
+      for (const word of ['getusermedia', 'mediadevices', 'canvas', 'facedetector', 'template']) {
+        expect(lower, word).not.toContain(word)
+      }
+    }
+    // What leaves the phone when it registers is this closed list.
+    const enrollment = lib.slice(lib.indexOf('export interface PhoneEnrollment {'))
+    expect(enrollment.slice(0, enrollment.indexOf('}'))).toBe(
+      'export interface PhoneEnrollment { credentialId: string publicKey: string algorithm: number clientDataJSON: string authenticatorData: string clientRequestId: string ',
+    )
+  })
+
+  it('the phone itself must verify its owner — a tap or another device is not asked for', () => {
+    expect(lib).toContain("authenticatorAttachment: 'platform'")
+    expect(lib.split("userVerification: 'required'").length - 1).toBe(2)
+    expect(lib).toContain("attestation: 'none'")
+    // The key belongs to this page's host, which is what the server checks.
+    expect(lib).toContain('rp: { id: window.location.hostname, name: input.appName }')
+    expect(lib).toContain('rpId: window.location.hostname')
+  })
+
+  it('⚠️ the signature covers the very form that is sent', () => {
+    // One object: signed, then spread into the body. Not two that could differ.
+    expect(page).toContain(
+      'proof = await signWithPhone({ token, credentialId: unlock.credentialId, fields })',
+    )
+    expect(page).toContain(
+      'body: JSON.stringify({ ...fields, note: note.trim() || null, unlock: proof })',
+    )
+    // The text both sides hash is built in one shared place.
+    expect(lib).toContain('unlockSubmissionMessage(input.token, input.fields)')
+    expect(lib).toContain('unlockEnrollmentMessage(input.token, input.clientRequestId)')
+    expect(code('backend/src/services/payroll/attendance-link.service.ts')).toContain(
+      'unlockSubmissionMessage(token, {',
+    )
+  })
+
+  it('reads the device only after mount and in handlers', () => {
+    // The page asks «can this phone do it» inside an effect…
+    expect(page).toContain('void canUsePhoneUnlock().then((answer) => {')
+    // …and never touches the WebAuthn API itself.
+    expect(page).not.toContain('navigator.credentials')
+    expect(page).not.toContain('PublicKeyCredential')
+  })
+
+  it('⚠️ required and not registered: the form cannot be sent, and the page says what to do', () => {
+    expect(page).toContain(
+      'disabled={sending || !day || (unlock.required && !unlock.credentialId)}',
+    )
+    expect(page).toContain('data-phone-state="none"')
+    expect(page).toContain('data-phone-state="unsupported"')
+    expect(page).toContain('data-phone-state="registered"')
+    // An older server that says nothing about a lock requires none.
+    expect(page).toContain('const unlock = view.unlock ?? { required: false, credentialId: null }')
+  })
+
+  it('a closed prompt is not a failed submission: nothing left the phone', () => {
+    expect(page).toContain("if (proof === 'unsupported' || proof === 'cancelled') {")
+    expect(page).toContain("setOutcome({ kind: 'refused', message: t(`unlock.${proof}`) })")
+  })
+
+  it('the manager chooses it per link, sees WHEN a phone was registered, and can forget it', () => {
+    expect(dialog).toContain('name="requireUnlock"')
+    expect(dialog).toContain('requireUnlock, }')
+    expect(dialog).toContain("t('link.phoneRegistered', { date: formatDay(phone.registeredAt) })")
+    expect(dialog).toContain('forgetPhone.mutate(employee.id, {')
+    // The hook's type has no key to show.
+    const hook = code(HOOK)
+    expect(hook).toContain('phone: { registeredAt: string; lastUsedAt: string | null } | null')
+    expect(hook).not.toContain('publicKey')
+    expect(hook).not.toContain('credentialId')
+  })
+})
+
+describe('a night is said by a person', () => {
+  const page = code(SELF)
+  const sheet = code(SHEET)
+
+  it('⚠️ the page sends the mark only for an exit that was typed, from a switch that says so', () => {
+    expect(page).toContain("const night = present && checkOut !== '' && endsNextDay")
+    expect(page).toContain('endsNextDay: night,')
+    expect(page).toContain('name="endsNextDay"')
+    expect(page).toContain("{checkOut !== '' ? (")
+  })
+
+  it('⚠️ the sheet never decides a night from the times: a button named for it does', () => {
+    // The default of the function is «not a night»…
+    expect(sheet).toContain('endsNextDay = false, ) => {')
+    // …and `true` is passed in exactly one place, behind its own label.
+    expect(sheet.split(', true)').length - 1).toBe(1)
+    expect(sheet).toContain("onClick={() => submit(row, 'present', checkIn, checkOut, true)}")
+    expect(sheet).toContain("{t('saveAsNight')}")
+    // A shift defined across midnight is the other source — the definition says it.
+    expect(sheet).toContain('endsEarlier(shift.startsAt, shift.endsAt),')
+    expect(sheet).toContain('data-ends-next-day')
+  })
+
+  it('a night shift is labelled where shifts are defined', () => {
+    const shifts = code('packages/ui/src/components/ui/team-and-payroll/shift-manager.tsx')
+    expect(shifts).toContain('data-night-shift')
+    expect(shifts).toContain('startsAt === endsAt')
+  })
+})
+
+describe.each(['fa', 'af', 'en'])('attendance-02 messages in %s', (lang) => {
+  const all = messages(lang)
+  it('every new key exists', () => {
+    const keys = [
+      ...['endsNextDay', 'nextDay', 'nightNote'].map((key) => `attendanceSelf.${key}`),
+      ...[
+        'title',
+        'enrollHelp',
+        'enroll',
+        'enrolling',
+        'enrolled',
+        'enrollUnknown',
+        'registered',
+        'confirmHint',
+        'unsupported',
+        'cancelled',
+        'privacy',
+        'mark',
+      ].map((key) => `attendanceSelf.unlock.${key}`),
+      ...[
+        'requireUnlock',
+        'requireUnlockHelp',
+        'unlockOn',
+        'unlockOff',
+        'phoneLabel',
+        'phoneRegistered',
+        'phoneNone',
+        'phoneForget',
+        'phoneForgetHelp',
+        'phoneForgotten',
+      ].map((key) => `attendance.link.${key}`),
+      'attendance.nightColumn',
+      'attendance.endsNextDay',
+      'attendance.saveAsNight',
+      'attendance.errors.ATTENDANCE_NIGHT_NOT_CONFIGURED',
+      'attendance.submissions.unlocked',
+      'attendance.submissions.notUnlocked',
+      'shifts.endsNextDay',
+      'shifts.nightNote',
+    ]
+    expect(keys.filter((key) => typeof at(all, key) !== 'string')).toEqual([])
+    expect(String(at(all, 'attendance.link.phoneRegistered'))).toContain('{date}')
+  })
+
+  it('⚠️ says what the lock is, and promises no recognition of a person', () => {
+    const text = JSON.stringify([
+      at(all, 'attendanceSelf.unlock'),
+      at(all, 'attendance.link.requireUnlockHelp'),
+    ]).toLowerCase()
+    for (const claim of [
+      'تشخیص چهره',
+      'شناسایی چهره',
+      'face recognition',
+      'recognis',
+      'recogniz',
+    ]) {
+      expect(text, claim).not.toContain(claim)
     }
   })
 })

@@ -46,6 +46,7 @@ import { DataTable, type TableColumn } from '../data-table'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../dialog'
 import { SelectField } from '../select-field'
 import { useToast } from '../toast-provider'
+import { AttendanceHeldDialog } from './attendance-held-dialog'
 
 /** Server refusals this panel can explain. Anything else gets the general sentence. */
 export const ATTENDANCE_DEVICE_ERROR_CODES = [
@@ -116,6 +117,7 @@ export function AttendanceDevices({
   const [fresh, setFresh] = useState<{ device: string; key: string } | null>(null)
   const [mapping, setMapping] = useState<AttendanceDevice | null>(null)
   const [revoking, setRevoking] = useState<AttendanceDevice | null>(null)
+  const [reviewingHeld, setReviewingHeld] = useState(false)
 
   const explain = (error: unknown): string => {
     const raw = apiErrorMessage(error, '')
@@ -242,9 +244,14 @@ export function AttendanceDevices({
               : t('people')}
           </Button>
           {row.held > 0 ? (
-            <span className="block text-xs text-[hsl(var(--fg-tertiary))]" data-device-held>
+            <Button
+              size="sm"
+              variant="ghost"
+              data-device-held
+              onClick={() => setReviewingHeld(true)}
+            >
               {t('heldCount', { count: formatNumber(row.held, locale, 0) })}
-            </span>
+            </Button>
           ) : null}
         </div>
       ),
@@ -513,6 +520,15 @@ export function AttendanceDevices({
         employees={employees}
         explain={explain}
         onClose={() => setMapping(null)}
+      />
+
+      <AttendanceHeldDialog
+        open={reviewingHeld}
+        employees={employees}
+        deviceNames={
+          new Map((devices.data?.devices ?? []).map((device) => [device.id, device.name]))
+        }
+        onClose={() => setReviewingHeld(false)}
       />
     </section>
   )

@@ -24,9 +24,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 
 import { useDateFormat } from '../../../../hooks/use-date-format'
+import { canUsePhoneUnlock, enrollPhone, signWithPhone } from '../../../../lib/phone-unlock'
 import { Button } from '../../button'
 import { SegmentedControl } from '../../segmented-control'
 import { SelectField } from '../../select-field'
+import { Switch } from '../../switch'
 
 const BASE_URL =
   (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_URL : undefined) ||
@@ -47,6 +49,12 @@ export const SELF_ERROR_CODES = [
   'ATTENDANCE_TIME_INVALID',
   'ATTENDANCE_CHECK_OUT_BEFORE_CHECK_IN',
   'ATTENDANCE_NOTE_TOO_LONG',
+  'ATTENDANCE_PHONE_NOT_REGISTERED',
+  'ATTENDANCE_PHONE_ALREADY_REGISTERED',
+  'ATTENDANCE_UNLOCK_REQUIRED',
+  // Every way a phone's proof can fail to check out is one sentence to the
+  // employee: «it was not confirmed — try again».
+  'ATTENDANCE_UNLOCK_FAILED',
 ] as const
 
 const SENT_STATES = ['pending', 'applied', 'approved', 'rejected'] as const
@@ -57,6 +65,8 @@ interface SelfSubmission {
   status: string
   checkIn: string | null
   checkOut: string | null
+  endsNextDay?: boolean
+  unlocked?: boolean
   note: string | null
   receivedAt: string
   state: string
@@ -73,9 +83,16 @@ interface SelfView {
   allowedFrom: string
   allowedTo: string
   autoApply: boolean
+  /** Absent from a server that predates the phone's lock: then nothing is required. */
+  unlock?: { required: boolean; credentialId: string | null }
   days: Array<{
     date: string
-    record: null | { status: string; checkIn: string | null; checkOut: string | null }
+    record: null | {
+      status: string
+      checkIn: string | null
+      checkOut: string | null
+      endsNextDay?: boolean
+    }
     submissions: SelfSubmission[]
   }>
 }
@@ -117,7 +134,12 @@ export function AttendanceSelfContainer({ token }: { token: string }) {
   const [status, setStatus] = useState<SelfStatus>('present')
   const [checkIn, setCheckIn] = useState('')
   const [checkOut, setCheckOut] = useState('')
+  const [endsNextDay, setEndsNextDay] = useState(false)
   const [note, setNote] = useState('')
+  // null = not asked yet. The answer is the device's, so it is asked after mount.
+  const [canUnlock, setCanUnlock] = useState<boolean | null>(null)
+  const [enrolling, setEnrolling] = useState(false)
+  const [phoneNote, setPhoneNote] = useState<null | { tone: 'good' | 'bad'; text: string }>(null)
   const [requestId, setRequestId] = useState('')
   const [sending, setSending] = useState(false)
   const [outcome, setOutcome] = useState<Outcome>(null)
@@ -150,6 +172,16 @@ export function AttendanceSelfContainer({ token }: { token: string }) {
     setRequestId(newRequestId())
   }, [read])
 
+  useEffect(() => {
+    let alive = true
+    void canUsePhoneUnlock().then((answer) => {
+      if (alive) setCanUnlock(answer)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+
   if (load.kind === 'loading') {
     return <p className="p-8 text-center text-[hsl(var(--fg-secondary))]">{t('loading')}</p>
   }
@@ -176,12 +208,56 @@ export function AttendanceSelfContainer({ token }: { token: string }) {
   const view = load.data
   const selected = view.days.find((item) => item.date === day) ?? null
   const present = status === 'present'
+  const unlock = view.unlock ?? { required: false, credentialId: null }
+  // A night is said only about an exit that was typed.
+  const night = present && checkOut !== '' && endsNextDay
 
   const explain = (code: string | undefined, httpStatus: number): string => {
-    const known = SELF_ERROR_CODES.find(
-      (candidate) => candidate === (httpStatus === 429 ? 'RATE_LIMITED' : code),
-    )
+    const wanted =
+      httpStatus === 429
+        ? 'RATE_LIMITED'
+        : code?.startsWith('ATTENDANCE_UNLOCK_') && code !== 'ATTENDANCE_UNLOCK_REQUIRED'
+          ? 'ATTENDANCE_UNLOCK_FAILED'
+          : code
+    const known = SELF_ERROR_CODES.find((candidate) => candidate === wanted)
     return known ? t(`errors.${known}`) : t('errors.general')
+  }
+
+  const registerPhone = async () => {
+    if (enrolling) return
+    setEnrolling(true)
+    setPhoneNote(null)
+    try {
+      const made = await enrollPhone({
+        token,
+        clientRequestId: newRequestId(),
+        personName: view.employeeName,
+        appName: view.businessName ?? t('title'),
+      })
+      if (made === 'unsupported' || made === 'cancelled') {
+        setPhoneNote({ tone: 'bad', text: t(`unlock.${made}`) })
+        return
+      }
+      const res = await fetch(`${BASE_URL}/public/attendance/${token}/phone`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(made),
+      })
+      if (res.status === 404) return setLoad({ kind: 'gone' })
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        setPhoneNote({ tone: 'bad', text: explain(body?.code, res.status) })
+      } else {
+        setPhoneNote({ tone: 'good', text: t('unlock.enrolled') })
+      }
+      // Registered, refused or already there: what the server says now is the truth.
+      await read(true)
+    } catch {
+      setPhoneNote({ tone: 'bad', text: t('unlock.enrollUnknown') })
+      await read(true)
+    } finally {
+      setEnrolling(false)
+    }
   }
 
   const submit = async () => {
@@ -189,17 +265,32 @@ export function AttendanceSelfContainer({ token }: { token: string }) {
     setSending(true)
     setOutcome(null)
     try {
+      // Exactly what is sent — and, when the link asks, exactly what the phone signs.
+      const fields = {
+        date: day,
+        status,
+        checkIn: present ? checkIn || null : null,
+        checkOut: present ? checkOut || null : null,
+        endsNextDay: night,
+        clientRequestId: requestId,
+      }
+      let proof: Awaited<ReturnType<typeof signWithPhone>> | null = null
+      if (unlock.required) {
+        if (!unlock.credentialId) {
+          setOutcome({ kind: 'refused', message: t('errors.ATTENDANCE_PHONE_NOT_REGISTERED') })
+          return
+        }
+        proof = await signWithPhone({ token, credentialId: unlock.credentialId, fields })
+        if (proof === 'unsupported' || proof === 'cancelled') {
+          // Nothing left the phone: the same form can simply be sent again.
+          setOutcome({ kind: 'refused', message: t(`unlock.${proof}`) })
+          return
+        }
+      }
       const res = await fetch(`${BASE_URL}/public/attendance/${token}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          date: day,
-          status,
-          checkIn: present ? checkIn || null : null,
-          checkOut: present ? checkOut || null : null,
-          note: note.trim() || null,
-          clientRequestId: requestId,
-        }),
+        body: JSON.stringify({ ...fields, note: note.trim() || null, unlock: proof }),
       })
       if (res.status === 404) return setLoad({ kind: 'gone' })
       const body = (await res.json().catch(() => null)) as {
@@ -215,6 +306,7 @@ export function AttendanceSelfContainer({ token }: { token: string }) {
       setRequestId(newRequestId())
       setCheckIn('')
       setCheckOut('')
+      setEndsNextDay(false)
       setNote('')
       await read(true)
     } catch {
@@ -227,8 +319,8 @@ export function AttendanceSelfContainer({ token }: { token: string }) {
     }
   }
 
-  const span = (from: string | null, to: string | null) =>
-    from ? `${from} – ${to ?? t('stillIn')}` : null
+  const span = (from: string | null, to: string | null, nextDay = false) =>
+    from ? `${from} – ${to ?? t('stillIn')}${to && nextDay ? ` (${t('nextDay')})` : ''}` : null
   const statusWord = (value: string) =>
     (RECORD_STATUSES as readonly string[]).includes(value)
       ? t(`statuses.${value as (typeof RECORD_STATUSES)[number]}`)
@@ -252,6 +344,51 @@ export function AttendanceSelfContainer({ token }: { token: string }) {
           ) : null}
         </p>
       </header>
+
+      {unlock.required ? (
+        <section className={`${card} space-y-2`} data-phone-unlock>
+          <h2 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+            {t('unlock.title')}
+          </h2>
+          {unlock.credentialId ? (
+            <p data-phone-state="registered" className="text-sm text-[hsl(var(--fg-secondary))]">
+              {t('unlock.registered')}
+            </p>
+          ) : canUnlock === false ? (
+            <p
+              role="alert"
+              data-phone-state="unsupported"
+              className="text-sm text-[hsl(var(--color-warning))]"
+            >
+              {t('unlock.unsupported')}
+            </p>
+          ) : (
+            <div data-phone-state="none" className="space-y-2">
+              <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('unlock.enrollHelp')}</p>
+              <Button
+                type="button"
+                disabled={enrolling || canUnlock === null}
+                onClick={() => void registerPhone()}
+              >
+                {enrolling ? t('unlock.enrolling') : t('unlock.enroll')}
+              </Button>
+            </div>
+          )}
+          {phoneNote ? (
+            <p
+              role={phoneNote.tone === 'bad' ? 'alert' : 'status'}
+              className={
+                phoneNote.tone === 'bad'
+                  ? 'text-sm text-[hsl(var(--color-destructive))]'
+                  : 'text-sm text-[hsl(var(--color-success))]'
+              }
+            >
+              {phoneNote.text}
+            </p>
+          ) : null}
+          <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('unlock.privacy')}</p>
+        </section>
+      ) : null}
 
       <form
         className={`${card} space-y-4`}
@@ -343,6 +480,17 @@ export function AttendanceSelfContainer({ token }: { token: string }) {
               </div>
               <p className="mt-1 text-xs text-[hsl(var(--fg-tertiary))]">{t('checkOutHelp')}</p>
             </div>
+            {checkOut !== '' ? (
+              <label className="flex items-start gap-3 sm:col-span-2">
+                <Switch
+                  name="endsNextDay"
+                  checked={endsNextDay}
+                  onCheckedChange={setEndsNextDay}
+                  aria-label={t('endsNextDay')}
+                />
+                <span className="text-sm text-[hsl(var(--fg-primary))]">{t('endsNextDay')}</span>
+              </label>
+            ) : null}
           </div>
         ) : null}
 
@@ -387,9 +535,16 @@ export function AttendanceSelfContainer({ token }: { token: string }) {
           </p>
         ) : null}
 
-        <Button type="submit" disabled={sending || !day} className="w-full">
+        <Button
+          type="submit"
+          disabled={sending || !day || (unlock.required && !unlock.credentialId)}
+          className="w-full"
+        >
           {sending ? t('sending') : t('submit')}
         </Button>
+        {unlock.required && unlock.credentialId ? (
+          <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('unlock.confirmHint')}</p>
+        ) : null}
 
         <div className="space-y-1 text-xs text-[hsl(var(--fg-tertiary))]">
           <p>{view.autoApply ? t('autoApplyOn') : t('autoApplyOff')}</p>
@@ -406,8 +561,12 @@ export function AttendanceSelfContainer({ token }: { token: string }) {
               <p className="mt-1 text-sm">
                 <span className="font-medium">{statusWord(selected.record.status)}</span>
                 {span(selected.record.checkIn, selected.record.checkOut) ? (
-                  <span className="ms-2 tabular-nums" dir="ltr">
-                    {span(selected.record.checkIn, selected.record.checkOut)}
+                  <span className="ms-2 tabular-nums">
+                    {span(
+                      selected.record.checkIn,
+                      selected.record.checkOut,
+                      selected.record.endsNextDay === true,
+                    )}
                   </span>
                 ) : null}
               </p>
@@ -429,8 +588,20 @@ export function AttendanceSelfContainer({ token }: { token: string }) {
                     <p>
                       <span className="font-medium">{statusWord(submission.status)}</span>
                       {span(submission.checkIn, submission.checkOut) ? (
-                        <span className="ms-2 tabular-nums" dir="ltr">
-                          {span(submission.checkIn, submission.checkOut)}
+                        <span className="ms-2 tabular-nums">
+                          {span(
+                            submission.checkIn,
+                            submission.checkOut,
+                            submission.endsNextDay === true,
+                          )}
+                        </span>
+                      ) : null}
+                      {submission.unlocked ? (
+                        <span
+                          data-sent-unlocked
+                          className="ms-2 text-xs text-[hsl(var(--color-success))]"
+                        >
+                          {t('unlock.mark')}
                         </span>
                       ) : null}
                       <span className="ms-2 text-xs text-[hsl(var(--fg-secondary))]">

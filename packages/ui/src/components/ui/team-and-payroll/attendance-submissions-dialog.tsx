@@ -77,8 +77,10 @@ export function AttendanceSubmissionsDialog({
     )
   }
 
-  const times = (checkIn: string | null, checkOut: string | null) =>
-    checkIn ? `${checkIn} – ${checkOut ?? t('stillIn')}` : null
+  const times = (checkIn: string | null, checkOut: string | null, nextDay = false) =>
+    checkIn
+      ? `${checkIn} – ${checkOut ?? t('stillIn')}${checkOut && nextDay ? ` (${t('endsNextDay')})` : ''}`
+      : null
 
   return (
     <Dialog open={employee !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
@@ -94,8 +96,8 @@ export function AttendanceSubmissionsDialog({
             <p>
               <span className="font-medium">{t(`statuses.${record.status}`)}</span>
               {times(record.checkIn, record.checkOut) ? (
-                <span className="ms-2 tabular-nums" dir="ltr">
-                  {times(record.checkIn, record.checkOut)}
+                <span className="ms-2 tabular-nums">
+                  {times(record.checkIn, record.checkOut, record.endsNextDay)}
                 </span>
               ) : null}
             </p>
@@ -117,10 +119,18 @@ export function AttendanceSubmissionsDialog({
                     <p>
                       <span className="font-medium">{t(`statuses.${submission.status}`)}</span>
                       {times(submission.checkIn, submission.checkOut) ? (
-                        <span className="ms-2 tabular-nums" dir="ltr">
-                          {times(submission.checkIn, submission.checkOut)}
+                        <span className="ms-2 tabular-nums">
+                          {times(submission.checkIn, submission.checkOut, submission.endsNextDay)}
                         </span>
                       ) : null}
+                    </p>
+                    <p
+                      data-submission-proof={submission.unlocked ? 'unlocked' : 'none'}
+                      className="mt-1 text-xs text-[hsl(var(--fg-secondary))]"
+                    >
+                      {submission.unlocked
+                        ? t('submissions.unlocked')
+                        : t('submissions.notUnlocked')}
                     </p>
                     <p className="mt-1 text-xs text-[hsl(var(--fg-tertiary))]">
                       {t('submissions.receivedAt')} {dateTime(submission.receivedAt)}
