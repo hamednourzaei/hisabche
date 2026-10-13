@@ -126,11 +126,14 @@ describe('5 · one currency at a time', () => {
 })
 
 describe('6 · the list does not say «no till is open» while tills are open', () => {
-  it('the hint knows three things: loading or failed, some tills, none', () => {
+  it('«no till is open» is said only when the list arrived and is empty', () => {
+    // The list no longer shows a per-till figure with a hint under it; it
+    // shows how many tills are open, and names the empty case only then.
     expect(view).toContain(
-      "isTillsLoading || tillsError ? undefined : tills.length > 0 ? t('till.select_a_till'",
+      "tillsKnown && tills.length === 0 ? t('till.no_open_session', 'صندوقی باز نیست') : undefined",
     )
-    expect(view).toContain(': noTillHint }')
+    expect(view).toContain('const tillsKnown = !isTillsLoading && !tillsError')
+    expect(view).not.toContain('noTillHint')
   })
 
   it('the cash-flow chart and the distribution panel are gone (owner, 13 October) — the currency choice is not', () => {
@@ -199,5 +202,126 @@ describe('«همه را خوانده‌شده کن» is offered by the unread of
     expect(code('packages/api/src/hooks/activity.ts')).toContain(
       'unreadBy: { invoices: number; payments: number; customers: number }',
     )
+  })
+})
+
+// ─── the till page after the 13 October review ──────────────────────────────
+
+describe('the till page after the 13 October review', () => {
+  const messages = (lang: string) =>
+    JSON.parse(readFileSync(join(ROOT, 'packages/i18n/messages', lang, 'common.json'), 'utf8')) as {
+      till: Record<string, string>
+    }
+
+  it('⚠️ cash in, cash out and counting are dialogs, like «افزودن صندوق» — no inline form is left', () => {
+    for (const mark of ['data-add-till=""', 'data-movement-till=""', 'data-close-till=""']) {
+      expect(count(view, mark), mark).toBe(1)
+    }
+    // Each is a Dialog, and each shows a refusal inside itself.
+    const movement = view.slice(
+      view.indexOf('data-movement-till=""'),
+      view.indexOf('data-close-till=""'),
+    )
+    expect(movement).toContain('{actionError ? <ErrorNote message={actionError} /> : null}')
+    expect(movement).toContain('<MinorInput')
+    expect(view).toContain(
+      '{actionError && !addTillOpen && !movementOpen && !closing ? ( <ErrorNote message={actionError} /> ) : null}',
+    )
+    // The form that used to sit above the ledger is gone.
+    expect(view).not.toContain('{/* Movement dialog */}')
+  })
+
+  it('⚠️ the movement dialog closes on the answer of the server, and not while it is busy', () => {
+    expect(view).toContain(
+      '<Dialog open onOpenChange={(open) => !open && !isBusy && setMovementOpen(false)}>',
+    )
+    expect(view).toContain(
+      '<Dialog open onOpenChange={(open) => !open && !isBusy && setClosing(null)}>',
+    )
+    expect(view).toContain('if (!recorded) return setMovementOpen(false)')
+    expect(view).toContain('if (closed) setClosing(null)')
+  })
+
+  it('deposit, withdrawal and count-and-close each have their own named button on the page of a till', () => {
+    const actions = view.slice(view.indexOf('data-till-actions'))
+    expect(actions).toContain("onClick={() => openMovementForm('cash_in')}")
+    expect(actions).toContain("onClick={() => openMovementForm('cash_out')}")
+    expect(actions).toContain("{t('till.take_cash', 'برداشت نقدی')}")
+    expect(actions).toContain('disabled={isBusy || !selectedListed}')
+    // The direction is set by the button, and the id is still made once per fill.
+    expect(view).toContain(
+      "const openMovementForm = (kind: 'cash_in' | 'cash_out') => { setMovementKind(kind) setMovementRequestId((current) => current || crypto.randomUUID())",
+    )
+  })
+
+  it('⚠️ the title of the page of a till is that till, and the way back is beside it', () => {
+    expect(view).toContain(
+      "title={ selectedTillId && session ? nameOfTill(session.id) : t('till.title', 'صندوق') }",
+    )
+    const header = view.slice(view.indexOf('<CapabilityHeader'), view.indexOf('{closeNotice ? ('))
+    expect(header).toContain("{t('till.back_to_tills', '← صندوق‌ها')}")
+  })
+
+  it('⚠️ recorded, counted and variance are three lines with three names', () => {
+    const close = view.slice(view.indexOf('data-close-till=""'))
+    const recorded = close.indexOf("t('till.expected_cash', 'موجودی ثبت‌شده در سیستم')")
+    const counted = close.indexOf("t('till.counted_cash', 'موجودی شمارش‌شده')")
+    const variance = close.indexOf("t('till.variance', 'مغایرت صندوق')")
+    expect(recorded).toBeGreaterThan(-1)
+    expect(counted).toBeGreaterThan(recorded)
+    expect(variance).toBeGreaterThan(counted)
+    for (const lang of ['fa', 'af', 'en']) {
+      const till = messages(lang).till
+      expect(new Set([till.expected_cash, till.counted_cash, till.variance]).size, lang).toBe(3)
+      for (const key of [
+        'take_cash',
+        'more_actions',
+        'open_tills',
+        'open_tills_cash',
+        'only_currency',
+        'transactions_hint',
+        'name_required',
+        'recorded_cash_hint',
+      ]) {
+        expect(typeof till[key], lang + ' ' + key).toBe('string')
+      }
+    }
+    // The recorded balance of a till is said once on its page: at the top.
+    expect(count(view, 'minor={totals.expectedCashMinor}')).toBe(1)
+  })
+
+  it('⚠️ the list never adds two currencies, and says which one its figure is in', () => {
+    expect(view).toContain(
+      'const tillsOfListCurrency = tills.filter( (item) => (item.currency ?? bookCurrency) === listCurrency, )',
+    )
+    expect(view).toContain('<Money minor={recordedInListCurrency} currency={listCurrency} />')
+    expect(view).toContain("t('till.only_currency', 'فقط صندوق‌های این ارز')}: ${listCurrency}")
+    // A failed or unfinished read of the list is not «zero».
+    expect(view).toContain(') : tillsKnown && listCurrency ? (')
+  })
+
+  it('one visible action per row; removing is last, behind «more», and marked destructive', () => {
+    const actions = view.slice(view.indexOf("id: 'actions'"), view.indexOf('<CapabilityHeader'))
+    expect(count(actions, '<ActionButton')).toBe(1)
+    expect(actions).toContain("aria-label={t('till.more_actions', 'عملیات بیشتر')}")
+    const rename = actions.indexOf("t('till.rename'")
+    const remove = actions.indexOf(
+      '<DropdownMenuItem variant="destructive" onSelect={() => setRemoving(item)}>',
+    )
+    expect(rename).toBeGreaterThan(-1)
+    expect(remove).toBeGreaterThan(rename)
+    // The confirmation names the till and its state.
+    expect(view).toContain('<span className="font-medium">{nameOfTill(removing.sessionId)}</span>')
+  })
+
+  it('a till is opened with a name; the profit column appears only when it can say something', () => {
+    expect(view).toContain(
+      "disabled={isBusy || !bookCurrency || !currencyDraft || labelDraft.trim() === ''}",
+    )
+    expect(view).toContain(
+      "const hasMargin = ledger.some((entry) => typeof entry.marginPercent === 'number')",
+    )
+    expect(view).toContain('...(hasMargin ? [')
+    expect(view).not.toContain('eslint-disable')
   })
 })
