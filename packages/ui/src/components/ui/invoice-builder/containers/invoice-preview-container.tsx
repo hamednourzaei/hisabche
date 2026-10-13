@@ -40,6 +40,8 @@ import { OversoldWarning } from '../oversold-warning'
 import { InvoiceExchangeRate } from '../invoice-exchange-rate'
 import { exchangeRateOf, needsExchangeRate } from '../../../../lib/invoices/exchange-rate'
 import { useBookCurrency } from '../../../../hooks/use-book-currency'
+import { useTillChoice } from '../../../../hooks/use-till-choice'
+import { TillSelectField } from '../../till/till-select-field'
 import { useOversoldLines } from '../use-oversold-lines'
 import { planLimitMessage } from '../../../../lib/plan-limit-message'
 import { loadPrinterSettings } from '../../../../lib/print/printer-settings'
@@ -231,6 +233,15 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
   const exchangeRate = exchangeRateOf(draft.exchangeRateFrom, draft.exchangeRateTo)
   const rateMissing = foreign && exchangeRate === null
 
+  // The cash of this invoice names its till: a sale's goes in, a purchase's
+  // comes out. Only the cash part — and with nothing paid in cash, no till.
+  const tillChoice = useTillChoice(currency)
+  const cashPaid =
+    paymentEntries.length > 0
+      ? paymentEntries.some((entry) => entry.method === 'cash' && entry.amount > 0)
+      : payment.method === 'cash' && paidAmount > 0
+  const tillSessionId = cashPaid ? tillChoice.tillSessionId : ''
+
   // Shared with the form (/invoices/new) — see use-oversold-lines.ts.
   const oversoldLines = useOversoldLines(items, draft.transactionType)
 
@@ -283,6 +294,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         currency,
         // Only on an invoice in another currency; the server refuses one without it.
         ...(foreign && exchangeRate !== null ? { exchangeRate } : {}),
+        ...(tillSessionId ? { tillSessionId } : {}),
         ...(primaryCustomer?.id ? { customerId: primaryCustomer.id } : {}),
         // The companions are kept on the invoice's own notes — the only place
         // the current schema can hold them without inventing a relationship.
@@ -424,6 +436,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     payment,
     paymentEntries,
     paymentBlocked,
+    tillSessionId,
     createInvoice,
     createRecurring,
     recurrence,
@@ -492,6 +505,15 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
             value={payment}
             onChange={setPayment}
           />
+          {cashPaid ? (
+            <div className="rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] p-3">
+              <TillSelectField
+                t={t}
+                choice={tillChoice}
+                direction={draft.transactionType === 'purchase' ? 'out' : 'in'}
+              />
+            </div>
+          ) : null}
 
           <InvoiceSidebar
             t={t}

@@ -48,6 +48,9 @@ export const accountRoles = [
   // cost of goods sold corrupts gross margin, which is the one figure a
   // shopkeeper checks daily.
   'salary_expense',
+  // An invoice booked at one rate and paid at another: the difference is
+  // neither sales nor the party's debt (docs/till-payments-01-migration.sql).
+  'fx_gain_loss',
 ] as const
 
 export type AccountRole = (typeof accountRoles)[number]

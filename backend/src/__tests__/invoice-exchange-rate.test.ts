@@ -182,7 +182,10 @@ describe('what the rate is used for', () => {
     const record = payments.indexOf('await this.repo.recordPayment(')
     expect(decide).toBeGreaterThan(-1)
     expect(record).toBeGreaterThan(decide)
-    expect(payments).toContain('round2(amount * bookingRate),')
+    // Booked through `paymentPosting`: the cash at the payment's rate, the
+    // debt at its invoice's (till-on-payments.test.ts holds the arithmetic).
+    expect(payments.split(/\s+/).join(' ')).toContain('paymentRate: bookingRate,')
+    expect(payments).not.toContain('round2(amount * bookingRate),')
     // The payment made with the invoice carries the invoice's own rate.
     expect(service).toContain(
       '? { exchangeRate: Number((data as { exchangeRate?: number }).exchangeRate) }',

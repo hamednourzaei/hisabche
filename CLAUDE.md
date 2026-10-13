@@ -125,8 +125,8 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **سود، بهای تمام‌شده، تراز آزمایشی: «نامعلوم، صفر نیست» (۱۱ اکتبر)** | `.claude/accounting-integrity/00-SPEC.md` · `SESSION-CACHE-2026-10-11-INTEGRITY.md` |
 | **یکپارچگی دیتابیس: هشت قاعده، فازها، خروجی FINDING (۱۱ اکتبر)**     | `.claude/db-integrity/00-SPEC.md` · `docs/db-integrity-01-migration.sql` — **منتظر اجرا و VERIFY** |
 | **ارز دفاتر و ممیزی چندارزی؛ ورود فایل (۱۱ اکتبر)**                    | `.claude/reverse-and-import/01-CURRENCY-AUDIT.md` · `00-SPEC.md`                         |
-| **مرور کار Antigravity؛ صندوق چندارزی، رخدادها، لینک حضور و غیاب (۱۲ اکتبر)** | `.claude/SESSION-CACHE-2026-10-12-ANTIGRAVITY-REVIEW.md` · `AGENTS.md` — **attendance-devices-01، attendance-02 و invoice-exchange-rate-01 منتظر اجرا** |
-| **همه‌ی درس‌ها با شماره (۱–۱۴۶)**                                     | `.claude/lessons-learned.md`                                                |
+| **مرور کار Antigravity؛ صندوق چندارزی، رخدادها، لینک حضور و غیاب (۱۲ اکتبر)** | `.claude/SESSION-CACHE-2026-10-12-ANTIGRAVITY-REVIEW.md` · `AGENTS.md` — **attendance-devices-01، attendance-02، invoice-exchange-rate-01 و till-payments-01 منتظر اجرا** |
+| **همه‌ی درس‌ها با شماره (۱–۱۵۲)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |
@@ -490,6 +490,9 @@ cd apps/admin     && npx tsc --noEmit
 - **دسترسی انبار = دسترسی شعبه** (`services/inventory/warehouse-access.ts`). انبار `branch_id` دارد؛ عضوِ محدود به شعبه فقط انبارهای همان شعبه را می‌بیند و با آن فاکتور می‌زند (سرور هم می‌سنجد). سیستم مجوز انبارِ جدا نساز. فهرست کالای فاکتور فقط از `lib/invoices/picker-rows.ts`.
 - **دسته‌بندی کالا رشته‌ی آزاد است** (`CategoryField`)، نه enum شش‌تایی. **«حداقل موجودی» در هیچ فرمی نیست** (کالای تازه ۰).
 - **صندوق:** هر فرم (افزودن، ورود/خروج نقدی، شمارش و بستن) مودال است؛ نمودار جریان نقدی و توزیع تراکنش‌ها حذف شده‌اند — دوباره نسازشان (گارد: `till-data-paths.test.ts`).
+- **صندوقِ پول نقد را آدم می‌گوید (till-payments-01):** `payments.pos_session_id` + `till_amount_minor` (به ارز صندوق)؛ هسته‌ی مشترک `PaymentsService.recordPayment` است و UI فقط `useTillChoice` + `TillSelectField`. صندوق فقط پرداخت‌هایی را نشان می‌دهد که نامش را برده‌اند — از «چه کسی ثبت کرد» حدس نزن. ⚠️ **تغییر موجودی حرکت پول نیست:** روی فرم تعدیل/انتقال انبار فیلد صندوق نگذار (گارد در `till-on-payments.test.ts`).
+- **سود و زیان تسعیر:** نقد به نرخ روز پرداخت، بدهی به نرخ فاکتور، تفاوت به حساب `fx_gain_loss` (`paymentPosting`). نرخ فاکتورِ بی‌نرخ حدس زده نمی‌شود.
+- ⚠️ **`CHECK (x > 0)` روی NULL می‌گذرد** — `IS NOT NULL` را بنویس. ⚠️ **اسکریپت مخرب با `'NO'` روی دیسک می‌ماند** (`WIPE-ALL-BUSINESS-DATA.sql`؛ تستش همین را می‌سنجد).
 - ⚠️ **قبل از نام‌گذاری جدول، `docs/*.sql` را بگرد.** `CREATE TABLE IF NOT EXISTS` روی نامِ موجود بی‌صدا رد می‌شود (BUG-123).
 - ⚠️ **تابعِ درونیِ SQL را از `service_role` هم بگیر** (در Supabase با اجازه‌ی کامل به دنیا می‌آید).
 - ⚠️ **صفحه‌ی تنظیماتِ ویندوز/موبایل صفحه‌ی وب نیست.** پوسته «تنظیمات عمومی» خودش را دارد (`app-shell/src/features/settings/settings-page.tsx`) و بخش‌های مشترک را یکی‌یکی mount می‌کند؛ بخش تازه‌ی تنظیمات را آنجا هم بگذار و از `screens.ts` صادر کن. («ارز دفاتر» و «منطقه‌ی زمانی» هر دو آنجا هستند.)

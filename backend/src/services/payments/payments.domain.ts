@@ -589,3 +589,93 @@ export function rankPartyProducts(
     .sort((a, b) => b.amount - a.amount)
     .slice(0, limit)
 }
+
+// ─── The till a cash payment names ─────────────────────────────────────────
+
+/**
+ * What a payment moves in the till it names, in the TILL's currency (minor
+ * units) — or null when this money cannot be counted in that till.
+ *
+ *   · the till counts in the payment's currency → the amount itself
+ *   · the till counts in the books currency and the payment is in another
+ *     → the amount at the payment's rate (the rate is required for such a
+ *       payment anyway, so the drawer and the ledger say the same figure)
+ *   · anything else → null. A toman payment has no place in a dollar till:
+ *     there is no rate between two foreign currencies here, and inventing
+ *     one would put a made-up figure in a drawer somebody counts.
+ */
+export function tillAmountMinor(input: {
+  amount: number
+  currency: string
+  tillCurrency: string
+  bookCurrency: string
+  /** Books currency per one unit of the payment's currency. */
+  rate: number
+}): number | null {
+  if (!(input.amount > 0)) return null
+  if (input.tillCurrency === input.currency) return Math.round(input.amount * 100)
+  if (input.tillCurrency === input.bookCurrency && input.rate > 0 && Number.isFinite(input.rate)) {
+    const minorUnits = Math.round(input.amount * input.rate * 100)
+    return minorUnits > 0 ? minorUnits : null
+  }
+  return null
+}
+
+// ─── What a payment puts in the books ──────────────────────────────────────
+
+export interface PaymentPosting {
+  /** Books currency: what the cash or bank account moves by. */
+  cash: number
+  /** Books currency: what the receivable or payable is relieved by. */
+  party: number
+  /**
+   * The exchange difference, in books currency. Positive = a gain, negative =
+   * a loss, zero = none. Always: cash, party and this make a balanced entry.
+   */
+  difference: number
+}
+
+/**
+ * The three amounts of a payment's journal entry.
+ *
+ * The money is worth what it was worth the day it MOVED (the payment's rate).
+ * The debt it closes was booked the day of the INVOICE (the invoice's rate).
+ * When the two rates differ, closing the debt by the cash figure would leave a
+ * residue on the receivable or payable for ever; closing it by its own figure
+ * leaves a difference, and that difference is a gain or a loss:
+ *
+ *   money in   more books-currency received than was owed  → gain
+ *   money out  less books-currency paid than was owed      → gain
+ *
+ * A part of the payment that settles no invoice (an advance) has no earlier
+ * rate to differ from. An invoice with no rate of its own (rate null: the
+ * books currency, or made before rates were kept) is closed at the payment's
+ * rate — no rate is guessed for it, so no difference is claimed.
+ */
+export function paymentPosting(input: {
+  direction: PaymentDirection
+  amount: number
+  paymentRate: number
+  allocations: ReadonlyArray<{ amount: number; rate: number | null }>
+}): PaymentPosting {
+  const cash = round2(input.amount * input.paymentRate)
+  let settled = 0
+  let allocated = 0
+  for (const allocation of input.allocations) {
+    const rate =
+      typeof allocation.rate === 'number' && allocation.rate > 0 && Number.isFinite(allocation.rate)
+        ? allocation.rate
+        : input.paymentRate
+    settled += round2(allocation.amount * rate)
+    allocated += allocation.amount
+  }
+  const advance = round2(Math.max(0, round2(input.amount - allocated)) * input.paymentRate)
+  const party = round2(settled + advance)
+  // When nothing differs, rounding line by line must not invent a difference.
+  const same = input.allocations.every(
+    (allocation) => allocation.rate === null || allocation.rate === input.paymentRate,
+  )
+  if (same) return { cash, party: cash, difference: 0 }
+  const difference = round2(input.direction === 'in' ? cash - party : party - cash)
+  return { cash, party, difference }
+}

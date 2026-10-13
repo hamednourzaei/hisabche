@@ -814,6 +814,19 @@ export class InvoiceService {
       throw new ConflictError('INVOICE_EXCHANGE_RATE_NOT_CONFIGURED')
     }
 
+    // The till named for this invoice's cash is asked NOW. A closed till found
+    // only after the invoice was written would leave an invoice whose money
+    // was said to be taken and is in no drawer.
+    const tillCash = this.cashPaidAtCreation(data)
+    if (data.tillSessionId && tillCash > 0) {
+      await this.payments.assertTillTakes(ctx, data.tillSessionId, {
+        method: 'cash',
+        amount: tillCash,
+        currency: bookCurrency,
+        rate: exchangeRate,
+      })
+    }
+
     // The plan's invoice ceiling — AFTER the replay check, so a sale already
     // recorded and merely resent by an offline device is never refused.
     await assertWithinLimit(workspaceId, 'invoices')
@@ -1277,6 +1290,16 @@ export class InvoiceService {
    * would put us back where we started, with an invoice whose paid amount
    * nobody can account for.
    */
+  /** What of this invoice is being paid in CASH as it is created. */
+  private cashPaidAtCreation(data: CreateInvoice): number {
+    if (data.payments && data.payments.length > 0) {
+      return data.payments
+        .filter((payment) => payment.method === 'cash')
+        .reduce((sum, payment) => sum + payment.amount, 0)
+    }
+    return (data.paymentMethod ?? 'cash') === 'cash' ? (data.paidAmount ?? 0) : 0
+  }
+
   private async recordCreationPayments(
     ctx: TenancyContext,
     invoiceId: string,
@@ -1329,6 +1352,11 @@ export class InvoiceService {
           ? { exchangeRate: Number((data as { exchangeRate?: number }).exchangeRate) }
           : {}),
         method: tranche.method,
+        // Only the cash part reaches the till; a card or a transfer paid with
+        // the same invoice is not money in a drawer.
+        ...(data.tillSessionId && tranche.method === 'cash'
+          ? { tillSessionId: data.tillSessionId }
+          : {}),
         reference: tranche.reference,
         // What the person typed beside the amount (transfer number, bank…).
         notes: tranche.note,

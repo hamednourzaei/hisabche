@@ -200,6 +200,11 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           // ⚠️ FORWARDED. The rate a foreign-currency invoice is booked at; the
           // service refuses such an invoice without it.
           ...(Number(body.exchangeRate) > 0 ? { exchangeRate: Number(body.exchangeRate) } : {}),
+          // ⚠️ FORWARDED. The till the cash of this invoice goes into or comes
+          // out of. A field this mapping does not name never reaches the service.
+          ...(UUID_PATTERN.test(String(body.tillSessionId ?? ''))
+            ? { tillSessionId: body.tillSessionId as string }
+            : {}),
           notes: body.notes ?? '',
           reference: body.reference ?? '',
           invoiceNumber: body.invoiceNumber,

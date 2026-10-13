@@ -37,6 +37,9 @@ import { Input } from '../input'
 import { Label } from '../label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { cn } from '../../../lib/utils'
+import { useBookCurrency } from '../../../hooks/use-book-currency'
+import { useTillChoice } from '../../../hooks/use-till-choice'
+import { TillSelectField } from '../till/till-select-field'
 import { MoneyInput } from '../money-input'
 import { toIsoDay } from '@hisabche/formatting'
 
@@ -55,6 +58,8 @@ export interface RecordPaymentFormProps {
   t: (key: string, fallback?: string) => string
   fmtMoney: (value: number) => string
   currency: string
+  /** 'in' = received on a sale, 'out' = paid on a purchase. */
+  direction: 'in' | 'out'
   /** What is still owed on THIS invoice. The amount is capped at it. */
   outstanding: number
   isSubmitting: boolean
@@ -65,6 +70,10 @@ export interface RecordPaymentFormProps {
     method: PaymentMethod
     reference: string
     date: string
+    /** The till the cash goes into or comes out of; absent = none. */
+    tillSessionId?: string | undefined
+    /** Books currency per one unit of the invoice's, today; absent = the invoice's own rate. */
+    exchangeRate?: number | undefined
   }) => void
   onCancel: () => void
 }
@@ -75,12 +84,21 @@ export function RecordPaymentForm({
   t,
   fmtMoney,
   currency,
+  direction,
   outstanding,
   isSubmitting,
   error,
   onSubmit,
   onCancel,
 }: RecordPaymentFormProps) {
+  const bookCurrency = useBookCurrency()
+  const till = useTillChoice(currency || undefined)
+  // The money of an invoice in another currency is worth what it is worth
+  // TODAY. Left empty, the server books it at the invoice's own rate.
+  const foreign = Boolean(currency && bookCurrency && currency !== bookCurrency)
+  const [rate, setRate] = React.useState('')
+  const parsedRate = Number(rate)
+  const rateValid = rate.trim() === '' || (Number.isFinite(parsedRate) && parsedRate > 0)
   // Pre-filled with the full balance — «مشتری همه‌اش را داد» is the common
   // case, and the uncommon one is one edit away.
   const [amount, setAmount] = React.useState(String(outstanding > 0 ? outstanding : ''))
@@ -96,8 +114,15 @@ export function RecordPaymentForm({
       className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-3"
       onSubmit={(event) => {
         event.preventDefault()
-        if (!valid || isSubmitting) return
-        onSubmit({ amount: parsed, method, reference: reference.trim(), date })
+        if (!valid || !rateValid || isSubmitting) return
+        onSubmit({
+          amount: parsed,
+          method,
+          reference: reference.trim(),
+          date,
+          ...(method === 'cash' && till.tillSessionId ? { tillSessionId: till.tillSessionId } : {}),
+          ...(foreign && rate.trim() !== '' ? { exchangeRate: parsedRate } : {}),
+        })
       }}
     >
       <div className="flex items-center justify-between">
@@ -152,6 +177,37 @@ export function RecordPaymentForm({
         </Select>
       </div>
 
+      {method === 'cash' ? (
+        <TillSelectField t={t} choice={till} direction={direction} disabled={isSubmitting} />
+      ) : null}
+
+      {foreign ? (
+        <div className="space-y-1" data-payment-rate>
+          <Label htmlFor="payment-rate">
+            {t('invoiceDetail.paymentRate', 'نرخ تبدیل روز پرداخت (اختیاری)')}
+          </Label>
+          <Input
+            id="payment-rate"
+            name="exchangeRate"
+            inputMode="decimal"
+            dir="ltr"
+            value={rate}
+            onChange={(event) => setRate(event.target.value)}
+            disabled={isSubmitting}
+            aria-invalid={!rateValid}
+          />
+          <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+            {t(
+              'invoiceDetail.paymentRateHint',
+              'ارزشِ یک واحد از ارز فاکتور به ارز دفاتر، امروز. خالی = همان نرخ فاکتور. اگر فرق کند، تفاوت به‌عنوان سود یا زیان تسعیر ثبت می‌شود.',
+            )}{' '}
+            <span dir="ltr">
+              1 {currency} = ? {bookCurrency}
+            </span>
+          </p>
+        </div>
+      ) : null}
+
       <div className="space-y-1">
         <Label htmlFor="payment-reference">
           {t('invoiceDetail.reference', 'شماره مرجع (اختیاری)')}
@@ -185,7 +241,7 @@ export function RecordPaymentForm({
       ) : null}
 
       <div className="flex gap-2">
-        <Button type="submit" disabled={!valid || isSubmitting} className="flex-1">
+        <Button type="submit" disabled={!valid || !rateValid || isSubmitting} className="flex-1">
           {isSubmitting
             ? t('common.saving', 'در حال ثبت…')
             : t('invoiceDetail.savePayment', 'ثبت پرداخت')}

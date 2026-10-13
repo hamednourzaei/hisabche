@@ -93,8 +93,17 @@ export interface InvoiceRelatedPanelProps {
   relatedFailed?: boolean | undefined
   onRetryRelated?: (() => void) | undefined
   onRecordPayment?:
-    | ((input: { amount: number; method: string; reference: string; date: string }) => void)
+    | ((input: {
+        amount: number
+        method: string
+        reference: string
+        date: string
+        tillSessionId?: string | undefined
+        exchangeRate?: number | undefined
+      }) => void)
     | undefined
+  /** 'out' on a purchase invoice (money paid), 'in' on a sale. */
+  paymentDirection?: 'in' | 'out' | undefined
   /** Provide to show the per-row remove control. */
   onCancelPayment?: ((paymentId: string) => void) | undefined
   isRecordingPayment?: boolean | undefined
@@ -125,6 +134,7 @@ export function InvoiceRelatedPanel({
   relatedFailed,
   onRetryRelated,
   onRecordPayment,
+  paymentDirection,
   onCancelPayment,
   isRecordingPayment,
   recordPaymentError,
@@ -207,6 +217,7 @@ export function InvoiceRelatedPanel({
               t={t}
               fmtMoney={fmtMoney}
               currency={currency}
+              direction={paymentDirection ?? 'in'}
               outstanding={outstanding}
               isSubmitting={Boolean(isRecordingPayment)}
               error={recordPaymentError ?? null}

@@ -110,6 +110,9 @@ const STANDARD_ACCOUNT_FOR_ROLE: Partial<
   cogs: { code: '5000', name: 'بهای تمام‌شده‌ی کالای فروش‌رفته', type: 'expense' },
   purchase: { code: '5100', name: 'خرید', type: 'expense' },
   salary_expense: { code: '6000', name: 'هزینه‌ی حقوق', type: 'expense' },
+  // One account for both directions: a gain sits on its credit side, a loss
+  // on its debit side, and its balance is the net of the two.
+  fx_gain_loss: { code: '4900', name: 'سود و زیان تسعیر ارز', type: 'revenue' },
 }
 
 function roleOf(account: AccountRow): AccountRole | null {

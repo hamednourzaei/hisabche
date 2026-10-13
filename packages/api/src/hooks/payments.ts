@@ -39,6 +39,10 @@ export interface RecordPaymentInput {
   /** ISO date (YYYY-MM-DD). Defaults to today on the server. */
   entryDate?: string
   currency?: string
+  /** Books currency per one unit of `currency`, the day the money moved. */
+  exchangeRate?: number
+  /** The till this cash goes into or comes out of. Cash only; omit for none. */
+  tillSessionId?: string
   method?: string
   reference?: string
   notes?: string

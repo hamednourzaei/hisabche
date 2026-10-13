@@ -522,6 +522,13 @@ export const invoiceSchema = z.object({
    * invoice in another currency with no rate would be booked as if 1 = 1.
    */
   exchangeRate: z.number().positive().finite().optional(),
+  /**
+   * The till the CASH paid with this invoice goes into (a sale) or comes out
+   * of (a purchase). A request: the server checks the till is open, belongs to
+   * the business and can count this money. With nothing paid in cash it does
+   * nothing — an invoice on credit moves no drawer.
+   */
+  tillSessionId: z.string().uuid().nullable().optional(),
 
   // Status — ✅ استفاده از invoiceStatusSchema
   status: invoiceStatusSchema.default('pending'),

@@ -450,6 +450,7 @@ export function InvoiceDetailContainer() {
             storedPaidAmount={display.paidAmount}
             onOpenJournalEntry={handleOpenJournalEntry}
             invoiceTotal={display.total}
+            paymentDirection={display.type === 'purchase' ? 'out' : 'in'}
             isRecordingPayment={recordPayment.isPending}
             {...(subscriptionLocked
               ? {}
@@ -501,6 +502,10 @@ export function InvoiceDetailContainer() {
                       ...(input.reference ? { reference: input.reference } : {}),
                       ...(input.date ? { entryDate: input.date } : {}),
                       ...(display.currency ? { currency: display.currency } : {}),
+                      // The till the person chose for this cash, and the day's
+                      // rate if they gave one. Neither is invented here.
+                      ...(input.tillSessionId ? { tillSessionId: input.tillSessionId } : {}),
+                      ...(input.exchangeRate ? { exchangeRate: input.exchangeRate } : {}),
                       // Explicit, always. Auto-allocation settles the OLDEST open
                       // invoice first — so paying here would quietly clear a
                       // different invoice and leave this one untouched.

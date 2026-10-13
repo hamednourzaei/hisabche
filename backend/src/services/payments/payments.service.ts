@@ -23,6 +23,7 @@ import type { TenancyContext } from '../tenancy.service'
 import { ledger } from '../accounting'
 import { scopes, sod } from '../authorization'
 import { logBusinessEvent } from '../event-log.service'
+import { tillForPayment } from '../pos/till-choice'
 
 import {
   ageInvoices,
@@ -38,6 +39,9 @@ import {
   summarizeParty,
   unallocatedOf,
   settlesInCurrency,
+  paymentPosting,
+  tillAmountMinor,
+  type PaymentPosting,
   validateAllocations,
   type AgingBuckets,
   type AllocationRequest,
@@ -70,6 +74,12 @@ export interface RecordPaymentInput {
   notes?: string | undefined
   /** Omit to settle the oldest open invoices first. */
   allocations?: AllocationRequest[] | undefined
+  /**
+   * The till this cash goes into (money in) or comes out of (money out).
+   * A REQUEST: the till is read and checked on the server. Cash only.
+   * Absent = no till is touched — nothing is inferred from who recorded it.
+   */
+  tillSessionId?: string | null | undefined
 }
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -236,6 +246,18 @@ export class PaymentsService {
     )
     if (bookingRate === null) throw new ValidationError('PAYMENT_EXCHANGE_RATE_REQUIRED')
 
+    // Also decided before anything is written: a till that is closed, of
+    // another branch, or that cannot count this money refuses the payment.
+    const till = input.tillSessionId
+      ? await this.tillMovement(ctx, input.tillSessionId, {
+          method: input.method ?? 'cash',
+          amount,
+          currency,
+          bookCurrency,
+          rate: bookingRate,
+        })
+      : null
+
     const problems = validateAllocations(amount, allocations, invoices)
     if (problems.length > 0) throw new ValidationError(problems.join(', '))
 
@@ -262,6 +284,7 @@ export class PaymentsService {
         },
         allocations,
         clientRequestId,
+        till,
       ))
     } catch (error) {
       const code = (error as { code?: string } | null)?.code
@@ -284,7 +307,12 @@ export class PaymentsService {
       ctx,
       paymentId,
       input.direction,
-      round2(amount * bookingRate),
+      paymentPosting({
+        direction: input.direction,
+        amount,
+        paymentRate: bookingRate,
+        allocations: await this.allocationRates(ctx, currency, bookCurrency, allocations),
+      }),
       entryDate,
       paymentNumber,
     )
@@ -320,7 +348,85 @@ export class PaymentsService {
     }
 
     const payment = await this.getPayment(ctx, paymentId)
-    return { ...payment, unallocated: unallocatedOf(amount, allocations) }
+    return {
+      ...payment,
+      unallocated: unallocatedOf(amount, allocations),
+      tillSessionId: till?.sessionId ?? null,
+    }
+  }
+
+  /**
+   * Would this till take this cash? Asked by a caller that is about to write
+   * something else first (an invoice) and must not find out afterwards.
+   * Throws exactly what recording the payment would.
+   */
+  async assertTillTakes(
+    ctx: TenancyContext,
+    tillSessionId: string,
+    money: { method: string; amount: number; currency?: string | undefined; rate: number },
+  ): Promise<void> {
+    const bookCurrency = await baseCurrencyOf(ctx.workspaceId)
+    await this.tillMovement(ctx, tillSessionId, {
+      method: money.method,
+      amount: round2(money.amount),
+      currency: money.currency ?? bookCurrency,
+      bookCurrency,
+      rate: money.rate,
+    })
+  }
+
+  private async tillMovement(
+    ctx: TenancyContext,
+    tillSessionId: string,
+    money: { method: string; amount: number; currency: string; bookCurrency: string; rate: number },
+  ): Promise<{ sessionId: string; amountMinor: number }> {
+    // A transfer or a card never passed through a drawer.
+    if (money.method !== 'cash') throw new ValidationError('PAYMENT_TILL_ONLY_CASH')
+    const till = await tillForPayment(ctx, tillSessionId)
+    const amountMinor = tillAmountMinor({
+      amount: money.amount,
+      currency: money.currency,
+      tillCurrency: till.currency ?? money.bookCurrency,
+      bookCurrency: money.bookCurrency,
+      rate: money.rate,
+    })
+    if (amountMinor === null) throw new ValidationError('PAYMENT_TILL_CURRENCY_MISMATCH')
+    return { sessionId: till.id, amountMinor }
+  }
+
+  /**
+   * Each allocation with the rate its invoice was booked at (null = none of
+   * its own). In the books currency there is no rate to differ.
+   */
+  private async allocationRates(
+    ctx: TenancyContext,
+    currency: string,
+    bookCurrency: string,
+    allocations: ReadonlyArray<{ invoiceId: string; amount: number }>,
+  ): Promise<Array<{ amount: number; rate: number | null }>> {
+    if (currency === bookCurrency || allocations.length === 0) {
+      return allocations.map((a) => ({ amount: a.amount, rate: null }))
+    }
+    const rates = await this.repo.invoiceRatesById(
+      ctx.workspaceId,
+      allocations.map((a) => a.invoiceId),
+    )
+    return allocations.map((a) => ({ amount: a.amount, rate: rates?.get(a.invoiceId) ?? null }))
+  }
+
+  /**
+   * The account an exchange difference is booked to, or null when this
+   * database cannot hold one yet (till-payments-01 not run: the role is
+   * refused by the CHECK). The payment is then booked as it always was.
+   */
+  private async exchangeDifferenceAccount(ctx: TenancyContext): Promise<string | null> {
+    try {
+      const { accounts } = await ledger.ensureAccountsForRoles(ctx, ['fx_gain_loss'])
+      return accounts.fx_gain_loss ?? null
+    } catch (error) {
+      console.warn('[Payments] no account for exchange differences:', error)
+      return null
+    }
   }
 
   /**
@@ -332,8 +438,9 @@ export class PaymentsService {
    *     payable the invoice opened is closed by exactly the same amount
    *   · otherwise                             → null: nothing to book it at
    *
-   * A difference between the rate of the invoice and the rate on the day the
-   * money moved is NOT recognised as a gain or loss here.
+   * This is the rate of the MONEY. When it differs from the rate of an
+   * invoice it settles, `paymentPosting` books the difference as a gain or a
+   * loss.
    */
   private async bookingRate(
     ctx: TenancyContext,
@@ -371,11 +478,19 @@ export class PaymentsService {
       const allocatedNow = payment.allocations.reduce((sum, a) => sum + a.amount, 0)
       return asReplay({ ...payment, unallocated: round2(payment.amount - allocatedNow) })
     }
+    // A replay that has to book (the first attempt died before the entry)
+    // no longer knows a rate given with the request, so it claims no
+    // difference: both sides at the one rate it can find.
     await this.bookPayment(
       ctx,
       payment.id,
       payment.direction,
-      round2(payment.amount * rate),
+      paymentPosting({
+        direction: payment.direction,
+        amount: payment.amount,
+        paymentRate: rate,
+        allocations: [],
+      }),
       payment.entryDate,
       payment.paymentNumber ?? '',
     )
@@ -398,7 +513,7 @@ export class PaymentsService {
     ctx: TenancyContext,
     paymentId: string,
     direction: PaymentDirection,
-    amount: number,
+    posting: PaymentPosting,
     entryDate: string,
     paymentNumber: string,
   ) {
@@ -414,6 +529,28 @@ export class PaymentsService {
       return
     }
 
+    // The exchange difference needs its own account. Without one (the
+    // migration not run) the debt is closed by the cash figure, as before —
+    // said in the log, never dropped silently into another account.
+    const differenceAccount =
+      posting.difference !== 0 ? await this.exchangeDifferenceAccount(ctx) : null
+    if (posting.difference !== 0 && !differenceAccount) {
+      console.warn(
+        `[Payments] payment ${paymentId}: exchange difference ${posting.difference} not recognised`,
+      )
+    }
+    const cash = posting.cash
+    const party = differenceAccount ? posting.party : posting.cash
+    const difference = differenceAccount ? posting.difference : 0
+    const differenceLine =
+      differenceAccount && difference !== 0
+        ? [
+            difference > 0
+              ? { accountId: differenceAccount, debit: 0, credit: difference }
+              : { accountId: differenceAccount, debit: -difference, credit: 0 },
+          ]
+        : []
+
     const outcome = await ledger.postDocument(ctx, {
       sourceType: 'payment',
       sourceId: paymentId,
@@ -422,12 +559,14 @@ export class PaymentsService {
       reference: paymentNumber,
       lines: isIncoming
         ? [
-            { accountId: accounts.cash!, debit: amount, credit: 0 },
-            { accountId: accounts.receivable!, debit: 0, credit: amount },
+            { accountId: accounts.cash!, debit: cash, credit: 0 },
+            { accountId: accounts.receivable!, debit: 0, credit: party },
+            ...differenceLine,
           ]
         : [
-            { accountId: accounts.payable!, debit: amount, credit: 0 },
-            { accountId: accounts.cash!, debit: 0, credit: amount },
+            { accountId: accounts.payable!, debit: party, credit: 0 },
+            { accountId: accounts.cash!, debit: 0, credit: cash },
+            ...differenceLine,
           ],
     })
 

@@ -2696,6 +2696,15 @@
       "credit": "On account",
       "mobile_money": "Mobile money",
       "other": "Other method"
+    },
+    "till": {
+      "into": "Till it goes into",
+      "outOf": "Till it is paid from",
+      "none": "No till",
+      "unnamed": "Unnamed till",
+      "failed": "The list of tills could not be read.",
+      "noneOpen": "No till is open for this currency; this money will not be recorded in any till.",
+      "atRate": "This till counts in the books currency; the amount is recorded in it at the rate of this payment."
     }
   },
   "debt": {
@@ -6673,7 +6682,9 @@
     "paymentsReadFailed": "This invoice's payments could not be read; a payment can't be recorded until they are.",
     "fullyPaid": "Fully paid",
     "paidWithoutRecord": "This invoice is marked paid but has no payment record behind it; until one is recorded it does not appear in the till, ledger or receivables.",
-    "error_PAYMENT_ALLOCATION_CURRENCY_MISMATCH": "This payment’s currency is not the invoice’s currency. A payment only settles invoices in its own currency."
+    "error_PAYMENT_ALLOCATION_CURRENCY_MISMATCH": "This payment’s currency is not the invoice’s currency. A payment only settles invoices in its own currency.",
+    "paymentRate": "Exchange rate on the payment day (optional)",
+    "paymentRateHint": "What one unit of the invoice currency is worth in the books currency today. Empty = the invoice’s own rate. If it differs, the difference is booked as an exchange gain or loss."
   },
   "ops": {
     "cashForecast": "Cash forecast",

@@ -45,6 +45,12 @@ const recordPaymentSchema = z
     amount: z.number().positive(),
     entryDate: z.string().optional(),
     currency: z.string().max(8).optional(),
+    // Books currency per one unit of `currency`, the day the money moved. The
+    // service read it and this schema dropped it, so a payment could never
+    // say its own rate.
+    exchangeRate: z.number().positive().finite().optional(),
+    // The till the cash goes into or comes out of. Checked by the service.
+    tillSessionId: z.string().uuid().nullable().optional(),
     method: z.string().max(32).optional(),
     reference: z.string().max(200).optional(),
     notes: z.string().max(1000).optional(),

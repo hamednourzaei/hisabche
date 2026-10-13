@@ -9,7 +9,7 @@ import {
   IdempotencyUnavailableError,
   isMissingIdempotencySupport,
 } from '../../utils/client-request'
-import { DatabaseError } from '../../errors/database.error'
+import { ConflictError, DatabaseError } from '../../errors/database.error'
 import type { TenancyContext } from '../tenancy.service'
 
 import type { AllocationRequest, OpenInvoice, PartyType, PaymentDirection } from './payments.domain'
@@ -220,6 +220,37 @@ export class PaymentsRepository {
     )
   }
 
+  /**
+   * The rate each of these invoices was booked at, by invoice. An invoice in
+   * the books currency (or made before rates were kept) is absent from the
+   * map. null = this database keeps no rate on invoices at all.
+   */
+  async invoiceRatesById(
+    workspaceId: string,
+    invoiceIds: readonly string[],
+  ): Promise<Map<string, number> | null> {
+    const unique = [...new Set(invoiceIds.filter(Boolean))]
+    if (unique.length === 0) return new Map()
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('id, exchange_rate')
+      .eq('workspace_id', workspaceId)
+      .in('id', unique)
+    if (error) {
+      if (['42703', 'PGRST204'].includes(error.code ?? '')) return null
+      throw new DatabaseError('Failed to read the rate of the settled invoices', error)
+    }
+    const rates = new Map<string, number>()
+    for (const row of (data ?? []) as Array<{
+      id: string
+      exchange_rate?: number | string | null
+    }>) {
+      const rate = Number(row.exchange_rate)
+      if (rate > 0 && Number.isFinite(rate)) rates.set(row.id, rate)
+    }
+    return rates
+  }
+
   async openInvoicesByIds(
     workspaceId: string,
     invoiceIds: readonly string[],
@@ -296,12 +327,29 @@ export class PaymentsRepository {
     },
     allocations: AllocationRequest[],
     clientRequestId: string | null = null,
+    /** The till this cash enters or leaves, and by how much in ITS currency. */
+    till: { sessionId: string; amountMinor: number } | null = null,
   ): Promise<{ id: string; replayed: boolean }> {
     // Keyed: the wrapper calls `payments_record` and stamps the key in the
     // same transaction (docs/offline-idempotency-migration.sql).
-    const fn = clientRequestId ? 'payments_record_keyed' : 'payments_record'
+    // At a till: one more wrapper, which checks the till is open and writes
+    // payment, allocations and till in ONE transaction
+    // (docs/till-payments-01-migration.sql).
+    const fn = till
+      ? 'payments_record_at_till'
+      : clientRequestId
+        ? 'payments_record_keyed'
+        : 'payments_record'
     const { data, error } = await supabase.rpc(fn, {
-      ...(clientRequestId ? { p_client_request_id: clientRequestId } : {}),
+      ...(till
+        ? {
+            p_client_request_id: clientRequestId,
+            p_session_id: till.sessionId,
+            p_till_amount_minor: till.amountMinor,
+          }
+        : clientRequestId
+          ? { p_client_request_id: clientRequestId }
+          : {}),
       p_workspace_id: ctx.workspaceId,
       p_user_id: ctx.userId,
       p_payment: {
@@ -320,9 +368,14 @@ export class PaymentsRepository {
       p_allocations: allocations.map((a) => ({ invoice_id: a.invoiceId, amount: a.amount })),
     })
 
+    // The function is not there: the migration has not been run. Said as
+    // that — recording the payment WITHOUT its till would be a silent lie.
+    if (error && till && ['PGRST202', '42883'].includes(error.code ?? '')) {
+      throw new ConflictError('PAYMENT_TILL_NOT_CONFIGURED')
+    }
     if (error) throw error
-    if (clientRequestId) {
-      // payments_record_keyed answers { payment_id, replayed }.
+    if (clientRequestId || till) {
+      // payments_record_keyed / _at_till answer { payment_id, replayed }.
       const keyed = (data ?? {}) as { payment_id?: string; replayed?: boolean }
       if (!keyed.payment_id) throw new DatabaseError('Keyed payment returned no id', null)
       return { id: keyed.payment_id, replayed: keyed.replayed === true }

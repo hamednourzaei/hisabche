@@ -304,16 +304,73 @@ export class PosService {
   }
 
   /**
-   * Cash invoice payments recorded at this drawer while the session was open.
+   * The cash payments of THIS till.
+   *
+   * A payment names its till (payments.pos_session_id,
+   * docs/till-payments-01-migration.sql): the person chose it, and what moved
+   * is stored in the till's own currency. That is the whole rule — who
+   * recorded the payment and when no longer decide anything, so a purchase the
+   * manager paid from the shop's drawer is in the shop's drawer.
+   *
+   * Only on a database without that column does the old inference below
+   * still run.
+   */
+  private async loadSettlements(
+    ctx: TenancyContext,
+    session: PosSession,
+  ): Promise<CashSettlement[]> {
+    const PAGE = 1000
+    const rows: Record<string, any>[] = []
+
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('id, payment_number, direction, till_amount_minor, created_at')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('pos_session_id', session.id)
+        .eq('status', 'posted')
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+
+      if (error) {
+        if (
+          isMissingColumn(error, 'pos_session_id') ||
+          isMissingColumn(error, 'till_amount_minor')
+        ) {
+          return this.loadInferredSettlements(ctx, session)
+        }
+        throw new DatabaseError('Failed to fetch cash settlements', error)
+      }
+
+      const page = (data ?? []) as Record<string, any>[]
+      rows.push(...page)
+      if (page.length < PAGE) break
+    }
+
+    return rows.map((row) => ({
+      id: row.id,
+      paymentNumber: row.payment_number ?? '',
+      direction: row.direction === 'out' ? ('out' as const) : ('in' as const),
+      // Already in the till's currency and in minor units — written with the
+      // payment, in the same transaction.
+      amountMinor: Number(row.till_amount_minor) || 0,
+      createdAt: row.created_at,
+    }))
+  }
+
+  /**
+   * BEFORE till-payments-01 ONLY: cash invoice payments recorded at this
+   * drawer while the session was open.
    *
    * The query is scoped by WORKSPACE only — `payments` is a shared book and
-   * user_id is never its filter (tenancy-static-guard). Which drawer a cash
+   * the member is never its filter (tenancy-static-guard). Which drawer a cash
    * payment went into is then decided by who recorded it: that is actor
    * attribution (the person holding the drawer), applied after the tenant
    * boundary, not access control. Paged, so a long session in a busy shop is
    * not silently cut at PostgREST max-rows.
    */
-  private async loadSettlements(
+  private async loadInferredSettlements(
     ctx: TenancyContext,
     session: PosSession,
   ): Promise<CashSettlement[]> {

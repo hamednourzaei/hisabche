@@ -1,6 +1,8 @@
 'use client'
 
 import { SelectField } from '../select-field'
+import { TillSelectField } from '../till/till-select-field'
+import { useTillChoice } from '../../../hooks/use-till-choice'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { z } from 'zod'
@@ -69,6 +71,8 @@ interface PaymentModalProps {
 export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: PaymentModalProps) {
   const t = useTranslations()
   const recordPayment = useRecordPayment()
+  // This form records cash in the books currency: the till it goes into.
+  const till = useTillChoice(undefined)
   const { setSaveStatus } = useSyncStore()
   const { addAuditEntry } = useBackupStore()
   const [amount, setAmount] = useState('')
@@ -131,6 +135,7 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
         // the server settles the oldest open invoices first, which is the right
         // default but not what was chosen on screen.
         allocations: [{ invoiceId: parsed.data.invoiceId, amount: parsed.data.amount }],
+        ...(till.tillSessionId ? { tillSessionId: till.tillSessionId } : {}),
         reference: parsed.data.invoiceId,
         notes: t('customers.paymentFrom', {
           name: customer.fullName || customer.name || '',
@@ -165,6 +170,7 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
     invoiceId,
     openInvoices,
     recordPayment,
+    till.tillSessionId,
     onPaid,
     onClose,
     t,
@@ -229,6 +235,13 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
                 label={t('customers.form.paymentAmount')}
                 startIcon={<DollarSign className="size-4" aria-hidden />}
                 autoFocus
+              />
+
+              <TillSelectField
+                t={(key) => t(key)}
+                choice={till}
+                direction="in"
+                disabled={recordPayment.isPending}
               />
 
               {error && (
