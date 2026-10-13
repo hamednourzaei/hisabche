@@ -78,7 +78,6 @@ export const TillContainer = memo(function TillContainer() {
 
   const selected = useSession(selectedTillId ?? '')
   const ledger = useSessionLedger(selectedTillId)
-  const [cashFlowDays, setCashFlowDays] = useState<7 | 30 | 90>(7)
 
   // Currencies across open tills + books currency
   const availableCurrencies = useMemo(() => {
@@ -106,7 +105,10 @@ export const TillContainer = memo(function TillContainer() {
     failure ? apiErrorMessage(failure, t('common.loadError', 'خطا در بارگذاری')) : null
   const sessionNotFound =
     (selected.error as { response?: { status?: number } } | null)?.response?.status === 404
-  const cashFlow = useCashFlow(cashFlowDays, activeCurrency)
+  // Read for «today» and «yesterday» on the figures at the top — the last two
+  // days of the shortest window the server offers. (The chart that used to
+  // show the whole window was removed on 13 October.)
+  const cashFlow = useCashFlow(7, activeCurrency)
 
   /**
    * Server refusals are shown verbatim rather than replaced with a generic
@@ -282,8 +284,6 @@ export const TillContainer = memo(function TillContainer() {
       isLedgerLoading={!!selectedTillId && ledger.isLoading}
       ledgerError={said(ledger.error)}
       dailyCashFlow={cashFlow.data ?? []}
-      cashFlowDays={cashFlowDays}
-      onCashFlowDaysChange={setCashFlowDays}
       isCashFlowLoading={cashFlow.isLoading}
       cashFlowError={said(cashFlow.error)}
     />

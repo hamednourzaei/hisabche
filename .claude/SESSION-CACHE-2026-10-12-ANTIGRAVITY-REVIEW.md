@@ -155,6 +155,25 @@ packages/ui/.../team-and-payroll/attendance-devices.tsx   پنل زیر برگه
 - **ساخته نشد:** ثبت‌نام اثر انگشت/چهره روی دستگاه، فرمان به دستگاه، برنامه‌ی محلی (Agent)، مبدّل هیچ برندی، UI برای رویدادهای
   `held` (فقط تعدادشان نشان داده می‌شود)، شیفت شب.
 
+## ۱۱. attendance-02 — شیفت شب، قفل گوشی، ثبت‌های کنار گذاشته‌شده (۱۳ اکتبر)
+
+- **نام جدول‌ها عوض شد.** `attendance-workforce-migration.sql` (قدیمی، روی دیتابیس زنده اجراشده) جدول‌های
+  `attendance_devices` و `attendance_device_events` را با شکل دیگری دارد. جدول‌های هسته‌ی دستگاه حالا
+  `attendance_terminals` · `attendance_terminal_identities` · `attendance_terminal_events` هستند. نام تابع‌ها
+  (`attendance_device_ingest` …) و مسیرها عوض نشد. هر دو تست Postgres با جدول‌های قدیمیِ حاضر شروع می‌شوند.
+- **شب گفته می‌شود، حدس زده نمی‌شود.** `attendance.ends_next_day`؛ خروجِ زودتر از ورود بدون این علامت همچنان خطای تایپ است.
+  برگه: دکمه‌ی «ذخیره با خروجِ روز بعد». صفحه‌ی کارمند: سوییچ. شیفتِ `ends_at < starts_at` = شیفت شب (`shiftMinutes`،
+  `crossesMidnight`). دستگاه: خوانده‌ی بعد از نیمه‌شب **فقط** با شیفت شبِ برنامه‌ریزی‌شده‌ی دیروز و تا ۳ ساعت بعد از پایانش
+  به دیروز می‌رود (`attendance_device_work_day`، ستون `work_day`)؛ بدون برنامه، روز تقویمی خودش.
+- **قفل گوشی = WebAuthn با authenticator خودِ گوشی.** فقط کلید عمومی در `attendance_phone_keys`. challenge تصادفی نیست:
+  SHA-256 همان فرمی است که فرستاده می‌شود (`packages/validation/src/schemas/attendance-unlock.ts`)، پس امضا فقط برای همان
+  فرم معتبر است. بررسی در `phone-unlock.domain.ts`؛ origin از `utils/browser-origins.ts` (همان فهرست CORS).
+  اولین گوشی ثبت می‌شود (trust-on-first-use)؛ عوض‌کردنش فقط با «فراموش کردن» توسط مدیر. **تشخیص چهره نیست** و ادعایش هم نشده.
+- **کنار گذاشته‌شده‌ها:** `GET /api/attendance-devices/held` + `POST …/held/accept` → `attendance_device_accept_held`.
+  تنها راه خروج از `held`، و تصمیم آدم است.
+- attendance-self-01 و attendance-devices-01 بعد از اجرای 02 دوباره اجرا نمی‌شوند (خودشان رد می‌کنند).
+- **ساخته نشد:** مبدّل برند، ثبت‌نام روی دستگاه فیزیکی، تشخیص چهره با دوربین، رد کردن یک ثبتِ کنار گذاشته‌شده (فقط پذیرفتن هست).
+
 ## ۷. باز مانده
 
 - (بسته شد در بخش ۸: فیلتر تأمین‌کننده، دکمه‌ی «همه را خوانده‌شده کن»، خواندن `till-view.tsx`.)

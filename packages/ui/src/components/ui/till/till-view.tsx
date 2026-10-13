@@ -29,10 +29,8 @@
 // ============================================
 
 import { memo, useEffect, useMemo, useState } from 'react'
-import dynamic from 'next/dynamic'
 import { Skeleton } from '../skeleton'
-import { formatSelectedMoney, documentIntlLocale } from '../../../lib/money-display'
-import { formatMoney, FRACTION_DIGITS, type KnownCurrency } from '@hisabche/formatting'
+import { FRACTION_DIGITS } from '@hisabche/formatting'
 import { CURRENCY_CODES } from '@hisabche/validation'
 import {
   ArrowDownLeft,
@@ -66,7 +64,6 @@ import {
   Loading,
   MinorInput,
   Money,
-  Panel,
   SelectField,
   Stat,
 } from '../capability/capability-kit'
@@ -138,22 +135,14 @@ export interface TillViewProps {
   isLedgerLoading: boolean
   ledgerError: string | null
   dailyCashFlow: CashFlowDay[]
-  cashFlowDays: 7 | 30 | 90
-  onCashFlowDaysChange: (days: 7 | 30 | 90) => void
   isCashFlowLoading: boolean
   cashFlowError: string | null
 }
 
 type LedgerFilter = 'all' | 'in' | 'out' | 'invoices'
 const LEDGER_FILTERS: readonly LedgerFilter[] = ['all', 'in', 'out', 'invoices']
-type CashFlowRange = '7' | '30' | '90'
 
 const PAGE_SIZE = 10
-
-const DistributionChart = dynamic(() => import('./till-distribution-chart-internal'), {
-  ssr: false,
-  loading: () => <Skeleton className="mx-auto size-44 rounded-full" />,
-})
 
 /**
  * «+13% نسبت به روز قبل». Tone follows MEANING, not the sign: more cash in is
@@ -204,11 +193,6 @@ function MarginCell({ value }: { value: number | null | undefined }) {
   )
 }
 
-const CashFlowChart = dynamic(() => import('./till-cash-flow-chart-internal'), {
-  ssr: false,
-  loading: () => <Skeleton className="h-60 w-full rounded-xl" />,
-})
-
 export const TillView = memo(function TillView({
   t,
   session,
@@ -243,29 +227,10 @@ export const TillView = memo(function TillView({
   isLedgerLoading,
   ledgerError,
   dailyCashFlow,
-  cashFlowDays,
-  onCashFlowDaysChange,
   isCashFlowLoading,
   cashFlowError,
 }: TillViewProps) {
-  const { dateTime, date } = useDateFormat()
-
-  const chartDigits =
-    selectedCurrency && selectedCurrency in FRACTION_DIGITS
-      ? FRACTION_DIGITS[selectedCurrency as KnownCurrency]
-      : 2
-  const chartFactor = 10 ** chartDigits
-
-  const chartData = useMemo(
-    () =>
-      dailyCashFlow.map((d) => ({
-        label: date(d.day, { month: 'short', day: 'numeric' }),
-        in: d.inMinor / chartFactor,
-        out: d.outMinor / chartFactor,
-        net: d.netMinor / chartFactor,
-      })),
-    [dailyCashFlow, date, chartFactor],
-  )
+  const { dateTime } = useDateFormat()
 
   const [floatMinor, setFloatMinor] = useState(0)
   const [labelDraft, setLabelDraft] = useState('')
@@ -372,32 +337,6 @@ export const TillView = memo(function TillView({
       : tills.length > 0
         ? t('till.select_a_till', 'یک صندوق را انتخاب کنید')
         : t('till.no_open_session', 'صندوقی باز نیست')
-
-  // Kinds of cash event in this session, counted from the drawer ledger.
-  const distribution = useMemo(() => {
-    const COLORS: Record<string, string> = {
-      sale: 'hsl(var(--color-success))',
-      settlement_in: 'hsl(var(--color-info))',
-      settlement_out: 'hsl(var(--color-warning))',
-      cash_in: 'hsl(var(--color-primary))',
-      cash_out: 'hsl(var(--color-destructive))',
-      transfer_to_bank: 'hsl(var(--fg-secondary))',
-      transfer_from_bank: 'hsl(var(--fg-tertiary))',
-    }
-    const counts = new Map<string, number>()
-    for (const entry of ledger) {
-      if (entry.kind === 'opening_float') continue
-      counts.set(entry.kind, (counts.get(entry.kind) ?? 0) + 1)
-    }
-    return [...counts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([kind, count]) => ({
-        key: kind,
-        label: t(`till.kind_${kind}`, kind),
-        count,
-        color: COLORS[kind] ?? 'hsl(var(--fg-tertiary))',
-      }))
-  }, [ledger, t])
 
   // Presentation of the server's entries: which ones to show.
   const ledgerRows = useMemo(
@@ -1090,131 +1029,26 @@ export const TillView = memo(function TillView({
               )}
             </ListSection>
           )}
-          {/* What kinds of cash event THIS till has seen. It was on the list,
-              where no till is selected, and said «صندوقی باز نیست» there
-              whatever was open. */}
-          {session && totals && !sessionNotFound ? (
-            <div className="min-w-0">
-              <Panel title={t('till.distribution_title', 'توزیع تراکنش‌ها')}>
-                {isLedgerLoading ? (
-                  <Skeleton className="mx-auto size-44 rounded-full" />
-                ) : ledgerError ? (
-                  <ErrorNote
-                    message={ledgerError}
-                    onRetry={onRefresh}
-                    retryLabel={t('common.retry', 'تلاش دوباره')}
-                  />
-                ) : distribution.length === 0 ? (
-                  <EmptyState
-                    icon="search"
-                    title={t('till.ledger_empty', 'تراکنشی با این فیلتر نیست')}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
-                    <DistributionChart
-                      data={distribution}
-                      centerLabel={t('till.transactions', 'تراکنش')}
-                      size={168}
-                    />
-                    <ul className="w-full space-y-2 text-sm">
-                      {distribution.map((slice) => (
-                        <li key={slice.key} className="flex items-center justify-between gap-2">
-                          <span className="flex min-w-0 items-center gap-2">
-                            <span
-                              aria-hidden="true"
-                              className="size-3 shrink-0 rounded-full"
-                              style={{ backgroundColor: slice.color }}
-                            />
-                            <span className="truncate">{slice.label}</span>
-                          </span>
-                          <span
-                            className="shrink-0 tabular-nums text-[hsl(var(--fg-secondary))]"
-                            dir="ltr"
-                          >
-                            {slice.count} · {Math.round((slice.count / eventCount) * 1000) / 10}%
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </Panel>
-            </div>
-          ) : null}
         </div>
       ) : (
         /* ─── LIST STATE (default) ─── */
         <>
-          <div className="grid gap-4">
-            <div className="min-w-0">
-              <Panel
-                title={t('till.cash_flow_title', 'جریان نقدی')}
-                description={t(
-                  'till.cash_flow_hint',
-                  'دریافت و پرداخت نقدی همه‌ی صندوق‌ها و فاکتورها، به تفکیک روز.',
-                )}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <SegmentedControl
-                    label={t('till.cash_flow_range', 'بازه')}
-                    value={String(cashFlowDays) as CashFlowRange}
-                    onChange={(next) => onCashFlowDaysChange(Number(next) as 7 | 30 | 90)}
-                    options={[
-                      { value: '7', label: t('till.range_7', '۷ روز') },
-                      { value: '30', label: t('till.range_30', '۳۰ روز') },
-                      { value: '90', label: t('till.range_90', '۹۰ روز') },
-                    ]}
-                  />
-                  {availableCurrencies && availableCurrencies.length > 1 ? (
-                    // One currency at a time. There is no «all currencies»:
-                    // afghani and dollars on one axis is not a total, and the
-                    // option used to show the books currency under that name.
-                    <TableFilterSelect
-                      label={t('till.filter_currency', 'ارز')}
-                      value={selectedCurrency ?? ''}
-                      onChange={(cur) => onSelectCurrency?.(cur)}
-                      allValue={bookCurrency ?? ''}
-                      options={availableCurrencies.map((c) => ({
-                        value: c,
-                        label: t(`currency.${c.toLowerCase()}`, c),
-                      }))}
-                    />
-                  ) : null}
-                </div>
-                <div className="mt-3">
-                  {isCashFlowLoading ? (
-                    <Skeleton className="h-60 w-full rounded-xl" />
-                  ) : cashFlowError ? (
-                    <ErrorNote
-                      message={cashFlowError}
-                      onRetry={onRefresh}
-                      retryLabel={t('common.retry', 'تلاش دوباره')}
-                    />
-                  ) : dailyCashFlow.every((d) => d.inMinor === 0 && d.outMinor === 0) ? (
-                    <EmptyState
-                      icon="search"
-                      title={t('till.cash_flow_empty', 'در این بازه جریان نقدی ثبت نشده')}
-                    />
-                  ) : (
-                    <CashFlowChart
-                      data={chartData}
-                      labels={{
-                        in: t('till.filter_in', 'ورود'),
-                        out: t('till.filter_out', 'خروج'),
-                        net: t('till.net_session', 'خالص جریان نقد'),
-                      }}
-                      fmt={(v) =>
-                        selectedCurrency && selectedCurrency in FRACTION_DIGITS
-                          ? formatMoney(v, selectedCurrency as KnownCurrency, documentIntlLocale())
-                          : formatSelectedMoney(v)
-                      }
-                      height={240}
-                    />
-                  )}
-                </div>
-              </Panel>
+          {availableCurrencies && availableCurrencies.length > 1 ? (
+            // One currency at a time. There is no «all currencies»: afghani and
+            // dollars in one figure is not a total.
+            <div className="flex justify-end" data-till-currency>
+              <TableFilterSelect
+                label={t('till.filter_currency', 'ارز')}
+                value={selectedCurrency ?? ''}
+                onChange={(cur) => onSelectCurrency?.(cur)}
+                allValue={bookCurrency ?? ''}
+                options={availableCurrencies.map((c) => ({
+                  value: c,
+                  label: t(`currency.${c.toLowerCase()}`, c),
+                }))}
+              />
             </div>
-          </div>
+          ) : null}
 
           {/* ─── Tills — every open till; click one to see its transactions ─── */}
           <ListSection

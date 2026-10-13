@@ -133,19 +133,21 @@ describe('6 · the list does not say «no till is open» while tills are open', 
     expect(view).toContain(': noTillHint }')
   })
 
-  it('the distribution of the events of a till is on the page of that till, with its own error branch', () => {
-    const detail = view.indexOf('selectedTillId ? (')
-    const list = view.indexOf("t('till.tills_title'")
-    const panel = view.indexOf("t('till.distribution_title'")
-    expect(detail).toBeGreaterThan(-1)
-    expect(panel).toBeGreaterThan(detail)
-    expect(panel).toBeLessThan(list)
-    expect(count(view, "t('till.distribution_title'")).toBe(1)
-    const body = view.slice(panel, list)
-    expect(body).toContain(') : ledgerError ? ( <ErrorNote')
-    expect(body.indexOf(') : ledgerError ? (')).toBeLessThan(
-      body.indexOf(') : distribution.length === 0 ? ('),
-    )
+  it('the cash-flow chart and the distribution panel are gone (owner, 13 October) — the currency choice is not', () => {
+    for (const gone of [
+      "t('till.cash_flow_title'",
+      "t('till.distribution_title'",
+      'CashFlowChart',
+      'DistributionChart',
+      'cashFlowDays',
+      'till-cash-flow-chart-internal',
+    ]) {
+      expect(view, gone).not.toContain(gone)
+    }
+    // The figures at the top are still read in ONE chosen currency, and the
+    // choice is still on the list.
+    expect(view).toContain('data-till-currency')
+    expect(count(view, 'onChange={(cur) => onSelectCurrency?.(cur)}')).toBe(1)
   })
 
   it('«+13% نسبت به روز قبل» is claimed only from two loaded days', () => {
@@ -159,7 +161,7 @@ describe('7 · the page of a till is in the currency of that till', () => {
     expect(container).toContain(
       'const tillCurrency = selectedTillId ? (selected.data?.session?.currency ?? (tills.data ?? []).find((till) => till.sessionId === selectedTillId)?.currency) : undefined',
     )
-    expect(container).toContain('const cashFlow = useCashFlow(cashFlowDays, activeCurrency)')
+    expect(container).toContain('const cashFlow = useCashFlow(7, activeCurrency)')
   })
 })
 

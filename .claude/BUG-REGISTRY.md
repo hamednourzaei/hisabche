@@ -1182,3 +1182,12 @@ placeholder همان برچسبِ بالای فیلد بود. **رفع:** `DateR
 
 فهرست در `.claude/SESSION-CACHE-2026-10-12-ANTIGRAVITY-REVIEW.md` بخش ۸. مهم‌ترین‌ها: فرم قبل از جواب سرور بسته می‌شد؛ تراکنش
 تکرارشده id تازه می‌گرفت؛ مبلغ اولیه با تغییر ارز می‌ماند. **گارد:** `packages/ui/src/__tests__/till-data-paths.test.ts`.
+
+### BUG-123 — migration دستگاه‌ها روی دیتابیس زنده اجرا نشد: برخورد نام جدول (۱۳ اکتبر)
+
+- **نشانه:** `column "employee_id" does not exist` در attendance-devices-01 و `trigger … does not exist` در attendance-02.
+- **ریشه:** `attendance-workforce-migration.sql` قبلاً `attendance_devices` و `attendance_device_events` را با شکل دیگری ساخته بود؛
+  `CREATE TABLE IF NOT EXISTS` رد شد و ایندکس/تریگرِ بعدی به جدول قدیمی خورد. هر دو اجرا در تراکنش بودند و چیزی جا نماند
+  (با `FINDING-attendance-terminals.sql` تأیید شد).
+- **رفع:** نام‌ها `attendance_terminal*` شد. جدول‌های قدیمی دست‌نخورده.
+- **گارد:** هر دو `*.pg.test.ts` با جدول‌های قدیمی شروع می‌کنند و ستون‌هایشان را بعد از اجرا می‌سنجند.
