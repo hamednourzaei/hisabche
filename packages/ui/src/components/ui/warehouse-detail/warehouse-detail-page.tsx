@@ -1,5 +1,6 @@
 'use client'
 
+import { CategoryField, categoryLabel } from '../warehouse/category-field'
 import { KpiCard, KpiGrid } from '../kpi-card'
 import { useState, useEffect } from 'react'
 import { UnitSelect } from '../units/unit-select'
@@ -9,7 +10,6 @@ import {
   ArrowRight,
   Package,
   DollarSign,
-  AlertTriangle,
   Loader2,
   Save,
   Trash2,
@@ -198,8 +198,6 @@ export function ProductDetailPage({
       newErrors.buyPrice = t('validation.min', 'مقدار نمی‌تواند منفی باشد')
     if (editValues.quantity < 0)
       newErrors.quantity = t('validation.min', 'مقدار نمی‌تواند منفی باشد')
-    if (editValues.minStockLevel < 0)
-      newErrors.minStockLevel = t('validation.min', 'مقدار نمی‌تواند منفی باشد')
     if (quantityChanged && stockWarehouses.length > 1 && !editValues.warehouseId)
       newErrors.warehouseId = t('warehouse.byWarehouse.pickRequired')
     setErrors(newErrors)
@@ -384,15 +382,28 @@ export function ProductDetailPage({
                 ))}
               </div>
 
-              {/* Quantity, Min Stock, Unit */}
-              <div className="grid grid-cols-3 gap-4">
-                {(['quantity', 'minStockLevel'] as const).map((field) => (
+              <div>
+                <label
+                  htmlFor="product-category"
+                  className="mb-1.5 block text-sm font-medium text-[hsl(var(--fg-primary))]"
+                >
+                  {t('warehouse.category', 'دسته‌بندی')}
+                </label>
+                <CategoryField
+                  t={t}
+                  id="product-category"
+                  value={editValues.category}
+                  onChange={(next) => handleEditChange('category', next)}
+                />
+              </div>
+
+              {/* Quantity, Unit. The minimum-stock field was removed (owner,
+                  13 October); a product keeps the minimum it already has. */}
+              <div className="grid grid-cols-2 gap-4">
+                {(['quantity'] as const).map((field) => (
                   <div key={field}>
                     <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-1.5">
-                      {t(
-                        `warehouse.${field === 'minStockLevel' ? 'minStock' : field}`,
-                        field === 'minStockLevel' ? 'حداقل موجودی' : 'تعداد',
-                      )}
+                      {t('warehouse.quantity', 'تعداد')}
                     </label>
                     <input
                       type="number"
@@ -473,18 +484,15 @@ export function ProductDetailPage({
                   label={t('warehouse.quantity', 'تعداد')}
                   value={`${product.quantity} ${t(`warehouse.units.${toUnitType(product.unit)}`, product.unit)}`}
                 />
-                <KpiCard
-                  icon={AlertTriangle}
-                  label={t('warehouse.minStock', 'حداقل موجودی')}
-                  value={`${product.minStockLevel}`}
-                />
               </KpiGrid>
               <div className="grid grid-cols-2 gap-4 border-t border-[hsl(var(--border-default))] pt-4 sm:grid-cols-3">
                 <div>
                   <p className="text-xs text-[hsl(var(--fg-secondary))]">
                     {t('warehouse.category', 'دسته‌بندی')}
                   </p>
-                  <p className="font-medium text-[hsl(var(--fg-primary))]">{product.category}</p>
+                  <p className="font-medium text-[hsl(var(--fg-primary))]">
+                    {categoryLabel(t, product.category) || '—'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-[hsl(var(--fg-secondary))]">

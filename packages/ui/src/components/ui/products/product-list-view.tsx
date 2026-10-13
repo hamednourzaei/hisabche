@@ -21,7 +21,7 @@ import { memo, useMemo } from 'react'
 import { PAGE_SIZES } from '@hisabche/ui-contract'
 
 import type { ListEngine } from '../../../hooks/use-list-engine'
-import type { ProductRow } from './containers/product-list-container'
+import type { ProductPlace, ProductRow } from './containers/product-list-container'
 import {
   ActionButton,
   Badge,
@@ -48,6 +48,8 @@ export interface ProductListViewProps {
   onRefresh: () => void
   /** The product's own page — a row opens it. */
   onOpen?: ((productId: string) => void) | undefined
+  /** Product id → the warehouses holding it. Null = not read. */
+  places: ReadonlyMap<string, ProductPlace[]> | null
 }
 
 const isLow = (product: ProductRow) => (product.quantity ?? 0) <= (product.minStockLevel ?? 0)
@@ -63,6 +65,7 @@ export const ProductListView = memo(function ProductListView({
   error,
   onRefresh,
   onOpen,
+  places,
 }: ProductListViewProps) {
   const { state } = engine
 
@@ -105,8 +108,59 @@ export const ProductListView = memo(function ProductListView({
           </>
         ),
       },
+      {
+        id: 'warehouses',
+        labelKey: 'products.warehouses',
+        labelFallback: 'انبار',
+        showFrom: 'md',
+        render: (product) => {
+          // Not read yet (or it failed): no claim either way.
+          if (!places) return <span className="text-[hsl(var(--fg-tertiary))]">—</span>
+          const list = places.get(product.id) ?? []
+          if (list.length === 0) {
+            return (
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('products.no_warehouse', 'در هیچ انباری نیست')}
+              </span>
+            )
+          }
+          return (
+            <ul className="space-y-0.5" data-product-places>
+              {list.map((place) => (
+                <li key={place.warehouseId} className="text-sm">
+                  {place.warehouseName}
+                  <span dir="ltr" className="ms-1.5 tabular-nums text-[hsl(var(--fg-secondary))]">
+                    {place.quantity}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )
+        },
+      },
+      {
+        id: 'branches',
+        labelKey: 'products.branches',
+        labelFallback: 'شعبه',
+        showFrom: 'md',
+        render: (product) => {
+          if (!places) return <span className="text-[hsl(var(--fg-tertiary))]">—</span>
+          const names = [
+            ...new Set(
+              (places.get(product.id) ?? [])
+                .map((place) => place.branchName)
+                .filter((name): name is string => !!name),
+            ),
+          ]
+          return names.length > 0 ? (
+            <span className="text-sm">{names.join('، ')}</span>
+          ) : (
+            <span className="text-[hsl(var(--fg-tertiary))]">—</span>
+          )
+        },
+      },
     ],
-    [t],
+    [t, places],
   )
 
   return (

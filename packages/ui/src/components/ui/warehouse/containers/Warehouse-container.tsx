@@ -179,7 +179,7 @@ export function warehouseContainer() {
           buyPrice: product.buyPrice,
           minStockLevel: product.minStockLevel ?? 5,
           unit: product.unit,
-          category: '',
+          category: product.category ?? '',
           imageUrl: product.imageUrl ?? null,
         })),
     [detail.data, search],

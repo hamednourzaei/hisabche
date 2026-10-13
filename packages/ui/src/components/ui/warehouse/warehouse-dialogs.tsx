@@ -10,7 +10,13 @@
 // ============================================
 
 import { useEffect, useState } from 'react'
-import type { WarehouseProduct } from '@hisabche/api'
+import {
+  asList,
+  useBranches,
+  useStockPlacement,
+  type Branch,
+  type WarehouseProduct,
+} from '@hisabche/api'
 
 import { SelectField } from '../select-field'
 import {
@@ -38,6 +44,9 @@ const errorText = (t: T, err: unknown) => {
     : t('warehouse.saveFailed', 'ذخیره نشد. دوباره تلاش کنید.')
 }
 
+/** The select's value for «belongs to no branch». Never sent as an id. */
+const NO_BRANCH = 'none'
+
 export function AddWarehouseDialog({
   t,
   open,
@@ -49,14 +58,31 @@ export function AddWarehouseDialog({
   t: T
   open: boolean
   onClose: () => void
-  onCreate: (input: { name: string; location: string }) => Promise<unknown>
+  onCreate: (input: {
+    name: string
+    location: string
+    branchId?: string | null
+  }) => Promise<unknown>
   isPending: boolean
   /** Set when editing an existing warehouse: the form starts from its values. */
-  initial?: { name: string; location: string } | null | undefined
+  initial?: { id?: string; name: string; location: string } | null | undefined
 }) {
   const [name, setName] = useState('')
   const [location, setLocation] = useState('')
+  const [branchId, setBranchId] = useState(NO_BRANCH)
   const [error, setError] = useState<string | null>(null)
+
+  // Which branch a warehouse belongs to decides who may sell from it: a member
+  // limited to a branch sees and uses only that branch's warehouses.
+  const branchList = useBranches()
+  const branches = asList<Branch>(branchList.data).filter((branch) => branch.isActive)
+  const placement = useStockPlacement(open)
+  const currentBranch = initial?.id
+    ? (placement.data?.warehouses.find((warehouse) => warehouse.id === initial.id)?.branchId ??
+      null)
+    : null
+  // The branch select is offered only when it can be saved and read back.
+  const canPlace = branches.length > 0 && placement.data?.branchesConfigured === true
 
   useEffect(() => {
     if (open) {
@@ -65,10 +91,22 @@ export function AddWarehouseDialog({
       setError(null)
     }
   }, [open, initial])
+  // The warehouse's present branch arrives after the dialog opens.
+  useEffect(() => {
+    if (open) setBranchId(currentBranch ?? NO_BRANCH)
+  }, [open, currentBranch])
 
   const submit = async () => {
     try {
-      await onCreate({ name: name.trim(), location: location.trim() })
+      const chosen = branchId === NO_BRANCH ? null : branchId
+      await onCreate({
+        name: name.trim(),
+        location: location.trim(),
+        // Sent only when it can be saved, and on an edit only when it changed.
+        ...(canPlace && (initial ? chosen !== currentBranch : chosen !== null)
+          ? { branchId: chosen }
+          : {}),
+      })
       onClose()
     } catch (err) {
       setError(errorText(t, err))
@@ -111,6 +149,28 @@ export function AddWarehouseDialog({
               className={input}
             />
           </label>
+          {canPlace ? (
+            <div className="space-y-1 text-sm" data-warehouse-branch>
+              <label htmlFor="warehouse-branch" className="text-[hsl(var(--fg-secondary))]">
+                {t('warehouse.branch', 'شعبه')}
+              </label>
+              <SelectField
+                id="warehouse-branch"
+                value={branchId}
+                onChange={setBranchId}
+                options={[
+                  { value: NO_BRANCH, label: t('warehouse.branchNone', 'کل کسب‌وکار') },
+                  ...branches.map((branch) => ({ value: branch.id, label: branch.name })),
+                ]}
+              />
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {t(
+                  'warehouse.branchHint',
+                  'وقتی انبار را به یک شعبه بدهید، فقط کسانی که به آن شعبه دسترسی دارند آن را می‌بینند و از آن فاکتور می‌زنند. انبارِ «کل کسب‌وکار» برای همه باز است.',
+                )}
+              </p>
+            </div>
+          ) : null}
           {error ? (
             <p role="alert" className="text-sm text-[hsl(var(--color-destructive))]">
               {error}

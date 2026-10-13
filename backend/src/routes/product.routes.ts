@@ -112,6 +112,21 @@ export async function productRoutes(fastify: FastifyInstance) {
   // never silently the first), 404 unknown. A failed query is a 500, never a
   // 404: «unknown barcode» invites creating a product that already exists.
   // Declared before /:id so the static segment wins.
+  // The categories this business has used. Declared before /:id so the
+  // static segment wins.
+  fastify.get(
+    '/api/products/categories',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send({ categories: await productService.categories(request.tenancy) })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to read product categories' })
+      }
+    },
+  )
+
   fastify.get(
     '/api/products/by-barcode/:code',
     { preHandler: [authenticate, requireWorkspaceContext] },

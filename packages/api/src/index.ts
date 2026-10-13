@@ -66,6 +66,7 @@ export {
   useProducts,
   useProduct,
   useProductsByIds,
+  useProductCategories,
   useCreateProduct,
   useUpdateProduct,
   useDeleteProduct,
@@ -1150,6 +1151,9 @@ export {
 // ─── Warehouses (multi-warehouse, request #90) ───────────
 export {
   useWarehouseOverview,
+  useStockPlacement,
+  type StockPlacement,
+  type PlacedWarehouse,
   useWarehouseDetail,
   useCreateWarehouse,
   useUpdateWarehouse,

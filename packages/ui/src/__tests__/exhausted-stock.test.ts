@@ -79,13 +79,11 @@ describe('a negative quantity is out of stock', () => {
 
 describe('the invoice picker', () => {
   it('⚠️ keeps an exhausted product visible but unpickable on a sale', () => {
-    expect(picker).toContain("transactionType !== 'purchase'")
-    // The figure is now the stock of the invoice's warehouse when it names one
-    // (#94); with no warehouse it is still the product total.
-    expect(picker).toContain("typeof stock === 'number' && stock <= 0")
-    expect(picker).toContain('warehouseStock.quantityOf(product.id)')
-    expect(picker).toContain('disabled={isExhausted(product)}')
-    expect(picker).toContain('if (isExhausted(product)) return')
+    // The rule lives in lib/invoices/picker-rows (tested in picker-rows.test.ts):
+    // a product its warehouse has run out of stays in the list, marked.
+    expect(picker).toContain("transactionType === 'purchase'")
+    expect(picker).toContain('disabled={exhausted}')
+    expect(picker).toContain('if (row.exhausted) return')
   })
 
   it('does not filter exhausted products out of the list', () => {

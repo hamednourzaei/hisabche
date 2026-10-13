@@ -32,6 +32,7 @@ import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.
 import { ValidationError } from '../errors/validation.error'
 import { memoryCache } from '../utils/pagination'
 import type { TenancyContext } from './tenancy.service'
+import { assertWarehouseBranch } from './inventory/warehouse-access'
 import {
   checkAssign,
   productWarehouseBreakdown,
@@ -86,7 +87,33 @@ export class WarehouseService {
     return result
   }
 
+  /**
+   * Put a warehouse in a branch (or take it out, with null). Its own write,
+   * after the row exists: `branch_id` comes from docs/branch-migration.sql,
+   * and on a database without it the warehouse is still saved — the branch is
+   * what is refused, by name.
+   */
+  private async placeInBranch(
+    ctx: TenancyContext,
+    warehouseId: string,
+    branchId: string | null,
+  ): Promise<void> {
+    await assertWarehouseBranch(ctx, branchId)
+    const { error } = await supabase
+      .from('warehouses')
+      .update({ branch_id: branchId })
+      .eq('id', warehouseId)
+      .eq('workspace_id', ctx.workspaceId)
+    if (!error) return
+    if (['42703', 'PGRST204'].includes(error.code ?? '')) {
+      throw new ConflictError('WAREHOUSE_BRANCH_NOT_CONFIGURED')
+    }
+    throw new DatabaseError('Failed to set the branch of the warehouse', error)
+  }
+
   async createWarehouse(ctx: TenancyContext, data: CreateWarehouse) {
+    // Checked before anything is written: an unknown branch makes no warehouse.
+    if (data.branchId) await assertWarehouseBranch(ctx, data.branchId)
     const { data: warehouse, error } = await supabase
       .from('warehouses')
       .insert({
@@ -103,6 +130,9 @@ export class WarehouseService {
       .single()
 
     if (error) throw new DatabaseError('Failed to create warehouse', error)
+    if (data.branchId) {
+      await this.placeInBranch(ctx, (warehouse as { id: string }).id, data.branchId)
+    }
 
     await this.invalidate(ctx.workspaceId)
     return warehouse
@@ -123,6 +153,8 @@ export class WarehouseService {
       .single()
 
     if (error) throw new DatabaseError('Failed to update warehouse', error)
+    // `undefined` = not mentioned, leave it. `null` = take it out of its branch.
+    if (data.branchId !== undefined) await this.placeInBranch(ctx, id, data.branchId)
 
     await this.invalidate(ctx.workspaceId)
     return warehouse
@@ -295,7 +327,9 @@ export class WarehouseService {
     for (let from = 0; ; from += PAGE) {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, sku, unit, quantity, sell_price, buy_price, min_stock_level, image_url')
+        .select(
+          'id, name, sku, unit, quantity, sell_price, buy_price, min_stock_level, category, image_url',
+        )
         .eq('workspace_id', workspaceId)
         .eq('is_active', true)
         .order('id', { ascending: true })

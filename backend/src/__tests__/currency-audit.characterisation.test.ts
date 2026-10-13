@@ -139,13 +139,17 @@ describe('a party’s balance is per currency', () => {
 })
 
 describe('CHARACTERISATION · DEFECT-CUR-02 — the ledger books a foreign invoice at an implicit rate of 1', () => {
-  it('the invoice posting takes the invoice total as it is, with no rate and no currency', () => {
+  // FIXED on 13 October (invoice-exchange-rate.test.ts): the posting used to
+  // take the invoice total as it was, with no rate. It is kept here as the
+  // record of what the defect was, now asserting the opposite.
+  it('the invoice posting converts the total at the rate frozen on the invoice', () => {
     const service = source('services/invoice.service.ts')
-    const at = service.indexOf('const total = Number(data.total) || 0')
+    expect(service).not.toContain('const total = Number(data.total) || 0')
+    const at = service.indexOf('const total = InvoiceService.inBooksCurrency(')
     expect(at).toBeGreaterThan(0)
-    const posting = service.slice(at, at + 2500)
-    expect(posting).toContain('{ accountId: accounts.receivable!, debit: total, credit: 0 }')
-    expect(posting).not.toMatch(/rate|currency/i)
+    expect(service.slice(at, at + 2500)).toContain(
+      '{ accountId: accounts.receivable!, debit: total, credit: 0 }',
+    )
   })
 
   it('revaluation states the booked rate of every foreign invoice as 1', () => {

@@ -516,6 +516,12 @@ export const invoiceSchema = z.object({
   // (services/base-currency.ts). A default here stamped 'AFN' on the body
   // before the service ever saw that none had been chosen.
   currency: currencyCodeSchema.optional(),
+  /**
+   * Units of the BOOKS currency per one unit of this invoice's currency, on the
+   * day of the invoice. Required by the server whenever the two differ — an
+   * invoice in another currency with no rate would be booked as if 1 = 1.
+   */
+  exchangeRate: z.number().positive().finite().optional(),
 
   // Status — ✅ استفاده از invoiceStatusSchema
   status: invoiceStatusSchema.default('pending'),
@@ -586,6 +592,12 @@ export const invoiceFiltersSchema = z.object({
   customerId: uuidSchema.optional(),
   supplierId: uuidSchema.optional(),
   currency: currencyCodeSchema.optional(),
+  /**
+   * Units of the BOOKS currency per one unit of this invoice's currency, on the
+   * day of the invoice. Required by the server whenever the two differ — an
+   * invoice in another currency with no rate would be booked as if 1 = 1.
+   */
+  exchangeRate: z.number().positive().finite().optional(),
   dateFrom: isoDateSchema.optional(),
   dateTo: isoDateSchema.optional(),
 

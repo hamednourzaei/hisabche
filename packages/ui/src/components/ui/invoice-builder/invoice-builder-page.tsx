@@ -51,6 +51,8 @@ export interface InvoiceBuilderPageProps {
   issues: string[]
   /** Non-blocking "stock goes below zero" notice, shown while typing. */
   stockWarning?: ReactNode
+  /** The scan button: in the grid's toolbar on a desktop, above the items on a phone. */
+  scanSlot?: ReactNode
 
   customers: readonly InvoiceDraftCustomer[]
   transactionType: 'sale' | 'purchase'
@@ -107,6 +109,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
   invalidRowIds,
   issues,
   stockWarning,
+  scanSlot,
   customers,
   transactionType,
   currency,
@@ -222,7 +225,12 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
           summary={summary}
           invalidRowIds={invalidRowIds}
           issues={issues}
-          stockWarning={stockWarning}
+          stockWarning={
+            <>
+              {scanSlot}
+              {stockWarning}
+            </>
+          }
           customers={customers}
           transactionType={transactionType}
           currency={currency}
@@ -365,6 +373,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
                   : null
               }
               canDeleteSelected={!!selectedColumn && canDeleteColumn(selectedColumn)}
+              scanSlot={scanSlot}
               onAddRow={onAddRow}
               onAddColumn={openAddColumn}
               onDeleteColumn={() => requestDeleteColumn(selectedColumn)}

@@ -4,7 +4,7 @@
 // ============================================
 'use client'
 
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { COLUMN, currencyPrecision, moveColumn, type InvoiceColumn } from '@hisabche/validation'
 import { formatNumber } from '@hisabche/formatting'
@@ -25,6 +25,9 @@ import { InvoiceWarehouseSelect } from '../invoice-warehouse-select'
 import { InvoiceBranchSelect } from '../invoice-branch-select'
 import { BarcodeScanDialog, type ScanProblem } from '../barcode-scan-dialog'
 import { CameraScanButton } from '../camera-scan-button'
+import { InvoiceExchangeRate } from '../invoice-exchange-rate'
+import { needsExchangeRate } from '../../../../lib/invoices/exchange-rate'
+import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import {
   loadScaleLabelConfig,
   parseScaleLabel,
@@ -184,6 +187,22 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
     [draft, currency, setPrimaryCurrency],
   )
 
+  // A NEW invoice starts in the currency the books are kept in (the one chosen
+  // when the business was set up) — not in whatever the last invoice used.
+  // Only an untouched draft is moved: one being written keeps its currency.
+  const bookCurrency = useBookCurrency()
+  const startedInBooks = useRef(false)
+  useEffect(() => {
+    if (startedInBooks.current || !bookCurrency) return
+    startedInBooks.current = true
+    const untouched =
+      draft.customers.length === 0 &&
+      draft.rows.every(
+        (row) => !row.productId && Object.values(row.values).every((value) => !value),
+      )
+    if (untouched && currency !== bookCurrency) handleCurrencyChange(bookCurrency as CurrencyCode)
+  }, [bookCurrency, currency, draft.customers.length, draft.rows, handleCurrencyChange])
+
   const handleSaveDraft = useCallback(() => {
     // The draft store is already persisted on every keystroke, so "save" is
     // an acknowledgement, not a write. Saying so beats faking a request.
@@ -207,6 +226,13 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   )
   const setBranchId = useCallback(
     (value: string | null) => draft.setField('branchId', value),
+    [draft],
+  )
+  const setExchangeRate = useCallback(
+    (next: { from: string; to: string }) => {
+      draft.setField('exchangeRateFrom', next.from)
+      draft.setField('exchangeRateTo', next.to)
+    },
     [draft],
   )
   const creditBreachInfo = useCustomerTerms({
@@ -250,18 +276,31 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
         summary={summary}
         invalidRowIds={invalidRowIds}
         issues={issues}
+        scanSlot={
+          <CameraScanButton
+            t={t}
+            onCode={(code) => void handleScan(code)}
+            disabled={scanProblem !== null}
+            onOpenChange={setScanDialogOpen}
+          />
+        }
         stockWarning={
           <>
-            <CameraScanButton
-              t={t}
-              onCode={(code) => void handleScan(code)}
-              disabled={scanProblem !== null}
-              onOpenChange={setScanDialogOpen}
-            />
+            {bookCurrency && needsExchangeRate(currency, bookCurrency) ? (
+              <InvoiceExchangeRate
+                t={t}
+                invoiceCurrency={currency}
+                bookCurrency={bookCurrency}
+                from={draft.exchangeRateFrom}
+                to={draft.exchangeRateTo}
+                onChange={setExchangeRate}
+              />
+            ) : null}
             <InvoiceBranchSelect t={t} value={draft.branchId} onChange={setBranchId} />
             <InvoiceWarehouseSelect
               t={t}
               transactionType={draft.transactionType}
+              branchId={draft.branchId}
               value={draft.warehouseId}
               onChange={setWarehouseId}
             />

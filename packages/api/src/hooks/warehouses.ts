@@ -40,6 +40,8 @@ export interface WarehouseProduct {
   sellPrice: number
   buyPrice: number
   minStockLevel: number | null
+  /** The business's own word for what kind of goods this is. Absent from an older server. */
+  category?: string | undefined
   /** The cover image; null (or absent, from an older server) = none. */
   imageUrl?: string | null | undefined
 }
@@ -51,8 +53,30 @@ export interface WarehouseDetail {
   summary: StockSummary
 }
 
+/** A warehouse and the branch it belongs to (null = the business as a whole). */
+export interface PlacedWarehouse {
+  id: string
+  name: string
+  branchId: string | null
+  branchName: string | null
+}
+
+/**
+ * Where stock is: the warehouses THIS member may use, each with its branch,
+ * and what each holds of each product (GET /warehouses/placement).
+ */
+export interface StockPlacement {
+  /** False = this database cannot say which branch a warehouse belongs to. */
+  branchesConfigured: boolean
+  /** True = the list is only what this member's branches include. */
+  restricted: boolean
+  warehouses: PlacedWarehouse[]
+  stock: Array<{ productId: string; warehouseId: string; quantity: number }>
+}
+
 export const warehouseKeys = {
   all: ['warehouses'] as const,
+  placement: () => [...warehouseKeys.all, 'placement'] as const,
   overview: () => [...warehouseKeys.all, 'overview'] as const,
   detail: (id: string) => [...warehouseKeys.all, 'detail', id] as const,
   product: (id: string) => [...warehouseKeys.all, 'product', id] as const,
@@ -99,13 +123,39 @@ export function useWarehouseDetail(id: string | null) {
   })
 }
 
+/**
+ * A sale is decided on these quantities, so they are read fresh every time
+ * the screen that shows them mounts, and never written to the device cache.
+ */
+export function useStockPlacement(enabled = true) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: warehouseKeys.placement(),
+    queryFn: async (): Promise<StockPlacement> => {
+      const { data } = await apiClient.get<Partial<StockPlacement>>('/warehouses/placement')
+      return {
+        branchesConfigured: data?.branchesConfigured === true,
+        restricted: data?.restricted === true,
+        warehouses: asList<PlacedWarehouse>(data?.warehouses),
+        stock: asList<StockPlacement['stock'][number]>(data?.stock),
+      }
+    },
+    enabled: authReady && enabled,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    meta: { persist: false },
+  })
+}
+
 export function useCreateWarehouse() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { name: string; location?: string }) => {
+    mutationFn: async (input: { name: string; location?: string; branchId?: string | null }) => {
       const { data } = await apiClient.post('/warehouses', {
         name: input.name,
         location: input.location ?? '',
+        // Sent only when a branch was chosen: an older server refuses unknown keys.
+        ...(input.branchId ? { branchId: input.branchId } : {}),
       })
       return data as { id: string; name: string }
     },
@@ -117,7 +167,13 @@ export function useCreateWarehouse() {
 export function useUpdateWarehouse() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { id: string; name: string; location: string }) => {
+    mutationFn: async (input: {
+      id: string
+      name: string
+      location: string
+      /** `undefined` = leave it; `null` = take it out of its branch. */
+      branchId?: string | null | undefined
+    }) => {
       const { data } = await apiClient.patch(`/warehouses/${input.id}`, input)
       return data as { id: string; name: string }
     },

@@ -3,6 +3,7 @@
 // FIXED: listwarehouses → listWarehouses
 // ============================================
 
+import { stockPlacement } from '../services/inventory/warehouse-access'
 import { sendFailure } from '../errors/http-failure'
 import { IdempotencyUnavailableError, readClientRequestId } from '../utils/client-request'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
@@ -79,6 +80,11 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
         if (err instanceof z.ZodError) {
           return reply.code(400).send({ error: 'Validation failed', details: err.errors })
         }
+        // A named refusal (an unknown branch, a database without branches on
+        // warehouses) is the caller's to read — not a server error.
+        if (err instanceof BaseError && err.statusCode < 500) {
+          return reply.code(err.statusCode).send({ error: err.message, code: err.message })
+        }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to create warehouse' })
       }
@@ -109,6 +115,9 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
       } catch (err) {
         if (err instanceof z.ZodError) {
           return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        }
+        if (err instanceof BaseError && err.statusCode < 500) {
+          return reply.code(err.statusCode).send({ error: err.message, code: err.message })
         }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to update warehouse' })
@@ -185,6 +194,22 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     fastify.log.error(err)
     return reply.code(500).send({ error: fallback })
   }
+
+  // Where every warehouse is (its branch) and what it holds — only the
+  // warehouses this member's branches include. No inventory capability asked:
+  // a seller needs it to say which shelf a sale leaves from, and it carries
+  // names and quantities, never a cost or a price.
+  fastify.get(
+    '/api/warehouses/placement',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send(await stockPlacement(request.tenancy))
+      } catch (err) {
+        return failWarehouse(reply, err, 'Failed to read where stock is')
+      }
+    },
+  )
 
   fastify.get(
     '/api/warehouses/overview',

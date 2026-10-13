@@ -12,6 +12,8 @@
 // writing into.
 // ============================================
 
+import { restateAtRates, type ProfitInvoice, type ProfitLine } from './profit-report.domain'
+import { baseCurrencyOf } from '../base-currency'
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
 import { fetchAllPages } from '../../utils/fetch-all-pages'
@@ -769,6 +771,47 @@ export class AccountingRepository {
     }
   }
 
+  /**
+   * A sale in another currency that carries its rate is a sale in the BOOKS
+   * currency: its revenue is restated at the rate frozen on the invoice, so it
+   * meets its cost (cost layers are always in the books currency) and a profit
+   * can be said.
+   *
+   * ⚠️ ONLY WITH A RATE. A foreign-currency invoice made before rates were
+   * kept has none; it stays under its own currency, where the report says its
+   * profit cannot be computed. Nothing is assumed for it.
+   */
+  private async restateInBooksCurrency<I extends ProfitInvoice, L extends ProfitLine>(
+    workspaceId: string,
+    invoices: I[],
+    lines: L[],
+  ): Promise<{ invoices: I[]; lines: L[] }> {
+    const foreign = invoices.map((invoice) => invoice.id)
+    if (foreign.length === 0) return { invoices, lines }
+
+    const rates = new Map<string, number>()
+    for (let i = 0; i < foreign.length; i += 200) {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id, exchange_rate')
+        .eq('workspace_id', workspaceId)
+        .in('id', foreign.slice(i, i + 200))
+        .not('exchange_rate', 'is', null)
+      if (error) {
+        // No column = no invoice of this database carries a rate.
+        if (['42703', 'PGRST204'].includes(error.code ?? '')) return { invoices, lines }
+        throw new DatabaseError('Failed to read invoice exchange rates', error)
+      }
+      for (const row of (data ?? []) as Array<{ id: string; exchange_rate: number | string }>) {
+        const rate = Number(row.exchange_rate)
+        if (rate > 0 && Number.isFinite(rate)) rates.set(String(row.id), rate)
+      }
+    }
+    if (rates.size === 0) return { invoices, lines }
+
+    return restateAtRates(invoices, lines, rates, await baseCurrencyOf(workspaceId))
+  }
+
   /** Sale invoices (not cancelled) dated in [from, to], their lines, costs and the period's payrolls. */
   async profitSources(workspaceId: string, from: string, to: string) {
     const [invoiceRows, payrollRows] = await Promise.all([
@@ -795,14 +838,16 @@ export class AccountingRepository {
           .range(a, b),
       ),
     ])
-    const invoices = invoiceRows.map((row) => this.mapProfitInvoice(row))
+    const read = invoiceRows.map((row) => this.mapProfitInvoice(row))
     const details = await this.profitDetails(
       workspaceId,
-      invoices.map((invoice) => invoice.id),
+      read.map((invoice) => invoice.id),
     )
+    const { invoices, lines } = await this.restateInBooksCurrency(workspaceId, read, details.lines)
     return {
       invoices,
       ...details,
+      lines,
       payrolls: payrollRows
         .filter((row) => !['cancelled', 'rejected'].includes(String(row.status ?? '')))
         .map((row) => ({
@@ -829,14 +874,13 @@ export class AccountingRepository {
       if (error) throw new DatabaseError('Failed to read invoices', error)
       invoiceRows.push(...(data ?? []))
     }
-    const invoices = invoiceRows.map((row) => this.mapProfitInvoice(row))
-    return {
-      invoices,
-      ...(await this.profitDetails(
-        workspaceId,
-        invoices.map((invoice) => invoice.id),
-      )),
-    }
+    const read = invoiceRows.map((row) => this.mapProfitInvoice(row))
+    const details = await this.profitDetails(
+      workspaceId,
+      read.map((invoice) => invoice.id),
+    )
+    const { invoices, lines } = await this.restateInBooksCurrency(workspaceId, read, details.lines)
+    return { invoices, ...details, lines }
   }
 
   // ─── Evidence (the chain behind a profit figure) ──────────────────────────

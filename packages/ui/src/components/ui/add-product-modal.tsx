@@ -3,7 +3,7 @@
 import { UnitSelect, toValidUnit } from './units/unit-select'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { DollarSign, Package, AlertTriangle, Loader2 } from 'lucide-react'
+import { DollarSign, Package, Loader2 } from 'lucide-react'
 import { Button } from './button'
 import { Input } from './input'
 import { MoneyInput } from './money-input'
@@ -40,7 +40,6 @@ type FormData = {
   buyPrice: number
   sellPrice: number
   unit: UnitType
-  minStock: number
 }
 
 const UNIT_OPTIONS: { value: UnitType; labelKey: string; fallback: string }[] = [
@@ -72,7 +71,6 @@ export const AddProductModal = memo(function AddProductModal({
     buyPrice: 0,
     sellPrice: 0,
     unit: 'piece',
-    minStock: 5,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -94,9 +92,6 @@ export const AddProductModal = memo(function AddProductModal({
     }
     if (formData.sellPrice < 0) {
       newErrors.sellPrice = t('validation.min')
-    }
-    if (formData.minStock < 0) {
-      newErrors.minStock = t('validation.min')
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -138,7 +133,7 @@ export const AddProductModal = memo(function AddProductModal({
         buyPrice: formData.buyPrice,
         sellPrice: formData.sellPrice,
         unit,
-        minStockLevel: formData.minStock,
+        minStockLevel: 0,
         category: 'general',
         isActive: true,
       })
@@ -160,7 +155,6 @@ export const AddProductModal = memo(function AddProductModal({
         buyPrice: 0,
         sellPrice: 0,
         unit: 'piece',
-        minStock: 5,
       })
       setErrors({})
 
@@ -185,7 +179,6 @@ export const AddProductModal = memo(function AddProductModal({
       buyPrice: 0,
       sellPrice: 0,
       unit: 'piece',
-      minStock: 5,
     })
     setErrors({})
     onClose()
@@ -343,27 +336,6 @@ export const AddProductModal = memo(function AddProductModal({
                 <p className="text-sm text-[hsl(var(--color-destructive))]">{errors.sellPrice}</p>
               )}
             </div>
-          </div>
-
-          {/* Min Stock */}
-          <div className="space-y-2">
-            <Label htmlFor="product-min-stock">{t('warehouse.minStock')}</Label>
-            <div className="relative">
-              <AlertTriangle className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
-              <Input
-                id="product-min-stock"
-                value={formData.minStock}
-                onChange={(e) => handleChange('minStock', Number(e.target.value))}
-                type="number"
-                min={0}
-                placeholder="5"
-                className={inputClass}
-                disabled={isPending}
-              />
-            </div>
-            {errors.minStock && (
-              <p className="text-sm text-[hsl(var(--color-destructive))]">{errors.minStock}</p>
-            )}
           </div>
 
           {/* Form Error */}

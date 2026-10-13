@@ -19,9 +19,9 @@
 // different columns, which is the whole point.
 // ============================================
 
-import { memo, useCallback, useEffect, useState } from 'react'
+import { useMemo, memo, useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { useProducts } from '@hisabche/api'
+import { useStockPlacement, useProducts } from '@hisabche/api'
 import { useSyncStore } from '@hisabche/store'
 
 import { useListEngine } from '../../../../hooks/use-list-engine'
@@ -68,6 +68,29 @@ export const ProductListContainer = memo(function ProductListContainer() {
 
   const rows = (products.data as { products?: unknown[] } | undefined)?.products ?? []
 
+  // Which warehouses (and so which branches) hold each product on this page.
+  const placement = useStockPlacement()
+  const places = useMemo(() => {
+    const warehouseOf = new Map(
+      (placement.data?.warehouses ?? []).map((warehouse) => [warehouse.id, warehouse]),
+    )
+    const byProduct = new Map<string, ProductPlace[]>()
+    for (const row of placement.data?.stock ?? []) {
+      const warehouse = warehouseOf.get(row.warehouseId)
+      // A warehouse that holds none of it is not «where it is».
+      if (!warehouse || row.quantity === 0) continue
+      const list = byProduct.get(row.productId) ?? []
+      list.push({
+        warehouseId: warehouse.id,
+        warehouseName: warehouse.name,
+        branchName: warehouse.branchName,
+        quantity: row.quantity,
+      })
+      byProduct.set(row.productId, list)
+    }
+    return byProduct
+  }, [placement.data])
+
   return (
     <ProductListView
       t={t}
@@ -75,6 +98,7 @@ export const ProductListContainer = memo(function ProductListContainer() {
       isOnline={isOnline}
       pendingCount={pendingCount}
       rows={rows as ProductRow[]}
+      places={placement.data ? places : null}
       total={total ?? 0}
       isLoading={products.isLoading}
       error={products.error ? (products.error as Error).message : null}
@@ -85,6 +109,15 @@ export const ProductListContainer = memo(function ProductListContainer() {
 })
 
 ProductListContainer.displayName = 'ProductListContainer'
+
+/** One warehouse that holds some of a product. */
+export interface ProductPlace {
+  warehouseId: string
+  warehouseName: string
+  /** Null = the warehouse belongs to no branch. */
+  branchName: string | null
+  quantity: number
+}
 
 export interface ProductRow {
   id: string

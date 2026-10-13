@@ -194,6 +194,32 @@ export class PaymentsRepository {
    * customer's money to another customer's debt — inside the same workspace,
    * so RLS would never see it.
    */
+  /**
+   * The rate each of these invoices was booked at (books currency per one unit
+   * of its own). Null = this database keeps no rate on invoices
+   * (invoice-exchange-rate-01 not run). An invoice with none contributes NaN,
+   * which the caller reads as «no single rate».
+   */
+  async invoiceExchangeRates(
+    workspaceId: string,
+    invoiceIds: readonly string[],
+  ): Promise<number[] | null> {
+    const unique = [...new Set(invoiceIds.filter(Boolean))]
+    if (unique.length === 0) return []
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('id, exchange_rate')
+      .eq('workspace_id', workspaceId)
+      .in('id', unique)
+    if (error) {
+      if (['42703', 'PGRST204'].includes(error.code ?? '')) return null
+      throw new DatabaseError('Failed to read the rate of the settled invoices', error)
+    }
+    return ((data ?? []) as Array<{ exchange_rate?: number | string | null }>).map((row) =>
+      Number(row.exchange_rate),
+    )
+  }
+
   async openInvoicesByIds(
     workspaceId: string,
     invoiceIds: readonly string[],

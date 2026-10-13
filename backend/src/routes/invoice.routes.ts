@@ -197,6 +197,9 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
             : {}),
           // None named = the business's books currency, decided by the service.
           ...(body.currency ? { currency: body.currency } : {}),
+          // ⚠️ FORWARDED. The rate a foreign-currency invoice is booked at; the
+          // service refuses such an invoice without it.
+          ...(Number(body.exchangeRate) > 0 ? { exchangeRate: Number(body.exchangeRate) } : {}),
           notes: body.notes ?? '',
           reference: body.reference ?? '',
           invoiceNumber: body.invoiceNumber,

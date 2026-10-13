@@ -24,6 +24,7 @@ import {
 
 import { Button } from '../button'
 import { SelectField } from '../select-field'
+import { CameraScanButton } from '../invoice-builder/camera-scan-button'
 import { barcodeTakenMessage } from '../../../lib/barcode/barcode-errors'
 
 type T = (key: string, fallback?: string) => string
@@ -124,6 +125,9 @@ export function ProductBarcodesPanel({ t, productId }: { t: T; productId: string
             className="h-9 w-44 rounded-md border border-[hsl(var(--border-default))] bg-transparent px-2 font-mono"
           />
         </label>
+        {/* A device types into the field; this opens the camera. The code that
+            was read is put in the field for the person to add — not looked up. */}
+        <CameraScanButton t={t} onCode={setCode} />
         <div className="flex flex-col gap-1 text-xs" data-field="unit">
           {t('barcode.extraUnit')}
           <SelectField

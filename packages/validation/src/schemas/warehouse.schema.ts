@@ -19,6 +19,8 @@ export const warehouseSchema = z.object({
   id: uuidSchema.optional(),
   name: nonEmptyStringSchema,
   location: optionalStringSchema,
+  /** The branch this warehouse belongs to. Null = the business as a whole. */
+  branchId: uuidSchema.nullable().optional(),
   isActive: z.boolean().default(true),
   createdAt: isoDateSchema.optional(),
   updatedAt: isoDateSchema.optional(),

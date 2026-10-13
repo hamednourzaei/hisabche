@@ -255,8 +255,9 @@ describe('the till page after the 13 October review', () => {
   })
 
   it('⚠️ the title of the page of a till is that till, and the way back is beside it', () => {
-    expect(view).toContain(
-      "title={ selectedTillId && session ? nameOfTill(session.id) : t('till.title', 'صندوق') }",
+    // However the formatter breaks the line, the title is the till's own name.
+    expect(view.split(' ').join('')).toContain(
+      "title={selectedTillId&&session?nameOfTill(session.id):t('till.title','صندوق')}",
     )
     const header = view.slice(view.indexOf('<CapabilityHeader'), view.indexOf('{closeNotice ? ('))
     expect(header).toContain("{t('till.back_to_tills', '← صندوق‌ها')}")

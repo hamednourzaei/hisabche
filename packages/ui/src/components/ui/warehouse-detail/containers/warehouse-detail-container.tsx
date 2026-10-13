@@ -22,6 +22,7 @@ import { ProductJourneyPanel } from '../product-journey-panel'
 import { ProductBarcodesPanel } from '../product-barcodes-panel'
 import { ProductImagesPanel } from '../product-images-panel'
 import { ProductWarehouseStockPanel } from '../product-warehouse-stock-panel'
+import { ProductMovementsPanel } from '../product-movements-panel'
 import { ProductManufacturingPanel } from '../../manufacturing/product-manufacturing-panel'
 import { EntityNotes } from '../../entity-notes'
 import { CustomFieldsPanel } from '../../custom-fields-panel'
@@ -154,9 +155,10 @@ export function ProductDetailContainer() {
         sellPrice: num(values.sellPrice),
         buyPrice: num(values.buyPrice),
         quantity: Math.floor(num(values.quantity)),
-        minStockLevel: Math.floor(num(values.minStockLevel)) || 5,
-        category: values.category as
-          'general' | 'food' | 'electronics' | 'clothing' | 'construction' | 'medicine',
+        // No field edits it any more: what the product had is sent back as it
+        // was (it used to be forced to 5 whenever it was 0).
+        minStockLevel: Math.max(0, Math.floor(num(values.minStockLevel))),
+        category: String(values.category ?? '').trim() || 'general',
         // Refused rather than defaulted — see toValidUnit (T2).
         unit: toValidUnit(values.unit) ?? undefined,
         // Where a quantity change lands (BUG-080); the server picks the only
@@ -271,7 +273,15 @@ ${t('warehouse.deactivateInstead')}`)
           <ProductImagesPanel t={safeT} productId={id} productName={product?.name ?? ''} />
         ) : null
       }
-      stockPlaces={id ? <ProductWarehouseStockPanel t={safeT} productId={id} fmt={fmt} /> : null}
+      stockPlaces={
+        id ? (
+          <>
+            <ProductWarehouseStockPanel t={safeT} productId={id} fmt={fmt} />
+            {/* How the figure above came to be: every increase and decrease. */}
+            <ProductMovementsPanel t={safeT} productId={id} />
+          </>
+        ) : null
+      }
       manufacturing={
         id ? (
           <div className="space-y-4">

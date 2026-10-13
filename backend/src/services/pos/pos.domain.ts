@@ -405,6 +405,12 @@ export interface AbandonedSession {
   /** What the orders say should be in a drawer nobody can reach. */
   expectedCashMinor: number
   orderCount: number
+  /**
+   * Every cash event of the till except its opening float: completed sales,
+   * cash in and out, and invoice payments settled through it. The same thing
+   * the page of a till counts from its ledger.
+   */
+  transactionCount: number
   currency?: string | undefined
   label?: string | null | undefined
 }
@@ -446,6 +452,10 @@ export function findAbandoned(
         entry.settlements ?? [],
       ),
       orderCount: entry.orders.filter((order) => order.status === 'completed').length,
+      transactionCount:
+        entry.orders.filter((order) => order.status === 'completed').length +
+        entry.movements.length +
+        (entry.settlements ?? []).length,
       currency: entry.session.currency,
       label: entry.session.label,
     }))

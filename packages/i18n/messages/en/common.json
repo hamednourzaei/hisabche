@@ -2062,7 +2062,27 @@
     "transferNoTarget": "There is no other warehouse to transfer to. Add a warehouse first.",
     "transferInsufficient": "That is more than this product has in the source warehouse.",
     "transferNotes": "Notes (optional)",
-    "transferDone": "Transferred."
+    "transferDone": "Transferred.",
+    "branch": "Branch",
+    "branchNone": "Whole business",
+    "branchHint": "Once a warehouse is given to a branch, only people with access to that branch see it and invoice from it. A “whole business” warehouse is open to everyone.",
+    "movementsTitle": "Stock increases and decreases",
+    "movementsHint": "Every purchase, sale, transfer, production and adjustment of this product, with the stock after it.",
+    "movementsFailed": "The stock history could not be read.",
+    "movementsGap": "These movements do not add up to the recorded stock; older movements may be missing from this list.",
+    "movementIn": "Increase",
+    "movementOut": "Decrease",
+    "movementType": {
+      "sale": "Sale",
+      "purchase": "Purchase",
+      "production": "Production",
+      "transfer": "Transfer",
+      "adjustment": "Adjustment",
+      "opening": "Opening stock"
+    },
+    "categoryAdd": "New category",
+    "categoryNewPlaceholder": "e.g. scarves, bracelets, parts",
+    "categoryFilter": "Category"
   },
   "customers": {
     "title": "Customers",
@@ -4254,7 +4274,8 @@
       "fromStock": "From stock — quantity will be reduced",
       "noProducts": "No product found — the text will be used as typed",
       "searchProduct": "Search products…",
-      "promotion": "Promo"
+      "promotion": "Promo",
+      "noProductsHere": "This product is not in the chosen warehouse — the text is saved as typed"
     },
     "column": {
       "addTitle": "Add column",
@@ -4408,7 +4429,17 @@
       "offline": "A repeat can only be set up online; this invoice will not repeat."
     },
     "branch": "Branch",
-    "branchNone": "Whole business"
+    "branchNone": "Whole business",
+    "warehouseAll": "All warehouses",
+    "warehouseAllHint": "Stock in every warehouse is shown. Picking the first product makes its warehouse the warehouse of this invoice.",
+    "warehouseNoneAllowed": "No warehouse is in your branches (or the chosen branch). Ask a manager to attach the warehouse to your branch.",
+    "warehouseNoneInBranch": "This branch has no warehouse.",
+    "rate": {
+      "title": "Exchange rate",
+      "hint": "This invoice is in a currency other than the one your books are kept in. Enter that day’s rate so stock, cost and accounts are recorded correctly.",
+      "amount": "Amount",
+      "required": "This invoice is not recorded without an exchange rate. Both amounts must be greater than zero."
+    }
   },
   "admin": {
     "limits": {
@@ -5141,7 +5172,8 @@
     "only_currency": "Tills in this currency only",
     "transactions_hint": "Opening float not counted",
     "name_required": "A name is required: with several tills it is the only way to tell them apart.",
-    "recorded_cash_hint": "Recorded balance = opening float + cash in − cash out, as recorded by the system. What is really in the drawer is not known until you count it."
+    "recorded_cash_hint": "Recorded balance = opening float + cash in − cash out, as recorded by the system. What is really in the drawer is not known until you count it.",
+    "transactions_column": "Transactions"
   },
   "assets": {
     "title": "Fixed assets",
@@ -5932,7 +5964,10 @@
     "no_match": "No product matches that search",
     "no_match_hint": "Change the search or clear it.",
     "empty": "No products yet",
-    "empty_hint": "Add your first product from the stock page."
+    "empty_hint": "Add your first product from the stock page.",
+    "warehouses": "Warehouse",
+    "branches": "Branch",
+    "no_warehouse": "In no warehouse"
   },
   "ledger": {
     "opening": "Opening balance",

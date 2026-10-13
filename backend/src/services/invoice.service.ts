@@ -15,6 +15,7 @@
 import { baseCurrencyOf } from './base-currency'
 import { createHash, randomUUID } from 'node:crypto'
 import { PaymentsService } from './payments/payments.service'
+import { assertMayUseWarehouse } from './inventory/warehouse-access'
 import { supabase } from '../db'
 import { sod } from './authorization'
 import { scopes } from './authorization/scope.service'
@@ -769,7 +770,12 @@ export class InvoiceService {
     const clientRequestId = options.clientRequestId ?? null
     // Multi-warehouse: an invoice may name the warehouse its goods move in.
     const invoiceWarehouseId = (data as { warehouseId?: string | null }).warehouseId ?? null
-    if (invoiceWarehouseId) await this.assertInvoiceWarehouse(workspaceId, invoiceWarehouseId)
+    if (invoiceWarehouseId) {
+      await this.assertInvoiceWarehouse(workspaceId, invoiceWarehouseId)
+      // …and be one this member's branches include. A seller of one branch does
+      // not sell off another branch's shelves by naming its warehouse.
+      await assertMayUseWarehouse(ctx, invoiceWarehouseId)
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // ⚠️ A REPLAYED REQUEST RETURNS THE INVOICE IT ALREADY CREATED.
@@ -782,6 +788,30 @@ export class InvoiceService {
     if (clientRequestId) {
       const existing = await this.findByClientRequestId(workspaceId, clientRequestId)
       if (existing) return { ...existing, idempotentReplay: true }
+    }
+
+    // Read AFTER a replayed request has been answered (a replay reads nothing
+    // more and writes nothing), and BEFORE a number is taken: an invoice that
+    // is going to be refused must not use one up.
+    const booksCurrency = await baseCurrencyOf(workspaceId)
+    const bookCurrency = data.currency || booksCurrency
+
+    // ─── ANOTHER CURRENCY NEEDS ITS RATE (13 October) ────────────────────────
+    //
+    // The ledger and the cost layers are kept in ONE currency. An invoice in
+    // another one used to be booked figure for figure — ten units of gold
+    // bought in toman entered the stock, the cost and the books as afghani.
+    // So such an invoice says what one unit of its currency was worth in the
+    // books currency that day, or it is not recorded at all.
+    const exchangeRate =
+      bookCurrency === booksCurrency ? 1 : Number((data as { exchangeRate?: number }).exchangeRate)
+    if (!(exchangeRate > 0) || !Number.isFinite(exchangeRate)) {
+      throw new ValidationError('INVOICE_EXCHANGE_RATE_REQUIRED')
+    }
+    // The rate is frozen ON the invoice (later postings read it back). A
+    // database that cannot hold it cannot take a foreign-currency invoice.
+    if (exchangeRate !== 1 && !(await this.canStoreExchangeRate())) {
+      throw new ConflictError('INVOICE_EXCHANGE_RATE_NOT_CONFIGURED')
     }
 
     // The plan's invoice ceiling — AFTER the replay check, so a sale already
@@ -899,7 +929,6 @@ export class InvoiceService {
     // keeps its books in — a stored value, not the letters 'AFN'. Read HERE,
     // after a replayed request has already been answered: a replay reads
     // nothing and writes nothing.
-    const bookCurrency = data.currency || (await baseCurrencyOf(workspaceId))
 
     const header = {
       id: invoiceId,
@@ -937,6 +966,9 @@ export class InvoiceService {
       paid_amount: 0,
       payment_method: data.paymentMethod || 'cash',
       currency: bookCurrency,
+      // Only on an invoice in another currency: the column comes with
+      // invoice-exchange-rate-01 and an ordinary invoice must not need it.
+      ...(exchangeRate !== 1 ? { exchange_rate: exchangeRate } : {}),
       // ⚠️ J3 — THIS LINE IS THE CONFLATION, and it is kept deliberately.
       //
       // `completed` is a DOCUMENT word being set by whether the invoice was
@@ -1149,10 +1181,12 @@ export class InvoiceService {
         data.items ?? [],
         data.date,
         uncosted,
+        exchangeRate,
       )
         .then((cogs) =>
           this.createAccountingEntries(ctx, invoice.id, {
             ...data,
+            exchangeRate,
             invoiceNumber,
             // The SAME derived total the document carries. Booking
             // `data.total` here is what let a request say «total: 1» on a
@@ -1290,6 +1324,10 @@ export class InvoiceService {
         entryDate: (data.date ?? new Date().toISOString()).slice(0, 10),
         // None named = the books currency; the payments service decides it.
         ...(data.currency ? { currency: data.currency } : {}),
+        // The money is booked at the rate its invoice was.
+        ...(Number((data as { exchangeRate?: number }).exchangeRate) > 0
+          ? { exchangeRate: Number((data as { exchangeRate?: number }).exchangeRate) }
+          : {}),
         method: tranche.method,
         reference: tranche.reference,
         // What the person typed beside the amount (transfer number, bank…).
@@ -2092,7 +2130,15 @@ export class InvoiceService {
     // The new lines carry new ids, so the costing keys differ from the ones
     // just released and the goods move again rather than being deduplicated
     // against the old document.
-    await this.applyCosting(ctx, invoiceId, type, items)
+    await this.applyCosting(
+      ctx,
+      invoiceId,
+      type,
+      items,
+      undefined,
+      undefined,
+      await this.storedExchangeRate(ctx.workspaceId, invoiceId),
+    )
   }
 
   // ─── Batch Update Stock ──────────────────────────────────────────────────
@@ -2161,6 +2207,39 @@ export class InvoiceService {
       throw new DatabaseError('Failed to read the invoice warehouse', error)
     }
     return (data as { warehouse_id?: string | null } | null)?.warehouse_id ?? null
+  }
+
+  /** An amount of the invoice's currency, in the books currency, at the invoice's rate. */
+  private static inBooksCurrency(amount: number, rate: number): number {
+    return rate === 1 ? amount : Math.round(amount * rate * 100) / 100
+  }
+
+  /** Does this database have somewhere to keep an invoice's rate? */
+  private async canStoreExchangeRate(): Promise<boolean> {
+    const { error } = await supabase.from('invoices').select('exchange_rate').limit(1)
+    if (!error) return true
+    if (['42703', 'PGRST204'].includes(error.code ?? '')) return false
+    throw new DatabaseError('Failed to check the invoice exchange rate column', error)
+  }
+
+  /**
+   * The rate an existing invoice was booked at. 1 for an invoice in the books
+   * currency, for one made before rates were kept, and on a database without
+   * the column — none of which has anything to convert.
+   */
+  private async storedExchangeRate(workspaceId: string, invoiceId: string): Promise<number> {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('exchange_rate')
+      .eq('workspace_id', workspaceId)
+      .eq('id', invoiceId)
+      .maybeSingle()
+    if (error) {
+      if (['42703', 'PGRST204'].includes(error.code ?? '')) return 1
+      throw new DatabaseError('Failed to read the invoice exchange rate', error)
+    }
+    const rate = Number((data as { exchange_rate?: number | string | null } | null)?.exchange_rate)
+    return rate > 0 ? rate : 1
   }
 
   /** A warehouse id from a request must belong to this workspace and not be deleted. */
@@ -2578,6 +2657,12 @@ export class InvoiceService {
      * books must hold; an unknown cost is reported, never invented.
      */
     uncosted?: string[],
+    /**
+     * Books currency per one unit of the invoice's currency. A purchase's cost
+     * layer is held in the BOOKS currency, so the price paid is converted here.
+     * (A sale's cost comes out of layers that already are.)
+     */
+    exchangeRate = 1,
   ): Promise<number> {
     const entryDate = date ? String(date).slice(0, 10) : new Date().toISOString().slice(0, 10)
     // Lines without a product are services; they hold no stock and cost
@@ -2603,7 +2688,7 @@ export class InvoiceService {
             // What was actually paid per unit, after the line discount. The
             // list price would overstate the layer and every profit drawn
             // from it.
-            unitCost: quantity > 0 ? lineTotal / quantity : 0,
+            unitCost: quantity > 0 ? (lineTotal * exchangeRate) / quantity : 0,
             entryDate,
             sourceType: 'invoice',
             sourceId: invoiceId,
@@ -2681,10 +2766,16 @@ export class InvoiceService {
        * CURRENT buy price for goods bought at a different one.
        */
       costOfGoodsSold?: number
+      /** Books currency per one unit of the invoice's currency. 1 when they are the same. */
+      exchangeRate?: number | undefined
     },
   ): Promise<LedgerPostResult> {
     const isPurchase = data.type === 'purchase'
-    const total = Number(data.total) || 0
+    // The ledger is in the books currency: the invoice's total at its own rate.
+    // (`costOfGoodsSold` is already in the books currency — it is read from
+    // the cost layers.)
+    const rate = Number(data.exchangeRate) > 0 ? Number(data.exchangeRate) : 1
+    const total = InvoiceService.inBooksCurrency(Number(data.total) || 0, rate)
     if (total <= 0) return { status: 'nothing_to_post' }
 
     const needed: AccountRole[] = isPurchase
@@ -3055,9 +3146,19 @@ export class InvoiceService {
     const date = String(invoice?.date ?? '')
 
     const uncosted: string[] = []
-    const cogs = await this.applyCosting(ctx, id, type, items, date || undefined, uncosted)
+    const exchangeRate = await this.storedExchangeRate(ctx.workspaceId, id)
+    const cogs = await this.applyCosting(
+      ctx,
+      id,
+      type,
+      items,
+      date || undefined,
+      uncosted,
+      exchangeRate,
+    )
     const result = await this.createAccountingEntries(ctx, id, {
       type,
+      exchangeRate,
       total: Number(invoice?.total) || 0,
       items,
       invoiceNumber: invoice?.invoiceNumber ?? invoice?.invoice_number,
@@ -3310,15 +3411,19 @@ export class InvoiceService {
       totalPrice: item.totalPrice ?? item.total_price,
     }))
 
+    const exchangeRate = await this.storedExchangeRate(ctx.workspaceId, invoiceId)
     const cogs = await this.applyCosting(
       ctx,
       invoiceId,
       String(raw.type ?? 'sale'),
       items,
       raw.date,
+      undefined,
+      exchangeRate,
     )
 
     await this.createAccountingEntries(ctx, invoiceId, {
+      exchangeRate,
       invoiceNumber: raw.invoice_number ?? raw.invoiceNumber,
       total: Number(raw.total) || 0,
       type: raw.type,

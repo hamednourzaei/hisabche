@@ -147,15 +147,12 @@ export const paymentMethodLabelSchema = z.string().trim().max(40).optional()
 /** Transaction types */
 export const transactionTypeSchema = z.enum(['sale', 'purchase', 'payment', 'receipt', 'return'])
 
-/** Product categories */
-export const productCategorySchema = z.enum([
-  'general',
-  'food',
-  'electronics',
-  'clothing',
-  'construction',
-  'medicine',
-])
+/**
+ * A product's category — the business's own word («شال», «دستبند», «قطعات»).
+ * It used to be one of six fixed trades; those six values are still valid, and
+ * so is anything else up to sixty characters. 'general' is the default.
+ */
+export const productCategorySchema = z.string().trim().min(1).max(60)
 
 /** Product units */
 /**

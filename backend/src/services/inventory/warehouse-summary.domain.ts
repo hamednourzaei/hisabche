@@ -33,6 +33,7 @@ export interface ProductStockRow {
   sell_price: number | string | null
   buy_price: number | string | null
   min_stock_level: number | string | null
+  category?: string | null | undefined
   /** The product's cover (its first gallery image); '' or null = none. */
   image_url?: string | null | undefined
 }
@@ -171,6 +172,7 @@ export function warehouseProducts(
           product.min_stock_level === null || product.min_stock_level === ''
             ? null
             : num(product.min_stock_level),
+        category: product.category ?? '',
         imageUrl: product.image_url || null,
       }))
       .sort((a, b) => a.name.localeCompare(b.name)),

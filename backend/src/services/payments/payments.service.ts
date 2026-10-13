@@ -63,6 +63,8 @@ export interface RecordPaymentInput {
   amount: number
   entryDate?: string | undefined
   currency?: string | undefined
+  /** Books currency per one unit of `currency`. Needed when they differ and no settled invoice carries one. */
+  exchangeRate?: number | undefined
   method?: string | undefined
   reference?: string | undefined
   notes?: string | undefined
@@ -223,6 +225,17 @@ export class PaymentsService {
       ? input.allocations!.map((a) => ({ invoiceId: a.invoiceId, amount: round2(a.amount) }))
       : autoAllocate(amount, invoices).allocations
 
+    // Decided BEFORE anything is written: a payment in another currency with
+    // no rate to book it at is refused, not recorded and left out of the books.
+    const bookingRate = await this.bookingRate(
+      ctx,
+      currency,
+      bookCurrency,
+      input.exchangeRate,
+      allocations.map((a) => a.invoiceId),
+    )
+    if (bookingRate === null) throw new ValidationError('PAYMENT_EXCHANGE_RATE_REQUIRED')
+
     const problems = validateAllocations(amount, allocations, invoices)
     if (problems.length > 0) throw new ValidationError(problems.join(', '))
 
@@ -267,7 +280,14 @@ export class PaymentsService {
     // lookup and our call: nothing new was written, so nothing is logged twice.
     if (replayed) return this.replayPayment(ctx, paymentId)
 
-    await this.bookPayment(ctx, paymentId, input.direction, amount, entryDate, paymentNumber)
+    await this.bookPayment(
+      ctx,
+      paymentId,
+      input.direction,
+      round2(amount * bookingRate),
+      entryDate,
+      paymentNumber,
+    )
 
     // Index who took this money. The cancel path reads it back: the person who
     // received a payment is not the person who may erase the record of it.
@@ -303,13 +323,59 @@ export class PaymentsService {
     return { ...payment, unallocated: unallocatedOf(amount, allocations) }
   }
 
+  /**
+   * The rate a payment is booked at: books currency per one unit of its own.
+   *
+   *   · the books currency                    → 1
+   *   · a rate given with the payment         → that
+   *   · every invoice it settles has ONE rate → that, so the receivable or
+   *     payable the invoice opened is closed by exactly the same amount
+   *   · otherwise                             → null: nothing to book it at
+   *
+   * A difference between the rate of the invoice and the rate on the day the
+   * money moved is NOT recognised as a gain or loss here.
+   */
+  private async bookingRate(
+    ctx: TenancyContext,
+    currency: string,
+    bookCurrency: string,
+    given: number | undefined,
+    invoiceIds: string[],
+  ): Promise<number | null> {
+    if (currency === bookCurrency) return 1
+    if (typeof given === 'number' && given > 0 && Number.isFinite(given)) return given
+    if (invoiceIds.length === 0) return null
+    const read = await this.repo.invoiceExchangeRates(ctx.workspaceId, invoiceIds)
+    // No column = no invoice of this database carries a rate.
+    if (read === null) return null
+    const rates = new Set(read)
+    if (rates.size !== 1) return null
+    const [rate] = [...rates]
+    return typeof rate === 'number' && rate > 0 ? rate : null
+  }
+
   private async replayPayment(ctx: TenancyContext, paymentId: string) {
     const payment = await this.getPayment(ctx, paymentId)
+    const bookCurrency = await baseCurrencyOf(ctx.workspaceId)
+    const rate = await this.bookingRate(
+      ctx,
+      payment.currency || bookCurrency,
+      bookCurrency,
+      undefined,
+      payment.allocations.map((a) => a.invoiceId),
+    )
+    // Already booked → the ledger answers «already posted» whatever is passed.
+    // Never booked and no rate to be found → left unbooked, and said.
+    if (rate === null) {
+      console.warn(`[Payments] payment ${paymentId} replayed with no rate to book it at`)
+      const allocatedNow = payment.allocations.reduce((sum, a) => sum + a.amount, 0)
+      return asReplay({ ...payment, unallocated: round2(payment.amount - allocatedNow) })
+    }
     await this.bookPayment(
       ctx,
       payment.id,
       payment.direction,
-      payment.amount,
+      round2(payment.amount * rate),
       payment.entryDate,
       payment.paymentNumber ?? '',
     )

@@ -82,6 +82,8 @@ export interface AbandonedSession {
   hoursOpen: number
   expectedCashMinor: number
   orderCount: number
+  /** Sales, cash in/out and settled invoice payments — not the opening float. Absent from an older server. */
+  transactionCount?: number | undefined
 }
 
 export interface RecordOrderInput {

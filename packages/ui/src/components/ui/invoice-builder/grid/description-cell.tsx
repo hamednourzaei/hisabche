@@ -29,12 +29,12 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { createPortal } from 'react-dom'
 import type { KeyboardEvent } from 'react'
 import { ChevronDown, Package, Search } from 'lucide-react'
-import { useProducts } from '@hisabche/api'
+import { useProducts, useStockPlacement } from '@hisabche/api'
 import { useInvoiceDraftStore } from '@hisabche/store'
 
 import { cn } from '../../../../lib/utils'
 import { productCost, readProducts, type PickerProduct } from '../../../../lib/invoices/products'
-import { useInvoiceWarehouseStock } from '../../../../hooks/invoices/use-invoice-warehouse-stock'
+import { pickerRows, type PickerRow } from '../../../../lib/invoices/picker-rows'
 import { usePromotionPricer } from '../../../../hooks/invoices/use-promotion-pricer'
 
 export interface DescriptionCellProps {
@@ -102,9 +102,14 @@ export const DescriptionCell = memo(function DescriptionCell({
     return () => clearTimeout(timer)
   }, [search])
 
+  // Where stock is, and which warehouses this person may sell from.
+  const placement = useStockPlacement()
+  const listedByWarehouse = (placement.data?.warehouses.length ?? 0) > 0
   const { data, isLoading } = useProducts({
     ...(debounced ? { search: debounced } : {}),
-    limit: 20,
+    // Narrowed to one warehouse AFTER it arrives, so a short page would hide
+    // goods that are there. The search still runs on the server.
+    limit: listedByWarehouse ? 100 : 20,
   })
 
   const products = useMemo<PickerProduct[]>(() => readProducts(data), [data])
@@ -113,19 +118,27 @@ export const DescriptionCell = memo(function DescriptionCell({
   // Hiding it would make a shopkeeper think the item was deleted. And only a
   // SALE is blocked: a purchase is exactly how an exhausted product comes back.
   const transactionType = useInvoiceDraftStore((state) => state.transactionType)
-  // With a warehouse on the invoice, «how many» means «how many HERE».
-  const warehouseStock = useInvoiceWarehouseStock()
-  const stockOf = (product: PickerProduct): number | null =>
-    warehouseStock.inWarehouse
-      ? warehouseStock.quantityOf(product.id)
-      : typeof product.quantity === 'number'
-        ? product.quantity
-        : null
-  const isExhausted = (product: PickerProduct) => {
-    if (pickAs === 'component') return false
-    const stock = stockOf(product)
-    return transactionType !== 'purchase' && typeof stock === 'number' && stock <= 0
-  }
+  // With a warehouse on the invoice, «how many» means «how many HERE» — and
+  // on a sale the list is what that warehouse holds (lib/invoices/picker-rows).
+  const warehouseId = useInvoiceDraftStore((state) => state.warehouseId)
+  const branchId = useInvoiceDraftStore((state) => state.branchId)
+  const setField = useInvoiceDraftStore((state) => state.setField)
+  const rows = useMemo<PickerRow[]>(
+    () =>
+      pickerRows({
+        products,
+        placement: placement.data,
+        warehouseId,
+        branchId,
+        mode:
+          pickAs === 'component'
+            ? 'component'
+            : transactionType === 'purchase'
+              ? 'purchase'
+              : 'sale',
+      }),
+    [products, placement.data, warehouseId, branchId, pickAs, transactionType],
+  )
 
   /**
    * Measure the cell and decide which way the list opens.
@@ -200,8 +213,12 @@ export const DescriptionCell = memo(function DescriptionCell({
   // A sale line is priced with the live promotions; a component is costed.
   const promoPrice = usePromotionPricer()
 
-  const pick = (product: PickerProduct) => {
-    if (isExhausted(product)) return
+  const pick = (row: PickerRow) => {
+    if (row.exhausted) return
+    const product = row.product
+    // Picked from «all warehouses»: the line's warehouse becomes the invoice's,
+    // so the stock that leaves is the stock that was shown.
+    if (row.warehouseId && !warehouseId) setField('warehouseId', row.warehouseId)
     const price = pickAs === 'component' ? productCost(product) : promoPrice(product).price
     onPickProduct({
       id: product.id,
@@ -339,19 +356,28 @@ export const DescriptionCell = memo(function DescriptionCell({
                   <p className="p-3 text-xs text-[hsl(var(--fg-tertiary))]">
                     {t('common.loading', 'در حال بارگذاری…')}
                   </p>
-                ) : products.length === 0 ? (
+                ) : rows.length === 0 ? (
                   <p className="p-3 text-xs text-[hsl(var(--fg-tertiary))]">
-                    {t('invoiceBuilder.grid.noProducts', 'کالایی پیدا نشد — همین متن ثبت می‌شود')}
+                    {products.length > 0
+                      ? // Found, but not in the warehouse this invoice sells from.
+                        t(
+                          'invoiceBuilder.grid.noProductsHere',
+                          'این کالا در انبار انتخاب‌شده نیست — همین متن ثبت می‌شود',
+                        )
+                      : t(
+                          'invoiceBuilder.grid.noProducts',
+                          'کالایی پیدا نشد — همین متن ثبت می‌شود',
+                        )}
                   </p>
                 ) : (
-                  products.map((product) => (
+                  rows.map(({ key, product, exhausted, stock, warehouseName }, index) => (
                     <button
-                      key={product.id}
+                      key={key}
                       type="button"
                       role="option"
-                      onClick={() => pick(product)}
-                      disabled={isExhausted(product)}
-                      aria-disabled={isExhausted(product)}
+                      onClick={() => pick(rows[index]!)}
+                      disabled={exhausted}
+                      aria-disabled={exhausted}
                       className={cn(
                         'flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)]',
                         // 44px: a finger target, not a mouse target. These rows
@@ -382,7 +408,7 @@ export const DescriptionCell = memo(function DescriptionCell({
                             {product.sku}
                           </span>
                         ) : null}
-                        {isExhausted(product) ? (
+                        {exhausted ? (
                           <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]">
                             {t('warehouse.outOfStock', 'تمام شده')}
                           </span>
@@ -392,13 +418,11 @@ export const DescriptionCell = memo(function DescriptionCell({
                         {/* Stock the invoice will actually draw down, and where
                             it is — a business-wide figure would be the wrong
                             number the moment there are two warehouses. */}
-                        {(() => {
-                          const stock = stockOf(product)
-                          if (stock === null) return ''
-                          return warehouseStock.inWarehouse
-                            ? `${stock.toLocaleString(locale)} · ${warehouseStock.warehouseName}`
-                            : stock.toLocaleString(locale)
-                        })()}
+                        {stock === null
+                          ? ''
+                          : warehouseName
+                            ? `${stock.toLocaleString(locale)} · ${warehouseName}`
+                            : stock.toLocaleString(locale)}
                       </span>
                     </button>
                   ))

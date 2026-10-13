@@ -73,6 +73,13 @@ export interface InvoiceDraftState {
    * worth. Typed by the user; absent means "no rate", and nothing converts.
    */
   rates: Partial<Record<CurrencyCode, string>>
+  /**
+   * The rate of an invoice whose currency is not the books currency, as typed:
+   * `exchangeRateFrom` units of the invoice's currency are worth
+   * `exchangeRateTo` units of the books currency. Empty = no rate yet.
+   */
+  exchangeRateFrom: string
+  exchangeRateTo: string
 
   // ---- rows ----
   setRows: (rows: InvoiceGridRow[]) => void
@@ -142,6 +149,9 @@ function blankDraft(columns: InvoiceColumn[]) {
     discountValue: '',
     discountType: 'fixed' as const,
     taxRate: '',
+    // A rate belongs to one invoice: yesterday's is not offered for today's.
+    exchangeRateFrom: '1',
+    exchangeRateTo: '',
   }
 }
 
@@ -376,6 +386,8 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
         discountType: state.discountType,
         taxRate: state.taxRate,
         rates: state.rates,
+        exchangeRateFrom: state.exchangeRateFrom,
+        exchangeRateTo: state.exchangeRateTo,
       }),
     },
   ),

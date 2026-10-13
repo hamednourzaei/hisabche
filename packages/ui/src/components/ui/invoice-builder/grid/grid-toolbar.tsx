@@ -8,7 +8,7 @@
 // ============================================
 'use client'
 
-import { memo } from 'react'
+import { type ReactNode, memo } from 'react'
 import { Columns3, MoreVertical, Plus, RotateCcw, Settings2, Trash2 } from 'lucide-react'
 
 import { Button } from '../../button'
@@ -32,6 +32,8 @@ export interface GridToolbarProps {
   onDeleteColumn: () => void
   onOpenSettings: () => void
   onResetColumns: () => void
+  /** «اسکن بارکد»: a scanned product becomes a row, so it sits with the row actions. */
+  scanSlot?: ReactNode | undefined
 }
 
 export const GridToolbar = memo(function GridToolbar({
@@ -43,6 +45,7 @@ export const GridToolbar = memo(function GridToolbar({
   onDeleteColumn,
   onOpenSettings,
   onResetColumns,
+  scanSlot,
 }: GridToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-[hsl(var(--border-default))] px-3 py-2.5">
@@ -61,6 +64,8 @@ export const GridToolbar = memo(function GridToolbar({
         </span>
         <span className="sm:hidden">{t('invoiceBuilder.toolbar.columnShort', 'ستون')}</span>
       </Button>
+
+      {scanSlot}
 
       {/* Delete-column stays visible on desktop and tablet; on a phone it
           lives in the menu below so the two primary actions keep their room. */}

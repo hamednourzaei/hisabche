@@ -130,9 +130,12 @@ describe('invoices name their warehouse', () => {
     )
   })
   it('a requested warehouse must be in this workspace', () => {
-    expect(invoice).toContain(
-      'if (invoiceWarehouseId) await this.assertInvoiceWarehouse(workspaceId, invoiceWarehouseId)',
+    const flat = invoice.split(/\s+/).join(' ')
+    // Two checks, in this order: it is this workspace's, and this MEMBER may use it.
+    expect(flat).toContain(
+      'if (invoiceWarehouseId) { await this.assertInvoiceWarehouse(workspaceId, invoiceWarehouseId)',
     )
+    expect(flat).toContain('await assertMayUseWarehouse(ctx, invoiceWarehouseId) }')
     const assert = invoice.slice(invoice.indexOf('private async assertInvoiceWarehouse'))
     expect(assert.slice(0, 600)).toContain(".eq('workspace_id', workspaceId)")
   })

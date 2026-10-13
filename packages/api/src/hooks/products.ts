@@ -400,6 +400,20 @@ export function useProductsByIds(ids: readonly string[]) {
   })
 }
 
+/** The categories this business has used (GET /products/categories). */
+export function useProductCategories() {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: [...productKeys.all, 'categories'] as const,
+    queryFn: async (): Promise<string[]> => {
+      const { data } = await apiClient.get<{ categories?: unknown }>('/products/categories')
+      return asList<string>(data?.categories).filter((item) => typeof item === 'string')
+    },
+    enabled: authReady,
+    staleTime: 60_000,
+  })
+}
+
 export function useCreateProduct() {
   const queryClient = useQueryClient()
 

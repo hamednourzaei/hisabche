@@ -862,6 +862,30 @@ export class ProductService {
     await memoryCache.invalidate(`products:${ctx.workspaceId}`)
   }
 
+  /**
+   * The categories this business has used, each once. Read from the products
+   * themselves — there is no list of categories to keep in step with them.
+   */
+  async categories(ctx: TenancyContext): Promise<string[]> {
+    const PAGE = 1000
+    const seen = new Set<string>()
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, category')
+        .eq('workspace_id', ctx.workspaceId)
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+      if (error) throw new DatabaseError('Failed to read product categories', error)
+      for (const row of (data ?? []) as Array<{ category?: string | null }>) {
+        const value = (row.category ?? '').trim()
+        if (value) seen.add(value)
+      }
+      if (!data || data.length < PAGE) break
+    }
+    return [...seen].sort((a, b) => a.localeCompare(b))
+  }
+
   // ─── Get Products by Category ────────────────────────────────
   async getByCategory(ctx: TenancyContext, category: string) {
     const { workspaceId } = ctx

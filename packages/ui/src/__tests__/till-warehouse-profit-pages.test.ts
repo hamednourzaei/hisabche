@@ -103,7 +103,11 @@ describe('#92 till row actions, warehouse edit, manual rates, invoice warehouse'
   })
   it('the invoice warehouse is shown for any warehouse, auto-picked when there is one', () => {
     const select = code(ui('invoice-builder/invoice-warehouse-select.tsx'))
-    expect(select).toContain('if (warehouses.length === 0) return null')
+    // Hidden only for a business with no warehouse at all; a member whose
+    // branches include none is TOLD so instead (picker-rows.test.ts).
+    expect(select.split(/\s+/).join(' ')).toContain(
+      'if (!data || (data.warehouses.length === 0 && !data.restricted)) return null',
+    )
     expect(select).toContain('warehouses.length === 1) onChange(warehouses[0]!.id)')
   })
 })
@@ -137,21 +141,25 @@ describe('#94/#95 add-to-warehouse modal, product code, expiry', () => {
   const picker = code(ui('invoice-builder/grid/description-cell.tsx'))
   const expiry = code(ui('warehouse-detail/product-expiry-panel.tsx'))
 
-  it('the modal has code, unit + custom unit, quantity, both prices and ONE minimum', () => {
-    for (const key of [
-      'productCode',
-      'unit',
-      'quantity',
-      'buyPrice',
-      'sellPrice',
-      'minStock',
-      'addUnit',
-    ]) {
+  it('the modal has code, unit + custom unit, quantity and both prices — and no minimum (owner, 13 October)', () => {
+    for (const key of ['productCode', 'unit', 'quantity', 'buyPrice', 'sellPrice', 'addUnit']) {
       expect(modal, key).toContain(`warehouse.${key}`)
     }
-    // One minimum-stock input, not a second reorder point.
-    expect((modal.match(/wh-product-min/g) ?? []).length).toBe(1)
+    expect(modal).not.toContain('wh-product-min')
+    expect(modal).not.toContain('warehouse.minStock')
+    // A new product has no minimum: «out» at zero, never «running low».
+    expect(modal).toContain('minStockLevel: 0,')
     expect(modal).toContain('warehouseId,')
+    // Neither does the other form that makes a product, nor the one that edits it.
+    expect(code(ui('add-product-modal.tsx'))).not.toContain('warehouse.minStock')
+    expect(code(ui('warehouse-detail/warehouse-detail-page.tsx'))).not.toContain(
+      'warehouse.minStock',
+    )
+  })
+
+  it('the barcode field has a scan button: a device types into it, the button opens the camera', () => {
+    expect(modal).toContain("<CameraScanButton t={t} onCode={(code) => set('barcode', code)} />")
+    expect(modal).toContain('htmlFor="wh-product-barcode"')
   })
 
   it('expiry is behind a switch and recorded as a batch', () => {
@@ -161,16 +169,18 @@ describe('#94/#95 add-to-warehouse modal, product code, expiry', () => {
   })
 
   it('the invoice picker shows the code and the stock of the invoice warehouse', () => {
-    expect(picker).toContain('useInvoiceWarehouseStock()')
-    expect(picker).toContain('warehouseStock.quantityOf(product.id)')
-    expect(picker).toContain('warehouseStock.warehouseName')
+    // The quantity and the name of the warehouse come from one rule
+    // (lib/invoices/picker-rows), fed by where the server says stock is.
+    expect(picker).toContain('useStockPlacement()')
+    expect(picker).toContain('pickerRows({')
+    expect(picker).toContain('`${stock.toLocaleString(locale)} · ${warehouseName}`')
     expect(picker).toContain('{product.sku}')
   })
 
   it('a sale is blocked on the warehouse figure, a purchase never is', () => {
-    expect(picker).toContain(
-      "transactionType !== 'purchase' && typeof stock === 'number' && stock <= 0",
-    )
+    const rule = code(ui('../../lib/invoices/picker-rows.ts'))
+    expect(rule).toContain("exhausted: mode === 'sale' && typeof stock === 'number' && stock <= 0,")
+    expect(rule).toContain('exhausted: false,')
   })
 
   it('the product page can correct an expiry date', () => {

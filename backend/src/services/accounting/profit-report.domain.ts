@@ -123,6 +123,54 @@ const round2 = (value: number) => Math.round(value * 100) / 100
 const QUANTITY_EPSILON = 0.00005
 const percent = (part: number, whole: number) => (whole === 0 ? null : round2((part / whole) * 100))
 
+/**
+ * A sale in another currency that carries its rate, restated in the BOOKS
+ * currency: its revenue at the rate frozen on the invoice. It then meets its
+ * cost — cost layers are always in the books currency — and has a profit.
+ *
+ * ⚠️ ONLY WITH A RATE. An invoice with none (made before rates were kept) is
+ * returned untouched, under its own currency, where its profit stays «cannot
+ * be computed». Nothing is assumed for it, and it is never treated as 1 = 1.
+ */
+export function restateAtRates<I extends ProfitInvoice, L extends ProfitLine>(
+  invoices: readonly I[],
+  lines: readonly L[],
+  /** Invoice id → books currency per one unit of the invoice's currency. */
+  rates: ReadonlyMap<string, number>,
+  booksCurrency: string,
+): { invoices: I[]; lines: L[] } {
+  const at = (amount: number, rate: number) => Math.round(amount * rate * 100) / 100
+  const restated = new Map<string, number>()
+  for (const invoice of invoices) {
+    const rate = rates.get(invoice.id)
+    if (
+      typeof rate === 'number' &&
+      rate > 0 &&
+      Number.isFinite(rate) &&
+      invoice.currency !== booksCurrency
+    ) {
+      restated.set(invoice.id, rate)
+    }
+  }
+  return {
+    invoices: invoices.map((invoice) => {
+      const rate = restated.get(invoice.id)
+      return rate === undefined
+        ? invoice
+        : {
+            ...invoice,
+            currency: booksCurrency,
+            subtotal: at(invoice.subtotal, rate),
+            discountTotal: at(invoice.discountTotal, rate),
+          }
+    }),
+    lines: lines.map((line) => {
+      const rate = restated.get(line.invoiceId)
+      return rate === undefined ? line : { ...line, totalPrice: at(line.totalPrice, rate) }
+    }),
+  }
+}
+
 /** Net sales of each line: the invoice discount is shared by line value. */
 export function lineRevenues(invoice: ProfitInvoice, lines: ProfitLine[]): Map<ProfitLine, number> {
   const gross = lines.reduce((sum, line) => sum + line.totalPrice, 0)

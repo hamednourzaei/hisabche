@@ -1,12 +1,14 @@
 // packages/ui/src/components/ui/warehouse/warehouse-product-list.tsx
 'use client'
 
-import { memo, useCallback, useEffect, useMemo, type ReactNode } from 'react'
+import { categoryLabel } from './category-field'
+import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { cn } from '../../../lib/utils'
 import { History, Pencil, Trash2 } from 'lucide-react'
 import {
   BulkActionBar,
   DataTable,
+  TableFilterSelect,
   useBulkAction,
   useRowSelection,
   type TableColumn,
@@ -19,6 +21,9 @@ import type { Product } from '../../../lib/warehouse/warehouse-types'
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type StockStatus = 'success' | 'warning' | 'destructive' | 'secondary'
+
+/** The filter's value for «every category». Never a category itself. */
+const ALL_CATEGORIES = '__all__'
 
 interface WarehouseProductListProps {
   t: (key: string, fallback?: string) => string
@@ -173,7 +178,9 @@ function useProductColumns(
         showFrom: 'md',
         sortValue: (product) => product.category ?? '',
         render: (product) => (
-          <span className="text-[hsl(var(--fg-secondary))]">{product.category || '—'}</span>
+          <span className="text-[hsl(var(--fg-secondary))]">
+            {categoryLabel(t, product.category) || '—'}
+          </span>
         ),
       },
       {
@@ -248,6 +255,27 @@ export const WarehouseProductList = memo(function WarehouseProductList({
 }: WarehouseProductListProps) {
   const columns = useProductColumns(t, fmt, stockStatus, stockLabel, onNavigate, onOpenHistory)
 
+  // «شال‌ها»، «شلوارها»، «دستبندها»: one category of this warehouse at a time.
+  // The choices are the categories the products on screen actually carry.
+  const [category, setCategory] = useState(ALL_CATEGORIES)
+  const categories = useMemo(
+    () =>
+      [...new Set(products.map((product) => (product.category ?? '').trim()))]
+        .filter((value) => value !== '')
+        .sort((a, b) => a.localeCompare(b)),
+    [products],
+  )
+  // A category that is no longer on the page (another warehouse was opened) is
+  // not a filter that silently hides everything.
+  const activeCategory = categories.includes(category) ? category : ALL_CATEGORIES
+  const shown = useMemo(
+    () =>
+      activeCategory === ALL_CATEGORIES
+        ? products
+        : products.filter((product) => (product.category ?? '').trim() === activeCategory),
+    [products, activeCategory],
+  )
+
   // Bulk delete reuses the same per-product delete the row menu calls, so the
   // stock and authorization side effects are identical to deleting one by one.
   const selection = useRowSelection()
@@ -281,14 +309,30 @@ export const WarehouseProductList = memo(function WarehouseProductList({
     <DataTable
       tableId="warehouse-products"
       t={t}
-      rows={products}
+      rows={shown}
       columns={columns}
       rowKey={(product) => product.id}
       onRowClick={(product) => onNavigate(product.id)}
       searchValue={search}
       onSearchChange={onSearchChange}
       minWidthClass="min-w-[420px] sm:min-w-[680px]"
-      actions={actions}
+      actions={
+        <>
+          {categories.length > 1 ? (
+            <TableFilterSelect
+              label={t('warehouse.categoryFilter', 'دسته‌بندی')}
+              value={activeCategory}
+              onChange={setCategory}
+              allValue={ALL_CATEGORIES}
+              options={[
+                { value: ALL_CATEGORIES, label: t('common.all', 'همه') },
+                ...categories.map((value) => ({ value, label: categoryLabel(t, value) })),
+              ]}
+            />
+          ) : null}
+          {actions}
+        </>
+      }
       emptyState={emptyState}
       selectedIds={selection.selectedIds}
       onToggleRow={selection.toggleRow}

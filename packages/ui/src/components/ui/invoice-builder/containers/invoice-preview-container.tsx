@@ -37,6 +37,9 @@ import { InvoiceSidebar } from '../../invoice-detail/invoice-sidebar'
 import { useInvoiceDraft } from '../../../../hooks/invoices/use-invoice-draft'
 import { PreviewItemsTable } from '../preview-items-table'
 import { OversoldWarning } from '../oversold-warning'
+import { InvoiceExchangeRate } from '../invoice-exchange-rate'
+import { exchangeRateOf, needsExchangeRate } from '../../../../lib/invoices/exchange-rate'
+import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import { useOversoldLines } from '../use-oversold-lines'
 import { planLimitMessage } from '../../../../lib/plan-limit-message'
 import { loadPrinterSettings } from '../../../../lib/print/printer-settings'
@@ -222,11 +225,17 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     [items],
   )
 
+  // An invoice in another currency is booked at a rate, or not sent.
+  const bookCurrency = useBookCurrency()
+  const foreign = needsExchangeRate(currency, bookCurrency)
+  const exchangeRate = exchangeRateOf(draft.exchangeRateFrom, draft.exchangeRateTo)
+  const rateMissing = foreign && exchangeRate === null
+
   // Shared with the form (/invoices/new) — see use-oversold-lines.ts.
   const oversoldLines = useOversoldLines(items, draft.transactionType)
 
   const handleConfirm = useCallback(async () => {
-    if (issues.length || items.length === 0 || paymentBlocked) return
+    if (issues.length || items.length === 0 || paymentBlocked || rateMissing) return
     // Decided BEFORE the invoice is created: an interval that is not a number
     // must stop the confirm, not be discovered after the sale is recorded.
     const cadence = recurrence.enabled
@@ -272,6 +281,8 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
             }
           : {}),
         currency,
+        // Only on an invoice in another currency; the server refuses one without it.
+        ...(foreign && exchangeRate !== null ? { exchangeRate } : {}),
         ...(primaryCustomer?.id ? { customerId: primaryCustomer.id } : {}),
         // The companions are kept on the invoice's own notes — the only place
         // the current schema can hold them without inventing a relationship.
@@ -460,6 +471,19 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         </div>
 
         <div className="min-w-0 space-y-3">
+          {foreign && bookCurrency ? (
+            <InvoiceExchangeRate
+              t={t}
+              invoiceCurrency={currency}
+              bookCurrency={bookCurrency}
+              from={draft.exchangeRateFrom}
+              to={draft.exchangeRateTo}
+              onChange={(next) => {
+                draft.setField('exchangeRateFrom', next.from)
+                draft.setField('exchangeRateTo', next.to)
+              }}
+            />
+          ) : null}
           <InvoicePaymentSection
             t={t}
             fmtMoney={(value) => value.toLocaleString('fa-AF')}
@@ -561,7 +585,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
             <Button
               onClick={handleConfirm}
               loading={createInvoice.isPending}
-              disabled={issues.length > 0 || paymentBlocked}
+              disabled={issues.length > 0 || paymentBlocked || rateMissing}
               fullWidth
               className="gap-1.5"
             >
@@ -616,7 +640,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
             variant="success"
             onClick={handleConfirm}
             loading={createInvoice.isPending}
-            disabled={issues.length > 0 || paymentBlocked}
+            disabled={issues.length > 0 || paymentBlocked || rateMissing}
             fullWidth
             className="h-12 gap-1.5 text-base"
           >

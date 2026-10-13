@@ -56,8 +56,9 @@ describe('the unlinked-line notice', () => {
   it('⚠️ does NOT block the save', () => {
     // A free-text line is legitimate.
     expect(preview).not.toMatch(/disabled=\{unlinkedLines/)
-    // Only `issues` (and a payment larger than the invoice) may disable confirm.
-    expect(preview).toContain('disabled={issues.length > 0 || paymentBlocked}')
+    // Only `issues`, a payment larger than the invoice, and a missing exchange
+    // rate on a foreign-currency invoice may disable confirm.
+    expect(preview).toContain('disabled={issues.length > 0 || paymentBlocked || rateMissing}')
   })
 
   it('renders nothing when every line is linked', () => {

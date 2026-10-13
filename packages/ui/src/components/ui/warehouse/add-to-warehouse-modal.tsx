@@ -15,8 +15,11 @@
 // name. The code is how a person tells «روغن ۵ لیتری» in one warehouse from the
 // same words in another — on this form, in the invoice picker, and in exports.
 //
-// One minimum-stock field, deliberately: a reorder point beside a minimum is
-// two numbers for one decision, and nothing in the app reads a second one.
+// No minimum-stock field (owner, 13 October): a new product is saved with a
+// minimum of 0, so it is «out» at zero and never «running low».
+//
+// The barcode field has the same scan button the invoice has: a device types
+// into the field, the button opens the camera.
 //
 // EXPIRY is off until the switch is turned on, and then it is recorded as a
 // BATCH (`stock_batches`, the traceability core the expiry report and the FEFO
@@ -35,6 +38,8 @@ import { UnitSelect, toValidUnit } from '../units/unit-select'
 import { SelectField } from '../select-field'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { Switch } from '../switch'
+import { CameraScanButton } from '../invoice-builder/camera-scan-button'
+import { CategoryField } from './category-field'
 import { barcodeTakenMessage } from '../../../lib/barcode/barcode-errors'
 
 type T = (key: string, fallback?: string) => string
@@ -73,7 +78,7 @@ const blank = {
   quantity: '',
   buyPrice: '',
   sellPrice: '',
-  minStock: '5',
+  category: 'general',
   expiryDate: '',
 }
 
@@ -115,7 +120,7 @@ export function AddToWarehouseModal({
   const number = (value: string) => (value.trim() === '' ? 0 : Number(value))
   const valid =
     form.name.trim() !== '' &&
-    [form.quantity, form.buyPrice, form.sellPrice, form.minStock].every(
+    [form.quantity, form.buyPrice, form.sellPrice].every(
       (value) => value.trim() === '' || (Number.isFinite(Number(value)) && Number(value) >= 0),
     )
 
@@ -183,8 +188,8 @@ export function AddToWarehouseModal({
         quantity: number(form.quantity),
         buyPrice: number(form.buyPrice),
         sellPrice: number(form.sellPrice),
-        minStockLevel: number(form.minStock),
-        category: 'general',
+        minStockLevel: 0,
+        category: form.category.trim() || 'general',
         isActive: true,
         warehouseId,
       })
@@ -250,24 +255,31 @@ export function AddToWarehouseModal({
             />
           </label>
 
-          <label className="space-y-1 text-sm">
-            <span className="text-[hsl(var(--fg-secondary))]">{t('barcode.label', 'بارکد')}</span>
-            <input
-              id="wh-product-barcode"
-              name="barcode"
-              value={form.barcode}
-              onChange={(e) => set('barcode', e.target.value)}
-              // A scanner ends every code with Enter: it must not submit the form.
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') e.preventDefault()
-              }}
-              dir="ltr"
-              inputMode="text"
-              autoComplete="off"
-              placeholder={t('barcode.hint', 'بارکد را اسکن یا تایپ کنید')}
-              className={field}
-            />
-          </label>
+          <div className="space-y-1 text-sm">
+            <label htmlFor="wh-product-barcode" className="text-[hsl(var(--fg-secondary))]">
+              {t('barcode.label', 'بارکد')}
+            </label>
+            <div className="flex items-center gap-1.5">
+              <input
+                id="wh-product-barcode"
+                name="barcode"
+                value={form.barcode}
+                onChange={(e) => set('barcode', e.target.value)}
+                // A scanner ends every code with Enter: it must not submit the form.
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.preventDefault()
+                }}
+                dir="ltr"
+                inputMode="text"
+                autoComplete="off"
+                placeholder={t('barcode.hint', 'بارکد را اسکن یا تایپ کنید')}
+                className={field}
+              />
+              {/* The code that was read goes into the field — it is not looked
+                up: this form is making the product that will own it. */}
+              <CameraScanButton t={t} onCode={(code) => set('barcode', code)} />
+            </div>
+          </div>
 
           <div className="space-y-1 text-sm">
             <span className="text-[hsl(var(--fg-secondary))]">{t('warehouse.unit', 'واحد')}</span>
@@ -356,21 +368,17 @@ export function AddToWarehouseModal({
             />
           </label>
 
-          <label className="space-y-1 text-sm">
-            <span className="text-[hsl(var(--fg-secondary))]">
-              {t('warehouse.minStock', 'حداقل موجودی')}
-            </span>
-            <input
-              id="wh-product-min"
-              type="number"
-              min={0}
-              inputMode="decimal"
-              dir="ltr"
-              value={form.minStock}
-              onChange={(e) => set('minStock', e.target.value)}
-              className={field}
+          <div className="space-y-1 text-sm">
+            <label htmlFor="wh-product-category" className="text-[hsl(var(--fg-secondary))]">
+              {t('warehouse.category', 'دسته‌بندی')}
+            </label>
+            <CategoryField
+              t={t}
+              id="wh-product-category"
+              value={form.category}
+              onChange={(next) => set('category', next)}
             />
-          </label>
+          </div>
 
           <label className="space-y-1 text-sm">
             <span className="text-[hsl(var(--fg-secondary))]">

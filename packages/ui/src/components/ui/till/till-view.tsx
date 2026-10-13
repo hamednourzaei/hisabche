@@ -582,13 +582,19 @@ export const TillView = memo(function TillView({
         ),
       },
       {
-        id: 'orderCount',
-        labelKey: 'till.orders',
-        labelFallback: 'فروش‌ها',
+        id: 'transactionCount',
+        labelKey: 'till.transactions_column',
+        labelFallback: 'تراکنش‌ها',
         align: 'end',
         showFrom: 'md',
-        sortValue: (item) => item.orderCount,
-        render: (item) => <span className="tabular-nums">{item.orderCount}</span>,
+        sortValue: (item) => item.transactionCount ?? null,
+        // An older server does not send the count; a dash, not the sales count
+        // under another name.
+        render: (item) => (
+          <span className="tabular-nums">
+            {typeof item.transactionCount === 'number' ? item.transactionCount : '—'}
+          </span>
+        ),
       },
       {
         id: 'actions',
