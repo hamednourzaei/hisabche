@@ -24,6 +24,11 @@ export interface InvoicePaymentLink {
   method: string | null
   reference: string | null
   status: string | null
+  /** The till this cash went into or came out of. Absent from an older server. */
+  tillSessionId?: string | null
+  tillLabel?: string | null
+  /** What a bank or money changer kept, in the payment's currency. */
+  feeAmount?: number | null
 }
 
 export interface InvoiceJournalLink {

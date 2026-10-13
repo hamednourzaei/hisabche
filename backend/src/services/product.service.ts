@@ -20,6 +20,7 @@ import { memoryCache } from '../utils/pagination'
 import type { TenancyContext } from './tenancy.service'
 import { logBusinessEvent } from './event-log.service'
 import { costing } from './inventory-costing'
+import { ledger } from './accounting'
 import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
 import {
   asReplay,
@@ -434,6 +435,7 @@ export class ProductService {
     const unitCost = Number(buyPrice) || 0
     if (unitCost <= 0) return
     const entryDate = new Date().toISOString().slice(0, 10)
+    let valued = 0
     for (const entry of entries) {
       if (!(entry.quantity > 0)) continue
       try {
@@ -447,9 +449,50 @@ export class ProductService {
           sourceId: productId,
           sourceLine: entry.warehouseId ?? 'none',
         })
+        valued += entry.quantity
       } catch (err) {
         console.error(`[ProductService] opening cost layer failed for product ${productId}:`, err)
       }
+    }
+    await this.bookOpeningStock(ctx, productId, valued * unitCost, entryDate)
+  }
+
+  /**
+   * The ledger entry behind opening stock: Dr inventory / Cr owner's capital.
+   *
+   * The goods a business started with are capital it put in, exactly like the
+   * cash it started with. Without this the inventory account knew nothing of
+   * them, and the first sale credited inventory below zero.
+   *
+   * Booked for what was actually VALUED (a layer was made), keyed by the
+   * product so it is posted once. It never fails the product: a chart that
+   * cannot express it yet (the capital role is refused before
+   * docs/opening-capital-and-fees-01-migration.sql) is logged and left.
+   */
+  private async bookOpeningStock(
+    ctx: TenancyContext,
+    productId: string,
+    value: number,
+    entryDate: string,
+  ): Promise<void> {
+    const amount = Math.round(value * 100) / 100
+    if (!(amount > 0)) return
+    try {
+      const { accounts } = await ledger.ensureAccountsForRoles(ctx, ['inventory', 'owner_capital'])
+      if (!accounts.inventory || !accounts.owner_capital) return
+      await ledger.postDocument(ctx, {
+        sourceType: 'opening_stock',
+        sourceId: productId,
+        date: entryDate,
+        description: 'موجودی اول کالا',
+        reference: productId,
+        lines: [
+          { accountId: accounts.inventory, debit: amount, credit: 0 },
+          { accountId: accounts.owner_capital, debit: 0, credit: amount },
+        ],
+      })
+    } catch (err) {
+      console.error(`[ProductService] opening stock not booked for product ${productId}:`, err)
     }
   }
 

@@ -74,6 +74,8 @@ export interface RecordPaymentFormProps {
     tillSessionId?: string | undefined
     /** Books currency per one unit of the invoice's, today; absent = the invoice's own rate. */
     exchangeRate?: number | undefined
+    /** What a bank or money changer kept, in the invoice's currency; absent = none. */
+    feeAmount?: number | undefined
   }) => void
   onCancel: () => void
 }
@@ -99,6 +101,9 @@ export function RecordPaymentForm({
   const [rate, setRate] = React.useState('')
   const parsedRate = Number(rate)
   const rateValid = rate.trim() === '' || (Number.isFinite(parsedRate) && parsedRate > 0)
+  // Optional. On money received it came out of what was sent, so it is less
+  // than the amount; on money paid it is paid on top.
+  const [fee, setFee] = React.useState('')
   // Pre-filled with the full balance — «مشتری همه‌اش را داد» is the common
   // case, and the uncommon one is one edit away.
   const [amount, setAmount] = React.useState(String(outstanding > 0 ? outstanding : ''))
@@ -108,13 +113,17 @@ export function RecordPaymentForm({
 
   const parsed = Number(amount)
   const valid = Number.isFinite(parsed) && parsed > 0 && parsed <= outstanding + 0.005
+  const parsedFee = Number(fee)
+  const feeValid =
+    fee.trim() === '' ||
+    (Number.isFinite(parsedFee) && parsedFee > 0 && (direction === 'out' || parsedFee < parsed))
 
   return (
     <form
       className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-3"
       onSubmit={(event) => {
         event.preventDefault()
-        if (!valid || !rateValid || isSubmitting) return
+        if (!valid || !rateValid || !feeValid || isSubmitting) return
         onSubmit({
           amount: parsed,
           method,
@@ -122,6 +131,7 @@ export function RecordPaymentForm({
           date,
           ...(method === 'cash' && till.tillSessionId ? { tillSessionId: till.tillSessionId } : {}),
           ...(foreign && rate.trim() !== '' ? { exchangeRate: parsedRate } : {}),
+          ...(fee.trim() !== '' ? { feeAmount: parsedFee } : {}),
         })
       }}
     >
@@ -208,6 +218,30 @@ export function RecordPaymentForm({
         </div>
       ) : null}
 
+      <div className="space-y-1" data-payment-fee>
+        <Label htmlFor="payment-fee">
+          {t('invoiceDetail.paymentFee', 'کارمزد بانک یا صرافی (اختیاری)')}
+        </Label>
+        <MoneyInput id="payment-fee" value={fee} onChange={setFee} disabled={isSubmitting} />
+        <p
+          className={cn(
+            'text-xs',
+            feeValid ? 'text-[hsl(var(--fg-tertiary))]' : 'text-[hsl(var(--color-destructive))]',
+          )}
+          role={feeValid ? undefined : 'alert'}
+        >
+          {direction === 'in'
+            ? t(
+                'invoiceDetail.paymentFeeHintIn',
+                'از همین مبلغ کم شده است: بدهی به اندازه‌ی کل مبلغ تسویه می‌شود و کارمزد هزینه ثبت می‌شود. باید کمتر از مبلغ باشد.',
+              )
+            : t(
+                'invoiceDetail.paymentFeeHintOut',
+                'علاوه بر مبلغ پرداخت شده است: بدهی به اندازه‌ی مبلغ تسویه می‌شود و کارمزد هزینه ثبت می‌شود.',
+              )}
+        </p>
+      </div>
+
       <div className="space-y-1">
         <Label htmlFor="payment-reference">
           {t('invoiceDetail.reference', 'شماره مرجع (اختیاری)')}
@@ -241,7 +275,11 @@ export function RecordPaymentForm({
       ) : null}
 
       <div className="flex gap-2">
-        <Button type="submit" disabled={!valid || !rateValid || isSubmitting} className="flex-1">
+        <Button
+          type="submit"
+          disabled={!valid || !rateValid || !feeValid || isSubmitting}
+          className="flex-1"
+        >
           {isSubmitting
             ? t('common.saving', 'در حال ثبت…')
             : t('invoiceDetail.savePayment', 'ثبت پرداخت')}

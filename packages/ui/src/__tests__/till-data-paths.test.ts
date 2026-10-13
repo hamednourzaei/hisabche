@@ -89,7 +89,7 @@ describe('3 · a retried movement is the same movement', () => {
     // The container no longer mints one per click.
     expect(container).not.toContain('randomUUID')
     expect(container).toContain(
-      'await cashMovement.mutateAsync({ sessionId: selectedTillId, ...input })',
+      'await cashMovement.mutateAsync({ sessionId: selectedTillId, kind: input.kind, amountMinor: input.amountMinor, reason: input.reason, movementId: input.movementId, })',
     )
   })
 })
@@ -250,7 +250,7 @@ describe('the till page after the 13 October review', () => {
     expect(actions).toContain('disabled={isBusy || !selectedListed}')
     // The direction is set by the button, and the id is still made once per fill.
     expect(view).toContain(
-      "const openMovementForm = (kind: 'cash_in' | 'cash_out') => { setMovementKind(kind) setMovementRequestId((current) => current || crypto.randomUUID())",
+      "const openMovementForm = (kind: 'cash_in' | 'cash_out' | 'opening_capital') => { setMovementKind(kind) setMovementRequestId((current) => current || crypto.randomUUID())",
     )
   })
 

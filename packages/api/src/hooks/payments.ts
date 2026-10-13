@@ -43,6 +43,8 @@ export interface RecordPaymentInput {
   exchangeRate?: number
   /** The till this cash goes into or comes out of. Cash only; omit for none. */
   tillSessionId?: string
+  /** What a bank or money changer kept, in the payment's currency. */
+  feeAmount?: number
   method?: string
   reference?: string
   notes?: string

@@ -842,6 +842,7 @@ export {
   useVoidOrder,
   useSessionLedger,
   useBankTransfer,
+  useRecordOpeningCapital,
   useCashFlow,
   type CashFlowDay,
   type DrawerEntry,

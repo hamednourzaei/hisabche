@@ -49,6 +49,11 @@ export interface InvoiceRelatedPayment {
   method: string | null
   reference: string | null
   status: string | null
+  /** The till this cash went into or came out of; absent/null = none named. */
+  tillSessionId?: string | null | undefined
+  tillLabel?: string | null | undefined
+  /** What a bank or money changer kept; absent/null = none. */
+  feeAmount?: number | null | undefined
 }
 
 export interface InvoiceRelatedJournal {
@@ -100,6 +105,7 @@ export interface InvoiceRelatedPanelProps {
         date: string
         tillSessionId?: string | undefined
         exchangeRate?: number | undefined
+        feeAmount?: number | undefined
       }) => void)
     | undefined
   /** 'out' on a purchase invoice (money paid), 'in' on a sale. */
@@ -248,6 +254,26 @@ export function InvoiceRelatedPanel({
                     <p className="truncate text-xs text-[hsl(var(--fg-tertiary))]">
                       {[payment.method, payment.reference].filter(Boolean).join(' · ') || '—'}
                     </p>
+                    {/* Said only when there is something to say: a payment
+                        that named no till shows no till, not «none». */}
+                    {payment.tillSessionId ? (
+                      <p
+                        className="truncate text-xs text-[hsl(var(--fg-secondary))]"
+                        data-payment-till
+                      >
+                        {t('invoiceDetail.paymentTill', 'صندوق')}:{' '}
+                        {payment.tillLabel || t('payment.till.unnamed', 'صندوق بی‌نام')}
+                      </p>
+                    ) : null}
+                    {payment.feeAmount ? (
+                      <p
+                        className="truncate text-xs text-[hsl(var(--fg-secondary))]"
+                        data-payment-fee
+                      >
+                        {t('invoiceDetail.paymentFeeShort', 'کارمزد')}:{' '}
+                        {fmtMoney(payment.feeAmount)} {currency}
+                      </p>
+                    ) : null}
                   </div>
                   {/* The amount ALLOCATED to this invoice, not the payment's
                       own total — one payment can settle several invoices, and

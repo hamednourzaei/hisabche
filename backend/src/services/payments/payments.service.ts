@@ -40,6 +40,7 @@ import {
   unallocatedOf,
   settlesInCurrency,
   paymentPosting,
+  cashMovedOf,
   tillAmountMinor,
   type PaymentPosting,
   validateAllocations,
@@ -80,6 +81,12 @@ export interface RecordPaymentInput {
    * Absent = no till is touched — nothing is inferred from who recorded it.
    */
   tillSessionId?: string | null | undefined
+  /**
+   * What a bank or money changer kept, in the payment's currency. Money in:
+   * the business received `amount - feeAmount`. Money out: it paid
+   * `amount + feeAmount`. The party's debt is settled by `amount` either way.
+   */
+  feeAmount?: number | undefined
 }
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -246,12 +253,19 @@ export class PaymentsService {
     )
     if (bookingRate === null) throw new ValidationError('PAYMENT_EXCHANGE_RATE_REQUIRED')
 
+    const fee = input.feeAmount && input.feeAmount > 0 ? round2(input.feeAmount) : 0
+    // A fee taken out of money received cannot be all of it.
+    if (fee > 0 && input.direction === 'in' && fee >= amount) {
+      throw new ValidationError('PAYMENT_FEE_EXCEEDS_AMOUNT')
+    }
+
     // Also decided before anything is written: a till that is closed, of
     // another branch, or that cannot count this money refuses the payment.
+    // The drawer moves by what actually passed through it — net of the fee.
     const till = input.tillSessionId
       ? await this.tillMovement(ctx, input.tillSessionId, {
           method: input.method ?? 'cash',
-          amount,
+          amount: cashMovedOf(input.direction, amount, fee),
           currency,
           bookCurrency,
           rate: bookingRate,
@@ -285,6 +299,7 @@ export class PaymentsService {
         allocations,
         clientRequestId,
         till,
+        fee > 0 ? fee : null,
       ))
     } catch (error) {
       const code = (error as { code?: string } | null)?.code
@@ -312,6 +327,7 @@ export class PaymentsService {
         amount,
         paymentRate: bookingRate,
         allocations: await this.allocationRates(ctx, currency, bookCurrency, allocations),
+        fee,
       }),
       entryDate,
       paymentNumber,
@@ -420,11 +436,18 @@ export class PaymentsService {
    * refused by the CHECK). The payment is then booked as it always was.
    */
   private async exchangeDifferenceAccount(ctx: TenancyContext): Promise<string | null> {
+    return this.accountForRole(ctx, 'fx_gain_loss')
+  }
+
+  private async accountForRole(
+    ctx: TenancyContext,
+    role: 'fx_gain_loss' | 'bank_fees',
+  ): Promise<string | null> {
     try {
-      const { accounts } = await ledger.ensureAccountsForRoles(ctx, ['fx_gain_loss'])
-      return accounts.fx_gain_loss ?? null
+      const { accounts } = await ledger.ensureAccountsForRoles(ctx, [role])
+      return accounts[role] ?? null
     } catch (error) {
-      console.warn('[Payments] no account for exchange differences:', error)
+      console.warn(`[Payments] no account for ${role}:`, error)
       return null
     }
   }
@@ -490,6 +513,7 @@ export class PaymentsService {
         amount: payment.amount,
         paymentRate: rate,
         allocations: [],
+        fee: await this.repo.feeOf(ctx.workspaceId, payment.id),
       }),
       payment.entryDate,
       payment.paymentNumber ?? '',
@@ -539,8 +563,16 @@ export class PaymentsService {
         `[Payments] payment ${paymentId}: exchange difference ${posting.difference} not recognised`,
       )
     }
-    const cash = posting.cash
-    const party = differenceAccount ? posting.party : posting.cash
+    // The fee, likewise, needs its account. Without one the cash is booked
+    // gross — the entry stays balanced and the log says what was left out.
+    const feeAccount = posting.fee > 0 ? await this.accountForRole(ctx, 'bank_fees') : null
+    if (posting.fee > 0 && !feeAccount) {
+      console.warn(`[Payments] payment ${paymentId}: fee ${posting.fee} not booked`)
+    }
+    const gross = round2(isIncoming ? posting.cash + posting.fee : posting.cash - posting.fee)
+    const cash = feeAccount ? posting.cash : gross
+    const feeLine = feeAccount ? [{ accountId: feeAccount, debit: posting.fee, credit: 0 }] : []
+    const party = differenceAccount ? posting.party : gross
     const difference = differenceAccount ? posting.difference : 0
     const differenceLine =
       differenceAccount && difference !== 0
@@ -560,11 +592,13 @@ export class PaymentsService {
       lines: isIncoming
         ? [
             { accountId: accounts.cash!, debit: cash, credit: 0 },
+            ...feeLine,
             { accountId: accounts.receivable!, debit: 0, credit: party },
             ...differenceLine,
           ]
         : [
             { accountId: accounts.payable!, debit: party, credit: 0 },
+            ...feeLine,
             { accountId: accounts.cash!, debit: 0, credit: cash },
             ...differenceLine,
           ],

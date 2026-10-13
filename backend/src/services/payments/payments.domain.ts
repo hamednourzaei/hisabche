@@ -630,9 +630,19 @@ export interface PaymentPosting {
   party: number
   /**
    * The exchange difference, in books currency. Positive = a gain, negative =
-   * a loss, zero = none. Always: cash, party and this make a balanced entry.
+   * a loss, zero = none. Always: cash, party, fee and this make a balanced entry.
    */
   difference: number
+  /** Books currency: what a bank or money changer kept. Zero = none. */
+  fee: number
+}
+
+/**
+ * What actually moves in the cash, bank or till, in the payment's currency.
+ * Money in: the fee came out of what was sent. Money out: it is paid on top.
+ */
+export function cashMovedOf(direction: PaymentDirection, amount: number, fee: number): number {
+  return round2(direction === 'in' ? amount - fee : amount + fee)
 }
 
 /**
@@ -651,14 +661,24 @@ export interface PaymentPosting {
  * rate to differ from. An invoice with no rate of its own (rate null: the
  * books currency, or made before rates were kept) is closed at the payment's
  * rate — no rate is guessed for it, so no difference is claimed.
+ *
+ * A FEE is neither of those: it is a cost. The party's debt is still closed
+ * by the full amount (the customer did send it; the supplier did receive
+ * it), the cash moves by amount ∓ fee, and the fee is its own line. It is
+ * never folded into the exchange difference, which would hide a bank's
+ * charges inside «the rate was bad that day».
  */
 export function paymentPosting(input: {
   direction: PaymentDirection
   amount: number
   paymentRate: number
   allocations: ReadonlyArray<{ amount: number; rate: number | null }>
+  /** In the payment's currency. Absent or zero = none. */
+  fee?: number | undefined
 }): PaymentPosting {
-  const cash = round2(input.amount * input.paymentRate)
+  const gross = round2(input.amount * input.paymentRate)
+  const fee = input.fee && input.fee > 0 ? round2(input.fee * input.paymentRate) : 0
+  const cash = round2(input.direction === 'in' ? gross - fee : gross + fee)
   let settled = 0
   let allocated = 0
   for (const allocation of input.allocations) {
@@ -675,7 +695,7 @@ export function paymentPosting(input: {
   const same = input.allocations.every(
     (allocation) => allocation.rate === null || allocation.rate === input.paymentRate,
   )
-  if (same) return { cash, party: cash, difference: 0 }
-  const difference = round2(input.direction === 'in' ? cash - party : party - cash)
-  return { cash, party, difference }
+  if (same) return { cash, party: gross, difference: 0, fee }
+  const difference = round2(input.direction === 'in' ? gross - party : party - gross)
+  return { cash, party, difference, fee }
 }

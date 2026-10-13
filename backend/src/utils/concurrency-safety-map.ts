@@ -218,6 +218,12 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   },
   {
     routeFile: 'pos.routes.ts',
+    route: 'POST /opening-capital',
+    mechanisms: ['idempotency-key'],
+    evidence: [{ file: `${SVC}/pos/pos.service.ts`, text: "sourceType: 'opening_capital'," }],
+  },
+  {
+    routeFile: 'pos.routes.ts',
     route: 'POST /sessions/:id/close',
     mechanisms: ['conditional-update'],
     evidence: [

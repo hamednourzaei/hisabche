@@ -41,6 +41,12 @@ export interface InvoicePaymentLink {
   method: string | null
   reference: string | null
   status: string | null
+  /** The till this cash went into or came out of; null = none was named. */
+  tillSessionId: string | null
+  /** The till's name; null when it has none (or no till). */
+  tillLabel: string | null
+  /** What a bank or money changer kept, in the payment's currency; null = none. */
+  feeAmount: number | null
 }
 
 export interface InvoiceJournalLink {
@@ -122,7 +128,13 @@ export class InvoiceRelatedService {
       throw new DatabaseError('Failed to load the payments for this invoice', error)
     }
 
+    const extras = await this.paymentExtras(
+      ctx,
+      (data ?? []).map((row: Record<string, any>) => String(row.payment_id)),
+    )
+
     return (data ?? []).map((row: Record<string, any>) => {
+      const extra = extras.get(String(row.payment_id))
       // PostgREST returns an embedded to-one as an object, but as a
       // single-element ARRAY when it cannot prove the relationship is to-one
       // (a missing FK — gap 4 in the handoff). Both shapes are handled, or the
@@ -133,6 +145,9 @@ export class InvoiceRelatedService {
       return {
         allocationId: String(row.id),
         paymentId: String(row.payment_id),
+        tillSessionId: extra?.tillSessionId ?? null,
+        tillLabel: extra?.tillLabel ?? null,
+        feeAmount: extra?.feeAmount ?? null,
         amount: Number(row.amount) || 0,
         date: payment?.entry_date ?? null,
         method: payment?.method ?? null,
@@ -140,6 +155,91 @@ export class InvoiceRelatedService {
         status: payment?.status ?? null,
       }
     })
+  }
+
+  /**
+   * The till and the fee of each payment — columns of two later migrations,
+   * so they are read APART from the payments themselves: a database without
+   * them still lists the payments, with these simply absent.
+   */
+  private async paymentExtras(
+    ctx: TenancyContext,
+    paymentIds: string[],
+  ): Promise<
+    Map<
+      string,
+      { tillSessionId: string | null; tillLabel: string | null; feeAmount: number | null }
+    >
+  > {
+    const found = new Map<
+      string,
+      { tillSessionId: string | null; tillLabel: string | null; feeAmount: number | null }
+    >()
+    const unique = [...new Set(paymentIds.filter(Boolean))]
+    if (unique.length === 0) return found
+
+    const missing = (error: { code?: string } | null) =>
+      error?.code === '42703' || error?.code === 'PGRST204'
+
+    const tills = await supabase
+      .from('payments')
+      .select('id, pos_session_id')
+      .eq('workspace_id', ctx.workspaceId)
+      .in('id', unique)
+    if (tills.error && !missing(tills.error)) {
+      throw new DatabaseError('Failed to load the tills of these payments', tills.error)
+    }
+    for (const row of (tills.data ?? []) as Array<{ id: string; pos_session_id: string | null }>) {
+      found.set(row.id, {
+        tillSessionId: row.pos_session_id ?? null,
+        tillLabel: null,
+        feeAmount: null,
+      })
+    }
+
+    const fees = await supabase
+      .from('payments')
+      .select('id, fee_amount')
+      .eq('workspace_id', ctx.workspaceId)
+      .in('id', unique)
+    if (fees.error && !missing(fees.error)) {
+      throw new DatabaseError('Failed to load the fees of these payments', fees.error)
+    }
+    for (const row of (fees.data ?? []) as Array<{
+      id: string
+      fee_amount: number | string | null
+    }>) {
+      const fee = Number(row.fee_amount)
+      const entry = found.get(row.id) ?? { tillSessionId: null, tillLabel: null, feeAmount: null }
+      found.set(row.id, { ...entry, feeAmount: fee > 0 ? fee : null })
+    }
+
+    const sessionIds = [
+      ...new Set([...found.values()].map((entry) => entry.tillSessionId).filter(Boolean)),
+    ] as string[]
+    if (sessionIds.length === 0) return found
+
+    const labels = await supabase
+      .from('pos_sessions')
+      .select('id, label')
+      .eq('workspace_id', ctx.workspaceId)
+      .in('id', sessionIds)
+    // No name column yet: the till is still said, without a name.
+    if (labels.error && !missing(labels.error)) {
+      throw new DatabaseError('Failed to load the names of these tills', labels.error)
+    }
+    const nameOf = new Map(
+      ((labels.data ?? []) as Array<{ id: string; label: string | null }>).map((row) => [
+        row.id,
+        row.label?.trim() || null,
+      ]),
+    )
+    for (const [id, entry] of found) {
+      if (entry.tillSessionId) {
+        found.set(id, { ...entry, tillLabel: nameOf.get(entry.tillSessionId) ?? null })
+      }
+    }
+    return found
   }
 
   private async journalEntry(

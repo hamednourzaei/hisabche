@@ -113,6 +113,8 @@ const STANDARD_ACCOUNT_FOR_ROLE: Partial<
   // One account for both directions: a gain sits on its credit side, a loss
   // on its debit side, and its balance is the net of the two.
   fx_gain_loss: { code: '4900', name: 'سود و زیان تسعیر ارز', type: 'revenue' },
+  owner_capital: { code: '3200', name: 'سرمایه', type: 'equity' },
+  bank_fees: { code: '6100', name: 'کارمزد بانک و صرافی', type: 'expense' },
 }
 
 function roleOf(account: AccountRow): AccountRole | null {

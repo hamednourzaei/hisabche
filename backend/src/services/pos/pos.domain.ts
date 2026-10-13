@@ -70,6 +70,12 @@ export type CashMovementKind =
    */
   | 'transfer_to_bank'
   | 'transfer_from_bank'
+  /**
+   * Cash the owner started with, put in this till. Posted to the ledger when
+   * it is recorded (Dr cash / Cr capital) — so, like a transfer, it is in
+   * expected cash and NOT in the close posting.
+   */
+  | 'opening_capital'
 
 export interface CashMovement {
   id: string
@@ -157,6 +163,7 @@ export function movementsNetMinor(movements: CashMovement[]): number {
 export function transfersNetMinor(movements: CashMovement[]): number {
   return movements.reduce((sum, movement) => {
     if (movement.kind === 'transfer_from_bank') return sum + movement.amountMinor
+    if (movement.kind === 'opening_capital') return sum + movement.amountMinor
     if (movement.kind === 'transfer_to_bank') return sum - movement.amountMinor
     return sum
   }, 0)
@@ -535,6 +542,7 @@ export type DrawerEntryKind =
   | 'cash_out'
   | 'transfer_to_bank'
   | 'transfer_from_bank'
+  | 'opening_capital'
   | 'settlement_in'
   | 'settlement_out'
 
@@ -602,7 +610,9 @@ export function buildDrawerLedger(
     ...movements.map((m) => ({
       kind: m.kind,
       amountMinor:
-        m.kind === 'cash_in' || m.kind === 'transfer_from_bank' ? m.amountMinor : -m.amountMinor,
+        m.kind === 'cash_in' || m.kind === 'transfer_from_bank' || m.kind === 'opening_capital'
+          ? m.amountMinor
+          : -m.amountMinor,
       at: m.createdAt,
       reference: m.reason,
       sourceId: m.id,

@@ -2,8 +2,9 @@
 
 **وضعیت: اجرا شده.** صاحب پروژه در ۱۳ اکتبر ۲۰۲۶ اسکریپت را در SQL Editor اجرا کرد و
 خروجی PART 3 را فرستاد: هر ۲۱ جدول `rows_left = 0`.
-`VERIFY-reset-all-business-data.sql` (پرسش گسترده‌تر) هنوز اجرا نشده:
-`Post-migration verification query generated — PENDING HUMAN CONFIRMATION`.
+`VERIFY-reset-all-business-data.sql` هم همان روز اجرا شد و خروجی‌اش فرستاده شد:
+`business rows left: ok = true — 0 rows in 0 of 137 targeted tables`؛ هیچ ردیف `left in:` نبود.
+مانده‌ها: workspaces ۲، workspace_members ۳، roles ۱۱، subscriptions ۱، accounts ۹، api_keys ۲، profiles ۰.
 
 ## فایل‌ها
 

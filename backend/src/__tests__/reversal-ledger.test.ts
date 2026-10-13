@@ -77,6 +77,7 @@ const LEDGER: Record<string, Record<string, Way>> = {
     '/orders/:id/void': inert,
     '/sessions/:id/cash': none('corrected by the opposite cash movement, not by removal'),
     '/sessions/:id/bank-transfer': none('no route reverses a till-to-bank transfer'),
+    '/opening-capital': none('corrected by a manual journal entry; a till keeps what was put in'),
     '/sessions/:id/close': none('a counted till is final by design'),
     '/sessions/:id/suspend': unproven('POST /sessions/:id/resume'),
     '/sessions/:id/resume': inert,
@@ -212,6 +213,6 @@ describe('every way forward has a decided way back', () => {
       for (const way of Object.values(ways)) counts[way.kind]++
     }
     // Written down so a change to the register is a change someone reads.
-    expect(counts).toEqual({ proven: 9, unproven: 14, none: 16, inert: 14 })
+    expect(counts).toEqual({ proven: 9, unproven: 14, none: 17, inert: 14 })
   })
 })

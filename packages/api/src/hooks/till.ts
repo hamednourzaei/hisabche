@@ -52,7 +52,15 @@ export interface SessionTotals {
 }
 
 export type DrawerEntryKind =
-  'opening_float' | 'sale' | 'cash_in' | 'cash_out' | 'settlement_in' | 'settlement_out'
+  | 'opening_float'
+  | 'sale'
+  | 'cash_in'
+  | 'cash_out'
+  | 'transfer_to_bank'
+  | 'transfer_from_bank'
+  | 'opening_capital'
+  | 'settlement_in'
+  | 'settlement_out'
 
 export interface DrawerEntry {
   kind: DrawerEntryKind
@@ -334,6 +342,36 @@ export function useBankTransfer() {
       queryClient.invalidateQueries({ queryKey: ['accounting'] })
       queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
       void variables
+    },
+  })
+}
+
+/**
+ * «سرمایه‌ی افتتاحیه» — the cash the business started with, into a till or
+ * the bank. Booked to the ledger when recorded (cash or bank / owner's capital).
+ *
+ * ⚠️ `entryId` is made by the CALLER once and resent unchanged on retry: a
+ * fresh id per attempt is the capital counted twice.
+ */
+export function useRecordOpeningCapital() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (body: {
+      entryId: string
+      amountMinor: number
+      into: 'till' | 'bank'
+      sessionId?: string
+      date?: string
+    }) => {
+      const { data } = await apiClient.post('/pos/opening-capital', body)
+      return data as { entryId: string; journalEntryId: string; alreadyRecorded: boolean }
+    },
+    retry: false,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tillKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['accounting'] })
+      queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
     },
   })
 }

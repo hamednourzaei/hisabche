@@ -5182,7 +5182,10 @@
     "transactions_hint": "Opening float not counted",
     "name_required": "A name is required: with several tills it is the only way to tell them apart.",
     "recorded_cash_hint": "Recorded balance = opening float + cash in − cash out, as recorded by the system. What is really in the drawer is not known until you count it.",
-    "transactions_column": "Transactions"
+    "transactions_column": "Transactions",
+    "opening_capital": "Opening capital",
+    "opening_capital_hint": "The cash the business started with, held in this till. It is booked to the owner’s capital, not to sales.",
+    "kind_opening_capital": "Opening capital"
   },
   "assets": {
     "title": "Fixed assets",
@@ -6684,7 +6687,12 @@
     "paidWithoutRecord": "This invoice is marked paid but has no payment record behind it; until one is recorded it does not appear in the till, ledger or receivables.",
     "error_PAYMENT_ALLOCATION_CURRENCY_MISMATCH": "This payment’s currency is not the invoice’s currency. A payment only settles invoices in its own currency.",
     "paymentRate": "Exchange rate on the payment day (optional)",
-    "paymentRateHint": "What one unit of the invoice currency is worth in the books currency today. Empty = the invoice’s own rate. If it differs, the difference is booked as an exchange gain or loss."
+    "paymentRateHint": "What one unit of the invoice currency is worth in the books currency today. Empty = the invoice’s own rate. If it differs, the difference is booked as an exchange gain or loss.",
+    "paymentFee": "Bank or money-changer fee (optional)",
+    "paymentFeeHintIn": "Taken out of this amount: the debt is settled by the whole amount and the fee is booked as a cost. It must be less than the amount.",
+    "paymentFeeHintOut": "Paid on top of the amount: the debt is settled by the amount and the fee is booked as a cost.",
+    "paymentFeeShort": "Fee",
+    "paymentTill": "Till"
   },
   "ops": {
     "cashForecast": "Cash forecast",

@@ -51,6 +51,8 @@ const recordPaymentSchema = z
     exchangeRate: z.number().positive().finite().optional(),
     // The till the cash goes into or comes out of. Checked by the service.
     tillSessionId: z.string().uuid().nullable().optional(),
+    // What a bank or money changer kept, in the payment's currency.
+    feeAmount: z.number().positive().finite().optional(),
     method: z.string().max(32).optional(),
     reference: z.string().max(200).optional(),
     notes: z.string().max(1000).optional(),

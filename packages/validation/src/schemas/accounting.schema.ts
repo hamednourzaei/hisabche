@@ -51,6 +51,10 @@ export const accountRoles = [
   // An invoice booked at one rate and paid at another: the difference is
   // neither sales nor the party's debt (docs/till-payments-01-migration.sql).
   'fx_gain_loss',
+  // What the owner put in to start — cash and goods — and what a bank or a
+  // money changer kept of a payment (docs/opening-capital-and-fees-01-migration.sql).
+  'owner_capital',
+  'bank_fees',
 ] as const
 
 export type AccountRole = (typeof accountRoles)[number]

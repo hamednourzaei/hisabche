@@ -506,6 +506,7 @@ export function InvoiceDetailContainer() {
                       // rate if they gave one. Neither is invented here.
                       ...(input.tillSessionId ? { tillSessionId: input.tillSessionId } : {}),
                       ...(input.exchangeRate ? { exchangeRate: input.exchangeRate } : {}),
+                      ...(input.feeAmount ? { feeAmount: input.feeAmount } : {}),
                       // Explicit, always. Auto-allocation settles the OLDEST open
                       // invoice first — so paying here would quietly clear a
                       // different invoice and leave this one untouched.

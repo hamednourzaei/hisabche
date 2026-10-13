@@ -189,7 +189,7 @@ describe('the exchange difference of a payment', () => {
         paymentRate: 70,
         allocations: [{ amount: 100, rate: 70 }],
       }),
-    ).toEqual({ cash: 7000, party: 7000, difference: 0 })
+    ).toEqual({ cash: 7000, party: 7000, difference: 0, fee: 0 })
     expect(
       paymentPosting({
         direction: 'out',
@@ -197,7 +197,7 @@ describe('the exchange difference of a payment', () => {
         paymentRate: 1,
         allocations: [{ amount: 100, rate: null }],
       }),
-    ).toEqual({ cash: 100, party: 100, difference: 0 })
+    ).toEqual({ cash: 100, party: 100, difference: 0, fee: 0 })
   })
 
   it('a sale of 100 dollars booked at 70 and received at 72 is a GAIN of 200', () => {
@@ -208,7 +208,7 @@ describe('the exchange difference of a payment', () => {
         paymentRate: 72,
         allocations: [{ amount: 100, rate: 70 }],
       }),
-    ).toEqual({ cash: 7200, party: 7000, difference: 200 })
+    ).toEqual({ cash: 7200, party: 7000, difference: 200, fee: 0 })
   })
 
   it('the same sale received at 68 is a LOSS of 200', () => {
@@ -219,7 +219,7 @@ describe('the exchange difference of a payment', () => {
         paymentRate: 68,
         allocations: [{ amount: 100, rate: 70 }],
       }),
-    ).toEqual({ cash: 6800, party: 7000, difference: -200 })
+    ).toEqual({ cash: 6800, party: 7000, difference: -200, fee: 0 })
   })
 
   it('⚠️ a purchase is the other way round: paying MORE afghani than was owed is the loss', () => {
@@ -230,7 +230,7 @@ describe('the exchange difference of a payment', () => {
         paymentRate: 72,
         allocations: [{ amount: 100, rate: 70 }],
       }),
-    ).toEqual({ cash: 7200, party: 7000, difference: -200 })
+    ).toEqual({ cash: 7200, party: 7000, difference: -200, fee: 0 })
     expect(
       paymentPosting({
         direction: 'out',
@@ -238,7 +238,7 @@ describe('the exchange difference of a payment', () => {
         paymentRate: 68,
         allocations: [{ amount: 100, rate: 70 }],
       }),
-    ).toEqual({ cash: 6800, party: 7000, difference: 200 })
+    ).toEqual({ cash: 6800, party: 7000, difference: 200, fee: 0 })
   })
 
   it('an advance has no earlier rate: only the part that settles an invoice differs', () => {
@@ -250,7 +250,7 @@ describe('the exchange difference of a payment', () => {
         paymentRate: 72,
         allocations: [{ amount: 100, rate: 70 }],
       }),
-    ).toEqual({ cash: 10_800, party: 10_600, difference: 200 })
+    ).toEqual({ cash: 10_800, party: 10_600, difference: 200, fee: 0 })
   })
 })
 

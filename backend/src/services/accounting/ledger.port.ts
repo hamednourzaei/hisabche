@@ -40,6 +40,11 @@ export type LedgerSourceType =
   // Cash moved between a till and the bank. Keyed by the transfer id the client
   // generated once, so a retried transfer posts nothing new.
   | 'till_transfer'
+  // What the business started with. Cash: keyed by the id the client made
+  // once. Goods: keyed by the product, so a product's opening stock is booked
+  // once however many warehouses it sits in.
+  | 'opening_capital'
+  | 'opening_stock'
   | 'manual'
   | 'reversal'
 

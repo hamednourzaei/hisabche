@@ -20,6 +20,7 @@ import {
   useOpenSession,
   useOpenSessions,
   useRecordCashMovement,
+  useRecordOpeningCapital,
   useSession,
   useSessionLedger,
   useSetTillSuspended,
@@ -53,6 +54,7 @@ export const TillContainer = memo(function TillContainer() {
   const tills = useOpenSessions()
   const openSession = useOpenSession()
   const cashMovement = useRecordCashMovement()
+  const openingCapital = useRecordOpeningCapital()
   const setSuspended = useSetTillSuspended()
   const closeSession = useCloseSession()
   const labels = useTillLabels()
@@ -152,7 +154,7 @@ export const TillContainer = memo(function TillContainer() {
 
   const handleRecordMovement = useCallback(
     async (input: {
-      kind: 'cash_in' | 'cash_out'
+      kind: 'cash_in' | 'cash_out' | 'opening_capital'
       amountMinor: number
       reason: string
       movementId: string
@@ -162,7 +164,24 @@ export const TillContainer = memo(function TillContainer() {
       setCloseNotice(null)
       try {
         // The id came with the form: sending it again is the same movement.
-        await cashMovement.mutateAsync({ sessionId: selectedTillId, ...input })
+        if (input.kind === 'opening_capital') {
+          // Its own route: it is booked to the owner's capital when recorded,
+          // which an ordinary «واریز نقدی» is not.
+          await openingCapital.mutateAsync({
+            entryId: input.movementId,
+            amountMinor: input.amountMinor,
+            into: 'till',
+            sessionId: selectedTillId,
+          })
+        } else {
+          await cashMovement.mutateAsync({
+            sessionId: selectedTillId,
+            kind: input.kind,
+            amountMinor: input.amountMinor,
+            reason: input.reason,
+            movementId: input.movementId,
+          })
+        }
         void ledger.refetch()
         void tills.refetch()
         void selected.refetch()
@@ -173,7 +192,7 @@ export const TillContainer = memo(function TillContainer() {
         return false
       }
     },
-    [cashFlow, cashMovement, ledger, report, selected, selectedTillId, tills],
+    [cashFlow, cashMovement, ledger, openingCapital, report, selected, selectedTillId, tills],
   )
 
   const refreshAll = useCallback(() => {
@@ -266,6 +285,7 @@ export const TillContainer = memo(function TillContainer() {
       isBusy={
         openSession.isPending ||
         cashMovement.isPending ||
+        openingCapital.isPending ||
         setSuspended.isPending ||
         removeTill.isPending ||
         closeSession.isPending

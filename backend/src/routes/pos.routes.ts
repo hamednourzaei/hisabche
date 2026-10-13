@@ -324,6 +324,36 @@ export async function posRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── POST /opening-capital ─────────────────────────────
+  // The cash the business started with: Dr cash (in a till) or bank / Cr
+  // owner's capital. Keyed by `entryId`, made once by the client. Idempotent.
+  fastify.post(
+    '/opening-capital',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.post')],
+      schema: { response: { 201: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            entryId: z.string().uuid(),
+            amountMinor: z.number().int().positive(),
+            into: z.enum(['till', 'bank']),
+            sessionId: z.string().uuid().optional(),
+            date: z
+              .string()
+              .regex(/^\d{4}-\d{2}-\d{2}$/)
+              .optional(),
+          })
+          .parse(request.body)
+        return reply.code(201).send(await posService.recordOpeningCapital(request.tenancy, body))
+      } catch (err) {
+        return fail(reply, err, 'Failed to record the opening capital')
+      }
+    },
+  )
+
   // ─── POST /sessions/:id/close ──────────────────────────
   // Posts the day once, keyed by the session id.
   fastify.post(

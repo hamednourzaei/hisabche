@@ -886,6 +886,111 @@ export class PosService {
     }
   }
 
+  /**
+   * «سرمایه‌ی افتتاحیه» — the cash the business started with.
+   *
+   * Dr cash (in a till) or bank / Cr owner's capital. Without it, a shop that
+   * began with money in the drawer shows a NEGATIVE cash account after its
+   * first purchase, because the books never heard the money existed.
+   *
+   * Shaped like `recordBankTransfer`: two idempotent writes keyed by the
+   * `entryId` the client made once — the journal entry first, then (for a
+   * till) the drawer movement with the same id. A retry completes whatever
+   * the first attempt did not; nothing is deleted to undo anything.
+   *
+   * ⚠️ A till that counts in another currency is refused: the ledger is in
+   * the books currency and there is no rate here to convert with.
+   */
+  async recordOpeningCapital(
+    ctx: TenancyContext,
+    input: {
+      entryId: string
+      amountMinor: number
+      into: 'till' | 'bank'
+      sessionId?: string | undefined
+      date?: string | undefined
+    },
+  ): Promise<{ entryId: string; journalEntryId: string; alreadyRecorded: boolean }> {
+    if (!(input.amountMinor > 0)) throw new ValidationError('OPENING_CAPITAL_AMOUNT_INVALID')
+    const reason = 'سرمایه‌ی افتتاحیه'
+
+    if (input.into === 'till') {
+      if (!input.sessionId) throw new ValidationError('OPENING_CAPITAL_TILL_REQUIRED')
+      const session = await this.getSession(ctx, input.sessionId)
+      const problems = validateMovement(session, { amountMinor: input.amountMinor, reason })
+      if (problems.length > 0) throw new ValidationError(problems.join(', '))
+      const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
+      if ((session.currency ?? booksCurrency) !== booksCurrency) {
+        throw new ValidationError('OPENING_CAPITAL_TILL_CURRENCY')
+      }
+    }
+
+    const asset = input.into === 'till' ? ('cash' as const) : ('bank' as const)
+    let resolved: Awaited<ReturnType<typeof ledger.ensureAccountsForRoles>>
+    try {
+      resolved = await ledger.ensureAccountsForRoles(ctx, [asset, 'owner_capital'])
+    } catch {
+      // The capital account's role is refused by the database:
+      // docs/opening-capital-and-fees-01-migration.sql has not been run.
+      throw new ConflictError('OPENING_CAPITAL_NOT_CONFIGURED')
+    }
+    const assetAccount = resolved.accounts[asset]
+    const capitalAccount = resolved.accounts.owner_capital
+    if (!assetAccount || !capitalAccount) throw new ConflictError('OPENING_CAPITAL_NOT_CONFIGURED')
+
+    const amount = input.amountMinor / 100
+    const outcome = await ledger.postDocument(ctx, {
+      sourceType: 'opening_capital',
+      sourceId: input.entryId,
+      date: (input.date ?? new Date().toISOString()).slice(0, 10),
+      description: reason,
+      reference: reason,
+      lines: [
+        { accountId: assetAccount, debit: amount, credit: 0 },
+        { accountId: capitalAccount, debit: 0, credit: amount },
+      ],
+    })
+    if (outcome.status === 'skipped') throw new ConflictError('OPENING_CAPITAL_NOT_CONFIGURED')
+
+    if (input.into === 'till' && input.sessionId) {
+      const { error } = await supabase.from('pos_cash_movements').upsert(
+        {
+          id: input.entryId,
+          workspace_id: ctx.workspaceId,
+          session_id: input.sessionId,
+          kind: 'opening_capital',
+          amount_minor: input.amountMinor,
+          reason,
+          created_by: ctx.userId,
+        },
+        { onConflict: 'id', ignoreDuplicates: true },
+      )
+      if (error) {
+        if (error.code === '23514') throw new ConflictError('OPENING_CAPITAL_NOT_CONFIGURED')
+        throw new DatabaseError('Failed to record the opening capital in the till', error)
+      }
+    }
+
+    await this.invalidate(ctx.workspaceId)
+
+    void logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: input.into === 'till' ? 'pos_session' : 'journal_entry',
+      entityId: input.into === 'till' && input.sessionId ? input.sessionId : outcome.entryId,
+      action: 'opening_capital',
+      title: reason,
+      metadata: { entryId: input.entryId, amountMinor: input.amountMinor, into: input.into },
+      notify: false,
+    })
+
+    return {
+      entryId: input.entryId,
+      journalEntryId: outcome.entryId,
+      alreadyRecorded: outcome.status === 'already_posted',
+    }
+  }
+
   // ─── Closing ──────────────────────────────────────────────────────────────
 
   /**

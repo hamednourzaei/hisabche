@@ -132,7 +132,8 @@ export interface TillViewProps {
   onRemoveTill: (sessionId: string) => void
   /** «ورود و خروج نقدی» — cash_in or cash_out on the selected till. */
   onRecordMovement: (input: {
-    kind: 'cash_in' | 'cash_out'
+    /** 'opening_capital' = «سرمایه‌ی افتتاحیه»: booked to the owner's capital, not at close. */
+    kind: 'cash_in' | 'cash_out' | 'opening_capital'
     amountMinor: number
     reason: string
     /** Made once per form fill and resent unchanged, so a retry is the same movement. */
@@ -268,14 +269,16 @@ export const TillView = memo(function TillView({
 
   // Movement dialog state (detail view)
   const [movementOpen, setMovementOpen] = useState(false)
-  const [movementKind, setMovementKind] = useState<'cash_in' | 'cash_out'>('cash_in')
+  const [movementKind, setMovementKind] = useState<'cash_in' | 'cash_out' | 'opening_capital'>(
+    'cash_in',
+  )
   const [movementAmountMinor, setMovementAmountMinor] = useState(0)
   const [movementReason, setMovementReason] = useState('')
   // One id per form fill. It is renewed only after the server has recorded
   // the movement, so pressing «ثبت» again after a lost answer is the SAME
   // movement to the server, never a second one in the drawer.
   const [movementRequestId, setMovementRequestId] = useState('')
-  const openMovementForm = (kind: 'cash_in' | 'cash_out') => {
+  const openMovementForm = (kind: 'cash_in' | 'cash_out' | 'opening_capital') => {
     setMovementKind(kind)
     setMovementRequestId((current) => current || crypto.randomUUID())
     setMovementOpen(true)
@@ -860,6 +863,18 @@ export const TillView = memo(function TillView({
                 <ArrowUpRight className="me-1 size-4" aria-hidden="true" />
                 {t('till.take_cash', 'برداشت نقدی')}
               </ActionButton>
+              {/* The ledger is in the books currency and there is no rate here:
+                  a till that counts in another currency is not offered it. */}
+              {!session.currency || session.currency === bookCurrency ? (
+                <ActionButton
+                  variant="quiet"
+                  onClick={() => openMovementForm('opening_capital')}
+                  disabled={isBusy}
+                  data-opening-capital
+                >
+                  {t('till.opening_capital', 'سرمایه‌ی افتتاحیه')}
+                </ActionButton>
+              ) : null}
               <ActionButton
                 variant="quiet"
                 // The list knows what closing needs; until it has arrived
@@ -1229,18 +1244,30 @@ export const TillView = memo(function TillView({
           <DialogContent className="sm:max-w-sm" data-movement-till="">
             <DialogHeader>
               <DialogTitle>
-                {t('till.record_movement', 'ثبت تراکنش نقدی')} — {nameOfTill(session.id)}
+                {movementKind === 'opening_capital'
+                  ? t('till.opening_capital', 'سرمایه‌ی افتتاحیه')
+                  : t('till.record_movement', 'ثبت تراکنش نقدی')}{' '}
+                — {nameOfTill(session.id)}
               </DialogTitle>
             </DialogHeader>
-            <SegmentedControl
-              label={t('till.movement_direction', 'جهت تراکنش')}
-              options={[
-                { value: 'cash_in', label: t('till.direction_in', 'ورودی به صندوق') },
-                { value: 'cash_out', label: t('till.direction_out', 'خروجی از صندوق') },
-              ]}
-              value={movementKind}
-              onChange={(v) => setMovementKind(v as 'cash_in' | 'cash_out')}
-            />
+            {movementKind === 'opening_capital' ? (
+              <p className="text-xs text-[hsl(var(--fg-secondary))]" data-opening-capital-hint>
+                {t(
+                  'till.opening_capital_hint',
+                  'پول نقدی که کسب‌وکار با آن شروع کرده و در این صندوق است. در دفتر به حساب «سرمایه» ثبت می‌شود، نه فروش.',
+                )}
+              </p>
+            ) : (
+              <SegmentedControl
+                label={t('till.movement_direction', 'جهت تراکنش')}
+                options={[
+                  { value: 'cash_in', label: t('till.direction_in', 'ورودی به صندوق') },
+                  { value: 'cash_out', label: t('till.direction_out', 'خروجی از صندوق') },
+                ]}
+                value={movementKind}
+                onChange={(v) => setMovementKind(v as 'cash_in' | 'cash_out')}
+              />
+            )}
             <MinorInput
               label={t('till.amount', 'مبلغ')}
               value={movementAmountMinor}
@@ -1248,12 +1275,15 @@ export const TillView = memo(function TillView({
               currency={session.currency ?? undefined}
               disabled={isBusy}
             />
-            <Field
-              label={t('till.reason', 'دلیل')}
-              value={movementReason}
-              onChange={setMovementReason}
-              disabled={isBusy}
-            />
+            {/* Opening capital says what it is; nothing more is asked. */}
+            {movementKind === 'opening_capital' ? null : (
+              <Field
+                label={t('till.reason', 'دلیل')}
+                value={movementReason}
+                onChange={setMovementReason}
+                disabled={isBusy}
+              />
+            )}
             {actionError ? <ErrorNote message={actionError} /> : null}
             <DialogFooter className="gap-2">
               <ActionButton
@@ -1268,7 +1298,7 @@ export const TillView = memo(function TillView({
                   isBusy ||
                   !movementRequestId ||
                   movementAmountMinor <= 0 ||
-                  movementReason.trim() === ''
+                  (movementKind !== 'opening_capital' && movementReason.trim() === '')
                 }
                 onClick={() => {
                   // Closed and emptied only once the server has it. A

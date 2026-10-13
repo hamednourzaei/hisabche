@@ -329,27 +329,41 @@ export class PaymentsRepository {
     clientRequestId: string | null = null,
     /** The till this cash enters or leaves, and by how much in ITS currency. */
     till: { sessionId: string; amountMinor: number } | null = null,
+    /** What a bank or money changer kept, in the payment's currency. */
+    fee: number | null = null,
   ): Promise<{ id: string; replayed: boolean }> {
     // Keyed: the wrapper calls `payments_record` and stamps the key in the
     // same transaction (docs/offline-idempotency-migration.sql).
     // At a till: one more wrapper, which checks the till is open and writes
     // payment, allocations and till in ONE transaction
     // (docs/till-payments-01-migration.sql).
-    const fn = till
-      ? 'payments_record_at_till'
-      : clientRequestId
-        ? 'payments_record_keyed'
-        : 'payments_record'
+    // With a fee: the widest wrapper, which takes the till too (or none) and
+    // stamps the fee in the same transaction
+    // (docs/opening-capital-and-fees-01-migration.sql).
+    const fn = fee
+      ? 'payments_record_with_fee'
+      : till
+        ? 'payments_record_at_till'
+        : clientRequestId
+          ? 'payments_record_keyed'
+          : 'payments_record'
     const { data, error } = await supabase.rpc(fn, {
-      ...(till
+      ...(fee
         ? {
             p_client_request_id: clientRequestId,
-            p_session_id: till.sessionId,
-            p_till_amount_minor: till.amountMinor,
+            p_session_id: till?.sessionId ?? null,
+            p_till_amount_minor: till?.amountMinor ?? null,
+            p_fee_amount: fee,
           }
-        : clientRequestId
-          ? { p_client_request_id: clientRequestId }
-          : {}),
+        : till
+          ? {
+              p_client_request_id: clientRequestId,
+              p_session_id: till.sessionId,
+              p_till_amount_minor: till.amountMinor,
+            }
+          : clientRequestId
+            ? { p_client_request_id: clientRequestId }
+            : {}),
       p_workspace_id: ctx.workspaceId,
       p_user_id: ctx.userId,
       p_payment: {
@@ -370,17 +384,35 @@ export class PaymentsRepository {
 
     // The function is not there: the migration has not been run. Said as
     // that — recording the payment WITHOUT its till would be a silent lie.
+    if (error && fee && ['PGRST202', '42883'].includes(error.code ?? '')) {
+      throw new ConflictError('PAYMENT_FEE_NOT_CONFIGURED')
+    }
     if (error && till && ['PGRST202', '42883'].includes(error.code ?? '')) {
       throw new ConflictError('PAYMENT_TILL_NOT_CONFIGURED')
     }
     if (error) throw error
-    if (clientRequestId || till) {
+    if (clientRequestId || till || fee) {
       // payments_record_keyed / _at_till answer { payment_id, replayed }.
       const keyed = (data ?? {}) as { payment_id?: string; replayed?: boolean }
       if (!keyed.payment_id) throw new DatabaseError('Keyed payment returned no id', null)
       return { id: keyed.payment_id, replayed: keyed.replayed === true }
     }
     return { id: data as string, replayed: false }
+  }
+
+  /** The fee stored on a payment; 0 when none, or when this database keeps none. */
+  async feeOf(workspaceId: string, paymentId: string): Promise<number> {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('fee_amount')
+      .eq('workspace_id', workspaceId)
+      .eq('id', paymentId)
+      .maybeSingle()
+    if (error) {
+      if (['42703', 'PGRST204'].includes(error.code ?? '')) return 0
+      throw new DatabaseError('Failed to read the fee of the payment', error)
+    }
+    return Number((data as { fee_amount?: number | string | null } | null)?.fee_amount) || 0
   }
 
   async cancelPayment(ctx: TenancyContext, paymentId: string): Promise<{ unallocated: number }> {
