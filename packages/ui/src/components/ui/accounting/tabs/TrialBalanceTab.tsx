@@ -24,12 +24,14 @@ import { BranchSwitcher, useBranchScope } from '../../branch/branch-scope'
 import { SegmentedControl } from '../../segmented-control'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import type { TrialBalance } from '@hisabche/api'
+import { useAccountName } from '../../../../hooks/use-account-name'
 
 type Shown = 'withBalance' | 'all'
 
 export const TrialBalanceTab = memo(function TrialBalanceTab() {
   const t = useTranslations()
   const n = useLedgerNumber()
+  const shownName = useAccountName()
   const format = useDateFormat()
   const [date, setDate] = useState(() => toIsoDay(new Date()))
   // Empty = from the first entry in the books, which is what the report has
@@ -280,7 +282,7 @@ export const TrialBalanceTab = memo(function TrialBalanceTab() {
                       </LedgerTd>
                       <LedgerTd strong>
                         <button type="button" onClick={openAccount} className={link}>
-                          {row.accountName}
+                          {shownName(row.accountName)}
                         </button>
                         {row.abnormal ? (
                           <span

@@ -37,6 +37,24 @@ import {
 } from 'recharts'
 
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '../chart'
+import { useIntlLocale } from '../../../hooks/use-intl-locale'
+
+/** `2026-10-08` in the reader's calendar (live audit #57: Gregorian ISO on a Persian page). */
+function dayLabel(value: unknown, locale: string): string {
+  const text = String(value ?? '')
+  if (!/^\d{4}-\d{2}-\d{2}/.test(text)) return text
+  const date = new Date(`${text.slice(0, 10)}T12:00:00Z`)
+  if (Number.isNaN(date.getTime())) return text
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    }).format(date)
+  } catch {
+    return text
+  }
+}
 
 interface ChartDataPoint {
   label: string
@@ -98,6 +116,7 @@ export default memo(function InternalSalesChart({
   animationDuration,
 }: InternalChartProps) {
   const gradientId = useId()
+  const locale = useIntlLocale()
 
   const chartData = useMemo(() => aggregateDataPoints(data ?? [], 30), [data])
 
@@ -128,7 +147,8 @@ export default memo(function InternalSalesChart({
 
   return (
     <ChartContainer config={chartConfig} className="w-full" style={{ height }}>
-      <ComposedChart data={chartData} margin={{ top: 16, right: 8, bottom: 0, left: 8 }}>
+      {/* Room above and beside the peak's label — «10,74» was cut off (live audit #57). */}
+      <ComposedChart data={chartData} margin={{ top: 28, right: 28, bottom: 0, left: 28 }}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="hsl(var(--color-primary))" stopOpacity={0.22} />
@@ -149,6 +169,7 @@ export default memo(function InternalSalesChart({
           axisLine={false}
           tickMargin={8}
           minTickGap={24}
+          tickFormatter={(value: unknown) => dayLabel(value, locale)}
           tick={{ fill: 'hsl(var(--fg-tertiary))', fontSize: 11 }}
         />
         <YAxis

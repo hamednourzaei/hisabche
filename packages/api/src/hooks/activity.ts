@@ -130,7 +130,9 @@ export function useActivities(
     enabled: authReady && options.enabled !== false,
     staleTime: 30_000,
     // No refetchInterval: refreshed on remount after staleTime (see top).
-    placeholderData: [],
+    // ⚠️ No placeholderData of []: it made a feed still loading report success
+    // with nothing in it, and the dashboard said «No activity recorded yet»
+    // until the answer came (live audit #75).
   })
 }
 

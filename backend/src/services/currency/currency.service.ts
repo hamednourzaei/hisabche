@@ -15,6 +15,17 @@ import { ledger } from '../accounting'
 
 import { rateFor, runRevaluation, type ForeignBalance, type RateQuote } from './revaluation.domain'
 
+export interface CustomUnitQuote {
+  name: string
+  /** Books-currency units one of this unit is worth. */
+  perUnit: number
+  onDate: string
+}
+
+/** The table of custom-units-01 is not there yet. */
+const isMissingTable = (error: { code?: string } | null | undefined) =>
+  error?.code === '42P01' || error?.code === 'PGRST205'
+
 export class CurrencyService {
   private async invalidate(workspaceId: string) {
     await memoryCache.invalidate(`currency:${workspaceId}`)
@@ -99,6 +110,80 @@ export class CurrencyService {
     return {
       currency: data.currency_code,
       rate: Number(data.rate),
+      onDate: String(data.rate_date).slice(0, 10),
+    }
+  }
+
+  // ─── Units the business names itself (custom-units-01, live audit #82) ──
+  //
+  // «یک ماشین = ۵۰۰٬۰۰۰ افغانی». For converting and showing a figure only:
+  // no document is ever kept in such a unit. Without the migration the answer
+  // is «not configured», never a 500 and never an empty list that looks like
+  // «you have none».
+
+  async listUnits(
+    ctx: TenancyContext,
+  ): Promise<{ configured: false } | { configured: true; units: CustomUnitQuote[] }> {
+    const { data, error } = await supabase
+      .from('custom_unit_rates')
+      .select('name, base_per_unit, rate_date')
+      .eq('workspace_id', ctx.workspaceId)
+      .order('rate_date', { ascending: false })
+      .order('name', { ascending: true })
+      .limit(500)
+    if (isMissingTable(error)) return { configured: false }
+    if (error) throw new DatabaseError('Failed to fetch the units', error)
+    return {
+      configured: true,
+      units: (data ?? []).map((row) => ({
+        name: String(row.name),
+        perUnit: Number(row.base_per_unit),
+        onDate: String(row.rate_date).slice(0, 10),
+      })),
+    }
+  }
+
+  async setUnit(
+    ctx: TenancyContext,
+    input: { name: string; perUnit: number; onDate: string },
+  ): Promise<CustomUnitQuote> {
+    if (ctx.role === 'seller') throw new ConflictError('RATE_MANAGE_FORBIDDEN')
+    const name = input.name.trim()
+    if (name.length < 1 || name.length > 40) throw new ValidationError('UNIT_NAME_INVALID')
+    if (!(input.perUnit > 0)) throw new ValidationError('RATE_INVALID')
+    const day = input.onDate.slice(0, 10)
+
+    // One quote per unit per day: the day's row is updated if it exists.
+    const existing = await supabase
+      .from('custom_unit_rates')
+      .select('id')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('name', name)
+      .eq('rate_date', day)
+      .limit(1)
+      .maybeSingle()
+    if (isMissingTable(existing.error)) throw new ConflictError('UNITS_NOT_CONFIGURED')
+    if (existing.error) throw new DatabaseError('Failed to read the unit', existing.error)
+
+    const now = new Date().toISOString()
+    const write = existing.data
+      ? supabase
+          .from('custom_unit_rates')
+          .update({ base_per_unit: input.perUnit, updated_at: now })
+          .eq('id', (existing.data as { id: string }).id)
+          .eq('workspace_id', ctx.workspaceId)
+      : supabase.from('custom_unit_rates').insert({
+          workspace_id: ctx.workspaceId,
+          name,
+          base_per_unit: input.perUnit,
+          rate_date: day,
+          created_by: ctx.userId,
+        })
+    const { data, error } = await write.select('name, base_per_unit, rate_date').single()
+    if (error || !data) throw new DatabaseError('Failed to save the unit', error)
+    return {
+      name: String(data.name),
+      perUnit: Number(data.base_per_unit),
       onDate: String(data.rate_date).slice(0, 10),
     }
   }

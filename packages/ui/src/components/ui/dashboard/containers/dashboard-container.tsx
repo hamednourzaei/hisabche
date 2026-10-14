@@ -17,11 +17,16 @@ import { fmt } from '../../../../lib/dashboard/dashboard-format'
 import { useDisplayBasis } from '../../../../hooks/dashboard/use-display-basis'
 import { DisplayBasisPicker, ExchangeRateForm } from '../display-basis-picker'
 import { AiAssistantLauncher } from '../../ai/ai-assistant-launcher'
-import { CURRENCY_CODES } from '@hisabche/validation'
-import { useSetExchangeRate } from '@hisabche/api'
+import { CURRENCY_PICK_ORDER } from '@hisabche/validation'
+import {
+  useCustomUnits,
+  useSetCustomUnit,
+  useSetExchangeRate,
+  type CustomUnitQuote,
+} from '@hisabche/api'
 import { localizePath } from '@hisabche/ui-contract'
 import { useLocalePush, useRouteLang } from '../../../../hooks/use-locale-push'
-import { toIsoDay } from '@hisabche/formatting'
+import { formatNumber, toIsoDay } from '@hisabche/formatting'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { ManufacturingDashboardCard } from '../../manufacturing/manufacturing-dashboard-card'
 
@@ -131,6 +136,17 @@ export function DashboardContainer() {
   // `POST /currency/revalue`, which books the difference as a journal entry.
   const display = useDisplayBasis()
   const setRate = useSetExchangeRate()
+  const customUnits = useCustomUnits()
+  const setUnit = useSetCustomUnit()
+  const unitList = customUnits.data
+  const unitsReady = unitList?.configured === true
+  // Newest first from the server: the first quote of a name is its latest.
+  const latestUnits: CustomUnitQuote[] = []
+  if (unitList?.configured) {
+    for (const unit of unitList.units) {
+      if (!latestUnits.some((seen) => seen.name === unit.name)) latestUnits.push(unit)
+    }
+  }
   const [rateOpen, setRateOpen] = useState<'new' | 'edit' | null>(null)
 
   /**
@@ -235,12 +251,34 @@ export function DashboardContainer() {
               initialCurrency={rateOpen === 'edit' ? display.basis : undefined}
               // The base is excluded: it is 1 against itself by definition, and
               // offering it invites someone to quote AFN against AFN.
-              currencies={CURRENCY_CODES.filter((code) => code !== display.base)}
+              currencies={CURRENCY_PICK_ORDER.filter((code) => code !== display.base)}
               isSaving={setRate.isPending}
               error={setRate.error ? String((setRate.error as Error).message) : null}
               onSave={(input) => setRate.mutate(input, { onSuccess: () => setRateOpen(null) })}
+              customUnits={latestUnits.map((unit) => unit.name)}
+              onSaveUnit={
+                unitsReady
+                  ? (input) => setUnit.mutate(input, { onSuccess: () => setRateOpen(null) })
+                  : undefined
+              }
             />
           </div>
+        ) : null}
+        {latestUnits.length > 0 ? (
+          // The units the business named itself, at their latest worth
+          // (live audit #82): «۱ ماشین = ۵۰۰٬۰۰۰ افغانی».
+          <ul className="flex w-full flex-wrap gap-1.5 text-[11px] text-[hsl(var(--fg-secondary))]">
+            {latestUnits.map((unit) => (
+              <li
+                key={unit.name}
+                className="rounded-full bg-[hsl(var(--surface-muted))] px-2.5 py-1 tabular-nums"
+              >
+                {formatNumber(1, intlLocale)} {unit.name} ={' '}
+                {formatNumber(unit.perUnit, intlLocale, 2)}{' '}
+                {t(`currency.${display.base.toLowerCase()}`, display.base)}
+              </li>
+            ))}
+          </ul>
         ) : null}
       </div>
 

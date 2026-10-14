@@ -15,6 +15,7 @@ import { entityRegistry, type EntityType } from '../../../lib/activity/entity-re
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { useNow } from '../../../hooks/use-now'
 import { timeAgo } from '../../../lib/time-ago'
+import { translateOr } from '../../../lib/translate-or'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -225,7 +226,7 @@ export const ActivityGroupCard = memo(function ActivityGroupCard({
                   STATUS_COLOR_CLASSES[statusInfo.color] ?? STATUS_COLOR_CLASSES.gray,
                 )}
               >
-                {statusInfo.label}
+                {translateOr(t, `activity.entityStatus.${entitySummary.status}`, statusInfo.label)}
               </span>
             )}
           </div>

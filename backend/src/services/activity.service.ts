@@ -513,15 +513,10 @@ export class ActivityService {
         })
       }
 
-      const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 }
-      result.sort((a, b) => {
-        const aPriority = priorityOrder[a.priority] ?? 2
-        const bPriority = priorityOrder[b.priority] ?? 2
-        if (aPriority !== bPriority) return aPriority - bPriority
-        if (a.unreadCount > 0 && b.unreadCount === 0) return -1
-        if (a.unreadCount === 0 && b.unreadCount > 0) return 1
-        return new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime()
-      })
+      // Newest first, always (live audit #43): reading a row moved it to the
+      // bottom, because unread groups were sorted above read ones and the
+      // newest invoice landed last. Unread is a badge on the row, not a place.
+      result.sort((a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime())
 
       const response: PaginatedActivitiesResponse = {
         data: result,

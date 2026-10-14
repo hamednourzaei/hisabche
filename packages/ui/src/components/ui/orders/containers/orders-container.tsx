@@ -57,7 +57,12 @@ export const OrdersContainer = memo(function OrdersContainer() {
     <OrdersView
       t={t}
       state={state}
-      error={orders.error ? apiErrorMessage(orders.error, t('orders.loadError')) : null}
+      // A missing setup has its own screen; the raw ORDERS_NOT_CONFIGURED is not an error message (live audit #31).
+      error={
+        orders.error && state === 'error'
+          ? apiErrorMessage(orders.error, t('orders.loadError'))
+          : null
+      }
       status={status}
       onStatusChange={(next) => {
         setStatus(next)

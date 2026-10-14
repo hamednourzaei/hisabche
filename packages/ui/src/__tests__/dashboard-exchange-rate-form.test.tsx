@@ -8,7 +8,8 @@ import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+  useTranslations: () =>
+    Object.assign((key: string) => key, { raw: () => undefined, has: () => false }),
   useLocale: () => 'fa',
 }))
 
@@ -57,6 +58,39 @@ describe('ExchangeRateForm (pair)', () => {
     fireEvent.submit(container.querySelector('form')!)
     expect(onSave).not.toHaveBeenCalled()
     expect(getByRole('alert').textContent).toContain('بزرگ‌تر از صفر')
+  })
+})
+
+describe('a unit the business names itself (live audit #82)', () => {
+  it('«1 ماشین = 500,000 AFN» is saved as a unit, not as a currency', () => {
+    const onSave = vi.fn()
+    const onSaveUnit = vi.fn()
+    const { container } = render(
+      <ExchangeRateForm
+        base="AFN"
+        currencies={['USD']}
+        customUnits={['ماشین']}
+        onSave={onSave}
+        onSaveUnit={onSaveUnit}
+        initialCurrency="unit:ماشین"
+      />,
+    )
+    const [left, right] = amounts(container)
+    fireEvent.change(left!, { target: { value: '1' } })
+    fireEvent.change(right!, { target: { value: '500000' } })
+    fireEvent.submit(container.querySelector('form')!)
+    expect(onSave).not.toHaveBeenCalled()
+    expect(onSaveUnit).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'ماشین', perUnit: 500000 }),
+    )
+  })
+
+  it('the form is one line and the date is the reader’s calendar, not <input type=date>', () => {
+    const { container } = render(
+      <ExchangeRateForm base="AFN" currencies={['USD']} onSave={vi.fn()} />,
+    )
+    expect(container.querySelector('input[type="date"]')).toBeNull()
+    expect(container.querySelector('form > div')!.className).toContain('lg:flex-nowrap')
   })
 })
 

@@ -1144,7 +1144,9 @@ export class InvoiceService {
       .create(workspaceId, {
         user_id: userId,
         title: '✅ صورت‌حساب جدید ایجاد شد',
-        body: `صورت‌حساب شماره ${invoice.invoice_number} با مبلغ ${invoice.total} ${invoice.currency} ثبت شد.`,
+        // The amount travels in metadata and is written by the screen in the
+        // reader's digits and currency name (live audit #40), not as «10000 AFN».
+        body: `صورت‌حساب شماره ${invoice.invoice_number} ثبت شد.`,
         type: 'success',
         entity_type: 'invoice',
         entity_id: invoice.id,
@@ -1535,7 +1537,7 @@ export class InvoiceService {
         await this.notificationService.create(workspaceId, {
           user_id: userId,
           title: '💰 صورت‌حساب پرداخت شد',
-          body: `صورت‌حساب شماره ${invoice.invoice_number} به مبلغ ${invoice.total} ${invoice.currency} پرداخت شد.`,
+          body: `صورت‌حساب شماره ${invoice.invoice_number} پرداخت شد.`,
           type: 'success',
           entity_type: 'invoice',
           entity_id: invoice.id,

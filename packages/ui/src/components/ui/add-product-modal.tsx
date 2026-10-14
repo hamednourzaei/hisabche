@@ -257,7 +257,7 @@ export const AddProductModal = memo(function AddProductModal({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') e.preventDefault()
               }}
-              placeholder={t('barcode.hint')}
+              placeholder={t('barcode.short')}
               className={inputClass}
               disabled={isPending}
             />

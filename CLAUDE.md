@@ -44,7 +44,7 @@ Rollback/Mitigation؛ (۲) Verification Query جدا. **انسان** آن‌ها
 - **route ای که با صفحه‌ای داده‌ی مشترک دارد، تب یا بخشِ همان صفحه می‌شود** — نه route تازه، نه مورد منو.
 - **نشانی قدیمی نمی‌میرد:** صفحه‌ای که بخش شد، یک جفت در `moved` (`apps/web/next.config.js`) و همان
   جفت به‌صورت `<Navigate>` در `packages/app-shell/src/app/app.tsx` می‌گیرد. دو فهرست باید یکی باشند
-  (گارد: `route-parity.test.ts`). ۲۵ جفت داریم؛ ۱۸ پوشه‌ی صفحه‌ی وب حذف شد.
+  (گارد: `route-parity.test.ts`). ۲۷ جفت داریم؛ ۱۹ پوشه‌ی صفحه‌ی وب حذف شد.
 - **قفل بخش = قفل صفحه‌ی قدیمی‌اش.** کلیدهایی مثل `/bank` و `/expiry` در `NAV_MODULE` می‌مانند با اینکه
   دیگر در منو نیستند — `isNavLocked(source)` بخش را با همان‌ها پنهان می‌کند. حذفشان = نمایش بخش به کسی که
   ماژولش قفل است. فهرست بسته در `nav-module-locks.test.ts`.
@@ -126,6 +126,7 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **یکپارچگی دیتابیس: هشت قاعده، فازها، خروجی FINDING (۱۱ اکتبر)**     | `.claude/db-integrity/00-SPEC.md` · `docs/db-integrity-01-migration.sql` — **منتظر اجرا و VERIFY** |
 | **ارز دفاتر و ممیزی چندارزی؛ ورود فایل (۱۱ اکتبر)**                    | `.claude/reverse-and-import/01-CURRENCY-AUDIT.md` · `00-SPEC.md`                         |
 | **مرور کار Antigravity؛ صندوق چندارزی، رخدادها، لینک حضور و غیاب (۱۲ اکتبر)** | `.claude/SESSION-CACHE-2026-10-12-ANTIGRAVITY-REVIEW.md` · `AGENTS.md` — **attendance-devices-01، attendance-02، invoice-exchange-rate-01 و till-payments-01 منتظر اجرا** |
+| **ممیزی زنده ۱۴ اکتبر: ۸۲ باگ، درس‌ها، آنچه منتظر انسان است**                 | `.claude/LIVE-AUDIT-2026-10-14.md` · `.claude/SESSION-CACHE-2026-10-14-LIVE-AUDIT.md` — **custom-units-01 منتظر اجرا و VERIFY** |
 | **همه‌ی درس‌ها با شماره (۱–۱۵۲)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
@@ -502,6 +503,16 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **`FOR SHARE` و بعد `UPDATE` همان ردیف، با دو تراکنش هم‌زمان بن‌بست است.** تریگرِ «حذف ممنوع» با `pg_trigger_depth() > 1` cascade را راه می‌دهد.
 - ⚠️ **محدودکننده‌ی نرخ در تست:** هر فراخوان `remoteAddress` خودش، و سقف یک تست جدا. پاسخ سقف حالا ۴۲۹ است (BUG-119: قبلاً در کل سرور ۵۰۰ بود).
 - ⚠️ **در پرامپت برای ایجنت دیگر، «بسنج» را از «انجام بده» جدا کن.** حدسی که به‌عنوان علت نوشتم اجرا شد و دسترسی را گسترده کرد.
+
+**ممیزی زنده (۱۴ اکتبر)** — جزئیات: `.claude/SESSION-CACHE-2026-10-14-LIVE-AUDIT.md`
+
+- ⚠️ **خطای کلاینت API باید `response.status` و `response.data` را نگه دارد.** interceptor خطای axios را با `ApiError` بی‌`response` عوض می‌کرد؛ ۲۶ صفحه ۵۰۳/۴۰۳ را نمی‌دیدند و `apiErrorMessage` پیام سرور را نمی‌دید.
+- ⚠️ **`placeholderData: []` یعنی «در حال بارگذاری» = «خالی».** v5 با placeholder وضعیت success می‌دهد.
+- ⚠️ **هر replace اسکریپتی تعداد تطابق را assert کند — حذف و درج هر دو.** جعبه‌ی نرخ فاکتور با یک درجِ بی‌تطابق بی‌صدا ناپدید شد؛ tsc ساکت بود.
+- ⚠️ **`t.has` در shim دسکتاپ نیست** — `translateOr(t, key, fallback)`. **id نقطه‌دار کلید پیام نیست** (تودرتو می‌شود) — `replace(/[.-]/g, '_')`.
+- **افغانی کلمه است:** `currencySign(code, locale)` → «افغانی»/«AFN». **ارزش موجودی = قیمت خرید.** **نرخ ارز فقط `exchange_rates`** (چیپ‌های انبار نرخ دستگاه داشتند). **واحد دلخواه** (`custom_unit_rates`) فقط برای تبدیل و نمایش است، هرگز ارز سند.
+- **متن سرور ترجمه نیست:** پیشنهادهای هوشمند و مبلغ اعلان = کد + عدد + ارز؛ جمله در صفحه.
+- ⚠️ **سطح نمایش ≠ سطح ذخیره:** بالاترین پله‌ی هر ماژول «کامل» خوانده می‌شود (`shownLevel`)؛ سرور دست نمی‌خورد چون round-trip ماتریس لازم است.
 
 **هسته‌ها (CRM / Payments)**
 

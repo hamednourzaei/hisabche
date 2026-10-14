@@ -25,7 +25,7 @@ describe('FREEZE: currencySign', () => {
   })
 
   it.each([
-    ['AFN', '؋'],
+    ['AFN', 'افغانی'],
     ['IRR', '﷼'],
     ['USD', '$'],
     ['PKR', '₨'],
@@ -72,7 +72,7 @@ describe('FREEZE: formatAmount — fa-IR, maximumFractionDigits: 0', () => {
 
 describe('FREEZE: formatMoney — sign is appended AFTER the amount', () => {
   it.each([
-    [1234.567, 'AFN', '۱٬۲۳۵ ؋'],
+    [1234.567, 'AFN', '۱٬۲۳۵ افغانی'],
     // RE-BASELINED at Stage 4. Was '۱٬۲۳۵ $'.
     // Per-currency decimal policy (product decision, Stage 0 doc §9): USD
     // displays 2 decimals, every other active currency displays 0. This is
@@ -80,7 +80,7 @@ describe('FREEZE: formatMoney — sign is appended AFTER the amount', () => {
     [1234.567, 'USD', '۱٬۲۳۴٫۵۷ $'],
     [1234.567, 'PKR', '۱٬۲۳۵ ₨'],
     [1234.567, 'IRR', '۱٬۲۳۵ ﷼'],
-    [0, 'AFN', '۰ ؋'],
+    [0, 'AFN', '۰ افغانی'],
   ])('formatMoney(%p, %p) === %p', (value, code, expected) => {
     expect(formatMoney(value, code as 'AFN')).toBe(expected)
   })
@@ -90,7 +90,7 @@ describe('FREEZE: formatMoney — sign is appended AFTER the amount', () => {
   })
 
   it('CONTRACT: amount and sign are separated by exactly one ASCII space', () => {
-    expect(formatMoney(1, 'AFN')).toBe('۱ ؋')
+    expect(formatMoney(1, 'AFN')).toBe('۱ افغانی')
   })
 })
 

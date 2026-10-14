@@ -32,9 +32,10 @@ import {
   type InvoiceGridRow,
   type InvoiceSummary,
   currencyPrecision,
+  CURRENCY_PICK_ORDER,
 } from '@hisabche/validation'
 import { formatNumber } from '@hisabche/formatting'
-import { SUPPORTED_CURRENCIES, type CurrencyCode, type InvoiceDraftCustomer } from '@hisabche/store'
+import { type CurrencyCode, type InvoiceDraftCustomer } from '@hisabche/store'
 
 import { Button } from '../../button'
 import { CustomerPicker } from '../../customer-picker'
@@ -418,7 +419,7 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SUPPORTED_CURRENCIES.map((code) => (
+                  {CURRENCY_PICK_ORDER.map((code) => (
                     <SelectItem key={code} value={code}>
                       {t(`currency.${code.toLowerCase()}`, code)}
                     </SelectItem>

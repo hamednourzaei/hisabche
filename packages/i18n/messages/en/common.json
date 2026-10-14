@@ -1809,7 +1809,7 @@
     "barcodePlaceholder": "Enabled after saving",
     "invoiceInfo": "Invoice Info",
     "customerInfo": "Customer Info",
-    "walkInCustomer": "Walk-in Customer",
+    "walkInCustomer": "Walk-in customer",
     "unit": "Unit",
     "shipping": "Shipping",
     "customerSignature": "Customer Signature",
@@ -1901,7 +1901,12 @@
     "branch": "Branch",
     "warehouse": "Warehouse",
     "allBranches": "All branches",
-    "allWarehouses": "All warehouses"
+    "allWarehouses": "All warehouses",
+    "cols": {
+      "type": "Type",
+      "company": "Company",
+      "itemsSent": "Items sent"
+    }
   },
   "warehouse": {
     "title": "Warehouse",
@@ -1969,8 +1974,8 @@
     "noWarehousesDesc": "Add your first warehouse",
     "warehouseStock": "Products in this warehouse",
     "loadError": "Couldn't load the warehouses.",
-    "assignTitle": "Add products to warehouse",
-    "assignAction": "Add to warehouse",
+    "assignTitle": "Place stock that has no warehouse",
+    "assignAction": "Place in this warehouse",
     "assignMax": "Max",
     "assignHint": "Stock that is in no warehouse moves into this one; the product's total does not change. Record new goods with a purchase invoice for this warehouse.",
     "assignExceeds": "That is more than this product's stock with no warehouse",
@@ -1995,7 +2000,7 @@
     "rateBridge": "One side must be afghani or already have a rate.",
     "rateSaved": "Rate saved.",
     "enterRate": "Enter rate",
-    "addToWarehouse": "Add to warehouse",
+    "addToWarehouse": "New product",
     "addToWarehouseHint": "The product is created and its opening stock is recorded in this warehouse.",
     "productCode": "Product code",
     "productCodeHint": "Tells same-named goods apart",
@@ -2225,7 +2230,7 @@
     "empty_hint": "Add your first customer from the customers page.",
     "list": "List",
     "address": "Address",
-    "anonymous": "Unknown customer",
+    "anonymous": "Walk-in customer",
     "statsCoverage": "These figures cover the latest invoices and customers fetched, not the whole book",
     "statsCoverageInvoices": "invoices",
     "statsCoverageCustomers": "customers",
@@ -2367,10 +2372,10 @@
     "jpy": "Japanese yen",
     "cad": "Canadian dollar",
     "aud": "Australian dollar",
-    "xau": "Gold",
-    "xag": "Silver",
-    "xpt": "Platinum",
-    "xpd": "Palladium"
+    "xau": "Gold (gram)",
+    "xag": "Silver (gram)",
+    "xpt": "Platinum (gram)",
+    "xpd": "Palladium (gram)"
   },
   "settings": {
     "title": "Settings",
@@ -2479,7 +2484,8 @@
       "sameAsBusiness": "Same as the business",
       "TIME_ZONE_INVALID": "This time zone was not recognised",
       "TIME_ZONE_SCHEMA_REQUIRED": "The database is not ready to store a time zone yet"
-    }
+    },
+    "backupWhere": "Your business records are kept on the Hisabche server. To keep a copy on your own device, use the export buttons below."
   },
   "sync": {
     "download": {
@@ -2569,7 +2575,8 @@
     "salesChart": {
       "emptyAria": "No sales data yet",
       "ariaLabel": "Sales chart",
-      "description": "Total: {total}, {change} from previous period"
+      "description": "Total: {total}, {change} from previous period",
+      "periodTotal": "Sales in this period"
     },
     "greeting": {
       "morning": "Good Morning",
@@ -2645,7 +2652,49 @@
     "openSalesInvoices": "Sales invoices",
     "openTodayInvoices": "Today's invoices",
     "openUnpaidInvoices": "Unpaid invoices",
-    "openWarehouse": "Warehouse"
+    "openWarehouse": "Warehouse",
+    "insight": {
+      "lowStock": {
+        "title": "Low stock",
+        "text": "{count} products are at or below their minimum stock.",
+        "action": "View stock"
+      },
+      "unpaid": {
+        "title": "Invoices awaiting payment",
+        "text": "{count} sales invoices are not fully paid yet.",
+        "action": "View invoices"
+      },
+      "weekSales": {
+        "title": "Sales, last 7 days",
+        "text": "Sales in the last 7 days: {amount}",
+        "action": "View dashboard"
+      },
+      "outstanding": {
+        "title": "Owed by customers",
+        "text": "{amount} is still to be collected from customers.",
+        "action": "Follow up debtors"
+      },
+      "outOfStock": {
+        "title": "Out of stock",
+        "text": "{count} products have no stock: {names}",
+        "action": "Record a purchase"
+      },
+      "stockValue": {
+        "title": "Stock value",
+        "text": "{amount} is tied up in stock (at purchase price).",
+        "action": "View warehouse"
+      },
+      "averageSale": {
+        "title": "Average sale",
+        "text": "A sales invoice averages {amount}.",
+        "action": "View invoices"
+      },
+      "tip": {
+        "title": "Tip of the day",
+        "text": "Record expenses under Accounting for a more accurate profit and loss report.",
+        "action": "Go to accounting"
+      }
+    }
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -2824,7 +2873,8 @@
       "unbalanced": "Unbalanced",
       "empty": {
         "title": "No balance sheet data"
-      }
+      },
+      "currentEarnings": "Current period profit (loss)"
     },
     "incomeStatement": {
       "chooseAccounts": "Choose accounts",
@@ -2975,6 +3025,23 @@
       "working": "Saving…",
       "done": "{valued} products valued.",
       "failed": "The stock could not be valued."
+    },
+    "standardAccount": {
+      "cash": "Cash",
+      "bank": "Bank",
+      "inventory": "Inventory",
+      "receivable": "Accounts receivable",
+      "payable": "Accounts payable",
+      "tax": "Tax",
+      "retained_earnings": "Retained earnings",
+      "current_year_earnings": "Current year earnings",
+      "sales": "Sales",
+      "cogs": "Cost of goods sold",
+      "purchase": "Purchases",
+      "salary_expense": "Salary expense",
+      "fx_gain_loss": "Exchange gain and loss",
+      "owner_capital": "Owner capital",
+      "bank_fees": "Bank and exchange fees"
     }
   },
   "hr": {
@@ -4067,6 +4134,16 @@
       "unread": "No unread activity",
       "search": "No results found",
       "searchHint": "No results found for \"{query}\""
+    },
+    "entityStatus": {
+      "pending": "Unpaid",
+      "paid": "Paid",
+      "completed": "Paid",
+      "cancelled": "Cancelled",
+      "partial": "Part-paid",
+      "overdue": "Overdue",
+      "draft": "Draft",
+      "issued": "Issued"
     }
   },
   "entity": {
@@ -4418,9 +4495,9 @@
       "select": "Select customer",
       "supplier": "Select supplier",
       "currency": "Invoice currency",
-      "rate": "Exchange rate",
+      "rate": "Column rate",
       "ratePlaceholder": "e.g. 59500",
-      "rateHint": "Without a rate, amounts in this currency are reported separately and excluded from the total.",
+      "rateHint": "Only for columns priced in this currency; without a rate their amounts are reported separately and left out of the total.",
       "date": "Invoice date",
       "dueDate": "Due date",
       "notes": "Notes",
@@ -5740,7 +5817,29 @@
     "tab_sod": "Separation of duties",
     "tab_audit": "Activity log",
     "group_people": "Organisation",
-    "group_control": "Control"
+    "group_control": "Control",
+    "sodRules": {
+      "payment_record_then_cancel": {
+        "name": "Record a payment, then cancel it",
+        "why": "The person who took the money should not be the one who erases the record of it.",
+        "conflict": "Record payment ⟂ cancel payment"
+      },
+      "invoice_create_then_delete": {
+        "name": "Raise an invoice, then delete it",
+        "why": "Raising a document and removing it are the two halves of hiding a sale.",
+        "conflict": "Raise invoice ⟂ delete invoice"
+      },
+      "ledger_post_then_reverse": {
+        "name": "Post an entry, then reverse it",
+        "why": "Posting an entry and reversing it unobserved leaves no net trace of either.",
+        "conflict": "Post entry ⟂ reverse entry"
+      },
+      "budget_draft_then_approve": {
+        "name": "Set a budget, then approve it",
+        "why": "Whoever sets a spending limit should not be the only person who agrees to it.",
+        "conflict": "Set budget ⟂ approve budget"
+      }
+    }
   },
   "migration": {
     "title": "Data migration",
@@ -6064,7 +6163,7 @@
     "no_match": "No product matches that search",
     "no_match_hint": "Change the search or clear it.",
     "empty": "No products yet",
-    "empty_hint": "Add your first product from the stock page.",
+    "empty_hint": "Create your first product on the warehouse page with “New product”.",
     "warehouses": "Warehouse",
     "branches": "Branch",
     "no_warehouse": "In no warehouse"
@@ -6729,7 +6828,11 @@
     "rateSame": "The two units must differ.",
     "rateAmount": "Both amounts must be greater than zero.",
     "rateNeedsBase": "One side must be your books’ currency.",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "otherUnit": "Other unit…",
+    "unitName": "Write the unit name (up to 40 characters).",
+    "unitPlaceholder": "e.g. car",
+    "unitNameLabel": "Unit name"
   },
   "invoiceDetail": {
     "addPayment": "Add payment",
@@ -7305,7 +7408,8 @@
     "scanHint": "Scan with a barcode scanner or type the code and press Enter. On a phone, turn on the camera.",
     "scanAdd": "Add",
     "cameraUnsupported": "This browser or device cannot reach a camera. Scan with a barcode scanner or type the code.",
-    "cameraFailed": "The camera did not start. Try again or type the code."
+    "cameraFailed": "The camera did not start. Try again or type the code.",
+    "short": "Scan or type"
   },
   "receipt": {
     "print": "Print receipt",
@@ -7416,7 +7520,13 @@
     "status": "Status",
     "title": "Stock count",
     "variance": "Variance",
-    "noLines": "No product matches this search"
+    "noLines": "No product matches this search",
+    "start": "Start a count",
+    "chooseWarehouse": "Choose a warehouse",
+    "warehouse": "Warehouse",
+    "needWarehouse": "Create a warehouse first to count stock.",
+    "emptyWarehouse": "This warehouse has nothing to count.",
+    "startFailed": "The count did not open."
   },
   "employee": {
     "branches": "This employee's branches",
@@ -9845,5 +9955,12 @@
       "title": "Pages",
       "url": "Page URL"
     }
+  },
+  "crumbs": {
+    "orders": "Orders",
+    "operations": "Operations",
+    "developers": "Developers",
+    "marketplace": "Marketplace",
+    "stock-count": "Stock count"
   }
 }

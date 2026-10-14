@@ -66,13 +66,13 @@ describe('summarizeInvoices', () => {
 describe('summarizeStock', () => {
   it('values stock and classifies oversold as out, not low', () => {
     const s = summarizeStock([
-      { quantity: 10, sell_price: 3, min_stock_level: 5 },
-      { quantity: 4, sell_price: '2.5', min_stock_level: 5 },
-      { quantity: -98, sell_price: 1, min_stock_level: 5 },
-      { quantity: 0, sell_price: 9, min_stock_level: null },
-      { quantity: 3, sell_price: 1, min_stock_level: null },
+      { quantity: 10, buy_price: 3, min_stock_level: 5 },
+      { quantity: 4, buy_price: '2.5', min_stock_level: 5 },
+      { quantity: -98, buy_price: 1, min_stock_level: 5 },
+      { quantity: 0, buy_price: 9, min_stock_level: null },
+      { quantity: 3, buy_price: 1, min_stock_level: null },
     ])
-    expect(s).toEqual({ productCount: 5, totalValue: -55, lowStockCount: 2, outOfStockCount: 2 })
+    expect(s).toEqual({ productCount: 5, totalValue: 43, lowStockCount: 2, outOfStockCount: 2 })
   })
 })
 

@@ -17,6 +17,7 @@ import { useNow } from '../../../hooks/use-now'
 import { DataTable } from '../data-table/data-table'
 import type { TableColumn } from '../data-table/table-types'
 import { STATUS_COLOR_CLASSES, formatAmount, getEntityConfig } from './ActivityGroupCard'
+import { translateOr } from '../../../lib/translate-or'
 
 export interface ActivityGroupTableProps {
   groups: ActivityGroupDto[]
@@ -106,7 +107,7 @@ export const ActivityGroupTable = memo(function ActivityGroupTable({
             <span
               className={cn(pill, STATUS_COLOR_CLASSES[info.color] ?? STATUS_COLOR_CLASSES.gray)}
             >
-              {info.label}
+              {translateOr(t, `activity.entityStatus.${g.entitySummary.status}`, info.label)}
             </span>
           )
         },

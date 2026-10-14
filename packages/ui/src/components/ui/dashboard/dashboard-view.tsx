@@ -4,7 +4,7 @@
 import { KpiCard, KpiGrid } from '../kpi-card'
 import { memo, useEffect, useMemo, useState } from 'react'
 import type { ElementType } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { invoiceListHref } from '../../../lib/invoices/invoice-filter-link'
 import { cn } from '../../../lib/utils'
 import { roleTone, roleLabelKey } from '../../../lib/role-tone'
@@ -25,6 +25,7 @@ import type { ActivityGroupDto, ActivityItemDto } from '@hisabche/api'
 import dynamic from 'next/dynamic'
 import { asList } from '@hisabche/api'
 import { useDateFormat } from '../../../hooks/use-date-format'
+import { formatAmount, formatNumber, type KnownCurrency } from '@hisabche/formatting'
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -153,6 +154,36 @@ const AIInsightsPanel = memo(function AIInsightsPanel({
     }
   }
 
+  const locale = useLocale()
+  // Live audit #74: the server sends WHAT (a code, numbers, the books
+  // currency); the sentence is written here, in the reader's language, with
+  // the reader's digits and the currency's name — never «افغانی» for everyone.
+  const written = (insight: AIInsight) => {
+    if (!insight.code)
+      return { title: insight.title, text: insight.description, action: insight.actionLabel }
+    const values = insight.values ?? {}
+    const currency = insight.currency ?? ''
+    const fill = (template: string) =>
+      template
+        .replace(
+          '{amount}',
+          typeof values.amount === 'number'
+            ? `${formatAmount(values.amount, currency as KnownCurrency, locale)} ${t(`currency.${currency.toLowerCase()}`, currency)}`
+            : '',
+        )
+        .replace(
+          '{count}',
+          typeof values.count === 'number' ? formatNumber(values.count, locale) : '',
+        )
+        .replace('{names}', typeof values.names === 'string' ? values.names : '')
+    const key = `dashboard.insight.${insight.code}`
+    return {
+      title: t(`${key}.title`, insight.code),
+      text: fill(t(`${key}.text`, '')),
+      action: t(`${key}.action`, t('dashboard.aiInsight.action')),
+    }
+  }
+
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] overflow-hidden">
       <div className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 pt-4 sm:pt-5 pb-2 sm:pb-3">
@@ -179,27 +210,30 @@ const AIInsightsPanel = memo(function AIInsightsPanel({
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-2.5">
-            {insights.map((insight, i) => (
-              <div
-                key={i}
-                className="flex h-full flex-col rounded-xl border border-[hsl(var(--color-primary)/0.2)] bg-[hsl(var(--color-primary)/0.05)] p-3"
-              >
-                <p className="text-xs sm:text-sm font-medium text-[hsl(var(--fg-primary))]">
-                  {insight.title}
-                </p>
-                <p className="text-[11px] sm:text-xs text-[hsl(var(--fg-secondary))] mt-0.5">
-                  {insight.description}
-                </p>
-                {insight.action && (
-                  <button
-                    onClick={() => onAction(insight.action!)}
-                    className="mt-auto pt-1.5 text-start text-[11px] sm:text-xs font-medium text-[hsl(var(--color-primary))] hover:underline focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] rounded-md"
-                  >
-                    {insight.actionLabel || t('dashboard.aiInsight.action')}
-                  </button>
-                )}
-              </div>
-            ))}
+            {insights.map((insight, i) => {
+              const words = written(insight)
+              return (
+                <div
+                  key={i}
+                  className="flex h-full flex-col rounded-xl border border-[hsl(var(--color-primary)/0.2)] bg-[hsl(var(--color-primary)/0.05)] p-3"
+                >
+                  <p className="text-xs sm:text-sm font-medium text-[hsl(var(--fg-primary))]">
+                    {words.title}
+                  </p>
+                  <p className="text-[11px] sm:text-xs text-[hsl(var(--fg-secondary))] mt-0.5">
+                    {words.text}
+                  </p>
+                  {insight.action && (
+                    <button
+                      onClick={() => onAction(insight.action!)}
+                      className="mt-auto pt-1.5 text-start text-[11px] sm:text-xs font-medium text-[hsl(var(--color-primary))] hover:underline focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] rounded-md"
+                    >
+                      {words.action || t('dashboard.aiInsight.action')}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

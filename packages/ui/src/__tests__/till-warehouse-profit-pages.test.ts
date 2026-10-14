@@ -99,7 +99,9 @@ describe('#92 till row actions, warehouse edit, manual rates, invoice warehouse'
   it('currency chips use only rates the user entered — no constants', () => {
     const container = code(ui('warehouse/containers/Warehouse-container.tsx'))
     expect(container).not.toMatch(/rate:\s*0\.\d/)
-    expect(container).toContain('rate: rate?.manual ? rate.rate : null')
+    // The saved rates of the business (live audit #50), not a list kept on one device.
+    expect(container).toContain('useExchangeRates()')
+    expect(container).not.toContain('setManualRate')
   })
   it('the invoice warehouse is shown for any warehouse, auto-picked when there is one', () => {
     const select = code(ui('invoice-builder/invoice-warehouse-select.tsx'))

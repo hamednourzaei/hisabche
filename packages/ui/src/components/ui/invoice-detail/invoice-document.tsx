@@ -392,7 +392,7 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                 </div>
               ) : (
                 <p className="text-sm text-[hsl(var(--fg-tertiary))]">
-                  {t('invoices.walkInCustomer', 'مشتری عمومی')}
+                  {t('invoices.walkInCustomer', 'مشتری نقدی')}
                 </p>
               )}
             </div>

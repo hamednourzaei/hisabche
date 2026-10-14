@@ -17,7 +17,8 @@ import { StockHistoryDrawer } from '../stock-history-drawer'
 import { fmt } from '../../../../lib/warehouse/warehouse-format'
 import type { Product } from '../../../../lib/warehouse/warehouse-types'
 import { useQueryClient } from '@tanstack/react-query'
-import { useCurrencyStore } from '@hisabche/store'
+import { asList, useExchangeRates, useSetExchangeRate, type RateQuote } from '@hisabche/api'
+import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import {
   productKeys,
   useAssignWarehouseStock,
@@ -46,10 +47,12 @@ const HISTORY_LIMIT = 200
 
 // Request #92: the chips convert with rates the USER entered, never with a
 // constant. Without a rate the chip asks for one instead of showing a number.
-const CHIP_CURRENCIES = [
-  { code: 'USD', labelKey: 'warehouse.currencyUSD', fallback: 'دالر' },
-  { code: 'IRR', labelKey: 'warehouse.currencyIRR', fallback: 'تومان' },
-] as const
+//
+// ⚠️ Live audit #50 (14 Oct): «دالر: ۲» came from a rate kept only on this
+// device (the currency store), beside the business's saved rates — a second
+// rate list nobody else saw, and «IRR» was labelled «تومان». The chips now
+// read and write the SAME saved rates as the dashboard and the invoice.
+const CHIP_DEFAULT = ['USD'] as const
 
 export function warehouseContainer() {
   const t = useTranslations()
@@ -148,22 +151,28 @@ export function warehouseContainer() {
 
   const handleNavigate = useCallback((id: string) => push(`/warehouse/${id}`), [push])
 
-  const rates = useCurrencyStore((state) => state.rates)
-  const setManualRate = useCurrencyStore((state) => state.setManualRate)
-  const currencies = useMemo(
-    () =>
-      CHIP_CURRENCIES.map((currency) => {
-        const rate = rates[currency.code]
+  const savedRates = useExchangeRates()
+  const saveRate = useSetExchangeRate()
+  const bookCurrency = useBookCurrency()
+  const currencies = useMemo(() => {
+    // Newest first from the server: the first quote seen is the latest.
+    const latest = new Map<string, number>()
+    for (const quote of asList<RateQuote>(savedRates.data)) {
+      if (quote.rate > 0 && !latest.has(quote.currency)) latest.set(quote.currency, quote.rate)
+    }
+    return [...new Set<string>([...CHIP_DEFAULT, ...latest.keys()])]
+      .filter((code) => code !== bookCurrency)
+      .map((code) => {
+        const perUnit = latest.get(code) ?? null
         return {
-          code: currency.code,
-          label: safeT(currency.labelKey, currency.fallback),
-          // Only a rate the user typed converts; null = ask for it.
-          rate: rate?.manual ? rate.rate : null,
-          afnPerUnit: rate?.manual && rate.rate > 0 ? 1 / rate.rate : null,
+          code,
+          label: safeT(`currency.${code.toLowerCase()}`, code),
+          // value × rate = value in this currency; null = ask for a rate.
+          rate: perUnit ? 1 / perUnit : null,
+          afnPerUnit: perUnit,
         }
-      }),
-    [rates, safeT],
-  )
+      })
+  }, [savedRates.data, bookCurrency, safeT])
 
   // One warehouse's products in the shape the product table already renders.
   // `quantity` is the quantity IN THIS WAREHOUSE.
@@ -216,8 +225,11 @@ export function warehouseContainer() {
     onSearchChange: setSearch,
     deletingId,
     currencies,
-    onSetRate: (code: string, afnPerUnit: number | null) =>
-      setManualRate(code as Parameters<typeof setManualRate>[0], afnPerUnit),
+    onSetRate: (code: string, afnPerUnit: number | null) => {
+      if (afnPerUnit && afnPerUnit > 0) {
+        saveRate.mutate({ currency: code, rate: afnPerUnit, onDate: new Date().toISOString() })
+      }
+    },
     onNavigate: handleNavigate,
     onOpenHistory: handleOpenHistory,
     onDelete,
@@ -253,12 +265,12 @@ export function warehouseContainer() {
             : () => setShowAddToWarehouse(true),
           actionLabel: isUnassigned
             ? safeT('warehouse.addProduct', 'افزودن محصول')
-            : safeT('warehouse.addToWarehouse', 'افزودن به انبار'),
+            : safeT('warehouse.addToWarehouse', 'کالای تازه'),
           // Moving stock that is already in the business but in no warehouse.
           ...(isUnassigned
             ? {}
             : {
-                secondaryActionLabel: safeT('warehouse.assignTitle', 'افزودن کالا به انبار'),
+                secondaryActionLabel: safeT('warehouse.assignTitle', 'جای‌دادن موجودیِ بی‌انبار'),
                 onSecondaryAction: () => setShowAssign(true),
                 // To another warehouse. The route had no button anywhere.
                 transferActionLabel: safeT('warehouse.transferStock', 'انتقال موجودی'),

@@ -359,7 +359,18 @@ export function JalaliDatePicker({
     setPickerMode('days')
   }
 
-  const displayValue = selectedDay ? formatJalaliDate(year, month, selectedDay) : ''
+  // «۲۲ مهر ۱۴۰۵» / «14 Oct 2026», not «1405-07-22» or «2026-10-14» (live
+  // audit #81: the same day read in two formats on two screens).
+  const digits = (n: number) => {
+    try {
+      return new Intl.NumberFormat(effectiveLocale, { useGrouping: false }).format(n)
+    } catch {
+      return String(n)
+    }
+  }
+  const displayValue = selectedDay
+    ? `${digits(selectedDay)} ${months[month - 1] ?? digits(month)} ${digits(year)}`
+    : ''
 
   return (
     <div className={cn('relative', className)}>

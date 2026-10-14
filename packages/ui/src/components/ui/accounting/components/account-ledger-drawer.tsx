@@ -39,6 +39,7 @@ import { X } from 'lucide-react'
 
 import { routeForEntity } from '../../../../lib/entity-route'
 import { cn } from '../../../../lib/utils'
+import { useAccountName } from '../../../../hooks/use-account-name'
 import {
   LedgerFoot,
   LedgerHead,
@@ -92,6 +93,7 @@ export function AccountLedgerDrawer({
   onNavigate,
 }: AccountLedgerDrawerProps) {
   const n = useLedgerNumber()
+  const shownName = useAccountName()
 
   if (!account) return null
 
@@ -113,7 +115,7 @@ export function AccountLedgerDrawer({
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold text-[hsl(var(--fg-primary))]">
               <span className="font-mono text-[hsl(var(--fg-tertiary))]">{account.code}</span>{' '}
-              {account.name}
+              {shownName(account.name)}
             </h2>
             {/* The window, stated. The drawer sums to the figure that opened
                 it only for this period, and a reader must be able to see

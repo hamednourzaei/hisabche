@@ -217,7 +217,7 @@ export class ProductService {
     for (let from = 0; ; from += PAGE) {
       const { data: page, error } = await supabase
         .from('products')
-        .select('quantity, sell_price, min_stock_level')
+        .select('quantity, buy_price, min_stock_level')
         .eq('workspace_id', workspaceId)
         .order('id', { ascending: true })
         .range(from, from + PAGE - 1)

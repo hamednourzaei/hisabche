@@ -77,7 +77,11 @@ describe('the screens', () => {
   })
 
   it('the field is on both steps, shown only when the currencies differ', () => {
-    expect(builder).toContain('{bookCurrency && needsExchangeRate(currency, bookCurrency) ? (')
+    // Right under «ارز فاکتور» (live audit #59), through the panel's rate slot.
+    expect(builder).toContain(
+      'rateSlot={ bookCurrency && needsExchangeRate(currency, bookCurrency) ? (',
+    )
+    expect(read('components/ui/invoice-builder/customer-panel.tsx')).toContain('{rateSlot}')
     expect(preview).toContain('{foreign && bookCurrency ? ( <InvoiceExchangeRate')
     expect(field).toContain("data-invoice-rate={missing ? 'missing' : 'set'}")
     // No currency is named in the field itself: both come from the invoice and the books.
@@ -86,7 +90,7 @@ describe('the screens', () => {
 
   it('⚠️ a new invoice starts in the books currency; one being written keeps its own', () => {
     expect(builder).toContain(
-      'if (untouched && currency !== bookCurrency) handleCurrencyChange(bookCurrency as CurrencyCode)',
+      'if (!untouched) return if (currency !== bookCurrency) { handleCurrencyChange(bookCurrency as CurrencyCode)',
     )
     expect(builder).toContain('if (startedInBooks.current || !bookCurrency) return')
     // The effect is placed AFTER the function it names (its dependency array is
@@ -100,7 +104,7 @@ describe('the screens', () => {
     expect(builder).toContain('scanSlot={ <CameraScanButton')
     expect(read('components/ui/invoice-builder/grid/grid-toolbar.tsx')).toContain('{scanSlot}')
     const page = read('components/ui/invoice-builder/invoice-builder-page.tsx')
-    expect(page).toContain('stockWarning={ <> {scanSlot} {stockWarning} </> }')
+    expect(page).toContain('stockWarning={ <> {rateSlot} {scanSlot} {stockWarning} </> }')
     // One button, not two dialogs listening to the same scanner.
     expect(builder.split('<CameraScanButton').length - 1).toBe(1)
   })

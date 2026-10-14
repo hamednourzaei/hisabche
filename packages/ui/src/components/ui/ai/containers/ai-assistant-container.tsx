@@ -32,7 +32,8 @@
 
 import * as React from 'react'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatNumber } from '@hisabche/formatting'
 import type { ThreadMessageLike } from '@assistant-ui/react'
 import { Sparkles } from 'lucide-react'
 
@@ -231,6 +232,7 @@ function Shell({
   onMode?: (mode: AssistantMode) => void
   children: React.ReactNode
 }) {
+  const locale = useLocale()
   return (
     // ⚠️ A FIXED HEIGHT, NOT `min-h`. The transcript scrolls inside itself and
     // the composer stays at the bottom; with `min-h` the page grows instead and
@@ -255,7 +257,7 @@ function Shell({
             )}
           >
             {t('ai.remaining', 'پرسش باقی‌مانده')}:{' '}
-            <span className="tabular-nums">{remaining}</span>
+            <span className="tabular-nums">{formatNumber(remaining, locale)}</span>
           </span>
         ) : null}
       </header>

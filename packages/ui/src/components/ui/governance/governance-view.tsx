@@ -47,6 +47,9 @@ import {
   StatGrid,
 } from '../capability/capability-kit'
 
+/** `budget.draft-then-approve` → `budget_draft_then_approve`: a dot in a message key is a nesting level. */
+const sodKey = (id: string) => id.replace(/[.-]/g, '_')
+
 export interface GovernanceViewProps {
   t: (key: string, fallback?: string) => string
   settings: SoDSettings | null
@@ -112,7 +115,7 @@ export const GovernanceView = memo(function GovernanceView({
           matchesSearch(ruleSearch, [
             rule.id,
             rule.capability,
-            t(`governance.rule_${rule.id}`, rule.rationale),
+            t(`governance.sodRules.${sodKey(rule.id)}.why`, rule.rationale),
             ...rule.conflictsWith,
           ]),
         ),
@@ -140,9 +143,10 @@ export const GovernanceView = memo(function GovernanceView({
         labelFallback: 'قاعده',
         locked: true,
         sortValue: (rule) => rule.id,
+        // A name a person reads, not the rule's id (live audit #28).
         render: (rule) => (
-          <span className="font-mono text-xs" dir="ltr">
-            {rule.id}
+          <span className="text-sm">
+            {t(`governance.sodRules.${sodKey(rule.id)}.name`, rule.id)}
           </span>
         ),
       },
@@ -167,7 +171,7 @@ export const GovernanceView = memo(function GovernanceView({
         // switch off at the first inconvenience.
         render: (rule) => (
           <span className="block min-w-[16rem] max-w-xl whitespace-normal text-[hsl(var(--fg-tertiary))]">
-            {t(`governance.rule_${rule.id}`, rule.rationale)}
+            {t(`governance.sodRules.${sodKey(rule.id)}.why`, rule.rationale)}
           </span>
         ),
       },
@@ -177,8 +181,11 @@ export const GovernanceView = memo(function GovernanceView({
         labelFallback: 'در تعارض با',
         showFrom: 'lg',
         render: (rule) => (
-          <span className="text-xs text-[hsl(var(--fg-tertiary))]" dir="ltr">
-            {rule.capability} ⟂ {rule.conflictsWith.join(', ')}
+          <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+            {t(
+              `governance.sodRules.${sodKey(rule.id)}.conflict`,
+              `${rule.capability} ⟂ ${rule.conflictsWith.join(', ')}`,
+            )}
           </span>
         ),
       },

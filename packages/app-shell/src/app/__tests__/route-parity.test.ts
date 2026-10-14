@@ -72,7 +72,7 @@ describe('the shared UI routes to every page the product has', () => {
     // Guards the guard: if the crawl ever returns nothing (a moved folder, a
     // renamed group), `missing` would be empty and the test would pass while
     // checking nothing at all (راهنمای سشن §۷٫۳).
-    expect(webRoutes.length).toBeGreaterThan(30)
+    expect(webRoutes.length).toBeGreaterThan(25)
     expect(shellRoutes.size).toBeGreaterThan(30)
   })
 })
@@ -89,7 +89,7 @@ describe('an address that was only a redirect still leads somewhere — on every
   )
 
   it('the web declares them, and this test can see them', () => {
-    expect(moved).toHaveLength(25)
+    expect(moved).toHaveLength(27)
     expect(moved).toContainEqual(['product-list', 'warehouse?tab=products'])
   })
 

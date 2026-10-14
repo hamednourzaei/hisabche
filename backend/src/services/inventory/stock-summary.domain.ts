@@ -9,7 +9,9 @@
 // value of its newest 100 under «ارزش کل», with nothing saying so.
 //
 // The rules are the ones `calculateTotals` in the UI already used, moved here:
-//   - value        = Σ quantity × sell_price
+//   - value        = Σ max(quantity, 0) × buy_price — what the stock COST, the
+//     same figure as the row column and the ledger (live audit #49: the card
+//     used the selling price, 1,360 beside a ledger of 850).
 //   - out of stock = quantity ≤ 0 (an oversold -98 is out, not «low»)
 //   - low stock    = 0 < quantity ≤ min_stock_level
 // ============================================
@@ -19,7 +21,7 @@ export const DEFAULT_MIN_STOCK_LEVEL = 5
 
 export interface StockSummaryRow {
   quantity: number | string | null
-  sell_price: number | string | null
+  buy_price: number | string | null
   min_stock_level: number | string | null
 }
 
@@ -41,7 +43,7 @@ export function summarizeStock(rows: readonly StockSummaryRow[]): StockSummary {
       row.min_stock_level === null || row.min_stock_level === ''
         ? DEFAULT_MIN_STOCK_LEVEL
         : Number(row.min_stock_level) || 0
-    totalValue += quantity * (Number(row.sell_price) || 0)
+    totalValue += Math.max(quantity, 0) * (Number(row.buy_price) || 0)
     if (quantity <= 0) outOfStockCount += 1
     else if (quantity <= minLevel) lowStockCount += 1
   }

@@ -9,7 +9,6 @@ import { useBackupStore, useDeviceStore, useAuthStore } from '@hisabche/store'
 import { useWorkspaces, useUpdateWorkspace, useWorkspaceBackup } from '@hisabche/api'
 import { cn } from '../../../lib/utils'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
-import { Switch } from '../switch'
 import { HardwareSection } from './hardware-section'
 import { BookCurrencySection } from './book-currency-section'
 import { WorkplaceTimeZoneSection } from './workplace-time-zone-section'
@@ -49,7 +48,6 @@ import { useRouteLang } from '../../../hooks/use-locale-push'
 const SAFETY_ITEMS = [
   { key: 'settings.safety1', fallback: 'اطلاعات شما به‌صورت امن ذخیره می‌شود' },
   { key: 'settings.safety2', fallback: 'بدون اینترنت هم قابل استفاده است' },
-  { key: 'settings.safety3', fallback: 'بازیابی اطلاعات تا ۳۰ روز ممکن است' },
   { key: 'settings.safety4', fallback: 'همگام‌سازی رمزنگاری‌شده انجام می‌شود' },
 ] as const
 
@@ -492,7 +490,7 @@ const BackupSection = memo(function BackupSection() {
   }
   // G7 — `exportData` is no longer read: it returned localStorage metadata,
   // not the business's data. The store still owns the local history list.
-  const { autoBackupEnabled, setAutoBackup, addBackup, backups } = useBackupStore()
+  const { addBackup, backups } = useBackupStore()
   const fetchBackup = useWorkspaceBackup()
 
   const [isExporting, setIsExporting] = useState(false)
@@ -562,19 +560,12 @@ const BackupSection = memo(function BackupSection() {
           </h2>
         </div>
 
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border-default))] p-4">
-          <div className="min-w-0 text-start">
-            <p className="font-medium text-[hsl(var(--fg-primary))]">{t('settings.autoBackup')}</p>
-            <p className="text-sm text-[hsl(var(--fg-secondary))]">
-              {t('settings.autoBackupDesc')}
-            </p>
-          </div>
-          <Switch
-            checked={autoBackupEnabled}
-            onCheckedChange={setAutoBackup}
-            className="shrink-0"
-          />
-        </div>
+        {/* ⚠️ No «automatic backup every 24 hours» switch (live audit #19/#70):
+            nothing ever scheduled it, and what it would have copied was this
+            device's own storage, not the business's records. Said as it is. */}
+        <p className="rounded-xl border border-[hsl(var(--border-default))] p-4 text-sm text-[hsl(var(--fg-secondary))]">
+          {t('settings.backupWhere')}
+        </p>
 
         <div className="grid gap-3 sm:grid-cols-3">
           <button

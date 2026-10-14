@@ -80,7 +80,7 @@ function summaryFor(entries: Array<{ quantity: number; product: ProductStockRow 
   return summarizeStock(
     entries.map((entry) => ({
       quantity: entry.quantity,
-      sell_price: entry.product.sell_price,
+      buy_price: entry.product.buy_price,
       min_stock_level: entry.product.min_stock_level,
     })),
   )

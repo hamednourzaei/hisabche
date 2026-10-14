@@ -19,6 +19,7 @@ import {
 } from '@hisabche/api'
 
 import { CycleCountView } from '../cycle-count-view'
+import { StartCountForm } from '../start-count-form'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 
 export function CycleCountContainer() {
@@ -84,6 +85,7 @@ export function CycleCountContainer() {
       onRecord={(productId, countedQty) => record.mutate({ productId, countedQty })}
       onComplete={() => complete.mutate()}
       onCancel={(reason) => cancel.mutate(reason)}
+      startSlot={<StartCountForm t={safeT} onStarted={setActiveId} />}
     />
   )
 }

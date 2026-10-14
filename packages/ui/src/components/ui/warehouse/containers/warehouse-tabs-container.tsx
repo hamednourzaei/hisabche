@@ -73,10 +73,9 @@ const ExpiryContainer = lazy(() =>
 // handling are the shared `HubTabs` / `SegmentedControl` / `useHubTab` /
 // `useHubSection`.
 //
-// ⚠️ «شمارش انبار» (/stock-count) IS NOT HERE, ON PURPOSE. Nothing in the
-// product can START a count — `useCreateCycleCount` has no caller — so its list
-// is a table nobody can add to. It stays at its own address until that is
-// decided; see .claude/ux-audit/00-PROPOSAL.md.
+// ⚠️ «شمارش انبار» (/stock-count) is not here: it stays at its own address
+// (see .claude/ux-audit/00-PROPOSAL.md). Since live audit #35 a count is
+// started on that page (`StartCountForm`).
 //
 // ⚠️ /operations is not here either: it is reorder and dead stock mixed with
 // till shifts and stale sales opportunities — not one job.

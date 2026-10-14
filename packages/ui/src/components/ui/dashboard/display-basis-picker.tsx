@@ -15,12 +15,18 @@ import * as React from 'react'
 
 import { AlertTriangle } from 'lucide-react'
 
-import { CURRENCY_SIGN } from '@hisabche/formatting'
+import { CURRENCY_SIGN, currencySign } from '@hisabche/formatting'
 
 import { SelectField } from '../select-field'
 import { cn } from '../../../lib/utils'
 import { toIsoDay } from '@hisabche/formatting'
 import { rateFromPair } from '../../../lib/warehouse/rate-from-pair'
+import { JalaliDatePicker } from '../jalali-datepicker'
+
+/** A unit the business named itself carries this prefix inside the picker. */
+const CUSTOM = 'unit:'
+/** «واحد دیگر…» — type a new one. */
+const OTHER = '__other__'
 
 /** Persian labels for the codes a shop is most likely to display in. */
 const LABEL: Record<string, string> = {
@@ -62,10 +68,10 @@ export function DisplayBasisPicker({
 
   const label = (code: string): string => {
     const name = LABEL[code] ?? code
-    const sign = CURRENCY_SIGN[code as keyof typeof CURRENCY_SIGN]
+    const sign = currencySign(code as keyof typeof CURRENCY_SIGN)
     return code === base
       ? `${name} — ${tr('display.ownCurrency', 'ارز دفاتر')}`
-      : sign
+      : sign && sign !== name
         ? `${name} (${sign})`
         : name
   }
@@ -138,7 +144,8 @@ export function ConvertedAmount({ t, value, currency, format, className }: Conve
     )
   }
 
-  const sign = CURRENCY_SIGN[currency as keyof typeof CURRENCY_SIGN]
+  const sign =
+    currency in CURRENCY_SIGN ? currencySign(currency as keyof typeof CURRENCY_SIGN) : undefined
   return (
     <span className={className}>
       {format(value)}
@@ -179,6 +186,10 @@ export interface ExchangeRateFormProps {
   isSaving?: boolean
   error?: string | null
   onSave: (input: { currency: string; rate: number; onDate: string }) => void
+  /** Units the business named itself (live audit #82). */
+  customUnits?: readonly string[] | undefined
+  /** Given when units can be saved; the «واحد دیگر…» option appears with it. */
+  onSaveUnit?: ((input: { name: string; perUnit: number; onDate: string }) => void) | undefined
 }
 
 /**
@@ -198,129 +209,160 @@ export function ExchangeRateForm({
   isSaving,
   error,
   onSave,
+  customUnits,
+  onSaveUnit,
 }: ExchangeRateFormProps) {
   const tr = (key: string, fallback: string) => (t ? t(key, fallback) : fallback)
 
-  const units = [base, ...currencies]
+  // A unit the business names itself (live audit #82) sits beside the
+  // currencies: «هر ۱ ماشین = ۵۰۰٬۰۰۰ افغانی». Such a unit is quoted against
+  // the books' currency only, and is never what a document is kept in.
+  const named = (customUnits ?? []).map((unit) => `${CUSTOM}${unit}`)
+  const units = [base, ...currencies, ...named, ...(onSaveUnit ? [OTHER] : [])]
   const [leftAmount, setLeftAmount] = React.useState('1')
   const [leftCode, setLeftCode] = React.useState(initialCurrency ?? base)
   const [rightAmount, setRightAmount] = React.useState('')
   const [rightCode, setRightCode] = React.useState(initialCurrency ? base : (currencies[0] ?? ''))
+  const [newUnit, setNewUnit] = React.useState('')
   const [onDate, setOnDate] = React.useState(() => toIsoDay(new Date()))
   const [problem, setProblem] = React.useState<string | null>(null)
 
   if (currencies.length === 0) return null
 
+  const nameOf = (code: string) =>
+    code === OTHER
+      ? tr('display.otherUnit', 'واحد دیگر…')
+      : code.startsWith(CUSTOM)
+        ? code.slice(CUSTOM.length)
+        : tr(`currency.${code.toLowerCase()}`, LABEL[code] ?? code)
   const option = (code: string) => ({
     value: code,
     label:
-      code === base
-        ? `${LABEL[code] ?? code} — ${tr('display.ownCurrency', 'ارز دفاتر')}`
-        : (LABEL[code] ?? code),
+      code === base ? `${nameOf(code)} — ${tr('display.ownCurrency', 'ارز دفاتر')}` : nameOf(code),
   })
   const box =
     'h-9 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 text-xs text-[hsl(var(--fg-primary))] outline-none focus:border-[hsl(var(--color-primary))]'
+  const unitCode = (code: string) => (code === OTHER ? `${CUSTOM}${newUnit.trim()}` : code)
 
+  const submit = () => {
+    if (isSaving) return
+    const left = unitCode(leftCode)
+    const right = unitCode(rightCode)
+    const customSide = [left, right].find((code) => code.startsWith(CUSTOM))
+    if (customSide !== undefined) {
+      const name = customSide.slice(CUSTOM.length)
+      if (name.length < 1 || name.length > 40) {
+        setProblem(tr('display.unitName', 'نام واحد را بنویسید (حداکثر ۴۰ حرف).'))
+        return
+      }
+      if (left !== base && right !== base) {
+        setProblem(tr('display.rateNeedsBase', 'یکی از دو طرف باید ارز دفاتر باشد.'))
+        return
+      }
+    }
+    const result = rateFromPair(
+      { amount: Number(leftAmount), code: left },
+      { amount: Number(rightAmount), code: right },
+      () => null,
+      base,
+    )
+    if (!result.ok) {
+      setProblem(
+        result.reason === 'same'
+          ? tr('display.rateSame', 'دو واحد باید متفاوت باشند.')
+          : result.reason === 'amount'
+            ? tr('display.rateAmount', 'هر دو مقدار باید بزرگ‌تر از صفر باشند.')
+            : tr('display.rateNeedsBase', 'یکی از دو طرف باید ارز دفاتر باشد.'),
+      )
+      return
+    }
+    setProblem(null)
+    if (result.code.startsWith(CUSTOM)) {
+      onSaveUnit?.({ name: result.code.slice(CUSTOM.length), perUnit: result.afnPerUnit, onDate })
+      return
+    }
+    onSave({ currency: result.code, rate: result.afnPerUnit, onDate })
+  }
+
+  const amount = (value: string, set: (next: string) => void, width: string) => (
+    <input
+      type="number"
+      inputMode="decimal"
+      min={0}
+      step="any"
+      dir="ltr"
+      aria-label={tr('display.rateAmountLabel', 'مقدار')}
+      value={value}
+      onChange={(event) => set(event.target.value)}
+      disabled={isSaving}
+      className={cn(box, width, 'tabular-nums')}
+    />
+  )
+  const unitPicker = (value: string, set: (next: string) => void) => (
+    <>
+      <SelectField
+        value={value}
+        onChange={set}
+        options={units.map(option)}
+        aria-label={tr('display.rateCurrency', 'ارز')}
+      />
+      {value === OTHER ? (
+        <input
+          value={newUnit}
+          maxLength={40}
+          onChange={(event) => setNewUnit(event.target.value)}
+          placeholder={tr('display.unitPlaceholder', 'مثلاً ماشین')}
+          aria-label={tr('display.unitNameLabel', 'نام واحد')}
+          disabled={isSaving}
+          className={cn(box, 'w-28')}
+        />
+      ) : null}
+    </>
+  )
+
+  // ONE line (owner's request, live audit #62): «هر [۱] [واحد] = [عدد] [واحد]
+  // [تاریخ] [تأیید]». It wraps only where the screen is too narrow for it.
+  // The date is the reader's calendar (#48), not the browser's 10/14/2026.
   return (
     <form
       data-exchange-rate-form=""
-      className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-3"
+      title={tr(
+        'display.rateHint',
+        'نرخ برای همان روز ثبت می‌شود — ارقام گذشته با نرخ همان روز محاسبه می‌شوند، نه با نرخ امروز.',
+      )}
+      className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-2"
       onSubmit={(event) => {
         event.preventDefault()
-        if (isSaving) return
-        const result = rateFromPair(
-          { amount: Number(leftAmount), code: leftCode },
-          { amount: Number(rightAmount), code: rightCode },
-          () => null,
-          base,
-        )
-        if (!result.ok) {
-          setProblem(
-            result.reason === 'same'
-              ? tr('display.rateSame', 'دو واحد باید متفاوت باشند.')
-              : result.reason === 'amount'
-                ? tr('display.rateAmount', 'هر دو مقدار باید بزرگ‌تر از صفر باشند.')
-                : tr('display.rateNeedsBase', 'یکی از دو طرف باید ارز دفاتر باشد.'),
-          )
-          return
-        }
-        setProblem(null)
-        onSave({ currency: result.code, rate: result.afnPerUnit, onDate })
+        submit()
       }}
     >
-      <p className="text-xs font-medium text-[hsl(var(--fg-primary))]">
-        {tr('display.exchangeButton', 'تبادل نرخ داشبورد')}
-      </p>
-
-      <div className="flex flex-wrap items-center gap-2 text-xs">
+      <div className="flex flex-wrap items-center gap-2 text-xs lg:flex-nowrap">
         <span>{tr('display.each', 'هر')}</span>
-        <input
-          type="number"
-          inputMode="decimal"
-          min={0}
-          step="any"
-          dir="ltr"
-          aria-label={tr('display.rateAmountLabel', 'مقدار')}
-          value={leftAmount}
-          onChange={(event) => setLeftAmount(event.target.value)}
-          disabled={isSaving}
-          className={cn(box, 'w-28 tabular-nums')}
-        />
-        <SelectField
-          value={leftCode}
-          onChange={setLeftCode}
-          options={units.map(option)}
-          aria-label={tr('display.rateCurrency', 'ارز')}
-        />
+        {amount(leftAmount, setLeftAmount, 'w-20')}
+        {unitPicker(leftCode, setLeftCode)}
         <span aria-hidden="true">=</span>
-        <input
-          type="number"
-          inputMode="decimal"
-          min={0}
-          step="any"
-          dir="ltr"
-          aria-label={tr('display.rateAmountLabel', 'مقدار')}
-          value={rightAmount}
-          onChange={(event) => setRightAmount(event.target.value)}
-          disabled={isSaving}
-          className={cn(box, 'w-36 tabular-nums')}
-        />
-        <SelectField
-          value={rightCode}
-          onChange={setRightCode}
-          options={units.map(option)}
-          aria-label={tr('display.rateCurrency', 'ارز')}
-        />
-        <input
-          type="date"
+        {amount(rightAmount, setRightAmount, 'w-32')}
+        {unitPicker(rightCode, setRightCode)}
+        <JalaliDatePicker
           value={onDate}
-          onChange={(event) => setOnDate(event.target.value)}
-          disabled={isSaving}
-          aria-label={tr('display.rateDate', 'تاریخ نرخ')}
-          className={box}
+          onChange={setOnDate}
+          disabled={isSaving === true}
+          className="w-36 shrink-0"
         />
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="h-9 shrink-0 rounded-full bg-[hsl(var(--color-primary))] px-4 text-xs font-bold text-[hsl(var(--color-primary-fg))] disabled:opacity-40"
+        >
+          {isSaving ? tr('common.saving', 'در حال ثبت…') : tr('display.confirm', 'تأیید')}
+        </button>
       </div>
 
-      <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
-        {tr(
-          'display.rateHint',
-          'نرخ برای همان روز ثبت می‌شود — ارقام گذشته با نرخ همان روز محاسبه می‌شوند، نه با نرخ امروز.',
-        )}
-      </p>
-
       {problem || error ? (
-        <p className="text-[11px] text-[hsl(var(--color-destructive))]" role="alert">
+        <p className="mt-1.5 text-[11px] text-[hsl(var(--color-destructive))]" role="alert">
           {problem ?? error}
         </p>
       ) : null}
-
-      <button
-        type="submit"
-        disabled={isSaving}
-        className="h-9 rounded-full bg-[hsl(var(--color-primary))] px-4 text-xs font-bold text-[hsl(var(--color-primary-fg))] disabled:opacity-40"
-      >
-        {isSaving ? tr('common.saving', 'در حال ثبت…') : tr('display.confirm', 'تأیید')}
-      </button>
     </form>
   )
 }

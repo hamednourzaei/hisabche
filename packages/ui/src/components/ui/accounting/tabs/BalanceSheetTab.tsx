@@ -13,6 +13,7 @@ import { AccountingEmptyState } from '../AccountingEmptyState'
 import { useLedgerNumber } from '../components/ledger-table'
 import { useAccountDrilldown } from '../components/use-account-drilldown'
 import { BranchSwitcher, useBranchScope } from '../../branch/branch-scope'
+import { useAccountName } from '../../../../hooks/use-account-name'
 
 interface DetailRow {
   section: string
@@ -52,6 +53,7 @@ function SectionBlock({
   tone,
   emptyLabel,
   onOpenAccount,
+  extra,
 }: {
   title: string
   total: number
@@ -60,8 +62,11 @@ function SectionBlock({
   onOpenAccount: (account: { id: string; code: string; name: string }) => void
   tone: keyof typeof SECTION_TONE
   emptyLabel: string
+  /** A line that is not an account — this period's profit under equity. */
+  extra?: { label: string; amount: number } | undefined
 }) {
   const n = useLedgerNumber()
+  const shownName = useAccountName()
 
   return (
     <section className="overflow-hidden rounded-xl border border-[hsl(var(--border-default))]">
@@ -71,7 +76,7 @@ function SectionBlock({
       </header>
 
       <div className="divide-y divide-[hsl(var(--border-default)/0.5)]">
-        {details.length === 0 ? (
+        {details.length === 0 && !extra ? (
           <p className="px-4 py-3 text-sm text-[hsl(var(--fg-tertiary))]">{emptyLabel}</p>
         ) : (
           details.map((d) => (
@@ -84,7 +89,7 @@ function SectionBlock({
                 }
                 className="rounded text-start text-sm text-[hsl(var(--color-primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]"
               >
-                {d.accountName}
+                {shownName(d.accountName)}
               </button>
               {/* tabular-nums: without it a column of figures does not align. */}
               <span className="text-sm font-medium tabular-nums text-[hsl(var(--fg-primary))]">
@@ -93,6 +98,14 @@ function SectionBlock({
             </div>
           ))
         )}
+        {extra ? (
+          <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+            <span className="text-sm text-[hsl(var(--fg-primary))]">{extra.label}</span>
+            <span className="text-sm font-medium tabular-nums text-[hsl(var(--fg-primary))]">
+              {n(extra.amount)}
+            </span>
+          </div>
+        ) : null}
       </div>
     </section>
   )
@@ -189,6 +202,13 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
               total={data.totalEquity}
               details={data.equity}
               tone="equity"
+              // The equity total includes this period's profit; without its own
+              // line the section showed «سرمایه ۱۰۰» under a total of 12,100
+              // (live audit #37).
+              extra={{
+                label: t('accounting.balanceSheet.currentEarnings'),
+                amount: data.currentYearEarnings,
+              }}
               emptyLabel={t('accounting.balanceSheet.empty.title')}
               onOpenAccount={drilldown.open}
             />

@@ -90,6 +90,12 @@ const rateSchema = z.object({
   onDate: z.string().min(8),
 })
 
+const unitSchema = z.object({
+  name: z.string().trim().min(1).max(40),
+  perUnit: z.number().positive(),
+  onDate: z.string().min(8),
+})
+
 const baseCurrencySchema = z.object({ currency: z.string().regex(/^[A-Z]{3}$/) })
 
 const revalueSchema = z.object({
@@ -385,6 +391,35 @@ export async function financeOpsRoutes(fastify: FastifyInstance) {
         return reply.send(await currencyService.setRate(request.tenancy, body))
       } catch (err) {
         return fail(reply, err, 'Failed to save the rate')
+      }
+    },
+  )
+
+  // Units a business names itself — a car, a bundle (live audit #82).
+  fastify.get(
+    '/currency/units',
+    { preHandler: read, schema: { response: { 200: toJsonSchema(z.any()) } } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send(await currencyService.listUnits(request.tenancy))
+      } catch (err) {
+        return fail(reply, err, 'Failed to fetch units')
+      }
+    },
+  )
+
+  fastify.put(
+    '/currency/units',
+    {
+      preHandler: configure,
+      schema: { body: toJsonSchema(unitSchema), response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = unitSchema.parse(request.body)
+        return reply.send(await currencyService.setUnit(request.tenancy, body))
+      } catch (err) {
+        return fail(reply, err, 'Failed to save the unit')
       }
     },
   )

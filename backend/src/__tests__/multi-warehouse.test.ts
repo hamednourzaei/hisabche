@@ -27,6 +27,7 @@ const warehouses = [
 ]
 
 describe('warehouse overview', () => {
+  // Valued at the BUY price (6), not the sell price (live audit #49).
   const products = [product('a', 100), product('b', 3), product('c', 0)]
   const stock = [
     { warehouse_id: 'w1', product_id: 'a', quantity: 60 },
@@ -39,12 +40,12 @@ describe('warehouse overview', () => {
     expect(view.warehouses[0]).toMatchObject({
       id: 'w1',
       location: 'کابل',
-      summary: { productCount: 1, totalValue: 600, lowStockCount: 0, outOfStockCount: 0 },
+      summary: { productCount: 1, totalValue: 360, lowStockCount: 0, outOfStockCount: 0 },
     })
     expect(view.warehouses[1]).toMatchObject({
       id: 'w2',
       location: '',
-      summary: { productCount: 2, totalValue: 330, lowStockCount: 1 },
+      summary: { productCount: 2, totalValue: 198, lowStockCount: 1 },
     })
   })
 
@@ -52,7 +53,7 @@ describe('warehouse overview', () => {
     expect([...unassignedQuantities(products, stock)]).toEqual([['a', 10]])
     expect(warehouseOverview(warehouses, products, stock).unassigned).toMatchObject({
       productCount: 1,
-      totalValue: 100,
+      totalValue: 60,
     })
   })
 
@@ -84,7 +85,7 @@ describe('warehouse detail', () => {
         minStockLevel: 5,
       }),
     ])
-    expect(detail.summary.totalValue).toBe(600)
+    expect(detail.summary.totalValue).toBe(360)
   })
 
   it('null warehouse = the unassigned stock', () => {

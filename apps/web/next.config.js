@@ -112,6 +112,8 @@ const nextConfig = {
       ['accounting-workspace', 'accounting'],
       ['sales-workspace', 'invoices'],
       ['inventory-workspace', 'warehouse'],
+      // Typed by people looking for stock (live audit #21: it was a bare 404).
+      ['inventory', 'warehouse'],
       ['people-workspace', 'team-and-payroll'],
       // A second invoice form beside /invoices/new — removed (live audit #67).
       ['quick-invoice', 'invoices/new'],

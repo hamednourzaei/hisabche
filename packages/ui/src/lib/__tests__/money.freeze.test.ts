@@ -32,7 +32,7 @@ const NBSP = ' '
 
 describe('FREEZE: formatCurrency — Intl currency style, fa-AF, max 2 decimals', () => {
   it.each([
-    ['AFN', `؋${NBSP}۱٬۲۳۴٫۵۷`],
+    ['AFN', `افغانی${NBSP}۱٬۲۳۴٫۵۷`],
     ['USD', `$${NBSP}۱٬۲۳۴٫۵۷`],
     ['PKR', `PKR${NBSP}۱٬۲۳۴٫۵۷`],
     ['IRR', `ریال${NBSP}۱٬۲۳۴٫۵۷`],
@@ -41,20 +41,20 @@ describe('FREEZE: formatCurrency — Intl currency style, fa-AF, max 2 decimals'
   })
 
   it('QUIRK: the separator is U+00A0, not ASCII space — desktop/mobile use ASCII', () => {
-    expect(formatCurrency(1000, 'AFN')).toBe(`؋${NBSP}۱٬۰۰۰`)
-    expect(formatCurrency(1000, 'AFN')).not.toBe('؋ ۱٬۰۰۰')
+    expect(formatCurrency(1000, 'AFN')).toBe(`افغانی${NBSP}۱٬۰۰۰`)
+    expect(formatCurrency(1000, 'AFN')).not.toBe('افغانی ۱٬۰۰۰')
   })
 
   it('QUIRK: keeps up to 2 decimals — desktop and mobile show ZERO decimals', () => {
     // Same input, three different strings across the product:
-    //   web      -> "؋ ۱٬۲۳۴٫۵۷"
-    //   desktop  -> "۱٬۲۳۵ ؋"
-    //   mobile   -> "۱٬۲۳۵ ؋"
+    //   web      -> "افغانی ۱٬۲۳۴٫۵۷"
+    //   desktop  -> "۱٬۲۳۵ افغانی"
+    //   mobile   -> "۱٬۲۳۵ افغانی"
     expect(formatCurrency(1234.567, 'AFN')).toContain('۱٬۲۳۴٫۵۷')
   })
 
   it('QUIRK: Intl places the sign BEFORE the amount; desktop/mobile append it AFTER', () => {
-    expect(formatCurrency(1000, 'AFN').indexOf('؋')).toBe(0)
+    expect(formatCurrency(1000, 'AFN').indexOf('افغانی')).toBe(0)
   })
 
   it('QUIRK: PKR and IRR render as "PKR" and "ریال", not the ₨ / ﷼ signs desktop and mobile use', () => {
@@ -65,7 +65,7 @@ describe('FREEZE: formatCurrency — Intl currency style, fa-AF, max 2 decimals'
   })
 
   it('drops trailing decimals when the value is whole (minimumFractionDigits: 0)', () => {
-    expect(formatCurrency(1000, 'AFN')).toBe(`؋${NBSP}۱٬۰۰۰`)
+    expect(formatCurrency(1000, 'AFN')).toBe(`افغانی${NBSP}۱٬۰۰۰`)
   })
 
   it('honours the explicit `en` locale with Latin digits', () => {
@@ -74,7 +74,7 @@ describe('FREEZE: formatCurrency — Intl currency style, fa-AF, max 2 decimals'
   })
 
   it('formats zero and negatives', () => {
-    expect(formatCurrency(0, 'AFN')).toBe(`؋${NBSP}۰`)
+    expect(formatCurrency(0, 'AFN')).toBe(`افغانی${NBSP}۰`)
     // QUIRK: the trailing zero is dropped — "-$1,234.5", not "-$1,234.50".
     expect(formatCurrency(-1234.5, 'USD', 'en')).toBe('-$1,234.5')
   })
@@ -121,7 +121,7 @@ describe('FREEZE: unformatThousands — what actually reaches the API', () => {
     ['۱۲۳', '123'],
     ['1,234.56', '1234.56'],
     ['1.2.3', '1.23'],
-    ['؋ 1,000', '1000'],
+    ['افغانی 1,000', '1000'],
     ['abc', ''],
     [null, ''],
   ])('unformatThousands(%p) === %p', (input, expected) => {

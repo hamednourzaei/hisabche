@@ -105,7 +105,9 @@ function useProductColumns(
         showFrom: 'md',
         sortValue: (product) => product.unit,
         render: (product) => (
-          <span className="text-[hsl(var(--fg-secondary))]">{product.unit}</span>
+          <span className="text-[hsl(var(--fg-secondary))]">
+            {t(`unit.${product.unit}`, product.unit)}
+          </span>
         ),
       },
       {

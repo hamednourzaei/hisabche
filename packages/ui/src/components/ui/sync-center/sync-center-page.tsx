@@ -46,14 +46,12 @@ export interface SyncCenterPageProps {
   isSyncing: boolean
   pendingCount: number
   lastSyncedAt: number | null
-  autoBackupEnabled: boolean
   backups: BackupItem[]
   auditLog: AuditItem[]
   /** اندازه‌ی واقعی داده‌ی محلی (hisabche-* در localStorage)، نه عدد ساختگی. */
   localStorageSize: string
   onSync: () => void
   onBackup: () => void
-  onToggleAutoBackup: () => void
 }
 
 export function SyncCenterPage({
@@ -63,13 +61,11 @@ export function SyncCenterPage({
   isSyncing,
   pendingCount,
   lastSyncedAt,
-  autoBackupEnabled,
   backups,
   auditLog,
   localStorageSize,
   onSync,
   onBackup,
-  onToggleAutoBackup,
 }: SyncCenterPageProps) {
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -153,22 +149,6 @@ export function SyncCenterPage({
             >
               <Download className="size-4" aria-hidden="true" />
               {t('sync.manualBackup', 'بکاپ دستی')}
-            </button>
-
-            <button
-              type="button"
-              onClick={onToggleAutoBackup}
-              className={cn(
-                'inline-flex items-center gap-2 rounded-full px-4 py-2.5',
-                'text-sm font-medium transition-all duration-200',
-                'motion-reduce:transition-none',
-                autoBackupEnabled
-                  ? 'bg-[image:var(--gradient-brand)] text-white shadow-sm'
-                  : 'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]',
-              )}
-            >
-              <Database className="size-4" aria-hidden="true" />
-              {t('sync.autoBackup', 'بکاپ خودکار')}
             </button>
           </div>
 

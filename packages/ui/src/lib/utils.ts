@@ -32,12 +32,17 @@ export function formatCurrency(
   // real figures, which reads like a number rather than like missing data.
   if (!Number.isFinite(amount)) return '—'
 
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount)
+  return (
+    new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })
+      .format(amount)
+      // The afghani is a word, not the glyph (live audit #63).
+      .replace('؋', 'افغانی')
+  )
 }
 
 /**

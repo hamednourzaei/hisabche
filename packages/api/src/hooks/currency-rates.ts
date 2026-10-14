@@ -107,6 +107,50 @@ export function useExchangeRates(currency?: string) {
   })
 }
 
+/** A unit the business named itself (live audit #82). Never a document currency. */
+export interface CustomUnitQuote {
+  name: string
+  /** Books-currency units one of it is worth. */
+  perUnit: number
+  onDate: string
+}
+
+export type CustomUnitList = { configured: false } | { configured: true; units: CustomUnitQuote[] }
+
+export const unitKeys = { all: ['custom-units'] as const }
+
+export function useCustomUnits() {
+  const ready = useAuthReady()
+  const allowed = useMyCapabilities().can('report.financial.read') === true
+  return useQuery({
+    queryKey: unitKeys.all,
+    queryFn: async (): Promise<CustomUnitList> => {
+      const { data } = await apiClient.get('/finance/currency/units')
+      const body = data as Partial<{ configured: boolean; units: unknown }> | null
+      if (body?.configured === false) return { configured: false }
+      return {
+        configured: true,
+        units: Array.isArray(body?.units) ? (body.units as CustomUnitQuote[]) : [],
+      }
+    },
+    enabled: ready && allowed,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+export function useSetCustomUnit() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { name: string; perUnit: number; onDate: string }) => {
+      const { data } = await apiClient.put('/finance/currency/units', input)
+      return data as CustomUnitQuote
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: unitKeys.all })
+    },
+  })
+}
+
 export function useSetExchangeRate() {
   const queryClient = useQueryClient()
 

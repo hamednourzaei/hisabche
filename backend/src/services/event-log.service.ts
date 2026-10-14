@@ -18,8 +18,12 @@ const auditService = new AuditService()
  * The audit column accepts a closed vocabulary; business events speak freely.
  * «created» is a create, «deleted» a delete, everything else changes a record.
  */
-function auditActionOf(action: string): 'create' | 'update' | 'delete' {
-  if (/^(create|created|issued|recorded)$/.test(action)) return 'create'
+function auditActionOf(action: string, entityType: string): 'create' | 'update' | 'delete' {
+  if (/^(create|created|issued|recorded|opened)$/.test(action)) return 'create'
+  // «payment_recorded» on the PAYMENT is its creation; on the invoice it
+  // settles it is a change (live audit #26: a new payment read «update»).
+  const own = /^([a-z]+)_(created|recorded|opened)$/.exec(action)
+  if (own && own[1] === entityType) return 'create'
   if (/^(delete|deleted|removed)$/.test(action)) return 'delete'
   return 'update'
 }
@@ -128,7 +132,7 @@ export async function logBusinessEvent(input: LogBusinessEventInput): Promise<vo
       auditService.log({
         userId: input.userId,
         workspaceId,
-        action: auditActionOf(input.action),
+        action: auditActionOf(input.action, input.entityType),
         entityType: input.entityType,
         entityId: input.entityId,
         newData: {

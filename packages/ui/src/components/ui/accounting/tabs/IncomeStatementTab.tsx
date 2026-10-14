@@ -23,6 +23,7 @@ import { AccountingEmptyState } from '../AccountingEmptyState'
 import { useLedgerNumber } from '../components/ledger-table'
 import { useAccountDrilldown } from '../components/use-account-drilldown'
 import { BranchSwitcher, useBranchScope } from '../../branch/branch-scope'
+import { useAccountName } from '../../../../hooks/use-account-name'
 
 interface SummaryRow {
   label: string
@@ -130,6 +131,7 @@ const HIDDEN_ACCOUNTS_KEY = 'hisabche:income-statement:hidden-accounts'
 export const IncomeStatementTab = memo(function IncomeStatementTab() {
   const t = useTranslations()
   const n = useLedgerNumber()
+  const shownName = useAccountName()
   const [from, setFrom] = useState(getFirstDayOfMonth)
   const [to, setTo] = useState(getToday)
   const { branchId } = useBranchScope()
@@ -355,7 +357,7 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
                         checked={!hiddenAccounts.has(row.accountId)}
                         onChange={() => toggleAccount(row.accountId)}
                       />
-                      <span className="truncate">{row.accountName}</span>
+                      <span className="truncate">{shownName(row.accountName)}</span>
                     </label>
                   ))}
                 </div>

@@ -94,3 +94,102 @@ describe('#15 — a purchase does not thank the reader for buying', () => {
     )
   })
 })
+
+describe('#74 — smart suggestions in the reader’s language and the books currency', () => {
+  const server = readFileSync(
+    join(__dirname, '../../../../backend/src/services/ai.service.ts'),
+    'utf8',
+  )
+  const insights = server
+    .slice(server.indexOf('async getInsights'))
+    .split('\n')
+    .filter((line) => !/^\s*\/\//.test(line))
+    .join('\n')
+
+  it('the server writes no sentence and no «افغانی» — it sends a code, numbers and the currency', () => {
+    expect(insights).not.toContain('افغانی')
+    expect(insights).toContain('currency: booksCurrency')
+  })
+
+  it('money sums are sales only, in the books currency only', () => {
+    expect(insights.split(".eq('type', 'sale')").length).toBe(3)
+    expect(insights).toContain('.filter(inBooks)')
+  })
+
+  it('every code has its words in all three languages', () => {
+    for (const lang of ['fa', 'af', 'en']) {
+      const messages = JSON.parse(
+        readFileSync(join(__dirname, `../../../i18n/messages/${lang}/common.json`), 'utf8'),
+      )
+      for (const code of [
+        'lowStock',
+        'unpaid',
+        'weekSales',
+        'outstanding',
+        'outOfStock',
+        'stockValue',
+        'averageSale',
+        'tip',
+      ]) {
+        expect(messages.dashboard.insight[code].title, `${lang}.${code}`).toBeTruthy()
+        expect(messages.dashboard.insight[code].text).toBeTruthy()
+      }
+    }
+  })
+
+  it('the panel writes the sentence from the code', () => {
+    expect(flat('components/ui/dashboard/dashboard-view.tsx')).toContain(
+      'const key = `dashboard.insight.${insight.code}`',
+    )
+  })
+})
+
+describe('#33 — a refusal keeps its status where the screens read it', () => {
+  it('the client error carries response.status and response.data', () => {
+    const client = readFileSync(join(__dirname, '../../../api/src/lib/client.ts'), 'utf8')
+      .split(/\s+/)
+      .join(' ')
+    expect(client).toContain('response: { status: error.response.status, data: responseData }')
+  })
+})
+
+describe('#43 / #75 — the activity feed', () => {
+  it('is in time order, not unread-first', () => {
+    const service = readFileSync(
+      join(__dirname, '../../../../backend/src/services/activity.service.ts'),
+      'utf8',
+    )
+    expect(service).toContain(
+      'result.sort((a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime())',
+    )
+    expect(service).not.toContain('if (a.unreadCount > 0 && b.unreadCount === 0) return -1')
+  })
+  it('a feed still loading is not «nothing happened»', () => {
+    const hook = readFileSync(join(__dirname, '../../../api/src/hooks/activity.ts'), 'utf8')
+    const useActivities = hook.slice(
+      hook.indexOf('export function useActivities('),
+      hook.indexOf('export function useInfiniteActivities'),
+    )
+    expect(useActivities).not.toMatch(/^\s*placeholderData:/m)
+  })
+})
+
+describe('#49 — stock is valued at what it cost', () => {
+  it('buy price, never sell price', () => {
+    const domain = readFileSync(
+      join(__dirname, '../../../../backend/src/services/inventory/stock-summary.domain.ts'),
+      'utf8',
+    )
+    expect(domain).toContain('Math.max(quantity, 0) * (Number(row.buy_price) || 0)')
+    expect(domain).not.toContain('row.sell_price')
+  })
+})
+
+describe('#63 — the afghani is a word', () => {
+  it('«افغانی» in Persian, «AFN» in English', async () => {
+    const { currencySign, formatMoney } = await import('@hisabche/formatting')
+    expect(currencySign('AFN', 'fa-IR')).toBe('افغانی')
+    expect(currencySign('AFN', 'en')).toBe('AFN')
+    expect(formatMoney(1000, 'AFN', 'en')).toBe('1,000 AFN')
+  })
+})

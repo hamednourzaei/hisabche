@@ -23,10 +23,27 @@ export const emailSchema = z
  * فرمت قابل قبول: + اختیاری در ابتدا، سپس ۸ تا ۱۵ رقم
  * مقدار قبول‌شده: undefined، '' یا شماره معتبر
  */
+/**
+ * A number someone can call (live audit #14): `+98123` and a 15-digit
+ * `+98…` were both accepted. Seven to fifteen digits (E.164), and the two
+ * countries this product serves have their exact length: Afghanistan +93 and
+ * nine digits, Iran +98 and ten.
+ */
+export function isPlausiblePhone(value: string): boolean {
+  if (!/^[\d\s\-+()]+$/.test(value)) return false
+  const digits = value.replace(/\D/g, '')
+  if (digits.length < 7 || digits.length > 15) return false
+  if (value.trim().startsWith('+')) {
+    if (digits.startsWith('93')) return digits.length === 11
+    if (digits.startsWith('98')) return digits.length === 12
+  }
+  return true
+}
+
 export const phoneSchema = z
   .string()
   .optional()
-  .refine((val) => !val || val === '' || /^[\d\s\-\+\(\)]{5,20}$/.test(val), {
+  .refine((val) => !val || val === '' || isPlausiblePhone(val), {
     message: 'validation.phone',
   })
 
@@ -117,6 +134,18 @@ export const CURRENCY_CODES = [
 ] as const
 
 export const currencyCodeSchema = z.enum(CURRENCY_CODES)
+
+/**
+ * The order a person picks a currency in (live audit #61/#65): the afghani,
+ * the dollar and gold/silver by the gram first — a money changer and a
+ * goldsmith should not scroll past the dirham to find them — then the rest in
+ * their list order. Every code appears exactly once.
+ */
+const PICK_FIRST = ['AFN', 'USD', 'XAU', 'XAG', 'IRT', 'EUR', 'PKR'] as const
+export const CURRENCY_PICK_ORDER: readonly (typeof CURRENCY_CODES)[number][] = [
+  ...PICK_FIRST,
+  ...CURRENCY_CODES.filter((code) => !(PICK_FIRST as readonly string[]).includes(code)),
+]
 
 /** Payment methods */
 /**

@@ -279,7 +279,7 @@ export function AssignStockDialog({
                 placeholder={t('warehouse.chooseProduct', 'انتخاب کالا')}
                 options={available.map((product) => ({
                   value: product.id,
-                  label: `${product.name} — ${fmt(product.quantity)} ${product.unit}`,
+                  label: `${product.name} — ${fmt(product.quantity)} ${t(`unit.${product.unit}`, product.unit)}`,
                 }))}
               />
             </div>
@@ -301,7 +301,8 @@ export function AssignStockDialog({
             </label>
             {selected ? (
               <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                {t('warehouse.assignMax', 'حداکثر')}: {fmt(selected.quantity)} {selected.unit}
+                {t('warehouse.assignMax', 'حداکثر')}: {fmt(selected.quantity)}{' '}
+                {t(`unit.${selected.unit}`, selected.unit)}
               </p>
             ) : null}
             {error ? (
@@ -461,7 +462,7 @@ export function TransferStockDialog({
                 placeholder={t('warehouse.chooseProduct', 'انتخاب کالا')}
                 options={available.map((product) => ({
                   value: product.id,
-                  label: `${product.name} — ${fmt(product.quantity)} ${product.unit}`,
+                  label: `${product.name} — ${fmt(product.quantity)} ${t(`unit.${product.unit}`, product.unit)}`,
                 }))}
               />
             </div>
@@ -483,7 +484,7 @@ export function TransferStockDialog({
             <label className="block space-y-1 text-sm">
               <span className="text-[hsl(var(--fg-secondary))]">
                 {t('warehouse.transferQuantity', 'مقدار انتقال')}
-                {selected ? ` (${selected.unit})` : ''}
+                {selected ? ` (${t(`unit.${selected.unit}`, selected.unit)})` : ''}
               </span>
               <input
                 id="warehouse-transfer-quantity"
@@ -500,7 +501,8 @@ export function TransferStockDialog({
             </label>
             {selected ? (
               <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                {t('warehouse.assignMax', 'حداکثر')}: {fmt(selected.quantity)} {selected.unit}
+                {t('warehouse.assignMax', 'حداکثر')}: {fmt(selected.quantity)}{' '}
+                {t(`unit.${selected.unit}`, selected.unit)}
               </p>
             ) : null}
             <label className="block space-y-1 text-sm">

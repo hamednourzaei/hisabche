@@ -12,8 +12,7 @@ export function SyncCenterContainer() {
   const t = useTranslations()
   const queryClient = useQueryClient()
   const { isOnline, isSyncing, pendingCount, lastSyncedAt, setLastSynced } = useSyncStore()
-  const { backups, autoBackupEnabled, setAutoBackup, addBackup, createBackup, auditLog } =
-    useBackupStore()
+  const { backups, addBackup, createBackup, auditLog } = useBackupStore()
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {
@@ -67,10 +66,6 @@ export function SyncCenterContainer() {
     const backup = createBackup()
     addBackup({ ...backup, type: 'manual' })
   }, [createBackup, addBackup])
-  const handleToggleAutoBackup = useCallback(
-    () => setAutoBackup(!autoBackupEnabled),
-    [autoBackupEnabled, setAutoBackup],
-  )
 
   return (
     <div className="space-y-4">
@@ -82,13 +77,11 @@ export function SyncCenterContainer() {
         isSyncing={isSyncing}
         pendingCount={pendingCount}
         lastSyncedAt={lastSyncedAt}
-        autoBackupEnabled={autoBackupEnabled}
         backups={backups as SyncCenterPageProps['backups']}
         auditLog={auditLog as SyncCenterPageProps['auditLog']}
         localStorageSize={localStorageSize}
         onSync={handleSync}
         onBackup={handleBackup}
-        onToggleAutoBackup={handleToggleAutoBackup}
       />
     </div>
   )

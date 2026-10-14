@@ -25,7 +25,7 @@ function localeTag(): string {
 }
 
 export function currencySign(currency: CurrencyCode): string {
-  return canonicalSign(currency)
+  return canonicalSign(currency, localeTag())
 }
 
 /**

@@ -119,7 +119,8 @@ export function statFontClass(text: string): string {
 
 function formatPercent(delta: number, locale: string): string {
   const abs = Math.abs(delta)
-  return `${localeNumber(abs, locale, abs < 10 ? 1 : 0)}٪`
+  // «٪» is the Persian sign; English reads «%» (live audit #76).
+  return `${localeNumber(abs, locale, abs < 10 ? 1 : 0)}${/^en/i.test(locale) ? '%' : '٪'}`
 }
 
 /**

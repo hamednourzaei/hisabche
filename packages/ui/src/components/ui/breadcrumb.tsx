@@ -30,6 +30,7 @@ import { ChevronLeft, Home } from 'lucide-react'
 import { breadcrumbsFor, localizePath } from '@hisabche/ui-contract'
 import { cn } from '../../lib/utils'
 import { useRouteLang } from '../../hooks/use-locale-push'
+import { translateOr } from '../../lib/translate-or'
 
 /** Kept in step with `apps/web/app/[lang]/i18n-config.ts`. */
 const LOCALES = ['fa', 'af', 'en'] as const
@@ -55,7 +56,11 @@ export function Breadcrumb({ className }: { className?: string }) {
     // A crumb the contract does not recognise. An id in the path is a record,
     // not a place — showing the raw UUID would be noise nobody can read.
     if (crumb.labelKey === '') {
-      return UUID.test(crumb.segment) ? t('common.details') : crumb.segment
+      if (UUID.test(crumb.segment)) return t('common.details')
+      // A page outside the menu still has a name (live audit #32): «orders» was
+      // shown as the English path segment.
+      const named = `crumbs.${crumb.segment}`
+      return translateOr(t, named, crumb.segment)
     }
     const translated = t(crumb.labelKey as Parameters<typeof t>[0])
     return translated && translated !== crumb.labelKey ? translated : crumb.labelKey

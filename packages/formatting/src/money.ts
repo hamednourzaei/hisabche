@@ -154,7 +154,14 @@ export function fractionDigits(currency: KnownCurrency): 0 | 2 | 3 {
   return FRACTION_DIGITS[currency]
 }
 
-export function currencySign(currency: KnownCurrency): string {
+/**
+ * ⚠️ «؋» beside a figure was not read as a currency by the people using this
+ * (live audit #63, 14 Oct): the afghani is written as a word. «افغانی» in
+ * Persian and Dari, «AFN» in English. Without a locale, the Persian word —
+ * every surface that does not pass one is a Persian surface.
+ */
+export function currencySign(currency: KnownCurrency, locale?: string): string {
+  if (currency === 'AFN') return locale && /^en/i.test(locale) ? 'AFN' : 'افغانی'
   return CURRENCY_SIGN[currency] ?? currency
 }
 
@@ -185,7 +192,7 @@ export function formatAmount(value: number, currency: KnownCurrency, locale: str
  * than ₨/﷼.
  */
 export function formatMoney(value: number, currency: KnownCurrency, locale: string): string {
-  return `${formatAmount(value, currency, locale)} ${currencySign(currency)}`
+  return `${formatAmount(value, currency, locale)} ${currencySign(currency, locale)}`
 }
 
 /** Grouped digits with no currency semantics — counts, quantities, percentages. */

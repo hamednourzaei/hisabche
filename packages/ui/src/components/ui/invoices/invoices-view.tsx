@@ -388,7 +388,7 @@ function useInvoiceColumns(
       },
       {
         id: 'type',
-        labelKey: 'invoices.type',
+        labelKey: 'invoices.cols.type',
         labelFallback: 'نوع',
         showFrom: 'md',
         sortValue: (inv) => inv.type,
@@ -455,7 +455,7 @@ function useInvoiceColumns(
       },
       {
         id: 'company',
-        labelKey: 'invoices.company',
+        labelKey: 'invoices.cols.company',
         labelFallback: 'شرکت',
         showFrom: 'lg',
         sortValue: (inv) => inv.company ?? '',
@@ -487,7 +487,7 @@ function useInvoiceColumns(
       },
       {
         id: 'itemsSent',
-        labelKey: 'invoices.itemsSent',
+        labelKey: 'invoices.cols.itemsSent',
         labelFallback: 'ارسال‌شده',
         showFrom: 'md',
         align: 'end',

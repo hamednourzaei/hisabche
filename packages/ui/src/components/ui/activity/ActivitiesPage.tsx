@@ -5,7 +5,7 @@
 // only presentation changed.
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useTransition } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { CheckCheck } from 'lucide-react'
 import { formatCompactCount, type UiLanguage } from '@hisabche/formatting'
@@ -82,6 +82,7 @@ export function ActivitiesPage() {
   const { data: unreadCount = 0 } = useUnreadActivityCount()
   const { mutate: markAllAsRead, isPending: isMarkingAll } = useMarkAllActivitiesAsRead()
   const { mutate: markAsRead } = useMarkActivityAsRead()
+  const [isOpening, startOpening] = useTransition()
 
   const allGroups = useMemo<ActivityGroupDto[]>(
     () => data?.pages.flatMap((page) => page.data) ?? [],
@@ -162,13 +163,22 @@ export function ActivitiesPage() {
       }
 
       const route = group.entitySummary.route || '/dashboard'
-      push(route)
+      // A transition, so the page can say it is opening (live audit #45: a
+      // click did nothing visible for seconds, then the page jumped).
+      startOpening(() => push(route))
     },
     [locallyReadIds, markAsRead, push, t, toast],
   )
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="relative flex flex-col h-full w-full" aria-busy={isOpening}>
+      {isOpening ? (
+        <div
+          role="progressbar"
+          aria-label={t('common.loading')}
+          className="absolute inset-x-0 top-0 z-10 h-0.5 animate-pulse bg-[hsl(var(--color-primary))]"
+        />
+      ) : null}
       {/* ─── Header ─────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-2 pb-3 md:pb-4 lg:pb-5">
         <div className="flex items-center gap-2 min-w-0">
@@ -233,7 +243,9 @@ export function ActivitiesPage() {
               branch
               label={t('activity.filter.all')}
               options={ACTIVITY_FILTERS.map((value) => {
-                const count = filterCounts?.[value]
+                // «خوانده‌نشده» says the same number as the header and the badge —
+                // one count, the one reading a row lowers at once (live audit #42).
+                const count = value === 'unread' ? effectiveUnreadCount : filterCounts?.[value]
                 const displayCount = count
                 return {
                   value,

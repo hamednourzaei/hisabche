@@ -19,9 +19,11 @@
 // ============================================
 'use client'
 
+import type { ReactNode } from 'react'
 import { memo } from 'react'
 import { User, X } from 'lucide-react'
-import { SUPPORTED_CURRENCIES, type CurrencyCode, type InvoiceDraftCustomer } from '@hisabche/store'
+import { type CurrencyCode, type InvoiceDraftCustomer } from '@hisabche/store'
+import { CURRENCY_PICK_ORDER } from '@hisabche/validation'
 
 import { CustomerPicker } from '../customer-picker'
 import { JalaliDatePicker } from '../jalali-datepicker'
@@ -40,6 +42,8 @@ export interface CustomerPanelProps {
   onTransactionTypeChange: (type: 'sale' | 'purchase') => void
   currency: CurrencyCode
   onCurrencyChange: (currency: CurrencyCode) => void
+  /** The invoice-to-books rate, shown right under the currency (live audit #59). */
+  rateSlot?: ReactNode
   /** Currencies used by a column but not the invoice's own. */
   foreignCurrencies: readonly CurrencyCode[]
   rates: Partial<Record<CurrencyCode, string>>
@@ -76,6 +80,7 @@ export const CustomerPanel = memo(function CustomerPanel({
   onTransactionTypeChange,
   currency,
   onCurrencyChange,
+  rateSlot,
   foreignCurrencies,
   rates,
   onRateChange,
@@ -182,7 +187,9 @@ export const CustomerPanel = memo(function CustomerPanel({
             placeholder={
               parties.length
                 ? t('invoiceBuilder.customer.addAnother', 'افزودن مشتری دیگر…')
-                : t('invoiceBuilder.customer.select', 'انتخاب مشتری')
+                : isPurchase
+                  ? t('invoiceBuilder.customer.supplier', 'انتخاب تأمین‌کننده')
+                  : t('invoiceBuilder.customer.select', 'انتخاب مشتری')
             }
           />
 
@@ -203,7 +210,7 @@ export const CustomerPanel = memo(function CustomerPanel({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {SUPPORTED_CURRENCIES.map((code) => (
+              {CURRENCY_PICK_ORDER.map((code) => (
                 <SelectItem key={code} value={code}>
                   {t(`currency.${code.toLowerCase()}`, code)}
                 </SelectItem>
@@ -211,6 +218,8 @@ export const CustomerPanel = memo(function CustomerPanel({
             </SelectContent>
           </Select>
         </div>
+
+        {rateSlot}
 
         {/* One rate field per foreign currency actually in use. Shown, not
             hidden — a conversion the user cannot see is a lie about money. */}

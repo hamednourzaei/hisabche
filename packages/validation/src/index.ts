@@ -15,6 +15,7 @@ export {
   optionalStringSchema,
   CURRENCY_CODES,
   currencyCodeSchema,
+  CURRENCY_PICK_ORDER,
   paymentMethodSchema,
   paymentMethodLabelSchema,
   transactionTypeSchema,

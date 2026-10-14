@@ -49,17 +49,17 @@ describe('decimal policy: 2 for USD/EUR, 0 for everything else', () => {
 
 describe('formatMoney places the sign AFTER the digits, ASCII space', () => {
   it.each([
-    [1234.567, 'AFN', '۱٬۲۳۵ ؋'],
+    [1234.567, 'AFN', '۱٬۲۳۵ افغانی'],
     [1234.567, 'PKR', '۱٬۲۳۵ ₨'],
     [1234.567, 'IRR', '۱٬۲۳۵ ﷼'],
     [1234.567, 'USD', '۱٬۲۳۴٫۵۷ $'],
-    [0, 'AFN', '۰ ؋'],
+    [0, 'AFN', '۰ افغانی'],
   ] as const)('%p %s -> %p', (value, currency, expected) => {
     expect(formatMoney(value, currency, FA)).toBe(expected)
   })
 
   it('uses ASCII space, never U+00A0 — unlike Intl currency style', () => {
-    expect(formatMoney(1, 'AFN', FA)).toBe('۱ ؋')
+    expect(formatMoney(1, 'AFN', FA)).toBe('۱ افغانی')
     expect(formatMoney(1, 'AFN', FA)).not.toContain(' ')
   })
 

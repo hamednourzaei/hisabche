@@ -55,6 +55,11 @@ export const aiInsightSchema = z.object({
   actionLabel: optionalStringSchema,
   metric: z.number().optional(),
   metricLabel: optionalStringSchema,
+  /** What the suggestion is; the screen writes it in the reader's language. */
+  code: z.string().optional(),
+  values: z.record(z.union([z.number(), z.string()])).optional(),
+  /** The currency of `values.amount` — the books currency. */
+  currency: z.string().optional(),
 })
 
 export type AIInsight = z.infer<typeof aiInsightSchema>

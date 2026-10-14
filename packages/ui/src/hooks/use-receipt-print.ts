@@ -7,7 +7,7 @@
 
 import { useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { CURRENCY_SIGN, formatNumber } from '@hisabche/formatting'
+import { CURRENCY_SIGN, currencySign, formatNumber } from '@hisabche/formatting'
 
 import { useToast } from '../components/ui/toast-provider'
 import { useDateFormat } from './use-date-format'
@@ -52,7 +52,7 @@ export function useReceiptPrint() {
           typeof value === 'number' && Number.isFinite(value) ? show(value) : '—'
         const currency =
           source.currency in CURRENCY_SIGN
-            ? CURRENCY_SIGN[source.currency as keyof typeof CURRENCY_SIGN]
+            ? currencySign(source.currency as keyof typeof CURRENCY_SIGN)
             : source.currency
         const data: ReceiptData = {
           businessName: source.businessName?.trim() || t('app.name'),

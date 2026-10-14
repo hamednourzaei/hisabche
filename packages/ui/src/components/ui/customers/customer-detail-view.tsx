@@ -41,6 +41,7 @@ import { CustomerCrmPanel } from '../crm/customer-crm-panel'
 import { CustomerProfilePanel } from './customer-profile-panel'
 import { CustomerPortalPanel } from './customer-portal-panel'
 import { CustomerAccountingPanel, CustomerInsightsPanel } from './customer-analysis-panels'
+import { translateOr } from '../../../lib/translate-or'
 
 export interface CustomerInvoiceRow {
   id: string
@@ -1006,7 +1007,8 @@ function Activity(props: CustomerDetailViewProps & { money: Money }) {
               sortValue: (p) => p.quantity,
               render: (p) => (
                 <span className="tabular-nums">
-                  {formatNumber(p.quantity, props.locale)} {p.unit}
+                  {formatNumber(p.quantity, props.locale)}{' '}
+                  {translateOr(tc, `unit.${p.unit}`, p.unit)}
                 </span>
               ),
             },

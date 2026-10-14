@@ -53,6 +53,10 @@ export interface AIInsight {
   actionLabel?: string
   metric?: number
   metricLabel?: string
+  /** What the suggestion is — written on screen from `dashboard.insight.<code>`. */
+  code?: string
+  values?: Record<string, number | string>
+  currency?: string
 }
 
 export interface SalesDataPoint {

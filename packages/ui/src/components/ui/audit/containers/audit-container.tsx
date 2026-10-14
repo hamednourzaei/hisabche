@@ -82,7 +82,10 @@ export const AuditContainer = memo(function AuditContainer() {
   const workspaceId = useWorkspaceStore((state) => state.workspaceId)
   const { data: membersData } = useWorkspaceMembers(workspaceId ?? '')
   const members = useMemo(
-    () => asList<{ user_id: string; role: string; full_name: string | null }>(membersData),
+    () =>
+      asList<{ user_id: string; role: string; full_name: string | null; email?: string | null }>(
+        membersData,
+      ),
     [membersData],
   )
 
@@ -93,7 +96,9 @@ export const AuditContainer = memo(function AuditContainer() {
 
   const actorName = useMemo(() => {
     const map = new Map<string, string>(
-      members.filter((m) => m.full_name).map((m) => [m.user_id, m.full_name as string]),
+      members
+        .filter((m) => m.full_name || m.email)
+        .map((m) => [m.user_id, (m.full_name || m.email) as string]),
     )
     // Someone no longer a member keeps their short id — honest, not guessed.
     return (id: string | null | undefined) => (id ? (map.get(id) ?? id.slice(0, 8)) : '—')
@@ -141,9 +146,11 @@ export const AuditContainer = memo(function AuditContainer() {
 
   const actorOptions = useMemo(
     () =>
+      // Everyone who can act, by name or else by email (live audit #25: the list
+      // was empty because no member had a profile name).
       members
-        .filter((m) => m.full_name)
-        .map((m) => ({ value: m.user_id, label: m.full_name as string })),
+        .filter((m) => m.full_name || m.email)
+        .map((m) => ({ value: m.user_id, label: (m.full_name || m.email) as string })),
     [members],
   )
 

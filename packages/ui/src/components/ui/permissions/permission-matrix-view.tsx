@@ -106,6 +106,17 @@ const LEVEL_STYLE: Record<AccessLevel, string> = {
 
 const LEVEL_ICON = { none: EyeOff, read: Eye, write: Pencil, full: ShieldCheck } as const
 
+/**
+ * The level as a person reads it: the HIGHEST rung a module has is «کامل»
+ * (live audit #29). «همکاران» and «بهای تمام‌شده» have only a read rung, so
+ * the owner — who holds everything — read «فقط مشاهده» there, which says the
+ * owner is limited when nothing more exists to hold. The stored value is not
+ * touched; only its name and colour.
+ */
+function shownLevel(level: AccessLevel, levels: readonly AccessLevel[]): AccessLevel {
+  return level !== 'none' && level === levels[levels.length - 1] ? 'full' : level
+}
+
 const FIELD =
   'min-h-10 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 text-sm text-[hsl(var(--fg-primary))] outline-none focus:border-[hsl(var(--color-primary))]'
 
@@ -345,14 +356,14 @@ export const PermissionMatrixView = memo(function PermissionMatrixView({
                         <span
                           className={cn(
                             'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium',
-                            LEVEL_STYLE[cell.effectiveLevel],
+                            LEVEL_STYLE[shownLevel(cell.effectiveLevel, module.levels)],
                           )}
                           title={t('permissions.lockedCell', 'این خانه قابل تغییر نیست.')}
                         >
                           <Lock className="size-3" aria-hidden />
                           {t(
-                            `permissions.level.${cell.effectiveLevel}`,
-                            LEVEL_LABEL[cell.effectiveLevel],
+                            `permissions.level.${shownLevel(cell.effectiveLevel, module.levels)}`,
+                            LEVEL_LABEL[shownLevel(cell.effectiveLevel, module.levels)],
                           )}
                         </span>
                       ) : (
@@ -368,11 +379,14 @@ export const PermissionMatrixView = memo(function PermissionMatrixView({
                           data-field={`${role.id}:${module.key}`}
                           options={module.levels.map((level) => ({
                             value: level,
-                            label: t(`permissions.level.${level}`, LEVEL_LABEL[level]),
+                            label: t(
+                              `permissions.level.${shownLevel(level, module.levels)}`,
+                              LEVEL_LABEL[shownLevel(level, module.levels)],
+                            ),
                           }))}
                           className={cn(
                             'whitespace-nowrap rounded-full border-0 px-2.5 py-1 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.4)]',
-                            LEVEL_STYLE[current],
+                            LEVEL_STYLE[shownLevel(current, module.levels)],
                           )}
                           disabled={isSaving}
                         />

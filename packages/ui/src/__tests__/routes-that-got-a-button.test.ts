@@ -83,7 +83,7 @@ describe('moving stock between warehouses', () => {
   })
 
   it('the quantity carries its unit', () => {
-    expect(dialog).toContain("{selected ? ` (${selected.unit})` : ''}")
+    expect(dialog).toContain("{selected ? ` (${t(`unit.${selected.unit}`, selected.unit)})` : ''}")
   })
 })
 

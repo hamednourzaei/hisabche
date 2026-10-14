@@ -10,6 +10,7 @@ import { AIQuery, AIInsight } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { CacheKeys, withCacheKey } from '../utils/cache'
 import type { TenancyContext } from './tenancy.service'
+import { baseCurrencyOf } from './base-currency'
 
 // ✅ Type for response
 interface AIResponse {
@@ -431,165 +432,118 @@ export class AIService {
   async getInsights(ctx: TenancyContext): Promise<AIInsight[]> {
     const { workspaceId } = ctx
     return withCacheKey(CacheKeys.insights(workspaceId), 120_000, async () => {
-      // ✅ count: "estimated" به جای "exact"
-      const [productsResult, unpaidResult, weekResult] = await Promise.all([
+      // Live audit #74 (14 Oct): every suggestion was a finished Persian
+      // sentence with «افغانی» written in — the English site showed Persian,
+      // a dollar business read «افغانی», purchases counted as «فروش», and
+      // dollar invoices were added to afghani ones. Each suggestion is now a
+      // CODE with numbers and the books currency; the screen writes the
+      // sentence in the reader's language. Money sums are sales in the books
+      // currency only.
+      const [productsResult, salesResult, weekResult, booksCurrency] = await Promise.all([
         supabase
           .from('products')
           .select('name, quantity, min_stock_level, buy_price')
           .eq('workspace_id', workspaceId)
           .eq('is_active', true),
-        // ✅ FIX: قبلاً هر فاکتوری که status آن دقیقاً 'paid' نبود «پرداخت‌نشده»
-        // شمرده می‌شد؛ ولی وضعیت واقعی فاکتورهای پرداخت‌شده 'completed' است،
-        // برای همین همه‌ی فاکتورها به‌اشتباه در انتظار پرداخت گزارش می‌شدند.
-        // ملاک درست، مبلغ باقی‌مانده است نه رشته‌ی status.
         supabase
           .from('invoices')
-          .select('total, paid_amount, status')
+          .select('total, paid_amount, status, currency')
           .eq('workspace_id', workspaceId)
+          .eq('type', 'sale')
           .neq('status', 'cancelled'),
         supabase
           .from('invoices')
-          .select('total')
+          .select('total, currency')
           .eq('workspace_id', workspaceId)
-          // ✅ FIX: فیلتر status === 'paid' حذف شد — وضعیت واقعی فاکتورهای
-          // پرداخت‌شده 'completed' است، پس این کوئری همیشه خالی برمی‌گشت و
-          // پیشنهاد «فروش هفته گذشته» هرگز نمایش داده نمی‌شد.
+          .eq('type', 'sale')
           .neq('status', 'cancelled')
           .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+        baseCurrencyOf(workspaceId),
       ])
+      for (const result of [productsResult, salesResult, weekResult]) {
+        if (result.error) throw new DatabaseError('Failed to read the suggestions', result.error)
+      }
 
       const insights: AIInsight[] = []
-
-      // ✅ هشدار کمبود موجودی
-      const products = productsResult.data || []
-      const lowStock = products.filter((p: any) => Number(p.quantity) <= Number(p.min_stock_level))
-      if (lowStock.length > 0) {
+      const inBooks = (row: { currency?: string | null }) =>
+        !row.currency || row.currency === booksCurrency
+      const money = (code: string, type: AIInsight['type'], action: string, amount: number) =>
         insights.push({
-          type: 'warning',
-          title: 'هشدار کمبود موجودی',
-          description: `${lowStock.length} محصول به حداقل موجودی رسیده‌اند.`,
-          action: '/warehouse',
-          actionLabel: 'مشاهده موجودی',
-          metric: lowStock.length,
-          metricLabel: 'محصول',
-        })
-      }
-
-      // ✅ فاکتورهای پرداخت‌نشده
-      const unpaidCount = (unpaidResult.data || []).filter(
-        (inv: any) => (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0) > 0,
-      ).length
-      if (unpaidCount > 0) {
+          type,
+          code,
+          title: code,
+          description: code,
+          action,
+          values: { amount },
+          currency: booksCurrency,
+        } as AIInsight)
+      const count = (
+        code: string,
+        type: AIInsight['type'],
+        action: string,
+        n: number,
+        extra = {},
+      ) =>
         insights.push({
-          type: 'info',
-          title: 'فاکتورهای در انتظار پرداخت',
-          description: `${unpaidCount} فاکتور هنوز پرداخت نشده‌اند.`,
-          action: '/invoices',
-          actionLabel: 'مشاهده فاکتورها',
-          metric: unpaidCount,
-          metricLabel: 'فاکتور',
-        })
-      }
+          type,
+          code,
+          title: code,
+          description: code,
+          action,
+          values: { count: n, ...extra },
+        } as AIInsight)
 
-      // ✅ فروش هفته گذشته
-      const weekSales = (weekResult.data || []).reduce(
-        (s: number, i: any) => s + Number(i.total),
-        0,
-      )
-      if (weekSales > 0) {
-        insights.push({
-          type: 'tip',
-          title: 'فروش هفته گذشته',
-          description: `فروش هفته گذشته: ${weekSales.toLocaleString()} افغانی.`,
-          action: '/dashboard',
-          actionLabel: 'مشاهده داشبورد',
-          metric: weekSales,
-          metricLabel: 'افغانی',
-        })
-      }
+      const products: any[] = productsResult.data || []
+      const lowStock = products.filter((p) => Number(p.quantity) <= Number(p.min_stock_level))
+      if (lowStock.length > 0) count('lowStock', 'warning', '/warehouse', lowStock.length)
 
-      // ✅ قواعد بیشتر — همگی از همان داده‌ی از قبل واکشی‌شده ساخته می‌شوند،
-      // پس هیچ کوئری اضافه‌ای به دیتابیس اضافه نمی‌کنند.
-      const invoiceRows: any[] = unpaidResult.data || []
+      const sales: any[] = salesResult.data || []
+      const owed = (inv: any) =>
+        Math.max(0, (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0))
+      const unpaidCount = sales.filter((inv) => owed(inv) > 0).length
+      if (unpaidCount > 0) count('unpaid', 'info', '/invoices', unpaidCount)
 
-      // مجموع مبلغ معوق (نه فقط تعداد فاکتور)
-      const outstanding = invoiceRows.reduce(
-        (sum: number, inv: any) =>
-          sum + Math.max(0, (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0)),
-        0,
-      )
-      if (outstanding > 0) {
-        insights.push({
-          type: 'warning',
-          title: 'مبلغ معوق مشتریان',
-          description: `${outstanding.toLocaleString()} افغانی هنوز از مشتریان دریافت نشده است.`,
-          action: '/customers',
-          actionLabel: 'پیگیری بدهکاران',
-          metric: outstanding,
-          metricLabel: 'افغانی',
-        })
-      }
+      const weekSales = (weekResult.data || [])
+        .filter(inBooks)
+        .reduce((sum: number, inv: any) => sum + (Number(inv.total) || 0), 0)
+      if (weekSales > 0) money('weekSales', 'tip', '/dashboard', weekSales)
 
-      // محصولات تمام‌شده — متفاوت از هشدار «موجودی کم»
-      const outOfStock = products.filter((p: any) => Number(p.quantity) <= 0)
+      const salesInBooks = sales.filter(inBooks)
+      const outstanding = salesInBooks.reduce((sum: number, inv: any) => sum + owed(inv), 0)
+      if (outstanding > 0) money('outstanding', 'warning', '/customers', outstanding)
+
+      const outOfStock = products.filter((p) => Number(p.quantity) <= 0)
       if (outOfStock.length > 0) {
-        const names = outOfStock
-          .slice(0, 3)
-          .map((p: any) => p.name)
-          .join('، ')
-        insights.push({
-          type: 'warning',
-          title: 'محصولات تمام‌شده',
-          description: `${outOfStock.length} محصول موجودی صفر دارند: ${names}.`,
-          action: '/warehouse',
-          actionLabel: 'ثبت خرید',
-          metric: outOfStock.length,
-          metricLabel: 'محصول',
+        count('outOfStock', 'warning', '/warehouse', outOfStock.length, {
+          names: outOfStock
+            .slice(0, 3)
+            .map((p) => p.name)
+            .join('، '),
         })
       }
 
-      // سرمایه‌ی خوابیده در انبار
+      // Valued at what was PAID for it (buy price), never the selling price.
       const stockValue = products.reduce(
-        (sum: number, p: any) => sum + Number(p.quantity || 0) * Number(p.buy_price || 0),
+        (sum: number, p: any) =>
+          sum + Math.max(0, Number(p.quantity) || 0) * (Number(p.buy_price) || 0),
         0,
       )
-      if (stockValue > 0) {
-        insights.push({
-          type: 'info',
-          title: 'ارزش موجودی انبار',
-          description: `${stockValue.toLocaleString()} افغانی سرمایه در انبار شماست.`,
-          action: '/warehouse',
-          actionLabel: 'مشاهده انبار',
-          metric: stockValue,
-          metricLabel: 'افغانی',
-        })
-      }
+      if (stockValue > 0) money('stockValue', 'info', '/warehouse', stockValue)
 
-      // میانگین مبلغ فاکتور
-      if (invoiceRows.length > 0) {
+      if (salesInBooks.length > 0) {
         const avg =
-          invoiceRows.reduce((sum: number, i: any) => sum + (Number(i.total) || 0), 0) /
-          invoiceRows.length
-        insights.push({
-          type: 'tip',
-          title: 'میانگین مبلغ فاکتور',
-          description: `هر فاکتور به‌طور میانگین ${Math.round(avg).toLocaleString()} افغانی است.`,
-          action: '/invoices',
-          actionLabel: 'مشاهده فاکتورها',
-          metric: Math.round(avg),
-          metricLabel: 'افغانی',
-        })
+          salesInBooks.reduce((sum: number, inv: any) => sum + (Number(inv.total) || 0), 0) /
+          salesInBooks.length
+        money('averageSale', 'tip', '/invoices', avg)
       }
 
-      // ✅ نکته روز (همیشه آخرین باشد)
       insights.push({
         type: 'tip',
-        title: '💡 نکته روز',
-        description:
-          'می‌توانید با ثبت هزینه‌ها در بخش حسابداری، گزارش سود و زیان دقیق‌تری داشته باشید.',
+        code: 'tip',
+        title: 'tip',
+        description: 'tip',
         action: '/accounting',
-        actionLabel: 'رفتن به حسابداری',
-      })
+      } as AIInsight)
 
       return insights
     })

@@ -92,6 +92,10 @@ export const DescriptionCell = memo(function DescriptionCell({
   const boxRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  // Opened by typing in the cell: the cell keeps the focus, the list follows
+  // what is typed (live audit #54 — typing a name suggested nothing; only the
+  // arrow did). Opened by the arrow: the list's own search box takes it.
+  const openedByTyping = useRef(false)
 
   // Debounced so a fast typist does not fire a query per keystroke. Every row
   // with the same search shares one React Query cache entry, so a hundred-row
@@ -207,7 +211,7 @@ export const DescriptionCell = memo(function DescriptionCell({
   // Focus lands in the panel's own search box, so typing filters the catalogue
   // instead of overwriting the description the person may have already typed.
   useEffect(() => {
-    if (open) searchRef.current?.focus()
+    if (open && !openedByTyping.current) searchRef.current?.focus()
   }, [open])
 
   // A sale line is priced with the live promotions; a component is costed.
@@ -246,7 +250,17 @@ export const DescriptionCell = memo(function DescriptionCell({
           disabled={disabled}
           data-cell={`${rowIndex}-${columnIndex}`}
           onKeyDown={(e) => onKeyDown(e, rowIndex, columnIndex)}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            const next = e.target.value
+            onChange(next)
+            if (!productId && next.trim().length >= 2) {
+              openedByTyping.current = true
+              setSearch(next)
+              setOpen(true)
+            } else if (openedByTyping.current && next.trim().length < 2) {
+              setOpen(false)
+            }
+          }}
           aria-label={t('invoiceBuilder.columns.description', 'شرح کالا / خدمت')}
           placeholder={t(
             'invoiceBuilder.grid.descriptionPlaceholder',
@@ -279,7 +293,10 @@ export const DescriptionCell = memo(function DescriptionCell({
         <button
           type="button"
           disabled={disabled}
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => {
+            openedByTyping.current = false
+            setOpen((v) => !v)
+          }}
           aria-label={t('invoiceBuilder.grid.pickProduct', 'انتخاب از انبار')}
           aria-expanded={open}
           aria-haspopup="listbox"

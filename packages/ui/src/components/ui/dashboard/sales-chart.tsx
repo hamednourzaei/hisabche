@@ -165,7 +165,8 @@ export const SalesChart = memo(function SalesChart({
         {/* Header: Context + Hero Metric */}
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-[hsl(var(--fg-secondary))]">
-            {t('dashboard.todaySales')}
+            {/* The figure under it is the whole chosen period, not today (live audit #56). */}
+            {t('dashboard.salesChart.periodTotal')}
           </h3>
           <button
             type="button"

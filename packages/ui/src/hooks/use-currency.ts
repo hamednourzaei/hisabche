@@ -28,7 +28,7 @@ import { useIntlLocale } from './use-intl-locale'
 export interface UseCurrencyResult {
   /** The user's selected currency. Never guessed. */
   currency: CurrencyCode
-  /** Its sign, e.g. `؋`. */
+  /** Its sign, or the afghani as a word. */
   symbol: string
   format: (value: number, options?: { showSymbol?: boolean; compact?: boolean }) => string
 }
@@ -36,7 +36,7 @@ export interface UseCurrencyResult {
 export function useCurrency(): UseCurrencyResult {
   const currency = useCurrencyStore((s) => s.primaryCurrency)
   const locale = useIntlLocale()
-  const symbol = currencySign(currency)
+  const symbol = currencySign(currency, locale)
 
   const format = useCallback(
     (value: number, options?: { showSymbol?: boolean; compact?: boolean }): string => {

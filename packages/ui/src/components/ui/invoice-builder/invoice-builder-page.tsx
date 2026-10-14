@@ -53,6 +53,11 @@ export interface InvoiceBuilderPageProps {
   stockWarning?: ReactNode
   /** The scan button: in the grid's toolbar on a desktop, above the items on a phone. */
   scanSlot?: ReactNode
+  /**
+   * The invoice-to-books rate. Right under «ارز فاکتور» — whoever changes the
+   * currency sees it there (live audit #59), not at the bottom of the column.
+   */
+  rateSlot?: ReactNode
 
   customers: readonly InvoiceDraftCustomer[]
   transactionType: 'sale' | 'purchase'
@@ -110,6 +115,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
   issues,
   stockWarning,
   scanSlot,
+  rateSlot,
   customers,
   transactionType,
   currency,
@@ -227,6 +233,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
           issues={issues}
           stockWarning={
             <>
+              {rateSlot}
               {scanSlot}
               {stockWarning}
             </>
@@ -408,6 +415,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
               onTransactionTypeChange={onTransactionTypeChange}
               currency={currency}
               onCurrencyChange={onCurrencyChange}
+              rateSlot={rateSlot}
               foreignCurrencies={foreignCurrencies}
               rates={rates}
               onRateChange={onRateChange}

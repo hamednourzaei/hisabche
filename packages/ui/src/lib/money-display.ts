@@ -50,5 +50,6 @@ export function formatSelectedAmount(value: number): string {
 /** The same, with the currency's sign appended. */
 export function formatSelectedMoney(value: number): string {
   const currency = selectedCurrency()
-  return `${formatAmount(value, currency, documentIntlLocale())} ${currencySign(currency)}`
+  const locale = documentIntlLocale()
+  return `${formatAmount(value, currency, locale)} ${currencySign(currency, locale)}`
 }

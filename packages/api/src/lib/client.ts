@@ -32,6 +32,15 @@ export interface ApiError {
   limit?: { feature: string; limit: number; used: number } | undefined
   /** BARCODE_AMBIGUOUS: every product carrying the scanned barcode. */
   candidates?: unknown[] | undefined
+  /**
+   * ⚠️ The status and body again, in the shape every screen reads
+   * (`error.response.status`, `error.response.data`). This object replaced the
+   * axios error, so 26 screens reading that shape never saw a 503 («not
+   * configured») or a 403, and `apiErrorMessage`/`apiErrorFields` never saw the
+   * server's message (live audit #33: a storefront that was simply not set up
+   * read «دریافت اطلاعات انجام نشد»).
+   */
+  response?: { status: number; data: unknown } | undefined
 }
 
 // ============================================
@@ -390,6 +399,9 @@ apiClient.interceptors.response.use(
       code: responseData?.code || (error.response ? 'UNKNOWN_ERROR' : 'NETWORK_ERROR'),
       status: error.response?.status || 500,
       details: responseData?.details,
+      ...(error.response
+        ? { response: { status: error.response.status, data: responseData } }
+        : {}),
       ...(responseData?.code === 'PLAN_LIMIT_REACHED'
         ? {
             limit: {

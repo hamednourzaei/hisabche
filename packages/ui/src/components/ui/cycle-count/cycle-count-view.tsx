@@ -61,6 +61,8 @@ export interface CycleCountViewProps {
   onRecord: (productId: string, countedQty: number) => void
   onComplete: () => void
   onCancel: (reason: string) => void
+  /** «شروع شمارش» — the way to open a count (live audit #35). */
+  startSlot?: React.ReactNode
 }
 
 /** Uses the Badge component's own variants — no parallel tone vocabulary. */
@@ -90,6 +92,7 @@ export function CycleCountView({
   onRecord,
   onComplete,
   onCancel,
+  startSlot,
 }: CycleCountViewProps) {
   const [confirming, setConfirming] = React.useState(false)
 
@@ -118,6 +121,7 @@ export function CycleCountView({
           <ClipboardList className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
           {t('cycleCount.title', 'شمارش انبار')}
         </h2>
+        {startSlot ? <div className="mb-3">{startSlot}</div> : null}
 
         {/* The shared table; a row opens that count below. */}
         <SearchableTable<CycleCount>

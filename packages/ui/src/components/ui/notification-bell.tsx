@@ -28,6 +28,7 @@ import type { Notification } from '@hisabche/api'
 import { formatCompactCount } from '@hisabche/formatting'
 import { timeAgo } from '../../lib/time-ago'
 import { useLocalePush, useRouteLang } from '../../hooks/use-locale-push'
+import { CURRENCY_SIGN, formatMoney, formatNumber } from '@hisabche/formatting'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -127,15 +128,12 @@ function resolveEntityUrl(n: Notification): string {
 // literal 'AFN'. Digits now follow the reader's language and the fallback is
 // the currency the user actually chose — see money-display.ts.
 function formatCurrency(amount: number, currency: string, locale: string): string {
-  try {
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  } catch {
-    return `${amount} ${currency}`
-  }
+  // The shared money formatter: digits of the reader, the afghani as a word
+  // (live audit #40/#63).
+  if (!Number.isFinite(Number(amount))) return ''
+  return currency in CURRENCY_SIGN
+    ? formatMoney(Number(amount), currency as keyof typeof CURRENCY_SIGN, locale)
+    : `${formatNumber(Number(amount), locale)} ${currency}`
 }
 
 // ─── Group Notifications by Entity ─────────────────────────────────────────

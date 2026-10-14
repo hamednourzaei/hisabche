@@ -40,7 +40,13 @@ import {
 } from '../../../../lib/barcode/scale-label'
 import { useBarcodeScanner } from '../../../../hooks/use-barcode-scanner'
 import { planScan } from '../../../../lib/barcode/scan-into-invoice'
-import { lookupProductByBarcode } from '@hisabche/api'
+import {
+  asList,
+  lookupProductByBarcode,
+  rateOn,
+  useExchangeRates,
+  type RateQuote,
+} from '@hisabche/api'
 import type { Product } from '@hisabche/validation'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 
@@ -278,6 +284,34 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
     },
     [draft],
   )
+  // Live audit #60: the rate the business already saved for this currency
+  // fills an EMPTY rate box — once per currency, the day's quote on or before
+  // the invoice date. Whatever the person typed is never overwritten, and with
+  // no saved rate the box stays empty and says so.
+  const savedRates = useExchangeRates()
+  const prefilledFor = useRef<string | null>(null)
+  useEffect(() => {
+    if (!bookCurrency || !needsExchangeRate(currency, bookCurrency)) return
+    if (prefilledFor.current === currency) return
+    if (draft.exchangeRateFrom.trim() || draft.exchangeRateTo.trim()) {
+      prefilledFor.current = currency
+      return
+    }
+    const quotes = asList<RateQuote>(savedRates.data)
+    if (quotes.length === 0) return
+    const saved = rateOn(quotes, currency, (draft.date || new Date().toISOString()).slice(0, 10))
+    prefilledFor.current = currency
+    if (saved !== null) setExchangeRate({ from: '1', to: String(saved) })
+  }, [
+    bookCurrency,
+    currency,
+    draft.date,
+    draft.exchangeRateFrom,
+    draft.exchangeRateTo,
+    savedRates.data,
+    setExchangeRate,
+  ])
+
   const creditBreachInfo = useCustomerTerms({
     customerId: draft.customers[0]?.id,
     transactionType: draft.transactionType,
@@ -327,18 +361,20 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
             onOpenChange={setScanDialogOpen}
           />
         }
+        rateSlot={
+          bookCurrency && needsExchangeRate(currency, bookCurrency) ? (
+            <InvoiceExchangeRate
+              t={t}
+              invoiceCurrency={currency}
+              bookCurrency={bookCurrency}
+              from={draft.exchangeRateFrom}
+              to={draft.exchangeRateTo}
+              onChange={setExchangeRate}
+            />
+          ) : null
+        }
         stockWarning={
           <>
-            {bookCurrency && needsExchangeRate(currency, bookCurrency) ? (
-              <InvoiceExchangeRate
-                t={t}
-                invoiceCurrency={currency}
-                bookCurrency={bookCurrency}
-                from={draft.exchangeRateFrom}
-                to={draft.exchangeRateTo}
-                onChange={setExchangeRate}
-              />
-            ) : null}
             <InvoiceBranchSelect t={t} value={draft.branchId} onChange={setBranchId} />
             <InvoiceWarehouseSelect
               t={t}
