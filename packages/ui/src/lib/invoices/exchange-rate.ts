@@ -9,6 +9,7 @@
 // refuses to send the invoice then — it never falls back to 1.
 // ============================================
 
+import { FRACTION_DIGITS } from '@hisabche/formatting'
 import { parseCellNumber } from '@hisabche/validation'
 
 /** `from` units of the invoice's currency are worth `to` units of the books currency. */
@@ -28,4 +29,29 @@ export function needsExchangeRate(
   // Until the books currency has arrived there is nothing to compare with;
   // the server decides, and refuses by name if one was needed.
   return !!invoiceCurrency && !!bookCurrency && invoiceCurrency !== bookCurrency
+}
+
+/**
+ * A product's price — kept in the BOOKS currency — as it goes on a line of an
+ * invoice in `invoiceCurrency`.
+ *
+ * ⚠️ It used to be copied as-is: an ice cream priced 80 afghani went onto a
+ * dollar invoice as 80 DOLLARS (5,600 afghani at 70) on the live site, 14 Oct.
+ * With a rate it is converted and rounded to the invoice currency's own digits;
+ * without one the price is left EMPTY for the person to type — never copied,
+ * never guessed.
+ */
+export function priceForInvoice(
+  price: string,
+  invoiceCurrency: string | undefined,
+  bookCurrency: string | undefined,
+  rate: number | null,
+): string {
+  if (!needsExchangeRate(invoiceCurrency, bookCurrency)) return price
+  const inBooks = parseCellNumber(price)
+  if (!(inBooks > 0) || !rate) return ''
+  const digits =
+    (FRACTION_DIGITS as Record<string, number>)[String(invoiceCurrency).toUpperCase()] ?? 2
+  const factor = 10 ** digits
+  return String(Math.round((inBooks / rate) * factor) / factor)
 }

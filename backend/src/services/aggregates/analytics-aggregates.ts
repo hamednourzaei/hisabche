@@ -68,9 +68,14 @@ export function fetchDashboardAggregate(
 }
 
 /** Every dashboard field except `customerGrowth`, which the service adds. */
-export function dashboardKpisFromAggregate(agg: DashboardAggregate) {
+export function dashboardKpisFromAggregate(agg: DashboardAggregate, booksCurrency: string) {
+  // ⚠️ THE HEADLINE IS THE BOOKS CURRENCY ONLY. It used to add every
+  // currency's total together: a sale of 80 USD made «فروش کل» and «بدهی
+  // مشتریان» 80 AFN higher on the live site (14 Oct). Other currencies stay
+  // in `byCurrency`, said as what they are — never silently added in.
+  const inBooks = agg.currencies.filter((row) => (row.currency || booksCurrency) === booksCurrency)
   const sum = (pick: (row: z.infer<typeof dashboardCurrencyRow>) => number) =>
-    agg.currencies.reduce((total, row) => total + pick(row), 0)
+    inBooks.reduce((total, row) => total + pick(row), 0)
 
   const byCurrency: Record<string, CurrencyBucket> = {}
   for (const row of agg.currencies) {

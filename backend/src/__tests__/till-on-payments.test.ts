@@ -136,7 +136,9 @@ describe('what a payment moves in the till it names', () => {
   const base = { amount: 500, bookCurrency: 'AFN', rate: 1 }
 
   it('a till in the payment’s currency moves by the amount itself', () => {
-    expect(tillAmountMinor({ ...base, currency: 'AFN', tillCurrency: 'AFN' })).toBe(50_000)
+    // ⚠️ In THAT currency's minor units: afghani has none, dollars have two.
+    // `× 100` everywhere made a 2,000 afghani payment 200,000 in the till.
+    expect(tillAmountMinor({ ...base, currency: 'AFN', tillCurrency: 'AFN' })).toBe(500)
     expect(tillAmountMinor({ ...base, currency: 'USD', tillCurrency: 'USD', rate: 70 })).toBe(
       50_000,
     )
@@ -152,7 +154,7 @@ describe('what a payment moves in the till it names', () => {
         bookCurrency: 'AFN',
         rate: 0.0016,
       }),
-    ).toBe(1_040_000)
+    ).toBe(10_400)
   })
 
   it('⚠️ between two currencies with no rate between them there is no figure — not a guessed one', () => {
@@ -265,7 +267,7 @@ describe('PaymentsService.recordPayment — the till', () => {
   it('a purchase paid in cash from a named till: that till, and what leaves it', async () => {
     const repo = fakeRepo({ currency: null, rate: null })
     const result = await (await service(repo)).recordPayment(ctx, pay({ tillSessionId: 'till-1' }))
-    expect(repo.recorded[0]!.till).toEqual({ sessionId: 'till-1', amountMinor: 50_000 })
+    expect(repo.recorded[0]!.till).toEqual({ sessionId: 'till-1', amountMinor: 500 })
     expect(repo.recorded[0]!.payment.direction).toBe('out')
     expect(result).toMatchObject({ tillSessionId: 'till-1' })
   })
@@ -275,7 +277,7 @@ describe('PaymentsService.recordPayment — the till', () => {
     await (
       await service(repo)
     ).recordPayment(ctx, pay({ direction: 'in', partyType: 'customer', tillSessionId: 'till-1' }))
-    expect(repo.recorded[0]!.till).toEqual({ sessionId: 'till-1', amountMinor: 50_000 })
+    expect(repo.recorded[0]!.till).toEqual({ sessionId: 'till-1', amountMinor: 500 })
     expect(repo.recorded[0]!.payment.direction).toBe('in')
   })
 
@@ -318,7 +320,7 @@ describe('PaymentsService.recordPayment — the till', () => {
         allocations: [{ invoiceId: INVOICE, amount: 6_500_000 }],
       }),
     )
-    expect(repo.recorded[0]!.till).toEqual({ sessionId: 'till-1', amountMinor: 1_040_000 })
+    expect(repo.recorded[0]!.till).toEqual({ sessionId: 'till-1', amountMinor: 10_400 })
     // The payment itself stays in its own currency.
     expect(repo.recorded[0]!.payment).toMatchObject({ amount: 6_500_000, currency: 'IRR' })
   })
@@ -456,11 +458,15 @@ describe('the wiring', () => {
 
   it('an invoice asks the till BEFORE it is written, and only its cash part reaches it', () => {
     const invoice = read('services/invoice.service.ts')
-    const ask = invoice.indexOf('await this.payments.assertTillTakes(ctx, data.tillSessionId')
+    const ask = invoice.indexOf('this.payments.assertTillTakes(ctx, data.tillSessionId')
     expect(ask).toBeGreaterThan(-1)
-    expect(ask).toBeLessThan(invoice.indexOf("await assertWithinLimit(workspaceId, 'invoices')"))
+    // Asked before a number is taken and before the document is written.
+    expect(ask).toBeLessThan(
+      invoice.indexOf('const invoiceNumber = await this.generateInvoiceNumber()'),
+    )
+    expect(ask).toBeLessThan(invoice.indexOf('this.writeInvoiceDocument('))
     expect(invoice).toContain("...(data.tillSessionId && tranche.method === 'cash'")
-    expect(invoice).toContain('if (data.tillSessionId && tillCash > 0) {')
+    expect(invoice).toContain('data.tillSessionId && tillCash > 0')
   })
 
   it('with the till, payment + allocations + till are ONE database call', () => {
@@ -507,5 +513,36 @@ describe('the wiring', () => {
         expect(code.includes(moneyWriter), path + ' → ' + moneyWriter).toBe(false)
       }
     }
+  })
+})
+
+describe('where the money of a payment is booked (live audit, 14 Oct)', () => {
+  const afghani = { currency: 'AFN', rate: 1 }
+
+  it('⚠️ a bank / transfer payment debits the BANK, not the till', async () => {
+    // On the live site PMT-2026-000003 («بانکی / حواله», 3,000) was debited
+    // to صندوق: the bank account never moved and the drawer read 3,000 high.
+    await (
+      await service(fakeRepo(afghani))
+    ).recordPayment(ctx, pay({ direction: 'in', partyType: 'customer', method: 'bank' }))
+    expect(posted[0]!.lines).toEqual([
+      { accountId: 'bank', debit: 500, credit: 0 },
+      { accountId: 'receivable', debit: 0, credit: 500 },
+    ])
+  })
+
+  it('money paid out by transfer leaves the bank', async () => {
+    await (await service(fakeRepo(afghani))).recordPayment(ctx, pay({ method: 'bank' }))
+    expect(posted[0]!.lines).toEqual([
+      { accountId: 'payable', debit: 500, credit: 0 },
+      { accountId: 'bank', debit: 0, credit: 500 },
+    ])
+  })
+
+  it('cash stays in the till account', async () => {
+    await (
+      await service(fakeRepo(afghani))
+    ).recordPayment(ctx, pay({ direction: 'in', partyType: 'customer', method: 'cash' }))
+    expect(posted[0]!.lines[0]).toEqual({ accountId: 'cash', debit: 500, credit: 0 })
   })
 })

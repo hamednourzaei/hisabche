@@ -805,8 +805,8 @@ export const TillView = memo(function TillView({
               }
               hint={
                 session && totals && totals.voidedCount > 0
-                  ? `${t('till.transactions_hint', 'بدون نقد اولیه')} · ${t('till.voided', 'ابطال‌شده')}: ${totals.voidedCount}`
-                  : t('till.transactions_hint', 'بدون نقد اولیه')
+                  ? `${t('till.transactions_hint', 'نقد اولیه شمرده نشده')} · ${t('till.voided', 'ابطال‌شده')}: ${totals.voidedCount}`
+                  : t('till.transactions_hint', 'نقد اولیه شمرده نشده')
               }
             />
           </>

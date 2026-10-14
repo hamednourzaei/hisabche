@@ -26,10 +26,13 @@ export function SyncCenterContainer() {
   const timeAgo = useCallback(
     (ts: number) => {
       const s = Math.floor((Date.now() - ts) / 1000)
-      if (s < 60) return `${s} ${t('sync.secondsAgo')}`
-      if (s < 3600) return `${Math.floor(s / 60)} ${t('sync.minutesAgo')}`
-      if (s < 86400) return `${Math.floor(s / 3600)} ${t('sync.hoursAgo')}`
-      return `${Math.floor(s / 86400)} ${t('sync.daysAgo')}`
+      // ⚠️ The messages carry their own placeholder («{m} دقیقه پیش»). The
+      // number used to be put IN FRONT of it, so the page read «2 {m} دقیقه
+      // پیش» (live audit #69, 14 Oct). The number goes INTO the message.
+      if (s < 60) return t('sync.secondsAgo').replace('{s}', String(s))
+      if (s < 3600) return t('sync.minutesAgo').replace('{m}', String(Math.floor(s / 60)))
+      if (s < 86400) return t('sync.hoursAgo').replace('{h}', String(Math.floor(s / 3600)))
+      return t('sync.daysAgo').replace('{d}', String(Math.floor(s / 86400)))
     },
     [t],
   )

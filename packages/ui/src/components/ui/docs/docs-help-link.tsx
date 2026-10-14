@@ -59,7 +59,6 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
   // `apps/web/app/[lang]/(dashboard)/`. They never matched a real path, so the
   // «؟» never fired for them, and they only risked being picked as the reverse
   // link for their article. `till` covers the POS screen that does exist.
-  'quick-invoice': 'invoices',
   customers: 'customers',
 
   // Stock

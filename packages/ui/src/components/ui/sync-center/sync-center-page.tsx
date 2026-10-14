@@ -99,7 +99,7 @@ export function SyncCenterPage({
         <KpiCard icon={Database} label={t('sync.backups', 'بکاپ')} value={backups.length} />
         <KpiCard
           icon={AlertTriangle}
-          label={t('sync.pending', 'عملیات معلق')}
+          label={t('sync.pendingLabel', 'در صف ارسال')}
           value={pendingCount}
         />
         <KpiCard
@@ -290,9 +290,11 @@ export function SyncCenterPage({
                     <div className="h-2 w-2 rounded-full bg-[hsl(var(--color-primary))] shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
-                        {item.action}
+                        {t(`audit.actions.${item.action}`, item.action)}
                       </p>
-                      <p className="text-xs text-[hsl(var(--fg-tertiary))]">{item.entity}</p>
+                      <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                        {t(`audit.entities.${item.entity}`, item.entity)}
+                      </p>
                     </div>
                   </div>
                   <span className="text-xs text-[hsl(var(--fg-tertiary))] shrink-0">

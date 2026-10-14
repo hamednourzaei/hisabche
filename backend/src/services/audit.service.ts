@@ -80,6 +80,11 @@ export class AuditService {
       // guessed.
       workspace_id: data.workspaceId ?? null,
       branch_id: data.branchId ?? null,
+      // ⚠️ WRITTEN, NOT LEFT TO A DEFAULT (live audit #23, 14 Oct). On the live
+      // database every row of the governance log had created_at NULL — the
+      // column there has no default — so «زمان» read «—» on every line. Rows
+      // already written stay without a time; it is not guessed.
+      created_at: new Date().toISOString(),
     }
 
     let { error } = await supabase.from('audit_logs').insert(row)

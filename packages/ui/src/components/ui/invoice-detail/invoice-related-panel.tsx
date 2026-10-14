@@ -122,6 +122,18 @@ export interface InvoiceRelatedPanelProps {
   ledgerPostMessage?: string | null | undefined
 }
 
+/** Methods with a word in `payment.method.*` — anything else is shown as stored. */
+const NAMED_METHODS = new Set(['cash', 'bank', 'credit', 'mobile_money', 'other'])
+
+/** «نقدی», not `cash` (seen raw on the live invoice page, 14 Oct). */
+function methodLabel(
+  method: string | null,
+  t: (key: string, fallback?: string) => string,
+): string | null {
+  if (!method) return null
+  return NAMED_METHODS.has(method) ? t(`payment.method.${method}`, method) : method
+}
+
 const card =
   'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4'
 
@@ -252,7 +264,9 @@ export function InvoiceRelatedPanel({
                         : t('common.unknownDate', 'تاریخ نامشخص')}
                     </p>
                     <p className="truncate text-xs text-[hsl(var(--fg-tertiary))]">
-                      {[payment.method, payment.reference].filter(Boolean).join(' · ') || '—'}
+                      {[methodLabel(payment.method, t), payment.reference]
+                        .filter(Boolean)
+                        .join(' · ') || '—'}
                     </p>
                     {/* Said only when there is something to say: a payment
                         that named no till shows no till, not «none». */}

@@ -1,7 +1,7 @@
 // packages/ui/src/lib/invoices-mappers.ts
 import type { RawInvoice, Invoice } from './invoices-types'
 import { settlementDate } from '@hisabche/validation'
-import { fmtDate } from './invoices-format'
+import { displayedInvoiceStatus, fmtDate } from './invoices-format'
 
 // ⚠️ `lang` REACHES DOWN HERE BECAUSE THIS MAPPER FORMATS DATES.
 //
@@ -26,7 +26,7 @@ export const mapInvoices = (rawInvoices: RawInvoice[] | undefined, lang: string)
           ? fmtDate(inv.date, lang)
           : '',
       isoDate: inv.date ?? inv.created_at ?? '',
-      status: inv.status ?? '',
+      status: displayedInvoiceStatus(inv.status ?? '', inv.paid_amount, inv.total),
       total: inv.total ?? 0,
       currency: inv.currency ?? '',
       type: inv.type ?? 'sale',

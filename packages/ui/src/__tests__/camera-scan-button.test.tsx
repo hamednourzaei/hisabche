@@ -91,10 +91,7 @@ describe('CameraScanButton', () => {
 
 describe('both invoice pages pause their own scanner while the dialog is open', () => {
   const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
-  it.each([
-    'invoice-builder/containers/invoice-builder-container.tsx',
-    'quick-invoice/containers/quick-invoice-container.tsx',
-  ])('%s', (rel) => {
+  it.each(['invoice-builder/containers/invoice-builder-container.tsx'])('%s', (rel) => {
     const src = strip(readFileSync(join(__dirname, '..', 'components', 'ui', rel), 'utf8'))
     expect(src).toContain('onOpenChange={setScanDialogOpen}')
     expect(src).toContain('!scanDialogOpen')

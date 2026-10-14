@@ -113,6 +113,8 @@ const nextConfig = {
       ['sales-workspace', 'invoices'],
       ['inventory-workspace', 'warehouse'],
       ['people-workspace', 'team-and-payroll'],
+      // A second invoice form beside /invoices/new — removed (live audit #67).
+      ['quick-invoice', 'invoices/new'],
     ]
     return moved.map(([from, to]) => ({
       source: '/:lang(fa|af|en)/' + from,

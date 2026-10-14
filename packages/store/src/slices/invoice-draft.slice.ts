@@ -80,6 +80,18 @@ export interface InvoiceDraftState {
    */
   exchangeRateFrom: string
   exchangeRateTo: string
+  /**
+   * The Idempotency-Key this draft is submitted with — born with the draft,
+   * saved with it, and replaced only by `clearDraft` after the server has
+   * confirmed the invoice.
+   *
+   * ⚠️ It used to be made per visit to the preview screen. On the live site
+   * (14 Oct) the server finished an invoice after the 15 s client timeout;
+   * the screen said «failed», kept the draft, and the next visit gave the
+   * same draft a NEW key — submitting it again would have made a second
+   * invoice. With the key in the draft, any resubmission of it is a replay.
+   */
+  submissionKey: string
 
   // ---- rows ----
   setRows: (rows: InvoiceGridRow[]) => void
@@ -152,7 +164,13 @@ function blankDraft(columns: InvoiceColumn[]) {
     // A rate belongs to one invoice: yesterday's is not offered for today's.
     exchangeRateFrom: '1',
     exchangeRateTo: '',
+    submissionKey: newSubmissionKey(),
   }
+}
+
+/** A fresh key for a fresh draft (see `submissionKey`). */
+function newSubmissionKey(): string {
+  return `inv_web_${crypto.randomUUID()}`
 }
 
 export const useInvoiceDraftStore = create<InvoiceDraftState>()(
@@ -388,6 +406,7 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
         rates: state.rates,
         exchangeRateFrom: state.exchangeRateFrom,
         exchangeRateTo: state.exchangeRateTo,
+        submissionKey: state.submissionKey,
       }),
     },
   ),

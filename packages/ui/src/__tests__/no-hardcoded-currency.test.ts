@@ -99,8 +99,6 @@ describe('no page, store or schema carries a currency of its own', () => {
     for (const file of [
       'ui/src/components/ui/customers/AddCustomerModal.tsx',
       'ui/src/components/ui/customers/PaymentModal.tsx',
-      'ui/src/components/ui/quick-invoice/quick-invoice-page.tsx',
-      'ui/src/components/ui/quick-invoice/containers/quick-invoice-container.tsx',
       'ui/src/components/ui/human-resources/hr-view.tsx',
       'ui/src/components/ui/team-and-payroll/team-and-payroll-view.tsx',
     ]) {

@@ -198,7 +198,6 @@ export { InvoiceDetailPage } from './components/ui/invoice-detail/invoice-detail
 
 // ---------- Pages — Settings & Others ----------
 export { SettingsPage, BusinessStampSection } from './components/ui/settings'
-export { QuickInvoicePage } from './components/ui/quick-invoice'
 export { SyncCenterPage } from './components/ui/sync-center'
 export { WorkspacePage } from './components/ui/workspace'
 export { OnboardingPage } from './components/ui/onboarding/onboarding-page'
@@ -228,7 +227,6 @@ export { InvoiceDetailContainer } from './components/ui/invoice-detail/container
 export { PublicInvoiceContainer } from './components/ui/invoice-detail/containers/public-invoice-container'
 export { PublicPortalContainer } from './components/ui/customers/containers/public-portal-container'
 export { AttendanceSelfContainer } from './components/ui/team-and-payroll/containers/attendance-self-container'
-export { QuickInvoiceContainer } from './components/ui/quick-invoice/containers/quick-invoice-container'
 export { InvoiceBuilderContainer, InvoicePreviewContainer } from './components/ui/invoice-builder'
 export { SyncCenterContainer } from './components/ui/sync-center/containers/sync-center-container'
 export { OnboardingContainer } from './components/ui/onboarding/containers/onboarding-container'

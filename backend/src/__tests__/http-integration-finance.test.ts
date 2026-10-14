@@ -996,8 +996,8 @@ describe('till ↔ bank transfer, over real HTTP', () => {
     const lines = db.rows('journal_lines').filter((l) => l.entry_id === entries[0]!.id)
     expect(lines).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ account_id: BANK, debit: 4000, credit: 0 }),
-        expect.objectContaining({ account_id: CASH, debit: 0, credit: 4000 }),
+        expect.objectContaining({ account_id: BANK, debit: 400_000, credit: 0 }),
+        expect.objectContaining({ account_id: CASH, debit: 0, credit: 400_000 }),
       ]),
     )
     expect(db.rows('pos_cash_movements').filter((m) => m.id === transferId)).toHaveLength(1)

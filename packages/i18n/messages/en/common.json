@@ -1741,7 +1741,11 @@
     "remove": "Remove",
     "unknownDate": "Date unknown",
     "error": "Something went wrong. Please try again.",
-    "type": "Type"
+    "type": "Type",
+    "draft": "Draft",
+    "preview": "Preview",
+    "published": "Published",
+    "title": "Title"
   },
   "invoices": {
     "title": "Invoice",
@@ -2527,7 +2531,8 @@
     "serverStatus": "Server status",
     "stable": "Stable",
     "localStorage": "Local storage",
-    "syncNow_description": "Synchronize your data right away"
+    "syncNow_description": "Synchronize your data right away",
+    "pendingLabel": "Waiting to send"
   },
   "validation": {
     "required": "This field is required",
@@ -3315,7 +3320,88 @@
     "time": "Time",
     "total": "Total",
     "view": "View",
-    "viewChanges": "View"
+    "viewChanges": "View",
+    "actions": {
+      "create": "Created",
+      "created": "Created",
+      "update": "Edited",
+      "updated": "Edited",
+      "delete": "Deleted",
+      "deleted": "Deleted",
+      "cancel": "Cancelled",
+      "cancelled": "Cancelled",
+      "read": "Viewed",
+      "export": "Exported",
+      "approve": "Approved",
+      "reject": "Rejected",
+      "suspend": "Suspended",
+      "manage": "Managed",
+      "posted_to_ledger": "Posted to the ledger",
+      "payment_recorded": "Payment recorded",
+      "permissions_changed": "Permissions changed",
+      "stage_changed": "Stage changed",
+      "opening_capital": "Opening capital"
+    },
+    "entities": {
+      "invoice": "Invoice",
+      "payment": "Payment",
+      "customer": "Customer",
+      "product": "Product",
+      "pos_session": "Till",
+      "journal_entry": "Journal entry",
+      "employee": "Employee",
+      "workspace_member": "Member",
+      "role": "Role",
+      "user": "User",
+      "budget": "Budget",
+      "work_order": "Work order",
+      "bom": "Bill of materials",
+      "automation": "Automation",
+      "workflow": "Workflow",
+      "leave": "Leave",
+      "opportunity": "Opportunity",
+      "purchase_order": "Purchase order",
+      "project": "Project",
+      "subscription": "Subscription",
+      "billing": "Billing",
+      "accounting_period_lock": "Period lock",
+      "warehouse": "Warehouse"
+    },
+    "fields": {
+      "type": "Type",
+      "event": "Event",
+      "title": "Title",
+      "total": "Total",
+      "status": "Status",
+      "currency": "Currency",
+      "invoiceNumber": "Invoice number",
+      "amount": "Amount",
+      "method": "Method",
+      "name": "Name",
+      "full_name": "Name",
+      "phone": "Phone",
+      "role": "Role",
+      "paymentNumber": "Payment number",
+      "label": "Name"
+    },
+    "values": {
+      "sale": "Sale",
+      "purchase": "Purchase",
+      "created": "Created",
+      "updated": "Updated",
+      "issued": "Issued",
+      "pending": "Unpaid",
+      "partial": "Partly paid",
+      "completed": "Paid",
+      "cancelled": "Cancelled",
+      "posted": "Posted",
+      "open": "Open",
+      "closed": "Closed",
+      "cash": "Cash",
+      "bank": "Bank / transfer",
+      "in": "In",
+      "out": "Out"
+    }
   },
   "billing": {
     "limitReached": {
@@ -4360,7 +4446,9 @@
       "priceRequired": "Unit price must be greater than zero",
       "totalRequired": "The line total must be greater than zero",
       "noItems": "At least one line is required",
-      "createFailed": "Could not create the invoice"
+      "createFailed": "Could not create the invoice",
+      "unanswered": "The server did not answer. The invoice may already be saved — check the invoice list before trying again.",
+      "referenceMissing": "A customer or product on this invoice no longer exists — choose it again."
     },
     "mobile": {
       "itemsTitle": "Invoice items",
@@ -8593,7 +8681,15 @@
     "fromDevice": "Recorded by a device",
     "nightColumn": "Night shift",
     "endsNextDay": "left the next day",
-    "saveAsNight": "Save as leaving the next day"
+    "saveAsNight": "Save as leaving the next day",
+    "biometricHint": "After the employee is added, their biometrics are enrolled on the device itself.",
+    "credential": "ID / card number",
+    "method": "Sign-in method",
+    "method_card": "Card (RFID)",
+    "method_face": "Face (on the device)",
+    "method_fingerprint": "Fingerprint",
+    "method_pin": "Password / PIN",
+    "settings": "Attendance settings (device)"
   },
   "promotions": {
     "title": "Promotions",
@@ -9725,6 +9821,29 @@
       "cancelled": "It was not confirmed. Please try again.",
       "privacy": "Your fingerprint and face never leave the phone and are not sent to Hisabche.",
       "mark": "Confirmed with the phone’s lock"
+    }
+  },
+  "cms": {
+    "media": {
+      "empty": "No files uploaded yet.",
+      "subtitle": "Your site’s images and files",
+      "title": "Media",
+      "upload": "Upload file"
+    },
+    "pages": {
+      "contentTab": "Content",
+      "create": "New page",
+      "empty": "No pages yet.",
+      "emptyDesc": "Create the first page of your store’s site.",
+      "locale": "Language",
+      "newTitle": "Untitled page",
+      "pageSettings": "Page settings",
+      "sections": "Sections",
+      "settingsTab": "Settings",
+      "slug": "Slug",
+      "subtitle": "Your store site’s pages",
+      "title": "Pages",
+      "url": "Page URL"
     }
   }
 }

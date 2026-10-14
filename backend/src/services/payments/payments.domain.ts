@@ -10,7 +10,24 @@
 // a debt figure anyone can overwrite is not a debt figure.
 // ============================================
 
+import { FRACTION_DIGITS } from '@hisabche/formatting'
 import { minor, round2 } from '../../utils/money'
+
+/**
+ * A MAJOR amount in the minor units a till counts in — the currency's own
+ * digits, as the till's `MinorInput` uses. ⚠️ Not `× 100`: AFN has none, so a
+ * 2,000 AFN cash payment became 200,000 in the till (seen live, 14 Oct).
+ */
+export function majorToTillMinor(amount: number, currency: string): number {
+  const digits = (FRACTION_DIGITS as Record<string, number>)[currency.toUpperCase()] ?? 2
+  return Math.round((Number.isFinite(amount) ? amount : 0) * 10 ** digits)
+}
+
+/** The inverse: a till's minor units as the MAJOR amount the ledger books. */
+export function tillMinorToMajor(amountMinor: number, currency: string): number {
+  const digits = (FRACTION_DIGITS as Record<string, number>)[currency.toUpperCase()] ?? 2
+  return amountMinor / 10 ** digits
+}
 
 /**
  * Both helpers moved to `utils/money` in Phase 0 — one implementation, guarded
@@ -613,9 +630,11 @@ export function tillAmountMinor(input: {
   rate: number
 }): number | null {
   if (!(input.amount > 0)) return null
-  if (input.tillCurrency === input.currency) return Math.round(input.amount * 100)
+  if (input.tillCurrency === input.currency) {
+    return majorToTillMinor(input.amount, input.tillCurrency)
+  }
   if (input.tillCurrency === input.bookCurrency && input.rate > 0 && Number.isFinite(input.rate)) {
-    const minorUnits = Math.round(input.amount * input.rate * 100)
+    const minorUnits = majorToTillMinor(input.amount * input.rate, input.tillCurrency)
     return minorUnits > 0 ? minorUnits : null
   }
   return null
@@ -698,4 +717,9 @@ export function paymentPosting(input: {
   if (same) return { cash, party: gross, difference: 0, fee }
   const difference = round2(input.direction === 'in' ? gross - party : party - gross)
   return { cash, party, difference, fee }
+}
+
+/** The ledger role a payment's money sits in: cash for cash, the bank for any other method. */
+export function moneyAccountRole(method: string | null | undefined): 'cash' | 'bank' {
+  return (method ?? 'cash') === 'cash' ? 'cash' : 'bank'
 }

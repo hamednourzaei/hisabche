@@ -58,8 +58,12 @@ const ctx = {
   userId: '22222222-2222-4222-8222-222222222222',
   role: 'owner',
 } as any
+// Paid in cash: an unpaid sale with no customer is refused before any of
+// this is reached (INVOICE_CREDIT_NEEDS_PARTY, 14 Oct).
 const draft = {
   type: 'sale',
+  paidAmount: 100,
+  paymentMethod: 'cash',
   items: [{ productId: null, productName: 'x', quantity: 1, unitPrice: 100, totalPrice: 100 }],
 } as any
 const EXISTING = {

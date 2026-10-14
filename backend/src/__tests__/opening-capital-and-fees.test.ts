@@ -132,8 +132,8 @@ describe('PosService.recordOpeningCapital', () => {
     expect(posted).toHaveLength(1)
     expect(posted[0]).toMatchObject({ sourceType: 'opening_capital', sourceId: ENTRY })
     expect(posted[0]!.lines).toEqual([
-      { accountId: 'cash', debit: 50_000, credit: 0 },
-      { accountId: 'owner_capital', debit: 0, credit: 50_000 },
+      { accountId: 'cash', debit: 5_000_000, credit: 0 },
+      { accountId: 'owner_capital', debit: 0, credit: 5_000_000 },
     ])
     expect(upserts).toEqual([
       {
@@ -155,8 +155,8 @@ describe('PosService.recordOpeningCapital', () => {
       await load()
     ).recordOpeningCapital(ctx, { entryId: ENTRY, amountMinor: 100_000, into: 'bank' })
     expect(posted[0]!.lines).toEqual([
-      { accountId: 'bank', debit: 1000, credit: 0 },
-      { accountId: 'owner_capital', debit: 0, credit: 1000 },
+      { accountId: 'bank', debit: 100_000, credit: 0 },
+      { accountId: 'owner_capital', debit: 0, credit: 100_000 },
     ])
     expect(upserts).toEqual([])
   })
@@ -350,7 +350,7 @@ describe('PaymentsService.recordPayment — with a fee', () => {
     await (await service(repo)).recordPayment(ctx, pay({ feeAmount: 2, tillSessionId: 'till-1' }))
     expect(repo.recorded[0]!.payment.amount).toBe(100)
     expect(repo.recorded[0]!.fee).toBe(2)
-    expect(repo.recorded[0]!.till).toEqual({ sessionId: 'till-1', amountMinor: 9800 })
+    expect(repo.recorded[0]!.till).toEqual({ sessionId: 'till-1', amountMinor: 98 })
     expect(posted[0]!.lines).toEqual([
       { accountId: 'cash', debit: 98, credit: 0 },
       { accountId: 'bank_fees', debit: 2, credit: 0 },
@@ -367,7 +367,7 @@ describe('PaymentsService.recordPayment — with a fee', () => {
       ctx,
       pay({ direction: 'out', partyType: 'supplier', feeAmount: 5, tillSessionId: 'till-1' }),
     )
-    expect(repo.recorded[0]!.till).toEqual({ sessionId: 'till-1', amountMinor: 10_500 })
+    expect(repo.recorded[0]!.till).toEqual({ sessionId: 'till-1', amountMinor: 105 })
     expect(posted[0]!.lines).toEqual([
       { accountId: 'payable', debit: 100, credit: 0 },
       { accountId: 'bank_fees', debit: 5, credit: 0 },

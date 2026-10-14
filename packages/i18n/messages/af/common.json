@@ -1750,7 +1750,11 @@
     "remove": "حذف",
     "unknownDate": "تاریخ نامعلوم",
     "error": "خطایی رخ داد. دوباره تلاش کنید.",
-    "type": "نوع"
+    "type": "نوع",
+    "draft": "پیش‌نویس",
+    "preview": "پیش‌نمایش",
+    "published": "نشرشده",
+    "title": "عنوان"
   },
   "invoices": {
     "title": "بل",
@@ -2536,7 +2540,8 @@
     "serverStatus": "وضعیت سرور",
     "stable": "پایدار",
     "localStorage": "ذخیره‌سازی محلی",
-    "syncNow_description": "معلومات را همین حالا همگام کن"
+    "syncNow_description": "معلومات را همین حالا همگام کن",
+    "pendingLabel": "در صف ارسال"
   },
   "validation": {
     "required": "این فیلد الزامیه",
@@ -3324,7 +3329,88 @@
     "time": "زمان",
     "total": "تعداد",
     "view": "دیدن",
-    "viewChanges": "دیدن"
+    "viewChanges": "دیدن",
+    "actions": {
+      "create": "ایجاد",
+      "created": "ایجاد",
+      "update": "ویرایش",
+      "updated": "ویرایش",
+      "delete": "حذف",
+      "deleted": "حذف",
+      "cancel": "لغو",
+      "cancelled": "لغو",
+      "read": "مشاهده",
+      "export": "خروجی",
+      "approve": "تأیید",
+      "reject": "رد",
+      "suspend": "تعلیق",
+      "manage": "مدیریت",
+      "posted_to_ledger": "ثبت در دفتر",
+      "payment_recorded": "ثبت پرداخت",
+      "permissions_changed": "تغییر دسترسی",
+      "stage_changed": "تغییر مرحله",
+      "opening_capital": "سرمایه‌ی افتتاحیه"
+    },
+    "entities": {
+      "invoice": "بل",
+      "payment": "پرداخت",
+      "customer": "مشتری",
+      "product": "جنس",
+      "pos_session": "صندوق",
+      "journal_entry": "سند حسابداری",
+      "employee": "کارمند",
+      "workspace_member": "عضو",
+      "role": "نقش",
+      "user": "کاربر",
+      "budget": "بودجه",
+      "work_order": "دستور تولید",
+      "bom": "فرمول ساخت",
+      "automation": "خودکارسازی",
+      "workflow": "گردش‌کار",
+      "leave": "رخصتی",
+      "opportunity": "فرصت فروش",
+      "purchase_order": "سفارش خرید",
+      "project": "پروژه",
+      "subscription": "اشتراک",
+      "billing": "صورت‌حساب اشتراک",
+      "accounting_period_lock": "قفل دوره",
+      "warehouse": "گدام"
+    },
+    "fields": {
+      "type": "نوع",
+      "event": "رخداد",
+      "title": "عنوان",
+      "total": "جمع",
+      "status": "وضعیت",
+      "currency": "اسعار",
+      "invoiceNumber": "شماره بل",
+      "amount": "مبلغ",
+      "method": "روش",
+      "name": "نام",
+      "full_name": "نام",
+      "phone": "تلفن",
+      "role": "نقش",
+      "paymentNumber": "شماره پرداخت",
+      "label": "نام"
+    },
+    "values": {
+      "sale": "فروش",
+      "purchase": "خرید",
+      "created": "ایجاد شد",
+      "updated": "ویرایش شد",
+      "issued": "صادر شده",
+      "pending": "پرداخت‌نشده",
+      "partial": "جزئی",
+      "completed": "پرداخت شده",
+      "cancelled": "لغو شده",
+      "posted": "ثبت‌شده",
+      "open": "باز",
+      "closed": "بسته",
+      "cash": "نقدی",
+      "bank": "بانکی / حواله",
+      "in": "دریافت",
+      "out": "پرداخت"
+    }
   },
   "billing": {
     "limitReached": {
@@ -4369,7 +4455,9 @@
       "priceRequired": "قیمت واحد باید بزرگ‌تر از صفر باشد",
       "totalRequired": "مبلغ ردیف باید بزرگ‌تر از صفر باشد",
       "noItems": "حداقل یک ردیف ضرور است",
-      "createFailed": "ثبت بل ناکام شد"
+      "createFailed": "ثبت بل ناکام شد",
+      "unanswered": "جواب سرور نرسید. شاید فاکتور ثبت شده باشد؛ پیش از کوشش دوباره فهرست فاکتورها را ببینید.",
+      "referenceMissing": "مشتری یا جنسی که در این فاکتور است دیگر وجود ندارد؛ آن را دوباره انتخاب کنید."
     },
     "mobile": {
       "itemsTitle": "اقلام بل",
@@ -5188,7 +5276,7 @@
     "open_tills": "صندوق‌های باز",
     "open_tills_cash": "موجودی ثبت‌شده‌ی صندوق‌های باز",
     "only_currency": "تنها صندوق‌های این اسعار",
-    "transactions_hint": "بدون نقد اولیه",
+    "transactions_hint": "نقد اولیه حساب نشده",
     "name_required": "نام لازم است: با چند صندوق، نام تنها راه شناختن آن‌هاست.",
     "recorded_cash_hint": "موجودی ثبت‌شده = نقد اولیه + ورودهای نقدی − خروج‌های نقدی، طبق ثبت‌های سیستم. مبلغ واقعی داخل صندوق تا وقتی آن را نشمارید معلوم نیست.",
     "transactions_column": "تراکنش‌ها",
@@ -8602,7 +8690,15 @@
     "fromDevice": "ثبتِ دستگاه",
     "nightColumn": "شیفت شب",
     "endsNextDay": "خروجِ روز بعد",
-    "saveAsNight": "ذخیره با خروجِ روز بعد"
+    "saveAsNight": "ذخیره با خروجِ روز بعد",
+    "biometricHint": "پس از ثبت کارمند، بیومتریک باید مستقیماً روی دستگاه تعریف شود.",
+    "credential": "شناسه / شماره کارت",
+    "method": "روش احراز هویت",
+    "method_card": "کارت (RFID)",
+    "method_face": "چهره (روی دستگاه)",
+    "method_fingerprint": "نشان انگشت",
+    "method_pin": "رمز عبور / PIN",
+    "settings": "تنظیمات حاضری (دستگاه)"
   },
   "promotions": {
     "title": "تخفیف‌ها",
@@ -9734,6 +9830,29 @@
       "cancelled": "تأیید انجام نشد. دوباره کوشش کنید.",
       "privacy": "نشان انگشت و چهره‌ی شما از مبایل بیرون نمی‌شود و به حسابچه فرستاده نمی‌شود.",
       "mark": "با قفل مبایل تأیید شد"
+    }
+  },
+  "cms": {
+    "media": {
+      "empty": "هنوز فایلی بارگذاری نشده است.",
+      "subtitle": "عکس‌ها و فایل‌های سایت شما",
+      "title": "رسانه‌ها",
+      "upload": "بارگذاری فایل"
+    },
+    "pages": {
+      "contentTab": "محتوا",
+      "create": "صفحه‌ی جدید",
+      "empty": "هنوز صفحه‌ای ساخته نشده است.",
+      "emptyDesc": "اولین صفحه‌ی سایت فروشگاه‌تان را بسازید.",
+      "locale": "زبان",
+      "newTitle": "صفحه‌ی بی‌عنوان",
+      "pageSettings": "تنظیمات صفحه",
+      "sections": "بخش‌ها",
+      "settingsTab": "تنظیمات",
+      "slug": "نشانی کوتاه",
+      "subtitle": "صفحه‌های سایت فروشگاه شما",
+      "title": "صفحه‌ها",
+      "url": "نشانی صفحه"
     }
   }
 }

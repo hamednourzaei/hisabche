@@ -49,23 +49,51 @@ export class CurrencyService {
   ): Promise<RateQuote> {
     if (ctx.role === 'seller') throw new ConflictError('RATE_MANAGE_FORBIDDEN')
     if (!(input.rate > 0)) throw new ValidationError('RATE_INVALID')
+    // A rate is books currency per ONE unit of another currency; the books
+    // currency against itself is not a rate anybody can set.
+    if (input.currency === (await baseCurrencyOf(ctx.workspaceId))) {
+      throw new ValidationError('RATE_BASE_CURRENCY')
+    }
 
-    const { data, error } = await supabase
+    const row = {
+      workspace_id: ctx.workspaceId,
+      currency_code: input.currency,
+      rate: input.rate,
+      rate_date: input.onDate.slice(0, 10),
+      updated_at: new Date().toISOString(),
+    }
+    let { data, error } = await supabase
       .from('exchange_rates')
-      .upsert(
-        {
-          workspace_id: ctx.workspaceId,
-          currency_code: input.currency,
-          rate: input.rate,
-          rate_date: input.onDate.slice(0, 10),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'workspace_id,currency_code,rate_date' },
-      )
+      .upsert(row, { onConflict: 'workspace_id,currency_code,rate_date' })
       .select('currency_code, rate, rate_date')
       .single()
 
-    if (error) throw new DatabaseError('Failed to save the exchange rate', error)
+    // ⚠️ «ثبت نرخ» answered 500 on the live site (14 Oct). An upsert needs a
+    // unique key on exactly these columns; a database where it was never
+    // created refuses with 42P10. One quote per (currency, day) is kept either
+    // way: the day's row is updated if it exists, created if not.
+    if (error?.code === '42P10') {
+      const existing = await supabase
+        .from('exchange_rates')
+        .select('id')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('currency_code', row.currency_code)
+        .eq('rate_date', row.rate_date)
+        .limit(1)
+        .maybeSingle()
+      if (existing.error)
+        throw new DatabaseError('Failed to read the exchange rate', existing.error)
+      const write = existing.data
+        ? supabase
+            .from('exchange_rates')
+            .update({ rate: row.rate, updated_at: row.updated_at })
+            .eq('id', (existing.data as { id: string }).id)
+            .eq('workspace_id', ctx.workspaceId)
+        : supabase.from('exchange_rates').insert(row)
+      ;({ data, error } = await write.select('currency_code, rate, rate_date').single())
+    }
+
+    if (error || !data) throw new DatabaseError('Failed to save the exchange rate', error)
 
     await this.invalidate(ctx.workspaceId)
     return {

@@ -57,6 +57,7 @@ import {
   summarizePartyByCurrency,
   type SummaryInvoice,
   type SummaryPayment,
+  moneyAccountRole,
 } from './payments.domain'
 import { PaymentsRepository, domainErrorCode, type PaymentRow } from './payments.repository'
 
@@ -322,6 +323,7 @@ export class PaymentsService {
       ctx,
       paymentId,
       input.direction,
+      input.method ?? 'cash',
       paymentPosting({
         direction: input.direction,
         amount,
@@ -508,6 +510,7 @@ export class PaymentsService {
       ctx,
       payment.id,
       payment.direction,
+      payment.method ?? 'cash',
       paymentPosting({
         direction: payment.direction,
         amount: payment.amount,
@@ -537,12 +540,20 @@ export class PaymentsService {
     ctx: TenancyContext,
     paymentId: string,
     direction: PaymentDirection,
+    method: string,
     posting: PaymentPosting,
     entryDate: string,
     paymentNumber: string,
   ) {
     const isIncoming = direction === 'in'
-    const needed = isIncoming ? (['cash', 'receivable'] as const) : (['payable', 'cash'] as const)
+    // ⚠️ Where the money is: cash in the drawer, anything else in the bank —
+    // the same split the till close makes for card and transfer takings. A
+    // «بانکی / حواله» payment was debited to صندوق on the live site (14 Oct),
+    // so the bank account never moved and the drawer read 3,000 too high.
+    const moneyRole = moneyAccountRole(method)
+    const needed = isIncoming
+      ? ([moneyRole, 'receivable'] as const)
+      : (['payable', moneyRole] as const)
 
     const { accounts, missing } = await ledger.ensureAccountsForRoles(ctx, [...needed])
 
@@ -591,7 +602,7 @@ export class PaymentsService {
       reference: paymentNumber,
       lines: isIncoming
         ? [
-            { accountId: accounts.cash!, debit: cash, credit: 0 },
+            { accountId: accounts[moneyRole]!, debit: cash, credit: 0 },
             ...feeLine,
             { accountId: accounts.receivable!, debit: 0, credit: party },
             ...differenceLine,
@@ -599,7 +610,7 @@ export class PaymentsService {
         : [
             { accountId: accounts.payable!, debit: party, credit: 0 },
             ...feeLine,
-            { accountId: accounts.cash!, debit: 0, credit: cash },
+            { accountId: accounts[moneyRole]!, debit: 0, credit: cash },
             ...differenceLine,
           ],
     })

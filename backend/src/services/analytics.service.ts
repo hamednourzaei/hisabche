@@ -4,6 +4,7 @@
 // ============================================
 
 import { DEFAULT_BUSINESS_TIME_ZONE, startOfLocalDayISO } from '../utils/local-day'
+import { baseCurrencyOf } from './base-currency'
 import { supabase } from '../db'
 import type { TenancyContext } from './tenancy.service'
 import { DateRange } from '@hisabche/validation'
@@ -152,7 +153,10 @@ export class AnalyticsService {
             workspaceId,
             firstOfThisMonth.toISOString(),
           )
-          return { ...dashboardKpisFromAggregate(aggregate), customerGrowth }
+          return {
+            ...dashboardKpisFromAggregate(aggregate, await baseCurrencyOf(workspaceId)),
+            customerGrowth,
+          }
         }
       }
 
@@ -192,7 +196,13 @@ export class AnalyticsService {
       // حالا فروش و خرید از هم جدا می‌شوند و هر متریک روی مجموعه‌ی درست خودش
       // حساب می‌شود. فاکتورهای قدیمی که type ندارند به‌عنوان فروش در نظر
       // گرفته می‌شوند — دقیقاً همان معنایی که قبلاً داشتند.
-      const allInvoices = salesTotalsResult.data || []
+      // ⚠️ Headline figures are the BOOKS currency only (see
+      // dashboardKpisFromAggregate) — the same rule on both paths.
+      const booksCurrency = await baseCurrencyOf(workspaceId)
+      const allInvoices = (salesTotalsResult.data || []).filter(
+        (inv) =>
+          ((inv as { currency?: string | null }).currency || booksCurrency) === booksCurrency,
+      )
       const isPurchase = (inv: { type?: string | null }) => inv.type === 'purchase'
       const invoices = allInvoices.filter((inv) => !isPurchase(inv))
       const purchaseInvoices = allInvoices.filter(isPurchase)

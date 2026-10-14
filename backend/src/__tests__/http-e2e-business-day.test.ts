@@ -324,7 +324,10 @@ describe('a business day, end to end', () => {
       .filter((line) => line.account_id === BANK)
       .reduce((sum, line) => sum + Number(line.debit ?? 0), 0)
 
-    expect(Math.round(bankDebit * 100), 'card takings did not reach the bank account').toBe(35_000)
+    // ⚠️ Afghani has no minor units: 35,000 counted in the till is 35,000 in
+    // the books. This used to say `× 100`, which locked in the bug that booked
+    // a 10,000 afghani opening capital as 100 on the live site (14 Oct).
+    expect(Math.round(bankDebit), 'card takings did not reach the bank account').toBe(35_000)
   })
 
   it('a short drawer books its shortfall instead of hiding it', async () => {

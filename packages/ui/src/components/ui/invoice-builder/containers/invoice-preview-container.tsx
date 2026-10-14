@@ -90,12 +90,11 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
    * invoice exists, so the push is the only navigation in flight.
    */
   const submittedRef = useRef(false)
-  // ⚠️ ONE KEY PER INVOICE ON THIS SCREEN. The server may commit the invoice
-  // and then fail a later step (recording the payment, re-reading it) — the
-  // page said «failed», the person pressed confirm again, and a SECOND invoice
-  // was created. With the same key, the retry returns the invoice that exists.
-  // Editing the draft remounts this screen and so gets a new key.
-  const requestKeyRef = useRef(`inv_web_${crypto.randomUUID()}`)
+  // ⚠️ ONE KEY PER DRAFT, NOT PER VISIT. The server may commit the invoice and
+  // the answer never arrive (a 15 s timeout on the live site, 14 Oct). The key
+  // lives in the draft (`submissionKey`), so submitting the same draft again
+  // — now, or after leaving and coming back — returns the invoice that exists.
+  const submissionKey = useInvoiceDraftStore((state) => state.submissionKey)
 
   // Reaching the preview with nothing to preview means the draft was cleared
   // in another tab or the URL was opened directly. Go back rather than
@@ -261,7 +260,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
 
     try {
       const created = await createInvoice.mutateAsync({
-        idempotencyKey: requestKeyRef.current,
+        idempotencyKey: submissionKey,
         // Sent explicitly from the draft, never inferred from the route.
         type: draft.transactionType,
         date: draft.date,
@@ -420,8 +419,30 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       const generic = t('invoiceBuilder.errors.createFailed', 'ثبت فاکتور ناموفق بود')
       // The plan's ceiling says what to do, not a code.
       const limit = planLimitMessage(cause, (key, values) => t(key, values as never))
+      const code = (cause as { code?: unknown } | null)?.code
+      const text = typeof reason === 'string' ? reason : ''
+      // ⚠️ No answer is not «failed»: on the live site the server finished
+      // INV-000081 after the 15 s client timeout, and the screen said it had
+      // failed — an invitation to submit it twice.
+      const unanswered = code === 'ECONNABORTED' || code === 'ETIMEDOUT' || /timeout/i.test(text)
+      // A draft kept on the device can name a customer or product deleted
+      // since; the server's English «Customer not found» was shown as is.
+      const missing = /not found|INVOICE_REFERENCE_MISSING/i.test(text)
       setError(
-        limit ?? (typeof reason === 'string' && reason.trim() ? `${generic}: ${reason}` : generic),
+        limit ??
+          (unanswered
+            ? t(
+                'invoiceBuilder.errors.unanswered',
+                'پاسخ سرور نرسید. ممکن است فاکتور ثبت شده باشد؛ پیش از تلاش دوباره فهرست فاکتورها را ببینید.',
+              )
+            : missing
+              ? t(
+                  'invoiceBuilder.errors.referenceMissing',
+                  'مشتری یا کالایی که در این فاکتور است دیگر وجود ندارد؛ آن را دوباره انتخاب کنید.',
+                )
+              : text.trim()
+                ? `${generic}: ${text}`
+                : generic),
       )
     }
   }, [

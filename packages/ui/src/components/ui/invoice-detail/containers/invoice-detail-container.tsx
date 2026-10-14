@@ -29,6 +29,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { useReceiptPrint } from '../../../../hooks/use-receipt-print'
 import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
+import { displayedInvoiceStatus } from '../../../../lib/invoices/invoices-format'
 
 /* ═══════════════════════════════════════════════════════════
    CONSTANTS
@@ -211,7 +212,11 @@ export function InvoiceDetailContainer() {
       invoiceNumber: (getField(inv.invoiceNumber, inv.invoice_number) as string) ?? '',
       date: inv.date as string,
       dueDate: (getField(inv.dueDate, inv.due_date) as string | undefined) ?? null,
-      status: inv.status as string,
+      status: displayedInvoiceStatus(
+        inv.status as string,
+        getField(inv.paidAmount, inv.paid_amount) as number | undefined,
+        inv.total as number | undefined,
+      ),
       currency: (inv.currency as string) ?? '',
       subtotal: (inv.subtotal as number) ?? 0,
       total: (inv.total as number) ?? 0,

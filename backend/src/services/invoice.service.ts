@@ -760,6 +760,30 @@ export class InvoiceService {
     return data as Record<string, unknown> | null
   }
 
+  /**
+   * The customer named on an invoice, read in THIS workspace — or a refusal.
+   *
+   * ⚠️ BEFORE ANYTHING IS WRITTEN. This check used to sit after the invoice,
+   * its items and the stock movements, and «compensated» a miss with a DELETE
+   * (forbidden: supabase-js has no transactions). The tenancy filter is the
+   * point: without it any customer id could be attached — a cross-workspace
+   * write that also leaked the other shop's customer name.
+   */
+  private async verifiedCustomerName(
+    workspaceId: string,
+    customerId: string | null,
+  ): Promise<string | null> {
+    if (!customerId) return null
+    const { data: customer } = await supabase
+      .from('customers')
+      .select('full_name')
+      .eq('id', customerId)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle()
+    if (!customer) throw new NotFoundError('Customer')
+    return (customer as { full_name: string }).full_name
+  }
+
   async create(
     ctx: TenancyContext,
     data: CreateInvoice,
@@ -770,13 +794,6 @@ export class InvoiceService {
     const clientRequestId = options.clientRequestId ?? null
     // Multi-warehouse: an invoice may name the warehouse its goods move in.
     const invoiceWarehouseId = (data as { warehouseId?: string | null }).warehouseId ?? null
-    if (invoiceWarehouseId) {
-      await this.assertInvoiceWarehouse(workspaceId, invoiceWarehouseId)
-      // …and be one this member's branches include. A seller of one branch does
-      // not sell off another branch's shelves by naming its warehouse.
-      await assertMayUseWarehouse(ctx, invoiceWarehouseId)
-    }
-
     // ═══════════════════════════════════════════════════════════════════════
     // ⚠️ A REPLAYED REQUEST RETURNS THE INVOICE IT ALREADY CREATED.
     //
@@ -793,44 +810,6 @@ export class InvoiceService {
     // Read AFTER a replayed request has been answered (a replay reads nothing
     // more and writes nothing), and BEFORE a number is taken: an invoice that
     // is going to be refused must not use one up.
-    const booksCurrency = await baseCurrencyOf(workspaceId)
-    const bookCurrency = data.currency || booksCurrency
-
-    // ─── ANOTHER CURRENCY NEEDS ITS RATE (13 October) ────────────────────────
-    //
-    // The ledger and the cost layers are kept in ONE currency. An invoice in
-    // another one used to be booked figure for figure — ten units of gold
-    // bought in toman entered the stock, the cost and the books as afghani.
-    // So such an invoice says what one unit of its currency was worth in the
-    // books currency that day, or it is not recorded at all.
-    const exchangeRate =
-      bookCurrency === booksCurrency ? 1 : Number((data as { exchangeRate?: number }).exchangeRate)
-    if (!(exchangeRate > 0) || !Number.isFinite(exchangeRate)) {
-      throw new ValidationError('INVOICE_EXCHANGE_RATE_REQUIRED')
-    }
-    // The rate is frozen ON the invoice (later postings read it back). A
-    // database that cannot hold it cannot take a foreign-currency invoice.
-    if (exchangeRate !== 1 && !(await this.canStoreExchangeRate())) {
-      throw new ConflictError('INVOICE_EXCHANGE_RATE_NOT_CONFIGURED')
-    }
-
-    // The till named for this invoice's cash is asked NOW. A closed till found
-    // only after the invoice was written would leave an invoice whose money
-    // was said to be taken and is in no drawer.
-    const tillCash = this.cashPaidAtCreation(data)
-    if (data.tillSessionId && tillCash > 0) {
-      await this.payments.assertTillTakes(ctx, data.tillSessionId, {
-        method: 'cash',
-        amount: tillCash,
-        currency: bookCurrency,
-        rate: exchangeRate,
-      })
-    }
-
-    // The plan's invoice ceiling — AFTER the replay check, so a sale already
-    // recorded and merely resent by an offline device is never refused.
-    await assertWithinLimit(workspaceId, 'invoices')
-
     // ═══════════════════════════════════════════════════════════════════════
     // ⚠️ THE MONEY IS DERIVED FROM THE LINES BEFORE ANYTHING IS WRITTEN.
     //
@@ -857,6 +836,64 @@ export class InvoiceService {
       taxTotal: data.taxTotal,
     })
 
+    // ⚠️ SPEED (14 Oct): these reads do not depend on each other, and each is a
+    // round trip to a database on another continent — run one after another
+    // they made a single sale take ten seconds on the live site. Together they
+    // cost one round trip. Nothing is written until every one has passed, and
+    // the invoice number is still taken only after them.
+    const [booksCurrency, , customerName, approvalOutcome] = await Promise.all([
+      baseCurrencyOf(workspaceId),
+      (async () => {
+        if (!invoiceWarehouseId) return
+        await this.assertInvoiceWarehouse(workspaceId, invoiceWarehouseId)
+        // …and be one this member's branches include. A seller of one branch does
+        // not sell off another branch's shelves by naming its warehouse.
+        await assertMayUseWarehouse(ctx, invoiceWarehouseId)
+      })(),
+      this.verifiedCustomerName(workspaceId, data.customerId ?? null),
+      // Only the DECISION — workflow instances start after the document exists.
+      this.decideApprovalRoute(ctx, money.total, {
+        type: data.type,
+        currency: data.currency,
+        customerId: data.customerId ?? null,
+      }),
+      // The plan's invoice ceiling — AFTER the replay check, so a sale already
+      // recorded and merely resent by an offline device is never refused.
+      assertWithinLimit(workspaceId, 'invoices'),
+    ])
+    const bookCurrency = data.currency || booksCurrency
+
+    // ─── ANOTHER CURRENCY NEEDS ITS RATE (13 October) ────────────────────────
+    //
+    // The ledger and the cost layers are kept in ONE currency. An invoice in
+    // another one used to be booked figure for figure — ten units of gold
+    // bought in toman entered the stock, the cost and the books as afghani.
+    // So such an invoice says what one unit of its currency was worth in the
+    // books currency that day, or it is not recorded at all.
+    const exchangeRate =
+      bookCurrency === booksCurrency ? 1 : Number((data as { exchangeRate?: number }).exchangeRate)
+    if (!(exchangeRate > 0) || !Number.isFinite(exchangeRate)) {
+      throw new ValidationError('INVOICE_EXCHANGE_RATE_REQUIRED')
+    }
+    // The rate is frozen ON the invoice (later postings read it back). A
+    // database that cannot hold it cannot take a foreign-currency invoice.
+    // The till named for this invoice's cash is asked NOW. A closed till found
+    // only after the invoice was written would leave an invoice whose money
+    // was said to be taken and is in no drawer.
+    const tillCash = this.cashPaidAtCreation(data)
+    const [canStoreRate] = await Promise.all([
+      exchangeRate !== 1 ? this.canStoreExchangeRate() : Promise.resolve(true),
+      data.tillSessionId && tillCash > 0
+        ? this.payments.assertTillTakes(ctx, data.tillSessionId, {
+            method: 'cash',
+            amount: tillCash,
+            currency: bookCurrency,
+            rate: exchangeRate,
+          })
+        : Promise.resolve(),
+    ])
+    if (!canStoreRate) throw new ConflictError('INVOICE_EXCHANGE_RATE_NOT_CONFIGURED')
+
     // ═══════════════════════════════════════════════════════════════════════
     // ⚠️ THE CUSTOMER IS VERIFIED BEFORE ANYTHING IS WRITTEN.
     //
@@ -878,20 +915,14 @@ export class InvoiceService {
     //
     // Validating first makes all of that unreachable. Nothing to compensate.
     // ═══════════════════════════════════════════════════════════════════════
-    let customerName: string | null = null
-    if (data.customerId) {
-      // The tenancy filter is the point: without it a client could attach ANY
-      // customer id to its invoice — a cross-workspace write that also leaked
-      // the other shop's customer name back through the activity feed.
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('full_name')
-        .eq('id', data.customerId)
-        .eq('workspace_id', workspaceId)
-        .maybeSingle()
-
-      if (!customer) throw new NotFoundError('Customer')
-      customerName = (customer as { full_name: string }).full_name
+    // ⚠️ AN AMOUNT OWED NEEDS SOMEBODY WHO OWES IT (14 Oct). A sale with no
+    // customer and nothing paid was accepted on the live site (INV-000084):
+    // a receivable that belongs to nobody, which no statement can show and
+    // nobody can be asked for. A cash sale with no customer is still fine —
+    // only the part left owing needs a name. Checked before anything is read
+    // or written, and before a number is used up.
+    if (!data.customerId && this.paidAtCreation(data) < money.total - 0.000001) {
+      throw new ValidationError('INVOICE_CREDIT_NEEDS_PARTY')
     }
 
     const invoiceNumber = await this.generateInvoiceNumber()
@@ -922,12 +953,6 @@ export class InvoiceService {
     // made here, with reads; the workflow instances start after the document
     // exists (startApprovalWorkflows), so a failed write leaves no approval
     // pointing at an invoice that is not there.
-    const approvalOutcome = await this.decideApprovalRoute(ctx, money.total, {
-      type: data.type,
-      currency: data.currency,
-      customerId: data.customerId ?? null,
-    })
-
     /** Held for approval: the goods must not move until somebody says so. */
     let isHeld = !mayPostDocument(approvalOutcome)
 
@@ -1066,6 +1091,14 @@ export class InvoiceService {
         throw new IdempotencyUnavailableError('invoice')
       }
     }
+    // A line naming a product (or customer) that no longer exists — a draft
+    // kept on the device after the record was deleted — is the client's
+    // mistake to correct, not a server failure.
+    if (invoiceError?.code === '23503') {
+      throw new ValidationError(
+        'INVOICE_REFERENCE_MISSING: a product or party on this invoice no longer exists',
+      )
+    }
     if (invoiceError) throw new DatabaseError('Failed to create invoice', invoiceError)
 
     const invoice = {
@@ -1097,12 +1130,18 @@ export class InvoiceService {
     }
 
     // ─── ✅ ایجاد نوتیفیکیشن ──────────────────────────────────────────────
-    try {
-      console.log(
-        `[InvoiceService] Creating notification for invoice ${invoice.id} with workspaceId: ${workspaceId}`,
-      )
-
-      await this.notificationService.create(workspaceId, {
+    //
+    // ⚠️ NOT AWAITED: a notification never holds up the sale it reports, and
+    // its failure never fails it (CLAUDE.md — notifications cannot undo a
+    // write).
+    //
+    // ⚠️ ONE notification. A second one used to go to `customers.user_id` as
+    // «صورت‌حساب جدید برای شما» — but that column records WHO CREATED the
+    // customer, not a customer's own account, so every invoice notified the
+    // person who raised it twice (seen live, 14 Oct). A customer with no
+    // account gets nothing (§12: no guessed recipient).
+    void this.notificationService
+      .create(workspaceId, {
         user_id: userId,
         title: '✅ صورت‌حساب جدید ایجاد شد',
         body: `صورت‌حساب شماره ${invoice.invoice_number} با مبلغ ${invoice.total} ${invoice.currency} ثبت شد.`,
@@ -1117,40 +1156,9 @@ export class InvoiceService {
           customer_name: customerName,
         },
       })
-
-      if (data.customerId) {
-        const { data: customer, error: customerError } = await supabase
-          .from('customers')
-          .select('user_id')
-          .eq('id', data.customerId)
-          .eq('workspace_id', workspaceId)
-          .maybeSingle()
-
-        if (customerError) {
-          console.error('Failed to fetch customer for notification:', customerError)
-        }
-
-        if (customer?.user_id) {
-          await this.notificationService.create(workspaceId, {
-            user_id: customer.user_id,
-            title: '📄 صورت‌حساب جدید برای شما',
-            body: `یک صورت‌حساب جدید به مبلغ ${invoice.total} ${invoice.currency} برای شما ثبت شده است.`,
-            type: 'info',
-            entity_type: 'invoice',
-            entity_id: invoice.id,
-            action_url: `/invoices/${invoice.id}`,
-            metadata: {
-              invoice_number: invoice.invoice_number,
-              total: invoice.total,
-              currency: invoice.currency,
-              customer_name: customerName,
-            },
-          })
-        }
-      }
-    } catch (notifError) {
-      console.error('[InvoiceService] Failed to create notification:', notifError)
-    }
+      .catch((notifError: unknown) =>
+        console.error('[InvoiceService] Failed to create notification:', notifError),
+      )
 
     // ─── پس‌زمینه ──────────────────────────────────────────────────────────
     this.invalidateWorkspaceCache(workspaceId)
@@ -1291,6 +1299,16 @@ export class InvoiceService {
    * nobody can account for.
    */
   /** What of this invoice is being paid in CASH as it is created. */
+  /** What is settled at creation, in the invoice's currency; «نسیه» is not settled. */
+  private paidAtCreation(data: CreateInvoice): number {
+    if (data.payments && data.payments.length > 0) {
+      return data.payments
+        .filter((payment) => payment.method !== 'credit')
+        .reduce((sum, payment) => sum + payment.amount, 0)
+    }
+    return (data.paymentMethod ?? 'cash') === 'credit' ? 0 : (data.paidAmount ?? 0)
+  }
+
   private cashPaidAtCreation(data: CreateInvoice): number {
     if (data.payments && data.payments.length > 0) {
       return data.payments

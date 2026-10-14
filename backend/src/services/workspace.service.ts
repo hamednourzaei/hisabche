@@ -324,7 +324,28 @@ export class WorkspaceService {
       }
     }
 
-    const result = rows.map((r) => ({ ...r, full_name: names.get(r.user_id) ?? null }))
+    // ⚠️ A MISSING PROFILE IS NOT A MISSING NAME (live audit #22, 14 Oct). On
+    // the live database `profiles` was empty and both members read «Unknown»,
+    // while settings — through /auth/me — showed the owner's name from the
+    // account itself. The same fallback here, and only for the members the
+    // profiles did not name: a handful of reads, in parallel.
+    const emails = new Map<string, string>()
+    const unnamed = userIds.filter((id) => !names.has(id))
+    await Promise.all(
+      unnamed.map(async (id) => {
+        const { data: account, error: accountError } = await supabase.auth.admin.getUserById(id)
+        if (accountError || !account?.user) return
+        const metaName = (account.user.user_metadata as { full_name?: unknown } | null)?.full_name
+        if (typeof metaName === 'string' && metaName.trim()) names.set(id, metaName.trim())
+        if (account.user.email) emails.set(id, account.user.email)
+      }),
+    )
+
+    const result = rows.map((r) => ({
+      ...r,
+      full_name: names.get(r.user_id) ?? null,
+      email: emails.get(r.user_id) ?? null,
+    }))
     await memoryCache.set(cacheKey, result, 60) // 1 minute
     return result
   }

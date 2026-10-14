@@ -121,10 +121,16 @@ function changedFields(
   return changes
 }
 
-const show = (value: unknown): string => {
+/**
+ * A recorded value as a person reads it. Words the app itself writes
+ * (`sale`, `issued`, `created`…) have a label; anything else — a name, a
+ * number, an invoice number — is shown as it was stored.
+ */
+const show = (value: unknown, t: (key: string, fallback?: string) => string): string => {
   if (value === null || value === undefined) return '—'
   if (typeof value === 'object') return JSON.stringify(value)
-  return String(value)
+  const text = String(value)
+  return /^[a-z_]+$/.test(text) ? t(`audit.values.${text}`, text) : text
 }
 
 const AuditDetailRow = memo(function AuditDetailRow({
@@ -156,14 +162,14 @@ const AuditDetailRow = memo(function AuditDetailRow({
       <tbody>
         {changes.map((change) => (
           <tr key={change.key} className="border-t border-[hsl(var(--border-default)/0.4)]">
-            <td className="px-4 py-1.5 font-mono text-xs text-[hsl(var(--fg-secondary))]">
-              {change.key}
+            <td className="px-4 py-1.5 text-xs text-[hsl(var(--fg-secondary))]">
+              {t(`audit.fields.${change.key}`, change.key)}
             </td>
             <td className="px-4 py-1.5 text-[hsl(var(--fg-tertiary))] line-through">
-              {show(change.from)}
+              {show(change.from, t)}
             </td>
             <td className="px-4 py-1.5 font-medium text-[hsl(var(--fg-primary))]">
-              {show(change.to)}
+              {show(change.to, t)}
             </td>
           </tr>
         ))}

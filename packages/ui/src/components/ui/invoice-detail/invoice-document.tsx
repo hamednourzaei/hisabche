@@ -621,7 +621,8 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
 
           {/* Footer */}
           <div className="mt-8 border-t border-[hsl(var(--border-default))] pt-4 text-center text-sm text-[hsl(var(--fg-secondary))]">
-            <p>{t('invoices.thankYou', 'از خرید شما سپاسگزاریم')}</p>
+            {/* On a purchase we are the buyer: thanking the reader for buying is wrong. */}
+            {isPurchase ? null : <p>{t('invoices.thankYou', 'از خرید شما سپاسگزاریم')}</p>}
             <p className="mt-1 text-xs">
               {t('invoices.generatedBy', 'ایجاد شده توسط')} Hisabche — hisabche.com
             </p>

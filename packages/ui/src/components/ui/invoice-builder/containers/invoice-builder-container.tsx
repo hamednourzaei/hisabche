@@ -26,7 +26,11 @@ import { InvoiceBranchSelect } from '../invoice-branch-select'
 import { BarcodeScanDialog, type ScanProblem } from '../barcode-scan-dialog'
 import { CameraScanButton } from '../camera-scan-button'
 import { InvoiceExchangeRate } from '../invoice-exchange-rate'
-import { needsExchangeRate } from '../../../../lib/invoices/exchange-rate'
+import {
+  exchangeRateOf,
+  needsExchangeRate,
+  priceForInvoice,
+} from '../../../../lib/invoices/exchange-rate'
 import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import {
   loadScaleLabelConfig,
@@ -47,6 +51,10 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   const { t, locale, currency, ctx, summary, invalidRowIds, issues, items } = useInvoiceDraft()
 
   const draft = useInvoiceDraftStore()
+  const bookCurrency = useBookCurrency()
+  // A product's price is in the books currency; on an invoice in another one it
+  // is converted at this invoice's rate, or left empty (priceForInvoice).
+  const lineRate = exchangeRateOf(draft.exchangeRateFrom, draft.exchangeRateTo)
   const setPrimaryCurrency = useCurrencyStore((s) => s.setPrimaryCurrency)
   const [savingDraft, setSavingDraft] = useState(false)
 
@@ -73,10 +81,15 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   // stock — both are legitimate invoice lines.
   const handlePickProduct = useCallback(
     (rowId: string, product: { id: string; name: string; price: string; unit: string }) => {
-      draft.setRowProduct(rowId, product.id, product.name, product.price)
+      draft.setRowProduct(
+        rowId,
+        product.id,
+        product.name,
+        priceForInvoice(product.price, currency, bookCurrency, lineRate),
+      )
       draft.setCell(rowId, COLUMN.unit, product.unit || 'piece')
     },
-    [draft],
+    [draft, currency, bookCurrency, lineRate],
   )
 
   // ─── Barcode scanner → invoice line ──────────────────────────────────────
@@ -91,8 +104,11 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
       // No id → nothing to link stock to; never a line that moves nothing.
       if (!product.id) return
       const unit = product.unit || 'piece'
-      const price = String(
-        (draft.transactionType === 'purchase' ? product.buyPrice : product.sellPrice) ?? '',
+      const price = priceForInvoice(
+        String((draft.transactionType === 'purchase' ? product.buyPrice : product.sellPrice) ?? ''),
+        currency,
+        bookCurrency,
+        lineRate,
       )
       // Read the store at the moment of the scan: two scans a few ms apart
       // must see each other's line, not the same render's snapshot.
@@ -112,7 +128,7 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
       draft.setCell(rowId, COLUMN.unit, unit)
       if (add !== 1) draft.setCell(rowId, COLUMN.quantity, String(add))
     },
-    [draft],
+    [draft, currency, bookCurrency, lineRate],
   )
 
   // A scale label's weight (or price ÷ unit price) is the quantity; an
@@ -190,7 +206,6 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   // A NEW invoice starts in the currency the books are kept in (the one chosen
   // when the business was set up) — not in whatever the last invoice used.
   // Only an untouched draft is moved: one being written keeps its currency.
-  const bookCurrency = useBookCurrency()
   const startedInBooks = useRef(false)
   useEffect(() => {
     if (startedInBooks.current || !bookCurrency) return
@@ -200,8 +215,36 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
       draft.rows.every(
         (row) => !row.productId && Object.values(row.values).every((value) => !value),
       )
-    if (untouched && currency !== bookCurrency) handleCurrencyChange(bookCurrency as CurrencyCode)
-  }, [bookCurrency, currency, draft.customers.length, draft.rows, handleCurrencyChange])
+    if (!untouched) return
+    if (currency !== bookCurrency) {
+      handleCurrencyChange(bookCurrency as CurrencyCode)
+      return
+    }
+    // ⚠️ The columns too (live audit #78, 14 Oct). They are saved with the
+    // draft and carry their own currency; a new afghani invoice opened with
+    // «دالر» headers left by an earlier dollar one, and every such column
+    // counted as deliberately pinned to dollars — which raised the second,
+    // contradicting rate box (#68). A NEW draft has pinned nothing yet.
+    if (
+      draft.columns.some(
+        (column) =>
+          (column.type === 'currency' || column.type === 'computed') &&
+          column.currency !== bookCurrency,
+      )
+    ) {
+      draft.setColumns(
+        draft.columns.map((column) =>
+          column.type === 'currency' || column.type === 'computed'
+            ? {
+                ...column,
+                currency: bookCurrency as CurrencyCode,
+                precision: currencyPrecision(bookCurrency as CurrencyCode),
+              }
+            : column,
+        ),
+      )
+    }
+  }, [bookCurrency, currency, draft, draft.customers.length, draft.rows, handleCurrencyChange])
 
   const handleSaveDraft = useCallback(() => {
     // The draft store is already persisted on every keystroke, so "save" is

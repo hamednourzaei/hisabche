@@ -34,3 +34,19 @@ export const STATUS_MAP: Record<string, 'success' | 'warning' | 'destructive' | 
   partial: 'secondary',
   cancelled: 'destructive',
 }
+
+/**
+ * The status a person reads. The server writes `pending` for every invoice
+ * not fully paid, so a 10,000 invoice with 7,000 received read «پرداخت‌نشده»
+ * on the live site (14 Oct). Part-paid is said as part-paid; the stored value
+ * is not changed.
+ */
+export function displayedInvoiceStatus(
+  status: string,
+  paidAmount: number | null | undefined,
+  total: number | null | undefined,
+): string {
+  const paid = Number(paidAmount) || 0
+  const owed = Number(total) || 0
+  return status === 'pending' && paid > 0 && paid < owed ? 'partial' : status
+}

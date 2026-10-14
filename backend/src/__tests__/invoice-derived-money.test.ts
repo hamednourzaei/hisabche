@@ -226,7 +226,9 @@ describe('nothing is compensated with a DELETE', () => {
   })
 
   it('⚠️ the customer is verified before the invoice row exists', () => {
-    const check = createBody.indexOf("from('customers')")
+    // Read in the parallel pre-write group (14 Oct) — still awaited before
+    // the document is written.
+    const check = createBody.indexOf('this.verifiedCustomerName(workspaceId, data.customerId')
     const insert = createBody.indexOf('this.writeInvoiceDocument(')
     expect(check).toBeGreaterThan(-1)
     expect(insert).toBeGreaterThan(-1)
@@ -236,8 +238,11 @@ describe('nothing is compensated with a DELETE', () => {
   it('the customer lookup is scoped to the workspace', () => {
     // Without it a client could attach any customer id to its invoice — a
     // cross-workspace write that also leaked the other shop's customer name.
-    const check = createBody.slice(createBody.indexOf("from('customers')"))
+    const helper = source.slice(source.indexOf('private async verifiedCustomerName('))
+    const check = helper.slice(helper.indexOf("from('customers')"))
     expect(check.slice(0, 300)).toMatch(/\.eq\('workspace_id', workspaceId\)/)
+    // …and a miss is a refusal, not a sale without a customer.
+    expect(helper.slice(0, 900)).toContain("if (!customer) throw new NotFoundError('Customer')")
   })
 
   it('a failed items insert says what state was left behind', () => {

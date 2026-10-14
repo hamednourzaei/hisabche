@@ -161,7 +161,7 @@ describe('customer debt report', () => {
 })
 
 describe('dashboard mapping', () => {
-  it('sums across currencies for the flat fields and flags mixed currency', () => {
+  it('keeps the headline in the books currency, the rest per currency, and flags mixed currency', () => {
     const row = (currency: string, v: number) => ({
       currency,
       total_sales: v,
@@ -176,15 +176,22 @@ describe('dashboard mapping', () => {
       pending_payments_count: 0,
       purchase_count: 0,
     })
-    const out = dashboardKpisFromAggregate({
-      currencies: [row('AFN', 100), row('USD', 10)],
-      active_customers: 3,
-      low_stock_alerts: 1,
-      warehouse_value: 12.345,
-    })
-    expect(out.totalSales).toBe(110)
+    const out = dashboardKpisFromAggregate(
+      {
+        currencies: [row('AFN', 100), row('USD', 10)],
+        active_customers: 3,
+        low_stock_alerts: 1,
+        warehouse_value: 12.345,
+      },
+      'AFN',
+    )
+    // ⚠️ The headline is the books currency only: 100 AFN, not 100 + 10 USD.
+    // It used to be 110 — dollars added to afghani as if they were afghani
+    // (the live dashboard showed 12,820 for 12,740 AFN + 80 USD, 14 Oct).
+    expect(out.totalSales).toBe(100)
+    expect(out.customerDebt).toBe(50)
     expect(out.monthlyGrowth).toBe(100)
-    expect(out.todayInvoices).toBe(2)
+    expect(out.todayInvoices).toBe(1)
     expect(out.mixedCurrency).toBe(true)
     expect(out.byCurrency.USD?.customerDebt).toBe(5)
     expect(out.warehouseValue).toBe(12.35)

@@ -130,7 +130,11 @@ describe('InvoiceService.create — another currency', () => {
   it('an invoice in the books currency needs no rate and never asks whether one can be kept', async () => {
     const { InvoiceService } = await import('../services/invoice.service')
     rateColumn = 'missing'
-    const attempt = new InvoiceService().create(ctx, purchase({ currency: 'AFN' }))
+    // Paid: a purchase owing money with no supplier is refused first (14 Oct).
+    const attempt = new InvoiceService().create(
+      ctx,
+      purchase({ currency: 'AFN', paidAmount: 10_000, paymentMethod: 'cash' }),
+    )
     // It goes on to be written (this database then has nothing to read back);
     // what matters is that neither refusal is the reason it stops.
     await attempt.catch((error: Error) => {
@@ -190,5 +194,37 @@ describe('what the rate is used for', () => {
     expect(service).toContain(
       '? { exchangeRate: Number((data as { exchangeRate?: number }).exchangeRate) }',
     )
+  })
+})
+
+describe('an amount owed needs somebody who owes it (live audit, 14 Oct)', () => {
+  it('⚠️ an unpaid invoice with no party is refused — and nothing is written, not even a number', async () => {
+    // INV-000084 on the live site: a sale with no customer, nothing paid —
+    // a receivable that belongs to nobody.
+    const { InvoiceService } = await import('../services/invoice.service')
+    await expect(new InvoiceService().create(ctx, purchase({ currency: 'AFN' }))).rejects.toThrow(
+      'INVOICE_CREDIT_NEEDS_PARTY',
+    )
+    expect(writes).toEqual([])
+  })
+
+  it('«نسیه» counts as owing; a part paid in cash does not cover the rest', async () => {
+    const { InvoiceService } = await import('../services/invoice.service')
+    for (const over of [
+      { paymentMethod: 'credit', paidAmount: 10_000 },
+      {
+        payments: [
+          { method: 'cash', amount: 4_000 },
+          { method: 'credit', amount: 6_000 },
+        ],
+      },
+      { paidAmount: 9_999, paymentMethod: 'cash' },
+    ]) {
+      writes.length = 0
+      await expect(
+        new InvoiceService().create(ctx, purchase({ currency: 'AFN', ...over })),
+      ).rejects.toThrow('INVOICE_CREDIT_NEEDS_PARTY')
+      expect(writes).toEqual([])
+    }
   })
 })

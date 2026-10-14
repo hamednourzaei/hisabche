@@ -30,7 +30,6 @@ const AssistantPage = lazy(() => import('@/features/ai/assistant-page'))
 const OperationsPage = lazy(() => import('@/features/inventory-ops/operations-page'))
 const StockCountPage = lazy(() => import('@/features/cycle-count/stock-count-page'))
 const InvoicesPage = lazy(() => import('@/features/sales/invoices-page'))
-const QuickInvoicePage = lazy(() => import('@/features/sales/quick-invoice-page'))
 const InvoiceDetailPage = lazy(() => import('@/features/sales/invoice-detail-page'))
 const InvoiceBuilderPage = lazy(() => import('@/features/sales/invoice-builder-page'))
 const InvoicePreviewPage = lazy(() => import('@/features/sales/invoice-preview-page'))
@@ -106,7 +105,6 @@ const router = createHashRouter([
       { path: 'invoices/new', element: <InvoiceBuilderPage /> },
       { path: 'invoices/new/preview', element: <InvoicePreviewPage /> },
       { path: 'invoices/:id', element: <InvoiceDetailPage /> },
-      { path: 'quick-invoice', element: <QuickInvoicePage /> },
 
       { path: 'warehouse', element: <ProductsPage /> },
       { path: 'warehouse/:id', element: <ProductDetailPage /> },
@@ -147,7 +145,7 @@ const router = createHashRouter([
       // shortcuts users already have keep working rather than bouncing to the
       // dashboard and losing the record they were opening.
       { path: 'sales', element: <Navigate to="/invoices" replace /> },
-      { path: 'sales/new', element: <Navigate to="/quick-invoice" replace /> },
+      { path: 'sales/new', element: <Navigate to="/invoices/new" replace /> },
       { path: 'sales/:id', element: <LegacyInvoiceRedirect /> },
       { path: 'inventory', element: <Navigate to="/warehouse" replace /> },
       { path: 'sync', element: <Navigate to="/sync-center" replace /> },
@@ -156,6 +154,8 @@ const router = createHashRouter([
 
       // Pages that became a tab or a section of the page holding the same data.
       // The same pairs as the web redirects in next.config.js.
+      // A second invoice form beside /invoices/new — removed (live audit #67).
+      { path: 'quick-invoice', element: <Navigate to="/invoices/new" replace /> },
       { path: 'crm', element: <Navigate to="/customers?tab=outreach" replace /> },
       { path: 'sales-followup', element: <Navigate to="/customers?tab=outreach" replace /> },
       { path: 'tasks', element: <Navigate to="/customers?tab=outreach" replace /> },

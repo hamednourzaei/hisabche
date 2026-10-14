@@ -13,7 +13,7 @@
 // ============================================
 
 import { useMemo, useState } from 'react'
-import { useOpenSessions } from '@hisabche/api'
+import { useOpenSessions, useTillLabels } from '@hisabche/api'
 
 import { keptTill, onlyTill, tillChoices, type TillChoice } from '../lib/till/till-choices'
 import { useBookCurrency } from './use-book-currency'
@@ -31,13 +31,24 @@ export interface TillChoiceState {
 
 export function useTillChoice(currency: string | undefined): TillChoiceState {
   const open = useOpenSessions()
+  // ⚠️ The name lives apart from the session row (its own read), so the open
+  // list alone called every till «صندوق بی‌نام» — seen live on 14 Oct.
+  const names = useTillLabels()
   const bookCurrency = useBookCurrency()
   // null = the person has not chosen; '' = they chose «no till».
   const [picked, setPicked] = useState<string | null>(null)
 
   const choices = useMemo(
-    () => tillChoices(open.data ?? [], currency, bookCurrency),
-    [open.data, currency, bookCurrency],
+    () =>
+      tillChoices(
+        (open.data ?? []).map((till) => ({
+          ...till,
+          label: till.label || names.data?.labels[till.sessionId] || null,
+        })),
+        currency,
+        bookCurrency,
+      ),
+    [open.data, names.data, currency, bookCurrency],
   )
 
   return {

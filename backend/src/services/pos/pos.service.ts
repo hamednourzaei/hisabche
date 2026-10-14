@@ -38,6 +38,7 @@ import {
   type PosSession,
   type SessionTotals,
 } from './pos.domain'
+import { majorToTillMinor, tillMinorToMajor } from '../payments/payments.domain'
 
 // The columns finance-gaps-migration created. Everything `mapSession` reads.
 const SESSION_COLUMNS =
@@ -414,7 +415,7 @@ export class PosService {
         paymentNumber: row.payment_number ?? '',
         direction: row.direction === 'out' ? ('out' as const) : ('in' as const),
         // payments.amount is major units (numeric); the drawer counts minor.
-        amountMinor: Math.round((Number(row.amount) || 0) * 100),
+        amountMinor: majorToTillMinor(Number(row.amount) || 0, sessionCurrency),
         createdAt: row.created_at,
       }))
   }
@@ -822,7 +823,10 @@ export class PosService {
       throw new ValidationError(`POS_TRANSFER_ACCOUNTS_MISSING: ${missing.join(', ')}`)
     }
 
-    const amount = input.amountMinor / 100
+    const amount = tillMinorToMajor(
+      input.amountMinor,
+      session.currency ?? (await baseCurrencyOf(ctx.workspaceId)),
+    )
     const toBank = input.direction === 'to_bank'
     const outcome = await ledger.postDocument(ctx, {
       sourceType: 'till_transfer',
@@ -938,7 +942,7 @@ export class PosService {
     const capitalAccount = resolved.accounts.owner_capital
     if (!assetAccount || !capitalAccount) throw new ConflictError('OPENING_CAPITAL_NOT_CONFIGURED')
 
-    const amount = input.amountMinor / 100
+    const amount = tillMinorToMajor(input.amountMinor, await baseCurrencyOf(ctx.workspaceId))
     const outcome = await ledger.postDocument(ctx, {
       sourceType: 'opening_capital',
       sourceId: input.entryId,
@@ -1096,6 +1100,8 @@ export class PosService {
     totals: SessionTotals,
   ): Promise<boolean> {
     const posting = buildPosting(session, totals)
+    const tillCurrency = session.currency ?? (await baseCurrencyOf(ctx.workspaceId))
+    const major = (amountMinor: number) => tillMinorToMajor(amountMinor, tillCurrency)
 
     // `bank` is asked for alongside the rest because card and transfer takings
     // are money the shop has, and cash is not where it sits.
@@ -1127,8 +1133,8 @@ export class PosService {
     }
 
     const lines = [
-      { accountId: accounts.cash!, debit: posting.cashMinor / 100, credit: 0 },
-      { accountId: accounts.sales!, debit: 0, credit: posting.revenueMinor / 100 },
+      { accountId: accounts.cash!, debit: major(posting.cashMinor), credit: 0 },
+      { accountId: accounts.sales!, debit: 0, credit: major(posting.revenueMinor) },
     ]
 
     // Card and transfer takings.
@@ -1143,11 +1149,11 @@ export class PosService {
     // Debited to BANK, not to cash: the money exists but is not in the drawer,
     // and putting it in cash would make every count look short by that amount.
     if (cardAndTransferMinor > 0) {
-      lines.push({ accountId: accounts.bank!, debit: cardAndTransferMinor / 100, credit: 0 })
+      lines.push({ accountId: accounts.bank!, debit: major(cardAndTransferMinor), credit: 0 })
     }
 
     if (posting.creditMinor > 0) {
-      lines.push({ accountId: accounts.receivable!, debit: posting.creditMinor / 100, credit: 0 })
+      lines.push({ accountId: accounts.receivable!, debit: major(posting.creditMinor), credit: 0 })
     }
 
     // Cash put in or taken out during the session.
@@ -1165,7 +1171,7 @@ export class PosService {
     // role would name it better, and until there is one this is the honest
     // approximation rather than a silent imbalance.
     if (posting.movementsMinor !== 0) {
-      const amount = Math.abs(posting.movementsMinor) / 100
+      const amount = major(Math.abs(posting.movementsMinor))
 
       lines.push(
         posting.movementsMinor < 0
@@ -1180,7 +1186,7 @@ export class PosService {
     // produces an unbalanced posting that the ledger correctly refuses — which
     // is how the shortage would come to light as a crash instead of a figure.
     if (posting.varianceMinor !== 0) {
-      const amount = Math.abs(posting.varianceMinor) / 100
+      const amount = major(Math.abs(posting.varianceMinor))
       lines.push(
         posting.varianceMinor < 0
           ? { accountId: accounts.sales!, debit: amount, credit: 0 }
@@ -1311,7 +1317,9 @@ export class PosService {
     const events: CashEvent[] = [
       ...filteredPayments.map((p) => ({
         at: p.created_at,
-        amountMinor: (p.direction === 'out' ? -1 : 1) * Math.round((Number(p.amount) || 0) * 100),
+        amountMinor:
+          (p.direction === 'out' ? -1 : 1) *
+          majorToTillMinor(Number(p.amount) || 0, p.currency ?? booksCurrency),
       })),
       ...filteredMovements.map((m) => ({
         at: m.created_at,
