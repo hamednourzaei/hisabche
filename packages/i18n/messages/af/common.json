@@ -1993,6 +1993,8 @@
     "saveFailed": "ذخیره نشد. دوباره کوشش کنید.",
     "noProductsInWarehouse": "جنسی در این گدام نیست؛ موجودی بدون گدام را اضافه کنید یا بل خرید با این گدام ثبت کنید",
     "name": "نام جنس",
+    "totalBuyValue": "ارزش کل خرید",
+    "totalSellValue": "ارزش کل فروش",
     "totalValue": "ارزش کل (AFN)",
     "actions": "عملیات",
     "editWarehouse": "ویرایش گدام",
@@ -2034,6 +2036,7 @@
     "unitFactor": "هر ۱ واحد برابر است با",
     "unitFactorInvalid": "نام و ضریب تبدیل واحد را درست وارد کنید.",
     "currentStock": "موجودی فعلی",
+    "stockPosition": "موقعیت در گدام",
     "profitPerUnit": "سود هر واحد",
     "totalProfit": "سود کل موجودی",
     "amountLabel": "مقدار",
@@ -2088,6 +2091,11 @@
     "movementsHint": "هر خرید، فروش، انتقال، تولید و تعدیلِ این جنس، با موجودی پس از آن.",
     "movementsFailed": "تاریخچه‌ی موجودی خوانده نشد.",
     "movementsGap": "جمع این حرکت‌ها با موجودی ثبت‌شده یکی نیست؛ ممکن است حرکت‌های قدیمی‌تر در این فهرست نباشند.",
+    "movementsNoMatch": "چیزی با این جستجو پیدا نشد.",
+    "direction": "جهت",
+    "exportExcel": "Excel",
+    "exportMarkdown": "Markdown",
+    "exportNote": "یادداشت",
     "movementIn": "افزایش",
     "movementOut": "کاهش",
     "movementType": {
@@ -2100,7 +2108,19 @@
     },
     "categoryAdd": "دسته‌بندی تازه",
     "categoryNewPlaceholder": "مثلاً شال، دستبند، پرزه‌جات",
-    "categoryFilter": "دسته‌بندی"
+    "categoryFilter": "دسته‌بندی",
+    "shelves": {
+      "none": "روی هیچ قفسه‌ای ثبت نشده",
+      "unplaced": "بدون قفسه",
+      "change": "تغییر موقعیت",
+      "changeHint": "فقط جای جنس روی قفسه عوض می‌شود؛ موجودی گدام تغییر نمی‌کند.",
+      "from": "از",
+      "to": "به قفسه",
+      "pick": "انتخاب قفسه",
+      "confirm": "ثبت موقعیت",
+      "moved": "موقعیت جنس تغییر کرد",
+      "moveFailed": "تغییر موقعیت انجام نشد"
+    }
   },
   "customers": {
     "title": "مشتری‌ها",

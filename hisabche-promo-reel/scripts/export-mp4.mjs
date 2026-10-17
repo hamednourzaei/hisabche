@@ -8,11 +8,13 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { createServer } from 'vite'
 import puppeteer from 'puppeteer'
 import { findVoiceoverFile } from './align-voiceover.mjs'
+import { designSoundtrack } from './sound-design.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -54,206 +56,6 @@ function getFFmpegExecutablePath() {
   }
 
   return null
-}
-
-// ─── Deterministic PCM/WAV Audio Synthesizer ─────────────────────────────────
-
-function generateWavBuffer(cues, duration) {
-  const sampleRate = 44100
-  const totalSamples = Math.ceil(duration * sampleRate)
-  const buffer = new Float32Array(totalSamples)
-
-  // Deterministic noise generator
-  function makeNoise(lengthSamples) {
-    const noise = new Float32Array(lengthSamples)
-    for (let i = 0; i < lengthSamples; i++) {
-      const pseudo = (((i * 374761393) ^ (i * 668265263)) & 0xffff) / 0x7fff - 1
-      noise[i] = pseudo
-    }
-    return noise
-  }
-
-  // Synthesize each cue deterministically
-  for (const cue of cues) {
-    const startSample = Math.floor(cue.at * sampleRate)
-    if (startSample >= totalSamples) continue
-
-    switch (cue.kind) {
-      case 'pop': {
-        const len = Math.floor(0.08 * sampleRate)
-        for (let i = 0; i < len && startSample + i < totalSamples; i++) {
-          const t = i / sampleRate
-          const env = Math.exp(-t * 45)
-          const freq = 800 - t * 7500
-          const s = Math.sin(2 * Math.PI * Math.max(120, freq) * t) * env * 0.4
-          buffer[startSample + i] += s
-        }
-        break
-      }
-
-      case 'tick': {
-        const len = Math.floor(0.015 * sampleRate)
-        for (let i = 0; i < len && startSample + i < totalSamples; i++) {
-          const t = i / sampleRate
-          const env = Math.exp(-t * 220)
-          const s = Math.sin(2 * Math.PI * 1400 * t) * env * 0.35
-          buffer[startSample + i] += s
-        }
-        break
-      }
-
-      case 'cardEnter': {
-        const len = Math.floor(0.09 * sampleRate)
-        for (let i = 0; i < len && startSample + i < totalSamples; i++) {
-          const t = i / sampleRate
-          const env = Math.exp(-t * 40)
-          const freq = 180 - t * 1400
-          const s = Math.sin(2 * Math.PI * Math.max(50, freq) * t) * env * 0.55
-          buffer[startSample + i] += s
-        }
-        break
-      }
-
-      case 'alert': {
-        const len = Math.floor(0.16 * sampleRate)
-        for (let i = 0; i < len && startSample + i < totalSamples; i++) {
-          const t = i / sampleRate
-          const env = Math.exp(-t * 20)
-          const s =
-            (Math.sin(2 * Math.PI * 880 * t) + 0.5 * Math.sin(2 * Math.PI * 1100 * t)) * env * 0.35
-          buffer[startSample + i] += s
-        }
-        break
-      }
-
-      case 'whoosh': {
-        const len = Math.floor(0.28 * sampleRate)
-        const rawNoise = makeNoise(len)
-        // 1-pole low-pass filter at ~380Hz for warm organic air displacement (eliminates harsh static buzz)
-        let filtered = 0
-        const alpha = (2 * Math.PI * 380) / sampleRate
-        for (let i = 0; i < len && startSample + i < totalSamples; i++) {
-          filtered += alpha * (rawNoise[i] - filtered)
-          const prog = i / len
-          const env = Math.sin(Math.PI * prog) * 0.4
-          const airRumble = Math.sin(2 * Math.PI * (120 - prog * 40) * (i / sampleRate)) * 0.15
-          buffer[startSample + i] += (filtered * 1.8 + airRumble) * env
-        }
-        break
-      }
-
-      case 'impact': {
-        // Physical rubber-stamp impact thud: 55Hz sub-punch + tactile wood slap
-        const len = Math.floor(0.42 * sampleRate)
-        let woodFilter = 0
-        const woodAlpha = (2 * Math.PI * 650) / sampleRate
-        for (let i = 0; i < len && startSample + i < totalSamples; i++) {
-          const t = i / sampleRate
-          const subEnv = Math.exp(-t * 14)
-          const sub = Math.sin(2 * Math.PI * Math.max(45, 58 - t * 30) * t) * 0.65 * subEnv
-          const slapEnv = Math.exp(-t * 55)
-          const noiseSample = Math.random() * 2 - 1
-          woodFilter += woodAlpha * (noiseSample - woodFilter)
-          const slap = woodFilter * slapEnv * 0.4
-          buffer[startSample + i] += sub + slap
-        }
-        break
-      }
-
-      case 'success':
-      case 'chime': {
-        const len = Math.floor(0.55 * sampleRate)
-        // Warm muted acoustic triads (E4, G4, B4 ~ 329.63, 392.00, 493.88)
-        const freqs = [329.63, 392.0, 493.88]
-        for (let i = 0; i < len && startSample + i < totalSamples; i++) {
-          const t = i / sampleRate
-          const env = Math.exp(-t * 6.5)
-          let s = 0
-          for (let f = 0; f < freqs.length; f++) {
-            s += Math.sin(2 * Math.PI * freqs[f] * t) * (0.12 / (f + 1))
-          }
-          buffer[startSample + i] += s * env
-        }
-        break
-      }
-
-      case 'cash': {
-        const len = Math.floor(0.25 * sampleRate)
-        for (let i = 0; i < len && startSample + i < totalSamples; i++) {
-          const t = i / sampleRate
-          const env = Math.exp(-t * 25)
-          const s =
-            (Math.sin(2 * Math.PI * 1320 * t) + 0.6 * Math.sin(2 * Math.PI * 2640 * t)) * env * 0.35
-          buffer[startSample + i] += s
-        }
-        break
-      }
-
-      case 'titleHit':
-      case 'cinematicReveal': {
-        const len = Math.floor(0.5 * sampleRate)
-        for (let i = 0; i < len && startSample + i < totalSamples; i++) {
-          const t = i / sampleRate
-          const env = Math.exp(-t * 9)
-          const sub = Math.sin(2 * Math.PI * (70 - t * 40) * t) * 0.55
-          buffer[startSample + i] += sub * env
-        }
-        break
-      }
-
-      default: {
-        const len = Math.floor(0.06 * sampleRate)
-        for (let i = 0; i < len && startSample + i < totalSamples; i++) {
-          const t = i / sampleRate
-          const env = Math.exp(-t * 50)
-          const s = Math.sin(2 * Math.PI * 520 * t) * env * 0.3
-          buffer[startSample + i] += s
-        }
-        break
-      }
-    }
-  }
-
-  // Master soft limiter & clamp
-  for (let i = 0; i < totalSamples; i++) {
-    const val = buffer[i]
-    if (val > 0.95) buffer[i] = 0.95
-    else if (val < -0.95) buffer[i] = -0.95
-  }
-
-  // Encode to 16-bit PCM RIFF WAV
-  const dataSize = totalSamples * 2
-  const wavBuffer = Buffer.alloc(44 + dataSize)
-
-  // RIFF header
-  wavBuffer.write('RIFF', 0)
-  wavBuffer.writeUInt32LE(36 + dataSize, 4)
-  wavBuffer.write('WAVE', 8)
-
-  // fmt chunk
-  wavBuffer.write('fmt ', 12)
-  wavBuffer.writeUInt32LE(16, 16) // Subchunk1Size (16 for PCM)
-  wavBuffer.writeUInt16LE(1, 20) // AudioFormat (1 for PCM)
-  wavBuffer.writeUInt16LE(1, 22) // NumChannels (1 = Mono)
-  wavBuffer.writeUInt32LE(sampleRate, 24) // SampleRate
-  wavBuffer.writeUInt32LE(sampleRate * 2, 28) // ByteRate
-  wavBuffer.writeUInt16LE(2, 32) // BlockAlign
-  wavBuffer.writeUInt16LE(16, 34) // BitsPerSample
-
-  // data chunk
-  wavBuffer.write('data', 36)
-  wavBuffer.writeUInt32LE(dataSize, 40)
-
-  // Write samples as 16-bit signed integers
-  let offset = 44
-  for (let i = 0; i < totalSamples; i++) {
-    const s = Math.max(-1, Math.min(1, buffer[i]))
-    const intVal = s < 0 ? s * 0x8000 : s * 0x7fff
-    wavBuffer.writeInt16LE(Math.floor(intVal), offset)
-    offset += 2
-  }
-
-  return wavBuffer
 }
 
 // ─── Main Export Pipeline ────────────────────────────────────────────────────
@@ -312,14 +114,25 @@ export async function exportReelMP4(options = {}) {
   // 3. Prepare Output Directories
   const tempExportDir = path.resolve(ROOT, '.tmp', 'export', `reel-${reel.id}`)
   const framesDir = path.resolve(tempExportDir, 'frames')
-  const exportsDir = path.resolve(ROOT, 'exports')
+  // Finished videos live OUTSIDE the repository (owner, 17 Oct 2026): a
+  // clean step in a git tool (git clean -fdx, «Discard all») wiped the ignored
+  // exports folder on every push. Nothing under the repo can be pushed or
+  // cleaned away from here. Override with HISABCHE_EXPORT_DIR.
+  const exportsDir = path.resolve(
+    process.env.HISABCHE_EXPORT_DIR || path.join(os.homedir(), 'Videos', 'hisabche-reels'),
+  )
 
   fs.mkdirSync(framesDir, { recursive: true })
   fs.mkdirSync(exportsDir, { recursive: true })
 
   // 4. Synthesize Deterministic Audio Track (.wav)
   console.log(`\n🔊 Synthesizing audio track from ${cues.length} choreography cues...`)
-  const wavBuffer = generateWavBuffer(cues, totalDuration)
+  // Designed soundtrack: stereo, music bed with side-chain, scene drops, a
+  // riser into the CTA, reverb and mastering (scripts/sound-design.mjs).
+  const wavBuffer = designSoundtrack(cues, totalDuration, {
+    sceneStarts: reel.scenes.map((scene) => scene.start),
+    ctaAt: reel.scenes[reel.scenes.length - 1]?.start,
+  })
   const wavPath = path.resolve(tempExportDir, 'audio.wav')
   fs.writeFileSync(wavPath, wavBuffer)
   console.log(
@@ -383,7 +196,7 @@ export async function exportReelMP4(options = {}) {
     console.log(`Frames and audio track were rendered deterministically without error.`)
     console.log(`To assemble into final MP4, install FFmpeg or run:`)
     console.log(
-      `\n  ffmpeg -y -framerate ${fps} -i "${framesDir}\\frame_%05d.png" -i "${wavPath}" -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest "${outputMp4}"\n`,
+      `\n  ffmpeg -y -framerate ${fps} -i "${framesDir}\\frame_%05d.png" -i "${wavPath}" -c:v libx264 -crf 18 -preset slow -pix_fmt yuv420p -c:a aac -b:a 256k -shortest "${outputMp4}"\n`,
     )
     return {
       success: false,
@@ -418,12 +231,16 @@ export async function exportReelMP4(options = {}) {
       '[a]',
       '-c:v',
       'libx264',
+      '-crf',
+      '18',
+      '-preset',
+      'slow',
       '-pix_fmt',
       'yuv420p',
       '-c:a',
       'aac',
       '-b:a',
-      '192k',
+      '256k',
       '-shortest',
       outputMp4,
     ]
@@ -443,12 +260,16 @@ export async function exportReelMP4(options = {}) {
       wavPath,
       '-c:v',
       'libx264',
+      '-crf',
+      '18',
+      '-preset',
+      'slow',
       '-pix_fmt',
       'yuv420p',
       '-c:a',
       'aac',
       '-b:a',
-      '192k',
+      '256k',
       '-shortest',
       outputMp4,
     ]

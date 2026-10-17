@@ -41,7 +41,7 @@ import { can } from '../authorization/authorization.domain'
 import { baseCurrencyOf } from '../base-currency'
 import { branches } from '../branch'
 import type { TenancyContext } from '../tenancy.service'
-import { assertMayUseWarehouse } from './warehouse-access'
+import { assertMayUseWarehouse, stockPlacement } from './warehouse-access'
 import { DEAD_STOCK_DEFAULT_DAYS, DEMAND_WINDOW_DAYS } from './reorder.domain'
 import {
   buildWarehouseMap,
@@ -283,6 +283,90 @@ export class WarehouseMapService {
       quantity: num(result.quantity ?? input.quantity),
       available: num(result.available),
     }
+  }
+
+  /**
+   * Where ONE product sits, shelf by shelf, in every warehouse this member may
+   * use — for the product page («موقعیت در انبار»), so a location can be read
+   * and changed there without opening the map (owner, 17 Oct 2026).
+   *
+   * A read over the same tables the map reads; it computes no stock. Each
+   * warehouse brings its own active locations as the choices a change can go
+   * to. `configured: false` = warehouse-map-01 is not on this database.
+   */
+  async productLocations(
+    ctx: TenancyContext,
+    productId: string,
+  ): Promise<
+    | { configured: false }
+    | {
+        configured: true
+        warehouses: Array<{
+          id: string
+          name: string
+          onHand: number
+          placed: Array<{ locationId: string; code: string; name: string | null; quantity: number }>
+          choices: Array<{ id: string; code: string; name: string | null }>
+        }>
+      }
+  > {
+    const placement = await stockPlacement(ctx)
+    const permitted = new Map(placement.warehouses.map((w) => [w.id, w.name]))
+
+    const { data, error } = await supabase
+      .from('storage_location_placements')
+      .select('location_id, quantity')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('product_id', productId)
+      .gt('quantity', 0)
+    if (error) {
+      if (MISSING_RELATION.has(error.code ?? '')) return { configured: false }
+      throw new DatabaseError('Failed to read where the product is placed', error)
+    }
+    const placedQty = new Map(
+      ((data ?? []) as Array<{ location_id: string; quantity: number | string }>).map((row) => [
+        row.location_id,
+        num(row.quantity),
+      ]),
+    )
+
+    // Warehouses that hold this product, or that have a shelf recording it.
+    const onHand = new Map<string, number>()
+    for (const row of placement.stock) {
+      if (row.productId === productId && permitted.has(row.warehouseId)) {
+        onHand.set(row.warehouseId, row.quantity)
+      }
+    }
+
+    const warehouses = []
+    for (const [warehouseId, name] of permitted) {
+      const locations = await this.locations(ctx, warehouseId)
+      if (locations === null) return { configured: false }
+      const placed = locations
+        .filter((location) => placedQty.has(location.id))
+        .map((location) => ({
+          locationId: location.id,
+          code: location.code,
+          name: location.name ?? null,
+          quantity: placedQty.get(location.id) ?? 0,
+        }))
+      const stock = onHand.get(warehouseId) ?? 0
+      if (stock === 0 && placed.length === 0) continue
+      warehouses.push({
+        id: warehouseId,
+        name,
+        onHand: stock,
+        placed,
+        choices: locations
+          .filter((location) => location.isActive)
+          .map((location) => ({
+            id: location.id,
+            code: location.code,
+            name: location.name ?? null,
+          })),
+      })
+    }
+    return { configured: true, warehouses }
   }
 
   // ─── Reads ────────────────────────────────────────────────────────────────

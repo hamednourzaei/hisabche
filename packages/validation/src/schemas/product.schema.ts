@@ -212,3 +212,16 @@ export function stockValue(product: {
 }): number {
   return (product.quantity ?? 0) * (product.sellPrice ?? 0)
 }
+
+/**
+ * Stock value at *buying* price — what the shelf cost to fill, beside
+ * `stockValue`, which is what it can sell for. The product page shows both
+ * (owner, 17 October 2026): neither is the other, and neither converts a
+ * currency.
+ */
+export function purchaseValue(product: {
+  quantity?: number | null
+  buyPrice?: number | null
+}): number {
+  return (product.quantity ?? 0) * (product.buyPrice ?? 0)
+}

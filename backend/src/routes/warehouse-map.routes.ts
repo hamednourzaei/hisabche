@@ -79,6 +79,20 @@ export async function warehouseMapRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // Where one product sits, shelf by shelf (the product page).
+  fastify.get(
+    '/api/products/:id/storage-locations',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = idSchema.parse(request.params)
+        return reply.send(await service.productLocations(request.tenancy, id))
+      } catch (err) {
+        return fail(reply, err, 'Failed to read where the product is placed')
+      }
+    },
+  )
+
   fastify.post(
     '/api/warehouses/:id/locations',
     {

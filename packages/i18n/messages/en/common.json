@@ -1984,6 +1984,8 @@
     "saveFailed": "Couldn't save. Try again.",
     "noProductsInWarehouse": "No products in this warehouse; add stock that has no warehouse, or record a purchase invoice for this warehouse",
     "name": "Product",
+    "totalBuyValue": "Total purchase value",
+    "totalSellValue": "Total sale value",
     "totalValue": "Total value (AFN)",
     "actions": "Actions",
     "editWarehouse": "Edit warehouse",
@@ -2025,6 +2027,7 @@
     "unitFactor": "One of these equals",
     "unitFactorInvalid": "Enter a name and a valid conversion factor.",
     "currentStock": "Current stock",
+    "stockPosition": "Warehouse placement",
     "profitPerUnit": "Profit per unit",
     "totalProfit": "Total stock profit",
     "amountLabel": "Amount",
@@ -2079,6 +2082,11 @@
     "movementsHint": "Every purchase, sale, transfer, production and adjustment of this product, with the stock after it.",
     "movementsFailed": "The stock history could not be read.",
     "movementsGap": "These movements do not add up to the recorded stock; older movements may be missing from this list.",
+    "movementsNoMatch": "Nothing matches this search.",
+    "direction": "Direction",
+    "exportExcel": "Excel",
+    "exportMarkdown": "Markdown",
+    "exportNote": "Note",
     "movementIn": "Increase",
     "movementOut": "Decrease",
     "movementType": {
@@ -2091,7 +2099,19 @@
     },
     "categoryAdd": "New category",
     "categoryNewPlaceholder": "e.g. scarves, bracelets, parts",
-    "categoryFilter": "Category"
+    "categoryFilter": "Category",
+    "shelves": {
+      "none": "Not recorded on any shelf",
+      "unplaced": "Not on a shelf",
+      "change": "Change location",
+      "changeHint": "Only the shelf changes; the warehouse stock stays the same.",
+      "from": "From",
+      "to": "To shelf",
+      "pick": "Choose a shelf",
+      "confirm": "Save location",
+      "moved": "Location changed",
+      "moveFailed": "The location was not changed"
+    }
   },
   "customers": {
     "title": "Customers",

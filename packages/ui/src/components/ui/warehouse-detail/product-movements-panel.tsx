@@ -13,39 +13,69 @@
 // history the server cut short is SAID to be cut short — the oldest rows are
 // then missing, and the table must not read as the whole story.
 // ⚠️ A NEGATIVE BALANCE IS SHOWN AS ONE: it is a recorded shortfall.
+//
+// The type and the direction are two columns (owner, 17 October 2026): «خرید»
+// and «افزایش» are different questions — what happened, and which way it moved
+// — and one glued cell answered both at once. The money journey, which reads
+// the same movements from the money side, is mounted INSIDE this card.
+//
+// The export writes the same rows this table shows: Excel (.xlsx) and
+// Markdown, built from `movement-export.ts`, so the file and the screen cannot
+// disagree. An export is the whole loaded history, not only what a search
+// narrowed down.
 // ============================================
 
-import { useMemo } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
+import { FileSpreadsheet, FileText } from 'lucide-react'
 import { useStockHistory, useStockPlacement, type StockMovementRecord } from '@hisabche/api'
-import { formatNumber } from '@hisabche/formatting'
+import { formatNumber, type XlsxSheet } from '@hisabche/formatting'
 import { localizePath } from '@hisabche/ui-contract'
 
 import { routeForEntity } from '../../../lib/entity-route'
+import { exportToMarkdown, exportToXlsx } from '../../../lib/export'
+import {
+  movementDirectionWord,
+  movementExportFilename,
+  movementExportMarkdown,
+  movementExportRecords,
+  movementExportTable,
+  movementPlace,
+  movementTypeWord,
+} from '../../../lib/warehouse/movement-export'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { useRouteLang } from '../../../hooks/use-locale-push'
 import { Button } from '../button'
-import { DataTable, type TableColumn } from '../data-table'
+import { FOCUS_RING } from '../focus-ring'
+import { cn } from '../../../lib/utils'
+import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 
 type T = (key: string, fallback?: string) => string
 
-/** Movement types the screen has a word for. Anything else is shown as sent. */
-export const MOVEMENT_TYPES = [
-  'sale',
-  'purchase',
-  'production',
-  'transfer',
-  'adjustment',
-  'opening',
-] as const
+// The catalogue of movement types lives with the export, so the screen and the
+// file name each type in the same words. Re-exported: callers imported it here.
+export { MOVEMENT_TYPES } from '../../../lib/warehouse/movement-export'
 
-export function ProductMovementsPanel({ t, productId }: { t: T; productId: string }) {
+export function ProductMovementsPanel({
+  t,
+  productId,
+  productName = '',
+  journey,
+}: {
+  t: T
+  productId: string
+  /** The product's own name — the export is filed under it. */
+  productName?: string | undefined
+  /** The money journey block, mounted inside this card (composed by the container). */
+  journey?: ReactNode
+}) {
   const history = useStockHistory(productId)
   const placement = useStockPlacement()
   const { dateTime } = useDateFormat()
   const locale = useIntlLocale()
   const lang = useRouteLang()
+  const [search, setSearch] = useState('')
 
   const warehouseName = useMemo(
     () => new Map((placement.data?.warehouses ?? []).map((row) => [row.id, row.name])),
@@ -55,16 +85,7 @@ export function ProductMovementsPanel({ t, productId }: { t: T; productId: strin
   // server, so reversing changes the order shown and no figure.
   const rows = useMemo(() => [...(history.data?.movements ?? [])].reverse(), [history.data])
 
-  const typeWord = (type: string) =>
-    (MOVEMENT_TYPES as readonly string[]).includes(type)
-      ? t(`warehouse.movementType.${type}`, type)
-      : type
-  const placeOf = (movement: StockMovementRecord) => {
-    const from = movement.fromWarehouseId ? warehouseName.get(movement.fromWarehouseId) : undefined
-    const to = movement.toWarehouseId ? warehouseName.get(movement.toWarehouseId) : undefined
-    if (from && to) return `${from} ← ${to}`
-    return to ?? from ?? null
-  }
+  const title = t('warehouse.movementsTitle', 'افزایش و کاهش موجودی')
 
   const columns = useMemo<TableColumn<StockMovementRecord>[]>(
     () => [
@@ -86,14 +107,18 @@ export function ProductMovementsPanel({ t, productId }: { t: T; productId: strin
         locked: true,
         sortValue: (movement) => movement.type,
         render: (movement) => (
-          <span>
-            <span className="font-medium">{typeWord(movement.type)}</span>
-            {/* Which way it went, in a word — never by colour alone. */}
-            <span className="ms-2 text-xs text-[hsl(var(--fg-secondary))]">
-              {movement.quantity < 0
-                ? t('warehouse.movementOut', 'کاهش')
-                : t('warehouse.movementIn', 'افزایش')}
-            </span>
+          <span className="font-medium">{movementTypeWord(movement.type, t)}</span>
+        ),
+      },
+      {
+        id: 'direction',
+        labelKey: 'warehouse.direction',
+        labelFallback: t('warehouse.direction', 'جهت'),
+        locked: true,
+        render: (movement) => (
+          // Which way it went, in a word — never by colour alone.
+          <span className="text-xs text-[hsl(var(--fg-secondary))]">
+            {movementDirectionWord(movement.quantity, t)}
           </span>
         ),
       },
@@ -102,7 +127,7 @@ export function ProductMovementsPanel({ t, productId }: { t: T; productId: strin
         labelKey: 'warehouse.warehouseName',
         labelFallback: t('warehouse.warehouseName', 'انبار'),
         showFrom: 'md',
-        render: (movement) => placeOf(movement) ?? '—',
+        render: (movement) => movementPlace(movement, warehouseName) ?? '—',
       },
       {
         id: 'change',
@@ -114,11 +139,12 @@ export function ProductMovementsPanel({ t, productId }: { t: T; productId: strin
         render: (movement) => (
           <span
             dir="ltr"
-            className={
+            className={cn(
+              'tabular-nums',
               movement.quantity < 0
-                ? 'tabular-nums text-[hsl(var(--color-destructive))]'
-                : 'tabular-nums text-[hsl(var(--color-success))]'
-            }
+                ? 'text-[hsl(var(--color-destructive))]'
+                : 'text-[hsl(var(--color-success))]',
+            )}
           >
             {movement.quantity > 0 ? '+' : ''}
             {formatNumber(movement.quantity, locale, 3)}
@@ -161,7 +187,7 @@ export function ProductMovementsPanel({ t, productId }: { t: T; productId: strin
         },
       },
     ],
-    // `typeWord` and `placeOf` read `t` and `warehouseName`, both listed.
+    // `movementTypeWord`/`movementPlace` read `t` and `warehouseName`, both listed.
     [t, dateTime, locale, lang, warehouseName],
   )
 
@@ -175,6 +201,51 @@ export function ProductMovementsPanel({ t, productId }: { t: T; productId: strin
     typeof stored === 'number' &&
     typeof summed === 'number' &&
     stored !== summed
+  const gapText = t(
+    'warehouse.movementsGap',
+    'جمع این حرکت‌ها با موجودی ثبت‌شده یکی نیست؛ ممکن است حرکت‌های قدیمی‌تر در این فهرست نباشند.',
+  )
+
+  // A search narrows the SCREEN only; the exports stay the whole history.
+  const shown = useMemo(() => {
+    if (!search.trim()) return rows
+    return rows.filter((movement) =>
+      matchesSearch(search, [
+        movementTypeWord(movement.type, t),
+        movementDirectionWord(movement.quantity, t),
+        movementPlace(movement, warehouseName) ?? '',
+        movement.notes ?? '',
+        movement.referenceType ?? '',
+        movement.quantity,
+        movement.balance,
+      ]),
+    )
+  }, [rows, search, t, warehouseName])
+
+  const table = useMemo(
+    () => movementExportTable(rows, { t, dateTime, warehouseNames: warehouseName }),
+    [rows, t, dateTime, warehouseName],
+  )
+
+  const exportExcel = () => {
+    if (table.rows.length === 0) return
+    const sheets: XlsxSheet[] = [{ name: title, rows: movementExportRecords(table) }]
+    if (incomplete) {
+      // The same warning the table carries: a file must not read as the whole
+      // story either.
+      const note = t('warehouse.exportNote', 'یادداشت')
+      sheets.push({ name: note, rows: [{ [note]: gapText }] })
+    }
+    exportToXlsx(sheets, movementExportFilename(productName, new Date()))
+  }
+
+  const exportMarkdown = () => {
+    if (table.rows.length === 0) return
+    exportToMarkdown(
+      movementExportMarkdown(table, { title, productName, warning: incomplete ? gapText : '' }),
+      movementExportFilename(productName, new Date()),
+    )
+  }
 
   return (
     <section
@@ -182,9 +253,7 @@ export function ProductMovementsPanel({ t, productId }: { t: T; productId: strin
       data-product-movements
     >
       <div>
-        <h3 className="font-semibold text-[hsl(var(--fg-primary))]">
-          {t('warehouse.movementsTitle', 'افزایش و کاهش موجودی')}
-        </h3>
+        <h3 className="font-semibold text-[hsl(var(--fg-primary))]">{title}</h3>
         <p className="mt-0.5 text-xs text-[hsl(var(--fg-secondary))]">
           {t(
             'warehouse.movementsHint',
@@ -192,6 +261,9 @@ export function ProductMovementsPanel({ t, productId }: { t: T; productId: strin
           )}
         </p>
       </div>
+
+      {/* The money side of the same movements (owner, 17 October 2026). */}
+      {journey}
 
       {history.isLoading ? (
         <p className="text-sm text-[hsl(var(--fg-secondary))]">
@@ -211,10 +283,7 @@ export function ProductMovementsPanel({ t, productId }: { t: T; productId: strin
         <>
           {incomplete ? (
             <p role="alert" className="text-xs text-[hsl(var(--color-warning))]" data-movements-gap>
-              {t(
-                'warehouse.movementsGap',
-                'جمع این حرکت‌ها با موجودی ثبت‌شده یکی نیست؛ ممکن است حرکت‌های قدیمی‌تر در این فهرست نباشند.',
-              )}{' '}
+              {gapText}{' '}
               <span dir="ltr" className="tabular-nums">
                 {stored} ≠ {summed}
               </span>
@@ -223,18 +292,73 @@ export function ProductMovementsPanel({ t, productId }: { t: T; productId: strin
           <DataTable
             tableId="product-movements"
             t={t}
-            rows={rows}
+            rows={shown}
             columns={columns}
             rowKey={(movement) => movement.id}
-            minWidthClass="min-w-[420px]"
+            minWidthClass="min-w-[480px]"
+            searchValue={search}
+            onSearchChange={setSearch}
+            actions={
+              <div className="flex items-center gap-1.5">
+                <ExportButton
+                  label={t('warehouse.exportExcel', 'Excel')}
+                  icon={<FileSpreadsheet className="size-4" aria-hidden="true" />}
+                  onClick={exportExcel}
+                  disabled={rows.length === 0}
+                />
+                <ExportButton
+                  label={t('warehouse.exportMarkdown', 'Markdown')}
+                  icon={<FileText className="size-4" aria-hidden="true" />}
+                  onClick={exportMarkdown}
+                  disabled={rows.length === 0}
+                />
+              </div>
+            }
             emptyState={
               <p className="p-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
-                {t('warehouse.noMovements', 'هیچ حرکتی برای این کالا ثبت نشده است.')}
+                {search.trim() && rows.length > 0
+                  ? // A search that found nothing is not «this product never moved».
+                    t('warehouse.movementsNoMatch', 'چیزی با این جستجو پیدا نشد.')
+                  : t('warehouse.noMovements', 'هیچ حرکتی برای این کالا ثبت نشده است.')}
               </p>
             }
           />
         </>
       )}
     </section>
+  )
+}
+
+/** An export control, the same square shape as the table's own icons. */
+function ExportButton({
+  label,
+  icon,
+  onClick,
+  disabled,
+}: {
+  label: string
+  icon: ReactNode
+  onClick: () => void
+  disabled: boolean
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        'inline-flex size-9 items-center justify-center rounded-xl',
+        'border border-[hsl(var(--border-default))]',
+        'text-[hsl(var(--fg-secondary))]',
+        'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+        FOCUS_RING,
+        'transition-colors duration-150 motion-reduce:transition-none',
+        'disabled:cursor-not-allowed disabled:opacity-40',
+      )}
+    >
+      {icon}
+    </button>
   )
 }

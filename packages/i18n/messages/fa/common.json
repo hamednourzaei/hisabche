@@ -1989,6 +1989,8 @@
     "saveFailed": "ذخیره نشد. دوباره تلاش کنید.",
     "noProductsInWarehouse": "کالایی در این انبار نیست؛ موجودی بدون انبار را اضافه کنید یا فاکتور خرید با این انبار ثبت کنید",
     "name": "نام کالا",
+    "totalBuyValue": "ارزش کل خرید",
+    "totalSellValue": "ارزش کل فروش",
     "totalValue": "ارزش کل (AFN)",
     "actions": "عملیات",
     "editWarehouse": "ویرایش انبار",
@@ -2030,6 +2032,7 @@
     "unitFactor": "هر ۱ واحد برابر است با",
     "unitFactorInvalid": "نام و ضریب تبدیل واحد را درست وارد کنید.",
     "currentStock": "موجودی فعلی",
+    "stockPosition": "موقعیت در انبار",
     "profitPerUnit": "سود هر واحد",
     "totalProfit": "سود کل موجودی",
     "amountLabel": "مقدار",
@@ -2084,6 +2087,11 @@
     "movementsHint": "هر خرید، فروش، انتقال، تولید و تعدیلِ این کالا، با موجودی بعد از آن.",
     "movementsFailed": "تاریخچه‌ی موجودی خوانده نشد.",
     "movementsGap": "جمع این حرکت‌ها با موجودی ثبت‌شده یکی نیست؛ ممکن است حرکت‌های قدیمی‌تر در این فهرست نباشند.",
+    "movementsNoMatch": "چیزی با این جستجو پیدا نشد.",
+    "direction": "جهت",
+    "exportExcel": "Excel",
+    "exportMarkdown": "Markdown",
+    "exportNote": "یادداشت",
     "movementIn": "افزایش",
     "movementOut": "کاهش",
     "movementType": {
@@ -2096,7 +2104,19 @@
     },
     "categoryAdd": "دسته‌بندی تازه",
     "categoryNewPlaceholder": "مثلاً شال، دستبند، قطعات",
-    "categoryFilter": "دسته‌بندی"
+    "categoryFilter": "دسته‌بندی",
+    "shelves": {
+      "none": "روی هیچ قفسه‌ای ثبت نشده",
+      "unplaced": "بدون قفسه",
+      "change": "تغییر موقعیت",
+      "changeHint": "فقط جای کالا روی قفسه عوض می‌شود؛ موجودی انبار تغییر نمی‌کند.",
+      "from": "از",
+      "to": "به قفسه",
+      "pick": "انتخاب قفسه",
+      "confirm": "ثبت موقعیت",
+      "moved": "موقعیت کالا تغییر کرد",
+      "moveFailed": "تغییر موقعیت انجام نشد"
+    }
   },
   "customers": {
     "title": "مشتریان",

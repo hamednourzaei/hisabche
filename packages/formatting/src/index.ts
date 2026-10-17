@@ -24,6 +24,15 @@ export { formatDate, formatDateLong, formatDateTime, toIsoDay, type DateInput } 
 export { toCSV, csvFilename, UTF8_BOM, type CsvColumn } from './csv'
 
 export {
+  buildXlsx,
+  cellText,
+  columnsOf,
+  markdownTable,
+  mdEscape,
+  type XlsxSheet,
+} from './table-export'
+
+export {
   toPersianDigits,
   toArabicDigits,
   toLatinDigits,

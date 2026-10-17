@@ -30,11 +30,14 @@ export function ProductManufacturingPanel({
   locale,
   productId,
   productName,
+  embedded = false,
 }: {
   t: T
   locale: string
   productId: string
   productName: string
+  /** Inside a dialog (the product page's «ساخت و تولید» tile): no card chrome. */
+  embedded?: boolean | undefined
 }) {
   const [editing, setEditing] = useState<'produce' | 'definition' | null>(null)
   const definition = useProductionDefinition(productId)
@@ -42,7 +45,12 @@ export function ProductManufacturingPanel({
 
   if (editing) {
     return (
-      <section className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] py-4">
+      <section
+        className={cn(
+          'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] py-4',
+          embedded && 'rounded-none border-0 bg-transparent',
+        )}
+      >
         <ProductionEditor
           t={t}
           locale={locale}
@@ -62,7 +70,12 @@ export function ProductManufacturingPanel({
   const failure = definition.error ? apiErrorMessage(definition.error, '') : ''
 
   return (
-    <section className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
+    <section
+      className={cn(
+        'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+        embedded && 'rounded-none border-0 bg-transparent',
+      )}
+    >
       <header className="flex flex-wrap items-center justify-between gap-2 p-4">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
           <Factory className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />

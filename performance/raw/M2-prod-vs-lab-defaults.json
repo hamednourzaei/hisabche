@@ -1,0 +1,1063 @@
+{
+  "generated_at": "2026-10-17T10:11:36.575Z",
+  "dump_file": "performance/raw/production-schema-dump.sql",
+  "dump_tables": 100,
+  "lab_tables": 255,
+  "shared_columns_compared": 1263,
+  "fixed_columns_checked": 29,
+  "criticals": [],
+  "critical_fixed_prod_default": [],
+  "critical_fixed_lab_default": [],
+  "lab_nullable_now_defaults": [],
+  "prod_nullable_now_defaults": [],
+  "not_null_mismatches": [],
+  "default_presence_mismatches": [
+    {
+      "column": "accounts.is_active",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "accounts.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "activities.entity_snapshot",
+      "prod_default": null,
+      "lab_default": "'[]'::jsonb"
+    },
+    {
+      "column": "attendance.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "attendance.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "audit_logs.old_data",
+      "prod_default": null,
+      "lab_default": "'{}'::jsonb"
+    },
+    {
+      "column": "audit_logs.new_data",
+      "prod_default": null,
+      "lab_default": "'{}'::jsonb"
+    },
+    {
+      "column": "audit_logs.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "background_jobs.payload",
+      "prod_default": null,
+      "lab_default": "'{}'::jsonb"
+    },
+    {
+      "column": "background_jobs.retry_count",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "background_jobs.max_retries",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "billing_plans.price_monthly",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "billing_plans.price_yearly",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "billing_plans.is_active",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "billing_plans.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "billing_plans.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "bom_items.unit_cost",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "boms.version",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "boms.is_active",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "boms.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "boms.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "checkout_sessions.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "checkout_sessions.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "customers.opening_balance",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "customers.is_active",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "customers.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "departments.is_active",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "departments.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "departments.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "employees.salary",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "employees.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "employees.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "event_log.payload",
+      "prod_default": null,
+      "lab_default": "'{}'::jsonb"
+    },
+    {
+      "column": "event_log.processed",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "event_log.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "event_log.retry_count",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "event_log.max_retries",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "event_log.realtime_sent",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "event_log.sync_sent",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "event_log.webhook_sent",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "event_types.schema_version",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "interactions.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "invoice_items.quantity",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "invoice_items.unit_price",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "invoice_items.discount",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "invoice_items.total_price",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "invoice_items.weight_grams",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "invoices.subtotal",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "invoices.discount_total",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "invoices.tax_total",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "invoices.paid_amount",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "invoices.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "invoices.tax_rate",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "journal_entries.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "journal_entries.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "journal_lines.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "leaves.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "leaves.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "ledger_entries.debit",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "ledger_entries.credit",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "ledger_entries.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "notifications.metadata",
+      "prod_default": null,
+      "lab_default": "'{}'::jsonb"
+    },
+    {
+      "column": "opportunities.value",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "opportunities.probability",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "opportunities.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "opportunities.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "password_reset_tokens.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "password_reset_tokens.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "payrolls.bonuses",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "payrolls.deductions",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "payrolls.overtime_hours",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "payrolls.overtime_rate",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "payrolls.overtime_amount",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "payrolls.tax_amount",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "payrolls.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "payrolls.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "permissions.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "products.quantity",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "products.buy_price",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "products.sell_price",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "products.wholesale_price",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "products.min_stock_level",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "products.is_active",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "products.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "profiles.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "profiles.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "project_members.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "project_tasks.estimated_hours",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "project_tasks.actual_hours",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "project_tasks.order_index",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "project_tasks.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "project_tasks.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "project_time_entries.billable",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "project_time_entries.hourly_rate",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "project_time_entries.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "project_time_entries.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "projects.budget",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "projects.progress",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "projects.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "projects.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "purchase_order_items.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "purchase_orders.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "purchase_orders.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "role_permissions.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "roles.is_system",
+      "prod_default": null,
+      "lab_default": "false"
+    },
+    {
+      "column": "roles.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "roles.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "subscriptions.cancel_at_period_end",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "subscriptions.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "subscriptions.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "subscriptions.is_trial",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "subscriptions.trial_used",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "suppliers.address",
+      "prod_default": null,
+      "lab_default": "'{}'::jsonb"
+    },
+    {
+      "column": "suppliers.is_active",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "suppliers.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "suppliers.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "sync_logs.items_processed",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "sync_logs.items_failed",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "sync_logs.items_total",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "sync_logs.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "sync_queue.priority",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "sync_queue.retry_count",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "sync_queue.max_retries",
+      "prod_default": null,
+      "lab_default": "0"
+    },
+    {
+      "column": "sync_queue.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "transactions.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "user_roles.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "warehouses.is_active",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "warehouses.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "warehouses.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "work_orders.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "work_orders.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "workspace_invites.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "workspace_members.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "workspaces.is_active",
+      "prod_default": null,
+      "lab_default": "true"
+    },
+    {
+      "column": "workspaces.created_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    },
+    {
+      "column": "workspaces.updated_at",
+      "prod_default": null,
+      "lab_default": "now()"
+    }
+  ],
+  "now_mismatches": [],
+  "default_text_differs": [],
+  "default_text_differs_sample": [],
+  "tables_only_in_dump": [],
+  "tables_only_in_lab_count": 155,
+  "tables_only_in_lab": [
+    "activity_reads",
+    "ai_action_requests",
+    "ai_pipeline_runs",
+    "ai_pipeline_settings",
+    "ai_pipeline_steps",
+    "ai_provider_settings",
+    "ai_query_log",
+    "ai_workspace_quota",
+    "api_keys",
+    "api_request_logs",
+    "app_installations",
+    "app_publishers",
+    "app_releases",
+    "app_reports",
+    "app_reviews",
+    "app_screenshots",
+    "app_versions",
+    "attendance_adjustments",
+    "attendance_calendar_days",
+    "attendance_calendars",
+    "attendance_credentials",
+    "attendance_days",
+    "attendance_device_connections",
+    "attendance_device_events",
+    "attendance_device_sync_state",
+    "attendance_devices",
+    "attendance_links",
+    "attendance_phone_keys",
+    "attendance_punch_events",
+    "attendance_sessions",
+    "attendance_shifts",
+    "attendance_submissions",
+    "attendance_terminal_events",
+    "attendance_terminal_identities",
+    "attendance_terminals",
+    "automation_runs",
+    "automations",
+    "billing_events",
+    "blog_article_sources",
+    "blog_article_versions",
+    "blog_categories",
+    "blog_comments",
+    "blog_content_briefs",
+    "blog_internal_links",
+    "blog_post_tags",
+    "blog_post_view_days",
+    "blog_posts",
+    "blog_prompt_settings",
+    "blog_quality_reports",
+    "blog_ratings",
+    "blog_reactions",
+    "blog_research_runs",
+    "blog_sources",
+    "blog_tags",
+    "branch_tree",
+    "budget_revisions",
+    "campaign_recipients",
+    "cms_globals",
+    "cms_media",
+    "cms_navigation",
+    "cms_page_versions",
+    "cms_pages",
+    "currencies",
+    "custom_field_definitions",
+    "custom_field_values",
+    "custom_unit_rates",
+    "custom_units",
+    "customer_campaigns",
+    "customer_contact_optouts",
+    "customer_documents",
+    "customer_portal_links",
+    "cycle_count_lines",
+    "cycle_counts",
+    "data_snapshots",
+    "effective_capabilities",
+    "email_outbox",
+    "employee_branch_assignments",
+    "employee_current_branches",
+    "employee_leave_requests",
+    "employee_work_schedules",
+    "entity_notes",
+    "investment_holdings",
+    "invoice_installments",
+    "invoice_outstanding",
+    "invoice_state",
+    "landed_cost_allocations",
+    "landed_costs",
+    "late_fee_assessments",
+    "late_fee_policies",
+    "leave_types",
+    "ledger_entries_view",
+    "loan_facilities",
+    "marketplace_listings",
+    "migration_jobs",
+    "migration_profiles",
+    "migration_records",
+    "oauth_app_webhook_secrets",
+    "oauth_apps",
+    "oauth_authorization_codes",
+    "oauth_refresh_tokens",
+    "party_ledger",
+    "payroll_posting_readiness",
+    "pg_stat_statements",
+    "pg_stat_statements_info",
+    "plan_limit_settings",
+    "platform_settings",
+    "price_list_items",
+    "price_lists",
+    "product_barcodes",
+    "product_images",
+    "product_unit_options",
+    "product_units",
+    "project_billing_config",
+    "promotions",
+    "referral_codes",
+    "referral_commissions",
+    "referral_payouts",
+    "referrals",
+    "report_dashboards",
+    "sales_order_items",
+    "sales_orders",
+    "saved_reports",
+    "saved_views",
+    "scheduled_task_runs",
+    "schema_migrations",
+    "seller_profiles",
+    "shift_assignments",
+    "stock_in_transit",
+    "stock_on_hand",
+    "stock_transfer_lines",
+    "stock_transfers",
+    "storage_location_placements",
+    "storage_locations",
+    "storefront_settings",
+    "subscription_events",
+    "subscription_upgrade_requests",
+    "sync_change_log",
+    "sync_horizon",
+    "sync_mutations",
+    "time_entries",
+    "transactions_view",
+    "units",
+    "wallet_payment_methods",
+    "wallet_topup_requests",
+    "wallet_transactions",
+    "wallets",
+    "webhook_deliveries",
+    "webhook_endpoint_secrets",
+    "webhook_endpoints",
+    "work_order_lines",
+    "work_shifts",
+    "workflow_escalations",
+    "workspace_limit_overrides",
+    "workspace_member_module_blocks",
+    "workspace_role_capabilities"
+  ],
+  "fixed_detail": [
+    {
+      "column": "workspace_members.suspended_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "accounts.deleted_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "journal_entries.deleted_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "invoices.finalized_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "invoices.lock_expires_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "profiles.onboarding_completed_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "workflows.deleted_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "password_reset_tokens.used_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "password_reset_tokens.revoked_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "password_reset_tokens.deleted_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "background_jobs.completed_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "background_jobs.started_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "customers.synced_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "event_log.completed_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "event_log.next_retry_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "invoices.synced_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "leaves.approved_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "notifications.read_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "products.synced_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "project_members.joined_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "project_tasks.completed_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "purchase_orders.received_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "sync_logs.completed_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "sync_queue.processed_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "transactions.synced_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "webhook_events.processed_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "workflow_instances.completed_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "workspace_invites.accepted_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    },
+    {
+      "column": "workspace_members.joined_at",
+      "prod_default": null,
+      "lab_default": null,
+      "prod_not_null": false,
+      "lab_not_null": false
+    }
+  ]
+}

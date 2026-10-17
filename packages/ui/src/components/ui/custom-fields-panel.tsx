@@ -75,14 +75,20 @@ export function CustomFieldsPanel({
   entity,
   entityId,
   className,
+  embedded = false,
+  defaultOpen = false,
 }: {
   entity: CustomFieldEntity
   entityId: string
   className?: string | undefined
+  /** Inside a dialog (the product page's «فیلدهای اختصاصی» tile): no card chrome. */
+  embedded?: boolean | undefined
+  /** Open from the start: a dialog must show its data, not a «نمایش» button. */
+  defaultOpen?: boolean | undefined
 }) {
   const t = useTranslations('customFields')
   const locale = useIntlLocale()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const [managing, setManaging] = useState(false)
   const record = useCustomFieldRecord(entity, entityId, open)
   const save = useSaveCustomFieldValues(entity, entityId)
@@ -201,7 +207,8 @@ export function CustomFieldsPanel({
   return (
     <section
       className={cn(
-        'space-y-3 rounded-2xl border border-[hsl(var(--border-default))] p-4',
+        'space-y-3',
+        !embedded && 'rounded-2xl border border-[hsl(var(--border-default))] p-4',
         className,
       )}
     >

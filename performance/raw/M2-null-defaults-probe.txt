@@ -1,0 +1,2 @@
+﻿[{"column_name":"workspace_members.suspended_at","value":null,"is_null":true},{"column_name":"accounts.deleted_at","value":null,"is_null":true},{"column_name":"journal_entries.deleted_at","value":null,"is_null":true},{"column_name":"password_reset_tokens.used_at","value":null,"is_null":true},{"column_name":"password_reset_tokens.revoked_at","value":null,"is_null":true},{"column_name":"password_reset_tokens.deleted_at","value":null,"is_null":true}]
+performance/scripts/db/probe-semantic-null-defaults.sql ΓÇö 3 statement result(s) in 12 ms

@@ -22,6 +22,7 @@ import {
   useRemoveProductBarcode,
 } from '@hisabche/api'
 
+import { cn } from '../../../lib/utils'
 import { Button } from '../button'
 import { SelectField } from '../select-field'
 import { CameraScanButton } from '../invoice-builder/camera-scan-button'
@@ -39,7 +40,16 @@ type BarcodeUnit = (typeof BARCODE_UNITS)[number]
 /** «The product's own unit» — an explicit value: the shared select has no empty one. */
 const OWN_UNIT = 'own'
 
-export function ProductBarcodesPanel({ t, productId }: { t: T; productId: string }) {
+export function ProductBarcodesPanel({
+  t,
+  productId,
+  embedded = false,
+}: {
+  t: T
+  productId: string
+  /** Inside a dialog (the product page's «بارکدهای دیگر این کالا» tile): no card border. */
+  embedded?: boolean | undefined
+}) {
   const { data, isLoading, isError, refetch } = useProductBarcodes(productId)
   const add = useAddProductBarcode(productId)
   const remove = useRemoveProductBarcode(productId)
@@ -61,7 +71,12 @@ export function ProductBarcodesPanel({ t, productId }: { t: T; productId: string
   const rows = data ?? []
 
   return (
-    <section className="space-y-3 rounded-[var(--radius-lg)] border border-[hsl(var(--border-default))] p-4">
+    <section
+      className={cn(
+        'space-y-3',
+        !embedded && 'rounded-[var(--radius-lg)] border border-[hsl(var(--border-default))] p-4',
+      )}
+    >
       <div className="flex items-center gap-2">
         <Barcode className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
         <h3 className="text-sm font-semibold">{t('barcode.extraTitle')}</h3>

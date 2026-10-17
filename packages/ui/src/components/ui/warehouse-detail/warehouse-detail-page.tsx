@@ -15,11 +15,16 @@ import {
   Trash2,
   Edit3,
   X,
+  Factory,
+  SlidersHorizontal,
+  ImagePlus,
+  Barcode,
   type LucideIcon,
   TrendingUp,
 } from 'lucide-react'
 import { MoneyInput } from '../money-input'
 import { SelectField } from '../select-field'
+import { Dialog, DialogContent, DialogTitle } from '../dialog'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ProductDetailPage v3 — Hisabche Design Language
@@ -37,6 +42,9 @@ import { SelectField } from '../select-field'
  * data change, structurally the T1 currency-to-AFN defect. See T2.
  */
 type UnitType = string
+
+/** The four panels the product page opens as square tiles (owner, 17 Oct 2026). */
+type SectionKey = 'manufacturing' | 'customFields' | 'images' | 'barcodes'
 
 interface ProductData {
   name: string
@@ -105,6 +113,9 @@ export interface ProductDetailPageProps {
   stockLabel: string
   profitPerUnit: number
   totalProfit: number
+  /** Stock value at BUYING price — what the shelf cost to fill. */
+  purchaseValue: number
+  /** Stock value at SELLING price — what it can sell for. */
   totalValue: number
   onBack: () => void
   onStartEditing: () => void
@@ -113,16 +124,22 @@ export interface ProductDetailPageProps {
   onDelete: () => void
   /** Expiry (request #95) — the batches panel, rendered by the container. */
   expiry?: React.ReactNode
-  /** The product's money journey (evidence chain), rendered by the container. */
-  journey?: React.ReactNode
+  /** «افزایش و کاهش موجودی» WITH the money journey inside it (17 Oct 2026). */
+  movements?: React.ReactNode
+  /** The assign form when stock sits in no warehouse — hidden when there is none. */
+  stockPanel?: React.ReactNode
+  /** Where the stock is, per warehouse (BUG-080) — the third strip item. */
+  stockPosition?: React.ReactNode
   /** The product's extra barcodes (27 Sep 2026), rendered by the container. */
   barcodes?: React.ReactNode
   /** The product's images (28 Sep 2026), rendered by the container. */
   images?: React.ReactNode
-  /** Where the stock is, per warehouse (BUG-080), rendered by the container. */
-  stockPlaces?: React.ReactNode
+  /** The business's own fields on this product, rendered by the container. */
+  customFields?: React.ReactNode
   /** What the product is made of, its cost and its production history. */
   manufacturing?: React.ReactNode
+  /** Notes colleagues left on this product, rendered by the container. */
+  notes?: React.ReactNode
   /**
    * The business's warehouses. A quantity change lands in one: with several,
    * the person picks it; with one, it is that one; with none, nowhere.
@@ -141,6 +158,7 @@ export function ProductDetailPage({
   stockLabel,
   profitPerUnit,
   totalProfit,
+  purchaseValue,
   totalValue,
   onBack,
   onStartEditing,
@@ -148,11 +166,14 @@ export function ProductDetailPage({
   onSave,
   onDelete,
   expiry,
-  journey,
+  movements,
+  stockPanel,
+  stockPosition,
   barcodes,
   images,
-  stockPlaces,
+  customFields,
   manufacturing,
+  notes,
   stockWarehouses,
 }: ProductDetailPageProps) {
   const [editValues, setEditValues] = useState<ProductEditValues>({
@@ -167,6 +188,8 @@ export function ProductDetailPage({
     warehouseId: '',
   })
   const [errors, setErrors] = useState<Partial<Record<keyof ProductEditValues, string>>>({})
+  /** Which tile's panel is open over the page — null is «none». */
+  const [openSection, setOpenSection] = useState<SectionKey | null>(null)
 
   useEffect(() => {
     if (product) {
@@ -238,6 +261,18 @@ export function ProductDetailPage({
   }
 
   const badgeStyle = stockBadgeStyles[stockStatus] ?? stockBadgeStyles.secondary
+
+  const tiles: Array<{ id: SectionKey; icon: LucideIcon; label: string }> = [
+    { id: 'manufacturing', icon: Factory, label: t('manufacturing.panel.title', 'ساخت و تولید') },
+    {
+      id: 'customFields',
+      icon: SlidersHorizontal,
+      label: t('customFields.title', 'فیلدهای اختصاصی'),
+    },
+    { id: 'images', icon: ImagePlus, label: t('productImages.title', 'عکس‌های کالا') },
+    { id: 'barcodes', icon: Barcode, label: t('barcode.extraTitle', 'بارکدهای دیگر این کالا') },
+  ]
+  const openTile = tiles.find((tile) => tile.id === openSection)
 
   return (
     <div className="space-y-6">
@@ -466,8 +501,8 @@ export function ProductDetailPage({
           ) : (
             /* ── View Mode ── */
             <>
-              {/* The product's own KPI row — these were bare label/value
-                  pairs with no card around them (a local `InfoBox`). */}
+              {/* The product's own KPI row — the bare «5 عدد» had no money
+                  meaning; the two shelf totals do (owner, 17 Oct 2026). */}
               <KpiGrid>
                 <KpiCard
                   icon={DollarSign}
@@ -481,10 +516,18 @@ export function ProductDetailPage({
                 />
                 <KpiCard
                   icon={Package}
-                  label={t('warehouse.quantity', 'تعداد')}
-                  value={`${product.quantity} ${t(`warehouse.units.${toUnitType(product.unit)}`, product.unit)}`}
+                  label={t('warehouse.totalBuyValue', 'ارزش کل خرید')}
+                  value={`${fmt(purchaseValue)} AFN`}
+                />
+                <KpiCard
+                  icon={TrendingUp}
+                  label={t('warehouse.totalSellValue', 'ارزش کل فروش')}
+                  value={`${fmt(totalValue)} AFN`}
                 />
               </KpiGrid>
+              {/* The three answers asked for first (owner, 17 Oct 2026): the
+                  category, the stock WITH its unit, and where it sits. The
+                  per-warehouse line is a node — it loads its own parts. */}
               <div className="grid grid-cols-2 gap-4 border-t border-[hsl(var(--border-default))] pt-4 sm:grid-cols-3">
                 <div>
                   <p className="text-xs text-[hsl(var(--fg-secondary))]">
@@ -496,18 +539,19 @@ export function ProductDetailPage({
                 </div>
                 <div>
                   <p className="text-xs text-[hsl(var(--fg-secondary))]">
-                    {t('warehouse.unit', 'واحد')}
+                    {t('warehouse.currentStock', 'موجودی فعلی')}
                   </p>
                   <p className="font-medium text-[hsl(var(--fg-primary))]">
+                    {fmt(product.quantity)}{' '}
                     {t(`warehouse.units.${toUnitType(product.unit)}`, product.unit)}
                   </p>
                 </div>
-                <div>
+                <div data-field="stock-position">
                   <p className="text-xs text-[hsl(var(--fg-secondary))]">
-                    {t('warehouse.totalValue', 'ارزش کل موجودی')}
+                    {t('warehouse.stockPosition', 'موقعیت در انبار')}
                   </p>
-                  <p className="font-bold text-[hsl(var(--color-primary))]">
-                    {fmt(totalValue)} AFN
+                  <p className="font-medium text-[hsl(var(--fg-primary))]">
+                    {stockPosition ?? '—'}
                   </p>
                 </div>
               </div>
@@ -516,13 +560,9 @@ export function ProductDetailPage({
         </div>
       </div>
 
-      {/* ── Profit cards — the product's KPI row, three across ── */}
-      <KpiGrid className="sm:grid-cols-3">
-        <KpiCard
-          icon={Package}
-          label={t('warehouse.currentStock', 'موجودی فعلی')}
-          value={product.quantity}
-        />
+      {/* ── Profit cards — the margin side of the same shelf. «موجودی فعلی» is
+           not repeated here: it is the second line of the strip above. ── */}
+      <KpiGrid className="sm:grid-cols-2">
         <KpiCard
           icon={TrendingUp}
           label={t('warehouse.profitPerUnit', 'سود هر واحد')}
@@ -535,12 +575,53 @@ export function ProductDetailPage({
         />
       </KpiGrid>
 
-      {stockPlaces}
-      {manufacturing}
-      {images}
-      {barcodes}
+      {/* The assign form, only when stock sits in no warehouse (BUG-080). */}
+      {stockPanel}
+
+      {/* «افزایش و کاهش موجودی» with the money journey inside it. */}
+      {movements}
+
+      {/* The four panels as square buttons that open over the page — four on a
+          laptop, three on a tablet, two on a phone (owner, 17 Oct 2026). */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4" data-product-tiles>
+        {tiles.map((tile) => (
+          <button
+            key={tile.id}
+            type="button"
+            data-section-tile={tile.id}
+            onClick={() => setOpenSection(tile.id)}
+            className={cn(
+              interactiveCard,
+              'flex aspect-square flex-col items-center justify-center gap-2 p-3 text-center',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.5)]',
+              'motion-reduce:transition-none',
+            )}
+          >
+            <tile.icon className="size-6 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+            <span className="text-sm font-medium text-[hsl(var(--fg-primary))]">{tile.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* The panel opens OVER the page: the page keeps its place and the panel
+          keeps its own header; the dialog title is for screen readers. */}
+      <Dialog
+        open={openSection !== null}
+        onOpenChange={(open) => {
+          if (!open) setOpenSection(null)
+        }}
+      >
+        <DialogContent className="max-w-2xl" data-section-modal={openSection ?? ''}>
+          <DialogTitle className="sr-only">{openTile?.label ?? ''}</DialogTitle>
+          {openSection === 'manufacturing' ? <>{manufacturing}</> : null}
+          {openSection === 'customFields' ? <>{customFields}</> : null}
+          {openSection === 'images' ? <>{images}</> : null}
+          {openSection === 'barcodes' ? <>{barcodes}</> : null}
+        </DialogContent>
+      </Dialog>
+
+      {notes}
       {expiry}
-      {journey}
     </div>
   )
 }

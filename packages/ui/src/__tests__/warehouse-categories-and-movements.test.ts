@@ -5,6 +5,10 @@
 //     the warehouse list can be narrowed to one
 //   · the product page has the table it lacked: every increase and decrease
 //   · «بارکدهای دیگر» has the scan button its hint always promised
+//
+// 17 October additions to the table: «نوع» and «جهت» are two columns (they
+// were glued into one cell), it has a search, and Excel + Markdown exports
+// built from the same reading it renders.
 // ============================================
 
 import { readFileSync } from 'node:fs'
@@ -103,12 +107,13 @@ describe('a category is the business’s own word', () => {
 describe('the product page: increases and decreases', () => {
   const panel = read('packages/ui/src/components/ui/warehouse-detail/product-movements-panel.tsx')
 
-  it('is on the product page, under where the stock is', () => {
-    expect(
-      read(
-        'packages/ui/src/components/ui/warehouse-detail/containers/warehouse-detail-container.tsx',
-      ),
-    ).toContain('<ProductMovementsPanel t={safeT} productId={id} />')
+  it('is on the product page, with the money journey mounted inside it (17 October merge)', () => {
+    const container = read(
+      'packages/ui/src/components/ui/warehouse-detail/containers/warehouse-detail-container.tsx',
+    )
+    expect(container).toContain('<ProductMovementsPanel')
+    expect(container).toContain('journey={<ProductJourneyPanel t={safeT} productId={id} />}')
+    expect(panel).toContain('{journey}')
   })
 
   it('⚠️ adds nothing up: the balance after each row is the server’s', () => {
@@ -118,10 +123,14 @@ describe('the product page: increases and decreases', () => {
     expect(panel).not.toContain('<table')
   })
 
-  it('says which way each one went in a word, and a failed read is not «no movements»', () => {
-    expect(panel).toContain(
+  it('says which way each one went in a word — the reading the screen and the export share', () => {
+    // The word lives in `movement-export.ts`, so the table and the Excel /
+    // Markdown file cannot disagree about which way a movement went.
+    const lib = read('packages/ui/src/lib/warehouse/movement-export.ts')
+    expect(lib).toContain(
       "? t('warehouse.movementOut', 'کاهش') : t('warehouse.movementIn', 'افزایش')",
     )
+    expect(panel).toContain('movementDirectionWord(')
     const failed = panel.indexOf(') : history.error || !history.data ? (')
     expect(failed).toBeGreaterThan(-1)
     expect(panel.indexOf("t('warehouse.noMovements'")).toBeGreaterThan(failed)
@@ -139,11 +148,19 @@ describe('the product page: increases and decreases', () => {
       'movementsHint',
       'movementsFailed',
       'movementsGap',
+      'movementsNoMatch',
       'movementIn',
       'movementOut',
+      'direction',
+      'exportExcel',
+      'exportMarkdown',
+      'exportNote',
       'categoryAdd',
       'categoryNewPlaceholder',
       'categoryFilter',
+      'totalBuyValue',
+      'totalSellValue',
+      'stockPosition',
     ]) {
       expect(typeof warehouse[key], key).toBe('string')
     }

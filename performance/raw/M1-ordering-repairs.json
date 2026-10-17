@@ -1,0 +1,22 @@
+{
+  "purpose": "Every repair the capacity lab had to make to application ORDER during the canonical bootstrap, with the evidence for it. No file in docs/ was edited; no schema was invented — each repair moves real DDL from a docs file, or removes an object so a real ALTER can run and then puts the object back from its own file.",
+  "repairs": [
+    {
+      "kind": "column-type-vs-trigger-definition",
+      "blockedFile": "phase-c-01-inventory-source-of-truth-migration.sql",
+      "error": "cannot alter type of a column used in a trigger definition",
+      "statementThatFailed": "ALTER TABLE products ALTER COLUMN quantity TYPE numeric(18, 4); (line 128, inside a guarded DO block)",
+      "cause": "products_stock_webhook_trg (AFTER UPDATE OF quantity, min_stock_level ON public.products, WHEN old/new quantity differ) was created by developer-platform-02-migration.sql lines 214-219. In the runner's alphabetical extras order 'developer-platform-*' (d) runs before 'phase-*' (p); on the live database the chronology was the opposite — phase-c-01 ran when products.quantity was still integer and no such trigger existed yet.",
+      "checks": [
+        "8 column-pinning triggers exist (UPDATE OF lists); cross-referenced against the only 2 ALTER COLUMN TYPE statements in docs/ — this was the single conflict.",
+        "No view or matview depends on products.quantity (pg_depend/pg_rewrite probe returned []).",
+        "developer-platform-02-migration.sql contains no INSERT/COPY — idempotent DDL and grants only — so re-running the whole file at the end restores exactly what it first created."
+      ],
+      "repair": [
+        "DROP TRIGGER IF EXISTS products_stock_webhook_trg ON public.products — the exact statement from developer-platform-02 line 214, executed before phase-c-01 could continue.",
+        "After the queue completes: re-run docs/developer-platform-02-migration.sql via `lab-db.mjs sql-file` to recreate the trigger (and its function/grants) from the file's own bytes."
+      ],
+      "status": "drop done 2026-10-17; restore PENDING (end of bootstrap)"
+    }
+  ]
+}

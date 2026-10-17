@@ -14,6 +14,7 @@ import { Reel55HybridActor } from './Reel55HybridActors'
 import { Reel56LineActor } from './Reel56LineActors'
 import { Reel57AuditActor } from './Reel57AuditActors'
 import { Reel59TaxActor } from './Reel59TaxActors'
+import { Reel60FxActor } from './Reel60FxActors'
 import { faNumber } from '../ui/motion-primitives'
 
 interface WordDrivenStageProps {
@@ -44,6 +45,7 @@ export function WordDrivenStage({ t, scene }: WordDrivenStageProps) {
         {actor?.startsWith('r56-') && <Reel56LineActor actor={actor} t={t} plan={plan} />}
         {actor?.startsWith('r57-') && <Reel57AuditActor actor={actor} t={t} plan={plan} />}
         {actor?.startsWith('r59-') && <Reel59TaxActor actor={actor} t={t} plan={plan} />}
+        {actor?.startsWith('r60-') && <Reel60FxActor actor={actor} t={t} plan={plan} />}
       </div>
 
       {/* ── Synchronized Live Teleprompter / Subtitles (Clean Caption Bar) ── */}

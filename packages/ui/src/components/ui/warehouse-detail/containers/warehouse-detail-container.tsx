@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 // Margin and stock-value rules live in the domain layer so mobile derives the
 // same numbers rather than re-implementing them.
-import { profitPerUnit, stockValue, totalProfit } from '@hisabche/validation'
+import { profitPerUnit, purchaseValue, stockValue, totalProfit } from '@hisabche/validation'
 import {
   apiErrorMessage,
   useProduct,
@@ -22,6 +22,7 @@ import { ProductJourneyPanel } from '../product-journey-panel'
 import { ProductBarcodesPanel } from '../product-barcodes-panel'
 import { ProductImagesPanel } from '../product-images-panel'
 import { ProductWarehouseStockPanel } from '../product-warehouse-stock-panel'
+import { ProductStockPosition } from '../product-stock-position'
 import { ProductMovementsPanel } from '../product-movements-panel'
 import { ProductManufacturingPanel } from '../../manufacturing/product-manufacturing-panel'
 import { EntityNotes } from '../../entity-notes'
@@ -233,6 +234,9 @@ ${t('warehouse.deactivateInstead')}`)
 
   const totalValue = productData ? stockValue(productData) : 0
 
+  // What the shelf cost to fill, beside what it can sell for (owner, 17 Oct).
+  const buyValue = productData ? purchaseValue(productData) : 0
+
   const onSave = useCallback(
     (data: ProductEditValues) => {
       // A refused save keeps the form open with what was typed.
@@ -261,46 +265,48 @@ ${t('warehouse.deactivateInstead')}`)
       stockLabel={stockLabel}
       profitPerUnit={profit}
       totalProfit={profitTotal}
+      purchaseValue={buyValue}
       totalValue={totalValue}
       onBack={() => router.back()}
       onStartEditing={startEditing}
       onCancelEditing={() => setEditing(false)}
       onSave={onSave}
       onDelete={handleDelete}
-      barcodes={id ? <ProductBarcodesPanel t={safeT} productId={id} /> : null}
+      barcodes={id ? <ProductBarcodesPanel t={safeT} productId={id} embedded /> : null}
       images={
         id ? (
-          <ProductImagesPanel t={safeT} productId={id} productName={product?.name ?? ''} />
+          <ProductImagesPanel t={safeT} productId={id} productName={product?.name ?? ''} embedded />
         ) : null
       }
-      stockPlaces={
+      stockPanel={id ? <ProductWarehouseStockPanel t={safeT} productId={id} /> : null}
+      movements={
         id ? (
-          <>
-            <ProductWarehouseStockPanel t={safeT} productId={id} fmt={fmt} />
-            {/* How the figure above came to be: every increase and decrease. */}
-            <ProductMovementsPanel t={safeT} productId={id} />
-          </>
+          <ProductMovementsPanel
+            t={safeT}
+            productId={id}
+            productName={product?.name ?? ''}
+            journey={<ProductJourneyPanel t={safeT} productId={id} />}
+          />
         ) : null
       }
+      stockPosition={id ? <ProductStockPosition t={safeT} productId={id} fmt={fmt} /> : null}
       manufacturing={
         id ? (
-          <div className="space-y-4">
-            <ProductManufacturingPanel
-              t={safeT}
-              locale={locale}
-              productId={id}
-              productName={product?.name ?? ''}
-            />
-            {/* What colleagues wrote about this product (#103). */}
-            <EntityNotes entityType="product" entityId={id} />
-            {/* The business's own fields on a product (#141–#143). */}
-            <CustomFieldsPanel entity="product" entityId={id} />
-          </div>
+          <ProductManufacturingPanel
+            t={safeT}
+            locale={locale}
+            productId={id}
+            productName={product?.name ?? ''}
+            embedded
+          />
         ) : null
       }
+      customFields={
+        id ? <CustomFieldsPanel entity="product" entityId={id} embedded defaultOpen /> : null
+      }
+      notes={id ? <EntityNotes entityType="product" entityId={id} /> : null}
       stockWarehouses={(breakdown.data?.warehouses ?? []).map((w) => ({ id: w.id, name: w.name }))}
       expiry={id ? <ProductExpiryPanel t={safeT} productId={id} /> : null}
-      journey={id ? <ProductJourneyPanel t={safeT} productId={id} /> : null}
     />
   )
 }

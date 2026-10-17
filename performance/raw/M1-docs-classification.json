@@ -1,0 +1,2553 @@
+{
+  "summary": {
+    "measuredAt": "2026-10-17T09:06:40.238Z",
+    "total": 276,
+    "applied": 276,
+    "pending": 0,
+    "pendingWithDdl": 0,
+    "pendingReadOnly": 0,
+    "skippedByLab": [
+      "DUMP-STRUCTURE-ONLY.sql",
+      "FINDING-1-SUSPENDED-MEMBERS.sql",
+      "FINDING-7-WHY-NO-COSTING.sql",
+      "FINDING-db-integrity.sql",
+      "FINDING-sandbox-403.sql",
+      "FINDING-till-units-and-routing-2026-10-14.sql",
+      "VERIFY-ai-action-requests-01.sql",
+      "VERIFY-ai-pipeline-01.sql",
+      "VERIFY-ai-pipeline-02.sql",
+      "VERIFY-attendance-02.sql",
+      "VERIFY-attendance-devices-01.sql",
+      "VERIFY-attendance-self-01.sql",
+      "VERIFY-automation-01.sql",
+      "VERIFY-benchmark-01.sql",
+      "VERIFY-blog.sql",
+      "VERIFY-budget-currency.sql",
+      "VERIFY-budget-planning.sql",
+      "VERIFY-budget-revision-fn.sql",
+      "VERIFY-campaigns-01.sql",
+      "VERIFY-content-intelligence.sql",
+      "VERIFY-custom-fields-01.sql",
+      "VERIFY-custom-units-01.sql",
+      "VERIFY-data-snapshots-01.sql",
+      "VERIFY-developer-platform-02.sql",
+      "VERIFY-developer-platform-03.sql",
+      "VERIFY-developer-platform-04.sql",
+      "VERIFY-developer-platform-05.sql",
+      "VERIFY-developer-platform-06.sql",
+      "VERIFY-developer-platform-06b.sql",
+      "VERIFY-developer-platform-07.sql",
+      "VERIFY-developer-platform-08.sql",
+      "VERIFY-developer-platform.sql",
+      "VERIFY-entity-notes-01.sql",
+      "VERIFY-financing-01.sql",
+      "VERIFY-goods-marketplace-01.sql",
+      "VERIFY-installments-01.sql",
+      "VERIFY-invoice-exchange-rate-01.sql",
+      "VERIFY-late-fees-01.sql",
+      "VERIFY-linter-2026-09-14.sql",
+      "VERIFY-offline-idempotency.sql",
+      "VERIFY-opening-capital-and-fees-01.sql",
+      "VERIFY-perf-aggregates.sql",
+      "VERIFY-price-lists-01.sql",
+      "VERIFY-product-images.sql",
+      "VERIFY-promotions-01.sql",
+      "VERIFY-saved-reports-01.sql",
+      "VERIFY-shift-assignments-01.sql",
+      "VERIFY-till-payments-01.sql",
+      "VERIFY-wallet-01.sql",
+      "VERIFY-warehouse-map-01.sql",
+      "VERIFY-work-shifts-01.sql",
+      "VERIFY-workflow-escalation-01.sql",
+      "VERIFY-workspace-access-rpc-02.sql",
+      "VERIFY-workspace-access-rpc.sql",
+      "WIPE-ALL-BUSINESS-DATA.sql"
+    ]
+  },
+  "classification": [
+    {
+      "name": "CREATE-MY-WORKSPACE.sql",
+      "ddl": false,
+      "dml": true,
+      "applied": {
+        "checksum": "e0574b1eeed11846",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "DIAG-payment-invoice-unknown.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "4c0b0a4266bbf956",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "DIAG-product-stock-846534ae.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "5f26868b736c43ee",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "DUMP-STRUCTURE-ONLY.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "172060674e261f92",
+        "by": "capacity-lab:SKIPPED (read-only diagnostics; query bug: SECTION 3 references c.oid on pg_stat_user_tables (no oid column) - fails on any database; carries no schema)"
+      }
+    },
+    {
+      "name": "FINDING-1-SUSPENDED-MEMBERS.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "cc5299f4bc5e1ebd",
+        "by": "capacity-lab:SKIPPED (read-only FINDING diagnostic; queries custom_units which custom-units-01-migration.sql creates later in the extras order; carries no schema)"
+      }
+    },
+    {
+      "name": "FINDING-3-RLS-FLAG-VS-POLICIES.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "6f654cede78db259",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "FINDING-5-DATA-AND-FUNCTIONS.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "f47317dd7c3cf9c2",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "FINDING-6-WRITE-PATH.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "b36200aa9e21b40d",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "FINDING-7-WHY-NO-COSTING.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "31fab1929c446a71",
+        "by": "capacity-lab:SKIPPED (read-only FINDING diagnostic (4 SELECTs, no DDL/DML); query 3 has an off-by-one GROUP BY (type,2,3,4 omits has_cost at position 5) so unit_cost is ungrouped - fails on any database)"
+      }
+    },
+    {
+      "name": "FINDING-8-DO-THE-FUNCTIONS-EXIST.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "90d3fd06c9cc0bdd",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "FINDING-9-FUNCTIONS-CORRECT-QUERY.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "ee5149f7d751bf23",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "FINDING-attendance-terminals.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "9b15089a71779f06",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "FINDING-db-integrity.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "765a0c1f29d9c721",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column w.base_currency does not exist)"
+      }
+    },
+    {
+      "name": "FINDING-multi-currency.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "fb9abca53a55c122",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "FINDING-orphan-invoice-effects.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "2b78070858568233",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "FINDING-sandbox-403.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "59be9e8d3e63d643",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column w.sandbox_of does not exist)"
+      }
+    },
+    {
+      "name": "FINDING-till-units-and-routing-2026-10-14.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "9f00f3885e047a67",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column p.pos_session_id does not exist)"
+      }
+    },
+    {
+      "name": "FIX-403.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "9e6df8a97fd04854",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "FIX-INVOICES.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "65b0aa3d650d1cab",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "SETUP-COMPLETE.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "0c5748f7c80f53cd",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "TEST-A-BEFORE.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "0f156b664ea0a8e5",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-activity-reads-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "425b409ac88b52f2",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-ai-action-requests-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "4974f1cd1fcdcf71",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.ai_action_requests\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-ai-pipeline-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "dc809a1b881ecad8",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.ai_pipeline_runs\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-ai-pipeline-02.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "a1c5e2c5e1fe785d",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.ai_action_requests\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-attendance-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "3bec688b5d8bacd8",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-attendance-02.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "ecc96cafc2fa4710",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.attendance_submissions\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-attendance-devices-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "3a5dda5ac75ac5f9",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.attendance_terminal_events\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-attendance-self-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "5c241d243e493efa",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.attendance_submissions\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-automation-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "958d91201b4b3df6",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.automations\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-background-jobs-and-realtime-2026-09-26.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "77e8db99211e1419",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-base-currency-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "0f28b63af2099656",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-benchmark-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "c33cb98c3fbdd73f",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.benchmark_sale_counts(integer)\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-blog.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "2c231d91848bb517",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.blog_posts\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-budget-currency.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "06f8ede0503e5d31",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column \"currency\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-budget-planning.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "5d54c76466f448d5",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.budget_revisions\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-budget-revision-fn.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "5b5720ec60c79340",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.budget_consumption(uuid,uuid,uuid,date,date)\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-campaigns-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "aeb25da3b3d888ea",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.campaign_recipients\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-chart-workspace.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "c3b62c6596df1989",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-content-intelligence.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "73bbcf8b6edb3dfa",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.blog_prompt_settings\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-created-at-default.sql",
+      "ddl": false,
+      "dml": true,
+      "applied": {
+        "checksum": "cd678843a33f89ac",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-custom-fields-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "bb5bccb8379de703",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.custom_field_definitions\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-custom-units-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "b1977755e16b3fc1",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.custom_unit_rates\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-customer-declared-role-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "ea8274ec3e08f8c8",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-dashboard-chart-zero.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "60e5d149ce3d265a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-data-snapshots-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "dc3fb4d6c2cf0081",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.data_snapshots\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-db-integrity-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "5ad103be19d3c684",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-developer-platform-02.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "f35d4533e3292c98",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.api_request_logs\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-developer-platform-03.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "10df5982dc65a8da",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.api_keys\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-developer-platform-04.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "ad37129c827cb6e9",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.customer_portal_links\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-developer-platform-05.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "d4089351500d22fd",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.oauth_authorization_codes\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-developer-platform-06.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "5c0f4dd5af359fd7",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column w.is_sandbox does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-developer-platform-06b.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "393e5900b4c774dd",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.create_sandbox_workspace(uuid, uuid)\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-developer-platform-07.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "0cfa77e17e747c1a",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.oauth_app_webhook_secrets\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-developer-platform-08.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "508372f6077d2ea1",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column w.is_sandbox does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-developer-platform.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "212cc5823c671c3b",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.api_keys\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-entity-notes-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "cc8e18114b1f5b70",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.entity_notes\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-financing-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "8d8e5f6c835b1395",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.loan_facilities\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-goods-marketplace-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "37bd9f1c0137a471",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.platform_settings\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-installments-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "86d62afcf3616ad7",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.invoice_installments\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-inventory-consume-concurrency.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "98fcd922af52b936",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-invoice-exchange-rate-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "f696bdc60ea86f14",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column i.exchange_rate does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-invoice-idempotency.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "56d3fdb33d03a6fd",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-invoice-line-product.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "6fcd1d5b8d4094ec",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-late-fees-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "4bcc3a83f10424c0",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.late_fee_assessments\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-linter-2026-09-14.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "1b7b058829bc02a3",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"private.auth_workspace_ids()\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-linter-2026-10-11.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "ad7137e4af834058",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-manufacturing-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "a8856f54c86a8b33",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-manufacturing-page-500s.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "ced8e1e19ffd58c1",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-multi-instance-2026-09-26.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "bbd1835a4f53d235",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-offline-idempotency.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "d3188f9aea9601ae",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.payments_record_keyed(uuid, uuid, jsonb, jsonb, text)\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-opening-capital-and-fees-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "b8c7d73994d5702e",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.payments_record_with_fee(uuid, uuid, jsonb, jsonb, text, uuid, bigint, numeric)\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-perf-aggregates.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "db2db7d02e98e3c2",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function public.analytics_dashboard_kpis(uuid, timestamp with time zone, timestamp with time zone, timestamp with time zone) does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-pos-schema.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "a5bfa8fa597f7af3",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-pos-session-label-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "419ae1b0213f21b7",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-pos-till-currency-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "8e5395fa6ee4cc1e",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-price-lists-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "2481599f4f8c356a",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.price_lists\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-product-barcode-unique.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "c40b48fa1e60ac43",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-product-images.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "87485ab6c41f6769",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.product_images\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-product-orphans.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "13955b04ee781e9a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-promotions-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "f2553537f41fab97",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.promotions\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-report-dashboards-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "c6b717b700e306da",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-reset-all-business-data.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "835722a15d3fb0aa",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-rpc-client-revoke.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "2f523daa6ec552f5",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-saved-reports-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "959963b04278bf34",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.saved_reports\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-saved-views-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "7fd6818508d3010d",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-security-definer-exposure.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "996ff3b6f8ae0b6a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-shift-assignments-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "b2cdde919ffbf5e9",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.shift_assignments\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-stock-projection.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "dfabbaef4e924579",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-stock-why-no-movement.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "06dfa8392ee76f38",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-sync-path.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "8c3aec2b668d8290",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-till-bank-transfer.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "831f5317ed30dabd",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-till-payments-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "08a9aeb56f5c51a2",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column \"pos_session_id\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-wallet-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "59e49c4880c4f44d",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.wallets\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-warehouse-map-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "67f379e74e6e27ab",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.storage_locations\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-work-shifts-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "e12fd20a083a882d",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.work_shifts\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-workflow-escalation-01.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "281d32b3ad58f8b9",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column \"escalate_after_hours\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-workspace-access-rpc-02.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "976d5d4155cc9400",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.resolve_workspace_access(uuid, uuid)\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-workspace-access-rpc.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "588eda740611dd15",
+        "by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.resolve_workspace_access(uuid, uuid)\" does not exist)"
+      }
+    },
+    {
+      "name": "VERIFY-workspace-role-capabilities.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "14e11a4c0bfaa0bd",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "VERIFY-write-functions.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "2fc1c2247b85936e",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "WIPE-ALL-BUSINESS-DATA.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "d5e259bf4b4f5c18",
+        "by": "capacity-lab:SKIPPED (operator-only maintenance script; RAISEs by design until a human edits v_confirm to YES-DELETE-ALL-BUSINESS-DATA (verified in file); carries no schema; the lab seeds its own data from scratch so a wipe is meaningless)"
+      }
+    },
+    {
+      "name": "accounting-core-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "fd2c729d5fa7e137",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "activity-reads-01-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "98d7d465bb8a5ac3",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "ai-action-requests-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "d6fe4b6aaffc207b",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "ai-pipeline-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "30c0e81f998b2bc2",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "ai-pipeline-02-one-approval-queue-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "50163ea233fc84c2",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "attendance-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "4e789c6a884d9f47",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "attendance-02-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "126b9af47ef6370a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "attendance-devices-01-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "60bec58254db4d8a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "attendance-self-01-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "da8f238a086cbf0a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "attendance-workforce-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "ff206bac39142c35",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "automation-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "47a0c0c935af6aff",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "background-jobs-claim-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "1286f635d4178cae",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "base-currency-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "e9fddce227963350",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "base-schema-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "2fa856101f20a4c5",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "benchmark-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "30212daaaa932e47",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "blog-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "eda711d5b99a73d0",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "branch-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "7506f839457019fb",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "budget-currency-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "7cc3d7ee744486d5",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "budget-planning-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "9c9115c8c71d6440",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "campaigns-01-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "6d591a5fa1a8c545",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "child-table-rls-fix.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "f0cd439069ce080c",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "cms-foundation-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "d8f1652146362271",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "content-intelligence-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "4d495721be356b0b",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "content-intelligence-02-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "ff3924a3b5c4368e",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "content-intelligence-03-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "3e77a278a8d810a1",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "content-intelligence-04-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "b03dcedd87d8a4ea",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "content-intelligence-05-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "ce6180d8b638ed74",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "custom-fields-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "3348cbd67c9924b6",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "custom-units-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "3619ebc0851c05c8",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "customer-360-phase3-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "cc1d8545c1240726",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "customer-360-phase3-verify.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "f693b88aee3058ce",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "customer-debt-cancelled-fix-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "4d373c953674053e",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "customer-declared-role-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "f58e17fb97c3390a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "data-migration-center-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "acccf49c2da4376a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "data-migration-invoices-01-VERIFY.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "16548ad8e0e4b0ec",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "data-migration-invoices-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "4d52f9749e96af17",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "data-snapshots-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "e0f579280f59eb83",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "db-integrity-01-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "f504cb525d0e8b25",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "developer-platform-02-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "8b1af1f4aa81675a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "developer-platform-03-commerce-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "c80518f346fb7133",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "developer-platform-04-portal-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "66d622f8852f161f",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "developer-platform-05-oauth-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "693668c9c079ffcf",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "developer-platform-06-sandbox-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "89b7ba4815d97722",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "developer-platform-06b-sandbox-access-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "1d573e867dd43ac5",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "developer-platform-07-marketplace-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "1ffa13162f232edb",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "developer-platform-08-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "c0632efb9bf28e07",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "developer-platform-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "1c394f2d6b4361a7",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "email-outbox-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "7583ab3fb9c4d3bf",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "entity-notes-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "2ea375e4380fe7fa",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "event-log-claim-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "1a579b3a00818421",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "finance-gaps-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "c5d307f293abf951",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "financing-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "c892acea3b4b1471",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "function-search-path-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "0656f95af60c3c25",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "goods-marketplace-01-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "e9292a1affcecf56",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "hardening-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "821eb51d1400286a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "installments-01-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "189507fc88e0d311",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "inventory-consume-concurrency-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "a735f60f6f9bb1ea",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "inventory-costing-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "8132d36f2ffc5c1d",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "invoice-exchange-rate-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "40b967cea6822a3a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "invoice-idempotency-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "b4f2aee6b44088c9",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "invoice-public-share-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "4af592ae01613c72",
+        "by": "sql-editor"
+      }
+    },
+    {
+      "name": "invoice-write-document-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "60b37f46e9bc5fc9",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "late-fees-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "d6d43b2e27e2dc4d",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "linter-2026-09-14-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "6fadcffce4ae0cb1",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "linter-2026-10-11-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "3e6d7ed41f5fe0ac",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "linter-hardening-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "6523fd4b5dbb7252",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "live-reconciliation-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "aabd1fe8d823c080",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "manufacturing-01-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "81914df9f5377426",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "mdm-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "75c8001a32225b92",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "member-module-blocks-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "8607ffb81341bf24",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "missing-rpcs-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "46f4e9fe055014a8",
+        "by": "sql-editor"
+      }
+    },
+    {
+      "name": "module-auth-session-epoch-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "072658b465b6b75f",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "module-created-at-default-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "ab9d64dea0f8c79a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "module-customer-opening-balance-report.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "170d3e622ae74c94",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "module-desktop-update-feed-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "c0e9bad5d06be5cc",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "multi-warehouse-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "9d8266c60429f889",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "offline-idempotency-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "bb9275932b3568e7",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "onboarding-server-state-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "caa6d3993853bd15",
+        "by": "sql-editor"
+      }
+    },
+    {
+      "name": "opening-capital-and-fees-01-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "e052991ddd88eb99",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "patch-01-currencies-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "8f45b54010f7bc10",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "patch-02-custom-units-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "4570b5cf4a8cda3c",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "patch-03-leaves-gaps-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "c9d1555d56812a02",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "payments-ar-ap-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "510240ef4b3fa771",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "perf-aggregates-analytics-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "3a378bda39efe39e",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "perf-aggregates-ledger-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "c75cfc0772078aa3",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "personalization-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "ab6fb60813a98e12",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-a-01-journal-lines-fk-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "736e2c0dda2a6d5e",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-a-02-ledger-entries-workspace-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "1891bb88669f1b94",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-a-03-fk-indexes-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "f8821f6eb9008a59",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-a-04-missing-primary-keys-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "1f3404a7d083889d",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-b-01-accounting-source-of-truth-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "cc7dacd4455d277e",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-b-02-freeze-transaction-payment-writes.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "e9435c65611822e9",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-b-03-view-security-invoker-fix.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "f27ad50f54775c7f",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-c-01-inventory-source-of-truth-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "a535aadc03e6d50d",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-d-01-employee-branch-assignments-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "c9a2fa9cffc96828",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-e-01-rbac-2.0-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "09e7571b236d7ca2",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-f-01-receivables-projection-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "665e06c8ae3f7447",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-g-01-branch-manager-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "28082627d3d5e859",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-g-02-permission-profiles-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "66e4e8f69b36eded",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-g-03-audit-branch-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "9aa6595fab2833e4",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-j-01-branch-period-lock-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "e3f8af9abe211389",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-j-02-reconciliation-hardening-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "4ffa24091995cc85",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-j-03-document-status-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "4574df5f2ce24a7f",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-j-04-payroll-ledger-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "ff7c3f4ef96cf844",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-k-01-stock-transfers-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "151a812195822fd2",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-l-01-units-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "922809c277b21200",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-l-02-product-units-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "1ddcb9c97302cfb7",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-l-03-cycle-counts-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "39d78c2709903f06",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-m-01-shift-handover-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "1acfd2667359db8f",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-n-01-reconciliation-memory-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "57613551433c39a2",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-o-01-reporting-layer-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "b6f8697baa1a122b",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-o-02-catalog-and-query-log-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "7af3c3c8a0d4c3d0",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-t11-product-units-rpc-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "61865e71a1a85f47",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-t13-ai-provider-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "14ab24e9fc7abb5f",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-t2-units-rls-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "d0feddaee789656c",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-t4-manufacturing-fk-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "3fe38ee9ed8a0302",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "phase-t4b-bom-notes-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "17d51828dc373402",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "plan-limits-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "4860c7dbe960b249",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "pos-session-label-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "cc7d102f2dcdb2f0",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "pos-session-suspend-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "104c18c5691a84d5",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "pos-till-currency-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "9afe7d25ab78cc5a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "price-lists-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "6335cdb130aeb55b",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "product-barcode-unique-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "e8a9d1aec88db318",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "product-barcodes-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "fc2923272e79709b",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "product-images-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "a0099bb536c257e8",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "promotions-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "0d71d3117f988fa3",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "purchase-order-write-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "ca3919315399399f",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "realtime-data-tables-migration.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "e5fd72becaa29f32",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "realtime-publication-migration.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "92173550621fc53d",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "referral-system-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "be79757e2f128af0",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "remaining-policies-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "2af0f3c2538b6475",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "report-dashboards-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "1c2c5a294a0e853e",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "restore-defaults-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "5e70424b6db39cdb",
+        "by": "sql-editor"
+      }
+    },
+    {
+      "name": "rls-performance-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "63a2c0d778b95d24",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "rls-recursion-fix-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "a1b7f80c1cd373e4",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "rpc-client-revoke-migration.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "86c9bdd1fa5a75f2",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "rules-engine-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "d781865b3356cfa7",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "saved-reports-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "debf6297a252dd3f",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "saved-views-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "2efed874270cb51d",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "schema-drift-fix-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "f5020fa6c8e9b1d0",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "security-revoke-definer-rpc-migration.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "fbe35d9f0be66187",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "shift-assignments-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "1ecc85d8dec5d0a4",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "sod-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "5cfb57d4db83ebc8",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "stock-transfer-idempotency-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "aa9fa1117cd43446",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "subscription-upgrade-requests-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "f9ffaf5be3e7aabc",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "subscription-workspace-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "93e1b8dc6a7344e4",
+        "by": "sql-editor"
+      }
+    },
+    {
+      "name": "sync-conflicts-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "8eafd4d5bb40cd41",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "sync-engine-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "236a1b4b30be63fc",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "t9-paid-amount-drift-report.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "98bca2f97dd7b1f2",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "task-assignment-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "ea67771132e83bd8",
+        "by": "sql-editor"
+      }
+    },
+    {
+      "name": "task-customer-outcomes-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "4ee404af5de026e5",
+        "by": "sql-editor"
+      }
+    },
+    {
+      "name": "tax-engine-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "abc558b2fcf06f1d",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "tenancy-rls.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "cf8cc0454fa2ff5b",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "tenancy-workspace-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "5bc0bda28b22f0d3",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "tenant-isolation-closure-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "431ea11307939b95",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "tier2-gaps-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "caa02a8bbfb23cdf",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "till-bank-transfer-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "16f8b2a6947a4928",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "till-payments-01-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "83f1384f3b9ef1eb",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "timesheet-sync-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "612ec2bb0c0eeffd",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "traceability-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "e7867b73fd3b0c06",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "unified-sale-purchase-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "49538cc25c2bae2a",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "verify-phases-m-n-o.sql",
+      "ddl": false,
+      "dml": false,
+      "applied": {
+        "checksum": "d27df5952f590332",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "views-and-billing-events-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "2cea2402a0227c50",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "wallet-01-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "e71a263fa51a3323",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "warehouse-map-01-migration.sql",
+      "ddl": true,
+      "dml": true,
+      "applied": {
+        "checksum": "c3486bd9019dfc94",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "work-shifts-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "222c3b6472ca3dc9",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "workflow-escalation-01-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "3ab7419e23d9d397",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "workspace-access-rpc-02-custom-role-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "94af0d14fbf99f7c",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "workspace-access-rpc-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "19bbb85a295a1275",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "workspace-member-fields-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "06f721137ebaa79b",
+        "by": "sql-editor"
+      }
+    },
+    {
+      "name": "workspace-members-rls-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "849173a04b6969b0",
+        "by": "sql-editor"
+      }
+    },
+    {
+      "name": "workspace-owner-invariant.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "57bc57e87fa91f40",
+        "by": "sql-editor"
+      }
+    },
+    {
+      "name": "workspace-role-capabilities-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "4eddb226e9704159",
+        "by": "hamed"
+      }
+    },
+    {
+      "name": "workspace-stamp-migration.sql",
+      "ddl": true,
+      "dml": false,
+      "applied": {
+        "checksum": "14e200c96c2a0df8",
+        "by": "sql-editor"
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "$comment": "Hisabche capacity lab — LOCAL ONLY. Every path and port here belongs to this machine. Nothing in this file may ever name a remote host.",
+  "lab": {
+    "host": "127.0.0.1",
+    "port": 55432,
+    "database": "hisabche_lab",
+    "user": "postgres",
+    "password": "hisabche-lab-local",
+    "dataRoot": "C:/Users/hamed/AppData/Local/Temp/opencode/hisabche-capacity-lab",
+    "$postgresSettings": "Written into postgresql.conf at lab init. shared_buffers/max_connections are LAB-HOST choices, not production parity — see performance/PARITY.md.",
+    "postgresSettings": {
+      "shared_buffers": "1GB",
+      "max_connections": "400",
+      "work_mem": "16MB",
+      "maintenance_work_mem": "256MB",
+      "wal_level": "logical",
+      "track_io_timing": "on",
+      "track_functions": "all",
+      "shared_preload_libraries": "'pg_stat_statements'",
+      "pg_stat_statements.max": "5000",
+      "pg_stat_statements.track": "all",
+      "log_min_duration_statement": "2000"
+    }
+  },
+  "profiles": {
+    "$comment": "Invoice/user counts are TARGETS from the task brief; the per-tenant skew is an assumption documented in reports/dataset-manifest.json. users here means distinct auth users seeded; concurrent users are chosen at load time.",
+    "SMALL": { "users": 100, "workspaces": 40, "invoices": 100000 },
+    "MEDIUM": { "users": 500, "workspaces": 180, "invoices": 500000 },
+    "TARGET": { "users": 1000, "workspaces": 350, "invoices": 1000000 },
+    "LARGE": { "users": 1500, "workspaces": 500, "invoices": 1500000 }
+  },
+  "safety": {
+    "maxDbSizeGb": 30,
+    "maxSeedMinutes": 240,
+    "minFreeDiskGb": 40,
+    "maxMemoryPressurePct": 85,
+    "maxWalGb": 20
+  },
+  "seed": {
+    "baseCurrency": "AFN",
+    "secondCurrency": "USD",
+    "monthsOfHistory": 24,
+    "itemsPerInvoice": { "min": 1, "max": 8, "median": 2 },
+    "cancelledSharePct": 3,
+    "draftSharePct": 4,
+    "paidSharePct": 55
+  }
+}

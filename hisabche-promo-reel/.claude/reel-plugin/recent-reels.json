@@ -94,5 +94,13 @@
     "primaryTemplate": "word-sync",
     "visualLanguage": "financial-intelligence",
     "hookMechanism": "deadline-pressure"
+  },
+  {
+    "id": 60,
+    "topic": "فاکتور هزار دالری به نرخ ۷۰، پرداخت به نرخ ۷۴؛ ۴٬۰۰۰ افغانی اختلاف کجا رفت؟",
+    "creativeMechanism": "overwritten-rate-strike",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "midnight-gold",
+    "hookMechanism": "uncomfortable-discovery"
   }
 ]

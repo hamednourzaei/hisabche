@@ -1177,6 +1177,27 @@ export const REEL_REGISTRY_LIST: ReelRegistryEntry[] = [
     description:
       'بحران ممیزی دارایی و جریمه کتمان درآمد: برگ تشخیص ۱۸۰ میلیونی به دلیل رد دفاتر سنتی و مغایرت با سامانه مودیان، نقص اکسل در تولید کد رهگیری ۲۲ رقمی، و ارسال مستقیم فاکتور الکترونیک با یک کلیک در حسابچه با صفر ریال جریمه',
   },
+  {
+    id: '60',
+    title: 'دالر بالا رفت؛ ۴٬۰۰۰ افغانی کجا رفت؟',
+    artDirection: 'swiss-editorial',
+    layoutTopology: 'asymmetrical-swiss-grid',
+    operators: [
+      'RateFreezeOnInvoice',
+      'DayRatePayment',
+      'FxGainLossPosting',
+      'OverwrittenRateStrike',
+      'MonotonicOdometer',
+    ],
+    themeName: 'midnight-gold',
+    cardQuotaMax: 3,
+    targetCustomer: 'wholesaler',
+    openingArchetype: 'uncomfortable-discovery',
+    merchantPainCategory: 'profit-illusion',
+    audioStrategy: 'tactile-foley',
+    description:
+      'فاکتور هزار دالری به نرخ ۷۰ صادر و به نرخ ۷۴ پرداخت شد: دفتر ۷۰٬۰۰۰، صندوق ۷۴٬۰۰۰، و ۴٬۰۰۰ افغانی اختلاف که در اکسل با بازنویسی نرخ گم شد. حسابچه نرخ فاکتور را نگه می‌دارد و اختلاف را خودکار به سود و زیان تسعیر ارز می‌برد',
+  },
 ]
 
 // Ensure every entry in the registry carries its designated viral template

@@ -6078,3 +6078,296 @@ button {
   border-radius: 999px;
   padding: 5px 12px;
 }
+
+/* ═══ Reel #60 — دالر بالا رفت؛ ۴٬۰۰۰ افغانی کجا رفت؟ ═══ */
+.r60-scene {
+  width: 100%;
+  padding: 0 22px;
+  gap: 16px;
+}
+
+.r60-headline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.r60-badge {
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 4px 14px;
+}
+
+.r60-badge.amber {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
+.r60-badge.red {
+  color: #fb7185;
+  background: rgba(251, 113, 133, 0.12);
+  border: 1px solid rgba(251, 113, 133, 0.4);
+}
+
+.r60-badge.cyan {
+  color: #22d3ee;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.4);
+}
+
+.r60-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.45;
+  color: #fff;
+  text-wrap: balance;
+  text-shadow: 0 6px 26px rgba(0, 0, 0, 0.85);
+}
+
+.r60-hl-amber {
+  color: #fbbf24;
+  text-shadow: 0 0 18px rgba(251, 191, 36, 0.55);
+}
+
+.r60-hl-cyan {
+  color: #22d3ee;
+  text-shadow: 0 0 18px rgba(34, 211, 238, 0.55);
+}
+
+.r60-hl-purple {
+  color: #c084fc;
+  text-shadow: 0 0 18px rgba(192, 132, 252, 0.55);
+}
+
+.r60-hl-red {
+  color: #fb7185;
+  font-weight: 900;
+  font-size: 24px;
+}
+
+.r60-card {
+  position: relative;
+  width: 100%;
+  background: linear-gradient(155deg, rgba(24, 20, 10, 0.95), rgba(9, 8, 6, 0.98));
+  border: 1.5px solid rgba(251, 191, 36, 0.28);
+  border-radius: 22px;
+  padding: 16px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
+}
+
+.r60-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.r60-muted {
+  color: #a8a29e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.r60-pill {
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 3px 12px;
+}
+
+.r60-pill.cyan {
+  color: #22d3ee;
+  background: rgba(34, 211, 238, 0.12);
+}
+
+.r60-big {
+  display: flex;
+  justify-content: center;
+}
+
+.r60-ticker {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.r60-ticker-value {
+  font-size: 46px;
+  font-weight: 900;
+  color: #fbbf24;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 24px rgba(251, 191, 36, 0.5);
+  min-width: 2.4em;
+  text-align: center;
+}
+
+.r60-arrow-up {
+  color: #4ade80;
+  font-size: 22px;
+}
+
+.r60-question {
+  font-size: 22px;
+  font-weight: 900;
+  color: #fbbf24;
+}
+
+.r60-diff {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  border-color: rgba(251, 113, 133, 0.6);
+  box-shadow:
+    0 0 28px rgba(251, 113, 133, 0.25),
+    0 20px 48px rgba(0, 0, 0, 0.7);
+  font-weight: 800;
+}
+
+.r60-sheet {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  padding: 0;
+  overflow: hidden;
+  gap: 0;
+}
+
+.r60-sheet-head,
+.r60-sheet-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1.3fr;
+  text-align: center;
+  font-size: 16px;
+}
+
+.r60-sheet-head {
+  background: #217346;
+  color: #fff;
+  font-weight: 800;
+  padding: 10px 6px;
+}
+
+.r60-sheet-row {
+  padding: 16px 6px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.r60-rate-cell {
+  display: inline-flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.r60-old-rate {
+  position: relative;
+  color: #64748b;
+}
+
+.r60-strike {
+  position: absolute;
+  inset-inline: -4px;
+  top: 50%;
+  height: 3px;
+  background: #e11d48;
+  border-radius: 2px;
+  transform-origin: right center;
+}
+
+.r60-new-rate {
+  color: #b45309;
+  font-weight: 900;
+}
+
+.r60-lost {
+  align-items: center;
+  text-align: center;
+  border-color: rgba(251, 113, 133, 0.5);
+  border-style: dashed;
+}
+
+.r60-locked {
+  border-color: rgba(34, 211, 238, 0.45);
+}
+
+.r60-lock {
+  color: #22d3ee;
+  font-weight: 900;
+  display: inline-block;
+}
+
+.r60-journal {
+  border-color: rgba(192, 132, 252, 0.45);
+  gap: 8px;
+}
+
+.r60-journal-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #c084fc;
+}
+
+.r60-journal-row {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.r60-side {
+  color: #a8a29e;
+  font-size: 13px;
+}
+
+.r60-account {
+  color: #f8fafc;
+}
+
+.r60-cta {
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  padding: 24px 22px;
+  border-color: rgba(34, 211, 238, 0.55);
+}
+
+.r60-cta-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.r60-cta-button {
+  background: linear-gradient(90deg, #06b6d4, #f59e0b);
+  color: #0b0a07;
+  font-size: 22px;
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 12px 40px;
+}
+
+.r60-url {
+  font-size: 15px;
+  letter-spacing: 0.18em;
+  color: #fbbf24;
+  direction: ltr;
+}

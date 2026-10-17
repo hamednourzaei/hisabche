@@ -246,6 +246,75 @@ export function useUpdateStorageLocation() {
  * The server refuses more units than the WAREHOUSE holds, so the answer to
  * «چند تا جا میشود؟» is the server's, not this screen's.
  */
+/** One product's shelves, per warehouse the member may use (the product page). */
+export interface ProductStorageWarehouse {
+  id: string
+  name: string
+  onHand: number
+  placed: Array<{ locationId: string; code: string; name: string | null; quantity: number }>
+  choices: Array<{ id: string; code: string; name: string | null }>
+}
+
+export type ProductStorageLocations =
+  { configured: false } | { configured: true; warehouses: ProductStorageWarehouse[] }
+
+/**
+ * Where ONE product sits, shelf by shelf. Under `warehouseMapKeys.all`, so
+ * placing or moving stock anywhere refreshes the product page too. Read fresh
+ * and never persisted to the device (a stale shelf sends a person the wrong way).
+ */
+export function useProductStorageLocations(productId: string | null) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: [...warehouseMapKeys.all, 'product', productId ?? ''] as const,
+    queryFn: async (): Promise<ProductStorageLocations> => {
+      const { data } = await apiClient.get<Partial<{ configured: boolean; warehouses: unknown }>>(
+        `/products/${productId}/storage-locations`,
+      )
+      if (data?.configured === false) return { configured: false }
+      return { configured: true, warehouses: asList<ProductStorageWarehouse>(data?.warehouses) }
+    },
+    enabled: authReady && !!productId,
+    staleTime: 0,
+    meta: { persist: false },
+  })
+}
+
+/**
+ * Move units of one product from one shelf to another in the same warehouse.
+ *
+ * Two calls of the ONE placing path, in this order: the old shelf goes down
+ * first, so the warehouse cap is never exceeded midway. If the second call
+ * fails the units are «not on a shelf» — an honest state — and the error is
+ * returned; nothing invents a stock figure.
+ */
+export function useMoveProductPlacement() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      productId: string
+      fromLocationId: string | null
+      fromQuantityAfter: number
+      toLocationId: string
+      toQuantityAfter: number
+    }) => {
+      if (input.fromLocationId) {
+        await apiClient.post(`/storage-locations/${input.fromLocationId}/place`, {
+          productId: input.productId,
+          quantity: input.fromQuantityAfter,
+        })
+      }
+      await apiClient.post(`/storage-locations/${input.toLocationId}/place`, {
+        productId: input.productId,
+        quantity: input.toQuantityAfter,
+      })
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: warehouseMapKeys.all })
+    },
+  })
+}
+
 export function usePlaceStock() {
   const queryClient = useQueryClient()
   return useMutation({

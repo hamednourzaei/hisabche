@@ -33,7 +33,11 @@ describe('the product page shows the gallery', () => {
       'warehouse-detail-container.tsx',
     )
     expect(container).toContain("import { ProductImagesPanel } from '../product-images-panel'")
-    expect(container).toContain('<ProductImagesPanel t={safeT} productId={id}')
+    // Whitespace-free, so a formatter's line breaks cannot hide the mount —
+    // and the tile passes `embedded`, so extra props are expected.
+    expect(container.split(/\s+/).join(' ')).toContain(
+      '<ProductImagesPanel t={safeT} productId={id}',
+    )
   })
 
   it('the page renders the slot it is given', () => {

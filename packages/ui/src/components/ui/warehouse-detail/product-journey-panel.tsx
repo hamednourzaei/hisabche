@@ -6,7 +6,13 @@
 // A product's money journey over the last 12 months, in the selected
 // currency: what was bought (cost layers, by source), what left with sales
 // and adjustments (at cost), what is still on the shelf, and the profit the
-// report attributes to it. Loads only when asked. Never converts currencies.
+// report attributes to it. Never converts currencies.
+//
+// ⚠️ IT LIVES INSIDE «افزایش و کاهش موجودی» (owner, 17 October 2026): the two
+// read the same movements from two angles, so this is a block inside the
+// movements card — no border of its own — and it opens SHOWING: the merge was
+// asked for so the numbers are read, not hidden behind a second click.
+// «بستن» still collapses it.
 // ============================================
 
 import { useMemo, useState } from 'react'
@@ -22,7 +28,7 @@ type T = (key: string, fallback?: string) => string
 
 export function ProductJourneyPanel({ t, productId }: { t: T; productId: string }) {
   const { currency } = useCurrency()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const range = useMemo(() => {
     const to = new Date()
     const from = new Date(to.getTime() - 365 * 86_400_000)
@@ -33,9 +39,9 @@ export function ProductJourneyPanel({ t, productId }: { t: T; productId: string 
   const money = (value: number) => `${formatSelectedAmount(value)} ${currency}`
 
   return (
-    <section className="space-y-3 rounded-2xl border border-[hsl(var(--border-default))] p-4">
+    <section className="space-y-3 rounded-xl bg-[hsl(var(--surface-muted))] p-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="font-semibold text-[hsl(var(--fg-primary))]">
+        <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
           {t('evidence.journeyTitle')}
         </h3>
         <Button size="sm" variant="ghost" onClick={() => setOpen((v) => !v)}>

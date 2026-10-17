@@ -24,6 +24,7 @@ import {
   type ProductImage,
 } from '@hisabche/api'
 
+import { cn } from '../../../lib/utils'
 import { Button } from '../button'
 
 type T = (key: string, fallback?: string) => string
@@ -62,11 +63,14 @@ export function ProductImagesPanel({
   t,
   productId,
   productName,
+  embedded = false,
 }: {
   t: T
   productId: string
   /** Suggested alt text for a new image. */
   productName: string
+  /** Inside a dialog (the product page's «عکس‌های کالا» tile): no card border. */
+  embedded?: boolean | undefined
 }) {
   const images = useProductImages(productId)
   const add = useAddProductImage(productId)
@@ -122,7 +126,10 @@ export function ProductImagesPanel({
 
   return (
     <section
-      className="space-y-3 rounded-[var(--radius-lg)] border border-[hsl(var(--border-default))] p-4"
+      className={cn(
+        'space-y-3',
+        !embedded && 'rounded-[var(--radius-lg)] border border-[hsl(var(--border-default))] p-4',
+      )}
       data-product-images=""
     >
       <div className="flex items-center gap-2">

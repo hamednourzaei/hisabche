@@ -1,0 +1,332 @@
+[
+  {
+    "name": "DUMP-STRUCTURE-ONLY.sql",
+    "checksum": "172060674e261f92",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostics; query bug: SECTION 3 references c.oid on pg_stat_user_tables (no oid column) - fails on any database; carries no schema)",
+    "applied_at": "2026-10-17T08:49:42.964Z"
+  },
+  {
+    "name": "FINDING-1-SUSPENDED-MEMBERS.sql",
+    "checksum": "cc5299f4bc5e1ebd",
+    "applied_by": "capacity-lab:SKIPPED (read-only FINDING diagnostic; queries custom_units which custom-units-01-migration.sql creates later in the extras order; carries no schema)",
+    "applied_at": "2026-10-17T08:50:21.641Z"
+  },
+  {
+    "name": "FINDING-7-WHY-NO-COSTING.sql",
+    "checksum": "31fab1929c446a71",
+    "applied_by": "capacity-lab:SKIPPED (read-only FINDING diagnostic (4 SELECTs, no DDL/DML); query 3 has an off-by-one GROUP BY (type,2,3,4 omits has_cost at position 5) so unit_cost is ungrouped - fails on any database)",
+    "applied_at": "2026-10-17T08:52:19.858Z"
+  },
+  {
+    "name": "FINDING-db-integrity.sql",
+    "checksum": "765a0c1f29d9c721",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column w.base_currency does not exist)",
+    "applied_at": "2026-10-17T08:52:20.667Z"
+  },
+  {
+    "name": "FINDING-sandbox-403.sql",
+    "checksum": "59be9e8d3e63d643",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column w.sandbox_of does not exist)",
+    "applied_at": "2026-10-17T08:52:21.234Z"
+  },
+  {
+    "name": "FINDING-till-units-and-routing-2026-10-14.sql",
+    "checksum": "9f00f3885e047a67",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column p.pos_session_id does not exist)",
+    "applied_at": "2026-10-17T08:52:21.763Z"
+  },
+  {
+    "name": "VERIFY-ai-action-requests-01.sql",
+    "checksum": "4974f1cd1fcdcf71",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.ai_action_requests\" does not exist)",
+    "applied_at": "2026-10-17T08:54:26.656Z"
+  },
+  {
+    "name": "VERIFY-ai-pipeline-01.sql",
+    "checksum": "dc809a1b881ecad8",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.ai_pipeline_runs\" does not exist)",
+    "applied_at": "2026-10-17T08:54:27.269Z"
+  },
+  {
+    "name": "VERIFY-ai-pipeline-02.sql",
+    "checksum": "a1c5e2c5e1fe785d",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.ai_action_requests\" does not exist)",
+    "applied_at": "2026-10-17T08:54:27.881Z"
+  },
+  {
+    "name": "VERIFY-attendance-02.sql",
+    "checksum": "ecc96cafc2fa4710",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.attendance_submissions\" does not exist)",
+    "applied_at": "2026-10-17T08:54:28.621Z"
+  },
+  {
+    "name": "VERIFY-attendance-devices-01.sql",
+    "checksum": "3a5dda5ac75ac5f9",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.attendance_terminal_events\" does not exist)",
+    "applied_at": "2026-10-17T08:54:29.240Z"
+  },
+  {
+    "name": "VERIFY-attendance-self-01.sql",
+    "checksum": "5c241d243e493efa",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.attendance_submissions\" does not exist)",
+    "applied_at": "2026-10-17T08:54:29.760Z"
+  },
+  {
+    "name": "VERIFY-automation-01.sql",
+    "checksum": "958d91201b4b3df6",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.automations\" does not exist)",
+    "applied_at": "2026-10-17T08:54:30.272Z"
+  },
+  {
+    "name": "VERIFY-benchmark-01.sql",
+    "checksum": "c33cb98c3fbdd73f",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.benchmark_sale_counts(integer)\" does not exist)",
+    "applied_at": "2026-10-17T08:54:30.927Z"
+  },
+  {
+    "name": "VERIFY-blog.sql",
+    "checksum": "2c231d91848bb517",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.blog_posts\" does not exist)",
+    "applied_at": "2026-10-17T08:54:31.464Z"
+  },
+  {
+    "name": "VERIFY-budget-currency.sql",
+    "checksum": "06f8ede0503e5d31",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column \"currency\" does not exist)",
+    "applied_at": "2026-10-17T08:54:32.001Z"
+  },
+  {
+    "name": "VERIFY-budget-planning.sql",
+    "checksum": "5d54c76466f448d5",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.budget_revisions\" does not exist)",
+    "applied_at": "2026-10-17T08:54:32.625Z"
+  },
+  {
+    "name": "VERIFY-budget-revision-fn.sql",
+    "checksum": "5b5720ec60c79340",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.budget_consumption(uuid,uuid,uuid,date,date)\" does not exist)",
+    "applied_at": "2026-10-17T08:54:33.265Z"
+  },
+  {
+    "name": "VERIFY-campaigns-01.sql",
+    "checksum": "aeb25da3b3d888ea",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.campaign_recipients\" does not exist)",
+    "applied_at": "2026-10-17T08:54:33.774Z"
+  },
+  {
+    "name": "VERIFY-content-intelligence.sql",
+    "checksum": "73bbcf8b6edb3dfa",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.blog_prompt_settings\" does not exist)",
+    "applied_at": "2026-10-17T08:54:34.412Z"
+  },
+  {
+    "name": "VERIFY-custom-fields-01.sql",
+    "checksum": "bb5bccb8379de703",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.custom_field_definitions\" does not exist)",
+    "applied_at": "2026-10-17T08:54:34.992Z"
+  },
+  {
+    "name": "VERIFY-custom-units-01.sql",
+    "checksum": "b1977755e16b3fc1",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.custom_unit_rates\" does not exist)",
+    "applied_at": "2026-10-17T08:54:35.606Z"
+  },
+  {
+    "name": "VERIFY-data-snapshots-01.sql",
+    "checksum": "dc3fb4d6c2cf0081",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.data_snapshots\" does not exist)",
+    "applied_at": "2026-10-17T08:54:36.244Z"
+  },
+  {
+    "name": "VERIFY-developer-platform-02.sql",
+    "checksum": "f35d4533e3292c98",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.api_request_logs\" does not exist)",
+    "applied_at": "2026-10-17T08:54:36.899Z"
+  },
+  {
+    "name": "VERIFY-developer-platform-03.sql",
+    "checksum": "10df5982dc65a8da",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.api_keys\" does not exist)",
+    "applied_at": "2026-10-17T08:54:37.408Z"
+  },
+  {
+    "name": "VERIFY-developer-platform-04.sql",
+    "checksum": "ad37129c827cb6e9",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.customer_portal_links\" does not exist)",
+    "applied_at": "2026-10-17T08:54:37.909Z"
+  },
+  {
+    "name": "VERIFY-developer-platform-05.sql",
+    "checksum": "d4089351500d22fd",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.oauth_authorization_codes\" does not exist)",
+    "applied_at": "2026-10-17T08:54:38.436Z"
+  },
+  {
+    "name": "VERIFY-developer-platform-06.sql",
+    "checksum": "5c0f4dd5af359fd7",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column w.is_sandbox does not exist)",
+    "applied_at": "2026-10-17T08:54:38.961Z"
+  },
+  {
+    "name": "VERIFY-developer-platform-06b.sql",
+    "checksum": "393e5900b4c774dd",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.create_sandbox_workspace(uuid, uuid)\" does not exist)",
+    "applied_at": "2026-10-17T08:54:39.560Z"
+  },
+  {
+    "name": "VERIFY-developer-platform-07.sql",
+    "checksum": "0cfa77e17e747c1a",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.oauth_app_webhook_secrets\" does not exist)",
+    "applied_at": "2026-10-17T08:54:40.339Z"
+  },
+  {
+    "name": "VERIFY-developer-platform-08.sql",
+    "checksum": "508372f6077d2ea1",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column w.is_sandbox does not exist)",
+    "applied_at": "2026-10-17T08:54:40.889Z"
+  },
+  {
+    "name": "VERIFY-developer-platform.sql",
+    "checksum": "212cc5823c671c3b",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.api_keys\" does not exist)",
+    "applied_at": "2026-10-17T08:54:41.431Z"
+  },
+  {
+    "name": "VERIFY-entity-notes-01.sql",
+    "checksum": "cc8e18114b1f5b70",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.entity_notes\" does not exist)",
+    "applied_at": "2026-10-17T08:54:41.984Z"
+  },
+  {
+    "name": "VERIFY-financing-01.sql",
+    "checksum": "8d8e5f6c835b1395",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.loan_facilities\" does not exist)",
+    "applied_at": "2026-10-17T08:54:42.535Z"
+  },
+  {
+    "name": "VERIFY-goods-marketplace-01.sql",
+    "checksum": "37bd9f1c0137a471",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.platform_settings\" does not exist)",
+    "applied_at": "2026-10-17T08:54:43.067Z"
+  },
+  {
+    "name": "VERIFY-installments-01.sql",
+    "checksum": "86d62afcf3616ad7",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.invoice_installments\" does not exist)",
+    "applied_at": "2026-10-17T08:54:43.604Z"
+  },
+  {
+    "name": "VERIFY-invoice-exchange-rate-01.sql",
+    "checksum": "f696bdc60ea86f14",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column i.exchange_rate does not exist)",
+    "applied_at": "2026-10-17T08:54:44.198Z"
+  },
+  {
+    "name": "VERIFY-late-fees-01.sql",
+    "checksum": "4bcc3a83f10424c0",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.late_fee_assessments\" does not exist)",
+    "applied_at": "2026-10-17T08:54:44.778Z"
+  },
+  {
+    "name": "VERIFY-linter-2026-09-14.sql",
+    "checksum": "1b7b058829bc02a3",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"private.auth_workspace_ids()\" does not exist)",
+    "applied_at": "2026-10-17T08:54:45.435Z"
+  },
+  {
+    "name": "VERIFY-offline-idempotency.sql",
+    "checksum": "d3188f9aea9601ae",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.payments_record_keyed(uuid, uuid, jsonb, jsonb, text)\" does not exist)",
+    "applied_at": "2026-10-17T08:54:46.073Z"
+  },
+  {
+    "name": "VERIFY-opening-capital-and-fees-01.sql",
+    "checksum": "b8c7d73994d5702e",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.payments_record_with_fee(uuid, uuid, jsonb, jsonb, text, uuid, bigint, numeric)\" does not exist)",
+    "applied_at": "2026-10-17T08:54:46.636Z"
+  },
+  {
+    "name": "VERIFY-perf-aggregates.sql",
+    "checksum": "db2db7d02e98e3c2",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function public.analytics_dashboard_kpis(uuid, timestamp with time zone, timestamp with time zone, timestamp with time zone) does not exist)",
+    "applied_at": "2026-10-17T08:54:47.197Z"
+  },
+  {
+    "name": "VERIFY-price-lists-01.sql",
+    "checksum": "2481599f4f8c356a",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.price_lists\" does not exist)",
+    "applied_at": "2026-10-17T08:54:47.783Z"
+  },
+  {
+    "name": "VERIFY-product-images.sql",
+    "checksum": "87485ab6c41f6769",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.product_images\" does not exist)",
+    "applied_at": "2026-10-17T08:54:48.355Z"
+  },
+  {
+    "name": "VERIFY-promotions-01.sql",
+    "checksum": "f2553537f41fab97",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.promotions\" does not exist)",
+    "applied_at": "2026-10-17T08:54:48.912Z"
+  },
+  {
+    "name": "VERIFY-saved-reports-01.sql",
+    "checksum": "959963b04278bf34",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.saved_reports\" does not exist)",
+    "applied_at": "2026-10-17T08:54:49.767Z"
+  },
+  {
+    "name": "VERIFY-shift-assignments-01.sql",
+    "checksum": "b2cdde919ffbf5e9",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.shift_assignments\" does not exist)",
+    "applied_at": "2026-10-17T08:54:50.340Z"
+  },
+  {
+    "name": "VERIFY-till-payments-01.sql",
+    "checksum": "08a9aeb56f5c51a2",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column \"pos_session_id\" does not exist)",
+    "applied_at": "2026-10-17T08:54:51.074Z"
+  },
+  {
+    "name": "VERIFY-wallet-01.sql",
+    "checksum": "59e49c4880c4f44d",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.wallets\" does not exist)",
+    "applied_at": "2026-10-17T08:54:51.705Z"
+  },
+  {
+    "name": "VERIFY-warehouse-map-01.sql",
+    "checksum": "67f379e74e6e27ab",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.storage_locations\" does not exist)",
+    "applied_at": "2026-10-17T08:54:52.359Z"
+  },
+  {
+    "name": "VERIFY-work-shifts-01.sql",
+    "checksum": "e12fd20a083a882d",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: relation \"public.work_shifts\" does not exist)",
+    "applied_at": "2026-10-17T08:54:52.875Z"
+  },
+  {
+    "name": "VERIFY-workflow-escalation-01.sql",
+    "checksum": "281d32b3ad58f8b9",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: column \"escalate_after_hours\" does not exist)",
+    "applied_at": "2026-10-17T08:54:53.405Z"
+  },
+  {
+    "name": "VERIFY-workspace-access-rpc-02.sql",
+    "checksum": "976d5d4155cc9400",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.resolve_workspace_access(uuid, uuid)\" does not exist)",
+    "applied_at": "2026-10-17T08:54:54.052Z"
+  },
+  {
+    "name": "VERIFY-workspace-access-rpc.sql",
+    "checksum": "588eda740611dd15",
+    "applied_by": "capacity-lab:SKIPPED (read-only diagnostic fails on a fresh canonical rebuild: function \"public.resolve_workspace_access(uuid, uuid)\" does not exist)",
+    "applied_at": "2026-10-17T08:54:54.696Z"
+  },
+  {
+    "name": "WIPE-ALL-BUSINESS-DATA.sql",
+    "checksum": "d5e259bf4b4f5c18",
+    "applied_by": "capacity-lab:SKIPPED (operator-only maintenance script; RAISEs by design until a human edits v_confirm to YES-DELETE-ALL-BUSINESS-DATA (verified in file); carries no schema; the lab seeds its own data from scratch so a wipe is meaningless)",
+    "applied_at": "2026-10-17T08:55:31.129Z"
+  }
+]

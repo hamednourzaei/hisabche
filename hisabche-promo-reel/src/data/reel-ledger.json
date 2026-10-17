@@ -540,6 +540,15 @@
       "dominantLayout": "full-bleed-kinetic",
       "cardQuotaPercent": 15,
       "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
+    },
+    {
+      "id": "60",
+      "title": "دالر بالا رفت؛ ۴٬۰۰۰ افغانی کجا رفت؟",
+      "theme": "midnight-gold",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "asymmetrical-swiss-grid",
+      "cardQuotaPercent": 20,
+      "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
     }
   ]
 }

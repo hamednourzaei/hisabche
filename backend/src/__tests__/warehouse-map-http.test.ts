@@ -630,3 +630,38 @@ describe('recording what is on a shelf', () => {
     expect(res.body).toContain('STORAGE_LOCATION_INACTIVE')
   })
 })
+
+describe('GET /api/products/:id/storage-locations (the product page)', () => {
+  const productLocations = (product: string, who = OWNER) =>
+    app.inject({
+      method: 'GET',
+      url: `/api/products/${product}/storage-locations`,
+      headers: as(who),
+    })
+
+  it('names the shelf the product is on, with the units recorded there', async () => {
+    const res = await productLocations(P1)
+    expect(res.statusCode, res.body).toBe(200)
+    const payload = body(res)
+    expect(payload.configured).toBe(true)
+    const w1 = payload.warehouses.find((row: any) => row.id === W1)
+    expect(w1.placed).toEqual([expect.objectContaining({ locationId: L2, quantity: 6 })])
+    // The choices a change can go to are this warehouse's active locations.
+    expect(w1.choices.map((row: any) => row.id)).toContain(L2)
+  })
+
+  it('⚠️ another workspace’s product shows no shelf of ours or theirs', async () => {
+    const res = await productLocations(FOREIGN_PRODUCT)
+    expect(res.statusCode).toBe(200)
+    const payload = body(res)
+    for (const warehouse of payload.warehouses) {
+      expect(warehouse.placed).toEqual([])
+      expect(warehouse.id).not.toBe(FOREIGN_WAREHOUSE)
+    }
+  })
+
+  it('a malformed id is refused before the database sees it', async () => {
+    const res = await productLocations('not-a-uuid')
+    expect(res.statusCode).toBe(400)
+  })
+})
