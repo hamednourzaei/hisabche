@@ -127,7 +127,7 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **ارز دفاتر و ممیزی چندارزی؛ ورود فایل (۱۱ اکتبر)**                    | `.claude/reverse-and-import/01-CURRENCY-AUDIT.md` · `00-SPEC.md`                         |
 | **مرور کار Antigravity؛ صندوق چندارزی، رخدادها، لینک حضور و غیاب (۱۲ اکتبر)** | `.claude/SESSION-CACHE-2026-10-12-ANTIGRAVITY-REVIEW.md` · `AGENTS.md` — **attendance-devices-01، attendance-02، invoice-exchange-rate-01 و till-payments-01 منتظر اجرا** |
 | **ممیزی زنده ۱۴ اکتبر: ۸۲ باگ، درس‌ها، آنچه منتظر انسان است**                 | `.claude/LIVE-AUDIT-2026-10-14.md` · `.claude/SESSION-CACHE-2026-10-14-LIVE-AUDIT.md` — **custom-units-01 منتظر اجرا و VERIFY** |
-| **همه‌ی درس‌ها با شماره (۱–۱۵۵)**                                     | `.claude/lessons-learned.md`                                                |
+| **همه‌ی درس‌ها با شماره (۱–۱۵۶)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |
@@ -513,6 +513,10 @@ cd apps/admin     && npx tsc --noEmit
 - **افغانی کلمه است:** `currencySign(code, locale)` → «افغانی»/«AFN». **ارزش موجودی = قیمت خرید.** **نرخ ارز فقط `exchange_rates`** (چیپ‌های انبار نرخ دستگاه داشتند). **واحد دلخواه** (`custom_unit_rates`) فقط برای تبدیل و نمایش است، هرگز ارز سند.
 - **متن سرور ترجمه نیست:** پیشنهادهای هوشمند و مبلغ اعلان = کد + عدد + ارز؛ جمله در صفحه.
 - ⚠️ **سطح نمایش ≠ سطح ذخیره:** بالاترین پله‌ی هر ماژول «کامل» خوانده می‌شود (`shownLevel`)؛ سرور دست نمی‌خورد چون round-trip ماتریس لازم است.
+
+**قفسه‌ها به‌جای نقشه انبار (۱۷ اکتبر)**
+
+- ⚠️ **«نقشه انبار» حذف شد؛ دوباره نسازش.** جای کالا = قفسه‌های هر انبار در `/warehouse?view=products&stockWarehouse=<id>` (`warehouse/shelves/`). قفسه فقط کد + توضیح + ظرفیت است — بدون x/y/عرض/ارتفاع/والد. داده و API نقشه (`storage_locations`، `/warehouses/:id/map`) ماندند. فرم انبار سوییچ «مدیریت قفسه‌ها» دارد؛ خاموش یعنی هیچ سؤالی، و پرچم ذخیره‌شده‌ای نیست. «بدون قفسه» = موجودی انبار − جمع روی قفسه‌ها. ثبت قفسه موجودی را تغییر نمی‌دهد. گارد: `warehouse-shelves.test.tsx`.
 
 **هسته‌ها (CRM / Payments)**
 

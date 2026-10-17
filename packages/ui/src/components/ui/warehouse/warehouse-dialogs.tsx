@@ -10,15 +10,20 @@
 // ============================================
 
 import { useEffect, useState } from 'react'
+import { Plus, X } from 'lucide-react'
 import {
   asList,
   useBranches,
+  useCreateStorageLocation,
+  useMyCapabilities,
   useStockPlacement,
+  useWarehouseMap,
   type Branch,
   type WarehouseProduct,
 } from '@hisabche/api'
 
 import { SelectField } from '../select-field'
+import { Switch } from '../switch'
 import {
   Dialog,
   DialogContent,
@@ -47,6 +52,25 @@ const errorText = (t: T, err: unknown) => {
 /** The select's value for «belongs to no branch». Never sent as an id. */
 const NO_BRANCH = 'none'
 
+interface ShelfRow {
+  key: number
+  code: string
+  name: string
+}
+
+/** Codes written twice in the form, compared the way the database compares them. */
+export function repeatedShelfCodes(rows: Array<{ code: string }>): string[] {
+  const seen = new Set<string>()
+  const repeated = new Set<string>()
+  for (const row of rows) {
+    const code = row.code.trim()
+    if (!code) continue
+    if (seen.has(code)) repeated.add(code)
+    seen.add(code)
+  }
+  return [...repeated]
+}
+
 export function AddWarehouseDialog({
   t,
   open,
@@ -58,6 +82,7 @@ export function AddWarehouseDialog({
   t: T
   open: boolean
   onClose: () => void
+  /** Resolves with the warehouse (its id is needed for the shelves written below it). */
   onCreate: (input: {
     name: string
     location: string
@@ -71,6 +96,20 @@ export function AddWarehouseDialog({
   const [location, setLocation] = useState('')
   const [branchId, setBranchId] = useState(NO_BRANCH)
   const [error, setError] = useState<string | null>(null)
+
+  // «مدیریت قفسه‌ها» (owner, 17 Oct 2026): off by default and the warehouse works
+  // fully without it. On, a few shelf codes are written right here; more can be
+  // added later from «کالاها» › this warehouse. There is no stored «shelves on»
+  // flag — a warehouse that has shelves IS managed by shelf, so the switch of an
+  // existing warehouse starts on when it has any.
+  const canShelve = useMyCapabilities().can('inventory.configure') === true
+  const existingShelves = useWarehouseMap(open && canShelve && initial?.id ? initial.id : null, 90)
+  const shelfCount = existingShelves.data?.migrated
+    ? existingShelves.data.locations.filter((location) => location.isActive).length
+    : 0
+  const [shelvesOn, setShelvesOn] = useState(false)
+  const [rows, setRows] = useState<ShelfRow[]>([{ key: 0, code: '', name: '' }])
+  const createShelf = useCreateStorageLocation(null)
 
   // Which branch a warehouse belongs to decides who may sell from it: a member
   // limited to a branch sees and uses only that branch's warehouses.
@@ -89,8 +128,15 @@ export function AddWarehouseDialog({
       setName(initial?.name ?? '')
       setLocation(initial?.location ?? '')
       setError(null)
+      setRows([{ key: Date.now(), code: '', name: '' }])
     }
   }, [open, initial])
+  useEffect(() => {
+    if (open) setShelvesOn(shelfCount > 0)
+  }, [open, shelfCount])
+
+  const filledRows = shelvesOn ? rows.filter((row) => row.code.trim() !== '') : []
+  const repeated = repeatedShelfCodes(filledRows)
   // The warehouse's present branch arrives after the dialog opens.
   useEffect(() => {
     if (open) setBranchId(currentBranch ?? NO_BRANCH)
@@ -99,7 +145,7 @@ export function AddWarehouseDialog({
   const submit = async () => {
     try {
       const chosen = branchId === NO_BRANCH ? null : branchId
-      await onCreate({
+      const saved = await onCreate({
         name: name.trim(),
         location: location.trim(),
         // Sent only when it can be saved, and on an edit only when it changed.
@@ -107,6 +153,29 @@ export function AddWarehouseDialog({
           ? { branchId: chosen }
           : {}),
       })
+      const warehouseId = initial?.id ?? (saved as { id?: string } | null)?.id
+      if (warehouseId && filledRows.length > 0) {
+        // One shelf per call, each through the same route as «افزودن قفسه». The
+        // warehouse is already saved: a refused shelf is named, not hidden.
+        const failed: string[] = []
+        for (const row of filledRows) {
+          try {
+            await createShelf.mutateAsync({
+              warehouseId,
+              kind: 'shelf',
+              code: row.code.trim(),
+              ...(row.name.trim() ? { name: row.name.trim() } : {}),
+            })
+          } catch {
+            failed.push(row.code.trim())
+          }
+        }
+        if (failed.length > 0) {
+          setRows(filledRows.filter((row) => failed.includes(row.code.trim())))
+          setError(t('warehouseShelves.form.partialFail').replace('{codes}', failed.join('، ')))
+          return
+        }
+      }
       onClose()
     } catch (err) {
       setError(errorText(t, err))
@@ -115,7 +184,7 @@ export function AddWarehouseDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? null : onClose())}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {initial
@@ -171,6 +240,105 @@ export function AddWarehouseDialog({
               </p>
             </div>
           ) : null}
+          {canShelve ? (
+            <section
+              data-warehouse-shelves-switch=""
+              className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] p-3"
+            >
+              <label className="flex cursor-pointer items-start justify-between gap-3">
+                <span className="space-y-0.5">
+                  <span className="block text-sm font-medium text-[hsl(var(--fg-primary))]">
+                    {t('warehouseShelves.form.switchLabel', 'مدیریت قفسه‌ها در این انبار')}
+                  </span>
+                  <span className="block text-xs text-[hsl(var(--fg-tertiary))]">
+                    {t('warehouseShelves.form.switchHint', '')}
+                  </span>
+                </span>
+                <Switch
+                  checked={shelvesOn}
+                  onCheckedChange={setShelvesOn}
+                  aria-label={t('warehouseShelves.form.switchLabel', 'مدیریت قفسه‌ها در این انبار')}
+                />
+              </label>
+              {shelvesOn ? (
+                <div className="space-y-2">
+                  {shelfCount > 0 ? (
+                    <p className="text-xs text-[hsl(var(--fg-secondary))]">
+                      {t('warehouseShelves.form.existing', '').replace(
+                        '{count}',
+                        String(shelfCount),
+                      )}
+                    </p>
+                  ) : null}
+                  {rows.map((row, index) => (
+                    <div key={row.key} className="flex items-center gap-2">
+                      <input
+                        name={`shelf-code-${index}`}
+                        value={row.code}
+                        maxLength={40}
+                        dir="ltr"
+                        onChange={(event) =>
+                          setRows((current) =>
+                            current.map((item) =>
+                              item.key === row.key ? { ...item, code: event.target.value } : item,
+                            ),
+                          )
+                        }
+                        placeholder={t('warehouseShelves.form.rowCode', 'A-01')}
+                        aria-label={t('warehouseShelves.shelfDialog.code', 'کد قفسه')}
+                        className={`${input} w-28 shrink-0`}
+                      />
+                      <input
+                        name={`shelf-name-${index}`}
+                        value={row.name}
+                        maxLength={80}
+                        onChange={(event) =>
+                          setRows((current) =>
+                            current.map((item) =>
+                              item.key === row.key ? { ...item, name: event.target.value } : item,
+                            ),
+                          )
+                        }
+                        placeholder={t('warehouseShelves.form.rowName', '')}
+                        aria-label={t('warehouseShelves.shelfDialog.name', '')}
+                        className={`${input} min-w-0 flex-1`}
+                      />
+                      {rows.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setRows((current) => current.filter((item) => item.key !== row.key))
+                          }
+                          aria-label={t('warehouseShelves.form.removeRow', '')}
+                          className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))]"
+                        >
+                          <X className="size-4" aria-hidden="true" />
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setRows((current) => [...current, { key: Date.now(), code: '', name: '' }])
+                    }
+                    className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--surface-muted))]"
+                  >
+                    <Plus className="size-3.5" aria-hidden="true" />
+                    {t('warehouseShelves.form.addRow', '')}
+                  </button>
+                  {repeated.length > 0 ? (
+                    <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+                      {t('warehouseShelves.form.duplicateCodes', '').replace(
+                        '{codes}',
+                        repeated.join('، '),
+                      )}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
           {error ? (
             <p role="alert" className="text-sm text-[hsl(var(--color-destructive))]">
               {error}
@@ -184,7 +352,9 @@ export function AddWarehouseDialog({
           <button
             type="button"
             onClick={() => void submit()}
-            disabled={isPending || name.trim() === ''}
+            disabled={
+              isPending || createShelf.isPending || name.trim() === '' || repeated.length > 0
+            }
             className={primary}
           >
             {t('common.save', 'ذخیره')}

@@ -232,3 +232,16 @@ Tests: `scripts/__tests__/av-sync-law.test.mjs` (library) · `src/__tests__/av-s
 Fast check while writing: `node scripts/check-av-sync.mjs <id> --mix` (seconds). On a file: `node scripts/check-av-sync.mjs <id>`.
 
 What it found on reel 60 (before): clockTick +585 ms, alert +600 ms, impact/markerScribble not heard at all, sparkle 145 ms early — causes: lead silence in files, music too loud after peak-normalising, master loudness raising the bed back up, swell files used for hits.
+
+---
+
+## 16. HARD RULE 14 — ONE FOCAL STAGE & ON-STAGE TEXT BUDGET (owner, 17 Oct 2026)
+- **One Dominant Visual Stage:** The 9:16 vertical canvas must maintain exactly ONE dominant visual focal area and one stable subtitle bar.
+- **Dedicated Safe Zones:** Subtitle anchored at bottom (`bottom: 80px`). Primary visual strictly centered ($Y \in [42\%, 58\%]$).
+- **Zero Duplicated Narration:** Never render the spoken voiceover dialogue as an on-stage headline or card title above the subtitle bar.
+- **Zero Floating Commentary:** Never add independent commentary text (e.g. «راه دیگری هم هست…») competing with narration.
+- **Strict Text Budget:** Default to zero decorative text. Max 6 words total non-subtitle on-stage text visible at once. Labels 1–2 words.
+- **Eliminate Divider Artifacts:** Never introduce unwanted horizontal green divider lines or split-screen border bars (`.r61-horizon`).
+- **Natural Persian Copy:** Reject broken or stilted fragments like `«بار گم»`, `«آدرس بار»`, `«بار رو بی‌تلفن پیدا کن»`. Communicate through visual state and motion.
+- **Honest Subtitle Synchronization:** Never claim word-sync without verified forced alignment evidence.
+

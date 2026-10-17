@@ -112,6 +112,11 @@ describe('nothing «بعد» needs went with «قبل»', () => {
   // Every hub still mounts every screen it held. The left column is the hub,
   // the right is what must still be in it.
   it.each([
+    // «کالاها»: the catalogue is the «همه‌ی کالاها» tab, beside each warehouse's shelves.
+    [
+      'warehouse/shelves/warehouse-products-section.tsx',
+      ['<ProductListContainer />', '<WarehouseShelvesContainer warehouseId={active} />'],
+    ],
     [
       'invoices/containers/sales-hub-container.tsx',
       ['<InvoicesContainer />', '<PromotionsContainer />'],
@@ -120,7 +125,7 @@ describe('nothing «بعد» needs went with «قبل»', () => {
       'warehouse/containers/warehouse-tabs-container.tsx',
       [
         '<WarehouseStockTab />',
-        '<ProductListContainer />',
+        '<WarehouseProductsSection />',
         '<ExpiryContainer />',
         '<OpsSectionContainer',
       ],

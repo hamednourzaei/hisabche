@@ -18,7 +18,7 @@ import { faNumber } from '../ui/motion-primitives'
 
 describe('Motion Design Engine & Reels Verification', () => {
   it('registers all 60 reels and flagship films with valid metadata', () => {
-    expect(REELS).toHaveLength(61)
+    expect(REELS).toHaveLength(66)
     REELS.forEach((reel, index) => {
       const expectedId = String(index + 1).padStart(2, '0')
       expect(reel.id).toBe(expectedId)
@@ -364,7 +364,7 @@ describe('Motion Design Engine & Reels Verification', () => {
       computeCreativeSimilarity,
     } = await import('../data/reel-registry')
 
-    expect(REEL_REGISTRY_LIST).toHaveLength(61)
+    expect(REEL_REGISTRY_LIST).toHaveLength(66)
 
     // Full sequence validation including weighted creative similarity
     const result = validateReelRegistry(REEL_REGISTRY_LIST)
@@ -684,5 +684,163 @@ describe('Motion Design Engine & Reels Verification', () => {
       expect(scene.sentence!.words.length).toBeGreaterThan(0)
       expect(scene.sentence!.intent.length).toBeGreaterThan(0)
     })
+  })
+
+  it('verifies Reel 62 thermal receipt cascade film has exact 28s duration, receipt actors, and hold >= 1.5s', () => {
+    const reel62 = REELS.find((r) => r.id === '62')
+    expect(reel62).toBeDefined()
+    expect(reel62!.duration).toBe(28.0)
+    expect(reel62!.scenes).toHaveLength(5)
+
+    const expectedActors = [
+      'r62-printer-hook',
+      'r62-night-manual',
+      'r62-hisabche-split',
+      'r62-balance-lock',
+      'r62-cta',
+    ]
+
+    reel62!.scenes.forEach((scene, index) => {
+      expect(scene.spec.kind).toBe('word-sync')
+      if (scene.spec.kind === 'word-sync') {
+        expect(scene.spec.actor).toBe(expectedActors[index])
+      }
+      expect(scene.sentence).toBeDefined()
+      expect(scene.sentence!.words.length).toBeGreaterThan(0)
+      expect(scene.sentence!.intent.length).toBeGreaterThan(0)
+    })
+  })
+
+  it('verifies Reel 63 goldsmith gram & wage film has exact 27s duration, gold actors, and hold >= 1.2s', () => {
+    const reel63 = REELS.find((r) => r.id === '63')
+    expect(reel63).toBeDefined()
+    expect(reel63!.duration).toBe(27.0)
+    expect(reel63!.scenes).toHaveLength(5)
+
+    const expectedActors = [
+      'r63-goldsmith-hook',
+      'r63-manual-math',
+      'r63-gram-lock',
+      'r63-labor-profit',
+      'r63-cta-gold',
+    ]
+
+    reel63!.scenes.forEach((scene, index) => {
+      expect(scene.spec.kind).toBe('word-sync')
+      if (scene.spec.kind === 'word-sync') {
+        expect(scene.spec.actor).toBe(expectedActors[index])
+      }
+      expect(scene.sentence).toBeDefined()
+      expect(scene.sentence!.words.length).toBeGreaterThan(0)
+      expect(scene.sentence!.intent.length).toBeGreaterThan(0)
+    })
+
+    // Climax scene holds at least 1.2s after its sentence resolves
+    const climax = reel63!.scenes[3]!
+    const ending = climax.sentence!.sentenceEnding!
+    expect(climax.end - climax.start - ending.at).toBeGreaterThanOrEqual(1.2)
+  })
+
+  it('verifies Reel 64 cogs blindspot film has exact 27s duration, cogs actors, and hold >= 1.2s', () => {
+    const reel64 = REELS.find((r) => r.id === '64')
+    expect(reel64).toBeDefined()
+    expect(reel64!.duration).toBe(27.0)
+    expect(reel64!.scenes).toHaveLength(5)
+
+    const expectedActors = [
+      'r64-hook',
+      'r64-guess-leak',
+      'r64-cogs-breakdown',
+      'r64-bom-solution',
+      'r64-cta',
+    ]
+
+    reel64!.scenes.forEach((scene, index) => {
+      expect(scene.spec.kind).toBe('word-sync')
+      if (scene.spec.kind === 'word-sync') {
+        expect(scene.spec.actor).toBe(expectedActors[index])
+      }
+      expect(scene.sentence).toBeDefined()
+      expect(scene.sentence!.words.length).toBeGreaterThan(0)
+      expect(scene.sentence!.intent.length).toBeGreaterThan(0)
+    })
+
+    // Climax scene (scene 4) holds at least 1.2s after its sentence resolves
+    const climax = reel64!.scenes[3]!
+    const ending = climax.sentence!.sentenceEnding!
+    expect(climax.end - climax.start - ending.at).toBeGreaterThanOrEqual(1.2)
+  })
+
+  it('verifies Reel 65 station-wall salon film has exact 26s duration, station actors, and hold >= 1.2s', () => {
+    const reel65 = REELS.find((r) => r.id === '65')
+    expect(reel65).toBeDefined()
+    expect(reel65!.duration).toBe(26.0)
+    expect(reel65!.scenes).toHaveLength(5)
+
+    const expectedActors = [
+      'r65-chair-wall',
+      'r65-paper-drawer',
+      'r65-live-chairs',
+      'r65-chair-profit',
+      'r65-cta-salon',
+    ]
+
+    reel65!.scenes.forEach((scene, index) => {
+      expect(scene.spec.kind).toBe('word-sync')
+      if (scene.spec.kind === 'word-sync') {
+        expect(scene.spec.actor).toBe(expectedActors[index])
+      }
+      expect(scene.sentence).toBeDefined()
+      expect(scene.sentence!.words.length).toBeGreaterThan(0)
+      expect(scene.sentence!.intent.length).toBeGreaterThan(0)
+    })
+
+    // The five scenes tile the reel exactly — no gap, no overlap
+    expect(reel65!.scenes[0]!.start).toBe(0)
+    expect(reel65!.scenes[reel65!.scenes.length - 1]!.end).toBe(26.0)
+    reel65!.scenes.forEach((scene, index) => {
+      if (index > 0) expect(scene.start).toBe(reel65!.scenes[index - 1]!.end)
+    })
+
+    // Climax scene (scene 4) holds at least 1.2s after its sentence resolves
+    const climax = reel65!.scenes[3]!
+    const ending = climax.sentence!.sentenceEnding!
+    expect(climax.end - climax.start - ending.at).toBeGreaterThanOrEqual(1.2)
+  })
+
+  it('verifies Reel 66 shopkeeper grocery narrative has exact 40s duration, 5 scenes, and valid word cues', () => {
+    const reel66 = REELS.find((r) => r.id === '66')
+    expect(reel66).toBeDefined()
+    expect(reel66!.duration).toBe(40.0)
+    expect(reel66!.scenes).toHaveLength(5)
+
+    const expectedActors = [
+      'r66-hook-paper-to-card',
+      'r66-invoice-quad-split',
+      'r66-receivables-timeline',
+      'r66-offline-cloud-sync',
+      'r66-unified-dashboard-cta',
+    ]
+
+    reel66!.scenes.forEach((scene, index) => {
+      if (scene.spec.kind === 'word-sync') {
+        expect(scene.spec.actor).toBe(expectedActors[index])
+      }
+      expect(scene.sentence).toBeDefined()
+      expect(scene.sentence!.words.length).toBeGreaterThan(0)
+      expect(scene.sentence!.intent.length).toBeGreaterThan(0)
+    })
+
+    // The five scenes tile the reel exactly — no gap, no overlap
+    expect(reel66!.scenes[0]!.start).toBe(0)
+    expect(reel66!.scenes[reel66!.scenes.length - 1]!.end).toBe(40.0)
+    reel66!.scenes.forEach((scene, index) => {
+      if (index > 0) expect(scene.start).toBe(reel66!.scenes[index - 1]!.end)
+    })
+
+    // Climax scene (scene 4) holds at least 1.0s after its sentence resolves
+    const climax = reel66!.scenes[3]!
+    const ending = climax.sentence!.sentenceEnding!
+    expect(climax.end - climax.start - ending.at).toBeGreaterThanOrEqual(1.0)
   })
 })

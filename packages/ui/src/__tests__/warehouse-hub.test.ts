@@ -42,21 +42,21 @@ describe('two tabs, built from shared parts', () => {
   it('stock and expiry — and nothing else', () => {
     expect([...WAREHOUSE_HUB_TABS]).toEqual(['stock', 'expiry'])
     expect(WAREHOUSE_HUB_SOURCE).toEqual({ stock: '/warehouse', expiry: '/expiry' })
-    expect([...STOCK_SECTIONS]).toEqual(['warehouses', 'products', 'reorder', 'deadStock', 'map'])
+    expect([...STOCK_SECTIONS]).toEqual(['warehouses', 'products', 'reorder', 'deadStock'])
   })
 
   it('uses the ONE tab bar and the ONE switch — it draws neither', () => {
     expect(after).toContain('<HubTabs')
     expect(after).toContain('<SegmentedControl')
     expect(after).toContain('useHubTab(offered)')
-    expect(after).toContain('useHubSection(STOCK_SECTIONS, STOCK_SECTION_CLEARS)')
+    expect(after).toContain('useHubSection(offeredStockSections, STOCK_SECTION_CLEARS)')
     expect(after).not.toContain('role="tablist"')
     expect(after).not.toContain('<button')
   })
 
   it('mounts the containers that own those screens and fetches nothing itself', () => {
     expect(after).toContain('<ExpiryContainer />')
-    expect(after).toContain('<ProductListContainer />')
+    expect(after).toContain('<WarehouseProductsSection />')
     expect(after).toContain('<WarehouseStockTab />')
     expect(hub).toContain('const ExpiryContainer = lazy(')
     const allowed = [
@@ -67,6 +67,8 @@ describe('two tabs, built from shared parts', () => {
       'useSearchParams',
       'useLocaleReplace',
       'useEffect',
+      // The person's own view of the hub (which sections show) — not data.
+      'usePageLook',
     ]
     const dataHooks = [...after.matchAll(/\buse[A-Z]\w+(?=\()/g)]
       .map((match) => match[0])
@@ -76,7 +78,7 @@ describe('two tabs, built from shared parts', () => {
 
   it('shows ONE stock part at a time — each mounted exactly once', () => {
     for (const mount of [
-      '<ProductListContainer />',
+      '<WarehouseProductsSection />',
       '<WarehouseStockTab />',
       '<OpsSectionContainer section={section} />',
     ]) {
@@ -101,7 +103,7 @@ describe('the section lives in the address', () => {
   })
 
   it('an open warehouse does not follow you to the product list', () => {
-    expect(hub).toContain("const STOCK_SECTION_CLEARS = ['warehouse'] as const")
+    expect(hub).toContain("const STOCK_SECTION_CLEARS = ['warehouse', 'stockWarehouse'] as const")
   })
 
   it('the old catalogue address opens the products section', () => {

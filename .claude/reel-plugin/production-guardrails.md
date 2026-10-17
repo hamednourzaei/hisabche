@@ -218,3 +218,56 @@ Tests: `scripts/__tests__/av-sync-law.test.mjs` (library) · `src/__tests__/av-s
 Fast check while writing: `node scripts/check-av-sync.mjs <id> --mix` (seconds). On a file: `node scripts/check-av-sync.mjs <id>`.
 
 What it found on reel 60 (before): clockTick +585 ms, alert +600 ms, impact/markerScribble not heard at all, sparkle 145 ms early — causes: lead silence in files, music too loud after peak-normalising, master loudness raising the bed back up, swell files used for hits.
+
+---
+
+## 19. HARD RULE 14 — ONE FOCAL STAGE & ON-STAGE TEXT BUDGET (owner, 17 Oct 2026)
+
+- **One Single Focal Area:** The 9:16 vertical canvas must have exactly ONE dominant visual focal area and one stable subtitle bar.
+- **Strictly Dedicated Safe Zones:**
+  - **Subtitle Zone:** Anchored exclusively at the bottom safe area (`bottom: 80px`). It is a pure floating overlay.
+  - **Primary Visual Zone:** Kept strictly centered in the central frame ($Y \in [42\%, 58\%]$).
+  - **Subordinate Branding:** Minimal metadata, badges, or emblems must remain subordinate to the primary visual.
+- **Banned Visual Clutter Behaviors:**
+  - **Zero Duplicated Narration:** Never render the spoken voiceover sentence as a headline or card title above the subtitle bar. The subtitle system is the sole place for the spoken dialogue.
+  - **No Floating Commentary:** Never introduce independent textual commentary (e.g., «راه دیگری هم هست…», «حالا چی کار کنیم؟») that competes with the narrator's voice.
+  - **No Multiple Vertical Text Streams:** Banned to have simultaneous text running at top, middle, and lower-middle.
+- **Hard On-Stage Text Budget:**
+  - Default to **ZERO decorative text**.
+  - Only functional labels communicating essential visual information are permitted (e.g., shelf code `B-04`, product name, quantity).
+  - Prefer **one or two words per label**.
+  - **Hard ceiling:** At most **6 words** of total non-subtitle on-stage text visible at any single point in time.
+  - Numbers and essential labels must be large and instantly legible on mobile screens (zero walls of tiny microcopy).
+
+---
+
+## 20. HARD RULE 15 — NATURAL PERSIAN COPY & ZERO BROKEN FRAGMENTS (owner, 17 Oct 2026)
+
+- **Natural Bazaar Idioms:** All on-screen copy and voiceover dialogue must use authentic, natural Persian phrasing suited for Iranian merchants.
+- **Strictly Banned Copy Fragments:**
+  - Reject unnatural, clipped, or stilted fragments such as `«بار گم»`, `«آدرس بار»`, `«بار رو بی‌تلفن پیدا کن»`.
+- **Communicate Through Visual State:**
+  - When communicating a consequence (e.g., lost stock, unknown location, missing worker), use **visual state and motion** (e.g., carton fading into a gray silhouette, note detaching and dissolving, animated question mark emerging) rather than slapping an awkward text tag onto the frame.
+
+---
+
+## 21. HARD RULE 16 — ELIMINATION OF HORIZONTAL DIVIDERS & LINE ARTIFACTS (owner, 17 Oct 2026)
+
+- **No Accidental Dividers:** The background and stage must NEVER contain accidental horizontal divider lines, neon boundary bars, or split-screen borders (such as the green line produced by `.r61-horizon`).
+- **Unified Spatial Canvas:** A scene must not be arbitrarily split into "top" and "bottom" sub-canvases that jump or resize between scenes. Every scene must occupy a cohesive, unified 9:16 coordinate plane.
+
+---
+
+## 22. HARD RULE 17 — EVIDENCE-BASED AUDIO & SUBTITLE SYNCHRONIZATION (owner, 17 Oct 2026)
+
+- **No Unsupported Synchronization Claims:**
+  - Never claim millisecond-accurate word-level synchronization based merely on silence detection, proportional pacing, or file duration.
+  - Silence detection identifies acoustic phrase/sentence boundaries; it does NOT establish individual word boundaries.
+- **Honest Alignment Lifecycle States:**
+  - `WORD_SYNC_VERIFIED`: Assigned ONLY when verified forced-alignment (or verified ASR word timestamps) with matching audio checksum exists.
+  - `PHRASE_SYNC_VERIFIED`: Assigned when voiceover phrases are anchored to measured acoustic speech intervals, and word positions are anchored estimates.
+  - `PROVISIONAL_CADENCE_MODEL_ACTIVE`: Assigned when voiceover audio is pending or estimated via cadence math (`isProvisional: true`, `confidence: null`).
+- **Timing Alignment to Actual Speech:**
+  - Words must appear when spoken; never stretch words uniformly across trailing silence.
+  - Visual actions may anticipate a spoken keyword by at most 0.1s–0.2s only when motivated by natural motion design.
+

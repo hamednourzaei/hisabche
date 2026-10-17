@@ -290,3 +290,69 @@ Every new reel must conform to the 12 production rules established in `.claude/r
 10. **Motion Presets:** Use standard primitives (`enterUp`, `enterDown`, `scaleReveal`, `clipReveal`, `highlightSweep`, `staggerEnter`, `stableHold`).
 11. **Context Position Audit:** Diagnostic bounding-box verification (`src/engine/composition-audit.ts`).
 12. **Final Slide Validation:** Perfect end card: CTA visible, brand centered, zero clipped cards, zero blinking.
+
+## 7. HARD RULE 13 — AV SYNC LAW (owner, 17 Oct 2026)
+
+«صدا با تصویر هماهنگ نیست» is no longer a review note; it is a number, and the export refuses the file.
+Code: `scripts/sync-law.mjs` (pure, one definition — mixer, gate and browser preview all import it) ·
+`scripts/sound-design.mjs` (`cuePlacements`) · `scripts/check-av-sync.mjs` (the gate).
+Tests: `scripts/__tests__/av-sync-law.test.mjs` (library) · `src/__tests__/av-sync-law.test.ts` (scripts, reel ≥ 60).
+
+**Script (reel ≥ 60)**
+1. A word with a `sound` has an `action`, and the actor reads that action's time with `cueAt(plan, '<action>', fallback)`. The action string must appear in the actor file.
+2. A `sentenceEnding` carries **no sound** — a hold is not an event.
+3. Two cues closer than 120 ms share one sound (`placedCues`).
+
+**Library (every file in `assets/sfx/manifest.json`)**
+4. The hit point is the first onset (5 ms RMS above 300 Hz, 2.2× the previous 40 ms) that reaches half the file's loudest frame within 30 ms. That frame lands on the cue.
+5. At most 20 ms is kept before the hit (faded in) — a shimmer ahead of the hit is heard as «early».
+6. Every event file is a transient whose FIRST hit leads (no later hit > 1.25× the first). Swells, rustle textures and «riffle then slap» files are not allowed for event kinds.
+7. Files normalised (after the trim) to a 0.5 peak; raw peak below −45 dB refused.
+
+**Mix**
+8. Choke: each sound fades out (60 ms) and is silent 40 ms before the next hit.
+9. Music bed by average level (RMS 0.008), never peak — a dense track at the events' level buried them.
+10. Master make-up gain stops where the loudest hit is 80% of the ceiling; loudness never flattens the hits.
+11. The scene-cut thump is 0.25 s, under the scene's first event.
+
+**Gate** — every export measures the finished file: each transient must start within ±45 ms of its cue, or the export fails (`blockedBy: 'AV_SYNC'`).
+Fast check while writing: `node scripts/check-av-sync.mjs <id> --mix` (seconds). On a file: `node scripts/check-av-sync.mjs <id>`.
+
+What it found on reel 60 (before): clockTick +585 ms, alert +600 ms, impact/markerScribble not heard at all, sparkle 145 ms early — causes: lead silence in files, music too loud after peak-normalising, master loudness raising the bed back up, swell files used for hits.
+
+---
+
+## 8. HARD RULE 14 — ONE FOCAL STAGE & ON-STAGE TEXT BUDGET (owner, 17 Oct 2026)
+
+- **One Focal Stage:** The 9:16 vertical canvas must have exactly ONE dominant visual focal area and one stable subtitle bar.
+- **Dedicated Safe Zones:** Subtitle Zone anchored exclusively at bottom safe area (`bottom: 80px`). Primary Visual Zone kept strictly centered in the central frame ($Y \in [42\%, 58\%]$).
+- **Zero Duplicated Narration:** Never render the spoken voiceover sentence as a headline or card title above the subtitle bar.
+- **No Floating Commentary:** Never introduce independent textual commentary competing with narrator.
+- **Hard Text Budget:** Default to ZERO decorative text. Functional labels only (e.g., shelf code `B-04`, product name, quantity). Hard ceiling: at most 6 words of total non-subtitle on-stage text visible at once.
+
+---
+
+## 9. HARD RULE 15 — NATURAL PERSIAN COPY & ZERO BROKEN FRAGMENTS (owner, 17 Oct 2026)
+
+- **Natural Bazaar Idioms:** All on-screen copy and voiceover dialogue must use authentic, natural Persian phrasing suited for Iranian merchants.
+- **Banned Copy Fragments:** Reject unnatural, clipped, or stilted fragments (`«بار گم»`, `«آدرس بار»`, `«بار رو بی‌تلفن پیدا کن»`).
+- **Communicate Through Visual State:** Show consequences through object state and motion, not awkward text tags.
+
+---
+
+## 10. HARD RULE 16 — ELIMINATION OF HORIZONTAL DIVIDERS & LINE ARTIFACTS (owner, 17 Oct 2026)
+
+- **No Accidental Dividers:** The background and stage must NEVER contain accidental horizontal divider lines, neon boundary bars, or split-screen borders (such as `.r61-horizon` or `.topology-split-screen-horizon::before`).
+- **Unified Spatial Canvas:** Every scene occupies a cohesive, unified 9:16 coordinate plane.
+
+---
+
+## 11. HARD RULE 17 — EVIDENCE-BASED AUDIO & SUBTITLE SYNCHRONIZATION (owner, 17 Oct 2026)
+
+- **No Unsupported Synchronization Claims:** Never claim millisecond-accurate word-level synchronization without verified forced-alignment JSON.
+- **Honest Alignment Lifecycle States:**
+  - `WORD_SYNC_VERIFIED`: Only with verified forced alignment.
+  - `PHRASE_SYNC_VERIFIED`: Anchored to measured acoustic speech intervals, word positions are anchored estimates.
+  - `PROVISIONAL_CADENCE_MODEL_ACTIVE`: Voiceover pending or estimated via cadence math (`isProvisional: true`).
+- **Timing Alignment to Actual Speech:** Words appear when spoken, not stretched across trailing silence.
+

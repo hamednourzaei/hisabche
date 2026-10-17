@@ -94,5 +94,53 @@
     "primaryTemplate": "word-sync",
     "visualLanguage": "financial-intelligence",
     "hookMechanism": "deadline-pressure"
+  },
+  {
+    "id": 60,
+    "topic": "فاکتور هزار دالری به نرخ ۷۰، پرداخت به نرخ ۷۴؛ ۴٬۰۰۰ افغانی اختلاف کجا رفت؟",
+    "creativeMechanism": "overwritten-rate-strike",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "midnight-gold",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 61,
+    "topic": "ده دقیقه پشت تلفن برای پیدا کردن ۲۰ کارتن روغن؛ آدرس قفسه فقط در ذهن یک نفر",
+    "creativeMechanism": "split-horizon-call-vs-shelf",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "cyber-emerald",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 63,
+    "topic": "مشتری پای ویترین قیمت گردنبند رو می‌خواد؛ مظنه، وزن و اجرت ساخت رو با هم کی حساب می‌کنه؟",
+    "creativeMechanism": "gram-scale-rate-lock",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "midnight-gold",
+    "hookMechanism": "customer-confrontation"
+  },
+  {
+    "id": 64,
+    "topic": "کوری بهای تمام‌شده کارگاه تولیدی و قیمت‌گذاری حدسی",
+    "creativeMechanism": "cogs-waterfall-deconstruct",
+    "primaryTemplate": "single-focal-stage",
+    "visualLanguage": "swiss-editorial",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 65,
+    "topic": "سه صندلی شلوغ سالن؛ شب فقط یک عدد فروش دیده می‌شود و سهم محصولات مصرفی هر صندلی معلوم نمی‌ماند",
+    "creativeMechanism": "station-wall-profit-attribution",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "obsidian-cinematic",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 66,
+    "topic": "یک شخصیت از حسابچه می‌گوید: کاسب خواربار، ثبت چهارگانه فاکتور، طلب و نسیه و فروش آفلاین",
+    "creativeMechanism": "paper-pile-swirl-quad-split",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "cyber-emerald",
+    "hookMechanism": "immediate-consequence"
   }
 ]

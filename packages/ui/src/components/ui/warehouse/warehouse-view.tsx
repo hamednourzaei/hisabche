@@ -16,7 +16,7 @@ import {
   Package,
   Pencil,
   AlertTriangle,
-  Map as MapIcon,
+  LayoutGrid,
 } from 'lucide-react'
 import type { Product, Currency } from '../../../lib/warehouse/warehouse-types'
 import { BASE_CODE, rateFromPair } from '../../../lib/warehouse/rate-from-pair'
@@ -49,8 +49,8 @@ interface WarehouseViewProps {
   transferActionLabel?: string | undefined
   onTransferAction?: (() => void) | undefined
   /** «مشاهده نقشه انبار» — where the goods physically are, inside a warehouse. */
-  mapActionLabel?: string | undefined
-  onMapAction?: (() => void) | undefined
+  shelvesActionLabel?: string | undefined
+  onShelvesAction?: (() => void) | undefined
   /** Header title/subtitle; default «موجودی». A warehouse passes its own name. */
   title?: string | undefined
   description?: string | undefined
@@ -116,8 +116,8 @@ const WarehouseHeader = memo(function WarehouseHeader({
   onSecondaryAction,
   transferActionLabel,
   onTransferAction,
-  mapActionLabel,
-  onMapAction,
+  shelvesActionLabel,
+  onShelvesAction,
   title,
   description,
   onBack,
@@ -130,8 +130,8 @@ const WarehouseHeader = memo(function WarehouseHeader({
   onSecondaryAction?: (() => void) | undefined
   transferActionLabel?: string | undefined
   onTransferAction?: (() => void) | undefined
-  mapActionLabel?: string | undefined
-  onMapAction?: (() => void) | undefined
+  shelvesActionLabel?: string | undefined
+  onShelvesAction?: (() => void) | undefined
   title: string
   description: string
   onBack?: (() => void) | undefined
@@ -177,19 +177,19 @@ const WarehouseHeader = memo(function WarehouseHeader({
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-        {mapActionLabel && onMapAction ? (
+        {shelvesActionLabel && onShelvesAction ? (
           <button
             type="button"
-            onClick={onMapAction}
-            data-warehouse-map-open=""
+            onClick={onShelvesAction}
+            data-warehouse-shelves-open=""
             className={cn(
               'inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full border border-[hsl(var(--border-default))] px-4 text-sm font-medium sm:min-h-[40px]',
               'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]',
               FOCUS_RING,
             )}
           >
-            <MapIcon className="size-4" aria-hidden="true" />
-            {mapActionLabel}
+            <LayoutGrid className="size-4" aria-hidden="true" />
+            {shelvesActionLabel}
           </button>
         ) : null}
         {transferActionLabel && onTransferAction ? (
@@ -496,8 +496,8 @@ export const WarehouseView = memo(function WarehouseView({
   onSecondaryAction,
   transferActionLabel,
   onTransferAction,
-  mapActionLabel,
-  onMapAction,
+  shelvesActionLabel,
+  onShelvesAction,
   title,
   description,
   onBack,
@@ -601,8 +601,8 @@ export const WarehouseView = memo(function WarehouseView({
         onSecondaryAction={onSecondaryAction}
         transferActionLabel={transferActionLabel}
         onTransferAction={onTransferAction}
-        mapActionLabel={mapActionLabel}
-        onMapAction={onMapAction}
+        shelvesActionLabel={shelvesActionLabel}
+        onShelvesAction={onShelvesAction}
         title={title ?? t('nav.stock', 'موجودی')}
         description={description ?? t('nav.stock_description', 'چه چیزی داریم و چه چیزی کم است')}
         onBack={onBack}

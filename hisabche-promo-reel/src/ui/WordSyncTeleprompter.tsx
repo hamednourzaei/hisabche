@@ -3,12 +3,13 @@
 //
 // Renders live, word-synchronized teleprompter subtitles.
 // Highlights active words as the playhead passes their exact
-// timestamps, with spring scale and luminous glow.
+// timestamps with a smooth, overshoot-free scale ramp and
+// luminous glow (Hard Rule 19 — no sudden pops).
 // Discloses exact alignment lifecycle status (provisional vs verified).
 // ============================================
 
 import type { SentencePlan } from '../engine/speech-model'
-import { spring, clamp } from '../engine/anim'
+import { clamp, ease, progress } from '../engine/anim'
 
 interface WordSyncTeleprompterProps {
   sentence: SentencePlan
@@ -50,9 +51,10 @@ export function WordSyncTeleprompter({
           const isActive = t >= w.start && t < w.end
           const isSpoken = t >= w.end
 
-          // Kinetic spring pop upon activation
-          const s = isActive ? spring(t - w.start) : 1
-          const scale = isActive ? 1 + (s - 1) * 0.15 : 1
+          // Voice-locked highlight: one smooth ramp that never overshoots or jolts
+          // (Hard Rule 19). The word rises softly to 1.15 and settles back to 1.
+          const ramp = isActive ? clamp(progress(t - w.start, 0, 0.22)) : 0
+          const scale = isActive ? 1 + Math.sin(Math.PI * ease(ramp)) * 0.15 : 1
 
           let wordStatus = 'upcoming'
           if (isActive) wordStatus = 'active'
@@ -63,7 +65,7 @@ export function WordSyncTeleprompter({
               key={idx}
               className={`teleprompter-word ${wordStatus} ${w.emphasis ? 'emphasis' : ''}`}
               style={{
-                transform: `scale(${clamp(scale, 0.95, 1.25)})`,
+                transform: `scale(${clamp(scale, 0.95, 1.15)})`,
               }}
             >
               {w.word}

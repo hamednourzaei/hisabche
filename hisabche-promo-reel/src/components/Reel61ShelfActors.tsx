@@ -1,22 +1,19 @@
 // ============================================
 // Reel #61 — «اون کارتن کجاست؟»
 //
-// Template: SPLIT HORIZON. One line divides the frame across all five scenes:
-// above it the phone call (a red waveform of shouting), below it the calm
-// shelf card. In scenes 1–3 the call owns the frame; in scene 4 the horizon
-// rises and the product page pushes the call off screen.
+// Refactored Motion Engine: Zero Clutter · One Focal Stage · Real Persian
 //
-// Product truth (checked in code, 17 Oct): the product page lists each
-// warehouse that holds the product and the shelf it sits on
-// (`GET /api/products/:id/storage-locations`), and the shelf can be changed
-// right there (`useMoveProductPlacement`). No shelf barcode, no worker routing.
-//
-// AV sync law: every sounded word carries an action, and that action's time
-// is read here with `cueAt` — the sound and its visual event share one clock.
+// Visual Laws & Guardrails:
+// 1. One Focal Stage: exactly ONE dominant centered visual ($Y \in [42%, 58%]$).
+// 2. Zero duplicated narration: spoken dialogue lives exclusively in the subtitle system.
+// 3. Strict text budget: default to zero decorative text; maximum 6 words on stage.
+// 4. Zero green line / divider artifacts: completely unified 9:16 coordinate canvas.
+// 5. Authentic Persian: natural bazaar terminology, zero broken fragments.
+// 6. AV Sync Law: every sounded word has an action, read via cueAt.
 // ============================================
 
 import type { SentencePlan } from '../engine/speech-model'
-import { clamp, mix, progress, pulse, studioSpring, studioSpringEnter } from '../engine/anim'
+import { clamp, ease, mix, progress, pulse, studioSpringEnter } from '../engine/anim'
 
 interface R61ActorProps {
   t: number
@@ -45,200 +42,283 @@ function cueAt(plan: SentencePlan | undefined, action: string, fallback: number)
   return plan?.words.find((w) => w.action === action)?.start ?? fallback
 }
 
-/**
- * The shouting on the line, drawn as bars. Deterministic: each bar's height is
- * a sum of sines of `t`, so a frame always looks the same. `energy` 0 → flat.
- */
-function Waveform({ t, energy, tone }: { t: number; energy: number; tone: 'red' | 'green' }) {
-  const bars = 28
-  return (
-    <div className={`r61-wave ${tone}`}>
-      {Array.from({ length: bars }, (_, i) => {
-        const h =
-          Math.abs(Math.sin(t * 9 + i * 0.7) * 0.6 + Math.sin(t * 23 + i * 1.9) * 0.4) * energy
-        return <span key={i} style={{ height: `${8 + h * 62}px` }} />
-      })}
-    </div>
-  )
-}
-
-/** The divide between the call and the calm. `at` is the share of the frame the call owns. */
-function Horizon({ share }: { share: number }) {
-  return <div className="r61-horizon" style={{ top: `${share * 100}%` }} />
-}
-
-function ShelfTag({ code, dim }: { code: string; dim?: boolean | undefined }) {
-  return <span className={`r61-shelf-tag${dim ? ' dim' : ''}`}>{code}</span>
-}
-
-// ─── 1. «ده دقیقه پشت تلفن داد می‌زنی: اون کارتن کجاست؟» ──────────────────────
+// ─── 1. Beat A: «ده دقیقه پشت تلفن داد می‌زنی: اون کارتن کجاست؟» ─────────────
+// Phone call interface with waveform morphing into a carton outline + question mark
 function CallHookActor({ t, plan }: R61ActorProps) {
   const ringAt = cueAt(plan, 'call-ring', 0.2)
-  const shoutAt = cueAt(plan, 'shout-wave', 1.9)
-  const askAt = cueAt(plan, 'where-hit', 3.1)
-  const energy = clamp(progress(t, shoutAt, 0.25)) * (1 + 0.4 * pulse(t, askAt, askAt + 0.6, 1))
-  const shake = t >= shoutAt && t < shoutAt + 0.3 ? Math.sin((t - shoutAt) * 70) * 4 : 0
+  const shoutAt = cueAt(plan, 'shout-wave', 1.38)
+  const askAt = cueAt(plan, 'where-hit', 3.21)
+
+  const shoutEnergy =
+    clamp(progress(t, shoutAt, 0.25)) * (1 + 0.4 * pulse(t, shoutAt, shoutAt + 0.6, 1))
+  const morphP = ease(clamp(progress(t, askAt, 0.5)))
+  const shake = t >= shoutAt && t < shoutAt + 0.3 ? Math.sin((t - shoutAt) * 60) * 3 : 0
+
+  const waveBars = 22
 
   return (
     <div className="r61-stage">
-      <Horizon share={0.62} />
-      <div className="r61-top">
-        <div
-          className="r61-call"
-          style={{ ...studioSpringEnter(t, ringAt, { y: -20 }), translate: `${shake}px 0` }}
-        >
-          <span className="r61-badge red">تماس با انبار · ۱۰:۰۰ دقیقه</span>
-          <Waveform t={t} energy={energy} tone="red" />
+      <div
+        className="r61-center-anchor"
+        style={{
+          ...studioSpringEnter(t, ringAt, { y: 20 }),
+          transform: `translate(${shake}px, 0)`,
+        }}
+      >
+        {/* Compact Phone Call Header Pill (4 words) */}
+        <div className="r61-call-pill">
+          <span className="r61-call-dot" />
+          <span className="r61-call-meta">تماس با انبار · ۱۰:۰۰</span>
         </div>
-        <h2 className="r61-shout" style={studioSpringEnter(t, askAt, { y: 16, scale: 0.88 })}>
-          اون کارتن <span className="r61-hl-red">کجاست؟</span>
-        </h2>
-      </div>
-      <div className="r61-bottom">
-        <div
-          className="r61-calm-ghost"
-          style={{ opacity: mix(0, 0.5, clamp(progress(t, askAt + 0.3, 0.6))) }}
-        >
-          راه دیگری هم هست…
+
+        {/* Central Audio Waveform that morphs into a Carton Box Outline */}
+        <div className="r61-waveform-box">
+          {/* Waveform bars (visible before morph) */}
+          <div
+            className="r61-bars-row"
+            style={{
+              opacity: 1 - morphP,
+              transform: `scale(${1 - morphP * 0.2})`,
+            }}
+          >
+            {Array.from({ length: waveBars }, (_, i) => {
+              const h =
+                Math.abs(Math.sin(t * 9 + i * 0.6) * 0.6 + Math.sin(t * 22 + i * 1.8) * 0.4) *
+                shoutEnergy
+              return <span key={i} className="r61-wbar" style={{ height: `${10 + h * 64}px` }} />
+            })}
+          </div>
+
+          {/* SVG Cardboard Carton Outline (reveals at where-hit) */}
+          <div
+            className="r61-carton-outline-wrap"
+            style={{
+              opacity: morphP,
+              transform: `scale(${mix(0.85, 1.0, morphP)})`,
+            }}
+          >
+            <svg viewBox="0 0 160 140" className="r61-carton-svg">
+              <path
+                d="M 20 40 L 80 15 L 140 40 L 80 65 Z"
+                fill="none"
+                stroke="#f59e0b"
+                strokeWidth="3.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 20 40 L 20 110 L 80 135 L 80 65 Z"
+                fill="none"
+                stroke="#d97706"
+                strokeWidth="3.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 140 40 L 140 110 L 80 135 L 80 65 Z"
+                fill="none"
+                stroke="#b45309"
+                strokeWidth="3.5"
+                strokeLinejoin="round"
+              />
+              <line x1="80" y1="15" x2="80" y2="40" stroke="#f59e0b" strokeWidth="2.5" />
+            </svg>
+
+            {/* Kinetic Amber Question Mark emerging from carton */}
+            <div
+              className="r61-question-glyph"
+              style={studioSpringEnter(t, askAt + 0.15, { scale: 0.8, y: 12 })}
+            >
+              ؟
+            </div>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-// ─── 2. «مشتری پای خط معطله؛ انباردار بین قفسه‌ها می‌گرده.» ─────────────────────
+// ─── 2. Beat B: «مشتری پای خط معطله؛ انباردار بین قفسه‌ها می‌گرده.» ─────────────
+// Warehouse rack with carton silhouettes and a sweeping searchlight beam
 function WaitingActor({ t, plan }: R61ActorProps) {
-  const customerAt = cueAt(plan, 'customer-hold', 0.3)
-  const aislesAt = cueAt(plan, 'aisle-search', 2.4)
-  const seconds = Math.floor(mix(0, 47, clamp(progress(t, customerAt, 4.2))))
-  // The searcher's torch sweeps the aisles and finds nothing.
-  const sweep = Math.sin(Math.max(0, t - aislesAt) * 2.6)
+  const customerAt = cueAt(plan, 'customer-hold', 0.2)
+  const aislesAt = cueAt(plan, 'aisle-search', 2.09)
+
+  const seconds = Math.floor(mix(0, 47, clamp(progress(t, customerAt, 3.8))))
+  const sweep = Math.sin(Math.max(0, t - aislesAt) * 2.8)
 
   return (
     <div className="r61-stage">
-      <Horizon share={0.62} />
-      <div className="r61-top">
-        <Waveform t={t} energy={0.55} tone="red" />
-        <div className="r61-card" style={studioSpringEnter(t, customerAt, { y: 22 })}>
-          <span className="r61-muted">مشتری پشت خط</span>
-          <span className="r61-timer">
+      <div className="r61-center-anchor" style={studioSpringEnter(t, customerAt, { y: 22 })}>
+        {/* Customer Waiting Timer Pill (3 words) */}
+        <div className="r61-wait-pill">
+          <span className="r61-wait-label">انتظار مشتری:</span>
+          <span className="r61-wait-timer">
             ۰۰:{new Intl.NumberFormat('fa-IR', { minimumIntegerDigits: 2 }).format(seconds)}
           </span>
         </div>
-      </div>
-      <div className="r61-bottom">
-        <div className="r61-aisles" style={studioSpringEnter(t, aislesAt, { y: 24 })}>
-          {['A', 'B', 'C', 'D'].map((aisle, i) => (
-            <div key={aisle} className="r61-aisle">
-              <span className="r61-aisle-name">راهرو {aisle}</span>
-              {[1, 2, 3].map((n) => (
-                <ShelfTag key={n} code={`${aisle}-0${n}`} dim />
-              ))}
-              <span
-                className="r61-torch"
-                style={{
-                  opacity:
-                    clamp(1 - Math.abs(sweep * 1.5 - (i - 1.5))) *
-                    clamp(progress(t, aislesAt, 0.3)),
-                }}
-              />
+
+        {/* 3D Multi-Tier Warehouse Rack Mockup */}
+        <div className="r61-warehouse-rack">
+          {/* Sweeping searchlight cone */}
+          <div
+            className="r61-search-cone"
+            style={{
+              opacity: clamp(progress(t, aislesAt, 0.3)),
+              transform: `translateX(${sweep * 110}px) rotate(${sweep * 16}deg)`,
+            }}
+          />
+
+          {/* Shelf Tiers */}
+          {[1, 2, 3].map((tier) => (
+            <div key={tier} className="r61-rack-shelf">
+              <div className="r61-shelf-rail" />
+              <div className="r61-shelf-boxes">
+                <div className="r61-box filled" />
+                <div className="r61-box filled" />
+                {tier === 2 ? (
+                  <div className="r61-box empty-slot">
+                    <span className="r61-slot-q">؟</span>
+                  </div>
+                ) : (
+                  <div className="r61-box filled" />
+                )}
+                <div className="r61-box filled" />
+              </div>
             </div>
           ))}
+
+          {/* Single minimal rack aisle indicator (2 words) */}
+          <div className="r61-rack-meta">
+            <span>انبار اصلی · راهرو B</span>
+          </div>
         </div>
-        <span className="r61-question" style={studioSpringEnter(t, aislesAt + 1.2, { y: 10 })}>
-          روغن کجاست؟
-        </span>
       </div>
     </div>
   )
 }
 
-// ─── 3. «آدرس قفسه فقط تو ذهن یک نفره؛ اون نباشه، بار گم.» ─────────────────────
+// ─── 3. Beat C: The Memory Problem ─────────────────────────────────────────
+// Carton on pallet with a pinned note that detaches and drifts, carton turns gray
 function OneHeadActor({ t, plan }: R61ActorProps) {
-  const noteAt = cueAt(plan, 'memory-note', 0.3)
-  const strikeAt = cueAt(plan, 'absent-strike', 2.6)
-  const lostAt = cueAt(plan, 'cargo-lost', 3.7)
-  const strike = clamp(progress(t, strikeAt, 0.35))
-  const drift = clamp(progress(t, lostAt, 0.9))
+  const noteAt = cueAt(plan, 'memory-note', 0.2)
+  const strikeAt = cueAt(plan, 'absent-strike', 3.39)
+  const lostAt = cueAt(plan, 'cargo-lost', 4.04)
+
+  const strikeP = clamp(progress(t, strikeAt, 0.3))
+  const detachP = ease(clamp(progress(t, strikeAt + 0.15, 0.7)))
+  const lostP = ease(clamp(progress(t, lostAt, 0.5)))
 
   return (
     <div className="r61-stage">
-      <Horizon share={0.62} />
-      <div className="r61-top">
-        <div
-          className="r61-note"
-          style={{ ...studioSpringEnter(t, noteAt, { y: 20 }), rotate: '-3deg' }}
-        >
-          <span className="r61-note-head">آدرس بار</span>
-          <span className="r61-note-body">«دست چپ، پشت گونی‌ها… فقط رحیم می‌دونه»</span>
-          <span className="r61-strike" style={{ transform: `scaleX(${strike})` }} />
+      <div className="r61-center-anchor" style={studioSpringEnter(t, noteAt, { y: 22 })}>
+        <div className="r61-carton-pallet-wrap">
+          {/* The Physical Carton (Dims & Grays out when note detaches) */}
+          <div
+            className={`r61-pallet-carton${lostP > 0.5 ? ' lost' : ''}`}
+            style={{
+              filter: `grayscale(${lostP * 0.9}) brightness(${1 - lostP * 0.35})`,
+            }}
+          >
+            <div className="r61-carton-top-tape" />
+            <div className="r61-carton-brand-mark">روغن ۱۶L</div>
+          </div>
+
+          {/* Wooden Pallet Base */}
+          <div className="r61-wooden-pallet">
+            <span />
+            <span />
+            <span />
+          </div>
+
+          {/* Handwritten Note that detaches and drifts away */}
+          <div
+            className="r61-sticky-note"
+            style={{
+              opacity: 1 - detachP * 0.9,
+              transform: `translate(${detachP * 60}px, ${-detachP * 80}px) rotate(${mix(-6, 22, detachP)}deg) scale(${1 - detachP * 0.3})`,
+            }}
+          >
+            <div className="r61-note-pin" />
+            <span className="r61-note-title">یادداشت انباردار</span>
+            <span className="r61-note-desc">قفسه دست رحیمه</span>
+            {/* Red marker diagonal strike */}
+            <div className="r61-marker-strike" style={{ transform: `scaleX(${strikeP})` }} />
+          </div>
+
+          {/* Visual Lost Question Halo (no clumsy text badge) */}
+          {lostP > 0.2 && (
+            <div
+              className="r61-lost-halo"
+              style={{
+                opacity: lostP,
+                transform: `scale(${mix(0.8, 1.0, lostP)})`,
+              }}
+            >
+              ؟
+            </div>
+          )}
         </div>
-        <span className="r61-absent" style={studioSpringEnter(t, strikeAt, { y: 12, scale: 0.9 })}>
-          رحیم امروز نیامده
-        </span>
-      </div>
-      <div className="r61-bottom">
-        <div
-          className="r61-carton"
-          style={{
-            opacity: 1 - drift * 0.85,
-            transform: `translateY(${drift * 40}px) rotate(${drift * 14}deg) scale(${1 - drift * 0.3})`,
-          }}
-        >
-          ۲۰ کارتن روغن
-        </div>
-        <span className="r61-hl-red" style={{ opacity: clamp(progress(t, lostAt + 0.3, 0.3)) }}>
-          بار گم
-        </span>
       </div>
     </div>
   )
 }
 
-// ─── 4. «حسابچه روی صفحه‌ی کالا می‌گه کدوم انبار و کدوم قفسه؛ جابه‌جا کردی، همون‌جا عوضش کن.» ─
+// ─── 4. Beat D: «حسابچه روی صفحه‌ی کالا می‌گه کدوم انبار و کدوم قفسه؛ جابه‌جا کردی، همون‌جا عوضش کن.»
+// Sleek Hisabche Product & Shelf View: Carton moves smoothly B-04 -> C-02
 function ShelfPageActor({ t, plan }: R61ActorProps) {
   const brandAt = cueAt(plan, 'brand-rise', 0.2)
-  const warehouseAt = cueAt(plan, 'warehouse-row', 1.9)
-  const shelfAt = cueAt(plan, 'shelf-light', 2.9)
-  const moveAt = cueAt(plan, 'shelf-move', 4.6)
-  // The horizon rises: the call is pushed off the top of the frame.
-  const share = mix(0.62, 0, studioSpring(Math.max(0, t - brandAt) * 0.8))
-  const moved = t >= moveAt + 0.25
-  const flip = clamp(progress(t, moveAt, 0.35))
+  const warehouseAt = cueAt(plan, 'warehouse-row', 2.5)
+  const shelfAt = cueAt(plan, 'shelf-light', 3.32)
+  const moveAt = cueAt(plan, 'shelf-move', 5.14)
+
+  const isMoved = t >= moveAt + 0.3
+  const moveP = ease(clamp(progress(t, moveAt, 0.45)))
 
   return (
     <div className="r61-stage">
-      <Horizon share={share} />
-      <div className="r61-top" style={{ height: `${share * 100}%`, opacity: share / 0.62 }}>
-        <Waveform t={t} energy={share} tone="red" />
-      </div>
-      <div className="r61-bottom r61-calm" style={{ top: `${share * 100}%` }}>
-        <span className="r61-badge green" style={studioSpringEnter(t, brandAt, { y: 14 })}>
-          حسابچه · صفحه‌ی کالا
-        </span>
-        <div className="r61-product" style={studioSpringEnter(t, brandAt + 0.3, { y: 26 })}>
-          <div className="r61-product-head">
-            <span className="r61-product-name">روغن آشپزی ۱۶ لیتری</span>
-            <span className="r61-muted">موجودی ۲۰ کارتن</span>
+      <div className="r61-center-anchor" style={studioSpringEnter(t, brandAt, { y: 22 })}>
+        {/* Structured Hisabche Product Card */}
+        <div className="r61-clean-product-card">
+          {/* Header Badge (3 words) */}
+          <div className="r61-emerald-pill">
+            <span className="r61-pill-dot" />
+            <span>حسابچه · مکان کالا</span>
           </div>
-          <div className="r61-loc-row" style={studioSpringEnter(t, warehouseAt, { y: 16 })}>
-            <span className="r61-muted">انبار</span>
-            <span className="r61-loc-value">انبار مرکزی</span>
+
+          {/* Product Title (3 words) */}
+          <h3 className="r61-clean-title">روغن مایع ۱۶ لیتری</h3>
+
+          {/* Warehouse Row (2 words) */}
+          <div className="r61-clean-row" style={studioSpringEnter(t, warehouseAt, { y: 14 })}>
+            <span className="r61-row-key">انبار</span>
+            <span className="r61-row-val">انبار مرکزی</span>
           </div>
+
+          {/* Interactive Shelf Location with Slide / Flip */}
           <div
-            className={`r61-loc-row shelf${t >= shelfAt ? ' lit' : ''}`}
-            style={studioSpringEnter(t, shelfAt, { y: 16 })}
+            className={`r61-clean-row shelf-focus${t >= shelfAt ? ' active' : ''}`}
+            style={studioSpringEnter(t, shelfAt, { y: 14 })}
           >
-            <span className="r61-muted">قفسه</span>
-            <span
-              className="r61-loc-flip"
-              style={{ transform: `rotateX(${Math.sin(flip * Math.PI) * 80}deg)` }}
-            >
-              <ShelfTag code={moved ? 'C-02' : 'B-04'} />
-            </span>
-          </div>
-          <div className="r61-move" style={studioSpringEnter(t, moveAt - 0.2, { y: 12 })}>
-            {moved ? 'جابه‌جا شد: B-04 ← C-02' : 'تغییر قفسه'}
+            <span className="r61-row-key">قفسه</span>
+
+            <div className="r61-shelf-display">
+              <span
+                className="r61-shelf-badge"
+                style={{
+                  transform: `rotateX(${Math.sin(moveP * Math.PI) * 90}deg)`,
+                }}
+              >
+                {isMoved ? 'C-02' : 'B-04'}
+              </span>
+
+              {isMoved && (
+                <span
+                  className="r61-check-tag"
+                  style={studioSpringEnter(t, moveAt + 0.35, { scale: 0.9 })}
+                >
+                  ✓ ثبت شد
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -246,28 +326,38 @@ function ShelfPageActor({ t, plan }: R61ActorProps) {
   )
 }
 
-// ─── 5. «بار رو بی‌تلفن پیدا کن؛ شروع رایگان در حسابچه.» ────────────────────────
+// ─── 5. Beat E: Final CTA ───────────────────────────────────────────────────
+// Clean, centered Hisabche brand card with 4+ second readable hold
 function CtaActor({ t, plan }: R61ActorProps) {
-  const cardAt = cueAt(plan, 'cta-card', 0.3)
-  const pulseAt = cueAt(plan, 'cta-pulse', 2.2)
-  const glow = pulse(t, pulseAt, pulseAt + 1.6, 0.9)
+  const cardAt = cueAt(plan, 'cta-card', 0.2)
+  const pulseAt = cueAt(plan, 'cta-pulse', 2.65)
+  const isPulsing = pulse(t, pulseAt, pulseAt + 1.2, 0.8)
 
   return (
     <div className="r61-stage">
-      <div className="r61-bottom r61-calm" style={{ top: 0 }}>
-        <h2 className="r61-cta-title" style={studioSpringEnter(t, cardAt - 0.1, { y: 16 })}>
-          بار رو <span className="r61-hl-green">بی‌تلفن</span> پیدا کن
-        </h2>
+      <div className="r61-center-anchor" style={studioSpringEnter(t, cardAt, { y: 24 })}>
         <div
-          className="r61-cta-card"
+          className="r61-clean-cta-card"
           style={{
-            ...studioSpringEnter(t, cardAt, { y: 26, scale: 0.92 }),
-            boxShadow: `0 0 ${24 + glow * 40}px rgba(52, 211, 153, ${0.25 + glow * 0.35})`,
+            boxShadow: `0 0 ${20 + isPulsing * 35}px rgba(52, 211, 153, ${0.2 + isPulsing * 0.35})`,
           }}
         >
-          <span className="r61-muted">انبار و قفسه‌ی هر کالا، روی صفحه‌ی همان کالا</span>
-          <span className="r61-cta-action">شروع رایگان</span>
-          <span className="r61-cta-url">hisabche.com</span>
+          {/* Brand Wordmark */}
+          <div className="r61-cta-brand">حسابچه</div>
+
+          {/* Value Prop (4 words) */}
+          <p className="r61-cta-prop">مدیریت دقیق انبار و قفسه‌ها</p>
+
+          {/* Action Button (2 words) */}
+          <div
+            className="r61-cta-button"
+            style={studioSpringEnter(t, pulseAt - 0.2, { scale: 0.94 })}
+          >
+            شروع رایگان
+          </div>
+
+          {/* Clear Official Domain */}
+          <div className="r61-cta-domain">hisabche.com</div>
         </div>
       </div>
     </div>

@@ -719,7 +719,7 @@ const SCREENS: Screen[] = [
     dynamic: {
       'warehouseHub.': ['label', 'loading', 'sectionsLabel'],
       'warehouseHub.tabs.': ['stock', 'expiry'],
-      'warehouseHub.sections.': ['warehouses', 'products', 'map'],
+      'warehouseHub.sections.': ['warehouses', 'products', 'reorder', 'deadStock'],
     },
   },
   {

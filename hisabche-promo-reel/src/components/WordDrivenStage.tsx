@@ -16,6 +16,11 @@ import { Reel57AuditActor } from './Reel57AuditActors'
 import { Reel59TaxActor } from './Reel59TaxActors'
 import { Reel60FxActor } from './Reel60FxActors'
 import { Reel61ShelfActor } from './Reel61ShelfActors'
+import { Reel62ReceiptActor } from './Reel62ReceiptActors'
+import { Reel63GoldsmithActor } from './Reel63GoldsmithActors'
+import { Reel64CogsActor } from './Reel64CogsActors'
+import { Reel65BarberActor } from './Reel65BarberChairActors'
+import { Reel66ShopkeeperActor } from './Reel66ShopkeeperActors'
 import { faNumber } from '../ui/motion-primitives'
 
 interface WordDrivenStageProps {
@@ -48,6 +53,11 @@ export function WordDrivenStage({ t, scene }: WordDrivenStageProps) {
         {actor?.startsWith('r59-') && <Reel59TaxActor actor={actor} t={t} plan={plan} />}
         {actor?.startsWith('r60-') && <Reel60FxActor actor={actor} t={t} plan={plan} />}
         {actor?.startsWith('r61-') && <Reel61ShelfActor actor={actor} t={t} plan={plan} />}
+        {actor?.startsWith('r62-') && <Reel62ReceiptActor actor={actor} t={t} plan={plan} />}
+        {actor?.startsWith('r63-') && <Reel63GoldsmithActor actor={actor} t={t} plan={plan} />}
+        {actor?.startsWith('r64-') && <Reel64CogsActor actor={actor} t={t} plan={plan} />}
+        {actor?.startsWith('r65-') && <Reel65BarberActor actor={actor} t={t} plan={plan} />}
+        {actor?.startsWith('r66-') && <Reel66ShopkeeperActor actor={actor} t={t} plan={plan} />}
       </div>
 
       {/* ── Synchronized Live Teleprompter / Subtitles (Clean Caption Bar) ── */}

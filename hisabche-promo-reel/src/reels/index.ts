@@ -45,6 +45,11 @@ import { reel58 } from './reel-58-offline-pos-sync'
 import { reel59 } from './reel-59-tax-audit-shield'
 import { reel60 } from './reel-60-fx-rate-gap'
 import { reel61 } from './reel-61-shelf-call'
+import { reel62 } from './reel-62-thermal-receipt-cascade'
+import { reel63 } from './reel-63-goldsmith-gram-profit'
+import { reel64 } from './reel-64-cogs-blindspot'
+import { reel65 } from './reel-65-barber-chair-profit'
+import { reel66 } from './reel-66-shopkeeper-story'
 
 export const REELS: Reel[] = [
   reel01,
@@ -108,6 +113,11 @@ export const REELS: Reel[] = [
   reel59,
   reel60,
   reel61,
+  reel62,
+  reel63,
+  reel64,
+  reel65,
+  reel66,
 ]
 
 export { film01, film02, film03, film04, film05 }
@@ -137,4 +147,9 @@ export {
   reel59,
   reel60,
   reel61,
+  reel62,
+  reel63,
+  reel64,
+  reel65,
+  reel66,
 }

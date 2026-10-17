@@ -319,3 +319,40 @@ Tests: `scripts/__tests__/av-sync-law.test.mjs` (library) · `src/__tests__/av-s
 Fast check while writing: `node scripts/check-av-sync.mjs <id> --mix` (seconds). On a file: `node scripts/check-av-sync.mjs <id>`.
 
 What it found on reel 60 (before): clockTick +585 ms, alert +600 ms, impact/markerScribble not heard at all, sparkle 145 ms early — causes: lead silence in files, music too loud after peak-normalising, master loudness raising the bed back up, swell files used for hits.
+
+---
+
+## 8. HARD RULE 14 — ONE FOCAL STAGE & ON-STAGE TEXT BUDGET (owner, 17 Oct 2026)
+
+- **One Focal Stage:** The 9:16 vertical canvas must have exactly ONE dominant visual focal area and one stable subtitle bar.
+- **Dedicated Safe Zones:** Subtitle Zone anchored exclusively at bottom safe area (`bottom: 80px`). Primary Visual Zone kept strictly centered in the central frame ($Y \in [42\%, 58\%]$).
+- **Zero Duplicated Narration:** Never render the spoken voiceover sentence as a headline or card title above the subtitle bar.
+- **No Floating Commentary:** Never introduce independent textual commentary competing with narrator.
+- **Hard Text Budget:** Default to ZERO decorative text. Functional labels only (e.g., shelf code `B-04`, product name, quantity). Hard ceiling: at most 6 words of total non-subtitle on-stage text visible at once.
+
+---
+
+## 9. HARD RULE 15 — NATURAL PERSIAN COPY & ZERO BROKEN FRAGMENTS (owner, 17 Oct 2026)
+
+- **Natural Bazaar Idioms:** All on-screen copy and voiceover dialogue must use authentic, natural Persian phrasing suited for Iranian merchants.
+- **Banned Copy Fragments:** Reject unnatural, clipped, or stilted fragments (`«بار گم»`, `«آدرس بار»`, `«بار رو بی‌تلفن پیدا کن»`).
+- **Communicate Through Visual State:** Show consequences through object state and motion, not awkward text tags.
+
+---
+
+## 10. HARD RULE 16 — ELIMINATION OF HORIZONTAL DIVIDERS & LINE ARTIFACTS (owner, 17 Oct 2026)
+
+- **No Accidental Dividers:** The background and stage must NEVER contain accidental horizontal divider lines, neon boundary bars, or split-screen borders (such as `.r61-horizon` or `.topology-split-screen-horizon::before`).
+- **Unified Spatial Canvas:** Every scene occupies a cohesive, unified 9:16 coordinate plane.
+
+---
+
+## 11. HARD RULE 17 — EVIDENCE-BASED AUDIO & SUBTITLE SYNCHRONIZATION (owner, 17 Oct 2026)
+
+- **No Unsupported Synchronization Claims:** Never claim millisecond-accurate word-level synchronization without verified forced-alignment JSON.
+- **Honest Alignment Lifecycle States:**
+  - `WORD_SYNC_VERIFIED`: Only with verified forced alignment.
+  - `PHRASE_SYNC_VERIFIED`: Anchored to measured acoustic speech intervals, word positions are anchored estimates.
+  - `PROVISIONAL_CADENCE_MODEL_ACTIVE`: Voiceover pending or estimated via cadence math (`isProvisional: true`).
+- **Timing Alignment to Actual Speech:** Words appear when spoken, not stretched across trailing silence.
+

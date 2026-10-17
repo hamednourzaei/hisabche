@@ -83,10 +83,15 @@ export async function exportReelMP4(options = {}) {
       : `⚠️ FFmpeg Binary: NOT FOUND on PATH or standard folders`,
   )
 
-  // 1. Start local Vite server
+  // 1. Start local Vite server (disable HMR and file watching to prevent navigation during frame capture)
   const server = await createServer({
     root: ROOT,
-    server: { port: 5178, host: '127.0.0.1' },
+    server: {
+      port: 5178,
+      host: '127.0.0.1',
+      hmr: false,
+      watch: null,
+    },
     logLevel: 'error',
   })
   await server.listen()
@@ -151,11 +156,23 @@ export async function exportReelMP4(options = {}) {
   const browser = await puppeteer.launch({
     executablePath: chromePath,
     headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
+    ],
   })
 
   const page = await browser.newPage()
   await page.setViewport({ width: 1080, height: 1920, deviceScaleFactor: 1 })
+
+  await page.evaluateOnNewDocument(() => {
+    // A reload mid-render (Vite HMR) loses the frame clock; ask the page to stay.
+    globalThis.onbeforeunload = () => false
+  })
 
   // Initial load
   const initialUrl = `${baseUrl}/?reel=${reel.id}&frame&exact`
@@ -171,7 +188,20 @@ export async function exportReelMP4(options = {}) {
   const startTime = Date.now()
   for (let i = 0; i < totalFrames; i++) {
     const t = Number((i / fps).toFixed(4))
-    await page.evaluate((time) => globalThis.__SEEK_REEL(time), t)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await page.evaluate((time) => globalThis.__SEEK_REEL(time), t)
+        break
+      } catch {
+        if (attempt === 2) {
+          await page.evaluate((time) => globalThis.__SEEK_REEL(time), t)
+        } else {
+          await page
+            .waitForFunction(() => typeof globalThis.__SEEK_REEL === 'function', { timeout: 3000 })
+            .catch(() => {})
+        }
+      }
+    }
 
     const frameFile = path.resolve(framesDir, `frame_${String(i).padStart(5, '0')}.png`)
     await page.screenshot({ path: frameFile, type: 'png' })

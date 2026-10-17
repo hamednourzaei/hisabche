@@ -34,6 +34,7 @@ export type ArtDirection =
   | 'financial-intelligence'
 
 export type LayoutTopology =
+  | 'single-focal-stage'
   | 'split-screen-horizon'
   | 'asymmetrical-swiss-grid'
   | 'full-bleed-kinetic'
@@ -81,7 +82,7 @@ export const ART_DIRECTIONS: ArtDirection[] = [
 ]
 
 export const LAYOUT_TOPOLOGIES: LayoutTopology[] = [
-  'split-screen-horizon',
+  'single-focal-stage',
   'asymmetrical-swiss-grid',
   'full-bleed-kinetic',
   'spatial-2.5d-portal',
@@ -1202,22 +1203,132 @@ export const REEL_REGISTRY_LIST: ReelRegistryEntry[] = [
     id: '61',
     title: 'اون کارتن کجاست؟',
     artDirection: 'kinetic-manifesto',
-    layoutTopology: 'split-screen-horizon',
+    layoutTopology: 'data-flow-matrix',
+    viralTemplate: 'chat-panic-to-calm',
     operators: [
-      'SplitHorizon',
-      'CallWaveform',
-      'AisleTorchSweep',
-      'ShelfLocationRow',
-      'ShelfTagFlip',
+      'CallWaveformMorph',
+      'WarehouseRackScan',
+      'DetachingNoteVisual',
+      'ShelfLocationFlip',
+      'CenteredBrandHold',
     ],
     themeName: 'cyber-emerald',
-    cardQuotaMax: 3,
+    cardQuotaMax: 1,
     targetCustomer: 'wholesaler',
     openingArchetype: 'uncomfortable-discovery',
     merchantPainCategory: 'inventory-discrepancy',
     audioStrategy: 'tactile-foley',
     description:
       'بنکدار ده دقیقه پشت تلفن داد می‌زند تا ۲۰ کارتن روغن را پیدا کند؛ مشتری پشت خط منتظر است و آدرس قفسه فقط در ذهن یک انباردار است. در حسابچه صفحه‌ی کالا انبار و قفسه را نشان می‌دهد و قفسه همان‌جا عوض می‌شود',
+  },
+  {
+    id: '62',
+    title: 'زایش فاکتور از دل پرینتر حرارتی',
+    artDirection: 'cinematic-obsidian',
+    layoutTopology: 'spatial-2.5d-portal',
+    viralTemplate: 'thermal-receipt-scroll',
+    operators: [
+      'ThermalReceiptSlot',
+      'ContinuousPaperUnroll',
+      'SerratedTearReveal',
+      'QuadCardSplit',
+      'EquilibriumShieldLock',
+    ],
+    themeName: 'obsidian-cinematic',
+    cardQuotaMax: 3,
+    targetCustomer: 'retail-shopkeeper',
+    openingArchetype: 'visual-pattern-interrupt',
+    merchantPainCategory: 'profit-illusion',
+    audioStrategy: 'tactile-foley',
+    description:
+      'در خرده‌فروشی سنتی رسید کاغذی پای پیشخوان چاپ می‌شود اما آخر شب باید ساعت‌ها صرف ورود دستی فاکتورها در اکسل و شمارش کسری دخل شود. در حسابچه همزمان با خروج فیش، انبار کسر و دخل شارژ شده و ترازنامه متوازن ثبت می‌شود',
+  },
+  {
+    id: '63',
+    title: 'گرم و مظنه و اجرت؛ قیمت این گردنبند چنده؟',
+    artDirection: 'financial-intelligence',
+    layoutTopology: 'split-screen-horizon',
+    viralTemplate: 'swiss-financial-terminal',
+    operators: [
+      'GramScaleReadout',
+      'RateLockSeal',
+      'WeightFlowConduit',
+      'ComponentExplodeRack',
+      'LaborWageChip',
+    ],
+    themeName: 'midnight-gold',
+    cardQuotaMax: 2,
+    targetCustomer: 'retail-shopkeeper',
+    openingArchetype: 'customer-confrontation',
+    merchantPainCategory: 'profit-illusion',
+    audioStrategy: 'rhythmic-urgency',
+    description:
+      'در طلافروشی قیمت هر گرم لحظه‌ای عوض می‌شود و جمع مظنه، عیار، وزن و اجرت ساخت با ماشین‌حساب دستی، ریسک قیمت اشتباه و سود ناپیدا دارد. در حسابچه طلا به گرم ثبت می‌شود، نرخ روز روی فاکتور قفل می‌ماند و قطعات گردنبند (زنجیر، سنگ، اجرت) جدا حساب می‌شوند',
+  },
+  {
+    id: '64',
+    title: 'کوری بهای تمام‌شده کارگاه',
+    artDirection: 'swiss-editorial',
+    layoutTopology: 'single-focal-stage',
+    viralTemplate: 'kinetic-color-block',
+    operators: [
+      'CogsWaterfallDeconstruct',
+      'IntuitivePricingFracture',
+      'ScrapLossCalculator',
+      'BomAssemblyEngine',
+      'MarginLockBadge',
+    ],
+    themeName: 'swiss-editorial',
+    cardQuotaMax: 2,
+    targetCustomer: 'workshop-producer',
+    openingArchetype: 'uncomfortable-discovery',
+    merchantPainCategory: 'profit-illusion',
+    audioStrategy: 'high-contrast-impact',
+    description:
+      'تولیدکننده کارگاهی با فروش ۱۰۰ صندلی در ماه رکورد می‌زند اما دخلش خالی است چون قیمت ۶۰۰ هزار تومانی را حسی حساب کرده و ضایعات، چسب و یراق را ندیده است. فرمول ساخت (BOM) حسابچه بهای ساخت را ۶۵۰ هزار نشان داده و با قیمت ۸۵۰ هزار، سود خالص را تضمین می‌کند',
+  },
+  {
+    id: '65',
+    title: 'سه صندلی پر؛ اما شب فقط یک عدد می‌بینی',
+    artDirection: 'cinematic-obsidian',
+    layoutTopology: 'data-flow-matrix',
+    operators: [
+      'StationWallMeters',
+      'HandwrittenRowStamp',
+      'LiveChairAttribution',
+      'ConsumableDeductRow',
+      'NightCloseProfitSplit',
+    ],
+    themeName: 'obsidian-cinematic',
+    cardQuotaMax: 2,
+    targetCustomer: 'services',
+    openingArchetype: 'quiet-dread',
+    merchantPainCategory: 'profit-illusion',
+    audioStrategy: 'restrained-dread',
+    description:
+      'در سالن زیبایی با سه صندلی، هر صندلی تمام روز کار می‌کند اما شب که کتاب بسته می‌شود فقط یک عدد کل فروش دیده می‌شود. در حسابچه هر خدمت روی صندلی خودش می‌نشیند، محصولات مصرفی همان صندلی جدا کسر می‌شود و بستن شیفت سود واقعی هر ایستگاه را نشان می‌دهد — از جمله صندلی‌ای که تمام شب ضرر داده است',
+  },
+  {
+    id: '66',
+    title: 'یک شخصیت از حسابچه می‌گوید: کاسب خواربار و لوازم خانگی',
+    artDirection: 'procedural-spatial',
+    layoutTopology: 'spatial-2.5d-portal',
+    viralTemplate: 'liquid-glass-spatial',
+    operators: [
+      'PaperPileSwirlTransform',
+      'InvoiceQuadSplitMatrix',
+      'CustomerReceivableTimeline',
+      'OfflineQueueCloudSync',
+      'UnifiedShopkeeperDashboard',
+    ],
+    themeName: 'cyber-emerald',
+    cardQuotaMax: 3,
+    targetCustomer: 'retail-shopkeeper',
+    openingArchetype: 'immediate-consequence',
+    merchantPainCategory: 'untracked-receivables',
+    audioStrategy: 'tactile-foley',
+    description:
+      'کاسب خواربار با کوهی از فاکتور کاغذی آخر روز سودش را نمی‌داند. در حسابچه ثبت یک فاکتور همزمان انبار، صندوق، حساب مشتری و سند دوبل دفتر را به‌روز می‌کند؛ با قطع اینترنت فروش متوقف نمی‌شود و گردش نسیه هر مشتری با یک نگاه شفاف است',
   },
 ]
 

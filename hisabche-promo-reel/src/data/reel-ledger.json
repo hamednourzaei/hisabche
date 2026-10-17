@@ -558,6 +558,51 @@
       "dominantLayout": "split-screen-horizon",
       "cardQuotaPercent": 20,
       "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
+    },
+    {
+      "id": "62",
+      "title": "زایش فاکتور از دل پرینتر حرارتی",
+      "theme": "obsidian-cinematic",
+      "hookFormula": "visual-pattern-interrupt",
+      "dominantLayout": "spatial-2.5d-portal",
+      "cardQuotaPercent": 20,
+      "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
+    },
+    {
+      "id": "63",
+      "title": "گرم و مظنه و اجرت؛ قیمت این گردنبند چنده؟",
+      "theme": "midnight-gold",
+      "hookFormula": "customer-confrontation",
+      "dominantLayout": "split-screen-horizon",
+      "cardQuotaPercent": 20,
+      "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
+    },
+    {
+      "id": "64",
+      "title": "کوری بهای تمام‌شده کارگاه",
+      "theme": "swiss-editorial",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "single-focal-stage",
+      "cardQuotaPercent": 20,
+      "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
+    },
+    {
+      "id": "65",
+      "title": "سه صندلی پر؛ اما شب فقط یک عدد می‌بینی",
+      "theme": "obsidian-cinematic",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "station-wall-grid",
+      "cardQuotaPercent": 20,
+      "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
+    },
+    {
+      "id": "66",
+      "title": "یک شخصیت از حسابچه می‌گوید: کاسب خواربار و لوازم خانگی",
+      "theme": "cyber-emerald",
+      "hookFormula": "immediate-consequence",
+      "dominantLayout": "single-focal-stage",
+      "cardQuotaPercent": 20,
+      "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
     }
   ]
 }

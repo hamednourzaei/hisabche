@@ -41,7 +41,7 @@ import { Hourglass, Warehouse as WarehouseIcon } from 'lucide-react'
 import { useMyCapabilities } from '@hisabche/api'
 import { isNavLocked } from '@hisabche/ui-contract'
 
-import { ProductListContainer } from '../../products/containers/product-list-container'
+import { WarehouseProductsSection } from '../shelves/warehouse-products-section'
 import { warehouseContainer } from './Warehouse-container'
 import { useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { HubTabs, useHubSection, useHubTab } from '../../hub-tabs'
@@ -61,14 +61,10 @@ const ExpiryContainer = lazy(() =>
   import('../../expiry/containers/expiry-container').then((m) => ({ default: m.ExpiryContainer })),
 )
 
-// «نقشه انبار» — where the goods physically are, over the stock the parts above
-// already show. Lazy like the operations part: a floor plan is not needed by
-// somebody who came to add a product.
-const MapSectionContainer = lazy(() =>
-  import('../map/containers/warehouse-map-container').then((m) => ({
-    default: m.WarehouseMapSection,
-  })),
-)
+// «نقشه انبار» was removed (owner, 17 Oct 2026: «too much»). Where goods sit
+// is now the shelves of each warehouse, under «کالاها» — see
+// ../shelves/warehouse-products-section.tsx. `?view=map` falls back to the
+// first section like any unknown section.
 
 //
 // «انبار» at one address: `/warehouse`. Two tabs, and only two:
@@ -98,11 +94,11 @@ export const WAREHOUSE_HUB_SOURCE: Record<WarehouseHubTab, string> = {
   expiry: '/expiry',
 }
 
-export const STOCK_SECTIONS = ['warehouses', 'products', 'reorder', 'deadStock', 'map'] as const
+export const STOCK_SECTIONS = ['warehouses', 'products', 'reorder', 'deadStock'] as const
 export type StockSection = (typeof STOCK_SECTIONS)[number]
 
-/** `?warehouse=` names an open warehouse; the product list has no use for it. */
-const STOCK_SECTION_CLEARS = ['warehouse'] as const
+/** `?warehouse=` names an open warehouse, `?stockWarehouse=` the shelves tab of «کالاها». */
+const STOCK_SECTION_CLEARS = ['warehouse', 'stockWarehouse'] as const
 
 const TAB_ICON = { stock: WarehouseIcon, expiry: Hourglass } as const
 
@@ -118,7 +114,7 @@ export type WarehouseTab = 'stock' | 'products'
  *
  * The first version of this file did exactly that, conditionally:
  *
- *     active === 'products' ? <ProductListContainer /> : warehouseContainer()
+ *     active === 'products' ? <ProductList /> : warehouseContainer()
  *
  * On the stock tab the parent rendered ~12 hooks; on the products tab it
  * rendered 3. Switching tabs therefore changed the hook count between renders,
@@ -238,17 +234,7 @@ function WarehouseHub() {
                 <OpsSectionContainer section={section} />
               </Suspense>
             ) : section === 'products' ? (
-              <ProductListContainer />
-            ) : section === 'map' ? (
-              <Suspense
-                fallback={
-                  <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
-                    {t('warehouseHub.loading')}
-                  </p>
-                }
-              >
-                <MapSectionContainer />
-              </Suspense>
+              <WarehouseProductsSection />
             ) : (
               <WarehouseStockTab />
             )}

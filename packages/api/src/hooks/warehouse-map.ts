@@ -197,12 +197,19 @@ export interface CreateStorageLocationInput {
   capacity?: number | null | undefined
 }
 
-/** Put a shelf on the plan (owner only — `inventory.configure`). */
+/**
+ * Put a shelf in a warehouse (`inventory.configure`). `input.warehouseId`
+ * names a warehouse created a moment ago (the warehouse form's shelf rows);
+ * otherwise the hook's own warehouse.
+ */
 export function useCreateStorageLocation(warehouseId: string | null) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: CreateStorageLocationInput) => {
-      const { data } = await apiClient.post(`/warehouses/${warehouseId}/locations`, input)
+    mutationFn: async ({
+      warehouseId: target,
+      ...input
+    }: CreateStorageLocationInput & { warehouseId?: string | undefined }) => {
+      const { data } = await apiClient.post(`/warehouses/${target ?? warehouseId}/locations`, input)
       return data as { id: string; code: string }
     },
     onSuccess: () => {

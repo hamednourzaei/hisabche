@@ -56,6 +56,12 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   oxc: { jsx: { runtime: 'automatic', importSource: 'react' } },
-  server: { port: 5190, open: false },
+  server: {
+    port: 5190,
+    open: false,
+    watch: {
+      ignored: ['**/.tmp/**', '**/audio/**', '**/dist/**'],
+    },
+  },
   build: { outDir: 'dist', emptyOutDir: true },
 })

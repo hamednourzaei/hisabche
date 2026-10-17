@@ -275,12 +275,12 @@ export function warehouseContainer() {
                 // To another warehouse. The route had no button anywhere.
                 transferActionLabel: safeT('warehouse.transferStock', 'انتقال موجودی'),
                 onTransferAction: () => setShowTransfer(true),
-                // Where the goods physically ARE. The map is its own section of
-                // this hub and reads this warehouse by `?mapWarehouse=`, so the
-                // person lands on the floor they were just looking at.
-                mapActionLabel: safeT('warehouseMap.open', 'مشاهده نقشه انبار'),
-                onMapAction: () => {
-                  if (warehouseParam) push(`/warehouse?view=map&mapWarehouse=${warehouseParam}`)
+                // Where the goods physically ARE: this warehouse's shelves,
+                // under «کالاها», on the tab of the warehouse just looked at.
+                shelvesActionLabel: safeT('warehouseShelves.openShelves', 'قفسه‌ها'),
+                onShelvesAction: () => {
+                  if (warehouseParam)
+                    push(`/warehouse?view=products&stockWarehouse=${warehouseParam}`)
                 },
               }),
           products: warehouseProducts,
