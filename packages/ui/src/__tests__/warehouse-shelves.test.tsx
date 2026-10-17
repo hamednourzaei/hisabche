@@ -351,6 +351,22 @@ describe('placing on a shelf', () => {
 })
 
 describe('the warehouse form', () => {
+  it('a branch can be made right here, and the branch field shows even before the first one exists', () => {
+    const source = readFileSync(
+      join(ROOT, 'packages', 'ui', 'src', 'components', 'ui', 'warehouse', 'warehouse-dialogs.tsx'),
+      'utf8',
+    )
+    expect(source).toContain('const canPlace = placement.data?.branchesConfigured === true')
+    expect(source).not.toContain('branches.length > 0 && placement')
+    expect(source).toContain('data-add-branch')
+    expect(source).toContain("useMyCapabilities().can('workspace.manage') === true")
+    for (const lang of ['fa', 'af', 'en'] as const) {
+      for (const key of ['newBranch', 'newBranchName', 'newBranchCode', 'addBranch']) {
+        expect(message(`warehouse.${key}`, lang), `${lang} ${key}`).toBeTruthy()
+      }
+    }
+  })
+
   it('a repeated shelf code is caught before anything is sent', () => {
     expect(
       repeatedShelfCodes([{ code: 'A-01' }, { code: ' A-01 ' }, { code: 'B-02' }, { code: '' }]),

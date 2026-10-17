@@ -12,8 +12,10 @@
 import { useEffect, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import {
+  apiErrorMessage,
   asList,
   useBranches,
+  useCreateBranch,
   useCreateStorageLocation,
   useMyCapabilities,
   useStockPlacement,
@@ -121,7 +123,31 @@ export function AddWarehouseDialog({
       null)
     : null
   // The branch select is offered only when it can be saved and read back.
-  const canPlace = branches.length > 0 && placement.data?.branchesConfigured === true
+  // ⚠️ Offered whenever branches can be saved — NOT only once one exists. «کل
+  // کسب‌وکار» is a real answer, and a business with no branch yet must be able to
+  // make its first one here (owner, 17 Oct 2026: «انبار و شعب باید باهم باشن»).
+  const canPlace = placement.data?.branchesConfigured === true
+  // Making a branch is `workspace.manage` on the server; the button follows it.
+  const canAddBranch = useMyCapabilities().can('workspace.manage') === true
+  const createBranch = useCreateBranch()
+  const [newBranch, setNewBranch] = useState<{ name: string; code: string } | null>(null)
+  const [branchError, setBranchError] = useState<string | null>(null)
+  const saveBranch = async () => {
+    if (!newBranch) return
+    setBranchError(null)
+    try {
+      const created = await createBranch.mutateAsync({
+        name: newBranch.name.trim(),
+        code: newBranch.code.trim(),
+      })
+      if (created?.id) setBranchId(created.id)
+      setNewBranch(null)
+    } catch (err) {
+      setBranchError(
+        apiErrorMessage(err, t('warehouse.saveFailed', 'ذخیره نشد. دوباره تلاش کنید.')),
+      )
+    }
+  }
 
   useEffect(() => {
     if (open) {
@@ -184,7 +210,7 @@ export function AddWarehouseDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? null : onClose())}>
-      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-md overflow-x-hidden overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {initial
@@ -232,6 +258,71 @@ export function AddWarehouseDialog({
                   ...branches.map((branch) => ({ value: branch.id, label: branch.name })),
                 ]}
               />
+              {canAddBranch && !newBranch ? (
+                <button
+                  type="button"
+                  data-add-branch=""
+                  onClick={() => {
+                    setBranchError(null)
+                    setNewBranch({ name: '', code: '' })
+                  }}
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--surface-muted))]"
+                >
+                  <Plus className="size-3.5" aria-hidden="true" />
+                  {t('warehouse.newBranch', 'شعبه‌ی تازه')}
+                </button>
+              ) : null}
+              {newBranch ? (
+                <div
+                  data-new-branch=""
+                  className="space-y-2 rounded-xl border border-dashed border-[hsl(var(--border-default))] p-3"
+                >
+                  <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] gap-2">
+                    <input
+                      name="branch-name"
+                      value={newBranch.name}
+                      maxLength={120}
+                      autoFocus
+                      onChange={(e) => setNewBranch({ ...newBranch, name: e.target.value })}
+                      placeholder={t('warehouse.newBranchName', 'نام شعبه، مثلاً شعبه‌ی مرکزی')}
+                      aria-label={t('warehouse.newBranchName', 'نام شعبه')}
+                      className={`${input} min-w-0`}
+                    />
+                    <input
+                      name="branch-code"
+                      value={newBranch.code}
+                      maxLength={20}
+                      dir="ltr"
+                      onChange={(e) => setNewBranch({ ...newBranch, code: e.target.value })}
+                      placeholder="BR-01"
+                      aria-label={t('warehouse.newBranchCode', 'کد شعبه')}
+                      className={`${input} min-w-0 text-center`}
+                    />
+                  </div>
+                  {branchError ? (
+                    <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+                      {branchError}
+                    </p>
+                  ) : null}
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => setNewBranch(null)} className={quiet}>
+                      {t('common.cancel', 'انصراف')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void saveBranch()}
+                      disabled={
+                        createBranch.isPending ||
+                        newBranch.name.trim() === '' ||
+                        newBranch.code.trim() === ''
+                      }
+                      className={primary}
+                    >
+                      {t('warehouse.addBranch', 'افزودن شعبه')}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
               <p className="text-xs text-[hsl(var(--fg-tertiary))]">
                 {t(
                   'warehouse.branchHint',
@@ -270,8 +361,20 @@ export function AddWarehouseDialog({
                       )}
                     </p>
                   ) : null}
+                  <div
+                    aria-hidden="true"
+                    className="grid grid-cols-[6.5rem_minmax(0,1fr)_2.5rem] gap-2 px-1 text-xs text-[hsl(var(--fg-tertiary))]"
+                  >
+                    <span className="text-center">
+                      {t('warehouseShelves.shelfDialog.code', 'کد قفسه')}
+                    </span>
+                    <span>{t('warehouseShelves.shelfDialog.name', 'توضیح (اختیاری)')}</span>
+                  </div>
                   {rows.map((row, index) => (
-                    <div key={row.key} className="flex items-center gap-2">
+                    <div
+                      key={row.key}
+                      className="grid grid-cols-[6.5rem_minmax(0,1fr)_2.5rem] items-center gap-2"
+                    >
                       <input
                         name={`shelf-code-${index}`}
                         value={row.code}
@@ -286,7 +389,7 @@ export function AddWarehouseDialog({
                         }
                         placeholder={t('warehouseShelves.form.rowCode', 'A-01')}
                         aria-label={t('warehouseShelves.shelfDialog.code', 'کد قفسه')}
-                        className={`${input} w-28 shrink-0`}
+                        className={`${input} min-w-0 text-center`}
                       />
                       <input
                         name={`shelf-name-${index}`}
@@ -301,7 +404,7 @@ export function AddWarehouseDialog({
                         }
                         placeholder={t('warehouseShelves.form.rowName', '')}
                         aria-label={t('warehouseShelves.shelfDialog.name', '')}
-                        className={`${input} min-w-0 flex-1`}
+                        className={`${input} min-w-0`}
                       />
                       {rows.length > 1 ? (
                         <button
@@ -314,7 +417,9 @@ export function AddWarehouseDialog({
                         >
                           <X className="size-4" aria-hidden="true" />
                         </button>
-                      ) : null}
+                      ) : (
+                        <span aria-hidden="true" />
+                      )}
                     </div>
                   ))}
                   <button

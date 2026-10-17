@@ -2111,7 +2111,11 @@
       "confirm": "Save location",
       "moved": "Location changed",
       "moveFailed": "The location was not changed"
-    }
+    },
+    "newBranch": "New branch",
+    "newBranchName": "Branch name, e.g. Main branch",
+    "newBranchCode": "Branch code",
+    "addBranch": "Add branch"
   },
   "customers": {
     "title": "Customers",
@@ -10055,7 +10059,7 @@
       "switchLabel": "Manage shelves in this warehouse",
       "switchHint": "Turn on to record which shelf each product sits on. Off, the warehouse still works fully, and you can turn it on any time.",
       "existing": "This warehouse has {count} shelves. Add new shelves here.",
-      "rowCode": "Code, e.g. A-01",
+      "rowCode": "A-01",
       "rowName": "Description (optional)",
       "addRow": "Another shelf",
       "removeRow": "Remove this row",
