@@ -249,6 +249,30 @@ export interface ReorderSuggestion {
   daysOfCover?: number | null
 }
 
+/**
+ * ⚠️ THE SERVER'S NAMES ARE NOT THESE. `reorder.service#suggestions` sends
+ * `name`, `reorderPoint` and `suggestedQty`; this list was typed with other
+ * names and `asList<T>()` passed the rows through unchanged, so every number
+ * was `undefined` and «پیشنهاد سفارش» crashed on `.toLocaleString` (17 Oct
+ * 2026). A type is not a runtime check — the rows are mapped field by field.
+ */
+const asNumber = (value: unknown): number => {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+export function reorderFromServer(row: Record<string, unknown>): ReorderSuggestion {
+  return {
+    productId: String(row.productId ?? ''),
+    productName: String(row.name ?? ''),
+    onHand: asNumber(row.onHand),
+    reorderLevel: asNumber(row.reorderPoint),
+    suggestedQuantity: asNumber(row.suggestedQty),
+    // The server does not send it; «—» on screen, never an invented number.
+    daysOfCover: null,
+  }
+}
+
 export function useReorderSuggestions() {
   const ready = useAuthReady()
 
@@ -256,7 +280,7 @@ export function useReorderSuggestions() {
     queryKey: inventoryOpsKeys.reorder(),
     queryFn: async (): Promise<ReorderSuggestion[]> => {
       const { data } = await apiClient.get('/inventory/reorder-suggestions')
-      return asList<ReorderSuggestion>(data)
+      return asList<Record<string, unknown>>(data).map(reorderFromServer)
     },
     enabled: ready,
     staleTime: 5 * 60 * 1000,
@@ -265,13 +289,31 @@ export function useReorderSuggestions() {
 
 // ─── L4 · dead stock ──────────────────────────────────────────────────
 
+/**
+ * One line of `reorder.service#deadStock` — the SALE that is missing, not any
+ * movement. There is no stock value: the server does not compute one, and a
+ * value without a purchase price would be an invented 0.
+ */
 export interface DeadStockItem {
   productId: string
   productName: string
   onHand: number
-  stockValue: number
-  lastMovementAt: string | null
-  daysSinceMovement: number | null
+  /** The most recent sale; `null` = never sold. */
+  lastSoldAt: string | null
+  daysSinceSale: number | null
+  neverSold: boolean
+}
+
+export function deadStockFromServer(row: Record<string, unknown>): DeadStockItem {
+  const days = row.daysSinceSale
+  return {
+    productId: String(row.productId ?? ''),
+    productName: String(row.name ?? ''),
+    onHand: asNumber(row.onHand),
+    lastSoldAt: typeof row.lastSoldAt === 'string' ? row.lastSoldAt : null,
+    daysSinceSale: days === null || days === undefined ? null : asNumber(days),
+    neverSold: row.neverSold === true,
+  }
 }
 
 export function useDeadStock(days = 90) {
@@ -281,7 +323,7 @@ export function useDeadStock(days = 90) {
     queryKey: inventoryOpsKeys.deadStock(days),
     queryFn: async (): Promise<DeadStockItem[]> => {
       const { data } = await apiClient.get('/inventory/dead-stock', { params: { days } })
-      return asList<DeadStockItem>(data)
+      return asList<Record<string, unknown>>(data).map(deadStockFromServer)
     },
     enabled: ready,
     staleTime: 10 * 60 * 1000,

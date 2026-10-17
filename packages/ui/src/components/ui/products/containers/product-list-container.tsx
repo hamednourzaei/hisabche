@@ -28,7 +28,12 @@ import { useListEngine } from '../../../../hooks/use-list-engine'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 import { ProductListView } from '../product-list-view'
 
-export const ProductListContainer = memo(function ProductListContainer() {
+export const ProductListContainer = memo(function ProductListContainer({
+  actions,
+}: {
+  /** Put in the table's own toolbar, beside search (the warehouse filter of «کالاها»). */
+  actions?: React.ReactNode
+} = {}) {
   const translate = useTranslations()
   const t = useCallback(
     (key: string, fallback?: string): string => {
@@ -104,6 +109,7 @@ export const ProductListContainer = memo(function ProductListContainer() {
       error={products.error ? (products.error as Error).message : null}
       onRefresh={() => products.refetch()}
       onOpen={openProduct}
+      actions={actions}
     />
   )
 })

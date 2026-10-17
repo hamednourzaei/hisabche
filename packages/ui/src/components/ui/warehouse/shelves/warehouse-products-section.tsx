@@ -3,12 +3,14 @@
 // ============================================
 // packages/ui/src/components/ui/warehouse/shelves/warehouse-products-section.tsx
 //
-// «کالاها» of the warehouse hub (`/warehouse?view=products`), owner 17 Oct 2026:
-// one row of tabs — «همه‌ی کالاها» and every warehouse, each named with its
-// branch — and under a warehouse, its shelves with the products on each.
+// «کالاها» of the warehouse hub (`/warehouse?view=products`), owner 17 Oct 2026.
 //
-// The tab is in the address (`?stockWarehouse=<id>`), so a link opens the same
-// shelf list. «همه‌ی کالاها» is the catalogue as it always was.
+// The warehouse is a FILTER of the list, not a third row of tabs (owner, same
+// day: «خیلی شلوغ شد» — hub tabs, section switch and warehouse pills were three
+// centred rows). It sits in the toolbar of whichever list is on screen, beside
+// its search: «همه‌ی انبارها» = the catalogue as it always was; one warehouse =
+// its shelves with the products on each. It is in the address
+// (`?stockWarehouse=<id>`), so a link opens the same shelf list.
 //
 // ⚠️ The floor map (x/y/width/height) is gone from the product. Its tables and
 // routes stay: a shelf is the same `storage_locations` row, read through the
@@ -36,14 +38,11 @@ import { resolveIntlLocale, type UiLanguage } from '@hisabche/formatting'
 
 import { useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { translateOr } from '../../../../lib/translate-or'
-import { SegmentedControl } from '../../segmented-control'
-import { SelectField } from '../../select-field'
+import { TableFilterSelect } from '../../data-table'
 import { ProductListContainer } from '../../products/containers/product-list-container'
 import { PlaceDialog, ShelfDialog, type PlaceRequest, type ShelfT } from './shelf-dialogs'
 import { stockOptions, WarehouseShelvesView } from './warehouse-shelves-view'
 
-/** The warehouse tabs; more than this and a searchable list is easier to use. */
-export const MAX_WAREHOUSE_TABS = 5
 export const ALL_PRODUCTS = 'all'
 /** The read window of the map answer; the shelves screen shows no staleness. */
 const DAYS = 90
@@ -84,43 +83,32 @@ export function WarehouseProductsSection() {
     }),
   ]
 
-  return (
-    <div className="space-y-4">
-      {warehouses.length > 0 ? (
-        <div className="flex justify-center">
-          {warehouses.length + 1 <= MAX_WAREHOUSE_TABS ? (
-            <SegmentedControl
-              label={t('warehouseShelves.pickerLabel')}
-              options={options}
-              value={active}
-              onChange={pick}
-              className="overflow-x-auto"
-            />
-          ) : (
-            <div className="w-full sm:max-w-sm">
-              <SelectField
-                aria-label={t('warehouseShelves.pickerLabel')}
-                value={active}
-                onChange={pick}
-                searchable
-                searchPlaceholder={t('warehouseShelves.pickWarehouse')}
-                noResultsText={t('warehouseShelves.noMatch')}
-                options={options.map((option) => ({ ...option, keywords: option.label }))}
-              />
-            </div>
-          )}
-        </div>
-      ) : null}
-      {active === ALL_PRODUCTS ? (
-        <ProductListContainer />
-      ) : (
-        <WarehouseShelvesContainer warehouseId={active} />
-      )}
-    </div>
+  // One business-wide warehouse or none: nothing to choose, no filter shown.
+  const filter =
+    warehouses.length > 0 ? (
+      <TableFilterSelect
+        label={t('warehouseShelves.pickerLabel')}
+        value={active}
+        options={options}
+        onChange={pick}
+        allValue={ALL_PRODUCTS}
+      />
+    ) : null
+
+  return active === ALL_PRODUCTS ? (
+    <ProductListContainer actions={filter} />
+  ) : (
+    <WarehouseShelvesContainer warehouseId={active} toolbar={filter} />
   )
 }
 
-export function WarehouseShelvesContainer({ warehouseId }: { warehouseId: string }) {
+export function WarehouseShelvesContainer({
+  warehouseId,
+  toolbar,
+}: {
+  warehouseId: string
+  toolbar?: React.ReactNode
+}) {
   const t = useTranslations() as unknown as ShelfT
   const locale = resolveIntlLocale(useLocale() as UiLanguage)
   const number = useMemo(
@@ -185,6 +173,7 @@ export function WarehouseShelvesContainer({ warehouseId }: { warehouseId: string
         onAddShelf={() => setShelfDialog({ open: true, editing: null })}
         onEditShelf={(shelf) => setShelfDialog({ open: true, editing: shelf })}
         onRequest={setRequest}
+        toolbar={toolbar}
       />
       {canConfigure ? (
         <ShelfDialog

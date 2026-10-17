@@ -50,6 +50,8 @@ export interface ProductListViewProps {
   onOpen?: ((productId: string) => void) | undefined
   /** Product id → the warehouses holding it. Null = not read. */
   places: ReadonlyMap<string, ProductPlace[]> | null
+  /** The table toolbar's filters, beside search. */
+  actions?: React.ReactNode
 }
 
 const isLow = (product: ProductRow) => (product.quantity ?? 0) <= (product.minStockLevel ?? 0)
@@ -66,6 +68,7 @@ export const ProductListView = memo(function ProductListView({
   onRefresh,
   onOpen,
   places,
+  actions,
 }: ProductListViewProps) {
   const { state } = engine
 
@@ -201,6 +204,7 @@ export const ProductListView = memo(function ProductListView({
         onRowClick={onOpen ? (product) => onOpen(product.id) : undefined}
         searchValue={state.search}
         onSearchChange={engine.setSearch}
+        actions={actions}
         minWidthClass="min-w-[420px]"
         emptyState={
           isLoading ? (

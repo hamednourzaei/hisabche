@@ -137,7 +137,7 @@ export function OpsReorderSection({ t }: OpsSectionProps) {
 
 // ─── L4 · dead stock ─────────────────────────────────────────────────────
 
-export function OpsDeadStockSection({ t, fmtMoney, fmtDate }: OpsSectionProps) {
+export function OpsDeadStockSection({ t, fmtDate }: OpsSectionProps) {
   const tr = translator(t)
   const deadStock = useDeadStock()
   if (deadStock.isLoading) return <Waiting text={tr('common.loading', 'در حال بارگذاری…')} />
@@ -172,25 +172,15 @@ export function OpsDeadStockSection({ t, fmtMoney, fmtDate }: OpsSectionProps) {
           render: (item) => <span className="tabular-nums">{num(item.onHand)}</span>,
         },
         {
-          id: 'stockValue',
-          labelKey: 'ops.stockValue',
-          labelFallback: 'ارزش (به قیمت تمام‌شده)',
-          align: 'end',
-          sortValue: (item) => item.stockValue,
-          render: (item) => <span className="tabular-nums">{fmtMoney(item.stockValue)}</span>,
-        },
-        {
-          id: 'lastMovement',
-          labelKey: 'ops.lastMovement',
-          labelFallback: 'آخرین حرکت',
-          showFrom: 'md',
-          sortValue: (item) => item.lastMovementAt ?? null,
-          // A product that has NEVER moved is not the same as one whose date is
-          // unknown, and both differ from «today».
+          id: 'lastSale',
+          labelKey: 'ops.lastSale',
+          labelFallback: 'آخرین فروش',
+          sortValue: (item) => item.lastSoldAt ?? null,
+          // NEVER SOLD is its own answer — not «∞ days», and not «today».
           render: (item) =>
-            item.lastMovementAt
-              ? fmtDate(item.lastMovementAt)
-              : tr('ops.neverMoved', 'هرگز حرکت نکرده'),
+            item.neverSold || !item.lastSoldAt
+              ? tr('ops.neverSold', 'هرگز فروش نرفته')
+              : fmtDate(item.lastSoldAt),
         },
       ]}
     />

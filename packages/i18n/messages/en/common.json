@@ -6918,8 +6918,6 @@
     "deadStockEmptyHint": "Everything has moved recently.",
     "expected": "Expected cash",
     "firstShortfall": "First shortfall",
-    "lastMovement": "Last movement",
-    "neverMoved": "Never moved",
     "noForecast": "Not enough data to forecast",
     "noShortfall": "No shortfall",
     "onHand": "On hand",
@@ -6937,12 +6935,13 @@
     "staleEmpty": "No stale opportunities",
     "staleOpportunities": "Stale opportunities",
     "stillOpen": "Still open",
-    "stockValue": "Value (at cost)",
     "suggested": "Suggested",
     "value": "Value",
     "variance": "Variance",
     "sectionsLabel": "Section",
-    "loadFailed": "This part could not be read."
+    "loadFailed": "This part could not be read.",
+    "lastSale": "Last sale",
+    "neverSold": "Never sold"
   },
   "productUnits": {
     "add": "Add a unit",
@@ -9984,7 +9983,7 @@
     "stock-count": "Stock count"
   },
   "warehouseShelves": {
-    "all": "All products",
+    "all": "All warehouses",
     "pickerLabel": "Warehouse",
     "pickWarehouse": "Choose a warehouse",
     "noBranch": "Whole business",

@@ -45,6 +45,8 @@ export interface WarehouseShelvesViewProps {
   onAddShelf: () => void
   onEditShelf: (shelf: MapLocation) => void
   onRequest: (request: PlaceRequest) => void
+  /** The warehouse filter — the same control the catalogue table has beside its search. */
+  toolbar?: React.ReactNode
 }
 
 /** Holds − placed, per product. Pure; exported for the tests. */
@@ -95,30 +97,51 @@ export function WarehouseShelvesView({
   onAddShelf,
   onEditShelf,
   onRequest,
+  toolbar,
 }: WarehouseShelvesViewProps) {
   const [query, setQuery] = useState('')
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
 
+  const bar = toolbar ? <div className="flex flex-wrap items-center gap-2">{toolbar}</div> : null
+
   if (state === 'loading') {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-40 animate-pulse rounded-2xl bg-[hsl(var(--surface-muted))]" />
-        ))}
+      <div className="space-y-4">
+        {bar}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-40 animate-pulse rounded-2xl bg-[hsl(var(--surface-muted))]"
+            />
+          ))}
+        </div>
       </div>
     )
   }
   if (state === 'not-migrated') {
-    return <Notice>{t('warehouseShelves.notMigrated')}</Notice>
+    return (
+      <div className="space-y-4">
+        {bar}
+        <Notice>{t('warehouseShelves.notMigrated')}</Notice>
+      </div>
+    )
   }
   if (state === 'error') {
     return (
-      <Notice tone="error">
-        <span>{errorMessage ?? t('warehouseShelves.loadFailed')}</span>
-        <button type="button" onClick={onRetry} className={cn(chipButton, 'border border-current')}>
-          {t('warehouseShelves.retry')}
-        </button>
-      </Notice>
+      <div className="space-y-4">
+        {bar}
+        <Notice tone="error">
+          <span>{errorMessage ?? t('warehouseShelves.loadFailed')}</span>
+          <button
+            type="button"
+            onClick={onRetry}
+            className={cn(chipButton, 'border border-current')}
+          >
+            {t('warehouseShelves.retry')}
+          </button>
+        </Notice>
+      </div>
     )
   }
 
@@ -142,6 +165,7 @@ export function WarehouseShelvesView({
   if (shelves.length === 0) {
     return (
       <div className="space-y-4">
+        {bar}
         <section className="rounded-2xl border border-dashed border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-6 text-center sm:p-10">
           <Package
             className="mx-auto mb-3 size-10 text-[hsl(var(--fg-tertiary))]"
@@ -178,20 +202,23 @@ export function WarehouseShelvesView({
   return (
     <div className="space-y-4" data-warehouse-shelves="">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <label className="relative block w-full sm:max-w-sm">
-          <Search
-            className="pointer-events-none absolute inset-y-0 start-3 my-auto size-4 text-[hsl(var(--fg-tertiary))]"
-            aria-hidden="true"
-          />
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t('warehouseShelves.search')}
-            aria-label={t('warehouseShelves.search')}
-            className="min-h-11 w-full rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] ps-9 pe-4 text-sm text-[hsl(var(--fg-primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]"
-          />
-        </label>
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="relative block w-full sm:max-w-sm">
+            <Search
+              className="pointer-events-none absolute inset-y-0 start-3 my-auto size-4 text-[hsl(var(--fg-tertiary))]"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t('warehouseShelves.search')}
+              aria-label={t('warehouseShelves.search')}
+              className="min-h-11 w-full rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] ps-9 pe-4 text-sm text-[hsl(var(--fg-primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]"
+            />
+          </label>
+          {toolbar}
+        </div>
         <div className="flex items-center justify-between gap-2 sm:justify-end">
           <span className="text-xs text-[hsl(var(--fg-tertiary))]">
             {t('warehouseShelves.shelfCount', { count: formatQuantity(shelves.length) })}

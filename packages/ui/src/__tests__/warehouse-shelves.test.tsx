@@ -397,6 +397,28 @@ describe('the floor map is gone from the product', () => {
     expect(view).toContain('data-warehouse-shelves-open')
   })
 
+  it('the warehouse is a FILTER in the list toolbar, not a third row of tabs («خیلی شلوغ شد»)', () => {
+    const section = readFileSync(
+      join(
+        ROOT,
+        'packages',
+        'ui',
+        'src',
+        'components',
+        'ui',
+        'warehouse',
+        'shelves',
+        'warehouse-products-section.tsx',
+      ),
+      'utf8',
+    )
+    expect(section).toContain('<TableFilterSelect')
+    expect(section).not.toContain('<SegmentedControl')
+    expect(section).not.toContain('<HubTabs')
+    expect(section).toContain('<ProductListContainer actions={filter} />')
+    expect(section).toContain('toolbar={filter}')
+  })
+
   it('search matches across ی/ي, ک/ك and the zero-width non-joiner', () => {
     expect(searchKey(`${String.fromCharCode(0x643)}الا`)).toBe(searchKey('کالا'))
     expect(searchKey(`روغن${String.fromCharCode(0x64a)}`)).toBe(searchKey('روغنی'))

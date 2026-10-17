@@ -6927,8 +6927,6 @@
     "deadStockEmptyHint": "همه‌ی اجناس اخیراً حرکت داشته‌اند.",
     "expected": "نقد مورد انتظار",
     "firstShortfall": "اولین کسری",
-    "lastMovement": "آخرین حرکت",
-    "neverMoved": "هرگز حرکت نکرده",
     "noForecast": "معلوماتی برای پیش‌بینی نیست",
     "noShortfall": "کسری ندارد",
     "onHand": "موجودی",
@@ -6946,12 +6944,13 @@
     "staleEmpty": "فرصت راکدی نیست",
     "staleOpportunities": "فرصت‌های راکد",
     "stillOpen": "باز است",
-    "stockValue": "ارزش (به قیمت تمام‌شده)",
     "suggested": "پیشنهاد",
     "value": "ارزش",
     "variance": "اختلاف",
     "sectionsLabel": "بخش",
-    "loadFailed": "این بخش خوانده نشد."
+    "loadFailed": "این بخش خوانده نشد.",
+    "lastSale": "آخرین فروش",
+    "neverSold": "هرگز فروش نرفته"
   },
   "productUnits": {
     "add": "افزودن واحد",
@@ -9993,7 +9992,7 @@
     "stock-count": "شمارش گدام"
   },
   "warehouseShelves": {
-    "all": "همه‌ی جنس‌ها",
+    "all": "همه‌ی گدام‌ها",
     "pickerLabel": "گدام",
     "pickWarehouse": "انتخاب گدام",
     "noBranch": "کل کسب‌وکار",

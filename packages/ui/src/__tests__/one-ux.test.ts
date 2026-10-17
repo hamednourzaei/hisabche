@@ -115,7 +115,10 @@ describe('nothing «بعد» needs went with «قبل»', () => {
     // «کالاها»: the catalogue is the «همه‌ی کالاها» tab, beside each warehouse's shelves.
     [
       'warehouse/shelves/warehouse-products-section.tsx',
-      ['<ProductListContainer />', '<WarehouseShelvesContainer warehouseId={active} />'],
+      [
+        '<ProductListContainer actions={filter} />',
+        '<WarehouseShelvesContainer warehouseId={active} toolbar={filter} />',
+      ],
     ],
     [
       'invoices/containers/sales-hub-container.tsx',

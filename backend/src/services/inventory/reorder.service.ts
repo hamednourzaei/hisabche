@@ -103,11 +103,14 @@ export class ReorderService {
   async deadStock(
     ctx: TenancyContext,
     days: number = DEAD_STOCK_DEFAULT_DAYS,
-  ): Promise<DeadStockLine[]> {
+  ): Promise<Array<DeadStockLine & { name: string }>> {
     const products = await this.products(ctx)
     const lastSold = await this.lastSaleByProduct(ctx)
+    const names = new Map(products.map((product) => [product.id, product.name]))
 
-    return findDeadStock(
+    // The name rides along, like `suggestions`' `name`: the list is read by a
+    // person, and a row of ids is not an answer.
+    const lines = findDeadStock(
       products.map((product) => ({
         productId: product.id,
         onHand: product.quantity,
@@ -116,6 +119,7 @@ export class ReorderService {
       new Date(),
       days,
     )
+    return lines.map((line) => ({ ...line, name: names.get(line.productId) ?? '' }))
   }
 
   private async products(ctx: TenancyContext) {
