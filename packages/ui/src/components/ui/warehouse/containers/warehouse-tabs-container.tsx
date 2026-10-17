@@ -61,6 +61,15 @@ const ExpiryContainer = lazy(() =>
   import('../../expiry/containers/expiry-container').then((m) => ({ default: m.ExpiryContainer })),
 )
 
+// «نقشه انبار» — where the goods physically are, over the stock the parts above
+// already show. Lazy like the operations part: a floor plan is not needed by
+// somebody who came to add a product.
+const MapSectionContainer = lazy(() =>
+  import('../map/containers/warehouse-map-container').then((m) => ({
+    default: m.WarehouseMapSection,
+  })),
+)
+
 //
 // «انبار» at one address: `/warehouse`. Two tabs, and only two:
 //
@@ -89,7 +98,7 @@ export const WAREHOUSE_HUB_SOURCE: Record<WarehouseHubTab, string> = {
   expiry: '/expiry',
 }
 
-export const STOCK_SECTIONS = ['warehouses', 'products', 'reorder', 'deadStock'] as const
+export const STOCK_SECTIONS = ['warehouses', 'products', 'reorder', 'deadStock', 'map'] as const
 export type StockSection = (typeof STOCK_SECTIONS)[number]
 
 /** `?warehouse=` names an open warehouse; the product list has no use for it. */
@@ -230,6 +239,16 @@ function WarehouseHub() {
               </Suspense>
             ) : section === 'products' ? (
               <ProductListContainer />
+            ) : section === 'map' ? (
+              <Suspense
+                fallback={
+                  <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
+                    {t('warehouseHub.loading')}
+                  </p>
+                }
+              >
+                <MapSectionContainer />
+              </Suspense>
             ) : (
               <WarehouseStockTab />
             )}

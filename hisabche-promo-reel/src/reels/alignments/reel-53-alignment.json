@@ -1,0 +1,314 @@
+{
+  "reelId": "53",
+  "title": "سناریوی کلمه‌به‌کلمه: فروشت زیاده؛ اما آخر ماه پولت کجاست؟",
+  "audioFile": "audio/reel-53-vo.wav",
+  "alignmentStatus": "PROVISIONAL_CADENCE_MODEL_ACTIVE",
+  "isProvisional": true,
+  "alignmentSource": "cadence-model",
+  "confidence": null,
+  "audioDuration": 26,
+  "scenes": [
+    {
+      "sceneIndex": 0,
+      "vo": "فروشت زیاده…",
+      "start": 0,
+      "end": 3,
+      "words": [
+        {
+          "word": "فروشت",
+          "start": 0.2,
+          "end": 0.9,
+          "emphasis": true,
+          "action": "sales-slam",
+          "sound": "titleHit",
+          "confidence": null
+        },
+        {
+          "word": "زیاده…",
+          "start": 0.95,
+          "end": 2.3,
+          "emphasis": true,
+          "action": "count-surge",
+          "sound": "whoosh",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 2.4,
+        "action": "freeze-hold",
+        "sound": "tick"
+      }
+    },
+    {
+      "sceneIndex": 1,
+      "vo": "اما آخر ماه نمی‌دونی پولت کجا رفته!",
+      "start": 3,
+      "end": 8,
+      "words": [
+        {
+          "word": "اما",
+          "start": 0.2,
+          "end": 0.7,
+          "emphasis": true,
+          "action": "chart-crack",
+          "sound": "alert",
+          "confidence": null
+        },
+        {
+          "word": "آخر",
+          "start": 0.75,
+          "end": 1.15,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "ماه",
+          "start": 1.2,
+          "end": 1.55,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "نمی‌دونی",
+          "start": 1.6,
+          "end": 2.15,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "پولت",
+          "start": 2.2,
+          "end": 2.75,
+          "emphasis": true,
+          "action": "money-collapse",
+          "sound": "impact",
+          "confidence": null
+        },
+        {
+          "word": "کجا",
+          "start": 2.8,
+          "end": 3.3,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "رفته!",
+          "start": 3.35,
+          "end": 4.4,
+          "emphasis": true,
+          "action": "question-reveal",
+          "sound": "alert",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 4.5,
+        "action": "void-state",
+        "sound": "tick"
+      }
+    },
+    {
+      "sceneIndex": 2,
+      "vo": "انبار، طلب مشتری‌ها، خرج‌ها…",
+      "start": 8,
+      "end": 14.5,
+      "words": [
+        {
+          "word": "انبار،",
+          "start": 0.3,
+          "end": 1.8,
+          "emphasis": true,
+          "action": "inventory-drop",
+          "sound": "paperRustle",
+          "confidence": null
+        },
+        {
+          "word": "طلب",
+          "start": 1.9,
+          "end": 2.4,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "مشتری‌ها،",
+          "start": 2.45,
+          "end": 3.6,
+          "emphasis": true,
+          "action": "debt-stack",
+          "sound": "cardEnter",
+          "confidence": null
+        },
+        {
+          "word": "خرج‌ها…",
+          "start": 3.8,
+          "end": 5.8,
+          "emphasis": true,
+          "action": "expense-slide",
+          "sound": "receiptPrint",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 6,
+        "action": "hold-leaks",
+        "sound": "softTransition"
+      }
+    },
+    {
+      "sceneIndex": 3,
+      "vo": "حسابچه کمک می‌کنه همه‌چیز رو یکجا ببینی.",
+      "start": 14.5,
+      "end": 21,
+      "words": [
+        {
+          "word": "حسابچه",
+          "start": 0.3,
+          "end": 1.3,
+          "emphasis": true,
+          "action": "brand-reveal",
+          "sound": "cinematicReveal",
+          "confidence": null
+        },
+        {
+          "word": "کمک",
+          "start": 1.35,
+          "end": 1.75,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "می‌کنه",
+          "start": 1.8,
+          "end": 2.3,
+          "emphasis": false,
+          "sound": "chime",
+          "confidence": null
+        },
+        {
+          "word": "همه‌چیز",
+          "start": 2.4,
+          "end": 3,
+          "emphasis": true,
+          "action": "converge-start",
+          "sound": "sync",
+          "confidence": null
+        },
+        {
+          "word": "رو",
+          "start": 3.05,
+          "end": 3.4,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "یکجا",
+          "start": 3.5,
+          "end": 4.6,
+          "emphasis": true,
+          "action": "dashboard-lock",
+          "sound": "financialMilestone",
+          "confidence": null
+        },
+        {
+          "word": "ببینی.",
+          "start": 4.65,
+          "end": 5.8,
+          "emphasis": true,
+          "sound": "successResolution",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 6,
+        "action": "clarity-lock",
+        "sound": "success"
+      }
+    },
+    {
+      "sceneIndex": 4,
+      "vo": "همین حالا دخل و حسابت رو در حسابچه شفاف کن.",
+      "start": 21,
+      "end": 26,
+      "words": [
+        {
+          "word": "همین",
+          "start": 0.2,
+          "end": 0.6,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "حالا",
+          "start": 0.65,
+          "end": 1.1,
+          "emphasis": true,
+          "sound": "cardEnter",
+          "confidence": null
+        },
+        {
+          "word": "دخل",
+          "start": 1.15,
+          "end": 1.55,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "و",
+          "start": 1.55,
+          "end": 1.7,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "حسابت",
+          "start": 1.75,
+          "end": 2.15,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "رو",
+          "start": 2.15,
+          "end": 2.35,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "در",
+          "start": 2.35,
+          "end": 2.55,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "حسابچه",
+          "start": 2.6,
+          "end": 3.2,
+          "emphasis": true,
+          "sound": "titleHit",
+          "confidence": null
+        },
+        {
+          "word": "شفاف",
+          "start": 3.25,
+          "end": 3.8,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "کن.",
+          "start": 3.85,
+          "end": 4.6,
+          "emphasis": true,
+          "sound": "ctaResolution",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 4.7,
+        "action": "cta-glow",
+        "sound": "chime"
+      }
+    }
+  ]
+}

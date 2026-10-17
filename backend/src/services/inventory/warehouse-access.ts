@@ -152,10 +152,15 @@ export async function stockPlacement(ctx: TenancyContext): Promise<StockPlacemen
 /**
  * A warehouse named on a sale or a purchase must be one this member may use.
  * (That it exists and is this workspace's is checked by the caller.)
+ *
+ * `errorCode` exists because a refusal is read by a person on the screen that
+ * asked: a sale says the invoice's warehouse is not permitted, a warehouse map
+ * says the warehouse itself is. Same rule, one implementation.
  */
 export async function assertMayUseWarehouse(
   ctx: TenancyContext,
   warehouseId: string,
+  errorCode = 'INVOICE_WAREHOUSE_NOT_PERMITTED',
 ): Promise<void> {
   const [scope, branchOf] = await Promise.all([
     branches.scopeFor(ctx),
@@ -163,7 +168,7 @@ export async function assertMayUseWarehouse(
   ])
   const branchesConfigured = branchOf !== null
   if (!mayUseWarehouse(scope, branchOf?.get(warehouseId) ?? null, branchesConfigured)) {
-    throw new ForbiddenError('INVOICE_WAREHOUSE_NOT_PERMITTED')
+    throw new ForbiddenError(errorCode)
   }
 }
 

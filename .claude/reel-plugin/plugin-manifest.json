@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "hisabche-new-reels",
+  "version": "1.0.0",
+  "description": "Universal Zero-Discovery Promo Reel Generation Plugin for Hisabche 9:16 SaaS Motion Film Engine",
+  "command": "/new_reels",
+  "aliases": [
+    "/new-reels"
+  ],
+  "entrypoint": ".claude/skills/new-reels/SKILL.md",
+  "sdk": ".claude/reel-plugin/fast-track-sdk.md",
+  "guardrails": ".claude/reel-plugin/production-guardrails.md",
+  "creativeDirector": ".claude/reel-plugin/creative-director.md",
+  "sceneCatalog": ".claude/reel-plugin/scene-catalog.md",
+  "tokenCatalog": ".claude/reel-plugin/token-catalog.md",
+  "registrationContract": ".claude/reel-plugin/registration-contract.md",
+  "verificationContract": ".claude/reel-plugin/verification-contract.md",
+  "stateFile": ".claude/reel-plugin/reel-state.json",
+  "recentReels": ".claude/reel-plugin/recent-reels.json",
+  "versionFile": ".claude/reel-plugin/version.json"
+}

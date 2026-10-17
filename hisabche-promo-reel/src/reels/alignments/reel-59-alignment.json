@@ -1,0 +1,410 @@
+{
+  "reelId": "59",
+  "title": "برگ تشخیص مالیات ۱۸۰ میلیونی رسید؛ چرا دفاتر رد شد؟",
+  "audioFile": "audio/reel-59-vo.wav",
+  "alignmentStatus": "PROVISIONAL_CADENCE_MODEL_ACTIVE",
+  "isProvisional": true,
+  "alignmentSource": "cadence-model",
+  "confidence": null,
+  "audioDuration": 26,
+  "scenes": [
+    {
+      "sceneIndex": 0,
+      "vo": "برگ تشخیص مالیات ۱۸۰ میلیونی رسید؛ چرا دفاتر رد شد؟",
+      "start": 0,
+      "end": 4.6,
+      "words": [
+        {
+          "word": "برگ",
+          "start": 0.2,
+          "end": 0.55,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "تشخیص",
+          "start": 0.6,
+          "end": 1.05,
+          "emphasis": true,
+          "action": "tax-notice-enter",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "مالیات",
+          "start": 1.1,
+          "end": 1.5,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "۱۸۰",
+          "start": 1.55,
+          "end": 2.1,
+          "emphasis": true,
+          "action": "penalty-odometer",
+          "sound": "clockTickRapid",
+          "confidence": null
+        },
+        {
+          "word": "میلیونی",
+          "start": 2.15,
+          "end": 2.55,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "رسید؛",
+          "start": 2.6,
+          "end": 3,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "چرا",
+          "start": 3.1,
+          "end": 3.35,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "دفاتر",
+          "start": 3.4,
+          "end": 3.85,
+          "emphasis": true,
+          "action": "ledger-inspect",
+          "sound": "cameraSwish",
+          "confidence": null
+        },
+        {
+          "word": "رد",
+          "start": 3.9,
+          "end": 4.15,
+          "emphasis": true,
+          "action": "reject-stamp",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "شد؟",
+          "start": 4.2,
+          "end": 4.5,
+          "emphasis": true,
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "sceneIndex": 1,
+      "vo": "چون فاکتورهای دستی با سامانه مودیان مغایرت داشت!",
+      "start": 4.6,
+      "end": 9.8,
+      "words": [
+        {
+          "word": "چون",
+          "start": 0.3,
+          "end": 0.6,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "فاکتورهای",
+          "start": 0.7,
+          "end": 1.25,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "دستی",
+          "start": 1.3,
+          "end": 1.75,
+          "emphasis": true,
+          "action": "paper-diff",
+          "sound": "cameraSwish",
+          "confidence": null
+        },
+        {
+          "word": "با",
+          "start": 1.8,
+          "end": 1.95,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "سامانه",
+          "start": 2.05,
+          "end": 2.5,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "مودیان",
+          "start": 2.55,
+          "end": 3.1,
+          "emphasis": true,
+          "action": "moadian-portal",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "مغایرت",
+          "start": 3.2,
+          "end": 3.75,
+          "emphasis": true,
+          "action": "discrepancy-alert",
+          "sound": "clockTickRapid",
+          "confidence": null
+        },
+        {
+          "word": "داشت!",
+          "start": 3.85,
+          "end": 4.4,
+          "emphasis": true,
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "sceneIndex": 2,
+      "vo": "اکسل و نرم‌افزار قدیمی کد رهگیری مالیاتی تولید نمی‌کنه!",
+      "start": 9.8,
+      "end": 15.6,
+      "words": [
+        {
+          "word": "اکسل",
+          "start": 0.3,
+          "end": 0.8,
+          "emphasis": true,
+          "action": "excel-vulnerable",
+          "sound": "cameraSwish",
+          "confidence": null
+        },
+        {
+          "word": "و",
+          "start": 0.85,
+          "end": 0.95,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "نرم‌افزار",
+          "start": 1.05,
+          "end": 1.55,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "قدیمی",
+          "start": 1.6,
+          "end": 2.05,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "کد",
+          "start": 2.15,
+          "end": 2.45,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "رهگیری",
+          "start": 2.5,
+          "end": 3.05,
+          "emphasis": true,
+          "action": "tax-id-missing",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "مالیاتی",
+          "start": 3.1,
+          "end": 3.65,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "تولید",
+          "start": 3.75,
+          "end": 4.15,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "نمی‌کنه!",
+          "start": 4.25,
+          "end": 4.9,
+          "emphasis": true,
+          "action": "penalty-strike",
+          "sound": "cardThock",
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "sceneIndex": 3,
+      "vo": "حسابچه با یک کلیک فاکتور رو به سامانه مودیان می‌فرسته!",
+      "start": 15.6,
+      "end": 21.6,
+      "words": [
+        {
+          "word": "حسابچه",
+          "start": 0.25,
+          "end": 0.85,
+          "emphasis": true,
+          "action": "brand-anchor",
+          "sound": "cinematicReveal",
+          "confidence": null
+        },
+        {
+          "word": "با",
+          "start": 0.95,
+          "end": 1.15,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "یک",
+          "start": 1.25,
+          "end": 1.5,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "کلیک",
+          "start": 1.6,
+          "end": 2.05,
+          "emphasis": true,
+          "action": "one-click-transmit",
+          "sound": "precisionSequence",
+          "confidence": null
+        },
+        {
+          "word": "فاکتور",
+          "start": 2.15,
+          "end": 2.6,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "رو",
+          "start": 2.7,
+          "end": 2.85,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "به",
+          "start": 2.95,
+          "end": 3.1,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "سامانه",
+          "start": 3.2,
+          "end": 3.65,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "مودیان",
+          "start": 3.7,
+          "end": 4.2,
+          "emphasis": true,
+          "action": "moadian-shield",
+          "sound": "precisionSequence",
+          "confidence": null
+        },
+        {
+          "word": "می‌فرسته!",
+          "start": 4.3,
+          "end": 4.9,
+          "emphasis": true,
+          "action": "verified-stamp",
+          "sound": "cardThock",
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "sceneIndex": 4,
+      "vo": "دفاترت رو تاییدیه دارایی کن؛ همین حالا در حسابچه.",
+      "start": 21.6,
+      "end": 26,
+      "words": [
+        {
+          "word": "دفاترت",
+          "start": 0.2,
+          "end": 0.7,
+          "emphasis": true,
+          "action": "tax-audit-pass",
+          "sound": "cameraSwish",
+          "confidence": null
+        },
+        {
+          "word": "رو",
+          "start": 0.8,
+          "end": 0.95,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "تاییدیه",
+          "start": 1.05,
+          "end": 1.5,
+          "emphasis": true,
+          "action": "moafiyat-badge",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "دارایی",
+          "start": 1.6,
+          "end": 2.05,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "کن؛",
+          "start": 2.1,
+          "end": 2.35,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "همین",
+          "start": 2.45,
+          "end": 2.7,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "حالا",
+          "start": 2.75,
+          "end": 3.1,
+          "emphasis": true,
+          "action": "cta-button-pulse",
+          "sound": "ctaResolution",
+          "confidence": null
+        },
+        {
+          "word": "در",
+          "start": 3.15,
+          "end": 3.3,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "حسابچه.",
+          "start": 3.35,
+          "end": 3.8,
+          "emphasis": true,
+          "action": "brand-finish",
+          "sound": "cardThock",
+          "confidence": null
+        }
+      ]
+    }
+  ]
+}

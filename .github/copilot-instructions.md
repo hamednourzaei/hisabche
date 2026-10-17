@@ -1,0 +1,40 @@
+# GitHub Copilot Instructions — Hisabche Repository
+
+## Hisabche Reel Plugin
+
+When the user invokes:
+
+```text
+/new_reels [topic]
+/new-reels [topic]
+```
+
+or asks to create a new promo reel, use the pre-indexed canonical skill:
+`hisabche-promo-reel/.claude/skills/new-reels/SKILL.md` (or `.claude/skills/new-reels/SKILL.md`)
+
+The canonical Reel SDK is:
+`hisabche-promo-reel/.claude/reel-plugin/fast-track-sdk.md` (or `.claude/reel-plugin/fast-track-sdk.md`)
+
+### Zero-Discovery Fast-Track Rule:
+
+- Do NOT recursively scan `hisabche-promo-reel/src/` for Reel architecture unless the Fast-Track SDK is missing, stale, or contradicted by a compiler/runtime error.
+- The SDK is an indexed contract generated from the actual repository.
+- Read only:
+  1. `.claude/reel-plugin/plugin-manifest.json`
+  2. `.claude/reel-plugin/fast-track-sdk.md`
+  3. `.claude/reel-plugin/production-guardrails.md`
+  4. `.claude/reel-plugin/creative-director.md`
+  5. `.claude/reel-plugin/scene-catalog.md`
+  6. `.claude/reel-plugin/token-catalog.md`
+  7. `.claude/reel-plugin/registration-contract.md`
+  8. `.claude/reel-plugin/reel-state.json`
+  9. `.claude/reel-plugin/recent-reels.json`
+
+When implementation and SDK disagree:
+
+1. Inspect the smallest relevant source file.
+2. Fix the implementation or SDK as appropriate.
+3. Update the SDK.
+4. Continue the task.
+
+Never invent APIs from memory.

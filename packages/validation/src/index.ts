@@ -239,6 +239,23 @@ export {
   type StockMovement,
 } from './schemas/warehouse.schema'
 
+// ---------- Storage locations (the map of a warehouse) ----------
+export {
+  STORAGE_LOCATION_KINDS,
+  storageLocationKindSchema,
+  storageLocationCodeSchema,
+  storageLocationNameSchema,
+  gridCellSchema,
+  gridSizeSchema,
+  createStorageLocationSchema,
+  updateStorageLocationSchema,
+  placeStorageLocationSchema,
+  type StorageLocationKind,
+  type CreateStorageLocation,
+  type UpdateStorageLocation,
+  type PlaceStorageLocation,
+} from './schemas/storage-location.schema'
+
 // ---------- CRM ----------
 export {
   interactionSchema,

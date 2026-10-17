@@ -1,0 +1,127 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "2.0.0",
+  "studio": "Hisabche Motion Engine",
+  "themes": {
+    "cinematic-obsidian": {
+      "name": "Cinematic Obsidian",
+      "mood": "Deep luxury void with neon hyper-luminescence and atmospheric fog",
+      "colors": {
+        "bg": "#05070c",
+        "panel": "rgba(13, 17, 28, 0.85)",
+        "panelBorder": "rgba(56, 189, 248, 0.2)",
+        "ink": "#f8fafc",
+        "muted": "#94a3b8",
+        "primary": "#38bdf8",
+        "secondary": "#a855f7",
+        "accent": "#f43f5e",
+        "ambientGlow": "rgba(56, 189, 248, 0.25)"
+      },
+      "geometry": {
+        "cardRadius": "24px",
+        "badgeRadius": "999px",
+        "borderWidth": "1.5px"
+      },
+      "shadows": {
+        "deep": "0 24px 60px rgba(0, 0, 0, 0.7)",
+        "laser": "0 0 25px rgba(56, 189, 248, 0.45)"
+      }
+    },
+    "swiss-editorial": {
+      "name": "Swiss Editorial Dark",
+      "mood": "Precision architectural grid, high-contrast monochrome with amber/cobalt sparks",
+      "colors": {
+        "bg": "#090d16",
+        "panel": "rgba(20, 27, 45, 0.9)",
+        "panelBorder": "rgba(255, 255, 255, 0.15)",
+        "ink": "#ffffff",
+        "muted": "#64748b",
+        "primary": "#f59e0b",
+        "secondary": "#3b82f6",
+        "accent": "#10b981",
+        "ambientGlow": "rgba(245, 158, 11, 0.15)"
+      },
+      "geometry": {
+        "cardRadius": "12px",
+        "badgeRadius": "6px",
+        "borderWidth": "1px"
+      },
+      "shadows": {
+        "deep": "0 12px 32px rgba(0, 0, 0, 0.5)",
+        "laser": "none"
+      }
+    },
+    "kinetic-manifesto": {
+      "name": "Kinetic Manifesto",
+      "mood": "Urgent typographic punch, brutalist high-velocity motion, graphic posters",
+      "colors": {
+        "bg": "#0a0a0c",
+        "panel": "rgba(24, 24, 27, 0.95)",
+        "panelBorder": "rgba(255, 255, 255, 0.22)",
+        "ink": "#fafafa",
+        "muted": "#a1a1aa",
+        "primary": "#e11d48",
+        "secondary": "#f43f5e",
+        "accent": "#fbbf24",
+        "ambientGlow": "rgba(225, 29, 72, 0.2)"
+      },
+      "geometry": {
+        "cardRadius": "8px",
+        "badgeRadius": "4px",
+        "borderWidth": "2px"
+      },
+      "shadows": {
+        "deep": "0 16px 40px rgba(0, 0, 0, 0.6)",
+        "laser": "0 0 20px rgba(225, 29, 72, 0.35)"
+      }
+    },
+    "procedural-spatial": {
+      "name": "Procedural Spatial",
+      "mood": "Technical isometric blueprint, node connections, wireframe depth, 2.5D coordinates",
+      "colors": {
+        "bg": "#070c18",
+        "panel": "rgba(15, 23, 42, 0.9)",
+        "panelBorder": "rgba(99, 102, 241, 0.25)",
+        "ink": "#f1f5f9",
+        "muted": "#64748b",
+        "primary": "#6366f1",
+        "secondary": "#06b6d4",
+        "accent": "#ec4899",
+        "ambientGlow": "rgba(99, 102, 241, 0.22)"
+      },
+      "geometry": {
+        "cardRadius": "18px",
+        "badgeRadius": "10px",
+        "borderWidth": "1.5px"
+      },
+      "shadows": {
+        "deep": "0 20px 50px rgba(0, 0, 0, 0.65)",
+        "laser": "0 0 30px rgba(99, 102, 241, 0.4)"
+      }
+    },
+    "financial-intelligence": {
+      "name": "Financial Intelligence",
+      "mood": "Stripe/Bloomberg executive clarity, deep emerald matrices, balance scales, clean math",
+      "colors": {
+        "bg": "#06120e",
+        "panel": "rgba(10, 31, 24, 0.88)",
+        "panelBorder": "rgba(16, 185, 129, 0.25)",
+        "ink": "#ecfdf5",
+        "muted": "#6ee7b7",
+        "primary": "#10b981",
+        "secondary": "#14b8a6",
+        "accent": "#f59e0b",
+        "ambientGlow": "rgba(16, 185, 129, 0.25)"
+      },
+      "geometry": {
+        "cardRadius": "16px",
+        "badgeRadius": "999px",
+        "borderWidth": "1.5px"
+      },
+      "shadows": {
+        "deep": "0 20px 48px rgba(0, 0, 0, 0.55)",
+        "laser": "0 0 24px rgba(16, 185, 129, 0.35)"
+      }
+    }
+  }
+}

@@ -42,7 +42,7 @@ describe('two tabs, built from shared parts', () => {
   it('stock and expiry — and nothing else', () => {
     expect([...WAREHOUSE_HUB_TABS]).toEqual(['stock', 'expiry'])
     expect(WAREHOUSE_HUB_SOURCE).toEqual({ stock: '/warehouse', expiry: '/expiry' })
-    expect([...STOCK_SECTIONS]).toEqual(['warehouses', 'products', 'reorder', 'deadStock'])
+    expect([...STOCK_SECTIONS]).toEqual(['warehouses', 'products', 'reorder', 'deadStock', 'map'])
   })
 
   it('uses the ONE tab bar and the ONE switch — it draws neither', () => {

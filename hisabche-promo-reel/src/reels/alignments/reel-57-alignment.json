@@ -1,0 +1,442 @@
+{
+  "reelId": "57",
+  "title": "فاکتور ۷۵ میلیونی دیروز کجاست؟ کی ویرایشش کرد؟",
+  "audioFile": "audio/reel-57-vo.wav",
+  "alignmentStatus": "PROVISIONAL_CADENCE_MODEL_ACTIVE",
+  "isProvisional": true,
+  "alignmentSource": "cadence-model",
+  "confidence": null,
+  "audioDuration": 26,
+  "scenes": [
+    {
+      "sceneIndex": 0,
+      "vo": "فاکتور ۷۵ میلیونی دیروز کجاست؟ کی ویرایشش کرد؟",
+      "start": 0,
+      "end": 4.8,
+      "words": [
+        {
+          "word": "فاکتور",
+          "start": 0.2,
+          "end": 0.7,
+          "emphasis": true,
+          "action": "invoice-enter",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "۷۵",
+          "start": 0.8,
+          "end": 1.3,
+          "emphasis": true,
+          "action": "original-odometer",
+          "sound": "clockTickRapid",
+          "confidence": null
+        },
+        {
+          "word": "میلیونی",
+          "start": 1.4,
+          "end": 1.8,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "دیروز",
+          "start": 1.9,
+          "end": 2.3,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "کجاست؟",
+          "start": 2.4,
+          "end": 3.1,
+          "emphasis": true,
+          "action": "tamper-alert",
+          "sound": "cameraSwish",
+          "confidence": null
+        },
+        {
+          "word": "کی",
+          "start": 3.2,
+          "end": 3.5,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "ویرایشش",
+          "start": 3.6,
+          "end": 4,
+          "emphasis": true,
+          "action": "diff-highlight",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "کرد؟",
+          "start": 4.1,
+          "end": 4.5,
+          "emphasis": true,
+          "action": "fraud-stamp",
+          "sound": "cardThock",
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "sceneIndex": 1,
+      "vo": "۳۰ میلیون پول نقد گم شد؛ بدون اینکه متوجه بشی!",
+      "start": 4.8,
+      "end": 10.2,
+      "words": [
+        {
+          "word": "۳۰",
+          "start": 0.3,
+          "end": 0.9,
+          "emphasis": true,
+          "action": "gap-counter",
+          "sound": "clockTickRapid",
+          "confidence": null
+        },
+        {
+          "word": "میلیون",
+          "start": 1,
+          "end": 1.4,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "پول",
+          "start": 1.5,
+          "end": 1.8,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "نقد",
+          "start": 1.9,
+          "end": 2.3,
+          "emphasis": true,
+          "action": "cash-drain",
+          "sound": "cameraSwish",
+          "confidence": null
+        },
+        {
+          "word": "گم",
+          "start": 2.4,
+          "end": 2.8,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "شد؛",
+          "start": 2.9,
+          "end": 3.3,
+          "emphasis": true,
+          "action": "cash-lock",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "بدون",
+          "start": 3.4,
+          "end": 3.7,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "اینکه",
+          "start": 3.8,
+          "end": 4.1,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "متوجه",
+          "start": 4.2,
+          "end": 4.6,
+          "emphasis": true,
+          "action": "stealth-reveal",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "بشی!",
+          "start": 4.7,
+          "end": 5.2,
+          "emphasis": true,
+          "action": "leak-badge",
+          "sound": "cardThock",
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "sceneIndex": 2,
+      "vo": "تو اکسل هیچ ردی نیست؛ فاکتور بی‌صدا عوض می‌شه!",
+      "start": 10.2,
+      "end": 16.2,
+      "words": [
+        {
+          "word": "تو",
+          "start": 0.3,
+          "end": 0.6,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "اکسل",
+          "start": 0.7,
+          "end": 1.2,
+          "emphasis": true,
+          "action": "legacy-blur",
+          "sound": "cameraSwish",
+          "confidence": null
+        },
+        {
+          "word": "هیچ",
+          "start": 1.3,
+          "end": 1.6,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "ردی",
+          "start": 1.7,
+          "end": 2.2,
+          "emphasis": true,
+          "action": "ghost-line",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "نیست؛",
+          "start": 2.3,
+          "end": 2.8,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "فاکتور",
+          "start": 2.9,
+          "end": 3.3,
+          "emphasis": true,
+          "action": "silent-swap",
+          "sound": "cameraSwish",
+          "confidence": null
+        },
+        {
+          "word": "بی‌صدا",
+          "start": 3.4,
+          "end": 3.9,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "عوض",
+          "start": 4,
+          "end": 4.5,
+          "emphasis": true,
+          "action": "audit-scan",
+          "sound": "clockTickRapid",
+          "confidence": null
+        },
+        {
+          "word": "می‌شه!",
+          "start": 4.6,
+          "end": 5.2,
+          "emphasis": true,
+          "action": "vulnerability-stamp",
+          "sound": "cardThock",
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "sceneIndex": 3,
+      "vo": "حسابچه لاگ هر تغییر رو با ساعت و اسم کاربر نگه می‌داره!",
+      "start": 16.2,
+      "end": 22,
+      "words": [
+        {
+          "word": "حسابچه",
+          "start": 0.25,
+          "end": 0.85,
+          "emphasis": true,
+          "action": "brand-anchor",
+          "sound": "cinematicReveal",
+          "confidence": null
+        },
+        {
+          "word": "لاگ",
+          "start": 0.95,
+          "end": 1.4,
+          "emphasis": true,
+          "action": "audit-stream",
+          "sound": "precisionSequence",
+          "confidence": null
+        },
+        {
+          "word": "هر",
+          "start": 1.5,
+          "end": 1.75,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "تغییر",
+          "start": 1.85,
+          "end": 2.3,
+          "emphasis": true,
+          "action": "secure-badge",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "رو",
+          "start": 2.4,
+          "end": 2.55,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "با",
+          "start": 2.65,
+          "end": 2.85,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "ساعت",
+          "start": 2.95,
+          "end": 3.4,
+          "emphasis": true,
+          "action": "timestamp-feed",
+          "sound": "clockTickRapid",
+          "confidence": null
+        },
+        {
+          "word": "و",
+          "start": 3.5,
+          "end": 3.6,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "اسم",
+          "start": 3.7,
+          "end": 4.1,
+          "emphasis": true,
+          "action": "user-permission-pill",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "کاربر",
+          "start": 4.2,
+          "end": 4.6,
+          "emphasis": true,
+          "action": "shield-lock",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "نگه",
+          "start": 4.7,
+          "end": 5,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "می‌داره!",
+          "start": 5.1,
+          "end": 5.6,
+          "emphasis": true,
+          "action": "audit-shield-lock",
+          "sound": "precisionSequence",
+          "confidence": null
+        }
+      ]
+    },
+    {
+      "sceneIndex": 4,
+      "vo": "صندوقت رو ضد سرقت کن؛ همین حالا در حسابچه.",
+      "start": 22,
+      "end": 26,
+      "words": [
+        {
+          "word": "صندوقت",
+          "start": 0.2,
+          "end": 0.7,
+          "emphasis": true,
+          "action": "pos-shield",
+          "sound": "cameraSwish",
+          "confidence": null
+        },
+        {
+          "word": "رو",
+          "start": 0.8,
+          "end": 0.95,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "ضد",
+          "start": 1.05,
+          "end": 1.4,
+          "emphasis": true,
+          "action": "armor-tag",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "سرقت",
+          "start": 1.5,
+          "end": 1.95,
+          "emphasis": true,
+          "action": "armor-lock",
+          "sound": "cardThock",
+          "confidence": null
+        },
+        {
+          "word": "کن؛",
+          "start": 2.05,
+          "end": 2.35,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "همین",
+          "start": 2.45,
+          "end": 2.7,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "حالا",
+          "start": 2.75,
+          "end": 3.1,
+          "emphasis": true,
+          "action": "cta-button-pulse",
+          "sound": "ctaResolution",
+          "confidence": null
+        },
+        {
+          "word": "در",
+          "start": 3.15,
+          "end": 3.3,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "حسابچه.",
+          "start": 3.35,
+          "end": 3.8,
+          "emphasis": true,
+          "action": "brand-finish",
+          "sound": "cardThock",
+          "confidence": null
+        }
+      ]
+    }
+  ]
+}

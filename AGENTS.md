@@ -103,6 +103,7 @@ packages/app-shell  the desktop/mobile shell and its routes
 apps/web            Next.js App Router, `[lang]` prefix
 apps/desktop        Electron
 apps/mobile         Expo (cannot import packages/ui)
+hisabche-promo-reel 9:16 vertical SaaS promo film engine (rules: PROMO_REEL_WORKFLOW.md, .claude/reel-plugin/)
 docs/               SQL files only: migrations, VERIFY, FINDING
 ```
 

@@ -1173,6 +1173,23 @@ export {
   type WarehouseDetail,
 } from './hooks/warehouses'
 
+// ─── The warehouse map («کالاها کجای انبار هستند؟») ───────────
+export {
+  useWarehouseMap,
+  useCreateStorageLocation,
+  useUpdateStorageLocation,
+  usePlaceStock,
+  warehouseMapKeys,
+  type WarehouseMap,
+  type MapLocation,
+  type MapLocationProduct,
+  type WarehouseMapTotals,
+  type HeatBand,
+  type MapMetric,
+  type CreateStorageLocationInput,
+  type UpdateStorageLocationInput,
+} from './hooks/warehouse-map'
+
 // ─── Blog (the reader's interactive island) ───────────────
 export {
   useBlogComments,

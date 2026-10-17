@@ -9585,7 +9585,8 @@
       "warehouses": "Warehouses",
       "products": "Products",
       "reorder": "Reorder suggestions",
-      "deadStock": "Dead stock"
+      "deadStock": "Dead stock",
+      "map": "Map"
     }
   },
   "accountingHub": {
@@ -9962,5 +9963,174 @@
     "developers": "Developers",
     "marketplace": "Marketplace",
     "stock-count": "Stock count"
+  },
+  "warehouseMap": {
+    "open": "View warehouse map",
+    "title": "Warehouse map",
+    "subtitle": "Where the goods are, and which part of the floor is asleep",
+    "branch": "Branch: {branch}",
+    "noWarehouse": "No warehouse yet. Create one in «Warehouses» first.",
+    "schemaRequired": "The map is not switched on yet. Run docs/warehouse-map-01-migration.sql on the database.",
+    "retry": "Try again",
+    "noLocations": "This warehouse has no locations yet.",
+    "noLocationsHint": "Locations are the shelves and levels your goods sit on. Add the first one with «Add location»: a code, a name, and where it stands.",
+    "noMatches": "Nothing is left on the floor with these filters.",
+    "nothingRecorded": "Nothing is recorded in these locations yet. Use «Record here» to say what sits on which shelf.",
+    "nothingRecordedRead": "Nothing is recorded in these locations yet.",
+    "costHidden": "Value is not shown to your role",
+    "valueUnknown": "Cannot be calculated (no purchase price entered)",
+    "withoutCost": "{count} products have no purchase price; the value above is a lower bound.",
+    "unplaced": "{products} products ({quantity} units) in this warehouse are in no location.",
+    "drift": "Locations claim more units of {products} products than the warehouse holds; the claim is reported, never repaired, and never blocks a sale.",
+    "retired": "Retired",
+    "lastSale": "Last sale from this warehouse",
+    "neverSoldHere": "Never sold from this warehouse",
+    "stagnantProducts": "Dead products",
+    "product": "Product",
+    "unknownProduct": "Removed product",
+    "unitCost": "Unit cost",
+    "openProduct": "Open product",
+    "emptyLocation": "Nothing is recorded in this location.",
+    "driftNotice": "One of these products is recorded here in more units than the warehouse holds.",
+    "editLocation": "Edit location",
+    "addLocation": "Add location",
+    "layoutFootnote": "Changing the layout is owner-only",
+    "canvasLabel": "Warehouse floor",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomFit": "Fit to screen",
+    "aria": {
+      "location": "Location {code} {name} — {products} products, {quantity} units. {status}: {reason}"
+    },
+    "kpi": {
+      "aria": "Map summary",
+      "filtered": "These figures follow the current filters, not the whole warehouse.",
+      "locations": "Locations",
+      "activeNote": "{active} active, {retired} retired",
+      "products": "Products",
+      "emptyNote": "{count} empty locations",
+      "quantity": "Quantity",
+      "value": "Value (at cost)",
+      "lowerBound": "{count} products without a purchase price — the value is a lower bound",
+      "stagnant": "Dead capital",
+      "stagnantUnits": "Dead stock (units)",
+      "stagnantNote": "{locations} locations · {quantity} units · dead means no sale from this warehouse in {days} days",
+      "status": "Status"
+    },
+    "band": {
+      "moving": "Moving",
+      "slow": "Slow",
+      "stagnant": "Dead",
+      "empty": "Empty"
+    },
+    "reason": {
+      "empty": "nothing recorded",
+      "neverSold": "no sale ever recorded from this warehouse",
+      "unknown": "sale date unknown",
+      "soldRecently": "last sold {days} days ago",
+      "soldLongAgo": "no sale from this warehouse in {days} days"
+    },
+    "metric": {
+      "label": "Colour the floor by",
+      "band": "Movement",
+      "quantity": "Quantity",
+      "value": "Value"
+    },
+    "legend": {
+      "moving": "sold within the last {window} days",
+      "slow": "has sold, but not in the last {window} days",
+      "stagnant": "no sale from this warehouse in {days} days, or ever",
+      "empty": "nothing recorded",
+      "less": "less",
+      "more": "more",
+      "relative": "relative to the fullest location of this warehouse",
+      "lessValue": "smaller value",
+      "moreValue": "largest value",
+      "relativeValue": "each location's value, relative to the most valuable location of this warehouse",
+      "retired": "retired location (dashed)"
+    },
+    "filter": {
+      "warehouse": "Warehouse",
+      "warehousePlaceholder": "Choose a warehouse",
+      "days": "Dead after",
+      "daysOption": "{days} days",
+      "band": "Status",
+      "all": "All",
+      "zone": "Area (anything below it)",
+      "category": "Category",
+      "product": "Product",
+      "search": "Search",
+      "searchPlaceholder": "Product name or code, location code…",
+      "hideUnmatched": "Hide what does not match (otherwise it is dimmed)"
+    },
+    "search": {
+      "count": "{count} locations match «{query}»",
+      "none": "Nothing matches «{query}»."
+    },
+    "dead": {
+      "aria": "Dead capital",
+      "title": "Which part of the floor has my money locked up?",
+      "definition": "Locations where nothing has sold from this warehouse in the last {days} days — the most capital first.",
+      "none": "No dead capital found — every location here has movement.",
+      "total": "{value} across {locations} locations",
+      "totalUnits": "{quantity} units across {locations} locations",
+      "row": "{products} products · {quantity} units",
+      "days": "{days} days without a sale",
+      "neverSold": "nothing here has ever sold from this warehouse",
+      "someNeverSold": "{count} products never sold from this warehouse",
+      "show": "Show on the map"
+    },
+    "place": {
+      "title": "Record what is here",
+      "hint": "Say what sits on this shelf. This does not change stock — it only records where goods are.",
+      "product": "Product",
+      "productPlaceholder": "Choose a product",
+      "warehouseHolds": "{name} in this warehouse: {quantity}",
+      "quantity": "Units in this location",
+      "saved": "Recorded: {quantity} units (of {available} in this warehouse)",
+      "saving": "Saving…",
+      "save": "Record"
+    },
+    "capacity": {
+      "label": "Capacity",
+      "unknown": "No capacity recorded"
+    },
+    "dialog": {
+      "addTitle": "Add a location",
+      "editTitle": "Edit location",
+      "hint": "Its code and where it stands. The code must be unique in this warehouse.",
+      "code": "Code",
+      "name": "Name",
+      "kind": "Kind",
+      "parent": "Inside",
+      "noParent": "No parent (warehouse level)",
+      "x": "x (column)",
+      "y": "y (row)",
+      "width": "Width",
+      "height": "Height",
+      "capacity": "Capacity (optional)",
+      "gridHint": "x, y, width and height are in the same grid cells you see on the floor; one cell is one step.",
+      "active": "Active (goods may sit here)",
+      "saving": "Saving…"
+    },
+    "kind": {
+      "zone": "Zone",
+      "aisle": "Aisle",
+      "rack": "Rack",
+      "shelf": "Shelf",
+      "bin": "Bin"
+    },
+    "error": {
+      "load": "The map could not be read.",
+      "save": "It was not saved. Try again.",
+      "place": "It was not recorded. Try again.",
+      "notPermitted": "You do not have access to this warehouse.",
+      "notFound": "This warehouse was not found.",
+      "codeTaken": "That code is already used in this warehouse.",
+      "cycle": "A location cannot sit inside itself.",
+      "parentWarehouse": "The parent location must be in the same warehouse.",
+      "exceedsStock": "You cannot record more units than the warehouse holds.",
+      "productNotFound": "That product is not in this warehouse."
+    }
   }
 }

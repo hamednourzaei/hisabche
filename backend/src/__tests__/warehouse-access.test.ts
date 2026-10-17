@@ -59,7 +59,11 @@ describe('where it is enforced', () => {
 
   it('⚠️ on the server, when the invoice is made — not only in the select', () => {
     expect(invoice).toContain('await assertMayUseWarehouse(ctx, invoiceWarehouseId)')
-    expect(access).toContain("throw new ForbiddenError('INVOICE_WAREHOUSE_NOT_PERMITTED')")
+    // The refusal is named by the screen that asked: the invoice's code is the
+    // DEFAULT, so a caller that says nothing (invoice.service does) still gets
+    // «INVOICE_WAREHOUSE_NOT_PERMITTED».
+    expect(access).toContain("errorCode = 'INVOICE_WAREHOUSE_NOT_PERMITTED'")
+    expect(access).toContain('throw new ForbiddenError(errorCode)')
   })
 
   it('what a member is shown is filtered by the same rule, stock included', () => {

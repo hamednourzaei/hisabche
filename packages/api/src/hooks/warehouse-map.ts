@@ -1,0 +1,263 @@
+// ============================================
+// packages/api/src/hooks/warehouse-map.ts
+//
+// «مشاهده نقشه انبار» — where the goods physically are. Every number comes from
+// the server (backend/src/services/inventory/warehouse-map.domain.ts); this file
+// only carries the shape of it and the four calls that change the plan.
+//
+// ⚠️ A PLACEMENT IS NOT A STOCK MOVEMENT. `usePlaceStock` records that goods are
+// ON a shelf; it never adds, removes or revalues anything. So it invalidates the
+// map and NOTHING else — there is no money or stock figure for it to invalidate.
+// The warehouse's own numbers live in `warehouses.ts` and stay untouched.
+// ============================================
+
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+
+import apiClient from '../lib/client'
+import { asList } from '../lib/as-list'
+import { useAuthReady } from './useAuthReady'
+import { warehouseKeys } from './warehouses'
+
+/**
+ * How goods in a location move — the same bands the dead-stock list uses, from
+ * the same constants (backend/src/services/inventory/reorder.domain.ts):
+ *
+ *   empty     nothing is recorded there
+ *   moving    everything there sold inside the demand window (30 days)
+ *   slow      sold, but not inside the window and not yet dead
+ *   stagnant  every product there is dead stock (90 days, or never sold)
+ */
+export type HeatBand = 'empty' | 'moving' | 'slow' | 'stagnant'
+
+/** Which figure colours the floor. `value` is not offered without cost access. */
+export type MapMetric = 'band' | 'quantity' | 'value'
+
+export interface MapLocationProduct {
+  productId: string
+  name: string
+  sku: string | null
+  unit: string | null
+  quantity: number
+  /** `null` = no purchase price on the product, or no permission to read it. */
+  unitCost: number | null
+  /** `null` = not shown to this reader, or the product has no price. Never 0. */
+  value: number | null
+  lastSoldAt: string | null
+  daysSinceSale: number | null
+  neverSold: boolean
+  soldInWindow: number
+  avgDailySales: number
+  stagnant: boolean
+  /** The locations of this warehouse claim more of it than the warehouse holds. */
+  exceedsStock: boolean
+}
+
+export interface MapLocation {
+  id: string
+  code: string
+  name: string | null
+  kind: string
+  parentId: string | null
+  depth: number
+  /** `Z01 › R02 › S04` — the codes from the root down. */
+  path: string
+  x: number
+  y: number
+  width: number
+  height: number
+  capacity: number | null
+  isActive: boolean
+  products: MapLocationProduct[]
+  productCount: number
+  quantity: number
+  /** `null` = the reader may not see what the stock cost. */
+  value: number | null
+  /** Products here with no purchase price — not included in `value`. */
+  productsWithoutCost: number
+  lastSoldAt: string | null
+  daysSinceSale: number | null
+  neverSold: boolean
+  band: HeatBand
+  stagnantProductCount: number
+  stagnantQuantity: number
+  stagnantValue: number | null
+  /** 0–3, relative to the fullest location of THIS warehouse. */
+  quantityClass: number
+  /** `null` when the reader may not see cost. */
+  valueClass: number | null
+  /** `null` until a capacity is recorded for this location. */
+  capacityUsed: number | null
+}
+
+export interface WarehouseMapTotals {
+  locationCount: number
+  activeLocationCount: number
+  retiredLocationCount: number
+  emptyLocationCount: number
+  locationProductCount: number
+  placedQuantity: number
+  placedValue: number | null
+  stagnantLocationCount: number
+  stagnantValue: number | null
+  stagnantQuantity: number
+  /** Products with no purchase price: every money figure above is a lower bound. */
+  productsWithoutCost: number
+  capacityTotal: number | null
+  capacityRecordedCount: number
+}
+
+export interface WarehouseMap {
+  warehouse: { id: string; name: string; branchId: string | null; branchName: string | null }
+  currency: string
+  /** False = this reader may not see cost; every money figure above is null. */
+  costVisible: boolean
+  /** The staleness threshold the map was built with. */
+  days: number
+  demandWindowDays: number
+  asOf: string
+  /** False = `docs/warehouse-map-01-migration.sql` has not been run yet. */
+  migrated: boolean
+  locations: MapLocation[]
+  totals: WarehouseMapTotals
+  unplaced: { productCount: number; quantity: number; value: number | null }
+  drift: { productCount: number; quantity: number; value: number | null }
+}
+
+export const warehouseMapKeys = {
+  all: ['warehouse-map'] as const,
+  one: (warehouseId: string, days: number) => [...warehouseMapKeys.all, warehouseId, days] as const,
+}
+
+const emptyTotals: WarehouseMapTotals = {
+  locationCount: 0,
+  activeLocationCount: 0,
+  retiredLocationCount: 0,
+  emptyLocationCount: 0,
+  locationProductCount: 0,
+  placedQuantity: 0,
+  placedValue: null,
+  stagnantLocationCount: 0,
+  stagnantValue: null,
+  stagnantQuantity: 0,
+  productsWithoutCost: 0,
+  capacityTotal: null,
+  capacityRecordedCount: 0,
+}
+
+/**
+ * The map of one warehouse.
+ *
+ * ⚠️ Read fresh every time it is opened and never persisted to the device: it
+ * is a picture of where the goods are right now, and a stale one sends a person
+ * to the wrong shelf. `migrated: false` is a real answer — the screen names the
+ * script instead of drawing an empty warehouse.
+ */
+export function useWarehouseMap(warehouseId: string | null, days: number) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: warehouseMapKeys.one(warehouseId ?? '', days),
+    queryFn: async (): Promise<WarehouseMap> => {
+      const { data } = await apiClient.get<Partial<WarehouseMap>>(
+        `/warehouses/${warehouseId}/map`,
+        {
+          params: { days },
+        },
+      )
+      return {
+        warehouse: data?.warehouse ?? { id: '', name: '', branchId: null, branchName: null },
+        // ⚠️ No currency is invented here: the server fills it from the books.
+        currency: data?.currency ?? '',
+        costVisible: data?.costVisible === true,
+        days: Number(data?.days ?? days),
+        demandWindowDays: Number(data?.demandWindowDays ?? 30),
+        asOf: data?.asOf ?? '',
+        migrated: data?.migrated === true,
+        locations: asList<MapLocation>(data?.locations),
+        totals: data?.totals ?? emptyTotals,
+        unplaced: data?.unplaced ?? { productCount: 0, quantity: 0, value: null },
+        drift: data?.drift ?? { productCount: 0, quantity: 0, value: null },
+      }
+    },
+    enabled: authReady && !!warehouseId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    meta: { persist: false },
+  })
+}
+
+export interface CreateStorageLocationInput {
+  parentId?: string | null | undefined
+  code: string
+  name?: string | undefined
+  kind?: 'zone' | 'aisle' | 'rack' | 'shelf' | 'bin' | undefined
+  x?: number | undefined
+  y?: number | undefined
+  width?: number | undefined
+  height?: number | undefined
+  capacity?: number | null | undefined
+}
+
+/** Put a shelf on the plan (owner only — `inventory.configure`). */
+export function useCreateStorageLocation(warehouseId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: CreateStorageLocationInput) => {
+      const { data } = await apiClient.post(`/warehouses/${warehouseId}/locations`, input)
+      return data as { id: string; code: string }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: warehouseMapKeys.all })
+      queryClient.invalidateQueries({ queryKey: warehouseKeys.all })
+    },
+  })
+}
+
+export interface UpdateStorageLocationInput {
+  code?: string | undefined
+  name?: string | undefined
+  kind?: 'zone' | 'aisle' | 'rack' | 'shelf' | 'bin' | undefined
+  x?: number | undefined
+  y?: number | undefined
+  width?: number | undefined
+  height?: number | undefined
+  capacity?: number | null | undefined
+  /** Retirement, not deletion: what is recorded there stays. */
+  isActive?: boolean | undefined
+}
+
+/** Rename, move or retire a location (owner only — `inventory.configure`). */
+export function useUpdateStorageLocation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: UpdateStorageLocationInput & { id: string }) => {
+      const { id, ...body } = input
+      const { data } = await apiClient.patch(`/storage-locations/${id}`, body)
+      return data as { id: string }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: warehouseMapKeys.all })
+    },
+  })
+}
+
+/**
+ * Record what actually sits in a location (`product.write`).
+ *
+ * The server refuses more units than the WAREHOUSE holds, so the answer to
+ * «چند تا جا میشود؟» is the server's, not this screen's.
+ */
+export function usePlaceStock() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { locationId: string; productId: string; quantity: number }) => {
+      const { data } = await apiClient.post(`/storage-locations/${input.locationId}/place`, {
+        productId: input.productId,
+        quantity: input.quantity,
+      })
+      return data as { locationId: string; productId: string; quantity: number; available: number }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: warehouseMapKeys.all })
+    },
+  })
+}

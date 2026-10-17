@@ -1,0 +1,98 @@
+[
+  {
+    "id": 48,
+    "topic": "قطع اینترنت دستگاه پوز و صف اعتراض مشتریان",
+    "creativeMechanism": "stopwatch-rush",
+    "primaryTemplate": "split-stopwatch",
+    "visualLanguage": "cyber-emerald",
+    "hookMechanism": "immediate-consequence"
+  },
+  {
+    "id": 49,
+    "topic": "بار ۵۰۰ میلیونی نسیه و آب رفتن سرمایه با تورم",
+    "creativeMechanism": "macro-inflation-trap",
+    "primaryTemplate": "premium-motion",
+    "visualLanguage": "cinematic-obsidian",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 50,
+    "topic": "پولت کجا می‌ره؟ فروش داشتی اما سودت کجاست؟",
+    "creativeMechanism": "thermal-receipt-reveal",
+    "primaryTemplate": "thermal-receipt",
+    "visualLanguage": "procedural-spatial",
+    "hookMechanism": "quiet-dread"
+  },
+  {
+    "id": 51,
+    "topic": "وانت باربری دم در منتظره اما کارتن‌ها تو انبار نیست!",
+    "creativeMechanism": "forensic-investigation",
+    "primaryTemplate": "vox-documentary",
+    "visualLanguage": "swiss-editorial",
+    "hookMechanism": "immediate-consequence"
+  },
+  {
+    "id": 52,
+    "topic": "۳۰۰ میلیون فروختی اما موجودی بانکت فقط ۲ میلیونه؟",
+    "creativeMechanism": "split-horizon-contrast",
+    "primaryTemplate": "split-screen-horizon",
+    "visualLanguage": "swiss-editorial",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 53,
+    "topic": "سناریوی کلمه‌به‌کلمه: فروشت زیاده اما آخر ماه پولت کجاست؟",
+    "creativeMechanism": "word-synchronized-dataflow",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "cinematic-obsidian",
+    "hookMechanism": "immediate-consequence"
+  },
+  {
+    "id": 54,
+    "topic": "ساعت ۱۲ ظهر چکت برگشت می‌خوره! چک صیادی بنفش ۶۰۰ میلیونی vs ۴۳۰ میلیون طلب معوق",
+    "creativeMechanism": "deadline-countdown-stamp",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "financial-intelligence",
+    "hookMechanism": "deadline-pressure"
+  },
+  {
+    "id": 55,
+    "topic": "انبارت پره، ولی جیبت خالیه! رسوب کالا و سرمایه راکد",
+    "creativeMechanism": "deadstock-capital-trap",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "procedural-spatial",
+    "hookMechanism": "visual-pattern-interrupt"
+  },
+  {
+    "id": 56,
+    "topic": "دو شعبه داری؛ ولی کدوم یکی داره ضرر می‌سازه؟",
+    "creativeMechanism": "continuous-line-traveler",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "kinetic-manifesto",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 57,
+    "topic": "فاکتور ۷۵ میلیونی دیروز کجاست؟ کی ویرایشش کرد؟",
+    "creativeMechanism": "forensic-audit-shield",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "cinematic-obsidian",
+    "hookMechanism": "forensic-investigation"
+  },
+  {
+    "id": 58,
+    "topic": "قطع اینترنت و ۴۰ مشتری در صف؛ دخل متوقف شد؟",
+    "creativeMechanism": "offline-pos-resilience",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "procedural-spatial",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 59,
+    "topic": "برگ تشخیص مالیات ۱۸۰ میلیونی رسید؛ چرا دفاتر رد شد؟",
+    "creativeMechanism": "tax-audit-moadian-shield",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "financial-intelligence",
+    "hookMechanism": "deadline-pressure"
+  }
+]

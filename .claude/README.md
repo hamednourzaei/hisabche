@@ -12,6 +12,7 @@
 | **«این صفحه برای چیست؟ کجا باید ادغام شود؟ پیشنهاد UX و فازها»**                      | [ux-audit/README.md](ux-audit/README.md) · [00-PROPOSAL.md](ux-audit/00-PROPOSAL.md) · مهارت [hisabche-ux-consolidation](skills/hisabche-ux-consolidation/SKILL.md) |
 | **«کاربر چطور می‌خواهد کار انجام شود؟ چه چیزی ممنوع است؟ گزارش پایانی چه شکلی است؟»** | [skills/hisabche-session-rules](skills/hisabche-session-rules/SKILL.md) — **هر سشن، اول این**                                                                       |
 | **«یک قابلیت تازه را از دیتابیس تا سه پلتفرم چطور تحویل بدهم؟»**                      | [skills/hisabche-feature-delivery](skills/hisabche-feature-delivery/SKILL.md)                                                                                       |
+| **«نقشه‌ی انبار چطور کار می‌کند؟ رنگ‌ها یعنی چه؟ کجا وصل است؟ چه چیزی ساخته نشد؟»**   | [warehouse-map/00-SPEC.md](warehouse-map/00-SPEC.md) — و سشن: [SESSION-CACHE-2026-10-16-WAREHOUSE-MAP.md](SESSION-CACHE-2026-10-16-WAREHOUSE-MAP.md)                 |
 | **«migration + VERIFY + تست Postgres واقعی را چطور بنویسم؟»**                         | [skills/hisabche-migrations](skills/hisabche-migrations/SKILL.md)                                                                                                   |
 | **«چند فایل را در این پوسته چطور امن ویرایش کنم؟ کلید سه‌زبانه؟»**                    | [skills/hisabche-scripted-edits](skills/hisabche-scripted-edits/SKILL.md)                                                                                           |
 | **«وریفای، lint و بیلد سایت/ویندوز/اندروید»**                                         | [skills/hisabche-release-build](skills/hisabche-release-build/SKILL.md)                                                                                             |
@@ -155,3 +156,13 @@ page           صفحه‌ی نازک در هر سه اپ
 - `accounting-integrity/00-SPEC.md` — «نامعلوم، صفر نیست»: حکم ممیزی COGS، قاعده‌ها، ۲۰ پیشنهاد تراز آزمایشی، آنچه باز ماند.
 - `db-integrity/00-SPEC.md` — سنجش ارزیابی اسکیما، فازهای قیدگذاری، خروجی‌های FINDING.
 - `reverse-and-import/` — ورود فایل (دورهای ۹–۱۲) و ممیزی ارز.
+
+## ۱۶ اکتبر ۲۰۲۶ — نقشه‌ی انبار
+
+- `warehouse-map/00-SPEC.md` — یادداشت پیاده‌سازی «نقشه انبار»: مسیر، منبع داده،
+  سلسله‌مراتب، معنی رنگ‌ها و آستانه‌ها، «سرمایه راکد»، مجوزها، رندر، موبایل،
+  حالت‌ها، محدودیت‌ها + چک‌لیست پذیرش.
+- `SESSION-CACHE-2026-10-16-WAREHOUSE-MAP.md` — چه چیزی ساخته شد، اعداد
+  اندازه‌گیری‌شده، ۱۱ باگ سرِ راه، و دو باگ **موجود** که عمداً دست نخوردند.
+- migration اجرانشده: `docs/warehouse-map-01-migration.sql` +
+  `docs/VERIFY-warehouse-map-01.sql` (۱۷ بررسی) — PENDING HUMAN CONFIRMATION.

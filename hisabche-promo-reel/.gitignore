@@ -1,0 +1,8 @@
+# hisabche-promo-reel gitignore
+node_modules
+dist
+.tmp
+exports
+*.png
+*.mp4
+*.wav

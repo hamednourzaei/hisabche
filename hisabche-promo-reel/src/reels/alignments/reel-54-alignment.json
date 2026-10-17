@@ -1,0 +1,475 @@
+{
+  "reelId": "54",
+  "title": "ساعت ۱۲ ظهر موعد پاس شدن چکته؛ اما حسابت خالیه!",
+  "audioFile": "audio/reel-54-vo.wav",
+  "alignmentStatus": "PROVISIONAL_CADENCE_MODEL_ACTIVE",
+  "isProvisional": true,
+  "alignmentSource": "cadence-model",
+  "confidence": null,
+  "audioDuration": 26,
+  "scenes": [
+    {
+      "sceneIndex": 0,
+      "vo": "ساعت ۱۲ ظهر چکت برگشت می‌خوره!",
+      "start": 0,
+      "end": 3.5,
+      "words": [
+        {
+          "word": "ساعت",
+          "start": 0.2,
+          "end": 0.55,
+          "emphasis": false,
+          "sound": "tick",
+          "confidence": null
+        },
+        {
+          "word": "۱۲",
+          "start": 0.6,
+          "end": 1.05,
+          "emphasis": true,
+          "action": "clock-countdown",
+          "sound": "clockTickRapid",
+          "confidence": null
+        },
+        {
+          "word": "ظهر",
+          "start": 1.1,
+          "end": 1.35,
+          "emphasis": false,
+          "sound": "tick",
+          "confidence": null
+        },
+        {
+          "word": "چکت",
+          "start": 1.4,
+          "end": 1.85,
+          "emphasis": true,
+          "action": "cheque-reveal",
+          "sound": "titleHit",
+          "confidence": null
+        },
+        {
+          "word": "برگشت",
+          "start": 1.9,
+          "end": 2.15,
+          "emphasis": true,
+          "sound": "alert",
+          "confidence": null
+        },
+        {
+          "word": "می‌خوره!",
+          "start": 2.2,
+          "end": 2.6,
+          "emphasis": true,
+          "action": "stamp-reject",
+          "sound": "impact",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 2.3,
+        "action": "freeze-alarm",
+        "sound": "alert"
+      }
+    },
+    {
+      "sceneIndex": 1,
+      "vo": "فروشت عالی بوده؛ اما ۴۳۰ میلیون از سرمایه‌ت دست مشتری‌ها خاک می‌خوره!",
+      "start": 3.5,
+      "end": 8.5,
+      "words": [
+        {
+          "word": "فروشت",
+          "start": 0.2,
+          "end": 0.6,
+          "emphasis": true,
+          "action": "sales-sparkle",
+          "sound": "whoosh",
+          "confidence": null
+        },
+        {
+          "word": "عالی",
+          "start": 0.65,
+          "end": 0.95,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "بوده؛",
+          "start": 1.0,
+          "end": 1.25,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "اما",
+          "start": 1.3,
+          "end": 1.65,
+          "emphasis": true,
+          "action": "crack-alert",
+          "sound": "alert",
+          "confidence": null
+        },
+        {
+          "word": "۴۳۰",
+          "start": 1.7,
+          "end": 2.05,
+          "emphasis": true,
+          "action": "trapped-counter",
+          "sound": "impact",
+          "confidence": null
+        },
+        {
+          "word": "میلیون",
+          "start": 2.1,
+          "end": 2.4,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "از",
+          "start": 2.45,
+          "end": 2.6,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "سرمایه‌ت",
+          "start": 2.65,
+          "end": 3.0,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "دست",
+          "start": 3.05,
+          "end": 3.25,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "مشتری‌ها",
+          "start": 3.3,
+          "end": 3.7,
+          "emphasis": true,
+          "action": "ledger-aging",
+          "sound": "paperRustle",
+          "confidence": null
+        },
+        {
+          "word": "خاک",
+          "start": 3.75,
+          "end": 3.95,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "می‌خوره!",
+          "start": 4.0,
+          "end": 4.45,
+          "emphasis": true,
+          "action": "spiderweb-trap",
+          "sound": "impact",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 4.5,
+        "action": "void-trap",
+        "sound": "tick"
+      }
+    },
+    {
+      "sceneIndex": 2,
+      "vo": "نه سررسید نسیه‌ها مشخصه، نه کسی یادش هست چقدر بدهکاره!",
+      "start": 8.5,
+      "end": 15,
+      "words": [
+        {
+          "word": "نه",
+          "start": 0.2,
+          "end": 0.45,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "سررسید",
+          "start": 0.5,
+          "end": 0.95,
+          "emphasis": true,
+          "sound": "cardEnter",
+          "confidence": null
+        },
+        {
+          "word": "نسیه‌ها",
+          "start": 1.0,
+          "end": 1.55,
+          "emphasis": true,
+          "action": "card-iron-bazaar",
+          "sound": "paperRustle",
+          "confidence": null
+        },
+        {
+          "word": "مشخصه،",
+          "start": 1.6,
+          "end": 2.15,
+          "emphasis": true,
+          "sound": "alert",
+          "confidence": null
+        },
+        {
+          "word": "نه",
+          "start": 2.2,
+          "end": 2.45,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "کسی",
+          "start": 2.5,
+          "end": 2.8,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "یادش",
+          "start": 2.85,
+          "end": 3.3,
+          "emphasis": true,
+          "action": "card-alborz",
+          "sound": "cardEnter",
+          "confidence": null
+        },
+        {
+          "word": "هست",
+          "start": 3.35,
+          "end": 3.7,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "چقدر",
+          "start": 3.75,
+          "end": 4.15,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "بدهکاره!",
+          "start": 4.2,
+          "end": 4.8,
+          "emphasis": true,
+          "action": "card-sabalan",
+          "sound": "impact",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 4.9,
+        "action": "aging-stack-hold",
+        "sound": "softTransition"
+      }
+    },
+    {
+      "sceneIndex": 3,
+      "vo": "حسابچه با یادآور پیامکی خودکار و راس‌گیری دقیق، طلب‌هات رو نقد می‌کنه.",
+      "start": 15,
+      "end": 21.5,
+      "words": [
+        {
+          "word": "حسابچه",
+          "start": 0.2,
+          "end": 0.8,
+          "emphasis": true,
+          "action": "brand-anchor",
+          "sound": "cinematicReveal",
+          "confidence": null
+        },
+        {
+          "word": "با",
+          "start": 0.85,
+          "end": 1.05,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "یادآور",
+          "start": 1.1,
+          "end": 1.45,
+          "emphasis": true,
+          "sound": "chime",
+          "confidence": null
+        },
+        {
+          "word": "پیامکی",
+          "start": 1.5,
+          "end": 1.95,
+          "emphasis": true,
+          "action": "sms-dispatch",
+          "sound": "sync",
+          "confidence": null
+        },
+        {
+          "word": "خودکار",
+          "start": 2.0,
+          "end": 2.35,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "و",
+          "start": 2.4,
+          "end": 2.55,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "راس‌گیری",
+          "start": 2.6,
+          "end": 3.15,
+          "emphasis": true,
+          "action": "maturity-calc",
+          "sound": "precisionSequence",
+          "confidence": null
+        },
+        {
+          "word": "دقیق،",
+          "start": 3.2,
+          "end": 3.55,
+          "emphasis": false,
+          "sound": "tick",
+          "confidence": null
+        },
+        {
+          "word": "طلب‌هات",
+          "start": 3.6,
+          "end": 4.0,
+          "emphasis": true,
+          "action": "cards-settle-green",
+          "sound": "cash",
+          "confidence": null
+        },
+        {
+          "word": "رو",
+          "start": 4.05,
+          "end": 4.2,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "نقد",
+          "start": 4.25,
+          "end": 4.65,
+          "emphasis": true,
+          "action": "cheque-cleared-gold",
+          "sound": "financialMilestone",
+          "confidence": null
+        },
+        {
+          "word": "می‌کنه.",
+          "start": 4.7,
+          "end": 5.2,
+          "emphasis": true,
+          "sound": "successResolution",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 5.0,
+        "action": "cheque-cleared-lock",
+        "sound": "success"
+      }
+    },
+    {
+      "sceneIndex": 4,
+      "vo": "همین حالا نسیه‌هات رو در حسابچه ثبت و وصول کن.",
+      "start": 21.5,
+      "end": 26,
+      "words": [
+        {
+          "word": "همین",
+          "start": 0.2,
+          "end": 0.45,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "حالا",
+          "start": 0.5,
+          "end": 0.8,
+          "emphasis": true,
+          "sound": "cardEnter",
+          "confidence": null
+        },
+        {
+          "word": "نسیه‌هات",
+          "start": 0.85,
+          "end": 1.35,
+          "emphasis": true,
+          "action": "receivables-tag",
+          "sound": "whoosh",
+          "confidence": null
+        },
+        {
+          "word": "رو",
+          "start": 1.4,
+          "end": 1.55,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "در",
+          "start": 1.6,
+          "end": 1.75,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "حسابچه",
+          "start": 1.8,
+          "end": 2.35,
+          "emphasis": true,
+          "action": "brand-glow",
+          "sound": "titleHit",
+          "confidence": null
+        },
+        {
+          "word": "ثبت",
+          "start": 2.4,
+          "end": 2.7,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "و",
+          "start": 2.75,
+          "end": 2.9,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "وصول",
+          "start": 2.95,
+          "end": 3.35,
+          "emphasis": true,
+          "sound": "cash",
+          "confidence": null
+        },
+        {
+          "word": "کن.",
+          "start": 3.4,
+          "end": 3.95,
+          "emphasis": true,
+          "action": "cta-button-pulse",
+          "sound": "ctaResolution",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 4.0,
+        "action": "cta-glow",
+        "sound": "chime"
+      }
+    }
+  ]
+}

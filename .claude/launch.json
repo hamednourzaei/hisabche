@@ -4,34 +4,78 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@hisabche/web", "dev"],
+      "runtimeArgs": [
+        "--filter",
+        "@hisabche/web",
+        "dev"
+      ],
       "port": 3039
     },
     {
       "//": "The API. Not a preview surface itself, but the web dev server is not drivable without it — the onboarding gate reads server state, so every dashboard route redirects while this is down.",
       "name": "backend",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@hisabche/backend", "dev"],
+      "runtimeArgs": [
+        "--filter",
+        "@hisabche/backend",
+        "dev"
+      ],
       "port": 10000
     },
     {
       "//": "Production build of the web app (run `NEXT_STANDALONE=0 next build` in apps/web first). The only way to check prerendered pages and their cache headers locally.",
       "name": "web-prod",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@hisabche/web", "exec", "next", "start", "-p", "3111"],
+      "runtimeArgs": [
+        "--filter",
+        "@hisabche/web",
+        "exec",
+        "next",
+        "start",
+        "-p",
+        "3111"
+      ],
       "port": 3111
     },
     {
       "name": "desktop",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@hisabche/desktop", "dev"],
+      "runtimeArgs": [
+        "--filter",
+        "@hisabche/desktop",
+        "dev"
+      ],
       "port": 5174
     },
     {
       "name": "mobile",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@hisabche/mobile", "dev", "--", "--web", "--port", "8081"],
+      "runtimeArgs": [
+        "--filter",
+        "@hisabche/mobile",
+        "dev",
+        "--",
+        "--web",
+        "--port",
+        "8081"
+      ],
       "port": 8081
+    },
+    {
+      "name": "promo-reel",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "node_modules/vite/bin/vite.js",
+        "--config",
+        "hisabche-promo-reel/vite.config.ts",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "5190",
+        "--strictPort"
+      ],
+      "port": 5190,
+      "url": "http://127.0.0.1:5190"
     }
   ]
 }

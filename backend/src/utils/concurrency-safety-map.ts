@@ -392,6 +392,62 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     evidence: [{ file: `${RT}/warehouse.routes.ts`, text: "'/api/warehouses/:id/assign'" }],
   },
 
+  // ─── The map of a warehouse ───────────────────────────────────────────────
+  {
+    routeFile: 'warehouse-map.routes.ts',
+    route: 'POST /api/warehouses/:id/locations',
+    // Two people label a shelf `A-01` at the same moment: the unique index
+    // refuses the second, and the route answers «this code is taken» rather
+    // than storing a duplicate the map could not tell apart.
+    mechanisms: ['unique-constraint'],
+    evidence: [
+      { file: `${RT}/warehouse-map.routes.ts`, text: "'/api/warehouses/:id/locations'" },
+      {
+        file: 'docs/warehouse-map-01-migration.sql',
+        text: 'CREATE UNIQUE INDEX IF NOT EXISTS storage_locations_code_per_warehouse',
+      },
+      {
+        file: `${SVC}/inventory/warehouse-map.service.ts`,
+        text: "throw new ConflictError('STORAGE_LOCATION_CODE_TAKEN')",
+      },
+    ],
+  },
+  {
+    routeFile: 'warehouse-map.routes.ts',
+    route: 'PATCH /api/storage-locations/:id',
+    // Master data: naming a shelf or moving its rectangle. No money and no
+    // stock moves, so the later edit stands — and the location is never
+    // deleted, only retired.
+    mechanisms: ['last-write-wins'],
+    evidence: [
+      { file: `${RT}/warehouse-map.routes.ts`, text: "'/api/storage-locations/:id'" },
+      {
+        file: `${SVC}/inventory/warehouse-map.service.ts`,
+        text: 'patch.is_active = input.isActive',
+      },
+    ],
+  },
+  {
+    routeFile: 'warehouse-map.routes.ts',
+    route: 'POST /api/storage-locations/:id/place',
+    // One Postgres function, row locks inside: two devices placing the same
+    // product cannot both pass «the warehouse holds 12». Repeating the same
+    // save leaves the same quantity.
+    mechanisms: ['db-function', 'state-idempotent'],
+    evidence: [
+      { file: `${RT}/warehouse-map.routes.ts`, text: "'/api/storage-locations/:id/place'" },
+      {
+        file: `${SVC}/inventory/warehouse-map.service.ts`,
+        text: "supabase.rpc('storage_place_stock'",
+      },
+      { file: 'docs/warehouse-map-01-migration.sql', text: 'FOR UPDATE;' },
+      {
+        file: 'docs/warehouse-map-01-migration.sql',
+        text: 'ON CONFLICT (location_id, product_id) DO UPDATE',
+      },
+    ],
+  },
+
   // ─── Purchasing ──────────────────────────────────────────────────────────
   {
     routeFile: 'purchasing.routes.ts',

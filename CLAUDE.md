@@ -623,3 +623,30 @@ cd apps/admin     && npx tsc --noEmit
 
 **Status:**
 - Test orchestration script deployed to run Web Typecheck, Mobile Tests, Desktop Tests, Backend Tests and produce verifiable Final Decision documents.
+
+---
+
+## Hisabche Reel Plugin (Zero-Discovery Fast-Track Bootstrap)
+
+When the user invokes:
+```text
+/new_reels [topic]
+/new-reels [topic]
+```
+use:
+`.claude/skills/new-reels/SKILL.md` (or `hisabche-promo-reel/.claude/skills/new-reels/SKILL.md`)
+
+The canonical Reel SDK is:
+`.claude/reel-plugin/fast-track-sdk.md` (or `hisabche-promo-reel/.claude/reel-plugin/fast-track-sdk.md`)
+
+Do not recursively scan `hisabche-promo-reel/src/` for Reel architecture unless the Fast-Track SDK is missing, stale, or contradicted by a compiler/runtime error.
+
+The SDK is an indexed contract generated from the actual repository.
+
+When implementation and SDK disagree:
+1. inspect the smallest relevant source file;
+2. fix the implementation or SDK as appropriate;
+3. update the SDK;
+4. continue the task.
+
+Never invent APIs from memory.

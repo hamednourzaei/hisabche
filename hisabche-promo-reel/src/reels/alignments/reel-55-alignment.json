@@ -1,0 +1,372 @@
+{
+  "reelId": "55",
+  "title": "انبارت پره، ولی جیبت خالیه!",
+  "audioFile": "audio/reel-55-vo.wav",
+  "alignmentStatus": "PROVISIONAL_CADENCE_MODEL_ACTIVE",
+  "isProvisional": true,
+  "alignmentSource": "cadence-model",
+  "confidence": null,
+  "audioDuration": 26,
+  "scenes": [
+    {
+      "sceneIndex": 0,
+      "vo": "انبارت پره، ولی جیبت خالیه!",
+      "start": 0,
+      "end": 4,
+      "words": [
+        {
+          "word": "انبارت",
+          "start": 0.2,
+          "end": 0.75,
+          "emphasis": true,
+          "action": "shelf-stuff",
+          "sound": "impact",
+          "confidence": null
+        },
+        {
+          "word": "پره،",
+          "start": 0.8,
+          "end": 1.25,
+          "emphasis": true,
+          "action": "shelf-overflow",
+          "sound": "paperRustle",
+          "confidence": null
+        },
+        {
+          "word": "ولی",
+          "start": 1.35,
+          "end": 1.6,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "جیبت",
+          "start": 1.65,
+          "end": 2.2,
+          "emphasis": true,
+          "action": "pocket-zero",
+          "sound": "alert",
+          "confidence": null
+        },
+        {
+          "word": "خالیه!",
+          "start": 2.4,
+          "end": 3.1,
+          "emphasis": true,
+          "action": "pocket-slam",
+          "sound": "impact",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 2.5,
+        "action": "hook-freeze",
+        "sound": "tick"
+      }
+    },
+    {
+      "sceneIndex": 1,
+      "vo": "چهارصد میلیون سرمایه، توی قفسه‌ها خوابه!",
+      "start": 4,
+      "end": 9.6,
+      "words": [
+        {
+          "word": "چهارصد",
+          "start": 0.3,
+          "end": 0.95,
+          "emphasis": true,
+          "action": "receipt-print",
+          "sound": "receiptPrint",
+          "confidence": null
+        },
+        {
+          "word": "میلیون",
+          "start": 1.05,
+          "end": 1.5,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "سرمایه،",
+          "start": 1.6,
+          "end": 2.35,
+          "emphasis": true,
+          "action": "capital-counter",
+          "sound": "impact",
+          "confidence": null
+        },
+        {
+          "word": "توی",
+          "start": 2.5,
+          "end": 2.8,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "قفسه‌ها",
+          "start": 2.9,
+          "end": 3.7,
+          "emphasis": true,
+          "action": "shelf-highlight",
+          "sound": "paperRustle",
+          "confidence": null
+        },
+        {
+          "word": "خوابه!",
+          "start": 3.9,
+          "end": 4.7,
+          "emphasis": true,
+          "action": "aging-climb",
+          "sound": "alert",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 4,
+        "action": "aging-hold",
+        "sound": "softTransition"
+      }
+    },
+    {
+      "sceneIndex": 2,
+      "vo": "کالای بی‌حرکت، ته انبار داره خاک می‌خوره!",
+      "start": 9.6,
+      "end": 15.8,
+      "words": [
+        {
+          "word": "کالای",
+          "start": 0.3,
+          "end": 0.9,
+          "emphasis": true,
+          "action": "explode-start",
+          "sound": "whoosh",
+          "confidence": null
+        },
+        {
+          "word": "بی‌حرکت،",
+          "start": 1,
+          "end": 1.9,
+          "emphasis": true,
+          "action": "freeze-flag",
+          "sound": "alert",
+          "confidence": null
+        },
+        {
+          "word": "ته",
+          "start": 2,
+          "end": 2.4,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "انبار",
+          "start": 2.5,
+          "end": 3.3,
+          "emphasis": true,
+          "action": "layer-separate",
+          "sound": "dataFlow",
+          "confidence": null
+        },
+        {
+          "word": "داره",
+          "start": 3.5,
+          "end": 3.9,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "خاک",
+          "start": 4,
+          "end": 4.7,
+          "emphasis": true,
+          "action": "dust-settle",
+          "sound": "paperRustle",
+          "confidence": null
+        },
+        {
+          "word": "می‌خوره!",
+          "start": 4.8,
+          "end": 5.6,
+          "emphasis": true,
+          "action": "locked-capital-slam",
+          "sound": "impact",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 5,
+        "action": "autopsy-hold",
+        "sound": "softTransition"
+      }
+    },
+    {
+      "sceneIndex": 3,
+      "vo": "حسابچه کالای راکد رو پیدا می‌کنه و به پول برمی‌گردونه.",
+      "start": 15.8,
+      "end": 22,
+      "words": [
+        {
+          "word": "حسابچه",
+          "start": 0.2,
+          "end": 0.8,
+          "emphasis": true,
+          "action": "brand-anchor",
+          "sound": "cinematicReveal",
+          "confidence": null
+        },
+        {
+          "word": "کالای",
+          "start": 0.9,
+          "end": 1.5,
+          "emphasis": true,
+          "action": "glass-terminal",
+          "sound": "precisionSequence",
+          "confidence": null
+        },
+        {
+          "word": "راکد",
+          "start": 1.6,
+          "end": 2.2,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "رو",
+          "start": 2.3,
+          "end": 2.5,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "پیدا",
+          "start": 2.6,
+          "end": 3.1,
+          "emphasis": true,
+          "action": "report-scan",
+          "sound": "scan",
+          "confidence": null
+        },
+        {
+          "word": "می‌کنه",
+          "start": 3.2,
+          "end": 3.8,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "و",
+          "start": 3.9,
+          "end": 4.05,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "به",
+          "start": 4.1,
+          "end": 4.3,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "پول",
+          "start": 4.5,
+          "end": 5.05,
+          "emphasis": true,
+          "action": "cash-conversion",
+          "sound": "financialMilestone",
+          "confidence": null
+        },
+        {
+          "word": "برمی‌گردونه.",
+          "start": 5.15,
+          "end": 6,
+          "emphasis": true,
+          "action": "recovery-lock",
+          "sound": "successResolution",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 4.6,
+        "action": "recovery-lock-hold",
+        "sound": "success"
+      }
+    },
+    {
+      "sceneIndex": 4,
+      "vo": "همین حالا انبارت رو در حسابچه پاک‌سازی کن.",
+      "start": 22,
+      "end": 26,
+      "words": [
+        {
+          "word": "همین",
+          "start": 0.2,
+          "end": 0.45,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "حالا",
+          "start": 0.5,
+          "end": 0.8,
+          "emphasis": true,
+          "sound": "cardEnter",
+          "confidence": null
+        },
+        {
+          "word": "انبارت",
+          "start": 0.85,
+          "end": 1.3,
+          "emphasis": true,
+          "action": "inventory-tag",
+          "sound": "whoosh",
+          "confidence": null
+        },
+        {
+          "word": "رو",
+          "start": 1.35,
+          "end": 1.5,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "در",
+          "start": 1.55,
+          "end": 1.7,
+          "emphasis": false,
+          "confidence": null
+        },
+        {
+          "word": "حسابچه",
+          "start": 1.75,
+          "end": 2.3,
+          "emphasis": true,
+          "action": "brand-glow",
+          "sound": "titleHit",
+          "confidence": null
+        },
+        {
+          "word": "پاک‌سازی",
+          "start": 2.35,
+          "end": 2.7,
+          "emphasis": true,
+          "confidence": null
+        },
+        {
+          "word": "کن.",
+          "start": 2.75,
+          "end": 3.3,
+          "emphasis": true,
+          "action": "cta-button-pulse",
+          "sound": "ctaResolution",
+          "confidence": null
+        }
+      ],
+      "sentenceEnding": {
+        "at": 2.85,
+        "action": "cta-glow",
+        "sound": "chime"
+      }
+    }
+  ]
+}
