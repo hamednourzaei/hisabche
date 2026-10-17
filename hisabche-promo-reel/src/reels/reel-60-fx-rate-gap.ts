@@ -81,7 +81,7 @@ export const reel60: Reel = {
           },
           { word: 'می‌ارزه؟', start: 3.45, end: 3.9 },
         ],
-        sentenceEnding: { at: 3.3, action: 'question-hold', sound: 'softTransition' },
+        sentenceEnding: { at: 3.3, action: 'question-hold' },
       },
     },
     {
@@ -125,7 +125,7 @@ export const reel60: Reel = {
           },
           { word: 'هزار!', start: 3.2, end: 3.6, emphasis: true },
         ],
-        sentenceEnding: { at: 3.6, action: 'diff-hold', sound: 'alert' },
+        sentenceEnding: { at: 3.6, action: 'diff-hold' },
       },
     },
     {
@@ -173,7 +173,7 @@ export const reel60: Reel = {
           },
           { word: 'گم.', start: 4.05, end: 4.35, emphasis: true },
         ],
-        sentenceEnding: { at: 4.0, action: 'lost-hold', sound: 'softTransition' },
+        sentenceEnding: { at: 4.0, action: 'lost-hold' },
       },
     },
     {
@@ -229,7 +229,7 @@ export const reel60: Reel = {
           { word: 'ثبت', start: 4.15, end: 4.4 },
           { word: 'می‌کنه.', start: 4.45, end: 4.85 },
         ],
-        sentenceEnding: { at: 4.2, action: 'journal-hold', sound: 'softTransition' },
+        sentenceEnding: { at: 4.2, action: 'journal-hold' },
       },
     },
     {
@@ -242,7 +242,14 @@ export const reel60: Reel = {
         intent: 'دعوت به اقدام',
         ...provisional,
         words: [
-          { word: 'حسابت', start: 0.25, end: 0.7, emphasis: true, sound: 'cardEnter' },
+          {
+            word: 'حسابت',
+            start: 0.25,
+            end: 0.7,
+            emphasis: true,
+            sound: 'cardEnter',
+            action: 'cta-card',
+          },
           { word: 'به', start: 0.72, end: 0.85 },
           { word: 'ارز', start: 0.9, end: 1.2, emphasis: true },
           { word: 'خودت؛', start: 1.25, end: 1.7 },
@@ -258,7 +265,7 @@ export const reel60: Reel = {
           { word: 'در', start: 2.9, end: 3.0 },
           { word: 'حسابچه.', start: 3.05, end: 3.6, emphasis: true },
         ],
-        sentenceEnding: { at: 2.4, action: 'cta-glow', sound: 'softTransition' },
+        sentenceEnding: { at: 2.4, action: 'cta-glow' },
       },
     },
   ],

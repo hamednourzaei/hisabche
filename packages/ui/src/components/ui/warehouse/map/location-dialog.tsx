@@ -44,7 +44,16 @@ export interface LocationFormValues {
   width: number
   height: number
   capacity?: number | null
+  /**
+   * Edit only. ⚠️ The create schema is `.strict()` and has no `isActive` —
+   * sending it on «add» was «unrecognized key(s) in object: 'isActive'» (owner, 17 Oct).
+   */
   isActive?: boolean
+  /**
+   * Add only, and NOT part of the location: what sits on it, recorded after the
+   * location exists, through the same placement the drawer uses.
+   */
+  placement?: { productId: string; quantity: number } | null
 }
 
 export interface LocationDialogProps {
@@ -54,6 +63,10 @@ export interface LocationDialogProps {
   editing: MapLocation | null
   /** The plan as it stands — for the parent select and the starting position. */
   locations: MapLocation[]
+  /** This warehouse's stock — the only products that can be recorded on a shelf here. */
+  warehouseProducts?: Array<{ id: string; name: string; quantity: number }> | undefined
+  /** `product.write`: without it the «which product» section is not offered. */
+  canPlace?: boolean | undefined
   isPending: boolean
   error: string | null
   onSubmit: (values: LocationFormValues) => void
@@ -66,6 +79,7 @@ const input =
   'min-h-10 w-full rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 text-sm text-[hsl(var(--fg-primary))]'
 const label = 'block space-y-1 text-sm'
 const caption = 'text-[hsl(var(--fg-secondary))]'
+const help = 'block text-xs text-[hsl(var(--fg-tertiary))]'
 
 /** A number field that never hands `NaN` to the form. */
 function toNumber(value: string, fallback: number): number {
@@ -78,11 +92,15 @@ export function LocationDialog({
   open,
   editing,
   locations,
+  warehouseProducts = [],
+  canPlace = false,
   isPending,
   error,
   onSubmit,
   onClose,
 }: LocationDialogProps) {
+  const [productId, setProductId] = useState('')
+  const [quantity, setQuantity] = useState('')
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [kind, setKind] = useState<string>('shelf')
@@ -120,12 +138,23 @@ export function LocationDialog({
     setHeight('1')
     setCapacity('')
     setIsActive(true)
+    setProductId('')
+    setQuantity('')
   }, [open, editing, locations])
 
   // A location cannot be moved under itself: the database refuses the cycle,
   // and the select must not offer a choice that will be refused.
   const forbidden = editing ? descendantIds(locations, editing.id) : new Set<string>()
   if (editing) forbidden.add(editing.id)
+
+  const chosen = warehouseProducts.find((product) => product.id === productId)
+  const parsedQuantity = Number(quantity)
+  const placement =
+    productId && quantity.trim() !== '' && Number.isFinite(parsedQuantity) && parsedQuantity > 0
+      ? { productId, quantity: parsedQuantity }
+      : null
+  // A product picked without a usable quantity is not silently dropped.
+  const placementIncomplete = !editing && productId !== '' && placement === null
 
   const submit = () => {
     const parsedCapacity = capacity.trim() === '' ? null : toNumber(capacity, 0)
@@ -139,13 +168,14 @@ export function LocationDialog({
       width: toNumber(width, 1),
       height: toNumber(height, 1),
       capacity: parsedCapacity !== null && parsedCapacity > 0 ? parsedCapacity : null,
-      isActive,
+      ...(editing ? { isActive } : {}),
+      ...(!editing && placement ? { placement } : {}),
     })
   }
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? null : onClose())}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {editing ? t('warehouseMap.dialog.editTitle') : t('warehouseMap.dialog.addTitle')}
@@ -161,9 +191,10 @@ export function LocationDialog({
               value={code}
               maxLength={40}
               onChange={(event) => setCode(event.target.value)}
-              placeholder="A-03"
+              placeholder={t('warehouseMap.dialog.codePlaceholder')}
               className={input}
             />
+            <span className={help}>{t('warehouseMap.dialog.codeHelp')}</span>
           </label>
           <label className={`${label} col-span-1`}>
             <span className={caption}>{t('warehouseMap.dialog.name')}</span>
@@ -172,8 +203,10 @@ export function LocationDialog({
               value={name}
               maxLength={80}
               onChange={(event) => setName(event.target.value)}
+              placeholder={t('warehouseMap.dialog.namePlaceholder')}
               className={input}
             />
+            <span className={help}>{t('warehouseMap.dialog.nameHelp')}</span>
           </label>
           <div className={`${label} col-span-1`}>
             <span className={caption}>{t('warehouseMap.dialog.kind')}</span>
@@ -186,6 +219,7 @@ export function LocationDialog({
                 label: t(`warehouseMap.kind.${value}`),
               }))}
             />
+            <span className={help}>{t('warehouseMap.dialog.kindHelp')}</span>
           </div>
           <div className={`${label} col-span-1`}>
             <span className={caption}>{t('warehouseMap.dialog.parent')}</span>
@@ -203,6 +237,7 @@ export function LocationDialog({
                   })),
               ]}
             />
+            <span className={help}>{t('warehouseMap.dialog.parentHelp')}</span>
           </div>
 
           {(
@@ -222,6 +257,7 @@ export function LocationDialog({
                 max={500}
                 value={field.value}
                 onChange={(event) => field.set(event.target.value)}
+                placeholder={t('warehouseMap.dialog.gridPlaceholder')}
                 className={input}
               />
             </label>
@@ -235,14 +271,66 @@ export function LocationDialog({
               min={0}
               value={capacity}
               onChange={(event) => setCapacity(event.target.value)}
+              placeholder={t('warehouseMap.dialog.capacityPlaceholder')}
               className={input}
             />
+            <span className={help}>{t('warehouseMap.dialog.capacityHelp')}</span>
           </label>
         </div>
 
         <p className="text-xs text-[hsl(var(--fg-tertiary))]">
           {t('warehouseMap.dialog.gridHint')}
         </p>
+
+        {!editing && canPlace ? (
+          <section className="space-y-2 rounded-lg border border-dashed border-[hsl(var(--border-default))] p-3">
+            <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+              {t('warehouseMap.dialog.placeTitle')}
+            </p>
+            <p className={help}>{t('warehouseMap.dialog.placeHint')}</p>
+            <SelectField
+              aria-label={t('warehouseMap.place.product')}
+              data-field="productId"
+              value={productId}
+              onChange={setProductId}
+              searchable
+              searchPlaceholder={t('warehouseMap.dialog.searchPlaceholder')}
+              noResultsText={t('warehouseMap.dialog.noResults')}
+              placeholder={t('warehouseMap.place.productPlaceholder')}
+              options={[
+                { value: '', label: t('warehouseMap.dialog.noProduct') },
+                ...warehouseProducts.map((product) => ({
+                  value: product.id,
+                  label: `${product.name} — ${product.quantity}`,
+                  keywords: product.name,
+                })),
+              ]}
+            />
+            {chosen ? (
+              <label className={label}>
+                <span className={caption}>
+                  {t('warehouseMap.place.warehouseHolds', {
+                    name: chosen.name,
+                    quantity: chosen.quantity,
+                  })}
+                </span>
+                <input
+                  name="quantity"
+                  type="number"
+                  min={0}
+                  step="any"
+                  inputMode="decimal"
+                  value={quantity}
+                  onChange={(event) => setQuantity(event.target.value)}
+                  placeholder={t('warehouseMap.dialog.quantityPlaceholder')}
+                  aria-label={t('warehouseMap.place.quantity')}
+                  className={input}
+                />
+              </label>
+            ) : null}
+            <p className={help}>{t('warehouseMap.dialog.notInList')}</p>
+          </section>
+        ) : null}
 
         {editing ? (
           <label className="flex items-center gap-2 text-sm text-[hsl(var(--fg-secondary))]">
@@ -273,7 +361,7 @@ export function LocationDialog({
           <button
             type="button"
             onClick={submit}
-            disabled={isPending || code.trim() === ''}
+            disabled={isPending || code.trim() === '' || placementIncomplete}
             className="inline-flex min-h-10 items-center justify-center rounded-full bg-[hsl(var(--color-primary))] px-5 text-sm font-bold text-[hsl(var(--color-primary-fg))] disabled:opacity-50"
           >
             {isPending ? t('warehouseMap.dialog.saving') : t('common.save')}

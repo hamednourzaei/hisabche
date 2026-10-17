@@ -334,7 +334,7 @@ function FxLockActor({ t, plan }: R60ActorProps) {
 // ─── 5. CTA: «حسابت به ارز خودت؛ شروع رایگان در حسابچه.» ─────────────────────
 function CtaActor({ t, plan }: R60ActorProps) {
   // Hard Rule 5: the card is in at 0.3s and stays fully readable to the end.
-  const cardAt = 0.3
+  const cardAt = cueAt(plan, 'cta-card', 0.3)
   const pulseAt = cueAt(plan, 'cta-pulse', 2.4)
   const glow = pulse(t, pulseAt, pulseAt + 1.6, 0.9)
 

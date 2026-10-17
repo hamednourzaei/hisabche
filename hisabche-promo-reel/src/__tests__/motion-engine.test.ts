@@ -18,7 +18,7 @@ import { faNumber } from '../ui/motion-primitives'
 
 describe('Motion Design Engine & Reels Verification', () => {
   it('registers all 60 reels and flagship films with valid metadata', () => {
-    expect(REELS).toHaveLength(60)
+    expect(REELS).toHaveLength(61)
     REELS.forEach((reel, index) => {
       const expectedId = String(index + 1).padStart(2, '0')
       expect(reel.id).toBe(expectedId)
@@ -364,7 +364,7 @@ describe('Motion Design Engine & Reels Verification', () => {
       computeCreativeSimilarity,
     } = await import('../data/reel-registry')
 
-    expect(REEL_REGISTRY_LIST).toHaveLength(60)
+    expect(REEL_REGISTRY_LIST).toHaveLength(61)
 
     // Full sequence validation including weighted creative similarity
     const result = validateReelRegistry(REEL_REGISTRY_LIST)

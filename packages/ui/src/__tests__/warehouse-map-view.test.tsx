@@ -272,7 +272,7 @@ function makeProps(over: Partial<WarehouseMapViewProps> = {}): WarehouseMapViewP
     onPlace: over.onPlace ?? (() => undefined),
     layoutPending: over.layoutPending ?? false,
     layoutError: over.layoutError ?? null,
-    onCreateLocation: over.onCreateLocation ?? (async () => undefined),
+    onCreateLocation: over.onCreateLocation ?? (async () => ({ id: 'new-location' })),
     onUpdateLocation: over.onUpdateLocation ?? (async () => undefined),
     onNavigate: over.onNavigate,
   }

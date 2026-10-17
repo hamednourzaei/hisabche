@@ -52,6 +52,8 @@ export interface SelectFieldOption {
   value: string
   label: React.ReactNode
   disabled?: boolean
+  /** What the search box matches when `label` is not plain text (name, SKU, barcode). */
+  keywords?: string | undefined
 }
 
 export interface SelectFieldProps {
@@ -74,6 +76,30 @@ export interface SelectFieldProps {
    * does not forward it compiles cleanly and then does nothing at all.
    */
   'data-field'?: string
+  /**
+   * A search box at the top of the open list — for long lists (products,
+   * customers). Matching ignores case, Arabic/Persian ی/ي and ک/ك, and the
+   * zero-width non-joiner. The selected option always stays in the list, or
+   * the trigger would lose its label.
+   */
+  searchable?: boolean | undefined
+  searchPlaceholder?: string | undefined
+  /** Shown when nothing matches. */
+  noResultsText?: string | undefined
+}
+
+/** A form both «كالا» and «کالا» reduce to — what the search compares. */
+export function searchKey(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[\u064A\u0649]/g, '\u06CC')
+    .replace(/\u0643/g, '\u06A9')
+    .replace(/\u200C/g, '')
+    .trim()
+}
+
+function optionText(option: SelectFieldOption): string {
+  return [typeof option.label === 'string' ? option.label : '', option.keywords ?? ''].join(' ')
 }
 
 export function SelectField({
@@ -87,17 +113,29 @@ export function SelectField({
   name,
   'aria-label': ariaLabel,
   'data-field': dataField,
+  searchable,
+  searchPlaceholder,
+  noResultsText,
 }: SelectFieldProps) {
+  const [query, setQuery] = React.useState('')
   // A stored value that is not in the list is RENDERED, not dropped. The old
   // native element showed nothing in that case and silently submitted the
   // first option; showing the raw value at least makes the mismatch visible.
   const known = options.some((option) => option.value === (value ?? ''))
   const hasValue = value !== null && value !== undefined
+  const needle = searchable ? searchKey(query) : ''
+  const shown = needle
+    ? options.filter(
+        (option) =>
+          option.value === (value ?? '') || searchKey(optionText(option)).includes(needle),
+      )
+    : options
 
   return (
     <Select
       {...(hasValue ? { value: toRadix(value) } : {})}
       onValueChange={(next) => onChange(fromRadix(next))}
+      {...(searchable ? { onOpenChange: (open: boolean) => (open ? null : setQuery('')) } : {})}
       disabled={Boolean(disabled)}
       {...(name ? { name } : {})}
     >
@@ -110,9 +148,29 @@ export function SelectField({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
+        {searchable ? (
+          <div className="sticky top-0 z-10 bg-[hsl(var(--surface-elevated))] p-1">
+            <input
+              type="search"
+              value={query}
+              autoFocus
+              placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
+              onChange={(event) => setQuery(event.target.value)}
+              // Radix's typeahead would take every key typed here.
+              onKeyDown={(event) => event.stopPropagation()}
+              className="min-h-9 w-full rounded-md border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 text-sm text-[hsl(var(--fg-primary))]"
+            />
+          </div>
+        ) : null}
+        {searchable && needle && shown.every((option) => option.value === (value ?? '')) ? (
+          <p className="px-2 py-3 text-center text-xs text-[hsl(var(--fg-tertiary))]">
+            {noResultsText}
+          </p>
+        ) : null}
         {!known && hasValue && value !== '' ? <SelectItem value={value}>{value}</SelectItem> : null}
 
-        {options.map((option) => (
+        {shown.map((option) => (
           <SelectItem
             key={option.value || EMPTY}
             value={toRadix(option.value)}

@@ -102,5 +102,13 @@
     "primaryTemplate": "word-sync",
     "visualLanguage": "midnight-gold",
     "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 61,
+    "topic": "ده دقیقه پشت تلفن برای پیدا کردن ۲۰ کارتن روغن؛ آدرس قفسه فقط در ذهن یک نفر",
+    "creativeMechanism": "split-horizon-call-vs-shelf",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "cyber-emerald",
+    "hookMechanism": "uncomfortable-discovery"
   }
 ]

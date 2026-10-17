@@ -44,6 +44,7 @@ import { reel57 } from './reel-57-forensic-audit-shield'
 import { reel58 } from './reel-58-offline-pos-sync'
 import { reel59 } from './reel-59-tax-audit-shield'
 import { reel60 } from './reel-60-fx-rate-gap'
+import { reel61 } from './reel-61-shelf-call'
 
 export const REELS: Reel[] = [
   reel01,
@@ -106,6 +107,7 @@ export const REELS: Reel[] = [
   reel58,
   reel59,
   reel60,
+  reel61,
 ]
 
 export { film01, film02, film03, film04, film05 }
@@ -134,4 +136,5 @@ export {
   reel58,
   reel59,
   reel60,
+  reel61,
 }

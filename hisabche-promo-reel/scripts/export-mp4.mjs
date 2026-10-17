@@ -15,6 +15,7 @@ import { createServer } from 'vite'
 import puppeteer from 'puppeteer'
 import { findVoiceoverFile } from './align-voiceover.mjs'
 import { designSoundtrack } from './sound-design.mjs'
+import { checkAvSync, printAvSync } from './check-av-sync.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -125,6 +126,8 @@ export async function exportReelMP4(options = {}) {
   fs.mkdirSync(framesDir, { recursive: true })
   fs.mkdirSync(exportsDir, { recursive: true })
 
+  const voFile = findVoiceoverFile(reel.id)
+
   // 4. Synthesize Deterministic Audio Track (.wav)
   console.log(`\n🔊 Synthesizing audio track from ${cues.length} choreography cues...`)
   // Designed soundtrack: stereo, music bed with side-chain, scene drops, a
@@ -132,6 +135,9 @@ export async function exportReelMP4(options = {}) {
   const wavBuffer = designSoundtrack(cues, totalDuration, {
     sceneStarts: reel.scenes.map((scene) => scene.start),
     ctaAt: reel.scenes[reel.scenes.length - 1]?.start,
+    reelId: reel.id,
+    musicMood: reel.musicMood || 'calm',
+    hasVoiceover: Boolean(voFile),
   })
   const wavPath = path.resolve(tempExportDir, 'audio.wav')
   fs.writeFileSync(wavPath, wavBuffer)
@@ -207,9 +213,7 @@ export async function exportReelMP4(options = {}) {
     }
   }
 
-  const voFile = findVoiceoverFile(reel.id)
-  let ffmpegArgs = []
-
+  let ffmpegArgs
   if (voFile) {
     console.log(`\n🎙️ Voiceover Audio Track Detected: ${voFile}`)
     console.log(`🎬 Muxing with FFmpeg (Frames + Human Voiceover + Ducked SFX): ${outputMp4}...`)
@@ -248,8 +252,10 @@ export async function exportReelMP4(options = {}) {
     console.log(
       `\n⚠️ Notice: No recorded human voiceover found in audio/reel-${reel.id}-vo.wav or .mp3.`,
     )
-    console.log(`   Exporting MP4 with SYNTHESIZED SFX ONLY (pending real voiceover recording).`)
-    console.log(`🎬 Muxing with FFmpeg (Frames + Synthesized SFX): ${outputMp4}...`)
+    console.log(
+      `   Exporting MP4 with RECORDED SFX & MUSIC BED (pending real voiceover recording).`,
+    )
+    console.log(`🎬 Muxing with FFmpeg (Frames + Recorded Audio Track): ${outputMp4}...`)
     ffmpegArgs = [
       '-y',
       '-framerate',
@@ -287,6 +293,16 @@ export async function exportReelMP4(options = {}) {
     }
   }
 
+  // AV SYNC GATE: every placed sound must start within SYNC_LAW.maxLagMs of
+  // its cue, measured on what was produced (the MP4; the effects track when a
+  // voiceover would mask the onsets). A miss fails the export.
+  const sync = checkAvSync(voFile ? wavPath : outputMp4, cues, ffmpegPath, reel.id)
+  printAvSync(sync)
+  if (!sync.ok) {
+    process.exitCode = 1
+    return { success: false, blockedBy: 'AV_SYNC', framesDir, wavPath, outputMp4 }
+  }
+
   const stat = fs.statSync(outputMp4)
   console.log(`\n======================================================`)
   console.log(`✅ Production MP4 Export Succeeded!`)
@@ -315,7 +331,7 @@ export async function exportReelMP4(options = {}) {
   }
 
   console.log(
-    `   Voiceover: ${voFile ? `MUXED (${path.basename(voFile)})` : 'SYNTHESIZED SFX ONLY (pending human recording)'}`,
+    `   Voiceover: ${voFile ? `MUXED (${path.basename(voFile)})` : 'RECORDED SFX & MUSIC (pending human voiceover recording)'}`,
   )
   console.log(`   Alignment Status: ${alignmentStatus}`)
   console.log(`======================================================\n`)

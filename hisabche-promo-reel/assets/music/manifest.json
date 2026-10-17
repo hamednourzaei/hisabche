@@ -1,0 +1,22 @@
+[
+  {
+    "file": "music-calm-softly.ogg",
+    "mood": "calm",
+    "bpm": 100
+  },
+  {
+    "file": "music-tense-coexistenz.ogg",
+    "mood": "tense",
+    "bpm": 120
+  },
+  {
+    "file": "music-uplifting-alive.ogg",
+    "mood": "uplifting",
+    "bpm": 110
+  },
+  {
+    "file": "music-calm-cadillac.ogg",
+    "mood": "calm",
+    "bpm": 90
+  }
+]

@@ -1198,6 +1198,27 @@ export const REEL_REGISTRY_LIST: ReelRegistryEntry[] = [
     description:
       'فاکتور هزار دالری به نرخ ۷۰ صادر و به نرخ ۷۴ پرداخت شد: دفتر ۷۰٬۰۰۰، صندوق ۷۴٬۰۰۰، و ۴٬۰۰۰ افغانی اختلاف که در اکسل با بازنویسی نرخ گم شد. حسابچه نرخ فاکتور را نگه می‌دارد و اختلاف را خودکار به سود و زیان تسعیر ارز می‌برد',
   },
+  {
+    id: '61',
+    title: 'اون کارتن کجاست؟',
+    artDirection: 'kinetic-manifesto',
+    layoutTopology: 'split-screen-horizon',
+    operators: [
+      'SplitHorizon',
+      'CallWaveform',
+      'AisleTorchSweep',
+      'ShelfLocationRow',
+      'ShelfTagFlip',
+    ],
+    themeName: 'cyber-emerald',
+    cardQuotaMax: 3,
+    targetCustomer: 'wholesaler',
+    openingArchetype: 'uncomfortable-discovery',
+    merchantPainCategory: 'inventory-discrepancy',
+    audioStrategy: 'tactile-foley',
+    description:
+      'بنکدار ده دقیقه پشت تلفن داد می‌زند تا ۲۰ کارتن روغن را پیدا کند؛ مشتری پشت خط منتظر است و آدرس قفسه فقط در ذهن یک انباردار است. در حسابچه صفحه‌ی کالا انبار و قفسه را نشان می‌دهد و قفسه همان‌جا عوض می‌شود',
+  },
 ]
 
 // Ensure every entry in the registry carries its designated viral template

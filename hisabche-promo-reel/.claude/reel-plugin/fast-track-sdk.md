@@ -290,3 +290,32 @@ Every new reel must conform to the 12 production rules established in `.claude/r
 10. **Motion Presets:** Use standard primitives (`enterUp`, `enterDown`, `scaleReveal`, `clipReveal`, `highlightSweep`, `staggerEnter`, `stableHold`).
 11. **Context Position Audit:** Diagnostic bounding-box verification (`src/engine/composition-audit.ts`).
 12. **Final Slide Validation:** Perfect end card: CTA visible, brand centered, zero clipped cards, zero blinking.
+
+## 7. HARD RULE 13 — AV SYNC LAW (owner, 17 Oct 2026)
+
+«صدا با تصویر هماهنگ نیست» is no longer a review note; it is a number, and the export refuses the file.
+Code: `scripts/sync-law.mjs` (pure, one definition — mixer, gate and browser preview all import it) ·
+`scripts/sound-design.mjs` (`cuePlacements`) · `scripts/check-av-sync.mjs` (the gate).
+Tests: `scripts/__tests__/av-sync-law.test.mjs` (library) · `src/__tests__/av-sync-law.test.ts` (scripts, reel ≥ 60).
+
+**Script (reel ≥ 60)**
+1. A word with a `sound` has an `action`, and the actor reads that action's time with `cueAt(plan, '<action>', fallback)`. The action string must appear in the actor file.
+2. A `sentenceEnding` carries **no sound** — a hold is not an event.
+3. Two cues closer than 120 ms share one sound (`placedCues`).
+
+**Library (every file in `assets/sfx/manifest.json`)**
+4. The hit point is the first onset (5 ms RMS above 300 Hz, 2.2× the previous 40 ms) that reaches half the file's loudest frame within 30 ms. That frame lands on the cue.
+5. At most 20 ms is kept before the hit (faded in) — a shimmer ahead of the hit is heard as «early».
+6. Every event file is a transient whose FIRST hit leads (no later hit > 1.25× the first). Swells, rustle textures and «riffle then slap» files are not allowed for event kinds.
+7. Files normalised (after the trim) to a 0.5 peak; raw peak below −45 dB refused.
+
+**Mix**
+8. Choke: each sound fades out (60 ms) and is silent 40 ms before the next hit.
+9. Music bed by average level (RMS 0.008), never peak — a dense track at the events' level buried them.
+10. Master make-up gain stops where the loudest hit is 80% of the ceiling; loudness never flattens the hits.
+11. The scene-cut thump is 0.25 s, under the scene's first event.
+
+**Gate** — every export measures the finished file: each transient must start within ±45 ms of its cue, or the export fails (`blockedBy: 'AV_SYNC'`).
+Fast check while writing: `node scripts/check-av-sync.mjs <id> --mix` (seconds). On a file: `node scripts/check-av-sync.mjs <id>`.
+
+What it found on reel 60 (before): clockTick +585 ms, alert +600 ms, impact/markerScribble not heard at all, sparkle 145 ms early — causes: lead silence in files, music too loud after peak-normalising, master loudness raising the bed back up, swell files used for hits.

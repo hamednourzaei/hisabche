@@ -87,7 +87,7 @@ export interface WarehouseMapViewProps {
   onPlace: (input: { locationId: string; productId: string; quantity: number }) => void
   layoutPending: boolean
   layoutError: string | null
-  onCreateLocation: (values: LocationFormValues) => Promise<unknown>
+  onCreateLocation: (values: Omit<LocationFormValues, 'placement'>) => Promise<{ id: string }>
   onUpdateLocation: (values: LocationFormValues & { id: string }) => Promise<unknown>
   onNavigate: ((route: string) => void) | undefined
 }
@@ -195,12 +195,21 @@ export function WarehouseMapView({
 
   const submitLayout = async (values: LocationFormValues) => {
     try {
+      const { placement, ...layout } = values
       if (dialog.editingId) {
-        await onUpdateLocation({ ...values, id: dialog.editingId })
-      } else {
-        await onCreateLocation(values)
+        await onUpdateLocation({ ...layout, id: dialog.editingId })
+        setDialog({ open: false, editingId: null })
+        return
       }
+      const created = await onCreateLocation(layout)
       setDialog({ open: false, editingId: null })
+      // What sits on the new shelf goes through the drawer's own placement, and
+      // the drawer opens on it: the server's answer (recorded / more than this
+      // warehouse holds) is shown where the person is looking.
+      if (placement && canPlace) {
+        setSelectedId(created.id)
+        onPlace({ locationId: created.id, ...placement })
+      }
     } catch {
       // The message is on screen already — `layoutError`, from the server.
     }
@@ -417,6 +426,8 @@ export function WarehouseMapView({
           open={dialog.open}
           editing={locations.find((row) => row.id === dialog.editingId) ?? null}
           locations={locations}
+          warehouseProducts={warehouseProducts}
+          canPlace={canPlace}
           isPending={layoutPending}
           error={layoutError}
           onSubmit={submitLayout}

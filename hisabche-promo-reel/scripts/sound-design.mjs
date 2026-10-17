@@ -16,9 +16,233 @@
 //
 // Any SoundKind without its own recipe falls back to a soft tactile tap, never
 // silence and never a raw beep.
-// ============================================
+import fs from 'node:fs'
+import path from 'node:path'
+import { execSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const ROOT = path.resolve(__dirname, '..')
+const FFMPEG = 'C:\\ffmpeg\\bin\\ffmpeg.exe'
+const SFX_MANIFEST_PATH = path.resolve(ROOT, 'assets', 'sfx', 'manifest.json')
+const MUSIC_MANIFEST_PATH = path.resolve(ROOT, 'assets', 'music', 'manifest.json')
 
 const SR = 48000
+
+// ─── sample cache & variant choice ──────────────────────────────────────────
+const sampleCache = new Map()
+
+export function getPcmSample(filePath) {
+  if (sampleCache.has(filePath)) return sampleCache.get(filePath)
+  if (!fs.existsSync(filePath)) return null
+  const buf = execSync(`"${FFMPEG}" -v error -i "${filePath}" -f f32le -ac 2 -ar ${SR} pipe:1`, {
+    maxBuffer: 50 * 1024 * 1024,
+  })
+  const numFrames = buf.length / 8
+  const L = new Float32Array(numFrames)
+  const R = new Float32Array(numFrames)
+  for (let i = 0; i < numFrames; i++) {
+    L[i] = buf.readFloatLE(i * 8)
+    R[i] = buf.readFloatLE(i * 8 + 4)
+  }
+  // ── AV SYNC LAW (owner, 17 Oct 2026) ──────────────────────────────────────
+  // A recorded file is placed by its HIT POINT, not by its first byte: files
+  // arrived with up to 519 ms of silence and peaks up to 1 s in, so a sound
+  // came half a second after the card it belongs to. The hit point is the
+  // first frame that reaches half the file's peak; the mixer puts THAT frame
+  // on the cue. Every file is also brought to the same peak (−6 dBFS) so a
+  // −40 dB recording is not lost under the music, and a file quieter than
+  // −45 dBFS raw is refused (it is noise, not a sound; short clicks are recorded
+  // as low as −43 dB and are fine once normalised).
+  let peak = 0
+  for (let i = 0; i < numFrames; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]))
+  const rawPeakDb = 20 * Math.log10(peak || 1e-9)
+  if (rawPeakDb < SYNC_LAW.minRawPeakDb) {
+    sampleCache.set(filePath, null)
+    return null
+  }
+  const norm = SYNC_LAW.targetPeak / peak
+  for (let i = 0; i < numFrames; i++) {
+    L[i] *= norm
+    R[i] *= norm
+  }
+  // The hit point is where the EAR hears the sound start: the first onset by
+  // the same detector the export gate runs on the finished file. A swell has
+  // no onset; it is placed by the first frame at half its peak.
+  const mono = new Float32Array(numFrames)
+  for (let i = 0; i < numFrames; i++) mono[i] = (L[i] + R[i]) / 2
+  const hits = hitProfile(mono, SR)
+  const onsets = hits.map((hit) => hit.t)
+  let anchor = 0
+  if (onsets.length > 0) {
+    anchor = Math.round(onsets[0] * SR)
+  } else {
+    for (let i = 0; i < numFrames; i++) {
+      if (Math.max(Math.abs(L[i]), Math.abs(R[i])) >= SYNC_LAW.targetPeak * SYNC_LAW.hitFraction) {
+        anchor = i
+        break
+      }
+    }
+  }
+  // Nothing audible before the hit: a faint shimmer 145 ms ahead of the real
+  // hit (cinematic-sparkle) is heard as «early». Keep SYNC_LAW.leadSeconds of
+  // lead, faded in, and drop the rest.
+  const lead = Math.round(SYNC_LAW.leadSeconds * SR)
+  const from = Math.max(0, anchor - lead)
+  const keptL = L.slice(from)
+  const keptR = R.slice(from)
+  for (let i = 0; i < Math.min(lead, anchor - from); i++) {
+    const g = i / lead
+    keptL[i] *= g
+    keptR[i] *= g
+  }
+  // Level is set on what is KEPT: a printer's motor run-up before its clack
+  // was the file's loudest part, and it is gone.
+  let keptPeak = 0
+  for (let i = 0; i < keptL.length; i++)
+    keptPeak = Math.max(keptPeak, Math.abs(keptL[i]), Math.abs(keptR[i]))
+  const renorm = keptPeak > 0 ? SYNC_LAW.targetPeak / keptPeak : 1
+  for (let i = 0; i < keptL.length; i++) {
+    keptL[i] *= renorm
+    keptR[i] *= renorm
+  }
+  const sample = {
+    L: keptL,
+    R: keptR,
+    length: keptL.length,
+    anchor: anchor - from,
+    transient: onsets.length > 0,
+    leads: firstHitLeads(hits),
+    rawPeakDb,
+  }
+  sampleCache.set(filePath, sample)
+  return sample
+}
+
+export {
+  ONSET,
+  SYNC_LAW,
+  highpass,
+  onsetsOf,
+  hitOnsets,
+  hitProfile,
+  firstHitLeads,
+} from './sync-law.mjs'
+import { SYNC_LAW, firstHitLeads, hitProfile } from './sync-law.mjs'
+
+function readSfxManifest() {
+  if (!fs.existsSync(SFX_MANIFEST_PATH)) return {}
+  try {
+    return JSON.parse(fs.readFileSync(SFX_MANIFEST_PATH, 'utf8'))
+  } catch {
+    return {}
+  }
+}
+
+/** A sample cut to `frames`, its last `SYNC_LAW.chokeSeconds` faded to silence. */
+function choked(sample, frames) {
+  if (frames >= sample.length) return sample
+  const n = Math.max(0, frames)
+  const L = sample.L.slice(0, n)
+  const R = sample.R.slice(0, n)
+  const fade = Math.min(n, Math.floor(SYNC_LAW.chokeSeconds * SR))
+  for (let i = 0; i < fade; i++) {
+    const g = i / fade
+    L[n - 1 - i] *= g
+    R[n - 1 - i] *= g
+  }
+  return { ...sample, L, R, length: n }
+}
+
+/**
+ * Where every placed cue's recorded file goes — the ONE answer the mixer
+ * writes and the export gate measures. `start` is in seconds (the file's
+ * first frame), so the hit point is `start + anchor / sampleRate` = `cue.at`.
+ * A cue with no usable file has `sample: null` (the synth recipe plays it).
+ */
+export function cuePlacements(cues, reelId = '0', manifest = readSfxManifest()) {
+  const placed = placedCues(cues).map((cue, i) => {
+    const file = chooseVariant(manifest[cue.kind], reelId, i)
+    const sample = file ? getPcmSample(path.resolve(ROOT, 'assets', 'sfx', file)) : null
+    return { cue, index: i, file, sample, start: sample ? cue.at - sample.anchor / SR : cue.at }
+  })
+  // One sound at a time: each tail ends where the next hit begins.
+  for (let i = 0; i + 1 < placed.length; i++) {
+    const here = placed[i]
+    if (!here.sample) continue
+    here.sample = choked(
+      here.sample,
+      Math.floor((placed[i + 1].cue.at - SYNC_LAW.chokeLeadSeconds - here.start) * SR),
+    )
+  }
+  return placed
+}
+
+export const SAMPLE_RATE = SR
+
+/**
+ * The cues that actually get a sound, after the «one hit per 120 ms» rule —
+ * the same list the mixer places and the export gate measures. A cue thinned
+ * away here was never promised a sound of its own.
+ */
+export function placedCues(cues) {
+  let last = -Infinity
+  return cues
+    .slice()
+    .sort((a, b) => a.at - b.at)
+    .filter((cue) => {
+      if (cue.at - last < SYNC_LAW.minGapSeconds && cue.kind !== 'ctaResolution') return false
+      last = cue.at
+      return true
+    })
+}
+
+export function chooseVariant(variants, reelId, cueIndex) {
+  if (!variants || variants.length === 0) return null
+  if (variants.length === 1) return variants[0]
+  let h = 2166136261 >>> 0
+  const str = `${reelId || '0'}:${cueIndex}`
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 16777619) >>> 0
+  }
+  return variants[h % variants.length]
+}
+
+const KIND_PROPERTIES = {
+  pop: { gain: 0.55, pan: -0.1, send: 0.1, duck: 0.2 },
+  chatPop: { gain: 0.55, pan: 0.15, send: 0.1, duck: 0.2 },
+  tick: { gain: 0.45, pan: 0.2, send: 0.08, duck: 0.15 },
+  clockTickRapid: { gain: 0.45, pan: 0.25, send: 0.08, duck: 0.2 },
+  typewriterClick: { gain: 0.5, pan: -0.15, send: 0.1, duck: 0.2 },
+  markerScribble: { gain: 0.55, pan: 0.2, send: 0.08, duck: 0.25 },
+  paperRustle: { gain: 0.5, pan: -0.25, send: 0.12, duck: 0.2 },
+  paperTear: { gain: 0.52, pan: -0.2, send: 0.12, duck: 0.25 },
+  cardEnter: { gain: 0.55, pan: -0.1, send: 0.1, duck: 0.2 },
+  cardThock: { gain: 0.6, pan: 0.1, send: 0.12, duck: 0.3 },
+  cash: { gain: 0.58, pan: 0.2, send: 0.15, duck: 0.35 },
+  receiptPrint: { gain: 0.5, pan: -0.2, send: 0.1, duck: 0.25 },
+  whoosh: { gain: 0.5, pan: 0.0, send: 0.18, duck: 0.35 },
+  cameraSwish: { gain: 0.52, pan: 0.1, send: 0.18, duck: 0.35 },
+  softTransition: { gain: 0.45, pan: -0.1, send: 0.15, duck: 0.25 },
+  sceneTransition: { gain: 0.55, pan: 0.0, send: 0.2, duck: 0.4 },
+  impact: { gain: 0.65, pan: 0.0, send: 0.18, duck: 0.45 },
+  alert: { gain: 0.5, pan: 0.1, send: 0.2, duck: 0.3 },
+  titleHit: { gain: 0.65, pan: 0.0, send: 0.2, duck: 0.5 },
+  bigReveal: { gain: 0.65, pan: 0.0, send: 0.22, duck: 0.5 },
+  majorReveal: { gain: 0.68, pan: 0.0, send: 0.25, duck: 0.55 },
+  cinematicReveal: { gain: 0.55, pan: 0.0, send: 0.25, duck: 0.4 },
+  insightReveal: { gain: 0.52, pan: 0.15, send: 0.2, duck: 0.35 },
+  dataFlow: { gain: 0.45, pan: -0.2, send: 0.12, duck: 0.25 },
+  sync: { gain: 0.5, pan: 0.1, send: 0.15, duck: 0.25 },
+  scan: { gain: 0.48, pan: 0.2, send: 0.12, duck: 0.2 },
+  precisionSequence: { gain: 0.45, pan: -0.1, send: 0.1, duck: 0.2 },
+  success: { gain: 0.55, pan: 0.1, send: 0.2, duck: 0.35 },
+  chime: { gain: 0.52, pan: 0.15, send: 0.22, duck: 0.3 },
+  financialMilestone: { gain: 0.6, pan: 0.1, send: 0.22, duck: 0.45 },
+  successResolution: { gain: 0.58, pan: 0.0, send: 0.25, duck: 0.4 },
+  ctaResolution: { gain: 0.62, pan: 0.0, send: 0.25, duck: 0.5 },
+}
 
 // ─── deterministic noise ────────────────────────────────────────────────────
 function rng(seed) {
@@ -95,6 +319,32 @@ class Bus {
     // Side-chain envelope: duck fast, release over ~350 ms.
     const len = Math.min(samples.length + Math.floor(0.35 * SR), this.n - start)
     for (let i = 0; i < len; i++) {
+      const k = start + i
+      if (k < 0) continue
+      const t = i / SR
+      const d = duck * (t < 0.01 ? t / 0.01 : Math.exp(-(t - 0.01) / 0.18))
+      if (d > this.duck[k]) this.duck[k] = d
+    }
+  }
+
+  /** Add a stereo source at time `at`, with a reverb send and ducking. */
+  addStereo(at, sample, { gain = 1, pan = 0, send = 0.15, duck = 0.5 } = {}) {
+    const start = Math.floor(at * SR)
+    const gl = gain * Math.cos(((pan + 1) * Math.PI) / 4)
+    const gr = gain * Math.sin(((pan + 1) * Math.PI) / 4)
+    const len = Math.min(sample.L.length, sample.R.length)
+    for (let i = 0; i < len; i++) {
+      const k = start + i
+      if (k < 0 || k >= this.n) continue
+      const vL = sample.L[i] * gl
+      const vR = sample.R[i] * gr
+      this.L[k] += vL
+      this.R[k] += vR
+      this.sendL[k] += vL * send
+      this.sendR[k] += vR * send
+    }
+    const duckLen = Math.min(len + Math.floor(0.35 * SR), this.n - start)
+    for (let i = 0; i < duckLen; i++) {
       const k = start + i
       if (k < 0) continue
       const t = i / SR
@@ -427,39 +677,47 @@ function recipe(kind, seed) {
 
 // ─── structure: music bed, scene drops, the riser ───────────────────────────
 
-function musicBed(bus, duration) {
-  // i – VI – III – VII in D minor, two bars each at ~86 bpm, low-passed pad.
-  const chords = [
-    [50, 57, 62, 65],
-    [46, 53, 58, 62],
-    [53, 57, 60, 65],
-    [48, 55, 60, 64],
-  ]
-  const bar = (60 / 86) * 4
-  const lpL = onePoleLP(1100)
-  const lpR = onePoleLP(1000)
+function musicBed(bus, duration, { mood = 'calm', hasVoiceover = false } = {}) {
+  let musicManifest = []
+  if (fs.existsSync(MUSIC_MANIFEST_PATH)) {
+    try {
+      musicManifest = JSON.parse(fs.readFileSync(MUSIC_MANIFEST_PATH, 'utf8'))
+    } catch {
+      // ignore
+    }
+  }
+
+  let musicFile = 'music-calm-softly.ogg'
+  const match = musicManifest.find((m) => m.mood === mood) || musicManifest[0]
+  if (match?.file) musicFile = match.file
+
+  const musicPath = path.resolve(ROOT, 'assets', 'music', musicFile)
+  const sample = getPcmSample(musicPath)
+  if (!sample) return
+
   const n = Math.ceil(duration * SR)
+  // Duck by ~ -10 dB when voiceover is present: 10^(-10/20) ≈ 0.3162
+  const voDucking = hasVoiceover ? 0.3162 : 1.0
+  // The bed is set by its AVERAGE level, not its peak: a dense track at the
+  // events' peak buried them (reel 60: music alone 0.08–0.17 RMS above 300 Hz,
+  // the event sounds 0.2–0.3 — six of them «not heard»). SYNC_LAW.bedRms keeps
+  // every event about 20 dB over the bed.
+  let sq = 0
+  for (let i = 0; i < sample.length; i++)
+    sq += (sample.L[i] * sample.L[i] + sample.R[i] * sample.R[i]) / 2
+  const bedRms = Math.sqrt(sq / Math.max(1, sample.length))
+  const baseGain = (SYNC_LAW.bedRms / Math.max(bedRms, 1e-6)) * voDucking
+
   for (let i = 0; i < n; i++) {
     const t = i / SR
-    const idx = Math.floor(t / (bar * 2)) % chords.length
-    const local = t % (bar * 2)
-    const fadeChord = Math.min(1, local / 0.6) * Math.min(1, (bar * 2 - local) / 0.6)
-    let l = 0
-    let r = 0
-    for (const m of chords[idx]) {
-      const f = midi(m)
-      l += Math.sin(2 * Math.PI * f * t) + 0.3 * Math.sin(2 * Math.PI * f * 1.003 * t)
-      r += Math.sin(2 * Math.PI * f * 0.998 * t) + 0.3 * Math.sin(2 * Math.PI * f * 2 * t) * 0.5
-    }
-    // A soft eighth-note pulse on the root keeps time without drums.
-    const eighth = (t % (bar / 8)) / (bar / 8)
-    const pulse =
-      Math.sin(2 * Math.PI * midi(chords[idx][0] - 12) * t) * Math.exp(-eighth * 6) * 0.6
+    const sampleIdx = i % sample.L.length
     const fadeIn = Math.min(1, t / 1.5)
     const fadeOut = Math.min(1, (duration - t) / 1.2)
-    const level = 0.035 * fadeChord * fadeIn * Math.max(0, fadeOut) * (1 - 0.75 * bus.duck[i])
-    bus.L[i] += (lpL(l) + pulse) * level
-    bus.R[i] += (lpR(r) + pulse) * level
+    const duckFactor = 1 - 0.75 * bus.duck[i]
+    const level = baseGain * fadeIn * Math.max(0, fadeOut) * duckFactor
+
+    bus.L[i] += sample.L[sampleIdx] * level
+    bus.R[i] += sample.R[sampleIdx] * level
   }
 }
 
@@ -468,11 +726,13 @@ function sceneDrops(bus, sceneStarts) {
     if (at <= 0.05) continue
     bus.add(
       at - 0.02,
-      render(0.9, (t) => Math.sin(2 * Math.PI * (48 - 18 * t) * t) * env(t, 0.003, 0.3)),
+      // 0.25 s: the cut's own thump, gone before the scene's first event.
+      render(0.25, (t) => Math.sin(2 * Math.PI * (48 - 18 * t) * t) * env(t, 0.003, 0.07)),
+      // Under the cut's own sound, never over the scene's first event.
       {
-        gain: 0.55,
+        gain: 0.3,
         send: 0.1,
-        duck: 0.5,
+        duck: 0.3,
       },
     )
   }
@@ -545,9 +805,15 @@ function master(L, R) {
     sum += a * a + b * b
   }
   const rms = Math.sqrt(sum / (2 * L.length)) || 1e-9
-  const target = Math.pow(10, -17 / 20)
-  const gain = Math.min(8, target / rms)
-  const ceiling = Math.pow(10, -1 / 20) // −1 dBTP-ish
+  const target = Math.pow(10, -16.2 / 20)
+  const ceiling = Math.pow(10, -5.5 / 20) // −5.5 dBFS ceiling guarantees AAC true peak <= −1.0 dBTP on dense transients
+  // AV sync law: loudness never costs the hits. The continuous bed dominates
+  // the average, so «reach −16 dBFS RMS» alone raised the bed back up and
+  // tanh flattened every hit into it (reel 60: six sounds «not heard»). The
+  // make-up gain stops where the loudest hit still sits at 80% of the ceiling.
+  let peak = 0
+  for (let i = 0; i < L.length; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]))
+  const gain = Math.min(8, target / rms, (0.8 * ceiling) / Math.max(peak, 1e-9))
   for (let i = 0; i < L.length; i++) {
     L[i] = Math.tanh((L[i] * gain) / ceiling) * ceiling
     R[i] = Math.tanh((R[i] * gain) / ceiling) * ceiling
@@ -563,21 +829,26 @@ function master(L, R) {
  */
 export function designSoundtrack(cues, duration, structure = {}) {
   const bus = new Bus(duration)
+  const reelId = structure.reelId || '0'
+  const musicMood = structure.musicMood || 'calm'
+  const hasVoiceover = Boolean(structure.hasVoiceover)
+
   // Hits first, so the music bed knows where to duck.
   // At most one designed hit per 120 ms: a pile-up of hits is noise.
-  let last = -1
-  cues
-    .slice()
-    .sort((a, b) => a.at - b.at)
-    .forEach((cue, i) => {
-      if (cue.at - last < 0.12 && cue.kind !== 'ctaResolution') return
-      last = cue.at
-      const r = recipe(cue.kind, 1009 * (i + 1))
-      bus.add(cue.at, r.samples, r)
-    })
+  cuePlacements(cues, reelId).forEach(({ cue, index, sample, start }) => {
+    if (sample) {
+      const props = KIND_PROPERTIES[cue.kind] || { gain: 0.5, pan: 0, send: 0.15, duck: 0.3 }
+      // The HIT POINT lands on the cue (AV sync law), not the file's start.
+      bus.addStereo(start, sample, props)
+      return
+    }
+    // Fallback to synthesis recipe if sample not found
+    const r = recipe(cue.kind, 1009 * (index + 1))
+    bus.add(cue.at, r.samples, r)
+  })
   sceneDrops(bus, structure.sceneStarts ?? [])
   if (typeof structure.ctaAt === 'number' && structure.ctaAt > 1.5) riser(bus, structure.ctaAt)
-  musicBed(bus, duration)
+  musicBed(bus, duration, { mood: musicMood, hasVoiceover })
 
   const wetL = reverb(bus.sendL, {
     combs: [1557, 1617, 1491, 1422].map((x) => Math.round((x * SR) / 44100)),

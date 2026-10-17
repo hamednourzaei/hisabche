@@ -549,6 +549,15 @@
       "dominantLayout": "asymmetrical-swiss-grid",
       "cardQuotaPercent": 20,
       "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
+    },
+    {
+      "id": "61",
+      "title": "اون کارتن کجاست؟",
+      "theme": "cyber-emerald",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "split-screen-horizon",
+      "cardQuotaPercent": 20,
+      "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
     }
   ]
 }

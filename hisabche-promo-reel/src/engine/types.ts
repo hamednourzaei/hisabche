@@ -442,6 +442,8 @@ export interface SaaSStoryMatrix {
   selectedOperators: string[]
 }
 
+export type MusicMood = 'calm' | 'tense' | 'uplifting'
+
 export interface Reel {
   id: string
   title: string
@@ -449,6 +451,7 @@ export interface Reel {
   scenes: Scene[]
   theme?: ThemeName
   storyMatrix?: SaaSStoryMatrix
+  musicMood?: MusicMood
 }
 
 export interface Cue {

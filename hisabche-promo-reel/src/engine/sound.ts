@@ -45,6 +45,108 @@ export type SoundKind =
 
 export type AudioPalette = 'cinematic' | 'editorial' | 'kinetic' | 'financial' | 'digital'
 
+import sfxManifestJson from '../../assets/sfx/manifest.json'
+import { SYNC_LAW, hitOnsets } from '../../scripts/sync-law.mjs'
+
+const sfxManifest = sfxManifestJson as Record<string, string[]>
+const bufferCache = new Map<string, AudioBuffer>()
+
+/**
+ * AV SYNC LAW — the SAME code as the export (scripts/sync-law.mjs). A file is
+ * played from its hit point (first onset that reaches half its loudest frame
+ * within 30 ms), keeps at most `leadSeconds` before it, and plays at the
+ * normalised level — so the studio preview hears what the export places.
+ */
+const MIN_RAW_PEAK = Math.pow(10, SYNC_LAW.minRawPeakDb / 20)
+const hitInfo = new Map<string, { offset: number; norm: number } | null>()
+
+function measureHit(buf: AudioBuffer): { offset: number; norm: number } | null {
+  const mono = new Float32Array(buf.length)
+  let peak = 0
+  for (let c = 0; c < buf.numberOfChannels; c++) {
+    const d = buf.getChannelData(c)
+    for (let i = 0; i < d.length; i++) {
+      mono[i]! += d[i]! / buf.numberOfChannels
+      peak = Math.max(peak, Math.abs(d[i]!))
+    }
+  }
+  if (peak < MIN_RAW_PEAK) return null
+  const hits = hitOnsets(mono, buf.sampleRate)
+  const hit = hits[0] ?? 0
+  const offset = Math.max(0, hit - SYNC_LAW.leadSeconds)
+  let kept = 0
+  for (let c = 0; c < buf.numberOfChannels; c++) {
+    const d = buf.getChannelData(c)
+    for (let i = Math.floor(offset * buf.sampleRate); i < d.length; i++)
+      kept = Math.max(kept, Math.abs(d[i]!))
+  }
+  return { offset, norm: SYNC_LAW.targetPeak / Math.max(kept, 1e-9) }
+}
+let globalCueCount = 0
+
+export function chooseVariant(
+  variants: string[],
+  reelId?: string,
+  cueIndex?: number,
+): string | null {
+  if (!variants || variants.length === 0) return null
+  if (variants.length === 1) return variants[0]
+  const idx = cueIndex !== undefined ? cueIndex : globalCueCount
+  let h = 2166136261 >>> 0
+  const str = `${reelId || '0'}:${idx}`
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 16777619) >>> 0
+  }
+  return variants[h % variants.length]
+}
+
+async function playSample(fileName: string, gainLevel = 0.5): Promise<boolean> {
+  const a = getAudio()
+  if (!a || isMuted) return false
+
+  try {
+    let buf = bufferCache.get(fileName)
+    if (!buf) {
+      // Plain bytes from the dev server, so a download manager does not try to
+      // grab each sound (see `soundData` in vite.config.ts); the direct file
+      // path only where that route is absent (a static build).
+      let res = await fetch(`/sound-data?f=${encodeURIComponent(`sfx/${fileName}`)}`)
+      if (!res.ok) res = await fetch(`/assets/sfx/${fileName}`)
+      if (!res.ok) return false
+      const arrayBuf = await res.arrayBuffer()
+      buf = await a.decodeAudioData(arrayBuf)
+      bufferCache.set(fileName, buf)
+    }
+
+    const source = a.createBufferSource()
+    source.buffer = buf
+    const gain = a.createGain()
+    if (!hitInfo.has(fileName)) hitInfo.set(fileName, measureHit(buf))
+    const hit = hitInfo.get(fileName)
+    if (!hit) return false
+    gain.gain.setValueAtTime(gainLevel * hit.norm, a.currentTime)
+
+    if (masterGain) {
+      source.connect(gain)
+      gain.connect(masterGain)
+    } else {
+      source.connect(gain)
+      gain.connect(a.destination)
+    }
+
+    // From the hit point: the sound lands on the frame it belongs to.
+    source.start(a.currentTime, hit.offset)
+    source.onended = () => {
+      source.disconnect()
+      gain.disconnect()
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
 // ─── Master Audio Bus & Lifecycle Management ──────────────────────────────
 
 let ctx: AudioContext | null = null
@@ -780,7 +882,20 @@ export function playReceiptPrint() {
 
 // ─── Main Dispatcher ─────────────────────────────────────────────────────
 
-export function play(kind: SoundKind) {
+export function play(kind: SoundKind, options?: { reelId?: string; cueIndex?: number }) {
+  globalCueCount++
+  const variants = sfxManifest[kind]
+  if (variants && variants.length > 0) {
+    const file = chooseVariant(variants, options?.reelId, options?.cueIndex)
+    if (file) {
+      void playSample(file)
+      return
+    }
+  }
+  playSynthesized(kind)
+}
+
+function playSynthesized(kind: SoundKind) {
   switch (kind) {
     case 'pop':
       return playPop()

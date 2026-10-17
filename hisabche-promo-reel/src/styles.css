@@ -6371,3 +6371,354 @@ button {
   color: #fbbf24;
   direction: ltr;
 }
+
+/* ─── Reel 61 — split horizon: the call above, the shelf below ─────────────── */
+.r61-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.r61-horizon {
+  position: absolute;
+  inset-inline: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.9), transparent);
+  box-shadow: 0 0 18px rgba(52, 211, 153, 0.6);
+  z-index: 2;
+}
+
+.r61-top {
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  height: 62%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 0 22px;
+  background: radial-gradient(circle at 50% 45%, rgba(127, 29, 29, 0.35), transparent 70%);
+}
+
+.r61-bottom {
+  position: absolute;
+  top: 62%;
+  bottom: 0;
+  inset-inline: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 22px;
+}
+
+.r61-calm {
+  justify-content: center;
+  gap: 16px;
+  background: radial-gradient(circle at 50% 40%, rgba(6, 78, 59, 0.45), transparent 75%);
+}
+
+.r61-call {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.r61-badge {
+  font-size: 13px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 4px 14px;
+}
+
+.r61-badge.red {
+  color: #fb7185;
+  background: rgba(251, 113, 133, 0.12);
+  border: 1px solid rgba(251, 113, 133, 0.45);
+}
+
+.r61-badge.green {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+}
+
+.r61-wave {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 80px;
+}
+
+.r61-wave span {
+  width: 6px;
+  border-radius: 3px;
+}
+
+.r61-wave.red span {
+  background: linear-gradient(180deg, #fb7185, #b91c1c);
+}
+
+.r61-wave.green span {
+  background: linear-gradient(180deg, #6ee7b7, #059669);
+}
+
+.r61-shout {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 900;
+  line-height: 1.45;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 6px 26px rgba(0, 0, 0, 0.85);
+}
+
+.r61-hl-red {
+  color: #fb7185;
+  font-weight: 900;
+  font-size: 26px;
+  text-shadow: 0 0 18px rgba(251, 113, 133, 0.55);
+}
+
+.r61-shout .r61-hl-red {
+  font-size: inherit;
+}
+
+.r61-hl-green {
+  color: #34d399;
+  text-shadow: 0 0 18px rgba(52, 211, 153, 0.55);
+}
+
+.r61-calm-ghost {
+  color: #6ee7b7;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.r61-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: rgba(15, 10, 10, 0.92);
+  border: 1.5px solid rgba(251, 113, 133, 0.35);
+  border-radius: 20px;
+  padding: 14px 24px;
+}
+
+.r61-muted {
+  color: #a8a29e;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.r61-timer {
+  font-size: 40px;
+  font-weight: 900;
+  color: #fb7185;
+  font-variant-numeric: tabular-nums;
+}
+
+.r61-aisles {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  justify-content: center;
+}
+
+.r61-aisle {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: 14px;
+  background: rgba(20, 20, 24, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.r61-aisle-name {
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.r61-torch {
+  position: absolute;
+  inset: -6px;
+  border-radius: 16px;
+  background: radial-gradient(circle, rgba(253, 224, 71, 0.35), transparent 70%);
+  pointer-events: none;
+}
+
+.r61-question {
+  color: #fde68a;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.r61-shelf-tag {
+  direction: ltr;
+  font-size: 18px;
+  font-weight: 900;
+  color: #052e1f;
+  background: #34d399;
+  border-radius: 8px;
+  padding: 3px 12px;
+}
+
+.r61-shelf-tag.dim {
+  font-size: 12px;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.r61-note {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 320px;
+  padding: 18px 24px;
+  background: #fef3c7;
+  color: #292524;
+  border-radius: 6px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+}
+
+.r61-note-head {
+  font-size: 13px;
+  font-weight: 800;
+  color: #92400e;
+}
+
+.r61-note-body {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.6;
+  text-wrap: balance;
+}
+
+.r61-strike {
+  position: absolute;
+  inset-inline: 14px;
+  top: 58%;
+  height: 4px;
+  background: #b91c1c;
+  border-radius: 2px;
+  transform-origin: right center;
+}
+
+.r61-absent {
+  color: #fb7185;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.r61-carton {
+  padding: 18px 28px;
+  border-radius: 10px;
+  background: linear-gradient(160deg, #a16207, #713f12);
+  color: #fef3c7;
+  font-size: 20px;
+  font-weight: 900;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.55);
+}
+
+.r61-product {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 24px;
+  border-radius: 22px;
+  background: linear-gradient(160deg, rgba(6, 30, 24, 0.96), rgba(3, 12, 10, 0.98));
+  border: 1.5px solid rgba(52, 211, 153, 0.35);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
+}
+
+.r61-product-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.r61-product-name {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.r61-loc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.r61-loc-row.lit {
+  border-color: rgba(52, 211, 153, 0.8);
+  box-shadow: 0 0 24px rgba(52, 211, 153, 0.35);
+}
+
+.r61-loc-value {
+  color: #f8fafc;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.r61-loc-flip {
+  display: inline-block;
+}
+
+.r61-move {
+  align-self: center;
+  color: #6ee7b7;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px dashed rgba(52, 211, 153, 0.6);
+}
+
+.r61-cta-title {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1.45;
+  color: #fff;
+  text-align: center;
+}
+
+.r61-cta-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 26px 24px;
+  border-radius: 24px;
+  background: linear-gradient(160deg, rgba(6, 30, 24, 0.96), rgba(3, 12, 10, 0.98));
+  border: 1.5px solid rgba(52, 211, 153, 0.5);
+  text-align: center;
+}
+
+.r61-cta-action {
+  font-size: 30px;
+  font-weight: 900;
+  color: #34d399;
+}
+
+.r61-cta-url {
+  direction: ltr;
+  font-size: 20px;
+  font-weight: 800;
+  color: #f8fafc;
+}

@@ -1,6 +1,7 @@
 # Hisabche Promo Reel — Creative Director's Handbook
 > **Path:** `.claude/reel-plugin/creative-director.md`  
-> **Mission:** Transform a raw topic into a gripping, visceral, 10/10 SaaS conversion masterpiece.
+> **Mission:** Transform a raw topic into a gripping, visceral, 10/10 SaaS conversion masterpiece.  
+> **Prompt Library Rule:** Before writing a new reel, pick an unused prompt from `docs/prompt-library/README.md` and mark it used there.
 
 ---
 
