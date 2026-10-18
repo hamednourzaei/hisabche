@@ -169,10 +169,18 @@
   },
   {
     "id": 69,
-    "topic": "موشن گرافیک کاراکترمحور پلتفرم Pocketsflow؛ فروش دوره‌ها، تسویه آنی، آپسل و مالیات جهانی",
+    "topic": "کاراکتر حسابچه؛ یک فاکتور، پنج کار: انبار، صندوق، دفتر کل، طلب مشتری و سود",
     "creativeMechanism": "dithered-character-commerce-explainer",
     "primaryTemplate": "word-sync",
     "visualLanguage": "swiss-editorial",
+    "hookMechanism": "visual-pattern-interrupt"
+  },
+  {
+    "id": 70,
+    "topic": "ulyssexbt: Genesis Block — هویت بصری برند کریپتو در ۱۵ ثانیه",
+    "creativeMechanism": "genesis-freeze-brand-identity",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "kinetic-manifesto",
     "hookMechanism": "visual-pattern-interrupt"
   }
 ]

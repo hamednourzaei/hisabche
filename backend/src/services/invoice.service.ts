@@ -55,6 +55,7 @@ import type { TenancyContext } from './tenancy.service'
 import { requireWorkspace } from './tenancy.service'
 import { logBusinessEvent } from './event-log.service'
 import { WarehouseMapService } from './inventory/warehouse-map.service'
+import { latestBuyPrices } from './inventory/buy-price.domain'
 import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
 import { IdempotencyUnavailableError, isMissingIdempotencySupport } from '../utils/client-request'
 import { assertWithinLimit } from './plan-limits.service'
@@ -1203,6 +1204,8 @@ export class InvoiceService {
       // throws, and it touches no stock, cost or ledger figure.
       if (direction === 1 && movementRows.length > 0) {
         await shelves.autoShelveInvoice(ctx, invoiceId)
+        // «قیمت خرید» follows the last purchase (buy-price.domain.ts).
+        await this.refreshBuyPrices(ctx, invoiceId)
       }
       // Costing FIRST, then the ledger: the journal entry needs the cost that
       // was actually consumed, and only the costing core can say what that was.
@@ -2269,6 +2272,110 @@ export class InvoiceService {
     return (data as { warehouse_id?: string | null } | null)?.warehouse_id ?? null
   }
 
+  /**
+   * «قیمت خرید» = the last price paid (`buy-price.domain.ts`). Called once a
+   * purchase's goods are in stock. Never throws: the invoice is already real,
+   * and a price display must not undo it. Touches only `products.buy_price` —
+   * no sale price, cost layer or journal.
+   *
+   * ⚠️ An invoice dated BEFORE another purchase of the same product (entered
+   * late, or approved late) does not overwrite the newer price.
+   */
+  private async refreshBuyPrices(ctx: TenancyContext, invoiceId: string): Promise<void> {
+    try {
+      const { data: invoice, error } = await supabase
+        .from('invoices')
+        .select('id, date, currency, type')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', invoiceId)
+        .maybeSingle()
+      if (error || !invoice || invoice.type !== 'purchase') return
+
+      const { data: items, error: itemsError } = await supabase
+        .from('invoice_items')
+        .select('product_id, quantity, unit_price, unit')
+        .eq('invoice_id', invoiceId)
+        .not('product_id', 'is', null)
+      if (itemsError || !items || items.length === 0) return
+
+      const ids = [...new Set(items.map((row: { product_id: string }) => String(row.product_id)))]
+      let products = await supabase
+        .from('products')
+        .select('id, unit, currency')
+        .eq('workspace_id', ctx.workspaceId)
+        .in('id', ids)
+      if (products.error && ['42703', 'PGRST204'].includes(products.error.code ?? '')) {
+        products = (await supabase
+          .from('products')
+          .select('id, unit')
+          .eq('workspace_id', ctx.workspaceId)
+          .in('id', ids)) as typeof products
+      }
+      if (products.error || !products.data) return
+
+      // Products bought again on a LATER date keep that later price.
+      const newer = new Set<string>()
+      if (invoice.date) {
+        const { data: later, error: laterError } = await supabase
+          .from('invoice_items')
+          .select('product_id, invoices!inner(date, type, status, workspace_id)')
+          .in('product_id', ids)
+          .neq('invoice_id', invoiceId)
+          .eq('invoices.workspace_id', ctx.workspaceId)
+          .eq('invoices.type', 'purchase')
+          .neq('invoices.status', 'cancelled')
+          .gt('invoices.date', invoice.date)
+        if (laterError) {
+          console.error(
+            '[InvoiceService] newer-purchase check failed:',
+            invoiceId,
+            laterError.message,
+          )
+          return
+        }
+        for (const row of later ?? []) newer.add(String((row as { product_id: string }).product_id))
+      }
+
+      const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
+      const rate = await this.storedExchangeRate(ctx.workspaceId, invoiceId)
+      const prices = latestBuyPrices(
+        {
+          currency: invoice.currency ?? null,
+          exchangeRate: rate,
+          booksCurrency,
+          lines: items.map((row: Record<string, unknown>) => ({
+            productId: String(row.product_id),
+            quantity: Number(row.quantity) || 0,
+            unitPrice: Number(row.unit_price) || 0,
+            unit: (row.unit as string | null) ?? null,
+          })),
+        },
+        new Map(
+          (
+            products.data as Array<{ id: string; unit: string | null; currency?: string | null }>
+          ).map((row) => [
+            row.id,
+            { id: row.id, unit: row.unit ?? null, currency: row.currency ?? null },
+          ]),
+        ),
+      )
+
+      for (const [productId, price] of prices) {
+        if (newer.has(productId)) continue
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ buy_price: price, updated_at: new Date().toISOString() })
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('id', productId)
+        if (updateError) {
+          console.error('[InvoiceService] buy price update failed:', productId, updateError.message)
+        }
+      }
+    } catch (err) {
+      console.error('[InvoiceService] buy price refresh failed:', invoiceId, err)
+    }
+  }
+
   /** An amount of the invoice's currency, in the books currency, at the invoice's rate. */
   private static inBooksCurrency(amount: number, rate: number): number {
     return inBooksCurrency(amount, rate)
@@ -2369,6 +2476,7 @@ export class InvoiceService {
       // A purchase approved later: its goods arrive now — the auto shelf too.
       if (direction === 1 && invoiceId) {
         await shelves.autoShelveInvoice(ctx, invoiceId)
+        await this.refreshBuyPrices(ctx, invoiceId)
       }
     }
   }

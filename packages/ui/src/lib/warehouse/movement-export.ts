@@ -30,8 +30,14 @@ export function movementTypeWord(type: string, t: T): string {
     : type
 }
 
-/** Which way it went, in a word — never by colour alone. */
-export function movementDirectionWord(quantity: number, t: T): string {
+/**
+ * Which way it went, in a word — never by colour alone.
+ *
+ * A transfer between two warehouses neither adds nor removes stock: one side
+ * loses what the other gains, so it reads «جابه‌جایی», never «افزایش».
+ */
+export function movementDirectionWord(quantity: number, t: T, isTransfer = false): string {
+  if (isTransfer) return t('warehouse.movementMoved', 'جابه‌جایی')
   return quantity < 0 ? t('warehouse.movementOut', 'کاهش') : t('warehouse.movementIn', 'افزایش')
 }
 
@@ -81,7 +87,7 @@ export function movementExportTable(
   const rows = movements.map((movement) => [
     movement.createdAt ? ctx.dateTime(movement.createdAt) : '—',
     movementTypeWord(movement.type, ctx.t),
-    movementDirectionWord(movement.quantity, ctx.t),
+    movementDirectionWord(movement.quantity, ctx.t, movement.isTransfer),
     movementPlace(movement, ctx.warehouseNames) ?? '—',
     movement.quantity,
     movement.balance,

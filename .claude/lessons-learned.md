@@ -1463,3 +1463,15 @@ The invoice picker read 100 products and narrowed them to the warehouse in the b
 ## 166. A form that asks for the total when the person means «add» (18 Oct 2026)
 
 «گذاشتن روی قفسه» asked how many are ON the shelf and pre-filled «on the shelf + on no shelf». So re-placing 2 gearboxes showed 8, and a product new to the shelf showed its whole stock. Capacity was stored but nothing enforced it. The dialog now shows the four numbers (in the warehouse, on this shelf, on no shelf, capacity) and asks for an ADDITION. The maximum is `placeLimits` = min(on no shelf, room). The server enforces the same rule inside `storage_place_stock` (shelf-capacity-01). A purchase fills the product auto shelf once per invoice via `storage_auto_receipts`. The overflow warning is DERIVED (`shelfOverflows`) and never stored, so it cannot drift or duplicate. The map hook builds its answer field by field, so a new field there must be mapped by name or it vanishes.
+
+## 167. حرکت انتقال، کالای تازه نیست (۱۸ اکتبر ۲۰۲۶)
+انتقال یک ردیف `stock_movements` با هر دو انبار و مقدار **مثبت** است؛ تریگر از مبدأ کم و به مقصد اضافه می‌کند و `products.quantity` را دست نمی‌زند. تاریخچه‌ی کالا همان مقدار را در مانده جمع می‌کرد: ۱۱ موجود، «۱۲» در تاریخچه و «انتقال · افزایش +۱». حالا `isTransfer` در مانده شمرده نمی‌شود و جهتش «جابه‌جایی» است. داده درست بود — فقط خواندن غلط بود. گارد: `buy-price-and-transfer-history.test.ts`.
+
+## 168. «قیمت خرید» را هیچ خریدی به‌روز نمی‌کرد
+`products.buy_price` فقط در فرم کالا نوشته می‌شد؛ خرید ۲۵ میلیونی همه‌جا ۲۰ نشان می‌داد. حالا بعد از ورود کالای فاکتور خرید، `refreshBuyPrices` (`buy-price.domain.ts`) قیمت آخرین خرید را می‌نویسد — همان واحد، همان ارز یا ارز دفاتر با نرخ منجمد فاکتور؛ خرید با تاریخ قدیمی‌تر قیمت تازه‌تر را عوض نمی‌کند. قیمت فروش، لایه‌ی بها و سند دست نمی‌خورند.
+
+## 169. عوض‌کردن ارز فاکتور فقط برچسب را عوض می‌کرد
+کالا در فاکتور افغانی انتخاب شد (۳۰ میلیون)، بعد ارز «دالر» و نرخ ۶۵ — خط همان ۳۰٬۰۰۰٬۰۰۰ ماند و «دالر» خوانده شد (۶۰ میلیون دالر). تبدیل فقط هنگام انتخاب کالا بود. حالا خطی که برنامه قیمتش را پر کرده با هر تغییر ارز/نرخ از قیمت دفاتر دوباره قیمت می‌خورد (`repriceAutoFilled`)؛ قیمتِ تایپ‌شده دست نمی‌خورد؛ بی‌نرخ، خالی می‌شود.
+
+## 170. شماره‌ی صندوق بعد از فاکتور تا رفرش سخت عوض نمی‌شد
+`useSession` نه staleTime کوتاه داشت نه با mutation فاکتور invalidate می‌شد، در حالی که «کل دریافتی امروز» (cash-flow) هر ۶۰ ثانیه تازه می‌شد. هر mutation فاکتور حالا `['till']` را هم invalidate می‌کند. گارد: `packages/api/src/__tests__/invoice-refreshes-till.test.ts`.

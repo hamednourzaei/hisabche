@@ -52,14 +52,21 @@ export interface StockMovementRecord {
   fromWarehouseId: string | null
   toWarehouseId: string | null
   createdAt: string | null
-  /** Running total after this movement, oldest first. */
+  /**
+   * A move between two of the business's own warehouses (both sides set).
+   * Its `quantity` is the amount moved, always positive — it is NOT a change
+   * to how much of the product exists (`stock_movements_project` moves the two
+   * warehouse rows and leaves `products.quantity` alone).
+   */
+  isTransfer: boolean
+  /** Running total of the PRODUCT after this movement, oldest first. */
   balance: number
 }
 
 export interface StockHistory {
   productId: string
   productName: string
-  /** `SUM(quantity)` over every movement — what the projection should equal. */
+  /** Σ of every non-transfer movement — what the projection should equal. */
   movementTotal: number
   /**
    * `products.quantity` as stored.
@@ -103,7 +110,12 @@ export class StockHistoryService {
     let running = 0
     const movements: StockMovementRecord[] = (data ?? []).map((row: Record<string, any>) => {
       const quantity = Number(row.quantity) || 0
-      running += quantity
+      // ⚠️ A transfer is one row with both warehouses and a POSITIVE quantity.
+      // Adding it here counted every transfer as new stock: 11 on hand read
+      // as 12 in the history, and «انتقال · افزایش +۱» (owner, 18 Oct 2026).
+      // The trigger never adds a transfer to the product total; neither do we.
+      const isTransfer = Boolean(row.from_warehouse_id && row.to_warehouse_id)
+      if (!isTransfer) running += quantity
 
       return {
         id: String(row.id),
@@ -115,6 +127,7 @@ export class StockHistoryService {
         fromWarehouseId: row.from_warehouse_id ?? null,
         toWarehouseId: row.to_warehouse_id ?? null,
         createdAt: row.created_at ?? null,
+        isTransfer,
         balance: running,
       }
     })

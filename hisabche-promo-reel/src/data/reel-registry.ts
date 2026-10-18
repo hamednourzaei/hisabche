@@ -1376,7 +1376,7 @@ export const REEL_REGISTRY_LIST: ReelRegistryEntry[] = [
   },
   {
     id: '69',
-    title: 'Pocketsflow — موشن گرافیک پلتفرم فروش دوره‌ها و محصولات دیجیتال',
+    title: 'یک فاکتور، پنج کار — کاراکتر حسابچه',
     artDirection: 'swiss-editorial',
     layoutTopology: 'data-flow-matrix',
     operators: [
@@ -1392,7 +1392,27 @@ export const REEL_REGISTRY_LIST: ReelRegistryEntry[] = [
     openingArchetype: 'visual-pattern-interrupt',
     audioStrategy: 'rhythmic-urgency',
     description:
-      'ویدیوی ۱۵ ثانیه‌ای موشن‌گرافیک پلتفرم Pocketsflow با کاراکتر دیترشده، کارت‌های محصول، فرایند خرید آنی، تسویه اپل‌پی و پیشنهادهای مکمل',
+      'کاراکتر دیترشده‌ی حسابچه نشان می‌دهد یک فاکتور چه می‌کند: کالا و خدمت و جنس وزنی در یک سند، نیمی نقد و نیمی نسیه، نرخ دالر همان روز روی فاکتور، و در اوج پنج کار هم‌زمان — انبار، صندوق، دفتر کل، طلب مشتری و سود',
+  },
+  {
+    id: '70',
+    title: 'ulyssexbt: Genesis Block',
+    artDirection: 'kinetic-manifesto',
+    layoutTopology: 'asymmetrical-swiss-grid',
+    operators: [
+      'GenesisFreeze',
+      'BlockStackOdometer',
+      'NetworkPulseConstellation',
+      'FinalLockCta',
+      'BrandLockReveal',
+    ],
+    themeName: 'kinetic-manifesto',
+    cardQuotaMax: 2,
+    targetCustomer: 'wholesaler',
+    openingArchetype: 'visual-pattern-interrupt',
+    audioStrategy: 'rhythmic-urgency',
+    description:
+      'هویت بصری ulyssexbt در ۱۵ ثانیه: ژنسیس فریز، پشته بلاک با هش و ارتفاع، شبکه ۱۲۸ نود با صفر تاخیر، و قفل نهایی برند — هویتی که برای X طراحی شده است',
   },
 ]
 

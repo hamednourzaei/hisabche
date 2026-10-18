@@ -127,7 +127,7 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **ارز دفاتر و ممیزی چندارزی؛ ورود فایل (۱۱ اکتبر)**                    | `.claude/reverse-and-import/01-CURRENCY-AUDIT.md` · `00-SPEC.md`                         |
 | **مرور کار Antigravity؛ صندوق چندارزی، رخدادها، لینک حضور و غیاب (۱۲ اکتبر)** | `.claude/SESSION-CACHE-2026-10-12-ANTIGRAVITY-REVIEW.md` · `AGENTS.md` — **attendance-devices-01، attendance-02، invoice-exchange-rate-01 و till-payments-01 منتظر اجرا** |
 | **ممیزی زنده ۱۴ اکتبر: ۸۲ باگ، درس‌ها، آنچه منتظر انسان است**                 | `.claude/LIVE-AUDIT-2026-10-14.md` · `.claude/SESSION-CACHE-2026-10-14-LIVE-AUDIT.md` — **custom-units-01 منتظر اجرا و VERIFY** |
-| **همه‌ی درس‌ها با شماره (۱–۱۶۶)**                                     | `.claude/lessons-learned.md`                                                |
+| **همه‌ی درس‌ها با شماره (۱–۱۷۰)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |

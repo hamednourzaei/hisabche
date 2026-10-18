@@ -118,7 +118,7 @@ export function ProductMovementsPanel({
         render: (movement) => (
           // Which way it went, in a word — never by colour alone.
           <span className="text-xs text-[hsl(var(--fg-secondary))]">
-            {movementDirectionWord(movement.quantity, t)}
+            {movementDirectionWord(movement.quantity, t, movement.isTransfer)}
           </span>
         ),
       },
@@ -141,12 +141,14 @@ export function ProductMovementsPanel({
             dir="ltr"
             className={cn(
               'tabular-nums',
-              movement.quantity < 0
-                ? 'text-[hsl(var(--color-destructive))]'
-                : 'text-[hsl(var(--color-success))]',
+              movement.isTransfer
+                ? 'text-[hsl(var(--color-muted-foreground))]'
+                : movement.quantity < 0
+                  ? 'text-[hsl(var(--color-destructive))]'
+                  : 'text-[hsl(var(--color-success))]',
             )}
           >
-            {movement.quantity > 0 ? '+' : ''}
+            {movement.quantity > 0 && !movement.isTransfer ? '+' : ''}
             {formatNumber(movement.quantity, locale, 3)}
           </span>
         ),
@@ -212,7 +214,7 @@ export function ProductMovementsPanel({
     return rows.filter((movement) =>
       matchesSearch(search, [
         movementTypeWord(movement.type, t),
-        movementDirectionWord(movement.quantity, t),
+        movementDirectionWord(movement.quantity, t, movement.isTransfer),
         movementPlace(movement, warehouseName) ?? '',
         movement.notes ?? '',
         movement.referenceType ?? '',

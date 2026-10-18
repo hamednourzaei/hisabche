@@ -9901,10 +9901,10 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  direction: ltr;
+  direction: rtl;
   box-sizing: border-box;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  font-family: inherit;
   user-select: none;
 }
 
@@ -9959,11 +9959,11 @@ button {
 }
 
 .r69-creator-tag {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: inherit;
   font-size: 18px;
   font-weight: 700;
   color: #0056b3;
-  letter-spacing: -0.01em;
+  letter-spacing: normal;
 }
 
 .r69-headline {
@@ -9971,8 +9971,8 @@ button {
   font-weight: 800;
   color: #111827;
   margin: 0;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
+  line-height: 1.5;
+  letter-spacing: normal;
 }
 
 .r69-right-column {
@@ -10068,7 +10068,7 @@ button {
 }
 
 .r69-checkout-card {
-  width: 310px;
+  width: 360px;
   background: #ffffff;
   border: 1.5px solid #e5e7eb;
   border-radius: 24px;
@@ -10089,8 +10089,8 @@ button {
   font-size: 13px;
   font-weight: 800;
   color: #0056b3;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .r69-step-tag {
@@ -10110,6 +10110,12 @@ button {
 
 .r69-item-row.compact {
   padding: 10px 12px;
+}
+
+.r69-item-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .r69-item-name {
@@ -10289,7 +10295,7 @@ button {
   font-size: 11px;
   font-weight: 800;
   color: #0056b3;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .r69-mini-tag.blue {
@@ -10381,8 +10387,8 @@ button {
 .r69-rev-label {
   font-size: 10px;
   color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .r69-rev-num {
@@ -10406,7 +10412,7 @@ button {
   align-items: center;
   font-size: 58px;
   font-weight: 900;
-  letter-spacing: -0.04em;
+  letter-spacing: normal;
 }
 
 .r69-logo-part.pockets {
@@ -10421,5 +10427,240 @@ button {
   font-size: 16px;
   font-weight: 600;
   color: #6b7280;
-  letter-spacing: -0.01em;
+  letter-spacing: normal;
+}
+
+/* ─── Reel #70 — ulyssexbt: Genesis Block (kinetic-manifesto / full-bleed-kinetic) ─── */
+.r70-stage {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  direction: rtl;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: radial-gradient(120% 80% at 50% 12%, #0d0d0d 0%, #050505 62%, #000000 100%);
+}
+
+.r70-particle-field {
+  position: absolute;
+  inset: -10%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.r70-particle {
+  font-size: 28px;
+  font-weight: 700;
+  color: rgba(250, 204, 21, 0.7);
+  text-shadow: 0 0 8px rgba(250, 204, 21, 0.4);
+}
+
+.r70-freeze-anchor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  z-index: 1;
+}
+.r70-wordmark {
+  font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  font-size: 110px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #fafafa;
+  line-height: 1;
+}
+.r70-genesis-tag {
+  letter-spacing: 0.4em;
+  font-size: 22px;
+  font-weight: 800;
+  color: #facc15;
+  padding: 4px 0 0 0.4em;
+  border-top: 2px solid rgba(250, 204, 21, 0.3);
+}
+
+.r70-block-anchor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.r70-block {
+  width: 520px;
+  padding: 32px 40px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(20, 20, 20, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
+  border: 1px solid rgba(250, 204, 21, 0.25);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(250, 204, 21, 0.08);
+  box-sizing: border-box;
+}
+.r70-block-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+.r70-block-label {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: #facc15;
+}
+.r70-block-height {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 56px;
+  font-weight: 900;
+  color: #fafafa;
+  font-variant-numeric: tabular-nums;
+}
+.r70-block-hash {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(250, 204, 21, 0.15);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 22px;
+  line-height: 1.6;
+  color: rgba(250, 250, 250, 0.7);
+}
+.r70-hash-prefix {
+  color: #facc15;
+  font-weight: 900;
+}
+.r70-hash-zeros {
+  color: #4ade80;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  display: inline-block;
+  max-width: 0;
+  white-space: nowrap;
+  transition: max-width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.r70-hash-zeros.visible {
+  max-width: 380px;
+}
+.r70-hash-rest {
+  color: rgba(250, 250, 250, 0.4);
+}
+.r70-block-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(250, 204, 21, 0.1);
+}
+.r70-meta-label {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #facc15;
+}
+.r70-meta-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 36px;
+  font-weight: 900;
+  color: #fafafa;
+  font-variant-numeric: tabular-nums;
+}
+.r70-stack-indicator {
+  width: 6px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #facc15 0%, #22d3ee 100%);
+  margin-top: -10px;
+}
+
+.r70-network-anchor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+.r70-constellation {
+  position: relative;
+  width: 480px;
+  height: 480px;
+}
+.r70-node {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transform-origin: center;
+  will-change: transform, opacity, box-shadow;
+}
+.r70-latency-badge {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 24px;
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.9);
+  border: 1px solid rgba(74, 222, 128, 0.4);
+}
+.r70-latency-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 52px;
+  font-weight: 900;
+  color: #4ade80;
+  font-variant-numeric: tabular-nums;
+}
+.r70-latency-unit {
+  font-size: 20px;
+  font-weight: 700;
+  color: rgba(74, 222, 128, 0.7);
+  margin-bottom: 4px;
+}
+.r70-sync-text {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  color: #22d3ee;
+  text-shadow: 0 0 30px rgba(34, 211, 238, 0.6);
+}
+
+.r70-final-anchor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.r70-brand-final {
+  font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  font-size: 120px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #fafafa;
+  line-height: 1;
+}
+.r70-trust-seal {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 36px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.15) 0%, rgba(34, 211, 238, 0.1) 100%);
+  border: 1px solid rgba(74, 222, 128, 0.4);
+}
+.r70-seal-icon {
+  font-size: 36px;
+  color: #4ade80;
+}
+.r70-seal-text {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: #4ade80;
+}
+.r70-url {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 36px;
+  font-weight: 800;
+  color: #facc15;
+  letter-spacing: 0.02em;
+  direction: ltr;
 }

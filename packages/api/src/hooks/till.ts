@@ -195,6 +195,11 @@ export function useSession(sessionId: string) {
       return data as { session: PosSession; totals: SessionTotals }
     },
     enabled: ready && Boolean(sessionId),
+    // «موجودی ثبت‌شده» is cash a sale made a moment ago — as fresh as the
+    // drawer ledger, not the app-wide default (owner, 18 Oct 2026: only a hard
+    // refresh showed an issued invoice here, while «کل دریافتی امروز» moved).
+    staleTime: 5_000,
+    refetchOnWindowFocus: true,
   })
 }
 

@@ -238,6 +238,8 @@ export function useCreateInvoice() {
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
       // A new invoice changes the party's receivable, statement and activity (Customer 360).
       queryClient.invalidateQueries({ queryKey: paymentKeys.all })
+      // The till's «موجودی ثبت‌شده» moves with an invoice's cash payment.
+      queryClient.invalidateQueries({ queryKey: ['till'] })
       queryClient.invalidateQueries({ queryKey: warehouseKeys.all })
     },
   })
@@ -275,6 +277,8 @@ export function useUpdateInvoice() {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() })
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
       queryClient.invalidateQueries({ queryKey: paymentKeys.all })
+      // The till's «موجودی ثبت‌شده» moves with an invoice's cash payment.
+      queryClient.invalidateQueries({ queryKey: ['till'] })
       queryClient.invalidateQueries({ queryKey: warehouseKeys.all })
     },
   })
@@ -295,6 +299,8 @@ export function useDeleteInvoice() {
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
       // Customer 360 summary/statement/activity live under paymentKeys.all.
       queryClient.invalidateQueries({ queryKey: paymentKeys.all })
+      // The till's «موجودی ثبت‌شده» moves with an invoice's cash payment.
+      queryClient.invalidateQueries({ queryKey: ['till'] })
       queryClient.invalidateQueries({ queryKey: warehouseKeys.all })
     },
   })

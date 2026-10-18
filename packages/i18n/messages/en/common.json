@@ -2089,6 +2089,7 @@
     "exportNote": "Note",
     "movementIn": "Increase",
     "movementOut": "Decrease",
+    "movementMoved": "Moved",
     "movementType": {
       "sale": "Sale",
       "purchase": "Purchase",

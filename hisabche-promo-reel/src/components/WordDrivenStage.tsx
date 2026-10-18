@@ -24,6 +24,7 @@ import { Reel66ShopkeeperActor } from './Reel66ShopkeeperActors'
 import { Reel67PriceListActor } from './Reel67PriceListActors'
 import { Reel68ShowreelActor } from './Reel68ShowreelActors'
 import { Reel69ShowreelActor } from './Reel69ShowreelActors'
+import { Reel70UlysseXBTactor } from './Reel70UlysseXBTActors'
 import { faNumber } from '../ui/motion-primitives'
 
 interface WordDrivenStageProps {
@@ -64,6 +65,7 @@ export function WordDrivenStage({ t, scene }: WordDrivenStageProps) {
         {actor?.startsWith('r67-') && <Reel67PriceListActor actor={actor} t={t} plan={plan} />}
         {actor?.startsWith('r68-') && <Reel68ShowreelActor actor={actor} t={t} plan={plan} />}
         {actor?.startsWith('r69-') && <Reel69ShowreelActor actor={actor} t={t} plan={plan} />}
+        {actor?.startsWith('r70-') && <Reel70UlysseXBTactor actor={actor} t={t} plan={plan} />}
       </div>
 
       {/* ── Synchronized Live Teleprompter / Subtitles (Clean Caption Bar) ── */}

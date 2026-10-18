@@ -26,6 +26,7 @@ const words: Record<string, string> = {
   'warehouse.movementType.adjustment': 'تعدیل',
   'warehouse.movementIn': 'افزایش',
   'warehouse.movementOut': 'کاهش',
+  'warehouse.movementMoved': 'جابه‌جایی',
   'common.date': 'تاریخ',
   'common.type': 'نوع',
   'warehouse.direction': 'جهت',
@@ -70,6 +71,10 @@ describe('the words', () => {
     expect(movementDirectionWord(-2, t)).toBe('کاهش')
     expect(movementDirectionWord(0, t)).toBe('افزایش')
     expect(movementDirectionWord(5, t)).toBe('افزایش')
+  })
+
+  it('a transfer between two warehouses is a move, not an increase (18 Oct 2026)', () => {
+    expect(movementDirectionWord(1, t, true)).toBe('جابه‌جایی')
   })
 
   it('a transfer reads from ← to; a one-sided movement reads its side; neither is null', () => {

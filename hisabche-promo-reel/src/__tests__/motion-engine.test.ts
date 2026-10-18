@@ -18,7 +18,7 @@ import { faNumber } from '../ui/motion-primitives'
 
 describe('Motion Design Engine & Reels Verification', () => {
   it('registers all 60 reels and flagship films with valid metadata', () => {
-    expect(REELS).toHaveLength(69)
+    expect(REELS).toHaveLength(70)
     REELS.forEach((reel, index) => {
       const expectedId = String(index + 1).padStart(2, '0')
       expect(reel.id).toBe(expectedId)
@@ -364,7 +364,7 @@ describe('Motion Design Engine & Reels Verification', () => {
       computeCreativeSimilarity,
     } = await import('../data/reel-registry')
 
-    expect(REEL_REGISTRY_LIST).toHaveLength(69)
+    expect(REEL_REGISTRY_LIST).toHaveLength(70)
 
     // Full sequence validation including weighted creative similarity
     const result = validateReelRegistry(REEL_REGISTRY_LIST)
@@ -913,18 +913,18 @@ describe('Motion Design Engine & Reels Verification', () => {
     expect(climax68.end - climax68.start - ending68.at).toBeGreaterThanOrEqual(1.0)
   })
 
-  it('verifies Reel 69 Pocketsflow creator explainer has exact 15s duration, 6 scenes, and climax hold >= 1.0s', () => {
+  it('verifies Reel 69 «یک فاکتور، پنج کار» has 33.5s, 6 scenes, and climax hold >= 1.0s', () => {
     const reel69 = REELS.find((r) => r.id === '69')
     expect(reel69).toBeDefined()
-    expect(reel69!.duration).toBe(15.0)
+    expect(reel69!.duration).toBe(33.5)
     expect(reel69!.scenes).toHaveLength(6)
 
     const expectedActors = [
-      'r69-creator-hook',
-      'r69-product-cards',
-      'r69-checkout-flow',
-      'r69-upsell-tax',
-      'r69-multi-panel-split',
+      'r69-invoice-hook',
+      'r69-line-cards',
+      'r69-cash-credit',
+      'r69-day-rate',
+      'r69-five-jobs',
       'r69-brand-outro',
     ]
 
@@ -940,7 +940,7 @@ describe('Motion Design Engine & Reels Verification', () => {
 
     // The six scenes tile the reel exactly — no gap, no overlap
     expect(reel69!.scenes[0]!.start).toBe(0)
-    expect(reel69!.scenes[reel69!.scenes.length - 1]!.end).toBe(15.0)
+    expect(reel69!.scenes[reel69!.scenes.length - 1]!.end).toBe(33.5)
     reel69!.scenes.forEach((scene, index) => {
       if (index > 0) expect(scene.start).toBe(reel69!.scenes[index - 1]!.end)
     })
@@ -949,5 +949,41 @@ describe('Motion Design Engine & Reels Verification', () => {
     const climax69 = reel69!.scenes[4]!
     const ending69 = climax69.sentence!.sentenceEnding!
     expect(climax69.end - climax69.start - ending69.at).toBeGreaterThanOrEqual(1.0)
+  })
+
+  it('verifies Reel 70 ulyssexbt brand identity has exact 15s duration, 4 scenes, and valid word cues', () => {
+    const reel70 = REELS.find((r) => r.id === '70')
+    expect(reel70).toBeDefined()
+    expect(reel70!.duration).toBe(15.0)
+    expect(reel70!.scenes).toHaveLength(4)
+
+    const expectedActors = [
+      'r70-genesis-freeze',
+      'r70-block-stack',
+      'r70-network-pulse',
+      'r70-final-lock',
+    ]
+
+    reel70!.scenes.forEach((scene, index) => {
+      expect(scene.spec.kind).toBe('word-sync')
+      if (scene.spec.kind === 'word-sync') {
+        expect(scene.spec.actor).toBe(expectedActors[index])
+      }
+      expect(scene.sentence).toBeDefined()
+      expect(scene.sentence!.words.length).toBeGreaterThan(0)
+      expect(scene.sentence!.intent.length).toBeGreaterThan(0)
+    })
+
+    // The four scenes tile the reel exactly — no gap, no overlap
+    expect(reel70!.scenes[0]!.start).toBe(0)
+    expect(reel70!.scenes[reel70!.scenes.length - 1]!.end).toBe(15.0)
+    reel70!.scenes.forEach((scene, index) => {
+      if (index > 0) expect(scene.start).toBe(reel70!.scenes[index - 1]!.end)
+    })
+
+    // Climax scene (scene 3, network pulse) holds at least 1.0s after its sentence resolves
+    const climax70 = reel70!.scenes[2]!
+    const ending70 = climax70.sentence!.sentenceEnding!
+    expect(climax70.end - climax70.start - ending70.at).toBeGreaterThanOrEqual(1.0)
   })
 })

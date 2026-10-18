@@ -30,6 +30,8 @@ import {
   exchangeRateOf,
   needsExchangeRate,
   priceForInvoice,
+  repriceAutoFilled,
+  type AutoPricedLine,
 } from '../../../../lib/invoices/exchange-rate'
 import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import {
@@ -61,6 +63,28 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   // A product's price is in the books currency; on an invoice in another one it
   // is converted at this invoice's rate, or left empty (priceForInvoice).
   const lineRate = exchangeRateOf(draft.exchangeRateFrom, draft.exchangeRateTo)
+  // Lines the APP priced from a product, so a later currency or rate change
+  // can price them again (repriceAutoFilled) instead of relabelling the number.
+  const [autoPriced, setAutoPriced] = useState<ReadonlyMap<string, AutoPricedLine>>(new Map())
+  const rememberAutoPrice = useCallback((rowId: string, booksPrice: string, filled: string) => {
+    setAutoPriced((prev) => new Map(prev).set(rowId, { booksPrice, filled }))
+  }, [])
+  useEffect(() => {
+    if (autoPriced.size === 0) return
+    const rows = useInvoiceDraftStore.getState().rows
+    const current = new Map(rows.map((row) => [row.id, row.values[COLUMN.unitPrice] ?? '']))
+    const changes = repriceAutoFilled(current, autoPriced, currency, bookCurrency, lineRate)
+    if (changes.size === 0) return
+    for (const [rowId, price] of changes) draft.setCell(rowId, COLUMN.unitPrice, price)
+    setAutoPriced((prev) => {
+      const next = new Map(prev)
+      for (const [rowId, price] of changes) {
+        const line = next.get(rowId)
+        if (line) next.set(rowId, { ...line, filled: price })
+      }
+      return next
+    })
+  }, [autoPriced, draft, currency, bookCurrency, lineRate])
   const setPrimaryCurrency = useCurrencyStore((s) => s.setPrimaryCurrency)
   const [savingDraft, setSavingDraft] = useState(false)
 
@@ -87,15 +111,14 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   // stock — both are legitimate invoice lines.
   const handlePickProduct = useCallback(
     (rowId: string, product: { id: string; name: string; price: string; unit: string }) => {
-      draft.setRowProduct(
-        rowId,
-        product.id,
-        product.name,
-        priceForInvoice(product.price, currency, bookCurrency, lineRate),
-      )
+      const before = useInvoiceDraftStore.getState().rows.find((row) => row.id === rowId)
+      const price = priceForInvoice(product.price, currency, bookCurrency, lineRate)
+      draft.setRowProduct(rowId, product.id, product.name, price)
+      // setRowProduct seeds the price only into an empty cell — only then is it ours.
+      if (!before?.values[COLUMN.unitPrice]?.trim()) rememberAutoPrice(rowId, product.price, price)
       draft.setCell(rowId, COLUMN.unit, product.unit || 'piece')
     },
-    [draft, currency, bookCurrency, lineRate],
+    [draft, currency, bookCurrency, lineRate, rememberAutoPrice],
   )
 
   // ─── Barcode scanner → invoice line ──────────────────────────────────────
@@ -110,12 +133,10 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
       // No id → nothing to link stock to; never a line that moves nothing.
       if (!product.id) return
       const unit = product.unit || 'piece'
-      const price = priceForInvoice(
-        String((draft.transactionType === 'purchase' ? product.buyPrice : product.sellPrice) ?? ''),
-        currency,
-        bookCurrency,
-        lineRate,
+      const booksPrice = String(
+        (draft.transactionType === 'purchase' ? product.buyPrice : product.sellPrice) ?? '',
       )
+      const price = priceForInvoice(booksPrice, currency, bookCurrency, lineRate)
       // Read the store at the moment of the scan: two scans a few ms apart
       // must see each other's line, not the same render's snapshot.
       const rows = useInvoiceDraftStore.getState().rows
@@ -130,11 +151,17 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
         rowId = useInvoiceDraftStore.getState().rows.at(-1)?.id ?? null
       }
       if (!rowId) return
+      const target = rowId
+      const typed = useInvoiceDraftStore
+        .getState()
+        .rows.find((row) => row.id === target)
+        ?.values[COLUMN.unitPrice]?.trim()
       draft.setRowProduct(rowId, product.id, product.name, price)
+      if (!typed) rememberAutoPrice(rowId, booksPrice, price)
       draft.setCell(rowId, COLUMN.unit, unit)
       if (add !== 1) draft.setCell(rowId, COLUMN.quantity, String(add))
     },
-    [draft, currency, bookCurrency, lineRate],
+    [draft, currency, bookCurrency, lineRate, rememberAutoPrice],
   )
 
   // A scale label's weight (or price ÷ unit price) is the quantity; an

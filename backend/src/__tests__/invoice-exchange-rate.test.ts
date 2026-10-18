@@ -175,8 +175,10 @@ describe('what the rate is used for', () => {
   })
 
   it('every later posting of the same invoice reads the rate it was frozen with', () => {
-    // Made, edited, re-posted, approved: four places that book an invoice.
-    expect(service.split('await this.storedExchangeRate(ctx.workspaceId').length - 1).toBe(3)
+    // Made, edited, re-posted, approved: four places that book an invoice —
+    // plus «قیمت خرید» after a purchase (refreshBuyPrices), which converts at
+    // the same frozen rate.
+    expect(service.split('await this.storedExchangeRate(ctx.workspaceId').length - 1).toBe(4)
     expect(service).toContain('...(exchangeRate !== 1 ? { exchange_rate: exchangeRate } : {}),')
   })
 

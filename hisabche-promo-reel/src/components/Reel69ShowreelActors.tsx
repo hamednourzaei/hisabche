@@ -1,16 +1,24 @@
 // ============================================
-// Reel #69 — Pocketsflow Creator E-Commerce Explainer
+// Reel #69 — یک فاکتور، پنج کار (character-led explainer)
 //
-// Dynamic 15-second character-led motion graphics explainer
-// showcasing: product listings, checkout, upsells, subscription management.
+// Six beats, one dithered character, one focal stage each:
+//   r69-invoice-hook   one invoice, «۱ = ۵»
+//   r69-line-cards     a product, a service and a weighed item on one invoice
+//   r69-cash-credit    the line price, then half cash, half credit
+//   r69-day-rate       a dollar invoice keeps that day's rate on it
+//   r69-five-jobs      climax — stock, till, ledger, customer balance, profit
+//   r69-brand-outro    «حساب» + «چه»
 //
-// Hard Rules 14-19:
-// 1. One Focal Stage per beat with zero clutter.
-// 2. Strict text budget: <= 6 words per label.
-// 3. Clean of any dividing line classes.
-// 4. AV Sync Law: every sounded word has an action read via cueAt.
-// 5. Deterministic animations driven purely by scene time t.
+// Every number is one invoice's: a gearbox at 30,000,000 AFN bought at
+// 20,000,000 — so the stock drops by one, the till takes the cash half, the
+// customer owes the other half, and the profit is 10,000,000. Nothing on screen
+// is a feature حسابچه does not have.
+//
+// Every time comes from the scene's own words via cueAt (AV sync law); the
+// fallback is only what the stage draws before a plan exists.
 // ============================================
+
+import type { ReactNode } from 'react'
 
 import type { SentencePlan } from '../engine/speech-model'
 import { clamp, ease, mix, progress, studioSpringEnter } from '../engine/anim'
@@ -19,6 +27,9 @@ interface R69Props {
   t: number
   plan?: SentencePlan | undefined
 }
+
+const fa = new Intl.NumberFormat('fa-IR')
+const n = (value: number) => fa.format(value)
 
 export function Reel69ShowreelActor({
   actor,
@@ -29,11 +40,11 @@ export function Reel69ShowreelActor({
   t: number
   plan?: SentencePlan | undefined
 }) {
-  if (actor === 'r69-creator-hook') return <CreatorHook t={t} plan={plan} />
-  if (actor === 'r69-product-cards') return <ProductCards t={t} plan={plan} />
-  if (actor === 'r69-checkout-flow') return <CheckoutFlow t={t} plan={plan} />
-  if (actor === 'r69-upsell-tax') return <UpsellTax t={t} plan={plan} />
-  if (actor === 'r69-multi-panel-split') return <MultiPanelSplit t={t} plan={plan} />
+  if (actor === 'r69-invoice-hook') return <InvoiceHook t={t} plan={plan} />
+  if (actor === 'r69-line-cards') return <LineCards t={t} plan={plan} />
+  if (actor === 'r69-cash-credit') return <CashCredit t={t} plan={plan} />
+  if (actor === 'r69-day-rate') return <DayRate t={t} plan={plan} />
+  if (actor === 'r69-five-jobs') return <FiveJobs t={t} plan={plan} />
   if (actor === 'r69-brand-outro') return <BrandOutro t={t} plan={plan} />
   return null
 }
@@ -42,7 +53,50 @@ function cueAt(plan: SentencePlan | undefined, action: string, fallback: number)
   return plan?.words.find((w) => w.action === action)?.start ?? fallback
 }
 
-// ─── Dither Patterns & Animated Character Component ─────────────────────────
+/** The stage every beat stands on: background, dither patterns, grid. */
+function Stage({
+  theme = 'white',
+  className = '',
+  children,
+}: {
+  theme?: 'white' | 'blue'
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <div
+      className={`r69-stage ${theme === 'blue' ? 'r69-blue-panel-theme' : 'r69-white-theme'} ${className}`}
+    >
+      <DitherDefs />
+      <div className={`r69-grid-bg ${theme === 'blue' ? 'dark' : ''}`} />
+      {children}
+    </div>
+  )
+}
+
+/** Shown from `at` on, sprung in from the given side. */
+function Enter({
+  t,
+  at,
+  from,
+  className,
+  children,
+}: {
+  t: number
+  at: number
+  from: { x?: number; y?: number }
+  className: string
+  children: ReactNode
+}) {
+  if (t < at) return null
+  return (
+    <div className={className} style={studioSpringEnter(t, at, from)}>
+      {children}
+    </div>
+  )
+}
+
+// ─── Dither patterns & the character ────────────────────────────────────────
 
 function DitherDefs() {
   return (
@@ -56,10 +110,6 @@ function DitherDefs() {
           <rect width="2" height="2" fill="#111827" fillOpacity="0.35" />
           <rect x="2" y="2" width="2" height="2" fill="#111827" fillOpacity="0.35" />
         </pattern>
-        <pattern id="r69-dither-white" width="4" height="4" patternUnits="userSpaceOnUse">
-          <rect width="2" height="2" fill="#ffffff" fillOpacity="0.55" />
-          <rect x="2" y="2" width="2" height="2" fill="#ffffff" fillOpacity="0.55" />
-        </pattern>
       </defs>
     </svg>
   )
@@ -69,16 +119,18 @@ function DitheredCharacter({
   t,
   scale = 1,
   lookingAt = 'center',
-  isSmiling = true,
 }: {
   t: number
   scale?: number
   lookingAt?: 'left' | 'right' | 'center'
-  isSmiling?: boolean
 }) {
   const bob = Math.sin(t * 6) * 4
   const tilt = Math.sin(t * 3.5) * 2.5
-  const eyeOffset = lookingAt === 'left' ? -3 : lookingAt === 'right' ? 3 : 0
+  const eye = lookingAt === 'left' ? -3 : lookingAt === 'right' ? 3 : 0
+  const body =
+    'M32 110 C32 95 48 88 70 88 C92 88 108 95 108 110 L114 156 C114 158 112 160 110 160 L30 160 C28 160 26 158 26 156 Z'
+  const hair =
+    'M36 50 C36 28 50 20 70 20 C90 20 104 28 104 50 C104 42 98 34 88 34 C80 34 76 38 70 38 C64 38 60 34 52 34 C42 34 36 42 36 50 Z'
 
   return (
     <div
@@ -89,438 +141,265 @@ function DitheredCharacter({
       }}
     >
       <svg width="140" height="170" viewBox="0 0 140 170" fill="none">
-        {/* Shadow base */}
         <ellipse cx="70" cy="162" rx="36" ry="6" fill="rgba(0,0,0,0.06)" />
-
-        {/* Torso / Hoodie */}
-        <path
-          d="M32 110 C32 95 48 88 70 88 C92 88 108 95 108 110 L114 156 C114 158 112 160 110 160 L30 160 C28 160 26 158 26 156 Z"
-          fill="#0056B3"
-        />
-        {/* Dither Texture on Hoodie */}
-        <path
-          d="M32 110 C32 95 48 88 70 88 C92 88 108 95 108 110 L114 156 C114 158 112 160 110 160 L30 160 C28 160 26 158 26 156 Z"
-          fill="url(#r69-dither-dark)"
-        />
-        {/* Hoodie Strings */}
+        <path d={body} fill="#0056B3" />
+        <path d={body} fill="url(#r69-dither-dark)" />
         <path d="M62 98 L60 126" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" />
         <path d="M78 98 L80 126" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" />
-
-        {/* Head */}
         <circle cx="70" cy="56" r="32" fill="#FDE68A" />
-        {/* Dither Shading on Head */}
         <path d="M44 68 C50 82 90 82 96 68 C88 86 52 86 44 68 Z" fill="url(#r69-dither-dark)" />
-
-        {/* Retro Pixel/Dither Hair */}
-        <path
-          d="M36 50 C36 28 50 20 70 20 C90 20 104 28 104 50 C104 42 98 34 88 34 C80 34 76 38 70 38 C64 38 60 34 52 34 C42 34 36 42 36 50 Z"
-          fill="#1F2937"
-        />
-        <path
-          d="M36 50 C36 28 50 20 70 20 C90 20 104 28 104 50 C104 42 98 34 88 34 C80 34 76 38 70 38 C64 38 60 34 52 34 C42 34 36 42 36 50 Z"
-          fill="url(#r69-dither-blue)"
-        />
-
-        {/* Eyes */}
-        <circle cx={58 + eyeOffset} cy="54" r="4.5" fill="#111827" />
-        <circle cx={82 + eyeOffset} cy="54" r="4.5" fill="#111827" />
-        <circle cx={59.5 + eyeOffset} cy="52.5" r="1.5" fill="#ffffff" />
-        <circle cx={83.5 + eyeOffset} cy="52.5" r="1.5" fill="#ffffff" />
-
-        {/* Cheeks with dither glow */}
+        <path d={hair} fill="#1F2937" />
+        <path d={hair} fill="url(#r69-dither-blue)" />
+        <circle cx={58 + eye} cy="54" r="4.5" fill="#111827" />
+        <circle cx={82 + eye} cy="54" r="4.5" fill="#111827" />
+        <circle cx={59.5 + eye} cy="52.5" r="1.5" fill="#ffffff" />
+        <circle cx={83.5 + eye} cy="52.5" r="1.5" fill="#ffffff" />
         <circle cx="50" cy="62" r="5" fill="#F87171" fillOpacity="0.45" />
         <circle cx="90" cy="62" r="5" fill="#F87171" fillOpacity="0.45" />
-
-        {/* Smile */}
-        {isSmiling ? (
-          <path
-            d="M62 64 Q70 73 78 64"
-            stroke="#111827"
-            strokeWidth="3"
-            strokeLinecap="round"
-            fill="none"
-          />
-        ) : (
-          <path
-            d="M63 66 Q70 68 77 66"
-            stroke="#111827"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            fill="none"
-          />
-        )}
+        <path
+          d="M62 64 Q70 73 78 64"
+          stroke="#111827"
+          strokeWidth="3"
+          strokeLinecap="round"
+          fill="none"
+        />
       </svg>
     </div>
   )
 }
 
-// ─── Beat 1 (0.0 - 1.5s): Hook — White Screen & Character ───────────────────
-function CreatorHook({ t, plan }: R69Props) {
-  const popAt = cueAt(plan, 'char-pop-in', 0.15)
-  const gotAt = cueAt(plan, 'got-something-in', 0.45)
-  const tagAt = cueAt(plan, 'creators-tag-in', 1.05)
+// ─── Beat 1: one invoice, five jobs ─────────────────────────────────────────
+function InvoiceHook({ t, plan }: R69Props) {
+  const popAt = cueAt(plan, 'char-pop-in', 0.35)
+  const invoiceAt = cueAt(plan, 'invoice-in', 0.85)
+  const fiveAt = cueAt(plan, 'five-tag-in', 1.6)
 
   return (
-    <div className="r69-stage r69-white-theme">
-      <DitherDefs />
-      <div className="r69-grid-bg" />
-
+    <Stage>
       <div className="r69-beat1-layout">
-        {/* Left Side: Typography */}
         <div className="r69-left-column">
-          {t >= tagAt && (
-            <div className="r69-creator-tag" style={studioSpringEnter(t, tagAt, { y: 12 })}>
-              // for creators
-            </div>
-          )}
-          {t >= gotAt && (
-            <h1 className="r69-headline" style={studioSpringEnter(t, gotAt, { y: 18 })}>
-              Got something
-            </h1>
-          )}
+          <Enter t={t} at={fiveAt} from={{ y: 12 }} className="r69-creator-tag">
+            ۱ فاکتور = ۵ کار
+          </Enter>
+          <Enter t={t} at={invoiceAt} from={{ y: 18 }} className="r69-headline">
+            فاکتور
+          </Enter>
         </div>
-
-        {/* Right Side: Dithered Character */}
-        {t >= popAt && (
-          <div className="r69-right-column" style={studioSpringEnter(t, popAt, { y: 24 })}>
-            <DitheredCharacter t={t} scale={1.15} lookingAt="left" isSmiling={true} />
-          </div>
-        )}
+        <Enter t={t} at={popAt} from={{ y: 24 }} className="r69-right-column">
+          <DitheredCharacter t={t} scale={1.15} lookingAt="right" />
+        </Enter>
       </div>
-    </div>
+    </Stage>
   )
 }
 
-// ─── Beat 2 (1.5 - 4.5s): Product Cards Slide on Blue UI Panel ──────────────
-function ProductCards({ t, plan }: R69Props) {
-  const panelAt = cueAt(plan, 'blue-panel-slide', 0.15)
-  const card1At = cueAt(plan, 'card-courses-in', 0.55)
-  const card2At = cueAt(plan, 'card-ebooks-in', 1.35)
-  const card3At = cueAt(plan, 'card-apps-in', 2.15)
+// ─── Beat 2: a product, a service and a weighed item on one invoice ─────────
+const LINES = [
+  { action: 'card-product-in', fallback: 0.2, icon: '⚙️', name: 'گیربوکس', kind: 'کالا' },
+  { action: 'card-service-in', fallback: 0.95, icon: '🔧', name: 'نصب', kind: 'خدمت' },
+  { action: 'card-weight-in', fallback: 2.15, icon: '⚖️', name: 'روغن', kind: 'وزنی' },
+] as const
 
-  const panelP = clamp(progress(t, panelAt, 0.4))
-  const panelSlide = mix(60, 0, ease(panelP))
+function LineCards({ t, plan }: R69Props) {
+  const panelP = clamp(progress(t, 0, 0.4))
+  const mergeAt = cueAt(plan, 'cards-merge', 3.2)
+  // «هر سه»: the three cards draw together into one invoice.
+  const merge = ease(clamp(progress(t, mergeAt, 0.45)))
 
   return (
-    <div className="r69-stage r69-blue-panel-theme">
-      <DitherDefs />
-      <div className="r69-grid-bg dark" />
-
-      {/* Main Blue UI Canvas Panel */}
+    <Stage theme="blue">
       <div
         className="r69-blue-canvas"
-        style={{
-          transform: `translateY(${panelSlide}px)`,
-          opacity: panelP,
-        }}
+        style={{ transform: `translateY(${mix(60, 0, ease(panelP))}px)`, opacity: panelP }}
       >
         <div className="r69-split-stage">
-          {/* Left: Product Cards Cascade */}
-          <div className="r69-cards-column">
-            {t >= card1At && (
-              <div className="r69-product-card" style={studioSpringEnter(t, card1At, { x: 30 })}>
-                <div className="r69-card-icon dither-icon">🎓</div>
+          <div className="r69-cards-column" style={{ gap: `${mix(14, 4, merge)}px` }}>
+            {LINES.map((line) => (
+              <Enter
+                key={line.action}
+                t={t}
+                at={cueAt(plan, line.action, line.fallback)}
+                from={{ x: 30 }}
+                className="r69-product-card"
+              >
+                <div className="r69-card-icon dither-icon">{line.icon}</div>
                 <div className="r69-card-info">
-                  <span className="r69-card-title">Courses</span>
-                  <span className="r69-card-price">$149.00</span>
+                  <span className="r69-card-title">{line.name}</span>
+                  <span className="r69-card-price">{line.kind}</span>
                 </div>
-              </div>
-            )}
-
-            {t >= card2At && (
-              <div className="r69-product-card" style={studioSpringEnter(t, card2At, { x: 30 })}>
-                <div className="r69-card-icon dither-icon">📚</div>
-                <div className="r69-card-info">
-                  <span className="r69-card-title">Ebooks</span>
-                  <span className="r69-card-price">$29.00</span>
-                </div>
-              </div>
-            )}
-
-            {t >= card3At && (
-              <div className="r69-product-card" style={studioSpringEnter(t, card3At, { x: 30 })}>
-                <div className="r69-card-icon dither-icon">⚡</div>
-                <div className="r69-card-info">
-                  <span className="r69-card-title">Apps</span>
-                  <span className="r69-card-price">$49.00</span>
-                </div>
-              </div>
-            )}
+              </Enter>
+            ))}
           </div>
-
-          {/* Right: Character Observing */}
           <div className="r69-character-side">
-            <DitheredCharacter t={t} scale={1.05} lookingAt="left" isSmiling={true} />
+            <DitheredCharacter t={t} scale={1.05} lookingAt="right" />
           </div>
         </div>
       </div>
-    </div>
+    </Stage>
   )
 }
 
-// ─── Beat 3 (4.5 - 7.5s): Checkout Screen & Apple Pay ───────────────────────
-function CheckoutFlow({ t, plan }: R69Props) {
-  const checkoutAt = cueAt(plan, 'checkout-slide-in', 0.15)
-  const priceAt = cueAt(plan, 'course-price-tag', 0.85)
-  const shrinkAt = cueAt(plan, 'char-shrink-float', 1.35)
-  const payAt = cueAt(plan, 'apple-pay-pulse', 1.85)
-  const snapAt = cueAt(plan, 'pay-btn-snap', 2.25)
-
-  const isShrunk = t >= shrinkAt
-  const charScale = isShrunk ? mix(1.0, 0.75, ease(clamp(progress(t, shrinkAt, 0.4)))) : 1.0
+// ─── Beat 3: the line price, half cash, half credit ─────────────────────────
+function CashCredit({ t, plan }: R69Props) {
+  const invoiceAt = cueAt(plan, 'invoice-slide-in', 0.2)
+  const priceAt = cueAt(plan, 'line-price-in', 2.1)
+  const shrinkAt = cueAt(plan, 'char-shrink-float', 3.0)
+  const cashAt = cueAt(plan, 'cash-pill-in', 3.35)
+  const creditAt = cueAt(plan, 'credit-pill-in', 4.45)
+  const shrink = t >= shrinkAt ? ease(clamp(progress(t, shrinkAt, 0.4))) : 0
 
   return (
-    <div className="r69-stage r69-white-theme">
-      <DitherDefs />
-      <div className="r69-grid-bg" />
-
+    <Stage>
       <div className="r69-checkout-stage">
-        {/* Left: Clean Checkout UI Mockup */}
-        <div className="r69-checkout-card" style={studioSpringEnter(t, checkoutAt, { x: -30 })}>
+        <div className="r69-checkout-card" style={studioSpringEnter(t, invoiceAt, { x: 30 })}>
           <div className="r69-checkout-header">
-            <span className="r69-badge-live">Checkout</span>
-            <span className="r69-step-tag">Step 1 of 2</span>
+            <span className="r69-badge-live">فاکتور فروش</span>
           </div>
-
-          {/* Design Course Line Item */}
           <div className="r69-item-row">
-            <div className="r69-item-detail">
-              <span className="r69-item-name">Design Course $149.00</span>
-              <span className="r69-item-sub">Instant digital access</span>
-            </div>
-            {t >= priceAt && <span className="r69-pill-price">Active</span>}
+            <span className="r69-item-name">گیربوکس اتوماتیک</span>
+            {t >= priceAt ? <span className="r69-pill-price">{n(30_000_000)}</span> : null}
           </div>
-
-          {/* Apple Pay Button */}
-          {t >= payAt && (
-            <div
-              className={`r69-apple-pay-btn ${t >= snapAt ? 'pulse-click' : ''}`}
-              style={studioSpringEnter(t, payAt, { y: 12 })}
-            >
-              <svg
-                width="18"
-                height="22"
-                viewBox="0 0 170 170"
-                fill="#ffffff"
-                style={{ flexShrink: 0 }}
-              >
-                <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.74-11.64-14.1-6.19-9.78-10.7-20.67-13.53-32.65-2.83-11.98-4.25-23.08-4.25-33.3 0-14.79 3.73-26.85 11.19-36.19 7.46-9.33 16.9-14.07 28.32-14.2 4.46 0 9.4 1.14 14.82 3.42 5.42 2.28 9.07 3.48 10.95 3.61 2.39-.26 6.33-1.6 11.82-4.02 5.49-2.42 10.4-3.53 14.75-3.33 12.06.66 21.64 4.88 28.74 12.67-10.43 6.33-15.54 15.03-15.33 26.1.22 8.7 3.51 15.86 9.88 21.48 6.37 5.62 14.05 8.94 23.03 9.96-2.5 7.41-5.75 15.11-9.76 23.1zM119.22 31.84c0-7.07 2.61-13.79 7.84-20.15 5.22-6.36 11.75-10.45 19.58-12.28.65 1.52.98 3.18.98 4.97 0 7.07-2.69 13.88-8.08 20.43-5.38 6.56-11.95 10.47-19.7 11.74-.22-1.53-.42-3.1-.62-4.71z" />
-              </svg>
-              <span className="r69-pay-text">Pay $149.00</span>
-            </div>
-          )}
+          <Enter t={t} at={cashAt} from={{ y: 12 }} className="r69-tax-row">
+            <span className="r69-tax-label">نقد</span>
+            <span className="r69-tax-val">{n(15_000_000)}</span>
+          </Enter>
+          <Enter t={t} at={creditAt} from={{ y: 12 }} className="r69-tax-row">
+            <span className="r69-tax-label">نسیه</span>
+            <span className="r69-tax-val">{n(15_000_000)}</span>
+          </Enter>
         </div>
-
-        {/* Right: Floating Scaled Character */}
         <div
           className="r69-character-float"
-          style={{
-            transform: `translate(20px, ${isShrunk ? -20 : 0}px)`,
-          }}
+          style={{ transform: `translate(-20px, ${mix(0, -20, shrink)}px)` }}
         >
-          <DitheredCharacter t={t} scale={charScale} lookingAt="left" isSmiling={true} />
+          <DitheredCharacter t={t} scale={mix(1, 0.75, shrink)} lookingAt="right" />
         </div>
       </div>
-    </div>
+    </Stage>
   )
 }
 
-// ─── Beat 4 (7.5 - 10.5s): Checkout Updates with Upsell & Tax ───────────────
-function UpsellTax({ t, plan }: R69Props) {
-  const upsellAt = cueAt(plan, 'upsell-card-snap', 0.15)
-  const priceAt = cueAt(plan, 'upsell-price-snap', 0.95)
-  const taxAt = cueAt(plan, 'vat-tax-ticker', 1.7)
-  const bounceAt = cueAt(plan, 'char-smile-bounce', 2.2)
-
-  const isBounced = t >= bounceAt
+// ─── Beat 4: a dollar invoice keeps that day's rate ─────────────────────────
+function DayRate({ t, plan }: R69Props) {
+  const dollarAt = cueAt(plan, 'dollar-note-in', 0.6)
+  const rateAt = cueAt(plan, 'rate-lock-in', 1.8)
+  const dateAt = cueAt(plan, 'rate-date-in', 2.45)
+  const bounceAt = cueAt(plan, 'char-smile-bounce', 3.5)
 
   return (
-    <div className="r69-stage r69-white-theme">
-      <DitherDefs />
-      <div className="r69-grid-bg" />
-
+    <Stage>
       <div className="r69-checkout-stage">
-        {/* Updated Checkout Screen */}
         <div className="r69-checkout-card expanded">
           <div className="r69-item-row compact">
-            <span className="r69-item-name">Design Course $149.00</span>
-            <span className="r69-pill-price">$149.00</span>
+            <span className="r69-item-name">گیربوکس اتوماتیک</span>
+            <span className="r69-pill-price">$ {n(400)}</span>
           </div>
-
-          {/* Upsell Offer Box */}
-          {t >= upsellAt && (
-            <div className="r69-upsell-box" style={studioSpringEnter(t, upsellAt, { y: 14 })}>
-              <div className="r69-upsell-header">
-                <span className="r69-sparkle">✨</span>
-                <span className="r69-upsell-title">Workbook upsell $19.00</span>
-              </div>
-              <div className="r69-upsell-actions">
-                <button className="r69-add-btn">Add the workbook</button>
-                {t >= priceAt && <span className="r69-upsell-cost">+$19.00</span>}
-              </div>
+          <Enter t={t} at={dollarAt} from={{ y: 14 }} className="r69-upsell-box">
+            <div className="r69-upsell-header">
+              <span className="r69-upsell-title">ارز فاکتور: دالر</span>
             </div>
-          )}
-
-          {/* Tax / VAT Section */}
-          {t >= taxAt && (
-            <div className="r69-tax-row" style={studioSpringEnter(t, taxAt, { y: 10 })}>
-              <span className="r69-tax-label">Tax - VAT 20% $33.60</span>
-              <span className="r69-tax-val">$33.60</span>
-            </div>
-          )}
+          </Enter>
+          <Enter t={t} at={rateAt} from={{ y: 10 }} className="r69-tax-row">
+            <span className="r69-tax-label">🔒 ۱ دالر</span>
+            <span className="r69-tax-val">{n(75)} افغانی</span>
+          </Enter>
+          <Enter t={t} at={dateAt} from={{ y: 8 }} className="r69-item-sub">
+            ۲۶ مهر
+          </Enter>
         </div>
-
-        {/* Character Smiling in Place */}
         <div
           className="r69-character-float"
-          style={{
-            transform: `translate(20px, ${isBounced ? -28 : -20}px)`,
-          }}
+          style={{ transform: `translate(-20px, ${t >= bounceAt ? -28 : -20}px)` }}
         >
-          <DitheredCharacter t={t} scale={0.78} lookingAt="left" isSmiling={true} />
+          <DitheredCharacter t={t} scale={0.78} lookingAt="right" />
         </div>
       </div>
-    </div>
+    </Stage>
   )
 }
 
-// ─── Beat 5 (10.5 - 13.5s): Multi-Panel Split & Metrics Explosion ───────────
-function MultiPanelSplit({ t, plan }: R69Props) {
-  const explodeAt = cueAt(plan, 'multi-panel-explode', 0.15)
-  const pillAt = cueAt(plan, 'workbook-add-pill', 0.55)
-  const subAt = cueAt(plan, 'sub-tier-snap', 1.05)
-  const vatAt = cueAt(plan, 'vat-tags-spread', 1.65)
-  const revAt = cueAt(plan, 'revenue-counter-surge', 2.15)
+// ─── Beat 5 (climax): five jobs land around the character ───────────────────
+const JOBS = [
+  {
+    action: 'panel-stock-in',
+    fallback: 0.2,
+    place: 'top-left',
+    label: 'انبار',
+    value: `− ${n(1)}`,
+  },
+  {
+    action: 'panel-till-in',
+    fallback: 1.35,
+    place: 'top-right',
+    label: 'صندوق',
+    value: `+ ${n(15_000_000)}`,
+  },
+  { action: 'panel-ledger-in', fallback: 2.5, place: 'mid-right', label: 'دفتر کل', value: '✓' },
+  {
+    action: 'panel-credit-in',
+    fallback: 3.7,
+    place: 'bottom-left',
+    label: 'طلب مشتری',
+    value: n(15_000_000),
+  },
+] as const
 
+function FiveJobs({ t, plan }: R69Props) {
+  const profitAt = cueAt(plan, 'panel-profit-in', 5.1)
   return (
-    <div className="r69-stage r69-white-theme">
-      <DitherDefs />
-      <div className="r69-grid-bg" />
-
+    <Stage>
       <div className="r69-multi-split-stage">
-        {/* Central Floating Character */}
         <div className="r69-center-character">
-          <DitheredCharacter t={t} scale={0.65} lookingAt="center" isSmiling={true} />
+          <DitheredCharacter t={t} scale={0.65} />
         </div>
-
-        {/* Surrounding Modular Panels */}
-        {t >= explodeAt && (
-          <div className="r69-floating-panels">
-            {/* Panel 1: Workbook Upsell */}
-            <div
-              className="r69-mini-card top-left"
-              style={studioSpringEnter(t, explodeAt, { y: -20 })}
+        <div className="r69-floating-panels">
+          {JOBS.map((job) => (
+            <Enter
+              key={job.action}
+              t={t}
+              at={cueAt(plan, job.action, job.fallback)}
+              from={{ y: job.place.startsWith('top') ? -20 : 20 }}
+              className={`r69-mini-card ${job.place}`}
             >
-              <span className="r69-mini-tag">Upsell</span>
-              <span className="r69-mini-title">Workbook upsell $19.00</span>
-            </div>
-
-            {/* Panel 2: Tax - VAT */}
-            <div
-              className="r69-mini-card top-right"
-              style={studioSpringEnter(t, explodeAt + 0.1, { y: -20 })}
-            >
-              <span className="r69-mini-tag blue">Auto-Tax</span>
-              <span className="r69-mini-title">Tax - VAT 20% $33.60</span>
-            </div>
-
-            {/* Panel 3: Add Workbook Action */}
-            {t >= pillAt && (
-              <div
-                className="r69-pill-action mid-left"
-                style={studioSpringEnter(t, pillAt, { x: -20 })}
-              >
-                <span>Add the workbook</span>
-              </div>
-            )}
-
-            {/* Panel 4: Coaching Call */}
-            <div
-              className="r69-mini-card mid-right"
-              style={studioSpringEnter(t, explodeAt + 0.2, { x: 20 })}
-            >
-              <span className="r69-mini-title">1:1 coaching call $99</span>
-            </div>
-
-            {/* Panel 5: Subscriptions */}
-            {t >= subAt && (
-              <div
-                className="r69-sub-card bottom-left"
-                style={studioSpringEnter(t, subAt, { y: 20 })}
-              >
-                <span className="r69-sub-price">$9 / month</span>
-                <span className="r69-sub-sub">Recurring revenue</span>
-              </div>
-            )}
-
-            {/* Panel 6: Global VAT Cluster */}
-            {t >= vatAt && (
-              <div
-                className="r69-vat-cluster bottom-center"
-                style={studioSpringEnter(t, vatAt, { y: 15 })}
-              >
-                <span className="r69-vat-chip">EU VAT</span>
-                <span className="r69-vat-chip">UK VAT</span>
-                <span className="r69-vat-chip">US sales tax</span>
-              </div>
-            )}
-
-            {/* Panel 7: Giant Revenue Total */}
-            {t >= revAt && (
-              <div
-                className="r69-revenue-banner bottom-right"
-                style={studioSpringEnter(t, revAt, { y: 20 })}
-              >
-                <span className="r69-rev-label">Net Sales</span>
-                <span className="r69-rev-num">$12,480.00</span>
-              </div>
-            )}
-          </div>
-        )}
+              <span className="r69-mini-tag">{job.label}</span>
+              <span className="r69-mini-title">{job.value}</span>
+            </Enter>
+          ))}
+          <Enter t={t} at={profitAt} from={{ y: 20 }} className="r69-revenue-banner bottom-right">
+            <span className="r69-rev-label">سود</span>
+            <span className="r69-rev-num">{n(10_000_000)}</span>
+          </Enter>
+        </div>
       </div>
-    </div>
+    </Stage>
   )
 }
 
-// ─── Beat 6 (13.5 - 15.0s): White Screen Outro & Pocketsflow Assembly ────────
+// ─── Beat 6: «حساب» + «چه» ──────────────────────────────────────────────────
 function BrandOutro({ t, plan }: R69Props) {
-  const pocketsAt = cueAt(plan, 'pockets-in', 0.15)
-  const flowAt = cueAt(plan, 'flow-slide-lock', 0.65)
-
-  const isPockets = t >= pocketsAt
-  const isFlow = t >= flowAt
-
+  const hesabAt = cueAt(plan, 'brand-hesab-in', 0.2)
+  const cheAt = cueAt(plan, 'brand-che-lock', 1.1)
   return (
-    <div className="r69-stage r69-white-theme outro">
-      <DitherDefs />
-      <div className="r69-grid-bg" />
-
+    <Stage className="outro">
       <div className="r69-brand-center">
+        {/* ⚠️ ONE text node once it locks: «حساب» and «چه» in two spans would
+            break the join between ب and چ (Persian glyphs never split across
+            DOM nodes). «حساب» alone first, then the whole word replaces it. */}
         <div className="r69-logo-assembly">
-          {/* "Pockets" animates in from left, fading in first */}
-          {isPockets && (
-            <span
-              className="r69-logo-part pockets"
-              style={studioSpringEnter(t, pocketsAt, { x: -25 })}
-            >
-              Pockets
-            </span>
-          )}
-
-          {/* "flow" slides in from right */}
-          {isFlow && (
-            <span className="r69-logo-part flow" style={studioSpringEnter(t, flowAt, { x: 25 })}>
-              flow
-            </span>
+          {t < cheAt ? (
+            <Enter t={t} at={hesabAt} from={{ x: 25 }} className="r69-logo-part pockets">
+              حساب
+            </Enter>
+          ) : (
+            <Enter t={t} at={cheAt} from={{ x: -12 }} className="r69-logo-part flow">
+              حسابچه
+            </Enter>
           )}
         </div>
-
-        {isFlow && (
-          <div className="r69-outro-sub" style={studioSpringEnter(t, flowAt + 0.15, { y: 10 })}>
-            <span>The creator commerce engine</span>
-          </div>
-        )}
+        <Enter t={t} at={cheAt + 0.15} from={{ y: 10 }} className="r69-outro-sub">
+          <span dir="ltr">hisabche.com</span>
+        </Enter>
       </div>
-    </div>
+    </Stage>
   )
 }

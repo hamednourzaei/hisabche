@@ -27,7 +27,13 @@ export interface StockMovementRecord {
   fromWarehouseId: string | null
   toWarehouseId: string | null
   createdAt: string | null
-  /** Running total after this movement, oldest first. */
+  /**
+   * A move between two own warehouses: `quantity` is the amount moved and the
+   * product total does not change. Optional — a cached reply from an older
+   * server has no such field.
+   */
+  isTransfer?: boolean | undefined
+  /** Running total of the product after this movement, oldest first. */
   balance: number
 }
 

@@ -55,3 +55,37 @@ export function priceForInvoice(
   const factor = 10 ** digits
   return String(Math.round((inBooks / rate) * factor) / factor)
 }
+
+/** A line whose price the app filled from a product (not typed by a person). */
+export interface AutoPricedLine {
+  /** The product's price in the BOOKS currency. */
+  booksPrice: string
+  /** What was written into the line — compared to tell a later hand edit apart. */
+  filled: string
+}
+
+/**
+ * When the invoice's currency or rate changes, every line the APP priced is
+ * priced again from the product's books price (owner, 18 Oct 2026: a 30M
+ * afghani gearbox picked first, then «دالر» and «1 = 65» chosen — the line
+ * stayed 30,000,000 and was simply called dollars: a 60M DOLLAR invoice).
+ *
+ * A line whose price a person changed is never touched. With no rate yet the
+ * line is emptied rather than left holding a number in the wrong currency.
+ */
+export function repriceAutoFilled(
+  current: ReadonlyMap<string, string>,
+  auto: ReadonlyMap<string, AutoPricedLine>,
+  invoiceCurrency: string | undefined,
+  bookCurrency: string | undefined,
+  rate: number | null,
+): Map<string, string> {
+  const out = new Map<string, string>()
+  for (const [rowId, line] of auto) {
+    const now = current.get(rowId)
+    if (now === undefined || now.trim() !== line.filled.trim()) continue
+    const next = priceForInvoice(line.booksPrice, invoiceCurrency, bookCurrency, rate)
+    if (next !== line.filled) out.set(rowId, next)
+  }
+  return out
+}
