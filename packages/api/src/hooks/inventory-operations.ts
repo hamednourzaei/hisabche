@@ -405,3 +405,42 @@ export function useStaleOpportunities() {
     staleTime: 5 * 60 * 1000,
   })
 }
+
+// ─── Costing method (owner, 18 Oct 2026) ──────────────────────────────
+//
+// `GET|PUT /inventory/settings` existed with zero callers, so every business
+// was on FIFO with no way to choose. The consumption itself is in Postgres
+// (`inventory_consume`), which already reads `costing_method` for both
+// methods; this only lets a person pick one.
+
+export type CostingMethod = 'fifo' | 'avco' | 'standard'
+
+export interface InventorySettings {
+  costingMethod: CostingMethod
+  negativeStock: 'block' | 'allow'
+}
+
+export const inventorySettingsKey = [...inventoryOpsKeys.all, 'settings'] as const
+
+export function useInventorySettings() {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: inventorySettingsKey,
+    queryFn: async (): Promise<InventorySettings> => {
+      const { data } = await apiClient.get('/inventory/settings')
+      return data as InventorySettings
+    },
+    enabled: ready,
+  })
+}
+
+export function useSetCostingMethod() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (costingMethod: CostingMethod): Promise<InventorySettings> => {
+      const { data } = await apiClient.put('/inventory/settings', { costingMethod })
+      return data as InventorySettings
+    },
+    onSuccess: (settings) => queryClient.setQueryData(inventorySettingsKey, settings),
+  })
+}

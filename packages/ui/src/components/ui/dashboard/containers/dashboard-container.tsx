@@ -16,6 +16,7 @@ import { useDashboardData } from '../../../../hooks/dashboard/use-dashboard-data
 import { fmt } from '../../../../lib/dashboard/dashboard-format'
 import { useDisplayBasis } from '../../../../hooks/dashboard/use-display-basis'
 import { DisplayBasisPicker, ExchangeRateForm } from '../display-basis-picker'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../dialog'
 import { AiAssistantLauncher } from '../../ai/ai-assistant-launcher'
 import { CURRENCY_PICK_ORDER } from '@hisabche/validation'
 import {
@@ -220,8 +221,8 @@ export function DashboardContainer() {
               feature is unreachable — `PUT /currency/rates` had no caller. */}
           <button
             type="button"
-            aria-expanded={rateOpen === 'new'}
-            onClick={() => setRateOpen((open) => (open === 'new' ? null : 'new'))}
+            aria-haspopup="dialog"
+            onClick={() => setRateOpen('new')}
             className="h-9 shrink-0 rounded-full border border-[hsl(var(--border-default))] px-3 text-xs text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
           >
             {t('display.exchangeButton', 'تبادل نرخ داشبورد')}
@@ -232,8 +233,8 @@ export function DashboardContainer() {
             <button
               type="button"
               data-edit-rate=""
-              aria-expanded={rateOpen === 'edit'}
-              onClick={() => setRateOpen((open) => (open === 'edit' ? null : 'edit'))}
+              aria-haspopup="dialog"
+              onClick={() => setRateOpen('edit')}
               className="h-9 shrink-0 rounded-full border border-[hsl(var(--border-default))] px-3 text-xs text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
             >
               {t('display.editRate', 'اصلاح قیمت')}
@@ -241,29 +242,43 @@ export function DashboardContainer() {
           ) : null}
         </div>
 
-        {rateOpen ? (
-          <div className="w-full sm:max-w-2xl">
-            <ExchangeRateForm
-              // Remount per mode so the pair starts on the right currency.
-              key={rateOpen}
-              t={t}
-              base={display.base}
-              initialCurrency={rateOpen === 'edit' ? display.basis : undefined}
-              // The base is excluded: it is 1 against itself by definition, and
-              // offering it invites someone to quote AFN against AFN.
-              currencies={CURRENCY_PICK_ORDER.filter((code) => code !== display.base)}
-              isSaving={setRate.isPending}
-              error={setRate.error ? String((setRate.error as Error).message) : null}
-              onSave={(input) => setRate.mutate(input, { onSuccess: () => setRateOpen(null) })}
-              customUnits={latestUnits.map((unit) => unit.name)}
-              onSaveUnit={
-                unitsReady
-                  ? (input) => setUnit.mutate(input, { onSuccess: () => setRateOpen(null) })
-                  : undefined
-              }
-            />
-          </div>
-        ) : null}
+        {/* A dialog over the page, at every width (owner, 18 Oct 2026): the
+            inline strip pushed the dashboard down and broke into rows. */}
+        <Dialog open={rateOpen !== null} onOpenChange={(open) => (open ? null : setRateOpen(null))}>
+          <DialogContent
+            data-exchange-rate-dialog=""
+            className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg overflow-x-hidden overflow-y-auto"
+          >
+            <DialogHeader>
+              <DialogTitle>
+                {rateOpen === 'edit'
+                  ? t('display.editRate', 'اصلاح قیمت')
+                  : t('display.exchangeButton', 'تبادل نرخ داشبورد')}
+              </DialogTitle>
+            </DialogHeader>
+            {rateOpen ? (
+              <ExchangeRateForm
+                // Remount per mode so the pair starts on the right currency.
+                key={rateOpen}
+                t={t}
+                base={display.base}
+                initialCurrency={rateOpen === 'edit' ? display.basis : undefined}
+                // The base is excluded: it is 1 against itself by definition, and
+                // offering it invites someone to quote AFN against AFN.
+                currencies={CURRENCY_PICK_ORDER.filter((code) => code !== display.base)}
+                isSaving={setRate.isPending}
+                error={setRate.error ? String((setRate.error as Error).message) : null}
+                onSave={(input) => setRate.mutate(input, { onSuccess: () => setRateOpen(null) })}
+                customUnits={latestUnits.map((unit) => unit.name)}
+                onSaveUnit={
+                  unitsReady
+                    ? (input) => setUnit.mutate(input, { onSuccess: () => setRateOpen(null) })
+                    : undefined
+                }
+              />
+            ) : null}
+          </DialogContent>
+        </Dialog>
         {latestUnits.length > 0 ? (
           // The units the business named itself, at their latest worth
           // (live audit #82): «۱ ماشین = ۵۰۰٬۰۰۰ افغانی».

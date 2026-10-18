@@ -37,6 +37,7 @@ import {
   type AccountRole,
 } from '@hisabche/validation'
 import { ledger, type DraftLine } from './accounting'
+import { inBooksCurrency, invoiceLedgerLines } from './accounting/invoice-posting.domain'
 import { costing } from './inventory-costing'
 import { rules } from './rules'
 import { tax } from './tax'
@@ -2259,7 +2260,7 @@ export class InvoiceService {
 
   /** An amount of the invoice's currency, in the books currency, at the invoice's rate. */
   private static inBooksCurrency(amount: number, rate: number): number {
-    return rate === 1 ? amount : Math.round(amount * rate * 100) / 100
+    return inBooksCurrency(amount, rate)
   }
 
   /** Does this database have somewhere to keep an invoice's rate? */
@@ -2842,34 +2843,14 @@ export class InvoiceService {
       return { status: 'skipped', missing: missing.map(String) }
     }
 
-    const lines: DraftLine[] = isPurchase
-      ? [
-          // Goods arrived and we owe the supplier. No revenue is involved —
-          // the version before this booked one, which inflated the income
-          // statement by the value of every purchase.
-          { accountId: accounts.inventory!, debit: total, credit: 0 },
-          { accountId: accounts.payable!, debit: 0, credit: total },
-        ]
-      : [
-          { accountId: accounts.receivable!, debit: total, credit: 0 },
-          { accountId: accounts.sales!, debit: 0, credit: total },
-        ]
-
-    // Cost of goods sold, as the costing core actually consumed it.
-    //
-    // This block used to price the goods at `products.buy_price` — the CURRENT
-    // buy price. A phone bought at 10,000,000 and later restocked at 9,000,000
-    // had both of its sales reported at 9,000,000, overstating the profit on
-    // the first by a million with nothing in the system able to say so.
-    if (!isPurchase) {
-      const cost = Number(data.costOfGoodsSold) || 0
-      if (cost > 0) {
-        lines.push(
-          { accountId: accounts.cogs!, debit: cost, credit: 0 },
-          { accountId: accounts.inventory!, debit: 0, credit: cost },
-        )
-      }
-    }
+    // The lines themselves: `invoiceLedgerLines` (pure, posted by the
+    // inventory-avco-01 real-Postgres E2E exactly as here).
+    const lines: DraftLine[] = invoiceLedgerLines({
+      isPurchase,
+      total,
+      costOfGoodsSold: data.costOfGoodsSold,
+      accounts,
+    })
 
     const outcome = await ledger.postDocument(ctx, {
       sourceType: 'invoice',

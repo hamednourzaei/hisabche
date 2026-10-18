@@ -1109,6 +1109,10 @@ export {
   type ShiftHistoryEntry,
   type CashForecast,
   type StaleOpportunity,
+  useInventorySettings,
+  useSetCostingMethod,
+  type CostingMethod,
+  type InventorySettings,
 } from './hooks/inventory-operations'
 
 // ─── Currency reference data (Patch 1 / L0.1) ───

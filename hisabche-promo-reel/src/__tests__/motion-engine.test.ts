@@ -18,7 +18,7 @@ import { faNumber } from '../ui/motion-primitives'
 
 describe('Motion Design Engine & Reels Verification', () => {
   it('registers all 60 reels and flagship films with valid metadata', () => {
-    expect(REELS).toHaveLength(66)
+    expect(REELS).toHaveLength(69)
     REELS.forEach((reel, index) => {
       const expectedId = String(index + 1).padStart(2, '0')
       expect(reel.id).toBe(expectedId)
@@ -364,7 +364,7 @@ describe('Motion Design Engine & Reels Verification', () => {
       computeCreativeSimilarity,
     } = await import('../data/reel-registry')
 
-    expect(REEL_REGISTRY_LIST).toHaveLength(66)
+    expect(REEL_REGISTRY_LIST).toHaveLength(69)
 
     // Full sequence validation including weighted creative similarity
     const result = validateReelRegistry(REEL_REGISTRY_LIST)
@@ -842,5 +842,111 @@ describe('Motion Design Engine & Reels Verification', () => {
     const climax = reel66!.scenes[3]!
     const ending = climax.sentence!.sentenceEnding!
     expect(climax.end - climax.start - ending.at).toBeGreaterThanOrEqual(1.0)
+  })
+
+  it('verifies Reel 67 two prices rice narrative has exact 48s duration, 6 scenes, and valid word cues', () => {
+    const reel67 = REELS.find((r) => r.id === '67')
+    expect(reel67).toBeDefined()
+    expect(reel67!.duration).toBe(48.0)
+    expect(reel67!.scenes).toHaveLength(6)
+
+    const expectedActors = [
+      'r67-twin-receipts',
+      'r67-flicker-tag',
+      'r67-loss-scale',
+      'r67-price-list-deck',
+      'r67-auto-priced-line',
+      'r67-cta-tag',
+    ]
+
+    reel67!.scenes.forEach((scene, index) => {
+      expect(scene.spec.kind).toBe('word-sync')
+      if (scene.spec.kind === 'word-sync') {
+        expect(scene.spec.actor).toBe(expectedActors[index])
+      }
+      expect(scene.sentence).toBeDefined()
+      expect(scene.sentence!.words.length).toBeGreaterThan(0)
+      expect(scene.sentence!.intent.length).toBeGreaterThan(0)
+    })
+
+    // The six scenes tile the reel exactly — no gap, no overlap
+    expect(reel67!.scenes[0]!.start).toBe(0)
+    expect(reel67!.scenes[reel67!.scenes.length - 1]!.end).toBe(48.0)
+    reel67!.scenes.forEach((scene, index) => {
+      if (index > 0) expect(scene.start).toBe(reel67!.scenes[index - 1]!.end)
+    })
+  })
+
+  it('verifies Reel 68 thief-in-the-till showreel has exact 18s duration, 4 scenes, and climax hold >= 1.0s', () => {
+    const reel68 = REELS.find((r) => r.id === '68')
+    expect(reel68).toBeDefined()
+    expect(reel68!.duration).toBe(18.0)
+    expect(reel68!.scenes).toHaveLength(4)
+
+    const expectedActors = [
+      'r68-hook-till-arrest',
+      'r68-exploded-cogs-leak',
+      'r68-quantum-sync-conduit',
+      'r68-luminous-resolution-cta',
+    ]
+
+    reel68!.scenes.forEach((scene, index) => {
+      expect(scene.spec.kind).toBe('word-sync')
+      if (scene.spec.kind === 'word-sync') {
+        expect(scene.spec.actor).toBe(expectedActors[index])
+      }
+      expect(scene.sentence).toBeDefined()
+      expect(scene.sentence!.words.length).toBeGreaterThan(0)
+      expect(scene.sentence!.intent.length).toBeGreaterThan(0)
+    })
+
+    // The four scenes tile the reel exactly — no gap, no overlap
+    expect(reel68!.scenes[0]!.start).toBe(0)
+    expect(reel68!.scenes[reel68!.scenes.length - 1]!.end).toBe(18.0)
+    reel68!.scenes.forEach((scene, index) => {
+      if (index > 0) expect(scene.start).toBe(reel68!.scenes[index - 1]!.end)
+    })
+
+    // Climax scene (scene 3, quantum sync conduit) holds at least 1.0s after its sentence resolves
+    const climax68 = reel68!.scenes[2]!
+    const ending68 = climax68.sentence!.sentenceEnding!
+    expect(climax68.end - climax68.start - ending68.at).toBeGreaterThanOrEqual(1.0)
+  })
+
+  it('verifies Reel 69 digital showreel has exact 20s duration, numeric actors, and climax hold >= 1.0s', () => {
+    const reel69 = REELS.find((r) => r.id === '69')
+    expect(reel69).toBeDefined()
+    expect(reel69!.duration).toBe(20.0)
+    expect(reel69!.scenes).toHaveLength(5)
+
+    const expectedActors = [
+      'r69-digit-freeze',
+      'r69-price-tiers',
+      'r69-team-shift',
+      'r69-offline-counter',
+      'r69-converged-cta',
+    ]
+
+    reel69!.scenes.forEach((scene, index) => {
+      expect(scene.spec.kind).toBe('word-sync')
+      if (scene.spec.kind === 'word-sync') {
+        expect(scene.spec.actor).toBe(expectedActors[index])
+      }
+      expect(scene.sentence).toBeDefined()
+      expect(scene.sentence!.words.length).toBeGreaterThan(0)
+      expect(scene.sentence!.intent.length).toBeGreaterThan(0)
+    })
+
+    // The five scenes tile the reel exactly — no gap, no overlap
+    expect(reel69!.scenes[0]!.start).toBe(0)
+    expect(reel69!.scenes[reel69!.scenes.length - 1]!.end).toBe(20.0)
+    reel69!.scenes.forEach((scene, index) => {
+      if (index > 0) expect(scene.start).toBe(reel69!.scenes[index - 1]!.end)
+    })
+
+    // Climax scene (scene 4, offline proof) holds at least 1.0s after its sentence resolves
+    const climax69 = reel69!.scenes[3]!
+    const ending69 = climax69.sentence!.sentenceEnding!
+    expect(climax69.end - climax69.start - ending69.at).toBeGreaterThanOrEqual(1.0)
   })
 })

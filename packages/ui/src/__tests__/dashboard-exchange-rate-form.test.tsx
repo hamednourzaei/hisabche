@@ -85,12 +85,68 @@ describe('a unit the business names itself (live audit #82)', () => {
     )
   })
 
-  it('the form is one line and the date is the reader’s calendar, not <input type=date>', () => {
+  it('one row per side (it lives in a dialog now) and the date is the reader’s calendar', () => {
     const { container } = render(
       <ExchangeRateForm base="AFN" currencies={['USD']} onSave={vi.fn()} />,
     )
     expect(container.querySelector('input[type="date"]')).toBeNull()
-    expect(container.querySelector('form > div')!.className).toContain('lg:flex-nowrap')
+    expect(container.querySelector('[data-rate-side="left"]')).not.toBeNull()
+    expect(container.querySelector('[data-rate-side="right"]')).not.toBeNull()
+  })
+})
+
+describe('measures (owner, 18 Oct 2026): kilogram of gold, million toman', () => {
+  it('stored units: gold per gram, a currency per one, a named unit per piece', async () => {
+    const { inStoredUnit, measuresFor } = await import('../lib/rate-measures')
+    expect(measuresFor('XAU')[0]!.id).toBe('gram')
+    expect(inStoredUnit(1, 'XAU', 'kilogram')).toBe(1000)
+    expect(inStoredUnit(2, 'XAG', 'ton')).toBe(2_000_000)
+    expect(inStoredUnit(1, 'XAU', 'mithqal')).toBeCloseTo(4.608)
+    expect(inStoredUnit(3, 'IRT', 'million')).toBe(3_000_000)
+    // A named unit: by count, by weight (kept per kilogram), or the person's own measure.
+    expect(measuresFor('unit:آهن').map((m) => m.id)).toEqual([
+      'piece',
+      'kilogram',
+      'gram',
+      'ton',
+      '__own__',
+    ])
+    expect(inStoredUnit(1, 'unit:آهن', 'ton')).toBe(1000)
+    // Already saved with its measure in the name: quoted as saved, not nested.
+    expect(measuresFor('unit:آهن (کیلوگرم)').map((m) => m.id)).toEqual(['piece'])
+    expect(inStoredUnit(5, 'USD', 'nonsense')).toBe(5)
+  })
+
+  it('the name a named unit is saved under carries its measure', async () => {
+    const { namedUnit } = await import('../lib/rate-measures')
+    const labels = { kilogram: 'کیلوگرم', own: 'بشکه' }
+    expect(namedUnit('ماشین', 'piece', labels)).toBe('ماشین')
+    expect(namedUnit('آهن', 'ton', labels)).toBe('آهن (کیلوگرم)')
+    expect(namedUnit('نفت', '__own__', labels)).toBe('نفت (بشکه)')
+    expect(namedUnit('نفت', '__own__', { kilogram: 'کیلوگرم', own: '' })).toBe('نفت')
+  })
+
+  it('gold opens on GRAMS (its stored unit): «1 gram = 2,400,000 AFN» → 2,400,000', () => {
+    const onSave = vi.fn()
+    const { container } = render(
+      <ExchangeRateForm base="AFN" currencies={['XAU']} initialCurrency="XAU" onSave={onSave} />,
+    )
+    const [l, r] = amounts(container)
+    fireEvent.change(l!, { target: { value: '1' } })
+    fireEvent.change(r!, { target: { value: '2400000' } })
+    fireEvent.submit(container.querySelector('form')!)
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ currency: 'XAU', rate: 2_400_000 }),
+    )
+  })
+
+  it('both sides go through inStoredUnit before the pair becomes a rate', () => {
+    const form = readFileSync(
+      resolve(__dirname, '../components/ui/dashboard/display-basis-picker.tsx'),
+      'utf8',
+    )
+    expect(form).toContain('amount: inStoredUnit(Number(leftAmount), leftCode, leftMeasure)')
+    expect(form).toContain('amount: inStoredUnit(Number(rightAmount), rightCode, rightMeasure)')
   })
 })
 
@@ -104,5 +160,11 @@ describe('dashboard container wiring', () => {
     expect(src).toContain("t('display.exchangeButton'")
     expect(src).toContain('display.basis !== display.base ?')
     expect(src).toContain("initialCurrency={rateOpen === 'edit' ? display.basis : undefined}")
+  })
+
+  it('the rate form opens in a dialog, not as a strip pushing the dashboard down', () => {
+    expect(src).toContain('<Dialog open={rateOpen !== null}')
+    expect(src).toContain('<ExchangeRateForm')
+    expect(src).not.toContain("aria-expanded={rateOpen === 'new'}")
   })
 })

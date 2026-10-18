@@ -21,6 +21,9 @@ import { Reel63GoldsmithActor } from './Reel63GoldsmithActors'
 import { Reel64CogsActor } from './Reel64CogsActors'
 import { Reel65BarberActor } from './Reel65BarberChairActors'
 import { Reel66ShopkeeperActor } from './Reel66ShopkeeperActors'
+import { Reel67PriceListActor } from './Reel67PriceListActors'
+import { Reel68ShowreelActor } from './Reel68ShowreelActors'
+import { Reel69ShowreelActor } from './Reel69ShowreelActors'
 import { faNumber } from '../ui/motion-primitives'
 
 interface WordDrivenStageProps {
@@ -58,6 +61,9 @@ export function WordDrivenStage({ t, scene }: WordDrivenStageProps) {
         {actor?.startsWith('r64-') && <Reel64CogsActor actor={actor} t={t} plan={plan} />}
         {actor?.startsWith('r65-') && <Reel65BarberActor actor={actor} t={t} plan={plan} />}
         {actor?.startsWith('r66-') && <Reel66ShopkeeperActor actor={actor} t={t} plan={plan} />}
+        {actor?.startsWith('r67-') && <Reel67PriceListActor actor={actor} t={t} plan={plan} />}
+        {actor?.startsWith('r68-') && <Reel68ShowreelActor actor={actor} t={t} plan={plan} />}
+        {actor?.startsWith('r69-') && <Reel69ShowreelActor actor={actor} t={t} plan={plan} />}
       </div>
 
       {/* ── Synchronized Live Teleprompter / Subtitles (Clean Caption Bar) ── */}

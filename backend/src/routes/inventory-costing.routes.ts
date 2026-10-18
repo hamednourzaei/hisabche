@@ -15,6 +15,7 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { CostingService } from '../services/inventory-costing'
+import { AuditService } from '../services/audit.service'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
@@ -218,7 +219,31 @@ export async function inventoryCostingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = settingsSchema.parse(request.body)
-        return reply.send(await costingService.setSettings(request.tenancy, body))
+        const before = await costingService.getSettings(request.tenancy)
+        const after = await costingService.setSettings(request.tenancy, body)
+        // A change of costing method changes how every LATER sale is costed
+        // (owner, 18 Oct 2026: «تغییر آن محدود و audit شود»). Who, when, from
+        // what to what — in the workspace's own governance log. A failed log
+        // write never undoes the change already saved.
+        if (
+          before.costingMethod !== after.costingMethod ||
+          before.negativeStock !== after.negativeStock
+        ) {
+          await new AuditService()
+            .log({
+              userId: request.tenancy.userId,
+              workspaceId: request.tenancy.workspaceId,
+              action: 'update',
+              entityType: 'inventory_settings',
+              entityId: request.tenancy.workspaceId,
+              oldData: { ...before },
+              newData: { ...after },
+              ipAddress: request.ip,
+              userAgent: request.headers['user-agent'],
+            })
+            .catch((err: unknown) => request.log.error(err, 'inventory settings audit failed'))
+        }
+        return reply.send(after)
       } catch (err) {
         return fail(reply, err, 'Failed to save inventory settings')
       }

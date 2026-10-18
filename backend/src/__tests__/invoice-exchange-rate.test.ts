@@ -163,8 +163,15 @@ describe('what the rate is used for', () => {
     expect(service).toContain(
       'const total = InvoiceService.inBooksCurrency(Number(data.total) || 0, rate)',
     )
-    expect(service).toContain('const cost = Number(data.costOfGoodsSold) || 0')
-    expect(service).toContain('return rate === 1 ? amount : Math.round(amount * rate * 100) / 100')
+    // Lines and conversion live in a pure module since 18 Oct 2026 (posted as
+    // is by inventory-avco-01.pg.test); the service only calls it.
+    expect(service).toContain('costOfGoodsSold: data.costOfGoodsSold,')
+    const posting = readFileSync(
+      join(__dirname, '..', 'services', 'accounting', 'invoice-posting.domain.ts'),
+      'utf8',
+    )
+    expect(posting).toContain('const cost = Number(input.costOfGoodsSold) || 0')
+    expect(posting).toContain('return rate === 1 ? amount : Math.round(amount * rate * 100) / 100')
   })
 
   it('every later posting of the same invoice reads the rate it was frozen with', () => {

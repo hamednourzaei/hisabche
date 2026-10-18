@@ -50,6 +50,9 @@ import { reel63 } from './reel-63-goldsmith-gram-profit'
 import { reel64 } from './reel-64-cogs-blindspot'
 import { reel65 } from './reel-65-barber-chair-profit'
 import { reel66 } from './reel-66-shopkeeper-story'
+import { reel67 } from './reel-67-two-prices'
+import { reel68 } from './reel-68-thief-in-the-till'
+import { reel69 } from './reel-69-digital-showreel'
 
 export const REELS: Reel[] = [
   reel01,
@@ -118,6 +121,9 @@ export const REELS: Reel[] = [
   reel64,
   reel65,
   reel66,
+  reel67,
+  reel68,
+  reel69,
 ]
 
 export { film01, film02, film03, film04, film05 }
@@ -152,4 +158,7 @@ export {
   reel64,
   reel65,
   reel66,
+  reel67,
+  reel68,
+  reel69,
 }

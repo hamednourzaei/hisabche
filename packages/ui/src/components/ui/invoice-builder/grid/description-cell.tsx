@@ -214,8 +214,12 @@ export const DescriptionCell = memo(function DescriptionCell({
     if (open && !openedByTyping.current) searchRef.current?.focus()
   }, [open])
 
-  // A sale line is priced with the live promotions; a component is costed.
+  // A sale line is priced with the live promotions; a PURCHASE line and a
+  // component are priced at what the business pays (the buy price). A purchase
+  // invoice used to take the SELL price: a 20M gearbox bought for the
+  // warehouse came in at 30M (owner, 18 Oct 2026).
   const promoPrice = usePromotionPricer()
+  const selling = pickAs === 'sale' && transactionType !== 'purchase'
 
   const pick = (row: PickerRow) => {
     if (row.exhausted) return
@@ -223,7 +227,7 @@ export const DescriptionCell = memo(function DescriptionCell({
     // Picked from «all warehouses»: the line's warehouse becomes the invoice's,
     // so the stock that leaves is the stock that was shown.
     if (row.warehouseId && !warehouseId) setField('warehouseId', row.warehouseId)
-    const price = pickAs === 'component' ? productCost(product) : promoPrice(product).price
+    const price = selling ? promoPrice(product).price : productCost(product)
     onPickProduct({
       id: product.id,
       name: product.name,
@@ -407,12 +411,12 @@ export const DescriptionCell = memo(function DescriptionCell({
                     >
                       <span className="flex min-w-0 items-center gap-1.5">
                         <span className="min-w-0 truncate">{product.name}</span>
-                        {pickAs === 'sale' && promoPrice(product).discounted ? (
+                        {selling && promoPrice(product).discounted ? (
                           <span className="shrink-0 rounded bg-[hsl(var(--color-success)/0.12)] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--color-success))]">
                             {t('invoiceBuilder.grid.promotion', 'تخفیف')}
                           </span>
                         ) : null}
-                        {pickAs === 'sale' && promoPrice(product).listName ? (
+                        {selling && promoPrice(product).listName ? (
                           <span className="shrink-0 rounded bg-[hsl(var(--color-primary)/0.1)] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--color-primary))]">
                             {promoPrice(product).listName}
                           </span>

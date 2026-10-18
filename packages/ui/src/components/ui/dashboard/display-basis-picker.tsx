@@ -21,6 +21,7 @@ import { SelectField } from '../select-field'
 import { cn } from '../../../lib/utils'
 import { toIsoDay } from '@hisabche/formatting'
 import { rateFromPair } from '../../../lib/warehouse/rate-from-pair'
+import { inStoredUnit, measuresFor, namedUnit, OWN_MEASURE } from '../../../lib/rate-measures'
 import { JalaliDatePicker } from '../jalali-datepicker'
 
 /** A unit the business named itself carries this prefix inside the picker. */
@@ -223,7 +224,13 @@ export function ExchangeRateForm({
   const [leftCode, setLeftCode] = React.useState(initialCurrency ?? base)
   const [rightAmount, setRightAmount] = React.useState('')
   const [rightCode, setRightCode] = React.useState(initialCurrency ? base : (currencies[0] ?? ''))
+  // How each side is said — «کیلوگرم», «میلیون» — turned into the stored
+  // unit before the pair becomes a rate (`inStoredUnit`).
+  const [leftMeasure, setLeftMeasure] = React.useState(() => measuresFor(leftCode)[0]!.id)
+  const [rightMeasure, setRightMeasure] = React.useState(() => measuresFor(rightCode)[0]!.id)
   const [newUnit, setNewUnit] = React.useState('')
+  /** Optional: the person's own measure for a named unit (بشکه، کیسه…). */
+  const [ownMeasure, setOwnMeasure] = React.useState('')
   const [onDate, setOnDate] = React.useState(() => toIsoDay(new Date()))
   const [problem, setProblem] = React.useState<string | null>(null)
 
@@ -251,6 +258,11 @@ export function ExchangeRateForm({
     const customSide = [left, right].find((code) => code.startsWith(CUSTOM))
     if (customSide !== undefined) {
       const name = customSide.slice(CUSTOM.length)
+      const sideMeasure = customSide === left ? leftMeasure : rightMeasure
+      if (sideMeasure === OWN_MEASURE && ownMeasure.trim().length === 0) {
+        setProblem(tr('display.ownMeasureEmpty', 'نام واحد اندازه را بنویسید.'))
+        return
+      }
       if (name.length < 1 || name.length > 40) {
         setProblem(tr('display.unitName', 'نام واحد را بنویسید (حداکثر ۴۰ حرف).'))
         return
@@ -261,8 +273,8 @@ export function ExchangeRateForm({
       }
     }
     const result = rateFromPair(
-      { amount: Number(leftAmount), code: left },
-      { amount: Number(rightAmount), code: right },
+      { amount: inStoredUnit(Number(leftAmount), leftCode, leftMeasure), code: left },
+      { amount: inStoredUnit(Number(rightAmount), rightCode, rightMeasure), code: right },
       () => null,
       base,
     )
@@ -278,7 +290,16 @@ export function ExchangeRateForm({
     }
     setProblem(null)
     if (result.code.startsWith(CUSTOM)) {
-      onSaveUnit?.({ name: result.code.slice(CUSTOM.length), perUnit: result.afnPerUnit, onDate })
+      const sideMeasure = result.code === left ? leftMeasure : rightMeasure
+      const saved = namedUnit(result.code.slice(CUSTOM.length), sideMeasure, {
+        kilogram: tr('display.measure.kilogram', 'کیلوگرم'),
+        own: ownMeasure.trim(),
+      })
+      if (saved.length > 40) {
+        setProblem(tr('display.unitName', 'نام واحد را بنویسید (حداکثر ۴۰ حرف).'))
+        return
+      }
+      onSaveUnit?.({ name: saved, perUnit: result.afnPerUnit, onDate })
       return
     }
     onSave({ currency: result.code, rate: result.afnPerUnit, onDate })
@@ -298,14 +319,46 @@ export function ExchangeRateForm({
       className={cn(box, width, 'tabular-nums')}
     />
   )
-  const unitPicker = (value: string, set: (next: string) => void) => (
+  const unitPicker = (
+    value: string,
+    set: (next: string) => void,
+    measure: string,
+    setMeasure: (next: string) => void,
+  ) => (
     <>
+      {measuresFor(value).length > 1 ? (
+        <SelectField
+          value={measure}
+          onChange={setMeasure}
+          options={measuresFor(value).map((m) => ({
+            value: m.id,
+            label: tr(`display.measure.${m.id}`, m.label),
+          }))}
+          aria-label={tr('display.measureLabel', 'واحد اندازه')}
+          className="w-auto min-w-[6rem]"
+        />
+      ) : null}
       <SelectField
         value={value}
-        onChange={set}
+        onChange={(next) => {
+          set(next)
+          setMeasure(measuresFor(next)[0]!.id)
+        }}
         options={units.map(option)}
         aria-label={tr('display.rateCurrency', 'ارز')}
       />
+      {measure === OWN_MEASURE ? (
+        <input
+          value={ownMeasure}
+          maxLength={20}
+          onChange={(event) => setOwnMeasure(event.target.value)}
+          placeholder={tr('display.ownMeasurePlaceholder', 'مثلاً بشکه')}
+          aria-label={tr('display.ownMeasureLabel', 'واحد اندازه‌ی خودتان')}
+          disabled={isSaving}
+          data-own-measure=""
+          className={cn(box, 'w-28')}
+        />
+      ) : null}
       {value === OTHER ? (
         <input
           value={newUnit}
@@ -320,39 +373,53 @@ export function ExchangeRateForm({
     </>
   )
 
-  // ONE line (owner's request, live audit #62): «هر [۱] [واحد] = [عدد] [واحد]
-  // [تاریخ] [تأیید]». It wraps only where the screen is too narrow for it.
-  // The date is the reader's calendar (#48), not the browser's 10/14/2026.
+  // Shown inside a dialog (owner, 18 Oct 2026): one row per side, so a
+  // measure picker fits at every width — «هر [۱] [کیلوگرم] [طلا]» over
+  // «= [عدد] [واحد] [افغانی]», then the day and «تأیید». The date is the
+  // reader's calendar (#48), not the browser's 10/14/2026.
+  const row = 'grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-2'
   return (
     <form
       data-exchange-rate-form=""
-      title={tr(
-        'display.rateHint',
-        'نرخ برای همان روز ثبت می‌شود — ارقام گذشته با نرخ همان روز محاسبه می‌شوند، نه با نرخ امروز.',
-      )}
-      className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-2"
+      className="flex flex-col gap-3"
       onSubmit={(event) => {
         event.preventDefault()
         submit()
       }}
     >
-      <div className="flex flex-wrap items-center gap-2 text-xs lg:flex-nowrap">
-        <span>{tr('display.each', 'هر')}</span>
-        {amount(leftAmount, setLeftAmount, 'w-20')}
-        {unitPicker(leftCode, setLeftCode)}
-        <span aria-hidden="true">=</span>
-        {amount(rightAmount, setRightAmount, 'w-32')}
-        {unitPicker(rightCode, setRightCode)}
+      <div className={row}>
+        <span className="text-xs text-[hsl(var(--fg-secondary))]">{tr('display.each', 'هر')}</span>
+        <div data-rate-side="left" className="flex flex-wrap items-center gap-2">
+          {amount(leftAmount, setLeftAmount, 'w-28')}
+          {unitPicker(leftCode, setLeftCode, leftMeasure, setLeftMeasure)}
+        </div>
+      </div>
+      <div className={row}>
+        <span aria-hidden="true" className="text-center text-base font-bold">
+          =
+        </span>
+        <div data-rate-side="right" className="flex flex-wrap items-center gap-2">
+          {amount(rightAmount, setRightAmount, 'w-36')}
+          {unitPicker(rightCode, setRightCode, rightMeasure, setRightMeasure)}
+        </div>
+      </div>
+      <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
+        {tr(
+          'display.rateHint',
+          'نرخ برای همان روز ثبت می‌شود — ارقام گذشته با نرخ همان روز محاسبه می‌شوند، نه با نرخ امروز.',
+        )}
+      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <JalaliDatePicker
           value={onDate}
           onChange={setOnDate}
           disabled={isSaving === true}
-          className="w-36 shrink-0"
+          className="w-40 shrink-0"
         />
         <button
           type="submit"
           disabled={isSaving}
-          className="h-9 shrink-0 rounded-full bg-[hsl(var(--color-primary))] px-4 text-xs font-bold text-[hsl(var(--color-primary-fg))] disabled:opacity-40"
+          className="h-9 shrink-0 rounded-full bg-[hsl(var(--color-primary))] px-6 text-xs font-bold text-[hsl(var(--color-primary-fg))] disabled:opacity-40"
         >
           {isSaving ? tr('common.saving', 'در حال ثبت…') : tr('display.confirm', 'تأیید')}
         </button>

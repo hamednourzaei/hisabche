@@ -2115,7 +2115,17 @@
     "newBranch": "New branch",
     "newBranchName": "Branch name, e.g. Main branch",
     "newBranchCode": "Branch code",
-    "addBranch": "Add branch"
+    "addBranch": "Add branch",
+    "costing": {
+      "label": "Cost of goods",
+      "fifo": "First in, first out (FIFO)",
+      "avco": "Weighted average",
+      "standard": "Standard cost",
+      "hint": "Every purchase keeps its own price; this only decides which cost a sale takes. Recorded sales are not re-costed.",
+      "confirmTitle": "Change the costing method?",
+      "confirmBody": "From now on every sale is costed with the new method, so future profit and stock value change. Sales already recorded are not re-costed. The change is logged under your name in the activity log.",
+      "confirmYes": "Yes, change it"
+    }
   },
   "customers": {
     "title": "Customers",
@@ -6856,7 +6866,23 @@
     "otherUnit": "Other unit…",
     "unitName": "Write the unit name (up to 40 characters).",
     "unitPlaceholder": "e.g. car",
-    "unitNameLabel": "Unit name"
+    "unitNameLabel": "Unit name",
+    "measureLabel": "Measure",
+    "measure": {
+      "gram": "gram",
+      "mithqal": "mithqal",
+      "ounce": "troy ounce",
+      "kilogram": "kilogram",
+      "ton": "tonne",
+      "one": "unit",
+      "thousand": "thousand",
+      "million": "million",
+      "piece": "piece",
+      "__own__": "Other measure…"
+    },
+    "ownMeasureEmpty": "Type the name of the measure.",
+    "ownMeasurePlaceholder": "e.g. barrel",
+    "ownMeasureLabel": "Your own measure"
   },
   "invoiceDetail": {
     "addPayment": "Add payment",

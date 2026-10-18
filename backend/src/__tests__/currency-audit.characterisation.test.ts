@@ -147,7 +147,11 @@ describe('CHARACTERISATION · DEFECT-CUR-02 — the ledger books a foreign invoi
     expect(service).not.toContain('const total = Number(data.total) || 0')
     const at = service.indexOf('const total = InvoiceService.inBooksCurrency(')
     expect(at).toBeGreaterThan(0)
-    expect(service.slice(at, at + 2500)).toContain(
+    // The lines moved to a pure function (18 Oct 2026, so a real-Postgres E2E
+    // posts the same ones); the CONVERTED total is what the service hands it.
+    expect(service.slice(at, at + 2500)).toContain('invoiceLedgerLines({')
+    expect(service.slice(at, at + 2500)).toContain('      total,\n')
+    expect(source('services/accounting/invoice-posting.domain.ts')).toContain(
       '{ accountId: accounts.receivable!, debit: total, credit: 0 }',
     )
   })

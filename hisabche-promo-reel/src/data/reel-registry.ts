@@ -1330,6 +1330,70 @@ export const REEL_REGISTRY_LIST: ReelRegistryEntry[] = [
     description:
       'کاسب خواربار با کوهی از فاکتور کاغذی آخر روز سودش را نمی‌داند. در حسابچه ثبت یک فاکتور همزمان انبار، صندوق، حساب مشتری و سند دوبل دفتر را به‌روز می‌کند؛ با قطع اینترنت فروش متوقف نمی‌شود و گردش نسیه هر مشتری با یک نگاه شفاف است',
   },
+  {
+    id: '67',
+    title: 'همین برنج رو دیروز به همسایه‌ات ارزون‌تر دادی؟',
+    artDirection: 'financial-intelligence',
+    layoutTopology: 'full-bleed-kinetic',
+    operators: [
+      'TwinReceiptConfrontation',
+      'FlickeringPriceTag',
+      'SplitLossScale',
+      'PriceListDeck',
+      'AutoPricedInvoiceLine',
+      'SingleTagCta',
+    ],
+    themeName: 'midnight-gold',
+    cardQuotaMax: 3,
+    targetCustomer: 'wholesaler',
+    openingArchetype: 'customer-confrontation',
+    merchantPainCategory: 'profit-illusion',
+    audioStrategy: 'tactile-foley',
+    description:
+      'مشتری قدیمی با دو رسید پای پیشخوان می‌آید: همان کیسه برنج دیروز به همسایه ارزان‌تر فروخته شده. قیمت عمده و خرده فقط در ذهن صاحب مغازه است و شاگرد هر بار عددی می‌گوید. در حسابچه هر مشتری روی یک فهرست قیمت است و فاکتور قیمت همان فهرست را خودش می‌گذارد',
+  },
+  {
+    id: '68',
+    title: 'دزد دخلت کیه وقتی نه دزدی شده و نه فروشت کمه؟',
+    artDirection: 'cinematic-obsidian',
+    layoutTopology: 'single-focal-stage',
+    viralTemplate: 'premium-motion-graphics',
+    operators: [
+      'KineticTillArrest',
+      'ExplodedProfitDeconstruct',
+      'QuantumSyncConduit',
+      'LuminousResolutionBadge',
+      'RealtimeProfitTicker',
+    ],
+    themeName: 'cinematic-obsidian',
+    cardQuotaMax: 3,
+    targetCustomer: 'retail-shopkeeper',
+    openingArchetype: 'uncomfortable-discovery',
+    merchantPainCategory: 'profit-illusion',
+    audioStrategy: 'high-contrast-impact',
+    description:
+      'کاسب فروش میلیاردی دارد اما دخلش خالی است؛ دزدی در کار نیست بلکه بهای تمام‌شده و ضایعات پنهان سود را می‌بلعند. حسابچه در لحظه صدور فاکتور سود واقعی را نشان می‌دهد',
+  },
+  {
+    id: '69',
+    title: '۱۰۰٪ کسب‌وکارت رقم است؛ همه‌ش یک‌جا',
+    artDirection: 'kinetic-manifesto',
+    layoutTopology: 'data-flow-matrix',
+    operators: [
+      'DigitFreezeHook',
+      'PriceTierOdometer',
+      'TeamShiftLedger',
+      'OfflineSalesCounter',
+      'ConvergedBalanceCta',
+    ],
+    themeName: 'procedural-spatial',
+    cardQuotaMax: 3,
+    targetCustomer: 'retail-shopkeeper',
+    openingArchetype: 'visual-pattern-interrupt',
+    audioStrategy: 'rhythmic-urgency',
+    description:
+      'نمایش‌فیلم تمام‌عددی: قلاب فریزِ دیوار اعداد، فهرست قیمت هر مشتری، جمع خودکار شیفت پرسنل، فروش آفلاین در قطع اینترنت و در فرجام همه‌ی اعداد در یک دفتر متعادل؛ برای هر رشته‌ی کسب‌وکاری، بدون نام بردن از هیچ ارزی',
+  },
 ]
 
 // Ensure every entry in the registry carries its designated viral template

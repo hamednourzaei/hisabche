@@ -603,6 +603,33 @@
       "dominantLayout": "single-focal-stage",
       "cardQuotaPercent": 20,
       "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
+    },
+    {
+      "id": "67",
+      "title": "همین برنج رو دیروز به همسایه‌ات ارزون‌تر دادی؟",
+      "theme": "midnight-gold",
+      "hookFormula": "customer-confrontation",
+      "dominantLayout": "single-focal-stage",
+      "cardQuotaPercent": 20,
+      "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
+    },
+    {
+      "id": "68",
+      "title": "دزد دخلت کیه وقتی نه دزدی شده و نه فروشت کمه؟",
+      "theme": "cinematic-obsidian",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "single-focal-stage",
+      "cardQuotaPercent": 20,
+      "components": ["word-sync", "word-sync", "word-sync", "word-sync"]
+    },
+    {
+      "id": "69",
+      "title": "۱۰۰٪ کسب‌وکارت رقم است؛ همه‌ش یک‌جا",
+      "theme": "procedural-spatial",
+      "hookFormula": "visual-pattern-interrupt",
+      "dominantLayout": "data-flow-matrix",
+      "cardQuotaPercent": 20,
+      "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
     }
   ]
 }

@@ -34,6 +34,7 @@ import { WarehouseListTable, UNASSIGNED_WAREHOUSE_ID } from '../warehouse-list-t
 import { AddWarehouseDialog, AssignStockDialog, TransferStockDialog } from '../warehouse-dialogs'
 import { AddToWarehouseModal } from '../add-to-warehouse-modal'
 import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
+import { CostingMethodPicker } from '../costing-method-picker'
 
 /**
  * H4 — the server's own cap on `GET /products/:id/stock-history`.
@@ -290,6 +291,8 @@ export function warehouseContainer() {
       : {
           onOpenAddModal: () => setShowAddWarehouse(true),
           actionLabel: safeT('warehouse.addWarehouse', 'افزودن انبار'),
+          // One setting for the whole business, so on the list, not inside a warehouse.
+          headerExtra: <CostingMethodPicker t={safeT} />,
           products,
           isLoading,
           summary,

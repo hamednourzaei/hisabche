@@ -127,7 +127,7 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **ارز دفاتر و ممیزی چندارزی؛ ورود فایل (۱۱ اکتبر)**                    | `.claude/reverse-and-import/01-CURRENCY-AUDIT.md` · `00-SPEC.md`                         |
 | **مرور کار Antigravity؛ صندوق چندارزی، رخدادها، لینک حضور و غیاب (۱۲ اکتبر)** | `.claude/SESSION-CACHE-2026-10-12-ANTIGRAVITY-REVIEW.md` · `AGENTS.md` — **attendance-devices-01، attendance-02، invoice-exchange-rate-01 و till-payments-01 منتظر اجرا** |
 | **ممیزی زنده ۱۴ اکتبر: ۸۲ باگ، درس‌ها، آنچه منتظر انسان است**                 | `.claude/LIVE-AUDIT-2026-10-14.md` · `.claude/SESSION-CACHE-2026-10-14-LIVE-AUDIT.md` — **custom-units-01 منتظر اجرا و VERIFY** |
-| **همه‌ی درس‌ها با شماره (۱–۱۵۶)**                                     | `.claude/lessons-learned.md`                                                |
+| **همه‌ی درس‌ها با شماره (۱–۱۵۹)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |
@@ -518,6 +518,10 @@ cd apps/admin     && npx tsc --noEmit
 
 - ⚠️ **«نقشه انبار» حذف شد؛ دوباره نسازش.** جای کالا = قفسه‌های هر انبار در `/warehouse?view=products&stockWarehouse=<id>` (`warehouse/shelves/`). قفسه فقط کد + توضیح + ظرفیت است — بدون x/y/عرض/ارتفاع/والد. داده و API نقشه (`storage_locations`، `/warehouses/:id/map`) ماندند. فرم انبار سوییچ «مدیریت قفسه‌ها» دارد؛ خاموش یعنی هیچ سؤالی، و پرچم ذخیره‌شده‌ای نیست. «بدون قفسه» = موجودی انبار − جمع روی قفسه‌ها. ثبت قفسه موجودی را تغییر نمی‌دهد. گارد: `warehouse-shelves.test.tsx`.
 
+**بهای تمام‌شده: FIFO یا میانگین موزون (۱۸ اکتبر)**
+
+- روش در `inventory_settings.costing_method` است و در هاب انبار (فهرست انبارها) با `CostingMethodPicker` انتخاب می‌شود. هر خرید لایه‌ی خودش با بها و نرخ خودش است؛ روش فقط می‌گوید فروش با کدام بها. ⚠️ avco فقط بعد از اجرای `docs/inventory-avco-01-migration.sql` + `VERIFY-inventory-avco-01.sql` درست است (اجرا و VERIFY شد، ۱۸ اکتبر) — نسخه‌ی قبلی تابع بهای فروش را بالا می‌برد (درس ۱۵۹). خط فاکتور خرید = قیمت خرید، خط فروش = قیمت فروش (درس ۱۵۸).
+
 **هسته‌ها (CRM / Payments)**
 
 - داده‌ی CRM را فقط از `backend/src/services/crm` (index/port) بخوان؛ هیچ سرویس دیگری جدول `interactions`/`opportunities` را مستقیم نمی‌خواند (`crm-core.test.ts` گارد است). در UI برای تصویر CRM یک مشتری `CustomerCrmPanel` را بگذار، دوباره نساز.
@@ -654,3 +658,5 @@ When implementation and SDK disagree:
 4. continue the task.
 
 Never invent APIs from memory.
+ببین حدود 100 سناریو از بخش های مختلف حسابچه میخوام برای 100 ویدیو بجز ویدیوهایی که الان داریم برای من بنویسی چجوری لایه بندی بشن 
+اینشکلی که اموزشی طور باشه بیان کنه حسابچه چه ویژگی هایی داره بعد که کامل به اتمام رسید بگه حسابچه چه جوری میتونن استفاده بکنن از هر بخش سایت سپس هر بخش چجوری مشکلات مالکان کسبو کار راحت تر میکنه ویژکی هایی که داریم و بعد مثال های جامع برای تمام دسته بندی های کسبو کار هایی  که پشتیبانی میکنیم 

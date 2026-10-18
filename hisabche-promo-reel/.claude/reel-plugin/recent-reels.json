@@ -150,5 +150,29 @@
     "primaryTemplate": "word-sync",
     "visualLanguage": "cyber-emerald",
     "hookMechanism": "immediate-consequence"
+  },
+  {
+    "id": 67,
+    "topic": "یک کیسه برنج، دو قیمت: مشتری پای پیشخوان مچ مغازه را می‌گیرد؛ فهرست قیمت هر مشتری",
+    "creativeMechanism": "twin-receipt-price-list",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "midnight-gold",
+    "hookMechanism": "customer-confrontation"
+  },
+  {
+    "id": 68,
+    "topic": "دزد دخلت کیه وقتی نه دزدی شده و نه فروشت کمه؟ سود کاغذی زنده اما جیب خالی",
+    "creativeMechanism": "kinetic-till-exploded-cogs-conduit",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "cinematic-obsidian",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 69,
+    "topic": "۱۰۰٪ کسب‌وکارت رقم است؛ نمایش‌فیلم تمام‌عددی از فهرست قیمت، شیفت پرسنل، آفلاین مود و دفتر",
+    "creativeMechanism": "numeric-freeze-showreel",
+    "primaryTemplate": "word-sync",
+    "visualLanguage": "procedural-spatial",
+    "hookMechanism": "visual-pattern-interrupt"
   }
 ]

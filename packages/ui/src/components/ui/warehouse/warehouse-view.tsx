@@ -51,6 +51,8 @@ interface WarehouseViewProps {
   /** «مشاهده نقشه انبار» — where the goods physically are, inside a warehouse. */
   shelvesActionLabel?: string | undefined
   onShelvesAction?: (() => void) | undefined
+  /** Beside the header's actions — the costing-method picker on the warehouse list. */
+  headerExtra?: ReactNode
   /** Header title/subtitle; default «موجودی». A warehouse passes its own name. */
   title?: string | undefined
   description?: string | undefined
@@ -118,6 +120,7 @@ const WarehouseHeader = memo(function WarehouseHeader({
   onTransferAction,
   shelvesActionLabel,
   onShelvesAction,
+  headerExtra,
   title,
   description,
   onBack,
@@ -132,6 +135,7 @@ const WarehouseHeader = memo(function WarehouseHeader({
   onTransferAction?: (() => void) | undefined
   shelvesActionLabel?: string | undefined
   onShelvesAction?: (() => void) | undefined
+  headerExtra?: ReactNode
   title: string
   description: string
   onBack?: (() => void) | undefined
@@ -177,6 +181,7 @@ const WarehouseHeader = memo(function WarehouseHeader({
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+        {headerExtra}
         {shelvesActionLabel && onShelvesAction ? (
           <button
             type="button"
@@ -498,6 +503,7 @@ export const WarehouseView = memo(function WarehouseView({
   onTransferAction,
   shelvesActionLabel,
   onShelvesAction,
+  headerExtra,
   title,
   description,
   onBack,
@@ -603,6 +609,7 @@ export const WarehouseView = memo(function WarehouseView({
         onTransferAction={onTransferAction}
         shelvesActionLabel={shelvesActionLabel}
         onShelvesAction={onShelvesAction}
+        headerExtra={headerExtra}
         title={title ?? t('nav.stock', 'موجودی')}
         description={description ?? t('nav.stock_description', 'چه چیزی داریم و چه چیزی کم است')}
         onBack={onBack}
