@@ -8,12 +8,18 @@
 'use client'
 
 import { memo } from 'react'
-import type { CurrencyCode } from '@hisabche/store'
+import { useInvoiceDraftStore, type CurrencyCode } from '@hisabche/store'
 import { currencyPrecision, type InvoiceSummary } from '@hisabche/validation'
 import { formatNumber } from '@hisabche/formatting'
 
 import { NumberStepper } from '../number-stepper'
 import { cn } from '../../../lib/utils'
+import { useBookCurrency } from '../../../hooks/use-book-currency'
+import {
+  exchangeRateOf,
+  inBooksAtRate,
+  needsExchangeRate,
+} from '../../../lib/invoices/exchange-rate'
 
 export interface InvoiceSummaryPanelProps {
   t: (key: string, fallback?: string) => string
@@ -56,6 +62,13 @@ export const InvoiceSummaryPanel = memo(function InvoiceSummaryPanel({
 }: InvoiceSummaryPanelProps) {
   const fmt = (value: number, decimals = precision) => formatNumber(value, locale, decimals)
   const currencyName = t(`currency.${currency.toLowerCase()}`, currency)
+  // The payable in the BOOKS currency (the one chosen at onboarding), at this
+  // invoice's own rate — the figure the stock, ledger and profit will carry.
+  const bookCurrency = useBookCurrency()
+  const rate = useInvoiceDraftStore((s) => exchangeRateOf(s.exchangeRateFrom, s.exchangeRateTo))
+  const foreign = needsExchangeRate(currency, bookCurrency)
+  const booksTotal = foreign ? inBooksAtRate(summary.total, rate, bookCurrency) : null
+  const bookName = bookCurrency ? t(`currency.${bookCurrency.toLowerCase()}`, bookCurrency) : ''
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
@@ -175,6 +188,19 @@ export const InvoiceSummaryPanel = memo(function InvoiceSummaryPanel({
             {fmt(summary.total)}
           </span>
         </div>
+
+        {foreign ? (
+          <div className={rowClass} data-books-equivalent>
+            <span className={labelClass}>
+              {t('invoiceBuilder.summary.booksEquivalent', 'معادل به ارز دفاتر')} ({bookName})
+            </span>
+            <span className={valueClass} dir="ltr">
+              {booksTotal === null
+                ? t('invoiceBuilder.summary.noRateYet', 'نرخ وارد نشده')
+                : fmt(booksTotal, Number.isInteger(booksTotal) ? 0 : 2)}
+            </span>
+          </div>
+        ) : null}
       </div>
     </div>
   )

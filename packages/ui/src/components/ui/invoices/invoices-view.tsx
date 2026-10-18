@@ -613,6 +613,7 @@ export const InvoicesView = memo(function InvoicesView({
       {statsSummary && statsSummary.count > 0 && <BentoStats t={t} stats={stats} />}
 
       <DataTable
+        paginate={false}
         tableId="invoices"
         t={t}
         rows={invoices}

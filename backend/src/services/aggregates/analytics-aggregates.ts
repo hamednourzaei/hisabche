@@ -3,7 +3,14 @@
 //
 // Database-side aggregates for the dashboard, the sales summary, the
 // inventory summary and the invoice-list summary.
-// SQL: docs/perf-aggregates-analytics-migration.sql
+// SQL: docs/perf-aggregates-analytics-migration.sql (v1) and
+//      docs/dashboard-fx-01-migration.sql (v2: in the books currency).
+//
+// ⚠️ v2 FIRST. v1 adds every invoice's `total` as it is, whatever currency it
+// is in — a 2,307,692.3 USD sale was «2.3 million» on the 7-day chart (owner,
+// 18 Oct 2026). v2 converts each invoice at its own frozen rate and COUNTS
+// the ones it cannot convert (another currency, no rate). v1 is read only
+// while v2 is not installed — the headline then stays books-currency-only.
 //
 // Each `fetch…` returns `null` ONLY when the function is not installed — the
 // caller then runs its original row-by-row path. Each `…FromAggregate` maps
@@ -40,8 +47,14 @@ const dashboardCurrencyRow = z.object({
   purchase_count: z.number(),
 })
 
+/** v2: every money figure in the books currency, at each invoice's own rate. */
+const dashboardBooksRow = dashboardCurrencyRow.omit({ currency: true }).extend({
+  unconverted_count: z.number(),
+})
+
 const dashboardSchema = z.object({
   currencies: z.array(dashboardCurrencyRow),
+  books: dashboardBooksRow.optional(),
   active_customers: z.number(),
   low_stock_alerts: z.number(),
   warehouse_value: z.number(),
@@ -49,22 +62,26 @@ const dashboardSchema = z.object({
 
 export type DashboardAggregate = z.infer<typeof dashboardSchema>
 
-export function fetchDashboardAggregate(
+export async function fetchDashboardAggregate(
   workspaceId: string,
   todayStart: string,
   firstOfThisMonth: Date,
   firstOfPrevMonth: Date,
+  booksCurrency: string,
 ): Promise<DashboardAggregate | null> {
-  return callAggregate(
-    'analytics_dashboard_kpis',
-    {
-      p_workspace_id: workspaceId,
-      p_today_start: todayStart,
-      p_month_start: firstOfThisMonth.toISOString(),
-      p_prev_month_start: firstOfPrevMonth.toISOString(),
-    },
+  const args = {
+    p_workspace_id: workspaceId,
+    p_today_start: todayStart,
+    p_month_start: firstOfThisMonth.toISOString(),
+    p_prev_month_start: firstOfPrevMonth.toISOString(),
+  }
+  const converted = await callAggregate(
+    'analytics_dashboard_kpis_v2',
+    { ...args, p_books_currency: booksCurrency },
     dashboardSchema,
   )
+  if (converted) return converted
+  return callAggregate('analytics_dashboard_kpis', args, dashboardSchema)
 }
 
 /** Every dashboard field except `customerGrowth`, which the service adds. */
@@ -90,6 +107,34 @@ export function dashboardKpisFromAggregate(agg: DashboardAggregate, booksCurrenc
     }
   }
   const currencies = Object.keys(byCurrency)
+
+  // v2: the headline is every invoice in the books currency, converted at its
+  // own rate; the ones that could not be are counted, not added at 1.
+  const books = agg.books
+  if (books) {
+    return {
+      monthlyRevenue: round2(books.monthly_revenue),
+      monthlyGrowth: growthPercent(books.monthly_revenue, books.prev_month_revenue),
+      pendingPayments: round2(books.pending_payments),
+      pendingPaymentsCount: books.pending_payments_count,
+      activeCustomers: agg.active_customers,
+      lowStockAlerts: agg.low_stock_alerts,
+      byCurrency,
+      currencies,
+      mixedCurrency: currencies.length > 1,
+      convertedToBooks: true,
+      unconvertedInvoices: books.unconverted_count,
+      totalSales: round2(books.total_sales),
+      customerDebt: round2(books.customer_debt),
+      warehouseValue: round2(agg.warehouse_value),
+      todaySales: round2(books.today_sales),
+      todayInvoices: books.today_invoices,
+      totalPurchases: round2(books.total_purchases),
+      supplierPayable: round2(books.supplier_payable),
+      purchaseCount: books.purchase_count,
+    }
+  }
+
   const monthlyRevenue = sum((r) => r.monthly_revenue)
 
   return {
@@ -105,6 +150,8 @@ export function dashboardKpisFromAggregate(agg: DashboardAggregate, booksCurrenc
     byCurrency,
     currencies,
     mixedCurrency: currencies.length > 1,
+    convertedToBooks: false,
+    unconvertedInvoices: 0,
     totalSales: round2(sum((r) => r.total_sales)),
     customerDebt: round2(sum((r) => r.customer_debt)),
     warehouseValue: round2(agg.warehouse_value),
@@ -120,6 +167,8 @@ export function dashboardKpisFromAggregate(agg: DashboardAggregate, booksCurrenc
 
 const salesSchema = z.object({
   total_invoices: z.number(),
+  /** v2 only: invoices in another currency with no rate, left out. */
+  unconverted_count: z.number().optional(),
   total_revenue: z.number(),
   total_paid: z.number(),
   by_currency: z.record(z.number()),
@@ -151,22 +200,26 @@ const salesSchema = z.object({
 
 export type SalesAggregate = z.infer<typeof salesSchema>
 
-export function fetchSalesAggregate(
+export async function fetchSalesAggregate(
   workspaceId: string,
   startDate: string,
   endExclusive: string,
   chartFrom: Date,
+  booksCurrency: string,
 ): Promise<SalesAggregate | null> {
-  return callAggregate(
-    'analytics_sales_summary',
-    {
-      p_workspace_id: workspaceId,
-      p_start: startDate,
-      p_end_exclusive: endExclusive,
-      p_chart_from: chartFrom.toISOString(),
-    },
+  const args = {
+    p_workspace_id: workspaceId,
+    p_start: startDate,
+    p_end_exclusive: endExclusive,
+    p_chart_from: chartFrom.toISOString(),
+  }
+  const converted = await callAggregate(
+    'analytics_sales_summary_v2',
+    { ...args, p_books_currency: booksCurrency },
     salesSchema,
   )
+  if (converted) return converted
+  return callAggregate('analytics_sales_summary', args, salesSchema)
 }
 
 /** Only for a non-empty aggregate — the empty case keeps its own diagnostic path. */
@@ -178,6 +231,8 @@ export function salesSummaryFromAggregate(agg: SalesAggregate) {
     totalPaid: round2(agg.total_paid),
     totalUnpaid: round2(agg.total_revenue - agg.total_paid),
     byCurrency: agg.by_currency,
+    convertedToBooks: agg.unconverted_count !== undefined,
+    unconvertedInvoices: agg.unconverted_count ?? 0,
     byPeriod: agg.by_period.map((p) => ({
       period: p.period,
       revenue: round2(p.revenue),

@@ -36,6 +36,10 @@ const SalesSummarySchema = z.object({
   totalPaid: z.number(),
   totalUnpaid: z.number(),
   byCurrency: z.record(z.number()),
+  // dashboard-fx-01: true when the figures above are in the books currency at
+  // each invoice's rate; how many invoices could not be converted (left out).
+  convertedToBooks: z.boolean().default(false),
+  unconvertedInvoices: z.number().default(0),
   byPeriod: z.array(
     z.object({
       period: z.string(),
@@ -100,6 +104,9 @@ const DashboardKPIsSchema = z.object({
     .default({}),
   currencies: z.array(z.string()).default([]),
   mixedCurrency: z.boolean().default(false),
+  // dashboard-fx-01 — see SalesSummarySchema.
+  convertedToBooks: z.boolean().default(false),
+  unconvertedInvoices: z.number().default(0),
   // Figure groups this person may not be told (dashboard-visibility.domain):
   // their fields are zero AND named here, so the client leaves the card out.
   hidden: z.array(z.enum(DASHBOARD_FIGURE_GROUPS)).default([]),

@@ -56,6 +56,23 @@ export function priceForInvoice(
   return String(Math.round((inBooks / rate) * factor) / factor)
 }
 
+/**
+ * An amount of the invoice's currency in the books currency: amount × rate
+ * («1 دالر = 65 افغانی» ⇒ × 65), rounded to the books currency's digits.
+ * null without a rate — never × 1.
+ */
+export function inBooksAtRate(
+  amount: number,
+  rate: number | null,
+  bookCurrency: string | undefined,
+): number | null {
+  if (!rate || !(rate > 0) || !Number.isFinite(amount)) return null
+  const digits =
+    (FRACTION_DIGITS as Record<string, number>)[String(bookCurrency ?? '').toUpperCase()] ?? 2
+  const factor = 10 ** digits
+  return Math.round(amount * rate * factor) / factor
+}
+
 /** A line whose price the app filled from a product (not typed by a person). */
 export interface AutoPricedLine {
   /** The product's price in the BOOKS currency. */

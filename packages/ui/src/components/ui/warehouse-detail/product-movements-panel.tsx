@@ -142,7 +142,7 @@ export function ProductMovementsPanel({
             className={cn(
               'tabular-nums',
               movement.isTransfer
-                ? 'text-[hsl(var(--color-muted-foreground))]'
+                ? 'text-[hsl(var(--fg-tertiary))]'
                 : movement.quantity < 0
                   ? 'text-[hsl(var(--color-destructive))]'
                   : 'text-[hsl(var(--color-success))]',

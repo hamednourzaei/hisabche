@@ -43,6 +43,14 @@ export interface DashboardKPIs {
    * The card is left out — a zero would read as a measurement.
    */
   hidden?: Array<'sales' | 'customers' | 'stock' | 'stockValue'> | undefined
+  /**
+   * dashboard-fx-01: the money figures are in the books currency, each
+   * invoice at its own frozen rate. Absent/false on a server or database
+   * without it (the headline is then books-currency invoices only).
+   */
+  convertedToBooks?: boolean | undefined
+  /** Invoices in another currency with no rate — left out, never added at 1. */
+  unconvertedInvoices?: number | undefined
 }
 
 export interface AIInsight {
@@ -101,6 +109,25 @@ export interface ProductsSummary {
     reorderPoint: number
   }>
 }
+
+// ─── Freshness ───────────────────────────────────────────────────────────────
+//
+// «Almost live», like the invoice list (owner, 18 Oct 2026: 440M of sales on
+// /invoices, the dashboard still on the old figure). The Realtime
+// subscriptions below stay, but they are not something to rely on alone: an
+// invoice issued on another device or by a colleague, or a Realtime channel
+// that never connected, left these reads on a 1–2 minute stale window with no
+// polling behind it. Now: stale after 5 s, re-read on focus and on every
+// visit, and every 20 s while the tab is visible (never in the background).
+// The server side is generation-checked (invalidateMoneyCaches), so a
+// re-read after an invoice gets the new figure, not a cached one.
+export const DASHBOARD_LIVE = {
+  staleTime: 5_000,
+  refetchOnWindowFocus: true,
+  refetchOnMount: 'always',
+  refetchInterval: 20_000,
+  refetchIntervalInBackground: false,
+} as const
 
 // ─── Keys ────────────────────────────────────────────────────────────────────
 export const dashboardKeys = {
@@ -247,11 +274,7 @@ export function useDashboardKPIs(options: DashboardReadOptions = {}) {
       return data
     },
     enabled: authReady && enabled,
-    staleTime: 60_000,
-    // ✅ FIX: بدون refetchInterval — Realtime جایگزین polling شده.
-    // staleTime بالاتر رفته چون دیگر polling دوره‌ای پشتوانه نیست؛
-    // این فقط سقف زمانی «بدون هیچ رویداد Realtime» است، نه فاصله‌ی
-    // معمول رفرش.
+    ...DASHBOARD_LIVE,
   })
 }
 
@@ -274,8 +297,7 @@ export function useAIInsights(options: DashboardReadOptions = {}) {
       return asList<AIInsight>(data)
     },
     enabled: authReady && enabled,
-    staleTime: 120_000,
-    // ✅ FIX: بدون refetchInterval — به Realtime تکیه می‌شود.
+    ...DASHBOARD_LIVE,
   })
 }
 
@@ -368,7 +390,6 @@ export function useDashboardSales(
       return { data: fallbackData, chartData: fallbackData, total: 0, average: 0 }
     },
     enabled: authReady && enabled,
-    staleTime: 120_000,
-    // ✅ FIX: بدون refetchInterval — به Realtime تکیه می‌شود.
+    ...DASHBOARD_LIVE,
   })
 }

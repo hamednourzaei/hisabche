@@ -166,7 +166,10 @@ function writeU32(target: Uint8Array, offset: number, value: number): void {
   target[offset + 3] = (value >>> 24) & 0xff
 }
 
-function concat(parts: readonly Uint8Array[]): Uint8Array<ArrayBuffer> {
+// No return annotation on purpose: `Uint8Array<ArrayBuffer>` is TypeScript ≥5.7
+// syntax and the mobile host type-checks this file with 5.3. Inferred from
+// `new Uint8Array(size)`, it is still `Uint8Array<ArrayBuffer>` on 5.9.
+function concat(parts: readonly Uint8Array[]) {
   let size = 0
   for (const part of parts) size += part.length
   const out = new Uint8Array(size)
@@ -179,7 +182,7 @@ function concat(parts: readonly Uint8Array[]): Uint8Array<ArrayBuffer> {
 }
 
 /** A minimal zip: every entry stored (no compression), UTF-8 names. */
-function zip(files: readonly ZipEntry[]): Uint8Array<ArrayBuffer> {
+function zip(files: readonly ZipEntry[]) {
   const locals: Uint8Array[] = []
   const centrals: Uint8Array[] = []
   let offset = 0
@@ -237,7 +240,7 @@ function zip(files: readonly ZipEntry[]): Uint8Array<ArrayBuffer> {
  * `new Blob([...])` — a `SharedArrayBuffer` view would be refused there and
  * TypeScript says so.
  */
-export function buildXlsx(sheets: readonly XlsxSheet[]): Uint8Array<ArrayBuffer> {
+export function buildXlsx(sheets: readonly XlsxSheet[]) {
   const names = sheetNames(sheets.map((sheet) => sheet.name))
 
   const workbook =

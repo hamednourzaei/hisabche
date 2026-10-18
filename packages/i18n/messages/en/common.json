@@ -1745,7 +1745,9 @@
     "draft": "Draft",
     "preview": "Preview",
     "published": "Published",
-    "title": "Title"
+    "title": "Title",
+    "showMore": "More",
+    "showLess": "Less"
   },
   "invoices": {
     "title": "Invoice",
@@ -2730,7 +2732,8 @@
         "text": "Record expenses under Accounting for a more accurate profit and loss report.",
         "action": "Go to accounting"
       }
-    }
+    },
+    "unconvertedInvoices": "{count} invoice(s) in another currency have no exchange rate and are not included in these figures."
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -4554,7 +4557,9 @@
       "discount": "Total discount",
       "taxRate": "Tax (%)",
       "taxTotal": "Tax amount",
-      "payable": "Amount payable"
+      "payable": "Amount payable",
+      "booksEquivalent": "Equivalent in books currency",
+      "noRateYet": "No rate yet"
     },
     "errors": {
       "descriptionRequired": "An item description is required",

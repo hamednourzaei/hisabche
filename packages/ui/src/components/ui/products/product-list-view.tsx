@@ -195,6 +195,7 @@ export const ProductListView = memo(function ProductListView({
           every other list. Search is sent to the server: the table holds one
           page. It stays mounted while a page loads, so typing keeps its focus. */}
       <DataTable
+        paginate={false}
         tableId="products"
         t={t}
         rows={rows}

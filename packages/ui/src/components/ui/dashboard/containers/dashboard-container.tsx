@@ -256,6 +256,22 @@ export function DashboardContainer() {
         ) : null}
       </div>
 
+      {/* dashboard-fx-01: an invoice in another currency with no rate cannot be
+          put in the books currency. It is left out of every figure — said
+          here, where the figures are read, never added at 1 (§7.5). */}
+      {(kpis?.unconvertedInvoices ?? 0) > 0 ? (
+        <p
+          role="note"
+          data-unconverted-invoices
+          className="mb-3 rounded-xl border border-[hsl(var(--color-warning)/0.4)] bg-[hsl(var(--color-warning)/0.08)] px-3 py-2 text-xs text-[hsl(var(--fg-secondary))]"
+        >
+          {t(
+            'dashboard.unconvertedInvoices',
+            '{count} فاکتور به ارز دیگر نرخ تبدیل ندارد و در این عددها نیامده است.',
+          ).replace('{count}', formatNumber(kpis?.unconvertedInvoices ?? 0, intlLocale))}
+        </p>
+      ) : null}
+
       <DashboardView
         t={t}
         fmt={fmtInBasis}

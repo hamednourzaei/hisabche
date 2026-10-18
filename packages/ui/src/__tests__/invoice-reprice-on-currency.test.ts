@@ -28,3 +28,12 @@ describe('repriceAutoFilled', () => {
     expect(out.get('r1')).toBe('30000000')
   })
 })
+
+describe('inBooksAtRate — the payable in the onboarding currency', () => {
+  it('923,076.92 dollars × 65 = 60,000,000 afghani', async () => {
+    const { inBooksAtRate } = await import('../lib/invoices/exchange-rate')
+    expect(inBooksAtRate(923_076.92, 65, 'AFN')).toBe(60_000_000)
+    expect(inBooksAtRate(400, 75, 'AFN')).toBe(30_000)
+    expect(inBooksAtRate(400, null, 'AFN')).toBeNull()
+  })
+})

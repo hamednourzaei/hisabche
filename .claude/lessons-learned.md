@@ -1475,3 +1475,18 @@ The invoice picker read 100 products and narrowed them to the warehouse in the b
 
 ## 170. شماره‌ی صندوق بعد از فاکتور تا رفرش سخت عوض نمی‌شد
 `useSession` نه staleTime کوتاه داشت نه با mutation فاکتور invalidate می‌شد، در حالی که «کل دریافتی امروز» (cash-flow) هر ۶۰ ثانیه تازه می‌شد. هر mutation فاکتور حالا `['till']` را هم invalidate می‌کند. گارد: `packages/api/src/__tests__/invoice-refreshes-till.test.ts`.
+
+## 171. جدول زیر تبلت = کارت؛ یکی رندر شود، نه هر دو (۱۸ اکتبر ۲۰۲۶)
+`DataTable` زیر ۷۶۸ پیکسل ردیف‌ها را کارت می‌کند (`data-table-cards.tsx`: ستون اول عنوان، سه ستون خلاصه، بقیه پشت فلش، `actions` پایین کارت) و یک pager داخلی دارد (۱۰/۲۵/۵۰/۱۰۰). نسخه‌ی اول هر دو را با `md:hidden`/`md:block` می‌کشید: هر ردیف دو بار در DOM و هر دکمه دو تا — سه تست موجود همین را گرفتند. حالا `useCards` بعد از mount با `matchMedia` یکی را انتخاب می‌کند (سرور و paint اول = جدول، پس hydration سالم). ⚠️ هوک مشترک `useMediaQuery` بدون چکِ وجود `matchMedia` است و در jsdom می‌شکند. صفحه‌ای که خودش صفحه‌بندی می‌کند (فاکتورها، سفارش‌ها، فهرست کالا) `paginate={false}` می‌دهد. ⚠️ موبایل هم همین است: اپ Expo یک WebView روی `@hisabche/app-shell` است (`src/host/shell-webview.tsx`)، پس هر تغییر `packages/ui` با `pnpm run build:shell` به APK می‌رسد — «موبایل از packages/ui استفاده نمی‌کند» غلط است؛ گارد: `data-table-cards-and-pager.test.ts` + `data-table-cards-render.test.tsx`.
+
+## 172. توکنی که وجود ندارد، رنگ نیست
+`--color-muted-foreground` (اسم shadcn) در این پروژه نیست؛ `--fg-tertiary` است. `design-token-existence.test.ts` گرفتش — اعلامِ نامعتبر بی‌صدا دور ریخته می‌شود.
+
+## 173. `Uint8Array<ArrayBuffer>` در کد مشترک، tsc موبایل را می‌شکند (۱۸ اکتبر ۲۰۲۶)
+موبایل TypeScript 5.3 دارد و `Uint8Array` آنجا generic نیست (از 5.7). در `packages/formatting/table-export.ts` نوع بازگشتی را ننویس؛ از `new Uint8Array(size)` استنتاج می‌شود و روی 5.9 همان `Uint8Array<ArrayBuffer>` است که `new Blob` می‌خواهد.
+
+## 174. داشبورد روی Realtime تنها بود و ۱–۲ دقیقه کهنه می‌ماند
+پولینگ حذف شده بود به اعتبار Realtime؛ فاکتورِ دستگاه یا همکار دیگر، یا کانالی که وصل نشده، داشبورد را عقب نگه می‌داشت. حالا هر سه خواندن `DASHBOARD_LIVE` (۵ ثانیه کهنگی، رفرش با فوکوس و ورود، هر ۲۰ ثانیه فقط وقتی تب دیده می‌شود). سمت سرور نسل‌دار است، پس بازخوانی عدد تازه می‌گیرد. ⚠️ `withCacheKey` ثانیه می‌گیرد و چهار جا `60_000`/`120_000` می‌دهند (۱۶–۳۳ ساعت)؛ برای کلیدهای پول بی‌ضرر است چون نسل چک می‌شود. ⚠️ **باز:** نمودار ۷ روز فاکتور دالری را خام با افغانی جمع می‌کند (۲٬۳۰۷٬۶۹۲ دالر = «۲٫۳ میلیون» به‌جای ۱۵۰ میلیون افغانی) — تبدیل با `invoices.exchange_rate` در تابع Postgres داشبورد، migration لازم.
+
+## 175. داشبورد به ارز دفاتر، هر فاکتور به نرخ خودش (dashboard-fx-01، ۱۸ اکتبر ۲۰۲۶)
+توابع `analytics_dashboard_kpis` و `analytics_sales_summary` ستون `total` را بی‌توجه به ارز جمع می‌کردند: ۲٬۳۰۷٬۶۹۲٫۳ دالر روی نمودار ۷ روز «۲٫۳ میلیون» افغانی بود. نسخه‌ی `_v2` (با `p_books_currency`) هر فاکتور را با `invoice_books_amount` می‌خواند: ارز دفاتر = خودش، ارز دیگر با نرخ = × `exchange_rate`، بی‌نرخ = NULL و **شمرده** (`unconverted_count`)، هرگز × ۱. بک‌اند اول v2 و بعد v1 را می‌خواند؛ کارت داشبورد تعداد فاکتورهای تبدیل‌نشده را می‌گوید. ⚠️ فاکتورِ بی‌ارز همان ارز دفاتر است — در کسب‌وکار دلاری، فاکتور بی‌ارز دالر حساب می‌شود. ⚠️ ۲٬۳۰۷٬۶۹۲٫۳ × ۶۵ = ۱۴۹٬۹۹۹٬۹۹۹٫۵ — گرد نشده؛ تست با تلورانس. گارد: `dashboard-fx-01.pg.test.ts` (برگرداندن ضرب = ۳ قرمز)، `dashboard-fx-mapping.test.ts`. **منتظر اجرا و VERIFY.**

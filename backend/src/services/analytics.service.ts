@@ -142,11 +142,13 @@ export class AnalyticsService {
         const now = new Date()
         const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
         const firstOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        const booksCurrency = await baseCurrencyOf(workspaceId)
         const aggregate = await fetchDashboardAggregate(
           workspaceId,
           todayStartISO,
           firstOfThisMonth,
           firstOfPrevMonth,
+          booksCurrency,
         )
         if (aggregate) {
           const customerGrowth = await this.getCustomerGrowth(
@@ -154,7 +156,7 @@ export class AnalyticsService {
             firstOfThisMonth.toISOString(),
           )
           return {
-            ...dashboardKpisFromAggregate(aggregate, await baseCurrencyOf(workspaceId)),
+            ...dashboardKpisFromAggregate(aggregate, booksCurrency),
             customerGrowth,
           }
         }
@@ -379,6 +381,7 @@ export class AnalyticsService {
         startDate,
         endOfDayExclusive(endDate),
         chartWindowStart(),
+        await baseCurrencyOf(workspaceId),
       )
       if (aggregate) {
         if (aggregate.total_invoices === 0) {

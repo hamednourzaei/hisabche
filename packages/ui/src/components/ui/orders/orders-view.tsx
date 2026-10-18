@@ -183,6 +183,7 @@ export const OrdersView = memo(function OrdersView(props: OrdersViewProps) {
         ) : (
           <>
             <DataTable
+              paginate={false}
               tableId="sales-orders"
               // The status filter sits in the table's own toolbar, as on /invoices.
               actions={
