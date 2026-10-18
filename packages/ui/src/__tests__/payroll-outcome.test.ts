@@ -151,10 +151,7 @@ describe('one control, on both screens, with a caller for the route', () => {
     expect(control).toContain('useSettlePayroll()')
   })
 
-  it('the payroll list and the employee page mount the same control', () => {
-    expect(ui('team-and-payroll', 'payroll-list-table.tsx')).toContain(
-      '<PayrollOutcome t={t} row={row} />',
-    )
+  it('the employee page mounts the control (the hub’s payroll list was removed, 18 Oct 2026)', () => {
     expect(ui('human-resources', 'employee-detail-view.tsx')).toContain(
       '<PayrollOutcome t={t} row={p} />',
     )

@@ -343,6 +343,15 @@ export const WarehouseProductList = memo(function WarehouseProductList({
       columns={columns}
       rowKey={(product) => product.id}
       onRowClick={(product) => onNavigate(product.id)}
+      // The phone card's edge (owner's mock-up, 18 Oct 2026): a shelf that
+      // could not take the goods is red; otherwise the stock badge's own state.
+      cardTone={(product) => {
+        if (overflowIds?.has(product.id)) return 'destructive'
+        const state = stockStatus(product.quantity, product.minStockLevel)
+        return state === 'secondary' ? undefined : state
+      }}
+      // The mock-up's grid: purchase, sale, on hand, value — category behind «بیشتر».
+      cardOrder={['buyPrice', 'sellPrice', 'quantity', 'itemValue']}
       searchValue={search}
       onSearchChange={onSearchChange}
       minWidthClass="min-w-[420px] sm:min-w-[680px]"

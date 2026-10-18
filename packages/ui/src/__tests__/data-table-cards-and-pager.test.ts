@@ -20,13 +20,46 @@ describe('DataTable — cards below md', () => {
     expect(src).toContain('columns={state.visibleColumns}')
   })
 
-  it('a card: first column the title, 3 in the summary, the rest behind the chevron, actions at the foot', () => {
+  it('a card (owner’s Android mock-up): title, «واحد» under it, 4 cells, status at the foot, actions at the top', () => {
     const col = (id: string) => ({ id, labelKey: id, labelFallback: id, render: () => id })
-    const layout = cardLayout(['name', 'a', 'b', 'c', 'd', 'actions', 'e'].map(col))
+    const layout = cardLayout(
+      [
+        'name',
+        'unit',
+        'buyPrice',
+        'sellPrice',
+        'quantity',
+        'stockStatus',
+        'category',
+        'itemValue',
+        'actions',
+      ].map(col),
+    )
     expect(layout.title?.id).toBe('name')
-    expect(layout.summary.map((c) => c.id)).toEqual(['a', 'b', 'c'])
-    expect(layout.more.map((c) => c.id)).toEqual(['d', 'e'])
+    expect(layout.subtitle?.id).toBe('unit')
+    expect(layout.grid.map((c) => c.id)).toEqual(['buyPrice', 'sellPrice', 'quantity', 'category'])
+    expect(layout.more.map((c) => c.id)).toEqual(['itemValue'])
+    expect(layout.status.map((c) => c.id)).toEqual(['stockStatus'])
     expect(layout.actions.map((c) => c.id)).toEqual(['actions'])
+  })
+
+  it('cardOrder puts the named cells first — the warehouse shows purchase, sale, on hand, value', () => {
+    const col = (id: string) => ({ id, labelKey: id, labelFallback: id, render: () => id })
+    const layout = cardLayout(
+      ['name', 'unit', 'buyPrice', 'sellPrice', 'quantity', 'category', 'itemValue'].map(col),
+      ['buyPrice', 'sellPrice', 'quantity', 'itemValue'],
+    )
+    expect(layout.grid.map((c) => c.id)).toEqual(['buyPrice', 'sellPrice', 'quantity', 'itemValue'])
+    expect(layout.more.map((c) => c.id)).toEqual(['category'])
+    const list = read('warehouse/warehouse-product-list.tsx')
+    expect(list).toContain("cardOrder={['buyPrice', 'sellPrice', 'quantity', 'itemValue']}")
+    expect(list).toContain('cardTone={(product) => {')
+  })
+
+  it('no image, no icon column in a card — a record, information first', () => {
+    const cards = read('data-table/data-table-cards.tsx')
+    expect(cards).not.toContain('<img')
+    expect(cards).not.toContain('src=')
   })
 })
 

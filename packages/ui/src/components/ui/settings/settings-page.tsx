@@ -23,7 +23,6 @@ import {
   Download,
   Trash2,
   LogOut,
-  Check,
   Loader2,
   CreditCard,
   ChevronLeft,
@@ -32,9 +31,8 @@ import {
   Upload,
   X,
   Plug,
-  ShoppingBag,
 } from 'lucide-react'
-import { formatBytes, formatNumber, toIsoDay } from '@hisabche/formatting'
+import { buildCsvZip, formatBytes, formatNumber, toIsoDay } from '@hisabche/formatting'
 import { localizePath } from '@hisabche/ui-contract'
 import { useRouteLang } from '../../../hooks/use-locale-push'
 
@@ -44,12 +42,6 @@ import { useRouteLang } from '../../../hooks/use-locale-push'
    ═══════════════════════════════════════════════════════════════════════════ */
 
 // ─── Constants ─────────────────────────────────────────────────────────────
-
-const SAFETY_ITEMS = [
-  { key: 'settings.safety1', fallback: 'اطلاعات شما به‌صورت امن ذخیره می‌شود' },
-  { key: 'settings.safety2', fallback: 'بدون اینترنت هم قابل استفاده است' },
-  { key: 'settings.safety4', fallback: 'همگام‌سازی رمزنگاری‌شده انجام می‌شود' },
-] as const
 
 const PERFORMANCE_MODES = [
   { value: 'auto', labelKey: 'settings.perfAuto', fallback: 'خودکار' },
@@ -275,24 +267,26 @@ const AccountSection = memo(function AccountSection() {
 })
 AccountSection.displayName = 'AccountSection'
 
-// ─── Business Stamp Section ───────────────────────────────────────────────
-// آپلود مهر/امضای صاحب کسب‌وکار — یک‌بار ثبت می‌شود و طبق business.stampUrl
-// روی همه‌ی فاکتورها (InvoiceDocument) نمایش داده می‌شود.
+// ─── Logo, stamp and signature ───────────────────────────────────────────
+// Owner, 18 Oct 2026: «بعضیا یک مهر، یک امضا و یک لوگو دارن» — three images,
+// each uploaded once: the logo heads every invoice, the stamp and the
+// signature sit at its foot (InvoiceDocument). Each is its own column on the
+// workspace (`logo_url`, `stamp_url`, `signature_url`).
 
 /**
  * Turn an upload failure into something the user can act on.
  *
- * The one failure worth naming is a database that has not run
- * `docs/workspace-stamp-migration.sql` — the stamp column does not exist, so no
- * amount of retrying will help and "try again" would be a lie.
+ * The one failure worth naming is a database whose column for this image does
+ * not exist yet (`workspace-stamp-migration.sql`, `workspace-signature-01`) —
+ * no amount of retrying will help and "try again" would be a lie.
  */
-function stampErrorMessage(error: unknown, t: (key: string, fallback?: string) => string): string {
+function imageErrorMessage(error: unknown, t: (key: string, fallback?: string) => string): string {
   const message = error instanceof Error ? error.message : String(error ?? '')
 
-  if (/stamp.*not supported|workspace-stamp-migration/i.test(message)) {
+  if (/not supported|-migration|signature-01/i.test(message)) {
     return t(
-      'settings.stampNotSupported',
-      'ذخیره‌ی مهر روی این سرور هنوز فعال نیست. با پشتیبانی تماس بگیرید.',
+      'settings.imageNotSupported',
+      'ذخیره‌ی این تصویر روی این سرور هنوز فعال نیست. با پشتیبانی تماس بگیرید.',
     )
   }
 
@@ -302,28 +296,58 @@ function stampErrorMessage(error: unknown, t: (key: string, fallback?: string) =
 const ALLOWED_STAMP_TYPES = ['image/png', 'image/svg+xml']
 const MAX_STAMP_SIZE = 1024 * 1024 // 1MB — چون به‌صورت data URL در ستون متنی ذخیره می‌شود
 
-export const BusinessStampSection = memo(function BusinessStampSection() {
-  const tOriginal = useTranslations()
-  const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
-    return v && v !== key ? v : (fallback ?? key)
-  }
-  const { data: workspaces } = useWorkspaces()
+type BrandImageField = 'logoUrl' | 'stampUrl' | 'signatureUrl'
+type BrandImageColumn = 'logo_url' | 'stamp_url' | 'signature_url'
+
+const BRAND_IMAGES: ReadonlyArray<{
+  field: BrandImageField
+  column: BrandImageColumn
+  labelKey: string
+  fallback: string
+}> = [
+  { field: 'logoUrl', column: 'logo_url', labelKey: 'settings.brandImages.logo', fallback: 'لوگو' },
+  {
+    field: 'stampUrl',
+    column: 'stamp_url',
+    labelKey: 'settings.brandImages.stamp',
+    fallback: 'مهر',
+  },
+  {
+    field: 'signatureUrl',
+    column: 'signature_url',
+    labelKey: 'settings.brandImages.signature',
+    fallback: 'امضا',
+  },
+]
+
+type WorkspaceImages = {
+  id: string
+  logo_url?: string | null
+  stamp_url?: string | null
+  signature_url?: string | null
+  myRole?: string
+}
+
+/** One image: its preview, «بارگذاری» and «حذف». */
+const BrandImageSlot = memo(function BrandImageSlot({
+  t,
+  workspaceId,
+  label,
+  field,
+  column,
+  current,
+}: {
+  t: (key: string, fallback?: string) => string
+  workspaceId: string | undefined
+  label: string
+  field: BrandImageField
+  column: BrandImageColumn
+  current: string | null
+}) {
   const updateWorkspace = useUpdateWorkspace()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const toast = useToast()
-
-  // ✅ فرض تک-workspace: اولین workspace کاربر (فعلاً هیچ workspace-switcher‌ای در برنامه نیست)
-  const workspace = useMemo(
-    () =>
-      (Array.isArray(workspaces) ? workspaces[0] : undefined) as
-        { id: string; stamp_url?: string | null; myRole?: string } | undefined,
-    [workspaces],
-  )
-  const workspaceId = workspace?.id
-  const stampUrl: string | null = workspace?.stamp_url ?? null
-  const canEdit = workspace?.myRole === 'owner' || workspace?.myRole === 'admin'
   const isSaving = updateWorkspace.isPending
 
   const handlePickFile = useCallback(() => fileInputRef.current?.click(), [])
@@ -355,51 +379,131 @@ export const BusinessStampSection = memo(function BusinessStampSection() {
       const reader = new FileReader()
       reader.onload = () => {
         const dataUrl = reader.result as string
-        // Both branches report. Silence on either one is what made this read
-        // as a missing feature rather than a request that succeeded or failed.
         updateWorkspace.mutate(
-          { id: workspaceId, stampUrl: dataUrl },
+          { id: workspaceId, [field]: dataUrl },
           {
             onSuccess: (updated) => {
               setError(null)
-              // A server without the stamp column answers 200 and drops the
-              // field. That is a FAILURE from the user's side, and saying
-              // "saved" while nothing was saved is the worse of the two lies.
-              const saved = (updated as { stamp_url?: string | null } | undefined)?.stamp_url
+              // A server without the column answers 200 and drops the field.
+              // That is a FAILURE from the user's side — never «saved».
+              const saved = (updated as Record<string, unknown> | undefined)?.[column]
               if (saved) {
-                toast.success(t('settings.stampSaved', 'مهر با موفقیت ذخیره شد'))
+                toast.success(t('settings.imageSaved', 'تصویر ذخیره شد'))
               } else {
                 setError(
                   t(
-                    'settings.stampNotSupported',
-                    'ذخیره‌ی مهر روی این سرور هنوز فعال نیست. با پشتیبانی تماس بگیرید.',
+                    'settings.imageNotSupported',
+                    'ذخیره‌ی این تصویر روی این سرور هنوز فعال نیست. با پشتیبانی تماس بگیرید.',
                   ),
                 )
               }
             },
-            onError: (err) => setError(stampErrorMessage(err, t)),
+            onError: (err) => setError(imageErrorMessage(err, t)),
           },
         )
       }
       reader.onerror = () => setError(t('settings.stampUploadFailed', 'بارگذاری تصویر ناموفق بود.'))
       reader.readAsDataURL(file)
     },
-    [workspaceId, updateWorkspace, t, toast],
+    [workspaceId, updateWorkspace, field, column, t, toast],
   )
 
   const handleRemove = useCallback(() => {
     if (!workspaceId) return
     updateWorkspace.mutate(
-      { id: workspaceId, stampUrl: null },
+      { id: workspaceId, [field]: null },
       {
         onSuccess: () => {
           setError(null)
-          toast.success(t('settings.stampRemoved', 'مهر حذف شد'))
+          toast.success(t('settings.imageRemoved', 'تصویر حذف شد'))
         },
-        onError: (err) => setError(stampErrorMessage(err, t)),
+        onError: (err) => setError(imageErrorMessage(err, t)),
       },
     )
-  }, [workspaceId, updateWorkspace, t, toast])
+  }, [workspaceId, updateWorkspace, field, t, toast])
+
+  return (
+    <div
+      className="space-y-2 rounded-xl border border-[hsl(var(--border-default))] p-3"
+      data-brand-image={field}
+    >
+      <p className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{label}</p>
+      <div className="flex h-20 w-full items-center justify-center rounded-xl border border-dashed border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-muted))]">
+        {current ? (
+          <img src={current} alt="" className="max-h-16 max-w-full object-contain" />
+        ) : (
+          <span className="px-2 text-center text-xs text-[hsl(var(--fg-tertiary))]">
+            {t('settings.stampNotSet')}
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={handlePickFile}
+          disabled={isSaving || !workspaceId}
+          className={cn(
+            'inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium',
+            'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]',
+            'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+            'transition-colors duration-150 disabled:opacity-40',
+            'motion-reduce:transition-none',
+          )}
+        >
+          {isSaving ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Upload className="size-4" aria-hidden="true" />
+          )}
+          {t('settings.uploadStamp')}
+        </button>
+
+        {current && (
+          <button
+            type="button"
+            onClick={handleRemove}
+            disabled={isSaving}
+            className={cn(
+              'inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium',
+              'text-[hsl(var(--color-destructive))] hover:bg-[hsl(var(--color-destructive)/0.08)]',
+              'transition-colors duration-150 disabled:opacity-40',
+            )}
+          >
+            <X className="size-4" aria-hidden="true" />
+            {t('settings.removeStamp')}
+          </button>
+        )}
+      </div>
+
+      {error && <p className="text-xs text-[hsl(var(--color-destructive))]">{error}</p>}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/svg+xml"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+    </div>
+  )
+})
+BrandImageSlot.displayName = 'BrandImageSlot'
+
+export const BusinessStampSection = memo(function BusinessStampSection() {
+  const tOriginal = useTranslations()
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+    return v && v !== key ? v : (fallback ?? key)
+  }
+  const { data: workspaces } = useWorkspaces()
+
+  // ✅ فرض تک-workspace: اولین workspace کاربر (فعلاً هیچ workspace-switcher‌ای در برنامه نیست)
+  const workspace = useMemo(
+    () => (Array.isArray(workspaces) ? workspaces[0] : undefined) as WorkspaceImages | undefined,
+    [workspaces],
+  )
+  const canEdit = workspace?.myRole === 'owner' || workspace?.myRole === 'admin'
 
   if (!canEdit) return null
 
@@ -414,65 +518,19 @@ export const BusinessStampSection = memo(function BusinessStampSection() {
         </div>
         <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('settings.businessStampDesc')}</p>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex h-20 w-40 shrink-0 items-center justify-center rounded-xl border border-dashed border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-muted))]">
-            {stampUrl ? (
-              <img src={stampUrl} alt="" className="max-h-16 max-w-full object-contain" />
-            ) : (
-              <span className="px-2 text-center text-xs text-[hsl(var(--fg-tertiary))]">
-                {t('settings.stampNotSet')}
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={handlePickFile}
-              disabled={isSaving || !workspaceId}
-              className={cn(
-                'inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium',
-                'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]',
-                'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
-                'transition-colors duration-150 disabled:opacity-40',
-                'motion-reduce:transition-none',
-              )}
-            >
-              {isSaving ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Upload className="size-4" aria-hidden="true" />
-              )}
-              {t('settings.uploadStamp')}
-            </button>
-
-            {stampUrl && (
-              <button
-                type="button"
-                onClick={handleRemove}
-                disabled={isSaving}
-                className={cn(
-                  'inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium',
-                  'text-[hsl(var(--color-destructive))] hover:bg-[hsl(var(--color-destructive)/0.08)]',
-                  'transition-colors duration-150 disabled:opacity-40',
-                )}
-              >
-                <X className="size-4" aria-hidden="true" />
-                {t('settings.removeStamp')}
-              </button>
-            )}
-          </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {BRAND_IMAGES.map((image) => (
+            <BrandImageSlot
+              key={image.field}
+              t={t}
+              workspaceId={workspace?.id}
+              label={t(image.labelKey, image.fallback)}
+              field={image.field}
+              column={image.column}
+              current={workspace?.[image.column] ?? null}
+            />
+          ))}
         </div>
-
-        {error && <p className="text-sm text-[hsl(var(--color-destructive))]">{error}</p>}
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/png,image/svg+xml"
-          className="hidden"
-          onChange={handleFileChange}
-        />
       </div>
     </div>
   )
@@ -494,6 +552,7 @@ const BackupSection = memo(function BackupSection() {
   const fetchBackup = useWorkspaceBackup()
 
   const [isExporting, setIsExporting] = useState(false)
+  const [isExportingCsv, setIsExportingCsv] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
 
   // ─── G7 — the backup now contains the business's data ────────────────────
@@ -523,7 +582,7 @@ const BackupSection = memo(function BackupSection() {
       addBackup({
         id: `backup-${Date.now()}`,
         timestamp: Date.now(),
-        size: `${Math.floor(blob.size / 1024)} KB`,
+        size: formatBytes(blob.size, intlLocale),
         type: 'manual',
         status: 'completed',
       })
@@ -546,7 +605,43 @@ const BackupSection = memo(function BackupSection() {
     } finally {
       setIsExporting(false)
     }
-  }, [fetchBackup, addBackup, t])
+  }, [fetchBackup, addBackup, intlLocale, t])
+
+  // CSV: the same backup the JSON button fetches. A CSV holds ONE table, so
+  // the download is a zip with one CSV per data set (buildCsvZip) — each one
+  // goes back in through the import screen as it is.
+  const handleExportCSV = useCallback(async () => {
+    setIsExportingCsv(true)
+    setExportError(null)
+    try {
+      const backup = await fetchBackup()
+      const archive = buildCsvZip(
+        Object.entries(backup.data).map(([name, rows]) => ({ name, rows })),
+      )
+      const blob = new Blob([archive], { type: 'application/zip' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `hisabche-backup-${toIsoDay(new Date())}-csv.zip`
+      a.click()
+      URL.revokeObjectURL(url)
+      addBackup({
+        id: `backup-${Date.now()}`,
+        timestamp: Date.now(),
+        size: formatBytes(blob.size, intlLocale),
+        type: 'manual',
+        status: 'completed',
+      })
+    } catch (err) {
+      setExportError(
+        err instanceof Error
+          ? err.message
+          : t('settings.backupFailed', 'دانلود پشتیبان ناموفق بود'),
+      )
+    } finally {
+      setIsExportingCsv(false)
+    }
+  }, [fetchBackup, addBackup, intlLocale, t])
 
   const latestBackup = backups?.[0]
 
@@ -590,14 +685,22 @@ const BackupSection = memo(function BackupSection() {
 
           <button
             type="button"
-            disabled
+            onClick={() => void handleExportCSV()}
+            disabled={isExportingCsv}
+            data-export-csv=""
             className={cn(
               'inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium',
-              'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-tertiary))]',
-              'opacity-40 cursor-not-allowed',
+              'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]',
+              'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+              'transition-colors duration-150 disabled:opacity-40',
+              'motion-reduce:transition-none',
             )}
           >
-            <FileText className="size-4" aria-hidden="true" />
+            {isExportingCsv ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <FileText className="size-4" aria-hidden="true" />
+            )}
             {t('settings.exportCSV')}
           </button>
 
@@ -699,46 +802,23 @@ const PerformanceSection = memo(function PerformanceSection() {
 })
 PerformanceSection.displayName = 'PerformanceSection'
 
-// ─── Safety Section ───────────────────────────────────────────────────────
-
-const SafetySection = memo(function SafetySection() {
-  const tOriginal = useTranslations()
-  const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
-    return v && v !== key ? v : (fallback ?? key)
-  }
-
-  return (
-    <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
-      <div className="p-6 space-y-5">
-        <div className="flex items-center gap-2">
-          <Shield className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-          <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
-            {t('settings.safety')}
-          </h2>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {SAFETY_ITEMS.map(({ key, fallback }) => (
-            <div
-              key={key}
-              className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border-default))] p-3 text-start"
-            >
-              <Check
-                className="size-4 shrink-0 text-[hsl(var(--color-success))]"
-                aria-hidden="true"
-              />
-              <span className="text-sm text-[hsl(var(--fg-primary))]">{t(key, fallback)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-})
-SafetySection.displayName = 'SafetySection'
-
 // ─── Storage Section ──────────────────────────────────────────────────────
+
+/** What this app keeps in localStorage, in bytes (UTF-16: two per character). */
+function localStorageBytes(): number | null {
+  try {
+    const storage = window.localStorage
+    let total = 0
+    for (let index = 0; index < storage.length; index++) {
+      const key = storage.key(index)
+      if (key === null) continue
+      total += (key.length + (storage.getItem(key)?.length ?? 0)) * 2
+    }
+    return total
+  } catch {
+    return null
+  }
+}
 
 /**
  * What this device keeps, and the one part of it that is safe to throw away.
@@ -773,6 +853,10 @@ export const StorageSection = memo(function StorageSection() {
   const queryClient = useQueryClient()
 
   const [entries, setEntries] = useState<number | null>(null)
+  // localStorage is where the read cache lives (persisted-query-cache) — and
+  // `navigator.storage.estimate()` does NOT count it, which is why this read
+  // «۰ بایت» with 160 answers on the device.
+  const [local, setLocal] = useState<number | null>(null)
   const [estimate, setEstimate] = useState<StorageEstimate>({ state: 'measuring' })
   const [clearing, setClearing] = useState(false)
 
@@ -780,7 +864,10 @@ export const StorageSection = memo(function StorageSection() {
   // and reset changes it, and the cache announces each one.
   useEffect(() => {
     const cache = queryClient.getQueryCache()
-    const read = () => setEntries(cache.getAll().length)
+    const read = () => {
+      setEntries(cache.getAll().length)
+      setLocal(localStorageBytes())
+    }
     read()
     return cache.subscribe(read)
   }, [queryClient])
@@ -825,7 +912,7 @@ export const StorageSection = memo(function StorageSection() {
       ? t('settings.storageMeasuring')
       : estimate.state === 'unavailable'
         ? t('settings.storageUnavailable')
-        : formatBytes(estimate.usage, locale)
+        : formatBytes(estimate.usage + (local ?? 0), locale)
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
@@ -843,7 +930,9 @@ export const StorageSection = memo(function StorageSection() {
               {t('settings.cacheEntries')}
             </dt>
             <dd className="rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] px-2.5 py-0.5 text-xs font-medium tabular-nums text-[hsl(var(--fg-secondary))]">
-              {entries === null ? '—' : formatNumber(entries, locale)}
+              {entries === null
+                ? '—'
+                : `${formatNumber(entries, locale)} ${t('settings.cacheEntriesUnit', 'مورد')}`}
             </dd>
           </div>
           <div className="flex items-center justify-between gap-3">
@@ -994,43 +1083,6 @@ const DevelopersSection = memo(function DevelopersSection() {
 })
 DevelopersSection.displayName = 'DevelopersSection'
 
-// Website and integration orders — the queue a storefront fills.
-const OrdersSection = memo(function OrdersSection() {
-  const tOriginal = useTranslations()
-  const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
-    return v && v !== key ? v : (fallback ?? key)
-  }
-  const lang = useRouteLang()
-
-  return (
-    <Link
-      href={localizePath('/orders', lang)}
-      className={cn(
-        'flex items-center gap-3 rounded-2xl p-4 sm:p-5',
-        'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
-        'transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))]',
-        'motion-reduce:transition-none',
-      )}
-    >
-      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[hsl(var(--color-primary)/0.1)] shrink-0">
-        <ShoppingBag className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="font-semibold text-[hsl(var(--fg-primary))]">{t('orders.title')}</p>
-        <p className="text-sm text-[hsl(var(--fg-secondary))] truncate">
-          {t('settings.ordersLink')}
-        </p>
-      </div>
-      <ChevronLeft
-        className="size-4 text-[hsl(var(--fg-tertiary))] rtl:rotate-180 shrink-0"
-        aria-hidden="true"
-      />
-    </Link>
-  )
-})
-OrdersSection.displayName = 'OrdersSection'
-
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export const SettingsPage = memo(function SettingsPage() {
@@ -1056,11 +1108,9 @@ export const SettingsPage = memo(function SettingsPage() {
       <BillingSection />
       <WorkflowTemplatesSection />
       <DevelopersSection />
-      <OrdersSection />
       <BackupSection />
       <HardwareSection />
       <PerformanceSection />
-      <SafetySection />
       <StorageSection />
     </div>
   )

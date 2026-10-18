@@ -36,7 +36,6 @@
 // ============================================
 
 import { useServerFieldErrors } from '../../../../hooks/use-server-field-errors'
-import type { PayrollRow } from '../payroll-list-table'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -50,8 +49,6 @@ import {
   useCreateMemberDirect,
   useDeleteEmployee,
   useEmployees,
-  usePayrolls,
-  usePayrollSummary,
   asList,
   usePermissionMatrix,
   useWorkspaces,
@@ -80,8 +77,13 @@ const TimesheetsContainer = lazy(() =>
 // Four pill tabs and a separate page became two tabs, each with one switch:
 //
 //   تیم            who works here   — کارمندان · شعب
-//   حقوق و حضور    what they are paid and when they worked
-//                                   — حقوق · حضور و غیاب · ساعات کار (was /timesheets)
+//   حقوق و حضور    when they worked — حضور و غیاب · ساعات کار (was /timesheets)
+//
+// ⚠️ NO «حقوق» SECTION (owner, 18 Oct 2026: «دقیقاً همین صفحه در
+// /team-and-payroll هست»). The payroll total is on the team page; a person's
+// payroll — and «پرداخت شد / نشد» (PayrollOutcome) — is on their own page
+// (/team-and-payroll/:id). The old `?tab=pay&view=payroll` and `?tab=payroll`
+// land on /team-and-payroll.
 //
 // ⚠️ THE SAME SCREENS. The first four are this file's own screen, told which
 // part to show; «ساعات کار» mounts the container that owns it. The bar, the
@@ -90,17 +92,18 @@ const TimesheetsContainer = lazy(() =>
 
 export const TEAM_HUB_TABS = ['team', 'pay'] as const
 export const TEAM_SECTIONS = ['employees', 'branches'] as const
-export const PAY_SECTIONS = ['payroll', 'attendance', 'timesheets'] as const
+export const PAY_SECTIONS = ['attendance', 'timesheets'] as const
 
 /** The address «ساعات کار» used to live at — the key of its lock in `NAV_MODULE`. */
 export const TIMESHEETS_SOURCE = '/timesheets'
 
 const HUB_TAB_ICON = { team: Users, pay: Wallet } as const
 
-/** Where an old `?tab=` value lives now; null when it is not an old value. */
-export function teamAddressOf(oldTab: string | null): string | null {
+/** Where an old address lives now; null when it is not an old one. */
+export function teamAddressOf(oldTab: string | null, view: string | null = null): string | null {
   if (oldTab === 'branches') return '/team-and-payroll?view=branches'
-  if (oldTab === 'payroll') return '/team-and-payroll?tab=pay'
+  if (oldTab === 'payroll') return '/team-and-payroll'
+  if (oldTab === 'pay' && view === 'payroll') return '/team-and-payroll'
   if (oldTab === 'attendance') return '/team-and-payroll?tab=pay&view=attendance'
   return null
 }
@@ -132,7 +135,7 @@ function TeamHub() {
 
   const params = useSearchParams()
   const localeReplace = useLocaleReplace()
-  const moved = teamAddressOf(params.get('tab'))
+  const moved = teamAddressOf(params.get('tab'), params.get('view'))
   useEffect(() => {
     if (moved) localeReplace(moved)
   }, [moved, localeReplace])
@@ -218,11 +221,6 @@ function TeamAndPayrollScreen({ section }: { section: TeamTab | 'timesheets' }) 
     refetch: refetchEmployees,
   } = useEmployees({ page: 1, limit: 20 })
 
-  const { data: payrollData, isLoading: isLoadingPayroll } = usePayrolls()
-  // The total is its own server-side sum over every payroll row — not
-  // something added up from whatever page of rows happened to arrive.
-  const { data: payrollSummary } = usePayrollSummary()
-
   // The flat list feeds the employee form's branch picker; the tree feeds the
   // «شعب» tab. Two reads because they answer two questions — the picker needs
   // every branch including ones with nobody in them, the tree needs the nesting
@@ -265,12 +263,6 @@ function TeamAndPayrollScreen({ section }: { section: TeamTab | 'timesheets' }) 
   const [showBranchForm, setShowBranchForm] = useState(false)
 
   const employees = employeesData?.employees ?? []
-  const totalEmployees = employeesData?.total ?? 0
-  // ⚠️ `GET /api/payrolls` returns the ARRAY of rows — there is no `.payrolls`
-  // and no `.total` on it. Both reads were `undefined`, so the tab was empty
-  // and the total was 0 even once the query above started running.
-  const payrollRecords = asList<PayrollRow>(payrollData)
-  const totalPayroll = payrollSummary?.total ?? 0
 
   // ─── Actions ──────────────────────────────────────────────────────────────
 
@@ -466,11 +458,7 @@ function TeamAndPayrollScreen({ section }: { section: TeamTab | 'timesheets' }) 
     <TeamAndPayrollView
       t={t}
       employees={employees}
-      payrollRecords={payrollRecords}
-      totalEmployees={totalEmployees}
-      totalPayroll={totalPayroll}
       isLoadingEmployees={isLoadingEmployees}
-      isLoadingPayroll={isLoadingPayroll}
       statusFilter={tab}
       onViewEmployee={handleViewEmployee}
       onCreateEmployee={handleCreateEmployee}

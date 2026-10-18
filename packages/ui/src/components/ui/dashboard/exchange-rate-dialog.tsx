@@ -20,6 +20,7 @@ import {
   type CustomUnitQuote,
 } from '@hisabche/api'
 import { CURRENCY_PICK_ORDER } from '@hisabche/validation'
+import { ArrowLeftRight } from 'lucide-react'
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../dialog'
 import { ExchangeRateForm } from './display-basis-picker'
@@ -64,10 +65,16 @@ export function ExchangeRateDialog({
     <Dialog open={open} onOpenChange={(next) => (next ? null : onClose())}>
       <DialogContent
         data-exchange-rate-dialog=""
-        className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg overflow-x-hidden overflow-y-auto"
+        className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-2xl overflow-x-hidden overflow-y-auto rounded-3xl p-6"
       >
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+            <ArrowLeftRight
+              className="size-5 text-[hsl(var(--color-primary))]"
+              aria-hidden="true"
+            />
+            {title}
+          </DialogTitle>
         </DialogHeader>
         {open ? (
           <ExchangeRateForm
@@ -92,6 +99,7 @@ export function ExchangeRateDialog({
             onSaveUnit={
               units.ready ? (input) => setUnit.mutate(input, { onSuccess: onClose }) : undefined
             }
+            onCancel={onClose}
           />
         ) : null}
       </DialogContent>

@@ -14,6 +14,7 @@
 
 import type { CreateInteraction, CreateOpportunity, UpdateOpportunity } from '@hisabche/validation'
 
+import { ForbiddenError } from '../../errors/auth.error'
 import { NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { cacheService } from '../cache.service'
@@ -94,6 +95,15 @@ export class CrmService {
   }
 
   async createInteraction(ctx: TenancyContext, data: CreateInteraction): Promise<Interaction> {
+    // A task with NO employee is the owner's own (owner, 18 Oct 2026: «اگه
+    // کارمندی نبود … اکانت مالک»). `employee_id` is a foreign key to
+    // `employees`, so the owner is not stored there as a fake employee: the
+    // task has none, and `employee_name` says who. Only the owner may give a
+    // task to the owner — the role is the server's (`request.tenancy.role`),
+    // never what the browser says.
+    if (!data.employeeId && ctx.role !== 'owner') {
+      throw new ForbiddenError('CRM_OWNER_TASK_OWNER_ONLY')
+    }
     const customerIds =
       data.customerIds && data.customerIds.length > 0 ? data.customerIds : [data.customerId]
     const customers = await this.repo.customerSnapshot(ctx.workspaceId, customerIds.filter(Boolean))

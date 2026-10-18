@@ -291,3 +291,34 @@ export function buildXlsx(sheets: readonly XlsxSheet[]) {
     })),
   ])
 }
+
+// ─── CSV, one file per data set ───────────────────────────────────────────
+
+function csvCell(text: string): string {
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+}
+
+/**
+ * The backup as CSV: a zip with one `<name>.csv` per data set.
+ *
+ * A CSV holds ONE table; a backup is many. One file each — UTF-8 with a BOM
+ * (Excel), columns as the rows name them — so each opens on its own and goes
+ * back in through the import screen as it is (customers.csv, products.csv).
+ */
+export function buildCsvZip(tables: readonly XlsxSheet[]) {
+  const names = sheetNames(tables.map((table) => table.name))
+  return zip(
+    tables.map((table, index) => {
+      const columns = columnsOf(table.rows)
+      const lines = [
+        columns.map(csvCell).join(','),
+        ...table.rows.map((row) =>
+          columns
+            .map((column) => csvCell(cellText((row as Record<string, unknown>)[column])))
+            .join(','),
+        ),
+      ]
+      return { name: `${names[index]}.csv`, data: utf8('﻿' + lines.join('\r\n') + '\r\n') }
+    }),
+  )
+}

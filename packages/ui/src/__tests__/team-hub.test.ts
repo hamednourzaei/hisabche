@@ -39,10 +39,21 @@ const hub = file.slice(
 )
 
 describe('two tabs, each with one switch', () => {
-  it('team and pay — and the five parts under them', () => {
+  it('team and pay — and the four parts under them', () => {
     expect([...TEAM_HUB_TABS]).toEqual(['team', 'pay'])
     expect([...TEAM_SECTIONS]).toEqual(['employees', 'branches'])
-    expect([...PAY_SECTIONS]).toEqual(['payroll', 'attendance', 'timesheets'])
+    // No «حقوق» section (owner, 18 Oct 2026): it repeated the team page. A
+    // person's payroll and «پرداخت شد / نشد» are on their own page.
+    expect([...PAY_SECTIONS]).toEqual(['attendance', 'timesheets'])
+  })
+
+  it('the payroll list is gone, and settling a payroll is still reachable', () => {
+    expect(file).not.toContain('PayrollListTable')
+    expect(file).not.toContain('usePayrolls()')
+    expect(ui('team-and-payroll', 'team-and-payroll-view.tsx')).not.toContain('PayrollListTable')
+    // the way out of «پیش‌نویس» must not die with the list (CLAUDE.md: a
+    // status no button changes is a dead end)
+    expect(ui('human-resources', 'employee-detail-view.tsx')).toContain('PayrollOutcome')
   })
 
   it('uses the shared bar, switch and address hooks — it draws none', () => {
@@ -73,10 +84,15 @@ describe('two tabs, each with one switch', () => {
 describe('addresses, «قبل / بعد» and the menu', () => {
   it.each([
     ['branches', '/team-and-payroll?view=branches'],
-    ['payroll', '/team-and-payroll?tab=pay'],
+    ['payroll', '/team-and-payroll'],
     ['attendance', '/team-and-payroll?tab=pay&view=attendance'],
   ])('the old ?tab=%s opens %s', (oldTab, address) => {
     expect(teamAddressOf(oldTab)).toBe(address)
+  })
+
+  it('the removed «حقوق» section lands on the team page', () => {
+    expect(teamAddressOf('pay', 'payroll')).toBe('/team-and-payroll')
+    expect(teamAddressOf('pay', 'attendance')).toBeNull()
   })
 
   it('a new address is left alone', () => {

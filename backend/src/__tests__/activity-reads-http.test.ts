@@ -23,6 +23,8 @@ const users = new Map<string, { id: string }>([
 ])
 
 let schemaMissingActive = false
+/** Only the unread-ids function is missing (live: badge right, tab wrong). */
+let unreadIdsMissing = false
 let activityReadsFailure: { code: string; message: string } | null = null
 
 const baseFrom = db.from.bind(db)
@@ -64,6 +66,9 @@ fakeDbModule.supabase.rpc = (async (name: string, args: any) => {
   }
   if (activityReadsFailure) {
     return { data: null, error: activityReadsFailure }
+  }
+  if (unreadIdsMissing && name === 'activity_get_unread_ids') {
+    return { data: null, error: { code: 'PGRST202', message: `function ${name} does not exist` } }
   }
   return originalRpc(name, args)
 }) as unknown as typeof fakeDbModule.supabase.rpc
@@ -198,6 +203,7 @@ function resetWorld() {
   db.failures.clear()
   db.queries.length = 0
   schemaMissingActive = false
+  unreadIdsMissing = false
   activityReadsFailure = null
 
   db.seed('workspaces', [
@@ -667,4 +673,46 @@ describe('activity reads over HTTP', () => {
     expect(countRes.statusCode).toBe(500)
     expect(countRes.json().code).toBe('ACTIVITIES_UNREAD_COUNT_FAILED')
   })
+})
+
+describe('the «خوانده‌نشده» tab (owner, 18 Oct 2026: «همه موارد نشان داده می‌شود»)', () => {
+  it.each([false, true])(
+    'lists only what this person has not read (unread-ids function missing: %s)',
+    async (missing) => {
+      unreadIdsMissing = missing
+      const ids = [1, 2, 3].map((n) => `bbbbbbbb-1111-4000-8000-00000000000${n}`)
+      db.seed(
+        'activities',
+        ids.map((id, index) => ({
+          id,
+          workspace_id: SHOP_1,
+          actor_id: USER_A.id,
+          actor_name: 'User A',
+          entity_type: 'invoice',
+          entity_id: `inv-${index}`,
+          action: 'created',
+          title: `Invoice ${index}`,
+          created_at: `2026-03-01T1${index}:00:00Z`,
+        })),
+      )
+      await app.inject({
+        method: 'PATCH',
+        url: '/api/v1/activities/mark-read',
+        headers: as(USER_A),
+        payload: { ids: [ids[0]] },
+      })
+
+      // Exactly the request the page sends (axios serialises `unread: true`).
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/activities?unread=true&limit=20',
+        headers: as(USER_A),
+      })
+      expect(res.statusCode).toBe(200)
+      const listed = (res.json().data as Array<{ activities: Array<{ id: string }> }>).flatMap(
+        (group) => group.activities.map((activity) => activity.id),
+      )
+      expect(listed.sort()).toEqual([ids[1], ids[2]].sort())
+    },
+  )
 })

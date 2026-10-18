@@ -32,6 +32,9 @@ import type { Interaction, TaskStatus } from '@hisabche/api'
 
 export type CrmTabId = 'interactions' | 'opportunities'
 
+/** The assignee picker's value for «خودم (مالک)» — never an employee id. */
+export const OWNER_ASSIGNEE = '__owner__'
+
 export interface EmployeeOption {
   id: string
   name: string
@@ -43,6 +46,12 @@ interface CrmViewProps {
   onTabChange: (tab: CrmTabId) => void
   interactions: Interaction[]
   employees: EmployeeOption[]
+  /**
+   * Given only to the owner: «خودم (مالک)» in the assignee picker, so a task
+   * can be made with no employee at all. Nobody else sees it, and the server
+   * refuses it from anyone else.
+   */
+  ownerOption?: { name: string } | undefined
   isLoading: boolean
   error?: string | null
   isCreatingInteraction: boolean
@@ -113,6 +122,7 @@ export const CrmView = memo(function CrmView({
   onTabChange,
   interactions,
   employees,
+  ownerOption,
   isLoading,
   error,
   isCreatingInteraction,
@@ -137,12 +147,16 @@ export const CrmView = memo(function CrmView({
 
   const handleSubmit = useCallback(async () => {
     if (customers.length === 0 || !subject.trim() || !employeeId) return
+    const toOwner = employeeId === OWNER_ASSIGNEE && ownerOption !== undefined
     const employee = employees.find((e) => e.id === employeeId)
     await onCreateInteraction({
       customerId: customers[0]!.id,
       customerIds: customers.map((c) => c.id),
-      employeeId,
-      employeeName: employee?.name ?? '',
+      // The owner's task carries no employee id; the container leaves it out.
+      employeeId: toOwner ? '' : employeeId,
+      employeeName: toOwner
+        ? ownerOption.name || t('crm.ownerAssignee', 'خودم (مالک)')
+        : (employee?.name ?? ''),
       type,
       subject: subject.trim(),
       content: content.trim(),
@@ -153,7 +167,17 @@ export const CrmView = memo(function CrmView({
     setSubject('')
     setContent('')
     setIsFormOpen(false)
-  }, [customers, employeeId, employees, type, subject, content, onCreateInteraction])
+  }, [
+    customers,
+    employeeId,
+    employees,
+    ownerOption,
+    t,
+    type,
+    subject,
+    content,
+    onCreateInteraction,
+  ])
 
   const selectedTask = useMemo(
     () => interactions.find((i) => i.id === selectedTaskId) ?? null,
@@ -380,6 +404,11 @@ export const CrmView = memo(function CrmView({
                 <SelectValue placeholder={t('crm.pickEmployeePlaceholder', 'انتخاب پرسنل...')} />
               </SelectTrigger>
               <SelectContent>
+                {ownerOption ? (
+                  <SelectItem value={OWNER_ASSIGNEE} data-owner-assignee="">
+                    {t('crm.ownerAssignee', 'خودم (مالک)')}
+                  </SelectItem>
+                ) : null}
                 {employees.map((emp) => (
                   <SelectItem key={emp.id} value={emp.id}>
                     {emp.name}

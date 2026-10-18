@@ -34,6 +34,8 @@ interface WorkspaceWithRole {
   description: string | null
   logo_url: string | null
   stamp_url: string | null
+  /** workspace-signature-01; null before that migration runs. */
+  signature_url: string | null
   owner_id: string
   is_active: boolean
   created_at: string
@@ -66,6 +68,41 @@ function isMissingStampColumn(error: { code?: string; message?: string } | null)
   if (!/stamp_url/.test(message)) return false
   return error.code === '42703' || /does not exist|schema cache|could not find/i.test(message)
 }
+const SIGNATURE_MIGRATION = 'docs/workspace-signature-01-migration.sql'
+
+/** Is this Postgres saying `signature_url` does not exist (the migration has not run)? */
+function isMissingSignatureColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  const message = error.message ?? ''
+  if (!/signature_url/.test(message)) return false
+  return error.code === '42703' || /does not exist|schema cache|could not find/i.test(message)
+}
+
+/**
+ * The signature images of these workspaces, read on their own.
+ *
+ * ⚠️ An OPTIONAL column, so not in WORKSPACE_COLUMNS: before
+ * workspace-signature-01 runs, naming it there would turn every workspace
+ * read into a 500. Missing column = every workspace has none; any other
+ * failure is a failure.
+ */
+async function signaturesOf(workspaceIds: readonly string[]): Promise<Map<string, string | null>> {
+  const found = new Map<string, string | null>()
+  if (workspaceIds.length === 0) return found
+  const { data, error } = await supabase
+    .from('workspaces')
+    .select('id, signature_url')
+    .in('id', [...workspaceIds])
+  if (error) {
+    if (isMissingSignatureColumn(error)) return found
+    throw new DatabaseError('Failed to fetch workspace signatures', error)
+  }
+  for (const row of (data ?? []) as Array<{ id: string; signature_url: string | null }>) {
+    found.set(row.id, row.signature_url ?? null)
+  }
+  return found
+}
+
 const WORKSPACE_MINIMAL = 'id, name, slug, is_active'
 
 const MEMBER_COLUMNS = 'id, user_id, role, joined_at'
@@ -202,9 +239,14 @@ export class WorkspaceService {
     if (workspacesError) throw new DatabaseError('Failed to fetch workspaces', workspacesError)
 
     const byId = new Map((workspaces || []).map((w: any) => [w.id, w]))
+    const signatures = await signaturesOf([...byId.keys()])
     const result = members
       .filter((m: any) => byId.has(m.workspace_id))
-      .map((m: any) => ({ ...byId.get(m.workspace_id), myRole: m.role || 'member' }))
+      .map((m: any) => ({
+        ...byId.get(m.workspace_id),
+        signature_url: signatures.get(m.workspace_id) ?? null,
+        myRole: m.role || 'member',
+      }))
 
     await memoryCache.set(cacheKey, result, 60) // 1 minute
     return result
@@ -239,7 +281,13 @@ export class WorkspaceService {
 
     if (!ws) throw new DatabaseError('Workspace not found')
 
-    const result = { ...ws, myRole: member.role, userHasAccess: userId }
+    const signatures = await signaturesOf([workspaceId])
+    const result = {
+      ...ws,
+      signature_url: signatures.get(workspaceId) ?? null,
+      myRole: member.role,
+      userHasAccess: userId,
+    }
     await memoryCache.set(cacheKey, result, 120) // 2 minutes
     return result
   }
@@ -285,9 +333,31 @@ export class WorkspaceService {
 
     if (error || !ws) throw new DatabaseError('Failed to update workspace', error)
 
+    // The signature is its own write: an optional column (signaturesOf).
+    // Refused by name when the column is missing — never «saved» silently.
+    if (data.signatureUrl !== undefined) {
+      const { error: signatureError } = await supabase
+        .from('workspaces')
+        .update({ signature_url: data.signatureUrl })
+        .eq('id', workspaceId)
+      if (signatureError) {
+        await this.invalidateWorkspaceCache(workspaceId)
+        if (isMissingSignatureColumn(signatureError)) {
+          throw new DatabaseError(
+            `Workspace signature is not supported by this database yet — run ${SIGNATURE_MIGRATION}`,
+          )
+        }
+        throw new DatabaseError('Failed to save the workspace signature', signatureError)
+      }
+    }
+    const signatures = await signaturesOf([workspaceId])
+
     // ✅ Invalidate cache
     await this.invalidateWorkspaceCache(workspaceId)
-    return ws
+    return {
+      ...(ws as unknown as Record<string, unknown>),
+      signature_url: signatures.get(workspaceId) ?? null,
+    }
   }
 
   // ─── List Members ──────────────────────────────────────────

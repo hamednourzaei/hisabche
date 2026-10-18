@@ -10,8 +10,10 @@ import {
   useRecordCustomerOutcome,
   useSubjectSuggestions,
   useEmployees,
+  useMyCapabilities,
 } from '@hisabche/api'
 import type { TaskStatus } from '@hisabche/api'
+import { useAuthStore } from '@hisabche/store'
 import { CrmView, type CrmTabId, type EmployeeOption } from '../crm-view'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -61,6 +63,13 @@ export const CrmContainer = memo(function CrmContainer() {
     }))
   }, [employeesData])
 
+  // «خودم (مالک)» in the assignee picker — for the OWNER only (owner, 18 Oct
+  // 2026). The role is the server's answer for the ACTIVE business, not the
+  // session's `user.role`; it only decides what is SHOWN — the server refuses
+  // an owner task from anyone else (CRM_OWNER_TASK_OWNER_ONLY).
+  const isOwner = useMyCapabilities().data?.role === 'owner'
+  const ownerName = useAuthStore((s) => s.user?.fullName?.trim() ?? '')
+
   const isLoading =
     activeTab === 'interactions'
       ? isInteractionsLoading || isEmployeesLoading
@@ -88,7 +97,10 @@ export const CrmContainer = memo(function CrmContainer() {
       subject: string
       content: string
     }) => {
-      await createInteraction(input)
+      // The owner's own task has no employee: `employee_id` is a key into
+      // `employees`, so it is left out, never sent as ''.
+      const { employeeId, ...rest } = input
+      await createInteraction(employeeId ? input : rest)
     },
     [createInteraction],
   )
@@ -137,6 +149,7 @@ export const CrmContainer = memo(function CrmContainer() {
       onTabChange={handleTabChange}
       interactions={interactions ?? []}
       employees={employees}
+      ownerOption={isOwner ? { name: ownerName } : undefined}
       isLoading={isLoading}
       error={error?.message || null}
       isCreatingInteraction={isCreatingInteraction}

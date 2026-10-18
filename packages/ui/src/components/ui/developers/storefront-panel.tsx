@@ -37,7 +37,6 @@ export interface StorefrontPanelProps {
   sdkUrl: string
   /** The API origin the SDK talks to. */
   apiBase: string
-  ordersHref: string
 }
 
 function snippet(sdkUrl: string, apiBase: string, key: string): string {
@@ -93,13 +92,6 @@ export const StorefrontPanel = memo(function StorefrontPanel(props: StorefrontPa
 
         {props.state === 'ready' && draft && (
           <>
-            <a
-              href={props.ordersHref}
-              className="text-sm text-[hsl(var(--color-primary))] underline-offset-4 hover:underline"
-            >
-              {t('storefront.openOrders')}
-            </a>
-
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="text-[hsl(var(--fg-secondary))]">

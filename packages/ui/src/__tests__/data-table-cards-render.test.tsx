@@ -86,3 +86,27 @@ describe('DataTable on a phone', () => {
     expect(document.querySelector('[data-table-pager]')).toBeNull()
   })
 })
+
+describe('the Android card (owner’s mock-up)', () => {
+  it('the row’s tone is the card’s edge; cells are label over value, two by two', async () => {
+    setWidth(true)
+    await act(async () => {
+      render(
+        <DataTable
+          tableId="t-tone"
+          t={t}
+          rows={rows.slice(0, 2)}
+          columns={columns}
+          rowKey={(r) => r.id}
+          cardTone={(r) => (r.qty === 0 ? 'destructive' : 'success')}
+        />,
+      )
+    })
+    const cards = [...document.querySelectorAll('[data-table-cards] > li')]
+    expect(cards.map((c) => c.getAttribute('data-card-tone'))).toEqual(['destructive', 'success'])
+    // «مقدار» is a label (dt) over its value (dd) inside the grid
+    const dt = cards[1]!.querySelector('dl dt')!
+    expect(dt.textContent).toBe('مقدار')
+    expect(dt.nextElementSibling?.textContent).toBe('1')
+  })
+})

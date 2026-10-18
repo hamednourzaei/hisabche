@@ -395,7 +395,7 @@ export function warehouseContainer() {
         <ExchangeRateDialog
           t={safeT}
           open={rateCode !== undefined}
-          title={safeT('warehouse.rateForm', 'ثبت نرخ')}
+          title={safeT('display.rateDialogTitle', 'ثبت نرخ تبدیل ارز')}
           base={bookCurrency}
           initialCurrency={rateCode ?? undefined}
           onClose={() => setRateCode(undefined)}

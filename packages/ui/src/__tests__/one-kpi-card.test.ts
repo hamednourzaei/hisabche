@@ -127,7 +127,8 @@ describe('every screen with a row of figures uses it', () => {
     ['crm/customer-crm-panel.tsx'],
     ['sync-center/sync-center-page.tsx'],
     ['human-resources/hr-view.tsx'],
-    ['team-and-payroll/team-and-payroll-view.tsx'],
+    // team-and-payroll-view.tsx left this list on 18 Oct 2026: its figure row
+    // was removed on the owner's request («هی تکرار میشه تو همه صفحات»).
     ['inventory-ops/inventory-ops-view.tsx'],
   ])('%s', (file) => {
     const src = code(readFileSync(join(UI_ROOT, ...file.split('/')), 'utf8'))

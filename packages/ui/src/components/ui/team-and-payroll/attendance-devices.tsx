@@ -84,9 +84,15 @@ const hint = 'text-xs text-[hsl(var(--fg-tertiary))]'
 
 export function AttendanceDevices({
   employees,
+  inDialog = false,
 }: {
   /** The people on the sheet — who a number on a device can be. */
   employees: ReadonlyArray<{ id: string; name: string }>
+  /**
+   * Shown inside the attendance page's dialog (owner, 18 Oct 2026): open from
+   * the start — and only then read — with no frame, title or «نمایش» of its own.
+   */
+  inDialog?: boolean | undefined
 }) {
   const t = useTranslations('attendance.devices')
   const locale = useIntlLocale()
@@ -98,7 +104,7 @@ export function AttendanceDevices({
     return value && value !== key ? value : (fallback ?? key)
   }
 
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(inDialog)
   const devices = useAttendanceDevices(open)
   // The branches a terminal can be put in; read only while the panel is open.
   const places = useWorkplaceTimeZones(open)
@@ -286,18 +292,25 @@ export function AttendanceDevices({
 
   return (
     <section
-      className="space-y-3 rounded-2xl border border-[hsl(var(--border-default))] p-4"
+      className={
+        inDialog
+          ? 'space-y-3'
+          : 'space-y-3 rounded-2xl border border-[hsl(var(--border-default))] p-4'
+      }
       data-attendance-devices
     >
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 className="font-semibold text-[hsl(var(--fg-primary))]">{t('title')}</h3>
-          <p className="mt-0.5 text-xs text-[hsl(var(--fg-tertiary))]">{t('hint')}</p>
+      {/* In the attendance dialog the dialog says the title and hint; no «نمایش». */}
+      {inDialog ? null : (
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h3 className="font-semibold text-[hsl(var(--fg-primary))]">{t('title')}</h3>
+            <p className="mt-0.5 text-xs text-[hsl(var(--fg-tertiary))]">{t('hint')}</p>
+          </div>
+          <Button size="sm" variant="ghost" onClick={() => setOpen((value) => !value)}>
+            {open ? t('hide') : t('show')}
+          </Button>
         </div>
-        <Button size="sm" variant="ghost" onClick={() => setOpen((value) => !value)}>
-          {open ? t('hide') : t('show')}
-        </Button>
-      </div>
+      )}
 
       {!open ? null : devices.isLoading ? (
         <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('loading')}</p>

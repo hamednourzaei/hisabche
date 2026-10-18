@@ -117,6 +117,9 @@ const nextConfig = {
       ['people-workspace', 'team-and-payroll'],
       // A second invoice form beside /invoices/new — removed (live audit #67).
       ['quick-invoice', 'invoices/new'],
+      // The orders list was never wired to a storefront anyone used (owner,
+      // 18 Oct 2026: «پیاده سازی نشده حذف بشه»). The storefront is in settings.
+      ['orders', 'settings'],
     ]
     return moved.map(([from, to]) => ({
       source: '/:lang(fa|af|en)/' + from,

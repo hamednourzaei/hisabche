@@ -62,7 +62,6 @@ export { PublicTaskContainer } from './components/ui/crm/containers/public-task-
 export { ApprovalsContainer } from './components/ui/workflow/containers/approvals-container'
 export { ReferralsContainer } from './components/ui/referrals/containers/referrals-container'
 export { DevelopersContainer } from './components/ui/developers/containers/developers-container'
-export { OrdersContainer } from './components/ui/orders/containers/orders-container'
 export { MarketplaceContainer } from './components/ui/marketplace/containers/marketplace-container'
 export { WorkflowTemplatesContainer } from './components/ui/workflow/containers/workflow-templates-container'
 export { ApprovalsHubContainer } from './components/ui/workflow/containers/approvals-hub-container'

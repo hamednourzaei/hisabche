@@ -17,7 +17,7 @@ import { PAGE_SIZES } from '@hisabche/ui-contract'
 
 import { cn } from '../../../lib/utils'
 import { ActionButton, Badge, SelectField } from '../capability/capability-kit'
-import { DataTableCards } from './data-table-cards'
+import { DataTableCards, type CardTone } from './data-table-cards'
 import { SavedViewsMenu } from './saved-views-menu'
 import { SortableHeader } from './sortable-header'
 import { TableToolbar } from './table-toolbar'
@@ -56,6 +56,10 @@ export interface DataTableProps<T> {
    * its rows (server pages, its own pager) — two pagers would split a page.
    */
   paginate?: boolean | undefined
+  /** Below tablet width: the row's state, as the card's coloured edge. */
+  cardTone?: ((row: T) => CardTone | undefined) | undefined
+  /** Column ids to put first in the card's grid (the table's order is untouched). */
+  cardOrder?: readonly string[] | undefined
 }
 
 /** Below the `md` breakpoint (tablet). */
@@ -105,6 +109,8 @@ function DataTableInner<T>({
   onToggleAll,
   bulkBar,
   paginate = true,
+  cardTone,
+  cardOrder,
 }: DataTableProps<T>) {
   const state = useTableState(tableId, columns)
   const sorted = useMemo(() => state.sortRows(rows), [rows, state])
@@ -175,6 +181,8 @@ function DataTableInner<T>({
               onRowClick={onRowClick}
               selectedIds={selectedIds}
               onToggleRow={onToggleRow}
+              cardTone={cardTone}
+              cardOrder={cardOrder}
             />
           ) : (
             <div className="w-full overflow-x-auto rounded-2xl border border-[hsl(var(--border-default))]">

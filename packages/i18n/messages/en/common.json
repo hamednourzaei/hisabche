@@ -2373,7 +2373,8 @@
     "markComplete": "Mark complete",
     "startTask": "Start task",
     "taskDone": "This task is complete",
-    "taskNotFound": "Task not found"
+    "taskNotFound": "Task not found",
+    "ownerAssignee": "Me (owner)"
   },
   "payments": {
     "amount": "Amount",
@@ -2470,8 +2471,8 @@
     "notSet": "Not set",
     "lightMode": "Light mode",
     "darkMode": "Dark mode",
-    "businessStamp": "Stamp & Signature",
-    "businessStampDesc": "Upload your stamp or signature image once to have it automatically shown at the bottom of every invoice.",
+    "businessStamp": "Logo, stamp and signature",
+    "businessStampDesc": "Upload up to three images: the logo heads every invoice, the stamp and signature sit at its foot.",
     "stampNotSet": "Not set",
     "uploadStamp": "Upload image",
     "removeStamp": "Remove image",
@@ -2523,7 +2524,16 @@
       "TIME_ZONE_INVALID": "This time zone was not recognised",
       "TIME_ZONE_SCHEMA_REQUIRED": "The database is not ready to store a time zone yet"
     },
-    "backupWhere": "Your business records are kept on the Hisabche server. To keep a copy on your own device, use the export buttons below."
+    "backupWhere": "Your business records are kept on the Hisabche server. To keep a copy on your own device, use the export buttons below.",
+    "brandImages": {
+      "logo": "Logo",
+      "stamp": "Stamp",
+      "signature": "Signature"
+    },
+    "imageSaved": "Image saved",
+    "imageRemoved": "Image removed",
+    "imageNotSupported": "Saving this image is not enabled on this server yet. Contact support.",
+    "cacheEntriesUnit": "items"
   },
   "sync": {
     "download": {
@@ -4239,7 +4249,7 @@
       "active": "Active",
       "approver": "Approver",
       "create": "Create template",
-      "description": "Without at least one active template, no invoice or purchase order enters the approval flow.",
+      "description": "A template says who approves; its condition says which invoices wait. A template with no condition holds no invoice.",
       "empty": "You have not created any templates yet",
       "entityType": "Applies to",
       "inactive": "Inactive",
@@ -4276,7 +4286,19 @@
     "started": "Started",
     "step": "Step",
     "oldest_waiting": "Oldest waiting",
-    "days": "days"
+    "days": "days",
+    "condition": {
+      "title": "Which invoices wait for approval",
+      "above": "Invoices above",
+      "always": "Every invoice",
+      "none": "No condition — no invoice waits for this template.",
+      "set": "Set condition",
+      "amountPlaceholder": "e.g. 5000",
+      "hint": "Leave empty for every invoice. The amount is in the invoice’s own currency.",
+      "badAmount": "The amount must be a number above zero.",
+      "notWired": "Approval is not applied to this kind of document yet",
+      "readFailed": "The conditions could not be read"
+    }
   },
   "action": {
     "clear": "Clear",
@@ -6891,7 +6913,16 @@
     },
     "ownMeasureEmpty": "Type the name of the measure.",
     "ownMeasurePlaceholder": "e.g. barrel",
-    "ownMeasureLabel": "Your own measure"
+    "ownMeasureLabel": "Your own measure",
+    "rateDialogTitle": "Record an exchange rate",
+    "rateIntro": "Enter the amounts and the equivalent in your books currency is worked out.",
+    "swapSides": "Swap the two sides",
+    "equalsTo": "Equals",
+    "rateToSave": "Exchange rate",
+    "rateDay": "Rate of",
+    "addCustom": "Add your own",
+    "addCustomHint": "A unit with your own name, e.g. “car” or “sack”.",
+    "save": "Save"
   },
   "invoiceDetail": {
     "addPayment": "Add payment",
@@ -7031,9 +7062,7 @@
     "salary": "Salary",
     "hireDate": "Hire date",
     "noEmployees": "No employees yet",
-    "noPayroll": "No payroll yet",
     "noEmployeesHint": "Add your first employee to start managing the team.",
-    "noPayrollHint": "Salary payments are recorded on an employee’s page and appear here.",
     "employeeName": "Employee",
     "phone": "Phone",
     "status": "Status",
@@ -9682,7 +9711,6 @@
     "sections": {
       "employees": "Employees",
       "branches": "Branches",
-      "payroll": "Payroll",
       "attendance": "Attendance",
       "timesheets": "Timesheets"
     }

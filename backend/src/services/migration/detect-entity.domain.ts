@@ -300,9 +300,27 @@ const looksLikeMoney = (cell: string): boolean => parseMoneyMinor(cell).ok === t
 /** Rows looked at for what the columns hold. Enough to see a pattern; cheap. */
 const SAMPLE = 50
 
+/**
+ * What a sheet is called, when the name IS the kind: Hisabche's own backup
+ * names its sheets after the tables (`customers`, `products`), and people
+ * name theirs «مشتریان». Exact names only — `invoice_items` is not invoices.
+ */
+const SHEET_NAMES: Record<DetectableEntity, Set<string>> = {
+  customer: new Set(
+    ['customers', 'customer', 'clients', 'مشتریان', 'مشتری', 'مشتری ها'].map(comparisonKey),
+  ),
+  product: new Set(
+    ['products', 'product', 'items', 'کالاها', 'کالا', 'اجناس', 'جنس ها'].map(comparisonKey),
+  ),
+  invoice: new Set(
+    ['invoices', 'invoice', 'sales', 'فاکتورها', 'فاکتور', 'فروش'].map(comparisonKey),
+  ),
+}
+
 export function detectEntity(
   headers: readonly string[],
   rows: readonly (readonly string[])[],
+  sheetName?: string | undefined,
 ): EntityDetection {
   const scores: Record<DetectableEntity, number> = { customer: 0, product: 0, invoice: 0 }
   const evidence: Record<DetectableEntity, string[]> = { customer: [], product: [], invoice: [] }
@@ -323,6 +341,14 @@ export function detectEntity(
           signal.keys.some((word) => (signal.exact ? key === word : names(key, word))),
       ).reduce((max, signal) => Math.max(max, signal.weight), 0)
       if (best > 0) add(kind, best, header)
+    }
+  }
+
+  // ── What the sheet is called ──
+  if (sheetName !== undefined) {
+    const key = comparisonKey(sheetName)
+    for (const kind of DETECTABLE_ENTITIES) {
+      if (SHEET_NAMES[kind].has(key)) add(kind, 3, `sheet: ${sheetName}`)
     }
   }
 

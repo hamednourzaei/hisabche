@@ -43,7 +43,6 @@ const SettingsPage = lazy(() => import('@/features/settings/settings-page'))
 const SyncCenterPage = lazy(() => import('@/features/sync/sync-page'))
 const ApprovalsPage = lazy(() => import('@/features/approvals/approvals-page'))
 const DevelopersPage = lazy(() => import('@/features/developers/developers-page'))
-const OrdersPage = lazy(() => import('@/features/orders/orders-page'))
 const MarketplacePage = lazy(() => import('@/features/marketplace/marketplace-page'))
 const BillingPage = lazy(() => import('@/features/billing/billing-page'))
 const MarketSellerPage = lazy(() => import('@/features/market/market-seller-page'))
@@ -118,7 +117,6 @@ const router = createHashRouter([
       { path: 'settings', element: <SettingsPage /> },
       { path: 'approvals', element: <ApprovalsPage /> },
       { path: 'developers', element: <DevelopersPage /> },
-      { path: 'orders', element: <OrdersPage /> },
       { path: 'marketplace', element: <MarketplacePage /> },
       { path: 'billing', element: <BillingPage /> },
       { path: 'market-seller', element: <MarketSellerPage /> },
@@ -156,6 +154,7 @@ const router = createHashRouter([
       // The same pairs as the web redirects in next.config.js.
       // A second invoice form beside /invoices/new — removed (live audit #67).
       { path: 'quick-invoice', element: <Navigate to="/invoices/new" replace /> },
+      { path: 'orders', element: <Navigate to="/settings" replace /> },
       { path: 'crm', element: <Navigate to="/customers?tab=outreach" replace /> },
       { path: 'sales-followup', element: <Navigate to="/customers?tab=outreach" replace /> },
       { path: 'tasks', element: <Navigate to="/customers?tab=outreach" replace /> },

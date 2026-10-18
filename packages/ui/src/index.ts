@@ -213,9 +213,7 @@ export {
   OAuthConsentContainer,
   type OAuthAuthorizeQuery,
 } from './components/ui/developers/containers/oauth-consent-container'
-export { OrdersContainer } from './components/ui/orders/containers/orders-container'
 export { MarketplaceContainer } from './components/ui/marketplace/containers/marketplace-container'
-export { OrdersView, type OrdersViewProps } from './components/ui/orders/orders-view'
 export {
   DevelopersView,
   type DevelopersViewProps,
@@ -253,10 +251,7 @@ export type {
   EmployeeStatus,
   PayrollStatus,
 } from './components/ui/team-and-payroll/team-and-payroll-view'
-export type {
-  Employee,
-  PayrollRecord,
-} from './components/ui/team-and-payroll/team-and-payroll-view'
+export type { Employee } from './components/ui/team-and-payroll/team-and-payroll-view'
 
 // ---------- Permissions ----------
 export { PermissionsContainer } from './components/ui/permissions/containers/permissions-container'

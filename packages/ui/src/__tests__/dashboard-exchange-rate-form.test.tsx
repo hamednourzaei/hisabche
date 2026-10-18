@@ -69,7 +69,8 @@ describe('a unit the business names itself (live audit #82)', () => {
     )
     expect(container.textContent).not.toContain('هزار')
     expect(container.textContent).not.toContain('میلیون')
-    const plus = container.querySelector('[data-rate-side="left"] [data-new-unit]')!
+    // «افزودن دلخواه» — one card under the two sides (owner's design, 18 Oct 2026)
+    const plus = container.querySelector('[data-new-unit]')!
     fireEvent.click(plus)
     const name = container.querySelector<HTMLInputElement>(
       '[data-rate-side="left"] input[maxlength="40"]',
@@ -203,5 +204,53 @@ describe('dashboard container wiring', () => {
     expect(shared).toContain('<DialogContent')
     expect(shared).toContain('<ExchangeRateForm')
     expect(src).not.toContain("aria-expanded={rateOpen === 'new'}")
+  })
+})
+
+describe('the dialog design (owner, 18 Oct 2026): swap, live rate, cancel', () => {
+  it('«⇄» swaps the two sides — codes and amounts — and the saved rate is the same', () => {
+    const onSave = vi.fn()
+    const { container } = render(
+      <ExchangeRateForm base="AFN" currencies={['USD']} onSave={onSave} />,
+    )
+    const [left, right] = amounts(container)
+    fireEvent.change(left!, { target: { value: '65' } })
+    fireEvent.change(right!, { target: { value: '1' } })
+    fireEvent.click(container.querySelector('[data-rate-swap]')!)
+    const [l2, r2] = amounts(container)
+    expect(l2!.value).toBe('1')
+    expect(r2!.value).toBe('65')
+    fireEvent.submit(container.querySelector('form')!)
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ currency: 'USD', rate: 65 }))
+  })
+
+  it('shows the rate it will save, live: «1 USD = 65 AFN»; nothing until both sides are filled', () => {
+    const { container } = render(
+      <ExchangeRateForm base="AFN" currencies={['USD']} initialCurrency="USD" onSave={vi.fn()} />,
+    )
+    const preview = () => container.querySelector('[data-rate-preview]')!.textContent ?? ''
+    expect(preview()).toContain('—')
+    const [, right] = amounts(container)
+    fireEvent.change(right!, { target: { value: '۶۵' } })
+    expect(preview()).toContain('1 USD = 65 AFN')
+  })
+
+  it('«انصراف» closes without saving', () => {
+    const onSave = vi.fn()
+    const onCancel = vi.fn()
+    const { getByText } = render(
+      <ExchangeRateForm base="AFN" currencies={['USD']} onSave={onSave} onCancel={onCancel} />,
+    )
+    fireEvent.click(getByText('انصراف'))
+    expect(onCancel).toHaveBeenCalled()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('no «نوع تبدیل» picker — the product keeps one kind of rate (G1: no control that changes nothing)', () => {
+    const form = readFileSync(
+      resolve(__dirname, '../components/ui/dashboard/display-basis-picker.tsx'),
+      'utf8',
+    )
+    expect(form).not.toContain("'نوع تبدیل'")
   })
 })

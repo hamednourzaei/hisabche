@@ -103,7 +103,7 @@ export function InvoiceExchangeRate({
       <ExchangeRateDialog
         t={t}
         open={formOpen}
-        title={t('display.exchangeButton', 'تبادل نرخ داشبورد')}
+        title={t('display.rateDialogTitle', 'ثبت نرخ تبدیل ارز')}
         base={bookCurrency}
         initialCurrency={invoiceCurrency}
         onClose={() => setFormOpen(false)}

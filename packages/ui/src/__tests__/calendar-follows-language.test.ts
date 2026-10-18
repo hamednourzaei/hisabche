@@ -81,7 +81,6 @@ describe('no component decides the calendar for the reader', () => {
       'components/ui/invoice-detail/containers/invoice-detail-container.tsx',
       'components/ui/landing-section.tsx',
       'components/ui/team-and-payroll/employee-list-table.tsx',
-      'components/ui/team-and-payroll/payroll-list-table.tsx',
       'components/ui/team-and-payroll/team-and-payroll-view.tsx',
       'components/ui/warehouse-detail/containers/warehouse-detail-container.tsx',
     ])

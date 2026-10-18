@@ -33,31 +33,18 @@ describe('the payroll query actually runs', () => {
   })
 })
 
-describe('the container reads the shape the API sends', () => {
+describe('the team hub', () => {
   const container = code(read('containers/team-and-payroll-container.tsx'))
+  const view = code(read('team-and-payroll-view.tsx'))
 
-  it('treats the response as an array', () => {
-    expect(container).toContain('asList<PayrollRow>(payrollData)')
-    expect(container).not.toContain('payrollData?.payrolls')
+  it('has no page title or KPI cards above every section (owner, 18 Oct 2026: «هی تکرار میشه»)', () => {
+    expect(container).not.toContain('usePayrollSummary()')
+    expect(view).not.toContain('<KpiCard')
+    expect(view).not.toContain("t('nav.teamPayroll'")
   })
 
-  it('takes the total from the server-side summary, not from a page of rows', () => {
-    expect(container).toContain('usePayrollSummary()')
-    expect(container).toContain('payrollSummary?.total ?? 0')
-    expect(container).not.toContain('payrollData?.total')
-  })
-})
-
-describe('the table reads the row’s real columns', () => {
-  const table = code(read('payroll-list-table.tsx'))
-
-  it.each(['net_salary', 'payment_date', 'employee?.first_name'])('uses %s', (field) => {
-    expect(table).toContain(field)
-  })
-
-  it('does not read the fields the old card invented', () => {
-    for (const ghost of ['row.employeeName', 'payroll.period', 'payroll.amount', 'dueDate']) {
-      expect(table).not.toContain(ghost)
-    }
+  it('the hub no longer lists payrolls (owner, 18 Oct 2026) — each person’s are on their page', () => {
+    expect(container).not.toContain('usePayrolls()')
+    expect(container).not.toContain('payroll-list-table')
   })
 })

@@ -25,6 +25,9 @@ import {
   saveScaleLabelConfig,
   type ScaleLabelConfig,
 } from '../../../lib/barcode/scale-label'
+
+/** The scale-label settings are hidden until the owner asks for them back. */
+const SHOW_SCALE_LABEL_SETTINGS = false
 import { getReceiptPrinterHost, type HostPrinter } from '../../../lib/print/printer-host'
 import { printReceipt } from '../../../lib/print/print-receipt'
 import {
@@ -268,62 +271,66 @@ export const HardwareSection = memo(function HardwareSection() {
           </div>
         </section>
 
-        {/* ── Scale labels (27 Sep 2026) ────────────────────────────── */}
-        <section className="space-y-4" data-scale-label-settings="">
-          <div className="flex items-center gap-2">
-            <Scale className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-            <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
-              {t('hardware.scaleTitle')}
-            </h2>
-          </div>
-          <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('hardware.scaleIntro')}</p>
+        {/* ── Scale labels (27 Sep 2026) — hidden for now (owner, 18 Oct 2026:
+            «این قسمت فعلا هاید بکن»). Reading a scale label still works for
+            whoever turned it on before; only the settings are not shown. */}
+        {SHOW_SCALE_LABEL_SETTINGS ? (
+          <section className="space-y-4" data-scale-label-settings="">
+            <div className="flex items-center gap-2">
+              <Scale className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+              <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
+                {t('hardware.scaleTitle')}
+              </h2>
+            </div>
+            <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('hardware.scaleIntro')}</p>
 
-          <Row label={t('hardware.scaleEnabled')}>
-            <Switch
-              checked={scale.enabled}
-              onCheckedChange={(enabled) => updateScale({ enabled })}
-            />
-          </Row>
-          <Row label={t('hardware.scaleValueKind')}>
-            <SelectField
-              value={scale.valueKind}
-              onChange={(value) =>
-                updateScale(
-                  value === 'price'
-                    ? { valueKind: 'price', decimals: 0 }
-                    : { valueKind: 'weight', decimals: 3 },
-                )
-              }
-              options={[
-                { value: 'weight', label: t('hardware.scaleWeight') },
-                { value: 'price', label: t('hardware.scalePrice') },
-              ]}
-              aria-label={t('hardware.scaleValueKind')}
-            />
-          </Row>
-          <Row label={t('hardware.scaleItemDigits')} hint={t('hardware.scaleItemDigitsHint')}>
-            <input
-              type="number"
-              min={4}
-              max={7}
-              aria-label={t('hardware.scaleItemDigits')}
-              value={scale.itemDigits}
-              onChange={(e) => updateScale({ itemDigits: Number(e.target.value) })}
-              className={numberInput}
-            />
-          </Row>
-          <Row label={t('hardware.scaleDecimals')} hint={t('hardware.scaleDecimalsHint')}>
-            <input
-              type="number"
-              min={0}
-              max={3}
-              aria-label={t('hardware.scaleDecimals')}
-              value={scale.decimals}
-              onChange={(e) => updateScale({ decimals: Number(e.target.value) })}
-              className={numberInput}
-            />
-          </Row>
-        </section>
+            <Row label={t('hardware.scaleEnabled')}>
+              <Switch
+                checked={scale.enabled}
+                onCheckedChange={(enabled) => updateScale({ enabled })}
+              />
+            </Row>
+            <Row label={t('hardware.scaleValueKind')}>
+              <SelectField
+                value={scale.valueKind}
+                onChange={(value) =>
+                  updateScale(
+                    value === 'price'
+                      ? { valueKind: 'price', decimals: 0 }
+                      : { valueKind: 'weight', decimals: 3 },
+                  )
+                }
+                options={[
+                  { value: 'weight', label: t('hardware.scaleWeight') },
+                  { value: 'price', label: t('hardware.scalePrice') },
+                ]}
+                aria-label={t('hardware.scaleValueKind')}
+              />
+            </Row>
+            <Row label={t('hardware.scaleItemDigits')} hint={t('hardware.scaleItemDigitsHint')}>
+              <input
+                type="number"
+                min={4}
+                max={7}
+                aria-label={t('hardware.scaleItemDigits')}
+                value={scale.itemDigits}
+                onChange={(e) => updateScale({ itemDigits: Number(e.target.value) })}
+                className={numberInput}
+              />
+            </Row>
+            <Row label={t('hardware.scaleDecimals')} hint={t('hardware.scaleDecimalsHint')}>
+              <input
+                type="number"
+                min={0}
+                max={3}
+                aria-label={t('hardware.scaleDecimals')}
+                value={scale.decimals}
+                onChange={(e) => updateScale({ decimals: Number(e.target.value) })}
+                className={numberInput}
+              />
+            </Row>
+          </section>
+        ) : null}
 
         {/* ── Receipt printer ───────────────────────────────────────── */}
         <section className="space-y-4">

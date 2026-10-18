@@ -319,6 +319,7 @@ export class ActivityService {
     const offset = !filters?.cursor && page > 1 ? (page - 1) * limit : 0
 
     let unreadIdsFilter: string[] | null = null
+    let unreadByReads = false
 
     if (filters?.unread) {
       const { data: unreadIds, error: unreadIdsErr } = await supabase.rpc(
@@ -335,6 +336,11 @@ export class ActivityService {
         if (!isMissingSchema(unreadIdsErr)) {
           throw new DatabaseError('Failed to fetch unread activity IDs', unreadIdsErr)
         }
+        // ⚠️ The function is missing (or not the signature this code calls).
+        // This used to fall through to the WHOLE feed — the «خوانده‌نشده» tab
+        // listed every event while the badge said three (owner, 18 Oct 2026).
+        // The page is read as usual and narrowed by activity_reads below.
+        unreadByReads = true
       } else if (Array.isArray(unreadIds)) {
         unreadIdsFilter = unreadIds.map((r: any) => (typeof r === 'string' ? r : r.id))
         if (unreadIdsFilter.length === 0) {
@@ -433,8 +439,11 @@ export class ActivityService {
         }
       }
 
+      // The unread tab without its function: only what this person has not read.
+      const shown = unreadByReads ? items.filter((item) => !readSet.has(item.id)) : items
+
       const groups = new Map<string, any[]>()
-      for (const activity of items) {
+      for (const activity of shown) {
         const key = `${activity.entity_type}:${activity.entity_id}`
         if (!groups.has(key)) {
           groups.set(key, [])

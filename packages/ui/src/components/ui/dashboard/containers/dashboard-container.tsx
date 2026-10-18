@@ -232,7 +232,7 @@ export function DashboardContainer() {
           title={
             rateOpen === 'edit'
               ? t('display.editRate', 'اصلاح قیمت')
-              : t('display.exchangeButton', 'تبادل نرخ داشبورد')
+              : t('display.rateDialogTitle', 'ثبت نرخ تبدیل ارز')
           }
           base={display.base}
           initialCurrency={rateOpen === 'edit' ? display.basis : undefined}

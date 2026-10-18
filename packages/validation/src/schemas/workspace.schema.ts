@@ -26,6 +26,7 @@ export const workspaceSchema = z.object({
   // actually needs bounding here.
   logoUrl: z.string().max(10_000_000).optional().nullable(),
   stampUrl: z.string().max(10_000_000).optional().nullable(),
+  signatureUrl: z.string().max(10_000_000).optional().nullable(),
   isActive: z.boolean().default(true),
   createdAt: isoDateSchema.optional(),
   updatedAt: isoDateSchema.optional(),

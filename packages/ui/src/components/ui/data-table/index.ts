@@ -1,4 +1,5 @@
 export { DataTable, type DataTableProps } from './data-table'
+export type { CardTone } from './data-table-cards'
 export { BulkActionBar, type BulkAction, type BulkActionBarProps } from './bulk-action-bar'
 export { useRowSelection, type RowSelection } from './use-row-selection'
 export { useBulkAction, type BulkActionResult, type BulkActionState } from './use-bulk-action'

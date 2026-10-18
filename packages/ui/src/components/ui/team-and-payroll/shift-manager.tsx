@@ -35,10 +35,18 @@ const field =
   'h-10 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3 text-sm text-[hsl(var(--fg-primary))] outline-none focus:border-[hsl(var(--color-primary))]'
 const label = 'block text-xs text-[hsl(var(--fg-secondary))]'
 
-export function ShiftManager() {
+export function ShiftManager({
+  inDialog = false,
+}: {
+  /**
+   * Shown inside the attendance page's dialog (owner, 18 Oct 2026): open from
+   * the start — and only then read — with no frame, title or «نمایش» of its own.
+   */
+  inDialog?: boolean | undefined
+} = {}) {
   const t = useTranslations('shifts')
   const locale = useIntlLocale()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(inDialog)
   const shifts = useWorkShifts(open)
   const create = useCreateWorkShift()
   const setActive = useSetWorkShiftActive()
@@ -56,16 +64,25 @@ export function ShiftManager() {
   const failure = create.error ?? setActive.error
 
   return (
-    <section className="space-y-3 rounded-2xl border border-[hsl(var(--border-default))] p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 className="font-semibold text-[hsl(var(--fg-primary))]">{t('title')}</h3>
-          <p className="mt-0.5 text-xs text-[hsl(var(--fg-tertiary))]">{t('hint')}</p>
+    <section
+      className={
+        inDialog
+          ? 'space-y-3'
+          : 'space-y-3 rounded-2xl border border-[hsl(var(--border-default))] p-4'
+      }
+    >
+      {/* In the attendance dialog the dialog says the title and hint; no «نمایش». */}
+      {inDialog ? null : (
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h3 className="font-semibold text-[hsl(var(--fg-primary))]">{t('title')}</h3>
+            <p className="mt-0.5 text-xs text-[hsl(var(--fg-tertiary))]">{t('hint')}</p>
+          </div>
+          <Button size="sm" variant="ghost" onClick={() => setOpen((value) => !value)}>
+            {open ? t('hide') : t('show')}
+          </Button>
         </div>
-        <Button size="sm" variant="ghost" onClick={() => setOpen((value) => !value)}>
-          {open ? t('hide') : t('show')}
-        </Button>
-      </div>
+      )}
 
       {open && shifts.isLoading ? (
         <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('loading')}</p>

@@ -57,6 +57,7 @@ export function ShiftPlan({
   date,
   employees,
   shifts,
+  inDialog = false,
 }: {
   /** The day the attendance sheet is showing. */
   date: string
@@ -64,11 +65,16 @@ export function ShiftPlan({
   employees: readonly AttendanceSheetRow[]
   /** Active shifts. Empty = none defined yet (or not set up). */
   shifts: readonly WorkShift[]
+  /**
+   * Shown inside the attendance page's dialog (owner, 18 Oct 2026): open from
+   * the start — and only then read — with no frame, title or «نمایش» of its own.
+   */
+  inDialog?: boolean | undefined
 }) {
   const t = useTranslations('shiftPlan')
   const locale = useIntlLocale()
   const { date: formatDate } = useDateFormat()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(inDialog)
   const plan = useShiftPlan(date, open)
   const assign = useAssignShift()
   const cancel = useCancelShiftAssignment()
@@ -113,16 +119,25 @@ export function ShiftPlan({
   }
 
   return (
-    <section className="space-y-3 rounded-2xl border border-[hsl(var(--border-default))] p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 className="font-semibold text-[hsl(var(--fg-primary))]">{t('title')}</h3>
-          <p className={cn('mt-1', faint)}>{t('hint')}</p>
+    <section
+      className={
+        inDialog
+          ? 'space-y-3'
+          : 'space-y-3 rounded-2xl border border-[hsl(var(--border-default))] p-4'
+      }
+    >
+      {/* In the attendance dialog the dialog says the title and hint; no «نمایش». */}
+      {inDialog ? null : (
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h3 className="font-semibold text-[hsl(var(--fg-primary))]">{t('title')}</h3>
+            <p className={cn('mt-1', faint)}>{t('hint')}</p>
+          </div>
+          <Button size="sm" variant="ghost" onClick={() => setOpen((value) => !value)}>
+            {open ? t('hide') : t('show')}
+          </Button>
         </div>
-        <Button size="sm" variant="ghost" onClick={() => setOpen((value) => !value)}>
-          {open ? t('hide') : t('show')}
-        </Button>
-      </div>
+      )}
 
       {open && plan.isLoading ? (
         <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('loading')}</p>

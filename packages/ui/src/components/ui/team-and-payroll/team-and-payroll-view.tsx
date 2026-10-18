@@ -1,13 +1,11 @@
 'use client'
 
-import { KpiCard } from '../kpi-card'
 import { SUPPORTED_CURRENCIES } from '@hisabche/store'
 import { SelectField } from '../select-field'
 import { Switch } from '../switch'
-import { Users, Wallet, Briefcase, Clock, Plus, Trash2 } from 'lucide-react'
+import { Briefcase, Clock, Plus, Trash2 } from 'lucide-react'
 import { useState, useMemo, useCallback, memo } from 'react'
 import { EmployeeListTable, type EmployeeRow } from './employee-list-table'
-import { PayrollListTable, type PayrollRow } from './payroll-list-table'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TeamAndPayrollView v1 — Complete Team & Payroll Module
@@ -28,19 +26,12 @@ export type PayrollStatus = 'paid' | 'pending' | 'processing' | 'overdue'
 export type Employee = EmployeeRow
 
 /**
- * ⚠️ snake_case — the row `GET /api/payrolls` actually sends, with the employee
- * embedded. This declared `employeeName` / `period` / `amount` / `dueDate`,
- * none of which exist on the response (request #100).
- */
-export type PayrollRecord = PayrollRow
-
-/**
  * G2 — the screen has three tabs now: [کارمندان] [شعب] [حقوق].
  *
  * `statusFilter` kept its name and its two original values so nothing that
  * already passes it breaks; 'branches' is the third.
  */
-export type TeamTab = 'employees' | 'branches' | 'payroll' | 'attendance'
+export type TeamTab = 'employees' | 'branches' | 'attendance'
 
 /** A branch as the employee form's picker needs it. */
 export interface BranchOption {
@@ -52,11 +43,7 @@ export interface BranchOption {
 interface TeamAndPayrollViewProps {
   t: (key: string, fallback?: string) => string
   employees: Employee[]
-  payrollRecords: PayrollRecord[]
-  totalEmployees: number
-  totalPayroll: number
   isLoadingEmployees: boolean
-  isLoadingPayroll: boolean
   statusFilter?: TeamTab
   onViewEmployee?: (id: string) => void
   onCreateEmployee?: (
@@ -109,11 +96,7 @@ const FORM_FIELD =
 export const TeamAndPayrollView = memo(function TeamAndPayrollView({
   t,
   employees,
-  payrollRecords,
-  totalEmployees,
-  totalPayroll,
   isLoadingEmployees,
-  isLoadingPayroll,
   statusFilter = 'employees',
   onViewEmployee,
   onCreateEmployee,
@@ -322,64 +305,48 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
     return employees
   }, [employees])
 
-  const filteredPayroll = useMemo(() => {
-    // Apply any filters here
-    return payrollRecords
-  }, [payrollRecords])
-
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Briefcase className="size-6 text-[hsl(var(--color-primary))]" />
-          <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-            {t('nav.teamPayroll', 'تیم و حقوق')}
-          </h1>
-        </div>
-        {/*
+      {/*
+        ⚠️ NO PAGE TITLE OR KPI CARDS HERE (owner, 18 Oct 2026: «هی تکرار میشه
+        تو همه صفحات»). «تیم و حقوق», «جمع کارمندان» and «جمع حقوق پرداختی»
+        sat above every section of the hub — attendance and branches too. The
+        hub's tabs already say where you are; a person's payroll is on their
+        own page. Only the employees section keeps its «کارمند جدید».
+      */}
+      {statusFilter === 'employees' && (
+        <div className="flex items-center justify-end">
+          {/*
           «کارمند جدید» belongs to the employees tab. On the branches tab the
           tree renders its own «افزودن شعبه», and two competing add buttons in
           one header is how someone adds the wrong thing.
         */}
-        {/*
+          {/*
           ⚠️ «هیچ کارمندی بدون شعبه اضافه نباید بشه و باید اول نام شعبه اضافه
           بشه» (request #98-و). The gate is on the button AND on the submit
           below AND on the server's schema — a disabled button is a hint, not
           a rule.
         */}
-        {statusFilter === 'employees' && (
-          <button
-            onClick={toggleEmployeeForm}
-            disabled={!hasBranch}
-            title={
-              hasBranch
-                ? undefined
-                : t('team.branchFirstHint', 'اول یک شعبه ثبت کنید؛ هر کارمند باید شعبه داشته باشد.')
-            }
-            className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] hover:brightness-110 transition disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Plus className="size-4" />
-            {t('team.addEmployee', 'کارمند جدید')}
-          </button>
-        )}
-      </div>
-
-      {/* KPI Cards */}
-      <div className="flex gap-4 flex-wrap">
-        <KpiCard
-          label={t('team.totalEmployees', 'جمع کارمندان')}
-          value={totalEmployees}
-          icon={Users}
-          className="min-w-[180px] flex-1"
-        />
-        <KpiCard
-          label={t('team.totalPayroll', 'جمع حقوق پرداختی')}
-          value={`${totalPayroll.toLocaleString('fa-AF')} AFN`}
-          icon={Wallet}
-          className="min-w-[180px] flex-1"
-        />
-      </div>
+          {statusFilter === 'employees' && (
+            <button
+              onClick={toggleEmployeeForm}
+              disabled={!hasBranch}
+              title={
+                hasBranch
+                  ? undefined
+                  : t(
+                      'team.branchFirstHint',
+                      'اول یک شعبه ثبت کنید؛ هر کارمند باید شعبه داشته باشد.',
+                    )
+              }
+              className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] hover:brightness-110 transition disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Plus className="size-4" />
+              {t('team.addEmployee', 'کارمند جدید')}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Employee Form */}
       {showEmployeeForm && statusFilter === 'employees' && (
@@ -869,10 +836,9 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
       )}
 
       {/* ─── G2 — the «شعب» tab ──────────────────────────────────────────────
-        Rendered BEFORE the employee/payroll grid and returning early, because
-        that grid's loading and empty states are written around those two
-        datasets: `filteredEmployees.length === 0 && filteredPayroll.length === 0`
-        would show "هیچ کارمندی ثبت نشده" over a perfectly good branch tree on a
+        Rendered BEFORE the employee grid and returning early, because that
+        grid's loading and empty states are written around the employees:
+        `filteredEmployees.length === 0` would show "هیچ کارمندی ثبت نشده" over a perfectly good branch tree on a
         workspace that has branches but no staff yet.
 
         The tree itself is passed in by the container — this view does not fetch.
@@ -884,7 +850,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
       ) : (
         <>
           {/* Content Grid */}
-          {isLoadingEmployees || isLoadingPayroll ? (
+          {isLoadingEmployees ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[1, 2, 3, 4].map((i) => (
                 <div
@@ -893,38 +859,29 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                 />
               ))}
             </div>
-          ) : filteredEmployees.length === 0 && filteredPayroll.length === 0 ? (
+          ) : filteredEmployees.length === 0 ? (
             <div className="p-12 text-center rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
               <Briefcase className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]" />
               <p className="text-[hsl(var(--fg-secondary))] mb-2">
-                {statusFilter === 'employees'
-                  ? t('team.noEmployees', 'هیچ کارمندی ثبت نشده')
-                  : t('team.noPayroll', 'هیچ سابقه حقوقی وجود ندارد')}
+                {t('team.noEmployees', 'هیچ کارمندی ثبت نشده')}
               </p>
               <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">
-                {statusFilter === 'employees'
-                  ? t('team.noEmployeesHint', 'با افزودن کارمندان جدید، شروع کنید')
-                  : t('team.noPayrollHint', 'با ثبت پرداخت حقوق، شروع کنید')}
+                {t('team.noEmployeesHint', 'با افزودن کارمندان جدید، شروع کنید')}
               </p>
             </div>
           ) : (
             <div className="space-y-6">
-              {statusFilter === 'employees' ? (
-                <EmployeeListTable
-                  t={t}
-                  employees={filteredEmployees}
-                  onView={onViewEmployee ?? undefined}
-                  onDelete={onDeleteEmployee ?? undefined}
-                  onAdd={toggleEmployeeForm}
-                  canAdd={hasBranch}
-                />
-              ) : (
-                <PayrollListTable
-                  t={t}
-                  payrolls={filteredPayroll}
-                  onView={onViewEmployee ?? undefined}
-                />
-              )}
+              {/* A person's payroll, and «پرداخت شد / نشد», live on their own
+                  page (/team-and-payroll/:id) — the «حقوق» section was removed
+                  (owner, 18 Oct 2026). */}
+              <EmployeeListTable
+                t={t}
+                employees={filteredEmployees}
+                onView={onViewEmployee ?? undefined}
+                onDelete={onDeleteEmployee ?? undefined}
+                onAdd={toggleEmployeeForm}
+                canAdd={hasBranch}
+              />
             </div>
           )}
         </>

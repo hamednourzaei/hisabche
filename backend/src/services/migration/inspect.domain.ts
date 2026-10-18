@@ -366,7 +366,7 @@ function liftGroupRows(
   return { header: [label, ...header.slice(1)], body: out, dropped }
 }
 
-function inspectTable(text: string, type: 'csv' | 'tsv') {
+function inspectTable(text: string, type: 'csv' | 'tsv', sheetName?: string) {
   let content = text
   let sourceType = type
 
@@ -439,8 +439,18 @@ function inspectTable(text: string, type: 'csv' | 'tsv') {
     skippedRows,
     summaryRows,
     formFields: form.map((entry) => entry.field),
-    detection: detectEntity(table.headers, table.rows),
+    detection: detectEntity(table.headers, table.rows, sheetName),
   }
+}
+
+/**
+ * The first sheet of Hisabche's own backup (backup-formats.ts): two columns,
+ * `key` and `value`, saying when and from where it was exported. It is a
+ * label on the file, not data to import — and as the first sheet it used to
+ * be the one chosen, «نامشخص», with the customers two sheets further on.
+ */
+function isOwnBackupLabel(name: string, headers: readonly string[]): boolean {
+  return name === 'backup' && headers.length === 2 && headers[0] === 'key' && headers[1] === 'value'
 }
 export function inspectUpload(input: {
   filename: string
@@ -449,7 +459,12 @@ export function inspectUpload(input: {
 }): UploadInspection {
   if (input.base64 === undefined) {
     return {
-      ...inspectTable(input.text ?? '', /\.tsv$/i.test(input.filename) ? 'tsv' : 'csv'),
+      ...inspectTable(
+        input.text ?? '',
+        /\.tsv$/i.test(input.filename) ? 'tsv' : 'csv',
+        // `customers.csv` from the CSV backup is named for what it holds.
+        input.filename.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, ''),
+      ),
       sheet: null,
       sheets: [],
     }
@@ -475,10 +490,11 @@ export function inspectUpload(input: {
   for (const candidate of workbook) {
     if (candidate.rows.length === 0) continue
     try {
-      const seen = inspectTable(rowsToCsv(candidate.rows), 'csv')
+      const seen = inspectTable(rowsToCsv(candidate.rows), 'csv', candidate.name)
       // A heading with nothing under it is a page of notes, not a table.
-      if (seen.rowCount === 0) ignored.push(candidate.name)
-      else sheets.push({ name: candidate.name, ...seen })
+      if (seen.rowCount === 0 || isOwnBackupLabel(candidate.name, seen.headers)) {
+        ignored.push(candidate.name)
+      } else sheets.push({ name: candidate.name, ...seen })
     } catch (error) {
       if (!(error instanceof InspectionError)) throw error
       firstError ??= error
@@ -486,6 +502,9 @@ export function inspectUpload(input: {
     }
   }
 
+  // The sheets whose kind was recognised come first, each group in the
+  // workbook's own order: the screen opens on the first one.
+  sheets.sort((a, b) => Number(b.detection.entity !== null) - Number(a.detection.entity !== null))
   const first = sheets[0]
   if (!first) throw firstError ?? new InspectionError('MIGRATION_FILE_EMPTY')
 

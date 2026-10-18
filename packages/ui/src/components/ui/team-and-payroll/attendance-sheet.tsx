@@ -22,7 +22,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Share2 } from 'lucide-react'
+import { CalendarClock, Clock, Fingerprint, Share2 } from 'lucide-react'
 import { formatNumber } from '@hisabche/formatting'
 import {
   apiErrorMessage,
@@ -40,6 +40,7 @@ import { useAddressDay } from '../../../hooks/use-address-day'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { useRouteLang } from '../../../hooks/use-locale-push'
 import { Button } from '../button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../dialog'
 import { GHOST_ICON_BUTTON } from '../button-classes'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { SelectField } from '../select-field'
@@ -49,6 +50,24 @@ import { AttendanceLinkDialog } from './attendance-link-dialog'
 import { AttendanceSubmissionsDialog } from './attendance-submissions-dialog'
 import { ShiftManager } from './shift-manager'
 import { ShiftPlan } from './shift-plan'
+
+/** The three tools beside the sheet — a square button each, opening a dialog. */
+type AttendanceTool = 'plan' | 'shifts' | 'devices'
+export const ATTENDANCE_TOOLS = [
+  { id: 'plan', icon: CalendarClock, title: 'shiftPlan.title', hint: 'shiftPlan.hint' },
+  { id: 'shifts', icon: Clock, title: 'shifts.title', hint: 'shifts.hint' },
+  {
+    id: 'devices',
+    icon: Fingerprint,
+    title: 'attendance.devices.title',
+    hint: 'attendance.devices.hint',
+  },
+] as const satisfies ReadonlyArray<{
+  id: AttendanceTool
+  icon: unknown
+  title: string
+  hint: string
+}>
 
 /** Server refusals with a translation. Anything else gets the general message. */
 export const ATTENDANCE_ERROR_CODES = [
@@ -89,6 +108,10 @@ export function AttendanceSheet() {
   const cameFromDevice = (employeeId: string) => (sent.data?.fromDevice ?? []).includes(employeeId)
   const [linkFor, setLinkFor] = useState<{ id: string; name: string } | null>(null)
   const [reviewing, setReviewing] = useState<string | null>(null)
+  // The three tools beside the sheet open as dialogs from square buttons at
+  // the top (owner, 18 Oct 2026) — not three panels at the bottom.
+  const [tool, setTool] = useState<AttendanceTool | null>(null)
+  const words = useTranslations()
   const mark = useMarkAttendance()
   const [failedFor, setFailedFor] = useState<string | null>(null)
   // The shift a day is recorded by. A failed or not-yet-set-up read simply
@@ -446,6 +469,25 @@ export function AttendanceSheet() {
 
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-3" data-attendance-tools>
+        {ATTENDANCE_TOOLS.map(({ id, icon: Icon, title }) => (
+          <button
+            key={id}
+            type="button"
+            data-attendance-tool={id}
+            onClick={() => setTool(id)}
+            className="flex aspect-square max-h-32 flex-col items-center justify-center gap-2 rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-3 text-center transition-colors hover:border-[hsl(var(--color-primary)/0.5)] hover:bg-[hsl(var(--color-primary)/0.05)] motion-reduce:transition-none"
+          >
+            <span className="grid size-10 place-items-center rounded-xl bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]">
+              <Icon className="size-5" aria-hidden="true" />
+            </span>
+            <span className="text-xs font-semibold leading-5 text-[hsl(var(--fg-primary))]">
+              {words(title as never)}
+            </span>
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <span className="block text-xs text-[hsl(var(--fg-secondary))]">{t('date')}</span>
@@ -562,15 +604,47 @@ export function AttendanceSheet() {
         </>
       )}
 
-      {/* Who is planned for this day, beside what was recorded (#101). */}
-      <ShiftPlan date={date} employees={sheet.data?.rows ?? []} shifts={activeShifts} />
-
-      <ShiftManager />
-
-      {/* Fingerprint / face / card terminals that write onto this sheet. */}
-      <AttendanceDevices
-        employees={(sheet.data?.rows ?? []).map((row) => ({ id: row.employeeId, name: row.name }))}
-      />
+      {(() => {
+        const open = ATTENDANCE_TOOLS.find((item) => item.id === tool)
+        return (
+          <Dialog open={open !== undefined} onOpenChange={(next) => (next ? null : setTool(null))}>
+            <DialogContent
+              data-attendance-tool-dialog={open?.id ?? ''}
+              className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-3xl overflow-y-auto"
+            >
+              {open ? (
+                <>
+                  <DialogHeader>
+                    <DialogTitle>{words(open.title as never)}</DialogTitle>
+                    <DialogDescription>{words(open.hint as never)}</DialogDescription>
+                  </DialogHeader>
+                  {/* Mounted only while open: each reads its data only then. */}
+                  {open.id === 'plan' ? (
+                    // Who is planned for this day, beside what was recorded (#101).
+                    <ShiftPlan
+                      inDialog
+                      date={date}
+                      employees={sheet.data?.rows ?? []}
+                      shifts={activeShifts}
+                    />
+                  ) : open.id === 'shifts' ? (
+                    <ShiftManager inDialog />
+                  ) : (
+                    // Fingerprint / face / card terminals that write onto this sheet.
+                    <AttendanceDevices
+                      inDialog
+                      employees={(sheet.data?.rows ?? []).map((row) => ({
+                        id: row.employeeId,
+                        name: row.name,
+                      }))}
+                    />
+                  )}
+                </>
+              ) : null}
+            </DialogContent>
+          </Dialog>
+        )
+      })()}
 
       <AttendanceLinkDialog employee={linkFor} onClose={() => setLinkFor(null)} />
       {(() => {

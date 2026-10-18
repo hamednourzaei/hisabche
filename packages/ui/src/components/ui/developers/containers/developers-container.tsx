@@ -315,7 +315,6 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
         },
         sdkUrl: sdk.sdkUrl,
         apiBase: sdk.apiBase,
-        ordersHref: localizePath('/orders', lang),
       }}
       sandbox={{
         state: sectionState(sandboxStatus.isLoading, sandboxStatus.error),

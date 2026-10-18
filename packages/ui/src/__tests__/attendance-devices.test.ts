@@ -152,7 +152,9 @@ describe('what the panel does not decide', () => {
 describe('on every platform', () => {
   it('the panel is part of the shared attendance sheet', () => {
     const sheet = code('packages/ui/src/components/ui/team-and-payroll/attendance-sheet.tsx')
-    expect(sheet).toContain('<AttendanceDevices employees={')
+    // Opened from a square button at the top of the sheet, in a dialog (owner, 18 Oct 2026).
+    expect(sheet).toContain('<AttendanceDevices')
+    expect(sheet).toContain("title: 'attendance.devices.title'")
     // …and the sheet says who wrote a record when it was not a person.
     expect(sheet).toContain('data-from-device')
     expect(sheet).toContain("{t('fromDevice')}")
@@ -280,4 +282,26 @@ describe('readings kept back', () => {
       for (const brand of BRANDS) expect(lower, brand).not.toContain(brand)
     },
   )
+})
+
+describe('the three tools beside the sheet (owner, 18 Oct 2026)', () => {
+  it('are square buttons in one row at the top, each opening a dialog — none at the bottom', () => {
+    const sheet = code('packages/ui/src/components/ui/team-and-payroll/attendance-sheet.tsx')
+    expect(sheet).toContain('data-attendance-tools')
+    expect(sheet).toContain('grid grid-cols-3')
+    expect(sheet).toContain('aspect-square')
+    expect(sheet.indexOf('data-attendance-tools')).toBeLessThan(sheet.indexOf('<DataTable'))
+    for (const tool of ['<ShiftPlan', '<ShiftManager', '<AttendanceDevices']) {
+      expect(sheet.split(tool).length - 1, tool).toBe(1)
+      expect(sheet).toContain(`${tool} inDialog`)
+    }
+  })
+
+  it('inside the dialog each is open at once, with no «نمایش» of its own', () => {
+    for (const file of ['shift-plan.tsx', 'shift-manager.tsx', 'attendance-devices.tsx']) {
+      const source = code(`packages/ui/src/components/ui/team-and-payroll/${file}`)
+      expect(source, file).toContain('useState(inDialog)')
+      expect(source, file).toContain('{inDialog ? null : (')
+    }
+  })
 })

@@ -795,6 +795,16 @@ export type {
   PaginatedActivitiesResponse,
 } from './types/activity.types'
 
+// ─── Business rules (when a document waits for approval) ───
+export {
+  useBusinessRules,
+  useCreateBusinessRule,
+  ruleKeys,
+  type BusinessRule,
+  type RuleCondition,
+  type RuleEntity,
+} from './hooks/business-rules'
+
 // ─── Workflow ─────────────────────────────────────────────
 export {
   useWorkflows,
@@ -1245,20 +1255,13 @@ export {
 
 // ─── Sales orders and the storefront ──────────────────────
 export {
-  useOrders,
-  useOrder,
-  useOrderAction,
   useStorefrontSettings,
   useSaveStorefrontSettings,
   usePublishableKeys,
   useCreatePublishableKey,
   useRevokePublishableKey,
   orderKeys,
-  ORDERS_PAGE_SIZE,
-  type SalesOrderRow,
-  type SalesOrderLine,
   type PublishableKeyRow,
-  type OrderAction,
 } from './hooks/orders'
 
 // ─── OAuth apps and the marketplace ───────────────────────

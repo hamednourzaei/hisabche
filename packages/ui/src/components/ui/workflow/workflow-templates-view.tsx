@@ -7,6 +7,53 @@ import { cn } from '../../../lib/utils'
 import { DataTable, TableFilterSelect, matchesSearch, type TableColumn } from '../data-table'
 import { ListChecks, Plus, X } from 'lucide-react'
 import type { Workflow, WorkflowEntityType, ApproverRole, WorkflowStep } from '@hisabche/api'
+import { formatNumber } from '@hisabche/formatting'
+import { typedNumber } from '../../../lib/typed-number'
+import { useIntlLocale } from '../../../hooks/use-intl-locale'
+import type { ApprovalCondition } from '../../../lib/workflow/approval-rule'
+
+/** «بیشتر از» as typed: empty = every invoice; anything else must be a positive number. */
+function readMinTotal(text: string): { ok: true; value: number | null } | { ok: false } {
+  if (text.trim() === '') return { ok: true, value: null }
+  const value = typedNumber(text)
+  return value !== null && value > 0 ? { ok: true, value } : { ok: false }
+}
+
+/** «شرط بگذار» for a template no rule names — the owner's existing templates. */
+function ConditionSetter({
+  t,
+  disabled,
+  onSave,
+}: {
+  t: (key: string, fallback?: string) => string
+  disabled: boolean
+  onSave: (minTotal: number | null) => Promise<void>
+}) {
+  const [text, setText] = useState('')
+  const parsed = readMinTotal(text)
+  return (
+    <div className="flex items-center gap-2" data-condition-setter>
+      <input
+        type="text"
+        inputMode="decimal"
+        dir="ltr"
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        placeholder={t('workflow.condition.amountPlaceholder', 'مثلاً ۵۰۰۰')}
+        aria-label={t('workflow.condition.above', 'فاکتورهای با مبلغ بیشتر از')}
+        className="h-9 w-28 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 text-xs tabular-nums"
+      />
+      <button
+        type="button"
+        disabled={disabled || !parsed.ok}
+        onClick={() => (parsed.ok ? onSave(parsed.value) : undefined)}
+        className="h-9 shrink-0 rounded-full bg-[hsl(var(--color-primary))] px-3 text-xs font-bold text-[hsl(var(--color-primary-fg))] disabled:opacity-40"
+      >
+        {t('workflow.condition.set', 'شرط بگذار')}
+      </button>
+    </div>
+  )
+}
 
 const ENTITY_TYPES: WorkflowEntityType[] = ['invoice', 'purchase_order', 'expense']
 const APPROVER_ROLES: ApproverRole[] = ['sales_manager', 'finance_manager', 'ceo', 'admin']
@@ -20,7 +67,17 @@ interface WorkflowTemplatesViewProps {
     name: string
     entity_type: WorkflowEntityType
     steps: WorkflowStep[]
+    /** Invoice templates: «مبلغ بیشتر از». null = every invoice. */
+    minTotal: number | null
   }) => Promise<void>
+  /**
+   * When a template actually holds invoices — the rule that names it. null
+   * while loading; 'error' when the rules could not be read.
+   */
+  conditionOf?: ((workflow: Workflow) => ApprovalCondition | 'error' | null) | undefined
+  /** Write the rule for a template that has none. */
+  onSetCondition?: ((workflow: Workflow, minTotal: number | null) => Promise<void>) | undefined
+  isSavingCondition?: boolean | undefined
   /** The escalation control of one workflow (it fetches and saves on its own). */
   renderEscalation?: ((workflow: Workflow) => ReactNode) | undefined
 }
@@ -31,23 +88,31 @@ export const WorkflowTemplatesView = memo(function WorkflowTemplatesView({
   isLoading,
   isCreating,
   onCreate,
+  conditionOf,
+  onSetCondition,
+  isSavingCondition = false,
   renderEscalation,
 }: WorkflowTemplatesViewProps) {
+  const locale = useIntlLocale()
+  const [minTotalText, setMinTotalText] = useState('')
+  const minTotal = readMinTotal(minTotalText)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [name, setName] = useState('')
   const [entityType, setEntityType] = useState<WorkflowEntityType>('invoice')
   const [approverRole, setApproverRole] = useState<ApproverRole>('finance_manager')
 
   const handleSubmit = useCallback(async () => {
-    if (!name.trim()) return
+    if (!name.trim() || !minTotal.ok) return
     await onCreate({
       name: name.trim(),
       entity_type: entityType,
       steps: [{ step_order: 1, approver_role: approverRole, is_final: true }],
+      minTotal: entityType === 'invoice' ? minTotal.value : null,
     })
     setName('')
+    setMinTotalText('')
     setIsFormOpen(false)
-  }, [name, entityType, approverRole, onCreate])
+  }, [name, entityType, approverRole, minTotal, onCreate])
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -101,6 +166,67 @@ export const WorkflowTemplatesView = memo(function WorkflowTemplatesView({
         </span>
       ),
     },
+    ...(conditionOf
+      ? [
+          {
+            id: 'condition',
+            labelKey: 'workflow.condition.title',
+            labelFallback: 'چه فاکتوری منتظر تأیید می‌ماند',
+            render: (workflow: Workflow) => {
+              // Only invoices ask the rules today (decideApprovalRoute); a
+              // purchase-order or expense template holds nothing — said, not hidden.
+              if (workflow.entity_type !== 'invoice') {
+                return (
+                  <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                    {t('workflow.condition.notWired', 'برای این نوع سند هنوز تأیید اعمال نمی‌شود')}
+                  </span>
+                )
+              }
+              const condition = conditionOf(workflow)
+              if (condition === null) return <span className="text-xs">…</span>
+              if (condition === 'error') {
+                return (
+                  <span role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+                    {t('workflow.condition.readFailed', 'شرط‌ها خوانده نشد')}
+                  </span>
+                )
+              }
+              if (condition.kind === 'above') {
+                return (
+                  <span className="text-xs font-medium" data-condition="above">
+                    {t('workflow.condition.above', 'فاکتورهای با مبلغ بیشتر از')}{' '}
+                    {formatNumber(condition.amount, locale)}
+                  </span>
+                )
+              }
+              if (condition.kind === 'always') {
+                return (
+                  <span className="text-xs font-medium" data-condition="always">
+                    {t('workflow.condition.always', 'همه‌ی فاکتورها')}
+                  </span>
+                )
+              }
+              return (
+                <div className="space-y-1.5" data-condition="none">
+                  <p className="text-xs text-[hsl(var(--color-warning))]">
+                    {t(
+                      'workflow.condition.none',
+                      'بدون شرط — هیچ فاکتوری منتظر این الگو نمی‌ماند.',
+                    )}
+                  </p>
+                  {onSetCondition ? (
+                    <ConditionSetter
+                      t={t}
+                      disabled={isSavingCondition}
+                      onSave={(value) => onSetCondition(workflow, value)}
+                    />
+                  ) : null}
+                </div>
+              )
+            },
+          } satisfies TableColumn<Workflow>,
+        ]
+      : []),
     ...(renderEscalation
       ? [
           {
@@ -208,9 +334,39 @@ export const WorkflowTemplatesView = memo(function WorkflowTemplatesView({
             </div>
           </div>
 
+          {entityType === 'invoice' ? (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+                {t('workflow.condition.above', 'فاکتورهای با مبلغ بیشتر از')}
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                dir="ltr"
+                value={minTotalText}
+                onChange={(event) => setMinTotalText(event.target.value)}
+                placeholder={t('workflow.condition.amountPlaceholder', 'مثلاً ۵۰۰۰')}
+                data-min-total=""
+                className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm tabular-nums text-[hsl(var(--fg-primary))]"
+              />
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {minTotal.ok
+                  ? t(
+                      'workflow.condition.hint',
+                      'خالی بگذارید تا همه‌ی فاکتورها منتظر تأیید بمانند. مبلغ به ارز خودِ فاکتور است.',
+                    )
+                  : t('workflow.condition.badAmount', 'مبلغ باید عددی بزرگ‌تر از صفر باشد.')}
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+              {t('workflow.condition.notWired', 'برای این نوع سند هنوز تأیید اعمال نمی‌شود')}
+            </p>
+          )}
+
           <button
             type="button"
-            disabled={!name.trim() || isCreating}
+            disabled={!name.trim() || !minTotal.ok || isCreating}
             onClick={handleSubmit}
             className={cn(
               'w-full rounded-full px-5 py-2.5 text-sm font-bold text-white',

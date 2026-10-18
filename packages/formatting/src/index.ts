@@ -24,6 +24,7 @@ export { formatDate, formatDateLong, formatDateTime, toIsoDay, type DateInput } 
 export { toCSV, csvFilename, UTF8_BOM, type CsvColumn } from './csv'
 
 export {
+  buildCsvZip,
   buildXlsx,
   cellText,
   columnsOf,

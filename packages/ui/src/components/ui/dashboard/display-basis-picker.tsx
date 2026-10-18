@@ -13,7 +13,17 @@
 
 import * as React from 'react'
 
-import { AlertTriangle, Plus, X } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowLeftRight,
+  Check,
+  Coins,
+  Landmark,
+  Package,
+  Plus,
+  TrendingUp,
+  X,
+} from 'lucide-react'
 
 import { CURRENCY_SIGN, currencySign } from '@hisabche/formatting'
 
@@ -192,6 +202,8 @@ export interface ExchangeRateFormProps {
   customUnits?: readonly string[] | undefined
   /** Given when units can be saved; the «واحد دیگر…» option appears with it. */
   onSaveUnit?: ((input: { name: string; perUnit: number; onDate: string }) => void) | undefined
+  /** «انصراف» beside «ثبت» — given by the dialog that holds the form. */
+  onCancel?: (() => void) | undefined
 }
 
 /**
@@ -213,6 +225,7 @@ export function ExchangeRateForm({
   onSave,
   customUnits,
   onSaveUnit,
+  onCancel,
 }: ExchangeRateFormProps) {
   const tr = (key: string, fallback: string) => (t ? t(key, fallback) : fallback)
 
@@ -250,8 +263,6 @@ export function ExchangeRateForm({
     label:
       code === base ? `${nameOf(code)} — ${tr('display.ownCurrency', 'ارز دفاتر')}` : nameOf(code),
   })
-  const box =
-    'h-9 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 text-xs text-[hsl(var(--fg-primary))] outline-none focus:border-[hsl(var(--color-primary))]'
   const unitCode = (code: string) => (code === OTHER ? `${CUSTOM}${newUnit.trim()}` : code)
 
   const submit = () => {
@@ -308,33 +319,75 @@ export function ExchangeRateForm({
     onSave({ currency: result.code, rate: result.afnPerUnit, onDate })
   }
 
-  // Text, not `type="number"`: that one reads Persian digits as empty (typed-number.ts).
-  const amount = (value: string, set: (next: string) => void, width: string) => (
-    <input
-      type="text"
-      inputMode="decimal"
-      dir="ltr"
-      aria-label={tr('display.rateAmountLabel', 'مقدار')}
-      value={value}
-      onChange={(event) => set(event.target.value)}
-      disabled={isSaving}
-      className={cn(box, width, 'tabular-nums')}
-    />
-  )
-  const unitPicker = (
+  // ─── The form (owner, 18 Oct 2026 — one design for the dashboard, the
+  // warehouse and the invoice): «هر [ارز] [مقدار] [اندازه]», a swap, «معادل
+  // است با [ارز] [مقدار]», the rate it will save — said live, the same
+  // `rateFromPair` the save uses — with its day, «افزودن دلخواه» for a unit
+  // the business names, then انصراف / ثبت.
+  //
+  // ⚠️ No «نوع تبدیل» picker: the product keeps ONE kind of rate (that day's,
+  // `exchange_rates` / `custom_unit_rates`). A control that changes
+  // nothing would be UI theater (G1).
+  const sideIcon = (code: string) => {
+    const Icon =
+      code === base ? Landmark : code.startsWith(CUSTOM) || code === OTHER ? Package : Coins
+    return <Icon className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+  }
+
+  const field =
+    'h-11 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 text-sm text-[hsl(var(--fg-primary))] outline-none focus:border-[hsl(var(--color-primary))]'
+
+  const side = (
+    which: 'left' | 'right',
+    code: string,
+    setCode: (next: string) => void,
     value: string,
-    set: (next: string) => void,
+    setValue: (next: string) => void,
     measure: string,
     setMeasure: (next: string) => void,
-    /** The other side becomes the books' currency: a named unit is quoted against it. */
-    otherToBase: () => void,
   ) => (
-    <>
-      {measuresFor(value).length > 1 ? (
+    <div data-rate-side={which} className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+      <div className="flex min-w-[9rem] flex-1 items-center gap-2">
+        {sideIcon(code)}
+        {code === OTHER ? (
+          <input
+            value={newUnit}
+            maxLength={40}
+            onChange={(event) => setNewUnit(event.target.value)}
+            placeholder={tr('display.unitPlaceholder', 'مثلاً ماشین')}
+            aria-label={tr('display.unitNameLabel', 'نام واحد')}
+            disabled={isSaving}
+            autoFocus
+            className={cn(field, 'min-w-0 flex-1')}
+          />
+        ) : (
+          <SelectField
+            value={code}
+            onChange={(next) => {
+              setCode(next)
+              setMeasure(measuresFor(next)[0]!.id)
+            }}
+            options={units.map(option)}
+            aria-label={tr('display.rateCurrency', 'ارز')}
+            className="min-w-0 flex-1"
+          />
+        )}
+      </div>
+      <input
+        type="text"
+        inputMode="decimal"
+        dir="ltr"
+        aria-label={tr('display.rateAmountLabel', 'مقدار')}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        disabled={isSaving}
+        className={cn(field, 'w-32 tabular-nums')}
+      />
+      {measuresFor(code).length > 1 ? (
         <SelectField
           value={measure}
           onChange={setMeasure}
-          options={measuresFor(value).map((m) => ({
+          options={measuresFor(code).map((m) => ({
             value: m.id,
             label: tr(`display.measure.${m.id}`, m.label),
           }))}
@@ -342,17 +395,6 @@ export function ExchangeRateForm({
           className="w-auto min-w-[6rem]"
         />
       ) : null}
-      {value === OTHER ? null : (
-        <SelectField
-          value={value}
-          onChange={(next) => {
-            set(next)
-            setMeasure(measuresFor(next)[0]!.id)
-          }}
-          options={units.map(option)}
-          aria-label={tr('display.rateCurrency', 'ارز')}
-        />
-      )}
       {measure === OWN_MEASURE ? (
         <input
           value={ownMeasure}
@@ -362,111 +404,220 @@ export function ExchangeRateForm({
           aria-label={tr('display.ownMeasureLabel', 'واحد اندازه‌ی خودتان')}
           disabled={isSaving}
           data-own-measure=""
-          className={cn(box, 'w-28')}
+          className={cn(field, 'w-28')}
         />
       ) : null}
-      {value === OTHER ? (
-        <input
-          value={newUnit}
-          maxLength={40}
-          onChange={(event) => setNewUnit(event.target.value)}
-          placeholder={tr('display.unitPlaceholder', 'مثلاً ماشین')}
-          aria-label={tr('display.unitNameLabel', 'نام واحد')}
-          disabled={isSaving}
-          autoFocus
-          className={cn(box, 'w-28')}
-        />
-      ) : null}
-      {onSaveUnit ? (
-        <button
-          type="button"
-          data-new-unit=""
-          disabled={isSaving}
-          onClick={() => {
-            const making = value !== OTHER
-            set(making ? OTHER : base)
-            setMeasure(measuresFor(making ? OTHER : base)[0]!.id)
-            if (making) otherToBase()
-            else setNewUnit('')
-          }}
-          aria-label={
-            value === OTHER ? tr('common.cancel', 'انصراف') : tr('display.otherUnit', 'واحد دیگر…')
-          }
-          className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] text-[hsl(var(--color-primary))]"
-        >
-          {value === OTHER ? (
-            <X className="size-4" aria-hidden="true" />
-          ) : (
-            <Plus className="size-4" aria-hidden="true" />
-          )}
-        </button>
-      ) : null}
-    </>
+    </div>
   )
 
-  // Shown inside a dialog (owner, 18 Oct 2026): one row per side, so a
-  // measure picker fits at every width — «هر [۱] [کیلوگرم] [طلا]» over
-  // «= [عدد] [واحد] [افغانی]», then the day and «تأیید». The date is the
-  // reader's calendar (#48), not the browser's 10/14/2026.
-  const row = 'grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-2'
+  /** «⇄» — the two sides change places, amounts and measures with them. */
+  const swap = () => {
+    setLeftCode(rightCode)
+    setRightCode(leftCode)
+    setLeftAmount(rightAmount)
+    setRightAmount(leftAmount)
+    setLeftMeasure(rightMeasure)
+    setRightMeasure(leftMeasure)
+  }
+
+  /** «افزودن دلخواه»: the first side becomes a unit to name, the other the books' currency. */
+  const making = leftCode === OTHER || rightCode === OTHER
+  const toggleNewUnit = () => {
+    if (making) {
+      if (leftCode === OTHER) setLeftCode(base)
+      if (rightCode === OTHER) setRightCode(base)
+      setLeftMeasure(measuresFor(base)[0]!.id)
+      setNewUnit('')
+      return
+    }
+    setLeftCode(OTHER)
+    setLeftMeasure(measuresFor(OTHER)[0]!.id)
+    setRightCode(base)
+    setRightMeasure(measuresFor(base)[0]!.id)
+  }
+
+  // What «ثبت» will store, said before it is pressed — the SAME computation.
+  const preview = (() => {
+    const result = rateFromPair(
+      {
+        amount: inStoredUnit(typedNumber(leftAmount) ?? 0, leftCode, leftMeasure),
+        code: unitCode(leftCode),
+      },
+      {
+        amount: inStoredUnit(typedNumber(rightAmount) ?? 0, rightCode, rightMeasure),
+        code: unitCode(rightCode),
+      },
+      () => null,
+      base,
+    )
+    if (!result.ok) return null
+    const name = (code: string) => (code.startsWith(CUSTOM) ? code.slice(CUSTOM.length) : code)
+    // Said like the codes beside it (Latin, as «1 USD = 65 AFN»): grouped by
+    // hand, so no number locale is hard-coded (calendar-follows-language).
+    const [whole, fraction] = String(Math.round(result.afnPerUnit * 10_000) / 10_000).split('.')
+    const grouped = whole!.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    return `1 ${name(result.code)} = ${fraction ? `${grouped}.${fraction}` : grouped} ${base}`
+  })()
+
+  const label = 'w-24 shrink-0 text-sm font-medium text-[hsl(var(--fg-secondary))]'
   return (
     <form
       data-exchange-rate-form=""
-      className="flex flex-col gap-3"
+      className="flex flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault()
         submit()
       }}
     >
-      <div className={row}>
-        <span className="text-xs text-[hsl(var(--fg-secondary))]">{tr('display.each', 'هر')}</span>
-        <div data-rate-side="left" className="flex flex-wrap items-center gap-2">
-          {amount(leftAmount, setLeftAmount, 'w-28')}
-          {unitPicker(leftCode, setLeftCode, leftMeasure, setLeftMeasure, () => {
-            setRightCode(base)
-            setRightMeasure(measuresFor(base)[0]!.id)
-          })}
-        </div>
-      </div>
-      <div className={row}>
-        <span aria-hidden="true" className="text-center text-base font-bold">
-          =
-        </span>
-        <div data-rate-side="right" className="flex flex-wrap items-center gap-2">
-          {amount(rightAmount, setRightAmount, 'w-36')}
-          {unitPicker(rightCode, setRightCode, rightMeasure, setRightMeasure, () => {
-            setLeftCode(base)
-            setLeftMeasure(measuresFor(base)[0]!.id)
-          })}
-        </div>
-      </div>
-      <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
+      <p className="text-xs text-[hsl(var(--fg-tertiary))]">
         {tr(
-          'display.rateHint',
-          'نرخ برای همان روز ثبت می‌شود — ارقام گذشته با نرخ همان روز محاسبه می‌شوند، نه با نرخ امروز.',
+          'display.rateIntro',
+          'مقدار مورد نظر را وارد کنید تا معادل آن به ارز دفاتر محاسبه شود.',
         )}
       </p>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <JalaliDatePicker
-          value={onDate}
-          onChange={setOnDate}
-          disabled={isSaving === true}
-          className="w-40 shrink-0"
-        />
-        <button
-          type="submit"
-          disabled={isSaving}
-          className="h-9 shrink-0 rounded-full bg-[hsl(var(--color-primary))] px-6 text-xs font-bold text-[hsl(var(--color-primary-fg))] disabled:opacity-40"
+
+      <div className="flex flex-col gap-3 rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.4)] p-4">
+        <div className="flex items-center gap-3">
+          <span className={label}>{tr('display.each', 'هر')}</span>
+          {side(
+            'left',
+            leftCode,
+            setLeftCode,
+            leftAmount,
+            setLeftAmount,
+            leftMeasure,
+            setLeftMeasure,
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="w-24 shrink-0" aria-hidden="true" />
+          <div className="relative flex flex-1 items-center justify-center">
+            <span
+              className="absolute inset-x-0 top-1/2 h-px bg-[hsl(var(--border-default))]"
+              aria-hidden="true"
+            />
+            <button
+              type="button"
+              data-rate-swap=""
+              onClick={swap}
+              disabled={isSaving}
+              aria-label={tr('display.swapSides', 'جابه‌جایی دو طرف')}
+              className="relative grid size-10 place-items-center rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--surface-muted))]"
+            >
+              <ArrowLeftRight className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className={label}>{tr('display.equalsTo', 'معادل است با')}</span>
+          {side(
+            'right',
+            rightCode,
+            setRightCode,
+            rightAmount,
+            setRightAmount,
+            rightMeasure,
+            setRightMeasure,
+          )}
+        </div>
+
+        <div
+          data-rate-preview=""
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-3"
         >
-          {isSaving ? tr('common.saving', 'در حال ثبت…') : tr('display.confirm', 'تأیید')}
-        </button>
+          <div className="flex items-center gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]">
+              <TrendingUp className="size-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {tr('display.rateToSave', 'نرخ تبدیل')}
+              </p>
+              <p
+                dir="ltr"
+                className="text-start text-base font-bold tabular-nums text-[hsl(var(--color-primary))]"
+              >
+                {preview ?? '—'}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-[11px] text-[hsl(var(--fg-tertiary))]">
+              {tr('display.rateDay', 'نرخِ روزِ')}
+            </span>
+            <JalaliDatePicker
+              value={onDate}
+              onChange={setOnDate}
+              disabled={isSaving === true}
+              className="w-40"
+            />
+          </div>
+        </div>
+
+        {onSaveUnit ? (
+          <button
+            type="button"
+            data-new-unit=""
+            onClick={toggleNewUnit}
+            disabled={isSaving}
+            className="flex w-full items-center gap-3 rounded-xl border border-dashed border-[hsl(var(--color-primary)/0.6)] bg-[hsl(var(--color-primary)/0.05)] p-3 text-start sm:w-auto sm:min-w-[18rem]"
+          >
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[hsl(var(--color-primary)/0.15)] text-[hsl(var(--color-primary))]">
+              {making ? (
+                <X className="size-5" aria-hidden="true" />
+              ) : (
+                <Plus className="size-5" aria-hidden="true" />
+              )}
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-[hsl(var(--color-primary))]">
+                {making ? tr('common.cancel', 'انصراف') : tr('display.addCustom', 'افزودن دلخواه')}
+              </span>
+              <span className="block text-[11px] text-[hsl(var(--fg-tertiary))]">
+                {tr('display.addCustomHint', 'یک واحد به نام خودتان، مثلاً «ماشین» یا «کیسه».')}
+              </span>
+            </span>
+          </button>
+        ) : null}
+
+        <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
+          {tr(
+            'display.rateHint',
+            'نرخ برای همان روز ثبت می‌شود — ارقام گذشته با نرخ همان روز محاسبه می‌شوند، نه با نرخ امروز.',
+          )}
+        </p>
       </div>
 
       {problem || error ? (
-        <p className="mt-1.5 text-[11px] text-[hsl(var(--color-destructive))]" role="alert">
+        <p className="text-xs text-[hsl(var(--color-destructive))]" role="alert">
           {problem ?? error}
         </p>
       ) : null}
+
+      <div className="grid grid-cols-2 gap-3">
+        {onCancel ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="h-12 rounded-full border border-[hsl(var(--border-default))] text-sm font-semibold text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))]"
+          >
+            {tr('common.cancel', 'انصراف')}
+          </button>
+        ) : (
+          <span />
+        )}
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[hsl(var(--color-primary))] text-sm font-bold text-[hsl(var(--color-primary-fg))] disabled:opacity-40"
+        >
+          <Check className="size-4" aria-hidden="true" />
+          {isSaving ? tr('common.saving', 'در حال ثبت…') : tr('display.save', 'ثبت')}
+        </button>
+      </div>
     </form>
   )
 }
