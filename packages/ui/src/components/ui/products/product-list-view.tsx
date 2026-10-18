@@ -131,10 +131,9 @@ export const ProductListView = memo(function ProductListView({
             <ul className="space-y-0.5" data-product-places>
               {list.map((place) => (
                 <li key={place.warehouseId} className="text-sm">
+                  {/* Name only (owner, 18 Oct 2026): the quantity is already
+                      its own column — printed here too it read «انبار تست16». */}
                   {place.warehouseName}
-                  <span dir="ltr" className="ms-1.5 tabular-nums text-[hsl(var(--fg-secondary))]">
-                    {place.quantity}
-                  </span>
                 </li>
               ))}
             </ul>

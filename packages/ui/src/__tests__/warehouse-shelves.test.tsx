@@ -400,7 +400,9 @@ describe('the floor map is gone from the product', () => {
       ),
       'utf8',
     )
-    expect(hub).not.toContain("'map'")
+    // 18 Oct: «نقشه قفسه‌ها» is a section (shelfMap); the old `?view=map` only redirects there.
+    expect(hub).not.toMatch(/STOCK_SECTIONS = \[[^\]]*'map'/)
+    expect(hub).toContain("params.get('view') === 'map'")
     expect(hub).toContain('<WarehouseProductsSection')
     expect(
       existsSync(join(ROOT, 'packages', 'ui', 'src', 'components', 'ui', 'warehouse', 'map')),

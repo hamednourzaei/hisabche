@@ -368,17 +368,21 @@ export function AddToWarehouseModal({
             />
           </label>
 
-          <div className="space-y-1 text-sm">
-            <label htmlFor="wh-product-category" className="text-[hsl(var(--fg-secondary))]">
-              {t('warehouse.category', 'دسته‌بندی')}
-            </label>
-            <CategoryField
-              t={t}
-              id="wh-product-category"
-              value={form.category}
-              onChange={(next) => set('category', next)}
+          <label className="space-y-1 text-sm">
+            <span className="text-[hsl(var(--fg-secondary))]">
+              {t('warehouse.sellPrice', 'قیمت فروش')}
+            </span>
+            <input
+              id="wh-product-sell"
+              type="number"
+              min={0}
+              inputMode="decimal"
+              dir="ltr"
+              value={form.sellPrice}
+              onChange={(e) => set('sellPrice', e.target.value)}
+              className={field}
             />
-          </div>
+          </label>
 
           <label className="space-y-1 text-sm">
             <span className="text-[hsl(var(--fg-secondary))]">
@@ -396,21 +400,17 @@ export function AddToWarehouseModal({
             />
           </label>
 
-          <label className="space-y-1 text-sm">
-            <span className="text-[hsl(var(--fg-secondary))]">
-              {t('warehouse.sellPrice', 'قیمت فروش')}
-            </span>
-            <input
-              id="wh-product-sell"
-              type="number"
-              min={0}
-              inputMode="decimal"
-              dir="ltr"
-              value={form.sellPrice}
-              onChange={(e) => set('sellPrice', e.target.value)}
-              className={field}
+          <div className="space-y-1 text-sm">
+            <label htmlFor="wh-product-category" className="text-[hsl(var(--fg-secondary))]">
+              {t('warehouse.category', 'دسته‌بندی')}
+            </label>
+            <CategoryField
+              t={t}
+              id="wh-product-category"
+              value={form.category}
+              onChange={(next) => set('category', next)}
             />
-          </label>
+          </div>
         </div>
 
         <div className="mt-1 space-y-2 rounded-lg border border-[hsl(var(--border-default))] p-3">

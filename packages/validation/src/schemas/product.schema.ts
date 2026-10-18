@@ -117,6 +117,8 @@ export const productFiltersSchema = z.object({
     .optional(),
 
   barcode: z.string().optional(),
+  /** Only the products this warehouse has a record of (owner, 18 Oct 2026). */
+  warehouseId: z.string().uuid().optional(),
 
   /**
    * Ask the list to also return `summary` — stock value and stock-state counts

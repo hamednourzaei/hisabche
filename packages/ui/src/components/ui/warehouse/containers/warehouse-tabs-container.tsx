@@ -41,7 +41,10 @@ import { Hourglass, Warehouse as WarehouseIcon } from 'lucide-react'
 import { useMyCapabilities } from '@hisabche/api'
 import { isNavLocked } from '@hisabche/ui-contract'
 
-import { WarehouseProductsSection } from '../shelves/warehouse-products-section'
+import {
+  WarehouseProductsSection,
+  WarehouseShelfMapSection,
+} from '../shelves/warehouse-products-section'
 import { warehouseContainer } from './Warehouse-container'
 import { useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { HubTabs, useHubSection, useHubTab } from '../../hub-tabs'
@@ -61,10 +64,10 @@ const ExpiryContainer = lazy(() =>
   import('../../expiry/containers/expiry-container').then((m) => ({ default: m.ExpiryContainer })),
 )
 
-// «نقشه انبار» was removed (owner, 17 Oct 2026: «too much»). Where goods sit
-// is now the shelves of each warehouse, under «کالاها» — see
-// ../shelves/warehouse-products-section.tsx. `?view=map` falls back to the
-// first section like any unknown section.
+// The floor map (x/y) was removed (owner, 17 Oct 2026: «too much»). Where goods
+// sit is the shelves of each warehouse, under «کالاها», and since 18 Oct the
+// «نقشه قفسه‌ها» section (`?view=shelfMap`): aisles read from the shelf codes,
+// one shelf's products as a table (`&shelf=<id>`). `?view=map` goes there.
 
 //
 // «انبار» at one address: `/warehouse`. Two tabs, and only two:
@@ -94,11 +97,17 @@ export const WAREHOUSE_HUB_SOURCE: Record<WarehouseHubTab, string> = {
   expiry: '/expiry',
 }
 
-export const STOCK_SECTIONS = ['warehouses', 'products', 'reorder', 'deadStock'] as const
+export const STOCK_SECTIONS = [
+  'warehouses',
+  'products',
+  'shelfMap',
+  'reorder',
+  'deadStock',
+] as const
 export type StockSection = (typeof STOCK_SECTIONS)[number]
 
 /** `?warehouse=` names an open warehouse, `?stockWarehouse=` the shelves tab of «کالاها». */
-const STOCK_SECTION_CLEARS = ['warehouse', 'stockWarehouse'] as const
+const STOCK_SECTION_CLEARS = ['warehouse', 'stockWarehouse', 'shelf'] as const
 
 const TAB_ICON = { stock: WarehouseIcon, expiry: Hourglass } as const
 
@@ -165,6 +174,17 @@ function WarehouseHub() {
   useEffect(() => {
     if (oldCatalogueAddress) localeReplace('/warehouse?view=products')
   }, [oldCatalogueAddress, localeReplace])
+  // «نقشه انبار» (`?view=map`, the old floor map's address) opens the shelf map.
+  const oldMapAddress = params.get('view') === 'map'
+  const mapWarehouse = params.get('stockWarehouse') ?? params.get('warehouse')
+  useEffect(() => {
+    if (oldMapAddress)
+      localeReplace(
+        mapWarehouse
+          ? `/warehouse?view=shelfMap&stockWarehouse=${mapWarehouse}`
+          : '/warehouse?view=shelfMap',
+      )
+  }, [oldMapAddress, mapWarehouse, localeReplace])
 
   return (
     <div className="relative space-y-4">
@@ -235,6 +255,8 @@ function WarehouseHub() {
               </Suspense>
             ) : section === 'products' ? (
               <WarehouseProductsSection />
+            ) : section === 'shelfMap' ? (
+              <WarehouseShelfMapSection />
             ) : (
               <WarehouseStockTab />
             )}

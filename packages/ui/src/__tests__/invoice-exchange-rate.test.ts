@@ -127,3 +127,20 @@ describe('the screens', () => {
     }
   })
 })
+
+describe('the dashboard rate form opens from the invoice (owner, 18 Oct 2026)', () => {
+  it('the box mounts the shared dialog and writes a saved rate of THIS currency into itself', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const box = readFileSync(
+      resolve(__dirname, '../components/ui/invoice-builder/invoice-exchange-rate.tsx'),
+      'utf8',
+    )
+      .split(/\s+/)
+      .join(' ')
+    expect(box).toContain('<ExchangeRateDialog')
+    expect(box).toContain(
+      "if (saved.currency === invoiceCurrency) onChange({ from: '1', to: String(saved.rate) })",
+    )
+  })
+})

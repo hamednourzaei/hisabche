@@ -26,6 +26,7 @@ import {
 
 import { SelectField } from '../select-field'
 import { Switch } from '../switch'
+import { typedNumber } from '../../../lib/typed-number'
 import {
   Dialog,
   DialogContent,
@@ -506,7 +507,7 @@ export function AssignStockDialog({
   }, [open])
 
   const selected = available.find((product) => product.id === productId)
-  const amount = Number(quantity)
+  const amount = typedNumber(quantity) ?? 0
   const valid = !!selected && Number.isFinite(amount) && amount > 0 && amount <= selected.quantity
 
   const submit = async () => {
@@ -564,9 +565,7 @@ export function AssignStockDialog({
               </span>
               <input
                 id="warehouse-assign-quantity"
-                type="number"
-                min={0}
-                max={selected?.quantity}
+                type="text"
                 inputMode="decimal"
                 dir="ltr"
                 value={quantity}
@@ -623,11 +622,14 @@ export function TransferStockDialog({
   targets,
   onTransfer,
   isPending,
+  initialProductId,
 }: {
   t: T
   fmt: (v: number) => string
   open: boolean
   onClose: () => void
+  /** Opened from one product's row (a shelf table): that product is chosen. */
+  initialProductId?: string | undefined
   /** The source: the warehouse that is open. */
   warehouseName: string
   /** What the source holds. */
@@ -655,17 +657,17 @@ export function TransferStockDialog({
 
   useEffect(() => {
     if (open) {
-      setProductId('')
+      setProductId(initialProductId ?? '')
       setTargetId('')
       setQuantity('')
       setNotes('')
       setError(null)
       setRequestKey(crypto.randomUUID())
     }
-  }, [open])
+  }, [open, initialProductId])
 
   const selected = available.find((product) => product.id === productId)
-  const amount = Number(quantity)
+  const amount = typedNumber(quantity) ?? 0
   const valid =
     !!selected && !!targetId && Number.isFinite(amount) && amount > 0 && amount <= selected.quantity
 
@@ -764,9 +766,7 @@ export function TransferStockDialog({
               <input
                 id="warehouse-transfer-quantity"
                 name="quantity"
-                type="number"
-                min={0}
-                max={selected?.quantity}
+                type="text"
                 inputMode="decimal"
                 dir="ltr"
                 value={quantity}

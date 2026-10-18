@@ -18,6 +18,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { ConflictError, NotFoundError } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
+import { ForbiddenError } from '../errors/auth.error'
 import { invalidateMoneyCaches } from '../utils/money-cache'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
@@ -27,6 +28,8 @@ const toJsonSchema = (schema: any) => {
   delete result.$schema
   return result
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** Which field a product refusal is about, so the form can point at it. */
 const REFUSAL_FIELD: Record<string, string> = {
@@ -92,10 +95,19 @@ export async function productRoutes(fastify: FastifyInstance) {
             query.lowStock === 'true' ? true : query.lowStock === 'false' ? false : undefined,
           barcode: query.barcode,
           includeSummary: query.includeSummary === 'true' ? true : undefined,
+          // A warehouse id, checked by the service: this workspace's and one
+          // this member may use. Anything that is not a uuid is not a scope.
+          warehouseId: UUID.test(String(query.warehouseId ?? '')) ? query.warehouseId : undefined,
         })
 
         return reply.send(result)
       } catch (err) {
+        if (err instanceof ValidationError) return sendRefusal(reply, err)
+        if (err instanceof ForbiddenError) {
+          return reply
+            .code(403)
+            .send({ error: err.message, code: err.message, message: err.message })
+        }
         fastify.log.error(err)
         return reply.code(500).send({
           error: 'Failed to fetch products',

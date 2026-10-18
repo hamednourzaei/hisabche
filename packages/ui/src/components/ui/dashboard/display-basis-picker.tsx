@@ -13,7 +13,7 @@
 
 import * as React from 'react'
 
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Plus, X } from 'lucide-react'
 
 import { CURRENCY_SIGN, currencySign } from '@hisabche/formatting'
 
@@ -22,6 +22,7 @@ import { cn } from '../../../lib/utils'
 import { toIsoDay } from '@hisabche/formatting'
 import { rateFromPair } from '../../../lib/warehouse/rate-from-pair'
 import { inStoredUnit, measuresFor, namedUnit, OWN_MEASURE } from '../../../lib/rate-measures'
+import { typedNumber } from '../../../lib/typed-number'
 import { JalaliDatePicker } from '../jalali-datepicker'
 
 /** A unit the business named itself carries this prefix inside the picker. */
@@ -219,7 +220,9 @@ export function ExchangeRateForm({
   // currencies: «هر ۱ ماشین = ۵۰۰٬۰۰۰ افغانی». Such a unit is quoted against
   // the books' currency only, and is never what a document is kept in.
   const named = (customUnits ?? []).map((unit) => `${CUSTOM}${unit}`)
-  const units = [base, ...currencies, ...named, ...(onSaveUnit ? [OTHER] : [])]
+  // A new unit is made with «+» beside the picker, the way the product form
+  // makes its own unit (owner, 18 Oct 2026) — not a «واحد دیگر…» option.
+  const units = [base, ...currencies, ...named]
   const [leftAmount, setLeftAmount] = React.useState('1')
   const [leftCode, setLeftCode] = React.useState(initialCurrency ?? base)
   const [rightAmount, setRightAmount] = React.useState('')
@@ -273,8 +276,8 @@ export function ExchangeRateForm({
       }
     }
     const result = rateFromPair(
-      { amount: inStoredUnit(Number(leftAmount), leftCode, leftMeasure), code: left },
-      { amount: inStoredUnit(Number(rightAmount), rightCode, rightMeasure), code: right },
+      { amount: inStoredUnit(typedNumber(leftAmount) ?? 0, leftCode, leftMeasure), code: left },
+      { amount: inStoredUnit(typedNumber(rightAmount) ?? 0, rightCode, rightMeasure), code: right },
       () => null,
       base,
     )
@@ -305,12 +308,11 @@ export function ExchangeRateForm({
     onSave({ currency: result.code, rate: result.afnPerUnit, onDate })
   }
 
+  // Text, not `type="number"`: that one reads Persian digits as empty (typed-number.ts).
   const amount = (value: string, set: (next: string) => void, width: string) => (
     <input
-      type="number"
+      type="text"
       inputMode="decimal"
-      min={0}
-      step="any"
       dir="ltr"
       aria-label={tr('display.rateAmountLabel', 'مقدار')}
       value={value}
@@ -324,6 +326,8 @@ export function ExchangeRateForm({
     set: (next: string) => void,
     measure: string,
     setMeasure: (next: string) => void,
+    /** The other side becomes the books' currency: a named unit is quoted against it. */
+    otherToBase: () => void,
   ) => (
     <>
       {measuresFor(value).length > 1 ? (
@@ -338,15 +342,17 @@ export function ExchangeRateForm({
           className="w-auto min-w-[6rem]"
         />
       ) : null}
-      <SelectField
-        value={value}
-        onChange={(next) => {
-          set(next)
-          setMeasure(measuresFor(next)[0]!.id)
-        }}
-        options={units.map(option)}
-        aria-label={tr('display.rateCurrency', 'ارز')}
-      />
+      {value === OTHER ? null : (
+        <SelectField
+          value={value}
+          onChange={(next) => {
+            set(next)
+            setMeasure(measuresFor(next)[0]!.id)
+          }}
+          options={units.map(option)}
+          aria-label={tr('display.rateCurrency', 'ارز')}
+        />
+      )}
       {measure === OWN_MEASURE ? (
         <input
           value={ownMeasure}
@@ -367,8 +373,33 @@ export function ExchangeRateForm({
           placeholder={tr('display.unitPlaceholder', 'مثلاً ماشین')}
           aria-label={tr('display.unitNameLabel', 'نام واحد')}
           disabled={isSaving}
+          autoFocus
           className={cn(box, 'w-28')}
         />
+      ) : null}
+      {onSaveUnit ? (
+        <button
+          type="button"
+          data-new-unit=""
+          disabled={isSaving}
+          onClick={() => {
+            const making = value !== OTHER
+            set(making ? OTHER : base)
+            setMeasure(measuresFor(making ? OTHER : base)[0]!.id)
+            if (making) otherToBase()
+            else setNewUnit('')
+          }}
+          aria-label={
+            value === OTHER ? tr('common.cancel', 'انصراف') : tr('display.otherUnit', 'واحد دیگر…')
+          }
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-[hsl(var(--border-default))] text-[hsl(var(--color-primary))]"
+        >
+          {value === OTHER ? (
+            <X className="size-4" aria-hidden="true" />
+          ) : (
+            <Plus className="size-4" aria-hidden="true" />
+          )}
+        </button>
       ) : null}
     </>
   )
@@ -391,7 +422,10 @@ export function ExchangeRateForm({
         <span className="text-xs text-[hsl(var(--fg-secondary))]">{tr('display.each', 'هر')}</span>
         <div data-rate-side="left" className="flex flex-wrap items-center gap-2">
           {amount(leftAmount, setLeftAmount, 'w-28')}
-          {unitPicker(leftCode, setLeftCode, leftMeasure, setLeftMeasure)}
+          {unitPicker(leftCode, setLeftCode, leftMeasure, setLeftMeasure, () => {
+            setRightCode(base)
+            setRightMeasure(measuresFor(base)[0]!.id)
+          })}
         </div>
       </div>
       <div className={row}>
@@ -400,7 +434,10 @@ export function ExchangeRateForm({
         </span>
         <div data-rate-side="right" className="flex flex-wrap items-center gap-2">
           {amount(rightAmount, setRightAmount, 'w-36')}
-          {unitPicker(rightCode, setRightCode, rightMeasure, setRightMeasure)}
+          {unitPicker(rightCode, setRightCode, rightMeasure, setRightMeasure, () => {
+            setLeftCode(base)
+            setLeftMeasure(measuresFor(base)[0]!.id)
+          })}
         </div>
       </div>
       <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">

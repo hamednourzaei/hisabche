@@ -1,7 +1,7 @@
 // apps/web/proxy.ts
-import createMiddleware from 'next-intl/middleware';
-import type { NextRequest, NextResponse } from 'next/server';
-import { locales, defaultLocale } from './app/[lang]/i18n-config';
+import createMiddleware from 'next-intl/middleware'
+import type { NextRequest, NextResponse } from 'next/server'
+import { locales, defaultLocale } from './app/[lang]/i18n-config'
 
 const intlMiddleware = createMiddleware({
   locales,
@@ -11,10 +11,16 @@ const intlMiddleware = createMiddleware({
   // محسوسی نداشت.
   localePrefix: 'always',
   localeDetection: true,
-}) as unknown as (req: NextRequest) => NextResponse;
+  // ⚠️ GSC 18 Oct 2026. next-intl added its own `Link:` hreflang header on
+  // every page: x-default = https://hisabche.com/ (a 307 redirect) and «af»
+  // where the page's own tags say «fa-AF». Two conflicting hreflang sets on one
+  // page; the HTML `alternates` (i18n-config `languageAlternates`) are the
+  // only ones now.
+  alternateLinks: false,
+}) as unknown as (req: NextRequest) => NextResponse
 
 export default function middleware(req: NextRequest): ReturnType<typeof intlMiddleware> {
-  return intlMiddleware(req);
+  return intlMiddleware(req)
 }
 
 export const config = {
@@ -25,7 +31,5 @@ export const config = {
   // فایل‌های public همیشه فقط از ریشه سرو می‌شوند نه زیر پیشوند locale، ۴۰۴
   // می‌داد. حالا هر مسیری که یک پسوند فایل استاتیک دارد (نقطه + حروف) به‌طور
   // کلی از این middleware مستثنا می‌شود.
-  matcher: [
-    '/((?!api|_next/static|_next/image|.*\\.[a-zA-Z0-9]+$).*)',
-  ],
-};
+  matcher: ['/((?!api|_next/static|_next/image|.*\\.[a-zA-Z0-9]+$).*)'],
+}

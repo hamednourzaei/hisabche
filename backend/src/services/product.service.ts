@@ -13,6 +13,8 @@ import {
 } from '@hisabche/validation'
 import { summarizeStock, type StockSummaryRow } from './inventory/stock-summary.domain'
 import { stockEditWarehouse, type WarehouseRow } from './inventory/warehouse-summary.domain'
+import { assertMayUseWarehouse } from './inventory/warehouse-access'
+import { selectAllPages } from '../utils/fetch-all-pages'
 import { ConflictError, DatabaseError, NotFoundError, isFailedRead } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
 import { mapProduct } from '../utils/product.mapper'
@@ -97,6 +99,93 @@ export class ProductService {
     return `products:low_stock:${workspaceId}`
   }
 
+  // ─── List of one warehouse ───────────────────────────────────
+  //
+  // ⚠️ Owner, 18 Oct 2026: the invoice picker narrowed a page of 100 products
+  // to the chosen warehouse IN THE BROWSER, so a warehouse's 101st product was
+  // not offered at all. The scope is now applied here, by the warehouse's id:
+  //   · the warehouse must be this workspace's, live, and one this member may
+  //     use (the branch rule of `assertMayUseWarehouse`) — otherwise refused,
+  //     never «an empty list»;
+  //   · the ids come from `warehouse_stock` (every page), then the products
+  //     are read with the same search, in chunks small enough for a URL;
+  //   · sort and page are applied to that whole set, so `total` is the
+  //     warehouse's count, not a page's.
+  // `quantity` stays the product's business total; the warehouse's own number
+  // is `/warehouses/placement`, as before. Reading changes nothing.
+  private async listInWarehouse(ctx: TenancyContext, warehouseId: string, filters: ProductFilters) {
+    const { workspaceId } = ctx
+    const { data: warehouse, error: warehouseError } = await supabase
+      .from('warehouses')
+      .select('id')
+      .eq('id', warehouseId)
+      .eq('workspace_id', workspaceId)
+      .is('deleted_at', null)
+      .maybeSingle()
+    if (warehouseError) throw new DatabaseError('Failed to read the warehouse', warehouseError)
+    if (!warehouse) throw new ValidationError('PRODUCT_WAREHOUSE_NOT_FOUND')
+    await assertMayUseWarehouse(ctx, warehouseId, 'PRODUCT_WAREHOUSE_NOT_PERMITTED')
+
+    const held = await selectAllPages<{ product_id: string }, { message: string; code?: string }>(
+      (from, to) =>
+        supabase
+          .from('warehouse_stock')
+          .select('product_id')
+          .eq('workspace_id', workspaceId)
+          .eq('warehouse_id', warehouseId)
+          .order('product_id', { ascending: true })
+          .range(from, to),
+    )
+    if (held.error) throw new DatabaseError('Failed to read warehouse stock', held.error)
+    const ids = [...new Set((held.data ?? []).map((row) => row.product_id))]
+
+    const maxLimit = Math.min(filters.limit ?? 20, 100)
+    const pageNumber = Math.max(1, Number(filters.page) || 1)
+    const dbSortBy = SORT_BY_MAP[filters.sortBy ?? ''] ?? filters.sortBy ?? 'created_at'
+    const ascending = filters.sortDirection === 'asc'
+
+    const CHUNK = 150
+    const rows: Array<Record<string, unknown>> = []
+    for (let start = 0; start < ids.length; start += CHUNK) {
+      let query = supabase
+        .from('products')
+        .select(PRODUCT_LIST_COLUMNS)
+        .eq('workspace_id', workspaceId)
+        .in('id', ids.slice(start, start + CHUNK))
+      if (filters.search) {
+        const code = normalizeBarcode(filters.search)
+        query = BARCODE_SAFE.test(code)
+          ? query.or(`name.ilike.%${code}%,barcode.eq.${code}`)
+          : query.ilike('name', `%${filters.search}%`)
+      }
+      if (filters.category) query = query.eq('category', filters.category)
+      if (filters.isActive !== undefined) query = query.eq('is_active', filters.isActive)
+      const { data, error } = await query
+      if (error) throw new DatabaseError('Failed to fetch products', error)
+      rows.push(...((data ?? []) as unknown as Array<Record<string, unknown>>))
+    }
+
+    const key = (row: Record<string, unknown>) => {
+      const value = row[dbSortBy]
+      return typeof value === 'number' ? value : String(value ?? '')
+    }
+    rows.sort((a, b) => {
+      const x = key(a)
+      const y = key(b)
+      const order = x < y ? -1 : x > y ? 1 : String(a.id).localeCompare(String(b.id))
+      return ascending ? order : -order
+    })
+    const start = (pageNumber - 1) * maxLimit
+    const page = rows.slice(start, start + maxLimit)
+    return {
+      products: page.map(mapProduct),
+      nextCursor: null,
+      hasMore: start + maxLimit < rows.length,
+      total: rows.length,
+      limit: maxLimit,
+    }
+  }
+
   // ─── List ────────────────────────────────────────────────────
   async list(ctx: TenancyContext, filters: ProductFilters) {
     const { workspaceId } = ctx
@@ -119,6 +208,12 @@ export class ProductService {
     const cacheKey = this.getListCacheKey(workspaceId, filters)
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
+
+    if (filters.warehouseId) {
+      const scoped = await this.listInWarehouse(ctx, filters.warehouseId, filters)
+      await memoryCache.set(cacheKey, scoped, 30)
+      return scoped
+    }
 
     const maxLimit = Math.min(limit, 100)
     const fetchLimit = maxLimit + 1

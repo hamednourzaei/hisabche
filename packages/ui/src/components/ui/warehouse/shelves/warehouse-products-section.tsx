@@ -28,19 +28,29 @@ import {
   useMyCapabilities,
   usePlaceStock,
   useStockPlacement,
+  useTransferStock,
   useUpdateStorageLocation,
+  useWarehouseOverview,
   useWarehouseDetail,
   useWarehouseMap,
   type Branch,
   type MapLocation,
 } from '@hisabche/api'
-import { resolveIntlLocale, type UiLanguage } from '@hisabche/formatting'
+import {
+  formatMoney,
+  resolveIntlLocale,
+  type KnownCurrency,
+  type UiLanguage,
+} from '@hisabche/formatting'
 
+import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import { useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { translateOr } from '../../../../lib/translate-or'
 import { TableFilterSelect } from '../../data-table'
 import { ProductListContainer } from '../../products/containers/product-list-container'
+import { TransferStockDialog } from '../warehouse-dialogs'
 import { PlaceDialog, ShelfDialog, type PlaceRequest, type ShelfT } from './shelf-dialogs'
+import { ShelfMapView, ShelfProductsView, type PlainT } from './warehouse-shelf-map'
 import { stockOptions, WarehouseShelvesView } from './warehouse-shelves-view'
 
 export const ALL_PRODUCTS = 'all'
@@ -102,12 +112,95 @@ export function WarehouseProductsSection() {
   )
 }
 
+/**
+ * «نقشه قفسه‌ها» — its own button in the hub switch (owner, 18 Oct 2026).
+ * `/warehouse?view=shelfMap&stockWarehouse=<id>` is the map of one warehouse;
+ * `&shelf=<id>` opens one shelf as a table. Both are in the address, so a link
+ * to «قفسه A-1» opens A-1. No warehouse named = the first one.
+ */
+export function WarehouseShelfMapSection() {
+  const t = useTranslations() as unknown as ShelfT
+  const params = useSearchParams()
+  const replace = useLocaleReplace()
+  const placement = useStockPlacement()
+  const branches = asList<Branch>(useBranches().data)
+  const warehouses = placement.data?.warehouses ?? []
+
+  const requested = params.get('stockWarehouse')
+  const active = warehouses.find((warehouse) => warehouse.id === requested) ?? warehouses[0]
+  const shelfId = params.get('shelf')
+
+  const go = useCallback(
+    (warehouseId: string, shelf?: string | null) =>
+      replace(
+        `/warehouse?view=shelfMap&stockWarehouse=${warehouseId}${shelf ? `&shelf=${shelf}` : ''}`,
+      ),
+    [replace],
+  )
+
+  if (placement.isLoading) {
+    return (
+      <div
+        className="h-40 animate-pulse rounded-2xl bg-[hsl(var(--surface-muted))]"
+        aria-busy="true"
+      />
+    )
+  }
+  if (!active) {
+    return (
+      <p className="rounded-2xl bg-[hsl(var(--surface-muted))] p-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
+        {t('warehouseShelves.map.noWarehouse')}
+      </p>
+    )
+  }
+
+  const filter =
+    warehouses.length > 1 ? (
+      <TableFilterSelect
+        label={t('warehouseShelves.pickerLabel')}
+        value={active.id}
+        options={warehouses.map((warehouse) => {
+          const branch =
+            warehouse.branchName ??
+            branches.find((row) => row.id === warehouse.branchId)?.name ??
+            null
+          return {
+            value: warehouse.id,
+            label: branch ? `${warehouse.name} · ${branch}` : warehouse.name,
+          }
+        })}
+        onChange={(id) => go(id)}
+      />
+    ) : null
+
+  return (
+    <WarehouseShelvesContainer
+      warehouseId={active.id}
+      warehouseName={active.name}
+      toolbar={filter}
+      mode="map"
+      shelfId={shelfId}
+      onOpenShelf={(id) => go(active.id, id)}
+    />
+  )
+}
+
 export function WarehouseShelvesContainer({
   warehouseId,
+  warehouseName = '',
   toolbar,
+  mode = 'cards',
+  shelfId = null,
+  onOpenShelf,
 }: {
   warehouseId: string
+  warehouseName?: string | undefined
   toolbar?: React.ReactNode
+  /** `map` = the aisle map, or one shelf's table when `shelfId` names one. */
+  mode?: 'cards' | 'map' | undefined
+  shelfId?: string | null | undefined
+  /** `null` = back to the map. */
+  onOpenShelf?: ((shelfId: string | null) => void) | undefined
 }) {
   const t = useTranslations() as unknown as ShelfT
   const locale = resolveIntlLocale(useLocale() as UiLanguage)
@@ -138,6 +231,25 @@ export function WarehouseShelvesContainer({
     editing: null,
   })
   const [request, setRequest] = useState<PlaceRequest | null>(null)
+  /** «انتقال به انبار دیگر» from one shelf: which product, from which shelf. */
+  const [transfer, setTransfer] = useState<{ productId: string; shelfId: string } | null>(null)
+  const transferStock = useTransferStock()
+  const overview = useWarehouseOverview()
+  const bookCurrency = useBookCurrency()
+  const formatValue = useCallback(
+    (value: number) =>
+      bookCurrency
+        ? formatMoney(value, bookCurrency as KnownCurrency, locale)
+        : number.format(value),
+    [bookCurrency, locale, number],
+  )
+  const plainT: PlainT = useCallback(
+    (key: string, fallback?: string) => translateOr(t as never, key, fallback ?? key),
+    [t],
+  )
+  const targets = (overview.data?.warehouses ?? [])
+    .filter((item) => item.isActive && item.id !== warehouseId)
+    .map((item) => ({ id: item.id, name: item.name }))
 
   const shelves = useMemo(
     () => (map.data?.locations ?? []).filter((location) => location.isActive),
@@ -157,24 +269,88 @@ export function WarehouseShelvesContainer({
           ? 'not-migrated'
           : 'ready'
 
+  const openShelf = mode === 'map' && shelfId ? shelves.find((s) => s.id === shelfId) : undefined
+  const mapBody =
+    mode !== 'map' ? null : state !== 'ready' || shelves.length === 0 ? null : openShelf ? (
+      <ShelfProductsView
+        t={t}
+        plainT={plainT}
+        formatQuantity={formatQuantity}
+        formatMoney={formatValue}
+        unitLabel={unitLabel}
+        shelf={openShelf}
+        warehouseName={warehouseName}
+        canPlace={canPlace}
+        canMove={canPlace && shelves.length > 1}
+        canTransfer={canPlace && targets.length > 0}
+        onBack={() => onOpenShelf?.(null)}
+        onAdd={() => setRequest({ mode: 'place', shelfId: openShelf.id })}
+        onMove={(row) =>
+          setRequest({ mode: 'move', productId: row.productId, fromShelfId: openShelf.id })
+        }
+        onTransfer={(row) => setTransfer({ productId: row.productId, shelfId: openShelf.id })}
+      />
+    ) : (
+      <div className="space-y-4">
+        {toolbar ? <div className="flex flex-wrap items-center gap-2">{toolbar}</div> : null}
+        <ShelfMapView
+          t={t}
+          formatQuantity={formatQuantity}
+          shelves={shelves}
+          onOpenShelf={(shelf) => onOpenShelf?.(shelf.id)}
+        />
+      </div>
+    )
+
   return (
     <>
-      <WarehouseShelvesView
-        t={t}
-        formatQuantity={formatQuantity}
-        unitLabel={unitLabel}
-        state={state}
-        errorMessage={null}
-        onRetry={() => void map.refetch()}
-        shelves={shelves}
-        stock={stock}
-        canConfigure={canConfigure}
-        canPlace={canPlace}
-        onAddShelf={() => setShelfDialog({ open: true, editing: null })}
-        onEditShelf={(shelf) => setShelfDialog({ open: true, editing: shelf })}
-        onRequest={setRequest}
-        toolbar={toolbar}
-      />
+      {mapBody ?? (
+        <WarehouseShelvesView
+          t={t}
+          formatQuantity={formatQuantity}
+          unitLabel={unitLabel}
+          state={state}
+          errorMessage={null}
+          onRetry={() => void map.refetch()}
+          shelves={shelves}
+          stock={stock}
+          canConfigure={canConfigure}
+          canPlace={canPlace}
+          onAddShelf={() => setShelfDialog({ open: true, editing: null })}
+          onEditShelf={(shelf) => setShelfDialog({ open: true, editing: shelf })}
+          onRequest={setRequest}
+          toolbar={toolbar}
+        />
+      )}
+      {canPlace && targets.length > 0 ? (
+        <TransferStockDialog
+          t={plainT}
+          fmt={formatQuantity}
+          open={transfer !== null}
+          onClose={() => setTransfer(null)}
+          warehouseName={warehouseName}
+          products={(detail.data?.products ?? []).filter(
+            (product) => product.id === transfer?.productId,
+          )}
+          initialProductId={transfer?.productId}
+          targets={targets}
+          isPending={transferStock.isPending || place.isPending}
+          onTransfer={async (input) => {
+            const from = transfer
+            await transferStock.mutateAsync({ ...input, fromWarehouseId: warehouseId })
+            // What left the warehouse left this shelf: the shelf no longer claims it.
+            if (from) {
+              const onShelf =
+                stock.find((row) => row.id === from.productId)?.onShelf[from.shelfId] ?? 0
+              await place.mutateAsync({
+                locationId: from.shelfId,
+                productId: from.productId,
+                quantity: Math.max(0, onShelf - input.quantity),
+              })
+            }
+          }}
+        />
+      ) : null}
       {canConfigure ? (
         <ShelfDialog
           t={t}

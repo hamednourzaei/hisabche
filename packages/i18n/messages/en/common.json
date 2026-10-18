@@ -2125,7 +2125,8 @@
       "confirmTitle": "Change the costing method?",
       "confirmBody": "From now on every sale is costed with the new method, so future profit and stock value change. Sales already recorded are not re-costed. The change is logged under your name in the activity log.",
       "confirmYes": "Yes, change it"
-    }
+    },
+    "addRate": "Add a currency or unit"
   },
   "customers": {
     "title": "Customers",
@@ -4481,7 +4482,9 @@
       "noProducts": "No product found — the text will be used as typed",
       "searchProduct": "Search products…",
       "promotion": "Promo",
-      "noProductsHere": "This product is not in the chosen warehouse — the text is saved as typed"
+      "noProductsHere": "This product is not in the chosen warehouse — the text is saved as typed",
+      "searchToAddHere": "This warehouse has no products yet — search for one by name",
+      "notHereYet": "Not in this warehouse yet"
     },
     "column": {
       "addTitle": "Add column",
@@ -4646,7 +4649,8 @@
       "title": "Exchange rate",
       "hint": "This invoice is in a currency other than the one your books are kept in. Enter that day’s rate so stock, cost and accounts are recorded correctly.",
       "amount": "Amount",
-      "required": "This invoice is not recorded without an exchange rate. Both amounts must be greater than zero."
+      "required": "This invoice is not recorded without an exchange rate. Both amounts must be greater than zero.",
+      "useDashboardForm": "Record the rate with the dashboard rate form"
     }
   },
   "admin": {
@@ -6875,10 +6879,9 @@
       "kilogram": "kilogram",
       "ton": "tonne",
       "one": "unit",
-      "thousand": "thousand",
-      "million": "million",
       "piece": "piece",
-      "__own__": "Other measure…"
+      "__own__": "Other measure…",
+      "device": "device"
     },
     "ownMeasureEmpty": "Type the name of the measure.",
     "ownMeasurePlaceholder": "e.g. barrel",
@@ -9634,7 +9637,8 @@
       "warehouses": "Warehouses",
       "products": "Products",
       "reorder": "Reorder suggestions",
-      "deadStock": "Dead stock"
+      "deadStock": "Dead stock",
+      "shelfMap": "Shelf map"
     }
   },
   "accountingHub": {
@@ -10092,6 +10096,36 @@
       "partialFail": "The warehouse was saved, but these shelves were not created: {codes}",
       "duplicateCodes": "Repeated shelf code: {codes}"
     },
-    "openShelves": "Shelves"
+    "openShelves": "Shelves",
+    "map": {
+      "title": "Shelf map",
+      "items": "{count} products",
+      "aisle": "Aisle {aisle}",
+      "otherAisle": "Other shelves",
+      "odd": "Odd side",
+      "even": "Even side",
+      "back": "Back to the shelf map",
+      "noWarehouse": "No warehouse yet. Add a warehouse first.",
+      "band": {
+        "empty": "Empty",
+        "low": "Under half",
+        "mid": "Half full",
+        "full": "Full",
+        "over": "Over capacity",
+        "none": "No capacity set"
+      }
+    },
+    "table": {
+      "product": "Product",
+      "quantity": "On this shelf",
+      "value": "Value (purchase price)",
+      "lastSale": "Last sale",
+      "actions": "Action",
+      "exceeds": "more than the warehouse holds",
+      "neverSold": "Never sold",
+      "daysAgo": "{days} days ago",
+      "stagnant": "Dead stock",
+      "transfer": "Move to another warehouse"
+    }
   }
 }

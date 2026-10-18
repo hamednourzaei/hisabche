@@ -1435,3 +1435,23 @@ CHECK روی NULL **می‌گذرد**. تست Postgres همان را گرفت. �
 ### ۱۵۹. میانگین موزونی که میانگین را نگه نمی‌داشت (۱۸ اکتبر)
 
 `inventory_consume_layers` در avco برداشت را به **میانگین** قیمت می‌زد ولی از **قدیمی‌ترین** لایه برمی‌داشت؛ لایه‌ی ارزان می‌رفت، میانگینِ باقی بالا می‌رفت. سه خرید ۶۵k/۱۳۲k/۱۹۲k → ۴۸۳٬۶۶۷ بهای فروش برای ۳۸۹٬۰۰۰ پرداخت. کسی متوجه نشد چون هیچ UI ای avco را انتخاب نمی‌کرد (`PUT /inventory/settings` بی‌caller — الگوی §۷٫۱). اصلاح: `docs/inventory-avco-01-migration.sql` — برداشت از همه‌ی لایه‌ها به نسبت مانده‌ی هر کدام، هر ردیف با بهای لایه‌ی خودش. ⚠️ مقدار ۴ رقم اعشار دارد، پس سهمِ یک فروش حداکثر ۰٫۰۰۰۱ واحد × بهای لایه خطا دارد ولی «فروخته + مانده = پرداخت‌شده» همیشه دقیق است. گارد واقعی: `inventory-avco-01.pg.test.ts` (injection: بدون migration سه تست قرمز). **روی دیتابیس زنده اجرا شد و VERIFY هر ۵ ردیف ok داد (۱۸ اکتبر).** همان فایل E2E خرید دالری → دفتر → تراز آزمایشی → «دارایی = بدهی + سود» را با تابع‌های واقعی Postgres اجرا می‌کند؛ خطوط سند از `invoiceLedgerLines` (`accounting/invoice-posting.domain.ts`) می‌آیند که سرویس هم همان را صدا می‌زند. تغییر روش با تأیید و در `audit_logs` (`inventory_settings`) ثبت می‌شود.
+
+### ۱۶۰. صفحه‌ی اصلی hreflang را به ۴۰۴ می‌داد (GSC، ۱۸ اکتبر)
+
+«Not found: /en/en/» از یک لینک نبود؛ از hreflangِ خودِ صفحه‌ی اصلی بود. `languageAlternates` خودش پیشوند زبان می‌گذارد و صفحه‌ی اصلی `localePath(locale, '/')` (یعنی `/en/`) را به آن می‌داد ⇒ `/fa/en/`، `/af/en/`، `/en/en/`. canonical هم `/en/` بود که ۳۰۸ به `/en` می‌خورد. حالا `languageAlternates()` و `localeUrl(locale)`. جدا: middleware ی next-intl هدر `Link:` با x-default = ریشه (۳۰۷) و «af» به‌جای «fa-AF» می‌فرستاد — `alternateLinks: false`. ⚠️ «Page with redirect» برای www و http **درست** است (همه ۳۰۸ به `https://hisabche.com`)؛ «Validation failed» آن‌ها یعنی هنوز redirect می‌کنند، که باید. گارد: `home-hreflang-no-double-locale.test.ts`.
+
+### ۱۶۱. `type="number"` رقم فارسی را خالی می‌خواند (۱۸ اکتبر)
+
+«ظرفیت را نوشتم، قفسه ساخته شد، ظرفیت نیامد.» فیلد `<input type="number">` بود؛ مرورگر برای «۲۰۰» مقدار «» می‌دهد، فرم آن را «ثبت‌نشده» خواند و `capacity: null` فرستاد — بی‌خطا. فیلد عددی‌ای که فارسی‌زبان پر می‌کند = `type="text"` + `inputMode="decimal"` + `typedNumber` (`packages/ui/src/lib/typed-number.ts`: رقم فارسی/عربی، «٫» اعشار، خالی = null نه ۰). در دیالوگ‌های انبار و قفسه چهار فیلد عوض شد. گارد: `typed-number-persian-digits.test.ts`. ⚠️ بقیه‌ی محصول هنوز `type="number"` دارد — سراسری عوض نشده.
+
+## 162. A guard that locks an old decision is rewritten with the new one (18 Oct 2026)
+
+The owner asked for «نقشه قفسه‌ها» back after the floor map was removed. `warehouse-shelves.test.tsx` forbade the string `'map'` anywhere in the hub; the redirect from the old `?view=map` address tripped it. The guard now says what the decision actually is: no `map` member in `STOCK_SECTIONS` (no floor plan), and the old address redirects to `shelfMap`. The aisle is read from the shelf code, so no x/y came back.
+
+## 163. «واحد» meant what is priced, not a multiple of money (18 Oct 2026)
+
+The rate form offered «واحد / هزار / میلیون» beside a currency. The owner meant «یک عدد، یک دستگاه، یک گرم»: the thing whose price is quoted. A currency now has one measure (no picker). Named units get عدد, دستگاه, گرم, کیلوگرم, تن, or your own measure. A new unit is made with «+», as in the product form. Every page that records a rate mounts `ExchangeRateDialog` (dashboard + warehouse chips); the warehouse kept a second rate form (`RateDialog`) and it was deleted.
+
+## 164. A purchase picker that lists the catalogue under one warehouse name is a lie (18 Oct 2026)
+
+`pickerRows` scoped a SALE to the chosen warehouse but, for a PURCHASE, returned every product with that warehouse name and «۰»: choosing «حاجی» only relabelled the list. The test locked it in ("a purchase lists every product"). A purchase into a warehouse now lists that warehouse own products. A product not there yet is still buyable into it, but only when searched, and marked «هنوز در این انبار نیست». Check every `mode` branch of a scoping rule, not only the one the complaint names.

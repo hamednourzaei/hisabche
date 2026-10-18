@@ -127,7 +127,7 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **ارز دفاتر و ممیزی چندارزی؛ ورود فایل (۱۱ اکتبر)**                    | `.claude/reverse-and-import/01-CURRENCY-AUDIT.md` · `00-SPEC.md`                         |
 | **مرور کار Antigravity؛ صندوق چندارزی، رخدادها، لینک حضور و غیاب (۱۲ اکتبر)** | `.claude/SESSION-CACHE-2026-10-12-ANTIGRAVITY-REVIEW.md` · `AGENTS.md` — **attendance-devices-01، attendance-02، invoice-exchange-rate-01 و till-payments-01 منتظر اجرا** |
 | **ممیزی زنده ۱۴ اکتبر: ۸۲ باگ، درس‌ها، آنچه منتظر انسان است**                 | `.claude/LIVE-AUDIT-2026-10-14.md` · `.claude/SESSION-CACHE-2026-10-14-LIVE-AUDIT.md` — **custom-units-01 منتظر اجرا و VERIFY** |
-| **همه‌ی درس‌ها با شماره (۱–۱۵۹)**                                     | `.claude/lessons-learned.md`                                                |
+| **همه‌ی درس‌ها با شماره (۱–۱۶۴)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |
@@ -517,6 +517,7 @@ cd apps/admin     && npx tsc --noEmit
 **قفسه‌ها به‌جای نقشه انبار (۱۷ اکتبر)**
 
 - ⚠️ **«نقشه انبار» حذف شد؛ دوباره نسازش.** جای کالا = قفسه‌های هر انبار در `/warehouse?view=products&stockWarehouse=<id>` (`warehouse/shelves/`). قفسه فقط کد + توضیح + ظرفیت است — بدون x/y/عرض/ارتفاع/والد. داده و API نقشه (`storage_locations`، `/warehouses/:id/map`) ماندند. فرم انبار سوییچ «مدیریت قفسه‌ها» دارد؛ خاموش یعنی هیچ سؤالی، و پرچم ذخیره‌شده‌ای نیست. «بدون قفسه» = موجودی انبار − جمع روی قفسه‌ها. ثبت قفسه موجودی را تغییر نمی‌دهد. گارد: `warehouse-shelves.test.tsx`.
+- **«نقشه قفسه‌ها» (۱۸ اکتبر، خواسته‌ی صاحب پروژه):** بخش `shelfMap` در سوییچ هاب انبار (`?view=shelfMap&stockWarehouse=<id>`، `&shelf=<id>` = جدول کالاهای یک قفسه). راهرو و سمت فرد/زوج **از کد قفسه** خوانده می‌شود (`shelves/shelf-map.ts`)، نه x/y — نقشه‌ی کف دوباره ساخته نشد. `?view=map` قدیمی به همین می‌رود. جدول قفسه = `DataTable` + همان pager فهرست کالا؛ «انتقال به انبار دیگر» از قفسه، بعد از انتقال مقدار قفسه را هم کم می‌کند. گارد: `warehouse-shelf-map.test.ts`.
 
 **بهای تمام‌شده: FIFO یا میانگین موزون (۱۸ اکتبر)**
 

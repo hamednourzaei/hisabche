@@ -1,25 +1,25 @@
-// Warehouse currency chips (owner's request, 27 Sep 2026): no rate form open
-// in the middle of the page; clicking a currency chip opens the project's
-// Dialog on that currency, saving stores the rate and closes it. And the KPI's
-// currency select is code-sized, not full width over the label.
+// Warehouse currency chips. 27 Sep 2026: no rate form open in the middle of the
+// page. 18 Oct 2026 (owner): a «+» beside the chips adds a currency or unit, up
+// to five, and every chip opens THE DASHBOARD'S rate form — the shared
+// ExchangeRateDialog, mounted by the container. The view only says which code.
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLocale: () => 'fa' }))
 
-const { WarehouseView } = await import('../components/ui/warehouse/warehouse-view')
+const { WarehouseView, MAX_CHIPS } = await import('../components/ui/warehouse/warehouse-view')
 
 afterEach(cleanup)
 
 const t = (_key: string, fallback?: string) => fallback ?? _key
-const currencies = [
+const two = [
   { code: 'USD', label: 'دالر', rate: 1 / 75, afnPerUnit: 75 },
   { code: 'IRT', label: 'تومان', rate: null, afnPerUnit: null },
 ]
 
-function renderView(onSetRate = vi.fn()) {
+function renderView(currencies = two, onOpenRate = vi.fn()) {
   render(
     <WarehouseView
       t={t}
@@ -32,70 +32,54 @@ function renderView(onSetRate = vi.fn()) {
       isLoading={false}
       summary={{ productCount: 3, totalValue: 7500, lowStockCount: 0, outOfStockCount: 0 }}
       currencies={currencies}
-      onSetRate={onSetRate}
+      onOpenRate={onOpenRate}
       onNavigate={() => undefined}
       onDelete={() => undefined}
       stockStatus={() => 'success'}
       stockLabel={() => ''}
     />,
   )
-  return onSetRate
+  return onOpenRate
 }
 
-describe('warehouse currency chips → rate dialog', () => {
-  it('no rate form is open on the page until a chip is clicked', () => {
+describe('warehouse currency chips → the shared rate form', () => {
+  it('no rate form on the page; afghani is a label, not a button', () => {
     renderView()
     expect(document.querySelector('[data-rate-form]')).toBeNull()
-    // Afghani is the base: a label, not a button.
     expect(screen.queryByRole('button', { name: /افغانی/ })).toBeNull()
   })
 
-  it('clicking a currency opens the dialog on it, pre-filled with its rate', async () => {
-    renderView()
+  it('a chip opens the form on its code; «+» opens it empty', () => {
+    const onOpenRate = renderView()
     fireEvent.click(screen.getByRole('button', { name: /دالر/ }))
-    const dialog = await screen.findByRole('dialog')
-    expect(dialog.textContent).toContain('دالر')
-    const [left, right] = Array.from(
-      dialog.querySelectorAll('input[type="number"]'),
-    ) as HTMLInputElement[]
-    expect(left!.value).toBe('1')
-    expect(right!.value).toBe('75')
+    expect(onOpenRate).toHaveBeenLastCalledWith('USD')
+    fireEvent.click(document.querySelector('[data-add-rate]')!)
+    expect(onOpenRate).toHaveBeenLastCalledWith(null)
   })
 
-  it('saving stores the rate and closes the dialog', async () => {
-    const onSetRate = renderView()
-    fireEvent.click(screen.getByRole('button', { name: /دالر/ }))
-    const dialog = await screen.findByRole('dialog')
-    const [, right] = Array.from(
-      dialog.querySelectorAll('input[type="number"]'),
-    ) as HTMLInputElement[]
-    fireEvent.change(right!, { target: { value: '750' } })
-    fireEvent.submit(dialog.querySelector('form')!)
-    expect(onSetRate).toHaveBeenCalledWith('USD', 750)
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  it('up to five: no «+» once five are shown, and never more than five chips', () => {
+    const many = ['USD', 'EUR', 'IRT', 'PKR', 'unit:ماشین', 'GBP'].map((code) => ({
+      code,
+      label: code,
+      rate: 1,
+      afnPerUnit: 1,
+    }))
+    expect(MAX_CHIPS).toBe(5)
+    renderView(many)
+    expect(document.querySelector('[data-add-rate]')).toBeNull()
+    expect(document.querySelectorAll('[data-currency-chips] button')).toHaveLength(5)
   })
 
-  it('an invalid rate keeps the dialog open with the reason', async () => {
-    const onSetRate = renderView()
-    fireEvent.click(screen.getByRole('button', { name: /تومان/ }))
-    const dialog = await screen.findByRole('dialog')
-    fireEvent.submit(dialog.querySelector('form')!) // right side empty
-    expect(onSetRate).not.toHaveBeenCalled()
-    expect(screen.getByRole('alert').textContent).toContain('بزرگ‌تر از صفر')
-    expect(screen.getByRole('dialog')).toBeTruthy()
-  })
-})
-
-describe('the KPI currency select is code-sized', () => {
-  it('overrides SelectField’s full width and shrinks its arrow', () => {
+  it('the container mounts the dashboard dialog, not a form of its own', () => {
     const src = readFileSync(
+      join(__dirname, '../components/ui/warehouse/containers/Warehouse-container.tsx'),
+      'utf8',
+    )
+    expect(src).toContain('<ExchangeRateDialog')
+    const view = readFileSync(
       join(__dirname, '../components/ui/warehouse/warehouse-view.tsx'),
       'utf8',
     )
-    const kpiSelect =
-      /aria-label=\{t\('warehouse\.showIn'[\s\S]*?className="([^"]+)"/.exec(src)?.[1] ?? ''
-    expect(kpiSelect).toContain('w-auto')
-    expect(kpiSelect).toContain('h-6')
-    expect(kpiSelect).toContain('[&>svg]:size-3')
+    expect(view).not.toContain('function RateDialog')
   })
 })

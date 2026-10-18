@@ -20,6 +20,7 @@
 import { useState } from 'react'
 
 import { SelectField } from '../../select-field'
+import { typedNumber } from '../../../../lib/typed-number'
 import {
   Dialog,
   DialogContent,
@@ -93,7 +94,8 @@ export function ShelfDialog({
     setOpenedFor(false)
   }
 
-  const parsedCapacity = capacity.trim() === '' ? null : Number(capacity)
+  // Persian digits included — `type="number"` read «۲۰۰» as empty (typed-number.ts).
+  const parsedCapacity = capacity.trim() === '' ? null : typedNumber(capacity)
   const capacityOk =
     parsedCapacity === null || (Number.isFinite(parsedCapacity) && parsedCapacity > 0)
 
@@ -151,9 +153,9 @@ export function ShelfDialog({
             <span className={caption}>{t('warehouseShelves.shelfDialog.capacity')}</span>
             <input
               name="capacity"
-              type="number"
-              min={0}
+              type="text"
               inputMode="decimal"
+              dir="ltr"
               value={capacity}
               onChange={(event) => setCapacity(event.target.value)}
               placeholder={t('warehouseShelves.shelfDialog.capacityPlaceholder')}
@@ -275,7 +277,7 @@ export function PlaceDialog({
     setQuantity(String(moving ? onFrom : onTarget + product.free))
   }
 
-  const amount = Number(quantity)
+  const amount = typedNumber(quantity) ?? 0
   const valid =
     !!product &&
     !!shelfId &&
@@ -401,9 +403,7 @@ export function PlaceDialog({
               </span>
               <input
                 name="quantity"
-                type="number"
-                min={0}
-                step="any"
+                type="text"
                 inputMode="decimal"
                 dir="ltr"
                 value={quantity}

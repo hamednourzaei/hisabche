@@ -18,7 +18,7 @@ const { ExchangeRateForm } = await import('../components/ui/dashboard/display-ba
 afterEach(cleanup)
 
 function amounts(container: HTMLElement) {
-  return [...container.querySelectorAll<HTMLInputElement>('input[type="number"]')]
+  return [...container.querySelectorAll<HTMLInputElement>('input[inputmode="decimal"]')]
 }
 
 describe('ExchangeRateForm (pair)', () => {
@@ -62,6 +62,28 @@ describe('ExchangeRateForm (pair)', () => {
 })
 
 describe('a unit the business names itself (live audit #82)', () => {
+  it('«+» makes a new unit, like the product form; Persian digits are read', () => {
+    const onSaveUnit = vi.fn()
+    const { container } = render(
+      <ExchangeRateForm base="AFN" currencies={['USD']} onSave={vi.fn()} onSaveUnit={onSaveUnit} />,
+    )
+    expect(container.textContent).not.toContain('هزار')
+    expect(container.textContent).not.toContain('میلیون')
+    const plus = container.querySelector('[data-rate-side="left"] [data-new-unit]')!
+    fireEvent.click(plus)
+    const name = container.querySelector<HTMLInputElement>(
+      '[data-rate-side="left"] input[maxlength="40"]',
+    )!
+    fireEvent.change(name, { target: { value: 'یخچال' } })
+    const [left, right] = amounts(container)
+    fireEvent.change(left!, { target: { value: '۱' } })
+    fireEvent.change(right!, { target: { value: '۲۵٬۰۰۰' } })
+    fireEvent.submit(container.querySelector('form')!)
+    expect(onSaveUnit).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'یخچال', perUnit: 25000 }),
+    )
+  })
+
   it('«1 ماشین = 500,000 AFN» is saved as a unit, not as a currency', () => {
     const onSave = vi.fn()
     const onSaveUnit = vi.fn()
@@ -97,15 +119,19 @@ describe('a unit the business names itself (live audit #82)', () => {
 
 describe('measures (owner, 18 Oct 2026): kilogram of gold, million toman', () => {
   it('stored units: gold per gram, a currency per one, a named unit per piece', async () => {
-    const { inStoredUnit, measuresFor } = await import('../lib/rate-measures')
+    const { inStoredUnit, measuresFor, namedUnit } = await import('../lib/rate-measures')
     expect(measuresFor('XAU')[0]!.id).toBe('gram')
     expect(inStoredUnit(1, 'XAU', 'kilogram')).toBe(1000)
     expect(inStoredUnit(2, 'XAG', 'ton')).toBe(2_000_000)
     expect(inStoredUnit(1, 'XAU', 'mithqal')).toBeCloseTo(4.608)
-    expect(inStoredUnit(3, 'IRT', 'million')).toBe(3_000_000)
+    // «واحد» is what is priced, never «هزار/میلیون» of money: a currency has one measure.
+    expect(measuresFor('IRT').map((m) => m.id)).toEqual(['one'])
+    expect(inStoredUnit(3, 'IRT', 'million')).toBe(3)
+    expect(namedUnit('یخچال', 'device', { kilogram: 'کیلوگرم', own: '' })).toBe('یخچال')
     // A named unit: by count, by weight (kept per kilogram), or the person's own measure.
     expect(measuresFor('unit:آهن').map((m) => m.id)).toEqual([
       'piece',
+      'device',
       'kilogram',
       'gram',
       'ton',
@@ -145,8 +171,12 @@ describe('measures (owner, 18 Oct 2026): kilogram of gold, million toman', () =>
       resolve(__dirname, '../components/ui/dashboard/display-basis-picker.tsx'),
       'utf8',
     )
-    expect(form).toContain('amount: inStoredUnit(Number(leftAmount), leftCode, leftMeasure)')
-    expect(form).toContain('amount: inStoredUnit(Number(rightAmount), rightCode, rightMeasure)')
+    expect(form).toContain(
+      'amount: inStoredUnit(typedNumber(leftAmount) ?? 0, leftCode, leftMeasure)',
+    )
+    expect(form).toContain(
+      'amount: inStoredUnit(typedNumber(rightAmount) ?? 0, rightCode, rightMeasure)',
+    )
   })
 })
 
@@ -163,8 +193,15 @@ describe('dashboard container wiring', () => {
   })
 
   it('the rate form opens in a dialog, not as a strip pushing the dashboard down', () => {
-    expect(src).toContain('<Dialog open={rateOpen !== null}')
-    expect(src).toContain('<ExchangeRateForm')
+    // One dialog for every page that records a rate (dashboard + warehouse, 18 Oct 2026).
+    expect(src).toContain('<ExchangeRateDialog')
+    expect(src).toContain('open={rateOpen !== null}')
+    const shared = readFileSync(
+      resolve(__dirname, '../components/ui/dashboard/exchange-rate-dialog.tsx'),
+      'utf8',
+    )
+    expect(shared).toContain('<DialogContent')
+    expect(shared).toContain('<ExchangeRateForm')
     expect(src).not.toContain("aria-expanded={rateOpen === 'new'}")
   })
 })

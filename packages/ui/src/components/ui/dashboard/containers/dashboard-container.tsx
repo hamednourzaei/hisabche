@@ -15,16 +15,9 @@ import { RegisterCustomizer } from '../../register-customizer'
 import { useDashboardData } from '../../../../hooks/dashboard/use-dashboard-data'
 import { fmt } from '../../../../lib/dashboard/dashboard-format'
 import { useDisplayBasis } from '../../../../hooks/dashboard/use-display-basis'
-import { DisplayBasisPicker, ExchangeRateForm } from '../display-basis-picker'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../dialog'
+import { DisplayBasisPicker } from '../display-basis-picker'
+import { ExchangeRateDialog, useLatestCustomUnits } from '../exchange-rate-dialog'
 import { AiAssistantLauncher } from '../../ai/ai-assistant-launcher'
-import { CURRENCY_PICK_ORDER } from '@hisabche/validation'
-import {
-  useCustomUnits,
-  useSetCustomUnit,
-  useSetExchangeRate,
-  type CustomUnitQuote,
-} from '@hisabche/api'
 import { localizePath } from '@hisabche/ui-contract'
 import { useLocalePush, useRouteLang } from '../../../../hooks/use-locale-push'
 import { formatNumber, toIsoDay } from '@hisabche/formatting'
@@ -136,18 +129,7 @@ export function DashboardContainer() {
   // accounting operation that legitimately revalues is
   // `POST /currency/revalue`, which books the difference as a journal entry.
   const display = useDisplayBasis()
-  const setRate = useSetExchangeRate()
-  const customUnits = useCustomUnits()
-  const setUnit = useSetCustomUnit()
-  const unitList = customUnits.data
-  const unitsReady = unitList?.configured === true
-  // Newest first from the server: the first quote of a name is its latest.
-  const latestUnits: CustomUnitQuote[] = []
-  if (unitList?.configured) {
-    for (const unit of unitList.units) {
-      if (!latestUnits.some((seen) => seen.name === unit.name)) latestUnits.push(unit)
-    }
-  }
+  const latestUnits = useLatestCustomUnits().units
   const [rateOpen, setRateOpen] = useState<'new' | 'edit' | null>(null)
 
   /**
@@ -244,41 +226,18 @@ export function DashboardContainer() {
 
         {/* A dialog over the page, at every width (owner, 18 Oct 2026): the
             inline strip pushed the dashboard down and broke into rows. */}
-        <Dialog open={rateOpen !== null} onOpenChange={(open) => (open ? null : setRateOpen(null))}>
-          <DialogContent
-            data-exchange-rate-dialog=""
-            className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg overflow-x-hidden overflow-y-auto"
-          >
-            <DialogHeader>
-              <DialogTitle>
-                {rateOpen === 'edit'
-                  ? t('display.editRate', 'اصلاح قیمت')
-                  : t('display.exchangeButton', 'تبادل نرخ داشبورد')}
-              </DialogTitle>
-            </DialogHeader>
-            {rateOpen ? (
-              <ExchangeRateForm
-                // Remount per mode so the pair starts on the right currency.
-                key={rateOpen}
-                t={t}
-                base={display.base}
-                initialCurrency={rateOpen === 'edit' ? display.basis : undefined}
-                // The base is excluded: it is 1 against itself by definition, and
-                // offering it invites someone to quote AFN against AFN.
-                currencies={CURRENCY_PICK_ORDER.filter((code) => code !== display.base)}
-                isSaving={setRate.isPending}
-                error={setRate.error ? String((setRate.error as Error).message) : null}
-                onSave={(input) => setRate.mutate(input, { onSuccess: () => setRateOpen(null) })}
-                customUnits={latestUnits.map((unit) => unit.name)}
-                onSaveUnit={
-                  unitsReady
-                    ? (input) => setUnit.mutate(input, { onSuccess: () => setRateOpen(null) })
-                    : undefined
-                }
-              />
-            ) : null}
-          </DialogContent>
-        </Dialog>
+        <ExchangeRateDialog
+          t={t}
+          open={rateOpen !== null}
+          title={
+            rateOpen === 'edit'
+              ? t('display.editRate', 'اصلاح قیمت')
+              : t('display.exchangeButton', 'تبادل نرخ داشبورد')
+          }
+          base={display.base}
+          initialCurrency={rateOpen === 'edit' ? display.basis : undefined}
+          onClose={() => setRateOpen(null)}
+        />
         {latestUnits.length > 0 ? (
           // The units the business named itself, at their latest worth
           // (live audit #82): «۱ ماشین = ۵۰۰٬۰۰۰ افغانی».

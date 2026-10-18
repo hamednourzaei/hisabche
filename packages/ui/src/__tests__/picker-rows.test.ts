@@ -118,12 +118,72 @@ describe('a branch', () => {
 })
 
 describe('what is not a sale', () => {
-  it('a purchase lists every product — buying is how one arrives — with what is there now', () => {
-    expect(
-      names(
-        pickerRows({ products, placement, warehouseId: HOY, branchId: null, mode: 'purchase' }),
-      ),
-    ).toEqual(['gold@hoy=20', 'bottle@hoy=0', 'leas@hoy=100', 'kartoon@hoy=0'])
+  // ⚠️ Owner, 18 Oct 2026: «انبار حاجی را گذاشتم و باز تمام اجناس را نشان داد» —
+  // a purchase INTO a warehouse listed the whole catalogue with only the label
+  // changed («۰ · حاجی»). The open list is now that warehouse's own products.
+  it('a purchase into one warehouse lists ITS products, with ITS quantities', () => {
+    const into = (warehouseId: string) =>
+      names(pickerRows({ products, placement, warehouseId, branchId: null, mode: 'purchase' }))
+    expect(into(HOY)).toEqual(['gold@hoy=20', 'leas@hoy=100'])
+    expect(into(HAJI)).toEqual(['gold@haji joon=0', 'bottle@haji joon=724'])
+    // Gold is in both: each warehouse its own number, never the other's.
+    expect(into(HAJI)).not.toContain('gold@haji joon=20')
+    // leas is only in hoy: not presented as being in haji at all.
+    expect(into(HAJI).some((row) => row.startsWith('leas@'))).toBe(false)
+  })
+
+  it('a product not there yet is buyable into it — only when searched, marked «not here»', () => {
+    const rows = pickerRows({
+      products,
+      placement,
+      warehouseId: HAJI,
+      branchId: null,
+      mode: 'purchase',
+      searching: true,
+    })
+    expect(rows.filter((row) => !row.notHere).map((row) => row.product.id)).toEqual([
+      'gold',
+      'bottle',
+    ])
+    expect(rows.filter((row) => row.notHere).map((row) => row.product.id)).toEqual([
+      'leas',
+      'kartoon',
+    ])
+    expect(rows.some((row) => row.exhausted)).toBe(false)
+  })
+
+  it('a purchase with «all warehouses» is the catalogue, with no warehouse claimed', () => {
+    const rows = pickerRows({
+      products,
+      placement,
+      warehouseId: null,
+      branchId: null,
+      mode: 'purchase',
+    })
+    expect(rows).toHaveLength(4)
+    expect(rows.every((row) => row.warehouseId === null && row.warehouseName === '')).toBe(true)
+  })
+
+  it('an id this person may not use (another business, another branch) scopes nothing', () => {
+    const rows = pickerRows({
+      products,
+      placement,
+      warehouseId: 'w-of-another-business',
+      branchId: null,
+      mode: 'purchase',
+    })
+    expect(rows.every((row) => row.warehouseId === null)).toBe(true)
+  })
+
+  it('the picker passes the search and recomputes when the warehouse changes', () => {
+    const cell = readFileSync(
+      join(__dirname, '../components/ui/invoice-builder/grid/description-cell.tsx'),
+      'utf8',
+    )
+      .split(/\s+/)
+      .join(' ')
+    expect(cell).toContain("searching: debounced !== '',")
+    expect(cell).toContain('warehouseId, branchId, pickAs, transactionType, debounced],')
   })
 
   it('a component of a recipe is never «out»', () => {

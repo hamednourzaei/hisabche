@@ -33,11 +33,10 @@ const MASS: readonly RateMeasure[] = [
   { id: 'ton', factor: 1_000_000, label: 'تن' },
 ]
 
-const MONEY: readonly RateMeasure[] = [
-  { id: 'one', factor: 1, label: 'واحد' },
-  { id: 'thousand', factor: 1_000, label: 'هزار' },
-  { id: 'million', factor: 1_000_000, label: 'میلیون' },
-]
+// One unit of the currency, and nothing else (owner, 18 Oct 2026): «واحد»
+// meant «یک عدد، یک دستگاه، یک گرم» — what is priced — never «هزار» or
+// «میلیون» of money. A currency has one measure, so no measure picker shows.
+const MONEY: readonly RateMeasure[] = [{ id: 'one', factor: 1, label: 'واحد' }]
 
 const COUNT: readonly RateMeasure[] = [{ id: 'piece', factor: 1, label: 'عدد' }]
 
@@ -53,6 +52,8 @@ export const OWN_MEASURE = '__own__'
  */
 const NAMED: readonly RateMeasure[] = [
   { id: 'piece', factor: 1, label: 'عدد' },
+  // A device is counted like a piece: «۱ دستگاه یخچال» is one یخچال.
+  { id: 'device', factor: 1, label: 'دستگاه' },
   { id: 'kilogram', factor: 1, label: 'کیلوگرم' },
   { id: 'gram', factor: 0.001, label: 'گرم' },
   { id: 'ton', factor: 1000, label: 'تن' },
@@ -88,7 +89,7 @@ export function namedUnit(
   measure: string,
   labels: { kilogram: string; own: string },
 ): string {
-  if (measure === 'piece') return name
+  if (measure === 'piece' || measure === 'device') return name
   if (measure === OWN_MEASURE) return labels.own ? `${name} (${labels.own})` : name
   return `${name} (${labels.kilogram})`
 }

@@ -10,8 +10,13 @@
 //   · SALE, «all warehouses»     → one line per product AND warehouse that
 //     holds some of it. Picking a line is also choosing its warehouse.
 //   · a branch chosen            → only that branch's warehouses count.
-//   · PURCHASE or a COMPONENT    → every product (buying is how a product
-//     arrives somewhere), with the chosen warehouse's quantity beside it.
+//   · PURCHASE, a warehouse chosen → that warehouse's products, with its own
+//     quantity (owner, 18 Oct 2026: «انبار حاجی را گذاشتم و باز تمام اجناس را
+//     نشان داد» — the whole catalogue came back with only the label changed).
+//     A product not there yet is still buyable INTO it — buying is how it
+//     arrives — but only when searched for, and marked `notHere`, never as
+//     «۰ · حاجی» on the open list.
+//   · PURCHASE, «all», or a COMPONENT → every product, as before.
 //   · a business with no warehouse at all → the old list: every product with
 //     its one total.
 //
@@ -33,6 +38,8 @@ export interface PickerRow {
   stock: number | null
   /** Listed, but not pickable on a sale. */
   exhausted: boolean
+  /** A purchase into a warehouse that has no record of this product yet. */
+  notHere?: boolean
 }
 
 export interface PickerRowsInput {
@@ -44,6 +51,8 @@ export interface PickerRowsInput {
   /** The invoice's branch. Null = the whole business. */
   branchId: string | null
   mode: 'sale' | 'purchase' | 'component'
+  /** The person typed a search: a purchase may then reach products not in the warehouse yet. */
+  searching?: boolean | undefined
 }
 
 /** The warehouses an invoice of this branch may draw on. */
@@ -58,7 +67,7 @@ export function warehousesForBranch(
 }
 
 export function pickerRows(input: PickerRowsInput): PickerRow[] {
-  const { products, placement, warehouseId, branchId, mode } = input
+  const { products, placement, warehouseId, branchId, mode, searching = false } = input
   const total = (product: PickerProduct) =>
     typeof product.quantity === 'number' ? product.quantity : null
   const plain = (product: PickerProduct): PickerRow => {
@@ -89,19 +98,25 @@ export function pickerRows(input: PickerRowsInput): PickerRow[] {
   }
   const chosen = warehouseId !== null && nameOf.has(warehouseId) ? warehouseId : null
 
-  if (mode !== 'sale') {
-    return products.map((product) => {
-      if (!chosen) return plain(product)
-      return {
+  if (mode === 'component' || (mode === 'purchase' && !chosen)) return products.map(plain)
+
+  if (mode === 'purchase' && chosen) {
+    const here: PickerRow[] = []
+    const elsewhere: PickerRow[] = []
+    for (const product of products) {
+      const stock = held.get(product.id)?.get(chosen)
+      const row: PickerRow = {
         key: product.id,
         product,
         warehouseId: chosen,
         warehouseName: nameOf.get(chosen) ?? '',
-        // Nothing there yet is a real answer for a purchase: zero.
-        stock: held.get(product.id)?.get(chosen) ?? 0,
+        stock: stock ?? 0,
         exhausted: false,
       }
-    })
+      if (stock !== undefined) here.push(row)
+      else if (searching) elsewhere.push({ ...row, notHere: true })
+    }
+    return [...here, ...elsewhere]
   }
 
   const rows: PickerRow[] = []

@@ -109,10 +109,24 @@ export const DescriptionCell = memo(function DescriptionCell({
   // Where stock is, and which warehouses this person may sell from.
   const placement = useStockPlacement()
   const listedByWarehouse = (placement.data?.warehouses.length ?? 0) > 0
+  const transactionType = useInvoiceDraftStore((state) => state.transactionType)
+  // With a warehouse on the invoice, «how many» means «how many HERE» — and
+  // on a sale the list is what that warehouse holds (lib/invoices/picker-rows).
+  const warehouseId = useInvoiceDraftStore((state) => state.warehouseId)
+  const branchId = useInvoiceDraftStore((state) => state.branchId)
+  // ⚠️ The warehouse goes to the SERVER (owner, 18 Oct 2026): narrowing a page
+  // of 100 here hid a warehouse's 101st product. Only a purchase SEARCH asks
+  // the whole catalogue — that is how a product first arrives in a warehouse
+  // (shown «not here yet» by pickerRows). The id is in the query key, so one
+  // warehouse never shows another's list.
+  const scopeToWarehouse =
+    listedByWarehouse &&
+    warehouseId !== null &&
+    pickAs !== 'component' &&
+    !(transactionType === 'purchase' && debounced !== '')
   const { data, isLoading } = useProducts({
     ...(debounced ? { search: debounced } : {}),
-    // Narrowed to one warehouse AFTER it arrives, so a short page would hide
-    // goods that are there. The search still runs on the server.
+    ...(scopeToWarehouse ? { warehouseId } : {}),
     limit: listedByWarehouse ? 100 : 20,
   })
 
@@ -121,11 +135,6 @@ export const DescriptionCell = memo(function DescriptionCell({
   // ⚠️ AN EXHAUSTED PRODUCT STAYS IN THE LIST — IT IS JUST NOT PICKABLE ON A SALE.
   // Hiding it would make a shopkeeper think the item was deleted. And only a
   // SALE is blocked: a purchase is exactly how an exhausted product comes back.
-  const transactionType = useInvoiceDraftStore((state) => state.transactionType)
-  // With a warehouse on the invoice, «how many» means «how many HERE» — and
-  // on a sale the list is what that warehouse holds (lib/invoices/picker-rows).
-  const warehouseId = useInvoiceDraftStore((state) => state.warehouseId)
-  const branchId = useInvoiceDraftStore((state) => state.branchId)
   const setField = useInvoiceDraftStore((state) => state.setField)
   const rows = useMemo<PickerRow[]>(
     () =>
@@ -140,8 +149,9 @@ export const DescriptionCell = memo(function DescriptionCell({
             : transactionType === 'purchase'
               ? 'purchase'
               : 'sale',
+        searching: debounced !== '',
       }),
-    [products, placement.data, warehouseId, branchId, pickAs, transactionType],
+    [products, placement.data, warehouseId, branchId, pickAs, transactionType, debounced],
   )
 
   /**
@@ -379,19 +389,25 @@ export const DescriptionCell = memo(function DescriptionCell({
                   </p>
                 ) : rows.length === 0 ? (
                   <p className="p-3 text-xs text-[hsl(var(--fg-tertiary))]">
-                    {products.length > 0
-                      ? // Found, but not in the warehouse this invoice sells from.
+                    {products.length > 0 && debounced === '' && warehouseId
+                      ? // A purchase into a warehouse with nothing in it yet.
                         t(
-                          'invoiceBuilder.grid.noProductsHere',
-                          'این کالا در انبار انتخاب‌شده نیست — همین متن ثبت می‌شود',
+                          'invoiceBuilder.grid.searchToAddHere',
+                          'این انبار هنوز کالایی ندارد — نام کالا را جستجو کنید',
                         )
-                      : t(
-                          'invoiceBuilder.grid.noProducts',
-                          'کالایی پیدا نشد — همین متن ثبت می‌شود',
-                        )}
+                      : products.length > 0
+                        ? // Found, but not in the warehouse this invoice sells from.
+                          t(
+                            'invoiceBuilder.grid.noProductsHere',
+                            'این کالا در انبار انتخاب‌شده نیست — همین متن ثبت می‌شود',
+                          )
+                        : t(
+                            'invoiceBuilder.grid.noProducts',
+                            'کالایی پیدا نشد — همین متن ثبت می‌شود',
+                          )}
                   </p>
                 ) : (
-                  rows.map(({ key, product, exhausted, stock, warehouseName }, index) => (
+                  rows.map(({ key, product, exhausted, stock, warehouseName, notHere }, index) => (
                     <button
                       key={key}
                       type="button"
@@ -439,11 +455,13 @@ export const DescriptionCell = memo(function DescriptionCell({
                         {/* Stock the invoice will actually draw down, and where
                             it is — a business-wide figure would be the wrong
                             number the moment there are two warehouses. */}
-                        {stock === null
-                          ? ''
-                          : warehouseName
-                            ? `${stock.toLocaleString(locale)} · ${warehouseName}`
-                            : stock.toLocaleString(locale)}
+                        {notHere
+                          ? t('invoiceBuilder.grid.notHereYet', 'هنوز در این انبار نیست')
+                          : stock === null
+                            ? ''
+                            : warehouseName
+                              ? `${stock.toLocaleString(locale)} · ${warehouseName}`
+                              : stock.toLocaleString(locale)}
                       </span>
                     </button>
                   ))

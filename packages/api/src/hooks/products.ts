@@ -151,6 +151,8 @@ export function useProducts(filters: Partial<ProductFilters> = {}) {
     minPrice: filters.minPrice,
     maxPrice: filters.maxPrice,
     cursor: filters.cursor,
+    // In the query key too: warehouse B never reuses warehouse A's list.
+    warehouseId: filters.warehouseId,
   }
 
   return useQuery({

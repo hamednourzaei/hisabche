@@ -5,7 +5,6 @@ import type { Metadata } from 'next'
 import { setRequestLocale } from 'next-intl/server'
 import {
   localeUrl,
-  localePath,
   languageAlternates,
   localeToBcp47,
   resolveLocale,
@@ -127,20 +126,25 @@ export async function generateMetadata({
   const { lang } = await params
   const locale = resolveLocale(lang)
   const config = pageConfig[locale]
-  const path = localePath(locale, '/')
+  // ⚠️ GSC 18 Oct 2026: «Not found (404) — https://hisabche.com/en/en/».
+  // `languageAlternates` adds the locale itself; it was given `/en/` (already
+  // prefixed), so the home page declared /fa/en/, /af/en/ and /en/en/ as its
+  // translations — three 404s Google kept crawling. And the canonical with a
+  // trailing slash, `/en/`, 308-redirects to `/en`: a canonical that is a redirect.
+  // The home page is the bare locale: `/fa`, `/af`, `/en`.
 
   return {
     title: config.title,
     description: config.description,
     keywords: config.keywords.join(', '),
     alternates: {
-      canonical: localeUrl(locale, '/'),
-      languages: languageAlternates(path),
+      canonical: localeUrl(locale),
+      languages: languageAlternates(),
     },
     openGraph: {
       title: config.ogTitle,
       description: config.ogDescription,
-      url: localeUrl(locale, '/'),
+      url: localeUrl(locale),
       siteName: config.siteName,
       locale: config.ogLocale,
       type: 'website',
@@ -175,7 +179,7 @@ function JsonLd({ lang }: { lang: string }) {
     applicationCategory: 'BusinessApplication',
     operatingSystem: config.schemaOperatingSystem,
     description: config.schemaDescription,
-    url: localeUrl(locale, '/'),
+    url: localeUrl(locale),
     offers: {
       '@type': 'Offer',
       price: '0',

@@ -32,6 +32,7 @@ import {
 } from '@hisabche/api'
 import { WarehouseListTable, UNASSIGNED_WAREHOUSE_ID } from '../warehouse-list-table'
 import { AddWarehouseDialog, AssignStockDialog, TransferStockDialog } from '../warehouse-dialogs'
+import { ExchangeRateDialog, useLatestCustomUnits } from '../../dashboard/exchange-rate-dialog'
 import { AddToWarehouseModal } from '../add-to-warehouse-modal'
 import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { CostingMethodPicker } from '../costing-method-picker'
@@ -153,8 +154,10 @@ export function warehouseContainer() {
   const handleNavigate = useCallback((id: string) => push(`/warehouse/${id}`), [push])
 
   const savedRates = useExchangeRates()
-  const saveRate = useSetExchangeRate()
   const bookCurrency = useBookCurrency()
+  const namedUnits = useLatestCustomUnits().units
+  /** The rate form: `undefined` = closed, `null` = «+» (a new one), a code = that chip. */
+  const [rateCode, setRateCode] = useState<string | null | undefined>(undefined)
   const currencies = useMemo(() => {
     // Newest first from the server: the first quote seen is the latest.
     const latest = new Map<string, number>()
@@ -173,7 +176,18 @@ export function warehouseContainer() {
           afnPerUnit: perUnit,
         }
       })
-  }, [savedRates.data, bookCurrency, safeT])
+      .concat(
+        // A unit the business named (ماشین، طلا (کیلوگرم)) values the stock too.
+        namedUnits
+          .filter((unit) => unit.perUnit > 0)
+          .map((unit) => ({
+            code: `unit:${unit.name}`,
+            label: unit.name,
+            rate: 1 / unit.perUnit,
+            afnPerUnit: unit.perUnit,
+          })),
+      )
+  }, [savedRates.data, bookCurrency, safeT, namedUnits])
 
   // One warehouse's products in the shape the product table already renders.
   // `quantity` is the quantity IN THIS WAREHOUSE.
@@ -226,11 +240,7 @@ export function warehouseContainer() {
     onSearchChange: setSearch,
     deletingId,
     currencies,
-    onSetRate: (code: string, afnPerUnit: number | null) => {
-      if (afnPerUnit && afnPerUnit > 0) {
-        saveRate.mutate({ currency: code, rate: afnPerUnit, onDate: new Date().toISOString() })
-      }
-    },
+    onOpenRate: (code: string | null) => setRateCode(code),
     onNavigate: handleNavigate,
     onOpenHistory: handleOpenHistory,
     onDelete,
@@ -354,6 +364,17 @@ export function warehouseContainer() {
             : Promise.resolve()
         }
       />
+
+      {bookCurrency ? (
+        <ExchangeRateDialog
+          t={safeT}
+          open={rateCode !== undefined}
+          title={safeT('warehouse.rateForm', 'ثبت نرخ')}
+          base={bookCurrency}
+          initialCurrency={rateCode ?? undefined}
+          onClose={() => setRateCode(undefined)}
+        />
+      ) : null}
 
       {inWarehouse && !isUnassigned && detail.data?.warehouse ? (
         <AddToWarehouseModal

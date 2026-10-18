@@ -42,7 +42,13 @@ describe('two tabs, built from shared parts', () => {
   it('stock and expiry — and nothing else', () => {
     expect([...WAREHOUSE_HUB_TABS]).toEqual(['stock', 'expiry'])
     expect(WAREHOUSE_HUB_SOURCE).toEqual({ stock: '/warehouse', expiry: '/expiry' })
-    expect([...STOCK_SECTIONS]).toEqual(['warehouses', 'products', 'reorder', 'deadStock'])
+    expect([...STOCK_SECTIONS]).toEqual([
+      'warehouses',
+      'products',
+      'shelfMap',
+      'reorder',
+      'deadStock',
+    ])
   })
 
   it('uses the ONE tab bar and the ONE switch — it draws neither', () => {
@@ -103,7 +109,9 @@ describe('the section lives in the address', () => {
   })
 
   it('an open warehouse does not follow you to the product list', () => {
-    expect(hub).toContain("const STOCK_SECTION_CLEARS = ['warehouse', 'stockWarehouse'] as const")
+    expect(hub).toContain(
+      "const STOCK_SECTION_CLEARS = ['warehouse', 'stockWarehouse', 'shelf'] as const",
+    )
   })
 
   it('the old catalogue address opens the products section', () => {
