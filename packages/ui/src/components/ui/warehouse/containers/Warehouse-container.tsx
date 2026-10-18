@@ -17,7 +17,7 @@ import { StockHistoryDrawer } from '../stock-history-drawer'
 import { fmt } from '../../../../lib/warehouse/warehouse-format'
 import type { Product } from '../../../../lib/warehouse/warehouse-types'
 import { useQueryClient } from '@tanstack/react-query'
-import { asList, useExchangeRates, useSetExchangeRate, type RateQuote } from '@hisabche/api'
+import { asList, useExchangeRates, useWarehouseMap, type RateQuote } from '@hisabche/api'
 import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import {
   productKeys,
@@ -36,6 +36,9 @@ import { ExchangeRateDialog, useLatestCustomUnits } from '../../dashboard/exchan
 import { AddToWarehouseModal } from '../add-to-warehouse-modal'
 import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { CostingMethodPicker } from '../costing-method-picker'
+import { ShelfOverflowNotice, shelfOverflows } from '../shelves/shelf-overflow'
+import type { ShelfT } from '../shelves/shelf-dialogs'
+import { stockOptions } from '../shelves/warehouse-shelves-view'
 
 /**
  * H4 — the server's own cap on `GET /products/:id/stock-history`.
@@ -229,6 +232,16 @@ export function warehouseContainer() {
 
   const inWarehouse = warehouseParam !== null
   const isUnassigned = warehouseParam === UNASSIGNED_WAREHOUSE_ID
+
+  // Goods that did not fit their full auto shelf (owner, 18 Oct 2026): red in
+  // the table and a warning in the corner — derived from the shelf map's own
+  // numbers, so it stays until it is actually resolved (shelf-overflow.tsx).
+  const shelfMap = useWarehouseMap(inWarehouse && !isUnassigned ? warehouseParam : null, 90)
+  const overflows = useMemo(() => {
+    const shelves = (shelfMap.data?.locations ?? []).filter((location) => location.isActive)
+    return shelfOverflows(shelfMap.data, stockOptions(detail.data?.products ?? [], shelves))
+  }, [shelfMap.data, detail.data])
+  const overflowIds = useMemo(() => new Set(overflows.map((row) => row.productId)), [overflows])
   const warehouseName = isUnassigned
     ? safeT('warehouse.unassigned', 'بدون انبار')
     : (detail.data?.warehouse?.name ?? '')
@@ -240,6 +253,7 @@ export function warehouseContainer() {
     onSearchChange: setSearch,
     deletingId,
     currencies,
+    overflowIds,
     onOpenRate: (code: string | null) => setRateCode(code),
     onNavigate: handleNavigate,
     onOpenHistory: handleOpenHistory,
@@ -286,12 +300,12 @@ export function warehouseContainer() {
                 // To another warehouse. The route had no button anywhere.
                 transferActionLabel: safeT('warehouse.transferStock', 'انتقال موجودی'),
                 onTransferAction: () => setShowTransfer(true),
-                // Where the goods physically ARE: this warehouse's shelves,
-                // under «کالاها», on the tab of the warehouse just looked at.
+                // «قفسه‌ها» opens the shelf MAP of this warehouse (owner, 18 Oct 2026),
+                // not the shelf cards under «کالاها».
                 shelvesActionLabel: safeT('warehouseShelves.openShelves', 'قفسه‌ها'),
                 onShelvesAction: () => {
                   if (warehouseParam)
-                    push(`/warehouse?view=products&stockWarehouse=${warehouseParam}`)
+                    push(`/warehouse?view=shelfMap&stockWarehouse=${warehouseParam}`)
                 },
               }),
           products: warehouseProducts,
@@ -362,6 +376,18 @@ export function warehouseContainer() {
           editingWarehouse
             ? updateWarehouse.mutateAsync({ id: editingWarehouse.id, ...input })
             : Promise.resolve()
+        }
+      />
+
+      <ShelfOverflowNotice
+        t={t as unknown as ShelfT}
+        overflows={overflows}
+        formatQuantity={fmt}
+        unitLabel={(unit) => safeT(`unit.${unit}`, unit)}
+        onOpenShelf={(shelfId) =>
+          warehouseParam
+            ? push(`/warehouse?view=shelfMap&stockWarehouse=${warehouseParam}&shelf=${shelfId}`)
+            : undefined
         }
       />
 

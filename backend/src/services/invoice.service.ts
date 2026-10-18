@@ -54,6 +54,7 @@ import { ActivityService } from './activity.service'
 import type { TenancyContext } from './tenancy.service'
 import { requireWorkspace } from './tenancy.service'
 import { logBusinessEvent } from './event-log.service'
+import { WarehouseMapService } from './inventory/warehouse-map.service'
 import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
 import { IdempotencyUnavailableError, isMissingIdempotencySupport } from '../utils/client-request'
 import { assertWithinLimit } from './plan-limits.service'
@@ -220,6 +221,9 @@ export function lateCostKey(invoiceId: string): string {
     hex.slice(20, 32),
   ].join('-')
 }
+
+/** Shelves: only the purchase auto-fill is used here. */
+const shelves = new WarehouseMapService()
 
 export class InvoiceService {
   private workflowService: WorkflowService
@@ -1193,6 +1197,13 @@ export class InvoiceService {
     // that had already had its full financial effect. Approving it changed a
     // status column; rejecting it changed a status column.
     if (!isHeld) {
+      // A purchase's goods are in the warehouse now (committed above): put them
+      // on each product's auto shelf, up to its capacity (shelf-capacity-01).
+      // Once per invoice and product, inside one row-locked function; it never
+      // throws, and it touches no stock, cost or ledger figure.
+      if (direction === 1 && movementRows.length > 0) {
+        await shelves.autoShelveInvoice(ctx, invoiceId)
+      }
       // Costing FIRST, then the ledger: the journal entry needs the cost that
       // was actually consumed, and only the costing core can say what that was.
       // Chaining them also stops a failed costing run from booking a sale with
@@ -2354,6 +2365,10 @@ export class InvoiceService {
       // the projection trigger.
       if (direction === -1 && invoiceId) {
         await this.flagNegativeStock(ctx, invoiceId, movements)
+      }
+      // A purchase approved later: its goods arrive now — the auto shelf too.
+      if (direction === 1 && invoiceId) {
+        await shelves.autoShelveInvoice(ctx, invoiceId)
       }
     }
   }

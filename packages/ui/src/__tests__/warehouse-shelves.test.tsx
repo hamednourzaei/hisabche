@@ -20,6 +20,7 @@ import { createStorageLocationSchema } from '@hisabche/validation'
 import { searchKey } from '../components/ui/select-field'
 import {
   PlaceDialog,
+  placeLimits,
   ShelfDialog,
   type ShelfT,
   type ShelfValues,
@@ -29,6 +30,10 @@ import {
   WarehouseShelvesView,
   type WarehouseShelvesViewProps,
 } from '../components/ui/warehouse/shelves/warehouse-shelves-view'
+import {
+  ShelfMapView,
+  ShelfProductsView,
+} from '../components/ui/warehouse/shelves/warehouse-shelf-map'
 import { repeatedShelfCodes } from '../components/ui/warehouse/warehouse-dialogs'
 
 afterEach(cleanup)
@@ -142,18 +147,12 @@ const products = [
 function view(over: Partial<WarehouseShelvesViewProps> = {}) {
   const props: WarehouseShelvesViewProps = {
     t,
-    formatQuantity: (v) => String(v),
-    unitLabel: (u) => u,
     state: 'ready',
     errorMessage: null,
     onRetry: () => undefined,
     shelves,
-    stock: stockOptions(products, shelves),
     canConfigure: true,
-    canPlace: true,
     onAddShelf: vi.fn(),
-    onEditShelf: vi.fn(),
-    onRequest: vi.fn(),
     ...over,
   }
   render(<WarehouseShelvesView {...props} />)
@@ -174,50 +173,88 @@ describe('«بدون قفسه» is what the warehouse holds minus what its shelv
   })
 })
 
-describe('the shelves of one warehouse', () => {
-  it('lists every shelf with the products on it, and the unshelved card', () => {
+// ⚠️ 18 Oct 2026 (owner, «دوتا یو ار ال میخوام چیکار»): the shelf CARDS are gone.
+// Shelves are the map (`?view=shelfMap`), a shelf is its table; this view is
+// only the screens that are not the map.
+const plainT = (key: string, fallback?: string) => message(key) ?? fallback ?? key
+
+describe('the shelves of one warehouse — the map, and one shelf', () => {
+  it('with shelves, this view draws nothing: the map does', () => {
     view()
-    const a01 = document.querySelector('[data-shelf="A-01"]') as HTMLElement
-    expect(within(a01).getByText('روغن آشپزی')).toBeTruthy()
-    expect(within(a01).getByText('12 piece')).toBeTruthy()
-    const unshelved = document.querySelector('[data-unshelved]') as HTMLElement
-    expect(within(unshelved).getByText('برنج')).toBeTruthy()
-    expect(within(unshelved).getByText('8 piece')).toBeTruthy()
+    expect(document.body.textContent).toBe('')
   })
 
-  it('search keeps only the shelves that hold a match', () => {
-    view()
-    fireEvent.change(screen.getByLabelText(message('warehouseShelves.search')!), {
-      target: { value: 'روغن' },
-    })
-    expect(document.querySelector('[data-shelf="A-01"]')).toBeTruthy()
-    expect(document.querySelector('[data-shelf="B-04"]')).toBeNull()
+  it('a tile opens its shelf', () => {
+    const onOpenShelf = vi.fn()
+    render(
+      <ShelfMapView
+        t={t}
+        formatQuantity={(v) => String(v)}
+        shelves={shelves}
+        onOpenShelf={onOpenShelf}
+      />,
+    )
+    fireEvent.click(document.querySelector('[data-map-shelf="A-01"]')!)
+    expect(onOpenShelf).toHaveBeenCalledWith(shelves[0])
   })
 
-  it('every action goes to the parent as a request — place on a shelf, move, put an unshelved product', () => {
-    const props = view()
-    const a01 = document.querySelector('[data-shelf="A-01"]') as HTMLElement
-    fireEvent.click(within(a01).getByText(message('warehouseShelves.move')!))
-    expect(props.onRequest).toHaveBeenCalledWith({
-      mode: 'move',
-      productId: OIL,
-      fromShelfId: 's1',
-    })
-    fireEvent.click(within(a01).getByText(message('warehouseShelves.addProductHere')!))
-    expect(props.onRequest).toHaveBeenCalledWith({ mode: 'place', shelfId: 's1' })
-    const unshelved = document.querySelector('[data-unshelved]') as HTMLElement
-    fireEvent.click(within(unshelved).getAllByText(message('warehouseShelves.putOnShelf')!)[0]!)
-    expect(props.onRequest).toHaveBeenCalledWith({ mode: 'place', productId: OIL })
+  it('a shelf page: move, transfer, add here, edit — each a request to the parent', () => {
+    const calls = { move: vi.fn(), transfer: vi.fn(), add: vi.fn(), edit: vi.fn() }
+    render(
+      <ShelfProductsView
+        t={t}
+        plainT={plainT}
+        formatQuantity={(v) => String(v)}
+        formatMoney={(v) => String(v)}
+        unitLabel={(u) => u}
+        shelf={shelves[0]!}
+        warehouseName="halakoi"
+        canPlace
+        canMove
+        canTransfer
+        onBack={() => undefined}
+        onAdd={calls.add}
+        onMove={calls.move}
+        onTransfer={calls.transfer}
+        onEdit={calls.edit}
+      />,
+    )
+    fireEvent.click(screen.getByText(message('warehouseShelves.move')!))
+    expect(calls.move).toHaveBeenCalledWith(expect.objectContaining({ productId: OIL }))
+    fireEvent.click(screen.getByText(message('warehouseShelves.table.transfer')!))
+    expect(calls.transfer).toHaveBeenCalledWith(expect.objectContaining({ productId: OIL }))
+    fireEvent.click(screen.getByText(message('warehouseShelves.addProductHere')!))
+    expect(calls.add).toHaveBeenCalled()
+    fireEvent.click(screen.getByText(message('warehouseShelves.editShelf')!))
+    expect(calls.edit).toHaveBeenCalled()
   })
 
-  it('without product.write nothing is offered to change; without inventory.configure no shelf is added', () => {
-    view({ canPlace: false, canConfigure: false })
+  it('without permission the shelf page offers no change', () => {
+    render(
+      <ShelfProductsView
+        t={t}
+        plainT={plainT}
+        formatQuantity={(v) => String(v)}
+        formatMoney={(v) => String(v)}
+        unitLabel={(u) => u}
+        shelf={shelves[0]!}
+        warehouseName="halakoi"
+        canPlace={false}
+        canMove={false}
+        canTransfer={false}
+        onBack={() => undefined}
+        onAdd={vi.fn()}
+        onMove={vi.fn()}
+        onTransfer={vi.fn()}
+      />,
+    )
     expect(screen.queryByText(message('warehouseShelves.move')!)).toBeNull()
-    expect(screen.queryByText(message('warehouseShelves.addShelf')!)).toBeNull()
+    expect(screen.queryByText(message('warehouseShelves.editShelf')!)).toBeNull()
+    expect(screen.queryByText(message('warehouseShelves.addProductHere')!)).toBeNull()
   })
 
   it('a warehouse with no shelves says it works without them, and offers to add one', () => {
-    const props = view({ shelves: [], stock: stockOptions(products, []) })
+    const props = view({ shelves: [] })
     expect(screen.getByText(message('warehouseShelves.noShelvesTitle')!)).toBeTruthy()
     fireEvent.click(screen.getByText(message('warehouseShelves.addShelf')!))
     expect(props.onAddShelf).toHaveBeenCalled()
@@ -290,29 +327,104 @@ describe('a shelf is a code, not coordinates', () => {
 describe('placing on a shelf', () => {
   const stock = stockOptions(products, shelves)
 
-  it('from a shelf: the quantity starts at «on this shelf + on no shelf» and is what is sent', async () => {
+  // ⚠️ Owner, 18 Oct 2026: re-placing 2 gearboxes asked for the TOTAL and
+  // started at «8»; a product new to the shelf started at its whole stock.
+  // The dialog now ADDS, at most min(on no shelf, room left on the shelf).
+  const GEAR = '33333333-3333-4333-8333-333333333333'
+  const HOSE = '44444444-4444-4444-8444-444444444444'
+  const a3 = { id: 'a3', code: 'A-3', name: 'قفسه گیربوکس', capacity: 10, occupied: 2 }
+  const gearStock = [
+    {
+      id: GEAR,
+      name: 'گیربوکس اتوماتیک',
+      sku: null,
+      unit: 'custom',
+      total: 8,
+      free: 6,
+      onShelf: { a3: 2 },
+    },
+    { id: HOSE, name: 'شلنگ رادیات', sku: null, unit: 'piece', total: 10, free: 10, onShelf: {} },
+  ]
+  const placeDialog = (over: Record<string, unknown> = {}) => {
     const onPlace = vi.fn(async () => undefined)
+    const onSetAuto = vi.fn(async () => undefined)
     render(
       <PlaceDialog
         t={t}
         formatQuantity={String}
         unitLabel={(u) => u}
-        request={{ mode: 'place', shelfId: 's1', productId: OIL }}
-        shelves={shelves.map((s) => ({ id: s.id, code: s.code, name: s.name }))}
-        products={stock}
+        request={{ mode: 'place', shelfId: 'a3', productId: GEAR }}
+        shelves={[a3]}
+        products={gearStock}
         isPending={false}
         onPlace={onPlace}
         onMove={vi.fn()}
         onClose={() => undefined}
+        autoShelfOf={() => null}
+        onSetAuto={onSetAuto}
+        {...over}
       />,
     )
-    const input = screen.getByPlaceholderText(
-      message('warehouseShelves.placeDialog.quantityPlaceholder')!,
-    ) as HTMLInputElement
-    expect(input.value).toBe('20') // 12 already there + 8 on no shelf
+    const input = document.querySelector('input[name="quantity"]') as HTMLInputElement
+    return { onPlace, onSetAuto, input }
+  }
+
+  it('shows the four numbers and asks how many to ADD; the box starts empty', () => {
+    const { input } = placeDialog()
+    const summary = document.querySelector('[data-place-summary]')!.textContent ?? ''
+    expect(summary).toContain('8 custom') // in this warehouse
+    expect(summary).toContain('2 custom') // on this shelf
+    expect(summary).toContain('6 custom') // on no shelf
+    expect(input.value).toBe('')
+    expect(input.placeholder).toContain('6') // min(6 free, 8 room)
+  })
+
+  it('adding 4 sends 2 + 4 = 6 — the number the shelf holds', async () => {
+    const { onPlace, input } = placeDialog()
+    fireEvent.change(input, { target: { value: '۴' } })
     fireEvent.click(screen.getByText(message('warehouseShelves.placeDialog.save')!))
     await Promise.resolve()
-    expect(onPlace).toHaveBeenCalledWith({ shelfId: 's1', productId: OIL, quantity: 20 })
+    expect(onPlace).toHaveBeenCalledWith({ shelfId: 'a3', productId: GEAR, quantity: 6 })
+  })
+
+  it('more than the max is refused before sending: room 4 (capacity 4, 2 on it) → 3 is too many', () => {
+    const { onPlace, input } = placeDialog({ shelves: [{ ...a3, capacity: 4 }] })
+    expect(input.placeholder).toContain('2')
+    fireEvent.change(input, { target: { value: '3' } })
+    const save = screen.getByText(
+      message('warehouseShelves.placeDialog.save')!,
+    ) as HTMLButtonElement
+    expect(save.disabled).toBe(true)
+    expect(onPlace).not.toHaveBeenCalled()
+  })
+
+  it('a product new to the shelf starts at 0 on it, its own stock on no shelf', () => {
+    placeDialog({ request: { mode: 'place', shelfId: 'a3', productId: HOSE } })
+    const summary = document.querySelector('[data-place-summary]')!.textContent ?? ''
+    expect(summary).toContain('0 piece')
+    expect(summary).toContain('10 piece')
+  })
+
+  it('a full shelf takes nothing and says so', () => {
+    const { input } = placeDialog({ shelves: [{ ...a3, capacity: 2 }] })
+    expect(input.disabled).toBe(true)
+    expect(screen.getByText(message('warehouseShelves.placeDialog.shelfFull')!)).toBeTruthy()
+  })
+
+  it('the auto-shelf switch is saved on its own, without placing anything', async () => {
+    const { onPlace, onSetAuto } = placeDialog()
+    fireEvent.click(document.querySelector('[data-auto-shelf]')!)
+    fireEvent.click(screen.getByText(message('warehouseShelves.placeDialog.save')!))
+    await Promise.resolve()
+    expect(onSetAuto).toHaveBeenCalledWith({ shelfId: 'a3', productId: GEAR, enabled: true })
+    expect(onPlace).not.toHaveBeenCalled()
+  })
+
+  it('placeLimits: min(on no shelf, room); no capacity = only the stock', () => {
+    expect(placeLimits({ free: 6, capacity: 10, occupied: 2 })).toEqual({ room: 8, max: 6 })
+    expect(placeLimits({ free: 6, capacity: 4, occupied: 2 })).toEqual({ room: 2, max: 2 })
+    expect(placeLimits({ free: 6, capacity: null, occupied: 2 })).toEqual({ room: null, max: 6 })
+    expect(placeLimits({ free: 0, capacity: 10, occupied: 0 }).max).toBe(0)
   })
 
   it('the product choice is the ONE select with search, and the form says where a missing product comes from', () => {
@@ -435,6 +547,11 @@ describe('the floor map is gone from the product', () => {
     expect(section).not.toContain('<HubTabs')
     expect(section).toContain('<ProductListContainer actions={filter} />')
     expect(section).toContain('toolbar={filter}')
+    // ONE address: the old `?view=products&stockWarehouse=` goes to the map.
+    expect(section).toContain(
+      'if (requested) replace(`/warehouse?view=shelfMap&stockWarehouse=${requested}`)',
+    )
+    expect(section).not.toContain('`/warehouse?view=products&stockWarehouse=')
   })
 
   it('search matches across ی/ي, ک/ك and the zero-width non-joiner', () => {

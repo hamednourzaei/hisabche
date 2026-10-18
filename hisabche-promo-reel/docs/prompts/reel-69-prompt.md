@@ -1,66 +1,33 @@
-# Reel #69 — «۱۰۰٪ کسب‌وکارت رقم است؛ همه‌ش یک‌جا»
+# Reel 69 — Pocketsflow Creator E-Commerce Explainer
 
-Digital Showreel II (20.0 ثانیه، ۵ صحنه × ۴٫۰ ثانیه) — تم `procedural-spatial`، رجیستری:
-`kinetic-manifesto` / `single-focal-stage` / قلاب `visual-pattern-interrupt`.
+- **Duration:** 15.0 seconds · 6 scenes · theme `swiss-editorial` · actors `r69-*` (`src/components/Reel69ShowreelActors.tsx`)
+- **Format:** 9:16 vertical (1080×1920 @ 30fps)
+- **Palette & Look:** Clean stark white background with subtle faint gray grid lines (`#ffffff`, `rgba(0,0,0,0.045)`), bold vibrant blue cards (`#0056B3`), black typography (`#111827`), flat lighting with no shadows, dithered retro texture on animated character and accents.
+- **Typography:** SF Pro / Inter sans-serif with bold headings and clean body weights.
+- **Exact on-screen words quoted:**
+  - Frame 1: “Got something”, “// for creators”
+  - Frame 2: “Courses”, “Ebooks”, “Apps”
+  - Frame 3: “Design Course $149.00”, “Apple Pay”, “Pay $149.00”
+  - Frame 4: “Workbook upsell $19.00”, “Tax - VAT 20% $33.60”, “Add the workbook”
+  - Frame 5: “1:1 coaching call $99”, “$9 / month”, “EU VAT”, “UK VAT”, “US sales tax”, “$12,480.00”
+  - Frame 6: “Pocketsflow” (“Pockets” + “flow”)
 
-منبع ایده: hp-010 «دومینوی یک فاکتور و پنج سند» (cascade typographic + equilibrium snap) —
-بازآرایی شده برای مونتاژ «تمام‌عددی» از چهار قابلیت صاحب‌کار (۱۷ اکتبر ۲۰۲۶):
-چند نرخی (فهرست قیمت) · تیم و حضورغیاب · آفلاین مود · دفتر حسابداری — برای همه‌ی رشته‌های کسب‌وکار.
+## Script & Shot List
 
----
+| #   | Time      | Spoken Line                               | Visual Stage & Motion                                                                                                                                                                    | Sound Cues                                            |
+| --- | --------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| 1   | 0.0–1.5   | Got something for creators.               | White screen + subtle grid. Smiling dithered character on right; “// for creators” & “Got something” on left.                                                                            | `pop`, `cardEnter`, `chime`                           |
+| 2   | 1.5–4.5   | Sell Courses, Ebooks, and Apps.           | Background transitions to bold blue UI panel (#0056B3). Character remains static on right; 3 product cards slide in from right.                                                          | `whoosh`, `cardThock`, `cardThock`, `cardThock`       |
+| 3   | 4.5–7.5   | Design Course $149.00, instant Apple Pay. | Blue panel slides out revealing checkout screen on left. Character shrinks & floats to center-right looking at screen. Shows “Apple Pay”, “Pay $149.00”.                                 | `cardEnter`, `tick`, `softTransition`, `pop`, `cash`  |
+| 4   | 7.5–10.0  | Workbook upsell $19.00, Tax - VAT 20%.    | Checkout updates with “Workbook upsell $19.00”, “Add the workbook”, and “Tax - VAT 20% $33.60”. Character smiles in place.                                                               | `pop`, `tick`, `dataFlow`, `insightReveal`            |
+| 5   | 10.0–13.5 | Add the workbook, $9 / month, $12,480.00. | Modular multi-panel split explosion: “1:1 coaching call $99”, “$9 / month”, VAT chips (EU VAT, UK VAT, US sales tax), and “$12,480.00”. Character floats in center. Climax holds ≥ 1.0s. | `impact`, `cardEnter`, `tick`, `cardEnter`, `success` |
+| 6   | 13.5–15.0 | Pockets... flow.                          | Screen fades to pure white. “Pockets” animates in from left (fading in first), then “flow” slides in from right to form “Pocketsflow”.                                                   | `softTransition`, `ctaResolution`                     |
 
-## 1. قلاب میخکوب (S1, 0–4s)
+## Production Rules & AV Sync
 
-- فریم ۰: دیوار اعداد پرشمار (۱۰۰ خانه، deterministic) به‌صورت آرام نفس می‌کشد.
-- ساعت ۰٫۲: ضربه‌ی «impact» → کل دیوار در یک لحظه **فریز** می‌شود (میخکوب — حرکتی نمی‌ماند).
-- ساعت ۱٫۳۳: دیوار کم‌نور می‌شود؛ ساعت ۲٫۸۳: «۱۰۰٪» با spring گنده وسط قفل می‌شود.
-- VO: «همه‌چیزِ کسب‌وکارت رقمه؛ حالا همش یک‌جاست.» — قلاب در هیچ تایتری از ۰۱–۶۸ استفاده نشده.
-
-## 2. چند نرخی (S2, 4–8s)
-
-- یک خط فاکتور «کالای بازرگانی ۱۰۱» + سه چیپ فهرست: عمده ۱٬۹۸۰ / خرده ۲٬۶۰۰ / همکار ۲٬۲۵۰.
-- ساعت ۶٫۵ (`tier-flip`): قیمت خط به فهرست «خرده» برمی‌گردد؛ ساعت ۶٫۹ (`tier-label`): «قیمت خودش» قفل سبز.
-- پیام: هر مشتری روی فهرست خودش است؛ فاکتور قیمت همان فهرست را خودش می‌گذارد.
-
-## 3. تیم و حضورغیاب (S3, 8–12s)
-
-- ۶ نقطه‌ی پرسنلی → ستون ورود/خروج به‌شکل ساعت (۰۸:۰۰→۱۷:۰۰ … یک‌به‌یکی).
-- ساعت ۱۱٫۱ (`hours-count`): کارت «شیفت هفتگی: ۴۲ ساعت» جمع می‌شود — بدون دست‌حسابی.
-
-## 4. آفلاین مود (S4, 12–16s) — اوج درام
-
-- ساعت ۱۲٫۱۵ (`net-cut`): وضعیت «آفلاین» قرمز؛ ساعت ۱۳٫۰۰: ضربه.
-- شمارنده‌ی فروش آفلاین از ۴۱ تا ۴۴ می‌رود (مونوتونیک — هرگز برنمی‌گردد).
-- ساعت ۱۴٫۱۵ (`queue-flush`): سینک سبز — چیزی گم نشده.
-
-## 5. همه‌ش یک‌جا (S5, 16–20s) — CTA
-
-- چهار جزیره‌ی عددی (پیشخوان، کارگاه، فهرست، شیفت) به هم می‌ریزند و پس‌زمینه کم‌نور می‌شود.
-- کارت CTA ساعت ۱۸٫۰ وارد (هم-Chip حسابچه/شروع رایگان/hisabche.com) و ≥۳ ثانیه در شفافیت کامل می‌ماند.
-- VO: «از پیشخوان تا کارگاه؛ همه‌ش حسابچه. شروع رایگان.»
-
----
-
-## صدا و قانون AV-Sync (Hard Rule 13)
-
-- هر واژه‌ی صدا دار یک `action` دارد و اکتر همان زمان را با `cueAt(plan, '<action>', …)` می‌خواند.
-- `sentenceEnding`ها هیچ صدایی ندارند (نگه‌داشتن، رویداد نیست).
-- دو cue با فاصله‌ی کمتر از ۱۲۰ms وجود ندارد.
-
-## Registration (۷ مرحله
-
-1. `src/reels/reel-69-digital-showreel.ts` ✅
-2. `src/components/Reel69ShowreelActors.tsx` + dispatch `r69-` در WordDrivenStage ✅
-3. `.r69-*` در `src/styles.css` ✅
-4. `src/reels/index.ts` (import + REELS + export) ✅
-5. `src/data/reel-ledger.json` (id 69) ✅ · رجیستری (id 69) ✅
-6. `docs/prompts/reel-69-prompt.md` ✅ · prompt-library hp-010 → used: reel 69 ✅
-7. `recent-reels.json` (id 69) ✅ · `reel-state.json` → nextReelId 70 ✅
-
-## گارد
-
-- متن روی صحنه در هر لحظه ≤ ۶ واژه (برچسب‌های کارکردی؛ اعداد به حساب برچسب نمی‌آیند ولی کم بودند).
-- بدون خط جدای افقی؛ بدون نام ارز؛ همه‌ی اعداد `faNumber`.
-- گیت رجیستری: شباهت با ۶۸ = ۰٪ (آرک‌تایپ/چیدمان/رنگ/صدا همگی متفاوت).
-- صدا: PROVISIONAL_CADENCE_MODEL_ACTIVE — تا گذاشتن واقعی VO و اجرای
-  `node scripts/align-voiceover.mjs 69`.
+- **HARD RULE 13 & 14:** Single focal stage per beat, ≤ 6 words per on-stage label.
+- **AV SYNC LAW:**
+  - Every word paired with a sound event carries an `action` and is read via `cueAt` in `Reel69ShowreelActors.tsx`.
+  - Zero sound on `sentenceEnding`.
+  - Climax scene (Scene 5) holds 1.05s (≥ 1.0s) after sentence ending.
+- **Alignment:** `PROVISIONAL_CADENCE_MODEL_ACTIVE`.

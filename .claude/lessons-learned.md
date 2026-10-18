@@ -1455,3 +1455,11 @@ The rate form offered «واحد / هزار / میلیون» beside a currency. 
 ## 164. A purchase picker that lists the catalogue under one warehouse name is a lie (18 Oct 2026)
 
 `pickerRows` scoped a SALE to the chosen warehouse but, for a PURCHASE, returned every product with that warehouse name and «۰»: choosing «حاجی» only relabelled the list. The test locked it in ("a purchase lists every product"). A purchase into a warehouse now lists that warehouse own products. A product not there yet is still buyable into it, but only when searched, and marked «هنوز در این انبار نیست». Check every `mode` branch of a scoping rule, not only the one the complaint names.
+
+## 165. Scope a list where the data is, not after a page of it arrived (18 Oct 2026)
+
+The invoice picker read 100 products and narrowed them to the warehouse in the browser, so the 101st product of a warehouse was never offered. `GET /api/products?warehouseId=` now scopes on the server: the warehouse must be in this workspace and pass `assertMayUseWarehouse`, the ids come from `warehouse_stock` (every page) and are read in chunks of 150, then sorted and paged as one set. The id is part of the React Query key. No FK from `warehouse_stock` to `products` is confirmed, so no PostgREST embed. Guard: `backend/src/__tests__/product-list-warehouse-scope.test.ts` (red with the scope off).
+
+## 166. A form that asks for the total when the person means «add» (18 Oct 2026)
+
+«گذاشتن روی قفسه» asked how many are ON the shelf and pre-filled «on the shelf + on no shelf». So re-placing 2 gearboxes showed 8, and a product new to the shelf showed its whole stock. Capacity was stored but nothing enforced it. The dialog now shows the four numbers (in the warehouse, on this shelf, on no shelf, capacity) and asks for an ADDITION. The maximum is `placeLimits` = min(on no shelf, room). The server enforces the same rule inside `storage_place_stock` (shelf-capacity-01). A purchase fills the product auto shelf once per invoice via `storage_auto_receipts`. The overflow warning is DERIVED (`shelfOverflows`) and never stored, so it cannot drift or duplicate. The map hook builds its answer field by field, so a new field there must be mapped by name or it vanishes.

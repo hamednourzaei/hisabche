@@ -32,6 +32,8 @@ interface WarehouseProductListProps {
   stockStatus: (qty: number, min: number) => StockStatus
   stockLabel: (qty: number, min: number) => string
   onNavigate: (id: string) => void
+  /** Products whose full auto shelf could not take what arrived (shelf-overflow.tsx). */
+  overflowIds?: ReadonlySet<string> | undefined
   /** H4 — open the movements behind this product's on-hand figure. */
   onOpenHistory?: ((product: Product) => void) | undefined
   // ⚠️ H4 — there is deliberately NO `onReorder` here.
@@ -70,6 +72,7 @@ function useProductColumns(
   stockLabel: (qty: number, min: number) => string,
   onNavigate: (id: string) => void,
   onOpenHistory: WarehouseProductListProps['onOpenHistory'],
+  overflowIds?: ReadonlySet<string> | undefined,
 ): TableColumn<Product>[] {
   return useMemo(
     () => [
@@ -94,7 +97,23 @@ function useProductColumns(
                 className="size-8 shrink-0 rounded-md object-cover"
               />
             ) : null}
-            <span className="font-medium text-[hsl(var(--fg-primary))]">{product.name}</span>
+            <span
+              className={
+                overflowIds?.has(product.id)
+                  ? 'font-medium text-[hsl(var(--color-destructive))]'
+                  : 'font-medium text-[hsl(var(--fg-primary))]'
+              }
+            >
+              {product.name}
+            </span>
+            {overflowIds?.has(product.id) ? (
+              <span
+                data-overflow-badge=""
+                className="shrink-0 rounded bg-[hsl(var(--color-destructive)/0.12)] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--color-destructive))]"
+              >
+                {t('warehouseShelves.overflow.badge', 'جا نشد')}
+              </span>
+            ) : null}
           </span>
         ),
       },
@@ -237,7 +256,7 @@ function useProductColumns(
         ),
       },
     ],
-    [fmt, onNavigate, onOpenHistory, stockStatus, stockLabel, t],
+    [fmt, onNavigate, onOpenHistory, stockStatus, stockLabel, t, overflowIds],
   )
 }
 
@@ -249,13 +268,22 @@ export const WarehouseProductList = memo(function WarehouseProductList({
   stockLabel,
   onNavigate,
   onOpenHistory,
+  overflowIds,
   onDelete,
   search,
   onSearchChange,
   actions,
   emptyState,
 }: WarehouseProductListProps) {
-  const columns = useProductColumns(t, fmt, stockStatus, stockLabel, onNavigate, onOpenHistory)
+  const columns = useProductColumns(
+    t,
+    fmt,
+    stockStatus,
+    stockLabel,
+    onNavigate,
+    onOpenHistory,
+    overflowIds,
+  )
 
   // «شال‌ها»، «شلوارها»، «دستبندها»: one category of this warehouse at a time.
   // The choices are the categories the products on screen actually carry.

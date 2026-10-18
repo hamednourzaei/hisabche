@@ -1376,23 +1376,23 @@ export const REEL_REGISTRY_LIST: ReelRegistryEntry[] = [
   },
   {
     id: '69',
-    title: '۱۰۰٪ کسب‌وکارت رقم است؛ همه‌ش یک‌جا',
-    artDirection: 'kinetic-manifesto',
+    title: 'Pocketsflow — موشن گرافیک پلتفرم فروش دوره‌ها و محصولات دیجیتال',
+    artDirection: 'swiss-editorial',
     layoutTopology: 'data-flow-matrix',
     operators: [
-      'DigitFreezeHook',
-      'PriceTierOdometer',
-      'TeamShiftLedger',
-      'OfflineSalesCounter',
-      'ConvergedBalanceCta',
+      'DitheredCharacterRig',
+      'ProductCascadeSlide',
+      'InstantCheckoutFloat',
+      'ModularUpsellTaxSplit',
+      'KineticBrandAssembly',
     ],
-    themeName: 'procedural-spatial',
+    themeName: 'swiss-editorial',
     cardQuotaMax: 3,
     targetCustomer: 'retail-shopkeeper',
     openingArchetype: 'visual-pattern-interrupt',
     audioStrategy: 'rhythmic-urgency',
     description:
-      'نمایش‌فیلم تمام‌عددی: قلاب فریزِ دیوار اعداد، فهرست قیمت هر مشتری، جمع خودکار شیفت پرسنل، فروش آفلاین در قطع اینترنت و در فرجام همه‌ی اعداد در یک دفتر متعادل؛ برای هر رشته‌ی کسب‌وکاری، بدون نام بردن از هیچ ارزی',
+      'ویدیوی ۱۵ ثانیه‌ای موشن‌گرافیک پلتفرم Pocketsflow با کاراکتر دیترشده، کارت‌های محصول، فرایند خرید آنی، تسویه اپل‌پی و پیشنهادهای مکمل',
   },
 ]
 

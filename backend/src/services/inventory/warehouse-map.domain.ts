@@ -227,6 +227,11 @@ export interface WarehouseMap {
    * so and names the script — it does NOT draw an empty warehouse.
    */
   migrated: boolean
+  /**
+   * The shelf each product's purchases fill (shelf-capacity-01). `null` = that
+   * migration is not on this database: no auto-fill, no overflow to show.
+   */
+  autoShelves?: Array<{ productId: string; locationId: string }> | null
   locations: MapLocation[]
   totals: WarehouseMapTotals
   unplaced: WarehouseMapUnplaced

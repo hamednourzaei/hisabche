@@ -59,6 +59,8 @@ interface WarehouseViewProps {
   children?: ReactNode
   deletingId: string | null
   products: Product[]
+  /** Products that did not fit their full auto shelf: drawn red. */
+  overflowIds?: ReadonlySet<string> | undefined
   isLoading: boolean
   /**
    * Stock value and counts over EVERY product, computed by the server.
@@ -356,6 +358,7 @@ export const WarehouseView = memo(function WarehouseView({
   children,
   deletingId,
   products,
+  overflowIds,
   isLoading,
   summary,
   currencies,
@@ -481,6 +484,7 @@ export const WarehouseView = memo(function WarehouseView({
           t={t}
           fmt={fmt}
           products={products}
+          overflowIds={overflowIds}
           stockStatus={stockStatus}
           stockLabel={stockLabel}
           onNavigate={onNavigate}

@@ -17,7 +17,7 @@
 // same `/warehouses/:id/map` answer.
 // ============================================
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import {
@@ -27,6 +27,7 @@ import {
   useMoveProductPlacement,
   useMyCapabilities,
   usePlaceStock,
+  useSetAutoShelf,
   useStockPlacement,
   useTransferStock,
   useUpdateStorageLocation,
@@ -51,6 +52,7 @@ import { ProductListContainer } from '../../products/containers/product-list-con
 import { TransferStockDialog } from '../warehouse-dialogs'
 import { PlaceDialog, ShelfDialog, type PlaceRequest, type ShelfT } from './shelf-dialogs'
 import { ShelfMapView, ShelfProductsView, type PlainT } from './warehouse-shelf-map'
+import { ShelfOverflowNotice, shelfOverflows } from './shelf-overflow'
 import { stockOptions, WarehouseShelvesView } from './warehouse-shelves-view'
 
 export const ALL_PRODUCTS = 'all'
@@ -65,18 +67,20 @@ export function WarehouseProductsSection() {
   const branches = asList<Branch>(useBranches().data)
 
   const warehouses = placement.data?.warehouses ?? []
+  // ONE address for a warehouse's shelves (owner, 18 Oct 2026: «دوتا یو ار ال
+  // میخوام چیکار»): `?view=shelfMap&stockWarehouse=<id>`. The old
+  // `?view=products&stockWarehouse=<id>` goes there, and picking a warehouse
+  // in this filter opens its shelf map.
   const requested = params.get('stockWarehouse')
-  const active = warehouses.some((warehouse) => warehouse.id === requested)
-    ? requested!
-    : ALL_PRODUCTS
+  useEffect(() => {
+    if (requested) replace(`/warehouse?view=shelfMap&stockWarehouse=${requested}`)
+  }, [requested, replace])
+  const active = ALL_PRODUCTS
 
   const pick = useCallback(
-    (id: string) =>
-      replace(
-        id === ALL_PRODUCTS
-          ? '/warehouse?view=products'
-          : `/warehouse?view=products&stockWarehouse=${id}`,
-      ),
+    (id: string) => {
+      if (id !== ALL_PRODUCTS) replace(`/warehouse?view=shelfMap&stockWarehouse=${id}`)
+    },
     [replace],
   )
 
@@ -105,11 +109,7 @@ export function WarehouseProductsSection() {
       />
     ) : null
 
-  return active === ALL_PRODUCTS ? (
-    <ProductListContainer actions={filter} />
-  ) : (
-    <WarehouseShelvesContainer warehouseId={active} toolbar={filter} />
-  )
+  return <ProductListContainer actions={filter} />
 }
 
 /**
@@ -178,7 +178,6 @@ export function WarehouseShelfMapSection() {
       warehouseId={active.id}
       warehouseName={active.name}
       toolbar={filter}
-      mode="map"
       shelfId={shelfId}
       onOpenShelf={(id) => go(active.id, id)}
     />
@@ -189,15 +188,12 @@ export function WarehouseShelvesContainer({
   warehouseId,
   warehouseName = '',
   toolbar,
-  mode = 'cards',
   shelfId = null,
   onOpenShelf,
 }: {
   warehouseId: string
   warehouseName?: string | undefined
   toolbar?: React.ReactNode
-  /** `map` = the aisle map, or one shelf's table when `shelfId` names one. */
-  mode?: 'cards' | 'map' | undefined
   shelfId?: string | null | undefined
   /** `null` = back to the map. */
   onOpenShelf?: ((shelfId: string | null) => void) | undefined
@@ -225,6 +221,7 @@ export function WarehouseShelvesContainer({
   const updateShelf = useUpdateStorageLocation()
   const place = usePlaceStock()
   const move = useMoveProductPlacement()
+  const setAuto = useSetAutoShelf()
 
   const [shelfDialog, setShelfDialog] = useState<{ open: boolean; editing: MapLocation | null }>({
     open: false,
@@ -269,9 +266,11 @@ export function WarehouseShelvesContainer({
           ? 'not-migrated'
           : 'ready'
 
-  const openShelf = mode === 'map' && shelfId ? shelves.find((s) => s.id === shelfId) : undefined
+  const openShelf = shelfId ? shelves.find((s) => s.id === shelfId) : undefined
+  const unshelvedCount = stock.filter((row) => row.free > 0).length
+  const overflows = shelfOverflows(map.data, stock)
   const mapBody =
-    mode !== 'map' ? null : state !== 'ready' || shelves.length === 0 ? null : openShelf ? (
+    state !== 'ready' || shelves.length === 0 ? null : openShelf ? (
       <ShelfProductsView
         t={t}
         plainT={plainT}
@@ -289,10 +288,38 @@ export function WarehouseShelvesContainer({
           setRequest({ mode: 'move', productId: row.productId, fromShelfId: openShelf.id })
         }
         onTransfer={(row) => setTransfer({ productId: row.productId, shelfId: openShelf.id })}
+        onEdit={canConfigure ? () => setShelfDialog({ open: true, editing: openShelf }) : undefined}
       />
     ) : (
       <div className="space-y-4">
-        {toolbar ? <div className="flex flex-wrap items-center gap-2">{toolbar}</div> : null}
+        {/* What the shelf cards had, now on the one shelf page: add a shelf,
+            and the goods that are on no shelf yet. */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
+          <div className="flex flex-wrap items-center gap-2">
+            {canPlace && unshelvedCount > 0 ? (
+              <button
+                type="button"
+                data-unshelved=""
+                onClick={() => setRequest({ mode: 'place' })}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[hsl(var(--color-warning)/0.14)] px-4 text-xs font-medium text-[hsl(var(--fg-primary))]"
+              >
+                {t('warehouseShelves.map.unshelvedButton', {
+                  count: formatQuantity(unshelvedCount),
+                })}
+              </button>
+            ) : null}
+            {canConfigure ? (
+              <button
+                type="button"
+                onClick={() => setShelfDialog({ open: true, editing: null })}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[hsl(var(--color-primary))] px-4 text-sm font-bold text-[hsl(var(--color-primary-fg))]"
+              >
+                {t('warehouseShelves.addShelf')}
+              </button>
+            ) : null}
+          </div>
+        </div>
         <ShelfMapView
           t={t}
           formatQuantity={formatQuantity}
@@ -304,21 +331,22 @@ export function WarehouseShelvesContainer({
 
   return (
     <>
+      <ShelfOverflowNotice
+        t={t}
+        overflows={overflows}
+        formatQuantity={formatQuantity}
+        unitLabel={unitLabel}
+        onOpenShelf={(id) => onOpenShelf?.(id)}
+      />
       {mapBody ?? (
         <WarehouseShelvesView
           t={t}
-          formatQuantity={formatQuantity}
-          unitLabel={unitLabel}
           state={state}
           errorMessage={null}
           onRetry={() => void map.refetch()}
           shelves={shelves}
-          stock={stock}
           canConfigure={canConfigure}
-          canPlace={canPlace}
           onAddShelf={() => setShelfDialog({ open: true, editing: null })}
-          onEditShelf={(shelf) => setShelfDialog({ open: true, editing: shelf })}
-          onRequest={setRequest}
           toolbar={toolbar}
         />
       )}
@@ -371,7 +399,22 @@ export function WarehouseShelvesContainer({
           formatQuantity={formatQuantity}
           unitLabel={unitLabel}
           request={request}
-          shelves={shelves.map((shelf) => ({ id: shelf.id, code: shelf.code, name: shelf.name }))}
+          shelves={shelves.map((shelf) => ({
+            id: shelf.id,
+            code: shelf.code,
+            name: shelf.name,
+            capacity: shelf.capacity,
+            occupied: shelf.quantity,
+          }))}
+          autoShelfOf={(productId) =>
+            map.data?.autoShelves?.find((row) => row.productId === productId)?.locationId ?? null
+          }
+          onSetAuto={
+            map.data?.autoShelves
+              ? ({ shelfId, productId, enabled }) =>
+                  setAuto.mutateAsync({ locationId: shelfId, productId, enabled })
+              : undefined
+          }
           products={stock}
           isPending={place.isPending || move.isPending}
           onClose={() => setRequest(null)}

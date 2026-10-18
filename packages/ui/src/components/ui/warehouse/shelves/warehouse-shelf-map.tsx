@@ -16,7 +16,7 @@
 // ============================================
 
 import { useMemo, useState } from 'react'
-import { ArrowLeft, ArrowLeftRight, Plus, Truck } from 'lucide-react'
+import { ArrowLeft, ArrowLeftRight, Pencil, Plus, Truck } from 'lucide-react'
 import type { MapLocation, MapLocationProduct } from '@hisabche/api'
 
 import { cn } from '../../../../lib/utils'
@@ -152,6 +152,7 @@ export function ShelfProductsView({
   onAdd,
   onMove,
   onTransfer,
+  onEdit,
 }: {
   t: ShelfT
   plainT: PlainT
@@ -169,6 +170,8 @@ export function ShelfProductsView({
   onAdd: () => void
   onMove: (row: MapLocationProduct) => void
   onTransfer: (row: MapLocationProduct) => void
+  /** «ویرایش قفسه» — only for someone who may configure the warehouse. */
+  onEdit?: (() => void) | undefined
 }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -313,12 +316,20 @@ export function ShelfProductsView({
             </p>
           </div>
         </div>
-        {canPlace ? (
-          <ActionButton onClick={onAdd}>
-            <Plus className="size-4" aria-hidden="true" />
-            {t('warehouseShelves.addProductHere')}
-          </ActionButton>
-        ) : null}
+        <span className="flex flex-wrap gap-2">
+          {onEdit ? (
+            <ActionButton variant="quiet" onClick={onEdit}>
+              <Pencil className="size-4" aria-hidden="true" />
+              {t('warehouseShelves.editShelf')}
+            </ActionButton>
+          ) : null}
+          {canPlace ? (
+            <ActionButton onClick={onAdd}>
+              <Plus className="size-4" aria-hidden="true" />
+              {t('warehouseShelves.addProductHere')}
+            </ActionButton>
+          ) : null}
+        </span>
       </div>
 
       <DataTable

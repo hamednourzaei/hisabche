@@ -2501,6 +2501,10 @@ button {
   width: 100%;
 }
 
+.teleprompter-speech-line[dir='ltr'] {
+  direction: ltr !important;
+}
+
 .teleprompter-word {
   display: inline-block;
   margin: 0 4px;
@@ -9889,7 +9893,7 @@ button {
   color: #64748b;
 }
 
-/* ─── Reel #69 — «۱۰۰٪ کسب‌وکارت رقم است؛ همه‌ش یک‌جا» (procedural-spatial showreel) ─── */
+/* ─── Reel #69 — Pocketsflow Creator E-Commerce Explainer ─────────────── */
 .r69-stage {
   width: 100%;
   height: 100%;
@@ -9897,362 +9901,525 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  direction: rtl;
+  direction: ltr;
   box-sizing: border-box;
   overflow: hidden;
-  background: radial-gradient(120% 80% at 50% 12%, #0d1b34 0%, #050914 62%, #04060f 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  user-select: none;
 }
 
-.r69-digit-grid {
-  position: absolute;
-  inset: -4% 6%;
-  display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 4px 10px;
-  align-content: center;
-}
-.r69-cell {
-  font-size: 30px;
-  font-weight: 800;
-  color: rgba(148, 163, 184, 0.66);
-  font-variant-numeric: tabular-nums;
-  text-align: center;
+.r69-white-theme {
+  background: #ffffff;
+  color: #111827;
 }
 
-.r69-freeze-anchor {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-}
-.r69-percent {
-  font-size: 148px;
-  font-weight: 900;
-  line-height: 1;
-  color: #e0f2fe;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-.r69-freeze-tag {
-  padding: 6px 26px;
-  border-radius: 999px;
-  border: 2px solid rgba(34, 211, 238, 0.55);
-  color: #67e8f9;
-  font-size: 26px;
-  font-weight: 800;
-  background: rgba(8, 20, 40, 0.6);
+.r69-blue-panel-theme {
+  background: #ffffff;
+  color: #111827;
 }
 
-.r69-price-anchor {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 26px;
-}
-.r69-invoice-line {
-  width: 460px;
-  padding: 24px 30px;
-  border-radius: 20px;
-  background: rgba(10, 20, 38, 0.88);
-  border: 2px solid rgba(148, 163, 184, 0.28);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-sizing: border-box;
-  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.5);
-}
-.r69-line-name {
-  font-size: 28px;
-  font-weight: 700;
-  color: #cbd5e1;
-}
-.r69-line-price {
-  font-size: 44px;
-  font-weight: 900;
-  color: #4ade80;
-  font-variant-numeric: tabular-nums;
-}
-.r69-tier-row {
-  display: flex;
-  gap: 16px;
-}
-.r69-tier {
-  width: 128px;
-  padding: 16px 12px;
-  border-radius: 16px;
-  border: 2px solid rgba(148, 163, 184, 0.3);
-  background: rgba(10, 20, 38, 0.8);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  box-sizing: border-box;
-}
-.r69-tier.is-live {
-  border-color: rgba(34, 211, 238, 0.75);
-}
-.r69-tier-label {
-  font-size: 24px;
-  font-weight: 800;
-  color: #94a3b8;
-}
-.r69-tier.is-live .r69-tier-label {
-  color: #67e8f9;
-}
-.r69-tier-price {
-  font-size: 28px;
-  font-weight: 900;
-  color: #e2e8f0;
-  font-variant-numeric: tabular-nums;
-}
-.r69-customer-tag {
-  padding: 8px 24px;
-  border-radius: 999px;
-  color: #94a3b8;
-  font-size: 24px;
-  font-weight: 700;
-  border: 2px solid rgba(148, 163, 184, 0.25);
-  transition: none;
-}
-.r69-customer-tag.is-lit {
-  color: #c084fc;
-  border-color: rgba(192, 132, 252, 0.6);
-}
-
-.r69-team-anchor {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 22px;
-}
-.r69-team-dots {
-  display: flex;
-  gap: 14px;
-}
-.r69-dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #67e8f9, #0891b2);
-  box-shadow: 0 0 14px rgba(34, 211, 238, 0.4);
-}
-.r69-attendance-column {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.r69-attendance-row {
-  width: 380px;
-  padding: 10px 24px;
-  border-radius: 14px;
-  background: rgba(10, 20, 38, 0.82);
-  border: 2px solid rgba(148, 163, 184, 0.24);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-sizing: border-box;
-}
-.r69-att-time {
-  font-size: 28px;
-  font-weight: 900;
-  color: #e2e8f0;
-  font-variant-numeric: tabular-nums;
-}
-.r69-att-arrow {
-  font-size: 24px;
-  color: #475569;
-}
-.r69-att-hours {
-  min-width: 56px;
-  text-align: center;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: rgba(192, 132, 252, 0.16);
-  color: #ddc9ff;
-  font-size: 26px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-}
-.r69-shift-total {
-  display: flex;
-  align-items: baseline;
-  gap: 14px;
-  padding: 14px 34px;
-  border-radius: 18px;
-  background: rgba(192, 132, 252, 0.1);
-  border: 2px solid rgba(192, 132, 252, 0.45);
-}
-.r69-shift-total-label {
-  font-size: 26px;
-  font-weight: 800;
-  color: #ddc9ff;
-}
-.r69-shift-total-value {
-  font-size: 40px;
-  font-weight: 900;
-  color: #f3e8ff;
-  font-variant-numeric: tabular-nums;
-}
-
-.r69-net {
-  position: absolute;
-  top: 52px;
-  left: 40px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.r69-net-bar {
-  width: 64px;
-  height: 8px;
-  border-radius: 4px;
-  background: rgba(148, 163, 184, 0.25);
-}
-.r69-net.is-cut .r69-net-bar {
-  background: linear-gradient(90deg, rgba(251, 113, 133, 0.2), rgba(251, 113, 133, 0.85));
-}
-.r69-net-label {
-  font-size: 22px;
-  font-weight: 800;
-  color: #94a3b8;
-}
-.r69-net.is-cut .r69-net-label {
-  color: #fb7185;
-}
-
-.r69-counter-anchor {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 24px;
-}
-.r69-counter {
-  width: 420px;
-  padding: 26px 32px;
-  border-radius: 24px;
-  background: rgba(10, 20, 38, 0.9);
-  border: 2px solid rgba(148, 163, 184, 0.3);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  box-sizing: border-box;
-}
-.r69-counter-label {
-  font-size: 26px;
-  font-weight: 800;
-  color: #cbd5e1;
-}
-.r69-counter-value {
-  font-size: 96px;
-  font-weight: 900;
-  line-height: 1;
-  color: #f8fafc;
-  font-variant-numeric: tabular-nums;
-}
-.r69-sync-line {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.r69-sync-pill {
-  padding: 8px 26px;
-  border-radius: 999px;
-  background: rgba(74, 222, 128, 0.14);
-  border: 2px solid rgba(74, 222, 128, 0.55);
-  color: #86efac;
-  font-size: 26px;
-  font-weight: 900;
-}
-.r69-sync-line.is-live .r69-sync-pill {
-  background: rgba(74, 222, 128, 0.28);
-}
-.r69-sync-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 16px rgba(74, 222, 128, 0.7);
-}
-
-.r69-cta-backdrop {
+.r69-grid-bg {
   position: absolute;
   inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+
+.r69-grid-bg.dark {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+}
+
+/* Character Rig */
+.r69-character-rig {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.r69-cta-island {
-  position: absolute;
-  min-width: 200px;
-  padding: 18px 28px;
-  border-radius: 18px;
-  background: rgba(10, 20, 38, 0.78);
-  border: 2px solid rgba(148, 163, 184, 0.26);
+
+/* Beat 1: Hook */
+.r69-beat1-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 88%;
+  z-index: 1;
+}
+
+.r69-left-column {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  max-width: 55%;
+}
+
+.r69-creator-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0056b3;
+  letter-spacing: -0.01em;
+}
+
+.r69-headline {
+  font-size: 44px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.r69-right-column {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42%;
+}
+
+/* Beat 2: Blue Canvas & Cards */
+.r69-blue-canvas {
+  width: 90%;
+  height: 80%;
+  background: #0056b3;
+  border-radius: 28px;
+  box-shadow: 0 20px 60px rgba(0, 86, 179, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.r69-split-stage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.r69-cards-column {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 58%;
+}
+
+.r69-product-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.r69-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(0, 86, 179, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.r69-card-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.r69-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.r69-card-price {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0056b3;
+}
+
+.r69-character-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38%;
+}
+
+/* Beat 3 & 4: Checkout & Upsell */
+.r69-checkout-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 92%;
+  gap: 16px;
+  z-index: 1;
+}
+
+.r69-checkout-card {
+  width: 310px;
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.r69-checkout-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.r69-badge-live {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0056b3;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.r69-step-tag {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.r69-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: #f9fafb;
+  border-radius: 14px;
+}
+
+.r69-item-row.compact {
+  padding: 10px 12px;
+}
+
+.r69-item-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.r69-item-sub {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.r69-pill-price {
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.r69-apple-pay-btn {
+  background: #000000;
+  color: #ffffff;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+.r69-apple-pay-btn.pulse-click {
+  transform: scale(0.98);
+  background: #1f2937;
+}
+
+.r69-apple-logo {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.r69-pay-text {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.r69-character-float {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Upsell Box & Tax */
+.r69-upsell-box {
+  background: rgba(0, 86, 179, 0.04);
+  border: 1.5px dashed #0056b3;
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.r69-upsell-header {
+  display: flex;
   align-items: center;
   gap: 6px;
-  box-sizing: border-box;
 }
-.r69-cta-island:nth-child(1) {
-  top: 26%;
-  right: 14%;
+
+.r69-sparkle {
+  font-size: 14px;
 }
-.r69-cta-island:nth-child(2) {
-  top: 22%;
-  left: 12%;
-}
-.r69-cta-island:nth-child(3) {
-  top: 56%;
-  right: 10%;
-}
-.r69-cta-island:nth-child(4) {
-  top: 58%;
-  left: 12%;
-}
-.r69-island-label {
-  font-size: 22px;
+
+.r69-upsell-title {
+  font-size: 14px;
   font-weight: 700;
-  color: #94a3b8;
+  color: #0056b3;
 }
-.r69-island-value {
-  font-size: 32px;
-  font-weight: 900;
-  color: #e2e8f0;
-  font-variant-numeric: tabular-nums;
+
+.r69-upsell-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
-.r69-cta-card {
+
+.r69-add-btn {
+  background: #0056b3;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.r69-upsell-cost {
+  font-size: 14px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.r69-tax-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f3f4f6;
+  border-radius: 12px;
+}
+
+.r69-tax-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.r69-tax-val {
+  font-size: 13px;
+  font-weight: 800;
+  color: #111827;
+}
+
+/* Beat 5: Multi-Panel Split */
+.r69-multi-split-stage {
   position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 1;
+}
+
+.r69-center-character {
+  position: absolute;
+  z-index: 2;
+}
+
+.r69-floating-panels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.r69-mini-card {
+  position: absolute;
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 10px 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  pointer-events: auto;
+}
+
+.r69-mini-card.top-left {
+  top: 15%;
+  left: 6%;
+}
+
+.r69-mini-card.top-right {
+  top: 14%;
+  right: 6%;
+}
+
+.r69-mini-card.mid-right {
+  top: 45%;
+  right: 4%;
+}
+
+.r69-mini-tag {
+  font-size: 11px;
+  font-weight: 800;
+  color: #0056b3;
+  text-transform: uppercase;
+}
+
+.r69-mini-tag.blue {
+  color: #0284c7;
+}
+
+.r69-mini-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.r69-pill-action.mid-left {
+  position: absolute;
+  top: 45%;
+  left: 4%;
+  background: #0056b3;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(0, 86, 179, 0.25);
+  pointer-events: auto;
+}
+
+.r69-sub-card.bottom-left {
+  position: absolute;
+  bottom: 16%;
+  left: 6%;
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 10px 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+}
+
+.r69-sub-price {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0056b3;
+}
+
+.r69-sub-sub {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.r69-vat-cluster.bottom-center {
+  position: absolute;
+  bottom: 27%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+.r69-vat-chip {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.r69-revenue-banner.bottom-right {
+  position: absolute;
+  bottom: 16%;
+  right: 6%;
+  background: #111827;
+  color: #ffffff;
+  border-radius: 18px;
+  padding: 12px 18px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: auto;
+}
+
+.r69-rev-label {
+  font-size: 10px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.r69-rev-num {
+  font-size: 20px;
+  font-weight: 900;
+  color: #10b981;
+}
+
+/* Beat 6: Outro */
+.r69-brand-center {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 40px 64px;
-  border-radius: 28px;
-  background: rgba(5, 10, 22, 0.9);
-  border: 2px solid rgba(34, 211, 238, 0.4);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  justify-content: center;
+  gap: 12px;
+  z-index: 1;
 }
-.r69-cta-brand {
-  font-size: 64px;
+
+.r69-logo-assembly {
+  display: flex;
+  align-items: center;
+  font-size: 58px;
   font-weight: 900;
-  color: #e0f2fe;
+  letter-spacing: -0.04em;
 }
-.r69-cta-button {
-  padding: 20px 60px;
-  border-radius: 999px;
-  background: #4ade80;
-  color: #052e16;
-  font-size: 36px;
-  font-weight: 900;
-  box-shadow: 0 18px 40px rgba(74, 222, 128, 0.25);
+
+.r69-logo-part.pockets {
+  color: #111827;
 }
-.r69-cta-url {
-  font-size: 30px;
-  font-weight: 800;
-  color: #67e8f9;
-  direction: ltr;
+
+.r69-logo-part.flow {
+  color: #0056b3;
+}
+
+.r69-outro-sub {
+  font-size: 16px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: -0.01em;
 }

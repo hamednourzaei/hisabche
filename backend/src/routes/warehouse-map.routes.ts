@@ -7,6 +7,7 @@
 //   POST  /api/warehouses/:id/locations    put a shelf on the plan
 //   PATCH /api/storage-locations/:id       rename, move or retire it
 //   POST  /api/storage-locations/:id/place what a person recorded as sitting there
+//   PUT   /api/storage-locations/:id/auto-shelf  this shelf takes a product's purchases
 //
 // ⚠️ TWO CAPABILITIES, AND THEY ARE DIFFERENT JOBS
 //
@@ -140,6 +141,26 @@ export async function warehouseMapRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // The shelf a product's purchases fill (shelf-capacity-01). A placement
+  // rule, so the same gate as placing: product.write.
+  fastify.put(
+    '/api/storage-locations/:id/auto-shelf',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = idSchema.parse(request.params)
+        const body = autoShelfSchema.parse(request.body)
+        return reply.send(await service.setAutoShelf(request.tenancy, id, body))
+      } catch (err) {
+        return fail(reply, err, 'Failed to save the auto shelf')
+      }
+    },
+  )
 }
+
+const autoShelfSchema = z.object({ productId: z.string().uuid(), enabled: z.boolean() })
 
 export default warehouseMapRoutes

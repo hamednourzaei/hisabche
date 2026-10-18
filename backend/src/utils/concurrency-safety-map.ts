@@ -448,6 +448,25 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     ],
   },
 
+  {
+    routeFile: 'warehouse-map.routes.ts',
+    route: 'PUT /api/storage-locations/:id/auto-shelf',
+    // One setting row per (warehouse, product), upserted on its key: saving
+    // the same choice twice leaves the same row; two choices = the last one.
+    mechanisms: ['unique-constraint', 'state-idempotent'],
+    evidence: [
+      { file: `${RT}/warehouse-map.routes.ts`, text: "'/api/storage-locations/:id/auto-shelf'" },
+      {
+        file: `${SVC}/inventory/warehouse-map.service.ts`,
+        text: "{ onConflict: 'warehouse_id,product_id' }",
+      },
+      {
+        file: 'docs/shelf-capacity-01-migration.sql',
+        text: 'PRIMARY KEY (warehouse_id, product_id)',
+      },
+    ],
+  },
+
   // ─── Purchasing ──────────────────────────────────────────────────────────
   {
     routeFile: 'purchasing.routes.ts',

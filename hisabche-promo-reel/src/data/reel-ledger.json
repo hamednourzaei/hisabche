@@ -624,12 +624,12 @@
     },
     {
       "id": "69",
-      "title": "۱۰۰٪ کسب‌وکارت رقم است؛ همه‌ش یک‌جا",
-      "theme": "procedural-spatial",
+      "title": "Pocketsflow — موشن گرافیک پلتفرم فروش دوره‌ها و محصولات دیجیتال",
+      "theme": "swiss-editorial",
       "hookFormula": "visual-pattern-interrupt",
       "dominantLayout": "data-flow-matrix",
       "cardQuotaPercent": 20,
-      "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
+      "components": ["word-sync", "word-sync", "word-sync", "word-sync", "word-sync", "word-sync"]
     }
   ]
 }

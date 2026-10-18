@@ -10076,14 +10076,31 @@
       "onShelf": "On this shelf: {quantity} {unit}",
       "notInList": "Bought something and it is not listed? It has not entered this warehouse yet: record its purchase invoice for this warehouse or adjust its stock — then it appears here.",
       "save": "Record",
-      "moveSave": "Move"
+      "moveSave": "Move",
+      "inWarehouse": "In this warehouse",
+      "onThisShelf": "On this shelf",
+      "noShelf": "On no shelf",
+      "capacityLabel": "Shelf capacity",
+      "capacityNone": "Not set",
+      "capacityOf": "{capacity} units — used: {occupied}",
+      "addQuantity": "How many units to add?",
+      "maxPlaceholder": "Up to {max} {unit} can be added",
+      "room": "Room left: {room} {unit}",
+      "roomUnlimited": "No capacity set for this shelf — only the stock limits it",
+      "freeShort": "On no shelf: {free} {unit}",
+      "shelfFull": "This shelf is full. Choose another shelf or move something off this one.",
+      "nothingFree": "All of this product in this warehouse is already on shelves; nothing left to add.",
+      "overMax": "At most {max} {unit} can be added.",
+      "autoLabel": "Put future purchases of this product on this shelf automatically",
+      "autoHint": "As far as the shelf capacity allows; the rest stays on no shelf, with a warning."
     },
     "errors": {
       "codeTaken": "This code is already used in this warehouse.",
       "exceedsStock": "A shelf cannot hold more of a product than this warehouse has.",
       "productNotFound": "This product was not found in this warehouse.",
       "save": "Not saved. Try again.",
-      "notPermitted": "You do not have access to this warehouse."
+      "notPermitted": "You do not have access to this warehouse.",
+      "exceedsCapacity": "This is more than the room left on this shelf."
     },
     "form": {
       "switchLabel": "Manage shelves in this warehouse",
@@ -10113,7 +10130,8 @@
         "full": "Full",
         "over": "Over capacity",
         "none": "No capacity set"
-      }
+      },
+      "unshelvedButton": "{count} products on no shelf — put on a shelf"
     },
     "table": {
       "product": "Product",
@@ -10126,6 +10144,14 @@
       "daysAgo": "{days} days ago",
       "stagnant": "Dead stock",
       "transfer": "Move to another warehouse"
+    },
+    "overflow": {
+      "button": "{count} products did not fit on their shelf",
+      "title": "Products that did not fit",
+      "hint": "These are in the warehouse but their automatic shelf is full. Give them another shelf, move something, or raise the shelf capacity.",
+      "row": "{product}: {quantity} {unit} are on no shelf — shelf {shelf} is full.",
+      "openShelf": "Open shelf {shelf}",
+      "badge": "Did not fit"
     }
   }
 }

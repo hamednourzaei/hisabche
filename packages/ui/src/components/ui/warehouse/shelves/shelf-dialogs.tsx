@@ -48,6 +48,8 @@ export function shelfErrorText(error: unknown, t: ShelfT): string {
   const code = typeof data?.code === 'string' ? data.code : String(data?.message ?? '')
   if (code === 'STORAGE_LOCATION_CODE_TAKEN') return t('warehouseShelves.errors.codeTaken')
   if (code === 'STORAGE_PLACEMENT_EXCEEDS_STOCK') return t('warehouseShelves.errors.exceedsStock')
+  if (code === 'STORAGE_PLACEMENT_EXCEEDS_CAPACITY')
+    return t('warehouseShelves.errors.exceedsCapacity')
   if (code === 'STORAGE_PRODUCT_NOT_FOUND') return t('warehouseShelves.errors.productNotFound')
   if (code === 'WAREHOUSE_NOT_PERMITTED') return t('warehouseShelves.errors.notPermitted')
   if (code === 'WAREHOUSE_MAP_SCHEMA_REQUIRED') return t('warehouseShelves.notMigrated')
@@ -191,6 +193,30 @@ export interface ShelfOption {
   id: string
   code: string
   name: string | null
+  /** Units it holds; `null` = not recorded (no limit). */
+  capacity?: number | null | undefined
+  /** Units of every product on it now. */
+  occupied?: number | undefined
+}
+
+/**
+ * How many more units of one product may go on one shelf (owner, 18 Oct 2026):
+ * never more than is on NO shelf in this warehouse, never more than the room
+ * left on the shelf (every product on it counts). `room: null` = no capacity
+ * recorded, so only the stock limits it. The server enforces the same two
+ * limits (storage_place_stock); this only says them before a refusal.
+ */
+export function placeLimits(input: {
+  free: number
+  capacity: number | null | undefined
+  occupied: number | undefined
+}): { room: number | null; max: number } {
+  const room =
+    input.capacity === null || input.capacity === undefined
+      ? null
+      : Math.max(0, input.capacity - (input.occupied ?? 0))
+  const max = Math.max(0, room === null ? input.free : Math.min(input.free, room))
+  return { room, max }
 }
 
 export interface StockOption {
@@ -213,8 +239,12 @@ export type PlaceRequest =
 /**
  * «گذاشتن روی قفسه» and «جابه‌جایی».
  *
- * place  the quantity is THE number on that shelf (what the server stores);
- *        it starts at «what is there + what is on no shelf».
+ * place  ADDS units to that shelf (owner, 18 Oct 2026). It asked for the total
+ *        and started at «on the shelf + on no shelf», so re-placing 2 gearboxes
+ *        read «8» and a new product read its whole stock. The dialog now shows
+ *        the four numbers (in this warehouse, on this shelf, on no shelf, shelf
+ *        capacity) and asks «how many to add», at most `placeLimits().max`;
+ *        the server is sent «on the shelf + added», the number it stores.
  * move   units go from one shelf to another of the same warehouse.
  */
 export function PlaceDialog({
@@ -228,6 +258,8 @@ export function PlaceDialog({
   onPlace,
   onMove,
   onClose,
+  autoShelfOf,
+  onSetAuto,
 }: {
   t: ShelfT
   formatQuantity: (value: number) => string
@@ -244,6 +276,12 @@ export function PlaceDialog({
     quantity: number
   }) => Promise<unknown>
   onClose: () => void
+  /** The shelf a product's purchases fill in this warehouse, if any. */
+  autoShelfOf?: ((productId: string) => string | null) | undefined
+  /** Absent = shelf-capacity-01 not run: the switch is not offered. */
+  onSetAuto?:
+    | ((input: { shelfId: string; productId: string; enabled: boolean }) => Promise<unknown>)
+    | undefined
 }) {
   const open = request !== null
   const moving = request?.mode === 'move'
@@ -253,6 +291,7 @@ export function PlaceDialog({
   const [error, setError] = useState<string | null>(null)
 
   const [suggestedFor, setSuggestedFor] = useState('')
+  const [auto, setAuto] = useState<boolean | null>(null)
   const [openedFor, setOpenedFor] = useState<PlaceRequest | null>(null)
   if (request !== openedFor) {
     setOpenedFor(request)
@@ -262,6 +301,7 @@ export function PlaceDialog({
       setShelfId(request.mode === 'place' ? (request.shelfId ?? '') : '')
       setQuantity('')
       setSuggestedFor('')
+      setAuto(null)
     }
   }
 
@@ -270,20 +310,35 @@ export function PlaceDialog({
   const onFrom = product && fromShelfId ? (product.onShelf[fromShelfId] ?? 0) : 0
   const onTarget = product && shelfId ? (product.onShelf[shelfId] ?? 0) : 0
 
-  // The first sensible number once both sides are known — the person edits it.
+  const target = shelves.find((shelf) => shelf.id === shelfId)
+  const limits = placeLimits({
+    // A move takes what is on the source shelf; a placement, what is on none.
+    free: moving ? onFrom : (product?.free ?? 0),
+    capacity: target?.capacity,
+    occupied: target?.occupied,
+  })
+
+  // A move starts at «all of it» (capped by the room); a placement starts empty.
   const key = `${productId}:${shelfId}`
   if (open && product && shelfId && key !== suggestedFor) {
     setSuggestedFor(key)
-    setQuantity(String(moving ? onFrom : onTarget + product.free))
+    setQuantity(moving ? String(limits.max) : '')
+    setAuto(null)
   }
 
+  const isAuto = product && shelfId ? autoShelfOf?.(product.id) === shelfId : false
+  const autoWanted = auto ?? isAuto
+  const autoChanged = !moving && !!onSetAuto && auto !== null && auto !== isAuto
+
   const amount = typedNumber(quantity) ?? 0
+  const amountOk =
+    quantity.trim() !== '' && Number.isFinite(amount) && amount > 0 && amount <= limits.max + 1e-9
   const valid =
     !!product &&
     !!shelfId &&
-    quantity.trim() !== '' &&
-    Number.isFinite(amount) &&
-    (moving ? amount > 0 && amount <= onFrom && shelfId !== fromShelfId : amount >= 0)
+    (moving
+      ? amountOk && shelfId !== fromShelfId
+      : amountOk || (quantity.trim() === '' && autoChanged))
 
   const submit = async () => {
     if (!product || !shelfId) return
@@ -292,7 +347,9 @@ export function PlaceDialog({
       if (moving && fromShelfId) {
         await onMove({ productId: product.id, fromShelfId, toShelfId: shelfId, quantity: amount })
       } else {
-        await onPlace({ shelfId, productId: product.id, quantity: amount })
+        if (amountOk) await onPlace({ shelfId, productId: product.id, quantity: onTarget + amount })
+        if (autoChanged && onSetAuto)
+          await onSetAuto({ shelfId, productId: product.id, enabled: autoWanted })
       }
       onClose()
     } catch (err) {
@@ -395,23 +452,110 @@ export function PlaceDialog({
           </div>
 
           {product && shelfId ? (
-            <label className="block space-y-1">
-              <span className={caption}>
-                {moving
-                  ? t('warehouseShelves.placeDialog.moveQuantity')
-                  : t('warehouseShelves.placeDialog.quantity')}
-              </span>
-              <input
-                name="quantity"
-                type="text"
-                inputMode="decimal"
-                dir="ltr"
-                value={quantity}
-                onChange={(event) => setQuantity(event.target.value)}
-                placeholder={t('warehouseShelves.placeDialog.quantityPlaceholder')}
-                className={shelfInput}
-              />
-            </label>
+            <div className="space-y-2">
+              {!moving ? (
+                <dl
+                  data-place-summary=""
+                  className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg bg-[hsl(var(--surface-muted))] p-3 text-xs"
+                >
+                  <dt className="text-[hsl(var(--fg-secondary))]">
+                    {t('warehouseShelves.placeDialog.inWarehouse')}
+                  </dt>
+                  <dd className="text-end font-semibold tabular-nums">
+                    {formatQuantity(product.total)} {unitLabel(product.unit)}
+                  </dd>
+                  <dt className="text-[hsl(var(--fg-secondary))]">
+                    {t('warehouseShelves.placeDialog.onThisShelf')}
+                  </dt>
+                  <dd className="text-end font-semibold tabular-nums">
+                    {formatQuantity(onTarget)} {unitLabel(product.unit)}
+                  </dd>
+                  <dt className="text-[hsl(var(--fg-secondary))]">
+                    {t('warehouseShelves.placeDialog.noShelf')}
+                  </dt>
+                  <dd className="text-end font-semibold tabular-nums">
+                    {formatQuantity(product.free)} {unitLabel(product.unit)}
+                  </dd>
+                  <dt className="text-[hsl(var(--fg-secondary))]">
+                    {t('warehouseShelves.placeDialog.capacityLabel')}
+                  </dt>
+                  <dd className="text-end font-semibold tabular-nums">
+                    {limits.room === null
+                      ? t('warehouseShelves.placeDialog.capacityNone')
+                      : t('warehouseShelves.placeDialog.capacityOf', {
+                          capacity: formatQuantity(target?.capacity ?? 0),
+                          occupied: formatQuantity(target?.occupied ?? 0),
+                        })}
+                  </dd>
+                </dl>
+              ) : null}
+              <label className="block space-y-1">
+                <span className={caption}>
+                  {moving
+                    ? t('warehouseShelves.placeDialog.moveQuantity')
+                    : t('warehouseShelves.placeDialog.addQuantity')}
+                </span>
+                <input
+                  name="quantity"
+                  type="text"
+                  inputMode="decimal"
+                  dir="ltr"
+                  value={quantity}
+                  disabled={limits.max <= 0}
+                  onChange={(event) => setQuantity(event.target.value)}
+                  placeholder={t('warehouseShelves.placeDialog.maxPlaceholder', {
+                    max: formatQuantity(limits.max),
+                    unit: unitLabel(product.unit),
+                  })}
+                  className={shelfInput}
+                />
+              </label>
+              <p className={help} data-place-room="">
+                {limits.room === null
+                  ? t('warehouseShelves.placeDialog.roomUnlimited')
+                  : t('warehouseShelves.placeDialog.room', {
+                      room: formatQuantity(limits.room),
+                      unit: unitLabel(product.unit),
+                    })}
+                {!moving
+                  ? ` · ${t('warehouseShelves.placeDialog.freeShort', {
+                      free: formatQuantity(product.free),
+                      unit: unitLabel(product.unit),
+                    })}`
+                  : ''}
+              </p>
+              {limits.max <= 0 ? (
+                <p role="status" className="text-xs text-[hsl(var(--color-warning))]">
+                  {limits.room === 0
+                    ? t('warehouseShelves.placeDialog.shelfFull')
+                    : t('warehouseShelves.placeDialog.nothingFree')}
+                </p>
+              ) : quantity.trim() !== '' && !amountOk ? (
+                <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+                  {t('warehouseShelves.placeDialog.overMax', {
+                    max: formatQuantity(limits.max),
+                    unit: unitLabel(product.unit),
+                  })}
+                </p>
+              ) : null}
+              {!moving && onSetAuto ? (
+                <label className="flex items-start gap-2 text-xs text-[hsl(var(--fg-primary))]">
+                  <input
+                    type="checkbox"
+                    data-auto-shelf=""
+                    checked={autoWanted}
+                    onChange={(event) => setAuto(event.target.checked)}
+                    className="mt-0.5 size-4 accent-[hsl(var(--color-primary))]"
+                  />
+                  <span>
+                    {t('warehouseShelves.placeDialog.autoLabel')}
+                    <span className={`${help} block`}>
+                      {t('warehouseShelves.placeDialog.autoHint')}
+                    </span>
+                  </span>
+                </label>
+              ) : null}
+            </div>
           ) : null}
 
           {error ? (

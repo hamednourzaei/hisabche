@@ -123,13 +123,14 @@ export class WarehouseMapService {
     const locations = await this.locations(ctx, warehouseId)
     if (locations === null) return this.notMigrated(warehouse, currency, costVisible, window, asOf)
 
-    const [placements, stock, products] = await Promise.all([
+    const [placements, stock, products, autoShelves] = await Promise.all([
       this.placements(
         ctx,
         locations.map((row) => row.id),
       ),
       this.stock(ctx, warehouseId),
       this.products(ctx),
+      this.autoShelves(ctx, warehouseId),
     ])
     if (placements === null) return this.notMigrated(warehouse, currency, costVisible, window, asOf)
 
@@ -158,6 +159,105 @@ export class WarehouseMapService {
         sales,
       }),
       migrated: true,
+      autoShelves,
+    }
+  }
+
+  /** The shelf each product's purchases fill in this warehouse; `null` = not migrated. */
+  private async autoShelves(
+    ctx: TenancyContext,
+    warehouseId: string,
+  ): Promise<Array<{ productId: string; locationId: string }> | null> {
+    const { data, error } = await selectAllPages<
+      { product_id: string; location_id: string },
+      { message: string; code?: string }
+    >((from, to) =>
+      supabase
+        .from('storage_auto_shelves')
+        .select('product_id, location_id')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('warehouse_id', warehouseId)
+        .order('product_id', { ascending: true })
+        .range(from, to),
+    )
+    if (error) {
+      if (MISSING_RELATION.has(error.code ?? '')) return null
+      throw new DatabaseError('Failed to read the auto shelves', error)
+    }
+    return (data ?? []).map((row) => ({ productId: row.product_id, locationId: row.location_id }))
+  }
+
+  /**
+   * «خریدهای بعدی این کالا خودکار روی همین قفسه برود» — on or off, for one
+   * product in the shelf's warehouse. One row per (warehouse, product): turning
+   * it on for another shelf moves the setting there.
+   */
+  async setAutoShelf(
+    ctx: TenancyContext,
+    locationId: string,
+    input: { productId: string; enabled: boolean },
+  ): Promise<{ locationId: string; productId: string; enabled: boolean }> {
+    const location = await this.locationRow(ctx, locationId)
+    await assertMayUseWarehouse(ctx, location.warehouse_id, 'WAREHOUSE_NOT_PERMITTED')
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('id')
+      .eq('id', input.productId)
+      .eq('workspace_id', ctx.workspaceId)
+      .maybeSingle()
+    if (productError) throw new DatabaseError('Failed to read the product', productError)
+    if (!product) throw new ValidationError('STORAGE_PLACEMENT_PRODUCT_NOT_FOUND')
+
+    if (input.enabled) {
+      const { error } = await supabase.from('storage_auto_shelves').upsert(
+        {
+          workspace_id: ctx.workspaceId,
+          warehouse_id: location.warehouse_id,
+          product_id: input.productId,
+          location_id: locationId,
+          set_by: ctx.userId,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'warehouse_id,product_id' },
+      )
+      if (error) {
+        if (MISSING_RELATION.has(error.code ?? ''))
+          throw new ValidationError('STORAGE_AUTO_NOT_MIGRATED')
+        throw new DatabaseError('Failed to save the auto shelf', error)
+      }
+    } else {
+      // Off: only if THIS shelf is the product's auto shelf — another shelf's
+      // setting is not this switch's to remove.
+      const { error } = await supabase
+        .from('storage_auto_shelves')
+        .delete()
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('warehouse_id', location.warehouse_id)
+        .eq('product_id', input.productId)
+        .eq('location_id', locationId)
+      if (error) {
+        if (MISSING_RELATION.has(error.code ?? ''))
+          throw new ValidationError('STORAGE_AUTO_NOT_MIGRATED')
+        throw new DatabaseError('Failed to save the auto shelf', error)
+      }
+    }
+    return { locationId, productId: input.productId, enabled: input.enabled }
+  }
+
+  /**
+   * After a purchase's stock movements are COMMITTED: put what arrived on each
+   * product's auto shelf, up to the room left (storage_auto_shelve_invoice —
+   * row-locked, once per invoice and product). Never throws: the purchase is
+   * already recorded, and a shelf note must not undo it. Without
+   * shelf-capacity-01 it does nothing.
+   */
+  async autoShelveInvoice(ctx: TenancyContext, invoiceId: string): Promise<void> {
+    const { error } = await supabase.rpc('storage_auto_shelve_invoice', {
+      p_workspace: ctx.workspaceId,
+      p_invoice: invoiceId,
+    })
+    if (error && error.code !== 'PGRST202' && error.code !== '42883') {
+      console.error('[WarehouseMap] auto-shelving purchase failed:', invoiceId, error.message)
     }
   }
 
@@ -268,7 +368,11 @@ export class WarehouseMapService {
       // «That shelf cannot hold more than the warehouse has» is an answer the
       // screen must read, not a server fault (the same shape as
       // WAREHOUSE_INSUFFICIENT_STOCK).
-      if (code === 'STORAGE_PLACEMENT_EXCEEDS_STOCK') throw new ConflictError(code)
+      if (
+        code === 'STORAGE_PLACEMENT_EXCEEDS_STOCK' ||
+        code === 'STORAGE_PLACEMENT_EXCEEDS_CAPACITY'
+      )
+        throw new ConflictError(code)
       if (code?.startsWith('STORAGE_')) throw new ValidationError(code)
       throw new DatabaseError('Failed to record what is in the location', error)
     }
@@ -386,6 +490,7 @@ export class WarehouseMapService {
       demandWindowDays: DEMAND_WINDOW_DAYS,
       asOf: asOf.toISOString(),
       migrated: false,
+      autoShelves: null,
       locations: [],
       totals: {
         locationCount: 0,

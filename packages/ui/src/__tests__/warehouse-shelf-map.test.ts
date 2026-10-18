@@ -82,3 +82,59 @@ describe('wiring', () => {
     )
   })
 })
+
+describe('«قفسه‌ها» on an open warehouse (owner, 18 Oct 2026)', () => {
+  it('opens that warehouse’s shelf map, not the shelf cards under «کالاها»', () => {
+    const container = src('containers/Warehouse-container.tsx')
+    expect(container).toContain('push(`/warehouse?view=shelfMap&stockWarehouse=${warehouseParam}`)')
+    expect(container).not.toContain(
+      'push(`/warehouse?view=products&stockWarehouse=${warehouseParam}`)',
+    )
+  })
+})
+
+describe('«جا نشد» — goods that do not fit their full auto shelf (18 Oct 2026)', () => {
+  const loc = (id: string, capacity: number | null, quantity: number) =>
+    ({ id, code: id.toUpperCase(), capacity, quantity, isActive: true }) as never
+  const gear = { id: 'g', name: 'گیربوکس', unit: 'custom', free: 3 }
+
+  it('A-3 full (10 of 10), 3 gearboxes on no shelf → 3 did not fit', async () => {
+    const { shelfOverflows } = await import('../components/ui/warehouse/shelves/shelf-overflow')
+    const rows = shelfOverflows(
+      { locations: [loc('a3', 10, 10)], autoShelves: [{ productId: 'g', locationId: 'a3' }] },
+      [gear],
+    )
+    expect(rows).toEqual([
+      expect.objectContaining({ productId: 'g', shelfCode: 'A3', quantity: 3 }),
+    ])
+  })
+
+  it('room for some: only what is left over is «over»; room for all: nothing', async () => {
+    const { shelfOverflows } = await import('../components/ui/warehouse/shelves/shelf-overflow')
+    const auto = [{ productId: 'g', locationId: 'a3' }]
+    expect(
+      shelfOverflows({ locations: [loc('a3', 10, 9)], autoShelves: auto }, [gear])[0]!.quantity,
+    ).toBe(2)
+    expect(shelfOverflows({ locations: [loc('a3', 10, 5)], autoShelves: auto }, [gear])).toEqual([])
+  })
+
+  it('unshelved alone is not a problem: no auto shelf, or no capacity, or not migrated → nothing', async () => {
+    const { shelfOverflows } = await import('../components/ui/warehouse/shelves/shelf-overflow')
+    expect(shelfOverflows({ locations: [loc('a3', 10, 10)], autoShelves: [] }, [gear])).toEqual([])
+    expect(
+      shelfOverflows(
+        { locations: [loc('a3', null, 10)], autoShelves: [{ productId: 'g', locationId: 'a3' }] },
+        [gear],
+      ),
+    ).toEqual([])
+    expect(shelfOverflows({ locations: [], autoShelves: null }, [gear])).toEqual([])
+  })
+
+  it('the warehouse page draws them red and shows the warning, from the map', () => {
+    const page = src('containers/Warehouse-container.tsx')
+    expect(page).toContain('<ShelfOverflowNotice')
+    expect(page).toContain('overflowIds,')
+    expect(src('warehouse-product-list.tsx')).toContain('data-overflow-badge=""')
+    expect(src('shelves/warehouse-products-section.tsx')).toContain('<ShelfOverflowNotice')
+  })
+})

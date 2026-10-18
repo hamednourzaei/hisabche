@@ -117,6 +117,8 @@ export interface WarehouseMap {
   asOf: string
   /** False = `docs/warehouse-map-01-migration.sql` has not been run yet. */
   migrated: boolean
+  /** The shelf each product's purchases fill; `null` = shelf-capacity-01 not run. */
+  autoShelves?: Array<{ productId: string; locationId: string }> | null
   locations: MapLocation[]
   totals: WarehouseMapTotals
   unplaced: { productCount: number; quantity: number; value: number | null }
@@ -176,6 +178,8 @@ export function useWarehouseMap(warehouseId: string | null, days: number) {
         totals: data?.totals ?? emptyTotals,
         unplaced: data?.unplaced ?? { productCount: 0, quantity: 0, value: null },
         drift: data?.drift ?? { productCount: 0, quantity: 0, value: null },
+        // Mapped by name, like every field here: left out, it would vanish.
+        autoShelves: Array.isArray(data?.autoShelves) ? data.autoShelves : null,
       }
     },
     enabled: authReady && !!warehouseId,
@@ -317,6 +321,23 @@ export function useMoveProductPlacement() {
       })
     },
     onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: warehouseMapKeys.all })
+    },
+  })
+}
+
+/** «خریدهای بعدی این کالا خودکار روی همین قفسه برود» — on or off. */
+export function useSetAutoShelf() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { locationId: string; productId: string; enabled: boolean }) => {
+      const { data } = await apiClient.put(`/storage-locations/${input.locationId}/auto-shelf`, {
+        productId: input.productId,
+        enabled: input.enabled,
+      })
+      return data as { locationId: string; productId: string; enabled: boolean }
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: warehouseMapKeys.all })
     },
   })

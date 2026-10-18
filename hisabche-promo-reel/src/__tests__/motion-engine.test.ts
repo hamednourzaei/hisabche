@@ -913,18 +913,19 @@ describe('Motion Design Engine & Reels Verification', () => {
     expect(climax68.end - climax68.start - ending68.at).toBeGreaterThanOrEqual(1.0)
   })
 
-  it('verifies Reel 69 digital showreel has exact 20s duration, numeric actors, and climax hold >= 1.0s', () => {
+  it('verifies Reel 69 Pocketsflow creator explainer has exact 15s duration, 6 scenes, and climax hold >= 1.0s', () => {
     const reel69 = REELS.find((r) => r.id === '69')
     expect(reel69).toBeDefined()
-    expect(reel69!.duration).toBe(20.0)
-    expect(reel69!.scenes).toHaveLength(5)
+    expect(reel69!.duration).toBe(15.0)
+    expect(reel69!.scenes).toHaveLength(6)
 
     const expectedActors = [
-      'r69-digit-freeze',
-      'r69-price-tiers',
-      'r69-team-shift',
-      'r69-offline-counter',
-      'r69-converged-cta',
+      'r69-creator-hook',
+      'r69-product-cards',
+      'r69-checkout-flow',
+      'r69-upsell-tax',
+      'r69-multi-panel-split',
+      'r69-brand-outro',
     ]
 
     reel69!.scenes.forEach((scene, index) => {
@@ -937,15 +938,15 @@ describe('Motion Design Engine & Reels Verification', () => {
       expect(scene.sentence!.intent.length).toBeGreaterThan(0)
     })
 
-    // The five scenes tile the reel exactly — no gap, no overlap
+    // The six scenes tile the reel exactly — no gap, no overlap
     expect(reel69!.scenes[0]!.start).toBe(0)
-    expect(reel69!.scenes[reel69!.scenes.length - 1]!.end).toBe(20.0)
+    expect(reel69!.scenes[reel69!.scenes.length - 1]!.end).toBe(15.0)
     reel69!.scenes.forEach((scene, index) => {
       if (index > 0) expect(scene.start).toBe(reel69!.scenes[index - 1]!.end)
     })
 
-    // Climax scene (scene 4, offline proof) holds at least 1.0s after its sentence resolves
-    const climax69 = reel69!.scenes[3]!
+    // Climax scene (scene 5, multi-panel split) holds at least 1.0s after its sentence resolves
+    const climax69 = reel69!.scenes[4]!
     const ending69 = climax69.sentence!.sentenceEnding!
     expect(climax69.end - climax69.start - ending69.at).toBeGreaterThanOrEqual(1.0)
   })

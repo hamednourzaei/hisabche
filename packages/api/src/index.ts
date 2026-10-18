@@ -1183,6 +1183,7 @@ export {
   useCreateStorageLocation,
   useUpdateStorageLocation,
   usePlaceStock,
+  useSetAutoShelf,
   useProductStorageLocations,
   useMoveProductPlacement,
   warehouseMapKeys,

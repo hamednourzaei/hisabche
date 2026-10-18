@@ -36,6 +36,8 @@ export function WordSyncTeleprompter({
     statusBadgeClass = 'status-manual-review'
   }
 
+  const isEnglish = /^[A-Za-z0-9\s.,//'$:;!?%—-]+$/.test(sentence.text.trim())
+
   return (
     <div className={`word-sync-teleprompter ${className}`}>
       {/* Clutter-free toggle: Metadata is hidden on production video canvas */}
@@ -46,7 +48,7 @@ export function WordSyncTeleprompter({
         </div>
       )}
 
-      <div className="teleprompter-speech-line">
+      <div className="teleprompter-speech-line" dir={isEnglish ? 'ltr' : 'rtl'}>
         {words.map((w, idx) => {
           const isActive = t >= w.start && t < w.end
           const isSpoken = t >= w.end
