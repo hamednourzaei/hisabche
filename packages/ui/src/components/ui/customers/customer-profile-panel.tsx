@@ -30,6 +30,8 @@ import { formatNumber } from '@hisabche/formatting'
 import { cn } from '../../../lib/utils'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
+import { useActionAvailability } from '../../../lib/capability'
+import { CloudRequiredNotice } from '../cloud-required-notice'
 
 const MAX_BYTES = 5 * 1024 * 1024
 const ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp'
@@ -67,6 +69,7 @@ export function CustomerProfilePanel({
   const updateTerms = useUpdateCustomerTerms(customerId)
   const upload = useUploadCustomerDocument(customerId)
   const remove = useRemoveCustomerDocument(customerId)
+  const docAvailability = useActionAvailability('customer.documents')
 
   const [limit, setLimit] = useState('')
   const [terms, setTerms] = useState('')
@@ -392,82 +395,91 @@ export function CustomerProfilePanel({
       </div>
 
       {/* ── Documents ─────────────────────────────────────────── */}
-      <div className={card}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
-            {t('documentsTitle')}
-          </h3>
-          <input
-            id="customer-document-file"
-            ref={fileRef}
-            type="file"
-            accept={ACCEPT}
-            className="hidden"
-            onChange={(e) => onFile(e.target.files?.[0])}
-          />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={!documents.data?.available || upload.isPending}
-            className={button}
-          >
-            <Upload className="size-4" aria-hidden="true" />
-            {upload.isPending ? t('uploading') : t('upload')}
-          </button>
-        </div>
-        <p className="mt-1 text-xs text-[hsl(var(--fg-tertiary))]">{t('uploadHint')}</p>
+      {docAvailability.requiresOnline ? (
+        <CloudRequiredNotice variant="card" title={t('documentsTitle')} />
+      ) : (
+        <div className={card}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+              {t('documentsTitle')}
+            </h3>
+            <input
+              id="customer-document-file"
+              ref={fileRef}
+              type="file"
+              accept={ACCEPT}
+              className="hidden"
+              onChange={(e) => onFile(e.target.files?.[0])}
+            />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={!documents.data?.available || upload.isPending}
+              className={button}
+            >
+              <Upload className="size-4" aria-hidden="true" />
+              {upload.isPending ? t('uploading') : t('upload')}
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-[hsl(var(--fg-tertiary))]">{t('uploadHint')}</p>
 
-        {documents.isLoading ? (
-          <p className="py-6 text-center text-sm text-[hsl(var(--fg-secondary))]">{t('loading')}</p>
-        ) : documents.isError ? (
-          <p role="alert" className="py-6 text-center text-sm text-[hsl(var(--color-destructive))]">
-            {t('loadError')}
-          </p>
-        ) : !documents.data?.available ? (
-          <p className="py-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
-            {t('notConfigured')}
-          </p>
-        ) : documents.data.documents.length === 0 ? (
-          <p className="py-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
-            {t('noDocuments')}
-          </p>
-        ) : (
-          <ul className="mt-3 divide-y divide-[hsl(var(--border-default)/0.6)]">
-            {documents.data.documents.map((doc) => (
-              <li key={doc.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                <button
-                  type="button"
-                  onClick={() => void openDocument(doc.id)}
-                  className="flex min-w-0 items-center gap-2 text-start hover:underline"
-                >
-                  <FileText
-                    className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))]"
-                    aria-hidden="true"
-                  />
-                  <span className="truncate">{doc.fileName}</span>
-                </button>
-                <span className="flex shrink-0 items-center gap-3 text-xs text-[hsl(var(--fg-tertiary))]">
-                  <span className="tabular-nums">
-                    {formatNumber(Math.ceil(doc.sizeBytes / 1024), locale)} KB
-                  </span>
-                  <span>{date(doc.createdAt)}</span>
+          {documents.isLoading ? (
+            <p className="py-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
+              {t('loading')}
+            </p>
+          ) : documents.isError ? (
+            <p
+              role="alert"
+              className="py-6 text-center text-sm text-[hsl(var(--color-destructive))]"
+            >
+              {t('loadError')}
+            </p>
+          ) : !documents.data?.available ? (
+            <p className="py-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
+              {t('notConfigured')}
+            </p>
+          ) : documents.data.documents.length === 0 ? (
+            <p className="py-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
+              {t('noDocuments')}
+            </p>
+          ) : (
+            <ul className="mt-3 divide-y divide-[hsl(var(--border-default)/0.6)]">
+              {documents.data.documents.map((doc) => (
+                <li key={doc.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm(t('confirmRemove')))
-                        remove.mutate(doc.id, { onError: fail })
-                    }}
-                    aria-label={t('remove')}
-                    className="rounded-full p-1.5 text-[hsl(var(--color-destructive))] hover:bg-[hsl(var(--surface-muted))]"
+                    onClick={() => void openDocument(doc.id)}
+                    className="flex min-w-0 items-center gap-2 text-start hover:underline"
                   >
-                    <Trash2 className="size-4" aria-hidden="true" />
+                    <FileText
+                      className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))]"
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">{doc.fileName}</span>
                   </button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                  <span className="flex shrink-0 items-center gap-3 text-xs text-[hsl(var(--fg-tertiary))]">
+                    <span className="tabular-nums">
+                      {formatNumber(Math.ceil(doc.sizeBytes / 1024), locale)} KB
+                    </span>
+                    <span>{date(doc.createdAt)}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(t('confirmRemove')))
+                          remove.mutate(doc.id, { onError: fail })
+                      }}
+                      aria-label={t('remove')}
+                      className="rounded-full p-1.5 text-[hsl(var(--color-destructive))] hover:bg-[hsl(var(--surface-muted))]"
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </section>
   )
 }

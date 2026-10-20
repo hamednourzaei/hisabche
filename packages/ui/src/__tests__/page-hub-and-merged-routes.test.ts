@@ -17,8 +17,8 @@ import { offeredHubTabs, type PageHubTab } from '../components/ui/page-hub'
 import { DATA_HUB_SOURCES } from '../components/ui/data-and-sync/containers/data-hub-container'
 import { BILLING_HUB_SOURCES } from '../components/ui/billing/containers/billing-hub-container'
 import {
-  GOVERNANCE_GROUPS,
-  governanceGroupOf,
+  GOVERNANCE_TABS,
+  governanceTabOf,
 } from '../components/ui/governance/containers/governance-hub-container'
 
 const ROOT = join(__dirname, '..', '..', '..', '..')
@@ -97,13 +97,12 @@ describe('a section is hidden by the lock of the page it came from', () => {
 })
 
 describe('/governance', () => {
-  it('six parts in two groups — every part reachable', () => {
-    expect(GOVERNANCE_GROUPS).toEqual({
-      people: ['overview', 'members', 'permissions'],
-      control: ['approvals', 'sod', 'audit'],
-    })
-    expect(governanceGroupOf('audit')).toBe('control')
-    expect(governanceGroupOf('overview')).toBe('people')
+  it('two tabs: approvals and permissions; a removed part opens the first (owner, 18 Oct 2026)', () => {
+    expect(GOVERNANCE_TABS).toEqual(['approvals', 'permissions'])
+    for (const removed of ['overview', 'members', 'sod', 'audit', null]) {
+      expect(governanceTabOf(removed)).toBe('approvals')
+    }
+    expect(governanceTabOf('permissions')).toBe('permissions')
   })
 })
 

@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf .next node_modules",
-    "test": "echo \"no tests yet\""
+    "test": "node ../../packages/ui/node_modules/vitest/vitest.mjs run"
   },
   "dependencies": {
     "@hisabche/api": "workspace:*",

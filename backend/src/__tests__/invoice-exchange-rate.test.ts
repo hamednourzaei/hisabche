@@ -154,6 +154,18 @@ describe('what the rate is used for', () => {
       .join(' ')
   const service = read('services/invoice.service.ts')
   const payments = read('services/payments/payments.service.ts')
+  /**
+   * ⚠️ The lines and the conversion moved to the shared package in Phase 2 of
+   * the offline edition (so the device posts the same journal). The assertion
+   * follows the rule to its one home; the backend file re-exports it.
+   */
+  const shared = (path: string) =>
+    readFileSync(join(__dirname, '..', '..', '..', 'packages', 'validation', 'src', path), 'utf8')
+      .split('\n')
+      .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+      .join('\n')
+      .split(/\s+/)
+      .join(' ')
 
   it('⚠️ a purchase’s cost layer is in the books currency', () => {
     expect(service).toContain('unitCost: quantity > 0 ? (lineTotal * exchangeRate) / quantity : 0,')
@@ -166,10 +178,7 @@ describe('what the rate is used for', () => {
     // Lines and conversion live in a pure module since 18 Oct 2026 (posted as
     // is by inventory-avco-01.pg.test); the service only calls it.
     expect(service).toContain('costOfGoodsSold: data.costOfGoodsSold,')
-    const posting = readFileSync(
-      join(__dirname, '..', 'services', 'accounting', 'invoice-posting.domain.ts'),
-      'utf8',
-    )
+    const posting = shared('schemas/invoice-posting.domain.ts')
     expect(posting).toContain('const cost = Number(input.costOfGoodsSold) || 0')
     expect(posting).toContain('return rate === 1 ? amount : Math.round(amount * rate * 100) / 100')
   })

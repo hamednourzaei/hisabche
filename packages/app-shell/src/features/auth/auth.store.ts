@@ -9,9 +9,11 @@
 import { create } from 'zustand'
 import {
   markTokenReady,
+  readStorage,
   registerTokenGetter,
   setOnUnauthorized,
   setRefreshSession,
+  STORAGE_KEYS,
   type ApiError,
 } from '@hisabche/api'
 import { signUpSchema, type SignUpInput } from '@hisabche/validation'
@@ -23,9 +25,11 @@ import {
   type LoginCredentials,
   type Session,
 } from '@hisabche/auth-core'
+import { useWorkspaceStore } from '@hisabche/store'
 
 import { apiClient } from '@/shared/lib/api'
 import { sessionStore } from '@/shared/lib/storage'
+import { buildOfflineSession, type OfflineWorkspace } from './offline-session'
 
 export interface AuthState {
   session: Session | null
@@ -42,6 +46,17 @@ export interface AuthState {
   validateSession: () => Promise<boolean>
   refreshToken: () => Promise<void>
   clearError: () => void
+  /**
+   * Open the app as the local owner of a workspace on this device.
+   *
+   * ⚠️ THE ONE PLACE A LOCAL SESSION IS BUILT.
+   *
+   * The login page and this store used to build one each. Now both call
+   * `buildOfflineSession()` (offline-session.ts) and this action, so the
+   * first run and the restart after it cannot disagree about who the owner
+   * is or what the session token is.
+   */
+  startOfflineSession: (workspace: OfflineWorkspace) => void
 }
 
 function toMessage(error: unknown): string {
@@ -213,6 +228,52 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         })
       }
 
+      const isOffline =
+        (typeof window !== 'undefined' &&
+          (window as { __hisabcheEdition?: string }).__hisabcheEdition === 'offline') ||
+        readStorage(STORAGE_KEYS.edition) === 'offline'
+
+      if (isOffline) {
+        try {
+          const res =
+            await apiClient.get<Array<{ id: string; name: string; ownerId: string }>>('/workspaces')
+          const workspaces = res.data
+          if (Array.isArray(workspaces) && workspaces.length > 0) {
+            const ws = workspaces[0]!
+            const offlineSession: Session = buildOfflineSession({
+              id: ws.id,
+              name: ws.name,
+              ownerId: ws.ownerId,
+            })
+            useWorkspaceStore.getState().setWorkspace(ws.id, ws.name)
+            set({
+              session: offlineSession,
+              isAuthenticated: true,
+              isHydrated: true,
+              isSessionValid: true,
+              error: null,
+            })
+            return
+          }
+        } catch (error) {
+          // ⚠️ THE WORKSPACE COULD NOT BE READ.
+          //
+          // This is NOT "no workspace yet": it is a failed read, and the
+          // difference matters. A failed read means the device database is
+          // not answering, and continuing as if there were no business would
+          // show an empty app and call it «your shop». The error is kept so
+          // the screen can say what happened instead of showing nothing.
+          set({
+            isHydrated: true,
+            error: toMessage(error),
+            session: null,
+            isAuthenticated: false,
+            isSessionValid: false,
+          })
+          return
+        }
+      }
+
       set({
         session: isValid ? stored : null,
         isAuthenticated: isValid,
@@ -380,6 +441,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false, error: toMessage(error) })
       throw error
     }
+  },
+
+  /**
+   * Open the app as the local owner of a workspace on this device.
+   *
+   * The session is BUILT by `buildOfflineSession()` and nowhere else, and
+   * the active workspace is set in the same breath: a session without a
+   * workspace is a session that every screen reads an empty business from.
+   */
+  startOfflineSession: (workspace: OfflineWorkspace) => {
+    const session = buildOfflineSession(workspace)
+    useWorkspaceStore.getState().setWorkspace(workspace.id, workspace.name)
+    set({
+      session,
+      isAuthenticated: true,
+      isHydrated: true,
+      isSessionValid: true,
+      isLoading: false,
+      error: null,
+    })
   },
 
   logout: async () => {

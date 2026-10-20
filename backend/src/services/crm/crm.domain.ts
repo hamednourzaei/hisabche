@@ -11,6 +11,8 @@
 //   opportunity  a potential sale moving through stages
 // ============================================
 
+import { round2 } from '../../utils/money'
+
 // ─── Vocabulary ──────────────────────────────────────────────────────────────
 
 export const INTERACTION_STATUSES = ['pending', 'in_progress', 'completed'] as const
@@ -238,7 +240,6 @@ export function summarizeCustomerCrm(
   const latest = [...interactions].sort(byDate).at(-1) ?? null
 
   const openDeals = opportunities.filter((o) => isOpenStage(o.stage))
-  const round2 = (n: number) => Math.round(n * 100) / 100
 
   return {
     openTasks: open.length,

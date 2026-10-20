@@ -64,6 +64,8 @@ import { fileToBase64 } from '../../wallet/wallet-format'
 import { copyText } from '../../../../lib/copy-text'
 import { sandboxErrorMessage } from '../../../../lib/sandbox-labels'
 import { DevelopersView, type SectionState } from '../developers-view'
+import { useActionAvailability } from '../../../../lib/capability'
+import { CloudRequiredNotice } from '../../cloud-required-notice'
 
 function statusOf(error: unknown): number | undefined {
   return (error as { response?: { status?: number } } | null)?.response?.status
@@ -88,6 +90,31 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
     },
     [tOriginal],
   )
+
+  const availability = useActionAvailability('developer.keys')
+
+  if (availability.requiresOnline) {
+    return (
+      <div className="p-4 sm:p-6">
+        <CloudRequiredNotice
+          variant="fullscreen"
+          title={t('nav.developers', 'توسعه‌دهندگان')}
+          description={t('offline.cloudRequired.description')}
+        />
+      </div>
+    )
+  }
+
+  return <DevelopersContainerContent t={t} />
+})
+
+DevelopersContainer.displayName = 'DevelopersContainer'
+
+const DevelopersContainerContent = memo(function DevelopersContainerContent({
+  t,
+}: {
+  t: (key: string, fallback?: string) => string
+}) {
   const { dateTime } = useDateFormat()
   const toast = useToast()
 
@@ -472,4 +499,4 @@ export const DevelopersContainer = memo(function DevelopersContainer() {
   )
 })
 
-DevelopersContainer.displayName = 'DevelopersContainer'
+DevelopersContainerContent.displayName = 'DevelopersContainerContent'

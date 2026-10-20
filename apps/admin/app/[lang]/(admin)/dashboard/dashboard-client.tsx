@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { usePathname, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   AlertTriangle,
   Building2,
@@ -13,32 +14,20 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
-import { Button, Skeleton } from '@/components/ui'
-import { ErrorState, Panel } from '@/components/admin-shell/admin-ui'
+import { Button, Card, EmptyState, HubTabs, Skeleton, useHubTab } from '@/components/ui'
+import { ErrorState } from '@/components/admin-shell/admin-ui'
 import { useAdminSession } from '@/hooks/use-admin-session'
 import { useAdminMetrics } from '@/hooks/use-admin-api'
+import { useAdminPastDue } from '@/hooks/use-admin-past-due'
 import { cn } from '@/lib/utils'
 
-/**
- * Platform KPI cards.
- *
- * Each entry names the field it reads so the mapping to
- * `AdminService.getMetrics()` is visible in one place. Adding a card without a
- * field here is impossible by construction — which is the point, because the
- * previous version rendered `adminStatus?.status`, a field the endpoint never
- * returned, and every card showed `?`.
- *
- * DELIBERATELY ABSENT: MRR, ARR, revenue. No authoritative pricing source
- * exists (PLANS carries no price, checkout_sessions carries no amount), so any
- * revenue card would display an invented number on the control panel of a
- * financial product.
- */
+const DASHBOARD_TABS = ['overview', 'revenue', 'alerts'] as const
+type DashboardTab = (typeof DASHBOARD_TABS)[number]
+
 interface Kpi {
-  /** i18n key under `admin.kpi`. */
   key: string
   value: number
   icon: LucideIcon
-  /** Accent applied to the icon tile only — never to the number itself. */
   accent: string
 }
 
@@ -46,6 +35,8 @@ export function DashboardClient() {
   const router = useRouter()
   const pathname = usePathname()
   const t = useTranslations()
+  const [tab, setTab] = useHubTab<DashboardTab>(DASHBOARD_TABS)
+
   const { loading: authLoading, error: authError } = useAdminSession()
   const {
     data: metrics,
@@ -53,6 +44,7 @@ export function DashboardClient() {
     isError: metricsError,
     refetch,
   } = useAdminMetrics()
+  const { data: pastDueData, isLoading: pastDueLoading } = useAdminPastDue()
 
   const localePrefix = pathname.split('/').filter(Boolean)[0] || 'fa'
 
@@ -72,10 +64,12 @@ export function DashboardClient() {
 
   if (authLoading || metricsLoading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 8 }, (_, index) => (
-          <Skeleton key={index} className="h-32 w-full rounded-2xl" />
-        ))}
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 8 }, (_, index) => (
+            <Skeleton key={index} className="h-32 w-full rounded-2xl" />
+          ))}
+        </div>
       </div>
     )
   }
@@ -91,7 +85,7 @@ export function DashboardClient() {
       key: 'totalWorkspaces',
       value: workspaces.total,
       icon: Building2,
-      accent: 'bg-blue-500/15 text-blue-400',
+      accent: 'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]',
     },
     {
       key: 'activeWorkspaces',
@@ -103,13 +97,13 @@ export function DashboardClient() {
       key: 'newThisMonth',
       value: workspaces.newThisMonth,
       icon: TrendingUp,
-      accent: 'bg-violet-500/15 text-violet-400',
+      accent: 'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]',
     },
     {
       key: 'totalMembers',
       value: members.total,
       icon: Users,
-      accent: 'bg-blue-500/15 text-blue-400',
+      accent: 'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]',
     },
     {
       key: 'activeSubscriptions',
@@ -133,106 +127,156 @@ export function DashboardClient() {
       key: 'trialSubscriptions',
       value: subscriptions.trial,
       icon: Sparkles,
-      accent: 'bg-violet-500/15 text-violet-400',
+      accent: 'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]',
     },
   ]
 
-  // Plan mix comes straight from the `plan` column, never from a plan name.
   const planEntries = Object.entries(subscriptions.byPlan)
   const planTotal = planEntries.reduce((sum, [, count]) => sum + count, 0)
+  const pastDueList = pastDueData?.subscriptions ?? []
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">{t('admin.dashboard.description')}</p>
-        <time
-          className="text-xs text-muted-foreground tabular-nums"
-          dateTime={metrics.generatedAt}
-          suppressHydrationWarning
-        >
-          {t('admin.dashboard.generatedAt', {
-            time: new Date(metrics.generatedAt).toLocaleString(),
-          })}
-        </time>
-      </div>
+    <div className="space-y-6">
+      <HubTabs
+        label={t('admin.hubs.dashboard.title')}
+        items={[
+          { id: 'overview', label: t('admin.hubs.dashboard.overview') },
+          { id: 'revenue', label: t('admin.hubs.dashboard.revenue') },
+          { id: 'alerts', label: t('admin.hubs.dashboard.alerts') },
+        ]}
+        active={tab}
+        onSelect={setTab}
+      />
 
-      {/*
-        Migration transparency. While subscriptions are still being attributed
-        to workspaces, the plan mix below does not cover every business — and
-        an admin console that presents partial data as complete invites wrong
-        decisions. Shown only when it is actually incomplete.
-      */}
-      {subscriptions.workspaceAttributedPercent < 100 && (
-        <div className="flex items-start gap-3 rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
-          <p className="min-w-0">
-            {t('admin.notice.migrationInProgress', {
-              percent: subscriptions.workspaceAttributedPercent,
-            })}
-          </p>
-        </div>
-      )}
+      {tab === 'overview' && (
+        <div className="space-y-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">{t('admin.dashboard.description')}</p>
+            <time
+              className="text-xs text-muted-foreground tabular-nums"
+              dateTime={metrics.generatedAt}
+              suppressHydrationWarning
+            >
+              {t('admin.dashboard.generatedAt', {
+                time: new Date(metrics.generatedAt).toLocaleString(),
+              })}
+            </time>
+          </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((kpi) => {
-          const Icon = kpi.icon
-          return (
-            <Panel key={kpi.key} className="p-5 transition-colors hover:border-border-strong">
-              <span
-                className={cn(
-                  'mb-4 flex h-11 w-11 items-center justify-center rounded-xl',
-                  kpi.accent,
-                )}
-              >
-                <Icon className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <p className="text-sm text-muted-foreground">{t(`admin.kpi.${kpi.key}`)}</p>
-              {/*
-                `toLocaleString()` so Persian and Dari get their own digits —
-                a platform console for Afghan and Iranian shops should not show
-                Latin numerals in a Persian UI.
-              */}
-              <p className="mt-1 text-3xl font-bold tabular-nums">{kpi.value.toLocaleString()}</p>
-            </Panel>
-          )
-        })}
-      </div>
+          {subscriptions.workspaceAttributedPercent < 100 && (
+            <div className="flex items-start gap-3 rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
+              <p className="min-w-0">
+                {t('admin.notice.migrationInProgress', {
+                  percent: subscriptions.workspaceAttributedPercent,
+                })}
+              </p>
+            </div>
+          )}
 
-      {planEntries.length > 0 && (
-        <section aria-labelledby="plan-mix-heading" className="space-y-4">
-          <h2 id="plan-mix-heading" className="text-lg font-bold">
-            {t('admin.dashboard.planMix')}
-          </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {planEntries.map(([plan, count]) => {
-              // Share of the plan mix, not of every subscription: the
-              // denominator is the sum of the buckets actually returned, so
-              // the bars add up to what is drawn.
-              const share = planTotal === 0 ? 0 : Math.round((count / planTotal) * 100)
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {kpis.map((kpi) => {
+              const Icon = kpi.icon
               return (
-                <Panel key={plan} className="p-5">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="truncate text-sm font-medium capitalize">{plan}</p>
-                    <p className="text-2xl font-bold tabular-nums">{count.toLocaleString()}</p>
-                  </div>
-                  <div
-                    className="mt-3 h-2 w-full overflow-hidden rounded-full bg-accent"
-                    role="img"
-                    aria-label={t('admin.dashboard.planShare', { plan, percent: share })}
+                <Card key={kpi.key} className="p-5 transition-colors hover:border-border-strong">
+                  <span
+                    className={cn(
+                      'mb-4 flex h-11 w-11 items-center justify-center rounded-xl',
+                      kpi.accent,
+                    )}
                   >
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500 rtl:bg-gradient-to-l"
-                      style={{ width: `${share}%` }}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {t('admin.dashboard.ofTotal', { total: subscriptions.total })}
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <p className="text-sm text-muted-foreground">{t(`admin.kpi.${kpi.key}`)}</p>
+                  <p className="mt-1 text-3xl font-bold tabular-nums">
+                    {kpi.value.toLocaleString()}
                   </p>
-                </Panel>
+                </Card>
               )
             })}
           </div>
-        </section>
+
+          {planEntries.length > 0 && (
+            <section aria-labelledby="plan-mix-heading" className="space-y-4">
+              <h2 id="plan-mix-heading" className="text-lg font-bold">
+                {t('admin.dashboard.planMix')}
+              </h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {planEntries.map(([plan, count]) => {
+                  const share = planTotal === 0 ? 0 : Math.round((count / planTotal) * 100)
+                  return (
+                    <Card key={plan} className="p-5">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="truncate text-sm font-medium capitalize">{plan}</p>
+                        <p className="text-2xl font-bold tabular-nums">{count.toLocaleString()}</p>
+                      </div>
+                      <div
+                        className="mt-3 h-2 w-full overflow-hidden rounded-full bg-accent"
+                        role="img"
+                        aria-label={t('admin.dashboard.planShare', { plan, percent: share })}
+                      >
+                        <div
+                          className="h-full rounded-full bg-[hsl(var(--color-primary))]"
+                          style={{ width: `${share}%` }}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {t('admin.dashboard.ofTotal', { total: subscriptions.total })}
+                      </p>
+                    </Card>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+        </div>
+      )}
+
+      {tab === 'revenue' && (
+        <Card className="p-8">
+          <EmptyState
+            title={t('admin.hubs.dashboard.revenue')}
+            description={t('admin.empty.comingInNextStep')}
+          />
+        </Card>
+      )}
+
+      {tab === 'alerts' && (
+        <div className="space-y-4">
+          <h2 className="text-base font-semibold">{t('admin.hubs.dashboard.alerts')}</h2>
+          {pastDueLoading ? (
+            <div className="space-y-3">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-2xl" />
+              ))}
+            </div>
+          ) : pastDueList.length === 0 ? (
+            <Card className="p-8">
+              <EmptyState title={t('admin.shell.alertsNone')} />
+            </Card>
+          ) : (
+            <ul className="space-y-3">
+              {pastDueList.map((sub) => (
+                <li key={sub.id}>
+                  <Card className="flex items-center justify-between p-4">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-destructive">{sub.workspace_id}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {sub.plan} · {sub.status}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/${localePrefix}/revenue?tab=subscriptions&status=past_due`}
+                      className="text-xs text-[hsl(var(--color-primary))] hover:underline"
+                    >
+                      {t('admin.subscriptions.title')}
+                    </Link>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   )

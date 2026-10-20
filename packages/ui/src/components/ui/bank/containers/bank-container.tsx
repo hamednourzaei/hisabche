@@ -20,6 +20,8 @@ import {
 } from '@hisabche/api'
 import { BankView } from '../bank-view'
 import { BankCategorySuggestions } from '../bank-category-suggestions'
+import { useActionAvailability } from '../../../../lib/capability'
+import { CloudRequiredNotice } from '../../cloud-required-notice'
 
 export const BankContainer = memo(function BankContainer() {
   const translate = useTranslations()
@@ -28,6 +30,30 @@ export const BankContainer = memo(function BankContainer() {
     return value && value !== key ? value : (fallback ?? key)
   }
 
+  const availability = useActionAvailability('bank.import')
+
+  if (availability.requiresOnline) {
+    return (
+      <div className="p-4 sm:p-6">
+        <CloudRequiredNotice
+          variant="fullscreen"
+          title={t('nav.bank', 'عملیات بانکی')}
+          description={t('offline.cloudRequired.description')}
+        />
+      </div>
+    )
+  }
+
+  return <BankContainerContent t={t} />
+})
+
+BankContainer.displayName = 'BankContainer'
+
+const BankContainerContent = memo(function BankContainerContent({
+  t,
+}: {
+  t: (key: string, fallback?: string) => string
+}) {
   const [chosenId, setChosenId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -130,4 +156,4 @@ export const BankContainer = memo(function BankContainer() {
   )
 })
 
-BankContainer.displayName = 'BankContainer'
+BankContainerContent.displayName = 'BankContainerContent'

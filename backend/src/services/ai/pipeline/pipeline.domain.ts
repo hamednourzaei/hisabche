@@ -26,6 +26,7 @@
 import { createCustomerSchema, paymentMethodSchema } from '@hisabche/validation'
 import { z } from 'zod'
 
+import { round2 } from '../../../utils/money'
 import type { Capability } from '../../authorization'
 import type { McpHttpCall } from '../../mcp/mcp-tools'
 
@@ -114,7 +115,14 @@ export function toNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-const round2 = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100
+// ⚠️ THE LOCAL `round2` WAS REMOVED HERE ON 19 Oct 2026, AND IT DID NOT ROUND
+// LIKE THE OTHERS. It read `Math.round((value + Number.EPSILON) * 100) / 100`,
+// so a line of one unit at 1.005 came to 1.01 here and 1.00 everywhere else
+// (`1.005 * 100` is 100.49999999999999 in IEEE-754 — a property of the float,
+// asserted in `money-primitive-guard.test.ts`). Its use below is the line total
+// of a PROPOSAL the person approves and the «expected total» checked against the
+// server's answer, not a stored figure; the server derives the real one. One
+// `round2` means the proposal now foots the same way the invoice will.
 
 // ─── The draft: what the person stated ───────────────────────────────────────
 

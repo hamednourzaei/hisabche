@@ -9,14 +9,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 import { IPC_EVENT, IPC, type HisabcheBridge } from '@hisabche/app-bridge'
-import type {
-  AppInfo,
-  ImportedFile,
-  LocalTable,
-  QueueEntry,
-  HttpRequestResponse,
-  UpdateStatus,
-} from '@hisabche/app-bridge'
+import type { UpdateStatus } from '@hisabche/app-bridge'
 
 const bridge: HisabcheBridge = {
   secure: {
@@ -65,3 +58,7 @@ const bridge: HisabcheBridge = {
 }
 
 contextBridge.exposeInMainWorld('hisabche', bridge)
+
+contextBridge.exposeInMainWorld('localApi', {
+  request: (req: unknown) => ipcRenderer.invoke(IPC.localApiRequest, req),
+})

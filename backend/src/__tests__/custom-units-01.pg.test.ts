@@ -10,8 +10,9 @@ import { join } from 'node:path'
 import EmbeddedPostgres from 'embedded-postgres'
 import postgres from 'postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { freePortSync } from './helpers/free-port'
 
-const PORT = 59800 + Math.floor(Math.random() * 150)
+const PORT = freePortSync()
 const dir = mkdtempSync(join(tmpdir(), 'hisabche-pg-custom-units-'))
 const pg = new EmbeddedPostgres({
   databaseDir: dir,

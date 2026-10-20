@@ -456,6 +456,7 @@ export class ProductService {
       if (movementError) {
         throw new DatabaseError('Failed to record the opening stock', movementError)
       }
+      ;(product as { quantity?: number }).quantity = Number(data.quantity) || 0
     }
 
     // The opening stock's COST, beside its quantity. Without this layer every

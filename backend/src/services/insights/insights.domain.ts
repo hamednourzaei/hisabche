@@ -49,21 +49,36 @@ export interface PeriodTotals {
 
 /** The profit, or null when the cost behind it is incomplete. */
 export function knownGrossProfit(totals: PeriodTotals): number | null {
-  return totals.costKnown === false ? null : grossProfit(totals)
+  return totals.costKnown === false ? null : periodGrossProfit(totals)
 }
 
 export function knownGrossMargin(totals: PeriodTotals): number | null {
   return totals.costKnown === false ? null : grossMargin(totals)
 }
 
-export function grossProfit(totals: PeriodTotals): number {
+/**
+ * ⚠️ THE NAME SAYS WHICH PROFIT THIS IS (owner decision, 19 Oct 2026).
+ *
+ * The repository had two `grossProfit` functions: the line's, in the shared
+ * `costing.domain.ts` («revenue − the cost actually consumed», on the money
+ * path, guarded by `one-rule-each.test.ts` with its full signature), and this
+ * one, which answers the same question for a PERIOD from `PeriodTotals`. Two
+ * formulas under one name is the defect that guard exists for, so this one is
+ * named for what it computes.
+ *
+ * («periodGrossMargin» was the name first suggested. It is not used: this
+ * function returns MONEY, and `grossMargin` directly below returns a
+ * PERCENTAGE — two things called margin with different units in one file is a
+ * worse defect than the one being fixed.)
+ */
+export function periodGrossProfit(totals: PeriodTotals): number {
   return round2(totals.revenue - totals.costOfGoodsSold)
 }
 
 /** Profit ÷ revenue. Zero revenue has no margin — not a margin of zero. */
 export function grossMargin(totals: PeriodTotals): number | null {
   if (totals.revenue === 0) return null
-  return round2((grossProfit(totals) / totals.revenue) * 100)
+  return round2((periodGrossProfit(totals) / totals.revenue) * 100)
 }
 
 export type ChangeDirection = 'up' | 'down' | 'flat'

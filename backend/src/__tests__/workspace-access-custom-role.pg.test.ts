@@ -22,8 +22,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { customRoleAccess, capabilitiesOf } from '../services/authorization/authorization.domain'
 import { resolveEffectiveAccess } from '../services/authorization/workspace-access.service'
+import { freePortSync } from './helpers/free-port'
 
-const PORT = 58900 + Math.floor(Math.random() * 900)
+const PORT = freePortSync()
 const dir = mkdtempSync(join(tmpdir(), 'hisabche-pg-access2-'))
 const pg = new EmbeddedPostgres({
   databaseDir: dir,

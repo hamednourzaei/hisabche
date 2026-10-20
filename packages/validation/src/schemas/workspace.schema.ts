@@ -8,6 +8,7 @@ import {
   nonEmptyStringSchema,
   optionalStringSchema,
   isoDateSchema,
+  currencyCodeSchema,
 } from './common.schema'
 
 // ============================================
@@ -34,11 +35,32 @@ export const workspaceSchema = z.object({
 
 export type Workspace = z.infer<typeof workspaceSchema>
 
-export const createWorkspaceSchema = workspaceSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-})
+/**
+ * The body of a workspace creation.
+ *
+ * ⚠️ `slug` IS OPTIONAL HERE, AND THAT IS NOT A LOOSENING.
+ *
+ * The service has always generated the slug from the name when the body does
+ * not carry one (`data.slug || data.name.toLowerCase()…`), so requiring it in
+ * the schema only refused a request the service was willing to serve. The
+ * offline first run sends a business name in the owner's own script — a name
+ * is not a slug, and a Latin slug cannot be made out of it.
+ *
+ * `baseCurrency` and `timeZone` are the device's own answers, asked once at
+ * creation: the books currency and the business time zone («today» is
+ * midnight in the BUSINESS's zone, not the device's). They are optional
+ * because the cloud sets its books currency through its own endpoint; the
+ * LOCAL engine refuses a creation without one — a currency is never assumed.
+ */
+export const createWorkspaceSchema = workspaceSchema
+  .omit({ id: true, createdAt: true, updatedAt: true, slug: true })
+  .extend({
+    slug: nonEmptyStringSchema.optional(),
+    /** The books currency, as an ISO 4217 code the product knows. */
+    baseCurrency: currencyCodeSchema.optional(),
+    /** IANA time zone of the business, e.g. `Asia/Kabul`. */
+    timeZone: z.string().trim().min(1).max(64).optional(),
+  })
 
 export type CreateWorkspace = z.infer<typeof createWorkspaceSchema>
 

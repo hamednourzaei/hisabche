@@ -25,6 +25,7 @@ import { z } from 'zod'
 import { AdminService } from '../services/admin.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { requireAdminPermission } from '../middleware/admin-rbac.middleware'
 import { planEnum, subscriptionStatusEnum } from '@hisabche/validation'
 
 const uuidParam = z.string().uuid()
@@ -98,7 +99,15 @@ export default async function adminRoutes(fastify: FastifyInstance) {
         status < 500 && typeof e === 'object' && e !== null && 'message' in e
           ? (e as { message: string }).message
           : 'Failed'
-      return reply.code(status).send({ error: message })
+      const code =
+        typeof e === 'object' && e !== null && 'code' in e && typeof (e as any).code === 'string'
+          ? (e as any).code
+          : status === 403
+            ? 'FORBIDDEN'
+            : status === 404
+              ? 'NOT_FOUND'
+              : 'ERROR'
+      return reply.code(status).send({ error: message, code })
     }
   }
 
@@ -112,7 +121,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // ─── GET /api/admin/metrics ──────────────────────────────────
   fastify.get(
     '/api/admin/metrics',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('operations.health.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) =>
       send(request, reply, () => adminService.getMetrics()),
   )
@@ -121,7 +136,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // Auth-admin directory (Supabase auth), not the users table projection.
   fastify.get(
     '/api/admin/users',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('customers.users.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const q = listQuery.parse(request.query)
       return send(request, reply, () => adminService.getUsers(q.limit ?? 50, q.offset ?? 0))
@@ -131,7 +152,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // ─── GET /api/admin/users/:id — detail + memberships ────────
   fastify.get(
     '/api/admin/users/:id',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('customers.users.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } =
         uuidParam.parse((request.params as { id: string }).id) === ''
@@ -150,7 +177,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // through /users/:id.
   fastify.get(
     '/api/admin/users-search',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('customers.users.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const q = userListQuery.parse(request.query)
       return send(request, reply, () => adminService.searchUsers(q))
@@ -160,7 +193,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // ─── GET /api/admin/workspaces ──────────────────────────────
   fastify.get(
     '/api/admin/workspaces',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('customers.workspaces.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const q = workspaceListQuery.parse(request.query)
       return send(request, reply, () => adminService.listWorkspaces(q))
@@ -170,7 +209,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // ─── GET /api/admin/workspaces/:id — detail ─────────────────
   fastify.get(
     '/api/admin/workspaces/:id',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('customers.workspaces.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = uuidParam.safeParse((request.params as { id: string }).id)
       if (!parsed.success) {
@@ -187,7 +232,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // identity — so a workspace with 50 members costs 2 round-trips, not 51.
   fastify.get(
     '/api/admin/workspaces/:workspaceId/members',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('customers.workspaces.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = uuidParam.safeParse((request.params as { workspaceId: string }).workspaceId)
       if (!parsed.success) {
@@ -209,7 +260,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // `workspace_single_owner_idx` is the backstop, not the UX.
   fastify.patch(
     '/api/admin/memberships/:membershipId',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('customers.workspaces.suspend'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = uuidParam.safeParse((request.params as { membershipId: string }).membershipId)
       if (!parsed.success) {
@@ -236,7 +293,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // not happen is worse than no log.
   fastify.delete(
     '/api/admin/memberships/:membershipId',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('customers.workspaces.suspend'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = uuidParam.safeParse((request.params as { membershipId: string }).membershipId)
       if (!parsed.success) {
@@ -252,7 +315,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // ─── GET /api/admin/workspaces/:id/invoices — read-only ─────
   fastify.get(
     '/api/admin/workspaces/:id/invoices',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('customers.workspaces.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = uuidParam.safeParse((request.params as { id: string }).id)
       if (!parsed.success) {
@@ -266,7 +335,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // ─── GET /api/admin/workspaces/:id/transactions — read-only ─
   fastify.get(
     '/api/admin/workspaces/:id/transactions',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('customers.workspaces.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = uuidParam.safeParse((request.params as { id: string }).id)
       if (!parsed.success) {
@@ -280,7 +355,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // ─── GET /api/admin/subscriptions ───────────────────────────
   fastify.get(
     '/api/admin/subscriptions',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('billing.subscriptions.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const q = subscriptionListQuery.parse(request.query)
       return send(request, reply, () => adminService.listSubscriptions(q))
@@ -291,7 +372,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // Registered BEFORE /subscriptions/:id so "past-due" is never eaten as an id.
   fastify.get(
     '/api/admin/subscriptions/past-due',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('billing.subscriptions.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const q = listQuery.parse(request.query)
       return send(request, reply, () => adminService.listPastDueSubscriptions(q.limit ?? 50))
@@ -301,7 +388,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // ─── GET /api/admin/subscriptions/:id — detail + history ────
   fastify.get(
     '/api/admin/subscriptions/:id',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('billing.subscriptions.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = uuidParam.safeParse((request.params as { id: string }).id)
       if (!parsed.success) {
@@ -314,7 +407,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // ─── PATCH /api/admin/subscriptions/:id/plan — audited ──────
   fastify.patch(
     '/api/admin/subscriptions/:id/plan',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('billing.subscriptions.plan'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = uuidParam.safeParse((request.params as { id: string }).id)
       if (!parsed.success) {
@@ -334,7 +433,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // ─── PATCH /api/admin/subscriptions/:id/status — audited ────
   fastify.patch(
     '/api/admin/subscriptions/:id/status',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('billing.subscriptions.status'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = uuidParam.safeParse((request.params as { id: string }).id)
       if (!parsed.success) {
@@ -354,7 +459,13 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // ─── GET /api/admin/webhook-events — projected, payload-free ─
   fastify.get(
     '/api/admin/webhook-events',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('operations.health.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const q = listQuery.parse(request.query)
       return send(request, reply, () => adminService.listWebhookEvents(q))
@@ -364,7 +475,9 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // ─── GET /api/admin/audit-logs ──────────────────────────────
   fastify.get(
     '/api/admin/audit-logs',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [authenticate, platformAdminGuard, requireAdminPermission('security.audit.read')],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const q = listQuery.parse(request.query)
       return send(request, reply, () => adminService.getAuditLogs(q.limit ?? 50, q.offset ?? 0))

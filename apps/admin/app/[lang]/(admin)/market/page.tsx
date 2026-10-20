@@ -1,8 +1,6 @@
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+import { redirect } from 'next/navigation'
 
-import { MarketClient } from './market-client'
-
-export default function AdminMarketPage() {
-  return <MarketClient />
+export default async function AdminMarketPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params
+  redirect(`/${lang}/product?tab=market`)
 }

@@ -3,7 +3,18 @@
 // ============================================
 
 // ─── Core Client ──────────────────────────────────────────
-export { apiClient, normalizeBaseUrl } from './lib/client'
+export {
+  apiClient,
+  normalizeBaseUrl,
+  setAppEdition,
+  getAppEdition,
+  registerLocalTransport,
+  registerFallbackTransport,
+  type AppEdition,
+  type LocalTransportRequest,
+  type LocalTransportResponse,
+  type LocalTransportAdapter,
+} from './lib/client'
 export { registerOfflineQueue, type OfflineQueue } from './lib/offline-queue'
 export { asList } from './lib/as-list'
 export type { ApiResponse, ApiError } from './lib/client'
@@ -12,6 +23,8 @@ export type { ApiResponse, ApiError } from './lib/client'
 export {
   registerTokenGetter,
   markTokenReady,
+  setOfflineTokenMode,
+  isOfflineTokenMode,
   getToken,
   hasToken,
   isTokenProviderReady,
@@ -565,16 +578,6 @@ export {
   type ReportDimension,
   type ReportMeasure,
 } from './hooks/custom-reports'
-
-// ─── Data snapshots (#42–#46) ─────────────────────────────
-export {
-  useDataSnapshots,
-  useTakeDataSnapshot,
-  useDataSnapshotComparison,
-  snapshotKeys,
-  type DataSnapshot,
-  type DataSnapshotComparison,
-} from './hooks/snapshots'
 
 // ─── AI assistants (MCP): the approval queue ──────────────
 export {

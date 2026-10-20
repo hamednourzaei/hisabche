@@ -1,5 +1,5 @@
-import axios, { AxiosInstance, AxiosError } from 'axios'
-import { getToken, tokenReady } from './tokenProvider'
+import axios, { AxiosInstance, AxiosError, type AxiosAdapter } from 'axios'
+import { getToken, tokenReady, setOfflineTokenMode } from './tokenProvider'
 import { getActiveWorkspaceId } from './active-workspace'
 import {
   activeBaseUrl,
@@ -9,7 +9,7 @@ import {
   isEdgeFailure,
   markEdgeDown,
 } from './edge-failover'
-import { readStorage, STORAGE_KEYS } from '../storage'
+import { readStorage, writeStorage, STORAGE_KEYS } from '../storage'
 // Side-effect import: auto-registers the browser adapter when localStorage
 // exists. On React Native the host app registers a SecureStore adapter.
 import '../storage/web'
@@ -27,7 +27,7 @@ export interface ApiError {
   message: string
   code: string
   status: number
-  details?: Record<string, string[]>
+  details?: Record<string, string[]> | undefined
   /** PLAN_LIMIT_REACHED: which ceiling, how high, how much is used. */
   limit?: { feature: string; limit: number; used: number } | undefined
   /** BARCODE_AMBIGUOUS: every product carrying the scanned barcode. */
@@ -42,6 +42,24 @@ export interface ApiError {
    */
   response?: { status: number; data: unknown } | undefined
 }
+
+export type AppEdition = 'offline' | 'cloud'
+
+export interface LocalTransportRequest {
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  path: string
+  params?: Record<string, string | number | boolean | undefined | null> | undefined
+  body?: unknown | undefined
+  headers?: Record<string, string | undefined> | undefined
+}
+
+export interface LocalTransportResponse<T = unknown> {
+  status: number
+  data: T
+  headers?: Record<string, string> | undefined
+}
+
+export type LocalTransportAdapter = (req: LocalTransportRequest) => Promise<LocalTransportResponse>
 
 // ============================================
 // Client Setup
@@ -148,6 +166,146 @@ export const apiClient: AxiosInstance = axios.create({
 })
 
 // ============================================
+// Edition & Transport Setup
+// ============================================
+let currentEdition: AppEdition =
+  (readStorage(STORAGE_KEYS.edition) as AppEdition) === 'offline' ? 'offline' : 'cloud'
+
+if (currentEdition === 'offline') {
+  setOfflineTokenMode(true)
+}
+
+export function setAppEdition(edition: AppEdition): void {
+  currentEdition = edition
+  writeStorage(STORAGE_KEYS.edition, edition)
+  if (edition === 'offline') {
+    setOfflineTokenMode(true)
+  }
+}
+
+export function getAppEdition(): AppEdition {
+  return currentEdition
+}
+
+let localTransportAdapter: LocalTransportAdapter | null = null
+
+export function registerLocalTransport(adapter: LocalTransportAdapter): void {
+  localTransportAdapter = adapter
+}
+
+/**
+ * The adapter used when the edition is NOT offline.
+ *
+ * ⚠️ THE HOST ADAPTER MUST BE REGISTERED, NOT ASSIGNED.
+ *
+ * The shell used to write `apiClient.defaults.adapter = hostAdapter`, which
+ * REPLACED the switch below: the offline branch was gone, and every request
+ * in the offline edition went to the cloud through the main-process proxy
+ * instead of the local engine. The button «نسخه‌ی محلی» therefore asked the
+ * internet for a workspace, got nothing, and did nothing.
+ *
+ * A host (Electron main process, React Native host) registers its adapter
+ * here; the edition decides which one runs.
+ */
+let fallbackAdapter: AxiosAdapter | null = null
+
+export function registerFallbackTransport(adapter: AxiosAdapter): void {
+  fallbackAdapter = adapter
+}
+
+const defaultAxiosAdapter = axios.getAdapter(apiClient.defaults.adapter)
+
+apiClient.defaults.adapter = async (config) => {
+  if (currentEdition === 'offline' && localTransportAdapter) {
+    const method = (config.method?.toUpperCase() || 'GET') as LocalTransportRequest['method']
+
+    let path = config.url || '/'
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      try {
+        const u = new URL(path)
+        path = u.pathname + u.search
+      } catch {
+        // keep path as is
+      }
+    }
+
+    let body = config.data
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body)
+      } catch {
+        // keep body as string
+      }
+    }
+
+    const headers: Record<string, string | undefined> = {}
+    if (config.headers) {
+      if (typeof config.headers.toJSON === 'function') {
+        Object.assign(headers, config.headers.toJSON())
+      } else {
+        for (const [k, v] of Object.entries(config.headers)) {
+          if (typeof v === 'string') {
+            headers[k] = v
+          } else if (v !== undefined && v !== null) {
+            headers[k] = String(v)
+          }
+        }
+      }
+    }
+
+    if (config.headers?.['Idempotency-Key']) {
+      headers['Idempotency-Key'] = String(config.headers['Idempotency-Key'])
+    }
+    if (config.headers?.[WORKSPACE_HEADER]) {
+      headers[WORKSPACE_HEADER] = String(config.headers[WORKSPACE_HEADER])
+    }
+    if (config.headers?.['Accept-Language']) {
+      headers['Accept-Language'] = String(config.headers['Accept-Language'])
+    }
+
+    const params = config.params as
+      Record<string, string | number | boolean | undefined | null> | undefined
+
+    const res = await localTransportAdapter({
+      method,
+      path,
+      params,
+      body,
+      headers,
+    })
+
+    if (res.status >= 200 && res.status < 300) {
+      return {
+        data: res.data,
+        status: res.status,
+        statusText: res.status === 201 ? 'Created' : 'OK',
+        headers: res.headers ?? {},
+        config,
+      }
+    }
+
+    const axiosError = new AxiosError(
+      typeof res.data === 'object' && res.data !== null && 'error' in res.data
+        ? String((res.data as Record<string, unknown>).error)
+        : `Request failed with status code ${res.status}`,
+      String(res.status),
+      config,
+      null,
+      {
+        data: res.data,
+        status: res.status,
+        statusText: String(res.status),
+        headers: res.headers ?? {},
+        config,
+      },
+    )
+    return Promise.reject(axiosError)
+  }
+
+  return (fallbackAdapter ?? defaultAxiosAdapter)(config)
+}
+
+// ============================================
 // Helpers
 // ============================================
 // ✅ callback برای ۴۰۱ — بدون import از Store
@@ -235,42 +393,45 @@ export function isExpiring(token: string, now: number = Date.now()): boolean {
 // ============================================
 apiClient.interceptors.request.use(
   async (config) => {
-    // ✅ صبر می‌کنیم تا Store توکن‌گیر را ثبت کند (یا سقف زمانی برسد)
-    // این کار جلوی 401 کاذب ناشی از race بین mount شدن صفحه و hydrate شدن session را می‌گیرد
-    await waitForTokenReady()
+    // In offline edition, token readiness, edge failover, and token refresh are skipped
+    if (currentEdition !== 'offline') {
+      // ✅ صبر می‌کنیم تا Store توکن‌گیر را ثبت کند (یا سقف زمانی برسد)
+      // این کار جلوی 401 کاذب ناشی از race بین mount شدن صفحه و hydrate شدن session را می‌گیرد
+      await waitForTokenReady()
 
-    // The edge failed recently → the direct Render address (edge-failover.ts).
-    const base = activeBaseUrl(config.baseURL ?? apiClient.defaults.baseURL)
-    if (base !== undefined) config.baseURL = base
+      // The edge failed recently → the direct Render address (edge-failover.ts).
+      const base = activeBaseUrl(config.baseURL ?? apiClient.defaults.baseURL)
+      if (base !== undefined) config.baseURL = base
 
-    // ⚠️ RENEW BEFORE SENDING, NOT AFTER THE 401.
-    //
-    // Supabase's auth log showed ~36 `GET /user` → 403 "token is expired" in
-    // 13 seconds: every request of a page went out with the stale token, each
-    // was verified and refused, and only then did one refresh happen. A token
-    // whose `exp` has passed (or is about to) is renewed first — through the
-    // same single-flight refresh, so ten requests cause one renewal.
-    const current = getToken()
-    const isAuthRoute = /\/auth\/(login|signup|refresh|logout)(\/|\?|$)/.test(
-      String(config.url ?? ''),
-    )
-    if (current && !isAuthRoute && refreshSession && isExpiring(current)) {
-      await refreshOnce().catch(() => null)
-    }
+      // ⚠️ RENEW BEFORE SENDING, NOT AFTER THE 401.
+      //
+      // Supabase's auth log showed ~36 `GET /user` → 403 "token is expired" in
+      // 13 seconds: every request of a page went out with the stale token, each
+      // was verified and refused, and only then did one refresh happen. A token
+      // whose `exp` has passed (or is about to) is renewed first — through the
+      // same single-flight refresh, so ten requests cause one renewal.
+      const current = getToken()
+      const isAuthRoute = /\/auth\/(login|signup|refresh|logout)(\/|\?|$)/.test(
+        String(config.url ?? ''),
+      )
+      if (current && !isAuthRoute && refreshSession && isExpiring(current)) {
+        await refreshOnce().catch(() => null)
+      }
 
-    // ✅ فقط از Token Provider می‌خوانیم
-    const token = getToken()
-    // A retry after a refresh already carries the renewed token; the store may
-    // not have been written yet, and overwriting it here would resend the
-    // expired one and end the session for no reason.
-    const retried = (config as { _retriedAfterRefresh?: boolean })._retriedAfterRefresh === true
+      // ✅ فقط از Token Provider می‌خوانیم
+      const token = getToken()
+      // A retry after a refresh already carries the renewed token; the store may
+      // not have been written yet, and overwriting it here would resend the
+      // expired one and end the session for no reason.
+      const retried = (config as { _retriedAfterRefresh?: boolean })._retriedAfterRefresh === true
 
-    const keepRenewed = retried && Boolean(config.headers.Authorization)
+      const keepRenewed = retried && Boolean(config.headers.Authorization)
 
-    if (token && !keepRenewed) {
-      config.headers.Authorization = `Bearer ${token}`
-    } else {
-      devLog('[API Client] no token — unauthenticated request')
+      if (token && !keepRenewed) {
+        config.headers.Authorization = `Bearer ${token}`
+      } else {
+        devLog('[API Client] no token — unauthenticated request')
+      }
     }
 
     // ⚠️ WHICH BUSINESS — on every request.
@@ -330,56 +491,60 @@ apiClient.interceptors.response.use(
     if (axios.isCancel(error)) return Promise.reject(error)
 
     // ─── The Cloudflare edge failed → the direct address (edge-failover.ts) ─
-    const failover = edgeFailoverConfig()
-    const sent = error.config as (typeof error.config & { _edgeRetried?: boolean }) | undefined
-    if (
-      failover &&
-      sent &&
-      !sent._edgeRetried &&
-      normalizeBaseUrl(sent.baseURL) === failover.primary &&
-      isEdgeFailure({
-        hasResponse: Boolean(error.response),
-        status: error.response?.status,
-        contentType: String(error.response?.headers?.['content-type'] ?? ''),
-        code: error.code,
-      })
-    ) {
-      markEdgeDown()
-      if (canReplay(sent.method, sent.headers as Record<string, unknown> | undefined)) {
-        sent._edgeRetried = true
-        sent.baseURL = failover.fallback
-        return apiClient.request(sent)
+    if (currentEdition !== 'offline') {
+      const failover = edgeFailoverConfig()
+      const sent = error.config as (typeof error.config & { _edgeRetried?: boolean }) | undefined
+      if (
+        failover &&
+        sent &&
+        !sent._edgeRetried &&
+        normalizeBaseUrl(sent.baseURL) === failover.primary &&
+        isEdgeFailure({
+          hasResponse: Boolean(error.response),
+          status: error.response?.status,
+          contentType: String(error.response?.headers?.['content-type'] ?? ''),
+          code: error.code,
+        })
+      ) {
+        markEdgeDown()
+        if (canReplay(sent.method, sent.headers as Record<string, unknown> | undefined)) {
+          sent._edgeRetried = true
+          sent.baseURL = failover.fallback
+          return apiClient.request(sent)
+        }
       }
     }
 
-    const responseData = error.response?.data as any
+    const responseData = error.response?.data as Record<string, unknown> | undefined
 
-    // ─── Expired access token → renew once, retry once ───────────────────
-    const original = error.config as
-      (typeof error.config & { _retriedAfterRefresh?: boolean }) | undefined
-    if (
-      error.response?.status === 401 &&
-      original &&
-      !original._retriedAfterRefresh &&
-      // Only the credential endpoints themselves are excluded: a 401 from
-      // /auth/login is a wrong password, not an expired session. /auth/me IS
-      // renewed — it is what a reload after an hour calls first.
-      !/\/auth\/(login|signup|refresh|logout)(\/|\?|$)/.test(String(original.url ?? ''))
-    ) {
-      original._retriedAfterRefresh = true
-      return refreshOnce().then((token) => {
-        if (!token) {
-          onUnauthorized?.()
-          return Promise.reject({
-            message: responseData?.error || 'Session expired',
-            code: responseData?.code || 'UNAUTHORIZED',
-            status: 401,
-          } satisfies ApiError)
-        }
-        original.headers = original.headers ?? {}
-        ;(original.headers as Record<string, string>).Authorization = `Bearer ${token}`
-        return apiClient.request(original)
-      })
+    // ─── Expired access token → renew once, retry once (cloud edition only) ──
+    if (currentEdition !== 'offline') {
+      const original = error.config as
+        (typeof error.config & { _retriedAfterRefresh?: boolean }) | undefined
+      if (
+        error.response?.status === 401 &&
+        original &&
+        !original._retriedAfterRefresh &&
+        // Only the credential endpoints themselves are excluded: a 401 from
+        // /auth/login is a wrong password, not an expired session. /auth/me IS
+        // renewed — it is what a reload after an hour calls first.
+        !/\/auth\/(login|signup|refresh|logout)(\/|\?|$)/.test(String(original.url ?? ''))
+      ) {
+        original._retriedAfterRefresh = true
+        return refreshOnce().then((token) => {
+          if (!token) {
+            onUnauthorized?.()
+            return Promise.reject({
+              message: (responseData?.error as string | undefined) || 'Session expired',
+              code: (responseData?.code as string | undefined) || 'UNAUTHORIZED',
+              status: 401,
+            } satisfies ApiError)
+          }
+          original.headers = original.headers ?? {}
+          ;(original.headers as Record<string, string>).Authorization = `Bearer ${token}`
+          return apiClient.request(original)
+        })
+      }
     }
 
     const apiError: ApiError = {
@@ -389,25 +554,29 @@ apiClient.interceptors.response.use(
       // axios ("Request failed with status code 400") سقوط می‌کرد و
       // پیام واقعی سرور هیچ‌وقت به کاربر نمی‌رسید.
       message:
-        responseData?.error ||
-        responseData?.message ||
+        (typeof responseData?.error === 'string' ? responseData.error : undefined) ||
+        (typeof responseData?.message === 'string' ? responseData.message : undefined) ||
         error.message ||
         'An unexpected error occurred',
       // ⚠️ No response at all is not a server error. It used to arrive as
       // status 500 / UNKNOWN_ERROR — indistinguishable from the server failing
       // — so nothing could decide "the network is down, queue it".
-      code: responseData?.code || (error.response ? 'UNKNOWN_ERROR' : 'NETWORK_ERROR'),
+      code:
+        (typeof responseData?.code === 'string' ? responseData.code : undefined) ||
+        (error.response ? 'UNKNOWN_ERROR' : 'NETWORK_ERROR'),
       status: error.response?.status || 500,
-      details: responseData?.details,
+      ...(responseData?.details
+        ? { details: responseData.details as Record<string, string[]> }
+        : {}),
       ...(error.response
         ? { response: { status: error.response.status, data: responseData } }
         : {}),
       ...(responseData?.code === 'PLAN_LIMIT_REACHED'
         ? {
             limit: {
-              feature: responseData.feature,
-              limit: responseData.limit,
-              used: responseData.used,
+              feature: String(responseData.feature ?? ''),
+              limit: Number(responseData.limit ?? 0),
+              used: Number(responseData.used ?? 0),
             },
           }
         : {}),
@@ -417,18 +586,20 @@ apiClient.interceptors.response.use(
         : {}),
     }
 
-    // ✅ ۴۰۱ → فقط callback صدا می‌شود (بدون logout، بدون loop)
-    // ✅ بدون گیت پلتفرم — callback فقط وقتی ثبت شده باشد صدا می‌شود،
-    // پس روی سرور بی‌اثر و روی موبایل (که window دارد ولی مرورگر نیست) درست است.
-    if (apiError.status === 401) {
-      devLog('[API Client] 401 — triggering onUnauthorized callback')
-      onUnauthorized?.()
-    }
+    if (currentEdition !== 'offline') {
+      // ✅ ۴۰۱ → فقط callback صدا می‌شود (بدون logout، بدون loop)
+      // ✅ بدون گیت پلتفرم — callback فقط وقتی ثبت شده باشد صدا می‌شود،
+      // پس روی سرور بی‌اثر و روی موبایل (که window دارد ولی مرورگر نیست) درست است.
+      if (apiError.status === 401) {
+        devLog('[API Client] 401 — triggering onUnauthorized callback')
+        onUnauthorized?.()
+      }
 
-    // 402 alone is not enough: only the subscription lock raises the notice,
-    // so an unrelated 402 is never explained as "your subscription ended".
-    if (apiError.status === 402 && apiError.code === SUBSCRIPTION_EXPIRED_CODE) {
-      onSubscriptionExpired?.()
+      // 402 alone is not enough: only the subscription lock raises the notice,
+      // so an unrelated 402 is never explained as "your subscription ended".
+      if (apiError.status === 402 && apiError.code === SUBSCRIPTION_EXPIRED_CODE) {
+        onSubscriptionExpired?.()
+      }
     }
 
     return Promise.reject(apiError)

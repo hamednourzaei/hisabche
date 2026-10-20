@@ -183,14 +183,7 @@ describe('nothing «بعد» needs went with «قبل»', () => {
     ],
     [
       'governance/containers/governance-hub-container.tsx',
-      [
-        '<GovernanceOverview',
-        '<WorkspaceContainer />',
-        '<PermissionsContainer />',
-        '<ApprovalsContainer />',
-        '<GovernanceContainer />',
-        '<AuditContainer />',
-      ],
+      ['<ApprovalsContainer />', '<PermissionsContainer />'],
     ],
     ['activity/ActivitiesPage.tsx', ['<HubTabs', '<SegmentedControl', '<AuditContainer />']],
     [

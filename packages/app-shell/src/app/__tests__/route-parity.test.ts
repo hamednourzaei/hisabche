@@ -75,6 +75,24 @@ describe('the shared UI routes to every page the product has', () => {
     expect(webRoutes.length).toBeGreaterThan(25)
     expect(shellRoutes.size).toBeGreaterThan(30)
   })
+
+  it('⚠️ no address is declared twice', () => {
+    // `inventory` was declared in both the legacy block and the workspace
+    // block. react-router takes the first and ignores the second, so the app
+    // looked right — but a Set cannot see the duplicate, so every audit that
+    // used one reported the router clean. This test counts, it does not
+    // deduplicate: a second declaration is a second truth about where an
+    // address goes.
+    const declared = [...router.matchAll(/path:\s*'([^']+)'/g)].map((match) =>
+      canonical(match[1] ?? ''),
+    )
+    const counts = new Map<string, number>()
+    for (const route of declared) counts.set(route, (counts.get(route) ?? 0) + 1)
+
+    // Each path once. A second declaration is a second truth about where an
+    // address goes, and react-router silently keeps the first.
+    expect([...counts].filter(([, times]) => times > 1)).toEqual([])
+  })
 })
 
 describe('an address that was only a redirect still leads somewhere — on every platform', () => {
@@ -89,8 +107,14 @@ describe('an address that was only a redirect still leads somewhere — on every
   )
 
   it('the web declares them, and this test can see them', () => {
-    expect(moved).toHaveLength(27)
+    // 28 on 19 Oct 2026: the list grew with the legacy `inventory` address.
+    // The exact count stays pinned — it is the guard that proves this test can
+    // read the list at all — and the duplicate check below is what keeps the
+    // number honest rather than merely current.
+    expect(moved).toHaveLength(28)
     expect(moved).toContainEqual(['product-list', 'warehouse?tab=products'])
+    const froms = moved.map(([from]) => from)
+    expect(froms.filter((from, index) => froms.indexOf(from) !== index)).toEqual([])
   })
 
   it.each(moved)('/%s goes to /%s in the shell too', (from, to) => {

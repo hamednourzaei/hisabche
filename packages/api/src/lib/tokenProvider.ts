@@ -57,6 +57,19 @@ export function registerTokenGetter(fn: TokenGetter): void {
   }
 }
 
+let offlineTokenMode = false
+
+export function setOfflineTokenMode(offline: boolean): void {
+  offlineTokenMode = offline
+  if (offline) {
+    settle()
+  }
+}
+
+export function isOfflineTokenMode(): boolean {
+  return offlineTokenMode
+}
+
 /**
  * The session has been read out of storage (or there is none). Everything
  * waiting on `tokenReady` may now send its request.
@@ -66,6 +79,12 @@ export function registerTokenGetter(fn: TokenGetter): void {
  */
 export function markTokenReady(): void {
   if (isReady) return
+
+  // Offline edition does not use remote tokens — settle immediately
+  if (offlineTokenMode) {
+    settle()
+    return
+  }
 
   // ⚠️ A READY SIGNAL WITH NO GETTER IS WORSE THAN NO SIGNAL. It would release
   // the request interceptor to send with no token. Remember it instead, and

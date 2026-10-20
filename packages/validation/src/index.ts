@@ -15,6 +15,10 @@ export {
   optionalStringSchema,
   CURRENCY_CODES,
   currencyCodeSchema,
+  rateSchema,
+  rateInputSchema,
+  baseCurrencySchema,
+  baseCurrencyInputSchema,
   CURRENCY_PICK_ORDER,
   paymentMethodSchema,
   paymentMethodLabelSchema,
@@ -44,7 +48,12 @@ export {
   type UpdateProfileInput,
 } from './schemas/auth.schema'
 
-export { profitPerUnit, totalProfit, stockValue, purchaseValue } from './schemas/product.schema'
+export {
+  profitPerUnit,
+  totalProfit,
+  stockValueAtSellPrice,
+  purchaseValue,
+} from './schemas/product.schema'
 export { derivePartyRole, partyRoleLabelKey, type PartyRole } from './schemas/customer.schema'
 
 // ---------- Invoice ----------
@@ -115,6 +124,138 @@ export {
   type InvoiceSummaryInput,
   type MappedInvoiceItem,
 } from './schemas/invoice-grid'
+
+export { computeItemTotalRounded, roundInvoiceMoney, sumInvoiceLines } from './schemas/invoice-math'
+
+// ---------- Money primitives (the one implementation) ----------
+export { minor, round2, roundHalfAwayFromZero, sumRounded } from './schemas/money'
+
+// ---------- Stock and warehouses (the movement rule) ----------
+export {
+  checkAssign,
+  productWarehouseBreakdown,
+  stockEditWarehouse,
+  type AssignRefusal,
+  type ProductWarehouseBreakdown,
+  type StockEditRefusal,
+  type WarehouseRow,
+  type WarehouseStockRow,
+} from './schemas/stock'
+
+// ---------- Payments, allocation and party balances (the money rules) ----------
+export {
+  ageInvoices,
+  autoAllocate,
+  cashMovedOf,
+  daysBetween,
+  emptyAging,
+  majorToTillMinor,
+  moneyAccountRole,
+  monthlyActivity,
+  openInvoices,
+  outstandingOf,
+  partyBalance,
+  partyBalancesByCurrency,
+  paymentPosting,
+  rankPartyProducts,
+  runningLedger,
+  settlesInCurrency,
+  summarizeParty,
+  summarizePartyByCurrency,
+  tillAmountMinor,
+  tillMinorToMajor,
+  unallocatedOf,
+  validateAllocations,
+  recordPaymentSchema,
+  cancelPaymentSchema,
+  type RecordPaymentInput,
+  type CancelPaymentInput,
+  type AgingBuckets,
+  type AllocationRequest,
+  type AllocationRuleCode,
+  type AutoAllocation,
+  type CurrencyBalance,
+  type LedgerMovement,
+  type MonthlyActivity,
+  type OpenInvoice,
+  type PartyProduct,
+  type PartySummary,
+  type PartyType,
+  type PaymentDirection,
+  type PaymentPosting,
+  type SummaryInvoice,
+  type SummaryPayment,
+} from './schemas/payments.domain'
+
+// ---------- Stock costing: what a sale actually cost (FIFO / AVCO) ----------
+export {
+  averageUnitCost,
+  fifoOrder,
+  grossProfit,
+  lastKnownCost,
+  mayIssue,
+  onHand,
+  planConsumption,
+  roundMoney,
+  roundQty,
+  layersValue,
+  type ConsumptionPlan,
+  type ConsumptionStep,
+  type CostLayer,
+  type CostingMethod,
+  type NegativeStockPolicy,
+} from './schemas/costing.domain'
+
+// ---------- The profit report: revenue, cost, costStatus ----------
+export {
+  buildProfitReport,
+  invoiceMargins,
+  isCostDeterminate,
+  lineRevenues,
+  restateAtRates,
+  type CostStatus,
+  type InvoiceMargin,
+  type ProductProfitRow,
+  type ProfitConsumption,
+  type ProfitInvoice,
+  type ProfitLine,
+  type ProfitPayroll,
+  type ProfitReport,
+} from './schemas/profit-report.domain'
+
+// ---------- The ledger: what balances, what may be posted (rule 4) ----------
+export {
+  collapseLines,
+  dateOnly,
+  dayBefore,
+  entryNumberSequence,
+  entryNumberYear,
+  evaluatePeriodLock,
+  isBalanceSheetType,
+  isPeriodLocked,
+  naturalBalance,
+  naturalSide,
+  nextEntryNumber,
+  normaliseLines,
+  reverseLines,
+  sumMinorUnits,
+  toMinorUnits,
+  validateAccountPlacement,
+  validateEntryLines,
+  type AccountNode,
+  type AccountRootType,
+  type ChartRuleCode,
+  type DraftLine,
+  type LedgerAccountFacts,
+  type LedgerRuleCode,
+  type LedgerRuleViolation,
+  type LedgerPeriodLock,
+  type PeriodLockDecision,
+  type PeriodLockScope,
+} from './schemas/accounting.domain'
+
+export { inBooksCurrency, invoiceLedgerLines } from './schemas/invoice-posting.domain'
+export type { InvoicePostingAccounts } from './schemas/invoice-posting.domain'
 
 // ---------- Sync protocol (local-first push/pull) ----------
 export {
@@ -784,3 +925,54 @@ export {
   type UnlockAlgorithm,
   type UnlockSubmissionFields,
 } from './schemas/attendance-unlock'
+
+// ---------- The feature registry and the entitlement resolver ----------
+export {
+  ALL_PLANS,
+  ONLINE_PLANS,
+  FEATURE_REGISTRY,
+  FEATURE_KEYS,
+  isFeatureKey,
+  featureDefinition,
+  cheapestPlanFor,
+  cheapestPlanForEdition,
+  planEdition,
+  type FeatureDefinition,
+  type FeatureExecution,
+  type FeatureKey,
+  type FeaturePlan,
+  type PlanEdition,
+} from './schemas/feature-registry'
+export {
+  resolveEntitlement,
+  type EntitlementInput,
+  type EntitlementVerdict,
+  type WorkspaceEntitlementState,
+} from './schemas/entitlement-resolver'
+export {
+  countsTowardsInvoiceQuota,
+  mayCreateInvoice,
+  type InvoiceUsageDocument,
+} from './schemas/entitlement-usage'
+export {
+  offlineLicensePayloadSchema,
+  signedOfflineLicenseSchema,
+  deviceSeatSchema,
+  canonicalizeJson,
+  canonicalizeLicensePayload,
+  bytesToHex,
+  hexToBytes,
+  generateOfflineLicenseKeyPair,
+  signOfflineLicense,
+  verifyOfflineLicenseSignature,
+  verifyOfflineLicense,
+  type OfflineLicensePayload,
+  type SignedOfflineLicense,
+  type DeviceSeat,
+  type LicenseStatus,
+  type Tier1EvidenceType,
+  type Tier2SignalType,
+  type LicenseVerdict,
+  type VerifyLicenseOptions,
+  type VerifyLicenseResult,
+} from './schemas/offline-license'

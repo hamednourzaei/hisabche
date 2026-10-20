@@ -20,26 +20,53 @@ import { formatNumber } from '@hisabche/formatting'
 import { useManufacturingReport } from '@hisabche/api'
 
 import { Button } from '../button'
+import { useActionAvailability } from '../../../lib/capability'
+import { CloudRequiredNotice } from '../cloud-required-notice'
 
 type T = (key: string, fallback?: string) => string
 
-export function ManufacturingDashboardCard({
-  t,
-  locale,
-  from,
-  to,
-  onOpen,
-}: {
+interface ManufacturingDashboardCardProps {
   t: T
   locale: string
   /** ISO days — the dashboard's own range. */
   from: string
   to: string
   onOpen: () => void
-}) {
+}
+
+/**
+ * Online-only on the device edition: the notice, or the card. The card's own
+ * hooks live in `ManufacturingDashboardCardBody` so they never run after an
+ * early return (a hook after `return` hands one hook's state to another —
+ * «Cannot read properties of undefined (reading 'runs')» on the device).
+ */
+export function ManufacturingDashboardCard(props: ManufacturingDashboardCardProps) {
+  const { t } = props
+  const availability = useActionAvailability('dashboard.manufacturing_card')
+  if (availability.requiresOnline) {
+    return (
+      <section className="mx-auto mt-4 w-full max-w-7xl px-4">
+        <CloudRequiredNotice
+          variant="card"
+          title={t('manufacturing.dashboard.title', 'تولید در این بازه')}
+        />
+      </section>
+    )
+  }
+
+  return <ManufacturingDashboardCardBody {...props} />
+}
+
+function ManufacturingDashboardCardBody({
+  t,
+  locale,
+  from,
+  to,
+  onOpen,
+}: ManufacturingDashboardCardProps) {
   const report = useManufacturingReport({ from, to })
   const data = report.data
-  if (!data || data.totals.runs === 0) return null
+  if (!data?.totals || data.totals.runs === 0) return null
 
   const money = (value: number) => formatNumber(value, locale, 4)
   const mostUsed = data.materials[0] ?? null

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { AdminHeader } from '@/components/admin-shell/admin-header'
 import { AdminSidebar } from '@/components/admin-shell/admin-sidebar'
+import { CommandPalette } from '@/components/admin-shell/command-palette'
 import { localeOf } from '@/components/admin-shell/admin-nav'
 import { useAdminTheme } from '@/components/admin-shell/use-admin-theme'
 import { useAdminSession } from '@/hooks/use-admin-session'
@@ -79,6 +80,7 @@ export default function AdminDashboardLayout({ children }: { children: ReactNode
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <AdminHeader pathname={pathname} onOpenMenu={() => setMenuOpen(true)} />
+        <CommandPalette />
         <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
           <div className="mx-auto w-full max-w-[1400px]">{children}</div>
         </main>

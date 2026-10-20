@@ -349,6 +349,208 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     mechanisms: ['last-write-wins'],
     evidence: [{ file: `${SVC}/plan-limits.service.ts`, text: 'saveWorkspaceOverride' }],
   },
+  {
+    routeFile: 'admin-security.routes.ts',
+    route: 'POST /api/admin/accounts',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-security.service.ts`, text: 'upsertAdminAccount' }],
+  },
+  {
+    routeFile: 'admin-security.routes.ts',
+    route: 'POST /api/admin/sessions/:userId/revoke',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-security.service.ts`, text: 'revokeAdminSession' }],
+  },
+  {
+    routeFile: 'admin-security.routes.ts',
+    route: 'POST /api/admin/security/step-up',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-security.service.ts`, text: 'logSecurityEvent' }],
+  },
+  {
+    routeFile: 'admin-customers.routes.ts',
+    route: 'POST /api/admin/users/:id/action',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-customers.service.ts`, text: 'manageUser' }],
+  },
+  {
+    routeFile: 'admin-customers.routes.ts',
+    route: 'POST /api/admin/workspaces/:id/support-sessions',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-customers.service.ts`, text: 'createSupportSession' }],
+  },
+  {
+    routeFile: 'admin-customers.routes.ts',
+    route: 'POST /api/admin/workspaces/:id/notes',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-customers.service.ts`, text: 'addNote' }],
+  },
+  {
+    routeFile: 'admin-customers.routes.ts',
+    route: 'POST /api/admin/data-requests',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-customers.service.ts`, text: 'createDataRequest' }],
+  },
+  {
+    routeFile: 'admin-billing.routes.ts',
+    route: 'POST /api/admin/billing/prices',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-billing.service.ts`, text: 'setPlanPrice' }],
+  },
+  {
+    routeFile: 'admin-billing.routes.ts',
+    route: 'POST /api/admin/workspaces/:id/billing-ledger',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/admin/admin-billing.service.ts`, text: 'recordLedgerEntry' }],
+  },
+  {
+    routeFile: 'admin-billing.routes.ts',
+    route: 'POST /api/admin/billing/action-requests',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-billing.service.ts`, text: 'proposeActionRequest' }],
+  },
+  {
+    routeFile: 'admin-billing.routes.ts',
+    route: 'POST /api/admin/billing/action-requests/:id/decide',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/admin/admin-billing.service.ts`, text: 'decideActionRequest' }],
+  },
+  {
+    routeFile: 'admin-offline.routes.ts',
+    route: 'POST /api/admin/offline/licences/:id/revoke',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/offline-license.service.ts`, text: 'revokeLicense' }],
+  },
+  {
+    routeFile: 'admin-offline.routes.ts',
+    route: 'POST /api/admin/offline/devices/:id/release',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/offline-license.service.ts`, text: 'releaseDevice' }],
+  },
+  {
+    routeFile: 'admin-offline.routes.ts',
+    route: 'POST /api/admin/offline/bans/:id/lift',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/offline-license.service.ts`, text: 'unbanLicense' }],
+  },
+  {
+    routeFile: 'admin-offline.routes.ts',
+    route: 'POST /api/admin/offline/reviews/:id/decide',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/offline-license.service.ts`, text: 'reportTier1Violation' }],
+  },
+  {
+    routeFile: 'admin-ops.routes.ts',
+    route: 'POST /api/admin/ops/flags',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-ops.service.ts`, text: 'upsertFeatureFlag' }],
+  },
+  {
+    routeFile: 'admin-ops.routes.ts',
+    route: 'POST /api/admin/ops/jobs/:id/retry',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-ops.service.ts`, text: 'retryJob' }],
+  },
+  {
+    routeFile: 'admin-ops.routes.ts',
+    route: 'POST /api/admin/ops/announcements',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-ops.service.ts`, text: 'createAnnouncement' }],
+  },
+  {
+    routeFile: 'admin-ops.routes.ts',
+    route: 'POST /api/admin/ops/export-csv',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-security.service.ts`, text: 'logSecurityEvent' }],
+  },
+  {
+    routeFile: 'billing.routes.ts',
+    route: 'POST /api/billing/offline-license',
+    mechanisms: ['check-then-write'],
+    evidence: [
+      {
+        file: `${SVC}/offline-license.service.ts`,
+        text: "from('offline_licenses')",
+      },
+    ],
+  },
+  {
+    routeFile: 'billing.routes.ts',
+    route: 'POST /api/billing/offline-license/:licenseId/revoke',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      {
+        file: `${SVC}/offline-license.service.ts`,
+        text: "from('offline_licenses')",
+      },
+    ],
+  },
+  {
+    routeFile: 'billing.routes.ts',
+    route: 'POST /api/billing/devices/activate',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      {
+        file: `${SVC}/offline-license.service.ts`,
+        text: "from('devices')",
+      },
+    ],
+  },
+  {
+    routeFile: 'billing.routes.ts',
+    route: 'POST /api/billing/devices/:deviceId/release',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      {
+        file: `${SVC}/offline-license.service.ts`,
+        text: "from('devices')",
+      },
+    ],
+  },
+  {
+    routeFile: 'billing.routes.ts',
+    route: 'POST /api/billing/offline-license/activate-seat',
+    mechanisms: ['check-then-write'],
+    evidence: [
+      {
+        file: `${SVC}/offline-license.service.ts`,
+        text: 'activateSeat(',
+      },
+    ],
+  },
+  {
+    routeFile: 'billing.routes.ts',
+    route: 'POST /api/billing/offline-license/connect',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      {
+        file: `${SVC}/offline-license.service.ts`,
+        text: 'connectDevice(',
+      },
+    ],
+  },
+  {
+    routeFile: 'billing.routes.ts',
+    route: 'POST /api/billing/offline-license/tier1-report',
+    mechanisms: ['check-then-write'],
+    evidence: [
+      {
+        file: `${SVC}/offline-license.service.ts`,
+        text: 'reportTier2Signal(',
+      },
+    ],
+  },
+  {
+    routeFile: 'billing.routes.ts',
+    route: 'POST /api/billing/offline-license/tier2-report',
+    mechanisms: ['check-then-write'],
+    evidence: [
+      {
+        file: `${SVC}/offline-license.service.ts`,
+        text: 'reportTier2Signal(',
+      },
+    ],
+  },
 
   // ─── Warehouses ──────────────────────────────────────────────────────────
   {
@@ -656,6 +858,55 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
       {
         file: `${SVC}/activity.service.ts`,
         text: '.delete()',
+      },
+    ],
+  },
+  // ─── Cloud Migration ──────────────────────────────────────────────────
+  {
+    routeFile: 'cloud-migration.routes.ts',
+    route: 'POST /api/cloud-migration/jobs',
+    mechanisms: ['check-then-write'],
+    evidence: [
+      {
+        file: `${SVC}/cloud-migration/cloud-migration.service.ts`,
+        text: 'MIGRATION_TARGET_WORKSPACE_NOT_EMPTY',
+      },
+    ],
+  },
+  {
+    routeFile: 'cloud-migration.routes.ts',
+    route: 'POST /api/cloud-migration/jobs/:id/chunk',
+    mechanisms: ['lease', 'idempotency-key'],
+    evidence: [
+      {
+        file: `${SVC}/cloud-migration/cloud-migration.service.ts`,
+        text: 'claimJob',
+      },
+      {
+        file: `${SVC}/cloud-migration/cloud-migration.service.ts`,
+        text: 'makeKey',
+      },
+    ],
+  },
+  {
+    routeFile: 'cloud-migration.routes.ts',
+    route: 'POST /api/cloud-migration/jobs/:id/reconcile',
+    mechanisms: ['lease'],
+    evidence: [
+      {
+        file: `${SVC}/cloud-migration/cloud-migration.service.ts`,
+        text: 'claimJob',
+      },
+    ],
+  },
+  {
+    routeFile: 'cloud-migration.routes.ts',
+    route: 'POST /api/cloud-migration/jobs/:id/confirm',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      {
+        file: 'docs/cloud-migration-01-migration.sql',
+        text: 'fn_cloud_migration_jobs_status_guard',
       },
     ],
   },

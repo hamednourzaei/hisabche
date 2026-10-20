@@ -140,7 +140,6 @@ describe('every hub, with one word', () => {
     ['customers/containers/customers-hub-container.tsx', 2],
     ['customers/customer-detail-view.tsx', 1],
     ['team-and-payroll/containers/team-and-payroll-container.tsx', 2],
-    ['governance/containers/governance-hub-container.tsx', 1],
     ['manufacturing/manufacturing-view.tsx', 1],
     ['analysis/analysis-container.tsx', 1],
     ['activity/ActivitiesPage.tsx', 1],

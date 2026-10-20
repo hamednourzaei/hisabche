@@ -10,7 +10,7 @@ import { BillingService, PLANS, PLAN_PRICING } from '../services/billing.service
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
-import { Plan } from '@hisabche/validation'
+import { Plan, type Tier1EvidenceType, type Tier2SignalType } from '@hisabche/validation'
 import { BaseError } from '../errors/base.error'
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
 import { subscriptionUpgradeService } from '../services/subscription-upgrade.service'
@@ -22,6 +22,16 @@ import {
   saveWorkspaceOverride,
   type LimitPatch,
 } from '../services/plan-limits.service'
+import {
+  offlineLicenseService,
+  LicenseSigningNotConfiguredError,
+  OfflinePlanRequiredError,
+  LicenseSeatsFullError,
+  LicenseTransfersExceededError,
+  LicenseBannedError,
+  LicenseRevokedError,
+} from '../services/offline-license.service'
+import { supabase } from '../db'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -408,6 +418,472 @@ export async function billingRoutes(fastify: FastifyInstance) {
         return reply.send({ success: true })
       } catch (err) {
         return limitsFail(reply, err)
+      }
+    },
+  )
+
+  // ─── POST /api/billing/offline-license ───────────────────────
+  fastify.post(
+    '/api/billing/offline-license',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const workspaceId = request.tenancy.workspaceId
+      const body = (request.body ?? {}) as {
+        deviceId?: string
+        device_id?: string
+        label?: string
+        features?: string[]
+        periodDays?: number
+      }
+      const deviceId = body.deviceId ?? body.device_id
+      try {
+        const license = await offlineLicenseService.issueOfflineLicense({
+          workspaceId,
+          accountId: request.userId,
+          deviceId,
+          label: body.label,
+          features: body.features,
+          periodDays: body.periodDays,
+        })
+        return reply.code(201).send({ license })
+      } catch (err: unknown) {
+        if (err instanceof LicenseSigningNotConfiguredError) {
+          return reply
+            .code(err.statusCode)
+            .send({ error: err.code, code: err.code, message: err.message })
+        }
+        if (err instanceof OfflinePlanRequiredError) {
+          return reply
+            .code(err.statusCode)
+            .send({ error: err.code, code: err.code, message: err.message })
+        }
+        if (err instanceof BaseError) {
+          return reply
+            .code(err.statusCode)
+            .send({ error: err.name, code: err.name, message: err.message })
+        }
+        return reply
+          .code(500)
+          .send({
+            error: 'INTERNAL_ERROR',
+            code: 'INTERNAL_ERROR',
+            message: 'Failed to issue licence',
+          })
+      }
+    },
+  )
+
+  // ─── GET /api/billing/offline-license ────────────────────────
+  fastify.get(
+    '/api/billing/offline-license',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest) => {
+      const workspaceId = request.tenancy.workspaceId
+      const licenses = await offlineLicenseService.listLicenses(workspaceId)
+      return { licenses }
+    },
+  )
+
+  // ─── POST /api/billing/offline-license/:licenseId/revoke ───────
+  fastify.post(
+    '/api/billing/offline-license/:licenseId/revoke',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const workspaceId = request.tenancy.workspaceId
+      const { licenseId } = request.params as { licenseId: string }
+      if (!licenseId || !/^[0-9a-f-]{36}$/i.test(licenseId)) {
+        return reply.code(400).send({ error: 'INVALID_LICENSE_ID', code: 'INVALID_LICENSE_ID' })
+      }
+      const result = await offlineLicenseService.revokeLicense(workspaceId, licenseId)
+      return reply.send(result)
+    },
+  )
+
+  // ─── GET /api/billing/offline-license/revocations ─────────────
+  fastify.get(
+    '/api/billing/offline-license/revocations',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest) => {
+      const workspaceId = request.tenancy.workspaceId
+      const revocations = await offlineLicenseService.listRevocations(workspaceId)
+      return { revocations }
+    },
+  )
+
+  // ─── POST /api/billing/offline-license/activate-seat ──────────
+  fastify.post(
+    '/api/billing/offline-license/activate-seat',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const workspaceId = request.tenancy.workspaceId
+      const body = (request.body ?? {}) as {
+        licenseId?: string
+        seat?: string
+        stableId?: string
+        devicePublicKey?: string
+        label?: string
+        allowTransfer?: boolean
+      }
+
+      if (!body.licenseId || !/^[0-9a-f-]{36}$/i.test(body.licenseId)) {
+        return reply.code(400).send({ error: 'INVALID_LICENSE_ID', code: 'INVALID_LICENSE_ID' })
+      }
+      if (body.seat !== 'computer' && body.seat !== 'mobile') {
+        return reply
+          .code(400)
+          .send({
+            error: 'INVALID_SEAT',
+            code: 'INVALID_SEAT',
+            message: 'Seat must be computer or mobile',
+          })
+      }
+      if (!body.stableId || typeof body.stableId !== 'string') {
+        return reply.code(400).send({ error: 'INVALID_STABLE_ID', code: 'INVALID_STABLE_ID' })
+      }
+      if (!body.devicePublicKey || typeof body.devicePublicKey !== 'string') {
+        return reply.code(400).send({ error: 'INVALID_PUBLIC_KEY', code: 'INVALID_PUBLIC_KEY' })
+      }
+
+      // No override from a customer: the workspace OWNER is the customer, so
+      // «owner may override» let any shop lift its own 3-transfers-a-year limit.
+      // A broken device is handled by a Hisabche admin releasing the old seat
+      // (POST /api/admin/offline/devices/:id/release, RBAC + fresh TOTP).
+
+      try {
+        const result = await offlineLicenseService.activateSeat({
+          workspaceId,
+          licenseId: body.licenseId,
+          seat: body.seat,
+          stableId: body.stableId,
+          devicePublicKey: body.devicePublicKey,
+          label: body.label,
+          ipAddress: request.ip,
+          allowTransfer: body.allowTransfer,
+        })
+        return reply.send({ success: true, ...result })
+      } catch (err: unknown) {
+        if (
+          err instanceof LicenseSeatsFullError ||
+          err instanceof LicenseTransfersExceededError ||
+          err instanceof LicenseBannedError ||
+          err instanceof LicenseRevokedError
+        ) {
+          return reply.code(err.statusCode).send({
+            error: err.code,
+            code: err.code,
+            message: err.message,
+          })
+        }
+        if (err instanceof BaseError) {
+          return reply
+            .code(err.statusCode)
+            .send({ error: err.name, code: err.name, message: err.message })
+        }
+        return reply
+          .code(500)
+          .send({
+            error: 'INTERNAL_ERROR',
+            code: 'INTERNAL_ERROR',
+            message: 'Failed to activate seat',
+          })
+      }
+    },
+  )
+
+  // ─── POST /api/billing/offline-license/connect ────────────────
+  fastify.post(
+    '/api/billing/offline-license/connect',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const workspaceId = request.tenancy.workspaceId
+      const body = (request.body ?? {}) as {
+        licenseId?: string
+        deviceId?: string
+      }
+      if (!body.licenseId || !/^[0-9a-f-]{36}$/i.test(body.licenseId)) {
+        return reply.code(400).send({ error: 'INVALID_LICENSE_ID', code: 'INVALID_LICENSE_ID' })
+      }
+      if (!body.deviceId || !/^[0-9a-f-]{36}$/i.test(body.deviceId)) {
+        return reply.code(400).send({ error: 'INVALID_DEVICE_ID', code: 'INVALID_DEVICE_ID' })
+      }
+
+      try {
+        const result = await offlineLicenseService.connectDevice({
+          workspaceId,
+          licenseId: body.licenseId,
+          deviceId: body.deviceId,
+          ipAddress: request.ip,
+        })
+        return reply.send(result)
+      } catch (err: unknown) {
+        if (err instanceof BaseError) {
+          return reply
+            .code(err.statusCode)
+            .send({ error: err.name, code: err.name, message: err.message })
+        }
+        return reply
+          .code(500)
+          .send({
+            error: 'INTERNAL_ERROR',
+            code: 'INTERNAL_ERROR',
+            message: 'Failed to connect device',
+          })
+      }
+    },
+  )
+
+  // ─── POST /api/billing/offline-license/tier1-report ───────────
+  //
+  // ⚠️ A device's OWN report is a claim, not evidence. This route used to ban
+  // the licence on whatever `violation` the body named — so any member of a
+  // workspace could permanently ban that workspace's licence with one request,
+  // and a patched app could simply never call it. A tier-1 ban needs evidence
+  // the SERVER verified; a self-report goes to the admin review queue, where a
+  // person decides (BUG-138).
+  fastify.post(
+    '/api/billing/offline-license/tier1-report',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const workspaceId = request.tenancy.workspaceId
+      const body = (request.body ?? {}) as {
+        licenseId?: string
+        violation?: Tier1EvidenceType
+        evidence?: Record<string, unknown>
+        deviceSeat?: 'computer' | 'mobile'
+        stableId?: string
+      }
+      if (!body.licenseId || !/^[0-9a-f-]{36}$/i.test(body.licenseId)) {
+        return reply.code(400).send({ error: 'INVALID_LICENSE_ID', code: 'INVALID_LICENSE_ID' })
+      }
+      const reportable: Tier1EvidenceType[] = [
+        'unregistered_device_key',
+        'invalid_signature',
+        'seat_key_collision',
+        'tampered_app_integrity',
+      ]
+      if (!body.violation || !reportable.includes(body.violation)) {
+        return reply
+          .code(400)
+          .send({ error: 'INVALID_VIOLATION_TYPE', code: 'INVALID_VIOLATION_TYPE' })
+      }
+
+      try {
+        const result = await offlineLicenseService.reportTier2Signal({
+          workspaceId,
+          licenseId: body.licenseId,
+          signalType: 'device_self_report',
+          details: { claimedViolation: body.violation, ...(body.evidence ?? {}) },
+          deviceSeat: body.deviceSeat,
+          stableId: body.stableId,
+          ipAddress: request.ip,
+        })
+        return reply.send(result)
+      } catch (err: unknown) {
+        if (err instanceof BaseError) {
+          return reply
+            .code(err.statusCode)
+            .send({ error: err.name, code: err.name, message: err.message })
+        }
+        return reply
+          .code(500)
+          .send({
+            error: 'INTERNAL_ERROR',
+            code: 'INTERNAL_ERROR',
+            message: 'Failed to record the report',
+          })
+      }
+    },
+  )
+
+  // ─── POST /api/billing/offline-license/tier2-report ───────────
+  fastify.post(
+    '/api/billing/offline-license/tier2-report',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const workspaceId = request.tenancy.workspaceId
+      const body = (request.body ?? {}) as {
+        licenseId?: string
+        signalType?: Tier2SignalType
+        details?: Record<string, unknown>
+        deviceSeat?: 'computer' | 'mobile'
+        stableId?: string
+      }
+
+      if (!body.licenseId || !/^[0-9a-f-]{36}$/i.test(body.licenseId)) {
+        return reply.code(400).send({ error: 'INVALID_LICENSE_ID', code: 'INVALID_LICENSE_ID' })
+      }
+      const validSignals: Tier2SignalType[] = [
+        'two_business_identities',
+        'parallel_invoice_sequences',
+        'disparate_cities',
+      ]
+      if (!body.signalType || !validSignals.includes(body.signalType)) {
+        return reply.code(400).send({ error: 'INVALID_SIGNAL_TYPE', code: 'INVALID_SIGNAL_TYPE' })
+      }
+
+      try {
+        const result = await offlineLicenseService.reportTier2Signal({
+          workspaceId,
+          licenseId: body.licenseId,
+          signalType: body.signalType,
+          details: body.details ?? {},
+          deviceSeat: body.deviceSeat,
+          stableId: body.stableId,
+          ipAddress: request.ip,
+        })
+        return reply.send(result)
+      } catch (err: unknown) {
+        if (err instanceof BaseError) {
+          return reply
+            .code(err.statusCode)
+            .send({ error: err.name, code: err.name, message: err.message })
+        }
+        return reply
+          .code(500)
+          .send({
+            error: 'INTERNAL_ERROR',
+            code: 'INTERNAL_ERROR',
+            message: 'Failed to report tier-2 signal',
+          })
+      }
+    },
+  )
+
+  // ─── GET /api/billing/offline-license/logs ────────────────────
+  fastify.get(
+    '/api/billing/offline-license/logs',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest) => {
+      const workspaceId = request.tenancy.workspaceId
+      const query = (request.query ?? {}) as { licenseId?: string }
+      const logs = await offlineLicenseService.listLogs(workspaceId, query.licenseId)
+      return { logs }
+    },
+  )
+
+  // ─── GET /api/billing/offline-license/review-queue ────────────
+  fastify.get(
+    '/api/billing/offline-license/review-queue',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest) => {
+      const workspaceId = request.tenancy.workspaceId
+      const queue = await offlineLicenseService.listReviewQueue(workspaceId)
+      return { queue }
+    },
+  )
+
+  // ─── POST /api/billing/devices/activate ───────────────────────
+  fastify.post(
+    '/api/billing/devices/activate',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const workspaceId = request.tenancy.workspaceId
+      const body = (request.body ?? {}) as { deviceId?: string; device_id?: string; label?: string }
+      const deviceId = body.deviceId ?? body.device_id
+      if (!deviceId || !/^[0-9a-f-]{36}$/i.test(deviceId)) {
+        return reply.code(400).send({ error: 'INVALID_DEVICE_ID', code: 'INVALID_DEVICE_ID' })
+      }
+      const device = await offlineLicenseService.activateDevice(workspaceId, deviceId, body.label)
+      return reply.send({ device })
+    },
+  )
+
+  // ─── POST /api/billing/devices/:deviceId/release ──────────────
+  fastify.post(
+    '/api/billing/devices/:deviceId/release',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const workspaceId = request.tenancy.workspaceId
+      const { deviceId } = request.params as { deviceId: string }
+      if (!deviceId || !/^[0-9a-f-]{36}$/i.test(deviceId)) {
+        return reply.code(400).send({ error: 'INVALID_DEVICE_ID', code: 'INVALID_DEVICE_ID' })
+      }
+      const result = await offlineLicenseService.releaseDevice(workspaceId, deviceId)
+      return reply.send(result)
+    },
+  )
+
+  // ─── GET /api/billing/devices ─────────────────────────────────
+  fastify.get(
+    '/api/billing/devices',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest) => {
+      const workspaceId = request.tenancy.workspaceId
+      const devices = await offlineLicenseService.listDevices(workspaceId)
+      return { devices }
+    },
+  )
+
+  // ─── GET /api/billing/upgrade-credit ─────────────────────────
+  fastify.get(
+    '/api/billing/upgrade-credit',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest) => {
+      const workspaceId = request.tenancy.workspaceId
+      const { toPlan } = (request.query ?? {}) as { toPlan?: string }
+
+      const { data: sub } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .maybeSingle()
+
+      const now = new Date()
+      const currency = 'IRR'
+
+      const defaultOfflinePaid = 120_000_000 // 12,000,000 Toman in IRR
+      let amountPaid = defaultOfflinePaid
+      let periodStart = now
+      let periodEnd = new Date(now.getTime() + 365 * 24 * 3600 * 1000)
+
+      if (sub?.period_start && sub?.period_end) {
+        periodStart = new Date(sub.period_start)
+        periodEnd = new Date(sub.period_end)
+      }
+
+      const { data: lastPaid } = await supabase
+        .from('subscription_upgrade_requests')
+        .select('amount_minor, currency')
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (lastPaid?.amount_minor) {
+        amountPaid = lastPaid.amount_minor
+      }
+
+      const totalTermDays = Math.max(
+        1,
+        Math.round((periodEnd.getTime() - periodStart.getTime()) / (24 * 3600 * 1000)),
+      )
+      const unusedDays = Math.max(
+        0,
+        Math.round((periodEnd.getTime() - now.getTime()) / (24 * 3600 * 1000)),
+      )
+      const creditAmount = Math.min(
+        amountPaid,
+        Math.round((amountPaid * unusedDays) / totalTermDays),
+      )
+
+      const newPlanPrices: Record<string, number> = {
+        ONLINE_500: 300_000_000,
+        ONLINE_1000: 400_000_000,
+        ONLINE_1500: 450_000_000,
+        pro: 300_000_000,
+      }
+      const newPlanPrice = newPlanPrices[toPlan ?? 'ONLINE_500'] ?? 300_000_000
+      const totalDue = Math.max(0, newPlanPrice - creditAmount)
+
+      return {
+        amountPaid,
+        currency,
+        termDays: totalTermDays,
+        unusedDays,
+        creditAmount,
+        newPlanPrice,
+        totalDue,
       }
     },
   )

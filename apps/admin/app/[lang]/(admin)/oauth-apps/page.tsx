@@ -1,8 +1,10 @@
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+import { redirect } from 'next/navigation'
 
-import { OAuthAppsClient } from './oauth-apps-client'
-
-export default function AdminOAuthAppsPage() {
-  return <OAuthAppsClient />
+export default async function AdminOAuthAppsPage({
+  params,
+}: {
+  params: Promise<{ lang: string }>
+}) {
+  const { lang } = await params
+  redirect(`/${lang}/product?tab=oauth`)
 }

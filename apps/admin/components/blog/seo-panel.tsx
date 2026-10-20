@@ -14,8 +14,7 @@ import {
   type BlogLocale,
 } from '@hisabche/validation'
 
-import { Input } from '@/components/ui'
-import { Panel } from '@/components/admin-shell/admin-ui'
+import { Card, Input } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 export interface SeoFields {
@@ -114,7 +113,7 @@ export function SeoPanel({
   }
 
   return (
-    <Panel className="space-y-4 p-4" as="section">
+    <Card className="space-y-4 p-4">
       <h2 className="text-sm font-semibold">{t('admin.blog.seo.title')}</h2>
 
       <div
@@ -173,6 +172,6 @@ export function SeoPanel({
         </ul>
         <p className="mt-2 text-[11px] text-muted-foreground">{t('admin.blog.seo.guidanceOnly')}</p>
       </div>
-    </Panel>
+    </Card>
   )
 }

@@ -33,6 +33,19 @@ const source = (path: string) =>
     .filter((line) => !line.trim().startsWith('//'))
     .join('\n')
 
+/**
+ * ⚠️ The rule moved to the shared package in Phase 2 of the offline edition, so
+ * the assertion follows it. It is the SAME rule: the backend file re-exports
+ * `packages/validation/src/schemas/invoice-posting.domain.ts`, and a copy that
+ * stayed behind would be a second formula.
+ */
+const shared = (path: string) =>
+  readFileSync(join(__dirname, '..', '..', '..', 'packages', 'validation', 'src', path), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('//'))
+    .join('\n')
+
 const move = (
   kind: LedgerMovement['kind'],
   amount: number,
@@ -151,7 +164,7 @@ describe('CHARACTERISATION · DEFECT-CUR-02 — the ledger books a foreign invoi
     // posts the same ones); the CONVERTED total is what the service hands it.
     expect(service.slice(at, at + 2500)).toContain('invoiceLedgerLines({')
     expect(service.slice(at, at + 2500)).toContain('      total,\n')
-    expect(source('services/accounting/invoice-posting.domain.ts')).toContain(
+    expect(shared('schemas/invoice-posting.domain.ts')).toContain(
       '{ accountId: accounts.receivable!, debit: total, credit: 0 }',
     )
   })

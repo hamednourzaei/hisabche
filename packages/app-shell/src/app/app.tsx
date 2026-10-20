@@ -190,7 +190,6 @@ const router = createHashRouter([
       { path: 'accounting-workspace', element: <Navigate to="/accounting" replace /> },
       { path: 'sales-workspace', element: <Navigate to="/invoices" replace /> },
       { path: 'inventory-workspace', element: <Navigate to="/warehouse" replace /> },
-      { path: 'inventory', element: <Navigate to="/warehouse" replace /> },
       { path: 'people-workspace', element: <Navigate to="/team-and-payroll" replace /> },
       { path: 'workflow', element: <Navigate to="/approvals?tab=workflows" replace /> },
 

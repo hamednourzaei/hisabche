@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { getAppEdition } from '@hisabche/api'
 
 import { bridge } from '@/shared/lib/bridge'
 import { runSync, startSyncStream } from './sync-engine'
@@ -13,10 +14,12 @@ const QUEUE_KEY = ['desktop', 'sync', 'queue'] as const
 const BACKGROUND_INTERVAL_MS = 60_000
 
 export function useSyncQueue() {
+  const isOfflineEdition = typeof getAppEdition === 'function' && getAppEdition() === 'offline'
   return useQuery<QueueEntry[]>({
     queryKey: QUEUE_KEY,
     queryFn: async () => (await bridge()?.db.queue()) ?? [],
-    refetchInterval: 5_000,
+    enabled: !isOfflineEdition,
+    refetchInterval: isOfflineEdition ? false : 5_000,
   })
 }
 
@@ -29,10 +32,11 @@ export interface SyncStatus {
 }
 
 export function useSyncStatus(): SyncStatus {
+  const isOfflineEdition = typeof getAppEdition === 'function' && getAppEdition() === 'offline'
   const queryClient = useQueryClient()
   const queue = useSyncQueue()
   const [isSyncing, setIsSyncing] = useState(false)
-  const [isOffline, setIsOffline] = useState(() => !navigator.onLine)
+  const [isOffline, setIsOffline] = useState(() => isOfflineEdition || !navigator.onLine)
 
   useEffect(() => {
     const online = () => setIsOffline(false)
@@ -80,6 +84,7 @@ export function useBackgroundSync(workspaceId: string | null): void {
   const queryClient = useQueryClient()
 
   useEffect(() => {
+    if (typeof getAppEdition === 'function' && getAppEdition() === 'offline') return
     const trigger = () => void runSync(queryClient)
 
     trigger()
@@ -119,7 +124,8 @@ export function useWorkspaceCache(workspaceId: string | null): {
   const [blocked, setBlocked] = useState(0)
 
   useEffect(() => {
-    if (!workspaceId) return
+    if (!workspaceId || (typeof getAppEdition === 'function' && getAppEdition() === 'offline'))
+      return
 
     let cancelled = false
 

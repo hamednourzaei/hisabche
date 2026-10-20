@@ -1,8 +1,6 @@
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+import { redirect } from 'next/navigation'
 
-import { BlogAdminClient } from '@/components/blog/blog-admin-client'
-
-export default function AdminBlogPage() {
-  return <BlogAdminClient />
+export default async function AdminBlogPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params
+  redirect(`/${lang}/content?tab=blog`)
 }

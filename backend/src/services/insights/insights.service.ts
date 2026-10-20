@@ -23,7 +23,7 @@ import {
   detectAnomalies,
   explainChange,
   grossMargin,
-  grossProfit,
+  periodGrossProfit,
   knownGrossMargin,
   knownGrossProfit,
   round2,
@@ -109,16 +109,22 @@ export class InsightsService {
 
     return buildExplanation({
       headlineKey:
-        grossProfit(now) >= grossProfit(before) ? 'insights.profit.up' : 'insights.profit.down',
+        periodGrossProfit(now) >= periodGrossProfit(before)
+          ? 'insights.profit.up'
+          : 'insights.profit.down',
       figures: {
-        currentProfit: grossProfit(now),
-        previousProfit: grossProfit(before),
+        currentProfit: periodGrossProfit(now),
+        previousProfit: periodGrossProfit(before),
         currentRevenue: now.revenue,
         previousRevenue: before.revenue,
         currentMarginPercent: grossMargin(now),
         previousMarginPercent: grossMargin(before),
-        change: compare('grossProfit', grossProfit(before), grossProfit(now)).absolute,
-        changePercent: compare('grossProfit', grossProfit(before), grossProfit(now)).percent,
+        // ⚠️ 'grossProfit' here is the METRIC NAME in the payload, not the
+        // function renamed above — it is what the screen's i18n key is built
+        // from, so it does not move with the identifier.
+        change: compare('grossProfit', periodGrossProfit(before), periodGrossProfit(now)).absolute,
+        changePercent: compare('grossProfit', periodGrossProfit(before), periodGrossProfit(now))
+          .percent,
         // 1 when either period sold goods with no recorded cost: the profits
         // above are then overstated and the comparison is not a finding.
         costIncomplete: now.costKnown === false || before.costKnown === false ? 1 : 0,

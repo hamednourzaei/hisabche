@@ -4,39 +4,29 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { usePathname, useRouter } from 'next/navigation'
 import { Info, Search } from 'lucide-react'
-import { Button, Input } from '@/components/ui'
-import {
-  EmptyState,
-  ErrorState,
-  ListSkeleton,
-  Pagination,
-  Panel,
-} from '@/components/admin-shell/admin-ui'
+import { Button, Card, EmptyState, Input, PaginationBar, Skeleton } from '@/components/ui'
+import { ErrorState } from '@/components/admin-shell/admin-ui'
 import { useAdminSession } from '@/hooks/use-admin-session'
 import { useAdminUsers } from '@/hooks/use-admin-users'
+import { useManageUser } from '@/hooks/use-admin-customers'
+import { StepUpDialog } from '@/components/admin-shell/step-up-dialog'
 
 const PAGE_SIZE = 20
 
-/**
- * The platform user directory.
- *
- * Read-only by design. This backend exposes no user mutation an admin console
- * may perform: there is no endpoint to create, suspend or delete an account,
- * and the membership capability explicitly never touches `auth.users`. So this
- * screen lists and it searches — it offers no action it cannot carry out.
- *
- * Membership editing lives on the workspace screen, which is where the
- * endpoints actually are.
- */
 export function UsersClient() {
   const t = useTranslations()
   const router = useRouter()
   const pathname = usePathname()
   const { loading: authLoading, error: authError } = useAdminSession()
+  const { mutateAsync: manageUser } = useManageUser()
 
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
   const [page, setPage] = useState(0)
+  const [targetAction, setTargetAction] = useState<{
+    userId: string
+    action: 'suspend' | 'reactivate' | 'revoke_sessions' | 'reset_mfa' | 'force_signout'
+  } | null>(null)
 
   const localePrefix = pathname.split('/').filter(Boolean)[0] || 'fa'
 
@@ -53,6 +43,17 @@ export function UsersClient() {
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
   })
+
+  const handleStepUpConfirm = async ({ stepUpTimestamp }: { stepUpTimestamp: string }) => {
+    if (!targetAction) return
+    await manageUser({
+      userId: targetAction.userId,
+      action: targetAction.action,
+      stepUpTimestamp,
+    })
+    setTargetAction(null)
+    void refetch()
+  }
 
   if (authError) {
     return (
@@ -71,9 +72,11 @@ export function UsersClient() {
   const users = data?.users ?? []
   const total = data?.total ?? 0
 
+  const from = total === 0 ? 0 : page * PAGE_SIZE + 1
+  const to = Math.min((page + 1) * PAGE_SIZE, total)
+
   return (
     <div className="space-y-6">
-      {/* The one thing an operator must know before typing. See the hook. */}
       <div className="flex items-start gap-3 rounded-2xl border border-border bg-accent/50 p-4 text-sm">
         <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-400" aria-hidden="true" />
         <p className="min-w-0 text-muted-foreground">{t('admin.users.searchScopeNotice')}</p>
@@ -94,7 +97,13 @@ export function UsersClient() {
         />
       </div>
 
-      {(authLoading || isLoading) && <ListSkeleton rows={6} height="h-16" />}
+      {(authLoading || isLoading) && (
+        <div className="space-y-3">
+          {Array.from({ length: 6 }, (_, index) => (
+            <Skeleton key={index} className="h-16 w-full rounded-2xl" />
+          ))}
+        </div>
+      )}
 
       {isError && !isLoading && (
         <ErrorState message={t('admin.users.loadError')} onRetry={() => void refetch()} />
@@ -105,29 +114,26 @@ export function UsersClient() {
           title={
             debounced ? t('admin.empty.noResults', { search: debounced }) : t('admin.users.empty')
           }
-          {...(debounced ? { hint: t('admin.users.searchScopeNotice') } : {})}
+          description={debounced ? t('admin.users.searchScopeNotice') : undefined}
         />
       )}
 
       {users.length > 0 && (
-        <Panel className="overflow-hidden">
-          {/* Desktop: a real table with a header row.
-              Mobile: the same <li> content reflowed to a card. The table
-              header is hidden below `sm` rather than horizontally scrolled,
-              because a two-column identity list has nothing worth scrolling. */}
+        <Card className="overflow-hidden">
           <div
-            className="hidden grid-cols-[1fr_1fr] gap-4 border-b border-border bg-accent/40 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:grid"
+            className="hidden grid-cols-[1.2fr_1.2fr_auto] gap-4 border-b border-border bg-accent/40 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:grid"
             aria-hidden="true"
           >
             <span>{t('admin.member.name')}</span>
             <span>{t('admin.member.email')}</span>
+            <span className="text-end">{t('admin.customers.actions')}</span>
           </div>
 
           <ul className="divide-y divide-border">
             {users.map((user) => (
               <li
                 key={user.id}
-                className="flex flex-col gap-1 px-5 py-4 sm:grid sm:grid-cols-[1fr_1fr] sm:items-center sm:gap-4"
+                className="flex flex-col gap-2 px-5 py-4 sm:grid sm:grid-cols-[1.2fr_1.2fr_auto] sm:items-center sm:gap-4"
               >
                 <span className="flex min-w-0 items-center gap-3">
                   <span
@@ -137,32 +143,67 @@ export function UsersClient() {
                     {initialOf(user.full_name ?? user.email)}
                   </span>
                   <span className="min-w-0 truncate font-medium">
-                    {/* No placeholder name and no truncated uuid: a user with
-                        no profile row is a real state, and saying so is more
-                        useful than inventing an identity. */}
                     {user.full_name ?? t('admin.member.noProfile')}
                   </span>
                 </span>
-                {/* `dir="ltr"` + `text-start`: an email is Latin text and must
-                    not be bidi-reordered inside a Persian page. */}
                 <span
                   dir="ltr"
                   className="min-w-0 truncate text-start text-sm text-muted-foreground"
                 >
                   {user.email ?? '—'}
                 </span>
+
+                <div className="flex items-center gap-1.5 justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setTargetAction({ userId: user.id, action: 'revoke_sessions' })}
+                  >
+                    {t('admin.customers.revokeSessions')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setTargetAction({ userId: user.id, action: 'reset_mfa' })}
+                  >
+                    {t('admin.customers.resetMfa')}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setTargetAction({ userId: user.id, action: 'suspend' })}
+                  >
+                    {t('admin.customers.suspendUser')}
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
-        </Panel>
+        </Card>
       )}
 
-      <Pagination
+      {/* StepUp Dialog for User Actions */}
+      <StepUpDialog
+        open={Boolean(targetAction)}
+        onOpenChange={(open) => !open && setTargetAction(null)}
+        title={t('admin.customers.userActionTitle')}
+        description={t('admin.customers.userActionDesc', { action: targetAction?.action ?? '' })}
+        destructive={targetAction?.action === 'suspend'}
+        onConfirm={handleStepUpConfirm}
+      />
+
+      <PaginationBar
         page={page}
         pageSize={PAGE_SIZE}
         total={total}
         busy={isFetching}
         onPage={setPage}
+        showingLabel={t('admin.pagination.showing', { from, to, total })}
+        previousLabel={t('admin.pagination.previous')}
+        nextLabel={t('admin.pagination.next')}
       />
     </div>
   )

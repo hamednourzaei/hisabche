@@ -26,6 +26,7 @@ import {
   productKeys,
   dashboardKeys,
   getToken,
+  getAppEdition,
   type ApiError,
 } from '@hisabche/api'
 import { decodePullPage, decodeSnapshotPage, HSB_CONTENT_TYPE } from '@hisabche/sync/wire'
@@ -407,6 +408,7 @@ async function pullDelta(workspaceId: string, from: number): Promise<number> {
  * on any error, which on a bad connection is the most expensive thing to do.
  */
 export async function pullAll(): Promise<number> {
+  if (typeof getAppEdition === 'function' && getAppEdition() === 'offline') return 0
   const workspaceId = useWorkspaceStore.getState().workspaceId ?? null
   const stored = workspaceId ? readCursor(workspaceId) : null
   if (workspaceId && stored !== null) return pullDelta(workspaceId, stored)
@@ -422,6 +424,14 @@ export async function pullAll(): Promise<number> {
  * server sends past this device's cursor runs a sync. Returns a stop handle.
  */
 export function startSyncStream(workspaceId: string, onWake: () => void): StreamHandle {
+  if (typeof getAppEdition === 'function' && getAppEdition() === 'offline') {
+    return {
+      stop() {},
+      get connected() {
+        return false
+      },
+    }
+  }
   return connectSyncStream({
     url: streamUrl(API_BASE_URL, workspaceId),
     getToken: () => getToken(),
@@ -554,6 +564,7 @@ export function stagesSnapshot() {
  * one more run afterwards, so a stream wake during a long pull still lands.
  */
 export async function runSync(queryClient: QueryClient): Promise<void> {
+  if (typeof getAppEdition === 'function' && getAppEdition() === 'offline') return
   const desktop = bridge()
   if (!desktop) return
   if (running) {

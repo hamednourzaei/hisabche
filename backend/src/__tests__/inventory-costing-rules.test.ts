@@ -15,10 +15,10 @@ import {
   fifoOrder,
   grossProfit,
   lastKnownCost,
+  layersValue,
   mayIssue,
   onHand,
   planConsumption,
-  stockValue,
   type CostLayer,
 } from '../services/inventory-costing/costing.domain'
 
@@ -208,7 +208,7 @@ describe('valuation', () => {
   ]
 
   it('is the sum of what is left times what it cost', () => {
-    expect(stockValue(layers)).toBe(800)
+    expect(layersValue(layers)).toBe(800)
   })
 
   it('counts what is on hand from the layers, not from a cached quantity', () => {

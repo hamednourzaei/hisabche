@@ -62,8 +62,6 @@ export interface DataAndSyncViewProps {
   /** Duplicate candidates per entity. null = not read (or no access). */
   duplicates: DuplicateSummary[] | null
   isLoading: boolean
-  /** Markers of the data's state (#42–#46), passed in by the container. */
-  snapshotsSlot?: React.ReactNode
   error: string | null
   onNavigate: (path: string) => void
   onRefresh: () => void
@@ -107,7 +105,6 @@ export const DataAndSyncView = memo(function DataAndSyncView({
   syncOverview,
   duplicates,
   isLoading,
-  snapshotsSlot,
   error,
   onNavigate,
   onRefresh,
@@ -370,24 +367,6 @@ export const DataAndSyncView = memo(function DataAndSyncView({
         )}
       </Panel>
 
-      {/* ─── Export ─────────────────────────────────────────────────────── */}
-      {/* Listed because §20 names it as one of the six areas, and stating
-          plainly where it lives is better than a card that pretends to be a
-          feature. Export today happens per-list, not centrally. */}
-      <Panel
-        title={t('dataSync.export_title', 'خروجی گرفتن')}
-        description={t(
-          'dataSync.export_hint',
-          'خروجی از هر فهرست، از دکمه‌ی خروجی همان صفحه گرفته می‌شود. خروجی مرکزی هنوز ساخته نشده.',
-        )}
-      >
-        <p className="text-sm text-[hsl(var(--fg-tertiary))]">
-          {t(
-            'dataSync.export_where',
-            'فهرست مشتریان، کالاها و فاکتورها هرکدام خروجی خودشان را دارند.',
-          )}
-        </p>
-      </Panel>
       {/* ─── Diagnostics — collapsed; every row is a real state ─────────── */}
       <details className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4">
         <summary className="min-h-11 cursor-pointer text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.5)]">
@@ -499,8 +478,6 @@ export const DataAndSyncView = memo(function DataAndSyncView({
           </ul>
         ) : null}
       </details>
-
-      {snapshotsSlot}
     </CapabilityPage>
   )
 })

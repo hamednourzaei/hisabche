@@ -77,6 +77,95 @@ export {
   TableCaption,
 } from './components/ui/table'
 export { Toaster } from './components/ui/sonner'
+export {
+  AlertDialog,
+  AlertDialogPortal,
+  AlertDialogOverlay,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from './components/ui/alert-dialog'
+export {
+  Command,
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandShortcut,
+  CommandSeparator,
+} from './components/ui/command'
+export { Checkbox } from './components/ui/checkbox'
+export { Textarea, type TextareaProps } from './components/ui/textarea'
+export {
+  SelectField,
+  type SelectFieldProps,
+  type SelectFieldOption,
+} from './components/ui/select-field'
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs'
+export {
+  Progress,
+  ProgressTrack,
+  ProgressIndicator,
+  ProgressLabel,
+  ProgressValue,
+} from './components/ui/progress'
+export { Label } from './components/ui/label'
+export { Switch, type SwitchProps } from './components/ui/switch'
+export {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from './components/ui/accordion'
+export {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  ChartStyle,
+  type ChartConfig,
+} from './components/ui/chart'
+export {
+  SegmentedControl,
+  type SegmentedControlProps,
+  type SegmentedOption,
+} from './components/ui/segmented-control'
+export {
+  HubTabs,
+  useHubTab,
+  useHubSection,
+  type HubTabItem,
+  type HubTabsProps,
+} from './components/ui/hub-tabs'
+export {
+  PageHub,
+  type PageHubProps,
+  type PageHubTab,
+  type PageHubSection,
+} from './components/ui/page-hub'
+export {
+  TableFilterSelect,
+  type TableFilterSelectProps,
+} from './components/ui/data-table/table-filter-select'
+export {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationBar,
+  type PaginationBarProps,
+} from './components/ui/pagination'
 
 // ---------- Feedback ----------
 export { SaveIndicator, type SaveIndicatorProps } from './components/ui/save-indicator'
@@ -201,6 +290,13 @@ export { SettingsPage, BusinessStampSection } from './components/ui/settings'
 export { SyncCenterPage } from './components/ui/sync-center'
 export { WorkspacePage } from './components/ui/workspace'
 export { OnboardingPage } from './components/ui/onboarding/onboarding-page'
+// The local first run: the business, made on this device (offline edition).
+export {
+  CurrencyPicker,
+  LocalFirstRunForm,
+  type CurrencyPickerProps,
+  type LocalFirstRunFormProps,
+} from './components/ui/onboarding'
 export { CustomerDetailView } from './components/ui/customers'
 export { CustomerDetailContainer } from './components/ui/customers/containers/customer-detail-container'
 
@@ -329,6 +425,13 @@ export {
   useSubscriptionLocked,
   isRouteAllowedWhenExpired,
   billingHref,
+  OfflineAccountPrompt,
+  OfflinePortalView,
+  type OfflineAccountPromptProps,
+  type OfflinePortalViewProps,
+  type OfflinePortalDevice,
+  type OfflinePortalLicense,
+  type UpgradeCreditBreakdown,
 } from './components/ui/billing'
 export { SandboxNotice } from './components/ui/developers/sandbox-notice'
 export { BookCurrencySync } from './components/ui/book-currency-sync'
@@ -375,9 +478,7 @@ export { TimesheetsView } from './components/ui/timesheets/timesheets-view'
 export { ExpiryContainer } from './components/ui/expiry/containers/expiry-container'
 export { ConflictsContainer } from './components/ui/conflicts/containers/conflicts-container'
 export { ConflictsView } from './components/ui/conflicts/conflicts-view'
-export { GovernanceContainer } from './components/ui/governance/containers/governance-container'
 export { GovernanceHubContainer } from './components/ui/governance/containers/governance-hub-container'
-export { GovernanceView } from './components/ui/governance/governance-view'
 export { ExpiryView } from './components/ui/expiry/expiry-view'
 
 // ─── AI assistant (T13) ───
@@ -440,3 +541,15 @@ export { NoAccessNotice } from './components/ui/no-access-notice'
 export { GlobalPageCustomizer } from './components/ui/global-page-customizer'
 
 export { RegisterCustomizer } from './components/ui/register-customizer'
+export {
+  CloudRequiredNotice,
+  type CloudRequiredNoticeProps,
+  type CloudRequiredVariant,
+} from './components/ui/cloud-required-notice'
+export {
+  useActionAvailability,
+  checkActionAvailability,
+  registerEntitlementContextProvider,
+  type ActionAvailability,
+  type ActionAvailabilityOptions,
+} from './lib/capability'

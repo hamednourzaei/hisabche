@@ -1,23 +1,52 @@
 // ============================================
-// The backend rounds money in exactly one place.
+// The repository rounds money in exactly one place.
 //
 // ⚠️ THE DEFECT THIS PREVENTS, WITH ITS HISTORY.
 //
 // Phase 0 of the Business OS found `round2` written out four times, byte for
 // byte identical, in four different domain files, plus a fifth in
-// `packages/validation` that the backend cannot import without taking a
-// dependency on a leaf package for four lines. `insights.domain` had its own
-// copy and used it 22 times without ever exporting it.
+// `packages/validation`. `insights.domain` had its own copy and used it 22
+// times without ever exporting it.
 //
-// Four identical copies are not four bugs. They are four places that a change to
-// rounding direction silently misses — and rounding direction is not a style
+// Four identical copies are not four bugs. They are four places that a change
+// to rounding direction silently misses — and rounding direction is not a style
 // choice in this codebase. `tax.domain.ts` exists precisely because
 // `Math.round(-0.5)` is `-0`, which is why a credit note rounded differently
 // from its invoice. The cost of that lesson was paid once already.
 //
-// So the rule is one implementation (`utils/money.ts`) and a guard, because a
-// shared helper with no guard is a convention, and a convention is what the
-// five copies were in the first place.
+// ⚠️ AND THEN PHASE 2 OF THE OFFLINE EDITION MOVED IT.
+//
+// The one implementation used to live in `backend/src/utils/money.ts`. The
+// device has to round the same way with no server to ask, so the body moved to
+// `packages/validation/src/schemas/money.ts` and the backend file re-exports
+// it. The guard therefore scans BOTH trees now, and its assertion got stronger,
+// not weaker: there is exactly ONE declaration in the repository, and it is the
+// shared one.
+//
+// ⚠️ AND THEN IT TURNED OUT THE GUARD HAD ONLY EVER SEEN ONE OF THE TWO FORMS.
+//
+// The assertion above was true and the claim behind it was false. The pattern
+// looked for `function round2`, so a copy written as an arrow constant —
+// `const round2 = (value) => Math.round(value * 100) / 100` — was invisible to
+// it. Six such copies were still in the repository on 19 Oct 2026:
+//
+//   packages/validation/src/schemas/profit-report.domain.ts  (inside the rule
+//       itself, with a comment saying it hid from this guard — the worst one)
+//   backend  accounting/evidence.domain.ts · ai/pipeline/pipeline.domain.ts
+//            analytics/break-even.domain.ts · analytics/cohort.domain.ts
+//            crm/crm.domain.ts · financing/working-capital.domain.ts
+//
+// A guard that matches one spelling of the thing it forbids is a guard that
+// reports a clean tree the day a second implementation is written. Both forms
+// are now matched, and the arrow form was added to a copy as a proof that the
+// guard goes red and NAMES the file.
+//
+// ⚠️ AND ONE OF THOSE COPIES DID NOT ROUND LIKE THE OTHERS: the AI pipeline's
+// added `Number.EPSILON`, so one unit at 1.005 came to 1.01 there and 1.00
+// everywhere else. Merging them changed that value by one cent in a PROPOSAL
+// (the person's approval screen and the «expected total» checked against the
+// server's answer), not in a stored figure — the server derives the real totals
+// from the lines. It is named here rather than left to be discovered.
 //
 // ⚠️ AND THE THING THAT IS *NOT* CONSOLIDATED — read this before "fixing" it.
 //
@@ -26,8 +55,17 @@
 // NOT use it; it uses `roundHalfAwayFromZero`. Making the other four symmetric
 // would move real balances in existing shops, so it is a product decision about
 // historical data, not a refactor. It is reported in BUSINESS-OS-SPEC Phase 0.7
-// and deliberately NOT done. A guard that forced symmetry here would be a
-// guard that changed books on the day it was added.
+// and deliberately NOT done. A guard that forced symmetry here would be a guard
+// that changed books on the day it was added.
+//
+// ⚠️ AN ALIAS IS NOT A SECOND IMPLEMENTATION — and the pattern says so.
+//
+// `costing.domain.ts` writes `const roundMoney = round2` and exports it: one
+// arithmetic under the name that file's callers have always used. The
+// `roundMoney` form below therefore matches a `function` or a function
+// expression (`= (`), never an identifier on the right-hand side. A pattern
+// broad enough to flag that alias is a pattern that fails on the day it is
+// added, and a guard nobody can keep green gets deleted.
 //
 // Comments are stripped before matching, so this file's own explanation cannot
 // satisfy the pattern it forbids.
@@ -38,15 +76,33 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-const SRC = join(__dirname, '..')
+const BACKEND_SRC = join(__dirname, '..')
+const REPO = join(__dirname, '..', '..', '..')
+const SHARED_SRC = join(REPO, 'packages', 'validation', 'src')
 
 /**
  * Line comments BEFORE block comments: a path or glob written inside a line
  * comment opens a fake block comment that swallows the rest of the file
  * (BUG-029 — `rls-coverage.test.ts` reported 49 tenant tables as having no RLS).
+ *
+ * ⚠️ `//` TOO, and that was learned the hard way. This function used to strip
+ * only SQL's `--` and C-style block comments, so a TypeScript file whose HEADER
+ * COMMENT
+ * mentioned the forbidden declaration — «the regex looks for `function round2`»
+ * — was reported as a second implementation. The guard's own docstring promised
+ * that «comments are stripped before matching», and for `//` it was not true.
+ * A guard whose comment describes behaviour the code does not have is BUG-029
+ * wearing a different hat.
+ *
+ * Known limit: a string literal containing `//` (a URL) loses the rest of its
+ * line. That can only ever hide a declaration, never invent one — and the same
+ * limit already existed for `--`.
  */
 function stripComments(source: string): string {
-  return source.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
+  return source
+    .replace(/\/\/.*$/gm, '')
+    .replace(/--.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
 }
 
 function walk(dir: string): string[] {
@@ -57,58 +113,77 @@ function walk(dir: string): string[] {
   })
 }
 
-const FILES = walk(SRC).map((path) => ({
-  path,
-  relative: path
-    .slice(SRC.length + 1)
-    .split('\\')
-    .join('/'),
-  code: stripComments(readFileSync(path, 'utf8')),
-}))
+function collect(root: string, label: string) {
+  return walk(root).map((path) => ({
+    path,
+    relative: `${label}/${path
+      .slice(root.length + 1)
+      .split('\\')
+      .join('/')}`,
+    code: stripComments(readFileSync(path, 'utf8')),
+  }))
+}
+
+const FILES = [
+  ...collect(BACKEND_SRC, 'backend/src'),
+  ...collect(SHARED_SRC, 'packages/validation/src'),
+]
 
 /** Where the one implementation lives. */
-const MONEY = 'utils/money.ts'
+const MONEY = 'packages/validation/src/schemas/money.ts'
 
 /**
  * A DECLARATION of two-decimal rounding, not a use of it.
+ *
+ * ⚠️ BOTH FORMS OF THE NAME, and that is the whole of this fix. A copy written
+ * as an arrow constant (`const round2 = (value) => …`) is a second rounding just
+ * as surely as `function round2` is, and the pattern used to match only the
+ * second — which is how six copies lived in this repository while a green test
+ * said there was one. See the header for the full account, including the one
+ * that rounded differently.
  *
  * ⚠️ Built by concatenation, so this file is not itself a counterexample. A
  * source-scanning guard that matches its own vocabulary is BUG-029 in a new
  * costume.
  */
 const ROUNDING_DECLARATION = new RegExp(
-  ['function' + '\\s+round2\\b', 'function' + '\\s+roundMoney\\b'].join('|'),
+  [
+    'function' + '\\s+round2\\b',
+    'function' + '\\s+roundMoney\\b',
+    // The assigned form. `[^=]`, not `\\s*`: it must not read `round2 === …`
+    // (a comparison) as an assignment.
+    '\\bround2[ \\t]*=[^=]',
+    // The `roundMoney` alias in `costing.domain.ts` is `= round2` — an
+    // identifier, i.e. the one arithmetic under another name. Only a function
+    // expression is a second implementation.
+    '\\broundMoney[ \\t]*=[ \\t]*\\(',
+    '\\broundMoney[ \\t]*=[ \\t]*function',
+  ].join('|'),
 )
 
+const isTest = (relative: string) => relative.includes('__tests__/')
+
 describe('money is rounded in one place', () => {
-  it('inspects the backend, not an empty list', () => {
+  it('inspects both trees, not an empty list', () => {
     expect(FILES.length).toBeGreaterThan(50)
+    expect(FILES.some((f) => f.relative === MONEY)).toBe(true)
   })
 
-  it('only utils/money.ts declares two-decimal rounding', () => {
-    const offenders = FILES.filter(
-      (f) => !f.relative.startsWith('__tests__/') && f.relative !== MONEY,
-    )
+  it('declares two-decimal rounding in exactly one file in the repository', () => {
+    const offenders = FILES.filter((f) => !isTest(f.relative))
       .filter((f) => ROUNDING_DECLARATION.test(f.code))
       .map((f) => f.relative)
 
-    expect(offenders).toEqual([])
+    // ⚠️ toEqual, not toContain: a second declaration anywhere — backend or
+    // shared — is the defect, and it must be named in the failure message.
+    expect(offenders).toEqual([MONEY])
   })
 
-  it('the domains import it rather than redefining it', () => {
-    // The four files that used to own a copy now have to reach for the shared
-    // one. This is the assertion that would have caught the duplication: a copy
-    // is invisible to "is round2 defined once?" until you ask who defines it.
-    for (const rel of [
-      'services/accounting/accounting.domain.ts',
-      'services/payments/payments.domain.ts',
-      'services/insights/insights.domain.ts',
-      'services/inventory-costing/costing.domain.ts',
-    ]) {
-      const file = FILES.find((f) => f.relative === rel)
-      expect(file, rel).toBeDefined()
-      expect(file?.code, rel).toMatch(/from '.*utils\/money'/)
-    }
+  it('the backend never declares one, it re-exports the shared file', () => {
+    const money = FILES.find((f) => f.relative === 'backend/src/utils/money.ts')
+    expect(money, 'backend/src/utils/money.ts').toBeDefined()
+    expect(money?.code).toMatch(/from '@hisabche\/validation'/)
+    expect(ROUNDING_DECLARATION.test(money?.code ?? '')).toBe(false)
   })
 
   it('round2 keeps the ties-toward-positive-infinity behaviour it always had', () => {
@@ -121,9 +196,46 @@ describe('money is rounded in one place', () => {
     expect(money?.code).toMatch(/Math\.round\(value \* 100\)/)
 
     // And the tax engine's own rounding is untouched and still symmetric.
-    const tax = FILES.find((f) => f.relative === 'services/tax/tax.domain.ts')
+    const tax = FILES.find((f) => f.relative === 'backend/src/services/tax/tax.domain.ts')
     expect(tax).toBeDefined()
     expect(tax?.code).toMatch(/roundHalfAwayFromZero/)
+  })
+
+  it('documents and tests the EPSILON rounding difference from the removed pipeline copy', () => {
+    // The AI pipeline's removed copy computed: Math.round((value + Number.EPSILON) * 100) / 100
+    // At 1.005:
+    // (1.005 + Number.EPSILON) * 100 is > 100.5, rounding up to 1.01.
+    // The shared round2(1.005) computes Math.round(1.005 * 100) / 100 which is 1 (in IEEE-754).
+    const epsilonRound = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100
+    const sharedRound = (v: number) => Math.round(v * 100) / 100
+
+    expect(epsilonRound(1.005)).toBe(1.01)
+    expect(sharedRound(1.005)).toBe(1)
+  })
+
+  it('injection test: adding a local copy triggers a red failure and names the file', () => {
+    const rogueFile = {
+      relative: 'backend/src/services/ai/pipeline/pipeline.domain.ts',
+      code: 'const round2 = (value: number) => Math.round(value * 100) / 100',
+    }
+    const testList = [...FILES, rogueFile]
+    const offenders = testList
+      .filter((f) => !isTest(f.relative))
+      .filter((f) => ROUNDING_DECLARATION.test(f.code))
+      .map((f) => f.relative)
+
+    expect(offenders).toContain(rogueFile.relative)
+    expect(offenders).not.toEqual([MONEY])
+  })
+
+  it('injection test: regex catches function declaration, arrow assignment, and expression forms', () => {
+    expect(ROUNDING_DECLARATION.test('function round2(x: number) { return x }')).toBe(true)
+    expect(ROUNDING_DECLARATION.test('const round2 = (x: number) => x')).toBe(true)
+    expect(ROUNDING_DECLARATION.test('let round2 = function(x: number) { return x }')).toBe(true)
+    expect(ROUNDING_DECLARATION.test('round2 = (x) => x')).toBe(true)
+    // Comparisons should NOT match:
+    expect(ROUNDING_DECLARATION.test('if (round2 === 0) {}')).toBe(false)
+    expect(ROUNDING_DECLARATION.test('if (round2 == 0) {}')).toBe(false)
   })
 })
 

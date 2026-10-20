@@ -19,7 +19,7 @@ import { DatabaseError } from '../../errors/database.error'
 import { fetchAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
 
-import type { AccountRootType, DraftLine, PeriodLock } from './accounting.domain'
+import type { AccountRootType, DraftLine, LedgerPeriodLock } from './accounting.domain'
 import type { LedgerTotals } from './accounting.reports'
 /**
  * J1 — does this error mean `accounting_period_locks.branch_id` has not been
@@ -471,7 +471,7 @@ export class AccountingRepository {
    * set, so the precedence rule lives in one pure function rather than in a
    * query that has to be got right at every call site.
    */
-  async listPeriodLocks(workspaceId: string): Promise<PeriodLock[]> {
+  async listPeriodLocks(workspaceId: string): Promise<LedgerPeriodLock[]> {
     const { data, error } = await supabase
       .from('accounting_period_locks')
       .select('branch_id, locked_until, reason')

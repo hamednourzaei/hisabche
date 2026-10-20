@@ -13,11 +13,17 @@
 // preview), so every caller goes through `bridge()` and handles null.
 // ============================================
 
-import type { HisabcheBridge } from '@hisabche/app-bridge'
+import type { HisabcheBridge, LocalEngineRequest, LocalEngineResponse } from '@hisabche/app-bridge'
+
+export interface LocalApiBridge {
+  request<T = unknown>(req: LocalEngineRequest): Promise<LocalEngineResponse<T>>
+}
 
 declare global {
   interface Window {
-    hisabche?: HisabcheBridge
+    hisabche?: HisabcheBridge | undefined
+    localApi?: LocalApiBridge | undefined
+    __hisabcheEdition?: 'offline' | 'cloud' | undefined
   }
 }
 
@@ -27,6 +33,14 @@ export function bridge(): HisabcheBridge | null {
 
 export function hasBridge(): boolean {
   return bridge() !== null
+}
+
+export function localApi(): LocalApiBridge | null {
+  return typeof window !== 'undefined' ? (window.localApi ?? null) : null
+}
+
+export function hasLocalApi(): boolean {
+  return localApi() !== null
 }
 
 export type { HisabcheBridge }

@@ -21,6 +21,7 @@ export const STORAGE_KEYS = {
   language: 'hisabche-lang',
   token: 'hisabche-token',
   auth: 'hisabche-auth',
+  edition: 'hisabche-edition',
 } as const
 
 const nullStorage: KeyValueStorage = {

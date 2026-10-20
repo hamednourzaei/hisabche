@@ -21,6 +21,8 @@ import { apiErrorMessage, usePeerBenchmark } from '@hisabche/api'
 import { cn } from '../../../lib/utils'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { KpiCard, KpiGrid } from '../kpi-card'
+import { useActionAvailability } from '../../../lib/capability'
+import { CloudRequiredNotice } from '../cloud-required-notice'
 
 /** Why there is no comparison; each has a sentence. */
 export const BENCHMARK_UNAVAILABLE = ['NO_SELF_FIGURE', 'NOT_ENOUGH_PEERS', 'NO_PEERS'] as const
@@ -31,6 +33,16 @@ const card =
 
 export function PeerBenchmark() {
   const t = useTranslations('benchmark')
+  const availability = useActionAvailability('analysis.benchmark')
+
+  if (availability.requiresOnline) {
+    return <CloudRequiredNotice variant="card" title={t('title')} />
+  }
+
+  return <PeerBenchmarkContent t={t} />
+}
+
+function PeerBenchmarkContent({ t }: { t: ReturnType<typeof useTranslations> }) {
   const locale = useIntlLocale()
   const result = usePeerBenchmark()
   const rate = (value: number) => formatNumber(value, locale, 2)

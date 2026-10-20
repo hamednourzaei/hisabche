@@ -36,8 +36,7 @@
 // ============================================
 
 import type { ProfitReport, ProductProfitRow } from '../accounting/profit-report.domain'
-
-const round2 = (v: number) => Math.round(v * 100) / 100
+import { round2 } from '../../utils/money'
 
 export interface BreakEvenRow {
   productId: string | null

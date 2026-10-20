@@ -1,8 +1,6 @@
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+import { redirect } from 'next/navigation'
 
-import { AiClient } from './ai-client'
-
-export default function AdminAiPage() {
-  return <AiClient />
+export default async function AdminAiPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params
+  redirect(`/${lang}/product?tab=ai`)
 }

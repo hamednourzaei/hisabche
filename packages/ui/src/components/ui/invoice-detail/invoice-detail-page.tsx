@@ -88,6 +88,7 @@ export interface InvoiceDetailDisplay {
   businessName?: string | undefined
   businessLogoUrl?: string | null | undefined
   businessStampUrl?: string | null | undefined
+  businessSignatureUrl?: string | null | undefined
   items: InvoiceItem[]
 }
 
@@ -209,6 +210,7 @@ export function InvoiceDetailPage({
     businessName,
     businessLogoUrl,
     businessStampUrl,
+    businessSignatureUrl,
     items,
   } = invoice
 
@@ -223,6 +225,7 @@ export function InvoiceDetailPage({
       name: businessName || t('app.name', 'Hisabche'),
       logoUrl: businessLogoUrl,
       stampUrl: businessStampUrl,
+      signatureUrl: businessSignatureUrl,
     },
     customer:
       customerName || customerPhone || customerEmail || customerAddress

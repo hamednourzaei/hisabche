@@ -43,7 +43,7 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { computeInvoiceMoney } from '@hisabche/validation'
+import { computeInvoiceMoney, computeItemTotalRounded } from '@hisabche/validation'
 
 const SERVICE = join(__dirname, '..', 'services', 'invoice.service.ts')
 
@@ -70,15 +70,21 @@ describe('computeInvoiceMoney', () => {
     ...extra,
   })
 
+  // AFN has no minor unit, so every fixture in this block is an exact integer:
+  // these tests pin the ORDER of the rule (discount, clamp, tax), not rounding.
+  // The rounding boundary itself is pinned with two currencies below and in the
+  // parity test, where the grid and the server must produce one number.
+  const afn = { currency: 'AFN' }
+
   it('adds the lines up', () => {
-    const money = computeInvoiceMoney({ items: [item(2, 1000), item(3, 500)] })
+    const money = computeInvoiceMoney({ ...afn, items: [item(2, 1000), item(3, 500)] })
     expect(money.subtotal).toBe(3500)
     expect(money.total).toBe(3500)
   })
 
   it('applies a per-line discount as a percentage, like the grid does', () => {
     // `computeItemTotal` treats `discount` as a percent of the gross.
-    const money = computeInvoiceMoney({ items: [item(1, 1000, { discount: 10 })] })
+    const money = computeInvoiceMoney({ ...afn, items: [item(1, 1000, { discount: 10 })] })
     expect(money.subtotal).toBe(900)
   })
 
@@ -86,6 +92,7 @@ describe('computeInvoiceMoney', () => {
     // A necklace: chain + stone + workmanship. The custom columns of the grid
     // are persisted as details, and they are part of what the customer pays.
     const money = computeInvoiceMoney({
+      ...afn,
       items: [
         {
           quantity: 1,
@@ -103,19 +110,22 @@ describe('computeInvoiceMoney', () => {
   it('⚠️ a detail with no quantity or amount does not make the invoice NaN', () => {
     // Both are optional on `CreateInvoice`, and `undefined * undefined` is
     // NaN — which would be stored as the invoice total.
-    const money = computeInvoiceMoney({ items: [{ quantity: 1, unitPrice: 100, details: [{}] }] })
+    const money = computeInvoiceMoney({
+      ...afn,
+      items: [{ quantity: 1, unitPrice: 100, details: [{}] }],
+    })
     expect(Number.isFinite(money.total)).toBe(true)
     expect(money.total).toBe(100)
   })
 
   it('⚠️ a discount larger than the invoice is clamped, not applied', () => {
-    const money = computeInvoiceMoney({ items: [item(1, 1000)], discountTotal: 5000 })
+    const money = computeInvoiceMoney({ ...afn, items: [item(1, 1000)], discountTotal: 5000 })
     expect(money.discountTotal).toBe(1000)
     expect(money.total).toBe(0)
   })
 
   it('⚠️ a negative discount is not a surcharge', () => {
-    const money = computeInvoiceMoney({ items: [item(1, 1000)], discountTotal: -500 })
+    const money = computeInvoiceMoney({ ...afn, items: [item(1, 1000)], discountTotal: -500 })
     expect(money.discountTotal).toBe(0)
     expect(money.total).toBe(1000)
   })
@@ -123,6 +133,7 @@ describe('computeInvoiceMoney', () => {
   it('taxes the amount AFTER the discount, in that order', () => {
     // subtotal 1000, discount 200, taxable 800, tax 9% = 72, total 872.
     const money = computeInvoiceMoney({
+      ...afn,
       items: [item(1, 1000)],
       discountTotal: 200,
       taxRate: 9,
@@ -132,29 +143,78 @@ describe('computeInvoiceMoney', () => {
   })
 
   it('a tax rate wins over a claimed tax amount', () => {
-    const money = computeInvoiceMoney({ items: [item(1, 1000)], taxRate: 10, taxTotal: 999_999 })
+    const money = computeInvoiceMoney({
+      ...afn,
+      items: [item(1, 1000)],
+      taxRate: 10,
+      taxTotal: 999_999,
+    })
     expect(money.taxTotal).toBe(100)
   })
 
   it('a claimed tax amount is used only when no rate is given, and is clamped', () => {
-    expect(computeInvoiceMoney({ items: [item(1, 1000)], taxTotal: 50 }).taxTotal).toBe(50)
-    expect(computeInvoiceMoney({ items: [item(1, 1000)], taxTotal: -50 }).taxTotal).toBe(0)
+    expect(computeInvoiceMoney({ ...afn, items: [item(1, 1000)], taxTotal: 50 }).taxTotal).toBe(50)
+    expect(computeInvoiceMoney({ ...afn, items: [item(1, 1000)], taxTotal: -50 }).taxTotal).toBe(0)
   })
 
   it('a rate above 100 is bounded', () => {
-    const money = computeInvoiceMoney({ items: [item(1, 100)], taxRate: 1000 })
+    const money = computeInvoiceMoney({ ...afn, items: [item(1, 100)], taxRate: 1000 })
     expect(money.taxTotal).toBe(100)
   })
 
   it('⚠️ no lines means no money, whatever was claimed', () => {
-    const money = computeInvoiceMoney({ items: [], discountTotal: 999, taxTotal: 999 })
+    const money = computeInvoiceMoney({
+      ...afn,
+      items: [],
+      discountTotal: 999,
+      taxTotal: 999,
+    })
     expect(money.subtotal).toBe(0)
     expect(money.total).toBe(0)
   })
 
   it('never returns a negative total', () => {
-    const money = computeInvoiceMoney({ items: [item(1, 100)], discountTotal: 100, taxRate: 0 })
+    const money = computeInvoiceMoney({
+      ...afn,
+      items: [item(1, 100)],
+      discountTotal: 100,
+      taxRate: 0,
+    })
     expect(money.total).toBe(0)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// F2-01 — DECIDED BY THE OWNER, 19 OCT 2026.
+//
+// The invoice total is the sum of the PRINTED lines: each line is rounded to
+// the currency's smallest unit first. The numbers below are computed by hand,
+// and the old sum-then-round answer is asserted beside them so the difference
+// is visible rather than inferred.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('F2-01 — the total foots to the printed lines', () => {
+  const threeLines = (unitPrice: number) => [
+    { quantity: 0.335, unitPrice },
+    { quantity: 0.335, unitPrice },
+    { quantity: 0.335, unitPrice },
+  ]
+
+  it('USD: three 0.335 lines are three printed 0.34s — 1.02, not 1.01', () => {
+    const money = computeInvoiceMoney({ items: threeLines(1), currency: 'USD' })
+    expect(Math.round(money.total * 100)).toBe(102)
+    // The number this rule replaced: round once at the end.
+    expect(Math.round(3 * 0.335 * 100)).toBe(101)
+  })
+
+  it('AFN: the same quantity at 250 is three printed 84s — 252, not 251', () => {
+    const money = computeInvoiceMoney({ items: threeLines(250), currency: 'AFN' })
+    expect(Math.round(money.total)).toBe(252)
+    expect(Math.round(3 * 0.335 * 250)).toBe(251)
+  })
+
+  it('IQD has three minor units, so 0.335 is 335 — the scale is the currency', () => {
+    const money = computeInvoiceMoney({ items: threeLines(1), currency: 'IQD' })
+    expect(Math.round(money.total * 1000)).toBe(1005)
   })
 })
 
@@ -249,5 +309,95 @@ describe('nothing is compensated with a DELETE', () => {
     // Only reachable on the pre-migration path; with the migration the whole
     // document rolls back and there is no state to describe.
     expect(source).toMatch(/was saved but its items could not be/)
+  })
+})
+
+describe('Rule 3 — client totalPrice is ignored, server computes stored line and total', () => {
+  it('AFN: client sends wrong totalPrice (999999) on item, derived line and invoice total are correct', () => {
+    const rawItem = {
+      productId: '11111111-1111-4111-8111-111111111111',
+      quantity: 2,
+      unitPrice: 1000,
+      discount: 10,
+      totalPrice: 999_999, // wrong client value!
+    }
+
+    const derivedLineTotal = computeItemTotalRounded(rawItem, 'AFN')
+    expect(derivedLineTotal).toBe(1800) // (2 * 1000) * 0.9 = 1800
+
+    const money = computeInvoiceMoney({
+      currency: 'AFN',
+      items: [
+        {
+          quantity: rawItem.quantity,
+          unitPrice: rawItem.unitPrice,
+          discount: rawItem.discount,
+        },
+      ],
+    })
+    expect(money.subtotal).toBe(1800)
+    expect(money.total).toBe(1800)
+  })
+
+  it('USD: client sends wrong totalPrice (1.00) on item, derived line and invoice total are correct', () => {
+    const rawItem = {
+      productId: '22222222-2222-4222-8222-222222222222',
+      quantity: 3,
+      unitPrice: 12.5,
+      discount: 0,
+      totalPrice: 1, // wrong client value!
+    }
+
+    const derivedLineTotal = computeItemTotalRounded(rawItem, 'USD')
+    expect(derivedLineTotal).toBe(37.5) // 3 * 12.50 = 37.50
+
+    const money = computeInvoiceMoney({
+      currency: 'USD',
+      items: [
+        {
+          quantity: rawItem.quantity,
+          unitPrice: rawItem.unitPrice,
+          discount: rawItem.discount,
+        },
+      ],
+    })
+    expect(money.subtotal).toBe(37.5)
+    expect(money.total).toBe(37.5)
+  })
+
+  it('source-level: buildItemRows writes derived totalPrice, never raw request totalPrice || ...', () => {
+    const buildItemRowsFn = source.slice(
+      source.indexOf('private buildItemRows('),
+      source.indexOf('private buildDetailRows('),
+    )
+    expect(buildItemRowsFn).toMatch(/total_price:\s*item\.totalPrice/)
+    expect(buildItemRowsFn).not.toMatch(/total_price:\s*item\.totalPrice\s*\|\|/)
+  })
+
+  it('source-level: create, replaceInvoiceItems, postToLedger, and postApprovedInvoice derive line totals via withDerivedLineTotals', () => {
+    expect(source).toContain(
+      'const lines = this.withDerivedLineTotals(data.items ?? [], bookCurrency)',
+    )
+    expect(source).toContain('const lines = this.withDerivedLineTotals(items, currency)')
+    expect(source).toContain(
+      'const items = this.withDerivedLineTotals(rawItems, String(invoice?.currency ??',
+    )
+    expect(source).toContain(
+      'const items = this.withDerivedLineTotals(rawItems, String(raw.currency ??',
+    )
+  })
+
+  it('injection test: trusting client totalPrice corrupts line totals', () => {
+    const badClientItem = { quantity: 2, unitPrice: 1000, discount: 10, totalPrice: 999_999 }
+
+    // Bad implementation: item.totalPrice || compute...
+    const badDerivation =
+      Number(badClientItem.totalPrice) || badClientItem.quantity * badClientItem.unitPrice
+    expect(badDerivation).toBe(999_999) // corrupt!
+
+    // Good implementation (Rule 3): ignore client totalPrice
+    const goodDerivation = computeItemTotalRounded(badClientItem, 'AFN')
+    expect(goodDerivation).toBe(1800)
+    expect(goodDerivation).not.toBe(badDerivation)
   })
 })

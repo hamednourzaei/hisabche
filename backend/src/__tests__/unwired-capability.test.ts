@@ -489,13 +489,6 @@ const REGISTER: Capability[] = [
     status: 'WRITTEN_NOT_WIRED',
   },
   {
-    id: 'Entitlement service',
-    file: 'services/entitlement.service.ts',
-    symbols: [],
-    note: 'No importer: plan limits are enforced elsewhere, so edits here change nothing.',
-    status: 'WRITTEN_NOT_WIRED',
-  },
-  {
     id: 'Webhook service (legacy)',
     file: 'services/webhook.service.ts',
     symbols: [],

@@ -42,12 +42,6 @@ allowBuilds:
   '@swc/core': true
   # v11 (desktop) has no bundled binary; its install script fetches one.
   better-sqlite3@11.10.0: true
-  # ⚠️ v13 (root) SHIPS its binaries in `prebuilds/` and declares
-  # `"gypfile": false`, but a `binding.gyp` is still in the tarball, so
-  # allowing its build makes pnpm run `node-gyp rebuild` — which needs Python.
-  # That failure aborts the install BEFORE any `node_modules/.bin` is linked,
-  # so jest, vitest and tsc vanish from every package at once.
-  better-sqlite3@13.0.3: false
   core-js: true
   detox: true
   dtrace-provider: true
@@ -83,8 +77,6 @@ allowBuilds:
   '@embedded-postgres/linux-ppc64': true
   '@embedded-postgres/linux-x64': true
   '@embedded-postgres/windows-x64': true
-minimumReleaseAgeExclude:
-  - better-sqlite3@13.0.3
 
 # ══════════════════════════════════════════════════════════════════════════
 # ⚠️ THE NATIVE ANDROID BUILD DIES 174 CHARACTERS INTO THE STORE PATH.

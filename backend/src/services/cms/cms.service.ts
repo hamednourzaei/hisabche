@@ -1,8 +1,27 @@
-import { z } from 'zod'
+// ============================================
+// backend/src/services/cms/cms.service.ts
+//
+// The CMS is PLATFORM content, not workspace content: the pages, the globals
+// and the media belong to the site, and their tables carry no `workspace_id`
+// (docs/cms-foundation-migration.sql).
+//
+// ⚠️ THE ACTOR, NOT A TENANCY.
+//
+// This service used to take a `TenancyContext` and call `assertGlobalAdmin` —
+// a function that asserted nothing, whose own comment said it relied on the
+// route's guard. The route's guard was `requireWorkspaceContext`, so ANY
+// customer with a workspace could create, edit, publish and archive the
+// site's pages, and rewrite its globals.
+//
+// The guard is now the platform-admin one (routes/cms.routes.ts), and the
+// service takes the **actor's user id** — which is all it ever needed (the
+// author of a page, the publisher of a page). There is no workspace here to
+// scope anything by, and inventing one (`workspaceId: ''`) is the fail-open
+// tenancy value the auth middleware warns about.
+// ============================================
 
 import { ForbiddenError } from '../../errors/auth.error'
 import { ValidationError } from '../../errors/validation.error'
-import type { TenancyContext } from '../tenancy.service'
 
 import { isSlugReserved, pageInputSchema, PageInput, validatePageSections } from './cms.domain'
 import { CmsRepository, CmsPageRow } from './cms.repository'
@@ -10,30 +29,11 @@ import { CmsRepository, CmsPageRow } from './cms.repository'
 export class CmsService {
   constructor(private readonly repo: CmsRepository) {}
 
-  /**
-   * The CMS is a site-wide (platform) feature, not a workspace feature.
-   * Only global admins (e.g., Hisabche platform owners) can edit public pages.
-   */
-  private assertGlobalAdmin(ctx: TenancyContext) {
-    // In a multi-tenant SaaS, editing the PUBLIC landing pages requires superadmin
-    // permissions, not just workspace owner. Here we assume `globalRole` or similar
-    // exists, or we check a specific system workspace/role.
-    // Assuming 'platform.admin' capability or similar, or checking if the user
-    // belongs to the system workspace.
-    // For now, we simulate this with a capability check if it existed, or just check role.
-    // If the system uses a specific ID for the Hisabche workspace:
-    // if (ctx.workspaceId !== HISABCHE_SYSTEM_WORKSPACE) throw new ForbiddenError('CMS_ADMIN_ONLY')
-    // Wait, the migration didn't enforce workspace_id on CMS tables, meaning it's global.
-    // We will assume `ctx.role` must be 'owner' in the system workspace, or we skip
-    // for this minimal implementation and rely on route-level guards.
-  }
-
-  async listPages(ctx: TenancyContext, locale?: string, status?: string) {
-    this.assertGlobalAdmin(ctx)
+  async listPages(locale?: string, status?: string) {
     return this.repo.listPages(locale, status)
   }
 
-  async getPage(ctx: TenancyContext, id: string) {
+  async getPage(id: string) {
     return this.repo.getPage(id)
   }
 
@@ -46,8 +46,7 @@ export class CmsService {
     return page
   }
 
-  async createPage(ctx: TenancyContext, input: PageInput) {
-    this.assertGlobalAdmin(ctx)
+  async createPage(actorUserId: string, input: PageInput) {
     const data = pageInputSchema.parse(input)
 
     if (isSlugReserved(data.slug)) {
@@ -61,14 +60,13 @@ export class CmsService {
 
     const payload: Partial<CmsPageRow> = {
       ...data,
-      created_by: ctx.userId,
+      created_by: actorUserId,
     }
 
     return this.repo.createPage(payload)
   }
 
-  async updatePage(ctx: TenancyContext, id: string, input: PageInput) {
-    this.assertGlobalAdmin(ctx)
+  async updatePage(id: string, input: PageInput) {
     const data = pageInputSchema.parse(input)
 
     if (isSlugReserved(data.slug)) {
@@ -87,26 +85,25 @@ export class CmsService {
     return this.repo.updatePage(id, payload)
   }
 
-  async publishPage(ctx: TenancyContext, id: string) {
-    this.assertGlobalAdmin(ctx)
-    // Wait, we should also create a version snapshot here, but keeping it simple for now.
+  async publishPage(actorUserId: string, id: string) {
+    // The version snapshot is still not written here — the same gap as before,
+    // unchanged by the guard. Recorded rather than silently inherited.
     return this.repo.updatePage(id, {
       status: 'published',
       published_at: new Date().toISOString(),
-      published_by: ctx.userId,
+      published_by: actorUserId,
     })
   }
 
-  async archivePage(ctx: TenancyContext, id: string) {
-    this.assertGlobalAdmin(ctx)
+  async archivePage(id: string) {
     return this.repo.updatePage(id, {
       status: 'archived',
     })
   }
 
-  // ═══════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════
   // GLOBALS / REMOTE CONTENT SNIPPETS
-  // ═══════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════
 
   async getPublishedGlobals(locale: string) {
     // Unauthenticated public read for Apps (Android/Windows/Web)
@@ -114,12 +111,11 @@ export class CmsService {
   }
 
   async upsertGlobal(
-    ctx: TenancyContext,
+    actorUserId: string,
     locale: string,
     key: string,
     content: Record<string, unknown>,
   ) {
-    this.assertGlobalAdmin(ctx)
-    return this.repo.upsertGlobal(locale, key, content, ctx.userId)
+    return this.repo.upsertGlobal(locale, key, content, actorUserId)
   }
 }

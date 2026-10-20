@@ -1,8 +1,6 @@
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+import { redirect } from 'next/navigation'
 
-import { WalletClient } from './wallet-client'
-
-export default function AdminWalletPage() {
-  return <WalletClient />
+export default async function AdminWalletPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params
+  redirect(`/${lang}/revenue?tab=wallet`)
 }

@@ -31,7 +31,9 @@
       "@hisabche/i18n": ["./packages/i18n/src"],
       "@hisabche/store": ["./packages/store/src"],
       "@hisabche/validation": ["./packages/validation/src"],
-      "@hisabche/api": ["./packages/api/src"]
+      "@hisabche/api": ["./packages/api/src"],
+      "@hisabche/app-bridge": ["./packages/app-bridge/src"],
+      "@hisabche/local-engine": ["./packages/local-engine/src"]
     }
   },
   "exclude": ["node_modules", "dist", ".next", ".expo"]

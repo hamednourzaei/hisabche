@@ -14,6 +14,11 @@ const ADMIN_ALLOWED_EMAILS = (() => {
     .filter(Boolean)
 })()
 
+/** True when the email is on the platform-admin allowlist — the ONE reader of it. */
+export function isAllowlistedAdminEmail(email: string): boolean {
+  return ADMIN_ALLOWED_EMAILS.includes(email.trim().toLowerCase())
+}
+
 /**
  * Fastify preHandler hook that checks if the authenticated user
  * is a platform admin (email in allowlist).
@@ -28,7 +33,7 @@ export async function platformAdminGuard(request: FastifyRequest, reply: Fastify
   }
 
   const userEmail = user.email.toLowerCase()
-  const isAdmin = ADMIN_ALLOWED_EMAILS.includes(userEmail)
+  const isAdmin = isAllowlistedAdminEmail(userEmail)
 
   if (!isAdmin) {
     return reply.code(403).send({

@@ -1,8 +1,6 @@
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+import { redirect } from 'next/navigation'
 
-import { UsersClient } from './users-client'
-
-export default function AdminUsersPage() {
-  return <UsersClient />
+export default async function AdminUsersPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params
+  redirect(`/${lang}/customers?tab=users`)
 }

@@ -35,6 +35,8 @@ import { CURRENCY_CODES } from '@hisabche/validation'
 
 import { ProductPicker } from '../product-picker'
 import { SearchableTable } from '../data-table'
+import { useActionAvailability } from '../../../lib/capability/use-action-availability'
+import { CloudRequiredNotice } from '../cloud-required-notice'
 import {
   ActionButton,
   Badge,
@@ -82,6 +84,30 @@ function minorToInput(minor: number, currency: string): string {
 
 export function MarketSellerContainer() {
   const t: T = useTranslations()
+  const availability = useActionAvailability('storefront.public')
+
+  if (availability.requiresOnline) {
+    return (
+      <CapabilityPage>
+        <CapabilityHeader
+          title={t('market.seller.title')}
+          description={t('market.seller.description')}
+        />
+        <div className="p-4 sm:p-6">
+          <CloudRequiredNotice
+            variant="card"
+            title={t('market.seller.title')}
+            description={t('offline.cloudRequired.description')}
+          />
+        </div>
+      </CapabilityPage>
+    )
+  }
+
+  return <MarketSellerContent t={t} />
+}
+
+function MarketSellerContent({ t }: { t: T }) {
   const seller = useMarketSeller()
   const status = seller.isError ? statusOf(seller.error) : null
 

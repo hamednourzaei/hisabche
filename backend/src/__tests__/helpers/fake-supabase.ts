@@ -105,6 +105,23 @@ export class FakeDatabase {
       rows = []
       this.tables.set(table, rows)
     }
+    if (table === 'invoice_outstanding' && rows.length === 0) {
+      const invoices = this.tables.get('invoices') ?? []
+      return invoices.map((row) => ({
+        invoice_id: row.id,
+        workspace_id: row.workspace_id,
+        invoice_number: row.invoice_number,
+        total: row.total,
+        allocated: row.paid_amount ?? 0,
+        outstanding: (Number(row.total) || 0) - (Number(row.paid_amount) || 0),
+        due_date: row.due_date,
+        invoice_date: row.date,
+        type: row.type,
+        customer_id: row.customer_id,
+        supplier_id: row.supplier_id,
+        currency: row.currency,
+      }))
+    }
     return rows
   }
 
@@ -484,7 +501,7 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
 }
 
 /** The module shape `src/db.ts` exports, backed by the fake. */
-export function createFakeDb(db: FakeDatabase, users: Map<string, { id: string }>) {
+export function createFakeDb(db: FakeDatabase, users: Map<string, { id: string; email?: string }>) {
   const supabase = {
     auth: {
       getUser: async (token: string) => {

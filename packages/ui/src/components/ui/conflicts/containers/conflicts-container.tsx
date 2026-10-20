@@ -18,6 +18,8 @@ import {
   type ResolutionChoice,
   apiErrorMessage,
 } from '@hisabche/api'
+import { useActionAvailability } from '../../../../lib/capability/use-action-availability'
+import { CloudRequiredNotice } from '../../cloud-required-notice'
 import { ConflictsView } from '../conflicts-view'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 
@@ -28,6 +30,30 @@ export const ConflictsContainer = memo(function ConflictsContainer() {
     return value && value !== key ? value : (fallback ?? key)
   }
 
+  const availability = useActionAvailability('sync.conflicts')
+
+  if (availability.requiresOnline) {
+    return (
+      <div className="p-4 sm:p-6">
+        <CloudRequiredNotice
+          variant="fullscreen"
+          title={t('conflicts.title', 'تعارض‌های همگام‌سازی')}
+          description={t('offline.cloudRequired.description')}
+        />
+      </div>
+    )
+  }
+
+  return <ConflictsContainerContent t={t} />
+})
+
+ConflictsContainer.displayName = 'ConflictsContainer'
+
+const ConflictsContainerContent = memo(function ConflictsContainerContent({
+  t,
+}: {
+  t: (key: string, fallback?: string) => string
+}) {
   const push = useLocalePush()
 
   const [status, setStatus] = useState<'open' | 'resolved' | 'all'>('open')
@@ -122,4 +148,4 @@ export const ConflictsContainer = memo(function ConflictsContainer() {
   )
 })
 
-ConflictsContainer.displayName = 'ConflictsContainer'
+ConflictsContainerContent.displayName = 'ConflictsContainerContent'

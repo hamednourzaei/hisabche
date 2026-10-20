@@ -16,9 +16,13 @@ import * as FileSystem from 'expo-file-system'
 import { WebView, type WebViewMessageEvent } from 'react-native-webview'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import NetInfo from '@react-native-community/netinfo'
-import { rpcRequestSchema, webViewBridgeSource } from '@hisabche/app-bridge'
+import {
+  localApiRpcRequestSchema,
+  rpcRequestSchema,
+  webViewBridgeSource,
+} from '@hisabche/app-bridge'
 
-import { handleBridgeCall } from './native-bridge'
+import { handleBridgeCall, handleLocalApiBridgeCall } from './native-bridge'
 import { CameraScanOverlay } from './camera-scan-overlay'
 import { useHostServices } from './use-host-services'
 
@@ -89,6 +93,25 @@ export function ShellWebView(): React.JSX.Element {
     try {
       parsed = JSON.parse(event.nativeEvent.data)
     } catch {
+      return
+    }
+
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      (parsed as { type?: unknown }).type === 'local-api'
+    ) {
+      const localReq = localApiRpcRequestSchema.safeParse(parsed)
+      if (!localReq.success) return
+      const localResponse = await handleLocalApiBridgeCall(localReq.data.request)
+      const rpcMsg = {
+        id: localReq.data.id,
+        ok: true,
+        value: localResponse,
+      }
+      webViewRef.current?.injectJavaScript(
+        `window.__hisabcheReceive(${JSON.stringify(JSON.stringify(rpcMsg))}); true;`,
+      )
       return
     }
 

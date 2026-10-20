@@ -1,15 +1,8 @@
 // ============================================
 // Admin UI surface.
 //
-// Re-exports `@hisabche/ui` rather than owning copies. This directory used to
-// hold duplicated Button/Card/Input/Badge/AuthShell/sidebar files; they had
-// already drifted — the local Button dropped `@radix-ui/react-slot` and
-// silently ignored `asChild`, so composed buttons rendered the wrong element.
-// That drift is exactly why the admin login stopped looking like the main app.
-//
-// Keeping this barrel (instead of importing `@hisabche/ui` everywhere) means
-// existing `@/components/ui` imports keep working, and there is one obvious
-// place to look if the admin ever genuinely needs its own variant.
+// Re-exports `@hisabche/ui` rather than owning copies.
+// Every component comes from `@hisabche/ui`.
 // ============================================
 
 export {
@@ -27,12 +20,6 @@ export {
   DashboardHeader,
   TopNav,
   NotificationBell,
-
-  // Added for the workspace-membership screen. Re-exported, never
-  // reimplemented: the historical Admin drift was a LOCAL Button that dropped
-  // @radix-ui/react-slot and silently ignored `asChild`, so composed buttons
-  // rendered the wrong element and the Admin login diverged visually from the
-  // main app. Every primitive below already exists in @hisabche/ui.
   Skeleton,
   Dialog,
   DialogTrigger,
@@ -46,12 +33,113 @@ export {
   SelectValue,
   SelectContent,
   SelectItem,
+  SelectGroup,
+  SelectLabel,
+  SelectSeparator,
   Table,
   TableHeader,
   TableBody,
+  TableFooter,
   TableRow,
   TableHead,
   TableCell,
+  TableCaption,
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetClose,
+  Toaster,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+  Breadcrumb,
+  DataTable,
+  TableToolbar,
+  SortableHeader,
+  useTableState,
+  TableFilterSelect,
+  EmptyState,
+  ToastProvider,
+  useToast,
+  AlertDialog,
+  AlertDialogPortal,
+  AlertDialogOverlay,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+  Command,
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandShortcut,
+  CommandSeparator,
+  Checkbox,
+  Textarea,
+  SelectField,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  Progress,
+  ProgressTrack,
+  ProgressIndicator,
+  ProgressLabel,
+  ProgressValue,
+  Label,
+  Switch,
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  ChartStyle,
+  SegmentedControl,
+  HubTabs,
+  useHubTab,
+  useHubSection,
+  PageHub,
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationBar,
 } from '@hisabche/ui'
 
-export type { ButtonVariant, ButtonSize, NavItem } from '@hisabche/ui'
+export type {
+  PaginationBarProps,
+  ButtonVariant,
+  ButtonSize,
+  NavItem,
+  EmptyStateProps,
+  TextareaProps,
+  SelectFieldProps,
+  SelectFieldOption,
+  SwitchProps,
+  ChartConfig,
+  SegmentedControlProps,
+  SegmentedOption,
+  HubTabItem,
+  HubTabsProps,
+  PageHubProps,
+  PageHubTab,
+  PageHubSection,
+  TableFilterSelectProps,
+} from '@hisabche/ui'

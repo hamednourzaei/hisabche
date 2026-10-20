@@ -19,6 +19,8 @@ import { lazy } from 'react'
 import { useTranslations } from 'next-intl'
 import { CreditCard, Wallet } from 'lucide-react'
 
+import { useActionAvailability } from '../../../../lib/capability/use-action-availability'
+import { CloudRequiredNotice } from '../../cloud-required-notice'
 import { PageHub } from '../../page-hub'
 import { BillingContainer } from './BillingContainer'
 
@@ -35,6 +37,21 @@ const ReferralsContainer = lazy(() =>
 export const BILLING_HUB_SOURCES = { wallet: '/wallet', referrals: '/referrals' } as const
 
 export function BillingHubContainer() {
+  const t = useTranslations()
+  const availability = useActionAvailability('billing.portal')
+
+  if (availability.requiresOnline) {
+    return (
+      <div className="p-4 sm:p-6">
+        <CloudRequiredNotice
+          variant="fullscreen"
+          title={t('nav.billing')}
+          description={t('offline.cloudRequired.description')}
+        />
+      </div>
+    )
+  }
+
   return <BillingHub />
 }
 

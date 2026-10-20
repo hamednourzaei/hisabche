@@ -20,7 +20,11 @@ vi.mock('../db', () => ({
       q.select = (_cols: string, opts?: { head?: boolean }) => {
         if (opts?.head) {
           const head: Record<string, unknown> = {
-            eq: async () => ({ count: db.counts[table] ?? 0, error: null }),
+            eq: () => head,
+            neq: () => head,
+            gte: () => head,
+            then: (resolve: (v: unknown) => void) =>
+              resolve({ count: db.counts[table] ?? 0, error: null }),
           }
           return head
         }
@@ -57,26 +61,29 @@ beforeEach(() => {
 describe('layers', () => {
   it('built-in defaults when nothing is set', async () => {
     expect(await limits.effectiveLimits('ws', 'free')).toEqual({
-      invoices: 10,
+      invoices: 50,
+      invoicesDaily: null,
       users: 1,
       aiMonthly: 20,
     })
   })
 
   it('the plan setting replaces a default; null there means unlimited', async () => {
-    db.planLimits = { invoices: 50, users: null }
+    db.planLimits = { invoices: 100, users: null }
     expect(await limits.effectiveLimits('ws', 'free')).toEqual({
-      invoices: 50,
+      invoices: 100,
+      invoicesDaily: null,
       users: null,
       aiMonthly: 20,
     })
   })
 
   it('the workspace setting wins over the plan; an absent key inherits', async () => {
-    db.planLimits = { invoices: 50 }
+    db.planLimits = { invoices: 100 }
     db.wsLimits = { invoices: 3 }
     expect(await limits.effectiveLimits('ws', 'free')).toEqual({
       invoices: 3,
+      invoicesDaily: null,
       users: 1,
       aiMonthly: 20,
     })
@@ -90,24 +97,24 @@ describe('layers', () => {
 })
 
 describe('⚠️ enforcement', () => {
-  it('the 11th invoice on the free plan is refused with 402 and the numbers', async () => {
-    db.counts.invoices = 10
+  it('the 51st invoice on the free plan is refused with 402 and the numbers', async () => {
+    db.counts.invoices = 50
     await expect(limits.assertWithinLimit('ws', 'invoices')).rejects.toMatchObject({
       statusCode: 402,
       code: 'PLAN_LIMIT_REACHED',
       feature: 'invoices',
-      limit: 10,
-      used: 10,
+      limit: 50,
+      used: 50,
     })
   })
 
-  it('the 10th is allowed', async () => {
-    db.counts.invoices = 9
+  it('the 50th is allowed', async () => {
+    db.counts.invoices = 49
     await expect(limits.assertWithinLimit('ws', 'invoices')).resolves.toBeUndefined()
   })
 
-  it('a trial is never limited', async () => {
-    db.sub = { plan: 'free', is_trial: true }
+  it('a paid plan trial is never limited', async () => {
+    db.sub = { plan: 'pro', is_trial: true }
     db.counts.invoices = 999
     await expect(limits.assertWithinLimit('ws', 'invoices')).resolves.toBeUndefined()
   })

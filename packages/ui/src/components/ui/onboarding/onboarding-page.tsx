@@ -16,16 +16,8 @@ import {
   ShoppingBag,
 } from 'lucide-react'
 import { memo, useCallback, useMemo, useState } from 'react'
-import {
-  BUSINESS_MODELS,
-  BUSINESS_TYPE_OTHER,
-  CURRENCIES,
-  filterBusinessTypes,
-  primaryCurrencies,
-} from '@hisabche/ui-contract'
-import { isSupportedCurrency } from '@hisabche/store'
-import { useCurrencies, type CurrencyRecord } from '@hisabche/api'
-
+import { BUSINESS_MODELS, BUSINESS_TYPE_OTHER, filterBusinessTypes } from '@hisabche/ui-contract'
+import { CurrencyPicker } from './currency-picker'
 import { SearchableOptionList } from './searchable-option-list'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -410,105 +402,14 @@ const CurrencyStep = memo(function CurrencyStep({
   onNext: () => void
   t: (key: string, fallback?: string) => string
 }) {
-  // Two cards, chosen by interface language: toman-first for Persian,
-  // afghani-first for Dari, dollar second in both. Everything else — including
-  // precious metals, which are priced by weight — is found by searching.
-  //
-  // Only the codes the product can actually honour are offered.
-  //
-  // ⚠️ THE COMMENT HERE USED TO SAY «accepts four». That was true before T1
-  // and is not now — `currencyCodeSchema` accepts 25, including the metals.
-  // The defect it described was real and is worth keeping in view: the
-  // catalogue offered codes the schema rejected, the answer was cast through
-  // `as`, and every formatter then quietly replaced it with AFN. A shopkeeper
-  // who picked تومان was shown افغانی for the life of the account.
-  //
-  // ⚠️ THE LIST IS INTERSECTED WITH `isSupportedCurrency`, NOT TAKEN FROM THE
-  // SERVER WHOLESALE (Patch 1).
-  //
-  // `currencies.is_active` and `CURRENCY_CODES` are meant to be the same 25,
-  // and a verification query checks it. But if someone activates a row in the
-  // database WITHOUT adding its precision to `FRACTION_DIGITS`, the server
-  // would start offering a code this build cannot format — amounts with no
-  // precision contract, which is a wrong number rather than a missing option
-  // (rule 9). Intersecting means the database can never widen the picker past
-  // what the code can honour; it can only ever narrow it.
-  //
-  // What the server DOES contribute is the reference data itself: the name,
-  // the Persian name and the symbol, which is exactly what a reference table
-  // is for.
-  const { data: currencyData } = useCurrencies()
-
-  const serverCurrencies = useMemo(() => {
-    const rows = currencyData?.currencies ?? []
-    return new Map<string, CurrencyRecord>(rows.map((row) => [row.code, row]))
-  }, [currencyData])
-
-  const primary = useMemo(
-    () => primaryCurrencies(lang).filter((c) => isSupportedCurrency(c.code)),
-    [lang],
-  )
-  const primaryCodes = useMemo(() => new Set(primary.map((c) => c.code)), [primary])
-
-  const searchable = useMemo(
-    () =>
-      CURRENCIES.filter((c) => isSupportedCurrency(c.code) && !primaryCodes.has(c.code)).map(
-        (c) => {
-          // The server's name wins when it has one — it is the reference
-          // table. The catalogue's label is the fallback, so a database that
-          // has not run the migration still renders proper names.
-          const fromTable = serverCurrencies.get(c.code)
-          return {
-            id: c.code,
-            label: fromTable?.nameFa ?? t(c.labelKey, c.labelFa),
-            prefix: c.flag,
-          }
-        },
-      ),
-    [primaryCodes, t, serverCurrencies],
-  )
-
-  const selectedCurrency = useMemo(
-    () => new Set(defaultCurrency ? [defaultCurrency] : []),
-    [defaultCurrency],
-  )
-
   return (
     <div className="mx-auto w-full max-w-3xl">
       <h2 className="mb-5 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-8 sm:text-2xl">
         {t('onboarding.defaultCurrency', 'ارز پیشفرض')}
       </h2>
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        {primary.map((cur) => (
-          <button
-            key={cur.code}
-            type="button"
-            onClick={() => onSetCurrency(cur.code)}
-            className={cn(
-              'rounded-2xl border-2 p-3.5 transition-all duration-200 sm:p-5',
-              'motion-reduce:transition-none',
-              defaultCurrency === cur.code ? selectedClasses : unselectedClasses,
-            )}
-          >
-            <div className="mb-1.5 text-2xl sm:mb-2 sm:text-3xl">{cur.flag}</div>
-            <div className="text-sm font-medium text-[hsl(var(--fg-primary))] sm:text-base">
-              {t(cur.labelKey, cur.labelFa)}
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Only reached if neither card is the user's unit. Same control as the
-          business-type step, so the interaction is learned once. */}
-      <div className="mt-4">
-        <SearchableOptionList
-          options={searchable}
-          selected={selectedCurrency}
-          onToggle={onSetCurrency}
-          placeholder={t('onboarding.searchCurrency', 'واحد پولت را جست‌وجو کن')}
-          emptyLabel={t('onboarding.noCurrencyMatch', 'موردی پیدا نشد')}
-        />
-      </div>
+      {/* The picker itself is shared with the offline first run — one control,
+          one list of codes, one place where a code can be refused. */}
+      <CurrencyPicker value={defaultCurrency || null} onChange={onSetCurrency} lang={lang} t={t} />
       <div className="mt-6 flex justify-between sm:mt-8">
         <button
           type="button"

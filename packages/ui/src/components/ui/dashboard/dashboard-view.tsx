@@ -26,6 +26,8 @@ import dynamic from 'next/dynamic'
 import { asList } from '@hisabche/api'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { formatAmount, formatNumber, type KnownCurrency } from '@hisabche/formatting'
+import { useActionAvailability } from '../../../lib/capability'
+import { CloudRequiredNotice } from '../cloud-required-notice'
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -144,6 +146,8 @@ const AIInsightsPanel = memo(function AIInsightsPanel({
   onAction: (action: string) => void
 }) {
   const tOriginal = useTranslations()
+  const availability = useActionAvailability('dashboard.ai_insight')
+
   const t = (key: string, fallback?: string) => {
     try {
       const v = tOriginal(key as Parameters<typeof tOriginal>[0])
@@ -154,7 +158,15 @@ const AIInsightsPanel = memo(function AIInsightsPanel({
     }
   }
 
+  // Every hook before the early return below (a hook after a return runs on some renders only).
   const locale = useLocale()
+
+  if (availability.requiresOnline) {
+    return (
+      <CloudRequiredNotice variant="card" title={t('dashboard.aiInsights', 'پیشنهادهای هوشمند')} />
+    )
+  }
+
   // Live audit #74: the server sends WHAT (a code, numbers, the books
   // currency); the sentence is written here, in the reader's language, with
   // the reader's digits and the currency's name — never «افغانی» for everyone.

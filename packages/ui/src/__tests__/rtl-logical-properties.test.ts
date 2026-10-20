@@ -93,6 +93,10 @@ const ALLOWED: Record<string, { classes: string[]; why: string }> = {
     classes: ['left-1/2'],
     why: 'Centring: paired with -translate-x-1/2, so it is symmetric and identical under rtl and ltr.',
   },
+  'packages/ui/src/components/ui/alert-dialog.tsx': {
+    classes: ['left-1/2'],
+    why: 'Centring: paired with -translate-x-1/2, so it is symmetric and identical under rtl and ltr.',
+  },
   'packages/ui/src/components/ui/invite-modal.tsx': {
     classes: ['left-1/2'],
     why: 'Centring the modal: paired with -translate-x-1/2, so it is symmetric and identical under rtl and ltr.',

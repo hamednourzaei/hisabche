@@ -51,6 +51,8 @@ import { DocumentTranslateTool } from '../document-translate-tool'
 import { cn } from '../../../../lib/utils'
 import { SegmentedControl } from '../../segmented-control'
 import { aiErrorText } from '../../../../lib/ai-error-text'
+import { useActionAvailability } from '../../../../lib/capability'
+import { CloudRequiredNotice } from '../../cloud-required-notice'
 
 const ASSISTANT_MODES = ['ask', 'do', 'translate', 'read'] as const
 type AssistantMode = (typeof ASSISTANT_MODES)[number]
@@ -86,6 +88,20 @@ export function AiAssistantContainer() {
     [translate],
   )
 
+  const actionAvailability = useActionAvailability('ai.assistant')
+
+  if (actionAvailability.requiresOnline) {
+    return (
+      <Shell t={tr}>
+        <CloudRequiredNotice variant="fullscreen" title={tr('ai.title', 'دستیار هوشمند')} />
+      </Shell>
+    )
+  }
+
+  return <AiAssistantContent tr={tr} />
+}
+
+function AiAssistantContent({ tr }: { tr: (key: string, fallback?: string) => string }) {
   const [messages, setMessages] = React.useState<ThreadMessageLike[]>([])
   const [exceeded, setExceeded] = React.useState<AiQuotaExceeded | null>(null)
   // Asking the books, translating a document (#20) or reading a picture of one

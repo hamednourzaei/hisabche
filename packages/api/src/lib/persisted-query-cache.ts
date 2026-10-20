@@ -40,6 +40,7 @@ import {
   removeOldestQuery,
   type Persister,
 } from '@tanstack/react-query-persist-client'
+import { getAppEdition } from './client'
 
 /** Bump when the shape of cached data changes incompatibly. */
 const CACHE_VERSION = 'v1'
@@ -63,6 +64,7 @@ export const PERSISTED_CACHE_KEY = 'hisabche-query-cache'
  * the default rule (successful queries only; an error is never persisted).
  */
 export function shouldPersistQuery(query: Query): boolean {
+  if (getAppEdition() === 'offline') return false
   return defaultShouldDehydrateQuery(query) && query.meta?.persist !== false
 }
 
@@ -94,6 +96,12 @@ export function createPersistedQueryCache(client: QueryClient, persister: Persis
   let generation = 0
 
   async function setOwner(next: string | null): Promise<void> {
+    if (getAppEdition() === 'offline') {
+      // In offline edition, the local SQLite database is the single source of truth.
+      // Do not restore or persist queries to storage.
+      return
+    }
+
     if (next === owner) return
 
     const previous = owner

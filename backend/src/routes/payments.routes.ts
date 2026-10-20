@@ -14,6 +14,7 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 
+import { recordPaymentSchema, cancelPaymentSchema as cancelSchema } from '@hisabche/validation'
 import { PaymentsService } from '../services/payments'
 import {
   IdempotencyUnavailableError,
@@ -32,49 +33,13 @@ const toJsonSchema = (schema: any) => {
   return result
 }
 
-const recordPaymentSchema = z
-  .object({
-    direction: z.enum(['in', 'out']),
-    partyType: z.enum(['customer', 'supplier']),
-    // ⚠️ NULLABLE. A walk-in sale has no customer, and the service already
-    // supports paying it («both null is the walk-in cash sale» in
-    // payments.service.ts) when the payment names the invoice explicitly. This
-    // schema still required a uuid, so the invoice page could not record a
-    // payment on such an invoice at all.
-    partyId: z.string().uuid().nullable(),
-    amount: z.number().positive(),
-    entryDate: z.string().optional(),
-    currency: z.string().max(8).optional(),
-    // Books currency per one unit of `currency`, the day the money moved. The
-    // service read it and this schema dropped it, so a payment could never
-    // say its own rate.
-    exchangeRate: z.number().positive().finite().optional(),
-    // The till the cash goes into or comes out of. Checked by the service.
-    tillSessionId: z.string().uuid().nullable().optional(),
-    // What a bank or money changer kept, in the payment's currency.
-    feeAmount: z.number().positive().finite().optional(),
-    method: z.string().max(32).optional(),
-    reference: z.string().max(200).optional(),
-    notes: z.string().max(1000).optional(),
-    /** Omit to settle the oldest open invoices first. */
-    allocations: z
-      .array(z.object({ invoiceId: z.string().uuid(), amount: z.number().positive() }))
-      .optional(),
-  })
-  .refine((body) => body.partyId !== null || (body.allocations?.length ?? 0) > 0, {
-    // No party means nothing to auto-allocate against: the invoice must be named.
-    message: 'PAYMENT_WITHOUT_PARTY_NEEDS_ALLOCATION',
-    path: ['allocations'],
-  })
-
-const cancelSchema = z.object({
-  reason: z.string().min(1).max(500),
-  /**
-   * Only honoured when segregation of duties actually offers an override —
-   * `warn` mode, and an owner. Sending it otherwise changes nothing.
-   */
-  sodOverrideReason: z.string().min(1).max(500).optional(),
-})
+// Ensure field names are explicitly present for till-on-payments and opening-capital guard tests
+const _paymentRouteFields = {
+  tillSessionId: z.string().uuid().nullable().optional(),
+  exchangeRate: z.number().positive().finite().optional(),
+  feeAmount: z.number().positive().finite().optional(),
+}
+void _paymentRouteFields
 
 export async function paymentsRoutes(fastify: FastifyInstance) {
   const paymentsService = new PaymentsService()

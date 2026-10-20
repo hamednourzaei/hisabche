@@ -223,3 +223,17 @@ In Persian, in this order:
 If the task is ambiguous, or doing it correctly needs a schema change, a new dependency, or
 touching a file outside its scope: **stop and ask**. A correct question is worth more than a
 plausible guess.
+
+---
+
+## 10. Editing discipline (WORKING RULE for every task)
+
+Editing discipline applies to every task: read each file once, one edit per file, no verify re-reads, batch tsc/tests at the end. Report files edited / edit operations.
+
+1. **Read once, plan once.** Before editing a file, read ALL the parts you need in one pass (whole file if < 800 lines; otherwise every relevant range at once). Write down in your head the complete list of changes for that file. Do NOT start editing until the full change list for the file is known.
+2. **One write per file.** Apply all changes to a file in ONE edit operation (a single multi-part edit, or one full-file write when more than ~30% of the file changes). Never: read → edit 10 lines → re-read the whole file → edit 10 lines.
+3. **No re-reading to "verify".** After a successful edit, do not re-read the file to check it. The edit tool already confirms success; tsc/tests are the check. Re-read only if the edit tool reports a failure — and then only the failing range.
+4. **Many files with the same change → one script.** Write a node script (Write tool, run with `node file.mjs`) that applies all replacements to all files and asserts the match count of each replacement (insertions too). One run, one report.
+5. **Batch the work:** finish ALL edits of the step, THEN run tsc, THEN tests — not tsc after every file.
+6. **Formatter note:** a formatter may rewrite the file after save. If an exact-match edit then fails, re-read ONLY the region you need, never the whole file again.
+7. **In each report, add one line:** «files edited: N, total edit operations: M». M should be close to N. If M is much larger than N, explain why.

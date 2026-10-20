@@ -20,6 +20,8 @@ import {
 
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { oauthErrorMessage } from '../../../../lib/oauth-labels'
+import { useActionAvailability } from '../../../../lib/capability/use-action-availability'
+import { CloudRequiredNotice } from '../../cloud-required-notice'
 import { useToast } from '../../toast-provider'
 import { MarketplaceView, type MarketplaceState } from '../marketplace-view'
 
@@ -47,6 +49,33 @@ export const MarketplaceContainer = memo(function MarketplaceContainer({
     },
     [tOriginal],
   )
+
+  const availability = useActionAvailability('marketplace.apps')
+
+  if (availability.requiresOnline) {
+    return (
+      <div className="p-4 sm:p-6">
+        <CloudRequiredNotice
+          variant="fullscreen"
+          title={t('nav.marketplace', 'بازارچه')}
+          description={t('offline.cloudRequired.description')}
+        />
+      </div>
+    )
+  }
+
+  return <MarketplaceContainerContent initialApp={initialApp} t={t} />
+})
+
+MarketplaceContainer.displayName = 'MarketplaceContainer'
+
+const MarketplaceContainerContent = memo(function MarketplaceContainerContent({
+  initialApp,
+  t,
+}: {
+  initialApp?: string | undefined
+  t: (key: string, fallback?: string) => string
+}) {
   const { dateTime } = useDateFormat()
   // The reader's language, for number and money formatting only.
   const locale = useLocale()
@@ -133,4 +162,4 @@ export const MarketplaceContainer = memo(function MarketplaceContainer({
   )
 })
 
-MarketplaceContainer.displayName = 'MarketplaceContainer'
+MarketplaceContainerContent.displayName = 'MarketplaceContainerContent'

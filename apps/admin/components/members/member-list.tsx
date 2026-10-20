@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Button,
+  EmptyState,
   Select,
   SelectContent,
   SelectItem,
@@ -21,7 +22,7 @@ import {
   type AdminMember,
   type MemberRole,
 } from '@/hooks/use-admin-members'
-import { EmptyState, ErrorState, StatusDot } from '@/components/admin-shell/admin-ui'
+import { ErrorState } from '@/components/admin-shell/admin-ui'
 import { cn } from '@/lib/utils'
 import { RemoveMemberDialog } from './remove-member-dialog'
 
@@ -125,7 +126,7 @@ export function MemberList({
                   */}
                   {member.status !== 'active' && (
                     <span className="inline-flex items-center gap-2 rounded-full border border-warning/40 bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">
-                      <StatusDot tone="attention" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
                       {member.status === 'suspended'
                         ? t('admin.member.statusSuspended')
                         : t('admin.member.statusNoAccess')}

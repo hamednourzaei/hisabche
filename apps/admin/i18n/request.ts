@@ -4,6 +4,7 @@ import { locales, defaultLocale, type Locale } from '../app/[lang]/i18n-config'
 
 const loaders: Record<Locale, () => Promise<{ default: unknown }>> = {
   fa: () => import('@hisabche/i18n/messages/fa/common.json'),
+  af: () => import('@hisabche/i18n/messages/af/common.json'),
   en: () => import('@hisabche/i18n/messages/en/common.json'),
 }
 

@@ -256,13 +256,18 @@ export interface BuildMapInput {
 /**
  * What the stock there COST.
  *
+ * ⚠️ `stockValueAtBuyPrice`, NOT `stockValue` (owner decision, 19 Oct 2026): the
+ * name has to say WHICH price, because the repository holds a figure per price —
+ * this one is quantity × the buy price, and `product.schema.ts` has the selling
+ * price one.
+ *
  * ⚠️ The price is REQUIRED, and the caller decides whether it exists. `products`
  * stores «never entered» as 0 (`buy_price numeric DEFAULT 0`) and the product's
  * own unvalued-stock rule is `buyPrice > 0` — so a 0 reaching this function
  * would turn «nobody priced this» into «worth nothing», which is the one
  * sentence this map must never say.
  */
-export function stockValue(quantity: number, buyPrice: number): number {
+export function stockValueAtBuyPrice(quantity: number, buyPrice: number): number {
   return Math.round(Math.max(quantity, 0) * buyPrice)
 }
 
@@ -410,7 +415,8 @@ export function buildWarehouseMap(input: BuildMapInput): WarehouseMap {
           unit: product?.unit ?? null,
           quantity: row.quantity,
           unitCost: input.costVisible ? price : null,
-          value: input.costVisible && price !== null ? stockValue(row.quantity, price) : null,
+          value:
+            input.costVisible && price !== null ? stockValueAtBuyPrice(row.quantity, price) : null,
           soldInWindow: input.sales.unitsInWindow.get(row.productId) ?? 0,
           avgDailySales: averageDailySales({
             productId: row.productId,
@@ -535,7 +541,7 @@ export function buildWarehouseMap(input: BuildMapInput): WarehouseMap {
     // Unpriced units add quantity and no money: the value below is then a lower
     // bound, and `productsWithoutCost` is what tells the reader.
     const price = priceOf(productId)
-    if (price !== null) unplacedValue += stockValue(missing, price)
+    if (price !== null) unplacedValue += stockValueAtBuyPrice(missing, price)
   }
 
   let driftQuantity = 0
@@ -545,7 +551,7 @@ export function buildWarehouseMap(input: BuildMapInput): WarehouseMap {
     const excess = claimed - Math.max(onHand.get(productId) ?? 0, 0)
     driftQuantity += excess
     const price = priceOf(productId)
-    if (price !== null) driftValue += stockValue(excess, price)
+    if (price !== null) driftValue += stockValueAtBuyPrice(excess, price)
   }
 
   const capacities = locations

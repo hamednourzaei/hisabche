@@ -1198,3 +1198,173 @@ placeholder همان برچسبِ بالای فیلد بود. **رفع:** `DateR
 - **ریشه:** `warehouse-product-list.tsx` (خط‌های ۱۱۴–۱۲۲ و ۱۹۴–۱۹۷) گارد ندارد؛ داده از `/api/warehouses/:id/detail` می‌آید که کف مجوزش `inventory.read` (فروشنده) است و `warehouse-summary.domain.ts` مقدار `buy_price` را داخل پاسخ می‌گذارد.
 - **رفع نشد** — خارج از دامنه‌ی این کار و یک تصمیم مالک است: یا فهرست کالا هم دروازه بگیرد، یا قاعده‌ی `authorization` تغییر کند.
 - **گواه:** خواندن سه فایل بالا. روی دیتابیس زنده بازتولید **نشد**.
+
+## BUG-125 — بی‌شبکه، دروازه‌ی نقش و دروازه‌ی اشتراک **باز** می‌مانند (۱۹ اکتبر ۲۰۲۶، با خواندن فایل، **رفع نشد**)
+
+- **نشانه:** `useMyCapabilities().data` و `useSubscription().data` بی‌شبکه `undefined` اند و
+  `components/layout/app-shell.tsx:53-60` هر دو را به‌صورت «نبودِ داده = نبودِ محدودیت» می‌خواند.
+  `isRouteDenied(pathname, [...blockedModules, ...hiddenModules])` با آرایه‌ی خالی `false` می‌دهد.
+- **ریشه:** هر دو دروازه برای «خواندنِ در جریان» نوشته شده‌اند، نه برای «خواندنِ شکست‌خورده».
+- **رفع نشد** — تصمیم مالک است: آخرین قابلیتِ شناخته‌شده ذخیره شود و در نبودِ آن دروازه **بسته** باشد.
+- **گواه:** خواندن `app-shell.tsx`، `governance.ts`، `billing.ts`. روی دستگاه بی‌شبکه بازتولید **نشد**.
+
+## BUG-126 — بی‌شبکه هیچ فضای کاری بارگذاری نمی‌شود (۱۹ اکتبر ۲۰۲۶، با خواندن فایل، **رفع نشد**)
+
+- **نشانه:** `providers.tsx:132` → `fetchWorkspace(userId)` → `GET /workspaces`. شکست ⇒
+  `workspaceId` صفر می‌ماند ⇒ همگام‌سازی و `db.setWorkspace` و Realtime همه با «هیچ» کار می‌کنند و
+  کشِ ذخیره‌شده زیر مالکِ اشتباه بایگانی می‌شود.
+- **ریشه:** فضای کاری هرگز روی دستگاه نگه داشته نمی‌شود؛ تنها منبع، شبکه است.
+- **رفع نشد** — نیازمند ذخیره‌ی فضای کاریِ فعال روی دستگاه و بازگردانی آن پیش از اولین رندر.
+- **گواه:** خواندن `providers.tsx`، `packages/store/src/slices/workspace.slice.ts:94`.
+
+## BUG-127 — ارزِ نمایشیِ دستگاه روی نصبِ تازه `AFN` می‌ماند (۱۹ اکتبر ۲۰۲۶، با خواندن فایل، **رفع نشد**)
+
+- **نشانه:** `BookCurrencySync` مقدار سرور را در `useCurrencyStore.primaryCurrency` می‌نویسد؛ بی‌شبکه
+  این خواندن شکست می‌خورد و مقدارِ پیش‌فرضِ ساختِ استور می‌ماند. کسب‌وکاری که دفترش تومان است، مبلغ‌ها را
+  با نامِ ارزِ دیگر می‌بیند.
+- **ریشه:** ارزِ دفاتر یک واقعیتِ سروری است و روی دستگاه ذخیره نمی‌شود.
+- **رفع نشد** — ذخیره‌ی `base_currency` روی دستگاه و خواندنِ آن پیش از اولین رندر.
+- **گواه:** `packages/ui/src/components/ui/book-currency-sync.tsx`، `packages/app-shell/src/components/layout/app-shell.tsx:109`.
+
+## BUG-128 — پولِ دستگاه `REAL` است و قاعده‌ی پولِ محصول عددِ صحیح است (۱۹ اکتبر ۲۰۲۶، با خواندن فایل، **رفع نشد**)
+
+- **نشانه:** `packages/app-bridge/src/local-schema.ts` — `subtotal REAL`، `total REAL`، `paid_amount REAL`،
+  `buy_price REAL`، `sell_price REAL`، `unit_price REAL`، `discount REAL`، `amount REAL`، `salary REAL`.
+- **ریشه:** طرحِ دستگاه پیش از قاعده‌ی «عدد صحیحِ کوچک‌ترین واحد» نوشته شده است.
+- **رفع نشد** — `SCHEMA_VERSION` ۲ ← ۳ و مهاجرتِ ردیف‌های موجود. خارج از دامنه‌ی فاز ۱.
+- **گواه:** خواندن طرح؛ مقایسه با `AGENTS.md` §1.3. هیچ عددی روی دستگاه محاسبه نمی‌شود که امروز اختلاف نشان دهد،
+  چون امروز هیچ محاسبه‌ی محلی وجود ندارد — و همین دلیلِ خطرناک بودنش است.
+
+## BUG-129 — `inventory` دو بار در روتر اعلام شده است (۱۹ اکتبر ۲۰۲۶، با خواندن فایل، **رفع نشد**)
+
+- **نشانه:** `packages/app-shell/src/app/app.tsx:148` و `:193` — همان `path: 'inventory'`، همان مقصد.
+- **ریشه:** دو موجِ تغییرِ مسیر که هر کدام ریدایرکت را اضافه کرده و دومی اولی را ندیده.
+- **اثر:** امروز بی‌اثر (اولی برنده می‌شود)؛ ولی گاردِ هم‌سانیِ مسیرها آن را نمی‌بیند و هر بازبینیِ بعدی
+  یکی را حذف می‌کند و فکر می‌کند رفتار عوض شده.
+- **رفع نشد** — فاز ۱ کد را تغییر نمی‌دهد.
+- **گواه:** شمارشِ `path:` (۷۱) و تکرارِ کلیدها (۱).
+
+## BUG-130 — جمعِ دستگاه و جمعِ سرور در خطوطِ زیرِ سنت یکی نیست (۱۹ اکتبر ۲۰۲۶، **رفع شد** ۱۹ اکتبر ۲۰۲۶ به تصمیم مالک)
+
+- **نشانه:** سه خطِ USD، هر کدام مقدار ۰٫۳۳۵ و قیمت ۱٫۰۰. شبکه‌ی فاکتور هر خط را با دقتِ ارز
+  گرد می‌کند: ۰٫۳۴ + ۰٫۳۴ + ۰٫۳۴ = **۱٫۰۲** (۱۰۲ سنت). سرور جمعِ دقیق را یک‌بار گرد می‌کند:
+  ۱٫۰۰۵ → **۱٫۰۱** (۱۰۱ سنت). یک سنت اختلاف، و همین عدد در دفتر و مانده‌ی مشتری می‌نشیند.
+- **ریشه:** `computeInvoiceMoney` (و `round2`) دقتِ ارز را نمی‌دانست؛ دقت همیشه ۲ بود. `summarize`
+  هر خط را با `ctx.precision` گرد می‌کرد. جمعِ «گردشده‌ها» با «گرد کردنِ جمع» یکی نیست.
+- **رفع (تصمیم مالک، ۱۹ اکتبر ۲۰۲۶):** جمعِ فاکتور = جمعِ خطوطِ چاپ‌شده؛ هر خط اول با
+  `FRACTION_DIGITS` ارز گرد می‌شود. `sumInvoiceLines` در `invoice-math.ts` تنها جای این قاعده
+  است؛ هم `computeInvoiceMoney` (سرور) و هم `summarize` (شبکه/دستگاه) آن را صدا می‌زنند.
+  `currency` اکنون آرگومانِ لازمِ `computeInvoiceMoney` است و `InvoiceService.create` پیش از
+  محاسبه‌ی پول، ارزِ دفتر را می‌خواند. هیچ فاکتورِ ذخیره‌شده‌ای بازمحاسبه نمی‌شود.
+- **تله‌ای که حین رفع پیدا شد:** `rowTotal` را در `manufacturing-cost.ts` با چهار رقم اعشار روی
+  ارزِ بدون اعشار به کار می‌برند (هزینه‌ی ۰٫۰۶ برای یک گرم نباید صفر شود). اگر `rowTotal` ارز را
+  بخواند، چهار آزمونِ ساخت قرمز می‌شود؛ پس `rowTotal` روی `ctx.precision` ماند و قاعده‌ی سرِ
+  فاکتور در `sumInvoiceLines` است.
+- **گواه:** `packages/validation/src/__tests__/invoice-math.parity.test.ts` → fixture «three
+  sub-cent quantities» در AFN (۲۵۲) و USD (۱٫۰۲)، ۱۰ آزمون سبز؛ و
+  `backend/src/__tests__/invoice-derived-money.test.ts` → بلوک «F2-01»، ۲۷ آزمون سبز.
+  تزریق (گرد کردنِ جمع به‌جای هر خط): parity ۲ از ۱۰ و بک‌اند ۲ از ۲۷ قرمز شد؛ بازگردانی سبز.
+
+## BUG-131 — کپیِ ششمِ `round2` که گارد آن را نمی‌دید (۱۹ اکتبر ۲۰۲۶، **رفع شد** ۱۹ اکتبر ۲۰۲۶ به تصمیم مالک)
+
+- **یافته:** `backend/src/services/accounting/profit-report.domain.ts` خطِ ۱۲۱:
+  `const round2 = (value: number) => Math.round(value * 100) / 100` — یک **arrow**، نه
+  `function round2`. گاردِ `money-primitive-guard.test.ts` الگوی `function\s+round2` را
+  می‌گشت، پس این کپی از روزِ اول نامرئی بود و BOS-02 آن را نشمرده بود.
+- **تصمیم مالک:** `round2` **یکی** می‌ماند و معنا را تصمیم نمی‌گیرد؛ هر جا NaN یعنی «خوانده
+  نشد» (بهای تمام‌شده، درآمد، سود)، فراخواننده `null` برمی‌گرداند. الگوی گارد **هر دو شکل** را
+  می‌گیرد: `function round2` و `round2 =`.
+- **رفع:** شش کپی با import جایگزین شد (`accounting/evidence.domain.ts`،
+  `ai/pipeline/pipeline.domain.ts`، `analytics/break-even.domain.ts`، `analytics/cohort.domain.ts`،
+  `crm/crm.domain.ts`، `financing/working-capital.domain.ts`). کپیِ `pipeline.domain.ts`
+  یکسان نبود (قبل از گرد کردن `EPSILON` اضافه می‌کرد و ۱٫۰۰۵ را ۱٫۰۱ می‌کرد) و به تابعِ مشترک
+  هم‌تراز شد. در `profit-report.domain.ts` تصمیمِ معنا پیش از گرد کردن گرفته می‌شود: پرچمِ
+  `unreadable` روی مصرفِ ناخوانا و پرچمِ `figuresRead` روی سودِ ردیف (سود = `null`). سه
+  آزمونِ «نادانسته صفر نیست» نوشته شد.
+- **تزریق:** فایلِ موقت با `function round2(` دوم ⇒ گارد **۱ از ۶** قرمز و نامِ همان فایل؛
+  حذف ⇒ **۶ سبز**.
+
+## BUG-132 — دو تابعِ هم‌نامِ `grossProfit` در دو دامنه (۱۹ اکتبر ۲۰۲۶، **رفع شد** ۱۹ اکتبر ۲۰۲۶)
+
+- **یافته:** `packages/validation/src/schemas/costing.domain.ts` →
+  `grossProfit(revenue, consumedCost)` (سودِ یک خط) و
+  `backend/src/services/insights/insights.domain.ts` →
+  `grossProfit(totals: PeriodTotals)` (سودِ یک دوره). دو فرمول، یک نام.
+- **رفع:** نسخه‌ی دوره‌ای **`periodGrossProfit`** شد (در `insights.domain.ts`، barrel،
+  `insights.service.ts` و `insights-rules.test.ts`). نامِ پیشنهادیِ اولِ مالک
+  (`periodGrossMargin`) استفاده **نشد**: آن تابع پول برمی‌گرداند و `grossMargin` کنارش درصد است.
+  نامِ متریکِ `'grossProfit'` در payload عوض نشد (کلیدِ ترجمه از آن ساخته می‌شود).
+  نسخه‌ی خطی نامش را نگه داشت و گارد با **امضای کامل** پینش می‌کند.
+
+## BUG-133 — دو نوعِ هم‌نامِ `PeriodLock` (۱۹ اکتبر ۲۰۲۶، **رفع شد** ۱۹ اکتبر ۲۰۲۶)
+
+- **یافته:** `periodLockSchema` در `accounting.schema.ts` → `{ lockedUntil, reason? }`
+  (بدنه‌ی API) و `accounting.domain.ts` → `{ branchId, lockedUntil, reason }` (قفلِ
+  شعبه‌آگاه). هم‌شکل نیستند.
+- **رفع:** **`LedgerPeriodLock` نامِ دائمی شد** (تصمیم مالک): اعلام در `accounting.domain.ts`،
+  صادر شدن با همان نام از barrel، و import با همان نام در `accounting.repository.ts` و
+  `period-lock-branch.test.ts`. `PeriodLock` همان بدنه‌ی API می‌ماند. aliasها حذف شدند.
+
+## BUG-134 — هم‌نامیِ `stockValue`، و یک توصیفِ غلط در گزارش (۱۹ اکتبر ۲۰۲۶، **رفع شد** ۱۹ اکتبر ۲۰۲۶)
+
+- **یافته:** سه تابع: `product.schema.ts` → `stockValue(product)`،
+  `costing.domain.ts` → `stockValue(layers)` و `warehouse-map.domain.ts` →
+  `stockValue(quantity, buyPrice)`.
+- ⚠️ **تصحیحِ گزارشِ فاز ۲:** اینجا نوشته بودم نسخه‌ی `product.schema.ts` با `buy_price`
+  کار می‌کند. غلط بود: بدنه `sellPrice` را ضرب می‌کند و رقمِ بهای خرید از قبل با نامِ
+  `purchaseValue` هست. پس نامی که مالک پیشنهاد داد (`stockValueAtBuyPrice`) مالِ تابعِ دیگری بود.
+- **رفع (یک نام برای هر قیمت):** `layersValue` (Σ لایه × بهای واحد)،
+  `stockValueAtSellPrice` (تعداد × قیمت فروش) و `stockValueAtBuyPrice` (تعداد × قیمت خرید،
+  نقشه‌ی انبار). aliasِ barrel حذف شد؛ مصرف‌کننده‌ها (`costing.service.ts`،
+  `inventory-costing/index.ts`، containerِ warehouse-detail) و چهار تست به‌روز شدند.
+- **تزریق:** فایلِ موقت با `export function layersValue(` دوم ⇒ گارد **۱ از ۷۱** قرمز با نامِ
+  فایل؛ حذف ⇒ **۷۱ سبز**.
+
+## BUG-135 — `invoice_items.total_price` از کلاینت می‌آمد (۱۹ اکتبر ۲۰۲۶، **رفع شد** ۱۹ اکتبر ۲۰۲۶)
+
+- **یافته:** `backend/src/services/invoice.service.ts` خطِ ~۱۸۹۱
+  `total_price: item.totalPrice || item.quantity * item.unitPrice` را از بدنه‌ی درخواست
+  می‌نوشت و ~۲۸۵۵ همان را برای بهای خرید می‌خواند. کلاینت می‌توانست پولِ یک خط را تعیین کند،
+  و گزارشِ سود (سهمِ درآمدِ خط) و لایه‌ی بهای خرید همان عدد را می‌خواندند.
+- **رفع:** در `invoice-math.ts` تابعِ `computeItemTotalRounded(item, currency)` اضافه شد؛
+  `withDerivedLineTotals` در سرویس هر خط را با همان تابع می‌سازد و `create` و
+  `replaceInvoiceItems` (مسیرِ ویرایش، که حالا ارز را هم می‌گیرد) از آن رد می‌شوند.
+  `buildItemRows` فقط `item.totalPrice`ِ ساخته‌شده را می‌نویسد.
+- **تست:** `invoice-line-total-derived.test.ts` — کلاینت ۹٫۹۹ می‌فرستد و ۱٫۰۱ ذخیره می‌شود؛
+  سه خط ۱٫۰۱ = ۳٫۰۳ = سرِ فاکتور؛ IQD ۰٫۰۰۰۵×۳ = ۰٫۰۰۲؛ اجزا جمع می‌شوند. بلوکِ تازه‌ی
+  `invoice-math.parity.test.ts` هم خطِ ذخیره‌شده را با خطِ چاپی و جمعِ سر مقایسه می‌کند.
+- **تزریق:** بازگرداندنِ `item.totalPrice || …` ⇒ **۶ از ۹** قرمز؛ بازگردانی ⇒ **۹ سبز**.
+
+## BUG-136 — مالیاتِ هر خط در صفحه جمع می‌شود و هرگز ثبت نمی‌شود (۱۹ اکتبر ۲۰۲۶، **گزارش، تعمیر نشد**)
+
+- **یافته:** `COLUMN.tax` (درصدِ مالیاتِ هر خط) در `rowTotal` (`invoice-grid.ts`) ضرب می‌شود، پس
+  خطِ چاپی و `summarize` آن را دارند. `rowToInvoiceItem` ستون‌های built-in را رد می‌کند، پس
+  سرور هیچ اثری از آن نمی‌بیند و `computeInvoiceMoney` نمی‌تواند بشماردش.
+- **پیش از BUG-135:** درصد از `totalPrice`ِ کلاینت به خطِ ذخیره‌شده می‌رسید ولی به سرِ فاکتور نه —
+  فاکتور جمع نمی‌خورد. **حالا:** نه به خط و نه به سر — فاکتور جمع می‌خورد، با خطِ صفحهٔ بالاتر.
+  در هر دو حالت مالیاتِ خطی **ثبت نمی‌شود**.
+- **اقدام لازم:** تصمیمِ محصولی — مالیاتِ هر خط کجا بنشیند (detailِ خط، `taxTotal`ِ فاکتور، یا
+  ممنوع شدنِ آن ستون). تعمیرش یک تغییرِ طرح است، نه نام‌گذاری.
+
+## BUG-137 — هر مشترکِ حساب‌دار می‌توانست صفحه‌های عمومیِ سایت را بنویسد و منتشر کند
+
+- **وضعیت:** 🟡 کد + تست؛ منتظر انتشار
+- **الگو (lessons):** «گاردِ درست را با گاردِ نادرست عوض نکن» — و «داده‌ای که `workspace_id` ندارد، اصلاً گاردِ فضای کاری نمی‌خواهد»
+- **کد:** `backend/src/routes/cms.routes.ts` (`const ADMIN = [authenticate, requireWorkspaceContext]`)، `backend/src/services/cms/cms.service.ts` (`assertGlobalAdmin` — تابعی که هیچ چیزی را assert نمی‌کرد)
+- **DB:** جدول‌های `cms_pages` / `cms_globals` / `cms_media` **ستون `workspace_id` ندارند** (پلتفرمی‌اند، نه فضای‌کاری) → هیچ scope‌ای وجود ندارد که بشود با آن محدود کرد
+- **RLS/مجوز:** `requireWorkspaceContext` می‌پرسد «این شخص عضوِ **بعضی** فضای کاری هست؟» — و پاسخ برای هر مشترک «بله» است. پس هر دکان‌دارِ حساب‌دار می‌توانست لندینگ‌پیج را بنویسد، صفحه‌ی خودش را **منتشر** کند، یا رشته‌هایی را که هر اپ هنگام باز شدن می‌خواند عوض کند.
+- **مسیر اجرا:** `POST|PUT /api/cms/pages`، `POST /api/cms/pages/:id/publish`، `POST /api/cms/pages/:id/archive`، `PUT /api/cms/globals/:locale/:key` → `CmsService` → `CmsRepository` → جدول‌های پلتفرمی
+- **بازتولید:** با توکنِ یک عضوِ عادی: `POST /api/cms/pages` → ۲۰۱ (باید ۴۰۳ باشد). تست: `backend/src/__tests__/cms-admin-guard.test.ts` — ۱۸ تست؛ **injection-tested**: برگرداندنِ گاردِ قدیمی → ۱۶ تست قرمز، و با برگرداندنِ گارد → ۱۸ سبز.
+- **ریشه‌ی واقعی:** (۱) برای داده‌ای گاردِ فضای کاری گذاشته شده بود که اصلاً فضای کاری ندارد — گاردِ اشتباه، نه گاردِ ضعیف‌تر. (۲) `assertGlobalAdmin` در سرویس یک بدنه‌ی خالی بود و در کامنتِ خودش می‌گفت «به گاردِ route تکیه می‌کنیم» — یعنی دفاعِ دومی وجود نداشت و گاردِ route هم اشتباه بود. (۳) هیچ تستی نبود که «ادمینِ سایت» و «عضوِ یک دکان» را روی همین مسیرها از هم جدا کند.
+- **رفع:** گاردِ CMS = همان گاردِ `admin.routes.ts` (`platformAdminGuard` — allowlistِ ایمیل). سرویس به‌جای `TenancyContext` **شناسه‌ی کننده** را می‌گیرد: CMS فضای کاری ندارد، و ساختنِ `workspaceId: ''` همان مقدارِ fail-open است که middlewareِ احراز هویت درباره‌اش هشدار می‌دهد. `assertGlobalAdmin` حذف شد (تابعی که چیزی را assert نمی‌کرد، نامی داشت که ادعا می‌کرد).
+- **تست‌ها:** `backend/src/__tests__/cms-admin-guard.test.ts` (۱۸: عضو → ۴۰۳ روی همه‌ی نوشتن‌ها و روی خواندنِ پیش‌نویس‌ها؛ ادمینِ سایت → مجاز؛ خواندنِ عمومی همچنان باز) + یک تستِ منبع که خودِ گارد را در فایل می‌سنجد.
+- **API:** ۴۰۳ با `code: 'ADMIN_UNAUTHORIZED'` روی همه‌ی مسیرهای نوشتنِ CMS.
+- **مرورگر:** ❌ انجام نشد — نیازمندِ ورودِ ادمین.
+
+## BUG-138 — Customer could ban, unban and bypass limits on their own offline licence (20 Oct 2026)
+
+- **Symptom:** three customer routes under `/api/billing/offline-license/` decided things only a Hisabche admin may decide: `tier1-report` banned the licence on whatever violation the body named (any member could permanently ban their own shop; a patched app simply never calls it); `/:licenseId/unban` let the workspace **owner** lift a ban; `activate-seat` honoured `adminOverride: true` from the owner and skipped the 3-transfers-a-year limit.
+- **Root cause:** «admin» was read as the workspace role `owner/admin` — which is the customer — and a device's own claim was treated as cryptographic evidence.
+- **Fix:** `tier1-report` files a `device_self_report` signal in the review queue (no ban); the customer unban route is removed (lift = `POST /api/admin/offline/bans/:id/lift`, RBAC + fresh TOTP + reason); `adminOverride` is gone from the customer route (an admin releases the old seat instead).
+- **Guard:** `offline-license-policy.test.ts` §3/§4/§6 — injection-tested (restoring the ban → red).
+- **Still open:** no server path verifies tier-1 evidence (device-key proof of possession is not implemented), so automatic tier-1 bans currently happen only through an admin's review decision.

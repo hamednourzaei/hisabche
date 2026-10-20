@@ -48,7 +48,8 @@ describe('two tabs, built from shared parts', () => {
     expect(hub).toMatch(/const PromotionsContainer = lazy\(/)
     const dataHooks = [...hub.matchAll(/\buse[A-Z]\w+(?=\()/g)]
       .map((match) => match[0])
-      .filter((name) => !/^use(Translations|UxVersion|MyCapabilities|HubTab)$/.test(name))
+      // usePageLook = this person's on-device view choice (no request).
+      .filter((name) => !/^use(Translations|UxVersion|MyCapabilities|HubTab|PageLook)$/.test(name))
     expect(dataHooks).toEqual([])
   })
 

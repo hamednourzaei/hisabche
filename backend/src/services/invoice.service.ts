@@ -34,6 +34,7 @@ import {
   UpdateInvoice,
   InvoiceFilters,
   computeInvoiceMoney,
+  computeItemTotalRounded,
   type AccountRole,
 } from '@hisabche/validation'
 import { ledger, type DraftLine } from './accounting'
@@ -59,6 +60,7 @@ import { latestBuyPrices } from './inventory/buy-price.domain'
 import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
 import { IdempotencyUnavailableError, isMissingIdempotencySupport } from '../utils/client-request'
 import { assertWithinLimit } from './plan-limits.service'
+import { countsTowardsInvoiceQuota } from '@hisabche/validation'
 
 // ============================================
 // ✅ OPTIMIZED: فقط ستون‌های مورد نیاز
@@ -794,7 +796,11 @@ export class InvoiceService {
     ctx: TenancyContext,
     data: CreateInvoice,
     branchId: string | null = null,
-    options: { clientRequestId?: string | null } = {},
+    options: {
+      clientRequestId?: string | null
+      isImport?: boolean | undefined
+      isSystemGenerated?: boolean | undefined
+    } = {},
   ) {
     const { workspaceId, userId } = ctx
     const clientRequestId = options.clientRequestId ?? null
@@ -834,12 +840,39 @@ export class InvoiceService {
     // `computeInvoiceMoney` uses the same arithmetic as the grid's own
     // `summarize`, so the figure a person approved on screen is the figure
     // their books carry.
+    //
+    // ⚠️ THE CURRENCY IS SETTLED FIRST (owner decision F2-01, 19 Oct 2026).
+    //
+    // The rule rounds EVERY LINE to the invoice currency's smallest unit before
+    // adding them up, so the total foots to the printed lines. That needs the
+    // currency — named by the request, or the one this business keeps its books
+    // in. This is the one read that cannot join the group below, because the
+    // group also needs `money.total`; the other four still run together.
     // ═══════════════════════════════════════════════════════════════════════
+    const booksCurrency = await baseCurrencyOf(workspaceId)
+    const bookCurrency = data.currency || booksCurrency
+    // ═══════════════════════════════════════════════════════════════════════
+    // ⚠️ THE LINES ARE DERIVED ONCE, HERE, AND EVERY LATER STEP USES THEM.
+    //
+    // The header was already derived from the lines; the LINES were not. A
+    // request could carry a header that footed and items that did not:
+    // `invoice_items.total_price` was written from the request body
+    // (`item.totalPrice || …`), and it is the figure the profit report, a
+    // purchase's cost layer and the printed invoice all read. Its own
+    // `totalPrice` is now recomputed from quantity, unitPrice, discount and
+    // components, in the invoice's currency, and the request's value is
+    // discarded — rule 3: the server derives the amount from the lines.
+    //
+    // The array is built ONCE so the header, the stored lines, the stock
+    // movements and the cost layers cannot disagree about a cent.
+    // ═══════════════════════════════════════════════════════════════════════
+    const lines = this.withDerivedLineTotals(data.items ?? [], bookCurrency)
     const money = computeInvoiceMoney({
-      items: data.items ?? [],
+      items: lines,
       discountTotal: data.discountTotal,
       taxRate: data.taxRate,
       taxTotal: data.taxTotal,
+      currency: bookCurrency,
     })
 
     // ⚠️ SPEED (14 Oct): these reads do not depend on each other, and each is a
@@ -847,8 +880,7 @@ export class InvoiceService {
     // they made a single sale take ten seconds on the live site. Together they
     // cost one round trip. Nothing is written until every one has passed, and
     // the invoice number is still taken only after them.
-    const [booksCurrency, , customerName, approvalOutcome] = await Promise.all([
-      baseCurrencyOf(workspaceId),
+    const [, customerName, approvalOutcome] = await Promise.all([
       (async () => {
         if (!invoiceWarehouseId) return
         await this.assertInvoiceWarehouse(workspaceId, invoiceWarehouseId)
@@ -863,11 +895,26 @@ export class InvoiceService {
         currency: data.currency,
         customerId: data.customerId ?? null,
       }),
-      // The plan's invoice ceiling — AFTER the replay check, so a sale already
-      // recorded and merely resent by an offline device is never refused.
-      assertWithinLimit(workspaceId, 'invoices'),
+      // The plan's invoice ceiling — checked against the usage policy.
+      // An import or system-generated invoice (late fee) does not count and is
+      // never refused by the quota ceiling.
+      (async () => {
+        const counts = countsTowardsInvoiceQuota({
+          type: data.type,
+          status: (data as { status?: string }).status,
+          isImport: Boolean(options.isImport || options.clientRequestId?.startsWith('mig-inv-')),
+          isSystemGenerated: Boolean(
+            options.isSystemGenerated ||
+            options.clientRequestId?.includes('late_fee') ||
+            options.clientRequestId?.includes('ingested_document'),
+          ),
+          clientRequestId,
+        })
+        if (counts) {
+          await assertWithinLimit(workspaceId, 'invoices')
+        }
+      })(),
     ])
-    const bookCurrency = data.currency || booksCurrency
 
     // ─── ANOTHER CURRENCY NEEDS ITS RATE (13 October) ────────────────────────
     //
@@ -969,10 +1016,9 @@ export class InvoiceService {
       data.paidAmount && data.total && data.paidAmount >= data.total ? 'completed' : 'pending'
     const direction: 1 | -1 = data.type === 'purchase' ? 1 : -1
 
-    // An invoice that names no currency is in the currency this business
-    // keeps its books in — a stored value, not the letters 'AFN'. Read HERE,
-    // after a replayed request has already been answered: a replay reads
-    // nothing and writes nothing.
+    // `bookCurrency` was settled above, before the money: an invoice that
+    // names no currency is in the currency this business keeps its books in —
+    // a stored value, not the letters 'AFN'.
 
     const header = {
       id: invoiceId,
@@ -1055,7 +1101,6 @@ export class InvoiceService {
       ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
     }
 
-    const lines = data.items ?? []
     const itemRows = this.buildItemRows(lines, invoiceId, userId, ctx.workspaceId)
     // A purchase moves stock too — it just moves it the other way. ⚠️ NOT WHILE
     // THE DOCUMENT IS HELD: `postApprovedInvoice` moves it on approval, and
@@ -1216,7 +1261,7 @@ export class InvoiceService {
         ctx,
         invoice.id,
         String(data.type ?? 'sale'),
-        data.items ?? [],
+        lines,
         data.date,
         uncosted,
         exchangeRate,
@@ -1224,6 +1269,7 @@ export class InvoiceService {
         .then((cogs) =>
           this.createAccountingEntries(ctx, invoice.id, {
             ...data,
+            type: data.type ?? 'sale',
             exchangeRate,
             invoiceNumber,
             // The SAME derived total the document carries. Booking
@@ -1488,28 +1534,47 @@ export class InvoiceService {
           'INVOICE_VERSION_REQUIRED: editing the lines needs the version you read, so another edit is not overwritten.',
         )
       }
+      // The lines are rounded in the invoice's OWN currency (F2-01). It comes
+      // from the row this edit read, not from the request: an edit cannot move
+      // an invoice into another currency.
+      const invoiceCurrency = String(
+        (currentInvoice as { currency?: string } | null)?.currency ?? '',
+      )
+      if (!invoiceCurrency) {
+        throw new DatabaseError('Invoice has no currency, so its lines cannot be re-totalled')
+      }
       const money = computeInvoiceMoney({
         items: lines,
         discountTotal: data.discountTotal,
         taxRate: data.taxRate,
         taxTotal: data.taxTotal,
+        currency: invoiceCurrency,
       })
       if (data.total !== undefined && Number(data.total) !== money.total) {
         throw new ValidationError(
           `INVOICE_TOTAL_IS_DERIVED: the lines add up to ${money.total}, not ${data.total}.`,
         )
       }
-      // Lines, money, version check and stock — one transaction.
-      await this.replaceInvoiceItems(id, lines, ctx, String(currentInvoice?.type ?? 'sale'), {
-        expectedVersion,
-        moneyPatch: {
-          subtotal: money.subtotal,
-          discount_total: money.discountTotal,
-          tax_total: money.taxTotal,
-          total: money.total,
-          updated_at: new Date().toISOString(),
+      // Lines, money, version check and stock — one transaction. The lines are
+      // derived in the invoice's OWN currency, the one the header above was
+      // totalled in, so a stored line and its header cannot disagree.
+      await this.replaceInvoiceItems(
+        id,
+        lines,
+        ctx,
+        String(currentInvoice?.type ?? 'sale'),
+        invoiceCurrency,
+        {
+          expectedVersion,
+          moneyPatch: {
+            subtotal: money.subtotal,
+            discount_total: money.discountTotal,
+            tax_total: money.taxTotal,
+            total: money.total,
+            updated_at: new Date().toISOString(),
+          },
         },
-      })
+      )
     }
 
     let metadataQuery = supabase
@@ -1864,8 +1929,27 @@ export class InvoiceService {
 
   // ─── Invoice document rows ───────────────────────────────────────────────
   /**
+   * ⚠️ THE LINE TOTAL IS DERIVED HERE, AND THE REQUEST'S IS IGNORED.
+   *
+   * `total_price` was written from the request body — `item.totalPrice || …` —
+   * so the one money figure on the document that nothing recomputed was the one
+   * every later read uses: the profit report's `lineRevenues`, a purchase's cost
+   * layer (`applyCosting`), the printed invoice. The header came from
+   * `computeInvoiceMoney`, so a request could make them disagree.
+   *
+   * `withDerivedLineTotals` is the single derivation, and the same array is what
+   * this writes, what the stock plan reads and what the costing consumes.
+   */
+  private withDerivedLineTotals(items: any[], currency: string): any[] {
+    return items.map((item) => ({ ...item, totalPrice: computeItemTotalRounded(item, currency) }))
+  }
+
+  /**
    * The item rows of an invoice, WITH their ids — made here so the details can
    * name their item and the whole document can be written in one call.
+   *
+   * `items` arrive with `totalPrice` ALREADY derived (`withDerivedLineTotals`);
+   * this writes that value and never reads the request's.
    */
   private buildItemRows(
     items: any[],
@@ -1888,7 +1972,7 @@ export class InvoiceService {
       weight_grams: item.weightGrams ?? null,
       unit_price: item.unitPrice,
       discount: item.discount || 0,
-      total_price: item.totalPrice || item.quantity * item.unitPrice,
+      total_price: item.totalPrice,
       notes: item.notes || '',
       user_id: userId,
     }))
@@ -2132,16 +2216,22 @@ export class InvoiceService {
     items: any[],
     ctx: TenancyContext,
     type: string,
+    /** The invoice's own currency: its new lines are rounded in it (F2-01). */
+    currency: string,
     edit: { expectedVersion: number; moneyPatch: Record<string, unknown> },
   ): Promise<void> {
     const direction: 1 | -1 = type === 'purchase' ? 1 : -1
+    // ⚠️ An EDITED line is derived exactly as a created one is. Without this,
+    // the one write path that took `total_price` from the request would still
+    // be reachable — on the edit screen instead of the create screen.
+    const lines = this.withDerivedLineTotals(items, currency)
     const warehouseId =
       (await this.invoiceWarehouseId(ctx.workspaceId, invoiceId)) ??
       (await this.soleWarehouseId(ctx.workspaceId))
 
-    const itemRows = this.buildItemRows(items, invoiceId, ctx.userId, ctx.workspaceId)
+    const itemRows = this.buildItemRows(lines, invoiceId, ctx.userId, ctx.workspaceId)
     const movementRows = await this.planStockMovements(
-      items,
+      lines,
       ctx,
       direction,
       invoiceId,
@@ -2157,7 +2247,7 @@ export class InvoiceService {
     const error = await this.writeInvoiceDocument(ctx, {
       invoiceId,
       itemRows,
-      detailRows: this.buildDetailRows(items, itemRows),
+      detailRows: this.buildDetailRows(lines, itemRows),
       movementRows,
       replaceItems: true,
       headerPatch: edit.moneyPatch,
@@ -2197,7 +2287,7 @@ export class InvoiceService {
       ctx,
       invoiceId,
       type,
-      items,
+      lines,
       undefined,
       undefined,
       await this.storedExchangeRate(ctx.workspaceId, invoiceId),
@@ -2928,16 +3018,16 @@ export class InvoiceService {
     data: {
       type: string
       total: number
-      items?: any[]
-      invoiceNumber?: string
-      date?: string
+      items?: any[] | undefined
+      invoiceNumber?: string | undefined
+      date?: string | undefined
       /**
        * What the goods actually cost, from the consumed cost layers. Passed in
        * rather than computed here: this method has no business deciding which
        * purchase a sale drew from, and when it tried, it used the product's
        * CURRENT buy price for goods bought at a different one.
        */
-      costOfGoodsSold?: number
+      costOfGoodsSold?: number | undefined
       /** Books currency per one unit of the invoice's currency. 1 when they are the same. */
       exchangeRate?: number | undefined
     },
@@ -3287,14 +3377,16 @@ export class InvoiceService {
     }
 
     const type = String(invoice?.type ?? 'sale')
-    const items = asArray(invoice?.items ?? invoice?.invoice_items).map((item: any) => ({
+    const rawItems = asArray(invoice?.items ?? invoice?.invoice_items).map((item: any) => ({
       id: item.id,
       productId: item.productId ?? item.product_id ?? null,
       warehouseId: item.warehouseId ?? item.warehouse_id ?? null,
       quantity: Number(item.quantity) || 0,
       unitPrice: Number(item.unitPrice ?? item.unit_price) || 0,
-      totalPrice: Number(item.totalPrice ?? item.total_price) || 0,
+      discount: Number(item.discount) || 0,
+      details: item.details,
     }))
+    const items = this.withDerivedLineTotals(rawItems, String(invoice?.currency ?? 'AFN'))
     const date = String(invoice?.date ?? '')
 
     const uncosted: string[] = []
@@ -3555,13 +3647,17 @@ export class InvoiceService {
     // the costing consumes no layers and the stock never moves — an approved
     // invoice with no effect, which is the exact failure this whole gate
     // exists to prevent.
-    const items = ((raw.invoice_items ?? raw.items ?? []) as Record<string, any>[]).map((item) => ({
-      ...item,
-      productId: item.productId ?? item.product_id,
-      quantity: Number(item.quantity) || 0,
-      unitPrice: item.unitPrice ?? item.unit_price,
-      totalPrice: item.totalPrice ?? item.total_price,
-    }))
+    const rawItems = ((raw.invoice_items ?? raw.items ?? []) as Record<string, any>[]).map(
+      (item) => ({
+        ...item,
+        productId: item.productId ?? item.product_id,
+        quantity: Number(item.quantity) || 0,
+        unitPrice: item.unitPrice ?? item.unit_price,
+        discount: Number(item.discount) || 0,
+        details: item.details,
+      }),
+    )
+    const items = this.withDerivedLineTotals(rawItems, String(raw.currency ?? 'AFN'))
 
     const exchangeRate = await this.storedExchangeRate(ctx.workspaceId, invoiceId)
     const cogs = await this.applyCosting(

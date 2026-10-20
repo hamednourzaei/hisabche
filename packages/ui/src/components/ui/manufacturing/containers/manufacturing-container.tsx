@@ -23,6 +23,8 @@ import { ManufacturingReportView } from '../manufacturing-report'
 import { ProductionEditor, type ProductionEditorTarget } from '../production-editor'
 import { ProductionHistory } from '../production-history'
 import { manufacturingErrorText } from '../manufacturing-errors'
+import { useActionAvailability } from '../../../../lib/capability'
+import { CloudRequiredNotice } from '../../cloud-required-notice'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ManufacturingContainer — the manufacturing page.
@@ -40,6 +42,27 @@ interface EditorState {
 }
 
 export const ManufacturingContainer = memo(function ManufacturingContainer() {
+  const tOriginal = useTranslations()
+  const actionAvailability = useActionAvailability('manufacturing.bom')
+  if (actionAvailability.requiresOnline) {
+    const title = tOriginal('manufacturing.title' as Parameters<typeof tOriginal>[0])
+    return (
+      <div className="p-4 sm:p-6">
+        <CloudRequiredNotice
+          variant="fullscreen"
+          title={title}
+          description={tOriginal(
+            'offline.cloudRequired.description' as Parameters<typeof tOriginal>[0],
+          )}
+        />
+      </div>
+    )
+  }
+  // The screen's hooks live in the body, so none runs after the return above.
+  return <ManufacturingScreen />
+})
+
+function ManufacturingScreen() {
   const tOriginal = useTranslations()
   const locale = useIntlLocale()
   const t = useCallback(
@@ -172,6 +195,6 @@ export const ManufacturingContainer = memo(function ManufacturingContainer() {
       />
     </>
   )
-})
+}
 
 ManufacturingContainer.displayName = 'ManufacturingContainer'

@@ -50,6 +50,48 @@ export interface LogBusinessEventInput {
   actionUrl?: string | undefined
   /** Set to false to skip the bell notification and only log the activity. */
   notify?: boolean | undefined
+  /** Where it happened, when the caller knows. Otherwise read from the record. */
+  branchId?: string | null | undefined
+}
+
+/**
+ * The branch a business event happened in, for «سابقه تغییرات».
+ *
+ * Owner, 18 Oct 2026: «شعبه نوشته نمی‌شود، خط فاصله است» — nothing passed a
+ * branch, so every row read «—». The branch is the RECORD's own: an invoice
+ * carries `branch_id`, and a payment is the invoice it settles. A customer
+ * or a product has no branch, and «—» is then the true answer (§12: never
+ * guessed from who did it).
+ */
+async function branchOfRecord(
+  workspaceId: string,
+  entityType: string,
+  entityId: string,
+): Promise<string | null> {
+  try {
+    if (entityType === 'invoice') {
+      const { data } = await supabase
+        .from('invoices')
+        .select('branch_id')
+        .eq('workspace_id', workspaceId)
+        .eq('id', entityId)
+        .maybeSingle()
+      return (data as { branch_id?: string | null } | null)?.branch_id ?? null
+    }
+    if (entityType === 'payment') {
+      const { data } = await supabase
+        .from('payments')
+        .select('invoice_id')
+        .eq('workspace_id', workspaceId)
+        .eq('id', entityId)
+        .maybeSingle()
+      const invoiceId = (data as { invoice_id?: string | null } | null)?.invoice_id
+      return invoiceId ? branchOfRecord(workspaceId, 'invoice', invoiceId) : null
+    }
+  } catch {
+    // A missing column (branch_id before its migration) is «no branch», not a lost event.
+  }
+  return null
 }
 
 async function getUserDisplayName(userId: string): Promise<string> {
@@ -121,6 +163,10 @@ export async function logBusinessEvent(input: LogBusinessEventInput): Promise<vo
     }
 
     const workspaceId = resolvedWorkspaceId
+    const branchId =
+      input.branchId !== undefined
+        ? input.branchId
+        : await branchOfRecord(workspaceId, input.entityType, input.entityId)
 
     const tasks: Promise<unknown>[] = [
       // ⚠️ THE RECORD HISTORY. «تاریخچه‌ی تغییرات این رکورد» reads audit_logs by
@@ -132,6 +178,7 @@ export async function logBusinessEvent(input: LogBusinessEventInput): Promise<vo
       auditService.log({
         userId: input.userId,
         workspaceId,
+        branchId,
         action: auditActionOf(input.action, input.entityType),
         entityType: input.entityType,
         entityId: input.entityId,

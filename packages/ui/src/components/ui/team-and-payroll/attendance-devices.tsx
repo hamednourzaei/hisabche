@@ -47,6 +47,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { SelectField } from '../select-field'
 import { useToast } from '../toast-provider'
 import { AttendanceHeldDialog } from './attendance-held-dialog'
+import { useActionAvailability } from '../../../lib/capability'
+import { CloudRequiredNotice } from '../cloud-required-notice'
 
 /** Server refusals this panel can explain. Anything else gets the general sentence. */
 export const ATTENDANCE_DEVICE_ERROR_CODES = [
@@ -95,6 +97,28 @@ export function AttendanceDevices({
   inDialog?: boolean | undefined
 }) {
   const t = useTranslations('attendance.devices')
+  const availability = useActionAvailability('hr.attendance_devices')
+
+  if (availability.requiresOnline) {
+    return (
+      <div className="py-2">
+        <CloudRequiredNotice variant="card" title={t('title')} />
+      </div>
+    )
+  }
+
+  return <AttendanceDevicesContent employees={employees} inDialog={inDialog} t={t} />
+}
+
+function AttendanceDevicesContent({
+  employees,
+  inDialog,
+  t,
+}: {
+  employees: ReadonlyArray<{ id: string; name: string }>
+  inDialog: boolean
+  t: ReturnType<typeof useTranslations>
+}) {
   const locale = useIntlLocale()
   const toast = useToast()
   const { dateTime } = useDateFormat()

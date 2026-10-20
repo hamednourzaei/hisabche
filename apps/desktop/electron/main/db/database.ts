@@ -21,12 +21,13 @@ import {
   type LocalTable,
   type QueueEntry,
 } from '@hisabche/app-bridge'
+import type { LocalDb, RunResult } from '@hisabche/local-engine'
 
 type SqliteDatabase = {
   prepare(sql: string): {
     all(...params: unknown[]): unknown[]
     get(...params: unknown[]): unknown
-    run(...params: unknown[]): { changes: number }
+    run(...params: unknown[]): { changes: number; lastInsertRowid?: number | bigint | undefined }
   }
   exec(sql: string): void
   pragma(sql: string): unknown
@@ -170,6 +171,38 @@ export function cacheFailure(): string | null {
 export function closeDatabase(): void {
   db?.close()
   db = null
+}
+
+/**
+ * Returns a LocalDb adapter over the active database instance.
+ * Conforms to the LocalDb interface expected by @hisabche/local-engine.
+ */
+export function getLocalDb(): LocalDb {
+  if (!db) {
+    throw new Error('Database not initialized')
+  }
+  const currentDb = db
+  return {
+    all<T = Record<string, unknown>>(sql: string, params: unknown[] = []): T[] {
+      return currentDb.prepare(sql).all(...params) as T[]
+    },
+    get<T = Record<string, unknown>>(sql: string, params: unknown[] = []): T | undefined {
+      return currentDb.prepare(sql).get(...params) as T | undefined
+    },
+    run(sql: string, params: unknown[] = []): RunResult {
+      const res = currentDb.prepare(sql).run(...params)
+      return {
+        changes: res.changes,
+        lastInsertRowid: res.lastInsertRowid,
+      }
+    },
+    exec(sql: string): void {
+      currentDb.exec(sql)
+    },
+    transaction<T>(fn: () => T): T {
+      return currentDb.transaction(fn)()
+    },
+  }
 }
 
 // ============================================

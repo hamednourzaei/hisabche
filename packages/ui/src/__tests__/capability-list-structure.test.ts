@@ -32,7 +32,6 @@ const LIST_VIEWS = [
   'timesheets/timesheets-view.tsx',
   'assets/assets-view.tsx',
   'bank/bank-view.tsx',
-  'governance/governance-view.tsx',
 ]
 
 function code(file: string): string {

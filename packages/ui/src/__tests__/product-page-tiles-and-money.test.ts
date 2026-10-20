@@ -41,7 +41,7 @@ describe('the cards tell the money', () => {
     // Both totals are derived in the domain layer, not by the page.
     const container = flat(read(CONTAINER))
     expect(container).toContain('purchaseValue(productData)')
-    expect(container).toContain('stockValue(productData)')
+    expect(container).toContain('stockValueAtSellPrice(productData)')
   })
 
   it('the strip is three lines: the category, the stock with its unit, the placement', () => {

@@ -20,7 +20,7 @@ import {
   intensityClass,
   locationPath,
   movementBand,
-  stockValue,
+  stockValueAtBuyPrice,
   type BuildMapInput,
   type RawLocation,
 } from '../services/inventory/warehouse-map.domain'
@@ -93,10 +93,10 @@ describe('movementBand — the colour says a sentence', () => {
 })
 
 describe('the pieces', () => {
-  it('stockValue is what the stock COST — the rule summarizeStock uses', () => {
-    expect(stockValue(6, 100)).toBe(600)
-    expect(stockValue(-3, 100)).toBe(0)
-    expect(stockValue(4.5, 2)).toBe(9)
+  it('stockValueAtBuyPrice is what the stock COST — the rule summarizeStock uses', () => {
+    expect(stockValueAtBuyPrice(6, 100)).toBe(600)
+    expect(stockValueAtBuyPrice(-3, 100)).toBe(0)
+    expect(stockValueAtBuyPrice(4.5, 2)).toBe(9)
   })
 
   it('intensity has a floor at zero and a top rung, and never divides by zero', () => {

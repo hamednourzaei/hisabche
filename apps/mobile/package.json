@@ -29,6 +29,7 @@
     "@hisabche/auth-core": "workspace:*",
     "@hisabche/formatting": "workspace:*",
     "@hisabche/i18n": "workspace:*",
+    "@hisabche/local-engine": "workspace:*",
     "@hisabche/mobile-ui": "workspace:*",
     "@hisabche/store": "workspace:*",
     "@hisabche/ui-contract": "workspace:*",

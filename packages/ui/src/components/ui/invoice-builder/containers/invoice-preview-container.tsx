@@ -21,6 +21,8 @@ import {
 
 import { Button } from '../../button'
 import { useToast } from '../../toast-provider'
+import { useActionAvailability } from '../../../../lib/capability/use-action-availability'
+import { CloudRequiredNotice } from '../../cloud-required-notice'
 import {
   InvoiceDocument,
   type InvoiceDocumentData,
@@ -73,6 +75,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
   const { addAuditEntry } = useBackupStore()
 
   const { t, locale, currency, ctx, summary, issues, items } = useInvoiceDraft()
+  const recurringAvailability = useActionAvailability('invoice.recurring')
   const draft = useInvoiceDraftStore()
   const clearDraft = useInvoiceDraftStore((s) => s.clearDraft)
 
@@ -111,6 +114,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
             name?: string
             logo_url?: string | null
             stamp_url?: string | null
+            signature_url?: string | null
             phone?: string | null
             address?: string | null
           }
@@ -152,6 +156,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         name: workspace?.name || t('app.name', 'حسابچه'),
         logoUrl: workspace?.logo_url ?? null,
         stampUrl: workspace?.stamp_url ?? null,
+        signatureUrl: workspace?.signature_url ?? null,
         phone: workspace?.phone ?? null,
         address: workspace?.address ?? null,
       },
@@ -305,7 +310,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       // the same lines, without this one's dates and payments. Only for an
       // invoice the server has actually recorded: one queued offline has not
       // been accepted yet, and an arrangement cannot be queued.
-      if (cadence && !created.pendingSync) {
+      if (cadence && !created.pendingSync && !recurringAvailability.requiresOnline) {
         const dueInDays = draft.dueDate
           ? Math.max(
               0,
@@ -460,6 +465,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     tillSessionId,
     createInvoice,
     createRecurring,
+    recurringAvailability.requiresOnline,
     recurrence,
     locale,
     toast,
@@ -606,14 +612,22 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
             </div>
           ) : null}
 
-          <RecurrencePanel
-            t={t}
-            value={recurrence}
-            onChange={setRecurrence}
-            invoiceDate={draft.date}
-            calendar={scheduleCalendarFor(locale)}
-            disabled={createInvoice.isPending}
-          />
+          {recurringAvailability.requiresOnline ? (
+            <CloudRequiredNotice
+              variant="inline"
+              title={t('invoiceBuilder.recurrence.title', 'فاکتور تکراری')}
+              description={t('offline.cloudRequired.description')}
+            />
+          ) : (
+            <RecurrencePanel
+              t={t}
+              value={recurrence}
+              onChange={setRecurrence}
+              invoiceDate={draft.date}
+              calendar={scheduleCalendarFor(locale)}
+              disabled={createInvoice.isPending}
+            />
+          )}
 
           {error ? (
             <p

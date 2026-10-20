@@ -78,6 +78,19 @@ const PLANS: Plan[] = [
   },
 ]
 
+const OFFLINE_PLANS: Plan[] = [
+  {
+    key: 'offline',
+    fallbackName: 'نسخه آفلاین',
+    fallbackWho:
+      'ثبت و مدیریت اسناد و حسابداری کامل روی دستگاه شما بدون نیاز به اتصال دائم اینترنت',
+    fallbackBestIf: 'فروشگاه‌ها و مشاغل محلی',
+    billingPlan: 'pro',
+    ctaFallback: 'دریافت نسخه آفلاین',
+    popular: true,
+  },
+]
+
 interface FeatureRow {
   labelKey: string
   fallback: string
@@ -411,10 +424,12 @@ export default function PricingScene() {
   }
 
   const [featuresOpen, setFeaturesOpen] = useState(false)
+  const [edition, setEdition] = useState<'online' | 'offline'>('online')
+  const visiblePlans = edition === 'online' ? PLANS : OFFLINE_PLANS
   const activeLocale = useLocale()
   const routePrefix = activeLocale ? `/${activeLocale}` : ''
 
-  const renderPlan = (plan: Plan, i: number) => {
+  const renderPlan = (plan: Plan, _i: number) => {
     // Quoted plans go to the real contact page — there is no contact form on
     // the landing page, and signup is not how to ask for a quote.
     const ctaHref =
@@ -476,18 +491,59 @@ export default function PricingScene() {
           title={st('landing.pricingTitle', 'از رایگان شروع کنید، هر زمان خواستید ارتقا دهید')}
         />
 
+        {/* Edition selector: دو باکس آنلاین / آفلاین */}
+        <div className="mb-8 flex justify-center">
+          <div className="inline-flex rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-1">
+            <button
+              type="button"
+              onClick={() => {
+                setEdition('online')
+                setFeaturesOpen(false)
+              }}
+              className={cn(
+                'rounded-lg px-6 py-2 text-sm font-semibold transition-colors',
+                edition === 'online'
+                  ? 'bg-[hsl(var(--color-primary))] text-white shadow-sm'
+                  : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
+              )}
+            >
+              {st('landing.pricing.editionOnline', 'آنلاین')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEdition('offline')
+                setFeaturesOpen(false)
+              }}
+              className={cn(
+                'rounded-lg px-6 py-2 text-sm font-semibold transition-colors',
+                edition === 'offline'
+                  ? 'bg-[hsl(var(--color-primary))] text-white shadow-sm'
+                  : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
+              )}
+            >
+              {st('landing.pricing.editionOffline', 'آفلاین')}
+            </button>
+          </div>
+        </div>
+
         {/* PHONES AND TABLETS — one plan at a time behind the project's Tabs.
             Three full cards stacked were 1021px at 360px, and the comparison
             table needs 800px; below `lg` each tab carries its own column of it. */}
         <Tabs defaultValue="pro" className="lg:hidden" onValueChange={() => setFeaturesOpen(false)}>
-          <TabsList className="mb-4 grid w-full grid-cols-3 overflow-visible">
-            {PLANS.map((plan) => (
+          <TabsList
+            className={cn(
+              'mb-4 grid w-full overflow-visible',
+              edition === 'online' ? 'grid-cols-3' : 'grid-cols-1',
+            )}
+          >
+            {visiblePlans.map((plan) => (
               <TabsTrigger key={plan.key} value={plan.key} className="min-h-10 w-full text-sm">
                 {st(`landing.pricing.${plan.key}.name`, plan.fallbackName)}
               </TabsTrigger>
             ))}
           </TabsList>
-          {PLANS.map((plan, i) => (
+          {visiblePlans.map((plan, i) => (
             <TabsContent key={plan.key} value={plan.key}>
               <div
                 className={cn(
@@ -546,8 +602,13 @@ export default function PricingScene() {
 
         {/* DESKTOP — the template's frame with the popular plan raised (MIT). */}
         <div className="hidden rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base)/0.5)] lg:block">
-          <ul className="grid grid-cols-3">
-            {PLANS.map((plan, i) => (
+          <ul
+            className={cn(
+              'grid',
+              edition === 'online' ? 'grid-cols-3' : 'grid-cols-1 max-w-md mx-auto',
+            )}
+          >
+            {visiblePlans.map((plan, i) => (
               <li
                 key={plan.key}
                 className={cn(
@@ -562,7 +623,7 @@ export default function PricingScene() {
           </ul>
         </div>
 
-        <ComparisonTable locale={locale} />
+        {edition === 'online' && <ComparisonTable locale={locale} />}
 
         <p className="mt-8 text-center text-xs text-[hsl(var(--fg-tertiary))] sm:text-sm">
           {st('landing.pricingFooter', 'بدون قرارداد · لغو هر زمان · بدون کارت بانکی')}

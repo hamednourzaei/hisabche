@@ -22,6 +22,7 @@ vi.mock('../db', () => {
       insert: () => ((op = 'insert'), calls.push({ table, op }), q),
       update: () => ((op = 'update'), calls.push({ table, op }), q),
       eq: () => q,
+      neq: () => q,
       in: () => q,
       is: () => q,
       order: () => q,

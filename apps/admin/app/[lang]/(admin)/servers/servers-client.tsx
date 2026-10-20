@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { apiErrorMessage } from '@hisabche/api'
 
-import { Button, Input } from '@/components/ui'
-import { ErrorState, Panel } from '@/components/admin-shell/admin-ui'
+import { Button, Card, Input } from '@/components/ui'
+import { ErrorState } from '@/components/admin-shell/admin-ui'
 import {
   useAdminInstances,
   useAdminScale,
@@ -13,9 +13,13 @@ import {
   type ServerInstance,
 } from '@/hooks/use-admin-servers'
 
-/** Green under 65 %, amber under 85 %, red above — the same bands as /docs. */
+/** Green under 65 %, amber under 85 %, red above — semantic tokens only. */
 function tone(value: number): string {
-  return value >= 85 ? 'bg-red-500' : value >= 65 ? 'bg-amber-500' : 'bg-emerald-500'
+  return value >= 85
+    ? 'bg-[hsl(var(--color-destructive))]'
+    : value >= 65
+      ? 'bg-[hsl(var(--color-warning))]'
+      : 'bg-[hsl(var(--color-success))]'
 }
 
 function Meter({ label, value }: { label: string; value: number }) {
@@ -28,7 +32,6 @@ function Meter({ label, value }: { label: string; value: number }) {
         </span>
       </div>
       <div className="h-2.5 overflow-hidden rounded-full bg-accent">
-        {/* A width is data, not a style decision — it cannot be a Tailwind class. */}
         <div
           className={`h-full rounded-full transition-[width] duration-500 ${tone(value)}`}
           style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
@@ -44,7 +47,6 @@ export function ServersClient() {
   const instances = data?.instances ?? []
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  // Default to the first server; keep the choice while it still reports.
   useEffect(() => {
     if (instances.length === 0) return
     if (!selectedId || !instances.some((i) => i.id === selectedId)) setSelectedId(instances[0]!.id)
@@ -58,9 +60,9 @@ export function ServersClient() {
 
   return (
     <div className="space-y-5">
-      <Panel className="space-y-4 p-4">
+      <Card className="space-y-4 p-4">
         {data && !data.shared ? (
-          <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
+          <p className="rounded-lg border border-[hsl(var(--color-warning)/0.4)] bg-[hsl(var(--color-warning)/0.1)] p-2 text-xs">
             {t('admin.servers.notShared')}
           </p>
         ) : null}
@@ -83,7 +85,7 @@ export function ServersClient() {
                   onClick={() => setSelectedId(instance.id)}
                   className={
                     instance.id === selectedId
-                      ? 'rounded-xl border border-primary bg-primary/10 px-3 py-1.5 text-sm font-medium'
+                      ? 'rounded-xl border border-[hsl(var(--color-primary))] bg-[hsl(var(--color-primary)/0.1)] px-3 py-1.5 text-sm font-medium'
                       : 'rounded-xl border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent'
                   }
                 >
@@ -125,7 +127,7 @@ export function ServersClient() {
             ) : null}
           </>
         )}
-      </Panel>
+      </Card>
 
       <ScalePanel />
     </div>
@@ -139,7 +141,7 @@ function ScalePanel() {
   const [count, setCount] = useState('')
 
   return (
-    <Panel className="space-y-3 p-4">
+    <Card className="space-y-3 p-4">
       <h2 className="text-sm font-semibold">{t('admin.servers.scaleTitle')}</h2>
       <p className="text-xs text-muted-foreground">{t('admin.servers.scaleHint')}</p>
 
@@ -182,7 +184,7 @@ function ScalePanel() {
       )}
 
       {setScale.isSuccess ? (
-        <p role="status" className="text-xs text-emerald-500">
+        <p role="status" className="text-xs text-[hsl(var(--color-success))]">
           {t('admin.servers.scaleDone')}
         </p>
       ) : null}
@@ -193,6 +195,6 @@ function ScalePanel() {
             ?.detail || apiErrorMessage(setScale.error, t('admin.error.generic'))}
         </p>
       ) : null}
-    </Panel>
+    </Card>
   )
 }

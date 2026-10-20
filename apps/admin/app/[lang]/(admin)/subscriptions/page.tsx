@@ -1,8 +1,10 @@
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+import { redirect } from 'next/navigation'
 
-import { SubscriptionsClient } from './subscriptions-client'
-
-export default function AdminSubscriptionsPage() {
-  return <SubscriptionsClient />
+export default async function AdminSubscriptionsPage({
+  params,
+}: {
+  params: Promise<{ lang: string }>
+}) {
+  const { lang } = await params
+  redirect(`/${lang}/revenue?tab=subscriptions`)
 }

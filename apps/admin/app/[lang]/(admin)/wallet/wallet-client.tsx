@@ -6,14 +6,8 @@ import type { WalletPaymentMethod, WalletTopup } from '@hisabche/api'
 import { CURRENCY_CODES } from '@hisabche/validation'
 import { walletAmountToMinor, walletErrorText, walletMoney } from '@hisabche/ui'
 
-import { Button, Input } from '@/components/ui'
-import {
-  EmptyState,
-  ErrorState,
-  FilterPill,
-  ListSkeleton,
-  Panel,
-} from '@/components/admin-shell/admin-ui'
+import { Button, Card, EmptyState, Input, Skeleton } from '@/components/ui'
+import { ErrorState } from '@/components/admin-shell/admin-ui'
 import {
   fetchTopupReceiptUrl,
   useAdjustWallet,
@@ -27,13 +21,6 @@ import {
   type AdminWalletWorkspace,
   type TopupStatusFilter,
 } from '@/hooks/use-admin-wallet'
-
-/**
- * Business wallets, from the platform side: the top-up queue (check the
- * tracking number and receipt against the account, then approve with the
- * amount that actually arrived), the payment methods businesses pay into, and
- * a business's wallet — its balances, ledger and a noted adjustment.
- */
 
 const TABS = ['queue', 'methods', 'businesses'] as const
 type Tab = (typeof TABS)[number]
@@ -49,9 +36,14 @@ export function WalletClient() {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {TABS.map((option) => (
-          <FilterPill key={option} selected={tab === option} onClick={() => setTab(option)}>
+          <Button
+            key={option}
+            size="sm"
+            variant={tab === option ? 'default' : 'outline'}
+            onClick={() => setTab(option)}
+          >
             {t(`admin.wallet.tabs.${option}`)}
-          </FilterPill>
+          </Button>
         ))}
       </div>
       {tab === 'queue' && <QueueTab />}
@@ -60,8 +52,6 @@ export function WalletClient() {
     </div>
   )
 }
-
-// ─── The top-up queue ────────────────────────────────────────────────────────
 
 function QueueTab() {
   const t = useTranslations()
@@ -74,16 +64,25 @@ function QueueTab() {
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         {STATUSES.map((option) => (
-          <FilterPill key={option} selected={status === option} onClick={() => setStatus(option)}>
+          <Button
+            key={option}
+            size="sm"
+            variant={status === option ? 'default' : 'outline'}
+            onClick={() => setStatus(option)}
+          >
             {t(`wallet.status.${option}`)}
-          </FilterPill>
+          </Button>
         ))}
       </div>
       <p className="text-xs text-muted-foreground">{t('admin.wallet.queueHint')}</p>
       {isError ? (
         <ErrorState message={walletErrorText(error, t)} onRetry={() => void refetch()} />
       ) : isLoading ? (
-        <ListSkeleton />
+        <div className="space-y-2">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-2xl" />
+          ))}
+        </div>
       ) : data.length === 0 ? (
         <EmptyState title={t('admin.wallet.queueEmpty')} />
       ) : (
@@ -118,7 +117,7 @@ function TopupRow({ row, method }: { row: WalletTopup; method: WalletPaymentMeth
   }
 
   return (
-    <Panel as="li" className="space-y-2 p-4 text-sm">
+    <li className="space-y-2 rounded-2xl border border-border bg-card p-4 text-sm">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span dir="ltr" className="font-semibold tabular-nums">
           {walletMoney(row.amountMinor, row.currency, lang)}
@@ -205,7 +204,6 @@ function TopupRow({ row, method }: { row: WalletTopup; method: WalletPaymentMeth
           </Button>
           <Button
             variant="outline"
-            // A refusal must say why: the business reads this note.
             disabled={decide.isPending || note.trim() === ''}
             onClick={() => decide.mutate({ id: row.id, decision: 'reject', note })}
           >
@@ -229,11 +227,9 @@ function TopupRow({ row, method }: { row: WalletTopup; method: WalletPaymentMeth
           {walletErrorText(decide.error, t)}
         </p>
       ) : null}
-    </Panel>
+    </li>
   )
 }
-
-// ─── Payment methods ─────────────────────────────────────────────────────────
 
 const EMPTY_METHOD: AdminWalletMethodInput = {
   kind: 'card_to_card',
@@ -272,13 +268,22 @@ function MethodsTab() {
       {isError ? (
         <ErrorState message={walletErrorText(error, t)} onRetry={() => void refetch()} />
       ) : isLoading ? (
-        <ListSkeleton rows={2} />
+        <div className="space-y-2">
+          <Skeleton className="h-16 w-full rounded-2xl" />
+          <Skeleton className="h-16 w-full rounded-2xl" />
+        </div>
       ) : data.length === 0 ? (
-        <EmptyState title={t('wallet.topup.noMethods')} hint={t('admin.wallet.noMethodsHint')} />
+        <EmptyState
+          title={t('wallet.topup.noMethods')}
+          description={t('admin.wallet.noMethodsHint')}
+        />
       ) : (
         <ul className="space-y-2">
           {data.map((m) => (
-            <Panel as="li" key={m.id} className="flex flex-wrap items-center gap-3 p-4 text-sm">
+            <li
+              key={m.id}
+              className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4 text-sm"
+            >
               <span className="font-medium">{m.title}</span>
               <span className="text-muted-foreground">
                 {t(`wallet.methodKind.${m.kind}`)} · {m.currency}
@@ -300,7 +305,7 @@ function MethodsTab() {
               >
                 {t('admin.wallet.edit')}
               </Button>
-            </Panel>
+            </li>
           ))}
         </ul>
       )}
@@ -324,7 +329,7 @@ function MethodForm({
     setInput((current) => ({ ...current, [key]: value }))
 
   return (
-    <Panel className="space-y-3 p-4 text-sm">
+    <Card className="space-y-3 p-4 text-sm">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="space-y-1">
           <span className="block text-xs text-muted-foreground">{t('admin.wallet.kind')}</span>
@@ -402,11 +407,9 @@ function MethodForm({
           {walletErrorText(save.error, t)}
         </p>
       ) : null}
-    </Panel>
+    </Card>
   )
 }
-
-// ─── A business's wallet ─────────────────────────────────────────────────────
 
 function BusinessesTab() {
   const t = useTranslations()
@@ -444,13 +447,19 @@ function BusinessesTab() {
           onRetry={() => void search.refetch()}
         />
       ) : search.isLoading ? (
-        <ListSkeleton rows={2} height="h-12" />
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-xl" />
+        </div>
       ) : (search.data ?? []).length === 0 ? (
         <EmptyState title={t('admin.wallet.noBusinesses')} />
       ) : (
         <ul className="space-y-2">
           {(search.data ?? []).map((w) => (
-            <Panel as="li" key={w.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
+            <li
+              key={w.id}
+              className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-3 text-sm"
+            >
               <span className="font-medium">{w.name}</span>
               <span dir="ltr" className="text-xs tabular-nums text-muted-foreground">
                 {w.balances.length === 0
@@ -467,7 +476,7 @@ function BusinessesTab() {
               >
                 {t('admin.wallet.open')}
               </Button>
-            </Panel>
+            </li>
           ))}
         </ul>
       )}
@@ -489,7 +498,7 @@ function BusinessWallet({ workspace }: { workspace: AdminWalletWorkspace }) {
   const amountInvalid = amount.trim() !== '' && (amountMinor === null || amountMinor === 0)
 
   return (
-    <Panel className="space-y-4 p-4 text-sm">
+    <Card className="space-y-4 p-4 text-sm">
       <h3 className="font-semibold">{workspace.name}</h3>
 
       <div className="space-y-2">
@@ -568,7 +577,11 @@ function BusinessWallet({ workspace }: { workspace: AdminWalletWorkspace }) {
           onRetry={() => void ledger.refetch()}
         />
       ) : ledger.isLoading ? (
-        <ListSkeleton rows={3} height="h-10" />
+        <div className="space-y-2">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-10 w-full rounded-xl" />
+          ))}
+        </div>
       ) : (ledger.data ?? []).length === 0 ? (
         <EmptyState title={t('wallet.history.empty')} />
       ) : (
@@ -595,6 +608,6 @@ function BusinessWallet({ workspace }: { workspace: AdminWalletWorkspace }) {
           ))}
         </ul>
       )}
-    </Panel>
+    </Card>
   )
 }

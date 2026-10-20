@@ -36,7 +36,6 @@ const VIEWS = [
   'conflicts/conflicts-view.tsx',
   'data-and-sync/data-and-sync-view.tsx',
   'data-migration/data-migration-view.tsx',
-  'governance/governance-view.tsx',
   'till/till-view.tsx',
   'expiry/expiry-view.tsx',
   'budgets/budgets-view.tsx',

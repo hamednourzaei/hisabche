@@ -16,6 +16,7 @@ import { ActivityService } from '../services/activity.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
+import { requireEntitlement } from '../middleware/entitlement.middleware'
 import { resolveBranchContext } from '../middleware/branch.middleware'
 import { branches } from '../services/branch'
 import { BaseError } from '../errors/base.error'
@@ -154,6 +155,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         authenticate,
         requireWorkspaceContext,
         requireCapability('invoice.create'),
+        requireEntitlement('invoice.create'),
         resolveBranchContext,
       ],
     },
@@ -299,8 +301,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
             used: err.used,
           })
         }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: err.message })
+        return sendFailure(reply, fastify.log, err, 'Failed to create invoice')
       }
     },
   )

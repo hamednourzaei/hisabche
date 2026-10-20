@@ -129,6 +129,12 @@ import { debugRoutes } from './routes/debug.routes'
 // ✅ اضافه کردن Activity Routes
 import { activityRoutes } from './routes/activity.routes'
 import adminRoutes from './routes/admin.routes'
+import adminSecurityRoutes from './routes/admin-security.routes'
+import adminCustomersRoutes from './routes/admin-customers.routes'
+import adminBillingRoutes from './routes/admin-billing.routes'
+import adminOfflineRoutes from './routes/admin-offline.routes'
+import adminOpsRoutes from './routes/admin-ops.routes'
+import { cloudMigrationRoutes } from './routes/cloud-migration.routes'
 import { developerRoutes } from './routes/developer.routes'
 import { ordersRoutes } from './routes/orders.routes'
 import { isPublicApiPath, storefrontRoutes } from './routes/storefront.routes'
@@ -576,6 +582,7 @@ export async function buildServer(): Promise<typeof server> {
       // request; without it here the browser blocks them all (BUG-006).
       'x-workspace-id',
       'etag',
+      'X-Admin-Step-Up-Timestamp',
     ],
     // ✅ FIX (کندی): بدون maxAge مرورگر برای هر درخواست یک OPTIONS جداگانه
     // می‌فرستد (در لاگ‌ها به‌وضوح دیده می‌شود). خود OPTIONS سریع است، اما
@@ -790,6 +797,12 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(marketplaceRoutes)
   await server.register(sandboxRoutes)
   await server.register(adminRoutes)
+  await server.register(adminSecurityRoutes)
+  await server.register(adminCustomersRoutes)
+  await server.register(adminBillingRoutes)
+  await server.register(adminOfflineRoutes)
+  await server.register(adminOpsRoutes)
+  await server.register(cloudMigrationRoutes)
 
   server.log.info('✅ All routes registered successfully')
 

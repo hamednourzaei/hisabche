@@ -29,6 +29,7 @@
 // customers, so caching the ids would show a stale answer under a fresh name.
 // A segment is the QUERY, evaluated when it is read.
 import type { OpenInvoice } from '../payments/payments.domain'
+import { round2 } from '../../utils/money'
 
 // ─── Cohorts (#130) ─────────────────────────────────────────────────────────
 
@@ -51,8 +52,6 @@ export interface CohortRow {
 }
 
 const monthKey = (isoDay: string) => isoDay.slice(0, 7)
-
-const round2 = (v: number) => Math.round(v * 100) / 100
 
 /**
  * ⚠️ HOW MANY MONTHS AFTER A COHORT THE TABLE SHOWS.

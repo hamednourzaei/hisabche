@@ -31,6 +31,7 @@ const READ_ONLY_ROUTES: readonly RegExp[] = [
   // An invoice by id — but never the builder at /invoices/new.
   /^\/invoices\/(?!new(?:\/|$))[^/]+\/?$/,
   /^\/billing\/?$/,
+  /^\/data-and-sync\/?$/,
   // Topping up and paying the plan from the wallet is the other way out.
   /^\/wallet\/?$/,
 ]
@@ -62,6 +63,37 @@ export function SubscriptionLockNotice({ hashRouter, onNavigate }: SubscriptionL
   const t = useTranslations()
   const locale = useLocale()
 
+  const safeT = (key: string, fallback?: string): string => {
+    try {
+      const res = t(key as Parameters<typeof t>[0])
+      return res && res !== key ? res : (fallback ?? key)
+    } catch {
+      return fallback ?? key
+    }
+  }
+
+  const title = safeT(
+    'entitlement.lockScreen.title',
+    safeT('subscriptionLock.title', 'پایان سقف مصرف یا انقضای اشتراک'),
+  )
+  const message = safeT(
+    'entitlement.lockScreen.message',
+    safeT(
+      'subscriptionLock.description',
+      'اطلاعات کسب‌وکار شما محفوظ است و حذف نشده است. برای ادامه‌ی عملیات، یکی از طرح‌های حسابچه را انتخاب کنید.',
+    ),
+  )
+  const exportPrompt = safeT(
+    'entitlement.lockScreen.exportPrompt',
+    'مشاهده، چاپ و خروجی اطلاعات همواره در دسترس است.',
+  )
+  const upgradePrompt = safeT(
+    'entitlement.lockScreen.upgradePrompt',
+    safeT('subscriptionLock.cta', 'ارتقا به طرح جدید'),
+  )
+
+  const exportHref = hashRouter ? '/data-and-sync' : `/${locale}/data-and-sync`
+
   return (
     <section
       role="alert"
@@ -70,17 +102,26 @@ export function SubscriptionLockNotice({ hashRouter, onNavigate }: SubscriptionL
       <span className="flex size-14 items-center justify-center rounded-full bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))] sm:size-16">
         <Lock className="size-7 sm:size-8" aria-hidden="true" />
       </span>
-      <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))] sm:text-xl">
-        {t('subscriptionLock.title')}
-      </h2>
-      <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('subscriptionLock.description')}</p>
-      <Link
-        href={billingHref(locale, Boolean(hashRouter))}
-        {...(onNavigate ? { onClick: onNavigate } : {})}
-        className="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-[image:var(--gradient-brand)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-110 sm:w-auto"
-      >
-        {t('subscriptionLock.cta')}
-      </Link>
+      <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))] sm:text-xl">{title}</h2>
+      <p className="text-sm text-[hsl(var(--fg-secondary))] leading-relaxed">{message}</p>
+      <p className="text-xs text-[hsl(var(--fg-tertiary))]">{exportPrompt}</p>
+
+      <div className="mt-2 flex w-full flex-col items-center gap-2 sm:w-auto">
+        <Link
+          href={billingHref(locale, Boolean(hashRouter))}
+          {...(onNavigate ? { onClick: onNavigate } : {})}
+          className="inline-flex w-full items-center justify-center rounded-xl bg-[image:var(--gradient-brand)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-110 sm:w-auto"
+        >
+          {upgradePrompt}
+        </Link>
+        <Link
+          href={exportHref}
+          {...(onNavigate ? { onClick: onNavigate } : {})}
+          className="text-xs text-[hsl(var(--color-primary))] hover:underline"
+        >
+          {exportPrompt}
+        </Link>
+      </div>
     </section>
   )
 }

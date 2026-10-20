@@ -15,8 +15,8 @@ import {
   type BlogPostStatus,
 } from '@hisabche/validation'
 
-import { Button, Input } from '@/components/ui'
-import { ErrorState, ListSkeleton, Panel } from '@/components/admin-shell/admin-ui'
+import { Button, Card, Input, Skeleton } from '@/components/ui'
+import { ErrorState } from '@/components/admin-shell/admin-ui'
 import {
   useAdminBlogPost,
   useBlogTaxonomy,
@@ -170,7 +170,15 @@ export function PostEditorClient({ id }: { id: string | null }) {
 
   const patch = (p: Partial<FormState>) => setForm((prev) => ({ ...prev, ...p }))
 
-  if (id && post.isLoading) return <ListSkeleton rows={4} height="h-32" />
+  if (id && post.isLoading) {
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+        ))}
+      </div>
+    )
+  }
   if (id && post.isError) {
     return (
       <ErrorState
@@ -233,7 +241,7 @@ export function PostEditorClient({ id }: { id: string | null }) {
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="space-y-4">
-        <Panel className="space-y-3 p-4">
+        <Card className="space-y-3 p-4">
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-xs">
               <span className="text-muted-foreground">{t('admin.blog.fields.locale')}</span>
@@ -311,7 +319,7 @@ export function PostEditorClient({ id }: { id: string | null }) {
               className="w-full rounded-lg border border-border bg-background p-2 text-sm"
             />
           </label>
-        </Panel>
+        </Card>
 
         <div data-field="contentHtml">
           <BlogEditor
@@ -329,7 +337,7 @@ export function PostEditorClient({ id }: { id: string | null }) {
       </div>
 
       <aside className="space-y-4">
-        <Panel className="space-y-3 p-4" as="section">
+        <Card className="space-y-3 p-4">
           <h2 className="text-sm font-semibold">{t('admin.blog.publish.title')}</h2>
           <p className="text-xs text-muted-foreground">
             {t('admin.blog.publish.current')}: {t(`admin.blog.status.${form.status}`)}
@@ -418,9 +426,9 @@ export function PostEditorClient({ id }: { id: string | null }) {
               {t('admin.blog.publish.delete')}
             </Button>
           ) : null}
-        </Panel>
+        </Card>
 
-        <Panel className="space-y-3 p-4" as="section">
+        <Card className="space-y-3 p-4">
           <h2 className="text-sm font-semibold">{t('admin.blog.fields.organise')}</h2>
           <label className="block space-y-1">
             <span className="text-xs text-muted-foreground">{t('admin.blog.fields.category')}</span>
@@ -478,9 +486,9 @@ export function PostEditorClient({ id }: { id: string | null }) {
               <span className="text-xs text-destructive">{errorFor('tagIds')}</span>
             ) : null}
           </fieldset>
-        </Panel>
+        </Card>
 
-        <Panel className="space-y-3 p-4" as="section">
+        <Card className="space-y-3 p-4">
           <h2 className="text-sm font-semibold">{t('admin.blog.fields.cover')}</h2>
           {form.coverUrl ? (
             // eslint-plugin-next prefers next/image; the admin preview is a
@@ -515,7 +523,7 @@ export function PostEditorClient({ id }: { id: string | null }) {
               <span className="text-xs text-destructive">{errorFor('coverAlt')}</span>
             ) : null}
           </label>
-        </Panel>
+        </Card>
 
         <SeoPanel
           locale={form.locale}
@@ -527,7 +535,7 @@ export function PostEditorClient({ id }: { id: string | null }) {
         />
 
         {current ? (
-          <Panel className="space-y-2 p-4 text-xs" as="section">
+          <Card className="space-y-2 p-4 text-xs">
             <h2 className="text-sm font-semibold">{t('admin.blog.translations.title')}</h2>
             {BLOG_LOCALES.filter((l) => l !== current.locale).map((l) => {
               const existing = current.translations.find((tr) => tr.locale === l)
@@ -552,11 +560,11 @@ export function PostEditorClient({ id }: { id: string | null }) {
                 </p>
               )
             })}
-          </Panel>
+          </Card>
         ) : null}
 
         {current ? (
-          <Panel className="grid grid-cols-2 gap-2 p-4 text-xs" as="section">
+          <Card className="grid grid-cols-2 gap-2 p-4 text-xs">
             <h2 className="col-span-2 text-sm font-semibold">{t('admin.blog.stats.title')}</h2>
             <span>{t('admin.blog.stats.views')}</span>
             <span className="tabular-nums">{current.stats.views}</span>
@@ -574,7 +582,7 @@ export function PostEditorClient({ id }: { id: string | null }) {
             <span className="tabular-nums">
               {current.stats.comments} + {current.stats.pendingComments}
             </span>
-          </Panel>
+          </Card>
         ) : null}
       </aside>
     </div>
@@ -590,7 +598,7 @@ function FaqEditor({
 }) {
   const t = useTranslations()
   return (
-    <Panel className="space-y-3 p-4" as="section">
+    <Card className="space-y-3 p-4">
       <h2 className="text-sm font-semibold">{t('admin.blog.faq.title')}</h2>
       <p className="text-xs text-muted-foreground">{t('admin.blog.faq.hint')}</p>
       {faq.map((item, index) => (
@@ -631,6 +639,6 @@ function FaqEditor({
       >
         {t('admin.blog.faq.add')}
       </Button>
-    </Panel>
+    </Card>
   )
 }

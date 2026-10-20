@@ -127,7 +127,7 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **ارز دفاتر و ممیزی چندارزی؛ ورود فایل (۱۱ اکتبر)**                    | `.claude/reverse-and-import/01-CURRENCY-AUDIT.md` · `00-SPEC.md`                         |
 | **مرور کار Antigravity؛ صندوق چندارزی، رخدادها، لینک حضور و غیاب (۱۲ اکتبر)** | `.claude/SESSION-CACHE-2026-10-12-ANTIGRAVITY-REVIEW.md` · `AGENTS.md` — **attendance-devices-01، attendance-02، invoice-exchange-rate-01 و till-payments-01 منتظر اجرا** |
 | **ممیزی زنده ۱۴ اکتبر: ۸۲ باگ، درس‌ها، آنچه منتظر انسان است**                 | `.claude/LIVE-AUDIT-2026-10-14.md` · `.claude/SESSION-CACHE-2026-10-14-LIVE-AUDIT.md` — **custom-units-01 منتظر اجرا و VERIFY** |
-| **همه‌ی درس‌ها با شماره (۱–۱۸۱)**                                     | `.claude/lessons-learned.md`                                                |
+| **همه‌ی درس‌ها با شماره (۱–۲۱۵)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |
@@ -634,6 +634,17 @@ cd apps/admin     && npx tsc --noEmit
 
 **Status:**
 - Test orchestration script deployed to run Web Typecheck, Mobile Tests, Desktop Tests, Backend Tests and produce verifiable Final Decision documents.
+
+---
+
+## Session Cache: 2026-10-20 Offline Edition, Entitlement & Admin Panel (P7, E, M, A)
+
+**Key Architecture Rules:**
+- **Feature Registry & Entitlement (E):** One registry in `packages/validation/src/schemas/feature-registry.ts` drives plan capability across local and cloud. `resolveEntitlement()` returns pure verdicts (`AVAILABLE`, `REQUIRES_ONLINE`, `NOT_ENTITLED`, `REQUIRES_UPGRADE`, `EXHAUSTED`, `EXPIRED`). Principle 6: Reading, printing, export, and backup are `alwaysAllowed: true` in every state (including `OFFLINE_BANNED` and `EXPIRED`).
+- **Offline Licence Seats & Two-Tier Policy (E):** Seats are modeled as `computer | mobile` (never OS-dependent). Reinstall on matching `stable-id` is free forever. Max 3 transfers/year. Tier-1 cryptographic evidence triggers automatic permanent ban; Tier-2 heuristic signals go to review queue only. Append-only `license_logs` table with DB trigger preventing mutations; strict evidence sanitizer strips all customer names, invoice IDs, and money amounts.
+- **Offline Notice & Hooks Discipline (P7):** Actions needing server display `<CloudRequiredNotice />` offline without network traffic. React hooks discipline requires `Container` (guard + notice) vs `Content` (business logic) separation so hooks are never called conditionally or after early returns.
+- **Admin Panel & Immutable Audits (A):** 8 central hubs with `HubTabs`. Fixed RBAC roles with granular permissions, Step-Up TOTP (≤300s), immutable `audit_logs` via trigger, Maker-Checker on sensitive financial actions (`chk_maker_checker_proposer_ne_approver`). Primitives strictly from `@hisabche/ui`.
+- **Cloud Migration Resilience (M):** Kill-and-resume migration with lease, checksum validation, and independent reconciliation engine verifying 100% data parity directly on cloud Postgres before edition cutover.
 
 ---
 

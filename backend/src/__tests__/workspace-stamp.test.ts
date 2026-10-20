@@ -24,7 +24,13 @@ const eq = vi.fn(() => ({ select }))
 const update = vi.fn(() => ({ eq }))
 
 vi.mock('../db', () => ({
-  supabase: { from: vi.fn(() => ({ update })) },
+  supabase: {
+    from: vi.fn(() => ({
+      update,
+      // The signature is read on its own (an optional column): none here.
+      select: () => ({ in: async () => ({ data: [], error: null }) }),
+    })),
+  },
 }))
 
 const { WorkspaceService } = await import('../services/workspace.service')

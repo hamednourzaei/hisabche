@@ -20,11 +20,19 @@ export default defineConfig({
     projects: [
       {
         extends: true,
-        test: { name: 'unit', exclude: [...configDefaults.exclude, '**/*.pg.test.ts'] },
+        test: {
+          name: 'unit',
+          exclude: [...configDefaults.exclude, '**/*.pg.test.ts'],
+          sequence: { groupOrder: 0 },
+        },
       },
       {
         extends: true,
-        test: { name: 'pg', include: ['src/**/*.pg.test.ts'], fileParallelism: false },
+        // Two Postgres files at a time (owner, 20 Oct 2026: the full suite took
+        // ~10 min). Each pg file starts its OWN embedded Postgres in its own temp
+        // dir on its own random port, so two never share state; more than two
+        // made start-up fight for CPU and ports.
+        test: { name: 'pg', include: ['src/**/*.pg.test.ts'], fileParallelism: true, maxWorkers: 2, sequence: { groupOrder: 1 } },
       },
     ],
   },

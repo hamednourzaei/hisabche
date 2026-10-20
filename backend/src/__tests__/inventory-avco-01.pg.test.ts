@@ -27,8 +27,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { collapseLines, normaliseLines } from '../services/accounting/accounting.domain'
 import { inBooksCurrency, invoiceLedgerLines } from '../services/accounting/invoice-posting.domain'
+import { freePortSync } from './helpers/free-port'
 
-const PORT = 57000 + Math.floor(Math.random() * 900)
+const PORT = freePortSync()
 const dir = mkdtempSync(join(tmpdir(), 'hisabche-pg-avco-'))
 const pg = new EmbeddedPostgres({
   databaseDir: dir,

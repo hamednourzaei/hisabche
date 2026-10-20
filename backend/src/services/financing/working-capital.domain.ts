@@ -39,6 +39,8 @@
 // applies to DIO with no cost of goods sold.
 // ============================================
 
+import { round2 } from '../../utils/money'
+
 export type Minor = number
 
 /** Everything this engine reads. No balance is computed here. */
@@ -125,7 +127,6 @@ export function workingCapital(input: WorkingCapitalInput): WorkingCapitalMetric
 }
 
 const round1 = (v: number): number => Math.round(v * 10) / 10
-const round2 = (v: number): number => Math.round(v * 100) / 100
 
 // ─── Loans and borrowings (#125) ──────────────────────────────────────────────
 

@@ -135,6 +135,18 @@ export const CURRENCY_CODES = [
 
 export const currencyCodeSchema = z.enum(CURRENCY_CODES)
 
+export const rateSchema = z.object({
+  currency: z.string().min(2).max(8),
+  rate: z.number().positive().finite(),
+  onDate: z.string().min(8),
+})
+export const rateInputSchema = rateSchema
+
+export const baseCurrencySchema = z.object({
+  currency: z.string().regex(/^[A-Z]{3}$/),
+})
+export const baseCurrencyInputSchema = baseCurrencySchema
+
 /**
  * The order a person picks a currency in (live audit #61/#65): the afghani,
  * the dollar and gold/silver by the gram first — a money changer and a

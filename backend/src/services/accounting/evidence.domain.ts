@@ -26,6 +26,7 @@ import {
   type ProfitInvoice,
   type ProfitLine,
 } from './profit-report.domain'
+import { round2 } from '../../utils/money'
 
 export interface EvidenceLayer {
   sourceType: string
@@ -80,8 +81,6 @@ export interface InvoiceEvidence {
   /** Stated, not hidden: a profit built on a missing or estimated cost is overstated or approximate. */
   warnings: Array<'COST_MISSING' | 'COST_ESTIMATED' | 'NOT_POSTED'>
 }
-
-const round2 = (value: number) => Math.round(value * 100) / 100
 
 export function explainInvoiceProfit(input: {
   invoice: ProfitInvoice

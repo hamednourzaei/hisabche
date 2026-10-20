@@ -10,6 +10,7 @@ import { closeDatabase, initDatabase } from './db/database'
 import { registerIpcHandlers } from './ipc/register'
 import { createMainWindow } from './window'
 import { initCrashReporting } from './services/monitoring'
+import { initNetworkLog } from './services/network-log'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ⚠️ WHERE THE LOCAL DATABASE LIVES — PINNED, NOT DERIVED.
@@ -67,7 +68,19 @@ function applyContentSecurityPolicy(): void {
   })
 }
 
+/**
+ * ⚠️ THE CONSOLE LOG IS GONE, AND THE FILE IS THE POINT.
+ *
+ * `console.warn` in a packaged Windows app goes nowhere: no terminal is
+ * attached to an installer the person double-clicked, and nothing is written
+ * to disk for them to send. The attempt is now recorded in
+ * `%APPDATA%\@hisabche\desktop\logs\network-offline.log` — one line per
+ * outbound attempt, plus a header line with the time the run started, so a
+ * run that made NO attempt leaves exactly one line behind.
+ */
 app.whenReady().then(() => {
+  // First, so that even the crash reporter's own start-up call is on record.
+  initNetworkLog()
   initCrashReporting()
   initDatabase()
   registerIpcHandlers()

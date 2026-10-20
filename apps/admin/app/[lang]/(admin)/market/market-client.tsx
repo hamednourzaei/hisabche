@@ -5,8 +5,8 @@ import { useLocale, useTranslations } from 'next-intl'
 import { apiErrorMessage, type MarketSellerProfile } from '@hisabche/api'
 import { walletMoney } from '@hisabche/ui'
 
-import { Button, Input } from '@/components/ui'
-import { EmptyState, ErrorState, ListSkeleton, Panel } from '@/components/admin-shell/admin-ui'
+import { Button, Card, EmptyState, Input, Skeleton } from '@/components/ui'
+import { ErrorState } from '@/components/admin-shell/admin-ui'
 import {
   useAdminMarketListings,
   useAdminMarketSellers,
@@ -20,11 +20,6 @@ import {
 
 /**
  * The goods marketplace, from the platform side.
- *
- * The switch decides whether the marketplace exists at all: OFF (the default)
- * the public pages are 404 and sellers see «not enabled yet». Below it: the
- * sellers — verify one, suspend one (with the reason the seller will read) —
- * and a seller's listings, each of which can be suspended on its own.
  */
 export function MarketClient() {
   const t = useTranslations()
@@ -38,10 +33,20 @@ export function MarketClient() {
   const notConfigured =
     state.isError && apiErrorMessage(state.error, '').startsWith('MARKET_NOT_CONFIGURED')
 
-  if (state.isLoading) return <ListSkeleton rows={2} />
+  if (state.isLoading) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-16 w-full rounded-2xl" />
+        <Skeleton className="h-16 w-full rounded-2xl" />
+      </div>
+    )
+  }
   if (notConfigured) {
     return (
-      <EmptyState title={t('market.notConfigured')} hint={t('admin.market.notConfiguredHint')} />
+      <EmptyState
+        title={t('market.notConfigured')}
+        description={t('admin.market.notConfiguredHint')}
+      />
     )
   }
   if (state.isError) {
@@ -52,7 +57,7 @@ export function MarketClient() {
 
   return (
     <div className="space-y-4">
-      <Panel className="flex flex-wrap items-center gap-3 p-4 text-sm">
+      <Card className="flex flex-wrap items-center gap-3 p-4 text-sm">
         <div className="min-w-0 flex-1 space-y-1">
           <p className="font-semibold">
             {enabled ? t('admin.market.switchOn') : t('admin.market.switchOff')}
@@ -74,7 +79,7 @@ export function MarketClient() {
             {apiErrorMessage(setEnabled.error, t('admin.error.generic'))}
           </p>
         ) : null}
-      </Panel>
+      </Card>
 
       <form
         className="flex flex-wrap gap-2"
@@ -97,7 +102,11 @@ export function MarketClient() {
       {sellers.isError ? (
         <ErrorState message={t('admin.error.generic')} onRetry={() => void sellers.refetch()} />
       ) : sellers.isLoading ? (
-        <ListSkeleton rows={3} height="h-16" />
+        <div className="space-y-2">
+          {Array.from({ length: 3 }, (_, index) => (
+            <Skeleton key={index} className="h-16 w-full rounded-2xl" />
+          ))}
+        </div>
       ) : (sellers.data ?? []).length === 0 ? (
         <EmptyState title={t('admin.market.noSellers')} />
       ) : (
@@ -132,7 +141,7 @@ function SellerRow({
   const suspended = seller.status === 'suspended'
 
   return (
-    <Panel as="li" className="space-y-3 p-4 text-sm">
+    <li className="space-y-3 rounded-2xl border border-border bg-card p-4 text-sm">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="font-medium">{seller.name}</span>
         <code dir="ltr" className="font-mono text-xs">
@@ -184,7 +193,6 @@ function SellerRow({
             <Button
               size="sm"
               variant="outline"
-              // The seller reads this reason: no suspension without one.
               disabled={setStatus.isPending || reason.trim() === ''}
               onClick={() =>
                 setStatus.mutate({ workspaceId: seller.workspaceId, status: 'suspended', reason })
@@ -206,7 +214,7 @@ function SellerRow({
       ) : null}
 
       {isOpen ? <SellerListings workspaceId={seller.workspaceId} /> : null}
-    </Panel>
+    </li>
   )
 }
 
@@ -217,7 +225,14 @@ function SellerListings({ workspaceId }: { workspaceId: string }) {
   if (listings.isError) {
     return <ErrorState message={t('admin.error.generic')} onRetry={() => void listings.refetch()} />
   }
-  if (listings.isLoading) return <ListSkeleton rows={2} height="h-12" />
+  if (listings.isLoading) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+      </div>
+    )
+  }
   if ((listings.data ?? []).length === 0) {
     return <p className="text-xs text-muted-foreground">{t('market.listings.empty')}</p>
   }

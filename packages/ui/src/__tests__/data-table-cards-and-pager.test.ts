@@ -73,11 +73,7 @@ describe('DataTable — the pager', () => {
   })
 
   it('pages that page from the server opt out — never two pagers', () => {
-    for (const file of [
-      'invoices/invoices-view.tsx',
-      'orders/orders-view.tsx',
-      'products/product-list-view.tsx',
-    ]) {
+    for (const file of ['invoices/invoices-view.tsx', 'products/product-list-view.tsx']) {
       expect(read(file), file).toContain('<DataTable paginate={false}')
     }
   })

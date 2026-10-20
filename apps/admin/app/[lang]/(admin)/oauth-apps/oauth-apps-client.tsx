@@ -5,14 +5,8 @@ import { useTranslations } from 'next-intl'
 import { apiErrorMessage } from '@hisabche/api'
 import { APP_HEALTH_LEVELS, APP_REPORT_REASONS, APP_RISK_FLAGS } from '@hisabche/validation'
 
-import { Button, Input } from '@/components/ui'
-import {
-  EmptyState,
-  ErrorState,
-  FilterPill,
-  ListSkeleton,
-  Panel,
-} from '@/components/admin-shell/admin-ui'
+import { Button, Card, EmptyState, Input, Skeleton } from '@/components/ui'
+import { ErrorState } from '@/components/admin-shell/admin-ui'
 import {
   OAUTH_APP_STATUSES,
   useAdminAppReports,
@@ -33,17 +27,9 @@ import {
   type OAuthAppStatus,
 } from '@/hooks/use-admin-oauth-apps'
 
-/**
- * The marketplace, from the platform side: the review queue (with what a
- * reviewer must look at), the apps, publisher verification, abuse reports and
- * reviews. Every decision here is the server's to enforce; this screen only
- * asks for it and shows what came back.
- */
-
 const TABS = ['versions', 'apps', 'publishers', 'reports', 'reviews'] as const
 type Tab = (typeof TABS)[number]
 
-/** A server value, worded only if it is on the closed list (t() throws otherwise). */
 function closed(
   t: (key: string) => string,
   list: readonly string[],
@@ -61,9 +47,14 @@ export function OAuthAppsClient() {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {TABS.map((option) => (
-          <FilterPill key={option} selected={tab === option} onClick={() => setTab(option)}>
+          <Button
+            key={option}
+            size="sm"
+            variant={tab === option ? 'default' : 'outline'}
+            onClick={() => setTab(option)}
+          >
             {t(`admin.oauthApps.tabs.${option}`)}
-          </FilterPill>
+          </Button>
         ))}
       </div>
       {tab === 'versions' && <VersionsTab />}
@@ -75,14 +66,20 @@ export function OAuthAppsClient() {
   )
 }
 
-// ─── versions in review ──────────────────────────────────────────────────────
-
 function VersionsTab() {
   const t = useTranslations()
   const { data = [], isLoading, isError, refetch } = useAdminAppVersions()
   if (isError)
     return <ErrorState message={t('admin.error.generic')} onRetry={() => void refetch()} />
-  if (isLoading) return <ListSkeleton />
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 3 }, (_, i) => (
+          <Skeleton key={i} className="h-24 w-full rounded-2xl" />
+        ))}
+      </div>
+    )
+  }
   if (data.length === 0) return <EmptyState title={t('admin.oauthApps.noVersions')} />
   return (
     <ul className="space-y-2">
@@ -99,7 +96,7 @@ function VersionRow({ version: v }: { version: AdminVersion }) {
   const [note, setNote] = useState('')
   const blocked = v.flags.some((f) => f.flag === 'LOCALHOST_REDIRECT')
   return (
-    <Panel as="li" className="space-y-2 p-4 text-sm">
+    <li className="space-y-2 rounded-2xl border border-border bg-card p-4 text-sm">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="font-medium">{v.appName}</span>
         <span dir="ltr" className="font-mono">
@@ -171,11 +168,9 @@ function VersionRow({ version: v }: { version: AdminVersion }) {
           {apiErrorMessage(decide.error, t('admin.error.generic'))}
         </p>
       ) : null}
-    </Panel>
+    </li>
   )
 }
-
-// ─── apps ────────────────────────────────────────────────────────────────────
 
 function AppsTab() {
   const t = useTranslations()
@@ -185,16 +180,25 @@ function AppsTab() {
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         {OAUTH_APP_STATUSES.map((option) => (
-          <FilterPill key={option} selected={status === option} onClick={() => setStatus(option)}>
+          <Button
+            key={option}
+            size="sm"
+            variant={status === option ? 'default' : 'outline'}
+            onClick={() => setStatus(option)}
+          >
             {t(`oauth.status.${option}`)}
-          </FilterPill>
+          </Button>
         ))}
       </div>
       <p className="text-xs text-muted-foreground">{t('admin.oauthApps.hint')}</p>
       {isError ? (
         <ErrorState message={t('admin.error.generic')} onRetry={() => void refetch()} />
       ) : isLoading ? (
-        <ListSkeleton />
+        <div className="space-y-2">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-2xl" />
+          ))}
+        </div>
       ) : data.length === 0 ? (
         <EmptyState title={t('admin.oauthApps.empty')} />
       ) : (
@@ -217,7 +221,7 @@ function AppRow({ app }: { app: AdminOAuthApp }) {
   const stats = useAdminAppStats(showStats ? app.id : null)
 
   return (
-    <Panel as="li" className="space-y-2 p-4 text-sm">
+    <li className="space-y-2 rounded-2xl border border-border bg-card p-4 text-sm">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="font-medium">{app.name}</span>
         <span className="text-muted-foreground">
@@ -233,7 +237,7 @@ function AppRow({ app }: { app: AdminOAuthApp }) {
           {t('oauth.reviewNote')}: {app.review_note}
         </p>
       ) : null}
-      <Button variant="outline" onClick={() => setShowStats(!showStats)}>
+      <Button variant="outline" size="sm" onClick={() => setShowStats(!showStats)}>
         {t('oauth.manage.analytics')}
       </Button>
       {showStats && stats.data ? (
@@ -297,11 +301,9 @@ function AppRow({ app }: { app: AdminOAuthApp }) {
           {apiErrorMessage(setStatus.error, t('admin.error.generic'))}
         </p>
       ) : null}
-    </Panel>
+    </li>
   )
 }
-
-// ─── publishers ──────────────────────────────────────────────────────────────
 
 function PublishersTab() {
   const t = useTranslations()
@@ -309,17 +311,24 @@ function PublishersTab() {
   const verify = useSetPublisherVerified()
   if (isError)
     return <ErrorState message={t('admin.error.generic')} onRetry={() => void refetch()} />
-  if (isLoading) return <ListSkeleton />
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 3 }, (_, i) => (
+          <Skeleton key={i} className="h-16 w-full rounded-2xl" />
+        ))}
+      </div>
+    )
+  }
   if (data.length === 0) return <EmptyState title={t('admin.oauthApps.noPublishers')} />
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground">{t('admin.oauthApps.verifyHint')}</p>
       <ul className="space-y-2">
         {data.map((p) => (
-          <Panel
-            as="li"
+          <li
             key={p.workspace_id}
-            className="flex flex-wrap items-center gap-3 p-4 text-sm"
+            className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4 text-sm"
           >
             <span className="font-medium">{p.display_name}</span>
             <span className="text-muted-foreground">{p.workspaceName}</span>
@@ -346,14 +355,12 @@ function PublishersTab() {
             >
               {p.verified_at ? t('admin.oauthApps.unverify') : t('admin.oauthApps.verify')}
             </Button>
-          </Panel>
+          </li>
         ))}
       </ul>
     </div>
   )
 }
-
-// ─── reports ─────────────────────────────────────────────────────────────────
 
 function ReportsTab() {
   const t = useTranslations()
@@ -363,15 +370,24 @@ function ReportsTab() {
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         {(['open', 'resolved', 'dismissed'] as const).map((option) => (
-          <FilterPill key={option} selected={status === option} onClick={() => setStatus(option)}>
+          <Button
+            key={option}
+            size="sm"
+            variant={status === option ? 'default' : 'outline'}
+            onClick={() => setStatus(option)}
+          >
             {t(`admin.oauthApps.reportStatus.${option}`)}
-          </FilterPill>
+          </Button>
         ))}
       </div>
       {isError ? (
         <ErrorState message={t('admin.error.generic')} onRetry={() => void refetch()} />
       ) : isLoading ? (
-        <ListSkeleton />
+        <div className="space-y-2">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-2xl" />
+          ))}
+        </div>
       ) : data.length === 0 ? (
         <EmptyState title={t('admin.oauthApps.noReports')} />
       ) : (
@@ -390,7 +406,7 @@ function ReportRow({ report: r }: { report: AdminReport }) {
   const resolve = useResolveAppReport()
   const [note, setNote] = useState('')
   return (
-    <Panel as="li" className="space-y-2 p-4 text-sm">
+    <li className="space-y-2 rounded-2xl border border-border bg-card p-4 text-sm">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="font-medium">{r.appName}</span>
         <span>{closed(t, APP_REPORT_REASONS, 'marketplace.reason', r.reason)}</span>
@@ -439,11 +455,9 @@ function ReportRow({ report: r }: { report: AdminReport }) {
           {apiErrorMessage(resolve.error, t('admin.error.generic'))}
         </p>
       ) : null}
-    </Panel>
+    </li>
   )
 }
-
-// ─── reviews ─────────────────────────────────────────────────────────────────
 
 function ReviewsTab() {
   const t = useTranslations()
@@ -452,17 +466,25 @@ function ReviewsTab() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        <FilterPill selected={!hidden} onClick={() => setHidden(false)}>
+        <Button
+          size="sm"
+          variant={!hidden ? 'default' : 'outline'}
+          onClick={() => setHidden(false)}
+        >
           {t('admin.oauthApps.visibleReviews')}
-        </FilterPill>
-        <FilterPill selected={hidden} onClick={() => setHidden(true)}>
+        </Button>
+        <Button size="sm" variant={hidden ? 'default' : 'outline'} onClick={() => setHidden(true)}>
           {t('admin.oauthApps.hiddenReviews')}
-        </FilterPill>
+        </Button>
       </div>
       {isError ? (
         <ErrorState message={t('admin.error.generic')} onRetry={() => void refetch()} />
       ) : isLoading ? (
-        <ListSkeleton />
+        <div className="space-y-2">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-2xl" />
+          ))}
+        </div>
       ) : data.length === 0 ? (
         <EmptyState title={t('admin.oauthApps.noReviews')} />
       ) : (
@@ -481,7 +503,7 @@ function ReviewRow({ review: r }: { review: AdminReview }) {
   const setHidden = useSetReviewHidden()
   const [reason, setReason] = useState('')
   return (
-    <Panel as="li" className="space-y-2 p-4 text-sm">
+    <li className="space-y-2 rounded-2xl border border-border bg-card p-4 text-sm">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="font-medium">{r.appName}</span>
         <span className="tabular-nums">{'★'.repeat(r.rating)}</span>
@@ -515,6 +537,6 @@ function ReviewRow({ review: r }: { review: AdminReview }) {
           {apiErrorMessage(setHidden.error, t('admin.error.generic'))}
         </p>
       ) : null}
-    </Panel>
+    </li>
   )
 }

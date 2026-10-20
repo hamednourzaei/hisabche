@@ -17,7 +17,7 @@ export {
   detectAnomalies,
   explainChange,
   grossMargin,
-  grossProfit,
+  periodGrossProfit,
   round2,
   type Anomaly,
   type AnomalyKind,

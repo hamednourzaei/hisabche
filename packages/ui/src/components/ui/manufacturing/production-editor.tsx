@@ -56,6 +56,8 @@ import { TableSettingsDialog } from '../invoice-builder/table-settings-dialog'
 import { GridToolbar } from '../invoice-builder/grid/grid-toolbar'
 import { InvoiceItemsGrid } from '../invoice-builder/grid/invoice-items-grid'
 import { AddWarehouseDialog } from '../warehouse/warehouse-dialogs'
+import { useActionAvailability } from '../../../lib/capability/use-action-availability'
+import { CloudRequiredNotice } from '../cloud-required-notice'
 import { useProductionDraft } from './use-production-draft'
 import { manufacturingErrorText } from './manufacturing-errors'
 
@@ -127,6 +129,9 @@ export function ProductionEditor({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [serverError, setServerError] = useState<string | null>(null)
   const idempotencyKey = useRef(newIdempotencyKey())
+
+  const produceAvailability = useActionAvailability('manufacturing.produce')
+  const definitionAvailability = useActionAvailability('manufacturing.definition')
 
   const definition = useProductionDefinition(target?.productId ?? null)
   const saveDefinition = useSaveProductionDefinition()
@@ -263,6 +268,7 @@ export function ProductionEditor({
   }, [target, currency, columns, draft])
 
   const handleSaveDefinition = useCallback(() => {
+    if (definitionAvailability.requiresOnline) return
     const found = validate(false)
     setErrors(found)
     setServerError(null)
@@ -279,9 +285,18 @@ export function ProductionEditor({
       onError: (error) =>
         setServerError(apiErrorMessage(error, t('manufacturing.editor.saveFailed', 'ذخیره نشد.'))),
     })
-  }, [validate, saveDefinition, definitionPayload, toast, t, onDone])
+  }, [
+    definitionAvailability.requiresOnline,
+    validate,
+    saveDefinition,
+    definitionPayload,
+    toast,
+    t,
+    onDone,
+  ])
 
   const handleProduce = useCallback(() => {
+    if (produceAvailability.requiresOnline) return
     const found = validate(true)
     setErrors(found)
     setServerError(null)
@@ -317,6 +332,7 @@ export function ProductionEditor({
         ),
     })
   }, [
+    produceAvailability.requiresOnline,
     validate,
     definitionPayload,
     workOrderId,
@@ -808,6 +824,14 @@ export function ProductionEditor({
         </p>
       ) : null}
 
+      {produceAvailability.requiresOnline || definitionAvailability.requiresOnline ? (
+        <CloudRequiredNotice
+          variant="inline"
+          title={t('manufacturing.title', 'تولید')}
+          description={t('offline.cloudRequired.description')}
+        />
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
           {t('action.cancel', 'انصراف')}
@@ -817,12 +841,27 @@ export function ProductionEditor({
           variant={mode === 'definition' ? 'default' : 'secondary'}
           onClick={handleSaveDefinition}
           loading={saveDefinition.isPending}
-          disabled={busy}
+          disabled={busy || definitionAvailability.requiresOnline}
+          title={
+            definitionAvailability.requiresOnline
+              ? t('offline.cloudRequired.title', 'این کار اینترنت می‌خواهد')
+              : undefined
+          }
         >
           {t('manufacturing.editor.saveDefinition', 'ذخیره‌ی فرمول')}
         </Button>
         {mode === 'produce' ? (
-          <Button type="button" onClick={handleProduce} loading={produce.isPending} disabled={busy}>
+          <Button
+            type="button"
+            onClick={handleProduce}
+            loading={produce.isPending}
+            disabled={busy || produceAvailability.requiresOnline}
+            title={
+              produceAvailability.requiresOnline
+                ? t('offline.cloudRequired.title', 'این کار اینترنت می‌خواهد')
+                : undefined
+            }
+          >
             {addToInventory
               ? t('manufacturing.editor.produceToStock', 'ثبت تولید و افزودن به انبار')
               : t('manufacturing.editor.produce', 'ثبت تولید')}

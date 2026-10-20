@@ -16,6 +16,7 @@
 import { memo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
+import { useActionAvailability } from '../../../../lib/capability/use-action-availability'
 import {
   asList,
   useConflicts,
@@ -27,7 +28,6 @@ import {
 import { useBackupStore, useSyncStore } from '@hisabche/store'
 
 import { DataAndSyncView } from '../data-and-sync-view'
-import { DataSnapshotsPanel } from '../data-snapshots-panel'
 
 export const DataAndSyncContainer = memo(function DataAndSyncContainer() {
   const onNavigate = useLocalePush()
@@ -40,6 +40,7 @@ export const DataAndSyncContainer = memo(function DataAndSyncContainer() {
     [translate],
   )
 
+  const overviewAvailability = useActionAvailability('sync.overview')
   const { isOnline, isSyncing, pendingCount, lastSyncedAt } = useSyncStore()
 
   // `useOpenConflictCount` is not used here on purpose: it returns a bare
@@ -49,7 +50,7 @@ export const DataAndSyncContainer = memo(function DataAndSyncContainer() {
   const conflicts = useConflicts('open')
   const migrations = useMigrations()
   const lastBackupAt = useBackupStore((s) => s.lastBackupAt)
-  const syncOverview = useSyncOverview()
+  const syncOverview = useSyncOverview({ enabled: !overviewAvailability.requiresOnline })
   const duplicates = useDuplicateCounts()
 
   // A failed or in-flight count is `null`, never 0. The view renders the two
@@ -65,9 +66,9 @@ export const DataAndSyncContainer = memo(function DataAndSyncContainer() {
   const handleRefresh = useCallback(() => {
     conflicts.refetch()
     migrations.refetch()
-    syncOverview.refetch()
+    if (!overviewAvailability.requiresOnline) syncOverview.refetch()
     duplicates.refetch()
-  }, [conflicts, migrations, syncOverview, duplicates])
+  }, [conflicts, migrations, syncOverview, duplicates, overviewAvailability.requiresOnline])
 
   return (
     <DataAndSyncView
@@ -84,7 +85,6 @@ export const DataAndSyncContainer = memo(function DataAndSyncContainer() {
       syncOverview={syncOverview.isError ? null : (syncOverview.data ?? null)}
       duplicates={duplicates.isError ? null : (duplicates.data ?? null)}
       isLoading={migrations.isLoading}
-      snapshotsSlot={<DataSnapshotsPanel />}
       error={migrations.error ? (migrations.error as Error).message : null}
       onNavigate={onNavigate}
       onRefresh={handleRefresh}

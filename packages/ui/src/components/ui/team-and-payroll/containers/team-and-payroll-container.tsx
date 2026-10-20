@@ -39,6 +39,7 @@ import { useServerFieldErrors } from '../../../../hooks/use-server-field-errors'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { useActionAvailability } from '../../../../lib/capability/use-action-availability'
 
 import {
   useAssignProfile,
@@ -49,7 +50,6 @@ import {
   useCreateMemberDirect,
   useDeleteEmployee,
   useEmployees,
-  asList,
   usePermissionMatrix,
   useWorkspaces,
   apiErrorMessage,
@@ -230,6 +230,7 @@ function TeamAndPayrollScreen({ section }: { section: TeamTab | 'timesheets' }) 
 
   // ⚠️ Hooks, called during render. This is the fix for the invalid hook calls
   // described at the top of this file.
+  const teamMembersAvailability = useActionAvailability('team.members')
   const createEmployee = useCreateEmployee()
   const createMemberDirect = useCreateMemberDirect()
   // The account is created under the owner's workspace. `useWorkspaces` is
@@ -298,7 +299,11 @@ function TeamAndPayrollScreen({ section }: { section: TeamTab | 'timesheets' }) 
         // بود» beside a person who was in fact created, and the owner would
         // add them a second time.
         let accessUserId: string | null = null
-        if (access && workspaceId) {
+        if (access && teamMembersAvailability.requiresOnline) {
+          setEmployeeFormError(
+            t('team.accountRequiresOnline', 'ساخت حساب کاربری برای عضو تیم نیاز به اینترنت دارد.'),
+          )
+        } else if (access && workspaceId) {
           try {
             const member = (await createMemberDirect.mutateAsync({
               workspaceId,
@@ -375,6 +380,7 @@ function TeamAndPayrollScreen({ section }: { section: TeamTab | 'timesheets' }) 
       workspaceId,
       refetchEmployees,
       employeeFields,
+      teamMembersAvailability.requiresOnline,
       t,
     ],
   )

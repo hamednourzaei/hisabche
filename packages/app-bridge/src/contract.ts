@@ -44,6 +44,9 @@ export const IPC = {
 
   // Outbound HTTP (main-process proxy: renders without browser CORS)
   httpRequest: 'http:request',
+
+  // Local engine request (Offline Edition)
+  localApiRequest: 'local-api:request',
 } as const
 
 /**
@@ -100,6 +103,22 @@ export const localTableSchema = z.enum([
   'transaction',
   'inventory_movement',
   'employee',
+  'local_user',
+  'local_workspace',
+  'warehouse',
+  'product_stock',
+  'cost_layer',
+  'cost_consumption',
+  'payment',
+  'payment_allocation',
+  'account',
+  'journal_entry',
+  'journal_line',
+  'exchange_rate',
+  'branch',
+  'shelf',
+  'inventory_settings',
+  'invoice_counter',
 ])
 
 export type LocalTable = z.infer<typeof localTableSchema>
@@ -228,6 +247,24 @@ export interface HttpRequestResponse {
   bytes?: Uint8Array
   /** The same bytes as base64 — for a host whose channel is JSON (Android WebView). */
   bytesBase64?: string
+}
+
+export const localEngineRequestSchema = z.object({
+  method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
+  path: z.string().min(1),
+  params: z
+    .record(z.union([z.string(), z.number(), z.boolean(), z.null(), z.undefined()]))
+    .optional(),
+  body: z.unknown().optional(),
+  headers: z.record(z.string().optional()).optional(),
+})
+
+export type LocalEngineRequest = z.infer<typeof localEngineRequestSchema>
+
+export interface LocalEngineResponse<T = unknown> {
+  status: number
+  data: T
+  headers?: Record<string, string> | undefined
 }
 
 // ============================================

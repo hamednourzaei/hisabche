@@ -31,7 +31,7 @@
 
 import type { z } from 'zod'
 
-import { computeItemTotal } from './invoice.schema'
+import { computeItemTotal, roundInvoiceMoney, sumInvoiceLines } from './invoice-math'
 import type { currencyCodeSchema, unitSchema } from './common.schema'
 import { fractionDigits } from '@hisabche/formatting'
 
@@ -568,6 +568,19 @@ export function rowExtraPercent(row: InvoiceGridRow, columns: readonly InvoiceCo
  * parent/component money rule lives — so the grid, the preview and the server
  * can never disagree. The per-row tax column is applied after, matching how
  * the invoice-level tax is applied to the invoice.
+ *
+ * ⚠️ `ctx.precision` IS DELIBERATE, NOT A CURRENCY LOOKUP.
+ *
+ * For an invoice grid the two are the same number: `ctx` is built from
+ * `currencyPrecision(currency)`. But this function is also the manufacturing
+ * editor's row total (`manufacturing-cost.ts`), where a component cost keeps
+ * FOUR decimals even in a currency written without any — ten grams at 0.06 a
+ * gram must not cost nothing. Reading the currency here would round a cost to
+ * the price precision and break that rule.
+ *
+ * The invoice HEADER does not depend on this rounding: `summarize` hands the
+ * lines to `sumInvoiceLines`, which rounds each one at the currency's minor
+ * unit (F2-01). This function decides what the ROW shows.
  */
 export function rowTotal(
   row: InvoiceGridRow,
@@ -676,21 +689,32 @@ export function summarize(input: InvoiceSummaryInput): InvoiceSummary {
   const { rows, columns, ctx, discountValue, discountType, taxRate } = input
   const filled = rows.filter(isRowSubmittable)
 
-  const subtotal = roundTo(
-    filled.reduce((sum, row) => sum + rowTotal(row, columns, ctx), 0),
-    ctx.precision,
-  )
+  // ⚠️ THE HEADER IS THE SHARED RULE'S ANSWER, NOT A SECOND SUM (F2-01).
+  //
+  // `rowTotal` derives each printed line; `sumInvoiceLines` rounds it to the
+  // invoice currency's minor unit, adds the lines, and applies the discount
+  // and tax — the same function `computeInvoiceMoney` runs on the server. The
+  // old code rounded the sum again after each line was already rounded, which
+  // is how a 1.02 on screen became a 1.01 in storage.
+  const lineTotals = filled.map((row) => rowTotal(row, columns, ctx))
 
-  const discountTotal = roundTo(
+  // A percentage discount is a share of the subtotal, so the subtotal has to
+  // be settled first — still by the shared rule, never by a local sum.
+  const beforeDiscount = sumInvoiceLines({ lineTotals, currency: ctx.currency })
+  const discountTotal =
     discountType === 'percentage'
-      ? (subtotal * boundedPercent(discountValue)) / 100
-      : Math.min(subtotal, Math.max(0, discountValue)),
-    ctx.precision,
-  )
+      ? roundInvoiceMoney(
+          (beforeDiscount.subtotal * boundedPercent(discountValue)) / 100,
+          ctx.currency,
+        )
+      : discountValue
 
-  const taxable = Math.max(0, subtotal - discountTotal)
-  const taxTotal = roundTo((taxable * boundedPercent(taxRate)) / 100, ctx.precision)
-  const total = roundTo(Math.max(0, taxable + taxTotal), ctx.precision)
+  const money = sumInvoiceLines({
+    lineTotals,
+    discountTotal,
+    taxRate,
+    currency: ctx.currency,
+  })
 
   const byCurrency = new Map<CurrencyCode, number>()
   for (const column of columns) {
@@ -706,10 +730,7 @@ export function summarize(input: InvoiceSummaryInput): InvoiceSummary {
 
   return {
     itemCount: filled.length,
-    subtotal,
-    discountTotal,
-    taxTotal,
-    total,
+    ...money,
     foreignTotals: [...byCurrency.entries()]
       .filter(([, amount]) => amount !== 0)
       .map(([currency, amount]) => ({ currency, amount })),
@@ -814,7 +835,7 @@ export function rowToInvoiceItem(
     const isCountedPercent = column.type === 'percent' && columnCountsInTotal(column)
 
     if (isCountedPercent) {
-      const surcharge = roundTo((percentBase * value) / 100, ctx.precision)
+      const surcharge = roundInvoiceMoney((percentBase * value) / 100, ctx.currency)
       details.push({
         // The rate is kept in the label so the detail explains itself. An
         // amount with no rate beside it cannot be checked by the customer or
@@ -833,7 +854,7 @@ export function rowToInvoiceItem(
       // A money component carries its amount; anything else carries its value
       // in `quantity` against a zero amount so the line total is untouched.
       quantity: isOwnCurrencyMoney ? 1 : value,
-      amount: isOwnCurrencyMoney ? roundTo(value, ctx.precision) : 0,
+      amount: isOwnCurrencyMoney ? roundInvoiceMoney(value, ctx.currency) : 0,
       unit: 'piece',
       sortOrder: sortOrder++,
     })

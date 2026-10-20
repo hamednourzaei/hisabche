@@ -2,14 +2,22 @@
 // Root providers — TanStack Query tuned for a desktop client.
 // ============================================
 
-import { createNotificationMutationCache, registerOfflineQueue } from '@hisabche/api'
+import {
+  createNotificationMutationCache,
+  readStorage,
+  registerLocalTransport,
+  registerOfflineQueue,
+  setAppEdition,
+  setOfflineTokenMode,
+  STORAGE_KEYS,
+} from '@hisabche/api'
 import React, { useEffect, useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { registerCameraScanner, registerReceiptPrinterHost, ToastProvider } from '@hisabche/ui'
 import { bindActiveWorkspace, useWorkspaceStore } from '@hisabche/store'
 
 import { useAuthStore } from '@/features/auth/auth.store'
-import { bridge } from '@/shared/lib/bridge'
+import { bridge, localApi } from '@/shared/lib/bridge'
 import {
   PERSISTED_CACHE_MAX_AGE_MS,
   cacheOwner,
@@ -23,6 +31,20 @@ import {
 // after the realtime hooks had already looked for a workspace.
 if (typeof window !== 'undefined') {
   bindActiveWorkspace()
+
+  const local = localApi()
+  if (local) {
+    registerLocalTransport((req) => local.request(req))
+  }
+
+  const isOffline =
+    (window as { __hisabcheEdition?: string }).__hisabcheEdition === 'offline' ||
+    readStorage(STORAGE_KEYS.edition) === 'offline'
+
+  if (isOffline) {
+    setAppEdition('offline')
+    setOfflineTokenMode(true)
+  }
 
   // A host with a device database takes a write the network could not — see
   // packages/api/src/lib/offline-queue.ts. `__hisabcheOnline` is what the

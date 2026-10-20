@@ -9,13 +9,8 @@ import { useAdminPastDue } from '@/hooks/use-admin-past-due'
 import { activeNavItem, localeOf } from './admin-nav'
 
 /**
- * The admin header: product name, page title, a search that actually searches,
- * and an alert bell backed by real data.
- *
- * The search box submits to the workspace list rather than pretending to be a
- * global index — `/admin/workspaces?search=` is the only text search this
- * backend exposes, and a box that silently searched nothing would be worse
- * than none. The label says so.
+ * The admin header: product name, hub title, search, and past due alerts.
+ * Design tokens only, RTL logical properties.
  */
 export function AdminHeader({
   pathname,
@@ -30,15 +25,15 @@ export function AdminHeader({
   const active = activeNavItem(pathname)
   const [term, setTerm] = useState('')
 
-  // A failed alert query must not blank the header. `data` simply stays
-  // undefined and the bell renders with no badge.
   const { data } = useAdminPastDue()
   const alertCount = data?.subscriptions.length ?? 0
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
     const query = term.trim()
-    router.push(`/${locale}/workspaces${query ? `?search=${encodeURIComponent(query)}` : ''}`)
+    router.push(
+      `/${locale}/customers?tab=workspaces${query ? `&search=${encodeURIComponent(query)}` : ''}`,
+    )
   }
 
   return (
@@ -47,13 +42,12 @@ export function AdminHeader({
         type="button"
         onClick={onOpenMenu}
         aria-label={t('admin.shell.openMenu')}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 lg:hidden"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
       >
         <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
 
-      {/* Page title. Sourced from ADMIN_NAV so the sidebar and the header can
-          never disagree about what this screen is called. */}
+      {/* Hub title sourced from ADMIN_NAV */}
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-base font-bold leading-tight sm:text-lg">
           {active ? t(active.titleKey) : t('app.name')}
@@ -70,8 +64,6 @@ export function AdminHeader({
           {t('admin.shell.searchLabel')}
         </label>
         <div className="relative">
-          {/* `start-3` — the icon belongs on the reading-start edge, which is
-              the RIGHT in Persian. `left-3` would put it under the text. */}
           <Search
             aria-hidden="true"
             className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
@@ -89,8 +81,8 @@ export function AdminHeader({
 
       <button
         type="button"
-        onClick={() => router.push(`/${locale}/subscriptions?status=past_due`)}
-        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        onClick={() => router.push(`/${locale}/revenue?tab=subscriptions&status=past_due`)}
+        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={
           alertCount > 0
             ? t('admin.shell.alertsWithCount', { count: alertCount })
@@ -103,9 +95,6 @@ export function AdminHeader({
             aria-hidden="true"
             className="absolute -top-0.5 end-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold tabular-nums text-destructive-foreground"
           >
-            {/* Digits follow the reader's locale — a Persian console must not
-                print Latin numerals. The overflow marker caps the badge at 99
-                without hardcoding a digit glyph for any one language. */}
             {Math.min(alertCount, 99).toLocaleString()}
             {alertCount > 99 ? '+' : ''}
           </span>

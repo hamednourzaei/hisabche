@@ -13,6 +13,8 @@ import { memo, useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
 
 import { authorizationText } from '../../../../lib/authorization-message'
+import { useActionAvailability } from '../../../../lib/capability/use-action-availability'
+import { CloudRequiredNotice } from '../../cloud-required-notice'
 
 import {
   useCreateCustomRole,
@@ -92,6 +94,30 @@ export const PermissionsContainer = memo(function PermissionsContainer() {
     [tOriginal],
   )
 
+  const availability = useActionAvailability('governance.permission_matrix')
+
+  if (availability.requiresOnline) {
+    return (
+      <div className="p-4 sm:p-6">
+        <CloudRequiredNotice
+          variant="card"
+          title={t('governance.tab_permissions', 'ماتریس دسترسی‌ها')}
+          description={t('offline.cloudRequired.description')}
+        />
+      </div>
+    )
+  }
+
+  return <PermissionsContainerContent t={t} />
+})
+
+PermissionsContainer.displayName = 'PermissionsContainer'
+
+const PermissionsContainerContent = memo(function PermissionsContainerContent({
+  t,
+}: {
+  t: (key: string, fallback?: string) => string
+}) {
   const { data: matrix, isLoading, error: loadError } = usePermissionMatrix()
   const setCell = useSetPermissionCell()
   const createRole = useCreateCustomRole()
@@ -166,4 +192,4 @@ export const PermissionsContainer = memo(function PermissionsContainer() {
   )
 })
 
-PermissionsContainer.displayName = 'PermissionsContainer'
+PermissionsContainerContent.displayName = 'PermissionsContainerContent'

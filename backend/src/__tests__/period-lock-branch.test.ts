@@ -20,18 +20,18 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { evaluatePeriodLock, type PeriodLock } from '../services/accounting/accounting.domain'
+import { evaluatePeriodLock, type LedgerPeriodLock } from '../services/accounting/accounting.domain'
 
 const BRANCH_A = 'branch-a'
 const BRANCH_B = 'branch-b'
 
-const company = (lockedUntil: string): PeriodLock => ({
+const company = (lockedUntil: string): LedgerPeriodLock => ({
   branchId: null,
   lockedUntil,
   reason: 'year end',
 })
 
-const branch = (branchId: string, lockedUntil: string): PeriodLock => ({
+const branch = (branchId: string, lockedUntil: string): LedgerPeriodLock => ({
   branchId,
   lockedUntil,
   reason: 'shop counted',

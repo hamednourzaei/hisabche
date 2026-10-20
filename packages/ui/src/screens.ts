@@ -132,7 +132,6 @@ export { ExpiryContainer } from './components/ui/expiry/containers/expiry-contai
 export { ConflictsContainer } from './components/ui/conflicts/containers/conflicts-container'
 
 // ---------- Separation of duties ----------
-export { GovernanceContainer } from './components/ui/governance/containers/governance-container'
 export { GovernanceHubContainer } from './components/ui/governance/containers/governance-hub-container'
 
 // ⚠️ Added so the shared shell can route them: Windows and mobile were

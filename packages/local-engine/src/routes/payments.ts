@@ -1,0 +1,479 @@
+// ============================================
+// packages/local-engine/src/routes/payments.ts
+//
+// Payments and settlement engine.
+// Enforces currency matching on allocation (settlesInCurrency).
+// Updates invoice paid_amount and settlement status atomically.
+// Posts cash/receivable/exchange-difference ledger entries via paymentPosting.
+// ============================================
+
+import {
+  cancelPaymentSchema,
+  paymentPosting,
+  recordPaymentSchema,
+  settlesInCurrency,
+  validateAllocations,
+  type OpenInvoice,
+} from '@hisabche/validation'
+import { ConflictError, NotFoundError, ValidationError } from '../errors'
+import type { Router } from '../router'
+import { ensureDefaultAccounts } from './invoices'
+import type { RouteHandlerContext } from '../types'
+
+export interface PaymentRow {
+  id: string
+  workspace_id: string
+  payment_number: string | null
+  direction: 'in' | 'out'
+  party_type: 'customer' | 'supplier'
+  party_id: string | null
+  amount: number
+  currency: string
+  method: string
+  entry_date: string
+  reference: string
+  notes: string
+  status: string
+  journal_entry_id: string | null
+  branch_id: string | null
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+}
+
+function generateUuid(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+export function mapPayment(row: PaymentRow) {
+  return {
+    id: row.id,
+    paymentNumber: row.payment_number,
+    payment_number: row.payment_number,
+    direction: row.direction,
+    partyType: row.party_type,
+    party_type: row.party_type,
+    partyId: row.party_id,
+    party_id: row.party_id,
+    amount: row.amount,
+    currency: row.currency,
+    method: row.method,
+    entryDate: row.entry_date,
+    entry_date: row.entry_date,
+    reference: row.reference,
+    notes: row.notes,
+    status: row.status,
+    createdAt: row.created_at,
+    created_at: row.created_at,
+    updatedAt: row.updated_at,
+    updated_at: row.updated_at,
+  }
+}
+
+export function registerPaymentRoutes(router: Router): void {
+  // ─── GET /payments ──────────────────────────────────────────
+  router.get('/payments', (c: RouteHandlerContext) => {
+    const { db, ctx, query } = c
+    const { workspaceId } = ctx
+
+    const direction = query.direction?.trim()
+    const partyId = query.partyId?.trim() || query.customerId?.trim()
+    const currency = query.currency?.trim()
+    const status = query.status?.trim()
+    const limit = Math.min(Math.max(Number(query.limit) || 20, 1), 100)
+    const page = Math.max(Number(query.page) || 1, 1)
+    const offset = (page - 1) * limit
+
+    const clauses: string[] = ['workspace_id = ?', 'deleted_at IS NULL']
+    const params: unknown[] = [workspaceId]
+
+    if (direction) {
+      clauses.push('direction = ?')
+      params.push(direction)
+    }
+    if (partyId) {
+      clauses.push('party_id = ?')
+      params.push(partyId)
+    }
+    if (currency) {
+      clauses.push('currency = ?')
+      params.push(currency)
+    }
+    if (status) {
+      clauses.push('status = ?')
+      params.push(status)
+    }
+
+    const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
+
+    const countRow = db.get<{ count: number }>(
+      `SELECT count(*) as count FROM payment ${where}`,
+      params,
+    )
+    const total = countRow?.count ?? 0
+
+    const rows = db.all<PaymentRow>(
+      `SELECT * FROM payment ${where} ORDER BY entry_date DESC, created_at DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset],
+    )
+
+    return {
+      payments: rows.map(mapPayment),
+      total,
+      hasMore: offset + limit < total,
+      nextCursor: null,
+      limit,
+    }
+  })
+
+  // ─── GET /payments/:id ──────────────────────────────────────
+  router.get('/payments/:id', (c: RouteHandlerContext) => {
+    const { db, ctx, params } = c
+    const { id } = params
+    const { workspaceId } = ctx
+
+    const payment = db.get<PaymentRow>(
+      'SELECT * FROM payment WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL',
+      [id, workspaceId],
+    )
+    if (!payment) throw new NotFoundError('Payment', id)
+
+    const allocations = db.all<{
+      id: string
+      invoice_id: string
+      amount: number
+    }>(
+      'SELECT id, invoice_id, amount FROM payment_allocation WHERE payment_id = ? AND workspace_id = ?',
+      [id, workspaceId],
+    )
+
+    return {
+      ...mapPayment(payment),
+      allocations: allocations.map((a) => ({
+        id: a.id,
+        invoiceId: a.invoice_id,
+        amount: a.amount,
+      })),
+    }
+  })
+
+  // ─── POST /payments ─────────────────────────────────────────
+  router.post('/payments', (c: RouteHandlerContext) => {
+    const { db, ctx, body } = c
+    const { workspaceId, baseCurrency } = ctx
+    const raw = (body || {}) as Record<string, unknown>
+    const parsed = recordPaymentSchema.safeParse(raw)
+    if (!parsed.success) {
+      throw new ValidationError(
+        parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
+      )
+    }
+    const data = parsed.data
+
+    const amount = Number(data.amount) || 0
+    const direction = data.direction || 'in'
+    const partyType = data.partyType || 'customer'
+    const partyId =
+      data.partyId || (typeof raw.customerId === 'string' ? raw.customerId : null) || null
+    const currency = data.currency?.trim() || baseCurrency
+    const method = data.method?.trim() || 'cash'
+    const now = new Date().toISOString()
+    const entryDate = data.entryDate?.slice(0, 10) || now.slice(0, 10)
+    const reference = data.reference?.trim() || ''
+    const notes = data.notes?.trim() || ''
+    const paymentId = (raw.id as string) || generateUuid()
+
+    const rawAllocations = data.allocations || []
+
+    return db.transaction(() => {
+      // 1. Fetch target open invoices if allocations requested
+      if (rawAllocations.length > 0) {
+        const invoiceIds = rawAllocations.map((a) => a.invoiceId)
+        const placeholders = invoiceIds.map(() => '?').join(', ')
+        const openInvoices = db.all<{
+          id: string
+          invoice_number: string
+          total: number
+          paid_amount: number
+          currency: string
+          date: string
+          due_date: string | null
+          status: string
+        }>(
+          `SELECT id, invoice_number, total, paid_amount, currency, date, due_date, status
+           FROM invoice
+           WHERE id IN (${placeholders}) AND workspace_id = ? AND status <> 'cancelled'`,
+          [...invoiceIds, workspaceId],
+        )
+
+        // Validate currency: payment can only allocate to invoice of its own currency or books currency
+        for (const rawAlloc of rawAllocations) {
+          const inv = openInvoices.find((i) => i.id === rawAlloc.invoiceId)
+          if (!inv) throw new NotFoundError('Invoice', rawAlloc.invoiceId)
+
+          if (!settlesInCurrency({ currency: inv.currency }, currency, baseCurrency)) {
+            throw new ConflictError(
+              'PAYMENT_CURRENCY_MISMATCH',
+              `Payment in ${currency} cannot settle invoice in ${inv.currency}`,
+            )
+          }
+        }
+
+        // Validate allocation limits
+        const domainInvoices: OpenInvoice[] = openInvoices.map((inv) => ({
+          invoiceId: inv.id,
+          invoiceNumber: inv.invoice_number || inv.id,
+          total: inv.total,
+          allocated: inv.paid_amount,
+          dueDate: inv.due_date || inv.date,
+          invoiceDate: inv.date,
+          currency: inv.currency,
+        }))
+
+        const problems = validateAllocations(amount, rawAllocations, domainInvoices)
+        if (problems.length > 0) {
+          throw new ConflictError(problems[0]!, problems[0]!)
+        }
+      }
+
+      // 2. Generate payment number
+      const prefix = direction === 'in' ? 'RCT' : 'VCH'
+      const countRow = db.get<{ count: number }>(
+        'SELECT count(*) as count FROM payment WHERE workspace_id = ? AND direction = ?',
+        [workspaceId, direction],
+      )
+      const nextNum = (countRow?.count ?? 0) + 1
+      const paymentNumber =
+        (raw.paymentNumber as string) ||
+        (raw.payment_number as string) ||
+        `${prefix}-${String(nextNum).padStart(5, '0')}`
+
+      // 3. Insert payment row
+      db.run(
+        `INSERT INTO payment (
+          id, workspace_id, payment_number, direction, party_type, party_id,
+          amount, currency, method, entry_date, reference, notes, status,
+          created_at, updated_at, origin, sync_state
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'posted', ?, ?, 'local', 'local_only')`,
+        [
+          paymentId,
+          workspaceId,
+          paymentNumber,
+          direction,
+          partyType,
+          partyId,
+          amount,
+          currency,
+          method,
+          entryDate,
+          reference,
+          notes,
+          now,
+          now,
+        ],
+      )
+
+      // 4. Record allocations and update invoices
+      for (const alloc of rawAllocations) {
+        if (alloc.amount > 0) {
+          db.run(
+            `INSERT INTO payment_allocation (
+              id, workspace_id, payment_id, invoice_id, amount,
+              created_at, updated_at, origin, sync_state
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+            [generateUuid(), workspaceId, paymentId, alloc.invoiceId, alloc.amount, now, now],
+          )
+
+          const inv = db.get<{ total: number; paid_amount: number }>(
+            'SELECT total, paid_amount FROM invoice WHERE id = ?',
+            [alloc.invoiceId],
+          )
+          if (inv) {
+            const nextPaid = inv.paid_amount + alloc.amount
+            const newStatus = nextPaid >= inv.total ? 'completed' : 'partial'
+            db.run('UPDATE invoice SET paid_amount = ?, status = ?, updated_at = ? WHERE id = ?', [
+              nextPaid,
+              newStatus,
+              now,
+              alloc.invoiceId,
+            ])
+          }
+        }
+      }
+
+      // 5. Post General Ledger lines
+      const accounts = ensureDefaultAccounts(db, workspaceId)
+      const paymentRate = Number(data.exchangeRate) > 0 ? Number(data.exchangeRate) : 1.0
+
+      const posting = paymentPosting({
+        direction,
+        amount,
+        paymentRate,
+        allocations: rawAllocations.map((a) => ({ amount: a.amount, rate: paymentRate })),
+      })
+
+      const journalId = generateUuid()
+      const journalNumber = `J-${entryDate.slice(0, 4)}-${paymentNumber}`
+
+      db.run(
+        `INSERT INTO journal_entry (
+          id, workspace_id, entry_number, date, description, reference, status,
+          source_type, source_id, posted_at, created_at, updated_at, origin, sync_state
+        ) VALUES (?, ?, ?, ?, ?, ?, 'posted', 'payment', ?, ?, ?, ?, 'local', 'local_only')`,
+        [
+          journalId,
+          workspaceId,
+          journalNumber,
+          entryDate,
+          `پرداخت ${paymentNumber}`,
+          paymentNumber,
+          paymentId,
+          now,
+          now,
+          now,
+        ],
+      )
+
+      const partyAccount = partyType === 'supplier' ? accounts.payable! : accounts.receivable!
+      const cashAccount = accounts.cash!
+
+      if (direction === 'in') {
+        // Debit Cash, Credit Accounts Receivable
+        db.run(
+          `INSERT INTO journal_line (id, workspace_id, journal_id, account_id, debit, credit, description, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+          [
+            generateUuid(),
+            workspaceId,
+            journalId,
+            cashAccount,
+            posting.cash,
+            paymentNumber,
+            now,
+            now,
+          ],
+        )
+        db.run(
+          `INSERT INTO journal_line (id, workspace_id, journal_id, account_id, debit, credit, description, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+          [
+            generateUuid(),
+            workspaceId,
+            journalId,
+            partyAccount,
+            posting.party,
+            paymentNumber,
+            now,
+            now,
+          ],
+        )
+      } else {
+        // Debit Accounts Payable, Credit Cash
+        db.run(
+          `INSERT INTO journal_line (id, workspace_id, journal_id, account_id, debit, credit, description, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+          [
+            generateUuid(),
+            workspaceId,
+            journalId,
+            partyAccount,
+            posting.party,
+            paymentNumber,
+            now,
+            now,
+          ],
+        )
+        db.run(
+          `INSERT INTO journal_line (id, workspace_id, journal_id, account_id, debit, credit, description, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+          [
+            generateUuid(),
+            workspaceId,
+            journalId,
+            cashAccount,
+            posting.cash,
+            paymentNumber,
+            now,
+            now,
+          ],
+        )
+      }
+
+      db.run('UPDATE payment SET journal_entry_id = ? WHERE id = ?', [journalId, paymentId])
+
+      const inserted = db.get<PaymentRow>('SELECT * FROM payment WHERE id = ?', [paymentId])
+      return mapPayment(inserted!)
+    })
+  })
+
+  // ─── POST /payments/:id/cancel ──────────────────────────────
+  router.post('/payments/:id/cancel', (c: RouteHandlerContext) => {
+    const { db, ctx, params } = c
+    const { id } = params
+    const { workspaceId } = ctx
+
+    const raw = (c.body || {}) as Record<string, unknown>
+    const parsed = cancelPaymentSchema.safeParse(raw)
+    if (!parsed.success) {
+      throw new ValidationError(
+        parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
+      )
+    }
+
+    const payment = db.get<PaymentRow>(
+      'SELECT * FROM payment WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL',
+      [id, workspaceId],
+    )
+    if (!payment) throw new NotFoundError('Payment', id)
+    if (payment.status === 'cancelled') return { success: true }
+
+    const now = new Date().toISOString()
+
+    return db.transaction(() => {
+      // 1. Revert allocations on invoices
+      const allocations = db.all<{ id: string; invoice_id: string; amount: number }>(
+        'SELECT id, invoice_id, amount FROM payment_allocation WHERE payment_id = ? AND workspace_id = ?',
+        [id, workspaceId],
+      )
+
+      for (const a of allocations) {
+        const inv = db.get<{ total: number; paid_amount: number }>(
+          'SELECT total, paid_amount FROM invoice WHERE id = ?',
+          [a.invoice_id],
+        )
+        if (inv) {
+          const nextPaid = Math.max(0, inv.paid_amount - a.amount)
+          const newStatus = nextPaid === 0 ? 'unpaid' : 'partial'
+          db.run('UPDATE invoice SET paid_amount = ?, status = ?, updated_at = ? WHERE id = ?', [
+            nextPaid,
+            newStatus,
+            now,
+            a.invoice_id,
+          ])
+        }
+      }
+
+      db.run('DELETE FROM payment_allocation WHERE payment_id = ?', [id])
+
+      // 2. Reverse journal entry
+      if (payment.journal_entry_id) {
+        db.run("UPDATE journal_entry SET status = 'reversed', updated_at = ? WHERE id = ?", [
+          now,
+          payment.journal_entry_id,
+        ])
+      }
+
+      // 3. Mark payment cancelled
+      db.run("UPDATE payment SET status = 'cancelled', updated_at = ? WHERE id = ?", [now, id])
+
+      return { success: true }
+    })
+  })
+}

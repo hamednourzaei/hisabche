@@ -17,3 +17,13 @@ export {
   isRouteAllowedWhenExpired,
   billingHref,
 } from './subscription-lock'
+
+// Offline account & portal
+export { OfflineAccountPrompt, type OfflineAccountPromptProps } from './offline-account-prompt'
+export {
+  OfflinePortalView,
+  type OfflinePortalViewProps,
+  type OfflinePortalDevice,
+  type OfflinePortalLicense,
+  type UpgradeCreditBreakdown,
+} from './offline-portal-view'

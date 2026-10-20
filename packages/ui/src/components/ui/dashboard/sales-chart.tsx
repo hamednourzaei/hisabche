@@ -258,15 +258,31 @@ export const SalesChart = memo(function SalesChart({
           </div>
         )}
 
-        {/* Chart with motion */}
-        <div className="relative">
-          <DynamicAreaChart
-            data={data}
-            fmt={fmt}
-            height={height}
-            animationDuration={animationDuration}
-          />
-        </div>
+        {/*
+          An empty window says so — about THIS window, not all of history
+          («هنوز فروشی ثبت نشده» sent people hunting for a bug). A flat zero line
+          with no words read as a broken chart.
+        */}
+        {!hasData || allZero ? (
+          <div
+            className="flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[hsl(var(--border-default))] px-4 text-center"
+            style={{ minHeight: height }}
+          >
+            <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+              {t('dashboard.noSalesInPeriod')}
+            </p>
+            <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('dashboard.tryWiderRange')}</p>
+          </div>
+        ) : (
+          <div className="relative">
+            <DynamicAreaChart
+              data={data}
+              fmt={fmt}
+              height={height}
+              animationDuration={animationDuration}
+            />
+          </div>
+        )}
 
         {/* The window the numbers cover, and what the one line is. */}
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[hsl(var(--fg-tertiary))] pt-1 border-t border-[hsl(var(--border-default)/0.5)]">

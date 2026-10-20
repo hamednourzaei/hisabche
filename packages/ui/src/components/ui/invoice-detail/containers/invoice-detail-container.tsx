@@ -18,6 +18,7 @@ import {
   type InvoiceLedgerPostResult,
 } from '@hisabche/api'
 import { useSubscriptionLocked } from '../../billing/subscription-lock'
+import { useActionAvailability } from '../../../../lib/capability/use-action-availability'
 import { InvoiceDetailPage, type InvoiceDetailDisplay } from '../invoice-detail-page'
 import InvoicePDFDownload from '../InvoicePDFDownload'
 import { InvoiceEvidencePanel } from '../invoice-evidence-panel'
@@ -117,6 +118,7 @@ function ledgerPostMessageOf(
 
 export function InvoiceDetailContainer() {
   const t = useTranslations()
+  const approvalAvailability = useActionAvailability('invoice.approval')
   // ⚠️ THE CALENDAR FOLLOWS THE LANGUAGE. These were hardcoded to `'fa-AF'`,
   // so every reader got the Afghan solar calendar whatever they chose.
   const { date: fmtIntlDate } = useDateFormat()
@@ -163,7 +165,13 @@ export function InvoiceDetailContainer() {
   const { data: workspaces } = useWorkspaces()
   const currentWorkspace = Array.isArray(workspaces)
     ? (workspaces[0] as
-        { name?: string; logo_url?: string | null; stamp_url?: string | null } | undefined)
+        | {
+            name?: string
+            logo_url?: string | null
+            stamp_url?: string | null
+            signature_url?: string | null
+          }
+        | undefined)
     : undefined
 
   // ✅ FIX: قبلاً این سه کوئری مستقیم با supabaseClient (anon key) زده
@@ -240,6 +248,7 @@ export function InvoiceDetailContainer() {
       businessName: currentWorkspace?.name,
       businessLogoUrl: currentWorkspace?.logo_url ?? null,
       businessStampUrl: currentWorkspace?.stamp_url ?? null,
+      businessSignatureUrl: currentWorkspace?.signature_url ?? null,
       items: (
         (inv.items as unknown[]) ??
         (inv.invoiceItems as unknown[]) ??
@@ -399,7 +408,7 @@ export function InvoiceDetailContainer() {
 
   const handleWorkflowAction = useCallback(
     async (action: 'approved' | 'rejected' | 'cancelled', comment?: string) => {
-      if (!workflowInstanceBase?.id) return
+      if (!workflowInstanceBase?.id || approvalAvailability.requiresOnline) return
       await performWorkflowAction({
         instanceId: workflowInstanceBase.id,
         action,
@@ -407,7 +416,13 @@ export function InvoiceDetailContainer() {
       })
       queryClient.invalidateQueries({ queryKey: ['invoice', id] })
     },
-    [performWorkflowAction, workflowInstanceBase, queryClient, id],
+    [
+      approvalAvailability.requiresOnline,
+      performWorkflowAction,
+      workflowInstanceBase,
+      queryClient,
+      id,
+    ],
   )
 
   return (
@@ -554,7 +569,13 @@ export function InvoiceDetailContainer() {
       documentRef={documentRef}
       statusVariant={statusVariant}
       workflowInstance={workflowData?.instance ?? null}
-      workflowActions={subscriptionLocked ? [] : (workflowData?.actions ?? [])}
+      workflowActions={
+        subscriptionLocked
+          ? []
+          : approvalAvailability.requiresOnline
+            ? []
+            : (workflowData?.actions ?? [])
+      }
       workflowSteps={workflowData?.steps ?? []}
       workflowPending={workflowData?.instance?.status === 'in_progress'}
       onWorkflowAction={handleWorkflowAction}

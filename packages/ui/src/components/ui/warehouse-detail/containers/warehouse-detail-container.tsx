@@ -6,7 +6,12 @@ import { useParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 // Margin and stock-value rules live in the domain layer so mobile derives the
 // same numbers rather than re-implementing them.
-import { profitPerUnit, purchaseValue, stockValue, totalProfit } from '@hisabche/validation'
+import {
+  profitPerUnit,
+  purchaseValue,
+  stockValueAtSellPrice,
+  totalProfit,
+} from '@hisabche/validation'
 import {
   apiErrorMessage,
   useProduct,
@@ -232,7 +237,7 @@ ${t('warehouse.deactivateInstead')}`)
 
   const profitTotal = productData ? totalProfit(productData) : 0
 
-  const totalValue = productData ? stockValue(productData) : 0
+  const totalValue = productData ? stockValueAtSellPrice(productData) : 0
 
   // What the shelf cost to fill, beside what it can sell for (owner, 17 Oct).
   const buyValue = productData ? purchaseValue(productData) : 0

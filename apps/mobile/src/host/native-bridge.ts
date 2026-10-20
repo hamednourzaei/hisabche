@@ -36,6 +36,8 @@ import {
 } from '@hisabche/app-bridge'
 
 import * as localDb from './local-db'
+import { handleMobileLocalApiRequest } from './local-api'
+import type { LocalEngineRequest, LocalEngineResponse } from '@hisabche/local-engine'
 
 // ─── secure storage ───────────────────────────────────────────────────────
 //
@@ -283,6 +285,27 @@ export async function handleBridgeCall(request: RpcRequest): Promise<RpcResponse
       id: request.id,
       ok: false,
       error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+/**
+ * Answer one local-api engine call from the WebView.
+ */
+export async function handleLocalApiBridgeCall(
+  request: LocalEngineRequest,
+): Promise<LocalEngineResponse> {
+  try {
+    return await handleMobileLocalApiRequest(request)
+  } catch (error) {
+    return {
+      status: 500,
+      data: {
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: error instanceof Error ? error.message : String(error),
+        },
+      },
     }
   }
 }

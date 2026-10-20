@@ -16,6 +16,7 @@
 // change reported profit.
 // ============================================
 
+import { rateSchema, baseCurrencySchema } from '@hisabche/validation'
 import { describeBaseCurrency, setBaseCurrency } from '../services/base-currency'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
@@ -84,19 +85,11 @@ const reconcileSchema = z.object({
   differenceReason: z.string().max(300).optional(),
 })
 
-const rateSchema = z.object({
-  currency: z.string().min(2).max(8),
-  rate: z.number().positive(),
-  onDate: z.string().min(8),
-})
-
 const unitSchema = z.object({
   name: z.string().trim().min(1).max(40),
   perUnit: z.number().positive(),
   onDate: z.string().min(8),
 })
-
-const baseCurrencySchema = z.object({ currency: z.string().regex(/^[A-Z]{3}$/) })
 
 const revalueSchema = z.object({
   asOf: z.string().min(8),

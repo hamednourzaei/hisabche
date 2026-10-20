@@ -80,7 +80,7 @@ describe('locks, «قبل / بعد», menu and shells', () => {
     expect(NAV_MODULE['/campaigns']).toBe('parties')
     expect(hub).toContain('!isNavLocked(OUTREACH_SOURCE[section], blocked)')
     // No section left → no tab.
-    expect(hub).toContain("(tab) => tab !== 'outreach' || sections.length > 0")
+    expect(hub).toContain("(tab) => tab !== 'outreach' || allowedSections.length > 0")
   })
 
   it('both shells mount the hub', () => {

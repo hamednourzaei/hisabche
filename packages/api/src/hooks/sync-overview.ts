@@ -37,7 +37,7 @@ export interface SyncOverview {
   failed: { count: number; recent: SyncFailedChange[] }
 }
 
-export function useSyncOverview() {
+export function useSyncOverview(options?: { enabled?: boolean | undefined }) {
   const ready = useAuthReady()
   return useQuery({
     queryKey: ['sync', 'overview'],
@@ -54,7 +54,7 @@ export function useSyncOverview() {
         },
       }
     },
-    enabled: ready,
+    enabled: ready && (options?.enabled ?? true),
     staleTime: 60_000,
   })
 }

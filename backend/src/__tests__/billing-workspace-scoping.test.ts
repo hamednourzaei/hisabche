@@ -78,10 +78,14 @@ function makeQuery(table: string) {
   let limitN = Infinity
   let counting = false
   let pendingUpdate: Row | null = null
+  // `.neq` — the quota count leaves drafts out (usage policy: a never-finalised
+  // draft is not an invoice); kept apart from `filters`, which the tests read.
+  const excluded: Array<{ column: string; value: unknown }> = []
+  const kept = (r: Row) => excluded.every((e) => r[e.column] !== e.value)
 
   const selected = () =>
     sorted(
-      rowsOf(table).filter((r) => passes(r, filters)),
+      rowsOf(table).filter((r) => passes(r, filters) && kept(r)),
       orderColumn,
       ascending,
     )
@@ -104,7 +108,7 @@ function makeQuery(table: string) {
 
     if (pendingUpdate) {
       const patch = pendingUpdate
-      const targets = rowsOf(table).filter((r) => passes(r, filters))
+      const targets = rowsOf(table).filter((r) => passes(r, filters) && kept(r))
       for (const row of targets) Object.assign(row, patch)
       return { data: targets, error: null, count: targets.length }
     }
@@ -124,6 +128,10 @@ function makeQuery(table: string) {
     },
     eq: (column: string, value: unknown) => {
       filters.push({ column, value })
+      return api
+    },
+    neq: (column: string, value: unknown) => {
+      excluded.push({ column, value })
       return api
     },
     order: (column: string, opts?: { ascending?: boolean }) => {
@@ -293,13 +301,14 @@ describe('D2 — the seat quota is per workspace', () => {
   })
 
   it('blocks invoicing once the WORKSPACE book reaches the limit', async () => {
-    for (let i = 0; i < 10; i++) {
+    // FREE = a lifetime allowance of 50 invoices (owner, 20 Oct 2026).
+    for (let i = 0; i < 50; i++) {
       rowsOf('invoices').push({ id: `inv-a-${i}`, workspace_id: WS_A, user_id: `clerk-${i}` })
     }
 
     const result = await ent.canPerformAction(ctxFor(U_FREE, WS_A), 'create_invoice')
     expect(result.allowed).toBe(false)
-    expect(result.reason).toContain('limit of 10')
+    expect(result.reason).toContain('limit of 50')
   })
 
   it('checkUsageLimit agrees with the workspace scope', async () => {

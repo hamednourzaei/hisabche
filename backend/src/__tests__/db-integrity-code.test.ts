@@ -79,12 +79,22 @@ describe('a payment settles invoices of its own currency', () => {
 describe('an invoice line says which business it belongs to', () => {
   it('⚠️ every line the service builds carries workspace_id', () => {
     const service = src('services/invoice.service.ts')
-    expect(service).toContain('workspace_id: workspaceId,')
+    // ⚠️ The builder's OWN body, not the whole file. `src()` flattens and strips
+    // comments, and this service legitimately stamps `workspace_id: workspaceId,`
+    // on rows written later — so an unscoped `toContain` stayed GREEN while the
+    // built LINES carried nothing. Proved by injection on 19 Oct 2026.
+    const raw = readFileSync(join(__dirname, '..', 'services', 'invoice.service.ts'), 'utf8')
+    const from = raw.indexOf('private buildItemRows(')
+    const builder = raw.slice(from, raw.indexOf('\n  }', from))
+    expect(builder).toContain('workspace_id: workspaceId,')
     // Both callers hand the workspace in; neither can forget it (it is a
-    // required parameter, so tsc refuses a call without it).
+    // required parameter, so tsc refuses a call without it). The array they
+    // hand over is the DERIVED `lines` on both paths (F2-01: the create path
+    // derives once at the top, the edit path inside `replaceInvoiceItems`), so
+    // the two literals differ only in whose id the line is stamped with.
     expect(service.split('this.buildItemRows(').length).toBe(3)
     expect(service).toContain('this.buildItemRows(lines, invoiceId, userId, ctx.workspaceId)')
-    expect(service).toContain('this.buildItemRows(items, invoiceId, ctx.userId, ctx.workspaceId)')
+    expect(service).toContain('this.buildItemRows(lines, invoiceId, ctx.userId, ctx.workspaceId)')
   })
 })
 

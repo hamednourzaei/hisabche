@@ -33,3 +33,16 @@ jest.mock('expo-camera', () => ({
   CameraView: 'CameraView',
   useCameraPermissions: () => [{ granted: true }, jest.fn()],
 }))
+
+// Mock @noble/curves for CommonJS Jest environment in Mobile
+jest.mock(
+  '@noble/curves/ed25519.js',
+  () => ({
+    ed25519: {
+      keygen: () => ({ secretKey: new Uint8Array(32), publicKey: new Uint8Array(32) }),
+      sign: () => new Uint8Array(64),
+      verify: () => true,
+    },
+  }),
+  { virtual: true },
+)

@@ -5,8 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient, apiErrorMessage } from '@hisabche/api'
 
-import { Button, Input } from '@/components/ui'
-import { Panel } from '@/components/admin-shell/admin-ui'
+import { Button, Card, Input } from '@/components/ui'
 
 /**
  * Plan limits — per plan, and per workspace (which wins).
@@ -148,7 +147,7 @@ export function PlanLimitsPanel() {
   })
 
   return (
-    <Panel className="space-y-3 p-4" data-plan-limits="">
+    <Card className="space-y-3 p-4" data-plan-limits="">
       <h2 className="text-sm font-semibold">{t('admin.limits.title')}</h2>
       <p className="text-xs text-muted-foreground">{t('admin.limits.hint')}</p>
       {data && !data.configured ? (
@@ -160,7 +159,7 @@ export function PlanLimitsPanel() {
         <PlanRowEditor key={row.plan} row={row} />
       ))}
       <WorkspaceLimits />
-    </Panel>
+    </Card>
   )
 }
 

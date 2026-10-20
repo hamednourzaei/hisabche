@@ -39,8 +39,41 @@ export default defineConfig({
       // `auth-core` was already excluded for exactly this reason. Adding a
       // second workspace import to main without adding it here is how this
       // came back.
+      //
+      // ⚠️ `validation` IS HERE FOR THE SAME REASON, AND IT WAS MISSING.
+      //
+      // The local engine is bundled, and it imports `@hisabche/validation`
+      // (the shared money rules). A bundled package's own workspace imports
+      // are NOT bundled with it: the bundler externalises anything that
+      // lives in node_modules, so the built `out/main/index.js` carried
+      // `require('@hisabche/validation')` — and the installer ships no
+      // `@hisabche/validation`, because no workspace package is ever copied
+      // into the installer. The packaged app therefore died on start with
+      // «Cannot find module '@hisabche/validation'».
+      //
+      // The guard that catches it reads the BUILT output
+      // (packaged-build-has-no-external-workspace.test.ts) — it went red on
+      // the build of 20 Oct 2026, 09:58, and would have gone red on every
+      // device that installed it.
+      //
+      // ⚠️ `formatting` IS HERE FOR THE SAME REASON, AND IT WAS MISSING TOO.
+      //
+      // The local engine imports `@hisabche/formatting` (the XLSX/CSV
+      // builders). Bundling the engine does NOT bundle what the engine
+      // imports: the bundler externalises everything that lives in
+      // node_modules, so the built `out/main/index.js` carried
+      // `require('@hisabche/formatting')` — and the installer ships no
+      // `@hisabche/formatting`, because no workspace package is ever copied
+      // into the installer. `formatting` has no dependencies of its own, so
+      // bundling it adds no new external require.
       externalizeDepsPlugin({
-        exclude: ['@hisabche/auth-core', '@hisabche/app-bridge'],
+        exclude: [
+          '@hisabche/auth-core',
+          '@hisabche/app-bridge',
+          '@hisabche/local-engine',
+          '@hisabche/validation',
+          '@hisabche/formatting',
+        ],
       }),
     ],
   },

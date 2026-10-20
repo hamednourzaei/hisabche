@@ -17,10 +17,10 @@ import type { TenancyContext } from '../tenancy.service'
 import {
   averageUnitCost,
   grossProfit,
+  layersValue,
   onHand,
   planConsumption,
   roundMoney,
-  stockValue,
   type CostLayer,
   type ConsumptionPlan,
 } from './costing.domain'
@@ -245,7 +245,7 @@ export class CostingService implements CostingPort {
     return {
       layers,
       onHand: onHand(layers),
-      value: stockValue(layers),
+      value: layersValue(layers),
       averageCost: roundMoney(averageUnitCost(layers)),
     }
   }

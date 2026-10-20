@@ -1,8 +1,10 @@
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+import { redirect } from 'next/navigation'
 
-import { AuditLogsClient } from './audit-logs-client'
-
-export default function AdminAuditLogsPage() {
-  return <AuditLogsClient />
+export default async function AdminAuditLogsPage({
+  params,
+}: {
+  params: Promise<{ lang: string }>
+}) {
+  const { lang } = await params
+  redirect(`/${lang}/security?tab=audit`)
 }

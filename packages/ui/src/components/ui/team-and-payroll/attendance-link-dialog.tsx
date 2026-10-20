@@ -43,6 +43,8 @@ import { Button } from '../button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../dialog'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { SelectField } from '../select-field'
+import { useActionAvailability } from '../../../lib/capability'
+import { CloudRequiredNotice } from '../cloud-required-notice'
 import { Switch } from '../switch'
 import { useToast } from '../toast-provider'
 
@@ -75,6 +77,7 @@ export function AttendanceLinkDialog({
   const lang = useRouteLang()
   const toast = useToast()
   const { dateTime, date: formatDay } = useDateFormat()
+  const availability = useActionAvailability('hr.attendance_links')
 
   const link = useAttendanceLink(employee?.id ?? null)
   const create = useCreateAttendanceLink()
@@ -165,7 +168,12 @@ export function AttendanceLinkDialog({
           <DialogDescription>{t('link.help')}</DialogDescription>
         </DialogHeader>
 
-        {link.isLoading ? (
+        {availability.requiresOnline ? (
+          <CloudRequiredNotice
+            variant="card"
+            title={t('link.title', { name: employee?.name ?? '' })}
+          />
+        ) : link.isLoading ? (
           <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('link.loading')}</p>
         ) : status === 503 ? (
           <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('link.notConfigured')}</p>

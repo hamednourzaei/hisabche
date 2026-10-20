@@ -1,30 +1,28 @@
 import type { LucideIcon } from 'lucide-react'
 import {
-  AppWindow,
-  Building2,
   CreditCard,
   LayoutDashboard,
   Newspaper,
-  ScrollText,
   Server,
+  ShieldCheck,
   Sparkles,
-  Store,
   Users,
-  WalletCards,
+  WifiOff,
 } from 'lucide-react'
 
 /**
- * The admin navigation — every destination backed by an endpoint that
- * exists today.
+ * The 8 hubs of the Admin Console:
+ * 1. داشبورد (Dashboard)
+ * 2. مشتریان (Customers)
+ * 3. درآمد (Revenue)
+ * 4. آفلاین (Offline)
+ * 5. محصول (Product)
+ * 6. عملیات (Operations)
+ * 7. محتوا (Content)
+ * 8. امنیت (Security)
  *
- * DELIBERATELY ABSENT: tickets, reports, settings. There is no
- * `/api/admin/tickets`, no reporting endpoint and no platform-settings
- * endpoint. A nav item whose page can only 404 is worse than no nav item: it
- * tells an operator a capability exists and then wastes their time. When those
- * endpoints land, add the entry here and nowhere else.
- *
- * `titleKey` doubles as the header's page title, so a route can never show a
- * name in the sidebar and a different one in the header.
+ * Each hub consolidates related domains behind `HubTabs` + `?tab=`.
+ * Old URLs redirect to their respective hub and tab.
  */
 export interface AdminNavItem {
   id: string
@@ -35,7 +33,7 @@ export interface AdminNavItem {
   titleKey: string
   /** i18n key for the one-line description under the page title. */
   descriptionKey: string
-  /** Endpoint this screen reads, for the reader of this file. */
+  /** Primary endpoint read by this hub. */
   endpoint: string
 }
 
@@ -44,101 +42,88 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     id: 'dashboard',
     path: '/dashboard',
     icon: LayoutDashboard,
-    titleKey: 'admin.dashboard.title',
-    descriptionKey: 'admin.dashboard.description',
+    titleKey: 'admin.nav.dashboard',
+    descriptionKey: 'admin.nav.dashboardDesc',
     endpoint: 'GET /admin/metrics',
   },
   {
-    id: 'workspaces',
-    path: '/workspaces',
-    icon: Building2,
-    titleKey: 'admin.workspaces.title',
-    descriptionKey: 'admin.workspaces.description',
+    id: 'customers',
+    path: '/customers',
+    icon: Users,
+    titleKey: 'admin.nav.customers',
+    descriptionKey: 'admin.nav.customersDesc',
     endpoint: 'GET /admin/workspaces',
   },
   {
-    id: 'users',
-    path: '/users',
-    icon: Users,
-    titleKey: 'admin.users.title',
-    descriptionKey: 'admin.users.description',
-    endpoint: 'GET /admin/users-search',
-  },
-  {
-    id: 'subscriptions',
-    path: '/subscriptions',
+    id: 'revenue',
+    path: '/revenue',
     icon: CreditCard,
-    titleKey: 'admin.subscriptions.title',
-    descriptionKey: 'admin.subscriptions.description',
+    titleKey: 'admin.nav.revenue',
+    descriptionKey: 'admin.nav.revenueDesc',
     endpoint: 'GET /admin/subscriptions',
   },
   {
-    // Added in T13, when `GET/PUT /ai/config` landed. The rule in this file is
-    // that an entry appears only once its endpoint exists — see above.
-    id: 'ai',
-    path: '/ai',
+    id: 'offline',
+    path: '/offline',
+    icon: WifiOff,
+    titleKey: 'admin.nav.offline',
+    descriptionKey: 'admin.nav.offlineDesc',
+    endpoint: 'GET /admin/licences',
+  },
+  {
+    id: 'product',
+    path: '/product',
     icon: Sparkles,
-    titleKey: 'admin.ai.title',
-    descriptionKey: 'admin.ai.description',
+    titleKey: 'admin.nav.product',
+    descriptionKey: 'admin.nav.productDesc',
     endpoint: 'GET /ai/config',
   },
   {
-    // Added with the business wallets (wallet-01): every /admin/wallet/* route
-    // exists in backend/src/routes/wallet.routes.ts, behind platformAdminGuard.
-    id: 'wallet',
-    path: '/wallet',
-    icon: WalletCards,
-    titleKey: 'admin.wallet.pageTitle',
-    descriptionKey: 'admin.wallet.description',
-    endpoint: 'GET /admin/wallet/topups',
-  },
-  {
-    // Added with the goods marketplace (goods-marketplace-01): every
-    // /admin/market/* route exists in backend/src/routes/market.routes.ts.
-    id: 'market',
-    path: '/market',
-    icon: Store,
-    titleKey: 'admin.market.pageTitle',
-    descriptionKey: 'admin.market.description',
-    endpoint: 'GET /admin/market',
-  },
-  {
-    // Added with the blog (26 Sep 2026): every /admin/blog/* route exists in
-    // backend/src/routes/blog.routes.ts, behind platformAdminGuard.
-    id: 'blog',
-    path: '/blog',
-    icon: Newspaper,
-    titleKey: 'admin.blog.title',
-    descriptionKey: 'admin.blog.description',
-    endpoint: 'GET /admin/blog/posts',
-  },
-  {
-    // Added with OAuth apps (developer platform 05): both /admin/oauth-apps
-    // routes exist in backend/src/routes/oauth.routes.ts, behind platformAdminGuard.
-    id: 'oauthApps',
-    path: '/oauth-apps',
-    icon: AppWindow,
-    titleKey: 'admin.oauthApps.title',
-    descriptionKey: 'admin.oauthApps.description',
-    endpoint: 'GET /admin/oauth-apps',
-  },
-  {
-    id: 'servers',
-    path: '/servers',
+    id: 'operations',
+    path: '/operations',
     icon: Server,
-    titleKey: 'admin.servers.title',
-    descriptionKey: 'admin.servers.description',
+    titleKey: 'admin.nav.operations',
+    descriptionKey: 'admin.nav.operationsDesc',
     endpoint: 'GET /admin/instances',
   },
   {
-    id: 'auditLogs',
-    path: '/audit-logs',
-    icon: ScrollText,
-    titleKey: 'admin.auditLogs.title',
-    descriptionKey: 'admin.auditLogs.description',
+    id: 'content',
+    path: '/content',
+    icon: Newspaper,
+    titleKey: 'admin.nav.content',
+    descriptionKey: 'admin.nav.contentDesc',
+    endpoint: 'GET /admin/blog/posts',
+  },
+  {
+    id: 'security',
+    path: '/security',
+    icon: ShieldCheck,
+    titleKey: 'admin.nav.security',
+    descriptionKey: 'admin.nav.securityDesc',
     endpoint: 'GET /admin/audit-logs',
   },
 ] as const
+
+const ROUTE_HUB_MAP: Record<string, string> = {
+  '/dashboard': 'dashboard',
+  '/customers': 'customers',
+  '/workspaces': 'customers',
+  '/users': 'customers',
+  '/revenue': 'revenue',
+  '/subscriptions': 'revenue',
+  '/wallet': 'revenue',
+  '/offline': 'offline',
+  '/product': 'product',
+  '/ai': 'product',
+  '/oauth-apps': 'product',
+  '/market': 'product',
+  '/operations': 'operations',
+  '/servers': 'operations',
+  '/content': 'content',
+  '/blog': 'content',
+  '/security': 'security',
+  '/audit-logs': 'security',
+}
 
 /** The locale segment of an admin pathname, defaulting to Persian. */
 export function localeOf(pathname: string): string {
@@ -153,5 +138,10 @@ export function routeOf(pathname: string): string {
 
 export function activeNavItem(pathname: string): AdminNavItem | undefined {
   const route = routeOf(pathname)
+  const matchKey = Object.keys(ROUTE_HUB_MAP).find((k) => route === k || route.startsWith(`${k}/`))
+  const hubId = matchKey ? ROUTE_HUB_MAP[matchKey] : undefined
+  if (hubId) {
+    return ADMIN_NAV.find((item) => item.id === hubId)
+  }
   return ADMIN_NAV.find((item) => route === item.path || route.startsWith(`${item.path}/`))
 }

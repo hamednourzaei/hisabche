@@ -1,15 +1,32 @@
 // ============================================
-// backend/src/services/entitlement.service.ts — Optimized v2.2
-// FIXED: exactOptionalPropertyTypes error
+// backend/src/services/entitlement.service.ts
+//
+// Plan Entitlement Core.
+// Answers through the shared pure resolver:
+//   packages/validation/src/schemas/entitlement-resolver.ts
+//
+// Principles:
+//   - Export of own data (canExportData, canExportPDF) is ALWAYS allowed in every state.
+//   - Free plan has a lifetime cap of 50 invoices.
+//   - ONLINE_* plans have daily ceilings.
 // ============================================
 
 import { supabase } from '../db'
 import type { TenancyContext } from './tenancy.service'
-import { Plan } from '@hisabche/validation'
+import {
+  type FeatureKey,
+  type FeaturePlan,
+  type PlanEdition,
+  type EntitlementVerdict,
+  type WorkspaceEntitlementState,
+  resolveEntitlement,
+} from '@hisabche/validation'
 import { BillingService } from './billing.service'
 import { memoryCache } from '../utils/pagination'
 import { DatabaseError } from '../errors/database.error'
 import { countBusinesses } from './workspace-counts'
+import { effectiveLimits } from './plan-limits.service'
+import { startOfLocalDayISO } from '../utils/local-day'
 
 // ✅ Types
 export interface Entitlements {
@@ -41,14 +58,12 @@ export interface Limits {
   invoices: number | null
 }
 
-// ✅ Action Result Type — با string | null
 export interface ActionResult {
   allowed: boolean
-  reason?: string | null // ✅ تغییر به string | null
+  reason?: string | null
   limit?: number | null
 }
 
-// ✅ Errors
 export class EntitlementError extends Error {
   constructor(
     message: string,
@@ -87,10 +102,10 @@ export class EntitlementService {
     if (cached) return cached as Entitlements
 
     const subscription = await this.billingService.getCurrentSubscription(userId)
-    const plan = subscription.plan as Plan
+    const plan = subscription.plan as string
 
     let entitlements: Entitlements
-    if (subscription.isTrial) {
+    if (subscription.isTrial && plan !== 'free' && plan !== 'FREE') {
       entitlements = this.getFullEntitlements()
     } else {
       entitlements = this.getEntitlementsForPlan(plan)
@@ -111,21 +126,38 @@ export class EntitlementService {
   }
 
   // ─── Get entitlements for a specific plan ───────────────────
-  private getEntitlementsForPlan(plan: Plan): Entitlements {
+  private getEntitlementsForPlan(plan: string): Entitlements {
     switch (plan) {
+      case 'FREE':
       case 'free':
         return {
-          canUseAI: false,
-          canExportPDF: false,
+          canUseAI: true, // Trial gets AI inside aiMonthly: 20 quota (Q4, 20 Oct 2026)
+          canExportPDF: true, // Export ALWAYS allowed
           canCreateTeam: false,
           canUseSSO: false,
           canManageUsers: false,
-          canViewReports: false,
-          canExportData: false,
+          canViewReports: true,
+          canExportData: true, // Export ALWAYS allowed (principle 6)
           maxUsers: 1,
           maxWorkspaces: 1,
-          maxInvoices: 10,
+          maxInvoices: 50, // 50 invoices lifetime
         }
+      case 'OFFLINE':
+        return {
+          canUseAI: false,
+          canExportPDF: true,
+          canCreateTeam: false,
+          canUseSSO: false,
+          canManageUsers: false,
+          canViewReports: true,
+          canExportData: true,
+          maxUsers: 1,
+          maxWorkspaces: 1,
+          maxInvoices: null,
+        }
+      case 'ONLINE_500':
+      case 'ONLINE_1000':
+      case 'ONLINE_1500':
       case 'pro':
         return {
           canUseAI: true,
@@ -142,11 +174,11 @@ export class EntitlementService {
       case 'enterprise':
         return this.getFullEntitlements()
       default:
-        return this.getEntitlementsForPlan('free')
+        return this.getEntitlementsForPlan('FREE')
     }
   }
 
-  // ─── Full entitlements (Trial / Enterprise) ────────────────
+  // ─── Full entitlements (Enterprise) ─────────────────────────
   private getFullEntitlements(): Entitlements {
     return {
       canUseAI: true,
@@ -172,6 +204,109 @@ export class EntitlementService {
       )
     }
     return true
+  }
+
+  // ─── Resolver for a Workspace Feature Entitlement ──────────
+  /**
+   * Resolves whether a workspace is entitled to a feature, answering through
+   * the pure resolver (resolveEntitlement from @hisabche/validation).
+   */
+  async resolveWorkspaceEntitlement(
+    workspaceId: string,
+    feature: FeatureKey,
+    options?: { edition?: PlanEdition },
+  ): Promise<EntitlementVerdict> {
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('plan, status, period_end, is_trial')
+      .eq('workspace_id', workspaceId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const rawPlan = (sub as { plan?: string } | null)?.plan
+    const rawStatus = (sub as { status?: string } | null)?.status ?? 'active'
+    const periodEnd = (sub as { period_end?: string | null } | null)?.period_end
+
+    // Normalize plan name
+    let plan: FeaturePlan = 'FREE'
+    if (rawPlan) {
+      const up = rawPlan.toUpperCase()
+      if (up === 'OFFLINE') plan = 'OFFLINE'
+      else if (up === 'ONLINE_500' || up === 'PRO') plan = 'ONLINE_500'
+      else if (up === 'ONLINE_1000') plan = 'ONLINE_1000'
+      else if (up === 'ONLINE_1500' || up === 'ENTERPRISE') plan = 'ONLINE_1500'
+      else plan = 'FREE'
+    }
+
+    const now = new Date()
+    const isPeriodExpired = Boolean(periodEnd && new Date(periodEnd).getTime() < now.getTime())
+    const isPastDue = rawStatus === 'past_due'
+    const isStatusExpired = rawStatus === 'expired' || rawStatus === 'cancelled'
+
+    let state: WorkspaceEntitlementState
+    let usageExhausted = false
+
+    if (plan === 'FREE') {
+      // Check lifetime invoice limit (50)
+      const limits = await effectiveLimits(workspaceId, 'FREE')
+      const lifetimeCap = limits.invoices ?? 50
+      const { count } = await supabase
+        .from('invoices')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+        .neq('status', 'draft')
+
+      const used = count ?? 0
+      if (used >= lifetimeCap) {
+        state = 'FREE_EXHAUSTED'
+        usageExhausted = true
+      } else {
+        state = 'FREE'
+      }
+    } else if (plan === 'OFFLINE') {
+      if (isPeriodExpired || isStatusExpired) {
+        state = 'OFFLINE_EXPIRED'
+      } else {
+        state = 'OFFLINE_ACTIVE'
+      }
+    } else {
+      // ONLINE_* plans
+      if (isPastDue) {
+        state = 'ONLINE_PAST_DUE'
+      } else if (isPeriodExpired || isStatusExpired) {
+        state = 'ONLINE_EXPIRED'
+      } else {
+        state = 'ONLINE_ACTIVE'
+      }
+
+      // Check daily ceiling
+      const limits = await effectiveLimits(workspaceId, plan)
+      if (limits.invoicesDaily !== null) {
+        const { data: ws } = await supabase
+          .from('workspaces')
+          .select('time_zone')
+          .eq('id', workspaceId)
+          .maybeSingle()
+        const storedTz = (ws as { time_zone?: string | null } | null)?.time_zone
+        const tz = storedTz && storedTz.trim() !== '' ? storedTz.trim() : 'UTC'
+        const startOfDay = startOfLocalDayISO(tz, now)
+
+        const { count } = await supabase
+          .from('invoices')
+          .select('id', { count: 'exact', head: true })
+          .eq('workspace_id', workspaceId)
+          .neq('status', 'draft')
+          .gte('created_at', startOfDay)
+
+        if ((count ?? 0) >= limits.invoicesDaily) {
+          usageExhausted = true
+        }
+      }
+    }
+
+    const edition = options?.edition ?? (plan === 'OFFLINE' ? 'local' : 'cloud')
+    return resolveEntitlement({ state, plan, edition, usageExhausted }, feature)
   }
 
   // ─── Get feature flags for frontend (with cache) ────────────
@@ -217,15 +352,6 @@ export class EntitlementService {
   }
 
   // ─── Check if user can perform an action ────────────────────
-  /**
-   * Quota checks.
-   *
-   * `ctx` is the authorized workspace. Entitlements themselves stay keyed to
-   * the USER, because a subscription is bought by a person — but anything
-   * counted against a limit that lives in the shared book (invoices) is
-   * counted per WORKSPACE, since those rows belong to the business, not to
-   * whichever member happened to create them.
-   */
   async canPerformAction(
     ctx: TenancyContext,
     action: 'create_invoice' | 'create_user' | 'create_workspace' | 'use_ai' | 'export_data',
@@ -238,17 +364,11 @@ export class EntitlementService {
         const limit = entitlements.maxInvoices
         if (limit === null) return { allowed: true, reason: null }
 
-        // Per workspace: the invoice limit applies to the business's book.
-        // Counting per user would let a three-member shop write three times
-        // the plan's invoices.
-        //
-        // D4 — fail closed. A count error here used to read as `count: 0`,
-        // i.e. "plenty of room", so a database hiccup silently lifted the
-        // plan's cap. An unreadable count must not widen the quota.
         const { count, error } = await supabase
           .from('invoices')
           .select('id', { count: 'exact', head: true })
           .eq('workspace_id', workspaceId)
+          .neq('status', 'draft')
 
         if (error) {
           throw new DatabaseError(`Failed to count invoices for usage limit`, error)
@@ -269,9 +389,6 @@ export class EntitlementService {
         const limit = entitlements.maxUsers
         if (limit === null) return { allowed: true, reason: null }
 
-        // D2 — members of THIS workspace only. Filtering by the acting user
-        // alone counted seats across every workspace they belong to and let a
-        // seat freed in another business block this one; the limit is per shop.
         const { count, error } = await supabase
           .from('workspace_members')
           .select('id', { count: 'exact', head: true })
@@ -296,19 +413,6 @@ export class EntitlementService {
         const limit = entitlements.maxWorkspaces
         if (limit === null) return { allowed: true, reason: null }
 
-        // D3 — ownership is `workspaces.owner_id`. This filtered
-        // `.eq('user_id', userId)` against a column that does not exist;
-        // PostgREST returned an error, `count` came back undefined, and the
-        // workspace quota has never been enforced. Corrected to the real
-        // column — workspaces are counted by owner, not by membership, since
-        // being a seller in someone else's shop is not running a business.
-        // D3 — ownership is `workspaces.owner_id`. This filtered
-        // `.eq('user_id', userId)` against a column that does not exist;
-        // PostgREST returned an error, `count` came back undefined, and the
-        // workspace quota has never been enforced. Corrected to the real
-        // column — workspaces are counted by owner, not by membership, since
-        // being a seller in someone else's shop is not running a business.
-        // Sandboxes are not businesses and do not use up the quota.
         const { count, error } = await countBusinesses((query) => query.eq('owner_id', userId))
 
         if (error) {
@@ -336,10 +440,8 @@ export class EntitlementService {
 
       case 'export_data':
         return {
-          allowed: entitlements.canExportData,
-          reason: entitlements.canExportData
-            ? null
-            : 'Data export is not available on your current plan.',
+          allowed: true, // Export is ALWAYS allowed (principle 6)
+          reason: null,
         }
 
       default:

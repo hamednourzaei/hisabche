@@ -1,8 +1,6 @@
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+import { redirect } from 'next/navigation'
 
-import { ServersClient } from './servers-client'
-
-export default function AdminServersPage() {
-  return <ServersClient />
+export default async function AdminServersPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params
+  redirect(`/${lang}/operations?tab=servers`)
 }

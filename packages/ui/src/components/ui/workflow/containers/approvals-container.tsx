@@ -15,6 +15,8 @@ import {
 import { ApprovalCard } from '../approval-timeline'
 import { ApprovalsView } from '../approvals-view'
 import { useToast } from '../../toast-provider'
+import { useActionAvailability } from '../../../../lib/capability/use-action-availability'
+import { CloudRequiredNotice } from '../../cloud-required-notice'
 // ⚠️ Every internal link carries the locale prefix on web (راهنمای سشن، §وب):
 // `router.push('/invoices/…')` from `/fa/approvals` went to a 404. And none on
 // desktop, which has no `/fa/…` routes — see `localizePath`.
@@ -137,6 +139,32 @@ export const ApprovalsContainer = memo(function ApprovalsContainer({
     return v && v !== key ? v : (fallback ?? key)
   }
 
+  const availability = useActionAvailability('approvals.workflows')
+
+  if (availability.requiresOnline) {
+    return (
+      <div className="p-4 sm:p-6">
+        <CloudRequiredNotice
+          variant="card"
+          title={t('governance.tab_approvals', 'تأییدها و گردش‌کار')}
+          description={t('offline.cloudRequired.description')}
+        />
+      </div>
+    )
+  }
+
+  return <ApprovalsContainerContent onDefineWorkflow={onDefineWorkflow} t={t} />
+})
+
+ApprovalsContainer.displayName = 'ApprovalsContainer'
+
+const ApprovalsContainerContent = memo(function ApprovalsContainerContent({
+  onDefineWorkflow,
+  t,
+}: {
+  onDefineWorkflow?: (() => void) | undefined
+  t: (key: string, fallback?: string) => string
+}) {
   const { data, isLoading, error, refetch } = useWorkflowInstances()
   const push = useLocalePush()
 
@@ -179,4 +207,5 @@ export const ApprovalsContainer = memo(function ApprovalsContainer({
     />
   )
 })
-ApprovalsContainer.displayName = 'ApprovalsContainer'
+
+ApprovalsContainerContent.displayName = 'ApprovalsContainerContent'

@@ -207,8 +207,14 @@ export function totalProfit(product: {
  *
  * Deliberately not cost basis: this figure answers "what is this shelf worth to
  * me", which is the question the warehouse page is built around.
+ *
+ * ⚠️ `stockValueAtSellPrice`, NOT `stockValue` (owner decision, 19 Oct 2026).
+ * The old name invited the very mistake this one names: this function
+ * multiplies by `sellPrice`, while `purchaseValue` directly below multiplies by
+ * `buyPrice`. (The name first suggested for this function — `stockValueAtBuyPrice`
+ * — described `purchaseValue`, which already exists.)
  */
-export function stockValue(product: {
+export function stockValueAtSellPrice(product: {
   quantity?: number | null
   sellPrice?: number | null
 }): number {
@@ -217,8 +223,8 @@ export function stockValue(product: {
 
 /**
  * Stock value at *buying* price — what the shelf cost to fill, beside
- * `stockValue`, which is what it can sell for. The product page shows both
- * (owner, 17 October 2026): neither is the other, and neither converts a
+ * `stockValueAtSellPrice`, which is what it can sell for. The product page shows
+ * both (owner, 17 October 2026): neither is the other, and neither converts a
  * currency.
  */
 export function purchaseValue(product: {

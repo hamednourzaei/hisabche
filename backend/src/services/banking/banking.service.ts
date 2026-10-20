@@ -734,6 +734,8 @@ export class BankingService {
         entity_type: 'bank_statement_line',
         entity_id: statementLineId,
         new_data: { action, ...detail },
+        // The live column has no default (live audit #23): «زمان» read «—».
+        created_at: new Date().toISOString(),
       })
       .then(({ error }) => {
         if (error) console.error('[BankingService] audit write failed:', error.message)

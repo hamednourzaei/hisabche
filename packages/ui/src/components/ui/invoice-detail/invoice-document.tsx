@@ -149,6 +149,8 @@ export interface InvoiceDocumentBusiness {
   address?: string | null | undefined
   /** مهر/امضای مالک — اگر ست شده باشد، به‌جای خط‌چین زیر هر فاکتور نمایش داده می‌شود */
   stampUrl?: string | null | undefined
+  /** امضای مالک (workspace-signature-01) — کنار مهر، پایین هر فاکتور */
+  signatureUrl?: string | null | undefined
 }
 
 export interface InvoiceDocumentCustomer {
@@ -606,9 +608,15 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
           {display.showSignature && (
             <div className="mt-8 flex justify-center">
               <div className="text-center">
-                {business.stampUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={business.stampUrl} alt="" className="mx-auto h-16 object-contain" />
+                {business.stampUrl || business.signatureUrl ? (
+                  <div className="flex items-end justify-center gap-6" data-seller-marks="">
+                    {[business.stampUrl, business.signatureUrl].map((src) =>
+                      src ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={src} src={src} alt="" className="h-16 object-contain" />
+                      ) : null,
+                    )}
+                  </div>
                 ) : (
                   <div className="h-16 w-40 border-b border-dashed border-[hsl(var(--border-strong))]" />
                 )}

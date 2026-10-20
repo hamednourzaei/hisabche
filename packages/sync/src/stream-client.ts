@@ -49,6 +49,8 @@ export interface StreamOptions {
   maxDelayMs?: number
   random?: () => number
   log?: (event: string, data: Record<string, unknown>) => void
+  /** In offline edition, no connection is attempted. */
+  offline?: boolean | undefined
 }
 
 export interface StreamHandle {
@@ -60,6 +62,21 @@ export interface StreamHandle {
 const OPEN = 1
 
 export function connectSyncStream(options: StreamOptions): StreamHandle {
+  const isOffline =
+    options.offline === true ||
+    (typeof window !== 'undefined' &&
+      ((window as unknown as { __hisabcheEdition?: string }).__hisabcheEdition === 'offline' ||
+        window.localStorage?.getItem('hisabche-edition') === 'offline'))
+
+  if (isOffline) {
+    return {
+      stop() {},
+      get connected() {
+        return false
+      },
+    }
+  }
+
   const {
     url,
     getToken,

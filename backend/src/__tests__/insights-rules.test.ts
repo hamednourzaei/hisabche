@@ -14,7 +14,7 @@ import {
   detectAnomalies,
   explainChange,
   grossMargin,
-  grossProfit,
+  periodGrossProfit,
   type LineForReview,
   type PeriodTotals,
 } from '../services/insights'
@@ -29,7 +29,7 @@ const totals = (revenue: number, cost: number): PeriodTotals => ({
 
 describe('profit and margin', () => {
   it('is revenue less the cost that was actually consumed', () => {
-    expect(grossProfit(totals(1000, 600))).toBe(400)
+    expect(periodGrossProfit(totals(1000, 600))).toBe(400)
   })
 
   it('reports margin as a percentage', () => {

@@ -20,7 +20,9 @@
       "@hisabche/auth-core": ["../../packages/auth-core/src/index.ts"],
       "@hisabche/formatting": ["../../packages/formatting/src/index.ts"],
       "@hisabche/validation": ["../../packages/validation/src/index.ts"],
-      "@hisabche/i18n": ["../../packages/i18n/src/index.ts"]
+      "@hisabche/i18n": ["../../packages/i18n/src/index.ts"],
+      "vitest": ["../../packages/ui/node_modules/vitest"],
+      "vitest/*": ["../../packages/ui/node_modules/vitest/*"]
     },
     "module": "esnext",
     "moduleResolution": "bundler",

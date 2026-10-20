@@ -8,7 +8,16 @@ import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
 
 import { Badge, Button, Card, type BadgeTone } from '@/components/ui/primitives'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@hisabche/ui'
+import {
+  CloudRequiredNotice,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  useActionAvailability,
+} from '@hisabche/ui'
 import { PageHeader } from '@/components/layout/page-header'
 import { bridge } from '@/shared/lib/bridge'
 import { formatDate } from '@/shared/lib/currency'
@@ -36,6 +45,7 @@ const TONE: Record<OutboxStage | 'committed', BadgeTone> = {
 
 export default function SyncPage() {
   const { t } = useTranslation('desktop')
+  const syncAvailability = useActionAvailability('sync.push_pull')
   const queue = useSyncQueue()
   const { isSyncing, sync } = useSyncStatus()
   const stages = useSyncExternalStore(subscribeStages, stagesSnapshot, stagesSnapshot)
@@ -116,13 +126,36 @@ export default function SyncPage() {
         title={t('sync.title')}
         subtitle={rejected > 0 ? `${rejected} ${t('sync.stage.rejected')}` : undefined}
       >
-        <Button size="sm" variant="primary" disabled={isSyncing} onClick={() => void sync()}>
+        <Button
+          size="sm"
+          variant="primary"
+          disabled={isSyncing || syncAvailability.requiresOnline}
+          title={
+            syncAvailability.requiresOnline
+              ? t('offline.cloudRequired.title', 'این کار اینترنت می‌خواهد')
+              : undefined
+          }
+          onClick={() => {
+            if (syncAvailability.requiresOnline) return
+            void sync()
+          }}
+        >
           <RefreshCw size={14} className={isSyncing ? 'animate-spin' : undefined} />
           {t('sync.syncNow')}
         </Button>
       </PageHeader>
 
       <div className="flex flex-col gap-4 overflow-x-auto p-4">
+        {syncAvailability.requiresOnline ? (
+          <CloudRequiredNotice
+            variant="inline"
+            title={t('sync.title', 'همگام‌سازی ابری')}
+            description={t(
+              'offline.cloudRequired.description',
+              'برای همگام‌سازی ابری با سرور، اتصال اینترنت نیاز است.',
+            )}
+          />
+        ) : null}
         {staged.length === 0 ? (
           <Card>
             <p className="text-center text-sm text-[hsl(var(--fg-secondary))]">

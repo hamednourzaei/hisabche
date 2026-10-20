@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { apiErrorMessage } from '@hisabche/api'
 
-import { Button, Input } from '@/components/ui'
-import { Panel } from '@/components/admin-shell/admin-ui'
+import { Button, Card, Input } from '@/components/ui'
 import {
   useAdminUpgradeRequests,
   useDecideUpgradeRequest,
@@ -32,7 +31,7 @@ export function UpgradeRequestsPanel() {
   const { data: requests = [], isLoading } = useAdminUpgradeRequests(status)
 
   return (
-    <Panel className="space-y-3 p-4" data-upgrade-queue="">
+    <Card className="space-y-3 p-4" data-upgrade-queue="">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">{t('admin.upgrades.title')}</h2>
         <div className="flex flex-wrap gap-1">
@@ -64,7 +63,7 @@ export function UpgradeRequestsPanel() {
           ))}
         </ul>
       )}
-    </Panel>
+    </Card>
   )
 }
 

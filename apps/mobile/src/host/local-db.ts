@@ -22,6 +22,8 @@ import * as SQLite from 'expo-sqlite'
 import {
   CREATE_STATEMENTS,
   SCHEMA_VERSION,
+  isAlreadyApplied,
+  migrationsFrom,
   buildSelect,
   buildUpserts,
   normalizeValue,
@@ -31,6 +33,24 @@ import {
 } from '@hisabche/app-bridge'
 
 let database: SQLite.SQLiteDatabase | null = null
+
+async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
+  const row = await db.getFirstAsync<{ value?: string }>(
+    "SELECT value FROM meta WHERE key = 'schema_version'",
+  )
+  const from = Number(row?.value ?? 1) || 1
+
+  for (const migration of migrationsFrom(from)) {
+    for (const statement of migration.statements) {
+      try {
+        await db.execAsync(statement)
+      } catch (error) {
+        if (isAlreadyApplied(error)) continue
+        throw error
+      }
+    }
+  }
+}
 
 /**
  * Open the cache, creating it on first run.
@@ -51,6 +71,7 @@ export async function initLocalDb(): Promise<boolean> {
     for (const statement of CREATE_STATEMENTS) {
       await db.execAsync(statement)
     }
+    await runMigrations(db)
     await db.runAsync('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)', [
       'schema_version',
       String(SCHEMA_VERSION),

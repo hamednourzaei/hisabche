@@ -88,6 +88,9 @@ interface DesktopBundle {
     committedTitle: string
     committedHint: string
   }
+  offline: {
+    cloudRequired: Record<'title' | 'description', string>
+  }
 }
 
 const faIR: DesktopBundle = {
@@ -225,6 +228,12 @@ const faIR: DesktopBundle = {
     committedTitle: 'ثبت‌شده در این نشست',
     committedHint:
       'این تغییرها به سرور رسیده‌اند و از صف خارج شده‌اند؛ این فهرست فقط تا بستن برنامه می‌ماند.',
+  },
+  offline: {
+    cloudRequired: {
+      title: 'این کار اینترنت می‌خواهد',
+      description: 'برای همگام‌سازی داده با سرور، اتصال اینترنت لازم است.',
+    },
   },
 }
 
@@ -380,6 +389,12 @@ const en: DesktopBundle = {
     committedTitle: 'Saved this session',
     committedHint:
       'These changes reached the server and left the queue; this list lasts until the app is closed.',
+  },
+  offline: {
+    cloudRequired: {
+      title: 'Internet Connection Required',
+      description: 'An internet connection is required to sync data with the server.',
+    },
   },
 }
 

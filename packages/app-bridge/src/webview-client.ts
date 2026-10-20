@@ -89,6 +89,25 @@ export function webViewBridgeSource(): string {
   bridge.app.onUpdateStatus = function (listener) { return subscribe('updateStatus', listener) }
 
   window.${BRIDGE_GLOBAL} = bridge
+
+  if (!window.localApi) {
+    window.localApi = {
+      request: function (req) {
+        return new Promise(function (resolve, reject) {
+          var id = String(++seq)
+          pending[id] = { resolve: resolve, reject: reject }
+          try {
+            window.ReactNativeWebView.postMessage(
+              JSON.stringify({ type: 'local-api', id: id, request: req })
+            )
+          } catch (e) {
+            delete pending[id]
+            reject(e)
+          }
+        })
+      }
+    }
+  }
 })();
 true;`
 }

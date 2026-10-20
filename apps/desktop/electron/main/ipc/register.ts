@@ -35,6 +35,8 @@ import { listPrinters, printEscPos, printHtml } from '../services/printing'
 import { checkForUpdates, downloadUpdate, quitAndInstall } from '../services/updater'
 import { writeExport } from '../services/files'
 import { httpRequest } from '../services/http'
+import { handleLocalApiRequest } from '../services/local-api'
+import type { LocalEngineRequest } from '@hisabche/local-engine'
 
 /** Authentication middleware for IPC handlers */
 export function authenticate<I, O>(
@@ -290,4 +292,10 @@ export function registerIpcHandlers(): void {
   // ─── Outbound HTTP ──────────────────────────────────── (Renderer proxy)
   // Bypasses browser CORS; hosts are restricted in services/http.
   handle(IPC.httpRequest, httpRequestSchema, (input, event) => httpRequest(input))
+
+  // ─── Local API Engine ───────────────────────────────── (Offline edition)
+  // In-process business engine execution without network or remote session.
+  handle(IPC.localApiRequest, anySchema, (input, event) =>
+    handleLocalApiRequest(input as LocalEngineRequest),
+  )
 }

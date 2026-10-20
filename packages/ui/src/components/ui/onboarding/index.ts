@@ -1,2 +1,6 @@
-export { OnboardingPage } from "./onboarding-page"
-export { OnboardingContainer } from "./containers/onboarding-container"
+export { OnboardingPage } from './onboarding-page'
+export { OnboardingContainer } from './containers/onboarding-container'
+export { CurrencyPicker } from './currency-picker'
+export { LocalFirstRunForm } from './local-first-run-form'
+export type { CurrencyPickerProps } from './currency-picker'
+export type { LocalFirstRunFormProps } from './local-first-run-form'

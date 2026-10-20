@@ -1,7 +1,5 @@
 'use client'
 
-// The blog console: articles (with their statistics), the comment queue, and
-// categories / tags per language.
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
@@ -16,17 +14,9 @@ import {
   type BlogPostStatus,
 } from '@hisabche/validation'
 
-import { Button, Input } from '@/components/ui'
-import {
-  EmptyState,
-  ErrorState,
-  FilterPill,
-  ListSkeleton,
-  Pagination,
-  Panel,
-  StatusDot,
-  type StatusTone,
-} from '@/components/admin-shell/admin-ui'
+import { Button, Card, EmptyState, Input, PaginationBar, Skeleton } from '@/components/ui'
+import { ErrorState } from '@/components/admin-shell/admin-ui'
+import { cn } from '@/lib/utils'
 import {
   useAdminBlogPosts,
   useBlogCommentQueue,
@@ -40,10 +30,10 @@ import {
 type Tab = 'posts' | 'comments' | 'taxonomy'
 const PAGE_SIZE = 20
 
-const STATUS_TONE: Record<BlogPostStatus, StatusTone> = {
-  draft: 'neutral',
-  scheduled: 'attention',
-  published: 'positive',
+const STATUS_TONE: Record<BlogPostStatus, string> = {
+  draft: 'bg-[hsl(var(--fg-tertiary))]',
+  scheduled: 'bg-[hsl(var(--color-warning))]',
+  published: 'bg-[hsl(var(--color-success))]',
 }
 
 export function BlogAdminClient() {
@@ -56,9 +46,14 @@ export function BlogAdminClient() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2" role="tablist">
           {(['posts', 'comments', 'taxonomy'] as const).map((key) => (
-            <FilterPill key={key} selected={tab === key} onClick={() => setTab(key)}>
+            <Button
+              key={key}
+              size="sm"
+              variant={tab === key ? 'default' : 'outline'}
+              onClick={() => setTab(key)}
+            >
               {t(`admin.blog.tabs.${key}`)}
-            </FilterPill>
+            </Button>
           ))}
         </div>
         <Button asChild>
@@ -85,6 +80,10 @@ function PostsTab({ lang }: { lang: string }) {
     page,
     pageSize: PAGE_SIZE,
   })
+
+  const total = posts.data?.total ?? 0
+  const from = total === 0 ? 0 : page * PAGE_SIZE + 1
+  const to = Math.min((page + 1) * PAGE_SIZE, total)
 
   return (
     <div className="space-y-3">
@@ -134,16 +133,23 @@ function PostsTab({ lang }: { lang: string }) {
       </div>
 
       {posts.isLoading ? (
-        <ListSkeleton />
+        <div className="space-y-3">
+          {Array.from({ length: 5 }, (_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-2xl" />
+          ))}
+        </div>
       ) : posts.isError ? (
         <ErrorState
           message={apiErrorMessage(posts.error, t('admin.blog.errors.load'))}
           onRetry={() => void posts.refetch()}
         />
       ) : (posts.data?.posts.length ?? 0) === 0 ? (
-        <EmptyState title={t('admin.blog.emptyPosts')} hint={t('admin.blog.emptyPostsHint')} />
+        <EmptyState
+          title={t('admin.blog.emptyPosts')}
+          description={t('admin.blog.emptyPostsHint')}
+        />
       ) : (
-        <Panel className="overflow-x-auto">
+        <Card className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground">
               <tr className="border-b border-border">
@@ -170,7 +176,10 @@ function PostsTab({ lang }: { lang: string }) {
                   <td className="p-3">{t(`admin.blog.locales.${p.locale}`)}</td>
                   <td className="p-3">
                     <span className="inline-flex items-center gap-2">
-                      <StatusDot tone={STATUS_TONE[p.status]} />
+                      <span
+                        aria-hidden="true"
+                        className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_TONE[p.status])}
+                      />
                       {t(`admin.blog.status.${p.status}`)}
                       {p.noindex ? (
                         <span className="text-xs text-muted-foreground">noindex</span>
@@ -194,14 +203,17 @@ function PostsTab({ lang }: { lang: string }) {
               ))}
             </tbody>
           </table>
-        </Panel>
+        </Card>
       )}
-      <Pagination
+      <PaginationBar
         page={page}
         pageSize={PAGE_SIZE}
-        total={posts.data?.total ?? 0}
+        total={total}
         busy={posts.isFetching}
         onPage={setPage}
+        showingLabel={t('admin.pagination.showing', { from, to, total })}
+        previousLabel={t('admin.pagination.previous')}
+        nextLabel={t('admin.pagination.next')}
       />
     </div>
   )
@@ -214,24 +226,33 @@ function CommentsTab({ lang }: { lang: string }) {
   const queue = useBlogCommentQueue(status, page, PAGE_SIZE)
   const moderate = useModerateBlogComment()
 
+  const total = queue.data?.total ?? 0
+  const from = total === 0 ? 0 : page * PAGE_SIZE + 1
+  const to = Math.min((page + 1) * PAGE_SIZE, total)
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         {BLOG_COMMENT_STATUSES.map((s) => (
-          <FilterPill
+          <Button
             key={s}
-            selected={status === s}
+            size="sm"
+            variant={status === s ? 'default' : 'outline'}
             onClick={() => {
               setStatus(s)
               setPage(0)
             }}
           >
             {t(`admin.blog.commentStatus.${s}`)}
-          </FilterPill>
+          </Button>
         ))}
       </div>
       {queue.isLoading ? (
-        <ListSkeleton />
+        <div className="space-y-3">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-2xl" />
+          ))}
+        </div>
       ) : queue.isError ? (
         <ErrorState
           message={apiErrorMessage(queue.error, t('admin.blog.errors.load'))}
@@ -242,7 +263,10 @@ function CommentsTab({ lang }: { lang: string }) {
       ) : (
         <ul className="space-y-2">
           {queue.data?.comments.map((c) => (
-            <Panel key={c.id} as="li" className="space-y-2 p-3 text-sm">
+            <li
+              key={c.id}
+              className="space-y-2 rounded-2xl border border-border bg-card p-3 text-sm"
+            >
               <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <span className="font-medium text-foreground">
                   {c.authorName ?? t('admin.blog.unknownAuthor')}
@@ -275,16 +299,19 @@ function CommentsTab({ lang }: { lang: string }) {
                     ))}
                 </div>
               ) : null}
-            </Panel>
+            </li>
           ))}
         </ul>
       )}
-      <Pagination
+      <PaginationBar
         page={page}
         pageSize={PAGE_SIZE}
-        total={queue.data?.total ?? 0}
+        total={total}
         busy={queue.isFetching}
         onPage={setPage}
+        showingLabel={t('admin.pagination.showing', { from, to, total })}
+        previousLabel={t('admin.pagination.previous')}
+        nextLabel={t('admin.pagination.next')}
       />
     </div>
   )
@@ -297,9 +324,14 @@ function TaxonomyTab() {
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         {BLOG_LOCALES.map((l) => (
-          <FilterPill key={l} selected={locale === l} onClick={() => setLocale(l)}>
+          <Button
+            key={l}
+            size="sm"
+            variant={locale === l ? 'default' : 'outline'}
+            onClick={() => setLocale(l)}
+          >
             {t(`admin.blog.locales.${l}`)}
-          </FilterPill>
+          </Button>
         ))}
       </div>
       <div className="grid gap-4 md:grid-cols-2">
@@ -321,7 +353,7 @@ function TaxonomyList({ kind, locale }: { kind: BlogTaxonomyKind; locale: BlogLo
   const [error, setError] = useState<string | null>(null)
 
   return (
-    <Panel className="space-y-3 p-4" as="section">
+    <Card className="space-y-3 p-4">
       <h2 className="text-sm font-semibold">{t(`admin.blog.taxonomy.${kind}`)}</h2>
       <form
         className="space-y-2"
@@ -414,6 +446,6 @@ function TaxonomyList({ kind, locale }: { kind: BlogTaxonomyKind; locale: BlogLo
           ) : null}
         </ul>
       )}
-    </Panel>
+    </Card>
   )
 }

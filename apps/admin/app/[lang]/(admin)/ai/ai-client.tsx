@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { apiErrorMessage } from '@hisabche/api'
 
-import { Button, Input } from '@/components/ui'
-import { ErrorState, Panel } from '@/components/admin-shell/admin-ui'
+import { Button, Card, Input } from '@/components/ui'
+import { ErrorState } from '@/components/admin-shell/admin-ui'
 import {
   useAdminAiConfig,
   useSaveAdminAiConfig,
@@ -67,9 +67,8 @@ export function AiClient() {
 
   return (
     <div className="space-y-5">
-      <Panel className="p-4">
-        {/* `Panel` is deliberately a bare surface with no title prop — see its
-            definition. The heading is the caller's, as everywhere else. */}
+      <Card className="p-4">
+        {/* `Card` is a shared surface from @hisabche/ui. The heading is the caller's, as everywhere else. */}
         <h2 className="mb-4 text-sm font-semibold text-[hsl(var(--fg-primary))]">
           {t('admin.ai.provider')}
         </h2>
@@ -239,9 +238,9 @@ export function AiClient() {
             </p>
           ) : null}
         </form>
-      </Panel>
+      </Card>
 
-      <Panel className="p-4">
+      <Card className="p-4">
         <h2 className="mb-4 text-sm font-semibold text-[hsl(var(--fg-primary))]">
           {t('admin.ai.quota')}
         </h2>
@@ -303,7 +302,7 @@ export function AiClient() {
             </p>
           ) : null}
         </form>
-      </Panel>
+      </Card>
     </div>
   )
 }

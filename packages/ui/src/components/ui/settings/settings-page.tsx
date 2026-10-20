@@ -9,6 +9,7 @@ import { useBackupStore, useDeviceStore, useAuthStore } from '@hisabche/store'
 import { useWorkspaces, useUpdateWorkspace, useWorkspaceBackup } from '@hisabche/api'
 import { cn } from '../../../lib/utils'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
+import { persistedBytes } from '../../../lib/persisted-bytes'
 import { HardwareSection } from './hardware-section'
 import { BookCurrencySection } from './book-currency-section'
 import { WorkplaceTimeZoneSection } from './workplace-time-zone-section'
@@ -35,6 +36,8 @@ import {
 import { buildCsvZip, formatBytes, formatNumber, toIsoDay } from '@hisabche/formatting'
 import { localizePath } from '@hisabche/ui-contract'
 import { useRouteLang } from '../../../hooks/use-locale-push'
+import { useActionAvailability } from '../../../lib/capability'
+import { CloudRequiredNotice } from '../cloud-required-notice'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SettingsPage v3 — Memoized · Performance Optimized
@@ -497,6 +500,7 @@ export const BusinessStampSection = memo(function BusinessStampSection() {
     return v && v !== key ? v : (fallback ?? key)
   }
   const { data: workspaces } = useWorkspaces()
+  const stampAvailability = useActionAvailability('settings.business_stamp')
 
   // ✅ فرض تک-workspace: اولین workspace کاربر (فعلاً هیچ workspace-switcher‌ای در برنامه نیست)
   const workspace = useMemo(
@@ -506,6 +510,14 @@ export const BusinessStampSection = memo(function BusinessStampSection() {
   const canEdit = workspace?.myRole === 'owner' || workspace?.myRole === 'admin'
 
   if (!canEdit) return null
+
+  if (stampAvailability.requiresOnline) {
+    return (
+      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-6">
+        <CloudRequiredNotice variant="card" title={t('settings.businessStamp', 'مهر کسب‌وکار')} />
+      </div>
+    )
+  }
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
@@ -804,22 +816,6 @@ PerformanceSection.displayName = 'PerformanceSection'
 
 // ─── Storage Section ──────────────────────────────────────────────────────
 
-/** What this app keeps in localStorage, in bytes (UTF-16: two per character). */
-function localStorageBytes(): number | null {
-  try {
-    const storage = window.localStorage
-    let total = 0
-    for (let index = 0; index < storage.length; index++) {
-      const key = storage.key(index)
-      if (key === null) continue
-      total += (key.length + (storage.getItem(key)?.length ?? 0)) * 2
-    }
-    return total
-  } catch {
-    return null
-  }
-}
-
 /**
  * What this device keeps, and the one part of it that is safe to throw away.
  *
@@ -853,9 +849,7 @@ export const StorageSection = memo(function StorageSection() {
   const queryClient = useQueryClient()
 
   const [entries, setEntries] = useState<number | null>(null)
-  // localStorage is where the read cache lives (persisted-query-cache) — and
-  // `navigator.storage.estimate()` does NOT count it, which is why this read
-  // «۰ بایت» with 160 answers on the device.
+  // The read cache on the device, which the estimate does not count (persisted-bytes.ts).
   const [local, setLocal] = useState<number | null>(null)
   const [estimate, setEstimate] = useState<StorageEstimate>({ state: 'measuring' })
   const [clearing, setClearing] = useState(false)
@@ -866,7 +860,7 @@ export const StorageSection = memo(function StorageSection() {
     const cache = queryClient.getQueryCache()
     const read = () => {
       setEntries(cache.getAll().length)
-      setLocal(localStorageBytes())
+      setLocal(persistedBytes())
     }
     read()
     return cache.subscribe(read)

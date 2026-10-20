@@ -5,24 +5,19 @@ import { useTranslations } from 'next-intl'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Button,
+  Card,
+  EmptyState,
   Input,
+  PaginationBar,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Skeleton,
 } from '@/components/ui'
 
-import {
-  EmptyState,
-  ErrorState,
-  FilterPill,
-  ListSkeleton,
-  Pagination,
-  Panel,
-  StatusDot,
-  type StatusTone,
-} from '@/components/admin-shell/admin-ui'
+import { ErrorState } from '@/components/admin-shell/admin-ui'
 import { cn } from '@/lib/utils'
 import { useAdminSession } from '@/hooks/use-admin-session'
 import {
@@ -44,17 +39,12 @@ const PAGE_SIZE = 20
 /** Rows within this many days of expiry are highlighted, never filtered. */
 const EXPIRING_SOON_DAYS = 7
 
-/**
- * Status → dot colour. Every dot sits beside its own translated label, so the
- * colour reinforces the word rather than replacing it — a red/green-only
- * signal would be unreadable to a colour-blind operator.
- */
-const STATUS_TONE: Record<SubscriptionStatus, StatusTone> = {
-  active: 'positive',
-  trial: 'neutral',
-  expired: 'negative',
-  cancelled: 'neutral',
-  past_due: 'attention',
+const STATUS_TONE: Record<SubscriptionStatus, string> = {
+  active: 'bg-[hsl(var(--color-success))]',
+  trial: 'bg-[hsl(var(--fg-tertiary))]',
+  expired: 'bg-[hsl(var(--color-destructive))]',
+  cancelled: 'bg-[hsl(var(--fg-tertiary))]',
+  past_due: 'bg-[hsl(var(--color-warning))]',
 }
 
 export function SubscriptionsClient() {
@@ -97,17 +87,16 @@ export function SubscriptionsClient() {
   const subscriptions = data?.subscriptions ?? []
   const total = data?.total ?? 0
 
+  const from = total === 0 ? 0 : page * PAGE_SIZE + 1
+  const to = Math.min((page + 1) * PAGE_SIZE, total)
+
   return (
     <div className="space-y-6">
       {/* Paid plans are activated here, after payment — never by the customer. */}
       <UpgradeRequestsPanel />
       <PlanLimitsPanel />
 
-      {/*
-        Honest about a real limitation rather than shipping buckets that only
-        cover the loaded page. See use-admin-subscriptions.ts.
-      */}
-      <p className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm">
+      <p className="rounded-2xl border border-[hsl(var(--color-warning)/0.4)] bg-[hsl(var(--color-warning)/0.1)] p-4 text-sm">
         {t('admin.subscriptions.noDateBuckets')}
       </p>
 
@@ -121,26 +110,28 @@ export function SubscriptionsClient() {
           <span className="me-1 text-sm text-muted-foreground">
             {t('admin.subscriptions.plan')}
           </span>
-          <FilterPill
-            selected={plan === 'all'}
+          <Button
+            size="sm"
+            variant={plan === 'all' ? 'default' : 'outline'}
             onClick={() => {
               setPlan('all')
               setPage(0)
             }}
           >
             {t('admin.subscriptions.allPlans')}
-          </FilterPill>
+          </Button>
           {PLANS.map((p) => (
-            <FilterPill
+            <Button
               key={p}
-              selected={plan === p}
+              size="sm"
+              variant={plan === p ? 'default' : 'outline'}
               onClick={() => {
                 setPlan(p)
                 setPage(0)
               }}
             >
               {t(`admin.plan.${p}`)}
-            </FilterPill>
+            </Button>
           ))}
         </div>
 
@@ -152,32 +143,36 @@ export function SubscriptionsClient() {
           <span className="me-1 text-sm text-muted-foreground">
             {t('admin.subscriptions.status')}
           </span>
-          <FilterPill
-            selected={status === 'all'}
+          <Button
+            size="sm"
+            variant={status === 'all' ? 'default' : 'outline'}
             onClick={() => {
               setStatus('all')
               setPage(0)
             }}
           >
             {t('admin.subscriptions.allStatuses')}
-          </FilterPill>
+          </Button>
           {STATUSES.map((value) => (
-            <FilterPill
+            <Button
               key={value}
-              selected={status === value}
-              tone={STATUS_TONE[value]}
+              size="sm"
+              variant={status === value ? 'default' : 'outline'}
               onClick={() => {
                 setStatus(value)
                 setPage(0)
               }}
             >
+              <span
+                aria-hidden="true"
+                className={cn('me-1.5 inline-block h-2 w-2 rounded-full', STATUS_TONE[value])}
+              />
               {t(`admin.status.${value}`)}
-            </FilterPill>
+            </Button>
           ))}
         </div>
 
-        {/* The audit reason. Kept beside the filters because it applies to
-            every mutation made from this screen, not to one row. */}
+        {/* The audit reason. */}
         <label className="flex max-w-xl flex-col gap-1.5 text-sm">
           <span className="text-muted-foreground">{t('admin.subscriptions.reason')}</span>
           <Input
@@ -189,7 +184,13 @@ export function SubscriptionsClient() {
         </label>
       </div>
 
-      {isLoading && <ListSkeleton rows={5} height="h-28" />}
+      {isLoading && (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }, (_, i) => (
+            <Skeleton key={i} className="h-28 w-full rounded-2xl" />
+          ))}
+        </div>
+      )}
 
       {isError && !isLoading && (
         <ErrorState message={t('admin.subscriptions.loadError')} onRetry={() => void refetch()} />
@@ -237,12 +238,15 @@ export function SubscriptionsClient() {
         </ul>
       )}
 
-      <Pagination
+      <PaginationBar
         page={page}
         pageSize={PAGE_SIZE}
         total={total}
         busy={isFetching}
         onPage={setPage}
+        showingLabel={t('admin.pagination.showing', { from, to, total })}
+        previousLabel={t('admin.pagination.previous')}
+        nextLabel={t('admin.pagination.next')}
       />
     </div>
   )
@@ -264,28 +268,34 @@ function SubscriptionRow({
   const t = useTranslations()
   const days = daysUntilExpiry(subscription.period_end)
 
-  // Highlighting only — the row is already on screen. Filtering on this would
-  // silently miss every subscription on another page.
   const expired = days !== null && days < 0
   const expiringSoon = days !== null && days >= 0 && days <= EXPIRING_SOON_DAYS
 
-  void reason // consumed by the parent's mutate calls
+  void reason
 
   return (
-    <Panel
-      as="li"
+    <li
       className={cn(
-        'flex flex-col gap-4 p-4 transition-colors lg:flex-row lg:items-center lg:justify-between',
-        expired ? 'border-destructive/40' : 'hover:border-border-strong',
+        'flex flex-col gap-4 rounded-2xl border bg-card p-4 transition-colors lg:flex-row lg:items-center lg:justify-between',
+        expired
+          ? 'border-[hsl(var(--color-destructive)/0.4)]'
+          : 'border-border hover:border-border-strong',
       )}
     >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center rounded-full border border-blue-500/40 bg-blue-500/15 px-3 py-1 text-xs font-medium text-blue-400">
+          <span className="inline-flex items-center rounded-full border border-[hsl(var(--color-primary)/0.4)] bg-[hsl(var(--color-primary)/0.15)] px-3 py-1 text-xs font-medium text-[hsl(var(--color-primary))]">
             {t(`admin.plan.${subscription.plan}`)}
           </span>
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-accent px-3 py-1 text-xs font-medium">
-            <StatusDot tone={STATUS_TONE[subscription.status as SubscriptionStatus] ?? 'neutral'} />
+            <span
+              aria-hidden="true"
+              className={cn(
+                'h-2 w-2 shrink-0 rounded-full',
+                STATUS_TONE[subscription.status as SubscriptionStatus] ??
+                  'bg-[hsl(var(--fg-tertiary))]',
+              )}
+            />
             {t(`admin.status.${subscription.status}`)}
           </span>
           {subscription.is_trial && (
@@ -294,14 +304,20 @@ function SubscriptionRow({
             </span>
           )}
           {expired && (
-            <span className="inline-flex items-center gap-2 rounded-full border border-destructive/40 bg-destructive/15 px-3 py-1 text-xs font-medium text-destructive">
-              <StatusDot tone="negative" />
+            <span className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--color-destructive)/0.4)] bg-[hsl(var(--color-destructive)/0.15)] px-3 py-1 text-xs font-medium text-[hsl(var(--color-destructive))]">
+              <span
+                aria-hidden="true"
+                className="h-2 w-2 shrink-0 rounded-full bg-[hsl(var(--color-destructive))]"
+              />
               {t('admin.subscriptions.expired')}
             </span>
           )}
           {expiringSoon && (
-            <span className="inline-flex items-center gap-2 rounded-full border border-warning/40 bg-warning/15 px-3 py-1 text-xs font-medium text-warning">
-              <StatusDot tone="attention" />
+            <span className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--color-warning)/0.4)] bg-[hsl(var(--color-warning)/0.15)] px-3 py-1 text-xs font-medium text-[hsl(var(--color-warning))]">
+              <span
+                aria-hidden="true"
+                className="h-2 w-2 shrink-0 rounded-full bg-[hsl(var(--color-warning))]"
+              />
               {t('admin.subscriptions.expiringSoon')}
             </span>
           )}
@@ -327,8 +343,6 @@ function SubscriptionRow({
           )}
         </div>
 
-        {/* Which business this is — the id support asks for and the AI quota
-            form takes. Selectable, so it can be copied. */}
         {subscription.workspace_id && (
           <div className="mt-1 text-xs text-muted-foreground">
             {t('admin.subscriptions.workspaceId')}:{' '}
@@ -338,10 +352,8 @@ function SubscriptionRow({
           </div>
         )}
 
-        {/* A subscription with no workspace_id is mid-migration. Saying so
-            beats rendering an empty cell that looks like a bug. */}
         {!subscription.workspace_id && (
-          <div className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+          <div className="mt-1 text-xs text-[hsl(var(--color-warning))]">
             {t('admin.workspaces.noOwner')}
           </div>
         )}
@@ -392,6 +404,6 @@ function SubscriptionRow({
           </SelectContent>
         </Select>
       </div>
-    </Panel>
+    </li>
   )
 }

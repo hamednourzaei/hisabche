@@ -259,7 +259,15 @@
       "unlimited": "Unlimited",
       "perMonthSuffix": "per month",
       "included": "Included",
-      "notIncluded": "Not included"
+      "notIncluded": "Not included",
+      "editionOnline": "Online",
+      "editionOffline": "Offline",
+      "offline": {
+        "name": "Offline",
+        "bestIf": "Working without internet",
+        "cta": "Buy the offline edition",
+        "who": "For a shop without a steady internet connection"
+      }
     },
     "dashboardLabel": "Product",
     "dashboardTitle": "This is what you'll see every day",
@@ -1560,7 +1568,9 @@
     "promotions": "Promotions",
     "promotions_description": "Percentage or fixed discounts for products and customers",
     "campaigns": "Campaigns",
-    "campaigns_description": "Email messages and surveys for customers"
+    "campaigns_description": "Email messages and surveys for customers",
+    "developers": "Developers",
+    "marketplace": "Marketplace"
   },
   "dateRange": {
     "today": "Today",
@@ -1626,7 +1636,24 @@
     "enterNewPassword": "Enter your new password",
     "invalidToken": "Invalid or expired link",
     "tokenExpired": "This link has expired or has already been used",
-    "passwordMismatch": "Passwords do not match"
+    "passwordMismatch": "Passwords do not match",
+    "offlineEdition": "Offline Edition (No Internet)",
+    "offlineEditionPreparing": "Preparing…",
+    "offlineEditionFailed": "The offline edition could not be prepared",
+    "localUser": "Local user",
+    "offlineFirstRun": {
+      "title": "Create your business",
+      "description": "This business is created on this device and needs no internet.",
+      "name": "Business name",
+      "namePlaceholder": "e.g. Central Shop",
+      "timeZone": "Time zone",
+      "timeZoneHint": "The device time zone is a suggestion — \"today\" in the books is counted in this zone.",
+      "currency": "Books currency",
+      "submit": "Create the business and start",
+      "creating": "Creating…",
+      "failed": "The local business could not be created",
+      "timeZoneRequired": "Time zone is required"
+    }
   },
   "signup": {
     "fullName": "Full Name",
@@ -2414,7 +2441,8 @@
     "xau": "Gold (gram)",
     "xag": "Silver (gram)",
     "xpt": "Platinum (gram)",
-    "xpd": "Palladium (gram)"
+    "xpd": "Palladium (gram)",
+    "toman": "toman"
   },
   "settings": {
     "title": "Settings",
@@ -3620,6 +3648,26 @@
           "dedicated_support": "Dedicated support",
           "sla": "SLA"
         }
+      },
+      "FREE": {
+        "name": "Free Trial",
+        "description": "Lifetime allowance of 50 invoices per workspace"
+      },
+      "OFFLINE": {
+        "name": "Offline",
+        "description": "Windows & Android local edition, no internet needed"
+      },
+      "ONLINE_500": {
+        "name": "Online 500",
+        "description": "Cloud edition; up to 500 invoices per day"
+      },
+      "ONLINE_1000": {
+        "name": "Online 1000",
+        "description": "Cloud edition; up to 1,000 invoices per day"
+      },
+      "ONLINE_1500": {
+        "name": "Online 1500",
+        "description": "Cloud edition; up to 1,500 invoices per day"
       }
     },
     "usage": {
@@ -4448,7 +4496,15 @@
   },
   "adminPanel": {
     "access": "Admin panel access",
-    "notAllowed": "This account does not have platform admin access. Sign in with an account on the allowlist."
+    "notAllowed": "This account does not have platform admin access. Sign in with an account on the allowlist.",
+    "mfaRequired": "The admin panel requires two-step verification.",
+    "mfaEnrollTitle": "Set up two-step verification",
+    "mfaChallengeTitle": "Two-step verification",
+    "mfaEnrollHint": "Scan this QR code with an authenticator app (e.g. Google Authenticator) and enter its 6-digit code.",
+    "mfaQrAlt": "Two-step verification QR code",
+    "mfaSecret": "If it will not scan, enter this key by hand:",
+    "mfaCode": "6-digit code",
+    "mfaVerify": "Verify and sign in"
   },
   "invoiceBuilder": {
     "new": "New Invoice",
@@ -4818,6 +4874,7 @@
       "cancel": "Cancel"
     },
     "empty": {
+      "comingInNextStep": "This section will be activated in upcoming steps.",
       "noWorkspaces": "No workspaces yet.",
       "noMembers": "This workspace has no members yet.",
       "noResults": "Nothing found for “{search}”.",
@@ -4911,7 +4968,19 @@
       "noEntity": "No entity",
       "empty": "No events recorded yet.",
       "emptyHint": "Only successful changes are recorded; a refused request writes nothing.",
-      "loadError": "Failed to load the audit log."
+      "loadError": "Failed to load the audit log.",
+      "afterData": "New data",
+      "beforeData": "Previous data",
+      "correlationId": "Correlation ID",
+      "details": "Details",
+      "diffTitle": "Audit event details",
+      "ip": "IP",
+      "loadErrorHint": "Could not reach the server.",
+      "reason": "Reason",
+      "requestId": "Request ID",
+      "searchPlaceholder": "Search the audit log…",
+      "totalCount": "Total: {count} records",
+      "viewDiff": "View changes"
     },
     "ai": {
       "title": "AI Assistant",
@@ -5275,6 +5344,333 @@
       "reason": "Reason (the seller reads it)",
       "showListings": "Listings",
       "hideListings": "Hide listings"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "dashboardDesc": "Overview of platform metrics, revenue, and alerts",
+      "customers": "Customers",
+      "customersDesc": "Workspaces, users, devices, and support sessions",
+      "revenue": "Revenue",
+      "revenueDesc": "Plans, prices, subscriptions, financial ledger, and wallets",
+      "offline": "Offline",
+      "offlineDesc": "Offline licences, device fleet, offline to online migration, and reconciliation",
+      "product": "Product",
+      "productDesc": "Feature registry, flags, AI configuration, OAuth apps, and marketplace",
+      "operations": "Operations",
+      "operationsDesc": "System health, server instances, and background jobs",
+      "content": "Content",
+      "contentDesc": "Blog posts, comments moderation, and taxonomy",
+      "security": "Security",
+      "securityDesc": "Audit log, admin roles, active sessions, and security events"
+    },
+    "hubs": {
+      "dashboard": {
+        "title": "Dashboard",
+        "overview": "Overview",
+        "revenue": "Revenue Analytics",
+        "alerts": "Alerts"
+      },
+      "customers": {
+        "title": "Customers",
+        "workspaces": "Workspaces",
+        "users": "Users",
+        "devices": "Devices",
+        "support": "Support Sessions",
+        "trialAbuse": "Abuse signals"
+      },
+      "revenue": {
+        "title": "Revenue",
+        "plans": "Plans & Prices",
+        "subscriptions": "Subscriptions",
+        "payments": "Payments & Ledger",
+        "upgrades": "Upgrade Requests",
+        "wallet": "Wallet",
+        "ledger": "Billing ledger",
+        "makerChecker": "Two-person approvals"
+      },
+      "offline": {
+        "title": "Offline",
+        "licences": "Licences",
+        "fleet": "Device Fleet",
+        "migration": "Migration Center",
+        "reconciliation": "Reconciliation",
+        "bans": "Automatic bans (tier 1)",
+        "devices": "Devices",
+        "log": "Licence log",
+        "reviews": "Review queue (tier 2)"
+      },
+      "product": {
+        "title": "Product",
+        "features": "Features & Flags",
+        "ai": "AI Assistant",
+        "oauth": "OAuth Apps",
+        "market": "Marketplace"
+      },
+      "operations": {
+        "title": "Operations",
+        "health": "System Health",
+        "servers": "Servers",
+        "jobs": "Jobs",
+        "announcements": "Announcements and maintenance"
+      },
+      "content": {
+        "title": "Content",
+        "blog": "Blog"
+      },
+      "security": {
+        "title": "Security",
+        "audit": "Audit Log",
+        "roles": "Admin Roles",
+        "sessions": "Admin Sessions",
+        "events": "Security Events"
+      }
+    },
+    "command": {
+      "empty": "No results.",
+      "hubs": "Main sections",
+      "placeholder": "Search a command or section… (Ctrl+K)"
+    },
+    "customers": {
+      "abuseLoadError": "Could not load the signals",
+      "abuseLoadErrorHint": "Could not reach the server.",
+      "actions": "Actions",
+      "activeSession": "Active",
+      "createSupportConfirm": "Open session",
+      "createSupportDesc": "This gives an admin temporary access to the business data for support.",
+      "createSupportTitle": "Open a support session",
+      "createdAt": "Signed up",
+      "devicesNotice": "Registered devices are shown in full in the «Offline» section.",
+      "expiresAt": "Expires:",
+      "fingerprint": "Fingerprint",
+      "lastSeen": "Last seen",
+      "legalHoldActive": "Legal hold is active",
+      "loadError": "Could not load the 360 view",
+      "loadErrorHint": "Could not reach the database.",
+      "newNoteTitle": "Add an internal note",
+      "noAbuseSignals": "No abuse signals detected",
+      "noAbuseSignalsHint": "Trial-abuse signals (repeated phone, same hardware, similar IP range, card hash) are reported here.",
+      "noActiveSub": "No paid subscription (default plan: Free). Detailed reports are in «Revenue».",
+      "noDataRequests": "No export or deletion requests",
+      "noDataRequestsHint": "Customer data requests (export within 7 days, deletion within 30 days) are handled here.",
+      "noMembers": "No members found",
+      "noNotes": "No notes for this business yet.",
+      "noSupportSessions": "No active support sessions.",
+      "notePlaceholder": "Internal note for the support team and managers…",
+      "openSupportSession": "Open a support session",
+      "resetMfa": "Reset MFA",
+      "revokeSessions": "Revoke sessions",
+      "revoked": "Revoked",
+      "saveNote": "Save note",
+      "signalType": "Signal type",
+      "slaDue": "Due by:",
+      "subscriptionsSection": "Subscription and access",
+      "supportNotice": "Support sessions use a temporary token with an expiry and are visible to the customer.",
+      "supportNoticeGeneral": "Open or manage support sessions from each business's 360 view in «Businesses».",
+      "supportReasonLabel": "Reason for support access (required)",
+      "suspendUser": "Suspend",
+      "tabs": {
+        "compliance": "Data",
+        "members": "Members",
+        "notes": "Notes",
+        "overview": "Overview",
+        "support": "Support"
+      },
+      "tagsPlaceholder": "Tags (comma-separated: vip, offline, fraud)",
+      "userActionDesc": "Run «{action}» on this user? It takes effect immediately.",
+      "userActionTitle": "Confirm user action",
+      "view360": "360 view",
+      "workspace360": "Business 360 view",
+      "workspaceCount": "Businesses",
+      "workspaceId": "ID",
+      "workspaceName": "Business name"
+    },
+    "offline": {
+      "actions": "Actions",
+      "activeDevices": "Active seats",
+      "activeLicences": "Active licences",
+      "banAction": "Ban",
+      "banReason": "Tier-1 violation",
+      "bannedAt": "Banned at",
+      "bannedLicences": "Banned licences",
+      "bansError": "Could not load the bans",
+      "confirmDecision": "Record the decision",
+      "confirmLiftBan": "Confirm and lift the ban",
+      "confirmRelease": "Confirm release",
+      "confirmReviewBan": "Confirm abuse and ban the licence",
+      "confirmReviewNotAbuse": "Not abuse — close the case",
+      "confirmRevoke": "Revoke the licence",
+      "decisionReasonLabel": "Reason for the decision (required)",
+      "details": "Evidence and details",
+      "deviceId": "Device ID",
+      "devicesError": "Could not load the device seats",
+      "emptyLogs": "No events in the licence log",
+      "emptyLogsHint": "Issue, seat activation, connection, ban and device release events are appended to this table.",
+      "emptyReviewQueue": "The review queue is empty",
+      "emptyReviewQueueHint": "Tier-2 anomalies (activity in distant cities, unusual invoice patterns) come here for review.",
+      "event": "Event",
+      "evidence": "Evidence",
+      "evidenceTitle": "Evidence recorded in the log",
+      "expiresAt": "Expires",
+      "fleetHealthDesc": "Totals of active and banned licences and the signing key.",
+      "fleetHealthTitle": "Offline fleet health",
+      "ip": "IP",
+      "issuedAt": "Issued",
+      "label": "Device label",
+      "lastSeen": "Last connected",
+      "licenseId": "Licence ID",
+      "liftBanAction": "Lift ban",
+      "liftBanDesc": "Lifting a ban is sensitive and audited. A reason and a fresh two-step (TOTP) check are required.",
+      "liftBanReasonLabel": "Reason for lifting the ban (required)",
+      "liftBanTitle": "Lift the offline licence ban",
+      "loadError": "Could not load the licences",
+      "logsError": "Could not load the licence log",
+      "migrationNotice": "Cloud migration runs in controlled steps: REQUESTED → BACKUP_CREATED → PREVIEWED → UPLOADING → RECONCILING → COMPLETED.",
+      "noBans": "No banned licences",
+      "noBansHint": "Tier-1 violations (unregistered key, forged signature, seat key collision, tampered app) ban the licence automatically.",
+      "noDevices": "No devices registered",
+      "noDevicesHint": "Computers and mobiles attached to a licence are listed here.",
+      "noLicences": "No offline licences",
+      "noLicencesHint": "Offline licences are issued when a Windows or Android device is activated.",
+      "notAbuseAction": "Not abuse",
+      "plan": "Plan",
+      "reason": "Reason",
+      "reconciliationNotice": "Read-only reconciliation: invoices, receivables per currency and stock per warehouse, MATCHED or MISMATCH with the difference.",
+      "releaseDesc": "Releasing this seat frees the licence so the customer can attach a new device.",
+      "releaseSeat": "Release seat",
+      "releaseTitle": "Release a device seat",
+      "reviewBanDesc": "The licence is banned at once and creating invoices stops.",
+      "reviewError": "Could not load the review queue",
+      "reviewNotAbuseDesc": "The tier-2 signal is marked as legitimate and closed with no effect.",
+      "revokeAction": "Revoke licence",
+      "revokeNotice": "Revoking never deletes the device's local data. It takes effect when the device next connects.",
+      "revokeReason": "Reason for revoking (required)",
+      "revokeTitle": "Revoke an offline licence",
+      "seatType": "Seat type",
+      "signalType": "Signal type",
+      "signingKey": "Signing key (Ed25519)",
+      "status": "Status",
+      "viewEvidence": "View evidence",
+      "when": "When",
+      "workspace": "Business"
+    },
+    "operations": {
+      "actions": "Actions",
+      "announcementsError": "Could not load the announcements",
+      "confirmRetry": "Queue again",
+      "createdAt": "Created",
+      "endsAt": "Ends:",
+      "errorMessage": "Error / result",
+      "healthError": "Could not run the probes",
+      "healthProbesDesc": "Each component is checked with a live probe. A component without a probe is shown as «no probe».",
+      "healthProbesTitle": "Infrastructure health",
+      "jobId": "ID",
+      "jobType": "Job type",
+      "jobsError": "Could not load the jobs",
+      "noAnnouncements": "No active announcements or maintenance notices",
+      "noAnnouncementsHint": "Announcements are targeted by plan, edition, platform and language.",
+      "noJobs": "No background jobs",
+      "noJobsHint": "Background jobs such as cloud migration, backups and data exports appear here.",
+      "refreshProbes": "Refresh",
+      "retry": "Retry",
+      "retryJobDesc": "Queue and run job {jobType} ({jobId}) again?",
+      "retryJobTitle": "Retry a background job",
+      "startsAt": "Starts:",
+      "status": "Status"
+    },
+    "product": {
+      "beta": "Beta",
+      "confirmToggleDesc": "{enable, select, true {Enable} other {Disable}} the flag {flag}?",
+      "confirmToggleTitle": "Change a feature flag",
+      "flagKey": "Flag key",
+      "flagName": "Feature",
+      "flagsError": "Could not load the feature flags",
+      "noFlags": "No feature flags defined",
+      "noFlagsHint": "Feature flags roll features out gradually by percentage, country or beta.",
+      "rollout": "Rollout %",
+      "status": "Enabled"
+    },
+    "revenue": {
+      "actionType": "Action",
+      "actions": "Action",
+      "actor": "Recorded by",
+      "amount": "Amount",
+      "approve": "Approve",
+      "approveDesc": "Approve {actionType}? The proposer cannot approve their own request.",
+      "approver": "Approver",
+      "confirmApprove": "Approve (second signature)",
+      "confirmReject": "Reject the request",
+      "createdBy": "Recorded by",
+      "defaultPricesActive": "The system's default prices are in use.",
+      "description": "Description",
+      "effectiveFrom": "Valid from",
+      "effectiveUntil": "Valid until",
+      "emptyLedger": "The ledger is empty",
+      "emptyLedgerHint": "Payments, wallet top-ups and refunds are recorded here.",
+      "idempotencyKey": "Idempotency key",
+      "ledgerError": "Could not load the ledger",
+      "ledgerErrorHint": "Could not reach the billing database.",
+      "makerCheckerError": "Could not load the approvals",
+      "noPendingActions": "No pending approvals",
+      "noPendingActionsHint": "Refunds, ledger adjustments, price changes and licence transfers need a second person's approval.",
+      "noPrices": "No prices recorded",
+      "plan": "Plan",
+      "priceCatalogDesc": "Prices are stored in rials and shown in tomans. Each price has a validity date and never changes existing subscriptions.",
+      "priceCatalogTitle": "Plan prices and history",
+      "priceIrr": "Amount (IRR)",
+      "priceToman": "Price (toman)",
+      "proposedBy": "Proposed by",
+      "reject": "Reject",
+      "rejectDesc": "Please give the reason for rejecting this request.",
+      "rejectionReasonLabel": "Reason for rejecting (required)",
+      "status": "Status",
+      "type": "Type",
+      "when": "When",
+      "workspace": "Business"
+    },
+    "security": {
+      "actions": "Actions",
+      "active": "Active",
+      "actor": "User",
+      "adminAccountsDesc": "Users with administrative access to the platform.",
+      "adminAccountsTitle": "Admin accounts",
+      "adminUser": "Admin",
+      "confirmAction": "Confirm",
+      "confirmRevoke": "Revoke and sign out",
+      "created": "Created",
+      "createdAt": "Connected",
+      "details": "Details",
+      "email": "Email",
+      "eventType": "Event",
+      "eventsError": "Could not load the security events",
+      "eventsErrorHint": "Could not reach the server.",
+      "fixedRolesDesc": "Roles are defined in code and strictly enforced on the server.",
+      "fixedRolesTitle": "The 7 admin roles",
+      "inactive": "Inactive",
+      "ip": "IP",
+      "lastSignIn": "Last sign-in",
+      "noAccounts": "No admin accounts",
+      "noAccountsHint": "Allowed emails are controlled by the ADMIN_ALLOWED_EMAILS environment variable.",
+      "noEvents": "No security events",
+      "noEventsHint": "Unauthorised access, step-up checks and permission changes are recorded here.",
+      "noSessions": "No active sessions",
+      "noSessionsHint": "No admin is connected right now.",
+      "permissionsCount": "permissions",
+      "reasonPlaceholder": "Write the reason…",
+      "reasonPrompt": "Reason (required)",
+      "reasonRequired": "A reason is required.",
+      "revokeConfirmDesc": "Revoke the session of {email}? All of this user's active tokens become invalid.",
+      "revokeConfirmTitle": "Revoke an admin session",
+      "revokeReason": "Reason for revoking (required)",
+      "revokeSession": "Revoke session",
+      "role": "Role",
+      "sessionId": "Session ID",
+      "sessionsError": "Could not load the sessions",
+      "sessionsErrorHint": "The session list could not be loaded.",
+      "status": "Status",
+      "stepUpFailed": "Two-step check failed. Enter the code again.",
+      "totpHint": "Enter the 6-digit code from your authenticator app (e.g. Google Authenticator).",
+      "totpPrompt": "Two-step code",
+      "when": "When"
     }
   },
   "till": {
@@ -5905,7 +6301,8 @@
         "why": "Whoever sets a spending limit should not be the only person who agrees to it.",
         "conflict": "Set budget ⟂ approve budget"
       }
-    }
+    },
+    "hub_subtitle_short": "Approval rules and permissions"
   },
   "migration": {
     "title": "Data migration",
@@ -7074,7 +7471,8 @@
     "attendance": "Attendance",
     "memberRole": "Role",
     "memberRoleHint": "Each role shows exactly the parts you set for it under “Access”.",
-    "memberRoleNoCustom": "You have not made a role yet. Make one under “Governance → Access” to choose it here."
+    "memberRoleNoCustom": "You have not made a role yet. Make one under “Governance → Access” to choose it here.",
+    "accountRequiresOnline": "Creating an account for a team member needs the internet."
   },
   "role": {
     "owner": "Owner",
@@ -10186,6 +10584,64 @@
       "row": "{product}: {quantity} {unit} are on no shelf — shelf {shelf} is full.",
       "openShelf": "Open shelf {shelf}",
       "badge": "Did not fit"
+    }
+  },
+  "entitlement": {
+    "notEntitled": "Your plan does not include this feature.",
+    "requiresOnline": "This feature requires an internet connection.",
+    "requiresUpgrade": "Upgrade to the {plan} plan to access this feature.",
+    "exhausted": "Your plan usage limit has been reached.",
+    "expired": "Your subscription has expired.",
+    "lockScreen": {
+      "title": "Plan limit reached or subscription expired",
+      "message": "Your business data is safe and has not been deleted. To continue full operations, please select one of the Hisabche plans.",
+      "exportPrompt": "Viewing, printing, and exporting your data remains always available.",
+      "upgradePrompt": "Upgrade plan"
+    },
+    "license": {
+      "signingNotConfigured": "License signing is not configured on this server.",
+      "offlinePlanRequired": "An active OFFLINE plan is required to issue offline licenses.",
+      "valid": "License is valid.",
+      "expired": "Offline license has expired.",
+      "wrongWorkspace": "License does not match this workspace.",
+      "wrongDevice": "License is not active on this device.",
+      "tampered": "License is invalid or tampered.",
+      "revoked": "License has been revoked.",
+      "clockRolledBack": "System clock has been moved backwards."
+    },
+    "offlineAccount": {
+      "deviceTitle": "Offline Account",
+      "deviceMessage": "Your account is offline - use locally on this device",
+      "continuePrompt": "Continue",
+      "upgradePrompt": "Upgrade to Online",
+      "webPortalTitle": "Offline License & Subscription Portal",
+      "webPortalMessage": "You are using the offline edition of Hisabche. Your operational data is stored locally on your device. Manage your licenses, devices, and cloud upgrades here.",
+      "devices": "Active Devices",
+      "licenses": "Issued Licenses",
+      "upgradeCreditTitle": "Upgrade to Online with Offline License Credit",
+      "creditBreakdown": "Credit calculation based on unused days",
+      "amountPaid": "Amount Paid",
+      "termDays": "Term Days",
+      "unusedDays": "Unused Days",
+      "creditAmount": "Upgrade Credit",
+      "newPlanPrice": "Online Plan Price",
+      "totalDue": "Total Due"
+    }
+  },
+  "offline": {
+    "cloudRequired": {
+      "title": "Internet connection required",
+      "badge": "Cloud required",
+      "description": "This feature runs on the cloud server and is not available in the offline edition on this device.",
+      "whyTitle": "Why is internet required?",
+      "whyDefault": "This action depends on cloud processing, multi-device sync, cloud file storage, or online services.",
+      "whatToDoTitle": "What can you do?",
+      "whatToDoDefault": "To use this feature, connect your device to the internet or access the online web edition.",
+      "action": "Connect to internet or switch to web edition",
+      "dataSafe": "Your local records and documents remain completely safe, preserved, and untouched.",
+      "retry": "Retry",
+      "dismiss": "Understood",
+      "backToHome": "Back to dashboard"
     }
   }
 }

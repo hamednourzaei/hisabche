@@ -25,6 +25,8 @@ import { localizePath } from '@hisabche/ui-contract'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { Button } from '../button'
 import { useToast } from '../toast-provider'
+import { useActionAvailability } from '../../../lib/capability'
+import { CloudRequiredNotice } from '../cloud-required-notice'
 
 export function CustomerPortalPanel({ customerId }: { customerId: string }) {
   const tOriginal = useTranslations()
@@ -34,6 +36,8 @@ export function CustomerPortalPanel({ customerId }: { customerId: string }) {
   }
   const toast = useToast()
   const { dateTime } = useDateFormat()
+  const availability = useActionAvailability('customer.portal_link')
+
   // The reader's own language — the link opens the public site, which always
   // has a locale prefix, from web and desktop alike.
   const locale = useLocale()
@@ -53,6 +57,11 @@ export function CustomerPortalPanel({ customerId }: { customerId: string }) {
 
   const status = (links.error as { response?: { status?: number } } | null)?.response?.status
   const live = (links.data ?? []).filter((l) => !l.revoked_at)
+
+  // After every hook: a hook below an early return runs on some renders only.
+  if (availability.requiresOnline) {
+    return <CloudRequiredNotice variant="card" title={t('portal.panelTitle', 'پرتال مشتری')} />
+  }
 
   const copy = (value: string) => {
     navigator.clipboard

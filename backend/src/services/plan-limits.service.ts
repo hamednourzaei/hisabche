@@ -8,23 +8,18 @@
 //       ← the admin's setting for THIS WORKSPACE       (workspace_limit_overrides)
 //
 // A key present in a layer replaces the one below; `null` there means
-// «unlimited», an absent key means «inherit». (AI questions cost the owner
-// money, so they are never unlimited — the admin routes refuse null there.)
+// «unlimited», an absent key means «inherit».
 //
-// Every reader — /billing's usage bars, the AI quota, and the enforcement on
-// invoice creation and member invites — goes through `effectiveLimits()`.
-// Before docs/plan-limits-migration.sql the tables do not exist: the built-in
-// defaults apply, which is exactly what applied before.
-//
-// Cached only in the SHARED store, 60 s, and dropped on every admin save —
-// a limit that one instance still remembers after the admin changed it would
-// block (or allow) differently depending on which server answered.
+// Daily ceiling for ONLINE_* plans:
+//   Counted by creation time (server clock) in the workspace's stored
+//   time zone (workspaces.time_zone; UTC when unset, never ?tz=).
 // ============================================
 
 import { supabase } from '../db'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 import { LIMIT_KEYS, defaultsFor, type PlanLimitValues } from './plan-limit-defaults'
+import { startOfLocalDayISO } from '../utils/local-day'
 
 const SCHEMA_ABSENT = new Set(['42P01', 'PGRST205', '42703', 'PGRST204'])
 const CACHE_TTL_S = 60
@@ -101,7 +96,18 @@ export async function listPlanSettings(): Promise<{
   )
   return {
     configured,
-    plans: (['free', 'pro', 'enterprise'] as const).map((plan) => {
+    plans: (
+      [
+        'free',
+        'pro',
+        'enterprise',
+        'FREE',
+        'OFFLINE',
+        'ONLINE_500',
+        'ONLINE_1000',
+        'ONLINE_1500',
+      ] as const
+    ).map((plan) => {
       const settings = byPlan.get(plan) ?? {}
       return {
         plan,
@@ -161,18 +167,16 @@ export async function saveWorkspaceOverride(
     if (SCHEMA_ABSENT.has(error.code)) throw new DatabaseError('PLAN_LIMITS_NOT_CONFIGURED', error)
     throw new DatabaseError('Failed to save workspace limits', error)
   }
-  // Every plan's cached entry for this workspace.
   await memoryCache.invalidate(CACHE_PREFIX)
 }
 
 // ─── Enforcement ───────────────────────────────────────────────────────────
 
-export type EnforcedLimit = 'invoices' | 'users'
+export type EnforcedLimit = 'invoices' | 'invoices_daily' | 'users'
 
 /**
  * The plan's ceiling is reached. 402, the same family as SUBSCRIPTION_EXPIRED:
- * permanent for this request (a mobile outbox must not retry it forever), and
- * answered by upgrading, not by trying again.
+ * permanent for this request, and answered by upgrading, not by trying again.
  */
 export class PlanLimitError extends Error {
   readonly statusCode = 402
@@ -187,14 +191,34 @@ export class PlanLimitError extends Error {
   }
 }
 
-const COUNTED: Record<EnforcedLimit, string> = { invoices: 'invoices', users: 'workspace_members' }
+/**
+ * Derives the start of local day for the workspace using its stored time zone.
+ * Unset -> UTC (owner decision Q5, 20 Oct 2026), never client ?tz=.
+ */
+async function workspaceStartOfDayIso(
+  workspaceId: string,
+  now: Date = new Date(),
+): Promise<string> {
+  const { data: ws, error: wsError } = await supabase
+    .from('workspaces')
+    .select('time_zone')
+    .eq('id', workspaceId)
+    .maybeSingle()
+
+  if (wsError && !SCHEMA_ABSENT.has(wsError.code ?? '')) {
+    throw new DatabaseError('Failed to read workspace time zone', wsError)
+  }
+
+  const storedTz = (ws as { time_zone?: string | null } | null)?.time_zone
+  const tz = storedTz && storedTz.trim() !== '' ? storedTz.trim() : 'UTC'
+  return startOfLocalDayISO(tz, now)
+}
 
 /**
  * Throws PlanLimitError when this workspace may not create one more.
  *
- * ⚠️ A TRIAL IS NOT LIMITED — it exists so a business can try everything.
- * ⚠️ The count is EXACT (`head: true`) — a planner estimate would refuse or
- * allow the 11th invoice by guesswork (راهنمای سشن §۷٫۴).
+ * ⚠️ A PAID-PLAN TRIAL (pro trial) has a bypass; FREE is capped at 50 invoices lifetime.
+ * ⚠️ The count is EXACT (`head: true`) — drafts are excluded.
  */
 export async function assertWithinLimit(
   workspaceId: string,
@@ -210,16 +234,76 @@ export async function assertWithinLimit(
   if (subError)
     throw new DatabaseError('Failed to read the subscription for a plan limit', subError)
   const row = sub as { plan?: string; is_trial?: boolean } | null
-  if (row?.is_trial) return
 
-  const limit = (await effectiveLimits(workspaceId, row?.plan ?? 'free'))[feature]
-  if (limit === null) return
+  const isFreePlan = !row?.plan || row.plan.toLowerCase() === 'free'
+  // Only paid trials (e.g. pro trial) bypass enforcement; the free trial is capped at 50
+  if (row?.is_trial && !isFreePlan) return
 
-  const { count, error } = await supabase
-    .from(COUNTED[feature])
-    .select('id', { count: 'exact', head: true })
-    .eq('workspace_id', workspaceId)
-  if (error) throw new DatabaseError(`Failed to count ${feature} for a plan limit`, error)
-  const used = count ?? 0
-  if (used >= limit) throw new PlanLimitError(feature, limit, used)
+  const planName = row?.plan ?? 'FREE'
+  const limits = await effectiveLimits(workspaceId, planName)
+
+  if (feature === 'invoices') {
+    // 1. Lifetime check
+    const lifetimeLimit = limits.invoices
+    if (lifetimeLimit !== null) {
+      const { count, error } = await supabase
+        .from('invoices')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+        .neq('status', 'draft')
+
+      if (error) throw new DatabaseError(`Failed to count invoices for lifetime limit`, error)
+      const used = count ?? 0
+      if (used >= lifetimeLimit) throw new PlanLimitError('invoices', lifetimeLimit, used)
+    }
+
+    // 2. Daily check if plan carries a daily ceiling (e.g. ONLINE_*)
+    const dailyLimit = limits.invoicesDaily
+    if (dailyLimit !== null) {
+      const startOfDay = await workspaceStartOfDayIso(workspaceId)
+      const { count, error } = await supabase
+        .from('invoices')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+        .neq('status', 'draft')
+        .gte('created_at', startOfDay)
+
+      if (error) throw new DatabaseError(`Failed to count invoices for daily limit`, error)
+      const used = count ?? 0
+      if (used >= dailyLimit) throw new PlanLimitError('invoices_daily', dailyLimit, used)
+    }
+    return
+  }
+
+  if (feature === 'invoices_daily') {
+    const dailyLimit = limits.invoicesDaily
+    if (dailyLimit !== null) {
+      const startOfDay = await workspaceStartOfDayIso(workspaceId)
+      const { count, error } = await supabase
+        .from('invoices')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+        .neq('status', 'draft')
+        .gte('created_at', startOfDay)
+
+      if (error) throw new DatabaseError(`Failed to count invoices for daily limit`, error)
+      const used = count ?? 0
+      if (used >= dailyLimit) throw new PlanLimitError('invoices_daily', dailyLimit, used)
+    }
+    return
+  }
+
+  if (feature === 'users') {
+    const userLimit = limits.users
+    if (userLimit === null) return
+
+    const { count, error } = await supabase
+      .from('workspace_members')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+
+    if (error) throw new DatabaseError(`Failed to count users for member limit`, error)
+    const used = count ?? 0
+    if (used >= userLimit) throw new PlanLimitError('users', userLimit, used)
+  }
 }

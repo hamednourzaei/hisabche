@@ -41,6 +41,8 @@ const data = ui('hooks', 'dashboard', 'use-dashboard-data.ts')
 const container = ui('components', 'ui', 'dashboard', 'containers', 'dashboard-container.tsx')
 const view = ui('components', 'ui', 'dashboard', 'dashboard-view.tsx')
 const hub = ui('components', 'ui', 'page-hub.tsx')
+// The menu group of the wrench moved out of the dashboard into the page-wide customizer.
+const globalCustomizer = ui('components', 'ui', 'global-page-customizer.tsx')
 const web = code(read('apps', 'web', 'app', '[lang]', '(dashboard)', 'dashboard-layout.tsx'))
 const shell = code(read('packages', 'app-shell', 'src', 'components', 'layout', 'app-shell.tsx'))
 const sidebar = code(read('packages', 'app-shell', 'src', 'components', 'layout', 'sidebar.tsx'))
@@ -148,7 +150,7 @@ describe('the wrench', () => {
   })
 
   it('the menu group offers only pages the role includes', () => {
-    expect(container).toContain(
+    expect(globalCustomizer).toContain(
       '!MENU_ALWAYS.includes(item.path) && !isNavLocked(item.path, hiddenByRole),',
     )
   })

@@ -17,6 +17,7 @@
 // ============================================
 
 import { z } from 'zod'
+import { localEngineRequestSchema } from './contract'
 
 /**
  * Injected before the page's own scripts run.
@@ -40,6 +41,15 @@ export const rpcRequestSchema = z.object({
 })
 
 export type RpcRequest = z.infer<typeof rpcRequestSchema>
+
+/** A local-engine call travelling from the WebView to the native host in offline edition. */
+export const localApiRpcRequestSchema = z.object({
+  type: z.literal('local-api'),
+  id: z.string().min(1).max(64),
+  request: localEngineRequestSchema,
+})
+
+export type LocalApiRpcRequest = z.infer<typeof localApiRpcRequestSchema>
 
 /**
  * The answer.
