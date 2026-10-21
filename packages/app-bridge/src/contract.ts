@@ -131,6 +131,8 @@ export const dbQuerySchema = z.object({
   direction: z.enum(['asc', 'desc']).default('desc'),
   limit: z.number().int().min(1).max(1000).default(100),
   offset: z.number().int().min(0).default(0),
+  /** The columns this search looks at, when the caller's rule differs. */
+  searchColumns: z.array(z.string().max(40)).max(8).optional(),
 })
 
 export const dbUpsertSchema = z.object({
@@ -150,6 +152,15 @@ export const dbEnqueueSchema = z.object({
   operation: queueOperationSchema,
   clientId: z.string().min(1).max(64),
   payload: z.record(z.unknown()),
+  /**
+   * Who made the change, and in which business.
+   *
+   * Nullable on purpose: a row written before this version has no owner, and
+   * an owner is never guessed. Such a row is shown to a person and sent only
+   * when that person says it is theirs.
+   */
+  userId: z.string().min(1).max(64).nullish(),
+  workspaceId: z.string().min(1).max(64).nullish(),
 })
 
 export const dbResolveQueueSchema = z.object({
@@ -280,6 +291,10 @@ export interface QueueEntry {
   status: 'pending' | 'failed'
   lastError: string | null
   createdAt: string
+  /** The account that made the change. Null: nobody knows. */
+  userId: string | null
+  /** The business the change belongs to. Null: nobody knows. */
+  workspaceId: string | null
 }
 
 export interface AppInfo {
@@ -330,6 +345,12 @@ export interface HisabcheBridge {
     delete(key: string): Promise<void>
   }
   db: {
+    /**
+     * A page of rows AND how many rows the filter matches in all.
+     *
+     * The count comes from the same WHERE as the page, so the pager and the
+     * list can never disagree about what the filter means.
+     */
     query<T>(input: {
       table: LocalTable
       search?: string
@@ -338,7 +359,8 @@ export interface HisabcheBridge {
       direction?: 'asc' | 'desc'
       limit?: number
       offset?: number
-    }): Promise<T[]>
+      searchColumns?: readonly string[]
+    }): Promise<{ rows: T[]; total: number }>
     upsertMany(table: LocalTable, rows: Array<Record<string, unknown>>): Promise<number>
     /**
      * Delete rows the SERVER deleted. A row still carrying an unsent local edit
@@ -351,6 +373,10 @@ export interface HisabcheBridge {
       operation: 'create' | 'update' | 'delete'
       clientId: string
       payload: Record<string, unknown>
+      /** The account making the change. Null: nobody knows. */
+      userId?: string | null | undefined
+      /** The business the change belongs to. Null: nobody knows. */
+      workspaceId?: string | null | undefined
     }): Promise<void>
     queue(): Promise<QueueEntry[]>
     resolveQueue(clientId: string, status: 'done' | 'failed', error?: string): Promise<void>

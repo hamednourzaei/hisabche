@@ -28,9 +28,10 @@ import {
   Card as SharedCard,
   Input as SharedInput,
   Skeleton as SharedSkeleton,
+  cn,
 } from '@hisabche/ui'
 
-export { cn } from '@hisabche/ui'
+export { cn }
 
 // ─── Button ───────────────────────────────────────────────────────────────
 
@@ -87,8 +88,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 
 // ─── Card ─────────────────────────────────────────────────────────────────
 
+// The shared Card carries no padding (its CardContent does); the shell's cards
+// put content straight inside, so without it text and buttons sat on the
+// border — the bottom of the device Settings looked unstyled.
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <SharedCard className={className}>{children}</SharedCard>
+  return <SharedCard className={cn('p-4 sm:p-5', className)}>{children}</SharedCard>
 }
 
 // ─── Badge ────────────────────────────────────────────────────────────────

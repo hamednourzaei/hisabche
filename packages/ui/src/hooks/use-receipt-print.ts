@@ -14,6 +14,7 @@ import { useDateFormat } from './use-date-format'
 import { printReceipt, type PrintOutcome } from '../lib/print/print-receipt'
 import { loadPrinterSettings } from '../lib/print/printer-settings'
 import { renderReceiptHtml, type ReceiptData } from '../lib/print/receipt-html'
+import { isTemporaryInvoiceNumber } from '@hisabche/validation'
 
 /** The parts of an invoice a receipt shows (the detail page's display shape). */
 export interface ReceiptSource {
@@ -78,6 +79,9 @@ export function useReceiptPrint() {
           data,
           {
             invoice: t('receipt.invoice'),
+            ...(isTemporaryInvoiceNumber(source.invoiceNumber)
+              ? { temporary: t('offline.temporary_invoice_number') }
+              : {}),
             date: t('receipt.date'),
             customer: t('receipt.customer'),
             item: t('receipt.item'),

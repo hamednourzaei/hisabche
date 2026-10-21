@@ -57,13 +57,21 @@ export const ProductListContainer = memo(function ProductListContainer({
 
   const { query } = engine
 
-  const products = useProducts({
-    page: Math.floor(query.offset / query.limit) + 1,
-    limit: query.limit,
-    ...(query.search ? { search: query.search } : {}),
-    ...(query.sortBy ? { sortBy: query.sortBy } : {}),
-    sortDirection: query.sortDirection ?? 'asc',
-  })
+  // ⚠️ THIS SCREEN READS THE DEVICE DATABASE, even while the network is up.
+  //
+  // The same rule as the customer list: one read path, one option. The device
+  // is kept fresh by the sync engine, and a device that knows nothing yet falls
+  // back to the network — so the list is never empty because the cache is.
+  const products = useProducts(
+    {
+      page: Math.floor(query.offset / query.limit) + 1,
+      limit: query.limit,
+      ...(query.search ? { search: query.search } : {}),
+      ...(query.sortBy ? { sortBy: query.sortBy } : {}),
+      sortDirection: query.sortDirection ?? 'asc',
+    },
+    { preferDevice: true },
+  )
 
   const reported = (products.data as { total?: number } | undefined)?.total
 

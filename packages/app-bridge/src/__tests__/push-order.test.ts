@@ -19,6 +19,8 @@ const entry = (
   status: 'pending',
   lastError: null,
   createdAt: '2026-09-27T00:00:00Z',
+  userId: 'user-a',
+  workspaceId: 'ws-a',
 })
 
 const customer = entry('m1', 'customer', 'create', { id: u(1), full_name: 'احمد' })

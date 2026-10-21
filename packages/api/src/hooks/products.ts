@@ -128,16 +128,36 @@ function productFromRow(r: Record<string, unknown>): Product {
   } as unknown as Product
 }
 
-export function useProducts(filters: Partial<ProductFilters> = {}) {
-  const authReady = useAuthReady()
+export interface ProductsReadOptions {
+  /**
+   * Read the device's rows FIRST, even when the network is up.
+   *
+   * The same option the customer list has: one read path, one preference.
+   */
+  preferDevice?: boolean
+}
 
-  // ✅ FIX: تنها subscription realtime برای جدول products — با
-  // productKeys.all، هم لیست‌ها (هر فیلتری) و هم جزئیات محصول
-  // پوشش داده می‌شوند.
-  useRealtime({ table: 'products', queryKey: productKeys.all as unknown as string[] })
+/**
+ * The columns the server searches.
+ *
+ * The name, and the barcode too when the text is a barcode
+ * (backend/src/services/product.service.ts:155). The sku is NOT searched by
+ * the server, so it is not searched on the device either — one rule, two
+ * hosts.
+ */
+function productSearchColumns(search: string): string[] {
+  const code = normalizeBarcode(search)
+  return code ? ['name', 'barcode'] : ['name']
+}
 
-  // ✅ فقط فیلدهایی که ارسال نشده‌اند را با default پر کن
-  const mergedFilters: ProductFilters = {
+/**
+ * The filters the list runs with.
+ *
+ * One place, so the query key and the request can never disagree about which
+ * page or which warehouse is being asked for.
+ */
+export function mergeProductFilters(filters: Partial<ProductFilters> = {}): ProductFilters {
+  return {
     page: filters.page ?? 1,
     limit: filters.limit ?? 20,
     sortDirection: filters.sortDirection ?? 'desc',
@@ -154,38 +174,102 @@ export function useProducts(filters: Partial<ProductFilters> = {}) {
     // In the query key too: warehouse B never reuses warehouse A's list.
     warehouseId: filters.warehouseId,
   }
+}
+
+export interface ProductPage {
+  products: Product[]
+  total: number
+  /** Present only when the request set `includeSummary: true`. */
+  summary?: StockSummary | undefined
+  /**
+   * The device does not hold this list — it was never pulled for this
+   * workspace. The screen must say so, not show an empty stock.
+   */
+  notAvailableOffline?: boolean
+}
+
+/**
+ * The product list: from the device when it can, from the server when it
+ * cannot.
+ *
+ * ⚠️ ONE PATH, the same one the customer list uses.
+ */
+export async function fetchProducts(
+  filters: Partial<ProductFilters> = {},
+  options: ProductsReadOptions = {},
+  signal: AbortSignal,
+): Promise<ProductPage> {
+  const mergedFilters = mergeProductFilters(filters)
+  const device = getOfflineQueue()
+
+  const fromDevice = async (): Promise<ProductPage> => {
+    const limit = mergedFilters.limit ?? 20
+    const page = mergedFilters.page ?? 1
+    const { rows, total, synced } = await device!.readRows!('product', mergedFilters.search ?? '', {
+      // The same filters the API applies: a deleted row is not a product, and
+      // `is_active` is a filter only when the caller asked for one.
+      where: {
+        deleted_at: null,
+        ...(mergedFilters.isActive === undefined
+          ? {}
+          : { is_active: mergedFilters.isActive ? 1 : 0 }),
+      },
+      // The server's own search rule.
+      searchColumns: productSearchColumns(mergedFilters.search ?? ''),
+      orderBy: mergedFilters.sortBy ?? 'created_at',
+      direction: mergedFilters.sortDirection ?? 'desc',
+      limit,
+      offset: (page - 1) * limit,
+    })
+    const products = rows.map(productFromRow)
+    // ⚠️ THE DEVICE'S REAL TOTAL. It used to be the length of the page, so a
+    // business with 300 products was told it had 20.
+    return { products, total, notAvailableOffline: synced === false }
+  }
+
+  if (device?.readRows && device.isOffline()) return fromDevice()
+
+  if (device?.readRows && options.preferDevice) {
+    const answer = await fromDevice()
+    // A device that has never synced knows nothing: that is "I do not know",
+    // not "this business has no products".
+    if (answer.total > 0) return answer
+  }
+
+  try {
+    const { data } = await apiClient.get<ProductPage>('/products', {
+      params: mergedFilters,
+      signal,
+    })
+    return data
+  } catch (error) {
+    // An aborted request is not "no network": never fall back to the device for it.
+    if (signal.aborted) throw error
+    if (device?.readRows && (error as Partial<ApiError>)?.code === 'NETWORK_ERROR') {
+      return fromDevice()
+    }
+    throw error
+  }
+}
+
+export function useProducts(
+  filters: Partial<ProductFilters> = {},
+  options: ProductsReadOptions = {},
+) {
+  const authReady = useAuthReady()
+
+  // ✅ FIX: تنها subscription realtime برای جدول products — با
+  // productKeys.all، هم لیست‌ها (هر فیلتری) و هم جزئیات محصول
+  // پوشش داده می‌شوند.
+  useRealtime({ table: 'products', queryKey: productKeys.all as unknown as string[] })
+
+  // ✅ فقط فیلدهایی که ارسال نشده‌اند را با default پر کن
+  const mergedFilters = mergeProductFilters(filters)
 
   return useQuery({
     queryKey: productKeys.list(mergedFilters),
     // Aborted by React Query when the search term changes or the picker closes.
-    queryFn: async ({ signal }) => {
-      type Page = {
-        products: Product[]
-        total: number
-        /** Present only when the request set `includeSummary: true`. */
-        summary?: StockSummary | undefined
-      }
-      // ⚠️ Offline this list used to render "no products" — the network error
-      // shown as an empty stock (راهنمای سشن §۷٫۳) — while the device database
-      // held every product. A host with that database answers instead.
-      const device = getOfflineQueue()
-      const fromDevice = async (): Promise<Page> => {
-        const rows = await device!.readRows!('product', mergedFilters.search ?? '')
-        const products = rows.map(productFromRow)
-        return { products, total: products.length }
-      }
-      if (device?.readRows && device.isOffline()) return fromDevice()
-      try {
-        const { data } = await apiClient.get<Page>('/products', { params: mergedFilters, signal })
-        return data
-      } catch (error) {
-        // An aborted request is not "no network": never fall back to the device for it.
-        if (signal.aborted) throw error
-        if (device?.readRows && (error as Partial<ApiError>)?.code === 'NETWORK_ERROR')
-          return fromDevice()
-        throw error
-      }
-    },
+    queryFn: async ({ signal }) => fetchProducts(mergedFilters, options, signal),
     enabled: authReady,
     staleTime: 1000 * 60 * 2,
     // ⚠️ 'always', not the default 'online': offline, React Query PAUSES a

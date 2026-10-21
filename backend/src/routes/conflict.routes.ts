@@ -21,8 +21,19 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
+/**
+ * `zodToJsonSchema` behind a shallow signature.
+ *
+ * Its own generic signature instantiates so deeply that tsc gives up
+ * (TS2589 «excessively deep») as soon as the argument is `z.any()`. The cast
+ * below is a type boundary only — same call, same output.
+ */
+const toJsonSchema = (schema: unknown): Record<string, unknown> => {
+  const convert = zodToJsonSchema as unknown as (
+    schema: unknown,
+    options: { target: 'jsonSchema7' },
+  ) => Record<string, unknown>
+  const result = convert(schema, { target: 'jsonSchema7' })
   delete result.$schema
   return result
 }
@@ -96,6 +107,14 @@ export async function conflictRoutes(fastify: FastifyInstance) {
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      // D7: the capability says «may reverse the ledger»; the role says «is the
+      // owner». A custom role can be granted one without being the other, and
+      // rewriting a posted record on a judgement call is the owner's.
+      if (request.tenancy.role !== 'owner') {
+        return reply
+          .code(403)
+          .send({ error: 'Only the owner can decide a conflict', code: 'OWNER_ONLY' })
+      }
       try {
         const { id } = request.params as { id: string }
         const body = resolveSchema.parse(request.body)

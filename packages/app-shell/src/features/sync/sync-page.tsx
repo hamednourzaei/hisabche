@@ -3,13 +3,19 @@
 // refused; force a sync. The stages are decided in outbox-stage.ts.
 // ============================================
 
-import React, { useCallback, useMemo, useSyncExternalStore } from 'react'
+import React, { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
 
 import { Badge, Button, Card, type BadgeTone } from '@/components/ui/primitives'
 import {
   CloudRequiredNotice,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Table,
   TableBody,
   TableCell,
@@ -21,8 +27,11 @@ import {
 import { PageHeader } from '@/components/layout/page-header'
 import { bridge } from '@/shared/lib/bridge'
 import { formatDate } from '@/shared/lib/currency'
+import { i18n } from '@/shared/i18n'
 import { useSyncQueue, useSyncStatus } from './use-sync'
+import { useSyncStore } from '@hisabche/store'
 import { MAX_ATTEMPTS, stagesSnapshot, subscribeStages } from './sync-engine'
+import { claimOwnerlessEntries, currentOutboxOwner } from './outbox-owner'
 import { reasonOf, stageOf, type OutboxStage } from './outbox-stage'
 import type { QueueEntry } from '@hisabche/app-bridge'
 
@@ -43,12 +52,27 @@ const TONE: Record<OutboxStage | 'committed', BadgeTone> = {
   committed: 'success',
 }
 
+/**
+ * The time of the day, in the reader's own calendar.
+ *
+ * The clock, not the date: "last sync: 20:08" is what a person needs, and a
+ * date on every line of a sync screen is noise.
+ */
+function formatTime(timestamp: number): string {
+  return new Intl.DateTimeFormat(i18n.language || 'fa-IR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(timestamp))
+}
+
 export default function SyncPage() {
   const { t } = useTranslation('desktop')
   const syncAvailability = useActionAvailability('sync.push_pull')
   const queue = useSyncQueue()
   const { isSyncing, sync } = useSyncStatus()
   const stages = useSyncExternalStore(subscribeStages, stagesSnapshot, stagesSnapshot)
+  const lastSyncedAt = useSyncStore((s) => s.lastSyncedAt)
+  const [claimOpen, setClaimOpen] = useState(false)
 
   const retry = useCallback(
     async (entry: QueueEntry) => {
@@ -66,12 +90,28 @@ export default function SyncPage() {
     [queue, sync],
   )
 
-  const entries = queue.data ?? []
+  // Memoised so the two `useMemo`s below do not see a new array on every
+  // render (`queue.data ?? []` builds a fresh `[]` while loading).
+  const entries = useMemo(() => queue.data ?? [], [queue.data])
   const staged = useMemo(
     () => entries.map((entry) => ({ entry, stage: stageOf(entry, stages.inFlight, MAX_ATTEMPTS) })),
     [entries, stages.inFlight],
   )
   const rejected = staged.filter((row) => row.stage === 'rejected').length
+
+  // ⚠️ THE ROWS WITH NO OWNER. They were queued before the device recorded
+  // who made them, and their owner is NOT GUESSED: they are never sent on
+  // their own, and a person says whose they are.
+  const ownerless = useMemo(() => entries.filter((entry) => !entry.userId), [entries])
+
+  const claimForCurrentAccount = useCallback(async () => {
+    // The same clientId is kept, so the server still sees one change with one
+    // identity: a claimed row is not a second row.
+    await claimOwnerlessEntries(ownerless, currentOutboxOwner())
+    setClaimOpen(false)
+    await sync()
+    await queue.refetch()
+  }, [ownerless, queue, sync])
 
   const label = useCallback(
     (group: 'entity' | 'op', value: string) => t(`sync.${group}.${value}`, { defaultValue: value }),
@@ -146,6 +186,12 @@ export default function SyncPage() {
       </PageHeader>
 
       <div className="flex flex-col gap-4 overflow-x-auto p-4">
+        <p className="text-xs text-[hsl(var(--fg-secondary))]">
+          {lastSyncedAt === null
+            ? t('sync.neverSynced')
+            : t('sync.lastSync', { time: formatTime(lastSyncedAt) })}
+          {entries.length > 0 ? ` · ${t('sync.pendingWaiting', { count: entries.length })}` : ''}
+        </p>
         {syncAvailability.requiresOnline ? (
           <CloudRequiredNotice
             variant="inline"
@@ -156,6 +202,32 @@ export default function SyncPage() {
             )}
           />
         ) : null}
+        {stages.progress ? (
+          <Card>
+            <p className="text-sm">
+              {/* ⚠️ The counts, not a percentage. A percentage is a rounding of
+                  the same two numbers — a second formula beside the shared one
+                  (packages/local-engine/src/__tests__/one-financial-engine.test.ts),
+                  and this screen has no business rounding anything. */}
+              {t('sync.preparingData', {
+                done: stages.progress.done,
+                total: stages.progress.total,
+              })}
+            </p>
+          </Card>
+        ) : null}
+
+        {ownerless.length > 0 ? (
+          <Card>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm">{t('sync.ownerUnknownHint', { count: ownerless.length })}</p>
+              <Button size="sm" variant="primary" onClick={() => setClaimOpen(true)}>
+                {t('sync.claimAsCurrentUser')}
+              </Button>
+            </div>
+          </Card>
+        ) : null}
+
         {staged.length === 0 ? (
           <Card>
             <p className="text-center text-sm text-[hsl(var(--fg-secondary))]">
@@ -199,6 +271,25 @@ export default function SyncPage() {
             </Table>
           </>
         )}
+
+        <Dialog open={claimOpen} onOpenChange={setClaimOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('sync.claimDialogTitle')}</DialogTitle>
+              <DialogDescription>
+                {t('sync.claimDialogBody', { count: ownerless.length })}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setClaimOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button variant="primary" onClick={() => void claimForCurrentAccount()}>
+                {t('sync.claimAsCurrentUser')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {stages.committed.length > 0 ? (
           <section aria-labelledby="sync-committed" className="flex flex-col gap-2">

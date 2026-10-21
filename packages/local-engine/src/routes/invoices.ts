@@ -18,9 +18,12 @@ import {
   round2,
   roundInvoiceMoney,
   sumInvoiceLines,
+  temporaryInvoiceNumber,
   type CostingMethod,
 } from '@hisabche/validation'
+import { buildEnqueue } from '@hisabche/app-bridge'
 import { NotFoundError, ValidationError } from '../errors'
+import type { LocalDb } from '../db'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 
@@ -70,6 +73,21 @@ export interface InvoiceItemRow {
   created_at: string
   updated_at: string
   deleted_at: string | null
+}
+
+/**
+ * This device's short identifier.
+ *
+ * It appears in the temporary invoice numbers, so two devices that both wrote
+ * an invoice offline can be told apart. It is generated once and stays on the
+ * device: it is a label, never an identity.
+ */
+function deviceIdOf(db: LocalDb): string {
+  const row = db.get<{ value?: string }>("SELECT value FROM meta WHERE key = 'device_id'")
+  if (row?.value) return row.value
+  const id = Math.random().toString(36).slice(2, 8).toUpperCase()
+  db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('device_id', ?)", [id])
+  return id
 }
 
 function generateUuid(): string {
@@ -388,6 +406,11 @@ export function registerInvoiceRoutes(router: Router): void {
     const { db, ctx, body } = c
     const { workspaceId } = ctx
     const raw = (body || {}) as Record<string, unknown>
+    // `localRequest` (cloud edition, offline) asks for the outbox row with
+    // this header. No header, no queue: the offline edition is unchanged, and
+    // a pull can never queue anything back to the server.
+    const queueForServer = c.headers['x-hisabche-queue'] === '1'
+    const queueOwner = c.headers['x-hisabche-user-id'] || ctx.userId
 
     const parsed = createInvoiceSchema.safeParse(raw)
     if (!parsed.success) {
@@ -423,7 +446,14 @@ export function registerInvoiceRoutes(router: Router): void {
     const rawItems = data.items
 
     return db.transaction(() => {
-      // 1. Next invoice number from counter
+      // 1. The number this device gives the invoice.
+      //
+      // A TEMPORARY ID, NOT A NUMBER. The official number comes from the
+      // server's canonical sequence (nextval('invoice_number_seq')) when the
+      // invoice is committed; a second numbering system here would hand out
+      // numbers the server never agreed to, and two devices would collide.
+      // So the device writes OFF-<device>-<seq>, and every screen that shows
+      // it says it is temporary.
       const prefix = type === 'purchase' ? 'PUR' : 'INV'
       const counterRow = db.get<{ next: number }>(
         'SELECT next FROM invoice_counter WHERE workspace_id = ? AND prefix = ?',
@@ -433,7 +463,7 @@ export function registerInvoiceRoutes(router: Router): void {
       const invoiceNumber =
         (typeof raw.invoiceNumber === 'string' ? raw.invoiceNumber : undefined) ||
         (typeof raw.invoice_number === 'string' ? raw.invoice_number : undefined) ||
-        `${prefix}-${String(nextNum).padStart(5, '0')}`
+        temporaryInvoiceNumber(deviceIdOf(db), nextNum)
 
       db.run(
         `INSERT INTO invoice_counter (workspace_id, prefix, next, updated_at) VALUES (?, ?, ?, ?)
@@ -806,6 +836,24 @@ export function registerInvoiceRoutes(router: Router): void {
         ])
       }
 
+      // ⚠️ THE OUTBOX ROW IS PART OF THE SAME TRANSACTION.
+      //
+      // An offline sale is written HERE; the row that asks the sync engine to
+      // send it to the server must be written here too, or a crash between the
+      // two leaves a sale the device knows and the server never will. Only a
+      // request carrying the queue header asks for it (`localRequest` sets it).
+      if (queueForServer) {
+        const enqueue = buildEnqueue({
+          entity: 'invoice',
+          operation: 'create',
+          clientId: invoiceId,
+          payload: raw,
+          userId: queueOwner,
+          workspaceId,
+        })
+        db.run(enqueue.sql, enqueue.params)
+      }
+
       const created = db.get<InvoiceRow>('SELECT * FROM invoice WHERE id = ?', [invoiceId])
       const createdItems = db.all<InvoiceItemRow>(
         'SELECT * FROM invoice_item WHERE invoice_id = ? ORDER BY sort_order ASC',
@@ -940,5 +988,24 @@ export function registerInvoiceRoutes(router: Router): void {
   router.delete('/invoices/:id', (c: RouteHandlerContext) => {
     cancelHandler(c)
     return { __status: 204, __data: null }
+  })
+
+  // ─── DELETE /invoices/:id/projection ────────────────────────
+  //
+  // Reconciliation after the server accepted this invoice (D3).
+  //
+  // The device wrote it with a temporary number; the server answered with the
+  // official one and the next pull brings that row. Both would show for an
+  // instant, so the projection goes — header AND lines, in ONE transaction —
+  // and nothing else: stock and balances are rebuilt from the pulled rows,
+  // never patched here.
+  router.delete('/invoices/:id/projection', (c: RouteHandlerContext) => {
+    const { db, params } = c
+    const id = params.id
+    return db.transaction(() => {
+      const items = db.run('DELETE FROM invoice_item WHERE invoice_id = ?', [id])
+      const header = db.run('DELETE FROM invoice WHERE id = ? AND dirty = 0', [id])
+      return { removed: items.changes + header.changes }
+    })
   })
 }

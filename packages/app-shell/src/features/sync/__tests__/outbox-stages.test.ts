@@ -14,6 +14,9 @@ type Entry = {
   status: 'pending' | 'failed'
   lastError: string | null
   createdAt: string
+  // Who made the change. The drain sends only the account's own rows.
+  userId: string | null
+  workspaceId: string | null
 }
 
 let outbox: Entry[] = []
@@ -38,7 +41,7 @@ jest.mock('@/shared/lib/bridge', () => ({
       resolveQueue,
       upsertMany: async () => 0,
       removeMany: async () => 0,
-      query: async () => [],
+      query: async () => ({ rows: [], total: 0 }),
     },
   }),
 }))
@@ -62,9 +65,13 @@ jest.mock('@hisabche/api', () => ({
   productKeys: { all: ['p'] },
   dashboardKeys: { all: ['d'] },
   getToken: () => 'token',
+  WORKSPACE_HEADER: 'x-workspace-id',
 }))
 jest.mock('@hisabche/store', () => ({
   useWorkspaceStore: { getState: () => ({ workspaceId: 'ws-1' }) },
+  useAuthStore: { getState: () => ({ user: { id: 'user-a' } }) },
+  // The sync centre's «last heard from the server» stamp (F2.4).
+  useSyncStore: { getState: () => ({ setLastSynced: () => undefined }) },
 }))
 
 import { MAX_ATTEMPTS, runSync, stagesSnapshot } from '../sync-engine'
@@ -82,6 +89,8 @@ const entry = (clientId: string, extra: Partial<Entry> = {}): Entry => ({
   status: 'pending',
   lastError: null,
   createdAt: '2026-09-27T10:00:00.000Z',
+  userId: 'user-a',
+  workspaceId: 'ws-1',
   ...extra,
 })
 const stage = (clientId: string) => {

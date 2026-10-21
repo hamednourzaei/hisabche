@@ -218,7 +218,7 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
               </div>
               <div className="space-y-1">
                 <p className="font-semibold text-foreground">{t('customers.noOpenDeals')}</p>
-                <p className="text-sm text-muted-foreground">{t('customers.noOpenDealsDesc')}</p>
+                <p className="text-sm text-muted-fg">{t('customers.noOpenDealsDesc')}</p>
               </div>
               <Button variant="outline" size="sm" onClick={handleClose}>
                 {t('common.back')}

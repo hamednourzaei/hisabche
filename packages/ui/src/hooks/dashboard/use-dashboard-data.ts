@@ -96,6 +96,12 @@ export function useDashboardData(dateRange: DateRange, parts: DashboardParts = A
   const previousRangeSalesTotal =
     typeof previousSalesData?.total === 'number' ? previousSalesData.total : null
 
+  // Sales the device wrote and the server has not confirmed yet (D10). Only
+  // the device read carries it; `null` means «not known here», and the line is
+  // then not drawn — «0 waiting» is a different sentence.
+  const pendingInvoiceCount =
+    typeof salesData?.pendingInvoiceCount === 'number' ? salesData.pendingInvoiceCount : null
+
   const { data: activitiesData, isPending: activitiesLoading } = useActivities(undefined, {
     enabled: parts.activities,
   })
@@ -149,6 +155,7 @@ export function useDashboardData(dateRange: DateRange, parts: DashboardParts = A
     salesChartData,
     rangeSalesTotal,
     previousRangeSalesTotal,
+    pendingInvoiceCount,
     rangeDays,
     rangeLoading: salesLoading || previousSalesLoading,
     recentActivities: Array.isArray(activitiesData) ? activitiesData : [],

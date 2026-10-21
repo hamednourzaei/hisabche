@@ -61,12 +61,12 @@ const SyncStatus: React.FC<SyncStatusProps> = ({
           {t('sync.syncing')}
         </Badge>
       ) : lastSyncedAt ? (
-        <div className="flex items-center gap-1.5 text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-muted-fg">
           <Clock className="size-3.5" aria-hidden />
           <span>{now === null ? '' : timeAgo(lastSyncedAt, now, t)}</span>
         </div>
       ) : (
-        <div className="flex items-center gap-1.5 text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-muted-fg">
           <Cloud className="size-3.5" aria-hidden />
           <span>{t('sync.notSynced')}</span>
         </div>

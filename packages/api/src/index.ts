@@ -10,6 +10,10 @@ export {
   getAppEdition,
   registerLocalTransport,
   registerFallbackTransport,
+  localRequest,
+  LOCAL_OWNER_HEADER,
+  LOCAL_QUEUE_HEADER,
+  WORKSPACE_HEADER,
   type AppEdition,
   type LocalTransportRequest,
   type LocalTransportResponse,
@@ -100,6 +104,11 @@ export {
   type ProductBarcode,
   type BarcodeLookup,
   type StockSummary,
+  // The read's own shape. Exported because `useProducts` hands it back: without
+  // it the inferred type of every hook that wraps `useProducts` can only be
+  // named through a deep path, and a `declaration` build refuses (TS2742).
+  type ProductPage,
+  type ProductsReadOptions,
 } from './hooks/products'
 
 // ─── Customers ────────────────────────────────────────────

@@ -63,8 +63,25 @@ export const syncEntitySchema = z.enum([
   'product',
   'transaction',
   'time_entry',
+  // The operational set (F2): the tables a device needs to work offline.
+  'warehouse',
+  'branch',
+  'exchange_rate',
+  'product_stock',
 ])
 export type SyncEntity = z.infer<typeof syncEntitySchema>
+
+/**
+ * How far back the device keeps invoices.
+ *
+ * The operational set is this window PLUS every invoice that is still open:
+ * a customer who still owes money from March is still a customer who owes
+ * money, however old the invoice is.
+ *
+ * ⚠️ ONE CONSTANT, two hosts: the server filters the pull with it and the
+ * device decides with it what it can answer offline.
+ */
+export const OPERATIONAL_WINDOW_DAYS = 90
 
 export const syncOperationSchema = z.enum(['create', 'update', 'delete'])
 export type SyncOperation = z.infer<typeof syncOperationSchema>

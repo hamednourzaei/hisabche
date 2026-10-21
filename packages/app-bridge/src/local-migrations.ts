@@ -396,7 +396,30 @@ const V3_OFFLINE_SCHEMA: LocalMigration = {
   ],
 }
 
-export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [ADD_VERSION, V3_OFFLINE_SCHEMA]
+/**
+ * v4 — the outbox knows who made the change.
+ *
+ * A queued row is somebody's work. Without an owner, the next account to sign
+ * in on this device sends it under its own token, and the change lands in
+ * another business's books.
+ *
+ * ⚠️ THE COLUMNS ARE NULLABLE ON PURPOSE. The rows already on a device were
+ * written before this version, and their owner is NOT GUESSED: they stay
+ * "owner unknown" until a person says whose they are.
+ */
+const V4_OUTBOX_OWNER: LocalMigration = {
+  to: 4,
+  statements: [
+    `ALTER TABLE sync_queue ADD COLUMN user_id TEXT`,
+    `ALTER TABLE sync_queue ADD COLUMN workspace_id TEXT`,
+  ],
+}
+
+export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
+  ADD_VERSION,
+  V3_OFFLINE_SCHEMA,
+  V4_OUTBOX_OWNER,
+]
 
 /**
  * The statements needed to bring a cache at `from` up to the current version.

@@ -16,6 +16,12 @@ const TABLE: Record<string, string> = {
   invoice: 'invoices',
   transaction: 'transactions',
   time_entry: 'time_entries',
+  // The operational set (F2.3). The local table is `product_stock`; the
+  // server's is `warehouse_stock`.
+  warehouse: 'warehouses',
+  branch: 'branches',
+  exchange_rate: 'exchange_rates',
+  product_stock: 'warehouse_stock',
 }
 
 describe('sync pull columns', () => {

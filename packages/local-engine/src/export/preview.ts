@@ -6,6 +6,8 @@
 // Rule 3: Unknown is not zero (null cost and null profit when unknown).
 // ============================================
 
+import { round2 } from '@hisabche/validation'
+
 import type { LocalDb } from '../db'
 import type {
   CostStatus,
@@ -168,7 +170,8 @@ export function generatePreview(db: LocalDb, workspaceId: string): MigrationPrev
           costStatus = 'partial'
         } else {
           for (const c of consumptions) {
-            costSum += Math.round(Number(c.quantity) * Number(c.unit_cost))
+            // ⚠️ The rounding is the shared money rule, not a local one.
+            costSum += round2(Number(c.quantity) * Number(c.unit_cost))
           }
         }
       }

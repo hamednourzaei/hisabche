@@ -81,8 +81,11 @@ export function registerCustomerRoutes(router: Router): void {
     const params: unknown[] = [workspaceId]
 
     if (search) {
-      clauses.push('(full_name LIKE ? OR phone LIKE ?)')
-      params.push(`%${search}%`, `%${search}%`)
+      // ⚠️ THE SERVER'S RULE, NOT A SECOND ONE: `ilike('full_name', …)`
+      // (backend/src/services/customer.service.ts:250). The server does not
+      // search the phone, so this route does not either — one rule, two hosts.
+      clauses.push('full_name LIKE ?')
+      params.push(`%${search}%`)
     }
     if (type) {
       clauses.push('type = ?')

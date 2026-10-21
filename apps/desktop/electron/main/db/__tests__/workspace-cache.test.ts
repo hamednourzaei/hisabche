@@ -89,7 +89,7 @@ function customerCount(): number {
   // `limit` and `offset` are bound as SQL parameters and have no defaults
   // inside query() — the Zod schema supplies them at the IPC boundary, which
   // this test calls past. Omitting `offset` binds undefined and throws.
-  return query({ table: 'customer', limit: 100, offset: 0, direction: 'desc' } as never).length
+  return query({ table: 'customer', limit: 100, offset: 0, direction: 'desc' } as never).rows.length
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

@@ -19,8 +19,9 @@
 // ============================================
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import apiClient from '../lib/client'
+import type { ConflictState } from '@hisabche/validation'
 import { useMyCapabilities } from './governance'
 import { asList } from '../lib/as-list'
 
@@ -59,6 +60,11 @@ export interface Conflict {
   hasFinancialDivergence: boolean
   status: 'open' | 'resolved' | 'superseded'
   resolution: string | null
+  /**
+   * What a person reads (D5), computed by the shared reading on the server:
+   * PENDING_REVIEW / ACCEPTED / REJECTED / RESOLVED / SUPERSEDED.
+   */
+  state: ConflictState
   resolutionReason: string | null
   resolvedBy: string | null
   resolvedAt: string | null

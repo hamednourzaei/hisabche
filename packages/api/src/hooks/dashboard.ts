@@ -19,7 +19,8 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '../lib/client'
+import { apiClient, localRequest } from '../lib/client'
+import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
 import { asList } from '../lib/as-list'
@@ -89,6 +90,14 @@ export interface SalesChartData {
   chartData?: SalesDataPoint[]
   total: number
   average: number
+  /**
+   * Sales the device wrote and the server has not confirmed yet (D10).
+   *
+   * Only the local engine can answer this: the cloud route has no outbox to
+   * count. Absent means «not known here» — the label is then not drawn at all,
+   * which is not the same sentence as «0 waiting».
+   */
+  pendingInvoiceCount?: number | undefined
 }
 
 export interface InvoicesSummary {
@@ -237,6 +246,74 @@ interface DashboardSalesParams {
   to?: string
 }
 
+/** The shape `GET /analytics/sales` answers with on the device. */
+interface DeviceSalesResponse {
+  chartData?: Array<{
+    label: string
+    value: number
+    date?: string
+    invoiceCount?: number
+    customerCount?: number
+  }>
+  pendingInvoiceCount?: number
+}
+
+/**
+ * The dashboard KPIs from the DEVICE, when there is no network.
+ *
+ * The local engine serves the same shape from the books it already holds
+ * (packages/local-engine/src/routes/dashboard.ts), so the screen keeps showing
+ * real numbers instead of a spinner. `null` means the device cannot answer —
+ * the caller then takes its old path, and a failed read stays an error.
+ */
+export async function readDashboardKpisFromDevice(): Promise<DashboardKPIs | null> {
+  if (!getOfflineQueue()?.isOffline()) return null
+  return localRequest<DashboardKPIs>('GET', '/analytics/dashboard')
+}
+
+/**
+ * The sales chart from the device, with the one number only it knows: how many
+ * sales are still waiting in the outbox (D10).
+ *
+ * The local route answers with every sale the device holds, so the picker's
+ * window is applied here — the chart and the range total then describe the
+ * same days.
+ */
+export async function readDashboardSalesFromDevice(
+  from: string,
+  to: string,
+): Promise<SalesChartData | null> {
+  if (!getOfflineQueue()?.isOffline()) return null
+  const local = await localRequest<DeviceSalesResponse>('GET', '/analytics/sales')
+  if (!local) return null
+
+  const points = (local.chartData ?? []).filter(
+    (
+      point,
+    ): point is {
+      label: string
+      value: number
+      date: string
+      invoiceCount?: number
+      customerCount?: number
+    } => typeof point.date === 'string' && point.date >= from && point.date <= to,
+  )
+
+  const series = fillDailyGaps(points.map(mapToSalesDataPoint), from, to)
+  const total = points.reduce((sum, point) => sum + point.value, 0)
+  const invoices = points.reduce((sum, point) => sum + (point.invoiceCount ?? 0), 0)
+
+  return {
+    data: series,
+    chartData: series,
+    total,
+    average: invoices > 0 ? total / invoices : 0,
+    ...(typeof local.pendingInvoiceCount === 'number'
+      ? { pendingInvoiceCount: local.pendingInvoiceCount }
+      : {}),
+  }
+}
+
 // ─── Hooks ──────────────────────────────────────────────────────────────────
 
 // ✅ گیت شده با authReady: قبل از hydrate شدن session، fire نمی‌شود
@@ -266,6 +343,11 @@ export function useDashboardKPIs(options: DashboardReadOptions = {}) {
   return useQuery({
     queryKey: dashboardKeys.kpis(),
     queryFn: async (): Promise<DashboardKPIs> => {
+      // ⚠️ OFFLINE, THE DEVICE ANSWERS — with the same shape, from the books it
+      // already holds. A device that cannot answer falls through to the
+      // server, whose failure stays an error (never a page of zeros).
+      const fromDevice = await readDashboardKpisFromDevice()
+      if (fromDevice) return fromDevice
       // «Today» starts at this device's midnight, not the server's (UTC):
       // a sale at 01:00 in Tehran was counted as yesterday's (BUG-087).
       // Read inside the query — it runs only in the browser.
@@ -337,19 +419,24 @@ export function useDashboardSales(
   return useQuery({
     queryKey: dashboardKeys.sales(queryParams),
     queryFn: async (): Promise<SalesChartData> => {
+      // ⚠️ OFFLINE: THE DEVICE'S OWN SALES — the only place the number of
+      // sales still waiting to be confirmed is known (D10).
+      const fromDevice = await readDashboardSalesFromDevice(
+        String(queryParams.startDate),
+        String(queryParams.endDate),
+      )
+      if (fromDevice) return fromDevice
+
       const response = await apiClient.get('/analytics/sales', {
         params: queryParams,
       })
 
-      let data: SalesDataPoint[] = []
-      let total = 0
-      let average = 0
-
       // ✅ حالت ۱: response.data.chartData (فرمت جدید Backend)
       if (response.data?.chartData && Array.isArray(response.data.chartData)) {
-        data = response.data.chartData.map(mapToSalesDataPoint)
-        total = response.data.totalRevenue ?? data.reduce((sum: number, d) => sum + d.value, 0)
-        average = data.length > 0 ? total / data.length : 0
+        const data: SalesDataPoint[] = response.data.chartData.map(mapToSalesDataPoint)
+        const total =
+          response.data.totalRevenue ?? data.reduce((sum: number, d) => sum + d.value, 0)
+        const average = data.length > 0 ? total / data.length : 0
         const series = fillDailyGaps(
           data,
           String(queryParams.startDate),
@@ -360,9 +447,9 @@ export function useDashboardSales(
 
       // ✅ حالت ۲: response.data.data (فرمت قبلی)
       if (response.data?.data && Array.isArray(response.data.data)) {
-        data = response.data.data.map(mapToSalesDataPoint)
-        total = response.data.total ?? data.reduce((sum: number, d) => sum + d.value, 0)
-        average = response.data.average ?? (data.length > 0 ? total / data.length : 0)
+        const data: SalesDataPoint[] = response.data.data.map(mapToSalesDataPoint)
+        const total = response.data.total ?? data.reduce((sum: number, d) => sum + d.value, 0)
+        const average = response.data.average ?? (data.length > 0 ? total / data.length : 0)
         const series = fillDailyGaps(
           data,
           String(queryParams.startDate),
@@ -373,9 +460,9 @@ export function useDashboardSales(
 
       // ✅ حالت ۳: response.data خودش آرایه است
       if (Array.isArray(response.data)) {
-        data = response.data.map(mapToSalesDataPoint)
-        total = data.reduce((sum: number, d) => sum + d.value, 0)
-        average = data.length > 0 ? total / data.length : 0
+        const data: SalesDataPoint[] = response.data.map(mapToSalesDataPoint)
+        const total = data.reduce((sum: number, d) => sum + d.value, 0)
+        const average = data.length > 0 ? total / data.length : 0
         const series = fillDailyGaps(
           data,
           String(queryParams.startDate),

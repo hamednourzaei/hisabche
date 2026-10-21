@@ -35,7 +35,10 @@ import { connectSyncStream, streamUrl, type StreamHandle } from '@hisabche/sync/
 import { useCurrencyStore, useWorkspaceStore } from '@hisabche/store'
 
 import { API_BASE_URL, apiClient } from '@/shared/lib/api'
-import { bridge } from '@/shared/lib/bridge'
+import { bridge, localApi } from '@/shared/lib/bridge'
+import { currentOutboxOwner, headersForEntry, isOwnedBy } from './outbox-owner'
+import { markTableSynced } from './device-sync-state'
+import { useSyncStore } from '@hisabche/store'
 import {
   createPushGate,
   routeFor,
@@ -72,7 +75,20 @@ const nowIso = (): string => new Date().toISOString()
 // ============================================
 
 /** Rebuild order matters: invoices read their customer's name from the device. */
-const DELTA_ENTITIES = ['customer', 'product', 'invoice'] as const
+/**
+ * The tables a sale needs, and nothing else.
+ *
+ * The app is usable once these are on the device: the products to sell, the
+ * customers to sell them to, the warehouse the stock sits in and the stock
+ * itself. Everything else (the invoices, the branches, the rates) can arrive
+ * in the background without anyone waiting for it.
+ */
+const ESSENTIAL_ENTITIES = ['product', 'customer', 'warehouse', 'product_stock'] as const
+
+/** The rest of the operational set, filled in the background. */
+const BACKGROUND_ENTITIES = ['invoice', 'branch', 'exchange_rate'] as const
+
+const DELTA_ENTITIES = [...ESSENTIAL_ENTITIES, ...BACKGROUND_ENTITIES] as const
 type DeltaEntity = (typeof DELTA_ENTITIES)[number]
 
 /** Entities retired with is_active = 0 rather than removed (a queued change may reference them). */
@@ -121,6 +137,49 @@ const FROM_LOG: Record<DeltaEntity, (r: Record<string, unknown>) => Record<strin
     updated_at: str(r.updated_at) ?? nowIso(),
     version: num(r.version) || 1,
     dirty: 0,
+  }),
+  warehouse: (r) => ({
+    id: r.id,
+    workspace_id: str(r.workspace_id) ?? '',
+    name: str(r.name) ?? '',
+    location: str(r.location) ?? '',
+    branch_id: str(r.branch_id),
+    is_active: r.is_active === false ? 0 : 1,
+    updated_at: str(r.updated_at) ?? nowIso(),
+    sync_state: 'synced',
+    origin: 'server',
+  }),
+  branch: (r) => ({
+    id: r.id,
+    workspace_id: str(r.workspace_id) ?? '',
+    code: str(r.code) ?? '',
+    name: str(r.name) ?? '',
+    parent_branch_id: str(r.parent_branch_id),
+    is_active: r.is_active === false ? 0 : 1,
+    updated_at: str(r.updated_at) ?? nowIso(),
+    sync_state: 'synced',
+    origin: 'server',
+  }),
+  exchange_rate: (r) => ({
+    id: r.id,
+    workspace_id: str(r.workspace_id) ?? '',
+    currency_code: str(r.currency_code) ?? '',
+    rate: num(r.rate),
+    rate_date: str(r.rate_date) ?? nowIso(),
+    updated_at: str(r.updated_at) ?? nowIso(),
+    sync_state: 'synced',
+    origin: 'server',
+  }),
+  product_stock: (r) => ({
+    id: r.id,
+    workspace_id: str(r.workspace_id) ?? '',
+    product_id: str(r.product_id) ?? '',
+    warehouse_id: str(r.warehouse_id) ?? '',
+    // The server counts in `quantity`; the device counts in `qty`.
+    qty: num(r.quantity),
+    updated_at: str(r.updated_at) ?? nowIso(),
+    sync_state: 'synced',
+    origin: 'server',
   }),
   invoice: (r) => ({
     id: r.id,
@@ -208,14 +267,18 @@ async function attachCustomerNames(rows: Array<Record<string, unknown>>): Promis
   const desktop = bridge()
   if (!desktop) return
   for (const row of rows) {
-    const [local] = await desktop.db.query<Record<string, unknown>>({
+    const {
+      rows: [local],
+    } = await desktop.db.query<Record<string, unknown>>({
       table: 'invoice',
       where: { id: String(row.id) },
       limit: 1,
     })
     let name = str(local?.customer_name)
     if (!name && typeof row.customer_id === 'string') {
-      const [customer] = await desktop.db.query<Record<string, unknown>>({
+      const {
+        rows: [customer],
+      } = await desktop.db.query<Record<string, unknown>>({
         table: 'customer',
         where: { id: row.customer_id },
         limit: 1,
@@ -254,7 +317,7 @@ async function storeInvoiceItems(invoices: Array<Record<string, unknown>>): Prom
       dirty: 0,
     }))
     const keep = new Set(items.map((item) => String(item.id)))
-    const local = await desktop.db.query<Record<string, unknown>>({
+    const { rows: local } = await desktop.db.query<Record<string, unknown>>({
       table: 'invoice_item',
       where: { invoice_id: invoiceId },
       limit: 1000,
@@ -271,7 +334,7 @@ async function removeInvoiceItems(invoiceIds: string[]): Promise<void> {
   const desktop = bridge()
   if (!desktop) return
   for (const invoiceId of invoiceIds) {
-    const local = await desktop.db.query<Record<string, unknown>>({
+    const { rows: local } = await desktop.db.query<Record<string, unknown>>({
       table: 'invoice_item',
       where: { invoice_id: invoiceId },
       limit: 1000,
@@ -281,6 +344,32 @@ async function removeInvoiceItems(invoiceIds: string[]): Promise<void> {
         'invoice_item',
         local.map((row) => String(row.id)),
       )
+  }
+}
+
+/**
+ * D3: drop the device-written projection of an invoice the server accepted.
+ *
+ * The local engine owns those two tables, so the delete is ONE transaction
+ * there. Nothing is compensated here: the pull that follows brings the
+ * server's row with the official number, and stock and balances are rebuilt
+ * from the pulled rows.
+ */
+/**
+ * Delete the device's own projection of a sale the server now owns (D3).
+ *
+ * Best-effort on purpose: the push has ALREADY succeeded when this runs, so a
+ * cleanup that fails must never turn a delivered change into «will retry» —
+ * that would resend an invoice the server already has. The pull that follows
+ * brings the server's row over the projection, and the next sync deletes it.
+ */
+async function discardInvoiceProjection(invoiceId: string): Promise<void> {
+  try {
+    const local = localApi()
+    if (!local) return
+    await local.request({ method: 'DELETE', path: `/invoices/${invoiceId}/projection` })
+  } catch {
+    // Reconciled by the pull; never fatal to the push.
   }
 }
 
@@ -309,16 +398,33 @@ async function snapshotEntity(entity: DeltaEntity): Promise<number> {
 async function rehydrate(workspaceId: string | null): Promise<number> {
   // The head is read FIRST: whatever changes while the snapshot runs lies
   // after it and is pulled again next time instead of being skipped.
+  // `null` when the head cannot be read: the walk still runs, and the next
+  // pull covers whatever changed meanwhile.
   let head: number | null = null
   try {
     const { data } = await apiClient.get<{ cursor: number }>('/sync/cursor')
     head = Number.isInteger(data.cursor) ? data.cursor : null
   } catch {
-    head = null
+    // Kept as `null` — nothing to advance the cursor to.
   }
 
   let written = 0
-  for (const entity of DELTA_ENTITIES) written += await snapshotEntity(entity)
+  for (const entity of DELTA_ENTITIES) {
+    // The staged bootstrap (F2): the person sees which table is being
+    // prepared and how many are done.
+    pullProgress = {
+      entity,
+      done: (pullProgress?.done ?? 0) + 1,
+      total: DELTA_ENTITIES.length,
+    }
+    publishStages()
+    written += await snapshotEntity(entity)
+    // The device knows this table now. A reader that asks before this point
+    // gets "not available offline", never an empty list.
+    markTableSynced(entity)
+  }
+  pullProgress = null
+  publishStages()
   // Only a complete rebuild may start the log: a head recorded after a
   // partial one would skip whatever the failed page held.
   if (workspaceId && head !== null) writeCursor(workspaceId, head)
@@ -352,7 +458,9 @@ export async function applyChanges(page: PullPage): Promise<number> {
       // Retired rather than erased: offline screens filter on is_active, and a
       // queued local change may still reference the row.
       for (const id of goneIds) {
-        const [local] = await desktop.db.query<Record<string, unknown>>({
+        const {
+          rows: [local],
+        } = await desktop.db.query<Record<string, unknown>>({
           table: entity,
           where: { id },
           limit: 1,
@@ -479,7 +587,10 @@ async function pushEntry(entry: QueueEntry): Promise<void> {
   const endpoint = ENDPOINT_BY_ENTITY[entry.entity]
   if (!endpoint) throw new Error(`NO_ENDPOINT:${entry.entity}`)
 
-  const headers = { 'Idempotency-Key': entry.clientId }
+  // ⚠️ THE ROW'S OWN WORKSPACE, NEVER THE ACTIVE ONE. A change made in
+  // another business goes to that business's books, even while another
+  // business is open on this device.
+  const headers = headersForEntry(entry)
 
   if (entry.operation === 'create') {
     await apiClient.post(endpoint, entry.payload, { headers })
@@ -528,7 +639,7 @@ async function pushVersioned(entry: QueueEntry): Promise<void> {
     ...(version > 0 ? { expectedVersion: version } : {}),
   }
 
-  await apiClient.post('/sync/push', { mutations: [mutation] })
+  await apiClient.post('/sync/push', { mutations: [mutation] }, { headers: headersForEntry(entry) })
 }
 
 let running = false
@@ -539,13 +650,23 @@ let again = false
 // a delivered change leaves the outbox — the recent ones are kept here so the
 // page can say «ثبت شد» for this session instead of the row just vanishing.
 const inFlight = new Set<string>()
+/** The bootstrap's progress: which table is being prepared, and how many are done. */
+let pullProgress: { entity: string; done: number; total: number } | null = null
 const COMMITTED_KEPT = 20
 let committed: CommittedEntry[] = []
 const stageListeners = new Set<() => void>()
-let stageSnapshot = { inFlight: new Set<string>(), committed: [] as CommittedEntry[] }
+let stageSnapshot = {
+  inFlight: new Set<string>(),
+  committed: [] as CommittedEntry[],
+  progress: null as { entity: string; done: number; total: number } | null,
+}
 
 function publishStages(): void {
-  stageSnapshot = { inFlight: new Set(inFlight), committed: [...committed] }
+  stageSnapshot = {
+    inFlight: new Set(inFlight),
+    committed: [...committed],
+    progress: pullProgress,
+  }
   for (const listener of stageListeners) listener()
 }
 
@@ -579,7 +700,13 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
     // failed customer create keeps its invoice WAITING, not failed.
     const gate = createPushGate(queue)
 
+    // ⚠️ ONLY THE ACCOUNT THAT MADE THE CHANGE SENDS IT. A row with no owner
+    // is never sent: it waits in the sync centre until a person says whose
+    // it is. A row of another account is not this person's to send.
+    const owner = currentOutboxOwner()
+
     for (const entry of queue) {
+      if (!isOwnedBy(entry, owner.userId)) continue
       if (entry.attempts >= MAX_ATTEMPTS) continue
       // Refused by the server: resending the same request gets the same answer.
       // It waits for a person (the sync page's retry re-queues it fresh).
@@ -591,6 +718,13 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
       try {
         await pushEntry(entry)
         await desktop.db.resolveQueue(entry.clientId, 'done')
+        // D3: the server owns this invoice now. The device's projection (the
+        // temporary number and the rows the engine wrote) goes before the pull
+        // brings the server's row — otherwise the device shows two invoices
+        // for one sale.
+        if (entry.entity === 'invoice' && entry.operation === 'create') {
+          await discardInvoiceProjection(entry.clientId)
+        }
         gate.markSent(entry)
         committed = [
           {
@@ -626,6 +760,8 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
       // The cursor stayed at the last committed page; the next run (interval,
       // reconnect, stream wake) resumes from there. Nothing to undo here.
     }
+    // The sync centre says when this device last heard from the server.
+    useSyncStore.getState().setLastSynced(Date.now())
     await invalidateAll(queryClient)
   } finally {
     running = false

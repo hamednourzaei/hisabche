@@ -4,6 +4,7 @@
 
 import {
   createNotificationMutationCache,
+  LOCAL_OWNER_HEADER,
   readStorage,
   registerLocalTransport,
   registerOfflineQueue,
@@ -17,6 +18,8 @@ import { registerCameraScanner, registerReceiptPrinterHost, ToastProvider } from
 import { bindActiveWorkspace, useWorkspaceStore } from '@hisabche/store'
 
 import { useAuthStore } from '@/features/auth/auth.store'
+import { currentOutboxOwner } from '@/features/sync/outbox-owner'
+import { hasSyncedTable } from '@/features/sync/device-sync-state'
 import { bridge, localApi } from '@/shared/lib/bridge'
 import {
   PERSISTED_CACHE_MAX_AGE_MS,
@@ -34,7 +37,21 @@ if (typeof window !== 'undefined') {
 
   const local = localApi()
   if (local) {
-    registerLocalTransport((req) => local.request(req))
+    // ⚠️ THE OUTBOX ROW'S OWNER IS STAMPED AT THE MOMENT OF THE WRITE.
+    //
+    // The local engine writes the outbox row inside the invoice transaction.
+    // The account that made the change is the session's — the same
+    // `currentOutboxOwner()` the device queue stamps — so it travels with the
+    // request instead of being guessed from the device's local user row.
+    registerLocalTransport((req) => {
+      const owner = currentOutboxOwner()
+      return local.request({
+        ...req,
+        headers: owner.userId
+          ? { ...req.headers, [LOCAL_OWNER_HEADER]: owner.userId }
+          : req.headers,
+      })
+    })
   }
 
   const isOffline =
@@ -55,17 +72,32 @@ if (typeof window !== 'undefined') {
       isOffline: () =>
         (window as { __hisabcheOnline?: boolean }).__hisabcheOnline === false ||
         navigator.onLine === false,
-      enqueue: (entry) => device.db.enqueue(entry),
-      readRows: (table, search) =>
-        device.db.query<Record<string, unknown>>({ table, search, limit: 500 }),
+      // ⚠️ THE OWNER IS STAMPED HERE, AT THE MOMENT OF THE WRITE. A queued row
+      // with no owner would be sent by whoever signs in next.
+      enqueue: (entry) => device.db.enqueue({ ...entry, ...currentOutboxOwner() }),
+      readRows: async (table, search, options) => {
+        const page = await device.db.query<Record<string, unknown>>({
+          table,
+          search,
+          limit: options?.limit ?? 500,
+          offset: options?.offset ?? 0,
+          ...(options?.where ? { where: options.where } : {}),
+          ...(options?.orderBy ? { orderBy: options.orderBy } : {}),
+          ...(options?.direction ? { direction: options.direction } : {}),
+          ...(options?.searchColumns ? { searchColumns: options.searchColumns } : {}),
+        })
+        return { ...page, synced: hasSyncedTable(table) }
+      },
       // The scanner asks the device first (instant, and the only answer
       // offline). Two rows = ambiguous, so up to five are read, not one.
       findByBarcode: (barcode) =>
-        device.db.query<Record<string, unknown>>({
-          table: 'product',
-          where: { barcode, is_active: 1 },
-          limit: 5,
-        }),
+        device.db
+          .query<Record<string, unknown>>({
+            table: 'product',
+            where: { barcode, is_active: 1 },
+            limit: 5,
+          })
+          .then((page) => page.rows),
     })
 
     // Receipts print silently to the chosen printer — a host capability the

@@ -130,10 +130,23 @@ function renderValue(t: Translate, value: unknown): string {
   return String(value)
 }
 
-function StatusBadge({ t, status }: { t: Translate; status: ConflictSummary['status'] }) {
-  if (status === 'resolved') return <Badge tone="good">{t('conflicts.resolved')}</Badge>
-  if (status === 'superseded') return <Badge tone="neutral">{t('conflicts.superseded')}</Badge>
-  return <Badge tone="warn">{t('conflicts.open')}</Badge>
+/**
+ * The state a person reads (D5), not the two storage words.
+ *
+ * ACCEPTED means the device's version was kept, REJECTED means the server's
+ * stands. A seller has to be able to tell those apart without knowing what
+ * `keep_client` means.
+ */
+function StatusBadge({ t, state }: { t: Translate; state: ConflictSummary['state'] }) {
+  const tone =
+    state === 'ACCEPTED' || state === 'RESOLVED'
+      ? 'good'
+      : state === 'REJECTED'
+        ? 'bad'
+        : state === 'SUPERSEDED'
+          ? 'neutral'
+          : 'warn'
+  return <Badge tone={tone}>{t(`conflicts.state_${state.toLowerCase()}`)}</Badge>
 }
 
 function DifferenceSummary({ t, divergences }: { t: Translate; divergences: FieldDivergence[] }) {
@@ -269,8 +282,8 @@ export const ConflictsView = memo(function ConflictsView({
         id: 'status',
         labelKey: 'conflicts.col_status',
         labelFallback: 'وضعیت',
-        sortValue: (c) => c.status,
-        render: (c) => <StatusBadge t={t} status={c.status} />,
+        sortValue: (c) => c.state,
+        render: (c) => <StatusBadge t={t} state={c.state} />,
       },
       {
         id: 'time',
@@ -536,6 +549,14 @@ export const ConflictsView = memo(function ConflictsView({
                 </>
               ) : (
                 <dl className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <dt className="text-xs text-[hsl(var(--fg-tertiary))]">
+                      {t('conflicts.state')}
+                    </dt>
+                    <dd>
+                      <StatusBadge t={t} state={selected.state} />
+                    </dd>
+                  </div>
                   <div>
                     <dt className="text-xs text-[hsl(var(--fg-tertiary))]">
                       {t('conflicts.choice')}

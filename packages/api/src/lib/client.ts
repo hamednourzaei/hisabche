@@ -194,6 +194,56 @@ export function registerLocalTransport(adapter: LocalTransportAdapter): void {
 }
 
 /**
+ * Header the local engine reads to decide whether a write must ALSO be queued
+ * for the server. Set by `localRequest` alone; the offline edition never sends
+ * it (there is no server to sync to), so its behaviour is unchanged.
+ */
+export const LOCAL_QUEUE_HEADER = 'x-hisabche-queue'
+
+/**
+ * The account that made the change, for the outbox row F1 stamps (D2). The
+ * host's adapter supplies it from the same `currentOutboxOwner()` the device
+ * queue uses — one source for «who did this».
+ */
+export const LOCAL_OWNER_HEADER = 'x-hisabche-user-id'
+
+/**
+ * Write to the device's local engine from the CLOUD edition.
+ *
+ * An offline sale has to be written by the one local engine — invoice, lines,
+ * stock, party balance, KPI projection — AND the outbox row that asks the sync
+ * engine to send it, in one SQLite transaction. This is that door: it calls
+ * the host's registered local transport directly, whatever the edition is.
+ *
+ * Returns `null` when no host adapter is registered (the web build), so the
+ * caller keeps its previous path instead of losing the sale.
+ */
+export async function localRequest<T = unknown>(
+  method: LocalTransportRequest['method'],
+  path: string,
+  body?: unknown,
+): Promise<T | null> {
+  if (!localTransportAdapter) return null
+
+  const headers: Record<string, string | undefined> = {}
+  if (currentEdition !== 'offline') headers[LOCAL_QUEUE_HEADER] = '1'
+  const workspaceId = getActiveWorkspaceId()
+  if (workspaceId) headers[WORKSPACE_HEADER] = workspaceId
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+
+  const res = await localTransportAdapter({ method, path, headers, body })
+  if (res.status >= 200 && res.status < 300) return res.data as T
+
+  const message =
+    typeof res.data === 'object' && res.data !== null && 'error' in res.data
+      ? String((res.data as Record<string, unknown>).error)
+      : `Local request failed with status code ${res.status}`
+  const error = new Error(message) as Error & { response?: { status: number; data: unknown } }
+  error.response = { status: res.status, data: res.data }
+  throw error
+}
+
+/**
  * The adapter used when the edition is NOT offline.
  *
  * ⚠️ THE HOST ADAPTER MUST BE REGISTERED, NOT ASSIGNED.

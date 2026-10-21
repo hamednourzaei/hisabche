@@ -66,6 +66,20 @@ const RESERVED = [
 
 const tableNames = Object.keys(WRITABLE_COLUMNS)
 
+/**
+ * Every table the schema creates — the plumbing too (the outbox, the cursors,
+ * the meta). A migration reaches those as well: the v4 migration gives the
+ * outbox its owner columns, and a guard that only knew the entity tables would
+ * call that a table that does not exist.
+ */
+const createdTables = [
+  ...new Set(
+    CREATE_STATEMENTS.map((s) => /CREATE TABLE IF NOT EXISTS "?(\w+)"?/.exec(s)?.[1]).filter(
+      (name): name is string => typeof name === 'string',
+    ),
+  ),
+]
+
 describe('the local migrations are safe to run on a real device', () => {
   it('⚠️ quotes every table name that is a reserved SQL word', () => {
     const reservedTables = tableNames.filter((name) => RESERVED.includes(name.toLowerCase()))
@@ -101,7 +115,7 @@ describe('the local migrations are safe to run on a real device', () => {
   it('⚠️ names no table the schema does not have', () => {
     // A migration against a table that does not exist throws on every launch
     // and never gets past it.
-    const known = new Set(tableNames)
+    const known = new Set([...tableNames, ...createdTables])
     for (const migration of LOCAL_MIGRATIONS) {
       for (const statement of migration.statements) {
         const named = /ALTER TABLE "?(\w+)"?/.exec(statement)?.[1]

@@ -15,6 +15,7 @@ import {
   WorkplaceTimeZoneSection,
 } from '@hisabche/ui/screens'
 import { PageHeader } from '@/components/layout/page-header'
+import { LogoutPendingDialog } from '@/components/layout/logout-pending-dialog'
 import { useAuthStore, useCurrentUser } from '@/features/auth/auth.store'
 import { bridge } from '@/shared/lib/bridge'
 import { setDesktopLanguage, supportedLanguages, type SupportedLanguage } from '@/shared/i18n'
@@ -106,6 +107,7 @@ function DesktopSettings() {
             <LogOut size={14} />
             {t('common.logout')}
           </Button>
+          <LogoutPendingDialog />
         </Card>
 
         <Card>

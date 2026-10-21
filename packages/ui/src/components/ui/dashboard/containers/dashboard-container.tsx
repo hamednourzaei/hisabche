@@ -89,6 +89,7 @@ export function DashboardContainer() {
     salesChartData,
     rangeSalesTotal,
     previousRangeSalesTotal,
+    pendingInvoiceCount,
     rangeLoading,
     recentActivities,
     kpiLoading,
@@ -104,6 +105,17 @@ export function DashboardContainer() {
     insights: look.active('insights') && mayInsights,
     activities: look.active('activities'),
   })
+
+  // ⚠️ ONLY THE DEVICE KNOWS THIS (D10): the cloud route has no outbox to
+  // count. `null` while unknown — the line is then not drawn, because «0 sales
+  // waiting» and «we could not read» are different sentences.
+  const pendingInvoicesLabel =
+    pendingInvoiceCount !== null && pendingInvoiceCount > 0
+      ? (tOriginal as unknown as (key: string, values?: Record<string, number>) => string)(
+          'dashboard.pendingInvoices',
+          { count: pendingInvoiceCount },
+        )
+      : null
 
   // ─── Callbacks ──────────────────────────────────────────────────────────
 
@@ -288,6 +300,7 @@ export function DashboardContainer() {
         insightsLoading={insightsLoading}
         salesChartData={salesChartData}
         chartLoading={chartLoading}
+        pendingInvoicesLabel={pendingInvoicesLabel}
         dateRange={dateRange}
         activitiesLoading={activitiesLoading}
         recentActivities={recentActivities}

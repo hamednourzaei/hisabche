@@ -167,6 +167,33 @@ function seedV1(): void {
   db.close()
 }
 
+/**
+ * A v3 device: the outbox exists, but nobody recorded who made the change.
+ *
+ * This is the shape a device that has been running the offline build has: the
+ * queue table is there, with no owner columns, and rows already in it.
+ */
+function seedV3WithQueuedChange(): void {
+  const db = new DatabaseSync(file)
+  db.exec(`CREATE TABLE IF NOT EXISTS sync_queue (
+    client_id TEXT PRIMARY KEY,
+    entity TEXT NOT NULL,
+    operation TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'pending',
+    last_error TEXT,
+    created_at TEXT NOT NULL
+  )`)
+  db.exec(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`)
+  db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run('schema_version', '3')
+  db.prepare(
+    `INSERT INTO sync_queue (client_id, entity, operation, payload, attempts, status, last_error, created_at)
+     VALUES (?, ?, ?, ?, 0, 'pending', NULL, ?)`,
+  ).run('c1', 'invoice', 'create', JSON.stringify({ id: 'inv-1' }), '2026-10-01T00:00:00.000Z')
+  db.close()
+}
+
 /** A realistic device database as it exists on a v2 device with financial rows. */
 function seedRealisticV2(): void {
   const db = new DatabaseSync(file)
@@ -235,7 +262,7 @@ describe('an existing cache survives a schema change', () => {
 
     expect(initDatabaseWith(TestDriver as never, file)).toBe(true)
 
-    const rows = query<{ id: string; name: string; version: number }>({
+    const { rows: rows } = query<{ id: string; name: string; version: number }>({
       table: 'product',
       direction: 'desc',
       limit: 10,
@@ -259,7 +286,29 @@ describe('an existing cache survives a schema change', () => {
     db.close()
 
     expect(Number(row.value)).toBe(SCHEMA_VERSION)
-    expect(SCHEMA_VERSION).toBe(3)
+    expect(SCHEMA_VERSION).toBe(4)
+  })
+
+  it('⚠️ the outbox gets its owner, and a change already queued keeps no owner', () => {
+    seedV3WithQueuedChange()
+    expect(initDatabaseWith(TestDriver as never, file)).toBe(true)
+    closeDatabase()
+
+    const db = new DatabaseSync(file)
+    const columns = (
+      db.prepare('PRAGMA table_info(sync_queue)').all() as Array<{ name: string }>
+    ).map((column) => column.name)
+    const row = db
+      .prepare('SELECT user_id, workspace_id FROM sync_queue WHERE client_id = ?')
+      .get('c1') as { user_id: string | null; workspace_id: string | null }
+    db.close()
+
+    expect(columns).toContain('user_id')
+    expect(columns).toContain('workspace_id')
+    // The change was queued before the device knew who made it. The owner is
+    // NOT guessed: it stays unknown until a person says whose it is.
+    expect(row.user_id).toBeNull()
+    expect(row.workspace_id).toBeNull()
   })
 
   it('⚠️ opening an already-migrated cache twice is harmless', () => {
@@ -268,7 +317,9 @@ describe('an existing cache survives a schema change', () => {
     closeDatabase()
     expect(initDatabaseWith(TestDriver as never, file)).toBe(true)
 
-    expect(query({ table: 'product', direction: 'desc', limit: 10, offset: 0 })).toHaveLength(1)
+    expect(query({ table: 'product', direction: 'desc', limit: 10, offset: 0 }).rows).toHaveLength(
+      1,
+    )
   })
 
   it('⚠️ a fresh database is already current and needs no migration', () => {
@@ -285,7 +336,7 @@ describe('an existing cache survives a schema change', () => {
     ])
     expect(written).toBe(1)
 
-    const rows = query<{ version: number }>({
+    const { rows: rows } = query<{ version: number }>({
       table: 'product',
       direction: 'desc',
       limit: 10,
@@ -302,7 +353,7 @@ describe('Gate 3 — v2 to v3 offline schema migration', () => {
     expect(initDatabaseWith(TestDriver as never, file)).toBe(true)
 
     // Check product rows: 15.5 -> 1550, 25.0 -> 2500, 800.75 -> 80075
-    const products = query<{
+    const { rows: products } = query<{
       id: string
       name: string
       buy_price: number
@@ -327,7 +378,7 @@ describe('Gate 3 — v2 to v3 offline schema migration', () => {
     expect(products[1]?.sell_price).toBe(120050)
 
     // Check customer: 500.25 -> 50025
-    const customers = query<{ id: string; full_name: string; opening_balance: number }>({
+    const { rows: customers } = query<{ id: string; full_name: string; opening_balance: number }>({
       table: 'customer',
       direction: 'asc',
       limit: 10,
@@ -337,7 +388,7 @@ describe('Gate 3 — v2 to v3 offline schema migration', () => {
     expect(customers[0]?.opening_balance).toBe(50025)
 
     // Check invoice: subtotal 250.0 -> 25000, discount 10.0 -> 1000, tax 5.0 -> 500, total 245.0 -> 24500, paid 100.0 -> 10000
-    const invoices = query<{
+    const { rows: invoices } = query<{
       id: string
       subtotal: number
       discount_total: number
@@ -360,7 +411,7 @@ describe('Gate 3 — v2 to v3 offline schema migration', () => {
     expect(invoices[0]?.exchange_rate).toBeNull()
 
     // Check invoice_item: unit_price 25.0 -> 2500, discount 1.0 -> 100, total_price 240.0 -> 24000
-    const items = query<{
+    const { rows: items } = query<{
       id: string
       unit_price: number
       discount: number
@@ -377,7 +428,7 @@ describe('Gate 3 — v2 to v3 offline schema migration', () => {
     expect(items[0]?.total_price).toBe(24000)
 
     // Check employee: salary 15000.5 -> 1500050
-    const employees = query<{ id: string; salary: number }>({
+    const { rows: employees } = query<{ id: string; salary: number }>({
       table: 'employee',
       direction: 'asc',
       limit: 10,
@@ -387,7 +438,7 @@ describe('Gate 3 — v2 to v3 offline schema migration', () => {
     expect(employees[0]?.salary).toBe(1500050)
 
     // Check transaction: 100.25 -> 10025
-    const txs = query<{ id: string; amount: number }>({
+    const { rows: txs } = query<{ id: string; amount: number }>({
       table: 'transaction',
       direction: 'asc',
       limit: 10,
@@ -408,7 +459,7 @@ describe('Gate 3 — v2 to v3 offline schema migration', () => {
     expect(initDatabaseWith(TestDriver as never, file)).toBe(true)
 
     // Assert prices were NOT scaled a second time (e.g. 1550 must remain 1550, NOT 155000)
-    const products = query<{ id: string; buy_price: number; sell_price: number }>({
+    const { rows: products } = query<{ id: string; buy_price: number; sell_price: number }>({
       table: 'product',
       direction: 'asc',
       limit: 10,
@@ -418,7 +469,7 @@ describe('Gate 3 — v2 to v3 offline schema migration', () => {
     expect(products[0]?.buy_price).toBe(1550)
     expect(products[0]?.sell_price).toBe(2500)
 
-    const invoices = query<{ id: string; total: number }>({
+    const { rows: invoices } = query<{ id: string; total: number }>({
       table: 'invoice',
       direction: 'asc',
       limit: 10,
@@ -432,7 +483,7 @@ describe('Gate 3 — v2 to v3 offline schema migration', () => {
     expect(initDatabaseWith(TestDriver as never, file)).toBe(true)
 
     // Verify warehouses table
-    expect(query({ table: 'warehouse', direction: 'asc', limit: 10, offset: 0 })).toEqual([])
+    expect(query({ table: 'warehouse', direction: 'asc', limit: 10, offset: 0 }).rows).toEqual([])
 
     // Insert a warehouse
     upsertMany('warehouse', [
@@ -445,7 +496,7 @@ describe('Gate 3 — v2 to v3 offline schema migration', () => {
         updated_at: '2026-10-19T00:00:00.000Z',
       },
     ])
-    const warehouses = query<{ id: string; name: string }>({
+    const { rows: warehouses } = query<{ id: string; name: string }>({
       table: 'warehouse',
       direction: 'asc',
       limit: 10,
@@ -466,7 +517,7 @@ describe('Gate 3 — v2 to v3 offline schema migration', () => {
         updated_at: '2026-10-19T00:00:00.000Z',
       },
     ])
-    const accounts = query<{ id: string; code: string; name: string }>({
+    const { rows: accounts } = query<{ id: string; code: string; name: string }>({
       table: 'account',
       direction: 'asc',
       limit: 10,
@@ -476,13 +527,15 @@ describe('Gate 3 — v2 to v3 offline schema migration', () => {
     expect(accounts[0]?.code).toBe('1010')
 
     // Verify cost_layer table
-    expect(query({ table: 'cost_layer', direction: 'asc', limit: 10, offset: 0 })).toEqual([])
+    expect(query({ table: 'cost_layer', direction: 'asc', limit: 10, offset: 0 }).rows).toEqual([])
 
     // Verify payment table
-    expect(query({ table: 'payment', direction: 'asc', limit: 10, offset: 0 })).toEqual([])
+    expect(query({ table: 'payment', direction: 'asc', limit: 10, offset: 0 }).rows).toEqual([])
 
     // Verify journal_entry table
-    expect(query({ table: 'journal_entry', direction: 'asc', limit: 10, offset: 0 })).toEqual([])
+    expect(query({ table: 'journal_entry', direction: 'asc', limit: 10, offset: 0 }).rows).toEqual(
+      [],
+    )
   })
 
   it('⚠️ journal_line CHECK constraint enforces debit >= 0, credit >= 0, not both', () => {

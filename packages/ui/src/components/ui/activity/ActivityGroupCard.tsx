@@ -183,7 +183,7 @@ export const ActivityGroupCard = memo(function ActivityGroupCard({
           )}
         >
           <Icon
-            className={cn('w-4 h-4 md:w-4.5 md:h-4.5 lg:w-5 lg:h-5', config.color)}
+            className={cn('w-4 h-4 md:w-[1.125rem] md:h-[1.125rem] lg:w-5 lg:h-5', config.color)}
             aria-hidden="true"
           />
         </div>

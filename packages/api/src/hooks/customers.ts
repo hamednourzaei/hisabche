@@ -13,7 +13,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { asList } from '../lib/as-list'
-import apiClient from '../lib/client'
+import apiClient, { type ApiError } from '../lib/client'
+import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
 import type {
@@ -39,8 +40,137 @@ export const customerKeys = {
 // Hooks
 // ============================================
 
+export interface CustomersReadOptions {
+  /**
+   * Read the device's rows FIRST, even when the network is up.
+   *
+   * ⚠️ This is the Always-Local milestone: one screen proving it can answer
+   * from the device database alone. The device is kept fresh by the sync
+   * engine (and by its realtime stream), so the answer is at most one sync
+   * behind. A device that knows nothing yet falls back to the network — an
+   * empty device is "I do not know", not "this business has no customers".
+   */
+  preferDevice?: boolean
+}
+
+export interface CustomersPage {
+  customers: Customer[]
+  total: number
+  /**
+   * The device does not hold this list — it was never pulled for this
+   * workspace. The screen must say so, not show an empty business.
+   */
+  notAvailableOffline?: boolean
+}
+
+/**
+ * The filters the device database cannot honour.
+ *
+ * `role`, `type` and `hasBalance` are DERIVED on the server (from the
+ * invoices a party appears on). The device holds no such derivation, so a
+ * device answer to those filters would be a different list from the server's
+ * — and a wrong list that looks right is worse than no list at all.
+ */
+function deviceCannotHonour(filters: CustomerFilters): boolean {
+  return (
+    filters.role !== undefined || filters.type !== undefined || filters.hasBalance !== undefined
+  )
+}
+
+/** One device row → one customer, the same way the product list does it. */
+function customerFromRow(r: Record<string, unknown>): Customer {
+  return {
+    id: String(r.id),
+    fullName: String(r.full_name ?? ''),
+    phone: (r.phone as string | null) ?? undefined,
+    email: (r.email as string | null) ?? undefined,
+    address: (r.address as string | null) ?? undefined,
+    notes: (r.notes as string | null) ?? undefined,
+    openingBalance: Number(r.opening_balance ?? 0),
+    isActive: r.is_active !== 0,
+    type: r.type === 'credit' ? 'credit' : 'cash',
+    declaredRole: (r.declared_role as Customer['declaredRole']) ?? undefined,
+    createdAt: String(r.created_at ?? '') || undefined,
+    updatedAt: String(r.updated_at ?? '') || undefined,
+  } as unknown as Customer
+}
+
+/**
+ * The customer list: from the device when it can, from the server when it
+ * cannot.
+ *
+ * ⚠️ ONE PATH. The device branch, the network fallback and the offline
+ * fallback are the branches the product list already uses
+ * (packages/api/src/hooks/products.ts) — not a second list that behaves
+ * differently from the first.
+ *
+ * ⚠️ A customer created ON THIS DEVICE and not yet synced is a row of the
+ * device table like any other (`dirty = 1`), so it is in this list. Leaving
+ * it out would show the shopkeeper an empty customer list right after they
+ * created the customer.
+ */
+export async function fetchCustomers(
+  filters: CustomerFilters,
+  options: CustomersReadOptions = {},
+  signal: AbortSignal,
+): Promise<CustomersPage> {
+  const device = getOfflineQueue()
+  const canUseDevice = !!device?.readRows && !deviceCannotHonour(filters)
+
+  const fromDevice = async (): Promise<CustomersPage> => {
+    const limit = filters.limit ?? 20
+    const page = filters.page ?? 1
+    const { rows, total, synced } = await device!.readRows!('customer', filters.search ?? '', {
+      // The same filters the API applies: a deleted row is not a customer, and
+      // `is_active` is a filter only when the caller asked for one
+      // (backend/src/services/customer.service.ts:250).
+      where: {
+        deleted_at: null,
+        ...(filters.isActive === undefined ? {} : { is_active: filters.isActive ? 1 : 0 }),
+      },
+      // The API's own default order.
+      orderBy: filters.sortBy ?? 'created_at',
+      direction: filters.sortDirection ?? 'desc',
+      limit,
+      offset: (page - 1) * limit,
+    })
+    return {
+      customers: rows.map(customerFromRow),
+      total,
+      // The device knows nothing about this table yet.
+      notAvailableOffline: synced === false,
+    }
+  }
+
+  if (canUseDevice && device.isOffline()) return fromDevice()
+
+  if (canUseDevice && options.preferDevice) {
+    const answer = await fromDevice()
+    if (answer.total > 0) return answer
+  }
+
+  try {
+    const { data } = await apiClient.get<{ customers: Customer[]; total: number }>('/customers', {
+      params: filters,
+      signal,
+    })
+    // A type annotation is not a runtime check. Every picker and list slices
+    // `customers`, so the list is asked for, not assumed.
+    return {
+      ...(data && typeof data === 'object' ? data : {}),
+      customers: asList<Customer>(data?.customers, '/customers'),
+      total: typeof data?.total === 'number' ? data.total : 0,
+    }
+  } catch (error) {
+    // The request never got an answer: the device still has the list.
+    if (canUseDevice && (error as Partial<ApiError>)?.code === 'NETWORK_ERROR') return fromDevice()
+    throw error
+  }
+}
+
 export function useCustomers(
   filters: CustomerFilters = { page: 1, limit: 20, sortDirection: 'desc' },
+  options: CustomersReadOptions = {},
 ) {
   const authReady = useAuthReady()
 
@@ -53,22 +183,14 @@ export function useCustomers(
     queryKey: customerKeys.list(filters),
     // `signal`: when the search term changes or the picker closes, React Query
     // aborts the request still in flight instead of letting it finish unused.
-    queryFn: async ({ signal }) => {
-      const { data } = await apiClient.get<{ customers: Customer[]; total: number }>('/customers', {
-        params: filters,
-        signal,
-      })
-      // A type annotation is not a runtime check. Every picker and list slices
-      // `customers`, so the list is asked for, not assumed.
-      return {
-        ...(data && typeof data === 'object' ? data : {}),
-        customers: asList<Customer>(data?.customers, '/customers'),
-        total: typeof data?.total === 'number' ? data.total : 0,
-      }
-    },
+    queryFn: async ({ signal }) => fetchCustomers(filters, options, signal),
     enabled: authReady,
     staleTime: 60_000,
     placeholderData: (previousData: any) => previousData,
+    // ⚠️ React Query PAUSES an offline query by default, so the device branch
+    // would never be reached at all — the same trap the product list had
+    // (packages/api/src/hooks/products.ts).
+    networkMode: 'always',
   })
 }
 

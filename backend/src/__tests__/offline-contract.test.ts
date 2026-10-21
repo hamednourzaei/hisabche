@@ -67,8 +67,28 @@ const OFFLINE_POSITION: Record<string, { syncs: boolean; because: string }> = {
     syncs: false,
     because: 'imported from a file; syncing two imports doubles the account',
   },
-  exchange_rate: { syncs: false, because: 'reference data, frozen onto the document instead' },
   fixed_asset: { syncs: false, because: 'depreciation is derived from a server-owned schedule' },
+
+  // ─── The operational set (F2.3) ─────────────────────────────────────────
+  //
+  // These four travel DOWN and are read-only for a device (their allow-list is
+  // `[]`): a shop prices a sale, picks the warehouse it leaves from and checks
+  // what is on the shelf with no signal, and a device that could WRITE them
+  // would be inventing stock. The old entry said an exchange rate «does not
+  // sync»; it does now, as reference data the device reads and never writes.
+  warehouse: {
+    syncs: true,
+    because: 'a sale names the warehouse it leaves from; the device must know it offline',
+  },
+  branch: { syncs: true, because: 'a sale names its branch; the device must know it offline' },
+  product_stock: {
+    syncs: true,
+    because: 'on-hand per warehouse is what a sale checks before it is written',
+  },
+  exchange_rate: {
+    syncs: true,
+    because: 'read-only reference data, so another currency can be read offline',
+  },
 }
 
 describe('the offline contract', () => {

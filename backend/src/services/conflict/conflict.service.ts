@@ -9,6 +9,7 @@
 // ============================================
 
 import { supabase } from '../../db'
+import { conflictState, type ConflictState } from '@hisabche/validation'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import type { TenancyContext } from '../tenancy.service'
@@ -42,6 +43,12 @@ export interface ConflictRow {
   hasFinancialDivergence: boolean
   status: 'open' | 'resolved' | 'superseded'
   resolution: string | null
+  /**
+   * What a person reads (D5). Computed from `status`/`resolution` by the one
+   * shared reading — PENDING_REVIEW / ACCEPTED / REJECTED / RESOLVED /
+   * SUPERSEDED — and never stored: a second copy would drift.
+   */
+  state: ConflictState
   resolutionReason: string | null
   resolvedBy: string | null
   resolvedAt: string | null
@@ -104,7 +111,35 @@ async function attachLabels<T extends { entityType: ConflictEntity; entityId: st
   }))
 }
 
-function mapConflict(raw: Record<string, any>): Omit<ConflictRow, 'entityLabel'> {
+/**
+ * The row as PostgREST returns it: snake_case, nullable, and three columns
+ * holding JSON this build does not own. Read once, here, and turned into the
+ * camelCase `ConflictRow` the rest of the code uses.
+ *
+ * The two JSON columns are optional because the LIST query does not select
+ * them (they are the bulk of the row); the detail query does.
+ */
+interface RawConflictRow {
+  id: string
+  entity_type: ConflictEntity
+  entity_id: string
+  mutation_id: string
+  operation: string
+  server_version: number | null
+  server_row?: Record<string, unknown> | null
+  client_version: number | null
+  client_payload?: Record<string, unknown> | null
+  divergences: FieldDivergence[] | null
+  has_financial_divergence: boolean | null
+  status: string | null
+  resolution: string | null
+  resolution_reason: string | null
+  resolved_by: string | null
+  resolved_at: string | null
+  created_at: string
+}
+
+function mapConflict(raw: RawConflictRow): Omit<ConflictRow, 'entityLabel'> {
   return {
     id: raw.id,
     entityType: raw.entity_type,
@@ -117,8 +152,11 @@ function mapConflict(raw: Record<string, any>): Omit<ConflictRow, 'entityLabel'>
     clientPayload: raw.client_payload ?? {},
     divergences: raw.divergences ?? [],
     hasFinancialDivergence: raw.has_financial_divergence === true,
-    status: raw.status ?? 'open',
+    // The table's CHECK constraint is the authority; this cast only tells the
+    // compiler what the database already guarantees.
+    status: (raw.status ?? 'open') as ConflictRow['status'],
     resolution: raw.resolution ?? null,
+    state: conflictState(raw.status ?? null, raw.resolution ?? null),
     resolutionReason: raw.resolution_reason ?? null,
     resolvedBy: raw.resolved_by ?? null,
     resolvedAt: raw.resolved_at ?? null,
@@ -126,7 +164,7 @@ function mapConflict(raw: Record<string, any>): Omit<ConflictRow, 'entityLabel'>
   }
 }
 
-function mapConflictSummary(raw: Record<string, any>): Omit<ConflictSummary, 'entityLabel'> {
+function mapConflictSummary(raw: RawConflictRow): Omit<ConflictSummary, 'entityLabel'> {
   const { serverRow: _server, clientPayload: _client, ...summary } = mapConflict(raw)
   return summary
 }
@@ -190,6 +228,26 @@ export class ConflictService {
             clientValue: input.clientPayload[field],
             financial: false,
           }))
+
+    // A DECIDED CONFLICT IS NOT REOPENED BY A REPLAY.
+    //
+    // The forward-only rule (docs/sync-conflicts-forward-01-migration.sql)
+    // refuses resolved/superseded -> open. A device that resends a mutation
+    // which has already been decided would try exactly that; the trigger
+    // refuses, `fileConflict` swallows the refusal, and the retry would look
+    // successful while changing nothing. So the decision that stands is
+    // returned, and nothing is written.
+    const { data: existing, error: existingError } = await supabase
+      .from('sync_conflicts')
+      .select('id, status')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('mutation_id', input.mutationId)
+      .maybeSingle()
+
+    if (existingError) throw new DatabaseError('Failed to read the conflict', existingError)
+    if (existing && existing.status !== 'open') {
+      return { status: 'recorded', conflictId: existing.id }
+    }
 
     const { data, error } = await supabase
       .from('sync_conflicts')
@@ -273,6 +331,19 @@ export class ConflictService {
   ): Promise<{ conflictId: string | undefined }> {
     const { breach } = input
 
+    // The same forward-only rule as `record()`: a replayed mutation whose
+    // oversell was already decided keeps that decision instead of reopening it.
+    const conflictKey = breachKey(input.mutationId, input.productId)
+    const { data: existing, error: existingError } = await supabase
+      .from('sync_conflicts')
+      .select('id, status')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('mutation_id', conflictKey)
+      .maybeSingle()
+
+    if (existingError) throw new DatabaseError('Failed to read the stock conflict', existingError)
+    if (existing && existing.status !== 'open') return { conflictId: existing.id }
+
     const { data, error } = await supabase
       .from('sync_conflicts')
       .upsert(
@@ -286,7 +357,7 @@ export class ConflictService {
           //
           // This also gives replay-idempotency for free (M2.5): re-sending the
           // mutation upserts the same row instead of filing a second conflict.
-          mutation_id: breachKey(input.mutationId, input.productId),
+          mutation_id: conflictKey,
           operation: 'negative_stock',
           server_version: null,
           server_row: {

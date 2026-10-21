@@ -111,7 +111,7 @@ function CustomersHeader({
       <div>
         <h1
           className={cn(
-            'font-bold text-[hsl(var(--fg-primary))] text-wrap-balance',
+            'font-bold text-[hsl(var(--fg-primary))] text-balance',
             isMobile ? 'text-lg' : 'text-2xl sm:text-3xl',
           )}
         >

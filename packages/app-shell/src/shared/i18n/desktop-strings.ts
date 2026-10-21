@@ -8,7 +8,16 @@ interface DesktopBundle {
     string
   >
   auth: Record<
-    'title' | 'tagline' | 'email' | 'password' | 'submit' | 'invalidEmail' | 'invalidPassword',
+    | 'title'
+    | 'tagline'
+    | 'email'
+    | 'password'
+    | 'submit'
+    | 'invalidEmail'
+    | 'invalidPassword'
+    | 'logoutPendingTitle'
+    | 'logoutPendingBody'
+    | 'logoutKeepData',
     string
   >
   common: Record<
@@ -66,7 +75,23 @@ interface DesktopBundle {
   >
   customers: Record<'title' | 'name' | 'phone' | 'balance' | 'debt' | 'credit' | 'settled', string>
   accounting: Record<'title' | 'income' | 'expense' | 'trialBalance' | 'profitLoss', string>
-  sync: Record<'title' | 'pending' | 'failed' | 'syncNow' | 'queueEmpty' | 'localOnly', string> & {
+  sync: Record<
+    | 'title'
+    | 'pending'
+    | 'failed'
+    | 'syncNow'
+    | 'queueEmpty'
+    | 'localOnly'
+    | 'ownerUnknownHint'
+    | 'claimAsCurrentUser'
+    | 'claimDialogTitle'
+    | 'claimDialogBody'
+    | 'preparingData'
+    | 'lastSync'
+    | 'neverSynced'
+    | 'pendingWaiting',
+    string
+  > & {
     // The outbox screen (features/sync/sync-page.tsx). These were used and
     // never defined, so Windows and Android showed «sync.col.record» as a
     // column heading. `stage` and `entity`/`op` are read with a computed key,
@@ -104,6 +129,10 @@ const faIR: DesktopBundle = {
     sync: 'همگام‌سازی',
   },
   auth: {
+    logoutPendingTitle: 'تغییرات ارسال‌نشده دارید',
+    logoutPendingBody:
+      '{{count}} تغییر روی این دستگاه ذخیره شده و هنوز به سرور نرسیده است. اگر خارج شوید، این تغییرات روی همین دستگاه می‌مانند و در ورود بعدی فرستاده می‌شوند.',
+    logoutKeepData: 'خارج شو و داده‌ها روی این دستگاه بماند',
     title: 'ورود به حسابچه',
     tagline: 'مدیریت هوشمند کسب‌وکار شما',
     email: 'ایمیل',
@@ -199,6 +228,12 @@ const faIR: DesktopBundle = {
     profitLoss: 'سود و زیان',
   },
   sync: {
+    ownerUnknownHint:
+      '{{count}} تغییر بدون صاحب است. این تغییرات خودکار فرستاده نمی‌شوند و تا وقتی صاحبشان را مشخص نکنید در صف می‌مانند.',
+    claimAsCurrentUser: 'ارسال با حساب کاربری فعلی',
+    claimDialogTitle: 'ارسال تغییرات بی‌صاحب',
+    claimDialogBody:
+      '{{count}} تغییر به حساب کاربری فعلی و فضای کاری فعلی نسبت داده می‌شود و با همین حساب فرستاده می‌شود. این کار برگشت‌پذیر نیست.',
     title: 'همگام‌سازی',
     pending: 'در انتظار',
     failed: 'ناموفق',
@@ -228,6 +263,10 @@ const faIR: DesktopBundle = {
     committedTitle: 'ثبت‌شده در این نشست',
     committedHint:
       'این تغییرها به سرور رسیده‌اند و از صف خارج شده‌اند؛ این فهرست فقط تا بستن برنامه می‌ماند.',
+    preparingData: 'آماده‌سازی داده‌ها: {{done}} از {{total}}',
+    lastSync: 'آخرین همگام‌سازی: {{time}}',
+    neverSynced: 'هنوز همگام‌سازی نشده',
+    pendingWaiting: '{{count}} تغییر در انتظار ارسال',
   },
   offline: {
     cloudRequired: {
@@ -259,6 +298,10 @@ const en: DesktopBundle = {
     sync: 'Sync',
   },
   auth: {
+    logoutPendingTitle: 'You have changes that were never sent',
+    logoutPendingBody:
+      '{{count}} changes are stored on this device and have not reached the server. If you sign out, they stay on this device and are sent the next time you sign in.',
+    logoutKeepData: 'Sign out and keep the data on this device',
     title: 'Sign in to Hisabche',
     tagline: 'Run your business, intelligently',
     email: 'Email',
@@ -354,6 +397,12 @@ const en: DesktopBundle = {
     profitLoss: 'Profit & loss',
   },
   sync: {
+    ownerUnknownHint:
+      '{{count}} changes have no owner. They are never sent on their own, and they stay in the queue until a person says whose they are.',
+    claimAsCurrentUser: 'Send with the current account',
+    claimDialogTitle: 'Send the changes that have no owner',
+    claimDialogBody:
+      '{{count}} changes will be attributed to the current account and the current workspace, and sent with this account. This cannot be undone.',
     title: 'Sync',
     pending: 'Pending',
     failed: 'Failed',
@@ -389,6 +438,10 @@ const en: DesktopBundle = {
     committedTitle: 'Saved this session',
     committedHint:
       'These changes reached the server and left the queue; this list lasts until the app is closed.',
+    preparingData: 'Preparing data: {{done}} of {{total}}',
+    lastSync: 'Last sync: {{time}}',
+    neverSynced: 'Never synced',
+    pendingWaiting: '{{count}} changes waiting to send',
   },
   offline: {
     cloudRequired: {

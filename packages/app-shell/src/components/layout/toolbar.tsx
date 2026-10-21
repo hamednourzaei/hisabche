@@ -24,6 +24,7 @@ import { Search } from 'lucide-react'
 import { DashboardHeader, useHeaderPeople } from '@hisabche/ui'
 import { useThemeStore } from '@hisabche/store'
 
+import { LogoutPendingDialog } from '@/components/layout/logout-pending-dialog'
 import { useAuthStore, useCurrentUser } from '@/features/auth/auth.store'
 import { useSyncStatus } from '@/features/sync/use-sync'
 import { i18n, setDesktopLanguage, supportedLanguages, type SupportedLanguage } from '@/shared/i18n'
@@ -103,9 +104,11 @@ export const Toolbar = memo(function Toolbar({ title }: { title: string }) {
     translate,
   )
 
-  const handleLogout = useCallback(() => {
-    logout()
-    navigate('/login')
+  const handleLogout = useCallback(async () => {
+    // The store refuses the sign-out while this account has unsent changes;
+    // then the dialog opens and the person chooses.
+    const signedOut = await logout()
+    if (signedOut) navigate('/login')
   }, [logout, navigate])
 
   return (
@@ -147,6 +150,7 @@ export const Toolbar = memo(function Toolbar({ title }: { title: string }) {
         canSeePeople={canSeePeople}
         isLoadingPeople={isLoadingPeople}
       />
+      <LogoutPendingDialog />
     </div>
   )
 })

@@ -851,6 +851,60 @@ describe('offline conflicts, over real HTTP', () => {
 
     expect(response.statusCode).toBe(200)
   })
+
+  it('even a member GRANTED ledger.reverse cannot decide one: the owner does', async () => {
+    const id = seedConflict()
+
+    // The capability alone is not enough (D7). Without this grant the seller
+    // is refused by the capability check, so the grant is what makes the test
+    // about the ROLE rather than about the capability.
+    db.seed('workspace_role_capabilities', [
+      { workspace_id: SHOP, role: 'seller', capability: 'ledger.reverse', granted: true },
+    ])
+    const { memoryCache } = await import('../utils/pagination')
+    await memoryCache.invalidate('permissions')
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/conflicts/${id}/resolve`,
+      headers: as(SELLER),
+      payload: { choice: 'keep_client', reason: 'the device version is the sale that happened' },
+    })
+
+    expect(response.statusCode, response.body).toBe(403)
+    expect(response.json()).toMatchObject({ code: 'OWNER_ONLY' })
+    expect(db.rows('sync_conflicts')[0]!.status).toBe('open')
+  })
+
+  it('reads a decision as the state a person sees (D5)', async () => {
+    const id = seedConflict()
+
+    const waiting = await app.inject({
+      method: 'GET',
+      url: '/api/conflicts?status=open',
+      headers: as(OWNER),
+    })
+    expect(waiting.statusCode, waiting.body).toBe(200)
+    expect(JSON.parse(waiting.body)[0].state).toBe('PENDING_REVIEW')
+
+    const decided = await app.inject({
+      method: 'POST',
+      url: `/api/conflicts/${id}/resolve`,
+      headers: as(OWNER),
+      payload: { choice: 'keep_server', reason: 'the server row already carries the sale' },
+    })
+    expect(decided.statusCode, decided.body).toBe(200)
+
+    const after = await app.inject({
+      method: 'GET',
+      url: '/api/conflicts?status=all',
+      headers: as(OWNER),
+    })
+    expect(after.statusCode, after.body).toBe(200)
+    const row = JSON.parse(after.body).find((c: { id: string }) => c.id === id)
+    expect(row.state).toBe('REJECTED')
+    expect(row.resolutionReason).toBe('the server row already carries the sale')
+  })
 })
 
 // ═══════════════════════════════════════════════════════════════════════════

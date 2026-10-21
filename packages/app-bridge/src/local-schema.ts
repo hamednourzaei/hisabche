@@ -12,7 +12,7 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4
 
 export const CREATE_STATEMENTS: readonly string[] = [
   // ─── Products & Stock ─────────────────────────────────────────
@@ -452,7 +452,14 @@ export const CREATE_STATEMENTS: readonly string[] = [
     attempts INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'pending',
     last_error TEXT,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    -- ⚠️ WHO MADE THE CHANGE. A queued row belongs to the account that made
+    -- it AND to the business it was made in. Without these two columns the
+    -- next person to sign in on this device sends somebody else's work under
+    -- their own token. NULL means "nobody knows": such a row is never sent on
+    -- a guess, it waits for a person to say whose it is.
+    user_id TEXT,
+    workspace_id TEXT
   )`,
   `CREATE INDEX IF NOT EXISTS idx_queue_status ON sync_queue(status, created_at)`,
 
@@ -822,8 +829,14 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
 
 /** Columns a free-text search may target per table. */
 export const SEARCHABLE_COLUMNS: Record<string, readonly string[]> = {
-  product: ['name', 'barcode', 'sku'],
-  customer: ['full_name', 'phone', 'email'],
+  // The server searches a product's name, and its barcode too when the text
+  // is a barcode (backend/src/services/product.service.ts:155). The sku is
+  // not searched by the server, so it is not searched here either.
+  product: ['name', 'barcode'],
+  // ⚠️ THE API SEARCHES THE NAME ONLY — `ilike('full_name', …)`
+  // (backend/src/services/customer.service.ts:250). A device search that also
+  // matched the phone would answer a different question than the server does.
+  customer: ['full_name'],
   invoice: ['invoice_number', 'customer_name', 'notes'],
   invoice_item: ['product_name'],
   transaction: ['description', 'reference'],

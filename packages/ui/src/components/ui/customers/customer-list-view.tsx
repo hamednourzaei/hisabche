@@ -42,6 +42,8 @@ export interface CustomerListViewProps {
   /** Connectivity, so the header can say whether this list is in step. */
   isOnline: boolean
   pendingCount: number
+  /** The device does not hold this list yet (it was never pulled). */
+  notAvailableOffline?: boolean | undefined
   rows: Customer[]
   total: number
   isLoading: boolean
@@ -67,6 +69,7 @@ export const CustomerListView = memo(function CustomerListView({
   engine,
   isOnline,
   pendingCount,
+  notAvailableOffline,
   rows,
   total,
   isLoading,
@@ -132,7 +135,17 @@ export const CustomerListView = memo(function CustomerListView({
 
       {isLoading ? <Loading label={t('common.loading', 'در حال بارگذاری…')} /> : null}
 
-      {!isLoading && rows.length === 0 ? (
+      {!isLoading && rows.length === 0 && notAvailableOffline ? (
+        <EmptyState
+          title={t('offline.not_available_offline', 'Not available offline')}
+          description={t(
+            'offline.not_available_offline_hint',
+            'This device has not downloaded this list yet. It appears after the next sync.',
+          )}
+        />
+      ) : null}
+
+      {!isLoading && rows.length === 0 && !notAvailableOffline ? (
         <EmptyState
           title={
             engine.isFiltered

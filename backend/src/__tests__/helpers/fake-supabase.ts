@@ -290,24 +290,52 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
   }
 
   /**
-   * Only `col.is.null` and `col.neq.value`, comma-separated — what the code
-   * uses. PostgREST semantics: neq on NULL is not a match.
+   * PostgREST's `or`: top-level commas are OR branches, `and(...)` is one
+   * branch that must satisfy all of its conditions, and a condition is
+   * `col.op.value` — `gte` (the operational window), `neq` (a status that is
+   * still open) or `is.null`. Anything else throws, so a new filter cannot
+   * pass here by being silently ignored.
    */
   or(filter: string) {
-    const parts = filter.split(',').map((part) => {
-      const [column, operator, ...rest] = part.split('.')
+    const parseCondition = (text: string): ((row: Record<string, unknown>) => boolean) => {
+      const [column, operator, ...rest] = text.trim().split('.')
       const value = rest.join('.')
-      if (operator === 'is' && value === 'null')
-        return (row: Record<string, unknown>) => valueAt(row, column!) == null
+      if (operator === 'gte') return (row) => String(valueAt(row, column!) ?? '') >= value
       if (operator === 'neq') {
-        return (row: Record<string, unknown>) => {
+        return (row) => {
           const cell = valueAt(row, column!)
           return cell != null && String(cell) !== value
         }
       }
-      throw new Error(`fake-supabase: .or(${part}) is not implemented`)
-    })
-    return this.push(`or:${filter}`, (row) => parts.some((test) => test(row)))
+      if (operator === 'is' && value === 'null') {
+        return (row) => valueAt(row, column!) == null
+      }
+      throw new Error(`fake-supabase: .or(${text}) is not implemented`)
+    }
+
+    const branches: string[] = []
+    let depth = 0
+    let current = ''
+    for (const char of filter) {
+      if (char === '(') depth += 1
+      if (char === ')') depth -= 1
+      if (char === ',' && depth === 0) {
+        branches.push(current)
+        current = ''
+        continue
+      }
+      current += char
+    }
+    if (current !== '') branches.push(current)
+
+    const test = (row: Record<string, unknown>): boolean =>
+      branches.some((branch) => {
+        const group = /^and\((.*)\)$/.exec(branch.trim())
+        if (group) return group[1]!.split(',').every((part) => parseCondition(part)(row))
+        return parseCondition(branch)(row)
+      })
+
+    return this.push(`or:${filter}`, test)
   }
 
   not(column: string, operator: string, value: unknown) {

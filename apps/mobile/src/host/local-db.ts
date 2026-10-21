@@ -24,6 +24,8 @@ import {
   SCHEMA_VERSION,
   isAlreadyApplied,
   migrationsFrom,
+  buildCount,
+  buildEnqueue,
   buildSelect,
   buildUpserts,
   normalizeValue,
@@ -101,9 +103,26 @@ function require_(): SQLite.SQLiteDatabase {
   return database
 }
 
-export async function query<T>(input: LocalQueryInput): Promise<T[]> {
-  const { sql, params } = buildSelect(input)
-  return (await require_().getAllAsync(sql, params as SQLite.SQLiteBindValue[])) as T[]
+/**
+ * A page of rows AND how many rows the filter matches in all.
+ *
+ * The count comes from the SAME WHERE as the page — see the desktop's
+ * `query()`, which runs the same two statements from the same module.
+ */
+export async function query<T>(input: LocalQueryInput): Promise<{ rows: T[]; total: number }> {
+  const page = buildSelect(input)
+  const rows = (await require_().getAllAsync(
+    page.sql,
+    page.params as SQLite.SQLiteBindValue[],
+  )) as T[]
+
+  const count = buildCount(input)
+  const counted = await require_().getFirstAsync<{ total?: number }>(
+    count.sql,
+    count.params as SQLite.SQLiteBindValue[],
+  )
+
+  return { rows, total: Number(counted?.total ?? rows.length) }
 }
 
 export async function upsertMany(
@@ -148,21 +167,16 @@ export async function enqueue(input: {
   operation: 'create' | 'update' | 'delete'
   clientId: string
   payload: Record<string, unknown>
+  /** The account making the change. Null: nobody knows. */
+  userId?: string | null | undefined
+  /** The business the change belongs to. Null: nobody knows. */
+  workspaceId?: string | null | undefined
 }): Promise<void> {
-  // `INSERT OR IGNORE` on the clientId: the shared UI retries a failed call,
-  // and a retry must not become a second invoice. The clientId is also the
-  // Idempotency-Key the server deduplicates on.
-  await require_().runAsync(
-    `INSERT OR IGNORE INTO sync_queue (client_id, entity, operation, payload, status, attempts, created_at)
-     VALUES (?, ?, ?, ?, 'pending', 0, ?)`,
-    [
-      input.clientId,
-      input.entity,
-      input.operation,
-      JSON.stringify(input.payload),
-      new Date().toISOString(),
-    ],
-  )
+  // The same SQL the desktop runs (@hisabche/app-bridge): the clientId is the
+  // Idempotency-Key the server deduplicates on, so a retry must not become a
+  // second invoice — and the owner is written the same way on both hosts.
+  const { sql, params } = buildEnqueue(input)
+  await require_().runAsync(sql, params as SQLite.SQLiteBindValue[])
 }
 
 interface QueueRow {
@@ -174,6 +188,8 @@ interface QueueRow {
   attempts: number
   last_error: string | null
   created_at: string
+  user_id: string | null
+  workspace_id: string | null
 }
 
 export async function queue(): Promise<QueueEntry[]> {
@@ -193,6 +209,9 @@ export async function queue(): Promise<QueueEntry[]> {
     attempts: row.attempts,
     lastError: row.last_error,
     createdAt: row.created_at,
+    // Null means "nobody knows" — the row is never sent on a guess.
+    userId: row.user_id,
+    workspaceId: row.workspace_id,
   })) as QueueEntry[]
 }
 

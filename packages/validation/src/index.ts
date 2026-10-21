@@ -277,6 +277,7 @@ export {
   MAX_PUSH_BATCH,
   MAX_PULL_PAGE,
   LEASE_TTL_SECONDS,
+  OPERATIONAL_WINDOW_DAYS,
   type SyncEntity,
   type SyncOperation,
   type SyncMutation,
@@ -290,6 +291,16 @@ export {
   type SyncLeaseRequest,
   type SyncLeaseResponse,
 } from './schemas/sync-protocol.schema'
+
+// ---------- Invoice number ----------
+export {
+  TEMPORARY_INVOICE_PREFIX,
+  isTemporaryInvoiceNumber,
+  temporaryInvoiceNumber,
+} from './schemas/invoice-number'
+
+// ---------- Sync conflict state (the one reading) ----------
+export { conflictState, type ConflictState } from './schemas/conflict-state'
 
 // ---------- Product ----------
 export {

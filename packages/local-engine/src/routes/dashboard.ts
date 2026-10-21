@@ -5,6 +5,8 @@
 // Follows the same decomposition rules and response shapes as analytics.service.ts.
 // ============================================
 
+import { round2 } from '@hisabche/validation'
+
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 
@@ -216,10 +218,20 @@ export function registerDashboardRoutes(router: Router): void {
     return {
       totalRevenue,
       totalInvoices,
-      averageInvoiceValue: totalInvoices > 0 ? Math.round(totalRevenue / totalInvoices) : 0,
+      // ⚠️ The rounding is the shared money rule, not a local one.
+      averageInvoiceValue: totalInvoices > 0 ? round2(totalRevenue / totalInvoices) : 0,
       totalPaid,
       totalUnpaid: Math.max(0, totalRevenue - totalPaid),
       byCurrency,
+      // D10: sales the device wrote and the server has not seen yet. They are
+      // already in these books — the local engine wrote them — so the KPI
+      // counts them; this number is what the label beside it says out loud.
+      pendingInvoiceCount:
+        db.get<{ count: number }>(
+          `SELECT COUNT(*) AS count FROM sync_queue
+           WHERE entity = 'invoice' AND operation = 'create' AND workspace_id = ?`,
+          [ws],
+        )?.count ?? 0,
       convertedToBooks: false,
       unconvertedInvoices: 0,
       byPeriod: [],

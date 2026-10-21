@@ -61,6 +61,12 @@ interface DashboardViewProps {
   // Chart Data
   salesChartData: ChartDataPoint[]
   dateRange: DateRange
+  /**
+   * «Includes N sales awaiting confirmation» — written by the container from
+   * the device read, because only the device has an outbox to count (D10).
+   * `null` = unknown, and nothing is drawn.
+   */
+  pendingInvoicesLabel?: string | null | undefined
 
   // Activities
   recentActivities: ActivityGroupDto[]
@@ -484,6 +490,7 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     insightsLoading,
     salesChartData,
     chartLoading,
+    pendingInvoicesLabel,
     dateRange,
     activitiesLoading,
     recentActivities,
@@ -694,6 +701,12 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
                   />
                 </div>
               </div>
+
+              {pendingInvoicesLabel ? (
+                <p className="mb-3 text-xs text-[hsl(var(--fg-secondary))]">
+                  {pendingInvoicesLabel}
+                </p>
+              ) : null}
 
               {/*
               One body, two views. `min-h` so switching does not make the card

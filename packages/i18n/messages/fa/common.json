@@ -2681,6 +2681,7 @@
     "activeCustomers": "مشتریان فعال",
     "lowStockAlerts": "هشدار موجودی",
     "invoicesCount": "{count} فاکتور",
+    "pendingInvoices": "شامل {count} فروش در انتظار تأیید است",
     "todayInvoices": "صورت‌حساب‌ها",
     "startSelling": "برای دیدن نمودارتان شروع به فروش کنید",
     "growth": "رشد",
@@ -6183,6 +6184,12 @@
     "open": "باز",
     "resolved": "حل‌شده",
     "superseded": "منسوخ",
+    "state": "وضعیت",
+    "state_pending_review": "در انتظار بررسی",
+    "state_accepted": "پذیرفته شد (نسخه دستگاه)",
+    "state_rejected": "رد شد (نسخه سرور)",
+    "state_resolved": "حل شد",
+    "state_superseded": "منقضی شد",
     "status_open": "باز",
     "status_resolved": "حل‌شده",
     "status_all": "همه",
@@ -10634,6 +10641,9 @@
     }
   },
   "offline": {
+    "temporary_invoice_number": "موقت",
+    "not_available_offline": "این فهرست به‌صورت آفلاین در دسترس نیست",
+    "not_available_offline_hint": "این دستگاه هنوز این فهرست را دریافت نکرده است. پس از همگام‌سازی بعدی در دسترس قرار می‌گیرد.",
     "cloudRequired": {
       "title": "این کار اینترنت می‌خواهد",
       "badge": "نیازمند اینترنت",

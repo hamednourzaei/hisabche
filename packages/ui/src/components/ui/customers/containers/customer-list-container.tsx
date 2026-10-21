@@ -60,13 +60,23 @@ export const CustomerListContainer = memo(function CustomerListContainer() {
 
   const { query } = engine
 
-  const customers = useCustomers({
-    page: Math.floor(query.offset / query.limit) + 1,
-    limit: query.limit,
-    ...(query.search ? { search: query.search } : {}),
-    ...(query.sortBy ? { sortBy: query.sortBy } : {}),
-    sortDirection: query.sortDirection ?? 'asc',
-  })
+  // ⚠️ THIS SCREEN READS THE DEVICE DATABASE, even while the network is up.
+  //
+  // This is the Always-Local milestone: one existing screen proving it can
+  // answer from the device alone, with no request for its data. The device is
+  // kept fresh by the sync engine (and by its realtime stream), so the answer is
+  // at most one sync behind — and a device that knows nothing yet falls back to
+  // the network, so the list is never empty because the cache is empty.
+  const customers = useCustomers(
+    {
+      page: Math.floor(query.offset / query.limit) + 1,
+      limit: query.limit,
+      ...(query.search ? { search: query.search } : {}),
+      ...(query.sortBy ? { sortBy: query.sortBy } : {}),
+      sortDirection: query.sortDirection ?? 'asc',
+    },
+    { preferDevice: true },
+  )
 
   const reported = customers.data?.total
 
@@ -84,6 +94,7 @@ export const CustomerListContainer = memo(function CustomerListContainer() {
       isOnline={isOnline}
       pendingCount={pendingCount}
       rows={customers.data?.customers ?? []}
+      notAvailableOffline={customers.data?.notAvailableOffline ?? false}
       total={total ?? 0}
       isLoading={customers.isLoading}
       error={customers.error ? (customers.error as Error).message : null}

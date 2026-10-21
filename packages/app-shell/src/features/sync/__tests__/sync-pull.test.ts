@@ -24,11 +24,14 @@ const removeMany = jest.fn(async (table: string, ids: string[]) => {
   return removed
 })
 const query = jest.fn(
-  async ({ table, where }: { table: string; where?: Record<string, unknown> }) =>
+  async ({ table, where }: { table: string; where?: Record<string, unknown> }) => {
     // Every where-column must match, like the real SQLite query.
-    (tables[table] ?? []).filter((row) =>
+    const rows = (tables[table] ?? []).filter((row) =>
       Object.entries(where ?? {}).every(([k, v]) => row[k] === v),
-    ),
+    )
+    // The read answers a page AND the number of rows the filter matches.
+    return { rows, total: rows.length }
+  },
 )
 
 jest.mock('@/shared/lib/bridge', () => ({
@@ -53,6 +56,8 @@ jest.mock('@hisabche/api', () => ({
 jest.mock('@hisabche/store', () => ({
   useWorkspaceStore: { getState: () => ({ workspaceId: 'ws-1' }) },
   useCurrencyStore: { getState: () => ({ primaryCurrency: 'AFN' }) },
+  // The sync centre's «last heard from the server» stamp (F2.4).
+  useSyncStore: { getState: () => ({ setLastSynced: () => undefined }) },
 }))
 
 import { applyChanges, pullAll, readCursor } from '../sync-engine'
@@ -114,6 +119,14 @@ describe('first pull: complete snapshot through /sync/snapshot, then the log fro
           hasMore: false,
           nextAfter: null,
         })
+      }
+      // The operational set (F2.3): read-only reference data. This workspace
+      // holds none of it, which is an EMPTY page — not an error.
+      if (
+        url === '/sync/snapshot' &&
+        ['warehouse', 'branch', 'exchange_rate', 'product_stock'].includes(String(params.entity))
+      ) {
+        return asJson({ rows: [], hasMore: false, nextAfter: null })
       }
       throw new Error(`unexpected ${url} ${JSON.stringify(params)}`)
     })

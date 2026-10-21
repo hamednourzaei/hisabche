@@ -37,6 +37,8 @@ export interface ReceiptData {
 
 export interface ReceiptLabels {
   invoice: string
+  /** Shown next to a number the server has not seen yet. */
+  temporary?: string | undefined
   date: string
   customer: string
   item: string
@@ -94,7 +96,7 @@ table { width: 100%; border-collapse: collapse; }
 <body>
 <h1>${e(data.businessName)}</h1>
 <div class="meta">
-<div>${e(labels.invoice)}: <span dir="ltr">${e(data.invoiceNumber)}</span></div>
+<div>${e(labels.invoice)}: <span dir="ltr">${e(data.invoiceNumber)}</span>${labels.temporary ? ` <em>${e(labels.temporary)}</em>` : ''}</div>
 <div>${e(labels.date)}: ${e(data.date)}</div>
 ${data.customerName ? `<div>${e(labels.customer)}: ${e(data.customerName)}</div>` : ''}
 </div>

@@ -5,6 +5,8 @@
 // Inspects CSV/TSV data and commits validated records into local SQLite tables.
 // ============================================
 
+import { round2 } from '@hisabche/validation'
+
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -124,8 +126,9 @@ export function registerImportRoutes(router: Router): void {
           if (!name) continue
           const id = String(r.id || generateUuid())
           const barcode = r.barcode ? String(r.barcode) : null
-          const sellPrice = Math.round(Number(r.sellPrice || r.sell_price || 0))
-          const buyPrice = Math.round(Number(r.buyPrice || r.buy_price || 0))
+          // ⚠️ The rounding is the shared money rule, not a local one.
+          const sellPrice = round2(Number(r.sellPrice || r.sell_price || 0))
+          const buyPrice = round2(Number(r.buyPrice || r.buy_price || 0))
           const unit = r.unit ? String(r.unit) : 'piece'
 
           db.run(

@@ -16,7 +16,7 @@
 // ============================================
 
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
-import apiClient, { type ApiError } from '../lib/client'
+import apiClient, { type ApiError, localRequest } from '../lib/client'
 import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { asList } from '../lib/as-list'
@@ -196,8 +196,23 @@ export async function submitInvoice({
     return { id: '', pendingSync: true } as Invoice & { pendingSync: true }
   }
 
+  // ⚠️ THE DEVICE WRITES THE SALE, NOT ONLY ITS PAYLOAD.
+  //
+  // In the cloud edition an offline sale used to become ONE outbox row and
+  // nothing else: no invoice, no lines, no stock, no balance, no KPI — the
+  // screen said «pending» and the books had no trace of it. The local engine
+  // writes all of it AND the outbox row in ONE SQLite transaction, so this
+  // branch calls it. A host without a local engine (the web build) keeps the
+  // queue-only path below instead of losing the sale.
+  const writeLocally = async (): Promise<(Invoice & { pendingSync: true }) | null> => {
+    const created = await localRequest<Invoice>('POST', '/invoices', input)
+    return created ? { ...created, pendingSync: true } : null
+  }
+
   // Without a key a replay could become a second sale: never queue that.
-  if (offline && idempotencyKey && offline.isOffline()) return queueIt()
+  if (offline && idempotencyKey && offline.isOffline()) {
+    return (await writeLocally()) ?? queueIt()
+  }
 
   try {
     const { data } = await apiClient.post<Invoice>(
@@ -210,7 +225,7 @@ export async function submitInvoice({
     // Only when the request never got an answer. A refusal from the server
     // (stock, validation, 5xx) is an answer and is shown, not queued.
     if (offline && idempotencyKey && (error as Partial<ApiError>)?.code === 'NETWORK_ERROR') {
-      return queueIt()
+      return (await writeLocally()) ?? queueIt()
     }
     throw error
   }

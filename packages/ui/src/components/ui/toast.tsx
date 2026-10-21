@@ -28,9 +28,9 @@ const toastIcons: Record<ToastVariant, React.ReactNode> = {
 // ═══ Styles ═══
 const toastStyles: Record<ToastVariant, string> = {
   default: 'border-[var(--hisab-border)]',
-  success: 'border-[var(--hisab-success)]/30 bg-[var(--hisab-success)]/5',
-  error: 'border-[var(--hisab-destructive)]/30 bg-[var(--hisab-destructive)]/5',
-  warning: 'border-[var(--hisab-warning)]/30 bg-[var(--hisab-warning)]/5',
+  success: 'border-[hsl(var(--hisab-success)/0.3)] bg-[hsl(var(--hisab-success)/0.05)]',
+  error: 'border-[hsl(var(--hisab-destructive)/0.3)] bg-[hsl(var(--hisab-destructive)/0.05)]',
+  warning: 'border-[hsl(var(--hisab-warning)/0.3)] bg-[hsl(var(--hisab-warning)/0.05)]',
   info: 'border-[hsl(var(--color-info))]/30 bg-[hsl(var(--color-info))]/5',
 }
 

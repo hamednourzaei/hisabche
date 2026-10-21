@@ -77,7 +77,7 @@ const db = {
     direction?: 'asc' | 'desc'
     limit?: number
     offset?: number
-  }): Promise<T[]> =>
+  }): Promise<{ rows: T[]; total: number }> =>
     localDb.query<T>({
       table: input.table,
       // The defaults are the contract's, not this host's: `dbQuerySchema`
@@ -100,6 +100,10 @@ const db = {
     operation: 'create' | 'update' | 'delete'
     clientId: string
     payload: Record<string, unknown>
+    /** The account making the change. Null: nobody knows. */
+    userId?: string | null | undefined
+    /** The business the change belongs to. Null: nobody knows. */
+    workspaceId?: string | null | undefined
   }): Promise<void> => localDb.enqueue(input),
 
   queue: (): Promise<QueueEntry[]> => localDb.queue(),

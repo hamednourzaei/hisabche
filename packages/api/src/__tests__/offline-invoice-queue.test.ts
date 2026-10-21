@@ -11,7 +11,13 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const post = vi.fn()
-vi.mock('../lib/client', () => ({ default: { post: (...a: unknown[]) => post(...a) } }))
+// `localRequest` is part of the client's surface (F3.1). With no local
+// transport registered it answers `null`, which is the case these tests cover:
+// the device cannot take the write, so it goes to the queue.
+vi.mock('../lib/client', () => ({
+  default: { post: (...a: unknown[]) => post(...a) },
+  localRequest: async () => null,
+}))
 
 const { submitInvoice } = await import('../hooks/invoices')
 const { registerOfflineQueue } = await import('../lib/offline-queue')

@@ -35,12 +35,27 @@ describe("the search-driven lists pass React Query's signal", () => {
       .replace(/^\s*\/\/.*$/gm, '')
 
   it.each([
-    ['products.ts', "apiClient.get<Page>('/products', { params: mergedFilters, signal })"],
-    ['customers.ts', 'params: filters,\n        signal,'],
     ['invoices.ts', 'params: filters,\n        signal,'],
     ['invoices.ts', 'queryFn: async ({ pageParam, signal })'],
   ])('%s', (file, needle) => {
     expect(code(file).split('\r\n').join('\n')).toContain(needle)
+  })
+
+  it('products.ts: the signal still travels with the filters', () => {
+    // The product list moved into the shared reader (fetchProducts) and the
+    // response type gained a name, so the call is written across lines now.
+    // The rule is unchanged: the signal travels with the filters.
+    expect(code('products.ts')).toMatch(
+      /apiClient\.get<[^>]+>\('\/products', \{\s*params: mergedFilters,\s*signal,?\s*\}\)/,
+    )
+  })
+
+  it('customers.ts: the signal still travels with the filters', () => {
+    // The customers' request moved into the shared reader (fetchCustomers), so
+    // the request is written there now. The rule this guard exists for — the
+    // signal travels with the filters — is unchanged; only the indentation of
+    // the call moved, so the check no longer counts spaces.
+    expect(code('customers.ts')).toMatch(/params: filters,\s*signal,/)
   })
 
   it('an aborted product search never falls back to the device database', () => {

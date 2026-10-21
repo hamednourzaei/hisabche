@@ -25,6 +25,10 @@ const WAREHOUSE_KABUL = '33333333-3333-4333-8333-333333333333'
 function createNodeTestDb(): LocalDb & { close: () => void } {
   const db = new DatabaseSync(':memory:')
   for (const s of CREATE_STATEMENTS) db.exec(s)
+  // The device label is part of a temporary invoice number (`OFF-<device>-0001`).
+  // Seeded to the SAME value on both sides so the comparison stays exact: this
+  // test compares two adapters of ONE device, not two devices.
+  db.exec("INSERT OR REPLACE INTO meta (key, value) VALUES ('device_id', 'PARITY')")
   let inTx = false
 
   return {
@@ -69,6 +73,8 @@ function createNodeTestDb(): LocalDb & { close: () => void } {
 function createSimulatedExpoSqliteDb(): ExpoSqliteDatabaseLike & { close: () => void } {
   const rawDb = new DatabaseSync(':memory:')
   for (const s of CREATE_STATEMENTS) rawDb.exec(s)
+  // The same device label as the node adapter (see createNodeTestDb).
+  rawDb.exec("INSERT OR REPLACE INTO meta (key, value) VALUES ('device_id', 'PARITY')")
 
   return {
     close: () => rawDb.close(),

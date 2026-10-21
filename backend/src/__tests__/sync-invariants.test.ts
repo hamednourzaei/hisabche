@@ -74,6 +74,7 @@ function matches(row: Row, filters: Array<[string, unknown]>): boolean {
 
 function makeQuery(table: string) {
   const eqs: Array<[string, unknown]> = []
+  const ors: Array<(row: Row) => boolean> = []
   let gtColumn: string | null = null
   let gtValue: number | string = 0
   let inColumn: string | null = null
@@ -87,6 +88,7 @@ function makeQuery(table: string) {
 
   const selected = () => {
     let out = rows().filter((r) => matches(r, eqs))
+    if (ors.length > 0) out = out.filter((r) => ors.every((test) => test(r)))
     if (gtColumn)
       out = out.filter((r) =>
         typeof gtValue === 'string'
@@ -104,10 +106,55 @@ function makeQuery(table: string) {
     return out.slice(0, limitN)
   }
 
+  /**
+   * One `col.op.value` condition, as PostgREST writes it.
+   *
+   * Only the three the operational pull uses: `gte` (the window), `neq` (a
+   * status that is still open) and `is.null`. Anything else throws, so a new
+   * filter cannot pass here by being silently ignored.
+   */
+  const parseCondition = (text: string): ((row: Row) => boolean) => {
+    const [column, operator, ...rest] = text.trim().split('.')
+    const value = rest.join('.')
+    if (operator === 'gte') return (row) => String(row[column!] ?? '') >= value
+    if (operator === 'neq') return (row) => row[column!] != null && String(row[column!]) !== value
+    if (operator === 'is' && value === 'null') return (row) => row[column!] == null
+    throw new Error(`sync-invariants fake: .or(${text}) is not implemented`)
+  }
+
+  /** `a,b,and(c,d)` — top-level commas are OR, `and(...)` is one branch. */
+  const parseOr = (filter: string): ((row: Row) => boolean) => {
+    const branches: string[] = []
+    let depth = 0
+    let current = ''
+    for (const char of filter) {
+      if (char === '(') depth += 1
+      if (char === ')') depth -= 1
+      if (char === ',' && depth === 0) {
+        branches.push(current)
+        current = ''
+        continue
+      }
+      current += char
+    }
+    if (current !== '') branches.push(current)
+
+    return (row) =>
+      branches.some((branch) => {
+        const group = /^and\((.*)\)$/.exec(branch.trim())
+        if (group) return group[1]!.split(',').every((part) => parseCondition(part)(row))
+        return parseCondition(branch)(row)
+      })
+  }
+
   const api = {
     select: (_cols?: string) => api,
     eq: (column: string, value: unknown) => {
       eqs.push([column, value])
+      return api
+    },
+    or: (filter: string) => {
+      ors.push(parseOr(filter))
       return api
     },
     gt: (column: string, value: number | string) => {
@@ -669,26 +716,24 @@ describe('snapshot — a full rebuild carries versions and never skips a row', (
 describe('an invoice travels with its lines', () => {
   it("pull and snapshot attach the invoice's own lines, and only those", async () => {
     await syncService.push(ACTOR, [invoiceMutation({ mutationId: uuid(981), entityId: uuid(70) })])
-    tables
-      .get('invoice_items')!
-      .push(
-        {
-          id: uuid(71),
-          invoice_id: uuid(70),
-          product_name: 'چای',
-          quantity: 2,
-          unit_price: 5,
-          total_price: 10,
-        },
-        {
-          id: uuid(72),
-          invoice_id: uuid(99),
-          product_name: 'not this invoice',
-          quantity: 1,
-          unit_price: 1,
-          total_price: 1,
-        },
-      )
+    tables.get('invoice_items')!.push(
+      {
+        id: uuid(71),
+        invoice_id: uuid(70),
+        product_name: 'چای',
+        quantity: 2,
+        unit_price: 5,
+        total_price: 10,
+      },
+      {
+        id: uuid(72),
+        invoice_id: uuid(99),
+        product_name: 'not this invoice',
+        quantity: 1,
+        unit_price: 1,
+        total_price: 1,
+      },
+    )
     const page = await syncService.pull(ACTOR.workspaceId, 0, 10)
     const change = page.changes.find((c) => c.entityId === uuid(70))
     expect((change?.data as { items: Array<{ id: string }> }).items.map((i) => i.id)).toEqual([

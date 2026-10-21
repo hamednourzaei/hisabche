@@ -34,6 +34,16 @@ export interface LocalQueryInput {
   direction: 'asc' | 'desc'
   limit: number
   offset: number
+  /**
+   * The columns this search looks at, when the caller's rule is not the
+   * table's default.
+   *
+   * The server searches a customer's NAME only and a product's name (plus its
+   * barcode when the text is a barcode). A device that searched more would
+   * answer a different question than the server does, and the two would
+   * disagree about which rows exist.
+   */
+  searchColumns?: readonly string[] | undefined
 }
 
 export interface PreparedStatement {
@@ -41,7 +51,18 @@ export interface PreparedStatement {
   params: unknown[]
 }
 
-export function buildSelect(input: LocalQueryInput): PreparedStatement {
+/**
+ * The WHERE clause, built ONCE for the page and for the count.
+ *
+ * ⚠️ A null filter means "the column is empty". `column = NULL` matches
+ * nothing in SQL, so the old builder turned "not deleted" into a filter that
+ * excluded EVERY row — a list that came back empty because the filter was
+ * wrong, which reads as "this business has no customers".
+ */
+export function buildWhere(input: LocalQueryInput): {
+  clauses: string[]
+  params: unknown[]
+} {
   const columns = WRITABLE_COLUMNS[input.table] ?? []
   const clauses: string[] = []
   const params: unknown[] = []
@@ -50,15 +71,31 @@ export function buildSelect(input: LocalQueryInput): PreparedStatement {
     // A column nobody declared is dropped, not refused: a filter the cache
     // cannot honour must not silently become a filter on everything.
     if (!columns.includes(column)) continue
+    if (value === null) {
+      clauses.push(`${ident(column)} IS NULL`)
+      continue
+    }
     clauses.push(`${ident(column)} = ?`)
     params.push(value)
   }
 
-  const searchable = SEARCHABLE_COLUMNS[input.table] ?? []
+  // The caller's columns, or the table's own. A column nobody declared is
+  // dropped, not honoured: a search over a column the cache does not have
+  // must not become a search over everything.
+  const searchable = (input.searchColumns ?? SEARCHABLE_COLUMNS[input.table] ?? []).filter(
+    (column) => columns.includes(column),
+  )
   if (input.search && searchable.length > 0) {
     clauses.push(`(${searchable.map((c) => `${ident(c)} LIKE ?`).join(' OR ')})`)
     searchable.forEach(() => params.push(`%${input.search}%`))
   }
+
+  return { clauses, params }
+}
+
+export function buildSelect(input: LocalQueryInput): PreparedStatement {
+  const columns = WRITABLE_COLUMNS[input.table] ?? []
+  const { clauses, params } = buildWhere(input)
 
   const order = input.orderBy && columns.includes(input.orderBy) ? input.orderBy : 'updated_at'
   const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
@@ -68,6 +105,63 @@ export function buildSelect(input: LocalQueryInput): PreparedStatement {
       `SELECT * FROM ${ident(input.table)} ${where} ` +
       `ORDER BY ${ident(order)} ${input.direction === 'asc' ? 'ASC' : 'DESC'} LIMIT ? OFFSET ?`,
     params: [...params, input.limit, input.offset],
+  }
+}
+
+/**
+ * How many rows the same filter matches — not how many fit on one page.
+ *
+ * A page of twenty out of a thousand rows must say "a thousand", or the pager
+ * tells the reader there is nothing beyond the page they can see.
+ */
+export function buildCount(input: LocalQueryInput): PreparedStatement {
+  const { clauses, params } = buildWhere(input)
+  const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
+
+  return {
+    sql: `SELECT COUNT(*) AS total FROM ${ident(input.table)} ${where}`,
+    params,
+  }
+}
+
+/**
+ * The outbox row, with its owner.
+ *
+ * ⚠️ THE SAME SQL ON BOTH HOSTS. A row queued on Windows and a row queued on
+ * Android must be the same row, or one device's queue is a queue the other
+ * device cannot read.
+ *
+ * The owner is KEPT when the new row has none: re-queuing a change that
+ * already knows its owner must not turn it back into "owner unknown".
+ */
+export interface LocalEnqueueInput {
+  entity: LocalTable
+  operation: 'create' | 'update' | 'delete'
+  clientId: string
+  payload: Record<string, unknown>
+  userId?: string | null | undefined
+  workspaceId?: string | null | undefined
+}
+
+export function buildEnqueue(input: LocalEnqueueInput): PreparedStatement {
+  return {
+    sql:
+      `INSERT INTO sync_queue (client_id, entity, operation, payload, attempts, status, last_error, created_at, user_id, workspace_id) ` +
+      `VALUES (?, ?, ?, ?, 0, 'pending', NULL, ?, ?, ?) ` +
+      `ON CONFLICT(client_id) DO UPDATE SET ` +
+      `entity = excluded.entity, operation = excluded.operation, payload = excluded.payload, ` +
+      `attempts = 0, status = 'pending', last_error = NULL, ` +
+      `user_id = COALESCE(excluded.user_id, sync_queue.user_id), ` +
+      `workspace_id = COALESCE(excluded.workspace_id, sync_queue.workspace_id)`,
+    params: [
+      input.clientId,
+      input.entity,
+      input.operation,
+      JSON.stringify(input.payload),
+      new Date().toISOString(),
+      input.userId ?? null,
+      input.workspaceId ?? null,
+    ],
   }
 }
 

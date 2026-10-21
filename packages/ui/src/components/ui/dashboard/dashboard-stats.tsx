@@ -96,7 +96,7 @@ const SIZE_STYLES = {
     value: 'text-2xl sm:text-4xl',
     label: 'text-xs sm:text-base',
     icon: 'h-8 w-8 sm:h-10 sm:w-10',
-    iconSize: 'h-4.5 w-4.5 sm:h-5 sm:w-5',
+    iconSize: 'h-[1.125rem] w-[1.125rem] sm:h-5 sm:w-5',
   },
 } as const
 

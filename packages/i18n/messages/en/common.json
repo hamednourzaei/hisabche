@@ -2676,6 +2676,7 @@
     "activeCustomers": "Active Customers",
     "lowStockAlerts": "Low Stock Alerts",
     "invoicesCount": "{count} Invoices",
+    "pendingInvoices": "Includes {count} sales awaiting confirmation",
     "startSelling": "Start selling to see your chart",
     "createInvoice": "Create Invoice",
     "viewReport": "View Report",
@@ -6178,6 +6179,12 @@
     "open": "Open",
     "resolved": "Resolved",
     "superseded": "Superseded",
+    "state": "State",
+    "state_pending_review": "Awaiting review",
+    "state_accepted": "Accepted (device version)",
+    "state_rejected": "Rejected (server version)",
+    "state_resolved": "Resolved",
+    "state_superseded": "Superseded",
     "status_open": "Open",
     "status_resolved": "Resolved",
     "status_all": "All",
@@ -10629,6 +10636,9 @@
     }
   },
   "offline": {
+    "temporary_invoice_number": "temporary",
+    "not_available_offline": "Not available offline",
+    "not_available_offline_hint": "This device has not downloaded this list yet. It appears after the next sync.",
     "cloudRequired": {
       "title": "Internet connection required",
       "badge": "Cloud required",

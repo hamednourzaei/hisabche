@@ -23,11 +23,13 @@ import {
   sessionCan,
   type Capability,
   type LoginCredentials,
+  type AuthUser,
   type Session,
 } from '@hisabche/auth-core'
-import { useWorkspaceStore } from '@hisabche/store'
+import { useAuthStore as useSharedAuthStore, useWorkspaceStore } from '@hisabche/store'
 
 import { apiClient } from '@/shared/lib/api'
+import { bridge } from '@/shared/lib/bridge'
 import { sessionStore } from '@/shared/lib/storage'
 import { buildOfflineSession, type OfflineWorkspace } from './offline-session'
 
@@ -42,7 +44,20 @@ export interface AuthState {
   hydrate: () => Promise<void>
   login: (input: LoginCredentials) => Promise<void>
   signup: (input: SignUpInput) => Promise<void>
-  logout: () => Promise<void>
+  /**
+   * Sign out.
+   *
+   * ⚠️ REFUSED while this account has changes on this device that were never
+   * sent: the dialog opens instead, and the person chooses. `force` is that
+   * choice — the changes and the data stay on the device for their owner.
+   *
+   * Returns whether the sign-out happened.
+   */
+  logout: (options?: { force?: boolean }) => Promise<boolean>
+  /** How many of this account's changes are still unsent. */
+  pendingLogoutCount: number
+  /** Close the dialog without signing out. */
+  dismissPendingLogout: () => void
   validateSession: () => Promise<boolean>
   refreshToken: () => Promise<void>
   clearError: () => void
@@ -169,6 +184,24 @@ async function postSignup(body: SignUpInput): Promise<Session> {
   return postAuth('/auth/signup', body)
 }
 
+/**
+ * The changes on this device that belong to this account and were never sent.
+ *
+ * The rows of ANOTHER account are not counted: they are not this person's
+ * work, and they are never sent by them.
+ */
+async function countPendingChanges(userId: string): Promise<number> {
+  const device = bridge()
+  if (!device) return 0
+  try {
+    const entries = await device.db.queue()
+    return entries.filter((entry) => entry.userId === userId).length
+  } catch {
+    // A device that cannot be read must not stop the sign-out.
+    return 0
+  }
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   isAuthenticated: false,
@@ -176,6 +209,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   error: null,
   isSessionValid: false,
+  pendingLogoutCount: 0,
 
   hydrate: async () => {
     try {
@@ -463,8 +497,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     })
   },
 
-  logout: async () => {
+  logout: async (options?: { force?: boolean }): Promise<boolean> => {
     const state = get()
+
+    // ⚠️ THE OUTBOX IS CHECKED BEFORE THE SIGN-OUT. A change that exists
+    // nowhere but this device must not disappear with the session — and the
+    // person must not be trapped either: the dialog offers both ways out.
+    if (!options?.force && state.session) {
+      const pending = await countPendingChanges(state.session.user.id)
+      if (pending > 0) {
+        set({ pendingLogoutCount: pending })
+        return false
+      }
+    }
+
     if (state.session) {
       try {
         await apiClient.post('/auth/logout', { token: state.session.token })
@@ -481,8 +527,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isSessionValid: false,
       isLoading: false,
       error: null,
+      pendingLogoutCount: 0,
     })
+
+    return true
   },
+
+  dismissPendingLogout: () => set({ pendingLogoutCount: 0 }),
 
   clearError: () => set({ error: null }),
 }))
@@ -543,3 +594,18 @@ setRefreshSession(async () => {
     return null
   }
 })
+
+// ─── The signed-in person, for the shared UI ────────────────────────────────
+//
+// Windows and Android keep the session in THIS store; the screens in
+// packages/ui read the person from `@hisabche/store` (the web's store). On the
+// device that one never had a user, so `usePageLook` was never ready, every
+// dashboard part stayed disabled, and the dashboard showed its loading cards
+// forever while every other page loaded. Only the person is mirrored — the
+// token stays here and the API client keeps reading it from here.
+function mirrorSignedInUser(user: AuthUser | null): void {
+  if (useSharedAuthStore.getState().user?.id === user?.id) return
+  useSharedAuthStore.setState({ user })
+}
+mirrorSignedInUser(useAuthStore.getState().session?.user ?? null)
+useAuthStore.subscribe((state) => mirrorSignedInUser(state.session?.user ?? null))

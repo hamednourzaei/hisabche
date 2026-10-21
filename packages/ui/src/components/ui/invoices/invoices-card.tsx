@@ -5,6 +5,7 @@ import { cn } from '../../../lib/utils'
 import { FOCUS_RING } from '../focus-ring'
 import { Eye, Trash2, FileText } from 'lucide-react'
 import type { Invoice } from '../../../lib/invoices/invoices-types'
+import { isTemporaryInvoiceNumber } from '@hisabche/validation'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    InvoiceCard v2.2 — Mobile-First · Memoized for Performance
@@ -84,13 +85,20 @@ export const InvoiceCard = memo(function InvoiceCard({
           <div className="flex items-start gap-2.5 sm:gap-3 text-start min-w-0 flex-1">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--color-primary)/0.1)] sm:h-11 sm:w-11">
               <FileText
-                className="size-4.5 sm:size-5 text-[hsl(var(--color-primary))]"
+                className="size-[1.125rem] sm:size-5 text-[hsl(var(--color-primary))]"
                 aria-hidden="true"
               />
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold sm:text-base text-[hsl(var(--fg-primary))]">
                 #{inv.invoiceNumber}
+                {/* A number the server has not seen yet says so, wherever it
+                    travels. The official number comes from the server. */}
+                {isTemporaryInvoiceNumber(inv.invoiceNumber) ? (
+                  <span className="ms-2 align-middle text-[11px] font-normal text-[hsl(var(--fg-tertiary))]">
+                    {t('offline.temporary_invoice_number', 'temporary')}
+                  </span>
+                ) : null}
               </p>
               <p className="text-[11px] sm:text-xs text-[hsl(var(--fg-tertiary))] mt-0.5">
                 {inv.date}

@@ -16,8 +16,11 @@ import {
   SCHEMA_VERSION,
   isAlreadyApplied,
   migrationsFrom,
-  SEARCHABLE_COLUMNS,
+  buildCount,
+  buildEnqueue,
+  buildSelect,
   WRITABLE_COLUMNS,
+  type LocalQueryInput,
   type LocalTable,
   type QueueEntry,
 } from '@hisabche/app-bridge'
@@ -219,32 +222,36 @@ export interface QueryInput {
   offset: number
 }
 
-export function query<T>(input: QueryInput): T[] {
-  if (!db) return []
+/**
+ * A page of rows AND how many rows the filter matches in all.
+ *
+ * ⚠️ THE SQL IS THE ONE BOTH HOSTS RUN (@hisabche/app-bridge). This file used
+ * to build its own SELECT, which is how two caches end up answering the same
+ * question differently on different machines.
+ *
+ * The count comes from the SAME WHERE as the page, so the pager and the list
+ * can never disagree about what the filter means.
+ */
+export function query<T>(input: QueryInput): { rows: T[]; total: number } {
+  if (!db) return { rows: [], total: 0 }
 
-  const columns = WRITABLE_COLUMNS[input.table] ?? []
-  const clauses: string[] = []
-  const params: unknown[] = []
-
-  for (const [column, value] of Object.entries(input.where ?? {})) {
-    if (!columns.includes(column)) continue
-    clauses.push(`${ident(column)} = ?`)
-    params.push(value)
+  const local: LocalQueryInput = {
+    table: input.table,
+    direction: input.direction,
+    limit: input.limit,
+    offset: input.offset,
+    ...(input.search !== undefined ? { search: input.search } : {}),
+    ...(input.where !== undefined ? { where: input.where } : {}),
+    ...(input.orderBy !== undefined ? { orderBy: input.orderBy } : {}),
   }
 
-  const searchable = SEARCHABLE_COLUMNS[input.table] ?? []
-  if (input.search && searchable.length > 0) {
-    clauses.push(`(${searchable.map((c) => `${ident(c)} LIKE ?`).join(' OR ')})`)
-    searchable.forEach(() => params.push(`%${input.search}%`))
-  }
+  const page = buildSelect(local)
+  const rows = db.prepare(page.sql).all(...page.params) as T[]
 
-  const order = input.orderBy && columns.includes(input.orderBy) ? input.orderBy : 'updated_at'
-  const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
-  const sql =
-    `SELECT * FROM ${ident(input.table)} ${where} ` +
-    `ORDER BY ${ident(order)} ${input.direction === 'asc' ? 'ASC' : 'DESC'} LIMIT ? OFFSET ?`
+  const count = buildCount(local)
+  const counted = db.prepare(count.sql).get(...count.params) as { total: number } | undefined
 
-  return db.prepare(sql).all(...params, input.limit, input.offset) as T[]
+  return { rows, total: Number(counted?.total ?? rows.length) }
 }
 
 // ============================================
@@ -316,20 +323,17 @@ export function enqueue(input: {
   operation: 'create' | 'update' | 'delete'
   clientId: string
   payload: Record<string, unknown>
+  /** The account making the change. Null: nobody knows. */
+  userId?: string | null | undefined
+  /** The business the change belongs to. Null: nobody knows. */
+  workspaceId?: string | null | undefined
 }): void {
   if (!db) return
 
-  db.prepare(
-    `INSERT OR REPLACE INTO sync_queue
-      (client_id, entity, operation, payload, attempts, status, last_error, created_at)
-     VALUES (?, ?, ?, ?, 0, 'pending', NULL, ?)`,
-  ).run(
-    input.clientId,
-    input.entity,
-    input.operation,
-    JSON.stringify(input.payload),
-    new Date().toISOString(),
-  )
+  // The same SQL the phone runs (@hisabche/app-bridge), so one device's queue
+  // is the other's queue — and the owner is written the same way on both.
+  const { sql, params } = buildEnqueue(input)
+  db.prepare(sql).run(...params)
 }
 
 interface QueueRow {
@@ -341,6 +345,8 @@ interface QueueRow {
   status: 'pending' | 'failed'
   last_error: string | null
   created_at: string
+  user_id: string | null
+  workspace_id: string | null
 }
 
 export function readQueue(): QueueEntry[] {
@@ -357,6 +363,9 @@ export function readQueue(): QueueEntry[] {
     status: row.status,
     lastError: row.last_error,
     createdAt: row.created_at,
+    // Null means "nobody knows" — the row is never sent on a guess.
+    userId: row.user_id,
+    workspaceId: row.workspace_id,
   }))
 }
 

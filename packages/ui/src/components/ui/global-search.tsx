@@ -221,7 +221,7 @@ export function GlobalSearch({
         )}
       >
         <Search
-          className="pointer-events-none absolute inset-inline-start-3 top-1/2 size-4 -translate-y-1/2 text-[hsl(var(--fg-tertiary))] start-3"
+          className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-[hsl(var(--fg-tertiary))] start-3"
           aria-hidden="true"
         />
         <input

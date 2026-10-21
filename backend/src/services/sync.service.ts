@@ -30,6 +30,7 @@
 import { conflicts, type ConflictEntity } from './conflict'
 import {
   LEASE_TTL_SECONDS,
+  OPERATIONAL_WINDOW_DAYS,
   isRetryable,
   type SyncChange,
   type SyncEntity,
@@ -41,6 +42,19 @@ import {
 
 import { supabase } from '../db'
 
+/**
+ * The server does not have this column.
+ *
+ * PostgREST says 42703 (a column that does not exist) or PGRST204 (a column
+ * it could not resolve). Both mean the same thing here: the table is there,
+ * the column is not.
+ */
+function isMissingColumn(error: { code?: string; message?: string }): boolean {
+  const code = error.code ?? ''
+  if (code === '42703' || code === 'PGRST204') return true
+  return /column .* does not exist|"column" .* not found/i.test(error.message ?? '')
+}
+
 /** Physical table behind each protocol entity. Nothing else is reachable. */
 const ENTITY_TABLE: Record<SyncEntity, string> = {
   invoice: 'invoices',
@@ -48,6 +62,11 @@ const ENTITY_TABLE: Record<SyncEntity, string> = {
   product: 'products',
   transaction: 'transactions',
   time_entry: 'time_entries',
+  // The operational set (F2): what a device needs besides the three it had.
+  warehouse: 'warehouses',
+  branch: 'branches',
+  exchange_rate: 'exchange_rates',
+  product_stock: 'warehouse_stock',
 }
 
 /**
@@ -98,6 +117,13 @@ const WRITABLE: Record<SyncEntity, readonly string[]> = {
   // ⚠️ A PAYMENT IS MONEY MOVING. `amount`, `type` and `invoice_id` decide
   // what a customer still owes; written straight to the table they change a
   // balance with no entry behind it. Only the note is descriptive.
+  // The operational set is READ-ONLY for a device: a warehouse, a branch, an
+  // exchange rate and a stock row are the server's to decide, and a client
+  // that could write them would be inventing stock.
+  warehouse: [],
+  branch: [],
+  exchange_rate: [],
+  product_stock: [],
   transaction: ['id', 'notes'],
   // Note what is ABSENT: `invoice_id`. Its presence is the lock that says
   // these hours are already on a bill, and it is the SERVER's to set when the
@@ -179,6 +205,47 @@ export const PULL_COLUMNS: Record<SyncEntity, readonly string[] | null> = {
     'currency',
     'status',
     'notes',
+    'updated_at',
+  ],
+  // The operational set. The lean pull columns: a device stores these and
+  // nothing else, so a column added on the server later does not arrive as a
+  // surprise.
+  warehouse: [
+    'id',
+    'workspace_id',
+    'version',
+    'name',
+    'location',
+    'branch_id',
+    'is_active',
+    'updated_at',
+  ],
+  branch: [
+    'id',
+    'workspace_id',
+    'version',
+    'code',
+    'name',
+    'parent_branch_id',
+    'is_active',
+    'updated_at',
+  ],
+  exchange_rate: [
+    'id',
+    'workspace_id',
+    'version',
+    'currency_code',
+    'rate',
+    'rate_date',
+    'updated_at',
+  ],
+  product_stock: [
+    'id',
+    'workspace_id',
+    'version',
+    'product_id',
+    'warehouse_id',
+    'quantity',
     'updated_at',
   ],
   transaction: null,
@@ -705,7 +772,29 @@ export class SyncService {
       .limit(limit + 1)
     if (after) query = query.gt('id', after)
 
+    // The operational window (F2): the last N days, plus every invoice that is
+    // still open. The filter is deliberately OVER-INCLUSIVE: an invoice whose
+    // status word this server does not know stays in the set rather than
+    // disappearing from the device — and so does one whose date or status is
+    // unreadable, because a sale dropped from the device is a sale the shop
+    // cannot see.
+    if (entity === 'invoice') {
+      const cutoff = new Date(Date.now() - OPERATIONAL_WINDOW_DAYS * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10)
+      query = query.or(
+        `date.gte.${cutoff},date.is.null,and(status.neq.paid,status.neq.cancelled),status.is.null`,
+      )
+    }
+
     const { data, error } = await query
+    // A COLUMN THIS SERVER DOES NOT HAVE IS "NOT CONFIGURED", NOT A 500. The
+    // operational pull adds columns a server that has not run the migration
+    // does not have; the device then reads nothing for that table instead of
+    // every pull failing.
+    if (error && isMissingColumn(error)) {
+      return { rows: [], nextAfter: null, hasMore: false }
+    }
     // A failed page is an error, never an empty table — an empty snapshot
     // would tell the device it has no customers (P0).
     if (error) throw new Error(`sync snapshot ${entity} failed: ${error.message}`)
