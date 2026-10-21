@@ -357,6 +357,9 @@ export function useDashboardKPIs(options: DashboardReadOptions = {}) {
     },
     enabled: authReady && enabled,
     ...DASHBOARD_LIVE,
+    // ⚠️ React Query PAUSES an offline query by default: the device branch
+    // above never ran and the dashboard froze on its last server numbers.
+    networkMode: 'always',
   })
 }
 
@@ -478,5 +481,8 @@ export function useDashboardSales(
     },
     enabled: authReady && enabled,
     ...DASHBOARD_LIVE,
+    // ⚠️ React Query PAUSES an offline query by default: the device branch
+    // above never ran and the dashboard froze on its last server numbers.
+    networkMode: 'always',
   })
 }

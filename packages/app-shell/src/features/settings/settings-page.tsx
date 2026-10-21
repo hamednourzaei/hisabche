@@ -2,23 +2,16 @@
 // Settings — account, language, currency, local database status, updates.
 // ============================================
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LogOut } from 'lucide-react'
 
 import { Badge, Button, Card, cn } from '@/components/ui/primitives'
-import {
-  BookCurrencySection,
-  BusinessStampSection,
-  HardwareSection,
-  SettingsHubContainer,
-  WorkplaceTimeZoneSection,
-} from '@hisabche/ui/screens'
-import { PageHeader } from '@/components/layout/page-header'
+import { SelectField } from '@hisabche/ui'
+import { SettingsHubContainer, SettingsPage as SharedSettingsPage } from '@hisabche/ui/screens'
 import { LogoutPendingDialog } from '@/components/layout/logout-pending-dialog'
 import { useAuthStore, useCurrentUser } from '@/features/auth/auth.store'
 import { bridge } from '@/shared/lib/bridge'
-import { setDesktopLanguage, supportedLanguages, type SupportedLanguage } from '@/shared/i18n'
 import { CURRENCY_CODES } from '@/shared/lib/currency'
 import { useUiStore } from '@/shared/stores/ui.store'
 import type { AppInfo } from '@hisabche/app-bridge'
@@ -33,7 +26,7 @@ export default function SettingsPage() {
 const renderDesktopSettings = () => <DesktopSettings />
 
 function DesktopSettings() {
-  const { t, i18n } = useTranslation('desktop')
+  const { t } = useTranslation('desktop')
   const user = useCurrentUser()
   const logout = useAuthStore((s) => s.logout)
 
@@ -56,48 +49,13 @@ function DesktopSettings() {
     }
   }, [])
 
-  const changeLanguage = useCallback(async (lang: SupportedLanguage) => {
-    await setDesktopLanguage(lang)
-  }, [])
-
+  // ⚠️ THE SAME PAGE AS THE WEB (owner, 21 Oct 2026). Only two parts are
+  // this device's own: the account card (sign-out asks about unsent offline
+  // changes) and the device cards (display currency, local database,
+  // version, updates). Language is the shared «زبان برنامه» section.
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <PageHeader title={t('nav.settings')} />
-
-      <div className="grid grid-cols-2 gap-4 overflow-y-auto p-4">
-        {/* The stamp/signature uploader is the shared web component, not a
-            desktop copy: it depends only on the workspace hooks, which this app
-            already uses, and the stamp it saves is the one every invoice
-            renders. Spans both columns because it is a full-width section. */}
-        <div className="col-span-2">
-          <BusinessStampSection />
-        </div>
-
-        {/* The scanner and receipt-printer settings are the shared section too.
-            The shell registers its printers at start-up (providers.tsx), and
-            this page is the only place a person can pick one — without it the
-            desktop printer host was registered and unreachable. */}
-        <div className="col-span-2">
-          <HardwareSection />
-        </div>
-
-        {/* The currency this business keeps its books in — one stored value on
-            the server, the shared section. It was only on the web: a business
-            set up from this app could see its books currency nowhere and
-            choose it nowhere. (The buttons further down pick how THIS DEVICE
-            shows money; they are not the books.) */}
-        <div className="col-span-2">
-          <BookCurrencySection />
-        </div>
-
-        {/* Where the business is — the zone «today» is read in for its
-            employees. The shared section, as on the web: without it a business
-            run from the Windows or phone app could never set its zone, and so
-            could never make an attendance link. */}
-        <div className="col-span-2">
-          <WorkplaceTimeZoneSection />
-        </div>
-
+    <SharedSettingsPage
+      accountSlot={
         <Card>
           <h2 className="mb-3 text-sm font-bold">{t('auth.title')}</h2>
           <p className="text-sm">{user?.fullName ?? '—'}</p>
@@ -109,63 +67,53 @@ function DesktopSettings() {
           </Button>
           <LogoutPendingDialog />
         </Card>
+      }
+      deviceSlot={
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Card>
+            <h2 className="mb-3 text-sm font-bold">{t('nav.settings')}</h2>
 
-        <Card>
-          <h2 className="mb-3 text-sm font-bold">{t('nav.settings')}</h2>
-
-          <div className="mb-4 flex flex-wrap gap-2">
-            {supportedLanguages.map((lang) => (
-              <Button
-                key={lang.code}
-                size="sm"
-                variant={i18n.language === lang.code ? 'primary' : 'outline'}
-                onClick={() => void changeLanguage(lang.code)}
-              >
-                {lang.nativeName}
-              </Button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {CURRENCY_CODES.map((code) => (
-              <Button
-                key={code}
-                size="sm"
-                variant={currency === code ? 'primary' : 'outline'}
-                onClick={() => setCurrency(code)}
-              >
-                {code}
-              </Button>
-            ))}
-          </div>
-        </Card>
-
-        <Card>
-          <h2 className="mb-3 text-sm font-bold">{t('sync.title')}</h2>
-
-          <div className="flex flex-col gap-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-[hsl(var(--fg-secondary))]">SQLite</span>
-              <Badge tone={info?.databaseReady ? 'success' : 'warning'}>
-                {info?.databaseReady ? 'ready' : t('sync.localOnly')}
-              </Badge>
+            {/* The site's own dropdown, as every other choice in the product. */}
+            <div className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="text-[hsl(var(--fg-secondary))]">{t('sync.displayCurrency')}</span>
+                <SelectField
+                  value={currency}
+                  onChange={(next) => setCurrency(next as (typeof CURRENCY_CODES)[number])}
+                  options={CURRENCY_CODES.map((code) => ({ value: code, label: code }))}
+                  aria-label={t('sync.displayCurrency')}
+                />
+              </label>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[hsl(var(--fg-secondary))]">version</span>
-              <span className={cn('tabular-nums')}>{info?.version ?? '—'}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[hsl(var(--fg-secondary))]">platform</span>
-              <span>{info?.platform ?? '—'}</span>
-            </div>
-          </div>
-        </Card>
+          </Card>
 
-        {/* ⚠️ The «تازه‌سازی» button that used to sit inside the card above is
+          <Card>
+            <h2 className="mb-3 text-sm font-bold">{t('sync.title')}</h2>
+
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[hsl(var(--fg-secondary))]">{t('sync.deviceDatabase')}</span>
+                <Badge tone={info?.databaseReady ? 'success' : 'warning'}>
+                  {info?.databaseReady ? t('sync.dbReady') : t('sync.localOnly')}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[hsl(var(--fg-secondary))]">{t('sync.appVersion')}</span>
+                <span className={cn('tabular-nums')}>{info?.version ?? '—'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[hsl(var(--fg-secondary))]">{t('sync.platform')}</span>
+                <span>{info?.platform ?? '—'}</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* ⚠️ The «تازه‌سازی» button that used to sit inside the card above is
             gone. It called a main-process function that returned `void`, so it
             could report nothing — see `update-section.tsx`. */}
-        <UpdateSection />
-      </div>
-    </div>
+          <UpdateSection />
+        </div>
+      }
+    />
   )
 }

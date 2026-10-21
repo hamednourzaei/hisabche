@@ -65,8 +65,14 @@ export const Money = React.memo(function Money({
   tone,
   className,
   currency,
+  bare = false,
 }: {
   minor: number
+  /**
+   * Digits only, no currency word. For a KPI tile whose currency is already
+   * said once beside it: «افغانی» on every tile pushed the figure out of it.
+   */
+  bare?: boolean | undefined
   /** Show an explicit + on positives, where the sign IS the meaning. */
   signed?: boolean
   /** 'auto' colours by sign; otherwise say it explicitly. */
@@ -93,9 +99,13 @@ export const Money = React.memo(function Money({
       )}
     >
       {signed && minor > 0 ? '+' : ''}
-      {currency && currency in FRACTION_DIGITS
-        ? formatMoney(major, currency as KnownCurrency, documentIntlLocale())
-        : formatSelectedMoney(major)}
+      {bare
+        ? new Intl.NumberFormat(documentIntlLocale(), { maximumFractionDigits: digits }).format(
+            major,
+          )
+        : currency && currency in FRACTION_DIGITS
+          ? formatMoney(major, currency as KnownCurrency, documentIntlLocale())
+          : formatSelectedMoney(major)}
     </span>
   )
 })

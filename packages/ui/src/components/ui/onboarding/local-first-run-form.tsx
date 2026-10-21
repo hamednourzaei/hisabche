@@ -19,10 +19,23 @@
 // call to the local engine and the session that follows it.
 // ============================================
 
+import { isMetal } from '@hisabche/formatting'
+import { MetalUnitPicker } from '../settings/metal-unit-section'
+import { SelectField } from '../select-field'
 import { memo } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { CurrencyPicker } from './currency-picker'
+
+/** Every zone this device knows, plus the current value even when it does not. */
+function timeZoneOptions(current: string): { value: string; label: string }[] {
+  const known =
+    typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : []
+  return [...new Set([...(current ? [current] : []), ...known])].map((zone) => ({
+    value: zone,
+    label: zone,
+  }))
+}
 
 export interface LocalFirstRunFormProps {
   /** The business name as typed. */
@@ -107,18 +120,18 @@ export const LocalFirstRunForm = memo(function LocalFirstRunForm({
         >
           {t('auth.offlineFirstRun.timeZone', 'منطقه‌ی زمانی')}
         </label>
-        <input
+        {/* A searchable list, not a text box: few people can type «Asia/Kabul»,
+            and a misspelt zone is a book whose «today» is wrong. Same list
+            as the settings section (the zones this device knows). */}
+        <SelectField
           id="offline-first-run-time-zone"
-          type="text"
+          name="timeZone"
+          searchable
           value={timeZone}
-          onChange={(event) => onTimeZoneChange(event.target.value)}
-          placeholder="Asia/Kabul"
-          className={cn(
-            'w-full rounded-xl border p-3 text-sm outline-none',
-            'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
-            'text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))]',
-            'focus:border-[hsl(var(--color-primary))]',
-          )}
+          onChange={onTimeZoneChange}
+          options={timeZoneOptions(timeZone)}
+          aria-label={t('auth.offlineFirstRun.timeZone', 'منطقه‌ی زمانی')}
+          className="w-full"
         />
         <p className="mt-1.5 text-xs text-[hsl(var(--fg-secondary))]">
           {t(
@@ -132,6 +145,17 @@ export const LocalFirstRunForm = memo(function LocalFirstRunForm({
         {t('auth.offlineFirstRun.currency', 'ارز دفاتر')}
       </h3>
       <CurrencyPicker value={currency} onChange={onCurrencyChange} lang={lang} t={t} />
+
+      {/* A metal is weighed: gram, kilogram or tonne — chosen here, changeable
+          in settings. The books keep grams either way (owner, 21 Oct 2026). */}
+      {isMetal(currency) ? (
+        <div className="mt-5 flex flex-col items-center gap-2">
+          <span className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+            {t('settings.metalUnit.title', 'واحد نمایش فلز')}
+          </span>
+          <MetalUnitPicker />
+        </div>
+      ) : null}
 
       <div className="mt-6 flex flex-col items-center gap-3 sm:mt-8">
         {/* ⚠️ THE ERROR IS AT THE BUTTON, NOT SWALLOWED.

@@ -1,7 +1,9 @@
 // packages/ui/src/components/ui/dashboard/sales-chart.tsx
 'use client'
 
-import { headlineFontClass, statFontClass } from '../kpi-card'
+import { formatPercent, headlineFontClass, statFontClass } from '../kpi-card'
+import { formatCompactValue } from '@hisabche/formatting'
+import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { memo, useMemo, useId } from 'react'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
@@ -61,6 +63,7 @@ export const SalesChart = memo(function SalesChart({
   onViewFullReport,
 }: SalesChartProps) {
   const tOriginal = useTranslations()
+  const intlLocale = useIntlLocale()
   const t = (key: string, fallback?: string) => {
     try {
       const v = tOriginal(key as Parameters<typeof tOriginal>[0])
@@ -178,7 +181,7 @@ export const SalesChart = memo(function SalesChart({
         </div>
 
         {/* Hero Metric + Comparison */}
-        <div className="flex items-baseline gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {/* ⚠️ The same automatic sizing the KPI cards use. A fixed
               `text-3xl` overflowed the card the moment the shop's numbers grew
               a digit — and a nine-figure sum is not an edge case here. */}
@@ -193,7 +196,9 @@ export const SalesChart = memo(function SalesChart({
           {previousPeriodTotal > 0 && (
             <span
               className={cn(
-                'flex items-center gap-1 text-sm font-medium',
+                // A vertical rule on the start side: at every width the total
+                // and the change read as two figures, not one run of digits.
+                'flex items-center gap-1 border-s border-[hsl(var(--border-default))] ps-3 text-sm font-medium',
                 isPositive
                   ? 'text-[hsl(var(--color-success))]'
                   : 'text-[hsl(var(--color-destructive))]',
@@ -204,7 +209,7 @@ export const SalesChart = memo(function SalesChart({
               ) : (
                 <ArrowDown className="h-4 w-4" aria-hidden="true" />
               )}
-              {Math.abs(percentageChange).toFixed(1)}%
+              {formatPercent(percentageChange, intlLocale)}
               <span className="text-xs text-[hsl(var(--fg-tertiary))] font-normal">
                 {t('dashboard.vsYesterday')}
               </span>
@@ -244,14 +249,19 @@ export const SalesChart = memo(function SalesChart({
                 <p className="truncate text-[11px] text-[hsl(var(--fg-tertiary))]">
                   {t(key, fallback)}
                 </p>
+                {/* A third of the card's width: past a million the figure is
+                    shown as k / M, with the exact amount on hover/long-press. */}
                 <p
+                  title={fmt(value)}
                   className={cn(
                     'truncate font-semibold tabular-nums',
                     statFontClass(fmt(value)),
                     tone,
                   )}
                 >
-                  {fmt(value)}
+                  {Math.abs(value) >= 1_000_000
+                    ? formatCompactValue(value, intlLocale)
+                    : fmt(value)}
                 </p>
               </div>
             ))}

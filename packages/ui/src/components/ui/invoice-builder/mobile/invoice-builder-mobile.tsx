@@ -51,6 +51,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { cn } from '../../../../lib/utils'
 import { InvoiceItemCard } from './invoice-item-card'
 import { toIsoDay } from '@hisabche/formatting'
+import { nameOfCurrency } from '../../../../lib/currency-name'
 
 export interface InvoiceBuilderMobileProps {
   t: (key: string, fallback?: string) => string
@@ -62,6 +63,10 @@ export interface InvoiceBuilderMobileProps {
   invalidRowIds: ReadonlySet<string>
   issues: string[]
   stockWarning?: ReactNode
+  /** The exchange-rate box, shown with the currency at the top of the invoice. */
+  rateSlot?: ReactNode
+  /** The payable amount in the books' currency, when the invoice is in another one. */
+  bookEquivalent?: string | null | undefined
 
   customers: readonly InvoiceDraftCustomer[]
   transactionType: 'sale' | 'purchase'
@@ -128,6 +133,8 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
   invalidRowIds,
   issues,
   stockWarning,
+  rateSlot,
+  bookEquivalent,
   customers,
   transactionType,
   currency,
@@ -178,7 +185,7 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
   }, [columns, ctx])
 
   const parties = customers ?? []
-  const currencyName = t(`currency.${currency.toLowerCase()}`, currency)
+  const currencyName = nameOfCurrency(t, currency, currency)
   const blocked = issues.length > 0
 
   const handleAdd = () => {
@@ -269,6 +276,29 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
             )
           })}
         </div>
+      </section>
+
+      {/* ── Currency and rate (owner, 21 Oct 2026) ─────────────────────
+          A property of the whole invoice, so it sits with its type at the
+          top — not folded into «تنظیمات فاکتور», where a gold business never
+          found it and priced afghani lines as grams. */}
+      <section className="mb-5 space-y-3">
+        <div>
+          <span className={fieldLabel}>{t('invoiceBuilder.customer.currency', 'ارز فاکتور')}</span>
+          <Select value={currency} onValueChange={(v) => onCurrencyChange(v as CurrencyCode)}>
+            <SelectTrigger aria-label={t('invoiceBuilder.customer.currency', 'ارز فاکتور')}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CURRENCY_PICK_ORDER.map((code) => (
+                <SelectItem key={code} value={code}>
+                  {nameOfCurrency(t, code, code)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {rateSlot}
       </section>
 
       {/* ── Items ────────────────────────────────────────────────────── */}
@@ -410,29 +440,11 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
 
         {settingsOpen ? (
           <div className="mt-3 space-y-4 rounded-[var(--radius-lg)] border border-[hsl(var(--border-default))] p-3">
-            <div>
-              <span className={fieldLabel}>
-                {t('invoiceBuilder.customer.currency', 'ارز فاکتور')}
-              </span>
-              <Select value={currency} onValueChange={(v) => onCurrencyChange(v as CurrencyCode)}>
-                <SelectTrigger aria-label={t('invoiceBuilder.customer.currency', 'ارز فاکتور')}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CURRENCY_PICK_ORDER.map((code) => (
-                    <SelectItem key={code} value={code}>
-                      {t(`currency.${code.toLowerCase()}`, code)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {foreignCurrencies.map((code) => (
               <div key={code}>
                 <span className={fieldLabel}>
                   {t('invoiceBuilder.customer.rate', 'نرخ تبدیل')} —{' '}
-                  {`1 ${t(`currency.${code.toLowerCase()}`, code)}`}
+                  {`1 ${nameOfCurrency(t, code, code)}`}
                 </span>
                 <NumberStepper
                   value={rates[code] ?? ''}
@@ -592,7 +604,7 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
             <div key={entry.currency} className="flex items-baseline justify-between gap-2">
               <dt className="text-[hsl(var(--fg-secondary))]">
                 {t('invoiceBuilder.summary.foreignTotal', 'جمع')} (
-                {t(`currency.${entry.currency.toLowerCase()}`, entry.currency)})
+                {nameOfCurrency(t, entry.currency, entry.currency)})
               </dt>
               <dd dir="ltr" className="tabular-nums text-[hsl(var(--fg-secondary))]">
                 {formatNumber(entry.amount, locale, currencyPrecision(entry.currency))}
@@ -637,6 +649,14 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
             {`${formatNumber(summary.total, locale, ctx.precision)} ${currencyName}`}
           </span>
         </div>
+        {bookEquivalent ? (
+          <div className="-mt-1 mb-2 flex items-baseline justify-between gap-2 text-xs text-[hsl(var(--fg-tertiary))]">
+            <span>{t('invoiceBuilder.summary.bookEquivalent', 'معادل دفتری')}</span>
+            <span dir="ltr" className="tabular-nums">
+              {bookEquivalent}
+            </span>
+          </div>
+        ) : null}
         <Button
           variant="success"
           onClick={onContinue}

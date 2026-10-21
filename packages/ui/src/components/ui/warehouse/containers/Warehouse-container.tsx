@@ -39,6 +39,7 @@ import { CostingMethodPicker } from '../costing-method-picker'
 import { ShelfOverflowNotice, shelfOverflows } from '../shelves/shelf-overflow'
 import type { ShelfT } from '../shelves/shelf-dialogs'
 import { stockOptions } from '../shelves/warehouse-shelves-view'
+import { nameOfCurrency } from '../../../../lib/currency-name'
 
 /**
  * H4 — the server's own cap on `GET /products/:id/stock-history`.
@@ -173,7 +174,7 @@ export function warehouseContainer() {
         const perUnit = latest.get(code) ?? null
         return {
           code,
-          label: safeT(`currency.${code.toLowerCase()}`, code),
+          label: nameOfCurrency(safeT, code, code),
           // value × rate = value in this currency; null = ask for a rate.
           rate: perUnit ? 1 / perUnit : null,
           afnPerUnit: perUnit,
@@ -356,7 +357,7 @@ export function warehouseContainer() {
         onCreated={handleProductCreated}
         initialBarcode={barcodeParam}
       />
-      <WarehouseView {...viewProps} />
+      <WarehouseView {...viewProps} bookCurrency={bookCurrency} />
 
       <AddWarehouseDialog
         t={safeT}

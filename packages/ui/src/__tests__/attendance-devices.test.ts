@@ -166,8 +166,10 @@ describe('on every platform', () => {
 
   it('the settings screen of the shell has the books currency and the time zone too', () => {
     const shell = code('packages/app-shell/src/features/settings/settings-page.tsx')
-    expect(shell).toContain('<BookCurrencySection />')
-    expect(shell).toContain('<WorkplaceTimeZoneSection />')
+    expect(shell).toContain('<SharedSettingsPage')
+    const shared = code('packages/ui/src/components/ui/settings/settings-page.tsx')
+    expect(shared).toContain('<BookCurrencySection />')
+    expect(shared).toContain('<WorkplaceTimeZoneSection />')
   })
 })
 

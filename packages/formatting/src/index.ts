@@ -41,6 +41,19 @@ export {
   groupThousands,
 } from './digits'
 
-export { formatCompactCount } from './compact'
+export { formatCompactCount, formatCompactValue } from './compact'
 
 export { formatBytes } from './bytes'
+export {
+  METAL_UNITS,
+  METAL_UNIT_GRAMS,
+  METAL_UNIT_SIGN,
+  isMetal,
+  metalDisplayUnit,
+  metalFactor,
+  metalFractionDigits,
+  setMetalDisplayUnit,
+  toShownMetal,
+  toStoredMetal,
+  type MetalUnit,
+} from './metal-unit'

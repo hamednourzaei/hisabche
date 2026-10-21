@@ -75,6 +75,7 @@ import {
   SelectField,
   Stat,
 } from '../capability/capability-kit'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 export interface TillViewProps {
   t: (key: string, fallback?: string) => string
@@ -263,7 +264,7 @@ export const TillView = memo(function TillView({
   const currencyOptions = useMemo(() => {
     return CURRENCY_CODES.filter((code) => code in FRACTION_DIGITS).map((code) => ({
       value: code,
-      label: t(`currency.${code.toLowerCase()}`, code),
+      label: nameOfCurrency(t, code, code),
     }))
   }, [t])
 
@@ -732,7 +733,7 @@ export const TillView = memo(function TillView({
             ) : cashFlowError ? (
               '—'
             ) : (
-              <Money minor={today.inMinor} currency={selectedCurrency} />
+              <Money minor={today.inMinor} currency={selectedCurrency} bare />
             )
           }
           hint={
@@ -750,7 +751,7 @@ export const TillView = memo(function TillView({
             ) : cashFlowError ? (
               '—'
             ) : (
-              <Money minor={today.outMinor} currency={selectedCurrency} />
+              <Money minor={today.outMinor} currency={selectedCurrency} bare />
             )
           }
           hint={
@@ -776,6 +777,7 @@ export const TillView = memo(function TillView({
                   <Money
                     minor={totals.expectedCashMinor}
                     currency={session.currency ?? selectedCurrency}
+                    bare
                   />
                 ) : (
                   '—'
@@ -819,7 +821,7 @@ export const TillView = memo(function TillView({
                 isTillsLoading ? (
                   <Skeleton className="h-7 w-20" />
                 ) : tillsKnown && listCurrency ? (
-                  <Money minor={recordedInListCurrency} currency={listCurrency} />
+                  <Money minor={recordedInListCurrency} currency={listCurrency} bare />
                 ) : (
                   '—'
                 )
@@ -1070,7 +1072,7 @@ export const TillView = memo(function TillView({
                 allValue={bookCurrency ?? ''}
                 options={availableCurrencies.map((c) => ({
                   value: c,
-                  label: t(`currency.${c.toLowerCase()}`, c),
+                  label: nameOfCurrency(t, c, c),
                 }))}
               />
             </div>

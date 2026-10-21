@@ -36,6 +36,7 @@ import { formatNumber } from '@hisabche/formatting'
 import { cn } from '../../../../lib/utils'
 import { DescriptionCell } from './description-cell'
 import { GridCell } from './grid-cell'
+import { nameOfCurrency } from '../../../../lib/currency-name'
 
 export interface InvoiceItemsGridProps {
   t: (key: string, fallback?: string) => string
@@ -222,7 +223,7 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
                         <span className="block truncate text-[10px] font-normal text-[hsl(var(--fg-tertiary))]">
                           {column.suffix ??
                             (column.currency
-                              ? t(`currency.${column.currency.toLowerCase()}`, column.currency)
+                              ? nameOfCurrency(t, column.currency, column.currency)
                               : '')}
                         </span>
                       ) : null}

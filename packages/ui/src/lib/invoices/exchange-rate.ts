@@ -9,13 +9,25 @@
 // refuses to send the invoice then — it never falls back to 1.
 // ============================================
 
-import { FRACTION_DIGITS } from '@hisabche/formatting'
+import { FRACTION_DIGITS, isMetal, metalFactor, metalFractionDigits } from '@hisabche/formatting'
 import { parseCellNumber } from '@hisabche/validation'
 
-/** `from` units of the invoice's currency are worth `to` units of the books currency. */
-export function exchangeRateOf(from: string, to: string): number | null {
-  const left = parseCellNumber(from)
-  const right = parseCellNumber(to)
+/**
+ * `from` units of the invoice's currency are worth `to` units of the books currency.
+ *
+ * ⚠️ A metal side is typed in the unit SHOWN (g / kg / t) and the rate is
+ * stored per GRAM, the books' unit: «1 kg gold = 7.5B afghani» is 7.5M per
+ * gram. Without the currencies (callers that predate metal units) both sides
+ * are taken as stored units.
+ */
+export function exchangeRateOf(
+  from: string,
+  to: string,
+  invoiceCurrency?: string | undefined,
+  bookCurrency?: string | undefined,
+): number | null {
+  const left = parseCellNumber(from) * metalFactor(invoiceCurrency)
+  const right = parseCellNumber(to) * metalFactor(bookCurrency)
   if (!(left > 0) || !(right > 0)) return null
   const rate = right / left
   return Number.isFinite(rate) && rate > 0 ? rate : null
@@ -47,13 +59,21 @@ export function priceForInvoice(
   bookCurrency: string | undefined,
   rate: number | null,
 ): string {
-  if (!needsExchangeRate(invoiceCurrency, bookCurrency)) return price
+  // The line is typed in the unit SHOWN: a metal's stored grams are divided by
+  // the chosen unit (a 2,500 g price reads «2.5» on a kilogram invoice).
+  const shownFactor = metalFactor(invoiceCurrency)
+  const digits = isMetal(invoiceCurrency)
+    ? metalFractionDigits()
+    : ((FRACTION_DIGITS as Record<string, number>)[String(invoiceCurrency).toUpperCase()] ?? 2)
+  const round = (value: number) => Math.round(value * 10 ** digits) / 10 ** digits
+  if (!needsExchangeRate(invoiceCurrency, bookCurrency)) {
+    if (shownFactor === 1) return price
+    const stored = parseCellNumber(price)
+    return stored > 0 ? String(round(stored / shownFactor)) : price
+  }
   const inBooks = parseCellNumber(price)
   if (!(inBooks > 0) || !rate) return ''
-  const digits =
-    (FRACTION_DIGITS as Record<string, number>)[String(invoiceCurrency).toUpperCase()] ?? 2
-  const factor = 10 ** digits
-  return String(Math.round((inBooks / rate) * factor) / factor)
+  return String(round(inBooks / rate / shownFactor))
 }
 
 /**
@@ -65,12 +85,16 @@ export function inBooksAtRate(
   amount: number,
   rate: number | null,
   bookCurrency: string | undefined,
+  invoiceCurrency?: string | undefined,
 ): number | null {
   if (!rate || !(rate > 0) || !Number.isFinite(amount)) return null
-  const digits =
-    (FRACTION_DIGITS as Record<string, number>)[String(bookCurrency ?? '').toUpperCase()] ?? 2
+  // Typed (shown) → stored, at the stored rate, → the books' shown unit.
+  const shown = (amount * metalFactor(invoiceCurrency) * rate) / metalFactor(bookCurrency)
+  const digits = isMetal(bookCurrency)
+    ? metalFractionDigits()
+    : ((FRACTION_DIGITS as Record<string, number>)[String(bookCurrency ?? '').toUpperCase()] ?? 2)
   const factor = 10 ** digits
-  return Math.round(amount * rate * factor) / factor
+  return Math.round(shown * factor) / factor
 }
 
 /** A line whose price the app filled from a product (not typed by a person). */

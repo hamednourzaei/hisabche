@@ -51,6 +51,7 @@ import {
 } from './stat-surface'
 import { cn } from '../../lib/utils'
 import { useIntlLocale } from '../../hooks/use-intl-locale'
+import { formatCompactValue } from '@hisabche/formatting'
 
 function localeNumber(value: number, locale: string, decimals = 0): string {
   try {
@@ -82,11 +83,13 @@ export function fullAmount(value: number, locale: string): string {
  */
 export function valueFontClass(text: string): string {
   const len = text.length
-  if (len <= 7) return 'text-lg sm:text-2xl'
-  if (len <= 11) return 'text-base sm:text-xl'
-  if (len <= 16) return 'text-sm sm:text-lg'
-  if (len <= 20) return 'text-xs sm:text-base'
-  if (len <= 26) return 'text-[11px] sm:text-sm'
+  // One step per group of three digits («۰۰۰,» = 4 characters): the owner
+  // asked that every added thousand make the figure visibly smaller.
+  if (len <= 5) return 'text-lg sm:text-2xl'
+  if (len <= 8) return 'text-base sm:text-xl'
+  if (len <= 11) return 'text-sm sm:text-lg'
+  if (len <= 15) return 'text-xs sm:text-base'
+  if (len <= 20) return 'text-[11px] sm:text-sm'
   return 'text-[10px] sm:text-xs'
 }
 
@@ -100,11 +103,11 @@ export function valueFontClass(text: string): string {
  */
 export function headlineFontClass(text: string): string {
   const len = text.length
-  if (len <= 7) return 'text-2xl sm:text-3xl'
-  if (len <= 11) return 'text-xl sm:text-2xl'
-  if (len <= 16) return 'text-lg sm:text-xl'
-  if (len <= 20) return 'text-base sm:text-lg'
-  if (len <= 26) return 'text-sm sm:text-base'
+  if (len <= 5) return 'text-2xl sm:text-3xl'
+  if (len <= 8) return 'text-xl sm:text-2xl'
+  if (len <= 11) return 'text-lg sm:text-xl'
+  if (len <= 15) return 'text-base sm:text-lg'
+  if (len <= 20) return 'text-sm sm:text-base'
   return 'text-xs sm:text-sm'
 }
 
@@ -117,10 +120,14 @@ export function statFontClass(text: string): string {
   return 'text-[10px]'
 }
 
-function formatPercent(delta: number, locale: string): string {
+export function formatPercent(delta: number, locale: string): string {
   const abs = Math.abs(delta)
   // «٪» is the Persian sign; English reads «%» (live audit #76).
-  return `${localeNumber(abs, locale, abs < 10 ? 1 : 0)}${/^en/i.test(locale) ? '%' : '٪'}`
+  const sign = /^en/i.test(locale) ? '%' : '٪'
+  // From a thousand percent on, k / M: «۲,۶۲۴,۲۲۳٪» pushed the chip out of its
+  // card. A change that large is read as «huge», not to the unit.
+  if (abs >= 1000) return `${formatCompactValue(abs, locale)}${sign}`
+  return `${localeNumber(abs, locale, abs < 10 ? 1 : 0)}${sign}`
 }
 
 /**

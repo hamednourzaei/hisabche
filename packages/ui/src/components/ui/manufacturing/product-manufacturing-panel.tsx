@@ -22,6 +22,7 @@ import { ProductionEditor } from './production-editor'
 import { ProductionHistory } from './production-history'
 import { unitText } from './unit-text'
 import { manufacturingErrorText } from './manufacturing-errors'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 type T = (key: string, fallback?: string) => string
 
@@ -64,9 +65,7 @@ export function ProductManufacturingPanel({
   }
 
   const data = definition.data
-  const currencyName = data?.currency
-    ? t(`currency.${data.currency.toLowerCase()}`, data.currency)
-    : ''
+  const currencyName = data?.currency ? nameOfCurrency(t, data.currency, data.currency) : ''
   const failure = definition.error ? apiErrorMessage(definition.error, '') : ''
 
   return (

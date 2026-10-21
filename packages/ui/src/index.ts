@@ -554,3 +554,11 @@ export {
   type ActionAvailability,
   type ActionAvailabilityOptions,
 } from './lib/capability'
+export { copyText } from './lib/copy-text'
+export {
+  APP_LANGUAGES,
+  LanguageSwitchProvider,
+  useLanguageSwitch,
+  type LanguageOption,
+  type LanguageSwitch,
+} from './lib/language-switch'

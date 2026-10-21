@@ -20,6 +20,7 @@ import { Plus } from 'lucide-react'
 
 import { exchangeRateOf } from '../../../lib/invoices/exchange-rate'
 import { ExchangeRateDialog } from '../dashboard/exchange-rate-dialog'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 const amountInput =
   'h-10 w-full min-w-0 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 text-sm tabular-nums'
@@ -42,8 +43,8 @@ export function InvoiceExchangeRate({
   to: string
   onChange: (next: { from: string; to: string }) => void
 }) {
-  const nameOf = (code: string) => t(`currency.${code.toLowerCase()}`, code)
-  const missing = exchangeRateOf(from, to) === null
+  const nameOf = (code: string) => nameOfCurrency(t, code, code)
+  const missing = exchangeRateOf(from, to, invoiceCurrency, bookCurrency) === null
   const [formOpen, setFormOpen] = useState(false)
 
   return (

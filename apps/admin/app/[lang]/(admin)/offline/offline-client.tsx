@@ -18,10 +18,18 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  Input,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from '@/components/ui'
+import { copyText } from '@hisabche/ui'
 import {
   useAdminOfflineLicences,
   useRevokeOfflineLicence,
+  useIssueOfflineLicence,
   useAdminOfflineDevices,
   useReleaseOfflineDevice,
   useAdminOfflineLogs,
@@ -83,6 +91,147 @@ export function OfflineClient() {
   )
 }
 
+// ─── Issue a licence for one device ─────────────────────────────────
+//
+// The offline edition's sale (owner, 21 Oct 2026): the admin types the ID the
+// device shows, the server signs a licence for that device, and the code is
+// shown ONCE in a dialog to be pasted on the device.
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function IssueLicenceCard() {
+  const t = useTranslations()
+  const { mutateAsync: issue } = useIssueOfflineLicence()
+  const [deviceId, setDeviceId] = useState('')
+  const [label, setLabel] = useState('')
+  const [periodDays, setPeriodDays] = useState('365')
+  const [confirming, setConfirming] = useState(false)
+  const [issued, setIssued] = useState<{ code: string; expiresAt: string } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
+
+  const id = deviceId.trim()
+  const days = Number(periodDays)
+  const valid = UUID_RE.test(id) && Number.isInteger(days) && days >= 1 && days <= 3650
+
+  const handleConfirm = async ({ stepUpTimestamp }: { stepUpTimestamp: string }) => {
+    setError(null)
+    try {
+      const result = await issue({
+        deviceId: id,
+        periodDays: days,
+        ...(label.trim() ? { label: label.trim() } : {}),
+        stepUpTimestamp,
+      })
+      setIssued(result)
+      setCopyState('idle')
+      setDeviceId('')
+      setLabel('')
+    } catch (err) {
+      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code
+      setError(
+        code === 'LICENSE_SIGNING_NOT_CONFIGURED'
+          ? t('admin.offline.signingNotConfigured')
+          : t('admin.offline.issueFailed'),
+      )
+    } finally {
+      setConfirming(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('admin.offline.issueTitle')}</CardTitle>
+        <CardDescription>{t('admin.offline.issueDescription')}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-[2fr_1fr_8rem_auto] md:items-end">
+          <label className="flex flex-col gap-1.5 text-xs">
+            <span className="text-muted-foreground">{t('admin.offline.deviceId')}</span>
+            <Input
+              dir="ltr"
+              value={deviceId}
+              onChange={(e) => setDeviceId(e.target.value)}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              aria-invalid={id !== '' && !UUID_RE.test(id)}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs">
+            <span className="text-muted-foreground">{t('admin.offline.label')}</span>
+            <Input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={80} />
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs">
+            <span className="text-muted-foreground">{t('admin.offline.periodDays')}</span>
+            <Input
+              dir="ltr"
+              inputMode="numeric"
+              value={periodDays}
+              onChange={(e) => setPeriodDays(e.target.value.replace(/[^0-9]/g, ''))}
+            />
+          </label>
+          <Button disabled={!valid} onClick={() => setConfirming(true)}>
+            {t('admin.offline.issueAction')}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {id !== '' && !UUID_RE.test(id)
+            ? t('admin.offline.invalidDeviceId')
+            : t('admin.offline.deviceIdHint')}
+        </p>
+        {error ? (
+          <p role="alert" className="text-xs font-medium text-destructive">
+            {error}
+          </p>
+        ) : null}
+      </CardContent>
+
+      <StepUpDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={t('admin.offline.issueTitle')}
+        description={t('admin.offline.issueNotice')}
+        confirmLabel={t('admin.offline.confirmIssue')}
+        onConfirm={handleConfirm}
+      />
+
+      {/* The one place the code is shown — a dialog, never a card that stays
+          on the page (CLAUDE.md: one-time values). */}
+      <Dialog open={issued !== null} onOpenChange={(open) => !open && setIssued(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('admin.offline.codeTitle')}</DialogTitle>
+            <DialogDescription>{t('admin.offline.codeNotice')}</DialogDescription>
+          </DialogHeader>
+          <textarea
+            readOnly
+            dir="ltr"
+            value={issued?.code ?? ''}
+            onFocus={(e) => e.currentTarget.select()}
+            rows={5}
+            className="w-full break-all rounded-lg border border-border bg-muted/40 p-3 font-mono text-xs"
+          />
+          <div className="flex items-center justify-end gap-3">
+            {copyState !== 'idle' ? (
+              <span className="text-xs text-muted-foreground">
+                {copyState === 'copied' ? t('admin.offline.copied') : t('admin.offline.copyFailed')}
+              </span>
+            ) : null}
+            <Button
+              onClick={async () => {
+                const ok = await copyText(issued?.code ?? '')
+                setCopyState(ok ? 'copied' : 'failed')
+              }}
+            >
+              {t('admin.offline.copyCode')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  )
+}
+
 // ─── TAB 1: LICENCES LIST & MANAGEMENT ──────────────────────────────
 
 function LicencesTabContent() {
@@ -105,6 +254,8 @@ function LicencesTabContent() {
 
   return (
     <div className="space-y-4">
+      <IssueLicenceCard />
+
       {isLoading && (
         <div className="space-y-2">
           {Array.from({ length: 4 }, (_, i) => (

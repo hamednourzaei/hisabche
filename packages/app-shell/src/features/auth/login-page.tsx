@@ -27,6 +27,8 @@ import { loginSchema, signUpSchema, type LoginInput, type SignUpInput } from '@h
 import { setAppEdition, setOfflineTokenMode, STORAGE_KEYS, writeStorage } from '@hisabche/api'
 
 import { useAuthStore } from './auth.store'
+import { checkStoredLicence, type LicenceCheck } from './offline-license'
+import { OfflineLicenceScreen } from './offline-licence-screen'
 import {
   createLocalWorkspace,
   lookupLocalWorkspace,
@@ -59,7 +61,8 @@ function deviceTimeZone(): string {
  * `creating` → the workspace is being written.
  * `checkFailed` / `createFailed` → it did not work, and the screen says so.
  */
-type OfflinePhase = 'idle' | 'checking' | 'firstRun' | 'creating' | 'checkFailed' | 'createFailed'
+type OfflinePhase =
+  'idle' | 'checking' | 'licence' | 'firstRun' | 'creating' | 'checkFailed' | 'createFailed'
 
 /**
  * `AuthShell` resolves copy through a `safeT`: a key lookup that falls back to
@@ -100,6 +103,9 @@ export function LoginPage() {
 
   const [offlinePhase, setOfflinePhase] = useState<OfflinePhase>('idle')
   const [offlineError, setOfflineError] = useState<string | null>(null)
+  const [licenceProblem, setLicenceProblem] = useState<
+    Exclude<LicenceCheck, { ok: true }>['reason'] | null
+  >(null)
   const [businessName, setBusinessName] = useState('')
   const [businessCurrency, setBusinessCurrency] = useState<string | null>(null)
   // The device's zone is the PREFILL, not the answer — the person edits it.
@@ -159,7 +165,8 @@ export function LoginPage() {
    * currency and the business is created with those answers. A failure says
    * so, at the button.
    */
-  const handleOfflineMode = useCallback(async () => {
+  /** Into the offline edition — called only once this device's licence verified. */
+  const enterOfflineEdition = useCallback(async () => {
     writeStorage(STORAGE_KEYS.edition, 'offline')
     setAppEdition('offline')
     setOfflineTokenMode(true)
@@ -185,6 +192,22 @@ export function LoginPage() {
       setOfflinePhase('checkFailed')
     }
   }, [navigate, redirectTarget, startOfflineSession, st])
+
+  // ⚠️ THE LICENCE COMES FIRST. This button used to open the offline edition
+  // for anyone (owner report, 21 Oct 2026); now it opens only with a licence
+  // that verifies for THIS device, and the edition is not even switched on
+  // before that.
+  const handleOfflineMode = useCallback(async () => {
+    setOfflineError(null)
+    setOfflinePhase('checking')
+    const licence = await checkStoredLicence()
+    if (!licence.ok) {
+      setLicenceProblem(licence.reason)
+      setOfflinePhase('licence')
+      return
+    }
+    await enterOfflineEdition()
+  }, [enterOfflineEdition])
 
   /** Create the business on this device, then open the app as its owner. */
   const handleCreateBusiness = useCallback(async () => {
@@ -237,6 +260,17 @@ export function LoginPage() {
   // error, and the linter names it (react-hooks/rules-of-hooks). The returns
   // come after the hooks, in the order a person meets them.
   if (isAuthenticated) return <Navigate to={redirectTarget} replace />
+
+  if (offlinePhase === 'licence') {
+    return (
+      <OfflineLicenceScreen
+        t={st}
+        initialProblem={licenceProblem}
+        onActivated={() => void enterOfflineEdition()}
+        onBack={() => setOfflinePhase('idle')}
+      />
+    )
+  }
 
   // The first run replaces the sign-in form: there is no account to sign in
   // to, and asking for a password nobody has would be a wall.
@@ -304,7 +338,9 @@ export function LoginPage() {
           translateError: (key?: string) => (key ? st(key, key) : undefined),
         }}
       />
-      <div className="absolute bottom-3 start-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-1">
+      {/* A full-width row centres in both directions; start-1/2 with a physical
+          -translate-x pushed the link off the side of an RTL phone screen. */}
+      <div className="absolute inset-x-0 bottom-3 z-30 flex flex-col items-center gap-1">
         {/* ⚠️ THE FAILURE IS SHOWN HERE, NEXT TO THE BUTTON THAT FAILED. */}
         {offlinePhase === 'checkFailed' && offlineError && (
           <p role="alert" className="text-xs font-medium text-[hsl(var(--color-destructive))]">

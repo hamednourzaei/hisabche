@@ -261,3 +261,33 @@ export function useAdminOfflineFleetHealth() {
     staleTime: 30 * 1000,
   })
 }
+
+/** Issue a licence for one device. The code it returns is shown once. */
+export function useIssueOfflineLicence() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      deviceId,
+      label,
+      periodDays,
+      stepUpTimestamp,
+    }: {
+      deviceId: string
+      label?: string | undefined
+      periodDays: number
+      stepUpTimestamp: string
+    }) => {
+      const res = await apiClient.post<{ code: string; expiresAt: string }>(
+        '/admin/offline/licences',
+        { deviceId, periodDays, ...(label ? { label } : {}) },
+        { headers: { 'X-Admin-Step-Up-Timestamp': stepUpTimestamp } },
+      )
+      return res.data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'offline', 'licences'] })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'offline', 'devices'] })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'offline', 'fleet-health'] })
+    },
+  })
+}

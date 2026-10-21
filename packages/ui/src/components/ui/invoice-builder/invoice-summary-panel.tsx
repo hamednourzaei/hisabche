@@ -20,6 +20,7 @@ import {
   inBooksAtRate,
   needsExchangeRate,
 } from '../../../lib/invoices/exchange-rate'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 export interface InvoiceSummaryPanelProps {
   t: (key: string, fallback?: string) => string
@@ -61,14 +62,16 @@ export const InvoiceSummaryPanel = memo(function InvoiceSummaryPanel({
   onTaxRateChange,
 }: InvoiceSummaryPanelProps) {
   const fmt = (value: number, decimals = precision) => formatNumber(value, locale, decimals)
-  const currencyName = t(`currency.${currency.toLowerCase()}`, currency)
+  const currencyName = nameOfCurrency(t, currency, currency)
   // The payable in the BOOKS currency (the one chosen at onboarding), at this
   // invoice's own rate — the figure the stock, ledger and profit will carry.
   const bookCurrency = useBookCurrency()
-  const rate = useInvoiceDraftStore((s) => exchangeRateOf(s.exchangeRateFrom, s.exchangeRateTo))
+  const rate = useInvoiceDraftStore((s) =>
+    exchangeRateOf(s.exchangeRateFrom, s.exchangeRateTo, currency, bookCurrency),
+  )
   const foreign = needsExchangeRate(currency, bookCurrency)
-  const booksTotal = foreign ? inBooksAtRate(summary.total, rate, bookCurrency) : null
-  const bookName = bookCurrency ? t(`currency.${bookCurrency.toLowerCase()}`, bookCurrency) : ''
+  const booksTotal = foreign ? inBooksAtRate(summary.total, rate, bookCurrency, currency) : null
+  const bookName = bookCurrency ? nameOfCurrency(t, bookCurrency, bookCurrency) : ''
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
@@ -111,7 +114,7 @@ export const InvoiceSummaryPanel = memo(function InvoiceSummaryPanel({
           <div key={entry.currency} className={rowClass}>
             <span className={labelClass}>
               {t('invoiceBuilder.summary.foreignTotal', 'جمع')} (
-              {t(`currency.${entry.currency.toLowerCase()}`, entry.currency)})
+              {nameOfCurrency(t, entry.currency, entry.currency)})
             </span>
             <span className={cn(valueClass, 'text-[hsl(var(--fg-secondary))]')} dir="ltr">
               {formatNumber(entry.amount, locale, currencyPrecision(entry.currency))}

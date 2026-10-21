@@ -28,6 +28,7 @@ import { useDateFormat } from '../../../hooks/use-date-format'
 import { formatAmount, formatNumber, type KnownCurrency } from '@hisabche/formatting'
 import { useActionAvailability } from '../../../lib/capability'
 import { CloudRequiredNotice } from '../cloud-required-notice'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -186,7 +187,7 @@ const AIInsightsPanel = memo(function AIInsightsPanel({
         .replace(
           '{amount}',
           typeof values.amount === 'number'
-            ? `${formatAmount(values.amount, currency as KnownCurrency, locale)} ${t(`currency.${currency.toLowerCase()}`, currency)}`
+            ? `${formatAmount(values.amount, currency as KnownCurrency, locale)} ${nameOfCurrency(t, currency, currency)}`
             : '',
         )
         .replace(

@@ -15,7 +15,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { CreateJournalEntry } from '@hisabche/validation'
-import apiClient from '../lib/client'
+import apiClient, { localRequest } from '../lib/client'
+import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
 import { asList } from '../lib/as-list'
@@ -190,6 +191,23 @@ export interface GeneralLedgerResult {
 }
 
 // ═══ Hooks ═══
+/**
+ * ⚠️ OFFLINE, THE BOOKS ARE READ FROM THE DEVICE.
+ *
+ * The local engine posts an offline sale's journal entry in the same
+ * transaction as the invoice, but these screens kept asking the server (and
+ * React Query paused them offline), so the accounts, journal and trial balance
+ * never moved. Offline, the same engine answers with the same shape; `null`
+ * means online or no local engine, and the server path runs.
+ */
+async function readBooksFromDevice<T>(
+  path: string,
+  params?: Record<string, string>,
+): Promise<T | null> {
+  if (!getOfflineQueue()?.isOffline()) return null
+  return localRequest<T>('GET', path, undefined, params)
+}
+
 export function useAccounts() {
   const authReady = useAuthReady()
 
@@ -201,11 +219,14 @@ export function useAccounts() {
   return useQuery({
     queryKey: accountingKeys.accounts(),
     queryFn: async (): Promise<Account[]> => {
+      const fromDevice = await readBooksFromDevice<unknown>('/accounting/accounts')
+      if (fromDevice) return asList<Account>(fromDevice)
       const { data } = await apiClient.get('/accounting/accounts')
       return asList<Account>(data)
     },
     enabled: authReady,
     staleTime: 5 * 60_000,
+    networkMode: 'always',
   })
 }
 
@@ -233,11 +254,15 @@ export function useJournalEntries() {
   return useQuery({
     queryKey: accountingKeys.journalEntries(),
     queryFn: async (): Promise<JournalEntry[]> => {
+      // The device answers { entries }, the server a bare list.
+      const fromDevice = await readBooksFromDevice<{ entries?: unknown }>('/accounting/journal')
+      if (fromDevice) return asList<JournalEntry>(fromDevice.entries)
       const { data } = await apiClient.get('/accounting/journal')
       return asList<JournalEntry>(data)
     },
     enabled: authReady,
     staleTime: 2 * 60_000,
+    networkMode: 'always',
   })
 }
 
@@ -282,7 +307,16 @@ export function useTrialBalance(date: string, branchId: string | null = null, fr
     // the consolidated one are two different answers; sharing a cache key
     // would show the branch figure under an «all branches» heading.
     queryKey: accountingKeys.trialBalance(date, branchId, fromDate),
+    networkMode: 'always',
     queryFn: async (): Promise<TrialBalanceResult> => {
+      // The device keeps one set of books; a branch figure stays the server's.
+      const fromDevice = branchId
+        ? null
+        : await readBooksFromDevice<TrialBalanceResult>('/accounting/trial-balance', {
+            date,
+            ...(fromDate ? { fromDate } : {}),
+          })
+      if (fromDevice) return fromDevice
       const { data } = await apiClient.get('/accounting/trial-balance', {
         // `undefined`, not `null` — axios drops an undefined param and
         // serialises a null one as the string "null", which the server would

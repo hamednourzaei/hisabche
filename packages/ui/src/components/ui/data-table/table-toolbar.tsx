@@ -64,7 +64,8 @@ function TableToolbarInner<T>({
   }, [onSearchChange])
 
   return (
-    <div className="flex items-center justify-end gap-1.5 pb-2">
+    // Wraps: three filters with min widths ran off a phone screen as one row.
+    <div className="flex flex-wrap items-center justify-end gap-1.5 pb-2">
       {!hasSearch ? null : searchOpen ? (
         <div className="relative flex-1 sm:max-w-xs">
           <Search

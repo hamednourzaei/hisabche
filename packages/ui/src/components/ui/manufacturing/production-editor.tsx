@@ -60,6 +60,7 @@ import { useActionAvailability } from '../../../lib/capability/use-action-availa
 import { CloudRequiredNotice } from '../cloud-required-notice'
 import { useProductionDraft } from './use-production-draft'
 import { manufacturingErrorText } from './manufacturing-errors'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 type T = (key: string, fallback?: string) => string
 
@@ -170,7 +171,7 @@ export function ProductionEditor({
   }, [addToInventory, warehouseId, warehouses])
 
   const { cost, columns, ctx, currency } = draft
-  const currencyName = t(`currency.${currency.toLowerCase()}`, currency)
+  const currencyName = nameOfCurrency(t, currency, currency)
   const money = useCallback((value: number) => formatNumber(value, locale, 4), [locale])
 
   const foreignCurrencies = useMemo(() => {
@@ -421,7 +422,7 @@ export function ProductionEditor({
               onChange={(next) => draft.setCurrency(next as CurrencyCode)}
               options={SUPPORTED_CURRENCIES.map((code) => ({
                 value: code,
-                label: t(`currency.${code.toLowerCase()}`, code),
+                label: nameOfCurrency(t, code, code),
               }))}
             />
           </div>
@@ -447,7 +448,7 @@ export function ProductionEditor({
               <Input
                 key={code}
                 inputMode="decimal"
-                label={`${t('invoiceBuilder.customer.rate', 'نرخ تبدیل')} — 1 ${t(`currency.${code.toLowerCase()}`, code)} (${currencyName})`}
+                label={`${t('invoiceBuilder.customer.rate', 'نرخ تبدیل')} — 1 ${nameOfCurrency(t, code, code)} (${currencyName})`}
                 value={draft.rates[code] ?? ''}
                 onChange={(event) => draft.setRate(code, event.target.value)}
               />

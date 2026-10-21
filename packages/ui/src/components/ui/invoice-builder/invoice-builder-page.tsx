@@ -58,6 +58,8 @@ export interface InvoiceBuilderPageProps {
    * currency sees it there (live audit #59), not at the bottom of the column.
    */
   rateSlot?: ReactNode
+  /** Phone only: «معادل دفتری» under the payable amount. */
+  bookEquivalent?: string | null | undefined
 
   customers: readonly InvoiceDraftCustomer[]
   transactionType: 'sale' | 'purchase'
@@ -116,6 +118,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
   stockWarning,
   scanSlot,
   rateSlot,
+  bookEquivalent,
   customers,
   transactionType,
   currency,
@@ -231,9 +234,10 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
           summary={summary}
           invalidRowIds={invalidRowIds}
           issues={issues}
+          rateSlot={rateSlot}
+          bookEquivalent={bookEquivalent}
           stockWarning={
             <>
-              {rateSlot}
               {scanSlot}
               {stockWarning}
             </>

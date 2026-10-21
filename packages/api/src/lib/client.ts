@@ -222,6 +222,7 @@ export async function localRequest<T = unknown>(
   method: LocalTransportRequest['method'],
   path: string,
   body?: unknown,
+  params?: LocalTransportRequest['params'],
 ): Promise<T | null> {
   if (!localTransportAdapter) return null
 
@@ -231,7 +232,13 @@ export async function localRequest<T = unknown>(
   if (workspaceId) headers[WORKSPACE_HEADER] = workspaceId
   if (body !== undefined) headers['Content-Type'] = 'application/json'
 
-  const res = await localTransportAdapter({ method, path, headers, body })
+  const res = await localTransportAdapter({
+    method,
+    path,
+    headers,
+    body,
+    ...(params ? { params } : {}),
+  })
   if (res.status >= 200 && res.status < 300) return res.data as T
 
   const message =

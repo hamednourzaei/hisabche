@@ -89,7 +89,12 @@ interface DesktopBundle {
     | 'preparingData'
     | 'lastSync'
     | 'neverSynced'
-    | 'pendingWaiting',
+    | 'pendingWaiting'
+    | 'deviceDatabase'
+    | 'dbReady'
+    | 'appVersion'
+    | 'platform'
+    | 'displayCurrency',
     string
   > & {
     // The outbox screen (features/sync/sync-page.tsx). These were used and
@@ -240,6 +245,11 @@ const faIR: DesktopBundle = {
     syncNow: 'همگام‌سازی اکنون',
     queueEmpty: 'همه‌چیز همگام است',
     localOnly: 'پایگاه‌داده محلی در دسترس نیست — فقط آنلاین',
+    deviceDatabase: 'پایگاه‌داده‌ی دستگاه',
+    dbReady: 'آماده',
+    appVersion: 'نسخه‌ی برنامه',
+    platform: 'سیستم‌عامل',
+    displayCurrency: 'ارز نمایش روی این دستگاه',
     col: { record: 'رکورد', operation: 'عملیات', stage: 'مرحله', reason: 'دلیل', time: 'زمان' },
     stage: {
       queued: 'در صف',
@@ -409,6 +419,11 @@ const en: DesktopBundle = {
     syncNow: 'Sync now',
     queueEmpty: 'Everything is in sync',
     localOnly: 'Local database unavailable — online only',
+    deviceDatabase: 'Device database',
+    dbReady: 'Ready',
+    appVersion: 'App version',
+    platform: 'Platform',
+    displayCurrency: 'Display currency on this device',
     col: {
       record: 'Record',
       operation: 'Operation',

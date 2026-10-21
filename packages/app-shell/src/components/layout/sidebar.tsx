@@ -23,6 +23,7 @@ import { useMyCapabilities } from '@hisabche/api'
 import { useToast } from '@hisabche/ui'
 
 import { useUiStore } from '@/shared/stores/ui.store'
+import { SearchTrigger } from './toolbar'
 
 /**
  * Destinations this build serves.
@@ -207,6 +208,7 @@ export function Sidebar() {
           moreIcon={MORE_ICON}
           activeNav={activeNav}
           onNavigate={handleNavigate}
+          searchSlot={<SearchTrigger />}
         />
       )}
     </>

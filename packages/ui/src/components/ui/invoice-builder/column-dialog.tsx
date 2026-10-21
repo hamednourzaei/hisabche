@@ -32,6 +32,7 @@ import {
 } from '../dialog'
 import { Switch } from '../switch'
 import { cn } from '../../../lib/utils'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 const TYPE_FALLBACK: Record<InvoiceColumnType, string> = {
   text: 'متن',
@@ -257,7 +258,7 @@ export const ColumnDialog = memo(function ColumnDialog({
                 options={[
                   ...SUPPORTED_CURRENCIES.map((code) => ({
                     value: code,
-                    label: t(`currency.${code.toLowerCase()}`, code),
+                    label: nameOfCurrency(t, code, code),
                   })),
                 ]}
                 className={cn(

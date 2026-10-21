@@ -416,6 +416,17 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     evidence: [{ file: `${SVC}/admin/admin-billing.service.ts`, text: 'decideActionRequest' }],
   },
   {
+    // Each issue is a NEW licence with its own id: a repeated click makes a
+    // second licence (revocable), never overwrites the first.
+    routeFile: 'admin-offline.routes.ts',
+    route: 'POST /api/admin/offline/licences',
+    mechanisms: ['unique-constraint'],
+    evidence: [
+      { file: `${SVC}/offline-license.service.ts`, text: 'issueDeviceLicense' },
+      { file: 'docs/entitlement-01-migration.sql', text: 'license_id    uuid PRIMARY KEY' },
+    ],
+  },
+  {
     routeFile: 'admin-offline.routes.ts',
     route: 'POST /api/admin/offline/licences/:id/revoke',
     mechanisms: ['check-then-write'],

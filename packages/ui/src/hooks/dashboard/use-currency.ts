@@ -6,7 +6,13 @@ import { useTranslations } from 'next-intl'
 import { useCurrencyStore } from '@hisabche/store'
 
 import { useIntlLocale } from '../use-intl-locale'
-import { CURRENCY_SIGN, type KnownCurrency } from '@hisabche/formatting'
+import {
+  CURRENCY_SIGN,
+  formatAmount,
+  formatMoney,
+  isMetal,
+  type KnownCurrency,
+} from '@hisabche/formatting'
 
 /**
  * Aligned with the canonical `currencyCodeSchema`
@@ -68,6 +74,11 @@ export function useCurrency(options: UseCurrencyOptions = {}) {
     return (amount: number, showCode: boolean = true): string => {
       if (amount === undefined || amount === null || isNaN(amount)) {
         return t('common.zero')
+      }
+
+      // A metal is a weight in the chosen unit, not an ISO currency to Intl.
+      if (isMetal(code)) {
+        return showCode ? formatMoney(amount, code, locale) : formatAmount(amount, code, locale)
       }
 
       const formatter = new Intl.NumberFormat(locale, {

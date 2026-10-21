@@ -116,7 +116,9 @@ export const NumberStepper = React.forwardRef<HTMLInputElement, NumberStepperPro
     const shown = !focused && groupThousands ? groupThousandsText(value) : value
 
     const arrow = cn(
-      'flex h-1/2 w-full items-center justify-center',
+      // `flex-1`, not `h-1/2`: half of an auto height is auto, so in a tall
+      // field the lower arrow collapsed and only «▲» was left (owner report).
+      'flex min-h-0 w-full flex-1 items-center justify-center',
       'text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--color-primary))]',
       'transition-colors duration-150 motion-reduce:transition-none',
       'disabled:opacity-30 disabled:hover:text-[hsl(var(--fg-tertiary))]',
@@ -184,7 +186,8 @@ export const NumberStepper = React.forwardRef<HTMLInputElement, NumberStepperPro
             'flex shrink-0 flex-col self-stretch overflow-hidden',
             'transition-[width,opacity] duration-150 motion-reduce:transition-none',
             arrowsShown ? 'w-5 opacity-100' : 'w-0 opacity-0',
-            '[@media(pointer:coarse)]:w-5 [@media(pointer:coarse)]:opacity-100',
+            // A finger needs more than 20px to hit «▼» rather than «▲».
+            '[@media(pointer:coarse)]:w-8 [@media(pointer:coarse)]:opacity-100',
           )}
         >
           <button

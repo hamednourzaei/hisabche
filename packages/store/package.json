@@ -11,12 +11,13 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "crypto-js": "^4.2.0",
-    "zustand": "^4.5.2",
     "@hisabche/api": "workspace:*",
     "@hisabche/auth": "workspace:*",
     "@hisabche/auth-core": "workspace:*",
-    "@hisabche/validation": "workspace:*"
+    "@hisabche/formatting": "workspace:*",
+    "@hisabche/validation": "workspace:*",
+    "crypto-js": "^4.2.0",
+    "zustand": "^4.5.2"
   },
   "peerDependencies": {
     "react": "^18.2.0"

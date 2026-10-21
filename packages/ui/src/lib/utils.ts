@@ -2,7 +2,7 @@ import { clsx, type ClassValue } from 'clsx'
 import type { CurrencyCode } from '@hisabche/store'
 import { twMerge } from 'tailwind-merge'
 
-import { resolveIntlLocale } from '@hisabche/formatting'
+import { formatMoney, isMetal, resolveIntlLocale, type KnownCurrency } from '@hisabche/formatting'
 
 /**
  * Combines class names and resolves Tailwind CSS conflicts.
@@ -31,6 +31,8 @@ export function formatCurrency(
   // `NaN` and `Infinity` do not throw here, but they render as "NaN ؋" beside
   // real figures, which reads like a number rather than like missing data.
   if (!Number.isFinite(amount)) return '—'
+  // A metal is a weight in the chosen unit, not an ISO currency to Intl.
+  if (isMetal(currency)) return formatMoney(amount, currency as KnownCurrency, locale)
 
   return (
     new Intl.NumberFormat(locale, {

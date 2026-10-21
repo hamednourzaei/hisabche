@@ -12,8 +12,10 @@ import {
   readStorage,
   registerTokenGetter,
   setOnUnauthorized,
+  setAppEdition,
   setRefreshSession,
   STORAGE_KEYS,
+  writeStorage,
   type ApiError,
 } from '@hisabche/api'
 import { signUpSchema, type SignUpInput } from '@hisabche/validation'
@@ -32,6 +34,7 @@ import { apiClient } from '@/shared/lib/api'
 import { bridge } from '@/shared/lib/bridge'
 import { sessionStore } from '@/shared/lib/storage'
 import { buildOfflineSession, type OfflineWorkspace } from './offline-session'
+import { checkStoredLicence } from './offline-license'
 
 export interface AuthState {
   session: Session | null
@@ -268,6 +271,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         readStorage(STORAGE_KEYS.edition) === 'offline'
 
       if (isOffline) {
+        // ⚠️ EVERY START RE-CHECKS THE LICENCE. A device that entered the
+        // offline edition without one (before the gate existed), or whose
+        // licence has expired or been moved, goes back to sign-in. Its data
+        // stays on the device; the licence screen opens from «نسخه‌ی محلی»
+        // and the same business opens once a licence verifies.
+        const licence = await checkStoredLicence()
+        if (!licence.ok) {
+          writeStorage(STORAGE_KEYS.edition, 'cloud')
+          setAppEdition('cloud')
+          set({
+            session: null,
+            isAuthenticated: false,
+            isHydrated: true,
+            isSessionValid: false,
+            error: null,
+          })
+          return
+        }
         try {
           const res =
             await apiClient.get<Array<{ id: string; name: string; ownerId: string }>>('/workspaces')
@@ -590,8 +611,15 @@ setRefreshSession(async () => {
     useAuthStore.setState({ session: renewed, isAuthenticated: true, isSessionValid: true })
     return renewed.token
   } catch (error) {
-    if ((error as Partial<ApiError>)?.code === 'NETWORK_ERROR') throw error
-    return null
+    // ⚠️ ONLY A REFUSAL OF THE REFRESH TOKEN SIGNS THE PERSON OUT.
+    //
+    // This used to sign out on anything but NETWORK_ERROR — so a 502/503 while
+    // the server woke up after the phone restarted, or a 429, ended the
+    // session and the person found the login screen. Those are «not now»,
+    // not «no»: they rethrow and the session is kept for the next request.
+    const status = (error as Partial<ApiError>)?.status
+    if (status === 400 || status === 401 || status === 403) return null
+    throw error
   }
 })
 

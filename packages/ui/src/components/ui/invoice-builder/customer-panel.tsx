@@ -31,6 +31,7 @@ import { NumberStepper } from '../number-stepper'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { cn } from '../../../lib/utils'
 import { toIsoDay } from '@hisabche/formatting'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 export interface CustomerPanelProps {
   t: (key: string, fallback?: string) => string
@@ -212,7 +213,7 @@ export const CustomerPanel = memo(function CustomerPanel({
             <SelectContent>
               {CURRENCY_PICK_ORDER.map((code) => (
                 <SelectItem key={code} value={code}>
-                  {t(`currency.${code.toLowerCase()}`, code)}
+                  {nameOfCurrency(t, code, code)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -227,7 +228,7 @@ export const CustomerPanel = memo(function CustomerPanel({
           <div key={code}>
             <span className={fieldLabel}>
               {t('invoiceBuilder.customer.rate', 'نرخ تبدیل')} —{' '}
-              {`1 ${t(`currency.${code.toLowerCase()}`, code)}`}
+              {`1 ${nameOfCurrency(t, code, code)}`}
             </span>
             <NumberStepper
               value={rates[code] ?? ''}

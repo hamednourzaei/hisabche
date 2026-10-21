@@ -285,10 +285,15 @@ describe('Settings → time zone', () => {
     // The shell renders its own «general» settings, not the web page. A
     // section added only to the web page does not exist on Windows or the
     // phone — and without a zone no attendance link can be made there.
+    // Since 21 Oct 2026 the shell renders the web's own page, so the section
+    // is there through it — the shell must render that page, not its own.
     const shell = code('packages/app-shell/src/features/settings/settings-page.tsx')
-    expect(shell).toContain('<WorkplaceTimeZoneSection />')
+    expect(shell).toContain('<SharedSettingsPage')
     expect(shell).toContain("from '@hisabche/ui/screens'")
-    expect(readFileSync(join(UI, 'screens.ts'), 'utf8')).toContain('WorkplaceTimeZoneSection,')
+    expect(readFileSync(join(UI, 'screens.ts'), 'utf8')).toContain('SettingsPage,')
+    expect(code('packages/ui/src/components/ui/settings/settings-page.tsx')).toContain(
+      '<WorkplaceTimeZoneSection />',
+    )
   })
 
   it('is mounted in settings, and a server code is translated only from the closed list', () => {

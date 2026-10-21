@@ -29,14 +29,23 @@ function resolveModule(from: string, spec: string): string | null {
   return null
 }
 
-/** Value (not type-only) re-exports of a barrel, as file paths. */
-function valueExports(file: string): string[] {
+/**
+ * Value (not type-only) re-exports of a barrel, as file paths — FOLLOWING
+ * nested barrels. `lib/capability/index.ts` re-exported a hook without
+ * 'use client'; one level deep the guard never saw it, and `next build`
+ * (Vercel) failed while this test was green (21 Oct 2026).
+ */
+function valueExports(file: string, seen: Set<string> = new Set()): string[] {
+  if (seen.has(file)) return []
+  seen.add(file)
   const src = readFileSync(file, 'utf8')
   const out: string[] = []
   for (const m of src.matchAll(/export\s+(type\s+)?(?:\{[^}]*\}|\*)\s+from\s+'(\.[^']+)'/g)) {
     if (m[1]) continue
     const path = resolveModule(file, m[2]!)
-    if (path) out.push(path)
+    if (!path) continue
+    out.push(path)
+    if (/[\\/]index\.tsx?$/.test(path)) out.push(...valueExports(path, seen))
   }
   return out
 }

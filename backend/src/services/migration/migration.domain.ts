@@ -69,13 +69,9 @@ export type MigrationSourceType = (typeof MIGRATION_SOURCE_TYPES)[number]
  * header, because a header is a claim by the sender. The cell cap exists
  * because rows × columns, not bytes, is what a parser has to hold.
  */
-export const INTAKE_LIMITS = {
-  maxBytes: 8 * 1024 * 1024,
-  maxRows: 50_000,
-  maxColumns: 120,
-  maxCells: 1_500_000,
-  maxFieldChars: 4_000,
-} as const
+// One set of limits for the server and the device's local engine.
+import { INTAKE_LIMITS } from '@hisabche/validation'
+export { INTAKE_LIMITS }
 
 export interface IntakeRejection {
   code:

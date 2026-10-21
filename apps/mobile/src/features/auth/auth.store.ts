@@ -125,7 +125,13 @@ export function useCan(capability: Capability): boolean {
 // ============================================
 registerTokenGetter(() => useAuthStore.getState().session?.token ?? null)
 
+// ⚠️ THE HOST NEVER DELETES THE STORED SESSION ON A 401.
+//
+// The host and the page keep the session under the SAME secure key, but only
+// the page owns it (it signs in, refreshes and signs out). The host's own
+// requests — the outbox drain at start and whenever the network returns — can
+// go out before it has a token, and their 401 cleared the page's session: the
+// person was signed out every time the app was closed or the phone restarted.
 setOnUnauthorized(() => {
-  void sessionStore.clear()
   useAuthStore.setState({ session: null, isAuthenticated: false })
 })

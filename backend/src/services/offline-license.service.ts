@@ -345,6 +345,80 @@ export class OfflineLicenseService {
   }
 
   /**
+   * A licence the platform admin issues for ONE DEVICE and a business that
+   * does not exist yet (owner decision, 21 Oct 2026).
+   *
+   * The offline edition is sold to people who may never open an online
+   * account, so there is no subscription to check: the admin's issuing IS
+   * the sale. The business and its owner are new ids — the device creates the
+   * business after the licence is accepted. Bound to the device id the app
+   * shows on its licence screen; another device rejects it (WRONG_DEVICE).
+   */
+  async issueDeviceLicense(params: {
+    deviceId: string
+    label?: string | undefined
+    periodDays: number
+  }): Promise<SignedOfflineLicense> {
+    const keyInfo = this.getSigningKey()
+    if (!keyInfo) throw new LicenseSigningNotConfiguredError()
+
+    const now = new Date()
+    const workspaceId = randomUUID()
+    const payload: OfflineLicensePayload = {
+      license_id: randomUUID(),
+      workspace_id: workspaceId,
+      account_id: randomUUID(),
+      plan: 'OFFLINE',
+      issued_at: now.toISOString(),
+      expires_at: new Date(now.getTime() + params.periodDays * 24 * 60 * 60 * 1000).toISOString(),
+      device_id: params.deviceId,
+      features: ['invoice.create', 'reports.view', 'export.all'],
+      version: 1,
+      key_id: keyInfo.keyId,
+    }
+    const signed = signOfflineLicense(payload, keyInfo.secretKey, keyInfo.keyId)
+
+    // The record first: a licence the admin cannot later find cannot be revoked.
+    const { error: licError } = await supabase.from('offline_licenses').insert({
+      license_id: payload.license_id,
+      workspace_id: workspaceId,
+      account_id: payload.account_id,
+      plan: 'OFFLINE',
+      status: 'active',
+      issued_at: payload.issued_at,
+      expires_at: payload.expires_at,
+      device_id: payload.device_id,
+      features: payload.features,
+      version: 1,
+      revoked_at: null,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    })
+    if (licError) throw new DatabaseError('Failed to store offline licence', licError)
+
+    const { error: deviceError } = await supabase.from('devices').upsert({
+      device_id: payload.device_id,
+      workspace_id: workspaceId,
+      label: params.label ?? null,
+      activated_at: now.toISOString(),
+      released_at: null,
+      last_verified_at: null,
+      updated_at: now.toISOString(),
+    })
+    if (deviceError) throw new DatabaseError('Failed to register device', deviceError)
+
+    await this.logEvent({
+      license_id: payload.license_id,
+      workspace_id: workspaceId,
+      event: 'activation',
+      device_id: payload.device_id,
+      reason: 'Issued by the platform admin for one device',
+    })
+
+    return signed
+  }
+
+  /**
    * Activates a device seat on the licence (1 computer + 1 mobile).
    * - 2nd computer or 2nd mobile -> LICENSE_SEATS_FULL (refused, dashboard locked).
    * - Reinstall on same device (matching stableId) -> free forever, rebinds seat.

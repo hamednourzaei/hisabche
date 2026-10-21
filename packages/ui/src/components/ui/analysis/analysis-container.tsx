@@ -39,6 +39,7 @@ import { HubTabs } from '../hub-tabs'
 import { SegmentedControl } from '../segmented-control'
 import { PeerBenchmark } from './peer-benchmark'
 import { ReportBuilder } from './report-builder'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 type T = (key: string, fallback?: string) => string
 type Section =
@@ -506,7 +507,7 @@ function BreakEven({ t, locale }: { t: T; locale: string }) {
         <>
           <dl className="grid grid-cols-2 gap-3 md:grid-cols-3">
             <Stat
-              label={`${t('analysis.breakEven.fixed', 'هزینه‌ی ثابت بازه')} (${t(`currency.${analysis.data.currency.toLowerCase()}`, analysis.data.currency)})`}
+              label={`${t('analysis.breakEven.fixed', 'هزینه‌ی ثابت بازه')} (${nameOfCurrency(t, analysis.data.currency, analysis.data.currency)})`}
               value={money(analysis.data.fixedCostsTotal)}
             />
           </dl>

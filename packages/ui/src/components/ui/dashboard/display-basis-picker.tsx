@@ -34,6 +34,7 @@ import { rateFromPair } from '../../../lib/warehouse/rate-from-pair'
 import { inStoredUnit, measuresFor, namedUnit, OWN_MEASURE } from '../../../lib/rate-measures'
 import { typedNumber } from '../../../lib/typed-number'
 import { JalaliDatePicker } from '../jalali-datepicker'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 /** A unit the business named itself carries this prefix inside the picker. */
 const CUSTOM = 'unit:'
@@ -257,7 +258,7 @@ export function ExchangeRateForm({
       ? tr('display.otherUnit', 'واحد دیگر…')
       : code.startsWith(CUSTOM)
         ? code.slice(CUSTOM.length)
-        : tr(`currency.${code.toLowerCase()}`, LABEL[code] ?? code)
+        : nameOfCurrency(tr, code, LABEL[code] ?? code)
   const option = (code: string) => ({
     value: code,
     label:
@@ -346,8 +347,11 @@ export function ExchangeRateForm({
     measure: string,
     setMeasure: (next: string) => void,
   ) => (
+    // The amount and its unit sit on the label's line; the currency (or the new
+    // unit's name) takes the line under them. Side by side, three controls and
+    // a label wrapped into a scattered column on a phone.
     <div data-rate-side={which} className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-      <div className="flex min-w-[9rem] flex-1 items-center gap-2">
+      <div className="order-last flex basis-full items-center gap-2">
         {sideIcon(code)}
         {code === OTHER ? (
           <input
@@ -381,7 +385,7 @@ export function ExchangeRateForm({
         value={value}
         onChange={(event) => setValue(event.target.value)}
         disabled={isSaving}
-        className={cn(field, 'w-32 tabular-nums')}
+        className={cn(field, 'min-w-0 flex-1 tabular-nums')}
       />
       {measuresFor(code).length > 1 ? (
         <SelectField
@@ -459,7 +463,7 @@ export function ExchangeRateForm({
     return `1 ${name(result.code)} = ${fraction ? `${grouped}.${fraction}` : grouped} ${base}`
   })()
 
-  const label = 'w-24 shrink-0 text-sm font-medium text-[hsl(var(--fg-secondary))]'
+  const label = 'w-20 shrink-0 text-sm font-medium text-[hsl(var(--fg-secondary))]'
   return (
     <form
       data-exchange-rate-form=""
@@ -477,8 +481,8 @@ export function ExchangeRateForm({
       </p>
 
       <div className="flex flex-col gap-3 rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.4)] p-4">
-        <div className="flex items-center gap-3">
-          <span className={label}>{tr('display.each', 'هر')}</span>
+        <div className="flex items-start gap-3">
+          <span className={cn(label, 'pt-2.5')}>{tr('display.each', 'هر')}</span>
           {side(
             'left',
             leftCode,
@@ -491,7 +495,7 @@ export function ExchangeRateForm({
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="w-24 shrink-0" aria-hidden="true" />
+          <span className="w-20 shrink-0" aria-hidden="true" />
           <div className="relative flex flex-1 items-center justify-center">
             <span
               className="absolute inset-x-0 top-1/2 h-px bg-[hsl(var(--border-default))]"
@@ -510,8 +514,8 @@ export function ExchangeRateForm({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className={label}>{tr('display.equalsTo', 'معادل است با')}</span>
+        <div className="flex items-start gap-3">
+          <span className={cn(label, 'pt-2.5')}>{tr('display.equalsTo', 'معادل است با')}</span>
           {side(
             'right',
             rightCode,

@@ -177,7 +177,8 @@ describe('#43 / #75 — the activity feed', () => {
 describe('#49 — stock is valued at what it cost', () => {
   it('buy price, never sell price', () => {
     const domain = readFileSync(
-      join(__dirname, '../../../../backend/src/services/inventory/stock-summary.domain.ts'),
+      // One rule for the server and the device's local engine (validation).
+      join(__dirname, '../../../validation/src/schemas/stock-summary.ts'),
       'utf8',
     )
     expect(domain).toContain('Math.max(quantity, 0) * (Number(row.buy_price) || 0)')

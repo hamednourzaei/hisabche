@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/settings/settings-page.tsx
 'use client'
 
-import { useState, useCallback, useEffect, useMemo, useRef, memo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef, memo, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
@@ -12,6 +12,8 @@ import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { persistedBytes } from '../../../lib/persisted-bytes'
 import { HardwareSection } from './hardware-section'
 import { BookCurrencySection } from './book-currency-section'
+import { MetalUnitSection } from './metal-unit-section'
+import { LanguageSection } from './language-section'
 import { WorkplaceTimeZoneSection } from './workplace-time-zone-section'
 import { useToast } from '../toast-provider'
 import {
@@ -1079,7 +1081,25 @@ DevelopersSection.displayName = 'DevelopersSection'
 
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
-export const SettingsPage = memo(function SettingsPage() {
+export interface SettingsPageProps {
+  /**
+   * The account card. Windows and Android pass their own: signing out there
+   * must ask about unsent offline changes first (LogoutPendingDialog).
+   */
+  accountSlot?: ReactNode | undefined
+  /** What only a device has — its database, version, updates, display. */
+  deviceSlot?: ReactNode | undefined
+}
+
+/**
+ * ⚠️ ONE SETTINGS PAGE FOR WEB, WINDOWS AND ANDROID (owner, 21 Oct 2026).
+ * The shells used to draw their own two-column page with four of these
+ * sections; now they render this one and fill only the two slots above.
+ */
+export const SettingsPage = memo(function SettingsPage({
+  accountSlot,
+  deviceSlot,
+}: SettingsPageProps = {}) {
   const tOriginal = useTranslations()
   const t = (key: string, fallback?: string): string => {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
@@ -1095,9 +1115,11 @@ export const SettingsPage = memo(function SettingsPage() {
         <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('settings.description')}</p>
       </div>
 
-      <AccountSection />
+      {accountSlot ?? <AccountSection />}
+      <LanguageSection />
       <BusinessStampSection />
       <BookCurrencySection />
+      <MetalUnitSection />
       <WorkplaceTimeZoneSection />
       <BillingSection />
       <WorkflowTemplatesSection />
@@ -1106,6 +1128,7 @@ export const SettingsPage = memo(function SettingsPage() {
       <HardwareSection />
       <PerformanceSection />
       <StorageSection />
+      {deviceSlot}
     </div>
   )
 })

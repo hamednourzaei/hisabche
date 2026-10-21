@@ -7,7 +7,12 @@
 // Cost layers are created on opening stock ONLY when buyPrice > 0.
 // ============================================
 
-import { createProductSchema, normalizeBarcode, updateProductSchema } from '@hisabche/validation'
+import {
+  createProductSchema,
+  normalizeBarcode,
+  summarizeStock,
+  updateProductSchema,
+} from '@hisabche/validation'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -157,6 +162,18 @@ export function registerProductRoutes(router: Router): void {
   })
 
   // ─── GET /products/:id ──────────────────────────────────────
+  // ─── GET /products/summary ─────────────────────────────────
+  // The warehouse cards offline. Over EVERY active product, with the server's
+  // own rule (summarizeStock) — without it each card read «نامعلوم» offline.
+  // Registered before `/products/:id`, which would otherwise take «summary».
+  router.get('/products/summary', (c: RouteHandlerContext) => {
+    const rows = c.db.all<{ quantity: number; buy_price: number; min_stock_level: number }>(
+      'SELECT quantity, buy_price, min_stock_level FROM product WHERE workspace_id = ? AND deleted_at IS NULL AND is_active = 1',
+      [c.ctx.workspaceId],
+    )
+    return summarizeStock(rows)
+  })
+
   router.get('/products/:id', (c: RouteHandlerContext) => {
     const { db, ctx, params } = c
     const { id } = params

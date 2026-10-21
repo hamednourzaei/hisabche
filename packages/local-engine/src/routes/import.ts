@@ -5,7 +5,13 @@
 // Inspects CSV/TSV data and commits validated records into local SQLite tables.
 // ============================================
 
-import { round2 } from '@hisabche/validation'
+import {
+  looksLikeWorkbook,
+  readXlsx,
+  round2,
+  XlsxError,
+  type XlsxSheet,
+} from '@hisabche/validation'
 
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
@@ -44,21 +50,44 @@ export function registerImportRoutes(router: Router): void {
     }
 
     let text = b.content || ''
+    // A workbook's rows are already a table: they skip the text step (this
+    // engine's CSV split does not handle quoted commas).
+    let workbookRows: string[][] | null = null
     if (!text && b.contentBase64) {
+      // ⚠️ NOT `Buffer`: it is Node's, and Android's engine (Hermes) has none —
+      // every file failed there with «invalid base64», CSV included.
+      let bytes: Uint8Array
       try {
-        text = Buffer.from(b.contentBase64, 'base64').toString('utf-8')
+        bytes = Uint8Array.from(atob(b.contentBase64.replace(/\s+/g, '')), (ch) => ch.charCodeAt(0))
       } catch {
         throw new ValidationError('MIGRATION_INSPECT_INVALID_BASE64')
       }
+      // An Excel workbook is a zip («PK»): read with the SAME reader the
+      // server uses (validation/schemas/xlsx-reader.ts — pure JS, so it runs
+      // in Hermes too), then into the same CSV path as a text file. Its
+      // refusals keep the server's codes, so the page explains them alike.
+      if (looksLikeWorkbook(bytes)) {
+        let sheets: XlsxSheet[]
+        try {
+          sheets = readXlsx(bytes)
+        } catch (error) {
+          if (error instanceof XlsxError) throw new ValidationError(`MIGRATION_${error.code}`)
+          throw error
+        }
+        const sheet = sheets.find((candidate) => candidate.rows.length > 0) ?? sheets[0]!
+        workbookRows = sheet.rows
+      } else {
+        text = new TextDecoder('utf-8').decode(bytes)
+      }
     }
 
-    if (!text) {
+    if (!text && !workbookRows) {
       throw new ValidationError('MIGRATION_INSPECT_NO_CONTENT')
     }
 
     const filename = b.filename || 'import.csv'
     const delimiter = /\.tsv$/i.test(filename) ? '\t' : text.includes('\t') ? '\t' : ','
-    const rows = parseCsvLines(text, delimiter)
+    const rows = workbookRows ?? parseCsvLines(text, delimiter)
 
     const headers = rows[0] || []
     const dataRows = rows.slice(1)

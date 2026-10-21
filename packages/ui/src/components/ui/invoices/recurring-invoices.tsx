@@ -31,6 +31,7 @@ import { useLocalePush } from '../../../hooks/use-locale-push'
 import { Button } from '../button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../dialog'
 import { useToast } from '../toast-provider'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 type T = (key: string, fallback?: string) => string
 
@@ -166,7 +167,7 @@ function RecurringInvoicesList({ t, onNavigate }: { t: T; onNavigate: () => void
                         {formatNumber(row.summary.total, locale, 2)}
                       </span>{' '}
                       {row.summary.currency
-                        ? t(`currency.${row.summary.currency.toLowerCase()}`, row.summary.currency)
+                        ? nameOfCurrency(t, row.summary.currency, row.summary.currency)
                         : ''}
                     </>
                   ) : null}

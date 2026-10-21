@@ -140,7 +140,10 @@ describe('#93 «بدون انبار» adds a product; warehouses can be renamed'
 
 describe('#94/#95 add-to-warehouse modal, product code, expiry', () => {
   const modal = code(ui('warehouse/add-to-warehouse-modal.tsx'))
-  const picker = code(ui('invoice-builder/grid/description-cell.tsx'))
+  // The cell and the shared hook it reads its rows from (use-picker-rows).
+  const picker =
+    code(ui('invoice-builder/grid/description-cell.tsx')) +
+    code(readFileSync(join(__dirname, '../hooks/invoices/use-picker-rows.ts'), 'utf8'))
   const expiry = code(ui('warehouse-detail/product-expiry-panel.tsx'))
 
   it('the modal has code, unit + custom unit, quantity and both prices — and no minimum (owner, 13 October)', () => {

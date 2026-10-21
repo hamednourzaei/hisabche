@@ -112,6 +112,8 @@ const FILE_ERRORS = [
   'MIGRATION_XLSX_ENCRYPTED',
   'MIGRATION_XLSX_TOO_LARGE',
   'MIGRATION_XLSX_NO_SHEET',
+  // The device's engine (offline) — it reads workbooks with the same reader.
+  'MIGRATION_INSPECT_INVALID_BASE64',
 ] as const
 
 function toBase64(buffer: ArrayBuffer): string {

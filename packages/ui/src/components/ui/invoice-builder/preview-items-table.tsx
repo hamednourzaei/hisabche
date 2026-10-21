@@ -26,6 +26,7 @@ import {
 import { formatNumber } from '@hisabche/formatting'
 
 import { cn } from '../../../lib/utils'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 export interface PreviewItemsTableProps {
   t: (key: string, fallback?: string) => string
@@ -91,7 +92,7 @@ export const PreviewItemsTable = memo(function PreviewItemsTable({
                   <span className="ms-1 text-[10px] font-normal text-[hsl(var(--fg-tertiary))]">
                     (
                     {column.suffix ??
-                      t(`currency.${(column.currency ?? '').toLowerCase()}`, column.currency ?? '')}
+                      nameOfCurrency(t, column.currency ?? '', column.currency ?? '')}
                     )
                   </span>
                 ) : null}
@@ -167,10 +168,7 @@ export const PreviewItemsTable = memo(function PreviewItemsTable({
                           it must never be mistaken for the invoice currency. */}
                       {isForeignMoneyColumn(column, ctx) ? (
                         <span className="ms-1 text-[10px] text-[hsl(var(--fg-tertiary))]">
-                          {t(
-                            `currency.${(column.currency ?? '').toLowerCase()}`,
-                            column.currency ?? '',
-                          )}
+                          {nameOfCurrency(t, column.currency ?? '', column.currency ?? '')}
                         </span>
                       ) : null}
                     </td>

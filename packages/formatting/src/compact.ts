@@ -16,3 +16,21 @@ export function formatCompactCount(count: number, lang: UiLanguage): string {
   if (n < 1_000_000) return `${nf.format(floor1(n / 1000))}k`
   return `${nf.format(floor1(n / 1_000_000))}M`
 }
+
+/**
+ * A figure too long for its box: `950`, `12.5k`, `481.3M`, `2.6B`, with sign.
+ *
+ * For a supporting stat or a percentage, never a document total — the exact
+ * figure stays one tap away (the caller puts it in `title`). Rounded DOWN in
+ * magnitude like `formatCompactCount`, so it never claims more than is there.
+ * `intlLocale` is the resolved Intl locale the screen already formats with.
+ */
+export function formatCompactValue(value: number, intlLocale: string): string {
+  const nf = new Intl.NumberFormat(intlLocale, { maximumFractionDigits: 1 })
+  const sign = value < 0 ? '-' : ''
+  const n = Math.abs(value)
+  if (n < 1000) return sign + nf.format(floor1(n))
+  if (n < 1_000_000) return `${sign}${nf.format(floor1(n / 1000))}k`
+  if (n < 1_000_000_000) return `${sign}${nf.format(floor1(n / 1_000_000))}M`
+  return `${sign}${nf.format(floor1(n / 1_000_000_000))}B`
+}

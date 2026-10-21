@@ -1,3 +1,5 @@
+'use client'
+
 // ============================================
 // packages/ui/src/lib/capability/use-action-availability.ts
 //

@@ -3,10 +3,22 @@
 
 import type { ReactNode } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { useAuthStore, useThemeStore, useOnboardingStore, useWorkspaceStore } from '@hisabche/store'
+import {
+  useAuthStore,
+  usePreferencesStore,
+  useThemeStore,
+  useOnboardingStore,
+  useWorkspaceStore,
+} from '@hisabche/store'
 import { useMyCapabilities } from '@hisabche/api'
 import { isRouteDenied } from '@hisabche/ui-contract'
-import { NoAccessNotice, usePageLook } from '@hisabche/ui'
+import {
+  APP_LANGUAGES,
+  GlobalPageCustomizer,
+  LanguageSwitchProvider,
+  NoAccessNotice,
+  usePageLook,
+} from '@hisabche/ui'
 import { useTranslations, useLocale } from 'next-intl'
 import {
   DashboardHeader,
@@ -25,7 +37,7 @@ import {
   useHeaderPeople,
   useToast,
 } from '@hisabche/ui'
-import { useEffect, useRef, useCallback, useMemo, useState, memo } from 'react'
+import { Fragment, useEffect, useRef, useCallback, useMemo, useState, memo } from 'react'
 import {
   NAV_ITEMS,
   PRIMARY_ITEMS,
@@ -289,6 +301,12 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
     },
     [pathname, currentLang, router, withLocale],
   )
+  // Settings' «زبان برنامه» calls the same switch as the header — one way to
+  // change language on the web (lib/language-switch.tsx).
+  const languageSwitch = useMemo(
+    () => ({ current: currentLang, options: APP_LANGUAGES, change: toggleLang }),
+    [currentLang, toggleLang],
+  )
 
   const handleNavigate = useCallback(
     (_id: string, path: string) => {
@@ -360,6 +378,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
 
   // ✅ صفحه‌های قابل جستجو — از همان NAV_ITEMS ساخته می‌شوند تا با منو
   // هم‌خوان بمانند و جای دیگری نگهداری نشوند.
+  const metalUnit = usePreferencesStore((state) => state.metalUnit)
   const searchablePages = useMemo(
     () =>
       NAV_ITEMS.map((item) => ({
@@ -377,6 +396,18 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
       router.push(localizedPath)
     },
     [router, withLocale],
+  )
+  // One search, two places: the header from a tablet up, the «More» sheet below.
+  const searchSlot = (
+    <GlobalSearch
+      compact
+      pages={searchablePages}
+      onNavigate={handleSearchNavigate}
+      t={(key, fallback) => {
+        const v = t(key as Parameters<typeof t>[0])
+        return v && v !== key ? v : (fallback ?? key)
+      }}
+    />
   )
   const commands = useMemo(
     () =>
@@ -519,22 +550,16 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
           onToggleLang={toggleLang}
           onLogout={handleLogout}
           onNavigateLogin={handleNavigateLogin}
-          searchSlot={
-            <GlobalSearch
-              compact
-              pages={searchablePages}
-              onNavigate={handleSearchNavigate}
-              t={(key, fallback) => {
-                const v = t(key as Parameters<typeof t>[0])
-                return v && v !== key ? v : (fallback ?? key)
-              }}
-            />
-          }
+          searchSlot={searchSlot}
         />
 
         <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
           <SandboxNotice />
           <BookCurrencySync />
+          {/* Below a tablet the wrench sits at the top of the page, not in the header. */}
+          <div className="mb-2 flex justify-end md:hidden">
+            <GlobalPageCustomizer />
+          </div>
           <Breadcrumb className="mb-4" />
           {routeLocked ? (
             <SubscriptionLockNotice />
@@ -542,7 +567,11 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
             // The page is NOT mounted: none of its queries run.
             <NoAccessNotice onHome={() => router.push(withLocale('/dashboard'))} />
           ) : (
-            children
+            // Keyed by the metal unit: a figure already on screen was formatted
+            // in the old unit, and only a fresh render shows it in the new one.
+            <LanguageSwitchProvider value={languageSwitch}>
+              <Fragment key={metalUnit}>{children}</Fragment>
+            </LanguageSwitchProvider>
           )}
         </main>
 
@@ -563,6 +592,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
             moreIcon={MORE_ICON}
             activeNav={activeNav}
             onNavigate={handleNavigate}
+            searchSlot={searchSlot}
           />
         )}
       </div>

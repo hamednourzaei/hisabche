@@ -28,6 +28,8 @@ import { SelectField } from '../select-field'
 
 interface WarehouseViewProps {
   t: (key: string, fallback?: string) => string
+  /** The books currency — the total is in it, so it is its name. */
+  bookCurrency?: string | undefined
   fmt: (v: number) => string
   search: string
   onSearchChange: (value: string) => void
@@ -136,9 +138,12 @@ const WarehouseHeader = memo(function WarehouseHeader({
   onEditCurrent?: (() => void) | undefined
 }) {
   return (
-    // Title and action share one row at every width, mobile included.
-    <div className="flex flex-row items-start justify-between gap-3">
-      <div className="flex min-w-0 items-start gap-2">
+    // Title and actions share one row while both fit. The actions (costing
+    // picker + button) are wider than a phone's spare room, and as a shrink-0
+    // column they squeezed the description to one word per line — so the row
+    // wraps and the title keeps a readable minimum width.
+    <div className="flex flex-row flex-wrap items-start justify-between gap-3">
+      <div className="flex min-w-[12rem] flex-1 items-start gap-2">
         {onBack ? (
           <button
             type="button"
@@ -174,7 +179,9 @@ const WarehouseHeader = memo(function WarehouseHeader({
         </div>
       </div>
 
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+      {/* On a phone the actions take their own full row and wrap: as a
+          shrink-0 column they ran off the screen and over the title. */}
+      <div className="flex w-full flex-wrap items-center justify-start gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
         {headerExtra}
         {shelvesActionLabel && onShelvesAction ? (
           <button
@@ -368,6 +375,7 @@ export const WarehouseView = memo(function WarehouseView({
   onDelete,
   stockStatus,
   stockLabel,
+  bookCurrency,
 }: WarehouseViewProps) {
   // Loading shows the placeholder; a loaded response without a summary says
   // the figure is unavailable. Neither shows a number that is not there.
@@ -385,6 +393,9 @@ export const WarehouseView = memo(function WarehouseView({
   // The unit «ارزش کل» is shown in — afghani, or any currency with a rate
   // (owner's request: the «(AFN)» of the card should be selectable).
   const [displayCode, setDisplayCode] = useState(BASE_CODE)
+  // ⚠️ The total is in the BOOKS' currency, so that is its name — a business
+  // keeping its books in gold saw «AFN» on its own stock value (owner report).
+  const baseLabel = bookCurrency ?? '—'
   const displayed = currencies.find((c) => c.code === displayCode)
   const valueText =
     displayCode === BASE_CODE || !displayed
@@ -408,7 +419,7 @@ export const WarehouseView = memo(function WarehouseView({
               value={displayCode}
               onChange={setDisplayCode}
               options={[
-                { value: BASE_CODE, label: 'AFN' },
+                { value: BASE_CODE, label: baseLabel },
                 ...currencies.map((c) => ({ value: c.code, label: c.code })),
               ]}
               // Currency-code sized (owner's request, 27 Sep 2026): SelectField is
@@ -416,7 +427,7 @@ export const WarehouseView = memo(function WarehouseView({
               className="h-6 w-auto shrink-0 gap-0.5 rounded-md border-transparent bg-transparent px-1 text-[11px] font-semibold hover:bg-[hsl(var(--surface-muted))] [&>svg]:size-3"
             />
           ) : (
-            <span className="text-[11px] text-[hsl(var(--fg-tertiary))]">(AFN)</span>
+            <span className="text-[11px] text-[hsl(var(--fg-tertiary))]">({baseLabel})</span>
           ),
         text: valueText,
       },

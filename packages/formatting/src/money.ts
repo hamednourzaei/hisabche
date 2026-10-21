@@ -46,6 +46,14 @@
 // two-decimal currency would round every gold invoice to the centigram.
 // ---------------------------------------------------------------------------
 
+import {
+  isMetal,
+  METAL_UNIT_SIGN,
+  metalDisplayUnit,
+  metalFractionDigits,
+  toShownMetal,
+} from './metal-unit'
+
 /** The currencies the product actually supports today. */
 export type ActiveCurrency =
   // ─── Region ───
@@ -162,6 +170,8 @@ export function fractionDigits(currency: KnownCurrency): 0 | 2 | 3 {
  */
 export function currencySign(currency: KnownCurrency, locale?: string): string {
   if (currency === 'AFN') return locale && /^en/i.test(locale) ? 'AFN' : 'افغانی'
+  // A metal says the unit it is SHOWN in (g / kg / t) — metal-unit.ts.
+  if (isMetal(currency)) return METAL_UNIT_SIGN[metalDisplayUnit()]
   return CURRENCY_SIGN[currency] ?? currency
 }
 
@@ -171,6 +181,21 @@ export function currencySign(currency: KnownCurrency, locale?: string): string {
  * some Android builds ships a partial Intl).
  */
 export function formatAmount(value: number, currency: KnownCurrency, locale: string): string {
+  // ⚠️ A METAL IS SHOWN IN THE CHOSEN UNIT, CONVERTED. The value is grams (the
+  // books); 2,500 g reads «2.5» beside «kg», never «2,500 kg».
+  if (isMetal(currency)) {
+    const shown = toShownMetal(value, currency)
+    try {
+      return new Intl.NumberFormat(locale, {
+        // Weighed, not counted: the decimals are kept, the empty ones are not
+        // printed — every gold figure used to carry «/۰۰۰» (owner report).
+        minimumFractionDigits: 0,
+        maximumFractionDigits: metalFractionDigits(),
+      }).format(shown)
+    } catch {
+      return String(shown)
+    }
+  }
   const digits = fractionDigits(currency)
   try {
     return new Intl.NumberFormat(locale, {

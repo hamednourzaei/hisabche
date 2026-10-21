@@ -977,6 +977,8 @@ export {
   signOfflineLicense,
   verifyOfflineLicenseSignature,
   verifyOfflineLicense,
+  encodeLicenseCode,
+  parseLicenseCode,
   type OfflineLicensePayload,
   type SignedOfflineLicense,
   type DeviceSeat,
@@ -987,3 +989,14 @@ export {
   type VerifyLicenseOptions,
   type VerifyLicenseResult,
 } from './schemas/offline-license'
+export * from './schemas/stock-summary'
+export {
+  INTAKE_LIMITS,
+  XlsxError,
+  looksLikeWorkbook,
+  readXlsx,
+  rowsToCsv,
+  serialToIso,
+  type XlsxRejection,
+  type XlsxSheet,
+} from './schemas/xlsx-reader'

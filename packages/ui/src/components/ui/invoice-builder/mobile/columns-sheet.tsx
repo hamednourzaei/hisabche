@@ -25,6 +25,7 @@ import { Button } from '../../button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../../sheet'
 import { Switch } from '../../switch'
 import { cn } from '../../../../lib/utils'
+import { nameOfCurrency } from '../../../../lib/currency-name'
 
 export interface ColumnsSheetProps {
   open: boolean
@@ -129,7 +130,7 @@ export const ColumnsSheet = memo(function ColumnsSheet({
                   <p className="truncate text-[11px] text-[hsl(var(--fg-tertiary))]">
                     {column.typeLabel ?? t(`invoiceBuilder.columnType.${column.type}`, column.type)}
                     {column.currency
-                      ? ` · ${t(`currency.${column.currency.toLowerCase()}`, column.currency)}`
+                      ? ` · ${nameOfCurrency(t, column.currency, column.currency)}`
                       : ''}
                   </p>
 

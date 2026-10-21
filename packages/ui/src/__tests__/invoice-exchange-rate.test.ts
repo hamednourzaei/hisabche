@@ -104,7 +104,12 @@ describe('the screens', () => {
     expect(builder).toContain('scanSlot={ <CameraScanButton')
     expect(read('components/ui/invoice-builder/grid/grid-toolbar.tsx')).toContain('{scanSlot}')
     const page = read('components/ui/invoice-builder/invoice-builder-page.tsx')
-    expect(page).toContain('stockWarning={ <> {rateSlot} {scanSlot} {stockWarning} </> }')
+    expect(page).toContain('stockWarning={ <> {scanSlot} {stockWarning} </> }')
+    // The rate travels on its own, to the top of the phone's invoice beside
+    // the currency (owner, 21 Oct 2026) — not among the stock warnings.
+    expect(page).toContain('rateSlot={rateSlot}')
+    const mobile = read('components/ui/invoice-builder/mobile/invoice-builder-mobile.tsx')
+    expect(mobile.indexOf('{rateSlot}')).toBeLessThan(mobile.indexOf('اقلام فاکتور'))
     // One button, not two dialogs listening to the same scanner.
     expect(builder.split('<CameraScanButton').length - 1).toBe(1)
   })

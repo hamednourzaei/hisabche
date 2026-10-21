@@ -383,3 +383,44 @@ export function verifyOfflineLicense(options: VerifyLicenseOptions): VerifyLicen
     payload,
   }
 }
+
+// ─── The licence as text a person can copy and paste ────────────────────────
+//
+// The admin panel shows a signed licence as one line; the device takes the
+// same line back. `HSB1.` + base64url(JSON). The prefix names the format so a
+// future change is a new prefix, never a guess. Parsing proves only the SHAPE;
+// trust comes from `verifyOfflineLicense` with the public key.
+
+const LICENSE_CODE_PREFIX = 'HSB1.'
+
+function toBase64Url(text: string): string {
+  const bytes = new TextEncoder().encode(text)
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function fromBase64Url(code: string): string {
+  const padded = code.replace(/-/g, '+').replace(/_/g, '/')
+  const binary = atob(padded + '='.repeat((4 - (padded.length % 4)) % 4))
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
+  return new TextDecoder().decode(bytes)
+}
+
+export function encodeLicenseCode(license: SignedOfflineLicense): string {
+  return LICENSE_CODE_PREFIX + toBase64Url(JSON.stringify(license))
+}
+
+/** The signed licence inside a pasted code, or null when it is not one. */
+export function parseLicenseCode(text: string): SignedOfflineLicense | null {
+  const code = text.replace(/\s+/g, '')
+  if (!code.startsWith(LICENSE_CODE_PREFIX)) return null
+  try {
+    const parsed = signedOfflineLicenseSchema.safeParse(
+      JSON.parse(fromBase64Url(code.slice(LICENSE_CODE_PREFIX.length))),
+    )
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
+}

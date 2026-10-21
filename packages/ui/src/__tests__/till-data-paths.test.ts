@@ -295,7 +295,9 @@ describe('the till page after the 13 October review', () => {
     expect(view).toContain(
       'const tillsOfListCurrency = tills.filter( (item) => (item.currency ?? bookCurrency) === listCurrency, )',
     )
-    expect(view).toContain('<Money minor={recordedInListCurrency} currency={listCurrency} />')
+    // Digits only on the tile (the owner: «افغانی» on every tile pushed the figure
+    // out); the currency is said once, in the hint below.
+    expect(view).toContain('<Money minor={recordedInListCurrency} currency={listCurrency} bare />')
     expect(view).toContain("t('till.only_currency', 'فقط صندوق‌های این ارز')}: ${listCurrency}")
     // A failed or unfinished read of the list is not «zero».
     expect(view).toContain(') : tillsKnown && listCurrency ? (')

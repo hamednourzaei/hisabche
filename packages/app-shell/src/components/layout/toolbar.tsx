@@ -17,7 +17,7 @@
 //   * the IPC-backed sync status
 // ============================================
 
-import React, { memo, useCallback, useState } from 'react'
+import React, { memo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslations } from 'next-intl'
 import { Search } from 'lucide-react'
@@ -27,7 +27,7 @@ import { useThemeStore } from '@hisabche/store'
 import { LogoutPendingDialog } from '@/components/layout/logout-pending-dialog'
 import { useAuthStore, useCurrentUser } from '@/features/auth/auth.store'
 import { useSyncStatus } from '@/features/sync/use-sync'
-import { i18n, setDesktopLanguage, supportedLanguages, type SupportedLanguage } from '@/shared/i18n'
+import { useShellLanguage } from '@/shared/i18n/use-shell-language'
 import { useUiStore } from '@/shared/stores/ui.store'
 
 /**
@@ -37,7 +37,7 @@ import { useUiStore } from '@/shared/stores/ui.store'
  * is the same intent through the desktop idiom. Passed as the header's
  * `searchSlot` so the button sits exactly where web puts it.
  */
-const SearchTrigger = memo(function SearchTrigger() {
+export const SearchTrigger = memo(function SearchTrigger() {
   const t = useTranslations()
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen)
 
@@ -83,18 +83,8 @@ export const Toolbar = memo(function Toolbar({ title }: { title: string }) {
   const isDark = useThemeStore((s) => s.isDark)
   const toggleTheme = useThemeStore((s) => s.toggle)
 
-  const [lang, setLang] = useState<SupportedLanguage>(() => {
-    // Read the active language on mount so the selector shows the value
-    // initDesktopI18n() restored, before any user interaction.
-    const initial = i18n.language as SupportedLanguage
-    return initial && supportedLanguages.some((l) => l.code === initial) ? initial : 'fa-IR'
-  })
-
-  const handleLangChange = useCallback((next: string) => {
-    const code = next as SupportedLanguage
-    setLang(code)
-    void setDesktopLanguage(code)
-  }, [])
+  // The same switch Settings uses — a change in either shows in the other.
+  const language = useShellLanguage()
 
   // Who else is online in this workspace — the same hook the web header uses.
   // The shell passed nothing here, so the menu listed only the person using it.
@@ -137,12 +127,12 @@ export const Toolbar = memo(function Toolbar({ title }: { title: string }) {
         isOnline={!isOffline}
         isSyncing={isSyncing}
         pendingCount={pendingCount}
-        currentLang={lang}
+        currentLang={language.current}
         isDark={isDark}
         signInLabel={t('auth.signIn' as never)}
         signOutLabel={t('auth.signOut' as never)}
         onToggleTheme={toggleTheme}
-        onToggleLang={handleLangChange}
+        onToggleLang={language.change}
         onLogout={handleLogout}
         onNavigateLogin={() => navigate('/login')}
         searchSlot={<SearchTrigger />}

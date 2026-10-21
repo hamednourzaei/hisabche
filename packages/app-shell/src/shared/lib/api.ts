@@ -16,6 +16,13 @@ const FALLBACK_API_URL = 'https://api.hisabche.com/api'
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL ?? FALLBACK_API_URL
 
+/**
+ * The key offline-edition licences are checked with (offline-license.ts). Part
+ * of the BUILD; absent = every licence refused, never «open unchecked».
+ */
+export const OFFLINE_LICENSE_PUBLIC_KEY: string | undefined = import.meta.env
+  .VITE_OFFLINE_LICENSE_PUBLIC_KEY
+
 apiClient.defaults.baseURL = API_BASE_URL
 
 // The adapter itself lives in host-http-adapter.ts (testable without Vite).

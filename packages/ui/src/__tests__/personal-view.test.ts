@@ -206,10 +206,10 @@ describe('a page the role does not include is not mounted', () => {
 
   it('both shells draw the notice INSTEAD of the page', () => {
     expect(web).toContain(
-      ") : routeDenied ? ( <NoAccessNotice onHome={() => router.push(withLocale('/dashboard'))} /> ) : ( children )}",
+      ") : routeDenied ? ( <NoAccessNotice onHome={() => router.push(withLocale('/dashboard'))} /> ) : ( <LanguageSwitchProvider value={languageSwitch}> <Fragment key={metalUnit}>{children}</Fragment> </LanguageSwitchProvider> )}",
     )
     expect(shell).toContain(
-      ") : routeDenied ? ( <NoAccessNotice onHome={() => navigate('/')} /> ) : ( <Outlet /> )}",
+      ") : routeDenied ? ( <NoAccessNotice onHome={() => navigate('/')} /> ) : ( <Fragment key={metalUnit}> <Outlet /> </Fragment> )}",
     )
   })
 

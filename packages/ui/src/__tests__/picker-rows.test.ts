@@ -176,14 +176,12 @@ describe('what is not a sale', () => {
   })
 
   it('the picker passes the search and recomputes when the warehouse changes', () => {
-    const cell = readFileSync(
-      join(__dirname, '../components/ui/invoice-builder/grid/description-cell.tsx'),
-      'utf8',
-    )
+    // The list is computed in the hook both the cell and the phone sheet use.
+    const cell = readFileSync(join(__dirname, '../hooks/invoices/use-picker-rows.ts'), 'utf8')
       .split(/\s+/)
       .join(' ')
-    expect(cell).toContain("searching: debounced !== '',")
-    expect(cell).toContain('warehouseId, branchId, pickAs, transactionType, debounced],')
+    expect(cell).toContain("searching: search !== '',")
+    expect(cell).toContain('warehouseId, branchId, pickAs, transactionType, search],')
   })
 
   it('a component of a recipe is never «out»', () => {
@@ -244,7 +242,10 @@ describe('the screens that use it', () => {
       .join('\n')
       .split(/\s+/)
       .join(' ')
-  const picker = read('components/ui/invoice-builder/grid/description-cell.tsx')
+  // The cell and the shared hook that picks (use-picker-rows).
+  const picker =
+    read('components/ui/invoice-builder/grid/description-cell.tsx') +
+    read('hooks/invoices/use-picker-rows.ts')
   const select = read('components/ui/invoice-builder/invoice-warehouse-select.tsx')
 
   it('picking a line from «all warehouses» makes its warehouse the warehouse of the invoice', () => {

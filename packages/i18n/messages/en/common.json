@@ -1653,6 +1653,27 @@
       "creating": "Creating…",
       "failed": "The local business could not be created",
       "timeZoneRequired": "Time zone is required"
+    },
+    "offlineLicense": {
+      "title": "Offline-edition licence",
+      "intro": "To use the offline edition, enter the licence code you received from Hisabche support.",
+      "deviceId": "This device's ID",
+      "deviceIdHint": "Send this ID to support so the licence is issued for this device.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "code": "Licence code",
+      "codePlaceholder": "HSB1.…",
+      "submit": "Activate",
+      "back": "Back to sign-in",
+      "notConfigured": "Licence checking is not set up in this build of the app. Contact support.",
+      "invalidCode": "This text is not a licence code. Copy the whole code.",
+      "TAMPERED": "The licence signature is not valid.",
+      "EXPIRED": "This licence has expired.",
+      "WRONG_DEVICE": "This licence was issued for another device.",
+      "WRONG_WORKSPACE": "This licence is for another business.",
+      "REVOKED": "This licence has been revoked.",
+      "BANNED": "This licence is banned.",
+      "CLOCK_ROLLED_BACK": "The device clock has gone back. Correct the date and time."
     }
   },
   "signup": {
@@ -2561,7 +2582,12 @@
     "imageSaved": "Image saved",
     "imageRemoved": "Image removed",
     "imageNotSupported": "Saving this image is not enabled on this server yet. Contact support.",
-    "cacheEntriesUnit": "items"
+    "cacheEntriesUnit": "items",
+    "metalUnit": {
+      "title": "Metal display unit",
+      "description": "Amounts are shown and entered in this unit. The books always record grams."
+    },
+    "appLanguage": "App language"
   },
   "sync": {
     "download": {
@@ -4638,7 +4664,8 @@
       "taxTotal": "Tax amount",
       "payable": "Amount payable",
       "booksEquivalent": "Equivalent in books currency",
-      "noRateYet": "No rate yet"
+      "noRateYet": "No rate yet",
+      "bookEquivalent": "In the books"
     },
     "errors": {
       "descriptionRequired": "An item description is required",
@@ -5552,7 +5579,22 @@
       "status": "Status",
       "viewEvidence": "View evidence",
       "when": "When",
-      "workspace": "Business"
+      "workspace": "Business",
+      "issueTitle": "Issue an offline-edition licence",
+      "issueDescription": "A licence is issued for one device. The device ID is shown on that device's licence screen.",
+      "deviceIdHint": "The ID the app shows on its licence screen",
+      "periodDays": "Period (days)",
+      "issueAction": "Issue licence",
+      "confirmIssue": "Issue",
+      "issueNotice": "A new licence will be created and signed for this device.",
+      "codeTitle": "Licence code",
+      "codeNotice": "This code is shown only once. Copy it and enter it on the device.",
+      "copyCode": "Copy code",
+      "copied": "Copied",
+      "copyFailed": "Could not copy — select the code by hand",
+      "issueFailed": "The licence was not issued",
+      "signingNotConfigured": "The licence signing key is not set on the server",
+      "invalidDeviceId": "The device ID is not valid"
     },
     "operations": {
       "actions": "Actions",
@@ -6537,7 +6579,8 @@
     "error_BASE_CURRENCY_FORBIDDEN": "Only the owner can set the books currency",
     "error_BASE_CURRENCY_UNSUPPORTED": "This currency is not supported",
     "error_BASE_CURRENCY_SCHEMA_REQUIRED": "The database is not ready to store the books currency yet",
-    "field_creditBalance": "Credit balance (we owe them)"
+    "field_creditBalance": "Credit balance (we owe them)",
+    "error_MIGRATION_INSPECT_INVALID_BASE64": "The file could not be read. Choose it again."
   },
   "state": {
     "forbidden": "Not allowed",
@@ -10653,5 +10696,16 @@
       "dismiss": "Understood",
       "backToHome": "Back to dashboard"
     }
+  },
+  "metal": {
+    "xau": "Gold",
+    "xag": "Silver",
+    "xpt": "Platinum",
+    "xpd": "Palladium"
+  },
+  "metalUnit": {
+    "g": "gram",
+    "kg": "kilogram",
+    "t": "tonne"
   }
 }

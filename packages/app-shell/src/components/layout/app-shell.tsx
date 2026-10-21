@@ -8,11 +8,12 @@
 // Desktop-specific: Electron drag regions, keyboard shortcuts, route outlet.
 // ============================================
 
-import { Suspense, useCallback } from 'react'
+import { Fragment, Suspense, useCallback } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useMyCapabilities } from '@hisabche/api'
 import { isRouteDenied } from '@hisabche/ui/menu'
-import { NoAccessNotice } from '@hisabche/ui'
+import { GlobalPageCustomizer, LanguageSwitchProvider, NoAccessNotice } from '@hisabche/ui'
+import { useShellLanguage } from '@/shared/i18n/use-shell-language'
 import { useTranslations } from 'next-intl'
 
 import {
@@ -32,7 +33,7 @@ import { Skeleton } from '@/components/ui/primitives'
 import { useShortcuts } from '@/shared/hooks/use-shortcuts'
 import { useUiStore } from '@/shared/stores/ui.store'
 import { useBackgroundSync, useWorkspaceCache } from '@/features/sync/use-sync'
-import { useWorkspaceStore } from '@hisabche/store'
+import { usePreferencesStore, useWorkspaceStore } from '@hisabche/store'
 
 function RouteFallback() {
   return (
@@ -65,6 +66,9 @@ export function AppShell() {
   // invoice issued offline sat in the queue until someone pressed "sync" by
   // hand. Signed in is when both must run.
   const workspaceId = useWorkspaceStore((s) => s.workspaceId)
+  const metalUnit = usePreferencesStore((s) => s.metalUnit)
+  // Settings' «زبان برنامه» reaches the same switch as the header.
+  const language = useShellLanguage()
   useWorkspaceCache(workspaceId)
   useBackgroundSync(workspaceId)
 
@@ -107,15 +111,24 @@ export function AppShell() {
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 pb-20 lg:pb-4">
           <SandboxNotice />
           <BookCurrencySync />
-          <Suspense fallback={<RouteFallback />}>
-            {routeLocked ? (
-              <SubscriptionLockNotice hashRouter />
-            ) : routeDenied ? (
-              <NoAccessNotice onHome={() => navigate('/')} />
-            ) : (
-              <Outlet />
-            )}
-          </Suspense>
+          {/* Below a tablet the wrench sits at the top of the page, not in the header. */}
+          <div className="mb-2 flex justify-end md:hidden">
+            <GlobalPageCustomizer />
+          </div>
+          <LanguageSwitchProvider value={language}>
+            <Suspense fallback={<RouteFallback />}>
+              {routeLocked ? (
+                <SubscriptionLockNotice hashRouter />
+              ) : routeDenied ? (
+                <NoAccessNotice onHome={() => navigate('/')} />
+              ) : (
+                // Keyed by the metal unit — see the web layout.
+                <Fragment key={metalUnit}>
+                  <Outlet />
+                </Fragment>
+              )}
+            </Suspense>
+          </LanguageSwitchProvider>
         </main>
       </div>
 

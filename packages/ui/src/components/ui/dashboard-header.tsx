@@ -1,5 +1,6 @@
 'use client'
 
+import { APP_LANGUAGES } from '../../lib/language-switch'
 import { memo, useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { cn } from '../../lib/utils'
 import { roleTone } from '../../lib/role-tone'
@@ -150,11 +151,13 @@ const SyncPill = memo(function SyncPill({
 })
 SyncPill.displayName = 'SyncPill'
 
-const LANGUAGES = [
-  { code: 'af', label: 'دری', nativeLabel: 'دری', flag: '🇦🇫' },
-  { code: 'fa', label: 'فارسی', nativeLabel: 'فارسی', flag: '🇮🇷' },
-  { code: 'en', label: 'English', nativeLabel: 'English', flag: '🇬🇧' },
-]
+const FLAGS: Record<string, string> = { af: '🇦🇫', fa: '🇮🇷', en: '🇬🇧' }
+const LANGUAGES = APP_LANGUAGES.map((language) => ({
+  code: language.code,
+  label: language.label,
+  nativeLabel: language.label,
+  flag: FLAGS[language.code] ?? '🌐',
+}))
 
 // ✅ LanguageSelect با memo
 const LanguageSelect = memo(function LanguageSelect({
@@ -778,12 +781,21 @@ export const DashboardHeader = memo(function DashboardHeader({
         {/* ── Search ──
             `min-w-0` so the flex item may shrink below its content instead of
             pushing the controls off the end of a narrow window. */}
-        <div className="flex min-w-0 flex-1 justify-center">{searchSlot}</div>
+        {/* ⚠️ Below a tablet the dashboard header keeps only identity, theme and
+            the bell: search lives at the top of the «More» sheet, the wrench at
+            the top of the page, and the language in onboarding and settings. */}
+        <div className="flex min-w-0 flex-1 justify-center">
+          <div className={variant === 'dashboard' ? 'hidden md:contents' : 'contents'}>
+            {searchSlot}
+          </div>
+        </div>
 
         {/* ── Controls ── */}
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-          <GlobalPageCustomizer />
-          <LanguageSelect currentLang={currentLang} onChange={onToggleLang} />
+          <div className={variant === 'dashboard' ? 'hidden md:contents' : 'contents'}>
+            <GlobalPageCustomizer />
+            <LanguageSelect currentLang={currentLang} onChange={onToggleLang} />
+          </div>
           <button
             type="button"
             onClick={onToggleTheme}

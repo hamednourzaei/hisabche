@@ -73,6 +73,33 @@ export interface InvoiceListSummary extends InvoiceSummaryBucket {
   currencies: string[]
 }
 
+type DeviceParams = Record<string, string | number | boolean>
+
+/** The filters as the local engine's query: scalars only, unset ones dropped. */
+function toDeviceParams(filters: object): DeviceParams {
+  const out: DeviceParams = {}
+  for (const [key, value] of Object.entries(filters)) {
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      out[key] = value
+    }
+  }
+  return out
+}
+
+/**
+ * ⚠️ OFFLINE, THE INVOICE READS COME FROM THE DEVICE.
+ *
+ * An offline sale is written by the local engine, but the list and the detail
+ * still asked the server: the request failed, the cached page stayed, and the
+ * new sale never appeared. Offline, the same local engine that wrote it answers
+ * with the same shape. `null` = online or no local engine; the caller then
+ * takes the server path.
+ */
+async function readInvoicesFromDevice<T>(path: string, params?: DeviceParams): Promise<T | null> {
+  if (!getOfflineQueue()?.isOffline()) return null
+  return localRequest<T>('GET', path, undefined, params)
+}
+
 export function useInvoices(
   filters: InvoiceFilters = { page: 1, limit: 20, sortDirection: 'desc' },
 ) {
@@ -92,6 +119,15 @@ export function useInvoices(
     queryKey: invoiceKeys.list(filters),
     // Aborted by React Query when the filters change or the list unmounts.
     queryFn: async ({ signal }) => {
+      const fromDevice = await readInvoicesFromDevice<{
+        invoices: InvoiceWithCustomer[]
+        total: number
+        hasMore: boolean
+        nextCursor: string | null
+        limit: number
+        summary?: InvoiceListSummary | undefined
+      }>('/invoices', toDeviceParams(filters))
+      if (fromDevice) return fromDevice
       const { data } = await apiClient.get<{
         invoices: InvoiceWithCustomer[]
         total: number
@@ -108,6 +144,9 @@ export function useInvoices(
     },
     enabled: authReady,
     staleTime: 1000 * 60 * 2,
+    // ⚠️ React Query PAUSES an offline query by default, so the device read
+    // above was never reached and an offline sale never appeared here.
+    networkMode: 'always',
     placeholderData: (previousData) => previousData,
   })
 }
@@ -127,6 +166,21 @@ export function useInvoicesInfinite(filters: Omit<InvoiceFilters, 'page' | 'curs
     queryKey: [...invoiceKeys.lists(), 'infinite', filters] as const,
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam, signal }) => {
+      // The device engine pages by offset, so offline the first page is the
+      // whole answer it gives; the cursor is the server's alone.
+      const fromDevice = pageParam
+        ? null
+        : await readInvoicesFromDevice<{
+            invoices: InvoiceWithCustomer[]
+            hasMore: boolean
+          }>('/invoices', toDeviceParams({ ...filters, limit: 100 }))
+      if (fromDevice) {
+        return {
+          invoices: asList<InvoiceWithCustomer>(fromDevice.invoices),
+          hasMore: false,
+          nextCursor: null,
+        }
+      }
       const { data } = await apiClient.get<{
         invoices: InvoiceWithCustomer[]
         hasMore: boolean
@@ -144,6 +198,9 @@ export function useInvoicesInfinite(filters: Omit<InvoiceFilters, 'page' | 'curs
     getNextPageParam: (last) => (last.hasMore && last.nextCursor ? last.nextCursor : undefined),
     enabled: authReady,
     staleTime: 1000 * 60 * 2,
+    // ⚠️ React Query PAUSES an offline query by default, so the device read
+    // above was never reached and an offline sale never appeared here.
+    networkMode: 'always',
   })
 }
 
@@ -160,11 +217,16 @@ export function useInvoice(id: string | undefined) {
   return useQuery({
     queryKey: invoiceKeys.detail(id!),
     queryFn: async () => {
+      const fromDevice = await readInvoicesFromDevice<InvoiceWithCustomer>(`/invoices/${id}`)
+      if (fromDevice) return fromDevice
       const { data } = await apiClient.get<InvoiceWithCustomer>(`/invoices/${id}`)
       return data
     },
     enabled: authReady && !!id,
     staleTime: 1000 * 60 * 5,
+    // ⚠️ React Query PAUSES an offline query by default, so the device read
+    // above was never reached and an offline sale never appeared here.
+    networkMode: 'always',
   })
 }
 

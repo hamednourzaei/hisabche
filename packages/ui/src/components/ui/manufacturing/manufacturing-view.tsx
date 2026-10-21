@@ -12,6 +12,7 @@ import { Button } from '../button'
 import { DataTable, TableFilterSelect, matchesSearch, type TableColumn } from '../data-table'
 import { HubTabs } from '../hub-tabs'
 import { SegmentedControl } from '../segmented-control'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ManufacturingView — the manufacturing page.
@@ -181,7 +182,7 @@ export const ManufacturingView = memo(function ManufacturingView({
       render: (bom) => (
         <span className="text-xs tabular-nums">
           {formatNumber(bom.unitCost, locale, 4)}{' '}
-          {bom.currency ? t(`currency.${bom.currency.toLowerCase()}`, bom.currency) : ''}
+          {bom.currency ? nameOfCurrency(t, bom.currency, bom.currency) : ''}
         </span>
       ),
     },

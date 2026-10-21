@@ -28,6 +28,7 @@ import {
 } from '../dialog'
 import { Switch } from '../switch'
 import { cn } from '../../../lib/utils'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 export interface TableSettingsDialogProps {
   open: boolean
@@ -113,7 +114,7 @@ export const TableSettingsDialog = memo(function TableSettingsDialog({
                 <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
                   {column.typeLabel ?? t(`invoiceBuilder.columnType.${column.type}`, column.type)}
                   {column.currency
-                    ? ` · ${t(`currency.${(column.currency ?? '').toLowerCase()}`, column.currency)}`
+                    ? ` · ${nameOfCurrency(t, column.currency ?? '', column.currency)}`
                     : ''}
                 </p>
               </div>

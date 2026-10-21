@@ -14,17 +14,16 @@ import { describe, expect, it } from 'vitest'
 
 import { productCost, productPrice } from '../lib/invoices/products'
 
+// The pricing rule lives in the hook the desktop cell and the phone sheet share.
 const src = readFileSync(
-  resolve(__dirname, '../components/ui/invoice-builder/grid/description-cell.tsx'),
+  resolve(__dirname, '../hooks/invoices/use-picker-rows.ts'),
   'utf8',
 ).replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
 
 describe('the price a picked product brings onto the line', () => {
   it('sale → promotions on the sell price; purchase and component → buy price', () => {
     expect(src).toContain("const selling = pickAs === 'sale' && transactionType !== 'purchase'")
-    expect(src).toContain(
-      'const price = selling ? promoPrice(product).price : productCost(product)',
-    )
+    expect(src).toContain('if (selling) return promoPrice(product)')
     // The promotion badges belong to a sale only.
     expect(src).not.toContain("pickAs === 'sale' && promoPrice(product)")
   })

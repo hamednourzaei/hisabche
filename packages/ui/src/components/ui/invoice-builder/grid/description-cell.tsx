@@ -25,17 +25,14 @@
 // ============================================
 'use client'
 
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { KeyboardEvent } from 'react'
 import { ChevronDown, Package, Search } from 'lucide-react'
-import { useProducts, useStockPlacement } from '@hisabche/api'
-import { useInvoiceDraftStore } from '@hisabche/store'
 
 import { cn } from '../../../../lib/utils'
-import { productCost, readProducts, type PickerProduct } from '../../../../lib/invoices/products'
-import { pickerRows, type PickerRow } from '../../../../lib/invoices/picker-rows'
-import { usePromotionPricer } from '../../../../hooks/invoices/use-promotion-pricer'
+import type { PickerRow } from '../../../../lib/invoices/picker-rows'
+import { usePickerRows } from '../../../../hooks/invoices/use-picker-rows'
 
 export interface DescriptionCellProps {
   value: string
@@ -106,53 +103,9 @@ export const DescriptionCell = memo(function DescriptionCell({
     return () => clearTimeout(timer)
   }, [search])
 
-  // Where stock is, and which warehouses this person may sell from.
-  const placement = useStockPlacement()
-  const listedByWarehouse = (placement.data?.warehouses.length ?? 0) > 0
-  const transactionType = useInvoiceDraftStore((state) => state.transactionType)
-  // With a warehouse on the invoice, «how many» means «how many HERE» — and
-  // on a sale the list is what that warehouse holds (lib/invoices/picker-rows).
-  const warehouseId = useInvoiceDraftStore((state) => state.warehouseId)
-  const branchId = useInvoiceDraftStore((state) => state.branchId)
-  // ⚠️ The warehouse goes to the SERVER (owner, 18 Oct 2026): narrowing a page
-  // of 100 here hid a warehouse's 101st product. Only a purchase SEARCH asks
-  // the whole catalogue — that is how a product first arrives in a warehouse
-  // (shown «not here yet» by pickerRows). The id is in the query key, so one
-  // warehouse never shows another's list.
-  const scopeToWarehouse =
-    listedByWarehouse &&
-    warehouseId !== null &&
-    pickAs !== 'component' &&
-    !(transactionType === 'purchase' && debounced !== '')
-  const { data, isLoading } = useProducts({
-    ...(debounced ? { search: debounced } : {}),
-    ...(scopeToWarehouse ? { warehouseId } : {}),
-    limit: listedByWarehouse ? 100 : 20,
-  })
-
-  const products = useMemo<PickerProduct[]>(() => readProducts(data), [data])
-
-  // ⚠️ AN EXHAUSTED PRODUCT STAYS IN THE LIST — IT IS JUST NOT PICKABLE ON A SALE.
-  // Hiding it would make a shopkeeper think the item was deleted. And only a
-  // SALE is blocked: a purchase is exactly how an exhausted product comes back.
-  const setField = useInvoiceDraftStore((state) => state.setField)
-  const rows = useMemo<PickerRow[]>(
-    () =>
-      pickerRows({
-        products,
-        placement: placement.data,
-        warehouseId,
-        branchId,
-        mode:
-          pickAs === 'component'
-            ? 'component'
-            : transactionType === 'purchase'
-              ? 'purchase'
-              : 'sale',
-        searching: debounced !== '',
-      }),
-    [products, placement.data, warehouseId, branchId, pickAs, transactionType, debounced],
-  )
+  // One list rule for this cell and the phone sheet (hooks/invoices/use-picker-rows).
+  const picker = usePickerRows(debounced, pickAs)
+  const { rows, isLoading, warehouseId } = picker
 
   /**
    * Measure the cell and decide which way the list opens.
@@ -224,26 +177,11 @@ export const DescriptionCell = memo(function DescriptionCell({
     if (open && !openedByTyping.current) searchRef.current?.focus()
   }, [open])
 
-  // A sale line is priced with the live promotions; a PURCHASE line and a
-  // component are priced at what the business pays (the buy price). A purchase
-  // invoice used to take the SELL price: a 20M gearbox bought for the
-  // warehouse came in at 30M (owner, 18 Oct 2026).
-  const promoPrice = usePromotionPricer()
-  const selling = pickAs === 'sale' && transactionType !== 'purchase'
-
+  const selling = picker.selling
   const pick = (row: PickerRow) => {
-    if (row.exhausted) return
-    const product = row.product
-    // Picked from «all warehouses»: the line's warehouse becomes the invoice's,
-    // so the stock that leaves is the stock that was shown.
-    if (row.warehouseId && !warehouseId) setField('warehouseId', row.warehouseId)
-    const price = selling ? promoPrice(product).price : productCost(product)
-    onPickProduct({
-      id: product.id,
-      name: product.name,
-      price: String(price ?? 0),
-      unit: product.unit ?? 'piece',
-    })
+    const picked = picker.pick(row)
+    if (!picked) return
+    onPickProduct(picked)
     setOpen(false)
     setSearch('')
   }
@@ -389,13 +327,13 @@ export const DescriptionCell = memo(function DescriptionCell({
                   </p>
                 ) : rows.length === 0 ? (
                   <p className="p-3 text-xs text-[hsl(var(--fg-tertiary))]">
-                    {products.length > 0 && debounced === '' && warehouseId
+                    {picker.productCount > 0 && debounced === '' && warehouseId
                       ? // A purchase into a warehouse with nothing in it yet.
                         t(
                           'invoiceBuilder.grid.searchToAddHere',
                           'این انبار هنوز کالایی ندارد — نام کالا را جستجو کنید',
                         )
-                      : products.length > 0
+                      : picker.productCount > 0
                         ? // Found, but not in the warehouse this invoice sells from.
                           t(
                             'invoiceBuilder.grid.noProductsHere',
@@ -427,14 +365,14 @@ export const DescriptionCell = memo(function DescriptionCell({
                     >
                       <span className="flex min-w-0 items-center gap-1.5">
                         <span className="min-w-0 truncate">{product.name}</span>
-                        {selling && promoPrice(product).discounted ? (
+                        {selling && picker.priceOf(product).discounted ? (
                           <span className="shrink-0 rounded bg-[hsl(var(--color-success)/0.12)] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--color-success))]">
                             {t('invoiceBuilder.grid.promotion', 'تخفیف')}
                           </span>
                         ) : null}
-                        {selling && promoPrice(product).listName ? (
+                        {selling && picker.priceOf(product).listName ? (
                           <span className="shrink-0 rounded bg-[hsl(var(--color-primary)/0.1)] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--color-primary))]">
-                            {promoPrice(product).listName}
+                            {picker.priceOf(product).listName}
                           </span>
                         ) : null}
                         {product.sku ? (

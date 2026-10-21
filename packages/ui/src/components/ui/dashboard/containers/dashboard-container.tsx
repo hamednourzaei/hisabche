@@ -23,6 +23,7 @@ import { useLocalePush, useRouteLang } from '../../../../hooks/use-locale-push'
 import { formatNumber, toIsoDay } from '@hisabche/formatting'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { ManufacturingDashboardCard } from '../../manufacturing/manufacturing-dashboard-card'
+import { nameOfCurrency } from '../../../../lib/currency-name'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -261,7 +262,7 @@ export function DashboardContainer() {
               >
                 {formatNumber(1, intlLocale)} {unit.name} ={' '}
                 {formatNumber(unit.perUnit, intlLocale, 2)}{' '}
-                {t(`currency.${display.base.toLowerCase()}`, display.base)}
+                {nameOfCurrency(t, display.base, display.base)}
               </li>
             ))}
           </ul>

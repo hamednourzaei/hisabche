@@ -28,6 +28,7 @@ import { CameraScanButton } from '../camera-scan-button'
 import { InvoiceExchangeRate } from '../invoice-exchange-rate'
 import {
   exchangeRateOf,
+  inBooksAtRate,
   needsExchangeRate,
   priceForInvoice,
   repriceAutoFilled,
@@ -51,6 +52,7 @@ import {
 } from '@hisabche/api'
 import type { Product } from '@hisabche/validation'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
+import { nameOfCurrency } from '../../../../lib/currency-name'
 
 export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   const push = useLocalePush()
@@ -62,7 +64,22 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   const bookCurrency = useBookCurrency()
   // A product's price is in the books currency; on an invoice in another one it
   // is converted at this invoice's rate, or left empty (priceForInvoice).
-  const lineRate = exchangeRateOf(draft.exchangeRateFrom, draft.exchangeRateTo)
+  const lineRate = exchangeRateOf(
+    draft.exchangeRateFrom,
+    draft.exchangeRateTo,
+    currency,
+    bookCurrency,
+  )
+  // «معادل دفتری»: what the books will record, at the rate typed on this
+  // invoice (and locked on it at commit). No rate yet = no line, never × 1.
+  const booksAmount =
+    bookCurrency && needsExchangeRate(currency, bookCurrency)
+      ? inBooksAtRate(summary.total, lineRate, bookCurrency, currency)
+      : null
+  const bookEquivalent =
+    bookCurrency && booksAmount !== null
+      ? `${formatNumber(booksAmount, locale, 9)} ${nameOfCurrency(t, bookCurrency, bookCurrency)}`
+      : null
   // Lines the APP priced from a product, so a later currency or rate change
   // can price them again (repriceAutoFilled) instead of relabelling the number.
   const [autoPriced, setAutoPriced] = useState<ReadonlyMap<string, AutoPricedLine>>(new Map())
@@ -388,6 +405,7 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
             onOpenChange={setScanDialogOpen}
           />
         }
+        bookEquivalent={bookEquivalent}
         rateSlot={
           bookCurrency && needsExchangeRate(currency, bookCurrency) ? (
             <InvoiceExchangeRate

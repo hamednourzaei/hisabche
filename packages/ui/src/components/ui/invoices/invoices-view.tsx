@@ -326,11 +326,9 @@ const PaginationControls = memo(function PaginationControls({
 
   return (
     <div
-      className={cn(
-        'flex items-center justify-center gap-2 sm:gap-3 pt-4',
-        'sticky bottom-0 pb-2 sm:pb-0',
-        'bg-[hsl(var(--surface-base)/0.95)] backdrop-blur-sm sm:bg-transparent sm:backdrop-blur-none',
-      )}
+      // Under the table, not sticky: stuck to the bottom it floated over the
+      // invoice cards on a phone and covered the row being read.
+      className="flex items-center justify-center gap-2 pt-4 pb-2 sm:gap-3 sm:pb-0"
     >
       <button
         type="button"

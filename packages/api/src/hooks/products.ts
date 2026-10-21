@@ -15,7 +15,7 @@
 // ============================================
 
 import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import apiClient, { type ApiError } from '../lib/client'
+import apiClient, { type ApiError, localRequest } from '../lib/client'
 import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { asList } from '../lib/as-list'
@@ -222,9 +222,20 @@ export async function fetchProducts(
       offset: (page - 1) * limit,
     })
     const products = rows.map(productFromRow)
+    // ⚠️ THE WAREHOUSE CARDS OFFLINE. The device page had no summary, so every
+    // card read «نامعلوم». The local engine sums EVERY active product with the
+    // server's rule; no engine (or no answer) leaves it absent — never zero.
+    const summary = mergedFilters.includeSummary
+      ? await localRequest<StockSummary>('GET', '/products/summary').catch(() => null)
+      : null
     // ⚠️ THE DEVICE'S REAL TOTAL. It used to be the length of the page, so a
     // business with 300 products was told it had 20.
-    return { products, total, notAvailableOffline: synced === false }
+    return {
+      products,
+      total,
+      notAvailableOffline: synced === false,
+      ...(summary ? { summary } : {}),
+    }
   }
 
   if (device?.readRows && device.isOffline()) return fromDevice()

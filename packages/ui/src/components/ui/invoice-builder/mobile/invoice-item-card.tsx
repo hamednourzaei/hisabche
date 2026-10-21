@@ -38,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from '../../dropdown-menu'
 import { cn } from '../../../../lib/utils'
+import { nameOfCurrency } from '../../../../lib/currency-name'
 
 export interface InvoiceItemCardProps {
   t: (key: string, fallback?: string) => string
@@ -108,7 +109,7 @@ export const InvoiceItemCard = memo(function InvoiceItemCard({
     const number = formatNumber(parseCellNumber(raw), locale, column.precision)
     if (column.type === 'percent') return `${number}٪`
     if (column.type === 'currency' && isForeignMoneyColumn(column, ctx)) {
-      return `${number} ${t(`currency.${(column.currency ?? '').toLowerCase()}`, column.currency ?? '')}`
+      return `${number} ${nameOfCurrency(t, column.currency ?? '', column.currency ?? '')}`
     }
     return number
   }

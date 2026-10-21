@@ -41,6 +41,7 @@ import { PreviewItemsTable } from '../preview-items-table'
 import { OversoldWarning } from '../oversold-warning'
 import { InvoiceExchangeRate } from '../invoice-exchange-rate'
 import { exchangeRateOf, needsExchangeRate } from '../../../../lib/invoices/exchange-rate'
+import { invoiceInStoredMetal } from '../../../../lib/invoices/metal-amounts'
 import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import { useTillChoice } from '../../../../hooks/use-till-choice'
 import { TillSelectField } from '../../till/till-select-field'
@@ -55,6 +56,7 @@ import {
   scheduleCalendarFor,
   type RecurrenceValue,
 } from '../recurrence-panel'
+import { nameOfCurrency } from '../../../../lib/currency-name'
 
 const DEFAULT_DISPLAY: InvoiceDocumentDisplaySettings = {
   showSignature: true,
@@ -234,7 +236,12 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
   // An invoice in another currency is booked at a rate, or not sent.
   const bookCurrency = useBookCurrency()
   const foreign = needsExchangeRate(currency, bookCurrency)
-  const exchangeRate = exchangeRateOf(draft.exchangeRateFrom, draft.exchangeRateTo)
+  const exchangeRate = exchangeRateOf(
+    draft.exchangeRateFrom,
+    draft.exchangeRateTo,
+    currency,
+    bookCurrency,
+  )
   const rateMissing = foreign && exchangeRate === null
 
   // The cash of this invoice names its till: a sale's goes in, a purchase's
@@ -264,47 +271,51 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     setSaveStatus('saving')
 
     try {
-      const created = await createInvoice.mutateAsync({
-        idempotencyKey: submissionKey,
-        // Sent explicitly from the draft, never inferred from the route.
-        type: draft.transactionType,
-        date: draft.date,
-        ...(draft.dueDate ? { dueDate: draft.dueDate } : {}),
-        ...(draft.warehouseId ? { warehouseId: draft.warehouseId } : {}),
-        ...(draft.branchId ? { branchId: draft.branchId } : {}),
-        subtotal: summary.subtotal,
-        discountTotal: summary.discountTotal,
-        discountType: draft.discountType,
-        taxRate: Number(draft.taxRate) || 0,
-        taxTotal: summary.taxTotal,
-        total: summary.total,
-        // ⚠️ The server turns these into REAL `payments` +
-        // `payment_allocations` rows. It no longer stamps `paid_amount` — see
-        // `recordCreationPayments` in invoice.service.ts.
-        paidAmount,
-        paymentMethod: paymentEntries[0]?.method ?? payment.method,
-        // One payment record per method. A single row carrying a blended
-        // method would make the till count and the bank reconciliation both
-        // wrong, and neither repairable afterwards.
-        ...(paymentEntries.length > 0
-          ? {
-              payments: paymentEntries.map((entry) => ({
-                method: entry.method,
-                amount: entry.amount,
-                ...(entry.note ? { note: entry.note } : {}),
-              })),
-            }
-          : {}),
-        currency,
-        // Only on an invoice in another currency; the server refuses one without it.
-        ...(foreign && exchangeRate !== null ? { exchangeRate } : {}),
-        ...(tillSessionId ? { tillSessionId } : {}),
-        ...(primaryCustomer?.id ? { customerId: primaryCustomer.id } : {}),
-        // The companions are kept on the invoice's own notes — the only place
-        // the current schema can hold them without inventing a relationship.
-        ...(invoiceNotes ? { notes: invoiceNotes } : {}),
-        items,
-      })
+      // A metal invoice is typed in the unit shown (g / kg / t); the books
+      // keep grams — converted here, once, at the boundary (metal-amounts.ts).
+      const created = await createInvoice.mutateAsync(
+        invoiceInStoredMetal({
+          idempotencyKey: submissionKey,
+          // Sent explicitly from the draft, never inferred from the route.
+          type: draft.transactionType,
+          date: draft.date,
+          ...(draft.dueDate ? { dueDate: draft.dueDate } : {}),
+          ...(draft.warehouseId ? { warehouseId: draft.warehouseId } : {}),
+          ...(draft.branchId ? { branchId: draft.branchId } : {}),
+          subtotal: summary.subtotal,
+          discountTotal: summary.discountTotal,
+          discountType: draft.discountType,
+          taxRate: Number(draft.taxRate) || 0,
+          taxTotal: summary.taxTotal,
+          total: summary.total,
+          // ⚠️ The server turns these into REAL `payments` +
+          // `payment_allocations` rows. It no longer stamps `paid_amount` — see
+          // `recordCreationPayments` in invoice.service.ts.
+          paidAmount,
+          paymentMethod: paymentEntries[0]?.method ?? payment.method,
+          // One payment record per method. A single row carrying a blended
+          // method would make the till count and the bank reconciliation both
+          // wrong, and neither repairable afterwards.
+          ...(paymentEntries.length > 0
+            ? {
+                payments: paymentEntries.map((entry) => ({
+                  method: entry.method,
+                  amount: entry.amount,
+                  ...(entry.note ? { note: entry.note } : {}),
+                })),
+              }
+            : {}),
+          currency,
+          // Only on an invoice in another currency; the server refuses one without it.
+          ...(foreign && exchangeRate !== null ? { exchangeRate } : {}),
+          ...(tillSessionId ? { tillSessionId } : {}),
+          ...(primaryCustomer?.id ? { customerId: primaryCustomer.id } : {}),
+          // The companions are kept on the invoice's own notes — the only place
+          // the current schema can hold them without inventing a relationship.
+          ...(invoiceNotes ? { notes: invoiceNotes } : {}),
+          items,
+        }),
+      )
 
       // The invoice just confirmed becomes the template of the arrangement —
       // the same lines, without this one's dates and payments. Only for an
@@ -561,7 +572,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
               {summary.foreignTotals.map((entry) => (
                 <p key={entry.currency} className="flex justify-between text-xs">
                   <span className="text-[hsl(var(--fg-tertiary))]">
-                    {t(`currency.${entry.currency.toLowerCase()}`, entry.currency)}
+                    {nameOfCurrency(t, entry.currency, entry.currency)}
                   </span>
                   <span dir="ltr" className="tabular-nums text-[hsl(var(--fg-primary))]">
                     {entry.amount.toLocaleString(locale)}
@@ -680,7 +691,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
             {t('invoiceBuilder.summary.payable', 'مبلغ قابل پرداخت')}
           </span>
           <span dir="ltr" className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-            {`${summary.total.toLocaleString(locale)} ${t(`currency.${currency.toLowerCase()}`, currency)}`}
+            {`${summary.total.toLocaleString(locale)} ${nameOfCurrency(t, currency, currency)}`}
           </span>
         </div>
         <div className="flex items-center gap-2">

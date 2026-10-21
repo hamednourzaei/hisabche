@@ -19,6 +19,7 @@ import { Button } from '../button'
 import { SearchableTable } from '../data-table'
 import { unitText } from './unit-text'
 import { manufacturingErrorText } from './manufacturing-errors'
+import { nameOfCurrency } from '../../../lib/currency-name'
 
 type T = (key: string, fallback?: string) => string
 
@@ -150,7 +151,7 @@ export function ProductionHistory({
               <span className="tabular-nums">
                 {money(run.totalCost)}{' '}
                 <span className="text-xs text-[hsl(var(--fg-tertiary))]">
-                  {run.currency ? t(`currency.${run.currency.toLowerCase()}`, run.currency) : ''}
+                  {run.currency ? nameOfCurrency(t, run.currency, run.currency) : ''}
                 </span>
                 {run.overrideTotal !== null ? (
                   <span className="ms-1 rounded-full bg-[hsl(var(--color-warning)/0.15)] px-1.5 py-0.5 text-[10px] text-[hsl(var(--fg-primary))]">

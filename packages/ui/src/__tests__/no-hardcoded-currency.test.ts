@@ -45,8 +45,6 @@ const NOT_YET: Record<string, string> = {
   'ui/src/components/ui/budgets/budgets-view.tsx':
     'budgets keep an fx_rate against AFN in the database (budget-currency-migration.sql); needs the ledger phase',
   'api/src/hooks/budgets.ts': 'same model as the budgets screen — a private four-currency union',
-  'ui/src/components/ui/warehouse/warehouse-view.tsx':
-    'the warehouse rate model is «afghani per unit» (Currency.afnPerUnit)',
   'ui/src/lib/warehouse/rate-from-pair.ts': 'BASE_CODE of the same warehouse rate model',
   'store/src/slices/currency.slice.ts': 'client rate table keyed to AFN = 1; same model as above',
   'app-shell/src/shared/stores/ui.store.ts': 'the desktop shell’s display currency default',

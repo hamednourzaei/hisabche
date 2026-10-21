@@ -19,7 +19,14 @@ import { platformAdminGuard } from '../middleware/platform-admin.middleware'
 import { requireAdminPermission, requireAdminStepUp } from '../middleware/admin-rbac.middleware'
 import { offlineLicenseService } from '../services/offline-license.service'
 import { supabase } from '../db'
+import { encodeLicenseCode } from '@hisabche/validation'
 import { AdminSecurityService } from '../services/admin/admin-security.service'
+
+const issueLicenceBody = z.object({
+  deviceId: z.string().uuid(),
+  label: z.string().trim().max(80).optional(),
+  periodDays: z.number().int().min(1).max(3650),
+})
 
 const liftBanBody = z.object({
   reason: z.string().min(5),
@@ -72,6 +79,40 @@ export default async function adminOfflineRoutes(fastify: FastifyInstance) {
         const { data, error } = await query.limit(100)
         if (error) throw error
         return { licences: data ?? [] }
+      })
+    },
+  )
+
+  // ─── Issue a licence for one device (the offline edition's sale) ──
+  fastify.post(
+    '/api/admin/offline/licences',
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('offline.licences.issue'),
+        requireAdminStepUp,
+      ],
+    },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const parsed = issueLicenceBody.safeParse(req.body)
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'Invalid licence request', code: 'VALIDATION_ERROR' })
+      }
+      const actorEmail = req.user?.email ?? 'admin'
+      return handle(reply, async () => {
+        const signed = await offlineLicenseService.issueDeviceLicense(parsed.data)
+        await AdminSecurityService.logSecurityEvent({
+          eventType: 'OFFLINE_LICENSE_ISSUED',
+          adminEmail: actorEmail,
+          details: {
+            licenseId: signed.payload.license_id,
+            deviceId: signed.payload.device_id,
+            expiresAt: signed.payload.expires_at,
+          },
+        })
+        // The code is shown once, in a dialog, to be pasted on the device.
+        return { code: encodeLicenseCode(signed), expiresAt: signed.payload.expires_at }
       })
     },
   )

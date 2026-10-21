@@ -44,7 +44,10 @@ const route = code(join(ROOT, 'backend', 'src', 'routes', 'product.routes.ts'))
 const hook = code(join(UI, 'hooks', 'warehouse', 'use-warehouse.ts'))
 const mappers = code(join(UI, 'lib', 'warehouse', 'warehouse-mappers.ts'))
 const list = code(join(UI, 'components', 'ui', 'warehouse', 'warehouse-product-list.tsx'))
-const picker = code(join(UI, 'components', 'ui', 'invoice-builder', 'grid', 'description-cell.tsx'))
+// The cell and the shared hook it reads its rows from (use-picker-rows).
+const picker =
+  code(join(UI, 'components', 'ui', 'invoice-builder', 'grid', 'description-cell.tsx')) +
+  code(join(UI, 'hooks', 'invoices', 'use-picker-rows.ts'))
 const preview = code(
   join(UI, 'components', 'ui', 'invoice-builder', 'containers', 'invoice-preview-container.tsx'),
 )
