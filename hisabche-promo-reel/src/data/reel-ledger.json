@@ -44,6 +44,15 @@
       "dominantLayout": "full-bleed-kinetic",
       "cardQuotaPercent": 15,
       "components": ["word-sync", "word-sync", "word-sync", "word-sync"]
+    },
+    {
+      "id": "71",
+      "title": "چرخه کامل کسب‌وکار از فروش تا تسویه — ۴۲ ثانیه",
+      "theme": "procedural-spatial",
+      "hookFormula": "visual-pattern-interrupt",
+      "dominantLayout": "cinematic-2.5d-orbit",
+      "cardQuotaPercent": 12,
+      "components": ["hook", "cinematic-product", "continuous-transform", "split", "bridge", "cta"]
     }
   ]
 }

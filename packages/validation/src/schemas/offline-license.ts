@@ -155,6 +155,11 @@ export function generateOfflineLicenseKeyPair(): {
   }
 }
 
+/** The public key (hex) that verifies licences signed with this secret key. */
+export function offlineLicensePublicKeyOf(secretKey: Uint8Array): string {
+  return bytesToHex(ed25519.getPublicKey(secretKey))
+}
+
 /**
  * Signs an offline licence payload using Ed25519.
  * If keyId is provided, it is attached to the payload (and envelope) before signing,

@@ -68,3 +68,6 @@ coverage
 
 # Graphify knowledge graph (generated; rebuild with /graphify . --update)
 graphify-out/
+
+# AI Codebase Intelligence Index (generated; rebuild with node scripts/build-ai-index.mjs)
+.ai/codebase/

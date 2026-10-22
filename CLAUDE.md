@@ -100,6 +100,45 @@ apps/
 docs/             فایل‌های SQL + گزارش‌ها. Migration ها این‌جا ساخته می‌شوند.
 ```
 
+---
+
+## ۰.۶. سیستم هوشمند ناوبری کدبیس — قوانین دائمی
+
+### ایندکس دو بخشی
+در `.ai/codebase/` دو آرتیفکت هست که **منبع واحد حقیقت** برای ناوبری هستند:
+- `CODEBASE_MAP.md` — خواندنی برای انسان، <۳۰۰ خط، **اولین چیزی که در هر سشن می‌خوانی**
+- `graph.json` — ایندکس نماد/وابستگی برای ماشین (git hash + timestamp برای تشخیص stale بودن)
+
+تولید/بازسازی: `node scripts/build-ai-index.mjs` (کمتر از ۲ ثانیه).
+
+### قانون ۱: کش‌اول و بررسی Staleness
+۱. در شروع **هر** تسک، اول `.ai/codebase/CODEBASE_MAP.md` را بخوان.
+۲. اگر فایل‌ها از کامیتِ ثبت‌شده در `graph.json` به‌وضوح تغییر کرده‌اند، `node scripts/build-ai-index.mjs` بزن به‌جای اسکن دستی.
+
+### قانون ۲: پروتکل حل باگ (Stack-Trace و نماد Jump)
+وقتی باگ، پیام خطا، خطای TypeScript یا کرش داده شده (مثلا `Android import crashes with Buffer is not defined`):
+۱. **اگر file:line در stack trace هست:** همان فایل و خط را **اول** باز کن. صفر کاوش.
+۲. **اگر رشته خطا یا نماد داده شده:** فقط در دامنه/پلتفرم مربوطه از `CODEBASE_MAP.md` جستجو کن — `rg -n "exact_symbol"` یا کوئری روی `.ai/codebase/graph.json`.
+۳. فقط زیرگراف مینیمم را ردیابی کن: `فایل خطا → Caller مستقیم → Callee مستقیم → Schema/Type → Platform Adapter`.
+۴. **سقف سخت خواندن:** قبل از تشخیص ریشه، **حداکثر ۵ فایل منبع** باز کن.
+
+### قانون ۳: پروتکل حل فیچر
+وقتی فیچر اضافه/تغییر خواسته شد:
+۱. دامنه و پلتفرم را با `CODEBASE_MAP.md` دسته‌بندی کن (`SHARED` vs `WEB_ONLY` vs `MOBILE_ONLY` vs `WINDOWS_ONLY` vs `SERVER_ONLY` vs `PLATFORM_ADAPTER` vs `OFFLINE_ENGINE`).
+۲. در `graph.json` برای hook/service/Zod schema/component موجود بگرد (**Reuse > Extend > Duplicate**).
+۳. قوانین تجاری باید در پکیج‌های shared/domain بمانند؛ کد پلتفرم‌خاص فقط adapter نازک باشد.
+۴. قبل از خواندن/ویرایش کد، درونی‌ 짧은‌لیست بساز:
+   - `PRIMARY FILES` (حداکثر ۲-۳ فایل اولویت)
+   - `SECONDARY FILES` (فقط اگر قرارداد تغییر کرد)
+۵. **سقف سخت ویرایش:** برای کار عادی **حداکثر ۲-۳ فایل** هدف قرار بده. اگر بیشتر لازم است، دلیل را بنویس.
+
+### قانون ۴: آپدیت تدریجی و وریفای صادقانه
+۱. بعد از تغییر کد، `node scripts/build-ai-index.mjs` بزن تا ایندکس تازه بماند.
+۲. هرگز `fixed`، `verified` یا `production-ready` ادعا نکن بدون اجرای چک واقعی. وضعیت را صریح برچسب بزن:
+   `IMPLEMENTED` | `TYPECHECKED` | `UNIT TESTED` | `EMULATOR/LIVE VERIFIED`.
+
+---
+
 `fa`، `af`، `en` هر سه **فعال**‌اند. هر کلید جدید باید در **هر سه** باشد —
 `t()` روی کلید ناموجود **throw** می‌کند و کل صفحه را به error boundary می‌برد.
 
@@ -127,7 +166,7 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **ارز دفاتر و ممیزی چندارزی؛ ورود فایل (۱۱ اکتبر)**                    | `.claude/reverse-and-import/01-CURRENCY-AUDIT.md` · `00-SPEC.md`                         |
 | **مرور کار Antigravity؛ صندوق چندارزی، رخدادها، لینک حضور و غیاب (۱۲ اکتبر)** | `.claude/SESSION-CACHE-2026-10-12-ANTIGRAVITY-REVIEW.md` · `AGENTS.md` — **attendance-devices-01، attendance-02، invoice-exchange-rate-01 و till-payments-01 منتظر اجرا** |
 | **ممیزی زنده ۱۴ اکتبر: ۸۲ باگ، درس‌ها، آنچه منتظر انسان است**                 | `.claude/LIVE-AUDIT-2026-10-14.md` · `.claude/SESSION-CACHE-2026-10-14-LIVE-AUDIT.md` — **custom-units-01 منتظر اجرا و VERIFY** |
-| **همه‌ی درس‌ها با شماره (۱–۲۲۴)**                                     | `.claude/lessons-learned.md`                                                |
+| **همه‌ی درس‌ها با شماره (۱–۲۲۵)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |

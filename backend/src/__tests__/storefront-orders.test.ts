@@ -366,6 +366,9 @@ describe('everything under /api/public/ is public by design', () => {
     'GET /api/public/feedback/:token',
     'POST /api/public/feedback/:token/answer',
     'POST /api/public/feedback/:token/unsubscribe',
+    // The offline licence's PUBLIC key (admin-offline.routes.ts): it only
+    // verifies; the private half never leaves offline_license_signing_keys.
+    'GET /api/public/offline/licence-key',
   ]
 
   const routeFiles = readdirSync(join(SRC, 'routes')).filter((f) => f.endsWith('.ts'))

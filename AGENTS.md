@@ -33,6 +33,241 @@ The long form of every rule here — with the real bug behind it — is in `CLAU
 
 ---
 
+## 0.5. ERROR-FIRST RESOLUTION — highest priority
+
+When a task contains a bug, error, exception, stack trace, failed assertion, TypeScript
+diagnostic, Supabase/Postgres error, HTTP error, route error, or runtime failure, enter
+**ERROR-FIRST MODE**. The failure — not the domain it happens to live in — decides where you
+look first.
+
+Never begin with broad repository exploration.
+
+### Resolution order
+
+```text
+error
+↓
+exact file / line if available
+↓
+exact error string
+↓
+exact symbol
+↓
+containing function
+↓
+direct callers
+↓
+direct dependencies
+↓
+relevant test
+↓
+minimal root-cause subgraph
+```
+
+### If a file and line are provided
+
+Open that exact file and line **first**.
+
+Do not inspect the repository map, unrelated domains, or neighbouring packages before
+inspecting the reported location.
+
+### If only an error string is provided
+
+Search the indexed source/symbol graph (`graphify-out/`, §7) for:
+
+1. exact error string
+2. exact symbol
+3. relevant route/function
+4. known dependency edge
+
+Then open the highest-confidence result.
+
+### If a stack trace is provided
+
+Parse every application-owned frame.
+
+Rank frames:
+
+1. exact application frame with line number
+2. nearest application frame
+3. direct caller
+4. direct dependency
+
+Ignore framework internals unless the application frame does not explain the failure.
+
+### Root-cause expansion
+
+After opening the primary source, only expand the graph one edge at a time:
+
+```text
+PRIMARY FILE
+    ↓
+FUNCTION
+    ↓
+CALLER / DEPENDENCY
+    ↓
+DATA CONTRACT / SCHEMA
+    ↓
+TEST
+```
+
+Do not recursively inspect unrelated consumers.
+
+Stop expanding as soon as the root cause is established with sufficient evidence.
+
+### Bug investigation does NOT have a fixed file-read limit
+
+The feature-mode read discipline (§10) does not apply to debugging.
+
+For bugs:
+
+- Start with the exact failure location.
+- Expand only when evidence requires it.
+- Never read files merely because they are in the same domain.
+- Never read the entire domain by default.
+
+### Confidence
+
+For every bug investigation, classify the source candidate internally:
+
+```text
+HIGH
+MEDIUM
+LOW
+```
+
+HIGH means:
+
+- exact stack frame
+- exact line
+- exact symbol
+- direct failing operation
+
+MEDIUM means:
+
+- direct caller/dependency strongly implicated
+
+LOW means:
+
+- inferred from indirect evidence
+
+Never claim a root cause as certain when confidence is LOW.
+
+### Example
+
+Given:
+
+```text
+TypeError: Cannot read properties of undefined
+    at reserveStockTransaction
+    at src/lib/inventory.ts:87
+```
+
+Correct:
+
+```text
+1. Open src/lib/inventory.ts:87
+2. Identify reserveStockTransaction
+3. Inspect its immediate inputs
+4. Inspect direct caller
+5. Inspect relevant schema/test
+6. Fix root cause
+```
+
+Incorrect:
+
+```text
+1. Read CODEBASE_MAP
+2. Read inventory domain
+3. Read all inventory routes
+4. Read all admin pages
+5. Read all API routes
+6. Read unrelated packages
+```
+
+### Feature mode remains separate
+
+For normal feature requests use:
+
+```text
+Task
+→ domain classification
+→ index lookup
+→ existing implementation
+→ minimal dependency graph
+→ implementation
+```
+
+For bugs use:
+
+```text
+Error
+→ exact source
+→ minimal root-cause graph
+→ fix
+→ verification
+```
+
+These are intentionally different workflows.
+
+### Final rule
+
+The repository index is a navigation accelerator.
+
+It must reduce repository exploration, not become another reason to explore the entire
+repository.
+
+When an exact source location is available:
+
+> TRUST THE ERROR LOCATION FIRST.
+> THEN USE THE INDEX TO UNDERSTAND ONLY WHAT SURROUNDS IT.
+
+---
+
+## 0.6. CODEBASE INTELLIGENCE & NAVIGATION SYSTEM — permanent laws
+
+### The Index
+
+Two artifacts live in `.ai/codebase/` and are the **single source of truth** for navigation:
+
+- `CODEBASE_MAP.md` — human-readable, <300 lines, read first every session
+- `graph.json` — machine-readable symbol/dependency index (git hash + timestamp for staleness)
+
+Regenerate with: `node scripts/build-ai-index.mjs` (<2s).
+
+### LAW 1: CACHE-FIRST & STALENESS CHECK
+
+1. At the start of **ANY** task, read `.ai/codebase/CODEBASE_MAP.md` FIRST.
+2. If files changed significantly since the git commit recorded in `graph.json`, run `node scripts/build-ai-index.mjs` instead of scanning manually.
+
+### LAW 2: BUG-FIRST RESOLUTION PROTOCOL (Stack-Trace & Symbol Jump)
+
+When given a bug, error message, TypeScript error, or crash (e.g., `Android import crashes with Buffer is not defined`):
+
+1. **If a file:line is in the stack trace:** OPEN THAT EXACT FILE AND LINE FIRST. Zero exploration.
+2. **If an error string or symbol is given:** Query `.ai/codebase/graph.json` or run scoped `rg -n "exact_symbol"` ONLY inside the relevant domain/platform path identified in `CODEBASE_MAP.md`.
+3. Trace ONLY the minimal subgraph: `Error File → Direct Caller → Direct Callee → Schema/Type → Platform Adapter`.
+4. **HARD READ CAP:** Never open more than **5 source files** before diagnosing the root cause.
+
+### LAW 3: FEATURE-FIRST RESOLUTION PROTOCOL
+
+When asked to add or modify a feature:
+
+1. Classify the Domain and Platform (`SHARED` vs `WEB_ONLY` vs `MOBILE_ONLY` vs `WINDOWS_ONLY` vs `SERVER_ONLY` vs `PLATFORM_ADAPTER` vs `OFFLINE_ENGINE`) using `CODEBASE_MAP.md`.
+2. Check `graph.json` for existing hooks, services, Zod schemas, or components before creating anything new (**Reuse > Extend > Duplicate**).
+3. Business rules MUST live in shared/domain packages; platform-specific code must remain a thin adapter.
+4. Before reading or editing code, output an internal shortlist:
+   - `PRIMARY FILES` (max 2-3 files to open first)
+   - `SECONDARY FILES` (inspect only if contract changes)
+5. **HARD EDIT CAP:** Target changing **≤ 2-3 files** for normal work. Explain why before expanding the change surface.
+
+### LAW 4: INCREMENTAL UPDATE & HONEST VERIFICATION
+
+1. After modifying code, run `node scripts/build-ai-index.mjs` to keep the index fresh.
+2. Never claim `fixed`, `verified`, or `production-ready` without running the actual check. Explicitly label status as: `IMPLEMENTED` | `TYPECHECKED` | `UNIT TESTED` | `EMULATOR/LIVE VERIFIED`.
+
+---
+
 ## 1. Five rules everything rests on
 
 1. **`workspace_id` is the only security boundary.** `user_id` says who did something; it is never

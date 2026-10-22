@@ -5,6 +5,15 @@ description: Investigating a bug, a failing request, a 500, a crash, or behaviou
 
 # Debugging
 
+## Error-first rule — binding, read this before the method below
+
+AGENTS.md §0.5 applies. When the task arrives as a failure, the failure chooses the first file:
+open the reported file/line — or the highest-confidence hit for the exact error string, symbol or
+stack frame — before anything else. Then expand one edge at a time
+(function → caller/dependency → data contract → test) and stop as soon as the cause is
+established. Debugging has no file-read budget, but «no budget» is not permission to read a
+domain; the repository index is for understanding what surrounds the failure, never for a tour.
+
 ## Method
 
 1. **Reproduce** — get the actual error, status code, stack or log line.

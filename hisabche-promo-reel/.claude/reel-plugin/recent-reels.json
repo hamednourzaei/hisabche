@@ -182,5 +182,13 @@
     "primaryTemplate": "word-sync",
     "visualLanguage": "kinetic-manifesto",
     "hookMechanism": "visual-pattern-interrupt"
+  },
+  {
+    "id": 71,
+    "topic": "چرخه کامل کسب‌وکار از فروش تا تسویه",
+    "creativeMechanism": "cinematic-camera-orbit",
+    "primaryTemplate": "combined-multi-engine",
+    "visualLanguage": "procedural-spatial",
+    "hookMechanism": "visual-pattern-interrupt"
   }
 ]

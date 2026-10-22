@@ -5,7 +5,9 @@
 
 import { randomUUID } from 'node:crypto'
 import {
+  generateOfflineLicenseKeyPair,
   hexToBytes,
+  offlineLicensePublicKeyOf,
   signOfflineLicense,
   type DeviceSeat,
   type OfflineLicensePayload,
@@ -188,20 +190,68 @@ export function sanitizeLicenseLogEvidence(raw: unknown): Record<string, unknown
 
 export class OfflineLicenseService {
   /**
-   * Reads the offline licence signing key from the secret store (environment).
-   * Returns null if not configured — NEVER uses a fallback key.
+   * The signing key. The backend makes it the first time it is needed and
+   * keeps it in `offline_license_signing_keys` (offline-licence-keys-01) —
+   * no environment file to set (owner, 22 Oct 2026). Only service_role can
+   * read that table. `OFFLINE_LICENSE_PRIVATE_KEY`, when set, still wins:
+   * that is how tests sign with a known pair.
+   * Returns null only when the table is missing (migration not run yet).
    */
-  getSigningKey(): { secretKey: Uint8Array; keyId: string } | null {
+  async getSigningKey(): Promise<{
+    secretKey: Uint8Array
+    keyId: string
+    publicKey: string
+  } | null> {
     const rawKey = process.env.OFFLINE_LICENSE_PRIVATE_KEY?.trim()
-    if (!rawKey) return null
-
-    try {
+    if (rawKey && /^[0-9a-f]{64}$/i.test(rawKey)) {
       const secretKey = hexToBytes(rawKey)
-      if (secretKey.length !== 32) return null
-      const keyId = process.env.OFFLINE_LICENSE_KEY_ID?.trim() || 'v1'
-      return { secretKey, keyId }
-    } catch {
-      return null
+      return {
+        secretKey,
+        keyId: process.env.OFFLINE_LICENSE_KEY_ID?.trim() || 'v1',
+        publicKey: offlineLicensePublicKeyOf(secretKey),
+      }
+    }
+
+    const active = await this.readActiveKey()
+    if (active === 'MISSING_TABLE') return null
+    if (active) return active
+
+    const created = generateOfflineLicenseKeyPair()
+    const { error } = await supabase.from('offline_license_signing_keys').insert({
+      key_id: `k-${new Date().toISOString().slice(0, 10)}-${randomUUID().slice(0, 8)}`,
+      private_key_hex: created.secretKeyHex,
+      public_key_hex: created.publicKeyHex,
+    })
+    // 23505: another request made the key at the same moment — use that one.
+    if (error && error.code !== '23505') {
+      throw new DatabaseError('Failed to store the licence signing key', error)
+    }
+    const stored = await this.readActiveKey()
+    return stored === 'MISSING_TABLE' ? null : stored
+  }
+
+  private async readActiveKey(): Promise<
+    { secretKey: Uint8Array; keyId: string; publicKey: string } | null | 'MISSING_TABLE'
+  > {
+    const { data, error } = await supabase
+      .from('offline_license_signing_keys')
+      .select('key_id, private_key_hex, public_key_hex')
+      .is('retired_at', null)
+      .maybeSingle()
+    if (error) {
+      if (error.code === '42P01' || error.code === 'PGRST205') {
+        console.warn(
+          '[offline-licence] offline_license_signing_keys is missing — run offline-licence-keys-01',
+        )
+        return 'MISSING_TABLE'
+      }
+      throw new DatabaseError('Failed to read the licence signing key', error)
+    }
+    if (!data) return null
+    return {
+      secretKey: hexToBytes(data.private_key_hex as string),
+      keyId: data.key_id as string,
+      publicKey: data.public_key_hex as string,
     }
   }
 
@@ -231,7 +281,7 @@ export class OfflineLicenseService {
    * Fails with 403 OFFLINE_PLAN_REQUIRED if workspace does not have an active OFFLINE plan.
    */
   async issueOfflineLicense(params: IssueOfflineLicenseParams): Promise<SignedOfflineLicense> {
-    const keyInfo = this.getSigningKey()
+    const keyInfo = await this.getSigningKey()
     if (!keyInfo) {
       throw new LicenseSigningNotConfiguredError()
     }
@@ -359,7 +409,7 @@ export class OfflineLicenseService {
     label?: string | undefined
     periodDays: number
   }): Promise<SignedOfflineLicense> {
-    const keyInfo = this.getSigningKey()
+    const keyInfo = await this.getSigningKey()
     if (!keyInfo) throw new LicenseSigningNotConfiguredError()
 
     const now = new Date()

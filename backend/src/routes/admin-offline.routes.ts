@@ -54,6 +54,26 @@ export default async function adminOfflineRoutes(fastify: FastifyInstance) {
     }
   }
 
+  // ─── The PUBLIC half of the signing key ───────────────────────
+  // Public by design: it can only verify, never sign. The app fetches it
+  // once while online and keeps it, so a build needs no key baked in.
+  fastify.get(
+    '/api/public/offline/licence-key',
+    async (_req: FastifyRequest, reply: FastifyReply) =>
+      handle(reply, async () => {
+        const key = await offlineLicenseService.getSigningKey()
+        if (!key) {
+          return reply
+            .code(503)
+            .send({
+              error: 'License signing is not configured',
+              code: 'LICENSE_SIGNING_NOT_CONFIGURED',
+            })
+        }
+        return { keyId: key.keyId, publicKey: key.publicKey }
+      }),
+  )
+
   // ─── 1. TAB: LICENCES ─────────────────────────────────────────
   fastify.get(
     '/api/admin/offline/licences',
@@ -405,7 +425,7 @@ export default async function adminOfflineRoutes(fastify: FastifyInstance) {
           .select('id', { count: 'exact', head: true })
           .eq('is_active', true)
 
-        const signingKey = offlineLicenseService.getSigningKey()
+        const signingKey = await offlineLicenseService.getSigningKey()
 
         return {
           health: {

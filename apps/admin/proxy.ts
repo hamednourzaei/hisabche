@@ -7,6 +7,8 @@ const LOCALES = ['fa', 'af', 'en'] as const
 const DEFAULT_LOCALE = 'fa'
 
 const OLD_ROUTE_REDIRECTS: Record<string, string> = {
+  // `/fa` alone has no page — it was a 404.
+  '/': '/dashboard?tab=overview',
   '/dashboard': '/dashboard?tab=overview',
   '/workspaces': '/customers?tab=workspaces',
   '/users': '/customers?tab=users',

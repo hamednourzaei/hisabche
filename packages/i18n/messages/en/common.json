@@ -1665,7 +1665,7 @@
       "codePlaceholder": "HSB1.…",
       "submit": "Activate",
       "back": "Back to sign-in",
-      "notConfigured": "Licence checking is not set up in this build of the app. Contact support.",
+      "notConfigured": "This device does not have the licence-checking key yet. Connect to the internet once to activate, then try again.",
       "invalidCode": "This text is not a licence code. Copy the whole code.",
       "TAMPERED": "The licence signature is not valid.",
       "EXPIRED": "This licence has expired.",

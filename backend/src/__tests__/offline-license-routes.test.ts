@@ -29,6 +29,19 @@ const dbState = {
 vi.mock('../db', () => ({
   supabase: {
     from: (table: string) => {
+      // The key table before offline-licence-keys-01 has run.
+      if (table === 'offline_license_signing_keys') {
+        return {
+          select: () => ({
+            is: () => ({
+              maybeSingle: async () => ({
+                data: null,
+                error: { code: '42P01', message: 'relation does not exist' },
+              }),
+            }),
+          }),
+        }
+      }
       if (table === 'subscriptions') {
         return {
           select: () => ({
@@ -172,7 +185,7 @@ describe('Offline Licence Endpoints', () => {
     await app.ready()
   })
 
-  it('POST /api/billing/offline-license returns 503 LICENSE_SIGNING_NOT_CONFIGURED when secret key is unset', async () => {
+  it('POST /api/billing/offline-license returns 503 LICENSE_SIGNING_NOT_CONFIGURED when the key table is not migrated', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/billing/offline-license',

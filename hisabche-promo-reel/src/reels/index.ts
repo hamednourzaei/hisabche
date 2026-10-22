@@ -54,6 +54,7 @@ import { reel67 } from './reel-67-two-prices'
 import { reel68 } from './reel-68-thief-in-the-till'
 import { reel69 } from './reel-69-digital-showreel'
 import { reel70 } from './reel-70-ulyssexbt-genesis'
+import { reel71 } from './reel-71-full-cycle'
 
 export const REELS: Reel[] = [
   reel01,
@@ -126,6 +127,7 @@ export const REELS: Reel[] = [
   reel68,
   reel69,
   reel70,
+  reel71,
 ]
 
 export { film01, film02, film03, film04, film05 }
@@ -164,4 +166,5 @@ export {
   reel68,
   reel69,
   reel70,
+  reel71,
 }

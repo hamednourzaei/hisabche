@@ -54,6 +54,10 @@ export function createMainWindow(): BrowserWindow {
     },
   })
 
+  // No File/Edit/View bar on Windows and Linux: the app is the whole window.
+  // Copy and paste in fields work without it; macOS keeps its system menu.
+  if (process.platform !== 'darwin') window.removeMenu()
+
   window.once('ready-to-show', () => window.show())
 
   // External links open in the user's browser, never inside the app shell.

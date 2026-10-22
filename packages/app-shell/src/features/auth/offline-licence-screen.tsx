@@ -20,7 +20,8 @@ export interface OfflineLicenceScreenProps {
 }
 
 const PROBLEM_FALLBACK: Record<string, string> = {
-  NOT_CONFIGURED: 'بررسی لایسنس در این نسخه از برنامه تنظیم نشده است. با پشتیبانی تماس بگیرید.',
+  NOT_CONFIGURED:
+    'کلید بررسی لایسنس هنوز روی این دستگاه نیست. برای فعال‌سازی یک بار به اینترنت وصل شوید و دوباره امتحان کنید.',
   INVALID_CODE: 'این متن کد لایسنس نیست. کد را کامل کپی کنید.',
   TAMPERED: 'امضای لایسنس معتبر نیست.',
   EXPIRED: 'مدت این لایسنس تمام شده است.',

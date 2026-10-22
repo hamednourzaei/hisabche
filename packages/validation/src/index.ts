@@ -974,6 +974,7 @@ export {
   bytesToHex,
   hexToBytes,
   generateOfflineLicenseKeyPair,
+  offlineLicensePublicKeyOf,
   signOfflineLicense,
   verifyOfflineLicenseSignature,
   verifyOfflineLicense,

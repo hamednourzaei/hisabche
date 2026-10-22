@@ -1414,6 +1414,28 @@ export const REEL_REGISTRY_LIST: ReelRegistryEntry[] = [
     description:
       'هویت بصری ulyssexbt در ۱۵ ثانیه: ژنسیس فریز، پشته بلاک با هش و ارتفاع، شبکه ۱۲۸ نود با صفر تاخیر، و قفل نهایی برند — هویتی که برای X طراحی شده است',
   },
+  {
+    id: '71',
+    title: 'چرخه کامل کسب‌وکار از فروش تا تسویه — ۴۲ ثانیه',
+    artDirection: 'procedural-spatial',
+    layoutTopology: 'spatial-2.5d-portal',
+    operators: [
+      'CinematicOrbitCamera',
+      'ContinuousTransformFlow',
+      'BridgeMergeWorlds',
+      'SplitRevealContrast',
+      'DualBoxCtaHold',
+    ],
+    themeName: 'procedural-spatial',
+    cardQuotaMax: 1,
+    targetCustomer: 'wholesaler',
+    openingArchetype: 'uncomfortable-discovery',
+    merchantPainCategory: 'multi-branch-blindness',
+    audioStrategy: 'tactile-foley',
+    viralTemplate: 'cinematic-camera-orbit',
+    description:
+      'اولین ریلز ترکیبی ۶ موتور: قلاب دیداری → دوربین ۲.۵D دور هسته مرکزی → چرخه پیوسته ۵ مرحله → تقسیم جداسازی vs یکپارچگی → پل آفلاین‌فست → CTA دو‌باکسی — ۴۲ ثانیه معماری هسته مرکزی حسابچه',
+  },
 ]
 
 // Ensure every entry in the registry carries its designated viral template
