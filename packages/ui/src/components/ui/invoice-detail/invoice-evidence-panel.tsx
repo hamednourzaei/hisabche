@@ -19,6 +19,8 @@ import { apiErrorMessage, useCostInvoice, useInvoiceEvidence } from '@hisabche/a
 import { formatSelectedAmount } from '../../../lib/money-display'
 import { evidenceSourceLabel } from '../../../lib/evidence-labels'
 import { Button } from '../button'
+import { CloudRequiredNotice } from '../cloud-required-notice'
+import { isOfflineNotAvailableError } from '../../../lib/capability/use-action-availability'
 
 export function InvoiceEvidencePanel({ invoiceId }: { invoiceId: string }) {
   const tOriginal = useTranslations()
@@ -53,7 +55,12 @@ export function InvoiceEvidencePanel({ invoiceId }: { invoiceId: string }) {
       {open && status === 403 && (
         <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('evidence.forbidden')}</p>
       )}
-      {open && evidence.error && status !== 403 && (
+      {/* The device does not hold the evidence behind a profit: say that it needs the
+          internet, not «load failed — try again», which a retry can never fix. */}
+      {open && isOfflineNotAvailableError(evidence.error) && (
+        <CloudRequiredNotice variant="inline" title={t('evidence.invoiceTitle')} />
+      )}
+      {open && evidence.error && status !== 403 && !isOfflineNotAvailableError(evidence.error) && (
         <p className="text-sm text-[hsl(var(--color-destructive))]">
           {apiErrorMessage(evidence.error, t('evidence.loadError'))}
         </p>

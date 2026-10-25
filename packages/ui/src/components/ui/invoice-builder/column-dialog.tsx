@@ -8,15 +8,17 @@
 'use client'
 
 import { SelectField } from '../select-field'
-import { memo, useEffect, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import {
   canAggregate,
+  canBeMultiplierSource,
   columnCountsInTotal,
   currencyPrecision,
   customColumnId,
   type InvoiceColumn,
   type InvoiceColumnType,
   COLUMN_TYPES,
+  multiplierIssue,
 } from '@hisabche/validation'
 import { SUPPORTED_CURRENCIES, type CurrencyCode } from '@hisabche/store'
 
@@ -58,6 +60,11 @@ export interface ColumnDialogProps {
   existingColumns: readonly InvoiceColumn[]
   invoiceCurrency: CurrencyCode
   onSubmit: (column: InvoiceColumn) => void
+  /**
+   * Present where the draft can re-point a money column. A weight or a count
+   * column then carries a tick per money column: «multiply this price».
+   */
+  onSetMultiplier?: ((columnId: string, sourceId: string | null) => void) | undefined
 }
 
 export const ColumnDialog = memo(function ColumnDialog({
@@ -68,6 +75,7 @@ export const ColumnDialog = memo(function ColumnDialog({
   existingColumns,
   invoiceCurrency,
   onSubmit,
+  onSetMultiplier,
 }: ColumnDialogProps) {
   const editing = column !== null
 
@@ -79,6 +87,13 @@ export const ColumnDialog = memo(function ColumnDialog({
   const [precision, setPrecision] = useState('2')
   const [aggregate, setAggregate] = useState(false)
   const [includeInTotal, setIncludeInTotal] = useState(false)
+  const [multiplyBy, setMultiplyBy] = useState('')
+  // The money columns this (numeric) column scales — set on THIS column's dialog,
+  // because the person thinks «وزن خالص ضرب در قیمت», not the other way round.
+  const [scales, setScales] = useState<string[]>([])
+  // Read when the dialog opens, not on every draft change (that would wipe the form).
+  const columnsRef = useRef(existingColumns)
+  columnsRef.current = existingColumns
   const [optionsText, setOptionsText] = useState('')
   const [defaultValue, setDefaultValue] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -101,6 +116,12 @@ export const ColumnDialog = memo(function ColumnDialog({
     // would show the switch OFF for a money column that IS being counted, and
     // saving the dialog unchanged would then silently drop it from the total.
     setIncludeInTotal(column ? columnCountsInTotal(column) : false)
+    setMultiplyBy(column?.multiplyByColumnId ?? '')
+    setScales(
+      column
+        ? columnsRef.current.filter((c) => c.multiplyByColumnId === column.id).map((c) => c.id)
+        : [],
+    )
     setOptionsText((column?.options ?? []).join('\n'))
     setDefaultValue(column?.defaultValue ?? '')
   }, [open, column, invoiceCurrency])
@@ -109,6 +130,12 @@ export const ColumnDialog = memo(function ColumnDialog({
   // Only these two carry money into the line. A weight or a count column is
   // summable in the footer but must never be added to what is owed.
   const chargeable = type === 'currency' || type === 'percent'
+  // A money column is a rate; the numeric columns beside it are what it scales.
+  const multiplierChoices = existingColumns.filter(
+    (c) => c.id !== column?.id && canBeMultiplierSource(c),
+  )
+
+  const moneyChoices = existingColumns.filter((c) => c.type === 'currency' && c.id !== column?.id)
 
   const handleSubmit = () => {
     const title = label.trim()
@@ -134,6 +161,21 @@ export const ColumnDialog = memo(function ColumnDialog({
       return
     }
 
+    // A column other people multiply by must stay a number — turning «وزن» into
+    // text would silently zero every price that is scaled by it.
+    const referencedBy = column
+      ? existingColumns.find((c) => c.multiplyByColumnId === column.id)
+      : undefined
+    if (referencedBy && column && !canBeMultiplierSource({ ...column, type })) {
+      setError(
+        t(
+          'invoiceBuilder.column.multiplierInUse',
+          'ستونی دیگر در این ستون ضرب می‌شود؛ نوع آن باید عددی بماند',
+        ),
+      )
+      return
+    }
+
     const resolvedPrecision =
       type === 'currency'
         ? currencyPrecision(currency)
@@ -155,6 +197,7 @@ export const ColumnDialog = memo(function ColumnDialog({
       // user switching a money column OFF would have it silently switched
       // back on the next time the invoice was opened.
       ...(chargeable ? { includeInTotal } : {}),
+      ...(type === 'currency' && multiplyBy ? { multiplyByColumnId: multiplyBy } : {}),
       precision: resolvedPrecision,
       ...(type === 'currency' ? { currency } : {}),
       ...(suffix.trim() ? { suffix: suffix.trim() } : {}),
@@ -164,7 +207,21 @@ export const ColumnDialog = memo(function ColumnDialog({
       ...(column?.labelKey ? { labelKey: column.labelKey } : {}),
     }
 
+    // The same rule the grid applies before it multiplies — refused here, so a
+    // configuration that could not be honoured is never saved.
+    if (multiplierIssue(next, existingColumns) !== null) {
+      setError(t('invoiceBuilder.column.multiplyByEmpty', 'ستون عددی برای ضرب وجود ندارد'))
+      return
+    }
+
     onSubmit(next)
+    if (onSetMultiplier && (type === 'integer' || type === 'decimal')) {
+      for (const money of moneyChoices) {
+        const wanted = scales.includes(money.id)
+        if (wanted && money.multiplyByColumnId !== next.id) onSetMultiplier(money.id, next.id)
+        if (!wanted && money.multiplyByColumnId === next.id) onSetMultiplier(money.id, null)
+      }
+    }
     onOpenChange(false)
   }
 
@@ -222,29 +279,6 @@ export const ColumnDialog = memo(function ColumnDialog({
               disabled={editing && column?.system}
               id={'column-type'}
             />
-          </div>
-
-          {/* T8 — the trade's own word for this kind of column. The BEHAVIOUR
-              is still the type chosen above; this names it for the reader. */}
-          <div>
-            <label htmlFor="column-type-label" className={fieldLabel}>
-              {t('invoiceBuilder.column.typeLabel', 'نام دلخواه نوع (اختیاری)')}
-            </label>
-            <Input
-              id="column-type-label"
-              value={typeLabel}
-              onChange={(e) => setTypeLabel(e.target.value)}
-              placeholder={t(
-                'invoiceBuilder.column.typeLabelPlaceholder',
-                'اجرت، کرایه حمل، کارمزد',
-              )}
-            />
-            <p className="mt-1 text-[11px] text-[hsl(var(--fg-tertiary))]">
-              {t(
-                'invoiceBuilder.column.typeLabelHint',
-                'فقط برای نمایش است — نحوه‌ی محاسبه همان «نوع ستون» بالا می‌ماند',
-              )}
-            </p>
           </div>
 
           {type === 'currency' ? (
@@ -338,6 +372,89 @@ export const ColumnDialog = memo(function ColumnDialog({
             </div>
           ) : null}
 
+          {type === 'currency' ? (
+            <div>
+              <label htmlFor="column-multiply-by" className={fieldLabel}>
+                {t('invoiceBuilder.column.multiplyBy', 'ضرب در ستون')}
+              </label>
+              {multiplierChoices.length > 0 ? (
+                <SelectField
+                  value={multiplyBy}
+                  onChange={setMultiplyBy}
+                  options={[
+                    { value: '', label: t('invoiceBuilder.column.multiplyByNone', 'بدون ضرب') },
+                    ...multiplierChoices.map((c) => ({ value: c.id, label: c.label })),
+                  ]}
+                  className={cn(
+                    'h-10 w-full rounded-[var(--radius-md)] border border-[hsl(var(--border-default))]',
+                    'bg-[hsl(var(--surface-base))] px-3 text-sm text-[hsl(var(--fg-primary))]',
+                    'outline-none focus:border-[hsl(var(--color-primary))]',
+                  )}
+                  id={'column-multiply-by'}
+                />
+              ) : (
+                <p className="text-[11px] leading-relaxed text-[hsl(var(--fg-tertiary))]">
+                  {t(
+                    'invoiceBuilder.column.multiplyByEmpty',
+                    'ستون عددی برای ضرب وجود ندارد؛ اول یک ستون «عدد صحیح» یا «عدد اعشاری» بسازید',
+                  )}
+                </p>
+              )}
+              {multiplierChoices.length > 0 ? (
+                <p className="mt-1 text-[11px] text-[hsl(var(--fg-tertiary))]">
+                  {t(
+                    'invoiceBuilder.column.multiplyByHint',
+                    'مبلغ هر ردیف در مقدار همان ردیف از ستون انتخابی ضرب می‌شود؛ مثلاً قیمت هر گرم × وزن خالص',
+                  )}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {onSetMultiplier && (type === 'integer' || type === 'decimal') ? (
+            <div className="space-y-2 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] px-3 py-2.5">
+              <div>
+                <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+                  {t('invoiceBuilder.column.multipliesTitle', 'ضرب در مبلغ')}
+                </p>
+                <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
+                  {t(
+                    'invoiceBuilder.column.multipliesHint',
+                    'مبلغ هر ردیف در مقدار این ستون ضرب می‌شود؛ مثلاً وزن خالص × قیمت هر گرم',
+                  )}
+                </p>
+              </div>
+              {moneyChoices.length === 0 ? (
+                <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
+                  {t(
+                    'invoiceBuilder.column.multipliesNoMoney',
+                    'ستون مبلغی (مثل «قیمت واحد») برای ضرب وجود ندارد',
+                  )}
+                </p>
+              ) : (
+                moneyChoices.map((money) => (
+                  <div key={money.id} className="flex items-center justify-between gap-3">
+                    <span className="min-w-0 truncate text-sm text-[hsl(var(--fg-primary))]">
+                      {t('invoiceBuilder.column.multipliesLabel', 'ضرب در «{column}»').replace(
+                        '{column}',
+                        money.label,
+                      )}
+                    </span>
+                    <Switch
+                      checked={scales.includes(money.id)}
+                      onCheckedChange={(on) =>
+                        setScales((current) =>
+                          on ? [...current, money.id] : current.filter((id) => id !== money.id),
+                        )
+                      }
+                      aria-label={money.label}
+                    />
+                  </div>
+                ))
+              )}
+            </div>
+          ) : null}
+
           {chargeable ? (
             <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] px-3 py-2.5">
               <div className="min-w-0">
@@ -376,6 +493,29 @@ export const ColumnDialog = memo(function ColumnDialog({
               <Switch checked={aggregate} onCheckedChange={setAggregate} />
             </div>
           ) : null}
+
+          {/* T8 — the trade's own word for this kind of column. The BEHAVIOUR
+              is still the type chosen above; this names it for the reader. */}
+          <div>
+            <label htmlFor="column-type-label" className={fieldLabel}>
+              {t('invoiceBuilder.column.typeLabel', 'نام دلخواه نوع (اختیاری)')}
+            </label>
+            <Input
+              id="column-type-label"
+              value={typeLabel}
+              onChange={(e) => setTypeLabel(e.target.value)}
+              placeholder={t(
+                'invoiceBuilder.column.typeLabelPlaceholder',
+                'اجرت، کرایه حمل، کارمزد',
+              )}
+            />
+            <p className="mt-1 text-[11px] text-[hsl(var(--fg-tertiary))]">
+              {t(
+                'invoiceBuilder.column.typeLabelHint',
+                'فقط برای نمایش است — نحوه‌ی محاسبه همان «نوع ستون» بالا می‌ماند',
+              )}
+            </p>
+          </div>
 
           {error ? (
             <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">

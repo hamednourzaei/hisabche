@@ -23,6 +23,7 @@ import {
 } from '@hisabche/validation'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import type { Router } from '../router'
+import { profitSources } from './report-sources'
 import type { RouteHandlerContext } from '../types'
 
 export interface AccountRow {
@@ -536,98 +537,13 @@ export function registerAccountingRoutes(router: Router): void {
     const to = query.to ? dateOnly(query.to) : dateOnly(new Date())
     const currency = query.currency?.trim() || baseCurrency
 
-    // Fetch invoices in period
-    const invoiceRows = db.all<{
-      id: string
-      currency: string
-      subtotal: number
-      discount_total: number
-    }>(
-      `SELECT id, currency, subtotal, discount_total
-       FROM invoice
-       WHERE workspace_id = ? AND date >= ? AND date <= ? AND status <> 'cancelled' AND deleted_at IS NULL AND type = 'sale'`,
-      [workspaceId, from, to],
-    )
-
-    const matchingInvoices: ProfitInvoice[] = invoiceRows
-      .filter((inv) => inv.currency === currency)
-      .map((inv) => ({
-        id: inv.id,
-        currency: inv.currency,
-        subtotal: inv.subtotal,
-        discountTotal: inv.discount_total,
-      }))
-
-    const matchingIds = matchingInvoices.map((i) => i.id)
-    const linesByInvoice = new Map<string, ProfitLine[]>()
-
-    if (matchingIds.length > 0) {
-      const placeholders = matchingIds.map(() => '?').join(', ')
-      const lineRows = db.all<{
-        invoice_id: string
-        product_id: string | null
-        product_name: string
-        quantity: number
-        total_price: number
-      }>(
-        `SELECT invoice_id, product_id, product_name, quantity, total_price
-         FROM invoice_item
-         WHERE invoice_id IN (${placeholders}) AND workspace_id = ? AND deleted_at IS NULL`,
-        [...matchingIds, workspaceId],
-      )
-
-      for (const line of lineRows) {
-        const list = linesByInvoice.get(line.invoice_id) ?? []
-        list.push({
-          invoiceId: line.invoice_id,
-          productId: line.product_id,
-          productName: line.product_name,
-          quantity: Number(line.quantity),
-          totalPrice: line.total_price,
-        })
-        linesByInvoice.set(line.invoice_id, list)
-      }
-    }
-
-    // Fetch consumptions for these invoices
-    let consumptions: ProfitConsumption[] = []
-    if (matchingIds.length > 0) {
-      const placeholders = matchingIds.map(() => '?').join(', ')
-      const consRows = db.all<{
-        consumer_id: string | null
-        product_id: string
-        quantity: number
-        unit_cost: number
-        is_shortfall: number
-      }>(
-        `SELECT consumer_id, product_id, quantity, unit_cost, is_shortfall
-         FROM cost_consumption
-         WHERE consumer_id IN (${placeholders}) AND workspace_id = ? AND deleted_at IS NULL`,
-        [...matchingIds, workspaceId],
-      )
-
-      consumptions = consRows.map((r) => ({
-        invoiceId: r.consumer_id,
-        productId: r.product_id,
-        amount: round2(Number(r.quantity) * Number(r.unit_cost)),
-        isEstimated: Boolean(r.is_shortfall),
-        quantity: Number(r.quantity),
-      }))
-    }
-
-    const allLines: ProfitLine[] = Array.from(linesByInvoice.values()).flat()
-
-    const report = buildProfitReport({
+    // The same reads as the by-currency report (report-sources.ts).
+    return buildProfitReport({
       from,
       to,
       currency,
-      invoices: matchingInvoices,
-      lines: allLines,
-      consumptions,
-      payrolls: [],
+      ...profitSources(db, workspaceId, from, to, baseCurrency),
     })
-
-    return report
   })
 
   // ─── GET /accounting/period-lock ─── & ─── PUT /accounting/period-lock ────────

@@ -8,10 +8,23 @@
 // ============================================
 
 import {
+  buildOpenInvoicesView,
+  buildPartyActivity,
+  buildCustomerAccounting,
+  buildPartyLedger,
+  buildPartySummary,
   cancelPaymentSchema,
+  partyActivityInvoices,
+  statementDocumentsOf,
+  type EntryInput,
+  type PartyInvoiceRow,
+  type PartyLineRow,
+  type PartyPaymentRow,
+  type PartyType,
   paymentPosting,
   recordPaymentSchema,
   settlesInCurrency,
+  tillAmountMinor,
   validateAllocations,
   type OpenInvoice,
 } from '@hisabche/validation'
@@ -113,24 +126,15 @@ export function registerPaymentRoutes(router: Router): void {
 
     const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
 
-    const countRow = db.get<{ count: number }>(
-      `SELECT count(*) as count FROM payment ${where}`,
-      params,
-    )
-    const total = countRow?.count ?? 0
-
     const rows = db.all<PaymentRow>(
       `SELECT * FROM payment ${where} ORDER BY entry_date DESC, created_at DESC LIMIT ? OFFSET ?`,
       [...params, limit, offset],
     )
 
-    return {
-      payments: rows.map(mapPayment),
-      total,
-      hasMore: offset + limit < total,
-      nextCursor: null,
-      limit,
-    }
+    // A plain array, as the server sends (payments.repository listPayments):
+    // `usePayments` hands it straight to a list. An object here broke the
+    // customer page offline.
+    return rows.map(mapPayment)
   })
 
   // ─── GET /payments/:id ──────────────────────────────────────
@@ -191,6 +195,33 @@ export function registerPaymentRoutes(router: Router): void {
     const paymentId = (raw.id as string) || generateUuid()
 
     const rawAllocations = data.allocations || []
+
+    // The till this cash goes into (money in) or comes out of (money out): a
+    // REQUEST, read and checked here. Cash only; the till must be open; what
+    // moves is stored in the till's own currency (payments.pos_session_id /
+    // till_amount_minor). Absent = no till is touched — nothing is inferred.
+    let till: { sessionId: string; amountMinor: number } | null = null
+    if (data.tillSessionId) {
+      if (method !== 'cash') throw new ValidationError('PAYMENT_TILL_ONLY_CASH')
+      const row = db.get<{ id: string; status: string; currency: string | null }>(
+        'SELECT id, status, currency FROM pos_session WHERE workspace_id = ? AND id = ?',
+        [workspaceId, data.tillSessionId],
+      )
+      // A till of another business reads as no till: its existence is not said.
+      if (!row) throw new ValidationError('PAYMENT_TILL_NOT_FOUND')
+      // Closed, being counted, or suspended: its count must not move under it.
+      if (row.status !== 'open')
+        throw new ConflictError('PAYMENT_TILL_NOT_OPEN', 'PAYMENT_TILL_NOT_OPEN')
+      const amountMinor = tillAmountMinor({
+        amount,
+        currency,
+        tillCurrency: row.currency ?? baseCurrency,
+        bookCurrency: baseCurrency,
+        rate: Number(data.exchangeRate) > 0 ? Number(data.exchangeRate) : 1,
+      })
+      if (amountMinor === null) throw new ValidationError('PAYMENT_TILL_CURRENCY_MISMATCH')
+      till = { sessionId: row.id, amountMinor }
+    }
 
     return db.transaction(() => {
       // 1. Fetch target open invoices if allocations requested
@@ -260,8 +291,8 @@ export function registerPaymentRoutes(router: Router): void {
         `INSERT INTO payment (
           id, workspace_id, payment_number, direction, party_type, party_id,
           amount, currency, method, entry_date, reference, notes, status,
-          created_at, updated_at, origin, sync_state
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'posted', ?, ?, 'local', 'local_only')`,
+          created_at, updated_at, origin, sync_state, pos_session_id, till_amount_minor
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'posted', ?, ?, 'local', 'local_only', ?, ?)`,
         [
           paymentId,
           workspaceId,
@@ -277,6 +308,8 @@ export function registerPaymentRoutes(router: Router): void {
           notes,
           now,
           now,
+          till?.sessionId ?? null,
+          till?.amountMinor ?? null,
         ],
       )
 
@@ -475,5 +508,190 @@ export function registerPaymentRoutes(router: Router): void {
 
       return { success: true }
     })
+  })
+}
+
+// ─── The statement of one party ──────────────────────────────
+// The same rows the server reads (payments.repository partyMovements), handed
+// to the same assembly (@hisabche/validation party-statement).
+
+function partyOf(c: RouteHandlerContext): { partyType: PartyType; partyId: string } {
+  const { partyType, partyId } = c.params
+  if (partyType !== 'customer' && partyType !== 'supplier') {
+    throw new ValidationError('Invalid party')
+  }
+  return { partyType, partyId: partyId ?? '' }
+}
+
+function partyMovements(c: RouteHandlerContext, partyType: PartyType, partyId: string) {
+  const { db, ctx } = c
+  const partyColumn = partyType === 'customer' ? 'customer_id' : 'supplier_id'
+  const invoices = db.all<PartyInvoiceRow>(
+    `SELECT id, invoice_number, type, status, total, paid_amount, date, due_date, currency
+     FROM invoice
+     WHERE workspace_id = ? AND ${partyColumn} = ? AND deleted_at IS NULL AND status <> 'cancelled'
+     ORDER BY date ASC, id ASC`,
+    [ctx.workspaceId, partyId],
+  )
+  const payments = db.all<PartyPaymentRow>(
+    `SELECT id, payment_number, direction, amount, entry_date, currency, method
+     FROM payment
+     WHERE workspace_id = ? AND party_id = ? AND deleted_at IS NULL AND status = 'posted'
+     ORDER BY entry_date ASC, id ASC`,
+    [ctx.workspaceId, partyId],
+  )
+  // Only customers carry an opening balance.
+  const openingBalance =
+    partyType === 'customer'
+      ? Number(
+          db.get<{ opening_balance: number }>(
+            'SELECT opening_balance FROM customer WHERE id = ? AND workspace_id = ?',
+            [partyId, ctx.workspaceId],
+          )?.opening_balance,
+        ) || 0
+      : 0
+  return { invoices, payments, openingBalance }
+}
+
+export function registerPartyStatementRoutes(router: Router): void {
+  router.get('/payments/open-invoices/:partyType/:partyId', (c: RouteHandlerContext) => {
+    const { partyType, partyId } = partyOf(c)
+    const partyColumn = partyType === 'customer' ? 'customer_id' : 'supplier_id'
+    const rows = c.db.all<{
+      id: string
+      invoice_number: string | null
+      total: number
+      paid_amount: number
+      due_date: string | null
+      date: string
+      currency: string | null
+    }>(
+      `SELECT id, invoice_number, total, paid_amount, due_date, date, currency
+       FROM invoice
+       WHERE workspace_id = ? AND ${partyColumn} = ? AND type = ? AND deleted_at IS NULL
+         AND status <> 'cancelled' AND total - paid_amount > 0
+       ORDER BY due_date ASC`,
+      [c.ctx.workspaceId, partyId, partyType === 'customer' ? 'sale' : 'purchase'],
+    )
+    return buildOpenInvoicesView(
+      rows.map((row) => ({
+        invoiceId: row.id,
+        invoiceNumber: row.invoice_number ?? '',
+        total: Number(row.total) || 0,
+        allocated: Number(row.paid_amount) || 0,
+        dueDate: String(row.due_date ?? '').slice(0, 10),
+        invoiceDate: String(row.date ?? '').slice(0, 10),
+        currency: row.currency ? String(row.currency) : null,
+      })),
+    )
+  })
+
+  router.get('/payments/summary/:partyType/:partyId', (c: RouteHandlerContext) => {
+    const { partyType, partyId } = partyOf(c)
+    const asOf = c.query.asOf
+    return buildPartySummary({
+      rows: partyMovements(c, partyType, partyId),
+      bookCurrency: c.ctx.baseCurrency,
+      asOf: asOf && /^d{4}-d{2}-d{2}$/.test(asOf) ? asOf : new Date().toISOString().slice(0, 10),
+    })
+  })
+
+  router.get('/payments/activity/:partyType/:partyId', (c: RouteHandlerContext) => {
+    const { partyType, partyId } = partyOf(c)
+    const rows = partyMovements(c, partyType, partyId)
+    const ids = partyActivityInvoices(partyType, rows.invoices).map((invoice) => invoice.id)
+    const lines =
+      ids.length === 0
+        ? []
+        : c.db.all<PartyLineRow>(
+            `SELECT invoice_id, product_id, product_name, unit, unit_label, quantity, total_price
+             FROM invoice_item
+             WHERE workspace_id = ? AND deleted_at IS NULL AND invoice_id IN (${ids.map(() => '?').join(', ')})
+             ORDER BY id ASC`,
+            [c.ctx.workspaceId, ...ids],
+          )
+    return buildPartyActivity({
+      partyType,
+      rows,
+      lines,
+      asOf: new Date().toISOString().slice(0, 10),
+    })
+  })
+
+  router.get('/payments/ledger/:partyType/:partyId', (c: RouteHandlerContext) => {
+    const { partyType, partyId } = partyOf(c)
+    return buildPartyLedger({
+      partyType,
+      partyId,
+      rows: partyMovements(c, partyType, partyId),
+      bookCurrency: c.ctx.baseCurrency,
+    })
+  })
+
+  // ─── GET /customers/:id/accounting ──────────────────────────
+  // Every statement document of the customer with the journal entries that
+  // account for it (the same rule the server's customer profile uses).
+  router.get('/customers/:id/accounting', (c: RouteHandlerContext) => {
+    const customerId = c.params.id ?? ''
+    const exists = c.db.get<{ id: string }>(
+      'SELECT id FROM customer WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL',
+      [customerId, c.ctx.workspaceId],
+    )
+    if (!exists) throw new NotFoundError('CUSTOMER_NOT_FOUND')
+
+    const ledger = buildPartyLedger({
+      partyType: 'customer',
+      partyId: customerId,
+      rows: partyMovements(c, 'customer', customerId),
+      bookCurrency: c.ctx.baseCurrency,
+    })
+    const documents = statementDocumentsOf(ledger.movements)
+
+    const entries: EntryInput[] = []
+    for (const type of ['invoice', 'payment'] as const) {
+      const ids = [
+        ...new Set(documents.filter((d) => d.sourceType === type).map((d) => d.sourceId)),
+      ]
+      if (ids.length === 0) continue
+      const rows = c.db.all<{
+        id: string
+        entry_number: string | null
+        date: string
+        status: string
+        source_type: string | null
+        source_id: string | null
+        reversal_of: string | null
+      }>(
+        `SELECT id, entry_number, date, status, source_type, source_id, reversal_of
+         FROM journal_entry
+         WHERE workspace_id = ? AND source_type = ? AND deleted_at IS NULL
+           AND source_id IN (${ids.map(() => '?').join(', ')})
+         ORDER BY date ASC, id ASC`,
+        [c.ctx.workspaceId, type, ...ids],
+      )
+      for (const row of rows) {
+        entries.push({
+          id: row.id,
+          entryNumber: row.entry_number,
+          date: row.date,
+          status: row.status,
+          sourceType: row.source_type,
+          sourceId: row.source_id,
+          reversalOf: row.reversal_of,
+          lines: c.db.all<{
+            debit: number
+            credit: number
+            accountCode: string
+            accountName: string
+          }>(
+            `SELECT l.debit AS debit, l.credit AS credit, a.code AS accountCode, a.name AS accountName
+             FROM journal_line l JOIN account a ON a.id = l.account_id
+             WHERE l.journal_id = ? AND l.workspace_id = ?`,
+            [row.id, c.ctx.workspaceId],
+          ),
+        })
+      }
+    }
+    return buildCustomerAccounting(documents, entries)
   })
 }

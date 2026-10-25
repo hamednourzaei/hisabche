@@ -36,29 +36,36 @@ import { CurrencyService } from '../currency/currency.service'
 import { z } from 'zod'
 
 import {
-  applicableBudgets,
-  checkImpact,
-  checkSpend,
-  distributeByWeights,
-  equalDistribution,
+  BUDGET_CURRENCIES,
+  actualsFromDays,
+  buildBudgetReport,
+  controllingBudgets,
+  convertParts,
+  decideBudgetSpend,
   evaluate,
-  findOverlap,
+  filterBudgets,
+  mapBudget,
   normalizeActual,
-  performance,
   periodFor,
-  reviseBudget,
-  theoreticalToDate,
-  validateDistribution,
+  planBudgetApprove,
+  planBudgetArchive,
+  planBudgetRevision,
+  planBudgetSave,
+  planFor,
+  reportWindow,
   varianceReport,
+  type AccountDayNet,
   type Budget,
   type BudgetAction,
-  type BudgetDistribution,
-  type BudgetPerformance,
-  type BudgetPeriod,
+  type BudgetConsumption,
+  type BudgetReport,
+  type BudgetReportEntry,
+  type BudgetReportRow,
   type BudgetStatus,
+  type BudgetStatusCode,
   type BudgetType,
-  type ImpactResult,
-} from './budget.domain'
+  type PlannedBudget,
+} from '@hisabche/validation'
 
 const LEGACY_COLUMNS =
   'id, account_id, dimension_value_id, branch_id, period, starts_on, amount_minor, action, warn_at_percent, is_active'
@@ -70,166 +77,13 @@ const COLUMNS = `${PLANNING_COLUMNS}, currency, amount_currency_minor, fx_rate`
 
 /** The ledger's currency. Every actual a budget is compared with is in it. */
 export const BASE_CURRENCY = 'AFN'
-export const BUDGET_CURRENCIES = ['AFN', 'USD', 'PKR', 'IRR'] as const
+export { BUDGET_CURRENCIES, convertParts, planFor }
+export type { BudgetReport, BudgetReportRow, BudgetStatusCode, PlannedBudget }
 export type BudgetCurrency = (typeof BUDGET_CURRENCIES)[number]
-
-export type BudgetStatusCode = 'draft' | 'pending_approval' | 'approved' | 'archived'
-
-/** A budget as the planning layer sees it. Extends the control-layer shape. */
-export interface PlannedBudget extends Budget {
-  name: string | null
-  type: BudgetType
-  status: BudgetStatusCode
-  version: number
-  /** Per sub-period minor units; null = equal split of amountMinor. */
-  distribution: Array<{ start: string; amountMinor: number }> | null
-  notes: string | null
-  approvedBy: string | null
-  approvedAt: string | null
-  createdBy: string | null
-  /** The currency the amount was ENTERED in. `amountMinor` is always base. */
-  currency: BudgetCurrency
-  /** The entered amount, in `currency` minor units. */
-  amountCurrencyMinor: number
-  /** Base units per 1 unit of `currency`, fixed at save. null for AFN. */
-  fxRate: number | null
-}
 
 /** 42703 undefined column / 42P01 undefined table — the migration has not run. */
 function isMissingSchema(error: { code?: string } | null): boolean {
   return !!error && (error.code === '42703' || error.code === '42P01' || error.code === 'PGRST204')
-}
-
-const distributionSchema = z
-  .array(z.object({ start: z.string(), amount_minor: z.number().int().nonnegative() }))
-  .nullable()
-
-function mapBudget(raw: Record<string, any>): PlannedBudget {
-  const parsed = distributionSchema.safeParse(raw.distribution ?? null)
-  return {
-    id: raw.id,
-    accountId: raw.account_id,
-    dimensionValueId: raw.dimension_value_id ?? null,
-    branchId: raw.branch_id ?? null,
-    period: raw.period as BudgetPeriod,
-    startsOn: String(raw.starts_on ?? '').slice(0, 10),
-    amountMinor: Number(raw.amount_minor) || 0,
-    action: raw.action as BudgetAction,
-    warnAtPercent: Number(raw.warn_at_percent) || 0,
-    isActive: raw.is_active !== false,
-    name: raw.name ?? null,
-    // Legacy rows (no column yet) were expense controls — see the migration.
-    type: raw.budget_type === 'revenue' ? 'revenue' : 'expense',
-    status: (raw.status as BudgetStatusCode | undefined) ?? 'approved',
-    version: Number(raw.version) || 1,
-    distribution:
-      parsed.success && parsed.data
-        ? parsed.data.map((d) => ({ start: d.start.slice(0, 10), amountMinor: d.amount_minor }))
-        : null,
-    notes: raw.notes ?? null,
-    approvedBy: raw.approved_by ?? null,
-    approvedAt: raw.approved_at ?? null,
-    createdBy: raw.created_by ?? null,
-    currency: (BUDGET_CURRENCIES as readonly string[]).includes(raw.currency)
-      ? raw.currency
-      : BASE_CURRENCY,
-    // NULL on rows entered before the column existed: they were entered in AFN.
-    amountCurrencyMinor:
-      raw.amount_currency_minor === null || raw.amount_currency_minor === undefined
-        ? Number(raw.amount_minor) || 0
-        : Number(raw.amount_currency_minor) || 0,
-    fxRate: raw.fx_rate === null || raw.fx_rate === undefined ? null : Number(raw.fx_rate),
-  }
-}
-
-const MONTHS_IN: Record<BudgetPeriod, number> = { monthly: 1, quarterly: 3, yearly: 12 }
-
-function addMonths(iso: string, months: number): string {
-  const d = new Date(`${iso}T00:00:00Z`)
-  const day = d.getUTCDate()
-  const out = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + months, day))
-  return out.toISOString().slice(0, 10)
-}
-
-function daysInclusive(a: string, b: string): number {
-  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000) + 1
-}
-
-/** The sub-period plan for the period containing `onDate`. */
-export function planFor(budget: PlannedBudget, onDate: string) {
-  const { start, end } = periodFor(budget, onDate)
-  const months = MONTHS_IN[budget.period]
-  const periodStarts = Array.from({ length: months }, (_, i) => addMonths(start, i))
-
-  // A stored distribution is honoured only if it describes THIS period's
-  // sub-periods and adds up to the budget. Anything else is a data error to
-  // surface, not something to reinterpret.
-  const stored = budget.distribution
-  const matches =
-    stored !== null &&
-    stored.length === months &&
-    stored.every((d, i) => d.start === periodStarts[i]) &&
-    stored.reduce((s, d) => s + d.amountMinor, 0) === budget.amountMinor
-
-  const distribution: BudgetDistribution = {
-    periodStarts,
-    amountsMinor: matches
-      ? stored!.map((d) => d.amountMinor)
-      : equalDistribution(budget.amountMinor, months),
-  }
-
-  return {
-    start,
-    end,
-    distribution,
-    distributionKind: matches ? ('custom' as const) : ('equal' as const),
-    distributionMismatch: stored !== null && !matches,
-  }
-}
-
-/**
- * Convert entered sub-period amounts to base currency so they still sum to
- * exactly `baseTotal`: each part is rounded, the remainder lands on the last.
- */
-export function convertParts(parts: number[], rate: number, baseTotal: number): number[] {
-  const converted = parts.map((part) => Math.round(part * rate))
-  const drift = baseTotal - converted.reduce((s, x) => s + x, 0)
-  if (converted.length > 0)
-    converted[converted.length - 1] = Math.max(0, converted[converted.length - 1]! + drift)
-  return converted
-}
-
-export interface BudgetReportRow {
-  budget: PlannedBudget
-  periodStart: string
-  periodEnd: string
-  distributionKind: 'equal' | 'custom'
-  distributionMismatch: boolean
-  performance: BudgetPerformance
-  /** Per sub-period: plan, actual, open commitments are period-level only. */
-  series: Array<{ start: string; planMinor: number; actualMinor: number }>
-}
-
-export interface BudgetReport {
-  onDate: string
-  rows: BudgetReportRow[]
-  totals: {
-    expense: {
-      budgetMinor: number
-      actualMinor: number
-      openCommitmentMinor: number
-      remainingMinor: number
-      forecastMinor: number | null
-    }
-    revenue: {
-      budgetMinor: number
-      actualMinor: number
-      remainingMinor: number
-      forecastMinor: number | null
-    }
-  }
-  /** 'batch' = one aggregate call; 'per_budget' = migration not run yet. */
-  source: 'batch' | 'per_budget'
 }
 
 const batchSchema = z.object({
@@ -300,7 +154,9 @@ export class BudgetService {
 
     if (error) throw new DatabaseError('Failed to fetch budgets', error)
 
-    const budgets = ((data ?? []) as unknown as Record<string, any>[]).map(mapBudget)
+    const budgets = ((data ?? []) as unknown as Record<string, any>[]).map((raw) =>
+      mapBudget(raw, BASE_CURRENCY),
+    )
     await memoryCache.set(cacheKey, budgets, 300)
     return budgets
   }
@@ -330,15 +186,13 @@ export class BudgetService {
   ): Promise<PlannedBudget> {
     this.assertCan(ctx, 'budget.manage')
 
-    const currency: BudgetCurrency = input.currency ?? BASE_CURRENCY
-    const enteredMinor = input.amountMinor
-    let fxRate: number | null = null
+    const currency: BudgetCurrency = (input.currency ?? BASE_CURRENCY) as BudgetCurrency
 
-    if (!Number.isSafeInteger(input.amountMinor) || input.amountMinor < 0) {
-      throw new ValidationError('BUDGET_AMOUNT_INVALID')
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startsOn) || Number.isNaN(Date.parse(input.startsOn))) {
-      throw new ValidationError('BUDGET_PERIOD_INVALID')
+    // The amount and the period are checked first, by the SHARED rule
+    // (planBudgetSave); only the FX quote is missing at this point.
+    const early = planBudgetSave(input, { baseCurrency: BASE_CURRENCY, fxRate: null })
+    if (!early.ok && !early.problem.startsWith('BUDGET_FX_RATE_MISSING')) {
+      throw new ValidationError(early.problem)
     }
 
     const existing = (await this.list(ctx)).find((b) => b.id === input.id)
@@ -373,43 +227,15 @@ export class BudgetService {
     // entry is converted at the workspace's own quote for the period start —
     // the most recent ON OR BEFORE it, never a later one — and the rate is
     // stored so the conversion can be re-done by hand.
+    let quoteRate: number | null = null
     if (currency !== BASE_CURRENCY) {
       const quote = await this.currencies.getRateFor(ctx, currency, input.startsOn)
       if ('error' in quote) throw new ValidationError(`BUDGET_FX_RATE_MISSING: ${currency}`)
-      fxRate = quote.rate
-      input = {
-        ...input,
-        amountMinor: Math.round(enteredMinor * quote.rate),
-        ...(input.distributionMinor && input.distributionMinor.length > 0
-          ? {
-              distributionMinor: convertParts(
-                input.distributionMinor,
-                quote.rate,
-                Math.round(enteredMinor * quote.rate),
-              ),
-            }
-          : {}),
-      }
+      quoteRate = quote.rate
     }
-
-    const months = MONTHS_IN[input.period]
-    const periodStarts = Array.from({ length: months }, (_, i) => addMonths(input.startsOn, i))
-    let amounts: number[] | null = null
-    try {
-      if (input.distributionMinor && input.distributionMinor.length > 0) {
-        validateDistribution({ periodStarts, amountsMinor: input.distributionMinor })
-        if (input.distributionMinor.reduce((s, x) => s + x, 0) !== input.amountMinor) {
-          throw new Error('BUDGET_DISTRIBUTION_TOTAL_MISMATCH')
-        }
-        amounts = input.distributionMinor
-      } else if (input.distributionWeightsBp && input.distributionWeightsBp.length > 0) {
-        if (input.distributionWeightsBp.length !== months)
-          throw new Error('BUDGET_DISTRIBUTION_INVALID')
-        amounts = distributeByWeights(input.amountMinor, input.distributionWeightsBp)
-      }
-    } catch (err) {
-      throw new ValidationError((err as Error).message)
-    }
+    const planned = planBudgetSave(input, { baseCurrency: BASE_CURRENCY, fxRate: quoteRate })
+    if (!planned.ok) throw new ValidationError(planned.problem)
+    const { amountMinor, enteredMinor, fxRate, distribution: amounts } = planned.plan
 
     const row: Record<string, unknown> = {
       id: input.id,
@@ -419,16 +245,14 @@ export class BudgetService {
       branch_id: input.branchId ?? null,
       period: input.period,
       starts_on: input.startsOn,
-      amount_minor: input.amountMinor,
+      amount_minor: amountMinor,
       action: input.action,
       warn_at_percent: input.warnAtPercent,
       is_active: input.isActive,
       name: input.name ?? null,
       budget_type: input.type ?? 'expense',
       notes: input.notes ?? null,
-      distribution: amounts
-        ? periodStarts.map((start, i) => ({ start, amount_minor: amounts![i] }))
-        : null,
+      distribution: amounts,
       updated_at: new Date().toISOString(),
       currency,
       amount_currency_minor: enteredMinor,
@@ -458,7 +282,7 @@ export class BudgetService {
     if (error) throw new DatabaseError('Failed to save the budget', error)
 
     await this.invalidate(ctx.workspaceId)
-    const saved = mapBudget(data as Record<string, any>)
+    const saved = mapBudget(data as Record<string, any>, BASE_CURRENCY)
     // SoD: index who drafted/edited this budget, so approval can be separated.
     await sod.recordAction(ctx, 'budget.manage', 'budget', saved.id)
     await this.writeAudit(
@@ -493,44 +317,29 @@ export class BudgetService {
     this.assertCan(ctx, 'budget.approve')
     const budget = await this.getOne(ctx, id)
 
-    if (budget.status !== 'draft' && budget.status !== 'pending_approval') {
-      throw new ConflictError('BUDGET_INVALID_TRANSITION')
+    const planned = planBudgetApprove(
+      budget,
+      await this.list(ctx),
+      ctx.userId,
+      new Date().toISOString(),
+    )
+    if (!planned.ok && planned.problem === 'BUDGET_INVALID_TRANSITION') {
+      throw new ConflictError(planned.problem)
     }
     await sod.assertAllowed(ctx, 'budget.approve', 'budget', id, override)
-
     // An approved budget may not stack on another approved one for the same
     // scope and period — the limit would silently double.
-    const plan = planFor(budget, budget.startsOn)
-    const toCandidate = (b: PlannedBudget) => {
-      const p = planFor(b, b.startsOn)
-      return {
-        id: b.id,
-        accountId: b.accountId,
-        type: b.type,
-        branchId: b.branchId,
-        dimensionValueId: b.dimensionValueId,
-        startsOn: p.start,
-        endsOn: p.end,
-        status: b.status,
-      }
-    }
-    const clash = findOverlap(
-      { ...toCandidate(budget), status: 'approved', endsOn: plan.end },
-      (await this.list(ctx)).map(toCandidate),
-    )
-    if (clash) throw new ConflictError(`BUDGET_OVERLAP: ${clash.id}`)
+    if (!planned.ok) throw new ConflictError(planned.problem)
 
-    return this.transition(ctx, id, budget.status, 'approved', {
-      approved_by: ctx.userId,
-      approved_at: new Date().toISOString(),
-    })
+    return this.transition(ctx, id, planned.plan.from, 'approved', planned.plan.extra)
   }
 
   async archive(ctx: TenancyContext, id: string): Promise<PlannedBudget> {
     this.assertCan(ctx, 'budget.approve')
     const budget = await this.getOne(ctx, id)
-    if (budget.status === 'archived') throw new ConflictError('BUDGET_INVALID_TRANSITION')
-    return this.transition(ctx, id, budget.status, 'archived', { is_active: false })
+    const planned = planBudgetArchive(budget)
+    if (!planned.ok) throw new ConflictError(planned.problem)
+    return this.transition(ctx, id, planned.plan.from, 'archived', planned.plan.extra)
   }
 
   private async transition(
@@ -558,7 +367,7 @@ export class BudgetService {
     if (!data) throw new ConflictError('BUDGET_INVALID_TRANSITION')
 
     await this.invalidate(ctx.workspaceId)
-    const after = mapBudget(data as Record<string, any>)
+    const after = mapBudget(data as Record<string, any>, BASE_CURRENCY)
     await this.writeAudit(ctx, `budget.${to}`, id, { status: from }, { status: to })
     return after
   }
@@ -582,53 +391,26 @@ export class BudgetService {
   ) {
     this.assertCan(ctx, 'budget.approve')
     const budget = await this.getOne(ctx, id)
-    const plan = planFor(budget, budget.startsOn)
-
-    const nextAmounts =
-      input.distributionMinor && input.distributionMinor.length > 0
-        ? input.distributionMinor
-        : equalDistribution(input.amountMinor, plan.distribution.periodStarts.length)
-
-    let revision
-    try {
-      validateDistribution({
-        periodStarts: plan.distribution.periodStarts,
-        amountsMinor: nextAmounts,
-      })
-      if (nextAmounts.reduce((s, x) => s + x, 0) !== input.amountMinor) {
-        throw new Error('BUDGET_DISTRIBUTION_TOTAL_MISMATCH')
-      }
-      const toLines = (amounts: number[]) =>
-        Object.fromEntries(plan.distribution.periodStarts.map((s, i) => [s, amounts[i] ?? 0]))
-      revision = reviseBudget(
-        {
-          version: budget.version,
-          status: budget.status === 'approved' ? 'approved' : 'draft',
-          linesMinor: toLines(plan.distribution.amountsMinor),
-        },
-        toLines(nextAmounts),
-        { reason: input.reason, actorId: ctx.userId, at: new Date().toISOString() },
-      )
-    } catch (err) {
-      const message = (err as Error).message
-      if (message === 'BUDGET_REVISION_REQUIRES_APPROVED') throw new ConflictError(message)
-      throw new ValidationError(message)
+    const planned = planBudgetRevision(budget, input, {
+      actorId: ctx.userId,
+      at: new Date().toISOString(),
+    })
+    if (!planned.ok) {
+      throw planned.kind === 'conflict'
+        ? new ConflictError(planned.problem)
+        : new ValidationError(planned.problem)
     }
-
-    if (budget.version !== input.expectedVersion) throw new ConflictError('BUDGET_VERSION_CONFLICT')
+    const { revision } = planned.plan
 
     const { data, error } = await supabase.rpc('budget_apply_revision', {
       p_workspace_id: ctx.workspaceId,
       p_budget_id: id,
       p_expected_version: input.expectedVersion,
-      p_amount_minor: input.amountMinor,
-      p_distribution: plan.distribution.periodStarts.map((start, i) => ({
-        start,
-        amount_minor: nextAmounts[i],
-      })),
-      p_action: input.action ?? budget.action,
+      p_amount_minor: planned.plan.amountMinor,
+      p_distribution: planned.plan.distribution,
+      p_action: planned.plan.action,
       p_reason: revision.reason,
-      p_warn_at_percent: input.warnAtPercent ?? budget.warnAtPercent,
+      p_warn_at_percent: planned.plan.warnAtPercent,
       p_actor_id: ctx.userId,
       p_lines: revision.lines.map((l) => ({
         line_key: l.lineKey,
@@ -764,30 +546,17 @@ export class BudgetService {
   ): Promise<BudgetReport> {
     this.assertCan(ctx, 'budget.read')
 
-    const all = await this.list(ctx)
-    const budgets = all.filter(
-      (b) =>
-        (!filter.type || b.type === filter.type) &&
-        (!filter.status || b.status === filter.status) &&
-        (!filter.branchId || b.branchId === filter.branchId),
-    )
-
-    const plans = budgets.map((budget) => ({ budget, plan: planFor(budget, onDate) }))
+    const budgets = filterBudgets(await this.list(ctx), filter)
 
     let source: BudgetReport['source'] = 'batch'
-    const netByAccountDay = new Map<string, Array<{ day: string; net: number }>>()
+    const netByAccountDay = new Map<string, AccountDayNet[]>()
     const openByBudget = new Map<string, number>()
 
-    if (plans.length > 0) {
-      const minStart = plans.reduce(
-        (m, p) => (p.plan.start < m ? p.plan.start : m),
-        plans[0]!.plan.start,
-      )
-      const maxEnd = plans.reduce((m, p) => (p.plan.end > m ? p.plan.end : m), plans[0]!.plan.end)
-
+    const window = reportWindow(budgets, onDate)
+    if (window) {
       const batch = await callAggregate(
         'budget_performance_batch',
-        { p_workspace_id: ctx.workspaceId, p_start: minStart, p_end: maxEnd },
+        { p_workspace_id: ctx.workspaceId, p_start: window.start, p_end: window.end },
         batchSchema,
       )
 
@@ -803,97 +572,33 @@ export class BudgetService {
       }
     }
 
-    const rows: BudgetReportRow[] = []
-    for (const { budget, plan } of plans) {
-      let actualMinor: number
-      let openMinor: number
-      let seriesActual: number[]
-
+    const entries: BudgetReportEntry[] = []
+    for (const budget of budgets) {
       if (source === 'batch') {
-        const days = (netByAccountDay.get(budget.accountId) ?? []).filter(
-          (d) => d.day >= plan.start && d.day <= plan.end,
+        const { actualMinor, seriesActual } = actualsFromDays(
+          budget,
+          onDate,
+          netByAccountDay.get(budget.accountId) ?? [],
         )
-        const starts = plan.distribution.periodStarts
-        seriesActual = starts.map((s, i) => {
-          const next = starts[i + 1]
-          return normalizeActual(
-            budget.type,
-            days
-              .filter((d) => d.day >= s && (!next || d.day < next))
-              .reduce((sum, d) => sum + d.net, 0),
-          )
+        entries.push({
+          budget,
+          actualMinor,
+          openMinor: openByBudget.get(budget.id) ?? 0,
+          seriesActual,
         })
-        actualMinor = seriesActual.reduce((s, x) => s + x, 0)
-        openMinor = openByBudget.get(budget.id) ?? 0
       } else {
         const c = await this.consumptionFor(ctx, budget, onDate)
-        actualMinor = c.actualMinor
-        openMinor = c.committedMinor
         // Without the batch there is no per-sub-period split to show honestly.
-        seriesActual = []
+        entries.push({
+          budget,
+          actualMinor: c.actualMinor,
+          openMinor: c.committedMinor,
+          seriesActual: [],
+        })
       }
-
-      const day = onDate.slice(0, 10)
-      const totalDays = daysInclusive(plan.start, plan.end)
-      const elapsedDays =
-        day < plan.start ? 0 : day > plan.end ? totalDays : daysInclusive(plan.start, day)
-
-      const perf = performance(
-        {
-          type: budget.type,
-          budgetMinor: budget.amountMinor,
-          theoreticalMinor: theoreticalToDate(plan.distribution, plan.end, onDate),
-          actualMinor,
-          openCommitmentMinor: budget.type === 'expense' ? openMinor : 0,
-          elapsedDays,
-          totalDays,
-        },
-        budget.warnAtPercent,
-      )
-
-      rows.push({
-        budget,
-        periodStart: plan.start,
-        periodEnd: plan.end,
-        distributionKind: plan.distributionKind,
-        distributionMismatch: plan.distributionMismatch,
-        performance: perf,
-        series: plan.distribution.periodStarts.map((start, i) => ({
-          start,
-          planMinor: plan.distribution.amountsMinor[i] ?? 0,
-          actualMinor: seriesActual[i] ?? 0,
-        })),
-      })
     }
 
-    // Totals only over APPROVED budgets: a draft is not yet a plan anybody
-    // agreed to, and summing it would overstate the budget.
-    const approved = rows.filter((r) => r.budget.status === 'approved' && r.budget.isActive)
-    const sumOrNull = (values: Array<number | null>) =>
-      values.some((v) => v === null) ? null : values.reduce<number>((s, v) => s + (v ?? 0), 0)
-    const expense = approved.filter((r) => r.budget.type === 'expense').map((r) => r.performance)
-    const revenue = approved.filter((r) => r.budget.type === 'revenue').map((r) => r.performance)
-
-    return {
-      onDate,
-      rows,
-      totals: {
-        expense: {
-          budgetMinor: expense.reduce((s, p) => s + p.budgetMinor, 0),
-          actualMinor: expense.reduce((s, p) => s + p.actualMinor, 0),
-          openCommitmentMinor: expense.reduce((s, p) => s + p.openCommitmentMinor, 0),
-          remainingMinor: expense.reduce((s, p) => s + p.remainingMinor, 0),
-          forecastMinor: sumOrNull(expense.map((p) => p.forecastMinor)),
-        },
-        revenue: {
-          budgetMinor: revenue.reduce((s, p) => s + p.budgetMinor, 0),
-          actualMinor: revenue.reduce((s, p) => s + p.actualMinor, 0),
-          remainingMinor: revenue.reduce((s, p) => s + p.remainingMinor, 0),
-          forecastMinor: sumOrNull(revenue.map((p) => p.forecastMinor)),
-        },
-      },
-      source,
-    }
+    return buildBudgetReport(onDate, source, entries)
   }
 
   async getStatus(ctx: TenancyContext, budgetId: string, onDate: string): Promise<BudgetStatus> {
@@ -918,56 +623,14 @@ export class BudgetService {
       onDate: string
     },
   ) {
-    const controlling = applicableBudgets(await this.list(ctx), posting).filter(
-      (b) => (b as PlannedBudget).status === 'approved' && (b as PlannedBudget).type === 'expense',
-    ) as PlannedBudget[]
-
-    if (controlling.length === 0) {
-      return { allowed: true, decision: 'allow' as const, problems: [], warnings: [], impacts: [] }
-    }
-
-    const statuses = await Promise.all(
-      controlling.map(async (budget) => ({
-        budget,
-        status: evaluate(
-          budget,
-          await this.consumptionFor(ctx, budget, posting.onDate),
-          posting.onDate,
-        ),
-      })),
-    )
-
-    const impacts: Array<ImpactResult & { budgetId: string }> = statuses.map(
-      ({ budget, status }) => ({
-        budgetId: budget.id,
-        ...checkImpact(
-          budget.action,
-          {
-            budgetMinor: status.budgetMinor,
-            actualMinor: status.actualMinor,
-            openCommitmentMinor: status.committedMinor,
-          },
-          Math.max(0, posting.amountMinor),
-        ),
+    const controlling = controllingBudgets(await this.list(ctx), posting)
+    const consumption = new Map<string, BudgetConsumption>()
+    await Promise.all(
+      controlling.map(async (budget) => {
+        consumption.set(budget.id, await this.consumptionFor(ctx, budget, posting.onDate))
       }),
     )
-
-    const rank = { allow: 0, warn: 1, require_approval: 2, block: 3 } as const
-    const decision = impacts.reduce<ImpactResult['decision']>(
-      (worst, i) => (rank[i.decision] > rank[worst] ? i.decision : worst),
-      'allow',
-    )
-
-    const legacy = checkSpend(
-      statuses.map(({ status }) => ({ status, amountMinor: posting.amountMinor })),
-    )
-
-    return {
-      ...legacy,
-      allowed: decision === 'allow' || decision === 'warn',
-      decision,
-      impacts,
-    }
+    return decideBudgetSpend(controlling, consumption, posting)
   }
 
   /**

@@ -4,6 +4,7 @@
 // Exchange rates, and what foreign balances are worth today.
 // ============================================
 
+import { parseCustomUnitInput, type CustomUnitQuote } from '@hisabche/validation'
 import { baseCurrencyOf } from '../base-currency'
 import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
@@ -15,12 +16,7 @@ import { ledger } from '../accounting'
 
 import { rateFor, runRevaluation, type ForeignBalance, type RateQuote } from './revaluation.domain'
 
-export interface CustomUnitQuote {
-  name: string
-  /** Books-currency units one of this unit is worth. */
-  perUnit: number
-  onDate: string
-}
+export type { CustomUnitQuote }
 
 /** The table of custom-units-01 is not there yet. */
 const isMissingTable = (error: { code?: string } | null | undefined) =>
@@ -148,10 +144,9 @@ export class CurrencyService {
     input: { name: string; perUnit: number; onDate: string },
   ): Promise<CustomUnitQuote> {
     if (ctx.role === 'seller') throw new ConflictError('RATE_MANAGE_FORBIDDEN')
-    const name = input.name.trim()
-    if (name.length < 1 || name.length > 40) throw new ValidationError('UNIT_NAME_INVALID')
-    if (!(input.perUnit > 0)) throw new ValidationError('RATE_INVALID')
-    const day = input.onDate.slice(0, 10)
+    const checked = parseCustomUnitInput(input)
+    if (!checked.ok) throw new ValidationError(checked.code)
+    const { name, day } = checked.value
 
     // One quote per unit per day: the day's row is updated if it exists.
     const existing = await supabase

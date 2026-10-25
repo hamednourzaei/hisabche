@@ -36,7 +36,7 @@ import {
   validateSteps,
   type CollectionsAction,
   type ReminderStep,
-} from '../services/collections/collections.domain'
+} from '@hisabche/validation'
 import type { OpenInvoice } from '../services/payments/payments.domain'
 
 const AS_OF = '2026-09-30'

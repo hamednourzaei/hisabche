@@ -121,6 +121,9 @@ export {
   PaginationNext,
   PaginationPrevious,
   PaginationBar,
+  useLocalePush,
+  useLocaleReplace,
+  useRouteLang,
 } from '@hisabche/ui'
 
 export type {
@@ -142,4 +145,5 @@ export type {
   PageHubTab,
   PageHubSection,
   TableFilterSelectProps,
+  TableColumn,
 } from '@hisabche/ui'

@@ -1374,6 +1374,7 @@
       "label": "The path of one invoice, from print to report",
       "end": "Start",
       "skip": "Skip the story",
+      "replay": "Replay Journey",
       "ready": "Your automation is ready",
       "readySub": "You recorded it once; payment, till, stock, ledger and report updated themselves. Start now.",
       "printing": "A sale is recorded and its invoice prints. Scroll down and see where it goes.",
@@ -4614,6 +4615,15 @@
       "defaultValue": "Default value",
       "aggregate": "Total this column",
       "aggregateHint": "Shown in the column totals row",
+      "multiplyBy": "Multiply by column",
+      "multiplyByHint": "Each row's amount is multiplied by that row's value in the chosen column — e.g. price per gram × net weight",
+      "multipliesTitle": "Multiply the price",
+      "multipliesHint": "Each row's amount is multiplied by this column — e.g. net weight × price per gram",
+      "multipliesNoMoney": "There is no money column (like «Unit price») to multiply",
+      "multipliesLabel": "Multiply «{column}»",
+      "multiplyByNone": "No multiplication",
+      "multiplyByEmpty": "There is no numeric column to multiply by — first add an integer or decimal column",
+      "multiplierInUse": "Another column is multiplied by this one, so it must stay numeric",
       "deleteConfirm": "Delete this column?",
       "includeInTotal": "Count toward the total",
       "includeInTotalHint": "This column is added to what the customer pays",
@@ -4670,6 +4680,7 @@
     "errors": {
       "descriptionRequired": "An item description is required",
       "priceRequired": "Unit price must be greater than zero",
+      "multiplierRequired": "Enter a value in the column this price is multiplied by",
       "totalRequired": "The line total must be greater than zero",
       "noItems": "At least one line is required",
       "createFailed": "Could not create the invoice",
@@ -4766,6 +4777,24 @@
     }
   },
   "admin": {
+    "cms": {
+      "globalsTitle": "Remote content (globals)",
+      "globalsSubtitle": "Strings shared by web, Android and Windows. Changes reach every client without a rebuild.",
+      "addOrUpdate": "Add or update content",
+      "keyLabel": "Key",
+      "contentLabel": "Content",
+      "saveAndPublish": "Save & publish",
+      "keyPlaceholder": "Key (e.g. dashboard.welcome)",
+      "contentPlaceholder": "Content string",
+      "emptyForLocale": "No remote content defined for {locale}.",
+      "themeName": "{theme} theme",
+      "editPage": "Edit page {title}",
+      "locales": {
+        "fa": "Persian (Iran)",
+        "af": "Dari (Afghanistan)",
+        "en": "English"
+      }
+    },
     "limits": {
       "title": "Plan limits",
       "hint": "Empty = the plan's default. «Unlimited» = no ceiling. Limits are enforced: once reached, new invoices or members are refused (trials are not limited).",
@@ -4844,6 +4873,9 @@
       "ofTotal": "of {total} subscriptions",
       "description": "Platform status overview",
       "generatedAt": "Updated: {time}",
+      "workspaceRef": "Workspace {id}",
+      "revenueUnavailableTitle": "Revenue analysis is not calculated in this build",
+      "revenueUnavailableHint": "This tab invents no number. Plans, subscriptions and real amounts live in Revenue.",
       "planShare": "{plan} plan share: {percent}%"
     },
     "kpi": {
@@ -4916,7 +4948,9 @@
       "updateRole": "Could not change the role.",
       "removeMember": "Could not remove the member.",
       "retry": "Try again",
-      "generic": "This section could not be loaded. Please try again."
+      "generic": "This section could not be loaded. Please try again.",
+      "title": "This section could not be loaded",
+      "hint": "Check your connection and try again."
     },
     "pagination": {
       "showing": "{from}–{to} of {total}",
@@ -4973,7 +5007,9 @@
       "searchLabel": "Search businesses",
       "searchPlaceholder": "Search businesses…",
       "alertsNone": "No alerts",
-      "alertsWithCount": "{count} past-due subscriptions"
+      "alertsWithCount": "{count} past-due subscriptions",
+      "skipToContent": "Skip to content",
+      "menuDialog": "Main menu"
     },
     "filters": {
       "all": "All",
@@ -5094,6 +5130,7 @@
         "comments": "Comments"
       },
       "taxonomy": {
+        "deleteDesc": "“{name}” will be deleted permanently. This cannot be undone.",
         "categories": "Categories (topic hub pages)",
         "tags": "Tags",
         "name": "Name",
@@ -5119,6 +5156,7 @@
         "coverAlt": "Image alt text (required)"
       },
       "publish": {
+        "deleteDesc": "“{title}” will be deleted permanently. This cannot be undone.",
         "title": "Publishing",
         "current": "Current state",
         "date": "Publication date and time",
@@ -5348,6 +5386,7 @@
       "adjusted": "Adjustment recorded."
     },
     "market": {
+      "toggleDesc": "This change reaches every business immediately.",
       "pageTitle": "Goods marketplace",
       "description": "Turn the marketplace on or off; verify and suspend sellers and listings",
       "notConfiguredHint": "The goods-marketplace-01 script has not been run on the database.",
@@ -5372,6 +5411,20 @@
       "reason": "Reason (the seller reads it)",
       "showListings": "Listings",
       "hideListings": "Hide listings"
+    },
+    "navGroup": {
+      "overview": "Overview",
+      "customers": "Customers & revenue",
+      "platform": "Platform",
+      "governance": "Content & governance"
+    },
+    "notFound": {
+      "title": "Page not found",
+      "description": "The address you opened does not exist or has moved.",
+      "home": "Back to dashboard"
+    },
+    "loading": {
+      "label": "Loading…"
     },
     "nav": {
       "dashboard": "Dashboard",
@@ -5456,6 +5509,8 @@
     "command": {
       "empty": "No results.",
       "hubs": "Main sections",
+      "label": "Quick search",
+      "open": "Open quick search",
       "placeholder": "Search a command or section… (Ctrl+K)"
     },
     "customers": {
@@ -5574,6 +5629,10 @@
       "revokeReason": "Reason for revoking (required)",
       "revokeTitle": "Revoke an offline licence",
       "seatType": "Seat type",
+      "seatComputer": "Computer",
+      "seatMobile": "Mobile",
+      "deviceActive": "In use",
+      "deviceReleased": "Released",
       "signalType": "Signal type",
       "signingKey": "Signing key (Ed25519)",
       "status": "Status",
@@ -5623,6 +5682,7 @@
     "product": {
       "beta": "Beta",
       "confirmToggleDesc": "{enable, select, true {Enable} other {Disable}} the flag {flag}?",
+      "toggleAria": "Enable or disable {flag}",
       "confirmToggleTitle": "Change a feature flag",
       "flagKey": "Flag key",
       "flagName": "Feature",
@@ -5647,6 +5707,7 @@
       "description": "Description",
       "effectiveFrom": "Valid from",
       "effectiveUntil": "Valid until",
+      "effectiveUntilOpen": "Always",
       "emptyLedger": "The ledger is empty",
       "emptyLedgerHint": "Payments, wallet top-ups and refunds are recorded here.",
       "idempotencyKey": "Idempotency key",
@@ -5675,6 +5736,7 @@
       "active": "Active",
       "actor": "User",
       "adminAccountsDesc": "Users with administrative access to the platform.",
+      "accountsLoadError": "Loading admin accounts failed.",
       "adminAccountsTitle": "Admin accounts",
       "adminUser": "Admin",
       "confirmAction": "Confirm",
@@ -5705,6 +5767,7 @@
       "revokeConfirmTitle": "Revoke an admin session",
       "revokeReason": "Reason for revoking (required)",
       "revokeSession": "Revoke session",
+      "revokeSessionFor": "Revoke session for {email}",
       "role": "Role",
       "sessionId": "Session ID",
       "sessionsError": "Could not load the sessions",
@@ -10694,7 +10757,11 @@
       "dataSafe": "Your local records and documents remain completely safe, preserved, and untouched.",
       "retry": "Retry",
       "dismiss": "Understood",
-      "backToHome": "Back to dashboard"
+      "backToHome": "Back to dashboard",
+      "unsupportedTitle": "This feature is not supported in this edition",
+      "unsupportedBadge": "Not supported",
+      "unsupportedDescription": "This part does not exist in the offline edition of Hisabche. Your data is untouched.",
+      "unsupportedWhatToDo": "To use it, open the web edition."
     }
   },
   "metal": {

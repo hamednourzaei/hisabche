@@ -39,6 +39,13 @@ export async function LandingPage({ locale }: { locale: string }) {
   const raw = (key: string): string =>
     translate.has(key as Key) ? String(translate.raw(key as Key)) : key
 
+  // The footer puts the year in itself, so it needs the copyright as a TEMPLATE.
+  // Through `t` the `{year}` placeholder has no value and next-intl answers with
+  // the key path — which is what the footer printed.
+  const copyrightTemplate = translate.has('landing.footerCopyright' as Key)
+    ? String(translate.raw('landing.footerCopyright' as Key))
+    : undefined
+
   return (
     <LandingShell>
       <NavigationRegistry id="hero">
@@ -47,34 +54,44 @@ export async function LandingPage({ locale }: { locale: string }) {
 
       {/* Story order (IA of 15 Sep 2026): one system → how an operation flows →
           the accounting core → money → stock → offline → reports → who it is
-          built for → AI → control → many businesses → price → questions → CTA. */}
+          built for → AI → control → many businesses → price → questions → CTA.
+
+          The folio numbers (`01`…`08`) are the page's chapter marks: they are
+          passed down rather than counted in CSS so a section can be moved
+          without the numbers lying. The closing statement is not numbered — it
+          is the signature, not a chapter. */}
       <NavigationRegistry id="features">
-        <ModulesScene t={t} localePrefix={locale} />
+        <ModulesScene t={t} localePrefix={locale} index="01" />
       </NavigationRegistry>
 
       <NavigationRegistry id="offline">
-        <ChapterScene t={t} localePrefix={locale} chapter="offline" />
+        <ChapterScene t={t} localePrefix={locale} chapter="offline" index="02" />
       </NavigationRegistry>
 
-      <TrustBarScene t={t} />
+      <TrustBarScene t={t} index="03" />
 
-      <ChapterScene t={t} localePrefix={locale} chapter="ai" />
+      <ChapterScene t={t} localePrefix={locale} chapter="ai" index="04" />
 
       <NavigationRegistry id="security">
-        <SecurityScene t={t} />
+        <SecurityScene t={t} index="05" />
       </NavigationRegistry>
 
-      <CompareScene t={t} />
+      <CompareScene t={t} index="06" />
 
-      <PricingScene />
+      <PricingScene index="07" />
 
-      <FaqScene t={t} />
+      <FaqScene t={t} index="08" />
 
       <CTAScene t={t} locale={locale} />
 
       {/* Server-rendered: the year is fixed when the page is built or
           revalidated, and this markup is never hydrated. */}
-      <SiteFooterView t={t} localePrefix={locale} year={new Date().getFullYear()} />
+      <SiteFooterView
+        t={t}
+        localePrefix={locale}
+        year={new Date().getFullYear()}
+        copyright={copyrightTemplate}
+      />
     </LandingShell>
   )
 }

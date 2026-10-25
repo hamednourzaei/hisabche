@@ -20,11 +20,14 @@
 
 import {
   priceListPricing,
+  promotionColumns,
   promotionInputSchema,
   promotionsFor,
   quotePrice,
+  toSavedPromotion as toSaved,
   type PriceQuote,
   type PromotionInput,
+  type PromotionRow,
   type SavedPromotion,
 } from '@hisabche/validation'
 
@@ -46,49 +49,6 @@ export class PromotionsNotConfiguredError extends BaseError {
     this.name = 'PromotionsNotConfiguredError'
   }
 }
-
-interface PromotionRow {
-  id: string
-  name: string
-  kind: 'percentage' | 'fixed_amount'
-  value: number | string
-  currency: string | null
-  stacking: 'exclusive' | 'stacking'
-  product_ids: string[] | null
-  customer_ids: string[] | null
-  valid_from: string | null
-  valid_to: string | null
-  is_active: boolean
-  created_at: string
-}
-
-const toSaved = (row: PromotionRow): SavedPromotion => ({
-  id: row.id,
-  name: row.name,
-  kind: row.kind,
-  value: Number(row.value),
-  currency: row.currency,
-  stacking: row.stacking,
-  productIds: row.product_ids,
-  customerIds: row.customer_ids,
-  validFrom: row.valid_from ? String(row.valid_from).slice(0, 10) : null,
-  validTo: row.valid_to ? String(row.valid_to).slice(0, 10) : null,
-  isActive: row.is_active,
-  createdAt: row.created_at,
-})
-
-const toRow = (input: PromotionInput) => ({
-  name: input.name,
-  kind: input.kind,
-  value: input.value,
-  // A percentage has no currency, whatever was sent with it.
-  currency: input.kind === 'fixed_amount' ? input.currency : null,
-  stacking: input.stacking,
-  product_ids: input.productIds,
-  customer_ids: input.customerIds,
-  valid_from: input.validFrom,
-  valid_to: input.validTo,
-})
 
 function fail(error: { code?: string; message: string }, what: string): never {
   if (MISSING_SCHEMA.has(error.code ?? '')) throw new PromotionsNotConfiguredError()
@@ -120,7 +80,7 @@ export class PromotionService {
     await this.assertOwned(ctx, input)
     const { data, error } = await supabase
       .from('promotions')
-      .insert({ ...toRow(input), workspace_id: ctx.workspaceId, created_by: ctx.userId })
+      .insert({ ...promotionColumns(input), workspace_id: ctx.workspaceId, created_by: ctx.userId })
       .select(COLUMNS)
       .single()
     if (error) fail(error, 'Failed to save the promotion')

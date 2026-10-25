@@ -429,7 +429,15 @@ describe('the wiring', () => {
     expect(named).toContain(".eq('workspace_id', ctx.workspaceId)")
     expect(named).toContain(".eq('pos_session_id', session.id)")
     expect(named).toContain(".eq('status', 'posted')")
-    expect(named).toContain('amountMinor: Number(row.till_amount_minor) || 0')
+    // The row → settlement mapping moved to the shared till view (the device's
+    // drawer reads the same column through the same function).
+    expect(named).toContain('toCashSettlement')
+    expect(
+      readFileSync(
+        join(__dirname, '../../../packages/validation/src/schemas/till-view.ts'),
+        'utf8',
+      ),
+    ).toContain('amountMinor: Number(raw.till_amount_minor) || 0')
     expect(named).not.toContain('openedBy')
     // The inference survives only for a database without the column.
     expect(named).toContain("isMissingColumn(error, 'pos_session_id')")

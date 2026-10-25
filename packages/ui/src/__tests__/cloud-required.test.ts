@@ -48,8 +48,17 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
       .filter(([, def]) => def.execution === 'server')
       .map(([key]) => key)
 
-    it('has exactly 31 server-execution features in FEATURE_REGISTRY', () => {
-      expect(serverFeatures.length).toBe(31)
+    // 32 since 24 Oct 2026: `customer.outreach` («پیگیری و کمپین») joined — the device
+    // has no follow-up, campaign or stale-sale engine, so the offline edition does not
+    // offer that tab (see customers-hub-container).
+    // 52 after the endpoint matrix (24 Oct 2026): every endpoint the client calls has a
+    // feature, so the 20 cloud-only ones that had no row joined — price lists, budgets,
+    // timesheets, expiry, fixed assets, automation, custom reports, …
+    // 48 since the offline parity sessions (25 Oct): the till, pricing and the people/books
+    // domains moved onto the device; 50 before that: the logo/stamp/signature section (settings.business_stamp) and
+    // the dashboard suggestions (dashboard.ai_insight) run on the device now.
+    it('has exactly 49 server-execution features in FEATURE_REGISTRY', () => {
+      expect(serverFeatures.length).toBe(49)
     })
 
     it('refuses EVERY server-execution feature when offline with REQUIRES_ONLINE', () => {
@@ -61,7 +70,10 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
         expect(result.requiresOnline, `Feature ${feature} must require online connection`).toBe(
           true,
         )
-        expect(result.reason).toBe('offline_edition')
+        // `not_supported` is the matrix's own word for a feature the device can never have.
+        expect(result.reason).toBe(
+          result.offline === 'not_supported' ? 'not_supported' : 'offline_edition',
+        )
         expect(result.verdict.kind).toBe('REQUIRES_ONLINE')
       }
     })
@@ -425,7 +437,7 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
       const deleteSpy = vi.spyOn(apiClient, 'delete')
       const fetchSpy = vi.spyOn(globalThis, 'fetch')
 
-      // Check all 31 C features offline
+      // Check all the C features offline
       const serverFeatures = (
         Object.entries(FEATURE_REGISTRY) as [FeatureKey, (typeof FEATURE_REGISTRY)[FeatureKey]][]
       )

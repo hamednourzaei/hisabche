@@ -16,7 +16,7 @@ export function CmsMediaClient() {
           </h1>
           <p className="mt-1 text-sm text-[hsl(var(--fg-secondary))]">{t('cms.media.subtitle')}</p>
         </div>
-        <button className="inline-flex h-10 items-center justify-center rounded-lg bg-[hsl(var(--color-primary))] px-4 text-sm font-medium text-white transition-colors hover:bg-[hsl(var(--color-primary-hover))]">
+        <button className="inline-flex h-10 items-center justify-center rounded-lg bg-[hsl(var(--color-primary))] px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-[hsl(var(--color-primary-hover))]">
           <UploadCloud className="me-2 size-4" />
           {t('cms.media.upload')}
         </button>

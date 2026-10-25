@@ -11,6 +11,8 @@ export {
   registerLocalTransport,
   registerFallbackTransport,
   localRequest,
+  onOfflineRefusal,
+  type OfflineRefusal,
   LOCAL_OWNER_HEADER,
   LOCAL_QUEUE_HEADER,
   WORKSPACE_HEADER,

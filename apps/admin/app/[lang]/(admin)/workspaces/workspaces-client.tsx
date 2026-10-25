@@ -10,12 +10,15 @@ import { ErrorState } from '@/components/admin-shell/admin-ui'
 import { WorkspaceRow } from '@/components/workspaces/workspace-row'
 import { useAdminSession } from '@/hooks/use-admin-session'
 import { useAdminWorkspaces } from '@/hooks/use-admin-workspaces'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminNumber } from '@/lib/admin-format'
 
 const PAGE_SIZE = 20
 
 type ActivityFilter = 'all' | 'active' | 'inactive'
 
 export function WorkspacesClient({ onOpen360 }: { onOpen360?: (id: string) => void } = {}) {
+  const dateLocale = useAdminLocale()
   const t = useTranslations()
   const router = useRouter()
   const pathname = usePathname()
@@ -118,7 +121,7 @@ export function WorkspacesClient({ onOpen360 }: { onOpen360?: (id: string) => vo
             >
               {filter.label}
               <span className="ms-1.5 tabular-nums opacity-70">
-                {filter.count.toLocaleString()}
+                {adminNumber(filter.count, dateLocale)}
               </span>
             </Button>
           ))}

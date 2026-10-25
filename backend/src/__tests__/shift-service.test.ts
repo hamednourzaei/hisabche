@@ -132,7 +132,20 @@ describe('the request pattern for a clock time', () => {
   // A script once wrote this pattern with its backslashes eaten, leaving
   // `d{1,2}:d{2}` — which matches the letter «d» and refuses every real time.
   // The pattern is taken from the route and exercised.
-  const source = readFileSync(join(__dirname, '..', 'routes', 'attendance.routes.ts'), 'utf8')
+  const source = readFileSync(
+    join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'packages',
+      'validation',
+      'src',
+      'schemas',
+      'attendance-bodies.ts',
+    ),
+    'utf8',
+  )
   const patterns = [...source.matchAll(/regex\((\/.+?\/)\)/g)].map((match) => match[1] as string)
 
   it('every time pattern in the route accepts 08:05 and 8:05 and refuses «dd:dd»', () => {

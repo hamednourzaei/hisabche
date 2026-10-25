@@ -77,6 +77,19 @@ function generateUuid(): string {
 }
 
 export function registerProductRoutes(router: Router): void {
+  // ─── GET /products/categories ───────────────────────────────
+  // ⚠️ Registered BEFORE /products/:id: the router takes the first match, so a
+  // later literal would be read as an id. The server declares it first too.
+  router.get('/products/categories', (c: RouteHandlerContext) => {
+    const rows = c.db.all<{ category: string }>(
+      `SELECT DISTINCT trim(category) AS category FROM product
+       WHERE workspace_id = ? AND deleted_at IS NULL AND category IS NOT NULL AND trim(category) <> ''
+       ORDER BY category`,
+      [c.ctx.workspaceId],
+    )
+    return { categories: rows.map((row) => row.category) }
+  })
+
   // ─── GET /products ──────────────────────────────────────────
   router.get('/products', (c: RouteHandlerContext) => {
     const { db, ctx, query } = c

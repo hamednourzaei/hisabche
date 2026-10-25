@@ -106,7 +106,7 @@ export const FEATURE_REGISTRY = {
     local: 'the queue of the local device',
     server: 'the approvals another person must act on',
   },
-  'dashboard.ai_insight': { execution: 'server', plans: CLOUD },
+  'dashboard.ai_insight': { execution: 'local', plans: ALL },
   'dashboard.manufacturing_card': { execution: 'server', plans: CLOUD },
   'dashboard.currency_rates': { execution: 'local', plans: ALL },
 
@@ -168,6 +168,10 @@ export const FEATURE_REGISTRY = {
   'customer.accounting': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'customer.risk': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'customer.crm': { execution: 'local', plans: ALL, alwaysAllowed: true },
+  // «پیگیری و کمپین» (the outreach tab of /customers): follow-up tasks, campaigns and
+  // stale opportunities. The device has no engine for them, so the offline edition
+  // does not OFFER the tab — it is not shown as a page that answers «not available».
+  'customer.outreach': { execution: 'server', plans: CLOUD },
   'customer.terms': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'customer.documents': { execution: 'server', plans: CLOUD },
   'customer.portal_link': { execution: 'server', plans: CLOUD },
@@ -227,7 +231,7 @@ export const FEATURE_REGISTRY = {
   'settings.books_currency': { execution: 'local', plans: ALL },
   'settings.time_zone': { execution: 'local', plans: ALL },
   'settings.workspace_profile': { execution: 'local', plans: ALL, alwaysAllowed: true },
-  'settings.business_stamp': { execution: 'server', plans: CLOUD },
+  'settings.business_stamp': { execution: 'local', plans: ALL },
   'settings.hardware': { execution: 'local', plans: ALL },
   'settings.currencies': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'data.backup': {
@@ -262,6 +266,35 @@ export const FEATURE_REGISTRY = {
   'marketplace.apps': { execution: 'server', plans: CLOUD },
   'storefront.public': { execution: 'server', plans: CLOUD },
   'billing.portal': { execution: 'server', plans: CLOUD },
+
+  // ─── Added by the endpoint matrix (offline-endpoint-matrix.ts) ──────────
+  // Every endpoint the client calls belongs to a feature. These are the
+  // features that had no row; the cloud-only ones are listed for what they are.
+  'branch.manage': { execution: 'local', plans: ALL },
+  'auth.cloud_session': { execution: 'server', plans: CLOUD },
+  'blog.public': { execution: 'server', plans: CLOUD },
+  'automation.rules': { execution: 'server', plans: CLOUD },
+  'asset.fixed': { execution: 'server', plans: CLOUD },
+  'budget.manage': { execution: 'local', plans: ALL },
+  'custom.fields': { execution: 'server', plans: CLOUD },
+  'custom.reports': { execution: 'server', plans: CLOUD },
+  'expiry.batches': { execution: 'server', plans: CLOUD },
+  'notes.entity': { execution: 'server', plans: CLOUD },
+  'pricing.price_lists': { execution: 'local', plans: ALL },
+  'pricing.promotions': { execution: 'local', plans: ALL },
+  'project.manage': { execution: 'server', plans: CLOUD },
+  'purchase.orders': { execution: 'local', plans: ALL },
+  'referral.program': { execution: 'server', plans: CLOUD },
+  'saved.views': { execution: 'server', plans: CLOUD },
+  'timesheet.manage': { execution: 'server', plans: CLOUD },
+  'activity.entity_timeline': { execution: 'server', plans: CLOUD },
+  'settings.currency_catalogue': { execution: 'server', plans: CLOUD },
+  'settings.custom_units': { execution: 'server', plans: CLOUD },
+  'stock.auto_shelf': { execution: 'server', plans: CLOUD },
+  'unit.conversion': { execution: 'server', plans: CLOUD },
+  'accounting.tax_return': { execution: 'server', plans: CLOUD },
+  'accounting.legacy_transactions': { execution: 'server', plans: CLOUD },
+  'inventory.insights': { execution: 'local', plans: ALL, alwaysAllowed: true },
 } as const satisfies Record<string, FeatureDefinition>
 
 /** The key of a feature in the registry. */

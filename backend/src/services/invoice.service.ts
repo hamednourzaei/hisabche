@@ -60,7 +60,7 @@ import { latestBuyPrices } from './inventory/buy-price.domain'
 import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
 import { IdempotencyUnavailableError, isMissingIdempotencySupport } from '../utils/client-request'
 import { assertWithinLimit } from './plan-limits.service'
-import { countsTowardsInvoiceQuota } from '@hisabche/validation'
+import { countsTowardsInvoiceQuota, lateCostKeyFromDigest } from '@hisabche/validation'
 
 // ============================================
 // ✅ OPTIMIZED: فقط ستون‌های مورد نیاز
@@ -215,14 +215,7 @@ function asArray(value: unknown): any[] {
  */
 export function lateCostKey(invoiceId: string): string {
   const hex = createHash('sha256').update(`late-cost:${invoiceId}`).digest('hex')
-  // Version 5 / RFC 4122 variant bits, so it is a well-formed UUID.
-  return [
-    hex.slice(0, 8),
-    hex.slice(8, 12),
-    `5${hex.slice(13, 16)}`,
-    `${((parseInt(hex.slice(16, 18), 16) & 0x3f) | 0x80).toString(16)}${hex.slice(18, 20)}`,
-    hex.slice(20, 32),
-  ].join('-')
+  return lateCostKeyFromDigest(hex)
 }
 
 /** Shelves: only the purchase auto-fill is used here. */

@@ -3,7 +3,14 @@
 
 import * as React from 'react'
 import { cn } from '../../lib/utils'
-import { formatThousands, unformatThousands } from '../../lib/thousands'
+import { useLocale } from 'next-intl'
+import {
+  caretAfter,
+  readNumeralText,
+  showNumeral,
+  significantBefore,
+} from '../../lib/numeral-input'
+import { unformatThousands } from '../../lib/thousands'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MoneyInput — thousand-separator formatted number input
@@ -26,18 +33,27 @@ export interface MoneyInputProps extends Omit<
 
 const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
   ({ value, onChange, className, label, startIcon, endIcon, ...props }, ref) => {
-    const [display, setDisplay] = React.useState(() => formatThousands(value))
+    const lang = useLocale()
+    // The text is DERIVED from the value, in the language's own digits (Persian =
+    // ۱٬۲۳۴, Dari and English = 1,234), grouped as it is typed. The value that
+    // leaves the field is always the clean Latin digit string.
+    const display = showNumeral(unformatThousands(value), lang, true)
+    const inputRef = React.useRef<HTMLInputElement | null>(null)
+    const caretRef = React.useRef<number | null>(null)
 
-    // Keep the on-screen text in sync when `value` changes from outside
-    // (reset, initial load, editing a different record, etc.).
-    React.useEffect(() => {
-      setDisplay(formatThousands(value))
-    }, [value])
+    React.useLayoutEffect(() => {
+      const input = inputRef.current
+      const wanted = caretRef.current
+      caretRef.current = null
+      if (!input || wanted === null || document.activeElement !== input) return
+      const at = caretAfter(display, wanted)
+      input.setSelectionRange(at, at)
+    }, [display])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const raw = unformatThousands(e.target.value)
-      setDisplay(formatThousands(raw))
-      onChange(raw)
+      const field = e.target
+      caretRef.current = significantBefore(field.value, field.selectionStart ?? field.value.length)
+      onChange(readNumeralText(field.value))
     }
 
     const input = (
@@ -48,7 +64,11 @@ const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
           </div>
         )}
         <input
-          ref={ref}
+          ref={(node) => {
+            inputRef.current = node
+            if (typeof ref === 'function') ref(node)
+            else if (ref) ref.current = node
+          }}
           type="text"
           inputMode="decimal"
           dir="ltr"

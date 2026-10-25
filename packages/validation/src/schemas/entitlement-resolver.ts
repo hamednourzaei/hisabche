@@ -26,6 +26,7 @@ import {
   type FeaturePlan,
   type PlanEdition,
 } from './feature-registry'
+import { featureOfflineAvailability } from './offline-endpoint-matrix'
 
 /**
  * The seven states of a workspace.
@@ -106,7 +107,14 @@ export function resolveEntitlement(
     definition.execution === 'server' ||
     (definition.execution === 'hybrid' && Boolean(definition.server))
 
-  if (input.edition === 'local' && needsTheServer) {
+  // ⚠️ «Local» in the registry is the INTENT; the endpoint matrix is what the
+  // device really runs (offline-endpoint-matrix.ts). A feature registered as
+  // local whose endpoints the engine does not answer yet is refused here, once,
+  // instead of failing as a 501 deep inside a screen.
+  const deviceCannotRunIt =
+    definition.execution === 'local' && featureOfflineAvailability(feature) !== 'available'
+
+  if (input.edition === 'local' && (needsTheServer || deviceCannotRunIt)) {
     return { kind: 'REQUIRES_ONLINE' }
   }
 

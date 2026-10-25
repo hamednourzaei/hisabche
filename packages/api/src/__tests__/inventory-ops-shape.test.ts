@@ -102,6 +102,13 @@ describe('dead stock, as the server sends it', () => {
       join(ROOT, 'backend', 'src', 'services', 'inventory', 'reorder.service.ts'),
       'utf8',
     )
-    expect(service).toContain("name: names.get(line.productId) ?? ''")
+    // The name is attached by ONE function — `buildDeadStock` in @hisabche/validation —
+    // which the server and the offline engine both call.
+    expect(service).toContain('buildDeadStock({')
+    const domain = readFileSync(
+      join(ROOT, 'packages', 'validation', 'src', 'schemas', 'reorder.domain.ts'),
+      'utf8',
+    )
+    expect(domain).toContain("name: names.get(line.productId) ?? ''")
   })
 })

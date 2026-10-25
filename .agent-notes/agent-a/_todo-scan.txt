@@ -1,0 +1,28 @@
+packages\ui\src\components\ui\cloud-required-notice.tsx:45: whatToDo?: string | undefined
+packages\ui\src\components\ui\cloud-required-notice.tsx:67: whatToDo,
+packages\ui\src\components\ui\cloud-required-notice.tsx:84: const effectiveWhatToDo = whatToDo ?? t(unsupported ? 'unsupportedWhatToDo' : 'whatToDoDefault')
+packages\ui\src\components\ui\cloud-required-notice.tsx:183: {t('whatToDoTitle')}
+packages\ui\src\components\ui\cloud-required-notice.tsx:186: {effectiveWhatToDo}
+packages\ui\src\components\ui\cloud-required-notice.tsx:283: {t('whatToDoTitle')}
+packages\ui\src\components\ui\cloud-required-notice.tsx:286: {effectiveWhatToDo}
+packages\ui\src\components\ui\crm\customer-crm-panel.tsx:17: import { CalendarClock, CheckCircle2, ListTodo, Target } from 'lucide-react'
+packages\ui\src\components\ui\crm\customer-crm-panel.tsx:98: icon={ListTodo}
+packages\ui\src\components\ui\customers\customer-ai-summary.tsx:25: {t("customers.aiComingSoon", "به زودی — تحلیل هوشمند وضعیت مشتری")}
+packages\ui\src\components\ui\customers\customer-workspace.tsx:285: {t('customers.timelineComingSoon', 'خط زمانی به زودی...')}
+packages\ui\src\components\ui\dashboard\display-basis-picker.tsx:183: // store is still a TODO that calls nothing. That is a real limitation and this
+packages\ui\src\lib\invoices\invoices-mappers.ts:42: // TODO: no `company` column on customers yet — always blank until that schema field exists
+packages\ui\src\__tests__\cloud-required-notice.test.tsx:30: expect(screen.getByText('offline.cloudRequired.whatToDoDefault')).toBeTruthy()
+packages\ui\src\__tests__\cloud-required-notice.test.tsx:34: it('respects custom title, badgeText, description, why, and whatToDo overrides', () => {
+packages\ui\src\__tests__\cloud-required-notice.test.tsx:41: whatToDo="جهت ویرایش یا ثبت فرمول جدید، به وب‌سایت حسابچه مراجعه فرمایید."
+packages\ui\src\__tests__\cloud-required-notice.test.tsx:143: 'whatToDoTitle',
+packages\ui\src\__tests__\cloud-required-notice.test.tsx:144: 'whatToDoDefault',
+packages\ui\src\__tests__\docs-baseline-dump.test.ts:57: const productToDocs = Object.entries(ROUTE_DOCS_MAP)
+packages\ui\src\__tests__\docs-baseline-dump.test.ts:62: for (const [route, slug] of productToDocs) {
+packages\ui\src\__tests__\docs-baseline-dump.test.ts:84: const footerLinksToDocs = footer.includes("href: '/docs'")
+packages\ui\src\__tests__\docs-baseline-dump.test.ts:130: productToDocsEntries: productToDocs.length,
+packages\ui\src\__tests__\docs-baseline-dump.test.ts:135: flags: { sitemapHasDocs, sitemapMapsArticles, footerLinksToDocs },
+packages\ui\src\__tests__\docs-baseline-dump.test.ts:136: productToDocs: Object.fromEntries(productToDocs),
+packages\ui\src\__tests__\offline-gate.test.ts:54: 'unsupportedWhatToDo',
+packages\ui\src\__tests__\rtl-logical-properties.test.ts:71: * ⚠️ NOT A TODO LIST — these are the cases where a PHYSICAL side is the
+packages\ui\src\__tests__\rtl-logical-properties.test.ts:292: * ⚠️ NOT A TODO LIST — the places where a raw literal is the correct answer,
+packages\ui\src\__tests__\settings-storage-section.test.ts:34: expect(section).not.toContain('TODO')

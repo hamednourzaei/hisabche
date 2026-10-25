@@ -8,17 +8,24 @@
 // names that have their own indexable page link to it, so this stays the
 // landing's in-content link to /features/* (see crawlable-nav.test.ts).
 //
+// The four groups are drawn as four ruled columns of one ledger, not as four
+// floating cards: a single border around the set, hairlines between the groups
+// and between the rows. An owner scans it top to bottom the way they scan their
+// own books.
+//
 // ⚠️ Every item is a module with a dashboard route and backend endpoints.
 import NextLink from 'next/link'
 import type { LucideIcon } from 'lucide-react'
 import { Cog, Gauge, Landmark, ShoppingCart } from 'lucide-react'
 
-import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
+import { CardAccent, LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 
 export interface ModulesSceneProps {
   t: (key: string, fallback?: string) => string
   /** Locale segment for route links — same contract as SiteFooter/TopNav. */
   localePrefix?: string | undefined
+  /** Chapter number of this section on the page (`01`). */
+  index?: string | undefined
 }
 
 interface ModuleItem {
@@ -76,61 +83,68 @@ const GROUPS: Array<{ key: string; icon: LucideIcon; items: ModuleItem[] }> = [
   },
 ]
 
-export default function ModulesScene({ t, localePrefix }: ModulesSceneProps) {
+export default function ModulesScene({ t, localePrefix, index }: ModulesSceneProps) {
   const routePrefix = localePrefix ? `/${localePrefix}` : ''
 
   return (
     <section id="features" className={LANDING_SECTION}>
       <div className={LANDING_CONTAINER}>
         <SectionHeader
+          index={index}
           label={t('landing.modules.label')}
           title={t('landing.modules.title')}
           description={t('landing.modules.desc')}
         />
 
-        <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {GROUPS.map(({ key, icon: Icon, items }) => (
-            <div
+        {/* One ledger: a single hairline frame, hairlines between the columns
+            and between the rows. `gap-px` over a bordered background is what
+            draws them — no per-cell border arithmetic, so RTL and LTR need
+            nothing different. */}
+        <ul className="grid gap-px overflow-hidden rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--border-default))] sm:grid-cols-2 lg:grid-cols-4">
+          {GROUPS.map(({ key, icon: Icon, items }, groupIndex) => (
+            <li
               key={key}
-              className="group relative flex flex-col overflow-hidden rounded-3xl bg-[hsl(var(--surface-muted))] p-6 shadow-sm ring-1 ring-[hsl(var(--border-default))] transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-[hsl(var(--color-primary)/0.1)] hover:ring-[hsl(var(--color-primary)/0.3)] animate-in fade-in zoom-in-95 duration-700"
+              className="group relative flex flex-col bg-[hsl(var(--surface-base))] p-5 transition-colors duration-300 hover:bg-[hsl(var(--surface-elevated))] sm:p-6"
             >
-              {/* Background Glow */}
-              <div className="absolute -inset-4 bg-gradient-to-br from-[hsl(var(--color-primary)/0.15)] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+              <CardAccent />
 
-              <div className="relative">
-                <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-[hsl(var(--color-primary)/0.1)] ring-1 ring-[hsl(var(--color-primary)/0.2)]">
-                  <Icon className="size-6 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-                </div>
-                <h3 className="mb-4 text-lg font-bold text-[hsl(var(--fg-primary))]">
-                  {t(`landing.modules.group.${key}`)}
-                </h3>
-                <ul className="flex flex-wrap gap-2">
-                  {items.map((item) => {
-                    const label = t(`landing.modules.item.${item.key}`)
-                    const chip =
-                      'inline-flex items-center rounded-lg bg-[hsl(var(--surface-elevated))] border border-[hsl(var(--border-default))] px-3 py-1.5 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors group-hover/item:border-[hsl(var(--color-primary)/0.4)] group-hover/item:bg-[hsl(var(--color-primary)/0.05)] group-hover/item:text-[hsl(var(--color-primary))]'
-
-                    return (
-                      <li key={item.key} className="group/item">
-                        {item.href ? (
-                          <NextLink
-                            prefetch={false}
-                            href={`${routePrefix}${item.href}`}
-                            className={chip}
-                          >
-                            {label}
-                          </NextLink>
-                        ) : (
-                          <span className={chip}>{label}</span>
-                        )}
-                      </li>
-                    )
-                  })}
-                </ul>
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-mono text-xs tabular-nums text-[hsl(var(--fg-tertiary))]">
+                  {String(groupIndex + 1).padStart(2, '0')}
+                </span>
+                <Icon className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
               </div>
-            </div>
+
+              <h3 className="mt-4 text-lg font-bold text-[hsl(var(--fg-primary))] sm:text-xl">
+                {t(`landing.modules.group.${key}`)}
+              </h3>
+
+              <ul className="mt-3 border-t border-[hsl(var(--border-default))]">
+                {items.map((item) => {
+                  const label = t(`landing.modules.item.${item.key}`)
+                  const row =
+                    'flex min-h-9 items-center justify-between gap-3 border-b border-[hsl(var(--border-default)/0.6)] py-1.5 text-sm text-[hsl(var(--fg-secondary))] transition-colors'
+
+                  return (
+                    <li key={item.key}>
+                      {item.href ? (
+                        <NextLink
+                          prefetch={false}
+                          href={`${routePrefix}${item.href}`}
+                          className={`${row} after:text-[hsl(var(--fg-tertiary))] after:content-['←'] hover:text-[hsl(var(--color-primary))] ltr:after:content-['→']`}
+                        >
+                          {label}
+                        </NextLink>
+                      ) : (
+                        <span className={row}>{label}</span>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   )

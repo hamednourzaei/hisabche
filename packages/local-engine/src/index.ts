@@ -5,22 +5,39 @@
 // Dispatches in-memory requests to SQLite-backed route handlers.
 // ============================================
 
+import { endpointAvailability } from '@hisabche/validation'
 import { resolveContext } from './context'
 import type { LocalDb } from './db'
 import { HttpError, OfflineNotAvailableError } from './errors'
 import { Router } from './router'
 import { registerAccountingRoutes } from './routes/accounting'
+import { registerAnalysisRoutes } from './routes/analysis'
+import { registerAttendanceRoutes } from './routes/attendance'
 import { registerBackupRoutes } from './routes/backup'
+import { registerBranchRoutes } from './routes/branches'
+import { registerBudgetRoutes } from './routes/budgets'
+import { registerCostingRoutes } from './routes/costing'
 import { registerCustomerRoutes } from './routes/customers'
 import { registerDashboardRoutes } from './routes/dashboard'
+import { registerEmployeeRoutes } from './routes/employees'
 import { registerExchangeRateRoutes } from './routes/exchange-rates'
+import { registerFeedRoutes } from './routes/feed'
 import { registerImportRoutes } from './routes/import'
+import { registerInsightRoutes } from './routes/insights'
+import { registerInstallmentRoutes } from './routes/installments'
 import { registerInvoiceRoutes } from './routes/invoices'
 import { registerMeRoutes } from './routes/me'
-import { registerPaymentRoutes } from './routes/payments'
+import { registerPartyStatementRoutes, registerPaymentRoutes } from './routes/payments'
+import { registerPayrollRoutes } from './routes/payroll'
+import { registerPricingRoutes } from './routes/pricing'
 import { registerProductRoutes } from './routes/products'
+import { registerPurchasingRoutes } from './routes/purchasing'
+import { registerReportRoutes } from './routes/reports'
 import { registerShelfRoutes } from './routes/shelves'
+import { registerStockInsightRoutes } from './routes/stock-insights'
+import { registerTillRoutes } from './routes/till'
 import { registerTransferRoutes } from './routes/transfers'
+import { registerUnitRoutes } from './routes/units'
 import { registerWarehouseRoutes } from './routes/warehouses'
 import { registerWorkspaceRoutes } from './routes/workspace'
 import type {
@@ -49,16 +66,33 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
   registerCustomerRoutes(router)
   registerInvoiceRoutes(router)
   registerPaymentRoutes(router)
+  registerPartyStatementRoutes(router)
   registerWarehouseRoutes(router)
   registerTransferRoutes(router)
   registerShelfRoutes(router)
   registerAccountingRoutes(router)
+  registerReportRoutes(router)
+  registerCostingRoutes(router)
+  registerAnalysisRoutes(router)
+  registerPurchasingRoutes(router)
+  registerStockInsightRoutes(router)
   registerExchangeRateRoutes(router)
   registerBackupRoutes(router)
   registerWorkspaceRoutes(router)
   registerMeRoutes(router)
   registerDashboardRoutes(router)
+  registerFeedRoutes(router)
+  registerBranchRoutes(router)
   registerImportRoutes(router)
+  registerInsightRoutes(router)
+  registerUnitRoutes(router)
+  registerEmployeeRoutes(router)
+  registerPayrollRoutes(router)
+  registerAttendanceRoutes(router)
+  registerBudgetRoutes(router)
+  registerInstallmentRoutes(router)
+  registerPricingRoutes(router)
+  registerTillRoutes(router)
 
   return {
     async request<T = unknown>(req: LocalEngineRequest): Promise<LocalEngineResponse<T>> {
@@ -67,7 +101,12 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
         const match = router.find(req.method, req.path)
 
         if (!match) {
-          throw new OfflineNotAvailableError(req.path)
+          // The matrix says WHICH feature and whether the device can ever run it.
+          const verdict = endpointAvailability(req.method, req.path)
+          throw new OfflineNotAvailableError(
+            verdict?.feature ?? req.path,
+            verdict?.status === 'not_supported' ? 'not_supported' : 'online_required',
+          )
         }
 
         const queryParams = {

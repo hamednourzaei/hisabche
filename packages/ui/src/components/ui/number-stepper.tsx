@@ -14,8 +14,15 @@
 
 import * as React from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { useLocale } from 'next-intl'
 
 import { cn } from '../../lib/utils'
+import {
+  caretAfter,
+  readNumeralText,
+  showNumeral,
+  significantBefore,
+} from '../../lib/numeral-input'
 
 export interface NumberStepperProps extends Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
@@ -28,7 +35,7 @@ export interface NumberStepperProps extends Omit<
   max?: number
   /** Decimals kept when stepping. Typing is never rounded. */
   precision?: number
-  /** Groups thousands while the field is not focused. */
+  /** Groups thousands as the number is typed (`25,000,000`), in the language's own digits. */
   groupThousands?: boolean
   /** Rendered inside the field, before the arrows. */
   suffix?: string
@@ -78,7 +85,11 @@ export const NumberStepper = React.forwardRef<HTMLInputElement, NumberStepperPro
     },
     ref,
   ) {
+    const lang = useLocale()
     const [focused, setFocused] = React.useState(false)
+    const inputRef = React.useRef<HTMLInputElement | null>(null)
+    // Digits before the caret at the last keystroke, so grouping never moves it.
+    const caretRef = React.useRef<number | null>(null)
     const [hovered, setHovered] = React.useState(false)
 
     const clamp = React.useCallback(
@@ -111,9 +122,19 @@ export const NumberStepper = React.forwardRef<HTMLInputElement, NumberStepperPro
       onKeyDown?.(event)
     }
 
-    // Grouping is applied only while the field is at rest, so the caret never
-    // jumps over a comma that appeared mid-word.
-    const shown = !focused && groupThousands ? groupThousandsText(value) : value
+    // Grouped while typing, in the language's own digits. The caret is put back
+    // after the same number of digits, so a comma appearing mid-word never moves
+    // what is being typed. The VALUE stays Latin digits throughout.
+    const shown = showNumeral(value, lang, groupThousands)
+
+    React.useLayoutEffect(() => {
+      const input = inputRef.current
+      const wanted = caretRef.current
+      caretRef.current = null
+      if (!input || wanted === null || document.activeElement !== input) return
+      const at = caretAfter(shown, wanted)
+      input.setSelectionRange(at, at)
+    }, [shown])
 
     const arrow = cn(
       // `flex-1`, not `h-1/2`: half of an auto height is auto, so in a tall
@@ -149,7 +170,11 @@ export const NumberStepper = React.forwardRef<HTMLInputElement, NumberStepperPro
         )}
       >
         <input
-          ref={ref}
+          ref={(node) => {
+            inputRef.current = node
+            if (typeof ref === 'function') ref(node)
+            else if (ref) ref.current = node
+          }}
           value={shown}
           disabled={disabled}
           inputMode="decimal"
@@ -163,7 +188,14 @@ export const NumberStepper = React.forwardRef<HTMLInputElement, NumberStepperPro
             setFocused(false)
             onBlur?.(e)
           }}
-          onChange={(e) => onValueChange(e.target.value.replace(/,/g, ''))}
+          onChange={(e) => {
+            const field = e.target
+            caretRef.current = significantBefore(
+              field.value,
+              field.selectionStart ?? field.value.length,
+            )
+            onValueChange(readNumeralText(field.value))
+          }}
           className={cn(
             'w-full min-w-0 bg-transparent text-end tabular-nums outline-none',
             'text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))]',

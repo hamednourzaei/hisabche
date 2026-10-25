@@ -238,6 +238,7 @@ function PlanPrice({
   perMonth,
   amountClassName,
   contactClassName,
+  freePlan,
 }: {
   price: { amount: number; currency?: string } | null | undefined
   locale: string
@@ -245,6 +246,8 @@ function PlanPrice({
   perMonth: (currency?: string) => string
   amountClassName: string
   contactClassName: string
+  /** The plan is free by definition, whatever the billing list answers. */
+  freePlan?: boolean | undefined
 }) {
   // Not loaded. A placeholder holds the height so the card does not jump, and
   // — critically — no number is shown. Showing a remembered price while the
@@ -258,8 +261,14 @@ function PlanPrice({
     )
   }
 
-  // Quoted per customer.
+  // Quoted per customer — unless the plan is free by definition. The billing
+  // list answers `priceMonthly: null` for `free`, and the card then said «تماس
+  // بگیرید» under the name «رایگان»: a reader was told to phone about a plan the
+  // same card calls free. Zero is not an unknown here; it is the plan.
   if (price === null) {
+    if (freePlan) {
+      return <span className={amountClassName}>{st('landing.pricing.free', 'رایگان')}</span>
+    }
     return (
       <span className={contactClassName}>{st('landing.pricing.contactUs', 'تماس بگیرید')}</span>
     )
@@ -293,9 +302,9 @@ const ComparisonTable = memo(function ComparisonTable({ locale }: { locale: stri
   }
   return (
     <div
-      className={cn(
-        'mt-10 hidden lg:block rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] shadow-sm',
-      )}
+      className={
+        'mt-10 hidden lg:block overflow-hidden rounded-xl border border-[hsl(var(--border-default))]'
+      }
     >
       <div className="overflow-x-auto">
         <table className="min-w-[800px] w-full border-collapse">
@@ -312,7 +321,7 @@ const ComparisonTable = memo(function ComparisonTable({ locale }: { locale: stri
                   )}
                 >
                   {plan.popular && (
-                    <span className="inline-block px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold text-white bg-[image:var(--gradient-brand)] mb-1.5">
+                    <span className="mb-1.5 inline-block rounded-sm border border-[hsl(var(--color-primary)/0.35)] px-2 py-0.5 text-xs font-semibold text-[hsl(var(--color-primary))]">
                       {st('landing.pricingPopular', 'محبوب‌ترین')}
                     </span>
                   )}
@@ -372,7 +381,12 @@ const ComparisonTable = memo(function ComparisonTable({ locale }: { locale: stri
   )
 })
 
-export default function PricingScene() {
+export interface PricingSceneProps {
+  /** Chapter number of this section on the page (`07`). */
+  index?: string | undefined
+}
+
+export default function PricingScene({ index }: PricingSceneProps) {
   const t = useTranslations()
   // Plan prices used to render through `toLocaleString('fa-AF')`, so an
   // English visitor was shown Persian digits. The digits follow the reader's
@@ -437,34 +451,37 @@ export default function PricingScene() {
     return (
       <>
         <div>
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <h3 className="text-lg font-semibold text-[hsl(var(--fg-primary))]">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
               {st(`landing.pricing.${plan.key}.name`, plan.fallbackName)}
             </h3>
             {plan.popular && (
-              <span className="rounded-full bg-[hsl(var(--color-primary)/0.12)] px-2.5 py-0.5 text-xs font-semibold text-[hsl(var(--color-primary))]">
+              <span className="shrink-0 rounded-sm border border-[hsl(var(--color-primary)/0.35)] px-2 py-0.5 text-xs font-semibold text-[hsl(var(--color-primary))]">
                 {st('landing.pricingPopular', 'محبوب‌ترین')}
               </span>
             )}
           </div>
-          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
+          <p className="mt-2 text-sm text-[hsl(var(--fg-secondary))]">
             {st('landing.pricing.bestIfLabel', 'مناسب اگر')}:{' '}
             {st(`landing.pricing.${plan.key}.bestIf`, plan.fallbackBestIf)}
           </p>
           {/* `who` carries the enterprise offer — "tell us what to add, remove
               or change" — the whole pitch for a plan with no listed price. */}
-          <p className="mt-1 text-sm leading-snug text-[hsl(var(--fg-secondary))]">
+          <p className="mt-1 text-pretty text-sm leading-6 text-[hsl(var(--fg-secondary))]">
             {st(`landing.pricing.${plan.key}.who`, plan.fallbackWho)}
           </p>
         </div>
 
-        <div className="flex min-h-10 items-end gap-1.5">
+        {/* The number is the one thing a reader compares across plans, so it is
+            set at display size in tabular figures and sits on its own rule. */}
+        <div className="flex min-h-10 items-baseline gap-1.5 border-t border-[hsl(var(--border-default))] pt-5">
           <PlanPrice
             price={priceOf(plan)}
             locale={locale}
             st={st}
             perMonth={perMonth}
-            amountClassName="text-3xl font-bold tabular-nums text-[hsl(var(--fg-primary))] lg:text-4xl"
+            freePlan={plan.billingPlan === 'free'}
+            amountClassName="text-4xl font-black tracking-tight tabular-nums text-[hsl(var(--fg-primary))]"
             contactClassName="text-2xl font-bold text-[hsl(var(--fg-primary))]"
           />
         </div>
@@ -473,8 +490,10 @@ export default function PricingScene() {
           prefetch={false}
           href={ctaHref}
           className={cn(
-            'inline-flex min-h-12 w-full items-center justify-center rounded-xl px-4 text-sm font-semibold',
-            plan.popular ? 'btn-primary' : 'btn-secondary',
+            'inline-flex min-h-12 w-full items-center justify-center rounded-lg px-4 text-sm font-bold transition-colors',
+            plan.popular
+              ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] hover:bg-[hsl(var(--color-primary-hover))]'
+              : 'border border-[hsl(var(--border-strong))] text-[hsl(var(--fg-primary))] hover:border-[hsl(var(--color-primary))] hover:text-[hsl(var(--color-primary))]',
           )}
         >
           {st(`landing.pricing.${plan.key}.cta`, plan.ctaFallback)}
@@ -485,15 +504,21 @@ export default function PricingScene() {
 
   return (
     <section id="pricing" className={cn(LANDING_SECTION, 'bg-[hsl(var(--surface-muted)/0.3)]')}>
-      <div className={cn(LANDING_CONTAINER, 'max-w-5xl')}>
+      <div className={LANDING_CONTAINER}>
         <SectionHeader
+          index={index}
           label={st('landing.pricingLabel', 'تعرفه‌ها')}
           title={st('landing.pricingTitle', 'از رایگان شروع کنید، هر زمان خواستید ارتقا دهید')}
+          description={st(
+            'landing.pricingDesc',
+            'شروع رایگان، بدون کارت بانکی. هر وقت خواستید ارتقا دهید.',
+          )}
         />
 
-        {/* Edition selector: دو باکس آنلاین / آفلاین */}
+        {/* Edition selector — a two-position switch, set as a segmented control
+            on a hairline track rather than two filled buttons. */}
         <div className="mb-8 flex justify-center">
-          <div className="inline-flex rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-1">
+          <div className="inline-flex border border-[hsl(var(--border-default))] p-1">
             <button
               type="button"
               onClick={() => {
@@ -501,9 +526,9 @@ export default function PricingScene() {
                 setFeaturesOpen(false)
               }}
               className={cn(
-                'rounded-lg px-6 py-2 text-sm font-semibold transition-colors',
+                'rounded-md px-5 py-2 text-sm font-semibold transition-colors',
                 edition === 'online'
-                  ? 'bg-[hsl(var(--color-primary))] text-white shadow-sm'
+                  ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]'
                   : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
               )}
             >
@@ -516,9 +541,9 @@ export default function PricingScene() {
                 setFeaturesOpen(false)
               }}
               className={cn(
-                'rounded-lg px-6 py-2 text-sm font-semibold transition-colors',
+                'rounded-md px-5 py-2 text-sm font-semibold transition-colors',
                 edition === 'offline'
-                  ? 'bg-[hsl(var(--color-primary))] text-white shadow-sm'
+                  ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]'
                   : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
               )}
             >
@@ -530,7 +555,17 @@ export default function PricingScene() {
         {/* PHONES AND TABLETS — one plan at a time behind the project's Tabs.
             Three full cards stacked were 1021px at 360px, and the comparison
             table needs 800px; below `lg` each tab carries its own column of it. */}
-        <Tabs defaultValue="pro" className="lg:hidden" onValueChange={() => setFeaturesOpen(false)}>
+        <Tabs
+          defaultValue="pro"
+          // Radix Tabs writes `dir` on its own root and defaults to `ltr`; it
+          // does not read the document's direction. Without this the mobile
+          // plan cards were laid out left-to-right inside an RTL page: the
+          // amount sat to the left of its unit (measured: amount at x=37,
+          // unit at x=84 in a 390px viewport) and every `ps`/`pe` mirrored.
+          dir={activeLocale === 'en' ? 'ltr' : 'rtl'}
+          className="mx-auto max-w-md lg:hidden"
+          onValueChange={() => setFeaturesOpen(false)}
+        >
           <TabsList
             className={cn(
               'mb-4 grid w-full overflow-visible',
@@ -547,9 +582,9 @@ export default function PricingScene() {
             <TabsContent key={plan.key} value={plan.key}>
               <div
                 className={cn(
-                  'flex flex-col gap-5 rounded-2xl border p-5 sm:p-8',
+                  'flex flex-col gap-5 rounded-xl border p-5 sm:p-6',
                   plan.popular
-                    ? 'border-[hsl(var(--color-primary)/0.35)] bg-[hsl(var(--surface-elevated))] shadow-xl'
+                    ? 'border-[hsl(var(--color-primary)/0.35)] bg-[hsl(var(--color-primary)/0.04)]'
                     : 'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base)/0.5)]',
                 )}
               >
@@ -579,7 +614,7 @@ export default function PricingScene() {
                             {group.rows.map((row) => (
                               <li
                                 key={row.labelKey}
-                                className="flex items-center justify-between gap-3 text-sm text-[hsl(var(--fg-secondary))]"
+                                className="flex items-center justify-between gap-3 border-b border-[hsl(var(--border-default)/0.6)] pb-2 text-sm text-[hsl(var(--fg-secondary))] last:border-0"
                               >
                                 <span>
                                   {st(`landing.pricing.row.${row.labelKey}`, row.fallback)}
@@ -600,21 +635,26 @@ export default function PricingScene() {
           ))}
         </Tabs>
 
-        {/* DESKTOP — the template's frame with the popular plan raised (MIT). */}
-        <div className="hidden rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base)/0.5)] lg:block">
+        {/* DESKTOP — one ruled sheet: three columns, a hairline between them,
+            the popular plan on a tinted ground instead of a floating card. */}
+        <div
+          className={cn(
+            'hidden overflow-hidden rounded-xl border border-[hsl(var(--border-default))] lg:block',
+            edition === 'offline' && 'mx-auto max-w-md',
+          )}
+        >
           <ul
             className={cn(
-              'grid',
-              edition === 'online' ? 'grid-cols-3' : 'grid-cols-1 max-w-md mx-auto',
+              'grid gap-px bg-[hsl(var(--border-default))]',
+              edition === 'online' ? 'grid-cols-3' : 'mx-auto max-w-md grid-cols-1',
             )}
           >
             {visiblePlans.map((plan, i) => (
               <li
                 key={plan.key}
                 className={cn(
-                  'relative flex flex-col gap-6 p-8',
-                  plan.popular &&
-                    'm-2 rounded-xl bg-[hsl(var(--surface-elevated))] shadow-xl ring-1 ring-[hsl(var(--color-primary)/0.35)]',
+                  'relative flex flex-col gap-6 bg-[hsl(var(--surface-base))] p-8',
+                  plan.popular && 'bg-[hsl(var(--color-primary)/0.05)]',
                 )}
               >
                 {renderPlan(plan, i)}

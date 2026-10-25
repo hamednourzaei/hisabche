@@ -33,6 +33,8 @@ import {
 } from '@/hooks/use-admin-subscriptions'
 import { UpgradeRequestsPanel } from './upgrade-requests-panel'
 import { PlanLimitsPanel } from './plan-limits-panel'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminDate } from '@/lib/admin-format'
 
 const PAGE_SIZE = 20
 
@@ -265,6 +267,7 @@ function SubscriptionRow({
   onPlan: (plan: Plan) => void
   onStatus: (status: SubscriptionStatus) => void
 }) {
+  const dateLocale = useAdminLocale()
   const t = useTranslations()
   const days = daysUntilExpiry(subscription.period_end)
 
@@ -328,7 +331,7 @@ function SubscriptionRow({
           {subscription.period_end ? (
             <>
               <time dateTime={subscription.period_end} suppressHydrationWarning>
-                {new Date(subscription.period_end).toLocaleDateString()}
+                {adminDate(subscription.period_end, dateLocale)}
               </time>
               {days !== null && (
                 <span className="ms-2">

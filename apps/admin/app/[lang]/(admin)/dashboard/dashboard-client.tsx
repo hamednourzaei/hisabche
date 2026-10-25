@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   AlertTriangle,
@@ -20,6 +20,8 @@ import { useAdminSession } from '@/hooks/use-admin-session'
 import { useAdminMetrics } from '@/hooks/use-admin-api'
 import { useAdminPastDue } from '@/hooks/use-admin-past-due'
 import { cn } from '@/lib/utils'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminDateTime, adminNumber, UNKNOWN_VALUE } from '@/lib/admin-format'
 
 const DASHBOARD_TABS = ['overview', 'revenue', 'alerts'] as const
 type DashboardTab = (typeof DASHBOARD_TABS)[number]
@@ -33,8 +35,8 @@ interface Kpi {
 
 export function DashboardClient() {
   const router = useRouter()
-  const pathname = usePathname()
   const t = useTranslations()
+  const locale = useAdminLocale()
   const [tab, setTab] = useHubTab<DashboardTab>(DASHBOARD_TABS)
 
   const { loading: authLoading, error: authError } = useAdminSession()
@@ -44,18 +46,21 @@ export function DashboardClient() {
     isError: metricsError,
     refetch,
   } = useAdminMetrics()
-  const { data: pastDueData, isLoading: pastDueLoading } = useAdminPastDue()
-
-  const localePrefix = pathname.split('/').filter(Boolean)[0] || 'fa'
+  const {
+    data: pastDueData,
+    isLoading: pastDueLoading,
+    isError: pastDueError,
+    refetch: refetchPastDue,
+  } = useAdminPastDue()
 
   if (authError) {
     return (
       <div className="space-y-4">
         <ErrorState
           message={authError === 'NO_SESSION' ? t('auth.sessionExpired') : t('app.error')}
-          onRetry={() => router.replace(`/${localePrefix}/login`)}
+          onRetry={() => router.replace(`/${locale}/login`)}
         />
-        <Button variant="outline" onClick={() => router.replace(`/${localePrefix}/login`)}>
+        <Button variant="outline" onClick={() => router.replace(`/${locale}/login`)}>
           {t('auth.signIn')}
         </Button>
       </div>
@@ -158,7 +163,7 @@ export function DashboardClient() {
               suppressHydrationWarning
             >
               {t('admin.dashboard.generatedAt', {
-                time: new Date(metrics.generatedAt).toLocaleString(),
+                time: adminDateTime(metrics.generatedAt, locale),
               })}
             </time>
           </div>
@@ -189,7 +194,7 @@ export function DashboardClient() {
                   </span>
                   <p className="text-sm text-muted-foreground">{t(`admin.kpi.${kpi.key}`)}</p>
                   <p className="mt-1 text-3xl font-bold tabular-nums">
-                    {kpi.value.toLocaleString()}
+                    {adminNumber(kpi.value, locale)}
                   </p>
                 </Card>
               )
@@ -208,7 +213,9 @@ export function DashboardClient() {
                     <Card key={plan} className="p-5">
                       <div className="flex items-baseline justify-between gap-3">
                         <p className="truncate text-sm font-medium capitalize">{plan}</p>
-                        <p className="text-2xl font-bold tabular-nums">{count.toLocaleString()}</p>
+                        <p className="text-2xl font-bold tabular-nums">
+                          {adminNumber(count, locale)}
+                        </p>
                       </div>
                       <div
                         className="mt-3 h-2 w-full overflow-hidden rounded-full bg-accent"
@@ -221,7 +228,9 @@ export function DashboardClient() {
                         />
                       </div>
                       <p className="mt-2 text-xs text-muted-foreground">
-                        {t('admin.dashboard.ofTotal', { total: subscriptions.total })}
+                        {t('admin.dashboard.ofTotal', {
+                          total: adminNumber(subscriptions.total, locale),
+                        })}
                       </p>
                     </Card>
                   )
@@ -233,18 +242,29 @@ export function DashboardClient() {
       )}
 
       {tab === 'revenue' && (
-        <Card className="p-8">
-          <EmptyState
-            title={t('admin.hubs.dashboard.revenue')}
-            description={t('admin.empty.comingInNextStep')}
-          />
-        </Card>
+        <section aria-labelledby="revenue-heading" className="space-y-4">
+          <h2 id="revenue-heading" className="text-base font-semibold">
+            {t('admin.hubs.dashboard.revenue')}
+          </h2>
+          <Card className="p-8">
+            <EmptyState
+              title={t('admin.dashboard.revenueUnavailableTitle')}
+              description={t('admin.dashboard.revenueUnavailableHint')}
+              action={{
+                label: t('admin.hubs.revenue.ledger'),
+                onClick: () => router.push(`/${locale}/revenue?tab=ledger`),
+              }}
+            />
+          </Card>
+        </section>
       )}
 
       {tab === 'alerts' && (
         <div className="space-y-4">
           <h2 className="text-base font-semibold">{t('admin.hubs.dashboard.alerts')}</h2>
-          {pastDueLoading ? (
+          {pastDueError ? (
+            <ErrorState message={t('admin.error.generic')} onRetry={() => void refetchPastDue()} />
+          ) : pastDueLoading ? (
             <div className="space-y-3">
               {[0, 1, 2].map((i) => (
                 <Skeleton key={i} className="h-16 w-full rounded-2xl" />
@@ -260,13 +280,18 @@ export function DashboardClient() {
                 <li key={sub.id}>
                   <Card className="flex items-center justify-between p-4">
                     <div className="min-w-0">
-                      <p className="font-semibold text-destructive">{sub.workspace_id}</p>
+                      <p className="font-semibold text-destructive">
+                        {t('admin.dashboard.workspaceRef', {
+                          id: sub.workspace_id ? `${sub.workspace_id.slice(0, 8)}…` : UNKNOWN_VALUE,
+                        })}
+                        {sub.workspace_id && <span className="sr-only"> {sub.workspace_id}</span>}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {sub.plan} · {sub.status}
                       </p>
                     </div>
                     <Link
-                      href={`/${localePrefix}/revenue?tab=subscriptions&status=past_due`}
+                      href={`/${locale}/revenue?tab=subscriptions&status=past_due`}
                       className="text-xs text-[hsl(var(--color-primary))] hover:underline"
                     >
                       {t('admin.subscriptions.title')}

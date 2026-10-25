@@ -1,28 +1,53 @@
 'use client'
 
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Save, Plus } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Save } from 'lucide-react'
 import { apiClient } from '@hisabche/api'
+
+import {
+  Button,
+  DataTable,
+  EmptyState,
+  Input,
+  SelectField,
+  Skeleton,
+  type TableColumn,
+} from '@/components/ui'
+import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
+
+/** The locales the globals endpoint accepts (`z.enum(['fa','af','en'])`). */
+const CMS_LOCALES = ['fa', 'af', 'en'] as const
+
+interface CmsGlobalEntry {
+  key: string
+  value: unknown
+}
 
 export function CmsGlobalsClient() {
   const t = useTranslations()
   const queryClient = useQueryClient()
-  const [locale, setLocale] = useState('fa')
+  const tableT = useAdminTableT()
+  const [locale, setLocale] = useState<string>('fa')
   const [editKey, setEditKey] = useState('')
   const [editValue, setEditValue] = useState('')
 
-  const { data: globals = {} } = useQuery({
+  const {
+    data: globals = {},
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<Record<string, unknown>>({
     queryKey: ['cms-globals', locale],
     queryFn: async () => {
-      const res = await apiClient.get(`/api/public/cms/globals/${locale}`)
+      const res = await apiClient.get<Record<string, unknown>>(`/api/public/cms/globals/${locale}`)
       return res.data
     },
   })
 
   const saveMutation = useMutation({
-    mutationFn: async ({ key, value }: { key: string; value: any }) => {
+    mutationFn: async ({ key, value }: { key: string; value: Record<string, unknown> }) => {
       await apiClient.put(`/api/cms/globals/${locale}/${key}`, value)
     },
     onSuccess: () => {
@@ -32,91 +57,109 @@ export function CmsGlobalsClient() {
     },
   })
 
-  return (
-    <div className="mx-auto max-w-4xl p-6">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-            Remote Content (Globals)
-          </h1>
-          <p className="mt-1 text-sm text-[hsl(var(--fg-secondary))]">
-            Manage Cross-Platform strings. Changes sync instantly to Web, Android, and Windows
-            clients without a build.
-          </p>
-        </div>
-        <select
-          value={locale}
-          onChange={(e) => setLocale(e.target.value)}
-          className="h-10 rounded-lg border border-[hsl(var(--border-default))] px-3 text-sm"
+  const rows: CmsGlobalEntry[] = Object.entries(globals).map(([key, value]) => ({ key, value }))
+
+  const columns: TableColumn<CmsGlobalEntry>[] = [
+    {
+      id: 'key',
+      labelKey: 'admin.cms.keyLabel',
+      labelFallback: 'کلید',
+      locked: true,
+      render: (row) => (
+        <span dir="ltr" className="font-mono text-xs text-foreground">
+          {row.key}
+        </span>
+      ),
+      sortValue: (row) => row.key,
+    },
+    {
+      id: 'content',
+      labelKey: 'admin.cms.contentLabel',
+      labelFallback: 'محتوا',
+      render: (row) => (
+        <span
+          dir="ltr"
+          className="block max-w-[520px] truncate font-mono text-xs text-muted-foreground"
         >
-          <option value="fa">فارسی (ایران)</option>
-          <option value="af">دری (افغانستان)</option>
-          <option value="en">English</option>
-        </select>
+          {JSON.stringify(row.value)}
+        </span>
+      ),
+    },
+  ]
+
+  return (
+    <div className="max-w-4xl space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{t('admin.cms.globalsTitle')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('admin.cms.globalsSubtitle')}</p>
+        </div>
+        <SelectField
+          value={locale}
+          onChange={setLocale}
+          options={CMS_LOCALES.map((value) => ({
+            value,
+            label: t(`admin.cms.locales.${value}`),
+          }))}
+          aria-label={t('cms.pages.locale')}
+          className="h-10 w-44"
+        />
       </div>
 
-      <div className="space-y-6">
-        <div className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4">
-          <h3 className="mb-4 text-sm font-medium">Add / Update Content</h3>
-          <div className="flex gap-4">
-            <input
-              type="text"
-              placeholder="Key (e.g. dashboard.welcome)"
-              value={editKey}
-              onChange={(e) => setEditKey(e.target.value)}
-              className="h-10 flex-1 rounded-lg border border-[hsl(var(--border-default))] px-3 text-sm font-mono"
-            />
-            <input
-              type="text"
-              placeholder="Content string"
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="h-10 flex-[2] rounded-lg border border-[hsl(var(--border-default))] px-3 text-sm"
-            />
-            <button
-              onClick={() => saveMutation.mutate({ key: editKey, value: { text: editValue } })}
-              disabled={!editKey || !editValue || saveMutation.isPending}
-              className="inline-flex h-10 items-center justify-center rounded-lg bg-[hsl(var(--color-primary))] px-4 text-sm font-medium text-white transition-colors hover:bg-[hsl(var(--color-primary-hover))] disabled:opacity-50"
-            >
-              <Save className="me-2 size-4" />
-              Save & Publish
-            </button>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))]">
-          <table className="w-full text-start text-sm">
-            <thead>
-              <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">
-                  Key
-                </th>
-                <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">
-                  Content
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[hsl(var(--border-default))]">
-              {Object.entries(globals).length === 0 ? (
-                <tr>
-                  <td colSpan={2} className="p-8 text-center text-[hsl(var(--fg-tertiary))]">
-                    No remote content defined for {locale}.
-                  </td>
-                </tr>
-              ) : (
-                Object.entries(globals).map(([k, v]: [string, any]) => (
-                  <tr key={k} className="hover:bg-[hsl(var(--surface-muted))]">
-                    <td className="px-4 py-3 font-mono text-[hsl(var(--fg-primary))]">{k}</td>
-                    <td className="px-4 py-3 text-[hsl(var(--fg-secondary))]">
-                      {JSON.stringify(v)}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      <div className="rounded-xl border border-border bg-card p-4">
+        <h2 className="mb-4 text-sm font-medium text-foreground">{t('admin.cms.addOrUpdate')}</h2>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Input
+            value={editKey}
+            onChange={(e) => setEditKey(e.target.value)}
+            placeholder={t('admin.cms.keyPlaceholder')}
+            aria-label={t('admin.cms.keyLabel')}
+            className="h-10 flex-1 font-mono"
+            dir="ltr"
+          />
+          <Input
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            placeholder={t('admin.cms.contentPlaceholder')}
+            aria-label={t('admin.cms.contentLabel')}
+            className="h-10 flex-[2]"
+          />
+          <Button
+            onClick={() => saveMutation.mutate({ key: editKey, value: { text: editValue } })}
+            disabled={!editKey || !editValue || saveMutation.isPending}
+          >
+            <Save className="me-2 size-4" aria-hidden="true" />
+            {t('admin.cms.saveAndPublish')}
+          </Button>
         </div>
       </div>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Skeleton key={i} className="h-12 w-full rounded-xl" />
+          ))}
+        </div>
+      ) : isError ? (
+        <ErrorState message={t('common.loadError')} onRetry={() => void refetch()} />
+      ) : (
+        <DataTable
+          tableId="admin-cms-globals"
+          t={tableT}
+          rows={rows}
+          columns={columns}
+          rowKey={(row) => row.key}
+          minWidthClass="min-w-[560px]"
+          caption={t('admin.cms.globalsTitle')}
+          emptyState={
+            <EmptyState
+              title={t('admin.cms.emptyForLocale', {
+                locale: t(`admin.cms.locales.${locale}`),
+              })}
+            />
+          }
+        />
+      )}
     </div>
   )
 }

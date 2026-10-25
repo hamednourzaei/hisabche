@@ -17,14 +17,23 @@
 //
 // ⚠️ A LIST AND A PRICE ARE RETIRED, NEVER DELETED (`is_active = false`).
 //
-// ⚠️ THE API SPEAKS THE PRODUCT'S UNIT (a price, like `products.sell_price`);
-// the table stores integer hundredths. The conversion is here and nowhere else.
+// ⚠️ ONE RULE, TWO RUNTIMES. The shape of a saved list, the detail, the
+// hundredths conversion and the change set of `setItems` are
+// `@hisabche/validation` (price-list-view) — the device builds the same
+// answers from its own rows. This file reads and writes Postgres.
 // ============================================
 
 import {
+  buildCustomerPriceList,
+  buildPriceListDetail,
+  planPriceListChanges,
   priceListInputSchema,
   priceListItemsSchema,
+  toSavedPriceList as toSaved,
   type CustomerPriceList,
+  type PriceListDetail,
+  type PriceListItemRow as ItemRow,
+  type PriceListRow as ListRow,
   type SavedPriceList,
 } from '@hisabche/validation'
 
@@ -33,8 +42,9 @@ import { BaseError } from '../../errors/base.error'
 import { DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { selectAllPages } from '../../utils/fetch-all-pages'
-import { minor } from '../../utils/money'
 import type { TenancyContext } from '../tenancy.service'
+
+export type { PriceListDetail }
 
 const MISSING_SCHEMA = new Set(['42703', '42P01', 'PGRST204', 'PGRST205'])
 const COLUMNS = 'id, name, currency, valid_from, valid_to, is_active, created_at'
@@ -49,55 +59,12 @@ export class PriceListsNotConfiguredError extends BaseError {
 
 type DbError = { code?: string; message: string }
 
-interface ListRow {
-  id: string
-  name: string
-  currency: string
-  valid_from: string | null
-  valid_to: string | null
-  is_active: boolean
-  created_at: string
-}
-
-interface ItemRow {
-  price_list_id: string
-  product_id: string
-  unit_price_minor: number | string
-  is_active: boolean
-}
-
-export interface PriceListDetail extends SavedPriceList {
-  items: {
-    productId: string
-    name: string
-    unit: string | null
-    ownPrice: number
-    unitPrice: number
-  }[]
-  customers: { id: string; name: string }[]
-}
-
-const day = (value: string | null) => (value ? String(value).slice(0, 10) : null)
-const fromHundredths = (value: number | string) => Number(value) / 100
-
 function fail(error: DbError, what: string): never {
   if (MISSING_SCHEMA.has(error.code ?? '')) throw new PriceListsNotConfiguredError()
   // The one-active-list-per-name index.
   if (error.code === '23505') throw new ValidationError('PRICE_LIST_NAME_TAKEN')
   throw new DatabaseError(what, error)
 }
-
-const toSaved = (row: ListRow, itemCount: number, customerCount: number): SavedPriceList => ({
-  id: row.id,
-  name: row.name,
-  currency: row.currency,
-  validFrom: day(row.valid_from),
-  validTo: day(row.valid_to),
-  isActive: row.is_active,
-  createdAt: row.created_at,
-  itemCount,
-  customerCount,
-})
 
 export class PriceListService {
   async list(ctx: TenancyContext): Promise<SavedPriceList[]> {
@@ -160,7 +127,7 @@ export class PriceListService {
 
   /** The list, every product priced on it (beside its own price), and who buys on it. */
   async detail(ctx: TenancyContext, id: string): Promise<PriceListDetail> {
-    const row = await this.row(ctx, id)
+    const list = await this.row(ctx, id)
     const items = await this.activeItems(ctx, id)
     const customers = await this.customersOnLists(ctx, id)
 
@@ -182,24 +149,7 @@ export class PriceListService {
       }
     }
 
-    return {
-      ...toSaved(row, items.length, customers.length),
-      // A price whose product can no longer be read is not shown as a nameless row.
-      items: items
-        .filter((item) => products.has(item.product_id))
-        .map((item) => {
-          const product = products.get(item.product_id)!
-          return {
-            productId: item.product_id,
-            name: product.name,
-            unit: product.unit,
-            ownPrice: Number(product.sell_price),
-            unitPrice: fromHundredths(item.unit_price_minor),
-          }
-        })
-        .sort((a, b) => a.name.localeCompare(b.name)),
-      customers: customers.map((customer) => ({ id: customer.id, name: customer.full_name })),
-    }
+    return buildPriceListDetail({ list, items, products, customers })
   }
 
   /**
@@ -225,27 +175,16 @@ export class PriceListService {
     }
     if (owned !== ids.length) throw new ValidationError('PRICE_LIST_PRODUCT_NOT_FOUND')
 
-    // A removal keeps the price the row had: the row is retired, not rewritten.
     const existing = new Map(
       (await this.items(ctx, id)).map((item) => [item.product_id, Number(item.unit_price_minor)]),
     )
-    const now = new Date().toISOString()
-    const rows = items.flatMap((item) => {
-      if (item.unitPrice === null) {
-        const kept = existing.get(item.productId)
-        // Nothing to take off: the product was never on the list.
-        if (kept === undefined) return []
-        return [{ product_id: item.productId, unit_price_minor: kept, is_active: false }]
-      }
-      const hundredths = minor(item.unitPrice)
-      // 0.004 is a positive number and zero hundredths; a free product is not a price.
-      if (hundredths <= 0) throw new ValidationError('PRICE_LIST_PRICE_TOO_SMALL')
-      return [{ product_id: item.productId, unit_price_minor: hundredths, is_active: true }]
-    })
+    const change = planPriceListChanges(items, existing)
+    if ('refusal' in change) throw new ValidationError(change.refusal)
 
-    if (rows.length > 0) {
+    const now = new Date().toISOString()
+    if (change.rows.length > 0) {
       const { error } = await supabase.from('price_list_items').upsert(
-        rows.map((row) => ({
+        change.rows.map((row) => ({
           ...row,
           price_list_id: id,
           workspace_id: ctx.workspaceId,
@@ -298,20 +237,7 @@ export class PriceListService {
     const listId = (customer as { price_list_id: string | null }).price_list_id
     if (!listId) return null
 
-    const row = await this.row(ctx, listId)
-    const items = await this.activeItems(ctx, listId)
-    return {
-      id: row.id,
-      name: row.name,
-      currency: row.currency,
-      validFrom: day(row.valid_from),
-      validTo: day(row.valid_to),
-      isActive: row.is_active,
-      prices: items.map((item) => ({
-        productId: item.product_id,
-        unitPrice: fromHundredths(item.unit_price_minor),
-      })),
-    }
+    return buildCustomerPriceList(await this.row(ctx, listId), await this.activeItems(ctx, listId))
   }
 
   private async row(ctx: TenancyContext, id: string): Promise<ListRow> {

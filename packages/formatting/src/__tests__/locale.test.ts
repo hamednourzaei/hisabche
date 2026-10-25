@@ -12,8 +12,8 @@ describe('resolveIntlLocale', () => {
   it.each([
     ['fa', 'fa-IR'],
     ['fa-IR', 'fa-IR'],
-    ['af', 'fa-AF'],
-    ['fa-AF', 'fa-AF'],
+    ['af', 'fa-AF-u-nu-latn'],
+    ['fa-AF', 'fa-AF-u-nu-latn'],
     ['en', 'en'],
   ])('maps %s to %s', (input, expected) => {
     expect(resolveIntlLocale(input)).toBe(expected)
@@ -30,10 +30,10 @@ describe('resolveIntlLocale', () => {
 })
 
 describe('digit system', () => {
-  it('reports Latin digits only for English', () => {
+  it('reports Latin digits for English and Dari, Persian digits for Persian', () => {
     expect(usesLatinDigits('en')).toBe(true)
+    expect(usesLatinDigits('af')).toBe(true)
     expect(usesLatinDigits('fa')).toBe(false)
-    expect(usesLatinDigits('af')).toBe(false)
   })
 
   it('actually renders Latin digits for English', () => {

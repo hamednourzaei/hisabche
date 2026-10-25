@@ -60,6 +60,7 @@ import { Users, Wallet } from 'lucide-react'
 import { useMyCapabilities } from '@hisabche/api'
 import { isNavLocked } from '@hisabche/ui-contract'
 import { TeamAndPayrollView, type TeamTab } from '../team-and-payroll-view'
+import { OfflineGate } from '../../offline-gate'
 import { BranchTreeView } from '../branch-tree-view'
 import { AttendanceSheet } from '../attendance-sheet'
 import { BranchForm, type BranchFormValues } from '../branch-form'
@@ -93,6 +94,14 @@ const TimesheetsContainer = lazy(() =>
 export const TEAM_HUB_TABS = ['team', 'pay'] as const
 export const TEAM_SECTIONS = ['employees', 'branches'] as const
 export const PAY_SECTIONS = ['attendance', 'timesheets'] as const
+
+/** Which feature each section is, for the offline gate (the endpoint matrix decides the rest). */
+const SECTION_FEATURE = {
+  employees: 'employee.list',
+  branches: 'branch.manage',
+  attendance: 'hr.attendance',
+  timesheets: 'timesheet.manage',
+} as const
 
 /** The address «ساعات کار» used to live at — the key of its lock in `NAV_MODULE`. */
 export const TIMESHEETS_SOURCE = '/timesheets'
@@ -179,21 +188,23 @@ function TeamHub() {
         )}
       </>
 
-      <div role="tabpanel">
-        {tab === 'pay' && pay === 'timesheets' ? (
-          <Suspense
-            fallback={
-              <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
-                {t('teamHub.loading')}
-              </p>
-            }
-          >
-            <TimesheetsContainer />
-          </Suspense>
-        ) : (
-          <TeamAndPayrollScreen section={tab === 'pay' ? pay : team} />
-        )}
-      </div>
+      <OfflineGate feature={SECTION_FEATURE[tab === 'pay' ? pay : team]}>
+        <div role="tabpanel">
+          {tab === 'pay' && pay === 'timesheets' ? (
+            <Suspense
+              fallback={
+                <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
+                  {t('teamHub.loading')}
+                </p>
+              }
+            >
+              <TimesheetsContainer />
+            </Suspense>
+          ) : (
+            <TeamAndPayrollScreen section={tab === 'pay' ? pay : team} />
+          )}
+        </div>
+      </OfflineGate>
     </div>
   )
 }

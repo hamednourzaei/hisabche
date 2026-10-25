@@ -28,12 +28,22 @@
 // ============================================
 
 import {
+  buildLateFeePreview,
   createInvoiceSchema,
+  FEE_LINE,
   lateFeePolicySchema,
-  LATE_FEE_PERIOD_DAYS,
+  LATE_FEE_LANGUAGES,
+  planLateFeeAssessment,
   type CreateInvoice,
+  type LateFeeAssessmentRow,
+  type LateFeeInvoiceFacts,
+  type LateFeeLanguage,
   type LateFeePolicy,
+  type LateFeePreview,
 } from '@hisabche/validation'
+
+export { LATE_FEE_LANGUAGES }
+export type { LateFeeLanguage, LateFeePreview }
 
 import { supabase } from '../../db'
 import { BaseError } from '../../errors/base.error'
@@ -43,11 +53,6 @@ import { sourceIdOf } from '../../utils/deterministic-id'
 import { minor } from '../../utils/money'
 import { InvoiceService } from '../invoice.service'
 import type { TenancyContext } from '../tenancy.service'
-import {
-  overdueInstallments,
-  type InstallmentSchedule,
-  type LateFeeSettings,
-} from './installment.domain'
 import { InstallmentsNotConfiguredError, installmentService } from './installment.service'
 
 const MISSING_SCHEMA = new Set(['42703', '42P01', 'PGRST204', 'PGRST205'])
@@ -70,150 +75,10 @@ function fail(error: DbError, what: string): never {
   throw new DatabaseError(what, error)
 }
 
-/** Why nothing can be charged on this invoice — or `ready`. */
-export type LateFeeState =
-  | 'ready'
-  | 'off'
-  | 'other_currency'
-  | 'not_sale'
-  | 'cancelled'
-  | 'no_customer'
-  | 'no_due_date'
-  | 'fee_invoice'
-
-export const LATE_FEE_LANGUAGES = ['fa', 'af', 'en'] as const
-export type LateFeeLanguage = (typeof LATE_FEE_LANGUAGES)[number]
-
-/** The line written on the fee invoice. A stored document, so it has a language. */
-const FEE_LINE: Record<LateFeeLanguage, (invoiceNumber: string, seq: number) => string> = {
-  fa: (n, seq) =>
-    seq > 0 ? `جریمه‌ی دیرکرد فاکتور ${n} — قسط ${seq}` : `جریمه‌ی دیرکرد فاکتور ${n}`,
-  af: (n, seq) => (seq > 0 ? `جریمه‌ی تأخیر بل ${n} — قسط ${seq}` : `جریمه‌ی تأخیر بل ${n}`),
-  en: (n, seq) =>
-    seq > 0 ? `Late fee on invoice ${n} — installment ${seq}` : `Late fee on invoice ${n}`,
-}
-
-export interface LateFeeLine {
-  /** The installment; 0 = the invoice as a whole (it has no plan). */
-  seq: number
-  dueDate: string
-  daysLate: number
-  /** Major units of the invoice's currency, like every amount below. */
-  overdue: number
-  /** What the policy asks for in total, as of today. */
-  fee: number
-  /** What has already been charged for this line. */
-  assessed: number
-  /** What a manager can charge now. */
-  toAssess: number
-  /** True when the cap limited the fee. */
-  capped: boolean
-}
-
-export interface LateFeeAssessment {
-  id: string
-  seq: number
-  periodNo: number
-  dueDate: string
-  daysLate: number
-  overdue: number
-  fee: number
-  assessedAt: string
-  /** Null while the fee invoice has not been issued yet. */
-  feeInvoiceId: string | null
-}
-
-export interface LateFeePreview {
-  invoiceId: string
-  invoiceNumber: string
-  currency: string
-  state: LateFeeState
-  policy: LateFeePolicy | null
-  lines: LateFeeLine[]
-  totalToAssess: number
-  assessments: LateFeeAssessment[]
-}
-
-interface AssessmentRow {
-  id: string
-  seq: number
-  period_no: number
-  due_date: string
-  days_late: number
-  overdue_minor: number | string
-  fee_minor: number | string
-  currency: string
-  fee_invoice_id: string | null
-  assessed_at: string
-}
-
-interface InvoiceFacts {
-  id: string
-  invoiceNumber: string
-  type: string
-  status: string
-  customerId: string | null
-  currency: string
-  dueDate: string | null
-  totalMinor: number
-  allocatedMinor: number
-}
+type InvoiceFacts = LateFeeInvoiceFacts
 
 const today = () => new Date().toISOString().slice(0, 10)
 const major = (hundredths: number | string) => Number(hundredths) / 100
-
-/**
- * The domain's settings for an invoice in `currency`, or why there are none.
- *
- * ⚠️ A fixed amount in another currency is LEFT OUT, not converted.
- */
-export function settingsFor(
-  policy: LateFeePolicy | null,
-  currency: string,
-): { settings: LateFeeSettings } | { state: 'off' | 'other_currency' } {
-  if (!policy || !policy.isEnabled) return { state: 'off' }
-  if (policy.basis === 'per_period') {
-    if (policy.currency !== currency) return { state: 'other_currency' }
-    return {
-      settings: {
-        basis: 'per_period',
-        value: minor(policy.amount ?? 0),
-        graceDays: policy.graceDays,
-        maxShareOfOverduePercent: policy.maxSharePercent,
-      },
-    }
-  }
-  return {
-    settings: {
-      basis: 'percentage',
-      value: policy.percent ?? 0,
-      graceDays: policy.graceDays,
-      maxShareOfOverduePercent: policy.maxSharePercent,
-    },
-  }
-}
-
-/** Which period an assessment made today belongs to. A percentage is charged once: 0. */
-export function periodOf(policy: LateFeePolicy, daysLate: number): number {
-  return policy.basis === 'per_period' ? Math.floor(daysLate / LATE_FEE_PERIOD_DAYS) : 0
-}
-
-/**
- * What may be charged now on one line, in hundredths.
- *
- * A period already assessed is never assessed again — whatever the policy has
- * become since. Otherwise it is what the policy asks for in total, less what
- * has been charged.
- */
-export function chargeableMinor(
-  policy: LateFeePolicy,
-  line: { daysLate: number; feeMinor: number },
-  assessed: readonly { periodNo: number; feeMinor: number }[],
-): number {
-  if (assessed.some((row) => row.periodNo === periodOf(policy, line.daysLate))) return 0
-  const already = assessed.reduce((sum, row) => sum + row.feeMinor, 0)
-  return Math.max(0, line.feeMinor - already)
-}
 
 export interface LateFeeInvoiceCreator {
   create: InvoiceService['create']
@@ -291,65 +156,18 @@ export class LateFeeService {
     const invoice = await this.invoice(ctx, invoiceId)
     const policy = await this.policy(ctx)
     const assessments = await this.assessments(ctx, invoiceId)
-
-    const base = {
-      invoiceId,
-      invoiceNumber: invoice.invoiceNumber,
-      currency: invoice.currency,
+    const isFeeInvoice =
+      invoice.type === 'sale' && invoice.status !== 'cancelled'
+        ? await this.isFeeInvoice(ctx, invoiceId)
+        : false
+    return buildLateFeePreview({
+      invoice,
       policy,
-      assessments: assessments.map((row) => ({
-        id: row.id,
-        seq: row.seq,
-        periodNo: row.period_no,
-        dueDate: String(row.due_date).slice(0, 10),
-        daysLate: row.days_late,
-        overdue: major(row.overdue_minor),
-        fee: major(row.fee_minor),
-        assessedAt: row.assessed_at,
-        feeInvoiceId: row.fee_invoice_id,
-      })),
-    }
-    const nothing = (state: LateFeeState): LateFeePreview => ({
-      ...base,
-      state,
-      lines: [],
-      totalToAssess: 0,
+      assessments,
+      plannedLines: await this.plannedLines(ctx, invoice),
+      isFeeInvoice,
+      asOf: today(),
     })
-
-    if (invoice.type !== 'sale') return nothing('not_sale')
-    if (invoice.status === 'cancelled') return nothing('cancelled')
-    if (await this.isFeeInvoice(ctx, invoiceId)) return nothing('fee_invoice')
-    if (!invoice.customerId) return nothing('no_customer')
-
-    const resolved = settingsFor(policy, invoice.currency)
-    if ('state' in resolved) return nothing(resolved.state)
-
-    const schedule = await this.schedule(ctx, invoice)
-    if (schedule === null) return nothing('no_due_date')
-
-    const lines = overdueInstallments(schedule, today(), resolved.settings).map((line) => {
-      const charged = assessments
-        .filter((row) => row.seq === line.seq)
-        .map((row) => ({ periodNo: row.period_no, feeMinor: Number(row.fee_minor) }))
-      const toAssessMinor = chargeableMinor(policy!, line, charged)
-      return {
-        seq: line.seq,
-        dueDate: line.dueDate,
-        daysLate: line.daysLate,
-        overdue: major(line.overdueMinor),
-        fee: major(line.feeMinor),
-        assessed: major(charged.reduce((sum, row) => sum + row.feeMinor, 0)),
-        toAssess: major(toAssessMinor),
-        capped: line.capped,
-      }
-    })
-
-    return {
-      ...base,
-      state: 'ready',
-      lines,
-      totalToAssess: major(lines.reduce((sum, line) => sum + minor(line.toAssess), 0)),
-    }
   }
 
   /**
@@ -362,41 +180,25 @@ export class LateFeeService {
     language: LateFeeLanguage,
   ): Promise<LateFeePreview> {
     const preview = await this.preview(ctx, invoiceId)
-    if (preview.state !== 'ready') {
-      throw new ValidationError(`LATE_FEE_${preview.state.toUpperCase()}`)
-    }
+    const work = planLateFeeAssessment(preview)
+    if ('refusal' in work) throw new ValidationError(work.refusal)
     const invoice = await this.invoice(ctx, invoiceId)
     const policy = preview.policy!
 
-    const unfinished = preview.assessments.filter((row) => row.feeInvoiceId === null)
-    const chargeable = preview.lines.filter((line) => line.toAssess > 0)
-    if (unfinished.length === 0 && chargeable.length === 0) {
-      throw new ValidationError('LATE_FEE_NOTHING_TO_ASSESS')
-    }
+    for (const row of work.unfinished) await this.issue(ctx, invoice, language, row)
 
-    for (const row of unfinished) {
-      await this.issue(ctx, invoice, language, {
-        id: row.id,
-        seq: row.seq,
-        periodNo: row.periodNo,
-        feeMinor: minor(row.fee),
-      })
-    }
-
-    for (const line of chargeable) {
-      const periodNo = periodOf(policy, line.daysLate)
-      const feeMinor = minor(line.toAssess)
+    for (const line of work.chargeable) {
       const { data, error } = await supabase
         .from('late_fee_assessments')
         .insert({
           workspace_id: ctx.workspaceId,
           invoice_id: invoiceId,
           seq: line.seq,
-          period_no: periodNo,
+          period_no: line.periodNo,
           due_date: line.dueDate,
           days_late: line.daysLate,
-          overdue_minor: minor(line.overdue),
-          fee_minor: feeMinor,
+          overdue_minor: line.overdueMinor,
+          fee_minor: line.feeMinor,
           currency: invoice.currency,
           policy,
           assessed_by: ctx.userId,
@@ -411,8 +213,8 @@ export class LateFeeService {
       await this.issue(ctx, invoice, language, {
         id: String((data as { id: string }).id),
         seq: line.seq,
-        periodNo,
-        feeMinor,
+        periodNo: line.periodNo,
+        feeMinor: line.feeMinor,
       })
     }
 
@@ -503,45 +305,21 @@ export class LateFeeService {
     }
   }
 
-  /**
-   * What is due and when: the installment plan when the invoice has one,
-   * otherwise the invoice as one line on its own due date. `null` = no plan and
-   * no due date, so nothing can be late.
-   */
-  private async schedule(
-    ctx: TenancyContext,
-    invoice: InvoiceFacts,
-  ): Promise<InstallmentSchedule[] | null> {
-    let planned: InstallmentSchedule[] = []
+  /** The installments of the plan; none before the installments migration. */
+  private async plannedLines(ctx: TenancyContext, invoice: InvoiceFacts) {
     try {
-      const plan = await installmentService.get(ctx, invoice.id)
-      planned = plan.lines.map((line) => ({
-        id: `${invoice.id}:${line.seq}`,
-        invoiceId: invoice.id,
-        seq: line.seq,
-        dueDate: line.dueDate,
-        amountMinor: minor(line.amount),
-        paidMinor: minor(line.paid),
-      }))
+      return (await installmentService.get(ctx, invoice.id)).lines
     } catch (error) {
       // Before the installments migration no invoice has a plan — which is true.
       if (!(error instanceof InstallmentsNotConfiguredError)) throw error
+      return []
     }
-    if (planned.length > 0) return planned
-    if (!invoice.dueDate) return null
-    return [
-      {
-        id: invoice.id,
-        invoiceId: invoice.id,
-        seq: 0,
-        dueDate: invoice.dueDate,
-        amountMinor: invoice.totalMinor,
-        paidMinor: Math.min(invoice.totalMinor, Math.max(0, invoice.allocatedMinor)),
-      },
-    ]
   }
 
-  private async assessments(ctx: TenancyContext, invoiceId: string): Promise<AssessmentRow[]> {
+  private async assessments(
+    ctx: TenancyContext,
+    invoiceId: string,
+  ): Promise<LateFeeAssessmentRow[]> {
     const { data, error } = await supabase
       .from('late_fee_assessments')
       .select(ASSESSMENT_COLUMNS)
@@ -549,7 +327,7 @@ export class LateFeeService {
       .eq('invoice_id', invoiceId)
       .order('assessed_at', { ascending: true })
     if (error) fail(error, 'Failed to read the late fees charged')
-    return (data ?? []) as AssessmentRow[]
+    return (data ?? []) as LateFeeAssessmentRow[]
   }
 
   private async isFeeInvoice(ctx: TenancyContext, invoiceId: string): Promise<boolean> {

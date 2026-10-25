@@ -18,7 +18,7 @@ import {
   payrollLines,
   rolesRequired,
   type PayrollAmounts,
-} from '../services/payroll/payroll-ledger.domain'
+} from '@hisabche/validation'
 
 const amounts = (over: Partial<PayrollAmounts> = {}): PayrollAmounts => ({
   grossMinor: 10_000_00,

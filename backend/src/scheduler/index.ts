@@ -16,6 +16,7 @@ import { runScheduledOnce, slotOf } from '../services/distributed-work'
 import { runDepreciationPosting } from '../workers/depreciation-posting.worker'
 import { automationService } from '../services/automation/automation.service'
 import { escalationService } from '../services/workflow/escalation.service'
+import { runDivergenceAlarm } from '../workers/divergence-alarm.worker'
 
 const trialWorker = new TrialExpirationWorker()
 
@@ -36,6 +37,8 @@ export const SCHEDULER_TIMEZONE = 'UTC'
 
 const DAY_SECONDS = 24 * 60 * 60
 const EVENT_RECOVERY_SECONDS = 3 * 60
+/** The divergence alarm judges the last hour, so its slot is one hour wide. */
+const ALARM_SLOT_SECONDS = 60 * 60
 
 /** The daily trial-expiration pass — once per UTC day across all instances. */
 export async function runTrialExpirationTick(now: Date = new Date()): Promise<boolean> {
@@ -147,6 +150,26 @@ export async function runTimedAutomationTick(now: Date = new Date()): Promise<bo
   })
 }
 
+/**
+ * The divergence alarm — once per hour across all instances.
+ *
+ * ⚠️ THIS IS THE CONSUMER `core_divergence` DID NOT HAVE. The rows were being
+ * written and read by nothing, so «zero divergence» meant «nobody looked».
+ * Judged by the pure rule in `@hisabche/validation`; this tick only claims the
+ * slot and reports.
+ */
+export async function runDivergenceAlarmTick(now: Date = new Date()): Promise<boolean> {
+  return runScheduledOnce('divergence-alarm', slotOf(ALARM_SLOT_SECONDS, now), async () => {
+    const result = await runDivergenceAlarm(now)
+    if (result.firing.length > 0 || result.errors.length > 0) {
+      console.warn(
+        `⚠️ Divergence alarm: firing=${result.firing.join(',') || 'none'} ` +
+          `notified=${result.notified} errors=${result.errors.length} :: ${result.message}`,
+      )
+    }
+  })
+}
+
 export function startScheduler() {
   console.log('🔄 Starting scheduler...')
 
@@ -244,6 +267,22 @@ export function startScheduler() {
       }
     },
     { timezone: SCHEDULER_TIMEZONE, name: 'workflow-escalation' },
+  )
+
+  // ─── Divergence alarm ──────────────
+  // هر ساعت، دقیقه‌ی ۲۰. آستانه‌اش پیش‌فرض خاموش است (`percent: null`)، پس تا
+  // کسی آن را روشن نکند هیچ اعلانی نمی‌فرستد — ولی خواندن و شمارش انجام می‌شود
+  // تا وقتی روشن شد، داده‌ی تاریخی داشته باشیم.
+  cron.schedule(
+    '20 * * * *',
+    async () => {
+      try {
+        await runDivergenceAlarmTick()
+      } catch (err) {
+        console.error('❌ Divergence alarm failed:', err)
+      }
+    },
+    { timezone: SCHEDULER_TIMEZONE, name: 'divergence-alarm' },
   )
 
   console.log('✅ Scheduler started.')

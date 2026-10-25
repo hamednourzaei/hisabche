@@ -13,6 +13,8 @@
 // ============================================
 
 import { useState } from 'react'
+import { CloudRequiredNotice } from '../cloud-required-notice'
+import { isOfflineNotAvailableError } from '../../../lib/capability/use-action-availability'
 import { useTranslations } from 'next-intl'
 import { CalendarRange } from 'lucide-react'
 import { formatNumber, toIsoDay } from '@hisabche/formatting'
@@ -76,7 +78,10 @@ export function InvoiceInstallmentsPanel({ invoiceId }: { invoiceId: string }) {
       {open && plan.isLoading ? (
         <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('loading')}</p>
       ) : null}
-      {open && plan.error ? (
+      {open && isOfflineNotAvailableError(plan.error) ? (
+        <CloudRequiredNotice variant="inline" title={t('title')} />
+      ) : null}
+      {open && plan.error && !isOfflineNotAvailableError(plan.error) ? (
         <p role="alert" className="text-sm text-[hsl(var(--color-destructive))]">
           {message(plan.error)}
         </p>

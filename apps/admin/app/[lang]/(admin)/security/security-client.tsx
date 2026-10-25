@@ -3,33 +3,39 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Badge,
   Button,
-  Input,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  DataTable,
   EmptyState,
-  Skeleton,
   HubTabs,
-  useHubTab,
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
+  Skeleton,
+  type TableColumn,
+  useHubTab,
 } from '@/components/ui'
 import {
+  useAdminAccounts,
   useAdminAuditLogs,
   useAdminRoles,
-  useAdminAccounts,
+  useAdminSecurityEvents,
   useAdminSessions,
   useRevokeAdminSession,
-  useAdminSecurityEvents,
+  type AdminAccountItem,
   type AdminAuditLogItem,
+  type AdminSecurityEventItem,
   type AdminSessionItem,
 } from '@/hooks/use-admin-security'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminDate, adminDateTime, UNKNOWN_VALUE } from '@/lib/admin-format'
+import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
 import { StepUpDialog } from '@/components/admin-shell/step-up-dialog'
 
 const SECURITY_TABS = ['audit', 'roles', 'sessions', 'events'] as const
@@ -68,25 +74,88 @@ function AuditTabContent() {
   const [search, setSearch] = useState('')
   const [selectedLog, setSelectedLog] = useState<AdminAuditLogItem | null>(null)
 
-  const { data, isLoading, isError } = useAdminAuditLogs({
+  const { data, isLoading, isError, refetch } = useAdminAuditLogs({
     search: search.trim() || undefined,
     limit: 50,
   })
 
   const logs = data?.logs ?? []
+  const locale = useAdminLocale()
+  const tableT = useAdminTableT()
+  const columns: TableColumn<AdminAuditLogItem>[] = [
+    {
+      id: 'when',
+      labelKey: 'admin.auditLogs.when',
+      labelFallback: 'زمان',
+      render: (log) => (
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {adminDateTime(log.created_at, locale)}
+        </span>
+      ),
+      sortValue: (log) => log.created_at,
+    },
+    {
+      id: 'action',
+      labelKey: 'admin.auditLogs.action',
+      labelFallback: 'عملیات',
+      render: (log) => <ActionBadge action={log.action} />,
+      sortValue: (log) => log.action,
+    },
+    {
+      id: 'entity',
+      labelKey: 'admin.auditLogs.entity',
+      labelFallback: 'موضوع',
+      render: (log) => (
+        <div className="text-xs">
+          <div className="font-medium text-foreground">{log.entity_type}</div>
+          {log.entity_id && (
+            <div dir="ltr" className="max-w-[140px] truncate font-mono text-muted-foreground">
+              {log.entity_id}
+            </div>
+          )}
+        </div>
+      ),
+      sortValue: (log) => log.entity_type,
+    },
+    {
+      id: 'reason',
+      labelKey: 'admin.auditLogs.reason',
+      labelFallback: 'دلیل',
+      render: (log) => (
+        <span className="block max-w-[200px] truncate text-xs text-muted-foreground">
+          {log.reason ?? UNKNOWN_VALUE}
+        </span>
+      ),
+    },
+    {
+      id: 'ip',
+      labelKey: 'admin.auditLogs.ip',
+      labelFallback: 'IP',
+      showFrom: 'md',
+      render: (log) => (
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {log.ip_address ?? UNKNOWN_VALUE}
+        </span>
+      ),
+    },
+    {
+      id: 'details',
+      labelKey: 'admin.auditLogs.details',
+      labelFallback: 'جزئیات',
+      align: 'end',
+      locked: true,
+      render: (log) => (
+        <Button variant="ghost" size="sm" onClick={() => setSelectedLog(log)}>
+          {t('admin.auditLogs.viewDiff')}
+        </Button>
+      ),
+    },
+  ]
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Input
-          placeholder={t('admin.auditLogs.searchPlaceholder')}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
-        <div className="text-xs text-muted-foreground">
-          {t('admin.auditLogs.totalCount', { count: data?.total ?? 0 })}
-        </div>
+      <div className="text-xs text-muted-foreground">
+        {t('admin.auditLogs.totalCount', { count: data?.total ?? 0 })}
       </div>
 
       {isLoading && (
@@ -98,74 +167,28 @@ function AuditTabContent() {
       )}
 
       {isError && !isLoading && (
-        <Card className="p-8">
-          <EmptyState
-            title={t('admin.auditLogs.loadError')}
-            description={t('admin.auditLogs.loadErrorHint')}
-          />
-        </Card>
+        <ErrorState message={t('admin.auditLogs.loadError')} onRetry={() => void refetch()} />
       )}
 
-      {!isLoading && !isError && logs.length === 0 && (
-        <Card className="p-8">
-          <EmptyState
-            title={t('admin.auditLogs.empty')}
-            description={t('admin.auditLogs.emptyHint')}
-          />
-        </Card>
-      )}
-
-      {!isLoading && !isError && logs.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-start text-sm">
-              <thead className="border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 text-start">{t('admin.auditLogs.when')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.auditLogs.action')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.auditLogs.entity')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.auditLogs.reason')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.auditLogs.ip')}</th>
-                  <th className="px-4 py-3 text-end">{t('admin.auditLogs.details')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground whitespace-nowrap">
-                      {new Date(log.created_at).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <ActionBadge action={log.action} />
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      <div className="font-medium text-foreground">{log.entity_type}</div>
-                      {log.entity_id && (
-                        <div
-                          dir="ltr"
-                          className="font-mono text-muted-foreground truncate max-w-[140px]"
-                        >
-                          {log.entity_id}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground max-w-[200px] truncate">
-                      {log.reason ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-xs font-mono text-muted-foreground tabular-nums whitespace-nowrap">
-                      {log.ip_address ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-end">
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedLog(log)}>
-                        {t('admin.auditLogs.viewDiff')}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+      {!isLoading && !isError && (
+        <DataTable
+          tableId="admin-audit-logs"
+          t={tableT}
+          rows={logs}
+          columns={columns}
+          rowKey={(log) => log.id}
+          searchValue={search}
+          onSearchChange={setSearch}
+          caption={t('admin.auditLogs.title')}
+          emptyState={
+            <EmptyState
+              title={search.trim() ? t('admin.empty.noneOnPage') : t('admin.auditLogs.empty')}
+              description={
+                search.trim() ? t('admin.empty.noneOnPageHint') : t('admin.auditLogs.emptyHint')
+              }
+            />
+          }
+        />
       )}
 
       {/* Before / After Diff Sheet */}
@@ -218,7 +241,7 @@ function AuditTabContent() {
                 </div>
                 <pre
                   dir="ltr"
-                  className="p-3 rounded-lg bg-muted font-mono text-[11px] overflow-x-auto text-start"
+                  className="p-3 rounded-lg bg-muted font-mono text-xs overflow-x-auto text-start"
                 >
                   {selectedLog.old_data ? JSON.stringify(selectedLog.old_data, null, 2) : 'null'}
                 </pre>
@@ -230,7 +253,7 @@ function AuditTabContent() {
                 </div>
                 <pre
                   dir="ltr"
-                  className="p-3 rounded-lg bg-muted font-mono text-[11px] overflow-x-auto text-start"
+                  className="p-3 rounded-lg bg-muted font-mono text-xs overflow-x-auto text-start"
                 >
                   {selectedLog.new_data ? JSON.stringify(selectedLog.new_data, null, 2) : 'null'}
                 </pre>
@@ -252,7 +275,7 @@ function ActionBadge({ action }: { action: string }) {
     variant = 'default'
   }
   return (
-    <Badge variant={variant} className="font-mono text-[11px]">
+    <Badge variant={variant} className="font-mono text-xs">
       {action}
     </Badge>
   )
@@ -263,10 +286,60 @@ function ActionBadge({ action }: { action: string }) {
 function RolesTabContent() {
   const t = useTranslations()
   const { data: rolesData, isLoading: rolesLoading } = useAdminRoles()
-  const { data: accountsData, isLoading: accountsLoading } = useAdminAccounts()
+  const {
+    data: accountsData,
+    isLoading: accountsLoading,
+    isError: accountsError,
+    refetch: refetchAccounts,
+  } = useAdminAccounts()
 
   const roles = rolesData?.roles ?? []
   const accounts = accountsData?.accounts ?? []
+  const locale = useAdminLocale()
+  const tableT = useAdminTableT()
+  const accountColumns: TableColumn<AdminAccountItem>[] = [
+    {
+      id: 'email',
+      labelKey: 'admin.security.email',
+      labelFallback: 'ایمیل',
+      locked: true,
+      render: (acc) => <span className="font-medium text-foreground">{acc.email}</span>,
+      sortValue: (acc) => acc.email,
+    },
+    {
+      id: 'role',
+      labelKey: 'admin.security.role',
+      labelFallback: 'نقش',
+      render: (acc) => (
+        <Badge variant="outline" className="font-mono text-xs">
+          {acc.role}
+        </Badge>
+      ),
+      sortValue: (acc) => acc.role,
+    },
+    {
+      id: 'status',
+      labelKey: 'admin.security.status',
+      labelFallback: 'وضعیت',
+      render: (acc) => (
+        <Badge variant={acc.isActive ? 'default' : 'secondary'} className="text-xs">
+          {acc.isActive ? t('admin.security.active') : t('admin.security.inactive')}
+        </Badge>
+      ),
+      sortValue: (acc) => (acc.isActive ? 1 : 0),
+    },
+    {
+      id: 'created',
+      labelKey: 'admin.security.created',
+      labelFallback: 'تاریخ ایجاد',
+      render: (acc) => (
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {adminDate(acc.createdAt, locale)}
+        </span>
+      ),
+      sortValue: (acc) => acc.createdAt,
+    },
+  ]
 
   return (
     <div className="space-y-6">
@@ -295,10 +368,7 @@ function RolesTabContent() {
                   </div>
                   <div className="text-xs text-muted-foreground max-h-24 overflow-y-auto space-y-1">
                     {r.permissions.map((p) => (
-                      <div
-                        key={p}
-                        className="font-mono text-[10px] bg-muted/50 rounded px-1.5 py-0.5"
-                      >
+                      <div key={p} className="font-mono text-xs bg-muted/50 rounded px-1.5 py-0.5">
                         {p}
                       </div>
                     ))}
@@ -320,47 +390,30 @@ function RolesTabContent() {
           {accountsLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 4 }, (_, i) => (
-                <Skeleton key={i} className="h-14 rounded-xl" />
+                <Skeleton key={i} className="h-14 rounded-[var(--radius-md)]" />
               ))}
             </div>
-          ) : accounts.length === 0 ? (
-            <EmptyState
-              title={t('admin.security.noAccounts')}
-              description={t('admin.security.noAccountsHint')}
+          ) : accountsError ? (
+            <ErrorState
+              message={t('admin.security.accountsLoadError')}
+              onRetry={() => void refetchAccounts()}
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-start text-sm">
-                <thead className="border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3 text-start">{t('admin.security.email')}</th>
-                    <th className="px-4 py-3 text-start">{t('admin.security.role')}</th>
-                    <th className="px-4 py-3 text-start">{t('admin.security.status')}</th>
-                    <th className="px-4 py-3 text-start">{t('admin.security.created')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {accounts.map((acc) => (
-                    <tr key={acc.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">{acc.email}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline" className="font-mono text-xs">
-                          {acc.role}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={acc.isActive ? 'default' : 'secondary'} className="text-xs">
-                          {acc.isActive ? t('admin.security.active') : t('admin.security.inactive')}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
-                        {new Date(acc.createdAt).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              tableId="admin-accounts"
+              t={tableT}
+              rows={accounts}
+              columns={accountColumns}
+              rowKey={(acc) => acc.id}
+              caption={t('admin.security.adminAccountsTitle')}
+              minWidthClass="min-w-[560px]"
+              emptyState={
+                <EmptyState
+                  title={t('admin.security.noAccounts')}
+                  description={t('admin.security.noAccountsHint')}
+                />
+              }
+            />
           )}
         </CardContent>
       </Card>
@@ -377,6 +430,65 @@ function SessionsTabContent() {
   const [targetSession, setTargetSession] = useState<AdminSessionItem | null>(null)
 
   const sessions = data?.sessions ?? []
+  const locale = useAdminLocale()
+  const tableT = useAdminTableT()
+  const columns: TableColumn<AdminSessionItem>[] = [
+    {
+      id: 'admin',
+      labelKey: 'admin.security.adminUser',
+      labelFallback: 'مدیر',
+      locked: true,
+      render: (sess) => <span className="font-medium text-foreground">{sess.adminEmail}</span>,
+      sortValue: (sess) => sess.adminEmail,
+    },
+    {
+      id: 'session',
+      labelKey: 'admin.security.sessionId',
+      labelFallback: 'شناسه نشست',
+      render: (sess) => <span className="font-mono text-xs text-muted-foreground">{sess.id}</span>,
+    },
+    {
+      id: 'signIn',
+      labelKey: 'admin.security.lastSignIn',
+      labelFallback: 'آخرین ورود',
+      showFrom: 'md',
+      render: (sess) => (
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {adminDateTime(sess.lastSignInAt, locale)}
+        </span>
+      ),
+      sortValue: (sess) => sess.lastSignInAt,
+    },
+    {
+      id: 'created',
+      labelKey: 'admin.security.createdAt',
+      labelFallback: 'تاریخ ایجاد',
+      showFrom: 'md',
+      render: (sess) => (
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {adminDateTime(sess.createdAt, locale)}
+        </span>
+      ),
+      sortValue: (sess) => sess.createdAt,
+    },
+    {
+      id: 'actions',
+      labelKey: 'admin.security.actions',
+      labelFallback: 'عملیات',
+      align: 'end',
+      locked: true,
+      render: (sess) => (
+        <Button
+          variant="destructive"
+          size="sm"
+          aria-label={t('admin.security.revokeSessionFor', { email: sess.adminEmail })}
+          onClick={() => setTargetSession(sess)}
+        >
+          {t('admin.security.revokeSession')}
+        </Button>
+      ),
+    },
+  ]
 
   const handleRevokeConfirm = async ({
     stepUpTimestamp,
@@ -403,62 +515,25 @@ function SessionsTabContent() {
       )}
 
       {isError && !isLoading && (
-        <Card className="p-8">
-          <EmptyState
-            title={t('admin.security.sessionsError')}
-            description={t('admin.security.sessionsErrorHint')}
-          />
-        </Card>
+        <ErrorState message={t('admin.security.sessionsError')} onRetry={() => void refetch()} />
       )}
 
-      {!isLoading && !isError && sessions.length === 0 && (
-        <Card className="p-8">
-          <EmptyState
-            title={t('admin.security.noSessions')}
-            description={t('admin.security.noSessionsHint')}
-          />
-        </Card>
-      )}
-
-      {!isLoading && !isError && sessions.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-start text-sm">
-              <thead className="border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 text-start">{t('admin.security.adminUser')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.security.sessionId')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.security.lastSignIn')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.security.createdAt')}</th>
-                  <th className="px-4 py-3 text-end">{t('admin.security.actions')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {sessions.map((sess) => (
-                  <tr key={sess.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 font-medium text-foreground">{sess.adminEmail}</td>
-                    <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{sess.id}</td>
-                    <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
-                      {sess.lastSignInAt ? new Date(sess.lastSignInAt).toLocaleString() : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
-                      {new Date(sess.createdAt).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-end">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setTargetSession(sess)}
-                      >
-                        {t('admin.security.revokeSession')}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+      {!isLoading && !isError && (
+        <DataTable
+          tableId="admin-sessions"
+          t={tableT}
+          rows={sessions}
+          columns={columns}
+          rowKey={(sess) => sess.id}
+          caption={t('admin.hubs.security.sessions')}
+          minWidthClass="min-w-[720px]"
+          emptyState={
+            <EmptyState
+              title={t('admin.security.noSessions')}
+              description={t('admin.security.noSessionsHint')}
+            />
+          }
+        />
       )}
 
       {/* Step-up Dialog for Revocation */}
@@ -483,8 +558,63 @@ function SessionsTabContent() {
 
 function EventsTabContent() {
   const t = useTranslations()
-  const { data, isLoading, isError } = useAdminSecurityEvents({ limit: 50 })
+  const { data, isLoading, isError, refetch } = useAdminSecurityEvents({ limit: 50 })
   const events = data?.events ?? []
+  const locale = useAdminLocale()
+  const tableT = useAdminTableT()
+  const columns: TableColumn<AdminSecurityEventItem>[] = [
+    {
+      id: 'when',
+      labelKey: 'admin.security.when',
+      labelFallback: 'زمان',
+      render: (ev) => (
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {adminDateTime(ev.createdAt, locale)}
+        </span>
+      ),
+      sortValue: (ev) => ev.createdAt,
+    },
+    {
+      id: 'type',
+      labelKey: 'admin.security.eventType',
+      labelFallback: 'نوع رویداد',
+      render: (ev) => <EventBadge eventType={ev.eventType} />,
+      sortValue: (ev) => ev.eventType,
+    },
+    {
+      id: 'actor',
+      labelKey: 'admin.security.actor',
+      labelFallback: 'کاربر',
+      render: (ev) => (
+        <span className="text-xs font-medium text-foreground">
+          {ev.adminEmail ?? UNKNOWN_VALUE}
+        </span>
+      ),
+      sortValue: (ev) => ev.adminEmail,
+    },
+    {
+      id: 'ip',
+      labelKey: 'admin.security.ip',
+      labelFallback: 'IP',
+      showFrom: 'md',
+      render: (ev) => (
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {ev.ipAddress ?? UNKNOWN_VALUE}
+        </span>
+      ),
+    },
+    {
+      id: 'details',
+      labelKey: 'admin.security.details',
+      labelFallback: 'جزئیات',
+      showFrom: 'lg',
+      render: (ev) => (
+        <pre dir="ltr" className="max-w-[240px] truncate rounded bg-muted/40 p-1 text-xs">
+          {JSON.stringify(ev.details)}
+        </pre>
+      ),
+    },
+  ]
 
   return (
     <div className="space-y-4">
@@ -497,65 +627,24 @@ function EventsTabContent() {
       )}
 
       {isError && !isLoading && (
-        <Card className="p-8">
-          <EmptyState
-            title={t('admin.security.eventsError')}
-            description={t('admin.security.eventsErrorHint')}
-          />
-        </Card>
+        <ErrorState message={t('admin.security.eventsError')} onRetry={() => void refetch()} />
       )}
 
-      {!isLoading && !isError && events.length === 0 && (
-        <Card className="p-8">
-          <EmptyState
-            title={t('admin.security.noEvents')}
-            description={t('admin.security.noEventsHint')}
-          />
-        </Card>
-      )}
-
-      {!isLoading && !isError && events.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-start text-sm">
-              <thead className="border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 text-start">{t('admin.security.when')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.security.eventType')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.security.actor')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.security.ip')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.security.details')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {events.map((ev) => (
-                  <tr key={ev.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground whitespace-nowrap">
-                      {new Date(ev.createdAt).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <EventBadge eventType={ev.eventType} />
-                    </td>
-                    <td className="px-4 py-3 text-xs font-medium text-foreground">
-                      {ev.adminEmail ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-xs font-mono text-muted-foreground tabular-nums whitespace-nowrap">
-                      {ev.ipAddress ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-xs font-mono text-muted-foreground">
-                      <pre
-                        className="text-[10px] bg-muted/50 rounded p-1 max-w-[240px] truncate"
-                        dir="ltr"
-                      >
-                        {JSON.stringify(ev.details)}
-                      </pre>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+      {!isLoading && !isError && (
+        <DataTable
+          tableId="admin-security-events"
+          t={tableT}
+          rows={events}
+          columns={columns}
+          rowKey={(ev) => ev.id}
+          caption={t('admin.hubs.security.events')}
+          emptyState={
+            <EmptyState
+              title={t('admin.security.noEvents')}
+              description={t('admin.security.noEventsHint')}
+            />
+          }
+        />
       )}
     </div>
   )
@@ -571,7 +660,7 @@ function EventBadge({ eventType }: { eventType: string }) {
     variant = 'outline'
   }
   return (
-    <Badge variant={variant} className="font-mono text-[11px]">
+    <Badge variant={variant} className="font-mono text-xs">
       {eventType}
     </Badge>
   )

@@ -8,11 +8,16 @@
 
 import {
   createCustomerSchema,
+  matchesRole,
+  mergeRole,
   partyBalancesByCurrency,
+  resolveEffectiveRole,
   runningLedger,
   updateCustomerSchema,
   type CurrencyBalance,
+  type DeclaredRole,
   type LedgerMovement,
+  type PartyRole,
 } from '@hisabche/validation'
 import { NotFoundError, ValidationError } from '../errors'
 import type { Router } from '../router'
@@ -95,8 +100,58 @@ export function registerCustomerRoutes(router: Router): void {
       clauses.push('is_active = ?')
       params.push(isActive ? 1 : 0)
     }
+    // The server's rule (customer.service): an opening balance owed, or none.
+    if (query.hasBalance === 'true' || query.hasBalance === 'false') {
+      clauses.push(query.hasBalance === 'true' ? 'opening_balance > 0' : 'opening_balance = 0')
+    }
 
     const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
+
+    // «مشتری / تأمین‌کننده». The role is not a column: it is what the person
+    // declared merged with what their invoices say, so it filters FIRST and the
+    // page is cut AFTER — the server's order, and its rule (resolveEffectiveRole).
+    // Before this the device ignored `role` and every tab listed everybody.
+    const role = query.role === 'buyer' ? 'buyer' : query.role === 'seller' ? 'seller' : undefined
+    if (role) {
+      const derived = new Map<string, PartyRole>()
+      const invoiceRows = db.all<{ customer_id: string; type: string | null }>(
+        `SELECT customer_id, type FROM invoice
+         WHERE workspace_id = ? AND deleted_at IS NULL AND customer_id IS NOT NULL`,
+        [workspaceId],
+      )
+      for (const invoice of invoiceRows) {
+        derived.set(
+          invoice.customer_id,
+          mergeRole(
+            derived.get(invoice.customer_id) ?? 'none',
+            invoice.type === 'purchase' ? 'seller' : 'buyer',
+          ),
+        )
+      }
+
+      const everyone = db.all<CustomerRow>(
+        `SELECT * FROM customer ${where} ORDER BY created_at DESC, id DESC`,
+        params,
+      )
+      const matching = everyone
+        .map((row) => ({
+          ...mapCustomer(row),
+          role: resolveEffectiveRole(
+            row.declared_role as DeclaredRole | null,
+            derived.get(row.id) ?? 'none',
+          ),
+        }))
+        .filter((customer) => matchesRole(customer.role, role))
+
+      const from = (page - 1) * limit
+      return {
+        customers: matching.slice(from, from + limit),
+        total: matching.length,
+        hasMore: from + limit < matching.length,
+        nextCursor: null,
+        limit,
+      }
+    }
 
     const countRow = db.get<{ count: number }>(
       `SELECT count(*) as count FROM customer ${where}`,

@@ -107,6 +107,8 @@ export interface InvoiceDraftState {
   setColumns: (columns: InvoiceColumn[]) => void
   addColumn: (column: InvoiceColumn) => void
   updateColumn: (id: string, patch: Partial<InvoiceColumn>) => void
+  /** Point a money column at the numeric column it is multiplied by, or clear it. */
+  setColumnMultiplier: (id: string, sourceId: string | null) => void
   removeColumn: (id: string) => void
   resetColumns: (currency: CurrencyCode) => void
 
@@ -278,6 +280,15 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
           columns: state.columns.map((c) => (c.id === id ? { ...c, ...patch } : c)),
         })),
 
+      setColumnMultiplier: (id, sourceId) =>
+        set((state) => ({
+          columns: state.columns.map((c) => {
+            if (c.id !== id) return c
+            const { multiplyByColumnId: _previous, ...rest } = c
+            return sourceId === null ? rest : { ...rest, multiplyByColumnId: sourceId }
+          }),
+        })),
+
       removeColumn: (id) =>
         set((state) => {
           const column = state.columns.find((c) => c.id === id)
@@ -286,7 +297,15 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
           // remove it by accident.
           if (!column || column.system) return state
           return {
-            columns: state.columns.filter((c) => c.id !== id),
+            // A price that was multiplied by the deleted column goes back to
+            // being a plain price — never left pointing at nothing.
+            columns: state.columns
+              .filter((c) => c.id !== id)
+              .map((c) => {
+                if (c.multiplyByColumnId !== id) return c
+                const { multiplyByColumnId: _removed, ...rest } = c
+                return rest
+              }),
             // The values go with it — a deleted column must not keep
             // contributing to a total from an invisible cell.
             rows: state.rows.map((row) => {

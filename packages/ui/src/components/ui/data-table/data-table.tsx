@@ -40,6 +40,8 @@ export interface DataTableProps<T> {
   emptyState?: ReactNode
   /** Minimum table width before horizontal scrolling kicks in. */
   minWidthClass?: string
+  /** Accessible name of the table when the surrounding heading is not enough. */
+  caption?: string | undefined
 
   // ─── Selection (opt-in) ───
   // Omitting `selectedIds` leaves the table exactly as it was: no checkbox
@@ -104,6 +106,7 @@ function DataTableInner<T>({
   actions,
   emptyState,
   minWidthClass = 'min-w-[640px] sm:min-w-[720px]',
+  caption,
   selectedIds,
   onToggleRow,
   onToggleAll,
@@ -187,6 +190,7 @@ function DataTableInner<T>({
           ) : (
             <div className="w-full overflow-x-auto rounded-2xl border border-[hsl(var(--border-default))]">
               <table className={cn('w-full text-sm', minWidthClass)}>
+                {caption ? <caption className="sr-only">{caption}</caption> : null}
                 <thead>
                   <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
                     {selectable && (

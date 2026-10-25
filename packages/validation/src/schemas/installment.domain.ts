@@ -43,6 +43,8 @@
 // no rule (G4: every setting needs a stated default).
 // ============================================
 
+import { daysBetween } from './payments.domain'
+
 /** Minor units everywhere. `computeInvoiceMoney` and the ledger take minor. */
 export type Minor = number
 
@@ -215,14 +217,6 @@ export function overdueInstallments(
   }
 
   return out
-}
-
-/** Whole days from `from` to `to`. Both ISO days. */
-export function daysBetween(from: string, to: string): number {
-  const [fy, fm, fd] = from.slice(0, 10).split('-').map(Number)
-  const [ty, tm, td] = to.slice(0, 10).split('-').map(Number)
-  const ms = Date.UTC(ty!, tm! - 1, td!) - Date.UTC(fy!, fm! - 1, fd!)
-  return Math.round(ms / 86_400_000)
 }
 
 // ─── Blocking policy ─────────────────────────────────────────────────────────

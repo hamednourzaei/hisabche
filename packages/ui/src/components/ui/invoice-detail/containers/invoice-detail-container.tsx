@@ -29,7 +29,9 @@ import { RecordHistoryPanel } from '../../activity/record-history-panel'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { useReceiptPrint } from '../../../../hooks/use-receipt-print'
+import { formatNumber } from '@hisabche/formatting'
 import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
+import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { displayedInvoiceStatus } from '../../../../lib/invoices/invoices-format'
 
 /* ═══════════════════════════════════════════════════════════
@@ -122,6 +124,8 @@ export function InvoiceDetailContainer() {
   // ⚠️ THE CALENDAR FOLLOWS THE LANGUAGE. These were hardcoded to `'fa-AF'`,
   // so every reader got the Afghan solar calendar whatever they chose.
   const { date: fmtIntlDate } = useDateFormat()
+  // Persian digits for Persian, Latin for Dari and English — one rule, `resolveIntlLocale`.
+  const intlLocale = useIntlLocale()
   // Printing is its own state — a failed print never touches the invoice.
   const { print: printReceipt, printing: printingReceipt } = useReceiptPrint()
   const router = useRouter()
@@ -460,7 +464,7 @@ export function InvoiceDetailContainer() {
         display ? (
           <InvoiceRelatedPanel
             t={safeT}
-            fmtMoney={(value) => value.toLocaleString('fa-AF')}
+            fmtMoney={(value) => formatNumber(value, intlLocale, 3)}
             fmtDate={(value) => fmtIntlDate(value)}
             currency={display.currency}
             isLoading={relatedLoading}

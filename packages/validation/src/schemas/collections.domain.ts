@@ -36,8 +36,8 @@
 // paid an hour ago.
 // ============================================
 
-import type { OpenInvoice } from '../payments/payments.domain'
-import { openInvoices, outstandingOf } from '../payments/payments.domain'
+import type { OpenInvoice } from './payments.domain'
+import { openInvoices, outstandingOf } from './payments.domain'
 
 /** Which channel a reminder goes out on. Notification delivery is not this module's job. */
 export type ReminderChannel = 'notification' | 'email' | 'sms'

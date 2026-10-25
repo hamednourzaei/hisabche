@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Info, Search } from 'lucide-react'
 import { Button, Card, EmptyState, Input, PaginationBar, Skeleton } from '@/components/ui'
 import { ErrorState } from '@/components/admin-shell/admin-ui'
+import { useAdminListState } from '@/hooks/use-admin-list-state'
 import { useAdminSession } from '@/hooks/use-admin-session'
 import { useAdminUsers } from '@/hooks/use-admin-users'
 import { useManageUser } from '@/hooks/use-admin-customers'
@@ -20,9 +21,10 @@ export function UsersClient() {
   const { loading: authLoading, error: authError } = useAdminSession()
   const { mutateAsync: manageUser } = useManageUser()
 
-  const [search, setSearch] = useState('')
-  const [debounced, setDebounced] = useState('')
-  const [page, setPage] = useState(0)
+  const { query, page: pageParam, setQuery, setPage: setPageParam } = useAdminListState()
+  const page = pageParam - 1
+  const [search, setSearch] = useState(query)
+  const [lastQuery, setLastQuery] = useState(query)
   const [targetAction, setTargetAction] = useState<{
     userId: string
     action: 'suspend' | 'reactivate' | 'revoke_sessions' | 'reset_mfa' | 'force_signout'
@@ -30,16 +32,22 @@ export function UsersClient() {
 
   const localePrefix = pathname.split('/').filter(Boolean)[0] || 'fa'
 
+  // The URL is the source of truth: a link, a refresh or the back button all
+  // restore the same search. Typing updates it through the debounce below.
+  if (lastQuery !== query) {
+    setLastQuery(query)
+    setSearch(query)
+  }
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebounced(search)
-      setPage(0)
+      if (search !== query) setQuery(search)
     }, 300)
     return () => clearTimeout(timer)
-  }, [search])
+  }, [search, query, setQuery])
 
   const { data, isLoading, isError, isFetching, refetch } = useAdminUsers({
-    ...(debounced ? { search: debounced } : {}),
+    ...(query ? { search: query } : {}),
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
   })
@@ -111,10 +119,8 @@ export function UsersClient() {
 
       {!isLoading && !isError && users.length === 0 && (
         <EmptyState
-          title={
-            debounced ? t('admin.empty.noResults', { search: debounced }) : t('admin.users.empty')
-          }
-          description={debounced ? t('admin.users.searchScopeNotice') : undefined}
+          title={query ? t('admin.empty.noResults', { search: query }) : t('admin.users.empty')}
+          description={query ? t('admin.users.searchScopeNotice') : undefined}
         />
       )}
 
@@ -200,7 +206,7 @@ export function UsersClient() {
         pageSize={PAGE_SIZE}
         total={total}
         busy={isFetching}
-        onPage={setPage}
+        onPage={(next) => setPageParam(next + 1)}
         showingLabel={t('admin.pagination.showing', { from, to, total })}
         previousLabel={t('admin.pagination.previous')}
         nextLabel={t('admin.pagination.next')}

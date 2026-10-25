@@ -1,0 +1,257 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-10-25T18:15:00.000Z",
+  "description": "Canonical golden test vectors for the Hisabche Local-First Shared Core. Byte-for-byte equivalence must hold across Node, Electron, Hermes/React-Native, and Postgres.",
+  "vectors": [
+    {
+      "id": "INV-001-BASIC-USD",
+      "domain": "invoice-math",
+      "currency": "USD",
+      "precision": 2,
+      "input": {
+        "lines": [
+          { "quantity": 3, "unitPriceMinor": 1050, "discountPercent": 0, "taxPercent": 0 },
+          { "quantity": 1, "unitPriceMinor": 2500, "discountPercent": 0, "taxPercent": 0 }
+        ],
+        "invoiceDiscountMinor": 0,
+        "taxRatePercent": 0
+      },
+      "expected": {
+        "subtotalMinor": 5650,
+        "totalDiscountMinor": 0,
+        "taxMinor": 0,
+        "totalMinor": 5650,
+        "lineTotalsMinor": [3150, 2500]
+      }
+    },
+    {
+      "id": "INV-002-DISCOUNTS-AND-TAX-USD",
+      "domain": "invoice-math",
+      "currency": "USD",
+      "precision": 2,
+      "input": {
+        "lines": [
+          { "quantity": 10, "unitPriceMinor": 1000, "discountPercent": 10, "taxPercent": 5 },
+          { "quantity": 2, "unitPriceMinor": 5000, "discountPercent": 0, "taxPercent": 10 }
+        ],
+        "invoiceDiscountMinor": 500,
+        "taxRatePercent": 0
+      },
+      "expected": {
+        "subtotalMinor": 20000,
+        "totalDiscountMinor": 1500,
+        "taxMinor": 1450,
+        "totalMinor": 19950,
+        "lineTotalsMinor": [9450, 11000]
+      }
+    },
+    {
+      "id": "INV-003-FRACTIONAL-ROUNDING-AFN",
+      "domain": "invoice-math",
+      "currency": "AFN",
+      "precision": 0,
+      "input": {
+        "lines": [
+          { "quantity": 3, "unitPriceMinor": 100, "discountPercent": 33.3333, "taxPercent": 0 },
+          { "quantity": 7, "unitPriceMinor": 25, "discountPercent": 15, "taxPercent": 0 }
+        ],
+        "invoiceDiscountMinor": 0,
+        "taxRatePercent": 0
+      },
+      "expected": {
+        "subtotalMinor": 475,
+        "totalDiscountMinor": 126,
+        "taxMinor": 0,
+        "totalMinor": 349,
+        "lineTotalsMinor": [200, 149]
+      }
+    },
+    {
+      "id": "COST-001-FIFO-CONSUMPTION",
+      "domain": "costing",
+      "input": {
+        "method": "fifo",
+        "requestedQty": 8,
+        "layers": [
+          { "id": "L1", "remainingQty": 5, "unitCostMinor": 1000, "entryDate": "2026-01-01" },
+          { "id": "L2", "remainingQty": 10, "unitCostMinor": 1200, "entryDate": "2026-01-05" }
+        ]
+      },
+      "expected": {
+        "consumedTotalCostMinor": 8600,
+        "consumedSteps": [
+          {
+            "layerId": "L1",
+            "quantity": 5,
+            "unitCost": 1000,
+            "amount": 5000,
+            "isEstimated": false
+          },
+          { "layerId": "L2", "quantity": 3, "unitCost": 1200, "amount": 3600, "isEstimated": false }
+        ],
+        "remainingOnHand": 7,
+        "isShortfall": false,
+        "shortfallQty": 0
+      }
+    },
+    {
+      "id": "COST-002-AVCO-WEIGHTED-AVERAGE",
+      "domain": "costing",
+      "input": {
+        "method": "avco",
+        "requestedQty": 6,
+        "layers": [
+          { "id": "L1", "remainingQty": 10, "unitCostMinor": 1000, "entryDate": "2026-01-01" },
+          { "id": "L2", "remainingQty": 10, "unitCostMinor": 1400, "entryDate": "2026-01-05" }
+        ]
+      },
+      "expected": {
+        "averageUnitCostMinor": 1200,
+        "consumedTotalCostMinor": 7200,
+        "remainingOnHand": 14,
+        "isShortfall": false
+      }
+    },
+    {
+      "id": "COST-003-UNKNOWN-IS-NOT-ZERO",
+      "domain": "costing",
+      "input": {
+        "method": "fifo",
+        "requestedQty": 5,
+        "layers": []
+      },
+      "expected": {
+        "consumedTotalCostMinor": null,
+        "remainingOnHand": 0,
+        "isShortfall": true,
+        "shortfallQty": 5,
+        "status": "CANNOT_BE_CALCULATED"
+      }
+    },
+    {
+      "id": "CURR-001-CONVERSION-USD-TO-AFN",
+      "domain": "currency",
+      "input": {
+        "sourceCurrency": "USD",
+        "sourceMinorUnits": 1050,
+        "targetCurrency": "AFN",
+        "exchangeRate": 70.5
+      },
+      "expected": {
+        "sourceMajor": 10.5,
+        "targetMajor": 740.25,
+        "targetMinorUnits": 740
+      }
+    },
+    {
+      "id": "PAY-001-PARTIAL-ALLOCATION",
+      "domain": "payments",
+      "currency": "USD",
+      "input": {
+        "totalReceivableMinor": 10000,
+        "alreadyPaidMinor": 3000,
+        "incomingPaymentMinor": 4000
+      },
+      "expected": {
+        "allocatedMinor": 4000,
+        "remainingReceivableMinor": 3000,
+        "isPaidInFull": false,
+        "status": "PARTIALLY_PAID"
+      }
+    },
+    {
+      "id": "PAY-002-EXCESS-REFUSAL",
+      "domain": "payments",
+      "currency": "USD",
+      "input": {
+        "totalReceivableMinor": 10000,
+        "alreadyPaidMinor": 8000,
+        "incomingPaymentMinor": 3000
+      },
+      "expected": {
+        "allocatedMinor": 0,
+        "error": "PAYMENT_EXCEEDS_RECEIVABLE",
+        "excessMinor": 1000,
+        "allowedMaximumMinor": 2000
+      }
+    },
+    {
+      "id": "LEDG-001-BALANCED-ENTRY",
+      "domain": "ledger",
+      "input": {
+        "lines": [
+          { "accountId": "acc_cash", "debitMinor": 5000, "creditMinor": 0 },
+          { "accountId": "acc_sales", "debitMinor": 0, "creditMinor": 5000 }
+        ]
+      },
+      "expected": {
+        "isBalanced": true,
+        "totalDebitsMinor": 5000,
+        "totalCreditsMinor": 5000,
+        "differenceMinor": 0
+      }
+    },
+    {
+      "id": "LEDG-002-UNBALANCED-ENTRY-REFUSAL",
+      "domain": "ledger",
+      "input": {
+        "lines": [
+          { "accountId": "acc_cash", "debitMinor": 5000, "creditMinor": 0 },
+          { "accountId": "acc_sales", "debitMinor": 0, "creditMinor": 4999 }
+        ]
+      },
+      "expected": {
+        "isBalanced": false,
+        "totalDebitsMinor": 5000,
+        "totalCreditsMinor": 4999,
+        "differenceMinor": 1,
+        "error": "OUT_OF_BALANCE"
+      }
+    },
+    {
+      "id": "LEDG-003-REVERSAL",
+      "domain": "ledger",
+      "input": {
+        "originalLines": [
+          { "accountId": "acc_receivable", "debitMinor": 12000, "creditMinor": 0 },
+          { "accountId": "acc_revenue", "debitMinor": 0, "creditMinor": 12000 }
+        ]
+      },
+      "expected": {
+        "reversalLines": [
+          { "accountId": "acc_receivable", "debitMinor": 0, "creditMinor": 12000 },
+          { "accountId": "acc_revenue", "debitMinor": 12000, "creditMinor": 0 }
+        ],
+        "netBalanceMinor": 0
+      }
+    },
+    {
+      "id": "PERIOD-001-CLOSED-PERIOD-LOCK",
+      "domain": "accounting-period",
+      "input": {
+        "entryDate": "2026-01-15",
+        "branchId": null,
+        "locks": [{ "branchId": null, "lockedUntil": "2026-01-31", "reason": "Month end closed" }]
+      },
+      "expected": {
+        "isLocked": true,
+        "actionAllowed": false,
+        "code": "PERIOD_LOCKED"
+      }
+    },
+    {
+      "id": "PERIOD-002-OPEN-PERIOD-ALLOW",
+      "domain": "accounting-period",
+      "input": {
+        "entryDate": "2026-02-01",
+        "branchId": null,
+        "locks": [{ "branchId": null, "lockedUntil": "2026-01-31", "reason": "Month end closed" }]
+      },
+      "expected": {
+        "isLocked": false,
+        "actionAllowed": true,
+        "code": "OK"
+      }
+    }
+  ]
+}

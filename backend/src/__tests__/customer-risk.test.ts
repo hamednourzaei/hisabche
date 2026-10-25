@@ -28,7 +28,7 @@ import {
   customerRisk,
   daysLate,
   type PaymentBehaviour,
-} from '../services/customers/customer-risk.domain'
+} from '@hisabche/validation'
 
 const paid = (
   issuedOn: string,

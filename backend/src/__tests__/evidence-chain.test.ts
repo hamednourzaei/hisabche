@@ -163,9 +163,10 @@ describe('wiring', () => {
   const read = (...p: string[]) => strip(readFileSync(join(__dirname, '..', ...p), 'utf8'))
 
   it('the evidence totals come from buildProfitReport — one formula', () => {
-    expect(read('services', 'accounting', 'evidence.domain.ts')).toContain(
-      'const report = buildProfitReport({',
-    )
+    // The rule moved to the shared package (one rule, two runtimes).
+    expect(
+      read('..', '..', 'packages', 'validation', 'src', 'schemas', 'evidence.domain.ts'),
+    ).toContain('const report = buildProfitReport({')
   })
 
   it('both routes need report.financial.read, like every profit figure', () => {

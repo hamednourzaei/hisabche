@@ -6,7 +6,7 @@ import type { WalletPaymentMethod, WalletTopup } from '@hisabche/api'
 import { CURRENCY_CODES } from '@hisabche/validation'
 import { walletAmountToMinor, walletErrorText, walletMoney } from '@hisabche/ui'
 
-import { Button, Card, EmptyState, Input, Skeleton } from '@/components/ui'
+import { Button, Card, EmptyState, Input, SelectField, Skeleton } from '@/components/ui'
 import { ErrorState } from '@/components/admin-shell/admin-ui'
 import {
   fetchTopupReceiptUrl,
@@ -21,13 +21,13 @@ import {
   type AdminWalletWorkspace,
   type TopupStatusFilter,
 } from '@/hooks/use-admin-wallet'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminDateTime } from '@/lib/admin-format'
 
 const TABS = ['queue', 'methods', 'businesses'] as const
 type Tab = (typeof TABS)[number]
 
 const STATUSES: TopupStatusFilter[] = ['pending', 'approved', 'rejected', 'cancelled', 'all']
-
-const selectClass = 'h-11 w-full rounded-xl border border-border bg-background px-3 text-sm'
 
 export function WalletClient() {
   const t = useTranslations()
@@ -97,6 +97,7 @@ function QueueTab() {
 }
 
 function TopupRow({ row, method }: { row: WalletTopup; method: WalletPaymentMethod | null }) {
+  const dateLocale = useAdminLocale()
   const t = useTranslations()
   const lang = useLocale()
   const decide = useDecideTopup()
@@ -129,7 +130,7 @@ function TopupRow({ row, method }: { row: WalletTopup; method: WalletPaymentMeth
           dateTime={row.createdAt}
           suppressHydrationWarning
         >
-          {new Date(row.createdAt).toLocaleString()}
+          {adminDateTime(row.createdAt, dateLocale)}
         </time>
       </div>
       <div className="grid gap-1 text-xs sm:grid-cols-2">
@@ -178,7 +179,7 @@ function TopupRow({ row, method }: { row: WalletTopup; method: WalletPaymentMeth
       {row.status === 'pending' ? (
         <div className="flex flex-wrap items-end gap-2">
           <label className="space-y-1">
-            <span className="block text-[11px] text-muted-foreground">
+            <span className="block text-xs text-muted-foreground">
               {t('admin.wallet.creditedAmount', { currency: row.currency })}
             </span>
             <Input
@@ -191,7 +192,7 @@ function TopupRow({ row, method }: { row: WalletTopup; method: WalletPaymentMeth
             />
           </label>
           <label className="min-w-[200px] flex-1 space-y-1">
-            <span className="block text-[11px] text-muted-foreground">
+            <span className="block text-xs text-muted-foreground">
               {t('admin.wallet.decisionNote')}
             </span>
             <Input value={note} maxLength={500} onChange={(event) => setNote(event.target.value)} />
@@ -333,29 +334,26 @@ function MethodForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="space-y-1">
           <span className="block text-xs text-muted-foreground">{t('admin.wallet.kind')}</span>
-          <select
-            className={selectClass}
+          <SelectField
+            className="h-11 w-full"
             value={input.kind}
-            onChange={(event) => set('kind', event.target.value as AdminWalletMethodInput['kind'])}
-          >
-            <option value="card_to_card">{t('wallet.methodKind.card_to_card')}</option>
-            <option value="foreign_currency">{t('wallet.methodKind.foreign_currency')}</option>
-          </select>
+            onChange={(value) => set('kind', value as AdminWalletMethodInput['kind'])}
+            options={[
+              { value: 'card_to_card', label: t('wallet.methodKind.card_to_card') },
+              { value: 'foreign_currency', label: t('wallet.methodKind.foreign_currency') },
+            ]}
+            aria-label={t('admin.wallet.kind')}
+          />
         </label>
         <label className="space-y-1">
           <span className="block text-xs text-muted-foreground">{t('admin.wallet.currency')}</span>
-          <select
-            className={selectClass}
-            dir="ltr"
+          <SelectField
+            className="h-11 w-full font-mono"
             value={input.currency}
-            onChange={(event) => set('currency', event.target.value)}
-          >
-            {CURRENCY_CODES.map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => set('currency', value)}
+            options={CURRENCY_CODES.map((code) => ({ value: code, label: code }))}
+            aria-label={t('admin.wallet.currency')}
+          />
         </label>
         <Input
           label={t('admin.wallet.methodTitle')}
@@ -487,6 +485,7 @@ function BusinessesTab() {
 }
 
 function BusinessWallet({ workspace }: { workspace: AdminWalletWorkspace }) {
+  const dateLocale = useAdminLocale()
   const t = useTranslations()
   const lang = useLocale()
   const ledger = useAdminWalletLedger(workspace.id)
@@ -505,24 +504,19 @@ function BusinessWallet({ workspace }: { workspace: AdminWalletWorkspace }) {
         <p className="text-xs text-muted-foreground">{t('admin.wallet.adjustHint')}</p>
         <div className="flex flex-wrap items-end gap-2">
           <label className="space-y-1">
-            <span className="block text-[11px] text-muted-foreground">
+            <span className="block text-xs text-muted-foreground">
               {t('admin.wallet.currency')}
             </span>
-            <select
-              className={selectClass}
-              dir="ltr"
+            <SelectField
+              className="h-11 w-full font-mono"
               value={currency}
-              onChange={(event) => setCurrency(event.target.value)}
-            >
-              {CURRENCY_CODES.map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setCurrency(value)}
+              options={CURRENCY_CODES.map((code) => ({ value: code, label: code }))}
+              aria-label={t('admin.wallet.currency')}
+            />
           </label>
           <label className="space-y-1">
-            <span className="block text-[11px] text-muted-foreground">
+            <span className="block text-xs text-muted-foreground">
               {t('admin.wallet.adjustAmount')}
             </span>
             <Input
@@ -534,7 +528,7 @@ function BusinessWallet({ workspace }: { workspace: AdminWalletWorkspace }) {
             />
           </label>
           <label className="min-w-[200px] flex-1 space-y-1">
-            <span className="block text-[11px] text-muted-foreground">
+            <span className="block text-xs text-muted-foreground">
               {t('admin.wallet.adjustNote')}
             </span>
             <Input value={note} maxLength={500} onChange={(event) => setNote(event.target.value)} />
@@ -593,7 +587,7 @@ function BusinessWallet({ workspace }: { workspace: AdminWalletWorkspace }) {
                 suppressHydrationWarning
                 className="text-muted-foreground"
               >
-                {new Date(row.createdAt).toLocaleString()}
+                {adminDateTime(row.createdAt, dateLocale)}
               </time>
               <span>{t(`wallet.kind.${row.kind}`)}</span>
               <span dir="ltr" className={row.amountMinor < 0 ? 'text-destructive' : 'text-success'}>

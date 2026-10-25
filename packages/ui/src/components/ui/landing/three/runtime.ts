@@ -11,6 +11,7 @@
 // import in `scene-canvas.tsx`, so the library is not in the first paint.
 
 import * as THREE from 'three'
+import { type QualityTier, type QualityTierConfig, QUALITY_TIER_CONFIGS } from '../journey.config'
 
 export type ViewportMode = 'mobile' | 'tablet' | 'desktop'
 
@@ -19,6 +20,9 @@ export interface SceneRuntime {
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera
   mode: ViewportMode
+  tier: QualityTier
+  qualityConfig: QualityTierConfig
+  setTier: (newTier: QualityTier) => void
   /** A design token (`--color-primary`) as a colour. Never a literal hex. */
   color: (token: string) => THREE.Color
   render: () => void
@@ -45,6 +49,42 @@ export function isWebGLAvailable(): boolean {
 }
 
 /**
+ * Detect hardware tier S / A / B / C / D per v2 specification Section 6.
+ */
+export function detectQualityTier(): QualityTier {
+  if (typeof window === 'undefined') return 'B'
+
+  if (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    return 'D'
+  }
+
+  const cores = navigator.hardwareConcurrency ?? 4
+  const deviceMemory = (navigator as unknown as { deviceMemory?: number }).deviceMemory ?? 4
+  const width = window.innerWidth
+  const mode = viewportMode(width)
+
+  if (mode === 'desktop') {
+    if (cores >= 8 && deviceMemory >= 8) return 'S'
+    if (cores >= 4 && deviceMemory >= 4) return 'A'
+    return 'B'
+  }
+
+  if (mode === 'tablet') {
+    if (cores >= 6 && deviceMemory >= 4) return 'A'
+    return 'B'
+  }
+
+  // Mobile
+  if (cores >= 8 && deviceMemory >= 6) return 'B'
+  if (cores > 4) return 'B'
+  if (cores <= 4 && deviceMemory <= 3) return 'C'
+  return 'C'
+}
+
+/**
  * Tokens are stored as bare `H S% L%` triples (see `globals.css`), which no
  * colour parser accepts on its own.
  */
@@ -59,21 +99,27 @@ function readToken(host: Element, token: string): THREE.Color {
 
 export function createSceneRuntime(canvas: HTMLCanvasElement): SceneRuntime {
   const mode = viewportMode(window.innerWidth)
-  const cores = navigator.hardwareConcurrency ?? 4
-  const light = mode === 'mobile' || cores <= 4
+  let activeTier = detectQualityTier()
+  let qualityConfig = QUALITY_TIER_CONFIGS[activeTier]
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
-    antialias: true,
+    antialias: qualityConfig.antialias,
     alpha: true,
-    powerPreference: light ? 'low-power' : 'high-performance',
+    powerPreference: activeTier === 'S' || activeTier === 'A' ? 'high-performance' : 'low-power',
   })
-  // No post-processing anywhere: one extra full-screen pass per frame is the
-  // quickest way for a landing page to lose its interaction budget.
-  // A phone screen is dense: below about 1.75 device pixels per pixel the edges
-  // and the text on the boards are visibly soft.
-  renderer.setPixelRatio(Math.min(light ? 1.75 : 2, window.devicePixelRatio || 1))
+
+  renderer.setPixelRatio(Math.min(qualityConfig.maxPixelRatio, window.devicePixelRatio || 1))
   renderer.outputColorSpace = THREE.SRGBColorSpace
+
+  if (qualityConfig.shadows) {
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = qualityConfig.softShadows
+      ? THREE.PCFSoftShadowMap
+      : THREE.BasicShadowMap
+  } else {
+    renderer.shadowMap.enabled = false
+  }
 
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200)
@@ -89,11 +135,28 @@ export function createSceneRuntime(canvas: HTMLCanvasElement): SceneRuntime {
   const observer = new ResizeObserver(resize)
   observer.observe(canvas)
 
+  const setTier = (newTier: QualityTier) => {
+    activeTier = newTier
+    qualityConfig = QUALITY_TIER_CONFIGS[newTier]
+    renderer.setPixelRatio(Math.min(qualityConfig.maxPixelRatio, window.devicePixelRatio || 1))
+    if (qualityConfig.shadows) {
+      renderer.shadowMap.enabled = true
+      renderer.shadowMap.type = qualityConfig.softShadows
+        ? THREE.PCFSoftShadowMap
+        : THREE.BasicShadowMap
+    } else {
+      renderer.shadowMap.enabled = false
+    }
+  }
+
   return {
     renderer,
     scene,
     camera,
     mode,
+    tier: activeTier,
+    qualityConfig,
+    setTier,
     color: (token) => readToken(canvas, token),
     render: () => renderer.render(scene, camera),
     dispose: () => {

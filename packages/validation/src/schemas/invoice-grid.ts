@@ -168,6 +168,22 @@ export interface InvoiceColumn {
    * has never been counted. Both would change saved documents' meaning.
    */
   includeInTotal?: boolean
+  /**
+   * «ضرب در ستون» — the id of a numeric column this money column is multiplied
+   * by, row by row: قیمت واحد × وزن خالص, نرخ ساعتی × ساعت.
+   *
+   * ---------------------------------------------------------------------
+   * ⚠️ A REFERENCE BY ID, NEVER BY NAME OR POSITION. The core does not know
+   * what a weight or an hour is; it knows «this column's value is scaled by
+   * that column's value». Only a `currency` column may carry it and only an
+   * `integer`/`decimal` column may be its source — see `multiplierIssue`.
+   * A source can not itself be multiplied, so there is no chain and therefore
+   * no cycle to walk.
+   *
+   * `undefined` is «not multiplied»: every column saved before this field
+   * existed keeps its exact arithmetic.
+   */
+  multiplyByColumnId?: string
   /** Only meaningful for `currency`. Chosen by the user, per column. */
   currency?: CurrencyCode
   /** Decimals used for display AND for rounding this column's total. */
@@ -360,6 +376,86 @@ export function canAggregate(type: InvoiceColumnType): boolean {
   return type === 'integer' || type === 'decimal' || type === 'currency' || type === 'computed'
 }
 
+/**
+ * Which columns can be the source of a multiplication. The quantity column is
+ * excluded on purpose: every row is already quantity × price, so multiplying by
+ * it again would charge the quantity twice.
+ */
+export function canBeMultiplierSource(column: InvoiceColumn): boolean {
+  return (column.type === 'integer' || column.type === 'decimal') && column.id !== COLUMN.quantity
+}
+
+/** Only a money column is a rate that something can scale. */
+export function canCarryMultiplier(column: InvoiceColumn): boolean {
+  return column.type === 'currency'
+}
+
+export type MultiplierIssue = 'not-a-rate' | 'self' | 'missing' | 'not-numeric' | 'chained'
+
+/**
+ * Why this column's «ضرب در ستون» can not be honoured, or `null` when it is
+ * fine (or absent). One rule shared by the dialog before it saves, by the grid
+ * before it multiplies, and by the tests.
+ */
+export function multiplierIssue(
+  column: InvoiceColumn,
+  columns: readonly InvoiceColumn[],
+): MultiplierIssue | null {
+  const sourceId = column.multiplyByColumnId
+  if (sourceId === undefined) return null
+  if (!canCarryMultiplier(column)) return 'not-a-rate'
+  if (sourceId === column.id) return 'self'
+  const source = columns.find((c) => c.id === sourceId)
+  if (!source) return 'missing'
+  if (!canBeMultiplierSource(source)) return 'not-numeric'
+  if (source.multiplyByColumnId !== undefined) return 'chained'
+  return null
+}
+
+/** Every column whose multiplication is invalid, with the reason. */
+export function invalidMultipliers(
+  columns: readonly InvoiceColumn[],
+): { columnId: string; issue: MultiplierIssue }[] {
+  const found: { columnId: string; issue: MultiplierIssue }[] = []
+  for (const column of columns) {
+    const issue = multiplierIssue(column, columns)
+    if (issue) found.push({ columnId: column.id, issue })
+  }
+  return found
+}
+
+/** The column this one is multiplied by — only when the configuration is valid. */
+export function multiplierSourceOf(
+  column: InvoiceColumn,
+  columns: readonly InvoiceColumn[],
+): InvoiceColumn | undefined {
+  if (column.multiplyByColumnId === undefined || multiplierIssue(column, columns) !== null) {
+    return undefined
+  }
+  return columns.find((c) => c.id === column.multiplyByColumnId)
+}
+
+/**
+ * The factor a row's cell for this column is scaled by: the row's value in the
+ * source column, or `1` when the column is not multiplied.
+ *
+ * A source cell the user left empty is 0, not 1 — «۲۵ میلیون × وزنِ نانوشته»
+ * is not «۲۵ میلیون». `validateGrid` turns that into a message before it can
+ * be saved.
+ */
+export function rowColumnMultiplier(
+  row: InvoiceGridRow,
+  column: InvoiceColumn,
+  columns: readonly InvoiceColumn[],
+): number {
+  const source = multiplierSourceOf(column, columns)
+  if (!source) return 1
+  return parseCellNumber(row.values[source.id])
+}
+
+/** Nudge away binary noise (0.1 × 3) without rounding to the currency. */
+const FACTOR_DECIMALS = 6
+
 export function moveColumn(
   columns: readonly InvoiceColumn[],
   id: string,
@@ -449,7 +545,13 @@ export function rowUnitPrice(
   const raw = row.values[COLUMN.unitPrice]
   if (!hasCellValue(raw)) return 0
   const converted = toInvoiceCurrency(parseCellNumber(raw), column?.currency ?? ctx.currency, ctx)
-  return converted ?? 0
+  if (converted === null) return 0
+
+  // «ضرب در ستون»: the price of ONE gram becomes the price of this row's
+  // weight. Returned as the row's effective unit price, so the line total
+  // (quantity × unit price), the saved invoice and the server agree.
+  const factor = column ? rowColumnMultiplier(row, column, columns) : 1
+  return factor === 1 ? converted : roundTo(converted * factor, FACTOR_DECIMALS)
 }
 
 export function rowQuantity(row: InvoiceGridRow): number {
@@ -533,7 +635,9 @@ export function rowExtraMoney(
       column.currency ?? ctx.currency,
       ctx,
     )
-    return converted === null ? sum : sum + converted
+    if (converted === null) return sum
+    const factor = rowColumnMultiplier(row, column, columns)
+    return sum + (factor === 1 ? converted : roundTo(converted * factor, FACTOR_DECIMALS))
   }, 0)
 }
 
@@ -646,7 +750,8 @@ export function columnTotals(
     // totals row, so «جمع دلار» stays dollars.
     totals[column.id] = roundTo(
       rows.reduce((sum, row) => {
-        const value = parseCellNumber(row.values[column.id])
+        const value =
+          parseCellNumber(row.values[column.id]) * rowColumnMultiplier(row, column, columns)
         // A unit price is per unit; its column total is the extended amount.
         return sum + (column.id === COLUMN.unitPrice ? value * rowQuantity(row) : value)
       }, 0),
@@ -722,7 +827,8 @@ export function summarize(input: InvoiceSummaryInput): InvoiceSummary {
     const code = column.currency
     if (!code) continue
     const sum = filled.reduce((acc, row) => {
-      const value = parseCellNumber(row.values[column.id])
+      const value =
+        parseCellNumber(row.values[column.id]) * rowColumnMultiplier(row, column, columns)
       return acc + (column.id === COLUMN.unitPrice ? value * rowQuantity(row) : value)
     }, 0)
     byCurrency.set(code, roundTo((byCurrency.get(code) ?? 0) + sum, column.precision))
@@ -854,7 +960,9 @@ export function rowToInvoiceItem(
       // A money component carries its amount; anything else carries its value
       // in `quantity` against a zero amount so the line total is untouched.
       quantity: isOwnCurrencyMoney ? 1 : value,
-      amount: isOwnCurrencyMoney ? roundInvoiceMoney(value, ctx.currency) : 0,
+      amount: isOwnCurrencyMoney
+        ? roundInvoiceMoney(value * rowColumnMultiplier(row, column, columns), ctx.currency)
+        : 0,
       unit: 'piece',
       sortOrder: sortOrder++,
     })
@@ -916,6 +1024,22 @@ export function validateGrid(
         rowId: row.id,
         key: 'invoiceBuilder.errors.descriptionRequired',
         fallback: 'شرح کالا / خدمت الزامی است',
+      })
+      continue
+    }
+    const unmultiplied = columns.some((column) => {
+      const source = multiplierSourceOf(column, columns)
+      return (
+        source !== undefined &&
+        hasCellValue(row.values[column.id]) &&
+        !hasCellValue(row.values[source.id])
+      )
+    })
+    if (unmultiplied) {
+      issues.push({
+        rowId: row.id,
+        key: 'invoiceBuilder.errors.multiplierRequired',
+        fallback: 'مقدار ستونِ ضرب‌شونده را وارد کنید',
       })
       continue
     }

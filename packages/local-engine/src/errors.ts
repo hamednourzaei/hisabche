@@ -50,7 +50,22 @@ export class ConflictError extends HttpError {
 }
 
 export class OfflineNotAvailableError extends HttpError {
-  constructor(feature: string) {
-    super(501, 'OFFLINE_NOT_AVAILABLE', 'This feature is not available offline', undefined, feature)
+  /**
+   * @param feature the feature the endpoint belongs to (the endpoint matrix), or
+   *   the path when the matrix does not know it
+   * @param availability `online_required` or `not_supported` — the screen words
+   *   the notice from it
+   */
+  constructor(
+    feature: string,
+    availability: 'online_required' | 'not_supported' = 'online_required',
+  ) {
+    super(
+      501,
+      'OFFLINE_NOT_AVAILABLE',
+      'This feature is not available offline',
+      { availability },
+      feature,
+    )
   }
 }

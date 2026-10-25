@@ -170,7 +170,7 @@ export function SeoPanel({
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-[11px] text-muted-foreground">{t('admin.blog.seo.guidanceOnly')}</p>
+        <p className="mt-2 text-xs text-muted-foreground">{t('admin.blog.seo.guidanceOnly')}</p>
       </div>
     </Card>
   )

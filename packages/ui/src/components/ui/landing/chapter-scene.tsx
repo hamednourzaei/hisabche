@@ -1,6 +1,6 @@
 // packages/ui/src/components/ui/landing/chapter-scene.tsx
 //
-// One chapter of the product story: label, title, lead, a "how it works" panel
+// One chapter of the product story: a numbered masthead, a "how it works" panel
 // where one exists, then cards (or example questions). The landing mounts it
 // once per chapter, in the order set by landing-page.tsx.
 // SERVER COMPONENT — never hydrated.
@@ -18,7 +18,7 @@
 // A planned feature is not a card. Remove the card before shipping a claim.
 //
 // Typography: titles `text-balance`, body `text-pretty` — no ragged
-// "staircase" lines in centred Persian text.
+// "staircase" lines in Persian text.
 import type { LucideIcon } from 'lucide-react'
 import {
   ArrowDownToLine,
@@ -46,6 +46,9 @@ import NextLink from 'next/link'
 import { cn } from '../../../lib/utils'
 import { AiVisual, JournalVisual, OfflineVisual, StepChain, TillVisual } from './chapter-visuals'
 import {
+  CardAccent,
+  LANDING_CARD,
+  LANDING_CHIP,
   LANDING_CONTAINER,
   LANDING_SECTION,
   LANDING_TYPE,
@@ -94,9 +97,17 @@ export interface ChapterSceneProps {
   muted?: boolean | undefined
   /** Locale segment for the guide link. */
   localePrefix: string
+  /** Chapter number of this section on the page (`02`). */
+  index?: string | undefined
 }
 
-export default function ChapterScene({ t, chapter, muted, localePrefix }: ChapterSceneProps) {
+export default function ChapterScene({
+  t,
+  chapter,
+  muted,
+  localePrefix,
+  index,
+}: ChapterSceneProps) {
   const { cards, chips, examples } = CHAPTERS[chapter]
   const k = `landing.chapter.${chapter}`
   // Chapters with a side panel put cards and panel side by side on desktop.
@@ -105,7 +116,7 @@ export default function ChapterScene({ t, chapter, muted, localePrefix }: Chapte
   const cardList = cards.length > 0 && (
     <ul
       className={cn(
-        'grid grid-cols-1 gap-3 sm:gap-4',
+        'grid grid-cols-1 gap-3',
         side
           ? 'sm:grid-cols-3 lg:grid-cols-1'
           : cards.length === 5
@@ -117,20 +128,30 @@ export default function ChapterScene({ t, chapter, muted, localePrefix }: Chapte
         <li
           key={i}
           className={cn(
-            'flex gap-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)] p-4 sm:flex-col sm:p-5',
-            side && 'lg:flex-row lg:items-start',
+            'group flex gap-4 p-4 sm:p-5',
+            LANDING_CARD,
+            'transition-colors duration-300 hover:bg-[hsl(var(--surface-elevated))]',
+            side && 'lg:items-start',
           )}
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))] sm:size-10">
-            <Icon className="size-[1.125rem] sm:size-5" aria-hidden="true" />
-          </span>
-          <div className="min-w-0">
-            <h3 className="mb-1 text-balance text-base font-semibold text-[hsl(var(--fg-primary))]">
-              {t(`${k}.card${i + 1}.title`)}
-            </h3>
-            <p className={cn('text-pretty text-[hsl(var(--fg-secondary))]', LANDING_TYPE.body)}>
-              {t(`${k}.card${i + 1}.desc`)}
-            </p>
+          <CardAccent />
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))]">
+                <Icon className="size-[1.125rem]" aria-hidden="true" />
+              </span>
+              <span className="font-mono text-xs tabular-nums text-[hsl(var(--fg-tertiary))]">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+            </div>
+            <div className="min-w-0">
+              <h3 className="mb-1 text-balance text-base font-bold text-[hsl(var(--fg-primary))]">
+                {t(`${k}.card${i + 1}.title`)}
+              </h3>
+              <p className={cn('text-pretty text-[hsl(var(--fg-secondary))]', LANDING_TYPE.body)}>
+                {t(`${k}.card${i + 1}.desc`)}
+              </p>
+            </div>
           </div>
         </li>
       ))}
@@ -140,18 +161,23 @@ export default function ChapterScene({ t, chapter, muted, localePrefix }: Chapte
   return (
     <section
       id={chapter}
-      className={cn(LANDING_SECTION, muted && 'bg-[hsl(var(--surface-muted)/0.3)]')}
+      className={cn(LANDING_SECTION, muted && 'bg-[hsl(var(--surface-muted)/0.25)]')}
     >
       <div className={LANDING_CONTAINER}>
-        {chapter === 'offline' && (
-          <p className="mb-4 text-center">
-            <span className="rounded-full border border-[hsl(var(--color-primary)/0.35)] px-3 py-1 font-mono text-xs font-semibold tracking-wider text-[hsl(var(--color-primary))]">
-              {t(`${k}.badge`)}
-            </span>
-          </p>
-        )}
         <SectionHeader
-          label={t(`${k}.label`)}
+          index={index}
+          label={
+            chapter === 'offline' ? (
+              <span className="flex items-center gap-2">
+                {t(`${k}.label`)}
+                <span className="rounded-sm border border-[hsl(var(--color-primary)/0.35)] px-1.5 py-0.5 font-mono text-xs font-semibold text-[hsl(var(--color-primary))]">
+                  {t(`${k}.badge`)}
+                </span>
+              </span>
+            ) : (
+              t(`${k}.label`)
+            )
+          }
           title={t(`${k}.title`)}
           description={t(`${k}.desc`)}
         />
@@ -164,16 +190,20 @@ export default function ChapterScene({ t, chapter, muted, localePrefix }: Chapte
         ) : (
           <>
             {chapter === 'inventory' && (
-              <div className="mb-8 sm:mb-10">
+              <div className="mb-8 border-y border-[hsl(var(--border-default))] py-6 sm:mb-10">
                 <StepChain t={t} prefix={`${k}.flow`} count={6} />
               </div>
             )}
             {chapter === 'offline' && (
-              <div className="mb-8 sm:mb-10">
+              <div className="mb-8 flex justify-center sm:mb-10">
                 <OfflineVisual t={t} />
               </div>
             )}
-            {chapter === 'ai' && <AiVisual t={t} />}
+            {chapter === 'ai' && (
+              <div className="mb-8 flex justify-center sm:mb-10">
+                <AiVisual t={t} />
+              </div>
+            )}
             {cardList}
           </>
         )}
@@ -190,12 +220,9 @@ export default function ChapterScene({ t, chapter, muted, localePrefix }: Chapte
         )}
 
         {chips > 0 && (
-          <ul className="mt-5 flex flex-wrap justify-center gap-2 sm:mt-6">
+          <ul className="mt-6 flex flex-wrap justify-center gap-2">
             {Array.from({ length: chips }, (_, i) => (
-              <li
-                key={i}
-                className="rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-1 text-sm text-[hsl(var(--fg-secondary))]"
-              >
+              <li key={i} className={LANDING_CHIP}>
                 {t(`${k}.chip${i + 1}`)}
               </li>
             ))}
@@ -204,13 +231,22 @@ export default function ChapterScene({ t, chapter, muted, localePrefix }: Chapte
 
         {examples > 0 && (
           <>
-            <ul className="mx-auto mt-5 flex max-w-3xl flex-wrap justify-center gap-2">
+            <ul className="mx-auto mt-6 grid max-w-3xl gap-2 sm:grid-cols-2">
               {Array.from({ length: examples }, (_, i) => (
                 <li
                   key={i}
-                  className="rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-1.5 text-sm text-[hsl(var(--fg-secondary))]"
+                  className={cn(
+                    LANDING_CARD,
+                    'flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--fg-secondary))]',
+                  )}
                 >
-                  {t(`${k}.example${i + 1}`)}
+                  <span
+                    aria-hidden="true"
+                    className="font-mono text-xs text-[hsl(var(--color-primary))]"
+                  >
+                    ?
+                  </span>
+                  <span className="text-pretty">{t(`${k}.example${i + 1}`)}</span>
                 </li>
               ))}
             </ul>
@@ -219,11 +255,12 @@ export default function ChapterScene({ t, chapter, muted, localePrefix }: Chapte
             </p>
           </>
         )}
-        <p className="mt-6 text-center text-sm">
+
+        <p className="mt-8 text-center text-sm">
           <NextLink
             prefetch={false}
             href={`/${localePrefix}/docs/${GUIDE[chapter]}`}
-            className="font-medium text-[hsl(var(--color-primary))] underline-offset-4 hover:underline"
+            className="inline-flex items-center gap-1.5 font-medium text-[hsl(var(--color-primary))] after:content-['←'] hover:underline ltr:after:content-['→']"
           >
             {t('landing.chapter.guide')} {t(`docs.${GUIDE[chapter]}.title`)}
           </NextLink>

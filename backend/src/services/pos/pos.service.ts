@@ -39,6 +39,23 @@ import {
   type SessionTotals,
 } from './pos.domain'
 import { majorToTillMinor, tillMinorToMajor } from '../payments/payments.domain'
+import {
+  attachDrawerMargins,
+  buildCashFlowView,
+  cashFlowSince,
+  closeColumns,
+  OPENING_CAPITAL_REASON,
+  openingCapitalLines,
+  SESSION_POSTING_ROLES,
+  sessionPostingLines,
+  TILL_TRANSFER_DESCRIPTION,
+  toCashMovement as mapMovement,
+  toCashSettlement,
+  toPosOrder as mapOrder,
+  toPosSession as mapSession,
+  toShiftHistoryRow,
+  transferLines,
+} from '@hisabche/validation'
 
 // The columns finance-gaps-migration created. Everything `mapSession` reads.
 const SESSION_COLUMNS =
@@ -51,46 +68,6 @@ const SESSION_COLUMNS =
 // /sessions/abandoned — which never read them — answered 42703 → 500 on any
 // database where phase-m-01 had not been applied.
 const HISTORY_COLUMNS = `${SESSION_COLUMNS}, expected_cash_minor, cash_sales_minor, cash_in_minor, cash_out_minor, variance_minor`
-
-function mapOrder(raw: Record<string, any>): PosOrder {
-  return {
-    id: raw.id,
-    orderRef: raw.order_ref,
-    totalMinor: Number(raw.total_minor) || 0,
-    changeMinor: Number(raw.change_minor) || 0,
-    status: raw.status,
-    createdAt: raw.created_at,
-    payments: (raw.payments ?? []).map((p: Record<string, any>) => ({
-      method: p.method as PaymentMethod,
-      amountMinor: Number(p.amount_minor) || 0,
-    })),
-  }
-}
-
-function mapMovement(raw: Record<string, any>): CashMovement {
-  return {
-    id: raw.id,
-    kind: raw.kind,
-    amountMinor: Number(raw.amount_minor) || 0,
-    reason: raw.reason,
-    createdAt: raw.created_at,
-  }
-}
-
-function mapSession(raw: Record<string, any>, defaultCurrency?: string): PosSession {
-  return {
-    id: raw.id,
-    currency: raw.currency ?? defaultCurrency ?? undefined,
-    label: raw.label ?? undefined,
-    status: raw.status,
-    openingFloatMinor: Number(raw.opening_float_minor) || 0,
-    openedAt: raw.opened_at,
-    openedBy: raw.opened_by,
-    closedAt: raw.closed_at ?? null,
-    closedBy: raw.closed_by ?? null,
-    countedCashMinor: raw.counted_cash_minor === null ? null : Number(raw.counted_cash_minor),
-  }
-}
 
 /**
  * 42703 — the SELECT named a column Postgres does not have; PGRST204 — the
@@ -349,15 +326,9 @@ export class PosService {
       if (page.length < PAGE) break
     }
 
-    return rows.map((row) => ({
-      id: row.id,
-      paymentNumber: row.payment_number ?? '',
-      direction: row.direction === 'out' ? ('out' as const) : ('in' as const),
-      // Already in the till's currency and in minor units — written with the
-      // payment, in the same transaction.
-      amountMinor: Number(row.till_amount_minor) || 0,
-      createdAt: row.created_at,
-    }))
+    // Already in the till's currency and in minor units — written with the
+    // payment, in the same transaction.
+    return rows.map(toCashSettlement)
   }
 
   /**
@@ -501,19 +472,7 @@ export class PosService {
       ctx,
       [...invoicesByPayment.values()].flat(),
     )
-    return {
-      ...drawer,
-      entries: drawer.entries.map((entry) =>
-        entry.kind === 'settlement_in' && entry.sourceId
-          ? {
-              ...entry,
-              marginPercent: invoicesByPayment.has(entry.sourceId)
-                ? paymentMargin(invoicesByPayment.get(entry.sourceId) ?? [], margins)
-                : null,
-            }
-          : entry,
-      ),
-    }
+    return attachDrawerMargins(drawer, invoicesByPayment, margins)
   }
 
   /**
@@ -560,30 +519,7 @@ export class PosService {
 
     if (error) throw new DatabaseError('Failed to read the shift history', error)
 
-    return (data ?? []).map((raw: Record<string, any>) => {
-      const num = (value: unknown) => (value === null || value === undefined ? null : Number(value))
-
-      return {
-        id: String(raw.id),
-        status: String(raw.status),
-        openedAt: raw.opened_at ?? null,
-        closedAt: raw.closed_at ?? null,
-        openedBy: raw.opened_by ?? null,
-        // Recorded separately from `opened_by`: «did one person both run and
-        // sign off the shift» is the question a handover exists to answer.
-        closedBy: raw.closed_by ?? null,
-        openingFloatMinor: Number(raw.opening_float_minor) || 0,
-        cashSalesMinor: num(raw.cash_sales_minor),
-        cashInMinor: num(raw.cash_in_minor),
-        cashOutMinor: num(raw.cash_out_minor),
-        expectedCashMinor: num(raw.expected_cash_minor),
-        countedCashMinor: num(raw.counted_cash_minor),
-        varianceMinor: num(raw.variance_minor),
-        varianceReason: raw.variance_reason ?? null,
-        wasForced: raw.was_forced === true,
-        handoverFrozen: raw.expected_cash_minor !== null && raw.expected_cash_minor !== undefined,
-      }
-    })
+    return (data ?? []).map((raw: Record<string, any>) => toShiftHistoryRow(raw))
   }
 
   // ─── Orders ───────────────────────────────────────────────────────────────
@@ -832,17 +768,9 @@ export class PosService {
       sourceType: 'till_transfer',
       sourceId: input.transferId,
       date: new Date().toISOString().slice(0, 10),
-      description: toBank ? 'انتقال نقد صندوق به بانک' : 'برداشت از بانک به صندوق',
+      description: TILL_TRANSFER_DESCRIPTION[input.direction],
       reference: input.reason.trim().slice(0, 200),
-      lines: toBank
-        ? [
-            { accountId: accounts.bank, debit: amount, credit: 0 },
-            { accountId: accounts.cash, debit: 0, credit: amount },
-          ]
-        : [
-            { accountId: accounts.cash, debit: amount, credit: 0 },
-            { accountId: accounts.bank, debit: 0, credit: amount },
-          ],
+      lines: transferLines(input.direction, { cash: accounts.cash, bank: accounts.bank }, amount),
     })
 
     if (outcome.status === 'skipped') {
@@ -874,7 +802,7 @@ export class PosService {
       entityType: 'pos_session',
       entityId: sessionId,
       action: toBank ? 'transfer_to_bank' : 'transfer_from_bank',
-      title: toBank ? 'انتقال نقد صندوق به بانک' : 'برداشت از بانک به صندوق',
+      title: TILL_TRANSFER_DESCRIPTION[input.direction],
       metadata: {
         transferId: input.transferId,
         amountMinor: input.amountMinor,
@@ -916,7 +844,7 @@ export class PosService {
     },
   ): Promise<{ entryId: string; journalEntryId: string; alreadyRecorded: boolean }> {
     if (!(input.amountMinor > 0)) throw new ValidationError('OPENING_CAPITAL_AMOUNT_INVALID')
-    const reason = 'سرمایه‌ی افتتاحیه'
+    const reason = OPENING_CAPITAL_REASON
 
     if (input.into === 'till') {
       if (!input.sessionId) throw new ValidationError('OPENING_CAPITAL_TILL_REQUIRED')
@@ -949,10 +877,7 @@ export class PosService {
       date: (input.date ?? new Date().toISOString()).slice(0, 10),
       description: reason,
       reference: reason,
-      lines: [
-        { accountId: assetAccount, debit: amount, credit: 0 },
-        { accountId: capitalAccount, debit: 0, credit: amount },
-      ],
+      lines: openingCapitalLines(assetAccount, capitalAccount, amount),
     })
     if (outcome.status === 'skipped') throw new ConflictError('OPENING_CAPITAL_NOT_CONFIGURED')
 
@@ -1029,32 +954,16 @@ export class PosService {
 
     const { data, error } = await supabase
       .from('pos_sessions')
-      .update({
-        status: input.force ? 'force_closed' : 'closed',
-        counted_cash_minor: input.countedCashMinor,
-        variance_reason: input.varianceReason ?? null,
-        closed_at: new Date().toISOString(),
-        closed_by: ctx.userId,
-        was_forced: input.force === true,
-
-        // ─── M3 — FREEZE THE HANDOVER ────────────────────────────────────
-        //
-        // These were computed by `summarise()` at read time, which meant the
-        // handover changed after it was signed: voiding one order from a
-        // closed session silently moved that shift's expected cash, and the
-        // person who counted the drawer and signed off a variance of 200 could
-        // be shown 900 a week later with nothing recording the change.
-        //
-        // A handover is a statement about a moment. Stored as of that moment.
-        expected_cash_minor: finalTotals.expectedCashMinor,
-        cash_sales_minor: finalTotals.byMethod.cash ?? 0,
-        // Split by sign rather than stored as one net figure: «took 500 out and
-        // put 500 in» and «nothing happened» are different shifts, and a net of
-        // zero cannot tell them apart.
-        cash_in_minor: Math.max(0, finalTotals.movementsMinor),
-        cash_out_minor: Math.max(0, -finalTotals.movementsMinor),
-        variance_minor: finalTotals.varianceMinor,
-      })
+      .update(
+        closeColumns({
+          finalTotals,
+          countedCashMinor: input.countedCashMinor,
+          varianceReason: input.varianceReason,
+          force: input.force,
+          closedAt: new Date().toISOString(),
+          closedBy: ctx.userId,
+        }),
+      )
       .eq('workspace_id', ctx.workspaceId)
       .eq('id', sessionId)
       // Only an OPEN (or suspended) session closes. Two devices closing at once
@@ -1101,98 +1010,18 @@ export class PosService {
   ): Promise<boolean> {
     const posting = buildPosting(session, totals)
     const tillCurrency = session.currency ?? (await baseCurrencyOf(ctx.workspaceId))
-    const major = (amountMinor: number) => tillMinorToMajor(amountMinor, tillCurrency)
 
     // `bank` is asked for alongside the rest because card and transfer takings
     // are money the shop has, and cash is not where it sits.
-    const { accounts, missing } = await ledger.ensureAccountsForRoles(ctx, [
-      'cash',
-      'sales',
-      'receivable',
-      'bank',
-      'purchase',
-    ])
-
-    // A shop that never takes a card needs no bank account configured, so
-    // `bank` is only required when there is card or transfer money to place.
-    const cardAndTransferMinor = posting.cardMinor + posting.transferMinor
-
-    // A role is only REQUIRED when there is money that needs it. A shop that
-    // never takes a card needs no bank account, and one whose sellers never
-    // take cash out needs no purchases account — demanding either would refuse
-    // to book a perfectly ordinary day.
-    const required = missing.filter((role) => {
-      if (role === 'bank') return cardAndTransferMinor !== 0
-      if (role === 'purchase') return posting.movementsMinor !== 0
-      return true
-    })
-
-    if (required.length > 0) {
-      console.warn(`[POS] session ${session.id} not booked: no account for ${required.join(', ')}`)
+    const { accounts, missing } = await ledger.ensureAccountsForRoles(ctx, SESSION_POSTING_ROLES)
+    const booked = sessionPostingLines({ posting, tillCurrency, accounts, missing })
+    if ('required' in booked) {
+      console.warn(
+        `[POS] session ${session.id} not booked: no account for ${booked.required.join(', ')}`,
+      )
       return false
     }
-
-    const lines = [
-      { accountId: accounts.cash!, debit: major(posting.cashMinor), credit: 0 },
-      { accountId: accounts.sales!, debit: 0, credit: major(posting.revenueMinor) },
-    ]
-
-    // Card and transfer takings.
-    //
-    // These were absent from the entry entirely. `buildPosting` has always
-    // reported them and this method used only cash, receivable and sales — so
-    // every session that took a single card payment produced debits short by
-    // exactly the card total, the ledger correctly refused the unbalanced
-    // entry, and the close failed. The day's takings never reached the books,
-    // and the cashier saw a generic error rather than the reason.
-    //
-    // Debited to BANK, not to cash: the money exists but is not in the drawer,
-    // and putting it in cash would make every count look short by that amount.
-    if (cardAndTransferMinor > 0) {
-      lines.push({ accountId: accounts.bank!, debit: major(cardAndTransferMinor), credit: 0 })
-    }
-
-    if (posting.creditMinor > 0) {
-      lines.push({ accountId: accounts.receivable!, debit: major(posting.creditMinor), credit: 0 })
-    }
-
-    // Cash put in or taken out during the session.
-    //
-    // Missing too, and its absence broke the same way the card takings did: a
-    // seller takes 3,000 out for a delivery fare, the drawer counts 3,000
-    // lighter, the debits come up short by exactly that, and the ledger
-    // refuses the entry — so the day never books.
-    //
-    // It is neither a shortage nor revenue. The money left the drawer for a
-    // stated reason, so it is a payment: cash is already reduced by the count,
-    // and the other side goes to purchases.
-    //
-    // `purchase` is the closest role the chart defines. A dedicated expense
-    // role would name it better, and until there is one this is the honest
-    // approximation rather than a silent imbalance.
-    if (posting.movementsMinor !== 0) {
-      const amount = major(Math.abs(posting.movementsMinor))
-
-      lines.push(
-        posting.movementsMinor < 0
-          ? // Money out: an expense the shop incurred.
-            { accountId: accounts.purchase!, debit: amount, credit: 0 }
-          : // Money in: the owner topping up the float.
-            { accountId: accounts.purchase!, debit: 0, credit: amount },
-      )
-    }
-
-    // The variance balances the entry. Without it, a drawer that is short
-    // produces an unbalanced posting that the ledger correctly refuses — which
-    // is how the shortage would come to light as a crash instead of a figure.
-    if (posting.varianceMinor !== 0) {
-      const amount = major(Math.abs(posting.varianceMinor))
-      lines.push(
-        posting.varianceMinor < 0
-          ? { accountId: accounts.sales!, debit: amount, credit: 0 }
-          : { accountId: accounts.sales!, debit: 0, credit: amount },
-      )
-    }
+    const lines = booked.lines
 
     const outcome = await ledger.postDocument(ctx, {
       sourceType: 'pos_session',
@@ -1233,11 +1062,7 @@ export class PosService {
     const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
     const targetCurrency = currency ?? booksCurrency
 
-    const now = Date.now() + offsetMinutes * 60_000
-    const today = new Date(now).toISOString().slice(0, 10)
-    const since = new Date(
-      Date.parse(`${today}T00:00:00Z`) - (days - 1) * 86_400_000 - offsetMinutes * 60_000,
-    ).toISOString()
+    const since = cashFlowSince(days, offsetMinutes)
 
     const pageAll = async (build: (from: number, to: number) => any) => {
       const PAGE = 1000
@@ -1304,42 +1129,16 @@ export class PosService {
       ),
     ])
 
-    const filteredPayments = payments.filter(
-      (p) => (p.currency ?? booksCurrency) === targetCurrency,
-    )
-    const filteredMovements = movements.filter(
-      (m) => (sessionCurrencies.get(m.session_id) ?? booksCurrency) === targetCurrency,
-    )
-    const filteredOrders = orders.filter(
-      (o) => (sessionCurrencies.get(o.session_id) ?? booksCurrency) === targetCurrency,
-    )
-
-    const events: CashEvent[] = [
-      ...filteredPayments.map((p) => ({
-        at: p.created_at,
-        amountMinor:
-          (p.direction === 'out' ? -1 : 1) *
-          majorToTillMinor(Number(p.amount) || 0, p.currency ?? booksCurrency),
-      })),
-      ...filteredMovements.map((m) => ({
-        at: m.created_at,
-        amountMinor: (m.kind === 'cash_out' ? -1 : 1) * (Number(m.amount_minor) || 0),
-      })),
-      ...filteredOrders.map((o) => ({
-        at: o.created_at,
-        amountMinor:
-          ((o.payments ?? []) as Array<{ method: string; amount_minor: number }>)
-            .filter((p) => p.method === 'cash')
-            .reduce((sum, p) => sum + (Number(p.amount_minor) || 0), 0) -
-          (Number(o.change_minor) || 0),
-      })),
-    ]
-
-    return {
-      days: dailyCashFlow(events, days, today, offsetMinutes),
-      today,
-      currency: targetCurrency,
-    }
+    return buildCashFlowView({
+      payments,
+      movements,
+      orders,
+      sessionCurrencies,
+      booksCurrency,
+      targetCurrency,
+      days,
+      offsetMinutes,
+    })
   }
 
   /** Every open or suspended till of the workspace, with its expected cash (the till list). */

@@ -22,7 +22,9 @@
 import { useMemo } from 'react'
 import {
   featureDefinition,
+  featureOfflineAvailability,
   resolveEntitlement,
+  type OfflineAvailability,
   type EntitlementInput,
   type EntitlementVerdict,
   type FeatureDefinition,
@@ -43,6 +45,12 @@ export interface ActionAvailabilityOptions {
 export interface ActionAvailability {
   /** True if the action can be performed right now */
   available: boolean
+  /**
+   * What the offline endpoint matrix says the device can do with this feature:
+   * `available`, `online_required`, or `not_supported`. Meaningful offline; the
+   * cloud edition always runs everything the plan includes.
+   */
+  offline: OfflineAvailability
   /** Raw verdict from the pure validation resolver */
   verdict: EntitlementVerdict
   /** True if the feature requires a server/cloud connection and we are running offline */
@@ -57,7 +65,13 @@ export interface ActionAvailability {
   hybrid?: { local?: string | undefined; server?: string | undefined } | undefined
   /** Machine-readable reason key */
   reason:
-    'available' | 'offline_edition' | 'upgrade_required' | 'not_entitled' | 'exhausted' | 'expired'
+    | 'available'
+    | 'offline_edition'
+    | 'not_supported'
+    | 'upgrade_required'
+    | 'not_entitled'
+    | 'exhausted'
+    | 'expired'
 }
 
 /**
@@ -147,7 +161,8 @@ export function checkActionAvailability(
   const available = verdict.kind === 'AVAILABLE'
 
   let reason: ActionAvailability['reason'] = 'available'
-  if (requiresOnline) reason = 'offline_edition'
+  const offline = featureOfflineAvailability(feature)
+  if (requiresOnline) reason = offline === 'not_supported' ? 'not_supported' : 'offline_edition'
   else if (requiresUpgrade) reason = 'upgrade_required'
   else if (verdict.kind === 'NOT_ENTITLED') reason = 'not_entitled'
   else if (verdict.kind === 'EXHAUSTED') reason = 'exhausted'
@@ -155,6 +170,7 @@ export function checkActionAvailability(
 
   return {
     available,
+    offline,
     verdict,
     requiresOnline,
     requiresUpgrade,
@@ -182,6 +198,17 @@ export function isOfflineNotAvailableError(error: unknown): boolean {
 
   const message = (error as { message?: string })?.message ?? ''
   return message.includes('OFFLINE_NOT_AVAILABLE')
+}
+
+/**
+ * Which kind of «no» an offline 501 is: `online_required` (the product has it, the
+ * device does not run it) or `not_supported`. Read from the engine's own answer,
+ * which takes it from the endpoint matrix — a screen never decides it itself.
+ */
+export function offlineKindOf(error: unknown): 'online_required' | 'not_supported' {
+  const details = (error as { response?: { data?: { details?: { availability?: string } } } })
+    ?.response?.data?.details
+  return details?.availability === 'not_supported' ? 'not_supported' : 'online_required'
 }
 
 /**

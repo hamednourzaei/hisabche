@@ -14,14 +14,14 @@ import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import {
-  savedViewStateSchema,
+  createSavedViewSchema,
   savedViewTableIdSchema,
-  savedViewsService,
-} from '../services/saved-views.service'
+  updateSavedViewSchema,
+} from '@hisabche/validation'
+import { savedViewsService } from '../services/saved-views.service'
 
 const MEMBER = [authenticate, requireWorkspaceContext]
 const idParams = z.object({ id: z.string().uuid() })
-const nameSchema = z.string().trim().min(1).max(60)
 
 function fail(fastify: FastifyInstance, reply: FastifyReply, err: unknown, fallback: string) {
   if (err instanceof z.ZodError) {
@@ -57,14 +57,7 @@ export async function savedViewsRoutes(fastify: FastifyInstance) {
     { preHandler: MEMBER },
     async (request: FastifyRequest, reply) => {
       try {
-        const input = z
-          .object({
-            tableId: savedViewTableIdSchema,
-            name: nameSchema,
-            state: savedViewStateSchema,
-            shared: z.boolean().default(false),
-          })
-          .parse(request.body)
+        const input = createSavedViewSchema.parse(request.body)
         return reply.code(201).send(await savedViewsService.create(request.tenancy, input))
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to save the view')
@@ -78,14 +71,7 @@ export async function savedViewsRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply) => {
       try {
         const { id } = idParams.parse(request.params)
-        const patch = z
-          .object({
-            name: nameSchema.optional(),
-            shared: z.boolean().optional(),
-            state: savedViewStateSchema.optional(),
-          })
-          .refine((value) => Object.keys(value).length > 0, { message: 'Nothing to change' })
-          .parse(request.body)
+        const patch = updateSavedViewSchema.parse(request.body)
         return reply.send(await savedViewsService.update(request.tenancy, id, patch))
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to update the view')

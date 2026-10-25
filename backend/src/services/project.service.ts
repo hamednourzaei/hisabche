@@ -13,6 +13,7 @@ import {
   CreateProjectMember,
   CreateTimeEntry,
   UpdateTimeEntry,
+  projectProgress,
 } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import type { TenancyContext } from './tenancy.service'
@@ -512,8 +513,7 @@ export class ProjectService {
       return
     }
 
-    const doneCount = tasks.filter((t: any) => t.status === 'done').length
-    const progress = Math.round((doneCount / tasks.length) * 100)
+    const progress = projectProgress(tasks.map((t: any) => String(t.status)))
 
     await supabase
       .from('projects')

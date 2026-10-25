@@ -23,6 +23,8 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 
 import { SceneCanvas, spanProgress } from '../three/scene-canvas'
 import type { IndustrySign } from './journey-industries'
+import { JOURNEY_ANALYTICS_EVENTS, BEAT_HEIGHT_DVH, type JourneyBeatId } from '../journey.config'
+import { emitJourneyEvent, getJourneyAnalyticsHistory } from '../journey-analytics'
 import {
   journeyAt,
   journeyReduce,
@@ -62,6 +64,9 @@ export interface JourneyStageProps {
   /** The heading of the text version of the story. */
   summaryLabel: string
   skipLabel: string
+  replayLabel?: string | undefined
+  locale?: string | undefined
+  forceFlat?: boolean | undefined
   invoice: InvoiceLabels
   /** «ثبت شد» — shown on a board once its station has the invoice. */
   recordedLabel: string
@@ -73,7 +78,7 @@ export interface JourneyStageProps {
 }
 
 /** How much page one beat of the story takes: enough that a wheel notch is a step, not a jump. */
-const BEAT_HEIGHT = 150
+const BEAT_HEIGHT = BEAT_HEIGHT_DVH
 
 /** The counter's sentence, with each number kept whole whichever way the text runs. */
 function Counter({
@@ -112,15 +117,21 @@ export function JourneyStage(props: JourneyStageProps) {
   const bubbleRef = useRef<HTMLParagraphElement | null>(null)
   const fillRef = useRef<HTMLSpanElement | null>(null)
   const columnRef = useRef<HTMLSpanElement | null>(null)
+  /** The hairline at the foot of the frame: how far through the story the page is. */
+  const frameFillRef = useRef<HTMLSpanElement | null>(null)
   const [beat, setBeat] = useState(0)
   const [invited, setInvited] = useState(false)
   const [link, setLink] = useState<LinkState>('online')
   /** No 3D picture on this device: the frame shows the station's board as markup. */
-  const [flat, setFlat] = useState(false)
+  const [flat, setFlat] = useState(props.forceFlat ?? false)
   /** How many characters of the clerk's line the bubble has typed so far. */
   const [typed, setTyped] = useState(0)
   const beats = stops.length + 2
   const ending = beat === beats - 1
+
+  const lastReportedBeatRef = useRef<number>(-1)
+  const lastLinkRef = useRef<LinkState>('online')
+  const invitedFiredRef = useRef<boolean>(false)
 
   useEffect(() => {
     journeyState.stations = stops.length
@@ -130,13 +141,43 @@ export function JourneyStage(props: JourneyStageProps) {
     journeyState.screens = props.screens
     journeyState.industries = props.industries
     journeyState.bubble = bubbleRef.current
+
+    // Emit initial view_hero analytics event
+    emitJourneyEvent(JOURNEY_ANALYTICS_EVENTS.VIEW_HERO, { locale: props.locale ?? 'fa' })
+
     const onScroll = () => {
       const progress = spanProgress(wrapRef.current)
       // The line reaches the stop the invoice is at, and the end when the story ends.
       const reach = `calc((100% - 1rem) * ${progress})`
       if (fillRef.current) fillRef.current.style.width = reach
+      if (frameFillRef.current) frameFillRef.current.style.width = `${progress * 100}%`
       if (columnRef.current) columnRef.current.style.height = reach
       const now = journeyAt(progress, stops.length)
+
+      if (lastReportedBeatRef.current !== now.beat) {
+        lastReportedBeatRef.current = now.beat
+        if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
+          window.history.replaceState(null, '', `#beat-${now.beat}`)
+        }
+        emitJourneyEvent(JOURNEY_ANALYTICS_EVENTS.BEAT_REACHED, {
+          beat: now.beat,
+          beatId: `beat-${now.beat}` as JourneyBeatId,
+          progress,
+        })
+      }
+
+      if (lastLinkRef.current !== now.link) {
+        lastLinkRef.current = now.link
+        if (now.link === 'offline') {
+          emitJourneyEvent(JOURNEY_ANALYTICS_EVENTS.OFFLINE_SIM_VIEWED, { state: now.link })
+        }
+      }
+
+      if (now.invited && !invitedFiredRef.current) {
+        invitedFiredRef.current = true
+        emitJourneyEvent(JOURNEY_ANALYTICS_EVENTS.CORE_BURST_COMPLETED, {})
+      }
+
       setBeat(now.beat)
       setInvited(now.invited)
       setLink(now.link)
@@ -154,7 +195,76 @@ export function JourneyStage(props: JourneyStageProps) {
     props.signLabel,
     props.screens,
     props.industries,
+    props.locale,
   ])
+
+  const goTo = (progress: number) => {
+    const wrap = wrapRef.current
+    if (!wrap) return
+    const span = wrap.offsetHeight - window.innerHeight
+    const top = wrap.getBoundingClientRect().top + window.scrollY
+    window.scrollTo({ top: top + progress * span, behavior: 'smooth' })
+  }
+  const send = (event: JourneyEvent) =>
+    goTo(journeyReduce(spanProgress(wrapRef.current), event, stops.length))
+  const travel = (index: number) => goTo(progressForBeat(index, stops.length))
+  const leave = () => {
+    emitJourneyEvent(JOURNEY_ANALYTICS_EVENTS.SKIP_CLICKED, { fromBeat: beat })
+    const wrap = wrapRef.current
+    if (wrap)
+      window.scrollTo({
+        top: wrap.getBoundingClientRect().bottom + window.scrollY,
+        behavior: 'smooth',
+      })
+  }
+  // On the route, the arrow keys step through the story like the wheel does.
+  const onRouteKey = (event: KeyboardEvent) => {
+    const step: Record<string, JourneyEvent> = {
+      ArrowDown: { type: 'next' },
+      PageDown: { type: 'next' },
+      ArrowUp: { type: 'previous' },
+      PageUp: { type: 'previous' },
+      Home: { type: 'reset' },
+      End: { type: 'skip' },
+    }
+    const wanted = step[event.key]
+    if (!wanted) return
+    event.preventDefault()
+    send(wanted)
+  }
+
+  // Deep-link to #beat-N on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    let timer: number | undefined
+    const hash = window.location.hash
+    const match = hash.match(/#beat-(\d+)/)
+    if (match && match[1]) {
+      const targetBeat = parseInt(match[1], 10)
+      if (!Number.isNaN(targetBeat) && targetBeat >= 0 && targetBeat < beats) {
+        timer = window.setTimeout(() => travel(targetBeat), 120)
+      }
+    }
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer)
+    }
+  }, [beats])
+
+  // Expose window.__journey debug hook per v2 spec Section 10
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    ;(window as unknown as { __journey?: unknown }).__journey = {
+      getProgress: () => spanProgress(wrapRef.current),
+      setProgress: (p: number) => goTo(p),
+      getBeat: () => beat,
+      setBeat: (b: number) => travel(b),
+      getSnapshot: () => journeyAt(spanProgress(wrapRef.current), stops.length),
+      getAnalyticsHistory: () => getJourneyAnalyticsHistory(),
+    }
+    return () => {
+      delete (window as unknown as { __journey?: unknown }).__journey
+    }
+  }, [beat, stops.length])
 
   // Tell the scene which band of the frame no text covers, so its camera
   // composes the subject there instead of behind the headline or the caption.
@@ -200,40 +310,6 @@ export function JourneyStage(props: JourneyStageProps) {
     return () => window.clearInterval(timer)
   }, [speaking])
 
-  const goTo = (progress: number) => {
-    const wrap = wrapRef.current
-    if (!wrap) return
-    const span = wrap.offsetHeight - window.innerHeight
-    const top = wrap.getBoundingClientRect().top + window.scrollY
-    window.scrollTo({ top: top + progress * span, behavior: 'smooth' })
-  }
-  const send = (event: JourneyEvent) =>
-    goTo(journeyReduce(spanProgress(wrapRef.current), event, stops.length))
-  const travel = (index: number) => goTo(progressForBeat(index, stops.length))
-  const leave = () => {
-    const wrap = wrapRef.current
-    if (wrap)
-      window.scrollTo({
-        top: wrap.getBoundingClientRect().bottom + window.scrollY,
-        behavior: 'smooth',
-      })
-  }
-  // On the route, the arrow keys step through the story like the wheel does.
-  const onRouteKey = (event: KeyboardEvent) => {
-    const step: Record<string, JourneyEvent> = {
-      ArrowDown: { type: 'next' },
-      PageDown: { type: 'next' },
-      ArrowUp: { type: 'previous' },
-      PageUp: { type: 'previous' },
-      Home: { type: 'reset' },
-      End: { type: 'skip' },
-    }
-    const wanted = step[event.key]
-    if (!wanted) return
-    event.preventDefault()
-    send(wanted)
-  }
-
   // Route stops: the stations, then the end. Stop `n` is reached in beat `n + 1`.
   const route = [...stops.map((stop) => stop.title), props.endLabel]
   const dot = (index: number) =>
@@ -250,21 +326,23 @@ export function JourneyStage(props: JourneyStageProps) {
         ref={frameRef}
         className="sticky top-0 h-dvh overflow-hidden bg-[hsl(var(--surface-base))]"
       >
-        <SceneCanvas
-          label={props.label}
-          load={() => import('./scene')}
-          progress={() => spanProgress(wrapRef.current)}
-          onUnavailable={() => {
-            frameRef.current?.removeAttribute('data-scene')
-            setFlat(true)
-          }}
-          className="absolute inset-0 size-full"
-        />
+        {!props.forceFlat && (
+          <SceneCanvas
+            label={props.label}
+            load={() => import('./scene')}
+            progress={() => spanProgress(wrapRef.current)}
+            onUnavailable={() => {
+              frameRef.current?.removeAttribute('data-scene')
+              setFlat(true)
+            }}
+            className="absolute inset-0 size-full"
+          />
+        )}
 
         <div
           className={
             beat === 0
-              ? 'absolute inset-x-0 top-0 bg-gradient-to-b from-[hsl(var(--surface-base))] via-[hsl(var(--surface-base))] to-transparent px-4 pb-32 pt-24 text-center sm:pt-28'
+              ? 'absolute inset-x-0 top-0 bg-gradient-to-b from-[hsl(var(--surface-base))] via-[hsl(var(--surface-base)/0.94)] to-transparent px-4 pb-24 pt-20 sm:px-6 sm:pt-24 lg:px-10'
               : 'hidden'
           }
         >
@@ -274,20 +352,23 @@ export function JourneyStage(props: JourneyStageProps) {
         {/* No 3D picture: the station's board, as it would hang in the hall, in markup. */}
         {flat && board ? (
           <div className="absolute inset-x-0 top-28 flex justify-center px-4 md:top-24">
-            <dl className="w-full max-w-md rounded-2xl border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))] p-5 shadow-lg">
-              <div className="mb-3 flex items-baseline justify-between gap-3 border-b-2 border-[hsl(var(--color-success))] pb-2">
+            <dl className="w-full max-w-md rounded-lg border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))] p-5">
+              <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-[hsl(var(--color-primary)/0.5)] pb-2">
                 <dt className="text-lg font-bold text-[hsl(var(--fg-primary))]">{board.title}</dt>
                 <dd className="text-xs text-[hsl(var(--fg-tertiary))]">{board.note}</dd>
               </div>
               {board.rows.map((row) => (
-                <div key={row.label} className="flex items-baseline justify-between gap-3 py-1.5">
+                <div
+                  key={row.label}
+                  className="flex items-baseline justify-between gap-3 border-b border-[hsl(var(--border-default)/0.6)] py-1.5 last:border-0"
+                >
                   <dt className="text-sm text-[hsl(var(--fg-secondary))]">{row.label}</dt>
-                  <dd className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+                  <dd className="text-sm font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
                     <bdi>{row.value}</bdi> <bdi>{row.extra}</bdi>
                   </dd>
                 </div>
               ))}
-              <div className="mt-2 text-xs font-semibold text-[hsl(var(--color-success))]">
+              <div className="mt-3 text-xs font-semibold text-[hsl(var(--color-success))]">
                 {board.foot}
               </div>
             </dl>
@@ -300,7 +381,7 @@ export function JourneyStage(props: JourneyStageProps) {
           className={
             link === 'online'
               ? 'hidden'
-              : 'absolute inset-x-0 top-28 mx-auto w-fit rounded-full border border-[hsl(var(--color-warning)/0.5)] bg-[hsl(var(--surface-elevated)/0.92)] px-4 py-1.5 text-xs font-semibold text-[hsl(var(--color-warning))] md:top-20'
+              : 'absolute inset-x-0 top-28 mx-auto w-fit rounded-md border border-[hsl(var(--color-warning)/0.5)] bg-[hsl(var(--surface-elevated)/0.95)] px-3 py-1.5 text-xs font-semibold text-[hsl(var(--color-warning))] md:top-20'
           }
         >
           {link === 'offline' ? props.offlineLabel : props.syncingLabel}
@@ -349,8 +430,8 @@ export function JourneyStage(props: JourneyStageProps) {
                     <span
                       className={
                         beat === index + 1
-                          ? 'whitespace-nowrap text-xs font-bold text-[hsl(var(--fg-primary))]'
-                          : 'sr-only md:not-sr-only md:text-xs md:text-[hsl(var(--fg-tertiary))]'
+                          ? 'whitespace-nowrap text-xs font-bold text-[hsl(var(--fg-primary))] [text-shadow:0_1px_3px_hsl(var(--surface-base))]'
+                          : 'sr-only md:not-sr-only md:text-xs md:text-[hsl(var(--fg-secondary))] md:[text-shadow:0_1px_3px_hsl(var(--surface-base))]'
                       }
                     >
                       {name}
@@ -367,34 +448,43 @@ export function JourneyStage(props: JourneyStageProps) {
             key={stop.id}
             className={
               beat === index + 1
-                ? 'absolute inset-x-0 bottom-0 bg-gradient-to-t from-[hsl(var(--surface-base))] via-[hsl(var(--surface-base)/0.9)] to-transparent px-5 pb-[max(3.5rem,env(safe-area-inset-bottom))] pt-16 text-center'
+                ? 'absolute inset-x-0 bottom-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-24 sm:px-6 lg:px-10'
                 : 'hidden'
             }
           >
-            <div ref={beat === index + 1 ? captionRef : undefined}>
-              <p className="text-xs font-semibold tracking-wide text-[hsl(var(--color-primary))]">
-                <Counter template={props.counter} current={stop.place} total={stop.total} />
-              </p>
-              <h2 className="mx-auto mt-1 max-w-xl text-xl font-bold text-[hsl(var(--fg-primary))] sm:text-3xl">
+            <div
+              ref={beat === index + 1 ? captionRef : undefined}
+              className="w-full max-w-xl rounded-lg border border-[hsl(var(--border-default)/0.8)] bg-[hsl(var(--surface-base)/0.88)] p-4 text-start backdrop-blur-md sm:p-5"
+            >
+              {/* A ledger heading: the station's place in the story, then a rule
+                  to the edge of the card. */}
+              <div className="flex items-center gap-3 border-b border-[hsl(var(--border-default))] pb-2">
+                <p className="shrink-0 text-xs font-semibold tabular-nums text-[hsl(var(--color-primary))]">
+                  <Counter template={props.counter} current={stop.place} total={stop.total} />
+                </p>
+                <span aria-hidden="true" className="h-px flex-1 bg-[hsl(var(--border-default))]" />
+              </div>
+
+              <h2 className="mt-3 text-balance text-xl font-black tracking-tight text-[hsl(var(--fg-primary))] sm:text-2xl">
                 {stop.title}
               </h2>
-              <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-[hsl(var(--fg-secondary))] sm:text-base sm:leading-7">
+              <p className="mt-1 max-w-md text-pretty text-base leading-7 text-[hsl(var(--fg-secondary))]">
                 {stop.desc}
               </p>
-              {/* The clerk's line is the bubble over the clerk. Where there is no 3D picture to hold a bubble, it is here in the caption. */}
-              <p className="mx-auto mt-2 max-w-md rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.85)] px-4 py-2 text-sm leading-6 text-[hsl(var(--fg-primary))] [[data-scene=on]_&]:hidden">
+              {/* On mobile: display clerk line in card to avoid overlap. On desktop: shown when 3D scene is unavailable */}
+              <p className="mt-3 max-w-md border-s-2 border-[hsl(var(--color-primary)/0.6)] ps-3 text-pretty text-sm leading-6 text-[hsl(var(--fg-primary))] [[data-scene=on]_&]:block sm:[[data-scene=on]_&]:hidden">
                 {stop.say}
               </p>
             </div>
           </section>
         ))}
 
-        {/* The one speech bubble. The scene moves it to the head of whoever is speaking. */}
+        {/* The one speech bubble: visible only from sm: up on desktop to prevent mobile occlusions */}
         <p
           ref={bubbleRef}
           aria-hidden="true"
           style={{ left: 0, top: 0, opacity: 0 }}
-          className="pointer-events-none absolute w-max max-w-[min(20rem,84vw)] rounded-2xl border border-[hsl(var(--color-primary)/0.4)] bg-[hsl(var(--surface-elevated))] px-4 py-2 text-center text-sm leading-6 text-[hsl(var(--fg-primary))] shadow-lg transition-opacity duration-300"
+          className="pointer-events-none absolute hidden sm:block w-max max-w-[min(20rem,84vw)] rounded-lg border border-[hsl(var(--color-primary)/0.45)] bg-[hsl(var(--surface-elevated))] px-3.5 py-2 text-start text-sm leading-6 text-[hsl(var(--fg-primary))] shadow-lg transition-opacity duration-300"
         >
           <span>{speaking.slice(0, typed)}</span>
           <span className="invisible">{speaking.slice(typed)}</span>
@@ -407,11 +497,20 @@ export function JourneyStage(props: JourneyStageProps) {
         <div
           className={
             ending && invited
-              ? 'absolute inset-0 flex items-center justify-center px-4 text-center'
+              ? 'absolute inset-0 flex flex-col items-center justify-center px-4 text-center'
               : 'hidden'
           }
         >
           {props.finale}
+          <div className="mt-5 flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => travel(0)}
+              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))] px-6 text-sm font-semibold text-[hsl(var(--fg-primary))] shadow-sm transition-colors hover:border-[hsl(var(--color-primary))] hover:text-[hsl(var(--color-primary))]"
+            >
+              {props.replayLabel ?? 'Replay'}
+            </button>
+          </div>
         </div>
 
         <button
@@ -420,11 +519,19 @@ export function JourneyStage(props: JourneyStageProps) {
           className={
             ending
               ? 'hidden'
-              : 'absolute bottom-2 start-3 min-h-11 px-2 text-xs text-[hsl(var(--fg-tertiary))] underline-offset-4 hover:underline'
+              : 'absolute start-4 top-20 min-h-11 px-1 text-xs text-[hsl(var(--fg-tertiary))] underline-offset-4 hover:text-[hsl(var(--fg-primary))] hover:underline md:inset-x-auto md:bottom-4 md:end-4 md:top-auto md:start-auto'
           }
         >
           {props.skipLabel}
         </button>
+
+        {/* The story's own progress, independent of the route: one hairline at
+            the foot of the frame that fills from the reading edge. */}
+        <span
+          aria-hidden="true"
+          ref={frameFillRef}
+          className="absolute bottom-0 start-0 h-0.5 w-0 bg-[hsl(var(--color-primary))]"
+        />
       </div>
 
       {/* The same story as text, for a reader who has no picture. */}

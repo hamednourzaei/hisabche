@@ -6,7 +6,16 @@
 import { baseCurrencyOf } from './base-currency'
 import { supabase } from '../db'
 import { scopes } from './authorization/scope.service'
-import { CreateCustomer, UpdateCustomer, CustomerFilters } from '@hisabche/validation'
+import {
+  CreateCustomer,
+  UpdateCustomer,
+  CustomerFilters,
+  matchesRole,
+  mergeRole,
+  resolveEffectiveRole,
+  type DeclaredRole,
+  type PartyRole,
+} from '@hisabche/validation'
 import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
 import type { TenancyContext } from './tenancy.service'
@@ -22,8 +31,9 @@ import {
   type Replayable,
 } from '../utils/client-request'
 
-// ✅ Types
-export type DeclaredRole = 'buyer' | 'seller' | 'both'
+// ✅ Types — the role rule lives in @hisabche/validation; these names stay importable from here.
+export { matchesRole, mergeRole, resolveEffectiveRole }
+export type { DeclaredRole, PartyRole }
 
 export const VALID_DECLARED_ROLES = new Set<string>(['buyer', 'seller', 'both'])
 
@@ -87,42 +97,6 @@ interface BalanceResult {
 }
 
 // ✅ Mapper
-/**
- * The transaction role a party has played, derived from their invoices.
- * 'both' is a real, common state — a person you buy from and sell to.
- */
-export type PartyRole = 'none' | 'buyer' | 'seller' | 'both'
-
-/** Roles accumulate; seeing a second kind of invoice promotes the party. */
-export function mergeRole(current: PartyRole, incoming: 'buyer' | 'seller'): PartyRole {
-  if (current === 'none') return incoming
-  if (current === incoming) return current
-  return 'both'
-}
-
-/**
- * Effective role = declared role merged with the derived role from invoices.
- * Declared seller + a sale invoice -> both.
- * Declared buyer + no invoice -> buyer.
- * Nothing declared (null) + purchase invoice -> seller.
- * Nothing declared + no invoice -> none.
- */
-export function resolveEffectiveRole(
-  declaredRole: DeclaredRole | null | undefined,
-  derivedRole: PartyRole,
-): PartyRole {
-  if (!declaredRole) return derivedRole
-  if (derivedRole === 'none') return declaredRole
-  if (declaredRole === 'both' || derivedRole === 'both') return 'both'
-  if (declaredRole === derivedRole) return declaredRole
-  return 'both'
-}
-
-/** A 'both' party legitimately matches a buyer filter AND a seller filter. */
-export function matchesRole(role: PartyRole, filter: 'buyer' | 'seller'): boolean {
-  return role === filter || role === 'both'
-}
-
 export function isMissingColumnError(error: unknown, column = 'declared_role'): boolean {
   if (!error || typeof error !== 'object') return false
   const err = error as { code?: string; message?: string; details?: string; hint?: string }

@@ -48,7 +48,7 @@ import {
 import { BLOG_FONT_FAMILIES, BLOG_FONT_SIZES, type BlogLocale } from '@hisabche/validation'
 import { apiErrorMessage } from '@hisabche/api'
 
-import { Button, Input } from '@/components/ui'
+import { Button, Input, SelectField } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { useAdminBlogPosts, useUploadBlogImage } from '@/hooks/use-admin-blog'
 
@@ -324,41 +324,36 @@ function Toolbar({ editor, locale }: { editor: Editor; locale: BlogLocale }) {
       <div className="flex flex-wrap items-center gap-2 border-t border-border px-2 py-2 text-xs">
         <label className="flex items-center gap-1">
           <span className="text-muted-foreground">{label('font')}</span>
-          <select
-            className="h-8 rounded-lg border border-border bg-background px-2"
+          <SelectField
+            className="h-8 w-40"
             value={state.fontFamily}
-            onChange={(e) =>
-              e.target.value
-                ? chain().setFontFamily(e.target.value).run()
-                : chain().unsetFontFamily().run()
+            onChange={(value) =>
+              value ? chain().setFontFamily(value).run() : chain().unsetFontFamily().run()
             }
-          >
-            <option value="">{label('fontDefault')}</option>
-            {Object.entries(BLOG_FONT_FAMILIES).map(([key, value]) => (
-              <option key={key} value={value}>
-                {label(`fonts.${key}`)}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: '', label: label('fontDefault') },
+              ...Object.entries(BLOG_FONT_FAMILIES).map(([key, value]) => ({
+                value,
+                label: label(`fonts.${key}`),
+              })),
+            ]}
+            aria-label={label('font')}
+          />
         </label>
         <label className="flex items-center gap-1">
           <span className="text-muted-foreground">{label('size')}</span>
-          <select
-            className="h-8 rounded-lg border border-border bg-background px-2"
+          <SelectField
+            className="h-8 w-28"
             value={state.fontSize}
-            onChange={(e) =>
-              e.target.value
-                ? chain().setFontSize(e.target.value).run()
-                : chain().unsetFontSize().run()
+            onChange={(value) =>
+              value ? chain().setFontSize(value).run() : chain().unsetFontSize().run()
             }
-          >
-            <option value="">{label('sizeDefault')}</option>
-            {BLOG_FONT_SIZES.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: '', label: label('sizeDefault') },
+              ...BLOG_FONT_SIZES.map((size) => ({ value: size, label: size })),
+            ]}
+            aria-label={label('size')}
+          />
         </label>
         <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
         <span className="text-muted-foreground">{label('direction')}</span>

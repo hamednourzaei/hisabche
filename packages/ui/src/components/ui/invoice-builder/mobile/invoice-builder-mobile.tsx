@@ -107,7 +107,7 @@ const fieldLabel = 'mb-1.5 block text-sm font-medium text-[hsl(var(--fg-secondar
 const fieldShell = cn(
   'flex h-12 items-center rounded-[var(--radius-md)] border px-3',
   'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))]',
-  'focus-within:border-[hsl(var(--color-primary))]',
+  'own-focus-ring focus-within:border-[hsl(var(--color-primary))]',
   'transition-colors duration-150 motion-reduce:transition-none',
 )
 

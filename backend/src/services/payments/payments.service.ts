@@ -59,6 +59,13 @@ import {
   type SummaryPayment,
   moneyAccountRole,
 } from './payments.domain'
+import {
+  buildOpenInvoicesView,
+  buildPartyActivity,
+  buildPartyLedger,
+  buildPartySummary,
+  partyActivityInvoices,
+} from '@hisabche/validation'
 import { PaymentsRepository, domainErrorCode, type PaymentRow } from './payments.repository'
 
 export interface RecordPaymentInput {
@@ -131,11 +138,9 @@ export class PaymentsService {
 
   /** What a party still owes, invoice by invoice. */
   async getOpenInvoices(ctx: TenancyContext, partyType: PartyType, partyId: string) {
-    const invoices = await this.repo.openInvoicesFor(ctx.workspaceId, partyType, partyId)
-    return openInvoices(invoices).map((invoice) => ({
-      ...invoice,
-      outstanding: outstandingOf(invoice),
-    }))
+    return buildOpenInvoicesView(
+      await this.repo.openInvoicesFor(ctx.workspaceId, partyType, partyId),
+    )
   }
 
   // ─── Recording ────────────────────────────────────────────────────────────
@@ -151,7 +156,27 @@ export class PaymentsService {
   async recordPayment(
     ctx: TenancyContext,
     input: RecordPaymentInput,
-    options: { clientRequestId?: string | null } = {},
+    options: {
+      clientRequestId?: string | null
+      /**
+       * Called once the payment and its journal entry exist, with the posting
+       * the core derived and the facts it derived it from.
+       *
+       * ⚠️ DIAGNOSTIC ONLY — shadow verification. It cannot change, reject or
+       * repeat the payment; a hook that could would be a second authority over
+       * money, which is the thing being audited.
+       */
+      onPosted?: (posted: {
+        posting: ReturnType<typeof paymentPosting>
+        facts: {
+          direction: PaymentDirection
+          amount: number
+          paymentRate: number
+          allocations: { amount: number; rate: number | null }[]
+          fee: number
+        }
+      }) => void
+    } = {},
   ) {
     const clientRequestId = options.clientRequestId ?? null
 
@@ -319,21 +344,31 @@ export class PaymentsService {
     // lookup and our call: nothing new was written, so nothing is logged twice.
     if (replayed) return this.replayPayment(ctx, paymentId)
 
+    // The facts the posting is derived FROM, kept beside the posting itself so
+    // the shadow check can re-derive from the same operands rather than from
+    // the answer.
+    const postingFacts = {
+      direction: input.direction,
+      amount,
+      paymentRate: bookingRate,
+      allocations: await this.allocationRates(ctx, currency, bookCurrency, allocations),
+      fee,
+    }
+    const posting = paymentPosting(postingFacts)
+
     await this.bookPayment(
       ctx,
       paymentId,
       input.direction,
       input.method ?? 'cash',
-      paymentPosting({
-        direction: input.direction,
-        amount,
-        paymentRate: bookingRate,
-        allocations: await this.allocationRates(ctx, currency, bookCurrency, allocations),
-        fee,
-      }),
+      posting,
       entryDate,
       paymentNumber,
     )
+
+    // Diagnostic only: see `onPosted`. Bound after the write, so a hook that
+    // throws cannot undo a payment that already exists.
+    options.onPosted?.({ posting, facts: postingFacts })
 
     // Index who took this money. The cancel path reads it back: the person who
     // received a payment is not the person who may erase the record of it.
@@ -757,145 +792,35 @@ export class PaymentsService {
 
   /**
    * A party's statement: every invoice and payment, with a running balance.
-   *
-   * Positive means they owe us. The balance this replaces added receipts to
-   * the customer's debt, so taking money from a customer made them owe MORE.
+   * Positive means they owe us. The assembly is the shared rule
+   * (`buildPartyLedger`) — the device builds the same statement with it.
    */
   async getPartyLedger(ctx: TenancyContext, partyType: PartyType, partyId: string) {
-    const { invoices, payments, openingBalance } = await this.repo.partyMovements(
-      ctx.workspaceId,
+    const rows = await this.repo.partyMovements(ctx.workspaceId, partyType, partyId)
+    return buildPartyLedger({
       partyType,
       partyId,
-    )
-
-    // Each row keeps what the statement needs to link back to its document.
-    const sources = new Map<
-      string,
-      { sourceType: 'invoice' | 'payment'; sourceId: string; currency: string; method?: string }
-    >()
-    const movements: LedgerMovement[] = [
-      ...invoices.map((invoice) => {
-        const reference = invoice.invoice_number ?? invoice.id
-        sources.set(`i:${invoice.id}`, {
-          sourceType: 'invoice',
-          sourceId: invoice.id,
-          currency: invoice.currency ?? '',
-        })
-        return {
-          date: String(invoice.date ?? '').slice(0, 10),
-          kind: (invoice.type === 'purchase' ? 'purchase' : 'sale') as LedgerMovement['kind'],
-          amount: Number(invoice.total) || 0,
-          reference,
-          ...(invoice.currency ? { currency: String(invoice.currency) } : {}),
-          key: `i:${invoice.id}`,
-        }
-      }),
-      ...payments.map((payment) => {
-        sources.set(`p:${payment.id}`, {
-          sourceType: 'payment',
-          sourceId: payment.id,
-          currency: payment.currency ?? '',
-          method: payment.method ?? undefined,
-        })
-        return {
-          date: String(payment.entry_date ?? '').slice(0, 10),
-          kind: (payment.direction === 'in'
-            ? 'payment_in'
-            : 'payment_out') as LedgerMovement['kind'],
-          amount: Number(payment.amount) || 0,
-          reference: payment.payment_number ?? payment.id,
-          ...(payment.currency ? { currency: String(payment.currency) } : {}),
-          key: `p:${payment.id}`,
-        }
-      }),
-    ]
-
-    // The running balance starts from the opening balance, not from zero —
-    // and the opening balance is in the books currency, so it is carried only
-    // by the rows of that currency.
-    const opening = round2(openingBalance)
-    const bookCurrency = await baseCurrencyOf(ctx.workspaceId)
-    const balances = partyBalancesByCurrency(movements, bookCurrency, opening)
-    return {
-      partyType,
-      partyId,
-      openingBalance: opening,
-      movements: runningLedger(
-        movements.map((movement) => ({ ...movement, currency: movement.currency || bookCurrency })),
-      ).map((row) => {
-        const { key, ...rest } = row as typeof row & { key: string }
-        const carried = rest.currency === bookCurrency ? opening : 0
-        return {
-          ...rest,
-          balance: round2(rest.balance + carried),
-          ...sources.get(key),
-          currency: rest.currency,
-        }
-      }),
-      /** The currency the books are kept in. */
-      currency: bookCurrency,
-      /**
-       * ⚠️ IN THE BOOKS CURRENCY ONLY. It used to be every movement added
-       * together whatever its currency. What the party owes in another
-       * currency is in `balances`, beside this — never inside it.
-       */
-      balance: balances[0]?.balance ?? opening,
-      balances,
-    }
+      rows,
+      bookCurrency: await baseCurrencyOf(ctx.workspaceId),
+    })
   }
 
   /**
    * Customer 360 money summary — the authoritative figures for the party page.
-   * The page must not add invoices up in the browser: it used to read the first
-   * 200 invoices of the whole workspace and total those.
+   * The page must not add invoices up in the browser.
    */
   async getPartySummary(
     ctx: TenancyContext,
     partyType: PartyType,
     partyId: string,
     asOf: string = today(),
-  ): Promise<
-    PartySummary & {
-      bookCurrency: string
-      byCurrency: Array<PartySummary & { currency: string }>
-    }
-  > {
-    const { invoices, payments, openingBalance } = await this.repo.partyMovements(
-      ctx.workspaceId,
-      partyType,
-      partyId,
-    )
-    const summaryInvoices: SummaryInvoice[] = invoices.map((invoice) => ({
-      id: invoice.id,
-      type: invoice.type === 'purchase' ? 'purchase' : 'sale',
-      status: String(invoice.status ?? ''),
-      total: Number(invoice.total) || 0,
-      paidAmount: Number(invoice.paid_amount) || 0,
-      invoiceDate: String(invoice.date ?? '').slice(0, 10),
-      dueDate: String(invoice.due_date ?? '').slice(0, 10),
-      currency: String(invoice.currency ?? ''),
-    }))
-    const summaryPayments: SummaryPayment[] = payments.map((payment) => ({
-      direction: payment.direction === 'out' ? 'out' : 'in',
-      amount: Number(payment.amount) || 0,
-      entryDate: String(payment.entry_date ?? '').slice(0, 10),
-      currency: String(payment.currency ?? ''),
-    }))
-    const bookCurrency = await baseCurrencyOf(ctx.workspaceId)
-    return {
-      ...summarizeParty(summaryInvoices, summaryPayments, asOf, openingBalance),
-      // ⚠️ The figures above add every document whatever its currency (and
-      // list the currencies they mixed). `byCurrency` is the same summary
-      // once per currency — the one a screen can show when there are several.
-      bookCurrency,
-      byCurrency: summarizePartyByCurrency(
-        summaryInvoices,
-        summaryPayments,
-        asOf,
-        openingBalance,
-        bookCurrency,
-      ),
-    }
+  ) {
+    const rows = await this.repo.partyMovements(ctx.workspaceId, partyType, partyId)
+    return buildPartySummary({
+      rows,
+      bookCurrency: await baseCurrencyOf(ctx.workspaceId),
+      asOf,
+    })
   }
 
   /**
@@ -908,44 +833,11 @@ export class PaymentsService {
     partyId: string,
     asOf: string = today(),
   ): Promise<{ monthly: MonthlyActivity[]; products: PartyProduct[] }> {
-    const { invoices, payments } = await this.repo.partyMovements(
-      ctx.workspaceId,
-      partyType,
-      partyId,
-    )
-    const documentType = partyType === 'customer' ? 'sale' : 'purchase'
-    const relevant = invoices.filter((invoice) => (invoice.type ?? 'sale') === documentType)
+    const rows = await this.repo.partyMovements(ctx.workspaceId, partyType, partyId)
     const lines = await this.repo.invoiceLines(
       ctx.workspaceId,
-      relevant.map((invoice) => invoice.id),
+      partyActivityInvoices(partyType, rows.invoices).map((invoice) => invoice.id),
     )
-    return {
-      monthly: monthlyActivity(
-        invoices.map((invoice) => ({
-          type: invoice.type === 'purchase' ? 'purchase' : 'sale',
-          total: Number(invoice.total) || 0,
-          invoiceDate: String(invoice.date ?? ''),
-        })),
-        payments.map((payment) => ({
-          direction: payment.direction === 'out' ? 'out' : 'in',
-          amount: Number(payment.amount) || 0,
-          entryDate: String(payment.entry_date ?? ''),
-        })),
-        asOf,
-      ),
-      products: rankPartyProducts(
-        lines.map((line) => ({
-          invoiceId: String(line.invoice_id),
-          productId: line.product_id ?? null,
-          name: String(line.product_name ?? ''),
-          unit: String(line.unit === 'custom' ? (line.unit_label ?? 'custom') : (line.unit ?? '')),
-          quantity: Number(line.quantity) || 0,
-          amount: Number(line.total_price) || 0,
-        })),
-        new Map(
-          relevant.map((invoice) => [String(invoice.id), String(invoice.date ?? '').slice(0, 10)]),
-        ),
-      ),
-    }
+    return buildPartyActivity({ partyType, rows, lines, asOf })
   }
 }

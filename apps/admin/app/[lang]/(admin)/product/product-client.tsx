@@ -2,7 +2,17 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Card, Badge, EmptyState, Skeleton, HubTabs, useHubTab, Switch } from '@/components/ui'
+import {
+  Card,
+  Badge,
+  DataTable,
+  EmptyState,
+  Skeleton,
+  HubTabs,
+  useHubTab,
+  Switch,
+  type TableColumn,
+} from '@/components/ui'
 import { AiClient } from '../ai/ai-client'
 import { OAuthAppsClient } from '../oauth-apps/oauth-apps-client'
 import { MarketClient } from '../market/market-client'
@@ -12,6 +22,9 @@ import {
   type FeatureFlagItem,
 } from '@/hooks/use-admin-ops'
 import { StepUpDialog } from '@/components/admin-shell/step-up-dialog'
+import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminNumber } from '@/lib/admin-format'
 
 const PRODUCT_TABS = ['features', 'ai', 'oauth', 'market'] as const
 type ProductTab = (typeof PRODUCT_TABS)[number]
@@ -52,6 +65,74 @@ function FeatureFlagsTabContent() {
   } | null>(null)
 
   const flags = data?.flags ?? []
+  const locale = useAdminLocale()
+  const tableT = useAdminTableT()
+  const columns: TableColumn<FeatureFlagItem>[] = [
+    {
+      id: 'flagKey',
+      labelKey: 'admin.product.flagKey',
+      labelFallback: 'کلید پرچم',
+      locked: true,
+      render: (f) => (
+        <span dir="ltr" className="font-mono text-xs font-semibold text-foreground">
+          {f.key}
+        </span>
+      ),
+      sortValue: (f) => f.key,
+    },
+    {
+      id: 'flagName',
+      labelKey: 'admin.product.flagName',
+      labelFallback: 'نام',
+      render: (f) => (
+        <div className="min-w-0">
+          <div className="font-medium text-foreground">{f.name}</div>
+          {f.description ? (
+            <div className="text-xs text-muted-foreground">{f.description}</div>
+          ) : null}
+        </div>
+      ),
+      sortValue: (f) => f.name,
+    },
+    {
+      id: 'rollout',
+      labelKey: 'admin.product.rollout',
+      labelFallback: 'درصد انتشار',
+      showFrom: 'md',
+      render: (f) => (
+        <span className="tabular-nums font-mono">{adminNumber(f.rollout_percentage, locale)}%</span>
+      ),
+      sortValue: (f) => f.rollout_percentage,
+    },
+    {
+      id: 'beta',
+      labelKey: 'admin.product.beta',
+      labelFallback: 'بتا',
+      showFrom: 'lg',
+      render: (f) =>
+        f.is_beta ? (
+          <Badge variant="outline" className="border-warning/30 text-xs text-warning">
+            {t('admin.product.beta')}
+          </Badge>
+        ) : null,
+      sortValue: (f) => (f.is_beta ? 1 : 0),
+    },
+    {
+      id: 'status',
+      labelKey: 'admin.product.status',
+      labelFallback: 'وضعیت',
+      align: 'end',
+      locked: true,
+      render: (f) => (
+        <Switch
+          checked={f.is_enabled}
+          aria-label={t('admin.product.toggleAria', { flag: f.name })}
+          onCheckedChange={(checked) => setToggleTarget({ flag: f, nextEnabled: checked })}
+        />
+      ),
+      sortValue: (f) => (f.is_enabled ? 1 : 0),
+    },
+  ]
 
   const handleToggleConfirm = async ({ stepUpTimestamp }: { stepUpTimestamp: string }) => {
     if (!toggleTarget) return
@@ -78,70 +159,24 @@ function FeatureFlagsTabContent() {
       )}
 
       {isError && !isLoading && (
-        <Card className="p-8">
-          <EmptyState title={t('admin.product.flagsError')} />
-        </Card>
+        <ErrorState message={t('admin.product.flagsError')} onRetry={() => void refetch()} />
       )}
 
-      {!isLoading && !isError && flags.length === 0 && (
-        <Card className="p-8">
-          <EmptyState
-            title={t('admin.product.noFlags')}
-            description={t('admin.product.noFlagsHint')}
-          />
-        </Card>
-      )}
-
-      {!isLoading && !isError && flags.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-start text-xs">
-              <thead className="border-b border-border bg-muted/40 font-medium text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 text-start">{t('admin.product.flagKey')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.product.flagName')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.product.rollout')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.product.beta')}</th>
-                  <th className="px-4 py-3 text-end">{t('admin.product.status')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {flags.map((f) => (
-                  <tr key={f.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-3 font-mono font-semibold text-foreground" dir="ltr">
-                      {f.key}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-foreground">{f.name}</div>
-                      {f.description && (
-                        <div className="text-muted-foreground text-[11px]">{f.description}</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 tabular-nums font-mono">{f.rollout_percentage}%</td>
-                    <td className="px-4 py-3">
-                      {f.is_beta && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] text-warning border-warning/30"
-                        >
-                          BETA
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-end">
-                      <Switch
-                        checked={f.is_enabled}
-                        onCheckedChange={(checked) =>
-                          setToggleTarget({ flag: f, nextEnabled: checked })
-                        }
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+      {!isLoading && !isError && (
+        <DataTable
+          tableId="admin-feature-flags"
+          t={tableT}
+          rows={flags}
+          columns={columns}
+          rowKey={(f) => f.id}
+          minWidthClass="min-w-[760px]"
+          emptyState={
+            <EmptyState
+              title={t('admin.product.noFlags')}
+              description={t('admin.product.noFlagsHint')}
+            />
+          }
+        />
       )}
 
       {/* StepUp Dialog for Feature Flag Toggle */}

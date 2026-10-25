@@ -16,6 +16,8 @@
 // the same arrangement as `local-sql.ts`.
 // ============================================
 
+import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
+import { SALES_SIDE_ALTERS, SALES_SIDE_STATEMENTS } from './local-sales-schema'
 import { SCHEMA_VERSION } from './local-schema'
 
 export interface LocalMigration {
@@ -415,10 +417,82 @@ const V4_OUTBOX_OWNER: LocalMigration = {
   ],
 }
 
+/**
+ * v5 — the people side runs on the device.
+ *
+ * The employee cache row was a name, a phone and a salary. The server's
+ * employee has a code, a hire date, a department, a status and a bank — and an
+ * offline employee list, payroll or attendance sheet has to say the same
+ * thing. The new tables (payroll, leave, work_shift, shift_assignment,
+ * attendance, budget, …) are created by CREATE_STATEMENTS; this adds the columns
+ * to the one table that already existed on a device.
+ *
+ * ⚠️ NULLABLE ON PURPOSE. The rows already cached were written without these
+ * fields and are NOT back-filled: an employee with no first_name shows the
+ * cached full_name — unknown stays unknown, it is not guessed.
+ */
+const V5_PEOPLE_SIDE: LocalMigration = {
+  to: 5,
+  statements: [
+    `ALTER TABLE employee ADD COLUMN employee_code TEXT`,
+    `ALTER TABLE employee ADD COLUMN first_name TEXT`,
+    `ALTER TABLE employee ADD COLUMN last_name TEXT`,
+    `ALTER TABLE employee ADD COLUMN father_name TEXT`,
+    `ALTER TABLE employee ADD COLUMN national_id TEXT`,
+    `ALTER TABLE employee ADD COLUMN passport_number TEXT`,
+    `ALTER TABLE employee ADD COLUMN date_of_birth TEXT`,
+    `ALTER TABLE employee ADD COLUMN gender TEXT`,
+    `ALTER TABLE employee ADD COLUMN marital_status TEXT`,
+    `ALTER TABLE employee ADD COLUMN email TEXT`,
+    `ALTER TABLE employee ADD COLUMN emergency_contact TEXT`,
+    `ALTER TABLE employee ADD COLUMN address TEXT`,
+    `ALTER TABLE employee ADD COLUMN city TEXT`,
+    `ALTER TABLE employee ADD COLUMN province TEXT`,
+    `ALTER TABLE employee ADD COLUMN department_id TEXT`,
+    `ALTER TABLE employee ADD COLUMN position TEXT`,
+    `ALTER TABLE employee ADD COLUMN employment_type TEXT`,
+    `ALTER TABLE employee ADD COLUMN hire_date TEXT`,
+    `ALTER TABLE employee ADD COLUMN termination_date TEXT`,
+    `ALTER TABLE employee ADD COLUMN status TEXT`,
+    `ALTER TABLE employee ADD COLUMN salary_currency TEXT`,
+    `ALTER TABLE employee ADD COLUMN bank_account TEXT`,
+    `ALTER TABLE employee ADD COLUMN bank_name TEXT`,
+    `ALTER TABLE employee ADD COLUMN notes TEXT`,
+  ],
+}
+
+/**
+ * v6 — the sales side that used to be online-only.
+ *
+ * Installment plans, late fees, price lists and promotions run on the device
+ * now (offline endpoint matrix), so their tables exist here. The statements are
+ * the SAME list a fresh install creates (local-sales-schema), so a migrated
+ * cache and a new one cannot differ.
+ */
+const V6_SALES_SIDE: LocalMigration = {
+  to: 6,
+  statements: [...SALES_SIDE_STATEMENTS, ...SALES_SIDE_ALTERS],
+}
+
+/**
+ * v7 — the books and the stock side that used to be online-only.
+ *
+ * Purchase orders, stock counts and the rest of what the offline endpoint matrix
+ * moved onto the device. The statements are the SAME list a fresh install
+ * creates (local-books-schema), so a migrated cache and a new one cannot differ.
+ */
+const V7_BOOKS_AND_STOCK: LocalMigration = {
+  to: 7,
+  statements: [...BOOKS_STOCK_STATEMENTS],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
   V4_OUTBOX_OWNER,
+  V5_PEOPLE_SIDE,
+  V6_SALES_SIDE,
+  V7_BOOKS_AND_STOCK,
 ]
 
 /**

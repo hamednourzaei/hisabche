@@ -33,6 +33,8 @@ import {
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import { TillView } from '../till-view'
+import { CloudRequiredNotice } from '../../cloud-required-notice'
+import { isOfflineNotAvailableError } from '../../../../lib/capability/use-action-availability'
 
 export const TillContainer = memo(function TillContainer() {
   const translate = useTranslations()
@@ -261,6 +263,21 @@ export const TillContainer = memo(function TillContainer() {
     }
     cashFlow.refetch()
   }, [cashFlow, current, ledger, selected, selectedTillId, tills])
+
+  // The device has no till engine yet: every till read answers «not available
+  // offline». Say so ONCE, in the product's own notice, instead of the same raw
+  // sentence under each of the page's panels.
+  if ([current, tills, cashFlow].some((query) => isOfflineNotAvailableError(query.error))) {
+    return (
+      <div className="p-4 sm:p-6">
+        <CloudRequiredNotice
+          variant="card"
+          title={t('nav.till', 'صندوق')}
+          description={t('offline.cloudRequired.description')}
+        />
+      </div>
+    )
+  }
 
   return (
     <TillView

@@ -2,11 +2,23 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Card, EmptyState, HubTabs, useHubTab, Badge, Skeleton } from '@/components/ui'
+import {
+  Card,
+  DataTable,
+  EmptyState,
+  HubTabs,
+  useHubTab,
+  Badge,
+  Skeleton,
+  type TableColumn,
+} from '@/components/ui'
 import { WorkspacesClient } from '../workspaces/workspaces-client'
 import { UsersClient } from '../users/users-client'
 import { Workspace360Sheet } from '@/components/customers/workspace-360-sheet'
-import { useTrialAbuseSignals } from '@/hooks/use-admin-customers'
+import { useTrialAbuseSignals, type TrialAbuseSignalItem } from '@/hooks/use-admin-customers'
+import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminDateTime } from '@/lib/admin-format'
 
 const CUSTOMERS_TABS = ['workspaces', 'users', 'devices', 'support', 'trial_abuse'] as const
 type CustomersTab = (typeof CUSTOMERS_TABS)[number]
@@ -68,8 +80,57 @@ export function CustomersClient() {
 
 function TrialAbuseTabContent() {
   const t = useTranslations()
-  const { data, isLoading, isError } = useTrialAbuseSignals()
+  const { data, isLoading, isError, refetch } = useTrialAbuseSignals()
   const signals = data?.signals ?? []
+  const locale = useAdminLocale()
+  const tableT = useAdminTableT()
+  const columns: TableColumn<TrialAbuseSignalItem>[] = [
+    {
+      id: 'signalType',
+      labelKey: 'admin.customers.signalType',
+      labelFallback: 'نوع سیگنال',
+      locked: true,
+      render: (s) => (
+        <Badge variant="destructive" className="font-mono text-xs">
+          {s.signal_type}
+        </Badge>
+      ),
+      sortValue: (s) => s.signal_type,
+    },
+    {
+      id: 'fingerprint',
+      labelKey: 'admin.customers.fingerprint',
+      labelFallback: 'اثر انگشت',
+      render: (s) => (
+        <span dir="ltr" className="block max-w-[180px] truncate font-mono text-xs text-foreground">
+          {s.fingerprint}
+        </span>
+      ),
+      sortValue: (s) => s.fingerprint,
+    },
+    {
+      id: 'workspaceCount',
+      labelKey: 'admin.customers.workspaceCount',
+      labelFallback: 'تعداد کسب‌وکار',
+      render: (s) => (
+        <span className="tabular-nums text-xs font-semibold text-foreground">
+          {s.workspace_count}
+        </span>
+      ),
+      sortValue: (s) => s.workspace_count,
+    },
+    {
+      id: 'lastSeen',
+      labelKey: 'admin.customers.lastSeen',
+      labelFallback: 'آخرین مشاهده',
+      render: (s) => (
+        <span className="whitespace-nowrap tabular-nums text-xs text-muted-foreground">
+          {adminDateTime(s.last_seen_at, locale)}
+        </span>
+      ),
+      sortValue: (s) => s.last_seen_at,
+    },
+  ]
 
   return (
     <div className="space-y-4">
@@ -82,58 +143,24 @@ function TrialAbuseTabContent() {
       )}
 
       {isError && !isLoading && (
-        <Card className="p-8">
-          <EmptyState
-            title={t('admin.customers.abuseLoadError')}
-            description={t('admin.customers.abuseLoadErrorHint')}
-          />
-        </Card>
+        <ErrorState message={t('admin.customers.abuseLoadError')} onRetry={() => void refetch()} />
       )}
 
-      {!isLoading && !isError && signals.length === 0 && (
-        <Card className="p-8">
-          <EmptyState
-            title={t('admin.customers.noAbuseSignals')}
-            description={t('admin.customers.noAbuseSignalsHint')}
-          />
-        </Card>
-      )}
-
-      {!isLoading && !isError && signals.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-start text-sm">
-              <thead className="border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 text-start">{t('admin.customers.signalType')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.customers.fingerprint')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.customers.workspaceCount')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.customers.lastSeen')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {signals.map((s) => (
-                  <tr key={s.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <Badge variant="destructive" className="font-mono text-xs">
-                        {s.signal_type}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-foreground" dir="ltr">
-                      {s.fingerprint}
-                    </td>
-                    <td className="px-4 py-3 text-xs tabular-nums text-foreground font-semibold">
-                      {s.workspace_count}
-                    </td>
-                    <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
-                      {new Date(s.last_seen_at).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+      {!isLoading && !isError && (
+        <DataTable
+          tableId="admin-customer-signals"
+          t={tableT}
+          rows={signals}
+          columns={columns}
+          rowKey={(s) => s.id}
+          minWidthClass="min-w-[720px]"
+          emptyState={
+            <EmptyState
+              title={t('admin.customers.noAbuseSignals')}
+              description={t('admin.customers.noAbuseSignalsHint')}
+            />
+          }
+        />
       )}
     </div>
   )

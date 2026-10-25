@@ -454,6 +454,7 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
         onPickProduct={handlePickProduct}
         onAddColumn={draft.addColumn}
         onUpdateColumn={draft.updateColumn}
+        onSetColumnMultiplier={draft.setColumnMultiplier}
         onReplaceColumn={handleReplaceColumn}
         onRemoveColumn={draft.removeColumn}
         onMoveColumn={handleMoveColumn}

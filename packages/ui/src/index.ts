@@ -194,6 +194,7 @@ export { DashboardHeader, type HeaderPerson } from './components/ui/dashboard-he
 export { useHeaderPeople, type HeaderPeopleUser } from './hooks/use-header-people'
 export { CommandPalette } from './components/ui/command-palette'
 export { GlobalSearch, type SearchPageItem } from './components/ui/global-search'
+export { useLocalePush, useLocaleReplace, useRouteLang } from './hooks/use-locale-push'
 
 // ---------- Navigation — Enterprise ----------
 export { NavigationProvider, useNavigation } from './hooks/menu/use-navigation-state'
@@ -331,6 +332,7 @@ export { DashboardView } from './components/ui/dashboard/dashboard-view'
 export { InsightCard } from './components/ui/dashboard/dashboard-stats'
 export { DashboardInvoices } from './components/ui/dashboard/dashboard-invoices'
 export { useDashboard } from './hooks/dashboard/use-dashboard'
+export { useDisplayBasis } from './hooks/dashboard/use-display-basis'
 
 // ---------- Human Resources ----------
 export { HumanResourcesContainer } from './components/ui/human-resources/containers/hr-container'
@@ -547,6 +549,10 @@ export {
   type CloudRequiredNoticeProps,
   type CloudRequiredVariant,
 } from './components/ui/cloud-required-notice'
+export { OfflineGate, type OfflineGateProps } from './components/ui/offline-gate'
+export { OfflinePageGate } from './components/ui/offline-page-gate'
+export { OfflineRefusalNotice } from './components/ui/offline-refusal-notice'
+export { featureForPage, PAGE_FEATURES } from './lib/capability/page-features'
 export {
   useActionAvailability,
   checkActionAvailability,

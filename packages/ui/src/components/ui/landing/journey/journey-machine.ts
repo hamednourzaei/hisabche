@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/landing/journey/journey-machine.ts
 //
 // The one place that decides WHERE THE STORY IS.
+// Derived from `journey.config.ts` (single source of truth).
 //
 // Input: a single number, how far the visitor has scrolled through the journey
 // (0 → 1), and the number of stations. Output: which beat is on screen, which
@@ -17,35 +18,37 @@
 export const JOURNEY_STATIONS = ['pay', 'cash', 'stock', 'post', 'report'] as const
 export type JourneyStationId = (typeof JOURNEY_STATIONS)[number]
 
-export type JourneyPhase =
-  'approaching' | 'gate-opening' | 'arrived' | 'handoff' | 'speaking' | 'leaving'
+import {
+  type JourneyPhase,
+  GATE_AT,
+  ARRIVE_AT,
+  ENTER_AT,
+  RECORDED_AT,
+  LEAVE_AT,
+  BURST_AT,
+  FINALE_AT,
+  OFFLINE_ON_THE_WAY_TO,
+  OFFLINE_AT,
+  type LinkState,
+  type GateState,
+  type ZoneState,
+} from '../journey.config'
 
-/** Within one station's beat (0 → 1): when each phase begins. */
-// The agent reaches the gate on the road a third of the way into the beat, so
-// the gate has to start opening before that.
-export const GATE_AT = 0.22
-export const ARRIVE_AT = 0.46
-/** The invoice starts going into the slot. */
-export const ENTER_AT = 0.5
-/** The machine has recorded it. */
-export const RECORDED_AT = 0.68
-/** The invoice comes back out. */
-export const LEAVE_AT = 0.8
-
-/** In the ending: the core bursts, and once it has, the invitation appears. */
-export const BURST_AT = 0.42
-export const FINALE_AT = 0.8
-
-/**
- * On the way to this station the connection drops: work goes on, on the device,
- * and is sent when the connection is back — which it is as the gate opens.
- */
-export const OFFLINE_ON_THE_WAY_TO: JourneyStationId = 'stock'
-export const OFFLINE_AT = 0.04
-export type LinkState = 'online' | 'offline' | 'restoring'
-
-export type GateState = 'closed' | 'open' | 'passed'
-export type ZoneState = 'visited' | 'current' | 'upcoming'
+export {
+  type JourneyPhase,
+  GATE_AT,
+  ARRIVE_AT,
+  ENTER_AT,
+  RECORDED_AT,
+  LEAVE_AT,
+  BURST_AT,
+  FINALE_AT,
+  OFFLINE_ON_THE_WAY_TO,
+  OFFLINE_AT,
+  type LinkState,
+  type GateState,
+  type ZoneState,
+}
 
 export interface JourneySnapshot {
   /** 0 is the opening (the printer), 1…n the stations, n + 1 the ending. */

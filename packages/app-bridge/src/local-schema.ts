@@ -12,7 +12,10 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 4
+export const SCHEMA_VERSION = 7
+
+import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
+import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
 
 export const CREATE_STATEMENTS: readonly string[] = [
   // ─── Products & Stock ─────────────────────────────────────────
@@ -54,6 +57,7 @@ export const CREATE_STATEMENTS: readonly string[] = [
     opening_balance INTEGER NOT NULL DEFAULT 0,
     type TEXT,
     declared_role TEXT,
+    price_list_id TEXT,
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL,
@@ -182,8 +186,200 @@ export const CREATE_STATEMENTS: readonly string[] = [
     origin TEXT NOT NULL DEFAULT 'local',
     sync_state TEXT NOT NULL DEFAULT 'local_only',
     dirty INTEGER NOT NULL DEFAULT 0,
-    version INTEGER NOT NULL DEFAULT 1
+    version INTEGER NOT NULL DEFAULT 1,
+    -- v5 — the server's employee, column for column (people side, offline).
+    employee_code TEXT,
+    first_name TEXT,
+    last_name TEXT,
+    father_name TEXT,
+    national_id TEXT,
+    passport_number TEXT,
+    date_of_birth TEXT,
+    gender TEXT,
+    marital_status TEXT,
+    email TEXT,
+    emergency_contact TEXT,
+    address TEXT,
+    city TEXT,
+    province TEXT,
+    department_id TEXT,
+    position TEXT,
+    employment_type TEXT,
+    hire_date TEXT,
+    termination_date TEXT,
+    status TEXT,
+    salary_currency TEXT,
+    bank_account TEXT,
+    bank_name TEXT,
+    notes TEXT
   )`,
+
+  // ─── People (v5) — the server's HR tables, narrowed to what the device runs ──
+  // Money here is in the units the API speaks (like invoice/payment above), so a
+  // row read back has the same number the server's response would carry.
+  `CREATE TABLE IF NOT EXISTS employee_branch_assignment (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    employee_id TEXT NOT NULL,
+    branch_id TEXT NOT NULL,
+    is_primary INTEGER NOT NULL DEFAULT 1,
+    starts_at TEXT NOT NULL,
+    ends_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_emp_branch_employee ON employee_branch_assignment(workspace_id, employee_id)`,
+
+  `CREATE TABLE IF NOT EXISTS payroll (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    employee_id TEXT NOT NULL,
+    period_start TEXT NOT NULL,
+    period_end TEXT NOT NULL,
+    base_salary REAL NOT NULL DEFAULT 0,
+    bonuses REAL NOT NULL DEFAULT 0,
+    deductions REAL NOT NULL DEFAULT 0,
+    overtime_hours REAL NOT NULL DEFAULT 0,
+    overtime_rate REAL NOT NULL DEFAULT 0,
+    overtime_amount REAL NOT NULL DEFAULT 0,
+    tax_amount REAL NOT NULL DEFAULT 0,
+    net_salary REAL NOT NULL DEFAULT 0,
+    currency TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft',
+    payment_date TEXT,
+    notes TEXT,
+    journal_entry_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_payroll_employee ON payroll(workspace_id, employee_id)`,
+
+  `CREATE TABLE IF NOT EXISTS leave (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    employee_id TEXT NOT NULL,
+    leave_type TEXT NOT NULL,
+    start_date TEXT NOT NULL,
+    end_date TEXT NOT NULL,
+    total_days REAL NOT NULL DEFAULT 0,
+    duration_units REAL,
+    reason TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    approved_by TEXT,
+    approved_at TEXT,
+    requested_by TEXT,
+    branch_id TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_leave_employee ON leave(workspace_id, employee_id)`,
+
+  `CREATE TABLE IF NOT EXISTS work_shift (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    starts_at TEXT NOT NULL,
+    ends_at TEXT NOT NULL,
+    break_minutes INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_work_shift_name ON work_shift(workspace_id, name)`,
+
+  `CREATE TABLE IF NOT EXISTS shift_assignment (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    employee_id TEXT NOT NULL,
+    shift_id TEXT NOT NULL,
+    work_date TEXT NOT NULL,
+    shift_name TEXT NOT NULL,
+    starts_at TEXT NOT NULL,
+    ends_at TEXT NOT NULL,
+    is_cancelled INTEGER NOT NULL DEFAULT 0,
+    cancelled_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_shift_assignment_day ON shift_assignment(workspace_id, work_date)`,
+
+  `CREATE TABLE IF NOT EXISTS attendance (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    employee_id TEXT NOT NULL,
+    date TEXT NOT NULL,
+    check_in TEXT,
+    check_out TEXT,
+    status TEXT NOT NULL DEFAULT 'present',
+    notes TEXT,
+    ends_next_day INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_day ON attendance(workspace_id, employee_id, date)`,
+
+  `CREATE TABLE IF NOT EXISTS budget (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    account_id TEXT NOT NULL,
+    branch_id TEXT,
+    period TEXT NOT NULL,
+    starts_on TEXT NOT NULL,
+    amount_minor INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    warn_at_percent INTEGER NOT NULL DEFAULT 80,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    name TEXT,
+    budget_type TEXT NOT NULL DEFAULT 'expense',
+    status TEXT NOT NULL DEFAULT 'draft',
+    version INTEGER NOT NULL DEFAULT 1,
+    distribution TEXT,
+    notes TEXT,
+    approved_by TEXT,
+    approved_at TEXT,
+    created_by TEXT,
+    currency TEXT,
+    amount_currency_minor INTEGER,
+    fx_rate REAL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_budget_workspace ON budget(workspace_id)`,
+
+  `CREATE TABLE IF NOT EXISTS budget_revision (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    budget_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    previous_version INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    actor_id TEXT,
+    previous_values TEXT,
+    new_values TEXT,
+    lines TEXT,
+    approved_by TEXT,
+    created_at TEXT NOT NULL,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_budget_revision_budget ON budget_revision(workspace_id, budget_id)`,
 
   // ─── Identity & Setup ─────────────────────────────────────────
   `CREATE TABLE IF NOT EXISTS local_user (
@@ -340,6 +536,8 @@ export const CREATE_STATEMENTS: readonly string[] = [
     status TEXT NOT NULL DEFAULT 'posted',
     journal_entry_id TEXT,
     branch_id TEXT,
+    pos_session_id TEXT,
+    till_amount_minor INTEGER,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     deleted_at TEXT,
@@ -443,6 +641,12 @@ export const CREATE_STATEMENTS: readonly string[] = [
     updated_at TEXT NOT NULL
   )`,
 
+  // ─── Sales side: installments, late fees, price lists, promotions (v6) ──
+  ...SALES_SIDE_STATEMENTS,
+
+  // ─── Books and stock: purchase orders, counts, assets, … (v7) ──
+  ...BOOKS_STOCK_STATEMENTS,
+
   // ─── Sync Plumbing & Meta ─────────────────────────────────────
   `CREATE TABLE IF NOT EXISTS sync_queue (
     client_id TEXT PRIMARY KEY,
@@ -510,6 +714,7 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'opening_balance',
     'type',
     'declared_role',
+    'price_list_id',
     'is_active',
     'created_at',
     'updated_at',
@@ -616,6 +821,30 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'phone',
     'salary',
     'is_active',
+    'employee_code',
+    'first_name',
+    'last_name',
+    'father_name',
+    'national_id',
+    'passport_number',
+    'date_of_birth',
+    'gender',
+    'marital_status',
+    'email',
+    'emergency_contact',
+    'address',
+    'city',
+    'province',
+    'department_id',
+    'position',
+    'employment_type',
+    'hire_date',
+    'termination_date',
+    'status',
+    'salary_currency',
+    'bank_account',
+    'bank_name',
+    'notes',
     'created_at',
     'updated_at',
     'deleted_at',

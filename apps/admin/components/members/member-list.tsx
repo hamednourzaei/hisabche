@@ -25,6 +25,8 @@ import {
 import { ErrorState } from '@/components/admin-shell/admin-ui'
 import { cn } from '@/lib/utils'
 import { RemoveMemberDialog } from './remove-member-dialog'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminDate } from '@/lib/admin-format'
 
 const ROLES: MemberRole[] = ['owner', 'manager', 'seller']
 
@@ -49,6 +51,7 @@ export function MemberList({
   expanded: boolean
   regionId: string
 }) {
+  const dateLocale = useAdminLocale()
   const t = useTranslations()
   const { data, isLoading, isError, refetch } = useWorkspaceMembers(workspaceId, expanded)
   const updateRole = useUpdateMemberRole(workspaceId)
@@ -140,7 +143,7 @@ export function MemberList({
                   <div className="mt-0.5 text-xs text-muted-foreground">
                     {t('admin.member.joined')}:{' '}
                     <time dateTime={member.joinedAt} suppressHydrationWarning>
-                      {new Date(member.joinedAt).toLocaleDateString()}
+                      {adminDate(member.joinedAt, dateLocale)}
                     </time>
                   </div>
                 )}

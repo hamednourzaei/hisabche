@@ -26,6 +26,7 @@ import { NotFoundError, ValidationError } from '../errors'
 import type { LocalDb } from '../db'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
+import { drawFromLayers } from './cost-layers'
 
 export interface InvoiceRow {
   id: string
@@ -356,17 +357,22 @@ export function registerInvoiceRoutes(router: Router): void {
     if (!inv) throw new NotFoundError('Invoice', id)
 
     const allocations = db.all<{
+      id: string
       payment_id: string
       amount: number
       created_at: string
       payment_number: string
       entry_date: string
       method: string
+      reference: string | null
+      status: string | null
     }>(
-      `SELECT pa.payment_id, pa.amount, pa.created_at, p.payment_number, p.entry_date, p.method
+      `SELECT pa.id, pa.payment_id, pa.amount, pa.created_at, p.payment_number, p.entry_date,
+              p.method, p.reference, p.status
        FROM payment_allocation pa
        JOIN payment p ON p.id = pa.payment_id
-       WHERE pa.invoice_id = ? AND pa.workspace_id = ? AND pa.deleted_at IS NULL`,
+       WHERE pa.invoice_id = ? AND pa.workspace_id = ? AND pa.deleted_at IS NULL
+       ORDER BY pa.created_at ASC`,
       [id, workspaceId],
     )
 
@@ -382,14 +388,28 @@ export function registerInvoiceRoutes(router: Router): void {
       [id, workspaceId],
     )
 
+    // ⚠️ The SERVER's shape (invoice-related.service): the invoice page reads
+    // `date` for the payment's day and `allocatedTotal` to tell whether the
+    // paid amount is backed by payments. Without them an offline sale showed
+    // «تاریخ نامشخص» and «مجموع تخصیص‌یافته ۰» and claimed a payment was missing.
+    // A device has no tills or bank fees, so those are honestly null.
+    const payments = allocations.map((a) => ({
+      allocationId: a.id,
+      paymentId: a.payment_id,
+      paymentNumber: a.payment_number,
+      tillSessionId: null,
+      tillLabel: null,
+      feeAmount: null,
+      amount: a.amount,
+      date: a.entry_date,
+      method: a.method,
+      reference: a.reference ?? null,
+      status: a.status ?? null,
+    }))
+
     return {
-      payments: allocations.map((a) => ({
-        paymentId: a.payment_id,
-        paymentNumber: a.payment_number,
-        amount: a.amount,
-        entryDate: a.entry_date,
-        method: a.method,
-      })),
+      payments,
+      allocatedTotal: payments.reduce((sum, p) => sum + p.amount, 0),
       journalEntry: journalEntry
         ? {
             id: journalEntry.id,
@@ -664,69 +684,19 @@ export function registerInvoiceRoutes(router: Router): void {
         // Sales consume cost layers via configured costing method (FIFO or AVCO)
         for (const item of derivedItems) {
           if (item.productId && item.quantity > 0) {
-            const layers = db.all<{
-              id: string
-              product_id: string
-              warehouse_id: string | null
-              remaining_qty: number
-              unit_cost: number
-              entry_date: string
-              created_at: string
-            }>(
-              `SELECT id, product_id, warehouse_id, remaining_qty, unit_cost, entry_date, created_at
-               FROM cost_layer
-               WHERE workspace_id = ? AND product_id = ? AND remaining_qty > 0 AND deleted_at IS NULL
-               ORDER BY entry_date ASC, created_at ASC`,
-              [workspaceId, item.productId],
-            )
-
-            const plan = planConsumption(
-              layers.map((l) => ({
-                id: l.id,
-                productId: l.product_id,
-                warehouseId: l.warehouse_id,
-                remainingQty: Number(l.remaining_qty),
-                unitCost: l.unit_cost,
-                entryDate: l.entry_date,
-                createdAt: l.created_at,
-              })),
-              item.quantity,
-              { method: costingMethod },
-            )
-
-            costOfGoodsSold += plan.totalCost
-
-            for (const step of plan.steps) {
-              if (step.layerId && step.quantity > 0) {
-                db.run(
-                  'UPDATE cost_layer SET remaining_qty = remaining_qty - ?, updated_at = ? WHERE id = ?',
-                  [step.quantity, now, step.layerId],
-                )
-
-                db.run(
-                  `INSERT INTO cost_consumption (
-                    id, workspace_id, layer_id, product_id, warehouse_id, consumer_type,
-                    consumer_id, consumer_line, quantity, unit_cost, currency, entry_date,
-                    created_at, updated_at, origin, sync_state
-                  ) VALUES (?, ?, ?, ?, ?, 'invoice', ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
-                  [
-                    generateUuid(),
-                    workspaceId,
-                    step.layerId,
-                    item.productId,
-                    data.warehouseId || null,
-                    invoiceId,
-                    item.id,
-                    step.quantity,
-                    step.unitCost,
-                    booksCurrency,
-                    date,
-                    now,
-                    now,
-                  ],
-                )
-              }
-            }
+            const drawn = drawFromLayers(db, {
+              workspaceId,
+              productId: item.productId,
+              quantity: item.quantity,
+              invoiceId,
+              invoiceLine: item.id,
+              entryDate: date,
+              currency: booksCurrency,
+              method: costingMethod,
+              warehouseId: data.warehouseId || null,
+              now,
+            })
+            costOfGoodsSold += drawn.totalCost
           }
         }
       }

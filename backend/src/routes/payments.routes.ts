@@ -16,6 +16,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { recordPaymentSchema, cancelPaymentSchema as cancelSchema } from '@hisabche/validation'
 import { PaymentsService } from '../services/payments'
+import { verifyPaymentPosting } from '../services/core-shadow'
 import {
   IdempotencyUnavailableError,
   readClientRequestId,
@@ -111,6 +112,16 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
         const body = recordPaymentSchema.parse(request.body)
         const payment = await paymentsService.recordPayment(request.tenancy, body, {
           clientRequestId: readClientRequestId(request),
+          // SHADOW VERIFICATION — see backend/src/services/core-shadow.ts for
+          // why this route and not `/api/sync/push` (that road cannot carry
+          // money at all). It records a divergence and changes nothing: the
+          // payment above is already written, and this callback cannot alter
+          // it.
+          onPosted: ({ posting, facts }) => {
+            void verifyPaymentPosting(request.tenancy, facts, posting).catch((error: unknown) => {
+              request.log.warn({ err: error }, 'shadow verification failed')
+            })
+          },
         })
         return sendCreated(reply, payment)
       } catch (err) {

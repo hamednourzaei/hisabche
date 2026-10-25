@@ -111,6 +111,33 @@ describe('a branch', () => {
     ).toEqual(['gold@hoy=20', 'leas@hoy=100'])
   })
 
+  it('⚠️ a warehouse placed in no branch stays open to every branch', () => {
+    const shared: StockPlacement = {
+      ...placement,
+      warehouses: [
+        ...placement.warehouses,
+        { id: 'shared-wh', name: 'خانه', branchId: null, branchName: null },
+      ],
+      stock: [...placement.stock, { productId: 'gold', warehouseId: 'shared-wh', quantity: 7 }],
+    }
+    expect(warehousesForBranch(shared, SAADAT).map((warehouse) => warehouse.name)).toEqual([
+      'hoy',
+      'خانه',
+    ])
+    // …and its goods are still pickable on a sale made in a branch.
+    expect(
+      names(
+        pickerRows({
+          products,
+          placement: shared,
+          warehouseId: null,
+          branchId: SAADAT,
+          mode: 'sale',
+        }),
+      ),
+    ).toContain('gold@خانه=7')
+  })
+
   it('a database that cannot place warehouses in branches does not filter by one', () => {
     const unplaced: StockPlacement = { ...placement, branchesConfigured: false }
     expect(warehousesForBranch(unplaced, SAADAT)).toHaveLength(2)

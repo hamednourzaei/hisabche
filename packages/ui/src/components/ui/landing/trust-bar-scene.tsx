@@ -3,18 +3,21 @@
 import type { LucideIcon } from 'lucide-react'
 import { Briefcase, Factory, Store, Truck } from 'lucide-react'
 
-import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
+import { CardAccent, LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TrustBarScene v9 — four business scenarios. The list of every business type
-   moved to the boards on the walls of the journey hall (`journey-industries.ts`).
-   Before that it was a static list here, and before that a marquee: The marquee (two infinitely animated ribbons) is gone: PageSpeed
-   counted 85–90 animated elements on the landing, and a list you have to wait
-   for is worse to scan than one you can read.
+   TrustBarScene v10 — four business scenarios, drawn as four ruled columns.
+   The list of every business type moved to the boards on the walls of the
+   journey hall (`journey-industries.ts`). Before that it was a static list
+   here, and before that a marquee: PageSpeed counted 85–90 animated elements
+   on the landing, and a list you have to wait for is worse to scan than one
+   you can read.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface TrustBarSceneProps {
   t: (key: string, fallback?: string) => string
+  /** Chapter number of this section on the page (`03`). */
+  index?: string | undefined
 }
 
 /** What each kind of business runs in the product — the modules, not a promise. */
@@ -25,7 +28,7 @@ const SCENARIOS: Array<{ key: string; icon: LucideIcon }> = [
   { key: 'services', icon: Briefcase },
 ]
 
-export default function TrustBarScene({ t }: TrustBarSceneProps) {
+export default function TrustBarScene({ t, index }: TrustBarSceneProps) {
   return (
     <section id="industries" className={LANDING_SECTION}>
       <div className={LANDING_CONTAINER}>
@@ -38,21 +41,28 @@ export default function TrustBarScene({ t }: TrustBarSceneProps) {
           says what the software is BUILT for instead.
         */}
         <SectionHeader
+          index={index}
           label={t('landing.industries.label')}
           title={t('landing.trustBarLabel', 'Built for every type of business')}
         />
 
-        <ul className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-          {SCENARIOS.map(({ key, icon: Icon }) => (
+        <ul className="grid gap-px overflow-hidden rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--border-default))] sm:grid-cols-2 lg:grid-cols-4">
+          {SCENARIOS.map(({ key, icon: Icon }, i) => (
             <li
               key={key}
-              className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)] p-4 sm:p-5"
+              className="group relative flex flex-col bg-[hsl(var(--surface-base))] p-5 transition-colors duration-300 hover:bg-[hsl(var(--surface-elevated))] sm:p-6"
             >
-              <Icon className="mb-3 size-6 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-              <h3 className="mb-1 text-balance text-base font-semibold text-[hsl(var(--fg-primary))]">
+              <CardAccent />
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-mono text-xs tabular-nums text-[hsl(var(--fg-tertiary))]">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <Icon className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+              </div>
+              <h3 className="mt-4 text-balance text-base font-bold text-[hsl(var(--fg-primary))] sm:text-lg">
                 {t(`landing.industries.${key}.title`)}
               </h3>
-              <p className="text-pretty text-sm leading-relaxed text-[hsl(var(--fg-secondary))]">
+              <p className="mt-1 text-pretty text-sm leading-6 text-[hsl(var(--fg-secondary))]">
                 {t(`landing.industries.${key}.desc`)}
               </p>
             </li>

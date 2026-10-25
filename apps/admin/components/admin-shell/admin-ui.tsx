@@ -1,8 +1,19 @@
 'use client'
 
+import { useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui'
+
+/**
+ * `DataTable` asks for `(key, fallback) => string`. next-intl's translator has a
+ * different second parameter, so it cannot be passed directly. Admin keys are
+ * complete in all three locales, which is why the fallback is not consulted.
+ */
+export function useAdminTableT(): (key: string, fallback?: string) => string {
+  const t = useTranslations()
+  return useCallback((key: string) => t(key), [t])
+}
 
 /**
  * Shared error state for admin screens.

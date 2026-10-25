@@ -31,33 +31,20 @@ import { z } from 'zod'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
-import { MARKABLE_STATUSES, attendanceService } from '../services/payroll/attendance.service'
 import {
-  MAX_ASSIGNMENT_DAYS,
-  shiftAssignmentService,
-} from '../services/payroll/shift-assignment.service'
+  assignShiftBodySchema,
+  attendanceIsoDay,
+  attendanceMarkBodySchema,
+  createShiftBodySchema,
+  setShiftActiveBodySchema,
+} from '@hisabche/validation'
+import { attendanceService } from '../services/payroll/attendance.service'
+import { shiftAssignmentService } from '../services/payroll/shift-assignment.service'
 import { shiftService } from '../services/payroll/shift.service'
 import { requireRole } from '../services/tenancy.service'
 
 const MEMBER = [authenticate, requireWorkspaceContext]
-const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
-/** `HH:MM`, the shop's own local time. */
-const clock = z.string().regex(/^[0-9]{1,2}:[0-9]{2}$/)
-const time = z
-  .string()
-  .regex(/^\d{1,2}:\d{2}$/)
-  .nullable()
-  .default(null)
-
-const markBody = z.object({
-  employeeId: z.string().uuid(),
-  date: isoDay,
-  status: z.enum(MARKABLE_STATUSES),
-  checkIn: time,
-  checkOut: time,
-  endsNextDay: z.boolean().default(false),
-  note: z.string().trim().max(500).nullable().default(null),
-})
+const isoDay = attendanceIsoDay
 
 function fail(fastify: FastifyInstance, reply: FastifyReply, err: unknown, fallback: string) {
   if (err instanceof z.ZodError) {
@@ -96,7 +83,10 @@ export async function attendanceRoutes(fastify: FastifyInstance) {
       try {
         requireRole(request.tenancy, 'manager')
         return reply.send(
-          await attendanceService.mark(request.tenancy, markBody.parse(request.body)),
+          await attendanceService.mark(
+            request.tenancy,
+            attendanceMarkBodySchema.parse(request.body),
+          ),
         )
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to record attendance')
@@ -118,14 +108,7 @@ export async function attendanceRoutes(fastify: FastifyInstance) {
   fastify.post('/api/shifts', { preHandler: MEMBER }, async (request: FastifyRequest, reply) => {
     try {
       requireRole(request.tenancy, 'manager')
-      const input = z
-        .object({
-          name: z.string().trim().min(1).max(60),
-          startsAt: clock,
-          endsAt: clock,
-          breakMinutes: z.number().int().min(0).max(600).default(0),
-        })
-        .parse(request.body)
+      const input = createShiftBodySchema.parse(request.body)
       return reply.code(201).send(await shiftService.create(request.tenancy, input))
     } catch (err) {
       return fail(fastify, reply, err, 'Failed to save the shift')
@@ -139,7 +122,7 @@ export async function attendanceRoutes(fastify: FastifyInstance) {
       try {
         requireRole(request.tenancy, 'manager')
         const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
-        const { isActive } = z.object({ isActive: z.boolean() }).parse(request.body)
+        const { isActive } = setShiftActiveBodySchema.parse(request.body)
         return reply.send(await shiftService.setActive(request.tenancy, id, isActive))
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to update the shift')
@@ -169,14 +152,7 @@ export async function attendanceRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply) => {
       try {
         requireRole(request.tenancy, 'manager')
-        const input = z
-          .object({
-            employeeId: z.string().uuid(),
-            shiftId: z.string().uuid(),
-            fromDate: isoDay,
-            days: z.number().int().min(1).max(MAX_ASSIGNMENT_DAYS).default(1),
-          })
-          .parse(request.body)
+        const input = assignShiftBodySchema.parse(request.body)
         return reply.code(201).send(await shiftAssignmentService.assign(request.tenancy, input))
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to save the shift plan')

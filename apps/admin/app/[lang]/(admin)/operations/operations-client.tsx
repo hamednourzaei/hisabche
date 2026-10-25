@@ -10,10 +10,12 @@ import {
   CardContent,
   Badge,
   Button,
+  DataTable,
   EmptyState,
   Skeleton,
   HubTabs,
   useHubTab,
+  type TableColumn,
 } from '@/components/ui'
 import { ServersClient } from '../servers/servers-client'
 import {
@@ -24,6 +26,9 @@ import {
   type BackgroundJobItem,
 } from '@/hooks/use-admin-ops'
 import { StepUpDialog } from '@/components/admin-shell/step-up-dialog'
+import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminDateTime, UNKNOWN_VALUE } from '@/lib/admin-format'
 
 const OPERATIONS_TABS = ['health', 'servers', 'jobs', 'announcements'] as const
 type OperationsTab = (typeof OPERATIONS_TABS)[number]
@@ -103,7 +108,7 @@ function SystemHealthTabContent() {
                     )}
                   </div>
                   {p.details && (
-                    <div className="text-[11px] text-muted-foreground truncate">{p.details}</div>
+                    <div className="text-xs text-muted-foreground truncate">{p.details}</div>
                   )}
                 </div>
               ))}
@@ -121,7 +126,7 @@ function ProbeStatusBadge({ status }: { status: string }) {
   if (status === 'DOWN') variant = 'destructive'
   if (status === 'DEGRADED') variant = 'outline'
   return (
-    <Badge variant={variant} className="text-[10px]">
+    <Badge variant={variant} className="text-xs">
       {status}
     </Badge>
   )
@@ -136,6 +141,82 @@ function BackgroundJobsTabContent() {
   const [targetJob, setTargetJob] = useState<BackgroundJobItem | null>(null)
 
   const jobs = data?.jobs ?? []
+  const locale = useAdminLocale()
+  const tableT = useAdminTableT()
+  const columns: TableColumn<BackgroundJobItem>[] = [
+    {
+      id: 'jobType',
+      labelKey: 'admin.operations.jobType',
+      labelFallback: 'نوع کار',
+      locked: true,
+      render: (j) => (
+        <span className="font-mono text-xs font-semibold text-foreground">{j.job_type}</span>
+      ),
+      sortValue: (j) => j.job_type,
+    },
+    {
+      id: 'jobId',
+      labelKey: 'admin.operations.jobId',
+      labelFallback: 'شناسه کار',
+      showFrom: 'md',
+      render: (j) => (
+        <span dir="ltr" className="font-mono text-xs text-muted-foreground">
+          {j.id.slice(0, 14)}…
+        </span>
+      ),
+      sortValue: (j) => j.id,
+    },
+    {
+      id: 'status',
+      labelKey: 'admin.operations.status',
+      labelFallback: 'وضعیت',
+      render: (j) => <JobStatusBadge status={j.status} />,
+      sortValue: (j) => j.status,
+    },
+    {
+      id: 'createdAt',
+      labelKey: 'admin.operations.createdAt',
+      labelFallback: 'زمان ایجاد',
+      showFrom: 'md',
+      render: (j) => (
+        <span className="whitespace-nowrap tabular-nums text-muted-foreground">
+          {adminDateTime(j.created_at, locale)}
+        </span>
+      ),
+      sortValue: (j) => j.created_at,
+    },
+    {
+      id: 'errorMessage',
+      labelKey: 'admin.operations.errorMessage',
+      labelFallback: 'پیام خطا',
+      showFrom: 'lg',
+      render: (j) => (
+        <span className="block max-w-[220px] truncate font-mono text-xs text-destructive">
+          {j.error_message ?? UNKNOWN_VALUE}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      labelKey: 'admin.operations.actions',
+      labelFallback: 'عملیات',
+      align: 'end',
+      locked: true,
+      render: (j) =>
+        j.status === 'FAILED' ? (
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label={`${t('admin.operations.retry')} — ${j.id.slice(0, 14)}…`}
+            onClick={() => setTargetJob(j)}
+          >
+            {t('admin.operations.retry')}
+          </Button>
+        ) : (
+          <span className="text-xs text-muted-foreground">{UNKNOWN_VALUE}</span>
+        ),
+    },
+  ]
 
   const handleRetryConfirm = async ({ stepUpTimestamp }: { stepUpTimestamp: string }) => {
     if (!targetJob) return
@@ -158,72 +239,24 @@ function BackgroundJobsTabContent() {
       )}
 
       {isError && !isLoading && (
-        <Card className="p-8">
-          <EmptyState title={t('admin.operations.jobsError')} />
-        </Card>
+        <ErrorState message={t('admin.operations.jobsError')} onRetry={() => void refetch()} />
       )}
 
-      {!isLoading && !isError && jobs.length === 0 && (
-        <Card className="p-8">
-          <EmptyState
-            title={t('admin.operations.noJobs')}
-            description={t('admin.operations.noJobsHint')}
-          />
-        </Card>
-      )}
-
-      {!isLoading && !isError && jobs.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-start text-xs">
-              <thead className="border-b border-border bg-muted/40 font-medium text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 text-start">{t('admin.operations.jobType')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.operations.jobId')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.operations.status')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.operations.createdAt')}</th>
-                  <th className="px-4 py-3 text-start">{t('admin.operations.errorMessage')}</th>
-                  <th className="px-4 py-3 text-end">{t('admin.operations.actions')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {jobs.map((j) => (
-                  <tr key={j.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-3 font-semibold text-foreground font-mono">
-                      {j.job_type}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-muted-foreground text-[11px]" dir="ltr">
-                      {j.id.slice(0, 14)}...
-                    </td>
-                    <td className="px-4 py-3">
-                      <JobStatusBadge status={j.status} />
-                    </td>
-                    <td className="px-4 py-3 tabular-nums text-muted-foreground whitespace-nowrap">
-                      {new Date(j.created_at).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-destructive font-mono text-[11px] truncate max-w-[200px]">
-                      {j.error_message ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-end">
-                      {j.status === 'FAILED' ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => setTargetJob(j)}
-                        >
-                          {t('admin.operations.retry')}
-                        </Button>
-                      ) : (
-                        <span className="text-muted-foreground text-[11px]">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+      {!isLoading && !isError && (
+        <DataTable
+          tableId="admin-background-jobs"
+          t={tableT}
+          rows={jobs}
+          columns={columns}
+          rowKey={(j) => j.id}
+          minWidthClass="min-w-[900px]"
+          emptyState={
+            <EmptyState
+              title={t('admin.operations.noJobs')}
+              description={t('admin.operations.noJobsHint')}
+            />
+          }
+        />
       )}
 
       {/* StepUp Dialog for Job Retry */}
@@ -248,7 +281,7 @@ function JobStatusBadge({ status }: { status: string }) {
   if (status === 'FAILED') variant = 'destructive'
   if (status === 'RUNNING') variant = 'outline'
   return (
-    <Badge variant={variant} className="text-[10px]">
+    <Badge variant={variant} className="text-xs">
       {status}
     </Badge>
   )
@@ -257,6 +290,7 @@ function JobStatusBadge({ status }: { status: string }) {
 // ─── TAB 4: ANNOUNCEMENTS & MAINTENANCE ──────────────────────────────
 
 function AnnouncementsTabContent() {
+  const dateLocale = useAdminLocale()
   const t = useTranslations()
   const { data, isLoading, isError } = useAdminAnnouncements()
   const announcements = data?.announcements ?? []
@@ -296,19 +330,19 @@ function AnnouncementsTabContent() {
                   variant={
                     a.level === 'MAINTENANCE' || a.level === 'CRITICAL' ? 'destructive' : 'default'
                   }
-                  className="text-[10px]"
+                  className="text-xs"
                 >
                   {a.level}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground whitespace-pre-wrap">{a.message}</p>
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground pt-1 border-t border-border">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1 border-t border-border">
                 <span>
-                  {t('admin.operations.startsAt')} {new Date(a.starts_at).toLocaleString()}
+                  {t('admin.operations.startsAt')} {adminDateTime(a.starts_at, dateLocale)}
                 </span>
                 {a.ends_at && (
                   <span>
-                    | {t('admin.operations.endsAt')} {new Date(a.ends_at).toLocaleString()}
+                    | {t('admin.operations.endsAt')} {adminDateTime(a.ends_at, dateLocale)}
                   </span>
                 )}
               </div>

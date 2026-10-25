@@ -3,14 +3,7 @@ import { BILLING_CURRENCY } from '@hisabche/ui-contract'
 import { ScopedMessages } from './scoped-messages'
 import type { Metadata } from 'next'
 import { setRequestLocale } from 'next-intl/server'
-import {
-  localeUrl,
-  languageAlternates,
-  localeToBcp47,
-  resolveLocale,
-  SITE_URL,
-  locales,
-} from './i18n-config'
+import { localeUrl, languageAlternates, resolveLocale, SITE_URL, locales } from './i18n-config'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RootPage — localized landing page for /, /en, /af
@@ -171,26 +164,120 @@ function JsonLd({ lang }: { lang: string }) {
   const locale = resolveLocale(lang)
   const config = pageConfig[locale]
 
-  const schema = {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    name: config.schemaName,
-    alternateName: config.schemaAlternateName,
-    applicationCategory: 'BusinessApplication',
-    operatingSystem: config.schemaOperatingSystem,
-    description: config.schemaDescription,
-    url: localeUrl(locale),
-    offers: {
-      '@type': 'Offer',
-      price: '0',
-      priceCurrency: BILLING_CURRENCY[locale as keyof typeof BILLING_CURRENCY],
+  const faqItems = {
+    fa: [
+      {
+        question: 'آیا حسابچه رایگان است؟',
+        answer:
+          'بله، نسخه رایگان حسابچه برای یک کسب‌وکار و امکانات اصلی کاملاً رایگان است. برای امکانات پیشرفته می‌توانید نسخه تجاری را تهیه کنید.',
+      },
+      {
+        question: 'چطور حسابچه را شروع کنم؟',
+        answer:
+          'کافی است روی دکمه شروع رایگان کلیک کنید و ثبت‌نام کنید. هیچ کارت بانکی لازم ندارید.',
+      },
+      {
+        question: 'آیا حتماً باید اینترنت داشته باشم؟',
+        answer:
+          'خیر. حسابچه کاملاً آفلاین کار می‌کند. می‌توانید فاکتور ثبت کنید، موجودی را بروز کنید و به محض اتصال دوباره، همه چیز به‌طور خودکار همگام‌سازی می‌شود.',
+      },
+      {
+        question: 'اگر گوشی‌ام خراب شود، اطلاعاتم از بین می‌رود؟',
+        answer:
+          'خیر. تمام اطلاعات شما در سرور امن حسابچه بک‌آپ می‌شود. همچنین نسخه‌ای امن روی خود گوشی ذخیره می‌شود.',
+      },
+    ],
+    af: [
+      {
+        question: 'آیا حسابچه رایگان است؟',
+        answer: 'بلی، نسخه رایگان حسابچه برای یک تجارت و امکانات اصلی کاملاً رایگان است.',
+      },
+      {
+        question: 'چطور حسابچه را شروع کنم؟',
+        answer:
+          'کافی است روی دکمه شروع رایگان کلیک کرده و ثبت‌نام نمایید. بدون نیاز به کارت بانکی.',
+      },
+      {
+        question: 'آیا حتماً باید انترنت داشته باشم؟',
+        answer:
+          'نخیر. حسابچه کاملاً آفلاین کار می‌کند و بدون انترنت فاکتور و گدام ثبت می‌شود و با وصل مجدد همگام می‌گردد.',
+      },
+      {
+        question: 'اگر تلفن خراب شود، معلومات از بین می‌رود؟',
+        answer: 'نخیر. تمام معلومات در سرور امن حسابچه ذخیره و بک‌آپ می‌شود.',
+      },
+    ],
+    en: [
+      {
+        question: 'Is Hisabche free to use?',
+        answer:
+          'Yes, Hisabche offers a free plan with double-entry accounting, sales, and stock management with no credit card required.',
+      },
+      {
+        question: 'How do I get started?',
+        answer: 'Click Start Free and register in 30 seconds. Your workspace is ready immediately.',
+      },
+      {
+        question: 'Does Hisabche require an internet connection?',
+        answer:
+          'No. Hisabche is offline-first. You can issue sales, record purchases, and manage stock offline, automatically syncing upon reconnection.',
+      },
+      {
+        question: 'Will my data be lost if my device is damaged?',
+        answer:
+          'No. Your records are encrypted and synchronized safely to the cloud with daily point-in-time backups.',
+      },
+    ],
+  }[locale]
+
+  const schemas = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: config.siteName,
+      url: SITE_URL,
+      logo: `${SITE_URL}/logo.png`,
     },
-  }
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: config.siteName,
+      url: localeUrl(locale),
+      inLanguage: config.ogLocale,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: config.schemaName,
+      alternateName: config.schemaAlternateName,
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: config.schemaOperatingSystem,
+      description: config.schemaDescription,
+      url: localeUrl(locale),
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: BILLING_CURRENCY[locale as keyof typeof BILLING_CURRENCY],
+      },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqItems.map((item) => ({
+        '@type': 'Question',
+        name: item.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: item.answer,
+        },
+      })),
+    },
+  ]
 
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schemas) }}
     />
   )
 }

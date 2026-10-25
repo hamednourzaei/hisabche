@@ -3,7 +3,10 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   setupFiles: ['<rootDir>/jest.setup.js'],
-  roots: ['<rootDir>/../../packages/app-shell/src', '<rootDir>/electron'],
+  // `src` holds the desktop-side suites that are not Electron-main code — today
+  // that is the golden-vector parity test, which proves the shared core computes
+  // the same bytes under Jest as under Vitest.
+  roots: ['<rootDir>/../../packages/app-shell/src', '<rootDir>/electron', '<rootDir>/src'],
   testPathIgnorePatterns: ['<rootDir>/e2e/'],
 
   // ⚠️ Jest's default treats EVERY file under `__tests__` as a suite, so a
@@ -16,7 +19,11 @@ module.exports = {
     '\.css$': '<rootDir>/src/__mocks__/style.js',
   },
   transform: {
-    '^.+\.tsx?$': ['ts-jest', { tsconfig: { jsx: 'react-jsx', module: 'commonjs' } }],
+    // @noble/hashes (the local engine's checksum) ships ES modules only: it is compiled too.
+    '^.+\.(t|j)sx?$': [
+      'ts-jest',
+      { tsconfig: { jsx: 'react-jsx', module: 'commonjs', allowJs: true } },
+    ],
   },
-  transformIgnorePatterns: ['node_modules/(?!(@hisabche)/)'],
+  transformIgnorePatterns: ['node_modules/(?!(@hisabche|@noble)/)'],
 }

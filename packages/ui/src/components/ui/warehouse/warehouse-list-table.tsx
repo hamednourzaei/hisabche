@@ -22,8 +22,23 @@ interface Row {
   id: string
   name: string
   location: string
-  summary: StockSummary
+  /**
+   * `null` when the answer did not carry one — an older offline engine or a
+   * response cached before the shape was fixed. A warehouse with no figures is
+   * shown with «—»; it must not take the whole page down, and it must not be
+   * shown as «۰ محصول» either (unknown is not zero).
+   */
+  summary: StockSummary | null
   unassigned: boolean
+}
+
+/** One figure of a row, or «—» when the row has none. */
+function figure(
+  fmt: (v: number) => string,
+  summary: StockSummary | null,
+  pick: (summary: StockSummary) => number,
+): string {
+  return summary ? fmt(pick(summary)) : '—'
 }
 
 export const WarehouseListTable = memo(function WarehouseListTable({
@@ -47,7 +62,12 @@ export const WarehouseListTable = memo(function WarehouseListTable({
   const [search, setSearch] = useState('')
 
   const rows = useMemo<Row[]>(() => {
-    const list: Row[] = warehouses.map((warehouse) => ({ ...warehouse, unassigned: false }))
+    // The type says `summary` is always there; the wire does not promise it.
+    const list: Row[] = warehouses.map((warehouse) => ({
+      ...warehouse,
+      summary: (warehouse as { summary?: StockSummary | null }).summary ?? null,
+      unassigned: false,
+    }))
     if (unassigned) {
       list.push({
         id: UNASSIGNED_WAREHOUSE_ID,
@@ -95,17 +115,21 @@ export const WarehouseListTable = memo(function WarehouseListTable({
         labelKey: 'warehouse.totalProducts',
         labelFallback: 'تعداد محصولات',
         align: 'end',
-        sortValue: (row) => row.summary.productCount,
-        render: (row) => <span className="tabular-nums">{fmt(row.summary.productCount)}</span>,
+        sortValue: (row) => row.summary?.productCount ?? null,
+        render: (row) => (
+          <span className="tabular-nums">{figure(fmt, row.summary, (x) => x.productCount)}</span>
+        ),
       },
       {
         id: 'value',
         labelKey: 'warehouse.totalValue',
         labelFallback: 'ارزش کل (AFN)',
         align: 'end',
-        sortValue: (row) => row.summary.totalValue,
+        sortValue: (row) => row.summary?.totalValue ?? null,
         render: (row) => (
-          <span className="font-medium tabular-nums">{fmt(row.summary.totalValue)}</span>
+          <span className="font-medium tabular-nums">
+            {figure(fmt, row.summary, (x) => x.totalValue)}
+          </span>
         ),
       },
       {
@@ -114,10 +138,10 @@ export const WarehouseListTable = memo(function WarehouseListTable({
         labelFallback: 'موجودی کم',
         align: 'end',
         showFrom: 'md',
-        sortValue: (row) => row.summary.lowStockCount,
+        sortValue: (row) => row.summary?.lowStockCount ?? null,
         render: (row) => (
           <span className="tabular-nums text-[hsl(var(--color-warning))]">
-            {fmt(row.summary.lowStockCount)}
+            {figure(fmt, row.summary, (x) => x.lowStockCount)}
           </span>
         ),
       },
@@ -127,10 +151,10 @@ export const WarehouseListTable = memo(function WarehouseListTable({
         labelFallback: 'ناموجود',
         align: 'end',
         showFrom: 'md',
-        sortValue: (row) => row.summary.outOfStockCount,
+        sortValue: (row) => row.summary?.outOfStockCount ?? null,
         render: (row) => (
           <span className="tabular-nums text-[hsl(var(--color-destructive))]">
-            {fmt(row.summary.outOfStockCount)}
+            {figure(fmt, row.summary, (x) => x.outOfStockCount)}
           </span>
         ),
       },

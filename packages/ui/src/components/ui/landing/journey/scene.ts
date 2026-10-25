@@ -10,8 +10,9 @@
 //
 // What makes it read as a place rather than a diagram:
 //   • it is a ROOM: four walls, a ceiling of light panels, a tiled floor;
-//   • the sheet is CLIPPED at the slot, so it goes into the machine instead of
-//     shrinking in mid-air;
+//   • the sheet is CLIPPED at the slot, so it goes down into the machine's
+//     intake instead of shrinking in mid-air; on the way there
+//     `scene-clearance.ts` measures that it stays clear of every solid;
 //   • every board shows figures derived from one sale (`journey-screens.ts`) —
 //     no screen is a flat colour;
 //   • the camera has an authored shot per station (`journey-shots.ts`) and
@@ -31,6 +32,21 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 
 import type { SceneSetup } from '../three/scene-canvas'
+import { ARM_REACH, CARRY_Y, MIN_CLEARANCE, SHEET, clearanceToStation } from '../scene-clearance'
+import {
+  HINGE_X,
+  LEAF_BOTTOM,
+  LEAF_HEIGHT,
+  LEAF_LENGTH,
+  LEAF_THICKNESS,
+  PEDESTAL_DEPTH,
+  PEDESTAL_HALF_WIDTH,
+  PEDESTAL_HEIGHT,
+  PEDESTAL_X,
+  gateAngle,
+  gateOpening,
+} from '../scene-gates'
+import { gaitAt, turnToward, walkerAt, type Gait } from '../scene-gait'
 import {
   ARRIVE_AT,
   BURST_AT,
@@ -60,9 +76,22 @@ import { journeyState, type InvoiceLabels } from './journey-state'
 
 const GAP = STATION_GAP
 const HOVER = 3.1
-const SHEET_HALF = 1.03
+const SHEET_HALF = SHEET.halfHeight
 const MACHINE_SLOT = 1.16
-const PRINTER_SLOT = 1.32
+/** The printer's output line: the sheet rises between the slot's rollers. */
+const PRINT_LINE = 0.62
+/** Top of the printer's body: the sheet's lower edge starts here, never inside. */
+const PRINT_LIP = 1.06
+/** Where a sheet waits over an intake: clear of the board hung behind it. */
+/**
+ * How far in front of a machine's middle its intake stands, per kind: the clear
+ * strip between what each one has at the back (board, book, terminal) and what
+ * it has at the front (the register's keys).
+ */
+const SLOT_Z = [0.4, 0, 0.4, 0.4, 0.4] as const
+const slotZ = (kind: number) => SLOT_Z[kind % SLOT_Z.length] ?? 0.4
+const INTAKE_HOLD = MACHINE_SLOT + SHEET_HALF + 0.18
+/** Far below any floor: the clipping plane parked where it cuts nothing. */
 const FAR_BELOW = -100
 /** Four tiles of the floor texture cover this much floor. */
 const TILE_SPAN = 3.4
@@ -331,8 +360,10 @@ const setup: SceneSetup = (runtime) => {
   // A dim base, one key, a pool that follows the station being worked at, and
   // a rim on the agent. Ceiling panels and screens light themselves.
   scene.fog = new THREE.Fog(base, mobile ? 28 : 24, 82)
-  scene.add(new THREE.HemisphereLight(lamp, dark, 0.8))
-  const key = new THREE.DirectionalLight(lamp, 1)
+  // Less ambient, more key: a white room needs the difference between a lit
+  // face and a shaded one, or every solid reads as paper.
+  scene.add(new THREE.HemisphereLight(lamp, dark, mobile ? 0.66 : 0.58))
+  const key = new THREE.DirectionalLight(lamp, mobile ? 1.1 : 1.32)
   key.position.set(5 * flow, 9, 7)
   scene.add(key)
   const pool = new THREE.SpotLight(lamp, 3.4, 44, 0.6, 0.8, 0)
@@ -438,6 +469,60 @@ const setup: SceneSetup = (runtime) => {
   }
 
   // ── The hall ──
+  // ── Realism materials & architectural styling ──
+  const metalMat = (color: THREE.Color, roughness = 0.24) =>
+    new THREE.MeshStandardMaterial({ color, roughness, metalness: 0.88 })
+  const rubberMat = (color: THREE.Color = dark) =>
+    new THREE.MeshStandardMaterial({ color, roughness: 0.92, metalness: 0.04 })
+
+  // Procedural UI textures for background desk screens (tables, charts, ledger rows)
+  const screenUI = (accentColor: THREE.Color, type: 0 | 1 | 2) =>
+    painted(128, 80, (ctx) => {
+      ctx.fillStyle = css(deep)
+      ctx.fillRect(0, 0, 128, 80)
+      ctx.fillStyle = css(dark)
+      ctx.fillRect(4, 4, 120, 14)
+      ctx.fillStyle = css(accentColor)
+      ctx.fillRect(8, 8, 24, 6)
+      if (type === 0) {
+        // Bar chart
+        for (let b = 0; b < 6; b++) {
+          const h = 12 + ((b * 7 + 11) % 40)
+          ctx.fillStyle = css(b % 2 === 0 ? accentColor : trim)
+          ctx.fillRect(12 + b * 18, 72 - h, 12, h)
+        }
+      } else if (type === 1) {
+        // Table with status dots
+        for (let r = 0; r < 4; r++) {
+          const y = 24 + r * 12
+          ctx.fillStyle = css(r === 1 ? done : trim)
+          ctx.beginPath()
+          ctx.arc(10, y + 4, 3, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.fillStyle = css(light)
+          ctx.fillRect(18, y + 2, 52, 4)
+          ctx.fillStyle = css(accentColor)
+          ctx.fillRect(84, y + 2, 36, 4)
+        }
+      } else {
+        // Area / line graph
+        ctx.strokeStyle = css(accentColor)
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(10, 68)
+        ctx.lineTo(34, 46)
+        ctx.lineTo(60, 54)
+        ctx.lineTo(88, 30)
+        ctx.lineTo(118, 38)
+        ctx.stroke()
+      }
+    })
+  const deskScreens = [
+    lit(grey.setScalar(1).clone(), screenUI(busy, 0)),
+    lit(grey.setScalar(1).clone(), screenUI(done, 1)),
+    lit(grey.setScalar(1).clone(), screenUI(warm, 2)),
+  ]
+
   // Ceramic floor: glossy tiles with grout lines, each a slightly different tone.
   let grain = 7
   const vary = () => {
@@ -647,9 +732,114 @@ const setup: SceneSetup = (runtime) => {
   repeat(cube, matte(body), desks)
   repeat(cube, matte(trim), legs)
   repeat(cube, matte(dark), monitors)
+  displays.forEach((group, idx) => {
+    if (group.length > 0 && deskScreens[idx]) {
+      repeat(flat, deskScreens[idx], group)
+    }
+  })
   repeat(cube, matte(dark, 0.9), beams)
   const lampMaterial = lit(lamp.clone())
   repeat(flat, lampMaterial, lamps)
+
+  // ── Layered Architectural Walls & Ceiling Infrastructure (Realism Pass) ──
+  const baseboards: Placement[] = []
+  const wainscots: Placement[] = []
+  const crownMoldings: Placement[] = []
+  const wallPanels: Placement[] = []
+  const cableTrays: Placement[] = []
+  const airDucts: Placement[] = []
+  const diffusers: Placement[] = []
+  const sprinklers: Placement[] = []
+  const keyboards: Placement[] = []
+  const mice: Placement[] = []
+  const mugs: Placement[] = []
+  const paperStacks: Placement[] = []
+
+  // Baseboards, dado panels, crown moldings along both main walls
+  for (const wall of [-1, 1]) {
+    const wX = wall * (hall.halfWidth + 0.12)
+    baseboards.push([wX, 0.08, centre, 0.08, 0.16, length, 0, 0])
+    wainscots.push([wX, 0.62, centre, 0.06, 0.92, length, 0, 0])
+    crownMoldings.push([wX, H - 0.1, centre, 0.12, 0.18, length, 0, 0])
+
+    // Architectural breakup: acoustic wood slat panels and utility panels every ~6m
+    for (let z = hall.front - 3; z > hall.back + 3; z -= 6) {
+      if (atDoor(wall, z, 3)) continue
+      wallPanels.push([wX - wall * 0.05, 3.2, z, 0.04, 2.8, 1.8, (-wall * Math.PI) / 2, 0])
+    }
+  }
+
+  // Ceiling MEP: dual cable trays and HVAC ductwork
+  for (const x of [-4.8, 4.8]) {
+    cableTrays.push([x, H - 0.72, centre, 0.44, 0.12, length, 0, 0])
+  }
+  for (const x of [-7.2, 7.2]) {
+    airDucts.push([x, H - 0.52, centre, 0.72, 0.52, length, 0, 0])
+  }
+  for (let z = hall.front - 4.5; z > hall.back + 3; z -= 9) {
+    for (const x of [-7.2, 7.2]) {
+      diffusers.push([x, H - 0.79, z, 0.82, 0.04, 0.82, 0, 0])
+    }
+  }
+  for (let z = hall.front - 3; z > hall.back + 3; z -= 4.5) {
+    sprinklers.push([0, H - 0.22, z, 0.08, 0.18, 0.08, 0, 0])
+  }
+
+  // Desk accessories (props library on office tables)
+  tables.forEach((t, i) => {
+    keyboards.push([t.x + t.wall * 0.08, 0.78, t.z, 0.48, 0.024, 0.16, (-t.wall * Math.PI) / 2, 0])
+    mice.push([
+      t.x + t.wall * 0.08,
+      0.78,
+      t.z + 0.22,
+      0.08,
+      0.026,
+      0.12,
+      (-t.wall * Math.PI) / 2,
+      0,
+    ])
+    mugs.push([t.x - t.wall * 0.16, 0.82, t.z - 0.34, 0.1, 0.11, 0.1, 0, 0])
+    if (i % 2 === 0) {
+      paperStacks.push([t.x - t.wall * 0.14, 0.81, t.z + 0.38, 0.26, 0.06, 0.34, 0, 0])
+    }
+  })
+
+  // Loading dock safety boundary: black/yellow hazard striping
+  if (doorSide !== 0) {
+    const hazardStripe = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.24, doorHigh - doorLow),
+      new THREE.MeshBasicMaterial({
+        map: painted(32, 128, (ctx) => {
+          ctx.fillStyle = css(warm)
+          ctx.fillRect(0, 0, 32, 128)
+          ctx.fillStyle = css(dark)
+          for (let s = 0; s < 8; s++) {
+            ctx.beginPath()
+            ctx.moveTo(0, s * 16)
+            ctx.lineTo(32, s * 16 + 12)
+            ctx.lineTo(32, s * 16 + 20)
+            ctx.lineTo(0, s * 16 + 8)
+            ctx.fill()
+          }
+        }),
+      }),
+    )
+    hazardStripe.rotation.x = -Math.PI / 2
+    scene.add(at(hazardStripe, doorSide * (hall.halfWidth - 0.14), 0.025, doorZ))
+  }
+
+  repeat(cube, matte(dark, 0.45), baseboards)
+  repeat(cube, matte(base.clone().lerp(light, 0.16), 0.68), wainscots)
+  repeat(cube, matte(dark, 0.45), crownMoldings)
+  repeat(cube, matte(trim, 0.55), wallPanels)
+  repeat(cube, metalMat(dark, 0.3), cableTrays)
+  repeat(cube, metalMat(trim, 0.32), airDucts)
+  repeat(cube, matte(dark, 0.5), diffusers)
+  repeat(cube, metalMat(warm, 0.2), sprinklers)
+  repeat(cube, matte(dark, 0.6), keyboards)
+  repeat(cube, matte(dark, 0.4), mice)
+  repeat(cube, matte(busy.clone().lerp(light, 0.35), 0.38), mugs)
+  repeat(cube, matte(light, 0.85), paperStacks)
   // When the connection comes back, a sheet of light crosses the hall in the
   // direction the page reads.
   const wave = new THREE.Mesh(
@@ -736,15 +926,27 @@ const setup: SceneSetup = (runtime) => {
   }
 
   // ── The printer ──
+  // A plotter: the sheet rises through a modelled slot between two lips and a
+  // pair of rollers. Nothing is ever inside the body — the sheet's lower edge
+  // starts on the slot, never below it.
   const printer = new THREE.Group()
   printer.add(at(block(2.9, 0.95, 2.1, body, 0.14), 0, 0.5, 0))
   printer.add(at(block(2.6, 0.34, 1.5, body, 0.12), 0, 1.13, -0.2))
-  printer.add(at(mouth(1.85), 0, PRINTER_SLOT - 0.03, 0.3))
   printer.add(at(block(2.3, 0.06, 0.9, dark, 0.03), 0, 0.2, 1.3))
   printer.add(at(block(1.1, 0.22, 0.05, dark, 0.02), -0.6, 0.62, 1.06))
-  const feed = at(rod(0.12, 1.9, trim, 12), 0, PRINTER_SLOT - 0.16, 0.3)
+  // The slot: a lip either side of the sheet's plane, and the rollers that
+  // feed it. The gap between them is where the paper comes out.
+  for (const z of [0.52, 0.74]) {
+    printer.add(at(block(2.0, 0.07, 0.08, dark, 0.02), 0, PRINT_LIP - 0.02, z))
+  }
+  for (const x of [-0.95, 0.95]) {
+    printer.add(at(block(0.07, 0.34, 0.34, trim, 0.02), x, PRINT_LIP + 0.1, PRINT_LINE))
+  }
+  const feed = at(rod(0.055, 1.9, trim, 14), 0, PRINT_LIP + 0.06, PRINT_LINE - 0.09)
   feed.rotation.z = Math.PI / 2
-  printer.add(feed)
+  const roller = at(rod(0.055, 1.9, trim, 14), 0, PRINT_LIP + 0.06, PRINT_LINE + 0.09)
+  roller.rotation.z = Math.PI / 2
+  printer.add(feed, roller)
   const printerLamp = new THREE.MeshBasicMaterial({ color: busy })
   printer.add(at(new THREE.Mesh(new THREE.CircleGeometry(0.07, 20), printerLamp), 1.05, 0.62, 1.06))
   scene.add(printer)
@@ -759,6 +961,12 @@ const setup: SceneSetup = (runtime) => {
     fore: THREE.Mesh[]
     legs: THREE.Mesh[]
     shins: THREE.Mesh[]
+    /** The contact disc. Kept on the floor even when the root is not. */
+    shadow: THREE.Mesh
+    eyebrows?: THREE.Mesh[] | undefined
+    eyelids?: THREE.Mesh[] | undefined
+    fingers?: THREE.Group[] | undefined
+    visorState?: { lamp: THREE.MeshBasicMaterial; eyes: THREE.Mesh[] } | undefined
   }
   type Look = 'robot' | 'woman' | 'man'
   const skin = warm.clone().lerp(light, 0.6)
@@ -787,12 +995,20 @@ const setup: SceneSetup = (runtime) => {
     const shins: THREE.Mesh[] = []
     const arms: THREE.Mesh[] = []
     const fore: THREE.Mesh[] = []
+    const eyebrows: THREE.Mesh[] = []
+    const eyelids: THREE.Mesh[] = []
+    const fingers: THREE.Group[] = []
+    let visorState: { lamp: THREE.MeshBasicMaterial; eyes: THREE.Mesh[] } | undefined
+
     for (const half of [-1, 1]) {
       const thigh = segment(robot ? 0.1 : 0.095, 0.4, legColor)
       const shin = segment(0.08, 0.4, legColor)
       shin.position.y = -0.42
       shin.add(at(block(0.17, 0.11, 0.32, robot ? dark : base, 0.04), 0, -0.47, -0.07))
-      if (robot) thigh.add(at(ball(0.105, dark), 0, -0.42, 0))
+      if (robot) {
+        thigh.add(at(ball(0.105, dark), 0, -0.42, 0))
+        thigh.add(at(rod(0.11, 0.04, trim, 12), 0, -0.02, 0))
+      }
       thigh.add(shin)
       root.add(at(thigh, half * 0.13, 0.95, 0))
       legs.push(thigh)
@@ -801,8 +1017,43 @@ const setup: SceneSetup = (runtime) => {
       const upper = segment(robot ? 0.085 : 0.075, 0.28, cloth)
       const lower = segment(0.065, 0.26, cloth)
       lower.position.y = -0.3
-      lower.add(at(ball(0.075, robot ? dark : skin), 0, -0.31, 0))
-      if (robot) upper.add(at(ball(0.09, dark), 0, -0.3, 0))
+
+      // Articulated Hand & Fingers Construction (Realism Pass)
+      const handGroup = new THREE.Group()
+      if (robot) {
+        // Articulated mechanical gripper: palm block + 3 jointed clamp fingers
+        handGroup.add(block(0.12, 0.05, 0.12, dark, 0.02))
+        for (let f = -1; f <= 1; f++) {
+          const finger = block(0.024, 0.06, 0.03, light, 0.008)
+          finger.rotation.x = 0.35
+          handGroup.add(at(finger, f * 0.038, -0.045, -0.04))
+        }
+        const thumb = block(0.026, 0.05, 0.03, light, 0.008)
+        thumb.rotation.z = -half * 0.5
+        handGroup.add(at(thumb, -half * 0.05, -0.03, 0.03))
+      } else {
+        // Human articulated hand: wrist cylinder + palm + opposable thumb + 4 fingers
+        handGroup.add(at(rod(0.032, 0.035, skin, 10), 0, 0.02, 0))
+        handGroup.add(at(block(0.08, 0.04, 0.09, skin, 0.02), 0, -0.02, -0.01))
+        // 4 fingers with subtle flexion
+        for (let f = 0; f < 4; f++) {
+          const finger = block(0.016, 0.045, 0.018, skin, 0.006)
+          finger.rotation.x = 0.28
+          handGroup.add(at(finger, -0.03 + f * 0.02, -0.055, -0.035))
+        }
+        // Opposed thumb
+        const thumb = block(0.018, 0.04, 0.02, skin, 0.006)
+        thumb.rotation.y = -half * 0.4
+        thumb.rotation.z = -half * 0.35
+        handGroup.add(at(thumb, -half * 0.045, -0.035, 0.01))
+      }
+      lower.add(at(handGroup, 0, -0.31, 0))
+      fingers.push(handGroup)
+
+      if (robot) {
+        upper.add(at(ball(0.09, dark), 0, -0.3, 0))
+        upper.add(at(rod(0.095, 0.04, trim, 12), 0, -0.02, 0))
+      }
       upper.add(lower)
       root.add(at(upper, half * (robot ? 0.42 : look === 'woman' ? 0.31 : 0.37), 1.58, 0))
       arms.push(upper)
@@ -811,34 +1062,39 @@ const setup: SceneSetup = (runtime) => {
 
     const head = new THREE.Group()
     if (robot) {
-      // White shell, dark joints, a visor with two lit eyes.
+      // Robot protagonist: glossy shell, dark joints, dynamic multi-state visor
       root.add(at(block(0.66, 0.6, 0.42, light, 0.18), 0, 1.38, 0))
       root.add(at(block(0.4, 0.22, 0.3, dark, 0.08), 0, 1.0, 0))
       root.add(at(block(0.2, 0.08, 0.02, busy, 0.01), 0, 1.46, -0.215))
       head.add(block(0.52, 0.44, 0.48, light, 0.2))
       head.add(at(block(0.42, 0.2, 0.06, base, 0.06), 0, 0.02, -0.225))
+
+      const visorLamp = lit(busy.clone())
+      const robotEyes: THREE.Mesh[] = []
       for (const half of [-1, 1]) {
-        const eye = new THREE.Mesh(
-          new THREE.CircleGeometry(0.045, 16),
-          new THREE.MeshBasicMaterial({ color: busy }),
-        )
+        const eye = new THREE.Mesh(new THREE.CircleGeometry(0.048, 16), visorLamp)
         eye.rotation.y = Math.PI
         head.add(at(eye, half * 0.1, 0.02, -0.258))
+        robotEyes.push(eye)
         const ear = rod(0.09, 0.05, dark)
         ear.rotation.z = Math.PI / 2
         head.add(at(ear, half * 0.275, 0, 0))
       }
+      // Scanning line across visor
+      const scanBar = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.018), visorLamp)
+      scanBar.rotation.y = Math.PI
+      head.add(at(scanBar, 0, -0.035, -0.258))
+
+      visorState = { lamp: visorLamp, eyes: robotEyes }
       root.add(at(rod(0.07, 0.12, dark), 0, 1.72, 0), at(head, 0, 1.98, 0))
     } else {
       if (look === 'woman') {
-        // Blazer, fitted waist, knee-length skirt, hair in a bun.
         root.add(at(block(0.52, 0.42, 0.34, cloth, 0.15), 0, 1.45, 0))
         root.add(at(block(0.4, 0.26, 0.26, cloth, 0.1), 0, 1.15, 0))
         const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.31, 0.46, 18), matte(cloth))
         root.add(at(skirt, 0, 0.84, 0), at(block(0.14, 0.24, 0.02, light, 0.01), 0, 1.5, -0.175))
         head.add(at(ball(0.11, hair), 0, 0.2, 0.17))
       } else {
-        // Suit jacket, shirt and tie.
         root.add(at(block(0.6, 0.68, 0.34, cloth, 0.12), 0, 1.32, 0))
         root.add(at(block(0.17, 0.42, 0.02, light, 0.01), 0, 1.4, -0.175))
         root.add(at(block(0.055, 0.34, 0.02, busy, 0.01), 0, 1.38, -0.19))
@@ -848,10 +1104,72 @@ const setup: SceneSetup = (runtime) => {
       const cap = ball(0.238, hair)
       cap.scale.set(1, 0.92, 1)
       head.add(at(cap, 0, 0.05, 0.05))
+
+      // Expressive Facial Features: Sclera + Iris + Pupil + Specular Catchlight + Eyebrows (Realism Pass)
+      for (const half of [-1, 1]) {
+        const eyeGroup = new THREE.Group()
+        // Sclera (white eye)
+        const sclera = new THREE.Mesh(
+          new THREE.SphereGeometry(0.038, 12, 10),
+          new THREE.MeshBasicMaterial({ color: 0xffffff }),
+        )
+        sclera.scale.set(1.2, 0.85, 0.5)
+        eyeGroup.add(sclera)
+        // Iris (warm amber-brown)
+        const iris = new THREE.Mesh(
+          new THREE.CircleGeometry(0.022, 12),
+          new THREE.MeshBasicMaterial({ color: 0x4a2c11 }),
+        )
+        iris.position.z = 0.02
+        eyeGroup.add(iris)
+        // Pupil (dark center)
+        const pupil = new THREE.Mesh(
+          new THREE.CircleGeometry(0.011, 10),
+          new THREE.MeshBasicMaterial({ color: 0x050505 }),
+        )
+        pupil.position.z = 0.022
+        eyeGroup.add(pupil)
+        // Catchlight (specular highlight dot)
+        const catchlight = new THREE.Mesh(
+          new THREE.CircleGeometry(0.005, 6),
+          new THREE.MeshBasicMaterial({ color: 0xffffff }),
+        )
+        catchlight.position.set(0.008, 0.008, 0.024)
+        eyeGroup.add(catchlight)
+
+        // Upper Eyelid for blinking
+        const eyelid = new THREE.Mesh(new THREE.PlaneGeometry(0.052, 0.028), matte(skin))
+        eyelid.position.set(0, 0.016, 0.026)
+        eyelid.visible = false
+        eyeGroup.add(eyelid)
+        eyelids.push(eyelid)
+
+        head.add(at(eyeGroup, half * 0.075, 0.02, -0.21))
+
+        // Eyebrow with state-dependent tilt
+        const brow = block(0.065, 0.016, 0.02, hair, 0.006)
+        brow.rotation.z = half * 0.08
+        head.add(at(brow, half * 0.075, 0.075, -0.212))
+        eyebrows.push(brow)
+      }
+
       root.add(at(rod(0.06, 0.1, skin), 0, 1.7, 0), at(head, 0, 1.9, 0))
     }
-    root.add(shadow(0.62, 0.62))
-    return { root, head, arms, fore, legs, shins }
+    const footing = shadow(0.62, 0.62)
+    root.add(footing)
+    return {
+      root,
+      head,
+      arms,
+      fore,
+      legs,
+      shins,
+      shadow: footing,
+      eyebrows,
+      eyelids,
+      fingers,
+      visorState,
+    }
   }
 
   /** Move a figure toward a pose: `stride` is the walk cycle, `carry` raises both forearms. */
@@ -899,7 +1217,10 @@ const setup: SceneSetup = (runtime) => {
       shin.rotation.x = -1.45
     })
     seated.root.rotation.y = (-table.wall * Math.PI) / 2
-    scene.add(at(seated.root, table.x - table.wall * 0.98, -0.4, table.z))
+    // Hip at stool height, so the shins put both feet on the floor instead of
+    // hanging ten centimetres above it.
+    scene.add(at(seated.root, table.x - table.wall * 0.98, -0.5, table.z))
+    seated.shadow.position.y = 0.516
     const stool = new THREE.Group()
     stool.add(
       at(block(0.5, 0.08, 0.5, dark, 0.04), 0, 0.5, 0),
@@ -921,21 +1242,26 @@ const setup: SceneSetup = (runtime) => {
     crowd.push({ who, home, role: 'walks' })
   }
   // ── Where everything stands ──
-  /** Where the sheet hovers over a stop, how high its slot is, which way it faces. */
+  /** Where the printer and each station stand, and which way the face turns. */
   const stops = [
-    { x: 0, z: 0.3, slot: PRINTER_SLOT, turn: 0 },
+    { x: 0, z: 0.3, turn: 0 },
     ...Array.from({ length: stations }, (_, index) => {
       const x = (index % 2 === 0 ? flow : -flow) * side
       // Each machine is turned a little toward the road, so its face is seen.
-      return { x, z: -(index + 1) * GAP, slot: MACHINE_SLOT, turn: -Math.sign(x) * 0.22 }
+      return { x, z: -(index + 1) * GAP, turn: -Math.sign(x) * 0.22 }
     }),
   ]
-  const origin = stops[0] ?? { x: 0, z: 0.3, slot: PRINTER_SLOT, turn: 0 }
+  const origin = stops[0] ?? { x: 0, z: 0.3, turn: 0 }
   /** Where the agent stands at a stop: on the road, beside the machine, clear of the camera. */
   const spots = stops.map((stop) => ({
     x: stop.x === 0 ? -2.2 * flow : stop.x - Math.sign(stop.x) * 2.5,
     z: stop.z + 1.3,
   }))
+  /** Where a machine's intake is in the hall: its mouth, turned with the machine. */
+  const intakeOf = (stop: { x: number; z: number; turn: number }, kind: number) => ({
+    x: stop.x + Math.sin(stop.turn) * slotZ(kind),
+    z: stop.z + Math.cos(stop.turn) * slotZ(kind),
+  })
   /** How far along the walk to a station its gate stands. */
   const GATE_ALONG = 0.7
 
@@ -945,6 +1271,8 @@ const setup: SceneSetup = (runtime) => {
     screen: THREE.MeshBasicMaterial
     moving: THREE.Object3D
     kind: number
+    beam: THREE.Mesh
+    beamMaterial: THREE.MeshBasicMaterial
   }
   const machines: Machine[] = []
   const clerks: Figure[] = []
@@ -953,7 +1281,7 @@ const setup: SceneSetup = (runtime) => {
     lift: THREE.Object3D
     carton: THREE.Object3D
     van: THREE.Group
-    wheels: THREE.Mesh[]
+    wheels: (THREE.Mesh | THREE.Group)[]
     arm: THREE.Group
     puffs: THREE.Mesh[]
     smoke: THREE.MeshBasicMaterial[]
@@ -991,8 +1319,27 @@ const setup: SceneSetup = (runtime) => {
 
     // What every machine shares is only the intake: a counter with a mouth.
     group.add(at(block(2.6, 1.1, 1.7, body, 0.12), 0, 0.55, 0))
-    group.add(at(mouth(1.8), 0, MACHINE_SLOT - 0.03, 0))
+    group.add(at(mouth(1.8), 0, MACHINE_SLOT - 0.03, slotZ(kind)))
     group.add(at(block(2.7, 0.08, 1.8, dark, 0.03), 0, 0.05, 0))
+
+    // The scanner that reads the sheet: a head on the intake, and the line of
+    // light it throws across the paper held in front of it. It sits inside the
+    // counter's solid, so nothing the robot carries can reach it.
+    const reader = -Math.sign(place.x) || -1
+    group.add(at(block(0.4, 0.24, 0.34, dark, 0.04), reader * 0.98, 1.28, 0.55))
+    group.add(at(glow(0.22, 0.1, lit(busy.clone())), reader * 0.98, 1.31, 0.73))
+    const beamMaterial = new THREE.MeshBasicMaterial({
+      color: busy,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    })
+    const beam = new THREE.Mesh(new THREE.PlaneGeometry(1.62, 0.045), beamMaterial)
+    beam.position.set(reader * 1.08, 3.3, 1.6)
+    beam.visible = false
+    group.add(beam)
 
     if (kind === 0) {
       // Payment terminal: a handset on a stem, tilted screen, keypad, card.
@@ -1070,17 +1417,70 @@ const setup: SceneSetup = (runtime) => {
       }
 
       const truck = new THREE.Group()
+      // Cargo box and cab body
       truck.add(at(block(2.5, 1.55, 1.6, light, 0.1), -0.45, 1.3, 0))
       truck.add(at(block(1.05, 1.15, 1.6, busy, 0.16), 1.4, 1.1, 0))
+      // Windshield & side mirrors
       truck.add(at(block(0.05, 0.42, 1.3, dark, 0.02), 1.93, 1.32, 0))
+      for (const mz of [-0.92, 0.92]) {
+        truck.add(at(block(0.08, 0.14, 0.16, dark, 0.02), 1.52, 1.25, mz))
+      }
+      // Headlights & taillights
+      for (const lz of [-0.55, 0.55]) {
+        truck.add(at(block(0.04, 0.12, 0.24, lamp, 0.02), 1.94, 0.88, lz))
+        truck.add(at(block(0.04, 0.14, 0.22, alert, 0.02), -1.72, 0.88, lz))
+      }
+      // Chassis & underbody frame
       truck.add(at(block(3.6, 0.16, 1.5, dark, 0.04), 0.1, 0.5, 0))
-      const wheels: THREE.Mesh[] = []
+
+      // Realistic 3D Wheel Assembly: tire with tread + 5-spoke alloy rim + brake disc & caliper
+      const wheels: THREE.Group[] = []
       for (const x of [-1.05, 1.25]) {
         for (const z of [-0.78, 0.78]) {
-          const wheel = rod(0.34, 0.22, dark, 8)
-          wheel.rotation.x = Math.PI / 2
-          truck.add(at(wheel, x, 0.34, z))
-          wheels.push(wheel)
+          const wheelAssembly = new THREE.Group()
+          // Profiled tire: dark rubber with rounded shoulders
+          const tireMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.34, 0.34, 0.22, 20),
+            rubberMat(dark),
+          )
+          tireMesh.rotation.x = Math.PI / 2
+          wheelAssembly.add(tireMesh)
+
+          // Recessed alloy rim
+          const rimMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.22, 0.22, 0.224, 16),
+            metalMat(trim, 0.25),
+          )
+          rimMesh.rotation.x = Math.PI / 2
+          wheelAssembly.add(rimMesh)
+
+          // 5 alloy spokes
+          for (let s = 0; s < 5; s++) {
+            const spoke = block(0.038, 0.18, 0.226, trim, 0.01)
+            spoke.rotation.z = (s * Math.PI * 2) / 5
+            wheelAssembly.add(spoke)
+          }
+
+          // Central hub & 5 lug nuts
+          const hubMesh = rod(0.065, 0.23, dark, 10)
+          hubMesh.rotation.x = Math.PI / 2
+          wheelAssembly.add(hubMesh)
+          for (let l = 0; l < 5; l++) {
+            const angle = (l * Math.PI * 2) / 5
+            const lug = rod(0.014, 0.235, light, 6)
+            lug.rotation.x = Math.PI / 2
+            wheelAssembly.add(at(lug, Math.cos(angle) * 0.09, Math.sin(angle) * 0.09, 0))
+          }
+
+          // Brake disc & red caliper
+          const brakeDisc = rod(0.18, 0.02, trim, 14)
+          brakeDisc.rotation.x = Math.PI / 2
+          wheelAssembly.add(brakeDisc)
+          const caliper = block(0.05, 0.09, 0.05, alert, 0.01)
+          wheelAssembly.add(at(caliper, 0.11, 0.11, 0))
+
+          truck.add(at(wheelAssembly, x, 0.34, z))
+          wheels.push(wheelAssembly)
         }
       }
       yard.add(at(truck, 4.6, 0, -1.1))
@@ -1167,7 +1567,7 @@ const setup: SceneSetup = (runtime) => {
       frame.add(at(glow(3.68, 2.3, lit(grey.setScalar(1).clone(), texture)), 0, 0, 0.075))
       // Tipped toward the road, as a board hung above head height is.
       frame.rotation.x = 0.12
-      group.add(at(frame, 0, 5.02, -1.86))
+      group.add(at(frame, 0, 5.55, -1.86))
       boardFrames[index] = frame
       boards.push({ model, ctx: canvas.getContext('2d'), texture, showing: -1 })
       own = texture
@@ -1186,25 +1586,31 @@ const setup: SceneSetup = (runtime) => {
     })
     // Leaning a little into the work, feet under the desk.
     clerk.root.rotation.x = 0.1
-    group.add(at(clerk.root, -1.86, -0.4, -1.0))
-    group.add(at(block(0.62, 0.09, 0.6, dark, 0.04), -1.86, 0.5, -1.02))
-    group.add(at(block(0.6, 0.78, 0.09, dark, 0.05), -1.86, 0.98, -1.36))
-    group.add(at(rod(0.045, 0.42, trim), -1.86, 0.26, -1.02))
-    group.add(at(rod(0.3, 0.05, dark, 5), -1.86, 0.04, -1.02))
-    group.add(at(block(1.1, 0.06, 0.7, body, 0.03), -1.86, 0.86, -0.3))
-    group.add(at(block(0.06, 0.86, 0.6, body, 0.02), -2.38, 0.43, -0.3))
-    group.add(at(block(0.5, 0.03, 0.2, dark, 0.01), -1.86, 0.905, -0.42))
-    group.add(at(block(0.62, 0.42, 0.05, dark, 0.03), -1.86, 1.2, -0.05))
+    const desk = new THREE.Group()
+    desk.add(at(clerk.root, -1.86, -0.4, -1.0))
+    desk.add(at(block(0.62, 0.09, 0.6, dark, 0.04), -1.86, 0.5, -1.02))
+    desk.add(at(block(0.6, 0.78, 0.09, dark, 0.05), -1.86, 0.98, -1.36))
+    desk.add(at(rod(0.045, 0.42, trim), -1.86, 0.26, -1.02))
+    desk.add(at(rod(0.3, 0.05, dark, 5), -1.86, 0.04, -1.02))
+    desk.add(at(block(1.1, 0.06, 0.7, body, 0.03), -1.86, 0.86, -0.3))
+    desk.add(at(block(0.06, 0.86, 0.6, body, 0.02), -2.38, 0.43, -0.3))
+    desk.add(at(block(0.5, 0.03, 0.2, dark, 0.01), -1.86, 0.905, -0.42))
+    desk.add(at(block(0.62, 0.42, 0.05, dark, 0.03), -1.86, 1.2, -0.05))
     const small = glow(0.54, 0.34, lit(grey.setScalar(1).clone(), own))
     small.rotation.y = Math.PI
-    group.add(at(small, -1.86, 1.2, -0.08))
+    desk.add(at(small, -1.86, 1.2, -0.08))
     clerks.push(clerk)
+    // The stock rack hands its carton off to the side of the hall the machine
+    // faces away from; the clerk sits on the other side, so the carton never
+    // passes over a head.
+    if (kind === 2 && out < 0) desk.scale.x = -1
+    group.add(desk)
 
     group.add(shadow(1.9, 1.4))
     group.position.set(place.x, 0, place.z)
     group.rotation.y = place.turn
     scene.add(group)
-    machines.push({ group, screen, moving, kind })
+    machines.push({ group, screen, moving, kind, beam, beamMaterial })
   }
 
   // The screens on the tables along the walls: two finished boards of the same
@@ -1219,6 +1625,14 @@ const setup: SceneSetup = (runtime) => {
     repeat(flat, lit(grey.setScalar(0.9).clone(), still), placements)
   })
 
+  if (typeof document !== 'undefined' && document.fonts?.ready) {
+    void document.fonts.ready.then(() => {
+      boards.forEach((board) => {
+        board.showing = -1
+      })
+    })
+  }
+
   // ── The gates ──
   // Before every station the road passes a gate: two pedestals, two glass
   // leaves hinged on them, a light on top. Amber while shut ahead of the sale,
@@ -1227,6 +1641,9 @@ const setup: SceneSetup = (runtime) => {
     leaves: THREE.Group[]
     lamp: THREE.MeshBasicMaterial
     open: number
+    /** Where the gate stands, for the proximity that opens it. */
+    x: number
+    z: number
   }
   const glass = new THREE.MeshStandardMaterial({
     color: busy.clone().lerp(lamp, 0.5),
@@ -1241,19 +1658,57 @@ const setup: SceneSetup = (runtime) => {
     const group = new THREE.Group()
     const gateLamp = lit(warm.clone())
     const leaves = [-1, 1].map((half) => {
-      group.add(at(block(0.34, 1.15, 1.5, body, 0.08), half * 1.12, 0.575, 0))
-      group.add(at(block(0.2, 0.04, 1.2, base, 0.02), half * 1.12, 1.16, 0))
-      const top = at(glow(0.16, 1.1, gateLamp), half * 1.12, 1.185, 0)
+      // Structural Pedestal with Bolted Base Flange & Rounded Top Cap (Realism Pass)
+      group.add(
+        at(
+          block(PEDESTAL_HALF_WIDTH * 2 + 0.08, 0.06, PEDESTAL_DEPTH + 0.1, dark, 0.02),
+          half * PEDESTAL_X,
+          0.03,
+          0,
+        ),
+      )
+      // Main pedestal housing
+      group.add(
+        at(
+          block(PEDESTAL_HALF_WIDTH * 2, PEDESTAL_HEIGHT, PEDESTAL_DEPTH, body, 0.08),
+          half * PEDESTAL_X,
+          PEDESTAL_HEIGHT / 2,
+          0,
+        ),
+      )
+      // Rounded alloy top cap
+      group.add(
+        at(block(0.26, 0.06, 1.35, trim, 0.03), half * PEDESTAL_X, PEDESTAL_HEIGHT + 0.02, 0),
+      )
+      const top = at(glow(0.16, 1.1, gateLamp), half * PEDESTAL_X, PEDESTAL_HEIGHT + 0.055, 0)
       top.rotation.x = -Math.PI / 2
       group.add(top)
-      group.add(at(block(0.03, 0.3, 0.3, dark, 0.01), half * 0.945, 0.85, 0.45))
+
+      // Recessed optical sensor window on inner face
+      group.add(
+        at(
+          block(0.03, 0.42, 0.42, dark, 0.02),
+          half * (PEDESTAL_X - PEDESTAL_HALF_WIDTH - 0.015),
+          0.82,
+          0.42,
+        ),
+      )
+
+      // Glass Leaf with Realistic 3D Thickness & Structural Metal Clamp Hinges
       const hinge = new THREE.Group()
-      const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.78, 0.04), glass)
-      hinge.add(at(leaf, -half * 0.47, 0, 0))
-      group.add(at(hinge, half * 0.95, 0.72, 0))
+      const leaf = new THREE.Mesh(
+        new THREE.BoxGeometry(LEAF_LENGTH, LEAF_HEIGHT, LEAF_THICKNESS),
+        glass,
+      )
+      // Metal hinge clamp bracket gripping the glass panel
+      const clampBracket = block(0.08, 0.22, 0.09, trim, 0.01)
+      leaf.add(at(clampBracket, half * (LEAF_LENGTH / 2 - 0.05), 0, 0))
+
+      hinge.add(at(leaf, -half * (LEAF_LENGTH / 2), 0, 0))
+      group.add(at(hinge, half * HINGE_X, LEAF_BOTTOM + LEAF_HEIGHT / 2, 0))
       return hinge
     })
-    const strip = glow(1.9, 0.12, gateLamp)
+    const strip = glow(2.2, 0.12, gateLamp)
     strip.rotation.x = -Math.PI / 2
     group.add(at(strip, 0, 0.022, 0))
     group.position.set(
@@ -1262,7 +1717,7 @@ const setup: SceneSetup = (runtime) => {
       from.z + (to.z - from.z) * GATE_ALONG,
     )
     scene.add(group)
-    return { leaves, lamp: gateLamp, open: 0 }
+    return { leaves, lamp: gateLamp, open: 0, x: group.position.x, z: group.position.z }
   })
 
   // Where each clerk's head is, for turning it to the agent and for the bubble.
@@ -1353,7 +1808,7 @@ const setup: SceneSetup = (runtime) => {
   })
   scene.add(at(sun, end.x, end.y, end.z))
 
-  const sparks = runtime.mode === 'mobile' ? 160 : 420
+  const sparks = runtime.qualityConfig?.maxSparks ?? (runtime.mode === 'mobile' ? 160 : 420)
   const directions = new Float32Array(sparks * 3)
   let seed = 11
   const next = () => {
@@ -1383,7 +1838,8 @@ const setup: SceneSetup = (runtime) => {
   scene.add(burst)
 
   // ── The invoice ──
-  // Everything below `cut` is not drawn: that is how the sheet goes INTO a slot.
+  // A sheet of paper, drawn whole. At a station it is lowered into the intake
+  // and a clipping plane at the slot hides the part that is inside.
   const cut = new THREE.Plane(new THREE.Vector3(0, 1, 0), -FAR_BELOW)
   const clip = { clippingPlanes: [cut], side: THREE.DoubleSide }
   const paperColor = lightIsPaper ? light : base
@@ -1419,8 +1875,6 @@ const setup: SceneSetup = (runtime) => {
   invoice.add(at(stamp, 0.42, -0.62, 0.012))
   scene.add(invoice)
 
-  const HAND = 2.25
-  const REACH = 0.58
   const H_CLEAR = hall.height - 1.2
 
   const snap = newJourneySnapshot(stations)
@@ -1519,6 +1973,8 @@ const setup: SceneSetup = (runtime) => {
     let lean = 0
     let size = 1
     cut.constant = -FAR_BELOW
+    /** The sheet is going into a machine: the clearance check is not asked then. */
+    let inserting = false
 
     const start = spots[0] ?? { x: -2.2, z: 1.6 }
     let ax = start.x
@@ -1526,26 +1982,34 @@ const setup: SceneSetup = (runtime) => {
     let face = Math.atan2(-(0 - ax), -(0.3 - az))
     let walking = false
     let carry = 0
+    /** The legs' swing, derived from the distance actually covered. */
+    let gait: Gait = { stride: 0, bob: 0 }
     // The sheet is held in front of the agent, whichever way the agent faces.
     const heading = agent.root.rotation.y
-    const fx = -Math.sin(heading) * REACH
-    const fz = -Math.cos(heading) * REACH
+    const fx = -Math.sin(heading) * ARM_REACH
+    const fz = -Math.cos(heading) * ARM_REACH
 
     if (beat === 0) {
-      // Printing: the sheet feeds up out of the printer's mouth, the agent waits.
+      // Printing: the sheet rises through the printer's modelled slot. Its
+      // lower edge starts on the slot, so no part of it is ever inside.
       const out = ease(t)
-      const inside = PRINTER_SLOT - SHEET_HALF
-      here.set(0, inside + out * (HOVER - inside), 0.3)
-      cut.constant = -PRINTER_SLOT
+      const startY = PRINT_LIP + SHEET_HALF
+      here.set(0, startY + out * (HOVER - startY), PRINT_LINE)
     } else if (beat <= stations) {
       const from = stops[beat - 1] ?? origin
       const to = stops[beat] ?? from
       const a = spots[beat - 1] ?? start
       const b = spots[beat] ?? a
-      const inside = to.slot - SHEET_HALF - 0.04
+      /** Where the sheet waits above the previous stop, and above this intake. */
+      const left =
+        beat === 1
+          ? { x: 0, y: HOVER, z: PRINT_LINE }
+          : { ...intakeOf(from, beat - 2), y: INTAKE_HOLD }
+      const inside = MACHINE_SLOT - SHEET_HALF - 0.04
+      const slot = intakeOf(to, beat - 1)
       if (t < ENTER_AT) {
-        // The agent takes the sheet from the last slot, walks it through the
-        // gate to the next station and holds it up to that one.
+        // The agent takes the sheet from the last stop, walks it down the road
+        // through the gate, and holds it up over the next intake.
         const fly = ease(t / ENTER_AT)
         const take = 1 - ease(clamp01(fly / 0.2))
         const give = ease(clamp01((fly - 0.8) / 0.2))
@@ -1555,26 +2019,30 @@ const setup: SceneSetup = (runtime) => {
         const hx = ax + fx
         const hz = az + fz
         here.set(
-          hx + (from.x - hx) * take + (to.x - hx) * give,
-          HAND + (HOVER - HAND) * (take + give),
-          hz + (from.z - hz) * take + (to.z - hz) * give,
+          hx + (left.x - hx) * take + (slot.x - hx) * give,
+          CARRY_Y + (left.y - CARRY_Y) * take + (INTAKE_HOLD - CARRY_Y) * give,
+          hz + (left.z - hz) * take + (slot.z - hz) * give,
         )
-        turn = from.turn * take + to.turn * give + heading * carry
-        lean = -0.1 * carry
+        turn = (beat === 1 ? 0 : from.turn) * take + to.turn * give + heading * carry
+        lean = -0.06 * carry
         walking = fly > 0.03 && fly < 0.97
+        gait = gaitAt(Math.hypot(ax - a.x, az - a.z))
         face = Math.atan2(-(b.x - a.x), -(b.z - a.z))
       } else {
+        // At the station: the sheet goes straight down into the intake while the
+        // scan gate reads it, and comes back up once it has been recorded.
         ax = b.x
         az = b.z
         face = Math.atan2(-(to.x - ax), -(to.z - az))
         turn = to.turn
-        cut.constant = -to.slot
+        inserting = true
+        cut.constant = -MACHINE_SLOT
         if (t < RECORDED_AT) {
           const sink = ease((t - ENTER_AT) / (RECORDED_AT - ENTER_AT))
-          here.set(to.x, HOVER - sink * (HOVER - inside), to.z)
+          here.set(slot.x, INTAKE_HOLD - sink * (INTAKE_HOLD - inside), slot.z)
         } else {
           const rise = ease(clamp01((t - LEAVE_AT) / (1 - LEAVE_AT)))
-          here.set(to.x, inside + rise * (HOVER - inside), to.z)
+          here.set(slot.x, inside + rise * (INTAKE_HOLD - inside), slot.z)
         }
       }
     } else {
@@ -1590,22 +2058,37 @@ const setup: SceneSetup = (runtime) => {
       carry = (1 - take) * (1 - release)
       const hx = ax + fx
       const hz = az + fz
-      here.set(hx + (from.x - hx) * take, HAND + (HOVER - HAND) * take, hz + (from.z - hz) * take)
+      here.set(
+        hx + (from.x - hx) * take,
+        CARRY_Y + (HOVER - CARRY_Y) * take,
+        hz + (from.z - hz) * take,
+      )
       here.lerp(end, release)
       turn = from.turn * take + heading * carry
       lean = -0.5 * Math.sin(release * Math.PI)
       size = 1 - release * 0.92
       walking = fly > 0.03 && fly < 0.97
+      if (walking) gait = gaitAt(Math.hypot(ax - a.x, az - a.z))
       face = Math.atan2(-(-2.6 * flow - a.x), 7)
     }
 
     // Going back, the agent turns round and walks back — it does not moonwalk.
     if (walking && going < 0) face += Math.PI
-    const stride = walking ? Math.sin(time * 9) : 0
-    agent.root.position.set(ax, Math.abs(stride) * 0.04, az)
+    const stride = gait.stride
+    agent.root.position.set(ax, gait.bob, az)
     agent.root.rotation.y += (face - agent.root.rotation.y) * drift
     pose(agent, stride, carry, drift)
     agent.head.rotation.y = Math.sin(time * 0.6) * 0.12 * (1 - carry)
+    // Dynamic Visor States: cyan idle/walking -> amber focused scanning -> green confirmation
+    if (agent.visorState) {
+      if (beat > 0 && beat <= stations && t >= ENTER_AT && t < RECORDED_AT) {
+        agent.visorState.lamp.color.copy(warm)
+      } else if (beat > 0 && beat <= stations && t >= RECORDED_AT) {
+        agent.visorState.lamp.color.copy(done)
+      } else {
+        agent.visorState.lamp.color.copy(busy)
+      }
+    }
 
     // The clerk of the station being worked at looks up at the agent, and
     // raises a hand while speaking; the others keep typing.
@@ -1618,6 +2101,18 @@ const setup: SceneSetup = (runtime) => {
         look = Math.max(-1.1, Math.min(1.1, toward))
       }
       clerk.head.rotation.y += (look - clerk.head.rotation.y) * drift
+
+      // Deterministic Eye Blinking & Eyebrow Reaction (Realism Pass)
+      const blinkCycle = (time * 0.8 + index * 1.7) % 4
+      const isBlinking = blinkCycle < 0.12
+      clerk.eyelids?.forEach((eyelid) => {
+        eyelid.visible = isBlinking
+      })
+      const browLift = (mine && t >= GATE_AT ? 0.15 : 0) + (isBlinking ? -0.05 : 0)
+      clerk.eyebrows?.forEach((brow, bIdx) => {
+        brow.rotation.z = (bIdx % 2 === 0 ? 0.08 : -0.08) + browLift
+      })
+
       const speaking = mine && t >= RECORDED_AT
       const pointer = pointers[index]
       if (pointer && head) {
@@ -1637,12 +2132,14 @@ const setup: SceneSetup = (runtime) => {
 
     crowd.forEach(({ who, home, role }, index) => {
       if (role === 'walks') {
-        // Walks a stretch of the hall and turns back.
-        const phase = time * 0.22 + index * 1.7
-        who.root.position.z = home + Math.sin(phase) * 4
-        who.root.rotation.y = Math.cos(phase) > 0 ? Math.PI : 0
-        pose(who, Math.sin(time * 6.5 + index), 0, drift)
-        who.root.position.y = Math.abs(Math.sin(time * 6.5 + index)) * 0.03
+        // Walks a stretch of the hall and turns back. The swing is a function
+        // of the distance covered, not of the clock, so the feet are planted on
+        // the floor they move over instead of sliding across it.
+        const walker = walkerAt(time, home, index)
+        who.root.position.z = walker.z
+        who.root.position.y = walker.bob
+        who.root.rotation.y += turnToward(who.root.rotation.y, walker.heading) * drift
+        pose(who, walker.stride, 0, drift)
       } else if (role === 'sits') {
         // Types, and now and then turns to the colleague.
         who.arms.forEach((arm) => {
@@ -1666,7 +2163,7 @@ const setup: SceneSetup = (runtime) => {
         who.root.position.y = Math.sin(time * 1.6 + index) * 0.008
       }
     })
-    invoice.position.copy(here)
+    invoice.position.set(here.x, here.y + gait.bob, here.z)
     invoice.rotation.set(lean, turn + Math.sin(time * 0.8) * 0.03, 0)
     invoice.scale.setScalar(size)
     marks.forEach((mark, index) => {
@@ -1680,7 +2177,21 @@ const setup: SceneSetup = (runtime) => {
       printerLamp.color.copy(done)
     }
 
+    const activeStation = snap.station ?? (snap.beat === 0 ? 0 : stations - 1)
+    const cullRange = runtime.qualityConfig?.cullStationRange ?? 1
+
     machines.forEach((machine, index) => {
+      const dist = Math.abs(index - activeStation)
+      if (dist > cullRange) {
+        machine.group.visible = false
+        const b = boardFrames[index]
+        if (b) b.visible = false
+        return
+      }
+      machine.group.visible = true
+      const b = boardFrames[index]
+      if (b) b.visible = true
+
       const taking = snap.station === index && t >= ENTER_AT && t < RECORDED_AT
       const finished = index < recorded
       const into = taking ? (t - ENTER_AT) / (RECORDED_AT - ENTER_AT) : 0
@@ -1691,30 +2202,38 @@ const setup: SceneSetup = (runtime) => {
       if (machine.kind === 0) machine.moving.position.z = 0.55 - amount * 0.5
       else if (machine.kind === 1) machine.moving.position.z = 0.1 + amount * 1.05
       else if (machine.kind === 2 && dock) {
-        // The dock is not scrubbed by the scroll: once the sale reaches the
-        // rack it plays through in real time, so it moves like machinery.
-        // Scrolled back before this stop: the van backs in, the barrier comes
-        // down and the carton goes back on its shelf — the same machinery,
-        // unwinding, not a jump cut.
-        if (taking || finished) dock.clock = time === 0 ? 8 : Math.min(8, dock.clock + step)
-        else dock.clock = time === 0 ? 0 : Math.max(0, dock.clock - step * 3)
-        const clock = dock.clock
-        const onto = ease(clamp01(clock / 0.9))
-        const down = ease(clamp01((clock - 0.9) / 1.6))
-        const load = ease(clamp01((clock - 2.5) / 1))
-        const raise = ease(clamp01((clock - 3.3) / 0.9))
-        const go = clamp01((clock - 4.1) / 3.4)
+        // Pure function of progress: van departure is derived deterministically
+        // from scroll progress inside the station and subsequent beats.
+        // The clock follows the story through this station's beat and rests at
+        // its end once the beat is over — it never jumps when the sale is recorded.
+        const dockClock =
+          beat > index + 1
+            ? 8
+            : beat === index + 1 && t >= ENTER_AT
+              ? clamp01((t - ENTER_AT) / (1 - ENTER_AT)) * 8
+              : 0
+        const clock = dockClock
+        const onto = ease(clamp01(clock / 1))
+        const down = ease(clamp01((clock - 1) / 1.8))
+        const load = ease(clamp01((clock - 2.8) / 1.1))
+        const raise = ease(clamp01((clock - 3.9) / 1))
+        const go = clamp01((clock - 4.9) / 3.1)
         // Pulls away slowly, then gathers speed.
-        const run = go * go * 30
+        const run = go * go * 20
         const height = 2.2 - down * 1.52
         dock.lift.position.y = height
-        dock.carton.position.set(dock.out * (onto * 1.75 + load * 2.3), height + 0.32, -1.1)
+        dock.carton.position.set(
+          dock.out * (onto * 1.75 + load * 2.3),
+          height + 0.32 - load * 0.12,
+          -1.1,
+        )
         dock.carton.visible = load < 0.97
         dock.arm.rotation.x = -raise * 1.32
         dock.van.position.x = 4.6 + run
         dock.van.position.y = go > 0 && go < 1 ? Math.sin(time * 30) * 0.008 : 0
         dock.wheels.forEach((wheel) => {
-          wheel.rotation.y = -run * 2.9
+          // Exact kinematic distance rotation: theta = distance / wheelRadius (0.34m)
+          wheel.rotation.z = -run / 0.34
         })
         dock.puffs.forEach((puff, cloud) => {
           const life = (clock * 1.4 + cloud / dock.puffs.length) % 1
@@ -1725,6 +2244,13 @@ const setup: SceneSetup = (runtime) => {
           if (material) material.opacity = (1 - life) * 0.45
         })
       } else if (machine.kind === 4) machine.moving.scale.y = 0.2 + amount * 0.8
+
+      // The scan gate: a line of light travels down the sheet while it is held
+      // in front of the intake, then fades as the gate answers.
+      const scan = taking ? clamp01((into - 0.5) / 0.5) : 0
+      machine.beam.visible = scan > 0.01 && scan < 0.99
+      machine.beam.position.y = 3.3 - scan * 2.05
+      machine.beamMaterial.opacity = taking ? Math.sin(scan * Math.PI) * 0.8 : 0
 
       // The board fills in row by row while the sale goes in. It is repainted
       // only when the number of rows or its state changes — never every frame.
@@ -1748,16 +2274,18 @@ const setup: SceneSetup = (runtime) => {
       }
     })
 
-    // A gate opens as the agent comes to it and shuts behind; its light is the
-    // machine's answer about that station, nothing the gate decides itself.
-    const swing = first ? 1 : 1 - Math.exp(-step * 9)
+    // The barrier senses the agent: its leaves are already open by the time it
+    // is close enough to touch them, and they swing forward — the way it walks
+    // — so it passes behind them. `gateOpening` is the same pure curve the gate
+    // test sweeps, so the picture cannot disagree with the measurement.
     gates.forEach((gate, index) => {
-      const state = snap.gates[index]
-      const wanted = state === 'open' && t < ARRIVE_AT ? 1 : 0
-      gate.open += (wanted - gate.open) * swing
-      gate.leaves.forEach((hinge, half) => {
-        hinge.rotation.y = (half === 0 ? 1 : -1) * gate.open * 1.5
+      gate.open = gateOpening(Math.hypot(ax - gate.x, az - gate.z))
+      const angle = gateAngle(gate.open)
+      gate.leaves.forEach((hinge, leaf) => {
+        hinge.rotation.y = (leaf === 0 ? 1 : -1) * angle
       })
+      // The lamp is the station's answer, nothing the barrier decides itself.
+      const state = snap.gates[index]
       gate.lamp.color.copy(state === 'closed' ? warm : done)
     })
 
@@ -1817,7 +2345,7 @@ const setup: SceneSetup = (runtime) => {
     // crosses the hall and everything is as it was.
     const back = snap.link === 'restoring' ? clamp01((t - GATE_AT) / (ARRIVE_AT - GATE_AT)) : 0
     const dimWanted = snap.link === 'offline' ? 1 : snap.link === 'restoring' ? 1 - back : 0
-    dim += (dimWanted - dim) * drift
+    dim = dimWanted
     lampMaterial.color
       .copy(lamp)
       .lerp(warm, dim * 0.75)
@@ -1944,13 +2472,27 @@ const setup: SceneSetup = (runtime) => {
       told.geometries = String(renderer.info.memory.geometries)
       told.cover = peak.toFixed(3)
       told.beat = String(beat)
+      // The measured gap between the sheet and the station it is at, so a
+      // verification run reads it off the canvas instead of trusting the eye.
+      const place = snap.station !== null ? stops[snap.station + 1] : undefined
+      if (place && !inserting) {
+        const gap = clearanceToStation(
+          { x: here.x, y: here.y, z: here.z, turn, lean },
+          { x: place.x, z: place.z, turn: place.turn },
+        )
+        told.clearance = Number.isFinite(gap) ? gap.toFixed(3) : 'clear'
+        told.breach = String(Number.isFinite(gap) && gap < MIN_CLEARANCE)
+      } else {
+        told.clearance = ''
+        told.breach = 'false'
+      }
     }
 
     // The speech bubble stands over the head of whoever is speaking.
     const element = journeyState.bubble
     if (element) {
-      const speaker = snap.station !== null && t >= RECORDED_AT ? heads[snap.station] : undefined
-      if (speaker) {
+      const speaker = snap.station !== null && t >= ENTER_AT ? heads[snap.station] : undefined
+      if (speaker && element.textContent) {
         camera.updateMatrixWorld()
         anchor.copy(speaker)
         anchor.y += 1.05

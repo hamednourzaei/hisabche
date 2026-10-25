@@ -48,6 +48,7 @@ import { TillSelectField } from '../../till/till-select-field'
 import { useOversoldLines } from '../use-oversold-lines'
 import { planLimitMessage } from '../../../../lib/plan-limit-message'
 import { loadPrinterSettings } from '../../../../lib/print/printer-settings'
+import { formatNumber } from '@hisabche/formatting'
 import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 import {
   INITIAL_RECURRENCE,
@@ -537,7 +538,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
           ) : null}
           <InvoicePaymentSection
             t={t}
-            fmtMoney={(value) => value.toLocaleString('fa-AF')}
+            fmtMoney={(value) => formatNumber(value, locale, 3)}
             currency={currency}
             total={summary.total}
             value={payment}

@@ -13,6 +13,7 @@ import { ConflictError, DatabaseError } from '../../errors/database.error'
 import type { TenancyContext } from '../tenancy.service'
 
 import type { AllocationRequest, OpenInvoice, PartyType, PaymentDirection } from './payments.domain'
+import type { PartyInvoiceRow, PartyLineRow, PartyPaymentRow } from '@hisabche/validation'
 
 const PAGE = 1000
 
@@ -502,7 +503,11 @@ export class PaymentsRepository {
       openingBalance = Number(data?.opening_balance) || 0
     }
 
-    return { invoices, payments, openingBalance }
+    return {
+      invoices: invoices as PartyInvoiceRow[],
+      payments: payments as PartyPaymentRow[],
+      openingBalance,
+    }
   }
 
   /** Every line of the given invoices, in chunks of ids and pages of rows. */
@@ -522,6 +527,6 @@ export class PaymentsRepository {
         )),
       )
     }
-    return lines
+    return lines as PartyLineRow[]
   }
 }

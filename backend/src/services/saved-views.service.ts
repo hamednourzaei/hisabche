@@ -18,7 +18,13 @@
 // from here.
 // ============================================
 
-import { z } from 'zod'
+import {
+  savedViewRecord,
+  savedViewStateSchema,
+  savedViewTableIdSchema,
+  type SavedViewRecord,
+  type SavedViewState,
+} from '@hisabche/validation'
 
 import { supabase } from '../db'
 import { BaseError } from '../errors/base.error'
@@ -34,30 +40,8 @@ export class SavedViewsNotConfiguredError extends BaseError {
   }
 }
 
-/** The whole of what a view may carry. Closed: an unknown field is refused. */
-export const savedViewStateSchema = z
-  .object({
-    hiddenIds: z.array(z.string().min(1).max(80)).max(100).default([]),
-    sortId: z.string().min(1).max(80).nullable().default(null),
-    sortDirection: z.enum(['asc', 'desc']).default('desc'),
-    search: z.string().max(200).default(''),
-  })
-  .strict()
-
-export type SavedViewState = z.infer<typeof savedViewStateSchema>
-
-export const savedViewTableIdSchema = z.string().regex(/^[a-z0-9][a-z0-9_.-]{0,59}$/)
-
-export interface SavedViewRecord {
-  id: string
-  tableId: string
-  name: string
-  state: SavedViewState
-  shared: boolean
-  /** Whether the reader saved it — only then may they change or remove it. */
-  mine: boolean
-  createdAt: string
-}
+// The contract (state, table id, record) is shared with the offline engine.
+export { savedViewStateSchema, savedViewTableIdSchema, type SavedViewRecord, type SavedViewState }
 
 const COLUMNS = 'id, table_id, name, state, shared, created_by, created_at'
 
@@ -69,21 +53,6 @@ interface Row {
   shared: boolean
   created_by: string
   created_at: string
-}
-
-function toRecord(row: Row, userId: string): SavedViewRecord {
-  // A stored state that no longer fits the contract becomes the default look
-  // rather than an error: a view must never be able to break a table.
-  const parsed = savedViewStateSchema.safeParse(row.state)
-  return {
-    id: row.id,
-    tableId: row.table_id,
-    name: row.name,
-    state: parsed.success ? parsed.data : savedViewStateSchema.parse({}),
-    shared: row.shared === true,
-    mine: row.created_by === userId,
-    createdAt: row.created_at,
-  }
 }
 
 export class SavedViewsService {
@@ -103,7 +72,9 @@ export class SavedViewsService {
       .order('created_at', { ascending: true })
     if (error) throw this.failure('Failed to read saved views', error)
 
-    const records = ((data ?? []) as unknown as Row[]).map((row) => toRecord(row, ctx.userId))
+    const records = ((data ?? []) as unknown as Row[]).map((row) =>
+      savedViewRecord(row, ctx.userId),
+    )
     return [...records.filter((view) => view.mine), ...records.filter((view) => !view.mine)]
   }
 
@@ -127,7 +98,7 @@ export class SavedViewsService {
       if (error.code === '23505') throw new ConflictError('SAVED_VIEW_NAME_TAKEN')
       throw this.failure('Failed to save the view', error)
     }
-    return toRecord(data as unknown as Row, ctx.userId)
+    return savedViewRecord(data as unknown as Row, ctx.userId)
   }
 
   /** Rename, re-share, or replace the look. Only its owner. */
@@ -160,7 +131,7 @@ export class SavedViewsService {
       throw this.failure('Failed to update the view', error)
     }
     if (!data) throw new NotFoundError('Saved view')
-    return toRecord(data as unknown as Row, ctx.userId)
+    return savedViewRecord(data as unknown as Row, ctx.userId)
   }
 
   async remove(ctx: TenancyContext, id: string): Promise<void> {

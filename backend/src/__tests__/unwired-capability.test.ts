@@ -161,12 +161,15 @@ const REGISTER: Capability[] = [
   {
     id: '#68 Escalation · #81 Compensation',
     file: 'services/workflow/escalation.domain.ts',
-    symbols: ['decideEscalation', 'compensationFor'],
+    symbols: ['decideEscalation'],
     note:
       'Recorded as WIRED on 30 September — wrongly: its only importers were ' +
       '`approval.domain.ts` and `compensation.service.ts`, which nothing reached. ' +
       'Really wired on 4 October 2026: escalation.service runs `decideEscalation` ' +
-      'hourly from scheduler/index.ts, and the approval action honours the result.',
+      'hourly from scheduler/index.ts, and the approval action honours the result. ' +
+      'compensationFor (#81) moved to @hisabche/validation (schemas/compensation-plan.ts) ' +
+      'on 25 October 2026 so the offline engine answers from the same table; ' +
+      'compensation.service re-exports it and the route serves it.',
     status: 'WIRED',
   },
   {
@@ -221,8 +224,8 @@ const REGISTER: Capability[] = [
   },
   {
     id: '#123 #124 Installments & late fees',
-    file: 'services/commerce/installment.domain.ts',
-    symbols: ['planSchedule', 'decideBlock'],
+    file: 'services/commerce/installment.service.ts',
+    symbols: ['installmentService'],
     note:
       'Wired on 4 October 2026 (#123): PUT /api/invoices/:id/installments splits what an ' +
       'invoice owes with planSchedule and saves it through installments_save ' +
@@ -232,18 +235,6 @@ const REGISTER: Capability[] = [
       'manager says so, issues the fee as a sale invoice through InvoiceService.create. ' +
       'NOT wired, on purpose: blocking a sale to a late customer (decideBlock) and any ' +
       'automatic charge.',
-    status: 'WIRED',
-  },
-  {
-    id: '#51 #53 #66 Collections',
-    file: 'services/collections/collections.domain.ts',
-    symbols: ['collectionsFor', 'planPayments'],
-    note:
-      'Wired on 4 October 2026 as a READ: GET /api/analysis/collections runs ' +
-      'collectionsFor over every open sale invoice with the default schedule. Still ' +
-      'missing: per-workspace reminder settings, a record of reminders sent (so every ' +
-      'invoice is judged against its first step), sending anything, and planPayments ' +
-      '(promise-to-pay).',
     status: 'WIRED',
   },
   {
@@ -258,16 +249,6 @@ const REGISTER: Capability[] = [
       'financing.service.ts reads docs/financing-01-migration.sql and shows accruedInterest, ' +
       'instalment and summarisePortfolio in the accounting screen. Nothing posts to the ' +
       "ledger — which accounts a loan or its interest belongs in is the owner's decision.",
-    status: 'WIRED',
-  },
-  {
-    id: '#10 #15 #19 Supplier intelligence',
-    file: 'services/supplier/supplier-intelligence.domain.ts',
-    symbols: ['scoreSupplier', 'supplierConcentration'],
-    note:
-      'Wired on 4 October 2026: GET /api/analysis/suppliers. Punctuality is scored ' +
-      'only for orders with an expected delivery date; no price list exists, so the ' +
-      'price-drift signal reads as no premium.',
     status: 'WIRED',
   },
   {
@@ -336,16 +317,6 @@ const REGISTER: Capability[] = [
       'same monthly allowance as a question. The pinner now sees Persian and ' +
       'Arabic-Indic digits and treats a date or document number as one figure. Never ' +
       'exercised against a live provider.',
-    status: 'WIRED',
-  },
-  {
-    id: '#3 #9 #13 #18 Customer risk',
-    file: 'services/customers/customer-risk.domain.ts',
-    symbols: ['customerRisk'],
-    note:
-      'Wired on 4 October 2026: GET /api/analysis/customers/:id/risk. The credit ' +
-      'limit is not passed (null = unknown), and broken promises are not counted ' +
-      'because promises to pay are not recorded anywhere.',
     status: 'WIRED',
   },
   {
@@ -523,9 +494,16 @@ describe('the register of written-but-unwired capabilities is honest', () => {
     for (const cap of REGISTER) {
       const file = BY_PATH.get(cap.file)
       for (const symbol of cap.symbols) {
-        expect(file?.code, `${cap.id}: ${symbol} is not exported by ${cap.file}`).toMatch(
-          new RegExp(`export (?:function|const|async function) ${symbol}\\b`),
-        )
+        // A symbol is exported when the file DEFINES it or RE-EXPORTS it from the shared
+        // package (`export { x } from '@hisabche/validation'` — the rule moved there so
+        // the offline engine can read the same one).
+        const defined = new RegExp(`export (?:function|const|async function) ${symbol}\\b`)
+        const reExported = new RegExp(`export \\{[^}]*\\b${symbol}\\b[^}]*\\} from`)
+        const code = file?.code ?? ''
+        expect(
+          defined.test(code) || reExported.test(code),
+          `${cap.id}: ${symbol} is not exported by ${cap.file}`,
+        ).toBe(true)
       }
     }
   })

@@ -24,7 +24,17 @@ import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
 import { ledger, type DraftLine } from './accounting'
 import type { AccountRole } from '@hisabche/validation'
-import { linesBalance, payrollLines } from './payroll/payroll-ledger.domain'
+import {
+  branchOnDate,
+  computePayrollFigures,
+  leaveTotalDays,
+  linesBalance,
+  payrollBookingAmounts,
+  payrollLines,
+  planLeaveDecision,
+  planPayrollOutcome,
+  summarizePayrolls,
+} from '@hisabche/validation'
 
 /**
  * G2 — does this error mean `employee_branch_assignments` has not been created
@@ -597,9 +607,8 @@ export class HumanResourcesService {
 
   async createPayroll(ctx: TenancyContext, data: CreatePayroll) {
     const { workspaceId, userId } = ctx
-    const overtimeAmount = data.overtimeHours * data.overtimeRate
-    const netSalary =
-      data.baseSalary + data.bonuses + overtimeAmount - data.deductions - data.taxAmount
+    // The figures are the shared rule (@hisabche/validation): the device computes the same.
+    const { overtimeAmount, netSalary } = computePayrollFigures(data)
 
     const { data: payroll, error } = await supabase
       .from('payrolls')
@@ -664,19 +673,15 @@ export class HumanResourcesService {
 
   async updatePayrollStatus(ctx: TenancyContext, id: string, data: UpdatePayroll) {
     const { workspaceId, userId } = ctx
-    const reason = (data.notes ?? '').trim()
-    // «پرداخت نشد» without a reason is the question the owner asks three
-    // months later with nobody left to answer it.
-    if (data.status === 'cancelled' && reason === '') {
+    // The reason rule and what a settle changes are the shared rule
+    // (@hisabche/validation planPayrollOutcome). Finality is enforced below,
+    // in the WHERE clause, so two people settling at once cannot both pass.
+    const nowIso = new Date().toISOString()
+    const outcome = planPayrollOutcome({ status: null }, data, nowIso)
+    if (!outcome.ok) {
       throw new ValidationError('PAYROLL_REASON_REQUIRED: say why this salary was not paid')
     }
-
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (data.status !== undefined) updates.status = data.status
-    if (data.paymentDate !== undefined) updates.payment_date = data.paymentDate
-    // A salary marked paid with no date was paid now, not «never».
-    else if (data.status === 'paid') updates.payment_date = new Date().toISOString()
-    if (data.notes !== undefined) updates.notes = reason || null
+    const updates: Record<string, unknown> = { updated_at: nowIso, ...outcome.changes }
 
     // ⚠️ The rule is in the WHERE clause, not in a read before it: two people
     // settling the same salary at once cannot both pass. A paid salary has a
@@ -735,17 +740,11 @@ export class HumanResourcesService {
    * only in a log line.
    */
   private async bookPayroll(ctx: TenancyContext, payroll: Record<string, unknown>): Promise<void> {
-    const toMinor = (value: unknown) => Math.round((Number(value) || 0) * 100)
-
-    const amounts = {
-      // Gross is what the business BEARS: base plus bonuses plus overtime.
-      // `net_salary` is what the employee receives and is not the expense.
-      grossMinor:
-        toMinor(payroll.base_salary) + toMinor(payroll.bonuses) + toMinor(payroll.overtime_amount),
-      taxMinor: toMinor(payroll.tax_amount),
-      deductionsMinor: toMinor(payroll.deductions),
-      netMinor: toMinor(payroll.net_salary),
-    }
+    // Gross is what the business BEARS: base plus bonuses plus overtime.
+    // `net_salary` is what the employee receives and is not the expense.
+    const amounts = payrollBookingAmounts(
+      payroll as unknown as Parameters<typeof payrollBookingAmounts>[0],
+    )
 
     // Cash unless the business keeps no cash account. A shop paying wages by
     // transfer and one paying from the till book the same entry with a
@@ -820,8 +819,7 @@ export class HumanResourcesService {
   async getPayrollSummary(ctx: TenancyContext) {
     const { workspaceId } = ctx
     const PAGE = 1000
-    const byEmployee: Record<string, number> = {}
-    let total = 0
+    const rows: Array<{ employee_id: string; net_salary: unknown; status: string | null }> = []
 
     for (let from = 0; ; from += PAGE) {
       const { data, error } = await supabase
@@ -832,18 +830,11 @@ export class HumanResourcesService {
         .range(from, from + PAGE - 1)
 
       if (error) throw new DatabaseError('Failed to fetch payroll summary', error)
-
-      for (const row of data ?? []) {
-        if (['cancelled', 'rejected'].includes(String(row.status ?? ''))) continue
-        const amount = Number(row.net_salary) || 0
-        total += amount
-        byEmployee[row.employee_id] = (byEmployee[row.employee_id] || 0) + amount
-      }
-
+      rows.push(...(data ?? []))
       if (!data || data.length < PAGE) break
     }
 
-    return { total, byEmployee }
+    return summarizePayrolls(rows)
   }
 
   // ─── Leaves ─────────────────────────────────────────────────
@@ -871,9 +862,7 @@ export class HumanResourcesService {
 
   async createLeave(ctx: TenancyContext, data: CreateLeave) {
     const { workspaceId, userId } = ctx
-    const start = new Date(data.startDate)
-    const end = new Date(data.endDate)
-    const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    const totalDays = leaveTotalDays(data.startDate, data.endDate)
 
     // Patch 3 / I1 — which branch this leave belongs to.
     const branchId = await this.branchForLeave(ctx, data.employeeId, data.startDate)
@@ -978,19 +967,14 @@ export class HumanResourcesService {
     employeeId: string,
     onDate: string,
   ): Promise<string | null> {
-    const day = onDate.slice(0, 10)
-
+    // The employee's primary postings; WHICH one covers the day is the shared
+    // rule (@hisabche/validation branchOnDate), the same one the device applies.
     const { data, error } = await supabase
       .from('employee_branch_assignments')
-      .select('branch_id')
+      .select('branch_id, is_primary, starts_at, ends_at')
       .eq('workspace_id', ctx.workspaceId)
       .eq('employee_id', employeeId)
       .eq('is_primary', true)
-      .lte('starts_at', day)
-      .or(`ends_at.is.null,ends_at.gte.${day}`)
-      .order('starts_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
 
     if (error) {
       // The assignments table may not exist on an older database. An absent
@@ -1000,18 +984,26 @@ export class HumanResourcesService {
       throw new DatabaseError('Failed to resolve the leave branch', error)
     }
 
-    return (data as { branch_id: string } | null)?.branch_id ?? null
+    return branchOnDate(
+      (data ?? []) as Array<{
+        branch_id: string
+        is_primary: boolean
+        starts_at: string
+        ends_at: string | null
+      }>,
+      onDate,
+    )
   }
 
   async updateLeaveStatus(ctx: TenancyContext, id: string, data: UpdateLeave) {
     const { workspaceId, userId } = ctx
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (data.status !== undefined) {
-      updates.status = data.status
-      if (data.status === 'approved') {
-        updates.approved_by = userId
-        updates.approved_at = new Date().toISOString()
-      }
+    // What a decision records is the shared rule (@hisabche/validation
+    // planLeaveDecision); that it is made ONCE is enforced in the WHERE below.
+    const nowIso = new Date().toISOString()
+    const decision = planLeaveDecision({ status: 'pending' }, data, userId, nowIso)
+    const updates: Record<string, unknown> = {
+      updated_at: nowIso,
+      ...(decision.ok ? decision.changes : {}),
     }
 
     // A decision is made once. The rule is in the WHERE clause, so two people

@@ -18,6 +18,11 @@
 // lucide icons: every icon is an <svg> plus paths that React walks on hydration.
 // With SVG marks the landing reached 1780 elements and local TBT rose
 // (desktop ~120 → 215 ms). Add an icon here only where it carries meaning.
+//
+// ⚠️ ONE LANGUAGE WITH THE PAGE. These panels used to be rounded cards floating
+// on a shadow — the only soft shapes left on a page of hairlines and folio
+// numbers. A worked example is a sheet from the ledger, so it is drawn as one:
+// a ruled frame, a ruled head, and column rules instead of inner cards.
 import type { ReactNode } from 'react'
 import { CloudOff, MessageCircleQuestion, Sparkles, Wifi } from 'lucide-react'
 
@@ -26,16 +31,16 @@ import { cn } from '../../../lib/utils'
 type T = (key: string, fallback?: string) => string
 
 const PANEL =
-  'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 shadow-sm sm:p-6'
+  'rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 sm:p-6'
 
 /** A success tick drawn as text. */
 const TICK = "before:font-bold before:text-[hsl(var(--color-success))] before:content-['✓']"
 
 function PanelHead({ t, title }: { t: T; title: ReactNode }) {
   return (
-    <div className="mb-4 flex items-center justify-between gap-3">
-      <p className="font-semibold text-[hsl(var(--fg-primary))]">{title}</p>
-      <span className="rounded-md bg-[hsl(var(--surface-muted))] px-2 py-0.5 text-xs font-medium text-[hsl(var(--fg-tertiary))]">
+    <div className="mb-4 flex items-baseline justify-between gap-3 border-b border-[hsl(var(--border-default))] pb-3">
+      <p className="text-balance font-semibold text-[hsl(var(--fg-primary))]">{title}</p>
+      <span className="shrink-0 rounded-sm border border-[hsl(var(--border-default))] px-1.5 py-0.5 text-xs font-medium text-[hsl(var(--fg-tertiary))]">
         {t('landing.visual.example')}
       </span>
     </div>
@@ -54,7 +59,7 @@ export function StepChain({ t, prefix, count }: { t: T; prefix: string; count: n
           key={i}
           className="flex items-center gap-2 whitespace-nowrap after:text-[hsl(var(--fg-tertiary))] after:content-['←'] last:after:content-none ltr:after:content-['→']"
         >
-          <span className="rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2.5 py-1 text-[0.8125rem] font-medium text-[hsl(var(--fg-primary))] sm:px-3 sm:py-1.5 sm:text-sm">
+          <span className="rounded-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2.5 py-1 text-[0.8125rem] font-medium text-[hsl(var(--fg-primary))] sm:px-3 sm:py-1.5 sm:text-sm">
             {t(`${prefix}${i + 1}`)}
           </span>
         </li>
@@ -128,10 +133,13 @@ export function OfflineVisual({ t }: { t: T }) {
   return (
     <div className="space-y-6">
       <StepChain t={t} prefix={`${k}.pipe`} count={6} />
-      <div className={cn(PANEL, 'mx-auto max-w-2xl')}>
+      <div className={cn(PANEL, 'mx-auto max-w-3xl')}>
         <PanelHead t={t} title={t(`${k}.title`)} />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl bg-[hsl(var(--surface-muted)/0.6)] p-4">
+        {/* Two states of the same sheet, divided by a rule — not two cards: the
+            machine is either cut off or connected, and that is a column, not a
+            second surface. */}
+        <div className="grid overflow-hidden rounded-md border border-[hsl(var(--border-default))] sm:grid-cols-2 sm:divide-x sm:divide-[hsl(var(--border-default))] rtl:sm:divide-x-reverse">
+          <div className="bg-[hsl(var(--surface-muted)/0.5)] p-4">
             <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
               <CloudOff className="size-4 text-[hsl(var(--color-warning))]" aria-hidden="true" />
               {t(`${k}.off`)}
@@ -144,7 +152,7 @@ export function OfflineVisual({ t }: { t: T }) {
               ))}
             </ul>
           </div>
-          <div className="rounded-xl bg-[hsl(var(--color-primary)/0.08)] p-4">
+          <div className="border-t border-[hsl(var(--border-default))] bg-[hsl(var(--color-primary)/0.06)] p-4 sm:border-t-0">
             <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
               <Wifi className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
               {t(`${k}.on`)}
@@ -168,16 +176,18 @@ export function OfflineVisual({ t }: { t: T }) {
 export function AiVisual({ t }: { t: T }) {
   const k = 'landing.visual.ai'
   return (
-    <div className={cn(PANEL, 'mx-auto max-w-2xl')}>
+    <div className={cn(PANEL, 'mx-auto max-w-3xl')}>
       <PanelHead t={t} title={t(`${k}.title`)} />
-      <p className="mb-3 flex items-start gap-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-3 text-sm text-[hsl(var(--fg-primary))] sm:text-base">
+      <p className="mb-3 flex items-start gap-2 rounded-md border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-3 text-sm text-[hsl(var(--fg-primary))] sm:text-base">
         <MessageCircleQuestion
           className="mt-0.5 size-5 shrink-0 text-[hsl(var(--fg-tertiary))]"
           aria-hidden="true"
         />
         {t(`${k}.question`)}
       </p>
-      <div className="flex items-start gap-2 rounded-xl bg-[hsl(var(--color-primary)/0.08)] px-4 py-3">
+      {/* The answer is the one place a tint is earned: it is the machine
+          speaking, and it is set against the reader's own question above. */}
+      <div className="flex items-start gap-2 rounded-md border-s-2 border-[hsl(var(--color-primary)/0.6)] bg-[hsl(var(--color-primary)/0.06)] py-3 pe-4 ps-3">
         <Sparkles
           className="mt-0.5 size-5 shrink-0 text-[hsl(var(--color-primary))]"
           aria-hidden="true"

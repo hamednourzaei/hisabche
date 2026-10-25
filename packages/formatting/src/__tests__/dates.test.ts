@@ -48,7 +48,8 @@ describe('the calendar follows the language', () => {
     // exactly why `resolveIntlLocale` must not collapse `af` onto `fa-IR`.
     expect(formatDateLong(DAY, 'fa')).not.toEqual(formatDateLong(DAY, 'af'))
     expect(formatDateLong(DAY, 'fa')).toContain('۱۴۰۵')
-    expect(formatDateLong(DAY, 'af')).toContain('۱۴۰۵')
+    // Dari writes its numerals as 0-9 (owner rule); the year is the same.
+    expect(formatDateLong(DAY, 'af')).toContain('1405')
   })
 
   it('an unknown language falls back to Persian, as the rest of the app does', () => {

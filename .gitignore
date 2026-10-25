@@ -11,6 +11,9 @@ node_modules
 # Turbo
 .turbo
 
+# Embedded Postgres data directories (see backend/src/__tests__/helpers/pg-temp-dir.ts)
+.pgtest
+
 # Build outputs
 dist
 build

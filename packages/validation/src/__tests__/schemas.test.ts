@@ -20,13 +20,17 @@ const invoiceSchema = z.object({
   paid_amount: z.number().min(0).default(0),
   currency: z.enum(['AFN', 'USD', 'PKR', 'IRR']).default('AFN'),
   payment_method: z.enum(['cash', 'credit']).default('cash'),
-  items: z.array(z.object({
-    product_id: z.string().uuid().optional(),
-    product_name: z.string().optional(),
-    quantity: z.number().positive(),
-    unit_price: z.number().min(0),
-    total_price: z.number().min(0),
-  })).min(1),
+  items: z
+    .array(
+      z.object({
+        product_id: z.string().uuid().optional(),
+        product_name: z.string().optional(),
+        quantity: z.number().positive(),
+        unit_price: z.number().min(0),
+        total_price: z.number().min(0),
+      }),
+    )
+    .min(1),
 })
 
 const productSchema = z.object({

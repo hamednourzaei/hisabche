@@ -1,27 +1,32 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Bell, Menu, Search } from 'lucide-react'
-import { Input } from '@/components/ui'
+import { Bell, Command as CommandIcon, Menu, Search } from 'lucide-react'
+import { formatNumber, resolveIntlLocale } from '@hisabche/formatting'
+import { Input, useLocalePush } from '@/components/ui'
 import { useAdminPastDue } from '@/hooks/use-admin-past-due'
 import { activeNavItem, localeOf } from './admin-nav'
 
 /**
- * The admin header: product name, hub title, search, and past due alerts.
+ * The admin header: hub title, workspace search, quick search and past-due alerts.
  * Design tokens only, RTL logical properties.
  */
 export function AdminHeader({
   pathname,
+  menuOpen,
   onOpenMenu,
+  onOpenCommand,
 }: {
   pathname: string
+  menuOpen: boolean
   onOpenMenu: () => void
+  onOpenCommand: () => void
 }) {
   const t = useTranslations()
-  const router = useRouter()
+  const push = useLocalePush()
   const locale = localeOf(pathname)
+  const intlLocale = resolveIntlLocale(locale)
   const active = activeNavItem(pathname)
   const [term, setTerm] = useState('')
 
@@ -31,18 +36,19 @@ export function AdminHeader({
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
     const query = term.trim()
-    router.push(
-      `/${locale}/customers?tab=workspaces${query ? `&search=${encodeURIComponent(query)}` : ''}`,
-    )
+    push(`/customers?tab=workspaces${query ? `&search=${encodeURIComponent(query)}` : ''}`)
   }
 
   return (
-    <header className="sticky top-0 z-sticky flex h-16 shrink-0 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-glass sm:px-6">
+    <header className="sticky top-0 z-sticky flex h-16 shrink-0 items-center gap-2 border-b border-border bg-card/80 px-4 backdrop-blur-glass sm:gap-3 sm:px-6">
       <button
         type="button"
         onClick={onOpenMenu}
         aria-label={t('admin.shell.openMenu')}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+        aria-haspopup="dialog"
+        aria-expanded={menuOpen}
+        aria-controls="admin-mobile-nav"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
       >
         <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
@@ -74,18 +80,29 @@ export function AdminHeader({
             value={term}
             onChange={(event) => setTerm(event.target.value)}
             placeholder={t('admin.shell.searchPlaceholder')}
-            className="h-11 w-56 rounded-xl ps-9 lg:w-72"
+            className="h-11 w-56 rounded-[var(--radius-md)] ps-9 lg:w-72"
           />
         </div>
       </form>
 
       <button
         type="button"
-        onClick={() => router.push(`/${locale}/revenue?tab=subscriptions&status=past_due`)}
-        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={onOpenCommand}
+        aria-label={t('admin.command.open')}
+        aria-haspopup="dialog"
+        aria-keyshortcuts="Control+K Meta+K"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <CommandIcon className="h-5 w-5" aria-hidden="true" />
+      </button>
+
+      <button
+        type="button"
+        onClick={() => push('/revenue?tab=subscriptions&status=past_due')}
+        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={
           alertCount > 0
-            ? t('admin.shell.alertsWithCount', { count: alertCount })
+            ? t('admin.shell.alertsWithCount', { count: formatNumber(alertCount, intlLocale) })
             : t('admin.shell.alertsNone')
         }
       >
@@ -93,9 +110,9 @@ export function AdminHeader({
         {alertCount > 0 && (
           <span
             aria-hidden="true"
-            className="absolute -top-0.5 end-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold tabular-nums text-destructive-foreground"
+            className="absolute -top-0.5 end-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs font-bold tabular-nums text-destructive-foreground"
           >
-            {Math.min(alertCount, 99).toLocaleString()}
+            {formatNumber(Math.min(alertCount, 99), intlLocale)}
             {alertCount > 99 ? '+' : ''}
           </span>
         )}

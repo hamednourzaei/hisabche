@@ -22,7 +22,15 @@ import { BaseError } from '../../errors/base.error'
 import { DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import type { TenancyContext } from '../tenancy.service'
-import { daysBetween, planSchedule } from './installment.domain'
+import {
+  buildInstallmentPlan,
+  outstandingHundredths,
+  planInstallments,
+  type InstallmentLine,
+  type InstallmentPlan,
+} from '@hisabche/validation'
+
+export type { InstallmentLine, InstallmentPlan }
 
 const MISSING_SCHEMA = new Set(['42703', '42P01', 'PGRST202', 'PGRST204', 'PGRST205'])
 
@@ -40,28 +48,6 @@ export class InstallmentsNotConfiguredError extends BaseError {
     super('INSTALLMENTS_MIGRATION_PENDING', 503)
     this.name = 'InstallmentsNotConfiguredError'
   }
-}
-
-export interface InstallmentLine {
-  seq: number
-  dueDate: string
-  /** Major units of the invoice's currency. */
-  amount: number
-  paid: number
-  remaining: number
-  /** Whole days past the due date with something still unpaid; 0 otherwise. */
-  daysLate: number
-}
-
-export interface InstallmentPlan {
-  invoiceId: string
-  currency: string
-  /** What the invoice owes now (total − allocated), major units. */
-  outstanding: number
-  /** Empty = the invoice has no plan. */
-  lines: InstallmentLine[]
-  /** The next unpaid installment, or null when there is no plan or it is all paid. */
-  nextDue: { seq: number; dueDate: string; remaining: number } | null
 }
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -85,7 +71,7 @@ export class InstallmentService {
 
   async get(ctx: TenancyContext, invoiceId: string): Promise<InstallmentPlan> {
     const invoice = await this.invoice(ctx, invoiceId)
-    const outstandingMinor = Math.max(0, Math.round((Number(invoice.outstanding) || 0) * 100))
+    const owed = outstandingHundredths(invoice.outstanding)
 
     const { data, error } = await supabase
       .from('invoice_installments')
@@ -99,42 +85,17 @@ export class InstallmentService {
       throw new DatabaseError('Failed to read the installment plan', error)
     }
 
-    const rows = (data ?? []) as Array<{
-      seq: number
-      due_date: string
-      amount_minor: number | string
-    }>
-    const plannedMinor = rows.reduce((sum, row) => sum + Number(row.amount_minor), 0)
-    // Paid toward the plan = what the plan asked for, less what is still owed.
-    // Never negative: a later credit note can leave more owed than planned.
-    let paidLeft = Math.max(0, plannedMinor - outstandingMinor)
-    const asOf = today()
-
-    const lines: InstallmentLine[] = rows.map((row) => {
-      const amountMinor = Number(row.amount_minor)
-      const paidMinor = Math.min(amountMinor, paidLeft)
-      paidLeft -= paidMinor
-      const remainingMinor = amountMinor - paidMinor
-      const dueDate = String(row.due_date).slice(0, 10)
-      return {
-        seq: row.seq,
-        dueDate,
-        amount: amountMinor / 100,
-        paid: paidMinor / 100,
-        remaining: remainingMinor / 100,
-        // A paid installment is never late, however old it is.
-        daysLate: remainingMinor > 0 ? Math.max(0, daysBetween(dueDate, asOf)) : 0,
-      }
-    })
-
-    const next = lines.find((line) => line.remaining > 0) ?? null
-    return {
+    return buildInstallmentPlan({
       invoiceId,
-      currency: invoice.currency ?? '',
-      outstanding: outstandingMinor / 100,
-      lines,
-      nextDue: next ? { seq: next.seq, dueDate: next.dueDate, remaining: next.remaining } : null,
-    }
+      currency: invoice.currency,
+      outstandingHundredths: owed,
+      rows: (data ?? []) as Array<{
+        seq: number
+        due_date: string
+        amount_minor: number | string
+      }>,
+      asOf: today(),
+    })
   }
 
   /** Split what the invoice owes NOW into `count` monthly parts from `firstDueDate`. */
@@ -144,16 +105,9 @@ export class InstallmentService {
     input: { count: number; firstDueDate: string },
   ): Promise<InstallmentPlan> {
     const invoice = await this.invoice(ctx, invoiceId)
-    const totalMinor = Math.round((Number(invoice.outstanding) || 0) * 100)
-    if (totalMinor <= 0) throw new ValidationError('INSTALLMENT_NOTHING_OWED')
-    // A part smaller than one minor unit cannot be asked for.
-    if (totalMinor < input.count) throw new ValidationError('INSTALLMENT_COUNT_INVALID')
-
-    const schedule = planSchedule({
-      totalMinor,
-      count: input.count,
-      firstDueDate: input.firstDueDate,
-    })
+    const planned = planInstallments(outstandingHundredths(invoice.outstanding), input)
+    if ('refusal' in planned) throw new ValidationError(planned.refusal)
+    const schedule = planned.lines
     await this.save(
       ctx,
       invoiceId,

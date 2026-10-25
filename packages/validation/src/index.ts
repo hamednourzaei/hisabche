@@ -54,7 +54,15 @@ export {
   stockValueAtSellPrice,
   purchaseValue,
 } from './schemas/product.schema'
-export { derivePartyRole, partyRoleLabelKey, type PartyRole } from './schemas/customer.schema'
+export {
+  derivePartyRole,
+  matchesRole,
+  mergeRole,
+  partyRoleLabelKey,
+  resolveEffectiveRole,
+  type DeclaredRole,
+  type PartyRole,
+} from './schemas/customer.schema'
 
 // ---------- Invoice ----------
 export {
@@ -87,6 +95,12 @@ export {
   COLUMN,
   COLUMN_TYPES,
   canAggregate,
+  canBeMultiplierSource,
+  canCarryMultiplier,
+  invalidMultipliers,
+  multiplierIssue,
+  multiplierSourceOf,
+  rowColumnMultiplier,
   columnCountsInTotal,
   canDeleteColumn,
   columnTotals,
@@ -123,7 +137,24 @@ export {
   type InvoiceSummary,
   type InvoiceSummaryInput,
   type MappedInvoiceItem,
+  type MultiplierIssue,
 } from './schemas/invoice-grid'
+
+// ---------- Branches (the rule the server and the offline engine share) ----------
+export {
+  branchAndDescendants,
+  branchScopeFor,
+  mayUseBranch,
+  nestBranches,
+  reportingBranchIds,
+  resolveActiveBranch,
+  validateBranchPlacement,
+  type Branch,
+  type BranchEmployee,
+  type BranchRuleCode,
+  type BranchScope,
+  type BranchTreeNode,
+} from './schemas/branch.domain'
 
 export { computeItemTotalRounded, roundInvoiceMoney, sumInvoiceLines } from './schemas/invoice-math'
 
@@ -253,6 +284,210 @@ export {
   type PeriodLockDecision,
   type PeriodLockScope,
 } from './schemas/accounting.domain'
+
+export {
+  DEFAULT_LEAD_TIME_DAYS,
+  DEMAND_WINDOW_DAYS,
+  type DemandInput,
+  type ReorderPoint,
+  averageDailySales,
+  reorderPointFor,
+  availablePosition,
+  suggestedOrderQuantity,
+  DEAD_STOCK_DEFAULT_DAYS,
+  type DeadStockInput,
+  type DeadStockLine,
+  findDeadStock,
+  buildReorderSuggestions,
+  buildDeadStock,
+  type ReorderLine,
+} from './schemas/reorder.domain'
+
+export { orderLineTotal, receiptUnitCost, receiveRefusal } from './schemas/purchasing.domain'
+
+export {
+  type BreakEvenRow,
+  type FixedCosts,
+  type BreakEvenResult,
+  breakEven,
+  type ScenarioChange,
+  type ScenarioResult,
+  runScenario,
+} from './schemas/break-even.domain'
+
+export {
+  type CohortRow,
+  COHORT_WINDOW_MONTHS,
+  buildCohorts,
+  type SegmentOperator,
+  type SegmentRule,
+  type SegmentFacts,
+  evaluateSegment,
+  type FunnelStep,
+  type Funnel,
+  buildFunnel,
+} from './schemas/cohort.domain'
+
+export {
+  type ReminderChannel,
+  type ReminderTone,
+  type ReminderStep,
+  type ReminderSettings,
+  DEFAULT_REMINDER_STEPS,
+  DEFAULT_REMINDER_SETTINGS,
+  daysPastDue,
+  type CollectionsRuleCode,
+  validateSteps,
+  type CollectionsAction,
+  type CollectionsVerdict,
+  type ChaseState,
+  collectionsFor,
+  stepForDays,
+  isExhausted,
+  type ScheduledPayment,
+  type ScheduleRuleCode,
+  planPayments,
+} from './schemas/collections.domain'
+
+export {
+  type RiskBand,
+  type PaymentBehaviour,
+  type CustomerRiskInput,
+  type PaymentSignal,
+  type CustomerRisk,
+  daysLate,
+  MIN_SETTLED_FOR_A_SCORE,
+  customerRisk,
+} from './schemas/customer-risk.domain'
+
+export {
+  type NpsCategory,
+  type SurveyResponse,
+  type NpsResult,
+  categorise,
+  netPromoterScore,
+  normaliseScore,
+  type HealthBand,
+  type HealthInput,
+  type CustomerHealth,
+  MIN_MONTHS_FOR_A_TREND,
+  customerHealth,
+  type LoyaltyTier,
+  type LoyaltyFacts,
+  loyaltyTier,
+  LOYALTY_TIERS,
+} from './schemas/nps.domain'
+
+export {
+  type Minor as WorkingCapitalMinor,
+  type WorkingCapitalInput,
+  type WorkingCapitalMetrics,
+  workingCapital,
+  type FacilityKind,
+  type Facility,
+  accruedInterest,
+  instalment,
+  dayCount,
+  type Holding,
+  type PortfolioSummary,
+  summarisePortfolio,
+} from './schemas/working-capital.domain'
+
+export {
+  type PurchaseRecord,
+  type SupplierFacts,
+  type RiskBand as supplierRiskBand,
+  type RiskSignal,
+  type SupplierRisk,
+  daysBetween as supplierDaysBetween,
+  MIN_PURCHASES_FOR_A_SCORE,
+  scoreSupplier,
+  type ConcentrationFinding,
+  CONCENTRATION_THRESHOLD_PERCENT,
+  supplierConcentration,
+} from './schemas/supplier-intelligence.domain'
+
+export {
+  createSavedViewSchema,
+  savedViewNameSchema,
+  savedViewRecord,
+  savedViewStateSchema,
+  savedViewTableIdSchema,
+  updateSavedViewSchema,
+  type SavedViewRecord,
+  type SavedViewRow,
+  type SavedViewState,
+} from './schemas/saved-views.schema'
+
+export { projectProgress } from './schemas/project-rules'
+export { parseCustomUnitInput, type CustomUnitQuote } from './schemas/custom-unit.rules'
+export { fallbackCurrencyList, type CurrencyRecord } from './schemas/currency-catalogue'
+
+export {
+  MAX_NOTE_LENGTH,
+  NOTABLE_ENTITIES,
+  validateNote,
+  type NoteDraft,
+  type NoteProblem,
+} from './schemas/note-rules'
+
+export {
+  analysisIsoDay,
+  analysisRangeMessage,
+  breakEvenQuerySchema,
+  workingCapitalQuerySchema,
+} from './schemas/analysis-query.schema'
+
+export {
+  breakEvenAnalysis,
+  cohortReport,
+  collectionsWorklist,
+  customerAssessment,
+  settledInvoiceIds,
+  supplierAnalysis,
+  withCustomerNames,
+  workingCapitalAnalysis,
+  type CollectionsWorklist,
+  type CustomerAssessment,
+  type OutstandingRow,
+  type SupplierAnalysis,
+  type SupplierOrderItemRow,
+  type SupplierOrderRow,
+  type WorkingCapitalAnalysis,
+} from './schemas/analysis-report.domain'
+
+export {
+  inventorySettingsInputSchema,
+  type InventorySettingsInput,
+} from './schemas/inventory-settings.schema'
+
+export {
+  explainInvoiceProfit,
+  productJourney,
+  type EvidenceConsumption,
+  type EvidenceLayer,
+  type InvoiceEvidence,
+  type ProductJourney,
+} from './schemas/evidence.domain'
+
+export {
+  findUnvaluedStock,
+  lateCostKeyFromDigest,
+  uncoveredSoldUnits,
+  type StockPosition,
+  type UnvaluedRow,
+  type UnvaluedStock,
+} from './schemas/unvalued-stock.domain'
+
+export {
+  buildGeneralLedger,
+  type LedgerLine,
+  toBalanceSheet,
+  toIncomeStatement,
+  toTrialBalance,
+  trialBalanceTotals,
+  type LedgerTotals,
+} from './schemas/accounting.reports'
 
 export { inBooksCurrency, invoiceLedgerLines } from './schemas/invoice-posting.domain'
 export type { InvoicePostingAccounts } from './schemas/invoice-posting.domain'
@@ -713,6 +948,14 @@ export {
   type AIInsight,
   type AIChatMessage,
 } from './schemas/ai.schema'
+// The dashboard's smart suggestions: one rule, read by the server and by the device.
+export { SEEDED_UNITS, type UnitRecord } from './schemas/units-seed'
+export {
+  buildInsights,
+  type InsightInput,
+  type InsightProduct,
+  type InsightSale,
+} from './schemas/insight-rules'
 
 // ---------- Workflow ----------
 export {
@@ -954,6 +1197,19 @@ export {
   type FeaturePlan,
   type PlanEdition,
 } from './schemas/feature-registry'
+// ---------- The offline endpoint matrix: what the device can run, per endpoint ----------
+export {
+  OFFLINE_ENDPOINT_MATRIX,
+  NOT_SUPPORTED_REASONS,
+  MATRIX_FEATURES,
+  normalizeEndpoint,
+  endpointAvailability,
+  endpointsOfFeature,
+  featureOfflineAvailability,
+  type EndpointRow,
+  type EndpointVerdict,
+  type OfflineAvailability,
+} from './schemas/offline-endpoint-matrix'
 export {
   resolveEntitlement,
   type EntitlementInput,
@@ -1001,3 +1257,52 @@ export {
   type XlsxRejection,
   type XlsxSheet,
 } from './schemas/xlsx-reader'
+
+export * from './schemas/warehouse-overview'
+
+// ---------- Party statement: open invoices, ledger, summary, activity ----------
+export * from './schemas/party-statement'
+
+// ---------- Installments & late fees: one rule for the server and the device ----------
+export * from './schemas/installment.domain'
+export * from './schemas/installment-plan'
+export * from './schemas/late-fee.domain'
+export * from './schemas/price-list-view'
+export * from './schemas/pos.domain'
+export * from './schemas/till-view'
+export * from './schemas/customer-accounting'
+
+// ---------- People side: attendance sheet and shift plan (shared with the offline engine) ----------
+export * from './schemas/attendance-rules'
+export * from './schemas/shift-plan'
+
+export * from './schemas/payroll-rules'
+export * from './schemas/compensation-plan'
+export * from './schemas/standard-accounts'
+export * from './schemas/attendance-bodies'
+export * from './schemas/budget-rules'
+export * from './schemas/budget-plan'
+export * from './schemas/revaluation-rules'
+export * from './schemas/budget-bodies'
+
+// ---------- Divergence alarm (shadow-mode rollout safety) ----------
+// The threshold rule for «has the shared core started disagreeing with the
+// server often enough to stop trusting the rollout». Pure, no clock, no DB.
+export * from './schemas/divergence-alarm'
+
+// ⚠️ `domain-ports.ts` and `domain-events.ts` WERE DELETED HERE (25 Oct 2026).
+// They declared `Clock`, `IdGenerator`, `UnitOfWork`, `DomainEventHeader`,
+// `CommandHandler` and `BaseFactsSnapshot` — a clean little ports-and-events
+// layer with ZERO production consumers. The only thing that ever touched them
+// was a boundary test that instantiated `FixedClock` and `SequenceIdGenerator`
+// and asserted they worked, which proves the scaffolding can stand, not that
+// anything stands on it.
+//
+// Project rule §14 («no dead code»): a request understood wrongly is thrown
+// away, not kept in case it is wanted later. Importing these into a real
+// command handler is a design change that needs its own ADR; until then the
+// types would be a promise the code does not keep.
+//
+// The same reasoning was applied to the golden-vector runner: it is test
+// support, it stays in `src/__golden__/`, and it is imported BY PATH by the
+// suites that need it so this barrel has no inbound edge from it.

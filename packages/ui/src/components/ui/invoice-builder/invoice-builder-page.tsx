@@ -83,6 +83,7 @@ export interface InvoiceBuilderPageProps {
   ) => void
   onAddColumn: (column: InvoiceColumn) => void
   onUpdateColumn: (id: string, patch: Partial<InvoiceColumn>) => void
+  onSetColumnMultiplier: (id: string, sourceId: string | null) => void
   onReplaceColumn: (column: InvoiceColumn) => void
   onRemoveColumn: (id: string) => void
   onMoveColumn: (id: string, direction: -1 | 1) => void
@@ -137,6 +138,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
   onPickProduct,
   onAddColumn,
   onUpdateColumn,
+  onSetColumnMultiplier,
   onReplaceColumn,
   onRemoveColumn,
   onMoveColumn,
@@ -470,6 +472,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
         existingColumns={columns}
         invoiceCurrency={currency}
         onSubmit={submitColumn}
+        onSetMultiplier={onSetColumnMultiplier}
       />
 
       <TableSettingsDialog

@@ -1,0 +1,168 @@
+
+## reverse: 102 tests in 57 files
+  10  backend\src\__tests__\reverse-guards.test.ts
+  5  backend\src\__tests__\money-is-reversed-not-deleted.test.ts
+  5  backend\src\__tests__\reversal-ledger.test.ts
+  5  backend\src\__tests__\reverse-invoice.test.ts
+  4  packages\api\src\__tests__\request-cancellation.test.ts
+  3  backend\src\__tests__\developer-platform-03.pg.test.ts
+  3  backend\src\__tests__\reverse-till.test.ts
+  3  backend\src\__tests__\shift-assignment-service.test.ts
+  -- sample names --
+  * accounting-close-and-ledger.test.ts :: the lookup excludes cancelled entries
+  * accounting-ledger-rules.test.ts :: drops an account whose lines cancel out entirely
+  * accounting-ledger-rules.test.ts :: reports a genuinely reversed balance as negative rather than hiding it
+  * ai-one-approval-queue.pg.test.ts :: through a key only money, stock and the irreversible are queued; a read never is
+  * ai-pipeline-domain.test.ts :: a cancelled payment, or one for somebody else, is not the payment that was agreed
+  * ai-pipeline-routes.test.ts :: an unfinished run is cancelled by the person who asked — it was never in the queue
+  * analysis-service.test.ts :: a cancelled order and another workspace’s order are not counted
+  * authorization-scope-applied.test.ts :: ⚠️ cancelling a payment is scope-checked, not only SoD-checked
+  * customer-debt-report.test.ts :: excludes cancelled and paid invoices
+  * customer-profile-core.test.ts :: no entry, a draft, or a reversed posting → unposted
+
+## profit: 123 tests in 22 files
+  26  packages\validation\src\__tests__\profit-report-rule.test.ts
+  19  packages\ui\src\__tests__\till-warehouse-profit-pages.test.ts
+  16  backend\src\__tests__\profit-report.test.ts
+  15  backend\src\__tests__\cost-unknown-is-not-zero.test.ts
+  13  packages\ui\src\__tests__\unknown-is-not-zero.test.ts
+  10  backend\src\__tests__\profit-foreign-currency.test.ts
+  4  backend\src\__tests__\insights-rules.test.ts
+  3  backend\src\__tests__\evidence-chain.test.ts
+  -- sample names --
+  * analysis-service.test.ts :: uses the accounting core’s profit report and its salaries; «other» absent is passed as null
+  * authorization-rules.test.ts :: hides the margin on an invoice from a seller
+  * bank-categorization.test.ts :: the ambiguity margin is a named export so the UI can explain itself
+  * break-even-scenarios.test.ts :: break-even quantity covers the fixed costs at the product own margin
+  * break-even-scenarios.test.ts :: a salary rise reaches net profit
+  * cloud-migration-100-invoices.test.ts :: 10. Unknown cost preserved: 5 sales keep costStatus unknown and profit null (never 0)
+  * cost-unknown-is-not-zero.test.ts :: ⚠️ INV-000077: no consumption → no profit and no margin, not 450,000 and 100%
+  * cost-unknown-is-not-zero.test.ts :: the cost is known → 150,000 and 33.33%
+  * cost-unknown-is-not-zero.test.ts :: ten units costed and five not → partial: the 200,000 is stated, the profit is not
+  * cost-unknown-is-not-zero.test.ts :: a layer bought at zero is a KNOWN zero: 100% is then a real margin
+
+## offline: 334 tests in 60 files
+  29  backend\src\__tests__\sync-invariants.test.ts
+  25  backend\src\__tests__\offline-conflict-rules.test.ts
+  18  backend\src\__tests__\offline-pos-conflict.test.ts
+  18  backend\src\__tests__\sync-security.test.ts
+  16  packages\validation\src\__tests__\offline-license.test.ts
+  12  backend\src\__tests__\offline-license-policy.test.ts
+  12  backend\src\__tests__\sync-binary-http.test.ts
+  12  backend\src\__tests__\sync-conflicts-forward.pg.test.ts
+  -- sample names --
+  * ai-action-requests.pg.test.ts :: a browser role cannot read the queue
+  * ai-one-approval-queue.pg.test.ts :: VERIFY: every check is ok
+  * ai-one-approval-queue.pg.test.ts :: the earlier VERIFY of the queue still passes
+  * ai-one-approval-queue.pg.test.ts :: a request made with a key before the migration is untouched and still decidable
+  * ai-one-approval-queue.pg.test.ts :: a request has exactly one origin
+  * ai-one-approval-queue.pg.test.ts :: a run has at most one request
+  * ai-one-approval-queue.pg.test.ts :: a request cannot name a run that does not exist
+  * ai-one-approval-queue.pg.test.ts :: through a key only money, stock and the irreversible are queued; a read never is
+  * ai-one-approval-queue.pg.test.ts :: five approvals of an in-app request at once: exactly ONE claims it
+  * ai-one-approval-queue.pg.test.ts :: an in-app request moves forward only, like any other
+
+## permission: 198 tests in 68 files
+  23  backend\src\__tests__\sod-rules.test.ts
+  19  backend\src\__tests__\authorization-scope.test.ts
+  14  backend\src\__tests__\authorization-scope-applied.test.ts
+  10  backend\src\__tests__\permission-matrix.test.ts
+  7  backend\src\__tests__\plugin-rules.test.ts
+  7  backend\src\__tests__\product-list-warehouse-scope.test.ts
+  7  packages\ui\src\lib\capability\__tests__\use-action-availability.test.ts
+  6  backend\src\__tests__\developer-platform.test.ts
+  -- sample names --
+  * accounting-close-and-ledger.test.ts :: the lookup is scoped to the workspace
+  * activity-feed-workspace-scoped.test.ts :: every statement that filters by actor also filters by workspace
+  * activity-feed-workspace-scoped.test.ts :: ⚠️ the SQL functions that mark and count stay inside the same personal feed
+  * activity-feed-workspace-scoped.test.ts :: no personal route runs without a resolved workspace
+  * activity-feed-workspace-scoped.test.ts :: the route cache is keyed by user AND workspace — switching books never serves the other one
+  * admin-02-security.pg.test.ts :: seeded all 7 admin roles in admin_permissions
+  * Servers with 403 ADMIN_PERMISSION_DENIED
+  * attendance-devices-01.pg.test.ts :: a device stores a hash and a closed list of capabilities
+  * attendance-devices-http.test.ts :: refuses a name that is blank, a zone nobody knows, a capability outside the list, a branch of another business
+  * authorization-rules.test.ts :: an owner holds every capability
+
+## planlimit: 69 tests in 32 files
+  14  backend\src\__tests__\plan-limits.test.ts
+  7  backend\src\__tests__\billing-workspace-scoping.test.ts
+  7  backend\src\__tests__\entitlement-core.test.ts
+  7  backend\src\__tests__\shared-rate-limit.test.ts
+  4  backend\src\__tests__\connector-framework.test.ts
+  2  backend\src\__tests__\authorization-rules.test.ts
+  2  backend\src\__tests__\customer-profile-core.test.ts
+  2  packages\ui\src\__tests__\invoice-customer-terms.test.ts
+  -- sample names --
+  * ai-provider-boundary.test.ts :: quota is checked BEFORE the provider is called
+  * attendance-shifts-notes.test.ts :: a note longer than the limit is a document, and documents have their own place
+  * authorization-rules.test.ts :: limits a seller to the invoices they raised
+  * authorization-rules.test.ts :: limits a seller to the payments they took
+  * billing-workspace-scoping.test.ts :: allows a seat while THIS workspace is under the limit, ignoring other shops
+  * billing-workspace-scoping.test.ts :: blocks a seat once THIS workspace reaches the plan limit
+  * billing-workspace-scoping.test.ts :: blocks invoicing once the WORKSPACE book reaches the limit
+  * billing-workspace-scoping.test.ts :: checkUsageLimit agrees with the workspace scope
+  * billing-workspace-scoping.test.ts :: a sandbox is not a business: it does not use up the quota
+  * billing-workspace-scoping.test.ts :: membership in other shops does not consume the quota
+
+## currency: 303 tests in 86 files
+  16  packages\ui\src\__tests__\dashboard-exchange-rate-form.test.tsx
+  16  packages\api\src\__tests__\currency-conversion.test.ts
+  11  backend\src\__tests__\invoice-exchange-rate.test.ts
+  11  packages\ui\src\__tests__\invoice-exchange-rate.test.ts
+  10  backend\src\__tests__\profit-foreign-currency.test.ts
+  10  packages\validation\src\__tests__\payments-rule.test.ts
+  9  backend\src\__tests__\kpi-currency-aggregation.test.ts
+  8  backend\src\__tests__\currency-audit.characterisation.test.ts
+  -- sample names --
+  * accounting-ledger-rules.test.ts :: exchanges the two sides and leaves the amounts alone
+  * ai-pipeline-domain.test.ts :: a stated price and currency are used as stated
+  * analysis-service.test.ts :: what is owed is stated per currency — afghani and dollars are never added together
+  * analysis-service.test.ts :: the trend is taken in the customer’s main currency only, and names it
+  * analysis-service.test.ts :: reads each leg from where it lives, in ONE currency, over the actual days
+  * base-currency.pg.test.ts :: before it runs, the VERIFY query says NOT ok
+  * base-currency.pg.test.ts :: every existing workspace becomes AFN
+  * base-currency.pg.test.ts :: ⚠️ a second run does not put a chosen currency back to AFN
+  * base-currency.pg.test.ts :: refuses what is not a currency code, and null
+  * base-currency.pg.test.ts :: the VERIFY query says ok, and counts the one that is no longer AFN
+
+## inventory: 319 tests in 83 files
+  28  backend\src\__tests__\stock-count.test.ts
+  25  backend\src\__tests__\inventory-costing-rules.test.ts
+  19  backend\src\__tests__\transfer-lifecycle.test.ts
+  19  packages\validation\src\__tests__\costing-rule.test.ts
+  18  backend\src\__tests__\reorder-dead-stock.test.ts
+  17  backend\src\__tests__\http-migration-stock.test.ts
+  11  backend\src\__tests__\product-stock-warehouse.test.ts
+  10  packages\ui\src\__tests__\product-warehouse-stock.test.ts
+  -- sample names --
+  * ai-one-approval-queue.pg.test.ts :: through a key only money, stock and the irreversible are queued; a read never is
+  * ai-pipeline-domain.test.ts :: money and stock always need a person; the rest may be automated
+  * ai-pipeline-domain.test.ts :: never approves money or stock, whatever the setting says
+  * authorization-rules.test.ts :: a seller cannot see what the shop paid for its stock
+  * buy-price-and-transfer-history.test.ts :: reproduces the owner’s history: 8 −4 +6 +1, then a transfer → 11, not 12
+  * buy-price-and-transfer-history.test.ts :: 20M → 25M in the same currency
+  * buy-price-and-transfer-history.test.ts :: a dollar purchase converts at the invoice’s own rate
+  * buy-price-and-transfer-history.test.ts :: leaves the price alone when it cannot be honest
+  * cloud-migration-100-invoices.test.ts :: 1. Happy path FIFO: MATCHED on every check; figures equal device & hand-computed values
+  * cloud-migration-100-invoices.test.ts :: 2. Happy path AVCO: same consistency with average cost layers
+
+## printing: 33 tests in 19 files
+  10  packages\ui\src\__tests__\receipt-print.test.ts
+  3  backend\src\__tests__\http-integration-finance.test.ts
+  2  backend\src\__tests__\invoice-derived-money.test.ts
+  2  backend\src\__tests__\stock-count.test.ts
+  2  packages\ui\src\__tests__\unknown-is-not-zero.test.ts
+  1  backend\src\__tests__\attendance-devices-01.pg.test.ts
+  1  backend\src\__tests__\cloud-migration-100-invoices.test.ts
+  1  backend\src\__tests__\db-integrity-01.pg.test.ts
+  -- sample names --
+  * attendance-devices-01.pg.test.ts :: rule 3 — a fingerprint and a face 30 seconds apart, on two devices, are one arrival
+  * cloud-migration-100-invoices.test.ts :: 13. Numbering: local printed number stored in reference, cloud sequence continues safely
+  * db-integrity-01.pg.test.ts :: below zero and above the receipt are refused; drawing down is fine
+  * entitlement-core.test.ts :: resolveWorkspaceEntitlement returns AVAILABLE for invoice.print even when expired
+  * http-integration-finance.test.ts :: records a receipt and books it
+  * http-integration-finance.test.ts :: books a receipt balanced
+  * transactions replays by key too
+  * import-inspect.test.ts :: does not print the binary tail of a stored number
+  * import-real-world.test.ts :: ⚠️ a printed-invoice FORM: the date and number above the table belong to its rows
+  * ingest-service.test.ts :: grouped with a no-break space (how many printers write thousands) is still a number

@@ -151,7 +151,7 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
     // `overflow-x-auto` here plus `min-w-0` on every ancestor is the whole
     // no-page-overflow strategy: the table may be wide, the page never is.
     <div className="w-full min-w-0 overflow-x-auto">
-      <table className="w-full table-auto border-collapse text-sm">
+      <table data-invoice-grid className="w-full table-auto border-collapse text-sm">
         <thead className="sticky top-0 z-20 bg-[hsl(var(--surface-muted))]">
           <tr>
             <th

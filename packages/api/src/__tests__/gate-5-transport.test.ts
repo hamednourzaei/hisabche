@@ -735,26 +735,26 @@ describe('Gate 5: Offline Edition Local Transport & Network Isolation Suite', ()
     })
 
     it('Step 15: Verify stock per (product, warehouse)', async () => {
-      const res = await apiClient.get<
-        Array<{
-          warehouseId: string
-          warehouseName: string
-          products: Array<{ productId: string; productName: string; quantity: number }>
-        }>
-      >('/warehouses/placement')
+      // The device answers in the SERVER's shape (StockPlacement): the warehouses,
+      // and one stock row per (product, warehouse) — not a list nested per warehouse.
+      const res = await apiClient.get<{
+        branchesConfigured: boolean
+        warehouses: Array<{ id: string }>
+        stock: Array<{ productId: string; warehouseId: string; quantity: number }>
+      }>('/warehouses/placement')
 
       expect(res.status).toBe(200)
-      expect(res.data.length).toBe(2)
+      expect(res.data.warehouses.length).toBe(2)
 
-      const kabulWh = res.data.find((w) => w.warehouseId === TEST_WAREHOUSE_ID)
-      expect(kabulWh).toBeDefined()
-      const p1InKabul = kabulWh?.products.find((p) => p.productId === prod1Id)
-      expect(p1InKabul?.quantity).toBe(115)
+      const quantityOf = (warehouseId: string) =>
+        res.data.stock.find((row) => row.warehouseId === warehouseId && row.productId === prod1Id)
+          ?.quantity
 
-      const heratWh = res.data.find((w) => w.warehouseId === wh2Id)
-      expect(heratWh).toBeDefined()
-      const p1InHerat = heratWh?.products.find((p) => p.productId === prod1Id)
-      expect(p1InHerat?.quantity).toBe(15)
+      expect(res.data.warehouses.some((w) => w.id === TEST_WAREHOUSE_ID)).toBe(true)
+      expect(quantityOf(TEST_WAREHOUSE_ID)).toBe(115)
+
+      expect(res.data.warehouses.some((w) => w.id === wh2Id)).toBe(true)
+      expect(quantityOf(wh2Id)).toBe(15)
     })
 
     it('Step 16: Verify COGS under FIFO and AVCO costing', async () => {

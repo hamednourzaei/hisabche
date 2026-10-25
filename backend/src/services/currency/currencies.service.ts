@@ -29,20 +29,12 @@
 // silently widens.
 // ============================================
 
-import { CURRENCY_CODES } from '@hisabche/validation'
+import { fallbackCurrencyList, type CurrencyRecord } from '@hisabche/validation'
 
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
 
-export interface CurrencyRecord {
-  code: string
-  name: string
-  nameFa: string | null
-  symbol: string | null
-  /** ISO 4217 minor units. See the migration for the non-2 groups. */
-  decimalPlaces: number
-  isActive: boolean
-}
+export type { CurrencyRecord }
 
 const SCHEMA_ABSENT = new Set(['42P01', 'PGRST205', '42703', 'PGRST204'])
 
@@ -55,25 +47,7 @@ interface Row {
   is_active: boolean
 }
 
-/**
- * What the picker falls back to when the table is missing.
- *
- * Deliberately minimal: code only, with the precision left to the client's
- * own `FRACTION_DIGITS`. Inventing names and symbols here would be a second
- * copy of the reference data to keep in step.
- */
-function fallback(): CurrencyRecord[] {
-  return CURRENCY_CODES.map((code) => ({
-    code,
-    name: code,
-    nameFa: null,
-    symbol: null,
-    // The client already knows the real precision for every one of these; the
-    // 2 here is never used for formatting, only to satisfy the shape.
-    decimalPlaces: 2,
-    isActive: true,
-  }))
-}
+const fallback = fallbackCurrencyList
 
 function map(row: Row): CurrencyRecord {
   return {

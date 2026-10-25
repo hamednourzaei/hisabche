@@ -24,6 +24,7 @@ import { useTranslations } from 'next-intl'
 import { Megaphone, Users } from 'lucide-react'
 import { useMyCapabilities } from '@hisabche/api'
 import { isNavLocked } from '@hisabche/ui-contract'
+import { useActionAvailability } from '../../../../lib/capability/use-action-availability'
 import { usePageLook } from '../../../../lib/page-look'
 import { RegisterCustomizer } from '../../register-customizer'
 import { hubLookId } from '../../page-hub'
@@ -70,8 +71,11 @@ export function CustomersHubContainer() {
 function CustomersHub() {
   const t = useTranslations()
   const blocked = useMyCapabilities().data?.blockedModules ?? []
+  // The offline edition (Windows, mobile) has no follow-up, campaign or stale-sale
+  // engine, so the whole tab is not offered there — same rule as a locked module.
+  const outreachOffline = useActionAvailability('customer.outreach').requiresOnline
   const allowedSections = OUTREACH_SECTIONS.filter(
-    (section) => !isNavLocked(OUTREACH_SOURCE[section], blocked),
+    (section) => !outreachOffline && !isNavLocked(OUTREACH_SOURCE[section], blocked),
   )
   const allowedTabs = CUSTOMERS_HUB_TABS.filter(
     (tab) => tab !== 'outreach' || allowedSections.length > 0,

@@ -11,6 +11,8 @@ import {
   type AdminUpgradeRequest,
   type UpgradeRequestStatusFilter,
 } from '@/hooks/use-admin-subscriptions'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminDateTime } from '@/lib/admin-format'
 
 const FILTERS: UpgradeRequestStatusFilter[] = [
   'pending',
@@ -68,6 +70,7 @@ export function UpgradeRequestsPanel() {
 }
 
 function UpgradeRequestRow({ request }: { request: AdminUpgradeRequest }) {
+  const dateLocale = useAdminLocale()
   const t = useTranslations()
   const decide = useDecideUpgradeRequest()
   const [note, setNote] = useState('')
@@ -98,7 +101,7 @@ function UpgradeRequestRow({ request }: { request: AdminUpgradeRequest }) {
           dateTime={request.created_at}
           suppressHydrationWarning
         >
-          {new Date(request.created_at).toLocaleString()}
+          {adminDateTime(request.created_at, dateLocale)}
         </time>
       </div>
       <div className="text-xs text-muted-foreground">
@@ -128,7 +131,7 @@ function UpgradeRequestRow({ request }: { request: AdminUpgradeRequest }) {
         <div className="flex flex-wrap items-end gap-2">
           {needsAmount ? (
             <label className="space-y-1">
-              <span className="block text-[11px] text-muted-foreground">
+              <span className="block text-xs text-muted-foreground">
                 {t('admin.upgrades.amountAgreed')}
               </span>
               <Input
@@ -142,9 +145,7 @@ function UpgradeRequestRow({ request }: { request: AdminUpgradeRequest }) {
             </label>
           ) : null}
           <label className="min-w-[200px] flex-1 space-y-1">
-            <span className="block text-[11px] text-muted-foreground">
-              {t('admin.upgrades.note')}
-            </span>
+            <span className="block text-xs text-muted-foreground">{t('admin.upgrades.note')}</span>
             <Input value={note} maxLength={500} onChange={(event) => setNote(event.target.value)} />
           </label>
           <Button

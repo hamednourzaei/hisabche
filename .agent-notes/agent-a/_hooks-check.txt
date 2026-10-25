@@ -1,0 +1,20 @@
+useShelves: packages\ui\src\components\ui\warehouse\containers\Warehouse-container.tsx | packages\ui\src\components\ui\warehouse\shelves\shelf-dialogs.tsx | packages\ui\src\components\ui\warehouse\shelves\shelf-overflow.tsx
+useStorefront: packages\api\src\hooks\orders.ts | packages\ui\src\components\ui\developers\containers\developers-container.tsx
+useCustomerPortal: packages\api\src\hooks\customer-portal.ts | packages\ui\src\components\ui\customers\customer-portal-panel.tsx
+useAttendanceLink: packages\api\src\hooks\attendance-links.ts | packages\ui\src\components\ui\team-and-payroll\attendance-link-dialog.tsx
+useConflicts: packages\api\src\hooks\conflicts.ts | packages\ui\src\components\ui\conflicts\containers\conflicts-container.tsx | packages\ui\src\components\ui\data-and-sync\containers\data-and-sync-container.tsx
+usePeerBenchmark: packages\api\src\hooks\analysis.ts | packages\ui\src\components\ui\analysis\peer-benchmark.tsx
+useAssets: packages\api\src\hooks\assets.ts | packages\ui\src\components\ui\assets\containers\assets-container.tsx
+useBudgets: packages\api\src\hooks\budgets.ts
+useRecurring: NONE
+useReportBuilder: NONE
+useWarehouseMap: packages\api\src\hooks\warehouse-map.ts | packages\ui\src\components\ui\warehouse\containers\Warehouse-container.tsx | packages\ui\src\components\ui\warehouse\shelves\warehouse-products-section.tsx
+useBankStatements: packages\api\src\hooks\bank.ts | packages\ui\src\components\ui\bank\containers\bank-container.tsx
+useManufacturing: packages\api\src\hooks\manufacturing.ts | packages\ui\src\components\ui\manufacturing\manufacturing-dashboard-card.tsx | packages\ui\src\components\ui\manufacturing\manufacturing-report.tsx
+useInstallmentPlan: packages\api\src\hooks\installments.ts | packages\ui\src\components\ui\invoice-detail\invoice-installments-panel.tsx
+usePayroll: packages\api\src\hooks\payroll.ts | packages\ui\src\components\ui\human-resources\containers\employee-detail-container.tsx | packages\ui\src\components\ui\human-resources\containers\hr-container.tsx
+useEmployees: packages\api\src\hooks\employees.ts | packages\ui\src\components\ui\crm\containers\crm-container.tsx | packages\ui\src\components\ui\human-resources\containers\hr-container.tsx
+useLateFee: packages\api\src\hooks\late-fees.ts | packages\ui\src\components\ui\invoice-detail\invoice-late-fee-panel.tsx
+useExpiry: packages\api\src\hooks\expiry.ts | packages\ui\src\components\ui\expiry\containers\expiry-container.tsx
+useTransfers: NONE
+useStockCount: NONE

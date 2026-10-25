@@ -14,8 +14,28 @@ import {
   type BlogPostStatus,
 } from '@hisabche/validation'
 
-import { Button, Card, EmptyState, Input, PaginationBar, Skeleton } from '@/components/ui'
-import { ErrorState } from '@/components/admin-shell/admin-ui'
+import {
+  Button,
+  Card,
+  DataTable,
+  EmptyState,
+  Input,
+  PaginationBar,
+  SelectField,
+  Skeleton,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  type TableColumn,
+} from '@/components/ui'
+import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminDateTime, adminNumber, UNKNOWN_VALUE } from '@/lib/admin-format'
 import { cn } from '@/lib/utils'
 import {
   useAdminBlogPosts,
@@ -24,6 +44,8 @@ import {
   useDeleteBlogTaxonomy,
   useModerateBlogComment,
   useSaveBlogTaxonomy,
+  type AdminBlogPostSummary,
+  type AdminBlogTaxonomy,
   type BlogTaxonomyKind,
 } from '@/hooks/use-admin-blog'
 
@@ -84,42 +106,142 @@ function PostsTab({ lang }: { lang: string }) {
   const total = posts.data?.total ?? 0
   const from = total === 0 ? 0 : page * PAGE_SIZE + 1
   const to = Math.min((page + 1) * PAGE_SIZE, total)
+  const displayLocale = useAdminLocale()
+  const tableT = useAdminTableT()
+  const columns: TableColumn<AdminBlogPostSummary>[] = [
+    {
+      id: 'title',
+      labelKey: 'admin.blog.columns.title',
+      labelFallback: 'عنوان',
+      locked: true,
+      render: (p) => (
+        <div className="min-w-0">
+          <Link
+            href={`/${lang}/blog/${p.id}`}
+            className="font-medium text-foreground hover:underline"
+          >
+            {p.title}
+          </Link>
+          <span className="block truncate font-mono text-xs text-muted-foreground" dir="ltr">
+            /{p.locale}/blog/{p.slug}
+          </span>
+        </div>
+      ),
+      sortValue: (p) => p.title,
+    },
+    {
+      id: 'locale',
+      labelKey: 'admin.blog.columns.locale',
+      labelFallback: 'زبان',
+      showFrom: 'md',
+      render: (p) => t(`admin.blog.locales.${p.locale}`),
+      sortValue: (p) => p.locale,
+    },
+    {
+      id: 'status',
+      labelKey: 'admin.blog.columns.status',
+      labelFallback: 'وضعیت',
+      render: (p) => (
+        <span className="inline-flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_TONE[p.status])}
+          />
+          {t(`admin.blog.status.${p.status}`)}
+          {p.noindex ? <span className="text-xs text-muted-foreground">noindex</span> : null}
+        </span>
+      ),
+      sortValue: (p) => p.status,
+    },
+    {
+      id: 'views',
+      labelKey: 'admin.blog.stats.views',
+      labelFallback: 'بازدید',
+      align: 'end',
+      showFrom: 'md',
+      render: (p) => (
+        <span className="tabular-nums">{adminNumber(p.stats.views, displayLocale)}</span>
+      ),
+      sortValue: (p) => p.stats.views,
+    },
+    {
+      id: 'likes',
+      labelKey: 'admin.blog.stats.likes',
+      labelFallback: 'پسند',
+      align: 'end',
+      showFrom: 'lg',
+      render: (p) => (
+        <span className="tabular-nums">
+          {adminNumber(p.stats.likes, displayLocale)} /{' '}
+          {adminNumber(p.stats.dislikes, displayLocale)}
+        </span>
+      ),
+      sortValue: (p) => p.stats.likes,
+    },
+    {
+      id: 'rating',
+      labelKey: 'admin.blog.stats.rating',
+      labelFallback: 'امتیاز',
+      align: 'end',
+      showFrom: 'lg',
+      render: (p) => (
+        <span className="tabular-nums">
+          {p.stats.ratingAvg === null
+            ? UNKNOWN_VALUE
+            : `${adminNumber(p.stats.ratingAvg, displayLocale, 1)} (${adminNumber(p.stats.ratingCount, displayLocale)})`}
+        </span>
+      ),
+      sortValue: (p) => p.stats.ratingAvg,
+    },
+    {
+      id: 'comments',
+      labelKey: 'admin.blog.stats.comments',
+      labelFallback: 'نظرها',
+      align: 'end',
+      render: (p) => (
+        <span className="tabular-nums">
+          {adminNumber(p.stats.comments, displayLocale)}
+          {p.stats.pendingComments
+            ? ` + ${adminNumber(p.stats.pendingComments, displayLocale)}`
+            : ''}
+        </span>
+      ),
+      sortValue: (p) => p.stats.comments,
+    },
+  ]
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <select
-          className="h-11 rounded-xl border border-border bg-background px-3 text-sm"
+        <SelectField
+          className="h-11 w-full sm:w-44"
           value={locale ?? ''}
+          onChange={(value) => {
+            setLocale((value || undefined) as BlogLocale | undefined)
+            setPage(0)
+          }}
+          options={[
+            { value: '', label: t('admin.blog.filters.allLocales') },
+            ...BLOG_LOCALES.map((l) => ({ value: l, label: t(`admin.blog.locales.${l}`) })),
+          ]}
           aria-label={t('admin.blog.fields.locale')}
-          onChange={(e) => {
-            setLocale((e.target.value || undefined) as BlogLocale | undefined)
-            setPage(0)
-          }}
-        >
-          <option value="">{t('admin.blog.filters.allLocales')}</option>
-          {BLOG_LOCALES.map((l) => (
-            <option key={l} value={l}>
-              {t(`admin.blog.locales.${l}`)}
-            </option>
-          ))}
-        </select>
-        <select
-          className="h-11 rounded-xl border border-border bg-background px-3 text-sm"
+        />
+        <SelectField
+          className="h-11 w-full sm:w-44"
           value={status ?? ''}
-          aria-label={t('admin.blog.filters.status')}
-          onChange={(e) => {
-            setStatus((e.target.value || undefined) as BlogPostStatus | undefined)
+          onChange={(value) => {
+            setStatus((value || undefined) as BlogPostStatus | undefined)
             setPage(0)
           }}
-        >
-          <option value="">{t('admin.blog.filters.allStatuses')}</option>
-          {BLOG_POST_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {t(`admin.blog.status.${s}`)}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: '', label: t('admin.blog.filters.allStatuses') },
+            ...BLOG_POST_STATUSES.map((s) => ({
+              value: s,
+              label: t(`admin.blog.status.${s}`),
+            })),
+          ]}
+          aria-label={t('admin.blog.filters.status')}
+        />
         <Input
           className="h-11 max-w-xs"
           value={q}
@@ -149,61 +271,15 @@ function PostsTab({ lang }: { lang: string }) {
           description={t('admin.blog.emptyPostsHint')}
         />
       ) : (
-        <Card className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-xs text-muted-foreground">
-              <tr className="border-b border-border">
-                <th className="p-3 text-start font-medium">{t('admin.blog.columns.title')}</th>
-                <th className="p-3 text-start font-medium">{t('admin.blog.columns.locale')}</th>
-                <th className="p-3 text-start font-medium">{t('admin.blog.columns.status')}</th>
-                <th className="p-3 text-end font-medium">{t('admin.blog.stats.views')}</th>
-                <th className="p-3 text-end font-medium">{t('admin.blog.stats.likes')}</th>
-                <th className="p-3 text-end font-medium">{t('admin.blog.stats.rating')}</th>
-                <th className="p-3 text-end font-medium">{t('admin.blog.stats.comments')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {posts.data?.posts.map((p) => (
-                <tr key={p.id} className="border-b border-border last:border-0">
-                  <td className="p-3">
-                    <Link href={`/${lang}/blog/${p.id}`} className="font-medium hover:underline">
-                      {p.title}
-                    </Link>
-                    <span className="block text-xs text-muted-foreground" dir="ltr">
-                      /{p.locale}/blog/{p.slug}
-                    </span>
-                  </td>
-                  <td className="p-3">{t(`admin.blog.locales.${p.locale}`)}</td>
-                  <td className="p-3">
-                    <span className="inline-flex items-center gap-2">
-                      <span
-                        aria-hidden="true"
-                        className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_TONE[p.status])}
-                      />
-                      {t(`admin.blog.status.${p.status}`)}
-                      {p.noindex ? (
-                        <span className="text-xs text-muted-foreground">noindex</span>
-                      ) : null}
-                    </span>
-                  </td>
-                  <td className="p-3 text-end tabular-nums">{p.stats.views}</td>
-                  <td className="p-3 text-end tabular-nums">
-                    {p.stats.likes} / {p.stats.dislikes}
-                  </td>
-                  <td className="p-3 text-end tabular-nums">
-                    {p.stats.ratingAvg === null
-                      ? '—'
-                      : `${p.stats.ratingAvg} (${p.stats.ratingCount})`}
-                  </td>
-                  <td className="p-3 text-end tabular-nums">
-                    {p.stats.comments}
-                    {p.stats.pendingComments ? ` + ${p.stats.pendingComments}` : ''}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <DataTable
+          tableId="admin-blog-posts"
+          t={tableT}
+          rows={posts.data?.posts ?? []}
+          columns={columns}
+          rowKey={(p) => p.id}
+          paginate={false}
+          minWidthClass="min-w-[900px]"
+        />
       )}
       <PaginationBar
         page={page}
@@ -220,6 +296,7 @@ function PostsTab({ lang }: { lang: string }) {
 }
 
 function CommentsTab({ lang }: { lang: string }) {
+  const dateLocale = useAdminLocale()
   const t = useTranslations()
   const [status, setStatus] = useState<BlogCommentStatus>('pending')
   const [page, setPage] = useState(0)
@@ -272,7 +349,7 @@ function CommentsTab({ lang }: { lang: string }) {
                   {c.authorName ?? t('admin.blog.unknownAuthor')}
                 </span>
                 <time dateTime={c.createdAt} suppressHydrationWarning>
-                  {new Date(c.createdAt).toLocaleString()}
+                  {adminDateTime(c.createdAt, dateLocale)}
                 </time>
                 {c.post ? (
                   <Link className="hover:underline" href={`/${lang}/blog/${c.post.id}`}>
@@ -351,6 +428,7 @@ function TaxonomyList({ kind, locale }: { kind: BlogTaxonomyKind; locale: BlogLo
   const [slug, setSlug] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<AdminBlogTaxonomy | null>(null)
 
   return (
     <Card className="space-y-3 p-4">
@@ -432,10 +510,7 @@ function TaxonomyList({ kind, locale }: { kind: BlogTaxonomyKind; locale: BlogLo
                 size="sm"
                 variant="outline"
                 disabled={removeItem.isPending}
-                onClick={() => {
-                  if (window.confirm(t('admin.blog.taxonomy.confirmDelete')))
-                    removeItem.mutate(item.id)
-                }}
+                onClick={() => setDeleteTarget(item)}
               >
                 {t('admin.blog.taxonomy.delete')}
               </Button>
@@ -446,6 +521,33 @@ function TaxonomyList({ kind, locale }: { kind: BlogTaxonomyKind; locale: BlogLo
           ) : null}
         </ul>
       )}
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('admin.blog.taxonomy.confirmDelete')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('admin.blog.taxonomy.deleteDesc', { name: deleteTarget?.name ?? '' })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                const target = deleteTarget
+                setDeleteTarget(null)
+                if (target) removeItem.mutate(target.id)
+              }}
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }

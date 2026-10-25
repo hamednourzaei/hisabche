@@ -15,7 +15,15 @@
 // ============================================
 
 import { app, safeStorage } from 'electron'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { join } from 'node:path'
 
 function vaultDir(): string {
@@ -59,35 +67,80 @@ export function isEncryptionAvailable(): boolean {
   }
 }
 
+// ---------------------------------------------------------------------------
+// ⚠️ A SIGN-IN MUST SURVIVE AN UPDATE OR A REINSTALL (owner, 24 Oct 2026).
+//
+// What lives here is the session, the licence, the licence key and the edition.
+// Losing ANY of them signs the person out — and for the offline edition a lost
+// licence key is worse than a sign-out: the licence cannot be re-checked without
+// the internet, so the device falls back to the cloud sign-in.
+//
+// The old store could lose them three ways, all of them around an update:
+//
+//   1. A read that failed ANYWHERE deleted the file. «Corrupt or written under a
+//      different OS user» was the guess; the same failure happens when the OS key
+//      service is not ready yet in the first moments after the installer starts
+//      the app. One slow start and the session was gone for good.
+//   2. Whether an entry was encrypted was decided by whether encryption happened
+//      to be available AT READ TIME, not at write time. An entry written plain
+//      while the key service was down was later fed to the decryptor, failed, and
+//      — see 1 — was deleted.
+//   3. A write was truncate-then-write. An app closed by the installer in the
+//      middle of one left a half file, which then failed 1.
+//
+// So: each entry says how it was written (first byte), a write is atomic and
+// keeps the previous good value beside it, and a read that cannot be completed
+// returns «nothing» WITHOUT touching the file.
+// ---------------------------------------------------------------------------
+
+/** First byte of a file: the payload is encrypted by safeStorage (OS user key). */
+const ENCRYPTED = 0x01
+/** First byte of a file: the payload is plain UTF-8 (the key service was unavailable). */
+const PLAIN = 0x02
+
+const backupPath = (path: string): string => `${path}.bak`
+
+function decode(buffer: Buffer): string | null {
+  if (buffer.length > 64_000) return null
+
+  const marker = buffer[0]
+  if (marker === ENCRYPTED) {
+    // Written encrypted. If the key service is not answering right now this is
+    // «not yet», never «gone» — the caller gets null and the file stays.
+    if (!isEncryptionAvailable()) return null
+    return safeStorage.decryptString(buffer.subarray(1))
+  }
+  if (marker === PLAIN) return buffer.subarray(1).toString('utf8')
+
+  // An entry from before the marker existed: encrypted if the OS can open it,
+  // otherwise it was written plain.
+  if (isEncryptionAvailable()) {
+    try {
+      return safeStorage.decryptString(buffer)
+    } catch {
+      /* fall through: it may have been written plain */
+    }
+  }
+  const text = buffer.toString('utf8')
+  return text.includes('\u0000') ? null : text
+}
+
+function readEntry(path: string): string | null {
+  if (!existsSync(path)) return null
+  try {
+    const value = decode(readFileSync(path))
+    return typeof value === 'string' && value.length <= 64_000 ? value : null
+  } catch (error) {
+    console.warn(`[secure] ${path} could not be read now; leaving it in place:`, error)
+    return null
+  }
+}
+
 export function secureGet(key: string): string | null {
   const safeKey = validateKey(key)
   const path = entryPath(safeKey)
-  if (!existsSync(path)) return null
-
-  try {
-    const buffer = readFileSync(path)
-
-    // Validate buffer size
-    if (buffer.length > 64_000) {
-      console.warn(`[secure] Key ${safeKey} has unusually large value, discarding`)
-      rmSync(path, { force: true })
-      return null
-    }
-
-    const result = isEncryptionAvailable() ? safeStorage.decryptString(buffer) : buffer.toString('utf8')
-
-    // Validate decrypted result
-    if (typeof result !== 'string' || result.length > 64_000) {
-      throw new Error('INVALID_VALUE: Decrypted value has invalid format or size')
-    }
-
-    return result
-  } catch (error) {
-    console.error(`[secure] Key ${safeKey} access failed:`, error)
-    // Corrupt or written under a different OS user — drop it rather than loop.
-    rmSync(path, { force: true })
-    return null
-  }
+  // The previous good value covers a main file that an update cut short.
+  return readEntry(path) ?? readEntry(backupPath(path))
 }
 
 export function secureSet(key: string, value: string): void {
@@ -108,17 +161,27 @@ export function secureSet(key: string, value: string): void {
     throw new Error('INVALID_VALUE: Value contains null bytes')
   }
 
-  const payload = isEncryptionAvailable()
-    ? safeStorage.encryptString(value)
-    : Buffer.from(value, 'utf8')
+  const encrypted = isEncryptionAvailable()
+  const payload = Buffer.concat([
+    Buffer.from([encrypted ? ENCRYPTED : PLAIN]),
+    encrypted ? safeStorage.encryptString(value) : Buffer.from(value, 'utf8'),
+  ])
 
   // Use safe file path and strict permissions
   const path = entryPath(safeKey)
 
   // Add audit logging for sensitive operations
-  console.log(`[secure] Setting key: ${safeKey}, size: ${value.length} bytes, encrypted: ${isEncryptionAvailable()}`)
+  console.log(
+    `[secure] Setting key: ${safeKey}, size: ${value.length} bytes, encrypted: ${encrypted}`,
+  )
 
-  writeFileSync(path, payload, { mode: 0o600 })
+  // Atomic: the new value is written beside the old one and renamed over it, and
+  // the old one is kept as the backup. A write cut short leaves the previous
+  // value readable instead of a half file.
+  const pending = `${path}.tmp`
+  writeFileSync(pending, payload, { mode: 0o600 })
+  if (existsSync(path)) copyFileSync(path, backupPath(path))
+  renameSync(pending, path)
 }
 
 export function secureDelete(key: string): void {
@@ -126,5 +189,9 @@ export function secureDelete(key: string): void {
   const path = entryPath(safeKey)
 
   console.log(`[secure] Deleting key: ${safeKey}`)
+  // A deliberate delete (sign-out) removes the backup too — otherwise a signed-out
+  // session would come back from it.
   rmSync(path, { force: true })
+  rmSync(backupPath(path), { force: true })
+  rmSync(`${path}.tmp`, { force: true })
 }

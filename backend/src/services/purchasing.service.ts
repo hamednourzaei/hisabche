@@ -22,7 +22,13 @@ import { randomUUID } from 'node:crypto'
 import { sourceIdOf } from '../utils/deterministic-id'
 import { IdempotencyUnavailableError } from '../utils/client-request'
 import { supabase } from '../db'
-import { CreatePurchaseOrder, UpdatePurchaseOrder } from '@hisabche/validation'
+import {
+  CreatePurchaseOrder,
+  UpdatePurchaseOrder,
+  orderLineTotal,
+  receiptUnitCost,
+  receiveRefusal,
+} from '@hisabche/validation'
 import type { TenancyContext } from './tenancy.service'
 import { costing } from './inventory-costing'
 import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
@@ -160,7 +166,7 @@ export class PurchasingService {
       product_id: item.productId,
       quantity: item.quantity,
       unit_price: item.unitPrice,
-      total_price: item.totalPrice ?? item.quantity * item.unitPrice,
+      total_price: orderLineTotal(item),
       workspace_id: workspaceId,
       user_id: userId,
     }))
@@ -370,8 +376,8 @@ export class PurchasingService {
     // flips first, conditioned on the status just read: exactly one caller's
     // update matches a row, every other one finds nothing and is refused.
     const priorStatus = String((order as { status?: unknown }).status ?? '')
-    if (priorStatus === 'received') throw new ConflictError('PURCHASE_ORDER_ALREADY_RECEIVED')
-    if (priorStatus === 'cancelled') throw new ConflictError('PURCHASE_ORDER_CANCELLED')
+    const refusal = receiveRefusal(priorStatus)
+    if (refusal) throw new ConflictError(refusal)
 
     const receivedAt = new Date().toISOString()
     const { data: claimed, error: claimError } = await supabase
@@ -427,14 +433,15 @@ export class PurchasingService {
       const quantity = Number(item.quantity) || 0
       if (!item.product_id || quantity <= 0) continue
 
-      const lineTotal = Number(item.total_price) || quantity * (Number(item.unit_price) || 0)
+      const unitCost = receiptUnitCost(item)
+      if (unitCost === null) continue
 
       await costing.recordReceipt(ctx, {
         productId: item.product_id,
         quantity,
         // What was actually paid per unit. The list price would overstate the
         // layer and every profit later drawn from it.
-        unitCost: lineTotal / quantity,
+        unitCost,
         entryDate,
         sourceType: 'purchase_order',
         sourceId: id,

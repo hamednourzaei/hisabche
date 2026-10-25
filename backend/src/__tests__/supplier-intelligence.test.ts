@@ -33,7 +33,7 @@ import {
   supplierConcentration,
   type PurchaseRecord,
   type SupplierFacts,
-} from '../services/supplier/supplier-intelligence.domain'
+} from '@hisabche/validation'
 
 const AS_OF = '2026-09-30'
 

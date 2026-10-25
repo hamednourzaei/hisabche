@@ -15,7 +15,21 @@ import {
   type BlogPostStatus,
 } from '@hisabche/validation'
 
-import { Button, Card, Input, Skeleton } from '@/components/ui'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Button,
+  Card,
+  Input,
+  SelectField,
+  Skeleton,
+} from '@/components/ui'
 import { ErrorState } from '@/components/admin-shell/admin-ui'
 import {
   useAdminBlogPost,
@@ -129,6 +143,7 @@ export function PostEditorClient({ id }: { id: string | null }) {
   const post = useAdminBlogPost(id)
   const save = useSaveBlogPost()
   const remove = useDeleteBlogPost()
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const uploadCover = useUploadBlogImage()
 
   const [form, setForm] = useState<FormState>(() => {
@@ -245,21 +260,20 @@ export function PostEditorClient({ id }: { id: string | null }) {
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-xs">
               <span className="text-muted-foreground">{t('admin.blog.fields.locale')}</span>
-              <select
+              <SelectField
                 name="locale"
-                className="h-9 rounded-lg border border-border bg-background px-2 text-sm"
+                className="h-9 w-36"
                 value={form.locale}
                 disabled={Boolean(id)}
-                onChange={(e) =>
-                  patch({ locale: e.target.value as BlogLocale, categoryId: '', tagIds: [] })
+                onChange={(value) =>
+                  patch({ locale: value as BlogLocale, categoryId: '', tagIds: [] })
                 }
-              >
-                {BLOG_LOCALES.map((l) => (
-                  <option key={l} value={l}>
-                    {t(`admin.blog.locales.${l}`)}
-                  </option>
-                ))}
-              </select>
+                options={BLOG_LOCALES.map((l) => ({
+                  value: l,
+                  label: t(`admin.blog.locales.${l}`),
+                }))}
+                aria-label={t('admin.blog.fields.locale')}
+              />
             </label>
             {current?.authorName ? (
               <span className="text-xs text-muted-foreground">
@@ -351,7 +365,7 @@ export function PostEditorClient({ id }: { id: string | null }) {
               value={form.publishedAt}
               onChange={(e) => patch({ publishedAt: e.target.value })}
             />
-            <span className="block text-[11px] text-muted-foreground">
+            <span className="block text-xs text-muted-foreground">
               {t('admin.blog.publish.dateHint')}
             </span>
             {errorFor('publishedAt') ? (
@@ -413,18 +427,43 @@ export function PostEditorClient({ id }: { id: string | null }) {
             </div>
           ) : null}
           {id ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="text-destructive"
-              disabled={remove.isPending}
-              onClick={() => {
-                if (!window.confirm(t('admin.blog.publish.confirmDelete'))) return
-                remove.mutate(id, { onSuccess: () => router.replace(`/${lang}/blog`) })
-              }}
-            >
-              {t('admin.blog.publish.delete')}
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="text-destructive"
+                disabled={remove.isPending}
+                onClick={() => setConfirmDelete(true)}
+              >
+                {t('admin.blog.publish.delete')}
+              </Button>
+              <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t('admin.blog.publish.confirmDelete')}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t('admin.blog.publish.deleteDesc', {
+                        title: current?.title || form.title,
+                      })}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                    <AlertDialogAction
+                      variant="destructive"
+                      onClick={() => {
+                        setConfirmDelete(false)
+                        remove.mutate(id, {
+                          onSuccess: () => router.replace(`/${lang}/blog`),
+                        })
+                      }}
+                    >
+                      {t('common.delete')}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           ) : null}
         </Card>
 
@@ -432,19 +471,18 @@ export function PostEditorClient({ id }: { id: string | null }) {
           <h2 className="text-sm font-semibold">{t('admin.blog.fields.organise')}</h2>
           <label className="block space-y-1">
             <span className="text-xs text-muted-foreground">{t('admin.blog.fields.category')}</span>
-            <select
+            <SelectField
               name="categoryId"
-              className="h-9 w-full rounded-lg border border-border bg-background px-2 text-sm"
+              data-field="categoryId"
+              className="h-9 w-full"
               value={form.categoryId}
-              onChange={(e) => patch({ categoryId: e.target.value })}
-            >
-              <option value="">{t('admin.blog.fields.none')}</option>
-              {(categories.data ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => patch({ categoryId: value })}
+              options={[
+                { value: '', label: t('admin.blog.fields.none') },
+                ...(categories.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              aria-label={t('admin.blog.fields.category')}
+            />
             {errorFor('categoryId') ? (
               <span className="text-xs text-destructive">{errorFor('categoryId')}</span>
             ) : null}

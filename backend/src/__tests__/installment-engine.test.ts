@@ -36,7 +36,7 @@ import {
   overdueInstallments,
   planSchedule,
   type InstallmentSchedule,
-} from '../services/commerce/installment.domain'
+} from '@hisabche/validation'
 
 const TOTAL = 100_000 // 1000.00 in minor units
 

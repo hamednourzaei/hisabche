@@ -1,0 +1,735 @@
+# i18n sampling — fa
+top-level namespaces: 153
+admin: 853
+landing: 800
+docs: 395
+accounting: 232
+migration: 227
+attendance: 213
+invoiceBuilder: 212
+warehouse: 205
+oauth: 196
+manufacturing: 193
+invoices: 149
+nav: 145
+budgets: 145
+customers: 140
+till: 139
+hr: 131
+aiAction: 127
+warehouseShelves: 120
+audit: 117
+settings: 114
+developer: 107
+dashboard: 106
+analysis: 104
+billing: 102
+common: 100
+conflicts: 96
+customer360: 89
+market: 86
+workflow: 81
+crm: 79
+wallet: 77
+blog: 75
+bank: 68
+auth: 67
+attendanceSelf: 64
+campaigns: 62
+workspace: 60
+governance: 60
+businessType: 58
+lateFees: 58
+orders: 57
+promotions: 57
+priceLists: 57
+customFields: 53
+evidence: 50
+marketplace: 50
+sync: 49
+invoiceDetail: 49
+aiRead: 49
+team: 48
+financing: 48
+dataSync: 47
+projects: 45
+permissions: 45
+hardware: 45
+aiConnect: 45
+faq: 43
+customerAnalysis: 43
+display: 42
+quickInvoice: 41
+assets: 41
+activity: 39
+customerProfile: 39
+ops: 36
+barcode: 34
+entitlement: 34
+pricing: 33
+timesheets: 33
+currency: 32
+onboarding: 32
+shiftPlan: 31
+referral: 29
+action: 28
+snapshots: 28
+aiTranslate: 28
+dateRange: 27
+expiry: 27
+cycleCount: 27
+installments: 27
+reportBuilder: 27
+portal: 26
+storefront: 24
+shifts: 23
+productImages: 22
+dashboardBuilder: 22
+countries: 20
+preview: 20
+state: 20
+ai: 20
+receipt: 20
+benchmark: 19
+offline: 19
+sandbox: 18
+branch: 17
+cms: 17
+payment: 16
+crmPanel: 16
+products: 15
+feedback: 15
+notes: 14
+purchasing: 13
+health: 13
+authz: 13
+table: 13
+pageLook: 13
+notifications: 12
+months: 12
+productUnits: 12
+update: 12
+undo: 11
+validation: 10
+adminPanel: 10
+warehouseHub: 10
+signup: 9
+unit: 9
+actions: 9
+workQueue: 9
+teamHub: 9
+entity: 8
+customersHub: 8
+app: 7
+time: 7
+weekdays: 7
+calendar: 7
+attention: 7
+customer: 6
+search: 6
+ledger: 6
+accountingHub: 6
+settingsHub: 6
+payments: 5
+people: 5
+crumbs: 5
+error: 4
+commandPalette: 4
+status: 4
+performance: 4
+employee: 4
+salesHub: 4
+approvalsHub: 4
+dataHub: 4
+billingHub: 4
+metal: 4
+debt: 3
+role: 3
+subscriptionLock: 3
+access: 3
+metalUnit: 3
+login: 2
+select: 2
+panel: 1
+product: 1
+webhook: 1
+
+## nav (145)
+- nav.dashboard = داشبورد
+- nav.settings = تنظیمات
+- nav.permissions_description = مدیریت نقش‌ها و مجوزها
+- nav.mainNav = منوی اصلی
+- nav.getPaid_description = چه کسی چقدر باید بپردازد
+- nav.followUp_description = گفت‌وگوها و فروش‌های احتمالی
+- nav.history_description = چه کسی چه چیزی را تغییر داد
+- nav.addBuyer = افزودن خریدار
+- nav.recordSale = ثبت فروش
+- nav.till = صندوق
+- nav.bank = مغایرت بانکی
+- nav.data_migration = انتقال داده
+- nav.teamMembers = اعضای تیم
+- nav.referrals = معرفی حسابچه
+
+## dashboard (106)
+- dashboard.welcome = خوش آمدید
+- dashboard.noInvoicesYet = هنوز فاکتوری ثبت نشده
+- dashboard.salesChart.periodTotal = فروش این بازه
+- dashboard.lowStockHint = کالاهای نیازمند سفارش
+- dashboard.monthlyRevenue = درآمد ماهانه
+- dashboard.startSelling = برای دیدن نمودارتان شروع به فروش کنید
+- dashboard.salesTrend = روند فروش
+- dashboard.recentActivities = فعالیت‌های اخیر
+- dashboard.noSalesInPeriod = در این بازه فروشی ثبت نشده است
+- dashboard.funnel.band.invoices = فاکتورها
+- dashboard.viewFunnel = قیف تبدیل
+- dashboard.openSalesInvoices = فاکتورهای فروش
+- dashboard.insight.unpaid.title = فاکتورهای در انتظار پرداخت
+- dashboard.insight.outstanding.text = {amount} هنوز از مشتریان دریافت نشده است.
+
+## invoices (149)
+- invoices.title = فاکتور
+- invoices.customer = مشتری
+- invoices.paymentMethod = نوع پرداخت
+- invoices.addItem = افزودن کالا
+- invoices.noInvoices = هیچ فاکتوری موجود نیست
+- invoices.pending = پرداخت‌نشده
+- invoices.open = باز
+- invoices.sellerSignature = مهر و امضای فروشنده
+- invoices.showBarcode = نمایش بارکد
+- invoices.bulkDeleteConfirm = فاکتورهای انتخاب‌شده حذف شوند؟
+- invoices.recurring.title = فاکتورهای تکراری
+- invoices.recurring.noNext = نوبت دیگری ندارد.
+- invoices.recurring.removeFailed = حذف نشد.
+- invoices.recurring.reasons.DISABLED = متوقف بود.
+
+## customers (140)
+- customers.title = مشتریان
+- customers.openDeals = معامله باز
+- customers.customerLedger = دفتر مشتری
+- customers.description = توضیحات
+- customers.noTransactions = معامله‌ای موجود نیست
+- customers.form.hasDebt = مشتری دارای بدهی
+- customers.debt = بدهی
+- customers.filterDebtors = بدهکار
+- customers.tabTimeline = خط زمانی
+- customers.export.invoiceNumber = شماره فاکتور
+- customers.export.lineTotal = جمع خط
+- customers.export.statusDebtor = بدهکار
+- customers.terms = شرایط
+- customers.statsCoverageInvoices = فاکتور
+
+## warehouse (205)
+- warehouse.title = انبار
+- warehouse.sellPrice = قیمت فروش
+- warehouse.addProductModal = کالای جدید
+- warehouse.units.pack = بسته
+- warehouse.unassignedHint = موجودی‌ای که هنوز در هیچ انباری ثبت نشده
+- warehouse.name = نام کالا
+- warehouse.rateSame = دو واحد باید متفاوت باشند.
+- warehouse.expiryRequired = تاریخ انقضا را انتخاب کنید یا سوییچ را خاموش کنید.
+- warehouse.unitFactorInvalid = نام و ضریب تبدیل واحد را درست وارد کنید.
+- warehouse.productNamePlaceholder = نام محصول را وارد کنید
+- warehouse.byWarehouse.moved = موجودی به انبار منتقل شد
+- warehouse.transferNoTarget = انبار دیگری برای انتقال وجود ندارد. اول یک انبار اضافه کنید.
+- warehouse.exportMarkdown = Markdown
+- warehouse.shelves.none = روی هیچ قفسه‌ای ثبت نشده
+
+## accounting (232)
+- accounting.title = حسابداری
+- accounting.accounts.name = نام
+- accounting.journal.description = توضیحات
+- accounting.journal.noMatch = سندی با این جست‌وجو نیست
+- accounting.trialBalance.totalDebit = جمع بدهکار
+- accounting.trialBalance.lastEntry = آخرین سند: {date}
+- accounting.incomeStatement.revenue = درآمد
+- accounting.accountCode = کد حساب
+- accounting.postUnpostedSkipped = ثبت نشد
+- accounting.profit.costEstimated = بخشی از بها تخمینی است
+- accounting.openingBalance = مانده‌ی ابتدای دوره
+- accounting.monthEnd.step.depreciation = استهلاک
+- accounting.monthEnd.autoSaved = بستن خودکار ماه روشن شد.
+- accounting.unvalued.value = ارزش با قیمت خریدِ خودِ کالا: {value} {currency}.
+
+## reports (0)
+
+## offline (19)
+- offline.temporary_invoice_number = موقت
+- offline.not_available_offline = این فهرست به‌صورت آفلاین در دسترس نیست
+- offline.not_available_offline_hint = این دستگاه هنوز این فهرست را دریافت نکرده است. پس از همگام‌سازی بعدی در دسترس قرار می‌گیرد.
+- offline.cloudRequired.title = این کار اینترنت می‌خواهد
+- offline.cloudRequired.badge = نیازمند اینترنت
+- offline.cloudRequired.description = این بخش بر روی سرور ابری اجرا می‌شود و در ویرایش آفلاین بر روی این دستگاه در دسترس نیست.
+- offline.cloudRequired.whyTitle = چرا به اینترنت نیاز است؟
+- offline.cloudRequired.whyDefault = این عملیات به پردازش ابری، هماهنگی بین چند دستگاه، ذخیره‌سازی فایل‌های ابری یا خدمات آنلاین متکی است.
+- offline.cloudRequired.whatToDoTitle = چه کاری می‌توانید انجام دهید؟
+- offline.cloudRequired.whatToDoDefault = برای استفاده از این قابلیت، دستگاه خود را به اینترنت متصل کنید یا از نسخه تحت وب استفاده نمایید.
+- offline.cloudRequired.action = اتصال به اینترنت یا باز کردن در نسخه وب
+- offline.cloudRequired.dataSafe = اطلاعات و اسناد محلی شما کاملاً محفوظ است و حذف یا تغییر نکرده‌اند.
+- offline.cloudRequired.retry = تلاش مجدد
+- offline.cloudRequired.dismiss = متوجه شدم
+
+## sync (49)
+- sync.download.title = دانلود نسخه‌ی کامل داده‌ها
+- sync.download.excel = Excel
+- sync.download.upgrade = ارتقای پلن
+- sync.title = همگام‌سازی
+- sync.synced = همگام‌سازی شد
+- sync.online = آنلاین
+- sync.justNow = همین الان
+- sync.hoursAgo = {h} ساعت پیش
+- sync.disconnected = قطع
+- sync.offlinePending = شما آفلاین هستید — {count} عملیات در انتظار
+- sync.backups = پشتیبان‌ها
+- sync.manualBackup = پشتیبان دستی
+- sync.noBackups = هنوز پشتیبانی ثبت نشده
+- sync.recentActivity = فعالیت‌های اخیر
+
+## auth (67)
+- auth.signIn = ورود
+- auth.password = رمز عبور
+- auth.haveAccount = حساب کاربری دارید؟
+- auth.passwordMinLength = رمز عبور حداقل ۸ حرف باشد
+- auth.enterPin = رمز پین را وارد کنید
+- auth.showPassword = نمایش رمز
+- auth.sendResetLink = ارسال لینک بازنشانی
+- auth.invalidToken = لینک نامعتبر یا منقضی شده است
+- auth.passwordMismatch = رمز عبور با تکرارش مطابقت ندارد
+- auth.localUser = کاربر محلی
+- auth.offlineFirstRun.namePlaceholder = مثلاً فروشگاه مرکزی
+- auth.offlineFirstRun.submit = ساخت کسب‌وکار و شروع
+- auth.offlineLicense.title = لایسنس نسخه‌ی محلی
+- auth.offlineLicense.copy = کپی
+
+## billing (102)
+- billing.limitReached.invoices = سقف {limit} فاکتورِ پلن شما پر شده است. برای ثبت فاکتور تازه، پلن را از بخش «پلن و اشتراک» ارتقا دهید.
+- billing.request.paymentMethod = روش پرداخت
+- billing.request.dismiss = انصراف
+- billing.request.errors.UPGRADE_REQUEST_PENDING = یک درخواست ارتقای در انتظار تأیید دارید.
+- billing.request.col.event = رویداد
+- billing.request.events.upgrade_cancelled = درخواست لغو شد
+- billing.currentPlan = پلن فعلی
+- billing.upgradeNow = ارتقا به Pro
+- billing.cancelScheduled = لغو در پایان دوره برنامه‌ریزی شده است
+- billing.plans.free.name = رایگان
+- billing.plans.enterprise.features.all_features = همه امکانات
+- billing.plans.FREE.description = ۵۰ فاکتور برای تمام طول عمر کسب‌وکار
+- billing.plans.ONLINE_1500.name = آنلاین ۱۵۰۰
+- billing.usage.transactions = تراکنش‌ها
+
+## team (48)
+- team.hasAccessTitle = آیا می‌خواهید جزئی از پرسنل سایت شود؟
+- team.accessPassword = رمز عبور
+- team.roleViewer = فقط مشاهده
+- team.roleOwner = مالک
+- team.roleUnknown = نامشخص
+- team.branches = شعب
+- team.totalPayroll = جمع حقوق پرداختی
+- team.lastName = تخلص
+- team.position = موقعیت
+- team.permissionProfile = پروفایل دسترسی
+- team.notSpecified = مشخص نشده
+- team.noEmployees = هیچ کارمندی ثبت نشده
+- team.phone = شماره تماس
+- team.chooseBranch = انتخاب شعبه
+
+## settings (114)
+- settings.title = تنظیمات
+- settings.printer = چاپگر
+- settings.invoiceStartNumber = شماره شروع فاکتور
+- settings.exportCSV = خروجی CSV
+- settings.perfNormal = معمولی
+- settings.storage = حافظه و کش
+- settings.cacheHint = فقط داده‌هایی که از سرور خوانده شده پاک می‌شود و دوباره خوانده می‌شود. تغییرات ارسال‌نشده، پیش‌نویس‌ها و ورود شما دست نمی‌خورد.
+- settings.stampNotSet = تنظیم نشده
+- settings.businessNamePlaceholder = مثلاً: فروشگاه حسابچه
+- settings.backupFailed = دانلود پشتیبان ناموفق بود
+- settings.bookCurrency.failed = ارز دفاتر ذخیره نشد
+- settings.timeZone.unreadable = منطقه‌ی زمانی خوانده نشد. دوباره تلاش کنید.
+- settings.timeZone.useDeviceZone = همین را انتخاب کن
+- settings.brandImages.logo = لوگو
+
+## manufacturing (193)
+- manufacturing.title = تولید
+- manufacturing.boms.dialogTitle = فرمول ساخت جدید
+- manufacturing.workOrders.endDate = تاریخ پایان
+- manufacturing.status.cancelled = لغوشده
+- manufacturing.report.materials = قطعات و مواد
+- manufacturing.report.change = تغییر
+- manufacturing.history.unitCost = بهای هر واحد
+- manufacturing.history.overrideNote = جمع دستی
+- manufacturing.editor.columns.lineTotal = جمع
+- manufacturing.editor.errors.overrideReason = دلیل تغییر جمع را بنویسید.
+- manufacturing.editor.noDefinition = برای این محصول هنوز فرمولی ذخیره نشده.
+- manufacturing.editor.laborCost = هزینه‌ی دستمزد
+- manufacturing.editor.pickWarehouse = انتخاب انبار
+- manufacturing.errors.MANUFACTURING_MIGRATION_PENDING = بخش تولید هنوز روی پایگاه داده فعال نشده است. اسکریپت manufacturing-01 باید اجرا شود.
+
+## ai (20)
+- ai.emptyHint = مثلاً: کدام مشتری بیشترین بدهی را دارد؟ · کدام کالاها به نقطه‌ی سفارش رسیده‌اند؟
+- ai.thinking = در حال فکر کردن…
+- ai.busy = مدل هوش مصنوعی همین حالا شلوغ است. چند لحظه‌ی دیگر دوباره بپرسید.
+- ai.notReady = دستیار روی سرور هنوز کامل راه‌اندازی نشده است. لطفاً به پشتیبانی خبر دهید.
+- ai.emptyTitle = از دفترهایتان بپرسید
+- ai.error = نتوانستم پاسخ بدهم. لطفاً دوباره تلاش کنید.
+- ai.launch = پرسش از دستیار
+- ai.placeholder = سؤالتان را بنویسید…
+- ai.quotaExceeded = سقف پرسش‌های این ماه تمام شده است.
+- ai.send = ارسال
+- ai.title = دستیار حسابچه
+- ai.topupHint = برای افزایش سقف تماس بگیرید:
+- ai.remaining = پرسش باقی‌مانده
+- ai.notConfiguredTitle = دستیار هنوز فعال نشده است
+
+## till (139)
+- till.title = صندوق
+- till.voided = ابطال‌شده
+- till.cash_out = خروج نقدی
+- till.hours_short = ساعت
+- till.method_other = سایر
+- till.ledger_hint = هر ورود و خروج نقد با موجودی پس از آن. پرداخت‌های نقدی فاکتور خودکار اینجا می‌آیند.
+- till.kind_cash_in = ورود نقدی
+- till.range_90 = ۹۰ روز
+- till.transactions = تراکنش
+- till.transfer_hint = انتقال به بانک یا برداشت از بانک با سند حسابداری (بدهکار بانک / بستانکار صندوق) ثبت می‌شود.
+- till.tills_title = صندوق‌ها
+- till.status_suspended = معلق
+- till.error_POS_LABEL_MIGRATION_REQUIRED = نام‌گذاری صندوق هنوز روی دیتابیس فعال نشده است.
+- till.currency = ارز / واحد
+
+## approvals (0)
+
+## audit (117)
+- audit.title = حسابرسی
+- audit.noLogs = هیچ گزارشی موجود نیست
+- audit.dateRangeSeparator = تا
+- audit.changes = قبل / بعد
+- audit.noRecordHistory = تغییری برای این رکورد ثبت نشده است.
+- audit.time = زمان
+- audit.actions.delete = حذف
+- audit.actions.suspend = تعلیق
+- audit.entities.payment = پرداخت
+- audit.entities.user = کاربر
+- audit.entities.purchase_order = سفارش خرید
+- audit.fields.title = عنوان
+- audit.fields.full_name = نام
+- audit.values.updated = ویرایش شد
+
+## governance (60)
+- governance.title = تفکیک وظایف
+- governance.mode_off = خاموش
+- governance.mode_warn_explains = کار انجام می‌شود و تعارض ثبت می‌گردد. فهرست پایین را کسی باید بخواند.
+- governance.rules = قواعد
+- governance.reason = دلیل
+- governance.overrides_hint = کاری که با وجود تعارض انجام شد. کسی باید این را بخواند.
+- governance.toggle = روشن / خاموش
+- governance.overview_health = وضعیت دسترسی سازمان
+- governance.kpi_sod = تفکیک وظایف
+- governance.see_all = مشاهده‌ی همه
+- governance.tab_members = اعضا
+- governance.tab_audit = گزارش فعالیت
+- governance.sodRules.payment_record_then_cancel.why = کسی که پول را گرفته نباید همان کسی باشد که سابقه‌اش را پاک می‌کند.
+- governance.sodRules.invoice_create_then_delete.conflict = صدور فاکتور ⟂ حذف فاکتور
+
+## onboarding (32)
+- onboarding.welcome = به حسابچه خوش آمدید
+- onboarding.start = شروع
+- onboarding.storeSize = اندازه فروشگاه
+- onboarding.ready = همه چیز آماده است
+- onboarding.size = اندازه
+- onboarding.enter = ورود به حسابچه
+- onboarding.wholesale = عمده‌فروشی
+- onboarding.service = خدماتی
+- onboarding.smallStore = فروشگاه کوچک
+- onboarding.mediumStore = فروشگاه متوسط
+- onboarding.largeStore = کسب‌وکار بزرگ
+- onboarding.title = راه‌اندازی
+- onboarding.noBusinessMatch = موردی پیدا نشد
+- onboarding.searchCurrency = واحد پولت را جست‌وجو کن
+
+## landing (800)
+- landing.heroTitle = فاکتور، حسابداری و مدیریت انبار، همه در یک جا
+- landing.solution2Sub = موجودی همیشه آپدیت
+- landing.dashboardLabel = محصول
+- landing.industry.barbershop = آرایشگاه مردانه
+- landing.footerLink.inventoryPage = انبارداری ساده
+- landing.security.sod.bullet3 = هر استثنا ثبت می‌شود
+- landing.pricing.plan.business.name = تجاری
+- landing.recentTransactions = تراکنش‌های اخیر
+- landing.legalPage.refundIntro = این سیاست شرایط بازگشت وجه برای پلن‌های پولی حسابچه را توضیح می‌دهد.
+- landing.featurePage.invoicing.ctaTitle = اولین فاکتور را همین امروز صادر کنید
+- landing.modules.item.offline = کار آفلاین
+- landing.chapter.inventory.card1.title = گردش کالا
+- landing.visual.journal.title = سند یک فروش نسیه
+- landing.compare.row.internet.new = آفلاین‌محور
+
+# fa/af differences (sample, only where wording really differs)
+- nav.warehouse
+    fa: انبار
+    af: گدام
+- nav.warehouse_description
+    fa: مدیریت انبار و کالاها
+    af: موجودی و محصولات
+- nav.invoices
+    fa: فاکتورها
+    af: بل‌ها
+- nav.invoices_description
+    fa: مدیریت فاکتورها و فروش
+    af: فاکتورها و فروش
+- nav.customers
+    fa: مشتریان
+    af: مشتری‌ها
+- nav.customers_description
+    fa: مدیریت مشتریان و بدهی‌ها
+    af: مشتری‌ها و بدهی‌ها
+- nav.suppliers
+    fa: تأمین‌کنندگان
+    af: تأمین‌کننده‌ها
+- nav.human-resources_description
+    fa: مدیریت کارمندان و حقوق
+    af: کارمندان و حقوق
+- dashboard.welcome
+    fa: خوش آمدید
+    af: خوش اومدی
+- dashboard.lowStockAlert
+    fa: موجودی کم
+    af: هشدار کمبود موجودی
+- dashboard.recentInvoices
+    fa: آخرین فاکتورها
+    af: فاکتورهای اخیر
+- dashboard.invoicesLine
+    fa: فاکتورها
+    af: بل‌ها
+- dashboard.noInvoicesYet
+    fa: هنوز فاکتوری ثبت نشده
+    af: هنوز فاکتوری نداری
+- dashboard.viewAllInvoices
+    fa: مشاهده همه فاکتورها
+    af: مشاهده همه بل‌ها
+- dashboard.itemsNeedReorder
+    fa: کالاهای نیازمند سفارش
+    af: اقلام نیازمند سفارش مجدد
+- dashboard.ready
+    fa: همه چیز آماده است!
+    af: همه‌چیز آماده!
+- invoices.title
+    fa: فاکتور
+    af: بل
+- invoices.saleInvoice
+    fa: فاکتور فروش
+    af: بل فروش
+- invoices.purchaseInvoice
+    fa: فاکتور خرید
+    af: بل خرید
+- invoices.newInvoice
+    fa: فاکتور جدید
+    af: بل جدید
+- invoices.invoiceNumber
+    fa: شماره فاکتور
+    af: شماره بل
+- invoices.invoiceDate
+    fa: تاریخ فاکتور
+    af: تاریخ بل
+- invoices.items
+    fa: کالاها
+    af: اقلام
+- invoices.subtotal
+    fa: جمع
+    af: جمع جزء
+- customers.title
+    fa: مشتریان
+    af: مشتری‌ها
+- customers.subtitle
+    fa: مدیریت طلب و بدهی مشتریان
+    af: مدیریت نسیه و بدهی مشتری‌ها
+- customers.creditInvoice
+    fa: فاکتور اعتباری
+    af: فاکتور نسیه
+- customers.error_CUSTOMER_DECLARED_ROLE_SCHEMA_REQUIRED
+    fa: طرح پایگاه داده از نقش تعیین‌شده پشتیبانی نمی‌کند. لطفاً ابتدا مایگریشن را اجرا کنید.
+    af: طرح دیتابیس از نقش مشخص‌شده پشتیبانی نمی‌کند. لطفاً اول مایگریشن را اجرا نمایید.
+- customers.searchPlaceholder
+    fa: جستجوی مشتری…
+    af: جستجوی مشتری‌ها...
+- customers.settled
+    fa: تسویه
+    af: تسویه شده
+- customers.openDeals
+    fa: معامله باز
+    af: معاملات باز
+- customers.debtorCount
+    fa: مشتریان بدهکار
+    af: مشتری‌های بدهکار
+- warehouse.title
+    fa: انبار
+    af: گدام
+- warehouse.totalProducts
+    fa: مجموع کالاها
+    af: کل محصولات
+- warehouse.lowStock
+    fa: کمبود موجودی
+    af: موجودی کم
+- warehouse.addProduct
+    fa: افزودن کالا
+    af: افزودن محصول
+- warehouse.editProduct
+    fa: ویرایش کالا
+    af: ویرایش محصول
+- warehouse.productName
+    fa: نام کالا
+    af: نام محصول
+- warehouse.sku
+    fa: کد محصول
+    af: SKU
+- warehouse.fromWarehouse
+    fa: از انبار
+    af: از گدام
+- accounting.tabs.incomeStatement
+    fa: سود و زیان
+    af: صورت سود و زیان
+- accounting.tabs.financing
+    fa: وام و سرمایه‌گذاری
+    af: قرضه و سرمایه‌گذاری
+- accounting.tabs.bank
+    fa: مغایرت بانکی
+    af: بانکي پرتله
+- accounting.tabs.budgets
+    fa: بودجه
+    af: بودیجه
+- accounting.accounts.createTitle
+    fa: افزودن حساب جدید
+    af: افزودن حساب نو
+- accounting.accounts.empty.title
+    fa: هنوز حسابی ثبت نشده
+    af: هیچ حسابی ثبت نشده
+- accounting.accounts.empty.subtitle
+    fa: اولین حساب خود را اضافه کنید
+    af: حساب اولت رو اضافه کو
+- accounting.journal.title
+    fa: ثبت‌های روزنامه
+    af: دفتر روزنامه
+- offline.not_available_offline_hint
+    fa: این دستگاه هنوز این فهرست را دریافت نکرده است. پس از همگام‌سازی بعدی در دسترس قرار می‌گیرد.
+    af: این دستگاه هنوز این فهرست را دریافت نکرده است. بعد از همگام‌سازی بعدی در دسترس می‌شود.
+- offline.cloudRequired.badge
+    fa: نیازمند اینترنت
+    af: ضرورت به اینترنت
+- offline.cloudRequired.description
+    fa: این بخش بر روی سرور ابری اجرا می‌شود و در ویرایش آفلاین بر روی این دستگاه در دسترس نیست.
+    af: این بخش بالای سرور ابری اجرا می‌شود و در ویرایش آفلاین بالای این دستگاه در دسترس نیست.
+- offline.cloudRequired.whyTitle
+    fa: چرا به اینترنت نیاز است؟
+    af: چرا به اینترنت ضرورت است؟
+- offline.cloudRequired.whyDefault
+    fa: این عملیات به پردازش ابری، هماهنگی بین چند دستگاه، ذخیره‌سازی فایل‌های ابری یا خدمات آنلاین متکی است.
+    af: این عملیات به پروسس ابری، هماهنگی بین چند دستگاه، ذخیره‌سازی فایل‌های ابری یا خدمات آنلاین وابسته است.
+- offline.cloudRequired.whatToDoDefault
+    fa: برای استفاده از این قابلیت، دستگاه خود را به اینترنت متصل کنید یا از نسخه تحت وب استفاده نمایید.
+    af: برای استفاده از این قابلیت، دستگاه خود را به اینترنت وصل کنید یا از نسخه تحت وب استفاده نمایید.
+- offline.cloudRequired.dataSafe
+    fa: اطلاعات و اسناد محلی شما کاملاً محفوظ است و حذف یا تغییر نکرده‌اند.
+    af: معلومات و اسناد محلی شما کاملاً محفوظ است و حذف یا تغییر نکرده‌اند.
+- offline.cloudRequired.retry
+    fa: تلاش مجدد
+    af: کوشش مجدد
+- sync.download.hint
+    fa: همه‌ی داده‌های این کسب‌وکار (فاکتورها، مشتریان، کالاها، پرداخت‌ها، اسناد و …) همین حالا از سرور گرفته و ذخیره می‌شود — تا اطلاعاتتان پیش خودتان هم بماند.
+    af: همه‌ی داده‌های این کسب‌وکار (بل‌ها، مشتریان، جنس‌ها، پرداخت‌ها، اسناد و …) همین حالا از سرور گرفته و ذخیره می‌شود — تا اطلاعاتتان پیش خودتان هم بماند.
+- sync.synced
+    fa: همگام‌سازی شد
+    af: همگام شد
+- sync.pendingCount
+    fa: {count} عملیات در صف
+    af: {count} عملیات در انتظار
+- sync.secondsAgo
+    fa: {s} ثانیه پیش
+    af: {s} ثانیه قبل
+- sync.minutesAgo
+    fa: {m} دقیقه پیش
+    af: {m} دقیقه قبل
+- sync.hoursAgo
+    fa: {h} ساعت پیش
+    af: {h} ساعت قبل
+- sync.daysAgo
+    fa: {d} روز پیش
+    af: {d} روز قبل
+- sync.disconnected
+    fa: قطع
+    af: قطع شده
+- auth.signUp
+    fa: ثبت نام
+    af: ثبت‌نام
+- auth.forgotPassword
+    fa: رمز عبور را فراموش کردید؟
+    af: رمزت رو فراموش کردی؟
+- auth.resetPassword
+    fa: بازنشانی رمز عبور
+    af: بازنشانی رمز
+- auth.noAccount
+    fa: حساب کاربری ندارید؟
+    af: حساب نداری؟
+- auth.haveAccount
+    fa: حساب کاربری دارید؟
+    af: حساب داری؟
+- auth.createAccount
+    fa: ایجاد حساب کاربری
+    af: ساخت حساب
+- auth.welcomeBack
+    fa: خوش آمدید
+    af: خوش برگشتی
+- auth.invalidCredentials
+    fa: ایمیل یا رمز عبور اشتباه است
+    af: ایمیل یا رمز اشتباهه
+- billing.limitReached.invoices
+    fa: سقف {limit} فاکتورِ پلن شما پر شده است. برای ثبت فاکتور تازه، پلن را از بخش «پلن و اشتراک» ارتقا دهید.
+    af: سقف {limit} بلِ پلن شما پر شده است. برای ثبت بل تازه، پلن را از بخش «پلن و اشتراک» ارتقا دهید.
+- billing.title
+    fa: صورتحساب و اشتراک
+    af: صورت‌حساب و اشتراک
+- billing.subtitle
+    fa: مدیریت پلن و اشتراک شما
+    af: مدیریت پلن و اشتراک
+- billing.trial
+    fa: دوره آزمایشی
+    af: آزمایشی
+- billing.upgradeNow
+    fa: ارتقا به Pro
+    af: ارتقا به حرفه‌ای
+- billing.daysLeft
+    fa: {days} روز باقی مانده
+    af: {days} روز باقی‌مانده
+- billing.startPro
+    fa: شروع با Pro
+    af: شروع با حرفه‌ای
+- billing.cancelScheduled
+    fa: لغو در پایان دوره برنامه‌ریزی شده است
+    af: لغو در پایان دوره برنامه‌ریزی شده
+- team.roleUnknown
+    fa: نامشخص
+    af: نامعلوم
+- team.salaryCurrency
+    fa: ارز حقوق
+    af: ارز معاش
+- team.attendance
+    fa: حضور و غیاب
+    af: حاضری
+- settings.description
+    fa: مدیریت حساب، پشتیبان و تنظیمات برنامه
+    af: مدیریت حساب، بک‌آپ و تنظیمات برنامه
+- settings.system
+    fa: سیستمی
+    af: سیستم
+- settings.backup
+    fa: پشتیبان
+    af: بک‌آپ
+- settings.businessPhone
+    fa: شماره تماس
+    af: تلفن
+- settings.invoicePrefix
+    fa: پیشوند فاکتور
+    af: پیش‌شماره فاکتور
+- settings.invoiceStartNumber
+    fa: شماره شروع فاکتور
+    af: شماره شروع بل
+- settings.defaultWarehouse
+    fa: انبار پیش‌فرض
+    af: گدام پیش‌فرض

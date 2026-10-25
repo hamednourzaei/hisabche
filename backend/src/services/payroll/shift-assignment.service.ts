@@ -28,14 +28,24 @@ import { supabase } from '../../db'
 import { BaseError } from '../../errors/base.error'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
+import {
+  MAX_ASSIGNMENT_DAYS,
+  actualOf,
+  consecutiveDays,
+  summarizeDayPlan,
+  type ActualState,
+  type DayPlan,
+  type PlannedShift,
+} from '@hisabche/validation'
 import { selectAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
 
 const MISSING_SCHEMA = new Set(['42703', '42P01', 'PGRST204', 'PGRST205'])
 const COLUMNS = 'id, employee_id, shift_id, work_date, shift_name, starts_at, ends_at'
 
-/** The most days one request may plan. */
-export const MAX_ASSIGNMENT_DAYS = 31
+/** The most days one request may plan: the shared rule (@hisabche/validation). */
+export { MAX_ASSIGNMENT_DAYS, actualOf, consecutiveDays }
+export type { ActualState, DayPlan, PlannedShift }
 
 /** Refusals the database raises by name; each has a translation on the client. */
 export const SHIFT_ASSIGNMENT_ERROR_CODES = [
@@ -61,29 +71,6 @@ function fail(error: DbError, what: string): never {
   throw new DatabaseError(what, error)
 }
 
-/** What the attendance sheet says about a planned day. */
-export type ActualState = 'worked' | 'open' | 'absent' | 'leave' | 'unrecorded'
-
-export interface PlannedShift {
-  id: string
-  employeeId: string
-  employeeName: string
-  shiftId: string
-  shiftName: string
-  /** `HH:MM`, the shop's own local time — as the shift was when it was planned. */
-  startsAt: string
-  endsAt: string
-  actual: ActualState
-  checkIn: string | null
-  checkOut: string | null
-}
-
-export interface DayPlan {
-  date: string
-  assignments: PlannedShift[]
-  summary: { planned: number; worked: number; absent: number; unrecorded: number }
-}
-
 interface AssignmentRow {
   id: string
   employee_id: string
@@ -95,28 +82,6 @@ interface AssignmentRow {
 }
 
 const hhmm = (value: string | null | undefined) => (value ? String(value).slice(0, 5) : null)
-
-/** `count` consecutive ISO days starting at `from`. Built from parts, never by string arithmetic. */
-export function consecutiveDays(from: string, count: number): string[] {
-  const [year, month, day] = from.split('-').map(Number)
-  return Array.from({ length: count }, (_, index) =>
-    new Date(Date.UTC(year!, month! - 1, day! + index)).toISOString().slice(0, 10),
-  )
-}
-
-/**
- * What a recorded day means for a plan. No record is `unrecorded` — never
- * «absent»: an empty sheet is a sheet nobody filled in.
- */
-export function actualOf(
-  record: { status: string | null; check_in: string | null; check_out: string | null } | undefined,
-): ActualState {
-  if (!record) return 'unrecorded'
-  if (record.status === 'absent') return 'absent'
-  if (record.status === 'leave' || record.status === 'holiday') return 'leave'
-  // Present (or a status this code does not know): the times decide.
-  return record.check_in && !record.check_out ? 'open' : 'worked'
-}
 
 export class ShiftAssignmentService {
   /** Everyone planned for `date`, beside what the attendance sheet recorded. */
@@ -195,18 +160,7 @@ export class ShiftAssignmentService {
       }
     })
 
-    const count = (...states: ActualState[]) =>
-      assignments.filter((item) => states.includes(item.actual)).length
-    return {
-      date,
-      assignments,
-      summary: {
-        planned: assignments.length,
-        worked: count('worked', 'open'),
-        absent: count('absent', 'leave'),
-        unrecorded: count('unrecorded'),
-      },
-    }
+    return summarizeDayPlan(date, assignments)
   }
 
   /** Plan one employee for one shift on `days` consecutive days from `fromDate`. */

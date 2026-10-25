@@ -42,7 +42,13 @@ export const sessionStore: SessionStore = createSessionStore(secureBackend, SESS
 export async function initStorage(): Promise<void> {
   registerStorage(desktopStorage)
 
-  const keys = [STORAGE_KEYS.language, STORAGE_KEYS.token]
+  // ⚠️ THE EDITION IS WARMED TOO. `hydrate` reads it synchronously to decide where
+  // the app opens. It was written to the secure store when someone chose «نسخه‌ی
+  // محلی», but never read back into this cache — so every launch started as the
+  // cloud edition and opened the sign-in page, and the person had to press
+  // «نسخه‌ی محلی» again each time (24 Oct 2026). Once a licence is accepted the
+  // device opens on its own dashboard until the person signs out.
+  const keys = [STORAGE_KEYS.language, STORAGE_KEYS.token, STORAGE_KEYS.edition]
   await Promise.all(
     keys.map(async (key) => {
       const value = await secureBackend.get(key)

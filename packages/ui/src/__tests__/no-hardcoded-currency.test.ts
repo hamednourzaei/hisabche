@@ -47,7 +47,6 @@ const NOT_YET: Record<string, string> = {
   'api/src/hooks/budgets.ts': 'same model as the budgets screen — a private four-currency union',
   'ui/src/lib/warehouse/rate-from-pair.ts': 'BASE_CODE of the same warehouse rate model',
   'store/src/slices/currency.slice.ts': 'client rate table keyed to AFN = 1; same model as above',
-  'app-shell/src/shared/stores/ui.store.ts': 'the desktop shell’s display currency default',
 }
 
 function filesUnder(dir: string): string[] {

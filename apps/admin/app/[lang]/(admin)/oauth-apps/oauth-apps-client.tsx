@@ -26,6 +26,8 @@ import {
   type AdminVersion,
   type OAuthAppStatus,
 } from '@/hooks/use-admin-oauth-apps'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminDateTime } from '@/lib/admin-format'
 
 const TABS = ['versions', 'apps', 'publishers', 'reports', 'reviews'] as const
 type Tab = (typeof TABS)[number]
@@ -143,7 +145,7 @@ function VersionRow({ version: v }: { version: AdminVersion }) {
       )}
       <div className="flex flex-wrap items-end gap-2">
         <label className="min-w-[200px] flex-1 space-y-1">
-          <span className="block text-[11px] text-muted-foreground">{t('oauth.reviewNote')}</span>
+          <span className="block text-xs text-muted-foreground">{t('oauth.reviewNote')}</span>
           <Input value={note} maxLength={1000} onChange={(event) => setNote(event.target.value)} />
         </label>
         <Button
@@ -252,7 +254,7 @@ function AppRow({ app }: { app: AdminOAuthApp }) {
       ) : null}
       <div className="flex flex-wrap items-end gap-2">
         <label className="min-w-[200px] flex-1 space-y-1">
-          <span className="block text-[11px] text-muted-foreground">{t('oauth.reviewNote')}</span>
+          <span className="block text-xs text-muted-foreground">{t('oauth.reviewNote')}</span>
           <Input value={note} maxLength={1000} onChange={(event) => setNote(event.target.value)} />
         </label>
         {app.status === 'suspended' ? (
@@ -402,6 +404,7 @@ function ReportsTab() {
 }
 
 function ReportRow({ report: r }: { report: AdminReport }) {
+  const dateLocale = useAdminLocale()
   const t = useTranslations()
   const resolve = useResolveAppReport()
   const [note, setNote] = useState('')
@@ -416,14 +419,14 @@ function ReportRow({ report: r }: { report: AdminReport }) {
           dateTime={r.created_at}
           suppressHydrationWarning
         >
-          {new Date(r.created_at).toLocaleString()}
+          {adminDateTime(r.created_at, dateLocale)}
         </time>
       </div>
       {r.details ? <p className="whitespace-pre-line text-xs">{r.details}</p> : null}
       {r.status === 'open' ? (
         <div className="flex flex-wrap items-end gap-2">
           <label className="min-w-[200px] flex-1 space-y-1">
-            <span className="block text-[11px] text-muted-foreground">
+            <span className="block text-xs text-muted-foreground">
               {t('admin.oauthApps.resolutionNote')}
             </span>
             <Input
@@ -514,7 +517,7 @@ function ReviewRow({ review: r }: { review: AdminReview }) {
       <div className="flex flex-wrap items-end gap-2">
         {!r.hidden_at ? (
           <label className="min-w-[200px] flex-1 space-y-1">
-            <span className="block text-[11px] text-muted-foreground">
+            <span className="block text-xs text-muted-foreground">
               {t('admin.oauthApps.hideReason')}
             </span>
             <Input

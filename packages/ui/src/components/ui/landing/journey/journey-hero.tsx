@@ -18,9 +18,11 @@ export interface JourneyHeroProps {
   /** A sentence with {placeholders}, exactly as written in the messages. */
   raw: (key: string) => string
   locale: string
+  killSwitch?: boolean | undefined
 }
 
-export function JourneyHero({ t, raw, locale }: JourneyHeroProps) {
+export function JourneyHero({ t, raw, locale, killSwitch }: JourneyHeroProps) {
+  const isKillSwitchActive = killSwitch ?? process.env.NEXT_PUBLIC_LANDING_3D_ENABLED === 'false'
   // Digits follow the reader's language; the count is the real number of stops.
   const stops: JourneyStop[] = JOURNEY_STATIONS.map((id, index) => ({
     id,
@@ -78,47 +80,63 @@ export function JourneyHero({ t, raw, locale }: JourneyHeroProps) {
   )
 
   const hero = (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="text-balance text-4xl font-black leading-tight text-[hsl(var(--fg-primary))] sm:text-5xl lg:text-6xl">
-        {t('landing.headline')}
-        <span className="block text-[hsl(var(--color-primary))]">
-          {t('landing.headlineHighlight')}
-        </span>
-      </h1>
-      <p className="mx-auto mt-4 max-w-xl text-pretty text-base leading-7 text-[hsl(var(--fg-secondary))] sm:text-lg sm:leading-8">
-        {t('landing.journey.printing')}
-      </p>
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-        <Link
-          prefetch={false}
-          href={`/${locale}/signup`}
-          className="btn-primary inline-flex min-h-12 items-center justify-center rounded-xl px-7 text-base"
-        >
-          {t('landing.cta')}
-        </Link>
-        <Link
-          prefetch={false}
-          href={`/${locale}/docs/getting-started`}
-          className="inline-flex min-h-12 items-center justify-center rounded-xl border border-[hsl(var(--border-strong))] px-6 text-base text-[hsl(var(--fg-primary))]"
-        >
-          {t('landing.ctaDocs')}
-        </Link>
+    <div className="mx-auto w-full max-w-7xl text-start">
+      <div className="max-w-3xl">
+        <h1 className="text-balance text-[2.25rem] font-black leading-[1.08] tracking-tight text-[hsl(var(--fg-primary))] sm:text-5xl sm:leading-[1.04] lg:text-[4.25rem]">
+          {t('landing.headline')}
+          <span className="mt-1 block text-[hsl(var(--color-primary))]">
+            {t('landing.headlineHighlight')}
+          </span>
+        </h1>
+        <p className="mt-5 max-w-xl text-pretty text-base leading-7 text-[hsl(var(--fg-secondary))] sm:text-lg sm:leading-8">
+          {t('landing.journey.printing')}
+        </p>
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <Link
+            prefetch={false}
+            href={`/${locale}/signup`}
+            className="inline-flex min-h-12 items-center justify-center rounded-lg bg-[hsl(var(--color-primary))] px-7 text-base font-bold text-[hsl(var(--color-primary-fg))] transition-colors hover:bg-[hsl(var(--color-primary-hover))]"
+          >
+            {t('landing.cta')}
+          </Link>
+          <Link
+            prefetch={false}
+            href={`/${locale}/docs/getting-started`}
+            className="inline-flex min-h-12 items-center justify-center rounded-lg border border-[hsl(var(--border-strong))] px-6 text-base text-[hsl(var(--fg-primary))] transition-colors hover:border-[hsl(var(--color-primary))] hover:text-[hsl(var(--color-primary))]"
+          >
+            {t('landing.ctaDocs')}
+          </Link>
+          <a
+            href="#features"
+            className="inline-flex min-h-12 items-center justify-center rounded-lg px-4 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors hover:text-[hsl(var(--fg-primary))] hover:underline"
+          >
+            {t('landing.journey.skip')}
+          </a>
+        </div>
+        <p className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[hsl(var(--fg-tertiary))] sm:text-sm">
+          <span>{t('landing.ctaReassurance1')}</span>
+          <span aria-hidden="true" className="size-1 rounded-full bg-[hsl(var(--border-strong))]" />
+          <span>{t('landing.ctaReassurance2')}</span>
+          <span aria-hidden="true" className="size-1 rounded-full bg-[hsl(var(--border-strong))]" />
+          <span>{t('landing.ctaReassurance3')}</span>
+        </p>
       </div>
     </div>
   )
 
   const finale = (
-    <div className="mx-auto max-w-xl rounded-3xl border border-[hsl(var(--color-primary)/0.35)] bg-[hsl(var(--surface-base)/0.82)] p-6 backdrop-blur-md sm:p-10">
-      <h2 className="text-balance text-3xl font-black leading-tight text-[hsl(var(--fg-primary))] sm:text-5xl">
+    <div className="mx-auto w-full max-w-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base)/0.88)] p-6 backdrop-blur-md sm:p-10">
+      <span aria-hidden="true" className="block h-0.5 w-10 bg-[hsl(var(--color-primary))]" />
+      <h2 className="mt-5 text-balance text-3xl font-black leading-tight tracking-tight text-[hsl(var(--fg-primary))] sm:text-5xl">
         {t('landing.journey.ready')}
       </h2>
-      <p className="mt-4 text-pretty text-base leading-8 text-[hsl(var(--fg-secondary))]">
+      <p className="mt-4 max-w-xl text-pretty text-base leading-8 text-[hsl(var(--fg-secondary))]">
         {t('landing.journey.readySub')}
       </p>
       <Link
         prefetch={false}
         href={`/${locale}/signup`}
-        className="btn-primary mt-6 inline-flex min-h-14 w-full items-center justify-center rounded-2xl px-10 text-lg font-bold sm:w-auto"
+        className="mt-7 inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-[hsl(var(--color-primary))] px-8 text-base font-bold text-[hsl(var(--color-primary-fg))] transition-colors hover:bg-[hsl(var(--color-primary-hover))] sm:w-auto"
       >
         {t('landing.ctaButton')}
       </Link>
@@ -134,6 +152,7 @@ export function JourneyHero({ t, raw, locale }: JourneyHeroProps) {
 
   return (
     <JourneyStage
+      forceFlat={isKillSwitchActive}
       label={t('landing.journey.label')}
       hero={hero}
       finale={finale}
@@ -148,6 +167,8 @@ export function JourneyHero({ t, raw, locale }: JourneyHeroProps) {
       counter={raw('landing.journey.counter')}
       summaryLabel={t('landing.journey.summary')}
       skipLabel={t('landing.journey.skip')}
+      replayLabel={t('landing.journey.replay')}
+      locale={locale}
       recordedLabel={t('landing.journey.recorded')}
       signLabel={t('landing.journey.sign')}
       offlineLabel={t('landing.journey.offline')}

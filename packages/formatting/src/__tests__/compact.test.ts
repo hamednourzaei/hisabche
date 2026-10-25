@@ -33,14 +33,14 @@ describe('formatCompactCount', () => {
     expect(formatCompactCount(12.8, 'fa')).toBe('۱۲')
   })
 
-  it('af digits follow the Dari locale, the suffix stays k / M', () => {
-    expect(formatCompactCount(0, 'af')).toBe('۰')
-    expect(formatCompactCount(999, 'af')).toBe('۹۹۹')
-    expect(formatCompactCount(1000, 'af')).toMatch(/^۱k$/)
-    expect(formatCompactCount(1999, 'af')).toMatch(/^۱.۹k$/)
-    expect(formatCompactCount(999_999, 'af')).toMatch(/^۹۹۹.۹k$/)
-    expect(formatCompactCount(1_000_000, 'af')).toMatch(/^۱M$/)
-    expect(formatCompactCount(-5, 'af')).toBe('۰')
-    expect(formatCompactCount(12.8, 'af')).toBe('۱۲')
+  it('af shows Latin digits (owner rule: Dari and English use 0-9), suffix k / M', () => {
+    expect(formatCompactCount(0, 'af')).toBe('0')
+    expect(formatCompactCount(999, 'af')).toBe('999')
+    expect(formatCompactCount(1000, 'af')).toMatch(/^1k$/)
+    expect(formatCompactCount(1999, 'af')).toMatch(/^1.9k$/)
+    expect(formatCompactCount(999_999, 'af')).toMatch(/^999.9k$/)
+    expect(formatCompactCount(1_000_000, 'af')).toMatch(/^1M$/)
+    expect(formatCompactCount(-5, 'af')).toBe('0')
+    expect(formatCompactCount(12.8, 'af')).toBe('12')
   })
 })

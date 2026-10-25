@@ -31,8 +31,6 @@ GRANT SELECT, INSERT ON public.offline_license_signing_keys TO service_role;
 GRANT UPDATE (retired_at) ON public.offline_license_signing_keys TO service_role;
 
 DROP POLICY IF EXISTS offline_license_signing_keys_backend ON public.offline_license_signing_keys;
-CREATE POLICY offline_license_signing_keys_backend ON public.offline_license_signing_keys
-  FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 CREATE OR REPLACE FUNCTION public.offline_license_signing_keys_guard()
 RETURNS trigger LANGUAGE plpgsql AS $$

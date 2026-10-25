@@ -25,7 +25,7 @@ import {
   type ConsumptionPlan,
 } from './costing.domain'
 import { CostingRepository, domainErrorCode, type InventorySettings } from './costing.repository'
-import { findUnvaluedStock, type UnvaluedStock } from './unvalued-stock.domain'
+import { findUnvaluedStock, uncoveredSoldUnits, type UnvaluedStock } from './unvalued-stock.domain'
 import type {
   CostingPort,
   CostingSourceType,
@@ -216,8 +216,7 @@ export class CostingService implements CostingPort {
     const position = await this.repo.stockPosition(ctx.workspaceId, request.productId)
     if (!position) return { covered: false }
 
-    const surplus = Math.max(0, position.layeredQuantity - Math.max(0, position.quantity))
-    const short = Math.round((request.quantity - surplus) * 10_000) / 10_000
+    const short = uncoveredSoldUnits(position, request.quantity)
     if (short <= 0) return { covered: true }
     if (!(position.buyPrice > 0)) return { covered: false }
 

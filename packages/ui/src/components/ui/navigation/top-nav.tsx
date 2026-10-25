@@ -64,11 +64,13 @@ const NavItem = memo(function NavItem({
   label,
   isActive,
   onClick,
+  variant,
 }: {
   id: string
   label: string
   isActive: boolean
   onClick: (id: string) => void
+  variant: 'landing' | 'dashboard'
 }) {
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLAnchorElement>) => {
@@ -95,7 +97,12 @@ const NavItem = memo(function NavItem({
         data-section-id={id}
         aria-current={isActive ? 'true' : undefined}
         className={cn(
-          'relative z-10 block px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors',
+          'relative z-10 block whitespace-nowrap transition-colors',
+          variant === 'landing'
+            ? // The landing bar is a set of tabs under a hairline, not a pill
+              // floating in a pill: the indicator below is the underline.
+              'px-2.5 py-2 text-xs font-medium sm:px-3 sm:text-sm'
+            : 'px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium',
           isActive
             ? 'text-[hsl(var(--fg-primary))] font-semibold'
             : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
@@ -242,7 +249,7 @@ export const TopNav = memo(function TopNav({
         className={cn(
           'mx-auto flex items-center justify-between gap-3',
           variant === 'landing'
-            ? 'h-14 w-full max-w-6xl px-4 sm:px-6 lg:h-16 lg:px-8'
+            ? 'h-14 w-full max-w-7xl px-4 sm:px-6 lg:h-16 lg:px-10'
             : 'h-14 px-4 lg:h-[52px] lg:px-0 lg:w-[90%] max-lg:h-14',
         )}
       >
@@ -276,7 +283,12 @@ export const TopNav = memo(function TopNav({
         >
           <ul
             ref={navListRef}
-            className="relative flex items-center gap-1 list-none m-0 px-1 py-1 rounded-full bg-[hsl(var(--fg-primary)/0.04)] border border-[hsl(var(--fg-primary)/0.07)]"
+            className={cn(
+              'relative flex list-none m-0',
+              variant === 'landing'
+                ? 'items-center gap-0.5 py-1'
+                : 'items-center gap-1 px-1 py-1 rounded-full bg-[hsl(var(--fg-primary)/0.04)] border border-[hsl(var(--fg-primary)/0.07)]',
+            )}
           >
             {/* Active indicator */}
             <span
@@ -288,7 +300,10 @@ export const TopNav = memo(function TopNav({
               // in a right-to-left page is the right edge — so the pill sat a whole
               // list-width away from the item it marks.
               className={cn(
-                'absolute top-1 z-0 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)]',
+                'absolute z-0',
+                variant === 'landing'
+                  ? 'bottom-0 h-0.5 rounded-full bg-[hsl(var(--color-primary))]'
+                  : 'top-1 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)]',
                 indicatorReady && 'transition-transform duration-300',
               )}
               style={{
@@ -304,6 +319,7 @@ export const TopNav = memo(function TopNav({
                 label={label}
                 isActive={activeSection === id}
                 onClick={handleSetSection}
+                variant={variant}
               />
             ))}
           </ul>
@@ -343,7 +359,7 @@ export const TopNav = memo(function TopNav({
                 setMenuRequested(true)
                 setMenuOpen(true)
               }}
-              className="flex size-10 items-center justify-center rounded-full text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))] md:hidden"
+              className="flex size-10 items-center justify-center rounded-md text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))] md:hidden"
             >
               <Menu className="size-5" aria-hidden="true" />
             </button>
@@ -385,7 +401,12 @@ export const TopNav = memo(function TopNav({
       {/* Progress bar */}
       <div className="absolute bottom-0 inset-x-0 h-0.5 bg-[hsl(var(--fg-primary)/0.06)] overflow-hidden">
         <div
-          className="h-full bg-[image:var(--gradient-brand)] transition-all duration-150"
+          className={cn(
+            'h-full transition-all duration-150',
+            variant === 'landing'
+              ? 'bg-[hsl(var(--color-primary))]'
+              : 'bg-[image:var(--gradient-brand)]',
+          )}
           style={{ width: `${scrollProgress}%` }}
         />
       </div>

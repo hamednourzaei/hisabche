@@ -6,7 +6,7 @@
 import { supabase } from '../db'
 import { AccountingService } from './accounting'
 import { InsightsService } from './insights'
-import { AIQuery, AIInsight } from '@hisabche/validation'
+import { AIQuery, AIInsight, buildInsights } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { CacheKeys, withCacheKey } from '../utils/cache'
 import type { TenancyContext } from './tenancy.service'
@@ -464,88 +464,14 @@ export class AIService {
         if (result.error) throw new DatabaseError('Failed to read the suggestions', result.error)
       }
 
-      const insights: AIInsight[] = []
-      const inBooks = (row: { currency?: string | null }) =>
-        !row.currency || row.currency === booksCurrency
-      const money = (code: string, type: AIInsight['type'], action: string, amount: number) =>
-        insights.push({
-          type,
-          code,
-          title: code,
-          description: code,
-          action,
-          values: { amount },
-          currency: booksCurrency,
-        } as AIInsight)
-      const count = (
-        code: string,
-        type: AIInsight['type'],
-        action: string,
-        n: number,
-        extra = {},
-      ) =>
-        insights.push({
-          type,
-          code,
-          title: code,
-          description: code,
-          action,
-          values: { count: n, ...extra },
-        } as AIInsight)
-
-      const products: any[] = productsResult.data || []
-      const lowStock = products.filter((p) => Number(p.quantity) <= Number(p.min_stock_level))
-      if (lowStock.length > 0) count('lowStock', 'warning', '/warehouse', lowStock.length)
-
-      const sales: any[] = salesResult.data || []
-      const owed = (inv: any) =>
-        Math.max(0, (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0))
-      const unpaidCount = sales.filter((inv) => owed(inv) > 0).length
-      if (unpaidCount > 0) count('unpaid', 'info', '/invoices', unpaidCount)
-
-      const weekSales = (weekResult.data || [])
-        .filter(inBooks)
-        .reduce((sum: number, inv: any) => sum + (Number(inv.total) || 0), 0)
-      if (weekSales > 0) money('weekSales', 'tip', '/dashboard', weekSales)
-
-      const salesInBooks = sales.filter(inBooks)
-      const outstanding = salesInBooks.reduce((sum: number, inv: any) => sum + owed(inv), 0)
-      if (outstanding > 0) money('outstanding', 'warning', '/customers', outstanding)
-
-      const outOfStock = products.filter((p) => Number(p.quantity) <= 0)
-      if (outOfStock.length > 0) {
-        count('outOfStock', 'warning', '/warehouse', outOfStock.length, {
-          names: outOfStock
-            .slice(0, 3)
-            .map((p) => p.name)
-            .join('، '),
-        })
-      }
-
-      // Valued at what was PAID for it (buy price), never the selling price.
-      const stockValue = products.reduce(
-        (sum: number, p: any) =>
-          sum + Math.max(0, Number(p.quantity) || 0) * (Number(p.buy_price) || 0),
-        0,
-      )
-      if (stockValue > 0) money('stockValue', 'info', '/warehouse', stockValue)
-
-      if (salesInBooks.length > 0) {
-        const avg =
-          salesInBooks.reduce((sum: number, inv: any) => sum + (Number(inv.total) || 0), 0) /
-          salesInBooks.length
-        money('averageSale', 'tip', '/invoices', avg)
-      }
-
-      insights.push({
-        type: 'tip',
-        code: 'tip',
-        title: 'tip',
-        description: 'tip',
-        action: '/accounting',
-      } as AIInsight)
-
-      return insights
+      // The RULES live in @hisabche/validation (`buildInsights`) — the offline
+      // engine reads the same function over the device's own rows.
+      return buildInsights({
+        products: productsResult.data || [],
+        sales: salesResult.data || [],
+        weekSales: weekResult.data || [],
+        booksCurrency,
+      })
     })
   }
 }

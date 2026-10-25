@@ -15,7 +15,7 @@
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { currencyCodeSchema } from '@hisabche/validation'
+import { breakEvenQuerySchema, workingCapitalQuerySchema } from '@hisabche/validation'
 
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
@@ -34,8 +34,6 @@ const FINANCIAL = [
   requireWorkspaceContext,
   requireCapability('report.financial.read'),
 ]
-
-const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
 function fail(fastify: FastifyInstance, reply: FastifyReply, err: unknown, fallback: string) {
   if (err instanceof z.ZodError) {
@@ -114,17 +112,7 @@ export async function analysisRoutes(fastify: FastifyInstance) {
     { preHandler: FINANCIAL },
     async (request: FastifyRequest, reply) => {
       try {
-        const query = z
-          .object({
-            from: isoDay,
-            to: isoDay,
-            currency: currencyCodeSchema,
-            // Absent = not stated. The result is then a lower bound and says so;
-            // an absent figure is never read as zero.
-            otherFixedCosts: z.coerce.number().min(0).optional(),
-          })
-          .refine((value) => value.from <= value.to, { message: 'analysis.errors.range' })
-          .parse(request.query)
+        const query = breakEvenQuerySchema.parse(request.query)
         return reply.send(
           await analysisService.breakEven(request.tenancy, {
             from: query.from,
@@ -144,10 +132,7 @@ export async function analysisRoutes(fastify: FastifyInstance) {
     { preHandler: FINANCIAL },
     async (request: FastifyRequest, reply) => {
       try {
-        const query = z
-          .object({ from: isoDay, to: isoDay, currency: currencyCodeSchema })
-          .refine((value) => value.from <= value.to, { message: 'analysis.errors.range' })
-          .parse(request.query)
+        const query = workingCapitalQuerySchema.parse(request.query)
         return reply.send(await analysisService.workingCapital(request.tenancy, query))
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to compute working capital')

@@ -63,11 +63,10 @@ asarUnpack:
 npmRebuild: true
 
 win:
-  # NOTE: no `icon:` yet. electron-builder needs a SQUARE .ico/.png of at least
-  # 256x256; every brand asset in apps/web/public is non-square (logo-icon.png is
-  # 1536x1024) and favicon.ico is actually a PNG with the wrong extension.
-  # Pointing at either makes the packaging step hang. Add a real square icon at
-  # resources/icon.ico and restore this line.
+  # The SAME logo as the Android app (apps/mobile/assets/icon.png, square 512).
+  # Windows had its own, different mark (a wide 1536x1024 artwork) — the app
+  # looked like two products. resources/icon.ico is that square logo at 256.
+  icon: resources/icon.ico
   target:
     - target: nsis
       arch: [x64]
@@ -116,6 +115,12 @@ nsis:
   # `perMachine` is true, so the failure mode would be a silent return of the
   # quarantine rather than a config error.
   packElevateHelper: false
+  # ⚠️ AN UNINSTALL KEEPS THE PERSON'S DATA (owner, 24 Oct 2026: an update or a
+  # reinstall must never sign anyone out). The vault (session, licence, edition),
+  # the offline database and the settings live in %APPDATA%@hisabchedesktop —
+  # pinned in electron/main/index.ts. Said out loud here because «true» would
+  # delete all of it with the app.
+  deleteAppDataOnUninstall: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true

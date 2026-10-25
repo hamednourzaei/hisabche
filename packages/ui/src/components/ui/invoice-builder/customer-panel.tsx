@@ -241,7 +241,7 @@ export const CustomerPanel = memo(function CustomerPanel({
               className={cn(
                 'h-11 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] px-2',
                 'bg-[hsl(var(--surface-base))]',
-                'focus-within:border-[hsl(var(--color-primary))]',
+                'own-focus-ring focus-within:border-[hsl(var(--color-primary))]',
               )}
             />
             <p className="mt-1 text-[11px] text-[hsl(var(--fg-tertiary))]">

@@ -12,7 +12,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { isPayrollFinal } from '@hisabche/validation'
+import { isPayrollFinal, planPayrollOutcome } from '@hisabche/validation'
 
 const ROOT = join(__dirname, '..', '..', '..', '..')
 const read = (...parts: string[]) => readFileSync(join(ROOT, ...parts), 'utf8')
@@ -56,9 +56,20 @@ describe('one rule: a paid salary is final', () => {
 
 describe('«پرداخت نشد» says why', () => {
   it('the server requires the reason', () => {
-    expect(settle).toContain("if (data.status === 'cancelled' && reason === '')")
+    // The rule is ONE function in @hisabche/validation, called by the server AND the device.
+    expect(settle).toContain('planPayrollOutcome(')
     expect(settle).toContain("throw new ValidationError('PAYROLL_REASON_REQUIRED")
-    expect(settle).toContain('if (data.notes !== undefined) updates.notes = reason || null')
+    const now = '2026-10-25T00:00:00.000Z'
+    expect(planPayrollOutcome({ status: 'draft' }, { status: 'cancelled' }, now)).toEqual({
+      ok: false,
+      problem: 'PAYROLL_REASON_REQUIRED',
+    })
+    expect(
+      planPayrollOutcome({ status: 'draft' }, { status: 'cancelled', notes: '   ' }, now),
+    ).toEqual({ ok: false, problem: 'PAYROLL_REASON_REQUIRED' })
+    expect(
+      planPayrollOutcome({ status: 'draft' }, { status: 'cancelled', notes: ' no cash ' }, now),
+    ).toEqual({ ok: true, changes: { status: 'cancelled', notes: 'no cash' } })
   })
 
   it('the dialog refuses an empty one before asking the server', () => {
@@ -96,9 +107,15 @@ describe('a paid salary reaches the books, whichever way it became paid', () => 
   })
 
   it('paid with no date means paid now', () => {
-    expect(settle).toContain(
-      "else if (data.status === 'paid') updates.payment_date = new Date().toISOString()",
-    )
+    const now = '2026-10-25T00:00:00.000Z'
+    expect(planPayrollOutcome({ status: 'draft' }, { status: 'paid' }, now)).toEqual({
+      ok: true,
+      changes: { status: 'paid', payment_date: now },
+    })
+    // …and a date the person gave is kept.
+    expect(
+      planPayrollOutcome({ status: 'draft' }, { status: 'paid', paymentDate: '2026-10-01' }, now),
+    ).toEqual({ ok: true, changes: { status: 'paid', payment_date: '2026-10-01' } })
   })
 })
 

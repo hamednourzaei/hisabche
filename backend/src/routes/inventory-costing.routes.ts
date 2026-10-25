@@ -17,6 +17,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import { CostingService } from '../services/inventory-costing'
 import { AuditService } from '../services/audit.service'
 import { BaseError } from '../errors/base.error'
+import { inventorySettingsInputSchema } from '@hisabche/validation'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
@@ -29,10 +30,7 @@ const toJsonSchema = (schema: any) => {
   return result
 }
 
-const settingsSchema = z.object({
-  costingMethod: z.enum(['fifo', 'avco', 'standard']).optional(),
-  negativeStock: z.enum(['block', 'allow']).optional(),
-})
+const settingsSchema = inventorySettingsInputSchema
 
 const previewQuerySchema = z.object({
   productId: z.string().uuid(),

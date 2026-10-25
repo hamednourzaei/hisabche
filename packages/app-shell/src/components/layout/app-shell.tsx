@@ -12,7 +12,13 @@ import { Fragment, Suspense, useCallback } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useMyCapabilities } from '@hisabche/api'
 import { isRouteDenied } from '@hisabche/ui/menu'
-import { GlobalPageCustomizer, LanguageSwitchProvider, NoAccessNotice } from '@hisabche/ui'
+import {
+  GlobalPageCustomizer,
+  LanguageSwitchProvider,
+  NoAccessNotice,
+  OfflinePageGate,
+  OfflineRefusalNotice,
+} from '@hisabche/ui'
 import { useShellLanguage } from '@/shared/i18n/use-shell-language'
 import { useTranslations } from 'next-intl'
 
@@ -124,7 +130,10 @@ export function AppShell() {
               ) : (
                 // Keyed by the metal unit — see the web layout.
                 <Fragment key={metalUnit}>
-                  <Outlet />
+                  <OfflineRefusalNotice routeKey={`${location.pathname}${location.search}`} />
+                  <OfflinePageGate pathname={location.pathname} search={location.search}>
+                    <Outlet />
+                  </OfflinePageGate>
                 </Fragment>
               )}
             </Suspense>

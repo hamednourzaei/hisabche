@@ -17,6 +17,8 @@
 import { useEffect, useRef } from 'react'
 
 import type { SceneRuntime } from './runtime'
+import { JOURNEY_ANALYTICS_EVENTS, type QualityTier } from '../journey.config'
+import { emitJourneyEvent } from '../journey-analytics'
 
 export interface SceneFrame {
   /** 0 → 1 along the variant's own scroll model. */
@@ -101,17 +103,66 @@ export function SceneCanvas({ label, load, progress, onUnavailable, className }:
           }
 
           const runtime = runtimeModule.createSceneRuntime(canvas)
-          const draw = sceneModule.default(runtime)
+          let draw = sceneModule.default(runtime)
           const still = window.matchMedia('(prefers-reduced-motion: reduce)')
 
           let frame = 0
           let onScreen = false
           let started = 0
+          let lastTick = 0
+          let benchmarkFrames = 0
+          let benchmarkTimeTotal = 0
+          let droppedCount = 0
+          let benchmarkSettled = false
 
           const tick = (now: number) => {
             frame = 0
             if (!onScreen || document.visibilityState !== 'visible') return
-            if (started === 0) started = now
+            if (started === 0) {
+              started = now
+              lastTick = now
+            }
+
+            const delta = now - lastTick
+            lastTick = now
+
+            // 60-frame benchmark during initial run
+            if (!benchmarkSettled && !still.matches) {
+              benchmarkFrames++
+              benchmarkTimeTotal += delta
+              if (delta > 25) droppedCount++
+
+              if (benchmarkFrames >= 60) {
+                benchmarkSettled = true
+                const avgFrameTime = benchmarkTimeTotal / 60
+                const estimatedFps = Math.min(60, Math.round(1000 / Math.max(1, avgFrameTime)))
+
+                // Downgrade tier if performance budget is violated (> 25ms per frame)
+                if (avgFrameTime > 25) {
+                  const currentTier = runtime.tier
+                  const nextTier: Record<QualityTier, QualityTier> = {
+                    S: 'A',
+                    A: 'B',
+                    B: 'C',
+                    C: 'D',
+                    D: 'D',
+                  }
+                  const downgraded = nextTier[currentTier]
+                  if (downgraded !== currentTier) {
+                    runtime.setTier(downgraded)
+                  }
+                }
+
+                emitJourneyEvent(JOURNEY_ANALYTICS_EVENTS.PERFORMANCE_TIER, {
+                  tier: runtime.tier,
+                  fps: estimatedFps,
+                  droppedFrames: droppedCount,
+                  deviceMemory: (navigator as unknown as { deviceMemory?: number }).deviceMemory,
+                  hardwareConcurrency: navigator.hardwareConcurrency,
+                })
+              }
+            }
+
             draw({
               progress: (progressRef.current ?? documentProgress)(),
               time: still.matches ? 0 : (now - started) / 1000,
@@ -129,19 +180,38 @@ export function SceneCanvas({ label, load, progress, onUnavailable, className }:
           })
           watcher.observe(canvas)
           document.addEventListener('visibilitychange', wake)
-          // The driver took the context away (memory pressure, a sleeping GPU):
-          // stop drawing and let the page tell the story itself.
+
+          // Context lost / restored recovery
           const onLost = (event: Event) => {
             event.preventDefault()
             onScreen = false
             unavailableRef.current?.()
+            if (frame !== 0) {
+              cancelAnimationFrame(frame)
+              frame = 0
+            }
           }
+
+          const onRestored = () => {
+            try {
+              runtime.dispose()
+              const restoredRuntime = runtimeModule.createSceneRuntime(canvas)
+              draw = sceneModule.default(restoredRuntime)
+              onScreen = true
+              wake()
+            } catch {
+              // Context cannot be restored; keep unavailable
+            }
+          }
+
           canvas.addEventListener('webglcontextlost', onLost)
+          canvas.addEventListener('webglcontextrestored', onRestored)
 
           stop = () => {
             watcher.disconnect()
             document.removeEventListener('visibilitychange', wake)
             canvas.removeEventListener('webglcontextlost', onLost)
+            canvas.removeEventListener('webglcontextrestored', onRestored)
             if (frame !== 0) cancelAnimationFrame(frame)
             runtime.dispose()
           }

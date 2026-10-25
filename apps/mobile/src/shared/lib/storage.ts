@@ -49,11 +49,13 @@ export const sessionStore: SessionStore = createSessionStore(secureBackend, SESS
 export async function initStorage(): Promise<void> {
   registerStorage(secureStorage)
 
-  const keys = [STORAGE_KEYS.language, STORAGE_KEYS.token]
+  // The edition too: it is read synchronously at startup to decide where the app opens
+  // (see app-shell storage.ts — without it every launch began as the cloud edition).
+  const keys = [STORAGE_KEYS.language, STORAGE_KEYS.token, STORAGE_KEYS.edition]
   await Promise.all(
     keys.map(async (key) => {
       const value = await secureBackend.get(key)
       if (value !== null) cache.set(key, value)
-    })
+    }),
   )
 }

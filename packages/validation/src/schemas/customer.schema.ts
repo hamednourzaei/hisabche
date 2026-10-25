@@ -187,6 +187,43 @@ export function derivePartyRole(invoices: ReadonlyArray<{ type?: string | null }
   return 'none'
 }
 
+/** What a person says a party is, when they add them. */
+export type DeclaredRole = 'buyer' | 'seller' | 'both'
+
+/** Roles accumulate; seeing a second kind of invoice promotes the party. */
+export function mergeRole(current: PartyRole, incoming: 'buyer' | 'seller'): PartyRole {
+  if (current === 'none') return incoming
+  if (current === incoming) return current
+  return 'both'
+}
+
+/**
+ * Effective role = declared role merged with the derived role from invoices.
+ * Declared seller + a sale invoice -> both.
+ * Declared buyer + no invoice -> buyer.
+ * Nothing declared (null) + purchase invoice -> seller.
+ * Nothing declared + no invoice -> none.
+ *
+ * ⚠️ THE ONE RULE. The server (customer list, customer 360) and the offline
+ * engine both call this; a second copy is how the offline «تأمین‌کننده» tab
+ * came to show everybody.
+ */
+export function resolveEffectiveRole(
+  declaredRole: DeclaredRole | null | undefined,
+  derivedRole: PartyRole,
+): PartyRole {
+  if (!declaredRole) return derivedRole
+  if (derivedRole === 'none') return declaredRole
+  if (declaredRole === 'both' || derivedRole === 'both') return 'both'
+  if (declaredRole === derivedRole) return declaredRole
+  return 'both'
+}
+
+/** A 'both' party legitimately matches a buyer filter AND a seller filter. */
+export function matchesRole(role: PartyRole, filter: 'buyer' | 'seller'): boolean {
+  return role === filter || role === 'both'
+}
+
 /** Copy key for a derived role. Same words on every platform. */
 export function partyRoleLabelKey(role: PartyRole): string {
   return `customers.role.${role}`

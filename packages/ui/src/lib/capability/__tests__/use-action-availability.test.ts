@@ -21,7 +21,6 @@ describe('useActionAvailability & checkActionAvailability', () => {
     it('returns requiresOnline: true for server-execution C-class features', () => {
       const serverFeatures = [
         'ai.assistant',
-        'dashboard.ai_insight',
         'dashboard.manufacturing_card',
         'invoice.recurring',
         'invoice.approval',
@@ -36,7 +35,6 @@ describe('useActionAvailability & checkActionAvailability', () => {
         'hr.attendance_devices',
         'hr.attendance_links',
         'team.members',
-        'settings.business_stamp',
         'sync.push_pull',
         'sync.overview',
         'sync.conflicts',
@@ -64,9 +62,7 @@ describe('useActionAvailability & checkActionAvailability', () => {
         'invoice.list',
         'invoice.detail',
         'invoice.create',
-        'invoice.edit',
         'invoice.delete',
-        'invoice.print',
         'product.list',
         'product.detail',
         'product.upsert',
@@ -75,9 +71,6 @@ describe('useActionAvailability & checkActionAvailability', () => {
         'customer.upsert',
         'accounting.chart',
         'accounting.journal',
-        'till.session',
-        'till.order',
-        'employee.list',
       ] as const
 
       for (const feat of localFeatures) {
@@ -86,6 +79,16 @@ describe('useActionAvailability & checkActionAvailability', () => {
         expect(result.requiresOnline, `${feat} should not require online`).toBe(false)
         expect(result.reason).toBe('available')
         expect(result.verdict.kind).toBe('AVAILABLE')
+      }
+    })
+
+    it('refuses, with the offline reason, a feature the registry calls local but the engine does not run yet', () => {
+      // The registry is the intent; the endpoint matrix is what the device runs.
+      // These were asserted «available» here while the engine answered 501.
+      for (const feat of ['invoice.edit', 'invoice.print'] as const) {
+        const result = checkActionAvailability(feat)
+        expect(result.available, feat).toBe(false)
+        expect(result.reason, feat).toBe('offline_edition')
       }
     })
 
@@ -134,7 +137,6 @@ describe('useActionAvailability & checkActionAvailability', () => {
         'customer.documents',
         'governance.permission_matrix',
         'team.members',
-        'settings.business_stamp',
         'sync.push_pull',
         'billing.portal',
       ] as const

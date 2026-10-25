@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosError, type AxiosAdapter } from 'axios'
 import { getToken, tokenReady, setOfflineTokenMode } from './tokenProvider'
 import { getActiveWorkspaceId } from './active-workspace'
+import { endpointAvailability } from '@hisabche/validation'
 import {
   activeBaseUrl,
   canReplay,
@@ -272,6 +273,33 @@ export function registerFallbackTransport(adapter: AxiosAdapter): void {
 
 const defaultAxiosAdapter = axios.getAdapter(apiClient.defaults.adapter)
 
+// ============================================
+// The offline gate, before the request
+//
+// The offline endpoint matrix (@hisabche/validation) says which endpoints the
+// device runs. One it does not run is refused HERE, before the engine, with the
+// same 501 body the engine would give — and announced to whoever listens (the
+// shell's notice), so the person is told «this needs the online edition» instead
+// of reading a failed list. The engine's own 501 stays as the second line.
+// ============================================
+
+export interface OfflineRefusal {
+  feature: string
+  availability: 'online_required' | 'not_supported'
+  method: string
+  path: string
+}
+
+const refusalListeners = new Set<(refusal: OfflineRefusal) => void>()
+
+/** Listen for requests the offline gate refused. Returns the unsubscribe. */
+export function onOfflineRefusal(listener: (refusal: OfflineRefusal) => void): () => void {
+  refusalListeners.add(listener)
+  return () => {
+    refusalListeners.delete(listener)
+  }
+}
+
 apiClient.defaults.adapter = async (config) => {
   if (currentEdition === 'offline' && localTransportAdapter) {
     const method = (config.method?.toUpperCase() || 'GET') as LocalTransportRequest['method']
@@ -322,6 +350,33 @@ apiClient.defaults.adapter = async (config) => {
 
     const params = config.params as
       Record<string, string | number | boolean | undefined | null> | undefined
+
+    const verdict = endpointAvailability(method, path)
+    if (verdict && verdict.status !== 'available') {
+      const refusal: OfflineRefusal = {
+        feature: verdict.feature,
+        availability: verdict.status,
+        method,
+        path,
+      }
+      refusalListeners.forEach((listener) => listener(refusal))
+      const data = {
+        error: 'This feature is not available offline',
+        code: 'OFFLINE_NOT_AVAILABLE',
+        message: 'This feature is not available offline',
+        details: { availability: verdict.status },
+        feature: verdict.feature,
+      }
+      return Promise.reject(
+        new AxiosError(data.error, '501', config, null, {
+          data,
+          status: 501,
+          statusText: '501',
+          headers: {},
+          config,
+        }),
+      )
+    }
 
     const res = await localTransportAdapter({
       method,

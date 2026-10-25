@@ -16,19 +16,16 @@ import {
   combinedBalance,
   creditControl,
   customerInsights,
-  matchDocumentEntries,
+  buildCustomerAccounting,
+  statementDocumentsOf,
   validateDocument,
   type CreditControl,
   type CustomerDocument,
-  type DocumentAccounting,
+  type CustomerAccounting,
   type Insight,
 } from './customer-profile.domain'
 
-export interface CustomerAccounting {
-  documents: DocumentAccounting[]
-  postedCount: number
-  unpostedCount: number
-}
+export type { CustomerAccounting }
 
 export interface CustomerProfile {
   /** false until docs/customer-360-phase3-migration.sql has been run. */
@@ -84,24 +81,9 @@ export class CustomerProfileService {
     if (!(await this.repo.customerExists(ctx.workspaceId, customerId)))
       throw new NotFoundError('CUSTOMER_NOT_FOUND')
     const ledger = await this.payments.getPartyLedger(ctx, 'customer', customerId)
-    const documents = ledger.movements.flatMap((row) =>
-      row.sourceType && row.sourceId
-        ? [
-            {
-              sourceType: row.sourceType,
-              sourceId: row.sourceId,
-              date: row.date,
-              kind: row.kind,
-              reference: row.reference,
-              amount: row.amount,
-            },
-          ]
-        : [],
-    )
+    const documents = statementDocumentsOf(ledger.movements)
     const entries = await this.accounting.entriesForDocuments(ctx, documents)
-    const matched = matchDocumentEntries(documents, entries).reverse()
-    const unpostedCount = matched.filter((document) => document.unposted).length
-    return { documents: matched, postedCount: matched.length - unpostedCount, unpostedCount }
+    return buildCustomerAccounting(documents, entries)
   }
 
   /** Rule-based observations built only from server figures. */

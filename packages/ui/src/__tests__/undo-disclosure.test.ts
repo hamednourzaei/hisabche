@@ -24,7 +24,7 @@ const code = (path: string) =>
 describe('undo disclosure', () => {
   it('knows every command kind the server declares — no more, no fewer', () => {
     const domain = readFileSync(
-      join(ROOT, 'backend', 'src', 'services', 'workflow', 'escalation.domain.ts'),
+      join(ROOT, 'packages', 'validation', 'src', 'schemas', 'compensation-plan.ts'),
       'utf8',
     )
     const union = domain.slice(
@@ -57,7 +57,7 @@ describe('undo disclosure', () => {
 
   it('the route it asks about is one the server describes', () => {
     const table = readFileSync(
-      join(ROOT, 'backend', 'src', 'services', 'workflow', 'compensation.service.ts'),
+      join(ROOT, 'packages', 'validation', 'src', 'schemas', 'compensation-plan.ts'),
       'utf8',
     )
     expect(table).toContain("'DELETE /invoices/:id'")

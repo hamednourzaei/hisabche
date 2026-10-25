@@ -12,35 +12,25 @@
 // Pure numbers, no Three.js: the scene turns a pose into a camera position, and
 // the tests sweep every pose to prove the camera stays inside the hall.
 
-import type { JourneyStationId } from './journey-machine'
+import {
+  type ShotMove,
+  type Shot,
+  OPENING_SHOT,
+  STATION_SHOTS,
+  CORE_SHOT,
+  PORTRAIT_YAW_LIMIT,
+  CRANE_FROM,
+} from '../journey.config'
 
-export type ShotMove = 'craneDown' | 'trackSide' | 'lowPush' | 'arc' | 'pullBackReveal'
-
-export interface Shot {
-  move: ShotMove
-  /** Degrees toward the road side of the station (negative: from the wall side). */
-  yaw: number
-  /** Degrees above the subject; the owner wants eye level, so these stay small. */
-  pitch: number
-  /** How far back, before the frame is fitted to the screen. */
-  distance: number
+export {
+  type ShotMove,
+  type Shot,
+  OPENING_SHOT,
+  STATION_SHOTS,
+  CORE_SHOT,
+  PORTRAIT_YAW_LIMIT,
+  CRANE_FROM,
 }
-
-export const OPENING_SHOT: Shot = { move: 'craneDown', yaw: 10, pitch: 6, distance: 9 }
-
-export const STATION_SHOTS: Record<JourneyStationId, Shot> = {
-  pay: { move: 'trackSide', yaw: 34, pitch: 3, distance: 9.5 },
-  cash: { move: 'lowPush', yaw: 18, pitch: -3, distance: 9 },
-  stock: { move: 'arc', yaw: 30, pitch: 2, distance: 10 },
-  post: { move: 'craneDown', yaw: 26, pitch: 4, distance: 9.5 },
-  report: { move: 'pullBackReveal', yaw: 12, pitch: 0, distance: 9.5 },
-}
-
-/** On a tall, narrow screen a wide sideways track would lose the subject. */
-export const PORTRAIT_YAW_LIMIT = 15
-
-/** A crane move starts this many degrees above the subject — a look down, never a top view. */
-export const CRANE_FROM = 15
 
 export interface CameraPose {
   yaw: number

@@ -21,6 +21,7 @@ import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { asList } from '../lib/as-list'
 import { useRealtime } from './useRealtime'
+import { accountingKeys } from './accounting'
 import { dashboardKeys } from './dashboard'
 import { paymentKeys } from './payments'
 import { warehouseKeys } from './warehouses'
@@ -318,6 +319,8 @@ export function useCreateInvoice() {
       // The till's «موجودی ثبت‌شده» moves with an invoice's cash payment.
       queryClient.invalidateQueries({ queryKey: ['till'] })
       queryClient.invalidateQueries({ queryKey: warehouseKeys.all })
+      // An invoice posts a journal entry: the journal, accounts and trial balance move too.
+      queryClient.invalidateQueries({ queryKey: accountingKeys.all })
     },
   })
 }
@@ -357,6 +360,8 @@ export function useUpdateInvoice() {
       // The till's «موجودی ثبت‌شده» moves with an invoice's cash payment.
       queryClient.invalidateQueries({ queryKey: ['till'] })
       queryClient.invalidateQueries({ queryKey: warehouseKeys.all })
+      // An invoice posts a journal entry: the journal, accounts and trial balance move too.
+      queryClient.invalidateQueries({ queryKey: accountingKeys.all })
     },
   })
 }
@@ -379,6 +384,8 @@ export function useDeleteInvoice() {
       // The till's «موجودی ثبت‌شده» moves with an invoice's cash payment.
       queryClient.invalidateQueries({ queryKey: ['till'] })
       queryClient.invalidateQueries({ queryKey: warehouseKeys.all })
+      // An invoice posts a journal entry: the journal, accounts and trial balance move too.
+      queryClient.invalidateQueries({ queryKey: accountingKeys.all })
     },
   })
 }
@@ -412,7 +419,7 @@ export function usePostInvoiceToLedger() {
     onSuccess: (_result, id) => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) })
       queryClient.invalidateQueries({ queryKey: ['ledger'] })
-      queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
+      queryClient.invalidateQueries({ queryKey: accountingKeys.all })
     },
   })
 }
@@ -472,7 +479,7 @@ export function usePostUnpostedInvoices() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ledger'] })
       queryClient.invalidateQueries({ queryKey: ['accounting'] })
-      queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
+      queryClient.invalidateQueries({ queryKey: accountingKeys.all })
       queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
     },
   })

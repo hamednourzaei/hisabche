@@ -29,6 +29,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './car
 
 export type CloudRequiredVariant = 'card' | 'inline' | 'fullscreen'
 
+/** What the offline endpoint matrix says about the feature (offline-endpoint-matrix.ts). */
+export type CloudRequiredKind = 'online_required' | 'not_supported'
+
 export interface CloudRequiredNoticeProps {
   /** Override for the feature title (e.g. «فرمول ساخت (BOM)» or «هوش مصنوعی») */
   title?: string | undefined
@@ -42,6 +45,8 @@ export interface CloudRequiredNoticeProps {
   whatToDo?: string | undefined
   /** Visual presentation variant */
   variant?: CloudRequiredVariant | undefined
+  /** `not_supported` words it as «not in this edition» instead of «needs the internet» */
+  kind?: CloudRequiredKind | undefined
   /** Optional retry handler */
   onRetry?: (() => void) | undefined
   /** Optional dismiss / close handler */
@@ -61,6 +66,7 @@ export const CloudRequiredNotice = memo(function CloudRequiredNotice({
   why,
   whatToDo,
   variant = 'card',
+  kind = 'online_required',
   onRetry,
   onDismiss,
   onHome,
@@ -69,11 +75,13 @@ export const CloudRequiredNotice = memo(function CloudRequiredNotice({
 }: CloudRequiredNoticeProps) {
   const t = useTranslations('offline.cloudRequired')
 
-  const effectiveTitle = title ?? t('title')
-  const effectiveBadge = badgeText ?? t('badge')
-  const effectiveDescription = description ?? t('description')
-  const effectiveWhy = why ?? t('whyDefault')
-  const effectiveWhatToDo = whatToDo ?? t('whatToDoDefault')
+  const unsupported = kind === 'not_supported'
+  const effectiveTitle = title ?? t(unsupported ? 'unsupportedTitle' : 'title')
+  const effectiveBadge = badgeText ?? t(unsupported ? 'unsupportedBadge' : 'badge')
+  const effectiveDescription =
+    description ?? t(unsupported ? 'unsupportedDescription' : 'description')
+  const effectiveWhy = why ?? t(unsupported ? 'unsupportedDescription' : 'whyDefault')
+  const effectiveWhatToDo = whatToDo ?? t(unsupported ? 'unsupportedWhatToDo' : 'whatToDoDefault')
 
   // ─── Inline Banner Variant ──────────────────────────────────────────────
   if (variant === 'inline') {

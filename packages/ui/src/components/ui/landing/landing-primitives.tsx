@@ -1,15 +1,26 @@
-// ============================================
 // packages/ui/src/components/ui/landing/landing-primitives.tsx
 //
-// Layout language of the landing page: centred section headers with a small
-// outlined label, a faint dot-grid ground, and one content width.
+// The landing's layout language. The page reads like a ledger:
 //
-// Adapted from the layout of shadcnstore/shadcn-dashboard-landing-template
-// (MIT License, Copyright (c) 2025 ShadcnStore — see
-// https://github.com/shadcnstore/shadcn-dashboard-landing-template/blob/main/License.md).
-// Only structure and spacing were taken; colours are this project's tokens and
-// every word on the page is Hisabche's own content.
-// ============================================
+//   ─────────────────────────────────────────────────────────────
+//   01 ── یک سیستم                    همه ابزارهای کسب‌وکار…
+//   (chapter number, a rule, the section name)
+//
+// One content width, one vertical rhythm, and a numbered masthead over every
+// section. The number is the design's spine: it tells the visitor where they
+// are in a long document and it lets the eye find a section again. It is set in
+// the mono face on purpose — a folio number, not a word to translate.
+//
+// Depth comes from hairlines, not from blur: a card is a ruled box, a list is a
+// ruled column, and the only shadow on the page is the header's. That is what
+// keeps a dark page from turning into a field of glowing rectangles.
+//
+// RTL: every offset here is logical (`start-` / `end-` / `border-s`). The hover
+// accent grows down the inline-start edge — right in fa/af, left in en — with no
+// mirrored class and no `scale-x-[-1]`.
+//
+// ⚠️ Text never goes below `text-xs` (12px): the landing is read on a 360px
+// phone first (`landing-i18n-keys.test.ts`, mobile-first guard).
 
 import type { ReactNode } from 'react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
@@ -17,7 +28,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 
 /** One content width for every landing section. */
-export const LANDING_CONTAINER = 'mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8'
+export const LANDING_CONTAINER = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10'
 
 /**
  * Vertical rhythm shared by the full sections — MOBILE FIRST.
@@ -30,19 +41,127 @@ export const LANDING_CONTAINER = 'mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8'
 // hero. PageSpeed measured ~1 s of "Other" + "Style & Layout" on load. The
 // intrinsic size keeps the scrollbar honest before a section is rendered.
 export const LANDING_SECTION =
-  'relative py-10 sm:py-16 lg:py-24 [content-visibility:auto] [contain-intrinsic-size:auto_900px]'
+  'relative border-t border-[hsl(var(--border-default)/0.7)] py-12 sm:py-16 lg:py-24 [content-visibility:auto] [contain-intrinsic-size:auto_900px]'
 
 /**
  * Type scale. Defaults are the phone sizes, chosen for Persian script at 360px
  * (a 30px h2 broke a four-word title over two lines); larger steps are opt-in.
  */
 export const LANDING_TYPE = {
-  h1: 'text-[1.875rem] leading-[1.25] sm:text-5xl sm:leading-[1.2] lg:text-6xl',
-  h2: 'text-[1.375rem] leading-snug sm:text-[1.75rem] lg:text-[2rem]',
-  h3: 'text-lg leading-snug sm:text-xl lg:text-2xl',
-  lead: 'text-[0.9375rem] leading-relaxed sm:text-base lg:text-[1.0625rem]',
-  body: 'text-sm leading-relaxed',
+  h1: 'text-[2.125rem] leading-[1.12] sm:text-[3.25rem] sm:leading-[1.06] lg:text-[4.25rem]',
+  h2: 'text-[1.5rem] leading-[1.2] sm:text-[2.125rem] lg:text-[2.75rem]',
+  h3: 'text-base leading-snug sm:text-lg',
+  lead: 'text-[0.9375rem] leading-7 sm:text-base sm:leading-8',
+  body: 'text-sm leading-7 sm:text-[0.9375rem]',
 } as const
+
+/**
+ * A ruled card. No shadow: the hairline is the surface. Pair it with `group`
+ * and put `<CardAccent />` inside when the card is interactive.
+ */
+export const LANDING_CARD =
+  'relative rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.55)]'
+
+/** A ruled card that responds to the pointer without moving under it. */
+export const LANDING_CARD_HOVER =
+  'transition-colors duration-300 hover:border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-elevated))]'
+
+/** A small ruled tag — a label, an item of a plan, a proof point. */
+export const LANDING_CHIP =
+  'inline-flex items-center gap-1.5 rounded-md border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base)/0.6)] px-2.5 py-1 text-xs font-medium text-[hsl(var(--fg-secondary))] transition-colors'
+
+/** A rule that opens a section: a chapter number, a line, then the name. */
+function SectionLabel({
+  index,
+  children,
+}: {
+  /** `01` … `09`. A folio number, not a translated word. */
+  index?: string | undefined
+  children: ReactNode
+}) {
+  return (
+    <p className="flex items-center justify-center gap-3 text-xs font-semibold text-[hsl(var(--fg-tertiary))]">
+      {index ? (
+        <span className="font-mono text-xs tabular-nums tracking-widest text-[hsl(var(--color-primary))]">
+          {index}
+        </span>
+      ) : null}
+      <span aria-hidden="true" className="h-px w-8 bg-[hsl(var(--border-strong))]" />
+      <span>{children}</span>
+    </p>
+  )
+}
+
+/**
+ * The masthead of a section: number, name, title at display size, and the lead.
+ *
+ * ⚠️ TITLE AND LEAD SIT IN ONE COLUMN AT EVERY WIDTH. They used to be a
+ * 12-column split on desktop (`lg:items-end`), so the lead dropped to the
+ * bottom-left of the title's block — under a three-line title it read as a
+ * separate paragraph floating away from its heading, and its position moved
+ * from section to section with the length of the title. A masthead is a
+ * caption: number, rule, name, title, then the sentence that explains it, all
+ * starting on the same edge at 360px and at 1600px.
+ *
+ * Measured at 1440 / 768 / 390 / 360 in fa, af and en: every title on a page
+ * starts on one edge, and no width scrolls sideways.
+ */
+export function SectionHeader({
+  index,
+  label,
+  title,
+  description,
+  className,
+}: {
+  index?: string | undefined
+  label?: ReactNode
+  title: ReactNode
+  description?: ReactNode
+  className?: string | undefined
+}) {
+  return (
+    <header
+      className={cn(
+        'mx-auto mb-8 flex max-w-4xl flex-col items-center text-center sm:mb-12 lg:mb-16',
+        className,
+      )}
+    >
+      {label ? <SectionLabel index={index}>{label}</SectionLabel> : null}
+      <h2
+        className={cn(
+          'text-balance text-center font-black tracking-tight text-[hsl(var(--fg-primary))]',
+          label ? 'mt-4' : undefined,
+          LANDING_TYPE.h2,
+        )}
+      >
+        {title}
+      </h2>
+      {description ? (
+        <p
+          className={cn(
+            'mx-auto mt-3 max-w-2xl text-pretty text-center text-[hsl(var(--fg-secondary))] sm:mt-4',
+            LANDING_TYPE.lead,
+          )}
+        >
+          {description}
+        </p>
+      ) : null}
+    </header>
+  )
+}
+
+/**
+ * The hover accent of a ruled card: a 2px brand rule that grows down the
+ * inline-start edge. Put it inside a `group relative` card.
+ */
+export function CardAccent() {
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-y-3 start-0 w-0.5 origin-top scale-y-0 rounded-full bg-[hsl(var(--color-primary))] transition-transform duration-300 group-hover:scale-y-100 group-focus-within:scale-y-100"
+    />
+  )
+}
 
 /**
  * A faint dot grid, faded out towards the edges. Pure CSS — no SVG, no image.
@@ -70,56 +189,6 @@ export function DotPattern({
   )
 }
 
-/** The small outlined label above a section title. */
-export function SectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-2 rounded-full border px-3 py-1',
-        'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base)/0.6)]',
-        'text-xs font-medium text-[hsl(var(--fg-secondary))]',
-      )}
-    >
-      {children}
-    </span>
-  )
-}
-
-export function SectionHeader({
-  label,
-  title,
-  description,
-  className,
-}: {
-  label?: ReactNode
-  title: ReactNode
-  description?: ReactNode
-  className?: string | undefined
-}) {
-  return (
-    <div className={cn('mx-auto mb-8 max-w-2xl text-center sm:mb-12 lg:mb-16', className)}>
-      {label ? (
-        <div className="mb-4">
-          <SectionLabel>{label}</SectionLabel>
-        </div>
-      ) : null}
-      <h2
-        className={cn(
-          'mb-3 text-balance font-bold tracking-tight text-[hsl(var(--fg-primary))] sm:mb-4',
-          LANDING_TYPE.h2,
-        )}
-      >
-        {title}
-      </h2>
-      {description ? (
-        <p className={cn('text-pretty text-[hsl(var(--fg-secondary))]', LANDING_TYPE.lead)}>
-          {description}
-        </p>
-      ) : null}
-    </div>
-  )
-}
-
 /**
  * An arrow that points FORWARD in the reading direction: ← in fa/af, → in en.
  * The icon is SELECTED by `dir`, not mirrored with a transform — a mirrored
@@ -131,72 +200,5 @@ export function ForwardArrow({ className }: { className?: string | undefined }) 
       <ArrowLeft className={cn('size-4 ltr:hidden', className)} aria-hidden="true" />
       <ArrowRight className={cn('size-4 rtl:hidden', className)} aria-hidden="true" />
     </>
-  )
-}
-
-/** Editorial rule for journal & newspaper typography paradigms */
-export function EditorialRule({ className }: { className?: string }) {
-  return (
-    <div
-      className={cn(
-        'my-8 w-full border-t border-[hsl(var(--border-default))] border-dashed opacity-60',
-        className,
-      )}
-    />
-  )
-}
-
-/** Industrial frame with corner accents for telemetry / control room paradigms */
-export function TelemetryFrame({
-  children,
-  className,
-}: {
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <div
-      className={cn(
-        'relative rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-6',
-        className,
-      )}
-    >
-      <div className="pointer-events-none absolute -top-1 -start-1 size-2 border-t-2 border-s-2 border-[hsl(var(--color-primary))]" />
-      <div className="pointer-events-none absolute -top-1 -end-1 size-2 border-t-2 border-e-2 border-[hsl(var(--color-primary))]" />
-      <div className="pointer-events-none absolute -bottom-1 -start-1 size-2 border-b-2 border-s-2 border-[hsl(var(--color-primary))]" />
-      <div className="pointer-events-none absolute -bottom-1 -end-1 size-2 border-b-2 border-e-2 border-[hsl(var(--color-primary))]" />
-      {children}
-    </div>
-  )
-}
-
-/** Strict 12-column Swiss layout container */
-export function SwissColumnGrid({
-  children,
-  className,
-}: {
-  children: ReactNode
-  className?: string
-}) {
-  return <div className={cn('grid grid-cols-1 md:grid-cols-12 gap-6', className)}>{children}</div>
-}
-
-/** Horological luxury precision bezel frame */
-export function HorologicalBezel({
-  children,
-  className,
-}: {
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <div
-      className={cn(
-        'relative rounded-2xl border border-[hsl(var(--border-default))] bg-gradient-to-b from-[hsl(var(--surface-elevated))] to-[hsl(var(--surface-base))] p-8 shadow-sm',
-        className,
-      )}
-    >
-      {children}
-    </div>
   )
 }

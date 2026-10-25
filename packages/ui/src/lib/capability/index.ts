@@ -4,6 +4,7 @@ export {
   registerEntitlementContextProvider,
   getCurrentEntitlementInput,
   isOfflineNotAvailableError,
+  offlineKindOf,
   type ActionAvailability,
   type ActionAvailabilityOptions,
   type EntitlementContextProvider,

@@ -19,6 +19,8 @@
 // ============================================
 
 import { useState } from 'react'
+import { CloudRequiredNotice } from '../cloud-required-notice'
+import { isOfflineNotAvailableError } from '../../../lib/capability/use-action-availability'
 import { useLocale, useTranslations } from 'next-intl'
 import { AlarmClock } from 'lucide-react'
 import { formatNumber } from '@hisabche/formatting'
@@ -121,7 +123,10 @@ export function InvoiceLateFeePanel({ invoiceId }: { invoiceId: string }) {
       {open && preview.isLoading ? (
         <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('loading')}</p>
       ) : null}
-      {open && preview.error ? (
+      {open && isOfflineNotAvailableError(preview.error) ? (
+        <CloudRequiredNotice variant="inline" title={t('title')} />
+      ) : null}
+      {open && preview.error && !isOfflineNotAvailableError(preview.error) ? (
         <p role="alert" className={danger}>
           {errorText(preview.error)}
         </p>

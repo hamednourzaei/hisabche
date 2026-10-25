@@ -30,6 +30,17 @@ export interface SiteFooterViewProps {
   localePrefix?: string | undefined
   /** `null` renders the copyright line without a year. */
   year: number | null
+  /**
+   * The copyright LINE AS A TEMPLATE (`© {year} …`), not as a formatted string.
+   *
+   * ⚠️ WHY THIS IS PASSED IN. The catalogue value contains an ICU `{year}`
+   * placeholder, and `t` here is a `(key, fallback)` wrapper that passes no
+   * values — so next-intl answered MISSING_VALUE, fell back to the key path, and
+   * every public page's footer read «landing.footerCopyright». Callers that own
+   * a real translator read the raw template (`t.raw`) and hand it down; the year
+   * is still substituted below, so the served HTML never depends on ICU.
+   */
+  copyright?: string | undefined
 }
 
 interface FooterLink {
@@ -112,7 +123,12 @@ const SOCIALS = [
   { icon: FaInstagram, label: 'Instagram', href: 'https://instagram.com/hisabche' },
 ]
 
-export default function SiteFooterView({ t, localePrefix, year }: SiteFooterViewProps) {
+export default function SiteFooterView({
+  t,
+  localePrefix,
+  year,
+  copyright: copyrightTemplate,
+}: SiteFooterViewProps) {
   /**
    * `#features`, `#pricing`, `#security` and `#faq` are sections of the LANDING
    * page, but this footer renders on all 45 public pages. A bare "#features" is
@@ -137,7 +153,8 @@ export default function SiteFooterView({ t, localePrefix, year }: SiteFooterView
     return `${prefix}${href}`
   }
 
-  const copyright = t('landing.footerCopyright', '© {year} حسابچه. تمامی حقوق محفوظ است.')
+  const copyright =
+    copyrightTemplate ?? t('landing.footerCopyright', '© {year} حسابچه. تمامی حقوق محفوظ است.')
 
   return (
     <footer
@@ -146,10 +163,10 @@ export default function SiteFooterView({ t, localePrefix, year }: SiteFooterView
         'bg-[hsl(var(--surface-muted)/0.3)]',
       )}
     >
-      <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-16 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-16 lg:px-10">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-16">
           {/* ── Brand block: beside the columns on wide screens, above them on narrow ── */}
-          <div className="flex flex-col items-center text-center lg:items-start lg:text-start">
+          <div className="flex flex-col items-start text-start">
             <div className="mb-2 text-base font-bold text-[hsl(var(--fg-primary))] sm:mb-3 sm:text-lg">
               {t('app.name', 'حسابچه')}
               <span className="text-[hsl(var(--color-primary))]">.</span>
@@ -162,7 +179,7 @@ export default function SiteFooterView({ t, localePrefix, year }: SiteFooterView
             </p>
 
             {/* دکمه‌های ارتباطی مربع با گوشه‌ی نرم — دایره در موبایل ریز و بی‌ریخت بود. */}
-            <div className="mt-4 flex items-center justify-center gap-2.5 sm:gap-3">
+            <div className="mt-4 flex items-center justify-start gap-2.5 sm:gap-3">
               {SOCIALS.map(({ icon: Icon, label, href }) => (
                 <a
                   key={label}

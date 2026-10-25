@@ -63,7 +63,12 @@ export function warehousesForBranch(
   const all = placement?.warehouses ?? []
   // A database that cannot say which branch a warehouse is in cannot filter by one.
   if (!branchId || !placement?.branchesConfigured) return all
-  return all.filter((warehouse) => warehouse.branchId === branchId)
+  // ⚠️ A warehouse placed in NO branch belongs to the business as a whole and is open
+  // to every branch — the server's own rule (warehouse-access.ts: «a warehouse that
+  // belongs to no branch → every member, until it is given one»). Filtering it out
+  // emptied the product list of anyone who had branches but had never assigned
+  // their warehouse to one («کالایی پیدا نشد» with the goods in stock).
+  return all.filter((warehouse) => warehouse.branchId === null || warehouse.branchId === branchId)
 }
 
 export function pickerRows(input: PickerRowsInput): PickerRow[] {

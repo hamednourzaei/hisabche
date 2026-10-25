@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { apiErrorMessage } from '@hisabche/api'
 
-import { Button, Card, Input } from '@/components/ui'
+import { Button, Card, Input, SelectField } from '@/components/ui'
 import { ErrorState } from '@/components/admin-shell/admin-ui'
 import {
   useAdminAiConfig,
@@ -95,14 +95,16 @@ export function AiClient() {
               <span className="text-xs text-[hsl(var(--fg-secondary))]">
                 {t('admin.ai.providerName')}
               </span>
-              <select
+              <SelectField
                 value={provider}
-                onChange={(event) => setProvider(event.target.value as 'anthropic' | 'openai')}
+                onChange={(value) => setProvider(value as 'anthropic' | 'openai')}
+                options={[
+                  { value: 'anthropic', label: 'Anthropic' },
+                  { value: 'openai', label: 'OpenAI' },
+                ]}
+                aria-label={t('admin.ai.provider')}
                 className={field}
-              >
-                <option value="anthropic">Anthropic</option>
-                <option value="openai">OpenAI</option>
-              </select>
+              />
             </label>
 
             <label className="space-y-1.5">
@@ -118,7 +120,7 @@ export function AiClient() {
               onChange={(event) => setBaseUrl(event.target.value)}
               placeholder="https://api.anthropic.com"
             />
-            <span className="block text-[11px] text-[hsl(var(--fg-tertiary))]">
+            <span className="block text-xs text-[hsl(var(--fg-tertiary))]">
               {t('admin.ai.baseUrlHint')}
             </span>
           </label>
@@ -132,7 +134,7 @@ export function AiClient() {
               autoComplete="off"
               placeholder={config?.hasApiKey ? t('admin.ai.keyStored') : t('admin.ai.keyMissing')}
             />
-            <span className="block text-[11px] text-[hsl(var(--fg-tertiary))]">
+            <span className="block text-xs text-[hsl(var(--fg-tertiary))]">
               {t('admin.ai.keyHint')}
             </span>
           </label>
@@ -147,7 +149,7 @@ export function AiClient() {
               rows={6}
               className={field}
             />
-            <span className="block text-[11px] text-[hsl(var(--fg-tertiary))]">
+            <span className="block text-xs text-[hsl(var(--fg-tertiary))]">
               {t('admin.ai.systemPromptHint')}
             </span>
           </label>
@@ -194,7 +196,7 @@ export function AiClient() {
               {test.isPending ? t('admin.ai.testing') : t('admin.ai.test')}
             </Button>
           </div>
-          <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">{t('admin.ai.testHint')}</p>
+          <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('admin.ai.testHint')}</p>
 
           {test.data ? (
             <div
@@ -215,10 +217,7 @@ export function AiClient() {
               </p>
               {/* The provider's own words — the one thing that says WHY. */}
               {test.data.detail ? (
-                <p
-                  dir="ltr"
-                  className="mt-1 break-words text-start font-mono text-[11px] opacity-90"
-                >
+                <p dir="ltr" className="mt-1 break-words text-start font-mono text-xs opacity-90">
                   {test.data.detail}
                 </p>
               ) : null}
@@ -290,7 +289,7 @@ export function AiClient() {
             <Input value={quotaNote} onChange={(event) => setQuotaNote(event.target.value)} />
           </label>
 
-          <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">{t('admin.ai.quotaHint')}</p>
+          <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('admin.ai.quotaHint')}</p>
 
           <Button type="submit" disabled={setQuota.isPending || !quotaWorkspace.trim()}>
             {setQuota.isPending ? t('common.saving') : t('common.save')}

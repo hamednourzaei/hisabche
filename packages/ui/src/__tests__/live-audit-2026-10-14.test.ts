@@ -106,14 +106,26 @@ describe('#74 — smart suggestions in the reader’s language and the books cur
     .filter((line) => !/^\s*\/\//.test(line))
     .join('\n')
 
-  it('the server writes no sentence and no «افغانی» — it sends a code, numbers and the currency', () => {
+  // The RULES are one function in @hisabche/validation, read by the server and by the
+  // offline engine; the server only reads the rows.
+  const rules = readFileSync(
+    join(__dirname, '../../../validation/src/schemas/insight-rules.ts'),
+    'utf8',
+  )
+    .split('\n')
+    .filter((line) => !/^\s*\/\//.test(line))
+    .join('\n')
+
+  it('the rules write no sentence and no «افغانی» — they send a code, numbers and the currency', () => {
     expect(insights).not.toContain('افغانی')
-    expect(insights).toContain('currency: booksCurrency')
+    expect(rules).not.toContain('افغانی')
+    expect(rules).toContain('currency: booksCurrency')
+    expect(insights).toContain('buildInsights')
   })
 
   it('money sums are sales only, in the books currency only', () => {
     expect(insights.split(".eq('type', 'sale')").length).toBe(3)
-    expect(insights).toContain('.filter(inBooks)')
+    expect(rules).toContain('.filter(inBooks)')
   })
 
   it('every code has its words in all three languages', () => {

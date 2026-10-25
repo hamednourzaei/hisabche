@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils'
 
 import { MemberList } from '@/components/members/member-list'
 import type { AdminWorkspace } from '@/hooks/use-admin-workspaces'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminNumber } from '@/lib/admin-format'
 
 export function WorkspaceRow({
   workspace,
@@ -127,10 +129,11 @@ function StatusBadge({ active }: { active: boolean }) {
 }
 
 function MemberCount({ count, label }: { count: number; label: string }) {
+  const dateLocale = useAdminLocale()
   return (
     <span className="inline-flex items-center gap-1.5 text-sm tabular-nums text-muted-foreground">
       <Users className="h-4 w-4" aria-hidden="true" />
-      <span>{count.toLocaleString()}</span>
+      <span>{adminNumber(count, dateLocale)}</span>
       <span className="sr-only">{label}</span>
     </span>
   )

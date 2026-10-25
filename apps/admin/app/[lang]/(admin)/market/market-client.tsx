@@ -5,7 +5,21 @@ import { useLocale, useTranslations } from 'next-intl'
 import { apiErrorMessage, type MarketSellerProfile } from '@hisabche/api'
 import { walletMoney } from '@hisabche/ui'
 
-import { Button, Card, EmptyState, Input, Skeleton } from '@/components/ui'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Button,
+  Card,
+  EmptyState,
+  Input,
+  Skeleton,
+} from '@/components/ui'
 import { ErrorState } from '@/components/admin-shell/admin-ui'
 import {
   useAdminMarketListings,
@@ -29,6 +43,7 @@ export function MarketClient() {
   const [submitted, setSubmitted] = useState('')
   const sellers = useAdminMarketSellers(submitted)
   const [open, setOpen] = useState<MarketSellerProfile | null>(null)
+  const [confirmToggle, setConfirmToggle] = useState(false)
 
   const notConfigured =
     state.isError && apiErrorMessage(state.error, '').startsWith('MARKET_NOT_CONFIGURED')
@@ -67,13 +82,31 @@ export function MarketClient() {
         <Button
           variant={enabled ? 'outline' : 'default'}
           disabled={setEnabled.isPending}
-          onClick={() => {
-            const question = enabled ? t('admin.market.confirmOff') : t('admin.market.confirmOn')
-            if (confirm(question)) setEnabled.mutate(!enabled)
-          }}
+          onClick={() => setConfirmToggle(true)}
         >
           {enabled ? t('admin.market.turnOff') : t('admin.market.turnOn')}
         </Button>
+        <AlertDialog open={confirmToggle} onOpenChange={setConfirmToggle}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {enabled ? t('admin.market.confirmOff') : t('admin.market.confirmOn')}
+              </AlertDialogTitle>
+              <AlertDialogDescription>{t('admin.market.toggleDesc')}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  setConfirmToggle(false)
+                  setEnabled.mutate(!enabled)
+                }}
+              >
+                {t('common.confirm')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         {setEnabled.isError ? (
           <p role="alert" className="w-full text-xs text-destructive">
             {apiErrorMessage(setEnabled.error, t('admin.error.generic'))}
@@ -181,7 +214,7 @@ function SellerRow({
         ) : (
           <>
             <label className="min-w-[200px] flex-1 space-y-1">
-              <span className="block text-[11px] text-muted-foreground">
+              <span className="block text-xs text-muted-foreground">
                 {t('admin.market.reason')}
               </span>
               <Input

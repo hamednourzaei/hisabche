@@ -12,6 +12,13 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 
+import {
+  approveBudgetBodySchema,
+  budgetBodySchema,
+  budgetReportQuerySchema,
+  checkBudgetSpendBodySchema,
+  reviseBudgetBodySchema,
+} from '@hisabche/validation'
 import { BudgetService } from '../services/budgeting'
 import { TraceabilityService } from '../services/traceability'
 import { TimesheetsService } from '../services/timesheets'
@@ -25,55 +32,6 @@ const toJsonSchema = (schema: any) => {
   delete result.$schema
   return result
 }
-
-const budgetSchema = z.object({
-  id: z.string().uuid(),
-  accountId: z.string().uuid(),
-  dimensionValueId: z.string().uuid().nullable().optional(),
-  branchId: z.string().uuid().nullable().optional(),
-  period: z.enum(['monthly', 'quarterly', 'yearly']),
-  startsOn: z.string().min(8),
-  amountMinor: z.number().int().min(0),
-  action: z.enum(['block', 'warn', 'approval', 'track']),
-  warnAtPercent: z.number().int().min(0).max(100).default(80),
-  isActive: z.boolean().default(true),
-  name: z.string().trim().max(120).nullable().optional(),
-  type: z.enum(['expense', 'revenue']).default('expense'),
-  /** The currency the amount is entered in. The server converts to base. */
-  currency: z.enum(['AFN', 'USD', 'PKR', 'IRR']).default('AFN'),
-  notes: z.string().max(2000).nullable().optional(),
-  /** Basis points per sub-period, summing to 10 000. */
-  distributionWeightsBp: z.array(z.number().int().min(0).max(10_000)).max(12).nullable().optional(),
-  /** Explicit minor units per sub-period, summing to amountMinor. */
-  distributionMinor: z.array(z.number().int().min(0)).max(12).nullable().optional(),
-})
-
-const reviseSchema = z.object({
-  expectedVersion: z.number().int().min(1),
-  amountMinor: z.number().int().min(0),
-  distributionMinor: z.array(z.number().int().min(0)).max(12).nullable().optional(),
-  action: z.enum(['block', 'warn', 'approval', 'track']).optional(),
-  warnAtPercent: z.number().int().min(0).max(100).optional(),
-  reason: z.string().trim().min(3).max(1000),
-})
-
-const reportQuerySchema = z.object({
-  onDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  type: z.enum(['expense', 'revenue']).optional(),
-  status: z.enum(['draft', 'pending_approval', 'approved', 'archived']).optional(),
-  branchId: z.string().uuid().optional(),
-})
-
-const checkSpendSchema = z.object({
-  accountId: z.string().uuid(),
-  dimensionValueId: z.string().uuid().nullable().optional(),
-  branchId: z.string().uuid().nullable().optional(),
-  amountMinor: z.number().int(),
-  onDate: z.string().min(8),
-})
 
 const receiveBatchSchema = z.object({
   productId: z.string().uuid(),
@@ -174,14 +132,14 @@ export async function operationsRoutes(fastify: FastifyInstance) {
       // so every save from the client (which sends `{ id, ...body }` split) was a
       // 400 «body must have required property 'id'» before any code ran.
       schema: {
-        body: toJsonSchema(budgetSchema.omit({ id: true })),
+        body: toJsonSchema(budgetBodySchema.omit({ id: true })),
         response: { 200: toJsonSchema(z.any()) },
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const body = budgetSchema.parse({ ...(request.body as object), id })
+        const body = budgetBodySchema.parse({ ...(request.body as object), id })
         return reply.send(await budgetService.upsert(request.tenancy, body))
       } catch (err) {
         return fail(reply, err, 'Failed to save the budget')
@@ -196,7 +154,7 @@ export async function operationsRoutes(fastify: FastifyInstance) {
     { preHandler: budgetRead, schema: { response: { 200: toJsonSchema(z.any()) } } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const query = reportQuerySchema.parse(request.query ?? {})
+        const query = budgetReportQuerySchema.parse(request.query ?? {})
         return reply.send(
           await budgetService.performanceReport(
             request.tenancy,
@@ -229,9 +187,7 @@ export async function operationsRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
-        const body = z
-          .object({ override: z.object({ reason: z.string().trim().min(3).max(500) }).optional() })
-          .parse(request.body ?? {})
+        const body = approveBudgetBodySchema.parse(request.body ?? {})
         return reply.send(await budgetService.approve(request.tenancy, id, body.override))
       } catch (err) {
         return fail(reply, err, 'Failed to approve the budget')
@@ -256,12 +212,15 @@ export async function operationsRoutes(fastify: FastifyInstance) {
     '/budgets/:id/revise',
     {
       preHandler: budgetApprove,
-      schema: { body: toJsonSchema(reviseSchema), response: { 200: toJsonSchema(z.any()) } },
+      schema: {
+        body: toJsonSchema(reviseBudgetBodySchema),
+        response: { 200: toJsonSchema(z.any()) },
+      },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
-        const body = reviseSchema.parse(request.body)
+        const body = reviseBudgetBodySchema.parse(request.body)
         return reply.send(await budgetService.revise(request.tenancy, id, body))
       } catch (err) {
         return fail(reply, err, 'Failed to revise the budget')
@@ -288,11 +247,14 @@ export async function operationsRoutes(fastify: FastifyInstance) {
     '/budgets/check',
     {
       preHandler: financeRead,
-      schema: { body: toJsonSchema(checkSpendSchema), response: { 200: toJsonSchema(z.any()) } },
+      schema: {
+        body: toJsonSchema(checkBudgetSpendBodySchema),
+        response: { 200: toJsonSchema(z.any()) },
+      },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const body = checkSpendSchema.parse(request.body)
+        const body = checkBudgetSpendBodySchema.parse(request.body)
         return reply.send(await budgetService.checkSpend(request.tenancy, body))
       } catch (err) {
         return fail(reply, err, 'Failed to check the budget')

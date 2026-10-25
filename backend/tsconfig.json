@@ -11,5 +11,10 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "drizzle.config.ts", "../packages/app-bridge/src/node-sqlite.d.ts"]
+  "include": [
+    "src/**/*.ts",
+    "drizzle.config.ts",
+    "../packages/app-bridge/src/node-sqlite.d.ts",
+    "../packages/validation/src/__golden__/run-vectors.ts"
+  ]
 }

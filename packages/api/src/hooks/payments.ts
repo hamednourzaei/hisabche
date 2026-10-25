@@ -25,6 +25,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useIntentKey } from '../lib/intent-key'
+import { accountingKeys } from './accounting'
 
 export type PaymentDirection = 'in' | 'out'
 export type PaymentPartyType = 'customer' | 'supplier'
@@ -306,6 +307,7 @@ export function useRecordPayment() {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['ledger'] })
+      queryClient.invalidateQueries({ queryKey: accountingKeys.all })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
@@ -351,6 +353,7 @@ export function useCancelPayment() {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['ledger'] })
+      queryClient.invalidateQueries({ queryKey: accountingKeys.all })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })

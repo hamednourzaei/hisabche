@@ -12,6 +12,8 @@ import {
   useSetAdminScale,
   type ServerInstance,
 } from '@/hooks/use-admin-servers'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminNumber } from '@/lib/admin-format'
 
 /** Green under 65 %, amber under 85 %, red above — semantic tokens only. */
 function tone(value: number): string {
@@ -42,6 +44,7 @@ function Meter({ label, value }: { label: string; value: number }) {
 }
 
 export function ServersClient() {
+  const dateLocale = useAdminLocale()
   const t = useTranslations()
   const { data, isError, refetch } = useAdminInstances()
   const instances = data?.instances ?? []
@@ -112,7 +115,9 @@ export function ServersClient() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {t('admin.servers.uptime')}:{' '}
-                  {t('admin.servers.seconds', { n: selected.uptimeSeconds.toLocaleString() })}
+                  {t('admin.servers.seconds', {
+                    n: adminNumber(selected.uptimeSeconds, dateLocale),
+                  })}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {t('admin.servers.inflight')}: {selected.inflightRequests}

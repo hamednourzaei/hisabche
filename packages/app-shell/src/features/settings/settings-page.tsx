@@ -7,13 +7,11 @@ import { useTranslation } from 'react-i18next'
 import { LogOut } from 'lucide-react'
 
 import { Badge, Button, Card, cn } from '@/components/ui/primitives'
-import { SelectField } from '@hisabche/ui'
+import { SelectField, useDisplayBasis } from '@hisabche/ui'
 import { SettingsHubContainer, SettingsPage as SharedSettingsPage } from '@hisabche/ui/screens'
 import { LogoutPendingDialog } from '@/components/layout/logout-pending-dialog'
 import { useAuthStore, useCurrentUser } from '@/features/auth/auth.store'
 import { bridge } from '@/shared/lib/bridge'
-import { CURRENCY_CODES } from '@/shared/lib/currency'
-import { useUiStore } from '@/shared/stores/ui.store'
 import type { AppInfo } from '@hisabche/app-bridge'
 
 import { UpdateSection } from './update-section'
@@ -30,8 +28,14 @@ function DesktopSettings() {
   const user = useCurrentUser()
   const logout = useAuthStore((s) => s.logout)
 
-  const currency = useUiStore((s) => s.currency)
-  const setCurrency = useUiStore((s) => s.setCurrency)
+  // ⚠️ ONE currency preference, the product's own (`useCurrencyStore`). This card
+  // used to keep a currency of its own in the shell's UI store: it started at AFN
+  // whatever the business chose in onboarding (a gold business read «AFN» here),
+  // nothing read it, and changing it changed nothing.
+  //
+  // What it offers and what it means is `useDisplayBasis`: the books currency
+  // until the person picks another, and only currencies that have a rate.
+  const display = useDisplayBasis()
 
   const [info, setInfo] = useState<AppInfo | null>(null)
 
@@ -78,9 +82,11 @@ function DesktopSettings() {
               <label className="flex flex-col gap-1.5 text-sm">
                 <span className="text-[hsl(var(--fg-secondary))]">{t('sync.displayCurrency')}</span>
                 <SelectField
-                  value={currency}
-                  onChange={(next) => setCurrency(next as (typeof CURRENCY_CODES)[number])}
-                  options={CURRENCY_CODES.map((code) => ({ value: code, label: code }))}
+                  value={display.basis}
+                  // The books currency is «no choice made» — stored as null, so a later
+                  // change of the books currency is followed rather than pinned.
+                  onChange={(next) => display.setBasis(next === display.base ? null : next)}
+                  options={display.availableBases.map((code) => ({ value: code, label: code }))}
                   aria-label={t('sync.displayCurrency')}
                 />
               </label>

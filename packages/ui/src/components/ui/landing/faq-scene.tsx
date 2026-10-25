@@ -5,7 +5,6 @@
 // JavaScript to hydrate. As a client component with useState it was one of the
 // larger trees React had to hydrate on load (headless-Chrome profile at
 // PageSpeed-like CPU speed: ~340 ms of hydration across the landing).
-import { cn } from '../../../lib/utils'
 import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -14,6 +13,8 @@ import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-pri
 
 export interface FaqSceneProps {
   t: (key: string, fallback?: string) => string
+  /** Chapter number of this section on the page (`08`). */
+  index?: string | undefined
 }
 
 /* ── Category & item definitions ────────────────────────────────────────── */
@@ -307,26 +308,27 @@ function translate(item: FaqItem, t: FaqSceneProps['t']): TranslatedItem {
   }
 }
 
-function FaqAccordionItem({ item }: { item: TranslatedItem }) {
+function FaqAccordionItem({ item, number }: { item: TranslatedItem; number: number }) {
   return (
-    <details
-      className={cn(
-        'group overflow-hidden rounded-xl border transition-colors sm:rounded-2xl',
-        'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.5)] hover:border-[hsl(var(--border-strong))]',
-        'open:border-[hsl(var(--color-primary)/0.3)] open:bg-[hsl(var(--color-primary)/0.03)]',
-      )}
-    >
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-start font-semibold text-[hsl(var(--fg-primary))] sm:gap-4 sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden">
-        <span className="text-sm leading-snug sm:text-base sm:leading-normal">{item.question}</span>
-        {/* Chevron from two borders: one element instead of <svg> + <path> on
-            each of 21 questions. The borders are end/bottom, so RTL needs the
-            opposite rotation to point down. */}
-        <span
-          aria-hidden="true"
-          className="me-1 size-2 shrink-0 rotate-45 border-b-2 border-e-2 border-[hsl(var(--fg-tertiary))] transition-transform duration-300 group-open:-rotate-[135deg] rtl:-rotate-45 rtl:group-open:rotate-[135deg]"
-        />
+    <details className="group border-b border-[hsl(var(--border-default))] transition-colors last:border-b-0 open:bg-[hsl(var(--color-primary)/0.03)]">
+      <summary className="flex min-h-12 cursor-pointer list-none items-start justify-between gap-4 px-1 py-4 text-start font-semibold text-[hsl(var(--fg-primary))] sm:py-5 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="pt-0.5 font-mono text-xs tabular-nums text-[hsl(var(--fg-tertiary))]"
+          >
+            {String(number).padStart(2, '0')}
+          </span>
+          <span className="text-pretty text-sm leading-snug sm:text-base">{item.question}</span>
+        </span>
+        {/* A plus that becomes a minus on open: two 2px bars, centred with
+            `inset-0 m-auto` so nothing is written with a physical side. */}
+        <span aria-hidden="true" className="relative mt-1 size-3 shrink-0">
+          <span className="absolute inset-0 m-auto h-0.5 w-3 rounded-full bg-[hsl(var(--fg-tertiary))] transition-colors group-open:bg-[hsl(var(--color-primary))]" />
+          <span className="absolute inset-0 m-auto h-3 w-0.5 rounded-full bg-[hsl(var(--fg-tertiary))] transition-transform duration-300 group-open:scale-y-0" />
+        </span>
       </summary>
-      <div className="px-4 pb-3 text-sm leading-relaxed text-[hsl(var(--fg-secondary))] sm:px-5 sm:pb-4">
+      <div className="pb-5 ps-8 text-pretty text-sm leading-7 text-[hsl(var(--fg-secondary))] sm:pe-8">
         {item.answer}
         {item.relatedLink && (
           <a
@@ -365,7 +367,7 @@ function FaqJsonLd({ items }: { items: TranslatedItem[] }) {
   )
 }
 
-export default function FaqScene({ t }: FaqSceneProps) {
+export default function FaqScene({ t, index }: FaqSceneProps) {
   const first = ALL_ITEMS.slice(0, INITIAL_COUNT)
   const firstIds = new Set(first.map((item) => item.id))
   const rest = FAQ_CATEGORIES.map((category) => ({
@@ -373,12 +375,19 @@ export default function FaqScene({ t }: FaqSceneProps) {
     items: category.items.filter((item) => !firstIds.has(item.id)),
   })).filter((category) => category.items.length > 0)
 
+  /** The folio number of a question is its place in the whole list, so the
+      numbers continue when the rest of the questions are opened. */
+  const numberOf = (id: string) => ALL_ITEMS.findIndex((item) => item.id === id) + 1
+
   return (
     <section id="faq" className={LANDING_SECTION}>
       <FaqJsonLd items={ALL_ITEMS.map((item) => translate(item, t))} />
 
-      <div className={cn(LANDING_CONTAINER, 'max-w-3xl')}>
+      {/* Same container as every other section. Only the READING COLUMN is
+          capped, so the folio numbers all sit on one vertical line. */}
+      <div className={LANDING_CONTAINER}>
         <SectionHeader
+          index={index}
           label={t('landing.faqLabel', 'پرسش‌های رایج')}
           title={t('landing.faqTitle', 'هر سوالی داری، اینجا جوابش هست')}
           description={t(
@@ -387,30 +396,38 @@ export default function FaqScene({ t }: FaqSceneProps) {
           )}
         />
 
-        <div className="space-y-2 sm:space-y-3">
+        {/* One ruled sheet, not six floating cards: a question list is read
+            row by row, and every card was a border the eye had to cross. */}
+        <div className="mx-auto max-w-4xl overflow-hidden rounded-xl border border-[hsl(var(--border-default))]">
           {first.map((item) => (
-            <FaqAccordionItem key={item.id} item={translate(item, t)} />
+            <FaqAccordionItem key={item.id} item={translate(item, t)} number={numberOf(item.id)} />
           ))}
         </div>
 
         {rest.length > 0 && (
-          <details className="group/more mt-6 sm:mt-8">
-            <summary className="mx-auto flex w-fit cursor-pointer list-none items-center gap-2 rounded-full border border-[hsl(var(--border-default))] px-5 py-2.5 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors hover:border-[hsl(var(--color-primary)/0.4)] hover:text-[hsl(var(--fg-primary))] group-open/more:hidden sm:px-6 sm:py-3 [&::-webkit-details-marker]:hidden">
+          <details className="group/more mx-auto mt-6 max-w-4xl sm:mt-8">
+            <summary className="flex min-h-12 w-full cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border-default))] px-4 py-4 text-sm font-semibold text-[hsl(var(--fg-secondary))] transition-colors hover:text-[hsl(var(--fg-primary))] group-open/more:hidden [&::-webkit-details-marker]:hidden">
               {t('faq.showMore', 'مشاهده همه سوالات')}
-              <span
-                aria-hidden="true"
-                className="size-2 rotate-45 border-b-2 border-e-2 border-current rtl:-rotate-45"
-              />
+              <span aria-hidden="true" className="relative size-3 shrink-0">
+                <span className="absolute inset-0 m-auto h-0.5 w-3 rounded-full bg-current" />
+                <span className="absolute inset-0 m-auto h-3 w-0.5 rounded-full bg-current" />
+              </span>
             </summary>
-            <div className="space-y-6 sm:space-y-8">
+
+            <div>
               {rest.map((category) => (
                 <div key={category.id}>
-                  <h3 className="mb-2 px-1 text-sm font-semibold text-[hsl(var(--fg-secondary))] sm:mb-3">
+                  <h3 className="flex items-center gap-2 pb-2 pt-6 text-xs font-semibold text-[hsl(var(--fg-tertiary))]">
+                    <span aria-hidden="true" className="h-px w-6 bg-[hsl(var(--border-strong))]" />
                     {t(category.titleKey, category.fallbackTitle)}
                   </h3>
-                  <div className="space-y-2 sm:space-y-3">
+                  <div className="border-y border-[hsl(var(--border-default))]">
                     {category.items.map((item) => (
-                      <FaqAccordionItem key={item.id} item={translate(item, t)} />
+                      <FaqAccordionItem
+                        key={item.id}
+                        item={translate(item, t)}
+                        number={numberOf(item.id)}
+                      />
                     ))}
                   </div>
                 </div>
@@ -419,7 +436,7 @@ export default function FaqScene({ t }: FaqSceneProps) {
           </details>
         )}
 
-        <div className="mt-8 text-center sm:mt-10">
+        <div className="mx-auto mt-10 max-w-4xl border-t border-[hsl(var(--border-default))] pt-6 text-center">
           <p className="text-sm text-[hsl(var(--fg-secondary))]">
             {t('faq.supportText', 'پاسخت را پیدا نکردی؟')}{' '}
             <a

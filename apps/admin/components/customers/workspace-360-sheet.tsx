@@ -25,6 +25,8 @@ import {
   useAddWorkspaceNote,
 } from '@/hooks/use-admin-customers'
 import { StepUpDialog } from '@/components/admin-shell/step-up-dialog'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminDate, adminDateTime } from '@/lib/admin-format'
 
 interface Workspace360SheetProps {
   workspaceId: string | null
@@ -32,6 +34,7 @@ interface Workspace360SheetProps {
 }
 
 export function Workspace360Sheet({ workspaceId, onClose }: Workspace360SheetProps) {
+  const dateLocale = useAdminLocale()
   const t = useTranslations()
   const { data, isLoading, isError } = useWorkspace360(workspaceId)
   const { mutateAsync: manageUser } = useManageUser()
@@ -155,7 +158,7 @@ export function Workspace360Sheet({ workspaceId, onClose }: Workspace360SheetPro
                 <div className="grid grid-cols-2 gap-2">
                   <span className="text-muted-foreground">{t('admin.customers.createdAt')}:</span>
                   <span className="tabular-nums text-muted-foreground">
-                    {ws?.created_at ? new Date(ws.created_at).toLocaleString() : '—'}
+                    {adminDateTime(ws?.created_at, dateLocale)}
                   </span>
                 </div>
               </div>
@@ -202,11 +205,11 @@ export function Workspace360Sheet({ workspaceId, onClose }: Workspace360SheetPro
                           {m.email ?? m.user_id}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline" className="text-[10px] uppercase">
+                          <Badge variant="outline" className="text-xs uppercase">
                             {m.role}
                           </Badge>
-                          <span className="text-muted-foreground tabular-nums text-[10px]">
-                            {new Date(m.created_at).toLocaleDateString()}
+                          <span className="text-muted-foreground tabular-nums text-xs">
+                            {adminDate(m.created_at, dateLocale)}
                           </span>
                         </div>
                       </div>
@@ -216,7 +219,7 @@ export function Workspace360Sheet({ workspaceId, onClose }: Workspace360SheetPro
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-7 text-[11px]"
+                          className="h-7 text-xs"
                           onClick={() =>
                             setUserActionTarget({ userId: m.user_id, action: 'revoke_sessions' })
                           }
@@ -226,7 +229,7 @@ export function Workspace360Sheet({ workspaceId, onClose }: Workspace360SheetPro
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-7 text-[11px]"
+                          className="h-7 text-xs"
                           onClick={() =>
                             setUserActionTarget({ userId: m.user_id, action: 'reset_mfa' })
                           }
@@ -236,7 +239,7 @@ export function Workspace360Sheet({ workspaceId, onClose }: Workspace360SheetPro
                         <Button
                           variant="destructive"
                           size="sm"
-                          className="h-7 text-[11px]"
+                          className="h-7 text-xs"
                           onClick={() =>
                             setUserActionTarget({ userId: m.user_id, action: 'suspend' })
                           }
@@ -287,17 +290,17 @@ export function Workspace360Sheet({ workspaceId, onClose }: Workspace360SheetPro
                       key={n.id}
                       className="p-3 rounded-xl border border-border bg-muted/20 space-y-1.5"
                     >
-                      <div className="flex items-center justify-between text-[11px]">
+                      <div className="flex items-center justify-between text-xs">
                         <span className="font-medium text-foreground">{n.admin_email}</span>
                         <span className="text-muted-foreground tabular-nums">
-                          {new Date(n.created_at).toLocaleString()}
+                          {adminDateTime(n.created_at, dateLocale)}
                         </span>
                       </div>
                       <p className="text-foreground whitespace-pre-wrap">{n.note}</p>
                       {n.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 pt-1">
                           {n.tags.map((tag) => (
-                            <Badge key={tag} variant="secondary" className="text-[10px]">
+                            <Badge key={tag} variant="secondary" className="text-xs">
                               {tag}
                             </Badge>
                           ))}
@@ -330,7 +333,7 @@ export function Workspace360Sheet({ workspaceId, onClose }: Workspace360SheetPro
                         <span>{s.admin_email}</span>
                         <Badge
                           variant={s.is_revoked ? 'destructive' : 'default'}
-                          className="text-[10px]"
+                          className="text-xs"
                         >
                           {s.is_revoked
                             ? t('admin.customers.revoked')
@@ -338,8 +341,8 @@ export function Workspace360Sheet({ workspaceId, onClose }: Workspace360SheetPro
                         </Badge>
                       </div>
                       <div className="text-muted-foreground">{s.reason}</div>
-                      <div className="text-[10px] text-muted-foreground tabular-nums">
-                        {t('admin.customers.expiresAt')} {new Date(s.expires_at).toLocaleString()}
+                      <div className="text-xs text-muted-foreground tabular-nums">
+                        {t('admin.customers.expiresAt')} {adminDateTime(s.expires_at, dateLocale)}
                       </div>
                     </div>
                   ))}
@@ -373,10 +376,10 @@ export function Workspace360Sheet({ workspaceId, onClose }: Workspace360SheetPro
                         </Badge>
                       </div>
                       <div className="text-muted-foreground">
-                        {t('admin.customers.slaDue')} {new Date(r.sla_due_at).toLocaleDateString()}
+                        {t('admin.customers.slaDue')} {adminDate(r.sla_due_at, dateLocale)}
                       </div>
                       {r.legal_hold && (
-                        <div className="text-destructive font-medium text-[11px]">
+                        <div className="text-destructive font-medium text-xs">
                           ⚠️ {t('admin.customers.legalHoldActive')}
                         </div>
                       )}

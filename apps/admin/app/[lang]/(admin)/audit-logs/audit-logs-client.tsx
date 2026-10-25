@@ -8,6 +8,8 @@ import { ErrorState } from '@/components/admin-shell/admin-ui'
 import { useAdminSession } from '@/hooks/use-admin-session'
 import { useAdminAuditLogs, type AdminAuditLog } from '@/hooks/use-admin-audit-logs'
 import { cn } from '@/lib/utils'
+import { useAdminLocale } from '@/hooks/use-admin-locale'
+import { adminDateTime } from '@/lib/admin-format'
 
 const PAGE_SIZE = 25
 
@@ -118,6 +120,7 @@ function toneOf(action: string): string {
 }
 
 function AuditRow({ log }: { log: AdminAuditLog }) {
+  const dateLocale = useAdminLocale()
   const t = useTranslations()
 
   return (
@@ -155,7 +158,7 @@ function AuditRow({ log }: { log: AdminAuditLog }) {
         suppressHydrationWarning
         className="text-sm tabular-nums text-muted-foreground"
       >
-        {new Date(log.created_at).toLocaleString()}
+        {adminDateTime(log.created_at, dateLocale)}
       </time>
     </li>
   )

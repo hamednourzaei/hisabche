@@ -1,131 +1,158 @@
 'use client'
 
-import React from 'react'
-import { useTranslations } from 'next-intl'
-import { useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
-import { Plus, Edit2, Globe, FileText, CheckCircle2 } from 'lucide-react'
-import { apiClient } from '@hisabche/api'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { useQuery } from '@tanstack/react-query'
+import { Edit2, Plus } from 'lucide-react'
+import { apiClient } from '@hisabche/api'
+
+import {
+  Badge,
+  Button,
+  DataTable,
+  EmptyState,
+  Skeleton,
+  useRouteLang,
+  type TableColumn,
+} from '@/components/ui'
+import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
+
+/**
+ * The part of `GET /api/cms/pages` (`CmsPageRow`) this screen reads.
+ * The endpoint answers with the rows themselves, newest first.
+ */
+interface CmsPageSummary {
+  id: string
+  locale: string
+  slug: string
+  title: string
+  status: 'draft' | 'published' | 'archived'
+  theme: string
+}
 
 export function CmsPagesClient() {
   const t = useTranslations()
-  const router = useRouter()
+  const tableT = useAdminTableT()
+  const lang = useRouteLang()
+  const href = (path: string) => (lang ? `/${lang}${path}` : path)
 
-  const { data: pages = [], isLoading } = useQuery({
+  const {
+    data: pages = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<CmsPageSummary[]>({
     queryKey: ['cms-pages'],
     queryFn: async () => {
-      const res = await apiClient.get('/api/cms/pages')
+      const res = await apiClient.get<CmsPageSummary[]>('/api/cms/pages')
       return res.data
     },
   })
 
-  return (
-    <div className="mx-auto max-w-6xl p-6">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-            {t('cms.pages.title')}
-          </h1>
-          <p className="mt-1 text-sm text-[hsl(var(--fg-secondary))]">{t('cms.pages.subtitle')}</p>
+  const columns: TableColumn<CmsPageSummary>[] = [
+    {
+      id: 'title',
+      labelKey: 'common.title',
+      labelFallback: 'عنوان',
+      locked: true,
+      render: (page) => (
+        <div className="min-w-0">
+          <div className="font-medium text-foreground">{page.title}</div>
+          <div className="text-xs text-muted-foreground">
+            {t('admin.cms.themeName', { theme: page.theme })}
+          </div>
         </div>
-        <Link
-          href="/cms/pages/new"
-          className="inline-flex h-10 items-center justify-center rounded-lg bg-[hsl(var(--color-primary))] px-4 text-sm font-medium text-white transition-colors hover:bg-[hsl(var(--color-primary-hover))]"
+      ),
+      sortValue: (page) => page.title,
+    },
+    {
+      id: 'url',
+      labelKey: 'cms.pages.url',
+      labelFallback: 'نشانی',
+      render: (page) => (
+        <span
+          dir="ltr"
+          className="inline-flex items-center rounded-md bg-muted px-2 py-1 font-mono text-xs text-muted-foreground"
         >
-          <Plus className="me-2 size-4" aria-hidden="true" />
-          {t('cms.pages.create')}
-        </Link>
+          /{page.locale}/{page.slug}
+        </span>
+      ),
+      sortValue: (page) => `${page.locale}/${page.slug}`,
+    },
+    {
+      id: 'status',
+      labelKey: 'common.status',
+      labelFallback: 'وضعیت',
+      render: (page) => (
+        <Badge variant={page.status === 'published' ? 'default' : 'secondary'}>
+          {page.status === 'published' ? t('common.published') : t('common.draft')}
+        </Badge>
+      ),
+      sortValue: (page) => page.status,
+    },
+    {
+      id: 'locale',
+      labelKey: 'cms.pages.locale',
+      labelFallback: 'زبان',
+      showFrom: 'md',
+      render: (page) => <span className="uppercase text-muted-foreground">{page.locale}</span>,
+      sortValue: (page) => page.locale,
+    },
+    {
+      id: 'actions',
+      labelKey: 'common.actions',
+      labelFallback: 'عملیات',
+      align: 'end',
+      locked: true,
+      render: (page) => (
+        <Button asChild variant="ghost" size="sm">
+          <Link
+            href={href(`/cms/pages/${page.id}`)}
+            aria-label={t('admin.cms.editPage', { title: page.title })}
+          >
+            <Edit2 className="size-4" aria-hidden="true" />
+          </Link>
+        </Button>
+      ),
+    },
+  ]
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{t('cms.pages.title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('cms.pages.subtitle')}</p>
+        </div>
+        <Button asChild>
+          <Link href={href('/cms/pages/new')}>
+            <Plus className="me-2 size-4" aria-hidden="true" />
+            {t('cms.pages.create')}
+          </Link>
+        </Button>
       </div>
 
       {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-[hsl(var(--surface-muted))]" />
+        <div className="space-y-2">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-xl" />
           ))}
         </div>
-      ) : pages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[hsl(var(--border-default))] py-20 text-center">
-          <Globe className="mb-4 size-10 text-[hsl(var(--fg-tertiary))]" />
-          <h3 className="text-lg font-semibold text-[hsl(var(--fg-primary))]">
-            {t('cms.pages.empty')}
-          </h3>
-          <p className="mt-2 max-w-sm text-sm text-[hsl(var(--fg-secondary))]">
-            {t('cms.pages.emptyDesc')}
-          </p>
-          <Link
-            href="/cms/pages/new"
-            className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-[hsl(var(--color-primary))] px-4 text-sm font-medium text-white transition-colors hover:bg-[hsl(var(--color-primary-hover))]"
-          >
-            {t('cms.pages.create')}
-          </Link>
-        </div>
+      ) : isError ? (
+        <ErrorState message={t('common.loadError')} onRetry={() => void refetch()} />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))]">
-          <table className="w-full text-start text-sm">
-            <thead>
-              <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">
-                  {t('common.title')}
-                </th>
-                <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">
-                  {t('cms.pages.url')}
-                </th>
-                <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">
-                  {t('common.status')}
-                </th>
-                <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">
-                  {t('cms.pages.locale')}
-                </th>
-                <th className="px-4 py-3 text-end font-medium text-[hsl(var(--fg-secondary))]">
-                  {t('common.actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[hsl(var(--border-default))]">
-              {pages.map((page: any) => (
-                <tr
-                  key={page.id}
-                  className="transition-colors hover:bg-[hsl(var(--surface-muted))]"
-                >
-                  <td className="px-4 py-4">
-                    <div className="font-medium text-[hsl(var(--fg-primary))]">{page.title}</div>
-                    <div className="text-xs text-[hsl(var(--fg-tertiary))]">{page.theme} theme</div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className="inline-flex items-center gap-1.5 rounded-md bg-[hsl(var(--surface-muted))] px-2 py-1 font-mono text-xs text-[hsl(var(--fg-secondary))]">
-                      /{page.locale}/{page.slug}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    {page.status === 'published' ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--color-success)/0.12)] px-2.5 py-1 text-xs font-medium text-[hsl(var(--color-success))]">
-                        <CheckCircle2 className="size-3.5" />
-                        {t('common.published')}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--color-warning)/0.12)] px-2.5 py-1 text-xs font-medium text-[hsl(var(--color-warning))]">
-                        <FileText className="size-3.5" />
-                        {t('common.draft')}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-4 text-[hsl(var(--fg-secondary))] uppercase">
-                    {page.locale}
-                  </td>
-                  <td className="px-4 py-4 text-end">
-                    <Link
-                      href={`/cms/pages/${page.id}`}
-                      className="inline-flex items-center justify-center rounded-lg p-2 text-[hsl(var(--fg-secondary))] transition-colors hover:bg-[hsl(var(--border-default))] hover:text-[hsl(var(--fg-primary))]"
-                    >
-                      <Edit2 className="size-4" />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          tableId="admin-cms-pages"
+          t={tableT}
+          rows={pages}
+          columns={columns}
+          rowKey={(page) => page.id}
+          minWidthClass="min-w-[760px]"
+          caption={t('cms.pages.title')}
+          emptyState={
+            <EmptyState title={t('cms.pages.empty')} description={t('cms.pages.emptyDesc')} />
+          }
+        />
       )}
     </div>
   )

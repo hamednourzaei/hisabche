@@ -208,8 +208,13 @@ describe('a page the role does not include is not mounted', () => {
     expect(web).toContain(
       ") : routeDenied ? ( <NoAccessNotice onHome={() => router.push(withLocale('/dashboard'))} /> ) : ( <LanguageSwitchProvider value={languageSwitch}> <Fragment key={metalUnit}>{children}</Fragment> </LanguageSwitchProvider> )}",
     )
+    // The device shell also gates an entry the device cannot run (OfflinePageGate),
+    // INSIDE the same branch: a denied page is still never mounted.
     expect(shell).toContain(
-      ") : routeDenied ? ( <NoAccessNotice onHome={() => navigate('/')} /> ) : ( <Fragment key={metalUnit}> <Outlet /> </Fragment> )}",
+      ") : routeDenied ? ( <NoAccessNotice onHome={() => navigate('/')} /> ) : ( <Fragment key={metalUnit}>",
+    )
+    expect(shell).toContain(
+      '<OfflinePageGate pathname={location.pathname} search={location.search}> <Outlet /> </OfflinePageGate>',
     )
   })
 

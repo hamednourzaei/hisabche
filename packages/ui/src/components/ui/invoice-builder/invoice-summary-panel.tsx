@@ -44,7 +44,7 @@ const valueClass = cn('font-medium text-[hsl(var(--fg-primary))]', numericFont)
 const fieldShell = cn(
   'h-9 w-32 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] px-2',
   'bg-[hsl(var(--surface-base))]',
-  'focus-within:border-[hsl(var(--color-primary))]',
+  'own-focus-ring focus-within:border-[hsl(var(--color-primary))]',
   'transition-colors duration-150 motion-reduce:transition-none',
 )
 

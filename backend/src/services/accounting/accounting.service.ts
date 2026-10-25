@@ -39,8 +39,6 @@ import {
   type AccountNode,
   type DraftLine,
   type LedgerAccountFacts,
-  naturalBalance,
-  naturalSide,
   type AccountRootType,
 } from './accounting.domain'
 import {
@@ -49,7 +47,12 @@ import {
   type AccountRow,
   type JournalEntryRow,
 } from './accounting.repository'
-import type { BalanceSheet, IncomeStatement } from '@hisabche/validation'
+import {
+  STANDARD_ACCOUNT_FOR_ROLE,
+  buildGeneralLedger,
+  type BalanceSheet,
+  type IncomeStatement,
+} from '@hisabche/validation'
 import {
   toBalanceSheet,
   toIncomeStatement,
@@ -86,35 +89,6 @@ const LEGACY_CODE_ROLES: Record<string, AccountRole> = {
   '2000': 'payable',
   '4000': 'sales',
   '5000': 'cogs',
-}
-
-/**
- * The account created for a role that has none — see `ensureAccountsForRoles`.
- * Codes follow the legacy numbering the poster already understood.
- */
-const STANDARD_ACCOUNT_FOR_ROLE: Partial<
-  Record<
-    AccountRole,
-    { code: string; name: string; type: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense' }
-  >
-> = {
-  cash: { code: '1010', name: 'صندوق', type: 'asset' },
-  bank: { code: '1020', name: 'بانک', type: 'asset' },
-  inventory: { code: '1000', name: 'موجودی کالا', type: 'asset' },
-  receivable: { code: '1200', name: 'حساب‌های دریافتنی', type: 'asset' },
-  payable: { code: '2000', name: 'حساب‌های پرداختنی', type: 'liability' },
-  tax: { code: '2100', name: 'مالیات', type: 'liability' },
-  retained_earnings: { code: '3000', name: 'سود انباشته', type: 'equity' },
-  current_year_earnings: { code: '3100', name: 'سود سال جاری', type: 'equity' },
-  sales: { code: '4000', name: 'فروش', type: 'revenue' },
-  cogs: { code: '5000', name: 'بهای تمام‌شده‌ی کالای فروش‌رفته', type: 'expense' },
-  purchase: { code: '5100', name: 'خرید', type: 'expense' },
-  salary_expense: { code: '6000', name: 'هزینه‌ی حقوق', type: 'expense' },
-  // One account for both directions: a gain sits on its credit side, a loss
-  // on its debit side, and its balance is the net of the two.
-  fx_gain_loss: { code: '4900', name: 'سود و زیان تسعیر ارز', type: 'revenue' },
-  owner_capital: { code: '3200', name: 'سرمایه', type: 'equity' },
-  bank_fees: { code: '6100', name: 'کارمزد بانک و صرافی', type: 'expense' },
 }
 
 function roleOf(account: AccountRow): AccountRole | null {
@@ -964,40 +938,18 @@ export class AccountingService implements LedgerPort {
         )
       : undefined
 
-    const side = naturalSide(account.type as AccountRootType)
-
-    let runningMinor = opening
-      ? Math.round(
-          naturalBalance(account.type as AccountRootType, opening.debit, opening.credit) * 100,
-        )
-      : 0
-
-    const rows = lines.map((line) => {
-      const movementMinor =
-        side === 'debit'
-          ? Math.round(line.debit * 100) - Math.round(line.credit * 100)
-          : Math.round(line.credit * 100) - Math.round(line.debit * 100)
-
-      runningMinor += movementMinor
-
-      return { ...line, balance: runningMinor / 100 }
-    })
-
-    return {
-      accountId,
-      accountCode: account.code,
-      accountName: account.name,
+    return buildGeneralLedger({
+      account: {
+        id: account.id,
+        code: account.code,
+        name: account.name,
+        type: account.type as AccountRootType,
+      },
       from,
       to,
-      openingBalance:
-        (opening
-          ? Math.round(
-              naturalBalance(account.type as AccountRootType, opening.debit, opening.credit) * 100,
-            )
-          : 0) / 100,
-      closingBalance: runningMinor / 100,
-      lines: rows,
-    }
+      lines,
+      opening,
+    })
   }
 
   // ═══════════════════════════════════════════════ YEAR END

@@ -15,26 +15,13 @@ import type { TenancyContext } from '../tenancy.service'
 import {
   DEAD_STOCK_DEFAULT_DAYS,
   DEMAND_WINDOW_DAYS,
-  availablePosition,
-  findDeadStock,
-  reorderPointFor,
-  suggestedOrderQuantity,
+  buildDeadStock,
+  buildReorderSuggestions,
   type DeadStockLine,
+  type ReorderLine,
 } from './reorder.domain'
 
-export interface ReorderLine {
-  productId: string
-  name: string
-  onHand: number
-  inTransit: number
-  onOrder: number
-  availablePosition: number
-  avgDailySales: number
-  leadTimeDays: number
-  safetyStock: number
-  reorderPoint: number
-  suggestedQty: number
-}
+export type { ReorderLine }
 
 export class ReorderService {
   /**
@@ -53,44 +40,11 @@ export class ReorderService {
       this.inTransit(ctx),
     ])
 
-    const lines: ReorderLine[] = []
-
-    for (const product of products) {
-      const point = reorderPointFor({
-        productId: product.id,
-        unitsSoldInWindow: sales.get(product.id) ?? 0,
-        windowDays: DEMAND_WINDOW_DAYS,
-        // No lead time exists anywhere in the schema — the domain's default of
-        // 7 applies. Deliberately not a setting (G4).
-      })
-
-      const position = availablePosition({
-        onHand: product.quantity,
-        inTransit: inTransit.get(product.id) ?? 0,
-        // ⚠️ ALWAYS 0 — see below.
-        onOrder: 0,
-      })
-
-      const suggestedQty = suggestedOrderQuantity(position, point.reorderPoint)
-      if (suggestedQty <= 0) continue
-
-      lines.push({
-        productId: product.id,
-        name: product.name,
-        onHand: product.quantity,
-        inTransit: inTransit.get(product.id) ?? 0,
-        onOrder: 0,
-        availablePosition: position,
-        avgDailySales: point.avgDailySales,
-        leadTimeDays: point.leadTimeDays,
-        safetyStock: point.safetyStock,
-        reorderPoint: point.reorderPoint,
-        suggestedQty,
-      })
-    }
-
-    // Largest shortfall first — the list is read from the top.
-    return lines.sort((a, b) => b.suggestedQty - a.suggestedQty)
+    return buildReorderSuggestions({
+      products,
+      soldInWindow: sales,
+      inTransit,
+    })
   }
 
   /**
@@ -106,20 +60,7 @@ export class ReorderService {
   ): Promise<Array<DeadStockLine & { name: string }>> {
     const products = await this.products(ctx)
     const lastSold = await this.lastSaleByProduct(ctx)
-    const names = new Map(products.map((product) => [product.id, product.name]))
-
-    // The name rides along, like `suggestions`' `name`: the list is read by a
-    // person, and a row of ids is not an answer.
-    const lines = findDeadStock(
-      products.map((product) => ({
-        productId: product.id,
-        onHand: product.quantity,
-        lastSoldAt: lastSold.get(product.id) ?? null,
-      })),
-      new Date(),
-      days,
-    )
-    return lines.map((line) => ({ ...line, name: names.get(line.productId) ?? '' }))
+    return buildDeadStock({ products, lastSold, asOf: new Date(), days })
   }
 
   private async products(ctx: TenancyContext) {
