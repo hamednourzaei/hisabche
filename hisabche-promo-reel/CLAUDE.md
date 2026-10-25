@@ -245,3 +245,60 @@ What it found on reel 60 (before): clockTick +585 ms, alert +600 ms, impact/mark
 - **Natural Persian Copy:** Reject broken or stilted fragments like `«بار گم»`, `«آدرس بار»`, `«بار رو بی‌تلفن پیدا کن»`. Communicate through visual state and motion.
 - **Honest Subtitle Synchronization:** Never claim word-sync without verified forced alignment evidence.
 
+---
+
+## 17. HARD RULE 15 — SOUND PACK & WHERE SOUNDS GO (owner, 24 Oct 2026)
+
+The owner's own pack (CapCut library, `Sounds.zip`) lives in the ONE library — `assets/sfx/`. No second folder, no second mixer.
+- Originals, untouched, kebab-case: `assets/sfx/user-pack/*.mp3` (21 files).
+- The 8 single-hit ones are converted with the library's own trim + fade (`scripts/ingest-user-sounds.mjs`, idempotent) and listed in `assets/sfx/manifest.json` under the kind they match:
+  `pop` ← user-pop · `tick` ← user-mouse-click · `whoosh` ← user-title-swoosh · `chime` ← user-ding ·
+  `success` ← user-correct-answer · `cash` ← user-money-payment · `alert` ← user-error · `dataFlow` ← user-glitch.
+- Swells, loops and long textures (riser, reverse rise, magic scene, wow, notification, call, telephone ring, both keyboard-typing files, both "analyze" files, camera shutter) stay in `user-pack/` only: AV SYNC LAW rule 6 forbids them as event sounds, and there is no `SoundKind` for them. Use one only as a deliberate, hand-placed bed or sting.
+- A converted file must pass `node ../backend/node_modules/vitest/vitest.mjs run scripts/__tests__/av-sync-law.test.mjs` (165 tests with this pack). A file that fails is removed from the manifest, not the law.
+
+**Where sounds go (owner's rule)**
+1. `whoosh` (or `softTransition` / `sceneTransition`) on every scene change.
+2. `pop` the moment each element appears. Cues closer than 120 ms share one sound (rule 3) — a list that appears at once pops once.
+3. The words' sounds still come from `sound` + `action` on the word (rule 1); the pack only adds variants to the same kinds.
+
+**Music**
+- A music file the owner names goes under the voice at **10–15 %** so the voice stays clear (the mixer's average-level rule 9 still decides the final level; never peak).
+- A commercial recording is not a sound effect and is not added to the library by default: `Gigamesh – Everything In Its Right Place (Remix)` was in the zip and was NOT ingested. Use it only if the owner confirms the right to publish it; the CC0 beds in `assets/music/` are the default.
+
+---
+
+## 18. HARD RULE 16 — EDITING BLUEPRINT (owner, 24 Oct 2026)
+
+Editing is part of the story. Every scenario file carries a `## Editing Blueprint` — an 11-column timeline plus strategy, shot/layout, transition, typography/subtitle, audio, assets, feasibility and QA sections.
+Full rules, the precedence table against Hard Rules 13–15, and the acceptance list: `docs/EDITING-BLUEPRINT-SPEC.md`.
+- It is an additional layer: reference-first research, diversity, product truth, natural Persian, source verification, feasibility and repo safety all still apply.
+- Live-action formats (A-roll, B-roll) appear in a plan only with the footage named as **to be filmed or sourced** — this engine renders motion graphics and product captures, not footage.
+- Split screen is one stage with two roles and **no drawn divider line** (Hard Rule 14).
+- A source video is inspected before it is planned; if it cannot be inspected, the plan says so.
+- The 100 get a diversity matrix and five representative scenarios for review; direct production only on the owner's explicit say-so.
+
+**Product shots (owner, 24 Oct 2026):** a shot of the real product is a `product-capture` scene — a real recording, not a drawing (`mockup` is never a stand-in). Recordings stay outside the repo (`~/Videos/hisabche-captures`); a missing or wrong file blocks the export with `PRODUCT_CAPTURE`. Details: `.claude/reel-plugin/fast-track-sdk.md` Category F.
+
+---
+
+## 19. STANDING BRIEF — AUTONOMOUS COMPLETION (owner, 24 Oct 2026)
+
+The owner's master brief for finishing the studio is saved in full at `docs/AUTONOMOUS-COMPLETION-PROMPT.md`: discover the repository instead of asking, audit every reel's runtime (> 30 s), build a reusable motion-asset catalogue, keep product captures real, complete Reel 94, continue the five representative scenarios, run real verification, and ask the owner only for genuinely external things.
+
+It is a brief, not a rule change. Where it meets a decision already in this file, the conflict stays visible until the owner settles it:
+
+| The brief says | Already decided | Open point |
+| --- | --- | --- |
+| Every reel runs **more than 30 s** | `docs/prompt-library/README.md` plans 28–34 s; the five scenario blueprints written on 24 Oct are 15–24 s (`docs/scenarios/`); Reel 94 is 15 s | The audit of all 94 reels has NOT been run. Enforcing the minimum will block the export of any existing reel at or under 30 s — remediation per reel, not a mass rewrite. |
+| Ask the owner only for external things | Hard Rule 16 / `docs/EDITING-BLUEPRINT-SPEC.md` §10: present five representative scenarios and wait for direction | The five are written; settle whether their approval is still wanted. |
+| Catalogue every reel's reusable motion source | One engine, no parallel system (§2 of the project rules) | Build the catalogue on `src/scenes`, `src/motion-operators` and the registry, not beside them. |
+
+---
+
+## 20. HARD RULE 17 — NOTHING LEAVES THE FRAME · NO OVERLAP (owner, 24 Oct 2026)
+
+1. **Nothing leaves the frame.** No text, recording or drawing may cross the edge of the 1080×1920 frame, or come closer than 24 px to it. `node scripts/check-frame-bounds.mjs <reelId>` renders the reel as the exporter does and measures every visible piece of text and every recording at each sampled moment; exit 1 lists what breaks it. A new reel is not done until it reports 0.
+   - ⚠️ The canvas is **540×960 logical**, exported at 2×. Scene code written in 1080×1920 numbers (the usual way to think about it) puts `zoom: 0.5` on its root.
+2. **No overlap.** A new reel must not repeat the subject, page or question of an existing reel, or of another new one. Check the titles in `docs/motion-catalogue/CATALOGUE.md` and add the finding to `docs/OVERLAP-AUDIT.md` before building.
+3. **No label that says what the picture is.** The word «تصویرسازی» does not appear on any video. A drawing is still never passed off as footage — it is simply a drawing.

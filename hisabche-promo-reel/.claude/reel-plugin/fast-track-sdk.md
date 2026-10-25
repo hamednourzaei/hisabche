@@ -159,7 +159,7 @@ Every scene in `scenes: Scene[]` has a `spec: SceneSpec`.
 - `'green'` (#4ade80)
 
 ### Valid `ThemeName` Strings (`export type ThemeName`):
-`'dark-neon'` | `'light-editorial'` | `'midnight-gold'` | `'cyber-emerald'` | `'obsidian-cinematic'` | `'cinematic-obsidian'` | `'swiss-editorial'` | `'alabaster-daylight'` | `'kinetic-manifesto'` | `'procedural-spatial'` | `'financial-intelligence'`
+`'dark-neon'` | `'light-editorial'` | `'midnight-gold'` | `'cyber-emerald'` | `'obsidian-cinematic'` | `'cinematic-obsidian'` | `'swiss-editorial'` | `'alabaster-daylight'` | `'kinetic-manifesto'` | `'procedural-spatial'` | `'financial-intelligence'` | `'paper-pocket'` | `'distilbook'` | `'isometric-neon'` | `'paper-galaxy'` | `'clockwork-brass'` | `'cash-tide'`
 
 ### Complete List of All 40 Valid Icon Names (`<Icon name="..." />`):
 `barcode`, `book`, `boxes`, `briefcase`, `calculator`, `calendar`, `check`, `clipboard`, `cloud`, `coins`, `factory`, `sheet`, `file`, `drive`, `history`, `bank`, `laptop`, `chat`, `notebook`, `package`, `receipt`, `sync`, `scale`, `shield`, `smartphone`, `sparkles`, `store`, `sun`, `moon`, `trash`, `trend`, `truck`, `user`, `users`, `wallet`, `offline`, `gem`, `dollar`, `question`.
@@ -270,6 +270,20 @@ To register a new Reel (e.g. Reel 55):
    npm run typecheck
    ```
 
+### 5b. Bespoke-Film Registration Addendum (Reel 84+ — custom kits)
+
+For bespoke films (fully custom scene kits, e.g. reels 87/88/89) the registration recipe extends to 8 moves:
+
+1. **Create the Bespoke Scene Kit:** `src/scenes/<slug>.tsx` — the film owns its palette, primitives, word engine and transition vocabulary; never import another film's stage/components (no `DarkStage`, no `HalftoneCharacter`, no neon bars from older kits).
+2. **Wire the Definition File:** scenes use `{ kind: 'bespoke', theme: '<slug>', component: <SceneFn>, cues: [...] }`; scene `t` is scene-local (0 at scene start), cues must stay strictly < scene `dur` (a cue at/after scene end is dropped by `reelCues`), and `duration` comes from `total(sequence([...]))`.
+3. **Extend `ThemeName`** in `src/engine/types.ts` when introducing a new theme value.
+4. **Registry Entry → `src/data/reel-registry.ts`:** append the full entry (artDirection, layoutTopology, operators — custom operator names, themeName, cardQuotaMax, targetCustomer, openingArchetype, merchantPainCategory, audioStrategy, viralTemplate, description). `scripts/variety-check.mjs` gates `npm run build`.
+5. **Memory Files:** append an entry to `src/data/reel-ledger.json`, append to `.claude/reel-plugin/recent-reels.json`, and bump `lastReelId`/`nextReelId` in `.claude/reel-plugin/reel-state.json`.
+6. **Creativity Anchor:** the creative reference is real viral internet reels, not prior film kits; every bespoke film is authored from scratch for its own metaphor — contracts/types are only default guides (see `creative-director.md` §5). Scene-level execution follows the Reference-First path (≥3 real candidates per scene → select mechanism → reuse existing assets first).
+7. **Reference Engine Gate:** record the selected `CreativeDNA` + `src/creative-references/manifests/reel-XX-reference-manifest.json` before any render/export, and append analyzed entries to `src/creative-references/creative-references.ts` (never from memory — see `.claude/reel-plugin/creative-reference-engine.md`).
+8. **Persian QA:** every `vo`, on-stage word cluster, title and CTA passes `.claude/reel-plugin/persian-language-qa.md`, and the full multi-role pipeline (reference → concept → copy QA → art direction → storyboard → triple QA) is run per `.claude/reel-plugin/master-production-protocol.md`.
+8. **Fast Verify:** `npm run typecheck`, then the full §7 checklist in `AGENTS.md`.
+
 ---
 
 ## 6. The 12 Motion System Production Hard Rules (Mandatory for Reel 58+)
@@ -356,3 +370,18 @@ What it found on reel 60 (before): clockTick +585 ms, alert +600 ms, impact/mark
   - `PROVISIONAL_CADENCE_MODEL_ACTIVE`: Voiceover pending or estimated via cadence math (`isProvisional: true`).
 - **Timing Alignment to Actual Speech:** Words appear when spoken, not stretched across trailing silence.
 
+---
+
+### Category F: Real product capture (`product-capture`)
+
+```ts
+{ kind: 'product-capture', theme?: ThemeName, file: string, route: string, trimStart?: number, fit?: 'contain' | 'cover', label?: string }
+```
+
+A real recording (`mp4` / `webm`) or still (`png` / `jpg` / `webp`) of the product, played as it is — **never a drawn UI**.
+- `file` is a bare name in the captures folder, **outside the repo**: `~/Videos/hisabche-captures` (override `HISABCHE_CAPTURES_DIR`).
+- `route` is the product page it shows (starts with `/`) — it appears in the export error so the owner knows what to record.
+- A video plays at `trimStart + t` and holds its last frame; a still fills the frame by `fit`.
+- Missing / empty / wrong-type / bad-name file ⇒ the preview shows «ضبط واقعی محصول موجود نیست» and `exportReelMP4` returns `{ success: false, blockedBy: 'PRODUCT_CAPTURE', problems }` **before any frame is drawn**.
+- Code: `scripts/product-capture.mjs` (shared by preview server, exporter and tests) · `src/scenes/product-capture.tsx`.
+- First user: reel 94 (`till-count.mp4`, `/till`).

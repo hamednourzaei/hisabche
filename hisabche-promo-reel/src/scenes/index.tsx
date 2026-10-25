@@ -1,4 +1,7 @@
 import type { Cue, Reel, Scene } from '../engine/types'
+import { ease, mix, progress } from '../engine/anim'
+import { planSceneMotion } from '../engine/motion-plan'
+import { MetaphorLayer, MotionBackground } from '../ui/motion-metaphors'
 import {
   CinematicProductScene,
   ContinuousTransformScene,
@@ -24,6 +27,8 @@ import {
   warehouseMovementDemoCues,
 } from './customer'
 import { Branch, Hook, Stagger, branchCues, hookCues, staggerCues } from './intro'
+import { DialogueScene, dialogueCues } from './dialogue'
+import { ProductCaptureScene, productCaptureCues } from './product-capture'
 import {
   ChartScene,
   KineticScene,
@@ -67,138 +72,197 @@ import {
 import { WordDrivenStage } from '../components/WordDrivenStage'
 
 /** The scene at its own local time. */
-export function SceneView({ scene, t }: { scene: Scene; t: number }) {
+export function SceneView({
+  scene,
+  t,
+  scenes,
+}: {
+  scene: Scene
+  t: number
+  scenes?: readonly Scene[]
+}) {
   const spec = scene.spec
-  switch (spec.kind) {
-    case 'hook':
-      return <Hook spec={spec} t={t} />
-    case 'branch':
-      return <Branch spec={spec} t={t} />
-    case 'stagger':
-      return <Stagger spec={spec} t={t} />
-    case 'hub':
-      return <Hub spec={spec} t={t} />
-    case 'compare':
-      return <Compare spec={spec} t={t} />
-    case 'bridge':
-      return <Bridge spec={spec} t={t} />
-    case 'cta':
-      return <Cta spec={spec} t={t} />
-    case 'pile':
-      return <Pile spec={spec} t={t} />
-    case 'versus':
-      return <Versus spec={spec} t={t} />
-    case 'ledger':
-      return <Ledger spec={spec} t={t} />
-    case 'queue':
-      return <Queue spec={spec} t={t} />
-    case 'day':
-      return <Day spec={spec} t={t} />
-    case 'kinetic':
-      return <KineticScene spec={spec} t={t} />
-    case 'mockup':
-      return <MockupScene spec={spec} t={t} />
-    case 'chart':
-      return <ChartScene spec={spec} t={t} />
-    case 'split':
-      return <SplitScene spec={spec} t={t} />
-    case 'cinematic-product':
-      return <CinematicProductScene spec={spec} t={t} />
-    case 'kinetic-manifesto':
-      return <KineticManifestoScene spec={spec} t={t} />
-    case 'financial-intelligence':
-      return <FinancialIntelligenceScene spec={spec} t={t} />
-    case 'continuous-transform':
-      return <ContinuousTransformScene spec={spec} t={t} />
-    case 'daylight-editorial':
-      return <DaylightEditorialScene spec={spec} t={t} />
-    case 'offline-sync-demo':
-      return <OfflineSyncDemoScene spec={spec} t={t} />
-    case 'fragmented-tools-demo':
-      return <FragmentedToolsDemoScene spec={spec} t={t} />
-    case 'profit-waterfall-demo':
-      return <ProfitWaterfallDemoScene spec={spec} t={t} />
-    case 'warehouse-movement-demo':
-      return <WarehouseMovementDemoScene spec={spec} t={t} />
-    case 'dual-perspective-demo':
-      return <DualPerspectiveDemoScene spec={spec} t={t} />
-    case 'tactile-train':
-      return <TactileTrainScrollTemplate t={t} totalDur={scene.end - scene.start} />
-    case 'thermal-receipt':
-      return <ThermalReceiptPrinterTemplate t={t} title={spec.title} />
-    case 'infinite-spatial':
-      return <InfiniteSpatialBoardTemplate t={t} title={spec.title} />
-    case 'vox-documentary':
-      return (
-        <VoxDocumentaryCollageTemplate
-          t={t}
-          title={spec.title}
-          headline={spec.headline}
-          documentNumber={spec.documentNumber}
-          badgeText={spec.badgeText}
-          clippingTitle={spec.clippingTitle}
-          clippingText={spec.clippingText}
-          dark={spec.dark}
-        />
-      )
-    case 'minimal-vector':
-      return <MinimalVectorPhilosophyTemplate t={t} title={spec.title} />
-    case 'chat-panic':
-      return <ChatPanicToCalmTemplate t={t} title={spec.title} />
-    case 'liquid-glass':
-      return <LiquidGlassSpatialTemplate t={t} title={spec.title} />
-    case 'kinetic-color':
-      return <KineticColorBlockTemplate t={t} />
-    case 'split-stopwatch':
-      return (
-        <SplitScreenStopwatchTemplate
-          t={t}
-          topTitle={spec.topTitle}
-          topSub={spec.topSub}
-          topBody={spec.topBody}
-          topFooter={spec.topFooter}
-          bottomTitle={spec.bottomTitle}
-          bottomSub={spec.bottomSub}
-          bottomBody={spec.bottomBody}
-          bottomFooter={spec.bottomFooter}
-          finishAt={spec.finishAt}
-        />
-      )
-    case 'isometric-exploded':
-      return <IsometricExplodedUiTemplate t={t} title={spec.title} />
-    case 'continuous-line':
-      return <ContinuousLineTravelerTemplate t={t} title={spec.title} />
-    case 'swiss-terminal':
-      return <SwissFinancialTerminalTemplate t={t} title={spec.title} />
-    case 'premium-motion':
-      return (
-        <PremiumMotionGraphicsTemplate
-          t={t}
-          title={spec.title}
-          subtitle={spec.subtitle}
-          kicker={spec.kicker}
-          statValue={spec.statValue}
-          statLabel={spec.statLabel}
-          contrastValue={spec.contrastValue}
-          contrastLabel={spec.contrastLabel}
-          badge={spec.badge}
-        />
-      )
-    case 'bespoke': {
-      const CustomComponent = spec.component
-      return <CustomComponent t={t} scene={scene} />
-    }
-    case 'word-sync': {
-      if (spec.component) {
+  const dur = Math.max(0.1, scene.end - scene.start)
+  // The Motion Plan drives this scene: camera curve, metaphor layer, focus flag
+  // and sound events all come from planSceneMotion (engine/motion-plan.ts).
+  const plan = planSceneMotion(scene, scenes ?? [scene])
+  const isNoZoom = Boolean(scene.noZoom) || (plan.camera.from === 1 && plan.camera.to === 1)
+  const camP = ease(progress(t, 0, dur))
+  const camScale = isNoZoom ? 1 : mix(plan.camera.from, plan.camera.to, camP)
+  const camX = isNoZoom ? 0 : (plan.camera.panX / 100) * 540 * camP
+  const camY = isNoZoom ? 0 : (plan.camera.panY / 100) * 960 * camP
+  const parallaxY = isNoZoom ? 0 : Math.sin(t * 0.8) * 6
+  const content = (() => {
+    switch (spec.kind) {
+      case 'hook':
+        return <Hook spec={spec} t={t} />
+      case 'branch':
+        return <Branch spec={spec} t={t} />
+      case 'stagger':
+        return <Stagger spec={spec} t={t} />
+      case 'dialogue':
+        return <DialogueScene spec={spec} t={t} dur={dur} />
+      case 'hub':
+        return <Hub spec={spec} t={t} />
+      case 'compare':
+        return <Compare spec={spec} t={t} />
+      case 'bridge':
+        return <Bridge spec={spec} t={t} />
+      case 'cta':
+        return <Cta spec={spec} t={t} />
+      case 'pile':
+        return <Pile spec={spec} t={t} />
+      case 'versus':
+        return <Versus spec={spec} t={t} />
+      case 'ledger':
+        return <Ledger spec={spec} t={t} />
+      case 'queue':
+        return <Queue spec={spec} t={t} />
+      case 'day':
+        return <Day spec={spec} t={t} />
+      case 'kinetic':
+        return <KineticScene spec={spec} t={t} />
+      case 'mockup':
+        return <MockupScene spec={spec} t={t} />
+      case 'chart':
+        return <ChartScene spec={spec} t={t} />
+      case 'split':
+        return <SplitScene spec={spec} t={t} />
+      case 'cinematic-product':
+        return <CinematicProductScene spec={spec} t={t} />
+      case 'kinetic-manifesto':
+        return <KineticManifestoScene spec={spec} t={t} />
+      case 'financial-intelligence':
+        return <FinancialIntelligenceScene spec={spec} t={t} />
+      case 'continuous-transform':
+        return <ContinuousTransformScene spec={spec} t={t} />
+      case 'daylight-editorial':
+        return <DaylightEditorialScene spec={spec} t={t} />
+      case 'offline-sync-demo':
+        return <OfflineSyncDemoScene spec={spec} t={t} />
+      case 'fragmented-tools-demo':
+        return <FragmentedToolsDemoScene spec={spec} t={t} />
+      case 'profit-waterfall-demo':
+        return <ProfitWaterfallDemoScene spec={spec} t={t} />
+      case 'warehouse-movement-demo':
+        return <WarehouseMovementDemoScene spec={spec} t={t} />
+      case 'dual-perspective-demo':
+        return <DualPerspectiveDemoScene spec={spec} t={t} />
+      case 'tactile-train':
+        return <TactileTrainScrollTemplate t={t} totalDur={scene.end - scene.start} />
+      case 'thermal-receipt':
+        return <ThermalReceiptPrinterTemplate t={t} title={spec.title} />
+      case 'infinite-spatial':
+        return <InfiniteSpatialBoardTemplate t={t} title={spec.title} />
+      case 'vox-documentary':
+        return (
+          <VoxDocumentaryCollageTemplate
+            t={t}
+            title={spec.title}
+            headline={spec.headline}
+            documentNumber={spec.documentNumber}
+            badgeText={spec.badgeText}
+            clippingTitle={spec.clippingTitle}
+            clippingText={spec.clippingText}
+            dark={spec.dark}
+          />
+        )
+      case 'minimal-vector':
+        return <MinimalVectorPhilosophyTemplate t={t} title={spec.title} />
+      case 'chat-panic':
+        return <ChatPanicToCalmTemplate t={t} title={spec.title} />
+      case 'liquid-glass':
+        return <LiquidGlassSpatialTemplate t={t} title={spec.title} />
+      case 'kinetic-color':
+        return <KineticColorBlockTemplate t={t} />
+      case 'split-stopwatch':
+        return (
+          <SplitScreenStopwatchTemplate
+            t={t}
+            topTitle={spec.topTitle}
+            topSub={spec.topSub}
+            topBody={spec.topBody}
+            topFooter={spec.topFooter}
+            bottomTitle={spec.bottomTitle}
+            bottomSub={spec.bottomSub}
+            bottomBody={spec.bottomBody}
+            bottomFooter={spec.bottomFooter}
+            finishAt={spec.finishAt}
+          />
+        )
+      case 'isometric-exploded':
+        return <IsometricExplodedUiTemplate t={t} title={spec.title} />
+      case 'continuous-line':
+        return <ContinuousLineTravelerTemplate t={t} title={spec.title} />
+      case 'swiss-terminal':
+        return <SwissFinancialTerminalTemplate t={t} title={spec.title} />
+      case 'product-capture':
+        return <ProductCaptureScene spec={spec} t={t} />
+      case 'premium-motion':
+        return (
+          <PremiumMotionGraphicsTemplate
+            t={t}
+            title={spec.title}
+            subtitle={spec.subtitle}
+            kicker={spec.kicker}
+            statValue={spec.statValue}
+            statLabel={spec.statLabel}
+            contrastValue={spec.contrastValue}
+            contrastLabel={spec.contrastLabel}
+            badge={spec.badge}
+          />
+        )
+      case 'bespoke': {
         const CustomComponent = spec.component
         return <CustomComponent t={t} scene={scene} />
       }
-      return <WordDrivenStage t={t} scene={scene} />
+      case 'word-sync': {
+        if (spec.component) {
+          const CustomComponent = spec.component
+          return <CustomComponent t={t} scene={scene} />
+        }
+        return <WordDrivenStage t={t} scene={scene} />
+      }
     }
-  }
+  })()
+  return (
+    <div
+      className="scene-motion-wrapper"
+      data-motion-plan={plan.sceneId}
+      data-motion-role={plan.role}
+      data-metaphor={plan.metaphor ?? 'none'}
+      data-metaphor-secondary={plan.secondaryMetaphor ?? 'none'}
+      data-camera={`${plan.camera.from.toFixed(2)}-${plan.camera.to.toFixed(2)}`}
+      data-motion-intensity={plan.intensity}
+      style={{
+        transform: isNoZoom
+          ? 'none'
+          : `scale(${camScale.toFixed(4)}) translate(${camX.toFixed(2)}px, ${camY.toFixed(2)}px)`,
+        transformOrigin: 'center center',
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+      }}
+    >
+      <MetaphorLayer plan={plan} t={t} />
+      <MotionBackground t={t} count={12} />
+      <div
+        className="scene-parallax-bg"
+        style={{
+          transform: `translateY(${parallaxY}px)`,
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          opacity: 0.08,
+        }}
+      />
+      {content}
+    </div>
+  )
 }
 
-function sceneCues(scene: Scene): Cue[] {
+function sceneCues(scene: Scene, scenes: readonly Scene[] = [scene]): Cue[] {
   const spec = scene.spec
   const baseCues: Cue[] = (() => {
     switch (spec.kind) {
@@ -208,6 +272,8 @@ function sceneCues(scene: Scene): Cue[] {
         return branchCues()
       case 'stagger':
         return staggerCues(spec)
+      case 'dialogue':
+        return dialogueCues(spec, scene.end - scene.start)
       case 'hub':
         return hubCues(spec)
       case 'compare':
@@ -332,6 +398,8 @@ function sceneCues(scene: Scene): Cue[] {
           { at: 1.2, kind: 'precisionSequence' },
           { at: 1.8, kind: 'financialMilestone' },
         ]
+      case 'product-capture':
+        return productCaptureCues()
       case 'premium-motion':
         return [
           { at: 0.1, kind: 'titleHit' },
@@ -349,24 +417,32 @@ function sceneCues(scene: Scene): Cue[] {
 
   // Collect word-level and sentence-ending acoustic cues if defined
   const speechCues: Cue[] = []
-  const plan = scene.sentence ?? (spec.kind === 'word-sync' ? spec.sentencePlan : undefined)
-  if (plan) {
-    for (const w of plan.words) {
+  const speechPlan = scene.sentence ?? (spec.kind === 'word-sync' ? spec.sentencePlan : undefined)
+  if (speechPlan) {
+    for (const w of speechPlan.words) {
       if (w.sound) speechCues.push({ at: w.start, kind: w.sound })
     }
-    if (plan.sentenceEnding?.sound) {
-      speechCues.push({ at: plan.sentenceEnding.at, kind: plan.sentenceEnding.sound })
+    if (speechPlan.sentenceEnding?.sound) {
+      speechCues.push({ at: speechPlan.sentenceEnding.at, kind: speechPlan.sentenceEnding.sound })
     }
   }
 
-  return [...baseCues, ...speechCues].sort((a, b) => a.at - b.at)
+  // Plan-level sound events: the metaphor's own transient, only if the scene
+  // does not already schedule the same sound at (almost) the same moment.
+  const planCues: Cue[] = planSceneMotion(scene, scenes)
+    .soundEvents.filter(
+      (ev) => !baseCues.some((c) => c.kind === ev.kind && Math.abs(c.at - ev.at) < 0.35),
+    )
+    .map((ev) => ({ at: ev.at, kind: ev.kind }))
+
+  return [...baseCues, ...speechCues, ...planCues].sort((a, b) => a.at - b.at)
 }
 
 /** Every sound of a reel, on the reel's clock, in order. A cue past its scene's end is dropped. */
 export function reelCues(reel: Reel): Cue[] {
   return reel.scenes
     .flatMap((scene) =>
-      sceneCues(scene)
+      sceneCues(scene, reel.scenes)
         .map((cue) => ({ ...cue, at: scene.start + cue.at }))
         .filter((cue) => cue.at < scene.end),
     )

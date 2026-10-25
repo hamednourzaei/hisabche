@@ -21,7 +21,7 @@ body,
   height: 100%;
   background: var(--bg);
   color: var(--ink);
-  font-family: Vazirmatn, Tahoma, system-ui, sans-serif;
+  font-family: Vazir, Vazirmatn, Tahoma, system-ui, sans-serif;
 }
 
 button {
@@ -6902,6 +6902,7 @@ button {
   padding: 18px 16px;
   box-sizing: border-box;
   font-family:
+    'Vazir',
     'Vazirmatn',
     -apple-system,
     sans-serif;
@@ -10663,4 +10664,79 @@ button {
   color: #facc15;
   letter-spacing: 0.02em;
   direction: ltr;
+}
+
+/* --- Paper-Pocket (reel 84): light print-like stage --------------------- */
+/* Warm paper canvas, ink text, royal-blue accent. The bespoke scene paints
+   its own opaque paper surface; these variables only stop the dark frame
+   base and glow/grid layers from flashing through scene fades. */
+
+.theme-paper-pocket {
+  --bg: #f2efe6;
+  --ink: #16150f;
+  --muted: #6b6659;
+  --card: #ffffff;
+  --cyan: #1f4dff;
+  --purple: #1f4dff;
+  --red: #e5432c;
+  --green: #1f4dff;
+  color-scheme: light;
+}
+
+.theme-paper-pocket .bg-glow {
+  background: none;
+}
+
+.theme-paper-pocket .bg-grid {
+  background-image: none;
+}
+
+/* --- DistilBook (reel 85): cinematic 3D dark theme --------------------- */
+/* Dark navy-black canvas, neon accents. Bespoke scenes paint their own
+   opaque surface; these variables only stop the dark frame base from
+   flashing through scene fades. */
+
+.theme-distilbook {
+  --bg: #0a0a12;
+  --ink: #ffffff;
+  --muted: #6b6659;
+  --card: #ffffff;
+  --cyan: #00b4ff;
+  --purple: #ff4d9e;
+  --red: #ff4d9e;
+  --green: #00ff9f;
+  color-scheme: dark;
+}
+
+.theme-distilbook .bg-glow {
+  background: none;
+}
+
+.theme-distilbook .bg-grid {
+  background-image: none;
+}
+
+/* --- Isometric Neon Diorama (reel 86): dark obsidian neon theme -------- */
+/* Deep obsidian canvas, neon green/blue/pink data lines. Bespoke scenes
+   paint their own opaque surface; these variables only stop the dark frame
+   base from flashing through scene fades. */
+
+.theme-isometric-neon {
+  --bg: #04060c;
+  --ink: #ffffff;
+  --muted: #6f7dff;
+  --card: #0a1020;
+  --cyan: #00b4ff;
+  --purple: #ff4d9e;
+  --red: #ff4d9e;
+  --green: #00ff9f;
+  color-scheme: dark;
+}
+
+.theme-isometric-neon .bg-glow {
+  background: none;
+}
+
+.theme-isometric-neon .bg-grid {
+  background-image: none;
 }

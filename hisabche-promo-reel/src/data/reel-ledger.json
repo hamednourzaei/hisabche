@@ -1,4 +1,4 @@
-﻿{
+{
   "reels": [
     {
       "id": "01",
@@ -53,6 +53,310 @@
       "dominantLayout": "cinematic-2.5d-orbit",
       "cardQuotaPercent": 12,
       "components": ["hook", "cinematic-product", "continuous-transform", "split", "bridge", "cta"]
+    },
+    {
+      "id": "72",
+      "title": "انتقال بین انبارها: بار رفت، ولی هنوز نرسیده!",
+      "theme": "obsidian-cinematic",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "single-focal-stage",
+      "cardQuotaPercent": 15,
+      "components": ["hook", "isometric-exploded", "stagger", "cta"]
+    },
+    {
+      "id": "73",
+      "title": "صندوق و شیفت: دخل فقط وقتی بسته می‌شود که شمرده شود!",
+      "theme": "dark-neon",
+      "hookFormula": "deadline-pressure",
+      "dominantLayout": "split-screen-horizon",
+      "cardQuotaPercent": 15,
+      "components": ["hook", "split-stopwatch", "ledger", "cta"]
+    },
+    {
+      "id": "74",
+      "title": "تولید و فرمول ساخت (BOM): قیمت تمام‌شده هر دانه چنده؟",
+      "theme": "swiss-editorial",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "asymmetrical-swiss-grid",
+      "cardQuotaPercent": 20,
+      "components": ["hook", "swiss-terminal", "compare", "cta"]
+    },
+    {
+      "id": "75",
+      "title": "پرونده مشتری و سقف اعتبار: به کی چقدر نسیه بدهیم؟",
+      "theme": "midnight-gold",
+      "hookFormula": "customer-confrontation",
+      "dominantLayout": "data-flow-matrix",
+      "cardQuotaPercent": 15,
+      "components": ["hook", "chat-panic", "branch", "cta"]
+    },
+    {
+      "id": "76",
+      "title": "قفسه‌بندی و کدینگ انبار: راهرو و طبقه را از کد بخوان!",
+      "theme": "cyber-emerald",
+      "hookFormula": "immediate-consequence",
+      "dominantLayout": "single-focal-stage",
+      "cardQuotaPercent": 15,
+      "components": ["hook", "infinite-spatial", "stagger", "cta"]
+    },
+    {
+      "id": "77",
+      "title": "فهرست قیمت و تخفیف گروهی: برای همکار چند، برای مشتری گذری چند؟",
+      "theme": "obsidian-cinematic",
+      "hookFormula": "customer-confrontation",
+      "dominantLayout": "asymmetrical-swiss-grid",
+      "cardQuotaPercent": 15,
+      "components": ["hook", "tactile-train", "versus", "cta"]
+    },
+    {
+      "id": "78",
+      "title": "نرخ ارز و تسعیر: دالر صبح ۷۰، عصر ۷۲؛ سود و زیان تسعیر کجاست؟",
+      "theme": "midnight-gold",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "data-flow-matrix",
+      "cardQuotaPercent": 15,
+      "components": ["hook", "continuous-line", "bridge", "cta"]
+    },
+    {
+      "id": "79",
+      "title": "کالای خاک‌خورده و سرمایه راکد (Dead Stock): ۶ ماهه تکون نخورده!",
+      "theme": "dark-neon",
+      "hookFormula": "quiet-dread",
+      "dominantLayout": "full-bleed-kinetic",
+      "cardQuotaPercent": 15,
+      "components": ["hook", "thermal-receipt", "versus", "cta"]
+    },
+    {
+      "id": "80",
+      "title": "کار بدون اینترنت در اوج شلوغی (Offline Engine): برق رفت، ولی فاکتور متوقف نشد!",
+      "theme": "procedural-spatial",
+      "hookFormula": "immediate-consequence",
+      "dominantLayout": "spatial-2.5d-portal",
+      "cardQuotaPercent": 15,
+      "components": ["hook", "liquid-glass", "queue", "cta"]
+    },
+    {
+      "id": "81",
+      "title": "حقوق و دستمزد تیم: مساعده، غیبت، اضافه کاری؛ آخر ماه کی چقدر طلبکاره؟",
+      "theme": "swiss-editorial",
+      "hookFormula": "customer-confrontation",
+      "dominantLayout": "single-focal-stage",
+      "cardQuotaPercent": 15,
+      "components": ["hook", "vox-documentary", "stagger", "cta"]
+    },
+    {
+      "id": "82",
+      "title": "گفتگوی مشتری و مالک",
+      "theme": "obsidian-cinematic",
+      "hookFormula": "customer-confrontation",
+      "dominantLayout": "single-focal-stage",
+      "cardQuotaPercent": 20,
+      "components": ["hook", "dialogue", "dialogue", "dialogue", "cta"]
+    },
+    {
+      "id": "83",
+      "title": "یک عدد واقعی (flagship cut)",
+      "theme": "cinematic-obsidian",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "data-flow-matrix",
+      "cardQuotaPercent": 15,
+      "components": ["hook", "stagger", "hub", "chart", "cta"]
+    },
+    {
+      "id": "84",
+      "title": "دفترت هنوز دستیه؟",
+      "theme": "paper-pocket",
+      "hookFormula": "visual-pattern-interrupt",
+      "dominantLayout": "asymmetrical-swiss-grid",
+      "cardQuotaPercent": 15,
+      "components": [
+        "bespoke",
+        "bespoke",
+        "bespoke",
+        "bespoke",
+        "bespoke",
+        "bespoke",
+        "bespoke",
+        "bespoke",
+        "bespoke",
+        "bespoke"
+      ]
+    },
+    {
+      "id": "85",
+      "title": "عددها معنی پیدا می‌کنن — تبلیغ سینمایی سه‌بُعدی",
+      "theme": "distilbook",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "spatial-2.5d-portal",
+      "cardQuotaPercent": 15,
+      "components": ["bespoke", "bespoke", "bespoke", "bespoke", "bespoke", "bespoke"]
+    },
+    {
+      "id": "86",
+      "title": "شبکه‌ی حسابچه",
+      "theme": "isometric-neon",
+      "hookFormula": "immediate-consequence",
+      "dominantLayout": "single-focal-stage",
+      "cardQuotaPercent": 12,
+      "components": ["bespoke", "bespoke", "bespoke", "bespoke", "bespoke", "bespoke"]
+    },
+    {
+      "id": "87",
+      "title": "شبِ کاغذها — رسیدهای بی‌صاحب به حلقه‌ی دفتر می‌پیوندند",
+      "theme": "paper-galaxy",
+      "hookFormula": "visual-pattern-interrupt",
+      "dominantLayout": "spatial-2.5d-portal",
+      "cardQuotaPercent": 0,
+      "components": ["bespoke", "bespoke", "bespoke", "bespoke", "bespoke", "bespoke"]
+    },
+    {
+      "id": "88",
+      "title": "ساعت صفر — مغازه‌ای که از گریبان دنده یک بازمی‌گردد",
+      "theme": "clockwork-brass",
+      "hookFormula": "deadline-pressure",
+      "dominantLayout": "full-bleed-kinetic",
+      "cardQuotaPercent": 0,
+      "components": ["bespoke", "bespoke", "bespoke", "bespoke", "bespoke", "bespoke", "bespoke"]
+    },
+    {
+      "id": "89",
+      "title": "موج روشن — نشت‌های زیر آب قفل و حوض‌ها روشن می‌شوند",
+      "theme": "cash-tide",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "asymmetrical-swiss-grid",
+      "cardQuotaPercent": 0,
+      "components": ["bespoke", "bespoke", "bespoke", "bespoke", "bespoke", "bespoke"]
+    },
+    {
+      "id": "90",
+      "title": "سیل کاغذها — صد برگه، یک داشبورد روشن",
+      "theme": "ink-flood",
+      "hookFormula": "immediate-consequence",
+      "dominantLayout": "single-focal-stage",
+      "cardQuotaPercent": 0,
+      "components": ["bespoke", "bespoke", "bespoke", "bespoke", "bespoke", "bespoke"]
+    },
+    {
+      "id": "91",
+      "title": "شوک عدد — فروش ۲۵ میلیون، سود فقط ۶ میلیون",
+      "theme": "financial-intelligence",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "data-flow-matrix",
+      "cardQuotaPercent": 20,
+      "components": [
+        "hook",
+        "financial-intelligence",
+        "pile",
+        "profit-waterfall-demo",
+        "kinetic",
+        "cta"
+      ]
+    },
+    {
+      "id": "92",
+      "title": "میز نیمه‌شب — ساعت ۱۱ شب، حساب روشن در جیب",
+      "theme": "midnight-desk",
+      "hookFormula": "deadline-pressure",
+      "dominantLayout": "spatial-2.5d-portal",
+      "cardQuotaPercent": 0,
+      "components": ["bespoke", "bespoke", "bespoke", "bespoke", "bespoke", "bespoke"]
+    },
+    {
+      "id": "93",
+      "title": "عدد داخل مه — سود واقعی پشت صد فاکتور",
+      "theme": "dusk-fog",
+      "hookFormula": "visual-pattern-interrupt",
+      "dominantLayout": "asymmetrical-swiss-grid",
+      "cardQuotaPercent": 0,
+      "components": ["bespoke", "bespoke", "bespoke", "bespoke", "bespoke", "bespoke"]
+    },
+    {
+      "id": "94",
+      "title": "سه سؤال درباره‌ی تاریخ انقضا",
+      "theme": "paper-pocket",
+      "hookFormula": "deadline-pressure",
+      "dominantLayout": "single-focal-stage",
+      "cardQuotaPercent": 0,
+      "components": [
+        "bespoke",
+        "bespoke",
+        "product-capture",
+        "bespoke",
+        "product-capture",
+        "bespoke",
+        "product-capture",
+        "bespoke",
+        "bespoke"
+      ]
+    },
+    {
+      "id": "95",
+      "title": "شخصی‌سازی این صفحه، فقط برای خودت",
+      "theme": "swiss-editorial",
+      "hookFormula": "immediate-consequence",
+      "dominantLayout": "data-flow-matrix",
+      "cardQuotaPercent": 0,
+      "components": [
+        "product-capture",
+        "product-capture",
+        "product-capture",
+        "product-capture",
+        "product-capture",
+        "bespoke"
+      ]
+    },
+    {
+      "id": "96",
+      "title": "مانده‌ی بانک با مانده‌ی دفاتر نمی‌خواند",
+      "theme": "financial-intelligence",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "full-bleed-kinetic",
+      "cardQuotaPercent": 0,
+      "components": [
+        "bespoke",
+        "bespoke",
+        "bespoke",
+        "bespoke",
+        "product-capture",
+        "bespoke",
+        "bespoke"
+      ]
+    },
+    {
+      "id": "97",
+      "title": "برگه‌ی امضا یا لینک کارمند؟",
+      "theme": "cinematic-obsidian",
+      "hookFormula": "visual-pattern-interrupt",
+      "dominantLayout": "split-screen-horizon",
+      "cardQuotaPercent": 0,
+      "components": ["bespoke", "bespoke", "bespoke", "product-capture", "bespoke", "bespoke"]
+    },
+    {
+      "id": "98",
+      "title": "کدام فروش راکد ماند؟",
+      "theme": "midnight-gold",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "asymmetrical-swiss-grid",
+      "cardQuotaPercent": 0,
+      "components": ["bespoke", "bespoke", "bespoke", "product-capture", "bespoke", "bespoke"]
+    },
+    {
+      "id": "99",
+      "title": "لینک هوشمند سازمان — رصد لحظه‌ای تیم و فعالیت‌ها",
+      "theme": "team-flow",
+      "hookFormula": "immediate-consequence",
+      "dominantLayout": "data-flow-matrix",
+      "cardQuotaPercent": 0,
+      "components": ["bespoke", "bespoke", "bespoke", "bespoke", "bespoke"]
+    },
+    {
+      "id": "100",
+      "title": "اکسپلینر تک‌سازمان — مانیتورینگ بلادرنگ تیم با حسابچه",
+      "theme": "team-flow",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "spatial-2.5d-portal",
+      "cardQuotaPercent": 0,
+      "components": ["bespoke", "bespoke", "bespoke", "bespoke", "bespoke"]
     }
   ]
 }

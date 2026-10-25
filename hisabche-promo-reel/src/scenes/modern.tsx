@@ -4,7 +4,7 @@
 // animated financial charts, split-screen comparisons.
 // ============================================
 
-import { enter } from '../engine/anim'
+import { ease, enter, progress } from '../engine/anim'
 import type { Cue, SceneSpec } from '../engine/types'
 import { Card, TONE } from '../ui/card'
 import { Icon } from '../ui/icons'
@@ -26,9 +26,18 @@ type Spec<K extends SceneSpec['kind']> = Extract<SceneSpec, { kind: K }>
 
 export function KineticScene({ spec, t }: { spec: Spec<'kinetic'>; t: number }) {
   const tone = spec.tone ?? 'cyan'
+  // STEP 2: the headline keeps a slow breath after entrance — never a frozen slide.
+  const headlineEnter = enter(t, 0.2, { y: -20, scale: 0.95 })
+  const headlineBreath = 1 + 0.012 * Math.sin(t * 1.9) * progress(t, 0.7, 0.6)
   return (
-    <div className="scene kinetic-scene">
-      <div className="kinetic-headline" style={enter(t, 0.2, { y: -20, scale: 0.95 })}>
+    <div className="scene kinetic-scene" data-text-motion="breathing">
+      <div
+        className="kinetic-headline"
+        style={{
+          ...headlineEnter,
+          transform: `${headlineEnter.transform ?? ''} scale(${headlineBreath.toFixed(4)})`,
+        }}
+      >
         <Rich text={spec.headline} />
       </div>
       <KineticWords words={spec.words} t={t} startAt={0.8} gap={0.4} tone={tone} />
@@ -56,6 +65,8 @@ export const kineticCues = (spec: Spec<'kinetic'>): Cue[] => [
 // ─── 2. Product UI Mockup Scene (Desktop / Mobile) ───────────────────────
 
 export function MockupScene({ spec, t }: { spec: Spec<'mockup'>; t: number }) {
+  // STEP 3: the proof card itself pushes in (inner camera on top of scene camera).
+  const push = ease(progress(t, 0.5, 5))
   return (
     <div className="scene mockup-scene">
       <div className="title-block" style={{ top: 70 }}>
@@ -69,7 +80,15 @@ export function MockupScene({ spec, t }: { spec: Spec<'mockup'>; t: number }) {
         )}
       </div>
 
-      <div className="mockup-container" style={{ top: 190 }}>
+      <div
+        className="mockup-container"
+        data-ui-camera="push-in"
+        style={{
+          top: 190,
+          transform: `scale(${(1 + 0.05 * push).toFixed(4)}) translateY(${(-8 * push).toFixed(2)}px)`,
+          transformOrigin: 'center 35%',
+        }}
+      >
         {spec.device === 'window' ? (
           <DesktopWindow
             title={spec.screen.header}

@@ -190,5 +190,189 @@
     "primaryTemplate": "combined-multi-engine",
     "visualLanguage": "procedural-spatial",
     "hookMechanism": "visual-pattern-interrupt"
+  },
+  {
+    "id": 72,
+    "topic": "انتقال بین انبارها: بار رفت، ولی هنوز نرسیده!",
+    "creativeMechanism": "isometric-warehouse-flow",
+    "primaryTemplate": "isometric-exploded",
+    "visualLanguage": "obsidian-cinematic",
+    "hookMechanism": "visual-pattern-interrupt"
+  },
+  {
+    "id": 73,
+    "topic": "صندوق و شیفت: دخل فقط وقتی بسته می‌شود که شمرده شود!",
+    "creativeMechanism": "split-stopwatch-till-rush",
+    "primaryTemplate": "split-stopwatch",
+    "visualLanguage": "dark-neon",
+    "hookMechanism": "deadline-pressure"
+  },
+  {
+    "id": 74,
+    "topic": "تولید و فرمول ساخت (BOM): قیمت تمام‌شده هر دانه چنده؟",
+    "creativeMechanism": "swiss-bom-waterfall",
+    "primaryTemplate": "swiss-terminal",
+    "visualLanguage": "swiss-editorial",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 75,
+    "topic": "پرونده مشتری و سقف اعتبار: به کی چقدر نسیه بدهیم؟",
+    "creativeMechanism": "chat-panic-to-credit-lock",
+    "primaryTemplate": "chat-panic",
+    "visualLanguage": "midnight-gold",
+    "hookMechanism": "customer-confrontation"
+  },
+  {
+    "id": 76,
+    "topic": "قفسه‌بندی و کدینگ انبار: راهرو و طبقه را از کد بخوان!",
+    "creativeMechanism": "2d-spatial-aisle-zoom",
+    "primaryTemplate": "infinite-spatial",
+    "visualLanguage": "cyber-emerald",
+    "hookMechanism": "immediate-consequence"
+  },
+  {
+    "id": 77,
+    "topic": "فهرست قیمت و تخفیف گروهی: برای همکار چند، برای مشتری گذری چند؟",
+    "creativeMechanism": "tactile-price-tag-train",
+    "primaryTemplate": "tactile-train",
+    "visualLanguage": "obsidian-cinematic",
+    "hookMechanism": "customer-confrontation"
+  },
+  {
+    "id": 78,
+    "topic": "نرخ ارز و تسعیر: دالر صبح ۷۰، عصر ۷۲؛ سود و زیان تسعیر کجاست؟",
+    "creativeMechanism": "continuous-fx-rate-thread",
+    "primaryTemplate": "continuous-line",
+    "visualLanguage": "midnight-gold",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 79,
+    "topic": "کالای خاک‌خورده و سرمایه راکد (Dead Stock): ۶ ماهه تکون نخورده!",
+    "creativeMechanism": "thermal-inventory-decay-tear",
+    "primaryTemplate": "thermal-receipt",
+    "visualLanguage": "dark-neon",
+    "hookMechanism": "quiet-dread"
+  },
+  {
+    "id": 80,
+    "topic": "کار بدون اینترنت در اوج شلوغی (Offline Engine): برق رفت، ولی فاکتور متوقف نشد!",
+    "creativeMechanism": "liquid-glass-offline-pulse",
+    "primaryTemplate": "liquid-glass",
+    "visualLanguage": "procedural-spatial",
+    "hookMechanism": "immediate-consequence"
+  },
+  {
+    "id": 81,
+    "topic": "حقوق و دستمزد تیم: مساعده، غیبت، اضافه کاری؛ آخر ماه کی چقدر طلبکاره؟",
+    "creativeMechanism": "vox-payroll-desk-audit",
+    "primaryTemplate": "vox-documentary",
+    "visualLanguage": "swiss-editorial",
+    "hookMechanism": "customer-confrontation"
+  },
+  {
+    "id": 82,
+    "topic": "گفتگوی مشتری و مالک: پیگیری بدهکاری پشت پیشخوان",
+    "creativeMechanism": "counter-dialogue-two-characters",
+    "primaryTemplate": "dialogue",
+    "visualLanguage": "obsidian-cinematic",
+    "hookMechanism": "customer-confrontation"
+  },
+  {
+    "id": 83,
+    "topic": "یک عدد واقعی: از گفتگو تا سود واقعی در یک فیلم پرچمی",
+    "creativeMechanism": "single-true-number-flagship",
+    "primaryTemplate": "multi-engine-mix",
+    "visualLanguage": "cinematic-obsidian",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 84,
+    "topic": "دفترت هنوز دستیه؟ سبک چاپ با کاردستور هافتون",
+    "creativeMechanism": "halftone-print-shopkeeper",
+    "primaryTemplate": "bespoke-paper-pocket",
+    "visualLanguage": "paper-pocket",
+    "hookMechanism": "visual-pattern-interrupt"
+  },
+  {
+    "id": 85,
+    "topic": "عددها معنی پیدا می‌کنن: کاغذ سه‌بعدی و حلقه‌های داده",
+    "creativeMechanism": "3d-paper-neon-rings",
+    "primaryTemplate": "bespoke-distilbook",
+    "visualLanguage": "distilbook",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 86,
+    "topic": "شبکه‌ی حسابچه: دایورام ایزومتریک نئونی مغازه",
+    "creativeMechanism": "isometric-diorama-core-build",
+    "primaryTemplate": "bespoke-isometric-neon",
+    "visualLanguage": "isometric-neon",
+    "hookMechanism": "immediate-consequence"
+  },
+  {
+    "id": 87,
+    "topic": "شبِ کاغذها: رسیدهای بی‌صاحب به حلقه‌ی دفتر مداری می‌پیوندند",
+    "creativeMechanism": "paper-galaxy-orbit-ledger",
+    "primaryTemplate": "bespoke-paper-galaxy",
+    "visualLanguage": "paper-galaxy",
+    "hookMechanism": "visual-pattern-interrupt"
+  },
+  {
+    "id": 88,
+    "topic": "ساعت صفر: سه دنده گیرکرده تا ساعت ۱۲ جلو می‌روند",
+    "creativeMechanism": "clockwork-mesh-to-ledger",
+    "primaryTemplate": "bespoke-clockwork-brass",
+    "visualLanguage": "clockwork-brass",
+    "hookMechanism": "deadline-pressure"
+  },
+  {
+    "id": 89,
+    "topic": "موج روشن: نشت‌های زیر آب قفل و حوض‌ها روشن می‌شوند",
+    "creativeMechanism": "cash-tide-basin-surfacing",
+    "primaryTemplate": "bespoke-cash-tide",
+    "visualLanguage": "cash-tide",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 90,
+    "topic": "سیل کاغذها: صد برگه، یک داشبورد روشن",
+    "creativeMechanism": "suction-freeze-cards-transform",
+    "primaryTemplate": "bespoke-ink-flood",
+    "visualLanguage": "ink-flood",
+    "hookMechanism": "immediate-consequence"
+  },
+  {
+    "id": 91,
+    "topic": "شوک عدد: فروش ۲۵ میلیون، سود فقط ۶ میلیون",
+    "creativeMechanism": "waterfall-profit-shock",
+    "primaryTemplate": "split-stopwatch",
+    "visualLanguage": "financial-intelligence",
+    "hookMechanism": "uncomfortable-discovery"
+  },
+  {
+    "id": 92,
+    "topic": "میز نیمه‌شب: ساعت ۱۱ شب، حساب روشن در جیب",
+    "creativeMechanism": "pov-desk-phone-whip",
+    "primaryTemplate": "bespoke-midnight-desk",
+    "visualLanguage": "midnight-desk",
+    "hookMechanism": "deadline-pressure"
+  },
+  {
+    "id": 93,
+    "topic": "عدد داخل مه: سود واقعی پشت صد فاکتور",
+    "creativeMechanism": "blurred-figure-clearing-fan",
+    "primaryTemplate": "bespoke-dusk-fog",
+    "visualLanguage": "dusk-fog",
+    "hookMechanism": "visual-pattern-interrupt"
+  },
+  {
+    "id": 99,
+    "topic": "لینک هوشمند سازمان: رصد تمامی فعالیت‌ها و تیم با یک لینک",
+    "creativeMechanism": "org-link-activity-stream",
+    "primaryTemplate": "liquid-glass-spatial",
+    "visualLanguage": "team-flow",
+    "hookMechanism": "immediate-consequence"
   }
 ]

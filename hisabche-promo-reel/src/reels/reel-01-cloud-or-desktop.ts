@@ -1,131 +1,137 @@
 // ============================================
-// Video 01: Where does bookkeeping live in your business? (55s)
-// Funnel stage: Awareness | Audience: All | SaaS Production Level
-// Claims-controlled: real product flows, zero fake promises.
+// Video 01: ابری یا سنتی؟ (58s)
+// Funnel stage: Awareness / Introduction | Audience: All business owners
+// Scenario 01 from SCENARIOS.md:
+// - Hook (0–4s): «کسب‌وکار من… نرم‌افزار ابری می‌خواد یا سنتی؟»
+// - Branch (4–9s): دوراهی: چرا فقط یکی؟ آنلاین در وب + آفلاین در اپ
+// - Stagger (9–16s): یک فاکتور، شش ثبت هم‌زمان
+// - Hub (16–24s): هسته حسابچه و ۸ گره کسب‌وکار
+// - Compare (24–34s): مقایسه ۳ ستونه: اکسل و دفتر / سنتی / حسابچه
+// - Bridge (34–43s): پل ابری و آفلاین در یک سیستم
+// - CTA (43–58s): دعوت دوگانه: رایگان / حسابچه
 // Theme: Dark Obsidian Cinematic
 // ============================================
 
 import type { Reel } from '../engine/types'
-import { ctaScene, sequence, total } from './shared'
+import { COMPARE_COLUMNS, ctaScene, sequence, total } from './shared'
 
 const scenes = sequence([
   {
     dur: 4,
     spec: {
       kind: 'hook',
-      label: 'سامانه ابری حسابچه',
-      lines: ['در کسب‌وکار تو،', 'حساب‌وکتابت [r:چند جا پخش شده]؟'],
+      label: 'انتخاب نرم‌افزار مالی',
+      lines: ['کسب‌وکار من…', 'نرم‌افزار [c:ابری] می‌خواد یا [p:سنتی]؟'],
       cards: [
-        { icon: 'notebook', title: 'دفترچه سنتی', sub: 'یادداشت‌های دست‌نویس', tone: 'red' },
-        { icon: 'sheet', title: 'فایل‌های اکسل', sub: 'جدول‌های نامرتبط', tone: 'purple' },
+        { icon: 'cloud', title: 'ابری و آنلاین', sub: 'دسترسی از هر کجا', tone: 'cyan' },
+        { icon: 'laptop', title: 'سنتی و آفلاین', sub: 'کار پای صندوق بدون نت', tone: 'purple' },
       ],
     },
-    vo: 'فروش، موجودی و حساب مشتری‌ها هنوز هرکدام یک جای جدا هستند؟',
+    vo: 'حساب‌وکتاب بیزینس من، نرم‌افزار ابری می‌خواد یا سنتی و آفلاین؟',
+  },
+  {
+    dur: 5,
+    spec: {
+      kind: 'branch',
+      cards: [
+        { icon: 'cloud', title: 'ابری و آنلاین', sub: 'دسترسی از هر کجا', tone: 'cyan' },
+        { icon: 'laptop', title: 'سنتی و آفلاین', sub: 'کار پای صندوق بدون نت', tone: 'purple' },
+      ],
+      question: 'چرا فقط یکی؟',
+      answer: 'هر دو در یک حسابچه',
+      badge: 'آنلاین در وب + آفلاین در اپ',
+    },
+    vo: 'چرا فقط یکی؟ با حسابچه، در وب آنلاین کار کن و در اپ، وقتی اینترنت قطع شد، بدون توقف فاکتور بزن.',
+  },
+  {
+    dur: 7,
+    spec: {
+      kind: 'stagger',
+      title: 'فقط [c:یک فاکتور] ثبت کن',
+      header: ['شش ثبت هم‌زمان', 'اتصال آنی'],
+      rows: [
+        { icon: 'receipt', text: 'فروش نقد و نسیه' },
+        { icon: 'wallet', text: 'صندوق و بانک' },
+        { icon: 'boxes', text: 'موجودی انبار' },
+        { icon: 'book', text: 'سند دوطرفه دفتر کل' },
+        { icon: 'trend', text: 'سود واقعی فاکتور' },
+        { icon: 'sync', text: 'همگام‌سازی اپ و وب' },
+      ],
+      interval: 0.8,
+      tone: 'cyan',
+    },
+    vo: 'فقط یک فاکتور ثبت کن؛ صندوق، انبار، دفتر کل و سود، همه خودشان به‌روز می‌شوند.',
   },
   {
     dur: 8,
     spec: {
-      kind: 'cinematic-product',
-      title: 'یک فضای کاری [c:منظم‌تر و متمرکز]',
-      subtitle: 'عملیات روزمره کسب‌وکار در یک بستر هماهنگ',
-      floatingBadge: 'مدیریت داده‌های مالی بدون پراکندگی',
-      layers: [
-        {
-          title: 'دفتر فروش و فاکتورها',
-          desc: 'صدور، بازبینی و پیگیری فاکتور در لحظه',
-          icon: 'receipt',
-          tone: 'cyan',
-          z: 60,
-        },
-        {
-          title: 'پرونده و سابقه مشتری',
-          desc: 'مانده حساب و ثبت دریافتی نقد و نسیه',
-          icon: 'user',
-          tone: 'purple',
-          z: 0,
-        },
-        {
-          title: 'کاردکس موجودی انبار',
-          desc: 'بررسی ورود، خروج و مانده واقعی کالا',
-          icon: 'boxes',
-          tone: 'green',
-          z: -60,
-        },
-      ],
-    },
-    vo: 'حسابچه کمک می‌کند عملیات روزمره کسب‌وکارت را در یک سیستم منظم‌تر دنبال کنی.',
-  },
-  {
-    dur: 13,
-    spec: {
       kind: 'hub',
-      title: 'ارتباط یکپارچه: [g:فروش • مشتری • موجودی]',
+      title: 'از یک مغازه تا [p:کارگاه و چند انبار]',
       core: 'حسابچه',
       coreSub: 'هسته داده',
       nodes: [
-        { icon: 'receipt', label: 'فاکتور فروش' },
-        { icon: 'user', label: 'حساب مشتری' },
-        { icon: 'boxes', label: 'موجودی کالا' },
-        { icon: 'wallet', label: 'دریافت و پرداخت' },
+        { icon: 'store', label: 'فروشگاه' },
+        { icon: 'truck', label: 'عمده‌فروشی' },
+        { icon: 'boxes', label: 'انبارها' },
+        { icon: 'factory', label: 'تولید' },
+        { icon: 'calculator', label: 'خدمات' },
+        { icon: 'users', label: 'تیم' },
+        { icon: 'book', label: 'دفتر کل' },
+        { icon: 'sparkles', label: 'دستیار هوشمند' },
       ],
     },
-    vo: 'از ثبت فروش و پیگیری حساب مشتری تا بررسی موجودی، اطلاعاتت را به هم مرتبط نگه دار.',
+    vo: 'از یک مغازه تا کارگاه و چند انبار، همه در یک هسته.',
   },
   {
-    dur: 14,
+    dur: 10,
     spec: {
-      kind: 'mockup',
-      device: 'window',
-      title: 'نسخه وب و اپلیکیشن',
-      subtitle: 'وب برای کار آنلاین؛ اپ برای جریان‌های آفلاین پشتیبانی‌شده',
-      screen: {
-        type: 'pos',
-        header: 'صندوق فروش فروشگاهی حسابچه',
-        items: [
-          { name: 'کالای تجاری کد ۱۰۱', qty: '۳ عدد', price: '۲٬۲۵۰' },
-          { name: 'محصول استاندارد کد ۲۰۲', qty: '۱ بسته', price: '۳٬۴۰۰' },
-          { name: 'کالای مصرفی کد ۳۰۳', qty: '۲ کارتن', price: '۱٬۸۰۰' },
-        ],
-        totalLabel: 'جمع فاکتور',
-        totalValue: '۷٬۴۵۰',
-      },
-      toast: { icon: 'check', text: 'فاکتور با موفقیت ثبت شد', time: 5 },
-      cursor: { x: 380, y: 530, clickAt: 4.2 },
+      kind: 'compare',
+      title: 'تفاوت واقعی [c:از این‌جا شروع می‌شود]',
+      columns: COMPARE_COLUMNS,
+      rows: [
+        { label: 'کار بدون اینترنت (در اپ)', marks: ['no', 'yes', 'yes'] },
+        { label: 'دسترسی آنلاین از هرجا', marks: ['part', 'no', 'yes'] },
+        { label: 'همگام‌سازی خودکار', marks: ['no', 'no', 'yes'] },
+        { label: 'سند دوطرفه خودکار', marks: ['no', 'yes', 'yes'] },
+        { label: 'سود واقعی هر فاکتور', marks: ['no', 'part', 'yes'] },
+        { label: 'پشتیبانی از چند ارز', marks: ['part', 'part', 'yes'] },
+      ],
+      interval: 1.1,
     },
-    vo: 'متناسب با روش کارت از نسخه وب یا اپ استفاده کن؛ قابلیت آفلاین مربوط به اپ‌های پشتیبانی‌شده است.',
+    vo: 'تفاوت واقعی از اینجا شروع می‌شود.',
   },
   {
     dur: 9,
     spec: {
-      kind: 'chart',
-      title: 'دید روشن‌تر از [c:کار روزانه مغازه]',
-      chartType: 'area',
-      kpis: [
-        { label: 'فاکتورهای امروز', value: 48, unit: 'عدد', tone: 'cyan' },
+      kind: 'bridge',
+      title: 'ابری + آفلاین؛ [c:در یک حسابچه]',
+      left: { icon: 'cloud', title: 'ابری و آنلاین', tone: 'cyan' },
+      right: { icon: 'laptop', title: 'آفلاین در اپ', tone: 'purple' },
+      merged: 'حسابچه',
+      caption: 'سادگی برای مدیر، دقت برای حسابدار',
+      summaries: [
         {
-          label: 'فروش روز جاری',
-          value: 185000,
-          unit: '',
-          trend: 'ثبت‌شده در سیستم',
-          tone: 'green',
+          question: 'برای مدیر و فروشنده',
+          answer: 'سادگی و سرعت کار روزانه',
+          tone: 'cyan',
+          icons: ['store', 'sparkles'],
+        },
+        {
+          question: 'برای حسابدار و شریک',
+          answer: 'دقت در سند دوبل و ترازنامه',
+          tone: 'purple',
+          icons: ['book', 'check'],
         },
       ],
-      data: [
-        { label: '۸ صبح', value: 20 },
-        { label: '۱۰ صبح', value: 45 },
-        { label: '۱۲ ظهر', value: 75 },
-        { label: '۳ عصر', value: 60 },
-        { label: '۶ عصر', value: 95 },
-      ],
     },
-    vo: 'هدف، فقط ثبت عددها نیست؛ هدف این است که راحت‌تر بفهمی چه اتفاقی در کسب‌وکارت افتاده.',
+    vo: 'سادگی برای مدیر، دقت برای حسابدار.',
   },
-  ctaScene(7),
+  ctaScene(15),
 ])
 
 export const reel01: Reel = {
   id: '01',
-  title: 'حساب‌وکتابت کجا زندگی می‌کند؟',
+  title: 'ابری یا سنتی؟',
   duration: total(scenes),
   scenes,
   theme: 'obsidian-cinematic',

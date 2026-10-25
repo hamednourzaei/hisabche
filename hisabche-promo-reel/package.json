@@ -6,13 +6,19 @@
   "description": "Vertical (9:16) motion-graphics reels introducing Hisabche. Uses the React, Vite and TypeScript already installed in the repository — nothing to download.",
   "scripts": {
     "dev": "node ../node_modules/vite/bin/vite.js",
-    "build": "node ../node_modules/typescript/bin/tsc --noEmit -p . && node ../node_modules/vite/bin/vite.js build",
+    "build": "node scripts/variety-check.mjs && node ../node_modules/typescript/bin/tsc --noEmit -p . && node ../node_modules/vite/bin/vite.js build",
     "typecheck": "node ../node_modules/typescript/bin/tsc --noEmit -p .",
     "test": "node ../backend/node_modules/vitest/vitest.mjs run",
     "preview": "node ../node_modules/vite/bin/vite.js preview",
     "visual-qa": "node scripts/visual-qa.mjs",
     "align-vo": "node scripts/align-voiceover.mjs",
     "export-mp4": "node scripts/export-mp4.mjs",
-    "verify:plugin": "node scripts/verify-reel-plugin.mjs"
+    "verify:plugin": "node scripts/verify-reel-plugin.mjs",
+    "motion-qa": "node scripts/motion-qa.mjs"
+  },
+  "dependencies": {
+    "@pixiv/three-vrm": "^3.5.5",
+    "@types/three": "^0.186.0",
+    "three": "^0.186.1"
   }
 }

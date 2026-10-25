@@ -255,10 +255,10 @@ export function Compare({ spec, t }: { spec: Spec<'compare'>; t: number }) {
         </div>
         <div style={{ textAlign: 'start' }}>
           <div style={{ fontSize: 13, fontWeight: 900, color: '#f8fafc' }}>
-            <Rich text="[c:شفافیت قطعی موجودی]: صفر شدن ۱۰۰٪ مغایرت در انبارگردانی" />
+            <Rich text="[c:برتری قاطع یکپارچگی]: وب آنلاین + اپلیکیشن بدون اینترنت" />
           </div>
           <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>
-            ثبت لحظه‌ای کاردکس با حواله انتقال دوطرفه و تراز دفاتر مالی
+            ثبت همگام فاکتور، انبار و اسناد مالی بدون توقف در عملیات روزمره
           </div>
         </div>
       </div>

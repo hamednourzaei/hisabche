@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
+import { capturesDir, resolveCapture } from './scripts/product-capture.mjs'
 
 // React, Vite and TypeScript come from the repository's own node_modules (one
 // level up). lucide-react is only installed inside packages/ui, so it is
@@ -47,16 +48,49 @@ function soundData(): Plugin {
   }
 }
 
+/**
+ * The product recordings, served from the captures folder OUTSIDE the repository.
+ * `/capture-data?f=<bare file name>`: the name is validated and the file checked
+ * (`resolveCapture`) before any byte is sent; a bad request is a 404, never a stand-in.
+ */
+function captureData(): Plugin {
+  return {
+    name: 'hisabche-capture-data',
+    configureServer(server) {
+      server.middlewares.use('/capture-data', async (req, res) => {
+        const name = new URL(req.url ?? '', 'http://local').searchParams.get('f') ?? ''
+        const found = resolveCapture(name, capturesDir())
+        if (!found.ok) {
+          res.statusCode = 404
+          res.setHeader('X-Capture-Problem', found.code)
+          res.end()
+          return
+        }
+        try {
+          const body = await readFile(found.file)
+          res.setHeader('Content-Type', 'application/octet-stream')
+          res.setHeader('Cache-Control', 'no-cache')
+          res.end(body)
+        } catch {
+          res.statusCode = 404
+          res.end()
+        }
+      })
+    },
+  }
+}
+
 export default defineConfig({
   // This folder, wherever vite is started from.
   root,
-  plugins: [soundData()],
+  plugins: [soundData(), captureData()],
   resolve: {
     alias: { 'lucide-react': lucide },
     dedupe: ['react', 'react-dom'],
   },
   oxc: { jsx: { runtime: 'automatic', importSource: 'react' } },
   server: {
+    host: true,
     port: 5190,
     open: false,
     watch: {

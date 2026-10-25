@@ -37,12 +37,14 @@ describe('AV sync law — every sound has a visual event', () => {
   })
 
   for (const reel of lawful) {
+    const scenesWithSentences = reel.scenes.filter((s) => s.sentence)
+    if (scenesWithSentences.length === 0) continue
+
     describe(`reel ${reel.id}`, () => {
       const source = actorSource(reel.id)
 
-      reel.scenes.forEach((scene, index) => {
-        const plan = scene.sentence
-        if (!plan) return
+      scenesWithSentences.forEach((scene, index) => {
+        const plan = scene.sentence!
 
         it(`scene ${index + 1}: a word with a sound has an action`, () => {
           const orphans = plan.words.filter((w) => w.sound && !w.action).map((w) => w.word)

@@ -1,10 +1,19 @@
 import type { Scene, SceneSpec } from '../engine/types'
 
 /** Lays scenes end to end: give each a duration, get start/end. */
-export function sequence(parts: { dur: number; spec: SceneSpec; vo: string }[]): Scene[] {
+export function sequence(
+  parts: { dur: number; spec: SceneSpec; vo: string }[],
+  options?: { noZoom?: boolean | undefined } | undefined,
+): Scene[] {
   let at = 0
   return parts.map((part) => {
-    const scene = { start: at, end: at + part.dur, spec: part.spec, vo: part.vo }
+    const scene: Scene = {
+      start: at,
+      end: at + part.dur,
+      spec: part.spec,
+      vo: part.vo,
+      noZoom: options?.noZoom,
+    }
     at += part.dur
     return scene
   })

@@ -5,7 +5,29 @@ import { Badge, TONE } from './card'
 import { Icon } from './icons'
 import { Rich } from './rich'
 
-export const faNumber = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n))
+/**
+ * Deterministic Persian-Indic digit formatting. Intl.NumberFormat('fa-IR')
+ * renders Latin digits with Western commas on hosts without full-ICU data
+ * (e.g. headless Chromium), which broke frame parity between QA and export —
+ * digits are now mapped from an explicit char table (layout-defect-laws.md
+ * band 6). Tests lock the format: faNumber(280000) === '۲۸۰٬۰۰۰'.
+ */
+const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'] as const
+
+export const faNumber = (n: number): string => {
+  const rounded = Math.round(n)
+  const grouped = String(Math.abs(rounded)).replace(/\B(?=(\d{3})+(?!\d))/g, '٬')
+  const sign = rounded < 0 ? '−' : ''
+  return sign + grouped.replace(/[0-9]/g, (d) => FA_DIGITS[Number(d)])
+}
+
+// An unknown value is not zero: it is rendered as "نامعلوم" (or ؟؟؟) on screen,
+// never silently treated as a number.
+export const isUnknownValue = (value?: string) =>
+  !!value && (value.includes('نامعلوم') || value.includes('؟؟؟') || value.includes('نا مشخص'))
+
+// A value the product cannot know yet is shown as «نامعلوم» text: it is never
+// silently treated as a number and never wrapped in a callout ring.
 
 // ─── Kinetic Typography ──────────────────────────────────────────────────
 
@@ -28,8 +50,13 @@ export function KineticWords({
         const at = startAt + i * gap
         const s = spring(t - at)
         const o = progress(t, at, 0.25)
-        const scale = mix(0.7, 1, s)
-        const y = mix(40, 0, s)
+        // Continuous micro-motion after entrance: a slow breath + float, so a
+        // revealed word is never a frozen slide element (STEP 2 / Hard Rule 18).
+        const settled = progress(t, at + 0.45, 0.6)
+        const breathe = 1 + 0.018 * Math.sin((t - at) * 2.1 + i * 0.9) * settled
+        const float = Math.sin((t - at) * 1.3 + i * 0.6) * 2.4 * settled
+        const scale = mix(0.7, 1, s) * breathe
+        const y = mix(40, 0, s) + float
         const isLast = i === words.length - 1
         return (
           <span
@@ -159,8 +186,18 @@ export function DesktopWindow({
   tone?: Tone
 }) {
   const winEnter = enter(t, startAt, { y: 40, scale: 0.94 })
+  // STEP 3: a proof scene always moves — slow inner camera push-in on the window.
+  const push = ease(progress(t, startAt + 0.4, 2.6))
   return (
-    <div className="mockup-window" style={winEnter}>
+    <div
+      className="mockup-window"
+      data-ui-camera="push-in"
+      style={{
+        ...winEnter,
+        transform: `${winEnter.transform ?? ''} scale(${(1 + 0.05 * push).toFixed(4)})`,
+        transformOrigin: 'center 40%',
+      }}
+    >
       <div className="window-titlebar">
         <div className="traffic-lights">
           <span className="light red" />
@@ -247,8 +284,18 @@ export function PhoneMockup({
 }) {
   const phoneEnter = enter(t, startAt, { y: 50, scale: 0.92 })
   const scanSweep = pulse(t, startAt + 0.8, startAt + 3.2, 1.2)
+  // STEP 3: proof scene → slow inner push-in of the product UI.
+  const push = ease(progress(t, startAt + 0.5, 2.4))
   return (
-    <div className="mockup-phone" style={phoneEnter}>
+    <div
+      className="mockup-phone"
+      data-ui-camera="push-in"
+      style={{
+        ...phoneEnter,
+        transform: `${phoneEnter.transform ?? ''} scale(${(1 + 0.05 * push).toFixed(4)})`,
+        transformOrigin: 'center 40%',
+      }}
+    >
       <div className="phone-notch">
         <div className="dynamic-island" />
       </div>

@@ -53,6 +53,8 @@ const ALLOWED_LICENSES = [
   'Pixabay Content License',
   'CC BY 4.0',
   'CC BY',
+  // The owner's own pack (24 Oct 2026): not an open licence — the owner answers for its terms.
+  'Owner-supplied',
 ]
 
 describe('Audio Design & Asset Library', () => {

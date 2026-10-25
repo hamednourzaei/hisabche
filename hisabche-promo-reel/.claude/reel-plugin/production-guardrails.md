@@ -290,3 +290,23 @@ What it found on reel 60 (before): clockTick +585 ms, alert +600 ms, impact/mark
 - **No Sudden Pops:** The subtitle line stays visible from the scene start; words light up in voice order and never mount/unmount. The karaoke highlight is ONE smooth, overshoot-free ramp (maximum `scale(1.15)`), never a jolt spring — see `src/ui/WordSyncTeleprompter.tsx` (smooth ramp, e.g. `Math.sin(Math.PI * ease(p))`).
 - **Voice-Locked:** Words light exactly when spoken (per Hard Rule 17 timing); never ahead of the audio, never in a burst after it.
 
+---
+
+## 25. HARD RULE 20 — CAMERA FOCUS & PUSH-IN ZOOM BAN (owner, 24 Oct 2026)
+
+- **Hard Ban on Camera Push-In / Focus Zoom:** Videos must NEVER use camera push-in zoom, focus zoom ramps, or continuous scaling across scenes.
+- **Static Crisp 1.0 Framing:** All sequences and reels must enforce `noZoom: true` (camera scale strictly 1.0). Camera scaling creates visual dizziness, breaks container alignment, and clips elements at screen borders.
+- **No Zoom Transitions:** Transitions between scenes must use clean cuts, dissolves, or directional wipes—never zoom-in transitions.
+
+---
+
+## 26. HARD RULE 21 — WORLD-CLASS SAAS VISUAL PERSONA STANDARD (owner, 24 Oct 2026)
+
+- **No Comic Halftone Dot Stickers:** Amateur black-and-white or gray halftone comic stickers, crude hand-drawn busts, and comic sweat drops are permanently banned.
+- **Fintech SaaS Caliber Only:** All avatars and merchant personae must follow modern world-class fintech SaaS standards (Stripe, Linear, Apple):
+  - Volumetric 3D gradients and obsidian ceramic styling.
+  - Apple/Linear specular rim lighting along head and shoulders.
+  - Micro-status glassmorphic chips (amber pulsating alert, emerald verification check) instead of cartoon sweat.
+  - Sleek modern titanium/OLED smart devices with live micro-charts instead of crude white boxes.
+
+

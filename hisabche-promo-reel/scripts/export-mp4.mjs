@@ -16,6 +16,8 @@ import puppeteer from 'puppeteer'
 import { findVoiceoverFile } from './align-voiceover.mjs'
 import { designSoundtrack } from './sound-design.mjs'
 import { checkAvSync, printAvSync } from './check-av-sync.mjs'
+import { captureScenesOf, checkProductCaptures, capturesDir } from './product-capture.mjs'
+import { MIN_RUNTIME_SECONDS, judgeRuntime } from './runtime-law.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -108,9 +110,39 @@ export async function exportReelMP4(options = {}) {
     throw new Error(`Reel ID '${targetReelId}' not found in REELS registry.`)
   }
 
+  // A reel that shows the real product needs the real recording. No file, no export — before
+  // any frame is drawn, and with the exact name, second and product page that is missing.
+  const captureCheck = checkProductCaptures(reel)
+  if (!captureCheck.ok) {
+    await server.close()
+    console.error(`\n⛔ PRODUCT_CAPTURE: this reel needs real recordings in ${capturesDir()}`)
+    for (const p of captureCheck.problems) {
+      console.error(`  · ${p.code} — "${p.name}" (${p.route}, at ${p.at}s): ${p.message}`)
+    }
+    return { success: false, blockedBy: 'PRODUCT_CAPTURE', problems: captureCheck.problems }
+  }
+  const hasCaptures = captureScenesOf(reel).length > 0
+
+  // Runtime law (owner, 24 Oct 2026): a reel runs more than 30 s. A reel that was already short
+  // when the law was written (RUNTIME_REMEDIATION) exports with a warning; any other short reel,
+  // or one whose declared length disagrees with its timeline, is refused before a frame is drawn.
+  const runtime = judgeRuntime(reel)
+  if (runtime.status === 'violation' || runtime.status === 'inconsistent') {
+    await server.close()
+    console.error(
+      `\n⛔ RUNTIME: reel ${reel.id} runs ${runtime.seconds}s (${runtime.status}); the minimum is more than ${MIN_RUNTIME_SECONDS}s.`,
+    )
+    return { success: false, blockedBy: 'RUNTIME', seconds: runtime.seconds }
+  }
+  if (runtime.status === 'remediation') {
+    console.warn(
+      `⚠️ RUNTIME: reel ${reel.id} runs ${runtime.seconds}s — at or under ${MIN_RUNTIME_SECONDS}s. Recorded in docs/RUNTIME-AUDIT.md; exporting anyway.`,
+    )
+  }
+
   const totalDuration = maxSeconds ? Math.min(maxSeconds, reel.duration) : reel.duration
   const totalFrames = Math.ceil(totalDuration * fps)
-  const cues = reelCues(reel)
+  const cues = reelCues(reel).filter((c) => !maxSeconds || c.at < totalDuration)
 
   console.log(`✓ Loaded Reel: "${reel.title}"`)
   console.log(
@@ -201,6 +233,16 @@ export async function exportReelMP4(options = {}) {
             .catch(() => {})
         }
       }
+    }
+
+    if (hasCaptures) {
+      // The recording must have reached this frame's time before the screenshot.
+      await page.evaluate(async () => {
+        await new Promise((resolve) =>
+          globalThis.requestAnimationFrame(() => globalThis.requestAnimationFrame(resolve)),
+        )
+        await Promise.all([...(globalThis.__REEL_MEDIA_PENDING ?? [])])
+      })
     }
 
     const frameFile = path.resolve(framesDir, `frame_${String(i).padStart(5, '0')}.png`)
@@ -386,7 +428,12 @@ const fps = fpsIndex !== -1 ? Number(args[fpsIndex + 1]) : 30
 const secIndex = args.indexOf('--seconds')
 const seconds = secIndex !== -1 ? Number(args[secIndex + 1]) : null
 
-exportReelMP4({ reelId, fps, seconds }).catch((err) => {
-  console.error('❌ Export failed:', err)
-  process.exit(1)
-})
+exportReelMP4({ reelId, fps, seconds })
+  .then((result) => {
+    // A refused export (AV_SYNC, PRODUCT_CAPTURE, …) is a failure for whoever runs this.
+    if (result && result.success === false) process.exitCode = 1
+  })
+  .catch((err) => {
+    console.error('❌ Export failed:', err)
+    process.exit(1)
+  })

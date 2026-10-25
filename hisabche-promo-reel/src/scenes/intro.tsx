@@ -10,7 +10,7 @@ type Spec<K extends SceneSpec['kind']> = Extract<SceneSpec, { kind: K }>
 
 // ─── Hook ────────────────────────────────────────────────────────────────
 
-const HOOK = { label: 0.1, line: 0.3, lineGap: 0.35, cards: 1.4, cardGap: 0.25 }
+const HOOK = { label: 0.1, line: 0.3, lineGap: 0.35, cards: 0.8, cardGap: 0.2 }
 
 export function Hook({ spec, t }: { spec: Spec<'hook'>; t: number }) {
   const archetype = spec.openingArchetype
@@ -853,6 +853,30 @@ export function Stagger({ spec, t }: { spec: Spec<'stagger'>; t: number }) {
             </div>
           ))}
         </div>
+        {t >= STAGGER.rows + spec.rows.length * gap && (
+          <div
+            style={{
+              marginTop: 14,
+              padding: '8px 14px',
+              borderRadius: 12,
+              background: 'rgba(16, 185, 129, 0.15)',
+              border: '1px solid rgba(16, 185, 129, 0.45)',
+              boxShadow: '0 0 16px rgba(16, 185, 129, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              ...enter(t, STAGGER.rows + spec.rows.length * gap + 0.1, { y: 12, scale: 0.9 }),
+            }}
+          >
+            <span style={{ color: '#10b981', display: 'flex', alignItems: 'center' }}>
+              <Icon name="check" size={16} />
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 800, color: '#a7f3d0' }}>
+              ثبت خودکار و آنی در تمام بخش‌ها
+            </span>
+          </div>
+        )}
       </Card>
     </div>
   )

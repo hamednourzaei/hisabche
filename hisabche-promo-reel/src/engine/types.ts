@@ -17,6 +17,16 @@ export type ThemeName =
   | 'kinetic-manifesto'
   | 'procedural-spatial'
   | 'financial-intelligence'
+  | 'paper-pocket'
+  | 'distilbook'
+  | 'isometric-neon'
+  | 'paper-galaxy'
+  | 'clockwork-brass'
+  | 'cash-tide'
+  | 'ink-flood'
+  | 'midnight-desk'
+  | 'dusk-fog'
+  | 'team-flow'
 
 /** A card with an icon: icons are named, see `icons.tsx`. */
 export interface IconCard {
@@ -40,6 +50,14 @@ export type OpeningArchetype =
  * One scene of a reel. `start`/`end` are seconds on the reel's clock; the
  * scene's component receives its own local time (0 at `start`).
  */
+/** A real recording of the product, named once: where it lives, what page it shows, what state. */
+export interface ProductCaptureRef {
+  file: string
+  route: string
+  trimStart?: number
+  screenState?: string
+}
+
 export type SceneSpec =
   | {
       kind: 'hook'
@@ -145,6 +163,12 @@ export type SceneSpec =
       left: { label: string; value: string; tone: Tone }
       right: { label: string; value: string; tone: Tone }
       verdict: string
+    }
+  | {
+      kind: 'dialogue'
+      theme?: ThemeName
+      title?: string
+      turns: { speaker: 'customer' | 'owner'; text: string }[]
     }
   | {
       kind: 'ledger'
@@ -378,10 +402,37 @@ export type SceneSpec =
       badge?: string
     }
   | {
+      /**
+       * A real recording of the product (video or still), played as it is.
+       * `file` is a bare name inside the captures folder (outside the repo, see
+       * scripts/product-capture.mjs); `route` is the product page it shows. Nothing is drawn here:
+       * a missing or wrong file makes the export refuse the reel.
+       */
+      kind: 'product-capture'
+      theme?: ThemeName
+      file: string
+      route: string
+      /** Seconds into a video where this scene starts. */
+      trimStart?: number
+      /** `contain` keeps the whole screen; `cover` fills the frame and may crop. */
+      fit?: 'contain' | 'cover'
+      /** One or two words above the frame. */
+      label?: string
+      /** The screen state the recording must show — read by the capture manifest, not drawn. */
+      screenState?: string
+      /** The colours behind the frame, so the shot sits on the reel's own stage (default: the engine backdrop). */
+      stage?: { background: string; ink: string }
+    }
+  | {
       kind: 'bespoke'
       theme?: ThemeName
       component: React.ComponentType<{ t: number; scene: Scene }>
       cues?: Cue[]
+      /**
+       * Real recordings this scene embeds (via `CaptureView`). Declared here so the export gate
+       * and the capture manifest see them; a bespoke scene cannot show a recording unannounced.
+       */
+      captures?: ProductCaptureRef[]
     }
   | {
       kind: 'word-sync'
@@ -425,7 +476,9 @@ export interface Scene {
   /** What the voice says during this scene (teleprompter). */
   vo: string
   /** Word-synchronized speech timing, visual actions, and acoustic events. */
-  sentence?: SentencePlan
+  sentence?: SentencePlan | undefined
+  /** When true, scene does not push-in or zoom camera. */
+  noZoom?: boolean | undefined
 }
 
 export interface SaaSStoryMatrix {
@@ -449,9 +502,10 @@ export interface Reel {
   title: string
   duration: number
   scenes: Scene[]
-  theme?: ThemeName
-  storyMatrix?: SaaSStoryMatrix
-  musicMood?: MusicMood
+  theme?: ThemeName | undefined
+  storyMatrix?: SaaSStoryMatrix | undefined
+  musicMood?: MusicMood | undefined
+  noZoom?: boolean | undefined
 }
 
 export interface Cue {

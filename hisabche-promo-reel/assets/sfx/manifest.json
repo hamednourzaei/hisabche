@@ -1,7 +1,7 @@
 {
-  "pop": ["pop-select-click.ogg", "pop-click-tactile.ogg"],
+  "pop": ["pop-select-click.ogg", "pop-click-tactile.ogg", "user-pop.ogg"],
   "chatPop": ["chatpop-message.ogg", "chatpop-switch.ogg"],
-  "tick": ["tick-mechanical-1.ogg", "tick-ui-click.ogg"],
+  "tick": ["tick-mechanical-1.ogg", "tick-ui-click.ogg", "user-mouse-click.ogg"],
   "clockTickRapid": ["clocktickrapid-burst-1.ogg", "clocktickrapid-burst-2.ogg"],
   "typewriterClick": ["typewriter-laptop.ogg"],
   "markerScribble": ["marker-stroke-1.ogg", "marker-stroke-2.ogg", "marker-stroke-3.ogg"],
@@ -13,30 +13,46 @@
     "cash-register-drawer.ogg",
     "cash-coins-handle-1.ogg",
     "cash-coins-handle-2.ogg",
-    "cash-coin-win.ogg"
+    "cash-coin-win.ogg",
+    "user-money-payment.ogg"
   ],
   "receiptPrint": [
     "receipt-print-feed-1.ogg",
     "receipt-print-feed-2.ogg",
     "receipt-print-feed-3.ogg"
   ],
-  "whoosh": ["whoosh-card-slide-1.ogg"],
+  "whoosh": ["whoosh-card-slide-1.ogg", "user-title-swoosh.ogg"],
   "cameraSwish": ["cameraswish-card-slide-2.ogg"],
   "softTransition": ["softtrans-sweep.ogg", "softtrans-scroll-1.ogg", "softtrans-card-slide-3.ogg"],
   "sceneTransition": ["scenetrans-scroll-2.ogg", "scenetrans-back-1.ogg"],
   "impact": ["impact-wood-stamp-1.ogg", "impact-wood-stamp-2.ogg", "impact-soft-punch.ogg"],
-  "alert": ["alert-soft-bong.ogg", "alert-twotone.ogg"],
+  "alert": ["alert-soft-bong.ogg", "alert-twotone.ogg", "user-error.ogg"],
   "titleHit": ["titlehit-trailer-cool.ogg", "titlehit-wood-heavy.ogg", "titlehit-plate.ogg"],
   "bigReveal": ["bigreveal-metal-heavy.ogg", "bigreveal-powerup.ogg"],
   "majorReveal": ["majorreveal-bell-heavy.ogg", "majorreveal-powerup-2.ogg"],
   "cinematicReveal": ["cinematic-powerup-7.ogg", "cinematic-glass-1.ogg"],
   "insightReveal": ["insight-glass-2.ogg", "insight-glass-3.ogg", "insight-highup.ogg"],
-  "dataFlow": ["dataflow-glitch-1.ogg", "dataflow-glitch-2.ogg", "dataflow-pep-1.ogg"],
+  "dataFlow": [
+    "dataflow-glitch-1.ogg",
+    "dataflow-glitch-2.ogg",
+    "dataflow-pep-1.ogg",
+    "user-glitch.ogg"
+  ],
   "sync": ["sync-twotone.ogg", "sync-switch.ogg"],
   "scan": ["scan-barcode-zap-1.ogg", "scan-barcode-zap-2.ogg", "scan-pep-3.ogg"],
   "precisionSequence": ["precision-click-1.ogg", "precision-click-2.ogg", "precision-mouse.ogg"],
-  "success": ["success-notification.ogg", "success-confirm-1.ogg", "success-threetone.ogg"],
-  "chime": ["chime-correct-tone.ogg", "chime-confirm-2.ogg", "chime-confirm-3.ogg"],
+  "success": [
+    "success-notification.ogg",
+    "success-confirm-1.ogg",
+    "success-threetone.ogg",
+    "user-correct-answer.ogg"
+  ],
+  "chime": [
+    "chime-correct-tone.ogg",
+    "chime-confirm-2.ogg",
+    "chime-confirm-3.ogg",
+    "user-ding.ogg"
+  ],
   "financialMilestone": ["finmilestone-completed.ogg", "finmilestone-chips.ogg"],
   "successResolution": ["successres-correct.ogg", "successres-confirm.ogg", "successres-glass.ogg"],
   "ctaResolution": ["ctares-completed.ogg", "ctares-confirm.ogg", "ctares-glass.ogg"]

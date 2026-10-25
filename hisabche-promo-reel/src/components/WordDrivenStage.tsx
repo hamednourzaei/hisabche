@@ -40,7 +40,14 @@ export function WordDrivenStage({ t, scene }: WordDrivenStageProps) {
   return (
     <div className="scene word-driven-stage" data-actor={actor}>
       {/* ── Visual Actor Canvas ── */}
-      <div className="word-driven-canvas">
+      <div
+        className="word-driven-canvas"
+        data-text-motion="drift"
+        style={{
+          transform: `translate(${(Math.sin(t * 0.6) * 4).toFixed(2)}px, ${(Math.cos(t * 0.45) * 3).toFixed(2)}px) scale(${(1 + 0.008 * Math.sin(t * 0.5)).toFixed(4)})`,
+          transformOrigin: 'center center',
+        }}
+      >
         {actor === 'hook-sales' && <HookSalesActor t={t} plan={plan} />}
         {actor === 'broken-chart' && <BrokenChartActor t={t} plan={plan} />}
         {actor === 'leak-cards' && <LeakCardsActor t={t} plan={plan} />}

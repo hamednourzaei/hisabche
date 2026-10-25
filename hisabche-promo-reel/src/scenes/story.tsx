@@ -58,6 +58,8 @@ export function Cta({ spec, t }: { spec: Spec<'cta'>; t: number }) {
         const from = i === 0 ? CTA.box1 : spec.switchAt
         const to = i === 0 ? spec.switchAt : 1e9
         const glow = active ? 0.55 + 0.45 * pulse(t, from, to) : 0.25
+        // CTA pulse: the box being offered breathes — an invitation, not a slide.
+        const pulseScale = active ? 1 + 0.022 * pulse(t, from, to, 1.2) : 1
         const entered = enter(t, i === 0 ? CTA.box1 : CTA.box2, { y: 40 })
         return (
           <Card
@@ -68,6 +70,7 @@ export function Cta({ spec, t }: { spec: Spec<'cta'>; t: number }) {
             style={{
               top: 470 + i * 170,
               ...entered,
+              transform: `${entered.transform ?? ''} scale(${pulseScale.toFixed(4)})`,
               // The box not being talked about dims to half, as in the reference.
               opacity: Number(entered.opacity) * (active ? 1 : 0.5),
             }}
@@ -185,9 +188,15 @@ export function Versus({ spec, t }: { spec: Spec<'versus'>; t: number }) {
     a.tone === 'red' ? -1 : b.tone === 'red' ? 1 : 0,
   )
 
+  // Opposition physics: the two sides lean/push toward each other and keep a slow
+  // counter-sway — the versus is a relationship, not two static cards.
+  const oppose = ease(progress(t, VERSUS.verdict - 0.8, 1.2))
+  const sway = Math.sin(t * 1.5) * 1.6
+
   return (
     <div
       className={`scene versus-scene ${isStacked ? 'versus-stacked-mode' : 'versus-columns-mode'}`}
+      data-motion="opposition"
     >
       <div className="title-block versus-title-block" style={{ top: 85, insetInline: 20 }}>
         <div className="title versus-title" style={enter(t, VERSUS.title)}>
@@ -212,6 +221,8 @@ export function Versus({ spec, t }: { spec: Spec<'versus'>; t: number }) {
             const split = splitTitleSubtitle(side.value)
             const iconName = side.tone === 'red' ? 'trash' : 'check'
             const animTime = i === 0 ? VERSUS.left : VERSUS.right
+            const entered = enter(t, animTime, { y: 25 })
+            const opposing = (i === 0 ? 1 : -1) * (5 * oppose + sway)
             return (
               <Card
                 key={i}
@@ -226,7 +237,8 @@ export function Versus({ spec, t }: { spec: Spec<'versus'>; t: number }) {
                   alignItems: 'center',
                   gap: 18,
                   boxSizing: 'border-box',
-                  ...enter(t, animTime, { y: 25 }),
+                  ...entered,
+                  transform: `${entered.transform ?? ''} translateX(${opposing.toFixed(2)}px)`,
                 }}
               >
                 <div
@@ -303,6 +315,9 @@ export function Versus({ spec, t }: { spec: Spec<'versus'>; t: number }) {
           {[spec.right, spec.left].map((side, i) => {
             const fontCfg = getOpticalFontSize(side.value, 'card-half')
             const iconName = side.tone === 'red' ? 'trash' : 'check'
+            const entered = enter(t, i ? VERSUS.left : VERSUS.right, { y: 35 })
+            const lean = (i === 0 ? -1 : 1) * (4 * oppose + 0.6 * sway)
+            const converge = (i === 0 ? -1 : 1) * 7 * oppose
             return (
               <Card
                 key={i}
@@ -319,7 +334,8 @@ export function Versus({ spec, t }: { spec: Spec<'versus'>; t: number }) {
                   justifyContent: 'space-between',
                   gap: 14,
                   boxSizing: 'border-box',
-                  ...enter(t, i ? VERSUS.left : VERSUS.right, { y: 35 }),
+                  ...entered,
+                  transform: `${entered.transform ?? ''} perspective(760px) rotateY(${lean.toFixed(2)}deg) translateX(${converge.toFixed(2)}px)`,
                 }}
               >
                 {/* 1. Top Header Pill / Icon Badge */}
@@ -464,7 +480,10 @@ export function Ledger({ spec, t }: { spec: Spec<'ledger'>; t: number }) {
           <span className="muted">مانده</span>
           <span
             className="balance-value"
-            style={{ color: p >= 1 ? TONE.green.solid : TONE.cyan.solid }}
+            style={{
+              color: p >= 1 ? TONE.green.solid : TONE.cyan.solid,
+              paddingInline: 8,
+            }}
           >
             {faNumber(balance)} {spec.unit}
           </span>
