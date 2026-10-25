@@ -1,0 +1,480 @@
+{
+  "generatedAt": "2026-10-25T22:48:40.605Z",
+  "base": "http://localhost:3111",
+  "totals": {
+    "urls": 262,
+    "sitemapUrls": 123,
+    "staticRoutes": 22,
+    "redirects": 28,
+    "dynamicRoutes": [
+      "/blog/category/[slug]/page/[page]",
+      "/blog/category/[slug]",
+      "/blog/page/[page]",
+      "/blog/tag/[slug]/page/[page]",
+      "/blog/tag/[slug]",
+      "/blog/[slug]",
+      "/docs/[slug]",
+      "/features/[slug]",
+      "/feedback/[token]",
+      "/market/[seller]",
+      "/market/[seller]/[listing]",
+      "/my-attendance/[token]",
+      "/portal/[token]",
+      "/public-invoice/[token]",
+      "/public-task/[token]"
+    ],
+    "status": {
+      "200": 259,
+      "404": 3
+    },
+    "pageType": {
+      "company": 6,
+      "auth": 15,
+      "blog": 3,
+      "docs": 69,
+      "legal": 30,
+      "other": 115,
+      "landing": 3,
+      "feature": 18,
+      "market": 3
+    },
+    "locale": {
+      "en": 78,
+      "af": 78,
+      "fa": 78,
+      "?": 28
+    },
+    "indexable": 126,
+    "noindex": 136,
+    "thin": 121,
+    "missingCanonical": 130,
+    "notSelfCanonical": [],
+    "canonicalNotAbsolute": [],
+    "canonicalTargetBroken": [],
+    "noH1": [
+      "http://localhost:3111/fa/accept-invite",
+      "http://localhost:3111/en/accept-invite",
+      "http://localhost:3111/af/accept-invite",
+      "http://localhost:3111/en/login",
+      "http://localhost:3111/fa/login",
+      "http://localhost:3111/af/login",
+      "http://localhost:3111/fa/signup",
+      "http://localhost:3111/af/signup",
+      "http://localhost:3111/en/signup",
+      "http://localhost:3111/af/human-resources",
+      "http://localhost:3111/fa/human-resources",
+      "http://localhost:3111/en/human-resources",
+      "http://localhost:3111/fa/human-resources/sample-id",
+      "http://localhost:3111/en/human-resources/sample-id",
+      "http://localhost:3111/af/human-resources/sample-id",
+      "http://localhost:3111/fa/people-workspace",
+      "http://localhost:3111/en/people-workspace",
+      "http://localhost:3111/af/people-workspace",
+      "http://localhost:3111/human-resources",
+      "http://localhost:3111/human-resources/:id",
+      "http://localhost:3111/people-workspace"
+    ],
+    "multiH1": [
+      {
+        "url": "http://localhost:3111/af/permissions",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/fa/permissions",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/en/permissions",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/en/bank",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/af/bank",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/fa/bank",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/fa/assets",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/af/assets",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/en/assets",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/fa/budgets",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/af/budgets",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/en/budgets",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/fa/quick-invoice",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/en/quick-invoice",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/af/quick-invoice",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/permissions",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/bank",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/assets",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/budgets",
+        "count": 2
+      },
+      {
+        "url": "http://localhost:3111/quick-invoice",
+        "count": 2
+      }
+    ],
+    "duplicateTitlesSamePath": [],
+    "hreflangIssues": [],
+    "robotsBlockedIndexable": [],
+    "robotsDisallowRules": [
+      "/api/",
+      "/_next/data/",
+      "/public-invoice/",
+      "/public-task/",
+      "/portal/",
+      "/my-attendance/",
+      "/feedback/",
+      "/fa/public-invoice/",
+      "/af/public-invoice/",
+      "/en/public-invoice/",
+      "/fa/public-task/",
+      "/af/public-task/",
+      "/en/public-task/",
+      "/fa/portal/",
+      "/af/portal/",
+      "/en/portal/",
+      "/fa/my-attendance/",
+      "/af/my-attendance/",
+      "/en/my-attendance/",
+      "/fa/feedback/",
+      "/af/feedback/",
+      "/en/feedback/",
+      "/fa/dashboard",
+      "/af/dashboard",
+      "/en/dashboard",
+      "/fa/invoices",
+      "/af/invoices",
+      "/en/invoices",
+      "/fa/customers",
+      "/af/customers",
+      "/en/customers",
+      "/fa/warehouse",
+      "/af/warehouse",
+      "/en/warehouse",
+      "/fa/settings",
+      "/af/settings",
+      "/en/settings",
+      "/fa/billing",
+      "/af/billing",
+      "/en/billing",
+      "/fa/wallet",
+      "/af/wallet",
+      "/en/wallet",
+      "/fa/market-seller",
+      "/af/market-seller",
+      "/en/market-seller",
+      "/fa/analysis",
+      "/af/analysis",
+      "/en/analysis",
+      "/fa/promotions",
+      "/af/promotions",
+      "/en/promotions",
+      "/fa/campaigns",
+      "/af/campaigns",
+      "/en/campaigns",
+      "/fa/crm",
+      "/af/crm",
+      "/en/crm",
+      "/fa/tasks",
+      "/af/tasks",
+      "/en/tasks",
+      "/fa/referrals",
+      "/af/referrals",
+      "/en/referrals",
+      "/fa/developers",
+      "/af/developers",
+      "/en/developers",
+      "/fa/orders",
+      "/af/orders",
+      "/en/orders",
+      "/fa/marketplace",
+      "/af/marketplace",
+      "/en/marketplace",
+      "/oauth/",
+      "/fa/oauth/",
+      "/af/oauth/",
+      "/en/oauth/",
+      "/fa/accounting",
+      "/af/accounting",
+      "/en/accounting",
+      "/fa/purchasing",
+      "/af/purchasing",
+      "/en/purchasing",
+      "/fa/manufacturing",
+      "/af/manufacturing",
+      "/en/manufacturing",
+      "/fa/human-resources",
+      "/af/human-resources",
+      "/en/human-resources",
+      "/fa/team-and-payroll",
+      "/af/team-and-payroll",
+      "/en/team-and-payroll",
+      "/fa/permissions",
+      "/af/permissions",
+      "/en/permissions",
+      "/fa/approvals",
+      "/af/approvals",
+      "/en/approvals",
+      "/fa/activities",
+      "/af/activities",
+      "/en/activities",
+      "/fa/sync-center",
+      "/af/sync-center",
+      "/en/sync-center",
+      "/fa/quick-invoice",
+      "/af/quick-invoice",
+      "/en/quick-invoice",
+      "/fa/workflow-templates",
+      "/af/workflow-templates",
+      "/en/workflow-templates",
+      "/fa/onboarding",
+      "/af/onboarding",
+      "/en/onboarding",
+      "/fa/accounting-workspace",
+      "/af/accounting-workspace",
+      "/en/accounting-workspace",
+      "/fa/assets",
+      "/af/assets",
+      "/en/assets",
+      "/fa/assistant",
+      "/af/assistant",
+      "/en/assistant",
+      "/fa/bank",
+      "/af/bank",
+      "/en/bank",
+      "/fa/budgets",
+      "/af/budgets",
+      "/en/budgets",
+      "/fa/conflicts",
+      "/af/conflicts",
+      "/en/conflicts",
+      "/fa/customer-list",
+      "/af/customer-list",
+      "/en/customer-list",
+      "/fa/data-and-sync",
+      "/af/data-and-sync",
+      "/en/data-and-sync",
+      "/fa/data-migration",
+      "/af/data-migration",
+      "/en/data-migration",
+      "/fa/domain",
+      "/af/domain",
+      "/en/domain",
+      "/fa/expiry",
+      "/af/expiry",
+      "/en/expiry",
+      "/fa/governance",
+      "/af/governance",
+      "/en/governance",
+      "/fa/inventory-workspace",
+      "/af/inventory-workspace",
+      "/en/inventory-workspace",
+      "/fa/operations",
+      "/af/operations",
+      "/en/operations",
+      "/fa/people-workspace",
+      "/af/people-workspace",
+      "/en/people-workspace",
+      "/fa/product-list",
+      "/af/product-list",
+      "/en/product-list",
+      "/fa/sales-followup",
+      "/af/sales-followup",
+      "/en/sales-followup",
+      "/fa/sales-workspace",
+      "/af/sales-workspace",
+      "/en/sales-workspace",
+      "/fa/stock-count",
+      "/af/stock-count",
+      "/en/stock-count",
+      "/fa/till",
+      "/af/till",
+      "/en/till",
+      "/fa/timesheets",
+      "/af/timesheets",
+      "/en/timesheets",
+      "/fa/accept-invite",
+      "/af/accept-invite",
+      "/en/accept-invite",
+      "/test.html"
+    ],
+    "sitemapNot200": [],
+    "sitemapNoindex": [],
+    "sitemapNonSelfCanonical": [],
+    "orphanIndexable": [],
+    "redirectsTo404": [
+      {
+        "url": "http://localhost:3111/fa/market",
+        "chain": "404 http://localhost:3111/fa/market"
+      },
+      {
+        "url": "http://localhost:3111/af/market",
+        "chain": "404 http://localhost:3111/af/market"
+      },
+      {
+        "url": "http://localhost:3111/en/market",
+        "chain": "404 http://localhost:3111/en/market"
+      }
+    ],
+    "chains": [
+      {
+        "url": "http://localhost:3111/crm",
+        "chain": "307 http://localhost:3111/crm -> /fa/crm | 308 http://localhost:3111/fa/crm -> /fa/customers?tab=outreach | 200 http://localhost:3111/fa/customers?tab=outreach"
+      },
+      {
+        "url": "http://localhost:3111/sales-followup",
+        "chain": "307 http://localhost:3111/sales-followup -> /fa/sales-followup | 308 http://localhost:3111/fa/sales-followup -> /fa/customers?tab=outreach | 200 http://localhost:3111/fa/customers?tab=outreach"
+      },
+      {
+        "url": "http://localhost:3111/tasks",
+        "chain": "307 http://localhost:3111/tasks -> /fa/tasks | 308 http://localhost:3111/fa/tasks -> /fa/customers?tab=outreach | 200 http://localhost:3111/fa/customers?tab=outreach"
+      },
+      {
+        "url": "http://localhost:3111/campaigns",
+        "chain": "307 http://localhost:3111/campaigns -> /fa/campaigns | 308 http://localhost:3111/fa/campaigns -> /fa/customers?tab=outreach&view=campaigns | 200 http://localhost:3111/fa/customers?tab=outreach&view=campaigns"
+      },
+      {
+        "url": "http://localhost:3111/customer-list",
+        "chain": "307 http://localhost:3111/customer-list -> /fa/customer-list | 308 http://localhost:3111/fa/customer-list -> /fa/customers | 200 http://localhost:3111/fa/customers"
+      },
+      {
+        "url": "http://localhost:3111/product-list",
+        "chain": "307 http://localhost:3111/product-list -> /fa/product-list | 308 http://localhost:3111/fa/product-list -> /fa/warehouse?tab=products | 200 http://localhost:3111/fa/warehouse?tab=products"
+      },
+      {
+        "url": "http://localhost:3111/expiry",
+        "chain": "307 http://localhost:3111/expiry -> /fa/expiry | 308 http://localhost:3111/fa/expiry -> /fa/warehouse?tab=expiry | 200 http://localhost:3111/fa/warehouse?tab=expiry"
+      },
+      {
+        "url": "http://localhost:3111/human-resources",
+        "chain": "307 http://localhost:3111/human-resources -> /fa/human-resources | 308 http://localhost:3111/fa/human-resources -> /fa/team-and-payroll | 200 http://localhost:3111/fa/team-and-payroll"
+      },
+      {
+        "url": "http://localhost:3111/human-resources/:id",
+        "chain": "307 http://localhost:3111/human-resources/:id -> /fa/human-resources/:id | 308 http://localhost:3111/fa/human-resources/:id -> /fa/team-and-payroll/:id | 200 http://localhost:3111/fa/team-and-payroll/:id"
+      },
+      {
+        "url": "http://localhost:3111/timesheets",
+        "chain": "307 http://localhost:3111/timesheets -> /fa/timesheets | 308 http://localhost:3111/fa/timesheets -> /fa/team-and-payroll?tab=pay&view=timesheets | 200 http://localhost:3111/fa/team-and-payroll?tab=pay&view=timesheets"
+      },
+      {
+        "url": "http://localhost:3111/purchasing",
+        "chain": "307 http://localhost:3111/purchasing -> /fa/purchasing | 308 http://localhost:3111/fa/purchasing -> /fa/invoices?type=purchase | 200 http://localhost:3111/fa/invoices?type=purchase"
+      },
+      {
+        "url": "http://localhost:3111/promotions",
+        "chain": "307 http://localhost:3111/promotions -> /fa/promotions | 308 http://localhost:3111/fa/promotions -> /fa/invoices?tab=pricing | 200 http://localhost:3111/fa/invoices?tab=pricing"
+      },
+      {
+        "url": "http://localhost:3111/permissions",
+        "chain": "307 http://localhost:3111/permissions -> /fa/permissions | 308 http://localhost:3111/fa/permissions -> /fa/governance?tab=permissions | 200 http://localhost:3111/fa/governance?tab=permissions"
+      },
+      {
+        "url": "http://localhost:3111/bank",
+        "chain": "307 http://localhost:3111/bank -> /fa/bank | 308 http://localhost:3111/fa/bank -> /fa/accounting?tab=treasury | 200 http://localhost:3111/fa/accounting?tab=treasury"
+      },
+      {
+        "url": "http://localhost:3111/assets",
+        "chain": "307 http://localhost:3111/assets -> /fa/assets | 308 http://localhost:3111/fa/assets -> /fa/accounting?tab=treasury&view=assets | 200 http://localhost:3111/fa/accounting?tab=treasury&view=assets"
+      },
+      {
+        "url": "http://localhost:3111/conflicts",
+        "chain": "307 http://localhost:3111/conflicts -> /fa/conflicts | 308 http://localhost:3111/fa/conflicts -> /fa/data-and-sync?tab=details&view=conflicts | 200 http://localhost:3111/fa/data-and-sync?tab=details&view=conflicts"
+      },
+      {
+        "url": "http://localhost:3111/budgets",
+        "chain": "307 http://localhost:3111/budgets -> /fa/budgets | 308 http://localhost:3111/fa/budgets -> /fa/accounting?tab=reports&view=budgets | 200 http://localhost:3111/fa/accounting?tab=reports&view=budgets"
+      },
+      {
+        "url": "http://localhost:3111/workflow-templates",
+        "chain": "307 http://localhost:3111/workflow-templates -> /fa/workflow-templates | 308 http://localhost:3111/fa/workflow-templates -> /fa/approvals?tab=workflows | 200 http://localhost:3111/fa/approvals?tab=workflows"
+      },
+      {
+        "url": "http://localhost:3111/data-migration",
+        "chain": "307 http://localhost:3111/data-migration -> /fa/data-migration | 308 http://localhost:3111/fa/data-migration -> /fa/data-and-sync?tab=details&view=migration | 200 http://localhost:3111/fa/data-and-sync?tab=details&view=migration"
+      },
+      {
+        "url": "http://localhost:3111/referrals",
+        "chain": "307 http://localhost:3111/referrals -> /fa/referrals | 308 http://localhost:3111/fa/referrals -> /fa/billing?tab=money&view=referrals | 200 http://localhost:3111/fa/billing?tab=money&view=referrals"
+      },
+      {
+        "url": "http://localhost:3111/wallet",
+        "chain": "307 http://localhost:3111/wallet -> /fa/wallet | 308 http://localhost:3111/fa/wallet -> /fa/billing?tab=money | 200 http://localhost:3111/fa/billing?tab=money"
+      },
+      {
+        "url": "http://localhost:3111/accounting-workspace",
+        "chain": "307 http://localhost:3111/accounting-workspace -> /fa/accounting-workspace | 308 http://localhost:3111/fa/accounting-workspace -> /fa/accounting | 200 http://localhost:3111/fa/accounting"
+      },
+      {
+        "url": "http://localhost:3111/sales-workspace",
+        "chain": "307 http://localhost:3111/sales-workspace -> /fa/sales-workspace | 308 http://localhost:3111/fa/sales-workspace -> /fa/invoices | 200 http://localhost:3111/fa/invoices"
+      },
+      {
+        "url": "http://localhost:3111/inventory",
+        "chain": "307 http://localhost:3111/inventory -> /fa/inventory | 308 http://localhost:3111/fa/inventory -> /fa/warehouse | 200 http://localhost:3111/fa/warehouse"
+      },
+      {
+        "url": "http://localhost:3111/inventory-workspace",
+        "chain": "307 http://localhost:3111/inventory-workspace -> /fa/inventory-workspace | 308 http://localhost:3111/fa/inventory-workspace -> /fa/warehouse | 200 http://localhost:3111/fa/warehouse"
+      },
+      {
+        "url": "http://localhost:3111/people-workspace",
+        "chain": "307 http://localhost:3111/people-workspace -> /fa/people-workspace | 308 http://localhost:3111/fa/people-workspace -> /fa/team-and-payroll | 200 http://localhost:3111/fa/team-and-payroll"
+      },
+      {
+        "url": "http://localhost:3111/quick-invoice",
+        "chain": "307 http://localhost:3111/quick-invoice -> /fa/quick-invoice | 308 http://localhost:3111/fa/quick-invoice -> /fa/invoices/new | 200 http://localhost:3111/fa/invoices/new"
+      },
+      {
+        "url": "http://localhost:3111/orders",
+        "chain": "307 http://localhost:3111/orders -> /fa/orders | 308 http://localhost:3111/fa/orders -> /fa/settings | 200 http://localhost:3111/fa/settings"
+      }
+    ],
+    "queryUrls": [],
+    "jsonLdInvalid": [],
+    "forbiddenSchema": []
+  }
+}

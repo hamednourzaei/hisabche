@@ -51,6 +51,9 @@ export function PublicAuthActions({
       <Link
         prefetch={false}
         href={`${routePrefix}/login`}
+        // Sign-in and sign-up are noindex app doors, not content: a public page
+        // pointing at them passes no equity (CLAUDE.md §8, public → private).
+        rel="nofollow"
         className="hidden rounded-full px-3 py-1.5 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors motion-reduce:transition-none hover:text-[hsl(var(--fg-primary))] md:inline-flex"
       >
         {labels.signIn}
@@ -58,6 +61,7 @@ export function PublicAuthActions({
       <Link
         prefetch={false}
         href={`${routePrefix}/signup`}
+        rel="nofollow"
         // Spread rather than pass `undefined`: `exactOptionalPropertyTypes`
         // makes `onClick={undefined}` a type error on LinkProps.
         {...(onNavigateCta ? { onClick: onNavigateCta } : {})}

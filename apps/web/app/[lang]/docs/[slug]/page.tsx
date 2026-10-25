@@ -120,15 +120,12 @@ export default async function DocsArticlePage({
             name: site.breadcrumbHome ?? 'Home',
             item: localeUrl(locale, ''),
           },
+          // No middle crumb for `/docs`: that address is a 308 to the entry
+          // article, and a BreadcrumbList item must point at a 200 canonical
+          // page, not a redirect. The real hierarchy is Home → article.
           {
             '@type': 'ListItem',
             position: 2,
-            name: site.title ?? 'Documentation',
-            item: localeUrl(locale, '/docs'),
-          },
-          {
-            '@type': 'ListItem',
-            position: 3,
             name: text.title ?? slug,
             item: localeUrl(locale, `/docs/${slug}`),
           },

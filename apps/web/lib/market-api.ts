@@ -18,13 +18,28 @@ import type {
   MarketSitemap,
 } from '@hisabche/api'
 
-const API_BASE = (
-  process.env.MARKET_API_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  'https://api.hisabche.com/api'
+/**
+ * This file only ever runs on the server (server components + sitemap), so a
+ * relative base is never valid: `fetch('/api/…')` throws
+ * `TypeError: Failed to parse URL` and turns /market into a 500. The deployed
+ * browser config uses `/api`, so validate and fall back to the absolute API.
+ */
+function absoluteApiBase(raw: string | undefined, fallback: string): string {
+  const value = raw?.trim().replace(/\/+$/, '') ?? ''
+  if (!value) return fallback
+  try {
+    const url = new URL(value)
+    if (url.protocol === 'http:' || url.protocol === 'https:') return value
+  } catch {
+    /* relative or malformed — not usable by a server-side fetch */
+  }
+  return fallback
+}
+
+const API_BASE = absoluteApiBase(
+  process.env.MARKET_API_URL || process.env.NEXT_PUBLIC_API_URL,
+  'https://api.hisabche.com/api',
 )
-  .trim()
-  .replace(/\/+$/, '')
 
 /** Ten minutes: how long a switched-off marketplace or a paused listing may linger. */
 export const MARKET_REVALIDATE_SECONDS = 600
@@ -41,15 +56,23 @@ export class MarketUnavailableError extends Error {
 }
 
 async function getJson<T>(path: string): Promise<MarketResult<T>> {
-  let response: Response
-  try {
-    response = await fetch(`${API_BASE}${path}`, {
+  // Same rule as the blog fetcher: retry a network error or timeout once, but
+  // never convert an error into "the marketplace is empty".
+  const attempt = () =>
+    fetch(`${API_BASE}${path}`, {
       headers: { accept: 'application/json' },
       next: { revalidate: MARKET_REVALIDATE_SECONDS, tags: ['market'] },
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(12_000),
     })
-  } catch (error) {
-    throw new MarketUnavailableError(`market API unreachable (${path}): ${String(error)}`)
+  let response: Response
+  try {
+    response = await attempt()
+  } catch {
+    try {
+      response = await attempt()
+    } catch (error) {
+      throw new MarketUnavailableError(`market API unreachable (${path}): ${String(error)}`)
+    }
   }
   if (response.status === 404 || response.status === 503) return { kind: 'closed' }
   if (!response.ok) {
