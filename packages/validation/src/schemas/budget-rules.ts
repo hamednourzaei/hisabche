@@ -310,12 +310,14 @@ export function distributeByWeights(totalMinor: number, weightsBp: number[]): nu
   }
   if (sum !== 10_000) throw new Error('BUDGET_DISTRIBUTION_PERCENT_INVALID')
 
-  // BigInt: total × weight can pass 2^53 for large budgets.
+  // BigInt: total × weight can pass 2^53 for large budgets. Built with BigInt()
+  // rather than `n` literals: the web build targets below ES2020.
+  const basisPoints = BigInt(10_000)
   const exact = weightsBp.map((w) => BigInt(totalMinor) * BigInt(w))
-  const floors = exact.map((e) => Number(e / 10_000n))
+  const floors = exact.map((e) => Number(e / basisPoints))
   let left = totalMinor - floors.reduce((s, x) => s + x, 0)
   const order = exact
-    .map((e, i) => ({ i, rem: Number(e % 10_000n) }))
+    .map((e, i) => ({ i, rem: Number(e % basisPoints) }))
     .sort((a, b) => b.rem - a.rem || a.i - b.i)
   for (const { i } of order) {
     if (left <= 0) break
