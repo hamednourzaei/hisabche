@@ -28,6 +28,7 @@ import {
 import { CURRENCY_SIGN, currencySign } from '@hisabche/formatting'
 
 import { SelectField } from '../select-field'
+import { useAfterHydration } from '../../../hooks/use-after-hydration'
 import { cn } from '../../../lib/utils'
 import { toIsoDay } from '@hisabche/formatting'
 import { rateFromPair } from '../../../lib/warehouse/rate-from-pair'
@@ -77,6 +78,7 @@ export function DisplayBasisPicker({
   disabled,
   className,
 }: DisplayBasisPickerProps) {
+  const hydrated = useAfterHydration()
   const tr = (key: string, fallback: string) => (t ? t(key, fallback) : fallback)
 
   const label = (code: string): string => {
@@ -91,7 +93,12 @@ export function DisplayBasisPicker({
 
   // Only the base is available: there is nothing to choose between, so a
   // picker would be a control that does nothing.
-  if (available.length <= 1) return null
+  //
+  // «Available» comes from exchange rates, and the persisted query cache can
+  // hand those to the first client render while the server HTML was built
+  // without them. Showing the picker before hydration finishes put a <div>
+  // where the server had the rate button (React #418, DisplayBasisPicker).
+  if (!hydrated || available.length <= 1) return null
 
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>

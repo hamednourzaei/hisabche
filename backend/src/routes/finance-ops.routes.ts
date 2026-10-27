@@ -417,6 +417,19 @@ export async function financeOpsRoutes(fastify: FastifyInstance) {
     },
   )
 
+  fastify.delete(
+    '/currency/units/:name',
+    { preHandler: configure, schema: { response: { 200: toJsonSchema(z.any()) } } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { name } = z.object({ name: z.string().trim().min(1).max(40) }).parse(request.params)
+        return reply.send(await currencyService.deleteUnit(request.tenancy, name))
+      } catch (err) {
+        return fail(reply, err, 'Failed to remove the unit')
+      }
+    },
+  )
+
   // Reverses the previous run before booking its own: last period's opinion
   // about a rate must not sit in the books underneath this one.
   fastify.post(

@@ -15,5 +15,8 @@ SELECT 'browser roles have nothing',
        NOT has_table_privilege('anon', 'public.custom_unit_rates', 'SELECT')
    AND NOT has_table_privilege('authenticated', 'public.custom_unit_rates', 'SELECT')
 UNION ALL
-SELECT 'server cannot delete',
-       NOT has_table_privilege('service_role', 'public.custom_unit_rates', 'DELETE');
+-- Before custom-units-02 the server cannot delete; after it, it can. Both are
+-- correct states, so this row only checks the server may still read and write.
+SELECT 'server can read and write',
+       has_table_privilege('service_role', 'public.custom_unit_rates', 'SELECT')
+   AND has_table_privilege('service_role', 'public.custom_unit_rates', 'INSERT');

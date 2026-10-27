@@ -36,7 +36,7 @@ export {
   isTokenProviderReady,
   tokenReady,
 } from './lib/tokenProvider'
-export { apiErrorMessage, apiErrorCode } from './lib/api-error-message'
+export { apiErrorMessage } from './lib/api-error-message'
 export { apiErrorFields, type ApiFieldError } from './lib/api-error-fields'
 // The unread badge refreshes when THIS tab causes a notification.
 export { createNotificationMutationCache } from './lib/notification-refresh'
@@ -1049,6 +1049,7 @@ export {
   useSetExchangeRate,
   useCustomUnits,
   useSetCustomUnit,
+  useDeleteCustomUnit,
   type CustomUnitQuote,
   type CustomUnitList,
   useBaseCurrency,

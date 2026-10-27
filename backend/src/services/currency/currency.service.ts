@@ -184,6 +184,30 @@ export class CurrencyService {
   }
 
   /**
+   * Removes a unit the business named — every quote of that name, in this
+   * business only. The unit is a display/conversion entry, never a document
+   * currency, so no accounting row refers to it.
+   */
+  async deleteUnit(ctx: TenancyContext, rawName: string): Promise<{ removed: number }> {
+    if (ctx.role === 'seller') throw new ConflictError('RATE_MANAGE_FORBIDDEN')
+    const name = rawName.trim()
+    if (!name) throw new ValidationError('UNIT_NAME_REQUIRED')
+
+    const { data, error } = await supabase
+      .from('custom_unit_rates')
+      .delete()
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('name', name)
+      .select('id')
+    if (isMissingTable(error)) throw new ConflictError('UNITS_NOT_CONFIGURED')
+    // 42501 = the server role lacks DELETE: docs/custom-units-02-migration.sql
+    // has not been run. Said plainly instead of a bare 500.
+    if (error?.code === '42501') throw new ConflictError('UNITS_DELETE_NOT_ENABLED')
+    if (error) throw new DatabaseError('Failed to remove the unit', error)
+    return { removed: (data ?? []).length }
+  }
+
+  /**
    * The rate for a date — the most recent quote ON OR BEFORE it.
    *
    * Never a later one. Valuing a past event with information nobody had at the

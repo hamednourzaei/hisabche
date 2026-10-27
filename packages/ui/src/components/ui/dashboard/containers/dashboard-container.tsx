@@ -8,7 +8,8 @@ import { DashboardView } from '../dashboard-view'
 import { WorkQueueContainer } from '../../work-queue/containers/work-queue-container'
 import { DateRangePicker, type DateRange, type PresetKey } from '../date-range-picker'
 import { isNavLocked } from '@hisabche/ui-contract'
-import { useMyCapabilities } from '@hisabche/api'
+import { apiErrorMessage, useDeleteCustomUnit, useMyCapabilities } from '@hisabche/api'
+import { X } from 'lucide-react'
 import { usePageLook } from '../../../../lib/page-look'
 import { useBusinessProfile } from '../../../../hooks/use-business-profile'
 // import { NAV_ITEMS } from '../../../../lib/menu/nav-items'
@@ -148,6 +149,21 @@ export function DashboardContainer() {
   // `POST /currency/revalue`, which books the difference as a journal entry.
   const display = useDisplayBasis()
   const latestUnits = useLatestCustomUnits().units
+  const removeUnit = useDeleteCustomUnit()
+  const [unitError, setUnitError] = useState<string | null>(null)
+  const handleRemoveUnit = (name: string) => {
+    if (
+      !window.confirm(
+        t('display.removeUnitConfirm', 'این واحد حذف شود؟ فاکتورها و دفترها تغییر نمی‌کنند.'),
+      )
+    )
+      return
+    setUnitError(null)
+    removeUnit.mutate(name, {
+      onError: (cause) =>
+        setUnitError(apiErrorMessage(cause, t('display.removeUnitFailed', 'حذف واحد انجام نشد'))),
+    })
+  }
   const [rateOpen, setRateOpen] = useState<'new' | 'edit' | null>(null)
 
   /**
@@ -263,14 +279,31 @@ export function DashboardContainer() {
             {latestUnits.map((unit) => (
               <li
                 key={unit.name}
-                className="rounded-full bg-[hsl(var(--surface-muted))] px-2.5 py-1 tabular-nums"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--surface-muted))] ps-2.5 pe-1 py-1 tabular-nums"
               >
-                {formatNumber(1, intlLocale)} {unit.name} ={' '}
-                {formatNumber(unit.perUnit, intlLocale, 2)}{' '}
-                {nameOfCurrency(t, display.base, display.base)}
+                <span>
+                  {formatNumber(1, intlLocale)} {unit.name} ={' '}
+                  {formatNumber(unit.perUnit, intlLocale, 2)}{' '}
+                  {nameOfCurrency(t, display.base, display.base)}
+                </span>
+                <button
+                  type="button"
+                  aria-label={t('display.removeUnit', 'حذف این واحد')}
+                  title={t('display.removeUnit', 'حذف این واحد')}
+                  disabled={removeUnit.isPending}
+                  onClick={() => handleRemoveUnit(unit.name)}
+                  className="inline-flex size-5 items-center justify-center rounded-full text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-elevated))] hover:text-[hsl(var(--color-destructive))] disabled:opacity-50"
+                >
+                  <X className="size-3" aria-hidden="true" />
+                </button>
               </li>
             ))}
           </ul>
+        ) : null}
+        {unitError ? (
+          <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+            {unitError}
+          </p>
         ) : null}
       </div>
 

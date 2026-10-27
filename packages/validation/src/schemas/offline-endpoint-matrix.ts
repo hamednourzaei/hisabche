@@ -40,6 +40,7 @@ export type EndpointRow = readonly [feature: FeatureKey, status: OfflineAvailabi
  */
 export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'DELETE /attendance-devices/:x': ['hr.attendance_devices', 'online_required'],
+  'DELETE /finance/currency/units/:x': ['settings.custom_units', 'online_required'],
   'DELETE /attendance-links/:x': ['hr.attendance_links', 'online_required'],
   'DELETE /attendance-links/phone/:x': ['hr.attendance_links', 'online_required'],
   'DELETE /automations/:x': ['automation.rules', 'online_required'],

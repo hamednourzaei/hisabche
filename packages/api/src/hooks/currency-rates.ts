@@ -151,6 +151,19 @@ export function useSetCustomUnit() {
   })
 }
 
+export function useDeleteCustomUnit() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const { data } = await apiClient.delete(`/finance/currency/units/${encodeURIComponent(name)}`)
+      return data as { removed: number }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: unitKeys.all })
+    },
+  })
+}
+
 export function useSetExchangeRate() {
   const queryClient = useQueryClient()
 
