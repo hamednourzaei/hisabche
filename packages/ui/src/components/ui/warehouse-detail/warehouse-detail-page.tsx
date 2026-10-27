@@ -124,6 +124,8 @@ export interface ProductDetailPageProps {
   onDelete: () => void
   /** Expiry (request #95) — the batches panel, rendered by the container. */
   expiry?: React.ReactNode
+  /** Industry-specific sections (variants, fitments, warranties) — the container decides which, from the business profile. */
+  specialties?: React.ReactNode
   /** «افزایش و کاهش موجودی» WITH the money journey inside it (17 Oct 2026). */
   movements?: React.ReactNode
   /** The assign form when stock sits in no warehouse — hidden when there is none. */
@@ -166,6 +168,7 @@ export function ProductDetailPage({
   onSave,
   onDelete,
   expiry,
+  specialties,
   movements,
   stockPanel,
   stockPosition,
@@ -622,6 +625,7 @@ export function ProductDetailPage({
 
       {notes}
       {expiry}
+      {specialties}
     </div>
   )
 }

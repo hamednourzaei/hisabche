@@ -45,6 +45,11 @@ jobs:
       - name: Unit tests
         run: pnpm --filter @hisabche/mobile test
 
+      # assets/shell/ is generated (gitignored) and shell-webview.tsx imports
+      # assets/shell/index.html, so Metro cannot resolve the graph without it.
+      - name: Build shell (app-shell -> assets/shell)
+        run: pnpm --filter @hisabche/mobile build:shell
+
       # Proves the Metro graph resolves for a real device target.
       - name: Bundle (Android)
         working-directory: apps/mobile

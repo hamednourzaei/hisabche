@@ -21,3 +21,14 @@ SELECT
 FROM pg_indexes
 WHERE schemaname = 'public'
   AND tablename IN ('invoice_returns', 'invoice_return_lines');
+
+-- The function must not read a column invoice_items does not have, and must
+-- name stock_movements.type (NOT NULL, no default). Run this block on its own:
+-- the SQL editor shows only the last result. Expected: both columns TRUE.
+SELECT
+  position('v_item.warehouse_id' in pg_get_functiondef(p.oid)) = 0 AS no_invoice_item_warehouse_read,
+  position('workspace_id, user_id, product_id, type, quantity' in pg_get_functiondef(p.oid)) > 0 AS restock_names_type
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND p.proname = 'invoice_return_create';

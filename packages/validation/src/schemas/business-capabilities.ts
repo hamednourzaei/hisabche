@@ -22,6 +22,7 @@ export const CAPABILITY_KEYS = [
   'variants',
   'table_service',
   'serialized_items',
+  'auto_fitments',
   'gold_purity',
   'making_charges',
 ] as const
@@ -128,6 +129,7 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
         'packages/local-engine/src/routes/variants.ts',
         'packages/api/src/hooks/universal-core.ts',
         'packages/ui/src/components/ui/warehouse/product-variants-section.tsx',
+        'packages/ui/src/components/ui/warehouse-detail/containers/warehouse-detail-container.tsx',
       ],
       tests: [
         'packages/validation/src/__tests__/universal-core.test.ts',
@@ -149,10 +151,29 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     evidence: {
       sources: [
         'packages/validation/src/schemas/universal-core/serial-batch.domain.ts',
+        'backend/src/routes/operations.routes.ts',
+        'packages/api/src/hooks/universal-core.ts',
+        'packages/ui/src/components/ui/invoices/warranties-section.tsx',
+        'packages/ui/src/components/ui/warehouse-detail/containers/warehouse-detail-container.tsx',
+      ],
+      tests: [
+        'packages/validation/src/__tests__/universal-core.test.ts',
+        'packages/local-engine/src/__tests__/universal-core-parity.test.ts',
+      ],
+    },
+  },
+  auto_fitments: {
+    key: 'auto_fitments',
+    status: 'available',
+    labelKey: 'capability.autoFitments',
+    evidence: {
+      sources: [
         'backend/src/services/inventory/fitment.service.ts',
         'backend/src/routes/operations.routes.ts',
         'packages/local-engine/src/routes/fitments.ts',
-        'packages/ui/src/components/ui/invoices/warranties-section.tsx',
+        'packages/api/src/hooks/universal-core.ts',
+        'packages/ui/src/components/ui/warehouse/product-fitments-section.tsx',
+        'packages/ui/src/components/ui/warehouse-detail/containers/warehouse-detail-container.tsx',
       ],
       tests: [
         'packages/validation/src/__tests__/universal-core.test.ts',

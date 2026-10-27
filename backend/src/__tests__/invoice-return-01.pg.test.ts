@@ -341,6 +341,10 @@ describe('Postgres: atomic invoice returns (invoice-return-01)', () => {
     `
     expect(sm.length).toBe(1)
     expect(Number(sm[0]?.quantity)).toBe(2)
+    // stock_movements.type is NOT NULL without a default, and invoice_items has
+    // no warehouse_id: both made the production call fail (42703, then 23502).
+    expect(sm[0]?.type).toBe('purchase')
+    expect(sm[0]?.to_warehouse_id).not.toBeNull()
 
     // Assert that NO cost_consumptions row was created with zero cost
     const cc = await sql`

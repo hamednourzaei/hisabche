@@ -232,16 +232,23 @@ BEGIN
        AND product_id = v_item.product_id
        AND quantity > 0;
 
-    v_warehouse_id := COALESCE(v_item.warehouse_id, v_invoice.warehouse_id);
+    -- ⚠️ `invoice_items` has NO warehouse_id column (the warehouse lives on the
+    -- invoice header). Reading `v_item.warehouse_id` raised 42703 «record has no
+    -- field» on every call — found on production, 27 Oct 2026.
+    v_warehouse_id := v_invoice.warehouse_id;
 
     IF v_restock_choice = 'restock' THEN
       -- Physical movement back into warehouse
       IF v_warehouse_id IS NOT NULL THEN
+        -- `stock_movements.type` is NOT NULL with no default. Goods coming back
+        -- are recorded the way InvoiceService's own reversal records them
+        -- (netReversal: an inflow of a sale is `type: 'purchase'`, direction from
+        -- `to_warehouse_id`), so every reader of the movements sees one convention.
         INSERT INTO public.stock_movements (
-          workspace_id, user_id, product_id, quantity, to_warehouse_id,
+          workspace_id, user_id, product_id, type, quantity, to_warehouse_id,
           reference_type, reference_id, created_at
         ) VALUES (
-          p_workspace_id, p_user_id, v_item.product_id, v_qty, v_warehouse_id,
+          p_workspace_id, p_user_id, v_item.product_id, 'purchase', v_qty, v_warehouse_id,
           'invoice_return', v_return_id, now()
         );
       END IF;

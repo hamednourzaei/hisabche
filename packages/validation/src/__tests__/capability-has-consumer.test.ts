@@ -8,7 +8,7 @@
 // ============================================
 
 import { describe, expect, it } from 'vitest'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import {
@@ -67,6 +67,34 @@ describe('capability-has-consumer guard', () => {
         expect(
           existsSync(resolve(REPO_ROOT, testPath)),
           `Test file for "${key}" does not exist on disk: ${testPath}`,
+        ).toBe(true)
+      }
+    }
+  })
+
+  it('every UI source named as evidence is mounted by another file, not just present', () => {
+    // A component that exists on disk but that no screen imports is the same
+    // as no UI at all (CLAUDE.md §7.1). The product-page container is where
+    // the industry sections are mounted behind the profile capability.
+    for (const key of AVAILABLE_CAPABILITIES) {
+      const def = CAPABILITIES[key]
+      const sections = def.evidence.sources.filter(
+        (src) => src.startsWith('packages/ui/') && /-section\.tsx$/.test(src),
+      )
+      for (const section of sections) {
+        const stem = section
+          .split('/')
+          .pop()!
+          .replace(/\.tsx$/, '')
+        const mounted = def.evidence.sources
+          .filter((src) => src !== section && src.startsWith('packages/ui/'))
+          .some((src) => {
+            const text = readFileSync(resolve(REPO_ROOT, src), 'utf8')
+            return text.includes('/' + stem + "'") && text.includes(`'${key}'`)
+          })
+        expect(
+          mounted,
+          `UI section ${section} for "${key}" is not imported behind the '${key}' capability by any evidence file`,
         ).toBe(true)
       }
     }

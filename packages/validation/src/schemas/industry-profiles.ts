@@ -282,6 +282,16 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
+  autoParts: {
+    capabilities: ['auto_fitments'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  carDealer: {
+    capabilities: ['serialized_items', 'auto_fitments'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
   restaurant: {
     capabilities: [],
     unit: 'piece',

@@ -23,6 +23,10 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { barcodeTakenMessage } from '../../../../lib/barcode/barcode-errors'
 import { ProductExpiryPanel } from '../product-expiry-panel'
+import { ProductVariantsSection } from '../../warehouse/product-variants-section'
+import { ProductFitmentsSection } from '../../warehouse/product-fitments-section'
+import { WarrantiesSection } from '../../invoices/warranties-section'
+import { useBusinessProfile } from '../../../../hooks/use-business-profile'
 import { ProductJourneyPanel } from '../product-journey-panel'
 import { ProductBarcodesPanel } from '../product-barcodes-panel'
 import { ProductImagesPanel } from '../product-images-panel'
@@ -112,6 +116,7 @@ type StockStatus = 'success' | 'warning' | 'destructive' | 'secondary'
 
 export function ProductDetailContainer() {
   const t = useTranslations()
+  const { profile } = useBusinessProfile()
   const router = useRouter()
   const push = useLocalePush()
   const { id } = useParams<{ id: string }>()
@@ -312,6 +317,21 @@ ${t('warehouse.deactivateInstead')}`)
       notes={id ? <EntityNotes entityType="product" entityId={id} /> : null}
       stockWarehouses={(breakdown.data?.warehouses ?? []).map((w) => ({ id: w.id, name: w.name }))}
       expiry={id ? <ProductExpiryPanel t={safeT} productId={id} /> : null}
+      specialties={
+        id ? (
+          <>
+            {profile.capabilities.includes('variants') ? (
+              <ProductVariantsSection t={safeT} productId={id} />
+            ) : null}
+            {profile.capabilities.includes('auto_fitments') ? (
+              <ProductFitmentsSection t={safeT} productId={id} />
+            ) : null}
+            {profile.capabilities.includes('serialized_items') ? (
+              <WarrantiesSection t={safeT} productId={id} />
+            ) : null}
+          </>
+        ) : null
+      }
     />
   )
 }

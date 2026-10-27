@@ -11,10 +11,10 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | ------------------------------------- | ----- |
 | Industry keys in the registry         | 66    |
 | Selectable in onboarding              | 66    |
-| Specialised profile                   | 21    |
-| General-purpose baseline              | 45    |
+| Specialised profile                   | 23    |
+| General-purpose baseline              | 43    |
 | Exact match with `JOURNEY_INDUSTRIES` | 14    |
-| Available capabilities                | 7     |
+| Available capabilities                | 8     |
 
 ## Industry registry
 
@@ -54,8 +54,8 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | شیشه و آلومینیوم           | `glass`              | بله                      | —                                | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | ساخت‌وساز و پیمانکاری      | `construction`       | بله                      | بله                              | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | تولیدی و کارگاه            | `manufacturing`      | بله                      | بله                              | تخصصی          | multi_unit                              | `piece`              | —                             | —                       | unit، quantity            | manufacturing، workQueue، kpis، chart، insights، activities | —                                    |
-| قطعات موتر و یدکی          | `autoParts`          | بله                      | بله                              | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
-| نمایشگاه موتر              | `carDealer`          | بله                      | —                                | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
+| قطعات موتر و یدکی          | `autoParts`          | بله                      | بله                              | تخصصی          | auto_fitments                           | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
+| نمایشگاه موتر              | `carDealer`          | بله                      | —                                | تخصصی          | serialized_items، auto_fitments         | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | مکانیکی و سرویس            | `mechanic`           | بله                      | —                                | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | تیل‌فروشی و گاز            | `fuel`               | بله                      | —                                | تخصصی          | measurement، multi_unit                 | `liter`              | —                             | —                       | unit، quantity            | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | مبل و اثاثیه               | `furniture`          | بله                      | بله                              | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
@@ -107,6 +107,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | `variants`         | available | فعال                         |
 | `table_service`    | planned   | فعال نیست                    |
 | `serialized_items` | available | فعال                         |
+| `auto_fitments`    | available | فعال                         |
 | `gold_purity`      | available | فعال                         |
 | `making_charges`   | available | فعال                         |
 
