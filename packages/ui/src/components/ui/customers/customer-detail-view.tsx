@@ -26,6 +26,7 @@ import {
   FilePlus2,
   FileText,
   Printer,
+  Trash2,
 } from 'lucide-react'
 import type { PartyActivity, PartyLedger, PartySummary, PaymentRecord } from '@hisabche/api'
 import { asList } from '@hisabche/api'
@@ -88,6 +89,10 @@ export interface CustomerDetailViewProps {
   onClosePayment: () => void
   onPaymentSuccess: () => void
   onNewInvoice: () => void
+  /** Remove the customer. The server refuses one that has invoices or payments. */
+  onDelete?: (() => void) | undefined
+  deleting?: boolean | undefined
+  deleteError?: string | null | undefined
   onOpenInvoice: (id: string) => void
   onExport: () => void
   activity: PartyActivity | null
@@ -251,6 +256,17 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
             <Download className="size-4" aria-hidden="true" />
             {t('exportStatement')}
           </button>
+          {props.onDelete ? (
+            <button
+              type="button"
+              onClick={props.onDelete}
+              disabled={props.deleting}
+              className={outlineBtn}
+            >
+              <Trash2 className="size-4" aria-hidden="true" />
+              {t('deleteCustomer')}
+            </button>
+          ) : null}
           {(summary?.receivable ?? 0) > 0 && props.openInvoices.length > 0 && (
             <button type="button" onClick={props.onOpenPayment} className={primaryBtn}>
               <DollarSign className="size-4" aria-hidden="true" />
@@ -259,6 +275,11 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
           )}
         </div>
       </header>
+      {props.deleteError ? (
+        <p role="alert" className="mt-2 text-xs text-[hsl(var(--color-destructive))]">
+          {props.deleteError}
+        </p>
+      ) : null}
 
       {props.summaryError && (
         <div

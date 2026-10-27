@@ -2012,6 +2012,10 @@
     }
   },
   "warehouse": {
+    "deleteWarehouse": "حذف انبار",
+    "deleteWarehouseConfirm": "این انبار حذف شود؟",
+    "deleteWarehouseFailed": "حذف انبار انجام نشد",
+    "deleteWarehouseHasStock": "این انبار هنوز موجودی دارد. اول موجودی را به انبار دیگر انتقال دهید.",
     "extVariantsTitle": "تنوع‌های جنس (سایز، رنگ، مدل)",
     "extVariantsCount": "تنوع",
     "extVariantsEmpty": "تا هنوز برای این جنس تنوعی ثبت نشده است.",
@@ -2248,6 +2252,7 @@
       "moveFailed": "تغییر موقعیت انجام نشد"
     },
     "newBranch": "شعبه‌ی تازه",
+    "branchCodeRequired": "کود شعبه لازم است (مثلاً BR-01).",
     "newBranchName": "نام شعبه، مثلاً شعبه‌ی مرکزی",
     "newBranchCode": "کد شعبه",
     "addBranch": "افزودن شعبه",
@@ -7725,6 +7730,10 @@
     "cta": "تمدید یا خرید اشتراک"
   },
   "customer360": {
+    "deleteCustomer": "حذف مشتری",
+    "deleteConfirm": "این مشتری حذف شود؟ این کار برگشت‌پذیر نیست.",
+    "deleteFailed": "حذف مشتری انجام نشد",
+    "deleteBlocked": "این مشتری فاکتور یا پرداخت ثبت‌شده دارد و حذف نمی‌شود.",
     "netBalance": "مانده‌ی خالص حساب",
     "netOwesUs": "به ما قرضدار است",
     "netWeOwe": "ما قرضداریم",
@@ -8207,6 +8216,10 @@
     "tree": "ساختار شعبه‌ها"
   },
   "cycleCount": {
+    "status_draft": "پیش‌نویس",
+    "status_counting": "در حال شمارش",
+    "status_completed": "انجام شد",
+    "status_cancelled": "لغو شد",
     "cancel": "لغو شمارش",
     "cancelReason": "دلیل لغو این شمارش؟",
     "complete": "تکمیل شمارش",

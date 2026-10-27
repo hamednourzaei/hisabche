@@ -58,6 +58,7 @@ import { localizePath } from '@hisabche/ui-contract'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { useToast } from '../../toast-provider'
 import { useRouteLang } from '../../../../hooks/use-locale-push'
+import { useAfterHydration } from '../../../../hooks/use-after-hydration'
 import { oauthErrorMessage } from '../../../../lib/oauth-labels'
 import { enterWorkspace } from '../../../../lib/enter-workspace'
 import { fileToBase64 } from '../../wallet/wallet-format'
@@ -71,8 +72,16 @@ function statusOf(error: unknown): number | undefined {
   return (error as { response?: { status?: number } } | null)?.response?.status
 }
 
-/** 503 = migration not run; 403 = not an owner/manager. Neither is «empty». */
-function sectionState(isLoading: boolean, error: unknown): SectionState {
+/**
+ * 503 = migration not run; 403 = not an owner/manager. Neither is «empty».
+ *
+ * Before hydration finishes it answers 'ready', which is what the server HTML
+ * shows: these queries are shared, so another component may already have them
+ * fetching (or failed) on the first client render, and a loading/error panel
+ * there is a markup the server never sent (React #418, SandboxPanel).
+ */
+function sectionStateFor(hydrated: boolean, isLoading: boolean, error: unknown): SectionState {
+  if (!hydrated) return 'ready'
   if (isLoading) return 'loading'
   if (!error) return 'ready'
   const status = statusOf(error)
@@ -115,6 +124,9 @@ const DevelopersContainerContent = memo(function DevelopersContainerContent({
 }: {
   t: (key: string, fallback?: string) => string
 }) {
+  const hydrated = useAfterHydration()
+  const sectionState = (isLoading: boolean, error: unknown) =>
+    sectionStateFor(hydrated, isLoading, error)
   const { dateTime } = useDateFormat()
   const toast = useToast()
 

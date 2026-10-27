@@ -2003,6 +2003,10 @@
     }
   },
   "warehouse": {
+    "deleteWarehouse": "Delete warehouse",
+    "deleteWarehouseConfirm": "Delete this warehouse?",
+    "deleteWarehouseFailed": "Could not delete the warehouse",
+    "deleteWarehouseHasStock": "This warehouse still holds stock. Transfer the stock to another warehouse first.",
     "extVariantsTitle": "Product variants (size, colour, model)",
     "extVariantsCount": "variants",
     "extVariantsEmpty": "No variants recorded for this product yet.",
@@ -2239,6 +2243,7 @@
       "moveFailed": "The location was not changed"
     },
     "newBranch": "New branch",
+    "branchCodeRequired": "A branch code is required (for example BR-01).",
     "newBranchName": "Branch name, e.g. Main branch",
     "newBranchCode": "Branch code",
     "addBranch": "Add branch",
@@ -7716,6 +7721,10 @@
     "cta": "Renew or buy a subscription"
   },
   "customer360": {
+    "deleteCustomer": "Delete customer",
+    "deleteConfirm": "Delete this customer? This cannot be undone.",
+    "deleteFailed": "Could not delete the customer",
+    "deleteBlocked": "This customer has invoices or payments and cannot be deleted.",
     "netBalance": "Net balance",
     "netOwesUs": "owes us",
     "netWeOwe": "we owe",
@@ -8198,6 +8207,10 @@
     "tree": "Branch structure"
   },
   "cycleCount": {
+    "status_draft": "Draft",
+    "status_counting": "Counting",
+    "status_completed": "Completed",
+    "status_cancelled": "Cancelled",
     "cancel": "Cancel count",
     "cancelReason": "Why cancel this count?",
     "complete": "Complete count",

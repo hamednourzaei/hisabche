@@ -81,10 +81,13 @@ export function AddWarehouseDialog({
   onCreate,
   isPending,
   initial,
+  onDelete,
 }: {
   t: T
   open: boolean
   onClose: () => void
+  /** Editing only: removes the warehouse. The server refuses one that still holds stock. */
+  onDelete?: ((id: string) => Promise<unknown>) | undefined
   /** Resolves with the warehouse (its id is needed for the shelves written below it). */
   onCreate: (input: {
     name: string
@@ -300,6 +303,11 @@ export function AddWarehouseDialog({
                       className={`${input} min-w-0 text-center`}
                     />
                   </div>
+                  {newBranch.name.trim() !== '' && newBranch.code.trim() === '' ? (
+                    <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                      {t('warehouse.branchCodeRequired', 'کد شعبه لازم است (مثلاً BR-01).')}
+                    </p>
+                  ) : null}
                   {branchError ? (
                     <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
                       {branchError}
@@ -452,6 +460,33 @@ export function AddWarehouseDialog({
           ) : null}
         </div>
         <DialogFooter className="gap-2">
+          {initial?.id && onDelete ? (
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                if (!window.confirm(t('warehouse.deleteWarehouseConfirm', 'این انبار حذف شود؟'))) {
+                  return
+                }
+                setError(null)
+                onDelete(initial.id as string).then(onClose, (cause: unknown) => {
+                  const status = (cause as { response?: { status?: number } } | null)?.response
+                    ?.status
+                  setError(
+                    status === 409
+                      ? t(
+                          'warehouse.deleteWarehouseHasStock',
+                          'این انبار هنوز موجودی دارد. اول موجودی را منتقل کنید.',
+                        )
+                      : errorText(t, cause),
+                  )
+                })
+              }}
+              className={quiet}
+            >
+              {t('warehouse.deleteWarehouse', 'حذف انبار')}
+            </button>
+          ) : null}
           <button type="button" onClick={onClose} className={quiet}>
             {t('common.cancel', 'انصراف')}
           </button>

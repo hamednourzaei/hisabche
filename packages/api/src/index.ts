@@ -119,6 +119,7 @@ export {
   useCustomer,
   useCreateCustomer,
   useUpdateCustomer,
+  useDeleteCustomer,
   customerKeys,
 } from './hooks/customers'
 
@@ -1190,6 +1191,7 @@ export {
   type PlacedWarehouse,
   useWarehouseDetail,
   useCreateWarehouse,
+  useDeleteWarehouse,
   useUpdateWarehouse,
   useAssignWarehouseStock,
   useProductWarehouseBreakdown,

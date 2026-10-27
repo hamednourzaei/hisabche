@@ -20,6 +20,7 @@ import {
 
 import { CycleCountView } from '../cycle-count-view'
 import { StartCountForm } from '../start-count-form'
+import { readProducts } from '../../../../lib/invoices/products'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 
 export function CycleCountContainer() {
@@ -47,8 +48,12 @@ export function CycleCountContainer() {
    */
   const productName = useCallback(
     (productId: string): string => {
-      const list = (products.data ?? []) as { id: string; name?: string }[]
-      return list.find((product) => product.id === productId)?.name ?? productId.slice(0, 8)
+      // `useProducts` resolves to `{ products, total }`, not an array: calling
+      // `.find` on it crashed the page the moment a count was opened.
+      return (
+        readProducts(products.data).find((product) => product.id === productId)?.name ??
+        productId.slice(0, 8)
+      )
     },
     [products.data],
   )

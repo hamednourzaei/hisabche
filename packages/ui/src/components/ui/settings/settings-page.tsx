@@ -867,7 +867,19 @@ export const StorageSection = memo(function StorageSection() {
       setLocal(persistedBytes())
     }
     read()
-    return cache.subscribe(read)
+    // A query created while ANOTHER component renders notifies the cache then; a
+    // synchronous setState here is «Cannot update a component while rendering a
+    // different component». Deferring one microtask moves it out of that render.
+    let live = true
+    const unsubscribe = cache.subscribe(() =>
+      queueMicrotask(() => {
+        if (live) read()
+      }),
+    )
+    return () => {
+      live = false
+      unsubscribe()
+    }
   }, [queryClient])
 
   const measure = useCallback(async () => {

@@ -264,6 +264,36 @@ describe('Postgres: atomic invoice returns (invoice-return-01)', () => {
     expect(res2[0]?.invoice_return_create.idempotentReplay).toBe(true)
   })
 
+  it('posts the reversal for an invoice in the books currency (exchange_rate IS NULL)', async () => {
+    if (!sql) return
+
+    // The live site's invoices have no stored rate. The old CASE turned that NULL
+    // into a NULL journal amount and the ledger refused it (JOURNAL_ENTRY_EMPTY).
+    const invoiceId = '40000000-0000-4000-8000-000000000006'
+    const lineId = '50000000-0000-4000-8000-000000000005'
+    await sql`
+      INSERT INTO invoices (id, workspace_id, invoice_number, total, exchange_rate, status)
+      VALUES (${invoiceId}, ${WS_A}, 'INV-NULL-RATE', 100, NULL, 'issued')
+      ON CONFLICT (id) DO NOTHING;
+    `
+    await sql`
+      INSERT INTO invoice_items (id, invoice_id, product_id, quantity, unit_price, total_price)
+      VALUES (${lineId}, ${invoiceId}, ${PRODUCT_1}, 1, 100, 100)
+      ON CONFLICT (id) DO NOTHING;
+    `
+
+    const res = await sql`
+      SELECT invoice_return_create(
+        ${WS_A}::uuid,
+        ${USER}::uuid,
+        2,
+        ${JSON.stringify({ originalInvoiceId: invoiceId, returnNumber: 'RET-NULL-RATE' })}::jsonb,
+        ${JSON.stringify([{ originalLineId: lineId, quantity: 1, restockChoice: 'restock' }])}::jsonb
+      );
+    `
+    expect(res[0]?.invoice_return_create.id).toBeTruthy()
+  })
+
   it('rolls back completely when mandatory sales or receivable accounts are missing', async () => {
     if (!sql) return
 

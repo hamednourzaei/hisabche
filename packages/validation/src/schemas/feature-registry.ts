@@ -144,6 +144,8 @@ export const FEATURE_REGISTRY = {
   'warehouse.overview': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'warehouse.detail': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'warehouse.upsert': { execution: 'local', plans: ALL },
+  // Delete asks the server whether the warehouse still holds stock.
+  'warehouse.delete': { execution: 'server', plans: CLOUD },
   'stock.transfer': { execution: 'local', plans: ALL },
   'stock.assign_unassigned': { execution: 'local', plans: ALL },
   'stock.placement': { execution: 'local', plans: ALL, alwaysAllowed: true },
@@ -165,6 +167,8 @@ export const FEATURE_REGISTRY = {
   'customer.list': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'customer.detail': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'customer.upsert': { execution: 'local', plans: ALL },
+  // Delete asks the server whether the customer has invoices or payments.
+  'customer.delete': { execution: 'server', plans: CLOUD },
   'customer.accounting': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'customer.risk': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'customer.crm': { execution: 'local', plans: ALL, alwaysAllowed: true },

@@ -73,6 +73,17 @@ const STATUS_VARIANT: Record<string, 'secondary' | 'warning' | 'success' | 'outl
   cancelled: 'outline',
 }
 
+/**
+ * Counted minus expected. The server stores `variance_qty` only when the count
+ * is completed, so before that it is null — which read as «0 difference» next
+ * to a line counted 3 against 0 expected. Derived from the two numbers the line
+ * really has; null while the line is not counted.
+ */
+function varianceOf(line: CycleCountLine): number | null {
+  if (line.counted_qty === null) return null
+  return line.variance_qty ?? line.counted_qty - line.expected_qty
+}
+
 /** Lines somebody has actually counted. Null is «not yet», not zero. */
 function countedLines(lines: CycleCountLine[]): CycleCountLine[] {
   return lines.filter((line) => line.counted_qty !== null)
@@ -246,17 +257,17 @@ export function CycleCountView({
                 labelKey: 'cycleCount.variance',
                 labelFallback: 'اختلاف',
                 align: 'end',
-                sortValue: (line) => (line.counted_qty === null ? null : (line.variance_qty ?? 0)),
+                sortValue: (line) => varianceOf(line),
                 render: (line) => (
                   <span
                     className={cn(
                       'tabular-nums',
-                      line.variance_qty
+                      varianceOf(line)
                         ? 'font-semibold text-[hsl(var(--color-destructive))]'
                         : 'text-[hsl(var(--fg-tertiary))]',
                     )}
                   >
-                    {line.counted_qty === null ? '—' : (line.variance_qty ?? 0)}
+                    {varianceOf(line) ?? '—'}
                   </span>
                 ),
               },

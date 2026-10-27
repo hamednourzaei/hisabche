@@ -164,6 +164,17 @@ export function useCreateWarehouse() {
 }
 
 /** Rename / relocate a warehouse (PATCH /warehouses/:id). */
+export function useDeleteWarehouse() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/warehouses/${id}`)
+      return id
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: warehouseKeys.all }),
+  })
+}
+
 export function useUpdateWarehouse() {
   const queryClient = useQueryClient()
   return useMutation({

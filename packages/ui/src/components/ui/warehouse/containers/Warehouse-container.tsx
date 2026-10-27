@@ -25,6 +25,7 @@ import {
   useTransferStock,
   useCreateWarehouse,
   warehouseKeys,
+  useDeleteWarehouse,
   useUpdateWarehouse,
   useStockHistory,
   useWarehouseDetail,
@@ -85,6 +86,7 @@ export function warehouseContainer() {
     location: string
   } | null>(null)
   const updateWarehouse = useUpdateWarehouse()
+  const deleteWarehouse = useDeleteWarehouse()
   const [showAssign, setShowAssign] = useState(false)
   const [showTransfer, setShowTransfer] = useState(false)
   const [showAddToWarehouse, setShowAddToWarehouse] = useState(false)
@@ -372,6 +374,7 @@ export function warehouseContainer() {
         open={editingWarehouse !== null}
         initial={editingWarehouse}
         onClose={() => setEditingWarehouse(null)}
+        onDelete={(id) => deleteWarehouse.mutateAsync(id)}
         isPending={updateWarehouse.isPending}
         onCreate={(input) =>
           editingWarehouse

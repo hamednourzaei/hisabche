@@ -26,6 +26,7 @@ import { Progress } from '../../progress'
 import { Loader2 } from 'lucide-react'
 
 import { PricingPage } from '../PricingPage'
+import { useAfterHydration } from '../../../../hooks/use-after-hydration'
 
 export function BillingContainer() {
   const t = useTranslations()
@@ -44,7 +45,10 @@ export function BillingContainer() {
     return formatMoney(minor / 10 ** fractionDigits(code), code, resolveIntlLocale(lang))
   }
 
-  const isLoading = subLoading || trialLoading || usageLoading
+  // Shared queries: another component may already have them fetching on the
+  // first client render, which the server HTML never showed (React #418).
+  const hydrated = useAfterHydration()
+  const isLoading = hydrated && (subLoading || trialLoading || usageLoading)
 
   if (isLoading) {
     return (

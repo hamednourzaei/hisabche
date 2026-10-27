@@ -20,6 +20,7 @@ import { CURRENCY_CODES } from '@hisabche/validation'
 
 import { SelectField } from '../select-field'
 import { useToast } from '../toast-provider'
+import { useAfterHydration } from '../../../hooks/use-after-hydration'
 
 const card =
   'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]'
@@ -35,6 +36,12 @@ export const BookCurrencySection = memo(function BookCurrencySection() {
   const t = useTranslations()
   const toast = useToast()
   const base = useBaseCurrency()
+  // «Not read yet» (query not enabled, or still fetching — and shared, so possibly
+  // already fetching on the first client render) is not «could not be read». The
+  // server used to print the error text for it and the client «reading…»: a text
+  // mismatch (React #418). Only a real error says unreadable.
+  const hydrated = useAfterHydration()
+  const reading = !hydrated || base.isLoading || (!base.data && !base.isError)
   const save = useSetBaseCurrency()
   const [chosen, setChosen] = useState<string | null>(null)
 
@@ -72,7 +79,7 @@ export const BookCurrencySection = memo(function BookCurrencySection() {
             {t('settings.bookCurrency.description')}
           </p>
 
-          {base.isLoading ? (
+          {reading ? (
             <p className="mt-4 text-sm text-[hsl(var(--fg-tertiary))]">
               {t('settings.bookCurrency.loading')}
             </p>

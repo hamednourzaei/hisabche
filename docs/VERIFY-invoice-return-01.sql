@@ -32,3 +32,13 @@ FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public'
   AND p.proname = 'invoice_return_create';
+
+-- The books-currency rate must not come from a bare CASE that returns a NULL
+-- exchange_rate (journal amount NULL -> JOURNAL_ENTRY_EMPTY). Run on its own.
+-- Expected: rate_null_safe = TRUE.
+SELECT
+  position('COALESCE(NULLIF(v_invoice.exchange_rate, 0), 1)' in pg_get_functiondef(p.oid)) > 0 AS rate_null_safe
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND p.proname = 'invoice_return_create';

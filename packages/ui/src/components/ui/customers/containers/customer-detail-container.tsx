@@ -26,7 +26,9 @@ import { useCallback, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import {
+  apiErrorMessage,
   useCustomer,
+  useDeleteCustomer,
   useInvoices,
   useOpenInvoices,
   usePartyActivity,
@@ -44,6 +46,7 @@ import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { CustomerDetailView } from '../customer-detail-view'
 import { RecordHistoryPanel } from '../../activity/record-history-panel'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
+import { useActionAvailability } from '../../../../lib/capability'
 
 const INVOICE_PAGE_SIZE = 20
 
@@ -54,6 +57,9 @@ export function CustomerDetailContainer({ customerId }: { customerId: string }) 
   const locale = useIntlLocale()
   const { date: formatDate } = useDateFormat()
   const [payOpen, setPayOpen] = useState(false)
+  const deleteCustomer = useDeleteCustomer()
+  const canDelete = !useActionAvailability('customer.delete').requiresOnline
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Back restores the list the person came from — its filters and scroll —
   // through real history; a profile opened from a link has nothing to go back
@@ -275,6 +281,30 @@ export function CustomerDetailContainer({ customerId }: { customerId: string }) 
       onClosePayment={() => setPayOpen(false)}
       onPaymentSuccess={refetchMoney}
       onNewInvoice={() => push('/invoices/new')}
+      onDelete={
+        !canDelete
+          ? undefined
+          : () => {
+              if (!window.confirm(t('customer360.deleteConfirm'))) return
+              setDeleteError(null)
+              deleteCustomer.mutate(customerId, {
+                onSuccess: () => push('/customers'),
+                onError: (cause) => {
+                  // The server refuses (409) a customer with invoices or payments: say that,
+                  // not a generic failure.
+                  const status = (cause as { response?: { status?: number } } | null)?.response
+                    ?.status
+                  setDeleteError(
+                    status === 409
+                      ? t('customer360.deleteBlocked')
+                      : apiErrorMessage(cause, t('customer360.deleteFailed')),
+                  )
+                },
+              })
+            }
+      }
+      deleting={deleteCustomer.isPending}
+      deleteError={deleteError}
       onOpenInvoice={(id) => push(`/invoices/${id}`)}
       onExport={handleExport}
       activity={activityQuery.data ?? null}

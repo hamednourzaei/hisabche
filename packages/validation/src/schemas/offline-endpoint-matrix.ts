@@ -45,6 +45,8 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'DELETE /attendance-links/phone/:x': ['hr.attendance_links', 'online_required'],
   'DELETE /automations/:x': ['automation.rules', 'online_required'],
   'DELETE /customer-portal-links/:x': ['customer.portal_link', 'online_required'],
+  'DELETE /customers/:x': ['customer.delete', 'online_required'],
+  'DELETE /warehouses/:x': ['warehouse.delete', 'online_required'],
   'DELETE /customers/:x/documents/:x': ['customer.documents', 'online_required'],
   'DELETE /developer/apps/:x': ['developer.keys', 'online_required'],
   'DELETE /developer/apps/:x/screenshots/:x': ['developer.keys', 'online_required'],

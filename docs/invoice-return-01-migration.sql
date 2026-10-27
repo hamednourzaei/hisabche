@@ -172,7 +172,10 @@ BEGIN
     );
   END IF;
 
-  v_rate := CASE WHEN COALESCE(v_invoice.exchange_rate, 1) > 0 THEN v_invoice.exchange_rate ELSE 1 END;
+  -- NULL exchange_rate = the invoice is in the books currency = rate 1. The previous
+  -- CASE returned v_invoice.exchange_rate itself when it was NULL, so the journal
+  -- amount became NULL and the ledger refused it (JOURNAL_ENTRY_EMPTY).
+  v_rate := COALESCE(NULLIF(v_invoice.exchange_rate, 0), 1);
   v_return_id := gen_random_uuid();
 
   -- 3. Validate and calculate each return line

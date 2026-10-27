@@ -254,6 +254,22 @@ export function useCreateCustomer() {
   })
 }
 
+export function useDeleteCustomer() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/customers/${id}`)
+      return id
+    },
+    onSuccess: () => {
+      // Only the lists: removing the detail entry made the still-mounted file page
+      // re-fetch a customer that no longer exists (a 404) before it navigated away.
+      queryClient.invalidateQueries({ queryKey: customerKeys.lists() })
+    },
+  })
+}
+
 export function useUpdateCustomer() {
   const queryClient = useQueryClient()
 
