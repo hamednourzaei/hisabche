@@ -32,6 +32,18 @@ describe('industryEditable', () => {
     expect(industryEditable('viewer')).toBe(false)
   })
 
+  it('does not report «saved» when the server answered 200 but kept nothing', () => {
+    // The profile endpoint drops `businessTypes` silently on a database without
+    // the onboarding columns and replies with an empty list; the store merges
+    // that reply, so the store is the truth after the call.
+    expect(component).toContain('useAuthStore.getState().user?.businessTypes')
+    expect(component).toContain('settings.industryNotPersisted')
+    const afterUpdate = component.slice(component.indexOf('await updateProfile('))
+    expect(afterUpdate.indexOf('industryNotPersisted')).toBeLessThan(
+      afterUpdate.indexOf('setSaved(true)'),
+    )
+  })
+
   it('is the gate the Settings section actually uses', () => {
     expect(component).toContain('industryEditable(storeRole)')
     expect(component).not.toContain("storeRole === 'owner'")

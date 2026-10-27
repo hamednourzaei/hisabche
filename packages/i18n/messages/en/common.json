@@ -2635,6 +2635,7 @@
     "industryOwnerOnly": "Only the workspace owner can change the industry.",
     "industrySaved": "Industry saved.",
     "industrySaveFailed": "The industry could not be saved",
+    "industryNotPersisted": "The server did not keep the industry. Try again; if it repeats, contact support.",
     "creditLimitMode": {
       "title": "Customer Credit Limit Policy",
       "description": "How the system behaves when an invoice exceeds the customer credit limit",

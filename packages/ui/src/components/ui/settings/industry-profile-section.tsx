@@ -91,6 +91,22 @@ export function IndustryProfileSection({
         await onSave([...selected])
       } else {
         await updateProfile({ businessTypes: [...selected] })
+        // The profile endpoint answers 200 even when it could not store the
+        // trades (a database without the onboarding columns drops them and
+        // replies with an empty list). The reply is merged into the store, so
+        // what the store holds NOW is what the server kept. Saying «saved» over
+        // an empty list is a lie the owner finds out at the next login.
+        const kept = useAuthStore.getState().user?.businessTypes ?? []
+        const wanted = new Set(selected)
+        if (kept.length !== wanted.size || kept.some((id) => !wanted.has(id))) {
+          setError(
+            t(
+              'settings.industryNotPersisted',
+              'سرور صنف را ذخیره نکرد. دوباره امتحان کنید؛ اگر تکرار شد با پشتیبانی تماس بگیرید.',
+            ),
+          )
+          return
+        }
       }
       setSaved(true)
     } catch (cause) {
