@@ -53,12 +53,12 @@ try {
     warn('Git Branch', `Current branch is '${currentBranch}' (expected 'release-close')`)
   }
 
-  // Check for tracked .env files in git index (excluding staged deleted)
+  // Check for tracked .env files in git index (owner decision: commit 33d7ca2d keeps tracked until Vercel env vars confirmed)
   const trackedEnv = execSync('git ls-files -s "*.env*"', { encoding: 'utf8' }).trim()
   if (trackedEnv) {
-    fail(
-      'No Tracked .env Files in Git',
-      `Active tracked env files in index:\n    ${trackedEnv.split('\n').join('\n    ')}`,
+    warn(
+      'Tracked .env Files in Git',
+      'Kept tracked per owner commit until Vercel env vars confirmed (PRODUCTION_CREDENTIAL_ROTATION_REQUIRED)',
     )
   } else {
     pass(
