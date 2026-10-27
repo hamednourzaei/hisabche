@@ -83,6 +83,26 @@ describe('InvoiceReturnService (thin RPC caller)', () => {
     ).rejects.toThrow(NotFoundError)
   })
 
+  it('names the missing migration when invoice_return_create does not exist', async () => {
+    rpcHandler = async () => ({
+      data: null,
+      error: {
+        message: 'Could not find the function public.invoice_return_create',
+        code: 'PGRST202',
+      },
+    })
+
+    await expect(
+      service.createReturn(WORKSPACE_A, {
+        originalInvoiceId: INVOICE_A_ID,
+        returnType: 'sale_return',
+        returnNumber: 'RET-001',
+        returnDate: '2026-10-26',
+        lines: [{ originalLineId: LINE_A_ID, returnQuantity: 1 }],
+      }),
+    ).rejects.toThrow('RETURN_FUNCTION_MISSING')
+  })
+
   it('translates RETURN_QUANTITY_EXCEEDS_ORIGINAL RPC error to ConflictError', async () => {
     rpcHandler = async () => ({
       data: null,

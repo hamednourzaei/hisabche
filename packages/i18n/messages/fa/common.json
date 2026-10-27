@@ -1832,6 +1832,8 @@
     "returnNumber": "شماره برگه مرجوعی",
     "returnQuantity": "تعداد مرجوعی",
     "returnReason": "علت مرجوعی",
+    "returnFailed": "ثبت مرجوعی انجام نشد",
+    "returnNotReady": "مرجوعی هنوز روی سرور فعال نشده است. با پشتیبانی تماس بگیرید.",
     "returnReasonPlaceholder": "علت برگشت کالا",
     "submitReturn": "ثبت و برگشت به انبار",
     "returnLineItem": "انتخاب قلم کالا برای مرجوعی",

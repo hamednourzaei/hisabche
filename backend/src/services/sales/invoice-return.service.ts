@@ -88,6 +88,18 @@ export class InvoiceReturnService {
 
     if (error) {
       const msg = error.message ?? ''
+      // The function does not exist: docs/invoice-return-01-migration.sql has not
+      // been applied to this database. Say so instead of a bare 500.
+      if (
+        error.code === 'PGRST202' ||
+        error.code === '42883' ||
+        /could not find the function|function .* does not exist/i.test(msg)
+      ) {
+        throw new DatabaseError(
+          'RETURN_FUNCTION_MISSING: apply docs/invoice-return-01-migration.sql',
+          error,
+        )
+      }
       if (msg.includes('INVOICE_NOT_FOUND')) throw new NotFoundError('Invoice')
       if (msg.includes('INVOICE_LINE_NOT_FOUND')) throw new NotFoundError('Invoice line')
       if (msg.includes('RETURN_QUANTITY_EXCEEDS_ORIGINAL')) {

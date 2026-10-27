@@ -1827,6 +1827,8 @@
     "returnNumber": "Return Number",
     "returnQuantity": "Return Quantity",
     "returnReason": "Return Reason",
+    "returnFailed": "The return could not be saved",
+    "returnNotReady": "Returns are not enabled on the server yet. Contact support.",
     "returnReasonPlaceholder": "Reason for returning goods",
     "submitReturn": "Submit and Restock",
     "returnLineItem": "Select Item to Return",

@@ -1836,6 +1836,8 @@
     "returnNumber": "شماره سند بازگشت",
     "returnQuantity": "تعداد بازگشتی",
     "returnReason": "دلیل بازگشت",
+    "returnFailed": "ثبت بازگشت انجام نشد",
+    "returnNotReady": "بازگشت هنوز روی سرور فعال نشده است. با پشتیبانی تماس بگیرید.",
     "returnReasonPlaceholder": "دلیل بازگشت مال",
     "submitReturn": "ثبت و بازگشت به گدام",
     "returnLineItem": "انتخاب جنس برای بازگشت",

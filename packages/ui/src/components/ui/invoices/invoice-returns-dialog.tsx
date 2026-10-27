@@ -12,7 +12,7 @@
 // ============================================
 
 import { memo, useCallback, useMemo, useState, useEffect } from 'react'
-import { useCreateInvoiceReturn } from '@hisabche/api'
+import { apiErrorMessage, useCreateInvoiceReturn } from '@hisabche/api'
 import { toIsoDay } from '@hisabche/formatting'
 import type { RestockChoice, ReturnReason } from '@hisabche/validation'
 import { RotateCcw } from 'lucide-react'
@@ -53,6 +53,7 @@ export const InvoiceReturnsDialog = memo(function InvoiceReturnsDialog({
   const [reason, setReason] = useState<ReturnReason>('defective')
   const [restockChoice, setRestockChoice] = useState<RestockChoice>('restock')
   const [quantity, setQuantity] = useState('1')
+  const [error, setError] = useState<string | null>(null)
 
   // Initialize selectedLineId to first item when opened or items change
   useEffect(() => {
@@ -132,21 +133,36 @@ export const InvoiceReturnsDialog = memo(function InvoiceReturnsDialog({
     const numQty = Number(quantity) || 1
     const clampedQty = Math.min(Math.max(1, numQty), maxQuantity)
 
-    await createReturn.mutateAsync({
-      returnType: 'sale_return',
-      returnNumber: trimmedNumber,
-      returnDate: toIsoDay(new Date()),
-      lines: [
-        {
-          originalLineId: targetLineId,
-          quantity: clampedQty,
-          restockChoice,
-          reasonCode: reason,
-        },
-      ],
-    })
-
-    onOpenChange(false)
+    setError(null)
+    try {
+      await createReturn.mutateAsync({
+        returnType: 'sale_return',
+        returnNumber: trimmedNumber,
+        returnDate: toIsoDay(new Date()),
+        lines: [
+          {
+            originalLineId: targetLineId,
+            quantity: clampedQty,
+            restockChoice,
+            reasonCode: reason,
+          },
+        ],
+      })
+      onOpenChange(false)
+    } catch (cause) {
+      // The mutation rejected and nothing caught it: the dialog just stayed
+      // open, the button came back, and a 500 looked like «nothing happened».
+      const message = apiErrorMessage(cause, '')
+      setError(
+        message.includes('RETURN_FUNCTION_MISSING')
+          ? (t?.(
+              'invoices.returnNotReady',
+              'مرجوعی هنوز روی سرور فعال نشده است. با پشتیبانی تماس بگیرید.',
+            ) ?? 'مرجوعی هنوز روی سرور فعال نشده است. با پشتیبانی تماس بگیرید.')
+          : message ||
+              (t?.('invoices.returnFailed', 'ثبت مرجوعی انجام نشد') ?? 'ثبت مرجوعی انجام نشد'),
+      )
+    }
   }, [
     returnNumber,
     activeItem,
@@ -239,6 +255,12 @@ export const InvoiceReturnsDialog = memo(function InvoiceReturnsDialog({
                 />
               </div>
             </div>
+
+            {error ? (
+              <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+                {error}
+              </p>
+            ) : null}
 
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
