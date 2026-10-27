@@ -10,9 +10,31 @@
 // Idempotent: running it twice changes nothing.
 import fs from 'node:fs'
 import path from 'node:path'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 
-const FFMPEG = 'C:\\ffmpeg\\bin\\ffmpeg.exe'
+function getFFmpegPath() {
+  const whereCmd = process.platform === 'win32' ? 'where.exe' : 'which'
+  try {
+    const res = spawnSync(whereCmd, ['ffmpeg'], { encoding: 'utf8', windowsHide: true })
+    if (res.status === 0 && res.stdout) {
+      const line = res.stdout.trim().split(/\r?\n/)[0].trim()
+      if (line && fs.existsSync(line)) return line
+    }
+  } catch {
+    // optional lookup failed: fall through to the standard paths below
+  }
+  const standardPaths = [
+    'C:\\ffmpeg\\bin\\ffmpeg.exe',
+    'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',
+    'C:\\ProgramData\\chocolatey\\bin\\ffmpeg.exe',
+  ]
+  for (const p of standardPaths) {
+    if (fs.existsSync(p)) return p
+  }
+  return 'ffmpeg'
+}
+
+const FFMPEG = getFFmpegPath()
 const ROOT = path.resolve('.')
 const SFX = path.join(ROOT, 'assets', 'sfx')
 const PACK = path.join(SFX, 'user-pack')
@@ -57,25 +79,29 @@ for (const name of fs.readdirSync(from).sort()) {
   const asEvent = AS_EVENT[name]
   if (!asEvent) continue
   const out = path.join(SFX, asEvent.file)
-  execFileSync(FFMPEG, [
-    '-y',
-    '-hide_banner',
-    '-loglevel',
-    'error',
-    '-i',
-    path.join(from, name),
-    '-filter_complex',
-    'silenceremove=start_periods=1:start_duration=0.005:start_threshold=-55dB:detection=peak,afade=t=in:ss=0:d=0.005',
-    '-ar',
-    '48000',
-    '-ac',
-    '2',
-    '-c:a',
-    'libvorbis',
-    '-q:a',
-    '5',
-    out,
-  ])
+  execFileSync(
+    FFMPEG,
+    [
+      '-y',
+      '-hide_banner',
+      '-loglevel',
+      'error',
+      '-i',
+      path.join(from, name),
+      '-filter_complex',
+      'silenceremove=start_periods=1:start_duration=0.005:start_threshold=-55dB:detection=peak,afade=t=in:ss=0:d=0.005',
+      '-ar',
+      '48000',
+      '-ac',
+      '2',
+      '-c:a',
+      'libvorbis',
+      '-q:a',
+      '5',
+      out,
+    ],
+    { windowsHide: true },
+  )
   const list = manifest[asEvent.kind] ?? []
   if (!list.includes(asEvent.file)) manifest[asEvent.kind] = [...list, asEvent.file]
   converted.push(`${asEvent.kind} <- ${asEvent.file}`)

@@ -25,12 +25,37 @@ import { SYNC_LAW, cuePlacements, onsetsOf } from './sound-design.mjs'
 
 const SR = 16000
 
+function getFFmpegPath() {
+  const whereCmd = process.platform === 'win32' ? 'where.exe' : 'which'
+  try {
+    const res = spawnSync(whereCmd, ['ffmpeg'], { encoding: 'utf8', windowsHide: true })
+    if (res.status === 0 && res.stdout) {
+      const line = res.stdout.trim().split(/\r?\n/)[0].trim()
+      if (line && fs.existsSync(line)) return line
+    }
+  } catch {
+    // optional lookup failed: fall through to the standard paths below
+  }
+  const standardPaths = [
+    'C:\\ffmpeg\\bin\\ffmpeg.exe',
+    'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',
+    'C:\\ProgramData\\chocolatey\\bin\\ffmpeg.exe',
+  ]
+  for (const p of standardPaths) {
+    if (fs.existsSync(p)) return p
+  }
+  return 'ffmpeg'
+}
+
 export function measureOnsets(file, ffmpeg) {
+  const bin = ffmpeg || getFFmpegPath()
   const r = spawnSync(
-    ffmpeg,
+    bin,
     ['-v', 'error', '-i', file, '-ac', '1', '-ar', String(SR), '-f', 'f32le', 'pipe:1'],
     {
       maxBuffer: 1 << 28,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'ignore'],
     },
   )
   if (r.status !== 0) throw new Error(`ffmpeg could not decode ${file}`)
@@ -131,7 +156,7 @@ if (
     console.error(`${file} not found`)
     process.exit(2)
   }
-  const result = checkAvSync(target, reelCues(reel), 'C:\\ffmpeg\\bin\\ffmpeg.exe', id)
+  const result = checkAvSync(target, reelCues(reel), getFFmpegPath(), id)
   printAvSync(result)
   process.exit(result.ok ? 0 : 1)
 }

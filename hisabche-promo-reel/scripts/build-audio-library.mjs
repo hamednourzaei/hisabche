@@ -1,8 +1,30 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { execSync } from 'node:child_process'
+import { execSync, spawnSync } from 'node:child_process'
 
-const FFMPEG = 'C:\\ffmpeg\\bin\\ffmpeg.exe'
+function getFFmpegPath() {
+  const whereCmd = process.platform === 'win32' ? 'where.exe' : 'which'
+  try {
+    const res = spawnSync(whereCmd, ['ffmpeg'], { encoding: 'utf8', windowsHide: true })
+    if (res.status === 0 && res.stdout) {
+      const line = res.stdout.trim().split(/\r?\n/)[0].trim()
+      if (line && fs.existsSync(line)) return line
+    }
+  } catch {
+    // optional lookup failed: fall through to the standard paths below
+  }
+  const standardPaths = [
+    'C:\\ffmpeg\\bin\\ffmpeg.exe',
+    'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',
+    'C:\\ProgramData\\chocolatey\\bin\\ffmpeg.exe',
+  ]
+  for (const p of standardPaths) {
+    if (fs.existsSync(p)) return p
+  }
+  return 'ffmpeg'
+}
+
+const FFMPEG = getFFmpegPath()
 const ROOT = path.resolve('.')
 const TMP = path.resolve(ROOT, '.tmp', 'sfx-download')
 const ASSETS_SFX = path.resolve(ROOT, 'assets', 'sfx')
@@ -32,7 +54,7 @@ function processSample(src, dest, { start = null, duration = null, gain = null }
   if (duration !== null) timeArgs.push(`-t ${duration}`)
 
   const cmd = `"${FFMPEG}" -y -hide_banner -loglevel error ${timeArgs.join(' ')} -i "${src}" -filter_complex "${filter}" -ar 48000 -ac 2 -c:a libvorbis -q:a 5 "${dest}"`
-  execSync(cmd)
+  execSync(cmd, { windowsHide: true, stdio: 'ignore' })
 }
 
 /**
@@ -41,7 +63,7 @@ function processSample(src, dest, { start = null, duration = null, gain = null }
 function processMusic(src, dest, { start = 0, duration = 45 } = {}) {
   const filter = 'afade=t=in:ss=0:d=0.5,afade=t=out:st=' + (duration - 0.5) + ':d=0.5'
   const cmd = `"${FFMPEG}" -y -hide_banner -loglevel error -ss ${start} -t ${duration} -i "${src}" -filter_complex "${filter}" -ar 48000 -ac 2 -c:a libvorbis -q:a 5 "${dest}"`
-  execSync(cmd)
+  execSync(cmd, { windowsHide: true, stdio: 'ignore' })
 }
 
 console.log('Processing audio files...')

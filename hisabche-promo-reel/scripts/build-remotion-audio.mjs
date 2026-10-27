@@ -23,7 +23,30 @@ import { createServer } from 'vite'
 import { designSoundtrack } from './sound-design.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const FFMPEG = 'C:\\ffmpeg\\bin\\ffmpeg.exe'
+
+function getFFmpegPath() {
+  const whereCmd = process.platform === 'win32' ? 'where.exe' : 'which'
+  try {
+    const res = spawnSync(whereCmd, ['ffmpeg'], { encoding: 'utf8', windowsHide: true })
+    if (res.status === 0 && res.stdout) {
+      const line = res.stdout.trim().split(/\r?\n/)[0].trim()
+      if (line && fs.existsSync(line)) return line
+    }
+  } catch {
+    // optional lookup failed: fall through to the standard paths below
+  }
+  const standardPaths = [
+    'C:\\ffmpeg\\bin\\ffmpeg.exe',
+    'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',
+    'C:\\ProgramData\\chocolatey\\bin\\ffmpeg.exe',
+  ]
+  for (const p of standardPaths) {
+    if (fs.existsSync(p)) return p
+  }
+  return 'ffmpeg'
+}
+
+const FFMPEG = getFFmpegPath()
 const TARGET_LUFS = -14
 const TARGET_TP = -1.5
 const requested = process.argv.slice(2)
@@ -47,7 +70,7 @@ function loudnessNormalize(file) {
       'null',
       '-',
     ],
-    { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
+    { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, windowsHide: true },
   )
   const stderr = measure.stderr ?? ''
   const jsonStart = stderr.lastIndexOf('{')
@@ -71,7 +94,7 @@ function loudnessNormalize(file) {
       '48000',
       normalized,
     ],
-    { encoding: 'utf8' },
+    { encoding: 'utf8', windowsHide: true },
   )
   if (apply.status !== 0) throw new Error(`loudnorm failed: ${apply.stderr}`)
   fs.renameSync(normalized, file)
