@@ -1,0 +1,333 @@
+PATCH /api/accounting/accounts/:id | Accounting | backend/src/routes/accounting.routes.ts:183 | auth=YES ws=YES role=none
+GET /api/accounting/journal/:id | Accounting | backend/src/routes/accounting.routes.ts:230 | auth=YES ws=YES role=none
+POST /api/accounting/journal/:id/post | Accounting | backend/src/routes/accounting.routes.ts:274 | auth=YES ws=YES role=none
+POST /api/accounting/journal/:id/reverse | Accounting | backend/src/routes/accounting.routes.ts:292 | auth=YES ws=YES role=none
+GET /api/accounting/period-lock | Accounting | backend/src/routes/accounting.routes.ts:318 | auth=YES ws=YES role=none
+PUT /api/accounting/period-lock | Accounting | backend/src/routes/accounting.routes.ts:333 | auth=YES ws=YES role=none
+GET /api/accounting/profit-report | Accounting | backend/src/routes/accounting.routes.ts:453 | auth=YES ws=YES role=none
+GET /api/accounting/cash-flow | Accounting | backend/src/routes/accounting.routes.ts:525 | auth=YES ws=YES role=none
+GET /api/accounting/customer-debt | Accounting | backend/src/routes/accounting.routes.ts:550 | auth=YES ws=YES role=none
+GET /api/accounting/year-end/plan | Accounting | backend/src/routes/accounting.routes.ts:677 | auth=YES ws=YES role=none
+POST /api/accounting/year-end/close | Accounting | backend/src/routes/accounting.routes.ts:708 | auth=YES ws=YES role=none
+DELETE /api/v1/activities/:id | Audit & Activity | backend/src/routes/activity.routes.ts:195 | auth=YES ws=YES role=none
+GET /api/v1/entities/:id/:id/summary | Audit & Activity | backend/src/routes/activity.routes.ts:309 | auth=YES ws=YES role=none
+GET /api/v1/entities/:id/:id/summary | Audit & Activity | backend/src/routes/activity.routes.ts:314 | auth=YES ws=YES role=none
+GET /api/admin/billing/prices | Purchasing | backend/src/routes/admin-billing.routes.ts:67 | auth=YES ws=NO role=none
+POST /api/admin/billing/prices | Purchasing | backend/src/routes/admin-billing.routes.ts:80 | auth=YES ws=NO role=none
+GET /api/admin/billing/ledger | Accounting | backend/src/routes/admin-billing.routes.ts:103 | auth=YES ws=NO role=none
+POST /api/admin/workspaces/:id/billing-ledger | Accounting | backend/src/routes/admin-billing.routes.ts:124 | auth=YES ws=NO role=none
+GET /api/admin/billing/action-requests | Purchasing | backend/src/routes/admin-billing.routes.ts:155 | auth=YES ws=NO role=none
+POST /api/admin/billing/action-requests | Purchasing | backend/src/routes/admin-billing.routes.ts:173 | auth=YES ws=NO role=none
+POST /api/admin/billing/action-requests/:id/decide | Purchasing | backend/src/routes/admin-billing.routes.ts:194 | auth=YES ws=NO role=none
+GET /api/admin/billing/subscriptions/:id/history | Purchasing | backend/src/routes/admin-billing.routes.ts:220 | auth=YES ws=NO role=none
+GET /api/admin/billing/dunning-logs | Purchasing | backend/src/routes/admin-billing.routes.ts:239 | auth=YES ws=NO role=none
+GET /api/admin/workspaces/:id/360 | Customers | backend/src/routes/admin-customers.routes.ts:61 | auth=YES ws=NO role=none
+POST /api/admin/users/:id/action | Customers | backend/src/routes/admin-customers.routes.ts:79 | auth=YES ws=NO role=none
+POST /api/admin/workspaces/:id/support-sessions | Customers | backend/src/routes/admin-customers.routes.ts:100 | auth=YES ws=NO role=none
+GET /api/admin/workspaces/:id/notes | Customers | backend/src/routes/admin-customers.routes.ts:128 | auth=YES ws=NO role=none
+POST /api/admin/workspaces/:id/notes | Customers | backend/src/routes/admin-customers.routes.ts:146 | auth=YES ws=NO role=none
+GET /api/admin/data-requests | Customers | backend/src/routes/admin-customers.routes.ts:173 | auth=YES ws=NO role=none
+POST /api/admin/data-requests | Customers | backend/src/routes/admin-customers.routes.ts:191 | auth=YES ws=NO role=none
+GET /api/admin/trial-abuse | Customers | backend/src/routes/admin-customers.routes.ts:210 | auth=YES ws=NO role=none
+GET /api/public/offline/licence-key | Admin | backend/src/routes/admin-offline.routes.ts:60 | auth=NO ws=NO role=none
+GET /api/admin/offline/licences | Admin | backend/src/routes/admin-offline.routes.ts:78 | auth=YES ws=NO role=none
+POST /api/admin/offline/licences | Admin | backend/src/routes/admin-offline.routes.ts:107 | auth=YES ws=NO role=none
+POST /api/admin/offline/licences/:id/revoke | Admin | backend/src/routes/admin-offline.routes.ts:140 | auth=YES ws=NO role=none
+GET /api/admin/offline/devices | Admin | backend/src/routes/admin-offline.routes.ts:168 | auth=YES ws=NO role=none
+POST /api/admin/offline/devices/:id/release | Admin | backend/src/routes/admin-offline.routes.ts:196 | auth=YES ws=NO role=none
+GET /api/admin/offline/logs | Admin | backend/src/routes/admin-offline.routes.ts:224 | auth=YES ws=NO role=none
+GET /api/admin/offline/bans | Admin | backend/src/routes/admin-offline.routes.ts:262 | auth=YES ws=NO role=none
+POST /api/admin/offline/bans/:id/lift | Admin | backend/src/routes/admin-offline.routes.ts:285 | auth=YES ws=NO role=none
+GET /api/admin/offline/reviews | Admin | backend/src/routes/admin-offline.routes.ts:321 | auth=YES ws=NO role=none
+POST /api/admin/offline/reviews/:id/decide | Admin | backend/src/routes/admin-offline.routes.ts:348 | auth=YES ws=NO role=none
+GET /api/admin/offline/fleet-health | Admin | backend/src/routes/admin-offline.routes.ts:402 | auth=YES ws=NO role=none
+GET /api/admin/ops/flags | Admin | backend/src/routes/admin-ops.routes.ts:71 | auth=YES ws=NO role=none
+POST /api/admin/ops/flags | Admin | backend/src/routes/admin-ops.routes.ts:88 | auth=YES ws=NO role=none
+GET /api/admin/ops/health | Admin | backend/src/routes/admin-ops.routes.ts:111 | auth=YES ws=NO role=none
+GET /api/admin/ops/jobs | Admin | backend/src/routes/admin-ops.routes.ts:129 | auth=YES ws=NO role=none
+POST /api/admin/ops/jobs/:id/retry | Admin | backend/src/routes/admin-ops.routes.ts:146 | auth=YES ws=NO role=none
+GET /api/admin/ops/announcements | Admin | backend/src/routes/admin-ops.routes.ts:166 | auth=YES ws=NO role=none
+POST /api/admin/ops/announcements | Admin | backend/src/routes/admin-ops.routes.ts:183 | auth=YES ws=NO role=none
+POST /api/admin/ops/export-csv | Admin | backend/src/routes/admin-ops.routes.ts:206 | auth=YES ws=NO role=none
+GET /api/admin/roles | Admin | backend/src/routes/admin-security.routes.ts:59 | auth=YES ws=NO role=none
+GET /api/admin/accounts | Accounting | backend/src/routes/admin-security.routes.ts:79 | auth=YES ws=NO role=none
+POST /api/admin/accounts | Accounting | backend/src/routes/admin-security.routes.ts:93 | auth=YES ws=NO role=none
+GET /api/admin/sessions | Admin | backend/src/routes/admin-security.routes.ts:119 | auth=YES ws=NO role=none
+POST /api/admin/sessions/:id/revoke | Admin | backend/src/routes/admin-security.routes.ts:137 | auth=YES ws=NO role=none
+GET /api/admin/security-events | Admin | backend/src/routes/admin-security.routes.ts:158 | auth=YES ws=NO role=none
+POST /api/admin/security/step-up | Admin | backend/src/routes/admin-security.routes.ts:176 | auth=YES ws=NO role=none
+GET /api/admin/metrics | Admin | backend/src/routes/admin.routes.ts:122 | auth=YES ws=NO role=none
+GET /api/admin/users | Admin | backend/src/routes/admin.routes.ts:137 | auth=YES ws=NO role=none
+GET /api/admin/users/:id | Admin | backend/src/routes/admin.routes.ts:153 | auth=YES ws=NO role=none
+GET /api/admin/users-search | Admin | backend/src/routes/admin.routes.ts:178 | auth=YES ws=NO role=none
+GET /api/admin/workspaces | Admin | backend/src/routes/admin.routes.ts:194 | auth=YES ws=NO role=none
+GET /api/admin/workspaces/:id | Admin | backend/src/routes/admin.routes.ts:210 | auth=YES ws=NO role=none
+GET /api/admin/workspaces/:id/members | Admin | backend/src/routes/admin.routes.ts:233 | auth=YES ws=NO role=none
+PATCH /api/admin/memberships/:id | Admin | backend/src/routes/admin.routes.ts:261 | auth=YES ws=NO role=none
+DELETE /api/admin/memberships/:id | Admin | backend/src/routes/admin.routes.ts:294 | auth=YES ws=NO role=none
+GET /api/admin/workspaces/:id/invoices | Sales | backend/src/routes/admin.routes.ts:316 | auth=YES ws=NO role=none
+GET /api/admin/workspaces/:id/transactions | Admin | backend/src/routes/admin.routes.ts:336 | auth=YES ws=NO role=none
+GET /api/admin/subscriptions | Admin | backend/src/routes/admin.routes.ts:356 | auth=YES ws=NO role=none
+GET /api/admin/subscriptions/past-due | Admin | backend/src/routes/admin.routes.ts:373 | auth=YES ws=NO role=none
+GET /api/admin/subscriptions/:id | Admin | backend/src/routes/admin.routes.ts:389 | auth=YES ws=NO role=none
+PATCH /api/admin/subscriptions/:id/plan | Admin | backend/src/routes/admin.routes.ts:408 | auth=YES ws=NO role=none
+PATCH /api/admin/subscriptions/:id/status | Admin | backend/src/routes/admin.routes.ts:434 | auth=YES ws=NO role=none
+GET /api/admin/webhook-events | Developer Platform | backend/src/routes/admin.routes.ts:460 | auth=YES ws=NO role=none
+GET /api/admin/audit-logs | Admin | backend/src/routes/admin.routes.ts:476 | auth=YES ws=NO role=none
+GET /api/agriculture/livestock | Inventory | backend/src/routes/agriculture.routes.ts:46 | auth=YES ws=YES role=none
+POST /api/agriculture/livestock | Inventory | backend/src/routes/agriculture.routes.ts:56 | auth=YES ws=YES role=none
+POST /api/ai/config/test | AI & Intelligence | backend/src/routes/ai-chat.routes.ts:218 | auth=YES ws=NO role=none
+POST /api/ai/query | AI & Intelligence | backend/src/routes/ai.routes.ts:25 | auth=YES ws=YES role=none
+GET /api/analytics/inventory | Inventory | backend/src/routes/analytics.routes.ts:233 | auth=YES ws=YES role=none
+GET /api/analytics/financial | Reporting | backend/src/routes/analytics.routes.ts:260 | auth=YES ws=YES role=none
+POST /api/public/attendance-devices/events | HR & Payroll | backend/src/routes/attendance-device.routes.ts:219 | auth=NO ws=NO role=none
+GET /api/public/attendance/:id | HR & Payroll | backend/src/routes/attendance-link.routes.ts:246 | auth=NO ws=NO role=none
+POST /api/public/attendance/:id | HR & Payroll | backend/src/routes/attendance-link.routes.ts:259 | auth=NO ws=NO role=none
+POST /api/public/attendance/:id/phone | HR & Payroll | backend/src/routes/attendance-link.routes.ts:273 | auth=NO ws=NO role=none
+POST /api/audit/log | Audit & Activity | backend/src/routes/audit.routes.ts:190 | auth=YES ws=NO role=none
+GET /api/audit/entity/:id/:id | Audit & Activity | backend/src/routes/audit.routes.ts:252 | auth=YES ws=NO role=none
+GET /api/audit/user/:id | Auth & Users | backend/src/routes/audit.routes.ts:283 | auth=YES ws=NO role=none
+GET /api/audit/stats | Audit & Activity | backend/src/routes/audit.routes.ts:319 | auth=YES ws=NO role=none
+GET /api/audit/export | Audit & Activity | backend/src/routes/audit.routes.ts:354 | auth=YES ws=NO role=none
+POST /api/audit/cleanup | Audit & Activity | backend/src/routes/audit.routes.ts:383 | auth=YES ws=NO role=none
+POST /api/auth/refresh | Auth & Users | backend/src/routes/auth.routes.ts:411 | auth=NO ws=NO role=none
+POST /api/auth/forgot-password | Auth & Users | backend/src/routes/auth.routes.ts:665 | auth=NO ws=NO role=none
+POST /api/auth/reset-password | Auth & Users | backend/src/routes/auth.routes.ts:689 | auth=NO ws=NO role=none
+PATCH /api/auth/profile | Auth & Users | backend/src/routes/auth.routes.ts:725 | auth=YES ws=NO role=none
+GET /api/admin/upgrade-requests | Admin | backend/src/routes/billing.routes.ts:230 | auth=YES ws=NO role=none
+POST /api/admin/upgrade-requests/:id/approve | Admin | backend/src/routes/billing.routes.ts:252 | auth=YES ws=NO role=none
+POST /api/admin/upgrade-requests/:id/reject | Admin | backend/src/routes/billing.routes.ts:275 | auth=YES ws=NO role=none
+GET /api/admin/plan-limits | Admin | backend/src/routes/billing.routes.ts:367 | auth=YES ws=NO role=none
+PUT /api/admin/plan-limits/:id | Admin | backend/src/routes/billing.routes.ts:373 | auth=YES ws=NO role=none
+GET /api/admin/workspace-limits/:id | Admin | backend/src/routes/billing.routes.ts:393 | auth=YES ws=NO role=none
+PUT /api/admin/workspace-limits/:id | Admin | backend/src/routes/billing.routes.ts:400 | auth=YES ws=NO role=none
+POST /api/billing/offline-license | Purchasing | backend/src/routes/billing.routes.ts:427 | auth=YES ws=YES role=none
+GET /api/billing/offline-license | Purchasing | backend/src/routes/billing.routes.ts:478 | auth=YES ws=YES role=none
+POST /api/billing/offline-license/:id/revoke | Purchasing | backend/src/routes/billing.routes.ts:491 | auth=YES ws=YES role=none
+GET /api/billing/offline-license/revocations | Purchasing | backend/src/routes/billing.routes.ts:508 | auth=YES ws=YES role=none
+POST /api/billing/offline-license/activate-seat | Purchasing | backend/src/routes/billing.routes.ts:519 | auth=YES ws=YES role=none
+POST /api/billing/offline-license/connect | Purchasing | backend/src/routes/billing.routes.ts:595 | auth=YES ws=YES role=none
+POST /api/billing/offline-license/tier1-report | Purchasing | backend/src/routes/billing.routes.ts:642 | auth=YES ws=YES role=none
+POST /api/billing/offline-license/tier2-report | Purchasing | backend/src/routes/billing.routes.ts:696 | auth=YES ws=YES role=none
+GET /api/billing/offline-license/logs | Purchasing | backend/src/routes/billing.routes.ts:748 | auth=YES ws=YES role=none
+GET /api/billing/offline-license/review-queue | Purchasing | backend/src/routes/billing.routes.ts:760 | auth=YES ws=YES role=none
+POST /api/billing/devices/activate | Purchasing | backend/src/routes/billing.routes.ts:771 | auth=YES ws=YES role=none
+POST /api/billing/devices/:id/release | Purchasing | backend/src/routes/billing.routes.ts:787 | auth=YES ws=YES role=none
+GET /api/billing/devices | Purchasing | backend/src/routes/billing.routes.ts:802 | auth=YES ws=YES role=none
+GET /api/billing/upgrade-credit | Purchasing | backend/src/routes/billing.routes.ts:813 | auth=YES ws=YES role=none
+GET /api/blog/posts | POS | backend/src/routes/blog.routes.ts:231 | auth=NO ws=NO role=none
+GET /api/blog/posts/:id/:id | POS | backend/src/routes/blog.routes.ts:245 | auth=NO ws=NO role=none
+GET /api/blog/sitemap | General Operations | backend/src/routes/blog.routes.ts:268 | auth=NO ws=NO role=none
+POST /api/blog/posts/:id/view | POS | backend/src/routes/blog.routes.ts:277 | auth=NO ws=NO role=none
+GET /api/admin/blog/posts | POS | backend/src/routes/blog.routes.ts:351 | auth=NO ws=NO role=none
+GET /api/admin/blog/posts/:id | POS | backend/src/routes/blog.routes.ts:359 | auth=NO ws=NO role=none
+POST /api/admin/blog/posts | POS | backend/src/routes/blog.routes.ts:368 | auth=NO ws=NO role=none
+PUT /api/admin/blog/posts/:id | POS | backend/src/routes/blog.routes.ts:377 | auth=NO ws=NO role=none
+DELETE /api/admin/blog/posts/:id | POS | backend/src/routes/blog.routes.ts:387 | auth=NO ws=NO role=none
+GET /api/admin/blog/:id | Admin | backend/src/routes/blog.routes.ts:398 | auth=NO ws=NO role=none
+POST /api/admin/blog/:id | Admin | backend/src/routes/blog.routes.ts:408 | auth=NO ws=NO role=none
+PUT /api/admin/blog/:id/:id | Admin | backend/src/routes/blog.routes.ts:420 | auth=NO ws=NO role=none
+DELETE /api/admin/blog/:id/:id | Admin | backend/src/routes/blog.routes.ts:430 | auth=NO ws=NO role=none
+GET /api/admin/blog/comments | Admin | backend/src/routes/blog.routes.ts:439 | auth=NO ws=NO role=none
+PATCH /api/admin/blog/comments/:id | Admin | backend/src/routes/blog.routes.ts:447 | auth=NO ws=NO role=none
+POST /api/admin/blog/images | Admin | backend/src/routes/blog.routes.ts:457 | auth=NO ws=NO role=none
+POST /api/admin/blog/intelligence/briefs | AI & Intelligence | backend/src/routes/blog.routes.ts:475 | auth=NO ws=NO role=none
+GET /api/admin/blog/intelligence/briefs/:id | AI & Intelligence | backend/src/routes/blog.routes.ts:495 | auth=NO ws=NO role=none
+POST /api/admin/blog/intelligence/briefs/:id/draft | AI & Intelligence | backend/src/routes/blog.routes.ts:511 | auth=NO ws=NO role=none
+GET /api/admin/blog/intelligence/briefs/:id/drafts | AI & Intelligence | backend/src/routes/blog.routes.ts:536 | auth=NO ws=NO role=none
+GET /api/admin/blog/intelligence/drafts/:id | AI & Intelligence | backend/src/routes/blog.routes.ts:545 | auth=NO ws=NO role=none
+GET /api/admin/blog/intelligence/jobs/:id | AI & Intelligence | backend/src/routes/blog.routes.ts:557 | auth=NO ws=NO role=none
+GET /api/admin/blog/intelligence/prompt | AI & Intelligence | backend/src/routes/blog.routes.ts:574 | auth=NO ws=NO role=none
+PUT /api/admin/blog/intelligence/prompt | AI & Intelligence | backend/src/routes/blog.routes.ts:588 | auth=NO ws=NO role=none
+DELETE /api/admin/blog/intelligence/prompt | AI & Intelligence | backend/src/routes/blog.routes.ts:597 | auth=NO ws=NO role=none
+GET /api/admin/blog/intelligence/drafts/:id/links | AI & Intelligence | backend/src/routes/blog.routes.ts:610 | auth=NO ws=NO role=none
+PATCH /api/admin/blog/intelligence/links/:id | AI & Intelligence | backend/src/routes/blog.routes.ts:621 | auth=NO ws=NO role=none
+PATCH /api/branches/:id | Workspaces & Billing | backend/src/routes/branch.routes.ts:135 | auth=YES ws=YES role=none
+PUT /api/branches/assignments | Workspaces & Billing | backend/src/routes/branch.routes.ts:156 | auth=YES ws=YES role=none
+POST /api/cloud-migration/jobs | General Operations | backend/src/routes/cloud-migration.routes.ts:45 | auth=YES ws=YES role=none
+POST /api/cloud-migration/jobs/:id/chunk | General Operations | backend/src/routes/cloud-migration.routes.ts:63 | auth=YES ws=YES role=none
+POST /api/cloud-migration/jobs/:id/reconcile | Banking & Treasury | backend/src/routes/cloud-migration.routes.ts:83 | auth=YES ws=YES role=none
+POST /api/cloud-migration/jobs/:id/confirm | General Operations | backend/src/routes/cloud-migration.routes.ts:96 | auth=YES ws=YES role=none
+GET /api/cloud-migration/jobs/:id | General Operations | backend/src/routes/cloud-migration.routes.ts:108 | auth=YES ws=YES role=none
+GET /api/public/cms/pages/:id/:id | General Operations | backend/src/routes/cms.routes.ts:52 | auth=NO ws=NO role=none
+GET /api/cms/pages | General Operations | backend/src/routes/cms.routes.ts:69 | auth=YES ws=NO role=none
+POST /api/cms/pages | General Operations | backend/src/routes/cms.routes.ts:81 | auth=YES ws=NO role=none
+GET /api/cms/pages/:id | General Operations | backend/src/routes/cms.routes.ts:91 | auth=YES ws=NO role=none
+PUT /api/cms/pages/:id | General Operations | backend/src/routes/cms.routes.ts:101 | auth=YES ws=NO role=none
+POST /api/cms/pages/:id/publish | General Operations | backend/src/routes/cms.routes.ts:112 | auth=YES ws=NO role=none
+POST /api/cms/pages/:id/archive | General Operations | backend/src/routes/cms.routes.ts:122 | auth=YES ws=NO role=none
+PUT /api/cms/globals/:id/:id | General Operations | backend/src/routes/cms.routes.ts:165 | auth=YES ws=NO role=none
+GET /api/public/tasks/:id | Projects | backend/src/routes/crm.routes.ts:190 | auth=NO ws=NO role=none
+PATCH /api/public/tasks/:id/status | Projects | backend/src/routes/crm.routes.ts:216 | auth=NO ws=NO role=none
+PATCH /api/public/tasks/:id/customer-outcome | Customers | backend/src/routes/crm.routes.ts:247 | auth=NO ws=NO role=none
+GET /api/custom-fields/:id | General Operations | backend/src/routes/custom-fields.routes.ts:82 | auth=YES ws=YES role=none
+GET /api/public/portal/:id | Customers | backend/src/routes/customer-portal.routes.ts:91 | auth=NO ws=NO role=none
+GET /api/customers/:id/documents/:id/url | Customers | backend/src/routes/customer-profile.routes.ts:151 | auth=YES ws=YES role=none
+DELETE /api/customers/:id | Customers | backend/src/routes/customer.routes.ts:182 | auth=YES ws=YES role=none
+GET /api/customers/:id/balance | Customers | backend/src/routes/customer.routes.ts:208 | auth=YES ws=YES role=none
+GET /api/debug/routes | General Operations | backend/src/routes/debug.routes.ts:6 | auth=NO ws=NO role=none
+GET /api/debug/check/:id | General Operations | backend/src/routes/debug.routes.ts:20 | auth=NO ws=NO role=none
+GET /api/debug/info | General Operations | backend/src/routes/debug.routes.ts:37 | auth=NO ws=NO role=none
+GET /api/v1/workflow-escalations | Workflows & Automation | backend/src/routes/escalation.routes.ts:82 | auth=YES ws=YES role=none
+POST /api/events/emit | Audit & Activity | backend/src/routes/event.routes.ts:30 | auth=YES ws=NO role=none
+POST /api/events/process | Audit & Activity | backend/src/routes/event.routes.ts:61 | auth=YES ws=NO role=none
+POST /api/events/seed | Audit & Activity | backend/src/routes/event.routes.ts:87 | auth=YES ws=NO role=none
+GET /api/events/stats | Audit & Activity | backend/src/routes/event.routes.ts:112 | auth=YES ws=NO role=none
+POST /api/events/cleanup | Audit & Activity | backend/src/routes/event.routes.ts:139 | auth=YES ws=NO role=none
+POST /api/finance/currency/revalue | Banking & Treasury | backend/src/routes/finance-ops.routes.ts:422 | auth=YES ws=YES role=none
+GET /api/finance/currency/revaluations | Banking & Treasury | backend/src/routes/finance-ops.routes.ts:438 | auth=YES ws=YES role=none
+GET /api/finance/dimensions | Banking & Treasury | backend/src/routes/finance-ops.routes.ts:452 | auth=YES ws=YES role=none
+PUT /api/finance/dimensions | Banking & Treasury | backend/src/routes/finance-ops.routes.ts:476 | auth=YES ws=YES role=none
+PUT /api/finance/dimensions/values | Banking & Treasury | backend/src/routes/finance-ops.routes.ts:492 | auth=YES ws=YES role=none
+PUT /api/finance/dimensions/requirements | Banking & Treasury | backend/src/routes/finance-ops.routes.ts:511 | auth=YES ws=YES role=none
+GET /api/finance/dimensions/:id/totals | Banking & Treasury | backend/src/routes/finance-ops.routes.ts:530 | auth=YES ws=YES role=none
+POST /api/governance/why-not | General Operations | backend/src/routes/governance.routes.ts:218 | auth=YES ws=YES role=none
+GET /api/departments | HR & Payroll | backend/src/routes/human-resources.routes.ts:40 | auth=YES ws=YES role=none
+POST /api/departments | HR & Payroll | backend/src/routes/human-resources.routes.ts:64 | auth=YES ws=YES role=none
+PATCH /api/departments/:id | HR & Payroll | backend/src/routes/human-resources.routes.ts:90 | auth=YES ws=YES role=none
+GET /api/attendance/:id | HR & Payroll | backend/src/routes/human-resources.routes.ts:236 | auth=YES ws=YES role=none
+POST /api/attendance | HR & Payroll | backend/src/routes/human-resources.routes.ts:268 | auth=YES ws=YES role=none
+PATCH /api/attendance/:id | HR & Payroll | backend/src/routes/human-resources.routes.ts:294 | auth=YES ws=YES role=none
+GET /api/intelligence/duplicates/:id/compare | AI & Intelligence | backend/src/routes/intelligence.routes.ts:88 | auth=YES ws=YES role=none
+POST /api/intelligence/merge | AI & Intelligence | backend/src/routes/intelligence.routes.ts:117 | auth=YES ws=YES role=none
+GET /api/intelligence/merges | AI & Intelligence | backend/src/routes/intelligence.routes.ts:133 | auth=YES ws=YES role=none
+GET /api/intelligence/summary | AI & Intelligence | backend/src/routes/intelligence.routes.ts:153 | auth=YES ws=YES role=none
+POST /api/intelligence/explain | AI & Intelligence | backend/src/routes/intelligence.routes.ts:175 | auth=YES ws=YES role=none
+GET /api/intelligence/anomalies | AI & Intelligence | backend/src/routes/intelligence.routes.ts:204 | auth=YES ws=YES role=none
+GET /api/inventory/valuation | Inventory | backend/src/routes/inventory-costing.routes.ts:59 | auth=YES ws=YES role=none
+GET /api/inventory/layers/:id | Inventory | backend/src/routes/inventory-costing.routes.ts:86 | auth=YES ws=YES role=none
+GET /api/inventory/cost-trail/:id/:id | Inventory | backend/src/routes/inventory-costing.routes.ts:106 | auth=YES ws=YES role=none
+GET /api/inventory/cost-preview | Inventory | backend/src/routes/inventory-costing.routes.ts:136 | auth=YES ws=YES role=none
+GET /api/invoices/:id/pdf | Sales | backend/src/routes/invoice-pdf.routes.ts:131 | auth=YES ws=YES role=none
+GET /api/public/invoices/:id | Sales | backend/src/routes/invoice-public.routes.ts:15 | auth=NO ws=NO role=none
+PATCH /api/work-orders/:id | Manufacturing | backend/src/routes/manufacturing.routes.ts:211 | auth=YES ws=YES role=none
+GET /api/public/market/listings | Marketplace | backend/src/routes/market-public.routes.ts:43 | auth=NO ws=NO role=none
+GET /api/public/market/sellers/:id | Marketplace | backend/src/routes/market-public.routes.ts:52 | auth=NO ws=NO role=none
+GET /api/public/market/sellers/:id/listings/:id | Marketplace | backend/src/routes/market-public.routes.ts:61 | auth=NO ws=NO role=none
+GET /api/public/market/sitemap | Marketplace | backend/src/routes/market-public.routes.ts:70 | auth=NO ws=NO role=none
+POST /api/market/listings | Marketplace | backend/src/routes/market.routes.ts:108 | auth=YES ws=YES role=none
+GET /api/admin/market | Marketplace | backend/src/routes/market.routes.ts:137 | auth=YES ws=NO role=none
+PUT /api/admin/market/enabled | Marketplace | backend/src/routes/market.routes.ts:145 | auth=YES ws=NO role=none
+GET /api/admin/market/sellers | Marketplace | backend/src/routes/market.routes.ts:154 | auth=YES ws=NO role=none
+POST /api/admin/market/sellers/:id/status | Marketplace | backend/src/routes/market.routes.ts:168 | auth=YES ws=NO role=none
+POST /api/admin/market/sellers/:id/verified | Marketplace | backend/src/routes/market.routes.ts:183 | auth=YES ws=NO role=none
+GET /api/admin/market/listings | Marketplace | backend/src/routes/market.routes.ts:198 | auth=YES ws=NO role=none
+POST /api/admin/market/listings/:id/suspended | Marketplace | backend/src/routes/market.routes.ts:212 | auth=YES ws=NO role=none
+GET /api/admin/oauth-apps/:id/stats | Developer Platform | backend/src/routes/marketplace.routes.ts:209 | auth=YES ws=NO role=none
+GET /api/admin/app-publishers | Marketplace | backend/src/routes/marketplace.routes.ts:219 | auth=YES ws=NO role=none
+POST /api/admin/app-publishers/:id/verification | Marketplace | backend/src/routes/marketplace.routes.ts:225 | auth=YES ws=NO role=none
+GET /api/admin/app-reports | Marketplace | backend/src/routes/marketplace.routes.ts:235 | auth=YES ws=NO role=none
+POST /api/admin/app-reports/:id/resolution | Marketplace | backend/src/routes/marketplace.routes.ts:244 | auth=YES ws=NO role=none
+GET /api/admin/app-reviews | Marketplace | backend/src/routes/marketplace.routes.ts:256 | auth=YES ws=NO role=none
+POST /api/admin/app-reviews/:id/visibility | Marketplace | backend/src/routes/marketplace.routes.ts:265 | auth=YES ws=NO role=none
+GET /mcp | AI & Intelligence | backend/src/routes/mcp.routes.ts:270 | auth=NO ws=NO role=none
+POST /mcp | AI & Intelligence | backend/src/routes/mcp.routes.ts:272 | auth=NO ws=NO role=none
+POST /api/ai-requests/:id/reject | AI & Intelligence | backend/src/routes/mcp.routes.ts:461 | auth=YES ws=YES role=none
+GET /api/migrations/:id/rollback-plan | General Operations | backend/src/routes/migration.routes.ts:261 | auth=YES ws=YES role=none
+POST /api/migrations/:id/rollback | General Operations | backend/src/routes/migration.routes.ts:274 | auth=YES ws=YES role=none
+GET /api/migrations/profiles | General Operations | backend/src/routes/migration.routes.ts:289 | auth=YES ws=YES role=none
+POST /api/migrations/:id/profile | General Operations | backend/src/routes/migration.routes.ts:303 | auth=YES ws=YES role=none
+POST /api/migrations/:id/apply-profile | General Operations | backend/src/routes/migration.routes.ts:320 | auth=YES ws=YES role=none
+GET /api/migrations/export | General Operations | backend/src/routes/migration.routes.ts:341 | auth=YES ws=YES role=none
+POST /api/oauth/token | Developer Platform | backend/src/routes/oauth.routes.ts:279 | auth=NO ws=NO role=none
+POST /api/oauth/revoke | Developer Platform | backend/src/routes/oauth.routes.ts:334 | auth=NO ws=NO role=none
+GET /api/admin/oauth-apps | Developer Platform | backend/src/routes/oauth.routes.ts:365 | auth=YES ws=NO role=none
+POST /api/admin/oauth-apps/:id/status | Developer Platform | backend/src/routes/oauth.routes.ts:374 | auth=YES ws=NO role=none
+GET /api/admin/app-versions | Developer Platform | backend/src/routes/oauth.routes.ts:392 | auth=YES ws=NO role=none
+POST /api/admin/app-versions/:id/decision | Developer Platform | backend/src/routes/oauth.routes.ts:398 | auth=YES ws=NO role=none
+GET /api/odata/:id | General Operations | backend/src/routes/odata.routes.ts:29 | auth=YES ws=YES role=none
+POST /api/operations/batches/plan-issue | General Operations | backend/src/routes/operations.routes.ts:344 | auth=YES ws=YES role=none
+GET /api/orders | General Operations | backend/src/routes/orders.routes.ts:75 | auth=YES ws=YES role=none
+GET /api/orders/:id | General Operations | backend/src/routes/orders.routes.ts:85 | auth=YES ws=YES role=none
+POST /api/orders | General Operations | backend/src/routes/orders.routes.ts:94 | auth=YES ws=YES role=none
+POST /api/orders/:id/confirm | General Operations | backend/src/routes/orders.routes.ts:109 | auth=YES ws=YES role=none
+POST /api/orders/:id/cancel | General Operations | backend/src/routes/orders.routes.ts:118 | auth=YES ws=YES role=none
+POST /api/orders/:id/fulfill | General Operations | backend/src/routes/orders.routes.ts:128 | auth=YES ws=YES role=none
+POST /api/orders/:id/invoice | Sales | backend/src/routes/orders.routes.ts:137 | auth=YES ws=YES role=none
+GET /api/payments/:id | Payments | backend/src/routes/payments.routes.ts:84 | auth=YES ws=YES role=none
+GET /api/payments/aging/:id | Payments | backend/src/routes/payments.routes.ts:188 | auth=YES ws=YES role=none
+POST /api/permissions/seed | Auth & Users | backend/src/routes/permission.routes.ts:92 | auth=YES ws=NO role=none
+GET /api/roles/:id | Auth & Users | backend/src/routes/permission.routes.ts:163 | auth=YES ws=NO role=none
+PATCH /api/roles/:id | Auth & Users | backend/src/routes/permission.routes.ts:185 | auth=YES ws=NO role=none
+GET /api/users/:id/roles | Auth & Users | backend/src/routes/permission.routes.ts:242 | auth=YES ws=NO role=none
+POST /api/users/:id/roles | Auth & Users | backend/src/routes/permission.routes.ts:268 | auth=YES ws=NO role=none
+DELETE /api/users/:id/roles/:id | Auth & Users | backend/src/routes/permission.routes.ts:296 | auth=YES ws=NO role=none
+GET /api/users/:id/permissions | Auth & Users | backend/src/routes/permission.routes.ts:320 | auth=YES ws=YES role=none
+POST /api/permissions/check | Auth & Users | backend/src/routes/permission.routes.ts:353 | auth=YES ws=YES role=none
+GET /api/personalization/visibility | General Operations | backend/src/routes/personalization.routes.ts:50 | auth=YES ws=YES role=none
+PATCH /api/personalization/visibility | General Operations | backend/src/routes/personalization.routes.ts:65 | auth=YES ws=YES role=none
+GET /api/personalization/visibility/hidden | General Operations | backend/src/routes/personalization.routes.ts:84 | auth=YES ws=YES role=none
+POST /api/personalization/visibility/reset | General Operations | backend/src/routes/personalization.routes.ts:99 | auth=YES ws=YES role=none
+POST /api/pos/sessions/:id/resume | POS | backend/src/routes/pos.routes.ts:393 | auth=YES ws=YES role=none
+GET /api/products/by-barcode/:id | Inventory | backend/src/routes/product.routes.ts:145 | auth=YES ws=YES role=none
+GET /api/products/low-stock | Inventory | backend/src/routes/product.routes.ts:416 | auth=YES ws=YES role=none
+GET /api/projects/:id/members | Projects | backend/src/routes/project.routes.ts:275 | auth=YES ws=YES role=none
+POST /api/projects/:id/members | Projects | backend/src/routes/project.routes.ts:300 | auth=YES ws=YES role=none
+DELETE /api/projects/:id/members/:id | Projects | backend/src/routes/project.routes.ts:325 | auth=YES ws=YES role=none
+GET /api/projects/:id/time-entries | Projects | backend/src/routes/project.routes.ts:353 | auth=YES ws=YES role=none
+POST /api/projects/:id/time-entries | Projects | backend/src/routes/project.routes.ts:378 | auth=YES ws=YES role=none
+PATCH /api/time-entries/:id | Projects | backend/src/routes/project.routes.ts:403 | auth=YES ws=YES role=none
+DELETE /api/time-entries/:id | Projects | backend/src/routes/project.routes.ts:430 | auth=YES ws=YES role=none
+POST /api/promotions/quote | General Operations | backend/src/routes/promotions.routes.ts:58 | auth=YES ws=YES role=none
+PATCH /api/purchase-orders/:id | Purchasing | backend/src/routes/purchasing.routes.ts:109 | auth=YES ws=YES role=none
+GET /api/rules/:id | Workflows & Automation | backend/src/routes/rules.routes.ts:125 | auth=YES ws=YES role=none
+PATCH /api/rules/:id | Workflows & Automation | backend/src/routes/rules.routes.ts:161 | auth=YES ws=YES role=none
+POST /api/rules/dry-run | Workflows & Automation | backend/src/routes/rules.routes.ts:181 | auth=YES ws=YES role=none
+POST /api/rules/evaluate | Workflows & Automation | backend/src/routes/rules.routes.ts:200 | auth=YES ws=YES role=none
+GET /api/snapshots | General Operations | backend/src/routes/snapshots.routes.ts:42 | auth=YES ws=YES role=manager
+POST /api/snapshots | General Operations | backend/src/routes/snapshots.routes.ts:51 | auth=YES ws=YES role=manager
+GET /api/snapshots/:id/compare | General Operations | backend/src/routes/snapshots.routes.ts:61 | auth=YES ws=YES role=manager
+GET /api/${STOREFRONT_PREFIX}/catalog | General Operations | backend/src/routes/storefront.routes.ts:120 | auth=NO ws=NO role=none
+GET /api/${STOREFRONT_PREFIX}/products/:id | Inventory | backend/src/routes/storefront.routes.ts:129 | auth=NO ws=NO role=none
+POST /api/${STOREFRONT_PREFIX}/orders | General Operations | backend/src/routes/storefront.routes.ts:141 | auth=NO ws=NO role=none
+GET /api/${STOREFRONT_PREFIX}/orders/:id | General Operations | backend/src/routes/storefront.routes.ts:170 | auth=NO ws=NO role=none
+GET /api/suppliers/:id | Suppliers | backend/src/routes/supplier.routes.ts:82 | auth=YES ws=YES role=none
+GET /api/suppliers/:id/360 | Suppliers | backend/src/routes/supplier.routes.ts:102 | auth=YES ws=YES role=none
+POST /api/suppliers/ | Suppliers | backend/src/routes/supplier.routes.ts:122 | auth=YES ws=YES role=none
+PATCH /api/suppliers/:id | Suppliers | backend/src/routes/supplier.routes.ts:138 | auth=YES ws=YES role=none
+GET /api/sync/stream | Sync & Offline | backend/src/routes/sync-stream.routes.ts:68 | auth=YES ws=YES role=none
+POST /api/sync/push | Sync & Offline | backend/src/routes/sync.routes.ts:106 | auth=YES ws=YES role=none
+GET /api/sync/pull | Sync & Offline | backend/src/routes/sync.routes.ts:180 | auth=YES ws=YES role=none
+GET /api/sync/snapshot | Sync & Offline | backend/src/routes/sync.routes.ts:249 | auth=YES ws=YES role=none
+GET /api/sync/cursor | Sync & Offline | backend/src/routes/sync.routes.ts:279 | auth=YES ws=YES role=none
+POST /api/sync/lease | Sync & Offline | backend/src/routes/sync.routes.ts:295 | auth=YES ws=YES role=none
+DELETE /api/sync/lease | Sync & Offline | backend/src/routes/sync.routes.ts:321 | auth=YES ws=YES role=none
+GET /api/sync/health | Sync & Offline | backend/src/routes/sync.routes.ts:344 | auth=YES ws=YES role=none
+GET /api/system/metrics | General Operations | backend/src/routes/system-metrics.routes.ts:60 | auth=NO ws=NO role=none
+GET /api/system/metrics/stream | General Operations | backend/src/routes/system-metrics.routes.ts:69 | auth=NO ws=NO role=none
+GET /api/admin/instances | Admin | backend/src/routes/system-metrics.routes.ts:104 | auth=YES ws=NO role=none
+GET /api/admin/instances/scale | Admin | backend/src/routes/system-metrics.routes.ts:106 | auth=YES ws=NO role=none
+PUT /api/admin/instances/scale | Admin | backend/src/routes/system-metrics.routes.ts:117 | auth=YES ws=NO role=none
+GET /api/tax/config | Tax | backend/src/routes/tax.routes.ts:91 | auth=YES ws=YES role=none
+PUT /api/tax/components/:id | Tax | backend/src/routes/tax.routes.ts:112 | auth=YES ws=YES role=none
+PUT /api/tax/rules/:id | Tax | backend/src/routes/tax.routes.ts:130 | auth=YES ws=YES role=none
+POST /api/tax/preview | Tax | backend/src/routes/tax.routes.ts:150 | auth=YES ws=YES role=none
+GET /api/tax/drift/:id | Sales | backend/src/routes/tax.routes.ts:170 | auth=YES ws=YES role=none
+GET /api/transactions/balance/:id | Customers | backend/src/routes/transaction.routes.ts:356 | auth=YES ws=YES role=none
+DELETE /api/transactions/:id | General Operations | backend/src/routes/transaction.routes.ts:446 | auth=YES ws=YES role=none
+GET /api/freight/trips | General Operations | backend/src/routes/transport.routes.ts:39 | auth=YES ws=YES role=none
+POST /api/freight/trips | General Operations | backend/src/routes/transport.routes.ts:41 | auth=YES ws=YES role=none
+GET /api/courier/deliveries | General Operations | backend/src/routes/transport.routes.ts:71 | auth=YES ws=YES role=none
+POST /api/courier/deliveries | General Operations | backend/src/routes/transport.routes.ts:73 | auth=YES ws=YES role=none
+PATCH /api/courier/deliveries/:id/cod-status | General Operations | backend/src/routes/transport.routes.ts:75 | auth=YES ws=YES role=none
+GET /api/delivery-notes | Audit & Activity | backend/src/routes/transport.routes.ts:99 | auth=YES ws=YES role=none
+POST /api/delivery-notes | Audit & Activity | backend/src/routes/transport.routes.ts:101 | auth=YES ws=YES role=none
+GET /api/updates/:id/latest.yml | General Operations | backend/src/routes/updates.routes.ts:119 | auth=NO ws=NO role=none
+GET /api/updates/:id/:id | General Operations | backend/src/routes/updates.routes.ts:161 | auth=NO ws=NO role=none
+GET /api/admin/wallet/methods | Admin | backend/src/routes/wallet.routes.ts:164 | auth=YES ws=NO role=none
+POST /api/admin/wallet/methods | Admin | backend/src/routes/wallet.routes.ts:172 | auth=YES ws=NO role=none
+PATCH /api/admin/wallet/methods/:id | Admin | backend/src/routes/wallet.routes.ts:181 | auth=YES ws=NO role=none
+GET /api/admin/wallet/topups | Admin | backend/src/routes/wallet.routes.ts:190 | auth=YES ws=NO role=none
+GET /api/admin/wallet/topups/:id/receipt | Admin | backend/src/routes/wallet.routes.ts:202 | auth=YES ws=NO role=none
+POST /api/admin/wallet/topups/:id/approve | Admin | backend/src/routes/wallet.routes.ts:214 | auth=YES ws=NO role=none
+POST /api/admin/wallet/topups/:id/reject | Admin | backend/src/routes/wallet.routes.ts:233 | auth=YES ws=NO role=none
+GET /api/admin/wallet/workspaces | Admin | backend/src/routes/wallet.routes.ts:247 | auth=YES ws=NO role=none
+GET /api/admin/wallet/workspaces/:id/transactions | Admin | backend/src/routes/wallet.routes.ts:263 | auth=YES ws=NO role=none
+POST /api/admin/wallet/workspaces/:id/adjust | Admin | backend/src/routes/wallet.routes.ts:275 | auth=YES ws=NO role=none
+GET /api/warehouses | Inventory | backend/src/routes/warehouse.routes.ts:35 | auth=YES ws=YES role=none
+DELETE /api/warehouses/:id | Inventory | backend/src/routes/warehouse.routes.ts:129 | auth=YES ws=YES role=none
+GET /api/warehouses/:id/stock | Inventory | backend/src/routes/warehouse.routes.ts:278 | auth=YES ws=YES role=none
+PATCH /api/v1/workflows/:id | Workflows & Automation | backend/src/routes/workflow.routes.ts:124 | auth=YES ws=YES role=none
+DELETE /api/v1/workflows/:id | Workflows & Automation | backend/src/routes/workflow.routes.ts:156 | auth=YES ws=YES role=none
+GET /api/workspaces/:id | Workspaces & Billing | backend/src/routes/workspace.routes.ts:158 | auth=YES ws=NO role=none
+POST /api/workspaces/accept-invite | Workspaces & Billing | backend/src/routes/workspace.routes.ts:359 | auth=YES ws=NO role=none
