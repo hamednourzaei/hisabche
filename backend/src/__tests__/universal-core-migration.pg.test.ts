@@ -73,7 +73,9 @@ afterAll(async () => {
   if (sql) await sql.end()
   try {
     await pg.stop()
-  } catch {}
+  } catch {
+    // the server may already be down; teardown must not fail the run
+  }
 })
 
 describe('docs/universal-core-migration.sql', () => {

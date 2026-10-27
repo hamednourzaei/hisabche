@@ -126,7 +126,9 @@ afterAll(async () => {
   await pg.stop()
   try {
     rmSync(dir, { recursive: true, force: true })
-  } catch {}
+  } catch {
+    // the temp directory may still be locked on Windows; it is not test state
+  }
 })
 
 beforeEach(async () => {
