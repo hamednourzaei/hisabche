@@ -1,0 +1,1620 @@
+{
+  "generatedBy": "scripts/audit/join-matrix.mjs",
+  "totalRows": 821,
+  "backendRoutesCount": 816,
+  "frontendHooksCount": 498,
+  "statusCounts": {
+    "STATICALLY_CONNECTED": 410,
+    "ROUTE_NO_HOOK": 333,
+    "HOOK_NO_UI_CONSUMER": 70,
+    "RUNTIME_VERIFIED": 3,
+    "HOOK_NO_ROUTE_NO_CONSUMER": 2,
+    "CLIENT_UTILITY_ACTIVE": 3
+  },
+  "routeClassCounts": {
+    "CUSTOMER_FACING_NO_UI": 413,
+    "UI_VIA_NON_HOOK": 99,
+    "PUBLIC_API": 28,
+    "INFRASTRUCTURE": 248,
+    "PUBLIC_PAGE_API": 28,
+    "CLIENT_ONLY": 5
+  },
+  "routeNoHookClassCounts": {
+    "CUSTOMER_FACING_NO_UI": 100,
+    "UI_VIA_NON_HOOK": 18,
+    "PUBLIC_API": 14,
+    "INFRASTRUCTURE": 180,
+    "PUBLIC_PAGE_API": 21
+  },
+  "domainCounts": {
+    "Accounting": 32,
+    "Audit & Activity": 36,
+    "Purchasing": 35,
+    "Customers": 32,
+    "Admin": 68,
+    "Sales": 22,
+    "Developer Platform": 48,
+    "Manufacturing": 11,
+    "Inventory": 64,
+    "AI & Intelligence": 48,
+    "General Operations": 141,
+    "Suppliers": 6,
+    "Reporting": 16,
+    "HR & Payroll": 49,
+    "Workspaces & Billing": 28,
+    "Auth & Users": 29,
+    "Workflows & Automation": 24,
+    "POS": 32,
+    "Banking & Treasury": 23,
+    "Projects": 22,
+    "Sales Returns": 2,
+    "Marketplace": 27,
+    "Payments": 7,
+    "Sync & Offline": 9,
+    "Tax": 5,
+    "Client-Only": 5
+  },
+  "riskCounts": {
+    "LOW": 516,
+    "MEDIUM": 276,
+    "HIGH": 29
+  },
+  "offlineCounts": {
+    "NOT_IN_MATRIX": 815,
+    "not_supported": 1,
+    "ONLINE_ONLY": 5
+  },
+  "evidenceCounts": {
+    "STATIC": 410,
+    "NONE": 408,
+    "RUNTIME": 3
+  },
+  "hookClassCounts": {
+    "HOOK_CONNECTED_TO_ROUTE": 487,
+    "HOOK_DUPLICATE_NAME": 6,
+    "HOOK_NO_ROUTE_NO_CONSUMER": 2,
+    "HOOK_UTILITY_WITHOUT_ROUTE": 3
+  },
+  "hookNoUiConsumerClasses": {
+    "DEAD_CANDIDATE": 71,
+    "TEST_ONLY": 1
+  },
+  "duplicateHookNames": [
+    "useUnreadCount",
+    "useMarkAsRead",
+    "useMarkAllAsRead",
+    "useActivities",
+    "useEntityActivities",
+    "useInfiniteActivities"
+  ],
+  "duplicateHookDetails": [
+    {
+      "name": "useUnreadCount",
+      "primary": "packages/api/src/hooks/notifications.ts:117",
+      "duplicate": "packages/api/src/hooks/activity.ts:164",
+      "exportedAs": "PRIMARY_EXPORTED_BARE"
+    },
+    {
+      "name": "useMarkAsRead",
+      "primary": "packages/api/src/hooks/notifications.ts:157",
+      "duplicate": "packages/api/src/hooks/activity.ts:219",
+      "exportedAs": "PRIMARY_EXPORTED_BARE"
+    },
+    {
+      "name": "useMarkAllAsRead",
+      "primary": "packages/api/src/hooks/notifications.ts:183",
+      "duplicate": "packages/api/src/hooks/activity.ts:262",
+      "exportedAs": "PRIMARY_EXPORTED_BARE"
+    },
+    {
+      "name": "useActivities",
+      "primary": "packages/api/src/hooks/activity.ts:109",
+      "duplicate": "packages/api/src/hooks/useActivities.ts:16",
+      "exportedAs": "PRIMARY_EXPORTED_BARE"
+    },
+    {
+      "name": "useEntityActivities",
+      "primary": "packages/api/src/hooks/activity.ts:286",
+      "duplicate": "packages/api/src/hooks/useEntityActivities.ts:18",
+      "exportedAs": "PRIMARY_EXPORTED_BARE"
+    },
+    {
+      "name": "useInfiniteActivities",
+      "primary": "packages/api/src/hooks/activity.ts:140",
+      "duplicate": "packages/api/src/hooks/useInfiniteActivities.ts:15",
+      "exportedAs": "PRIMARY_EXPORTED_BARE"
+    }
+  ],
+  "customerFacingNoUi": [
+    {
+      "id": "PATCH /api/accounting/accounts/:id",
+      "method": "PATCH",
+      "path": "/api/accounting/accounts/:id",
+      "file": "backend/src/routes/accounting.routes.ts:183",
+      "domain": "Accounting",
+      "tables": "none",
+      "capabilities": "account.manage"
+    },
+    {
+      "id": "GET /api/accounting/journal/:id",
+      "method": "GET",
+      "path": "/api/accounting/journal/:id",
+      "file": "backend/src/routes/accounting.routes.ts:230",
+      "domain": "Accounting",
+      "tables": "none",
+      "capabilities": "ledger.read"
+    },
+    {
+      "id": "POST /api/accounting/journal/:id/post",
+      "method": "POST",
+      "path": "/api/accounting/journal/:id/post",
+      "file": "backend/src/routes/accounting.routes.ts:274",
+      "domain": "Accounting",
+      "tables": "none",
+      "capabilities": "ledger.post"
+    },
+    {
+      "id": "POST /api/accounting/journal/:id/reverse",
+      "method": "POST",
+      "path": "/api/accounting/journal/:id/reverse",
+      "file": "backend/src/routes/accounting.routes.ts:292",
+      "domain": "Accounting",
+      "tables": "none",
+      "capabilities": "ledger.reverse"
+    },
+    {
+      "id": "GET /api/accounting/period-lock",
+      "method": "GET",
+      "path": "/api/accounting/period-lock",
+      "file": "backend/src/routes/accounting.routes.ts:318",
+      "domain": "Accounting",
+      "tables": "none",
+      "capabilities": "ledger.read"
+    },
+    {
+      "id": "PUT /api/accounting/period-lock",
+      "method": "PUT",
+      "path": "/api/accounting/period-lock",
+      "file": "backend/src/routes/accounting.routes.ts:333",
+      "domain": "Accounting",
+      "tables": "none",
+      "capabilities": "ledger.lock_period"
+    },
+    {
+      "id": "GET /api/accounting/cash-flow",
+      "method": "GET",
+      "path": "/api/accounting/cash-flow",
+      "file": "backend/src/routes/accounting.routes.ts:525",
+      "domain": "Accounting",
+      "tables": "none",
+      "capabilities": "report.financial.read"
+    },
+    {
+      "id": "GET /api/accounting/year-end/plan",
+      "method": "GET",
+      "path": "/api/accounting/year-end/plan",
+      "file": "backend/src/routes/accounting.routes.ts:677",
+      "domain": "Accounting",
+      "tables": "none",
+      "capabilities": "report.financial.read"
+    },
+    {
+      "id": "POST /api/accounting/year-end/close",
+      "method": "POST",
+      "path": "/api/accounting/year-end/close",
+      "file": "backend/src/routes/accounting.routes.ts:708",
+      "domain": "Accounting",
+      "tables": "none",
+      "capabilities": "ledger.lock_period"
+    },
+    {
+      "id": "DELETE /api/v1/activities/:id",
+      "method": "DELETE",
+      "path": "/api/v1/activities/:id",
+      "file": "backend/src/routes/activity.routes.ts:195",
+      "domain": "Audit & Activity",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/v1/entities/:entityType/:entityId/summary",
+      "method": "GET",
+      "path": "/api/v1/entities/:id/:id/summary",
+      "file": "backend/src/routes/activity.routes.ts:309",
+      "domain": "Audit & Activity",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/v1/entities/:entityType/:entityId/summary",
+      "method": "GET",
+      "path": "/api/v1/entities/:id/:id/summary",
+      "file": "backend/src/routes/activity.routes.ts:314",
+      "domain": "Audit & Activity",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/agriculture/livestock",
+      "method": "GET",
+      "path": "/api/agriculture/livestock",
+      "file": "backend/src/routes/agriculture.routes.ts:46",
+      "domain": "Inventory",
+      "tables": "none",
+      "capabilities": "invoice.read"
+    },
+    {
+      "id": "POST /api/agriculture/livestock",
+      "method": "POST",
+      "path": "/api/agriculture/livestock",
+      "file": "backend/src/routes/agriculture.routes.ts:56",
+      "domain": "Inventory",
+      "tables": "none",
+      "capabilities": "invoice.create"
+    },
+    {
+      "id": "POST /api/ai/query",
+      "method": "POST",
+      "path": "/api/ai/query",
+      "file": "backend/src/routes/ai.routes.ts:25",
+      "domain": "AI & Intelligence",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/analytics/inventory",
+      "method": "GET",
+      "path": "/api/analytics/inventory",
+      "file": "backend/src/routes/analytics.routes.ts:233",
+      "domain": "Inventory",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/analytics/financial",
+      "method": "GET",
+      "path": "/api/analytics/financial",
+      "file": "backend/src/routes/analytics.routes.ts:260",
+      "domain": "Reporting",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/billing/offline-license",
+      "method": "POST",
+      "path": "/api/billing/offline-license",
+      "file": "backend/src/routes/billing.routes.ts:427",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "workspace.manage"
+    },
+    {
+      "id": "GET /api/billing/offline-license",
+      "method": "GET",
+      "path": "/api/billing/offline-license",
+      "file": "backend/src/routes/billing.routes.ts:478",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "workspace.manage"
+    },
+    {
+      "id": "POST /api/billing/offline-license/:licenseId/revoke",
+      "method": "POST",
+      "path": "/api/billing/offline-license/:id/revoke",
+      "file": "backend/src/routes/billing.routes.ts:491",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "workspace.manage"
+    },
+    {
+      "id": "GET /api/billing/offline-license/revocations",
+      "method": "GET",
+      "path": "/api/billing/offline-license/revocations",
+      "file": "backend/src/routes/billing.routes.ts:508",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/billing/offline-license/activate-seat",
+      "method": "POST",
+      "path": "/api/billing/offline-license/activate-seat",
+      "file": "backend/src/routes/billing.routes.ts:519",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/billing/offline-license/connect",
+      "method": "POST",
+      "path": "/api/billing/offline-license/connect",
+      "file": "backend/src/routes/billing.routes.ts:595",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/billing/offline-license/tier1-report",
+      "method": "POST",
+      "path": "/api/billing/offline-license/tier1-report",
+      "file": "backend/src/routes/billing.routes.ts:642",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/billing/offline-license/tier2-report",
+      "method": "POST",
+      "path": "/api/billing/offline-license/tier2-report",
+      "file": "backend/src/routes/billing.routes.ts:696",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/billing/offline-license/logs",
+      "method": "GET",
+      "path": "/api/billing/offline-license/logs",
+      "file": "backend/src/routes/billing.routes.ts:748",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/billing/offline-license/review-queue",
+      "method": "GET",
+      "path": "/api/billing/offline-license/review-queue",
+      "file": "backend/src/routes/billing.routes.ts:760",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/billing/devices/activate",
+      "method": "POST",
+      "path": "/api/billing/devices/activate",
+      "file": "backend/src/routes/billing.routes.ts:771",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/billing/devices/:deviceId/release",
+      "method": "POST",
+      "path": "/api/billing/devices/:id/release",
+      "file": "backend/src/routes/billing.routes.ts:787",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/billing/devices",
+      "method": "GET",
+      "path": "/api/billing/devices",
+      "file": "backend/src/routes/billing.routes.ts:802",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/billing/upgrade-credit",
+      "method": "GET",
+      "path": "/api/billing/upgrade-credit",
+      "file": "backend/src/routes/billing.routes.ts:813",
+      "domain": "Purchasing",
+      "tables": "subscriptions; subscription_upgrade_requests",
+      "capabilities": "none"
+    },
+    {
+      "id": "PATCH /api/branches/:id",
+      "method": "PATCH",
+      "path": "/api/branches/:id",
+      "file": "backend/src/routes/branch.routes.ts:135",
+      "domain": "Workspaces & Billing",
+      "tables": "none",
+      "capabilities": "workspace.manage"
+    },
+    {
+      "id": "PUT /api/branches/assignments",
+      "method": "PUT",
+      "path": "/api/branches/assignments",
+      "file": "backend/src/routes/branch.routes.ts:156",
+      "domain": "Workspaces & Billing",
+      "tables": "none",
+      "capabilities": "member.manage"
+    },
+    {
+      "id": "GET /api/custom-fields/:entity",
+      "method": "GET",
+      "path": "/api/custom-fields/:id",
+      "file": "backend/src/routes/custom-fields.routes.ts:82",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/customers/:id/documents/:documentId/url",
+      "method": "GET",
+      "path": "/api/customers/:id/documents/:id/url",
+      "file": "backend/src/routes/customer-profile.routes.ts:151",
+      "domain": "Customers",
+      "tables": "none",
+      "capabilities": "customer.read"
+    },
+    {
+      "id": "GET /api/v1/workflow-escalations",
+      "method": "GET",
+      "path": "/api/v1/workflow-escalations",
+      "file": "backend/src/routes/escalation.routes.ts:82",
+      "domain": "Workflows & Automation",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/finance/currency/revalue",
+      "method": "POST",
+      "path": "/api/finance/currency/revalue",
+      "file": "backend/src/routes/finance-ops.routes.ts:422",
+      "domain": "Banking & Treasury",
+      "tables": "none",
+      "capabilities": "ledger.post"
+    },
+    {
+      "id": "GET /api/finance/currency/revaluations",
+      "method": "GET",
+      "path": "/api/finance/currency/revaluations",
+      "file": "backend/src/routes/finance-ops.routes.ts:438",
+      "domain": "Banking & Treasury",
+      "tables": "none",
+      "capabilities": "report.financial.read"
+    },
+    {
+      "id": "GET /api/finance/dimensions",
+      "method": "GET",
+      "path": "/api/finance/dimensions",
+      "file": "backend/src/routes/finance-ops.routes.ts:452",
+      "domain": "Banking & Treasury",
+      "tables": "none",
+      "capabilities": "report.operational.read"
+    },
+    {
+      "id": "PUT /api/finance/dimensions",
+      "method": "PUT",
+      "path": "/api/finance/dimensions",
+      "file": "backend/src/routes/finance-ops.routes.ts:476",
+      "domain": "Banking & Treasury",
+      "tables": "none",
+      "capabilities": "account.manage"
+    },
+    {
+      "id": "PUT /api/finance/dimensions/values",
+      "method": "PUT",
+      "path": "/api/finance/dimensions/values",
+      "file": "backend/src/routes/finance-ops.routes.ts:492",
+      "domain": "Banking & Treasury",
+      "tables": "none",
+      "capabilities": "account.manage"
+    },
+    {
+      "id": "PUT /api/finance/dimensions/requirements",
+      "method": "PUT",
+      "path": "/api/finance/dimensions/requirements",
+      "file": "backend/src/routes/finance-ops.routes.ts:511",
+      "domain": "Banking & Treasury",
+      "tables": "none",
+      "capabilities": "account.manage"
+    },
+    {
+      "id": "GET /api/finance/dimensions/:dimensionId/totals",
+      "method": "GET",
+      "path": "/api/finance/dimensions/:id/totals",
+      "file": "backend/src/routes/finance-ops.routes.ts:530",
+      "domain": "Banking & Treasury",
+      "tables": "none",
+      "capabilities": "report.financial.read"
+    },
+    {
+      "id": "POST /api/governance/why-not",
+      "method": "POST",
+      "path": "/api/governance/why-not",
+      "file": "backend/src/routes/governance.routes.ts:218",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "report.operational.read"
+    },
+    {
+      "id": "GET /api/departments",
+      "method": "GET",
+      "path": "/api/departments",
+      "file": "backend/src/routes/human-resources.routes.ts:40",
+      "domain": "HR & Payroll",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/departments",
+      "method": "POST",
+      "path": "/api/departments",
+      "file": "backend/src/routes/human-resources.routes.ts:64",
+      "domain": "HR & Payroll",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "PATCH /api/departments/:id",
+      "method": "PATCH",
+      "path": "/api/departments/:id",
+      "file": "backend/src/routes/human-resources.routes.ts:90",
+      "domain": "HR & Payroll",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/intelligence/duplicates/:entity/compare",
+      "method": "GET",
+      "path": "/api/intelligence/duplicates/:id/compare",
+      "file": "backend/src/routes/intelligence.routes.ts:88",
+      "domain": "AI & Intelligence",
+      "tables": "none",
+      "capabilities": "customer.read"
+    },
+    {
+      "id": "POST /api/intelligence/merge",
+      "method": "POST",
+      "path": "/api/intelligence/merge",
+      "file": "backend/src/routes/intelligence.routes.ts:117",
+      "domain": "AI & Intelligence",
+      "tables": "none",
+      "capabilities": "customer.write"
+    },
+    {
+      "id": "GET /api/intelligence/merges",
+      "method": "GET",
+      "path": "/api/intelligence/merges",
+      "file": "backend/src/routes/intelligence.routes.ts:133",
+      "domain": "AI & Intelligence",
+      "tables": "none",
+      "capabilities": "report.operational.read"
+    },
+    {
+      "id": "GET /api/intelligence/summary",
+      "method": "GET",
+      "path": "/api/intelligence/summary",
+      "file": "backend/src/routes/intelligence.routes.ts:153",
+      "domain": "AI & Intelligence",
+      "tables": "none",
+      "capabilities": "report.financial.read"
+    },
+    {
+      "id": "POST /api/intelligence/explain",
+      "method": "POST",
+      "path": "/api/intelligence/explain",
+      "file": "backend/src/routes/intelligence.routes.ts:175",
+      "domain": "AI & Intelligence",
+      "tables": "none",
+      "capabilities": "report.financial.read"
+    },
+    {
+      "id": "GET /api/intelligence/anomalies",
+      "method": "GET",
+      "path": "/api/intelligence/anomalies",
+      "file": "backend/src/routes/intelligence.routes.ts:204",
+      "domain": "AI & Intelligence",
+      "tables": "none",
+      "capabilities": "report.financial.read"
+    },
+    {
+      "id": "GET /api/inventory/valuation",
+      "method": "GET",
+      "path": "/api/inventory/valuation",
+      "file": "backend/src/routes/inventory-costing.routes.ts:59",
+      "domain": "Inventory",
+      "tables": "none",
+      "capabilities": "inventory.cost.read"
+    },
+    {
+      "id": "GET /api/inventory/layers/:productId",
+      "method": "GET",
+      "path": "/api/inventory/layers/:id",
+      "file": "backend/src/routes/inventory-costing.routes.ts:86",
+      "domain": "Inventory",
+      "tables": "none",
+      "capabilities": "inventory.cost.read"
+    },
+    {
+      "id": "GET /api/inventory/cost-trail/:consumerType/:consumerId",
+      "method": "GET",
+      "path": "/api/inventory/cost-trail/:id/:id",
+      "file": "backend/src/routes/inventory-costing.routes.ts:106",
+      "domain": "Inventory",
+      "tables": "none",
+      "capabilities": "inventory.cost.read"
+    },
+    {
+      "id": "GET /api/inventory/cost-preview",
+      "method": "GET",
+      "path": "/api/inventory/cost-preview",
+      "file": "backend/src/routes/inventory-costing.routes.ts:136",
+      "domain": "Inventory",
+      "tables": "none",
+      "capabilities": "inventory.cost.read"
+    },
+    {
+      "id": "PATCH /api/work-orders/:id",
+      "method": "PATCH",
+      "path": "/api/work-orders/:id",
+      "file": "backend/src/routes/manufacturing.routes.ts:211",
+      "domain": "Manufacturing",
+      "tables": "none",
+      "capabilities": "product.write"
+    },
+    {
+      "id": "POST /api/ai-requests/:id/reject",
+      "method": "POST",
+      "path": "/api/ai-requests/:id/reject",
+      "file": "backend/src/routes/mcp.routes.ts:461",
+      "domain": "AI & Intelligence",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/operations/batches/plan-issue",
+      "method": "POST",
+      "path": "/api/operations/batches/plan-issue",
+      "file": "backend/src/routes/operations.routes.ts:344",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "inventory.read"
+    },
+    {
+      "id": "GET /api/payments/aging/:kind",
+      "method": "GET",
+      "path": "/api/payments/aging/:id",
+      "file": "backend/src/routes/payments.routes.ts:188",
+      "domain": "Payments",
+      "tables": "none",
+      "capabilities": "report.financial.read"
+    },
+    {
+      "id": "GET /api/roles/:id",
+      "method": "GET",
+      "path": "/api/roles/:id",
+      "file": "backend/src/routes/permission.routes.ts:163",
+      "domain": "Auth & Users",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/permissions/check",
+      "method": "POST",
+      "path": "/api/permissions/check",
+      "file": "backend/src/routes/permission.routes.ts:353",
+      "domain": "Auth & Users",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/personalization/visibility",
+      "method": "GET",
+      "path": "/api/personalization/visibility",
+      "file": "backend/src/routes/personalization.routes.ts:50",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "PATCH /api/personalization/visibility",
+      "method": "PATCH",
+      "path": "/api/personalization/visibility",
+      "file": "backend/src/routes/personalization.routes.ts:65",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/personalization/visibility/hidden",
+      "method": "GET",
+      "path": "/api/personalization/visibility/hidden",
+      "file": "backend/src/routes/personalization.routes.ts:84",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/personalization/visibility/reset",
+      "method": "POST",
+      "path": "/api/personalization/visibility/reset",
+      "file": "backend/src/routes/personalization.routes.ts:99",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/pos/sessions/:id/resume",
+      "method": "POST",
+      "path": "/api/pos/sessions/:id/resume",
+      "file": "backend/src/routes/pos.routes.ts:393",
+      "domain": "POS",
+      "tables": "none",
+      "capabilities": "invoice.create"
+    },
+    {
+      "id": "GET /api/projects/:projectId/members",
+      "method": "GET",
+      "path": "/api/projects/:id/members",
+      "file": "backend/src/routes/project.routes.ts:275",
+      "domain": "Projects",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/projects/:projectId/members",
+      "method": "POST",
+      "path": "/api/projects/:id/members",
+      "file": "backend/src/routes/project.routes.ts:300",
+      "domain": "Projects",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "DELETE /api/projects/:projectId/members/:memberId",
+      "method": "DELETE",
+      "path": "/api/projects/:id/members/:id",
+      "file": "backend/src/routes/project.routes.ts:325",
+      "domain": "Projects",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/projects/:projectId/time-entries",
+      "method": "GET",
+      "path": "/api/projects/:id/time-entries",
+      "file": "backend/src/routes/project.routes.ts:353",
+      "domain": "Projects",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/projects/:projectId/time-entries",
+      "method": "POST",
+      "path": "/api/projects/:id/time-entries",
+      "file": "backend/src/routes/project.routes.ts:378",
+      "domain": "Projects",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "PATCH /api/time-entries/:id",
+      "method": "PATCH",
+      "path": "/api/time-entries/:id",
+      "file": "backend/src/routes/project.routes.ts:403",
+      "domain": "Projects",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "DELETE /api/time-entries/:id",
+      "method": "DELETE",
+      "path": "/api/time-entries/:id",
+      "file": "backend/src/routes/project.routes.ts:430",
+      "domain": "Projects",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "POST /api/promotions/quote",
+      "method": "POST",
+      "path": "/api/promotions/quote",
+      "file": "backend/src/routes/promotions.routes.ts:58",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "invoice.read"
+    },
+    {
+      "id": "PATCH /api/purchase-orders/:id",
+      "method": "PATCH",
+      "path": "/api/purchase-orders/:id",
+      "file": "backend/src/routes/purchasing.routes.ts:109",
+      "domain": "Purchasing",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/rules/:id",
+      "method": "GET",
+      "path": "/api/rules/:id",
+      "file": "backend/src/routes/rules.routes.ts:125",
+      "domain": "Workflows & Automation",
+      "tables": "none",
+      "capabilities": "report.operational.read"
+    },
+    {
+      "id": "PATCH /api/rules/:id",
+      "method": "PATCH",
+      "path": "/api/rules/:id",
+      "file": "backend/src/routes/rules.routes.ts:161",
+      "domain": "Workflows & Automation",
+      "tables": "none",
+      "capabilities": "account.manage"
+    },
+    {
+      "id": "POST /api/rules/dry-run",
+      "method": "POST",
+      "path": "/api/rules/dry-run",
+      "file": "backend/src/routes/rules.routes.ts:181",
+      "domain": "Workflows & Automation",
+      "tables": "none",
+      "capabilities": "account.manage"
+    },
+    {
+      "id": "POST /api/rules/evaluate",
+      "method": "POST",
+      "path": "/api/rules/evaluate",
+      "file": "backend/src/routes/rules.routes.ts:200",
+      "domain": "Workflows & Automation",
+      "tables": "none",
+      "capabilities": "report.operational.read"
+    },
+    {
+      "id": "GET /api/suppliers/:id/360",
+      "method": "GET",
+      "path": "/api/suppliers/:id/360",
+      "file": "backend/src/routes/supplier.routes.ts:102",
+      "domain": "Suppliers",
+      "tables": "none",
+      "capabilities": "report.financial.read"
+    },
+    {
+      "id": "POST /api/sync/lease",
+      "method": "POST",
+      "path": "/api/sync/lease",
+      "file": "backend/src/routes/sync.routes.ts:295",
+      "domain": "Sync & Offline",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "DELETE /api/sync/lease",
+      "method": "DELETE",
+      "path": "/api/sync/lease",
+      "file": "backend/src/routes/sync.routes.ts:321",
+      "domain": "Sync & Offline",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "GET /api/tax/config",
+      "method": "GET",
+      "path": "/api/tax/config",
+      "file": "backend/src/routes/tax.routes.ts:91",
+      "domain": "Tax",
+      "tables": "none",
+      "capabilities": "invoice.read"
+    },
+    {
+      "id": "PUT /api/tax/components/:id",
+      "method": "PUT",
+      "path": "/api/tax/components/:id",
+      "file": "backend/src/routes/tax.routes.ts:112",
+      "domain": "Tax",
+      "tables": "none",
+      "capabilities": "workspace.manage"
+    },
+    {
+      "id": "PUT /api/tax/rules/:id",
+      "method": "PUT",
+      "path": "/api/tax/rules/:id",
+      "file": "backend/src/routes/tax.routes.ts:130",
+      "domain": "Tax",
+      "tables": "none",
+      "capabilities": "workspace.manage"
+    },
+    {
+      "id": "POST /api/tax/preview",
+      "method": "POST",
+      "path": "/api/tax/preview",
+      "file": "backend/src/routes/tax.routes.ts:150",
+      "domain": "Tax",
+      "tables": "none",
+      "capabilities": "invoice.create"
+    },
+    {
+      "id": "GET /api/tax/drift/:invoiceId",
+      "method": "GET",
+      "path": "/api/tax/drift/:id",
+      "file": "backend/src/routes/tax.routes.ts:170",
+      "domain": "Sales",
+      "tables": "invoices",
+      "capabilities": "report.financial.read"
+    },
+    {
+      "id": "GET /api/transactions/balance/:customerId",
+      "method": "GET",
+      "path": "/api/transactions/balance/:id",
+      "file": "backend/src/routes/transaction.routes.ts:356",
+      "domain": "Customers",
+      "tables": "transactions_view; transactions",
+      "capabilities": "none"
+    },
+    {
+      "id": "DELETE /api/transactions/:id",
+      "method": "DELETE",
+      "path": "/api/transactions/:id",
+      "file": "backend/src/routes/transaction.routes.ts:446",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "payment.cancel"
+    },
+    {
+      "id": "GET /api/freight/trips",
+      "method": "GET",
+      "path": "/api/freight/trips",
+      "file": "backend/src/routes/transport.routes.ts:39",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "invoice.read"
+    },
+    {
+      "id": "POST /api/freight/trips",
+      "method": "POST",
+      "path": "/api/freight/trips",
+      "file": "backend/src/routes/transport.routes.ts:41",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "invoice.create"
+    },
+    {
+      "id": "GET /api/courier/deliveries",
+      "method": "GET",
+      "path": "/api/courier/deliveries",
+      "file": "backend/src/routes/transport.routes.ts:71",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "invoice.read"
+    },
+    {
+      "id": "POST /api/courier/deliveries",
+      "method": "POST",
+      "path": "/api/courier/deliveries",
+      "file": "backend/src/routes/transport.routes.ts:73",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "invoice.create"
+    },
+    {
+      "id": "PATCH /api/courier/deliveries/:id/cod-status",
+      "method": "PATCH",
+      "path": "/api/courier/deliveries/:id/cod-status",
+      "file": "backend/src/routes/transport.routes.ts:75",
+      "domain": "General Operations",
+      "tables": "none",
+      "capabilities": "invoice.create"
+    },
+    {
+      "id": "GET /api/delivery-notes",
+      "method": "GET",
+      "path": "/api/delivery-notes",
+      "file": "backend/src/routes/transport.routes.ts:99",
+      "domain": "Audit & Activity",
+      "tables": "none",
+      "capabilities": "invoice.read"
+    },
+    {
+      "id": "POST /api/delivery-notes",
+      "method": "POST",
+      "path": "/api/delivery-notes",
+      "file": "backend/src/routes/transport.routes.ts:101",
+      "domain": "Audit & Activity",
+      "tables": "none",
+      "capabilities": "invoice.create"
+    },
+    {
+      "id": "PATCH /api/v1/workflows/:id",
+      "method": "PATCH",
+      "path": "/api/v1/workflows/:id",
+      "file": "backend/src/routes/workflow.routes.ts:124",
+      "domain": "Workflows & Automation",
+      "tables": "none",
+      "capabilities": "none"
+    },
+    {
+      "id": "DELETE /api/v1/workflows/:id",
+      "method": "DELETE",
+      "path": "/api/v1/workflows/:id",
+      "file": "backend/src/routes/workflow.routes.ts:156",
+      "domain": "Workflows & Automation",
+      "tables": "none",
+      "capabilities": "none"
+    }
+  ],
+  "hookNoUiConsumer": [
+    {
+      "name": "useAiConfig",
+      "file": "packages/api/src/hooks/ai-chat.ts:152",
+      "route": "/api/ai/config",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useSaveAiConfig",
+      "file": "packages/api/src/hooks/ai-chat.ts:165",
+      "route": "/api/ai/config",
+      "method": "PUT",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useSetAiQuota",
+      "file": "packages/api/src/hooks/ai-chat.ts:188",
+      "route": "/api/ai/quota/:id",
+      "method": "PUT",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useVerifyAuditLog",
+      "file": "packages/api/src/hooks/audit.ts:118",
+      "route": "/api/audit/verify",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useLogin",
+      "file": "packages/api/src/hooks/auth.ts:24",
+      "route": "/api/auth/login",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useSignUp",
+      "file": "packages/api/src/hooks/auth.ts:35",
+      "route": "/api/auth/signup",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useLogout",
+      "file": "packages/api/src/hooks/auth.ts:46",
+      "route": "/api/auth/logout",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useUnmatchLine",
+      "file": "packages/api/src/hooks/bank.ts:252",
+      "route": "/api/finance/bank/lines/:id/unmatch",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useBudgets",
+      "file": "packages/api/src/hooks/budgets.ts:187",
+      "route": "/api/operations/budgets",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useBudgetVariance",
+      "file": "packages/api/src/hooks/budgets.ts:208",
+      "route": "/api/operations/budgets/variance",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCreateOpportunity",
+      "file": "packages/api/src/hooks/crm.ts:268",
+      "route": "/api/opportunities",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useUpdateOpportunity",
+      "file": "packages/api/src/hooks/crm.ts:281",
+      "route": "/api/opportunities/:id",
+      "method": "PATCH",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useUpdateCustomer",
+      "file": "packages/api/src/hooks/customers.ts:257",
+      "route": "/api/customers/:id",
+      "method": "PATCH",
+      "cls": "TEST_ONLY",
+      "evidence": "packages/ui/src/__tests__/ai-action-tool.test.ts"
+    },
+    {
+      "name": "useSerials",
+      "file": "packages/api/src/hooks/expiry.ts:99",
+      "route": "/api/operations/serials",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useLotTrail",
+      "file": "packages/api/src/hooks/expiry.ts:134",
+      "route": "/api/operations/lot-trail/:id/:id",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useReceiveSerials",
+      "file": "packages/api/src/hooks/expiry.ts:174",
+      "route": "/api/operations/serials",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useSoD",
+      "file": "packages/api/src/hooks/governance.ts:59",
+      "route": "/api/governance/sod",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useSoDOverrides",
+      "file": "packages/api/src/hooks/governance.ts:80",
+      "route": "/api/governance/sod/overrides",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useSaveSoD",
+      "file": "packages/api/src/hooks/governance.ts:94",
+      "route": "/api/governance/sod",
+      "method": "PUT",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useProductUnits",
+      "file": "packages/api/src/hooks/inventory-operations.ts:60",
+      "route": "/api/products/:id/units",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useSaveProductUnits",
+      "file": "packages/api/src/hooks/inventory-operations.ts:83",
+      "route": "/api/products/:id/units",
+      "method": "PUT",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useDraftPOFromReorder",
+      "file": "packages/api/src/hooks/inventory-operations.ts:448",
+      "route": "/api/inventory/reorder-suggestions/draft-po",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useInvoicesInfinite",
+      "file": "packages/api/src/hooks/invoices.ts:162",
+      "route": "/api/invoices",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useUpdateInvoice",
+      "file": "packages/api/src/hooks/invoices.ts:328",
+      "route": "/api/invoices/:id",
+      "method": "PATCH",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useLateFeePolicy",
+      "file": "packages/api/src/hooks/late-fees.ts:81",
+      "route": "/api/late-fees/policy",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useMigration",
+      "file": "packages/api/src/hooks/migrations.ts:158",
+      "route": "/api/migrations/:id",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useRenameCustomRole",
+      "file": "packages/api/src/hooks/permission-matrix.ts:130",
+      "route": "/api/permissions/roles/:id",
+      "method": "PATCH",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useRoles",
+      "file": "packages/api/src/hooks/permissions.ts:16",
+      "route": "/api/roles",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "usePermissions",
+      "file": "packages/api/src/hooks/permissions.ts:29",
+      "route": "/api/permissions",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCreateRole",
+      "file": "packages/api/src/hooks/permissions.ts:42",
+      "route": "/api/roles",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useDeleteRole",
+      "file": "packages/api/src/hooks/permissions.ts:53",
+      "route": "/api/roles/:id",
+      "method": "DELETE",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCreateProject",
+      "file": "packages/api/src/hooks/projects.ts:45",
+      "route": "/api/projects",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useDeleteProject",
+      "file": "packages/api/src/hooks/projects.ts:56",
+      "route": "/api/projects/:id",
+      "method": "DELETE",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useProjectTasks",
+      "file": "packages/api/src/hooks/projects.ts:72",
+      "route": "/api/projects/:id/tasks",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCreateProjectTask",
+      "file": "packages/api/src/hooks/projects.ts:94",
+      "route": "/api/projects/:id/tasks",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useUpdateProjectTask",
+      "file": "packages/api/src/hooks/projects.ts:112",
+      "route": "/api/tasks/:id",
+      "method": "PATCH",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useDeleteProjectTask",
+      "file": "packages/api/src/hooks/projects.ts:129",
+      "route": "/api/tasks/:id",
+      "method": "DELETE",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useProject",
+      "file": "packages/api/src/hooks/projects.ts:146",
+      "route": "/api/projects/:id",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useUpdateProject",
+      "file": "packages/api/src/hooks/projects.ts:159",
+      "route": "/api/projects/:id",
+      "method": "PATCH",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "usePurchaseOrders",
+      "file": "packages/api/src/hooks/purchasing.ts:42",
+      "route": "/api/purchase-orders",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "usePurchaseOrder",
+      "file": "packages/api/src/hooks/purchasing.ts:62",
+      "route": "/api/purchase-orders/:id",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useReceiveGoods",
+      "file": "packages/api/src/hooks/purchasing.ts:96",
+      "route": "/api/purchase-orders/:id/receive",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useTaxReturn",
+      "file": "packages/api/src/hooks/tax.ts:85",
+      "route": "/api/tax/return",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useAbandonedSessions",
+      "file": "packages/api/src/hooks/till.ts:227",
+      "route": "/api/pos/sessions/abandoned",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useRecordOrder",
+      "file": "packages/api/src/hooks/till.ts:270",
+      "route": "/api/pos/sessions/:id/orders",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useBankTransfer",
+      "file": "packages/api/src/hooks/till.ts:327",
+      "route": "/api/pos/sessions/:id/bank-transfer",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useVoidOrder",
+      "file": "packages/api/src/hooks/till.ts:481",
+      "route": "/api/pos/orders/:id/void",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useSaveBillingConfig",
+      "file": "packages/api/src/hooks/timesheets.ts:153",
+      "route": "/api/operations/timesheets/config",
+      "method": "PUT",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useTransactions",
+      "file": "packages/api/src/hooks/transactions.ts:35",
+      "route": "/api/transactions",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useUnitsByDimension",
+      "file": "packages/api/src/hooks/units.ts:88",
+      "route": "/api/units",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useLatestMetalRate",
+      "file": "packages/api/src/hooks/universal-core.ts:225",
+      "route": "/api/metal-rates/latest",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useRecordMetalRate",
+      "file": "packages/api/src/hooks/universal-core.ts:237",
+      "route": "/api/metal-rates",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useVehicles",
+      "file": "packages/api/src/hooks/universal-core.ts:290",
+      "route": "/api/vehicles",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCreateVehicle",
+      "file": "packages/api/src/hooks/universal-core.ts:302",
+      "route": "/api/vehicles",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useRegisterWarranty",
+      "file": "packages/api/src/hooks/universal-core.ts:339",
+      "route": "/api/warranties",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useInvoiceReturns",
+      "file": "packages/api/src/hooks/universal-core.ts:361",
+      "route": "/api/invoices/:id/returns",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useOrderDeposits",
+      "file": "packages/api/src/hooks/universal-core.ts:406",
+      "route": "/api/orders/:id/deposits",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCreateOrderDeposit",
+      "file": "packages/api/src/hooks/universal-core.ts:420",
+      "route": "/api/orders/:id/deposits",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useAppointments",
+      "file": "packages/api/src/hooks/universal-core.ts:442",
+      "route": "/api/appointments",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCreateAppointment",
+      "file": "packages/api/src/hooks/universal-core.ts:454",
+      "route": "/api/appointments",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCropCycles",
+      "file": "packages/api/src/hooks/universal-core.ts:476",
+      "route": "/api/agriculture/crops",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCreateCropCycle",
+      "file": "packages/api/src/hooks/universal-core.ts:488",
+      "route": "/api/agriculture/crops",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useFreightTrips",
+      "file": "packages/api/src/hooks/universal-core.ts:508",
+      "route": "/api/transport/trips",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCreateFreightTrip",
+      "file": "packages/api/src/hooks/universal-core.ts:520",
+      "route": "/api/transport/trips",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCourierDeliveries",
+      "file": "packages/api/src/hooks/universal-core.ts:541",
+      "route": "/api/deliveries/courier",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCreateCourierDelivery",
+      "file": "packages/api/src/hooks/universal-core.ts:555",
+      "route": "/api/deliveries/courier",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useProgressCourierCod",
+      "file": "packages/api/src/hooks/universal-core.ts:577",
+      "route": "/api/deliveries/courier/:id/progress-cod",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useDeliveryNotes",
+      "file": "packages/api/src/hooks/universal-core.ts:595",
+      "route": "/api/deliveries/notes",
+      "method": "GET",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCreateDeliveryNote",
+      "file": "packages/api/src/hooks/universal-core.ts:609",
+      "route": "/api/deliveries/notes",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useStartWorkflowInstance",
+      "file": "packages/api/src/hooks/use-workflow.ts:214",
+      "route": "/api/v1/workflows/instances",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useCreateWorkspace",
+      "file": "packages/api/src/hooks/workspace.ts:61",
+      "route": "/api/workspaces",
+      "method": "POST",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    },
+    {
+      "name": "useSetMemberSuspension",
+      "file": "packages/api/src/hooks/workspace.ts:192",
+      "route": "/api/workspaces/:id/members/suspension",
+      "method": "PATCH",
+      "cls": "DEAD_CANDIDATE",
+      "evidence": ""
+    }
+  ],
+  "hookNoRoute": [
+    {
+      "name": "useAuthReady",
+      "file": "packages/api/src/hooks/useAuthReady.ts:17",
+      "url": null
+    },
+    {
+      "name": "useActiveWorkspaceId",
+      "file": "packages/api/src/hooks/useRealtime.ts:26",
+      "url": null
+    }
+  ]
+}

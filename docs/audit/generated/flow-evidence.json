@@ -1,0 +1,152 @@
+{
+  "generatedBy": "scripts/audit/probe/record-flow-evidence.mjs",
+  "generatedAt": "2026-10-27T10:31:45.475Z",
+  "flows": {
+    "invoice-return": {
+      "tests": [
+        "src/__tests__/reverse-sales-return.test.ts",
+        "src/__tests__/invoice-return-01.pg.test.ts"
+      ],
+      "ran": ["src/__tests__/reverse-sales-return.test.ts"],
+      "level": "STATIC + UNIT",
+      "pgWrittenNotRun": ["backend/src/__tests__/invoice-return-01.pg.test.ts"]
+    },
+    "bank-reconciliation": {
+      "tests": [
+        "src/__tests__/auto-bank-match.test.ts",
+        "src/__tests__/bank-categorization.test.ts",
+        "src/__tests__/bank-review-assist.test.ts",
+        "src/__tests__/bank-category-suggestions.test.ts"
+      ],
+      "ran": [
+        "src/__tests__/auto-bank-match.test.ts",
+        "src/__tests__/bank-categorization.test.ts",
+        "src/__tests__/bank-review-assist.test.ts",
+        "src/__tests__/bank-category-suggestions.test.ts"
+      ],
+      "level": "UNIT",
+      "pgWrittenNotRun": []
+    },
+    "till-close": {
+      "tests": [
+        "src/__tests__/http-e2e-business-day.test.ts",
+        "src/__tests__/http-integration-finance.test.ts",
+        "src/__tests__/pos-till-currency-http.test.ts",
+        "src/__tests__/pos-till-currency.pg.test.ts"
+      ],
+      "ran": [
+        "src/__tests__/http-e2e-business-day.test.ts",
+        "src/__tests__/http-integration-finance.test.ts"
+      ],
+      "level": "HTTP_INJECT",
+      "pgWrittenNotRun": ["backend/src/__tests__/pos-till-currency.pg.test.ts"]
+    },
+    "sync-conflict": {
+      "tests": [
+        "src/__tests__/http-integration-finance.test.ts",
+        "src/__tests__/conflict-auto-merge.test.ts",
+        "src/__tests__/sync-invariants.test.ts",
+        "src/__tests__/offline-pos-conflict.test.ts",
+        "src/__tests__/offline-conflict-rules.test.ts",
+        "packages/app-shell/src/features/sync/__tests__/sync-scenarios.test.ts",
+        "src/__tests__/sync-scenarios.pg.test.ts"
+      ],
+      "ran": [
+        "src/__tests__/http-integration-finance.test.ts",
+        "src/__tests__/conflict-auto-merge.test.ts",
+        "src/__tests__/sync-invariants.test.ts",
+        "src/__tests__/offline-pos-conflict.test.ts",
+        "src/__tests__/offline-conflict-rules.test.ts",
+        "packages/app-shell/src/features/sync/__tests__/sync-scenarios.test.ts"
+      ],
+      "level": "HTTP_INJECT + CLIENT_FAKE_TRANSPORT",
+      "pgWrittenNotRun": ["backend/src/__tests__/sync-scenarios.pg.test.ts"]
+    },
+    "tax-return": {
+      "tests": [
+        "src/__tests__/tax-calculation-consistency.test.ts",
+        "src/__tests__/tax-engine-rules.test.ts"
+      ],
+      "ran": [
+        "src/__tests__/tax-calculation-consistency.test.ts",
+        "src/__tests__/tax-engine-rules.test.ts"
+      ],
+      "level": "UNIT",
+      "pgWrittenNotRun": []
+    }
+  },
+  "commands": [
+    {
+      "command": "npx vitest run --project unit src/__tests__/reverse-sales-return.test.ts src/__tests__/auto-bank-match.test.ts src/__tests__/bank-categorization.test.ts src/__tests__/bank-review-assist.test.ts src/__tests__/bank-category-suggestions.test.ts src/__tests__/http-e2e-business-day.test.ts src/__tests__/http-integration-finance.test.ts src/__tests__/conflict-auto-merge.test.ts src/__tests__/offline-conflict-rules.test.ts src/__tests__/offline-pos-conflict.test.ts src/__tests__/sync-invariants.test.ts src/__tests__/tax-calculation-consistency.test.ts src/__tests__/tax-engine-rules.test.ts src/__tests__/financial-flows-e2e.test.ts",
+      "cwd": "backend",
+      "exit": 0,
+      "durationMs": 9788,
+      "summary": " Test Files  14 passed (14)\n      Tests  233 passed (233)"
+    },
+    {
+      "command": "npx vitest run --config ../scripts/audit/probe/vitest.probe.config.mts",
+      "cwd": "backend",
+      "exit": 0,
+      "durationMs": 8767,
+      "summary": " Test Files  1 passed (1)\n      Tests  5 passed (5)"
+    },
+    {
+      "command": "npx jest sync-scenarios",
+      "cwd": "apps/desktop",
+      "exit": 0,
+      "durationMs": 3027,
+      "summary": "PASS ../../packages/app-shell/src/features/sync/__tests__/sync-scenarios.test.ts\nTests:       4 passed, 4 total"
+    }
+  ],
+  "clientScenarios": {
+    "passed": true,
+    "runner": "apps/desktop Jest (roots include packages/app-shell/src)",
+    "source": "packages/app-shell/src/features/sync/__tests__/sync-scenarios.test.ts",
+    "covered": [
+      "D — network cut mid-push",
+      "E — batch retry safety",
+      "F — delete refusal (N-30)",
+      "H — rehydrate past horizon"
+    ],
+    "notCoveredByThisSuite": [
+      "A — oversell on the last stock unit",
+      "B — multi-device convergence",
+      "C — invoice aggregate conflict",
+      "G — commit-horizon cursor"
+    ],
+    "summary": "PASS ../../packages/app-shell/src/features/sync/__tests__/sync-scenarios.test.ts\nTests:       4 passed, 4 total"
+  },
+  "wiring": {
+    "level": "HTTP_INJECT",
+    "passed": true,
+    "source": "scripts/audit/probe/flow-routes.probe.test.ts",
+    "routes": [
+      "POST /api/invoices/:id/returns",
+      "POST /api/finance/bank/reconcile",
+      "POST /api/pos/sessions/:id/close",
+      "POST /api/conflicts/:id/resolve",
+      "GET /api/tax/return"
+    ]
+  },
+  "routes": {
+    "POST /api/pos/sessions/:id/close": {
+      "level": "HTTP_INJECT",
+      "passed": true,
+      "flow": "till-close",
+      "source": "backend/src/__tests__/http-e2e-business-day.test.ts"
+    },
+    "GET /api/conflicts/": {
+      "level": "HTTP_INJECT",
+      "passed": true,
+      "flow": "sync-conflict",
+      "source": "backend/src/__tests__/http-integration-finance.test.ts"
+    },
+    "POST /api/conflicts/:id/resolve": {
+      "level": "HTTP_INJECT",
+      "passed": true,
+      "flow": "sync-conflict",
+      "source": "backend/src/__tests__/http-integration-finance.test.ts"
+    }
+  },
+  "pgCommand": "cd backend && npx vitest run --project pg   # Linux/macOS; Windows embedded-postgres fails with error code 1314"
+}
