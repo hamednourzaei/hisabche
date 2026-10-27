@@ -12,7 +12,7 @@
 // ============================================
 
 import { memo, useCallback, useMemo, useState, useEffect } from 'react'
-import { apiErrorMessage, useCreateInvoiceReturn } from '@hisabche/api'
+import { apiErrorCode, apiErrorMessage, useCreateInvoiceReturn } from '@hisabche/api'
 import { toIsoDay } from '@hisabche/formatting'
 import type { RestockChoice, ReturnReason } from '@hisabche/validation'
 import { RotateCcw } from 'lucide-react'
@@ -152,15 +152,21 @@ export const InvoiceReturnsDialog = memo(function InvoiceReturnsDialog({
     } catch (cause) {
       // The mutation rejected and nothing caught it: the dialog just stayed
       // open, the button came back, and a 500 looked like «nothing happened».
+      // A 500 says «Failed to create invoice return» whatever the cause; the
+      // response `code` / `dbCode` is what tells a missing server function from
+      // a bad quantity, so show it next to the sentence.
+      const code = apiErrorCode(cause)
       const message = apiErrorMessage(cause, '')
       setError(
-        message.includes('RETURN_FUNCTION_MISSING')
+        code === 'RETURN_FUNCTION_MISSING'
           ? (t?.(
               'invoices.returnNotReady',
               'مرجوعی هنوز روی سرور فعال نشده است. با پشتیبانی تماس بگیرید.',
             ) ?? 'مرجوعی هنوز روی سرور فعال نشده است. با پشتیبانی تماس بگیرید.')
-          : message ||
-              (t?.('invoices.returnFailed', 'ثبت مرجوعی انجام نشد') ?? 'ثبت مرجوعی انجام نشد'),
+          : `${
+              message ||
+              (t?.('invoices.returnFailed', 'ثبت مرجوعی انجام نشد') ?? 'ثبت مرجوعی انجام نشد')
+            }${code ? ` (${code})` : ''}`,
       )
     }
   }, [

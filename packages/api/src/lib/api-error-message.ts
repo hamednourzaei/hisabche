@@ -27,6 +27,20 @@ interface ApiErrorBody {
   error?: string
   message?: string
   details?: ZodIssueLike[]
+  /** Operational code the service put first in its message (e.g. RETURN_FUNCTION_MISSING). */
+  code?: string | undefined
+  /** Postgres/PostgREST code of a database failure (code only, never the message). */
+  dbCode?: string | undefined
+}
+
+/**
+ * The machine-readable reason behind a failed request, when the server gave one.
+ * A 500 answers `{ error: 'Failed to …', code?, dbCode? }`: the sentence is the
+ * same for every cause, the code is what tells them apart.
+ */
+export function apiErrorCode(error: unknown): string | undefined {
+  const data = (error as { response?: { data?: ApiErrorBody } })?.response?.data
+  return data?.code ?? data?.dbCode
 }
 
 /**
