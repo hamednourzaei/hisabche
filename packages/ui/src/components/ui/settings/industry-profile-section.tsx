@@ -19,6 +19,7 @@ import { useTranslations } from 'next-intl'
 import { useAuthStore } from '@hisabche/store'
 import { BUSINESS_TYPES, BUSINESS_MODELS } from '@hisabche/ui-contract'
 import { apiErrorMessage } from '@hisabche/api'
+import { industryEditable } from '../../../lib/industry-edit-access'
 import { industrySupportNoteKey } from '../../../lib/industry-support-note'
 
 export interface IndustryProfileSectionProps {
@@ -68,7 +69,7 @@ export function IndustryProfileSection({
   }, [current])
 
   const noteKey = industrySupportNoteKey(selected)
-  const editable = canEdit ?? storeRole === 'owner'
+  const editable = canEdit ?? industryEditable(storeRole)
   const options = useMemo(
     () => [...BUSINESS_MODELS, ...BUSINESS_TYPES].filter((option) => option.id !== 'other'),
     [],
