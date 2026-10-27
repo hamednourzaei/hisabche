@@ -1,0 +1,22 @@
+tsc-validation|packages/validation|npx tsc --noEmit|exit=0
+tsc-api|packages/api|npx tsc --noEmit|exit=0
+tsc-ui|packages/ui|npx tsc --noEmit|exit=2
+tsc-local-engine|packages/local-engine|npx tsc --noEmit|exit=0
+tsc-app-bridge|packages/app-bridge|npx tsc --noEmit|exit=0
+tsc-app-shell|packages/app-shell|npx tsc --noEmit|exit=2
+tsc-formatting|packages/formatting|npx tsc --noEmit|exit=0
+tsc-backend|backend|npx tsc --noEmit|exit=0
+tsc-web|apps/web|npx tsc --noEmit|exit=2
+tsc-desktop|apps/desktop|npx tsc --noEmit|exit=2
+tsc-mobile|apps/mobile|npx tsc --noEmit|exit=0
+tsc-admin|apps/admin|npx tsc --noEmit|exit=2
+vitest-api|packages/api|npx vitest run|exit=0
+vitest-formatting|packages/formatting|npx vitest run|exit=0
+vitest-app-bridge|packages/app-bridge|npx vitest run|exit=0
+vitest-app-shell|packages/app-shell|npx vitest run|exit=1
+vitest-validation|packages/validation|npx vitest run|exit=0
+vitest-local-engine|packages/local-engine|npx vitest run|exit=0
+vitest-ui|packages/ui|npx vitest run --reporter=default|exit=0
+vitest-backend|backend|npx vitest run src/__tests__ --exclude **/*.pg.test.ts|exit=0
+jest-desktop|apps/desktop|npx jest|exit=0
+jest-mobile|apps/mobile|npx jest|exit=0

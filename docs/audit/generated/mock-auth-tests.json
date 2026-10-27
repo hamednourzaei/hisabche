@@ -1,0 +1,13 @@
+[
+  "backend/src/__tests__/ai-pipeline-routes.test.ts",
+  "backend/src/__tests__/developer.routes.test.ts",
+  "backend/src/__tests__/list-filter-contract-http.test.ts",
+  "backend/src/__tests__/mcp-gateway.test.ts",
+  "backend/src/__tests__/odata.test.ts",
+  "backend/src/__tests__/offline-license-policy.test.ts",
+  "backend/src/__tests__/offline-license-routes.test.ts",
+  "backend/src/__tests__/product-barcode.test.ts",
+  "backend/src/__tests__/sync-binary-http.test.ts",
+  "backend/src/__tests__/sync-stream.test.ts",
+  "backend/src/__tests__/workspace.routes.test.ts"
+]

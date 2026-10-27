@@ -9,6 +9,7 @@
 
 import {
   createProductSchema,
+  flagFilter,
   normalizeBarcode,
   summarizeStock,
   updateProductSchema,
@@ -76,6 +77,38 @@ function generateUuid(): string {
   })
 }
 
+/**
+ * The columns a list may be sorted by, in the names a client sends them.
+ *
+ * ⚠️ A closed list, not the client's string: a column name cannot be a bound
+ * parameter, so an open one is an injection. Unknown names fall back to the
+ * server's own default (newest first) instead of failing the whole list.
+ */
+const SORT_COLUMNS: Record<string, string> = {
+  name: 'name',
+  category: 'category',
+  quantity: 'quantity',
+  createdAt: 'created_at',
+  created_at: 'created_at',
+  updatedAt: 'updated_at',
+  updated_at: 'updated_at',
+  sellPrice: 'sell_price',
+  sell_price: 'sell_price',
+  buyPrice: 'buy_price',
+  buy_price: 'buy_price',
+  minStockLevel: 'min_stock_level',
+  min_stock_level: 'min_stock_level',
+}
+
+/** The warehouse cards' numbers, over EVERY active product (the server's rule). */
+function stockSummaryOf(c: RouteHandlerContext) {
+  const rows = c.db.all<{ quantity: number; buy_price: number; min_stock_level: number }>(
+    'SELECT quantity, buy_price, min_stock_level FROM product WHERE workspace_id = ? AND deleted_at IS NULL AND is_active = 1',
+    [c.ctx.workspaceId],
+  )
+  return summarizeStock(rows)
+}
+
 export function registerProductRoutes(router: Router): void {
   // ─── GET /products/categories ───────────────────────────────
   // ⚠️ Registered BEFORE /products/:id: the router takes the first match, so a
@@ -97,13 +130,13 @@ export function registerProductRoutes(router: Router): void {
 
     const search = query.search?.trim()
     const category = query.category?.trim()
-    const isActive =
-      query.isActive !== undefined ? query.isActive === 'true' || query.isActive === '1' : undefined
+    // ⚠️ filter-contract: unset is NO filter; only an explicit false filters.
+    const isActive = flagFilter(query.isActive)
     const barcode = query.barcode?.trim()
     const warehouseId = query.warehouseId?.trim()
     const minPrice = query.minPrice ? Number(query.minPrice) : undefined
     const maxPrice = query.maxPrice ? Number(query.maxPrice) : undefined
-    const limit = Math.min(Math.max(Number(query.limit) || 20, 1), 100)
+    const limit = Math.min(Math.max(Number(query.limit) || 20, 1), 1000)
     const page = Math.max(Number(query.page) || 1, 1)
     const offset = (page - 1) * limit
 
@@ -151,19 +184,23 @@ export function registerProductRoutes(router: Router): void {
     )
     const total = countRow?.count ?? 0
 
+    const sortColumn = SORT_COLUMNS[query.sortBy ?? ''] ?? 'created_at'
+    const direction = query.sortDirection === 'asc' ? 'ASC' : 'DESC'
     const rows = db.all<ProductRow>(
-      `SELECT * FROM product ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT * FROM product ${where} ORDER BY ${sortColumn} ${direction}, id ASC LIMIT ? OFFSET ?`,
       [...params, limit, offset],
     )
 
     let products = rows.map(mapProduct)
 
-    if (query.lowStock !== undefined) {
-      const lowStock = query.lowStock === 'true' || query.lowStock === '1'
+    const lowStock = flagFilter(query.lowStock)
+    if (lowStock !== undefined) {
       products = lowStock
         ? products.filter((p) => p.quantity <= p.minStockLevel)
         : products.filter((p) => p.quantity > p.minStockLevel)
     }
+
+    const includeSummary = flagFilter(query.includeSummary) === true
 
     return {
       products,
@@ -171,6 +208,7 @@ export function registerProductRoutes(router: Router): void {
       hasMore: offset + limit < total,
       nextCursor: null,
       limit,
+      ...(includeSummary ? { summary: stockSummaryOf(c) } : {}),
     }
   })
 
@@ -179,13 +217,7 @@ export function registerProductRoutes(router: Router): void {
   // The warehouse cards offline. Over EVERY active product, with the server's
   // own rule (summarizeStock) — without it each card read «نامعلوم» offline.
   // Registered before `/products/:id`, which would otherwise take «summary».
-  router.get('/products/summary', (c: RouteHandlerContext) => {
-    const rows = c.db.all<{ quantity: number; buy_price: number; min_stock_level: number }>(
-      'SELECT quantity, buy_price, min_stock_level FROM product WHERE workspace_id = ? AND deleted_at IS NULL AND is_active = 1',
-      [c.ctx.workspaceId],
-    )
-    return summarizeStock(rows)
-  })
+  router.get('/products/summary', (c: RouteHandlerContext) => stockSummaryOf(c))
 
   router.get('/products/:id', (c: RouteHandlerContext) => {
     const { db, ctx, params } = c

@@ -7,7 +7,7 @@ import { invalidateMoneyCaches } from '../utils/money-cache'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { createCustomerSchema, updateCustomerSchema } from '@hisabche/validation'
+import { createCustomerSchema, flagFilter, updateCustomerSchema } from '@hisabche/validation'
 import { CustomerService } from '../services/customer.service'
 import { BaseError } from '../errors/base.error'
 import {
@@ -63,11 +63,9 @@ export async function customerRoutes(fastify: FastifyInstance) {
           search,
           sortBy,
           sortDirection,
-          isActive:
-            query.isActive === 'true' ? true : query.isActive === 'false' ? false : undefined,
+          isActive: flagFilter(query.isActive),
           type: query.type === 'cash' ? 'cash' : query.type === 'credit' ? 'credit' : undefined,
-          hasBalance:
-            query.hasBalance === 'true' ? true : query.hasBalance === 'false' ? false : undefined,
+          hasBalance: flagFilter(query.hasBalance),
           role: query.role === 'buyer' ? 'buyer' : query.role === 'seller' ? 'seller' : undefined,
         })
 

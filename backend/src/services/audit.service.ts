@@ -4,6 +4,7 @@
 // ============================================
 
 import { selectAllPages } from '../utils/fetch-all-pages'
+import { createHash } from 'node:crypto'
 import { supabase } from '../db'
 import { CreateAuditLog, AuditFilters } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
@@ -473,6 +474,35 @@ export class AuditService {
 
     if (error) throw new DatabaseError('Failed to export audit logs', error)
     return data || []
+  }
+
+  // ─── Option 48: Tamper-Evident Verification ─────────────
+  async verifyChain(
+    workspaceId: string,
+  ): Promise<{ verified: boolean; failedAtRowId?: string; count: number }> {
+    const { data: rows, error } = await supabase
+      .from('audit_logs')
+      .select('id, workspace_id, action, entity_id, created_at, hash, prev_hash')
+      .eq('workspace_id', workspaceId)
+      .order('created_at', { ascending: true })
+
+    if (error) throw new DatabaseError('Failed to read audit logs for verification', error)
+    if (!rows || rows.length === 0) return { verified: true, count: 0 }
+
+    let expectedPrevHash = '0'.repeat(64)
+    for (const row of rows as any[]) {
+      if (row.prev_hash && row.prev_hash !== expectedPrevHash) {
+        return { verified: false, failedAtRowId: row.id, count: rows.length }
+      }
+      const dataToHash = `${expectedPrevHash}:${row.workspace_id}:${row.id}:${row.action}:${row.created_at}:${row.entity_id ?? ''}`
+      const computedHash = createHash('sha256').update(dataToHash).digest('hex')
+      if (row.hash && row.hash !== computedHash) {
+        return { verified: false, failedAtRowId: row.id, count: rows.length }
+      }
+      expectedPrevHash = row.hash || computedHash
+    }
+
+    return { verified: true, count: rows.length }
   }
 
   // ─── Invalidate Cache ────────────────────────────────────

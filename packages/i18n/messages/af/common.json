@@ -1,4 +1,28 @@
 {
+  "capability": {
+    "measurement": "اندازه‌گیری",
+    "weightPricing": "قیمت بر اساس وزن",
+    "lengthPricing": "قیمت بر اساس متر",
+    "volumePricing": "قیمت بر اساس حجم",
+    "multiUnit": "چند واحد",
+    "batchExpiry": "تاریخ انقضا",
+    "recipeBom": "فورمول ساخت",
+    "variants": "تنوع",
+    "tableService": "میز و سفارش",
+    "serializedItems": "قطعه‌ی یکتا",
+    "goldPurity": "عیار",
+    "makingCharges": "اجرت"
+  },
+  "industry": {
+    "supportNote": {
+      "generic": "امکانات عمومی مدیریت تجارت فعال است. امکانات تخصصی این نوع تجارت هنوز در دسترس نیست."
+    },
+    "vocabulary": {
+      "piece": "قطعه",
+      "dish": "غذا",
+      "drink": "نوشیدنی"
+    }
+  },
   "app": {
     "name": "حسابچه",
     "tagline": "سیستم مدیریت کسب‌وکار",
@@ -1808,6 +1832,23 @@
     "showLess": "بستن"
   },
   "invoices": {
+    "returnInvoice": "ثبت بازگشت",
+    "returnNumber": "شماره سند بازگشت",
+    "returnQuantity": "تعداد بازگشتی",
+    "returnReason": "دلیل بازگشت",
+    "returnReasonPlaceholder": "دلیل بازگشت مال",
+    "submitReturn": "ثبت و بازگشت به گدام",
+    "returnLineItem": "انتخاب جنس برای بازگشت",
+    "invoiceQuantity": "تعداد در بل",
+    "returnRestockAction": "نحوه مدیریت مال",
+    "restockChoiceRestock": "بازگشت به گدام (افزایش موجودی)",
+    "restockChoiceScrap": "اسقاط / ضایعات (بدون افزایش موجودی)",
+    "reasonDefective": "معیوب / عوارض مال",
+    "reasonWrongItem": "ارسال اشتباه",
+    "reasonChangeOfMind": "انصراف مشتری",
+    "reasonDamaged": "آسیب در انتقال",
+    "reasonExpired": "گذشتن تاریخ مصرف",
+    "reasonOther": "دیگر موارد",
     "title": "بل",
     "newInvoice": "بل جدید",
     "invoiceNumber": "شماره بل",
@@ -2597,7 +2638,20 @@
       "title": "واحد نمایش فلز",
       "description": "مبلغ‌ها با همین واحد نشان داده و وارد می‌شوند. دفاتر همیشه به گرام ثبت می‌شوند."
     },
-    "appLanguage": "زبان برنامه"
+    "appLanguage": "زبان برنامه",
+    "industryTitle": "صنف و نوع کسب‌وکار",
+    "industryHint": "صنف تعیین می‌کند واحد پیش‌فرض، ستون‌های فاکتور و ترتیب داشبورد چه باشد.",
+    "industryOwnerOnly": "تنها مالک کسب‌وکار می‌تواند صنف را تغییر دهد.",
+    "industrySaved": "صنف ذخیره شد.",
+    "industrySaveFailed": "ذخیره‌ی صنف انجام نشد",
+    "creditLimitMode": {
+      "title": "تنظیم حد اعتبار مشتریان",
+      "description": "روش برخورد سیستم هنگام ثبت بل بیشتر از حد مجاز اعتبار مشتری",
+      "off": "غیرفعال (بدون بررسی)",
+      "warn": "اخطار (فقط اطلاع‌دهی)",
+      "block": "بندش (مانع ثبت بل)",
+      "success": "تنظیمات حد اعتبار ذخیره شد."
+    }
   },
   "sync": {
     "download": {
@@ -3844,7 +3898,8 @@
     "aboutBusiness": "درباره تجارتت",
     "aboutBusinessPlaceholder": "اگر دوست داشتی بیشتر درمورد تجارتت بنویس",
     "bookCurrencyLocked": "این کسب‌وکار سند مالی دارد؛ اسعار دفاتر دیگر قابل تغییر نیست.",
-    "bookCurrencyFailed": "اسعار انتخابی در سرور ذخیره نشد. از تنظیمات دوباره کوشش کنید."
+    "bookCurrencyFailed": "اسعار انتخابی در سرور ذخیره نشد. از تنظیمات دوباره کوشش کنید.",
+    "saveFailed": "معلومات کسب‌وکار ذخیره نشد. اتصال را بررسی کنید و دوباره کوشش کنید."
   },
   "months": {
     "farvardin": "حمل",
@@ -4485,12 +4540,14 @@
     "watches": "ساعت",
     "currencyExchange": "صرافی",
     "clothing": "پوشاک",
-    "fabric": "پارچه و خرازی",
+    "fabric": "پارچه متری و خرازی",
+    "fabricRoll": "رول پارچه (عمده)",
     "shoes": "کفش",
     "carpet": "فرش و قالین",
     "tailoring": "خیاطی",
     "mobilePhones": "موبایل و لوازم جانبی",
     "computers": "کامپیوتر و لپ‌تاپ",
+    "computerComponents": "قطعات کمپیوتر",
     "electronics": "لوازم برقی و الکترونیک",
     "itServices": "خدمات کامپیوتری",
     "hardware": "آهن‌فروشی و ابزار",
@@ -4520,6 +4577,9 @@
     "seedsFertilizer": "تخم و کود",
     "flowers": "گل و گیاه",
     "transport": "ترانسپورت و باربری",
+    "freightTransport": "حمل بار و باربری",
+    "passengerTransport": "مسافربری",
+    "courier": "پیک و رساندن بسته",
     "travelAgency": "آژانس مسافرتی",
     "realEstate": "املاک و مشاورین",
     "printing": "چاپ و تبلیغات",
@@ -4690,6 +4750,7 @@
       "descriptionRequired": "شرح جنس / خدمت ضروری است",
       "priceRequired": "قیمت واحد باید بزرگ‌تر از صفر باشد",
       "multiplierRequired": "مقدار ستونِ ضرب‌شونده را وارد کنید",
+      "unitMismatch": "واحد این سطر با واحد کالا یکی نیست و تبدیل ثبت‌شده ندارد",
       "totalRequired": "مبلغ ردیف باید بزرگ‌تر از صفر باشد",
       "noItems": "حداقل یک ردیف ضرور است",
       "createFailed": "ثبت بل ناکام شد",
@@ -4783,7 +4844,9 @@
       "amount": "مقدار",
       "required": "بدون نرخ تبدیل این فاکتور ثبت نمی‌شود. هر دو مقدار باید بزرگ‌تر از صفر باشند.",
       "useDashboardForm": "ثبت نرخ با فورم تبادلهٔ نرخ داشبورد"
-    }
+    },
+    "creditLimitBlocked": "فروش به علت حد اعتبار مسدود است",
+    "creditLimitBlockedHint": "طلبکاری مشتری از حد اعتبار مجاز بیشتر گردیده است."
   },
   "admin": {
     "cms": {
@@ -10594,6 +10657,7 @@
     "noShelvesBody": "گدام بدون قفسه هم کامل کار می‌کند. اگر می‌خواهید بدانید هر جنس دقیقاً کجاست، قفسه‌ها را اضافه کنید.",
     "noShelvesNoAccess": "فقط کسی که اجازه‌ی تنظیم گدام را دارد می‌تواند قفسه اضافه کند.",
     "notMigrated": "قفسه‌بندی روی این سرور هنوز فعال نشده است. اسکریپت docs/warehouse-map-01-migration.sql باید روی دیتابیس اجرا شود.",
+    "notAvailableOffline": "نقشه‌ی قفسه‌ها فعلاً در حالت آفلاین در دسترس نیست. برای دیدن آن به انترنت وصل شوید.",
     "loadFailed": "قفسه‌های این گدام خوانده نشد.",
     "retry": "دوباره امتحان کنید",
     "noMatch": "جنسی با این نام در این گدام نیست.",

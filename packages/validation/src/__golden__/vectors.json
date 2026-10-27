@@ -10,8 +10,18 @@
       "precision": 2,
       "input": {
         "lines": [
-          { "quantity": 3, "unitPriceMinor": 1050, "discountPercent": 0, "taxPercent": 0 },
-          { "quantity": 1, "unitPriceMinor": 2500, "discountPercent": 0, "taxPercent": 0 }
+          {
+            "quantity": 3,
+            "unitPriceMinor": 1050,
+            "discountPercent": 0,
+            "taxPercent": 0
+          },
+          {
+            "quantity": 1,
+            "unitPriceMinor": 2500,
+            "discountPercent": 0,
+            "taxPercent": 0
+          }
         ],
         "invoiceDiscountMinor": 0,
         "taxRatePercent": 0
@@ -31,8 +41,18 @@
       "precision": 2,
       "input": {
         "lines": [
-          { "quantity": 10, "unitPriceMinor": 1000, "discountPercent": 10, "taxPercent": 5 },
-          { "quantity": 2, "unitPriceMinor": 5000, "discountPercent": 0, "taxPercent": 10 }
+          {
+            "quantity": 10,
+            "unitPriceMinor": 1000,
+            "discountPercent": 10,
+            "taxPercent": 5
+          },
+          {
+            "quantity": 2,
+            "unitPriceMinor": 5000,
+            "discountPercent": 0,
+            "taxPercent": 10
+          }
         ],
         "invoiceDiscountMinor": 500,
         "taxRatePercent": 0
@@ -52,8 +72,18 @@
       "precision": 0,
       "input": {
         "lines": [
-          { "quantity": 3, "unitPriceMinor": 100, "discountPercent": 33.3333, "taxPercent": 0 },
-          { "quantity": 7, "unitPriceMinor": 25, "discountPercent": 15, "taxPercent": 0 }
+          {
+            "quantity": 3,
+            "unitPriceMinor": 100,
+            "discountPercent": 33.3333,
+            "taxPercent": 0
+          },
+          {
+            "quantity": 7,
+            "unitPriceMinor": 25,
+            "discountPercent": 15,
+            "taxPercent": 0
+          }
         ],
         "invoiceDiscountMinor": 0,
         "taxRatePercent": 0
@@ -73,8 +103,18 @@
         "method": "fifo",
         "requestedQty": 8,
         "layers": [
-          { "id": "L1", "remainingQty": 5, "unitCostMinor": 1000, "entryDate": "2026-01-01" },
-          { "id": "L2", "remainingQty": 10, "unitCostMinor": 1200, "entryDate": "2026-01-05" }
+          {
+            "id": "L1",
+            "remainingQty": 5,
+            "unitCostMinor": 1000,
+            "entryDate": "2026-01-01"
+          },
+          {
+            "id": "L2",
+            "remainingQty": 10,
+            "unitCostMinor": 1200,
+            "entryDate": "2026-01-05"
+          }
         ]
       },
       "expected": {
@@ -87,7 +127,13 @@
             "amount": 5000,
             "isEstimated": false
           },
-          { "layerId": "L2", "quantity": 3, "unitCost": 1200, "amount": 3600, "isEstimated": false }
+          {
+            "layerId": "L2",
+            "quantity": 3,
+            "unitCost": 1200,
+            "amount": 3600,
+            "isEstimated": false
+          }
         ],
         "remainingOnHand": 7,
         "isShortfall": false,
@@ -101,8 +147,18 @@
         "method": "avco",
         "requestedQty": 6,
         "layers": [
-          { "id": "L1", "remainingQty": 10, "unitCostMinor": 1000, "entryDate": "2026-01-01" },
-          { "id": "L2", "remainingQty": 10, "unitCostMinor": 1400, "entryDate": "2026-01-05" }
+          {
+            "id": "L1",
+            "remainingQty": 10,
+            "unitCostMinor": 1000,
+            "entryDate": "2026-01-01"
+          },
+          {
+            "id": "L2",
+            "remainingQty": 10,
+            "unitCostMinor": 1400,
+            "entryDate": "2026-01-05"
+          }
         ]
       },
       "expected": {
@@ -180,8 +236,16 @@
       "domain": "ledger",
       "input": {
         "lines": [
-          { "accountId": "acc_cash", "debitMinor": 5000, "creditMinor": 0 },
-          { "accountId": "acc_sales", "debitMinor": 0, "creditMinor": 5000 }
+          {
+            "accountId": "acc_cash",
+            "debitMinor": 5000,
+            "creditMinor": 0
+          },
+          {
+            "accountId": "acc_sales",
+            "debitMinor": 0,
+            "creditMinor": 5000
+          }
         ]
       },
       "expected": {
@@ -196,8 +260,16 @@
       "domain": "ledger",
       "input": {
         "lines": [
-          { "accountId": "acc_cash", "debitMinor": 5000, "creditMinor": 0 },
-          { "accountId": "acc_sales", "debitMinor": 0, "creditMinor": 4999 }
+          {
+            "accountId": "acc_cash",
+            "debitMinor": 5000,
+            "creditMinor": 0
+          },
+          {
+            "accountId": "acc_sales",
+            "debitMinor": 0,
+            "creditMinor": 4999
+          }
         ]
       },
       "expected": {
@@ -213,14 +285,30 @@
       "domain": "ledger",
       "input": {
         "originalLines": [
-          { "accountId": "acc_receivable", "debitMinor": 12000, "creditMinor": 0 },
-          { "accountId": "acc_revenue", "debitMinor": 0, "creditMinor": 12000 }
+          {
+            "accountId": "acc_receivable",
+            "debitMinor": 12000,
+            "creditMinor": 0
+          },
+          {
+            "accountId": "acc_revenue",
+            "debitMinor": 0,
+            "creditMinor": 12000
+          }
         ]
       },
       "expected": {
         "reversalLines": [
-          { "accountId": "acc_receivable", "debitMinor": 0, "creditMinor": 12000 },
-          { "accountId": "acc_revenue", "debitMinor": 12000, "creditMinor": 0 }
+          {
+            "accountId": "acc_receivable",
+            "debitMinor": 0,
+            "creditMinor": 12000
+          },
+          {
+            "accountId": "acc_revenue",
+            "debitMinor": 12000,
+            "creditMinor": 0
+          }
         ],
         "netBalanceMinor": 0
       }
@@ -231,7 +319,13 @@
       "input": {
         "entryDate": "2026-01-15",
         "branchId": null,
-        "locks": [{ "branchId": null, "lockedUntil": "2026-01-31", "reason": "Month end closed" }]
+        "locks": [
+          {
+            "branchId": null,
+            "lockedUntil": "2026-01-31",
+            "reason": "Month end closed"
+          }
+        ]
       },
       "expected": {
         "isLocked": true,
@@ -245,12 +339,208 @@
       "input": {
         "entryDate": "2026-02-01",
         "branchId": null,
-        "locks": [{ "branchId": null, "lockedUntil": "2026-01-31", "reason": "Month end closed" }]
+        "locks": [
+          {
+            "branchId": null,
+            "lockedUntil": "2026-01-31",
+            "reason": "Month end closed"
+          }
+        ]
       },
       "expected": {
         "isLocked": false,
         "actionAllowed": true,
         "code": "OK"
+      }
+    },
+    {
+      "id": "FILTER-001-FLAG-UNSET-IS-NOT-FALSE",
+      "domain": "list-filters",
+      "input": {
+        "kind": "flag",
+        "cases": [
+          {
+            "type": "undefined"
+          },
+          {
+            "type": "null"
+          },
+          {
+            "type": "string",
+            "value": ""
+          },
+          {
+            "type": "string",
+            "value": "undefined"
+          },
+          {
+            "type": "string",
+            "value": "null"
+          },
+          {
+            "type": "string",
+            "value": "  "
+          }
+        ]
+      },
+      "expected": {
+        "results": ["unset", "unset", "unset", "unset", "unset", "unset"]
+      }
+    },
+    {
+      "id": "FILTER-002-FLAG-EXPLICIT",
+      "domain": "list-filters",
+      "input": {
+        "kind": "flag",
+        "cases": [
+          {
+            "type": "boolean",
+            "value": true
+          },
+          {
+            "type": "boolean",
+            "value": false
+          },
+          {
+            "type": "string",
+            "value": "true"
+          },
+          {
+            "type": "string",
+            "value": "false"
+          },
+          {
+            "type": "string",
+            "value": "1"
+          },
+          {
+            "type": "string",
+            "value": "0"
+          },
+          {
+            "type": "string",
+            "value": "FALSE"
+          },
+          {
+            "type": "string",
+            "value": "maybe"
+          }
+        ]
+      },
+      "expected": {
+        "results": [true, false, true, false, true, false, false, "unset"]
+      }
+    },
+    {
+      "id": "FILTER-003-ID-UNSET-IS-NO-SCOPE",
+      "domain": "list-filters",
+      "input": {
+        "kind": "id",
+        "cases": [
+          {
+            "type": "undefined"
+          },
+          {
+            "type": "null"
+          },
+          {
+            "type": "string",
+            "value": ""
+          },
+          {
+            "type": "string",
+            "value": "undefined"
+          },
+          {
+            "type": "string",
+            "value": "null"
+          },
+          {
+            "type": "string",
+            "value": "  "
+          },
+          {
+            "type": "string",
+            "value": "33333333-3333-4333-8333-333333333333"
+          }
+        ]
+      },
+      "expected": {
+        "results": [
+          "unset",
+          "unset",
+          "unset",
+          "unset",
+          "unset",
+          "unset",
+          "33333333-3333-4333-8333-333333333333"
+        ]
+      }
+    },
+    {
+      "id": "FILTER-004-TEXT-BLANK-IS-NO-SEARCH",
+      "domain": "list-filters",
+      "input": {
+        "kind": "text",
+        "cases": [
+          {
+            "type": "undefined"
+          },
+          {
+            "type": "null"
+          },
+          {
+            "type": "string",
+            "value": ""
+          },
+          {
+            "type": "string",
+            "value": "   "
+          },
+          {
+            "type": "string",
+            "value": "null"
+          },
+          {
+            "type": "string",
+            "value": " طلا "
+          }
+        ]
+      },
+      "expected": {
+        "results": ["unset", "unset", "unset", "unset", "null", "طلا"]
+      }
+    },
+    {
+      "id": "UNIT-001-CARTON-TO-PIECE",
+      "domain": "unit-conversion",
+      "description": "Two cartons of a product that holds 24 pieces convert to 48 base pieces on server and device alike.",
+      "input": {
+        "quantity": 2,
+        "unit": "carton",
+        "units": [
+          {
+            "unitId": "u-piece",
+            "unitCode": "piece",
+            "conversionFactorToBase": 1,
+            "isBaseUnit": true,
+            "isPurchaseDefault": false,
+            "isSaleDefault": false
+          },
+          {
+            "unitId": "u-carton",
+            "unitCode": "carton",
+            "conversionFactorToBase": 24,
+            "isBaseUnit": false,
+            "isPurchaseDefault": true,
+            "isSaleDefault": false
+          }
+        ]
+      },
+      "expected": {
+        "ok": true,
+        "baseQuantity": 48,
+        "baseUnitCode": "piece"
       }
     }
   ]

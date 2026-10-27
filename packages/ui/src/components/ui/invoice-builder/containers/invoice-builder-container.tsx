@@ -52,6 +52,7 @@ import {
 } from '@hisabche/api'
 import type { Product } from '@hisabche/validation'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
+import { useBusinessProfile } from '../../../../hooks/use-business-profile'
 import { nameOfCurrency } from '../../../../lib/currency-name'
 
 export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
@@ -61,6 +62,7 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   const { t, locale, currency, ctx, summary, invalidRowIds, issues, items } = useInvoiceDraft()
 
   const draft = useInvoiceDraftStore()
+  const { profile } = useBusinessProfile()
   const bookCurrency = useBookCurrency()
   // A product's price is in the books currency; on an invoice in another one it
   // is converted at this invoice's rate, or left empty (priceForInvoice).
@@ -120,8 +122,8 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   // Re-running it on every currency change would throw away columns the user
   // had added.
   useEffect(() => {
-    draft.initColumns(currency)
-  }, [draft, currency])
+    draft.initColumns(currency, profile.invoiceDefaults)
+  }, [draft, currency, profile.invoiceDefaults])
 
   // Picking a warehouse product links `productId`, which is what makes the
   // backend move stock for this line. Free text leaves it unset and moves no
@@ -130,10 +132,10 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
     (rowId: string, product: { id: string; name: string; price: string; unit: string }) => {
       const before = useInvoiceDraftStore.getState().rows.find((row) => row.id === rowId)
       const price = priceForInvoice(product.price, currency, bookCurrency, lineRate)
-      draft.setRowProduct(rowId, product.id, product.name, price)
-      // setRowProduct seeds the price only into an empty cell — only then is it ours.
+      draft.setRowProduct(rowId, product.id, product.name, price, product.unit || 'piece')
+      // setRowProduct seeds the unit and price only where they are empty — only
+      // then are they ours.
       if (!before?.values[COLUMN.unitPrice]?.trim()) rememberAutoPrice(rowId, product.price, price)
-      draft.setCell(rowId, COLUMN.unit, product.unit || 'piece')
     },
     [draft, currency, bookCurrency, lineRate, rememberAutoPrice],
   )
@@ -173,9 +175,8 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
         .getState()
         .rows.find((row) => row.id === target)
         ?.values[COLUMN.unitPrice]?.trim()
-      draft.setRowProduct(rowId, product.id, product.name, price)
+      draft.setRowProduct(rowId, product.id, product.name, price, unit)
       if (!typed) rememberAutoPrice(rowId, booksPrice, price)
-      draft.setCell(rowId, COLUMN.unit, unit)
       if (add !== 1) draft.setCell(rowId, COLUMN.quantity, String(add))
     },
     [draft, currency, bookCurrency, lineRate, rememberAutoPrice],
@@ -365,7 +366,12 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
     setDueDate,
   })
 
-  const handleContinue = useCallback(() => push('/invoices/new/preview'), [push])
+  const handleContinue = useCallback(() => {
+    if (creditBreachInfo?.isBlocked) {
+      return
+    }
+    push('/invoices/new/preview')
+  }, [creditBreachInfo?.isBlocked, push])
   const handleBackToList = useCallback(() => push('/invoices'), [push])
 
   return (

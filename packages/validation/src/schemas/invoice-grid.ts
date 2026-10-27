@@ -32,7 +32,9 @@
 import type { z } from 'zod'
 
 import { computeItemTotal, roundInvoiceMoney, sumInvoiceLines } from './invoice-math'
-import type { currencyCodeSchema, unitSchema } from './common.schema'
+import { unitSchema } from './common.schema'
+import type { currencyCodeSchema } from './common.schema'
+import { isMeasurementUnit, lineUnitIssue } from './measurement.domain'
 import { fractionDigits } from '@hisabche/formatting'
 
 type CurrencyCode = z.infer<typeof currencyCodeSchema>
@@ -220,6 +222,14 @@ export interface InvoiceGridRow {
   id: string
   /** Present when the description was picked from the warehouse. */
   productId?: string
+  /**
+   * The unit the picked product is stocked and priced in.
+   *
+   * Kept beside the editable line unit so a mismatch can be SHOWN instead of
+   * silently repricing the line. Absent for free-text rows and for drafts saved
+   * before this field existed.
+   */
+  productUnit?: string
   /** Raw text exactly as typed, keyed by column id. */
   values: Record<string, string>
 }
@@ -351,6 +361,40 @@ export function defaultColumns(currency: CurrencyCode): InvoiceColumn[] {
       precision: 0,
     },
   ]
+}
+
+export interface InvoiceDefaultSelection {
+  readonly extraVisibleColumns: readonly string[]
+  readonly priceMultiplierSource?: string
+}
+
+/**
+ * Apply a profile's INITIAL column emphasis to a freshly-built generic layout.
+ *
+ * ⚠️ Used only when `columnsInitialised` is false. A saved layout is never
+ * passed through here, so an industry change cannot rewrite a user's columns.
+ * This shows columns; it never removes one.
+ */
+export function applyInvoiceDefaults(
+  columns: readonly InvoiceColumn[],
+  defaults: InvoiceDefaultSelection,
+): InvoiceColumn[] {
+  const wanted = new Set(defaults.extraVisibleColumns)
+  const source = defaults.priceMultiplierSource
+
+  return columns.map((column) => {
+    const next: InvoiceColumn = { ...column }
+    if (wanted.has(column.id)) next.visible = true
+    if (
+      source &&
+      column.id === COLUMN.unitPrice &&
+      column.multiplyByColumnId === undefined &&
+      columns.some((candidate) => candidate.id === source && canBeMultiplierSource(candidate))
+    ) {
+      next.multiplyByColumnId = source
+    }
+    return next
+  })
 }
 
 export function emptyRow(id: string, columns: readonly InvoiceColumn[]): InvoiceGridRow {
@@ -556,7 +600,14 @@ export function rowUnitPrice(
 
 export function rowQuantity(row: InvoiceGridRow): number {
   const raw = row.values[COLUMN.quantity]
-  if (!hasCellValue(raw)) return 1
+  const lineUnit = row.values[COLUMN.unit]?.trim() || row.productUnit
+  if (!hasCellValue(raw)) {
+    // A counted product keeps the familiar «1 piece». A measured product with
+    // an empty quantity is NOT one gram: seeding 1 is exactly how a 15-gram
+    // necklace was once sold as a single gram. Unknown/custom units keep the
+    // legacy default until the user tells us what they are.
+    return isMeasurementUnit(lineUnit) ? 0 : 1
+  }
   const value = parseCellNumber(raw)
   return value > 0 ? value : 1
 }
@@ -867,17 +918,6 @@ export interface MappedInvoiceItem {
   }[]
 }
 
-const KNOWN_UNITS: readonly InvoiceUnit[] = [
-  'piece',
-  'gram',
-  'kg',
-  'meter',
-  'liter',
-  'box',
-  'pack',
-  'carton',
-]
-
 /**
  * Turn one grid row into the invoice item the existing API already accepts.
  * See the file header for why each column type lands where it does.
@@ -969,11 +1009,8 @@ export function rowToInvoiceItem(
   }
 
   const unitRaw = row.values[COLUMN.unit]?.trim()
-  const unit: InvoiceUnit = unitRaw
-    ? (KNOWN_UNITS as readonly string[]).includes(unitRaw)
-      ? (unitRaw as InvoiceUnit)
-      : 'custom'
-    : 'piece'
+  const parsedUnit = unitRaw ? unitSchema.safeParse(unitRaw) : null
+  const unit: InvoiceUnit = parsedUnit?.success ? parsedUnit.data : unitRaw ? 'custom' : 'piece'
 
   const weight = parseCellNumber(row.values[COLUMN.weight])
   const rowNotes = (row.values[COLUMN.notes] ?? '').trim()
@@ -1048,6 +1085,16 @@ export function validateGrid(
         rowId: row.id,
         key: 'invoiceBuilder.errors.priceRequired',
         fallback: 'قیمت واحد باید بزرگ‌تر از صفر باشد',
+      })
+      continue
+    }
+    // A product priced per gram must not be sold as «pieces». Conversion
+    // (kg ↔ gram) is allowed; everything else stops the line with a reason.
+    if (lineUnitIssue(row.productUnit, row.values[COLUMN.unit]) !== null) {
+      issues.push({
+        rowId: row.id,
+        key: 'invoiceBuilder.errors.unitMismatch',
+        fallback: 'واحد این سطر با واحد کالا یکی نیست و تبدیل ثبت‌شده‌ای ندارد',
       })
       continue
     }

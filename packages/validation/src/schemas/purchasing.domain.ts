@@ -45,3 +45,45 @@ export function receiveRefusal(
   if (status === 'cancelled') return 'PURCHASE_ORDER_CANCELLED'
   return null
 }
+
+// ─── Option 5: Three-Way Match ──────────────────────────────────────────────
+export interface ThreeWayMatchLine {
+  poQuantity: number
+  poUnitPriceMinor: number
+  receivedQuantity: number
+  invoiceQuantity: number
+  invoiceUnitPriceMinor: number
+}
+
+export type MatchVariance = 'none' | 'quantity_variance' | 'price_variance' | 'both_variance'
+
+export interface ThreeWayMatchResult {
+  variance: MatchVariance
+  quantityVariance: number
+  priceVarianceMinor: number
+  passed: boolean
+}
+
+/**
+ * Three-Way Match (Purchase Order vs Goods Receipt vs Supplier Invoice).
+ * Pure domain logic: integer minor units, detects quantity and price variances.
+ */
+export function threeWayMatch(line: ThreeWayMatchLine, tolerancePercent = 0): ThreeWayMatchResult {
+  const qtyDiff = line.invoiceQuantity - line.receivedQuantity
+  const priceDiff = line.invoiceUnitPriceMinor - line.poUnitPriceMinor
+
+  const hasQtyVariance = Math.abs(qtyDiff) > tolerancePercent
+  const hasPriceVariance = Math.abs(priceDiff) > tolerancePercent
+
+  let variance: MatchVariance = 'none'
+  if (hasQtyVariance && hasPriceVariance) variance = 'both_variance'
+  else if (hasQtyVariance) variance = 'quantity_variance'
+  else if (hasPriceVariance) variance = 'price_variance'
+
+  return {
+    variance,
+    quantityVariance: qtyDiff,
+    priceVarianceMinor: priceDiff,
+    passed: variance === 'none',
+  }
+}

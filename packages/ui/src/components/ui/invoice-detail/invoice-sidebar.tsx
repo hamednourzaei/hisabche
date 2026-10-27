@@ -14,6 +14,7 @@ import {
   Link as LinkIcon,
   Check,
   ChevronDown,
+  RotateCcw,
 } from 'lucide-react'
 import { type InvoiceDocumentDisplaySettings } from './invoice-document'
 
@@ -41,6 +42,7 @@ export interface InvoiceSidebarActions {
   onExportPNG?: (() => void) | undefined
   exportingPNG?: boolean | undefined
   pdfDownloadSlot?: ReactNode
+  onReturn?: (() => void) | undefined
 }
 
 export interface InvoiceSidebarMetadata {
@@ -236,6 +238,18 @@ export function InvoiceSidebar({
                 {actions.printingReceipt
                   ? t('receipt.printing', '…')
                   : t('receipt.print', 'چاپ رسید')}
+              </button>
+            ) : null}
+
+            {actions.onReturn ? (
+              <button
+                type="button"
+                onClick={actions.onReturn}
+                data-return-invoice=""
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[hsl(var(--border-default))] p-2.5 text-sm text-[hsl(var(--fg-secondary))] transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
+              >
+                <RotateCcw className="size-4" aria-hidden="true" />
+                {t('invoices.returnInvoice', 'ثبت مرجوعی')}
               </button>
             ) : null}
 

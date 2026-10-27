@@ -55,6 +55,20 @@ function isMissingColumn(error: { code?: string; message?: string }): boolean {
   return /column .* does not exist|"column" .* not found/i.test(error.message ?? '')
 }
 
+/**
+ * The server does not have this FUNCTION.
+ *
+ * PostgREST says PGRST202 (no function matching the signature) or 42883
+ * (undefined_function). Both mean «the migration that creates it has not run».
+ *
+ * ⚠️ THE CALLER MUST NOT FALL BACK TO A DIRECT READ ON THIS. See `pull`.
+ */
+function isMissingFunction(error: { code?: string; message?: string }): boolean {
+  const code = error.code ?? ''
+  if (code === 'PGRST202' || code === '42883') return true
+  return /could not find the function|function .* does not exist/i.test(error.message ?? '')
+}
+
 /** Physical table behind each protocol entity. Nothing else is reachable. */
 const ENTITY_TABLE: Record<SyncEntity, string> = {
   invoice: 'invoices',
@@ -68,6 +82,29 @@ const ENTITY_TABLE: Record<SyncEntity, string> = {
   exchange_rate: 'exchange_rates',
   product_stock: 'warehouse_stock',
 }
+
+/**
+ * Entities backed by a physical table that has a `version` column maintained by `sync_bump_version()`.
+ *
+ * `transactions` (the cash/bank register) has no version column in the current schema
+ * (docs/base-schema-migration.sql:171). The optimistic-lock guard and `.select('version')`
+ * run only for entities backed by a versioned table; unversioned entities update without
+ * the `.eq('version', ...)` predicate so PostgREST does not fail on 42703 (missing column).
+ */
+export const ENTITIES_WITH_VERSION: ReadonlySet<SyncEntity> = new Set([
+  'invoice',
+  'customer',
+  'product',
+  'time_entry',
+  'warehouse',
+  'branch',
+  'exchange_rate',
+  'product_stock',
+])
+
+/** Canonical SQL pattern for the version-guarded UPDATE issued on versioned entities. */
+export const VERSION_GUARDED_UPDATE_SQL = (table: string, updateFields: string[]): string =>
+  `UPDATE ${table} SET ${updateFields.map((f, i) => `${f} = $${i + 4}`).join(', ')} WHERE id = $1 AND workspace_id = $2 AND version = $3 RETURNING version`
 
 /**
  * Columns a client may write, per entity.
@@ -501,30 +538,28 @@ export class SyncService {
     const table = ENTITY_TABLE[mutation.entityType]
 
     if (mutation.operation === 'delete') {
-      await this.assertOwned(table, mutation.entityId, actor.workspaceId)
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .eq('id', mutation.entityId)
-        .eq('workspace_id', actor.workspaceId)
-      if (error) throw new SyncError('server_error', error.message)
-      return { entityVersion: 0 }
+      throw new SyncError(
+        'forbidden',
+        `Deletes are not accepted through /sync/push. Route deletes through the domain REST endpoint (/api/${mutation.entityType}s/:id).`,
+      )
     }
 
     const values = pickWritable(mutation.entityType, mutation.payload)
 
+    const hasVersion = ENTITIES_WITH_VERSION.has(mutation.entityType)
+
     if (mutation.operation === 'create') {
-      const { data, error } = await supabase
-        .from(table)
-        .insert({
-          ...values,
-          id: mutation.entityId,
-          // Derived from the verified token, never from the payload.
-          workspace_id: actor.workspaceId,
-          user_id: actor.userId,
-        })
-        .select('version')
-        .single()
+      const insertQuery = supabase.from(table).insert({
+        ...values,
+        id: mutation.entityId,
+        // Derived from the verified token, never from the payload.
+        workspace_id: actor.workspaceId,
+        user_id: actor.userId,
+      })
+
+      const { data, error } = hasVersion
+        ? await insertQuery.select('version').single()
+        : await insertQuery.select('id').single()
 
       if (error) {
         // The row already exists. With a stable mutation_id this can only
@@ -537,7 +572,8 @@ export class SyncService {
         throw new SyncError('validation_failed', error.message)
       }
 
-      return { entityVersion: Number(data?.version ?? 1) }
+      const rowWithVersion = data && 'version' in data ? (data as { version: unknown }) : null
+      return { entityVersion: Number(rowWithVersion?.version ?? 1) }
     }
 
     // ── update ──────────────────────────────────────────────────────────
@@ -552,6 +588,7 @@ export class SyncService {
     }
 
     if (
+      hasVersion &&
       mutation.expectedVersion !== undefined &&
       Number(current.version ?? 1) !== mutation.expectedVersion
     ) {
@@ -580,13 +617,19 @@ export class SyncService {
       throw new SyncError('locked', 'Another user is editing this record.')
     }
 
-    const { data, error } = await supabase
+    let updateQuery = supabase
       .from(table)
       .update(values)
       .eq('id', mutation.entityId)
       .eq('workspace_id', actor.workspaceId)
-      .select('version')
-      .single()
+
+    if (hasVersion && mutation.expectedVersion !== undefined) {
+      updateQuery = updateQuery.eq('version', mutation.expectedVersion)
+    }
+
+    const { data, error } = hasVersion
+      ? await updateQuery.select('version').maybeSingle()
+      : await updateQuery.select('id').maybeSingle()
 
     if (error) {
       // The finalized-invoice guard trigger raises this.
@@ -596,7 +639,20 @@ export class SyncService {
       throw new SyncError('validation_failed', error.message)
     }
 
-    return { entityVersion: Number(data?.version ?? 1) }
+    // If expectedVersion was passed but 0 rows matched (a concurrent write changed
+    // the version between readRow and update), file the conflict and report it.
+    if (hasVersion && mutation.expectedVersion !== undefined && !data) {
+      const latest = await this.readRow(table, mutation.entityId, actor.workspaceId)
+      await this.fileConflict(actor, mutation, latest ?? current)
+      throw new SyncError(
+        'version_conflict',
+        `expected version ${mutation.expectedVersion}, server has ${latest?.version ?? 'concurrent update'}`,
+        latest ?? current,
+      )
+    }
+
+    const updatedWithVersion = data && 'version' in data ? (data as { version: unknown }) : null
+    return { entityVersion: Number(updatedWithVersion?.version ?? 1) }
   }
 
   /**
@@ -711,32 +767,54 @@ export class SyncService {
 
     // One extra row is fetched purely to learn whether more exist, without a
     // second COUNT query over the same range.
-    const { data: log, error } = await supabase
-      .from('sync_change_log')
-      .select('sync_version, entity_type, entity_id, operation, entity_version, origin_device')
-      .eq('workspace_id', workspaceId)
-      .gt('sync_version', cursor)
-      .order('sync_version', { ascending: true })
-      .limit(limit + 1)
+    //
+    // ⚠️ N-36 — THE COMMIT HORIZON IS THE ONLY SOURCE (P1).
+    //
+    // `sync_pull_changes` returns only log rows whose writing transaction has
+    // committed (`txid < pg_snapshot_xmin(pg_current_snapshot())`). A direct
+    // read of `sync_change_log` returns everything visible, including ids whose
+    // neighbours are still in flight — which is the exact hazard the horizon
+    // exists to remove.
+    //
+    // So there is deliberately NO fallback here. The fallback used to run
+    // precisely when the horizon answered «nothing yet», i.e. while a writer
+    // was open, and handed back the rows the horizon had just hidden. And an
+    // RPC error was swallowed, so a database without the migration silently
+    // ran the unsafe path forever.
+    //
+    // A missing function is a DEPLOYMENT error, not a data condition: it says
+    // the backend is ahead of the schema. It fails loudly and stays failed.
+    const rpcRes = await supabase.rpc('sync_pull_changes', {
+      p_workspace_id: workspaceId,
+      p_cursor: cursor,
+      p_limit: limit + 1,
+    })
 
-    if (error) throw new Error(`sync pull failed: ${error.message}`)
+    if (rpcRes.error) {
+      if (isMissingFunction(rpcRes.error)) {
+        throw new SyncError(
+          'server_error',
+          'sync_pull_changes missing — apply docs/sync-commit-horizon-migration.sql',
+        )
+      }
+      throw new SyncError('server_error', `sync pull failed: ${rpcRes.error.message}`)
+    }
 
-    const rows = log ?? []
-    const hasMore = rows.length > limit
-    const page = hasMore ? rows.slice(0, limit) : rows
+    const rows = (rpcRes.data ?? []) as Record<string, unknown>[]
+    const hasMoreRows = rows.length > limit
+    const page = hasMoreRows ? rows.slice(0, limit) : rows
 
     if (page.length === 0) {
       return { changes: [], nextCursor: cursor, hasMore: false, mustRehydrate: false }
     }
 
     const changes = await this.hydrate(workspaceId, page, excludeDevice)
+    const nextCursor = Number(page[page.length - 1]?.sync_version ?? cursor)
+    const hasMore = hasMoreRows && nextCursor > cursor
 
     return {
       changes,
-      // The cursor advances past everything examined, including changes filtered
-      // out as this device's own echoes — they HAVE been accounted for, and not
-      // advancing past them would replay them on every pull forever.
-      nextCursor: Number(page[page.length - 1]?.sync_version ?? cursor),
+      nextCursor,
       hasMore,
       mustRehydrate: false,
     }

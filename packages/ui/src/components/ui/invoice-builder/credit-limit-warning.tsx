@@ -14,13 +14,29 @@ export function CreditLimitWarning({
   formatMoney: (value: number) => string
 }) {
   if (!breach) return null
+
+  const isBlocked = breach.isBlocked
+
   return (
     <div
       role="alert"
-      className="rounded-[var(--radius-md)] border border-[hsl(var(--color-warning)/0.5)] bg-[hsl(var(--color-warning)/0.08)] p-3"
+      className={`rounded-[var(--radius-md)] border p-3 ${
+        isBlocked
+          ? 'border-[hsl(var(--color-destructive)/0.5)] bg-[hsl(var(--color-destructive)/0.08)]'
+          : 'border-[hsl(var(--color-warning)/0.5)] bg-[hsl(var(--color-warning)/0.08)]'
+      }`}
     >
-      <p className="text-xs font-medium text-[hsl(var(--fg-primary))]">
-        {t('invoiceBuilder.creditLimitTitle', 'این فروش بدهی مشتری را از سقف اعتبارش بیشتر می‌کند')}
+      <p
+        className={`text-xs font-medium ${
+          isBlocked ? 'text-[hsl(var(--color-destructive))]' : 'text-[hsl(var(--fg-primary))]'
+        }`}
+      >
+        {isBlocked
+          ? t('invoiceBuilder.creditLimitBlocked', 'فروش مسدود است: سقف اعتبار مشتری پر شده است')
+          : t(
+              'invoiceBuilder.creditLimitTitle',
+              'این فروش بدهی مشتری را از سقف اعتبارش بیشتر می‌کند',
+            )}
       </p>
       <dl className="mt-1.5 grid grid-cols-3 gap-2 text-xs text-[hsl(var(--fg-secondary))]">
         <div>
@@ -41,10 +57,15 @@ export function CreditLimitWarning({
         </div>
       </dl>
       <p className="mt-1.5 text-xs text-[hsl(var(--fg-tertiary))]">
-        {t(
-          'invoiceBuilder.creditLimitHint',
-          'ثبت انجام می‌شود؛ پیش از تحویل، دریافت یا تأیید را بررسی کنید.',
-        )}
+        {isBlocked
+          ? t(
+              'invoiceBuilder.creditLimitBlockedHint',
+              'ثبت فاکتور تا زمان تسویه بدهی قبلی طبق تنظیمات کسب‌وکار مسدود است.',
+            )
+          : t(
+              'invoiceBuilder.creditLimitHint',
+              'ثبت انجام می‌شود؛ پیش از تحویل، دریافت یا تأیید را بررسی کنید.',
+            )}
       </p>
     </div>
   )

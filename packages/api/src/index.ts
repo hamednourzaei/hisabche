@@ -1356,3 +1356,4 @@ export {
 } from './hooks/evidence'
 
 export { useCmsRemoteContent, type CmsGlobals } from './hooks/cms/remote-content'
+export * from './hooks/universal-core'

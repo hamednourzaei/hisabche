@@ -5,7 +5,7 @@
 // Dispatches in-memory requests to SQLite-backed route handlers.
 // ============================================
 
-import { endpointAvailability } from '@hisabche/validation'
+import { endpointAvailability, isUnsetValue } from '@hisabche/validation'
 import { resolveContext } from './context'
 import type { LocalDb } from './db'
 import { HttpError, OfflineNotAvailableError } from './errors'
@@ -38,6 +38,12 @@ import { registerStockInsightRoutes } from './routes/stock-insights'
 import { registerTillRoutes } from './routes/till'
 import { registerTransferRoutes } from './routes/transfers'
 import { registerUnitRoutes } from './routes/units'
+import { registerVariantsRoutes } from './routes/variants'
+import { registerMetalRatesRoutes } from './routes/metal-rates'
+import { registerFitmentsRoutes } from './routes/fitments'
+import { registerWarrantiesRoutes } from './routes/warranties'
+import { registerOrderDepositsRoutes } from './routes/order-deposits'
+import { registerTaxRoutes } from './routes/tax'
 import { registerWarehouseRoutes } from './routes/warehouses'
 import { registerWorkspaceRoutes } from './routes/workspace'
 import type {
@@ -93,6 +99,12 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
   registerInstallmentRoutes(router)
   registerPricingRoutes(router)
   registerTillRoutes(router)
+  registerVariantsRoutes(router)
+  registerMetalRatesRoutes(router)
+  registerFitmentsRoutes(router)
+  registerWarrantiesRoutes(router)
+  registerOrderDepositsRoutes(router)
+  registerTaxRoutes(router)
 
   return {
     async request<T = unknown>(req: LocalEngineRequest): Promise<LocalEngineResponse<T>> {
@@ -111,8 +123,18 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
 
         const queryParams = {
           ...match.query,
+          // ⚠️ A FILTER NOBODY SET IS ABSENT, NOT AN EMPTY STRING (26 Oct 2026).
+          // The shared list hooks send `{ isActive: undefined, lowStock: undefined,
+          // … }`. `String(undefined ?? '')` made each of them `''`, and every
+          // route's «was it asked for?» test is `query.x !== undefined`: `''`
+          // passed it, `'' === 'true'` is false, so `isActive` became «only
+          // INACTIVE products» and the invoice picker listed none of them with
+          // 10 grams of gold in stock. An unset value is dropped here, once, for
+          // every route.
           ...Object.fromEntries(
-            Object.entries(req.params || {}).map(([k, v]) => [k, String(v ?? '')]),
+            Object.entries(req.params || {})
+              .filter(([, v]) => !isUnsetValue(v))
+              .map(([k, v]) => [k, String(v)]),
           ),
         }
 

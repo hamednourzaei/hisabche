@@ -52,6 +52,7 @@ export {
   HardwareSection,
   WorkplaceTimeZoneSection,
   BookCurrencySection,
+  IndustryProfileSection,
 } from './components/ui/settings'
 
 // ---------- CRM ----------

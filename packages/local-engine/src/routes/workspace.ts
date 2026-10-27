@@ -14,11 +14,25 @@ export interface LocalWorkspaceRow {
   name: string
   base_currency: string
   time_zone: string
+  business_types: string | null
+  business_types_updated_at: string | null
   logo_url: string | null
   stamp_url: string | null
   signature_url: string | null
   created_at: string
   updated_at: string
+}
+
+/** The stored comma-separated value as the catalogue's ids. */
+export function splitBusinessTypes(value: string | null | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean)
+}
+
+function joinBusinessTypes(values: readonly string[] | null | undefined): string {
+  return [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))].join(',')
 }
 
 export interface LocalUserRow {
@@ -41,6 +55,10 @@ function mapWorkspace(row: LocalWorkspaceRow, ownerId: string) {
     base_currency: row.base_currency,
     timeZone: row.time_zone,
     time_zone: row.time_zone,
+    businessTypes: splitBusinessTypes(row.business_types),
+    business_types: splitBusinessTypes(row.business_types),
+    businessTypesUpdatedAt: row.business_types_updated_at,
+    business_types_updated_at: row.business_types_updated_at,
     logoUrl: row.logo_url,
     logo_url: row.logo_url,
     stampUrl: row.stamp_url,
@@ -123,18 +141,45 @@ export function registerWorkspaceRoutes(router: Router): void {
           ? (b.signature_url as string | null)
           : ws.signature_url
 
+    // The industry list. An explicit write always carries a timestamp so the
+    // sync conflict rule («latest explicit write wins») has something to compare.
+    const businessTypesTouched = 'businessTypes' in b || 'business_types' in b
+    const businessTypes = businessTypesTouched
+      ? joinBusinessTypes(
+          ('businessTypes' in b ? b.businessTypes : b.business_types) as
+            string[] | null | undefined,
+        )
+      : (ws.business_types ?? '')
+    const businessTypesUpdatedAt = businessTypesTouched
+      ? typeof b.businessTypesUpdatedAt === 'string'
+        ? b.businessTypesUpdatedAt
+        : new Date().toISOString()
+      : ws.business_types_updated_at
+
     const now = new Date().toISOString()
 
     db.run(
       `UPDATE local_workspace SET
         name = ?,
         time_zone = ?,
+        business_types = ?,
+        business_types_updated_at = ?,
         logo_url = ?,
         stamp_url = ?,
         signature_url = ?,
         updated_at = ?
       WHERE id = ?`,
-      [name, timeZone, logoUrl, stampUrl, signatureUrl, now, ws.id],
+      [
+        name,
+        timeZone,
+        businessTypes,
+        businessTypesUpdatedAt,
+        logoUrl,
+        stampUrl,
+        signatureUrl,
+        now,
+        ws.id,
+      ],
     )
 
     const updated = db.get<LocalWorkspaceRow>(
@@ -153,7 +198,12 @@ export function registerWorkspaceRoutes(router: Router): void {
       const msg = parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
       throw new ValidationError(msg)
     }
-    const b = parsed.data as { name?: string; baseCurrency?: string; timeZone?: string }
+    const b = parsed.data as {
+      name?: string
+      baseCurrency?: string
+      timeZone?: string
+      businessTypes?: string[]
+    }
     const name = b.name?.trim() || 'Hisabche Workspace'
 
     const existing = db.get<LocalWorkspaceRow>('SELECT * FROM local_workspace LIMIT 1')
@@ -194,9 +244,19 @@ export function registerWorkspaceRoutes(router: Router): void {
     db.transaction(() => {
       db.run(
         `INSERT INTO local_workspace (
-          id, name, base_currency, time_zone, logo_url, stamp_url, signature_url, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, ?)`,
-        [id, name, baseCurrency, timeZone, now, now],
+          id, name, base_currency, time_zone, business_types, business_types_updated_at,
+          logo_url, stamp_url, signature_url, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?)`,
+        [
+          id,
+          name,
+          baseCurrency,
+          timeZone,
+          joinBusinessTypes(b.businessTypes),
+          b.businessTypes && b.businessTypes.length > 0 ? now : null,
+          now,
+          now,
+        ],
       )
 
       const owner = db.get<LocalUserRow>('SELECT id FROM local_user LIMIT 1')

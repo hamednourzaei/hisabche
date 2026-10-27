@@ -1,0 +1,488 @@
+[
+  {
+    "f": "activity-reads-01",
+    "its": 6,
+    "sqls": "activity-reads-01-migration.sql,VERIFY-activity-reads-01.sql",
+    "http": false
+  },
+  {
+    "f": "admin-02-security",
+    "its": 7,
+    "sqls": "admin-02-security-migration.sql",
+    "http": false
+  },
+  {
+    "f": "admin-03-customers",
+    "its": 4,
+    "sqls": "admin-03-customers-migration.sql",
+    "http": false
+  },
+  {
+    "f": "admin-04-billing",
+    "its": 4,
+    "sqls": "admin-04-billing-migration.sql",
+    "http": false
+  },
+  {
+    "f": "admin-06-ops",
+    "its": 4,
+    "sqls": "admin-06-ops-migration.sql",
+    "http": false
+  },
+  {
+    "f": "ai-action-requests",
+    "its": 9,
+    "sqls": "ai-action-requests-01-migration.sql,VERIFY-ai-action-requests-01.sql",
+    "http": false
+  },
+  {
+    "f": "ai-one-approval-queue",
+    "its": 11,
+    "sqls": "ai-action-requests-01-migration.sql,ai-pipeline-01-migration.sql,ai-pipeline-02-one-approval-queue-migration.sql,VERIFY-ai-pipeline-02.sql,VERIFY-ai-action-requests-01.sql",
+    "http": false
+  },
+  {
+    "f": "ai-pipeline",
+    "its": 15,
+    "sqls": "ai-pipeline-01-migration.sql,VERIFY-ai-pipeline-01.sql",
+    "http": false
+  },
+  {
+    "f": "always-local-operational-pull",
+    "its": 13,
+    "sqls": "always-local-operational-pull-migration.sql,VERIFY-always-local-operational-pull.sql",
+    "http": false
+  },
+  {
+    "f": "attendance-02",
+    "its": 20,
+    "sqls": "work-shifts-01-migration.sql,shift-assignments-01-migration.sql,attendance-self-01-migration.sql,attendance-devices-01-migration.sql,attendance-02-migration.sql,VERIFY-attendance-02.sql",
+    "http": false
+  },
+  {
+    "f": "attendance-devices-01",
+    "its": 17,
+    "sqls": "attendance-self-01-migration.sql,attendance-devices-01-migration.sql,VERIFY-attendance-devices-01.sql,VERIFY-attendance-self-01.sql",
+    "http": false
+  },
+  {
+    "f": "attendance-self-01",
+    "its": 24,
+    "sqls": "attendance-self-01-migration.sql,VERIFY-attendance-self-01.sql",
+    "http": false
+  },
+  {
+    "f": "attendance",
+    "its": 3,
+    "sqls": "attendance-01-migration.sql,VERIFY-attendance-01.sql",
+    "http": false
+  },
+  {
+    "f": "automation",
+    "its": 5,
+    "sqls": "automation-01-migration.sql,VERIFY-automation-01.sql",
+    "http": false
+  },
+  {
+    "f": "base-currency",
+    "its": 5,
+    "sqls": "VERIFY-base-currency-01.sql,base-currency-01-migration.sql",
+    "http": false
+  },
+  {
+    "f": "benchmark",
+    "its": 6,
+    "sqls": "benchmark-01-migration.sql,VERIFY-benchmark-01.sql",
+    "http": false
+  },
+  {
+    "f": "blog",
+    "its": 20,
+    "sqls": "blog-migration.sql,VERIFY-blog.sql",
+    "http": false
+  },
+  {
+    "f": "campaigns",
+    "its": 8,
+    "sqls": "email-outbox-migration.sql,campaigns-01-migration.sql,VERIFY-campaigns-01.sql",
+    "http": false
+  },
+  {
+    "f": "cloud-migration-01",
+    "its": 5,
+    "sqls": "cloud-migration-01-migration.sql,VERIFY-cloud-migration-01.sql",
+    "http": false
+  },
+  {
+    "f": "content-intelligence",
+    "its": 2,
+    "sqls": "blog-migration.sql,VERIFY-content-intelligence.sql",
+    "http": false
+  },
+  {
+    "f": "core-divergence",
+    "its": 8,
+    "sqls": "core-divergence-migration.sql,VERIFY-core-divergence.sql",
+    "http": false
+  },
+  {
+    "f": "custom-fields",
+    "its": 6,
+    "sqls": "custom-fields-01-migration.sql,VERIFY-custom-fields-01.sql",
+    "http": false
+  },
+  {
+    "f": "custom-units-01",
+    "its": 4,
+    "sqls": "custom-units-01-migration.sql,VERIFY-custom-units-01.sql",
+    "http": false
+  },
+  {
+    "f": "customer-declared-role",
+    "its": 10,
+    "sqls": "customer-declared-role-01-migration.sql,VERIFY-customer-declared-role-01.sql",
+    "http": false
+  },
+  {
+    "f": "dashboard-fx-01",
+    "its": 6,
+    "sqls": "perf-aggregates-analytics-migration.sql,dashboard-fx-01-migration.sql,VERIFY-dashboard-fx-01.sql",
+    "http": false
+  },
+  {
+    "f": "data-migration-invoices",
+    "its": 5,
+    "sqls": "data-migration-invoices-01-migration.sql,data-migration-invoices-01-VERIFY.sql",
+    "http": false
+  },
+  {
+    "f": "data-snapshots",
+    "its": 5,
+    "sqls": "data-snapshots-01-migration.sql,VERIFY-data-snapshots-01.sql",
+    "http": false
+  },
+  {
+    "f": "db-integrity-01",
+    "its": 20,
+    "sqls": "db-integrity-01-migration.sql,VERIFY-db-integrity-01.sql",
+    "http": false
+  },
+  {
+    "f": "developer-platform-02",
+    "its": 10,
+    "sqls": "developer-platform-migration.sql,developer-platform-02-migration.sql,VERIFY-developer-platform-02.sql",
+    "http": false
+  },
+  {
+    "f": "developer-platform-03",
+    "its": 18,
+    "sqls": "developer-platform-migration.sql,developer-platform-03-commerce-migration.sql,VERIFY-developer-platform-03.sql",
+    "http": false
+  },
+  {
+    "f": "developer-platform-04",
+    "its": 3,
+    "sqls": "developer-platform-04-portal-migration.sql,VERIFY-developer-platform-04.sql",
+    "http": false
+  },
+  {
+    "f": "developer-platform-05",
+    "its": 6,
+    "sqls": "developer-platform-migration.sql,developer-platform-05-oauth-migration.sql,VERIFY-developer-platform-05.sql",
+    "http": false
+  },
+  {
+    "f": "developer-platform-06",
+    "its": 6,
+    "sqls": "developer-platform-06-sandbox-migration.sql,VERIFY-developer-platform-06.sql",
+    "http": false
+  },
+  {
+    "f": "developer-platform-06b",
+    "its": 9,
+    "sqls": "developer-platform-06-sandbox-migration.sql,developer-platform-06b-sandbox-access-migration.sql,VERIFY-developer-platform-06b.sql,FINDING-sandbox-403.sql",
+    "http": false
+  },
+  {
+    "f": "developer-platform-07",
+    "its": 10,
+    "sqls": "developer-platform-migration.sql,developer-platform-02-migration.sql,developer-platform-05-oauth-migration.sql,developer-platform-07-marketplace-migration.sql,VERIFY-developer-platform-07.sql",
+    "http": false
+  },
+  {
+    "f": "developer-platform-08",
+    "its": 14,
+    "sqls": "developer-platform-08-migration.sql,VERIFY-developer-platform-08.sql,developer-platform-migration.sql,developer-platform-02-migration.sql,developer-platform-05-oauth-migration.sql,developer-platform-06-sandbox-migration.sql,developer-platform-07-marketplace-migration.sql",
+    "http": false
+  },
+  {
+    "f": "developer-platform",
+    "its": 13,
+    "sqls": "developer-platform-migration.sql,VERIFY-developer-platform.sql",
+    "http": false
+  },
+  {
+    "f": "distributed-work",
+    "its": 19,
+    "sqls": "background-jobs-claim-migration.sql,event-log-claim-migration.sql",
+    "http": false
+  },
+  {
+    "f": "email-outbox",
+    "its": 8,
+    "sqls": "email-outbox-migration.sql",
+    "http": false
+  },
+  {
+    "f": "entitlement-01",
+    "its": 5,
+    "sqls": "plan-limits-migration.sql,entitlement-01-migration.sql",
+    "http": false
+  },
+  {
+    "f": "entitlement-02",
+    "its": 5,
+    "sqls": "plan-limits-migration.sql,entitlement-01-migration.sql,entitlement-02-migration.sql",
+    "http": false
+  },
+  {
+    "f": "entity-notes",
+    "its": 5,
+    "sqls": "entity-notes-01-migration.sql,VERIFY-entity-notes-01.sql",
+    "http": false
+  },
+  {
+    "f": "financing",
+    "its": 6,
+    "sqls": "financing-01-migration.sql,VERIFY-financing-01.sql",
+    "http": false
+  },
+  {
+    "f": "finding-db-integrity",
+    "its": 13,
+    "sqls": "FINDING-db-integrity.sql",
+    "http": false
+  },
+  {
+    "f": "finding-multi-currency",
+    "its": 7,
+    "sqls": "FINDING-multi-currency.sql",
+    "http": false
+  },
+  {
+    "f": "finding-till-units",
+    "its": 6,
+    "sqls": "FINDING-till-units-and-routing-2026-10-14.sql",
+    "http": false
+  },
+  {
+    "f": "goods-marketplace",
+    "its": 15,
+    "sqls": "goods-marketplace-01-migration.sql,VERIFY-goods-marketplace-01.sql",
+    "http": false
+  },
+  {
+    "f": "installments",
+    "its": 9,
+    "sqls": "installments-01-migration.sql,VERIFY-installments-01.sql",
+    "http": false
+  },
+  {
+    "f": "inventory-avco-01",
+    "its": 9,
+    "sqls": "accounting-core-migration.sql,phase-j-01-branch-period-lock-migration.sql,inventory-costing-migration.sql,inventory-consume-concurrency-migration.sql,inventory-avco-01-migration.sql",
+    "http": false
+  },
+  {
+    "f": "invoice-exchange-rate-01",
+    "its": 3,
+    "sqls": "invoice-exchange-rate-01-migration.sql,VERIFY-invoice-exchange-rate-01.sql",
+    "http": false
+  },
+  {
+    "f": "invoice-write-document",
+    "its": 21,
+    "sqls": "invoice-write-document-migration.sql,purchase-order-write-migration.sql,phase-c-01-inventory-source-of-truth-migration.sql,rpc-client-revoke-migration.sql,VERIFY-write-functions.sql",
+    "http": false
+  },
+  {
+    "f": "late-fees",
+    "its": 8,
+    "sqls": "late-fees-01-migration.sql,VERIFY-late-fees-01.sql",
+    "http": false
+  },
+  {
+    "f": "linter-2026-10-11",
+    "its": 6,
+    "sqls": "VERIFY-linter-2026-10-11.sql,linter-2026-10-11-migration.sql",
+    "http": false
+  },
+  {
+    "f": "manufacturing",
+    "its": 25,
+    "sqls": "manufacturing-01-migration.sql,phase-c-01-inventory-source-of-truth-migration.sql,inventory-costing-migration.sql,inventory-consume-concurrency-migration.sql,VERIFY-manufacturing-01.sql",
+    "http": false
+  },
+  {
+    "f": "offline-licence-keys-01",
+    "its": 6,
+    "sqls": "offline-licence-keys-01-migration.sql,VERIFY-offline-licence-keys-01.sql",
+    "http": false
+  },
+  {
+    "f": "opening-capital-and-fees-01",
+    "its": 8,
+    "sqls": "till-payments-01-migration.sql,opening-capital-and-fees-01-migration.sql,VERIFY-opening-capital-and-fees-01.sql,VERIFY-till-payments-01.sql",
+    "http": false
+  },
+  {
+    "f": "pos-session-label",
+    "its": 4,
+    "sqls": "pos-session-label-01-migration.sql,VERIFY-pos-session-label-01.sql",
+    "http": false
+  },
+  {
+    "f": "pos-till-currency",
+    "its": 8,
+    "sqls": "pos-till-currency-01-migration.sql,VERIFY-pos-till-currency-01.sql",
+    "http": false
+  },
+  {
+    "f": "price-lists",
+    "its": 6,
+    "sqls": "price-lists-01-migration.sql,VERIFY-price-lists-01.sql",
+    "http": false
+  },
+  {
+    "f": "product-barcodes",
+    "its": 8,
+    "sqls": "product-barcode-unique-migration.sql,product-barcodes-migration.sql",
+    "http": false
+  },
+  {
+    "f": "product-images",
+    "its": 11,
+    "sqls": "product-images-migration.sql,VERIFY-product-images.sql",
+    "http": false
+  },
+  {
+    "f": "promotions",
+    "its": 6,
+    "sqls": "promotions-01-migration.sql,VERIFY-promotions-01.sql",
+    "http": false
+  },
+  {
+    "f": "report-dashboards",
+    "its": 4,
+    "sqls": "report-dashboards-01-migration.sql,VERIFY-report-dashboards-01.sql",
+    "http": false
+  },
+  {
+    "f": "saved-reports",
+    "its": 5,
+    "sqls": "saved-reports-01-migration.sql,VERIFY-saved-reports-01.sql",
+    "http": false
+  },
+  {
+    "f": "saved-views",
+    "its": 5,
+    "sqls": "saved-views-01-migration.sql,VERIFY-saved-views-01.sql",
+    "http": false
+  },
+  {
+    "f": "semantic-null-defaults",
+    "its": 5,
+    "sqls": "semantic-null-defaults-migration.sql",
+    "http": false
+  },
+  {
+    "f": "shelf-capacity-01",
+    "its": 14,
+    "sqls": "warehouse-map-01-migration.sql,shelf-capacity-01-migration.sql,VERIFY-shelf-capacity-01.sql",
+    "http": false
+  },
+  {
+    "f": "shift-assignments",
+    "its": 8,
+    "sqls": "shift-assignments-01-migration.sql,work-shifts-01-migration.sql,VERIFY-shift-assignments-01.sql",
+    "http": false
+  },
+  {
+    "f": "stock-transfer-keyed",
+    "its": 7,
+    "sqls": "stock-transfer-idempotency-migration.sql,phase-c-01-inventory-source-of-truth-migration.sql",
+    "http": false
+  },
+  {
+    "f": "subscription-upgrade",
+    "its": 8,
+    "sqls": "subscription-upgrade-requests-migration.sql",
+    "http": false
+  },
+  {
+    "f": "sync-conflicts-forward",
+    "its": 16,
+    "sqls": "sync-conflicts-forward-01-migration.sql,VERIFY-sync-conflicts-forward-01.sql",
+    "http": false
+  },
+  {
+    "f": "till-payments-01",
+    "its": 10,
+    "sqls": "till-payments-01-migration.sql,VERIFY-till-payments-01.sql",
+    "http": false
+  },
+  {
+    "f": "universal-core-migration",
+    "its": 3,
+    "sqls": "universal-core-migration.sql,VERIFY-universal-core.sql",
+    "http": false
+  },
+  {
+    "f": "wallet",
+    "its": 20,
+    "sqls": "subscription-upgrade-requests-migration.sql,wallet-01-migration.sql,VERIFY-wallet-01.sql",
+    "http": false
+  },
+  {
+    "f": "warehouse-map-01",
+    "its": 10,
+    "sqls": "warehouse-map-01-migration.sql,VERIFY-warehouse-map-01.sql",
+    "http": false
+  },
+  {
+    "f": "wipe-all-business-data",
+    "its": 10,
+    "sqls": "WIPE-ALL-BUSINESS-DATA.sql,VERIFY-reset-all-business-data.sql",
+    "http": false
+  },
+  {
+    "f": "work-shifts",
+    "its": 6,
+    "sqls": "work-shifts-01-migration.sql,VERIFY-work-shifts-01.sql",
+    "http": false
+  },
+  {
+    "f": "workflow-escalation",
+    "its": 5,
+    "sqls": "workflow-escalation-01-migration.sql,VERIFY-workflow-escalation-01.sql",
+    "http": false
+  },
+  {
+    "f": "workspace-access-custom-role",
+    "its": 11,
+    "sqls": "workspace-access-rpc-migration.sql,workspace-access-rpc-02-custom-role-migration.sql,VERIFY-workspace-access-rpc-02.sql",
+    "http": false
+  },
+  {
+    "f": "workspace-access",
+    "its": 5,
+    "sqls": "workspace-access-rpc-migration.sql,VERIFY-workspace-access-rpc.sql",
+    "http": false
+  },
+  {
+    "f": "workspace-signature-01",
+    "its": 4,
+    "sqls": "workspace-signature-01-migration.sql,VERIFY-workspace-signature-01.sql",
+    "http": false
+  }
+]

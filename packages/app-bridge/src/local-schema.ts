@@ -12,10 +12,11 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 7
+export const SCHEMA_VERSION = 9
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
+import { UNIVERSAL_CORE_STATEMENTS } from './local-universal-core-schema'
 
 export const CREATE_STATEMENTS: readonly string[] = [
   // ─── Products & Stock ─────────────────────────────────────────
@@ -44,6 +45,23 @@ export const CREATE_STATEMENTS: readonly string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_product_barcode ON product(barcode)`,
   `CREATE INDEX IF NOT EXISTS idx_product_name ON product(name)`,
+  `CREATE TABLE IF NOT EXISTS product_units (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    product_id TEXT NOT NULL,
+    unit_code TEXT NOT NULL,
+    conversion_factor_to_base REAL NOT NULL DEFAULT 1,
+    is_base_unit INTEGER NOT NULL DEFAULT 0,
+    is_purchase_default INTEGER NOT NULL DEFAULT 0,
+    is_sale_default INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_product_units_product ON product_units(workspace_id, product_id)`,
 
   // ─── Customers / Parties ──────────────────────────────────────
   `CREATE TABLE IF NOT EXISTS customer (
@@ -397,6 +415,9 @@ export const CREATE_STATEMENTS: readonly string[] = [
     name TEXT NOT NULL,
     base_currency TEXT NOT NULL,
     time_zone TEXT NOT NULL DEFAULT 'Asia/Kabul',
+    business_types TEXT NOT NULL DEFAULT '',
+    business_types_updated_at TEXT,
+    credit_limit_mode TEXT NOT NULL DEFAULT 'warn',
     logo_url TEXT,
     stamp_url TEXT,
     signature_url TEXT,
@@ -647,6 +668,9 @@ export const CREATE_STATEMENTS: readonly string[] = [
   // ─── Books and stock: purchase orders, counts, assets, … (v7) ──
   ...BOOKS_STOCK_STATEMENTS,
 
+  // ─── Universal Core: variants, pack barcodes, serials, returns, warranties, metal rates (v9) ──
+  ...UNIVERSAL_CORE_STATEMENTS,
+
   // ─── Sync Plumbing & Meta ─────────────────────────────────────
   `CREATE TABLE IF NOT EXISTS sync_queue (
     client_id TEXT PRIMARY KEY,
@@ -702,6 +726,22 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'sync_state',
     'dirty',
     'version',
+  ],
+  product_units: [
+    'id',
+    'workspace_id',
+    'product_id',
+    'unit_code',
+    'conversion_factor_to_base',
+    'is_base_unit',
+    'is_purchase_default',
+    'is_sale_default',
+    'is_active',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'origin',
+    'sync_state',
   ],
   customer: [
     'id',
@@ -859,6 +899,8 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'name',
     'base_currency',
     'time_zone',
+    'business_types',
+    'business_types_updated_at',
     'logo_url',
     'stamp_url',
     'signature_url',

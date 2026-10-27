@@ -26,7 +26,30 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const FFMPEG = 'C:/ffmpeg/bin/ffmpeg.exe'
+
+function getFFmpegPath() {
+  const whereCmd = process.platform === 'win32' ? 'where.exe' : 'which'
+  try {
+    const res = spawnSync(whereCmd, ['ffmpeg'], { encoding: 'utf8', windowsHide: true })
+    if (res.status === 0 && res.stdout) {
+      const line = res.stdout.trim().split(/\r?\n/)[0].trim()
+      if (line && fs.existsSync(line)) return line
+    }
+  } catch {
+    // optional lookup failed: fall through to the standard paths below
+  }
+  const standardPaths = [
+    'C:\\ffmpeg\\bin\\ffmpeg.exe',
+    'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',
+    'C:\\ProgramData\\chocolatey\\bin\\ffmpeg.exe',
+  ]
+  for (const p of standardPaths) {
+    if (fs.existsSync(p)) return p
+  }
+  return 'ffmpeg'
+}
+
+const FFMPEG = getFFmpegPath()
 const LEAD = 0.2
 const SPLIT = /[:؛]$/
 
@@ -37,6 +60,7 @@ export function pauses(file, minSilence = 0.25) {
     ['-i', file, '-af', `silencedetect=noise=-38dB:d=${minSilence}`, '-f', 'null', '-'],
     {
       encoding: 'utf8',
+      windowsHide: true,
     },
   )
   const out = r.stderr

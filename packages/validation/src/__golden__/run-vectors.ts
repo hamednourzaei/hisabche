@@ -48,6 +48,8 @@ import { CURRENCY_CODES } from '../schemas/common.schema'
 import { evaluatePeriodLock, reverseLines } from '../schemas/accounting.domain'
 import type { DraftLine, LedgerPeriodLock } from '../schemas/accounting.domain'
 import { validateAllocations } from '../schemas/payments.domain'
+import { flagFilter, idFilter, textFilter } from '../schemas/filter-contract'
+import { toBaseQuantity, type ProductUnitOption } from '../schemas/unit-conversion.domain'
 import type { OpenInvoice } from '../schemas/payments.domain'
 import { FRACTION_DIGITS } from '@hisabche/formatting'
 
@@ -410,6 +412,36 @@ export function runVector(vector: GoldenVector): Record<string, unknown> {
         actionAllowed: !lock.locked,
         code: lock.locked ? 'PERIOD_LOCKED' : 'OK',
       }
+    }
+
+    // What an UNSET list filter means (filter-contract.ts). JSON has no
+    // `undefined`, so a case names its type: {type:'undefined'} / {type:'null'} /
+    // {type:'string', value} / {type:'boolean', value}. The answer is `'unset'`
+    // for «no filter» — the one result that must NEVER be `false`.
+    case 'list-filters': {
+      const kind = String(vector.input.kind)
+      const cases = vector.input.cases as Array<{ type: string; value?: unknown }>
+      const results = cases.map((c) => {
+        const raw = c.type === 'undefined' ? undefined : c.type === 'null' ? null : c.value
+        const answer =
+          kind === 'flag' ? flagFilter(raw) : kind === 'id' ? idFilter(raw) : textFilter(raw)
+        return answer === undefined ? 'unset' : answer
+      })
+      return { results }
+    }
+
+    case 'unit-conversion': {
+      // The SAME pure function the server and the local engine call. A vector
+      // here fails if offline and online can ever disagree about «2 cartons».
+      const options = (vector.input.units ?? []) as ProductUnitOption[]
+      const result = toBaseQuantity(
+        Number(vector.input.quantity),
+        (vector.input.unit as string | null | undefined) ?? null,
+        options,
+      )
+      return result.ok
+        ? { ok: true, baseQuantity: result.baseQuantity, baseUnitCode: result.baseUnitCode }
+        : { ok: false, code: result.code }
     }
 
     default:

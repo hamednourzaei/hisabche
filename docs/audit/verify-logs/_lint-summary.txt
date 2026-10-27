@@ -1,0 +1,11 @@
+backend|files=51|exit=1
+packages/validation|files=44|exit=0
+packages/api|files=11|exit=0
+packages/ui|files=34|exit=0
+packages/local-engine|files=21|exit=0
+packages/app-bridge|files=3|exit=0
+packages/app-shell|files=3|exit=0
+packages/formatting|files=2|exit=0
+packages/ui-contract|files=1|exit=0
+apps/desktop|files=3|exit=0
+apps/mobile|files=1|exit=0

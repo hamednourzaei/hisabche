@@ -9,6 +9,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import { BillingService, PLANS, PLAN_PRICING } from '../services/billing.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { Plan, type Tier1EvidenceType, type Tier2SignalType } from '@hisabche/validation'
 import { BaseError } from '../errors/base.error'
@@ -425,7 +426,9 @@ export async function billingRoutes(fastify: FastifyInstance) {
   // ─── POST /api/billing/offline-license ───────────────────────
   fastify.post(
     '/api/billing/offline-license',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const workspaceId = request.tenancy.workspaceId
       const body = (request.body ?? {}) as {
@@ -462,13 +465,11 @@ export async function billingRoutes(fastify: FastifyInstance) {
             .code(err.statusCode)
             .send({ error: err.name, code: err.name, message: err.message })
         }
-        return reply
-          .code(500)
-          .send({
-            error: 'INTERNAL_ERROR',
-            code: 'INTERNAL_ERROR',
-            message: 'Failed to issue licence',
-          })
+        return reply.code(500).send({
+          error: 'INTERNAL_ERROR',
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to issue licence',
+        })
       }
     },
   )
@@ -476,7 +477,9 @@ export async function billingRoutes(fastify: FastifyInstance) {
   // ─── GET /api/billing/offline-license ────────────────────────
   fastify.get(
     '/api/billing/offline-license',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')],
+    },
     async (request: FastifyRequest) => {
       const workspaceId = request.tenancy.workspaceId
       const licenses = await offlineLicenseService.listLicenses(workspaceId)
@@ -487,7 +490,9 @@ export async function billingRoutes(fastify: FastifyInstance) {
   // ─── POST /api/billing/offline-license/:licenseId/revoke ───────
   fastify.post(
     '/api/billing/offline-license/:licenseId/revoke',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const workspaceId = request.tenancy.workspaceId
       const { licenseId } = request.params as { licenseId: string }
@@ -529,13 +534,11 @@ export async function billingRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: 'INVALID_LICENSE_ID', code: 'INVALID_LICENSE_ID' })
       }
       if (body.seat !== 'computer' && body.seat !== 'mobile') {
-        return reply
-          .code(400)
-          .send({
-            error: 'INVALID_SEAT',
-            code: 'INVALID_SEAT',
-            message: 'Seat must be computer or mobile',
-          })
+        return reply.code(400).send({
+          error: 'INVALID_SEAT',
+          code: 'INVALID_SEAT',
+          message: 'Seat must be computer or mobile',
+        })
       }
       if (!body.stableId || typeof body.stableId !== 'string') {
         return reply.code(400).send({ error: 'INVALID_STABLE_ID', code: 'INVALID_STABLE_ID' })
@@ -579,13 +582,11 @@ export async function billingRoutes(fastify: FastifyInstance) {
             .code(err.statusCode)
             .send({ error: err.name, code: err.name, message: err.message })
         }
-        return reply
-          .code(500)
-          .send({
-            error: 'INTERNAL_ERROR',
-            code: 'INTERNAL_ERROR',
-            message: 'Failed to activate seat',
-          })
+        return reply.code(500).send({
+          error: 'INTERNAL_ERROR',
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to activate seat',
+        })
       }
     },
   )
@@ -621,13 +622,11 @@ export async function billingRoutes(fastify: FastifyInstance) {
             .code(err.statusCode)
             .send({ error: err.name, code: err.name, message: err.message })
         }
-        return reply
-          .code(500)
-          .send({
-            error: 'INTERNAL_ERROR',
-            code: 'INTERNAL_ERROR',
-            message: 'Failed to connect device',
-          })
+        return reply.code(500).send({
+          error: 'INTERNAL_ERROR',
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to connect device',
+        })
       }
     },
   )
@@ -684,13 +683,11 @@ export async function billingRoutes(fastify: FastifyInstance) {
             .code(err.statusCode)
             .send({ error: err.name, code: err.name, message: err.message })
         }
-        return reply
-          .code(500)
-          .send({
-            error: 'INTERNAL_ERROR',
-            code: 'INTERNAL_ERROR',
-            message: 'Failed to record the report',
-          })
+        return reply.code(500).send({
+          error: 'INTERNAL_ERROR',
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to record the report',
+        })
       }
     },
   )
@@ -738,13 +735,11 @@ export async function billingRoutes(fastify: FastifyInstance) {
             .code(err.statusCode)
             .send({ error: err.name, code: err.name, message: err.message })
         }
-        return reply
-          .code(500)
-          .send({
-            error: 'INTERNAL_ERROR',
-            code: 'INTERNAL_ERROR',
-            message: 'Failed to report tier-2 signal',
-          })
+        return reply.code(500).send({
+          error: 'INTERNAL_ERROR',
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to report tier-2 signal',
+        })
       }
     },
   )

@@ -6,7 +6,12 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { createProductSchema, unitSchema, updateProductSchema } from '@hisabche/validation'
+import {
+  createProductSchema,
+  flagFilter,
+  unitSchema,
+  updateProductSchema,
+} from '@hisabche/validation'
 import { ProductService } from '../services/product.service'
 import {
   IdempotencyUnavailableError,
@@ -83,18 +88,16 @@ export async function productRoutes(fastify: FastifyInstance) {
           category: query.category,
           minPrice: query.minPrice ? parseFloat(query.minPrice) : undefined,
           maxPrice: query.maxPrice ? parseFloat(query.maxPrice) : undefined,
-          isActive:
-            query.isActive === 'true' ? true : query.isActive === 'false' ? false : undefined,
+          isActive: flagFilter(query.isActive),
           // ⚠️ THREE STATES, NOT TWO. This was `query.lowStock === 'true'`,
           // which turned an ABSENT parameter into `false` — and the service
           // reads `false` as «only products ABOVE their minimum». So every
           // plain list request hid every low, empty and negative product: the
           // warehouse page silently dropped exactly the items that needed
           // attention, while their own detail URLs still worked.
-          lowStock:
-            query.lowStock === 'true' ? true : query.lowStock === 'false' ? false : undefined,
+          lowStock: flagFilter(query.lowStock),
           barcode: query.barcode,
-          includeSummary: query.includeSummary === 'true' ? true : undefined,
+          includeSummary: flagFilter(query.includeSummary) === true ? true : undefined,
           // A warehouse id, checked by the service: this workspace's and one
           // this member may use. Anything that is not a uuid is not a scope.
           warehouseId: UUID.test(String(query.warehouseId ?? '')) ? query.warehouseId : undefined,

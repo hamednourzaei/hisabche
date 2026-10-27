@@ -1,4 +1,4 @@
-﻿// ============================================
+// ============================================
 // backend/src/routes/warehouse.routes.ts
 // FIXED: listwarehouses → listWarehouses
 // ============================================
@@ -62,7 +62,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/warehouses',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.configure')],
       schema: {
         body: toJsonSchema(createwarehouseSchema),
         response: {
@@ -95,7 +95,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/warehouses/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.configure')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updatewarehouseSchema),
@@ -129,7 +129,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/warehouses/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.configure')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
       },

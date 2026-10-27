@@ -17,6 +17,7 @@
 
 import {
   createPurchaseOrderSchema,
+  flagFilter,
   orderLineTotal,
   receiptUnitCost,
   receiveRefusal,
@@ -127,9 +128,10 @@ export function registerPurchasingRoutes(router: Router): void {
     const { db, ctx, query } = c
     const clauses = ['workspace_id = ?', 'deleted_at IS NULL']
     const params: unknown[] = [ctx.workspaceId]
-    if (query.isActive !== undefined && query.isActive !== '') {
+    const isActive = flagFilter(query.isActive)
+    if (isActive !== undefined) {
       clauses.push('is_active = ?')
-      params.push(query.isActive === 'true' ? 1 : 0)
+      params.push(isActive ? 1 : 0)
     }
     if (query.search) {
       clauses.push('(name LIKE ? OR phone LIKE ?)')
@@ -343,6 +345,69 @@ export function registerPurchasingRoutes(router: Router): void {
         created_at: received.created_at,
         updated_at: received.updated_at,
       })
+    })
+  })
+
+  // ─── POST /inventory/reorder-suggestions/draft-po ───────────
+  router.post('/inventory/reorder-suggestions/draft-po', (c: RouteHandlerContext) => {
+    const { db, ctx, body } = c
+    const raw = (body ?? {}) as {
+      suggestions?: Array<{
+        supplierId?: string
+        productId: string
+        suggestedQuantity: number
+        unitPrice?: number
+      }>
+    }
+    const items = raw.suggestions ?? []
+    const now = new Date().toISOString()
+    const orderDate = now.slice(0, 10)
+
+    const bySupplier = new Map<
+      string,
+      Array<{ productId: string; quantity: number; unitPrice: number }>
+    >()
+    for (const item of items) {
+      const supId = item.supplierId || 'default-supplier'
+      if (!bySupplier.has(supId)) bySupplier.set(supId, [])
+      bySupplier.get(supId)!.push({
+        productId: item.productId,
+        quantity: item.suggestedQuantity,
+        unitPrice: item.unitPrice ?? 0,
+      })
+    }
+
+    return db.transaction(() => {
+      const draftPOs = []
+      for (const [supplierId, supItems] of bySupplier.entries()) {
+        const orderId = `po-draft-${Math.random().toString(36).slice(2, 9)}`
+        db.run(
+          `INSERT INTO purchase_order (id, workspace_id, supplier_id, order_date, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 'draft', ?, ?)`,
+          [orderId, ctx.workspaceId, supplierId, orderDate, now, now],
+        )
+        for (const si of supItems) {
+          const lineId = `pol-${Math.random().toString(36).slice(2, 9)}`
+          const total = si.quantity * si.unitPrice
+          db.run(
+            `INSERT INTO purchase_order_item (id, workspace_id, purchase_order_id, product_id, quantity, unit_price, total_price, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              lineId,
+              ctx.workspaceId,
+              orderId,
+              si.productId,
+              si.quantity,
+              si.unitPrice,
+              total,
+              now,
+              now,
+            ],
+          )
+        }
+        draftPOs.push(openOrder(db, ctx.workspaceId, orderId))
+      }
+      return { draftPOs, count: draftPOs.length }
     })
   })
 }

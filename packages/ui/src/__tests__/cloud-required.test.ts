@@ -57,8 +57,8 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
     // 48 since the offline parity sessions (25 Oct): the till, pricing and the people/books
     // domains moved onto the device; 50 before that: the logo/stamp/signature section (settings.business_stamp) and
     // the dashboard suggestions (dashboard.ai_insight) run on the device now.
-    it('has exactly 49 server-execution features in FEATURE_REGISTRY', () => {
-      expect(serverFeatures.length).toBe(49)
+    it('has exactly 54 server-execution features in FEATURE_REGISTRY', () => {
+      expect(serverFeatures.length).toBe(54)
     })
 
     it('refuses EVERY server-execution feature when offline with REQUIRES_ONLINE', () => {

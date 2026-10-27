@@ -473,6 +473,13 @@ const REGISTER: Capability[] = [
     note: NOTHING_REACHES_IT,
     status: 'WRITTEN_NOT_WIRED',
   },
+  {
+    id: '#34 Scheduled reports',
+    file: 'services/reporting/scheduled-reports.service.ts',
+    symbols: [],
+    note: NOTHING_REACHES_IT,
+    status: 'WRITTEN_NOT_WIRED',
+  },
 ]
 
 describe('the register of written-but-unwired capabilities is honest', () => {

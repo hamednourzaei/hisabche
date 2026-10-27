@@ -59,7 +59,9 @@ describe('Golden vectors — React Native (mobile) runtime', () => {
       'currency',
       'invoice-math',
       'ledger',
+      'list-filters',
       'payments',
+      'unit-conversion',
     ])
   })
 })

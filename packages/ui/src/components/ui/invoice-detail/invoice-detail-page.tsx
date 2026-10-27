@@ -107,6 +107,7 @@ export interface InvoiceDetailPageProps {
   onExportPNG?: () => void
   exportingPNG?: boolean
   pdfDownloadSlot?: React.ReactNode
+  onReturn?: (() => void) | undefined
   /** H2 — the payments and journal entry behind this invoice. Rendered under
    *  the sidebar; the container owns the query. */
   relatedSlot?: React.ReactNode
@@ -152,6 +153,7 @@ export function InvoiceDetailPage({
   onExportPNG,
   exportingPNG,
   pdfDownloadSlot,
+  onReturn,
   relatedSlot,
   evidenceSlot,
   historySlot,
@@ -268,6 +270,7 @@ export function InvoiceDetailPage({
     onExportPNG,
     exportingPNG,
     pdfDownloadSlot,
+    onReturn,
   }
 
   const shareUrl = buildInvoiceShareUrl('fa-AF', invoiceId, publicToken)

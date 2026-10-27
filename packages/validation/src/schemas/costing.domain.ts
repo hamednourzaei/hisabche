@@ -213,3 +213,74 @@ export function mayIssue(
 export function grossProfit(revenue: number, consumedCost: number): number {
   return roundMoney(revenue - consumedCost)
 }
+
+// ─── Option 13: Landed Cost Allocation ──────────────────────────────────────
+export interface LandedCostLineInput {
+  lineId: string
+  valueMinor: number
+  quantity: number
+}
+
+export interface AllocatedLandedCostLine {
+  lineId: string
+  allocatedLandedCostMinor: number
+  newUnitCostMinor: number
+}
+
+/**
+ * Allocate landed costs (freight, duties, insurance) to purchase lines.
+ * Vector: 100 split by value 3:1 -> 75/25, layers repriced.
+ * Basis can be 'value' (default) or 'quantity'.
+ * Integer minor units, no floats, last line absorbs rounding residual.
+ */
+export function allocateLandedCost(
+  totalLandedCostMinor: number,
+  lines: readonly LandedCostLineInput[],
+  basis: 'value' | 'quantity' = 'value',
+): readonly AllocatedLandedCostLine[] {
+  if (lines.length === 0 || totalLandedCostMinor <= 0) {
+    return lines.map((l) => ({
+      lineId: l.lineId,
+      allocatedLandedCostMinor: 0,
+      newUnitCostMinor: l.quantity > 0 ? Math.round(l.valueMinor / l.quantity) : 0,
+    }))
+  }
+
+  const denominator = lines.reduce(
+    (sum, l) => sum + (basis === 'value' ? l.valueMinor : l.quantity),
+    0,
+  )
+
+  if (denominator <= 0) {
+    return lines.map((l) => ({
+      lineId: l.lineId,
+      allocatedLandedCostMinor: 0,
+      newUnitCostMinor: l.quantity > 0 ? Math.round(l.valueMinor / l.quantity) : 0,
+    }))
+  }
+
+  let allocatedSum = 0
+  const results: AllocatedLandedCostLine[] = []
+
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i]!
+    const isLast = i === lines.length - 1
+    const share = basis === 'value' ? l.valueMinor : l.quantity
+
+    const allocated = isLast
+      ? totalLandedCostMinor - allocatedSum
+      : Math.floor((totalLandedCostMinor * share) / denominator)
+
+    allocatedSum += allocated
+    const totalLineCostMinor = l.valueMinor + allocated
+    const newUnitCostMinor = l.quantity > 0 ? Math.round(totalLineCostMinor / l.quantity) : 0
+
+    results.push({
+      lineId: l.lineId,
+      allocatedLandedCostMinor: allocated,
+      newUnitCostMinor,
+    })
+  }
+
+  return results
+}

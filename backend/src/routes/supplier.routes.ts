@@ -10,6 +10,7 @@
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
+import { flagFilter } from '@hisabche/validation'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { SupplierService } from '../services/supplier'
@@ -64,10 +65,12 @@ export async function supplierRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { search, isActive } = request.query as { search?: string; isActive?: string }
+        // ⚠️ filter-contract: `?isActive=` is NO filter, not «inactive only».
+        const active = flagFilter(isActive)
         return reply.send(
           await supplierService.list(request.tenancy, {
             ...(search ? { search } : {}),
-            ...(isActive === undefined ? {} : { isActive: isActive === 'true' }),
+            ...(active === undefined ? {} : { isActive: active }),
           }),
         )
       } catch (err) {

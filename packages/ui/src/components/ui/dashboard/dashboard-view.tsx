@@ -86,6 +86,11 @@ interface DashboardViewProps {
    * include them). Those cards are left out, never drawn as zero.
    */
   hiddenFigures?: readonly string[] | undefined
+  /**
+   * Section order. The industry profile supplies it when the person has no
+   * saved look; a saved look keeps the person's own arrangement.
+   */
+  order?: readonly string[] | undefined
 }
 
 // ─── Lazy Load Components ─────────────────────────────────────────────────
@@ -500,7 +505,15 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     onDateRangeChange,
     show,
     hiddenFigures = [],
+    order,
   } = props
+
+  const rank = useMemo(() => {
+    const map = new Map<string, number>()
+    ;(order ?? []).forEach((id, index) => map.set(id, index))
+    return map
+  }, [order])
+  const orderOf = (id: string) => rank.get(id) ?? 99
 
   // ─── The range card ───────────────────────────────────────────────────
   //
@@ -550,83 +563,87 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     : `${t('dashboard.vsPrevious', 'نسبت به')} ${rangeDays} ${t('dashboard.daysBefore', 'روز قبل')}`
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Level 1: Context */}
+    <div className="flex flex-col gap-4 sm:gap-6">
+      {/* Level 1: Context — always first; it names the page, not a section. */}
       <Greeting t={t} />
 
       {/* Level 2: KPI cards — `KpiGrid`, the same row `/invoices`,
           `/warehouse` and `/customers` draw. A local grid here is what made
           the dashboard look like a different page. */}
-      {show?.kpis === false ? null : (
-        <KpiGrid>
-          {/* ✅ این دو کارت روندشان را از داده‌ی نمودار می‌گیرند، پس تا وقتی آن
+      <div style={{ order: orderOf('kpis') }}>
+        {show?.kpis === false ? null : (
+          <KpiGrid>
+            {/* ✅ این دو کارت روندشان را از داده‌ی نمودار می‌گیرند، پس تا وقتی آن
             کوئری کامل نشده باید skeleton نشان دهند؛ وگرنه یک لحظه با
             trend=null رندر می‌شوند و خط خنثی (نه اسپارک‌لاین) دیده می‌شود. */}
-          {/* H1 — every figure opens the rows it was computed from.
+            {/* H1 — every figure opens the rows it was computed from.
             `invoiceListHref` and the list's own parser come from one table
             (invoice-filter-link.ts), so a card cannot link to a filter the
             list ignores. */}
-          {hiddenFigures.includes('sales') ? null : (
-            <KpiCard
-              icon={TrendingUp}
-              label={t('dashboard.totalSales', 'فروش کل')}
-              value={fmt(totalSales)}
-              delta={monthlyGrowth ?? null}
-              deltaLabel={t('dashboard.vsLastMonth', 'نسبت به ماه گذشته')}
-              showEmptyDelta
-              isLoading={kpiLoading}
-              onOpen={() => onNavigate(invoiceListHref('totalSales'))}
-              openLabel={t('dashboard.openSalesInvoices', 'فاکتورهای فروش')}
-            />
-          )}
-          {hiddenFigures.includes('sales') ? null : (
-            <KpiCard
-              icon={Wallet}
-              label={rangeLabel}
-              value={fmt(rangeSalesTotal ?? 0)}
-              delta={rangeChange}
-              {...(rangeChangeLabel ? { deltaLabel: rangeChangeLabel } : {})}
-              showEmptyDelta
-              isLoading={rangeLoading || rangeSalesTotal === null}
-              onOpen={() => onNavigate(invoiceListHref(rangeIsToday ? 'todaySales' : 'totalSales'))}
-              openLabel={t('dashboard.openTodayInvoices', 'فاکتورهای امروز')}
-            />
-          )}
-          {hiddenFigures.includes('customers') ? null : (
-            <KpiCard
-              icon={CreditCard}
-              label={t('dashboard.customerDebt', 'بدهی مشتریان')}
-              value={fmt(customerDebt)}
-              delta={null}
-              // ⚠️ Debt is the one card here where rising is BAD. It carries no
-              // comparison today, so nothing is coloured — but the flag is set so
-              // a future delta cannot inherit «up is green».
-              invertDelta
-              showEmptyDelta
-              isLoading={kpiLoading}
-              onOpen={() => onNavigate(invoiceListHref('customerDebt'))}
-              openLabel={t('dashboard.openUnpaidInvoices', 'فاکتورهای تسویه‌نشده')}
-            />
-          )}
-          {hiddenFigures.includes('stockValue') ? null : (
-            <KpiCard
-              icon={Boxes}
-              label={t('dashboard.warehouseValue', 'ارزش کل انبار')}
-              value={fmt(warehouseValue)}
-              delta={null}
-              showEmptyDelta
-              isLoading={kpiLoading}
-              onOpen={() => onNavigate('/warehouse')}
-              openLabel={t('dashboard.openWarehouse', 'انبار')}
-            />
-          )}
-        </KpiGrid>
-      )}
+            {hiddenFigures.includes('sales') ? null : (
+              <KpiCard
+                icon={TrendingUp}
+                label={t('dashboard.totalSales', 'فروش کل')}
+                value={fmt(totalSales)}
+                delta={monthlyGrowth ?? null}
+                deltaLabel={t('dashboard.vsLastMonth', 'نسبت به ماه گذشته')}
+                showEmptyDelta
+                isLoading={kpiLoading}
+                onOpen={() => onNavigate(invoiceListHref('totalSales'))}
+                openLabel={t('dashboard.openSalesInvoices', 'فاکتورهای فروش')}
+              />
+            )}
+            {hiddenFigures.includes('sales') ? null : (
+              <KpiCard
+                icon={Wallet}
+                label={rangeLabel}
+                value={fmt(rangeSalesTotal ?? 0)}
+                delta={rangeChange}
+                {...(rangeChangeLabel ? { deltaLabel: rangeChangeLabel } : {})}
+                showEmptyDelta
+                isLoading={rangeLoading || rangeSalesTotal === null}
+                onOpen={() =>
+                  onNavigate(invoiceListHref(rangeIsToday ? 'todaySales' : 'totalSales'))
+                }
+                openLabel={t('dashboard.openTodayInvoices', 'فاکتورهای امروز')}
+              />
+            )}
+            {hiddenFigures.includes('customers') ? null : (
+              <KpiCard
+                icon={CreditCard}
+                label={t('dashboard.customerDebt', 'بدهی مشتریان')}
+                value={fmt(customerDebt)}
+                delta={null}
+                // ⚠️ Debt is the one card here where rising is BAD. It carries no
+                // comparison today, so nothing is coloured — but the flag is set so
+                // a future delta cannot inherit «up is green».
+                invertDelta
+                showEmptyDelta
+                isLoading={kpiLoading}
+                onOpen={() => onNavigate(invoiceListHref('customerDebt'))}
+                openLabel={t('dashboard.openUnpaidInvoices', 'فاکتورهای تسویه‌نشده')}
+              />
+            )}
+            {hiddenFigures.includes('stockValue') ? null : (
+              <KpiCard
+                icon={Boxes}
+                label={t('dashboard.warehouseValue', 'ارزش کل انبار')}
+                value={fmt(warehouseValue)}
+                delta={null}
+                showEmptyDelta
+                isLoading={kpiLoading}
+                onOpen={() => onNavigate('/warehouse')}
+                openLabel={t('dashboard.openWarehouse', 'انبار')}
+              />
+            )}
+          </KpiGrid>
+        )}
+      </div>
 
       {/* Level 3: Chart + AI Insights (عمودی، جای قبلی صورت‌حساب‌های اخیر) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="flex flex-col gap-4 sm:gap-6">
         {show?.chart === false ? null : (
-          <div className="lg:col-span-2">
+          <div style={{ order: orderOf('chart') }}>
             <div
               className={cn(
                 'rounded-2xl border border-[hsl(var(--border-default))]',
@@ -751,7 +768,7 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
         )}
 
         {show?.insights === false ? null : (
-          <div className="lg:col-span-1">
+          <div style={{ order: orderOf('insights') }}>
             <AIInsightsPanel
               insights={insights}
               isLoading={insightsLoading}
@@ -762,13 +779,15 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
       </div>
 
       {/* Level 4: Recent Activities — انتهای صفحه */}
-      {show?.activities === false ? null : (
-        <RecentActivities
-          groups={recentActivities}
-          isLoading={activitiesLoading}
-          onNavigate={onNavigate}
-        />
-      )}
+      <div style={{ order: orderOf('activities') }}>
+        {show?.activities === false ? null : (
+          <RecentActivities
+            groups={recentActivities}
+            isLoading={activitiesLoading}
+            onNavigate={onNavigate}
+          />
+        )}
+      </div>
     </div>
   )
 })

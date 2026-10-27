@@ -1,0 +1,920 @@
+[
+  {
+    "domain": "accounting",
+    "files": 14,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": true,
+    "tests": 3
+  },
+  {
+    "domain": "accounting",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": true,
+    "tests": 3
+  },
+  {
+    "domain": "activity",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 6
+  },
+  {
+    "domain": "admin",
+    "files": 5,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 8
+  },
+  {
+    "domain": "admin",
+    "files": 1,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 8
+  },
+  {
+    "domain": "aggregates",
+    "files": 3,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "ai",
+    "files": 8,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 22
+  },
+  {
+    "domain": "ai",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 22
+  },
+  {
+    "domain": "analysis",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": true,
+    "tests": 1
+  },
+  {
+    "domain": "analytics",
+    "files": 5,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "analytics",
+    "files": 1,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "assets",
+    "files": 3,
+    "route": false,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 0
+  },
+  {
+    "domain": "attendance",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": false,
+    "tests": 8
+  },
+  {
+    "domain": "attendance-devices",
+    "files": 3,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": false,
+    "tests": 8
+  },
+  {
+    "domain": "audit",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 4
+  },
+  {
+    "domain": "authorization",
+    "files": 11,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 4
+  },
+  {
+    "domain": "automation",
+    "files": 2,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 4
+  },
+  {
+    "domain": "banking",
+    "files": 6,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "billing",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 2
+  },
+  {
+    "domain": "blog",
+    "files": 13,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 4
+  },
+  {
+    "domain": "branch",
+    "files": 3,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": true,
+    "tests": 4
+  },
+  {
+    "domain": "budgeting",
+    "files": 3,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "cache",
+    "files": 1,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 5
+  },
+  {
+    "domain": "campaigns",
+    "files": 2,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 1
+  },
+  {
+    "domain": "checkout",
+    "files": 1,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "cloud-migration",
+    "files": 4,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 2
+  },
+  {
+    "domain": "cms",
+    "files": 3,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "commerce",
+    "files": 4,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "conflict",
+    "files": 3,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 4
+  },
+  {
+    "domain": "connectors",
+    "files": 1,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "core-divergence-alarm",
+    "files": 1,
+    "route": false,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 7
+  },
+  {
+    "domain": "core-divergence",
+    "files": 1,
+    "route": false,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 7
+  },
+  {
+    "domain": "crm",
+    "files": 6,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 1
+  },
+  {
+    "domain": "currency",
+    "files": 4,
+    "route": false,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 11
+  },
+  {
+    "domain": "customer-portal",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": false,
+    "tests": 10
+  },
+  {
+    "domain": "customer-profile",
+    "files": 4,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": false,
+    "tests": 10
+  },
+  {
+    "domain": "customer",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": false,
+    "tests": 10
+  },
+  {
+    "domain": "customers",
+    "files": 2,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": true,
+    "tests": 2
+  },
+  {
+    "domain": "developer",
+    "files": 4,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 11
+  },
+  {
+    "domain": "dimensions",
+    "files": 3,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "email",
+    "files": 1,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 2
+  },
+  {
+    "domain": "entitlement",
+    "files": 1,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 3
+  },
+  {
+    "domain": "event-log",
+    "files": 1,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "event",
+    "files": 1,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "extensions",
+    "files": 2,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "financing",
+    "files": 2,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 2
+  },
+  {
+    "domain": "human-resources",
+    "files": 1,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": true,
+    "tests": 0
+  },
+  {
+    "domain": "ingest",
+    "files": 4,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 2
+  },
+  {
+    "domain": "insights",
+    "files": 3,
+    "route": true,
+    "hook": false,
+    "engine": true,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "intelligence",
+    "files": 2,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 3
+  },
+  {
+    "domain": "inventory",
+    "files": 14,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 2
+  },
+  {
+    "domain": "inventory-costing",
+    "files": 10,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 2
+  },
+  {
+    "domain": "invoice",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": false,
+    "tests": 17
+  },
+  {
+    "domain": "invoices",
+    "files": 4,
+    "route": false,
+    "hook": true,
+    "engine": true,
+    "ui": true,
+    "tests": 3
+  },
+  {
+    "domain": "job",
+    "files": 1,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 2
+  },
+  {
+    "domain": "manufacturing",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 3
+  },
+  {
+    "domain": "manufacturing",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 3
+  },
+  {
+    "domain": "market",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 3
+  },
+  {
+    "domain": "mcp",
+    "files": 3,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "mdm",
+    "files": 3,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "migration",
+    "files": 17,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 11
+  },
+  {
+    "domain": "notes",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 3
+  },
+  {
+    "domain": "notification",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "oauth",
+    "files": 4,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 2
+  },
+  {
+    "domain": "offline-license",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 9
+  },
+  {
+    "domain": "orders",
+    "files": 4,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "password-reset",
+    "files": 1,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "payments",
+    "files": 4,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": false,
+    "tests": 4
+  },
+  {
+    "domain": "payroll",
+    "files": 6,
+    "route": false,
+    "hook": true,
+    "engine": true,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "permission",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "personalization",
+    "files": 3,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "plan-limits",
+    "files": 1,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 2
+  },
+  {
+    "domain": "plugins",
+    "files": 1,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "portability",
+    "files": 2,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "pos",
+    "files": 5,
+    "route": true,
+    "hook": false,
+    "engine": true,
+    "ui": false,
+    "tests": 8
+  },
+  {
+    "domain": "pricing",
+    "files": 1,
+    "route": false,
+    "hook": false,
+    "engine": true,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "product",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": false,
+    "tests": 9
+  },
+  {
+    "domain": "product-images",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": false,
+    "tests": 9
+  },
+  {
+    "domain": "product",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": false,
+    "tests": 9
+  },
+  {
+    "domain": "project",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "purchasing",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "referral",
+    "files": 4,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "reporting",
+    "files": 4,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "rules",
+    "files": 3,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 18
+  },
+  {
+    "domain": "sales",
+    "files": 3,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 2
+  },
+  {
+    "domain": "saved-views",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 3
+  },
+  {
+    "domain": "subscription-upgrade",
+    "files": 1,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 3
+  },
+  {
+    "domain": "supplier",
+    "files": 2,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "sync",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": false,
+    "tests": 9
+  },
+  {
+    "domain": "tax",
+    "files": 4,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "tenancy",
+    "files": 1,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 4
+  },
+  {
+    "domain": "timesheets",
+    "files": 3,
+    "route": false,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 0
+  },
+  {
+    "domain": "traceability",
+    "files": 3,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "transport",
+    "files": 1,
+    "route": true,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 0
+  },
+  {
+    "domain": "wallet",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 2
+  },
+  {
+    "domain": "warehouse",
+    "files": 2,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": true,
+    "tests": 9
+  },
+  {
+    "domain": "warehouse",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": true,
+    "tests": 9
+  },
+  {
+    "domain": "webhook",
+    "files": 1,
+    "route": false,
+    "hook": false,
+    "engine": false,
+    "ui": false,
+    "tests": 1
+  },
+  {
+    "domain": "workflow",
+    "files": 6,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 3
+  },
+  {
+    "domain": "workflow",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": false,
+    "ui": true,
+    "tests": 3
+  },
+  {
+    "domain": "workspace",
+    "files": 2,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": true,
+    "tests": 17
+  },
+  {
+    "domain": "workspace",
+    "files": 1,
+    "route": true,
+    "hook": true,
+    "engine": true,
+    "ui": true,
+    "tests": 17
+  }
+]

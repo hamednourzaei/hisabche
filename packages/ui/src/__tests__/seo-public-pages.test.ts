@@ -119,7 +119,7 @@ describe('public → private links', () => {
     expect(signup, 'signup link must exist').toBeTruthy()
     expect(login).toContain('rel="nofollow"')
     expect(signup).toContain('rel="nofollow"')
-  })
+  }, 120_000) // imports the whole sitemap graph; 32 s under a full-suite load
 })
 
 // ── The measured link graph ─────────────────────────────────────────────────

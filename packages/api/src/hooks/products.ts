@@ -15,7 +15,7 @@
 // ============================================
 
 import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import apiClient, { type ApiError, localRequest } from '../lib/client'
+import apiClient, { type ApiError, getAppEdition, localRequest } from '../lib/client'
 import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { asList } from '../lib/as-list'
@@ -145,6 +145,19 @@ export interface ProductsReadOptions {
  * the server, so it is not searched on the device either — one rule, two
  * hosts.
  */
+/**
+ * The list's filters as the engine's query string: only what was asked for,
+ * every value a string (the engine reads `'true'`/`'1'`, like the server).
+ */
+function engineProductParams(filters: ProductFilters): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [key, value] of Object.entries(filters)) {
+    if (value === undefined || value === null || value === '') continue
+    out[key] = String(value)
+  }
+  return out
+}
+
 function productSearchColumns(search: string): string[] {
   const code = normalizeBarcode(search)
   return code ? ['name', 'barcode'] : ['name']
@@ -202,7 +215,44 @@ export async function fetchProducts(
   const mergedFilters = mergeProductFilters(filters)
   const device = getOfflineQueue()
 
-  const fromDevice = async (): Promise<ProductPage> => {
+  // ⚠️ THE DEVICE ANSWERS THROUGH THE LOCAL ENGINE, NOT THROUGH `db:query`.
+  //
+  // `db:query` is a generic table read that the desktop's main process gates
+  // behind a stored sign-in (`authenticateAndAuthorize`). A device with no
+  // stored session — the offline edition, or a signed-out cloud device — got
+  // `IPC_REJECTED:db:query` and the stock picker said «کالایی پیدا نشد» with 10
+  // grams of gold in the warehouse (owner, 26 Oct 2026). The engine is what
+  // reads AND writes the business on this device: it scopes by workspace, takes
+  // the warehouse filter and sorts the way the server does. The gate on
+  // `db:query` stays exactly where it is.
+  //
+  // `null` = this host has no engine (the web build): the generic read below
+  // is then the only device answer there is.
+  const fromEngine = async (): Promise<ProductPage | null> => {
+    const page = await localRequest<ProductPage>(
+      'GET',
+      '/products',
+      undefined,
+      engineProductParams(mergedFilters),
+    )
+    if (!page) return null
+    const products = asList<Product>(page.products, '/products')
+    const total = typeof page.total === 'number' ? page.total : products.length
+    return {
+      ...page,
+      products,
+      total,
+      // A cloud device that never pulled products does not KNOW the business is
+      // empty. The offline edition has no cloud to pull from: for it, empty is empty.
+      notAvailableOffline:
+        total === 0 &&
+        getAppEdition() !== 'offline' &&
+        device?.hasSynced !== undefined &&
+        device.hasSynced('product') === false,
+    }
+  }
+
+  const fromRows = async (): Promise<ProductPage> => {
     const limit = mergedFilters.limit ?? 20
     const page = mergedFilters.page ?? 1
     const { rows, total, synced } = await device!.readRows!('product', mergedFilters.search ?? '', {
@@ -238,9 +288,16 @@ export async function fetchProducts(
     }
   }
 
-  if (device?.readRows && device.isOffline()) return fromDevice()
+  // The engine when this host has one, the generic table read when it has only that.
+  const fromDevice = async (): Promise<ProductPage> => {
+    const page = await fromEngine()
+    if (page) return page
+    if (device?.readRows) return fromRows()
+    return { products: [], total: 0, notAvailableOffline: true }
+  }
+  if (device?.isOffline()) return fromDevice()
 
-  if (device?.readRows && options.preferDevice) {
+  if (device && options.preferDevice) {
     const answer = await fromDevice()
     // A device that has never synced knows nothing: that is "I do not know",
     // not "this business has no products".
@@ -256,7 +313,7 @@ export async function fetchProducts(
   } catch (error) {
     // An aborted request is not "no network": never fall back to the device for it.
     if (signal.aborted) throw error
-    if (device?.readRows && (error as Partial<ApiError>)?.code === 'NETWORK_ERROR') {
+    if (device && (error as Partial<ApiError>)?.code === 'NETWORK_ERROR') {
       return fromDevice()
     }
     throw error

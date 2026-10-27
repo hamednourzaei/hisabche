@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
+import { flagFilter } from '@hisabche/validation'
 import { ActivityService, ActivityReadsNotConfiguredError } from '../services/activity.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
@@ -9,7 +10,9 @@ const activityService = new ActivityService()
 
 const activityFiltersSchema = z.object({
   type: z.string().optional(),
-  unread: z.coerce.boolean().optional(),
+  // ⚠️ NOT `z.coerce.boolean()`: it reads the text 'false' as TRUE (any non-empty
+  // string is truthy). filter-contract: unset = no filter, 'false' = read ones.
+  unread: z.unknown().transform((value) => flagFilter(value)),
   search: z.string().optional(),
   limit: z.coerce.number().min(1).max(100).default(20),
   cursor: z.string().optional(),

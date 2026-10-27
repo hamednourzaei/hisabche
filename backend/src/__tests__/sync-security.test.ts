@@ -110,7 +110,21 @@ function makeQuery(table: string) {
   return api
 }
 
-vi.mock('../db', () => ({ supabase: { from: (t: string) => makeQuery(t) } }))
+vi.mock('../db', () => ({
+  supabase: {
+    from: (t: string) => makeQuery(t),
+    rpc: async (name: string, params: Record<string, unknown>) => {
+      const pLimit = Number(params.p_limit ?? 10)
+      const pCursor = Number(params.p_cursor ?? 0)
+      const pWs = String(params.p_workspace_id ?? '')
+      const rows = (tables.get('sync_change_log') ?? [])
+        .filter((r) => r.workspace_id === pWs && Number(r.sync_version) > pCursor)
+        .sort((a, b) => Number(a.sync_version) - Number(b.sync_version))
+        .slice(0, pLimit)
+      return { data: rows, error: null }
+    },
+  },
+}))
 
 const { syncService } = await import('../services/sync.service')
 

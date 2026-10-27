@@ -10,7 +10,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const get = vi.fn()
-vi.mock('../lib/client', () => ({ default: { get: (...a: unknown[]) => get(...a) } }))
+// The local engine: `null` is «this host has none» (the web build) — the generic
+// table read is then the only device answer there is.
+const local = vi.fn()
+let edition: 'cloud' | 'offline' = 'cloud'
+vi.mock('../lib/client', () => ({
+  default: { get: (...a: unknown[]) => get(...a) },
+  localRequest: (...a: unknown[]) => local(...a),
+  getAppEdition: () => edition,
+}))
 
 const { fetchProducts } = await import('../hooks/products')
 const { registerOfflineQueue } = await import('../lib/offline-queue')
@@ -55,6 +63,9 @@ const productRow = (over: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
   get.mockReset()
+  local.mockReset()
+  local.mockResolvedValue(null)
+  edition = 'cloud'
   offline = false
   deviceRows = []
   deviceTotal = 0
@@ -157,5 +168,136 @@ describe('the product list', () => {
     const page = await fetchProducts({ page: 1, limit: 20, sortDirection: 'desc' }, {}, SIGNAL)
 
     expect(page.products).toHaveLength(1)
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ⚠️ THE DEVICE ANSWERS THROUGH THE LOCAL ENGINE (owner, 26 Oct 2026).
+//
+// «در انبار ۱۰ گرم طلا دارم و فاکتور می‌گوید کالایی پیدا نشد.» The picker read
+// the device with `db:query`, which the desktop's main process refuses without a
+// stored sign-in: `IPC_REJECTED:db:query`, an empty list, and no error anyone
+// could see. The engine is the one reader that needs no such session.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('the device answers through the local engine, not through the gated table read', () => {
+  const engineProduct = {
+    id: '0918241e-bdd4-4dc5-a29c-b9a5bd7f8b34',
+    name: 'طلای ابشده',
+    unit: 'gram',
+    quantity: 10,
+  }
+
+  it('offline: the engine is asked, and the generic table read never is', async () => {
+    offline = true
+    local.mockResolvedValue({ products: [engineProduct], total: 1 })
+
+    const page = await fetchProducts({ page: 1, limit: 100, warehouseId: 'wh-1' }, {}, SIGNAL)
+
+    expect(page.products.map((p) => p.name)).toEqual(['طلای ابشده'])
+    expect(reads).toEqual([]) // no `db:query`, so no IPC_REJECTED
+    expect(get).not.toHaveBeenCalled()
+  })
+
+  it('the warehouse reaches the engine, as a string, with the page and the sort', async () => {
+    offline = true
+    local.mockResolvedValue({ products: [], total: 0 })
+
+    await fetchProducts(
+      { page: 2, limit: 100, warehouseId: 'wh-1', sortBy: 'name', sortDirection: 'asc' },
+      {},
+      SIGNAL,
+    )
+
+    const [method, path, body, params] = local.mock.calls[0]!
+    expect([method, path, body]).toEqual(['GET', '/products', undefined])
+    expect(params).toMatchObject({
+      warehouseId: 'wh-1',
+      page: '2',
+      limit: '100',
+      sortBy: 'name',
+      sortDirection: 'asc',
+    })
+    // A filter nobody set is not sent: `isActive=undefined` is not «all».
+    expect(params).not.toHaveProperty('isActive')
+    expect(params).not.toHaveProperty('search')
+  })
+
+  it('the summary rides along, so the warehouse cards are not «نامعلوم»', async () => {
+    offline = true
+    const summary = { productCount: 1, totalValue: 300000000 }
+    local.mockResolvedValue({ products: [engineProduct], total: 1, summary })
+
+    const page = await fetchProducts({ includeSummary: true }, {}, SIGNAL)
+
+    expect(page.summary).toEqual(summary)
+    expect(local.mock.calls[0]![3]).toMatchObject({ includeSummary: 'true' })
+  })
+
+  it('a host with no engine still has the table read', async () => {
+    offline = true
+    deviceRows = [productRow()]
+    deviceTotal = 1
+
+    const page = await fetchProducts({ page: 1, limit: 20 }, {}, SIGNAL)
+
+    expect(page.products).toHaveLength(1)
+    expect(reads).toHaveLength(1)
+  })
+
+  it('the engine failing is an error, not an empty list', async () => {
+    offline = true
+    local.mockRejectedValue(new Error('engine down'))
+
+    await expect(fetchProducts({}, {}, SIGNAL)).rejects.toThrow('engine down')
+    expect(reads).toEqual([]) // and it does not fall into the gated read behind its back
+  })
+
+  it('a cloud device that never pulled products says «not available», not «empty»', async () => {
+    offline = true
+    local.mockResolvedValue({ products: [], total: 0 })
+    registerOfflineQueue({
+      isOffline: () => true,
+      enqueue: async () => {},
+      hasSynced: () => false,
+    })
+
+    const page = await fetchProducts({}, {}, SIGNAL)
+
+    expect(page.notAvailableOffline).toBe(true)
+  })
+
+  it('the offline edition has no cloud to pull from: empty is empty', async () => {
+    offline = true
+    edition = 'offline'
+    local.mockResolvedValue({ products: [], total: 0 })
+    registerOfflineQueue({
+      isOffline: () => true,
+      enqueue: async () => {},
+      hasSynced: () => false,
+    })
+
+    const page = await fetchProducts({}, {}, SIGNAL)
+
+    expect(page.notAvailableOffline).toBe(false)
+  })
+
+  it('ONLINE, on the screen that prefers the device: the engine answers when it has rows', async () => {
+    local.mockResolvedValue({ products: [engineProduct], total: 1 })
+
+    const page = await fetchProducts({}, { preferDevice: true }, SIGNAL)
+
+    expect(page.total).toBe(1)
+    expect(reads).toEqual([])
+    expect(get).not.toHaveBeenCalled()
+  })
+
+  it('ONLINE, an engine that knows nothing falls back to the network', async () => {
+    local.mockResolvedValue({ products: [], total: 0 })
+    get.mockResolvedValue({ data: { products: [engineProduct], total: 1 } })
+
+    const page = await fetchProducts({}, { preferDevice: true }, SIGNAL)
+
+    expect(page.total).toBe(1)
+    expect(get).toHaveBeenCalledTimes(1)
   })
 })

@@ -88,6 +88,10 @@ import { reel100 } from './reel-100-tech-explainer'
 import { reel101 } from './reel-101-interactive-invoicing'
 import { reel102 } from './reel-102-deal-rescue'
 import { reel103 } from './reel-103-tech-lost-deal'
+import { reel104 } from './reel-104-return-flow'
+import { reel105 } from './reel-105-landed-cost'
+import { reel106 } from './reel-106-single-thread'
+import { reel107 } from './reel-107-need-blueprint'
 export const REELS: Reel[] = [
   reel01,
   reel02,
@@ -192,6 +196,10 @@ export const REELS: Reel[] = [
   reel101,
   reel102,
   reel103,
+  reel104,
+  reel105,
+  reel106,
+  reel107,
 ]
 
 export { film01, film02, film03, film04, film05 }
@@ -263,4 +271,8 @@ export {
   reel101,
   reel102,
   reel103,
+  reel104,
+  reel105,
+  reel106,
+  reel107,
 }

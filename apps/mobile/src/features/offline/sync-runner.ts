@@ -22,6 +22,7 @@
 // ============================================
 
 import NetInfo from '@react-native-community/netinfo'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { ApiError } from '@hisabche/api'
 import {
   createPushGate,
@@ -29,9 +30,19 @@ import {
   stripFinancialFields,
   type QueueEntry,
 } from '@hisabche/app-bridge'
+import {
+  deriveStableBatchId,
+  getPersistentDeviceIdAsync,
+  type AsyncDeviceIdStorage,
+} from '@hisabche/validation'
 
 import { apiClient } from '../../shared/lib/api'
 import * as localDb from '../../host/local-db'
+
+const mobileStorage: AsyncDeviceIdStorage = {
+  getItem: (key) => AsyncStorage.getItem(key),
+  setItem: (key, val) => AsyncStorage.setItem(key, val),
+}
 
 const MAX_ATTEMPTS = 5
 
@@ -99,14 +110,18 @@ async function pushEntry(entry: QueueEntry): Promise<void> {
  * Without it the server has nothing to compare and two devices editing one
  * customer resolve as last-write-wins, silently.
  */
-async function pushVersioned(entry: QueueEntry): Promise<void> {
+export async function pushVersioned(entry: QueueEntry): Promise<void> {
   const local = entry.payload as { id?: unknown; version?: unknown }
   const entityId = String(local.id ?? '')
   if (!entityId) throw new Error(`NO_ENTITY_ID:${entry.entity}`)
 
   const version = Number(local.version ?? 0)
+  const batchId = deriveStableBatchId(entry.clientId)
+  const deviceId = await getPersistentDeviceIdAsync(mobileStorage)
 
   await apiClient.post('/sync/push', {
+    deviceId,
+    batchId,
     mutations: [
       {
         mutationId: entry.clientId,

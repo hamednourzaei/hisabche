@@ -18,12 +18,35 @@
 // silence and never a raw beep.
 import fs from 'node:fs'
 import path from 'node:path'
-import { execSync } from 'node:child_process'
+import { execSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const FFMPEG = 'C:\\ffmpeg\\bin\\ffmpeg.exe'
+
+function getFFmpegPath() {
+  const whereCmd = process.platform === 'win32' ? 'where.exe' : 'which'
+  try {
+    const res = spawnSync(whereCmd, ['ffmpeg'], { encoding: 'utf8', windowsHide: true })
+    if (res.status === 0 && res.stdout) {
+      const line = res.stdout.trim().split(/\r?\n/)[0].trim()
+      if (line && fs.existsSync(line)) return line
+    }
+  } catch {
+    // optional lookup failed: fall through to the standard paths below
+  }
+  const standardPaths = [
+    'C:\\ffmpeg\\bin\\ffmpeg.exe',
+    'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',
+    'C:\\ProgramData\\chocolatey\\bin\\ffmpeg.exe',
+  ]
+  for (const p of standardPaths) {
+    if (fs.existsSync(p)) return p
+  }
+  return null
+}
+
+const FFMPEG = getFFmpegPath()
 const SFX_MANIFEST_PATH = path.resolve(ROOT, 'assets', 'sfx', 'manifest.json')
 const MUSIC_MANIFEST_PATH = path.resolve(ROOT, 'assets', 'music', 'manifest.json')
 
@@ -34,10 +57,18 @@ const sampleCache = new Map()
 
 export function getPcmSample(filePath) {
   if (sampleCache.has(filePath)) return sampleCache.get(filePath)
-  if (!fs.existsSync(filePath)) return null
-  const buf = execSync(`"${FFMPEG}" -v error -i "${filePath}" -f f32le -ac 2 -ar ${SR} pipe:1`, {
-    maxBuffer: 50 * 1024 * 1024,
-  })
+  if (!fs.existsSync(filePath) || !FFMPEG) return null
+  let buf
+  try {
+    buf = execSync(`"${FFMPEG}" -v error -i "${filePath}" -f f32le -ac 2 -ar ${SR} pipe:1`, {
+      maxBuffer: 50 * 1024 * 1024,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+  } catch {
+    sampleCache.set(filePath, null)
+    return null
+  }
   const numFrames = buf.length / 8
   const L = new Float32Array(numFrames)
   const R = new Float32Array(numFrames)

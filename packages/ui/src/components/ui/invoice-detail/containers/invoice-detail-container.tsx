@@ -26,6 +26,7 @@ import { InvoiceInstallmentsPanel } from '../invoice-installments-panel'
 import { InvoiceLateFeePanel } from '../invoice-late-fee-panel'
 import { InvoiceRelatedPanel } from '../invoice-related-panel'
 import { RecordHistoryPanel } from '../../activity/record-history-panel'
+import { InvoiceReturnsDialog } from '../../invoices/invoice-returns-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { useReceiptPrint } from '../../../../hooks/use-receipt-print'
@@ -137,6 +138,7 @@ export function InvoiceDetailContainer() {
   const autoActionRef = useRef(false)
   const queryClient = useQueryClient()
   const [exportingPNG, setExportingPNG] = useState(false)
+  const [returnsDialogOpen, setReturnsDialogOpen] = useState(false)
 
   const { data: invoice, isLoading } = useInvoice(id)
 
@@ -430,160 +432,172 @@ export function InvoiceDetailContainer() {
   )
 
   return (
-    <InvoiceDetailPage
-      t={safeT}
-      invoice={display}
-      isLoading={isLoading}
-      onBack={() => router.back()}
-      onPrint={handlePrint}
-      onPrintReceipt={display ? () => void printReceipt(display) : undefined}
-      printingReceipt={printingReceipt}
-      onSharePDF={handleSharePDF}
-      onWhatsApp={handleWhatsApp}
-      onTelegram={handleTelegram}
-      onEmail={handleEmail}
-      onExportPNG={handleExportPNG}
-      exportingPNG={exportingPNG}
-      pdfDownloadSlot={invoice ? <InvoicePDFDownload invoice={invoice} /> : null}
-      // «Why this profit?» — loads only when the person opens it.
-      evidenceSlot={
-        display && id ? (
-          <div className="space-y-4">
-            {/* When the unpaid part is due, in parts (#123). Sales only. */}
-            {display.type === 'sale' ? <InvoiceInstallmentsPanel invoiceId={id} /> : null}
-            {/* What a late payment costs, and charging it (#124). Sales only. */}
-            {display.type === 'sale' ? <InvoiceLateFeePanel invoiceId={id} /> : null}
-            <InvoiceEvidencePanel invoiceId={id} />
-          </div>
-        ) : null
-      }
-      // H2 — rendered only once the invoice itself has loaded. Fetching the
-      // related records for an id that turns out not to exist would show an
-      // empty payments panel beside a «فاکتور پیدا نشد» message.
-      relatedSlot={
-        display ? (
-          <InvoiceRelatedPanel
-            t={safeT}
-            fmtMoney={(value) => formatNumber(value, intlLocale, 3)}
-            fmtDate={(value) => fmtIntlDate(value)}
-            currency={display.currency}
-            isLoading={relatedLoading}
-            payments={related?.payments ?? []}
-            journalEntry={related?.journalEntry ?? null}
-            allocatedTotal={related?.allocatedTotal ?? 0}
-            storedPaidAmount={display.paidAmount}
-            onOpenJournalEntry={handleOpenJournalEntry}
-            invoiceTotal={display.total}
-            paymentDirection={display.type === 'purchase' ? 'out' : 'in'}
-            isRecordingPayment={recordPayment.isPending}
-            {...(subscriptionLocked
-              ? {}
-              : {
-                  onPostToLedger: () =>
-                    postToLedger.mutate(id, {
-                      onSuccess: (result) => setLedgerResult(result),
-                      onError: (err) =>
-                        setLedgerResult({
-                          status: 'not_postable',
-                          // ⚠️ The API client rejects with a plain object
-                          // ({ message, code, status }), not an Error — so
-                          // `String(err)` rendered «[object Object]».
-                          reason:
-                            (err as { code?: string; message?: string })?.code &&
-                            (err as { code?: string }).code !== 'UNKNOWN_ERROR'
-                              ? String((err as { code?: string }).code)
-                              : String((err as { message?: string })?.message ?? err),
-                        }),
-                    }),
-                })}
-            isPostingToLedger={postToLedger.isPending}
-            ledgerPostMessage={ledgerPostMessageOf(ledgerResult, safeT)}
-            recordPaymentError={paymentErrorMessage(recordPayment.error, safeT)}
-            relatedFailed={!relatedLoading && !relatedKnown}
-            onRetryRelated={() => void refetchRelated()}
-            onRecordPayment={
-              subscriptionLocked || !relatedKnown
-                ? undefined
-                : (input) => {
-                    const isPurchase = display.type === 'purchase'
-                    // ⚠️ NULL FOR A WALK-IN, NOT A BLOCK. An invoice with no customer is an
-                    // ordinary cash sale; the server records its payment with no party as
-                    // long as the payment names this invoice, which it always does below.
-                    // The earlier version refused here and asked for a customer on a page
-                    // that has no customer field.
-                    const partyId = (isPurchase ? display.supplierId : display.customerId) || null
-                    recordPayment.mutate({
-                      // A purchase pays OUT to a supplier; a sale takes money IN.
-                      // Reversed, this lands on the wrong side of the ledger.
-                      direction: isPurchase ? 'out' : 'in',
-                      partyType: isPurchase ? 'supplier' : 'customer',
-                      partyId,
-                      amount: input.amount,
-                      // ⚠️ OMIT, DON'T SEND NULL. These fields are `.optional()` on
-                      // the server, which accepts a missing key and REJECTS `null` —
-                      // an invoice with no stored currency produced a 400 here.
-                      ...(input.method ? { method: input.method } : {}),
-                      ...(input.reference ? { reference: input.reference } : {}),
-                      ...(input.date ? { entryDate: input.date } : {}),
-                      ...(display.currency ? { currency: display.currency } : {}),
-                      // The till the person chose for this cash, and the day's
-                      // rate if they gave one. Neither is invented here.
-                      ...(input.tillSessionId ? { tillSessionId: input.tillSessionId } : {}),
-                      ...(input.exchangeRate ? { exchangeRate: input.exchangeRate } : {}),
-                      ...(input.feeAmount ? { feeAmount: input.feeAmount } : {}),
-                      // Explicit, always. Auto-allocation settles the OLDEST open
-                      // invoice first — so paying here would quietly clear a
-                      // different invoice and leave this one untouched.
-                      allocations: [{ invoiceId: display.id, amount: input.amount }],
-                    })
-                  }
-            }
-            onCancelPayment={
-              subscriptionLocked
-                ? undefined
-                : (paymentId) => {
-                    // The server requires a reason and refuses without one: a
-                    // cancelled payment nobody explained is unauditable.
-                    const reason = window.prompt(
-                      safeT('invoiceDetail.cancelPaymentReason', 'دلیل حذف این پرداخت؟'),
-                    )
-                    if (!reason || !reason.trim()) return
-                    cancelPayment.mutate({ paymentId, reason: reason.trim() })
-                  }
-            }
-          />
-        ) : null
-      }
-      /* H6 — «تاریخچه‌ی تغییرات این رکورد». `useRecordHistory` was written in
+    <>
+      <InvoiceDetailPage
+        t={safeT}
+        invoice={display}
+        isLoading={isLoading}
+        onBack={() => router.back()}
+        onPrint={handlePrint}
+        onPrintReceipt={display ? () => void printReceipt(display) : undefined}
+        printingReceipt={printingReceipt}
+        onSharePDF={handleSharePDF}
+        onWhatsApp={handleWhatsApp}
+        onTelegram={handleTelegram}
+        onEmail={handleEmail}
+        onExportPNG={handleExportPNG}
+        exportingPNG={exportingPNG}
+        pdfDownloadSlot={invoice ? <InvoicePDFDownload invoice={invoice} /> : null}
+        // «Why this profit?» — loads only when the person opens it.
+        evidenceSlot={
+          display && id ? (
+            <div className="space-y-4">
+              {/* When the unpaid part is due, in parts (#123). Sales only. */}
+              {display.type === 'sale' ? <InvoiceInstallmentsPanel invoiceId={id} /> : null}
+              {/* What a late payment costs, and charging it (#124). Sales only. */}
+              {display.type === 'sale' ? <InvoiceLateFeePanel invoiceId={id} /> : null}
+              <InvoiceEvidencePanel invoiceId={id} />
+            </div>
+          ) : null
+        }
+        // H2 — rendered only once the invoice itself has loaded. Fetching the
+        // related records for an id that turns out not to exist would show an
+        // empty payments panel beside a «فاکتور پیدا نشد» message.
+        relatedSlot={
+          display ? (
+            <InvoiceRelatedPanel
+              t={safeT}
+              fmtMoney={(value) => formatNumber(value, intlLocale, 3)}
+              fmtDate={(value) => fmtIntlDate(value)}
+              currency={display.currency}
+              isLoading={relatedLoading}
+              payments={related?.payments ?? []}
+              journalEntry={related?.journalEntry ?? null}
+              allocatedTotal={related?.allocatedTotal ?? 0}
+              storedPaidAmount={display.paidAmount}
+              onOpenJournalEntry={handleOpenJournalEntry}
+              invoiceTotal={display.total}
+              paymentDirection={display.type === 'purchase' ? 'out' : 'in'}
+              isRecordingPayment={recordPayment.isPending}
+              {...(subscriptionLocked
+                ? {}
+                : {
+                    onPostToLedger: () =>
+                      postToLedger.mutate(id, {
+                        onSuccess: (result) => setLedgerResult(result),
+                        onError: (err) =>
+                          setLedgerResult({
+                            status: 'not_postable',
+                            // ⚠️ The API client rejects with a plain object
+                            // ({ message, code, status }), not an Error — so
+                            // `String(err)` rendered «[object Object]».
+                            reason:
+                              (err as { code?: string; message?: string })?.code &&
+                              (err as { code?: string }).code !== 'UNKNOWN_ERROR'
+                                ? String((err as { code?: string }).code)
+                                : String((err as { message?: string })?.message ?? err),
+                          }),
+                      }),
+                  })}
+              isPostingToLedger={postToLedger.isPending}
+              ledgerPostMessage={ledgerPostMessageOf(ledgerResult, safeT)}
+              recordPaymentError={paymentErrorMessage(recordPayment.error, safeT)}
+              relatedFailed={!relatedLoading && !relatedKnown}
+              onRetryRelated={() => void refetchRelated()}
+              onRecordPayment={
+                subscriptionLocked || !relatedKnown
+                  ? undefined
+                  : (input) => {
+                      const isPurchase = display.type === 'purchase'
+                      // ⚠️ NULL FOR A WALK-IN, NOT A BLOCK. An invoice with no customer is an
+                      // ordinary cash sale; the server records its payment with no party as
+                      // long as the payment names this invoice, which it always does below.
+                      // The earlier version refused here and asked for a customer on a page
+                      // that has no customer field.
+                      const partyId = (isPurchase ? display.supplierId : display.customerId) || null
+                      recordPayment.mutate({
+                        // A purchase pays OUT to a supplier; a sale takes money IN.
+                        // Reversed, this lands on the wrong side of the ledger.
+                        direction: isPurchase ? 'out' : 'in',
+                        partyType: isPurchase ? 'supplier' : 'customer',
+                        partyId,
+                        amount: input.amount,
+                        // ⚠️ OMIT, DON'T SEND NULL. These fields are `.optional()` on
+                        // the server, which accepts a missing key and REJECTS `null` —
+                        // an invoice with no stored currency produced a 400 here.
+                        ...(input.method ? { method: input.method } : {}),
+                        ...(input.reference ? { reference: input.reference } : {}),
+                        ...(input.date ? { entryDate: input.date } : {}),
+                        ...(display.currency ? { currency: display.currency } : {}),
+                        // The till the person chose for this cash, and the day's
+                        // rate if they gave one. Neither is invented here.
+                        ...(input.tillSessionId ? { tillSessionId: input.tillSessionId } : {}),
+                        ...(input.exchangeRate ? { exchangeRate: input.exchangeRate } : {}),
+                        ...(input.feeAmount ? { feeAmount: input.feeAmount } : {}),
+                        // Explicit, always. Auto-allocation settles the OLDEST open
+                        // invoice first — so paying here would quietly clear a
+                        // different invoice and leave this one untouched.
+                        allocations: [{ invoiceId: display.id, amount: input.amount }],
+                      })
+                    }
+              }
+              onCancelPayment={
+                subscriptionLocked
+                  ? undefined
+                  : (paymentId) => {
+                      // The server requires a reason and refuses without one: a
+                      // cancelled payment nobody explained is unauditable.
+                      const reason = window.prompt(
+                        safeT('invoiceDetail.cancelPaymentReason', 'دلیل حذف این پرداخت؟'),
+                      )
+                      if (!reason || !reason.trim()) return
+                      cancelPayment.mutate({ paymentId, reason: reason.trim() })
+                    }
+              }
+            />
+          ) : null
+        }
+        /* H6 — «تاریخچه‌ی تغییرات این رکورد». `useRecordHistory` was written in
          G4 and had zero consumers; this is the first place it renders. */
-      historySlot={
-        display ? (
-          <RecordHistoryPanel
-            t={safeT}
-            isLoading={historyLoading}
-            entries={(recordHistory ?? []).map((entry) => ({
-              id: entry.id,
-              action: entry.action,
-              createdAt: entry.created_at,
-              userId: entry.user_id ?? null,
-            }))}
-          />
-        ) : null
-      }
-      documentRef={documentRef}
-      statusVariant={statusVariant}
-      workflowInstance={workflowData?.instance ?? null}
-      workflowActions={
-        subscriptionLocked
-          ? []
-          : approvalAvailability.requiresOnline
+        historySlot={
+          display ? (
+            <RecordHistoryPanel
+              t={safeT}
+              isLoading={historyLoading}
+              entries={(recordHistory ?? []).map((entry) => ({
+                id: entry.id,
+                action: entry.action,
+                createdAt: entry.created_at,
+                userId: entry.user_id ?? null,
+              }))}
+            />
+          ) : null
+        }
+        documentRef={documentRef}
+        statusVariant={statusVariant}
+        workflowInstance={workflowData?.instance ?? null}
+        workflowActions={
+          subscriptionLocked
             ? []
-            : (workflowData?.actions ?? [])
-      }
-      workflowSteps={workflowData?.steps ?? []}
-      workflowPending={workflowData?.instance?.status === 'in_progress'}
-      onWorkflowAction={handleWorkflowAction}
-    />
+            : approvalAvailability.requiresOnline
+              ? []
+              : (workflowData?.actions ?? [])
+        }
+        workflowSteps={workflowData?.steps ?? []}
+        workflowPending={workflowData?.instance?.status === 'in_progress'}
+        onWorkflowAction={handleWorkflowAction}
+        onReturn={() => setReturnsDialogOpen(true)}
+      />
+      {display ? (
+        <InvoiceReturnsDialog
+          invoiceId={display.id}
+          open={returnsDialogOpen}
+          onOpenChange={setReturnsDialogOpen}
+          items={display.items}
+          t={safeT}
+        />
+      ) : null}
+    </>
   )
 }
 

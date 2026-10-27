@@ -70,7 +70,11 @@ import {
 const MISSING_SCHEMA = new Set(['42703', '42P01', 'PGRST204', 'PGRST205'])
 
 /** The actions this backend can actually perform. A closed set, on purpose. */
-export const EXECUTABLE_ACTIONS: readonly ActionType[] = ['recurring_invoice', 'month_end']
+export const EXECUTABLE_ACTIONS: readonly ActionType[] = [
+  'recurring_invoice',
+  'month_end',
+  'recurring_expense',
+]
 
 /** How far back a missed slot is still issued. Older ones are recorded, not run. */
 export const MAX_CATCH_UP_DAYS = 35
@@ -679,10 +683,18 @@ export class AutomationService {
       }
       // The creator, with the access they have TODAY — or a refusal.
       const actor = await requireWorkspace(row.created_by, row.workspace_id)
-      const documentId =
-        automation.action.type === 'month_end'
-          ? await this.closeMonth(actor, row, slot)
-          : await this.issueInvoice(actor, row, slot)
+      let documentId: string | null = null
+      let docType: string | undefined = undefined
+
+      if (automation.action.type === 'month_end') {
+        await this.closeMonth(actor, row, slot)
+      } else if (automation.action.type === 'recurring_expense') {
+        documentId = await this.postJournalTemplate(actor, row, slot)
+        docType = 'journal_entry'
+      } else {
+        documentId = await this.issueInvoice(actor, row, slot)
+        docType = 'invoice'
+      }
 
       const recorded = await this.record(
         row,
@@ -690,7 +702,7 @@ export class AutomationService {
         'ran',
         'OK',
         startedAt,
-        automation.action.type === 'month_end' ? undefined : { type: 'invoice', id: documentId },
+        docType && documentId ? { type: docType, id: documentId } : undefined,
       )
       if (!recorded) return { outcome: 'already_ran' }
 
@@ -780,6 +792,30 @@ export class AutomationService {
     if (summary.failedAt)
       throw new ValidationError(`MONTH_END_FAILED_AT_${summary.failedAt.toUpperCase()}`)
     return null
+  }
+
+  private async postJournalTemplate(
+    actor: TenancyContext,
+    row: AutomationRow,
+    slot: string,
+  ): Promise<string | null> {
+    const payload = (row.payload as any)?.journal || (row.payload as any)
+    const lines = (payload?.lines || []).map((l: any) => ({
+      accountId: l.accountId,
+      debitMinor: Number(l.debitMinor || 0),
+      creditMinor: Number(l.creditMinor || 0),
+      description: l.description || row.name,
+    }))
+
+    const sourceId = sourceIdOf(actor.workspaceId, 'journal_entry', row.id, slot)
+    const outcome = await this.accounting.postDocument(actor, {
+      sourceType: 'manual',
+      sourceId,
+      date: slot,
+      description: row.name,
+      lines,
+    })
+    return 'entryId' in outcome ? outcome.entryId : sourceId
   }
 
   private async issueInvoice(actor: TenancyContext, row: AutomationRow, slot: string) {

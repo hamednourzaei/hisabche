@@ -53,6 +53,8 @@ export interface WarehouseProduct {
   sellPrice: number
   buyPrice: number
   minStockLevel: number | null
+  /** The product's category; '' when none is recorded. */
+  category: string
   /** The cover image, or null — the list shows a thumbnail when there is one. */
   imageUrl: string | null
 }

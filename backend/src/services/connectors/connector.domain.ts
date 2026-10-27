@@ -52,6 +52,10 @@ export type ConnectorId =
   | 'email_imap'
   | 'browser_extension'
   | 'excel_addin'
+  | 'payment_gateway'
+  | 'bank_statement'
+  | 'shipping_courier'
+  | 'moodian'
 
 /** What a connector can do. Scopes map onto the capability list that exists. */
 export type ConnectorScope =
@@ -223,7 +227,60 @@ const DEFINITIONS: readonly ConnectorDefinition[] = [
     maxRequestsPerHour: 1200,
     signsPayloads: true,
   },
+  {
+    id: 'payment_gateway',
+    labelKey: 'connectors.paymentGateway',
+    scopes: ['read:invoices', 'notify:customer'],
+    direction: 'both',
+    maxRequestsPerHour: 3600,
+    signsPayloads: true,
+  },
+  {
+    id: 'bank_statement',
+    labelKey: 'connectors.bankStatement',
+    scopes: ['capture:document'],
+    direction: 'poll',
+    maxRequestsPerHour: 60,
+    signsPayloads: true,
+  },
+  {
+    id: 'shipping_courier',
+    labelKey: 'connectors.shippingCourier',
+    scopes: ['read:invoices', 'notify:customer'],
+    direction: 'both',
+    maxRequestsPerHour: 600,
+    signsPayloads: true,
+  },
+  {
+    id: 'moodian',
+    labelKey: 'connectors.moodian',
+    scopes: ['read:invoices'],
+    direction: 'push',
+    maxRequestsPerHour: 300,
+    signsPayloads: true,
+  },
 ]
+
+export const FORBIDDEN_FINANCIAL_TABLES = [
+  'journal_entries',
+  'journal_lines',
+  'invoices',
+  'payments',
+  'cost_layers',
+  'accounts',
+] as const
+
+/**
+ * Framework guard: ensures an external connector adapter never writes
+ * directly to core financial / ledger tables.
+ */
+export function assertNoFinancialTableWrite(targetTable: string): void {
+  if ((FORBIDDEN_FINANCIAL_TABLES as readonly string[]).includes(targetTable)) {
+    throw new Error(
+      `CONNECTOR_DIRECT_FINANCIAL_WRITE_FORBIDDEN: Table '${targetTable}' cannot be written directly by a connector. All money must flow through InvoiceService, PaymentsService, or ledger.postDocument.`,
+    )
+  }
+}
 
 export function connector(id: ConnectorId): ConnectorDefinition | null {
   return DEFINITIONS.find((c) => c.id === id) ?? null

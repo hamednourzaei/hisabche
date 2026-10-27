@@ -15,20 +15,13 @@ import {
 import { OnboardingPage } from '../onboarding-page'
 import { useCallback, useMemo, memo, useState } from 'react'
 import { useAuthStore } from '@hisabche/store'
+import { BUSINESS_MODELS, BUSINESS_TYPES, BUSINESS_TYPE_OTHER } from '@hisabche/ui-contract'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    OnboardingContainer v3 — Memoized · Type-Safe · Persist Fix
    ✅ memo · useCallback · useMemo · safeT · type-safe
    ═══════════════════════════════════════════════════════════════════════════ */
-
-const businessTypes: { id: BusinessType; labelFa: string }[] = [
-  { id: 'retail', labelFa: 'خرده فروشی' },
-  { id: 'wholesale', labelFa: 'عمده فروشی' },
-  { id: 'restaurant', labelFa: 'رستوران' },
-  { id: 'service', labelFa: 'خدماتی' },
-  { id: 'other', labelFa: 'سایر' },
-]
 
 const storeSizes: { id: StoreSize; labelFa: string }[] = [
   { id: 'small', labelFa: 'دکان کوچک' },
@@ -59,11 +52,18 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     completeOnboarding,
   } = useOnboardingStore()
 
-  // ✅ useMemo برای labels
-  const businessTypeLabel = useMemo(
-    () => businessTypes.find((b) => b.id === businessType)?.labelFa || '',
-    [businessType],
-  )
+  // ✅ useMemo برای labels — the catalogue is the one onboarding renders, so the
+  // review step can no longer show «سایر» for a trade that is in the list.
+  const businessTypeLabel = useMemo(() => {
+    const ids = businessType
+      ? businessType
+          .split(',')
+          .map((id) => id.trim())
+          .filter(Boolean)
+      : []
+    const catalogue = [...BUSINESS_MODELS, ...BUSINESS_TYPES, BUSINESS_TYPE_OTHER]
+    return ids.map((id) => catalogue.find((option) => option.id === id)?.labelFa ?? id).join('، ')
+  }, [businessType])
 
   const storeSizeLabel = useMemo(
     () => storeSizes.find((s) => s.id === storeSize)?.labelFa || '',
@@ -77,11 +77,47 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
   const [businessNote, setBusinessNote] = useState('')
 
   const updateProfile = useAuthStore((s) => s.updateProfile)
+  const toast = useToast()
 
-  const handleComplete = useCallback(() => {
+  /**
+   * Persist what the wizard collected, then finish.
+   *
+   * The selection used to live only in this device's store: `updateProfile`
+   * was read and never called, so the server's `profiles.business_types` stayed
+   * empty and every screen resolved the generic profile. A failure is shown
+   * and the wizard stays put — finishing locally would look like success while
+   * the account kept an empty industry.
+   */
+  const handleComplete = useCallback(async () => {
+    const selected = businessType
+      ? businessType
+          .split(',')
+          .map((id) => id.trim())
+          .filter(Boolean)
+      : []
+    try {
+      await updateProfile({
+        onboardingCompleted: true,
+        businessTypes: selected,
+        ...(storeSize ? { storeSize } : {}),
+        ...(businessNote.trim() ? { businessNote: businessNote.trim() } : {}),
+      })
+    } catch {
+      toast.error(tOriginal('onboarding.saveFailed'))
+      return
+    }
     completeOnboarding()
     push('/dashboard')
-  }, [completeOnboarding, push])
+  }, [
+    businessNote,
+    businessType,
+    completeOnboarding,
+    push,
+    storeSize,
+    tOriginal,
+    toast,
+    updateProfile,
+  ])
 
   // ✅ type-safe wrapper برای setterها
   const handleSetBusinessType = useCallback(
@@ -100,7 +136,6 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
 
   const setPrimaryCurrency = useCurrencyStore((s) => s.setPrimaryCurrency)
   const saveBookCurrency = useSetBaseCurrency()
-  const toast = useToast()
 
   // The wizard's answer used to stop here: `defaultCurrency` was written to the
   // onboarding store and NOTHING read it back. Every amount in the product is

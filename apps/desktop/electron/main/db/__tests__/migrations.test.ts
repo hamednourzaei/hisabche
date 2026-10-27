@@ -286,7 +286,7 @@ describe('an existing cache survives a schema change', () => {
     db.close()
 
     expect(Number(row.value)).toBe(SCHEMA_VERSION)
-    expect(SCHEMA_VERSION).toBe(7)
+    expect(SCHEMA_VERSION).toBe(9)
   })
 
   it('⚠️ the outbox gets its owner, and a change already queued keeps no owner', () => {

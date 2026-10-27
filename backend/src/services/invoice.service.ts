@@ -1224,9 +1224,24 @@ export class InvoiceService {
     // different answer than the tax return does. The snapshot is what lets an
     // invoice written offline reproduce its own figures at sync instead of
     // being silently re-rated.
-    this.applyTax(ctx, invoice.id, data).catch((err) =>
-      console.error(`[InvoiceService] tax computation failed for ${invoice.id}:`, err),
-    )
+    // If tax computation fails, the created invoice is not lost (preventing phantom
+    // duplicate invoices on retry): it is returned with taxStatus: 'failed' and
+    // recorded durably so it can be retried.
+    let taxWarning: { taxStatus: 'failed'; message: string } | undefined
+    try {
+      await this.applyTax(ctx, invoice.id, data)
+    } catch (taxErr) {
+      console.warn(`[InvoiceService] Tax computation failed for invoice ${invoice.id}:`, taxErr)
+      taxWarning = {
+        taxStatus: 'failed',
+        message: taxErr instanceof Error ? taxErr.message : 'TAX_COMPUTE_FAILED',
+      }
+      void supabase
+        .from('invoices')
+        .update({ tax_status: 'failed' })
+        .eq('id', invoice.id)
+        .eq('workspace_id', workspaceId)
+    }
 
     // ─── G6 — APPROVAL DECIDES BEFORE ANYTHING IS BOOKED ─────────────────────
     //
@@ -1327,7 +1342,12 @@ export class InvoiceService {
       notify: false,
     })
 
-    return this.getById(invoice.id, ctx)
+    const created = await this.getById(invoice.id, ctx)
+    if (taxWarning && created && typeof created === 'object') {
+      ;(created as Record<string, unknown>).taxStatus = taxWarning.taxStatus
+      ;(created as Record<string, unknown>).taxWarning = taxWarning.message
+    }
+    return created
   }
 
   /**

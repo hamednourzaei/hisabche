@@ -31,7 +31,7 @@ const chipButton = cn(
 
 export interface WarehouseShelvesViewProps {
   t: ShelfT
-  state: 'loading' | 'error' | 'not-migrated' | 'ready'
+  state: 'loading' | 'error' | 'not-migrated' | 'offline-unavailable' | 'ready'
   errorMessage: string | null
   onRetry: () => void
   /** Active shelves of this warehouse. */
@@ -101,6 +101,14 @@ export function WarehouseShelvesView({
             />
           ))}
         </div>
+      </div>
+    )
+  }
+  if (state === 'offline-unavailable') {
+    return (
+      <div className="space-y-4">
+        {bar}
+        <Notice>{t('warehouseShelves.notAvailableOffline')}</Notice>
       </div>
     )
   }

@@ -3,6 +3,7 @@
 // ============================================
 
 import { z } from 'zod'
+import { flagFilter } from './filter-contract'
 import {
   uuidSchema,
   positiveNumberSchema,
@@ -96,14 +97,16 @@ export const productFiltersSchema = z.object({
 
   category: productCategorySchema.optional(),
 
+  // ⚠️ UNSET IS NOT FALSE. `''`, `null` and the words 'undefined'/'null' are «no
+  // filter» (filter-contract.ts); only an explicit false/'false'/'0' filters.
   isActive: z
-    .union([z.boolean(), z.string()])
-    .transform((val) => (typeof val === 'string' ? val === 'true' : val))
+    .union([z.boolean(), z.string(), z.null()])
+    .transform((val) => flagFilter(val))
     .optional(),
 
   lowStock: z
-    .union([z.boolean(), z.string()])
-    .transform((val) => (typeof val === 'string' ? val === 'true' : val))
+    .union([z.boolean(), z.string(), z.null()])
+    .transform((val) => flagFilter(val))
     .optional(),
 
   minPrice: z

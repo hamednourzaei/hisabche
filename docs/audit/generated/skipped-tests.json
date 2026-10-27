@@ -1,0 +1,5 @@
+[
+  "packages/ui/src/__tests__/docs-baseline-dump.test.ts:47",
+  "apps/mobile/src/__tests__/metro-windows-entry.test.ts:25",
+  "apps/web/e2e/business-day.spec.ts:79"
+]

@@ -191,6 +191,12 @@ function makeQuery(table: string) {
     },
 
     maybeSingle: async () => {
+      if (pending) {
+        const outcome = await api.commit()
+        if (outcome.error) return outcome
+        const list = Array.isArray(outcome.data) ? outcome.data : [outcome.data]
+        return { data: list[0] ?? null, error: null }
+      }
       if (failingReads.has(table)) return { data: null, error: { message: 'statement timeout' } }
       const found = selected()
       return { data: found[0] ?? null, error: null }
@@ -277,10 +283,23 @@ function makeQuery(table: string) {
 }
 
 vi.mock('../db', () => ({
-  supabase: { from: (table: string) => makeQuery(table) },
+  supabase: {
+    from: (table: string) => makeQuery(table),
+    rpc: async (name: string, params: Record<string, unknown>) => {
+      const pLimit = Number(params.p_limit ?? 10)
+      const pCursor = Number(params.p_cursor ?? 0)
+      const pWs = String(params.p_workspace_id ?? '')
+      const rows = (tables.get('sync_change_log') ?? [])
+        .filter((r) => r.workspace_id === pWs && Number(r.sync_version) > pCursor)
+        .sort((a, b) => Number(a.sync_version) - Number(b.sync_version))
+        .slice(0, pLimit)
+      return { data: rows, error: null }
+    },
+  },
 }))
 
 const { syncService } = await import('../services/sync.service')
+const { conflicts } = await import('../services/conflict')
 
 const ACTOR = {
   userId: '11111111-1111-4111-8111-111111111111',
@@ -462,6 +481,40 @@ describe('a stale write never overwrites a newer one', () => {
     expect(ok.results[0]?.status).toBe('applied')
     expect(ok.results[0]?.entityVersion).toBe(2)
   })
+
+  it('rejects a concurrent race where version changed during update execution', async () => {
+    await syncService.push(ACTOR, [invoiceMutation({ entityId: uuid(35), mutationId: uuid(935) })])
+
+    // Device A updates and bumps to version 2
+    const resA = await syncService.push(ACTOR, [
+      {
+        mutationId: uuid(936),
+        entityType: 'invoice',
+        entityId: uuid(35),
+        operation: 'update',
+        expectedVersion: 1,
+        payload: { notes: 'update-from-a' },
+      },
+    ])
+    expect(resA.results[0]?.status).toBe('applied')
+    expect(resA.results[0]?.entityVersion).toBe(2)
+
+    // Device B sends with expectedVersion 1 (racing update)
+    const resB = await syncService.push(ACTOR, [
+      {
+        mutationId: uuid(937),
+        entityType: 'invoice',
+        entityId: uuid(35),
+        operation: 'update',
+        expectedVersion: 1,
+        payload: { notes: 'update-from-b' },
+      },
+    ])
+    expect(resB.results[0]?.status).toBe('rejected')
+    expect(resB.results[0]?.errorCode).toBe('version_conflict')
+    expect(resB.results[0]?.serverState).toBeDefined()
+    expect(tables.get('invoices')?.find((r) => r.id === uuid(35))?.notes).toBe('update-from-a')
+  })
 })
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -640,7 +693,7 @@ describe('the cursor is monotonic and never skips a change', () => {
 
   it('sends no row for a delete — there is nothing left to send', async () => {
     await syncService.push(ACTOR, [invoiceMutation({ mutationId: uuid(992), entityId: uuid(52) })])
-    await syncService.push(ACTOR, [
+    const pushResult = await syncService.push(ACTOR, [
       {
         mutationId: uuid(993),
         entityType: 'invoice',
@@ -649,6 +702,15 @@ describe('the cursor is monotonic and never skips a change', () => {
         payload: {},
       },
     ])
+    expect(pushResult.results[0]?.status).toBe('rejected')
+    expect(pushResult.results[0]?.errorCode).toBe('forbidden')
+
+    // An authoritative deletion event (e.g. from domain route) emits null data on pull
+    recordChange(
+      'invoices',
+      { id: uuid(52), workspace_id: ACTOR.workspaceId, version: 2 },
+      'delete',
+    )
 
     const page = await syncService.pull(ACTOR.workspaceId, 0, 10)
     const removal = page.changes.find((c) => c.operation === 'delete')
@@ -894,5 +956,199 @@ describe('the draft editing lease', () => {
     // "locked" outcome would have replayed the failure forever.
     const retry = await syncService.push(other, [attempt])
     expect(retry.results[0]?.status).toBe('applied')
+  })
+})
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Service-level behaviours (Phase 2 audit §3.2)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+describe('service-level sync guarantees (unit suite)', () => {
+  it('(a) a push whose version-guarded UPDATE matches zero rows files a conflict and returns version_conflict + current row', async () => {
+    const conflictSpy = vi
+      .spyOn(conflicts, 'record')
+      .mockResolvedValue({ status: 'recorded', conflictId: 'conf-1' })
+    try {
+      await syncService.push(ACTOR, [
+        invoiceMutation({ entityId: uuid(110), mutationId: uuid(901) }),
+      ])
+
+      // User A updates to version 2
+      await syncService.push(ACTOR, [
+        {
+          mutationId: uuid(902),
+          entityType: 'invoice',
+          entityId: uuid(110),
+          operation: 'update',
+          expectedVersion: 1,
+          payload: { notes: 'update A' },
+        },
+      ])
+
+      conflictSpy.mockClear()
+
+      // User B sends expectedVersion 1 (WHERE version=1 matches 0 rows)
+      const res = await syncService.push(ACTOR, [
+        {
+          mutationId: uuid(903),
+          entityType: 'invoice',
+          entityId: uuid(110),
+          operation: 'update',
+          expectedVersion: 1,
+          payload: { notes: 'update B' },
+        },
+      ])
+
+      expect(res.results[0]?.status).toBe('rejected')
+      expect(res.results[0]?.errorCode).toBe('version_conflict')
+      expect(res.results[0]?.serverState).toBeDefined()
+      expect((res.results[0]?.serverState as { version?: unknown })?.version).toBe(2)
+      expect(conflictSpy).toHaveBeenCalledTimes(1)
+      expect(conflictSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ workspaceId: ACTOR.workspaceId, userId: ACTOR.userId }),
+        expect.objectContaining({
+          clientPayload: expect.objectContaining({ notes: 'update B' }),
+          clientVersion: 1,
+          entityId: uuid(110),
+          entityType: 'invoice',
+          mutationId: uuid(903),
+          operation: 'update',
+          serverRow: expect.objectContaining({ version: 2, notes: 'update A' }),
+        }),
+      )
+    } finally {
+      conflictSpy.mockRestore()
+    }
+  })
+
+  it('(b) replaying the same mutationId returns the stored result and performs no second write', async () => {
+    const mut = invoiceMutation({
+      entityId: uuid(111),
+      mutationId: uuid(904),
+      payload: { notes: 'first-write' },
+    })
+    const first = await syncService.push(ACTOR, [mut])
+    expect(first.results[0]?.status).toBe('applied')
+    expect(first.results[0]?.duplicate).toBe(false)
+    expect(tables.get('invoices')!.filter((r) => r.id === uuid(111))).toHaveLength(1)
+
+    const second = await syncService.push(ACTOR, [mut])
+    expect(second.results[0]?.status).toBe('applied')
+    expect(second.results[0]?.duplicate).toBe(true)
+    expect(tables.get('invoices')!.filter((r) => r.id === uuid(111))).toHaveLength(1)
+  })
+
+  it('(c) a duplicated batch with the same batchId/mutationIds has exactly one effect', async () => {
+    const batch = [
+      invoiceMutation({ entityId: uuid(112), mutationId: uuid(905) }),
+      invoiceMutation({ entityId: uuid(113), mutationId: uuid(906) }),
+    ]
+    const first = await syncService.push(ACTOR, batch)
+    const second = await syncService.push(ACTOR, batch)
+    expect(first.results.every((r) => r.status === 'applied' && !r.duplicate)).toBe(true)
+    expect(second.results.every((r) => r.status === 'applied' && r.duplicate === true)).toBe(true)
+    expect(
+      tables.get('invoices')!.filter((r) => r.id === uuid(112) || r.id === uuid(113)),
+    ).toHaveLength(2)
+  })
+
+  it('(d) delete through /sync/push is rejected and nothing is written', async () => {
+    await syncService.push(ACTOR, [invoiceMutation({ entityId: uuid(114), mutationId: uuid(907) })])
+    expect(tables.get('invoices')!.filter((r) => r.id === uuid(114))).toHaveLength(1)
+
+    const del = await syncService.push(ACTOR, [
+      {
+        mutationId: uuid(908),
+        entityType: 'invoice',
+        entityId: uuid(114),
+        operation: 'delete',
+        payload: {},
+      },
+    ])
+    expect(del.results[0]?.status).toBe('rejected')
+    expect(del.results[0]?.errorCode).toBe('forbidden')
+    expect(del.results[0]?.errorMessage).toContain('Deletes are not accepted through /sync/push')
+    expect(tables.get('invoices')!.filter((r) => r.id === uuid(114))).toHaveLength(1)
+  })
+
+  it('(e) a rejected mutation does not move the cursor or write a log row', async () => {
+    const initialLogs = (tables.get('sync_change_log') ?? []).length
+    const rejected = await syncService.push(ACTOR, [
+      {
+        mutationId: uuid(909),
+        entityType: 'transaction',
+        entityId: uuid(115),
+        operation: 'create',
+        payload: { amount: 99999 }, // financial field rejected
+      },
+    ])
+    expect(rejected.results[0]?.status).toBe('rejected')
+    expect((tables.get('sync_change_log') ?? []).length).toBe(initialLogs)
+  })
+
+  it('(f) cross-workspace entity id is forbidden/not found', async () => {
+    const otherWs = '55555555-5555-4555-8555-555555555555'
+    await syncService.push(ACTOR, [invoiceMutation({ entityId: uuid(116), mutationId: uuid(912) })])
+
+    const actorB = { ...ACTOR, workspaceId: otherWs, userId: uuid(888) }
+    const attempt = await syncService.push(actorB, [
+      {
+        mutationId: uuid(913),
+        entityType: 'invoice',
+        entityId: uuid(116),
+        operation: 'update',
+        expectedVersion: 1,
+        payload: { notes: 'cross-tenant write attempt' },
+      },
+    ])
+    expect(attempt.results[0]?.status).toBe('rejected')
+    expect(attempt.results[0]?.errorCode).toBe('not_found')
+  })
+
+  it('unversioned entity (transaction) update succeeds without version column validation error', async () => {
+    tables.get('transactions')!.push({
+      id: uuid(117),
+      workspace_id: ACTOR.workspaceId,
+      notes: 'initial note',
+    })
+    const update = await syncService.push(ACTOR, [
+      {
+        mutationId: uuid(914),
+        entityType: 'transaction',
+        entityId: uuid(117),
+        operation: 'update',
+        payload: { notes: 'updated note' },
+      },
+    ])
+    expect(update.results[0]?.status).toBe('applied')
+    const row = tables.get('transactions')!.find((r) => r.id === uuid(117))
+    expect(row?.notes).toBe('updated note')
+  })
+
+  it('isBehindHorizon: cursor older than oldest surviving log row signals mustRehydrate: true with empty changes', async () => {
+    const log = tables.get('sync_change_log')!
+    log.push({
+      sync_version: 10,
+      workspace_id: ACTOR.workspaceId,
+      entity_type: 'invoice',
+      entity_id: uuid(118),
+      operation: 'create',
+      entity_version: 1,
+      origin_device: null,
+    })
+    log.push({
+      sync_version: 11,
+      workspace_id: ACTOR.workspaceId,
+      entity_type: 'invoice',
+      entity_id: uuid(119),
+      operation: 'create',
+      entity_version: 1,
+      origin_device: null,
+    })
+
+    const pull = await syncService.pull(ACTOR.workspaceId, 5, 10)
+    expect(pull.mustRehydrate).toBe(true)
+    expect(pull.changes).toHaveLength(0)
+    expect(pull.hasMore).toBe(false)
   })
 })

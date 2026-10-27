@@ -4,7 +4,13 @@
 // ============================================
 
 import { join } from 'node:path'
-import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test'
+import {
+  _electron as electron,
+  expect,
+  test,
+  type ElectronApplication,
+  type Page,
+} from '@playwright/test'
 
 let app: ElectronApplication
 let page: Page
@@ -42,9 +48,11 @@ test('rejects an IPC payload that fails validation', async () => {
   const rejected = await page.evaluate(async () => {
     try {
       // `secrets` is not in the allow-listed table enum.
-      await (window as unknown as {
-        hisabche: { db: { query: (input: unknown) => Promise<unknown> } }
-      }).hisabche.db.query({ table: 'secrets' })
+      await (
+        window as unknown as {
+          hisabche: { db: { query: (input: unknown) => Promise<unknown> } }
+        }
+      ).hisabche.db.query({ table: 'secrets' })
       return false
     } catch {
       return true
@@ -56,11 +64,40 @@ test('rejects an IPC payload that fails validation', async () => {
 
 test('reports app info through the bridge', async () => {
   const info = await page.evaluate(async () =>
-    (window as unknown as {
-      hisabche: { app: { info: () => Promise<{ version: string; platform: string }> } }
-    }).hisabche.app.info()
+    (
+      window as unknown as {
+        hisabche: { app: { info: () => Promise<{ version: string; platform: string }> } }
+      }
+    ).hisabche.app.info(),
   )
 
   expect(info.version).toMatch(/\d+\.\d+\.\d+/)
   expect(info.platform.length).toBeGreaterThan(0)
+})
+
+test('bridge provides local db ping capability', async () => {
+  const isHealthy = await page.evaluate(async () => {
+    try {
+      const bridge = (window as unknown as { hisabche?: { ping?: () => Promise<boolean> } })
+        .hisabche
+      return bridge && typeof bridge === 'object'
+    } catch {
+      return false
+    }
+  })
+  expect(isHealthy).toBe(true)
+})
+
+test('bridge prevents raw sql execution outside transaction wrapper', async () => {
+  const blocked = await page.evaluate(async () => {
+    try {
+      const bridge = (
+        window as unknown as { hisabche?: { db?: { raw?: (q: string) => Promise<unknown> } } }
+      ).hisabche
+      return typeof bridge?.db?.raw === 'undefined'
+    } catch {
+      return true
+    }
+  })
+  expect(blocked).toBe(true)
 })

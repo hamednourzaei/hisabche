@@ -8,6 +8,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { CloudMigrationService } from '../services/cloud-migration/cloud-migration.service'
 
@@ -38,11 +39,12 @@ const reconcileSchema = z.object({
 
 export async function cloudMigrationRoutes(fastify: FastifyInstance) {
   const service = new CloudMigrationService()
+  const guard = [authenticate, requireWorkspaceContext, requireCapability('data.import')]
 
   // ─── 1. POST /api/cloud-migration/jobs ─────────────────────────────────────
   fastify.post(
     '/api/cloud-migration/jobs',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: guard },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const ctx = request.tenancy!
       const body = createJobSchema.parse(request.body ?? {})
@@ -60,7 +62,7 @@ export async function cloudMigrationRoutes(fastify: FastifyInstance) {
   // ─── 2. POST /api/cloud-migration/jobs/:id/chunk ───────────────────────────
   fastify.post(
     '/api/cloud-migration/jobs/:id/chunk',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: guard },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const ctx = request.tenancy!
       const { id } = request.params as { id: string }
@@ -80,7 +82,7 @@ export async function cloudMigrationRoutes(fastify: FastifyInstance) {
   // ─── 3. POST /api/cloud-migration/jobs/:id/reconcile ───────────────────────
   fastify.post(
     '/api/cloud-migration/jobs/:id/reconcile',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: guard },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const ctx = request.tenancy!
       const { id } = request.params as { id: string }
@@ -93,7 +95,7 @@ export async function cloudMigrationRoutes(fastify: FastifyInstance) {
   // ─── 4. POST /api/cloud-migration/jobs/:id/confirm ─────────────────────────
   fastify.post(
     '/api/cloud-migration/jobs/:id/confirm',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: guard },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const ctx = request.tenancy!
       const { id } = request.params as { id: string }
@@ -105,7 +107,7 @@ export async function cloudMigrationRoutes(fastify: FastifyInstance) {
   // ─── 5. GET /api/cloud-migration/jobs/:id ──────────────────────────────────
   fastify.get(
     '/api/cloud-migration/jobs/:id',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: guard },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const ctx = request.tenancy!
       const { id } = request.params as { id: string }

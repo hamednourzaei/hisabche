@@ -295,6 +295,18 @@ export const FEATURE_REGISTRY = {
   'accounting.tax_return': { execution: 'server', plans: CLOUD },
   'accounting.legacy_transactions': { execution: 'server', plans: CLOUD },
   'inventory.insights': { execution: 'local', plans: ALL, alwaysAllowed: true },
+  'product.variants': { execution: 'local', plans: ALL },
+  'trade.metal_rates': { execution: 'local', plans: ALL },
+  'product.fitments': { execution: 'local', plans: ALL },
+  'trade.vehicles': { execution: 'local', plans: ALL },
+  'trade.warranties': { execution: 'local', plans: ALL },
+  'invoice.returns': { execution: 'local', plans: ALL },
+  'order.deposits': { execution: 'local', plans: ALL },
+  'trade.appointments': { execution: 'server', plans: CLOUD },
+  'trade.agriculture': { execution: 'server', plans: CLOUD },
+  'trade.freight': { execution: 'server', plans: CLOUD },
+  'trade.courier': { execution: 'server', plans: CLOUD },
+  'trade.delivery_notes': { execution: 'server', plans: CLOUD },
 } as const satisfies Record<string, FeatureDefinition>
 
 /** The key of a feature in the registry. */

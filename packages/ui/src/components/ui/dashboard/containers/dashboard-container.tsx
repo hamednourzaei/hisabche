@@ -10,6 +10,7 @@ import { DateRangePicker, type DateRange, type PresetKey } from '../date-range-p
 import { isNavLocked } from '@hisabche/ui-contract'
 import { useMyCapabilities } from '@hisabche/api'
 import { usePageLook } from '../../../../lib/page-look'
+import { useBusinessProfile } from '../../../../hooks/use-business-profile'
 // import { NAV_ITEMS } from '../../../../lib/menu/nav-items'
 import { RegisterCustomizer } from '../../register-customizer'
 import { useDashboardData } from '../../../../hooks/dashboard/use-dashboard-data'
@@ -75,6 +76,10 @@ export function DashboardContainer() {
   // Their own choice (lib/page-look), never a permission. A part that is off
   // is not mounted below and not fetched by `useDashboardData`.
   const look = usePageLook('dashboard')
+  // A saved look is the person's own arrangement and must win. Only without
+  // one does the selected industry decide which section comes first.
+  const { profile } = useBusinessProfile()
+  const sectionOrder = look.customized ? DASHBOARD_PARTS : profile.dashboard
   // const menuLook = usePageLook('menu')
   const access = useMyCapabilities().data
   const hiddenByRole = access?.hiddenModules ?? []
@@ -314,6 +319,7 @@ export function DashboardContainer() {
           insights: look.shows('insights') && mayInsights,
           activities: look.shows('activities'),
         }}
+        order={sectionOrder}
         hiddenFigures={kpis?.hidden ?? []}
       />
 

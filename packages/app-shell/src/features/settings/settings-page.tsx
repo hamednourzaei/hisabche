@@ -8,7 +8,13 @@ import { LogOut } from 'lucide-react'
 
 import { Badge, Button, Card, cn } from '@/components/ui/primitives'
 import { SelectField, useDisplayBasis } from '@hisabche/ui'
-import { SettingsHubContainer, SettingsPage as SharedSettingsPage } from '@hisabche/ui/screens'
+import {
+  IndustryProfileSection,
+  SettingsHubContainer,
+  SettingsPage as SharedSettingsPage,
+} from '@hisabche/ui/screens'
+import { useAuthStore as useSharedAuthStore } from '@hisabche/store'
+import { apiClient } from '@/shared/lib/api'
 import { LogoutPendingDialog } from '@/components/layout/logout-pending-dialog'
 import { useAuthStore, useCurrentUser } from '@/features/auth/auth.store'
 import { bridge } from '@/shared/lib/bridge'
@@ -38,6 +44,23 @@ function DesktopSettings() {
   const display = useDisplayBasis()
 
   const [info, setInfo] = useState<AppInfo | null>(null)
+
+  /**
+   * Offline/online both go through the SAME `/auth/profile` contract: the
+   * local engine registers that route too, so this handler does not choose a
+   * transport. The session is updated after the write so the effective profile,
+   * defaults and dashboard order change without a restart.
+   */
+  const saveIndustry = async (businessTypes: string[]): Promise<void> => {
+    await apiClient.patch('/auth/profile', { businessTypes })
+    useAuthStore.setState((state) =>
+      state.session
+        ? { session: { ...state.session, user: { ...state.session.user, businessTypes } } }
+        : {},
+    )
+    const shared = useSharedAuthStore.getState().user
+    if (shared) useSharedAuthStore.setState({ user: { ...shared, businessTypes } })
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -73,51 +96,62 @@ function DesktopSettings() {
         </Card>
       }
       deviceSlot={
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Card>
-            <h2 className="mb-3 text-sm font-bold">{t('nav.settings')}</h2>
+        <div className="space-y-4">
+          <IndustryProfileSection
+            businessTypes={user?.businessTypes ?? []}
+            canEdit
+            onSave={saveIndustry}
+          />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Card>
+              <h2 className="mb-3 text-sm font-bold">{t('nav.settings')}</h2>
 
-            {/* The site's own dropdown, as every other choice in the product. */}
-            <div className="flex flex-col gap-3">
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="text-[hsl(var(--fg-secondary))]">{t('sync.displayCurrency')}</span>
-                <SelectField
-                  value={display.basis}
-                  // The books currency is «no choice made» — stored as null, so a later
-                  // change of the books currency is followed rather than pinned.
-                  onChange={(next) => display.setBasis(next === display.base ? null : next)}
-                  options={display.availableBases.map((code) => ({ value: code, label: code }))}
-                  aria-label={t('sync.displayCurrency')}
-                />
-              </label>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-3 text-sm font-bold">{t('sync.title')}</h2>
-
-            <div className="flex flex-col gap-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-[hsl(var(--fg-secondary))]">{t('sync.deviceDatabase')}</span>
-                <Badge tone={info?.databaseReady ? 'success' : 'warning'}>
-                  {info?.databaseReady ? t('sync.dbReady') : t('sync.localOnly')}
-                </Badge>
+              {/* The site's own dropdown, as every other choice in the product. */}
+              <div className="flex flex-col gap-3">
+                <label className="flex flex-col gap-1.5 text-sm">
+                  <span className="text-[hsl(var(--fg-secondary))]">
+                    {t('sync.displayCurrency')}
+                  </span>
+                  <SelectField
+                    value={display.basis}
+                    // The books currency is «no choice made» — stored as null, so a later
+                    // change of the books currency is followed rather than pinned.
+                    onChange={(next) => display.setBasis(next === display.base ? null : next)}
+                    options={display.availableBases.map((code) => ({ value: code, label: code }))}
+                    aria-label={t('sync.displayCurrency')}
+                  />
+                </label>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[hsl(var(--fg-secondary))]">{t('sync.appVersion')}</span>
-                <span className={cn('tabular-nums')}>{info?.version ?? '—'}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[hsl(var(--fg-secondary))]">{t('sync.platform')}</span>
-                <span>{info?.platform ?? '—'}</span>
-              </div>
-            </div>
-          </Card>
+            </Card>
 
-          {/* ⚠️ The «تازه‌سازی» button that used to sit inside the card above is
+            <Card>
+              <h2 className="mb-3 text-sm font-bold">{t('sync.title')}</h2>
+
+              <div className="flex flex-col gap-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[hsl(var(--fg-secondary))]">
+                    {t('sync.deviceDatabase')}
+                  </span>
+                  <Badge tone={info?.databaseReady ? 'success' : 'warning'}>
+                    {info?.databaseReady ? t('sync.dbReady') : t('sync.localOnly')}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[hsl(var(--fg-secondary))]">{t('sync.appVersion')}</span>
+                  <span className={cn('tabular-nums')}>{info?.version ?? '—'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[hsl(var(--fg-secondary))]">{t('sync.platform')}</span>
+                  <span>{info?.platform ?? '—'}</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* ⚠️ The «تازه‌سازی» button that used to sit inside the card above is
             gone. It called a main-process function that returned `void`, so it
             could report nothing — see `update-section.tsx`. */}
-          <UpdateSection />
+            <UpdateSection />
+          </div>
         </div>
       }
     />

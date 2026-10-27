@@ -23,7 +23,11 @@ export default function SiteFooter({ t, localePrefix }: SiteFooterProps) {
   // «landing.footerCopyright» on every public page. The view substitutes the
   // year itself, so the template is all it needs.
   const translate = useTranslations()
-  const copyright = translate.has('landing.footerCopyright')
+  // ⚠️ `has` is next-intl's; the desktop and phone shim has no such method, and
+  // a footer that crashed there would take the page with it (typecheck of
+  // app-shell caught it, 26 Oct 2026). Asked through a cast, answered «no» when absent.
+  const has = (translate as unknown as { has?: (key: string) => boolean }).has
+  const copyright = has?.call(translate, 'landing.footerCopyright')
     ? String(translate.raw('landing.footerCopyright'))
     : undefined
   return <SiteFooterView t={t} localePrefix={localePrefix} year={year} copyright={copyright} />

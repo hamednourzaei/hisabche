@@ -610,6 +610,8 @@ async function pushEntry(entry: QueueEntry): Promise<void> {
   }
 }
 
+import { deriveStableBatchId, getPersistentDeviceId } from './sync-identity'
+
 /**
  * A descriptive edit, with the version the device believed.
  *
@@ -639,7 +641,18 @@ async function pushVersioned(entry: QueueEntry): Promise<void> {
     ...(version > 0 ? { expectedVersion: version } : {}),
   }
 
-  await apiClient.post('/sync/push', { mutations: [mutation] }, { headers: headersForEntry(entry) })
+  const batchId = deriveStableBatchId(entry.clientId)
+  const deviceId = getPersistentDeviceId()
+
+  await apiClient.post(
+    '/sync/push',
+    {
+      deviceId,
+      batchId,
+      mutations: [mutation],
+    },
+    { headers: headersForEntry(entry) },
+  )
 }
 
 let running = false

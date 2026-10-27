@@ -48,6 +48,12 @@ export interface OfflineWorkspace {
   id: string
   name: string
   ownerId?: string | undefined
+  /**
+   * The trades stored on THIS device. The first run and every restart build
+   * the session from this field, so a fresh offline install resolves the same
+   * profile as an online one without waiting for a sync.
+   */
+  businessTypes?: string[] | undefined
 }
 
 /**
@@ -68,6 +74,7 @@ export function buildOfflineSession(workspace: OfflineWorkspace): Session {
       email: OFFLINE_SESSION_EMAIL,
       fullName: localUserDisplayName(),
       createdAt: new Date().toISOString(),
+      ...(workspace.businessTypes ? { businessTypes: workspace.businessTypes } : {}),
     },
     token: OFFLINE_SESSION_TOKEN,
   }

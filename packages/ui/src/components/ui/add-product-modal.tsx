@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useCreateProduct } from '@hisabche/api'
 import { useSyncStore, useBackupStore } from '@hisabche/store'
 import { barcodeTakenMessage } from '../../lib/barcode/barcode-errors'
+import { useBusinessProfile } from '../../hooks/use-business-profile'
+import { translateOr } from '../../lib/translate-or'
 
 type AddProductModalProps = {
   open: boolean
@@ -60,6 +62,7 @@ export const AddProductModal = memo(function AddProductModal({
   initialBarcode,
 }: AddProductModalProps) {
   const t = useTranslations()
+  const { profile } = useBusinessProfile()
   const createProduct = useCreateProduct()
   const { setSaveStatus } = useSyncStore()
   const { addAuditEntry } = useBackupStore()
@@ -70,7 +73,7 @@ export const AddProductModal = memo(function AddProductModal({
     quantity: 0,
     buyPrice: 0,
     sellPrice: 0,
-    unit: 'piece',
+    unit: profile.productDefaults.unit,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -154,7 +157,7 @@ export const AddProductModal = memo(function AddProductModal({
         quantity: 0,
         buyPrice: 0,
         sellPrice: 0,
-        unit: 'piece',
+        unit: profile.productDefaults.unit,
       })
       setErrors({})
 
@@ -169,7 +172,17 @@ export const AddProductModal = memo(function AddProductModal({
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, validate, createProduct, setSaveStatus, addAuditEntry, onCreated, onClose, t])
+  }, [
+    formData,
+    validate,
+    createProduct,
+    setSaveStatus,
+    addAuditEntry,
+    onCreated,
+    onClose,
+    t,
+    profile.productDefaults.unit,
+  ])
 
   const handleClose = useCallback(() => {
     setFormData({
@@ -178,11 +191,11 @@ export const AddProductModal = memo(function AddProductModal({
       quantity: 0,
       buyPrice: 0,
       sellPrice: 0,
-      unit: 'piece',
+      unit: profile.productDefaults.unit,
     })
     setErrors({})
     onClose()
-  }, [onClose])
+  }, [onClose, profile.productDefaults.unit])
 
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
@@ -222,7 +235,9 @@ export const AddProductModal = memo(function AddProductModal({
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="product-name">
-              {t('warehouse.productName')}
+              {profile.vocabulary.productKey
+                ? translateOr(t as never, profile.vocabulary.productKey, t('warehouse.productName'))
+                : t('warehouse.productName')}
               <span className="text-[hsl(var(--color-destructive))] ms-1">*</span>
             </Label>
             <div className="relative">

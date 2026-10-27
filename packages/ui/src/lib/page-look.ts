@@ -33,6 +33,7 @@ import { useAuthStore, useWorkspaceStore } from '@hisabche/store'
 
 const PREFIX = 'hisabche.look.'
 const NOTHING: readonly string[] = Object.freeze([])
+const EMPTY_LOOKS: Looks = Object.freeze({})
 
 type Looks = Record<string, readonly string[]>
 
@@ -98,6 +99,22 @@ export function lookOwner(
   return userId && workspaceId ? `${userId}.${workspaceId}` : null
 }
 
+/**
+ * Does this person have a SAVED look for the page?
+ *
+ * ⚠️ THIS IS THE DASHBOARD-ORDERING PRECEDENCE RULE, and it is deliberately
+ * about the RECORD, not about which parts are else hidden. An empty saved
+ * record is still a person's explicit choice («I hid nothing»), so it counts.
+ * Without a record the industry profile's default order applies; with one the
+ * person's own arrangement wins and changing industry must never overwrite it.
+ */
+export function isCustomizedLook(
+  looks: Readonly<Record<string, readonly string[]>> | null | undefined,
+  pageId: string,
+): boolean {
+  return Boolean(looks && Object.prototype.hasOwnProperty.call(looks, pageId))
+}
+
 export interface PageLook {
   /**
    * The owner is known and the stored choice has been read. Until then nothing
@@ -105,6 +122,8 @@ export interface PageLook {
    * shown: use `active()` for a query's `enabled`.
    */
   ready: boolean
+  /** A saved look exists for this page — see `isCustomizedLook`. */
+  customized: boolean
   hiddenIds: readonly string[]
   /** Not hidden. For RENDERING: before `ready`, a part shows its loading state. */
   shows: (id: string) => boolean
@@ -121,14 +140,16 @@ export function usePageLook(pageId: string): PageLook {
   const workspaceId = useWorkspaceStore((state) => state.workspaceId)
   const owner = lookOwner(userId, workspaceId)
 
-  const hiddenIds = useSyncExternalStore(
+  const looks = useSyncExternalStore(
     subscribe,
-    () => (owner ? (load(owner)[pageId] ?? NOTHING) : NOTHING),
+    () => (owner ? load(owner) : EMPTY_LOOKS),
     // The server knows no person: it renders as if nothing were hidden, and the
     // client takes over after hydration without a mismatch.
-    () => NOTHING,
+    () => EMPTY_LOOKS,
   )
+  const hiddenIds = owner ? (looks[pageId] ?? NOTHING) : NOTHING
   const ready = owner !== null
+  const customized = isCustomizedLook(owner ? looks : null, pageId)
 
   const toggle = useCallback(
     (id: string) => {
@@ -151,13 +172,14 @@ export function usePageLook(pageId: string): PageLook {
   return useMemo(
     () => ({
       ready,
+      customized,
       hiddenIds,
       shows: (id: string) => !hiddenIds.includes(id),
       active: (id: string) => ready && !hiddenIds.includes(id),
       toggle,
       reset,
     }),
-    [hiddenIds, ready, reset, toggle],
+    [customized, hiddenIds, ready, reset, toggle],
   )
 }
 
