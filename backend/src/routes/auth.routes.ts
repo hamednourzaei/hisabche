@@ -17,6 +17,7 @@ import {
 import { createAuthClient, supabase } from '../db'
 import { authenticate, invalidateAuthToken } from '../middleware/auth.middleware'
 import { passwordResetService } from '../services/password-reset.service'
+import { writeProfile } from '../services/profile-write'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import {
   clearRefreshCookie,
@@ -804,34 +805,25 @@ export async function authRoutes(fastify: FastifyInstance) {
         if (body.storeSize !== undefined) profileUpdate.store_size = body.storeSize
         if (body.businessNote !== undefined) profileUpdate.business_note = body.businessNote
 
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({ id: userId, ...profileUpdate }, { onConflict: 'id' })
-
-        // Until the migration runs these columns do not exist. Retry without
-        // them so an ordinary name/avatar edit still saves, rather than failing
-        // with a bare "ذخیره نشد".
-        if (
-          profileError &&
-          (profileError.code === '42703' || /column/.test(profileError.message || ''))
-        ) {
-          const {
-            onboarding_completed_at: _a,
-            business_types: _b,
-            store_size: _c,
-            business_note: _d,
-            ...withoutOnboarding
-          } = profileUpdate
-
-          await supabase
-            .from('profiles')
-            .upsert({ id: userId, ...withoutOnboarding }, { onConflict: 'id' })
-        } else if (profileError) {
-          throw profileError
-        }
-
-        // ۳. گرفتن user به‌روزشده
+        // ۳. گرفتن user (برای نام ردیف تازه‌ی profiles و پاسخ)
         const { data: authUser } = await supabase.auth.admin.getUserById(userId)
+
+        // ⚠️ UPDATE the row, never upsert a partial one: `profiles.full_name`
+        // and `business_types` are NOT NULL without a default, so the INSERT
+        // half of an upsert failed (23502) and the old fallback answered 200
+        // having stored nothing. See services/profile-write.ts.
+        const written = await writeProfile(userId, profileUpdate, {
+          fullName:
+            body.fullName ??
+            (authUser?.user?.user_metadata?.full_name as string | undefined) ??
+            authUser?.user?.email?.split('@')[0] ??
+            '',
+        })
+        if (written.onboardingColumnsMissing) {
+          fastify.log.warn(
+            'profiles onboarding columns are missing: apply docs/onboarding-server-state-migration.sql',
+          )
+        }
         const [profile, role] = await Promise.all([getProfile(userId), resolveSoleRole(userId)])
 
         // ۴. پاک کردن کش
