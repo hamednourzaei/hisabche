@@ -36,6 +36,13 @@ publicHoistPattern:
   - 'abort-controller'
   - 'event-target-shim'
 allowBuilds:
+  # Native SQLite driver. It is an optional peer of drizzle-orm (autoInstallPeers
+  # pulls it into the root, backend and db-schema) and a real dependency of the
+  # desktop app only. pnpm 11 fails the whole install (ERR_PNPM_IGNORED_BUILDS)
+  # on any dependency with an unreviewed build script, which stopped the Render
+  # backend build. The backend never loads it; desktop compiles its own copy for
+  # Electron through electron-builder (`npmRebuild`, `rebuild:native`).
+  better-sqlite3: false
   bcrypt: false
   '@parcel/watcher': true
   '@sentry/cli': true
