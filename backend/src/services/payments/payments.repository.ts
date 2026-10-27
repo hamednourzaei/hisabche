@@ -13,7 +13,12 @@ import { ConflictError, DatabaseError } from '../../errors/database.error'
 import type { TenancyContext } from '../tenancy.service'
 
 import type { AllocationRequest, OpenInvoice, PartyType, PaymentDirection } from './payments.domain'
-import type { PartyInvoiceRow, PartyLineRow, PartyPaymentRow } from '@hisabche/validation'
+import type {
+  PartyInvoiceRow,
+  PartyLineRow,
+  PartyPaymentRow,
+  PartyReturnRow,
+} from '@hisabche/validation'
 
 const PAGE = 1000
 
@@ -30,6 +35,35 @@ async function readAll(
     const { data, error } = await page(from, from + PAGE - 1)
     if (error) throw new DatabaseError(`Failed to fetch ${label}`, error)
     rows.push(...(data ?? []))
+    if (!data || data.length < PAGE) return rows
+  }
+}
+
+/**
+ * The sale returns of the given invoices, all pages. A database that has not
+ * run docs/invoice-return-01-migration.sql has no `invoice_returns` table: that
+ * is «no returns», not a failed statement.
+ */
+async function readSaleReturns(
+  workspaceId: string,
+  invoiceIds: readonly string[],
+): Promise<Array<Omit<PartyReturnRow, 'currency'>>> {
+  const rows: Array<Omit<PartyReturnRow, 'currency'>> = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('invoice_returns')
+      .select('id, original_invoice_id, return_type, return_number, return_date, grand_total_minor')
+      .eq('workspace_id', workspaceId)
+      .eq('return_type', 'sale_return')
+      .in('original_invoice_id', [...invoiceIds])
+      .order('return_date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (error) {
+      if (error.code === '42P01' || error.code === 'PGRST205') return []
+      throw new DatabaseError('Failed to fetch party returns', error)
+    }
+    rows.push(...((data ?? []) as Array<Omit<PartyReturnRow, 'currency'>>))
     if (!data || data.length < PAGE) return rows
   }
 }
@@ -490,6 +524,13 @@ export class PaymentsRepository {
       ),
     ])
 
+    // Sale returns of this customer's invoices. They credit the customer in the
+    // ledger, so the statement and the balance must see them.
+    const returns =
+      partyType === 'customer'
+        ? await this.returnsOfInvoices(workspaceId, invoices as PartyInvoiceRow[])
+        : []
+
     // Only customers carry an opening balance (customers.opening_balance).
     let openingBalance = 0
     if (partyType === 'customer') {
@@ -506,8 +547,47 @@ export class PaymentsRepository {
     return {
       invoices: invoices as PartyInvoiceRow[],
       payments: payments as PartyPaymentRow[],
+      returns,
       openingBalance,
     }
+  }
+
+  /**
+   * The sale returns of the given invoices, each carrying its invoice's
+   * currency. A database without the returns migration answers «none».
+   */
+  async returnsOfInvoices(
+    workspaceId: string,
+    invoices: readonly { id: string; currency?: string | number | null | undefined }[],
+  ): Promise<PartyReturnRow[]> {
+    const currencyOf = new Map<string, string>(
+      invoices.map((invoice) => [invoice.id, String(invoice.currency ?? '')]),
+    )
+    const ids = [...currencyOf.keys()]
+    const returns: PartyReturnRow[] = []
+    for (let i = 0; i < ids.length; i += 200) {
+      const rows = await readSaleReturns(workspaceId, ids.slice(i, i + 200))
+      for (const row of rows) {
+        returns.push({ ...row, currency: currencyOf.get(row.original_invoice_id) ?? '' })
+      }
+    }
+    return returns
+  }
+
+  /** A customer's sale returns, wherever the caller has no invoice list yet (the balance). */
+  async saleReturnsOfCustomer(workspaceId: string, customerId: string): Promise<PartyReturnRow[]> {
+    const invoices = await readAll('customer invoices for returns', (from, to) =>
+      supabase
+        .from('invoices')
+        .select('id, currency')
+        .eq('workspace_id', workspaceId)
+        .eq('customer_id', customerId)
+        .eq('type', 'sale')
+        .neq('status', 'cancelled')
+        .order('id', { ascending: true })
+        .range(from, to),
+    )
+    return this.returnsOfInvoices(workspaceId, invoices as Array<{ id: string; currency?: string }>)
   }
 
   /** Every line of the given invoices, in chunks of ids and pages of rows. */

@@ -10,6 +10,7 @@ import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { InvoiceReturnService } from '../services/sales/invoice-return.service'
 import { sendFailure } from '../errors/http-failure'
+import { invalidateMoneyCaches } from '../utils/money-cache'
 
 export async function invoiceReturnRoutes(fastify: FastifyInstance) {
   const service = new InvoiceReturnService()
@@ -71,6 +72,10 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
             reasonCode: l.reasonCode ?? 'other',
           })),
         })
+        // A return changes the customer's statement and balance, the dashboard and
+        // stock; a cached copy would keep showing the figures from before it
+        // (BUG-008: it stayed «unpaid» for two minutes after a payment).
+        await invalidateMoneyCaches(workspaceId)
         return reply.status(201).send({ data: ret })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to create invoice return')

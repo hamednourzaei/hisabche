@@ -13,6 +13,7 @@ import {
   matchesRole,
   mergeRole,
   resolveEffectiveRole,
+  saleReturnsOf,
   type DeclaredRole,
   type PartyRole,
 } from '@hisabche/validation'
@@ -21,7 +22,7 @@ import { ValidationError } from '../errors/validation.error'
 import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
-import { partyBalancesByCurrency } from './payments'
+import { PaymentsRepository, partyBalancesByCurrency } from './payments'
 import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
 import { selectAllPages } from '../utils/fetch-all-pages'
 import {
@@ -944,21 +945,36 @@ export class CustomerService {
     //   payment  money we paid out to them → owes more (we settled our side)
     //   return   we credited them          → owes less
     const bookCurrency = await baseCurrencyOf(workspaceId)
+    // The statement view (`party_ledger`) is documents: invoices and payments. A
+    // sale return is its own document, so without this a customer who returned
+    // goods kept the balance they had before (seen live, 27 Oct 2026).
+    const returnMovements = saleReturnsOf(
+      await new PaymentsRepository().saleReturnsOfCustomer(workspaceId, customerId),
+    ).map((entry) => ({
+      date: entry.returnDate,
+      reference: entry.reference,
+      amount: entry.amount,
+      ...(entry.currency ? { currency: entry.currency } : {}),
+      kind: 'return' as const,
+    }))
     const balances = partyBalancesByCurrency(
-      (transactions ?? []).map((tx) => ({
-        date: '',
-        reference: '',
-        amount: Number(tx.amount) || 0,
-        ...(tx.currency ? { currency: tx.currency } : {}),
-        kind:
-          tx.type === 'sale'
-            ? ('sale' as const)
-            : tx.type === 'receipt'
-              ? ('payment_in' as const)
-              : tx.type === 'payment'
-                ? ('payment_out' as const)
-                : ('return' as const),
-      })),
+      [
+        ...(transactions ?? []).map((tx) => ({
+          date: '',
+          reference: '',
+          amount: Number(tx.amount) || 0,
+          ...(tx.currency ? { currency: tx.currency } : {}),
+          kind:
+            tx.type === 'sale'
+              ? ('sale' as const)
+              : tx.type === 'receipt'
+                ? ('payment_in' as const)
+                : tx.type === 'payment'
+                  ? ('payment_out' as const)
+                  : ('return' as const),
+        })),
+        ...returnMovements,
+      ],
       bookCurrency,
     )
 

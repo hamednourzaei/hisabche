@@ -57,10 +57,10 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
     // 48 since the offline parity sessions (25 Oct): the till, pricing and the people/books
     // domains moved onto the device; 50 before that: the logo/stamp/signature section (settings.business_stamp) and
     // the dashboard suggestions (dashboard.ai_insight) run on the device now.
-    // 56 since 27 Oct 2026: customer.delete and warehouse.delete — deleting asks the server
-    // whether invoices/payments/stock still point at the row, so it cannot run on the device.
-    it('has exactly 56 server-execution features in FEATURE_REGISTRY', () => {
-      expect(serverFeatures.length).toBe(56)
+    // 55 since 27 Oct 2026: customer.delete — deleting a customer asks the server whether
+    // invoices or payments still point at them, so it cannot run on the device.
+    it('has exactly 55 server-execution features in FEATURE_REGISTRY', () => {
+      expect(serverFeatures.length).toBe(55)
     })
 
     it('refuses EVERY server-execution feature when offline with REQUIRES_ONLINE', () => {

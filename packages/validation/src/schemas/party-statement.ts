@@ -11,6 +11,7 @@
 // shape; every loose field is read with the same coercion the server always used.
 // ============================================
 
+import { FRACTION_DIGITS } from '@hisabche/formatting'
 import {
   monthlyActivity,
   openInvoices,
@@ -29,6 +30,7 @@ import {
   type PartyType,
   type SummaryInvoice,
   type SummaryPayment,
+  type SummaryReturn,
 } from './payments.domain'
 
 type Loose = string | number | null | undefined
@@ -55,6 +57,22 @@ export interface PartyPaymentRow {
   method?: Loose
 }
 
+/**
+ * A return document of one of the party's invoices (`invoice_returns`). The
+ * amount is in MINOR units of the original invoice's currency — the same unit
+ * the function that wrote it divided by (an invoice with no currency used 2).
+ */
+export interface PartyReturnRow {
+  id: string
+  original_invoice_id: string
+  return_type?: Loose
+  return_number?: Loose
+  return_date?: Loose
+  grand_total_minor?: Loose
+  /** The original invoice's currency; empty = the books currency. */
+  currency?: Loose
+}
+
 export interface PartyLineRow {
   invoice_id: Loose
   product_id?: Loose
@@ -69,10 +87,38 @@ export interface PartyRows {
   invoices: readonly PartyInvoiceRow[]
   payments: readonly PartyPaymentRow[]
   openingBalance: number
+  /** Sale returns. Absent where returns are not kept (the device). */
+  returns?: readonly PartyReturnRow[] | undefined
 }
 
 const num = (value: Loose): number => Number(value) || 0
 const day = (value: Loose): string => String(value ?? '').slice(0, 10)
+
+/**
+ * The sale returns of a party as MAJOR amounts. A purchase return is not here:
+ * the return function posts only the sales side (sales, receivable, inventory,
+ * cost of sales), so a supplier statement has nothing to subtract.
+ */
+export function saleReturnsOf(
+  returns: readonly PartyReturnRow[] | undefined,
+): Array<SummaryReturn & { id: string; invoiceId: string; reference: string }> {
+  return (returns ?? [])
+    .filter((entry) => entry.return_type !== 'purchase_return')
+    .map((entry) => {
+      const currency = String(entry.currency ?? '')
+      const digits = currency
+        ? ((FRACTION_DIGITS as Record<string, number>)[currency.toUpperCase()] ?? 2)
+        : 2
+      return {
+        id: entry.id,
+        invoiceId: entry.original_invoice_id,
+        reference: String(entry.return_number ?? entry.id),
+        returnDate: day(entry.return_date),
+        currency,
+        amount: round2(num(entry.grand_total_minor) / 10 ** digits),
+      }
+    })
+}
 
 /** What a party still owes, invoice by invoice. */
 export function buildOpenInvoicesView(invoices: readonly OpenInvoice[]) {
@@ -100,6 +146,7 @@ export function buildPartyLedger(input: {
     string,
     { sourceType: 'invoice' | 'payment'; sourceId: string; currency: string; method?: string }
   >()
+  const saleReturns = saleReturnsOf(input.rows.returns)
   const movements: (LedgerMovement & { key: string })[] = [
     ...invoices.map((invoice) => {
       const reference = String(invoice.invoice_number ?? invoice.id)
@@ -131,6 +178,22 @@ export function buildPartyLedger(input: {
         reference: String(payment.payment_number ?? payment.id),
         ...(payment.currency ? { currency: String(payment.currency) } : {}),
         key: `p:${payment.id}`,
+      }
+    }),
+    // A return reads in the statement as a credit and links to the invoice it came from.
+    ...saleReturns.map((entry) => {
+      sources.set(`r:${entry.id}`, {
+        sourceType: 'invoice',
+        sourceId: entry.invoiceId,
+        currency: entry.currency,
+      })
+      return {
+        date: entry.returnDate,
+        kind: 'return' as LedgerMovement['kind'],
+        amount: entry.amount,
+        reference: entry.reference,
+        ...(entry.currency ? { currency: entry.currency } : {}),
+        key: `r:${entry.id}`,
       }
     }),
   ]
@@ -190,8 +253,11 @@ export function buildPartySummary(input: {
     entryDate: day(payment.entry_date),
     currency: String(payment.currency ?? ''),
   }))
+  const summaryReturns: SummaryReturn[] = saleReturnsOf(input.rows.returns).map(
+    ({ amount, returnDate, currency }) => ({ amount, returnDate, currency }),
+  )
   return {
-    ...summarizeParty(summaryInvoices, summaryPayments, input.asOf, openingBalance),
+    ...summarizeParty(summaryInvoices, summaryPayments, input.asOf, openingBalance, summaryReturns),
     // The figures above add every document whatever its currency; `byCurrency`
     // is the same summary once per currency.
     bookCurrency: input.bookCurrency,
@@ -201,6 +267,7 @@ export function buildPartySummary(input: {
       input.asOf,
       openingBalance,
       input.bookCurrency,
+      summaryReturns,
     ),
   }
 }

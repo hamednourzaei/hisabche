@@ -144,8 +144,6 @@ export const FEATURE_REGISTRY = {
   'warehouse.overview': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'warehouse.detail': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'warehouse.upsert': { execution: 'local', plans: ALL },
-  // Delete asks the server whether the warehouse still holds stock.
-  'warehouse.delete': { execution: 'server', plans: CLOUD },
   'stock.transfer': { execution: 'local', plans: ALL },
   'stock.assign_unassigned': { execution: 'local', plans: ALL },
   'stock.placement': { execution: 'local', plans: ALL, alwaysAllowed: true },

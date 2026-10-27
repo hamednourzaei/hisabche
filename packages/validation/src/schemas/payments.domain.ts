@@ -378,12 +378,21 @@ export interface SummaryPayment {
   currency: string
 }
 
+/** A sale return that credited the customer: a MAJOR amount in the invoice's currency. */
+export interface SummaryReturn {
+  amount: number
+  returnDate: string
+  currency: string
+}
+
 export interface PartySummary {
   asOf: string
   totalSales: number
   totalPurchases: number
   totalReceived: number
   totalPaid: number
+  /** Sale returns that credited the customer (reduce what they owe, or create a credit). */
+  totalReturned: number
   /**
    * Balance carried in when the customer was created (customers.opening_balance;
    * positive: they owe us). Part of `receivable` and `netBalance`, shown apart.
@@ -424,6 +433,7 @@ export function summarizeParty(
   payments: SummaryPayment[],
   asOf: string,
   openingBalance = 0,
+  returns: readonly SummaryReturn[] = [],
 ): PartySummary {
   const live = invoices.filter((invoice) => invoice.status !== 'cancelled')
   const sales = live.filter((invoice) => invoice.type === 'sale')
@@ -450,7 +460,13 @@ export function summarizeParty(
 
   const sum = (values: number[]) => round2(values.reduce((acc, value) => acc + value, 0))
   const opening = round2(openingBalance)
-  const receivable = sum([...sales.map(outstanding), Math.max(0, opening)])
+  // A sale return credits the customer: it lowers what they owe, and once nothing
+  // is owed it becomes a credit (negative net). `receivable` never goes below zero;
+  // `netBalance` can, so it keeps agreeing with the statement's running balance
+  // (sales − receipts − returns).
+  const returned = sum(returns.map((entry) => entry.amount))
+  const owedBeforeReturns = sum([...sales.map(outstanding), Math.max(0, opening)])
+  const receivable = Math.max(0, round2(owedBeforeReturns - returned))
   const payable = sum([...purchases.map(outstanding), Math.max(0, -opening)])
   const latest = (dates: string[]) => dates.filter(Boolean).sort().at(-1) ?? null
 
@@ -460,10 +476,11 @@ export function summarizeParty(
     totalPurchases: sum(purchases.map((invoice) => invoice.total)),
     totalReceived: sum(payments.filter((p) => p.direction === 'in').map((p) => p.amount)),
     totalPaid: sum(payments.filter((p) => p.direction === 'out').map((p) => p.amount)),
+    totalReturned: returned,
     openingBalance: opening,
     receivable,
     payable,
-    netBalance: round2(receivable - payable),
+    netBalance: round2(owedBeforeReturns - payable - returned),
     overdue: round2(overdue),
     dueToday: round2(dueToday),
     dueLater: round2(dueLater),
@@ -519,12 +536,14 @@ export function summarizePartyByCurrency(
   asOf: string,
   openingBalance: number,
   bookCurrency: string,
+  returns: readonly SummaryReturn[] = [],
 ): Array<PartySummary & { currency: string }> {
   const of = (currency: string) => currency || bookCurrency
   const present = new Set<string>([
     bookCurrency,
     ...invoices.map((invoice) => of(invoice.currency)),
     ...payments.map((payment) => of(payment.currency)),
+    ...returns.map((entry) => of(entry.currency)),
   ])
   return [...present]
     .sort((a, b) => (a === bookCurrency ? -1 : b === bookCurrency ? 1 : a < b ? -1 : 1))
@@ -535,6 +554,7 @@ export function summarizePartyByCurrency(
         payments.filter((payment) => of(payment.currency) === currency),
         asOf,
         currency === bookCurrency ? openingBalance : 0,
+        returns.filter((entry) => of(entry.currency) === currency),
       ),
     }))
 }
