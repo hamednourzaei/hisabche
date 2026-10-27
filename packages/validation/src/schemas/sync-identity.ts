@@ -17,6 +17,20 @@ export interface AsyncDeviceIdStorage {
 }
 
 const STORAGE_KEY = 'hisabche_sync_device_id'
+
+/**
+ * The page's `localStorage`, when there is one. Read through `globalThis` with
+ * a structural type: this file is imported by the Electron MAIN process, whose
+ * tsconfig has no DOM lib, so `window` and `Storage` do not exist there.
+ */
+interface LocalStorageLike {
+  getItem(key: string): string | null
+  setItem(key: string, value: string): void
+}
+
+function browserStorage(): LocalStorageLike | undefined {
+  return (globalThis as { localStorage?: LocalStorageLike }).localStorage
+}
 let cachedDeviceId: string | null = null
 
 export function _resetCachedDeviceIdForTesting(): void {
@@ -94,9 +108,9 @@ export function getPersistentDeviceId(storage?: DeviceIdStorage): string {
     } catch {
       // ignore
     }
-  } else if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+  } else if (browserStorage() !== undefined) {
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY)
+      const stored = browserStorage()?.getItem(STORAGE_KEY) ?? null
       if (stored) {
         cachedDeviceId = stored
         return stored
@@ -115,9 +129,9 @@ export function getPersistentDeviceId(storage?: DeviceIdStorage): string {
     } catch {
       // ignore
     }
-  } else if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+  } else if (browserStorage() !== undefined) {
     try {
-      window.localStorage.setItem(STORAGE_KEY, generated)
+      browserStorage()?.setItem(STORAGE_KEY, generated)
     } catch {
       // ignore
     }
@@ -143,9 +157,9 @@ export async function getPersistentDeviceIdAsync(storage?: AsyncDeviceIdStorage)
     } catch {
       // ignore storage error, proceed to generate
     }
-  } else if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+  } else if (browserStorage() !== undefined) {
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY)
+      const stored = browserStorage()?.getItem(STORAGE_KEY) ?? null
       if (stored) {
         cachedDeviceId = stored
         return stored
@@ -164,9 +178,9 @@ export async function getPersistentDeviceIdAsync(storage?: AsyncDeviceIdStorage)
     } catch {
       // ignore storage write failure
     }
-  } else if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+  } else if (browserStorage() !== undefined) {
     try {
-      window.localStorage.setItem(STORAGE_KEY, generated)
+      browserStorage()?.setItem(STORAGE_KEY, generated)
     } catch {
       // ignore
     }

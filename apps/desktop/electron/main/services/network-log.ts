@@ -172,7 +172,10 @@ function installNodeHooks(): void {
   // has no `fetch`, and wrapping `undefined` would turn every later call
   // into a crash.
   if (typeof originalFetch === 'function') {
-    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = ((
+      input: Parameters<typeof fetch>[0],
+      init?: Parameters<typeof fetch>[1],
+    ) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
       recordNetworkAttempt('fetch', url)
       return originalFetch(input, init)
