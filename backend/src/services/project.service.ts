@@ -15,7 +15,7 @@ import {
   UpdateTimeEntry,
   projectProgress,
 } from '@hisabche/validation'
-import { DatabaseError } from '../errors/database.error'
+import { DatabaseError, NotFoundError } from '../errors/database.error'
 import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
@@ -56,6 +56,18 @@ export class ProjectService {
 
   private getTimeEntriesCacheKey(workspaceId: string, projectId: string) {
     return `project:time:${workspaceId}:${projectId}`
+  }
+
+  async assertProjectOwned(workspaceId: string, projectId: string): Promise<void> {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('id', projectId)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Failed to verify project ownership', error)
+    if (!data) throw new NotFoundError('Project')
   }
 
   // ─── Projects ─────────────────────────────────────────────────
@@ -199,6 +211,7 @@ export class ProjectService {
   // ─── Tasks ────────────────────────────────────────────────────
   async listTasks(ctx: TenancyContext, projectId: string, status?: string) {
     const { workspaceId, userId } = ctx
+    await this.assertProjectOwned(workspaceId, projectId)
     const cacheKey = this.getTasksCacheKey(workspaceId, projectId, status)
 
     const cached = await memoryCache.get(cacheKey)
@@ -222,6 +235,7 @@ export class ProjectService {
 
   async createTask(ctx: TenancyContext, data: CreateProjectTask) {
     const { workspaceId, userId } = ctx
+    await this.assertProjectOwned(workspaceId, data.projectId)
     // ✅ گرفتن آخرین order_index با یک کوئری
     const { data: lastTask } = await supabase
       .from('project_tasks')
@@ -334,6 +348,7 @@ export class ProjectService {
   // ─── Members ──────────────────────────────────────────────────
   async listMembers(ctx: TenancyContext, projectId: string) {
     const { workspaceId, userId } = ctx
+    await this.assertProjectOwned(workspaceId, projectId)
     const cacheKey = this.getMembersCacheKey(workspaceId, projectId)
 
     const cached = await memoryCache.get(cacheKey)
@@ -353,6 +368,7 @@ export class ProjectService {
 
   async addMember(ctx: TenancyContext, data: CreateProjectMember) {
     const { workspaceId, userId } = ctx
+    await this.assertProjectOwned(workspaceId, data.projectId)
     const { data: member, error } = await supabase
       .from('project_members')
       .insert({
@@ -374,6 +390,7 @@ export class ProjectService {
 
   async removeMember(ctx: TenancyContext, projectId: string, memberId: string) {
     const { workspaceId, userId } = ctx
+    await this.assertProjectOwned(workspaceId, projectId)
     const { error } = await supabase
       .from('project_members')
       .delete()
@@ -391,6 +408,7 @@ export class ProjectService {
   // ─── Time Entries ────────────────────────────────────────────
   async listTimeEntries(ctx: TenancyContext, projectId: string) {
     const { workspaceId, userId } = ctx
+    await this.assertProjectOwned(workspaceId, projectId)
     const cacheKey = this.getTimeEntriesCacheKey(workspaceId, projectId)
 
     const cached = await memoryCache.get(cacheKey)
@@ -412,6 +430,7 @@ export class ProjectService {
 
   async createTimeEntry(ctx: TenancyContext, data: CreateTimeEntry) {
     const { workspaceId, userId } = ctx
+    await this.assertProjectOwned(workspaceId, data.projectId)
     const { data: entry, error } = await supabase
       .from('project_time_entries')
       .insert({

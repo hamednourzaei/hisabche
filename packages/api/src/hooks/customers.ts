@@ -13,7 +13,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { asList } from '../lib/as-list'
-import apiClient, { type ApiError } from '../lib/client'
+import apiClient, { type ApiError, getAppEdition, localRequest } from '../lib/client'
 import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
@@ -117,7 +117,34 @@ export async function fetchCustomers(
   const device = getOfflineQueue()
   const canUseDevice = !!device?.readRows && !deviceCannotHonour(filters)
 
-  const fromDevice = async (): Promise<CustomersPage> => {
+  // ⚠️ THE ENGINE FIRST, THE GATED TABLE READ ONLY WHEN THERE IS NO ENGINE.
+  // `db:query` is refused by the desktop's main process without a stored
+  // sign-in (`IPC_REJECTED:db:query`) — the same failure that emptied the
+  // product picker (26 Oct 2026). The engine scopes by workspace and needs no
+  // such session; the gate on `db:query` stays where it is.
+  const fromEngine = async (): Promise<CustomersPage | null> => {
+    const params: Record<string, string> = {}
+    for (const [key, value] of Object.entries(filters)) {
+      if (value === undefined || value === null || value === '') continue
+      params[key] = String(value)
+    }
+    const page = await localRequest<CustomersPage>('GET', '/customers', undefined, params)
+    if (!page) return null
+    const customers = asList<Customer>(page.customers, '/customers')
+    const total = typeof page.total === 'number' ? page.total : customers.length
+    return {
+      ...page,
+      customers,
+      total,
+      notAvailableOffline:
+        total === 0 &&
+        getAppEdition() !== 'offline' &&
+        device?.hasSynced !== undefined &&
+        device.hasSynced('customer') === false,
+    }
+  }
+
+  const fromRows = async (): Promise<CustomersPage> => {
     const limit = filters.limit ?? 20
     const page = filters.page ?? 1
     const { rows, total, synced } = await device!.readRows!('customer', filters.search ?? '', {
@@ -141,6 +168,8 @@ export async function fetchCustomers(
       notAvailableOffline: synced === false,
     }
   }
+
+  const fromDevice = async (): Promise<CustomersPage> => (await fromEngine()) ?? fromRows()
 
   if (canUseDevice && device.isOffline()) return fromDevice()
 

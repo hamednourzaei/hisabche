@@ -102,24 +102,24 @@ export class WorkflowService {
   }
 
   // ─── Cache Keys ──────────────────────────────────────────────
-  private getWorkflowCacheKey(workflowId: string) {
-    return `workflow:${workflowId}`
+  private getWorkflowCacheKey(workspaceId: string, workflowId: string) {
+    return `workflow:${workspaceId}:${workflowId}`
   }
 
   private getWorkflowsCacheKey(workspaceId: string, filters: WorkflowFilters) {
     return `workflows:${workspaceId}:${JSON.stringify(filters)}`
   }
 
-  private getInstanceCacheKey(instanceId: string) {
-    return `workflow:instance:${instanceId}`
+  private getInstanceCacheKey(workspaceId: string, instanceId: string) {
+    return `workflow:instance:${workspaceId}:${instanceId}`
   }
 
   private getInstancesCacheKey(workspaceId: string, filters: InstanceFilters) {
     return `workflow:instances:${workspaceId}:${JSON.stringify(filters)}`
   }
 
-  private getWorkflowStepsCacheKey(workflowId: string) {
-    return `workflow:steps:${workflowId}`
+  private getWorkflowStepsCacheKey(workspaceId: string, workflowId: string) {
+    return `workflow:steps:${workspaceId}:${workflowId}`
   }
 
   /* ─── Create workflow template with steps ─── */
@@ -227,8 +227,8 @@ export class WorkflowService {
   }
 
   /* ─── Get single workflow ─── */
-  async getWorkflow(workflowId: string): Promise<Workflow> {
-    const cacheKey = this.getWorkflowCacheKey(workflowId)
+  async getWorkflow(workspaceId: string, workflowId: string): Promise<Workflow> {
+    const cacheKey = this.getWorkflowCacheKey(workspaceId, workflowId)
 
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as Workflow
@@ -243,6 +243,7 @@ export class WorkflowService {
       .from('workflows')
       .select(WORKFLOW_COLUMNS)
       .eq('id', workflowId)
+      .eq('workspace_id', workspaceId)
       .maybeSingle()
 
     if (error) throw new DatabaseError('Failed to fetch workflow', error)
@@ -254,7 +255,13 @@ export class WorkflowService {
   }
 
   /* ─── Update workflow ─── */
-  async updateWorkflow(workflowId: string, input: UpdateWorkflowInput): Promise<Workflow> {
+  async updateWorkflow(
+    workspaceId: string,
+    workflowId: string,
+    input: UpdateWorkflowInput,
+  ): Promise<Workflow> {
+    await this.getWorkflow(workspaceId, workflowId)
+
     const updates: Record<string, unknown> = {}
     if (input.name !== undefined) updates.name = input.name
     if (input.description !== undefined) updates.description = input.description
@@ -262,7 +269,11 @@ export class WorkflowService {
     if (input.is_active !== undefined) updates.is_active = input.is_active
 
     if (Object.keys(updates).length > 0) {
-      const { error } = await supabase.from('workflows').update(updates).eq('id', workflowId)
+      const { error } = await supabase
+        .from('workflows')
+        .update(updates)
+        .eq('id', workflowId)
+        .eq('workspace_id', workspaceId)
       if (error) throw new DatabaseError('Failed to update workflow', error)
     }
 
@@ -280,21 +291,26 @@ export class WorkflowService {
       if (stepsError) throw new DatabaseError('Failed to update steps', stepsError)
     }
 
-    await memoryCache.invalidate(this.getWorkflowCacheKey(workflowId))
-    await memoryCache.invalidate(this.getWorkflowStepsCacheKey(workflowId))
+    await memoryCache.invalidate(this.getWorkflowCacheKey(workspaceId, workflowId))
+    await memoryCache.invalidate(this.getWorkflowStepsCacheKey(workspaceId, workflowId))
+    await memoryCache.invalidate(`workflows:${workspaceId}:*`)
 
-    return this.getWorkflow(workflowId)
+    return this.getWorkflow(workspaceId, workflowId)
   }
 
   /* ─── Soft delete workflow ─── */
-  async deleteWorkflow(workflowId: string): Promise<void> {
+  async deleteWorkflow(workspaceId: string, workflowId: string): Promise<void> {
+    await this.getWorkflow(workspaceId, workflowId)
+
     const { error } = await supabase
       .from('workflows')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', workflowId)
+      .eq('workspace_id', workspaceId)
     if (error) throw new DatabaseError('Failed to delete workflow', error)
 
-    await memoryCache.invalidate(this.getWorkflowCacheKey(workflowId))
+    await memoryCache.invalidate(this.getWorkflowCacheKey(workspaceId, workflowId))
+    await memoryCache.invalidate(`workflows:${workspaceId}:*`)
   }
 
   /* ─── Start a new approval process ─── */
@@ -302,7 +318,10 @@ export class WorkflowService {
     workspaceId: string,
     input: CreateWorkflowInstanceInput,
   ): Promise<WorkflowInstance> {
-    const stepsCacheKey = this.getWorkflowStepsCacheKey(input.workflow_id)
+    // Cross-tenant verification: verify template belongs to caller's workspace
+    await this.getWorkflow(workspaceId, input.workflow_id)
+
+    const stepsCacheKey = this.getWorkflowStepsCacheKey(workspaceId, input.workflow_id)
     let templateSteps = (await memoryCache.get(stepsCacheKey)) as any[]
 
     if (!templateSteps) {
@@ -411,15 +430,21 @@ export class WorkflowService {
 
   /* ─── Get single instance with full history ─── */
   async getInstance(
+    workspaceId: string,
     instanceId: string,
   ): Promise<{ instance: WorkflowInstance; actions: WorkflowActionRecord[] }> {
-    const cacheKey = this.getInstanceCacheKey(instanceId)
+    const cacheKey = this.getInstanceCacheKey(workspaceId, instanceId)
 
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as { instance: WorkflowInstance; actions: WorkflowActionRecord[] }
 
     const [instanceResult, actionsResult] = await Promise.all([
-      supabase.from('workflow_instances').select(INSTANCE_COLUMNS).eq('id', instanceId).single(),
+      supabase
+        .from('workflow_instances')
+        .select(INSTANCE_COLUMNS)
+        .eq('id', instanceId)
+        .eq('workspace_id', workspaceId)
+        .maybeSingle(),
       supabase
         .from('workflow_actions')
         .select(ACTION_MINIMAL)
@@ -427,8 +452,11 @@ export class WorkflowService {
         .order('created_at', { ascending: false }),
     ])
 
-    if (instanceResult.error || !instanceResult.data) {
+    if (instanceResult.error) {
       throw new DatabaseError('Workflow instance not found', instanceResult.error)
+    }
+    if (!instanceResult.data) {
+      throw new NotFoundError('Workflow instance')
     }
 
     const result = {
@@ -494,7 +522,7 @@ export class WorkflowService {
       throw new NotFoundError('Workflow definition')
     }
 
-    const stepsCacheKey = this.getWorkflowStepsCacheKey(workflowId)
+    const stepsCacheKey = this.getWorkflowStepsCacheKey(ctx.workspaceId, workflowId)
     let steps = (await memoryCache.get(stepsCacheKey)) as any[]
 
     if (!steps) {
@@ -741,13 +769,13 @@ export class WorkflowService {
   /* ─── Invalidate Cache ─────────────────────────────────────── */
   private async invalidateWorkflowCache(workspaceId: string) {
     await memoryCache.invalidate(`workflows:${workspaceId}:*`)
-    await memoryCache.invalidate(`workflow:steps:*`)
+    await memoryCache.invalidate(`workflow:steps:${workspaceId}:*`)
   }
 
   private async invalidateInstanceCache(workspaceId: string, instanceId?: string) {
     await memoryCache.invalidate(`workflow:instances:${workspaceId}:*`)
     if (instanceId) {
-      await memoryCache.invalidate(this.getInstanceCacheKey(instanceId))
+      await memoryCache.invalidate(this.getInstanceCacheKey(workspaceId, instanceId))
     }
   }
 

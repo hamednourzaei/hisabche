@@ -742,10 +742,12 @@ export async function authRoutes(fastify: FastifyInstance) {
                 businessName: z.string().nullable(),
                 avatarUrl: z.string().nullable(),
                 createdAt: z.string().datetime(),
+                businessTypes: z.array(z.string()),
               }),
             }),
           ),
           400: toJsonSchema(z.object({ error: z.string() })),
+          403: toJsonSchema(z.object({ error: z.string() })),
         },
       },
     },
@@ -753,6 +755,24 @@ export async function authRoutes(fastify: FastifyInstance) {
       try {
         const userId = (request as any).userId
         const body = updateProfileSchema.parse(request.body)
+
+        // ⚠️ ONLY A WORKSPACE OWNER MAY CHANGE THE INDUSTRY.
+        //
+        // The industry decides the defaults every screen starts from, so it is
+        // a workspace decision, not a personal preference. A member's own
+        // profile row must not be able to move the shop to another trade.
+        if (body.businessTypes !== undefined) {
+          const { data: owned, error: ownerError } = await supabase
+            .from('workspace_members')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('role', 'owner')
+            .limit(1)
+          if (ownerError) throw ownerError
+          if (!owned || owned.length === 0) {
+            return reply.code(403).send({ error: 'INDUSTRY_OWNER_ONLY' })
+          }
+        }
 
         // ۱. به‌روزرسانی user_metadata
         const metadataUpdate: Record<string, any> = {}

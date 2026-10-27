@@ -14,12 +14,13 @@ import {
   computeItemTotal,
   createInvoiceSchema,
   invoiceLedgerLines,
-  planConsumption,
   round2,
   roundInvoiceMoney,
   sumInvoiceLines,
   temporaryInvoiceNumber,
+  toBaseQuantity,
   type CostingMethod,
+  type ProductUnitOption,
 } from '@hisabche/validation'
 import { buildEnqueue } from '@hisabche/app-bridge'
 import { NotFoundError, ValidationError } from '../errors'
@@ -100,6 +101,60 @@ function generateUuid(): string {
     const v = c === 'x' ? r : (r & 0x3) | 0x8
     return v.toString(16)
   })
+}
+
+/**
+ * The product's declared units, in the shape the SHARED conversion function
+ * takes.
+ *
+ * This is the same `product_units` concept the server reads through
+ * `product_unit_options`; no conversion algorithm lives here. An empty list is
+ * the correct answer for every product that never opted in to multi-UOM, and
+ * `toBaseQuantity` then means «factor 1».
+ */
+function productUnitOptions(
+  db: LocalDb,
+  workspaceId: string,
+  productId: string,
+): ProductUnitOption[] {
+  return db
+    .all<{
+      id: string
+      unit_code: string
+      conversion_factor_to_base: number
+      is_base_unit: number
+      is_purchase_default: number
+      is_sale_default: number
+    }>(
+      `SELECT id, unit_code, conversion_factor_to_base, is_base_unit,
+              is_purchase_default, is_sale_default
+       FROM product_units
+       WHERE workspace_id = ? AND product_id = ? AND deleted_at IS NULL AND is_active = 1`,
+      [workspaceId, productId],
+    )
+    .map((row) => ({
+      unitId: row.id,
+      unitCode: row.unit_code,
+      conversionFactorToBase: Number(row.conversion_factor_to_base),
+      isBaseUnit: Number(row.is_base_unit) === 1,
+      isPurchaseDefault: Number(row.is_purchase_default) === 1,
+      isSaleDefault: Number(row.is_sale_default) === 1,
+    }))
+}
+
+/** Convert one line to the product's base unit, refusing the same cases the server refuses. */
+function baseQuantityOf(
+  db: LocalDb,
+  workspaceId: string,
+  productId: string,
+  quantity: number,
+  unit: string | null | undefined,
+): number {
+  const converted = toBaseQuantity(quantity, unit, productUnitOptions(db, workspaceId, productId))
+  if (!converted.ok) {
+    throw new ValidationError(`${converted.code}: product ${productId}`)
+  }
+  return converted.baseQuantity
 }
 
 export function mapInvoiceItem(row: InvoiceItemRow) {
@@ -498,12 +553,19 @@ export function registerInvoiceRoutes(router: Router): void {
         const discount = Number(item.discount) || 0
         const derivedTotal = computeItemTotal({ quantity: qty, unitPrice, discount })
         const roundedTotal = roundInvoiceMoney(derivedTotal, currency)
+        const productId = item.productId || null
+        // The document keeps the quantity the person typed («2 cartons»);
+        // INVENTORY is always the product's base unit («48 pieces»). The
+        // conversion is the shared function, not a local copy.
+        const baseQuantity =
+          productId && qty > 0 ? baseQuantityOf(db, workspaceId, productId, qty, item.unit) : qty
 
         return {
           id: item.id || generateUuid(),
-          productId: item.productId || null,
+          productId,
           productName: String(item.productName || 'کالا').trim(),
           quantity: qty,
+          baseQuantity,
           unit: (item.unit as string) || 'piece',
           unitPrice,
           buyPrice: 0,
@@ -600,7 +662,7 @@ export function registerInvoiceRoutes(router: Router): void {
         )
 
         // 5. Stock movements & Warehouse inventory
-        if (item.productId && item.quantity > 0) {
+        if (item.productId && item.baseQuantity > 0) {
           const movId = generateUuid()
           const movType = type === 'purchase' ? 'purchase' : 'sale'
           db.run(
@@ -613,7 +675,7 @@ export function registerInvoiceRoutes(router: Router): void {
               workspaceId,
               item.productId,
               movType,
-              item.quantity,
+              item.baseQuantity,
               invoiceNumber,
               date,
               now,
@@ -622,7 +684,7 @@ export function registerInvoiceRoutes(router: Router): void {
           )
 
           // Update product total quantity
-          const qtyDelta = type === 'purchase' ? item.quantity : -item.quantity
+          const qtyDelta = type === 'purchase' ? item.baseQuantity : -item.baseQuantity
           db.run(
             'UPDATE product SET quantity = quantity + ?, updated_at = ? WHERE id = ? AND workspace_id = ?',
             [qtyDelta, now, item.productId, workspaceId],
@@ -653,9 +715,13 @@ export function registerInvoiceRoutes(router: Router): void {
       if (type === 'purchase') {
         // Purchases create cost layers (in books currency)
         for (const item of derivedItems) {
-          if (item.productId && item.quantity > 0) {
+          if (item.productId && item.baseQuantity > 0) {
             const layerId = generateUuid()
-            const layerUnitCost = round2(item.unitPrice * exchangeRate)
+            // A layer is in BASE units at a BASE-unit cost. The line price is
+            // per line unit, so «33,000,000 per gram» stays per gram while
+            // «24,000 per carton» becomes 1,000 per piece.
+            const perBase = item.quantity > 0 ? item.baseQuantity / item.quantity : 1
+            const layerUnitCost = round2((item.unitPrice * exchangeRate) / perBase)
             db.run(
               `INSERT INTO cost_layer (
                 id, workspace_id, product_id, warehouse_id, source_type, source_id, source_line,
@@ -669,8 +735,8 @@ export function registerInvoiceRoutes(router: Router): void {
                 data.warehouseId || null,
                 invoiceId,
                 item.id,
-                item.quantity,
-                item.quantity,
+                item.baseQuantity,
+                item.baseQuantity,
                 layerUnitCost,
                 booksCurrency,
                 date,
@@ -683,11 +749,11 @@ export function registerInvoiceRoutes(router: Router): void {
       } else {
         // Sales consume cost layers via configured costing method (FIFO or AVCO)
         for (const item of derivedItems) {
-          if (item.productId && item.quantity > 0) {
+          if (item.productId && item.baseQuantity > 0) {
             const drawn = drawFromLayers(db, {
               workspaceId,
               productId: item.productId,
-              quantity: item.quantity,
+              quantity: item.baseQuantity,
               invoiceId,
               invoiceLine: item.id,
               entryDate: date,
@@ -870,7 +936,16 @@ export function registerInvoiceRoutes(router: Router): void {
 
       for (const item of items) {
         if (item.product_id && item.quantity > 0) {
-          const qtyDelta = inv.type === 'purchase' ? -item.quantity : item.quantity
+          // The stored line quantity is in the line's unit; the stock it moved
+          // was the base quantity. Reversing must undo the base figure.
+          const baseQuantity = baseQuantityOf(
+            db,
+            workspaceId,
+            item.product_id,
+            Number(item.quantity),
+            item.unit,
+          )
+          const qtyDelta = inv.type === 'purchase' ? -baseQuantity : baseQuantity
 
           db.run(
             'UPDATE product SET quantity = quantity + ?, updated_at = ? WHERE id = ? AND workspace_id = ?',

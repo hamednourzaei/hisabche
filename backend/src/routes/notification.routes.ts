@@ -5,7 +5,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { markReadSchema } from '@hisabche/validation'
 import { NotificationService } from '../services/notification.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
@@ -95,10 +94,10 @@ export async function notificationRoutes(fastify: FastifyInstance) {
 
         console.log('📝 [mark-read] Validated ids:', ids)
 
-        await notificationService.markAsRead(ids)
-        await clearCache('notifications:*')
-        await clearCache('notifications-unread:*')
-        return reply.send({ success: true, count: ids.length })
+        const updated = await notificationService.markAsRead(request.userId, ids)
+        await clearCache(`notifications:${request.userId}:*`)
+        await clearCache(`notifications-unread:${request.userId}:*`)
+        return reply.send({ success: true, count: updated.length })
       } catch (err: any) {
         fastify.log.error('❌ [mark-read] Error:', err)
 

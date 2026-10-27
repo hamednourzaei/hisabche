@@ -568,3 +568,7 @@ export {
   type LanguageOption,
   type LanguageSwitch,
 } from './lib/language-switch'
+export { ProductVariantsSection } from './components/ui/warehouse/product-variants-section'
+export { ProductFitmentsSection } from './components/ui/warehouse/product-fitments-section'
+export { WarrantiesSection } from './components/ui/invoices/warranties-section'
+export { InvoiceReturnsDialog } from './components/ui/invoices/invoice-returns-dialog'

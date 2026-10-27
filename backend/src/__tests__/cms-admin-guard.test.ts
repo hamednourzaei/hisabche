@@ -173,6 +173,10 @@ describe('the guard is the platform one, in the source', () => {
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/\/\/.*$/gm, '')
       .replace(/\s+/g, ' ')
+      // The formatter wraps a long array and adds a trailing comma; the GUARD is the
+      // elements and their order, not the layout.
+      .replace(/\[ /g, '[')
+      .replace(/,? \]/g, ']')
 
     // Every admin chain starts with the platform guard; the admin role
     // permission (RBAC) sits after it and narrows, never replaces, it.

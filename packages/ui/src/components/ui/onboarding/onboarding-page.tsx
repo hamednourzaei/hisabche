@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { BUSINESS_MODELS, BUSINESS_TYPE_OTHER, filterBusinessTypes } from '@hisabche/ui-contract'
+import { industrySupportNoteKey } from '../../../lib/industry-support-note'
 import { CurrencyPicker } from './currency-picker'
 import { SearchableOptionList } from './searchable-option-list'
 
@@ -449,18 +450,21 @@ CurrencyStep.displayName = 'CurrencyStep'
 // ─── Step 4: Complete ─────────────────────────────────────────────────────
 
 const CompleteStep = memo(function CompleteStep({
+  businessType,
   businessTypeLabel,
   storeSizeLabel,
   currencyLabel,
   onComplete,
   t,
 }: {
+  businessType: string
   businessTypeLabel: string
   storeSizeLabel: string
   currencyLabel: string
   onComplete: () => void
   t: (key: string, fallback?: string) => string
 }) {
+  const noteKey = industrySupportNoteKey(businessType)
   return (
     <div className="mx-auto max-w-xl text-center">
       <div className="mb-4 flex justify-center sm:mb-6">
@@ -484,6 +488,14 @@ const CompleteStep = memo(function CompleteStep({
           <Row label={t('onboarding.currency', 'ارز')} value={currencyLabel} />
         </div>
       </div>
+      {noteKey ? (
+        <p
+          role="note"
+          className="mb-5 rounded-xl bg-[hsl(var(--surface-muted))] px-4 py-3 text-start text-xs text-[hsl(var(--fg-secondary))] sm:mb-8 sm:text-sm"
+        >
+          {t(noteKey)}
+        </p>
+      ) : null}
       <button
         type="button"
         onClick={onComplete}
@@ -580,6 +592,7 @@ export const OnboardingPage = memo(function OnboardingPage({
         )}
         {step === 4 && (
           <CompleteStep
+            businessType={businessType ?? ''}
             businessTypeLabel={businessTypeLabel}
             storeSizeLabel={storeSizeLabel}
             currencyLabel={currencyLabel}

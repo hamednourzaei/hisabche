@@ -1,0 +1,21 @@
+{
+  "fa": 9010,
+  "af": 9012,
+  "en": 9005,
+  "faNotEn": [
+    "landing.security.badge.آفلاین اول",
+    "landing.security.badge.رمزنگاری شده",
+    "landing.security.badge.پشتیبان خودکار",
+    "landing.security.badge.کنترل دسترسی",
+    "landing.security.badge.ثبت رویدادها",
+    "landing.security.badge.چند کاربره",
+    "landing.security.badge.۹۹_۹٪ در دسترس"
+  ],
+  "enNotFa": ["common.alert", "common.viewDetails"],
+  "faNotAf": ["landing.security.badge.پشتیبان خودکار"],
+  "afNotFa": [
+    "landing.security.badge.بک‌آپ خودکار",
+    "landing.featurePage.offline.sections.4.heading",
+    "landing.featurePage.offline.sections.4.body"
+  ]
+}

@@ -47,7 +47,8 @@ export const BUSINESS_TYPES: readonly BusinessTypeOption[] = [
 
   // ─── Clothing & textiles ───
   { id: 'clothing', labelKey: 'businessType.clothing', labelFa: 'پوشاک' },
-  { id: 'fabric', labelKey: 'businessType.fabric', labelFa: 'پارچه و خرازی' },
+  { id: 'fabric', labelKey: 'businessType.fabric', labelFa: 'پارچه متری و خرازی' },
+  { id: 'fabricRoll', labelKey: 'businessType.fabricRoll', labelFa: 'رول پارچه (عمده)' },
   { id: 'shoes', labelKey: 'businessType.shoes', labelFa: 'کفش' },
   { id: 'carpet', labelKey: 'businessType.carpet', labelFa: 'فرش و قالین' },
   { id: 'tailoring', labelKey: 'businessType.tailoring', labelFa: 'خیاطی' },
@@ -55,6 +56,11 @@ export const BUSINESS_TYPES: readonly BusinessTypeOption[] = [
   // ─── Technology ───
   { id: 'mobilePhones', labelKey: 'businessType.mobilePhones', labelFa: 'موبایل و لوازم جانبی' },
   { id: 'computers', labelKey: 'businessType.computers', labelFa: 'کامپیوتر و لپ‌تاپ' },
+  {
+    id: 'computerComponents',
+    labelKey: 'businessType.computerComponents',
+    labelFa: 'قطعات کامپیوتر',
+  },
   { id: 'electronics', labelKey: 'businessType.electronics', labelFa: 'لوازم برقی و الکترونیک' },
   { id: 'itServices', labelKey: 'businessType.itServices', labelFa: 'خدمات کامپیوتری' },
 
@@ -96,6 +102,17 @@ export const BUSINESS_TYPES: readonly BusinessTypeOption[] = [
 
   // ─── Services ───
   { id: 'transport', labelKey: 'businessType.transport', labelFa: 'ترانسپورت و باربری' },
+  {
+    id: 'freightTransport',
+    labelKey: 'businessType.freightTransport',
+    labelFa: 'حمل بار و باربری',
+  },
+  {
+    id: 'passengerTransport',
+    labelKey: 'businessType.passengerTransport',
+    labelFa: 'مسافربری',
+  },
+  { id: 'courier', labelKey: 'businessType.courier', labelFa: 'پیک و تحویل بسته' },
   { id: 'travelAgency', labelKey: 'businessType.travelAgency', labelFa: 'آژانس مسافرتی' },
   { id: 'realEstate', labelKey: 'businessType.realEstate', labelFa: 'املاک و مشاورین' },
   { id: 'printing', labelKey: 'businessType.printing', labelFa: 'چاپ و تبلیغات' },

@@ -1,0 +1,223 @@
+{
+  "inv": {
+    "backend/src": {
+      "files": 863,
+      "ext": {
+        ".ts": 860,
+        ".ttf": 2,
+        ".tsx": 1
+      }
+    },
+    "packages": {
+      "files": 1491,
+      "ext": {
+        ".ts": 910,
+        ".json": 44,
+        ".tsx": 520,
+        ".ttf": 2,
+        ".html": 1,
+        ".png": 1,
+        ".css": 4,
+        ".js": 2,
+        ".mjs": 1,
+        ".mts": 2,
+        "none": 3,
+        ".txt": 1
+      }
+    },
+    "apps": {
+      "files": 587,
+      "ext": {
+        "none": 11,
+        ".ts": 117,
+        ".tsx": 203,
+        ".log": 5,
+        ".js": 14,
+        ".json": 16,
+        ".ttf": 6,
+        ".png": 58,
+        ".tsbuildinfo": 1,
+        ".mts": 1,
+        ".yml": 1,
+        ".ico": 2,
+        ".md": 2,
+        ".lock": 8,
+        ".bin": 11,
+        ".class": 78,
+        ".java": 4,
+        ".properties": 8,
+        ".probe": 2,
+        ".gradle": 3,
+        ".keystore": 1,
+        ".pro": 1,
+        ".xml": 10,
+        ".html": 2,
+        ".kt": 3,
+        ".jar": 1,
+        ".bat": 1,
+        ".kts": 1,
+        ".css": 1,
+        ".mjs": 4,
+        ".local": 1,
+        ".txt": 7,
+        ".svg": 2,
+        ".webmanifest": 1
+      }
+    },
+    "scripts": {
+      "files": 56,
+      "ext": {
+        ".mjs": 41,
+        ".js": 2,
+        ".ps1": 1,
+        ".sh": 2,
+        ".sql": 6,
+        ".py": 4
+      }
+    },
+    "docs": {
+      "files": 592,
+      "ext": {
+        ".sql": 330,
+        ".md": 170,
+        ".csv": 5,
+        ".html": 3,
+        ".json": 16,
+        ".log": 33,
+        ".txt": 3,
+        "none": 2,
+        ".py": 2,
+        ".jpg": 27,
+        ".ts": 1
+      }
+    }
+  },
+  "perWs": {
+    "packages/analytics": {
+      "code": 3,
+      "tests": 0
+    },
+    "packages/api": {
+      "code": 109,
+      "tests": 37
+    },
+    "packages/app-bridge": {
+      "code": 14,
+      "tests": 5
+    },
+    "packages/app-shell": {
+      "code": 81,
+      "tests": 17
+    },
+    "packages/auth": {
+      "code": 3,
+      "tests": 0
+    },
+    "packages/auth-core": {
+      "code": 4,
+      "tests": 1
+    },
+    "packages/config": {
+      "code": 1,
+      "tests": 0
+    },
+    "packages/db-schema": {
+      "code": 7,
+      "tests": 0
+    },
+    "packages/design-tokens": {
+      "code": 4,
+      "tests": 1
+    },
+    "packages/formatting": {
+      "code": 10,
+      "tests": 10
+    },
+    "packages/i18n": {
+      "code": 2,
+      "tests": 1
+    },
+    "packages/local-engine": {
+      "code": 53,
+      "tests": 27
+    },
+    "packages/mobile-ui": {
+      "code": 31,
+      "tests": 5
+    },
+    "packages/store": {
+      "code": 17,
+      "tests": 3
+    },
+    "packages/sync": {
+      "code": 7,
+      "tests": 2
+    },
+    "packages/ui": {
+      "code": 588,
+      "tests": 187
+    },
+    "packages/ui-contract": {
+      "code": 19,
+      "tests": 19
+    },
+    "packages/validation": {
+      "code": 123,
+      "tests": 39
+    },
+    "apps/admin": {
+      "code": 109,
+      "tests": 3
+    },
+    "apps/desktop": {
+      "code": 16,
+      "tests": 13
+    },
+    "apps/mobile": {
+      "code": 17,
+      "tests": 12
+    },
+    "apps/web": {
+      "code": 147,
+      "tests": 3
+    },
+    "backend": {
+      "code": 466,
+      "tests": 398
+    }
+  },
+  "routeCount": 816,
+  "writeRoutes": 416,
+  "weakWriteRoutes": 225,
+  "hooks": 498,
+  "orphanHooks": 72,
+  "tests": {
+    "total": 783,
+    "pg": 81,
+    "e2e": 6,
+    "http": 51,
+    "unit": 645,
+    "skippedMarkers": 3,
+    "mockHeavy": 28,
+    "mockAuth": 11
+  },
+  "tables": 286,
+  "i18n": {
+    "fa": 9010,
+    "af": 9012,
+    "en": 9005,
+    "faNotEn": 7,
+    "enNotFa": 2,
+    "faNotAf": 1,
+    "afNotFa": 3
+  },
+  "hardPersian": 1290,
+  "matrix": {
+    "rows": 490,
+    "online_required": 299,
+    "available": 176,
+    "not_supported": 15,
+    "availableNoEngine": 44
+  },
+  "orphanFns": 40
+}

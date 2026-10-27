@@ -61,7 +61,9 @@ describe('Golden vectors — Electron (desktop) runtime', () => {
       'currency',
       'invoice-math',
       'ledger',
+      'list-filters',
       'payments',
+      'unit-conversion',
     ])
   })
 })

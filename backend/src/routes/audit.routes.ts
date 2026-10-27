@@ -128,6 +128,27 @@ export default async function auditRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── Option 48: GET /api/audit/verify ──────────────────────────────────────
+  fastify.get(
+    '/api/audit/verify',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.operational.read'),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const result = await auditService.verifyChain(request.tenancy.workspaceId)
+        return reply.send(result)
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Audit verification failed' })
+      }
+    },
+  )
+
   // ─── GET /api/audit/workspace/:entityType/:entityId ────────────────────────
   //
   // H6 — the "history of this record" panel on a document's own screen.

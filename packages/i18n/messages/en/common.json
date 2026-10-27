@@ -1,4 +1,28 @@
 {
+  "capability": {
+    "measurement": "Measurement",
+    "weightPricing": "Price by weight",
+    "lengthPricing": "Price by length",
+    "volumePricing": "Price by volume",
+    "multiUnit": "Multiple units",
+    "batchExpiry": "Batch expiry",
+    "recipeBom": "Recipe / BOM",
+    "variants": "Variants",
+    "tableService": "Table service",
+    "serializedItems": "Serialized items",
+    "goldPurity": "Gold purity",
+    "makingCharges": "Making charges"
+  },
+  "industry": {
+    "supportNote": {
+      "generic": "The universal business-management features are available. Specialized features for this business type are not yet available."
+    },
+    "vocabulary": {
+      "piece": "Piece",
+      "dish": "Dish",
+      "drink": "Drink"
+    }
+  },
   "app": {
     "name": "Hisabche",
     "tagline": "Business Management System",
@@ -1799,6 +1823,23 @@
     "showLess": "Less"
   },
   "invoices": {
+    "returnInvoice": "Register Return",
+    "returnNumber": "Return Number",
+    "returnQuantity": "Return Quantity",
+    "returnReason": "Return Reason",
+    "returnReasonPlaceholder": "Reason for returning goods",
+    "submitReturn": "Submit and Restock",
+    "returnLineItem": "Select Item to Return",
+    "invoiceQuantity": "Invoice Quantity",
+    "returnRestockAction": "Item Disposition",
+    "restockChoiceRestock": "Restock to Warehouse (Increase Inventory)",
+    "restockChoiceScrap": "Scrap / Waste (No Stock Increase)",
+    "reasonDefective": "Defective / Faulty",
+    "reasonWrongItem": "Wrong Item Sent",
+    "reasonChangeOfMind": "Customer Changed Mind",
+    "reasonDamaged": "Damaged in Transit",
+    "reasonExpired": "Expired Product",
+    "reasonOther": "Other Reason",
     "title": "Invoice",
     "newInvoice": "New Invoice",
     "newinvoices": "New Invoice",
@@ -2588,7 +2629,20 @@
       "title": "Metal display unit",
       "description": "Amounts are shown and entered in this unit. The books always record grams."
     },
-    "appLanguage": "App language"
+    "appLanguage": "App language",
+    "industryTitle": "Industry",
+    "industryHint": "The industry sets the default unit, invoice columns and dashboard order.",
+    "industryOwnerOnly": "Only the workspace owner can change the industry.",
+    "industrySaved": "Industry saved.",
+    "industrySaveFailed": "The industry could not be saved",
+    "creditLimitMode": {
+      "title": "Customer Credit Limit Policy",
+      "description": "How the system behaves when an invoice exceeds the customer credit limit",
+      "off": "Off (No enforcement)",
+      "warn": "Warn (Show notice only)",
+      "block": "Block (Prevent creation)",
+      "success": "Credit limit policy saved successfully."
+    }
   },
   "sync": {
     "download": {
@@ -3835,7 +3889,8 @@
     "aboutBusiness": "About your business",
     "aboutBusinessPlaceholder": "Tell us more about your business, if you like",
     "bookCurrencyLocked": "This business has financial documents; its books currency can no longer be changed.",
-    "bookCurrencyFailed": "The chosen currency was not saved on the server. Try again from Settings."
+    "bookCurrencyFailed": "The chosen currency was not saved on the server. Try again from Settings.",
+    "saveFailed": "Your business details were not saved. Check the connection and try again."
   },
   "status": {
     "excellent": "Excellent",
@@ -4476,12 +4531,14 @@
     "watches": "Watches",
     "currencyExchange": "Currency exchange",
     "clothing": "Clothing",
-    "fabric": "Fabric and haberdashery",
+    "fabric": "Fabric by the metre and haberdashery",
+    "fabricRoll": "Fabric rolls (wholesale)",
     "shoes": "Shoes",
     "carpet": "Carpets and rugs",
     "tailoring": "Tailoring",
     "mobilePhones": "Mobile phones and accessories",
     "computers": "Computers and laptops",
+    "computerComponents": "Computer components",
     "electronics": "Electronics and appliances",
     "itServices": "IT services",
     "hardware": "Hardware and tools",
@@ -4511,6 +4568,9 @@
     "seedsFertilizer": "Seeds and fertiliser",
     "flowers": "Flowers and plants",
     "transport": "Transport and freight",
+    "freightTransport": "Freight and cargo transport",
+    "passengerTransport": "Passenger transport",
+    "courier": "Courier and delivery",
     "travelAgency": "Travel agency",
     "realEstate": "Real estate",
     "printing": "Printing and advertising",
@@ -4681,6 +4741,7 @@
       "descriptionRequired": "An item description is required",
       "priceRequired": "Unit price must be greater than zero",
       "multiplierRequired": "Enter a value in the column this price is multiplied by",
+      "unitMismatch": "This line's unit does not match the product's unit and no conversion is defined",
       "totalRequired": "The line total must be greater than zero",
       "noItems": "At least one line is required",
       "createFailed": "Could not create the invoice",
@@ -4774,7 +4835,9 @@
       "amount": "Amount",
       "required": "This invoice is not recorded without an exchange rate. Both amounts must be greater than zero.",
       "useDashboardForm": "Record the rate with the dashboard rate form"
-    }
+    },
+    "creditLimitBlocked": "Sale blocked due to credit limit",
+    "creditLimitBlockedHint": "Customer receivables exceed their approved credit limit."
   },
   "admin": {
     "cms": {
@@ -10585,6 +10648,7 @@
     "noShelvesBody": "A warehouse works fully without shelves. Add shelves when you want to know exactly where each product sits.",
     "noShelvesNoAccess": "Only someone allowed to configure the warehouse can add shelves.",
     "notMigrated": "Shelves are not enabled on this server yet. Run docs/warehouse-map-01-migration.sql on the database.",
+    "notAvailableOffline": "The shelf map is not available offline yet. Connect to the internet to see it.",
     "loadFailed": "The shelves of this warehouse could not be read.",
     "retry": "Try again",
     "noMatch": "No product by that name in this warehouse.",

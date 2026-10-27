@@ -7,57 +7,57 @@
 // می‌شد، نه response.data — به همین دلیل با اینکه سرور همیشه
 // 200 و داده‌ی درست برمی‌گرداند، جدول در فرانت همیشه خالی
 // نمایش داده می‌شد.
-"use client";
+'use client'
 
-import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "../lib/client";
-import { useAuthReady } from "./useAuthReady";
+import { useQuery } from '@tanstack/react-query'
+import { apiClient } from '../lib/client'
+import { useAuthReady } from './useAuthReady'
 
 export const auditKeys = {
-  all: ["audit"] as const,
-  list: (params: Record<string, unknown>) => [...auditKeys.all, "list", params] as const,
-};
+  all: ['audit'] as const,
+  list: (params: Record<string, unknown>) => [...auditKeys.all, 'list', params] as const,
+}
 
 interface UseAuditLogsParams {
-  page?: number;
-  limit?: number;
-  action?: string;
-  entityType?: string;
-  startDate?: string;
-  endDate?: string;
-  search?: string;
+  page?: number
+  limit?: number
+  action?: string
+  entityType?: string
+  startDate?: string
+  endDate?: string
+  search?: string
 }
 
 export interface AuditLog {
-  id: string;
-  action: string;
-  entity_type: string;
-  entity_id?: string;
-  user_id: string;
-  created_at: string;
-  ip_address?: string;
-  user_name?: string;
-  details?: Record<string, unknown>;
+  id: string
+  action: string
+  entity_type: string
+  entity_id?: string
+  user_id: string
+  created_at: string
+  ip_address?: string
+  user_name?: string
+  details?: Record<string, unknown>
 }
 
 export interface AuditResponse {
-  logs: AuditLog[];
-  total: number;
-  page?: number;
-  limit?: number;
+  logs: AuditLog[]
+  total: number
+  page?: number
+  limit?: number
 }
 
 function extractAuditData(body: unknown): AuditResponse {
-  const data = body as Record<string, unknown>;
+  const data = body as Record<string, unknown>
 
   // ✅ 1. Check for body.data.logs (بدنه‌ای که خودش یک لایه‌ی nested دارد)
-  if (data?.data && typeof data.data === "object" && !Array.isArray(data.data)) {
-    const nested = data.data as Record<string, unknown>;
+  if (data?.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+    const nested = data.data as Record<string, unknown>
     if (nested?.logs && Array.isArray(nested.logs)) {
       return {
         logs: nested.logs as AuditLog[],
         total: (nested.total as number) || nested.logs.length,
-      };
+      }
     }
   }
 
@@ -66,7 +66,7 @@ function extractAuditData(body: unknown): AuditResponse {
     return {
       logs: data.logs as AuditLog[],
       total: (data.total as number) || data.logs.length,
-    };
+    }
   }
 
   // ✅ 3. Check for body.data as array — این دقیقاً فرمت واقعی
@@ -75,7 +75,7 @@ function extractAuditData(body: unknown): AuditResponse {
     return {
       logs: data.data as AuditLog[],
       total: (data.total as number) || data.data.length,
-    };
+    }
   }
 
   // ✅ 4. Fallback: خود body یک آرایه است
@@ -83,34 +83,47 @@ function extractAuditData(body: unknown): AuditResponse {
     return {
       logs: data as unknown as AuditLog[],
       total: (data as unknown as AuditLog[]).length,
-    };
+    }
   }
 
   // ✅ 5. Fallback: empty
   return {
     logs: [],
     total: 0,
-  };
+  }
 }
 
 // ✅ گیت شده با authReady
 export function useAuditLogs(params: UseAuditLogsParams = {}) {
-  const authReady = useAuthReady();
-  const { page = 1, limit = 30, ...rest } = params;
+  const authReady = useAuthReady()
+  const { page = 1, limit = 30, ...rest } = params
 
   return useQuery({
     queryKey: auditKeys.list({ page, limit, ...rest }),
     queryFn: async (): Promise<AuditResponse> => {
-      const response = await apiClient.get("/audit/logs", {
+      const response = await apiClient.get('/audit/logs', {
         params: { page, limit, ...rest },
-      });
+      })
 
       // ✅ FIX: response.data (نه خود response) بدنه‌ی واقعی JSON
       // است که بک‌اند برگردانده.
-      return extractAuditData(response.data);
+      return extractAuditData(response.data)
     },
     enabled: authReady,
     staleTime: 30000,
     retry: 2,
-  });
+  })
+}
+
+export function useVerifyAuditLog() {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: ['audit', 'verify'],
+    queryFn: async () => {
+      const response = await apiClient.get('/audit/verify')
+      return response.data
+    },
+    enabled: authReady,
+    staleTime: 60000,
+  })
 }

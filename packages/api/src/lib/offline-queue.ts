@@ -80,6 +80,14 @@ export interface OfflineQueue {
    * product the device already has, and offline it is the only answer.
    */
   findByBarcode?(barcode: string): Promise<Array<Record<string, unknown>>>
+  /**
+   * Has this device ever pulled this table from the cloud?
+   *
+   * Asked of the HOST's own record, not through the database bridge — that one
+   * is gated behind a signed-in session and a device without one must still be
+   * able to say "I do not know" instead of "nothing here".
+   */
+  hasSynced?(table: 'product' | 'customer'): boolean
 }
 
 let queue: OfflineQueue | null = null

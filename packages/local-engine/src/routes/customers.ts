@@ -11,6 +11,7 @@ import {
   matchesRole,
   mergeRole,
   partyBalancesByCurrency,
+  flagFilter,
   resolveEffectiveRole,
   runningLedger,
   updateCustomerSchema,
@@ -76,9 +77,9 @@ export function registerCustomerRoutes(router: Router): void {
 
     const search = query.search?.trim()
     const type = query.type?.trim()
-    const isActive =
-      query.isActive !== undefined ? query.isActive === 'true' || query.isActive === '1' : undefined
-    const limit = Math.min(Math.max(Number(query.limit) || 20, 1), 100)
+    // ⚠️ filter-contract: unset is NO filter; only an explicit false filters.
+    const isActive = flagFilter(query.isActive)
+    const limit = Math.min(Math.max(Number(query.limit) || 20, 1), 1000)
     const page = Math.max(Number(query.page) || 1, 1)
     const offset = (page - 1) * limit
 
@@ -101,8 +102,9 @@ export function registerCustomerRoutes(router: Router): void {
       params.push(isActive ? 1 : 0)
     }
     // The server's rule (customer.service): an opening balance owed, or none.
-    if (query.hasBalance === 'true' || query.hasBalance === 'false') {
-      clauses.push(query.hasBalance === 'true' ? 'opening_balance > 0' : 'opening_balance = 0')
+    const hasBalance = flagFilter(query.hasBalance)
+    if (hasBalance !== undefined) {
+      clauses.push(hasBalance ? 'opening_balance > 0' : 'opening_balance = 0')
     }
 
     const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''

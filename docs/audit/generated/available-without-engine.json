@@ -1,0 +1,266 @@
+[
+  {
+    "method": "DELETE",
+    "path": "/invoices/:x/installments",
+    "feature": "invoice.installment",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/analysis/customers/:x/risk",
+    "feature": "customer.risk",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/customers/:x/accounting",
+    "feature": "customer.accounting",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/invoices/:x/installments",
+    "feature": "invoice.installment",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/invoices/:x/late-fees",
+    "feature": "invoice.late_fee",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/invoices/:x/related",
+    "feature": "invoice.related",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/invoices/:x/returns",
+    "feature": "invoice.returns",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/operations/budgets/:x/revisions",
+    "feature": "budget.manage",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/orders/:x/deposits",
+    "feature": "order.deposits",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/pos/sessions/:x/ledger",
+    "feature": "till.ledger",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/products/:x/fitments",
+    "feature": "product.fitments",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/products/:x/storage-locations",
+    "feature": "stock.storage_locations",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/products/:x/variants",
+    "feature": "product.variants",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/products/:x/warehouse-breakdown",
+    "feature": "warehouse.detail",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/warehouses/:x/detail",
+    "feature": "warehouse.upsert",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/warehouses/:x/map",
+    "feature": "warehouse.upsert",
+    "status": "available"
+  },
+  {
+    "method": "GET",
+    "path": "/workspaces/:x/members",
+    "feature": "settings.workspace_profile",
+    "status": "available"
+  },
+  {
+    "method": "PATCH",
+    "path": "/price-lists/:x/active",
+    "feature": "pricing.price_lists",
+    "status": "available"
+  },
+  {
+    "method": "PATCH",
+    "path": "/promotions/:x/active",
+    "feature": "pricing.promotions",
+    "status": "available"
+  },
+  {
+    "method": "PATCH",
+    "path": "/shifts/:x/active",
+    "feature": "hr.shifts",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/invoices/:x/cost",
+    "feature": "accounting.unvalued_stock",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/invoices/:x/late-fees",
+    "feature": "invoice.late_fee",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/invoices/:x/returns",
+    "feature": "invoice.returns",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/operations/budgets/:x/approve",
+    "feature": "budget.manage",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/operations/budgets/:x/archive",
+    "feature": "budget.manage",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/operations/budgets/:x/revise",
+    "feature": "budget.manage",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/operations/budgets/:x/submit",
+    "feature": "budget.manage",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/orders/:x/deposits",
+    "feature": "order.deposits",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/payments/:x/cancel",
+    "feature": "payment.cancel",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/pos/orders/:x/void",
+    "feature": "till.order",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/pos/sessions/:x/bank-transfer",
+    "feature": "till.cash_movement",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/pos/sessions/:x/cash",
+    "feature": "till.cash_movement",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/pos/sessions/:x/close",
+    "feature": "till.open_close",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/pos/sessions/:x/orders",
+    "feature": "till.order",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/pos/sessions/:x/resume",
+    "feature": "till.suspend",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/pos/sessions/:x/suspend",
+    "feature": "till.suspend",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/products/:x/fitments",
+    "feature": "product.fitments",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/products/:x/variants",
+    "feature": "product.variants",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/purchase-orders/:x/receive",
+    "feature": "purchase.orders",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/shift-assignments/:x/cancel",
+    "feature": "hr.shifts",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/storage-locations/:x/place",
+    "feature": "stock.placement",
+    "status": "available"
+  },
+  {
+    "method": "POST",
+    "path": "/warehouses/:x/locations",
+    "feature": "stock.storage_locations",
+    "status": "available"
+  },
+  {
+    "method": "PUT",
+    "path": "/invoices/:x/installments",
+    "feature": "invoice.installment",
+    "status": "available"
+  },
+  {
+    "method": "PUT",
+    "path": "/price-lists/:x/items",
+    "feature": "pricing.price_lists",
+    "status": "available"
+  }
+]

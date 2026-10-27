@@ -20,9 +20,12 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import {
   COLUMN,
+  applyInvoiceDefaults,
   defaultColumns,
   emptyRow,
+  seedQuantityForUnit,
   type InvoiceColumn,
+  type InvoiceDefaultSelection,
   type InvoiceGridRow,
 } from '@hisabche/validation'
 
@@ -100,10 +103,16 @@ export interface InvoiceDraftState {
   removeRow: (id: string) => void
   removeLastRow: () => void
   setCell: (rowId: string, columnId: string, value: string) => void
-  setRowProduct: (rowId: string, productId: string | undefined, name: string, price: string) => void
+  setRowProduct: (
+    rowId: string,
+    productId: string | undefined,
+    name: string,
+    price: string,
+    productUnit?: string,
+  ) => void
 
   // ---- columns ----
-  initColumns: (currency: CurrencyCode) => void
+  initColumns: (currency: CurrencyCode, defaults?: InvoiceDefaultSelection) => void
   setColumns: (columns: InvoiceColumn[]) => void
   addColumn: (column: InvoiceColumn) => void
   updateColumn: (id: string, patch: Partial<InvoiceColumn>) => void
@@ -199,6 +208,7 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
           const copy: InvoiceGridRow = {
             id: nextRowId(),
             ...(source.productId ? { productId: source.productId } : {}),
+            ...(source.productUnit ? { productUnit: source.productUnit } : {}),
             values: { ...source.values },
           }
           const rows = [...state.rows]
@@ -229,7 +239,7 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
           return { rows: withTrailingBlank(rows, state.columns) }
         }),
 
-      setRowProduct: (rowId, productId, name, price) =>
+      setRowProduct: (rowId, productId, name, price, productUnit) =>
         set((state) => {
           const rows = state.rows.map((row) => {
             if (row.id !== rowId) return row
@@ -237,12 +247,23 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
               ...row.values,
               [COLUMN.description]: name,
             }
+            // The line sells in the product's own unit. Without this a gram-
+            // priced product could keep an empty unit cell that the mapper
+            // reads as «piece».
+            if (productUnit) values[COLUMN.unit] = productUnit
             // Only seed the price when the user has not typed one — retyping
             // over a deliberate price would silently change the money.
             if (price && !values[COLUMN.unitPrice]?.trim()) values[COLUMN.unitPrice] = price
-            if (!values[COLUMN.quantity]?.trim()) values[COLUMN.quantity] = '1'
+            // «1» is only an honest default where the unit is counted one by
+            // one. A measured product waits for the quantity the user means:
+            // seeding «1 gram» is the defect this rule exists to stop.
+            if (!values[COLUMN.quantity]?.trim()) {
+              const seed = seedQuantityForUnit(productUnit)
+              if (seed) values[COLUMN.quantity] = seed
+            }
             const next: InvoiceGridRow = { id: row.id, values }
             if (productId) next.productId = productId
+            if (productUnit) next.productUnit = productUnit
             return next
           })
           return { rows: withTrailingBlank(rows, state.columns) }
@@ -252,9 +273,11 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
       // Runs once, to re-key the starting layout to the user's real currency.
       // After that the layout is the user's and is never rewritten — adding
       // «وزن خالص» must survive every visit.
-      initColumns: (currency) => {
+      initColumns: (currency, defaults) => {
         if (get().columnsInitialised) return
-        const columns = defaultColumns(currency)
+        const columns = defaults
+          ? applyInvoiceDefaults(defaultColumns(currency), defaults)
+          : defaultColumns(currency)
         set({
           columns,
           columnsInitialised: true,

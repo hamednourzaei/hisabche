@@ -12,6 +12,8 @@ import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { persistedBytes } from '../../../lib/persisted-bytes'
 import { HardwareSection } from './hardware-section'
 import { BookCurrencySection } from './book-currency-section'
+import { IndustryProfileSection } from './industry-profile-section'
+import { CreditLimitModeSection } from './credit-limit-mode-section'
 import { MetalUnitSection } from './metal-unit-section'
 import { LanguageSection } from './language-section'
 import { WorkplaceTimeZoneSection } from './workplace-time-zone-section'
@@ -1119,6 +1121,8 @@ export const SettingsPage = memo(function SettingsPage({
       <LanguageSection />
       <BusinessStampSection />
       <BookCurrencySection />
+      <IndustryProfileSection />
+      <CreditLimitModeSection />
       <MetalUnitSection />
       <WorkplaceTimeZoneSection />
       <BillingSection />

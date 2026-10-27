@@ -444,3 +444,25 @@ export function useSetCostingMethod() {
     onSuccess: (settings) => queryClient.setQueryData(inventorySettingsKey, settings),
   })
 }
+
+export function useDraftPOFromReorder() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (
+      suggestions: Array<{
+        supplierId: string
+        productId: string
+        suggestedQuantity: number
+        unitPrice?: number
+      }>,
+    ) => {
+      const { data } = await apiClient.post('/inventory/reorder-suggestions/draft-po', {
+        suggestions,
+      })
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] })
+    },
+  })
+}

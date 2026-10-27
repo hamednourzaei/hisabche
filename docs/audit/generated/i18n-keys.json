@@ -1,0 +1,280 @@
+{
+  "out": {
+    "distinctLiteralKeys": 3331,
+    "missingFa": 49,
+    "missingAf": 49,
+    "missingEn": 49
+  },
+  "missing": {
+    "fa": [
+      ["crm.interactions.type", "packages/ui/src/components/ui/crm/task-detail-modal.tsx"],
+      [
+        "customers.name",
+        "packages/ui/src/components/ui/customers/containers/customer-360-container.tsx"
+      ],
+      [
+        "pageLook.hubSections",
+        "packages/ui/src/components/ui/customers/containers/customers-hub-container.tsx"
+      ],
+      ["customers.empty", "packages/ui/src/components/ui/customers/customer-list-view.tsx"],
+      ["invoice.open", "packages/ui/src/components/ui/dashboard/dashboard-invoices.tsx"],
+      [
+        "invoices.item",
+        "packages/ui/src/components/ui/invoice-detail/containers/invoice-360-container.tsx"
+      ],
+      [
+        "invoices.price",
+        "packages/ui/src/components/ui/invoice-detail/containers/invoice-360-container.tsx"
+      ],
+      ["invoices.type", "packages/ui/src/components/ui/invoices/invoices-view.tsx"],
+      ["dashboard.salesChart", "packages/ui/src/components/ui/landing-preview.tsx"],
+      ["landing.invoices", "packages/ui/src/components/ui/landing-preview.tsx"],
+      [
+        "entity.activity.empty",
+        "packages/ui/src/components/ui/notification-bell/EntityActivityCard.tsx"
+      ],
+      [
+        "entity.activity.count",
+        "packages/ui/src/components/ui/notification-bell/EntityActivityCard.tsx"
+      ],
+      ["permissions.cap.invite", "packages/ui/src/components/ui/permissions/permissions-view.tsx"],
+      [
+        "permissions.cap.removeMember",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      [
+        "permissions.cap.changeRole",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      [
+        "permissions.cap.deleteWorkspace",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      [
+        "permissions.cap.useAllModules",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      ["permissions.honestNote", "packages/ui/src/components/ui/permissions/permissions-view.tsx"],
+      [
+        "permissions.manageMembers",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      [
+        "auth.logoutPendingTitle",
+        "packages/app-shell/src/components/layout/logout-pending-dialog.tsx"
+      ],
+      [
+        "auth.logoutPendingBody",
+        "packages/app-shell/src/components/layout/logout-pending-dialog.tsx"
+      ],
+      ["auth.logoutKeepData", "packages/app-shell/src/components/layout/logout-pending-dialog.tsx"],
+      ["auth.title", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["common.logout", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.displayCurrency", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.deviceDatabase", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.dbReady", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.localOnly", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.appVersion", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.platform", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.col.record", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.col.operation", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.col.stage", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.col.reason", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.col.time", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.stage.rejected", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.neverSynced", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.lastSync", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.pendingWaiting", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.preparingData", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.ownerUnknownHint", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.claimAsCurrentUser", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.queueEmpty", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.rejectedHint", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.claimDialogTitle", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.claimDialogBody", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.committedTitle", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.committedHint", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.stage.committed", "packages/app-shell/src/features/sync/sync-page.tsx"]
+    ],
+    "af": [
+      ["crm.interactions.type", "packages/ui/src/components/ui/crm/task-detail-modal.tsx"],
+      [
+        "customers.name",
+        "packages/ui/src/components/ui/customers/containers/customer-360-container.tsx"
+      ],
+      [
+        "pageLook.hubSections",
+        "packages/ui/src/components/ui/customers/containers/customers-hub-container.tsx"
+      ],
+      ["customers.empty", "packages/ui/src/components/ui/customers/customer-list-view.tsx"],
+      ["invoice.open", "packages/ui/src/components/ui/dashboard/dashboard-invoices.tsx"],
+      [
+        "invoices.item",
+        "packages/ui/src/components/ui/invoice-detail/containers/invoice-360-container.tsx"
+      ],
+      [
+        "invoices.price",
+        "packages/ui/src/components/ui/invoice-detail/containers/invoice-360-container.tsx"
+      ],
+      ["invoices.type", "packages/ui/src/components/ui/invoices/invoices-view.tsx"],
+      ["dashboard.salesChart", "packages/ui/src/components/ui/landing-preview.tsx"],
+      ["landing.invoices", "packages/ui/src/components/ui/landing-preview.tsx"],
+      [
+        "entity.activity.empty",
+        "packages/ui/src/components/ui/notification-bell/EntityActivityCard.tsx"
+      ],
+      [
+        "entity.activity.count",
+        "packages/ui/src/components/ui/notification-bell/EntityActivityCard.tsx"
+      ],
+      ["permissions.cap.invite", "packages/ui/src/components/ui/permissions/permissions-view.tsx"],
+      [
+        "permissions.cap.removeMember",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      [
+        "permissions.cap.changeRole",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      [
+        "permissions.cap.deleteWorkspace",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      [
+        "permissions.cap.useAllModules",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      ["permissions.honestNote", "packages/ui/src/components/ui/permissions/permissions-view.tsx"],
+      [
+        "permissions.manageMembers",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      [
+        "auth.logoutPendingTitle",
+        "packages/app-shell/src/components/layout/logout-pending-dialog.tsx"
+      ],
+      [
+        "auth.logoutPendingBody",
+        "packages/app-shell/src/components/layout/logout-pending-dialog.tsx"
+      ],
+      ["auth.logoutKeepData", "packages/app-shell/src/components/layout/logout-pending-dialog.tsx"],
+      ["auth.title", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["common.logout", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.displayCurrency", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.deviceDatabase", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.dbReady", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.localOnly", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.appVersion", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.platform", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.col.record", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.col.operation", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.col.stage", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.col.reason", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.col.time", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.stage.rejected", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.neverSynced", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.lastSync", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.pendingWaiting", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.preparingData", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.ownerUnknownHint", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.claimAsCurrentUser", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.queueEmpty", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.rejectedHint", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.claimDialogTitle", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.claimDialogBody", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.committedTitle", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.committedHint", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.stage.committed", "packages/app-shell/src/features/sync/sync-page.tsx"]
+    ],
+    "en": [
+      ["crm.interactions.type", "packages/ui/src/components/ui/crm/task-detail-modal.tsx"],
+      [
+        "customers.name",
+        "packages/ui/src/components/ui/customers/containers/customer-360-container.tsx"
+      ],
+      [
+        "pageLook.hubSections",
+        "packages/ui/src/components/ui/customers/containers/customers-hub-container.tsx"
+      ],
+      ["customers.empty", "packages/ui/src/components/ui/customers/customer-list-view.tsx"],
+      ["invoice.open", "packages/ui/src/components/ui/dashboard/dashboard-invoices.tsx"],
+      [
+        "invoices.item",
+        "packages/ui/src/components/ui/invoice-detail/containers/invoice-360-container.tsx"
+      ],
+      [
+        "invoices.price",
+        "packages/ui/src/components/ui/invoice-detail/containers/invoice-360-container.tsx"
+      ],
+      ["invoices.type", "packages/ui/src/components/ui/invoices/invoices-view.tsx"],
+      ["dashboard.salesChart", "packages/ui/src/components/ui/landing-preview.tsx"],
+      ["landing.invoices", "packages/ui/src/components/ui/landing-preview.tsx"],
+      [
+        "entity.activity.empty",
+        "packages/ui/src/components/ui/notification-bell/EntityActivityCard.tsx"
+      ],
+      [
+        "entity.activity.count",
+        "packages/ui/src/components/ui/notification-bell/EntityActivityCard.tsx"
+      ],
+      ["permissions.cap.invite", "packages/ui/src/components/ui/permissions/permissions-view.tsx"],
+      [
+        "permissions.cap.removeMember",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      [
+        "permissions.cap.changeRole",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      [
+        "permissions.cap.deleteWorkspace",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      [
+        "permissions.cap.useAllModules",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      ["permissions.honestNote", "packages/ui/src/components/ui/permissions/permissions-view.tsx"],
+      [
+        "permissions.manageMembers",
+        "packages/ui/src/components/ui/permissions/permissions-view.tsx"
+      ],
+      [
+        "auth.logoutPendingTitle",
+        "packages/app-shell/src/components/layout/logout-pending-dialog.tsx"
+      ],
+      [
+        "auth.logoutPendingBody",
+        "packages/app-shell/src/components/layout/logout-pending-dialog.tsx"
+      ],
+      ["auth.logoutKeepData", "packages/app-shell/src/components/layout/logout-pending-dialog.tsx"],
+      ["auth.title", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["common.logout", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.displayCurrency", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.deviceDatabase", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.dbReady", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.localOnly", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.appVersion", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.platform", "packages/app-shell/src/features/settings/settings-page.tsx"],
+      ["sync.col.record", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.col.operation", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.col.stage", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.col.reason", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.col.time", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.stage.rejected", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.neverSynced", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.lastSync", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.pendingWaiting", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.preparingData", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.ownerUnknownHint", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.claimAsCurrentUser", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.queueEmpty", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.rejectedHint", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.claimDialogTitle", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.claimDialogBody", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.committedTitle", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.committedHint", "packages/app-shell/src/features/sync/sync-page.tsx"],
+      ["sync.stage.committed", "packages/app-shell/src/features/sync/sync-page.tsx"]
+    ]
+  }
+}

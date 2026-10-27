@@ -1,0 +1,189 @@
+routes: 816 · client path strings: 629 · with no caller: 116
+
+activity.routes.ts
+  GET /api/v1/entities/:entityType/:entityId/summary
+
+admin-billing.routes.ts
+  POST /api/admin/workspaces/:id/billing-ledger
+  GET /api/admin/billing/subscriptions/:id/history
+
+admin.routes.ts
+  GET /api/admin/users
+  GET /api/admin/users/:id
+  GET /api/admin/workspaces/:id
+  GET /api/admin/workspaces/:id/invoices
+  GET /api/admin/workspaces/:id/transactions
+  GET /api/admin/webhook-events
+
+agriculture.routes.ts
+  GET /api/agriculture/livestock
+  POST /api/agriculture/livestock
+
+ai.routes.ts
+  POST /api/ai/query
+
+analytics.routes.ts
+  GET /api/analytics/inventory
+  GET /api/analytics/financial
+
+attendance-link.routes.ts
+  GET /api/public/attendance/:token
+  POST /api/public/attendance/:token
+  POST /api/public/attendance/:token/phone
+
+audit.routes.ts
+  POST /api/audit/log
+  GET /api/audit/entity/:type/:id
+  GET /api/audit/user/:userId
+  GET /api/audit/stats
+  GET /api/audit/export
+  POST /api/audit/cleanup
+
+billing.routes.ts
+  POST /api/admin/upgrade-requests/:id/approve
+  POST /api/admin/upgrade-requests/:id/reject
+  POST /api/billing/offline-license
+  GET /api/billing/offline-license
+  POST /api/billing/offline-license/:licenseId/revoke
+  GET /api/billing/offline-license/revocations
+  POST /api/billing/offline-license/activate-seat
+  POST /api/billing/offline-license/connect
+  POST /api/billing/offline-license/tier1-report
+  POST /api/billing/offline-license/tier2-report
+  GET /api/billing/offline-license/logs
+  GET /api/billing/offline-license/review-queue
+  POST /api/billing/devices/activate
+  POST /api/billing/devices/:deviceId/release
+  GET /api/billing/devices
+  GET /api/billing/upgrade-credit
+
+blog.routes.ts
+  GET /api/admin/blog/intelligence/drafts/:id/links
+  PATCH /api/admin/blog/intelligence/links/:id
+
+cloud-migration.routes.ts
+  POST /api/cloud-migration/jobs
+  POST /api/cloud-migration/jobs/:id/chunk
+  POST /api/cloud-migration/jobs/:id/reconcile
+  POST /api/cloud-migration/jobs/:id/confirm
+  GET /api/cloud-migration/jobs/:id
+
+cms.routes.ts
+  GET /api/public/cms/pages/:locale/:slug
+  POST /api/cms/pages/:id/publish
+  POST /api/cms/pages/:id/archive
+
+crm.routes.ts
+  GET /api/public/tasks/:token
+  PATCH /api/public/tasks/:token/status
+  PATCH /api/public/tasks/:token/customer-outcome
+
+customer-portal.routes.ts
+  GET /api/public/portal/:token
+
+customer.routes.ts
+  GET /api/customers/:id/balance
+
+debug.routes.ts
+  GET /api/debug/routes
+  GET /api/debug/check/:path
+  GET /api/debug/info
+
+escalation.routes.ts
+  GET /api/v1/workflow-escalations
+
+event.routes.ts
+  POST /api/events/emit
+  POST /api/events/process
+  POST /api/events/seed
+  GET /api/events/stats
+  POST /api/events/cleanup
+
+human-resources.routes.ts
+  GET /api/departments
+  POST /api/departments
+  PATCH /api/departments/:id
+  GET /api/attendance/:employeeId
+  POST /api/attendance
+  PATCH /api/attendance/:id
+
+invoice-public.routes.ts
+  GET /api/public/invoices/:token
+
+manufacturing.routes.ts
+  PATCH /api/work-orders/:id
+
+oauth.routes.ts
+  POST /api/oauth/token
+  POST /api/oauth/revoke
+
+odata.routes.ts
+  GET /api/odata/:dataset
+
+orders.routes.ts
+  GET /api/orders
+  GET /api/orders/:id
+  POST /api/orders
+  POST /api/orders/:id/confirm
+  POST /api/orders/:id/cancel
+  POST /api/orders/:id/fulfill
+  POST /api/orders/:id/invoice
+
+permission.routes.ts
+  POST /api/permissions/seed
+  GET /api/users/:userId/roles
+  POST /api/users/:userId/roles
+  DELETE /api/users/:userId/roles/:roleId
+  GET /api/users/:userId/permissions
+  POST /api/permissions/check
+
+product.routes.ts
+  GET /api/products/low-stock
+
+project.routes.ts
+  GET /api/projects/:projectId/members
+  POST /api/projects/:projectId/members
+  DELETE /api/projects/:projectId/members/:memberId
+  GET /api/projects/:projectId/time-entries
+  POST /api/projects/:projectId/time-entries
+  PATCH /api/time-entries/:id
+  DELETE /api/time-entries/:id
+
+promotions.routes.ts
+  POST /api/promotions/quote
+
+snapshots.routes.ts
+  GET /api/snapshots
+  POST /api/snapshots
+  GET /api/snapshots/:id/compare
+
+sync-stream.routes.ts
+  GET /api/sync/stream
+
+sync.routes.ts
+  POST /api/sync/lease
+  DELETE /api/sync/lease
+  GET /api/sync/health
+
+system-metrics.routes.ts
+  GET /api/system/metrics
+  GET /api/system/metrics/stream
+
+transaction.routes.ts
+  GET /api/transactions/balance/:customerId
+
+transport.routes.ts
+  GET /api/freight/trips
+  POST /api/freight/trips
+  GET /api/courier/deliveries
+  POST /api/courier/deliveries
+  PATCH /api/courier/deliveries/:id/cod-status
+  GET /api/delivery-notes
+  POST /api/delivery-notes
+
+updates.routes.ts
+  GET /api/updates/:platform/latest.yml
+  GET /api/updates/:platform/:fileName
+
+warehouse.routes.ts
+  GET /api/warehouses/:id/stock

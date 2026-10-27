@@ -1,0 +1,362 @@
+[
+  {
+    "file": "packages/api/src/hooks/ai-chat.ts",
+    "name": "useAiConfig",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/ai-chat.ts",
+    "name": "useSaveAiConfig",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/ai-chat.ts",
+    "name": "useSetAiQuota",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/audit.ts",
+    "name": "useVerifyAuditLog",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/auth.ts",
+    "name": "useLogin",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/auth.ts",
+    "name": "useSignUp",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/auth.ts",
+    "name": "useLogout",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/bank.ts",
+    "name": "useUnmatchLine",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/budgets.ts",
+    "name": "useBudgets",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/budgets.ts",
+    "name": "useBudgetVariance",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/crm.ts",
+    "name": "useCreateOpportunity",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/crm.ts",
+    "name": "useUpdateOpportunity",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/customers.ts",
+    "name": "useUpdateCustomer",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/expiry.ts",
+    "name": "useSerials",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/expiry.ts",
+    "name": "useLotTrail",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/expiry.ts",
+    "name": "useReceiveSerials",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/governance.ts",
+    "name": "useSoD",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/governance.ts",
+    "name": "useSoDOverrides",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/governance.ts",
+    "name": "useSaveSoD",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/inventory-operations.ts",
+    "name": "useProductUnits",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/inventory-operations.ts",
+    "name": "useSaveProductUnits",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/inventory-operations.ts",
+    "name": "useDraftPOFromReorder",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/invoices.ts",
+    "name": "useInvoicesInfinite",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/invoices.ts",
+    "name": "useUpdateInvoice",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/late-fees.ts",
+    "name": "useLateFeePolicy",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/migrations.ts",
+    "name": "useMigration",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/permission-matrix.ts",
+    "name": "useRenameCustomRole",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/permissions.ts",
+    "name": "useRoles",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/permissions.ts",
+    "name": "usePermissions",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/permissions.ts",
+    "name": "useCreateRole",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/permissions.ts",
+    "name": "useDeleteRole",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/projects.ts",
+    "name": "useCreateProject",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/projects.ts",
+    "name": "useDeleteProject",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/projects.ts",
+    "name": "useProjectTasks",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/projects.ts",
+    "name": "useCreateProjectTask",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/projects.ts",
+    "name": "useUpdateProjectTask",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/projects.ts",
+    "name": "useDeleteProjectTask",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/projects.ts",
+    "name": "useProject",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/projects.ts",
+    "name": "useUpdateProject",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/purchasing.ts",
+    "name": "usePurchaseOrders",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/purchasing.ts",
+    "name": "usePurchaseOrder",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/purchasing.ts",
+    "name": "useReceiveGoods",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/tax.ts",
+    "name": "useTaxReturn",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/till.ts",
+    "name": "useAbandonedSessions",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/till.ts",
+    "name": "useRecordOrder",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/till.ts",
+    "name": "useBankTransfer",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/till.ts",
+    "name": "useVoidOrder",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/timesheets.ts",
+    "name": "useSaveBillingConfig",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/transactions.ts",
+    "name": "useTransactions",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/units.ts",
+    "name": "useUnitsByDimension",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useLatestMetalRate",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useRecordMetalRate",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useVehicles",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useCreateVehicle",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useRegisterWarranty",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useInvoiceReturns",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useOrderDeposits",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useCreateOrderDeposit",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useAppointments",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useCreateAppointment",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useCropCycles",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useCreateCropCycle",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useFreightTrips",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useCreateFreightTrip",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useCourierDeliveries",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useCreateCourierDelivery",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useProgressCourierCod",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useDeliveryNotes",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/universal-core.ts",
+    "name": "useCreateDeliveryNote",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/use-workflow.ts",
+    "name": "useStartWorkflowInstance",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/workspace.ts",
+    "name": "useCreateWorkspace",
+    "consumers": 0
+  },
+  {
+    "file": "packages/api/src/hooks/workspace.ts",
+    "name": "useSetMemberSuspension",
+    "consumers": 0
+  }
+]

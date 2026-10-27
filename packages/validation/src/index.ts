@@ -104,6 +104,7 @@ export {
   columnCountsInTotal,
   canDeleteColumn,
   columnTotals,
+  applyInvoiceDefaults,
   currencyPrecision,
   customColumnId,
   defaultColumns,
@@ -133,6 +134,7 @@ export {
   type GridValidationIssue,
   type InvoiceColumn,
   type InvoiceColumnType,
+  type InvoiceDefaultSelection,
   type InvoiceGridRow,
   type InvoiceSummary,
   type InvoiceSummaryInput,
@@ -950,6 +952,70 @@ export {
 } from './schemas/ai.schema'
 // The dashboard's smart suggestions: one rule, read by the server and by the device.
 export { SEEDED_UNITS, type UnitRecord } from './schemas/units-seed'
+
+// ---------- Industry profiles, capabilities & measurement (one shared core) ----------
+export {
+  CAPABILITIES,
+  CAPABILITY_KEYS,
+  AVAILABLE_CAPABILITIES,
+  isAvailableCapability,
+  type CapabilityDefinition,
+  type CapabilityEvidence,
+  type CapabilityKey,
+} from './schemas/business-capabilities'
+export {
+  INDUSTRY_KEYS,
+  LEGACY_INDUSTRY_KEYS,
+  SALES_MODEL_KEYS,
+  DASHBOARD_PART_IDS,
+  PROFILES,
+  canonicalIndustryTypes,
+  resolveBusinessProfile,
+  industryKeysWithProfiles,
+  operatingCharacteristicsSchema,
+  DEFAULT_OPERATING_CHARACTERISTICS,
+  type OperatingCharacteristics,
+  type BusinessProfile,
+  type CanonicalIndustryInput,
+  type DashboardPartId,
+  type IndustryKey,
+  type InvoiceDefaults,
+  type ProductDefaults,
+  type ProfileDefinition,
+  type Vocabulary,
+} from './schemas/industry-profiles'
+export {
+  INVOICE_UNIT_CHOICES,
+  convertQuantity,
+  isCountUnit,
+  isMeasurementUnit,
+  lineUnitIssue,
+  seedQuantityForUnit,
+  unitDimension,
+  unitFactor,
+  type LineUnitIssue,
+  type UnitCode,
+  type UnitDimension,
+} from './schemas/measurement.domain'
+export {
+  defaultUnitFor,
+  fromBaseQuantity,
+  roundToBaseScale,
+  toBaseQuantity,
+  validateUnitSet,
+  type ConversionRefusal,
+  type ConversionResult,
+  type ProductUnitOption,
+  type UnitSetRefusal,
+} from './schemas/unit-conversion.domain'
+export {
+  flagFilter,
+  idFilter,
+  isUnsetFlag,
+  isUnsetValue,
+  setFilters,
+  textFilter,
+} from './schemas/filter-contract'
 export {
   buildInsights,
   type InsightInput,
@@ -1306,3 +1372,21 @@ export * from './schemas/divergence-alarm'
 // The same reasoning was applied to the golden-vector runner: it is test
 // support, it stays in `src/__golden__/`, and it is imported BY PATH by the
 // suites that need it so this barrel has no inbound edge from it.
+
+export * from './schemas/universal-core'
+export * from './schemas/tax.domain'
+export * from './schemas/deferral.domain'
+export * from './schemas/expense-claims.domain'
+export * from './schemas/mfa.domain'
+export {
+  threeWayMatch,
+  type ThreeWayMatchLine,
+  type ThreeWayMatchResult,
+  type MatchVariance,
+} from './schemas/purchasing.domain'
+export {
+  allocateLandedCost,
+  type LandedCostLineInput,
+  type AllocatedLandedCostLine,
+} from './schemas/costing.domain'
+export * from './schemas/sync-identity'

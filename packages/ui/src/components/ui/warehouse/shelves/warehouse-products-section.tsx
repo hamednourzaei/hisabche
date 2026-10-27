@@ -262,9 +262,11 @@ export function WarehouseShelvesContainer({
       ? 'loading'
       : map.isError
         ? 'error'
-        : map.data?.migrated === false
-          ? 'not-migrated'
-          : 'ready'
+        : map.data?.notAvailableOffline === true
+          ? 'offline-unavailable'
+          : map.data?.migrated === false
+            ? 'not-migrated'
+            : 'ready'
 
   const openShelf = shelfId ? shelves.find((s) => s.id === shelfId) : undefined
   const unshelvedCount = stock.filter((row) => row.free > 0).length

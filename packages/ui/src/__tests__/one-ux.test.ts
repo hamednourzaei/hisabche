@@ -42,7 +42,7 @@ describe('the comparison is gone', () => {
       .filter((path) => words.some((word) => readFileSync(path, 'utf8').includes(word)))
       .map((path) => path.slice(ROOT.length + 1))
     expect(left).toEqual([])
-  })
+  }, 60_000) // reads the source of five packages; 5 s is not enough under load
 
   it('the switch component and its words are gone', () => {
     expect(

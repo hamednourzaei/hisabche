@@ -12,7 +12,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const get = vi.fn()
-vi.mock('../lib/client', () => ({ default: { get: (...a: unknown[]) => get(...a) } }))
+// The local engine: `null` is «this host has none» (the web build).
+const local = vi.fn()
+vi.mock('../lib/client', () => ({
+  default: { get: (...a: unknown[]) => get(...a) },
+  localRequest: (...a: unknown[]) => local(...a),
+  getAppEdition: () => 'cloud',
+}))
 
 const { fetchCustomers } = await import('../hooks/customers')
 const { registerOfflineQueue } = await import('../lib/offline-queue')
@@ -60,6 +66,8 @@ const list = { page: 1, limit: 20, sortDirection: 'desc' } as const
 
 beforeEach(() => {
   get.mockReset()
+  local.mockReset()
+  local.mockResolvedValue(null)
   offline = false
   deviceRows = []
   deviceTotal = 0
@@ -191,5 +199,39 @@ describe('the customer list', () => {
       fetchCustomers({ page: 1, limit: 20, sortDirection: 'desc', role: 'buyer' }, {}, SIGNAL),
     ).rejects.toMatchObject({ code: 'NETWORK_ERROR' })
     expect(reads).toHaveLength(0)
+  })
+})
+
+// ⚠️ THE ENGINE, NOT THE GATED TABLE READ (26 Oct 2026) — the product picker's
+// twin: `db:query` is refused without a stored sign-in, the engine is not.
+describe('the device answers through the local engine', () => {
+  it('offline: the engine is asked, and the table read never is', async () => {
+    offline = true
+    local.mockResolvedValue({
+      customers: [{ id: 'c1', fullName: 'haji' }],
+      total: 1,
+    })
+
+    const page = await fetchCustomers(
+      { page: 1, limit: 20, sortDirection: 'desc', search: 'haj' },
+      {},
+      SIGNAL,
+    )
+
+    expect(page.customers.map((c) => c.fullName)).toEqual(['haji'])
+    expect(reads).toEqual([])
+    expect(get).not.toHaveBeenCalled()
+    expect(local.mock.calls[0]![3]).toMatchObject({ search: 'haj', page: '1', limit: '20' })
+  })
+
+  it('a host with no engine still has the table read', async () => {
+    offline = true
+    deviceRows = [{ id: 'c1', full_name: 'haji', is_active: 1 }]
+    deviceTotal = 1
+
+    const page = await fetchCustomers({ page: 1, limit: 20, sortDirection: 'desc' }, {}, SIGNAL)
+
+    expect(page.customers).toHaveLength(1)
+    expect(reads).toHaveLength(1)
   })
 })

@@ -1,0 +1,2290 @@
+[
+  {
+    "table": "accounting_period_locks",
+    "files": "docs/accounting-core-migration.sql docs/phase-j-01-branch-period-lock-migration.sql",
+    "fk": 1,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "activity_reads",
+    "files": "docs/activity-reads-01-migration.sql",
+    "fk": 2,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "admin_accounts",
+    "files": "docs/admin-02-security-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 2,
+    "workspace": false
+  },
+  {
+    "table": "admin_permissions",
+    "files": "docs/admin-02-security-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "admin_security_events",
+    "files": "docs/admin-02-security-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "support_sessions",
+    "files": "docs/admin-03-customers-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "admin_notes",
+    "files": "docs/admin-03-customers-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "admin_data_requests",
+    "files": "docs/admin-03-customers-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "trial_abuse_signals",
+    "files": "docs/admin-03-customers-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "plan_prices",
+    "files": "docs/admin-04-billing-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "billing_ledger_entries",
+    "files": "docs/admin-04-billing-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "admin_action_requests",
+    "files": "docs/admin-04-billing-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "subscription_history",
+    "files": "docs/admin-04-billing-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "dunning_logs",
+    "files": "docs/admin-04-billing-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "feature_flags",
+    "files": "docs/admin-06-ops-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "admin_announcements",
+    "files": "docs/admin-06-ops-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "background_jobs",
+    "files": "docs/admin-06-ops-migration.sql docs/base-schema-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "ai_action_requests",
+    "files": "docs/ai-action-requests-01-migration.sql",
+    "fk": 0,
+    "check": 5,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "ai_pipeline_settings",
+    "files": "docs/ai-pipeline-01-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "ai_pipeline_runs",
+    "files": "docs/ai-pipeline-01-migration.sql",
+    "fk": 0,
+    "check": 8,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "ai_pipeline_steps",
+    "files": "docs/ai-pipeline-01-migration.sql",
+    "fk": 1,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "attendance_phone_keys",
+    "files": "docs/attendance-02-migration.sql",
+    "fk": 2,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "attendance_terminals",
+    "files": "docs/attendance-devices-01-migration.sql",
+    "fk": 2,
+    "check": 8,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "attendance_terminal_identities",
+    "files": "docs/attendance-devices-01-migration.sql",
+    "fk": 3,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "attendance_terminal_events",
+    "files": "docs/attendance-devices-01-migration.sql",
+    "fk": 3,
+    "check": 6,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "attendance_links",
+    "files": "docs/attendance-self-01-migration.sql",
+    "fk": 2,
+    "check": 2,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "attendance_submissions",
+    "files": "docs/attendance-self-01-migration.sql",
+    "fk": 3,
+    "check": 7,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "attendance_devices",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "attendance_device_connections",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 1,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "attendance_device_sync_state",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 1,
+    "check": 0,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "attendance_credentials",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 3,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "attendance_device_events",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 2,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "attendance_punch_events",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 3,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "attendance_shifts",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "employee_work_schedules",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 3,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "attendance_days",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "attendance_sessions",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 4,
+    "check": 1,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "attendance_calendars",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 1,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "attendance_calendar_days",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "leave_types",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 1,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "employee_leave_requests",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 4,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "attendance_adjustments",
+    "files": "docs/attendance-workforce-migration.sql",
+    "fk": 6,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "automations",
+    "files": "docs/automation-01-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "automation_runs",
+    "files": "docs/automation-01-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "scheduled_task_runs",
+    "files": "docs/background-jobs-claim-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "accounts",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "activities",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 4,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "attendance",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "audit_logs",
+    "files": "docs/base-schema-migration.sql docs/phase-g-03-audit-branch-migration.sql",
+    "fk": 1,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "billing_plans",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "bom_items",
+    "files": "docs/base-schema-migration.sql docs/phase-t4-manufacturing-fk-migration.sql",
+    "fk": 2,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "boms",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 4,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "checkout_sessions",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "customers",
+    "files": "docs/base-schema-migration.sql docs/customer-360-phase3-migration.sql",
+    "fk": 7,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "departments",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "employees",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "event_log",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "event_types",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "interactions",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 6,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "invoice_items",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 6,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "invoice_pdf_cache",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 4,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "invoices",
+    "files": "docs/base-schema-migration.sql docs/FIX-INVOICES.sql",
+    "fk": 23,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "journal_entries",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "journal_lines",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 4,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "leaves",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "ledger_entries",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 6,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "notifications",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "opportunities",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "password_reset_tokens",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "payrolls",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "permissions",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "products",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 7,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "profiles",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "project_members",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 6,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "project_tasks",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "project_time_entries",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 6,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "projects",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "purchase_order_items",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 6,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "purchase_orders",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 6,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "role_permissions",
+    "files": "docs/base-schema-migration.sql docs/phase-e-01-rbac-2.0-migration.sql",
+    "fk": 2,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "roles",
+    "files": "docs/base-schema-migration.sql docs/phase-e-01-rbac-2.0-migration.sql",
+    "fk": 1,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "stock_movements",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "subscriptions",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 6,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "suppliers",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "sync_logs",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "sync_queue",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "transactions",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 15,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "user_roles",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 5,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "warehouse_stock",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 6,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "warehouses",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "webhook_events",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "work_orders",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 5,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "workflow_actions",
+    "files": "docs/base-schema-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "workflow_instances",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 6,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "workflow_steps",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "workflows",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "workspace_invites",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "workspace_members",
+    "files": "docs/base-schema-migration.sql docs/hardening-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "workspaces",
+    "files": "docs/base-schema-migration.sql docs/developer-platform-06-sandbox-migration.sql",
+    "fk": 1,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "blog_categories",
+    "files": "docs/blog-migration.sql",
+    "fk": 0,
+    "check": 4,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "blog_tags",
+    "files": "docs/blog-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "blog_posts",
+    "files": "docs/blog-migration.sql",
+    "fk": 1,
+    "check": 12,
+    "unique": 2,
+    "workspace": false
+  },
+  {
+    "table": "blog_post_tags",
+    "files": "docs/blog-migration.sql",
+    "fk": 2,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "blog_comments",
+    "files": "docs/blog-migration.sql",
+    "fk": 2,
+    "check": 2,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "blog_reactions",
+    "files": "docs/blog-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "blog_ratings",
+    "files": "docs/blog-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "blog_post_view_days",
+    "files": "docs/blog-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "branches",
+    "files": "docs/branch-migration.sql docs/phase-g-01-branch-manager-migration.sql",
+    "fk": 4,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "member_branches",
+    "files": "docs/branch-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "budget_revisions",
+    "files": "docs/budget-planning-migration.sql",
+    "fk": 1,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "customer_campaigns",
+    "files": "docs/campaigns-01-migration.sql",
+    "fk": 0,
+    "check": 10,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "campaign_recipients",
+    "files": "docs/campaigns-01-migration.sql",
+    "fk": 1,
+    "check": 6,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "customer_contact_optouts",
+    "files": "docs/campaigns-01-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "cloud_migration_jobs",
+    "files": "docs/cloud-migration-01-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "cloud_migration_map",
+    "files": "docs/cloud-migration-01-migration.sql",
+    "fk": 2,
+    "check": 0,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "cloud_migration_records",
+    "files": "docs/cloud-migration-01-migration.sql",
+    "fk": 2,
+    "check": 1,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "cms_media",
+    "files": "docs/cms-foundation-migration.sql",
+    "fk": 1,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "cms_pages",
+    "files": "docs/cms-foundation-migration.sql",
+    "fk": 3,
+    "check": 3,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "cms_page_versions",
+    "files": "docs/cms-foundation-migration.sql",
+    "fk": 2,
+    "check": 0,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "cms_navigation",
+    "files": "docs/cms-foundation-migration.sql",
+    "fk": 1,
+    "check": 2,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "cms_globals",
+    "files": "docs/cms-foundation-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "blog_content_briefs",
+    "files": "docs/content-intelligence-01-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "blog_research_runs",
+    "files": "docs/content-intelligence-01-migration.sql",
+    "fk": 1,
+    "check": 3,
+    "unique": 2,
+    "workspace": false
+  },
+  {
+    "table": "blog_sources",
+    "files": "docs/content-intelligence-01-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 2,
+    "workspace": false
+  },
+  {
+    "table": "blog_article_sources",
+    "files": "docs/content-intelligence-01-migration.sql",
+    "fk": 2,
+    "check": 1,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "blog_article_versions",
+    "files": "docs/content-intelligence-02-migration.sql",
+    "fk": 2,
+    "check": 3,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "blog_quality_reports",
+    "files": "docs/content-intelligence-03-migration.sql",
+    "fk": 2,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "blog_internal_links",
+    "files": "docs/content-intelligence-04-migration.sql",
+    "fk": 2,
+    "check": 3,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "blog_prompt_settings",
+    "files": "docs/content-intelligence-05-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "core_divergence",
+    "files": "docs/core-divergence-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "custom_field_definitions",
+    "files": "docs/custom-fields-01-migration.sql",
+    "fk": 0,
+    "check": 7,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "custom_field_values",
+    "files": "docs/custom-fields-01-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "custom_unit_rates",
+    "files": "docs/custom-units-01-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "customer_documents",
+    "files": "docs/customer-360-phase3-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "migration_jobs",
+    "files": "docs/data-migration-center-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "migration_records",
+    "files": "docs/data-migration-center-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "migration_profiles",
+    "files": "docs/data-migration-center-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "data_snapshots",
+    "files": "docs/data-snapshots-01-migration.sql",
+    "fk": 0,
+    "check": 5,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "deferral_schedules",
+    "files": "docs/deferral-schedules-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "deferral_schedule_lines",
+    "files": "docs/deferral-schedules-migration.sql",
+    "fk": 1,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "api_request_logs",
+    "files": "docs/developer-platform-02-migration.sql",
+    "fk": 2,
+    "check": 4,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "storefront_settings",
+    "files": "docs/developer-platform-03-commerce-migration.sql",
+    "fk": 1,
+    "check": 5,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "sales_orders",
+    "files": "docs/developer-platform-03-commerce-migration.sql",
+    "fk": 2,
+    "check": 7,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "sales_order_items",
+    "files": "docs/developer-platform-03-commerce-migration.sql",
+    "fk": 2,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "customer_portal_links",
+    "files": "docs/developer-platform-04-portal-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "oauth_apps",
+    "files": "docs/developer-platform-05-oauth-migration.sql docs/developer-platform-07-marketplace-migration.sql",
+    "fk": 2,
+    "check": 8,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "oauth_authorization_codes",
+    "files": "docs/developer-platform-05-oauth-migration.sql",
+    "fk": 2,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "app_publishers",
+    "files": "docs/developer-platform-07-marketplace-migration.sql",
+    "fk": 1,
+    "check": 4,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "app_screenshots",
+    "files": "docs/developer-platform-07-marketplace-migration.sql",
+    "fk": 1,
+    "check": 3,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "oauth_app_webhook_secrets",
+    "files": "docs/developer-platform-07-marketplace-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "app_versions",
+    "files": "docs/developer-platform-07-marketplace-migration.sql",
+    "fk": 1,
+    "check": 4,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "app_installations",
+    "files": "docs/developer-platform-07-marketplace-migration.sql",
+    "fk": 5,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "app_reviews",
+    "files": "docs/developer-platform-07-marketplace-migration.sql",
+    "fk": 2,
+    "check": 3,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "app_reports",
+    "files": "docs/developer-platform-07-marketplace-migration.sql",
+    "fk": 2,
+    "check": 4,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "oauth_refresh_tokens",
+    "files": "docs/developer-platform-08-migration.sql",
+    "fk": 2,
+    "check": 1,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "api_keys",
+    "files": "docs/developer-platform-migration.sql",
+    "fk": 1,
+    "check": 3,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "webhook_endpoints",
+    "files": "docs/developer-platform-migration.sql",
+    "fk": 1,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "webhook_endpoint_secrets",
+    "files": "docs/developer-platform-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "webhook_deliveries",
+    "files": "docs/developer-platform-migration.sql",
+    "fk": 2,
+    "check": 1,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "email_outbox",
+    "files": "docs/email-outbox-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "offline_licenses",
+    "files": "docs/entitlement-01-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "devices",
+    "files": "docs/entitlement-01-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "license_logs",
+    "files": "docs/entitlement-02-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "license_review_queue",
+    "files": "docs/entitlement-02-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "entity_notes",
+    "files": "docs/entity-notes-01-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "expense_reports",
+    "files": "docs/expense-claims-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "expense_lines",
+    "files": "docs/expense-claims-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "pos_sessions",
+    "files": "docs/finance-gaps-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "pos_orders",
+    "files": "docs/finance-gaps-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 3,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "pos_order_payments",
+    "files": "docs/finance-gaps-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 3,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "pos_cash_movements",
+    "files": "docs/finance-gaps-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 3,
+    "check": 9,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "fixed_assets",
+    "files": "docs/finance-gaps-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 9,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "asset_depreciation_schedule",
+    "files": "docs/finance-gaps-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "bank_statements",
+    "files": "docs/finance-gaps-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "bank_statement_lines",
+    "files": "docs/finance-gaps-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "fx_revaluations",
+    "files": "docs/finance-gaps-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "fx_revaluation_lines",
+    "files": "docs/finance-gaps-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "accounting_dimensions",
+    "files": "docs/finance-gaps-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "dimension_values",
+    "files": "docs/finance-gaps-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 6,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "dimension_requirements",
+    "files": "docs/finance-gaps-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "loan_facilities",
+    "files": "docs/financing-01-migration.sql",
+    "fk": 0,
+    "check": 7,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "investment_holdings",
+    "files": "docs/financing-01-migration.sql",
+    "fk": 0,
+    "check": 4,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "platform_settings",
+    "files": "docs/goods-marketplace-01-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "seller_profiles",
+    "files": "docs/goods-marketplace-01-migration.sql",
+    "fk": 0,
+    "check": 7,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "marketplace_listings",
+    "files": "docs/goods-marketplace-01-migration.sql",
+    "fk": 2,
+    "check": 10,
+    "unique": 2,
+    "workspace": true
+  },
+  {
+    "table": "invoice_installments",
+    "files": "docs/installments-01-migration.sql",
+    "fk": 1,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "inventory_settings",
+    "files": "docs/inventory-costing-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 6,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "cost_layers",
+    "files": "docs/inventory-costing-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 6,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "cost_consumptions",
+    "files": "docs/inventory-costing-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "landed_costs",
+    "files": "docs/landed-costs-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 8,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "landed_cost_lines",
+    "files": "docs/landed-costs-migration.sql",
+    "fk": 1,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "late_fee_policies",
+    "files": "docs/late-fees-01-migration.sql",
+    "fk": 0,
+    "check": 7,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "late_fee_assessments",
+    "files": "docs/late-fees-01-migration.sql",
+    "fk": 0,
+    "check": 6,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "exchange_rates",
+    "files": "docs/live-reconciliation-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "journal_lines_archive",
+    "files": "docs/live-reconciliation-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "work_order_lines",
+    "files": "docs/manufacturing-01-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "mdm_merges",
+    "files": "docs/mdm-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 9,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "workspace_member_module_blocks",
+    "files": "docs/member-module-blocks-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "app_releases",
+    "files": "docs/module-desktop-update-feed-migration.sql",
+    "fk": 0,
+    "check": 4,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "offline_license_signing_keys",
+    "files": "docs/offline-licence-keys-01-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "currencies",
+    "files": "docs/patch-01-currencies-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "payments",
+    "files": "docs/patch-01-currencies-migration.sql docs/payments-ar-ap-migration.sql",
+    "fk": 2,
+    "check": 12,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "custom_units",
+    "files": "docs/patch-02-custom-units-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 2,
+    "workspace": true
+  },
+  {
+    "table": "payment_allocations",
+    "files": "docs/payments-ar-ap-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 3,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "ui_visibility_profiles",
+    "files": "docs/personalization-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "ui_visibility_suggestions",
+    "files": "docs/personalization-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 9,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "employee_branch_assignments",
+    "files": "docs/phase-d-01-employee-branch-assignments-migration.sql",
+    "fk": 3,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "stock_transfers",
+    "files": "docs/phase-k-01-stock-transfers-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "stock_transfer_lines",
+    "files": "docs/phase-k-01-stock-transfers-migration.sql",
+    "fk": 1,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "units",
+    "files": "docs/phase-l-01-units-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "product_units",
+    "files": "docs/phase-l-02-product-units-migration.sql",
+    "fk": 1,
+    "check": 2,
+    "unique": 2,
+    "workspace": true
+  },
+  {
+    "table": "cycle_counts",
+    "files": "docs/phase-l-03-cycle-counts-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "cycle_count_lines",
+    "files": "docs/phase-l-03-cycle-counts-migration.sql",
+    "fk": 1,
+    "check": 0,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "ai_query_log",
+    "files": "docs/phase-o-02-catalog-and-query-log-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "ai_provider_settings",
+    "files": "docs/phase-t13-ai-provider-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "ai_workspace_quota",
+    "files": "docs/phase-t13-ai-provider-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "plan_limit_settings",
+    "files": "docs/plan-limits-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "workspace_limit_overrides",
+    "files": "docs/plan-limits-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "price_lists",
+    "files": "docs/price-lists-01-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "price_list_items",
+    "files": "docs/price-lists-01-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "product_barcodes",
+    "files": "docs/product-barcodes-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "product_images",
+    "files": "docs/product-images-migration.sql",
+    "fk": 1,
+    "check": 3,
+    "unique": 3,
+    "workspace": true
+  },
+  {
+    "table": "promotions",
+    "files": "docs/promotions-01-migration.sql",
+    "fk": 0,
+    "check": 9,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "referral_codes",
+    "files": "docs/referral-system-migration.sql",
+    "fk": 1,
+    "check": 0,
+    "unique": 2,
+    "workspace": false
+  },
+  {
+    "table": "referrals",
+    "files": "docs/referral-system-migration.sql",
+    "fk": 3,
+    "check": 1,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "referral_commissions",
+    "files": "docs/referral-system-migration.sql",
+    "fk": 3,
+    "check": 7,
+    "unique": 1,
+    "workspace": false
+  },
+  {
+    "table": "referral_payouts",
+    "files": "docs/referral-system-migration.sql",
+    "fk": 1,
+    "check": 2,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "report_dashboards",
+    "files": "docs/report-dashboards-01-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "business_rules",
+    "files": "docs/rules-engine-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "rule_decisions",
+    "files": "docs/rules-engine-migration.sql docs/SETUP-COMPLETE.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "saved_reports",
+    "files": "docs/saved-reports-01-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "saved_views",
+    "files": "docs/saved-views-01-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "invoice_item_details",
+    "files": "docs/SETUP-COMPLETE.sql docs/unified-sale-purchase-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "sync_conflicts",
+    "files": "docs/SETUP-COMPLETE.sql docs/sync-conflicts-migration.sql",
+    "fk": 0,
+    "check": 6,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "sod_settings",
+    "files": "docs/SETUP-COMPLETE.sql docs/sod-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "sod_actions",
+    "files": "docs/SETUP-COMPLETE.sql docs/sod-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "sod_overrides",
+    "files": "docs/SETUP-COMPLETE.sql docs/sod-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "tax_settings",
+    "files": "docs/SETUP-COMPLETE.sql docs/tax-engine-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "tax_components",
+    "files": "docs/SETUP-COMPLETE.sql docs/tax-engine-migration.sql",
+    "fk": 0,
+    "check": 12,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "tax_rules",
+    "files": "docs/SETUP-COMPLETE.sql docs/tax-engine-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "invoice_tax_lines",
+    "files": "docs/SETUP-COMPLETE.sql docs/tax-engine-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "stock_batches",
+    "files": "docs/SETUP-COMPLETE.sql docs/traceability-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "stock_serials",
+    "files": "docs/SETUP-COMPLETE.sql docs/traceability-migration.sql",
+    "fk": 3,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "lot_allocations",
+    "files": "docs/SETUP-COMPLETE.sql docs/traceability-migration.sql",
+    "fk": 6,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "budgets",
+    "files": "docs/SETUP-COMPLETE.sql docs/tier2-gaps-migration.sql",
+    "fk": 0,
+    "check": 9,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "budget_commitments",
+    "files": "docs/SETUP-COMPLETE.sql docs/tier2-gaps-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "budget_breaches",
+    "files": "docs/SETUP-COMPLETE.sql docs/tier2-gaps-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "cost_reposts",
+    "files": "docs/SETUP-COMPLETE.sql docs/tier2-gaps-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "cost_repost_adjustments",
+    "files": "docs/SETUP-COMPLETE.sql docs/tier2-gaps-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "landed_cost_allocations",
+    "files": "docs/SETUP-COMPLETE.sql docs/tier2-gaps-migration.sql",
+    "fk": 3,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "project_billing_config",
+    "files": "docs/SETUP-COMPLETE.sql docs/tier2-gaps-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "time_entries",
+    "files": "docs/SETUP-COMPLETE.sql docs/tier2-gaps-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "sync_change_log",
+    "files": "docs/SETUP-COMPLETE.sql docs/sync-engine-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "sync_mutations",
+    "files": "docs/SETUP-COMPLETE.sql docs/sync-engine-migration.sql",
+    "fk": 0,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "billing_events",
+    "files": "docs/SETUP-COMPLETE.sql docs/views-and-billing-events-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "schema_migrations",
+    "files": "docs/SETUP-COMPLETE.sql docs/_bundle.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "storage_auto_shelves",
+    "files": "docs/shelf-capacity-01-migration.sql",
+    "fk": 1,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "storage_auto_receipts",
+    "files": "docs/shelf-capacity-01-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "shift_assignments",
+    "files": "docs/shift-assignments-01-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "subscription_upgrade_requests",
+    "files": "docs/subscription-upgrade-requests-migration.sql",
+    "fk": 0,
+    "check": 5,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "subscription_events",
+    "files": "docs/subscription-upgrade-requests-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "product_variants",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "metal_rates",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "auto_fitments",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "vehicle_attributes",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "warranties",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "invoice_returns",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "invoice_return_lines",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "appointments",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "crop_cycles",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "livestock_groups",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "order_deposits",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "freight_trips",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "passenger_tickets",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "courier_deliveries",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "delivery_notes",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "delivery_note_lines",
+    "files": "docs/universal-core-migration.sql",
+    "fk": 0,
+    "check": 0,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "wallet_payment_methods",
+    "files": "docs/wallet-01-migration.sql",
+    "fk": 0,
+    "check": 4,
+    "unique": 0,
+    "workspace": false
+  },
+  {
+    "table": "wallets",
+    "files": "docs/wallet-01-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 1,
+    "workspace": true
+  },
+  {
+    "table": "wallet_transactions",
+    "files": "docs/wallet-01-migration.sql",
+    "fk": 1,
+    "check": 3,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "wallet_topup_requests",
+    "files": "docs/wallet-01-migration.sql",
+    "fk": 1,
+    "check": 5,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "storage_locations",
+    "files": "docs/warehouse-map-01-migration.sql",
+    "fk": 0,
+    "check": 8,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "storage_location_placements",
+    "files": "docs/warehouse-map-01-migration.sql",
+    "fk": 1,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "work_shifts",
+    "files": "docs/work-shifts-01-migration.sql",
+    "fk": 0,
+    "check": 4,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "workflow_escalations",
+    "files": "docs/workflow-escalation-01-migration.sql",
+    "fk": 0,
+    "check": 1,
+    "unique": 0,
+    "workspace": true
+  },
+  {
+    "table": "workspace_role_capabilities",
+    "files": "docs/workspace-role-capabilities-migration.sql",
+    "fk": 0,
+    "check": 2,
+    "unique": 0,
+    "workspace": true
+  }
+]

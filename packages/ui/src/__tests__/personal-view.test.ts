@@ -59,7 +59,7 @@ describe('whose view it is', () => {
   it('the store is keyed by that owner, and reads nothing on the server', () => {
     expect(store).toContain('window.localStorage.getItem(PREFIX + owner)')
     expect(store).toContain('const ready = owner !== null')
-    expect(store).toContain('() => NOTHING,')
+    expect(store).toContain('() => EMPTY_LOOKS,')
   })
 
   it('«shown» is for drawing, «active» is for fetching — a part never fetches on a guess', () => {

@@ -1,0 +1,47 @@
+# Launch prompt — paste this to the implementation agent
+
+You are working in the Hisabche monorepo at `C:\Users\hamed\Desktop\hisabche`.
+
+**Your job:** execute `docs/architecture/universal-core/FIFTY-OPTIONS-RANK4-PROMPT.md` from the first line to the last.
+
+## How to read it
+
+1. Open that file and read **all of it** — every section, every table row — before you touch anything. Do not skim and do not work from a summary of it (including this one). If it references another file by path, open that file too: `MENU-DOMAIN-MAP.md`, `FIFTY-OPTIONS-AUDIT.md`, `RANKING-MODEL.md`, `WIRE-IT-UP-MASTER-PROMPT.md` §3, `CLOSE-ALL-GAPS-PROMPT.md` §1 and §3, `CLAUDE.md`.
+2. When a sentence in your own plan disagrees with a sentence in those files, the files win. When two of them disagree, `FIFTY-OPTIONS-RANK4-PROMPT.md` wins.
+3. Before starting, write 10 lines in `docs/architecture/universal-core/FIFTY-OPTIONS-LOG.md` stating what you understood: the goal (rank 4 or better in the model), step zero, Wave 1 / Wave 2, and the anti-duplicate protocol. If you cannot, you have not read it.
+
+## The UI rule — nothing new is drawn
+
+**Do not create any new UI primitive, any new table component, any new modal, any new select, any new page layout.** Everything on screen is assembled from what already exists in `packages/ui/src/components/ui/`. This is not a style preference; the repository has guards (`select-consistency`, `one-ux`, `dashboard-page-structure`, token-only colours, RTL logical classes) that go red otherwise.
+
+Use exactly these:
+
+| Need                                                                      | Use                                                                                                                                                           | Copy the structure of                                                                                                                            |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Any list or table                                                         | `DataTable` from `../data-table` (with `TableColumn`, `matchesSearch`, `TableFilterSelect` in its `actions`, `paginate={false}` if the page paginates itself) | `warehouse/warehouse-list-table.tsx`, `accounting/tabs/JournalTab.tsx`, `assets/assets-view.tsx`                                                 |
+| A form that creates or edits something                                    | a modal: `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogFooter` from `../dialog`                                                            | `till/till-view.tsx`, `assets/assets-view.tsx`, `accounting/components/CreateJournalEntryDialog.tsx`, `CreateAccountDialog.tsx`                  |
+| A side panel / long detail                                                | `Sheet` from `../sheet`                                                                                                                                       | `budgets/budgets-view.tsx`                                                                                                                       |
+| A yes/no confirmation                                                     | `alert-dialog.tsx`                                                                                                                                            | wherever a delete or cancel is confirmed today                                                                                                   |
+| A dropdown                                                                | `SelectField` (never a native `<select>`, never `SelectPrimitive.Root`)                                                                                       | `accounting/tabs/FinancingTab.tsx`                                                                                                               |
+| Money / quantity / date input                                             | `MoneyInput`, `NumberStepper`, `JalaliDatePicker`, `PhoneInput`; amounts shown with `Money`; currency from `useBookCurrency()`                                | `till/till-view.tsx`                                                                                                                             |
+| A new feature on an existing page                                         | a **tab or `?view=` section** of the hub: `PageHub` / `HubTabs` + `useHubTab` + `SegmentedControl`                                                            | `accounting/AccountingPage.tsx`, `data-and-sync/containers/data-hub-container.tsx`, `team-and-payroll/containers/team-and-payroll-container.tsx` |
+| Capability panels (stats, labelled fields, list sections, loading, error) | `capability/capability-kit.tsx` (`Panel`, `Stat`, `Field`, `MinorInput`, `NumberField`, `ListSection`, `Loading`, `ErrorNote`, `CapabilityPage`)              | the screens that already import it                                                                                                               |
+| Empty state / skeleton                                                    | `empty-state.tsx`, `page-skeleton.tsx`, `skeleton.tsx`                                                                                                        | any list above                                                                                                                                   |
+| Offline refusal                                                           | `OfflineGate`, `CloudRequiredNotice`, `OfflineRefusalNotice`                                                                                                  | `offline-gate.tsx` consumers                                                                                                                     |
+| Server field errors                                                       | `useServerFieldErrors()` + `apiErrorMessage()` (from `@hisabche/api`)                                                                                         | any form that shows a server error                                                                                                               |
+| Toast                                                                     | `useToast` from `toast-provider.tsx`                                                                                                                          | any container                                                                                                                                    |
+| Navigation                                                                | `useLocalePush` / `useLocaleReplace` / `useRouteLang` + `localizePath` — never a bare `router.push('/…')`                                                     | `hooks/use-locale-push.ts`                                                                                                                       |
+
+Per screen, name in the log **which existing page you copied and which components you reused**. If you believe a component is missing, search `components/ui/` and every sibling page first; extending an existing component with a prop is allowed, a parallel component is not.
+
+Additional rules for UI files: tokens only (`hsl(var(--…))`, no hex, no palette classes); logical RTL classes (`ms-`, `me-`, `ps-`, `pe-`, `start-`, `end-`); no `window.confirm`/`alert`; no raw `<table>`, `<select>`, `<dialog>`; no `useEffect` that reads `document`/`window` during render; hooks never after an early return; a page file is metadata + the container only. Every string in `fa`, `af`, `en` (`translateOr` where the desktop shim has no `t.has`).
+
+Add one guard, `packages/ui/src/__tests__/no-new-ui-primitives.test.ts`: a closed snapshot of the file names directly under `packages/ui/src/components/ui/` as they are today; the test fails if a new top-level primitive appears or if a new section file contains a raw `<table`, `<select`, `<dialog`, or its own fixed-position overlay. Inject-test it (add a violation, see it go red, remove it).
+
+The in-flight file `packages/ui/src/components/ui/universal-core/universal-core-sections.tsx` was written without this rule. Audit it: any hand-rolled table, modal or field is rebuilt from the components above and the file is dissolved into the hubs named in `MENU-DOMAIN-MAP.md`.
+
+## Hard rules (the long version is in the prompt file)
+
+No commit, no push, no subagents. No live database changes — migrations are files in `docs/` with a rollback block, a VERIFY query and a test that applies them twice. No duplicate of anything the repository already owns: search first, extend or wire what exists, and write the search into the log. Honest status labels only. Do not stop until the completion gate in the prompt file is true; if something is genuinely blocked from outside (live Supabase SQL, a physical device, a third party's credential or sample file, an external audit), say exactly what and finish everything around it.
+
+Begin now: `git status`, then open `FIFTY-OPTIONS-RANK4-PROMPT.md`.

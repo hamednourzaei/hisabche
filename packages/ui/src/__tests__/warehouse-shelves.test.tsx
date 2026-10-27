@@ -264,6 +264,13 @@ describe('the shelves of one warehouse — the map, and one shelf', () => {
     view({ state: 'not-migrated' })
     expect(screen.getByText(message('warehouseShelves.notMigrated')!)).toBeTruthy()
     cleanup()
+    // ⚠️ The device's engine keeps shelves but not the map. Offline, that is «not
+    // available», never «run docs/warehouse-map-01-migration.sql on the database»
+    // (owner, 26 Oct 2026) — an instruction for a server the person is not on.
+    view({ state: 'offline-unavailable' })
+    expect(screen.getByText(message('warehouseShelves.notAvailableOffline')!)).toBeTruthy()
+    expect(screen.queryByText(message('warehouseShelves.notMigrated')!)).toBeNull()
+    cleanup()
     view({ state: 'error' })
     expect(screen.getByRole('alert').textContent).toContain(message('warehouseShelves.loadFailed')!)
     cleanup()

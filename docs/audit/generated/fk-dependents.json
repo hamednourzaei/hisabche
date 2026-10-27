@@ -1,0 +1,574 @@
+{
+  "invoices": {
+    "referencedBy": [
+      {
+        "owner": "invoice_items",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "invoice_pdf_cache",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "purchase_orders",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "transactions",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "invoice_installments",
+        "file": "installments-01-migration.sql",
+        "onDelete": "CASCADE",
+        "notValid": false
+      },
+      {
+        "owner": "invoice_pdf_cache",
+        "file": "phase-a-04-missing-primary-keys-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "invoice_items",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "invoice_pdf_cache",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "purchase_orders",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "transactions",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "invoice_items",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "invoice_pdf_cache",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "purchase_orders",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "transactions",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      }
+    ],
+    "deleteTriggers": [
+      {
+        "name": "products_bump_version_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "SETUP-COMPLETE.sql"
+      },
+      {
+        "name": "products_bump_version_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "sync-engine-migration.sql"
+      },
+      {
+        "name": "products_bump_version_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "_bundle.sql"
+      }
+    ]
+  },
+  "customers": {
+    "referencedBy": [
+      {
+        "owner": "customer_documents",
+        "file": "customer-360-phase3-migration.sql",
+        "onDelete": "RESTRICT",
+        "notValid": false
+      },
+      {
+        "owner": "invoices",
+        "file": "FIX-INVOICES.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "interactions",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "invoices",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "opportunities",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "transactions",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "interactions",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "invoices",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "opportunities",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "transactions",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "interactions",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "invoices",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "opportunities",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "transactions",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      }
+    ],
+    "deleteTriggers": [
+      {
+        "name": "customers_change_log_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "SETUP-COMPLETE.sql"
+      },
+      {
+        "name": "customers_change_log_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "sync-engine-migration.sql"
+      },
+      {
+        "name": "customers_change_log_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "_bundle.sql"
+      }
+    ]
+  },
+  "products": {
+    "referencedBy": [
+      {
+        "owner": "marketplace_listings",
+        "file": "goods-marketplace-01-migration.sql",
+        "onDelete": "CASCADE",
+        "notValid": false
+      },
+      {
+        "owner": "boms",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "invoice_items",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "purchase_order_items",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "stock_movements",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "warehouse_stock",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "work_orders",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "boms",
+        "file": "phase-t4-manufacturing-fk-migration.sql",
+        "onDelete": "RESTRICT",
+        "notValid": false
+      },
+      {
+        "owner": "bom_items",
+        "file": "phase-t4-manufacturing-fk-migration.sql",
+        "onDelete": "RESTRICT",
+        "notValid": false
+      },
+      {
+        "owner": "work_orders",
+        "file": "phase-t4-manufacturing-fk-migration.sql",
+        "onDelete": "RESTRICT",
+        "notValid": false
+      },
+      {
+        "owner": "product_barcodes",
+        "file": "product-barcodes-migration.sql",
+        "onDelete": "CASCADE",
+        "notValid": false
+      },
+      {
+        "owner": "product_images",
+        "file": "product-images-migration.sql",
+        "onDelete": "CASCADE",
+        "notValid": false
+      },
+      {
+        "owner": "boms",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "invoice_items",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "purchase_order_items",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "stock_movements",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "warehouse_stock",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "work_orders",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "boms",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "invoice_items",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "purchase_order_items",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "stock_movements",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "warehouse_stock",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "work_orders",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      }
+    ],
+    "deleteTriggers": [
+      {
+        "name": "products_change_log_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "SETUP-COMPLETE.sql"
+      },
+      {
+        "name": "products_change_log_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "sync-engine-migration.sql"
+      },
+      {
+        "name": "products_change_log_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "_bundle.sql"
+      }
+    ]
+  },
+  "transactions": {
+    "referencedBy": [],
+    "deleteTriggers": [
+      {
+        "name": "transactions_change_log_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "SETUP-COMPLETE.sql"
+      },
+      {
+        "name": "transactions_change_log_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "sync-engine-migration.sql"
+      },
+      {
+        "name": "transactions_change_log_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "_bundle.sql"
+      }
+    ]
+  },
+  "time_entries": {
+    "referencedBy": [],
+    "deleteTriggers": [
+      {
+        "name": "time_entries_bump_version_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "SETUP-COMPLETE.sql"
+      },
+      {
+        "name": "time_entries_bump_version_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "timesheet-sync-migration.sql"
+      },
+      {
+        "name": "time_entries_bump_version_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "_bundle.sql"
+      }
+    ]
+  },
+  "warehouses": {
+    "referencedBy": [
+      {
+        "owner": "warehouse_stock",
+        "file": "hardening-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "invoices",
+        "file": "multi-warehouse-migration.sql",
+        "onDelete": "SET NULL",
+        "notValid": false
+      },
+      {
+        "owner": "warehouse_stock",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "warehouse_stock",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      }
+    ],
+    "deleteTriggers": [
+      {
+        "name": "warehouses_change_log_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "always-local-operational-pull-migration.sql"
+      }
+    ]
+  },
+  "branches": {
+    "referencedBy": [
+      {
+        "owner": "attendance_terminals",
+        "file": "attendance-devices-01-migration.sql",
+        "onDelete": "SET NULL",
+        "notValid": false
+      },
+      {
+        "owner": "branches",
+        "file": "branch-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": false
+      },
+      {
+        "owner": "member_branches",
+        "file": "branch-migration.sql",
+        "onDelete": "CASCADE",
+        "notValid": false
+      },
+      {
+        "owner": "ledger_entries",
+        "file": "phase-a-02-ledger-entries-workspace-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "employee_branch_assignments",
+        "file": "phase-d-01-employee-branch-assignments-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "audit_logs",
+        "file": "phase-g-03-audit-branch-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "activities",
+        "file": "phase-g-03-audit-branch-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "accounting_period_locks",
+        "file": "phase-j-01-branch-period-lock-migration.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": true
+      },
+      {
+        "owner": "branches",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": false
+      },
+      {
+        "owner": "member_branches",
+        "file": "SETUP-COMPLETE.sql",
+        "onDelete": "CASCADE",
+        "notValid": false
+      },
+      {
+        "owner": "branches",
+        "file": "_bundle.sql",
+        "onDelete": "NO ACTION (DEFAULT)",
+        "notValid": false
+      },
+      {
+        "owner": "member_branches",
+        "file": "_bundle.sql",
+        "onDelete": "CASCADE",
+        "notValid": false
+      }
+    ],
+    "deleteTriggers": [
+      {
+        "name": "branches_change_log_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "always-local-operational-pull-migration.sql"
+      }
+    ]
+  },
+  "exchange_rates": {
+    "referencedBy": [],
+    "deleteTriggers": [
+      {
+        "name": "exchange_rates_change_log_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "always-local-operational-pull-migration.sql"
+      }
+    ]
+  },
+  "warehouse_stock": {
+    "referencedBy": [],
+    "deleteTriggers": [
+      {
+        "name": "warehouse_stock_change_log_trg",
+        "timing": "AFTER",
+        "event": "INSERT OR UPDATE OR DELETE",
+        "file": "always-local-operational-pull-migration.sql"
+      }
+    ]
+  }
+}

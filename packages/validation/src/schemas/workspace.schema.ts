@@ -29,6 +29,13 @@ export const workspaceSchema = z.object({
   stampUrl: z.string().max(10_000_000).optional().nullable(),
   signatureUrl: z.string().max(10_000_000).optional().nullable(),
   isActive: z.boolean().default(true),
+  /**
+   * The trades selected in onboarding, as catalogue ids. Stored
+   * comma-separated in the local database and as an array on the server.
+   */
+  businessTypes: z.array(z.string().max(64)).max(20).optional(),
+  /** When the last EXPLICIT user write to `businessTypes` happened. */
+  businessTypesUpdatedAt: z.string().max(40).optional().nullable(),
   createdAt: isoDateSchema.optional(),
   updatedAt: isoDateSchema.optional(),
 })

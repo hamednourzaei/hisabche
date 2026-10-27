@@ -88,6 +88,7 @@ if (typeof window !== 'undefined') {
         })
         return { ...page, synced: hasSyncedTable(table) }
       },
+      hasSynced: (table) => hasSyncedTable(table),
       // The scanner asks the device first (instant, and the only answer
       // offline). Two rows = ambiguous, so up to five are read, not one.
       findByBarcode: (barcode) =>

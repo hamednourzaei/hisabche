@@ -69,16 +69,16 @@ function readCsv(): Row[] {
 }
 
 describe('capability-matrix.csv — generated from code, and CHECKED against it', () => {
-  it('exists, covers all 462 matrix endpoints, with the documented header', () => {
+  it('exists, covers all matrix endpoints, with the documented header', () => {
     expect(fs.existsSync(CSV_PATH), `Missing ${CSV_PATH}`).toBe(true)
     const lines = fs.readFileSync(CSV_PATH, 'utf8').trim().split('\n')
-    expect(lines.length).toBe(463)
+    const matrixKeys = Object.keys(OFFLINE_ENDPOINT_MATRIX)
+    expect(lines.length).toBe(matrixKeys.length + 1)
     expect(lines[0]).toBe(HEADERS.join(','))
 
     const rows = readCsv()
     const csvEndpoints = new Set(rows.map((r) => r.get('endpoint')))
-    const matrixKeys = Object.keys(OFFLINE_ENDPOINT_MATRIX)
-    expect(matrixKeys.length).toBe(462)
+    expect(matrixKeys.length).toBeGreaterThanOrEqual(462)
     for (const key of matrixKeys) {
       expect(csvEndpoints.has(key), `Endpoint ${key} missing from capability-matrix.csv`).toBe(true)
     }

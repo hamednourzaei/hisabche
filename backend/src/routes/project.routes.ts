@@ -18,6 +18,7 @@ import { ProjectService } from '../services/project.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
+import { sendFailure } from '../errors/http-failure'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -58,8 +59,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const projects = await projectService.listProjects(request.tenancy, status)
         return reply.send(projects)
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch projects' })
+        return sendFailure(reply, fastify.log, err, 'Failed to fetch projects')
       }
     },
   )
@@ -78,14 +78,10 @@ export async function projectRoutes(fastify: FastifyInstance) {
       try {
         const data = createProjectSchema.parse(request.body)
         const project = await projectService.createProject(request.tenancy, data)
-        await clearCache('projects:*')
+        await clearCache(`projects:${request.tenancy.workspaceId}:*`)
         return reply.code(201).send(project)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to create project' })
+        return sendFailure(reply, fastify.log, err, 'Failed to create project')
       }
     },
   )
@@ -110,8 +106,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const project = await projectService.getProject(id, request.tenancy)
         return reply.send(project)
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch project' })
+        return sendFailure(reply, fastify.log, err, 'Failed to fetch project')
       }
     },
   )
@@ -132,15 +127,11 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string }
         const data = updateProjectSchema.parse(request.body)
         const project = await projectService.updateProject(request.tenancy, id, data)
-        await clearCache(`project:${id}`)
-        await clearCache('projects:*')
+        await clearCache(`project:${request.tenancy.workspaceId}:${id}`)
+        await clearCache(`projects:${request.tenancy.workspaceId}:*`)
         return reply.send(project)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to update project' })
+        return sendFailure(reply, fastify.log, err, 'Failed to update project')
       }
     },
   )
@@ -159,12 +150,11 @@ export async function projectRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const result = await projectService.deleteProject(request.tenancy, id)
-        await clearCache(`project:${id}`)
-        await clearCache('projects:*')
+        await clearCache(`project:${request.tenancy.workspaceId}:${id}`)
+        await clearCache(`projects:${request.tenancy.workspaceId}:*`)
         return reply.send(result)
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to delete project' })
+        return sendFailure(reply, fastify.log, err, 'Failed to delete project')
       }
     },
   )
@@ -199,8 +189,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const tasks = await projectService.listTasks(request.tenancy, projectId, status)
         return reply.send(tasks)
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch tasks' })
+        return sendFailure(reply, fastify.log, err, 'Failed to fetch tasks')
       }
     },
   )
@@ -218,17 +207,14 @@ export async function projectRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const data = createProjectTaskSchema.parse(request.body)
+        const { projectId } = request.params as { projectId: string }
+        const body = (request.body as Record<string, unknown>) || {}
+        const data = createProjectTaskSchema.parse({ ...body, projectId })
         const task = await projectService.createTask(request.tenancy, data)
-        // ✅ اصلاح: data.projectId (با camelCase)
-        await clearCache(`project-tasks:${data.projectId}:*`)
+        await clearCache(`project-tasks:${request.tenancy.workspaceId}:${data.projectId}:*`)
         return reply.code(201).send(task)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to create task' })
+        return sendFailure(reply, fastify.log, err, 'Failed to create task')
       }
     },
   )
@@ -249,16 +235,11 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string }
         const data = updateProjectTaskSchema.parse(request.body)
         const task = await projectService.updateTask(request.tenancy, id, data)
-        await clearCache(`task:${id}`)
-        // ✅ اصلاح: task.project_id (با underscore - چون خروجی سرویس است)
-        await clearCache(`project-tasks:${task.project_id}:*`)
+        await clearCache(`task:${request.tenancy.workspaceId}:${id}`)
+        await clearCache(`project-tasks:${request.tenancy.workspaceId}:${task.project_id}:*`)
         return reply.send(task)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to update task' })
+        return sendFailure(reply, fastify.log, err, 'Failed to update task')
       }
     },
   )
@@ -277,12 +258,11 @@ export async function projectRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const result = await projectService.deleteTask(request.tenancy, id)
-        await clearCache(`task:${id}`)
-        await clearCache('project-tasks:*')
+        await clearCache(`task:${request.tenancy.workspaceId}:${id}`)
+        await clearCache(`project-tasks:${request.tenancy.workspaceId}:*`)
         return reply.send(result)
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to delete task' })
+        return sendFailure(reply, fastify.log, err, 'Failed to delete task')
       }
     },
   )
@@ -311,8 +291,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const members = await projectService.listMembers(request.tenancy, projectId)
         return reply.send(members)
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch members' })
+        return sendFailure(reply, fastify.log, err, 'Failed to fetch members')
       }
     },
   )
@@ -323,23 +302,21 @@ export async function projectRoutes(fastify: FastifyInstance) {
     {
       preHandler: [authenticate, requireWorkspaceContext],
       schema: {
+        params: toJsonSchema(z.object({ projectId: z.string().uuid() })),
         body: toJsonSchema(createProjectMemberSchema),
         response: { 201: toJsonSchema(z.any()) },
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const data = createProjectMemberSchema.parse(request.body)
+        const { projectId } = request.params as { projectId: string }
+        const body = (request.body as Record<string, unknown>) || {}
+        const data = createProjectMemberSchema.parse({ ...body, projectId })
         const member = await projectService.addMember(request.tenancy, data)
-        // ✅ اصلاح: data.projectId (با camelCase)
-        await clearCache(`project-members:${data.projectId}:*`)
+        await clearCache(`project-members:${request.tenancy.workspaceId}:${data.projectId}:*`)
         return reply.code(201).send(member)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to add member' })
+        return sendFailure(reply, fastify.log, err, 'Failed to add member')
       }
     },
   )
@@ -360,11 +337,10 @@ export async function projectRoutes(fastify: FastifyInstance) {
       try {
         const { projectId, memberId } = request.params as { projectId: string; memberId: string }
         const result = await projectService.removeMember(request.tenancy, projectId, memberId)
-        await clearCache(`project-members:${projectId}:*`)
+        await clearCache(`project-members:${request.tenancy.workspaceId}:${projectId}:*`)
         return reply.send(result)
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to remove member' })
+        return sendFailure(reply, fastify.log, err, 'Failed to remove member')
       }
     },
   )
@@ -393,8 +369,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const entries = await projectService.listTimeEntries(request.tenancy, projectId)
         return reply.send(entries)
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch time entries' })
+        return sendFailure(reply, fastify.log, err, 'Failed to fetch time entries')
       }
     },
   )
@@ -405,23 +380,21 @@ export async function projectRoutes(fastify: FastifyInstance) {
     {
       preHandler: [authenticate, requireWorkspaceContext],
       schema: {
+        params: toJsonSchema(z.object({ projectId: z.string().uuid() })),
         body: toJsonSchema(createTimeEntrySchema),
         response: { 201: toJsonSchema(z.any()) },
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const data = createTimeEntrySchema.parse(request.body)
+        const { projectId } = request.params as { projectId: string }
+        const body = (request.body as Record<string, unknown>) || {}
+        const data = createTimeEntrySchema.parse({ ...body, projectId })
         const entry = await projectService.createTimeEntry(request.tenancy, data)
-        // ✅ اصلاح: data.projectId (با camelCase)
-        await clearCache(`project-time-entries:${data.projectId}:*`)
+        await clearCache(`project-time-entries:${request.tenancy.workspaceId}:${data.projectId}:*`)
         return reply.code(201).send(entry)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to create time entry' })
+        return sendFailure(reply, fastify.log, err, 'Failed to create time entry')
       }
     },
   )
@@ -442,16 +415,13 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string }
         const data = updateTimeEntrySchema.parse(request.body)
         const entry = await projectService.updateTimeEntry(request.tenancy, id, data)
-        await clearCache(`time-entry:${id}`)
-        // ✅ اصلاح: entry.project_id (با underscore - چون خروجی سرویس است)
-        await clearCache(`project-time-entries:${entry.project_id}:*`)
+        await clearCache(`time-entry:${request.tenancy.workspaceId}:${id}`)
+        await clearCache(
+          `project-time-entries:${request.tenancy.workspaceId}:${entry.project_id}:*`,
+        )
         return reply.send(entry)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to update time entry' })
+        return sendFailure(reply, fastify.log, err, 'Failed to update time entry')
       }
     },
   )
@@ -470,12 +440,11 @@ export async function projectRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const result = await projectService.deleteTimeEntry(request.tenancy, id)
-        await clearCache(`time-entry:${id}`)
-        await clearCache('project-time-entries:*')
+        await clearCache(`time-entry:${request.tenancy.workspaceId}:${id}`)
+        await clearCache(`project-time-entries:${request.tenancy.workspaceId}:*`)
         return reply.send(result)
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to delete time entry' })
+        return sendFailure(reply, fastify.log, err, 'Failed to delete time entry')
       }
     },
   )

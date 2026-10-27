@@ -55,7 +55,10 @@ const preview = code(
 describe('the warehouse list does not hide low stock', () => {
   it('⚠️ an absent lowStock parameter is undefined, not false', () => {
     expect(route).not.toContain("lowStock: query.lowStock === 'true',")
-    expect(route).toContain("query.lowStock === 'false' ? false : undefined")
+    // Since 26 Oct 2026 the three states («true», «false», unset) are ONE rule —
+    // `flagFilter` (filter-contract.ts), proven over HTTP by
+    // backend/src/__tests__/list-filter-contract-http.test.ts.
+    expect(route).toContain('lowStock: flagFilter(query.lowStock)')
   })
 })
 

@@ -15,11 +15,14 @@
 
 import { useEffect } from 'react'
 import { useCustomerProfile } from '@hisabche/api'
+import { evaluateCreditLimit, type CreditLimitMode } from '@hisabche/validation'
 
 export interface CreditBreach {
   creditLimit: number
   used: number
   after: number
+  isBlocked?: boolean
+  overLimit?: number
 }
 
 /** YYYY-MM-DD (or a full ISO date) + days → ISO date at UTC midnight. */
@@ -35,12 +38,36 @@ export function dueDateFromTerms(invoiceDate: string, days: number | null): stri
 export function creditBreach(
   credit: { creditLimit: number; used: number } | null | undefined,
   invoiceTotal: number,
+  mode: CreditLimitMode = 'warn',
 ): CreditBreach | null {
   if (!credit || !(invoiceTotal > 0)) return null
-  const after = credit.used + invoiceTotal
-  return after > credit.creditLimit
-    ? { creditLimit: credit.creditLimit, used: credit.used, after }
-    : null
+
+  const evalResult = evaluateCreditLimit({
+    mode,
+    currentReceivableMinor: credit.used,
+    newInvoiceAmountMinor: invoiceTotal,
+    creditLimitMinor: credit.creditLimit,
+  })
+
+  if (!evalResult.allowed) {
+    return {
+      creditLimit: evalResult.creditLimitMinor,
+      used: credit.used,
+      after: evalResult.totalProjectedReceivableMinor,
+      isBlocked: true,
+      overLimit: evalResult.overLimitMinor,
+    }
+  }
+
+  if (evalResult.warning) {
+    return {
+      creditLimit: evalResult.warning.creditLimitMinor,
+      used: credit.used,
+      after: evalResult.warning.totalProjectedReceivableMinor,
+    }
+  }
+
+  return null
 }
 
 export function useCustomerTerms(input: {
@@ -50,11 +77,13 @@ export function useCustomerTerms(input: {
   dueDate: string | null
   invoiceTotal: number
   setDueDate: (value: string) => void
+  creditLimitMode?: CreditLimitMode
 }): CreditBreach | null {
   const isSale = input.transactionType === 'sale'
   const { data } = useCustomerProfile(isSale ? input.customerId : undefined)
   const days = data?.paymentTermsDays ?? null
   const { date, dueDate, setDueDate } = input
+  const mode = input.creditLimitMode ?? 'warn'
 
   useEffect(() => {
     if (!isSale || dueDate !== null) return
@@ -62,5 +91,5 @@ export function useCustomerTerms(input: {
     if (next) setDueDate(next)
   }, [isSale, date, dueDate, days, setDueDate])
 
-  return isSale ? creditBreach(data?.credit, input.invoiceTotal) : null
+  return isSale ? creditBreach(data?.credit, input.invoiceTotal, mode) : null
 }

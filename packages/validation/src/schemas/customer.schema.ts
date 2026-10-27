@@ -3,6 +3,7 @@
 // ============================================
 
 import { z } from 'zod'
+import { flagFilter } from './filter-contract'
 import {
   uuidSchema,
   emailSchema,
@@ -128,13 +129,14 @@ export const customerFiltersSchema = z.object({
    */
   role: z.enum(['buyer', 'seller']).optional(),
   search: z.string().optional(),
+  // ⚠️ UNSET IS NOT FALSE (filter-contract.ts): `''` used to read as «inactive only».
   isActive: z
-    .union([z.boolean(), z.string()])
-    .transform((val) => (typeof val === 'string' ? val === 'true' : val))
+    .union([z.boolean(), z.string(), z.null()])
+    .transform((val) => flagFilter(val))
     .optional(),
   hasBalance: z
-    .union([z.boolean(), z.string()])
-    .transform((val) => (typeof val === 'string' ? val === 'true' : val))
+    .union([z.boolean(), z.string(), z.null()])
+    .transform((val) => flagFilter(val))
     .optional(),
   type: z.enum(['cash', 'credit']).optional(),
   page: z

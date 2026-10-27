@@ -128,6 +128,16 @@ import { notificationRoutes } from './routes/notification.routes'
 import { debugRoutes } from './routes/debug.routes'
 // ✅ اضافه کردن Activity Routes
 import { activityRoutes } from './routes/activity.routes'
+import { variantRoutes } from './routes/variant.routes'
+import { metalRatesRoutes } from './routes/metal-rates.routes'
+import { fitmentRoutes } from './routes/fitment.routes'
+import { warrantyRoutes } from './routes/warranty.routes'
+import { invoiceReturnRoutes } from './routes/invoice-return.routes'
+import { orderDepositRoutes } from './routes/order-deposit.routes'
+import { transportRoutes } from './routes/transport.routes'
+import { appointmentRoutes } from './routes/appointment.routes'
+import { agricultureRoutes } from './routes/agriculture.routes'
+import { odataRoutes } from './routes/odata.routes'
 import adminRoutes from './routes/admin.routes'
 import adminSecurityRoutes from './routes/admin-security.routes'
 import adminCustomersRoutes from './routes/admin-customers.routes'
@@ -768,6 +778,16 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(campaignRoutes)
   await server.register(purchasingRoutes)
   await server.register(workflowRoutes)
+  await server.register(variantRoutes)
+  await server.register(metalRatesRoutes)
+  await server.register(fitmentRoutes)
+  await server.register(warrantyRoutes)
+  await server.register(invoiceReturnRoutes)
+  await server.register(orderDepositRoutes)
+  await server.register(transportRoutes)
+  await server.register(appointmentRoutes)
+  await server.register(agricultureRoutes)
+  await server.register(odataRoutes)
 
   // ✅ ثبت Route‌های دیباگ (فقط برای دیباگ)
   await server.register(debugRoutes)

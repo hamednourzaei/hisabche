@@ -1,0 +1,338 @@
+[
+  {
+    "file": "backend/src/services/admin/admin-ops.service.ts",
+    "line": 234,
+    "table": "background_jobs",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/admin.service.ts",
+    "line": 686,
+    "table": "workspace_members",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/admin.service.ts",
+    "line": 708,
+    "table": "workspace_members",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/admin.service.ts",
+    "line": 718,
+    "table": "workspace_members",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/admin.service.ts",
+    "line": 738,
+    "table": "workspace_members",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/admin.service.ts",
+    "line": 912,
+    "table": "subscriptions",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/billing.service.ts",
+    "line": 529,
+    "table": "subscriptions",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/billing.service.ts",
+    "line": 550,
+    "table": "subscriptions",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/billing.service.ts",
+    "line": 630,
+    "table": "subscriptions",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/billing.service.ts",
+    "line": 645,
+    "table": "subscriptions",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/billing.service.ts",
+    "line": 658,
+    "table": "subscriptions",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/blog/draft.service.ts",
+    "line": 439,
+    "table": "background_jobs",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/campaigns/campaign.service.ts",
+    "line": 525,
+    "table": "campaign_recipients",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/checkout.service.ts",
+    "line": 289,
+    "table": "checkout_sessions",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/checkout.service.ts",
+    "line": 308,
+    "table": "checkout_sessions",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/customer-portal/customer-portal.service.ts",
+    "line": 222,
+    "table": "customer_portal_links",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/developer/developer.repository.ts",
+    "line": 180,
+    "table": "api_keys",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/developer/developer.repository.ts",
+    "line": 248,
+    "table": "webhook_endpoints",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/developer/developer.repository.ts",
+    "line": 261,
+    "table": "webhook_endpoints",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/developer/developer.repository.ts",
+    "line": 345,
+    "table": "webhook_endpoints",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/inventory/cycle-count.service.ts",
+    "line": 103,
+    "table": "cycle_counts",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/job.service.ts",
+    "line": 127,
+    "table": "background_jobs",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/job.service.ts",
+    "line": 151,
+    "table": "background_jobs",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/job.service.ts",
+    "line": 175,
+    "table": "background_jobs",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/job.service.ts",
+    "line": 205,
+    "table": "background_jobs",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/job.service.ts",
+    "line": 301,
+    "table": "background_jobs",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/market/market.service.ts",
+    "line": 561,
+    "table": "marketplace_listings",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/notification.service.ts",
+    "line": 109,
+    "table": "notifications",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/notification.service.ts",
+    "line": 123,
+    "table": "notifications",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/notification.service.ts",
+    "line": 201,
+    "table": "notifications",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/notification.service.ts",
+    "line": 218,
+    "table": "notifications",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/notification.service.ts",
+    "line": 225,
+    "table": "notifications",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/oauth/marketplace.service.ts",
+    "line": 600,
+    "table": "app_reports",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/oauth/marketplace.service.ts",
+    "line": 646,
+    "table": "app_reviews",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/oauth/oauth.repository.ts",
+    "line": 140,
+    "table": "oauth_apps",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/oauth/oauth.service.ts",
+    "line": 176,
+    "table": "api_keys",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/oauth/oauth.service.ts",
+    "line": 288,
+    "table": "oauth_apps",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/oauth/oauth.service.ts",
+    "line": 354,
+    "table": "oauth_apps",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/oauth/oauth.service.ts",
+    "line": 377,
+    "table": "oauth_apps",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/oauth/oauth.service.ts",
+    "line": 470,
+    "table": "oauth_apps",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/oauth/oauth.service.ts",
+    "line": 471,
+    "table": "api_keys",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/oauth/oauth.service.ts",
+    "line": 685,
+    "table": "api_keys",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/oauth/oauth.service.ts",
+    "line": 846,
+    "table": "oauth_apps",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/password-reset.service.ts",
+    "line": 232,
+    "table": "password_reset_tokens",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/referral/referral.repository.ts",
+    "line": 196,
+    "table": "referrals",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/referral/referral.repository.ts",
+    "line": 209,
+    "table": "referrals",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/wallet/wallet.service.ts",
+    "line": 401,
+    "table": "wallet_topup_requests",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/warehouse/transfer.service.ts",
+    "line": 127,
+    "table": "stock_transfers",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/workflow.service.ts",
+    "line": 243,
+    "table": "workflows",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/workflow.service.ts",
+    "line": 265,
+    "table": "workflows",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/workflow.service.ts",
+    "line": 292,
+    "table": "workflows",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/workflow.service.ts",
+    "line": 422,
+    "table": "workflow_instances",
+    "op": "read"
+  },
+  {
+    "file": "backend/src/services/workflow.service.ts",
+    "line": 603,
+    "table": "workflow_instances",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/workspace.service.ts",
+    "line": 641,
+    "table": "workspace_invites",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/services/workspace.service.ts",
+    "line": 673,
+    "table": "workspace_invites",
+    "op": "WRITE"
+  },
+  {
+    "file": "backend/src/routes/admin-offline.routes.ts",
+    "line": 377,
+    "table": "license_review_queue",
+    "op": "WRITE"
+  }
+]

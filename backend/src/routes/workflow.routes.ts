@@ -108,7 +108,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const workflow = await workflowService.getWorkflow(id)
+        const workflow = await workflowService.getWorkflow(request.tenancy.workspaceId, id)
         return reply.send(workflow)
       } catch (err) {
         if (err instanceof NotFoundError) {
@@ -134,12 +134,15 @@ export async function workflowRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
+        const workspaceId = request.tenancy.workspaceId
         const data = updateWorkflowSchema.parse(request.body)
-        const workflow = await workflowService.updateWorkflow(id, data)
-        await clearCache(`workflow:${id}`)
-        await clearCache('workflows:*')
+        const workflow = await workflowService.updateWorkflow(workspaceId, id, data)
+        await clearCache(`*workflow*${workspaceId}*`)
         return reply.send(workflow)
       } catch (err) {
+        if (err instanceof NotFoundError) {
+          return reply.code(404).send({ error: err.message })
+        }
         if (err instanceof z.ZodError) {
           return reply.code(400).send({ error: 'Validation failed', details: err.errors })
         }
@@ -162,11 +165,14 @@ export async function workflowRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        await workflowService.deleteWorkflow(id)
-        await clearCache(`workflow:${id}`)
-        await clearCache('workflows:*')
+        const workspaceId = request.tenancy.workspaceId
+        await workflowService.deleteWorkflow(workspaceId, id)
+        await clearCache(`*workflow*${workspaceId}*`)
         return reply.send({ success: true })
       } catch (err) {
+        if (err instanceof NotFoundError) {
+          return reply.code(404).send({ error: err.message })
+        }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to delete workflow' })
       }
@@ -190,10 +196,14 @@ export async function workflowRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createWorkflowInstanceSchema.parse(request.body)
-        const instance = await workflowService.startWorkflow(request.tenancy.workspaceId, data)
-        await clearCache('workflow-instances:*')
+        const workspaceId = request.tenancy.workspaceId
+        const instance = await workflowService.startWorkflow(workspaceId, data)
+        await clearCache(`*workflow*${workspaceId}*`)
         return reply.code(201).send(instance)
       } catch (err) {
+        if (err instanceof NotFoundError) {
+          return reply.code(404).send({ error: err.message })
+        }
         if (err instanceof z.ZodError) {
           return reply.code(400).send({ error: 'Validation failed', details: err.errors })
         }
@@ -249,9 +259,12 @@ export async function workflowRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const result = await workflowService.getInstance(id)
+        const result = await workflowService.getInstance(request.tenancy.workspaceId, id)
         return reply.send(result)
       } catch (err) {
+        if (err instanceof NotFoundError) {
+          return reply.code(404).send({ error: err.message })
+        }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to fetch workflow instance' })
       }

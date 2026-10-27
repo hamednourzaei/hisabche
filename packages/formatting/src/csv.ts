@@ -31,13 +31,23 @@ function escapeCell(value: unknown): string {
  * Returns an empty string for an empty row set so callers can treat "nothing to
  * export" as a falsy result rather than writing a header-only file.
  */
-export function toCSV<T>(rows: readonly T[], columns: readonly CsvColumn<T>[]): string {
+export function toCSV<T>(
+  rows: readonly T[],
+  columns: readonly CsvColumn<T>[],
+  options?: { readonly footer?: readonly (string | number | null | undefined)[] } | undefined,
+): string {
   if (!rows || rows.length === 0) return ''
 
   const header = columns.map((column) => escapeCell(column.label)).join(',')
   const body = rows.map((row) => columns.map((column) => escapeCell(row[column.key])).join(','))
 
-  return UTF8_BOM + [header, ...body].join('\n')
+  const lines = [header, ...body]
+  if (options?.footer && options.footer.length > 0) {
+    const footerLine = options.footer.map(escapeCell).join(',')
+    lines.push(footerLine)
+  }
+
+  return UTF8_BOM + lines.join('\n')
 }
 
 /** `invoices-2026-08-10` — stable across platforms, so exports sort together. */

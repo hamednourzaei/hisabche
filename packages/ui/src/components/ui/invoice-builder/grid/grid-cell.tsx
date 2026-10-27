@@ -17,24 +17,15 @@
 
 import { memo, useCallback } from 'react'
 import type { KeyboardEvent } from 'react'
-import { COLUMN, type InvoiceColumn } from '@hisabche/validation'
+import { COLUMN, INVOICE_UNIT_CHOICES, type InvoiceColumn } from '@hisabche/validation'
 
 import { cn } from '../../../../lib/utils'
 import { JalaliDatePicker } from '../../jalali-datepicker'
 import { NumberStepper } from '../../number-stepper'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../select'
 
-/** The unit choices offered by the built-in واحد column. */
-export const UNIT_CHOICES = [
-  'piece',
-  'gram',
-  'kg',
-  'meter',
-  'liter',
-  'box',
-  'pack',
-  'carton',
-] as const
+/** The unit choices offered by the built-in واحد column — the schema's list. */
+export const UNIT_CHOICES = INVOICE_UNIT_CHOICES
 
 export interface GridCellProps {
   column: InvoiceColumn

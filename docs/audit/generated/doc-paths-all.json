@@ -1,0 +1,2623 @@
+{
+  "docs": 424,
+  "refsTotal": 5585,
+  "unresolvedTotal": 573,
+  "perDoc": [
+    {
+      "doc": "docs/HISABCHE_ARCHITECTURE.md",
+      "refs": 128,
+      "unresolved": [
+        "(dashboard)/layout.tsx",
+        "apps/web/app/[lang]/(dashboard)/constants/nav-items.ts",
+        "websocket/activity.ws.ts",
+        "queue/pdf-queue.ts",
+        "packages/db/src/client.ts",
+        "(dashboard)/page.tsx",
+        "dashboard/page.tsx",
+        "accounting/page.tsx",
+        "crm/page.tsx",
+        "manufacturing/page.tsx",
+        "purchasing/page.tsx",
+        "invoices/page.tsx",
+        "invoices/[id]/page.tsx",
+        "customers/page.tsx",
+        "warehouse/page.tsx",
+        "warehouse/[id]/page.tsx",
+        "human-resources/page.tsx",
+        "human-resources/[id]/page.tsx",
+        "projects/page.tsx",
+        "projects/[id]/page.tsx",
+        "permissions/page.tsx",
+        "audit/page.tsx",
+        "activities/page.tsx",
+        "settings/page.tsx",
+        "workspace/page.tsx",
+        "sync-center/page.tsx",
+        "quick-invoice/page.tsx",
+        "onboarding/page.tsx",
+        "login/page.tsx",
+        "signup/page.tsx",
+        "forgot-password/page.tsx",
+        "reset-password/page.tsx",
+        "accept-invite/page.tsx",
+        "sync/sync-queue.ts",
+        "apps/web/app/i18n-config.ts"
+      ]
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/docs/HISABCHE_ARCHITECTURE.md",
+      "refs": 128,
+      "unresolved": [
+        "(dashboard)/layout.tsx",
+        "apps/web/app/[lang]/(dashboard)/constants/nav-items.ts",
+        "websocket/activity.ws.ts",
+        "queue/pdf-queue.ts",
+        "packages/db/src/client.ts",
+        "(dashboard)/page.tsx",
+        "dashboard/page.tsx",
+        "accounting/page.tsx",
+        "crm/page.tsx",
+        "manufacturing/page.tsx",
+        "purchasing/page.tsx",
+        "invoices/page.tsx",
+        "invoices/[id]/page.tsx",
+        "customers/page.tsx",
+        "warehouse/page.tsx",
+        "warehouse/[id]/page.tsx",
+        "human-resources/page.tsx",
+        "human-resources/[id]/page.tsx",
+        "projects/page.tsx",
+        "projects/[id]/page.tsx",
+        "permissions/page.tsx",
+        "audit/page.tsx",
+        "activities/page.tsx",
+        "settings/page.tsx",
+        "workspace/page.tsx",
+        "sync-center/page.tsx",
+        "quick-invoice/page.tsx",
+        "onboarding/page.tsx",
+        "login/page.tsx",
+        "signup/page.tsx",
+        "forgot-password/page.tsx",
+        "reset-password/page.tsx",
+        "accept-invite/page.tsx",
+        "sync/sync-queue.ts",
+        "apps/web/app/i18n-config.ts"
+      ]
+    },
+    {
+      "doc": "docs/UI-UX-AUDIT-2026-10-22.md",
+      "refs": 31,
+      "unresolved": [
+        "src/app/[locale]/layout.tsx",
+        "src/components/admin/admin-shell.tsx",
+        "src/components/storefront/ProductCarousel.tsx",
+        "src/app/[locale]/login/page.tsx",
+        "src/app/[locale]/products/page.tsx",
+        "src/components/storefront/ProductCard.tsx",
+        "src/app/[locale]/checkout/page.tsx",
+        "src/app/[locale]/account/page.tsx",
+        "src/components/storefront/AnnouncementBar.tsx",
+        "ProductCard.tsx",
+        "admin-shell.tsx",
+        "src/app/[locale]/admin/page.tsx",
+        "messages/en.json",
+        "src/components/storefront/Header.tsx",
+        "ProductCarousel.tsx",
+        "ProductFilterBar.tsx",
+        "[slug]/page.tsx",
+        "login/page.tsx",
+        "account/page.tsx",
+        "admin/page.tsx",
+        "admin/orders/page.tsx",
+        "admin/products/page.tsx",
+        "AnnouncementBar.tsx",
+        "products/page.tsx",
+        "checkout/layout.tsx",
+        "carousel.tsx"
+      ]
+    },
+    {
+      "doc": "docs/CREATIVE-INTELLIGENCE-REFACTOR-PROMPT.md",
+      "refs": 25,
+      "unresolved": [
+        "src/reels/reel-XX.ts",
+        "engine/sound.ts",
+        "engine/guardrails.ts",
+        "scripts/export-mp4.mjs",
+        "scripts/visual-qa.mjs",
+        "src/creative/types.ts",
+        "src/creative/novelty-score.ts",
+        "src/data/creative-moments.ts",
+        "src/data/narrative-grammars.ts",
+        "src/creative/creative-director.ts",
+        "src/creative/trend-research.ts",
+        "data/trend-signals.json",
+        "src/creative/reference-analyzer.ts",
+        "data/reference-dnas.json",
+        "src/creative/creative-qa.ts",
+        "src/data/reel-registry.ts",
+        "creative-dna.ts",
+        "scripts/variety-check.mjs",
+        "creative-novelty.test.ts",
+        "scripts/creative-brief.mjs",
+        "creative-brief.mjs",
+        "creative-qa.ts"
+      ]
+    },
+    {
+      "doc": "docs/architecture/universal-core/FIFTY-OPTIONS-LOG.md",
+      "refs": 116,
+      "unresolved": [
+        "universal-core-sections.tsx",
+        "consolidation.domain.test.ts",
+        "tax.domain.test.ts",
+        "deferral.domain.test.ts",
+        "purchasing.domain.test.ts",
+        "automation-rules.test.ts",
+        "accounting-cash-flow.test.ts",
+        "expense-claims.domain.test.ts",
+        "serial-batch.domain.test.ts",
+        "costing-landed.test.ts",
+        "specialized-extensions.domain.test.ts",
+        "pack-barcode.domain.test.ts",
+        "area-dimension.domain.test.ts",
+        "roll-batch.domain.test.ts",
+        "gold-jewellery.domain.test.ts",
+        "tax-return.domain.test.ts",
+        "mfa.domain.test.ts"
+      ]
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/UPDATES10.7.md",
+      "refs": 36,
+      "unresolved": [
+        "backend/src/routes/godam.routes.ts",
+        "backend/src/services/godam.service.ts",
+        "backend/src/routes/hr.routes.ts",
+        "backend/src/services/hr.service.ts",
+        "packages/validation/src/schemas/godam.schema.ts",
+        "packages/validation/src/schemas/hr.schema.ts",
+        "apps/mobile/screens/GodamScreen.tsx",
+        "apps/mobile/screens/WarehouseScreen.tsx",
+        "apps/mobile/screens/BaqidariScreen.tsx",
+        "apps/mobile/screens/CustomersScreen.tsx",
+        "customers-container.tsx",
+        "warehouse-container.tsx",
+        "warehouse/page.tsx",
+        "customers/page.tsx",
+        "customers/loading.tsx"
+      ]
+    },
+    {
+      "doc": "docs/offline/OFFLINE-EDITION-PROMPT.md",
+      "refs": 69,
+      "unresolved": [
+        "__tests__/migrations.test.ts",
+        "main/ipc/register.ts",
+        "host/native-bridge.ts",
+        "packages/validation/src/schemas/costing.ts",
+        "packages/validation/src/schemas/posting.ts",
+        "packages/validation/src/schemas/allocation.ts",
+        "src/index.ts",
+        "src/router.ts",
+        "src/db.ts",
+        "src/errors.ts",
+        "settings.ts",
+        "packages/ui/src/lib/capability/requirement.ts",
+        "backend/src/routes/offline-import.routes.ts",
+        "packages/ui/src/lib/capability/entitlement.ts"
+      ]
+    },
+    {
+      "doc": "docs/VIDEO-PRODUCTION-WORKFLOW.md",
+      "refs": 18,
+      "unresolved": [
+        "src/reels/alignments/reel-XX-alignment.json",
+        "cadence-model.ts",
+        "src/components/WordDrivenStage.tsx",
+        "src/reels/index.ts",
+        "src/data/reel-registry.ts",
+        "src/ui/icons.tsx",
+        "src/reels/reel-01-cloud-or-desktop.ts",
+        "src/reels/shared.ts",
+        "src/data/template-catalog.ts",
+        "src/engine/guardrails.ts",
+        "src/engine/sound.ts",
+        "src/engine/speech-model.ts",
+        "scripts/export-mp4.mjs",
+        "scripts/visual-qa.mjs"
+      ]
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-16-WAREHOUSE-MAP.md",
+      "refs": 33,
+      "unresolved": [
+        "map-filtering.ts",
+        "warehouse-map-canvas.tsx",
+        "warehouse-location-drawer.tsx",
+        "location-dialog.tsx",
+        "warehouse-map-panels.tsx",
+        "warehouse-map-view.tsx",
+        "containers/warehouse-map-container.tsx",
+        "warehouse-map-filtering.test.ts",
+        "warehouse-map-view.test.tsx",
+        "packages/ui/src/components/ui/warehouse/map/map-filtering.ts",
+        "packages/ui/src/components/ui/warehouse/map/warehouse-map-view.tsx",
+        "scripts/export-mp4.mjs",
+        "scripts/visual-qa.mjs",
+        "scripts/new-reels.mjs"
+      ]
+    },
+    {
+      "doc": "docs/offline/02-RULE-EXTRACTION.md",
+      "refs": 101,
+      "unresolved": [
+        "allocation.ts",
+        "posting.ts",
+        "schemas/invoice-math.ts",
+        "schemas/stock.ts",
+        "schemas/costing.domain.ts",
+        "schemas/accounting.domain.ts",
+        "schemas/invoice-posting.domain.ts",
+        "schemas/payments.domain.ts",
+        "schemas/profit-report.domain.ts",
+        "schemas/product.schema.ts",
+        "packages/validation/src/schemas/temp-duplicate.ts",
+        "backend/src/services/__scratch-round2.ts",
+        "backend/src/services/__scratch-layers-value.ts"
+      ]
+    },
+    {
+      "doc": ".claude/BUG-REGISTRY.md",
+      "refs": 267,
+      "unresolved": [
+        "containers/invoice-builder-container.tsx",
+        "mobile/invoice-builder-mobile.tsx",
+        "containers/invoice-preview-container.tsx",
+        ".modules.yaml",
+        ".pnpm-workspace-state-v1.json",
+        "react-native/jest/react-native-env.js",
+        "app-shell/providers.tsx",
+        "apps/web/app/[lang]/auth-gate.tsx",
+        "(dashboard)/dashboard-layout.tsx",
+        "packages/db/src/client.ts",
+        "portal/layout.tsx",
+        "src/queue.ts",
+        "src/queue/pdf-queue.ts"
+      ]
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/doc4.md",
+      "refs": 19,
+      "unresolved": [
+        "apps/web/app/invoices/[id]/page.tsx",
+        "apps/web/app/invoices/[id]/InvoicePDFDownload.tsx",
+        "apps/web/app/quick-invoice/page.tsx",
+        "apps/web/app/warehouse/page.tsx",
+        "apps/web/app/warehouse/[id]/page.tsx",
+        "packages/ui/src/components/ui/stock-stats-card.tsx",
+        "apps/mobile/App.tsx",
+        "apps/mobile/screens/QuickInvoiceScreen.tsx",
+        "apps/mobile/screens/WarehouseScreen.tsx",
+        "apps/mobile/screens/ProductDetailScreen.tsx",
+        "apps/mobile/screens/InvoiceDetailScreen.tsx",
+        "apps/mobile/screens/InvoicesScreen.tsx"
+      ]
+    },
+    {
+      "doc": "docs/DESKTOP_FINAL_AUDIT.md",
+      "refs": 20,
+      "unresolved": [
+        "apps/desktop/src/shared/lib/api.ts",
+        "apps/desktop/src/shared/lib/bridge.ts",
+        "apps/desktop/src/features/dashboard/dashboard-page.tsx",
+        "apps/desktop/src/features/sales/invoices-page.tsx",
+        "apps/desktop/src/features/inventory/products-page.tsx",
+        "apps/desktop/src/features/crm/customers-page.tsx",
+        "apps/desktop/src/features/accounting/accounting-page.tsx",
+        "apps/desktop/src/features/auth/auth.store.ts",
+        "apps/desktop/src/shared/print/escpos.ts",
+        "apps/desktop/electron/main/db/schema.ts",
+        "apps/desktop/src/features/sync/sync-engine.ts"
+      ]
+    },
+    {
+      "doc": ".claude/BUSINESS-OS-SPEC.md",
+      "refs": 95,
+      "unresolved": [
+        "queue/pdf-queue.ts",
+        "services/payroll/payroll-ledger.domain.ts",
+        "ui-contract/list-engine.ts",
+        "src/queue.ts",
+        "src/queue/pdf-queue.ts",
+        "packages/api/hooks/tax.ts",
+        "commerce/pricing.domain.ts",
+        "collections/collections.domain.ts",
+        "commerce/installment.domain.ts",
+        "customers/customer-risk.domain.ts",
+        "supplier/supplier-intelligence.domain.ts"
+      ]
+    },
+    {
+      "doc": ".claude/lessons-learned.md",
+      "refs": 105,
+      "unresolved": [
+        "hisabche-backup-2026-09-06.json",
+        "location-dialog.test.tsx",
+        "scripts/__tests__/voiceover-pauses.test.mjs",
+        "packages/formatting/table-export.ts",
+        "payroll-list-table.tsx",
+        "app-shell/components/ui/primitives.tsx",
+        "formatting/metal-unit.ts",
+        "helpers/scan-client-endpoints.ts",
+        "routes/insights.ts",
+        "postgres.js"
+      ]
+    },
+    {
+      "doc": "docs/offline/01-CAPABILITY-MATRIX.md",
+      "refs": 287,
+      "unresolved": [
+        "packages/api/src/hooks/analytics.ts",
+        "commerce/installment.domain.ts",
+        "services/customers/customer-risk.domain.ts",
+        "customers/customer-risk.domain.ts",
+        "payroll/payroll-ledger.domain.ts",
+        "payroll-ledger.domain.ts",
+        "collections/collections.domain.ts",
+        "packages/api/src/hooks/snapshots.ts",
+        "analytics.ts"
+      ]
+    },
+    {
+      "doc": ".claude/reel-plugin/fast-track-sdk.md",
+      "refs": 9,
+      "unresolved": [
+        "src/reels/index.ts",
+        "src/data/reel-ledger.json",
+        "src/engine/composition-audit.ts",
+        "scripts/sync-law.mjs",
+        "scripts/sound-design.mjs",
+        "scripts/check-av-sync.mjs",
+        "scripts/__tests__/av-sync-law.test.mjs",
+        "src/__tests__/av-sync-law.test.ts",
+        "assets/sfx/manifest.json"
+      ]
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/🧠 Hisabche Event-Driven Evolution — Manifest نهایی v4.0 (Execution-Ready).md",
+      "refs": 13,
+      "unresolved": [
+        "backend/src/types/event.types.ts",
+        "backend/src/services/idempotency.service.ts",
+        "backend/src/consumers/index.ts",
+        "backend/src/consumers/realtime.consumer.ts",
+        "backend/src/consumers/sync.consumer.ts",
+        "backend/src/consumers/webhook.consumer.ts",
+        "backend/src/workers/event-worker.ts",
+        "docker-compose.yml",
+        "packages/api/src/hooks/useLiveQuery.ts"
+      ]
+    },
+    {
+      "doc": "docs/SESSION_HANDOFF.md",
+      "refs": 46,
+      "unresolved": [
+        "apps/web/app/[lang]/(dashboard)/constants/nav-items.ts",
+        "containers/approvals-container.tsx",
+        "containers/workflow-templates-container.tsx",
+        "projects/[id]/page.tsx",
+        "human-resources/[id]/page.tsx",
+        "packages/api/src/hooks/sales-followup.ts",
+        "packages/api/hooks/auth.ts",
+        "store/auth.slice.ts"
+      ]
+    },
+    {
+      "doc": ".claude/reel-plugin/production-guardrails.md",
+      "refs": 8,
+      "unresolved": [
+        "src/engine/motion-presets.ts",
+        "src/engine/composition-audit.ts",
+        "scripts/sync-law.mjs",
+        "scripts/sound-design.mjs",
+        "scripts/check-av-sync.mjs",
+        "scripts/__tests__/av-sync-law.test.mjs",
+        "src/__tests__/av-sync-law.test.ts",
+        "assets/sfx/manifest.json"
+      ]
+    },
+    {
+      "doc": "docs/architecture/AUDIT.md",
+      "refs": 55,
+      "unresolved": [
+        "packages/local-engine/src/routes/sales-side.ts",
+        "packages/local-engine/src/routes/invoice-ops.ts",
+        "packages/ui/src/components/ui/invoice-builder/hooks/use-invoice-grid.ts",
+        "packages/local-engine/src/routes/inventory.ts",
+        "packages/app-shell/src/features/sales/till-page.tsx",
+        "packages/local-engine/src/routes/people.ts",
+        "backend/src/__tests__/seller-field-masking.test.ts"
+      ]
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/docs/SESSION_HANDOFF.md",
+      "refs": 37,
+      "unresolved": [
+        "apps/web/app/[lang]/(dashboard)/constants/nav-items.ts",
+        "containers/approvals-container.tsx",
+        "containers/workflow-templates-container.tsx",
+        "projects/[id]/page.tsx",
+        "human-resources/[id]/page.tsx",
+        "packages/api/hooks/auth.ts",
+        "store/auth.slice.ts"
+      ]
+    },
+    {
+      "doc": "docs/architecture/PROGRESS.md",
+      "refs": 36,
+      "unresolved": [
+        "src/services/inventory/warehouse-summary.domain.ts",
+        "packages/validation/src/schemas/domain-ports.ts",
+        "packages/validation/src/schemas/domain-events.ts",
+        "matrix.ts",
+        "__golden__/run-vectors.ts",
+        "domain-ports.ts"
+      ]
+    },
+    {
+      "doc": "docs/audit/UNIVERSAL-CORE-GAP-LEDGER.md",
+      "refs": 35,
+      "unresolved": [
+        "generated/mock-auth-tests.json",
+        "generated/weak-write-routes.json",
+        "period-lock.service.ts",
+        "api-key.service.ts",
+        "no-secrets-in-code.test.ts",
+        "docs/workspace-deletion.sql"
+      ]
+    },
+    {
+      "doc": "docs/landing/landing-reconstruction-forensic-verification.md",
+      "refs": 30,
+      "unresolved": [
+        "hero.tsx",
+        "flow.tsx",
+        "modules.tsx",
+        "variant-01-cinematic-os.tsx",
+        "variant-03-industrial-control.tsx",
+        "variant-05-financial-instrument.tsx"
+      ]
+    },
+    {
+      "doc": "docs/audit/AUDIT-GATE-STATUS.md",
+      "refs": 14,
+      "unresolved": [
+        "generated/domains.json",
+        "generated/tables.json",
+        "generated/routes.json",
+        "generated/orphan-hooks.json",
+        "generated/tenancy-scan.json"
+      ]
+    },
+    {
+      "doc": "docs/engineering/HISABCHE_ADMIN_REDESIGN_NOTEBOOK.md",
+      "refs": 21,
+      "unresolved": [
+        "components/ui/index.ts",
+        "hooks/use-admin-offline.ts",
+        "__guard-probe.tsx",
+        "messages/af/common.json",
+        ".ts/.tsx"
+      ]
+    },
+    {
+      "doc": "docs/security/soc2/control-inventory.md",
+      "refs": 14,
+      "unresolved": [
+        "backend/src/services/accounting/period-lock.service.ts",
+        "backend/src/services/developer/api-key.service.ts",
+        "backend/src/__tests__/unknown-is-not-zero.test.ts",
+        "no-secrets-in-code.test.ts",
+        "docs/workspace-deletion.sql"
+      ]
+    },
+    {
+      "doc": "docs/admin/00-ADMIN-CONTRACT.md",
+      "refs": 48,
+      "unresolved": [
+        "docs/admin-01-migration.sql",
+        "docs/admin-02-migration.sql",
+        "docs/admin-03-migration.sql",
+        "docs/admin-04-migration.sql"
+      ]
+    },
+    {
+      "doc": "docs/architecture/universal-core/FIFTY-OPTIONS-AUDIT.md",
+      "refs": 34,
+      "unresolved": [
+        "backend/src/services/universal-core/universal-core.service.ts",
+        "backend/src/routes/universal-core.routes.ts",
+        "packages/local-engine/src/routes/universal-core.ts",
+        "validation/schemas/tax.domain.ts"
+      ]
+    },
+    {
+      "doc": "docs/architecture/universal-core/FIFTY-OPTIONS-IMPLEMENTATION-PROMPT.md",
+      "refs": 30,
+      "unresolved": [
+        "universal-core.service.ts",
+        "universal-core.routes.ts",
+        "packages/local-engine/src/routes/universal-core.ts",
+        "universal-core-sections.tsx"
+      ]
+    },
+    {
+      "doc": "docs/HISABCHE-ADMIN-UI-UX-AUDIT-2026-10-22.md",
+      "refs": 47,
+      "unresolved": [
+        "lib/admin-auth.ts",
+        "components/ui/index.ts",
+        "lib/admin-format.ts",
+        "(admin)/error.tsx"
+      ]
+    },
+    {
+      "doc": "docs/landing/landing-reconstruction.md",
+      "refs": 16,
+      "unresolved": [
+        ".tsx/.ts",
+        "variants/variant-command-center.tsx",
+        "variant-command-center.tsx",
+        "shared/real-product-embeds.tsx"
+      ]
+    },
+    {
+      "doc": "docs/offline/gates/2.md",
+      "refs": 25,
+      "unresolved": [
+        "src/__tests__/payments-rule.test.ts",
+        "src/__tests__/costing-rule.test.ts",
+        "src/__tests__/profit-report-rule.test.ts",
+        "src/__tests__/ledger-rule.test.ts"
+      ]
+    },
+    {
+      "doc": ".claude/ONE-CLICK-AI-ARTICLE-SCOPE.md",
+      "refs": 10,
+      "unresolved": [
+        "components/blog/post-editor-client.tsx",
+        "components/blog/blog-editor.tsx",
+        "components/blog/seo-panel.tsx",
+        "new/page.tsx"
+      ]
+    },
+    {
+      "doc": ".claude/reel-plugin/token-catalog.md",
+      "refs": 4,
+      "unresolved": [
+        "src/ui/icons.tsx",
+        "src/ui/card.tsx",
+        "src/ui/rich.tsx",
+        "src/engine/sound.ts"
+      ]
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-09-15-PERF.md",
+      "refs": 21,
+      "unresolved": [
+        "landing-client-sections.tsx",
+        "scratchpad/cdp-tbt.mjs",
+        "scratchpad/cdp-anim-trace.mjs",
+        "marquee-rtl.test.ts"
+      ]
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-19-OFFLINE-PHASE-1.md",
+      "refs": 16,
+      "unresolved": [
+        "packages/api/src/hooks/snapshots.ts",
+        "data-snapshots-panel.tsx",
+        "governance-container.tsx",
+        "governance-view.tsx"
+      ]
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/Hisabche v1.1 — Production Ready 🚀7.7.md",
+      "refs": 39,
+      "unresolved": [
+        "hr.routes.ts",
+        "approval-card.tsx",
+        "accept-invite/page.tsx",
+        "customers-customer-list.tsx"
+      ]
+    },
+    {
+      "doc": "CLAUDE.md",
+      "refs": 153,
+      "unresolved": ["queue/pdf-queue.ts", "postgres.js", "copy.ts", "shelves/shelf-map.ts"]
+    },
+    {
+      "doc": "docs/architecture/adr/005-groundtruth-and-four-fixes.md",
+      "refs": 22,
+      "unresolved": ["schemas/money.ts", "domain-ports.ts", "domain-events.ts"]
+    },
+    {
+      "doc": "docs/architecture/adr/006-review-round-2-fixes.md",
+      "refs": 14,
+      "unresolved": ["__golden__/run-vectors.ts", "domain-ports.ts", "domain-events.ts"]
+    },
+    {
+      "doc": "docs/BUSINESS_OS_RESTRUCTURING_ROADMAP.md",
+      "refs": 28,
+      "unresolved": ["packages/api/hooks/auth.ts", "store/auth.slice.ts", "CommandPalette.tsx"]
+    },
+    {
+      "doc": "docs/feature-audit/CATALOG.md",
+      "refs": 195,
+      "unresolved": [
+        "backend/src/services/payroll/payroll-ledger.domain.ts",
+        "packages/ui/src/components/ui/team-and-payroll/payroll-list-table.tsx",
+        "orders-page.tsx"
+      ]
+    },
+    {
+      "doc": "docs/import/AI-CONVERSION-PROMPT.md",
+      "refs": 4,
+      "unresolved": ["customers.csv", "products.csv", "invoices.csv"]
+    },
+    {
+      "doc": "docs/offline/entitlement/00-CONTRACT.md",
+      "refs": 46,
+      "unresolved": [
+        "src/schemas/entitlement-usage.ts",
+        "backend/src/services/monitoring.ts",
+        "docs/VERIFY-plan-limits.sql"
+      ]
+    },
+    {
+      "doc": "docs/offline/gates/4.md",
+      "refs": 18,
+      "unresolved": ["routes/invoices.ts", "routes/workspace.ts", ".d.ts"]
+    },
+    {
+      "doc": ".claude/reel-plugin/scene-catalog.md",
+      "refs": 3,
+      "unresolved": [
+        "src/engine/types.ts",
+        "src/scenes/index.tsx",
+        "src/components/WordDrivenStage.tsx"
+      ]
+    },
+    {
+      "doc": ".claude/reverse-and-import/01-CURRENCY-AUDIT.md",
+      "refs": 74,
+      "unresolved": [
+        "quick-invoice/containers/quick-invoice-container.tsx",
+        "payroll-list-table.tsx",
+        "ui-contract/currencies.ts"
+      ]
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/docs/BUSINESS_OS_RESTRUCTURING_ROADMAP.md",
+      "refs": 28,
+      "unresolved": ["packages/api/hooks/auth.ts", "store/auth.slice.ts", "CommandPalette.tsx"]
+    },
+    {
+      "doc": "docs/architecture/CORE-READINESS.md",
+      "refs": 20,
+      "unresolved": ["domain-ports.ts", "domain-events.ts"]
+    },
+    {
+      "doc": "docs/architecture/INDUSTRY-PROFILES-AGENT-PROMPT.md",
+      "refs": 16,
+      "unresolved": ["schemas/industry-profiles.ts", "schemas/business-capabilities.ts"]
+    },
+    {
+      "doc": "docs/architecture/LOCAL-FIRST-CORE-FINAL-PROMPT.md",
+      "refs": 14,
+      "unresolved": ["domain-ports.ts", "domain-events.ts"]
+    },
+    {
+      "doc": "docs/architecture/MASTER-EXECUTION-LOG.md",
+      "refs": 29,
+      "unresolved": ["seo-internal-links.test.ts", "coverage-data.test.ts"]
+    },
+    {
+      "doc": "docs/architecture/MEASUREMENTS.md",
+      "refs": 13,
+      "unresolved": [".agent-notes/measure-core.mjs", "matrix.ts"]
+    },
+    {
+      "doc": "docs/architecture/universal-core/FIFTY-OPTIONS-RANK4-PROMPT.md",
+      "refs": 16,
+      "unresolved": ["universal-core.service.ts", "universal-core.routes.ts"]
+    },
+    {
+      "doc": "docs/audit/ORPHAN-CAPABILITY-LEDGER.md",
+      "refs": 48,
+      "unresolved": ["generated/orphan-hooks.json", "generated/orphan-functions.json"]
+    },
+    {
+      "doc": "docs/feature-audit/implementation-truth-matrix.md",
+      "refs": 104,
+      "unresolved": [
+        "backend/src/services/payroll/payroll-ledger.domain.ts",
+        "packages/ui/src/components/ui/team-and-payroll/payroll-list-table.tsx"
+      ]
+    },
+    {
+      "doc": "docs/feature-audit/raw/hr.md",
+      "refs": 34,
+      "unresolved": [
+        "backend/src/services/payroll/payroll-ledger.domain.ts",
+        "packages/ui/src/components/ui/team-and-payroll/payroll-list-table.tsx"
+      ]
+    },
+    {
+      "doc": "docs/landing/landing-refactor-audit.md",
+      "refs": 5,
+      "unresolved": ["landing-page-refactored.tsx", "landing-preview-wrapper.tsx"]
+    },
+    {
+      "doc": "docs/LANDING-GAP-REPORT.md",
+      "refs": 20,
+      "unresolved": [
+        "packages/ui/src/components/ui/landing/journey/journey.config.ts",
+        "packages/ui/src/components/ui/landing/journey/journey-analytics.ts"
+      ]
+    },
+    {
+      "doc": "docs/offline/ALWAYS-LOCAL-RUN-LOG.md",
+      "refs": 19,
+      "unresolved": ["latest.yml", "standalone/apps/web/server.js"]
+    },
+    {
+      "doc": "docs/SCENE-REALISM-AUDIT.md",
+      "refs": 6,
+      "unresolved": ["journey/scene.ts", "three/runtime.ts"]
+    },
+    {
+      "doc": "docs/SEO_AUDIT_REPORT.md",
+      "refs": 16,
+      "unresolved": [
+        "[lang]/page.tsx",
+        "packages/ui/src/components/ui/landing/dashboard-showcase-scene.tsx"
+      ]
+    },
+    {
+      "doc": "docs/UI-UX-GUIDELINES.md",
+      "refs": 4,
+      "unresolved": ["messages/fa.json", "messages/en.json"]
+    },
+    {
+      "doc": ".claude/DARI-GLOSSARY.md",
+      "refs": 2,
+      "unresolved": ["scratchpad/dari.js", "af/common.json"]
+    },
+    {
+      "doc": ".claude/fast-track-sdk.md",
+      "refs": 2,
+      "unresolved": ["src/reels/index.ts", "src/data/reel-ledger.json"]
+    },
+    {
+      "doc": ".claude/reel-plugin/registration-contract.md",
+      "refs": 5,
+      "unresolved": ["src/reels/index.ts", "src/data/reel-ledger.json"]
+    },
+    {
+      "doc": ".claude/reverse-and-import/00-SPEC.md",
+      "refs": 31,
+      "unresolved": [
+        "docs/invoice-reversal-01-migration.sql",
+        "docs/FINDING-orphan-invoice-entries.sql"
+      ]
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-09-17.md",
+      "refs": 11,
+      "unresolved": ["cdp-tbt.mjs", "shot.mjs"]
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-09-27.md",
+      "refs": 32,
+      "unresolved": ["(dashboard)/page.tsx", "[lang]/page.tsx"]
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-09-30-BUSINESS-OS.md",
+      "refs": 11,
+      "unresolved": ["queue/pdf-queue.ts", "src/queue.ts"]
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-04-BUSINESS-OS-WIRING.md",
+      "refs": 27,
+      "unresolved": ["scratchpad/route-audit.js", "postgres.js"]
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-19-OFFLINE-PHASE-2.md",
+      "refs": 50,
+      "unresolved": ["allocation.ts", "posting.ts"]
+    },
+    {
+      "doc": ".claude/skills/hisabche-auth/SKILL.md",
+      "refs": 10,
+      "unresolved": ["lib/admin-auth.ts", "lib/supabase-server.ts"]
+    },
+    {
+      "doc": ".claude/skills/hisabche-i18n/SKILL.md",
+      "refs": 5,
+      "unresolved": [
+        "apps/mobile/src/shared/i18n/mobile-strings.ts",
+        "apps/desktop/src/shims/next-intl.tsx"
+      ]
+    },
+    {
+      "doc": ".claude/skills/new-reels/SKILL.md",
+      "refs": 7,
+      "unresolved": ["src/reels/index.ts", "src/data/reel-ledger.json"]
+    },
+    {
+      "doc": ".claude/STATE.md",
+      "refs": 24,
+      "unresolved": ["apps/mobile/src/shared/navigation/nav.ts", "nav.ts"]
+    },
+    {
+      "doc": ".claude/TASKS-UI-AND-PRODUCT.md",
+      "refs": 43,
+      "unresolved": ["containers/PricingContainer.tsx", "governance-view.tsx"]
+    },
+    {
+      "doc": ".claude/USER-REQUESTS.md",
+      "refs": 76,
+      "unresolved": ["docs/custom-units-migration.sql", "vite.shell.ts"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/accounting-workspace.md",
+      "refs": 7,
+      "unresolved": [
+        "apps/web/app/[lang]/(dashboard)/accounting-workspace/page.tsx",
+        "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx"
+      ]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/domain___domain.md",
+      "refs": 5,
+      "unresolved": [
+        "apps/web/app/[lang]/(dashboard)/domain/[domain]/page.tsx",
+        "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx"
+      ]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/inventory-workspace.md",
+      "refs": 7,
+      "unresolved": [
+        "apps/web/app/[lang]/(dashboard)/inventory-workspace/page.tsx",
+        "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx"
+      ]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/orders.md",
+      "refs": 5,
+      "unresolved": [
+        "apps/web/app/[lang]/(dashboard)/orders/page.tsx",
+        "packages/ui/src/components/ui/orders/containers/orders-container.tsx"
+      ]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/people-workspace.md",
+      "refs": 7,
+      "unresolved": [
+        "apps/web/app/[lang]/(dashboard)/people-workspace/page.tsx",
+        "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx"
+      ]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/purchasing.md",
+      "refs": 7,
+      "unresolved": [
+        "apps/web/app/[lang]/(dashboard)/purchasing/page.tsx",
+        "packages/ui/src/components/ui/purchasing/containers/purchasing-container.tsx"
+      ]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/quick-invoice.md",
+      "refs": 5,
+      "unresolved": [
+        "apps/web/app/[lang]/(dashboard)/quick-invoice/page.tsx",
+        "packages/ui/src/components/ui/quick-invoice/containers/quick-invoice-container.tsx"
+      ]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/sales-workspace.md",
+      "refs": 7,
+      "unresolved": [
+        "apps/web/app/[lang]/(dashboard)/sales-workspace/page.tsx",
+        "packages/ui/src/components/ui/domain/containers/domain-workspace-container.tsx"
+      ]
+    },
+    {
+      "doc": ".claude/ux-audit/README.md",
+      "refs": 3,
+      "unresolved": ["scripts/ux-scan.js", "scripts/ux-write.js"]
+    },
+    {
+      "doc": ".claude/warehouse-map/00-SPEC.md",
+      "refs": 6,
+      "unresolved": ["warehouse-map-canvas.tsx", "map-filtering.ts"]
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/backend/doc-backend.md",
+      "refs": 32,
+      "unresolved": ["auth.service.ts", "queue/pdf-queue.ts"]
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/docs/SEO_AUDIT_REPORT.md",
+      "refs": 16,
+      "unresolved": [
+        "[lang]/page.tsx",
+        "packages/ui/src/components/ui/landing/dashboard-showcase-scene.tsx"
+      ]
+    },
+    {
+      "doc": "docs/architecture/adr/004-clock-and-id-generator-injection.md",
+      "refs": 1,
+      "unresolved": ["packages/validation/src/schemas/domain-ports.ts"]
+    },
+    {
+      "doc": "docs/architecture/adr/007-final-round-alarm-and-proofs.md",
+      "refs": 14,
+      "unresolved": ["postgres.js"]
+    },
+    {
+      "doc": "docs/architecture/industry/VERIFICATION-LOG.md",
+      "refs": 5,
+      "unresolved": ["packages/ui/src/__industry-guard-injection.ts"]
+    },
+    {
+      "doc": "docs/architecture/INDUSTRY-PROFILES-FINISH-PROMPT.md",
+      "refs": 13,
+      "unresolved": ["routes/invoices.ts"]
+    },
+    {
+      "doc": "docs/architecture/LOCAL-FIRST-CORE-PROMPT.md",
+      "refs": 24,
+      "unresolved": ["routes/local-ledger.ts"]
+    },
+    {
+      "doc": "docs/architecture/universal-core/AGENT-LAUNCH-PROMPT.md",
+      "refs": 21,
+      "unresolved": ["packages/ui/src/components/ui/universal-core/universal-core-sections.tsx"]
+    },
+    {
+      "doc": "docs/audit/gates/GATE-04-database.md",
+      "refs": 13,
+      "unresolved": ["generated/pg-tests.json"]
+    },
+    {
+      "doc": "docs/audit/gates/GATE-08-sync.md",
+      "refs": 11,
+      "unresolved": ["routes/invoices.ts"]
+    },
+    {
+      "doc": "docs/audit/gates/GATE-13-reporting.md",
+      "refs": 3,
+      "unresolved": ["generated/routes.json"]
+    },
+    {
+      "doc": "docs/audit/gates/GATE-14-i18n.md",
+      "refs": 26,
+      "unresolved": ["generated/i18n-keys.json"]
+    },
+    {
+      "doc": "docs/audit/UNIVERSAL-CORE-AUDIT.md",
+      "refs": 15,
+      "unresolved": ["generated/domains.json"]
+    },
+    {
+      "doc": "docs/audit/WRITE-ROUTE-AUTHORIZATION.md",
+      "refs": 4,
+      "unresolved": ["generated/write-route-authz.json"]
+    },
+    {
+      "doc": "docs/DECISIONS.md",
+      "refs": 8,
+      "unresolved": ["packages/ui/src/components/ui/landing/journey/journey.config.ts"]
+    },
+    {
+      "doc": "docs/DESKTOP_RELEASE_AUDIT.md",
+      "refs": 4,
+      "unresolved": [".github/workflows/desktop.yml"]
+    },
+    {
+      "doc": "docs/DESKTOP_STATUS.md",
+      "refs": 4,
+      "unresolved": [".github/workflows/desktop.yml"]
+    },
+    {
+      "doc": "docs/feature-audit/raw/purchasing.md",
+      "refs": 8,
+      "unresolved": ["orders-page.tsx"]
+    },
+    {
+      "doc": "docs/feature-audit/SALES-INTELLIGENCE.md",
+      "refs": 20,
+      "unresolved": ["payroll-ledger.domain.ts"]
+    },
+    {
+      "doc": "docs/feature-audit/SALES-PLAYBOOK.md",
+      "refs": 16,
+      "unresolved": ["projects.service.ts"]
+    },
+    {
+      "doc": "docs/landing/scene/PROGRESS.md",
+      "refs": 11,
+      "unresolved": ["verify-results.json"]
+    },
+    {
+      "doc": "docs/landing/SPEC.md",
+      "refs": 3,
+      "unresolved": ["packages/ui/src/components/ui/landing/copy.ts"]
+    },
+    {
+      "doc": "docs/offline/P7-0-PLAN.md",
+      "refs": 76,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/page.tsx"]
+    },
+    {
+      "doc": "docs/parallel/handoff.md",
+      "refs": 104,
+      "unresolved": ["schemas/offline-license.ts"]
+    },
+    {
+      "doc": "docs/reset-all-business-data.md",
+      "refs": 5,
+      "unresolved": ["reset-all-business-data.sql"]
+    },
+    {
+      "doc": "docs/SEO/INDEXABILITY-POLICY.md",
+      "refs": 4,
+      "unresolved": ["features/[slug]/page.tsx"]
+    },
+    {
+      "doc": "docs/SEO/INTERNAL-LINKING-ARCHITECTURE.md",
+      "refs": 11,
+      "unresolved": ["features/[slug]/page.tsx"]
+    },
+    {
+      "doc": ".claude/agents/parity-reviewer.md",
+      "refs": 1,
+      "unresolved": ["apps/desktop/src/app/app.tsx"]
+    },
+    {
+      "doc": ".claude/architecture/api-surface.md",
+      "refs": 19,
+      "unresolved": ["sales-followup.ts"]
+    },
+    {
+      "doc": ".claude/architecture/data-model.md",
+      "refs": 15,
+      "unresolved": ["packages/sync/src/gc.ts"]
+    },
+    {
+      "doc": ".claude/db-integrity/00-SPEC.md",
+      "refs": 7,
+      "unresolved": ["docs/db-integrity-NN-migration.sql"]
+    },
+    {
+      "doc": ".claude/HANDOFF-PHASES-G-TO-O.md",
+      "refs": 28,
+      "unresolved": ["packages/sync/src/http-transport.ts"]
+    },
+    {
+      "doc": ".claude/reel-plugin/verification-contract.md",
+      "refs": 1,
+      "unresolved": ["cadence-model.ts"]
+    },
+    {
+      "doc": ".claude/SESSION-2026-08-31-PHASES.md",
+      "refs": 23,
+      "unresolved": ["timeline.service.ts"]
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-05-UX.md",
+      "refs": 23,
+      "unresolved": ["ux-version-switch.tsx"]
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-23-100-VIDEOS.md",
+      "refs": 5,
+      "unresolved": ["scratch/industry-coverage.mjs"]
+    },
+    {
+      "doc": ".claude/SESSION-CACHE.md",
+      "refs": 32,
+      "unresolved": ["apps/desktop/src/components/layout/sidebar.tsx"]
+    },
+    {
+      "doc": ".claude/skills/hisabche-architecture/SKILL.md",
+      "refs": 4,
+      "unresolved": ["apps/desktop/src/app/app.tsx"]
+    },
+    {
+      "doc": ".claude/skills/hisabche-feature-delivery/SKILL.md",
+      "refs": 9,
+      "unresolved": ["app-shell/app.tsx"]
+    },
+    {
+      "doc": ".claude/skills/hisabche-lessons/SKILL.md",
+      "refs": 13,
+      "unresolved": ["backend/kpi-currency-aggregation.test.ts"]
+    },
+    {
+      "doc": ".claude/skills/hisabche-migrations/SKILL.md",
+      "refs": 3,
+      "unresolved": ["postgres.js"]
+    },
+    {
+      "doc": ".claude/skills/hisabche-mobile/SKILL.md",
+      "refs": 3,
+      "unresolved": ["apps/mobile/src/shared/i18n/mobile-strings.ts"]
+    },
+    {
+      "doc": ".claude/skills/hisabche-ui/SKILL.md",
+      "refs": 2,
+      "unresolved": ["apps/desktop/src/app/app.tsx"]
+    },
+    {
+      "doc": ".claude/skills/hisabche-web/SKILL.md",
+      "refs": 12,
+      "unresolved": ["crawl.mjs"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/assets.md",
+      "refs": 7,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/assets/page.tsx"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/bank.md",
+      "refs": 7,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/bank/page.tsx"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/budgets.md",
+      "refs": 7,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/budgets/page.tsx"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/campaigns.md",
+      "refs": 7,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/campaigns/page.tsx"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/conflicts.md",
+      "refs": 7,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/conflicts/page.tsx"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/data-migration.md",
+      "refs": 7,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/data-migration/page.tsx"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/expiry.md",
+      "refs": 7,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/expiry/page.tsx"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/promotions.md",
+      "refs": 7,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/promotions/page.tsx"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/referrals.md",
+      "refs": 7,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/referrals/page.tsx"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/tasks.md",
+      "refs": 7,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/tasks/page.tsx"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/timesheets.md",
+      "refs": 7,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/timesheets/page.tsx"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/wallet.md",
+      "refs": 7,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/wallet/page.tsx"]
+    },
+    {
+      "doc": ".claude/ux-audit/pages/workflow-templates.md",
+      "refs": 7,
+      "unresolved": ["apps/web/app/[lang]/(dashboard)/workflow-templates/page.tsx"]
+    },
+    {
+      "doc": ".claude/WORKFLOW.md",
+      "refs": 7,
+      "unresolved": ["apps/mobile/src/shared/navigation/nav.ts"]
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/doc.md",
+      "refs": 1,
+      "unresolved": ["Day.js"]
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/supa/📊 Fast-Track Summary — Supabase Reverse Engineering.md",
+      "refs": 1,
+      "unresolved": ["AI_CONTEXT.json"]
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/🏆 Hisabche Master Roadmap (vFinal – 10/10).md",
+      "refs": 1,
+      "unresolved": ["data/roadmap.json"]
+    },
+    {
+      "doc": "docs/admin/ADMIN-10-PROMPT.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/admin/ADMIN-AGENT-PROMPT.md",
+      "refs": 53,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/admin-guide.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/ADMIN_UI_COPY_TASK.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/ai-integration-readme.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/adr/001-money-units.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/adr/002-core-location.md",
+      "refs": 6,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/adr/003-execution-authority-per-plan.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/ARCHITECTURE-CONTRACT-TEMPLATE.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/EVIDENCE-FIRST-SUPPLEMENT-PROMPT.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/industry/ADR-001-primary-industry.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/industry/AUDIT.md",
+      "refs": 5,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/industry/BASELINE.md",
+      "refs": 4,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/industry/EVIDENCE.md",
+      "refs": 6,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/industry/FINAL-RESULTS.md",
+      "refs": 10,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/industry/industry-diff.generated.md",
+      "refs": 4,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/industry/INDUSTRY-DIFFERENCES.md",
+      "refs": 36,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/industry/INDUSTRY-ONBOARDING-TAXONOMY.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/industry/INDUSTRY-SUPPORT-MATRIX.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/industry/OPEN-QUESTIONS.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/industry/TRACEABILITY.md",
+      "refs": 13,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/INDUSTRY-DIFF-DOC-PROMPT.md",
+      "refs": 6,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/INDUSTRY-PROFILES-CLOSE-ALL-PROMPT.md",
+      "refs": 4,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/MASTER-EXECUTION-PROMPT.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/OPEN-QUESTIONS.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/universal-core/CLOSE-ALL-GAPS-PROMPT.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/universal-core/CORE-BOUNDARIES.md",
+      "refs": 13,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/universal-core/CORE-INVENTORY.md",
+      "refs": 68,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/universal-core/INDUSTRY-COVERAGE-TABLE.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/universal-core/MENU-DOMAIN-MAP.md",
+      "refs": 34,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/universal-core/RANKING-MODEL.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/universal-core/README.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/universal-core/UNIVERSAL-CORE-GAP-ANALYSIS.md",
+      "refs": 5,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/universal-core/WIRE-IT-UP-MASTER-PROMPT.md",
+      "refs": 11,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/UNIVERSAL-CORE-ADDENDUM-PROMPT.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/audit/COMPETITIVE-EVIDENCE-MATRIX.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/audit/evidence/round1-inventory-offline.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/audit/evidence/round2-accounting-compliance-api.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/audit/gates/GATE-09-accounting.md",
+      "refs": 5,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/audit/gates/GATE-10-inventory.md",
+      "refs": 12,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/audit/SCORE-METHODOLOGY.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/capabilities/admin-workspace-membership.md",
+      "refs": 11,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/CLOUDFLARE-EDGE.md",
+      "refs": 4,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/DESKTOP_VERIFICATION.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/feature-audit/catalog-reconciliation.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/feature-audit/parser-artifacts.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/feature-audit/qa-report.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/feature-audit/raw/accounting.md",
+      "refs": 32,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/feature-audit/raw/ai-content.md",
+      "refs": 23,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/feature-audit/raw/customers-crm.md",
+      "refs": 31,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/feature-audit/raw/ecosystem.md",
+      "refs": 22,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/feature-audit/raw/inventory.md",
+      "refs": 14,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/feature-audit/raw/platform.md",
+      "refs": 16,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/feature-audit/raw/reports.md",
+      "refs": 21,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/feature-audit/raw/sales-pos.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/feature-audit/tenancy-security-proof.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/feature-audit/unknown-features.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/FINDING-10-ROOT-CAUSE.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/HISABCHE-ADMIN-REDESIGN-PLAN.md",
+      "refs": 13,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/I18N_MIGRATION_PROMPT.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/landing/FIX-AUDIT.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/landing-3d-spec.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/landing-v2-spec.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/MOBILE_PERFORMANCE.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/MOBILE_UX_AUDIT.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/newtask.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/03-DEVICE-SCHEMA.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/ALWAYS-LOCAL-00-FINDING.md",
+      "refs": 37,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/ALWAYS-LOCAL-CONTINUE.en.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/ALWAYS-LOCAL-DECISIONS.md",
+      "refs": 10,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/ALWAYS-LOCAL-F3F4-DECISIONS.en.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/ALWAYS-LOCAL-PROMPT.en.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/ALWAYS-LOCAL-PROMPT.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/device-test-checklist.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/ENTITLEMENT-PROMPT.md",
+      "refs": 17,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/gates/3.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/gates/5.md",
+      "refs": 18,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/handoff/03.md",
+      "refs": 4,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/handoff/05.md",
+      "refs": 15,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/handoff/engine-contract.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/migration/00-CONTRACT.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/migration/00-SURVEY.md",
+      "refs": 6,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/offline/migration/AGENT-M-PROMPT.md",
+      "refs": 7,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/PARALLEL-AGENTS-PROMPT.md",
+      "refs": 4,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/PRODUCTION-RELEASE-CHECKLIST-universal-core.md",
+      "refs": 9,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/PRODUCT_FEATURE_MATRIX.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/PROMPT-safe-migration-method.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/qa/deep-audit-2026-10-14.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/RESET-AND-REBUILD.md",
+      "refs": 7,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/sales/hisabche-features-for-owners.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/sales/hisabche-sales-script.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/sales/OPEN-QUESTIONS.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/sales/_claims-check.md",
+      "refs": 4,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/sales/_evidence.md",
+      "refs": 114,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/security/disaster-recovery.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/security/iso27001/scope-and-risk-register.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/security/iso27001/statement-of-applicability.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/security/pentest-scope.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/SEO/AUDIT.md",
+      "refs": 10,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/SEO/internal-link-report.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/SEO/INTERNAL-LINKING-AGENT-PROMPT.md",
+      "refs": 13,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/SEO/INTERNAL-LINKING-BEFORE.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/SEO/POST-IMPLEMENTATION.md",
+      "refs": 11,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/SEO/SEO-AGENT-PROMPT.md",
+      "refs": 16,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/SEO/SEO-TESTING.md",
+      "refs": 25,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/SYNC_RUNBOOK.md",
+      "refs": 4,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/USER_JOURNEY_DATA_MAP.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/VPS_MIGRATION.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/accounting-integrity/00-SPEC.md",
+      "refs": 10,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/agents/domain-reviewer.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/agents/sales-product-analyst.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/agents/sales-script-writer.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/agents/security-reviewer.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ai-pipeline/00-GAP-AND-PLAN.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ai-pipeline/01-STATUS.md",
+      "refs": 11,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/architecture/core-modules.md",
+      "refs": 18,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/architecture/one-ui-two-hosts.md",
+      "refs": 9,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/architecture/performance-policy.md",
+      "refs": 5,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/BUSINESS-OS-EXECUTION.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/commands/db-migration.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/commands/i18n-check.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/commands/new-reels.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/commands/new_reels.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/commands/review.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/commands/security-audit.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/commands/verify.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/CONTENT-INTELLIGENCE-SCOPE.md",
+      "refs": 11,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/DEBUG-CONTENT-INTELLIGENCE.md",
+      "refs": 7,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/DEBUG-PLAYBOOK.md",
+      "refs": 8,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/detail.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/DOCS-AND-PATCHES-STATE.md",
+      "refs": 15,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/HISABCHE_UX_task_v3.0.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/LIVE-AUDIT-2026-10-14.md",
+      "refs": 4,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/POSITIONING-2026-09-15.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/README.md",
+      "refs": 5,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/reel-plugin/creative-director.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/reel-plugin/README.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/research/accounting-gap-analysis.md",
+      "refs": 8,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/research/blog-keywords.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/research/ecosystem-gap-analysis.md",
+      "refs": 13,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/research/inventory-costing-gap-analysis.md",
+      "refs": 5,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/research/payments-ar-ap-gap-analysis.md",
+      "refs": 4,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/research/tier2-gap-analysis.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-2026-08-31.md",
+      "refs": 20,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-2026-09-05-CONSOLIDATION.md",
+      "refs": 31,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-09-14.md",
+      "refs": 10,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-09-19.md",
+      "refs": 4,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-09-26-BLOG.md",
+      "refs": 12,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-09-30-FINDINGS.md",
+      "refs": 7,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-09.md",
+      "refs": 26,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-01-CONTENT-INTELLIGENCE.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-03.md",
+      "refs": 23,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-04-MANUFACTURING.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-07.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-11-INTEGRITY.md",
+      "refs": 19,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-12-ANTIGRAVITY-REVIEW.md",
+      "refs": 21,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-14-LIVE-AUDIT.md",
+      "refs": 5,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/SESSION-CACHE-2026-10-19-OFFLINE-PHASE-3.md",
+      "refs": 5,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/sessions/2026-10-06-release-readiness-campaign.md",
+      "refs": 7,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/sessions/2026-10-07-responsive-seo-cache.md",
+      "refs": 5,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/skills/hisabche-ai-and-integrations/SKILL.md",
+      "refs": 7,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/skills/hisabche-backend/SKILL.md",
+      "refs": 4,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/skills/hisabche-code-review/SKILL.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/skills/hisabche-database/SKILL.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/skills/hisabche-debugging/SKILL.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/skills/hisabche-desktop/SKILL.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/skills/hisabche-offline/SKILL.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/skills/hisabche-release-build/SKILL.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/skills/hisabche-scripted-edits/SKILL.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/skills/hisabche-session-rules/SKILL.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/skills/hisabche-testing/SKILL.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/skills/hisabche-ux-consolidation/SKILL.md",
+      "refs": 15,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/TASK-close-the-gap.md",
+      "refs": 8,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/00-PROPOSAL.md",
+      "refs": 24,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/about.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/accept-invite.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/accounting.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/activities.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/analysis.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/approvals.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/assistant.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/billing.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/blog.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/blog__category___slug.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/blog__category___slug___page___page.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/blog__page___page.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/blog__tag___slug.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/blog__tag___slug___page___page.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/blog___slug.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/contact.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/customers.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/customers___id.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/dashboard.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/data-and-sync.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/developers.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/docs.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/docs___slug.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/features___slug.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/feedback___token.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/forgot-password.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/governance.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/home.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/invoices.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/invoices__new.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/invoices__new__preview.md",
+      "refs": 5,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/invoices___id.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/legal__accessibility.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/legal__cookies.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/legal__copyright.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/legal__data-deletion.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/legal__disclaimer.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/legal__gdpr.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/legal__privacy.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/legal__refund.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/legal__security.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/legal__terms.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/login.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/manufacturing.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/market-seller.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/market.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/marketplace.md",
+      "refs": 5,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/market___seller.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/market___seller____listing.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/oauth__authorize.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/onboarding.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/operations.md",
+      "refs": 5,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/portal___token.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/public-invoice___token.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/public-task___token.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/reset-password.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/settings.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/signup.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/stock-count.md",
+      "refs": 5,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/sync-center.md",
+      "refs": 7,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/team-and-payroll.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/team-and-payroll___id.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/till.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/warehouse.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/ux-audit/pages/warehouse___id.md",
+      "refs": 2,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/CLAUDE.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/database-dependencies-report.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/docs/DESKTOP_STATUS.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/docs/I18N_MIGRATION_PROMPT.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/docs/MOBILE_PERFORMANCE.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/docs/MOBILE_UX_AUDIT.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/docs/USER_JOURNEY_DATA_MAP.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/README.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/# 📊 Hisabche — ERP & Business Management System7.11.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/2manifest new.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/7.7doc.md",
+      "refs": 18,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/ai,assists.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/doc3.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/doc6.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/docforSEO-EN.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/documentforSEO-fa.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/docupdate.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/dpc7.md",
+      "refs": 3,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/future.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/last-rouadmap.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/main.manifest.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/Manifest v7.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/manifest7.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/newdoc5.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/prompt 4.md",
+      "refs": 1,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/prompt new.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/prompt.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/prompt3.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/prompt4.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/system.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/titanprompt.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/worktrees/relaxed-allen-e9e665/util/📜 Hisabche AI Operating Manifest v11.0.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "README.md",
+      "refs": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "AGENTS.md",
+      "refs": 11,
+      "unresolved": []
+    }
+  ]
+}

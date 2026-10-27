@@ -19,6 +19,7 @@
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_ALTERS, SALES_SIDE_STATEMENTS } from './local-sales-schema'
 import { SCHEMA_VERSION } from './local-schema'
+import { UNIVERSAL_CORE_ALTERS, UNIVERSAL_CORE_STATEMENTS } from './local-universal-core-schema'
 
 export interface LocalMigration {
   /** The version this migration brings the cache UP TO. */
@@ -486,6 +487,57 @@ const V7_BOOKS_AND_STOCK: LocalMigration = {
   statements: [...BOOKS_STOCK_STATEMENTS],
 }
 
+/**
+ * v8 — the industry profile and the per-product units, offline.
+ *
+ * `business_types` is the SAME comma-separated value the server stores on the
+ * profile, so a device can resolve the profile with no network. The timestamp
+ * is what makes «latest explicit user write wins» decidable during sync.
+ *
+ * `product_units` is the table `toBaseQuantity` reads. It is created here as
+ * well as in CREATE_STATEMENTS: a device that already has a cache never runs
+ * the CREATE list again.
+ *
+ * Additive and idempotent: ALTER TABLE on an existing column is recognised by
+ * `isAlreadyApplied`, and every CREATE is `IF NOT EXISTS`.
+ */
+const V8_INDUSTRY_AND_UNITS: LocalMigration = {
+  to: 8,
+  statements: [
+    `ALTER TABLE local_workspace ADD COLUMN business_types TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE local_workspace ADD COLUMN business_types_updated_at TEXT`,
+    `CREATE TABLE IF NOT EXISTS product_units (
+      id TEXT PRIMARY KEY,
+      workspace_id TEXT NOT NULL DEFAULT '',
+      product_id TEXT NOT NULL,
+      unit_code TEXT NOT NULL,
+      conversion_factor_to_base REAL NOT NULL DEFAULT 1,
+      is_base_unit INTEGER NOT NULL DEFAULT 0,
+      is_purchase_default INTEGER NOT NULL DEFAULT 0,
+      is_sale_default INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT '',
+      deleted_at TEXT,
+      origin TEXT NOT NULL DEFAULT 'local',
+      sync_state TEXT NOT NULL DEFAULT 'local_only'
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_product_units_product ON product_units(workspace_id, product_id)`,
+  ],
+}
+
+/**
+ * v9 — Universal Business Core.
+ *
+ * Adds credit_limit_mode to local_workspace, and creates offline tables for:
+ * product_variants, metal_rates, auto_fitments, vehicle_attributes, warranties,
+ * invoice_returns, invoice_return_lines, and order_deposits.
+ */
+const V9_UNIVERSAL_CORE: LocalMigration = {
+  to: 9,
+  statements: [...UNIVERSAL_CORE_ALTERS, ...UNIVERSAL_CORE_STATEMENTS],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -493,6 +545,8 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V5_PEOPLE_SIDE,
   V6_SALES_SIDE,
   V7_BOOKS_AND_STOCK,
+  V8_INDUSTRY_AND_UNITS,
+  V9_UNIVERSAL_CORE,
 ]
 
 /**

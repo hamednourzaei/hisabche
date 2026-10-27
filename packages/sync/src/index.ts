@@ -15,3 +15,4 @@
 
 export * from './wire'
 export * from './stream-client'
+export * from './sync-identity'

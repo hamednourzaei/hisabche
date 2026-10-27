@@ -117,6 +117,12 @@ export interface WarehouseMap {
   asOf: string
   /** False = `docs/warehouse-map-01-migration.sql` has not been run yet. */
   migrated: boolean
+  /**
+   * The answer came from the device's engine, which keeps shelves but not the
+   * map's heat, stagnation and value. That is «not available offline» — NOT
+   * «the server's script has not been run», which is what `migrated: false` says.
+   */
+  notAvailableOffline?: boolean
   /** The shelf each product's purchases fill; `null` = shelf-capacity-01 not run. */
   autoShelves?: Array<{ productId: string; locationId: string }> | null
   locations: MapLocation[]
@@ -173,7 +179,10 @@ export function useWarehouseMap(warehouseId: string | null, days: number) {
         days: Number(data?.days ?? days),
         demandWindowDays: Number(data?.demandWindowDays ?? 30),
         asOf: data?.asOf ?? '',
+        // ⚠️ The server always says `migrated`; the device's engine never does.
+        // A missing flag is the engine, not an old database.
         migrated: data?.migrated === true,
+        notAvailableOffline: data?.migrated === undefined,
         locations: asList<MapLocation>(data?.locations),
         totals: data?.totals ?? emptyTotals,
         unplaced: data?.unplaced ?? { productCount: 0, quantity: 0, value: null },

@@ -128,7 +128,7 @@ function uiLanguageFromHeader(header: string | string[] | undefined): 'fa' | 'af
 }
 
 export async function invoicePdfRoutes(fastify: FastifyInstance) {
-  fastify.get<{ Params: { id: string } }>(
+  fastify.get(
     '/api/invoices/:id/pdf',
     {
       preHandler: [authenticate, requireWorkspaceContext],
@@ -143,8 +143,8 @@ export async function invoicePdfRoutes(fastify: FastifyInstance) {
         },
       },
     },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-      const { id } = request.params
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string }
       const { workspaceId } = request.tenancy
 
       if (!UUID_RE.test(id)) {

@@ -1,0 +1,162 @@
+[
+  {
+    "file": "packages/validation/src/schemas/consolidation.domain.ts",
+    "fn": "consolidateEntities"
+  },
+  {
+    "file": "packages/validation/src/schemas/deferral.domain.ts",
+    "fn": "buildDeferralSchedule"
+  },
+  {
+    "file": "packages/validation/src/schemas/expense-claims.domain.ts",
+    "fn": "calculateExpenseReportTotal"
+  },
+  {
+    "file": "packages/validation/src/schemas/expense-claims.domain.ts",
+    "fn": "canApproveExpenseReport"
+  },
+  {
+    "file": "packages/validation/src/schemas/expense-claims.domain.ts",
+    "fn": "canRejectExpenseReport"
+  },
+  {
+    "file": "packages/validation/src/schemas/installment.domain.ts",
+    "fn": "decideBlock"
+  },
+  {
+    "file": "packages/validation/src/schemas/late-fee.domain.ts",
+    "fn": "settingsFor"
+  },
+  {
+    "file": "packages/validation/src/schemas/late-fee.domain.ts",
+    "fn": "periodOf"
+  },
+  {
+    "file": "packages/validation/src/schemas/late-fee.domain.ts",
+    "fn": "chargeableMinor"
+  },
+  {
+    "file": "packages/validation/src/schemas/late-fee.domain.ts",
+    "fn": "lateFeeSchedule"
+  },
+  {
+    "file": "packages/validation/src/schemas/mfa.domain.ts",
+    "fn": "formatRecoveryCode"
+  },
+  {
+    "file": "packages/validation/src/schemas/mfa.domain.ts",
+    "fn": "generateRecoveryCodes"
+  },
+  {
+    "file": "packages/validation/src/schemas/mfa.domain.ts",
+    "fn": "matchRecoveryCode"
+  },
+  {
+    "file": "packages/validation/src/schemas/tax-return.domain.ts",
+    "fn": "formatArdBrtReturn"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/area-dimension.domain.ts",
+    "fn": "toMeters"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/area-dimension.domain.ts",
+    "fn": "fromSquareMeters"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/area-dimension.domain.ts",
+    "fn": "calculateAreaDimension"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/area-dimension.domain.ts",
+    "fn": "calculateAreaLineTotal"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/auto-parts.domain.ts",
+    "fn": "matchesFitment"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/auto-parts.domain.ts",
+    "fn": "buildCoreDepositLine"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/gold-jewellery.domain.ts",
+    "fn": "deriveKaratGramRate"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/gold-jewellery.domain.ts",
+    "fn": "calculateJewelleryLine"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/gold-jewellery.domain.ts",
+    "fn": "calculateOldGoldTradeIn"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/pack-barcode.domain.ts",
+    "fn": "resolvePackScan"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/roll-batch.domain.ts",
+    "fn": "consumeRollLength"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/roll-batch.domain.ts",
+    "fn": "convertBatchQuantity"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/serial-batch.domain.ts",
+    "fn": "validateSerialSale"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/serial-batch.domain.ts",
+    "fn": "markSerialSold"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/serial-batch.domain.ts",
+    "fn": "markSerialReturned"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/serial-batch.domain.ts",
+    "fn": "sortBatchesFEFO"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/specialized-extensions.domain.ts",
+    "fn": "calculateTripSummary"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/specialized-extensions.domain.ts",
+    "fn": "calculateCropYieldSummary"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/specialized-extensions.domain.ts",
+    "fn": "calculateOrderDepositBalance"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/specialized-extensions.domain.ts",
+    "fn": "explodeKit"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/variants.domain.ts",
+    "fn": "resolveVariantPrice"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/variants.domain.ts",
+    "fn": "formatVariantTitle"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/variants.domain.ts",
+    "fn": "canonicalAttributeKey"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/vehicles.domain.ts",
+    "fn": "calculateDaysInStock"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/vehicles.domain.ts",
+    "fn": "calculateTotalVehicleCost"
+  },
+  {
+    "file": "packages/validation/src/schemas/universal-core/vehicles.domain.ts",
+    "fn": "calculateVehicleProfit"
+  }
+]

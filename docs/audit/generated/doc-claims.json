@@ -1,0 +1,158 @@
+{
+  "rows": [
+    {
+      "doc": "CLAUDE.md",
+      "refs": 210,
+      "resolved": 206,
+      "unresolved": ["queue/pdf-queue.ts", "postgres.js", "copy.ts", "shelves/shelf-map.ts"]
+    },
+    {
+      "doc": ".claude/README.md",
+      "refs": 10,
+      "resolved": 10,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/STATE.md",
+      "refs": 29,
+      "resolved": 27,
+      "unresolved": ["apps/mobile/src/shared/navigation/nav.ts", "nav.ts"]
+    },
+    {
+      "doc": ".claude/WORKFLOW.md",
+      "refs": 7,
+      "resolved": 6,
+      "unresolved": ["apps/mobile/src/shared/navigation/nav.ts"]
+    },
+    {
+      "doc": ".claude/architecture/core-modules.md",
+      "refs": 19,
+      "resolved": 19,
+      "unresolved": []
+    },
+    {
+      "doc": ".claude/architecture/api-surface.md",
+      "refs": 19,
+      "resolved": 18,
+      "unresolved": ["sales-followup.ts"]
+    },
+    {
+      "doc": ".claude/architecture/data-model.md",
+      "refs": 15,
+      "resolved": 14,
+      "unresolved": ["packages/sync/src/gc.ts"]
+    },
+    {
+      "doc": ".claude/ux-audit/README.md",
+      "refs": 4,
+      "resolved": 2,
+      "unresolved": ["scripts/ux-scan.js", "scripts/ux-write.js"]
+    },
+    {
+      "doc": "docs/architecture/capability-matrix.csv",
+      "refs": 0,
+      "resolved": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/PRODUCTION-RELEASE-CHECKLIST-universal-core.md",
+      "refs": 9,
+      "resolved": 9,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/security/disaster-recovery.md",
+      "refs": 0,
+      "resolved": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/security/pentest-scope.md",
+      "refs": 0,
+      "resolved": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/security/soc2/control-inventory.md",
+      "refs": 14,
+      "resolved": 9,
+      "unresolved": [
+        "backend/src/services/accounting/period-lock.service.ts",
+        "backend/src/services/developer/api-key.service.ts",
+        "backend/src/__tests__/unknown-is-not-zero.test.ts",
+        "no-secrets-in-code.test.ts",
+        "docs/workspace-deletion.sql"
+      ]
+    },
+    {
+      "doc": "docs/security/iso27001/scope-and-risk-register.md",
+      "refs": 0,
+      "resolved": 0,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/security/iso27001/statement-of-applicability.md",
+      "refs": 1,
+      "resolved": 1,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/universal-core/FIFTY-OPTIONS-LOG.md",
+      "refs": 123,
+      "resolved": 106,
+      "unresolved": [
+        "universal-core-sections.tsx",
+        "consolidation.domain.test.ts",
+        "tax.domain.test.ts",
+        "deferral.domain.test.ts",
+        "purchasing.domain.test.ts",
+        "automation-rules.test.ts",
+        "accounting-cash-flow.test.ts",
+        "expense-claims.domain.test.ts",
+        "serial-batch.domain.test.ts",
+        "costing-landed.test.ts",
+        "specialized-extensions.domain.test.ts",
+        "pack-barcode.domain.test.ts",
+        "area-dimension.domain.test.ts",
+        "roll-batch.domain.test.ts",
+        "gold-jewellery.domain.test.ts",
+        "tax-return.domain.test.ts",
+        "mfa.domain.test.ts"
+      ]
+    },
+    {
+      "doc": "docs/architecture/universal-core/UNIVERSAL-CORE-GAP-ANALYSIS.md",
+      "refs": 6,
+      "resolved": 6,
+      "unresolved": []
+    },
+    {
+      "doc": "docs/architecture/universal-core/CORE-INVENTORY.md",
+      "refs": 70,
+      "resolved": 70,
+      "unresolved": []
+    }
+  ],
+  "count": {
+    "movedPairs": 28,
+    "lessonsMax": 218,
+    "lessonsCount": 57,
+    "skillDirs": 22,
+    "commands": [
+      "db-migration.md",
+      "i18n-check.md",
+      "new-reels.md",
+      "new_reels.md",
+      "review.md",
+      "security-audit.md",
+      "verify.md"
+    ],
+    "agents": [
+      "domain-reviewer.md",
+      "parity-reviewer.md",
+      "sales-product-analyst.md",
+      "sales-script-writer.md",
+      "security-reviewer.md"
+    ]
+  }
+}
