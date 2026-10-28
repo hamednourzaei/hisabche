@@ -32,12 +32,18 @@ Loaded: dashboard, invoices, customers, warehouse, accounting, till, team-and-pa
 
 Customer create → delete. Warehouse create → delete; delete refused with stock. Branch create. Stock count start → record → complete. Invoice INV-000099 issued (80 AFN, paid into «صندوق تست») and returned. Customer statement and balance after the return.
 
-## Known limitations (not fixed)
+## Return follow-ups (fixed 28 Oct, verified live)
 
-- After a return on an UNPAID invoice, the invoice still appears in the open-invoices list for its full amount (affects payment allocation). Balance and statement are correct.
-- The customers list shows debtors only: a customer with a credit shows 0 / «تسویه».
-- The stat «بدهی ما به مشتری» means purchase-invoice payable; the credit from a return is in the net balance card.
-- Stock count: «expected 0» for a product the picker shows as 10 in the same warehouse; value 0 when the product has no cost — not investigated.
+- A returned UNPAID invoice no longer stays open: INV-000100 (130,000, unpaid) returned as RET-LIVE-0100 gives receivable 0, overdue 0, open invoices 0 and a statement row «برگشت ۱۳۰٬۰۰۰». Open-invoice reads (allocation, party list, aging) subtract returns (netOfReturns in payments.repository).
+- The customers list shows a credit: «مشتری تست — ۸۰ AFN بستانکار», status «بستانکار», instead of «۰ / تسویه» (GET /api/payments/return-effects/customers).
+- «بدهی ما به مشتری» is purchase payable plus return credit (server field weOwe), with the hint «شامل اعتبار مرجوعی».
+- One shared rule, returnEffectOfInvoice: a return cancels debt on that invoice and becomes credit once nothing is owed.
+
+## Remaining limitations
+
+- The invoice's own status in the invoice list stays «پرداخت‌نشده» after a return (the database computes it from total and allocations).
+- The customers list adds one figure in the books currency: debt or credit in another currency is not shown there (the customer file shows each currency).
+- After the deploy the live API was slow for several minutes (5–15 s per call, some timeouts) while the new instance warmed up; it recovered without action.
 
 ## Not done
 
