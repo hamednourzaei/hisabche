@@ -2260,6 +2260,7 @@
     "addRate": "Add a currency or unit"
   },
   "customers": {
+    "creditor": "Creditor",
     "title": "Customers",
     "subtitle": "Manage customer credits and debts",
     "creditInvoice": "Credit Invoice",
@@ -7721,6 +7722,7 @@
     "cta": "Renew or buy a subscription"
   },
   "customer360": {
+    "weOweIncludesReturns": "Includes credit from returns",
     "deleteCustomer": "Delete customer",
     "deleteConfirm": "Delete this customer? This cannot be undone.",
     "deleteFailed": "Could not delete the customer",

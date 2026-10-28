@@ -18,6 +18,8 @@ export interface Customer {
 
 export interface CustomerWithDebt extends Customer {
   totalDebt: number
+  /** What the business owes this customer (a return on an invoice already paid). */
+  creditBalance?: number
   openCount: number
 }
 

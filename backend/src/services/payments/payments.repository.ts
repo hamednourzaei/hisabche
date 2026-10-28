@@ -13,6 +13,7 @@ import { ConflictError, DatabaseError } from '../../errors/database.error'
 import type { TenancyContext } from '../tenancy.service'
 
 import type { AllocationRequest, OpenInvoice, PartyType, PaymentDirection } from './payments.domain'
+import { returnEffectOfInvoice, saleReturnsOf } from '@hisabche/validation'
 import type {
   PartyInvoiceRow,
   PartyLineRow,
@@ -66,6 +67,39 @@ async function readSaleReturns(
     rows.push(...((data ?? []) as Array<Omit<PartyReturnRow, 'currency'>>))
     if (!data || data.length < PAGE) return rows
   }
+}
+
+/** Every sale return of a workspace, all pages (the customers list reads the effects of all of them). */
+async function readAllSaleReturns(
+  workspaceId: string,
+): Promise<Array<Omit<PartyReturnRow, 'currency'>>> {
+  const rows: Array<Omit<PartyReturnRow, 'currency'>> = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('invoice_returns')
+      .select('id, original_invoice_id, return_type, return_number, return_date, grand_total_minor')
+      .eq('workspace_id', workspaceId)
+      .eq('return_type', 'sale_return')
+      .order('return_date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (error) {
+      if (error.code === '42P01' || error.code === 'PGRST205') return []
+      throw new DatabaseError('Failed to fetch returns', error)
+    }
+    rows.push(...((data ?? []) as Array<Omit<PartyReturnRow, 'currency'>>))
+    if (!data || data.length < PAGE) return rows
+  }
+}
+
+export interface ReturnEffectRow {
+  customerId: string
+  /** Empty = the books currency. */
+  currency: string
+  /** Debt the returns cancelled (comes off what the customer owes). */
+  applied: number
+  /** Returns on money already paid: what the business now owes the customer. */
+  credit: number
 }
 
 export interface PaymentRow {
@@ -196,15 +230,18 @@ export class PaymentsRepository {
 
     if (error) throw new DatabaseError('Failed to fetch open invoices', error)
 
-    return (data ?? []).map((row) => ({
-      invoiceId: row.invoice_id,
-      invoiceNumber: row.invoice_number ?? '',
-      total: Number(row.total) || 0,
-      allocated: Number(row.allocated) || 0,
-      dueDate: String(row.due_date ?? '').slice(0, 10),
-      invoiceDate: String(row.invoice_date ?? '').slice(0, 10),
-      currency: row.currency ? String(row.currency) : null,
-    }))
+    return this.netOfReturns(
+      workspaceId,
+      (data ?? []).map((row) => ({
+        invoiceId: row.invoice_id,
+        invoiceNumber: row.invoice_number ?? '',
+        total: Number(row.total) || 0,
+        allocated: Number(row.allocated) || 0,
+        dueDate: String(row.due_date ?? '').slice(0, 10),
+        invoiceDate: String(row.invoice_date ?? '').slice(0, 10),
+        currency: row.currency ? String(row.currency) : null,
+      })),
+    )
   }
 
   /**
@@ -308,18 +345,21 @@ export class PaymentsRepository {
 
     if (error) throw new DatabaseError('Failed to fetch invoices for allocation', error)
 
-    return (data ?? []).map((row) => ({
-      invoiceId: row.invoice_id,
-      invoiceNumber: row.invoice_number ?? '',
-      total: Number(row.total) || 0,
-      allocated: Number(row.allocated) || 0,
-      dueDate: String(row.due_date ?? '').slice(0, 10),
-      invoiceDate: String(row.invoice_date ?? '').slice(0, 10),
-      customerId: row.customer_id ?? null,
-      supplierId: row.supplier_id ?? null,
-      type: String(row.type ?? ''),
-      currency: row.currency ? String(row.currency) : null,
-    }))
+    return this.netOfReturns(
+      workspaceId,
+      (data ?? []).map((row) => ({
+        invoiceId: row.invoice_id,
+        invoiceNumber: row.invoice_number ?? '',
+        total: Number(row.total) || 0,
+        allocated: Number(row.allocated) || 0,
+        dueDate: String(row.due_date ?? '').slice(0, 10),
+        invoiceDate: String(row.invoice_date ?? '').slice(0, 10),
+        customerId: row.customer_id ?? null,
+        supplierId: row.supplier_id ?? null,
+        type: String(row.type ?? ''),
+        currency: row.currency ? String(row.currency) : null,
+      })),
+    )
   }
 
   /** Every open invoice in the workspace, for the aging report. */
@@ -327,7 +367,7 @@ export class PaymentsRepository {
     const { data, error } = await supabase
       .from('invoice_outstanding')
       .select(
-        'invoice_id, invoice_number, total, allocated, due_date, invoice_date, customer_id, supplier_id',
+        'invoice_id, invoice_number, total, allocated, due_date, invoice_date, customer_id, supplier_id, currency',
       )
       .eq('workspace_id', workspaceId)
       .eq('type', invoiceType)
@@ -335,15 +375,53 @@ export class PaymentsRepository {
 
     if (error) throw new DatabaseError('Failed to fetch open invoices', error)
 
-    return (data ?? []).map((row) => ({
-      invoiceId: row.invoice_id,
-      invoiceNumber: row.invoice_number ?? '',
-      total: Number(row.total) || 0,
-      allocated: Number(row.allocated) || 0,
-      dueDate: String(row.due_date ?? '').slice(0, 10),
-      invoiceDate: String(row.invoice_date ?? '').slice(0, 10),
-      partyId: (invoiceType === 'sale' ? row.customer_id : row.supplier_id) ?? null,
-    }))
+    return this.netOfReturns(
+      workspaceId,
+      (data ?? []).map((row) => ({
+        invoiceId: row.invoice_id,
+        invoiceNumber: row.invoice_number ?? '',
+        total: Number(row.total) || 0,
+        allocated: Number(row.allocated) || 0,
+        dueDate: String(row.due_date ?? '').slice(0, 10),
+        invoiceDate: String(row.invoice_date ?? '').slice(0, 10),
+        partyId: (invoiceType === 'sale' ? row.customer_id : row.supplier_id) ?? null,
+        currency: row.currency ? String(row.currency) : null,
+      })),
+    )
+  }
+
+  /**
+   * Open invoices as they stand AFTER their returns.
+   *
+   * `invoice_outstanding` is total − allocations, so a returned unpaid invoice
+   * still read as fully owed: it was offered for collection, aged, and could
+   * take a payment for goods the customer had already sent back. The part of a
+   * return that cancels debt comes off the total; an invoice with nothing left
+   * owed is dropped. Only sale returns exist, so purchase rows pass through.
+   */
+  private async netOfReturns<
+    T extends { invoiceId: string; total: number; allocated: number; currency?: string | null },
+  >(workspaceId: string, rows: T[]): Promise<T[]> {
+    if (rows.length === 0) return rows
+    const returns = saleReturnsOf(
+      await this.returnsOfInvoices(
+        workspaceId,
+        rows.map((row) => ({ id: row.invoiceId, currency: row.currency ?? '' })),
+      ),
+    )
+    if (returns.length === 0) return rows
+
+    const returnedOn = new Map<string, number>()
+    for (const entry of returns) {
+      returnedOn.set(entry.invoiceId, (returnedOn.get(entry.invoiceId) ?? 0) + entry.amount)
+    }
+    return rows.flatMap((row) => {
+      const returned = returnedOn.get(row.invoiceId)
+      if (!returned) return [row]
+      const effect = returnEffectOfInvoice(row.total, row.allocated, returned)
+      if (effect.outstanding <= 0) return []
+      return [{ ...row, total: Math.round((row.total - effect.applied) * 100) / 100 }]
+    })
   }
 
   async recordPayment(
@@ -572,6 +650,70 @@ export class PaymentsRepository {
       }
     }
     return returns
+  }
+
+  /**
+   * What the sale returns did to each customer, per currency. Only customers who
+   * HAVE a return appear, so a list that adds this changes nothing for anyone
+   * else. The split of one return into debt cancelled and credit created is the
+   * shared `returnEffectOfInvoice`.
+   */
+  async saleReturnEffects(workspaceId: string): Promise<ReturnEffectRow[]> {
+    const returns = await readAllSaleReturns(workspaceId)
+    if (returns.length === 0) return []
+
+    const invoiceIds = [...new Set(returns.map((entry) => entry.original_invoice_id))]
+    const invoices = new Map<
+      string,
+      { customerId: string; total: number; paid: number; currency: string }
+    >()
+    for (let i = 0; i < invoiceIds.length; i += 200) {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id, customer_id, total, paid_amount, currency')
+        .eq('workspace_id', workspaceId)
+        .eq('type', 'sale')
+        .neq('status', 'cancelled')
+        .in('id', invoiceIds.slice(i, i + 200))
+      if (error) throw new DatabaseError('Failed to fetch returned invoices', error)
+      for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+        if (!row.customer_id) continue
+        invoices.set(String(row.id), {
+          customerId: String(row.customer_id),
+          total: Number(row.total) || 0,
+          paid: Number(row.paid_amount) || 0,
+          currency: row.currency ? String(row.currency) : '',
+        })
+      }
+    }
+
+    const returnedOn = new Map<string, number>()
+    for (const entry of saleReturnsOf(
+      returns.map((row) => ({
+        ...row,
+        currency: invoices.get(row.original_invoice_id)?.currency ?? '',
+      })),
+    )) {
+      returnedOn.set(entry.invoiceId, (returnedOn.get(entry.invoiceId) ?? 0) + entry.amount)
+    }
+
+    const effects = new Map<string, ReturnEffectRow>()
+    for (const [invoiceId, returned] of returnedOn) {
+      const invoice = invoices.get(invoiceId)
+      if (!invoice) continue
+      const effect = returnEffectOfInvoice(invoice.total, invoice.paid, returned)
+      const key = `${invoice.customerId}|${invoice.currency}`
+      const row = effects.get(key) ?? {
+        customerId: invoice.customerId,
+        currency: invoice.currency,
+        applied: 0,
+        credit: 0,
+      }
+      row.applied = Math.round((row.applied + effect.applied) * 100) / 100
+      row.credit = Math.round((row.credit + effect.credit) * 100) / 100
+      effects.set(key, row)
+    }
+    return [...effects.values()]
   }
 
   /** A customer's sale returns, wherever the caller has no invoice list yet (the balance). */

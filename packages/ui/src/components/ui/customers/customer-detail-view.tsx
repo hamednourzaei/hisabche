@@ -323,7 +323,7 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
                 </span>
                 <span className="text-[hsl(var(--fg-secondary))]">
                   {t('payable')}:{' '}
-                  <span className="tabular-nums">{formatNumber(row.payable, locale, 2)}</span>
+                  <span className="tabular-nums">{formatNumber(row.weOwe, locale, 2)}</span>
                 </span>
                 <span className="font-medium text-[hsl(var(--fg-primary))]">
                   {t('netBalance')}:{' '}
@@ -372,10 +372,18 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
           />
           <Stat label={t('totalSales')} value={money(summary.totalSales)} />
           <Stat label={t('totalReceived')} value={money(summary.totalReceived)} />
-          {(summary.totalPurchases > 0 || summary.payable > 0) && (
+          {(summary.totalPurchases > 0 || summary.weOwe > 0) && (
             <>
-              <Stat label={t('totalPurchases')} value={money(summary.totalPurchases)} />
-              <Stat label={t('payable')} value={money(summary.payable)} />
+              {summary.totalPurchases > 0 ? (
+                <Stat label={t('totalPurchases')} value={money(summary.totalPurchases)} />
+              ) : null}
+              {/* `weOwe` is the server's figure: purchase payable plus the credit a return on
+                  an already-paid invoice created. A return used to show only in the net card. */}
+              <Stat
+                label={t('payable')}
+                value={money(summary.weOwe)}
+                hint={summary.returnCredit > 0 ? t('weOweIncludesReturns') : undefined}
+              />
             </>
           )}
           <Stat

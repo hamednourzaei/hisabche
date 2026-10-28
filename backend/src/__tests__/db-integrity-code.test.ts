@@ -70,9 +70,10 @@ describe('a payment settles invoices of its own currency', () => {
     expect(service).toContain(
       'candidates.filter((invoice) => settlesInCurrency(invoice, currency, bookCurrency)',
     )
-    // Both readers bring the invoice's currency back.
+    // The two settlement readers bring the invoice's currency back — and the aging reader
+    // does too (28 Oct 2026), so a return's minor amount is read in that invoice's own digits.
     const repo = src('services/payments/payments.repository.ts')
-    expect(repo.split('currency: row.currency ? String(row.currency) : null').length).toBe(3)
+    expect(repo.split('currency: row.currency ? String(row.currency) : null').length).toBe(4)
   })
 })
 

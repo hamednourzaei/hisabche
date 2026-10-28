@@ -193,6 +193,8 @@ export {
   type RecordPaymentInput,
   type OpenInvoice,
   type PartySummary,
+  type CustomerReturnEffects,
+  useCustomerReturnEffects,
   type PartyLedger,
   type PartyLedgerRow,
   type PartyActivity,

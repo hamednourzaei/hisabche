@@ -252,6 +252,16 @@ function useCustomerColumns(
         sortValue: (c) => c.totalDebt || 0,
         render: (c) => {
           const hasDebt = (c.totalDebt || 0) > 0
+          const credit = c.creditBalance || 0
+          // A customer the business owes (a return on a paid invoice) used to read
+          // «0 / settled» here, the same as someone who owes nothing.
+          if (!hasDebt && credit > 0) {
+            return (
+              <span className="tabular-nums text-[hsl(var(--color-success))]">
+                {fmt(credit)} {currency} {t('customers.creditor', 'بستانکار')}
+              </span>
+            )
+          }
           return (
             <span
               className={cn(
@@ -306,7 +316,11 @@ function useCustomerColumns(
                   : 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border-[hsl(var(--color-success)/0.2)]',
               )}
             >
-              {hasDebt ? t('customers.debtor', 'بدهکار') : t('customers.settled', 'تسویه')}
+              {hasDebt
+                ? t('customers.debtor', 'بدهکار')
+                : (c.creditBalance || 0) > 0
+                  ? t('customers.creditor', 'بستانکار')
+                  : t('customers.settled', 'تسویه')}
             </span>
           )
         },

@@ -378,8 +378,35 @@ export interface SummaryPayment {
   currency: string
 }
 
+/**
+ * What a return does to ONE sale invoice.
+ *
+ * `outstanding` is what is still owed on it once the returned goods are taken
+ * off (never below zero). `applied` is the part of the return that cancelled
+ * debt; `credit` is the rest — a return on money already paid, which the
+ * business now owes the customer. applied + credit = returned.
+ *
+ * The single place this is decided: the party summary, the customers list and
+ * the open-invoice read all call it, so they cannot disagree.
+ */
+export function returnEffectOfInvoice(
+  total: number,
+  paid: number,
+  returned: number,
+): { outstanding: number; applied: number; credit: number } {
+  const gross = Math.max(0, round2(total - paid))
+  const applied = Math.min(Math.max(0, returned), gross)
+  return {
+    outstanding: round2(gross - applied),
+    applied: round2(applied),
+    credit: round2(Math.max(0, returned) - applied),
+  }
+}
+
 /** A sale return that credited the customer: a MAJOR amount in the invoice's currency. */
 export interface SummaryReturn {
+  /** The invoice that was returned (a return is per invoice, not per party). */
+  invoiceId: string
   amount: number
   returnDate: string
   currency: string
@@ -393,6 +420,10 @@ export interface PartySummary {
   totalPaid: number
   /** Sale returns that credited the customer (reduce what they owe, or create a credit). */
   totalReturned: number
+  /** The part of the returns on invoices already paid: money the business now owes the customer. */
+  returnCredit: number
+  /** Everything the business owes this party: purchase payable plus return credit. */
+  weOwe: number
   /**
    * Balance carried in when the customer was created (customers.opening_balance;
    * positive: they owe us). Part of `receivable` and `netBalance`, shown apart.
@@ -439,8 +470,14 @@ export function summarizeParty(
   const sales = live.filter((invoice) => invoice.type === 'sale')
   const purchases = live.filter((invoice) => invoice.type === 'purchase')
 
+  const returnedOn = new Map<string, number>()
+  for (const entry of returns) {
+    returnedOn.set(entry.invoiceId, round2((returnedOn.get(entry.invoiceId) ?? 0) + entry.amount))
+  }
+  const returnedOf = (invoice: SummaryInvoice) =>
+    invoice.type === 'sale' ? (returnedOn.get(invoice.id) ?? 0) : 0
   const outstanding = (invoice: SummaryInvoice) =>
-    Math.max(0, round2(invoice.total - invoice.paidAmount))
+    returnEffectOfInvoice(invoice.total, invoice.paidAmount, returnedOf(invoice)).outstanding
 
   const open = live.filter((invoice) => outstanding(invoice) > 0)
   const openSales = sales.filter((invoice) => outstanding(invoice) > 0)
@@ -464,9 +501,14 @@ export function summarizeParty(
   // is owed it becomes a credit (negative net). `receivable` never goes below zero;
   // `netBalance` can, so it keeps agreeing with the statement's running balance
   // (sales − receipts − returns).
-  const returned = sum(returns.map((entry) => entry.amount))
-  const owedBeforeReturns = sum([...sales.map(outstanding), Math.max(0, opening)])
-  const receivable = Math.max(0, round2(owedBeforeReturns - returned))
+  const returned = sum(sales.map(returnedOf))
+  const returnCredit = sum(
+    sales.map(
+      (invoice) =>
+        returnEffectOfInvoice(invoice.total, invoice.paidAmount, returnedOf(invoice)).credit,
+    ),
+  )
+  const receivable = sum([...sales.map(outstanding), Math.max(0, opening)])
   const payable = sum([...purchases.map(outstanding), Math.max(0, -opening)])
   const latest = (dates: string[]) => dates.filter(Boolean).sort().at(-1) ?? null
 
@@ -477,10 +519,12 @@ export function summarizeParty(
     totalReceived: sum(payments.filter((p) => p.direction === 'in').map((p) => p.amount)),
     totalPaid: sum(payments.filter((p) => p.direction === 'out').map((p) => p.amount)),
     totalReturned: returned,
+    returnCredit,
+    weOwe: round2(payable + returnCredit),
     openingBalance: opening,
     receivable,
     payable,
-    netBalance: round2(owedBeforeReturns - payable - returned),
+    netBalance: round2(receivable - payable - returnCredit),
     overdue: round2(overdue),
     dueToday: round2(dueToday),
     dueLater: round2(dueLater),
@@ -488,7 +532,7 @@ export function summarizeParty(
       openSales.map((invoice) => ({
         invoiceId: invoice.id,
         invoiceNumber: '',
-        total: invoice.total,
+        total: round2(invoice.total - returnedOf(invoice)),
         allocated: invoice.paidAmount,
         dueDate: invoice.dueDate,
         invoiceDate: invoice.invoiceDate,

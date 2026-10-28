@@ -2,7 +2,7 @@
 // 🎯 Custom hook for customers data fetching & computation
 
 import { useMemo } from 'react'
-import { useCustomers, useInvoices } from '@hisabche/api'
+import { useCustomerReturnEffects, useCustomers, useInvoices } from '@hisabche/api'
 import type { CustomerWithDebt, InvoiceForDebt } from '../../lib/customers/customers-types'
 import { toIsoDay } from '@hisabche/formatting'
 
@@ -148,6 +148,9 @@ export function useCustomersData(options: UseCustomersDataOptions = {}): UseCust
     sortDirection: 'desc',
   })
 
+  // What returns did to each customer. Optional: when unreadable the list is what it was.
+  const returnEffects = useCustomerReturnEffects().data
+
   const isLoading = customersLoading || invoicesLoading
   const isError = customersError || invoicesError
   const error = customersErrorObj || invoicesErrorObj
@@ -180,10 +183,20 @@ export function useCustomersData(options: UseCustomersDataOptions = {}): UseCust
       )
 
       // محاسبه‌ی کل بدهی
-      const totalDebt = openInvoices.reduce((sum, inv) => {
+      const grossDebt = openInvoices.reduce((sum, inv) => {
         const paid = inv.paidAmount || inv.paid_amount || 0
         return sum + Math.max(0, (inv.total || 0) - paid)
       }, 0)
+
+      // Sale returns: the part that cancelled debt comes off it; a return on an
+      // invoice already paid is a credit the business owes the customer. Books
+      // currency only — this list adds one figure, in that currency.
+      const customerEffects = (returnEffects?.effects ?? []).filter(
+        (row) => row.customerId === customer.id && row.currency === returnEffects?.bookCurrency,
+      )
+      const applied = customerEffects.reduce((sum, row) => sum + row.applied, 0)
+      const creditBalance = customerEffects.reduce((sum, row) => sum + row.credit, 0)
+      const totalDebt = Math.max(0, Math.round((grossDebt - applied) * 100) / 100)
 
       // کل خریدها
       const totalPurchases = customerInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0)
@@ -215,6 +228,7 @@ export function useCustomersData(options: UseCustomersDataOptions = {}): UseCust
         name: customer.fullName || (customer as any).full_name || '',
         phone: customer.phone || '',
         totalDebt,
+        creditBalance,
         openCount: openInvoices.length,
         totalPurchases,
         lastInvoiceDate: lastInvoice?.date || null, // ✅ حالا در type وجود دارد
@@ -329,7 +343,7 @@ export function useCustomersData(options: UseCustomersDataOptions = {}): UseCust
         isPartial: invoicesData?.hasMore === true || (customersData?.total ?? 0) > customers.length,
       },
     }
-  }, [customersData, invoicesData])
+  }, [customersData, invoicesData, returnEffects])
 
   return {
     ...result,

@@ -149,6 +149,12 @@ export interface PartySummary {
   openingBalance: number
   receivable: number
   payable: number
+  /** Sale returns (money credited back to the customer). */
+  totalReturned: number
+  /** Returns on invoices already paid: money the business now owes the customer. */
+  returnCredit: number
+  /** Everything we owe this party: purchase payable plus return credit. */
+  weOwe: number
   /** Positive: they owe us. */
   netBalance: number
   overdue: number
@@ -169,6 +175,19 @@ export interface PartySummary {
    * screen shows.
    */
   byCurrency?: Array<PartySummary & { currency: string }> | undefined
+}
+
+/** What sale returns did to each customer: debt cancelled, and credit created. */
+export interface CustomerReturnEffects {
+  bookCurrency: string
+  effects: Array<{
+    customerId: string
+    currency: string
+    /** Comes off the debt the customers list shows. */
+    applied: number
+    /** What the business now owes the customer (a return on money already paid). */
+    credit: number
+  }>
 }
 
 export interface PartyLedgerRow {
@@ -356,5 +375,28 @@ export function useCancelPayment() {
       queryClient.invalidateQueries({ queryKey: accountingKeys.all })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
+  })
+}
+
+/**
+ * For the customers list. Optional enrichment: when it cannot be read (offline,
+ * no permission) the list shows what it always did, so it never retries.
+ */
+export function useCustomerReturnEffects() {
+  const authReady = useAuthReady()
+  return useQuery({
+    // Under `payments`: recording a payment or a return invalidates it with the rest.
+    queryKey: [...paymentKeys.all, 'customer-return-effects'] as const,
+    queryFn: async (): Promise<CustomerReturnEffects> => {
+      const { data } = await apiClient.get('/payments/return-effects/customers')
+      const body = data as Partial<CustomerReturnEffects> | null
+      return {
+        bookCurrency: String(body?.bookCurrency ?? ''),
+        effects: Array.isArray(body?.effects) ? body.effects : [],
+      }
+    },
+    enabled: authReady,
+    retry: false,
+    staleTime: 30_000,
   })
 }

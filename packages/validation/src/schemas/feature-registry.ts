@@ -167,6 +167,8 @@ export const FEATURE_REGISTRY = {
   'customer.upsert': { execution: 'local', plans: ALL },
   // Delete asks the server whether the customer has invoices or payments.
   'customer.delete': { execution: 'server', plans: CLOUD },
+  // The list's credit/debt after returns is read from the server; without it the list shows what it always did.
+  'customer.return_effects': { execution: 'server', plans: CLOUD },
   'customer.accounting': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'customer.risk': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'customer.crm': { execution: 'local', plans: ALL, alwaysAllowed: true },

@@ -824,6 +824,22 @@ export class PaymentsService {
   }
 
   /**
+   * What sale returns did to each customer (books currency first in each row's
+   * `currency`). For the customers list: «applied» comes off the debt it shows,
+   * «credit» is what the business owes the customer.
+   */
+  async customerReturnEffects(ctx: TenancyContext) {
+    const [rows, bookCurrency] = await Promise.all([
+      this.repo.saleReturnEffects(ctx.workspaceId),
+      baseCurrencyOf(ctx.workspaceId),
+    ])
+    return {
+      bookCurrency,
+      effects: rows.map((row) => ({ ...row, currency: row.currency || bookCurrency })),
+    }
+  }
+
+  /**
    * Customer 360 activity: sales vs receipts for the last 12 months, and the
    * products this party buys (or supplies) most, by amount.
    */

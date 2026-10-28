@@ -2269,6 +2269,7 @@
     "addRate": "افزودن اسعار یا واحد"
   },
   "customers": {
+    "creditor": "بستانکار",
     "title": "مشتری‌ها",
     "subtitle": "مدیریت نسیه و بدهی مشتری‌ها",
     "creditInvoice": "فاکتور نسیه",
@@ -7730,6 +7731,7 @@
     "cta": "تمدید یا خرید اشتراک"
   },
   "customer360": {
+    "weOweIncludesReturns": "شامل اعتبار مرجوعی",
     "deleteCustomer": "حذف مشتری",
     "deleteConfirm": "این مشتری حذف شود؟ این کار برگشت‌پذیر نیست.",
     "deleteFailed": "حذف مشتری انجام نشد",

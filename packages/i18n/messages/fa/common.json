@@ -2265,6 +2265,7 @@
     "addRate": "افزودن ارز یا واحد"
   },
   "customers": {
+    "creditor": "بستانکار",
     "title": "مشتریان",
     "subtitle": "مدیریت طلب و بدهی مشتریان",
     "creditInvoice": "فاکتور اعتباری",
@@ -7726,6 +7727,7 @@
     "cta": "تمدید یا خرید اشتراک"
   },
   "customer360": {
+    "weOweIncludesReturns": "شامل اعتبار مرجوعی",
     "deleteCustomer": "حذف مشتری",
     "deleteConfirm": "این مشتری حذف شود؟ این کار برگشت‌پذیر نیست.",
     "deleteFailed": "حذف مشتری انجام نشد",

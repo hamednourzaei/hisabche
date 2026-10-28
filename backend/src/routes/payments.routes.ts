@@ -207,6 +207,24 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /return-effects/customers ───────────────────────
+  // What sale returns did to each customer (debt cancelled, credit created) — the
+  // customers list's debt and credit. Same visibility as the list itself.
+  fastify.get(
+    '/return-effects/customers',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.read')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send(await paymentsService.customerReturnEffects(request.tenancy))
+      } catch (err) {
+        return fail(reply, err, 'Failed to read return effects')
+      }
+    },
+  )
+
   // ─── GET /summary/:partyType/:partyId ──────────────────
   // Customer 360 money summary. NOT cached: a payment must show immediately
   // (BUG-008 was a cached money figure).

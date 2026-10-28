@@ -254,7 +254,12 @@ export function buildPartySummary(input: {
     currency: String(payment.currency ?? ''),
   }))
   const summaryReturns: SummaryReturn[] = saleReturnsOf(input.rows.returns).map(
-    ({ amount, returnDate, currency }) => ({ amount, returnDate, currency }),
+    ({ amount, returnDate, currency, invoiceId }) => ({
+      amount,
+      returnDate,
+      currency,
+      invoiceId,
+    }),
   )
   return {
     ...summarizeParty(summaryInvoices, summaryPayments, input.asOf, openingBalance, summaryReturns),

@@ -219,6 +219,7 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'GET /orders/:x/deposits': ['order.deposits', 'available'],
   'GET /payments': ['payment.record', 'available'],
   'GET /payments/activity/:x/:x': ['customer.accounting', 'available'],
+  'GET /payments/return-effects/customers': ['customer.return_effects', 'online_required'],
   'GET /payments/ledger/:x/:x': ['customer.accounting', 'available'],
   'GET /payments/open-invoices/:x/:x': ['customer.accounting', 'available'],
   'GET /payments/summary/:x/:x': ['customer.accounting', 'available'],
