@@ -33,7 +33,7 @@ interface EntityActivityCardProps {
   entityType: string
   entityId: string
   hasUnread: boolean
-  onActivityClick: (activity: any) => void
+  onActivityClick: (activity: { id: string; [key: string]: unknown }) => void
 }
 
 // ─── Config ──────────────────────────────────────────────────────────────────
