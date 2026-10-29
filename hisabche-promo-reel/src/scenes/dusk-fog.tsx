@@ -1,140 +1,259 @@
 // ============================================
-// Dusk-Fog art direction (reel 95) — «عدد داخل مه» (open-loop mystery number)
+// Reel 93 — «عدد داخل مه — سود واقعی پشت صد فاکتور»
+// Bespoke Motion Engine: LiDAR Prism & Volumetric Profit Beacon
+// (سامانه لایدار فوتونیک و منشور شکست مه مالی)
 //
-// A blurred figure floats in dusk fog and slowly sharpens — but every time
-// the owner reaches for it, a fanned deck of blank sheets closes over it
-// like a hand of cards (uniform mesh rhythm: all sheets share one anchor,
-// one radius and a constant 16° step — layout-defect-laws.md band 3). The
-// deck then fans out, the fog lifts, and the figure publishes itself as the
-// day's true net profit, with its three ledger footings beneath it.
+// 100% Dark Studio Theme (Obsidian & Volumetric Fog / Cyan Laser / Incandescent Gold)
+// Zero-overlap certified geometry (Canvas: 540x960, disjoint vertical bands)
+// Deterministic numerals via faNumber.
 //
-// Bespoke, self-authored stage: own palette (dusk blue-grey + amber fog),
-// own primitives, own geometry. No set is borrowed from reels 84–90 except
-// the deterministic helpers every bespoke stage already depends on.
-//
-// Persistent arithmetic (digits via faNumber only — layout-defect-laws band 6):
-//   ۲٬۴۶۰٬۰۰۰ فروش − ۱٬۶۲۰٬۰۰۰ بهای تمام‌شده − ۳۸۵٬۰۰۰ خرج = ۴۵۵٬۰۰۰ سود
+// Persistent arithmetic:
+//   ۲٬۴۶۰٬۰۰۰ فروش − ۱٬۶۲۰٬۰۰۰ بهای تمام‌شده − ۳۸۵٬۰۰۰ خرج = ۴۵۵٬۰۰۰ سود خالص
 // ============================================
 
-import type { CSSProperties } from 'react'
+import type { ReactNode } from 'react'
 import type { Scene } from '../engine/types'
-import { clamp, deterministicHash, ease, mix, progress, spring } from '../engine/anim'
+import { clamp, ease, progress, spring } from '../engine/anim'
 import { faNumber } from '../ui/motion-primitives'
-import { HalftoneCharacter } from './paper-pocket'
 
-// ─── Tokens ──────────────────────────────────────────────────────────────────
+type SceneProps = { t: number; scene: Scene }
 
-export const FOG_NIGHT = '#0a0f16'
-export const FOG_GREY = '#141d28'
-export const MIST_BLUE = '#9fb6c9'
-export const FOG_AMBER = '#ffc466'
-export const REVEAL_CREAM = '#f1ecdf'
-export const DEEP_TEAL = '#5fd4c0'
+// ─── Tokens (Obsidian Volumetric Palette) ────────────────────────────────────
+export const FOG_NIGHT = '#05080e'
+export const FOG_GREY = '#0c121e'
+export const MIST_BLUE = '#94a3b8'
+export const FOG_AMBER = '#f59e0b'
+export const REVEAL_CREAM = '#f8fafc'
+export const DEEP_TEAL = '#06b6d4'
+export const LASER_CYAN = '#38bdf8'
+export const PROFIT_GOLD = '#fbbf24'
+export const COST_ROSE = '#f43f5e'
+export const BORDER_SUBTLE = 'rgba(255, 255, 255, 0.08)'
 
-const MYSTERY_WASH: CSSProperties = {
-  position: 'absolute',
-  inset: 0,
-  background:
-    'radial-gradient(760px 480px at 50% 38%, rgba(255,196,102,0.08), transparent 60%), radial-gradient(620px 420px at 24% 76%, rgba(95,212,192,0.06), transparent 66%)',
-}
-
-const FOG_VIGNETTE: CSSProperties = {
-  position: 'absolute',
-  inset: 0,
-  background: 'radial-gradient(122% 88% at 50% 42%, transparent 46%, rgba(2,4,8,0.9) 100%)',
-}
-
-function pop(t: number, at: number, dur = 0.55): number {
-  return spring(clamp(progress(t, at, at + dur)))
-}
-
-// ─── Stage ───────────────────────────────────────────────────────────────────
-
-/** The stage every scene paints over. */
-export function DuskFogStage({
-  scene,
-  t,
-  children,
-}: {
-  scene: Scene
-  t: number
-  children: React.ReactNode
-}) {
-  void scene
+/** Pinned 540x960 LTR Stage with procedural atmospheric mist particles */
+export function DuskFogStage({ t, children }: { scene?: Scene; t: number; children: ReactNode }) {
   return (
     <div
       style={{
         position: 'absolute',
         inset: 0,
-        // Deterministic canvas (layout-defect-laws.md band 1): the player
-        // document is RTL and mirrors insetInlineStart; the stage pins LTR so
-        // every numeric inset below is a physical left coordinate.
-        direction: 'ltr',
-        background: FOG_NIGHT,
+        width: 540,
+        height: 960,
+        backgroundColor: FOG_NIGHT,
+        color: '#f8fafc',
+        fontFamily: 'Vazirmatn, system-ui, sans-serif',
         overflow: 'hidden',
-        color: MIST_BLUE,
+        direction: 'ltr',
       }}
     >
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-        <div style={MYSTERY_WASH} />
-        {/* fog banks: soft edge-less ellipses (never rectangles / dividers) */}
-        {Array.from({ length: 5 }).map((_, i) => {
-          const seed = deterministicHash(i, 91)
-          const drift = Math.sin(t * (0.14 + seed * 0.1) + i * 1.7) * 26
+      {/* Volumetric Radial Glows */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(650px 420px at 50% 40%, rgba(245, 158, 11, 0.07), transparent 70%), radial-gradient(550px 380px at 50% 80%, rgba(6, 182, 212, 0.05), transparent 70%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Atmospheric Mist Drift Particles */}
+      <svg
+        width="540"
+        height="960"
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.25 }}
+      >
+        {[...Array(18)].map((_, i) => {
+          const x = (i * 32 + ((i * 17) % 50)) % 540
+          const baseY = 120 + i * 44
+          const driftY = baseY + Math.sin(t * 0.8 + i) * 16
+          const r = 2.5 + (i % 4) * 1.5
           return (
-            <div
+            <circle
               key={i}
-              style={{
-                position: 'absolute',
-                top: 120 + i * 150 + seed * 60,
-                insetInlineStart: 40 + drift * 0.6,
-                width: 480 - seed * 60,
-                height: 150 + seed * 60,
-                borderRadius: '50%',
-                filter: 'blur(34px)',
-                background:
-                  i % 2 === 0
-                    ? `radial-gradient(closest-side, rgba(159,182,201,${0.1 + seed * 0.08}), transparent 72%)`
-                    : `radial-gradient(closest-side, rgba(20,29,40,0.55), transparent 70%)`,
-              }}
+              cx={x}
+              cy={driftY}
+              r={r}
+              fill={i % 2 === 0 ? '#38bdf8' : '#fbbf24'}
+              opacity={0.3 + (i % 5) * 0.12}
+              style={{ filter: 'blur(3px)' }}
             />
           )
         })}
-        {/* suspended dust */}
-        {Array.from({ length: 30 }).map((_, i) => {
-          const seed = deterministicHash(i, 47)
-          const x = ((i * 107) % 540) + seed * 14
-          const cycle = (t * (0.01 + seed * 0.03) + seed) % 1
-          const y = 1000 - cycle * 1040
-          return (
-            <div
-              key={`d${i}`}
-              style={{
-                position: 'absolute',
-                top: y,
-                insetInlineStart: x,
-                width: 1.5 + seed * 1.8,
-                height: 1.5 + seed * 1.8,
-                borderRadius: '50%',
-                background: MIST_BLUE,
-                opacity: Math.sin(cycle * Math.PI) * (0.05 + seed * 0.1),
-              }}
-            />
-          )
-        })}
-        <div style={FOG_VIGNETTE} />
+      </svg>
+
+      {/* Top Fixed Telemetry Bar (Y: 48..86) */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 48,
+          left: 40,
+          right: 40,
+          height: 38,
+          borderBottom: `1px solid ${BORDER_SUBTLE}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: 13,
+          fontWeight: 600,
+          color: MIST_BLUE,
+          zIndex: 20,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: '#f59e0b',
+              boxShadow: '0 0 10px #f59e0b',
+            }}
+          />
+          <span>رصد سود واقعی کسب‌وکار</span>
+        </div>
+        <span
+          style={{ fontFamily: 'monospace', fontSize: 11, color: LASER_CYAN, letterSpacing: 1 }}
+        >
+          LIDAR_PROFIT // V93
+        </span>
       </div>
+
+      {/* Safe Stage Container */}
       {children}
+
+      {/* Bottom Fixed Telemetry Footer (Y: 884..920) */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          bottom: 40,
+          left: 40,
+          right: 40,
+          height: 36,
+          borderTop: `1px solid ${BORDER_SUBTLE}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: 12,
+          color: '#64748b',
+          zIndex: 20,
+        }}
+      >
+        <span>حسابچه · شفافیت مالی در پایان روز</span>
+        <span style={{ fontFamily: 'monospace', fontSize: 11, letterSpacing: 0.5 }}>
+          AUDIT: [REVENUE → NET_PROFIT]
+        </span>
+      </div>
     </div>
   )
 }
 
-// ─── Primitives ──────────────────────────────────────────────────────────────
+/** Standard Scene Header Cluster at Y = 150..220 (Disjoint, zero overlap) */
+function SceneHeader({
+  badge,
+  badgeColor,
+  title,
+  opacity = 1,
+  translateY = 0,
+}: {
+  badge: string
+  badgeColor: string
+  title: string
+  opacity?: number
+  translateY?: number
+}) {
+  return (
+    <div
+      dir="rtl"
+      style={{
+        position: 'absolute',
+        top: 150,
+        left: 40,
+        right: 40,
+        height: 70,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        gap: 6,
+        opacity,
+        transform: `translateY(${translateY}px)`,
+        zIndex: 25,
+      }}
+    >
+      <div
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '4px 12px',
+          borderRadius: 999,
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          border: `1px solid ${badgeColor}`,
+          fontSize: 13,
+          fontWeight: 700,
+          color: badgeColor,
+        }}
+      >
+        {badge}
+      </div>
+      <div
+        style={{
+          fontSize: 27,
+          fontWeight: 900,
+          color: '#ffffff',
+          lineHeight: 1.3,
+        }}
+      >
+        {title}
+      </div>
+    </div>
+  )
+}
 
-/**
- * Staged word cluster: full-bleed flex row, explicit dir="rtl"
- * (layout-defect-laws.md bands 1–2). Mount-once, stays to the end.
- */
+/** Bottom Insight Banner at Y = 685..745 */
+function BottomBanner({
+  text,
+  color = LASER_CYAN,
+  opacity = 1,
+}: {
+  text: string
+  color?: string
+  opacity?: number
+}) {
+  return (
+    <div
+      dir="rtl"
+      style={{
+        position: 'absolute',
+        top: 685,
+        left: 40,
+        right: 40,
+        height: 55,
+        borderRadius: 12,
+        backgroundColor: 'rgba(12, 18, 30, 0.85)',
+        border: `1px solid ${BORDER_SUBTLE}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        padding: '0 16px',
+        fontSize: 15,
+        fontWeight: 700,
+        color,
+        opacity,
+        zIndex: 25,
+      }}
+    >
+      {text}
+    </div>
+  )
+}
+
+/** Backward compatibility helper for registry */
 export function FogWords({
   t,
   cueAt,
@@ -149,607 +268,721 @@ export function FogWords({
   words: string[]
   y: number
   size?: number
-  accentWord?: string | undefined
-  accentColor?: string | undefined
+  accentWord?: string
+  accentColor?: string
 }) {
+  const p = ease(clamp(progress(t, cueAt, cueAt + 0.6)))
   return (
     <div
       dir="rtl"
       style={{
         position: 'absolute',
         top: y,
-        insetInlineStart: 0,
-        insetInlineEnd: 0,
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'baseline',
-        gap: '0.28em',
-      }}
-    >
-      {words.map((word, i) => {
-        const p = pop(t, cueAt + i * 0.4)
-        const accent = word === accentWord
-        return (
-          <span
-            key={word}
-            style={{
-              opacity: clamp(p * 1.6),
-              transform: `translateY(${mix(16, 0, p).toFixed(1)}px)`,
-              fontSize: size,
-              fontWeight: 900,
-              color: accent ? (accentColor ?? FOG_AMBER) : MIST_BLUE,
-              whiteSpace: 'pre',
-              textShadow: accent
-                ? `0 0 26px ${accentColor ?? FOG_AMBER}`
-                : '0 2px 14px rgba(0,0,0,0.7)',
-            }}
-          >
-            {word}
-          </span>
-        )
-      })}
-    </div>
-  )
-}
-
-/**
- * The mystery figure: a literal value carrying CSS blur that decays over the
- * film. Digits come from the deterministic string (char-map-safe); the blur
- * radius alone decides legibility, so the hold frames of scenes 1–2 stay
- * unreadable by design.
- */
-function MysteryFigure({
-  value,
-  blurPx,
-  y = 330,
-  scale = 1,
-  opacity = 0.9,
-  accent = FOG_AMBER,
-  wobbleT,
-}: {
-  value: number
-  blurPx: number
-  y?: number
-  scale?: number
-  opacity?: number
-  accent?: string
-  wobbleT: number
-}) {
-  void accent
-  const tilt = Math.sin(wobbleT * 0.9) * 2.2
-  const lift = Math.sin(wobbleT * 0.7) * 5
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: y + lift,
-        insetInlineStart: 0,
-        insetInlineEnd: 0,
+        left: 40,
+        right: 40,
         display: 'flex',
         justifyContent: 'center',
-        zIndex: 18,
-        opacity,
-      }}
-    >
-      <span
-        dir="ltr"
-        style={{
-          fontSize: 96 * scale,
-          fontWeight: 900,
-          color: REVEAL_CREAM,
-          fontVariantNumeric: 'tabular-nums',
-          lineHeight: 1.05,
-          whiteSpace: 'nowrap',
-          filter: `blur(${blurPx.toFixed(1)}px)`,
-          textShadow: `0 0 60px rgba(255,196,102,0.4)`,
-          transform: `rotate(${tilt.toFixed(2)}deg)`,
-        }}
-      >
-        {faNumber(value)}
-      </span>
-    </div>
-  )
-}
-
-/** Monotonic rolling figure: 0 → value, then holds (never blinks). */
-function FogRoll({
-  t,
-  at,
-  value,
-  size = 26,
-  color = REVEAL_CREAM,
-}: {
-  t: number
-  at: number
-  value: number
-  size?: number
-  color?: string
-}) {
-  const p = ease(clamp(progress(t, at, at + 1.2)))
-  const n = Math.round(mix(0, value, p))
-  return (
-    <span
-      dir="ltr"
-      style={{
+        gap: '0.4em',
+        opacity: p,
+        transform: `translateY(${(1 - p) * 12}px)`,
         fontSize: size,
         fontWeight: 900,
-        color,
-        fontVariantNumeric: 'tabular-nums',
-        lineHeight: 1.05,
-        whiteSpace: 'nowrap',
+        color: REVEAL_CREAM,
+        zIndex: 25,
       }}
     >
-      {faNumber(n)}
-    </span>
-  )
-}
-
-/**
- * Fanned blank deck: 7 sheets, one anchor, one radius R=158, constant 16°
- * step (mesh-rhythm law, band 3). The fan is one deck cluster occluding the
- * mystery figure — deliberate narrative occlusion, uniform rhythm documented
- * here so no future maintainer mistakes it for an unordered Venn pile.
- */
-function PaperDeckFan({
-  t,
-  openAmount,
-  anchorX = 270,
-  anchorY = 470,
-}: {
-  t: number
-  openAmount: number
-  anchorX?: number
-  anchorY?: number
-}) {
-  void t
-  const R = 158
-  const STEP = 16
-  const SHEETS = 7
-  return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 30, pointerEvents: 'none' }}>
-      {Array.from({ length: SHEETS }).map((_, i) => {
-        const theta = -48 + i * STEP
-        const openT = i * 0.16
-        const q = clamp(mix(0, 1.35, openAmount * (1 - openT / 2.2)))
-        const spreadRot = theta + q * 34
-        const spreadR = R + q * 150
-        const rad = (spreadRot * Math.PI) / 180
-        const sheetX = anchorX + Math.sin(rad) * spreadR
-        const sheetY = anchorY - Math.cos(rad) * spreadR
-        const appear = pop(t, 0.5 + i * 0.5)
-        return (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              top: sheetY - 103,
-              insetInlineStart: sheetX - 75,
-              width: 150,
-              height: 206,
-              borderRadius: 10,
-              opacity: clamp(appear * 1.4) * (1 - clamp(openAmount * (1.1 + openT * 0.5))),
-              transform: `rotate(${(theta * 0.55 + q * 26).toFixed(2)}deg)`,
-              background: `linear-gradient(180deg, rgba(241,236,223,0.92), rgba(241,236,223,0.78))`,
-              boxShadow: '0 16px 34px rgba(0,0,0,0.45)',
-              padding: 12,
-            }}
-          >
-            <div
-              style={{
-                height: 5,
-                width: `${52 + ((i * 31) % 26)}%`,
-                borderRadius: 4,
-                background: 'rgba(12,18,30,0.35)',
-                filter: 'blur(1.2px)',
-              }}
-            />
-            <div
-              style={{
-                marginTop: 10,
-                height: 4.5,
-                width: `${30 + ((i * 19) % 38)}%`,
-                borderRadius: 4,
-                background: 'rgba(12,18,30,0.28)',
-                filter: 'blur(1.2px)',
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                bottom: 12,
-                insetInlineStart: 12,
-                width: 46,
-                height: 12,
-                borderRadius: 4,
-                background: 'rgba(12,18,30,0.4)',
-                filter: 'blur(2.2px)',
-              }}
-            />
-          </div>
-        )
-      })}
+      {words.map((w) => (
+        <span key={w} style={{ color: w === accentWord ? accentColor : REVEAL_CREAM }}>
+          {w}
+        </span>
+      ))}
     </div>
   )
 }
 
-// ─── Scene 1 (0–8s): the figure spins in fog, unreadable on purpose ──────────
+// ============================================
+// SCENE 1: FogNumberScene (0–8s) — The Obscured Profit Beacon in Fog
+// ============================================
+export function FogNumberScene({ t, scene }: SceneProps) {
+  const enter = clamp(progress(t, 0, 0.8), 0, 1)
+  const pulse = Math.sin(t * 2.2) * 8
+  const ringScale = 1 + (t % 2.5) * 0.4
+  const ringOpacity = Math.max(0, 1 - (t % 2.5) / 2.5)
+  const blurPx = Math.max(14, 28 - t * 1.5)
 
-export function FogNumberScene({ t, scene }: { t: number; scene: Scene }) {
-  void scene
-  const appear = pop(t, 0.4, 0.9)
-  const blurPx = mix(26, 16, ease(clamp(progress(t, 0.6, 6.2))))
   return (
     <DuskFogStage scene={scene} t={t}>
-      <MysteryFigure
-        value={455000}
-        blurPx={blurPx}
-        y={336}
-        opacity={clamp(appear * 0.8 + 0.2) * 0.9}
-        wobbleT={t}
+      <SceneHeader
+        badge="ابهام مالی پایان روز"
+        badgeColor={FOG_AMBER}
+        title="امشب چقدر سود واقعی داری؟"
+        opacity={enter}
       />
-      <FogWords
-        t={t}
-        cueAt={0.6}
-        y={150}
-        words={['امشب', 'یک', 'عدد', 'داری']}
-        accentWord="عدد"
-        size={42}
-      />
-    </DuskFogStage>
-  )
-}
 
-// ─── Scene 2 (8–16s): the deck of sheets closes over the figure ──────────────
-// Deck anchor (270, 470), R=158, sheet 150×206 → worst fan extent
-// y ≤ 470−(158+103)=209 … the word band ends at ~184 → ≥ 24px clear.
-
-export function PaperWallScene({ t, scene }: { t: number; scene: Scene }) {
-  void scene
-  const blurPx = mix(16, 13, ease(clamp(progress(t, 0.5, 5))))
-  return (
-    <DuskFogStage scene={scene} t={t}>
-      <MysteryFigure value={455000} blurPx={blurPx} y={336} opacity={0.8} wobbleT={t} />
-      <PaperDeckFan t={t} openAmount={0} />
-      <HalftoneCharacter
-        t={t}
-        mood="worried"
-        scale={0.95}
-        style={{ position: 'absolute', insetInlineStart: 26, top: 612, zIndex: 40 }}
-      />
-      <FogWords
-        t={t}
-        cueAt={0.5}
-        y={126}
-        words={['پشت', 'برگه‌ها', 'گم', 'است.']}
-        accentWord="گم"
-        size={42}
-      />
-    </DuskFogStage>
-  )
-}
-
-// ─── Scene 3 (16–25s): the deck fans out, the figure starts to resolve ───────
-
-export function PartClearScene({ t, scene }: { t: number; scene: Scene }) {
-  void scene
-  const open = ease(clamp(progress(t, 0.8, 4.6)))
-  const blurPx = mix(13, 5.5, ease(clamp(progress(t, 2.0, 6.2))))
-  return (
-    <DuskFogStage scene={scene} t={t}>
-      <MysteryFigure value={455000} blurPx={blurPx} y={336} opacity={0.82} wobbleT={t} />
-      <PaperDeckFan t={t} openAmount={open} />
-      {/* focus ramp readout: a tiny mono focus meter, ltr */}
+      {/* Center Obscured Beacon Chamber (Y: 270..590) */}
       <div
-        dir="ltr"
         style={{
           position: 'absolute',
-          top: 700,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
+          top: 280,
+          left: 50,
+          right: 50,
+          height: 320,
           display: 'flex',
-          justifyContent: 'center',
-          gap: 8,
-          zIndex: 42,
-        }}
-      >
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            style={{
-              width: 26,
-              height: 6,
-              borderRadius: 4,
-              background:
-                clamp(progress(t, 1.2 + i * 0.9, 0.8)) > 0.4 ? DEEP_TEAL : 'rgba(159,182,201,0.2)',
-              boxShadow: progress(t, 1.2 + i * 0.9, 0.8) > 0.4 ? `0 0 12px ${DEEP_TEAL}88` : 'none',
-            }}
-          />
-        ))}
-      </div>
-      <FogWords
-        t={t}
-        cueAt={0.5}
-        y={126}
-        words={['کمی', 'واضح‌تر…']}
-        accentWord="واضح‌تر…"
-        size={44}
-      />
-    </DuskFogStage>
-  )
-}
-
-// ─── Scene 4 (25–35s): the figure publishes itself ───────────────────────────
-
-export function ClearRevealScene({ t, scene }: { t: number; scene: Scene }) {
-  void scene
-  const sharp = pop(t, 0.4, 0.9)
-  const blurPx = mix(5.5, 0, ease(clamp(progress(t, 0.3, 1.6))))
-  return (
-    <DuskFogStage scene={scene} t={t}>
-      {/* publish ring */}
-      <svg
-        viewBox="0 0 540 960"
-        style={{ position: 'absolute', inset: 0, width: 540, height: 960, pointerEvents: 'none' }}
-      >
-        <circle
-          cx="270"
-          cy="386"
-          r={mix(60, 208, ease(clamp(progress(t, 0.6, 1.5))))}
-          fill="none"
-          stroke={FOG_AMBER}
-          strokeWidth="2"
-          opacity={clamp(0.5 - ease(clamp(progress(t, 0.8, 1.9))) * 0.42)}
-        />
-      </svg>
-      <MysteryFigure
-        value={455000}
-        blurPx={blurPx}
-        y={330}
-        scale={1.08}
-        opacity={clamp(0.75 + sharp * 0.25)}
-        wobbleT={t * 0.4}
-      />
-      <FogWords t={t} cueAt={1.6} y={560} words={['سود', 'خالص']} accentWord="خالص" size={44} />
-      <div
-        dir="rtl"
-        style={{
-          position: 'absolute',
-          top: 612,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          textAlign: 'center',
-          fontSize: 17,
-          fontWeight: 700,
-          color: 'rgba(241,236,223,0.62)',
-          opacity: clamp(pop(t, 3.2) * 1.4),
-        }}
-      >
-        فروش − بهای − خرج
-      </div>
-    </DuskFogStage>
-  )
-}
-
-// ─── Scene 5 (35–40s): the three ledger footings (disjoint rows) ─────────────
-// Rows: x=100..440 (w=340), h=64 at y=372/448/524 → vertical gap 12px; all
-// inside the panel band 340..588; word cluster sits at y=660.
-
-export function LedgerFootScene({ t, scene }: { t: number; scene: Scene }) {
-  void scene
-  const rows = [
-    { label: 'فروش', value: 2460000, at: 0.5 },
-    { label: 'بهای', value: 1620000, at: 1.4 },
-    { label: 'خرج', value: 385000, at: 2.3 },
-  ]
-  return (
-    <DuskFogStage scene={scene} t={t}>
-      <div
-        style={{
-          position: 'absolute',
-          top: 236,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          display: 'flex',
-          justifyContent: 'center',
-          zIndex: 24,
-        }}
-      >
-        <FogRoll t={t} at={0.1} value={455000} size={54} color="#ffc466" />
-      </div>
-      <div
-        style={{
-          position: 'absolute',
-          top: 372,
-          insetInlineStart: 100,
-          width: 340,
-          height: 1,
-          zIndex: 30,
-        }}
-      >
-        {rows.map((row, i) => (
-          <div
-            key={row.label}
-            style={{
-              position: 'absolute',
-              top: i * 76,
-              insetInlineStart: 0,
-              width: 340,
-              height: 64,
-              borderRadius: 12,
-              opacity: clamp(pop(t, row.at) * 1.5),
-              transform: `translateX(${mix(18, 0, pop(t, row.at)).toFixed(1)}px)`,
-              background: 'rgba(159,182,201,0.08)',
-              border: '1.5px solid rgba(159,182,201,0.26)',
-              boxShadow: '0 12px 26px rgba(0,0,0,0.4)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0 16px',
-            }}
-          >
-            <span dir="rtl" style={{ fontSize: 20, fontWeight: 800, color: REVEAL_CREAM }}>
-              {row.label}
-            </span>
-            <FogRoll t={t} at={row.at + 0.15} value={row.value} size={24} />
-          </div>
-        ))}
-      </div>
-      <FogWords
-        t={t}
-        cueAt={3.0}
-        y={660}
-        words={['همهٔ', 'حساب،', 'زنده.']}
-        accentWord="زنده."
-        size={40}
-      />
-    </DuskFogStage>
-  )
-}
-
-// ─── Scene 6 (40–45s): brand lockup over the fog ─────────────────────────────
-
-function FogCommentBox({
-  t,
-  at,
-  x,
-  lead,
-  tone,
-}: {
-  t: number
-  at: number
-  x: number
-  lead: string
-  tone: 'cyan' | 'purple'
-}) {
-  const p = pop(t, at)
-  const accent = tone === 'cyan' ? DEEP_TEAL : '#b59cf7'
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 668,
-        insetInlineStart: x,
-        width: 230,
-        height: 132,
-        borderRadius: 14,
-        zIndex: 30,
-        opacity: clamp(p * 1.6),
-        transform: `translateY(${mix(18, 0, p).toFixed(1)}px)`,
-        background: 'rgba(159,182,201,0.08)',
-        border: '1.5px solid rgba(159,182,201,0.24)',
-        boxShadow: `0 16px 36px rgba(0,0,0,0.4), 0 0 22px ${accent}22`,
-        padding: '14px 16px',
-      }}
-    >
-      <div dir="rtl" style={{ fontSize: 16, fontWeight: 800, color: REVEAL_CREAM }}>
-        {lead}
-      </div>
-      <div
-        dir="rtl"
-        style={{ fontSize: 13, fontWeight: 600, color: 'rgba(241,236,223,0.6)', marginTop: 6 }}
-      >
-        کامنت کنید:
-      </div>
-      <div
-        style={{
-          marginTop: 10,
-          width: 118,
-          height: 42,
-          borderRadius: 21,
-          background: `${accent}26`,
-          border: `1.5px solid ${accent}`,
-          display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: `0 0 18px ${accent}55`,
         }}
       >
-        <span dir="rtl" style={{ fontSize: 19, fontWeight: 900, color: accent, lineHeight: 1 }}>
-          {tone === 'cyan' ? 'رایگان' : 'دمو'}
-        </span>
+        {/* Pulsing Sonar Rings */}
+        <svg
+          width="320"
+          height="320"
+          viewBox="0 0 320 320"
+          style={{ position: 'absolute', inset: 0 }}
+        >
+          <circle
+            cx="160"
+            cy="160"
+            r={100}
+            fill="none"
+            stroke="rgba(245, 158, 11, 0.15)"
+            strokeWidth="1.5"
+          />
+          <circle
+            cx="160"
+            cy="160"
+            r={80 * ringScale}
+            fill="none"
+            stroke="#f59e0b"
+            strokeWidth="1.5"
+            strokeDasharray="6 8"
+            opacity={ringOpacity * 0.7}
+          />
+          <circle
+            cx="160"
+            cy="160"
+            r={65}
+            fill={FOG_GREY}
+            stroke="rgba(255,255,255,0.1)"
+            strokeWidth="1"
+          />
+        </svg>
+
+        {/* Blurred Mysterious Numeric Core */}
+        <div
+          style={{
+            fontSize: 68 + pulse * 0.2,
+            fontWeight: 900,
+            lineHeight: 1,
+            color: PROFIT_GOLD,
+            filter: `blur(${blurPx.toFixed(1)}px)`,
+            textShadow: '0 0 45px rgba(245, 158, 11, 0.6)',
+            userSelect: 'none',
+            zIndex: 10,
+          }}
+        >
+          {faNumber(455000)}
+        </div>
+
+        <div
+          dir="rtl"
+          style={{
+            marginTop: 24,
+            fontSize: 14,
+            fontWeight: 700,
+            color: MIST_BLUE,
+            zIndex: 10,
+          }}
+        >
+          سیگنال مبهم در میان تراکنش‌ها
+        </div>
       </div>
-    </div>
+
+      <BottomBanner text="سودی که در مه دخل و فاکتورها ناپدید شده" color="#fbbf24" />
+    </DuskFogStage>
   )
 }
 
-export function FogCtaScene({ t, scene }: { t: number; scene: Scene }) {
-  void scene
-  const lock = pop(t, 0.3, 0.8)
+// ============================================
+// SCENE 2: PaperWallScene (8–16s) — The Acrylic Invoice Cascade
+// ============================================
+export function PaperWallScene({ t, scene }: SceneProps) {
+  const enter = ease(clamp(progress(t, 0, 0.6), 0, 1))
+
+  // 3 Floating Glass Invoice Panes
+  const p1 = clamp(progress(t, 0.3, 1.2), 0, 1)
+  const p2 = clamp(progress(t, 1.1, 2.0), 0, 1)
+  const p3 = clamp(progress(t, 1.9, 2.8), 0, 1)
+
   return (
     <DuskFogStage scene={scene} t={t}>
-      {/* emblem: figure dot rising out of a fog ring */}
-      <svg
-        viewBox="0 0 540 960"
-        style={{ position: 'absolute', inset: 0, width: 540, height: 960, pointerEvents: 'none' }}
-      >
-        <circle
-          cx="270"
-          cy="258"
-          r={mix(2, 9, lock)}
-          fill={FOG_AMBER}
-          opacity={clamp(lock * 1.6)}
-          style={{ filter: 'drop-shadow(0 0 14px rgba(255,196,102,0.8))' }}
-        />
-        <circle
-          cx="270"
-          cy="258"
-          r={mix(2, 36, lock)}
-          fill="none"
-          stroke={DEEP_TEAL}
-          strokeWidth="1.6"
-          opacity={clamp(lock * 1.1)}
-        />
-      </svg>
+      <SceneHeader
+        badge="طوفان اسناد و فاکتورها"
+        badgeColor={COST_ROSE}
+        title="سود واقعی پشت برگه‌ها گم است!"
+        opacity={enter}
+      />
+
+      {/* Floating Acrylic Panes Stack (Y: 260..590) */}
       <div
         dir="rtl"
         style={{
           position: 'absolute',
-          top: 322,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          textAlign: 'center',
-          fontSize: 64,
-          fontWeight: 900,
-          color: REVEAL_CREAM,
-          textShadow: '0 0 54px rgba(255,196,102,0.35)',
-          opacity: clamp(lock * 1.6),
-          transform: `translateY(${mix(14, 0, lock).toFixed(1)}px)`,
+          top: 260,
+          left: 40,
+          right: 40,
+          height: 350,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
         }}
       >
-        حسابچه
+        {/* Pane 1: فاکتورهای فروش */}
+        <div
+          style={{
+            height: 94,
+            backgroundColor: 'rgba(20, 29, 45, 0.85)',
+            backdropFilter: 'blur(12px)',
+            borderRadius: 14,
+            border: `1.5px solid rgba(56, 189, 248, 0.35)`,
+            boxShadow: '0 12px 30px rgba(0, 0, 0, 0.45)',
+            padding: '14px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            opacity: p1,
+            transform: `translateY(${(1 - p1) * 24}px) rotate(${Math.sin(t + 1) * 1.2}deg)`,
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#ffffff' }}>
+              فاکتور فروش شماره ۱۰۸
+            </span>
+            <span style={{ fontSize: 13, color: MIST_BLUE }}>جریان فروش ثبت‌شده در سیستم</span>
+          </div>
+          <span style={{ fontSize: 18, fontWeight: 900, color: LASER_CYAN }}>
+            {faNumber(2460000)}
+          </span>
+        </div>
+
+        {/* Pane 2: حواله‌های خرید کالا */}
+        <div
+          style={{
+            height: 94,
+            backgroundColor: 'rgba(20, 29, 45, 0.85)',
+            backdropFilter: 'blur(12px)',
+            borderRadius: 14,
+            border: `1.5px solid rgba(245, 158, 11, 0.35)`,
+            boxShadow: '0 12px 30px rgba(0, 0, 0, 0.45)',
+            padding: '14px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            opacity: p2,
+            transform: `translateY(${(1 - p2) * 24}px) rotate(${Math.cos(t + 2) * 1.2}deg)`,
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#ffffff' }}>
+              حواله خرید و بهای انبار
+            </span>
+            <span style={{ fontSize: 13, color: MIST_BLUE }}>بهای تمام‌شده کالای فروش‌رفته</span>
+          </div>
+          <span style={{ fontSize: 18, fontWeight: 900, color: FOG_AMBER }}>
+            {faNumber(1620000)}
+          </span>
+        </div>
+
+        {/* Pane 3: فیش هزینه‌های جاری */}
+        <div
+          style={{
+            height: 94,
+            backgroundColor: 'rgba(20, 29, 45, 0.85)',
+            backdropFilter: 'blur(12px)',
+            borderRadius: 14,
+            border: `1.5px solid rgba(244, 63, 94, 0.35)`,
+            boxShadow: '0 12px 30px rgba(0, 0, 0, 0.45)',
+            padding: '14px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            opacity: p3,
+            transform: `translateY(${(1 - p3) * 24}px) rotate(${Math.sin(t + 3) * 1.2}deg)`,
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#ffffff' }}>
+              قبض و هزینه‌های جاری
+            </span>
+            <span style={{ fontSize: 13, color: MIST_BLUE }}>کرایه، دستمزد و مخارج روزانه</span>
+          </div>
+          <span style={{ fontSize: 18, fontWeight: 900, color: COST_ROSE }}>
+            {faNumber(385000)}
+          </span>
+        </div>
       </div>
+
+      <BottomBanner text="فروش بالا داری، اما سود خالص ناپیداست!" color="#f87171" />
+    </DuskFogStage>
+  )
+}
+
+// ============================================
+// SCENE 3: PartClearScene (16–25s) — The LiDAR Laser Sweep & Fog De-noising
+// ============================================
+export function PartClearScene({ t, scene }: SceneProps) {
+  const enter = ease(clamp(progress(t, 0, 0.6), 0, 1))
+
+  // Laser sweep progress
+  const sweep = clamp(progress(t, 0.8, 6.5), 0, 1)
+  const laserY = 260 + sweep * 340
+  const clarityPercent = Math.min(100, Math.round(52 + sweep * 47))
+  const blurPx = Math.max(0, (1 - sweep) * 14)
+
+  return (
+    <DuskFogStage scene={scene} t={t}>
+      <SceneHeader
+        badge="اسکن فرکانسی حسابچه"
+        badgeColor={DEEP_TEAL}
+        title="برگه‌ها کنار می‌روند؛ مه باز می‌شود"
+        opacity={enter}
+      />
+
+      {/* Center De-noising Core Chamber (Y: 260..590) */}
       <div
+        dir="rtl"
         style={{
           position: 'absolute',
-          top: 418,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
+          top: 260,
+          left: 40,
+          right: 40,
+          height: 350,
+          backgroundColor: FOG_GREY,
+          borderRadius: 16,
+          border: `1.5px solid rgba(6, 182, 212, 0.35)`,
+          boxShadow: '0 0 35px rgba(6, 182, 212, 0.15)',
+          padding: '24px 20px',
           display: 'flex',
-          justifyContent: 'center',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div style={{ fontSize: 14, fontWeight: 700, color: LASER_CYAN }}>
+          تفکیک خودکار بهای تمام‌شده و هزینه‌ها
+        </div>
+
+        {/* Sharpening Core Number */}
+        <div
+          style={{
+            fontSize: 66,
+            fontWeight: 900,
+            lineHeight: 1,
+            color: PROFIT_GOLD,
+            filter: `blur(${blurPx.toFixed(1)}px)`,
+            textShadow: '0 0 35px rgba(245, 158, 11, 0.5)',
+            userSelect: 'none',
+          }}
+        >
+          {faNumber(455000)}
+        </div>
+
+        {/* Signal Clarity Gauge Meter */}
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: 13,
+              color: MIST_BLUE,
+            }}
+          >
+            <span>وضوح محاسبه تراز:</span>
+            <span style={{ fontWeight: 800, color: DEEP_TEAL }}>{faNumber(clarityPercent)}٪</span>
+          </div>
+          <div
+            style={{
+              width: '100%',
+              height: 8,
+              backgroundColor: 'rgba(255,255,255,0.08)',
+              borderRadius: 4,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                width: `${clarityPercent}%`,
+                height: '100%',
+                backgroundColor: DEEP_TEAL,
+                boxShadow: '0 0 12px #06b6d4',
+                transition: 'width 0.1s linear',
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Sweeping Cyan Laser Beam */}
+      {sweep > 0 && sweep < 1 && (
+        <div
+          style={{
+            position: 'absolute',
+            top: laserY,
+            left: 36,
+            right: 36,
+            height: 2,
+            backgroundColor: '#00f2fe',
+            boxShadow: '0 0 16px 3px #00f2fe',
+            pointerEvents: 'none',
+            zIndex: 30,
+          }}
+        />
+      )}
+
+      <BottomBanner text="محاسبه بلادرنگ سود با تفکیک هزینه‌ها" color="#38bdf8" />
+    </DuskFogStage>
+  )
+}
+
+// ============================================
+// SCENE 4: ClearRevealScene (25–35s) — The Monolithic Crystal Prism & Pure Net Profit
+// ============================================
+export function ClearRevealScene({ t, scene }: SceneProps) {
+  const enter = ease(clamp(progress(t, 0, 0.6), 0, 1))
+  const popSpring = spring(clamp(progress(t, 0.2, 1.2), 0, 1))
+
+  return (
+    <DuskFogStage scene={scene} t={t}>
+      <SceneHeader
+        badge="کشف حقیقت مالی"
+        badgeColor={PROFIT_GOLD}
+        title="سود خالص واقعی آشکار شد!"
+        opacity={enter}
+      />
+
+      {/* Center Crystalline Prism Chamber (Y: 260..590) */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 260,
+          left: 40,
+          right: 40,
+          height: 350,
+          backgroundColor: FOG_GREY,
+          borderRadius: 18,
+          border: `2px solid ${FOG_AMBER}`,
+          boxShadow: '0 0 45px rgba(245, 158, 11, 0.22)',
+          padding: '28px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          transform: `scale(${0.92 + popSpring * 0.08})`,
         }}
       >
         <div
           style={{
-            width: mix(0, 202, lock),
-            height: 5,
-            borderRadius: 4,
-            background: `linear-gradient(90deg, ${DEEP_TEAL}, ${FOG_AMBER}, #b59cf7)`,
-            boxShadow: '0 0 24px rgba(255,196,102,0.55)',
-            opacity: clamp(lock * 1.4),
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '5px 14px',
+            borderRadius: 999,
+            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+            border: `1px solid ${FOG_AMBER}`,
+            color: PROFIT_GOLD,
+            fontSize: 13,
+            fontWeight: 800,
           }}
-        />
+        >
+          <span>سود خالص قطعی امروز</span>
+        </div>
+
+        {/* Razor-Sharp Pure Profit Numeral */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <div
+            style={{
+              fontSize: 68,
+              fontWeight: 900,
+              lineHeight: 1,
+              color: '#ffffff',
+              textShadow: '0 0 35px rgba(251, 191, 36, 0.6)',
+              userSelect: 'none',
+              letterSpacing: 1,
+            }}
+          >
+            {faNumber(455000)}
+          </div>
+          <span style={{ fontSize: 14, color: MIST_BLUE, fontWeight: 700 }}>
+            بدون حتی یک ریال کسری یا خطا
+          </span>
+        </div>
+
+        {/* Decomposition Tag */}
+        <div
+          style={{
+            width: '100%',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: 10,
+            border: `1px solid ${BORDER_SUBTLE}`,
+            padding: '10px 14px',
+            fontSize: 14,
+            fontWeight: 700,
+            color: REVEAL_CREAM,
+            textAlign: 'center',
+          }}
+        >
+          فروش منهای بهای تمام‌شده و کل خرج‌ها
+        </div>
       </div>
-      <FogWords
-        t={t}
-        cueAt={0.9}
-        y={500}
-        words={['هر', 'لحظه،', 'همین', 'عدد.']}
-        accentWord="عدد."
-        size={40}
+
+      <BottomBanner text="سود خالص واقعی: چهارصد و پنجاه و پنج هزار" color="#fbbf24" />
+    </DuskFogStage>
+  )
+}
+
+// ============================================
+// SCENE 5: LedgerFootScene (35–40s) — The 3 Decomposition Rails (Arithmetic Invariant)
+// ============================================
+export function LedgerFootScene({ t, scene }: SceneProps) {
+  const enter = ease(clamp(progress(t, 0, 0.5), 0, 1))
+
+  const r1 = clamp(progress(t, 0.2, 0.8), 0, 1)
+  const r2 = clamp(progress(t, 0.9, 1.5), 0, 1)
+  const r3 = clamp(progress(t, 1.6, 2.2), 0, 1)
+  const rResult = clamp(progress(t, 2.3, 3.0), 0, 1)
+
+  return (
+    <DuskFogStage scene={scene} t={t}>
+      <SceneHeader
+        badge="سه‌گانه تراز محاسباتی"
+        badgeColor={DEEP_TEAL}
+        title="پایه‌های حساب؛ زنده و شفاف"
+        opacity={enter}
       />
-      <FogCommentBox t={t} at={1.5} x={28} lead="شروع، همین امشب" tone="cyan" />
-      <FogCommentBox t={t} at={1.9} x={282} lead="نصب و دمو" tone="purple" />
+
+      {/* 3 Decomposition Rails + Net Profit Result (Y: 250..635) */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 250,
+          left: 40,
+          right: 40,
+          height: 380,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+        }}
+      >
+        {/* Rail 1: فروش ناخالص */}
+        <div
+          style={{
+            height: 72,
+            backgroundColor: FOG_GREY,
+            borderRadius: 12,
+            border: `1.5px solid rgba(6, 182, 212, 0.35)`,
+            padding: '0 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            opacity: r1,
+            transform: `translateX(${(1 - r1) * 20}px)`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 18, fontWeight: 900, color: DEEP_TEAL }}>+</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#ffffff' }}>فروش ناخالص روز</span>
+          </div>
+          <span style={{ fontSize: 17, fontWeight: 900, color: LASER_CYAN }}>
+            {faNumber(2460000)}
+          </span>
+        </div>
+
+        {/* Rail 2: بهای تمام‌شده کالا */}
+        <div
+          style={{
+            height: 72,
+            backgroundColor: FOG_GREY,
+            borderRadius: 12,
+            border: `1.5px solid rgba(245, 158, 11, 0.35)`,
+            padding: '0 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            opacity: r2,
+            transform: `translateX(${(1 - r2) * 20}px)`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 18, fontWeight: 900, color: FOG_AMBER }}>−</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#ffffff' }}>
+              بهای تمام‌شده کالا
+            </span>
+          </div>
+          <span style={{ fontSize: 17, fontWeight: 900, color: FOG_AMBER }}>
+            {faNumber(1620000)}
+          </span>
+        </div>
+
+        {/* Rail 3: هزینه‌ها و مخارج */}
+        <div
+          style={{
+            height: 72,
+            backgroundColor: FOG_GREY,
+            borderRadius: 12,
+            border: `1.5px solid rgba(244, 63, 94, 0.35)`,
+            padding: '0 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            opacity: r3,
+            transform: `translateX(${(1 - r3) * 20}px)`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 18, fontWeight: 900, color: COST_ROSE }}>−</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#ffffff' }}>
+              هزینه‌ها و مخارج جاری
+            </span>
+          </div>
+          <span style={{ fontSize: 17, fontWeight: 900, color: COST_ROSE }}>
+            {faNumber(385000)}
+          </span>
+        </div>
+
+        {/* Result: سود خالص قطعی */}
+        <div
+          style={{
+            height: 80,
+            backgroundColor: 'rgba(245, 158, 11, 0.12)',
+            borderRadius: 14,
+            border: `2px solid ${PROFIT_GOLD}`,
+            boxShadow: '0 0 25px rgba(245, 158, 11, 0.25)',
+            padding: '0 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            opacity: rResult,
+            transform: `scale(${0.95 + rResult * 0.05})`,
+          }}
+        >
+          <span style={{ fontSize: 17, fontWeight: 900, color: PROFIT_GOLD }}>
+            = سود خالص واقعی
+          </span>
+          <span style={{ fontSize: 24, fontWeight: 900, color: '#ffffff' }}>
+            {faNumber(455000)}
+          </span>
+        </div>
+      </div>
+
+      <BottomBanner text="تراز لحظه‌ای فروش، بهای تمام‌شده و خرج‌ها" color="#38bdf8" />
+    </DuskFogStage>
+  )
+}
+
+// ============================================
+// SCENE 6: FogCtaScene (40–45s) — The Clear Horizon & Tactile CTA
+// ============================================
+export function FogCtaScene({ t, scene }: SceneProps) {
+  const dur = scene.end - scene.start
+  const enter = ease(clamp(progress(t, 0, 0.6), 0, 1))
+
+  // Loop back strictly at the very tail (last 0.2s)
+  const loopBack = ease(clamp(progress(t, dur - 0.2, dur), 0, 1))
+
+  return (
+    <DuskFogStage scene={scene} t={t}>
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          opacity: 1 - loopBack,
+          display: loopBack >= 1 ? 'none' : 'block',
+        }}
+      >
+        <SceneHeader
+          badge="آرامش مالی هر شب"
+          badgeColor={PROFIT_GOLD}
+          title="حساب روشن، دخل شفاف با حسابچه"
+          opacity={enter}
+        />
+
+        {/* Center CTA Button Cluster (Y: 340..540) */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 350,
+            left: 40,
+            right: 40,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 20,
+          }}
+        >
+          {/* Main Action Button */}
+          <div
+            style={{
+              width: '100%',
+              height: 72,
+              borderRadius: 16,
+              background: 'linear-gradient(135deg, #f59e0b 0%, #06b6d4 100%)',
+              boxShadow: '0 0 35px rgba(245, 158, 11, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 22,
+              fontWeight: 900,
+              color: '#05080e',
+              cursor: 'pointer',
+            }}
+          >
+            همین امشب سود واقعی‌ات را ببین
+          </div>
+
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: MIST_BLUE,
+              textAlign: 'center',
+              lineHeight: 1.5,
+            }}
+          >
+            نرم‌افزار یکپارچه حسابداری ابری و آفلاین حسابچه
+          </div>
+        </div>
+
+        <BottomBanner text="حسابچه · پایان ابهام دخل و سود فروشگاه" color="#fbbf24" />
+      </div>
+
+      {/* Frame 0 Loop Anchor */}
+      {loopBack > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: loopBack,
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 68,
+              fontWeight: 900,
+              color: PROFIT_GOLD,
+              filter: 'blur(24px)',
+            }}
+          >
+            {faNumber(455000)}
+          </div>
+        </div>
+      )}
     </DuskFogStage>
   )
 }

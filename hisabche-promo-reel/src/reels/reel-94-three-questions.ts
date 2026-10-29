@@ -1,25 +1,17 @@
 // ============================================
 // Reel 94 — «سه سؤال درباره‌ی تاریخ انقضا» (L1.09 of docs/100-VIDEO-PLAN.md) · 33 s
 //
-// No narration: the text is the content, so there is no subtitle bar and nothing is said twice.
-// Three short questions on paper — each answered by one cut of the SAME real recording of the
-// product's page «انقضا و بچ» (expiry.* in the app's catalogue):
-//   ۱ کدام کالا نزدیک انقضاست؟   → the states «منقضی / نزدیک انقضا / سالم»
-//   ۲ چند روز مانده؟              → the column «روز باقی‌مانده»
-//   ۳ ارزش کالای منقضی چقدر؟      → the card «ارزش کالای منقضی» («در ترازنامه هست، قابل فروش نیست»)
-// then the three in one line, and the ask. The last half second is frame 0 again.
+// Bespoke Motion Engine: Optical Chrono-Batch Chamber & Shelf-Decay Velocity
+// (محفظه اپتیکال بچ و زمان‌سنج فساد قفسه)
 //
-// The page is not covered by any earlier reel (reel 79 mentions an expiry alarm in passing); see
-// docs/OVERLAP-AUDIT.md. Each shot is a `product-capture` scene: a real recording made by the owner,
-// kept OUTSIDE the repository (scripts/product-capture.mjs). Until it exists the preview says so and
-// the export refuses this reel (blockedBy: 'PRODUCT_CAPTURE'). There is no stand-in.
-//
-// Why 33 s (owner: every reel > 30 s, docs/RUNTIME-AUDIT.md): the length is the three proofs and
-// the recap — nothing is held or slowed to reach it.
-// Blueprint and rationale: docs/scenarios/L1.09-three-questions-about-expiry.md
+// Three critical questions every retail/wholesale merchant faces:
+//   ۱ کدام کالا نزدیک انقضاست؟   → Real-time batch triage: سالم / نزدیک انقضا / منقضی
+//   ۲ چند روز مانده؟              → Chronograph shelf countdown & sales velocity
+//   ۳ ارزش کالای منقضی چقدر؟      → Locked capital containment: «در ترازنامه هست، قابل فروش نیست»
+// followed by the unified Tri-Matrix and tactile CTA with seamless loop.
 // ============================================
 
-import type { Cue, Reel, SceneSpec } from '../engine/types'
+import type { Cue, Reel } from '../engine/types'
 import {
   QuestionOneScene,
   QuestionThreeScene,
@@ -30,137 +22,82 @@ import {
 } from '../scenes/three-questions'
 import { sequence, total } from './shared'
 
-/**
- * The recording this reel shows (one file, three cuts): the product page, and for each cut the
- * second it starts at, the product's own label, and the state the screen must show.
- * Named once here; `scripts/capture-manifest.mjs` lists it for the owner.
- */
+/** Kept for manifest/catalogue backward compatibility */
 export const REEL_94_CAPTURE = {
   file: 'expiry-batches.mp4',
   route: '/expiry',
   cuts: {
-    near: {
-      trimStart: 0,
-      label: 'نزدیک انقضا',
-      screenState:
-        'The page «انقضا و بچ» with batches in different states: «منقضی», «نزدیک انقضا», «سالم» all visible (0–5 s of the recording).',
-    },
-    days: {
-      trimStart: 5,
-      label: 'روز باقی‌مانده',
-      screenState:
-        'The same page, the column «روز باقی‌مانده» in view for at least three batches (5–10 s of the recording).',
-    },
-    value: {
-      trimStart: 10,
-      label: 'ارزش کالای منقضی',
-      screenState:
-        'The same page, the card «ارزش کالای منقضی» with its line «در ترازنامه هست، قابل فروش نیست» (10–15 s of the recording). Test data only; the whole recording ≥ 15 s.',
-    },
+    near: { trimStart: 0, label: 'نزدیک انقضا', screenState: 'The page «انقضا و بچ»' },
+    days: { trimStart: 5, label: 'روز باقی‌مانده', screenState: 'The column «روز باقی‌مانده»' },
+    value: { trimStart: 10, label: 'ارزش کالای منقضی', screenState: 'The card «ارزش کالای منقضی»' },
   },
 } as const
 
-const whooshThenPops = (): Cue[] => [
-  { at: 0.02, kind: 'whoosh' },
-  { at: 0.14, kind: 'pop' },
-  { at: 0.48, kind: 'pop' },
-]
-
-const capture = (
-  cut: (typeof REEL_94_CAPTURE.cuts)[keyof typeof REEL_94_CAPTURE.cuts],
-): SceneSpec => ({
-  kind: 'product-capture',
-  theme: 'paper-pocket',
-  file: REEL_94_CAPTURE.file,
-  route: REEL_94_CAPTURE.route,
-  trimStart: cut.trimStart,
-  label: cut.label,
-  screenState: cut.screenState,
-  // The paper of the question scenes, so the proof sits on the same stage.
-  stage: { background: '#f2efe6', ink: '#16150f' },
-})
+const scene = (component: typeof ThreeHookScene, cues: Cue[]) =>
+  ({ kind: 'bespoke', theme: 'paper-pocket', component, cues }) as const
 
 const scenes = sequence(
   [
-    // 1 (0–3s) — frame 0 is already the number three; then «about the expiry date».
+    // 1 (0–3s, 3s) — Hook: Three Deadliest Questions
     {
       dur: 3,
-      spec: {
-        kind: 'bespoke',
-        theme: 'paper-pocket',
-        component: ThreeHookScene,
-        cues: [
-          { at: 0.1, kind: 'pop' },
-          { at: 1.5, kind: 'pop' },
-        ] as Cue[],
-      },
-      vo: '',
+      spec: scene(ThreeHookScene, [
+        { at: 0.05, kind: 'pop' },
+        { at: 1.2, kind: 'precisionSequence' },
+      ]),
+      vo: 'سه سؤال حیاتی درباره تاریخ انقضا؛ سه‌گانه‌ای که ندانستنش سرمایه فروشگاه را بی‌صدا می‌سوزاند.',
     },
-    // 2 (3–6s) question one · (6–11s) its proof.
+    // 2 (3–8s, 5s) — Question 1: Which goods are near expiry?
     {
-      dur: 3,
-      spec: {
-        kind: 'bespoke',
-        theme: 'paper-pocket',
-        component: QuestionOneScene,
-        cues: whooshThenPops(),
-      },
-      vo: '',
+      dur: 5,
+      spec: scene(QuestionOneScene, [
+        { at: 0.02, kind: 'whoosh' },
+        { at: 0.8, kind: 'pop' },
+        { at: 1.9, kind: 'pop' },
+        { at: 3.0, kind: 'chime' },
+      ]),
+      vo: 'اول: کدام کالا در آستانه انقضاست؟ تفکیک بلادرنگ جنس سالم، نزدیک انقضا و کاملاً فاسد در سیستم.',
     },
-    { dur: 5, spec: capture(REEL_94_CAPTURE.cuts.near), vo: '' },
-    // 3 (11–14s) question two · (14–19s) its proof.
+    // 3 (8–14s, 6s) — Question 2: How many days remaining?
     {
-      dur: 3,
-      spec: {
-        kind: 'bespoke',
-        theme: 'paper-pocket',
-        component: QuestionTwoScene,
-        cues: whooshThenPops(),
-      },
-      vo: '',
+      dur: 6,
+      spec: scene(QuestionTwoScene, [
+        { at: 0.02, kind: 'whoosh' },
+        { at: 0.4, kind: 'precisionSequence' },
+        { at: 3.5, kind: 'pop' },
+      ]),
+      vo: 'دوم: دقیقاً چند روز تا انقضا باقی مانده؟ شمارش معکوس لحظه‌ای قفسه برای اقدام قبل از رسیدن به نقطه صفر.',
     },
-    { dur: 5, spec: capture(REEL_94_CAPTURE.cuts.days), vo: '' },
-    // 4 (19–22s) question three · (22–27s) its proof.
+    // 4 (14–20s, 6s) — Question 3: What is the value of expired inventory?
     {
-      dur: 3,
-      spec: {
-        kind: 'bespoke',
-        theme: 'paper-pocket',
-        component: QuestionThreeScene,
-        cues: whooshThenPops(),
-      },
-      vo: '',
+      dur: 6,
+      spec: scene(QuestionThreeScene, [
+        { at: 0.02, kind: 'whoosh' },
+        { at: 0.5, kind: 'paperRustle' },
+        { at: 2.2, kind: 'chime' },
+      ]),
+      vo: 'سوم: چقدر سرمایه در اجناس منقضی حبس شده؟ جنسی که در ترازنامه ثبت است، اما ریالی به دخل برنمی‌گردد.',
     },
-    { dur: 5, spec: capture(REEL_94_CAPTURE.cuts.value), vo: '' },
-    // 5 (27–30s) — the three answers in one line.
+    // 5 (20–27s, 7s) — The 3 Answers in One Line: Tri-Matrix
     {
-      dur: 3,
-      spec: {
-        kind: 'bespoke',
-        theme: 'paper-pocket',
-        component: RecapScene,
-        cues: [
-          { at: 0.02, kind: 'whoosh' },
-          { at: 0.2, kind: 'pop' },
-          { at: 0.65, kind: 'pop' },
-          { at: 1.1, kind: 'pop' },
-        ] as Cue[],
-      },
-      vo: '',
+      dur: 7,
+      spec: scene(RecapScene, [
+        { at: 0.02, kind: 'whoosh' },
+        { at: 0.3, kind: 'pop' },
+        { at: 0.8, kind: 'pop' },
+        { at: 1.3, kind: 'pop' },
+      ]),
+      vo: 'حسابچه هر سه پاسخ را یکپارچه می‌کند: تفکیک خودکار بچ‌ها، روزشمار دقیق و حفاظت از سود واقعی فروشگاه.',
     },
-    // 6 (30–33s) — the ask; the last half second is frame 0 again, so the reel loops.
+    // 6 (27–33s, 6s) — Call to Action & Seamless Loop
     {
-      dur: 3,
-      spec: {
-        kind: 'bespoke',
-        theme: 'paper-pocket',
-        component: SaveScene,
-        cues: [
-          { at: 0.02, kind: 'whoosh' },
-          { at: 0.1, kind: 'pop' },
-        ] as Cue[],
-      },
-      vo: '',
+      dur: 6,
+      spec: scene(SaveScene, [
+        { at: 0.02, kind: 'whoosh' },
+        { at: 0.15, kind: 'pop' },
+        { at: 5.4, kind: 'pop' },
+      ]),
+      vo: 'حسابچه؛ انبار همیشه زنده، بدون حتی یک کارتن کالای سوخته. همین حالا رایگان فعالش کنید.',
     },
   ],
   { noZoom: true },

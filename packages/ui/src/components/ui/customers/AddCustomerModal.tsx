@@ -29,7 +29,7 @@ const toNum = (v: string): number => {
 const fmt = (v: number): string => v.toLocaleString('fa-AF')
 
 const customerSchema = z.object({
-  name: z.string().min(1, 'customer.nameRequired'),
+  name: z.string().min(1, 'customers.form.nameRequired'),
   phone: z.string().optional().or(z.literal('')),
 })
 

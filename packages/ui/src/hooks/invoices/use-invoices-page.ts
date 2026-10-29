@@ -54,7 +54,12 @@ export function useInvoicesPage() {
   const [filters, setFilters] = useState<InvoicesQueryParams>(initialFilters)
 
   // ─── Data Fetching ──────────────────────────────────────────────────────
-  const { data, isLoading, refetch } = useInvoices(filters)
+  // ⚠️ `isLoading` is `isPending && isFetching`, and it is FALSE in two states
+  // that are not «loaded»: the query is disabled (auth not ready yet) and the
+  // query is paused between retries. The page took that as «no invoices» and
+  // printed «No invoices have been recorded yet» before the 21 rows arrived
+  // (live audit B3). `isPending` is the honest question: is there data yet?
+  const { data, isPending, refetch } = useInvoices(filters)
   const { data: statsData } = useInvoices({
     page: 1,
     limit: STATS_LIMIT,
@@ -186,7 +191,8 @@ export function useInvoicesPage() {
     invoices,
     statsInvoices,
     statsSummary,
-    isLoading,
+    // Pending, not «pending and fetching»: see the destructure above (B3).
+    isLoading: isPending,
     total,
     searchValue: filters.search ?? '',
     filters: {

@@ -91,6 +91,12 @@ export const GridCell = memo(function GridCell({
     [onKeyDown, rowIndex, columnIndex],
   )
 
+  // ⚠️ The header translates `labelKey`; the cell used `column.label`, which is
+  // the schema's PERSIAN fallback. On the English invoice form every input was
+  // announced as «تعداد / واحد / قیمت واحد» by a screen reader and by the
+  // browser's own accessibility tree (live audit B5).
+  const columnLabel = column.labelKey ? t(column.labelKey, column.label) : column.label
+
   // ── computed ───────────────────────────────────────────────────────────
   if (column.type === 'computed') {
     return (
@@ -117,7 +123,7 @@ export const GridCell = memo(function GridCell({
           data-cell={`${rowIndex}-${columnIndex}`}
           onKeyDown={handleKey}
           onChange={(e) => onChange(e.target.checked ? 'true' : '')}
-          aria-label={column.label}
+          aria-label={columnLabel}
           className="size-4 accent-[hsl(var(--color-primary))]"
         />
       </div>
@@ -152,7 +158,7 @@ export const GridCell = memo(function GridCell({
         <SelectTrigger
           data-cell={`${rowIndex}-${columnIndex}`}
           onKeyDown={handleKey}
-          aria-label={column.label}
+          aria-label={columnLabel}
           className={cn(
             'h-9 min-h-0 w-full rounded-none border-0 bg-transparent px-2 text-sm',
             'focus:bg-[hsl(var(--color-primary)/0.07)]',
@@ -190,7 +196,7 @@ export const GridCell = memo(function GridCell({
           {...(column.suffix ? { suffix: column.suffix } : {})}
           data-cell={`${rowIndex}-${columnIndex}`}
           onKeyDown={handleKey}
-          aria-label={column.label}
+          aria-label={columnLabel}
           className={cn(
             'h-9 px-1',
             'focus-within:bg-[hsl(var(--color-primary)/0.07)]',
@@ -221,7 +227,7 @@ export const GridCell = memo(function GridCell({
       data-cell={`${rowIndex}-${columnIndex}`}
       onKeyDown={handleKey}
       onChange={(e) => onChange(e.target.value)}
-      aria-label={column.label}
+      aria-label={columnLabel}
       className={cellBase}
     />
   )

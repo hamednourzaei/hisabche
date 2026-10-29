@@ -1,36 +1,46 @@
 // src/scenes/inference-engine.tsx
 // =============================================================================
 // Reel 103 — «موتور استنتاج هوش مصنوعی حسابچه» (Hisabche Inference Engine)
-// Modern High-Performance AI Inference Startup Showreel
+// Bespoke Monolithic Silicon Die & Laser Neural Bus Architecture
 //
-// Full-Canvas Vertical 9:16 (540x960) Dynamic Composition:
-// - Top Zone (y=35 to 160): Sleek Tech Topbar + Bold Natural Typography (Zero Stepped Boxes!)
-// - Center Hero (y=175 to 575): Large-Scale Cybernetic Motion Graphics & 3D Shaders
-// - Bottom Active Zone (y=595 to 915): Live Telemetry Sparklines, Real-Time Audio Meters, Benchmark Comparisons & High-Impact CTA
-//
-// 100% Procedural Math & SVG Transforms. Zero Static Empty Spaces. Zero Pipeline Clutter.
+// Strict Anti-Repetition & Anti-Template Design:
+// - ZERO floating cards, ZERO rounded card containers, ZERO 3-pod decks (distinct from 104, 105, 106, 107).
+// - The ENTIRE 540x960 canvas IS the monolithic silicon processor die surface.
+// - Authentic photolithography gold bus traces, wafer fiducial crosshairs & perimeter bond pads.
+// - Scene 1: Choked GPU core with incandescent thermal red meltdown & latency odometer (5,420ms).
+// - Scene 2: High-speed 5-lane vertical photon bus & KV-Cache laser memory compressor (1,850 tok/s).
+// - Scene 3: Real 8x8 Systolic Tensor Core Matrix firing diagonal compute waves & 11ms latency collapse.
+// - Scene 4: Full-field vector coordinate radar detecting & laser-locking anomalous fraud in 0.4ms.
+// - Scene 5: Monolithic packaged BGA silicon chip with gold contact pins & direct terminal key CTA.
 // =============================================================================
 
 import React from 'react'
 import type { Scene } from '../engine/types'
-import { clamp, mix, progress } from '../engine/anim'
+import { clamp, mix, progress, spring } from '../engine/anim'
 import { stagePunch, stageShake } from './card-motion'
 import { faNumber } from '../ui/motion-primitives'
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 
-const BG_VOID = '#020617'
-const NEON_CYAN = '#00f5ff'
-const NEON_EMERALD = '#00ff88'
-const NEON_INDIGO = '#818cf8'
-const NEON_VIOLET = '#c084fc'
-const NEON_AMBER = '#fbbf24'
-const NEON_RED = '#f43f5e'
+const SILICON_OBSIDIAN = '#02050f'
+const DIE_SUBSTRATE = '#060d1f'
+const GOLD_PAD = '#eab308'
+const LASER_CYAN = '#00f5ff'
+const COBALT_BLUE = '#38bdf8'
+const SILICON_EMERALD = '#10b981'
+const THERMAL_RED = '#ef4444'
+const THERMAL_ORANGE = '#f97316'
+const WAFER_WHITE = '#f8fafc'
 const TEXT_MUTED = '#94a3b8'
 
-// ─── Stage Frame (Full-Canvas 540x960 with Visceral Shake & Punch) ───────────
+function popSpring(t: number, at: number, dur = 0.5): number {
+  return spring(clamp(progress(t, at, dur)))
+}
+
+// ─── Monolithic Silicon Die Stage ─────────────────────────────────────────────
 
 export function InferenceStage({
+  scene,
   t,
   children,
   shakes,
@@ -44,9 +54,10 @@ export function InferenceStage({
   punches?: readonly number[]
   alertFlash?: boolean
 }) {
+  void scene
   const shake = stageShake(t, shakes)
   const punch = stagePunch(t, punches)
-  const scanY = (t * 130) % 960
+  const scanY = (t * 140) % 960
 
   return (
     <div
@@ -54,54 +65,114 @@ export function InferenceStage({
         position: 'relative',
         width: 540,
         height: 960,
-        backgroundColor: BG_VOID,
-        color: '#f8fafc',
-        fontFamily: 'Vazirmatn, sans-serif',
+        backgroundColor: SILICON_OBSIDIAN,
+        color: WAFER_WHITE,
         overflow: 'hidden',
         direction: 'ltr',
         transform: `translate(${shake.x.toFixed(1)}px, ${shake.y.toFixed(1)}px) scale(${punch.toFixed(3)})`,
         transformOrigin: 'center center',
       }}
     >
-      {/* Background Cyber Grid */}
+      {/* ─── Silicon Wafer Physical Substrate ─── */}
       <svg
-        style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          opacity: 0.15,
-          pointerEvents: 'none',
-        }}
+        width={540}
+        height={960}
+        viewBox="0 0 540 960"
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
       >
         <defs>
-          <pattern id="infGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+          {/* Micro-Circuit Photolithography Pattern */}
+          <pattern id="siliconBusNet" width="60" height="60" patternUnits="userSpaceOnUse">
             <path
-              d="M 40 0 L 0 0 0 40"
+              d="M 0 30 H 60 M 30 0 V 60 M 15 15 H 45 V 45 H 15 Z"
               fill="none"
-              stroke="rgba(129, 140, 248, 0.45)"
-              strokeWidth="0.8"
+              stroke="rgba(56, 189, 248, 0.05)"
+              strokeWidth="0.75"
             />
-            <circle cx="40" cy="40" r="1.2" fill="rgba(0, 245, 255, 0.6)" />
+            <circle cx="30" cy="30" r="1.2" fill="rgba(234, 179, 8, 0.25)" />
           </pattern>
         </defs>
-        <rect width="100%" height="100%" fill="url(#infGrid)" />
+
+        <rect width="540" height="960" fill="url(#siliconBusNet)" />
+
+        {/* Outer Wafer Die Boundary Framing Lines */}
+        <rect
+          x={16}
+          y={16}
+          width={508}
+          height={928}
+          fill="none"
+          stroke="rgba(234, 179, 8, 0.2)"
+          strokeWidth={1}
+          strokeDasharray="8 6"
+        />
+
+        {/* 4 Corner Wafer Alignment Fiducial Crosshairs */}
+        {[
+          { cx: 32, cy: 32 },
+          { cx: 508, cy: 32 },
+          { cx: 32, cy: 928 },
+          { cx: 508, cy: 928 },
+        ].map((f, i) => (
+          <g key={i}>
+            <circle
+              cx={f.cx}
+              cy={f.cy}
+              r={8}
+              fill="none"
+              stroke={GOLD_PAD}
+              strokeWidth={1}
+              opacity={0.6}
+            />
+            <line
+              x1={f.cx - 12}
+              y1={f.cy}
+              x2={f.cx + 12}
+              y2={f.cy}
+              stroke={GOLD_PAD}
+              strokeWidth={1}
+              opacity={0.6}
+            />
+            <line
+              x1={f.cx}
+              y1={f.cy - 12}
+              x2={f.cx}
+              y2={f.cy + 12}
+              stroke={GOLD_PAD}
+              strokeWidth={1}
+              opacity={0.6}
+            />
+          </g>
+        ))}
+
+        {/* Perimeter Gold Wire Bond Pads (Micro gold teeth along outer margins) */}
+        {Array.from({ length: 18 }).map((_, i) => (
+          <React.Fragment key={i}>
+            {/* Top row */}
+            <rect
+              x={55 + i * 24}
+              y={12}
+              width={12}
+              height={5}
+              fill={GOLD_PAD}
+              opacity={0.4}
+              rx={1}
+            />
+            {/* Bottom row */}
+            <rect
+              x={55 + i * 24}
+              y={943}
+              width={12}
+              height={5}
+              fill={GOLD_PAD}
+              opacity={0.4}
+              rx={1}
+            />
+          </React.Fragment>
+        ))}
       </svg>
 
-      {/* Red Alert Thermal Vignette Flash on Panic */}
-      {alertFlash && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'radial-gradient(circle, transparent 40%, rgba(244, 63, 94, 0.35) 100%)',
-            pointerEvents: 'none',
-            zIndex: 15,
-          }}
-        />
-      )}
-
-      {/* Travelling Laser Scanline */}
+      {/* Travelling Laser Inspection Scanline */}
       <div
         style={{
           position: 'absolute',
@@ -109,142 +180,165 @@ export function InferenceStage({
           right: 0,
           top: scanY,
           height: 1.5,
-          background: 'linear-gradient(90deg, transparent, rgba(0, 245, 255, 0.8), transparent)',
-          boxShadow: '0 0 15px rgba(0, 245, 255, 0.9)',
+          background: 'linear-gradient(90deg, transparent, rgba(0, 245, 255, 0.75), transparent)',
+          boxShadow: '0 0 16px rgba(0, 245, 255, 0.8)',
           pointerEvents: 'none',
-          zIndex: 12,
+          zIndex: 15,
         }}
       />
 
-      {/* Atmospheric Ambient Glow */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '38%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 500,
-          height: 500,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(99, 102, 241, 0.14) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
+      {/* Thermal Alarm Vignette on Overload */}
+      {alertFlash && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'radial-gradient(circle, transparent 40%, rgba(239, 68, 68, 0.4) 100%)',
+            pointerEvents: 'none',
+            zIndex: 14,
+          }}
+        />
+      )}
 
       {children}
 
-      {/* Global Minimalist Tech Footer Bar */}
+      {/* Laser-Etched Silicon Monospace Footer */}
       <div
+        dir="ltr"
         style={{
           position: 'absolute',
-          bottom: 12,
-          left: 24,
-          right: 24,
+          bottom: 22,
+          left: 36,
+          right: 36,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           fontSize: 9.5,
-          fontFamily: 'monospace',
-          color: 'rgba(255,255,255,0.4)',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          paddingTop: 8,
-          zIndex: 50,
+          fontFamily: "'JetBrains Mono', monospace",
+          letterSpacing: '0.14em',
+          color: 'rgba(234, 179, 8, 0.5)',
+          zIndex: 40,
         }}
       >
-        <span>HISABCHE.AI // SUB-MILLISECOND INFERENCE</span>
-        <span>GLOBAL EDGE CLUSTER</span>
-        <span>V4.2_FP8</span>
+        <span>HISABCHE // TENSOR_SILICON_4NM</span>
+        <span>RETICLE: 26x33mm // WAFER_OK</span>
       </div>
     </div>
   )
 }
 
-// ─── Reusable Clean Modern Topbar ─────────────────────────────────────────────
+// ─── Silicon Header Lockup (Direct Surface Typography, No Card) ───────────────
 
-function StartupTopbar({
-  tag = 'INFERENCE CLUSTER ONLINE',
-  badge = '۱۱.۴ میلی‌ثانیه',
-  badgeColor = NEON_EMERALD,
+function SiliconHeader({
+  chipTag,
+  title,
+  subtitle,
+  accentText,
+  accentColor = LASER_CYAN,
+  t,
 }: {
-  tag?: string
-  badge?: string
-  badgeColor?: string
+  chipTag: string
+  title: string
+  subtitle: string
+  accentText?: string
+  accentColor?: string
+  t: number
 }) {
+  const enter = clamp(progress(t, 0.05, 0.45))
   return (
     <div
+      dir="rtl"
       style={{
         position: 'absolute',
-        top: 36,
-        left: 28,
-        right: 28,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        zIndex: 40,
+        top: 44,
+        left: 36,
+        right: 36,
+        textAlign: 'start',
+        zIndex: 35,
+        opacity: enter,
+        transform: `translateY(${mix(10, 0, enter)}px)`,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span
+      {/* Laser-Etched Technical Bus Path */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 6,
+        }}
+      >
+        <div
           style={{
-            width: 8,
-            height: 8,
+            width: 7,
+            height: 7,
             borderRadius: '50%',
-            background: NEON_CYAN,
-            boxShadow: `0 0 10px ${NEON_CYAN}`,
+            background: accentColor,
+            boxShadow: `0 0 10px ${accentColor}`,
           }}
         />
         <span
           style={{
             fontSize: 11,
-            fontFamily: 'monospace',
             fontWeight: 800,
-            letterSpacing: 0.8,
-            color: '#e2e8f0',
+            fontFamily: "'JetBrains Mono', monospace",
+            color: accentColor,
+            letterSpacing: '0.08em',
           }}
         >
-          {tag}
+          {chipTag}
         </span>
       </div>
+
+      {/* Main Bold Headline */}
       <div
         style={{
-          padding: '4px 12px',
-          borderRadius: 20,
-          background: `${badgeColor}18`,
-          border: `1px solid ${badgeColor}66`,
-          color: badgeColor,
-          fontSize: 11,
-          fontFamily: 'monospace',
-          fontWeight: 800,
+          fontSize: 27,
+          fontWeight: 900,
+          color: WAFER_WHITE,
+          lineHeight: 1.25,
+          letterSpacing: '-0.02em',
+          marginBottom: 4,
         }}
       >
-        ● {badge}
+        {title}
+      </div>
+
+      {/* Subtitle */}
+      <div
+        style={{
+          fontSize: 14,
+          fontWeight: 600,
+          color: TEXT_MUTED,
+          lineHeight: 1.4,
+        }}
+      >
+        <span>{subtitle} </span>
+        {accentText && <span style={{ color: accentColor, fontWeight: 800 }}>{accentText}</span>}
       </div>
     </div>
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SCENE 1: The Choked Latency Dial & Breakout Shockwave (0.00–7.20s)
-// ─────────────────────────────────────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════════
+// SCENE 1: InferenceLatencyCrisisScene (0.00–7.20s)
+// The Choked Silicon Core & Incandescent Thermal Meltdown
+// ═════════════════════════════════════════════════════════════════════════════
 
 export function InferenceLatencyCrisisScene({ t, scene }: { t: number; scene: Scene }) {
-  const enter = clamp(progress(t, 0.1, 0.5))
-  const shock = clamp(progress(t, 2.5, 3.8))
-  const latency = Math.round(mix(5420, 11, clamp(progress(t, 3.2, 5.6))))
-  const needleAngle =
-    shock > 0.5
-      ? mix(110, -95, clamp(progress(t, 3.2, 4.8)))
-      : mix(-110, 110, clamp(progress(t, 0.5, 2.8)))
-  const alertFlash = t >= 2.4 && t <= 3.8
+  const enter = clamp(progress(t, 0.1, 0.45))
+  const latency = Math.round(mix(280, 5420, clamp(progress(t, 0.4, 4.2))))
+  const isOverheated = latency > 2000
+  const alertFlash = t >= 2.4 && t <= 4.0
 
-  // Orbiting blocked requests
-  const packets = [0, 45, 90, 135, 180, 225, 270, 315].map((deg) => {
-    const rad = ((deg + t * 50) * Math.PI) / 180
-    const r = shock > 0.5 ? 180 : 130
+  // 24 Blocked token particles circling the burning silicon die
+  const blockedPackets = Array.from({ length: 24 }).map((_, i) => {
+    const angle = (i / 24) * Math.PI * 2 + t * 2.8
+    const radius = 175 + Math.sin(t * 4 + i) * 12
     return {
-      x: 270 + Math.cos(rad) * r,
-      y: 360 + Math.sin(rad) * r,
-      color: shock > 0.5 ? NEON_EMERALD : NEON_RED,
+      x: 270 + Math.cos(angle) * radius,
+      y: 450 + Math.sin(angle) * radius,
+      color: isOverheated ? THERMAL_RED : THERMAL_ORANGE,
     }
   })
 
@@ -252,141 +346,138 @@ export function InferenceLatencyCrisisScene({ t, scene }: { t: number; scene: Sc
     <InferenceStage
       scene={scene}
       t={t}
-      shakes={[2.5, 2.8, 3.2]}
-      punches={[0.2, 3.2]}
+      shakes={[0.1, 1.4, 3.5]}
+      punches={[0.1, 3.5]}
       alertFlash={alertFlash}
     >
-      <StartupTopbar
-        tag="GPU CLUSTER // OVERLOAD SPIKE"
-        badge={`${faNumber(latency)} میلی‌ثانیه`}
-        badgeColor={latency > 100 ? NEON_RED : NEON_EMERALD}
+      <SiliconHeader
+        chipTag="HARDWARE_THROTTLE // CLUSTER_BACKPRESSURE"
+        title="مدل داری، ولی سرعتش فاجعه‌ست؟"
+        subtitle="کاربران ثانیه‌ها پشت لودینگ معطل می‌مانند؛"
+        accentText="سرعت پایین، بیزنس را متوقف می‌کند!"
+        accentColor={THERMAL_RED}
+        t={t}
       />
 
-      {/* Bold, Clean Top Typography (Zero Stepped Words) */}
-      <div
-        dir="rtl"
-        style={{
-          position: 'absolute',
-          top: 80,
-          left: 24,
-          right: 24,
-          textAlign: 'center',
-          opacity: enter,
-          zIndex: 35,
-        }}
+      {/* ─── Main Center: Overheating Silicon Core Die (x=270, y=450) ─── */}
+      <svg
+        width={540}
+        height={960}
+        viewBox="0 0 540 960"
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
       >
-        <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0, color: '#ffffff', lineHeight: 1.3 }}>
-          سرعت پاسخ مدل کُنده؟{' '}
-          <span style={{ color: latency > 100 ? NEON_RED : NEON_EMERALD }}>
-            {latency > 100 ? 'کاربرت ثانیه‌ها معطله!' : 'شتاب ۱۱ میلی‌ثانیه‌ای!'}
-          </span>
-        </h1>
-        <p
-          style={{
-            fontSize: 13.5,
-            color: TEXT_MUTED,
-            marginTop: 8,
-            marginInline: 'auto',
-            maxWidth: 440,
-          }}
-        >
-          صف‌های سنگین سرور، هزینه سرسام‌آور GPU و لودینگ‌های کلافه‌کننده‌ای که بیزنس را می‌کُشد
-        </p>
-      </div>
+        <defs>
+          <radialGradient id="thermalDieGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={THERMAL_RED} stopOpacity={0.85} />
+            <stop offset="60%" stopColor={THERMAL_ORANGE} stopOpacity={0.35} />
+            <stop offset="100%" stopColor="transparent" stopOpacity={0} />
+          </radialGradient>
+        </defs>
 
-      {/* Center Hero: High-Precision Latency Tachometer (y=180 to y=550) */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 180,
-          left: 45,
-          right: 45,
-          height: 360,
-          borderRadius: 24,
-          background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.98))',
-          border: `1.5px solid ${latency > 100 ? 'rgba(244, 63, 94, 0.5)' : 'rgba(0, 255, 136, 0.5)'}`,
-          boxShadow: `0 25px 60px rgba(0,0,0,0.85), 0 0 40px ${latency > 100 ? 'rgba(244, 63, 94, 0.25)' : 'rgba(0, 255, 136, 0.25)'}`,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 20,
-        }}
-      >
-        {/* Tachometer SVG */}
-        <svg width="300" height="190" viewBox="0 0 300 190">
-          <defs>
-            <linearGradient id="dialGrad103" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#00ff88" />
-              <stop offset="50%" stopColor="#fbbf24" />
-              <stop offset="100%" stopColor="#f43f5e" />
-            </linearGradient>
-          </defs>
-          {/* Track */}
-          <path
-            d="M 40 160 A 110 110 0 0 1 260 160"
-            fill="none"
-            stroke="rgba(255,255,255,0.08)"
-            strokeWidth="18"
-            strokeLinecap="round"
+        {/* Pulsing Thermal Heat Aura */}
+        <circle
+          cx={270}
+          cy={450}
+          r={180 + Math.sin(t * 8) * 14}
+          fill="url(#thermalDieGrad)"
+          opacity={isOverheated ? 0.9 : 0.4}
+        />
+
+        {/* 4 Laser Feeding Buses Jammed with Requests */}
+        <line
+          x1={270}
+          y1={180}
+          x2={270}
+          y2={330}
+          stroke={THERMAL_RED}
+          strokeWidth={3}
+          strokeDasharray="6 4"
+        />
+        <line
+          x1={270}
+          y1={570}
+          x2={270}
+          y2={720}
+          stroke={THERMAL_RED}
+          strokeWidth={3}
+          strokeDasharray="6 4"
+        />
+        <line
+          x1={70}
+          y1={450}
+          x2={150}
+          y2={450}
+          stroke={THERMAL_RED}
+          strokeWidth={3}
+          strokeDasharray="6 4"
+        />
+        <line
+          x1={390}
+          y1={450}
+          x2={470}
+          y2={450}
+          stroke={THERMAL_RED}
+          strokeWidth={3}
+          strokeDasharray="6 4"
+        />
+
+        {/* Silicon Die Monolith (240x240 center chip) */}
+        <g transform="translate(150, 330)">
+          {/* Metallic substrate rim */}
+          <rect
+            x={0}
+            y={0}
+            width={240}
+            height={240}
+            rx={16}
+            fill={DIE_SUBSTRATE}
+            stroke={THERMAL_RED}
+            strokeWidth={2.5}
+            style={{ filter: `drop-shadow(0 0 24px ${THERMAL_RED}aa)` }}
           />
-          {/* Active Arc */}
-          <path
-            d="M 40 160 A 110 110 0 0 1 260 160"
+          {/* Internal photolithography lines */}
+          <rect
+            x={16}
+            y={16}
+            width={208}
+            height={208}
+            rx={10}
             fill="none"
-            stroke="url(#dialGrad103)"
-            strokeWidth="18"
-            strokeLinecap="round"
-            strokeDasharray="345"
-            strokeDashoffset={mix(345, 0, clamp(progress(t, 0.4, 2.6)))}
+            stroke="rgba(239, 68, 68, 0.4)"
+            strokeWidth={1}
           />
-          {/* Needle with Hub */}
-          <g transform={`translate(150, 160) rotate(${needleAngle})`}>
-            <line
-              x1="0"
-              y1="0"
-              x2="0"
-              y2="-95"
-              stroke="#ffffff"
-              strokeWidth="4"
-              strokeLinecap="round"
-            />
-            <circle cx="0" cy="0" r="10" fill={latency > 100 ? NEON_RED : NEON_EMERALD} />
-          </g>
-        </svg>
+          <line
+            x1={120}
+            y1={16}
+            x2={120}
+            y2={224}
+            stroke="rgba(239, 68, 68, 0.3)"
+            strokeWidth={1}
+          />
+          <line
+            x1={16}
+            y1={120}
+            x2={224}
+            y2={120}
+            stroke="rgba(239, 68, 68, 0.3)"
+            strokeWidth={1}
+          />
+        </g>
+      </svg>
 
-        {/* Digital Speedometer Readout */}
-        <div style={{ textAlign: 'center', marginTop: 10 }}>
-          <div
-            style={{
-              fontSize: 44,
-              fontWeight: 900,
-              fontFamily: 'monospace',
-              color: latency > 100 ? NEON_RED : NEON_EMERALD,
-              textShadow: `0 0 25px ${latency > 100 ? NEON_RED : NEON_EMERALD}77`,
-            }}
-          >
-            {faNumber(latency)} <span style={{ fontSize: 18, fontWeight: 500 }}>میلی‌ثانیه</span>
-          </div>
-          <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>
-            زمان تأخیر تا اولین توکن (TTFT)
-          </div>
-        </div>
-      </div>
-
-      {/* Orbiting Quantum Data Packets */}
-      {packets.map((pkt, i) => (
+      {/* Floating Overload Particles Circling Core */}
+      {blockedPackets.map((pkt, i) => (
         <div
           key={i}
           style={{
             position: 'absolute',
             left: pkt.x,
             top: pkt.y,
-            width: 14,
-            height: 14,
+            width: 10,
+            height: 10,
             borderRadius: '50%',
             background: pkt.color,
-            boxShadow: `0 0 14px ${pkt.color}`,
+            boxShadow: `0 0 12px ${pkt.color}`,
             transform: 'translate(-50%, -50%)',
             pointerEvents: 'none',
             zIndex: 25,
@@ -394,1151 +485,1174 @@ export function InferenceLatencyCrisisScene({ t, scene }: { t: number; scene: Sc
         />
       ))}
 
-      {/* Bottom Active Zone: Telemetry Cards & Live Log Terminal (y=570 to y=890) */}
+      {/* Big Digital Latency Ticker Inside Core */}
+      <div
+        dir="ltr"
+        style={{
+          position: 'absolute',
+          top: 380,
+          left: 160,
+          right: 160,
+          textAlign: 'center',
+          zIndex: 30,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 10,
+            fontFamily: "'JetBrains Mono', monospace",
+            letterSpacing: '0.12em',
+            color: THERMAL_ORANGE,
+            marginBottom: 2,
+          }}
+        >
+          CORE_TEMP: 104°C // TTFT
+        </div>
+        <div
+          style={{
+            fontSize: 42,
+            fontWeight: 900,
+            fontFamily: "'JetBrains Mono', monospace",
+            color: THERMAL_RED,
+            lineHeight: 1.1,
+            textShadow: `0 0 28px ${THERMAL_RED}`,
+          }}
+        >
+          {faNumber(latency)}
+        </div>
+        <div
+          dir="rtl"
+          style={{
+            fontSize: 13,
+            fontWeight: 800,
+            color: WAFER_WHITE,
+            marginTop: 4,
+          }}
+        >
+          میلی‌ثانیه تأخیر در پاسخ
+        </div>
+      </div>
+
+      {/* Diagnostic Silicon Surface Telemetry (Direct On-Wafer Readout) */}
       <div
         dir="rtl"
         style={{
           position: 'absolute',
-          top: 565,
-          left: 45,
-          right: 45,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
+          top: 615,
+          left: 36,
+          right: 36,
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 16,
+          opacity: enter,
           zIndex: 30,
         }}
       >
-        {/* Trio of Telemetry Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        {/* Metric 1 */}
+        <div
+          style={{
+            borderInlineStart: `3px solid ${THERMAL_RED}`,
+            paddingInlineStart: 12,
+          }}
+        >
           <div
-            style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 16,
-              padding: '14px 10px',
-              textAlign: 'center',
-            }}
+            style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: TEXT_MUTED }}
           >
-            <div style={{ fontSize: 11, color: TEXT_MUTED }}>ترافیک در صف</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: NEON_RED, marginTop: 4 }}>
-              {faNumber(86)}٪
-            </div>
-            <div style={{ fontSize: 9.5, color: '#f87171', marginTop: 2 }}>انباشت سرور</div>
+            ترافیک انباشته در صف
           </div>
-          <div
-            style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 16,
-              padding: '14px 10px',
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ fontSize: 11, color: TEXT_MUTED }}>هزینه پردازش</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: NEON_AMBER, marginTop: 4 }}>
-              {faNumber(4.2)}X
-            </div>
-            <div style={{ fontSize: 9.5, color: '#fcd34d', marginTop: 2 }}>اتلاف منابع</div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: WAFER_WHITE, marginTop: 2 }}>
+            {faNumber(14200)} <span style={{ fontSize: 13, color: THERMAL_RED }}>درخواست</span>
           </div>
-          <div
-            style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 16,
-              padding: '14px 10px',
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ fontSize: 11, color: TEXT_MUTED }}>ریزش کاربر</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: '#f8fafc', marginTop: 4 }}>
-              {faNumber(62)}٪
-            </div>
-            <div style={{ fontSize: 9.5, color: TEXT_MUTED, marginTop: 2 }}>ترک صفحه</div>
+          <div style={{ fontSize: 11, color: THERMAL_RED, marginTop: 2 }}>
+            گلوگاه شدید حافظه گرافیکی
           </div>
         </div>
 
-        {/* Live Terminal Log Line */}
+        {/* Metric 2 */}
         <div
           style={{
-            background: 'rgba(0, 0, 0, 0.65)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 14,
-            padding: '12px 16px',
-            fontFamily: 'monospace',
-            fontSize: 11,
-            color: latency > 100 ? '#fca5a5' : '#86efac',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            direction: 'ltr',
+            borderInlineStart: `3px solid ${THERMAL_ORANGE}`,
+            paddingInlineStart: 12,
           }}
         >
-          <span>
-            {latency > 100
-              ? '⚠️ [WARN] BACKPRESSURE CRITICAL: 14,200 REQ/S QUEUED'
-              : '⚡ [INFO] TENSOR PIPELINE STREAMING AT PEAK BANDWIDTH'}
-          </span>
-          <span style={{ fontWeight: 800 }}>{latency > 100 ? 'SHED_FAIL' : 'OK_200'}</span>
+          <div
+            style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: TEXT_MUTED }}
+          >
+            اتلاف منابع سرور
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: WAFER_WHITE, marginTop: 2 }}>
+            {faNumber(4)}X <span style={{ fontSize: 13, color: THERMAL_ORANGE }}>هزینه گزاف</span>
+          </div>
+          <div style={{ fontSize: 11, color: THERMAL_ORANGE, marginTop: 2 }}>
+            سوخت سرمایه پردازش
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Alert Banner */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          bottom: 46,
+          left: 36,
+          right: 36,
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.35)',
+          borderRadius: 12,
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          zIndex: 30,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: THERMAL_RED,
+              boxShadow: `0 0 10px ${THERMAL_RED}`,
+            }}
+          />
+          <div style={{ fontSize: 13, fontWeight: 700, color: WAFER_WHITE }}>
+            نتیجه تأخیر سرور: ۶۲٪ کاربران پیش از پاسخ خارج می‌شوند
+          </div>
+        </div>
+        <div
+          dir="ltr"
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            fontFamily: "'JetBrains Mono', monospace",
+            color: THERMAL_RED,
+          }}
+        >
+          SHED_FAIL
         </div>
       </div>
     </InferenceStage>
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SCENE 2: High-Throughput Token Streaming & 16-Bar Equalizer (7.20–14.40s)
-// ─────────────────────────────────────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════════
+// SCENE 2: NeuralTokenStreamScene (7.20–14.40s)
+// 5-Lane High-Speed Photon Bus & KV-Cache Compactor
+// ═════════════════════════════════════════════════════════════════════════════
 
 export function NeuralTokenStreamScene({ t, scene }: { t: number; scene: Scene }) {
-  const enter = clamp(progress(t, 0.1, 0.5))
-  const streamX = (t * 160) % 400
-  const tokensPerSec = Math.min(1850, Math.round(mix(240, 1850, clamp(progress(t, 0.5, 4.5)))))
+  const enter = clamp(progress(t, 0.1, 0.45))
+  const tokensPerSec = Math.min(1850, Math.round(mix(240, 1850, clamp(progress(t, 0.5, 4.0)))))
+  const compactorRot = t * 65
 
-  const tokens = [
-    { text: '[PROMPT]', color: NEON_INDIGO },
-    { text: 'vector_embed_768', color: NEON_CYAN },
-    { text: 'flash_attention_v3', color: NEON_EMERALD },
-    { text: 'kv_cache_paged', color: NEON_AMBER },
-    { text: 'quant_fp8_gemm', color: NEON_VIOLET },
-    { text: 'speculative_draft', color: NEON_CYAN },
-    { text: '[STREAM_OUT]', color: '#f8fafc' },
+  // 5 Vertical Bus Lanes across the silicon surface
+  const lanes = [95, 180, 270, 360, 445]
+
+  // Tokens streaming down the lanes
+  const streamTokens = [
+    { label: 'توکن ورودی', lane: 0, speed: 220, offset: 0, col: LASER_CYAN },
+    { label: 'کاهش کوئری', lane: 1, speed: 280, offset: 140, col: COBALT_BLUE },
+    { label: 'استنتاج مالی', lane: 2, speed: 260, offset: 70, col: SILICON_EMERALD },
+    { label: 'فشرده‌سازی کش', lane: 3, speed: 300, offset: 210, col: GOLD_PAD },
+    { label: 'خروجی آنی', lane: 4, speed: 240, offset: 100, col: LASER_CYAN },
   ]
 
-  // 18-Bar Neural Spectrum Analyzer
-  const bars = Array.from({ length: 18 }).map((_, i) => {
-    const height = 18 + Math.abs(Math.sin(t * 9 + i * 0.55)) * 62
-    return { id: i, height }
-  })
-
   return (
-    <InferenceStage scene={scene} t={t} punches={[0.3, 2.2, 5.0]}>
-      <StartupTopbar
-        tag="PARALLEL DECODING PIPELINE"
-        badge={`${faNumber(tokensPerSec)} توکن/ثانیه`}
-        badgeColor={NEON_CYAN}
+    <InferenceStage scene={scene} t={t} punches={[0.3, 2.1, 4.8]}>
+      <SiliconHeader
+        chipTag="KV_CACHE_COMPACTOR // PARALLEL_STREAM"
+        title="جریان روان توکن‌ها در ثانیه"
+        subtitle="وقتی توکن‌ها پشت صف پردازش گیر نکنند،"
+        accentText="هزینه سرورها به صفر نزدیک می‌شود"
+        accentColor={LASER_CYAN}
+        t={t}
       />
 
-      {/* Bold Top Headline */}
-      <div
-        dir="rtl"
-        style={{
-          position: 'absolute',
-          top: 80,
-          left: 24,
-          right: 24,
-          textAlign: 'center',
-          opacity: enter,
-          zIndex: 35,
-        }}
+      {/* ─── 5 Vertical Photon Laser Bus Channels (x = 95 to 445) ─── */}
+      <svg
+        width={540}
+        height={960}
+        viewBox="0 0 540 960"
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
       >
-        <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0, color: '#ffffff', lineHeight: 1.3 }}>
-          جریان روان توکن‌ها با <span style={{ color: NEON_CYAN }}>سرعت ۱٬۸۵۰ توکن/ثانیه</span>
-        </h1>
-        <p
-          style={{
-            fontSize: 13.5,
-            color: TEXT_MUTED,
-            marginTop: 8,
-            marginInline: 'auto',
-            maxWidth: 440,
-          }}
-        >
-          فشرده‌سازی خودکار کش حافظه بدون کوچک‌ترین افت در دقت محاسبات آماری
-        </p>
-      </div>
+        <defs>
+          <linearGradient id="busLaserGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="transparent" />
+            <stop offset="30%" stopColor="rgba(0, 245, 255, 0.5)" />
+            <stop offset="70%" stopColor="rgba(16, 185, 129, 0.5)" />
+            <stop offset="100%" stopColor="transparent" />
+          </linearGradient>
+        </defs>
 
-      {/* Center Hero: Animated Conveyor & Spectrum Analyzer (y=180 to y=550) */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 180,
-          left: 45,
-          right: 45,
-          height: 360,
-          borderRadius: 24,
-          background: 'linear-gradient(145deg, rgba(8, 16, 36, 0.92), rgba(2, 6, 20, 0.98))',
-          border: '1.5px solid rgba(0, 245, 255, 0.45)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.85), 0 0 35px rgba(0, 245, 255, 0.25)',
-          padding: '22px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          zIndex: 20,
-        }}
-      >
-        {/* Pipeline Telemetry Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                background: NEON_CYAN,
-                boxShadow: `0 0 12px ${NEON_CYAN}`,
-              }}
+        {/* 5 Vertical Conduits */}
+        {lanes.map((x, idx) => (
+          <g key={idx}>
+            <line
+              x1={x}
+              y1={180}
+              x2={x}
+              y2={750}
+              stroke="url(#busLaserGrad)"
+              strokeWidth={12}
+              opacity={0.15}
             />
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#ffffff' }}>
-              HIGH-THROUGHPUT TOKEN STREAM
-            </span>
-          </div>
-          <span
-            style={{ fontSize: 12, fontFamily: 'monospace', color: NEON_CYAN, fontWeight: 800 }}
-          >
-            {faNumber(tokensPerSec)} TOKENS/SEC
-          </span>
-        </div>
-
-        {/* Dynamic Horizontal Token Rail */}
-        <div
-          style={{
-            height: 80,
-            overflow: 'hidden',
-            borderRadius: 14,
-            background: 'rgba(0, 0, 0, 0.65)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 12px',
-            position: 'relative',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              gap: 12,
-              transform: `translateX(-${streamX}px)`,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {[...tokens, ...tokens, ...tokens].map((tok, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '8px 14px',
-                  borderRadius: 8,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: `1.5px solid ${tok.color}`,
-                  color: tok.color,
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  fontWeight: 800,
-                  boxShadow: `0 0 12px ${tok.color}33`,
-                }}
-              >
-                <span>✦</span>
-                <span>{tok.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 18-Bar Live Spectrum Frequency Visualizer */}
-        <div>
-          <div
-            style={{
-              fontSize: 11,
-              color: TEXT_MUTED,
-              marginBottom: 8,
-              display: 'flex',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span>توزیع بار هسته‌های تنسور // بازدهی پردازش</span>
-            <span style={{ color: NEON_EMERALD, fontWeight: 800 }}>۹۹.۴٪ PEAK EFFICIENCY</span>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-end',
-              justifyContent: 'space-between',
-              height: 90,
-              padding: '8px 16px',
-              borderRadius: 12,
-              background: 'rgba(0,0,0,0.5)',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}
-          >
-            {bars.map((bar) => (
-              <div
-                key={bar.id}
-                style={{
-                  width: 14,
-                  height: bar.height,
-                  borderRadius: 4,
-                  background: 'linear-gradient(to top, #00f5ff, #818cf8)',
-                  boxShadow: '0 0 10px rgba(0, 245, 255, 0.5)',
-                  transition: 'height 0.08s ease',
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Active Zone: Memory & Throughput Analytics (y=565 to y=890) */}
-      <div
-        dir="rtl"
-        style={{
-          position: 'absolute',
-          top: 565,
-          left: 45,
-          right: 45,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-          zIndex: 30,
-        }}
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div
-            style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              border: '1px solid rgba(0, 255, 136, 0.35)',
-              borderRadius: 16,
-              padding: '16px 18px',
-            }}
-          >
-            <div style={{ fontSize: 11.5, color: TEXT_MUTED }}>صرفه‌جویی در حافظه رم</div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: NEON_EMERALD, marginTop: 4 }}>
-              -{faNumber(78)}٪
-            </div>
-            <div style={{ fontSize: 10, color: '#86efac', marginTop: 2 }}>
-              مدیریت هوشمند Paged KV-Cache
-            </div>
-          </div>
-          <div
-            style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              border: '1px solid rgba(0, 245, 255, 0.35)',
-              borderRadius: 16,
-              padding: '16px 18px',
-            }}
-          >
-            <div style={{ fontSize: 11.5, color: TEXT_MUTED }}>پهنای باند داده</div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: NEON_CYAN, marginTop: 4 }}>
-              {faNumber(1.8)} <span style={{ fontSize: 14 }}>ترابایت/ث</span>
-            </div>
-            <div style={{ fontSize: 10, color: '#a5f3fc', marginTop: 2 }}>
-              بدون کوچک‌ترین گلوگاه ورودی
-            </div>
-          </div>
-        </div>
-
-        {/* Speculative Acceleration Bar */}
-        <div
-          style={{
-            background: 'rgba(0, 0, 0, 0.65)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 14,
-            padding: '12px 18px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <span style={{ fontSize: 12, color: '#f8fafc', fontWeight: 800 }}>
-            ⚡ معماری استنتاج رمزگشایی گمانه‌زن (Speculative)
-          </span>
-          <span style={{ fontSize: 12, fontWeight: 900, color: NEON_EMERALD }}>
-            +{faNumber(340)}٪ شتاب خالص
-          </span>
-        </div>
-      </div>
-    </InferenceStage>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SCENE 3: Speculative Decoding 3D Isometric Architecture (14.40–25.20s)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export function SpeculativeInferenceMatrixScene({ t, scene }: { t: number; scene: Scene }) {
-  const enter = clamp(progress(t, 0.1, 0.5))
-  const separation = clamp(progress(t, 1.0, 2.5))
-  const floatZ = Math.sin(t * 3.5) * 8
-
-  return (
-    <InferenceStage scene={scene} t={t} punches={[1.5, 4.8, 8.5]}>
-      <StartupTopbar
-        tag="SPECULATIVE DECODING MATRIX"
-        badge="شتاب ۴ برابری"
-        badgeColor={NEON_EMERALD}
-      />
-
-      {/* Bold Top Headline */}
-      <div
-        dir="rtl"
-        style={{
-          position: 'absolute',
-          top: 80,
-          left: 24,
-          right: 24,
-          textAlign: 'center',
-          opacity: enter,
-          zIndex: 35,
-        }}
-      >
-        <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0, color: '#ffffff', lineHeight: 1.3 }}>
-          رمزگشایی گمانه‌زن در <span style={{ color: NEON_EMERALD }}>مقیاس میکروثانیه</span>
-        </h1>
-        <p
-          style={{
-            fontSize: 13.5,
-            color: TEXT_MUTED,
-            marginTop: 8,
-            marginInline: 'auto',
-            maxWidth: 440,
-          }}
-        >
-          تلفیق مدل سبک پیش‌نویس با مدل هدف برای سرعت ۴ برابری در سطح سیلیکون
-        </p>
-      </div>
-
-      {/* Center Hero: 3D Isometric Exploded Glass Deck (y=175 to y=550) */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 175,
-          left: 45,
-          right: 45,
-          height: 360,
-          perspective: 1100,
-          transformStyle: 'preserve-3d',
-          zIndex: 20,
-        }}
-      >
-        {/* Layer 1 (Bottom): Silicon FP8 Hardware Substrate */}
-        <div
-          dir="rtl"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            borderRadius: 22,
-            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(4, 9, 20, 0.98))',
-            border: '1.5px solid rgba(129, 140, 248, 0.65)',
-            boxShadow: '0 25px 50px rgba(0,0,0,0.85), 0 0 35px rgba(129, 140, 248, 0.3)',
-            transform: `rotateX(54deg) rotateZ(-26deg) translateZ(${-65 * separation + floatZ}px)`,
-            padding: '18px 22px',
-            transition: 'transform 0.3s ease',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 900, color: NEON_INDIGO }}>
-              ⚡ هسته تانسوری سیلیکون // محاسبات ماتریسی
-            </span>
-            <span style={{ fontSize: 10.5, color: NEON_EMERALD, fontWeight: 800 }}>
-              FP8 ACTIVATED
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-            <div
-              style={{
-                flex: 1,
-                padding: 10,
-                borderRadius: 8,
-                background: 'rgba(255,255,255,0.06)',
-                fontSize: 11,
-              }}
-            >
-              ضرب ماتریسی با دقت کامل
-            </div>
-            <div
-              style={{
-                flex: 1,
-                padding: 10,
-                borderRadius: 8,
-                background: 'rgba(255,255,255,0.06)',
-                fontSize: 11,
-              }}
-            >
-              مدیریت هوشمند HBM3e
-            </div>
-          </div>
-        </div>
-
-        {/* Layer 2 (Middle): Continuous Batching & Draft Verifier */}
-        <div
-          dir="rtl"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            borderRadius: 22,
-            background: 'linear-gradient(135deg, rgba(8, 28, 38, 0.95), rgba(3, 14, 22, 0.98))',
-            border: '2px solid rgba(0, 245, 255, 0.85)',
-            boxShadow: '0 30px 60px rgba(0,0,0,0.85), 0 0 45px rgba(0, 245, 255, 0.35)',
-            transform: `rotateX(54deg) rotateZ(-26deg) translateZ(${30 * separation + floatZ}px)`,
-            padding: '20px 24px',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 10,
-            }}
-          >
-            <span style={{ fontSize: 14, fontWeight: 900, color: '#ffffff' }}>
-              🔄 صف‌بندی پویا (Continuous Batching)
-            </span>
-            <span
-              style={{
-                padding: '3px 10px',
-                borderRadius: 4,
-                background: '#0284c7',
-                color: '#fff',
-                fontSize: 10,
-              }}
-            >
-              راندمان ۹۹.۶٪
-            </span>
-          </div>
-          <div
-            style={{
-              padding: '10px 14px',
-              borderRadius: 10,
-              background: 'rgba(255,255,255,0.06)',
-              fontSize: 11.5,
-              color: '#e0f2fe',
-              lineHeight: 1.5,
-            }}
-          >
-            پیش‌بینی هم‌زمان ۵ توکن در یک چرخه؛ حذف کامل حباب‌های اتلاف پردازشگر
-          </div>
-        </div>
-
-        {/* Layer 3 (Top Floating Core Beacon) */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '38%',
-            left: '50%',
-            transform: `translate(-50%, -50%) rotateX(54deg) rotateZ(-26deg) translateZ(${115 * separation + floatZ}px)`,
-            width: 110,
-            height: 110,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(0, 245, 255, 0.5), transparent 70%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '2px solid #00f5ff',
-            boxShadow: '0 0 40px #00f5ff',
-          }}
-        >
-          <span style={{ fontSize: 36 }}>⚡</span>
-        </div>
-      </div>
-
-      {/* Bottom Active Zone: Benchmark Comparison (y=565 to y=890) */}
-      <div
-        dir="rtl"
-        style={{
-          position: 'absolute',
-          top: 565,
-          left: 45,
-          right: 45,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-          zIndex: 30,
-        }}
-      >
-        <div
-          style={{
-            background: 'rgba(15, 23, 42, 0.85)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 18,
-            padding: '16px 20px',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 10,
-            }}
-          >
-            <span style={{ fontSize: 12, color: TEXT_MUTED }}>مقایسه زمان پاسخ‌دهی (Latency)</span>
-            <span style={{ fontSize: 12, fontWeight: 900, color: NEON_EMERALD }}>
-              ۳۳ برابر سریع‌تر
-            </span>
-          </div>
-
-          {/* Bar 1: Hisabche */}
-          <div style={{ marginBottom: 10 }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: 11,
-                marginBottom: 4,
-              }}
-            >
-              <span style={{ color: '#ffffff', fontWeight: 800 }}>⚡ موتور استنتاج حسابچه</span>
-              <span style={{ color: NEON_EMERALD, fontWeight: 900 }}>۱۱.۴ میلی‌ثانیه</span>
-            </div>
-            <div
-              style={{
-                height: 10,
-                borderRadius: 5,
-                background: 'rgba(255,255,255,0.08)',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  height: '100%',
-                  width: '12%',
-                  background: NEON_EMERALD,
-                  boxShadow: '0 0 10px #00ff88',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Bar 2: Legacy Cloud */}
-          <div>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: 11,
-                marginBottom: 4,
-              }}
-            >
-              <span style={{ color: TEXT_MUTED }}>سایر سرورهای ابری معمولی</span>
-              <span style={{ color: NEON_RED, fontWeight: 900 }}>۳۸۰ میلی‌ثانیه</span>
-            </div>
-            <div
-              style={{
-                height: 10,
-                borderRadius: 5,
-                background: 'rgba(255,255,255,0.08)',
-                overflow: 'hidden',
-              }}
-            >
-              <div style={{ height: '100%', width: '92%', background: NEON_RED }} />
-            </div>
-          </div>
-        </div>
-
-        {/* Accuracy Lock Pill */}
-        <div
-          style={{
-            background: 'rgba(0, 0, 0, 0.65)',
-            border: '1px solid rgba(0, 255, 136, 0.35)',
-            borderRadius: 14,
-            padding: '12px 18px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <span style={{ fontSize: 12, color: '#f8fafc', fontWeight: 800 }}>
-            🎯 تضمین تطابق ۱۰۰٪ دقت اعشاری بدون خطای تبدیل مدل
-          </span>
-          <span style={{ fontSize: 11, fontWeight: 800, color: NEON_EMERALD }}>VERIFIED ✅</span>
-        </div>
-      </div>
-    </InferenceStage>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SCENE 4: Autonomous Semantic Radar & Anomaly Lock (25.20–34.60s)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export function AutonomousReasoningLassoScene({ t, scene }: { t: number; scene: Scene }) {
-  const enter = clamp(progress(t, 0.1, 0.5))
-  const lockOn = clamp(progress(t, 1.8, 3.2))
-
-  const nodes = [
-    { x: 90, y: 70, label: 'تراکنش ۱', isAnomaly: false },
-    { x: 180, y: 120, label: 'فاکتور ۱۰۲', isAnomaly: false },
-    { x: 260, y: 80, label: 'حواله انبار', isAnomaly: false },
-    { x: 340, y: 140, label: 'پرداخت نقدی', isAnomaly: false },
-    { x: 220, y: 200, label: 'مغایرت مشکوک', isAnomaly: true },
-    { x: 130, y: 220, label: 'سند دوبل', isAnomaly: false },
-    { x: 330, y: 210, label: 'تراز حساب', isAnomaly: false },
-  ]
-
-  return (
-    <InferenceStage scene={scene} t={t} shakes={[2.2, 2.5]} punches={[0.4, 2.5, 6.5]}>
-      <StartupTopbar tag="AUTONOMOUS VECTOR AUDIT" badge="تشخیص آنی تقلب" badgeColor={NEON_RED} />
-
-      {/* Bold Top Headline */}
-      <div
-        dir="rtl"
-        style={{
-          position: 'absolute',
-          top: 80,
-          left: 24,
-          right: 24,
-          textAlign: 'center',
-          opacity: enter,
-          zIndex: 35,
-        }}
-      >
-        <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0, color: '#ffffff', lineHeight: 1.3 }}>
-          کشف آنی الگوها در{' '}
-          <span style={{ color: lockOn > 0.5 ? NEON_RED : NEON_CYAN }}>
-            {lockOn > 0.5 ? 'کسری از میلی‌ثانیه!' : 'فضای برداری اسناد'}
-          </span>
-        </h1>
-        <p
-          style={{
-            fontSize: 13.5,
-            color: TEXT_MUTED,
-            marginTop: 8,
-            marginInline: 'auto',
-            maxWidth: 440,
-          }}
-        >
-          استنتاج معنایی رویدادهای مالی بدون نیاز به فرمول‌نویسی دستی یا نیروی انسانی
-        </p>
-      </div>
-
-      {/* Center Hero: Large Radar Hologram Canvas (y=180 to y=550) */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 180,
-          left: 45,
-          right: 45,
-          height: 360,
-          borderRadius: 24,
-          background: 'linear-gradient(145deg, rgba(8, 14, 28, 0.92), rgba(2, 6, 16, 0.98))',
-          border: '1.5px solid rgba(129, 140, 248, 0.4)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.85), 0 0 35px rgba(129, 140, 248, 0.2)',
-          overflow: 'hidden',
-          zIndex: 20,
-        }}
-      >
-        {/* Radar Concentric Rings */}
-        {[100, 200, 300].map((dim, idx) => (
-          <div
-            key={idx}
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              width: dim,
-              height: dim,
-              borderRadius: '50%',
-              border: '1px dashed rgba(0, 245, 255, 0.18)',
-              transform: 'translate(-50%, -50%)',
-              pointerEvents: 'none',
-            }}
-          />
+            <line
+              x1={x}
+              y1={180}
+              x2={x}
+              y2={750}
+              stroke={COBALT_BLUE}
+              strokeWidth={2}
+              strokeDasharray="8 6"
+              opacity={0.6}
+            />
+          </g>
         ))}
 
-        {/* Radar Sweeping Beam */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            width: 320,
-            height: 320,
-            borderRadius: '50%',
-            transform: `translate(-50%, -50%) rotate(${t * 60}deg)`,
-            pointerEvents: 'none',
-          }}
-        >
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: '50%',
-              width: 2,
-              height: '50%',
-              background: 'linear-gradient(to top, rgba(0, 245, 255, 0.9), transparent)',
-            }}
+        {/* Center Quantum Ring Compactor (x=270, y=470) */}
+        <g transform={`translate(270, 470) rotate(${compactorRot})`}>
+          <circle
+            r={105}
+            fill="none"
+            stroke={LASER_CYAN}
+            strokeWidth={2}
+            strokeDasharray="14 10"
+            opacity={0.7}
           />
-        </div>
+          <circle
+            r={75}
+            fill="none"
+            stroke={SILICON_EMERALD}
+            strokeWidth={2.5}
+            strokeDasharray="10 8"
+          />
+          <circle r={45} fill="none" stroke={GOLD_PAD} strokeWidth={1.5} opacity={0.6} />
+        </g>
+      </svg>
 
-        {/* Vector Embedding Nodes */}
-        {nodes.map((node, i) => {
-          const isTarget = node.isAnomaly && lockOn > 0.3
-          return (
-            <div
-              key={i}
-              style={{
-                position: 'absolute',
-                left: node.x,
-                top: node.y,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                transform: isTarget ? `scale(${1 + Math.sin(t * 10) * 0.15})` : 'scale(1)',
-                transition: 'transform 0.2s ease',
-              }}
-            >
-              <div
-                style={{
-                  width: isTarget ? 16 : 10,
-                  height: isTarget ? 16 : 10,
-                  borderRadius: '50%',
-                  background: isTarget ? NEON_RED : NEON_CYAN,
-                  boxShadow: `0 0 ${isTarget ? 18 : 8}px ${isTarget ? NEON_RED : NEON_CYAN}`,
-                }}
-              />
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: isTarget ? 900 : 500,
-                  color: isTarget ? NEON_RED : 'rgba(255,255,255,0.7)',
-                  background: 'rgba(0,0,0,0.65)',
-                  padding: '2px 6px',
-                  borderRadius: 4,
-                }}
-              >
-                {node.label}
-              </span>
-            </div>
-          )
-        })}
-
-        {/* Anomaly Targeted Popup */}
-        {lockOn > 0.4 && (
+      {/* Moving Hexagonal Token Badges sliding on the vertical buses */}
+      {streamTokens.map((st, idx) => {
+        const yPos = 200 + ((t * st.speed + st.offset) % 520)
+        return (
           <div
+            key={idx}
             dir="rtl"
             style={{
               position: 'absolute',
-              bottom: 16,
-              left: 16,
-              right: 16,
-              borderRadius: 14,
-              background: 'rgba(244, 63, 94, 0.2)',
-              border: '1.5px solid #f43f5e',
-              boxShadow: '0 0 25px rgba(244, 63, 94, 0.45)',
-              padding: '12px 18px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              left: lanes[st.lane],
+              top: yPos,
+              transform: 'translate(-50%, -50%)',
+              background: 'rgba(6, 13, 31, 0.95)',
+              border: `1.5px solid ${st.col}`,
+              borderRadius: 8,
+              padding: '6px 12px',
+              fontSize: 11,
+              fontWeight: 800,
+              color: WAFER_WHITE,
+              boxShadow: `0 0 16px ${st.col}66`,
+              whiteSpace: 'nowrap',
+              zIndex: 25,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 22 }}>🚨</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 900, color: '#ffffff' }}>
-                  مغایرت انحراف برداری شناسایی شد!
-                </div>
-                <div style={{ fontSize: 10.5, color: '#fecdd3', marginTop: 2 }}>
-                  فاصله معنایی غیرعادی با اسناد بالادستی // فاصله: ۰.۹۴
-                </div>
-              </div>
-            </div>
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 900,
-                color: '#ffffff',
-                background: '#f43f5e',
-                padding: '4px 10px',
-                borderRadius: 6,
-              }}
-            >
-              قرنطینه آنی
-            </span>
+            {st.label}
           </div>
-        )}
+        )
+      })}
+
+      {/* Center Throughput HUD Display */}
+      <div
+        dir="ltr"
+        style={{
+          position: 'absolute',
+          top: 430,
+          left: 170,
+          right: 170,
+          textAlign: 'center',
+          zIndex: 30,
+          pointerEvents: 'none',
+        }}
+      >
+        <div
+          style={{
+            fontSize: 34,
+            fontWeight: 900,
+            fontFamily: "'JetBrains Mono', monospace",
+            color: LASER_CYAN,
+            textShadow: `0 0 20px ${LASER_CYAN}`,
+            lineHeight: 1.1,
+          }}
+        >
+          {faNumber(tokensPerSec)}
+        </div>
+        <div
+          dir="rtl"
+          style={{
+            fontSize: 12,
+            fontWeight: 800,
+            color: WAFER_WHITE,
+            marginTop: 4,
+          }}
+        >
+          توکن در هر ثانیه
+        </div>
       </div>
 
-      {/* Bottom Active Zone: Diagnostic Audit Telemetry (y=565 to y=890) */}
+      {/* Direct Silicon Metric Benchmarks */}
       <div
         dir="rtl"
         style={{
           position: 'absolute',
-          top: 565,
-          left: 45,
-          right: 45,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
+          top: 640,
+          left: 36,
+          right: 36,
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 16,
+          opacity: enter,
           zIndex: 30,
         }}
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div style={{ borderInlineStart: `3px solid ${SILICON_EMERALD}`, paddingInlineStart: 12 }}>
           <div
-            style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              border: '1px solid rgba(0, 255, 136, 0.35)',
-              borderRadius: 16,
-              padding: '16px 18px',
-            }}
+            style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: TEXT_MUTED }}
           >
-            <div style={{ fontSize: 11.5, color: TEXT_MUTED }}>زمان تشخیص و قرنطینه</div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: NEON_EMERALD, marginTop: 4 }}>
-              {faNumber(1.2)} <span style={{ fontSize: 14 }}>میلی‌ثانیه</span>
-            </div>
-            <div style={{ fontSize: 10, color: '#86efac', marginTop: 2 }}>بدون توقف خط فروش</div>
+            صرفه‌جویی در رم گرافیک
           </div>
-          <div
-            style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              border: '1px solid rgba(0, 245, 255, 0.35)',
-              borderRadius: 16,
-              padding: '16px 18px',
-            }}
-          >
-            <div style={{ fontSize: 11.5, color: TEXT_MUTED }}>دقت تفکیک تقلب</div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: NEON_CYAN, marginTop: 4 }}>
-              ۹۹.۹۷٪
-            </div>
-            <div style={{ fontSize: 10, color: '#a5f3fc', marginTop: 2 }}>حذف ۱۰۰٪ خطای انسانی</div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: SILICON_EMERALD, marginTop: 2 }}>
+            -{faNumber(78)}٪ <span style={{ fontSize: 13, color: WAFER_WHITE }}>مصرف VRAM</span>
+          </div>
+          <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>
+            کش هوشمند حافظه پِـیج‌شده
           </div>
         </div>
 
+        <div style={{ borderInlineStart: `3px solid ${LASER_CYAN}`, paddingInlineStart: 12 }}>
+          <div
+            style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: TEXT_MUTED }}
+          >
+            ترافیک پیوستهٔ داده
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: LASER_CYAN, marginTop: 2 }}>
+            {faNumber(1850)} <span style={{ fontSize: 13, color: WAFER_WHITE }}>Tok/s</span>
+          </div>
+          <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>
+            بدون کوچک‌ترین مکث پردازنده
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Summary Bar */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          bottom: 46,
+          left: 36,
+          right: 36,
+          background: 'rgba(0, 245, 255, 0.08)',
+          border: '1px solid rgba(0, 245, 255, 0.3)',
+          borderRadius: 12,
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          zIndex: 30,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: LASER_CYAN,
+              boxShadow: `0 0 10px ${LASER_CYAN}`,
+            }}
+          />
+          <div style={{ fontSize: 13, fontWeight: 700, color: WAFER_WHITE }}>
+            شتاب سخت‌افزاری: حذف کامل صف انتظار درخواست‌ها
+          </div>
+        </div>
         <div
+          dir="ltr"
           style={{
-            background: 'rgba(0, 0, 0, 0.65)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 14,
-            padding: '12px 18px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            fontSize: 11,
+            fontWeight: 800,
+            fontFamily: "'JetBrains Mono', monospace",
+            color: LASER_CYAN,
           }}
         >
-          <span style={{ fontSize: 12, color: '#f8fafc', fontWeight: 800 }}>
-            🛡️ لاگ تغییرناپذیر ثبت در دفتر کل رمزنگاری‌شده
-          </span>
-          <span style={{ fontSize: 11, fontWeight: 800, color: NEON_EMERALD }}>IMMUTABLE_LOG</span>
+          KV_SYNC_OK
         </div>
       </div>
     </InferenceStage>
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SCENE 5: Developer API Console & Global Low-Latency Edge (34.60–41.20s)
-// ─────────────────────────────────────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════════
+// SCENE 3: SpeculativeInferenceMatrixScene (14.40–25.20s)
+// 8x8 Systolic Tensor Core Array & 11ms Latency Collapse
+// ═════════════════════════════════════════════════════════════════════════════
 
-export function InferenceEdgeCtaScene({ t, scene }: { t: number; scene: Scene }) {
-  const enter = clamp(progress(t, 0.1, 0.5))
-  const pulse = Math.sin(t * 6) * 0.04
+export function SpeculativeInferenceMatrixScene({ t, scene }: { t: number; scene: Scene }) {
+  const enter = clamp(progress(t, 0.1, 0.45))
+  const chimePulse = popSpring(t, 8.5, 0.7)
+
+  // Latency collapse from 5420ms to 11ms at t=4.8s
+  const latency = Math.round(mix(5420, 11, clamp(progress(t, 3.5, 5.0))))
+  const isAccelerated = latency <= 50
 
   return (
-    <InferenceStage scene={scene} t={t} punches={[0.3, 2.0]}>
-      <StartupTopbar
-        tag="INSTANT DEVELOPER ACCESS"
-        badge="ساندباکس رایگان"
-        badgeColor={NEON_EMERALD}
+    <InferenceStage scene={scene} t={t} punches={[1.9, 4.8, 8.5]} shakes={[4.8]}>
+      <SiliconHeader
+        chipTag="SYSTOLIC_ARRAY // SPECULATIVE_CORE"
+        title="شتاب ۱۰ برابری پردازش توکن‌ها"
+        subtitle="با موتور استنتاج اختصاصی حسابچه؛"
+        accentText="کمترین تأخیر ممکن در مقیاس میلی‌ثانیه"
+        accentColor={SILICON_EMERALD}
+        t={t}
       />
 
-      {/* Bold Top Headline */}
-      <div
-        dir="rtl"
-        style={{
-          position: 'absolute',
-          top: 80,
-          left: 24,
-          right: 24,
-          textAlign: 'center',
-          opacity: enter,
-          zIndex: 35,
-        }}
-      >
-        <h1 style={{ fontSize: 29, fontWeight: 900, margin: 0, color: '#ffffff', lineHeight: 1.3 }}>
-          کلید اختصاصی <span style={{ color: NEON_EMERALD }}>موتور هوش</span> در دستان تو
-        </h1>
-        <p
-          style={{
-            fontSize: 13.5,
-            color: TEXT_MUTED,
-            marginTop: 8,
-            marginInline: 'auto',
-            maxWidth: 440,
-          }}
-        >
-          تست رایگان سرعت استنتاج و اتصال به کلاستر ابری با یک پیام در دایرکت
-        </p>
-      </div>
-
-      {/* Center Hero: Developer Holographic API Console (y=175 to y=520) */}
+      {/* ─── 8x8 Systolic Tensor Core Grid (64 Hardware Nodes) ─── */}
       <div
         style={{
           position: 'absolute',
-          top: 175,
-          left: 45,
-          right: 45,
-          height: 330,
-          borderRadius: 24,
-          background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.98))',
-          border: '1.5px solid rgba(0, 255, 136, 0.65)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.85), 0 0 40px rgba(0, 255, 136, 0.25)',
-          padding: 22,
+          top: 200,
+          left: 0,
+          right: 0,
           display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          zIndex: 20,
+          justifyContent: 'center',
+          zIndex: 25,
         }}
       >
-        {/* Terminal Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#f43f5e' }} />
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#fbbf24' }} />
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#00ff88' }} />
-          </div>
-          <span
-            style={{ fontSize: 11, fontFamily: 'monospace', color: NEON_EMERALD, fontWeight: 800 }}
-          >
-            API_TERMINAL // CLOUD_READY
-          </span>
-        </div>
-
-        {/* Code Snippet Box */}
-        <div
-          style={{
-            background: 'rgba(0, 0, 0, 0.75)',
-            borderRadius: 14,
-            padding: '16px 18px',
-            fontFamily: 'monospace',
-            fontSize: 12,
-            lineHeight: 1.6,
-            color: '#a5f3fc',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}
-        >
-          <div style={{ color: 'rgba(255,255,255,0.45)' }}>
-            # فراخوانی با حداقل تأخیر در سطح میلی‌ثانیه
-          </div>
-          <div>
-            <span style={{ color: NEON_INDIGO }}>curl</span> -X POST
-            https://api.hisabche.ai/v1/inference \
-          </div>
-          <div style={{ paddingLeft: 14 }}>
-            -H <span style={{ color: NEON_EMERALD }}>"Authorization: Bearer sk-inf-live-99x7"</span>{' '}
-            \
-          </div>
-          <div style={{ paddingLeft: 14 }}>
-            -d{' '}
-            <span style={{ color: NEON_AMBER }}>{`'{"stream": true, "speculative": true}'`}</span>
-          </div>
-        </div>
-
-        {/* Global Edge Node Ping Status */}
-        <div
-          dir="rtl"
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '10px 14px',
-            borderRadius: 10,
-            background: 'rgba(255,255,255,0.04)',
-          }}
-        >
-          <span style={{ fontSize: 11.5, color: TEXT_MUTED }}>
-            شبکه توزیع جهانی لبه (Edge Nodes)
-          </span>
-          <span style={{ fontSize: 12, fontWeight: 900, color: NEON_EMERALD }}>
-            پینگ: {faNumber(4)} میلی‌ثانیه 🟢
-          </span>
-        </div>
-      </div>
-
-      {/* Bottom Active Zone: Massive Kinetic CTA Button & Perks (y=535 to y=890) */}
-      <div
-        dir="rtl"
-        style={{
-          position: 'absolute',
-          top: 535,
-          left: 45,
-          right: 45,
-          textAlign: 'center',
-          zIndex: 35,
-        }}
-      >
-        <div
-          style={{
-            padding: '20px 24px',
-            borderRadius: 22,
-            background: 'linear-gradient(135deg, #00ff88, #00c853)',
-            color: '#020617',
-            fontSize: 22,
-            fontWeight: 900,
-            boxShadow: '0 20px 50px rgba(0, 255, 136, 0.45)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: 12,
-            transform: `scale(${1 + pulse})`,
-            transition: 'transform 0.1s ease',
-          }}
-        >
-          <span>ارسال کلمه</span>
-          <span
-            style={{
-              background: '#020617',
-              color: '#00ff88',
-              padding: '4px 14px',
-              borderRadius: 10,
-              fontSize: 24,
-              fontWeight: 900,
-            }}
-          >
-            «هوش»
-          </span>
-          <span>در دایرکت</span>
-        </div>
-
-        {/* Perks Grid */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: 'repeat(8, 32px)',
+            gridTemplateRows: 'repeat(8, 32px)',
+            gap: 5,
+            padding: 12,
+            borderRadius: 18,
+            background: 'rgba(6, 13, 31, 0.85)',
+            border: `1.5px solid ${isAccelerated ? SILICON_EMERALD : COBALT_BLUE}`,
+            boxShadow: `0 0 35px ${isAccelerated ? SILICON_EMERALD : COBALT_BLUE}44`,
+          }}
+        >
+          {Array.from({ length: 64 }).map((_, idx) => {
+            const row = Math.floor(idx / 8)
+            const col = idx % 8
+            // Diagonal light wave traveling across matrix
+            const wave = Math.sin(t * 10 - (row + col) * 0.55)
+            const active = wave > 0.3
+            const nodeCol = isAccelerated
+              ? active
+                ? SILICON_EMERALD
+                : 'rgba(16, 185, 129, 0.3)'
+              : active
+                ? LASER_CYAN
+                : 'rgba(56, 189, 248, 0.25)'
+
+            return (
+              <div
+                key={idx}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 5,
+                  background: active ? `${nodeCol}33` : 'rgba(2, 6, 18, 0.9)',
+                  border: `1px solid ${nodeCol}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: active ? `0 0 10px ${nodeCol}` : 'none',
+                }}
+              >
+                <div
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: '50%',
+                    background: nodeCol,
+                  }}
+                />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Center Floating Metric Badge: Latency Collapse */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 550,
+          left: 36,
+          right: 36,
+          textAlign: 'center',
+          zIndex: 30,
+        }}
+      >
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
             gap: 8,
-            marginTop: 18,
+            fontSize: 12,
+            fontWeight: 800,
+            color: SILICON_EMERALD,
+            background: 'rgba(16, 185, 129, 0.12)',
+            border: '1px solid rgba(16, 185, 129, 0.35)',
+            padding: '4px 14px',
+            borderRadius: 999,
+            marginBottom: 8,
+          }}
+        >
+          <span>تأخیر استنتاج سخت‌افزاری</span>
+          <span>⚡</span>
+        </div>
+        <div
+          dir="ltr"
+          style={{
+            fontSize: 44,
+            fontWeight: 900,
+            fontFamily: "'JetBrains Mono', monospace",
+            color: isAccelerated ? SILICON_EMERALD : THERMAL_RED,
+            textShadow: `0 0 24px ${isAccelerated ? SILICON_EMERALD : THERMAL_RED}`,
+            lineHeight: 1.1,
+          }}
+        >
+          {faNumber(latency)} <span style={{ fontSize: 20 }}>ms</span>
+        </div>
+      </div>
+
+      {/* Direct Silicon Benchmarks */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 685,
+          left: 36,
+          right: 36,
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 16,
+          opacity: enter,
+          zIndex: 30,
+        }}
+      >
+        <div style={{ borderInlineStart: `3px solid ${SILICON_EMERALD}`, paddingInlineStart: 12 }}>
+          <div
+            style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: TEXT_MUTED }}
+          >
+            شتاب کل فرآیند
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: WAFER_WHITE, marginTop: 2 }}>
+            {faNumber(10)}X <span style={{ fontSize: 13, color: SILICON_EMERALD }}>سریع‌تر</span>
+          </div>
+          <div style={{ fontSize: 11, color: SILICON_EMERALD, marginTop: 2 }}>
+            رمزگشایی گمانه‌زن (Speculative)
+          </div>
+        </div>
+
+        <div style={{ borderInlineStart: `3px solid ${COBALT_BLUE}`, paddingInlineStart: 12 }}>
+          <div
+            style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: TEXT_MUTED }}
+          >
+            مقایسه با ابرهای سنتی
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: WAFER_WHITE, marginTop: 2 }}>
+            {faNumber(33)}X <span style={{ fontSize: 13, color: COBALT_BLUE }}>کاهش معطلی</span>
+          </div>
+          <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>
+            پایداری ۹۹.۹۹٪ تحت بار سنگین
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Shockwave Banner */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          bottom: 46,
+          left: 36,
+          right: 36,
+          background: 'rgba(16, 185, 129, 0.1)',
+          border: '1px solid rgba(16, 185, 129, 0.35)',
+          borderRadius: 12,
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          transform: `scale(${mix(1, 1.03, chimePulse)})`,
+          boxShadow: isAccelerated ? '0 0 24px rgba(16, 185, 129, 0.25)' : 'none',
+          zIndex: 30,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: SILICON_EMERALD,
+              boxShadow: `0 0 10px ${SILICON_EMERALD}`,
+            }}
+          />
+          <div style={{ fontSize: 13, fontWeight: 800, color: WAFER_WHITE }}>
+            پردازش در مقیاس میکروثانیه: پاسخ آنی و بدون لودینگ
+          </div>
+        </div>
+        <div
+          dir="ltr"
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            fontFamily: "'JetBrains Mono', monospace",
+            color: SILICON_EMERALD,
+          }}
+        >
+          11MS_LOCKED
+        </div>
+      </div>
+    </InferenceStage>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SCENE 4: AutonomousReasoningLassoScene (25.20–34.60s)
+// Vector Space Radar & Microsecond Rogue Anomaly Containment
+// ═════════════════════════════════════════════════════════════════════════════
+
+export function AutonomousReasoningLassoScene({ t, scene }: { t: number; scene: Scene }) {
+  const enter = clamp(progress(t, 0.1, 0.45))
+  const radarAngle = (t * 220) % 360
+  const isDetected = t >= 2.8
+  const lockSpring = popSpring(t, 2.8, 0.5)
+
+  // 24 Vector Points on the wafer field
+  const vectorNodes = [
+    { x: 130, y: 310, col: SILICON_EMERALD },
+    { x: 210, y: 280, col: COBALT_BLUE },
+    { x: 280, y: 330, col: LASER_CYAN },
+    { x: 160, y: 400, col: SILICON_EMERALD },
+    { x: 240, y: 450, col: COBALT_BLUE },
+    { x: 140, y: 510, col: SILICON_EMERALD },
+    { x: 310, y: 490, col: COBALT_BLUE },
+    { x: 200, y: 550, col: LASER_CYAN },
+    { x: 390, y: 530, col: SILICON_EMERALD },
+    { x: 440, y: 440, col: COBALT_BLUE },
+    { x: 410, y: 330, col: COBALT_BLUE },
+    { x: 330, y: 270, col: LASER_CYAN },
+  ]
+
+  // Rogue Target Node
+  const rogueTarget = { x: 360, y: 380 }
+
+  return (
+    <InferenceStage scene={scene} t={t} shakes={[2.8, 6.5]} punches={[0.4, 2.8]}>
+      <SiliconHeader
+        chipTag="VECTOR_RADAR // ANOMALY_QUARANTINE"
+        title="کشف و قرنطینه در کسری از میلی‌ثانیه"
+        subtitle="کوچک‌ترین مغایرت، تقلب یا خطای فاکتور؛"
+        accentText="در لحظه شناسایی و جدا می‌شود"
+        accentColor={isDetected ? THERMAL_RED : LASER_CYAN}
+        t={t}
+      />
+
+      {/* ─── Vector Coordinate Radar & Caliper Containment (x=270, y=440) ─── */}
+      <svg
+        width={540}
+        height={960}
+        viewBox="0 0 540 960"
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+      >
+        <defs>
+          {/* Radar Sweep Gradient */}
+          <linearGradient id="radarSweepGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="transparent" />
+            <stop offset="100%" stopColor="rgba(0, 245, 255, 0.4)" />
+          </linearGradient>
+        </defs>
+
+        {/* Concentric Coordinate Rings */}
+        <circle
+          cx={270}
+          cy={440}
+          r={180}
+          fill="none"
+          stroke="rgba(56, 189, 248, 0.15)"
+          strokeWidth={1}
+          strokeDasharray="6 4"
+        />
+        <circle
+          cx={270}
+          cy={440}
+          r={120}
+          fill="none"
+          stroke="rgba(56, 189, 248, 0.2)"
+          strokeWidth={1}
+        />
+        <circle
+          cx={270}
+          cy={440}
+          r={60}
+          fill="none"
+          stroke="rgba(56, 189, 248, 0.25)"
+          strokeWidth={1}
+        />
+
+        {/* Radar Crosshairs */}
+        <line x1={90} y1={440} x2={450} y2={440} stroke="rgba(56, 189, 248, 0.2)" strokeWidth={1} />
+        <line
+          x1={270}
+          y1={260}
+          x2={270}
+          y2={620}
+          stroke="rgba(56, 189, 248, 0.2)"
+          strokeWidth={1}
+        />
+
+        {/* Rotating Radar Sweep Beam */}
+        <g transform={`translate(270, 440) rotate(${radarAngle})`}>
+          <path d="M 0 0 L 180 0 A 180 180 0 0 0 127 -127 Z" fill="url(#radarSweepGrad)" />
+          <line x1={0} y1={0} x2={180} y2={0} stroke={LASER_CYAN} strokeWidth={2} />
+        </g>
+
+        {/* Compliant Normal Vector Nodes */}
+        {vectorNodes.map((n, i) => (
+          <circle
+            key={i}
+            cx={n.x}
+            cy={n.y}
+            r={5}
+            fill={n.col}
+            style={{ filter: `drop-shadow(0 0 8px ${n.col})` }}
+          />
+        ))}
+
+        {/* Rogue Anomaly Node & 4-Laser Lock Calipers */}
+        <g>
+          <circle
+            cx={rogueTarget.x}
+            cy={rogueTarget.y}
+            r={isDetected ? 14 : 6}
+            fill={isDetected ? THERMAL_RED : COBALT_BLUE}
+            style={{ filter: `drop-shadow(0 0 18px ${isDetected ? THERMAL_RED : COBALT_BLUE})` }}
+          />
+
+          {isDetected && (
+            <>
+              {/* 4 Laser Calipers Converging from Boundaries */}
+              <line
+                x1={mix(40, rogueTarget.x - 30, lockSpring)}
+                y1={rogueTarget.y}
+                x2={rogueTarget.x - 18}
+                y2={rogueTarget.y}
+                stroke={THERMAL_RED}
+                strokeWidth={2.5}
+              />
+              <line
+                x1={mix(500, rogueTarget.x + 30, lockSpring)}
+                y1={rogueTarget.y}
+                x2={rogueTarget.x + 18}
+                y2={rogueTarget.y}
+                stroke={THERMAL_RED}
+                strokeWidth={2.5}
+              />
+              <line
+                x1={rogueTarget.x}
+                y1={mix(180, rogueTarget.y - 30, lockSpring)}
+                x2={rogueTarget.x}
+                y2={rogueTarget.y - 18}
+                stroke={THERMAL_RED}
+                strokeWidth={2.5}
+              />
+              <line
+                x1={rogueTarget.x}
+                y1={mix(700, rogueTarget.y + 30, lockSpring)}
+                x2={rogueTarget.x}
+                y2={rogueTarget.y + 18}
+                stroke={THERMAL_RED}
+                strokeWidth={2.5}
+              />
+
+              {/* Holographic Containment Box */}
+              <rect
+                x={rogueTarget.x - 24}
+                y={rogueTarget.y - 24}
+                width={48}
+                height={48}
+                fill="none"
+                stroke={THERMAL_RED}
+                strokeWidth={2}
+                strokeDasharray="8 4"
+                style={{ filter: `drop-shadow(0 0 14px ${THERMAL_RED})` }}
+              />
+            </>
+          )}
+        </g>
+      </svg>
+
+      {/* Anomaly Callout Pill when locked */}
+      {isDetected && (
+        <div
+          dir="rtl"
+          style={{
+            position: 'absolute',
+            left: rogueTarget.x + 35,
+            top: rogueTarget.y - 10,
+            background: 'rgba(15, 23, 42, 0.95)',
+            border: `1.5px solid ${THERMAL_RED}`,
+            borderRadius: 10,
+            padding: '8px 14px',
+            boxShadow: `0 0 20px ${THERMAL_RED}66`,
+            zIndex: 30,
+          }}
+        >
+          <div style={{ fontSize: 11, fontWeight: 800, color: THERMAL_RED }}>
+            ⚠️ مغایرت در تراکنش انبار
+          </div>
+          <div style={{ fontSize: 10, color: WAFER_WHITE, marginTop: 2 }}>
+            کشف در ۰.۴ میلی‌ثانیه // قرنطینه خودکار
+          </div>
+        </div>
+      )}
+
+      {/* Direct Silicon Benchmarks */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 660,
+          left: 36,
+          right: 36,
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 16,
+          opacity: enter,
+          zIndex: 30,
+        }}
+      >
+        <div
+          style={{
+            borderInlineStart: `3px solid ${isDetected ? THERMAL_RED : LASER_CYAN}`,
+            paddingInlineStart: 12,
+          }}
+        >
+          <div
+            style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: TEXT_MUTED }}
+          >
+            سرعت کشف مغایرت
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: WAFER_WHITE, marginTop: 2 }}>
+            ۰.۴ <span style={{ fontSize: 13, color: LASER_CYAN }}>میلی‌ثانیه</span>
+          </div>
+          <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>واکنش در کسری از لحظه</div>
+        </div>
+
+        <div style={{ borderInlineStart: `3px solid ${SILICON_EMERALD}`, paddingInlineStart: 12 }}>
+          <div
+            style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: TEXT_MUTED }}
+          >
+            پایداری جریان فروش
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: SILICON_EMERALD, marginTop: 2 }}>
+            {faNumber(100)}٪ <span style={{ fontSize: 13, color: WAFER_WHITE }}>بدون توقف</span>
+          </div>
+          <div style={{ fontSize: 11, color: SILICON_EMERALD, marginTop: 2 }}>
+            جداسازی بدون توقف صندوق
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Summary Bar */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          bottom: 46,
+          left: 36,
+          right: 36,
+          background: 'rgba(15, 23, 42, 0.9)',
+          border: `1.5px solid ${isDetected ? THERMAL_RED : 'rgba(56, 189, 248, 0.3)'}`,
+          borderRadius: 12,
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          zIndex: 30,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: isDetected ? THERMAL_RED : LASER_CYAN,
+              boxShadow: `0 0 10px ${isDetected ? THERMAL_RED : LASER_CYAN}`,
+            }}
+          />
+          <div style={{ fontSize: 13, fontWeight: 800, color: WAFER_WHITE }}>
+            {isDetected
+              ? 'تراکنش مشکوک بلافاصله ایزوله شد'
+              : 'اسکن پیوسته فضای برداری تراکنش‌ها...'}
+          </div>
+        </div>
+        <div
+          dir="ltr"
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            fontFamily: "'JetBrains Mono', monospace",
+            color: isDetected ? THERMAL_RED : LASER_CYAN,
+          }}
+        >
+          {isDetected ? 'ISOLATED_OK' : 'RADAR_SCAN'}
+        </div>
+      </div>
+    </InferenceStage>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SCENE 5: InferenceEdgeCtaScene (34.60–41.20s)
+// Monolithic Packaged BGA Chip & Developer Terminal Access CTA
+// ═════════════════════════════════════════════════════════════════════════════
+
+export function InferenceEdgeCtaScene({ t, scene }: { t: number; scene: Scene }) {
+  const enter = clamp(progress(t, 0.15, 0.5))
+  const ctaPop = popSpring(t, 2.0, 0.6)
+
+  return (
+    <InferenceStage scene={scene} t={t} shakes={[2.0]} punches={[0.3, 2.0]}>
+      <SiliconHeader
+        chipTag="HISABCHE_SILICON // DIRECT_API"
+        title="موتور استنتاج هوش مصنوعی حسابچه"
+        subtitle="پردازش سریع و بدون معطلی در دستان شما؛"
+        accentText="بدون نیاز به خرید سرور شخصی"
+        accentColor={SILICON_EMERALD}
+        t={t}
+      />
+
+      {/* ─── Packaged BGA Processor Package (x=270, y=390) ─── */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 250,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          perspective: 800,
+          zIndex: 25,
+        }}
+      >
+        <div
+          style={{
+            width: 250,
+            height: 250,
+            borderRadius: 24,
+            background: 'linear-gradient(145deg, #0d1527, #030712)',
+            border: `2px solid ${SILICON_EMERALD}`,
+            boxShadow: `0 20px 60px rgba(0,0,0,0.9), 0 0 35px rgba(16, 185, 129, 0.4)`,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            transform: `rotateY(${Math.sin(t * 1.5) * 10}deg) rotateX(${Math.cos(t * 1.2) * 8}deg)`,
+          }}
+        >
+          {/* Gold Corner Heat Spreader Accents */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 10,
+              left: 10,
+              width: 14,
+              height: 14,
+              borderTop: `2px solid ${GOLD_PAD}`,
+              borderLeft: `2px solid ${GOLD_PAD}`,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 10,
+              right: 10,
+              width: 14,
+              height: 14,
+              borderTop: `2px solid ${GOLD_PAD}`,
+              borderRight: `2px solid ${GOLD_PAD}`,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 10,
+              left: 10,
+              width: 14,
+              height: 14,
+              borderBottom: `2px solid ${GOLD_PAD}`,
+              borderLeft: `2px solid ${GOLD_PAD}`,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 10,
+              right: 10,
+              width: 14,
+              height: 14,
+              borderBottom: `2px solid ${GOLD_PAD}`,
+              borderRight: `2px solid ${GOLD_PAD}`,
+            }}
+          />
+
+          {/* Central Emblem Core */}
+          <div
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, transparent 70%)',
+              border: `2px solid ${SILICON_EMERALD}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: `0 0 24px ${SILICON_EMERALD}`,
+              marginBottom: 12,
+            }}
+          >
+            <span style={{ fontSize: 32 }}>⚡</span>
+          </div>
+
+          {/* Laser-Etched Chip Brand */}
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 900,
+              fontFamily: "'JetBrains Mono', monospace",
+              letterSpacing: '0.12em',
+              color: WAFER_WHITE,
+            }}
+          >
+            HISABCHE AI
+          </div>
+          <div
+            style={{
+              fontSize: 10,
+              fontFamily: "'JetBrains Mono', monospace",
+              color: SILICON_EMERALD,
+              letterSpacing: '0.18em',
+              marginTop: 4,
+            }}
+          >
+            SUB_MS // FINFET_4NM
+          </div>
+        </div>
+      </div>
+
+      {/* Developer Terminal Command Bar */}
+      <div
+        dir="ltr"
+        style={{
+          position: 'absolute',
+          top: 550,
+          left: 36,
+          right: 36,
+          background: 'rgba(6, 13, 31, 0.95)',
+          border: '1px solid rgba(0, 245, 255, 0.35)',
+          borderRadius: 12,
+          padding: '12px 18px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 12,
+          opacity: enter,
+          boxShadow: '0 0 20px rgba(0, 245, 255, 0.15)',
+          zIndex: 25,
+        }}
+      >
+        <span style={{ color: LASER_CYAN }}>$ curl api.hisabche.ai/v1/inference</span>
+        <span style={{ color: SILICON_EMERALD, fontWeight: 800 }}>READY 200</span>
+      </div>
+
+      {/* High-Impact Tactical CTA Button */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 650,
+          left: 36,
+          right: 36,
+          transform: `scale(${mix(0.9, 1, ctaPop)})`,
+          opacity: clamp(progress(t, 1.8, 0.45)),
+          zIndex: 35,
+        }}
+      >
+        <div
+          style={{
+            background: `linear-gradient(135deg, ${SILICON_EMERALD}, #059669)`,
+            borderRadius: 18,
+            padding: '18px 24px',
+            textAlign: 'center',
+            boxShadow: `0 16px 40px rgba(16, 185, 129, 0.45), 0 0 24px rgba(0, 245, 255, 0.3)`,
+            border: '1.5px solid rgba(255, 255, 255, 0.4)',
           }}
         >
           <div
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              borderRadius: 12,
-              padding: '10px 6px',
-              border: '1px solid rgba(255,255,255,0.06)',
+              fontSize: 20,
+              fontWeight: 900,
+              color: '#02120d',
+              letterSpacing: '-0.01em',
+              marginBottom: 4,
             }}
           >
-            <div style={{ fontSize: 13 }}>⚡</div>
-            <div style={{ fontSize: 10.5, fontWeight: 800, color: '#f8fafc', marginTop: 4 }}>
-              تست بلادرنگ
-            </div>
+            کلمه «هوش» رو بفرست
           </div>
           <div
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              borderRadius: 12,
-              padding: '10px 6px',
-              border: '1px solid rgba(255,255,255,0.06)',
+              fontSize: 13,
+              fontWeight: 700,
+              color: '#04281c',
             }}
           >
-            <div style={{ fontSize: 13 }}>🔑</div>
-            <div style={{ fontSize: 10.5, fontWeight: 800, color: '#f8fafc', marginTop: 4 }}>
-              کلید اختصاصی
-            </div>
-          </div>
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.04)',
-              borderRadius: 12,
-              padding: '10px 6px',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}
-          >
-            <div style={{ fontSize: 13 }}>📚</div>
-            <div style={{ fontSize: 10.5, fontWeight: 800, color: '#f8fafc', marginTop: 4 }}>
-              مستندات API
-            </div>
+            دریافت کلید دسترسی به موتور پردازش سریع
           </div>
         </div>
+      </div>
+
+      {/* 3 Silicon Trust Badges */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          bottom: 46,
+          left: 36,
+          right: 36,
+          display: 'flex',
+          justifyContent: 'center',
+          gap: 16,
+          fontSize: 12,
+          fontWeight: 700,
+          color: TEXT_MUTED,
+          opacity: enter,
+          zIndex: 30,
+        }}
+      >
+        <span>⚡ ۱۱ میلی‌ثانیه پاسخ</span>
+        <span>•</span>
+        <span>🛡️ امنیت بانکی داده‌ها</span>
+        <span>•</span>
+        <span>🚀 اتصال در ۱ دقیقه</span>
       </div>
     </InferenceStage>
   )

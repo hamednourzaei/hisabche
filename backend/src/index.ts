@@ -674,6 +674,14 @@ export async function buildServer(): Promise<typeof server> {
     // An API key has its own bucket and budget (developer.domain.ts).
     max: (_request, key) => (isApiKeyBucket(key) ? API_KEY_RATE_LIMIT_PER_MINUTE : 100),
     timeWindow: '1 minute',
+    // ⚠️ A CORS preflight is not a request the user made. The plugin hooks
+    // `onRequest`, so without this line every `OPTIONS` that `@fastify/cors`
+    // answers was counted in the same 100/min budget as the call itself: a
+    // page fires 10–20 calls, each with a preflight, and four page views left
+    // the app answering 429 to its own shell (`/api/auth/me`,
+    // `/api/governance/my-capabilities`, notifications, currency, employees).
+    // Live audit B1, 28 Oct 2026.
+    allowList: (request) => request.method === 'OPTIONS',
     keyGenerator: (request) => {
       const userId = (request as any).userId
       return rateLimitBucket(request.headers.authorization, userId || request.ip || 'anonymous')

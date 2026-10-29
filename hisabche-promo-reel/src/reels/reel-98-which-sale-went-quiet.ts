@@ -14,11 +14,10 @@
 import type { Cue, Reel } from '../engine/types'
 import {
   AskScene,
-  LAMP_DARK,
-  LAMP_INK,
   LinkScene,
   ListScene,
   OUTREACH_CAPTURE,
+  OutreachRadarScene,
   ProductWordsScene,
   QuietScene,
 } from '../scenes/quiet-customers'
@@ -43,7 +42,7 @@ const scenes = sequence(
         { at: 0.6, kind: 'paperRustle' },
         { at: 0.75, kind: 'pop' },
       ]),
-      vo: '',
+      vo: 'کدام مشتری وفادار مغازه، بی‌صدا و بدون هیچ هشداری از چرخهٔ خرید خارج شد؟',
     },
     // 2 (5–11s) — months pass: the rows go quiet.
     {
@@ -54,7 +53,7 @@ const scenes = sequence(
         { at: 1.5, kind: 'paperRustle' },
         { at: 3.0, kind: 'paperRustle' },
       ]),
-      vo: '',
+      vo: 'ماه‌ها گذشت و سفارش‌ها یکی پس از دیگری متوقف شدند، بدون این‌که متوجه رفتنشان شوید.',
     },
     // 3 (11–15s) — the question.
     {
@@ -63,21 +62,17 @@ const scenes = sequence(
         { at: 0.02, kind: 'whoosh' },
         { at: 0.3, kind: 'pop' },
       ]),
-      vo: '',
+      vo: 'آیا کسی پیگیری کرد؟ شش مشتری قدیمی رفتند، چون هیچ سیستمی این سکوت را یادآوری نکرد.',
     },
     // 4 (15–24s) — the product's own tab.
     {
       dur: 9,
-      spec: {
-        kind: 'product-capture',
-        theme: 'midnight-gold',
-        file: REEL_98_CAPTURE.file,
-        route: REEL_98_CAPTURE.route,
-        label: REEL_98_CAPTURE.label,
-        screenState: REEL_98_CAPTURE.screenState,
-        stage: { background: LAMP_DARK, ink: LAMP_INK },
-      },
-      vo: '',
+      spec: scene(OutreachRadarScene, [
+        { at: 0.02, kind: 'whoosh' },
+        { at: 0.5, kind: 'precisionSequence' },
+        { at: 3.2, kind: 'chime' },
+      ]),
+      vo: 'در حسابچه، فرصت‌های راکد قبل از اینکه بسوزند شناسایی شده و پیگیری مناسب پیشنهاد می‌شود.',
     },
     // 5 (24–31s) — its three names.
     {
@@ -88,7 +83,7 @@ const scenes = sequence(
         { at: 1.45, kind: 'pop' },
         { at: 2.55, kind: 'pop' },
       ]),
-      vo: '',
+      vo: 'پیگیری و کمپین، رصد فرصت‌های راکد و احیای فروش؛ سه ابزار برای پایان دادن به مرگ خاموش مشتریان.',
     },
     // 6 (31–35s) — the ask; the last half second is the list again.
     {
@@ -97,7 +92,7 @@ const scenes = sequence(
         { at: 0.02, kind: 'whoosh' },
         { at: 0.12, kind: 'pop' },
       ]),
-      vo: '',
+      vo: 'حسابچه؛ نگذار مشتریان قدیمی بی‌صدا ناپدید شوند. همین حالا رایگان شروع کن.',
     },
   ],
   { noZoom: true },

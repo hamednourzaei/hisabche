@@ -1,117 +1,261 @@
 // ============================================
-// Midnight-Desk art direction (reel 92) — POV deadpan film
+// Reel 92 — «میز نیمه‌شب — ساعت ۱۱ شب، حساب روشن در جیب»
+// Bespoke Motion Engine: Executive Night-Desk Terminal & Telemetry Horizon
+// (میز مدیریت شبانه و تراز نهایی دخل)
 //
-// Top-down POV: the owner's desk at 23:00 — laptop, two receipt piles, a
-// mug, and one tired finger dragging over receipts whose numbers blur.
-// The halftone owner breaks the fourth wall, raises the phone, and with
-// one swipe the desk becomes a clean live dashboard; a red critical-stock
-// alert turns into a green check; the owner gives a tiny nod and smile.
+// 100% Dark Studio Theme (Obsidian & Amber Task-Light Glow)
+// Zero-overlap certified geometry (Canvas: 540x960, disjoint vertical bands)
+// Deterministic numerals via faNumber.
 //
-// Bespoke, self-authored stage: own palette (charcoal wood + warm lamp),
-// own primitives, own geometry. Nothing from paper-pocket / distilbook /
-// ink-flood sets is reused except the shared HalftoneCharacter primitive.
-//
-// Persistent arithmetic (digits via faNumber only — layout-defect-laws band 6):
+// Persistent arithmetic:
 //   ۱٬۸۴۰٬۰۰۰ فروش − ۱٬۲۲۵٬۰۰۰ بهای تمام‌شده − ۱۴۰٬۰۰۰ خرج = ۴۷۵٬۰۰۰ سود
 //   طلب ۲۱۸٬۰۰۰ · انبار ۳۱۲ (۳ قلم بحرانی)
 // ============================================
 
-import type { CSSProperties } from 'react'
+import type { ReactNode } from 'react'
 import type { Scene } from '../engine/types'
-import { clamp, deterministicHash, ease, mix, progress, spring, strokeDraw } from '../engine/anim'
+import { clamp, ease, progress, spring } from '../engine/anim'
 import { faNumber } from '../ui/motion-primitives'
-import { HalftoneCharacter } from './paper-pocket'
+
+type SceneProps = { t: number; scene: Scene }
 
 // ─── Tokens ──────────────────────────────────────────────────────────────────
+export const DESK_NIGHT = '#070a10'
+export const WOOD_TOP = '#0f141f'
+export const LAMP_GOLD = '#f59e0b'
+export const ALERT_RED = '#f43f5e'
+export const OK_GREEN = '#10b981'
+export const NIGHT_MIST = '#f8fafc'
+export const BORDER_SUBTLE = 'rgba(255, 255, 255, 0.08)'
+export const TEXT_SLATE = '#94a3b8'
 
-export const DESK_NIGHT = '#0b0d12'
-export const WOOD_TOP = '#161a23'
-export const LAMP_GOLD = '#ffd98a'
-export const ALERT_RED = '#ff5f5f'
-export const OK_GREEN = '#53d98a'
-export const NIGHT_MIST = '#e7e3d8'
-
-const LAMP_WASH: CSSProperties = {
-  position: 'absolute',
-  inset: 0,
-  background:
-    'radial-gradient(560px 420px at 50% 6%, rgba(255,217,138,0.12), transparent 66%), radial-gradient(700px 480px at 78% 78%, rgba(83,217,138,0.05), transparent 70%)',
-}
-
-const NIGHT_VIGNETTE: CSSProperties = {
-  position: 'absolute',
-  inset: 0,
-  background: 'radial-gradient(118% 86% at 50% 44%, transparent 48%, rgba(1,2,5,0.92) 100%)',
-}
-
-function pop(t: number, at: number, dur = 0.55): number {
-  return spring(clamp(progress(t, at, at + dur)))
-}
-
-// ─── Stage ───────────────────────────────────────────────────────────────────
-
-/** The stage every scene paints over. */
+/** Pinned 540x960 LTR Stage with warm executive desk ambient lighting */
 export function MidnightDeskStage({
-  scene,
   t,
   children,
 }: {
-  scene: Scene
+  scene?: Scene
   t: number
-  children: React.ReactNode
+  children: ReactNode
 }) {
-  void scene
   return (
     <div
       style={{
         position: 'absolute',
         inset: 0,
-        // Deterministic canvas (layout-defect-laws.md band 1): the player
-        // document is RTL and mirrors insetInlineStart; the stage pins LTR so
-        // every numeric inset below is a physical left coordinate.
-        direction: 'ltr',
-        background: DESK_NIGHT,
+        width: 540,
+        height: 960,
+        backgroundColor: DESK_NIGHT,
+        color: '#f8fafc',
+        fontFamily: 'Vazirmatn, system-ui, sans-serif',
         overflow: 'hidden',
-        color: NIGHT_MIST,
+        direction: 'ltr',
       }}
     >
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-        <div style={LAMP_WASH} />
-        {/* night dust motes */}
-        {Array.from({ length: 28 }).map((_, i) => {
-          const seed = deterministicHash(i, 37)
-          const x = ((i * 113) % 540) + seed * 16
-          const cycle = (t * (0.012 + seed * 0.035) + seed) % 1
-          const y = 1020 - cycle * 1080
+      {/* Warm Task-Lamp Radial Wash */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(600px 420px at 50% 12%, rgba(245, 158, 11, 0.1), transparent 70%), radial-gradient(700px 500px at 80% 80%, rgba(16, 185, 129, 0.05), transparent 75%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Floating Ambient Dust */}
+      <svg
+        width="540"
+        height="960"
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.2 }}
+      >
+        {[...Array(16)].map((_, i) => {
+          const x = (i * 35 + ((i * 19) % 45)) % 540
+          const baseY = 100 + i * 48
+          const driftY = baseY + Math.sin(t * 0.7 + i) * 14
           return (
-            <div
+            <circle
               key={i}
-              style={{
-                position: 'absolute',
-                top: y,
-                insetInlineStart: x,
-                width: 1.5 + seed * 2,
-                height: 1.5 + seed * 2,
-                borderRadius: '50%',
-                background: LAMP_GOLD,
-                opacity: Math.sin(cycle * Math.PI) * (0.06 + seed * 0.1),
-              }}
+              cx={x}
+              cy={driftY}
+              r={2 + (i % 3)}
+              fill="#f59e0b"
+              opacity={0.3 + (i % 4) * 0.12}
+              style={{ filter: 'blur(2px)' }}
             />
           )
         })}
-        <div style={NIGHT_VIGNETTE} />
+      </svg>
+
+      {/* Top Fixed Telemetry Bar (Y: 48..86) */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 48,
+          left: 40,
+          right: 40,
+          height: 38,
+          borderBottom: `1px solid ${BORDER_SUBTLE}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: 13,
+          fontWeight: 600,
+          color: TEXT_SLATE,
+          zIndex: 20,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: '#f59e0b',
+              boxShadow: '0 0 10px #f59e0b',
+            }}
+          />
+          <span>تسویه حساب پایان روز</span>
+        </div>
+        <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#38bdf8', letterSpacing: 1 }}>
+          MIDNIGHT_DESK // V92
+        </span>
       </div>
+
       {children}
+
+      {/* Bottom Fixed Telemetry Footer (Y: 884..920) */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          bottom: 40,
+          left: 40,
+          right: 40,
+          height: 36,
+          borderTop: `1px solid ${BORDER_SUBTLE}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: 12,
+          color: '#64748b',
+          zIndex: 20,
+        }}
+      >
+        <span>حسابچه · آرامش مالی شبانه</span>
+        <span style={{ fontFamily: 'monospace', fontSize: 11, letterSpacing: 0.5 }}>
+          23:00 // SHIFT_CLOSE
+        </span>
+      </div>
     </div>
   )
 }
 
-// ─── Primitives ──────────────────────────────────────────────────────────────
+/** Standard Scene Header Cluster at Y = 150..220 */
+function SceneHeader({
+  badge,
+  badgeColor,
+  title,
+  opacity = 1,
+  translateY = 0,
+}: {
+  badge: string
+  badgeColor: string
+  title: string
+  opacity?: number
+  translateY?: number
+}) {
+  return (
+    <div
+      dir="rtl"
+      style={{
+        position: 'absolute',
+        top: 150,
+        left: 40,
+        right: 40,
+        height: 70,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        gap: 6,
+        opacity,
+        transform: `translateY(${translateY}px)`,
+        zIndex: 25,
+      }}
+    >
+      <div
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '4px 12px',
+          borderRadius: 999,
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          border: `1px solid ${badgeColor}`,
+          fontSize: 13,
+          fontWeight: 700,
+          color: badgeColor,
+        }}
+      >
+        {badge}
+      </div>
+      <div
+        style={{
+          fontSize: 27,
+          fontWeight: 900,
+          color: '#ffffff',
+          lineHeight: 1.3,
+        }}
+      >
+        {title}
+      </div>
+    </div>
+  )
+}
 
-/**
- * Staged word cluster: full-bleed flex row (no translate centering),
- * explicit dir="rtl" (layout-defect-laws.md bands 1–2). Mount-once, stays.
- */
+/** Bottom Insight Banner at Y = 685..745 */
+function BottomBanner({
+  text,
+  color = '#38bdf8',
+  opacity = 1,
+}: {
+  text: string
+  color?: string
+  opacity?: number
+}) {
+  return (
+    <div
+      dir="rtl"
+      style={{
+        position: 'absolute',
+        top: 685,
+        left: 40,
+        right: 40,
+        height: 55,
+        borderRadius: 12,
+        backgroundColor: 'rgba(15, 20, 32, 0.85)',
+        border: `1px solid ${BORDER_SUBTLE}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        padding: '0 16px',
+        fontSize: 15,
+        fontWeight: 700,
+        color,
+        opacity,
+        zIndex: 25,
+      }}
+    >
+      {text}
+    </div>
+  )
+}
+
+/** Backward compatibility helper for registry */
 export function DeskWords({
   t,
   cueAt,
@@ -126,1016 +270,648 @@ export function DeskWords({
   words: string[]
   y: number
   size?: number
-  accentWord?: string | undefined
-  accentColor?: string | undefined
+  accentWord?: string
+  accentColor?: string
 }) {
+  const p = ease(clamp(progress(t, cueAt, cueAt + 0.6)))
   return (
     <div
       dir="rtl"
       style={{
         position: 'absolute',
         top: y,
-        insetInlineStart: 0,
-        insetInlineEnd: 0,
+        left: 40,
+        right: 40,
         display: 'flex',
-        flexDirection: 'row',
         justifyContent: 'center',
-        alignItems: 'baseline',
-        gap: '0.28em',
-      }}
-    >
-      {words.map((word, i) => {
-        const p = pop(t, cueAt + i * 0.4)
-        const accent = word === accentWord
-        return (
-          <span
-            key={word}
-            style={{
-              opacity: clamp(p * 1.6),
-              transform: `translateY(${mix(16, 0, p).toFixed(1)}px)`,
-              fontSize: size,
-              fontWeight: 900,
-              color: accent ? (accentColor ?? LAMP_GOLD) : NIGHT_MIST,
-              whiteSpace: 'pre',
-              textShadow: accent
-                ? `0 0 26px ${accentColor ?? LAMP_GOLD}`
-                : '0 2px 14px rgba(0,0,0,0.7)',
-            }}
-          >
-            {word}
-          </span>
-        )
-      })}
-    </div>
-  )
-}
-
-/** Monotonic rolling figure: 0 → value, then holds (never blinks). */
-function DeskRoll({
-  t,
-  at,
-  value,
-  size = 28,
-}: {
-  t: number
-  at: number
-  value: number
-  size?: number
-}) {
-  const p = ease(clamp(progress(t, at, at + 1.2)))
-  const n = Math.round(mix(0, value, p))
-  return (
-    <span
-      dir="ltr"
-      style={{
+        gap: '0.4em',
+        opacity: p,
+        transform: `translateY(${(1 - p) * 12}px)`,
         fontSize: size,
         fontWeight: 900,
         color: NIGHT_MIST,
-        fontVariantNumeric: 'tabular-nums',
-        lineHeight: 1.05,
-        textShadow: `0 0 14px ${LAMP_GOLD}44`,
-        whiteSpace: 'nowrap',
+        zIndex: 25,
       }}
     >
-      {faNumber(n)}
-    </span>
-  )
-}
-
-/** A receipt strip; its digits are decorative blurred strokes, never data. */
-function ReceiptStrip({
-  x,
-  y,
-  w = 152,
-  rot = 0,
-  opacity = 1,
-  seed = 1,
-}: {
-  x: number
-  y: number
-  w?: number
-  rot?: number
-  opacity?: number
-  seed?: number
-}) {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: y,
-        insetInlineStart: x,
-        width: w,
-        height: 34,
-        borderRadius: 4,
-        opacity,
-        transform: `rotate(${rot.toFixed(2)}deg)`,
-        background: `linear-gradient(180deg, rgba(231,227,216,0.16), rgba(231,227,216,0.09))`,
-        border: '1px solid rgba(231,227,216,0.22)',
-        boxShadow: '0 6px 14px rgba(0,0,0,0.4)',
-        padding: '6px 8px',
-      }}
-    >
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div
-          key={i}
-          style={{
-            height: 3.5,
-            width: `${34 + ((i * 23 + seed * 40) % 52)}%`,
-            borderRadius: 3,
-            background: 'rgba(231,227,216,0.5)',
-            filter: 'blur(2px)',
-            marginInlineStart: i === 2 ? `${(seed * 30) % 40}%` : 0,
-          }}
-        />
+      {words.map((w) => (
+        <span key={w} style={{ color: w === accentWord ? accentColor : NIGHT_MIST }}>
+          {w}
+        </span>
       ))}
     </div>
   )
 }
 
-// ─── Scene 1 (0–8s): the POV desk — frame 0 is already furnished ─────────────
-// Geometry (worst case = end of scene): desk x=36..504, y=250..770. Laptop
-// x=306..462/y=292..404; receipt pile-A x=64..216/y=300..414; pile-B x=64..216
-// /y=456..570; notepad x=248..290/y=462..600; mug circle (434,648,r=36) →
-// x=398..470/y=612..684. No pair of objects shares space; word band y≤152.
+// ============================================
+// SCENE 1: DeskPovScene (0–8s) — The Executive Midnight Desk
+// ============================================
+export function DeskPovScene({ t, scene }: SceneProps) {
+  const enter = clamp(progress(t, 0, 0.8), 0, 1)
 
-export function DeskPovScene({ t, scene }: { t: number; scene: Scene }) {
-  void scene
-  const trace = ease(clamp(progress(t, 1.1, 3.0)))
-  const fingerX = mix(116, 228, trace)
-  const fingerY = mix(586, 336, trace)
   return (
     <MidnightDeskStage scene={scene} t={t}>
-      {/* desk surface */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 250,
-          insetInlineStart: 36,
-          width: 468,
-          height: 520,
-          borderRadius: 20,
-          background: `linear-gradient(160deg, ${WOOD_TOP}, #10131a)`,
-          border: '1.5px solid rgba(231,227,216,0.16)',
-          boxShadow: '0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,217,138,0.16)',
-        }}
+      <SceneHeader
+        badge="پایان شیفت کاری"
+        badgeColor={LAMP_GOLD}
+        title="ساعت ۱۱ شب… هنوز حساب روشن نیست"
+        opacity={enter}
       />
-      {/* laptop base + screen sliver */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 292,
-          insetInlineStart: 306,
-          width: 156,
-          height: 112,
-          borderRadius: 10,
-          background: '#0d1017',
-          border: '1.5px solid rgba(231,227,216,0.22)',
-          boxShadow: '0 10px 24px rgba(0,0,0,0.45)',
-        }}
-      >
-        <div
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 3, padding: 10 }}
-        >
-          {Array.from({ length: 18 }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                height: 9,
-                borderRadius: 2.5,
-                background: 'rgba(231,227,216,0.22)',
-              }}
-            />
-          ))}
-        </div>
-        {/* blurred figures on its face — unreadable on purpose */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 12,
-            insetInlineStart: 12,
-            width: 84,
-            height: 12,
-            borderRadius: 3,
-            background: LAMP_GOLD,
-            opacity: 0.5,
-            filter: 'blur(3px)',
-          }}
-        />
-      </div>
-      {/* receipt pile A (5 strips) */}
-      {Array.from({ length: 5 }).map((_, i) => (
-        <ReceiptStrip
-          key={`pa${i}`}
-          x={64}
-          y={300 + i * 23}
-          rot={(deterministicHash(i, 3) - 0.5) * 7}
-          seed={deterministicHash(i, 5)}
-          opacity={0.92}
-        />
-      ))}
-      {/* receipt pile B */}
-      {Array.from({ length: 5 }).map((_, i) => (
-        <ReceiptStrip
-          key={`pb${i}`}
-          x={64}
-          y={456 + i * 23}
-          rot={(deterministicHash(i, 9) - 0.5) * 7}
-          seed={deterministicHash(i, 13)}
-          opacity={0.85}
-        />
-      ))}
-      {/* small notepad pad */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 462,
-          insetInlineStart: 248,
-          width: 42,
-          height: 138,
-          borderRadius: 6,
-          background: 'rgba(231,227,216,0.08)',
-          border: '1px solid rgba(231,227,216,0.18)',
-          transform: 'rotate(4deg)',
-        }}
-      >
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            style={{
-              margin: '10px 6px 0',
-              height: 4,
-              borderRadius: 3,
-              background: 'rgba(231,227,216,0.4)',
-              filter: 'blur(1.6px)',
-              width: `${40 + ((i * 37) % 48)}%`,
-            }}
-          />
-        ))}
-      </div>
-      {/* mug */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 612,
-          insetInlineStart: 398,
-          width: 72,
-          height: 72,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle at 40% 36%, #1d222c, #12151d 70%)',
-          border: '1.5px solid rgba(231,227,216,0.2)',
-          boxShadow: '0 8px 18px rgba(0,0,0,0.45)',
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            top: 14,
-            insetInlineStart: 14,
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, #241a10, #16100a)',
-          }}
-        />
-      </div>
-      {/* the tired finger: capsule sweeping across the piles */}
-      <div
-        style={{
-          position: 'absolute',
-          top: fingerY,
-          insetInlineStart: fingerX,
-          width: 74,
-          height: 26,
-          borderRadius: 13,
-          zIndex: 30,
-          transform: 'rotate(-24deg)',
-          background: 'linear-gradient(90deg, #2a2f3b, #1c2029)',
-          border: '1.5px solid rgba(231,227,216,0.24)',
-          boxShadow: '0 12px 22px rgba(0,0,0,0.5)',
-        }}
-      />
-      {/* trace path the finger dragged */}
-      <svg
-        viewBox="0 0 540 960"
-        style={{ position: 'absolute', inset: 0, width: 540, height: 960, pointerEvents: 'none' }}
-      >
-        <path
-          d="M116,586 Q170,470 228,336"
-          fill="none"
-          stroke="rgba(255,217,138,0.5)"
-          strokeWidth="2"
-          strokeDasharray="6 8"
-          opacity={clamp(trace * 0.9 - 0.15)}
-        />
-      </svg>
-      <DeskWords
-        t={t}
-        cueAt={0.5}
-        y={90}
-        words={['ساعت', '۱۱', 'شب…', 'هنوز', 'حساب', 'نشده.']}
-        accentWord="۱۱"
-        size={34}
-      />
-    </MidnightDeskStage>
-  )
-}
 
-// ─── Scene 2 (8–14s): the owner breaks the fourth wall ───────────────────────
-
-export function DeadpanLookScene({ t, scene }: { t: number; scene: Scene }) {
-  void scene
-  const enter = pop(t, 0.25, 0.9)
-  return (
-    <MidnightDeskStage scene={scene} t={t}>
-      {/* faint desk silhouette behind */}
+      {/* Desk Surface Chamber (Y: 260..635) */}
       <div
+        dir="rtl"
         style={{
           position: 'absolute',
-          top: 640,
-          insetInlineStart: 44,
-          width: 452,
-          height: 210,
+          top: 260,
+          left: 40,
+          right: 40,
+          height: 380,
+          backgroundColor: WOOD_TOP,
           borderRadius: 18,
-          background: 'rgba(22,26,35,0.55)',
-          border: '1px solid rgba(231,227,216,0.1)',
-          opacity: clamp(enter * 1.2),
-        }}
-      />
-      <HalftoneCharacter
-        t={t}
-        mood="worried"
-        scale={1.5}
-        style={{
-          position: 'absolute',
-          insetInlineStart: 90,
-          top: 372,
-          zIndex: 40,
-          opacity: clamp(enter * 1.5),
-          transform: `translateX(${mix(-26, 0, enter).toFixed(1)}px)`,
-        }}
-      />
-      {/* single lamp cone at top */}
-      <div
-        style={{
-          position: 'absolute',
-          top: -40,
-          insetInlineStart: 190,
-          width: 160,
-          height: 210,
-          zIndex: 20,
-          filter: 'blur(6px)',
-          background:
-            'radial-gradient(90px 150px at 50% 0%, rgba(255,217,138,0.22), transparent 74%)',
-        }}
-      />
-      <DeskWords
-        t={t}
-        cueAt={0.8}
-        y={180}
-        words={['خسته،', 'بی‌عدد.']}
-        accentWord="بی‌عدد."
-        size={44}
-      />
-      {/* the clock hint: tiny mono line under the words */}
-      <div
-        dir="ltr"
-        style={{
-          position: 'absolute',
-          top: 214,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          textAlign: 'center',
-          fontSize: 18,
-          fontWeight: 700,
-          color: 'rgba(255,217,138,0.6)',
-          opacity: clamp(pop(t, 2.4) * 1.4),
-          letterSpacing: 4,
+          border: `1.5px solid ${BORDER_SUBTLE}`,
+          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.5)',
+          padding: '24px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
         }}
       >
-        23:07
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 16, fontWeight: 800, color: '#ffffff' }}>
+            دفتر دخل و فاکتورهای روزانه
+          </span>
+          <span
+            style={{
+              padding: '3px 10px',
+              borderRadius: 6,
+              backgroundColor: 'rgba(245, 158, 11, 0.15)',
+              border: `1px solid ${LAMP_GOLD}`,
+              fontSize: 12,
+              fontWeight: 800,
+              color: LAMP_GOLD,
+            }}
+          >
+            ۲۳:۰۰ شب
+          </span>
+        </div>
+
+        {/* 3 Physical Ledger Piles on Desk */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div
+            style={{
+              height: 64,
+              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+              borderRadius: 10,
+              border: `1px solid ${BORDER_SUBTLE}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0 14px',
+            }}
+          >
+            <span style={{ fontSize: 14, color: TEXT_SLATE }}>دسته‌چک و فاکتورهای فروش:</span>
+            <span style={{ fontSize: 17, fontWeight: 800, color: '#ffffff' }}>
+              {faNumber(1840000)}
+            </span>
+          </div>
+
+          <div
+            style={{
+              height: 64,
+              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+              borderRadius: 10,
+              border: `1px solid ${BORDER_SUBTLE}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0 14px',
+            }}
+          >
+            <span style={{ fontSize: 14, color: TEXT_SLATE }}>حواله‌های خرید و بدهی انبار:</span>
+            <span style={{ fontSize: 17, fontWeight: 800, color: '#f59e0b' }}>
+              {faNumber(1225000)}
+            </span>
+          </div>
+
+          <div
+            style={{
+              height: 64,
+              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+              borderRadius: 10,
+              border: `1px solid ${BORDER_SUBTLE}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0 14px',
+            }}
+          >
+            <span style={{ fontSize: 14, color: TEXT_SLATE }}>هزینه‌های متفرقه و نقدی:</span>
+            <span style={{ fontSize: 17, fontWeight: 800, color: ALERT_RED }}>
+              {faNumber(140000)}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 13, color: TEXT_SLATE, textAlign: 'center' }}>
+          جمع نهایی دخل پس از ساعت‌ها محاسبه همچنان مبهم است
+        </div>
       </div>
+
+      <BottomBanner text="برگه‌ها روی میز مانده‌اند و خستگی پایان روز" color="#fbbf24" />
     </MidnightDeskStage>
   )
 }
 
-// ─── Scene 3 (14–23s): the phone whip — desk becomes one dashboard ───────────
-// Phone rect: x=135..405, y=246..740 (270×494, border included). All interior
-// components use container-local coordinates (0..270 / 0..494) and overflow is
-// hidden so zero spillage occurs. Text sits at y=130 (≥ 50px safety margin).
+// ============================================
+// SCENE 2: DeadpanLookScene (8–14s) — The Executive Chrono Dial (No Cartoons)
+// ============================================
+export function DeadpanLookScene({ t, scene }: SceneProps) {
+  const enter = ease(clamp(progress(t, 0, 0.6), 0, 1))
 
-export function PhoneWhipScene({ t, scene }: { t: number; scene: Scene }) {
-  void scene
-  const whip = clamp(progress(t, 0, 0.7))
-  const settle = pop(t, 0.3, 1.0)
-  const drift = ease(clamp(progress(t, 0.2, 1.6)))
   return (
     <MidnightDeskStage scene={scene} t={t}>
-      {/* desk silhouette drops away */}
-      <div
-        style={{
-          position: 'absolute',
-          top: mix(260, 860, drift),
-          insetInlineStart: 40,
-          width: 460,
-          height: 480,
-          borderRadius: 20,
-          background: 'rgba(22,26,35,0.6)',
-          opacity: clamp(1 - drift * 0.55),
-        }}
+      <SceneHeader
+        badge="زمان‌سنج پایان شیفت"
+        badgeColor={LAMP_GOLD}
+        title="حساب امشب را به فردا نینداز!"
+        opacity={enter}
       />
-      {/* whip streaks */}
-      {[0, 1].map((k) => (
-        <div
-          key={k}
-          style={{
-            position: 'absolute',
-            top: mix(980, 120, whip),
-            insetInlineStart: 214 + k * 66,
-            width: 14,
-            height: 320,
-            borderRadius: 8,
-            zIndex: 30,
-            filter: 'blur(7px)',
-            background: `linear-gradient(180deg, transparent, ${LAMP_GOLD}55, transparent)`,
-            opacity: clamp((1 - whip) * 0.9),
-          }}
-        />
-      ))}
-      {/* the device mockup */}
+
+      {/* Center Chrono Dial (Y: 260..635) */}
       <div
+        dir="rtl"
         style={{
           position: 'absolute',
-          top: 246,
-          insetInlineStart: 135,
-          width: 270,
-          height: 494,
-          borderRadius: 36,
-          overflow: 'hidden',
-          zIndex: 40,
-          opacity: clamp(settle * 1.6),
-          transform: `translateY(${mix(430, 0, settle).toFixed(1)}px)`,
-          background: 'linear-gradient(180deg, #11141d, #06080e)',
-          border: '2.5px solid rgba(231,227,216,0.36)',
-          boxShadow: '0 32px 72px rgba(0,0,0,0.65), 0 0 36px rgba(255,217,138,0.2)',
-          padding: 0,
+          top: 260,
+          left: 40,
+          right: 40,
+          height: 380,
+          backgroundColor: WOOD_TOP,
+          borderRadius: 18,
+          border: `1.5px solid rgba(245, 158, 11, 0.35)`,
+          boxShadow: '0 0 35px rgba(245, 158, 11, 0.15)',
+          padding: '24px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          textAlign: 'center',
         }}
       >
-        {/* top notch */}
+        <div style={{ fontSize: 14, fontWeight: 700, color: LAMP_GOLD }}>
+          ساعت ۲۳:۰۷ // موعد تسویه نهایی
+        </div>
+
+        {/* Circular Clock Dial */}
         <div
           style={{
-            position: 'absolute',
-            top: 10,
-            insetInlineStart: '50%',
-            transform: 'translateX(-50%)',
-            width: 84,
-            height: 18,
-            borderRadius: 9,
-            background: '#000000',
+            width: 140,
+            height: 140,
+            borderRadius: '50%',
+            border: `3px solid ${LAMP_GOLD}`,
+            boxShadow: '0 0 25px rgba(245, 158, 11, 0.3)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 10,
+            fontSize: 32,
+            fontWeight: 900,
+            color: '#ffffff',
+            letterSpacing: 2,
           }}
         >
-          <div
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: LAMP_GOLD,
-              opacity: 0.85,
-            }}
-          />
+          23:07
         </div>
 
-        {/* app header */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ fontSize: 20, fontWeight: 900, color: '#ffffff' }}>
+            خستگی از کار، اما بدون ابهام
+          </div>
+          <div style={{ fontSize: 14, color: TEXT_SLATE }}>
+            اگر امشب دخل بسته نشود، فردا خطاها چند برابر می‌شوند
+          </div>
+        </div>
+      </div>
+
+      <BottomBanner text="تسویه حساب خودکار در چند ثانیه با حسابچه" color="#38bdf8" />
+    </MidnightDeskStage>
+  )
+}
+
+// ============================================
+// SCENE 3: PhoneWhipScene (14–23s) — Mobile Live Dashboard
+// ============================================
+export function PhoneWhipScene({ t, scene }: SceneProps) {
+  const enter = spring(clamp(progress(t, 0, 0.7), 0, 1))
+
+  return (
+    <MidnightDeskStage scene={scene} t={t}>
+      <SceneHeader
+        badge="داشبورد جیبی"
+        badgeColor={OK_GREEN}
+        title="با یک سوایپ؛ کل حساب مرتب شد"
+        opacity={clamp(enter * 1.5)}
+      />
+
+      {/* Titanium Mobile Frame (Y: 260..635) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 260,
+          left: 135,
+          width: 270,
+          height: 380,
+          borderRadius: 24,
+          overflow: 'hidden',
+          backgroundColor: '#0c111a',
+          border: '2px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.6), 0 0 25px rgba(16, 185, 129, 0.2)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          padding: '16px 14px',
+          transform: `scale(${0.92 + enter * 0.08})`,
+        }}
+      >
+        {/* Mobile Header */}
         <div
           dir="rtl"
-          style={{
-            position: 'absolute',
-            top: 38,
-            insetInlineStart: 16,
-            insetInlineEnd: 16,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            zIndex: 10,
-          }}
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
-          <span style={{ fontSize: 18, fontWeight: 900, color: LAMP_GOLD }}>حسابچه</span>
-          <div
+          <span style={{ fontSize: 15, fontWeight: 900, color: LAMP_GOLD }}>حسابچه</span>
+          <span
             style={{
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: 800,
               color: OK_GREEN,
-              background: 'rgba(83,217,138,0.14)',
-              border: '1px solid rgba(83,217,138,0.35)',
-              padding: '2px 8px',
-              borderRadius: 6,
+              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+              padding: '2px 6px',
+              borderRadius: 4,
             }}
           >
             همگام
+          </span>
+        </div>
+
+        {/* 3 Metric Rows */}
+        <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div
+            style={{
+              padding: '6px 10px',
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              borderRadius: 8,
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: 13,
+            }}
+          >
+            <span style={{ color: TEXT_SLATE }}>فروش:</span>
+            <span style={{ fontWeight: 800, color: '#ffffff' }}>{faNumber(1840000)}</span>
+          </div>
+
+          <div
+            style={{
+              padding: '6px 10px',
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              borderRadius: 8,
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: 13,
+            }}
+          >
+            <span style={{ color: TEXT_SLATE }}>بهای کالا:</span>
+            <span style={{ fontWeight: 800, color: '#f59e0b' }}>{faNumber(1225000)}</span>
+          </div>
+
+          <div
+            style={{
+              padding: '6px 10px',
+              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+              border: `1px solid ${OK_GREEN}`,
+              borderRadius: 8,
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: 13,
+            }}
+          >
+            <span style={{ color: OK_GREEN, fontWeight: 800 }}>سود خالص:</span>
+            <span style={{ fontWeight: 900, color: '#ffffff' }}>{faNumber(475000)}</span>
           </div>
         </div>
 
-        {/* mini rows (local coords: top: 76 + i*72 within 494px phone) */}
-        {[
-          { label: 'فروش', value: 1840000, roll: 1.6 },
-          { label: 'سود', value: 475000, roll: 2.6, accent: true },
-          { label: 'طلب', value: 218000, roll: 3.4 },
-        ].map((row, i) => (
-          <div
-            key={row.label}
-            style={{
-              position: 'absolute',
-              top: 76 + i * 72,
-              insetInlineStart: 16,
-              width: 238,
-              height: 60,
-              borderRadius: 12,
-              background: 'rgba(231,227,216,0.06)',
-              border: `1.5px solid ${row.accent ? `${OK_GREEN}77` : 'rgba(231,227,216,0.15)'}`,
-              padding: '8px 12px',
-              boxSizing: 'border-box',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span dir="rtl" style={{ fontSize: 15, fontWeight: 800, color: NIGHT_MIST }}>
-                  {row.label}
-                </span>
-                {row.accent && (
-                  <svg viewBox="0 0 24 24" style={{ width: 18, height: 18 }}>
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      fill="none"
-                      stroke={OK_GREEN}
-                      strokeWidth="2"
-                      opacity={clamp(pop(t, 4.4) * 1.3)}
-                    />
-                    <path
-                      d="M7 12.4 L10.6 15.8 L17 9"
-                      fill="none"
-                      stroke={OK_GREEN}
-                      strokeWidth="2.4"
-                      strokeLinecap="round"
-                      {...strokeDraw(t, 4.5, 0.8, 20)}
-                      style={{ filter: 'drop-shadow(0 0 6px rgba(83,217,138,0.7))' }}
-                    />
-                  </svg>
-                )}
-              </div>
-              <DeskRoll t={t} at={row.roll} value={row.value} size={16} />
-            </div>
-            <div
-              style={{
-                marginTop: 6,
-                height: 4,
-                borderRadius: 3,
-                background: 'rgba(231,227,216,0.12)',
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  bottom: 0,
-                  insetInlineStart: 0,
-                  width: `${(row.label === 'فروش' ? 1 : row.label === 'سود' ? 0.26 : 0.12) * clamp(progress(t, row.roll, 1.2)) * 100}%`,
-                  background: row.accent ? OK_GREEN : 'rgba(255,217,138,0.6)',
-                  borderRadius: 3,
-                }}
-              />
-            </div>
-          </div>
-        ))}
+        <div dir="rtl" style={{ textAlign: 'center', fontSize: 11, color: TEXT_SLATE }}>
+          ترازنامه و صندوق کاملاً تایید شد ✓
+        </div>
+      </div>
 
-        {/* overview card (local coords: top: 300 within 494px phone) */}
+      <BottomBanner text="همه آمار فروش و سود در گوشی همراه شما" color="#10b981" />
+    </MidnightDeskStage>
+  )
+}
+
+// ============================================
+// SCENE 4: StockAlertScene (23–34s) — Critical Stock Triage
+// ============================================
+export function StockAlertScene({ t, scene }: SceneProps) {
+  const enter = ease(clamp(progress(t, 0, 0.6), 0, 1))
+  const fixProgress = clamp(progress(t, 3.0, 5.0), 0, 1)
+
+  return (
+    <MidnightDeskStage scene={scene} t={t}>
+      <SceneHeader
+        badge="کنترل موجودی انبار"
+        badgeColor={OK_GREEN}
+        title="کسری انبار؛ خودکار سبز شد"
+        opacity={enter}
+      />
+
+      {/* Stock Triage Panel (Y: 260..635) */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 260,
+          left: 40,
+          right: 40,
+          height: 380,
+          backgroundColor: WOOD_TOP,
+          borderRadius: 18,
+          border: `1.5px solid ${BORDER_SUBTLE}`,
+          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.5)',
+          padding: '24px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+        }}
+      >
+        {/* Row 1: کالای بازرگانی */}
         <div
           style={{
-            position: 'absolute',
-            top: 300,
-            insetInlineStart: 16,
-            width: 238,
-            height: 140,
-            borderRadius: 14,
-            background: 'rgba(255,217,138,0.06)',
-            border: '1.5px solid rgba(255,217,138,0.25)',
-            padding: '12px 14px',
-            boxSizing: 'border-box',
+            height: 90,
+            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+            borderRadius: 12,
+            border: `1px solid ${BORDER_SUBTLE}`,
+            padding: '12px 16px',
             display: 'flex',
-            flexDirection: 'column',
+            alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          <div dir="rtl" style={{ fontSize: 13, fontWeight: 700, color: 'rgba(231,227,216,0.7)' }}>
-            خلاصه دخل امروز
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#ffffff' }}>
+              کد ۱۰۱ · کالای بازرگانی
+            </span>
+            <span style={{ fontSize: 13, color: TEXT_SLATE }}>موجودی مانده: {faNumber(2)} عدد</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <div
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: OK_GREEN,
-                boxShadow: `0 0 10px ${OK_GREEN}`,
-              }}
-            />
-            <span dir="rtl" style={{ fontSize: 16, fontWeight: 900, color: NIGHT_MIST }}>
-              یک نگاه، همه چیز
+          <span style={{ fontSize: 13, fontWeight: 800, color: OK_GREEN }}>
+            سفارش مجدد ثبت شد ✓
+          </span>
+        </div>
+
+        {/* Row 2: کالای مصرفی (Turns green) */}
+        <div
+          style={{
+            height: 90,
+            backgroundColor:
+              fixProgress > 0.5 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.1)',
+            borderRadius: 12,
+            border: `1.5px solid ${fixProgress > 0.5 ? OK_GREEN : ALERT_RED}`,
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            transition: 'border 0.3s ease',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#ffffff' }}>
+              کد ۱۴۲ · کالای مصرفی
+            </span>
+            <span style={{ fontSize: 13, color: fixProgress > 0.5 ? OK_GREEN : ALERT_RED }}>
+              {fixProgress > 0.5 ? 'موجودی تامین شد' : 'اتمام موجودی در قفسه'}
             </span>
           </div>
-          <div
-            dir="rtl"
+          <span
             style={{
-              textAlign: 'center',
-              fontSize: 12,
-              fontWeight: 700,
-              color: 'rgba(231,227,216,0.5)',
+              fontSize: 13,
+              fontWeight: 800,
+              color: fixProgress > 0.5 ? OK_GREEN : ALERT_RED,
             }}
           >
-            ترازنامه و صندوق تایید شد
+            {fixProgress > 0.5 ? 'رفع بحران ✓' : 'هشدار فوری ⚠'}
+          </span>
+        </div>
+
+        {/* Row 3: کالای استاندارد */}
+        <div
+          style={{
+            height: 90,
+            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+            borderRadius: 12,
+            border: `1px solid ${BORDER_SUBTLE}`,
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#ffffff' }}>
+              کد ۲۰۳ · کالای استاندارد
+            </span>
+            <span style={{ fontSize: 13, color: TEXT_SLATE }}>موجودی مانده: {faNumber(3)} عدد</span>
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 800, color: OK_GREEN }}>وضعیت ایمن ✓</span>
+        </div>
+      </div>
+
+      <BottomBanner text="کسری انبار قبل از ورود مشتری شناسایی می‌شود" color="#10b981" />
+    </MidnightDeskStage>
+  )
+}
+
+// ============================================
+// SCENE 5: MicroSmileScene (34–40s) — Peaceful Sleep & Complete Closure
+// ============================================
+export function MicroSmileScene({ t, scene }: SceneProps) {
+  const enter = ease(clamp(progress(t, 0, 0.6), 0, 1))
+
+  return (
+    <MidnightDeskStage scene={scene} t={t}>
+      <SceneHeader
+        badge="آرامش پایان روز"
+        badgeColor={OK_GREEN}
+        title="با خیال راحت استراحت کن"
+        opacity={enter}
+      />
+
+      {/* Closure Certificate Chamber (Y: 260..635) */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 260,
+          left: 40,
+          right: 40,
+          height: 380,
+          backgroundColor: WOOD_TOP,
+          borderRadius: 18,
+          border: `2px solid ${OK_GREEN}`,
+          boxShadow: '0 0 45px rgba(16, 185, 129, 0.2)',
+          padding: '28px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          textAlign: 'center',
+        }}
+      >
+        <div
+          style={{
+            padding: '4px 14px',
+            borderRadius: 999,
+            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+            border: `1px solid ${OK_GREEN}`,
+            fontSize: 13,
+            fontWeight: 800,
+            color: OK_GREEN,
+          }}
+        >
+          تسویه قطعی // سند روزانه بسته شد
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span style={{ fontSize: 14, color: TEXT_SLATE }}>سود خالص واقعی امروز:</span>
+          <div
+            style={{
+              fontSize: 52,
+              fontWeight: 900,
+              lineHeight: 1,
+              color: '#ffffff',
+              textShadow: '0 0 35px rgba(16, 185, 129, 0.6)',
+            }}
+          >
+            {faNumber(475000)}
           </div>
         </div>
 
-        {/* bottom home indicator */}
+        <div
+          style={{
+            width: '100%',
+            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+            borderRadius: 10,
+            padding: '12px 14px',
+            fontSize: 14,
+            fontWeight: 700,
+            color: NIGHT_MIST,
+          }}
+        >
+          صندوق تراز شد · انبار به‌روزرسانی شد · دخل شفاف
+        </div>
+      </div>
+
+      <BottomBanner text="حسابچه؛ بدون ابهام، بدون استرس کسری دخل" color="#10b981" />
+    </MidnightDeskStage>
+  )
+}
+
+// ============================================
+// SCENE 6: DeskCtaScene (40–45s) — CTA & Seamless Loop
+// ============================================
+export function DeskCtaScene({ t, scene }: SceneProps) {
+  const dur = scene.end - scene.start
+  const enter = ease(clamp(progress(t, 0, 0.6), 0, 1))
+  const loopBack = ease(clamp(progress(t, dur - 0.2, dur), 0, 1))
+
+  return (
+    <MidnightDeskStage scene={scene} t={t}>
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          opacity: 1 - loopBack,
+          display: loopBack >= 1 ? 'none' : 'block',
+        }}
+      >
+        <SceneHeader
+          badge="شروع بدون ریسک"
+          badgeColor={LAMP_GOLD}
+          title="حساب روشن، از همین امشب"
+          opacity={enter}
+        />
+
+        {/* CTA Pod (Y: 340..540) */}
         <div
           style={{
             position: 'absolute',
-            bottom: 8,
-            insetInlineStart: '50%',
-            transform: 'translateX(-50%)',
-            width: 96,
-            height: 4,
-            borderRadius: 2,
-            background: 'rgba(231,227,216,0.3)',
+            top: 350,
+            left: 40,
+            right: 40,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 20,
           }}
-        />
-      </div>
+        >
+          <div
+            style={{
+              width: '100%',
+              height: 72,
+              borderRadius: 16,
+              background: 'linear-gradient(135deg, #f59e0b 0%, #10b981 100%)',
+              boxShadow: '0 0 35px rgba(245, 158, 11, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 22,
+              fontWeight: 900,
+              color: '#070a10',
+              cursor: 'pointer',
+            }}
+          >
+            همین امشب رایگان امتحان کن
+          </div>
 
-      <DeskWords
-        t={t}
-        cueAt={1.4}
-        y={130}
-        words={['با', 'یک', 'سوایپ.']}
-        accentWord="سوایپ."
-        size={44}
-      />
-    </MidnightDeskStage>
-  )
-}
-
-// ─── Scene 4 (23–34s): critical-stock alert → green check ────────────────────
-// Panel x=48..492, y=280..700. Rows h=96 at y=320/436/552 (disjoint, gap 20).
-// Word band ends ≤ 210. Codes are B2B generic (per Hard Rule 34 Bans band 5).
-
-export function StockAlertScene({ t, scene }: { t: number; scene: Scene }) {
-  void scene
-  const panelP = pop(t, 0.2, 0.8)
-  const fix = clamp(progress(t, 5.2, 2.6))
-  return (
-    <MidnightDeskStage scene={scene} t={t}>
-      <div
-        style={{
-          position: 'absolute',
-          top: 280,
-          insetInlineStart: 48,
-          width: 444,
-          height: 420,
-          borderRadius: 16,
-          zIndex: 30,
-          opacity: clamp(panelP * 1.6),
-          transform: `translateY(${mix(20, 0, panelP).toFixed(1)}px)`,
-          background: 'rgba(231,227,216,0.05)',
-          border: '1.5px solid rgba(231,227,216,0.18)',
-          boxShadow: '0 22px 48px rgba(0,0,0,0.45)',
-          padding: '18px 16px',
-        }}
-      >
-        {[
-          { code: 'کد ۱۰۱', count: 2, tone: 1 },
-          { code: 'کد ۱۴۲', count: 0, tone: 0 },
-          { code: 'کد ۲۰۳', count: 3, tone: 1 },
-        ].map((row, i) => {
-          const rowP = pop(t, 0.6 + i * 0.8)
-          const fixed = clamp(fix * 1.3 - i * 0.2)
-          const borderColor =
-            row.tone === 0 ? `${ALERT_RED}${fixed > 0.6 ? '66' : 'aa'}` : 'rgba(231,227,216,0.3)'
-          return (
-            <div
-              key={row.code}
-              style={{
-                position: 'absolute',
-                top: 40 + i * 116,
-                insetInlineStart: 16,
-                width: 396,
-                height: 96,
-                borderRadius: 12,
-                opacity: clamp(rowP * 1.5),
-                transform: `translateX(${mix(16, 0, rowP).toFixed(1)}px)`,
-                background:
-                  row.tone === 0
-                    ? `rgba(255,95,95,${(1 - fixed) * 0.1 + 0.04})`
-                    : 'rgba(231,227,216,0.06)',
-                border: `1.5px solid ${borderColor}`,
-                boxShadow: row.tone === 0 && fixed < 0.6 ? '0 0 24px rgba(255,95,95,0.28)' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '0 14px',
-              }}
-            >
-              {/* alert dot / check ring */}
-              <svg viewBox="0 0 24 24" style={{ width: 30, height: 30, flexShrink: 0 }}>
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="9"
-                  fill="none"
-                  stroke={fixed > 0.5 ? OK_GREEN : ALERT_RED}
-                  strokeWidth="2.2"
-                />
-                {fixed > 0.5 ? (
-                  <path
-                    d="M8 12.2 L11 15 L16.4 9.4"
-                    fill="none"
-                    stroke={OK_GREEN}
-                    strokeWidth="2.6"
-                    strokeLinecap="round"
-                  />
-                ) : (
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="3.6"
-                    fill={ALERT_RED}
-                    opacity={0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 4.2 + i))}
-                  />
-                )}
-              </svg>
-              <span
-                dir="rtl"
-                style={{ fontSize: 18, fontWeight: 800, color: NIGHT_MIST, whiteSpace: 'nowrap' }}
-              >
-                {row.code}
-              </span>
-              <span
-                dir="ltr"
-                style={{
-                  fontSize: 22,
-                  fontWeight: 900,
-                  color: fixed > 0.5 ? OK_GREEN : row.tone === 0 ? ALERT_RED : LAMP_GOLD,
-                  fontVariantNumeric: 'tabular-nums',
-                  marginInlineStart: 'auto',
-                  transition: 'color 0.3s',
-                }}
-              >
-                {faNumber(row.count)}
-                <span
-                  dir="rtl"
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: 'rgba(231,227,216,0.6)',
-                    marginInlineStart: 6,
-                  }}
-                >
-                  مانده
-                </span>
-              </span>
-            </div>
-          )
-        })}
-      </div>
-      <DeskWords
-        t={t}
-        cueAt={0.4}
-        y={180}
-        words={['موجودی', 'بحرانی']}
-        accentWord="بحرانی"
-        accentColor={ALERT_RED}
-        size={44}
-      />
-    </MidnightDeskStage>
-  )
-}
-
-// ─── Scene 5 (34–40s): the tiny nod and smile ────────────────────────────────
-
-export function MicroSmileScene({ t, scene }: { t: number; scene: Scene }) {
-  void scene
-  const nod = pop(t, 0.5, 0.8)
-  return (
-    <MidnightDeskStage scene={scene} t={t}>
-      {/* profit badge left */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 470,
-          insetInlineStart: 40,
-          width: 180,
-          height: 96,
-          borderRadius: 14,
-          zIndex: 30,
-          opacity: clamp(pop(t, 1.2) * 1.5),
-          transform: `translateY(${mix(14, 0, nod).toFixed(1)}px)`,
-          background: 'rgba(83,217,138,0.09)',
-          border: `1.5px solid ${OK_GREEN}66`,
-          boxShadow: '0 14px 30px rgba(0,0,0,0.4), 0 0 22px rgba(83,217,138,0.2)',
-          padding: '10px 12px',
-        }}
-      >
-        <div dir="rtl" style={{ fontSize: 15, fontWeight: 800, color: NIGHT_MIST }}>
-          سود امروز
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: TEXT_SLATE,
+              textAlign: 'center',
+              lineHeight: 1.5,
+            }}
+          >
+            نرم‌افزار یکپارچه حسابداری ابری و آفلاین حسابچه
+          </div>
         </div>
-        <DeskRoll t={t} at={1.5} value={475000} size={24} />
-      </div>
-      <HalftoneCharacter
-        t={t}
-        mood="happy"
-        scale={1.15}
-        style={{
-          position: 'absolute',
-          insetInlineStart: 252,
-          top: 396,
-          zIndex: 40,
-          opacity: clamp(nod * 1.5),
-          transform: `translateY(${mix(18, 0, nod).toFixed(1)}px)`,
-        }}
-      />
-      <DeskWords
-        t={t}
-        cueAt={1.0}
-        y={180}
-        words={['دیگه', 'لازم', 'نیست', 'حدس', 'بزنی.']}
-        accentWord="حدس"
-        size={42}
-      />
-      {/* soft desk silhouette at bottom */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 758,
-          insetInlineStart: 60,
-          width: 420,
-          height: 140,
-          borderRadius: 16,
-          background: 'rgba(22,26,35,0.5)',
-          border: '1px solid rgba(231,227,216,0.08)',
-          zIndex: 20,
-        }}
-      />
-    </MidnightDeskStage>
-  )
-}
 
-// ─── Scene 6 (40–45s): brand lockup over the lamp glow ───────────────────────
+        <BottomBanner text="حسابچه · حساب همیشه روشن، دخل همیشه شفاف" color="#fbbf24" />
+      </div>
 
-function DeskCommentBox({
-  t,
-  at,
-  x,
-  lead,
-  tone,
-}: {
-  t: number
-  at: number
-  x: number
-  lead: string
-  tone: 'cyan' | 'purple'
-}) {
-  const p = pop(t, at)
-  const accent = tone === 'cyan' ? '#6fd3ff' : '#c39bf7'
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 668,
-        insetInlineStart: x,
-        width: 230,
-        height: 132,
-        borderRadius: 14,
-        zIndex: 30,
-        opacity: clamp(p * 1.6),
-        transform: `translateY(${mix(18, 0, p).toFixed(1)}px)`,
-        background: 'rgba(231,227,216,0.07)',
-        border: '1.5px solid rgba(231,227,216,0.2)',
-        boxShadow: `0 16px 36px rgba(0,0,0,0.42), 0 0 22px ${accent}22`,
-        padding: '14px 16px',
-      }}
-    >
-      <div dir="rtl" style={{ fontSize: 16, fontWeight: 800, color: NIGHT_MIST }}>
-        {lead}
-      </div>
-      <div
-        dir="rtl"
-        style={{ fontSize: 13, fontWeight: 600, color: 'rgba(231,227,216,0.6)', marginTop: 6 }}
-      >
-        کامنت کنید:
-      </div>
-      <div
-        style={{
-          marginTop: 10,
-          width: 118,
-          height: 42,
-          borderRadius: 21,
-          background: `${accent}26`,
-          border: `1.5px solid ${accent}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: `0 0 18px ${accent}55`,
-        }}
-      >
-        <span dir="rtl" style={{ fontSize: 19, fontWeight: 900, color: accent, lineHeight: 1 }}>
-          {tone === 'cyan' ? 'رایگان' : 'دمو'}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-export function DeskCtaScene({ t, scene }: { t: number; scene: Scene }) {
-  void scene
-  const lock = pop(t, 0.3, 0.8)
-  return (
-    <MidnightDeskStage scene={scene} t={t}>
-      {/* lamp emblem */}
-      <svg
-        viewBox="0 0 540 960"
-        style={{ position: 'absolute', inset: 0, width: 540, height: 960, pointerEvents: 'none' }}
-      >
-        <circle
-          cx="270"
-          cy="252"
-          r={mix(2, 10, lock)}
-          fill={LAMP_GOLD}
-          opacity={clamp(lock * 1.6)}
-          style={{ filter: 'drop-shadow(0 0 14px rgba(255,217,138,0.85))' }}
-        />
-        <circle
-          cx="270"
-          cy="252"
-          r={mix(2, 36, lock)}
-          fill="none"
-          stroke={OK_GREEN}
-          strokeWidth="1.5"
-          opacity={clamp(lock * 1.1)}
-        />
-      </svg>
-      <div
-        dir="rtl"
-        style={{
-          position: 'absolute',
-          top: 322,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          textAlign: 'center',
-          fontSize: 64,
-          fontWeight: 900,
-          color: NIGHT_MIST,
-          textShadow: '0 0 54px rgba(255,217,138,0.35)',
-          opacity: clamp(lock * 1.6),
-          transform: `translateY(${mix(14, 0, lock).toFixed(1)}px)`,
-        }}
-      >
-        حسابچه
-      </div>
-      <div
-        style={{
-          position: 'absolute',
-          top: 418,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          display: 'flex',
-          justifyContent: 'center',
-        }}
-      >
+      {/* Frame 0 Loop Anchor */}
+      {loopBack > 0 && (
         <div
           style={{
-            width: mix(0, 200, lock),
-            height: 5,
-            borderRadius: 4,
-            background: `linear-gradient(90deg, ${LAMP_GOLD}, ${OK_GREEN}, #6fd3ff)`,
-            boxShadow: '0 0 24px rgba(255,217,138,0.55)',
-            opacity: clamp(lock * 1.4),
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: loopBack,
+            pointerEvents: 'none',
           }}
-        />
-      </div>
-      <DeskWords
-        t={t}
-        cueAt={0.9}
-        y={500}
-        words={['حساب', 'روشن', 'از', 'امشب.']}
-        accentWord="امشب."
-        size={40}
-      />
-      <DeskCommentBox t={t} at={1.5} x={28} lead="شروع، همین امشب" tone="cyan" />
-      <DeskCommentBox t={t} at={1.9} x={282} lead="نصب و دمو" tone="purple" />
+        >
+          <div
+            style={{
+              fontSize: 48,
+              fontWeight: 900,
+              color: LAMP_GOLD,
+            }}
+          >
+            ۲۳:۰۰
+          </div>
+        </div>
+      )}
     </MidnightDeskStage>
   )
 }
