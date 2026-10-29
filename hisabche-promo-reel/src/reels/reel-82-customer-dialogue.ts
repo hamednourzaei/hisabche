@@ -1,101 +1,122 @@
 // ============================================
-// Reel 82 — «گفتگوی مشتری و مالک» (two characters, one counter)
+// Reel 82 — «گفتگوی مشتری و مالک» (Customer Dialogue — Bespoke SaaS Cut)
 //
-// The whole film happens across a counter: a customer asks a question she has
-// every right to ask, and the shopkeeper answers out of the product instead of
-// out of a notebook. Two animated characters carry the reel; every number on
-// screen is a number Hisabche actually holds.
+// Optical Counter Telemetry & Zero-Latency Customer Ledger
+// Across-the-counter point-of-sale resolution in under 3 seconds.
 // ============================================
 
-import type { Reel } from '../engine/types'
-import { ctaScene, sequence, total } from './shared'
+import type { Cue, Reel } from '../engine/types'
+import {
+  CounterStandOffScene,
+  DialogueCtaScene,
+  InvoiceDeepDiveScene,
+  SingleSourceCoreScene,
+  SubSecondQueryScene,
+  TrustEquationScene,
+} from '../scenes/customer-dialogue'
+import { sequence, total } from './shared'
 
-const scenes = sequence([
-  {
-    dur: 5,
-    spec: {
-      kind: 'hook',
-      theme: 'obsidian-cinematic',
-      label: 'پای صندوق، ساعت شلوغی',
-      lines: ['مشتری: «چقدر بدهکارم؟»', '[r:مالک: «بگذار دفتر را ببینم…»]'],
-      cards: [
-        { icon: 'user', title: 'مشتری', sub: 'پیگیری نسیه', tone: 'cyan' },
-        { icon: 'store', title: 'مالک', sub: 'دفتر و ماشین‌حساب', tone: 'red' },
-      ],
+const scenes = sequence(
+  [
+    // 1 — Frame-0 Arrest: The Point-of-Sale Stand-Off
+    {
+      dur: 5,
+      spec: {
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: CounterStandOffScene,
+        cues: [
+          { at: 0, kind: 'impact' },
+          { at: 1.2, kind: 'alert' },
+          { at: 2.5, kind: 'whoosh' },
+        ] as Cue[],
+      },
+      vo: 'مشتری پای صندوق می‌پرسد چقدر بدهکار است؛ مالک باید دفتر کاغذی را ورق بزند.',
     },
-    vo: 'مشتری می‌پرسد چقدر بدهکار است. مالک باید دفتر را ببیند.',
-  },
-  {
-    dur: 9,
-    spec: {
-      kind: 'dialogue',
-      theme: 'obsidian-cinematic',
-      title: 'پاسخ در لحظه',
-      turns: [
-        { speaker: 'customer', text: 'حساب نسیهٔ من چقدر مانده؟' },
-        { speaker: 'owner', text: 'یک لحظه…' },
-        { speaker: 'owner', text: '۱۲٬۴۰۰٬۰۰۰ مانده.' },
-      ],
+
+    // 2 — Sub-Second Query: Biometric & NFC Customer Ledger Query
+    {
+      dur: 8,
+      spec: {
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: SubSecondQueryScene,
+        cues: [
+          { at: 0.2, kind: 'whoosh' },
+          { at: 1.4, kind: 'scan' },
+          { at: 3.2, kind: 'tick' },
+          { at: 5.0, kind: 'success' },
+        ] as Cue[],
+      },
+      vo: 'با حسابچه، پاسخ در کمتر از سه ثانیه روی صفحه است: ۴۲ هزار خرید، ۳۱ هزار پرداخت، ۱۱ هزار مانده.',
     },
-    vo: 'مشتری می‌پرسد حساب نسیه‌اش چقدر مانده. مالک با حسابچه در لحظه جواب می‌دهد.',
-  },
-  {
-    dur: 7,
-    spec: {
-      kind: 'versus',
-      theme: 'procedural-spatial',
-      title: 'دفتر کاغذی یا [c:حساب زنده]',
-      left: { label: 'بدون حسابچه', value: 'جستجو در دفتر', tone: 'red' },
-      right: { label: 'با حسابچه', value: 'پاسخ در ۳ ثانیه', tone: 'cyan' },
-      verdict: 'پاسخ سریع، اعتماد می‌سازد',
+
+    // 3 — Historical Deep-Dive: Specific Invoices with Date and Items
+    {
+      dur: 7,
+      spec: {
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: InvoiceDeepDiveScene,
+        cues: [
+          { at: 0.2, kind: 'cameraSwish' },
+          { at: 1.5, kind: 'pop' },
+          { at: 3.0, kind: 'dataFlow' },
+          { at: 5.0, kind: 'chime' },
+        ] as Cue[],
+      },
+      vo: 'مشتری سابقه فاکتور قبلی را می‌خواهد؛ تاریخ، ساعت و ریز اقلام بلافاصله نمایش داده می‌شود.',
     },
-    vo: 'بدون حسابچه جستجو در دفتر؛ با حسابچه پاسخ در سه ثانیه.',
-  },
-  {
-    dur: 8,
-    spec: {
-      kind: 'dialogue',
-      theme: 'obsidian-cinematic',
-      title: 'سابقهٔ خرید',
-      turns: [
-        { speaker: 'customer', text: 'فاکتور قبلی‌ام کی بود؟' },
-        { speaker: 'owner', text: 'فاکتور ۱۰۴۲، سه روز پیش.' },
-        { speaker: 'customer', text: 'همین را می‌خواستم.' },
-      ],
+
+    // 4 — The Trust Equation: Transparent Ledger vs Awkward Guesswork
+    {
+      dur: 7,
+      spec: {
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: TrustEquationScene,
+        cues: [
+          { at: 0.2, kind: 'whoosh' },
+          { at: 1.5, kind: 'alert' },
+          { at: 3.5, kind: 'successResolution' },
+        ] as Cue[],
+      },
+      vo: 'شفافیت در عددها، اعتماد می‌سازد؛ فاکتور برای مشتری پیامک می‌شود و حساب بدون چانه‌زنی تسویه می‌گردد.',
     },
-    vo: 'مشتری سابقهٔ فاکتور را می‌پرسد و مالک همان لحظه نشان می‌دهد.',
-  },
-  {
-    dur: 8,
-    spec: {
-      kind: 'ledger',
-      theme: 'midnight-gold',
-      title: 'صورت‌حساب مشتری',
-      name: 'مشتری ۱۰۴۲',
-      lines: [
-        { label: 'خرید', amount: '۴۲٬۰۰۰' },
-        { label: 'پرداخت', amount: '۳۱٬۰۰۰' },
-      ],
-      balanceFrom: 0,
-      balanceTo: 11000,
-      unit: '',
-      footer: 'ماندهٔ نهایی، بدون حدس',
+
+    // 5 — Single Source Core: The Unified Retail Cloud
+    {
+      dur: 6,
+      spec: {
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: SingleSourceCoreScene,
+        cues: [
+          { at: 0.2, kind: 'titleHit' },
+          { at: 1.5, kind: 'whoosh' },
+          { at: 2.8, kind: 'bigReveal' },
+        ] as Cue[],
+      },
+      vo: 'یک دفتر واحد ابری برای فروشنده و خریدار؛ دیگر نگران حساب‌های معوق و نسیه نباشید.',
     },
-    vo: 'خرید چهل‌ودو هزار، پرداخت سی‌ویک هزار، مانده یازده هزار.',
-  },
-  {
-    dur: 4,
-    spec: {
-      kind: 'kinetic',
-      theme: 'kinetic-manifesto',
-      headline: 'پاسخ در لحظه',
-      words: ['پاسخ', 'در', 'لحظه،', 'اعتماد', 'می‌سازد.'],
-      tone: 'cyan',
+
+    // 6 — High-Impact Brand Monolith & CTA
+    {
+      dur: 7,
+      spec: {
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: DialogueCtaScene,
+        cues: [
+          { at: 0.2, kind: 'bigReveal' },
+          { at: 1.6, kind: 'ctaResolution' },
+        ] as Cue[],
+      },
+      vo: 'حسابچه؛ نرم‌افزار ابری حسابداری و فروشگاهی. همین امروز دوره رایگان را شروع کنید.',
     },
-    vo: 'پاسخ در لحظه، اعتماد می‌سازد.',
-  },
-  ctaScene(8),
-])
+  ],
+  { noZoom: true },
+)
 
 export const reel82: Reel = {
   id: '82',
@@ -104,4 +125,5 @@ export const reel82: Reel = {
   scenes,
   theme: 'obsidian-cinematic',
   musicMood: 'uplifting',
+  noZoom: true,
 }

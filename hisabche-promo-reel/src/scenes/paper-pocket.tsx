@@ -1,9 +1,11 @@
 // ============================================
-// Paper-Pocket art direction (reel 84) — a light, print-like stage:
-// warm paper background, halftone black-and-white character, royal-blue
-// accent, mono corner labels with a running timecode, neo-brutalist white
-// cards with hard offset shadows. Inspired by the Pocketsflow reference:
-// frame-0 arrest, one focal element per beat, motion carries the story.
+// Paper-Pocket Art Direction (Reel 84) — World-Class SaaS Motion
+// Tactile Dark Micro-Ledger & Titanium Pocket Cockpit
+//
+// Palette: Dark Carbon Obsidian (#08090f), Electric Royal Blue (#2962FF),
+// Mint Emerald (#00E676), Crimson Alert (#FF3D00), Amber (#FFB800)
+// High-depth 3D perspective, zero hold-frame overlap,
+// strict physical container-local coordinates, 100% dark studio theme.
 // ============================================
 
 import { useId } from 'react'
@@ -12,10 +14,17 @@ import type { Scene } from '../engine/types'
 import { clamp, ease, mix, progress, spring } from '../engine/anim'
 import { faNumber } from '../ui/motion-primitives'
 
-export const PAPER = '#f2efe6'
-export const INK = '#16150f'
-export const BLUE = '#1f4dff'
-export const RED = '#e5432c'
+const DARK = '#08090f'
+export const BLUE = '#2962FF'
+const EMERALD = '#00E676'
+export const RED = '#FF3D00'
+const AMBER = '#FFB800'
+const WHITE = '#ffffff'
+const BORDER_GLASS = 'rgba(255, 255, 255, 0.08)'
+
+// Backward compatibility exports
+export const PAPER = DARK
+export const INK = WHITE
 
 const MONO: CSSProperties = {
   fontFamily: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
@@ -24,9 +33,9 @@ const MONO: CSSProperties = {
 
 export type SceneComponentProps = { t: number; scene: Scene }
 
-/** Spring pop-in: 0 before `at`, overshoots, settles at 1. */
+/** Spring pop helper */
 const pop = (t: number, at: number, dur = 0.55): number =>
-  spring(clamp(progress(t, at, at + dur), 0, 1) * 1.15)
+  spring(clamp(progress(t, at, at + dur), 0, 1) * 1.12)
 
 function pad2(n: number): string {
   return String(n).padStart(2, '0')
@@ -38,14 +47,13 @@ function Timecode({ t }: { t: number }) {
   const mm = Math.floor(frames / (30 * 60))
   const ff = frames % 30
   return (
-    <span>
+    <span style={MONO}>
       {pad2(mm)}:{pad2(ss)}:{pad2(ff)}
     </span>
   )
 }
 
-/** The opaque paper canvas: covers the dark engine backdrop, carries the
- *  mono HUD (scene label, running reel timecode, wordmark). */
+/** Root Dark Paper Stage: strictly LTR pinned with dark micro-texture */
 export function PaperStage({
   scene,
   t,
@@ -62,111 +70,78 @@ export function PaperStage({
       style={{
         position: 'absolute',
         inset: 0,
-        background: PAPER,
+        background: 'radial-gradient(circle at 50% 20%, #111526 0%, #08090f 70%, #030406 100%)',
         overflow: 'hidden',
-        color: INK,
+        color: '#ffffff',
+        direction: 'ltr',
       }}
     >
-      {/* paper grain */}
+      {/* Dark micro-grid texture */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          opacity: 0.055,
-          backgroundImage: `radial-gradient(${INK} 0.7px, transparent 0.7px)`,
-          backgroundSize: '7px 7px',
+          opacity: 0.04,
+          backgroundImage:
+            'linear-gradient(rgba(41, 98, 255, 0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(41, 98, 255, 0.4) 1px, transparent 1px)',
+          backgroundSize: '36px 36px',
         }}
       />
-      {/* soft vignette */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: `radial-gradient(120% 90% at 50% 45%, transparent 62%, rgba(22,21,15,0.10))`,
-        }}
-      />
-      {/* HUD */}
+
+      {/* Top HUD */}
       <div
         style={{
           ...MONO,
           position: 'absolute',
-          top: 26,
-          insetInlineStart: 28,
-          fontSize: 15,
-          letterSpacing: '0.08em',
-          opacity: 0.72,
+          top: 24,
+          left: 28,
+          fontSize: 12,
+          letterSpacing: '0.12em',
+          color: BLUE,
+          opacity: 0.85,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
         }}
       >
+        <span
+          style={{
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            background: BLUE,
+            boxShadow: `0 0 10px ${BLUE}`,
+          }}
+        />
         {label}
       </div>
       <div
         style={{
           ...MONO,
           position: 'absolute',
-          top: 26,
-          insetInlineEnd: 28,
-          fontSize: 15,
-          opacity: 0.72,
+          top: 24,
+          right: 28,
+          fontSize: 12,
+          color: 'rgba(255, 255, 255, 0.5)',
           fontVariantNumeric: 'tabular-nums',
         }}
       >
         <Timecode t={scene.start + t} />
       </div>
-      <div
-        style={{
-          ...MONO,
-          position: 'absolute',
-          bottom: 26,
-          insetInlineEnd: 28,
-          fontSize: 13,
-          letterSpacing: '0.18em',
-          opacity: 0.5,
-        }}
-      >
-        HISABCHE
-      </div>
+
       {children}
     </div>
   )
 }
 
-/** Slow virtual-camera push-in / drift applied inside a scene. */
-function Cam({
-  t,
-  from = 1.05,
-  to = 1,
-  panY = 0,
-  children,
-}: {
-  t: number
-  from?: number
-  to?: number
-  panY?: number
-  children: ReactNode
-}) {
-  const p = ease(clamp(progress(t, 0, 6)))
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        transform: `scale(${mix(from, to, p).toFixed(4)}) translateY(${mix(panY, 0, p).toFixed(1)}px)`,
-        transformOrigin: '50% 50%',
-      }}
-    >
-      {children}
-    </div>
-  )
-}
+type Word = { text: string; accent?: boolean; color?: string }
 
-type Word = { text: string; accent?: boolean }
-
-/** Staggered word-by-word headline entrance. */
+/** Clean Staggered Headline in Safe Zone */
 export function Words({
   t,
   at,
   words,
-  size = 46,
+  size = 42,
   top,
 }: {
   t: number
@@ -177,35 +152,39 @@ export function Words({
 }) {
   return (
     <div
+      dir="rtl"
       style={{
         position: 'absolute',
         top,
-        insetInlineStart: 0,
-        insetInlineEnd: 0,
+        left: 0,
+        right: 0,
         display: 'flex',
         flexWrap: 'wrap',
         gap: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: '0 34px',
+        padding: '0 28px',
+        zIndex: 10,
       }}
     >
       {words.map((w, i) => {
-        const p = pop(t, at + i * 0.09)
+        const p = pop(t, at + i * 0.1)
+        const accentBg = w.color || BLUE
         return (
           <span
             key={`${w.text}-${i}`}
             style={{
               fontSize: size,
               fontWeight: 900,
-              lineHeight: 1.28,
-              transform: `translateY(${mix(26, 0, p).toFixed(1)}px) scale(${mix(0.86, 1, p).toFixed(3)})`,
-              opacity: clamp(p * 1.4),
-              background: w.accent ? BLUE : 'transparent',
-              color: w.accent ? PAPER : INK,
-              padding: w.accent ? '2px 16px' : 0,
-              borderRadius: w.accent ? 12 : 0,
-              boxShadow: w.accent ? `5px 5px 0 ${INK}` : 'none',
+              lineHeight: 1.25,
+              transform: `translateY(${mix(20, 0, p).toFixed(1)}px) scale(${mix(0.85, 1, p).toFixed(3)})`,
+              opacity: clamp(p * 1.5),
+              background: w.accent ? accentBg : 'transparent',
+              color: w.accent ? '#ffffff' : '#ffffff',
+              padding: w.accent ? '4px 18px' : 0,
+              borderRadius: w.accent ? 14 : 0,
+              boxShadow: w.accent ? `0 0 25px ${accentBg}66` : 'none',
+              border: w.accent ? `1px solid rgba(255,255,255,0.3)` : 'none',
             }}
           >
             {w.text}
@@ -216,40 +195,13 @@ export function Words({
   )
 }
 
-/** Neo-brutalist card: white paper, hard ink border, hard offset shadow. */
-function BrutCard({ children, style }: { children: ReactNode; style?: CSSProperties }) {
-  return (
-    <div
-      style={{
-        background: '#ffffff',
-        border: `3px solid ${INK}`,
-        borderRadius: 18,
-        boxShadow: `6px 6px 0 ${INK}`,
-        padding: '14px 18px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 4,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-// ─── Halftone character (World-Class SaaS Production Persona) ────────────
-
 export type Mood = 'worried' | 'dizzy' | 'calm' | 'happy'
 
 /**
- * World-Class SaaS Production Persona (Stripe/Linear/Apple fintech caliber):
- * Volumetric 3D gradients, specular rims, aerodynamic tech apparel,
- * expressive eyelid dynamics, micro-status badges (amber alert / emerald check),
- * and high-craft OLED smart device.
+ * World-Class SaaS Production Persona (Linear/Stripe fintech caliber)
+ * Strictly vector gradients, no comic dots.
  */
-export function HalftoneCharacter({
+export function SaaSProductionPersona({
   t,
   mood,
   phone = false,
@@ -263,10 +215,10 @@ export function HalftoneCharacter({
   style?: CSSProperties
 }) {
   const uid = useId().replace(/:/g, '')
-  const blinkPhase = t % 3.4
-  const eyeRy = blinkPhase < 0.14 ? 1.0 : 6.5
-  const breathe = Math.sin(t * 2.2) * 2.2
-  const dizzyShake = mood === 'dizzy' ? Math.sin(t * 14) * 2.5 : 0
+  const blinkPhase = t % 3.6
+  const eyeRy = blinkPhase < 0.12 ? 1.0 : 6.5
+  const breathe = Math.sin(t * 2.2) * 2.5
+  const dizzyShake = mood === 'dizzy' ? Math.sin(t * 16) * 3 : 0
   const mouth =
     mood === 'happy'
       ? 'M104,118 Q120,132 136,118'
@@ -282,56 +234,31 @@ export function HalftoneCharacter({
       style={{
         display: 'block',
         overflow: 'visible',
-        filter: 'drop-shadow(0 14px 28px rgba(0,0,0,0.45))',
+        filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.8))',
         ...style,
       }}
       aria-hidden
     >
       <defs>
-        {/* Head 3D volumetric radial gradient */}
-        <radialGradient id={`head-${uid}`} cx="42%" cy="36%" r="58%">
-          <stop offset="0%" stopColor="#3b4254" />
-          <stop offset="50%" stopColor="#1e2330" />
-          <stop offset="100%" stopColor="#0d1017" />
-        </radialGradient>
-
-        {/* Torso obsidian tech jacket gradient */}
-        <linearGradient id={`torso-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#222838" />
-          <stop offset="40%" stopColor="#151924" />
+        <radialGradient id={`head-${uid}`} cx="45%" cy="35%" r="60%">
+          <stop offset="0%" stopColor="#2c3345" />
+          <stop offset="60%" stopColor="#161a25" />
           <stop offset="100%" stopColor="#0a0d14" />
+        </radialGradient>
+        <linearGradient id={`torso-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#1e2436" />
+          <stop offset="50%" stopColor="#131722" />
+          <stop offset="100%" stopColor="#080a10" />
         </linearGradient>
-
-        {/* Specular rim lighting */}
         <linearGradient id={`rim-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.45)" />
-          <stop offset="45%" stopColor="rgba(99,102,241,0.25)" />
-          <stop offset="100%" stopColor="rgba(6,182,212,0.05)" />
+          <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
+          <stop offset="50%" stopColor="rgba(41, 98, 255, 0.3)" />
+          <stop offset="100%" stopColor="rgba(0, 230, 118, 0.1)" />
         </linearGradient>
-
-        {/* Cyber zip / accent glow */}
-        <linearGradient id={`zip-${uid}`} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#06b6d4" />
-          <stop offset="100%" stopColor="#3b82f6" />
-        </linearGradient>
-
-        {/* Floating status badge glow */}
-        <filter id={`badgeGlow-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow
-            dx="0"
-            dy="2"
-            stdDeviation="4"
-            floodColor={mood === 'happy' ? '#10b981' : '#f59e0b'}
-            floodOpacity="0.4"
-          />
-        </filter>
       </defs>
 
       <g transform={`translate(${dizzyShake.toFixed(2)} ${breathe.toFixed(2)})`}>
-        {/* Ambient shadow underneath bust */}
-        <ellipse cx="120" cy="286" rx="68" ry="12" fill="rgba(0,0,0,0.5)" filter="blur(6px)" />
-
-        {/* Torso / Tech Hoodie with ergonomic curves */}
+        {/* Torso */}
         <path
           d="M56,290 C56,200 78,154 120,154 C162,154 184,200 184,290 Z"
           fill={`url(#torso-${uid})`}
@@ -339,38 +266,10 @@ export function HalftoneCharacter({
           strokeWidth="1.5"
         />
 
-        {/* Shoulder seam & interior depth */}
-        <path
-          d="M74,290 C76,212 90,178 120,178 C150,178 164,212 166,290"
-          fill="none"
-          stroke="rgba(255,255,255,0.08)"
-          strokeWidth="1.2"
-        />
-
-        {/* Precision Cyber Collar / Zipper track */}
-        <path
-          d="M102,156 L120,184 L138,156"
-          fill="none"
-          stroke={`url(#zip-${uid})`}
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <circle cx="120" cy="186" r="3" fill="#06b6d4" />
-
         {/* Neck */}
-        <rect
-          x="108"
-          y="132"
-          width="24"
-          height="26"
-          rx="8"
-          fill="#141822"
-          stroke="rgba(255,255,255,0.08)"
-          strokeWidth="1"
-        />
+        <rect x="108" y="132" width="24" height="26" rx="8" fill="#131722" />
 
-        {/* Head — 3D Volumetric Sphere */}
+        {/* Head */}
         <circle
           cx="120"
           cy="96"
@@ -380,215 +279,104 @@ export function HalftoneCharacter({
           strokeWidth="1.5"
         />
 
-        {/* Subtle Specular Rim Arch (Apple glassmorphism highlight) */}
+        {/* Specular Rim */}
         <path
           d="M84,74 A48,48 0 0,1 156,74"
           fill="none"
-          stroke="rgba(255,255,255,0.42)"
+          stroke="rgba(255,255,255,0.4)"
           strokeWidth="2.5"
           strokeLinecap="round"
         />
 
-        {/* Sleek Modern Vector Hair / Cap sculpt */}
+        {/* Cap / Modern hair contour */}
         <path
           d="M72,92 C72,66 92,50 120,50 C148,50 168,66 168,92 C162,76 146,62 120,62 C94,62 78,76 72,92 Z"
           fill="#0c0e14"
-          stroke="rgba(255,255,255,0.12)"
-          strokeWidth="1"
         />
 
-        {/* Eyes — High-craft vector almond pupils with glint */}
+        {/* Eyes */}
         <g>
           <ellipse cx="104" cy="94" rx="5" ry={eyeRy} fill="#ffffff" />
           <ellipse cx="136" cy="94" rx="5" ry={eyeRy} fill="#ffffff" />
           {eyeRy > 3 && (
             <>
-              <circle cx="105" cy="93" r="2.2" fill="#06b6d4" />
-              <circle cx="137" cy="93" r="2.2" fill="#06b6d4" />
-              <circle cx="106" cy="92" r="0.8" fill="#ffffff" />
-              <circle cx="138" cy="92" r="0.8" fill="#ffffff" />
+              <circle cx="105" cy="93" r="2.2" fill={BLUE} />
+              <circle cx="137" cy="93" r="2.2" fill={BLUE} />
             </>
           )}
         </g>
 
-        {/* Eyebrows */}
-        {mood === 'worried' || mood === 'dizzy' ? (
-          <>
-            <path
-              d="M92,78 Q103,72 112,80"
-              fill="none"
-              stroke="#e2e8f0"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            />
-            <path
-              d="M148,78 Q137,72 128,80"
-              fill="none"
-              stroke="#e2e8f0"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            />
-          </>
-        ) : (
-          <>
-            <path
-              d="M92,79 Q103,75 112,78"
-              fill="none"
-              stroke="#e2e8f0"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            />
-            <path
-              d="M148,79 Q137,75 128,78"
-              fill="none"
-              stroke="#e2e8f0"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            />
-          </>
-        )}
-
         {/* Mouth */}
         <path d={mouth} fill="none" stroke="#e2e8f0" strokeWidth="2.5" strokeLinecap="round" />
 
-        {/* High-End Micro-Status Badge (replaces cheap comic sweat drop) */}
-        {(mood === 'worried' || mood === 'dizzy') && (
-          <g transform="translate(150 42)" filter={`url(#badgeGlow-${uid})`}>
+        {/* Micro-Status Telemetry Pin */}
+        {mood === 'worried' && (
+          <g transform="translate(152 44)">
             <rect
               x="0"
               y="0"
-              width="46"
-              height="22"
-              rx="11"
-              fill="rgba(245,158,11,0.22)"
-              stroke="#f59e0b"
+              width="44"
+              height="20"
+              rx="10"
+              fill="rgba(255, 61, 0, 0.2)"
+              stroke={RED}
               strokeWidth="1.2"
             />
-            <circle cx="10" cy="11" r="3" fill="#f59e0b">
-              <animate
-                attributeName="opacity"
-                values="1;0.4;1"
-                dur="1.2s"
-                repeatCount="indefinite"
-              />
-            </circle>
+            <circle cx="10" cy="10" r="3" fill={RED} />
             <path
-              d="M22,7 L26,15 L32,7"
+              d="M22,6 L26,14 L32,6"
               fill="none"
-              stroke="#f59e0b"
+              stroke={RED}
               strokeWidth="1.5"
               strokeLinecap="round"
-              strokeLinejoin="round"
             />
           </g>
         )}
-
         {mood === 'happy' && (
-          <g transform="translate(150 42)" filter={`url(#badgeGlow-${uid})`}>
+          <g transform="translate(152 44)">
             <rect
               x="0"
               y="0"
-              width="46"
-              height="22"
-              rx="11"
-              fill="rgba(16,185,129,0.22)"
-              stroke="#10b981"
+              width="44"
+              height="20"
+              rx="10"
+              fill="rgba(0, 230, 118, 0.2)"
+              stroke={EMERALD}
               strokeWidth="1.2"
             />
-            <circle cx="10" cy="11" r="3" fill="#10b981" />
+            <circle cx="10" cy="10" r="3" fill={EMERALD} />
             <path
-              d="M22,11 L26,15 L34,7"
+              d="M22,10 L26,14 L32,7"
               fill="none"
-              stroke="#10b981"
+              stroke={EMERALD}
               strokeWidth="2"
               strokeLinecap="round"
-              strokeLinejoin="round"
             />
           </g>
         )}
 
-        {/* Orbiting data rings for dizzy state */}
-        {mood === 'dizzy' && (
-          <g transform="translate(120 96)">
-            <ellipse
-              rx="58"
-              ry="18"
-              fill="none"
-              stroke="rgba(6,182,212,0.4)"
-              strokeWidth="1.2"
-              strokeDasharray="6 8"
-              transform={`rotate(${(t * 40) % 360})`}
-            />
-            <ellipse
-              rx="54"
-              ry="16"
-              fill="none"
-              stroke="rgba(99,102,241,0.3)"
-              strokeWidth="1.2"
-              strokeDasharray="4 6"
-              transform={`rotate(${(-t * 35) % 360})`}
-            />
-          </g>
-        )}
-
-        {/* World-Class OLED Smartphone Mockup */}
+        {/* OLED Handheld Phone Mockup */}
         {phone && (
-          <g transform="translate(162 108)">
-            {/* Forearm angled upwards */}
-            <path
-              d="M-4,106 C12,88 20,68 20,44"
-              fill="none"
-              stroke={`url(#torso-${uid})`}
-              strokeWidth="16"
-              strokeLinecap="round"
-            />
-            {/* Titanium Smartphone Chasis */}
+          <g transform="translate(160 110)">
             <rect
               x="6"
-              y="-10"
+              y="-8"
               width="44"
-              height="76"
+              height="74"
               rx="10"
               fill="#080a10"
               stroke="rgba(255,255,255,0.3)"
-              strokeWidth="2"
+              strokeWidth="1.5"
             />
-            {/* Screen bezel */}
-            <rect x="9" y="-7" width="38" height="70" rx="7" fill="#0c101a" />
-            {/* Notch / Dynamic Island */}
-            <rect x="23" y="-5" width="10" height="3" rx="1.5" fill="rgba(255,255,255,0.4)" />
-            {/* Micro Live Fintech Chart on Screen */}
+            <rect x="9" y="-5" width="38" height="68" rx="7" fill="#0c101a" />
             <path
-              d="M13,38 L21,30 L27,34 L35,22 L41,26"
+              d="M14,36 L21,28 L27,32 L35,20 L40,24"
               fill="none"
-              stroke="#06b6d4"
+              stroke={BLUE}
               strokeWidth="2"
               strokeLinecap="round"
-              strokeLinejoin="round"
             />
-            <circle cx="41" cy="26" r="2.5" fill="#10b981" />
-            {/* Micro data cards */}
-            <rect x="13" y="2" width="24" height="4" rx="2" fill="rgba(255,255,255,0.3)" />
-            <rect x="13" y="10" width="16" height="3" rx="1.5" fill="rgba(255,255,255,0.15)" />
-            <rect
-              x="13"
-              y="48"
-              width="30"
-              height="8"
-              rx="3"
-              fill="rgba(6,182,212,0.18)"
-              stroke="#06b6d4"
-              strokeWidth="0.8"
-            />
-            {/* Hand thumb wrap */}
-            <circle
-              cx="6"
-              cy="30"
-              r="5"
-              fill="#1e2330"
-              stroke="rgba(255,255,255,0.1)"
-              strokeWidth="1"
-            />
+            <circle cx="40" cy="24" r="2.5" fill={EMERALD} />
           </g>
         )}
       </g>
@@ -596,327 +384,563 @@ export function HalftoneCharacter({
   )
 }
 
-export const SaaSProductionPersona = HalftoneCharacter
+export const HalftoneCharacter = SaaSProductionPersona
 
-// ─── Scene 1 — hook: frame-0 arrest ─────────────────────────────────────
+// ─── Scene 1 — Hook: Frame-0 Arrest ─────────────────────────────────────
 
 export function PaperHookScene({ t, scene }: SceneComponentProps) {
   const q = pop(t, 0.05)
+  const ledgerP = pop(t, 0.3)
+
   return (
-    <PaperStage scene={scene} t={t} label="// 01 — شروع">
-      <Cam t={t} from={1.06} to={1}>
-        {/* colossal question mark behind the character */}
+    <PaperStage scene={scene} t={t} label="// 01 · توقف در دفتر دستی">
+      {/* Background Volumetric Watermark */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 320,
+          left: '50%',
+          transform: `translate(-50%, -50%) scale(${mix(0.7, 1, q).toFixed(3)})`,
+          fontSize: 400,
+          fontWeight: 900,
+          color: BLUE,
+          opacity: 0.07,
+          userSelect: 'none',
+        }}
+      >
+        ?
+      </div>
+
+      <Words
+        t={t}
+        at={0.15}
+        top={140}
+        words={[{ text: 'دفترت' }, { text: 'هنوز' }, { text: 'دستیه؟', accent: true, color: BLUE }]}
+        size={50}
+      />
+
+      {/* Massive Dark Embossed Ledger Object (Guaranteed safe center y: 320..540) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 320,
+          left: '50%',
+          width: 320,
+          height: 220,
+          marginLeft: -160,
+          background: 'linear-gradient(145deg, #161b2b, #0d101a)',
+          borderRadius: 24,
+          border: `2px solid ${RED}`,
+          boxShadow: `0 30px 80px rgba(0,0,0,0.8), 0 0 35px ${RED}33`,
+          padding: 24,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          transform: `scale(${mix(0.8, 1, ledgerP).toFixed(3)})`,
+          opacity: clamp(ledgerP * 1.5),
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span
+            style={{
+              ...MONO,
+              fontSize: 12,
+              background: `${RED}22`,
+              color: RED,
+              border: `1px solid ${RED}`,
+              padding: '3px 10px',
+              borderRadius: 6,
+              fontWeight: 800,
+            }}
+          >
+            MANUAL LEDGER
+          </span>
+          <span dir="rtl" style={{ fontSize: 16, fontWeight: 900, color: '#ffffff' }}>
+            دفتر کاغذی مغازه
+          </span>
+        </div>
+
+        {/* Fraying manual lines */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, opacity: 0.5 }}>
+          <div style={{ height: 8, width: '85%', background: '#ffffff', borderRadius: 4 }} />
+          <div style={{ height: 8, width: '60%', background: '#ffffff', borderRadius: 4 }} />
+          <div style={{ height: 8, width: '75%', background: '#ffffff', borderRadius: 4 }} />
+        </div>
+
         <div
+          dir="rtl"
           style={{
-            position: 'absolute',
-            top: 300,
-            insetInlineStart: 0,
-            insetInlineEnd: 0,
+            background: 'rgba(255, 61, 0, 0.15)',
+            border: `1px dashed ${RED}`,
+            borderRadius: 12,
+            padding: '8px 14px',
+            fontSize: 13,
+            fontWeight: 800,
+            color: RED,
             textAlign: 'center',
-            fontSize: 430,
-            fontWeight: 900,
-            lineHeight: 1,
-            color: BLUE,
-            opacity: 0.13,
-            transform: `scale(${mix(0.6, 1, q).toFixed(3)}) rotate(${mix(-8, 0, q).toFixed(1)}deg)`,
           }}
         >
-          ?
+          خطای مغایرت و محاسبه دستی
         </div>
-        <Words
-          t={t}
-          at={0.15}
-          top={168}
-          words={[{ text: 'دفترت' }, { text: 'هنوز' }, { text: 'دستیه؟', accent: true }]}
-          size={52}
-        />
-        <HalftoneCharacter
-          t={t}
-          mood="worried"
-          scale={1.35}
-          style={{
-            position: 'absolute',
-            bottom: 96,
-            insetInlineStart: 0,
-            insetInlineEnd: 0,
-            margin: '0 auto',
-            transform: `scale(${mix(0.7, 1, pop(t, 0.1)).toFixed(3)})`,
-          }}
-        />
-      </Cam>
+      </div>
+
+      {/* Modern SaaS Persona below (safe y: 580..860) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 570,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <SaaSProductionPersona t={t} mood="worried" scale={0.95} />
+      </div>
     </PaperStage>
   )
 }
 
-// ─── Scene 2 — chaos: four tools, four truths ───────────────────────────
+// ─── Scene 2 — Chaos: Four Fragmented Truths ────────────────────────────
 
 const CHAOS_TOOLS = [
-  { text: 'اکسل', dx: -150, dy: 330, rot: -9 },
-  { text: 'دفتر', dx: 150, dy: 300, rot: 8 },
-  { text: 'ماشین‌حساب', dx: -140, dy: 610, rot: 6 },
-  { text: 'پیامک', dx: 145, dy: 640, rot: -7 },
+  { text: 'فایل اکسل', num: 380000, color: AMBER, x: 36, y: 220 },
+  { text: 'دفتر کاغذی', num: 420000, color: BLUE, x: 284, y: 220 },
+  { text: 'ماشین‌حساب', num: 415000, color: RED, x: 36, y: 400 },
+  { text: 'پیامک بانک', num: 405000, color: '#00B4FF', x: 284, y: 400 },
 ]
 
 export function PaperChaosScene({ t, scene }: SceneComponentProps) {
+  const centerWarningP = pop(t, 1.2)
+
   return (
-    <PaperStage scene={scene} t={t} label="// 02 — آشفتگی">
-      <Cam t={t} from={1} to={1.05}>
-        <Words
-          t={t}
-          at={0.1}
-          top={148}
-          words={[{ text: 'هرکدام' }, { text: 'عددی' }, { text: 'می‌گویند', accent: true }]}
-          size={44}
-        />
-        {CHAOS_TOOLS.map((tool, i) => {
-          const p = pop(t, 0.35 + i * 0.14)
-          const jitter = Math.sin(t * 9 + i * 1.7) * 3
-          const sway = Math.sin(t * 1.4 + i) * 5
-          return (
-            <BrutCard
-              key={tool.text}
+    <PaperStage scene={scene} t={t} label="// 02 · چهار عدد متفاوت">
+      <Words
+        t={t}
+        at={0.1}
+        top={130}
+        words={[
+          { text: 'هرکدام' },
+          { text: 'عددی' },
+          { text: 'می‌گویند!', accent: true, color: RED },
+        ]}
+        size={44}
+      />
+
+      {/* Disjoint 2x2 Grid (Safe coordinate bands: x 36..256 and 284..504; y 220..380 and 400..560) */}
+      {CHAOS_TOOLS.map((tool, i) => {
+        const p = pop(t, 0.3 + i * 0.12)
+        const count = mix(0, tool.num, ease(clamp(progress(t, 0.4 + i * 0.12, 1.6))))
+        return (
+          <div
+            key={tool.text}
+            style={{
+              position: 'absolute',
+              top: tool.y,
+              left: tool.x,
+              width: 220,
+              height: 154,
+              background: 'linear-gradient(145deg, #131724, #0b0e16)',
+              border: `1.5px solid ${tool.color}`,
+              borderRadius: 20,
+              boxShadow: `0 15px 40px rgba(0,0,0,0.7), 0 0 20px ${tool.color}22`,
+              padding: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              opacity: clamp(p * 1.5),
+              transform: `scale(${mix(0.85, 1, p).toFixed(3)})`,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: tool.color,
+                  boxShadow: `0 0 10px ${tool.color}`,
+                }}
+              />
+              <span dir="rtl" style={{ fontSize: 14, fontWeight: 900, color: '#ffffff' }}>
+                {tool.text}
+              </span>
+            </div>
+
+            <div
               style={{
-                position: 'absolute',
-                top: tool.dy,
-                insetInlineStart: `calc(50% + ${tool.dx}px)`,
-                transform: `translate(-50%, -50%) rotate(${tool.rot + jitter * 0.6}deg) translate(${sway}px, ${jitter}px) scale(${mix(0.4, 1, p).toFixed(3)})`,
-                opacity: clamp(p * 1.5),
-                width: tool.text.length > 6 ? 172 : 132,
+                ...MONO,
+                fontSize: 26,
+                fontWeight: 900,
+                color: tool.color,
+                textAlign: 'right',
+                fontVariantNumeric: 'tabular-nums',
               }}
             >
-              <span style={{ fontSize: 24, fontWeight: 800 }}>{tool.text}</span>
-              {i === 0 && (
-                <span
-                  style={{
-                    ...MONO,
-                    fontSize: 16,
-                    fontWeight: 800,
-                    color: '#ffffff',
-                    background: RED,
-                    borderRadius: 8,
-                    padding: '1px 9px',
-                    marginTop: 4,
-                  }}
-                >
-                  !
-                </span>
-              )}
-            </BrutCard>
-          )
-        })}
-        <HalftoneCharacter
-          t={t}
-          mood="dizzy"
-          scale={0.92}
+              {faNumber(Math.round(count))}
+            </div>
+
+            <div
+              dir="rtl"
+              style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.45)' }}
+            >
+              رقم گزارش شده در پایان روز
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Center Discrepancy Pill (y: 600..710) */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 600,
+          left: 40,
+          right: 40,
+          background: 'rgba(255, 61, 0, 0.12)',
+          border: `1.5px solid ${RED}`,
+          borderRadius: 20,
+          padding: '16px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          boxShadow: `0 20px 50px rgba(0,0,0,0.8), 0 0 30px ${RED}33`,
+          opacity: clamp(centerWarningP * 1.5),
+          transform: `scale(${mix(0.85, 1, centerWarningP).toFixed(3)})`,
+        }}
+      >
+        <div
           style={{
-            position: 'absolute',
-            top: 400,
-            insetInlineStart: 0,
-            insetInlineEnd: 0,
-            margin: '0 auto',
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            background: RED,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#ffffff',
+            fontWeight: 900,
+            fontSize: 20,
           }}
-        />
-      </Cam>
+        >
+          !
+        </div>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 900, color: '#ffffff' }}>
+            اختلاف حساب غیرقابل ردیابی
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>
+            کدام عدد سود واقعی شماست؟ هیچ‌کس نمی‌داند!
+          </div>
+        </div>
+      </div>
     </PaperStage>
   )
 }
 
-// ─── Scene 3 — morph: four cards become one ─────────────────────────────
+// ─── Scene 3 — Morph: Four Cards Become One Ledger ──────────────────────
 
 export function PaperMorphScene({ t, scene }: SceneComponentProps) {
-  const fly = ease(clamp(progress(t, 0.4, 1.9)))
-  const cardP = pop(t, 2.1, 0.6)
+  const morphP = ease(clamp(progress(t, 0.4, 2.0)))
+  const unifiedP = pop(t, 2.0, 0.6)
+
   return (
-    <PaperStage scene={scene} t={t} label="// 03 — اتحاد">
+    <PaperStage scene={scene} t={t} label="// 03 · تجمیع در یک دفتر">
       <Words
         t={t}
         at={0.1}
-        top={158}
-        words={[{ text: 'همه' }, { text: 'در' }, { text: 'یک‌جا', accent: true }]}
+        top={140}
+        words={[{ text: 'همه' }, { text: 'در' }, { text: 'یک‌جا', accent: true, color: BLUE }]}
         size={48}
       />
-      {/* flying fragments converging to the center */}
+
+      {/* Converging Shards */}
       {CHAOS_TOOLS.map((tool) => (
         <div
           key={tool.text}
           style={{
             position: 'absolute',
-            top: mix(tool.dy, 520, fly),
-            insetInlineStart: `calc(50% + ${mix(tool.dx, 0, fly)}px)`,
-            width: mix(tool.text.length > 6 ? 172 : 132, 10, fly),
-            height: mix(78, 10, fly),
-            border: `${mix(3, 0, fly)}px solid ${INK}`,
-            borderRadius: mix(18, 4, fly),
-            background: '#ffffff',
-            transform: `translate(-50%, -50%) rotate(${mix(tool.rot, 0, fly)}deg)`,
-            opacity: 1 - fly * fly,
+            top: mix(tool.y, 420, morphP),
+            left: mix(tool.x, 270 - 110, morphP),
+            width: mix(220, 20, morphP),
+            height: mix(154, 20, morphP),
+            background: tool.color,
+            borderRadius: mix(20, 10, morphP),
+            opacity: 1 - morphP * 0.9,
           }}
         />
       ))}
-      {/* the one card that survives */}
-      <BrutCard
+
+      {/* The One True Unified Ledger Card (y: 340..580) */}
+      <div
         style={{
           position: 'absolute',
-          top: 460,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          margin: '0 auto',
-          width: 250,
-          height: 150,
-          background: BLUE,
-          transform: `translateY(-50%) scale(${mix(0.2, 1, cardP).toFixed(3)}) rotate(${mix(14, 0, cardP).toFixed(1)}deg)`,
-          opacity: clamp(cardP * 2),
-          boxShadow: `8px 8px 0 ${INK}`,
+          top: 340,
+          left: '50%',
+          width: 340,
+          height: 240,
+          marginLeft: -170,
+          background: 'linear-gradient(145deg, #131a30, #0a0e1c)',
+          border: `2px solid ${BLUE}`,
+          borderRadius: 28,
+          boxShadow: `0 35px 90px rgba(0,0,0,0.9), 0 0 50px ${BLUE}44`,
+          padding: 24,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          transform: `scale(${mix(0.6, 1, unifiedP).toFixed(3)})`,
+          opacity: clamp(unifiedP * 1.5),
         }}
       >
-        <span style={{ fontSize: 42, fontWeight: 900, color: PAPER }}>حسابچه</span>
-        <span style={{ ...MONO, fontSize: 14, color: PAPER, opacity: 0.85 }}>ONE LEDGER</span>
-      </BrutCard>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span
+            style={{
+              ...MONO,
+              fontSize: 12,
+              background: `${BLUE}22`,
+              color: BLUE,
+              border: `1px solid ${BLUE}`,
+              padding: '4px 12px',
+              borderRadius: 8,
+              fontWeight: 800,
+            }}
+          >
+            SINGLE SOURCE OF TRUTH
+          </span>
+          <span dir="rtl" style={{ fontSize: 24, fontWeight: 900, color: '#ffffff' }}>
+            حسابچه
+          </span>
+        </div>
+
+        <div dir="rtl" style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 18, fontWeight: 900, color: EMERALD }}>
+            دفتر مالی یکپارچه و هوشمند
+          </div>
+          <div
+            style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginTop: 4 }}
+          >
+            فروش · انبار · مشتری · سود در یک دیتابیس
+          </div>
+        </div>
+
+        <div
+          style={{
+            ...MONO,
+            fontSize: 28,
+            fontWeight: 900,
+            color: '#ffffff',
+            textAlign: 'center',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            paddingTop: 12,
+          }}
+        >
+          {faNumber(420000)}
+        </div>
+      </div>
     </PaperStage>
   )
 }
 
-// ─── Scene 4 — product reveal: the wordmark ─────────────────────────────
+// ─── Scene 4 — Product Reveal: The Wordmark ─────────────────────────────
 
 export function PaperRevealScene({ t, scene }: SceneComponentProps) {
-  const mark = pop(t, 0.1)
-  const wipe = ease(clamp(progress(t, 0.55, 1.35)))
+  const markP = pop(t, 0.1)
+  const lineP = ease(clamp(progress(t, 0.6, 1.6)))
+
   return (
-    <PaperStage scene={scene} t={t} label="// 04 — محصول">
+    <PaperStage scene={scene} t={t} label="// 04 · معرفی محصول">
       <div
         style={{
           position: 'absolute',
-          top: 330,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          textAlign: 'center',
+          top: 280,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          opacity: clamp(markP * 1.5),
+          transform: `scale(${mix(0.8, 1, markP).toFixed(3)})`,
         }}
       >
         <div
+          dir="rtl"
           style={{
-            fontSize: 96,
+            fontSize: 88,
             fontWeight: 900,
-            lineHeight: 1.1,
-            transform: `scale(${mix(0.72, 1, mark).toFixed(3)})`,
-            opacity: clamp(mark * 1.5),
+            color: '#ffffff',
+            letterSpacing: '-0.02em',
+            textShadow: `0 10px 40px ${BLUE}66`,
           }}
         >
           حسابچه
         </div>
-        {/* blue underline wipe */}
+
+        {/* Dynamic Specular Laser Bar */}
         <div
           style={{
-            width: `${(wipe * 300).toFixed(0)}px`,
-            height: 10,
-            background: BLUE,
-            borderRadius: 6,
-            margin: '18px auto 0',
-            boxShadow: `4px 4px 0 ${INK}`,
+            width: mix(0, 260, lineP),
+            height: 6,
+            background: `linear-gradient(90deg, ${BLUE}, ${EMERALD})`,
+            borderRadius: 3,
+            boxShadow: `0 0 20px ${BLUE}`,
+            marginTop: 12,
           }}
         />
+
         <div
+          dir="rtl"
           style={{
-            marginTop: 26,
-            fontSize: 30,
+            fontSize: 26,
             fontWeight: 800,
-            opacity: clamp(progress(t, 1.1, 1.7)),
+            color: 'rgba(255,255,255,0.85)',
+            marginTop: 24,
           }}
         >
-          نرم‌افزار مالی ابری
+          نرم‌افزار مالی ابری مغازه و کارگاه
+        </div>
+
+        <div
+          style={{
+            ...MONO,
+            fontSize: 13,
+            letterSpacing: '0.2em',
+            color: BLUE,
+            marginTop: 12,
+          }}
+        >
+          ACCURATE · CLOUD-NATIVE · FAST
         </div>
       </div>
-      <HalftoneCharacter
-        t={t}
-        mood="happy"
-        scale={0.78}
+
+      {/* Relaxed Confident Merchant Persona below */}
+      <div
         style={{
           position: 'absolute',
-          bottom: 60,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          margin: '0 auto',
+          bottom: 110,
+          left: '50%',
+          transform: 'translateX(-50%)',
           opacity: clamp(progress(t, 0.8, 1.4)),
         }}
-      />
+      >
+        <SaaSProductionPersona t={t} mood="happy" scale={1.05} />
+      </div>
     </PaperStage>
   )
 }
 
-// ─── Scene 5 — the dashboard: four cards, one grid ──────────────────────
+// ─── Scene 5 — The Dashboard: 4 Cards, 1 Screen ─────────────────────────
 
-const GRID_CARDS = [
-  { label: 'فروش', value: 420000, blue: true },
-  { label: 'فاکتور', value: 18, blue: false },
-  { label: 'انبار', value: 73, blue: false },
-  { label: 'مشتری', value: 26, blue: false },
+const DASH_METRICS = [
+  { label: 'فروش روزانه', val: 420000, color: BLUE, x: 36, y: 220, sub: '۱۸ فاکتور صادره' },
+  { label: 'موجودی انبار', val: 73, color: '#00B4FF', x: 284, y: 220, sub: 'اقلام بدون کسری' },
+  { label: 'مشتریان فعال', val: 26, color: AMBER, x: 36, y: 400, sub: 'ثبت در باشگاه' },
+  { label: 'سود ناخالص', val: 90000, color: EMERALD, x: 284, y: 400, sub: 'محاسبه لحظه‌ای' },
 ]
 
 export function PaperGridScene({ t, scene }: SceneComponentProps) {
   return (
-    <PaperStage scene={scene} t={t} label="// 05 — صفحهٔ اصلی">
-      <Cam t={t} from={1.04} to={1}>
-        <Words
-          t={t}
-          at={0.1}
-          top={148}
-          words={[{ text: 'همه‌چیز،' }, { text: 'یک‌جا', accent: true }]}
-          size={46}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: 320,
-            insetInlineStart: 0,
-            insetInlineEnd: 0,
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 26,
-            padding: '0 56px',
-          }}
-        >
-          {GRID_CARDS.map((card, i) => {
-            const p = pop(t, 0.35 + i * 0.12)
-            const count = mix(0, card.value, ease(clamp(progress(t, 0.5 + i * 0.12, 1.9))))
-            return (
-              <BrutCard
-                key={card.label}
+    <PaperStage scene={scene} t={t} label="// 05 · صفحه داشبورد زنده">
+      <Words
+        t={t}
+        at={0.1}
+        top={130}
+        words={[{ text: 'همه‌چیز،' }, { text: 'یک‌جا', accent: true, color: BLUE }]}
+        size={46}
+      />
+
+      {/* 2x2 Clean Dashboard Grid */}
+      {DASH_METRICS.map((metric, i) => {
+        const p = pop(t, 0.3 + i * 0.12)
+        const count = mix(0, metric.val, ease(clamp(progress(t, 0.4 + i * 0.12, 1.6))))
+        return (
+          <div
+            key={metric.label}
+            style={{
+              position: 'absolute',
+              top: metric.y,
+              left: metric.x,
+              width: 220,
+              height: 154,
+              background: 'linear-gradient(145deg, #121626, #0b0e18)',
+              border: `1.5px solid ${metric.color}`,
+              borderRadius: 20,
+              boxShadow: `0 20px 45px rgba(0,0,0,0.7), 0 0 25px ${metric.color}22`,
+              padding: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              opacity: clamp(p * 1.5),
+              transform: `scale(${mix(0.85, 1, p).toFixed(3)})`,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span
                 style={{
-                  height: 168,
-                  background: card.blue ? BLUE : '#ffffff',
-                  transform: `translateY(${mix(60, 0, p).toFixed(1)}px) scale(${mix(0.8, 1, p).toFixed(3)}) rotate(${mix(-4 + i * 2, 0, p).toFixed(1)}deg)`,
-                  opacity: clamp(p * 1.5),
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: metric.color,
+                  boxShadow: `0 0 10px ${metric.color}`,
                 }}
-              >
-                <span
-                  style={{
-                    fontSize: 26,
-                    fontWeight: 900,
-                    color: card.blue ? PAPER : INK,
-                  }}
-                >
-                  {card.label}
-                </span>
-                <span
-                  style={{
-                    ...MONO,
-                    fontSize: 22,
-                    fontWeight: 700,
-                    color: card.blue ? PAPER : BLUE,
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
-                >
-                  {faNumber(count)}
-                </span>
-              </BrutCard>
-            )
-          })}
-        </div>
-      </Cam>
+              />
+              <span dir="rtl" style={{ fontSize: 15, fontWeight: 900, color: '#ffffff' }}>
+                {metric.label}
+              </span>
+            </div>
+
+            <div
+              style={{
+                ...MONO,
+                fontSize: 28,
+                fontWeight: 900,
+                color: metric.color,
+                textAlign: 'right',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {faNumber(Math.round(count))}
+            </div>
+
+            <div
+              dir="rtl"
+              style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}
+            >
+              {metric.sub}
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Bottom Telemetry Status Bar */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 600,
+          left: 36,
+          right: 36,
+          background: 'rgba(18, 22, 38, 0.85)',
+          border: `1.5px solid ${BORDER_GLASS}`,
+          borderRadius: 18,
+          padding: '14px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <span style={{ fontSize: 14, fontWeight: 800, color: '#ffffff' }}>
+          دفتر آنلاین همیشه در دسترس و همگام
+        </span>
+        <span style={{ ...MONO, fontSize: 12, color: EMERALD, fontWeight: 800 }}>LIVE FEED</span>
+      </div>
     </PaperStage>
   )
 }
 
-// ─── Scene 6 — phone mockup: live stock, even offline ───────────────────
+// ─── Scene 6 — Phone Mockup: Live Stock Offline ─────────────────────────
 
 const STOCK_ROWS = [
   { name: 'کالای بازرگانی کد ۱۰۱', qty: 24 },
@@ -926,459 +950,546 @@ const STOCK_ROWS = [
 
 export function PaperPhoneScene({ t, scene }: SceneComponentProps) {
   const up = pop(t, 0.2, 0.7)
-  const badge = pop(t, 1.6)
+  const badge = pop(t, 1.4)
+
   return (
-    <PaperStage scene={scene} t={t} label="// 06 — انبار در جیب">
+    <PaperStage scene={scene} t={t} label="// 06 · انبار در جیب و آفلاین">
       <Words
         t={t}
         at={0.1}
-        top={128}
-        words={[{ text: 'موجودی' }, { text: 'زنده،' }, { text: 'آفلاین', accent: true }]}
+        top={110}
+        words={[
+          { text: 'موجودی' },
+          { text: 'زنده،' },
+          { text: 'آفلاین', accent: true, color: EMERALD },
+        ]}
         size={42}
       />
-      {/* phone */}
+
+      {/* Titanium Mobile Cockpit: Strictly container-local coordinates (Defect Law #8) */}
       <div
         style={{
           position: 'absolute',
-          top: 300,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          margin: '0 auto',
-          width: 272,
-          height: 500,
-          background: '#ffffff',
-          border: `4px solid ${INK}`,
-          borderRadius: 36,
-          boxShadow: `10px 10px 0 ${INK}`,
-          transform: `translateY(${mix(240, 0, up).toFixed(1)}px) rotate(${mix(6, 0, up).toFixed(1)}deg)`,
-          opacity: clamp(up * 1.6),
-          padding: '20px 18px',
+          top: 190,
+          left: '50%',
+          width: 320,
+          height: 520,
+          marginLeft: -160,
+          background: '#0a0d16',
+          border: '4px solid #1f2538',
+          borderRadius: 44,
+          boxShadow: `0 35px 90px rgba(0,0,0,0.9), 0 0 45px ${BLUE}22`,
+          overflow: 'hidden',
+          padding: '24px 20px',
           display: 'flex',
           flexDirection: 'column',
           gap: 14,
+          opacity: clamp(up * 1.5),
+          transform: `translateY(${mix(60, 0, up).toFixed(1)}px)`,
+          direction: 'ltr',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 26, fontWeight: 900 }}>انبار</span>
           <span
             style={{
               ...MONO,
-              fontSize: 13,
-              background: BLUE,
-              color: PAPER,
-              borderRadius: 8,
-              padding: '3px 10px',
+              fontSize: 11,
+              background: `${EMERALD}22`,
+              color: EMERALD,
+              borderRadius: 6,
+              padding: '3px 8px',
+              fontWeight: 800,
             }}
           >
-            LIVE
+            OFFLINE READY
+          </span>
+          <span dir="rtl" style={{ fontSize: 18, fontWeight: 900, color: '#ffffff' }}>
+            کاردکس انبار
           </span>
         </div>
+
+        {/* Stock Rows */}
         {STOCK_ROWS.map((row, i) => {
-          const p = pop(t, 0.8 + i * 0.18)
-          const qty = mix(0, row.qty, ease(clamp(progress(t, 1.0 + i * 0.18, 2.3))))
+          const p = pop(t, 0.6 + i * 0.16)
+          const qty = mix(0, row.qty, ease(clamp(progress(t, 0.8 + i * 0.16, 2.0))))
           return (
             <div
               key={row.name}
+              dir="rtl"
               style={{
-                border: `2.5px solid ${INK}`,
+                background: 'linear-gradient(145deg, #131726, #0e121e)',
+                border: `1px solid ${BORDER_GLASS}`,
                 borderRadius: 14,
-                padding: '10px 14px',
+                padding: '12px 14px',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: 8,
-                transform: `translateX(${mix(-30, 0, p).toFixed(1)}px)`,
-                opacity: clamp(p * 1.6),
+                opacity: clamp(p * 1.5),
+                transform: `translateX(${mix(-20, 0, p).toFixed(1)}px)`,
               }}
             >
-              <span style={{ fontSize: 15, fontWeight: 700 }}>{row.name}</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: '#ffffff' }}>{row.name}</span>
               <span
                 style={{
                   ...MONO,
-                  fontSize: 19,
-                  fontWeight: 800,
+                  fontSize: 18,
+                  fontWeight: 900,
                   color: BLUE,
-                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
-                {faNumber(qty)}
+                {faNumber(Math.round(qty))}
               </span>
             </div>
           )
         })}
+
+        {/* Local Sync Status */}
+        <div
+          dir="rtl"
+          style={{
+            marginTop: 'auto',
+            background: 'rgba(0, 230, 118, 0.08)',
+            border: `1px solid ${EMERALD}44`,
+            borderRadius: 14,
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <span style={{ color: EMERALD, fontSize: 16 }}>✓</span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#ffffff' }}>
+            همگام‌سازی ابری پس از اتصال
+          </span>
+        </div>
       </div>
-      {/* offline badge */}
-      <BrutCard
+
+      {/* Offline Assurance Badge (y: 740..840) */}
+      <div
+        dir="rtl"
         style={{
           position: 'absolute',
-          bottom: 70,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          margin: '0 auto',
-          background: INK,
-          transform: `scale(${mix(0.4, 1, badge).toFixed(3)})`,
-          opacity: clamp(badge * 1.6),
-          padding: '10px 22px',
+          top: 740,
+          left: 40,
+          right: 40,
+          background: 'rgba(15, 20, 35, 0.9)',
+          border: `1.5px solid ${EMERALD}`,
+          borderRadius: 20,
+          padding: '12px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
+          boxShadow: `0 20px 45px rgba(0,0,0,0.8), 0 0 25px ${EMERALD}33`,
+          opacity: clamp(badge * 1.5),
+          transform: `scale(${mix(0.85, 1, badge).toFixed(3)})`,
         }}
       >
-        <span style={{ fontSize: 21, fontWeight: 800, color: PAPER }}>
-          بدون اینترنت هم ثبت می‌شود
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: EMERALD }} />
+        <span style={{ fontSize: 16, fontWeight: 900, color: '#ffffff' }}>
+          حتی بدون اینترنت هم فاکتور ثبت می‌شود
         </span>
-      </BrutCard>
+      </div>
     </PaperStage>
   )
 }
 
-// ─── Scene 7 — sales → profit: the number that matters ──────────────────
+// ─── Scene 7 — Sales → Profit: The Real Number ──────────────────────────
 
 const BARS = [0.3, 0.52, 0.78, 1]
 
 export function PaperProfitScene({ t, scene }: SceneComponentProps) {
-  const draw = ease(clamp(progress(t, 0.6, 2.4)))
-  const profit = mix(0, 90000, ease(clamp(progress(t, 1.0, 2.8))))
+  const draw = ease(clamp(progress(t, 0.6, 2.2)))
+  const profit = mix(0, 90000, ease(clamp(progress(t, 0.8, 2.4))))
+
   return (
-    <PaperStage scene={scene} t={t} label="// 07 — سود">
+    <PaperStage scene={scene} t={t} label="// 07 · سود واقعی مغازه">
       <Words
         t={t}
         at={0.1}
-        top={132}
-        words={[{ text: 'سود،' }, { text: 'از' }, { text: 'دلِ', accent: true }, { text: 'فروش' }]}
+        top={120}
+        words={[
+          { text: 'سود،' },
+          { text: 'از' },
+          { text: 'دلِ', accent: true, color: EMERALD },
+          { text: 'فروش' },
+        ]}
         size={46}
       />
-      {/* bars + trend line */}
+
+      {/* Bar Chart Container (y: 220..440) */}
       <div
         style={{
           position: 'absolute',
-          top: 320,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          height: 240,
+          top: 220,
+          left: 60,
+          right: 60,
+          height: 220,
           display: 'flex',
-          gap: 22,
+          gap: 24,
           justifyContent: 'center',
           alignItems: 'flex-end',
-          padding: '0 70px',
         }}
       >
         {BARS.map((h, i) => {
-          const p = ease(clamp(progress(t, 0.25 + i * 0.18, 1.1 + i * 0.18)))
+          const p = ease(clamp(progress(t, 0.2 + i * 0.16, 1.0 + i * 0.16)))
           return (
             <div
               key={i}
               style={{
-                width: 64,
-                height: 230 * h * p,
-                background: i === BARS.length - 1 ? BLUE : INK,
-                borderRadius: '10px 10px 0 0',
-                boxShadow: `5px 5px 0 rgba(22,21,15,0.28)`,
+                width: 60,
+                height: 200 * h * p,
+                background:
+                  i === BARS.length - 1
+                    ? `linear-gradient(to top, ${EMERALD}, #00b35c)`
+                    : `linear-gradient(to top, ${BLUE}, #1a40b8)`,
+                borderRadius: '12px 12px 4px 4px',
+                boxShadow: `0 10px 30px rgba(0,0,0,0.6)`,
               }}
             />
           )
         })}
       </div>
-      {/* trend line drawn over the bars */}
+
+      {/* SVG Trendline */}
       <svg
-        viewBox="0 0 400 240"
+        viewBox="0 0 360 220"
         style={{
           position: 'absolute',
-          top: 316,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          margin: '0 auto',
-          width: 400,
-          height: 240,
+          top: 220,
+          left: '50%',
+          width: 360,
+          height: 220,
+          marginLeft: -180,
+          pointerEvents: 'none',
         }}
         aria-hidden
       >
         <path
-          d="M30,200 L130,150 L230,90 L360,26"
+          d="M20,180 L110,135 L200,85 L320,25"
           fill="none"
-          stroke={RED}
-          strokeWidth="5"
+          stroke={EMERALD}
+          strokeWidth="4"
           strokeLinecap="round"
-          strokeDasharray={520}
-          strokeDashoffset={520 * (1 - draw)}
+          strokeDasharray={400}
+          strokeDashoffset={400 * (1 - draw)}
+          filter="drop-shadow(0 0 10px rgba(0,230,118,0.8))"
         />
       </svg>
-      {/* the number */}
+
+      {/* Formula & Calculated Profit Result (y: 490..740) */}
       <div
         style={{
           position: 'absolute',
-          top: 618,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
+          top: 490,
+          left: 40,
+          right: 40,
+          background: 'linear-gradient(145deg, #121728, #0b0e18)',
+          border: `1.5px solid ${EMERALD}`,
+          borderRadius: 24,
+          padding: 24,
           textAlign: 'center',
+          boxShadow: `0 25px 60px rgba(0,0,0,0.8), 0 0 35px ${EMERALD}33`,
         }}
       >
         <div
+          dir="rtl"
+          style={{ fontSize: 16, fontWeight: 800, color: 'rgba(255,255,255,0.7)', marginBottom: 8 }}
+        >
+          سود قطعی این دوره
+        </div>
+        <div
           style={{
             ...MONO,
-            fontSize: 64,
-            fontWeight: 800,
-            color: BLUE,
+            fontSize: 54,
+            fontWeight: 900,
+            color: EMERALD,
             fontVariantNumeric: 'tabular-nums',
           }}
         >
-          {faNumber(profit)}
+          {faNumber(Math.round(profit))}
         </div>
-        <div style={{ fontSize: 28, fontWeight: 800, marginTop: 6 }}>سود این ماه</div>
         <div
           style={{
             ...MONO,
-            fontSize: 16,
-            opacity: 0.65,
-            marginTop: 12,
+            fontSize: 14,
+            color: 'rgba(255,255,255,0.5)',
+            marginTop: 10,
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            paddingTop: 10,
           }}
         >
-          420K − 260K − 70K = 90K
+          ۴۲۰٬۰۰۰ − ۲۶۰٬۰۰۰ − ۷۰٬۰۰۰ = ۹۰٬۰۰۰
         </div>
       </div>
     </PaperStage>
   )
 }
 
-// ─── Scene 8 — transformation: chaos wipes into order ───────────────────
+// ─── Scene 8 — Transformation: Chaos Wipes into Order ───────────────────
 
 export function PaperTransformScene({ t, scene }: SceneComponentProps) {
-  const wipe = ease(clamp(progress(t, 0.7, 2.3)))
+  const wipe = ease(clamp(progress(t, 0.6, 2.2)))
+  const bladeX = mix(40, 500, wipe)
+
   return (
-    <PaperStage scene={scene} t={t} label="// 08 — تحول">
+    <PaperStage scene={scene} t={t} label="// 08 · تحول به یک سیستم منظم">
       <Words
         t={t}
         at={0.1}
-        top={140}
-        words={[{ text: 'از' }, { text: 'آشفتگی' }, { text: 'به‌نظم', accent: true }]}
+        top={130}
+        words={[{ text: 'از' }, { text: 'آشفتگی' }, { text: 'به‌نظم', accent: true, color: BLUE }]}
         size={46}
       />
-      {/* BEFORE: scattered gray cards */}
-      <div style={{ position: 'absolute', inset: 0 }}>
-        {[
-          { x: -120, y: 400, r: -12 },
-          { x: 110, y: 350, r: 10 },
-          { x: -60, y: 610, r: 7 },
-          { x: 130, y: 640, r: -8 },
-        ].map((c, i) => (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              top: c.y,
-              insetInlineStart: `calc(50% + ${c.x}px)`,
-              width: 120,
-              height: 74,
-              background: '#dcd7c9',
-              border: `3px solid #a29c8c`,
-              borderRadius: 16,
-              transform: `translate(-50%, -50%) rotate(${c.r}deg)`,
-            }}
-          />
-        ))}
-        <HalftoneCharacter
-          t={t}
-          mood="worried"
-          scale={0.85}
-          style={{
-            position: 'absolute',
-            top: 400,
-            insetInlineStart: 0,
-            insetInlineEnd: 0,
-            margin: '0 auto',
-          }}
-        />
-      </div>
-      {/* AFTER: clean blue ledger, revealed by a wipe */}
+
+      {/* Left Chamber: Old Chaos (0 to bladeX) */}
       <div
         style={{
           position: 'absolute',
-          inset: 0,
-          clipPath: `inset(0 0 0 ${((1 - wipe) * 100).toFixed(1)}%)`,
+          top: 220,
+          left: 40,
+          width: Math.max(0, bladeX - 40),
+          height: 480,
+          background: 'linear-gradient(135deg, rgba(255, 61, 0, 0.08), rgba(20, 10, 15, 0.95))',
+          borderRadius: '24px 0 0 24px',
+          border: `1.5px solid rgba(255, 61, 0, 0.3)`,
+          borderRight: 'none',
+          overflow: 'hidden',
+          padding: 24,
         }}
       >
-        <BrutCard
-          style={{
-            position: 'absolute',
-            top: 330,
-            insetInlineStart: 0,
-            insetInlineEnd: 0,
-            margin: '0 auto',
-            width: 330,
-            height: 400,
-            background: BLUE,
-            gap: 16,
-            padding: '26px 24px',
-            alignItems: 'stretch',
-          }}
-        >
-          {['فروش ثبت شد', 'انبار کم شد', 'سود معلوم شد'].map((line) => (
+        <div dir="rtl" style={{ fontSize: 18, fontWeight: 900, color: RED, marginBottom: 16 }}>
+          ثبت سنتی و جزیره‌ای
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, opacity: 0.5 }}>
+          {['دوباره‌کاری فاکتور', 'کسری نامعلوم انبار', 'اختلاف نسیه با مشتری'].map((item, idx) => (
             <div
-              key={line}
+              key={idx}
+              dir="rtl"
               style={{
-                background: PAPER,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px dashed rgba(255, 61, 0, 0.4)',
                 borderRadius: 12,
-                padding: '12px 16px',
-                fontSize: 22,
-                fontWeight: 800,
-                color: INK,
-                display: 'flex',
-                justifyContent: 'space-between',
+                padding: '12px 14px',
+                fontSize: 13,
+                color: 'rgba(255,255,255,0.7)',
               }}
             >
-              <span>{line}</span>
-              <span style={{ color: BLUE }}>✓</span>
+              ✕ {item}
             </div>
           ))}
-        </BrutCard>
+        </div>
       </div>
+
+      {/* Right Chamber: Hisabche Order (bladeX to 500) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 220,
+          left: bladeX,
+          width: Math.max(0, 500 - bladeX),
+          height: 480,
+          background: 'linear-gradient(135deg, rgba(41, 98, 255, 0.08), rgba(10, 16, 28, 0.95))',
+          borderRadius: '0 24px 24px 0',
+          border: `1.5px solid rgba(41, 98, 255, 0.4)`,
+          borderLeft: 'none',
+          overflow: 'hidden',
+          padding: 24,
+        }}
+      >
+        <div dir="rtl" style={{ fontSize: 18, fontWeight: 900, color: BLUE, marginBottom: 16 }}>
+          نظم خودکار حسابچه
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {['فروش ثبت شد', 'انبار کسر شد', 'سود معلوم شد'].map((item, idx) => (
+            <div
+              key={idx}
+              dir="rtl"
+              style={{
+                background: 'rgba(41, 98, 255, 0.08)',
+                border: '1px solid rgba(41, 98, 255, 0.3)',
+                borderRadius: 12,
+                padding: '12px 14px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: 14,
+                fontWeight: 800,
+                color: '#ffffff',
+              }}
+            >
+              <span>{item}</span>
+              <span style={{ color: EMERALD }}>✓</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Travelling Laser Blade */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 200,
+          left: bladeX - 2,
+          width: 4,
+          height: 520,
+          background: `linear-gradient(to bottom, transparent, ${BLUE}, #ffffff, ${EMERALD}, transparent)`,
+          boxShadow: `0 0 25px 6px ${BLUE}`,
+        }}
+      />
     </PaperStage>
   )
 }
 
-// ─── Scene 9 — brand lockup ─────────────────────────────────────────────
+// ─── Scene 9 — Brand Lockup: The Name and Vision ────────────────────────
 
 export function PaperBrandScene({ t, scene }: SceneComponentProps) {
-  const mark = pop(t, 0.2)
-  const wipe = ease(clamp(progress(t, 0.7, 1.5)))
-  const calmCard = pop(t, 1.3)
-  return (
-    <PaperStage scene={scene} t={t} label="// 09 — حسابچه">
-      <Cam t={t} from={1.05} to={1}>
-        <div
-          style={{
-            position: 'absolute',
-            top: 300,
-            insetInlineStart: 0,
-            insetInlineEnd: 0,
-            textAlign: 'center',
-          }}
-        >
-          <div
-            style={{
-              fontSize: 88,
-              fontWeight: 900,
-              lineHeight: 1.1,
-              transform: `scale(${mix(0.75, 1, mark).toFixed(3)})`,
-              opacity: clamp(mark * 1.5),
-            }}
-          >
-            حسابچه
-          </div>
-          <div
-            style={{
-              width: `${(wipe * 260).toFixed(0)}px`,
-              height: 9,
-              background: BLUE,
-              borderRadius: 6,
-              margin: '16px auto 0',
-              boxShadow: `4px 4px 0 ${INK}`,
-            }}
-          />
-          <div
-            style={{
-              ...MONO,
-              marginTop: 22,
-              fontSize: 17,
-              letterSpacing: '0.22em',
-              opacity: clamp(progress(t, 1.0, 1.6)) * 0.75,
-            }}
-          >
-            CLOUD · SIMPLE · FAST
-          </div>
-        </div>
-        <HalftoneCharacter
-          t={t}
-          mood="happy"
-          phone
-          scale={1.05}
-          style={{
-            position: 'absolute',
-            bottom: 70,
-            insetInlineStart: 0,
-            insetInlineEnd: 0,
-            margin: '0 auto',
-          }}
-        />
-        {/* two calm cards echo the grid, settled */}
-        {[
-          { text: 'فروش', x: -180, y: 560 },
-          { text: 'انبار', x: 180, y: 620 },
-        ].map((c) => (
-          <BrutCard
-            key={c.text}
-            style={{
-              position: 'absolute',
-              top: c.y,
-              insetInlineStart: `calc(50% + ${c.x}px)`,
-              transform: `translate(-50%, -50%) scale(${mix(0.5, 1, calmCard).toFixed(3)})`,
-              opacity: clamp(calmCard * 1.4),
-              padding: '10px 20px',
-            }}
-          >
-            <span style={{ fontSize: 20, fontWeight: 800 }}>{c.text}</span>
-          </BrutCard>
-        ))}
-      </Cam>
-    </PaperStage>
-  )
-}
+  const markP = pop(t, 0.2)
+  const lineP = ease(clamp(progress(t, 0.6, 1.4)))
 
-// ─── Scene 10 — CTA ─────────────────────────────────────────────────────
-
-export function PaperCtaScene({ t, scene }: SceneComponentProps) {
-  const block = pop(t, 0.3, 0.65)
-  const sub = clamp(progress(t, 1.0, 1.6))
   return (
-    <PaperStage scene={scene} t={t} label="// 10 — شروع رایگان">
+    <PaperStage scene={scene} t={t} label="// 09 · نام و هویت حسابچه">
       <div
         style={{
           position: 'absolute',
           top: 260,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          opacity: clamp(markP * 1.5),
+          transform: `scale(${mix(0.8, 1, markP).toFixed(3)})`,
+        }}
+      >
+        <div
+          dir="rtl"
+          style={{
+            fontSize: 84,
+            fontWeight: 900,
+            color: '#ffffff',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          حسابچه
+        </div>
+
+        <div
+          style={{
+            width: mix(0, 240, lineP),
+            height: 6,
+            background: `linear-gradient(90deg, ${BLUE}, ${EMERALD})`,
+            borderRadius: 3,
+            boxShadow: `0 0 20px ${BLUE}`,
+            marginTop: 12,
+          }}
+        />
+
+        <div
+          style={{
+            ...MONO,
+            marginTop: 20,
+            fontSize: 14,
+            letterSpacing: '0.22em',
+            color: 'rgba(255,255,255,0.6)',
+          }}
+        >
+          CLOUD · SIMPLE · FAST
+        </div>
+      </div>
+
+      {/* Relaxed Persona with Handheld Mobile Phone */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 120,
+          left: '50%',
+          transform: 'translateX(-50%)',
+        }}
+      >
+        <SaaSProductionPersona t={t} mood="happy" phone scale={1.15} />
+      </div>
+    </PaperStage>
+  )
+}
+
+// ─── Scene 10 — High-Impact CTA ─────────────────────────────────────────
+
+export function PaperCtaScene({ t, scene }: SceneComponentProps) {
+  const blockP = pop(t, 0.3, 0.65)
+  const subP = clamp(progress(t, 0.9, 1.5))
+
+  return (
+    <PaperStage scene={scene} t={t} label="// 10 · شروع رایگان">
+      <div
+        style={{
+          position: 'absolute',
+          top: 240,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: 40, fontWeight: 900, marginBottom: 34 }}>همین امروز شروع کن</div>
         <div
+          dir="rtl"
           style={{
-            display: 'inline-block',
-            background: BLUE,
-            color: PAPER,
-            fontSize: 92,
+            fontSize: 36,
             fontWeight: 900,
-            padding: '10px 56px',
-            borderRadius: 24,
-            boxShadow: `10px 10px 0 ${INK}`,
-            transform: `scale(${mix(0.3, 1, block).toFixed(3)}) rotate(${mix(-10, 0, block).toFixed(1)}deg)`,
-            opacity: clamp(block * 1.6),
+            color: 'rgba(255,255,255,0.9)',
+            marginBottom: 24,
           }}
         >
-          رایگان
+          همین امروز شروع کن
         </div>
+
+        {/* Primary Action Button */}
         <div
+          dir="rtl"
+          style={{
+            background: `linear-gradient(135deg, ${BLUE}, #1040db)`,
+            color: '#ffffff',
+            fontSize: 54,
+            fontWeight: 900,
+            padding: '16px 72px',
+            borderRadius: 28,
+            boxShadow: `0 25px 70px ${BLUE}66, 0 0 35px ${BLUE}44`,
+            border: '2px solid rgba(255,255,255,0.4)',
+            transform: `scale(${mix(0.6, 1, blockP).toFixed(3)})`,
+            opacity: clamp(blockP * 1.5),
+          }}
+        >
+          شروع رایگان
+        </div>
+
+        <div
+          dir="rtl"
           style={{
             marginTop: 36,
-            fontSize: 30,
+            fontSize: 26,
             fontWeight: 800,
-            opacity: sub,
-            transform: `translateY(${mix(20, 0, sub).toFixed(1)}px)`,
+            color: 'rgba(255,255,255,0.8)',
+            opacity: subP,
+            transform: `translateY(${mix(20, 0, subP).toFixed(1)}px)`,
           }}
         >
-          کامنت کن، لینک می‌گیری
+          کلمه <span style={{ color: BLUE }}>«دفتر»</span> را کامنت کن تا لینک بگیری
         </div>
       </div>
-      <HalftoneCharacter
-        t={t}
-        mood="happy"
-        scale={0.85}
+
+      {/* Confident Persona below */}
+      <div
         style={{
           position: 'absolute',
-          bottom: 40,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          margin: '0 auto',
+          bottom: 60,
+          left: '50%',
+          transform: 'translateX(-50%)',
           opacity: clamp(progress(t, 0.6, 1.2)),
         }}
-      />
+      >
+        <SaaSProductionPersona t={t} mood="happy" scale={0.9} />
+      </div>
     </PaperStage>
   )
 }

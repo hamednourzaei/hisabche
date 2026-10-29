@@ -84,33 +84,43 @@ export const newUnitRow = (): ProductUnitDraft => ({
  * rather than after submitting, which matters when the rules are about the
  * set rather than about the field they are in.
  */
-export function unitSetProblems(rows: ProductUnitDraft[]): string[] {
+export function unitSetProblems(
+  rows: ProductUnitDraft[],
+  t?: ((key: string, fallback: string) => string) | undefined,
+): string[] {
   if (rows.length === 0) return []
+  const tr = (k: string, fb: string) => (t ? t(k, fb) : fb)
   const problems: string[] = []
 
   const bases = rows.filter((row) => row.isBaseUnit)
-  if (bases.length === 0) problems.push('باید دقیقاً یک واحد پایه انتخاب شود')
-  if (bases.length > 1) problems.push('فقط یک واحد می‌تواند پایه باشد')
+  if (bases.length === 0)
+    problems.push(tr('units.problems.oneBaseRequired', 'باید دقیقاً یک واحد پایه انتخاب شود'))
+  if (bases.length > 1)
+    problems.push(tr('units.problems.onlyOneBase', 'فقط یک واحد می‌تواند پایه باشد'))
 
   if (bases.some((row) => Number(row.conversionFactorToBase) !== 1)) {
     // Otherwise «convert to base» is lossy on the base itself.
-    problems.push('ضریب واحد پایه باید دقیقاً ۱ باشد')
+    problems.push(tr('units.problems.baseMultiplierOne', 'ضریب واحد پایه باید دقیقاً ۱ باشد'))
   }
 
   if (rows.some((row) => !(Number(row.conversionFactorToBase) > 0))) {
-    problems.push('ضریب هر واحد باید بزرگ‌تر از صفر باشد')
+    problems.push(tr('units.problems.multiplierPositive', 'ضریب هر واحد باید بزرگ‌تر از صفر باشد'))
   }
 
-  if (rows.some((row) => !row.unitId)) problems.push('برای هر سطر یک واحد انتخاب کنید')
+  if (rows.some((row) => !row.unitId))
+    problems.push(tr('units.problems.selectUnitPerRow', 'برای هر سطر یک واحد انتخاب کنید'))
 
   const ids = rows.map((row) => row.unitId).filter(Boolean)
-  if (new Set(ids).size !== ids.length) problems.push('هر واحد فقط یک بار می‌تواند بیاید')
+  if (new Set(ids).size !== ids.length)
+    problems.push(tr('units.problems.duplicateUnit', 'هر واحد فقط یک بار می‌تواند بیاید'))
 
   if (rows.filter((row) => row.isPurchaseDefault).length > 1) {
-    problems.push('فقط یک واحد می‌تواند پیش‌فرض خرید باشد')
+    problems.push(
+      tr('units.problems.singlePurchaseDefault', 'فقط یک واحد می‌تواند پیش‌فرض خرید باشد'),
+    )
   }
   if (rows.filter((row) => row.isSaleDefault).length > 1) {
-    problems.push('فقط یک واحد می‌تواند پیش‌فرض فروش باشد')
+    problems.push(tr('units.problems.singleSaleDefault', 'فقط یک واحد می‌تواند پیش‌فرض فروش باشد'))
   }
 
   return problems
@@ -129,7 +139,7 @@ export function ProductUnitsPanel({
   const { data: unitsData } = useUnits()
   const units: Unit[] = unitsData?.units ?? []
 
-  const problems = unitSetProblems(rows)
+  const problems = unitSetProblems(rows, tr)
   const baseCode = units.find(
     (unit) => unit.id === rows.find((row) => row.isBaseUnit)?.unitId,
   )?.code

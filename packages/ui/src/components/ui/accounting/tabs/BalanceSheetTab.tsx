@@ -21,12 +21,6 @@ interface DetailRow {
   amount: number
 }
 
-const exportColumns: ExportColumn<DetailRow>[] = [
-  { key: 'section', header: 'بخش', accessor: (r) => r.section },
-  { key: 'label', header: 'شرح', accessor: (r) => r.label },
-  { key: 'amount', header: 'مبلغ', accessor: (r) => r.amount },
-]
-
 /**
  * ⚠️ TOKENS, NOT RAW TAILWIND COLOURS.
  *
@@ -152,6 +146,15 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
   // adds up its own visible rows always balances, even when rows are missing.
   const isBalanced = data ? data.outOfBalanceBy === 0 : false
 
+  const exportCols: ExportColumn<DetailRow>[] = useMemo(
+    () => [
+      { key: 'section', header: t('accounting.balanceSheet.section'), accessor: (r) => r.section },
+      { key: 'label', header: t('accounting.balanceSheet.label'), accessor: (r) => r.label },
+      { key: 'amount', header: t('accounting.balanceSheet.amount'), accessor: (r) => r.amount },
+    ],
+    [t],
+  )
+
   return (
     <div className="flex h-full flex-col">
       <header className="flex flex-col gap-3 border-b border-[hsl(var(--border-default))] px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
@@ -167,7 +170,7 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
           />
           <ExportButton
             data={exportData}
-            columns={exportColumns}
+            columns={exportCols}
             filename="balance-sheet"
             className="mb-0"
           />

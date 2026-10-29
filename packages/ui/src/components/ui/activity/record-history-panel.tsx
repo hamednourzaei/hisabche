@@ -113,7 +113,10 @@ export function RecordHistoryPanel({ t, isLoading, entries, className }: RecordH
             >
               <div className="min-w-0">
                 <p className="truncate text-sm text-[hsl(var(--fg-primary))]">
-                  {ACTION_LABEL[entry.action] ?? entry.action}
+                  {t(
+                    `activity.actions.${entry.action}`,
+                    ACTION_LABEL[entry.action] ?? entry.action,
+                  )}
                   {entry.userName ? (
                     <span className="text-[hsl(var(--fg-secondary))]"> — {entry.userName}</span>
                   ) : null}

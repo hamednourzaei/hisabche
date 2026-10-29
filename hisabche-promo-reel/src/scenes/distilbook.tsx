@@ -1,22 +1,25 @@
 // ============================================
-// DistilBook art direction (reel 85) — cinematic 3D commercial:
-// dark navy-black background, floating 3D paper documents with thickness
-// and soft reflections, glowing neon green-blue-pink vertical logo bars,
-// clean kinetic typography, smooth camera movements, particle data rings,
-// elegant depth of field, octane-quality lighting, highly polished SaaS aesthetic.
+// DistilBook Art Direction (Reel 85) — World-Class SaaS Motion
+// Fractional Cryogenic Distillation & Precision Analytical Ledger
+//
+// Palette: Dark Obsidian (#08090f), Laser Emerald (#00FF9F),
+// Electric Cyan (#00B4FF), Radical Magenta (#FF4D9E), Amber (#FFB800)
+// High-depth 3D perspective, zero hold-frame overlap,
+// strict physical container-local coordinates, no comic characters.
 // ============================================
 
 import type { CSSProperties } from 'react'
 import type { Scene } from '../engine/types'
 import { clamp, ease, mix, progress, spring, deterministicHash } from '../engine/anim'
-import { HalftoneCharacter } from './paper-pocket'
 import { faNumber } from '../ui/motion-primitives'
 
-export const DARK = '#0a0a12'
+export const DARK = '#08090f'
 export const NEON_GREEN = '#00FF9F'
 export const NEON_BLUE = '#00B4FF'
 export const NEON_PINK = '#FF4D9E'
+const NEON_AMBER = '#FFB800'
 export const PAPER_WHITE = '#ffffff'
+const BORDER_GLASS = 'rgba(255, 255, 255, 0.08)'
 
 const MONO: CSSProperties = {
   fontFamily: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
@@ -39,7 +42,7 @@ function Timecode({ t }: { t: number }) {
   )
 }
 
-/** Dark canvas: covers the engine backdrop, carries neon HUD. */
+/** Root Dark Stage: Strictly LTR pinned to avoid RTL mirror flip */
 export function DarkStage({
   scene,
   t,
@@ -56,68 +59,70 @@ export function DarkStage({
       style={{
         position: 'absolute',
         inset: 0,
-        background: DARK,
+        background: 'radial-gradient(circle at 50% 25%, #111524 0%, #08090f 75%, #040508 100%)',
         overflow: 'hidden',
         color: '#ffffff',
+        direction: 'ltr',
       }}
     >
-      {/* subtle particle field */}
+      {/* Precision grid background */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          opacity: 0.06,
+          opacity: 0.04,
           backgroundImage:
-            'radial-gradient(#00FF9F 0.6px, transparent 0.6px), radial-gradient(#00B4FF 0.6px, transparent 0.6px), radial-gradient(#FF4D9E 0.6px, transparent 0.6px)',
-          backgroundSize: '22px 22px, 30px 30px, 38px 38px',
+            'linear-gradient(rgba(0, 255, 159, 0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 180, 255, 0.4) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
         }}
       />
-      {/* HUD */}
+      {/* Top HUD */}
       <div
         style={{
           ...MONO,
           position: 'absolute',
-          top: 26,
-          insetInlineStart: 28,
-          fontSize: 14,
-          letterSpacing: '0.08em',
-          opacity: 0.6,
+          top: 24,
+          left: 28,
+          fontSize: 12,
+          letterSpacing: '0.12em',
+          color: NEON_BLUE,
+          opacity: 0.8,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
         }}
       >
+        <span
+          style={{
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            background: NEON_GREEN,
+            boxShadow: `0 0 10px ${NEON_GREEN}`,
+          }}
+        />
         {label}
       </div>
       <div
         style={{
           ...MONO,
           position: 'absolute',
-          top: 26,
-          insetInlineEnd: 28,
-          fontSize: 14,
-          opacity: 0.6,
+          top: 24,
+          right: 28,
+          fontSize: 12,
+          color: 'rgba(255, 255, 255, 0.5)',
           fontVariantNumeric: 'tabular-nums',
         }}
       >
         <Timecode t={scene.start + t} />
       </div>
-      <div
-        style={{
-          ...MONO,
-          position: 'absolute',
-          bottom: 26,
-          insetInlineEnd: 28,
-          fontSize: 12,
-          letterSpacing: '0.18em',
-          opacity: 0.4,
-        }}
-      >
-        HISABCHE
-      </div>
+
       {children}
     </div>
   )
 }
 
-/** 3D stage: perspective container for floating paper objects. */
+/** 3D perspective wrapper */
 function Stage3D({ children, style }: { children: React.ReactNode; style?: CSSProperties }) {
   return (
     <div
@@ -134,19 +139,13 @@ function Stage3D({ children, style }: { children: React.ReactNode; style?: CSSPr
   )
 }
 
-/** Spring pop: 0 before `at`, overshoots, settles at 1. */
+/** Smooth spring helper */
 function pop(t: number, at: number, dur = 0.5): number {
-  return spring(clamp(progress(t, at, at + dur)) * 1.15)
+  return spring(clamp(progress(t, at, at + dur)) * 1.12)
 }
 
-/** Soft pulse 0..1, period seconds, only while t inside [from, to]. */
-function pulse(t: number, from: number, to: number, period = 1.4): number {
-  if (t < from || t > to) return 0
-  return 0.5 - 0.5 * Math.cos(((t - from) / period) * Math.PI * 2)
-}
-
-/** Floating 3D paper sheet with thickness, reflection, and text lines. */
-function PaperSheet({
+/** Floating 3D paper shards */
+function PaperShard({
   t,
   at,
   dx,
@@ -155,9 +154,10 @@ function PaperSheet({
   rx,
   ry,
   rz,
-  w = 170,
-  h = 230,
+  w = 140,
+  h = 180,
   delay = 0,
+  glowColor = NEON_PINK,
 }: {
   t: number
   at: number
@@ -170,122 +170,66 @@ function PaperSheet({
   w?: number
   h?: number
   delay?: number
+  glowColor?: string
 }) {
-  const p = ease(clamp(progress(t, at + (delay || 0), 1.4)))
-  const sway = Math.cos((t - at) * 0.9 + dy * 0.01) * 4
-  const s = mix(0.35, 1, p)
-  const rot = mix(12, 0, p)
+  const p = ease(clamp(progress(t, at + delay, at + delay + 1.2)))
+  const sway = Math.sin((t - at) * 1.2 + dy * 0.02) * 6
+  const s = mix(0.4, 1, p)
   return (
     <div
       style={{
         position: 'absolute',
-        top: mix(620, dy, p),
-        insetInlineStart: `calc(50% + ${dx + sway}px)`,
+        top: mix(700, dy, p),
+        left: `calc(50% + ${dx + sway}px)`,
         width: w * s,
         height: h * s,
         marginLeft: -(w * s) / 2,
-        transform: `translateZ(${dz}px) rotateX(${mix(rx, rx + rot, p)}deg) rotateY(${mix(ry, ry + rot, p)}deg) rotateZ(${rz}deg)`,
+        transform: `translateZ(${dz}px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg)`,
         transformStyle: 'preserve-3d',
-        opacity: clamp(p * 1.5),
+        opacity: clamp(p * 1.6),
       }}
     >
-      {/* back thickness */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          background: '#161624',
-          borderRadius: 10,
-          boxShadow: 'inset 1px 1px 4px rgba(0,0,0,0.6)',
-        }}
-      />
-      {/* front paper */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: PAPER_WHITE,
-          borderRadius: 10,
-          border: '1px solid rgba(255,255,255,0.35)',
-          boxShadow: '0 24px 70px rgba(0,0,0,0.7), 0 0 40px rgba(0,255,159,0.12)',
-        }}
-      />
-      {/* reflection highlight */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          insetInlineStart: 0,
-          width: '45%',
-          height: '55%',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.7), transparent)',
-          borderRadius: '10px 0 0 0',
-          pointerEvents: 'none',
-          opacity: 0.8,
-        }}
-      />
-      {/* text lines on paper */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 18,
+          background: 'linear-gradient(145deg, rgba(22, 26, 38, 0.95), rgba(12, 14, 22, 0.98))',
+          borderRadius: 12,
+          border: `1px solid ${glowColor}`,
+          boxShadow: `0 20px 50px rgba(0,0,0,0.8), 0 0 25px ${glowColor}22`,
+          padding: 14,
           display: 'flex',
           flexDirection: 'column',
-          gap: 7,
-          color: '#161624',
-          fontSize: 12,
-          fontWeight: 800,
-          opacity: clamp(p * 1.3),
+          gap: 8,
         }}
       >
-        <div style={{ height: 9, width: '65%', background: '#161624', borderRadius: 4 }} />
-        <div style={{ height: 7, width: '45%', background: '#161624', borderRadius: 4 }} />
-        <div style={{ height: 9, width: '80%', background: '#161624', borderRadius: 4 }} />
-        <div style={{ height: 7, width: '55%', background: '#161624', borderRadius: 4 }} />
+        <div
+          style={{ height: 8, width: '70%', background: glowColor, borderRadius: 4, opacity: 0.8 }}
+        />
+        <div
+          style={{ height: 6, width: '45%', background: 'rgba(255,255,255,0.2)', borderRadius: 3 }}
+        />
+        <div
+          style={{ height: 6, width: '85%', background: 'rgba(255,255,255,0.15)', borderRadius: 3 }}
+        />
+        <div
+          style={{
+            ...MONO,
+            fontSize: 10,
+            color: glowColor,
+            marginTop: 'auto',
+            textAlign: 'right',
+            opacity: 0.9,
+          }}
+        >
+          {faNumber(1250000)}
+        </div>
       </div>
     </div>
   )
 }
 
-/** Neon vertical bar for the logo lockup. */
-function NeonBar({
-  t,
-  at,
-  x,
-  color,
-  height = 320,
-  width = 12,
-}: {
-  t: number
-  at: number
-  x: number
-  color: string
-  height?: number
-  width?: number
-}) {
-  const p = ease(clamp(progress(t, at, 0.9)))
-  const g = pulse(t, at, 7)
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: mix(700, 320 - height / 2, p),
-        insetInlineStart: `calc(50% + ${x}px)`,
-        width,
-        height: height * p,
-        background: color,
-        boxShadow: `0 0 ${18 + g * 32}px ${color}, 0 0 ${40 + g * 45}px ${color}`,
-        borderRadius: width / 2,
-        opacity: clamp(p * 1.7),
-        filter: 'blur(1px)',
-        transform: `scaleY(${p})`,
-        transformOrigin: 'bottom center',
-      }}
-    />
-  )
-}
-
-/** Data ring: rotating circular particle ring. */
+/** Precision Concentric Data Ring */
 function DataRing({
   t,
   at,
@@ -293,7 +237,7 @@ function DataRing({
   cy,
   radius,
   color,
-  count = 28,
+  count = 24,
 }: {
   t: number
   at: number
@@ -303,40 +247,40 @@ function DataRing({
   color: string
   count?: number
 }) {
-  const p = ease(clamp(progress(t, at, 1.6)))
+  const p = ease(clamp(progress(t, at, at + 1.2)))
   return (
     <div
       style={{
         position: 'absolute',
         top: cy - radius * p,
-        insetInlineStart: cx - radius * p,
+        left: cx - radius * p,
         width: radius * 2 * p,
         height: radius * 2 * p,
-        border: `2px solid ${color}`,
+        border: `1.5px dashed ${color}`,
         borderRadius: '50%',
-        opacity: clamp(p * 1.6),
-        boxShadow: `0 0 ${35 * p}px ${color}`,
-        transform: `rotate(${t * 35}deg)`,
+        opacity: clamp(p * 1.5),
+        boxShadow: `0 0 ${25 * p}px ${color}33`,
+        transform: `rotate(${t * 30}deg)`,
         transformOrigin: 'center center',
       }}
     >
       {Array.from({ length: count }).map((_, i) => {
-        const angle = (i / count) * Math.PI * 2 + t * 0.6
+        const angle = (i / count) * Math.PI * 2
         const px = Math.cos(angle) * radius * p
         const py = Math.sin(angle) * radius * p
-        const bright = deterministicHash(i, 97) > 0.55 ? 1 : 0.35
+        const bright = deterministicHash(i, 85) > 0.6 ? 1 : 0.3
         return (
           <div
             key={i}
             style={{
               position: 'absolute',
               top: '50%',
-              insetInlineStart: '50%',
-              width: 4,
-              height: 4,
+              left: '50%',
+              width: 3.5,
+              height: 3.5,
               background: color,
               borderRadius: '50%',
-              boxShadow: `0 0 ${9 * bright}px ${color}`,
+              boxShadow: `0 0 8px ${color}`,
               transform: `translate(${px}px, ${py}px) translate(-50%, -50%)`,
               opacity: bright,
             }}
@@ -347,652 +291,1097 @@ function DataRing({
   )
 }
 
-/** Kinetic word: appears with spring pop, optional accent pill. */
-function KineticWord({
-  t,
-  at,
-  text,
-  x,
-  y,
-  size = 34,
-  color = '#ffffff',
-  accent = false,
-}: {
+// ─── Scene 1 — Chaos: Frame-0 Visual Arrest & Confusion ──────────────────
+
+const CHAOS_PAPERS = [
+  { dx: -180, dy: 380, dz: -50, rx: 14, ry: -10, rz: -12, delay: 0.0, glowColor: NEON_PINK },
+  { dx: 180, dy: 350, dz: 40, rx: -10, ry: 15, rz: 10, delay: 0.1, glowColor: NEON_AMBER },
+  { dx: -130, dy: 540, dz: 80, rx: 8, ry: -8, rz: -16, delay: 0.2, glowColor: NEON_PINK },
+  { dx: 140, dy: 590, dz: -30, rx: -14, ry: 12, rz: 12, delay: 0.3, glowColor: NEON_AMBER },
+  { dx: -70, dy: 460, dz: 100, rx: 12, ry: -5, rz: -8, delay: 0.15, glowColor: NEON_PINK },
+  { dx: 90, dy: 490, dz: -40, rx: -8, ry: 10, rz: 8, delay: 0.25, glowColor: NEON_AMBER },
+]
+
+export function DistilChaosScene({ t, scene }: { t: number; scene: Scene }) {
+  const p1 = pop(t, 0.2)
+  const p2 = pop(t, 0.9)
+  const p3 = pop(t, 1.8)
+  const shake = t < 1.2 ? Math.sin(t * 40) * (1.2 - t) * 6 : 0
+
+  return (
+    <DarkStage scene={scene} t={t} label="// 01 · آشفتگی دفاتر سنتی">
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          transform: `translate(${shake}px, ${shake * 0.5}px)`,
+        }}
+      >
+        <Stage3D>
+          {CHAOS_PAPERS.map((paper, i) => (
+            <PaperShard key={i} t={t} at={paper.delay} {...paper} />
+          ))}
+        </Stage3D>
+
+        {/* Top Typographic Cluster (Zero overlap, strictly pinned at top 140..290) */}
+        <div
+          dir="rtl"
+          style={{
+            position: 'absolute',
+            top: 130,
+            left: 0,
+            right: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 12,
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 34,
+              fontWeight: 900,
+              color: '#ffffff',
+              opacity: clamp(p1 * 1.5),
+              transform: `scale(${mix(0.8, 1, p1).toFixed(3)})`,
+            }}
+          >
+            فروختی…
+          </div>
+
+          <div
+            style={{
+              fontSize: 34,
+              fontWeight: 900,
+              color: 'rgba(255,255,255,0.7)',
+              opacity: clamp(p2 * 1.5),
+              transform: `scale(${mix(0.8, 1, p2).toFixed(3)})`,
+            }}
+          >
+            خرج کردی…
+          </div>
+
+          <div
+            style={{
+              fontSize: 38,
+              fontWeight: 900,
+              color: '#ffffff',
+              background: `linear-gradient(135deg, ${NEON_PINK}, #D60065)`,
+              padding: '8px 28px',
+              borderRadius: 16,
+              boxShadow: `0 0 35px ${NEON_PINK}66`,
+              opacity: clamp(p3 * 1.5),
+              transform: `scale(${mix(0.7, 1, p3).toFixed(3)})`,
+            }}
+          >
+            ولی آخرش چقدر موند؟
+          </div>
+        </div>
+
+        {/* Central Anomaly Beacon */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 730,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            background: 'rgba(255, 77, 158, 0.12)',
+            border: `1px solid ${NEON_PINK}`,
+            borderRadius: 30,
+            padding: '10px 24px',
+            opacity: clamp(p3 * 1.2),
+          }}
+        >
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: NEON_PINK,
+              boxShadow: `0 0 15px ${NEON_PINK}`,
+            }}
+          />
+          <span style={{ fontSize: 15, fontWeight: 800, color: '#ffffff' }} dir="rtl">
+            سود واقعی زیر انبوه فاکتور پنهان است
+          </span>
+        </div>
+      </div>
+    </DarkStage>
+  )
+}
+
+// ─── Scene 2 — Freeze & Laser Condenser: Fractional Distillation ─────────
+
+export function DistilFreezeScene({ t, scene }: { t: number; scene: Scene }) {
+  const flash = ease(clamp(progress(t, 0.2, 0.7)))
+  const columnsP = ease(clamp(progress(t, 0.8, 2.2)))
+  const logoP = pop(t, 2.3)
+
+  return (
+    <DarkStage scene={scene} t={t} label="// 02 · تقطیر و استخراج هوشمند">
+      {/* Central Cryogenic Distillation Core */}
+      <DataRing t={t} at={0.4} cx={270} cy={350} radius={130} color={NEON_BLUE} />
+      <DataRing t={t} at={0.6} cx={270} cy={350} radius={190} color={NEON_GREEN} />
+      <DataRing t={t} at={0.8} cx={270} cy={350} radius={240} color={NEON_PINK} />
+
+      {/* Volumetric center burst */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 350,
+          left: 270,
+          width: 22,
+          height: 22,
+          borderRadius: '50%',
+          background: '#ffffff',
+          boxShadow: `0 0 ${mix(10, 80, flash)}px ${mix(0, 40, flash)}px ${NEON_BLUE}`,
+          transform: 'translate(-50%, -50%)',
+          opacity: flash,
+        }}
+      />
+
+      {/* 3 Fractional Vertical Columns (Left to Right) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 180,
+          left: 54,
+          right: 54,
+          height: 340,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          pointerEvents: 'none',
+        }}
+      >
+        {/* Column 1: Gross Sales */}
+        <div
+          style={{
+            width: 120,
+            height: mix(0, 310, columnsP),
+            background: `linear-gradient(to top, ${NEON_GREEN}33, ${NEON_GREEN}05)`,
+            border: `1.5px solid ${NEON_GREEN}`,
+            borderRadius: '16px 16px 6px 6px',
+            boxShadow: `0 0 25px ${NEON_GREEN}44`,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            padding: 12,
+            opacity: columnsP,
+          }}
+        >
+          <div
+            dir="rtl"
+            style={{ fontSize: 13, fontWeight: 900, color: NEON_GREEN, marginBottom: 4 }}
+          >
+            فروش کل
+          </div>
+          <div style={{ ...MONO, fontSize: 13, fontWeight: 800, color: '#ffffff' }}>
+            {faNumber(12850000)}
+          </div>
+        </div>
+
+        {/* Column 2: Cost of Sales */}
+        <div
+          style={{
+            width: 120,
+            height: mix(0, 220, columnsP),
+            background: `linear-gradient(to top, ${NEON_PINK}33, ${NEON_PINK}05)`,
+            border: `1.5px solid ${NEON_PINK}`,
+            borderRadius: '16px 16px 6px 6px',
+            boxShadow: `0 0 25px ${NEON_PINK}44`,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            padding: 12,
+            opacity: columnsP,
+          }}
+        >
+          <div
+            dir="rtl"
+            style={{ fontSize: 13, fontWeight: 900, color: NEON_PINK, marginBottom: 4 }}
+          >
+            بهای تمام‌شده
+          </div>
+          <div style={{ ...MONO, fontSize: 13, fontWeight: 800, color: '#ffffff' }}>
+            {faNumber(7610000)}
+          </div>
+        </div>
+
+        {/* Column 3: Pure Net Profit */}
+        <div
+          style={{
+            width: 140,
+            height: mix(0, 360, columnsP),
+            background: `linear-gradient(to top, ${NEON_BLUE}44, ${NEON_BLUE}08)`,
+            border: `2px solid ${NEON_BLUE}`,
+            borderRadius: '16px 16px 6px 6px',
+            boxShadow: `0 0 35px ${NEON_BLUE}66`,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            padding: 12,
+            opacity: columnsP,
+          }}
+        >
+          <div
+            dir="rtl"
+            style={{ fontSize: 14, fontWeight: 900, color: NEON_BLUE, marginBottom: 4 }}
+          >
+            سود خالص
+          </div>
+          <div style={{ ...MONO, fontSize: 15, fontWeight: 900, color: '#ffffff' }}>
+            {faNumber(5240000)}
+          </div>
+        </div>
+      </div>
+
+      {/* Brand Lockup Below (Guaranteed safe band 600..820) */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 600,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 12,
+          opacity: clamp(logoP * 1.5),
+          transform: `scale(${mix(0.85, 1, logoP).toFixed(3)})`,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 48,
+            fontWeight: 900,
+            color: '#ffffff',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          حسابچه
+        </div>
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 800,
+            color: NEON_GREEN,
+            background: 'rgba(0, 255, 159, 0.1)',
+            border: `1px solid ${NEON_GREEN}44`,
+            borderRadius: 24,
+            padding: '6px 22px',
+          }}
+        >
+          تبدیل داده خام به هوش مالی زنده
+        </div>
+      </div>
+    </DarkStage>
+  )
+}
+
+// ─── Scene 3 — Clean 3D Metric Cards (2x2 Disjoint Grid) ─────────────────
+
+interface MetricCardProps {
+  label: string
+  val: string
+  sub: string
+  color: string
+  x: number
+  y: number
   t: number
   at: number
-  text: string
-  x: string | number
-  y: string | number
-  size?: number
-  color?: string
-  accent?: boolean
-}) {
-  const p = pop(t, at)
+}
+
+function MetricCard({ label, val, sub, color, x, y, t, at }: MetricCardProps) {
+  const p = pop(t, at, 0.6)
+  const countP = ease(clamp(progress(t, at + 0.2, at + 1.2)))
+  const isPercent = val.includes('٪')
+  const rawNum = Number(val.replace(/[^0-9]/g, ''))
+
   return (
     <div
       style={{
         position: 'absolute',
         top: y,
-        insetInlineStart: x,
-        transform: `translate(-50%, -50%) scale(${mix(0.35, 1, p).toFixed(3)})`,
+        left: x,
+        width: 226,
+        height: 184,
+        background: 'linear-gradient(145deg, #101422, #0a0d16)',
+        borderRadius: 20,
+        border: `1.5px solid ${color}`,
+        boxShadow: `0 20px 45px rgba(0,0,0,0.7), 0 0 25px ${color}22`,
+        padding: '16px 18px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
         opacity: clamp(p * 1.6),
-        fontSize: size,
-        fontWeight: 900,
-        color: accent ? color : PAPER_WHITE,
-        background: accent ? color : 'transparent',
-        padding: accent ? '5px 16px' : 0,
-        borderRadius: accent ? 12 : 0,
-        letterSpacing: '0.02em',
-        whiteSpace: 'nowrap',
-        boxShadow: accent ? `0 0 20px ${color}` : 'none',
+        transform: `translateY(${mix(40, 0, p).toFixed(1)}px) scale(${mix(0.85, 1, p).toFixed(3)})`,
       }}
     >
-      {text}
-    </div>
-  )
-}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: color,
+            boxShadow: `0 0 10px ${color}`,
+          }}
+        />
+        <span dir="rtl" style={{ fontSize: 14, fontWeight: 800, color: 'rgba(255,255,255,0.85)' }}>
+          {label}
+        </span>
+      </div>
 
-/** Value card: big number with label, floating in 3D. */
-function ValueCard({
-  t,
-  at,
-  dx,
-  dy,
-  dz,
-  rx,
-  ry,
-  label,
-  value,
-  color,
-  delay = 0,
-}: {
-  t: number
-  at: number
-  dx: number
-  dy: number
-  dz: number
-  rx: number
-  ry: number
-  label: string
-  value: string
-  color: string
-  delay?: number
-}) {
-  const p = pop(t, at + (delay || 0), 0.7)
-  const float = Math.sin((t - at) * 1.1 + dx * 0.015) * 5
-  const count = mix(
-    0,
-    Number(value.replace(/[^0-9]/g, '')),
-    ease(clamp(progress(t, at + 0.3 + (delay || 0), 1.6))),
-  )
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: mix(700, dy, p),
-        insetInlineStart: `calc(50% + ${dx + float}px)`,
-        width: 210,
-        marginLeft: -105,
-        transform: `translateZ(${dz}px) rotateX(${mix(rx, rx - 8, p)}deg) rotateY(${mix(ry, ry + 6, p)}deg)`,
-        transformStyle: 'preserve-3d',
-        opacity: clamp(p * 1.8),
-      }}
-    >
       <div
         style={{
-          background: PAPER_WHITE,
-          borderRadius: 18,
-          boxShadow: `0 30px 80px rgba(0,0,0,0.7), 0 0 45px ${color}`,
-          border: `2px solid ${color}`,
-          padding: '18px 22px',
-          transformStyle: 'preserve-3d',
+          ...MONO,
+          fontSize: isPercent ? 36 : 28,
+          fontWeight: 900,
+          color: color,
+          fontVariantNumeric: 'tabular-nums',
+          textAlign: 'right',
+          lineHeight: 1.1,
         }}
       >
-        <div
-          style={{
-            fontSize: 15,
-            fontWeight: 800,
-            color: color,
-            marginBottom: 6,
-            letterSpacing: '0.05em',
-          }}
-        >
-          {label}
-        </div>
-        <div
-          style={{
-            ...MONO,
-            fontSize: 34,
-            fontWeight: 900,
-            color: '#0a0a12',
-            fontVariantNumeric: 'tabular-nums',
-            lineHeight: 1.1,
-          }}
-        >
-          {value.includes('%')
-            ? faNumber(Number(value.replace('%', ''))) + '%'
-            : faNumber(Math.round(count))}
-        </div>
+        {isPercent ? `+${faNumber(24)}٪` : faNumber(Math.round(rawNum * countP))}
+      </div>
+
+      <div
+        dir="rtl"
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: 'rgba(255,255,255,0.45)',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          paddingTop: 8,
+        }}
+      >
+        {sub}
       </div>
     </div>
   )
 }
 
-// ─── Scene 1 — Chaos: flying papers, overwhelmed character ───────────────
-
-const CHAOS_PAPERS = [
-  { dx: -190, dy: 260, dz: -60, rx: 15, ry: -12, rz: -8, delay: 0.0 },
-  { dx: 190, dy: 220, dz: 40, rx: -10, ry: 14, rz: 6, delay: 0.12 },
-  { dx: -120, dy: 420, dz: 90, rx: 8, ry: -6, rz: -14, delay: 0.24 },
-  { dx: 130, dy: 470, dz: -30, rx: -12, ry: 10, rz: 9, delay: 0.36 },
-  { dx: -210, dy: 610, dz: 20, rx: 6, ry: -8, rz: -4, delay: 0.48 },
-  { dx: 210, dy: 560, dz: -70, rx: -8, ry: 6, rz: 12, delay: 0.6 },
-  { dx: -60, dy: 380, dz: 110, rx: 14, ry: -4, rz: -10, delay: 0.1 },
-  { dx: 80, dy: 430, dz: -50, rx: -6, ry: 12, rz: 7, delay: 0.22 },
-]
-
-export function DistilChaosScene({ t, scene }: { t: number; scene: Scene }) {
-  return (
-    <DarkStage scene={scene} t={t} label="// 01 — اشغال">
-      <Stage3D>
-        {CHAOS_PAPERS.map((paper, i) => (
-          <PaperSheet key={i} t={t} at={paper.delay} {...paper} />
-        ))}
-      </Stage3D>
-      <HalftoneCharacter
-        t={t}
-        mood="worried"
-        scale={1.15}
-        style={{
-          position: 'absolute',
-          bottom: 110,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          margin: '0 auto',
-          transform: `translateY(${Math.sin(t * 10) * 6}px) scale(${mix(0.6, 1, pop(t, 0.05, 0.8)).toFixed(3)})`,
-        }}
-      />
-      <KineticWord t={t} at={0.25} text="فروختی…" x="50%" y="300" size={38} accent={false} />
-      <KineticWord t={t} at={0.95} text="خرج کردی…" x="50%" y="356" size={38} accent={false} />
-      <KineticWord
-        t={t}
-        at={1.65}
-        text="چقدر موند؟"
-        x="50%"
-        y="412"
-        size={42}
-        accent={true}
-        color={NEON_PINK}
-      />
-    </DarkStage>
-  )
-}
-
-// ─── Scene 2 — Freeze & rings: data rings + neon logo bars ───────────────
-
-export function DistilFreezeScene({ t, scene }: { t: number; scene: Scene }) {
-  return (
-    <DarkStage scene={scene} t={t} label="// 02 — تجمید">
-      {/* frozen papers dimmed */}
-      <Stage3D>
-        {CHAOS_PAPERS.map((paper, i) => (
-          <PaperSheet
-            key={i}
-            t={t}
-            at={0}
-            dx={paper.dx}
-            dy={paper.dy}
-            dz={paper.dz}
-            rx={paper.rx}
-            ry={paper.ry}
-            rz={paper.rz}
-            delay={0}
-          />
-        ))}
-      </Stage3D>
-      {/* central bright light */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 320,
-          insetInlineStart: '50%',
-          width: 0,
-          height: 0,
-          background: '#ffffff',
-          borderRadius: '50%',
-          transform: `translate(-50%, -50%) scale(${mix(0, 220, ease(clamp(progress(t, 0.5, 1.2)))).toFixed(0)})`,
-          boxShadow: `0 0 ${mix(0, 200, ease(clamp(progress(t, 0.5, 1.2))))}px #ffffff`,
-          opacity: ease(clamp(progress(t, 0.5, 1.2))),
-        }}
-      />
-      {/* data rings */}
-      <DataRing t={t} at={0.9} cx={270} cy={320} radius={140} color={NEON_BLUE} />
-      <DataRing t={t} at={1.1} cx={270} cy={320} radius={200} color={NEON_GREEN} />
-      <DataRing t={t} at={1.3} cx={270} cy={320} radius={260} color={NEON_PINK} />
-      {/* neon bars */}
-      <NeonBar t={t} at={1.5} x={-46} color={NEON_GREEN} />
-      <NeonBar t={t} at={1.7} x={0} color={NEON_BLUE} />
-      <NeonBar t={t} at={1.9} x={46} color={NEON_PINK} />
-      {/* logo text */}
-      <KineticWord
-        t={t}
-        at={2.4}
-        text="حسابچه"
-        x="50%"
-        y="540"
-        size={64}
-        accent={true}
-        color={NEON_GREEN}
-      />
-    </DarkStage>
-  )
-}
-
-// ─── Scene 3 — Clean cards: four organized 3D value cards ────────────────
-
 export function DistilCardsScene({ t, scene }: { t: number; scene: Scene }) {
+  const summaryP = pop(t, 1.4)
+
   return (
-    <DarkStage scene={scene} t={t} label="// 03 — düzen">
-      <Stage3D>
-        <ValueCard
-          t={t}
-          at={0.2}
-          dx={-180}
-          dy={-60}
-          dz={20}
-          rx={-8}
-          ry={6}
-          label="فروش امروز"
-          value="۱۲٬۸۵۰٬۰۰۰"
-          color={NEON_GREEN}
-          delay={0}
-        />
-        <ValueCard
-          t={t}
-          at={0.45}
-          dx={180}
-          dy={-60}
-          dz={-40}
-          rx={6}
-          ry={-8}
-          label="موجودی انبار"
-          value="۳۴۸"
-          color={NEON_BLUE}
-          delay={0}
-        />
-        <ValueCard
-          t={t}
-          at={0.7}
-          dx={-180}
-          dy={140}
-          dz={60}
-          rx={-6}
-          ry={4}
-          label="سود خالص"
-          value="+۲۴٪"
-          color={NEON_PINK}
-          delay={0}
-        />
-        <ValueCard
-          t={t}
-          at={0.95}
-          dx={180}
-          dy={140}
-          dz={-80}
-          rx={8}
-          ry={-6}
-          label="بدهکاران"
-          value="۸٬۴۰۰٬۰۰۰"
-          color={NEON_GREEN}
-          delay={0}
-        />
-      </Stage3D>
-      <HalftoneCharacter
+    <DarkStage scene={scene} t={t} label="// 03 · ترازنامه چهارگانه شفاف">
+      {/* 2x2 Guaranteed Disjoint Grid:
+          Col 1: left 34, w 226 (spans 34..260)
+          Col 2: left 280, w 226 (spans 280..506)
+          Row 1: top 180, h 184 (spans 180..364)
+          Row 2: top 394, h 184 (spans 394..578)
+          Safe Gap: 20px horizontally, 30px vertically
+      */}
+      <MetricCard
+        label="فروش امروز"
+        val="۱۲٬۸۵۰٬۰۰۰"
+        sub="۳۸ تراکنش موفق"
+        color={NEON_GREEN}
+        x={34}
+        y={180}
         t={t}
-        mood="happy"
-        scale={0.95}
-        style={{
-          position: 'absolute',
-          bottom: 100,
-          insetInlineStart: 0,
-          insetInlineEnd: 0,
-          margin: '0 auto',
-          opacity: clamp(progress(t, 1.5, 2.2)),
-        }}
+        at={0.2}
       />
-    </DarkStage>
-  )
-}
+      <MetricCard
+        label="موجودی کالا"
+        val="۳۴۸"
+        sub="اقلام در انبار مرکزی"
+        color={NEON_BLUE}
+        x={280}
+        y={180}
+        t={t}
+        at={0.4}
+      />
+      <MetricCard
+        label="حاشیه سود"
+        val="+۲۴٪"
+        sub="سود خالص خالص"
+        color={NEON_PINK}
+        x={34}
+        y={394}
+        t={t}
+        at={0.6}
+      />
+      <MetricCard
+        label="مطالبات معوق"
+        val="۸٬۴۰۰٬۰۰۰"
+        sub="وصولی در سررسید"
+        color={NEON_AMBER}
+        x={280}
+        y={394}
+        t={t}
+        at={0.8}
+      />
 
-// ─── Scene 4 — Phone mockup: dashboard, live counters, alerts ────────────
-
-export function DistilPhoneScene({ t, scene }: { t: number; scene: Scene }) {
-  const phoneUp = pop(t, 0.15, 0.8)
-  const counterP = ease(clamp(progress(t, 1.4, 3.0)))
-  const alertP = pop(t, 3.2, 0.6)
-  return (
-    <DarkStage scene={scene} t={t} label="// 04 — تابلو">
-      {/* phone mockup */}
+      {/* Disjoint Bottom Ledger Bar (top 630..760) */}
       <div
+        dir="rtl"
         style={{
           position: 'absolute',
-          top: mix(660, 300, phoneUp),
-          insetInlineStart: '50%',
-          marginLeft: -136,
-          width: 272,
-          height: 520,
-          background: '#161624',
-          border: `4px solid #0a0a12`,
-          borderRadius: 44,
-          boxShadow: `0 40px 120px rgba(0,0,0,0.8), 0 0 60px ${NEON_BLUE}`,
-          transform: `translateY(${mix(100, 0, phoneUp).toFixed(1)}px) rotate(${mix(8, 0, phoneUp).toFixed(1)}deg)`,
-          opacity: clamp(phoneUp * 1.8),
-          padding: '26px 22px',
+          top: 630,
+          left: 34,
+          right: 34,
+          background: 'rgba(16, 20, 34, 0.9)',
+          border: `1.5px solid ${BORDER_GLASS}`,
+          borderRadius: 20,
+          padding: '18px 24px',
           display: 'flex',
-          flexDirection: 'column',
-          gap: 16,
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.6)',
+          opacity: clamp(summaryP * 1.5),
+          transform: `translateY(${mix(30, 0, summaryP).toFixed(1)}px)`,
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 22, fontWeight: 900 }}>تابلو</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 12,
+              background: `${NEON_GREEN}22`,
+              border: `1px solid ${NEON_GREEN}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 18,
+              color: NEON_GREEN,
+            }}
+          >
+            ✓
+          </div>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 900, color: '#ffffff' }}>
+              ترازنامه لحظه‌ای همگام
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>
+              تمامی دفاتر بدون خطای انطباق تراز شدند
+            </div>
+          </div>
+        </div>
+        <div
+          style={{
+            ...MONO,
+            fontSize: 12,
+            background: `${NEON_GREEN}22`,
+            color: NEON_GREEN,
+            padding: '4px 12px',
+            borderRadius: 8,
+            fontWeight: 800,
+          }}
+        >
+          BALANCED
+        </div>
+      </div>
+    </DarkStage>
+  )
+}
+
+// ─── Scene 4 — Titanium Mobile Cockpit: Local Coordinate System ──────────
+
+export function DistilPhoneScene({ t, scene }: { t: number; scene: Scene }) {
+  const phoneP = pop(t, 0.2, 0.8)
+  const counterP = ease(clamp(progress(t, 1.2, 2.8)))
+  const alertP = pop(t, 3.2, 0.6)
+  const mathP = pop(t, 5.0, 0.6)
+  const syncP = pop(t, 7.2, 0.6)
+
+  return (
+    <DarkStage scene={scene} t={t} label="// 04 · کاک‌پیت موبایل حسابچه">
+      {/* Mobile Frame: strictly local coordinates (Defect Law #8) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 130,
+          left: 100,
+          width: 340,
+          height: 680,
+          background: '#0c0f18',
+          border: '4px solid #222738',
+          borderRadius: 48,
+          boxShadow: `0 40px 100px rgba(0,0,0,0.9), 0 0 50px ${NEON_BLUE}22`,
+          overflow: 'hidden',
+          opacity: clamp(phoneP * 1.5),
+          transform: `translateY(${mix(60, 0, phoneP).toFixed(1)}px)`,
+          direction: 'ltr',
+        }}
+      >
+        {/* Notch / Speaker bar */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 14,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 90,
+            height: 6,
+            background: '#1a1f30',
+            borderRadius: 4,
+          }}
+        />
+
+        {/* Local App Header (top: 36, h: 44) */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 36,
+            left: 20,
+            right: 20,
+            height: 44,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <span
             style={{
               ...MONO,
-              fontSize: 12,
-              background: NEON_GREEN,
-              color: '#0a0a12',
-              borderRadius: 8,
-              padding: '3px 10px',
+              fontSize: 11,
+              background: `${NEON_GREEN}22`,
+              color: NEON_GREEN,
+              border: `1px solid ${NEON_GREEN}`,
+              borderRadius: 6,
+              padding: '3px 8px',
               fontWeight: 800,
             }}
           >
-            LIVE
+            LIVE SYNC
+          </span>
+          <span dir="rtl" style={{ fontSize: 18, fontWeight: 900, color: '#ffffff' }}>
+            داشبورد زنده
           </span>
         </div>
-        {/* live counter */}
+
+        {/* Card 1: Real-time Sales Counter (top: 96, h: 140) */}
         <div
           style={{
-            background: PAPER_WHITE,
-            borderRadius: 16,
-            padding: '16px 20px',
-            border: `2px solid ${NEON_BLUE}`,
-            boxShadow: `0 0 30px ${NEON_BLUE}`,
+            position: 'absolute',
+            top: 96,
+            left: 20,
+            right: 20,
+            height: 140,
+            background: 'linear-gradient(145deg, #131826, #0e121e)',
+            border: `1.5px solid ${NEON_BLUE}`,
+            borderRadius: 22,
+            padding: 16,
+            boxShadow: `0 10px 30px rgba(0,0,0,0.5), 0 0 25px ${NEON_BLUE}22`,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
           }}
         >
-          <div style={{ fontSize: 14, fontWeight: 800, color: NEON_BLUE, marginBottom: 6 }}>
-            فروش لحظه‌ای
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ ...MONO, fontSize: 11, color: NEON_BLUE }}>TODAY REVENUE</span>
+            <span dir="rtl" style={{ fontSize: 14, fontWeight: 800, color: '#ffffff' }}>
+              فروش لحظه‌ای
+            </span>
           </div>
+
           <div
             style={{
               ...MONO,
-              fontSize: 40,
+              fontSize: 34,
               fontWeight: 900,
-              color: '#0a0a12',
+              color: '#ffffff',
+              textAlign: 'right',
               fontVariantNumeric: 'tabular-nums',
             }}
           >
             {faNumber(Math.round(12850000 * counterP))}
           </div>
+
+          {/* Micro sparkline bar */}
+          <div
+            style={{
+              height: 6,
+              width: '100%',
+              background: 'rgba(255,255,255,0.1)',
+              borderRadius: 3,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                height: '100%',
+                width: `${counterP * 100}%`,
+                background: `linear-gradient(90deg, ${NEON_BLUE}, ${NEON_GREEN})`,
+              }}
+            />
+          </div>
         </div>
-        {/* low stock alert */}
+
+        {/* Card 2: Low Stock Warning (top: 252, h: 84) */}
         <div
           style={{
-            background: NEON_PINK,
-            borderRadius: 14,
-            padding: '12px 18px',
-            opacity: alertP,
-            transform: `scale(${mix(0.5, 1, alertP).toFixed(3)})`,
+            position: 'absolute',
+            top: 252,
+            left: 20,
+            right: 20,
+            height: 84,
+            background: 'linear-gradient(145deg, rgba(255, 184, 0, 0.12), #141720)',
+            border: `1.5px solid ${NEON_AMBER}`,
+            borderRadius: 18,
+            padding: 14,
+            opacity: clamp(alertP * 1.5),
+            transform: `scale(${mix(0.85, 1, alertP).toFixed(3)})`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
           }}
         >
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              background: `${NEON_AMBER}22`,
+              border: `1px solid ${NEON_AMBER}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: NEON_AMBER,
+              fontSize: 16,
+              fontWeight: 900,
+            }}
+          >
+            !
+          </div>
+          <div dir="rtl" style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 900, color: NEON_AMBER }}>
+              هشدار موجودی حداقل
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>
+              کالای استاندارد کد ۱۰۱ (کمتر از ۵ عدد)
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Exact Net Profit Equation (top: 352, h: 120) */}
+        <div
+          dir="rtl"
+          style={{
+            position: 'absolute',
+            top: 352,
+            left: 20,
+            right: 20,
+            height: 120,
+            background: 'linear-gradient(145deg, #111624, #0a0d16)',
+            border: `1.5px solid ${NEON_GREEN}`,
+            borderRadius: 20,
+            padding: 14,
+            opacity: clamp(mathP * 1.5),
+            transform: `scale(${mix(0.85, 1, mathP).toFixed(3)})`,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.7)' }}>
+            محاسبه قطعی سود عملیاتی:
+          </div>
+
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 10,
-              color: PAPER_WHITE,
-              fontSize: 15,
-              fontWeight: 800,
-            }}
-          >
-            <span style={{ width: 10, height: 10, background: PAPER_WHITE, borderRadius: '50%' }} />
-            <span>انبار پایین: کالای مصرفی کد ۳۰۳</span>
-          </div>
-        </div>
-        {/* profit line */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            color: PAPER_WHITE,
-            fontSize: 14,
-            fontWeight: 700,
-            opacity: clamp(progress(t, 4.0, 5.2)),
-          }}
-        >
-          <span style={{ color: NEON_GREEN }}>۱۲٬۸۵۰٬۰۰۰</span>
-          <span style={{ color: '#666677' }}>−</span>
-          <span style={{ color: NEON_PINK }}>۷٬۶۱۰٬۰۰۰</span>
-          <span style={{ color: NEON_BLUE }}> = ۵٬۲۴۰٬۰۰۰ سود</span>
-        </div>
-      </div>
-    </DarkStage>
-  )
-}
-
-// ─── Scene 5 — Split screen: chaos left, clean right, sweep line ─────────
-
-export function DistilSplitScene({ t, scene }: { t: number; scene: Scene }) {
-  const sweep = ease(clamp(progress(t, 0.8, 2.6)))
-  return (
-    <DarkStage scene={scene} t={t} label="// 05 — تقسیم">
-      {/* left: chaotic papers (dimmed) */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          opacity: 0.45,
-          backgroundImage:
-            'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
-          backgroundSize: '30px 30px',
-        }}
-      />
-      {CHAOS_PAPERS.map((paper, i) => (
-        <PaperSheet
-          key={i}
-          t={t}
-          at={0}
-          dx={paper.dx - 180}
-          dy={paper.dy}
-          dz={paper.dz}
-          rx={paper.rx}
-          ry={paper.ry}
-          rz={paper.rz}
-          delay={0}
-          w={140}
-          h={180}
-        />
-      ))}
-      {/* right: clean dashboard card */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 420,
-          insetInlineStart: `calc(50% + 90px)`,
-          width: 260,
-          height: 340,
-          background: PAPER_WHITE,
-          borderRadius: 24,
-          boxShadow: `0 40px 120px rgba(0,0,0,0.5)`,
-          border: `2px solid ${NEON_GREEN}`,
-          padding: '22px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 14,
-          opacity: clamp(progress(t, 0.5, 1.4)) * 0.95,
-          transform: `translateX(${mix(-40, 0, ease(clamp(progress(t, 0.5, 1.4)))).toFixed(1)}px)`,
-        }}
-      >
-        {['فروش:', 'انبار:', 'سود:'].map((label, i) => (
-          <div
-            key={i}
-            style={{
-              display: 'flex',
               justifyContent: 'space-between',
-              fontSize: 16,
-              fontWeight: 800,
+              ...MONO,
+              fontSize: 13,
+              fontWeight: 900,
             }}
           >
-            <span style={{ color: '#161624' }}>{label}</span>
-            <span style={{ color: NEON_GREEN, ...MONO, fontWeight: 900 }}>
-              {i === 0 ? '۱۲٬۸۵۰٬۰۰۰' : i === 1 ? '۳۴۸' : '+۲۴٪'}
+            <span style={{ color: NEON_GREEN }}>{faNumber(12850000)}</span>
+            <span style={{ color: 'rgba(255,255,255,0.4)' }}>−</span>
+            <span style={{ color: NEON_PINK }}>{faNumber(7610000)}</span>
+            <span style={{ color: 'rgba(255,255,255,0.4)' }}>=</span>
+            <span
+              style={{
+                color: '#ffffff',
+                background: `${NEON_GREEN}33`,
+                padding: '3px 8px',
+                borderRadius: 6,
+              }}
+            >
+              {faNumber(5240000)}
             </span>
           </div>
-        ))}
+
+          <div style={{ fontSize: 11, fontWeight: 700, color: NEON_GREEN, textAlign: 'left' }}>
+            سود قطعی +۲۴٪ تایید شد
+          </div>
+        </div>
+
+        {/* Card 4: Double Entry Auto Settle (top: 488, h: 80) */}
+        <div
+          dir="rtl"
+          style={{
+            position: 'absolute',
+            top: 488,
+            left: 20,
+            right: 20,
+            height: 80,
+            background: 'rgba(0, 255, 159, 0.08)',
+            border: `1.5px solid ${NEON_GREEN}`,
+            borderRadius: 18,
+            padding: 14,
+            opacity: clamp(syncP * 1.5),
+            transform: `translateY(${mix(20, 0, syncP).toFixed(1)}px)`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: NEON_GREEN,
+              color: '#08090f',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 900,
+              fontSize: 16,
+            }}
+          >
+            ✓
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 900, color: '#ffffff' }}>
+              ثبت سند دوبل حسابداری
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>
+              همگام‌سازی لحظه‌ای با انبار و دفاتر
+            </div>
+          </div>
+        </div>
+
+        {/* Cockpit Home Indicator Bar */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 12,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 120,
+            height: 4,
+            background: 'rgba(255,255,255,0.25)',
+            borderRadius: 2,
+          }}
+        />
       </div>
-      {/* sweep line */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          bottom: 0,
-          insetInlineStart: `calc(50% + ${mix(-270, 0, sweep)}px)`,
-          width: 4,
-          background: `linear-gradient(to bottom, ${NEON_PINK}, ${NEON_BLUE}, ${NEON_GREEN})`,
-          boxShadow: `0 0 40px #ffffff`,
-          transform: `scaleY(${mix(0, 1, sweep)})`,
-          opacity: clamp(sweep * 1.4),
-        }}
-      />
-      {/* text */}
-      <KineticWord
-        t={t}
-        at={1.6}
-        text="کمتر"
-        x="50%"
-        y="780"
-        size={40}
-        accent={true}
-        color={NEON_PINK}
-      />
-      <KineticWord t={t} at={2.1} text="حدس بزن." x="50%" y="830" size={40} accent={false} />
-      <KineticWord
-        t={t}
-        at={2.7}
-        text="بیشتر"
-        x="50%"
-        y="880"
-        size={40}
-        accent={true}
-        color={NEON_GREEN}
-      />
-      <KineticWord t={t} at={3.2} text="بدون." x="50%" y="930" size={40} accent={false} />
     </DarkStage>
   )
 }
 
-// ─── Scene 6 — Logo converge: final lockup + CTA ─────────────────────────
+// ─── Scene 5 — Dual Phase Transformation & Laser Sweep Blade ─────────────
 
-export function DistilLogoScene({ t, scene }: { t: number; scene: Scene }) {
-  const converge = ease(clamp(progress(t, 0.4, 1.8)))
-  const mark = pop(t, 1.0)
-  const cta = clamp(progress(t, 2.6, 0.8))
+export function DistilSplitScene({ t, scene }: { t: number; scene: Scene }) {
+  const sweep = ease(clamp(progress(t, 0.6, 2.8)))
+  const bladeX = mix(40, 500, sweep)
+
+  const textP1 = pop(t, 1.4)
+  const textP2 = pop(t, 2.0)
+
   return (
-    <DarkStage scene={scene} t={t} label="// 06 — accumulating">
-      {/* converging elements */}
+    <DarkStage scene={scene} t={t} label="// 05 · انتقال از سردرگمی به نظم">
+      {/* Left Chamber: Old Chaos (0 to bladeX) */}
       <div
         style={{
           position: 'absolute',
-          top: mix(400, 340, converge),
-          insetInlineStart: '50%',
-          transform: `translate(-50%, -50%) scale(${mix(0.2, 1, converge).toFixed(3)})`,
-          opacity: clamp(converge * 1.5),
-          display: 'flex',
-          gap: 14,
-          justifyContent: 'center',
+          top: 160,
+          left: 40,
+          width: Math.max(0, bladeX - 40),
+          height: 480,
+          background: 'linear-gradient(135deg, rgba(255, 77, 158, 0.08), rgba(20, 10, 16, 0.95))',
+          borderRadius: '24px 0 0 24px',
+          border: '1.5px solid rgba(255, 77, 158, 0.3)',
+          borderRight: 'none',
+          overflow: 'hidden',
+          padding: 24,
         }}
       >
-        <NeonBar t={t} at={0} x={-40} color={NEON_GREEN} height={160} />
-        <NeonBar t={t} at={0.15} x={0} color={NEON_BLUE} height={160} />
-        <NeonBar t={t} at={0.3} x={40} color={NEON_PINK} height={160} />
+        <div
+          dir="rtl"
+          style={{ fontSize: 18, fontWeight: 900, color: NEON_PINK, marginBottom: 16 }}
+        >
+          دفاتر دستی و نامنظم
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, opacity: 0.5 }}>
+          {['کسری نامعلوم دخل', 'خطای دستی محاسبه انبار', 'گم شدن فاکتور نسیه'].map((item, idx) => (
+            <div
+              key={idx}
+              dir="rtl"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px dashed rgba(255, 77, 158, 0.4)',
+                borderRadius: 12,
+                padding: '10px 14px',
+                fontSize: 13,
+                color: 'rgba(255,255,255,0.7)',
+              }}
+            >
+              ✕ {item}
+            </div>
+          ))}
+        </div>
       </div>
-      {/* logo */}
+
+      {/* Right Chamber: Hisabche Precision (bladeX to 500) */}
       <div
         style={{
           position: 'absolute',
-          top: 380,
-          insetInlineStart: '50%',
-          transform: `translate(-50%, -50%) scale(${mix(0.3, 1, mark).toFixed(3)})`,
-          opacity: clamp(mark * 1.8),
+          top: 160,
+          left: bladeX,
+          width: Math.max(0, 500 - bladeX),
+          height: 480,
+          background: 'linear-gradient(135deg, rgba(0, 255, 159, 0.08), rgba(10, 20, 16, 0.95))',
+          borderRadius: '0 24px 24px 0',
+          border: '1.5px solid rgba(0, 255, 159, 0.4)',
+          borderLeft: 'none',
+          overflow: 'hidden',
+          padding: 24,
         }}
       >
-        <div style={{ fontSize: 72, fontWeight: 900, letterSpacing: '-0.02em' }}>حسابچه</div>
+        <div
+          dir="rtl"
+          style={{ fontSize: 18, fontWeight: 900, color: NEON_GREEN, marginBottom: 16 }}
+        >
+          نظم هوشمند حسابچه
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {[
+            { label: 'سود خالص قطعی:', val: '+۲۴٪' },
+            { label: 'انبار خودکار:', val: '۳۴۸ قلم' },
+            { label: 'ثبت دوبل لحظه‌ای:', val: 'تراز ۱۰۰٪' },
+          ].map((item, idx) => (
+            <div
+              key={idx}
+              dir="rtl"
+              style={{
+                background: 'rgba(0, 255, 159, 0.06)',
+                border: '1px solid rgba(0, 255, 159, 0.3)',
+                borderRadius: 12,
+                padding: '10px 14px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: 13,
+                fontWeight: 800,
+                color: '#ffffff',
+              }}
+            >
+              <span>{item.label}</span>
+              <span style={{ color: NEON_GREEN, ...MONO }}>{item.val}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Travelling Photonic Laser Blade */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 140,
+          left: bladeX - 2,
+          width: 4,
+          height: 520,
+          background: `linear-gradient(to bottom, transparent, ${NEON_BLUE}, #ffffff, ${NEON_GREEN}, transparent)`,
+          boxShadow: `0 0 25px 8px ${NEON_BLUE}88, 0 0 40px 12px ${NEON_GREEN}66`,
+          borderRadius: 2,
+        }}
+      />
+
+      {/* Safe Typographic Anchor Below (y: 690..840) */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 690,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
         <div
           style={{
-            width: `${mix(0, 240, mark).toFixed(0)}px`,
-            height: 8,
-            background: `linear-gradient(to right, ${NEON_GREEN}, ${NEON_BLUE}, ${NEON_PINK})`,
-            borderRadius: 6,
-            margin: '18px auto 0',
-            boxShadow: `0 0 40px #ffffff`,
-            opacity: mark,
+            fontSize: 34,
+            fontWeight: 900,
+            color: '#ffffff',
+            opacity: clamp(textP1 * 1.5),
+            transform: `scale(${mix(0.8, 1, textP1).toFixed(3)})`,
+          }}
+        >
+          کمتر حدس بزن…
+        </div>
+
+        <div
+          style={{
+            fontSize: 36,
+            fontWeight: 900,
+            color: '#08090f',
+            background: `linear-gradient(135deg, ${NEON_GREEN}, ${NEON_BLUE})`,
+            padding: '8px 36px',
+            borderRadius: 18,
+            boxShadow: `0 0 35px ${NEON_GREEN}66`,
+            opacity: clamp(textP2 * 1.5),
+            transform: `scale(${mix(0.8, 1, textP2).toFixed(3)})`,
+          }}
+        >
+          بیشتر مطمئن باش!
+        </div>
+      </div>
+    </DarkStage>
+  )
+}
+
+// ─── Scene 6 — Architectural Brand Monolith & CTA ────────────────────────
+
+export function DistilLogoScene({ t, scene }: { t: number; scene: Scene }) {
+  const monolithP = pop(t, 0.3, 0.8)
+  const barsP = ease(clamp(progress(t, 0.6, 1.8)))
+  const ctaP = pop(t, 2.2, 0.7)
+
+  return (
+    <DarkStage scene={scene} t={t} label="// 06 · حسابچه هوشمند">
+      {/* Volumetric Center Monolith */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 240,
+          left: '50%',
+          transform: `translateX(-50%) scale(${mix(0.8, 1, monolithP).toFixed(3)})`,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          opacity: clamp(monolithP * 1.6),
+        }}
+      >
+        {/* 3 Prismatic Neon Trinity Bars */}
+        <div style={{ display: 'flex', gap: 14, height: 120, alignItems: 'center' }}>
+          <div
+            style={{
+              width: 14,
+              height: mix(0, 110, barsP),
+              background: NEON_GREEN,
+              borderRadius: 7,
+              boxShadow: `0 0 25px ${NEON_GREEN}`,
+            }}
+          />
+          <div
+            style={{
+              width: 14,
+              height: mix(0, 140, barsP),
+              background: NEON_BLUE,
+              borderRadius: 7,
+              boxShadow: `0 0 30px ${NEON_BLUE}`,
+            }}
+          />
+          <div
+            style={{
+              width: 14,
+              height: mix(0, 95, barsP),
+              background: NEON_PINK,
+              borderRadius: 7,
+              boxShadow: `0 0 25px ${NEON_PINK}`,
+            }}
+          />
+        </div>
+
+        {/* Master Brand Name */}
+        <div
+          dir="rtl"
+          style={{
+            fontSize: 68,
+            fontWeight: 900,
+            color: '#ffffff',
+            letterSpacing: '-0.02em',
+            marginTop: 20,
+            textShadow: '0 10px 40px rgba(0,0,0,0.8)',
+          }}
+        >
+          حسابچه
+        </div>
+
+        {/* Specular underline */}
+        <div
+          style={{
+            width: mix(0, 240, barsP),
+            height: 4,
+            background: `linear-gradient(90deg, ${NEON_GREEN}, ${NEON_BLUE}, ${NEON_PINK})`,
+            borderRadius: 2,
+            boxShadow: '0 0 15px rgba(255,255,255,0.8)',
+            marginTop: 8,
           }}
         />
+
         <div
           style={{
             ...MONO,
-            marginTop: 20,
-            fontSize: 16,
-            letterSpacing: '0.2em',
-            opacity: mark * 0.8,
+            fontSize: 13,
+            letterSpacing: '0.22em',
+            color: 'rgba(255,255,255,0.6)',
+            marginTop: 14,
           }}
         >
-          CLOUD · SIMPLE · FAST
+          FINANCIAL PRECISION · CLOUD ERP
         </div>
       </div>
-      {/* final text */}
-      <KineticWord
-        t={t}
-        at={1.4}
-        text="حسابچه؛"
-        x="50%"
-        y="560"
-        size={36}
-        accent={true}
-        color={NEON_GREEN}
-      />
-      <KineticWord
-        t={t}
-        at={2.0}
-        text="عددها معنی پیدا می‌کنن."
-        x="50%"
-        y="610"
-        size={32}
-        accent={false}
-      />
-      {/* CTA */}
+
+      {/* Slogan */}
+      <div
+        dir="rtl"
+        style={{
+          position: 'absolute',
+          top: 570,
+          left: 0,
+          right: 0,
+          textAlign: 'center',
+          fontSize: 24,
+          fontWeight: 800,
+          color: 'rgba(255,255,255,0.9)',
+          opacity: clamp(monolithP * 1.4),
+        }}
+      >
+        وقتی عددها بالاخره معنی پیدا می‌کنند.
+      </div>
+
+      {/* Tactile Primary Action Call (bottom 160..240) */}
       <div
         style={{
           position: 'absolute',
-          bottom: 130,
-          insetInlineStart: '50%',
-          transform: `translate(-50%, -50%) scale(${mix(0.2, 1, cta).toFixed(3)}) rotate(${mix(-8, 0, cta).toFixed(1)}deg)`,
-          opacity: cta,
+          bottom: 150,
+          left: '50%',
+          transform: `translateX(-50%) scale(${mix(0.8, 1, ctaP).toFixed(3)})`,
+          opacity: clamp(ctaP * 1.5),
         }}
       >
         <div
+          dir="rtl"
           style={{
-            background: NEON_BLUE,
-            color: PAPER_WHITE,
-            fontSize: 34,
+            background: `linear-gradient(135deg, ${NEON_GREEN}, #00CC7E)`,
+            color: '#08090f',
+            fontSize: 32,
             fontWeight: 900,
-            padding: '14px 60px',
-            borderRadius: 26,
-            boxShadow: `0 0 40px ${NEON_BLUE}, 12px 12px 0 #0a0a12`,
-            border: `2px solid #0a0a12`,
+            padding: '16px 64px',
+            borderRadius: 24,
+            boxShadow: `0 20px 60px ${NEON_GREEN}55, 0 0 30px ${NEON_GREEN}44`,
+            border: '2px solid #ffffff',
+            whiteSpace: 'nowrap',
           }}
         >
-          شروع کن
+          شروع رایگان
         </div>
       </div>
     </DarkStage>

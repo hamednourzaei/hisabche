@@ -130,6 +130,24 @@ describe('catalog parity', () => {
       `missing ${missing.length} keys in ${locale}: ${missing.slice(0, 20).join(', ')}`,
     ).toEqual([])
   })
+
+  it('guarantees bidirectional parity across en, fa, and af', () => {
+    const enKeys = stringKeys(messageCatalogs.en).filter(
+      (k) => !LEGACY_PASSTHROUGH_PREFIXES.some((p) => k.startsWith(p)),
+    )
+
+    const missingInFa = enKeys.filter((k) => resolveMessage(messageCatalogs.fa, k) === undefined)
+    expect(
+      missingInFa,
+      `missing ${missingInFa.length} keys in fa from en: ${missingInFa.slice(0, 20).join(', ')}`,
+    ).toEqual([])
+
+    const missingInAf = enKeys.filter((k) => resolveMessage(messageCatalogs.af, k) === undefined)
+    expect(
+      missingInAf,
+      `missing ${missingInAf.length} keys in af from en: ${missingInAf.slice(0, 20).join(', ')}`,
+    ).toEqual([])
+  })
 })
 
 describe('getMessages', () => {

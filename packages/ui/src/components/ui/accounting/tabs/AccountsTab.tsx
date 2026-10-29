@@ -18,13 +18,6 @@ import { AccountingEmptyState } from '../AccountingEmptyState'
 import { DataTable, TableFilterSelect, matchesSearch, type TableColumn } from '../../data-table'
 import type { Account } from '@hisabche/api'
 
-const exportColumns: ExportColumn<Account>[] = [
-  { key: 'code', header: 'کد', accessor: (a) => a.code },
-  { key: 'name', header: 'نام', accessor: (a) => a.name },
-  { key: 'type', header: 'نوع', accessor: (a) => a.type },
-  { key: 'isActive', header: 'وضعیت', accessor: (a) => (a.isActive ? 'فعال' : 'غیرفعال') },
-]
-
 const ALL = 'all'
 
 /**
@@ -121,6 +114,20 @@ export const AccountsTab = memo(function AccountsTab() {
     [createAccount],
   )
 
+  const exportCols: ExportColumn<Account>[] = useMemo(
+    () => [
+      { key: 'code', header: t('accounting.accounts.code'), accessor: (a) => a.code },
+      { key: 'name', header: t('accounting.accounts.name'), accessor: (a) => a.name },
+      { key: 'type', header: t('accounting.accounts.type'), accessor: (a) => a.type },
+      {
+        key: 'isActive',
+        header: t('accounting.accounts.status'),
+        accessor: (a) => (a.isActive ? t('common.active') : t('common.inactive')),
+      },
+    ],
+    [t],
+  )
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between gap-2 px-3 md:px-4 lg:px-5 py-2.5 md:py-3 lg:py-4 border-b border-[hsl(var(--border-default))]">
@@ -135,7 +142,7 @@ export const AccountsTab = memo(function AccountsTab() {
             onToChange={setOpenedTo}
           />
           {/* The export follows what is on screen: the same filters. */}
-          <ExportButton data={rows} columns={exportColumns} filename="accounts" />
+          <ExportButton data={rows} columns={exportCols} filename="accounts" />
           <button
             type="button"
             onClick={handleOpenDialog}

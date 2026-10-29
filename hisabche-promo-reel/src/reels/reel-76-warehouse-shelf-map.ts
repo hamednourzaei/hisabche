@@ -1,53 +1,119 @@
 // ============================================
-// Reel 76: Warehouse Shelf Map - 3-Second Bin Locating
-// Motion Template: infinite-spatial-board
-// Funnel Stage: Operational Speed | Audience: Warehouse Managers, Distribution Centers
+// Reel 76: Warehouse Shelf Map - 3-Second Bin Locating (Bespoke Cut)
+//
+// The Optical 2D Warehouse Matrix & 3-Second Bin Navigation
+// High-conversion warehouse precision narrative for distribution hubs & stockrooms.
 // ============================================
 
-import type { Reel } from '../engine/types'
-import { ctaScene, sequence, total } from './shared'
+import type { Cue, Reel } from '../engine/types'
+import {
+  Interactive2DShelfGridScene,
+  MissingItemStandOffScene,
+  ShelfCapacityGaugeScene,
+  SubSecondBarcodeLocatorScene,
+  WarehousePrecisionManifestoScene,
+  WarehouseShelfCtaScene,
+} from '../scenes/warehouse-shelf-map'
+import { sequence, total } from './shared'
 
 const scenes = sequence(
   [
+    // 1 — Frame-0 Visual Arrest: Missing Item Blind Search Stand-Off
     {
-      dur: 4,
+      dur: 5,
       spec: {
-        kind: 'hook',
-        label: 'سیستم قفسه‌بندی و کدینگ انبار',
-        lines: ['مشتری پای صندوق منتظره،', 'ولی [r:مکان کالا مشخص نیست]!'],
-        cards: [
-          { icon: 'boxes', title: 'موجودی سیستمی', sub: '۲۰ عدد در انبار', tone: 'cyan' },
-          { icon: 'offline', title: 'محل قرارگیری', sub: 'فقط در ذهن انباردار!', tone: 'red' },
-        ],
+        kind: 'bespoke',
+        theme: 'cyber-emerald',
+        component: MissingItemStandOffScene,
+        cues: [
+          { at: 0, kind: 'impact' },
+          { at: 1.2, kind: 'alert' },
+          { at: 2.5, kind: 'whoosh' },
+        ] as Cue[],
       },
-      vo: 'سیستم می‌گه کالا تو انباره، ولی انباردار ۲۰ دقیقه است تو راهروها می‌گرده و پیداش نمی‌کنه!',
+      vo: 'مشتری پای صندوق منتظره، ولی مکان کالا مشخص نیست؛ انباردار ۲۰ دقیقه است تو راهروها می‌گرده!',
     },
+
+    // 2 — Interactive 2D Warehouse Shelf Grid Matrix
     {
       dur: 8,
       spec: {
-        kind: 'infinite-spatial',
-        title: 'نقشه دوبعدی قفسه‌بندی و مکان‌یابی هوشمند کالا در انبار',
+        kind: 'bespoke',
+        theme: 'cyber-emerald',
+        component: Interactive2DShelfGridScene,
+        cues: [
+          { at: 0.2, kind: 'whoosh' },
+          { at: 1.5, kind: 'scan' },
+          { at: 3.5, kind: 'tick' },
+          { at: 5.5, kind: 'success' },
+        ] as Cue[],
       },
-      vo: 'در حسابچه، هر قفسه کد استاندارد داره: راهرو، ردیف و طبقه. با یک نگاه جای دقیق بار را می‌دانی.',
+      vo: 'در حسابچه، هر قفسه کد استاندارد ۳ سطحی داره: راهرو، ردیف و طبقه. با یک نگاه جای دقیق بار را می‌دانی.',
     },
+
+    // 3 — Sub-Second Barcode Scanner & Instant Reticle Lock
     {
-      dur: 7,
+      dur: 8,
       spec: {
-        kind: 'stagger',
-        title: 'مکان‌یابی [c:سه ثانیه‌ای کالا] با بارکد',
-        header: ['کد قفسه: B-04-2', 'انبار مرکزی'],
-        rows: [
-          { icon: 'boxes', text: 'راهروی B - بخش مواد تجاری' },
-          { icon: 'barcode', text: 'قفسه شماره ۰۴ - طبقه دوم' },
-          { icon: 'package', text: 'ظرفیت باقیمانده: ۱۸ کارتن' },
-          { icon: 'check', text: 'ثبت خروج آنی با اسکنر' },
-        ],
-        interval: 0.8,
-        tone: 'green',
+        kind: 'bespoke',
+        theme: 'cyber-emerald',
+        component: SubSecondBarcodeLocatorScene,
+        cues: [
+          { at: 0.2, kind: 'pop' },
+          { at: 1.8, kind: 'scan' },
+          { at: 3.5, kind: 'financialMilestone' },
+          { at: 5.5, kind: 'tick' },
+        ] as Cue[],
       },
       vo: 'بارکد کالا رو اسکن کن؛ قفسه ثبت می‌شه و هر کس وارد انبار بشه فوراً کالا رو پیدا می‌کنه.',
     },
-    ctaScene(7),
+
+    // 4 — Volumetric Shelf Capacity & Smart Stock Gauge
+    {
+      dur: 7,
+      spec: {
+        kind: 'bespoke',
+        theme: 'cyber-emerald',
+        component: ShelfCapacityGaugeScene,
+        cues: [
+          { at: 0.2, kind: 'cinematicReveal' },
+          { at: 1.5, kind: 'dataFlow' },
+          { at: 3.8, kind: 'successResolution' },
+        ] as Cue[],
+      },
+      vo: 'ظرفیت باقیمانده هر قفسه پایش می‌شود؛ نه انباشت خطرناک روی طبقات و نه هدررفت فضای مفید انبار.',
+    },
+
+    // 5 — Precision Logistics Manifesto
+    {
+      dur: 6,
+      spec: {
+        kind: 'bespoke',
+        theme: 'cyber-emerald',
+        component: WarehousePrecisionManifestoScene,
+        cues: [
+          { at: 0.2, kind: 'titleHit' },
+          { at: 1.5, kind: 'whoosh' },
+          { at: 3.2, kind: 'chime' },
+        ] as Cue[],
+      },
+      vo: 'انبار بدون نقشه یعنی چاه سرمایه؛ با حسابچه ۳ ثانیه تا قفسه فاصله داری، با صفر سردرگمی.',
+    },
+
+    // 6 — Obsidian Monolith CTA
+    {
+      dur: 7,
+      spec: {
+        kind: 'bespoke',
+        theme: 'cyber-emerald',
+        component: WarehouseShelfCtaScene,
+        cues: [
+          { at: 0.2, kind: 'bigReveal' },
+          { at: 1.5, kind: 'ctaResolution' },
+        ] as Cue[],
+      },
+      vo: 'سیستم قفسه‌بندی و کدینگ انبار حسابچه؛ تسلط بر فضای انبار در hisabche.com.',
+    },
   ],
   { noZoom: true },
 )
@@ -58,17 +124,19 @@ export const reel76: Reel = {
   duration: total(scenes),
   scenes,
   theme: 'cyber-emerald',
+  musicMood: 'uplifting',
   noZoom: true,
   storyMatrix: {
     targetCustomer: 'wholesaler',
-    customerPain: 'سردرگمی کارگران در انبار بزرگ و اتلاف وقت پشت تلفن برای آدرس یک کارتن',
-    oldWorkflow: 'کالاها بدون نظم در گوشه انبار چیده می‌شوند و فقط شاگرد قدیمی جایشان را می‌داند',
-    friction: 'اگر شاگرد قدیمی نباشد، تحویل سفارش متوقف می‌شود و مشتری معترض می‌رود',
-    hisabcheAction: 'نقشه بصری قفسه‌ها، کدگذاری استاندارد (راهرو-قفسه-طبقه) و چاپ برچسب بارکد',
-    automatedResult: 'یافتن هر کالا در زیر ۳ ثانیه حتی توسط کارگر تازه‌وارد بدون نیاز به پرسش',
-    businessOutcome: 'سرعت تحویل سفارشات ۵ برابر و انبارگردانی بدون خطای مکان‌یابی',
-    emotionalPayoff: 'انضباط اروپایی و آرامش کامل در قلب انبار شلوغ',
-    cta: 'نقشه قفسه در hisabche.com',
-    selectedOperators: ['SpatialWhipPan', 'BarcodeLensZoom', 'DualBoxCtaHold'],
+    customerPain: 'سرگردانی پرسنل در راهروهای انبار برای یافتن کالا در حضور مشتری و اتلاف وقت',
+    oldWorkflow: 'به حافظه سپردن جای کارتن‌ها یا گشتن قفسه به قفسه در سالن انبار',
+    friction: 'انباردار مرخصی رفت و هیچ‌کس نتوانست کالای مورد نیاز فاکتور را در انبار پیدا کند',
+    hisabcheAction:
+      'تعریف نقشه ۲ بعدی انبار، آدرس‌دهی استاندارد ۳ سطحی (راهرو-قفسه-طبقه) و اتصال بارکد',
+    automatedResult: 'اسکن بارکد = هدایت مستقیم به مختصات قفسه در کمتر از ۳ ثانیه',
+    businessOutcome: 'کاهش ۹۰ درصدی زمان آماده‌سازی بار و افزایش رضایت مشتریان پای صندوق',
+    emotionalPayoff: 'انضباط نظامی و آرامش کامل در مدیریت سالن‌های انبار',
+    cta: 'قفسه‌بندی انبار در hisabche.com',
+    selectedOperators: ['SpatialGridTrack', 'LaserScannerSweep', 'MonolithHoldCta'],
   },
 }

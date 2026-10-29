@@ -82,7 +82,7 @@ export function DisplayBasisPicker({
   const tr = (key: string, fallback: string) => (t ? t(key, fallback) : fallback)
 
   const label = (code: string): string => {
-    const name = LABEL[code] ?? code
+    const name = nameOfCurrency(tr, code, LABEL[code] ?? code)
     const sign = currencySign(code as keyof typeof CURRENCY_SIGN)
     return code === base
       ? `${name} — ${tr('display.ownCurrency', 'ارز دفاتر')}`

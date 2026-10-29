@@ -204,7 +204,10 @@ export function StockHistoryDrawer({
                         {formatDate(movement.createdAt, dateLang)}
                       </td>
                       <td className="px-2 py-2 text-[hsl(var(--fg-primary))]">
-                        {TYPE_LABEL[movement.type] ?? movement.type}
+                        {t(
+                          `warehouse.movements.${movement.type}`,
+                          TYPE_LABEL[movement.type] ?? movement.type,
+                        )}
                       </td>
                       <td className="px-2 py-2">
                         {route && onNavigate ? (

@@ -27,6 +27,7 @@ import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead } fro
 import type { Notification } from '@hisabche/api'
 import { formatCompactCount } from '@hisabche/formatting'
 import { timeAgo } from '../../lib/time-ago'
+import { localizeNotification, localizeNotificationText } from '../../lib/localize-notification'
 import { useLocalePush, useRouteLang } from '../../hooks/use-locale-push'
 import { CURRENCY_SIGN, formatMoney, formatNumber } from '@hisabche/formatting'
 
@@ -100,6 +101,7 @@ interface GroupLabels {
   untitled: string
   invoiceNumber: (number: string | number) => string
   newActivity: string
+  formatText: (raw: string) => string
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -179,7 +181,9 @@ function groupNotifications(list: Notification[], labels: GroupLabels): Notifica
         entityType,
         entityLabel: metadata?.invoice_number
           ? labels.invoiceNumber(metadata.invoice_number)
-          : latest.title || labels.untitled,
+          : latest.title
+            ? labels.formatText(latest.title)
+            : labels.untitled,
         entityUrl: resolveEntityUrl(latest),
         items: sorted,
         hasUnread: sorted.some((i) => !i.is_read),
@@ -191,7 +195,7 @@ function groupNotifications(list: Notification[], labels: GroupLabels): Notifica
         currency: metadata?.currency,
         status: metadata?.status,
         summary: {
-          title: latest.title || labels.newActivity,
+          title: latest.title ? labels.formatText(latest.title) : labels.newActivity,
           icon: config.icon,
           color: config.color,
         },
@@ -237,6 +241,7 @@ const TimelineItem = memo(function TimelineItem({
     entityConfig[notification.entity_type as NotificationGroup['entityType']] ||
     entityConfig.invoice
   const Icon = config.icon
+  const localized = localizeNotification(notification, t)
 
   return (
     <div className="flex items-start gap-2 md:gap-3">
@@ -253,11 +258,11 @@ const TimelineItem = memo(function TimelineItem({
       </div>
       <div className="flex-1 pb-2 md:pb-3">
         <p className="text-xs md:text-sm text-[hsl(var(--fg-primary))] line-clamp-2">
-          {notification.title}
+          {localized.title}
         </p>
         {notification.body && (
           <p className="text-[10px] md:text-xs text-[hsl(var(--fg-secondary))] mt-0.5 line-clamp-2">
-            {notification.body}
+            {localized.body}
           </p>
         )}
         <p className="text-[9px] md:text-[10px] text-[hsl(var(--fg-tertiary))] mt-1">
@@ -289,8 +294,6 @@ const GroupCard = memo(function GroupCard({
   const statusColor = group.status ? statusColors[group.status] || '' : ''
   const statusKey = group.status ? STATUS_LABEL_KEYS[group.status] : undefined
   const statusLabel = statusKey ? t(statusKey as Parameters<typeof t>[0]) : (group.status ?? '')
-  const config = entityConfig[group.entityType] || entityConfig.invoice
-  const Icon = config.icon
 
   return (
     <div
@@ -350,8 +353,10 @@ const GroupCard = memo(function GroupCard({
               )}
               <span className="text-[8px] md:text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
                 <Clock className="w-2.5 h-2.5 md:w-3 md:h-3" aria-hidden="true" />
-                {group.items.length} {t('notifications.activities')} •{' '}
-                {timeAgo(group.latestAt, now, t)}
+                {group.items.length === 1
+                  ? `1 ${t('notifications.activityOne')}`
+                  : `${group.items.length} ${t('notifications.activities')}`}{' '}
+                • {timeAgo(group.latestAt, now, t)}
               </span>
             </div>
           </div>
@@ -477,6 +482,7 @@ export const NotificationBell = memo(function NotificationBell({
         untitled: t('notifications.untitled'),
         invoiceNumber: (number) => t('notifications.invoiceNumber', { number: String(number) }),
         newActivity: t('notifications.newActivity'),
+        formatText: (raw: string) => localizeNotificationText(raw, t),
       }),
     [notifications, t],
   )

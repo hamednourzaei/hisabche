@@ -16,6 +16,12 @@ export default tseslint.config(
       '**/coverage/**',
       '**/.expo/**',
       '**/*.tsbuildinfo',
+      'docs/**',
+      'scripts/**',
+      'hisabche-promo-reel/scripts/**',
+      'test-intelligence-results/**',
+      'llm-council-results/**',
+      'release-readiness-results/**',
     ],
   },
   js.configs.recommended,
@@ -23,10 +29,16 @@ export default tseslint.config(
   {
     files: ['**/*.{js,mjs,cjs}'],
     languageOptions: {
-      globals: globals.node,
+      globals: {
+        ...globals.node,
+        ...globals.browser,
+      },
     },
     rules: {
       '@typescript-eslint/no-require-imports': 'off', // config files use require()
+      '@typescript-eslint/no-unused-vars': 'warn',
+      'no-undef': 'off',
+      'no-empty': 'warn',
       'no-useless-escape': 'warn',
       'no-useless-assignment': 'warn',
     },

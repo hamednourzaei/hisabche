@@ -19,13 +19,6 @@ import { DataTable, matchesSearch, type TableColumn } from '../../data-table'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import type { JournalEntry } from '@hisabche/api'
 
-const exportColumns: ExportColumn<JournalEntry>[] = [
-  { key: 'date', header: 'تاریخ', accessor: (e) => e.date },
-  { key: 'description', header: 'شرح', accessor: (e) => e.description },
-  { key: 'reference', header: 'مرجع', accessor: (e) => e.reference || '' },
-  { key: 'total', header: 'جمع', accessor: (e) => e.lines.reduce((s, l) => s + l.debit, 0) },
-]
-
 export const JournalTab = memo(function JournalTab() {
   const t = useTranslations()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -133,6 +126,28 @@ export const JournalTab = memo(function JournalTab() {
     [createJournalEntry],
   )
 
+  const exportCols: ExportColumn<JournalEntry>[] = useMemo(
+    () => [
+      { key: 'date', header: t('accounting.journal.date'), accessor: (e) => e.date },
+      {
+        key: 'description',
+        header: t('accounting.journal.description'),
+        accessor: (e) => e.description,
+      },
+      {
+        key: 'reference',
+        header: t('accounting.journal.reference'),
+        accessor: (e) => e.reference || '',
+      },
+      {
+        key: 'total',
+        header: t('accounting.journal.total'),
+        accessor: (e) => e.lines.reduce((s, l) => s + l.debit, 0),
+      },
+    ],
+    [t],
+  )
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between gap-2 px-3 md:px-4 lg:px-5 py-2.5 md:py-3 lg:py-4 border-b border-[hsl(var(--border-default))]">
@@ -140,7 +155,7 @@ export const JournalTab = memo(function JournalTab() {
           {t('accounting.journal.title')}
         </h2>
         <div className="flex items-center gap-1.5 md:gap-2">
-          <ExportButton data={entries || []} columns={exportColumns} filename="journal-entries" />
+          <ExportButton data={entries || []} columns={exportCols} filename="journal-entries" />
           <button
             type="button"
             onClick={handleOpenDialog}

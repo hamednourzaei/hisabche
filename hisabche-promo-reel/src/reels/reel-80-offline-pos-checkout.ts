@@ -1,57 +1,120 @@
 // ============================================
-// Reel 80: Offline POS Engine - Unstoppable Retail Operations
-// Motion Template: liquid-glass-spatial
-// Funnel Stage: Operational Reliability | Audience: Retail Stores, High-Volume Supermarkets
+// Reel 80: Offline POS Engine — Unstoppable Retail Operations (Bespoke Cut)
+//
+// The Cryogenic Local Database Core & Kinetic Photonic Sync Pipe
+// High-conversion operational reliability narrative for retail & supermarkets.
 // ============================================
 
-import type { Reel } from '../engine/types'
-import { ctaScene, sequence, total } from './shared'
+import type { Cue, Reel } from '../engine/types'
+import {
+  InstantReconnectSyncScene,
+  LocalDatabaseLaserScene,
+  OfflineCtaScene,
+  OfflineDisasterScene,
+  OfflineQueueStreamScene,
+  UnstoppableBusinessScene,
+} from '../scenes/offline-pos-checkout'
+import { sequence, total } from './shared'
 
 const scenes = sequence(
   [
+    // 1 — Frame-0 Arrest: The Micro-Disaster (Internet Drops at Peak Rush Hour)
     {
-      dur: 4,
+      dur: 5,
       spec: {
-        kind: 'hook',
-        label: 'پایداری آفلاین در اپلیکیشن ویندوز و موبایل',
-        lines: ['مشتری پای صندوق منتظره،', 'و [r:ناگهان اینترنت قطع شد]!'],
-        cards: [
-          { icon: 'offline', title: 'قطعی اینترنت', sub: 'توقف در سیستم‌های وب سنتی', tone: 'red' },
-          {
-            icon: 'sync',
-            title: 'اپ ویندوز و موبایل',
-            sub: 'تداوم صدور فاکتور در اپ',
-            tone: 'cyan',
-          },
-        ],
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: OfflineDisasterScene,
+        cues: [
+          { at: 0, kind: 'impact' },
+          { at: 1.2, kind: 'alert' },
+          { at: 2.5, kind: 'whoosh' },
+        ] as Cue[],
       },
-      vo: 'صف شلوغ، مشتری‌ها عجله دارند و اینترنت رفت؛ دخلت می‌خوابه یا به فروش ادامه می‌دی؟',
+      vo: 'صف شلوغ، مشتری‌ها عجله دارند و ناگهان اینترنت قطع شد؛ دخلت می‌خوابه یا به فروش ادامه می‌دی؟',
     },
+
+    // 2 — Local SQLite Vault & 0ms Barcode Laser Scan
     {
       dur: 8,
       spec: {
-        kind: 'liquid-glass',
-        title: 'موتور پردازش محلی و پایداری آفلاین در اپلیکیشن حسابچه',
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: LocalDatabaseLaserScene,
+        cues: [
+          { at: 0.2, kind: 'whoosh' },
+          { at: 1.4, kind: 'scan' },
+          { at: 3.2, kind: 'tick' },
+          { at: 5.2, kind: 'success' },
+        ] as Cue[],
       },
       vo: 'در اپلیکیشن ویندوز و موبایل حسابچه، پایگاه داده روی دستگاهت زنده‌ست؛ بدون اینترنت بارکد بزن و فاکتور چاپ کن.',
     },
+
+    // 3 — Dynamic Offline Queue Stream: 3 Invoices Safely Buffered
+    {
+      dur: 8,
+      spec: {
+        kind: 'bespoke',
+        theme: 'financial-intelligence',
+        component: OfflineQueueStreamScene,
+        cues: [
+          { at: 0.2, kind: 'pop' },
+          { at: 1.6, kind: 'tick' },
+          { at: 3.4, kind: 'cash' },
+          { at: 5.4, kind: 'dataFlow' },
+        ] as Cue[],
+      },
+      vo: 'فاکتورها یکی پس از دیگری صادر می‌شوند و در صف امن محلی دستگاه ذخیره می‌گردند؛ بدون ۱ ثانیه توقف.',
+    },
+
+    // 4 — Instant Reconnect & High-Speed Cloud Sync Surge
     {
       dur: 7,
       spec: {
-        kind: 'queue',
-        title: 'صف فاکتورهای آفلاین و همگام‌سازی خودکار',
-        offlineLabel: 'صدور فاکتور در صف محلی دستگاه',
-        items: [
-          'فاکتور شماره ۱۲۴۰ (کالای بازرگانی کد ۱۰۱)',
-          'فاکتور شماره ۱۲۴۱ (محصول استاندارد کد ۲۰۲)',
-          'فاکتور شماره ۱۲۴۲ (فروش نقدی)',
-        ],
-        syncedLabel: 'اینترنت وصل شد — همگام‌سازی آنی با سرور',
-        reconnectAt: 3.5,
+        kind: 'bespoke',
+        theme: 'financial-intelligence',
+        component: InstantReconnectSyncScene,
+        cues: [
+          { at: 0.2, kind: 'cameraSwish' },
+          { at: 1.6, kind: 'sync' },
+          { at: 3.6, kind: 'chime' },
+          { at: 5.2, kind: 'successResolution' },
+        ] as Cue[],
       },
-      vo: 'به محض وصل شدن اینترنت، تمام فاکتورها خودکار به سرور ابری و حسابداری منتقل می‌شوند.',
+      vo: 'به محض وصل شدن اینترنت، تمام فاکتورها خودکار و بی‌صدا با سرور ابری و حسابداری همگام می‌شوند.',
     },
-    ctaScene(7),
+
+    // 5 — Unstoppable Business Manifesto
+    {
+      dur: 6,
+      spec: {
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: UnstoppableBusinessScene,
+        cues: [
+          { at: 0.2, kind: 'titleHit' },
+          { at: 1.5, kind: 'whoosh' },
+          { at: 2.8, kind: 'bigReveal' },
+        ] as Cue[],
+      },
+      vo: 'نه قطعی اینترنت، نه نوسان برق؛ فروشگاه شما با حسابچه هرگز متوقف نمی‌شود.',
+    },
+
+    // 6 — High-Impact Brand Monolith & CTA
+    {
+      dur: 7,
+      spec: {
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: OfflineCtaScene,
+        cues: [
+          { at: 0.2, kind: 'bigReveal' },
+          { at: 1.5, kind: 'ctaResolution' },
+        ] as Cue[],
+      },
+      vo: 'حسابچه؛ نسخه ویندوز و موبایل. همین امروز اپلیکیشن را رایگان دانلود کنید.',
+    },
   ],
   { noZoom: true },
 )
@@ -61,7 +124,8 @@ export const reel80: Reel = {
   title: 'کار بدون اینترنت در اوج شلوغی (Offline Engine): برق رفت، ولی فاکتور متوقف نشد!',
   duration: total(scenes),
   scenes,
-  theme: 'procedural-spatial',
+  theme: 'obsidian-cinematic',
+  musicMood: 'uplifting',
   noZoom: true,
   storyMatrix: {
     targetCustomer: 'retail-shopkeeper',

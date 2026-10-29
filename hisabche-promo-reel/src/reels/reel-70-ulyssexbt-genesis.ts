@@ -26,6 +26,7 @@ export const reel70: Reel = {
   title: 'ulyssexbt: Genesis Block',
   duration: 15.0,
   theme: 'kinetic-manifesto',
+  noZoom: true,
   storyMatrix: {
     targetCustomer: 'wholesaler',
     customerPain: 'هویت برند در شلوغی کریپتو گم می‌شود؛ نیاز به یک امضای بصری غیرقابل‌فراموشی است.',
@@ -48,11 +49,12 @@ export const reel70: Reel = {
     {
       start: 0.0,
       end: 3.5,
+      noZoom: true,
       vo: 'ulyssexbt — ژنسیس.',
       spec: { kind: 'word-sync', actor: 'r70-genesis-freeze', title: 'ژنسیس فریز' },
       sentence: {
         text: 'ulyssexbt — ژنسیس.',
-        intent: 'قلاب میخکوب: کاوس Геометری فریز می‌شود و وردمارک قفل می‌شود',
+        intent: 'قلاب میخکوب: آشفتگی هندسی فریز می‌شود و وردمارک قفل می‌شود',
         ...provisional,
         words: [
           w('ulyssexbt', 0.15, 1.1, { emphasis: true, action: 'genesis-freeze', sound: 'impact' }),
@@ -64,6 +66,7 @@ export const reel70: Reel = {
     {
       start: 3.5,
       end: 7.5,
+      noZoom: true,
       vo: 'بلاک ۸۴۷۲۹۱ — هش ۰۰۰۰... — تایم‌استمپ ۱۷۰۸۲۰۲۶.',
       spec: { kind: 'word-sync', actor: 'r70-block-stack', title: 'بلاک‌چینِ عددی' },
       sentence: {
@@ -92,6 +95,7 @@ export const reel70: Reel = {
     {
       start: 7.5,
       end: 11.5,
+      noZoom: true,
       vo: '۱۲۸ نود — ۰ تاخیر — همگامی فوری.',
       spec: { kind: 'word-sync', actor: 'r70-network-pulse', title: 'شبکه نودها' },
       sentence: {
@@ -112,6 +116,7 @@ export const reel70: Reel = {
     {
       start: 11.5,
       end: 15.0,
+      noZoom: true,
       vo: 'ulyssexbt — کدِ اعتماد. ulyssexbt.com',
       spec: { kind: 'word-sync', actor: 'r70-final-lock', title: 'قفل نهایی' },
       sentence: {

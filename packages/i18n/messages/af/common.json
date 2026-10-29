@@ -1829,7 +1829,9 @@
     "published": "نشرشده",
     "title": "عنوان",
     "showMore": "بیشتر",
-    "showLess": "بستن"
+    "showLess": "بستن",
+    "alert": "هشدار",
+    "viewDetails": "مشاهده جزئیات"
   },
   "invoices": {
     "returnInvoice": "ثبت بازگشت",
@@ -2266,7 +2268,15 @@
       "confirmBody": "از این به بعد بهای هر فروش با روش تازه حساب می‌شود و سود و ارزش موجودیِ آینده تغییر می‌کند. فروش‌های ثبت‌شده دوباره حساب نمی‌شوند. این تغییر با نام شما در گزارش فعالیت‌ها ثبت می‌شود.",
       "confirmYes": "بلی، تغییر کند"
     },
-    "addRate": "افزودن اسعار یا واحد"
+    "addRate": "افزودن اسعار یا واحد",
+    "movements": {
+      "sale": "فروش",
+      "purchase": "خرید",
+      "production": "تولید",
+      "transfer": "انتقال",
+      "adjustment": "تعدیل",
+      "opening": "موجودی ابتدایی"
+    }
   },
   "customers": {
     "creditor": "بستانکار",
@@ -2999,7 +3009,7 @@
       "type": "نوع",
       "parent": "حساب والد",
       "noParent": "بدون والد",
-      "status": "وضعیت",
+      "status": "حالت",
       "active": "فعال",
       "inactive": "غیرفعال",
       "empty": {
@@ -3014,7 +3024,7 @@
       "createTitle": "ثبت روزنامه نو",
       "date": "تاریخ",
       "reference": "مرجع",
-      "description": "توضیحات",
+      "description": "شرح",
       "lines": "ردیف‌ها",
       "addLine": "افزودن ردیف",
       "selectAccount": "انتخاب حساب",
@@ -3032,7 +3042,8 @@
       "entry": "سند",
       "openSource": "دیدن سند مبدأ",
       "source": "مبدأ",
-      "noMatch": "سندی با این جست‌وجو نیست"
+      "noMatch": "سندی با این جست‌وجو نیست",
+      "total": "مجموع"
     },
     "trialBalance": {
       "title": "تراز آزمایشی",
@@ -3082,7 +3093,10 @@
       "empty": {
         "title": "داده‌ای برای ترازنامه نیست"
       },
-      "currentEarnings": "مفاد (زیان) دوره‌ی جاری"
+      "currentEarnings": "مفاد (زیان) دوره‌ی جاری",
+      "section": "بخش",
+      "label": "شرح",
+      "amount": "مبلغ"
     },
     "incomeStatement": {
       "chooseAccounts": "انتخاب حساب‌ها",
@@ -3881,16 +3895,35 @@
     "untitled": "بدون عنوان",
     "invoiceNumber": "بل #{number}",
     "newActivity": "فعالیت جدید",
-    "loading": "در حال بارگذاری اعلان‌ها"
+    "loading": "در حال بارگذاری اعلان‌ها",
+    "invoiceCreated": "بل جدید ایجاد شد",
+    "invoiceRegisteredBody": "بل شماره {number} ثبت شد.",
+    "invoicePaid": "پرداخت بل ثبت شد",
+    "invoicePaidBody": "بل شماره {number} پرداخت شد.",
+    "paymentRecorded": "پرداخت {ref} ثبت شد",
+    "invoiceOverdue": "بل سررسید شده",
+    "customerCreated": "مشتری جدید: {name}",
+    "escalatedToYou": "تأییدی که بی‌پاسخ مانده به شما ارجاع شد",
+    "escalatedNoOne": "تأییدی منتظر مانده و کسی برای ارجاع نیست",
+    "requiresApproval": "نیاز به تأیید دارد",
+    "approved": "تأیید شد",
+    "rejected": "رد شد",
+    "activityOne": "فعالیت"
   },
   "time": {
-    "justNow": "همین الان",
+    "justNow": "همین اکنون",
     "minutesAgo": "{m} دقیقه قبل",
     "hoursAgo": "{h} ساعت قبل",
     "daysAgo": "{d} روز قبل",
-    "weeksAgo": "{w} هفته پیش",
-    "monthsAgo": "{mo} ماه پیش",
-    "yearsAgo": "{y} سال پیش"
+    "weeksAgo": "{w} هفته قبل",
+    "monthsAgo": "{mo} ماه قبل",
+    "yearsAgo": "{y} سال قبل",
+    "minuteAgo": "1 دقیقه قبل",
+    "hourAgo": "1 ساعت قبل",
+    "dayAgo": "1 روز قبل",
+    "weekAgo": "1 هفته قبل",
+    "monthAgo": "1 ماه قبل",
+    "yearAgo": "1 سال قبل"
   },
   "commandPalette": {
     "title": "پالت فرمان",
@@ -4323,13 +4356,38 @@
       "overdue": "سررسید گذشته",
       "draft": "پیش‌نویس",
       "issued": "صادر شده"
+    },
+    "created": "ایجاد شد",
+    "updated": "ویرایش شد",
+    "status_changed": "تغییر حالت",
+    "payment": "پرداخت",
+    "approved": "تأیید شد",
+    "rejected": "رد شد",
+    "sent": "ارسال شد",
+    "archived": "آرشیف شد",
+    "cancelled": "لغو شد",
+    "actions": {
+      "create": "ایجاد",
+      "update": "ویرایش",
+      "delete": "حذف",
+      "view": "مشاهده",
+      "export": "خروجی",
+      "login": "ورود",
+      "logout": "خروج"
     }
   },
   "status": {
     "excellent": "عالی",
     "good": "خوب",
     "neutral": "پایدار",
-    "attention": "نیاز به توجه دارد"
+    "attention": "نیاز به توجه دارد",
+    "pending": "در انتظار",
+    "paid": "پرداخت شده",
+    "completed": "تکمیل شده",
+    "cancelled": "لغو شده",
+    "partial": "قسمتی پرداخت",
+    "overdue": "سررسید شده",
+    "draft": "پیش‌نویس"
   },
   "health": {
     "title": "سلامت کسب‌وکار",
@@ -7788,6 +7846,8 @@
     "recordReceipt": "ثبت دریافت",
     "exportStatement": "خروجی صورت‌حساب",
     "mixedCurrency": "بل‌ها و پرداخت‌های این طرف حساب به چند پول هستند ({currencies}). جمع‌ها پول‌ها را تبدیل نمی‌کنند.",
+    "mixedCurrencyTitle": "چند پولی",
+    "noMatch": "موردی با این نوع نیست",
     "loadError": "معلومات مالی این طرف حساب خوانده نشد. دوباره کوشش کنید.",
     "retry": "کوشش دوباره",
     "noInvoices": "بلی برای این طرف حساب نیست.",
@@ -10899,5 +10959,17 @@
     "g": "گرام",
     "kg": "کیلوگرام",
     "t": "تن"
+  },
+  "units": {
+    "problems": {
+      "oneBaseRequired": "باید دقیقاً یک واحد اساسی انتخاب شود",
+      "onlyOneBase": "تنها یک واحد می‌تواند اساسی باشد",
+      "baseMultiplierOne": "ضریب واحد اساسی باید دقیقاً ۱ باشد",
+      "multiplierPositive": "ضریب هر واحد باید بزرگ‌تر از صفر باشد",
+      "selectUnitPerRow": "برای هر ردیف یک واحد انتخاب کنید",
+      "duplicateUnit": "هر واحد تنها یک بار می‌تواند اضافه شود",
+      "singlePurchaseDefault": "تنها یک واحد می‌تواند پیش‌فرض خرید باشد",
+      "singleSaleDefault": "تنها یک واحد می‌تواند پیش‌فرض فروش باشد"
+    }
   }
 }

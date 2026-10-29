@@ -25,6 +25,7 @@ import { useNow } from '../../../hooks/use-now'
 import { useEntitySummary, useEntityActivities } from '@hisabche/api'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { timeAgo } from '../../../lib/time-ago'
+import { localizeNotification } from '../../../lib/localize-notification'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,18 +70,6 @@ const activityIcons: Record<string, LucideIcon> = {
   cancelled: XCircle,
 }
 
-const activityLabels: Record<string, string> = {
-  created: 'ایجاد شد',
-  updated: 'ویرایش شد',
-  status_changed: 'تغییر وضعیت',
-  payment: 'پرداخت',
-  approved: 'تأیید شد',
-  rejected: 'رد شد',
-  sent: 'ارسال شد',
-  archived: 'بایگانی شد',
-  cancelled: 'لغو شد',
-}
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 // The locale was pinned to 'fa-AF' and a missing currency fell back to the
@@ -101,13 +90,12 @@ function formatCurrency(amount: number, currency: string, locale: string): strin
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
 const StatusBadge = memo(function StatusBadge({ status }: { status: string }) {
+  const t = useTranslations()
   const colorClass = statusColors[status] || 'text-gray-500 bg-gray-500/10'
-  const labelKey = statusLabels[status] || status
+  const label = status in statusLabels ? t(`status.${status}`) : status
 
   return (
-    <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded', colorClass)}>
-      {labelKey}
-    </span>
+    <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded', colorClass)}>{label}</span>
   )
 })
 StatusBadge.displayName = 'StatusBadge'
@@ -180,7 +168,7 @@ export const EntityActivityCard = memo(function EntityActivityCard({
   const now = useNow(60_000)
   // ⚠️ THE CALENDAR FOLLOWS THE LANGUAGE. These were hardcoded to `'fa-AF'`,
   // so every reader got the Afghan solar calendar whatever they chose.
-  const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
+  const { date: fmtIntlDate, lang: _dateLang } = useDateFormat()
   const fmtIntlTime = (v: string | Date, o: Intl.DateTimeFormatOptions) => fmtIntlDate(v, o)
   const locale = useIntlLocale()
   const { currency: userCurrency } = useCurrency()
@@ -293,6 +281,17 @@ export const EntityActivityCard = memo(function EntityActivityCard({
                 {activities.map((activity, index) => {
                   const isLast = index === activities.length - 1
                   const type = activity.action
+                  const localized = localizeNotification(
+                    {
+                      title: activity.title,
+                      body: activity.description,
+                      metadata:
+                        'metadata' in activity
+                          ? (activity as { metadata?: Record<string, unknown> }).metadata
+                          : undefined,
+                    },
+                    t,
+                  )
 
                   return (
                     <button
@@ -306,11 +305,11 @@ export const EntityActivityCard = memo(function EntityActivityCard({
                       </div>
                       <div className="flex-1 pb-2">
                         <p className="text-sm text-[hsl(var(--fg-primary))] group-hover:text-[hsl(var(--color-primary))] transition-colors">
-                          {activity.title}
+                          {localized.title}
                         </p>
-                        {activity.description && (
+                        {localized.body && (
                           <p className="text-xs text-[hsl(var(--fg-secondary))] mt-0.5">
-                            {activity.description}
+                            {localized.body}
                           </p>
                         )}
                         <p className="text-[10px] text-[hsl(var(--fg-tertiary))] mt-0.5">

@@ -1,78 +1,144 @@
 // ============================================
-// Reel 74: Manufacturing BOM - Accurate Unit Costing
-// Motion Template: swiss-financial-terminal
-// Funnel Stage: Value Creation | Audience: Manufacturers, Workshop Producers, Food & Bakeries
+// Reel 74: Manufacturing BOM - Accurate Unit Costing (Bespoke Cut)
+//
+// The Precision Workshop Alchemy & Real-time BOM Engine
+// High-conversion industrial costing narrative for manufacturers & workshop producers.
 // ============================================
 
-import type { Reel } from '../engine/types'
-import { COMPARE_COLUMNS, ctaScene, sequence, total } from './shared'
+import type { Cue, Reel } from '../engine/types'
+import {
+  AutomaticMaterialDeductionScene,
+  ExactUnitCostBreakdownScene,
+  GuessworkCostingCrisisScene,
+  InteractiveBomRecipeMatrixScene,
+  ManufacturingBomCtaScene,
+  WorkshopIndustrialManifestoScene,
+} from '../scenes/manufacturing-bom'
+import { sequence, total } from './shared'
 
 const scenes = sequence(
   [
+    // 1 — Frame-0 Visual Arrest: Guesswork Costing Crisis
     {
-      dur: 4,
+      dur: 5,
       spec: {
-        kind: 'hook',
-        label: 'سیستم تولید و کارگاهی',
-        lines: ['کارگاه شلوغه و تولید بالاست،', 'ولی [r:قیمت تمام‌شده رو حدسی می‌زنی]!'],
-        cards: [
-          { icon: 'factory', title: 'مواد خام و اولیه', sub: '۳ قلم ماده مصرفی', tone: 'cyan' },
-          {
-            icon: 'wallet',
-            title: 'بهای تمام‌شده هر واحد',
-            sub: 'نامشخص در کارگاه سنتی',
-            tone: 'red',
-          },
-        ],
+        kind: 'bespoke',
+        theme: 'midnight-gold',
+        component: GuessworkCostingCrisisScene,
+        cues: [
+          { at: 0, kind: 'impact' },
+          { at: 1.2, kind: 'alert' },
+          { at: 2.5, kind: 'whoosh' },
+        ] as Cue[],
       },
-      vo: 'تولید می‌کنی و می‌فروشی، اما نمی‌دونی هر دانه محصول چقدر برات آب خورده؟',
+      vo: 'کارگاه شلوغه و تولید بالاست، ولی قیمت تمام‌شده هر دانه محصول را حدسی می‌زنی؛ سود می‌کنی یا ضرر؟',
     },
-    {
-      dur: 8,
-      spec: {
-        kind: 'swiss-terminal',
-        title: 'ترمینال فرمول ساخت و بهای تمام‌شده واقعی (BOM)',
-      },
-      vo: 'در حسابچه فرمول ساخت می‌سازی؛ با هر دستور تولید، مواد اولیه از انبار کسر و کالای نهایی دقیق ثبت می‌شه.',
-    },
+
+    // 2 — Interactive BOM Recipe Matrix
     {
       dur: 8,
       spec: {
-        kind: 'compare',
-        title: 'تولید سنتی در برابر [c:سیستم تولید حسابچه]',
-        columns: COMPARE_COLUMNS,
-        rows: [
-          { label: 'کسر خودکار مواد خام', marks: ['no', 'part', 'yes'] },
-          { label: 'محاسبه ضایعات استاندارد', marks: ['no', 'no', 'yes'] },
-          { label: 'بهای تمام‌شده لحظه‌ای', marks: ['no', 'part', 'yes'] },
-          { label: 'بازنگری فرمول ساخت', marks: ['no', 'no', 'yes'] },
-        ],
-        interval: 1.0,
+        kind: 'bespoke',
+        theme: 'midnight-gold',
+        component: InteractiveBomRecipeMatrixScene,
+        cues: [
+          { at: 0.2, kind: 'whoosh' },
+          { at: 1.5, kind: 'scan' },
+          { at: 3.5, kind: 'tick' },
+          { at: 5.5, kind: 'precisionSequence' },
+        ] as Cue[],
       },
-      vo: 'وقتی قیمت مواد اولیه نوسان کرد، سیستم فوراً بهای تمام‌شده کالای نهایی را به‌روز می‌کند.',
+      vo: 'در حسابچه فرمول ساخت استاندارد تعریف می‌کنی؛ ضریب مصرف مواد خام، بسته‌بندی و هزینه سربار کارگاه.',
     },
-    ctaScene(7),
+
+    // 3 — Automatic Material Deduction & Warehouse Sync
+    {
+      dur: 8,
+      spec: {
+        kind: 'bespoke',
+        theme: 'midnight-gold',
+        component: AutomaticMaterialDeductionScene,
+        cues: [
+          { at: 0.2, kind: 'pop' },
+          { at: 1.8, kind: 'sync' },
+          { at: 3.5, kind: 'financialMilestone' },
+          { at: 5.5, kind: 'tick' },
+        ] as Cue[],
+      },
+      vo: 'با ۱ کلیک ثبت دستور تولید، مواد اولیه خودکار از انبار کسر و کالای ساخته‌شده دقیق به موجودی اضافه می‌شود.',
+    },
+
+    // 4 — Exact Unit Cost Breakdown & Real Profit Margin
+    {
+      dur: 7,
+      spec: {
+        kind: 'bespoke',
+        theme: 'financial-intelligence',
+        component: ExactUnitCostBreakdownScene,
+        cues: [
+          { at: 0.2, kind: 'cinematicReveal' },
+          { at: 1.5, kind: 'dataFlow' },
+          { at: 3.8, kind: 'successResolution' },
+        ] as Cue[],
+      },
+      vo: 'بهای تمام‌شده هر واحد بر اساس آخرین نرخ خرید انبار محاسبه می‌شود؛ بدون یک ریال تخمین یا خطای انسانی.',
+    },
+
+    // 5 — Workshop Industrial Manifesto
+    {
+      dur: 6,
+      spec: {
+        kind: 'bespoke',
+        theme: 'midnight-gold',
+        component: WorkshopIndustrialManifestoScene,
+        cues: [
+          { at: 0.2, kind: 'titleHit' },
+          { at: 1.5, kind: 'whoosh' },
+          { at: 3.2, kind: 'chime' },
+        ] as Cue[],
+      },
+      vo: 'تولید بدون فرمول یعنی قمار با سرمایه؛ با حسابچه ریال به ریال بهای تمام‌شده شفاف است.',
+    },
+
+    // 6 — Obsidian Monolith CTA
+    {
+      dur: 7,
+      spec: {
+        kind: 'bespoke',
+        theme: 'midnight-gold',
+        component: ManufacturingBomCtaScene,
+        cues: [
+          { at: 0.2, kind: 'bigReveal' },
+          { at: 1.5, kind: 'ctaResolution' },
+        ] as Cue[],
+      },
+      vo: 'سامانه فرمول تولید و قیمت تمام‌شده حسابچه؛ مدیریت حرفه‌ای کارگاه در hisabche.com.',
+    },
   ],
   { noZoom: true },
 )
 
 export const reel74: Reel = {
   id: '74',
-  title: 'تولید و فرمول ساخت (BOM): قیمت تمام‌شده هر دانه چنده؟',
+  title: 'فرمول تولید و BOM: قیمت تمام‌شده را حدسی نزن!',
   duration: total(scenes),
   scenes,
-  theme: 'swiss-editorial',
+  theme: 'financial-intelligence',
+  musicMood: 'uplifting',
   noZoom: true,
   storyMatrix: {
     targetCustomer: 'workshop-producer',
-    customerPain: 'بی‌اطلاعی تولیدکننده از بهای تمام‌شده هر عدد کالا و حاشیه سود واقعی',
-    oldWorkflow: 'محاسبه سرانگشتی روی تخته کارگاه و فراموش کردن ضایعات و هزینه سربار',
-    friction: 'تولید روزبه‌روز بیشتر می‌شود اما سود انتهای ماه با استهلاک و هزینه جور درنمی‌آید',
-    hisabcheAction: 'فرمول ساخت چندمرحله‌ای (BOM)، کسر آنی مواد اولیه و ثبت بهای تمام‌شده',
-    automatedResult: 'سود و زیان دقیق برای تک‌تک محصولات تولیدی و ثبت اسناد انبار',
-    businessOutcome: 'قیمت‌گذاری علمی و افزایش حاشیه سود بدون ریسک ضرر پنهان',
-    emotionalPayoff: 'اطمینان مهندسی‌شده از این‌که هر خروجی کارگاه واقعاً سودآور است',
-    cta: 'فرمول ساخت در hisabche.com',
-    selectedOperators: ['SwissTerminalCurtain', 'BaselineCurtainRise', 'DualBoxCtaHold'],
+    customerPain:
+      'قیمت‌گذاری حسی محصولات تولیدی کارگاه بدون آگاهی از نوسان نرخ مواد اولیه و زیان پنهان',
+    oldWorkflow: 'محاسبه دستی روی کاغذ یا تخمین سرانگشتی بهای تمام‌شده هر قلم کالا',
+    friction:
+      'تولیدکننده پس از ۶ ماه متوجه شد به خاطر گران شدن یکی از مواد خام، با ضرر می‌فروخته است',
+    hisabcheAction:
+      'ایجاد فرمول ساخت چندلایه (BOM)، کسر اتوماتیک مواد اولیه با ثبت تولید و نرخ‌گذاری لحظه‌ای',
+    automatedResult: 'محاسبه آنی بهای تمام‌شده واقعی بر اساس میانگین موزون خرید انبار مواد خام',
+    businessOutcome: 'تضمین حاشیه سود کارگاه و امکان رقابت قیمتی هوشمند در بازار تولید',
+    emotionalPayoff: 'اطمینان قطعی از سودآوری هر قطعه خروجی از خط تولید',
+    cta: 'فرمول تولید در hisabche.com',
+    selectedOperators: ['IndustrialCrucible', 'SynchronizedStockTransfer', 'MonolithHoldCta'],
   },
 }

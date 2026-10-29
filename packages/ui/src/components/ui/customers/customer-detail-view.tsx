@@ -10,8 +10,8 @@
 // (12-month chart + top products), CRM (shared CustomerCrmPanel), history.
 // ============================================
 
-import { KpiCard } from '../kpi-card'
-import { DataTable, SearchableTable, type TableColumn } from '../data-table'
+import { KpiCard, headlineFontClass, valueFontClass } from '../kpi-card'
+import { DataTable, SearchableTable, TableFilterSelect, type TableColumn } from '../data-table'
 import { useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import {
@@ -25,7 +25,9 @@ import {
   Download,
   FilePlus2,
   FileText,
+  MoreHorizontal,
   Printer,
+  Scale,
   Trash2,
 } from 'lucide-react'
 import type { PartyActivity, PartyLedger, PartySummary, PaymentRecord } from '@hisabche/api'
@@ -34,6 +36,14 @@ import { CURRENCY_SIGN, formatMoney, formatNumber, type KnownCurrency } from '@h
 
 import { cn } from '../../../lib/utils'
 import { GHOST_ICON_BUTTON } from '../button-classes'
+import { FOCUS_RING } from '../focus-ring'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../dropdown-menu'
 import { HubTabs } from '../hub-tabs'
 import { SegmentedControl } from '../segmented-control'
 import { Tabs, TabsContent } from '../tabs'
@@ -108,6 +118,31 @@ const outlineBtn =
 const primaryBtn =
   'inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[hsl(var(--color-primary))] px-5 text-sm font-bold text-[hsl(var(--color-primary-fg))] shadow-sm transition hover:brightness-110'
 
+/** The caption over a supporting figure — the KPI card's caption, one step smaller. */
+const FIGURE_LABEL = 'truncate text-[11px] text-[hsl(var(--fg-tertiary))]'
+
+/** A figure that is bad news (money overdue). */
+const DANGER_VALUE = 'text-[hsl(var(--color-destructive))]'
+
+/**
+ * ⚠️ THE SIGN IS THE WHOLE MEANING of a net balance: positive is money THEY
+ * owe us, negative is money WE owe them. The colour carries it — and `netLabel`
+ * beside it says the same thing in words, so colour is never the only channel.
+ */
+function netTone(value: number): string {
+  if (value > 0) return DANGER_VALUE
+  if (value < 0) return 'text-[hsl(var(--color-success))]'
+  return 'text-[hsl(var(--fg-primary))]'
+}
+
+/** The same reading of the sign, as the chip behind the words. */
+function netChipTone(value: number): string {
+  if (value > 0)
+    return 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]'
+  if (value < 0) return 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]'
+  return 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]'
+}
+
 // Statuses with a label under customer360.status (desktop's next-intl shim has no `t.has`).
 const KNOWN_STATUS = new Set(['paid', 'pending', 'completed', 'cancelled', 'draft'])
 
@@ -169,6 +204,58 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
       ? formatMoney(value, currency, locale)
       : `${formatNumber(value, locale, 2)}${currency ? ` ${currency}` : ''}`
 
+  // ⚠️ TWO CURRENCIES ARE NEVER ADDED UP. When this party's invoices and
+  // payments are in more than one currency, `summary.netBalance` and the other
+  // totals are a sum of unlike things; the per-currency rows the server sends
+  // are the true picture. Every figure below is then shown once per currency
+  // instead of as one total.
+  const byCurrency = asList<PartySummary & { currency: string }>(summary?.byCurrency)
+  const perCurrency = (summary?.currencies.length ?? 0) > 1 && byCurrency.length > 0
+
+  const balanceRows = !summary
+    ? []
+    : perCurrency
+      ? byCurrency.map((row) => ({ currency: row.currency, value: row.netBalance }))
+      : [{ currency: summaryCurrency, value: summary.netBalance }]
+
+  /**
+   * The due-date and aging breakdown, one block per currency for the same
+   * reason: their totals are a sum of unlike things too.
+   */
+  const owedByCurrency: Array<{ currency: string; figures: PartySummary }> = summary
+    ? perCurrency
+      ? byCurrency.map((row) => ({ currency: row.currency, figures: row }))
+      : [{ currency: summaryCurrency, figures: summary }]
+    : []
+
+  /**
+   * One money figure. With a single currency it is a string, so the KPI card
+   * sizes it to the number it holds; with several it is one line per currency —
+   * never their sum.
+   */
+  const figure = (pick: (row: PartySummary) => number, danger = false): ReactNode => {
+    if (!summary) return ''
+    if (!perCurrency) {
+      const text = money(pick(summary))
+      return danger ? <span className={cn(DANGER_VALUE, valueFontClass(text))}>{text}</span> : text
+    }
+    return (
+      <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        {byCurrency.map((row) => (
+          <span
+            key={row.currency}
+            className={cn('whitespace-nowrap tabular-nums', danger && DANGER_VALUE)}
+          >
+            <span className="text-[hsl(var(--fg-tertiary))]" dir="ltr">
+              {row.currency}
+            </span>{' '}
+            {formatNumber(pick(row), locale, 2)}
+          </span>
+        ))}
+      </span>
+    )
+  }
+
   if (!customer) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
@@ -185,11 +272,14 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
     )
   }
 
-  const net = summary?.netBalance ?? 0
-  const netLabel = net > 0 ? t('netOwesUs') : net < 0 ? t('netWeOwe') : t('netSettled')
+  // The sign is the meaning — see `netTone`. `null` when the summary did not
+  // load: an unknown balance is not a settled one.
+  const net = summary?.netBalance ?? null
+  const netLabel =
+    net === null ? '' : net > 0 ? t('netOwesUs') : net < 0 ? t('netWeOwe') : t('netSettled')
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       <PaymentModal
         open={props.payOpen}
         onClose={props.onClosePayment}
@@ -203,27 +293,28 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
         openInvoices={props.openInvoices}
       />
 
-      {/* ── Identity and actions ─────────────────────────────────────────── */}
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
+      {/* ── 1. Who this customer is · the one action that matters ─────────── */}
+      <header className={cn(card, 'p-3 sm:p-5')}>
+        <div className="flex flex-wrap items-start gap-x-3 gap-y-3">
           <button
             type="button"
             onClick={props.onBack}
             aria-label={tc('customers.backToList')}
-            className={cn(GHOST_ICON_BUTTON, 'mt-0.5 shrink-0 rounded-full')}
+            className={cn(GHOST_ICON_BUTTON, FOCUS_RING, 'mt-0.5 shrink-0')}
           >
             <ChevronRight className="size-5 ltr:rotate-180" aria-hidden="true" />
           </button>
-          <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold text-[hsl(var(--fg-primary))]">
+
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-xl font-bold text-[hsl(var(--fg-primary))] sm:text-2xl">
               {customer.name}
             </h1>
-            <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-[hsl(var(--fg-secondary))]">
+            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[hsl(var(--fg-secondary))]">
               {customer.phone && <span dir="ltr">{customer.phone}</span>}
               {customer.email && <span dir="ltr">{customer.email}</span>}
               {customer.address && <span>{customer.address}</span>}
             </p>
-            <p className="mt-1 flex flex-wrap gap-x-4 text-xs text-[hsl(var(--fg-tertiary))]">
+            <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[hsl(var(--fg-tertiary))]">
               <span>
                 {t('lastSale')}: {props.formatDate(summary?.lastSaleAt ?? null)}
               </span>
@@ -232,51 +323,78 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
               </span>
             </p>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2 print:hidden">
-          <button
-            type="button"
-            onClick={printStatement}
-            disabled={!props.ledger || props.ledger.movements.length === 0}
-            className={outlineBtn}
-          >
-            <Printer className="size-4" aria-hidden="true" />
-            {t('printStatement')}
-          </button>
-          <button type="button" onClick={props.onNewInvoice} className={outlineBtn}>
-            <FilePlus2 className="size-4" aria-hidden="true" />
-            {t('newInvoice')}
-          </button>
-          <button
-            type="button"
-            onClick={props.onExport}
-            disabled={!props.ledger || props.ledger.movements.length === 0}
-            className={outlineBtn}
-          >
-            <Download className="size-4" aria-hidden="true" />
-            {t('exportStatement')}
-          </button>
-          {props.onDelete ? (
+
+          {/* One primary action and one money action. Print, export and delete
+              used to sit beside them at the same weight, so nothing led. On a
+              phone the primary action takes the row and the rest lives behind
+              «بیشتر» — four buttons in a phone header is no header at all. */}
+          <div className="flex w-full flex-wrap items-center gap-2 print:hidden md:w-auto">
             <button
               type="button"
-              onClick={props.onDelete}
-              disabled={props.deleting}
-              className={outlineBtn}
+              onClick={props.onNewInvoice}
+              className={cn(primaryBtn, 'flex-1 md:flex-none')}
             >
-              <Trash2 className="size-4" aria-hidden="true" />
-              {t('deleteCustomer')}
+              <FilePlus2 className="size-4" aria-hidden="true" />
+              {t('newInvoice')}
             </button>
-          ) : null}
-          {(summary?.receivable ?? 0) > 0 && props.openInvoices.length > 0 && (
-            <button type="button" onClick={props.onOpenPayment} className={primaryBtn}>
-              <DollarSign className="size-4" aria-hidden="true" />
-              {t('recordReceipt')}
-            </button>
-          )}
+            {summary && summary.receivable > 0 && props.openInvoices.length > 0 && (
+              <button
+                type="button"
+                onClick={props.onOpenPayment}
+                className={cn(outlineBtn, 'flex-1 md:flex-none')}
+              >
+                <DollarSign className="size-4" aria-hidden="true" />
+                {t('recordReceipt')}
+              </button>
+            )}
+            <DropdownMenu>
+              {/* A bare <button>: Radix's Slot clones exactly one element. */}
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={tc('common.more')}
+                  title={tc('common.more')}
+                  className={cn(outlineBtn, 'px-3')}
+                >
+                  <MoreHorizontal className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">{tc('common.more')}</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  disabled={!props.ledger || props.ledger.movements.length === 0}
+                  onSelect={printStatement}
+                >
+                  <Printer className="size-4" aria-hidden="true" />
+                  {t('printStatement')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={!props.ledger || props.ledger.movements.length === 0}
+                  onSelect={props.onExport}
+                >
+                  <Download className="size-4" aria-hidden="true" />
+                  {t('exportStatement')}
+                </DropdownMenuItem>
+                {props.onDelete ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      disabled={props.deleting === true}
+                      onSelect={props.onDelete}
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                      {t('deleteCustomer')}
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
       {props.deleteError ? (
-        <p role="alert" className="mt-2 text-xs text-[hsl(var(--color-destructive))]">
+        <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
           {props.deleteError}
         </p>
       ) : null}
@@ -293,135 +411,192 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
         </div>
       )}
 
+      {/* ── 2. Several currencies — said once, compactly ──────────────────── */}
       {summary && summary.currencies.length > 1 && (
-        <p className="flex items-start gap-2 rounded-xl border border-[hsl(var(--color-warning)/0.4)] bg-[hsl(var(--color-warning)/0.06)] p-3 text-sm text-[hsl(var(--fg-secondary))]">
+        <div className="flex items-start gap-2.5 rounded-xl border border-[hsl(var(--color-warning)/0.35)] bg-[hsl(var(--color-warning)/0.07)] px-3 py-2.5">
           <AlertTriangle
             className="mt-0.5 size-4 shrink-0 text-[hsl(var(--color-warning))]"
             aria-hidden="true"
           />
-          {t('mixedCurrency', { currencies: summary.currencies.join('، ') })}
-        </p>
+          <p className="min-w-0 text-xs leading-5 text-[hsl(var(--fg-secondary))] sm:text-sm">
+            <span className="font-semibold text-[hsl(var(--fg-primary))]">
+              {t('mixedCurrencyTitle')}
+            </span>
+            {' — '}
+            {t('mixedCurrency', { currencies: summary.currencies.join('، ') })}
+          </p>
+        </div>
       )}
 
-      {/* With several currencies the cards below add unlike things. This is
-          the picture that is true: what is owed in each currency, apart. */}
-      {summary &&
-        summary.currencies.length > 1 &&
-        asList<PartySummary & { currency: string }>(summary.byCurrency).length > 0 && (
-          <ul
-            aria-label={t('byCurrency')}
-            className="flex flex-col gap-2 rounded-xl border border-[hsl(var(--border-default))] p-3 text-sm"
-          >
-            {asList<PartySummary & { currency: string }>(summary.byCurrency).map((row) => (
-              <li key={row.currency} className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                <span className="min-w-12 font-semibold text-[hsl(var(--fg-primary))]">
-                  {row.currency}
-                </span>
-                <span className="text-[hsl(var(--fg-secondary))]">
-                  {t('receivable')}:{' '}
-                  <span className="tabular-nums">{formatNumber(row.receivable, locale, 2)}</span>
-                </span>
-                <span className="text-[hsl(var(--fg-secondary))]">
-                  {t('payable')}:{' '}
-                  <span className="tabular-nums">{formatNumber(row.weOwe, locale, 2)}</span>
-                </span>
-                <span className="font-medium text-[hsl(var(--fg-primary))]">
-                  {t('netBalance')}:{' '}
-                  <span className="tabular-nums">{formatNumber(row.netBalance, locale, 2)}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-
-      {/* ── The money picture ─────────────────────────────────────────────── */}
+      {/* ── 3. The balance — the one number this page is about ─────────────── */}
       {summary && (
-        <section className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-          {/* ⚠️ The sign is the whole meaning here: positive is money THEY
-              owe us, negative is money WE owe them. The colour carries it,
-              and `netLabel` says it in words so colour is not the only
-              channel. */}
-          <KpiCard
-            label={t('netBalance')}
-            value={
+        <section aria-labelledby="customer-net-balance" className={cn(card, 'overflow-hidden')}>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[hsl(var(--border-default))] px-4 py-3 sm:px-5">
+            <h2
+              id="customer-net-balance"
+              className="flex items-center gap-2 text-sm font-semibold text-[hsl(var(--fg-secondary))]"
+            >
+              <Scale className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+              {t('netBalance')}
+            </h2>
+            {net !== null ? (
               <span
-                className={
-                  net > 0
-                    ? 'text-[hsl(var(--color-destructive))]'
-                    : net < 0
-                      ? 'text-[hsl(var(--color-success))]'
-                      : 'text-[hsl(var(--fg-primary))]'
-                }
+                className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', netChipTone(net))}
               >
-                {money(Math.abs(net))}
+                {netLabel}
               </span>
-            }
-            hint={netLabel}
-            className={cn('col-span-2', net > 0 && 'border-[hsl(var(--color-destructive)/0.35)]')}
-          />
-          <Stat label={t('receivable')} value={money(summary.receivable)} />
-          <Stat
-            label={t('overdue')}
-            value={money(summary.overdue)}
-            tone={summary.overdue > 0 ? 'danger' : undefined}
-            hint={
-              summary.overdueInvoiceCount > 0
-                ? t('overdueInvoices', { count: summary.overdueInvoiceCount })
-                : undefined
-            }
-          />
-          <Stat label={t('totalSales')} value={money(summary.totalSales)} />
-          <Stat label={t('totalReceived')} value={money(summary.totalReceived)} />
-          {(summary.totalPurchases > 0 || summary.weOwe > 0) && (
-            <>
-              {summary.totalPurchases > 0 ? (
-                <Stat label={t('totalPurchases')} value={money(summary.totalPurchases)} />
-              ) : null}
-              {/* `weOwe` is the server's figure: purchase payable plus the credit a return on
-                  an already-paid invoice created. A return used to show only in the net card. */}
-              <Stat
-                label={t('payable')}
-                value={money(summary.weOwe)}
-                hint={summary.returnCredit > 0 ? t('weOweIncludesReturns') : undefined}
-              />
-            </>
-          )}
-          <Stat
-            label={t('openInvoices')}
-            value={formatNumber(summary.openInvoiceCount, locale)}
-            hint={t('invoiceCount', { count: summary.invoiceCount })}
-          />
-          {summary.openingBalance !== 0 && (
-            <Stat label={tc('customers.openingBalance')} value={money(summary.openingBalance)} />
-          )}
+            ) : null}
+          </div>
+
+          {/* One line per currency. Two currencies are never added together;
+              with a single currency this is simply its net balance. */}
+          <dl className="divide-y divide-[hsl(var(--border-default))] px-4 sm:px-5">
+            {balanceRows.map((row) => {
+              const text = money(row.value, row.currency)
+              return (
+                <div
+                  key={row.currency || 'book'}
+                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3"
+                >
+                  <dt className="text-sm font-semibold text-[hsl(var(--fg-secondary))]" dir="ltr">
+                    {row.currency}
+                  </dt>
+                  <dd
+                    className={cn(
+                      'font-bold tabular-nums',
+                      headlineFontClass(text),
+                      netTone(row.value),
+                    )}
+                    title={text}
+                  >
+                    {text}
+                  </dd>
+                </div>
+              )
+            })}
+          </dl>
         </section>
+      )}
+
+      {/* ── 4. What the balance is made of ─────────────────────────────────── */}
+      {summary && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+            <KpiCard label={t('receivable')} value={figure((row) => row.receivable)} />
+            {(summary.totalPurchases > 0 || summary.weOwe > 0) && (
+              /* `weOwe` is the server's figure: purchase payable plus the credit a return on
+                 an already-paid invoice created. A return used to show only in the net card. */
+              <KpiCard
+                label={t('payable')}
+                value={figure((row) => row.weOwe)}
+                {...(summary.returnCredit > 0 ? { hint: t('weOweIncludesReturns') } : {})}
+              />
+            )}
+            <KpiCard label={t('totalSales')} value={figure((row) => row.totalSales)} />
+            <KpiCard
+              label={t('overdue')}
+              value={figure((row) => row.overdue, summary.overdue > 0)}
+              {...(summary.overdueInvoiceCount > 0
+                ? { hint: t('overdueInvoices', { count: summary.overdueInvoiceCount }) }
+                : {})}
+            />
+            <KpiCard
+              label={t('openInvoices')}
+              value={formatNumber(summary.openInvoiceCount, locale)}
+              hint={t('invoiceCount', { count: summary.invoiceCount })}
+              className="col-span-2 md:col-span-1"
+            />
+          </div>
+
+          {/* The rest of the picture, one step down: it supports the five above
+              and does not need the same weight. */}
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[hsl(var(--border-default))] pt-3 sm:grid-cols-3">
+            <div className="min-w-0">
+              <dt className={FIGURE_LABEL}>{t('totalReceived')}</dt>
+              <dd className="mt-0.5 font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
+                {figure((row) => row.totalReceived)}
+              </dd>
+            </div>
+            {summary.totalPurchases > 0 && (
+              <div className="min-w-0">
+                <dt className={FIGURE_LABEL}>{t('totalPurchases')}</dt>
+                <dd className="mt-0.5 font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
+                  {figure((row) => row.totalPurchases)}
+                </dd>
+              </div>
+            )}
+            {summary.openingBalance !== 0 && (
+              <div className="min-w-0">
+                <dt className={FIGURE_LABEL}>{tc('customers.openingBalance')}</dt>
+                <dd className="mt-0.5 font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
+                  {figure((row) => row.openingBalance)}
+                </dd>
+              </div>
+            )}
+          </dl>
+        </div>
       )}
 
       {/* ── What is owed: by due date and by age ─────────────────────────── */}
       {summary && summary.receivable > 0 && (
-        <section className={cn(card, 'grid gap-5 p-4 md:grid-cols-2')}>
-          <div>
-            <h2 className="mb-3 text-sm font-semibold text-[hsl(var(--fg-primary))]">
-              {t('receivable')}
-            </h2>
-            <dl className="space-y-2 text-sm">
-              <Row label={t('overdue')} value={money(summary.overdue)} tone="danger" />
-              <Row label={t('dueToday')} value={money(summary.dueToday)} tone="warning" />
-              <Row label={t('dueLater')} value={money(summary.dueLater)} />
-            </dl>
-          </div>
-          <div>
-            <h2 className="mb-3 text-sm font-semibold text-[hsl(var(--fg-primary))]">
-              {t('aging')}
-            </h2>
-            <dl className="space-y-2 text-sm">
-              <Row label={t('agingCurrent')} value={money(summary.aging.current)} />
-              <Row label={t('aging1to30')} value={money(summary.aging.days1to30)} tone="warning" />
-              <Row label={t('aging31to60')} value={money(summary.aging.days31to60)} tone="danger" />
-              <Row label={t('aging61to90')} value={money(summary.aging.days61to90)} tone="danger" />
-              <Row label={t('agingOver90')} value={money(summary.aging.over90)} tone="danger" />
-            </dl>
-          </div>
+        <section className={cn(card, 'space-y-5 p-4')}>
+          {owedByCurrency.map(({ currency, figures }) => (
+            <div key={currency || 'book'}>
+              {perCurrency && (
+                <p className="mb-2 text-xs font-semibold text-[hsl(var(--fg-tertiary))]" dir="ltr">
+                  {currency}
+                </p>
+              )}
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <h2 className="mb-3 text-sm font-semibold text-[hsl(var(--fg-primary))]">
+                    {t('receivable')}
+                  </h2>
+                  <dl className="space-y-2 text-sm">
+                    <Row
+                      label={t('overdue')}
+                      value={money(figures.overdue, currency)}
+                      tone="danger"
+                    />
+                    <Row
+                      label={t('dueToday')}
+                      value={money(figures.dueToday, currency)}
+                      tone="warning"
+                    />
+                    <Row label={t('dueLater')} value={money(figures.dueLater, currency)} />
+                  </dl>
+                </div>
+                <div>
+                  <h2 className="mb-3 text-sm font-semibold text-[hsl(var(--fg-primary))]">
+                    {t('aging')}
+                  </h2>
+                  <dl className="space-y-2 text-sm">
+                    <Row label={t('agingCurrent')} value={money(figures.aging.current, currency)} />
+                    <Row
+                      label={t('aging1to30')}
+                      value={money(figures.aging.days1to30, currency)}
+                      tone="warning"
+                    />
+                    <Row
+                      label={t('aging31to60')}
+                      value={money(figures.aging.days31to60, currency)}
+                      tone="danger"
+                    />
+                    <Row
+                      label={t('aging61to90')}
+                      value={money(figures.aging.days61to90, currency)}
+                      tone="danger"
+                    />
+                    <Row
+                      label={t('agingOver90')}
+                      value={money(figures.aging.over90, currency)}
+                      tone="danger"
+                    />
+                  </dl>
+                </div>
+              </div>
+            </div>
+          ))}
         </section>
       )}
 
@@ -502,12 +677,19 @@ function Statement(props: CustomerDetailViewProps & { money: Money }) {
   const t = useTranslations('customer360')
   const tc = useTranslations()
   const { ledger } = props
+  // ⚠️ Before the early returns: the statement loads, then shows rows, and a
+  // tab that changes its number of hooks between renders is a crash.
+  const [kind, setKind] = useState('all')
   if (props.ledgerLoading) return <Empty text={tc('common.loading')} />
   if (!ledger || ledger.movements.length === 0) return <Empty text={t('statementEmpty')} />
 
   // Newest first on screen; the running balance is the server's, after each row.
-  const rows = [...ledger.movements].reverse()
-  type Movement = (typeof rows)[number]
+  const allRows = [...ledger.movements].reverse()
+  type Movement = (typeof allRows)[number]
+  // Only the kinds this statement actually holds — a filter that can select a
+  // row that does not exist is a filter that shows «no match» for no reason.
+  const kinds = [...new Set(allRows.map((row) => row.kind))]
+  const rows = kind === 'all' ? allRows : allRows.filter((row) => row.kind === kind)
   // Debit raises what they owe us (a sale, or money we paid out).
   const isDebit = (row: Movement) => row.kind === 'sale' || row.kind === 'payment_out'
   const columns: TableColumn<Movement>[] = [
@@ -680,7 +862,28 @@ function Statement(props: CustomerDetailViewProps & { money: Money }) {
           if (row.sourceType === 'invoice' && row.sourceId) props.onOpenInvoice(row.sourceId)
         }}
         words={(row) => [row.reference, t(`kind.${row.kind}`), props.formatDate(row.date)]}
-        empty={t('statementEmpty')}
+        actions={
+          <>
+            <TableFilterSelect
+              label={t('colType')}
+              value={kind}
+              options={[
+                { value: 'all', label: tc('common.all') },
+                ...kinds.map((value) => ({ value, label: t(`kind.${value}`) })),
+              ]}
+              onChange={setKind}
+            />
+            <button
+              type="button"
+              onClick={props.onExport}
+              className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2.5 text-sm text-[hsl(var(--fg-secondary))] transition-colors hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
+            >
+              <Download className="size-4" aria-hidden="true" />
+              <span className="hidden sm:inline">{t('exportStatement')}</span>
+            </button>
+          </>
+        }
+        empty={kind === 'all' ? t('statementEmpty') : t('noMatch')}
       />
       {ledger.openingBalance !== 0 ? (
         <p className="flex justify-between gap-3 px-3 text-sm text-[hsl(var(--fg-secondary))]">
@@ -885,37 +1088,9 @@ function InvoicesTable(props: CustomerDetailViewProps & { money: Money }) {
 }
 
 /**
- * The product's KPI card, with this screen's one addition: `tone: 'danger'`
- * colours the FIGURE because the figure itself is bad news (money overdue).
- * That is a different question from `invertDelta`, which is about the
- * direction of a change.
+ * One supporting line of the money picture — a label and its figure, with the
+ * dot that marks what kind of news it is.
  */
-function Stat({
-  label,
-  value,
-  hint,
-  tone,
-}: {
-  label: string
-  value: string
-  hint?: string | undefined
-  tone?: 'danger' | undefined
-}) {
-  return (
-    <KpiCard
-      label={label}
-      value={
-        tone === 'danger' ? (
-          <span className="text-[hsl(var(--color-destructive))]">{value}</span>
-        ) : (
-          value
-        )
-      }
-      {...(hint ? { hint } : {})}
-    />
-  )
-}
-
 function Row({
   label,
   value,

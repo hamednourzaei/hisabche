@@ -2257,7 +2257,15 @@
       "confirmBody": "From now on every sale is costed with the new method, so future profit and stock value change. Sales already recorded are not re-costed. The change is logged under your name in the activity log.",
       "confirmYes": "Yes, change it"
     },
-    "addRate": "Add a currency or unit"
+    "addRate": "Add a currency or unit",
+    "movements": {
+      "sale": "Sale",
+      "purchase": "Purchase",
+      "production": "Production",
+      "transfer": "Transfer",
+      "adjustment": "Adjustment",
+      "opening": "Opening balance"
+    }
   },
   "customers": {
     "creditor": "Creditor",
@@ -3023,7 +3031,8 @@
       "entry": "Entry",
       "openSource": "Open source document",
       "source": "Source",
-      "noMatch": "No entry matches this search"
+      "noMatch": "No entry matches this search",
+      "total": "Total"
     },
     "trialBalance": {
       "title": "Trial Balance",
@@ -3073,7 +3082,10 @@
       "empty": {
         "title": "No balance sheet data"
       },
-      "currentEarnings": "Current period profit (loss)"
+      "currentEarnings": "Current period profit (loss)",
+      "section": "Section",
+      "label": "Description",
+      "amount": "Amount"
     },
     "incomeStatement": {
       "chooseAccounts": "Choose accounts",
@@ -3872,7 +3884,20 @@
     "untitled": "Untitled",
     "invoiceNumber": "Invoice #{number}",
     "newActivity": "New activity",
-    "loading": "Loading notifications"
+    "loading": "Loading notifications",
+    "invoiceCreated": "New invoice created",
+    "invoiceRegisteredBody": "Invoice #{number} was registered.",
+    "invoicePaid": "Invoice paid",
+    "invoicePaidBody": "Invoice #{number} was paid.",
+    "paymentRecorded": "Payment {ref} recorded",
+    "invoiceOverdue": "Overdue invoice",
+    "customerCreated": "New customer: {name}",
+    "escalatedToYou": "Unanswered approval referred to you",
+    "escalatedNoOne": "Approval pending and no one to assign",
+    "requiresApproval": "Requires approval",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "activityOne": "activity"
   },
   "time": {
     "justNow": "Just now",
@@ -3881,7 +3906,13 @@
     "daysAgo": "{d} days ago",
     "weeksAgo": "{w} weeks ago",
     "monthsAgo": "{mo} months ago",
-    "yearsAgo": "{y} years ago"
+    "yearsAgo": "{y} years ago",
+    "minuteAgo": "1 minute ago",
+    "hourAgo": "1 hour ago",
+    "dayAgo": "1 day ago",
+    "weekAgo": "1 week ago",
+    "monthAgo": "1 month ago",
+    "yearAgo": "1 year ago"
   },
   "commandPalette": {
     "title": "Command Palette",
@@ -3936,7 +3967,14 @@
     "excellent": "Excellent",
     "good": "Good",
     "neutral": "Stable",
-    "attention": "Needs Attention"
+    "attention": "Needs Attention",
+    "pending": "Pending",
+    "paid": "Paid",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "partial": "Partially paid",
+    "overdue": "Overdue",
+    "draft": "Draft"
   },
   "health": {
     "title": "Business Health",
@@ -4364,6 +4402,24 @@
       "overdue": "Overdue",
       "draft": "Draft",
       "issued": "Issued"
+    },
+    "created": "Created",
+    "updated": "Updated",
+    "status_changed": "Status changed",
+    "payment": "Payment",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "sent": "Sent",
+    "archived": "Archived",
+    "cancelled": "Cancelled",
+    "actions": {
+      "create": "Create",
+      "update": "Update",
+      "delete": "Delete",
+      "view": "View",
+      "export": "Export",
+      "login": "Login",
+      "logout": "Logout"
     }
   },
   "entity": {
@@ -7779,6 +7835,8 @@
     "recordReceipt": "Record receipt",
     "exportStatement": "Export statement",
     "mixedCurrency": "This party's invoices and payments use several currencies ({currencies}). Totals do not convert between them.",
+    "mixedCurrencyTitle": "Several currencies",
+    "noMatch": "Nothing of this type",
     "loadError": "Couldn't load this party's financial data. Try again.",
     "retry": "Try again",
     "noInvoices": "No invoices for this party.",
@@ -10890,5 +10948,17 @@
     "g": "gram",
     "kg": "kilogram",
     "t": "tonne"
+  },
+  "units": {
+    "problems": {
+      "oneBaseRequired": "Exactly one base unit must be selected",
+      "onlyOneBase": "Only one unit can be the base unit",
+      "baseMultiplierOne": "Base unit multiplier must be exactly 1",
+      "multiplierPositive": "Unit multiplier must be greater than zero",
+      "selectUnitPerRow": "Select a unit for each row",
+      "duplicateUnit": "Each unit can only be added once",
+      "singlePurchaseDefault": "Only one unit can be the default purchase unit",
+      "singleSaleDefault": "Only one unit can be the default sale unit"
+    }
   }
 }

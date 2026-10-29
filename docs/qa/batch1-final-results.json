@@ -1,0 +1,23 @@
+{
+  "step": "BATCH_1_CUSTOMER_LIFECYCLE",
+  "date": "2026-10-29",
+  "customer": {
+    "id": "2e39f4a3-329b-4993-a433-2ae59de40746",
+    "name": "QA-2026-10-29-Cust1"
+  },
+  "supplier": {
+    "name": "QA-2026-10-29-Supp1",
+    "verified": true
+  },
+  "searchVerified": true,
+  "detailVerified": false,
+  "editVerified": false,
+  "deleteOrArchiveChecked": false,
+  "screenshots": [
+    "batch1-cust1-in-table.png",
+    "batch1-search-filter.png",
+    "batch1-customer-detail.png",
+    "batch1-supplier-created.png",
+    "batch1-supplier-tab-verified.png"
+  ]
+}

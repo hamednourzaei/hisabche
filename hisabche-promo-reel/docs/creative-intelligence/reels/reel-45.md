@@ -1,0 +1,154 @@
+# Creative Intelligence Brief — Reel 45
+
+## A. Identity
+
+| Field                 | Value                                                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Reel ID               | **45**                                                                                                             |
+| Official Title        | شش ماه زحمت کشیدی؛ فاکتورهای دستی گم شد و کارفرما تسویه نمی‌کند!                                                   |
+| Source Implementation | [`src/reels/reels-42-45.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reels-42-45.ts) |
+| Scene Dependencies    | Shared engine components                                                                                           |
+| Actual Duration       | **59s**                                                                                                            |
+| Aspect Ratio          | 9:16 Vertical (1080x1920)                                                                                          |
+| Frame Rate            | 30 FPS                                                                                                             |
+| Source-Based Score    | **80 / 100**                                                                                                       |
+| Verification Status   | `SOURCE_VERIFIED`                                                                                                  |
+
+## B. Strategic Objective
+
+- **Product Capability Promoted:** تعریف مرکز هزینه هر پروژه، ثبت آنی فاکتور با پیوست تصویر و ارسال پیامکی به کارفرما
+- **Target Business Type:** عمده‌فروشان، فروشگاه‌های زنجیره‌ای و خرده‌فروشی‌های پرتردد _(INFERRED)_
+- **Target Audience:** مالکان کسب‌وکار، مدیران مالی و حسابداران ارشد _(INFERRED)_
+- **Customer Problem / Anxiety:** سوخت شدن هزینه‌کردهای پروژه‌ای به دلیل گم شدن فاکتورهای کاغذی و انکار کارفرما موقع تسویه نهایی
+- **Primary Message:** یکپارچگی بلادرنگ، حذف دوباره‌کاری و استقرار انضباط مالی بدون نیاز به تخصص پیچیده حسابداری.
+- **Desired Audience Action:** ورود به سایت hisabche.com و راه‌اندازی دمو/حساب کاری.
+- **Funnel Stage:** `consideration` _(INFERRED)_
+
+## C. Hook Intelligence
+
+- **Hook Category:** `warning/risk`
+- **Exact Opening On-Screen Copy:** شش ماه شبانه‌روز زحمت کشیدی؛ اما کارفرما [r:صورت‌وضعیت دستی را رد کرد!]
+- **Exact Opening Voiceover:** «شش ماه در سرما و گرما کار کردی، موقع تسویه کارفرما می‌گه صورت‌جلسه دست‌نویس اعتبار نداره و میلیاردها تومن طلبت قفل شد!»
+- **Visual Arrest Event:** High-contrast hook choreography
+- **First Meaningful Motion:** `impact-ripple` transition settling at ~0.8s
+- **Time to First Payoff:** 1.2s to 1.8s
+- **Hook Mechanism:** Acute financial anxiety warning
+
+## D. Problem and Story Progression
+
+Narrative Framework Audit:
+
+| Narrative Stage          | Classification | Notes                                             |
+| ------------------------ | :------------: | ------------------------------------------------- |
+| **Hook**                 |   `EXPLICIT`   | Scene 01 opening visual & verbal arrest           |
+| **Problem**              |   `EXPLICIT`   | Exposure of friction/loss in manual workflow      |
+| **Consequence**          |   `IMPLIED`    | Cost of error, untracked capital, or late balance |
+| **Product Intervention** |   `EXPLICIT`   | Introduction of Hisabche automatic engine         |
+| **Proof**                |   `EXPLICIT`   | Telemetry demonstration / verified balance        |
+| **Resolution**           |   `IMPLIED`    | Peace-of-mind and financial clarity               |
+| **CTA**                  |   `EXPLICIT`   | Direct conversion prompt to hisabche.com          |
+
+## E. Scene-by-Scene Direction
+
+### Scene 01 (0.00s – 7.00s / 7s)
+
+- **Voiceover:** «شش ماه در سرما و گرما کار کردی، موقع تسویه کارفرما می‌گه صورت‌جلسه دست‌نویس اعتبار نداره و میلیاردها تومن طلبت قفل شد!»
+- **On-Screen Copy:** Dynamic numeric/ledger layout
+- **Visual Composition:** Standard UI (`hook`) in `cinematic-obsidian` container-local grid
+- **Motion Primitives:** Primary: `impact-ripple`, Secondary: `breathing-text`, Typography: `entrance-spring + breathing (no static hold > 1.2s)`
+- **Transitions:** In: Cut / Out: Synchronized wipe/transient
+- **Sound Cues:** `titleHit` at +0.20s, `impact` at +0.25s, `alert` at +1.10s, `pop` at +1.80s
+- **Narrative Purpose:** Hook & Attention Arrest
+- **Pacing Risk:** Optimal short-form velocity
+
+### Scene 02 (7.00s – 23.00s / 16s)
+
+- **Voiceover:** «با کاغذهای دستی زحمتت پایمال می‌شه؛ اما در حسابچه، تمام صورت‌وضعیت‌ها با تاییدیه رسمی ثبت می‌شن تا کارفرما نتونه زیرش بزنه.»
+- **On-Screen Copy:** تسویه مطالبات پروژه: [r:فاکتورهای پراکنده کاغذی] در برابر [c:پرونده رسمی دیجیتال]
+- **Visual Composition:** Standard UI (`split`) in `cinematic-obsidian` container-local grid
+- **Motion Primitives:** Primary: `impact-ripple`, Secondary: `breathing-text`, Typography: `entrance-spring + breathing (no static hold > 1.2s)`
+- **Transitions:** In: Cut / Out: Synchronized wipe/transient
+- **Sound Cues:** `impact` at +0.25s, `whoosh` at +0.40s, `alert` at +0.60s, `tick` at +0.80s, `sync` at +1.00s, `tick` at +1.10s, `tick` at +1.40s, `tick` at +1.40s, `tick` at +1.70s, `tick` at +2.00s, `chime` at +2.40s
+- **Narrative Purpose:** Product Truth Demonstration
+- **Pacing Risk:** High dwell time; requires micro-visual pulsing to maintain viewer engagement
+
+### Scene 03 (23.00s – 37.00s / 14s)
+
+- **Voiceover:** «قانون و داوری فقط مدرک دیجیتال مستند رو قبول دارن؛ حسابچه زره ضدگلوله دسترنج شش ماه تلاش شبانه‌روزی توئه.»
+- **On-Screen Copy:** وصول مطالبات خدماتی: [r:دفتر کارگاهی] در برابر [c:سامانه حسابچه]
+- **Visual Composition:** Standard UI (`compare`) in `cinematic-obsidian` container-local grid
+- **Motion Primitives:** Primary: `entrance-spring`, Secondary: `breathing-text`, Typography: `entrance-spring + breathing (no static hold > 1.2s)`
+- **Transitions:** In: Cut / Out: Synchronized wipe/transient
+- **Sound Cues:** `whoosh` at +0.40s, `tick` at +1.10s, `tick` at +1.50s, `tick` at +1.90s, `chime` at +2.50s
+- **Narrative Purpose:** Product Truth Demonstration
+- **Pacing Risk:** High dwell time; requires micro-visual pulsing to maintain viewer engagement
+
+### Scene 04 (37.00s – 51.00s / 14s)
+
+- **Voiceover:** «نگذار ریالی از حق خودت و تیمت پایمال بشه. با حسابچه با مدارک رسمی و امضاشده به جلسه تسویه برو.»
+- **On-Screen Copy:** فرجام پروژه‌ها: [r:سوخت شدن هزینه‌ها] در برابر [c:تسویه کامل و مقتدر]
+- **Visual Composition:** Standard UI (`versus`) in `cinematic-obsidian` container-local grid
+- **Motion Primitives:** Primary: `value-transform`, Secondary: `breathing-text`, Typography: `entrance-spring + breathing (no static hold > 1.2s)`
+- **Transitions:** In: Cut / Out: Synchronized wipe/transient
+- **Sound Cues:** `alert` at +0.70s, `tick` at +1.20s, `impact` at +2.00s
+- **Narrative Purpose:** Product Truth Demonstration
+- **Pacing Risk:** High dwell time; requires micro-visual pulsing to maintain viewer engagement
+
+### Scene 05 (51.00s – 59.00s / 8s)
+
+- **Voiceover:** «همین امروز دسترنج خودت رو بیمه کن. حسابچه، پشتیبان محکم مجریان و پیمانکاران ایرانی.»
+- **On-Screen Copy:** Dynamic numeric/ledger layout
+- **Visual Composition:** Standard UI (`cta`) in `cinematic-obsidian` container-local grid
+- **Motion Primitives:** Primary: `entrance-spring`, Secondary: `breathing-text`, Typography: `entrance-spring + breathing (no static hold > 1.2s)`
+- **Transitions:** In: Cut / Out: Synchronized wipe/transient
+- **Sound Cues:** `success` at +1.00s, `pop` at +4.00s
+- **Narrative Purpose:** Conversion Closing
+- **Pacing Risk:** Optimal short-form velocity
+
+## F. Typography and Visual System
+
+- **Primary Typography:** Vazirmatn / Dana (font-weight: 700–900 for headlines)
+- **Telemetry / Monospace:** JetBrains Mono / ui-monospace for currency amounts and timestamps
+- **Digit Purity:** Enforced via `faNumber(...)` (Layout Defect Law 6)
+- **Theme Tokens:** `cinematic-obsidian` (Obsidian surfaces, Neon cyan/purple highlights, soft volumetric borders)
+- **Spatial Governance:** Strict `direction: 'ltr'` root stage with container-local bounded elements (Layout Defect Law 1)
+- **Camera Law:** `Dynamic camera zoom (Legacy)`
+
+## G. Audio Direction
+
+- **Spoken Narration:** Persian conversational business tone (B2B market register)
+- **Music Mood Metadata:** `confident` _(SOURCE_VERIFIED)_
+- **Sound Cues Count:** 25 registered acoustic transients
+- **Acoustic Transients:** `alert`, `chime`, `impact`, `pop`, `success`, `sync`, `tick`, `titleHit`, `whoosh`
+- **Sync Law:** Hard Rule 5 forced-alignment and frame-accurate audio transients
+
+## H. CTA Audit
+
+- **Exact CTA Copy:** «حسابچه | مدیریت قراردادها و صورت‌وضعیت‌های رسمی»
+- **CTA Timing:** Final scene (51s – 59s)
+- **Intended Commercial Action:** Navigate to website and register business workspace
+- **Consistency with Message:** High alignment with product resolution
+- **Measurability:** Trackable via URL campaign parameters (`?utm_source=reel&utm_campaign=reel-45`)
+
+## I. Creative Improvement Opportunities
+
+### Opportunity 1 [P1]: IMP-45-03
+
+- **Observed Issue:** Legacy dynamic push-in camera zoom active, risking sub-pixel text blur on mobile viewports.
+- **Evidence:** noZoom property is false or undefined.
+- **Recommended Change:** Enforce Layout Defect Law 9: set noZoom: true and pin scale at 1.0x with static LTR stage anchor.
+- **Expected Qualitative Benefit:** Rock-solid typography crispness and zero layout wobble across all devices.
+- **Implementation Scope:** `S` | **Risk:** `LOW — isolated boolean flag toggle in reel definition.`
+- **Verification Method:** Assert noZoom: true in test suite and verify edge distance in frame bounds check.
+
+## J. Evidence and Confidence
+
+| Assessment Area             | Evidence Classification  |      Confidence      |
+| --------------------------- | :----------------------: | :------------------: |
+| Metadata & Timing           |    `SOURCE_VERIFIED`     |         100%         |
+| Script & Spoken Words       |    `SOURCE_VERIFIED`     |         100%         |
+| Motion Plan & Primitives    |    `SOURCE_VERIFIED`     |         100%         |
+| Target Audience & Persona   |        `INFERRED`        |         85%          |
+| Visual Layout Quality       |    `SOURCE_VERIFIED`     |         95%          |
+| Real Audience Retention     | `REQUIRES_AUDIENCE_TEST` |         N/A          |
+| Full Pixel Render Integrity |   `SOURCE_CONFIGURED`    | Pending Batch Render |

@@ -1196,6 +1196,9 @@ export class InvoiceService {
         entity_id: invoice.id,
         action_url: `/invoices/${invoice.id}`,
         metadata: {
+          title_key: 'notifications.invoiceCreated',
+          body_key: 'notifications.invoiceRegisteredBody',
+          params: { number: invoice.invoice_number },
           invoice_number: invoice.invoice_number,
           total: invoice.total,
           currency: invoice.currency,
@@ -1636,6 +1639,9 @@ export class InvoiceService {
           entity_id: invoice.id,
           action_url: `/invoices/${invoice.id}`,
           metadata: {
+            title_key: 'notifications.invoicePaid',
+            body_key: 'notifications.invoicePaidBody',
+            params: { number: invoice.invoice_number },
             invoice_number: invoice.invoice_number,
             total: invoice.total,
             currency: invoice.currency,

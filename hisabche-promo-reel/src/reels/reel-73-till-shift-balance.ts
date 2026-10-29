@@ -1,82 +1,143 @@
 // ============================================
-// Reel 73: Till & Shift Closing - Cash Accountability
-// Motion Template: split-screen-stopwatch
-// Funnel Stage: Operational Discipline | Audience: Retailers, Supermarkets, Cashiers
+// Reel 73: Till Shift Balance - Zero Cash Shortage (Bespoke Cut)
+//
+// The Golden Till Vault, Precision Shift Cash Reconciler & Soulful Night Closure
+// Complies strictly with Layout Defect Law 11
+// High-conversion cash integrity narrative for retailers & multi-shift stores.
 // ============================================
 
-import type { Reel } from '../engine/types'
-import { ctaScene, sequence, total } from './shared'
+import type { Cue, Reel } from '../engine/types'
+import {
+  CashierIntegrityManifestoScene,
+  InteractiveCashReconciliationScene,
+  ShiftDiscrepancyPanicScene,
+  ShiftHandoverProtocolScene,
+  SoulfulNightClosureScene,
+  TillShiftCtaScene,
+} from '../scenes/till-shift-balance'
+import { sequence, total } from './shared'
 
 const scenes = sequence(
   [
+    // 1 — Frame-0 Visual Arrest: Shift Discrepancy Panic
     {
-      dur: 4,
+      dur: 5,
       spec: {
-        kind: 'hook',
-        label: 'مدیریت صندوق و تحویل شیفت',
-        lines: ['ساعت ۱۰ شب پای کرکره،', 'ولی [r:دخل صندوق جور نیست]!'],
-        cards: [
-          { icon: 'calculator', title: 'جمع فاکتورها', sub: '۴۸٬۲۰۰ ثبت سیستمی', tone: 'cyan' },
-          { icon: 'wallet', title: 'شمارش نقدی', sub: 'فقط ۴۵٬۰۰۰ در کشو!', tone: 'red' },
-        ],
+        kind: 'bespoke',
+        theme: 'midnight-gold',
+        component: ShiftDiscrepancyPanicScene,
+        cues: [
+          { at: 0, kind: 'impact' },
+          { at: 1.2, kind: 'alert' },
+          { at: 2.5, kind: 'whoosh' },
+        ] as Cue[],
       },
-      vo: 'پای بستن مغازه، پول داخل کشو با کارتخوان و فاکتورها نمی‌خونه؛ کی اشتباه کرده؟',
+      vo: 'ساعت ۱۰ شب موقع بستن دخل، صندوق و سیستم با هم نمی‌خوانند؛ کسری صندوق از جیب کی می‌ره؟',
     },
+
+    // 2 — Interactive Cash Reconciliation Matrix
     {
       dur: 8,
       spec: {
-        kind: 'split-stopwatch',
-        topTitle: 'روش سنتی: شمارش دستی و خطای صندوق',
-        topSub: '۴۵ دقیقه استرس، بازبینی دوباره فیش‌های کارتخوان و جروبحث',
-        topBody: 'کسری ۳٬۲۰۰ نامشخص پای تحویل شیفت',
-        topFooter: 'ساعت ۱۱ شب هنوز کرکره پایین نیامده',
-        bottomTitle: 'روش حسابچه: تسویه ۳ ثانیه‌ای شیفت',
-        bottomSub: 'تفکیک خودکار وجه نقد، پوز بانکی و خروجی‌های تأییدشده',
-        bottomBody: 'تراز آنی با دقت کامل بدون ابهام',
-        bottomFooter: 'تایید نهایی با یک کلیک و چاپ رسید شیفت',
+        kind: 'bespoke',
+        theme: 'midnight-gold',
+        component: InteractiveCashReconciliationScene,
+        cues: [
+          { at: 0.2, kind: 'whoosh' },
+          { at: 1.5, kind: 'scan' },
+          { at: 3.5, kind: 'tick' },
+          { at: 5.5, kind: 'cash' },
+        ] as Cue[],
       },
-      vo: 'در حسابچه، صندوقدار قبل از بستن، اسکناس‌ها را می‌شمارد و سیستم فوراً مغایرت را به تفکیک شیفت نشان می‌دهد.',
+      vo: 'در حسابچه، فروش نقدی و تراکنش‌های پوز هوشمندانه تطبیق داده می‌شوند؛ مغایرت دخل به صفر مطلق می‌رسد.',
     },
+
+    // 3 — Digital Shift Handover Protocol
+    {
+      dur: 8,
+      spec: {
+        kind: 'bespoke',
+        theme: 'midnight-gold',
+        component: ShiftHandoverProtocolScene,
+        cues: [
+          { at: 0.2, kind: 'pop' },
+          { at: 1.8, kind: 'sync' },
+          { at: 3.5, kind: 'financialMilestone' },
+          { at: 5.5, kind: 'tick' },
+        ] as Cue[],
+      },
+      vo: 'با صورت‌جلسه دیجیتال، صندوقدار صبح تحویل می‌دهد و صندوقدار عصر تایید می‌کند؛ بدون سوءتفاهم یا اختلاف.',
+    },
+
+    // 4 — Soulful Night Closure (Layout Defect Law 11)
     {
       dur: 7,
       spec: {
-        kind: 'ledger',
-        title: 'بستن قطعی شیفت صندوقداری',
-        name: 'صندوق فروشگاه مرکزی - شیفت عصر',
-        lines: [
-          { label: 'فروش نقدی ثبت‌شده', amount: '۱۵٬۰۰۰' },
-          { label: 'دریافتی کارتخوان متصل', amount: '۳۰٬۰۰۰' },
-          { label: 'وصول طلب نسیه', amount: '۳٬۲۰۰' },
-        ],
-        balanceFrom: 48200,
-        balanceTo: 0,
-        unit: '',
-        footer: 'صندوق با موفقیت بسته شد و سند دوبل به دفتر کل منتقل گردید',
+        kind: 'bespoke',
+        theme: 'midnight-gold',
+        component: SoulfulNightClosureScene,
+        cues: [
+          { at: 0.2, kind: 'cinematicReveal' },
+          { at: 1.8, kind: 'whoosh' },
+          { at: 3.8, kind: 'successResolution' },
+        ] as Cue[],
       },
-      vo: 'یک کلیک، بستن رسمی صندوق و انتقال اتوماتیک سند تراز به حسابداری.',
+      vo: 'کرکره مغازه پایین می‌آید، قفل زده می‌شود؛ دخل تراز و شب آرام بازار، با خیالی آسوده به خانه برگرد.',
     },
-    ctaScene(7),
+
+    // 5 — Cashier Integrity Manifesto
+    {
+      dur: 6,
+      spec: {
+        kind: 'bespoke',
+        theme: 'midnight-gold',
+        component: CashierIntegrityManifestoScene,
+        cues: [
+          { at: 0.2, kind: 'titleHit' },
+          { at: 1.5, kind: 'whoosh' },
+          { at: 3.2, kind: 'chime' },
+        ] as Cue[],
+      },
+      vo: 'صندوق شفاف، احترام و عزت پرسنل است؛ با حسابچه ریال به ریال زحمت شما محفوظ است.',
+    },
+
+    // 6 — Obsidian Monolith CTA
+    {
+      dur: 7,
+      spec: {
+        kind: 'bespoke',
+        theme: 'midnight-gold',
+        component: TillShiftCtaScene,
+        cues: [
+          { at: 0.2, kind: 'bigReveal' },
+          { at: 1.5, kind: 'ctaResolution' },
+        ] as Cue[],
+      },
+      vo: 'مدیریت شیفت و بستن صندوق در حسابچه؛ دخل تراز و آرامش کامل در hisabche.com.',
+    },
   ],
   { noZoom: true },
 )
 
 export const reel73: Reel = {
   id: '73',
-  title: 'صندوق و شیفت: دخل فقط وقتی بسته می‌شود که شمرده شود!',
+  title: 'تحویل شیفت و بستن صندوق: دخل و سیستم یک ریال هم اختلاف ندارند!',
   duration: total(scenes),
   scenes,
-  theme: 'dark-neon',
+  theme: 'midnight-gold',
+  musicMood: 'calm',
   noZoom: true,
   storyMatrix: {
     targetCustomer: 'retail-shopkeeper',
-    customerPain: 'کسری مجهول پول در دخل پای صندوق و دعوا میان صندوقدار و صاحب مغازه',
-    oldWorkflow: 'جمع کاغذی فیش‌های پوز و شمارش اسکناس در تاریکی پایان شب',
-    friction: 'صندوقدار مدعی است اشتباه نشده، مدیر مطمئن است پول گم شده است',
-    hisabcheAction: 'فرایند اجباری شمارش فیزیکی صندوق قبل از بستن و اتصال به پوز هوشمند',
-    automatedResult: 'گزارش شفاف مابه‌التفاوت شمارش نقدی با فروش ثبت‌شده و بستن شیفت',
-    businessOutcome: 'پایان کامل نشتی صندوق و آرامش روانی پرسنل در تحویل شیفت',
-    emotionalPayoff: 'بستن بی‌دردسر کرکره مغازه در ۵ دقیقه با اطمینان کامل',
-    cta: 'مدیریت حرفه‌ای صندوق در hisabche.com',
-    selectedOperators: ['SplitStopwatchShutter', 'LiveLedgerCountdown', 'DualBoxCtaHold'],
+    customerPain: 'کسری صندوق در پایان روز کاری، مشاجره بین شیفت صبح و عصر و سوءظن میان همکاران',
+    oldWorkflow: 'شمارش سرانگشتی پول نقد و مقایسه با فیش‌های کارتخوان روی کاغذهای پاره',
+    friction: 'صندوقدار ۵۰۰ هزار تومان کسری آورد و شیفت قبل مدعی شد پول را کامل تحویل داده است',
+    hisabcheAction:
+      'ماژول بستن شیفت، تطبیق خودکار تراکنش‌های بانکی پوز با اسکناس‌های ثبت‌شده و رسید دیجیتال تحویل',
+    automatedResult: 'گزارش مغایرت صفر و ثبت تاییدیه دوطرفه تحویل کشوی دخل با ساعت دقیق',
+    businessOutcome: 'حذف کامل کسری‌های پنهان نقدینگی و حفظ اعتماد و صمیمیت در تیم فروش',
+    emotionalPayoff: 'آرامش عمیق شبانه هنگام بستن کرکره مغازه و پایان شیفت',
+    cta: 'بستن صندوق در hisabche.com',
+    selectedOperators: ['GoldenTillVault', 'SoulfulNightShutter', 'MonolithHoldCta'],
   },
 }

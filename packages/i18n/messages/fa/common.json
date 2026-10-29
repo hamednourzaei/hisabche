@@ -1825,7 +1825,9 @@
     "published": "منتشرشده",
     "title": "عنوان",
     "showMore": "بیشتر",
-    "showLess": "بستن"
+    "showLess": "بستن",
+    "alert": "هشدار",
+    "viewDetails": "مشاهده جزئیات"
   },
   "invoices": {
     "returnInvoice": "ثبت مرجوعی",
@@ -2262,7 +2264,15 @@
       "confirmBody": "از این به بعد بهای هر فروش با روش تازه حساب می‌شود و سود و ارزش موجودیِ آینده تغییر می‌کند. فروش‌های ثبت‌شده دوباره حساب نمی‌شوند. این تغییر با نام شما در گزارش فعالیت‌ها ثبت می‌شود.",
       "confirmYes": "بله، عوض شود"
     },
-    "addRate": "افزودن ارز یا واحد"
+    "addRate": "افزودن ارز یا واحد",
+    "movements": {
+      "sale": "فروش",
+      "purchase": "خرید",
+      "production": "تولید",
+      "transfer": "انتقال",
+      "adjustment": "تعدیل",
+      "opening": "مانده‌ی اول دوره"
+    }
   },
   "customers": {
     "creditor": "بستانکار",
@@ -3021,7 +3031,7 @@
       "createTitle": "ثبت روزنامه جدید",
       "date": "تاریخ",
       "reference": "مرجع",
-      "description": "توضیحات",
+      "description": "شرح",
       "lines": "ردیف‌ها",
       "addLine": "افزودن ردیف",
       "selectAccount": "انتخاب حساب",
@@ -3039,7 +3049,8 @@
       "entry": "سند",
       "openSource": "مشاهده سند مبدأ",
       "source": "مبدأ",
-      "noMatch": "سندی با این جست‌وجو نیست"
+      "noMatch": "سندی با این جست‌وجو نیست",
+      "total": "جمع"
     },
     "trialBalance": {
       "title": "تراز آزمایشی",
@@ -3089,7 +3100,10 @@
       "empty": {
         "title": "داده‌ای برای ترازنامه نیست"
       },
-      "currentEarnings": "سود (زیان) دوره‌ی جاری"
+      "currentEarnings": "سود (زیان) دوره‌ی جاری",
+      "section": "بخش",
+      "label": "شرح",
+      "amount": "مبلغ"
     },
     "incomeStatement": {
       "chooseAccounts": "انتخاب حساب‌ها",
@@ -3888,7 +3902,20 @@
     "untitled": "بدون عنوان",
     "invoiceNumber": "فاکتور #{number}",
     "newActivity": "فعالیت جدید",
-    "loading": "در حال بارگذاری اعلان‌ها"
+    "loading": "در حال بارگذاری اعلان‌ها",
+    "invoiceCreated": "صورت‌حساب جدید ایجاد شد",
+    "invoiceRegisteredBody": "صورت‌حساب شماره {number} ثبت شد.",
+    "invoicePaid": "صورت‌حساب پرداخت شد",
+    "invoicePaidBody": "صورت‌حساب شماره {number} پرداخت شد.",
+    "paymentRecorded": "پرداخت {ref} ثبت شد",
+    "invoiceOverdue": "صورت‌حساب سررسید شده",
+    "customerCreated": "مشتری جدید: {name}",
+    "escalatedToYou": "تأییدی که بی‌پاسخ مانده به شما ارجاع شد",
+    "escalatedNoOne": "تأییدی منتظر مانده و کسی برای ارجاع نیست",
+    "requiresApproval": "نیاز به تأیید دارد",
+    "approved": "تأیید شد",
+    "rejected": "رد شد",
+    "activityOne": "فعالیت"
   },
   "time": {
     "justNow": "همین الان",
@@ -3897,7 +3924,13 @@
     "daysAgo": "{d} روز پیش",
     "weeksAgo": "{w} هفته پیش",
     "monthsAgo": "{mo} ماه پیش",
-    "yearsAgo": "{y} سال پیش"
+    "yearsAgo": "{y} سال پیش",
+    "minuteAgo": "۱ دقیقه پیش",
+    "hourAgo": "۱ ساعت پیش",
+    "dayAgo": "۱ روز پیش",
+    "weekAgo": "۱ هفته پیش",
+    "monthAgo": "۱ ماه پیش",
+    "yearAgo": "۱ سال پیش"
   },
   "commandPalette": {
     "title": "Command Palette",
@@ -4330,13 +4363,38 @@
       "overdue": "سررسید گذشته",
       "draft": "پیش‌نویس",
       "issued": "صادر شده"
+    },
+    "created": "ایجاد شد",
+    "updated": "ویرایش شد",
+    "status_changed": "تغییر وضعیت",
+    "payment": "پرداخت",
+    "approved": "تأیید شد",
+    "rejected": "رد شد",
+    "sent": "ارسال شد",
+    "archived": "بایگانی شد",
+    "cancelled": "لغو شد",
+    "actions": {
+      "create": "ایجاد",
+      "update": "ویرایش",
+      "delete": "حذف",
+      "view": "مشاهده",
+      "export": "خروجی",
+      "login": "ورود",
+      "logout": "خروج"
     }
   },
   "status": {
     "excellent": "عالی",
     "good": "خوب",
     "neutral": "پایدار",
-    "attention": "نیاز به توجه دارد"
+    "attention": "نیاز به توجه دارد",
+    "pending": "در انتظار",
+    "paid": "پرداخت شده",
+    "completed": "تکمیل شده",
+    "cancelled": "لغو شده",
+    "partial": "بخشی پرداخت",
+    "overdue": "سررسید شده",
+    "draft": "پیش‌نویس"
   },
   "health": {
     "title": "سلامت کسب‌وکار",
@@ -7784,6 +7842,8 @@
     "recordReceipt": "ثبت دریافت",
     "exportStatement": "خروجی صورت‌حساب",
     "mixedCurrency": "فاکتورها و پرداخت‌های این طرف حساب در چند ارز هستند ({currencies}). جمع‌ها ارزها را تبدیل نمی‌کنند.",
+    "mixedCurrencyTitle": "چندارزی",
+    "noMatch": "موردی با این نوع نیست",
     "loadError": "اطلاعات مالی این طرف حساب خوانده نشد. دوباره تلاش کنید.",
     "retry": "تلاش دوباره",
     "noInvoices": "فاکتوری برای این طرف حساب نیست.",
@@ -10895,5 +10955,17 @@
     "g": "گرم",
     "kg": "کیلوگرم",
     "t": "تن"
+  },
+  "units": {
+    "problems": {
+      "oneBaseRequired": "باید دقیقاً یک واحد پایه انتخاب شود",
+      "onlyOneBase": "فقط یک واحد می‌تواند پایه باشد",
+      "baseMultiplierOne": "ضریب واحد پایه باید دقیقاً ۱ باشد",
+      "multiplierPositive": "ضریب هر واحد باید بزرگ‌تر از صفر باشد",
+      "selectUnitPerRow": "برای هر سطر یک واحد انتخاب کنید",
+      "duplicateUnit": "هر واحد فقط یک بار می‌تواند اضافه شود",
+      "singlePurchaseDefault": "فقط یک واحد می‌تواند پیش‌فرض خرید باشد",
+      "singleSaleDefault": "فقط یک واحد می‌تواند پیش‌فرض فروش باشد"
+    }
   }
 }

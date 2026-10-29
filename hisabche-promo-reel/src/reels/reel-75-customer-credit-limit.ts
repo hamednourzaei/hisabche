@@ -1,76 +1,143 @@
 // ============================================
-// Reel 75: Customer Credit Limit - Receivables Risk Shield
-// Motion Template: chat-panic-to-calm
-// Funnel Stage: Risk Control | Audience: Retailers, Wholesalers, Distributors
+// Reel 75: Customer Credit Limit - Receivables Risk Shield (Bespoke Cut)
+//
+// The Titanium Credit Sentinel & Holographic Risk Gate
+// High-conversion receivables risk control narrative for merchants & wholesalers.
 // ============================================
 
-import type { Reel } from '../engine/types'
-import { ctaScene, sequence, total } from './shared'
+import type { Cue, Reel } from '../engine/types'
+import {
+  AutomatedLockGateScene,
+  CreditLimitCtaScene,
+  CreditLimitImpasseScene,
+  InteractiveRiskGaugeScene,
+  ReceivablesProtectionManifestoScene,
+  SettlementGateReleaseScene,
+} from '../scenes/customer-credit-limit'
+import { sequence, total } from './shared'
 
 const scenes = sequence(
   [
+    // 1 — Frame-0 Visual Arrest: The Credit Limit Impasse
     {
-      dur: 4,
+      dur: 5,
       spec: {
-        kind: 'hook',
-        label: 'مدیریت نسیه و پرونده مشتری',
-        lines: ['مشتری پای پیشخوان نسیه می‌خواد،', 'ولی [r:حساب قبلیش هنوز تسویه نشده]!'],
-        cards: [
-          { icon: 'user', title: 'سقف مجاز نسیه', sub: '۲۰٬۰۰۰ سقف اعتبار', tone: 'cyan' },
-          { icon: 'wallet', title: 'بدهی جاری معوق', sub: '۲۵٬۴۰۰ فراتر از سقف!', tone: 'red' },
-        ],
+        kind: 'bespoke',
+        theme: 'dark-neon',
+        component: CreditLimitImpasseScene,
+        cues: [
+          { at: 0, kind: 'impact' },
+          { at: 1.2, kind: 'alert' },
+          { at: 2.5, kind: 'whoosh' },
+        ] as Cue[],
       },
-      vo: 'شاگرد مغازه می‌پرسه به این مشتری جنس بدیم؟ تعارف می‌کنی یا سیستم جلوت رو می‌گیره؟',
+      vo: 'مشتری پای پیشخوان جنس نسیه می‌خواد، ولی حساب قبلیش هنوز تسویه نشده؛ تعارف می‌کنی یا سیستم جلوت رو می‌گیره؟',
     },
+
+    // 2 — Interactive Risk Gauge & Customer Credit Ledger
     {
       dur: 8,
       spec: {
-        kind: 'chat-panic',
-        title: 'آشفتگی پیام‌های شاگردان در برابر پرونده متمرکز مشتری',
+        kind: 'bespoke',
+        theme: 'dark-neon',
+        component: InteractiveRiskGaugeScene,
+        cues: [
+          { at: 0.2, kind: 'whoosh' },
+          { at: 1.5, kind: 'scan' },
+          { at: 3.5, kind: 'tick' },
+          { at: 5.5, kind: 'alert' },
+        ] as Cue[],
       },
-      vo: 'پیام‌ها سرازیر می‌شن: "فلانی نسیه می‌خواد"، "چکش پاس نشده"؛ همه در پرونده شفاف مشتری آرام می‌گیرند.',
+      vo: 'در حسابچه، برای هر مشتری سقف اعتبار نسیه تعیین می‌کنی؛ سیستم دیرکردها و چک‌های وصول‌نشده را لحظه‌ای رصد می‌کند.',
     },
+
+    // 3 — Automated Lock Gate & Frictionless Rejection
+    {
+      dur: 8,
+      spec: {
+        kind: 'bespoke',
+        theme: 'dark-neon',
+        component: AutomatedLockGateScene,
+        cues: [
+          { at: 0.2, kind: 'pop' },
+          { at: 1.8, kind: 'impact' },
+          { at: 3.5, kind: 'tick' },
+          { at: 5.5, kind: 'whoosh' },
+        ] as Cue[],
+      },
+      vo: 'حسابچه تعارف ندارد؛ با عبور از سقف مجاز، صدور فاکتور نسیه خودکار قفل می‌شود و رودربایستی با مشتری پایان می‌یابد.',
+    },
+
+    // 4 — Instant Settlement & Gate Release
     {
       dur: 7,
       spec: {
-        kind: 'branch',
-        cards: [
-          { icon: 'user', title: 'پرونده مشتری', sub: 'سابقه و گردش مالی', tone: 'cyan' },
-          {
-            icon: 'wallet',
-            title: 'سقف اعتبار هوشمند',
-            sub: 'قفل خودکار فاکتور نسیه',
-            tone: 'purple',
-          },
-        ],
-        question: 'چطور بدون رودربایستی نسیه را مهار کنیم؟',
-        answer: 'قفل خودکار اعتبار در حسابچه',
-        badge: 'کنترل ریسک بدهی معوق',
+        kind: 'bespoke',
+        theme: 'financial-intelligence',
+        component: SettlementGateReleaseScene,
+        cues: [
+          { at: 0.2, kind: 'cinematicReveal' },
+          { at: 1.5, kind: 'cash' },
+          { at: 3.8, kind: 'successResolution' },
+        ] as Cue[],
       },
-      vo: 'حسابچه تعارف ندارد؛ اگر مشتری از سقف اعتبار گذشت، فاکتور نسیه صادر نمی‌شود تا تسویه کند.',
+      vo: 'مشتری بدهی قبلی را تسویه می‌کند؛ بلافاصله سقف اعتبار آزاد و فاکتور جدید بدون ریسک صادر می‌شود.',
     },
-    ctaScene(7),
+
+    // 5 — Receivables Protection Manifesto
+    {
+      dur: 6,
+      spec: {
+        kind: 'bespoke',
+        theme: 'dark-neon',
+        component: ReceivablesProtectionManifestoScene,
+        cues: [
+          { at: 0.2, kind: 'titleHit' },
+          { at: 1.5, kind: 'whoosh' },
+          { at: 3.2, kind: 'chime' },
+        ] as Cue[],
+      },
+      vo: 'رودربایستی در نسیه یعنی ورشکستگی خاموش؛ بگذار سیستم به‌جای تو «نه» بگوید تا سرمایه‌ات حفظ شود.',
+    },
+
+    // 6 — Obsidian Monolith CTA
+    {
+      dur: 7,
+      spec: {
+        kind: 'bespoke',
+        theme: 'dark-neon',
+        component: CreditLimitCtaScene,
+        cues: [
+          { at: 0.2, kind: 'bigReveal' },
+          { at: 1.5, kind: 'ctaResolution' },
+        ] as Cue[],
+      },
+      vo: 'مدیریت هوشمند سقف اعتبار مشتری در حسابچه؛ دخل آرام و بدون بدهی سوخت‌شده در hisabche.com.',
+    },
   ],
   { noZoom: true },
 )
 
 export const reel75: Reel = {
   id: '75',
-  title: 'پرونده مشتری و سقف اعتبار: به کی چقدر نسیه بدهیم؟',
+  title: 'سقف اعتبار مشتری و هشدار بدهی: تا تسویه نکنه، نسیه نده!',
   duration: total(scenes),
   scenes,
-  theme: 'midnight-gold',
+  theme: 'dark-neon',
+  musicMood: 'tense',
   noZoom: true,
   storyMatrix: {
     targetCustomer: 'wholesaler',
-    customerPain: 'سوخت شدن طلب‌ها به دلیل رودربایستی با مشتریان قدیمی و نسیه بی‌حساب',
-    oldWorkflow: 'فروشنده با یادداشت روی کاغذ جنس نسیه می‌دهد و موعدها از خاطر می‌رود',
-    friction: 'مشتری صد میلیون بدهکار است و باز هم تقاضای بار جدید بدون پرداخت دارد',
-    hisabcheAction: 'تعیین سقف اعتبار، مهلت بازپرداخت، و قفل هوشمند صدور فاکتور فراتر از سقف',
-    automatedResult: 'جلوگیری آنی از بارگیری برای مشتری بدهکار و ارسال صورتحساب خودکار',
-    businessOutcome: 'کاهش ۹۰ درصدی مطالبات معوق و جریان نقدی پایدار برای خرید بار تازه',
-    emotionalPayoff: 'پایان استرس وصول مطالبات و برخورد حرفه‌ای سیستم به‌جای دعوا',
+    customerPain: 'رودربایستی با مشتریان قدیمی، انباشت بدهی معوق و سوخت شدن سرمایه در گردش',
+    oldWorkflow: 'نسیه دادن سنتی با تکیه بر حافظه یا اعتماد بی‌قاعده بدون کنترل سررسید',
+    friction:
+      'شاگرد بدون اطلاع مدیر فاکتور نسیه کلان صادر کرد در حالی که مشتری بدهی میلیونی تسویه‌نشده داشت',
+    hisabcheAction:
+      'تنظیم سقف اعتبار مجاز در پرونده مشتری و قفل خودکار ثبت فاکتور نسیه در نقطه بحرانی',
+    automatedResult: 'مسدودسازی آنی فاکتور نسیه مازاد بر سقف تا زمان تسویه بدهی‌های معوق',
+    businessOutcome: 'کاهش ۱۰۰ درصدی مطالبات سوخت‌شده و تسریع چشمگیر در وصول نقدی',
+    emotionalPayoff: 'رهایی از تعارف و اضطراب طلب‌های وصول‌نشده',
     cta: 'سقف اعتبار در hisabche.com',
-    selectedOperators: ['ChatPanicCollapse', 'MagneticPillSnap', 'DualBoxCtaHold'],
+    selectedOperators: ['SentinelLockGate', 'HolographicGaugeSweep', 'MonolithHoldCta'],
   },
 }

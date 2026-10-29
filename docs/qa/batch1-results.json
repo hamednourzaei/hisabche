@@ -1,0 +1,52 @@
+{
+  "step": "BATCH_1_CUSTOMER_LIFECYCLE",
+  "date": "2026-10-29",
+  "validations": [
+    {
+      "field": "name",
+      "rule": "required",
+      "input": "",
+      "observedError": "Customer name is required",
+      "status": "PASS"
+    },
+    {
+      "field": "name",
+      "rule": "non-empty-string",
+      "input": "   ",
+      "observedError": "Customer name is required",
+      "status": "PASS"
+    }
+  ],
+  "createdRecords": [
+    {
+      "type": "Customer",
+      "id": "QA-2026-10-29-Cust1",
+      "phone": "0701234567",
+      "role": "buyer",
+      "persisted": false
+    },
+    {
+      "type": "Supplier",
+      "id": "QA-2026-10-29-Supp1",
+      "phone": "0709876543",
+      "role": "seller",
+      "persisted": false
+    }
+  ],
+  "searchResults": {
+    "searchFieldFound": true,
+    "query": "QA-2026-10-29-Cust1"
+  },
+  "editResults": {},
+  "detailResults": {},
+  "deleteResults": {},
+  "screenshots": [
+    "batch1-01-customers-list.png",
+    "batch1-02-modal-opened.png",
+    "batch1-03-validation-empty.png",
+    "batch1-04-customer-submitted.png",
+    "batch1-05-supplier-submitted.png",
+    "batch1-06-supplier-tab.png",
+    "batch1-07-search-filtered.png"
+  ]
+}

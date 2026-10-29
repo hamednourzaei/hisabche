@@ -34,16 +34,6 @@ export const RUNTIME_REMEDIATION = [
   '65',
   '68',
   '70',
-  '72',
-  '73',
-  '74',
-  '75',
-  '76',
-  '77',
-  '78',
-  '79',
-  '80',
-  '81',
 ]
 
 /** The authoritative duration: the end of the last scene on the reel's own timeline. */

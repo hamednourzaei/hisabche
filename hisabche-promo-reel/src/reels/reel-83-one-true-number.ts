@@ -1,179 +1,128 @@
 // ============================================
-// Reel 83 — «یک عدد واقعی» (the flagship cut)
+// Reel 83 — «یک عدد واقعی» (One True Number — Bespoke SaaS Cinematic Cut)
 //
-// One shop, one day, one question the owner cannot answer from memory: how
-// much is really left? The film answers it the way the product does — a
-// customer conversation, the invoice, the stock, the books, the profit — and
-// each beat hands the frame to a different kind of motion instead of repeating
-// the same card layout.
-//
-// Every figure below is the same arithmetic seen from a different angle:
+// One shop, one day, one indisputable source of financial truth.
+// Every figure repeats the verified arithmetic:
 //   ۴۲٬۰۰۰ فروش − ۳۱٬۰۰۰ پرداخت = ۱۱٬۰۰۰ ماندهٔ مشتری
 //   ۴۲۰٬۰۰۰ فروش − ۲۶۰٬۰۰۰ بهای تمام‌شده − ۷۰٬۰۰۰ هزینه = ۹۰٬۰۰۰ سود
 // ============================================
 
-import type { Reel } from '../engine/types'
-import { ctaScene, sequence, total } from './shared'
+import type { Cue, Reel } from '../engine/types'
+import {
+  TrueCtaScene,
+  TrueDialogueScene,
+  TrueDilemmaScene,
+  TrueManifestoScene,
+  TrueQuantumSyncScene,
+  TrueWaterfallScene,
+} from '../scenes/one-true-number'
+import { sequence, total } from './shared'
 
-const scenes = sequence([
-  // 1 — frame-0 arrest: two systems, two numbers, one shop.
-  {
-    dur: 5,
-    spec: {
-      kind: 'hook',
-      theme: 'obsidian-cinematic',
-      openingArchetype: 'immediate-consequence',
-      label: 'دو عدد برای یک مغازه',
-      lines: ['دخل می‌گوید ۴۲٬۰۰۰', 'دفتر می‌گوید ۳۱٬۰۰۰', '[r:کدام درست است؟]'],
-      consequence: {
-        alertBanner: 'مغایرت صندوق و دفتر: ۲۶٪',
-        stoppedAction: 'فاکتور زدن متوقف شد؛ مشتری پای صندوق منتظر است',
-        lossMetric: 'اعتماد مشتری در حال آب رفتن',
+const scenes = sequence(
+  [
+    // 1 — Frame-0 visual arrest: Binary dilemma (Register vs Ledger discrepancy)
+    {
+      dur: 5,
+      spec: {
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: TrueDilemmaScene,
+        cues: [
+          { at: 0, kind: 'impact' },
+          { at: 1.2, kind: 'alert' },
+          { at: 2.6, kind: 'whoosh' },
+        ] as Cue[],
       },
+      vo: 'دخل یک عدد می‌گوید، دفتر یک عدد دیگر. کدام درست است؟',
     },
-    vo: 'دخل یک عدد می‌گوید، دفتر یک عدد دیگر. کدام درست است؟',
-  },
 
-  // 2 — the question that starts every real transaction, asked by a character.
-  {
-    dur: 9,
-    spec: {
-      kind: 'dialogue',
-      theme: 'obsidian-cinematic',
-      title: 'همان سؤال، پای صندوق',
-      turns: [
-        { speaker: 'customer', text: 'این ماه چقدر خرید کردم؟' },
-        { speaker: 'owner', text: 'الان از حسابچه می‌بینم…' },
-        { speaker: 'owner', text: '۴۲٬۰۰۰ خرید، ۳۱٬۰۰۰ پرداخت.' },
-        { speaker: 'customer', text: 'پس ۱۱٬۰۰۰ مانده.' },
-      ],
-    },
-    vo: 'مشتری می‌پرسد این ماه چقدر خرید کرده؛ مالک از حسابچه جواب می‌دهد.',
-  },
-
-  // 3 — the mess the product replaces, converging into one surface.
-  {
-    dur: 6,
-    spec: {
-      kind: 'fragmented-tools-demo',
-      theme: 'procedural-spatial',
-      title: 'اکسل، دفتر، ماشین‌حساب — سه نسخه از یک واقعیت',
-      convergeAt: 2.6,
-    },
-    vo: 'اکسل، دفتر و ماشین‌حساب هر کدام یک نسخه از واقعیت می‌سازند.',
-  },
-
-  // 4 — the proof: issuing the invoice moves four other things at once.
-  {
-    dur: 7,
-    spec: {
-      kind: 'mockup',
-      theme: 'financial-intelligence',
-      device: 'window',
-      title: 'یک فاکتور، [c:پنج ثبت هم‌زمان]',
-      subtitle: 'موجودی، دفتر، صندوق و طلب مشتری با همان یک کلیک',
-      screen: {
-        type: 'invoice',
-        header: 'فاکتور ۱۰۴۲ — مشتری ۱۰۴۲',
-        items: [
-          { name: 'کالای بازرگانی کد ۱۰۱', qty: '۲ عدد', price: '۲۴٬۰۰۰' },
-          { name: 'کالای مصرفی کد ۳۰۳', qty: '۱ عدد', price: '۱۸٬۰۰۰' },
-        ],
-        totalLabel: 'مبلغ فاکتور',
-        totalValue: '۴۲٬۰۰۰',
+    // 2 — Instant Counter Query: Customer statement resolved in 0.2s
+    {
+      dur: 8,
+      spec: {
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: TrueDialogueScene,
+        cues: [
+          { at: 0.2, kind: 'whoosh' },
+          { at: 1.4, kind: 'scan' },
+          { at: 3.4, kind: 'tick' },
+          { at: 5.0, kind: 'success' },
+        ] as Cue[],
       },
-      toast: { icon: 'check', text: 'انبار کسر شد · سند دفتر خورد · طلب ثبت شد', time: 2.4 },
+      vo: 'مشتری پای صندوق مانده‌اش را می‌پرسد؛ حسابچه در لحظه می‌گوید: ۴۲ هزار خرید، ۳۱ هزار پرداخت، ۱۱ هزار مانده.',
     },
-    vo: 'با صدور فاکتور، موجودی کم می‌شود، سند دفتر می‌خورد و طلب مشتری ثبت می‌شود.',
-  },
 
-  // 5 — where the money actually went, waterfall with no invented number.
-  {
-    dur: 6,
-    spec: {
-      kind: 'profit-waterfall-demo',
-      theme: 'financial-intelligence',
-      title: 'از فروش تا [g:سود واقعی]',
-      grossRevenue: 420000,
-      cogs: 260000,
-      expenses: 70000,
+    // 3 — 1 Invoice, 5 Simultaneous Quantum Syncs
+    {
+      dur: 7,
+      spec: {
+        kind: 'bespoke',
+        theme: 'financial-intelligence',
+        component: TrueQuantumSyncScene,
+        cues: [
+          { at: 0.2, kind: 'cinematicReveal' },
+          { at: 1.2, kind: 'pop' },
+          { at: 2.2, kind: 'dataFlow' },
+          { at: 3.8, kind: 'sync' },
+          { at: 5.2, kind: 'successResolution' },
+        ] as Cue[],
+      },
+      vo: 'با یک کلیک فاکتور، هم‌زمان انبار کسر می‌شود، سند دوبل می‌خورد و صندوق شارژ می‌شود.',
     },
-    vo: 'فروش چهارصد و بیست هزار، بهای تمام‌شده دویست و شصت هزار، هزینه هفتاد هزار؛ سود نود هزار.',
-  },
 
-  // 6 — the same invoice, now seen in space: stock moved, no ledger gap.
-  {
-    dur: 5,
-    spec: {
-      kind: 'warehouse-movement-demo',
-      theme: 'cyber-emerald',
-      title: 'همان فاکتور، انبار را هم تکان داد',
-      transitAt: 1.6,
-      arriveAt: 3.2,
+    // 4 — Real Profit Waterfall: Complete arithmetic certainty
+    {
+      dur: 8,
+      spec: {
+        kind: 'bespoke',
+        theme: 'financial-intelligence',
+        component: TrueWaterfallScene,
+        cues: [
+          { at: 0.2, kind: 'pop' },
+          { at: 1.2, kind: 'tick' },
+          { at: 2.2, kind: 'tick' },
+          { at: 3.4, kind: 'cash' },
+          { at: 5.2, kind: 'financialMilestone' },
+        ] as Cue[],
+      },
+      vo: 'فروش ۴۲۰ هزار، خرید ۲۶۰ هزار، هزینه ۷۰ هزار؛ سود واقعی ۹۰ هزار است؛ نه حدس، نه تخمین.',
     },
-    vo: 'همان فاکتور، موجودی انبار مبدا و مقصد را با هم به‌روز می‌کند.',
-  },
 
-  // 7 — breadth: every part of the business already lit in one frame.
-  {
-    dur: 6,
-    spec: {
-      kind: 'hub',
-      theme: 'midnight-gold',
-      title: 'همه در [p:یک هسته]',
-      core: 'حسابچه',
-      coreSub: 'یک نسخه از واقعیت',
-      nodes: [
-        { icon: 'receipt', label: 'فروش' },
-        { icon: 'boxes', label: 'انبار' },
-        { icon: 'book', label: 'دفتر' },
-        { icon: 'bank', label: 'بانک' },
-        { icon: 'factory', label: 'تولید' },
-      ],
+    // 5 — The Indisputable Manifesto: Single source of truth
+    {
+      dur: 6,
+      spec: {
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: TrueManifestoScene,
+        cues: [
+          { at: 0.2, kind: 'titleHit' },
+          { at: 1.2, kind: 'whoosh' },
+          { at: 2.2, kind: 'bigReveal' },
+          { at: 4.0, kind: 'chime' },
+        ] as Cue[],
+      },
+      vo: 'نه حدس، نه دفتر دوم؛ فقط یک عدد واقعی و قابل استناد.',
     },
-    vo: 'فروش، انبار، دفتر، بانک و تولید روی یک هسته می‌نشینند.',
-  },
 
-  // 8 — the customer statement, the number the owner can finally say out loud.
-  {
-    dur: 7,
-    spec: {
-      kind: 'ledger',
-      theme: 'midnight-gold',
-      title: 'ماندهٔ مشتری ۱۰۴۲',
-      name: 'مشتری ۱۰۴۲',
-      lines: [
-        { label: 'خرید این ماه', amount: '۴۲٬۰۰۰' },
-        { label: 'پرداخت‌ها', amount: '۳۱٬۰۰۰' },
-      ],
-      balanceFrom: 0,
-      balanceTo: 11000,
-      unit: '',
-      footer: 'همان عددی که پای صندوق گفته شد',
+    // 6 — Architectural Brand Monolith & Conversion CTA
+    {
+      dur: 7,
+      spec: {
+        kind: 'bespoke',
+        theme: 'obsidian-cinematic',
+        component: TrueCtaScene,
+        cues: [
+          { at: 0.2, kind: 'bigReveal' },
+          { at: 1.4, kind: 'ctaResolution' },
+        ] as Cue[],
+      },
+      vo: 'حسابچه؛ نرم‌افزار مالی یکپارچه مغازه و کارگاه. همین امروز رایگان شروع کنید.',
     },
-    vo: 'ماندهٔ مشتری یازده هزار است؛ همان عددی که پای صندوق گفته شد.',
-  },
-
-  // 9 — thesis in typography, not in a card.
-  {
-    dur: 5,
-    spec: {
-      kind: 'kinetic-manifesto',
-      theme: 'kinetic-manifesto',
-      headline: ['یک عدد.', 'واقعی.'],
-      subheadline: 'نه حدس، نه دفتر دوم',
-      statements: [
-        'فروش و انبار با هم می‌خوانند',
-        'سود از بهای واقعی می‌آید',
-        'هر عدد، قابل ردیابی است',
-      ],
-      accentTone: 'green',
-    },
-    vo: 'یک عدد واقعی؛ نه حدس، نه دفتر دوم.',
-  },
-
-  ctaScene(9),
-])
+  ],
+  { noZoom: true },
+)
 
 export const reel83: Reel = {
   id: '83',
@@ -182,4 +131,5 @@ export const reel83: Reel = {
   scenes,
   theme: 'obsidian-cinematic',
   musicMood: 'uplifting',
+  noZoom: true,
 }
