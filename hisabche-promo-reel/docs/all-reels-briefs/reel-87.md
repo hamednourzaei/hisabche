@@ -397,7 +397,7 @@ Rendered programmatically by bespoke visual component.
 ## 11. Source Files
 
 - Reel definition: [`src/reels/reel-87-paper-galaxy.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-87-paper-galaxy.ts) (Lines 1–152)
-- Scene component: [`src/scenes/paper-galaxy.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/paper-galaxy.tsx) (Lines 1–1296)
+- Scene component: [`src/scenes/paper-galaxy.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/paper-galaxy.tsx) (Lines 1–1320)
 - Registry entry: [`src/data/reel-registry.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/data/reel-registry.ts)
 - Motion catalogue: [`docs/motion-catalogue/registry.json`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/docs/motion-catalogue/registry.json)
 

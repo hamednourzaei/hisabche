@@ -187,6 +187,8 @@ export interface CustomerReturnEffects {
     applied: number
     /** What the business now owes the customer (a return on money already paid). */
     credit: number
+    /** Invoices whose whole remaining debt the returns cancelled (no longer open). */
+    closedInvoices: number
   }>
 }
 

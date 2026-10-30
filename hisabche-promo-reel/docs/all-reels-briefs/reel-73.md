@@ -379,8 +379,8 @@ Rendered programmatically by bespoke visual component.
 
 ## 11. Source Files
 
-- Reel definition: [`src/reels/reel-73-till-shift-balance.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-73-till-shift-balance.ts) (Lines 1–143)
-- Scene component: [`src/scenes/till-shift-balance.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/till-shift-balance.tsx) (Lines 1–923)
+- Reel definition: [`src/reels/reel-73-till-shift-balance.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-73-till-shift-balance.ts) (Lines 1–144)
+- Scene component: [`src/scenes/till-shift-balance.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/till-shift-balance.tsx) (Lines 1–929)
 - Registry entry: [`src/data/reel-registry.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/data/reel-registry.ts)
 - Motion catalogue: [`docs/motion-catalogue/registry.json`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/docs/motion-catalogue/registry.json)
 

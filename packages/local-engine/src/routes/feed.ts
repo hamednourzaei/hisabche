@@ -57,6 +57,9 @@ interface FeedEvent {
   entityId: string
   action: 'created'
   title: string
+  titleKey: string
+  bodyKey?: string | undefined
+  params?: Record<string, string | number> | undefined
   description: string | undefined
   createdAt: string
   label: string
@@ -97,7 +100,12 @@ function eventsOf(db: LocalDb, workspaceId: string): FeedEvent[] {
       entityType: 'invoice',
       entityId: row.id,
       action: 'created',
-      title: purchase ? 'فاکتور خرید ثبت شد' : 'فاکتور فروش ثبت شد',
+      title: purchase ? 'Purchase invoice registered' : 'Sales invoice registered',
+      titleKey: purchase
+        ? 'notifications.purchaseInvoiceCreated'
+        : 'notifications.saleInvoiceCreated',
+      bodyKey: 'notifications.invoiceRegisteredBody',
+      params: { number: row.invoice_number },
       description: row.customer_name ? row.customer_name : undefined,
       createdAt: row.created_at,
       label: `#${row.invoice_number}`,
@@ -125,10 +133,13 @@ function eventsOf(db: LocalDb, workspaceId: string): FeedEvent[] {
       entityType: 'payment',
       entityId: row.id,
       action: 'created',
-      title: paidOut ? 'پرداخت ثبت شد' : 'دریافت وجه ثبت شد',
+      title: paidOut ? 'Payment sent' : 'Payment received',
+      titleKey: paidOut ? 'notifications.paymentSent' : 'notifications.paymentReceived',
+      bodyKey: row.payment_number ? 'notifications.paymentRecorded' : undefined,
+      params: row.payment_number ? { ref: row.payment_number } : undefined,
       description: row.payment_number ?? undefined,
       createdAt: row.created_at,
-      label: row.payment_number ?? 'پرداخت',
+      label: row.payment_number ?? 'Payment',
       subtitle: undefined,
       amount: row.amount,
       currency: row.currency,
@@ -152,7 +163,10 @@ function eventsOf(db: LocalDb, workspaceId: string): FeedEvent[] {
       entityType: 'customer',
       entityId: row.id,
       action: 'created',
-      title: 'مشتری تازه اضافه شد',
+      title: 'New customer added',
+      titleKey: 'notifications.newCustomerAdded',
+      bodyKey: 'notifications.customerCreated',
+      params: { name: row.full_name },
       description: row.full_name,
       createdAt: row.created_at,
       label: row.full_name,
@@ -219,7 +233,7 @@ function newestAt(events: readonly FeedEvent[]): string {
 export function registerFeedRoutes(router: Router): void {
   const actorName = (c: RouteHandlerContext): string => {
     const user = c.db.get<{ full_name: string }>('SELECT full_name FROM local_user LIMIT 1')
-    return user?.full_name ?? 'این دستگاه'
+    return user?.full_name?.trim() || ''
   }
 
   // ─── activities ───────────────────────────────────────────
@@ -264,11 +278,15 @@ export function registerFeedRoutes(router: Router): void {
             title: event.title,
             ...(event.description ? { description: event.description } : {}),
             actor,
-            // Unknown, not «owner»: the device knows who is signed in, not the role the server holds.
             actorRole: null,
             timestamp: event.createdAt,
             isRead: read,
             importance: 1,
+            metadata: {
+              title_key: event.titleKey,
+              ...(event.bodyKey ? { body_key: event.bodyKey } : {}),
+              ...(event.params ? { params: event.params } : {}),
+            },
           },
         ],
         unreadCount: read ? 0 : 1,
@@ -339,6 +357,9 @@ export function registerFeedRoutes(router: Router): void {
       is_read: isRead(state, event),
       created_at: event.createdAt,
       metadata: {
+        title_key: event.titleKey,
+        ...(event.bodyKey ? { body_key: event.bodyKey } : {}),
+        ...(event.params ? { params: event.params } : {}),
         ...(event.invoiceNumber ? { invoice_number: event.invoiceNumber } : {}),
         ...(event.subtitle ? { customer_name: event.subtitle } : {}),
         ...(event.amount !== undefined ? { total: event.amount } : {}),

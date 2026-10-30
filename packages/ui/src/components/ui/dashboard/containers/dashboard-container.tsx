@@ -12,6 +12,7 @@ import { apiErrorMessage, useDeleteCustomUnit, useMyCapabilities } from '@hisabc
 import { X } from 'lucide-react'
 import { usePageLook } from '../../../../lib/page-look'
 import { useBusinessProfile } from '../../../../hooks/use-business-profile'
+import { useActionAvailability } from '../../../../lib/capability'
 // import { NAV_ITEMS } from '../../../../lib/menu/nav-items'
 import { RegisterCustomizer } from '../../register-customizer'
 import { useDashboardData } from '../../../../hooks/dashboard/use-dashboard-data'
@@ -150,6 +151,9 @@ export function DashboardContainer() {
   const display = useDisplayBasis()
   const latestUnits = useLatestCustomUnits().units
   const removeUnit = useDeleteCustomUnit()
+  // Removing a unit is a server write: offline the ✕ is not offered, like the rest of
+  // the online-only actions (the same rule the customer delete follows).
+  const canRemoveUnit = !useActionAvailability('settings.custom_units').requiresOnline
   const [unitError, setUnitError] = useState<string | null>(null)
   const handleRemoveUnit = (name: string) => {
     if (
@@ -286,16 +290,18 @@ export function DashboardContainer() {
                   {formatNumber(unit.perUnit, intlLocale, 2)}{' '}
                   {nameOfCurrency(t, display.base, display.base)}
                 </span>
-                <button
-                  type="button"
-                  aria-label={t('display.removeUnit', 'حذف این واحد')}
-                  title={t('display.removeUnit', 'حذف این واحد')}
-                  disabled={removeUnit.isPending}
-                  onClick={() => handleRemoveUnit(unit.name)}
-                  className="inline-flex size-5 items-center justify-center rounded-full text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-elevated))] hover:text-[hsl(var(--color-destructive))] disabled:opacity-50"
-                >
-                  <X className="size-3" aria-hidden="true" />
-                </button>
+                {canRemoveUnit ? (
+                  <button
+                    type="button"
+                    aria-label={t('display.removeUnit', 'حذف این واحد')}
+                    title={t('display.removeUnit', 'حذف این واحد')}
+                    disabled={removeUnit.isPending}
+                    onClick={() => handleRemoveUnit(unit.name)}
+                    className="inline-flex size-5 items-center justify-center rounded-full text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-elevated))] hover:text-[hsl(var(--color-destructive))] disabled:opacity-50"
+                  >
+                    <X className="size-3" aria-hidden="true" />
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>

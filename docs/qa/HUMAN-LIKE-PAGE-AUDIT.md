@@ -1,6 +1,6 @@
-# Hisabche QA — Human-Like Page Audit & Source-of-Truth Traces
+# Hisabche QA — Human-Like Page Audit & Source-of-Truth Traces (Phase 1 & Phase 2)
 
-**Audit Run:** Phase 2 (Write-Enabled Test Workspace `lolokhan`)  
+**Audit Run:** Phase 1 & Phase 2 (Write-Enabled Test Workspace `lolokhan`)  
 **Auditor Mode:** Human-Like Business Operator (Store Owner & Accountant Perspective)  
 **Session Details:** Antigravity Internal Chromium Webview (CDP Port 64571)
 
@@ -53,7 +53,7 @@
 
 ---
 
-## 2. End-to-End Page Journeys Audited
+## 2. End-to-End Page Journeys Audited (Phase 2 Live Workflows)
 
 ### 2.1 Journey 1: Customer & Supplier Lifecycle (`/en/customers`)
 
@@ -79,3 +79,31 @@
   4. Final Document Created: Redirected to `/en/invoices/23e12bdd-0895-4b91-afc7-930605966296`. Invoice `#INV-000101` created.
   5. Accounting Integration: Ledger Journal Entry `JV-2026-000051` posted automatically.
   6. Notification: Notification bell incremented from 8 to 9. Drawer displayed: `✅ صورت‌حساب جدید ایجاد شد — صورت‌حساب شماره INV-000101 ثبت شد`.
+
+---
+
+## 3. Control Triage Matrix (Mandatory §0.2 Classification)
+
+Every visible interactive control on the primary screens was inspected and triaged into exactly one class:
+
+### Class A — Genuinely Broken (Resolved in Code)
+
+1. **Add Customer Empty Submit (`/customers`):** Printed raw key `customer.nameRequired` instead of localized string. Class A defect -> Fixed in `AddCustomerModal.tsx`.
+2. **Add Employee Button (`/team-and-payroll`):** Disabled on cold load despite valid branches existing. Class A defect -> Fixed in `team-and-payroll-container.tsx`.
+3. **Governance Sub-Header (`/governance`):** Embedded `ApprovalsContainer` emitted a redundant `<h1>`. Class A accessibility defect -> Fixed via `showHeader={false}`.
+4. **Invoice Builder Mobile Title (`/invoices/new`):** Emitted a secondary `<h1>` simultaneously with desktop view. Class A accessibility defect -> Fixed in `invoice-builder-mobile.tsx`.
+5. **Breadcrumb Slug (`/sync-center`):** Rendered raw slug `sync-center`. Class A localization defect -> Fixed in `common.json`.
+
+### Class B — Properly Disabled / State-Guarded (Not a Bug)
+
+1. **Save Customer Button (AddCustomerModal):** Disabled while submitting or highlights red when name is empty. Proper state validation.
+2. **Invoice Finalize Button:** Disabled when no items are added or when total is zero. Proper state validation.
+3. **Cycle Count Complete Button:** Disabled when count has not been recorded. Proper workflow gate.
+4. **Pagination Next Button:** Disabled on the last page of invoices list. Proper boundary constraint.
+
+### Class C — Intentionally Restricted / Mutating Financial Action (Production Safety)
+
+1. **Close Cashier Shift (`/till`):** Irreversibly locks cash session on live production. Class C -> Audited in Phase 2 with active drawer verified.
+2. **Post Invoice (`/invoices/new`):** Generates immutable accounting journal entries in live ledger. Class C -> Tested via Draft mode (`QA-2026-10-28-InvDraft1`) and live invoice `#INV-000101`.
+3. **Delete Customer (`/customers/:id`):** Destructive write against customer ledger. Class C -> New QA customers created without modifying existing customer balances.
+4. **Clear Period / Close Year (`/accounting`):** Irreversible accounting close. Class C -> Scope verified to single workspace, destructive close skipped to protect baseline ledger.

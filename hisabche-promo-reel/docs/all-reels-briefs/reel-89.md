@@ -397,7 +397,7 @@ Rendered programmatically by bespoke visual component.
 ## 11. Source Files
 
 - Reel definition: [`src/reels/reel-89-cash-tide.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-89-cash-tide.ts) (Lines 1–150)
-- Scene component: [`src/scenes/cash-tide.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/cash-tide.tsx) (Lines 1–1291)
+- Scene component: [`src/scenes/cash-tide.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/cash-tide.tsx) (Lines 1–1311)
 - Registry entry: [`src/data/reel-registry.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/data/reel-registry.ts)
 - Motion catalogue: [`docs/motion-catalogue/registry.json`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/docs/motion-catalogue/registry.json)
 

@@ -94,10 +94,19 @@ export const CurrencyPicker = memo(function CurrencyPicker({
           // The server's name wins when it has one — it is the reference
           // table. The catalogue's label is the fallback, so a database that
           // has not run the migration still renders proper names.
+          // ⚠️ The bundle is the only source that speaks all three interface
+          // languages; the reference table carries ONE Persian name and one
+          // English name, so `nameFa` cannot serve an `en` or an `af` reader.
+          // It used to win outright (`label: fromTable?.nameFa ?? t(...)`), and
+          // the English onboarding listed «🇦🇫 افغانی · 🇮🇷 ریال ایران · 🇵🇰
+          // روپیه پاکستان» inside an English step. The table is now only the
+          // fallback for a key the bundle does not have.
           const fromTable = serverCurrencies.get(c.code)
+          const serverFallback =
+            lang === 'en' ? (fromTable?.name ?? c.labelFa) : (fromTable?.nameFa ?? c.labelFa)
           return {
             id: c.code,
-            label: fromTable?.nameFa ?? t(c.labelKey, c.labelFa),
+            label: t(c.labelKey, serverFallback),
             prefix: c.flag,
           }
         },

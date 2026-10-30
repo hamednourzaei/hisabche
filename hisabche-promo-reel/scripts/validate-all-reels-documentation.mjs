@@ -115,7 +115,8 @@ for (let i = 0; i < REELS.length; i++) {
   // Check metadata table duration matches source
   const expectedDuration =
     reel.duration || (reel.scenes?.length ? reel.scenes[reel.scenes.length - 1].end : 0)
-  if (!content.includes(`| Duration | ${expectedDuration}s |`)) {
+  const durPattern = new RegExp(`\\|\\s*Duration\\s*\\|\\s*${expectedDuration}s\\s*\\|`)
+  if (!durPattern.test(content)) {
     errors.push(
       `Reel ${padId} duration in metadata table does not match source (${expectedDuration}s)`,
     )
@@ -123,7 +124,8 @@ for (let i = 0; i < REELS.length; i++) {
 
   // Check scene count
   const expectedScenes = reel.scenes?.length || 0
-  if (!content.includes(`| Scene count | ${expectedScenes} |`)) {
+  const scenePattern = new RegExp(`\\|\\s*Scene count\\s*\\|\\s*${expectedScenes}\\s*\\|`)
+  if (!scenePattern.test(content)) {
     errors.push(
       `Reel ${padId} scene count in metadata table does not match source (${expectedScenes})`,
     )
@@ -143,7 +145,8 @@ if (fs.existsSync(overviewPath)) {
   const ovContent = fs.readFileSync(overviewPath, 'utf8')
   for (let i = 1; i <= REELS.length; i++) {
     const pad = String(i).padStart(2, '0')
-    if (!ovContent.includes(`| ${pad} |`) && !ovContent.includes(`| [${pad}](reel-${pad}.md) |`)) {
+    const ovPattern = new RegExp(`\\|\\s*(\\[?${pad}\\]?(\\(reel-${pad}\\.md\\))?)\\s*\\|`)
+    if (!ovPattern.test(ovContent)) {
       errors.push(`FULL_REELS_OVERVIEW.md is missing row for Reel ID ${pad}`)
     }
   }

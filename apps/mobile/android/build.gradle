@@ -43,3 +43,25 @@ allprojects {
 def expoCameraMavenPath = new File(["node", "--print", "require.resolve('expo-camera/package.json')"].execute(null, rootDir).text.trim(), "../android/maven")
 allprojects { repositories { maven { url(expoCameraMavenPath) } } }
 // @generated end expo-camera-import
+
+subprojects { project ->
+    plugins.withId("com.android.library") {
+        if (project.hasProperty('android')) {
+            project.android.defaultConfig.externalNativeBuild.cmake.arguments "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+        }
+    }
+    plugins.withId("com.android.application") {
+        if (project.hasProperty('android')) {
+            project.android.defaultConfig.externalNativeBuild.cmake.arguments "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+        }
+    }
+    tasks.configureEach { task ->
+        if (task.name.startsWith("strip") && task.name.contains("DebugSymbols")) {
+            task.enabled = false
+        }
+        if (task.name.contains("NativeDebugMetadata") || task.name.contains("NativeSymbolTables")) {
+            task.enabled = false
+        }
+    }
+}
+

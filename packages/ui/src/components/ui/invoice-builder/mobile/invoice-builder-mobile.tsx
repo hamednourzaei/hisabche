@@ -212,9 +212,13 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
           <ChevronLeft className="size-5 rtl:rotate-180" aria-hidden="true" />
         </button>
 
-        <h1 className="min-w-0 flex-1 truncate text-base font-bold text-[hsl(var(--fg-primary))]">
+        <p
+          role="heading"
+          aria-level={1}
+          className="min-w-0 flex-1 truncate text-base font-bold text-[hsl(var(--fg-primary))]"
+        >
           {t('invoiceBuilder.new', 'فاکتور جدید')}
-        </h1>
+        </p>
 
         {savingDraft ? (
           <span className="shrink-0 px-2 text-[11px] text-[hsl(var(--fg-tertiary))]">

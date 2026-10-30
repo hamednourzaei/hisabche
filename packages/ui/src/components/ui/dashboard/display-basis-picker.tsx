@@ -36,25 +36,12 @@ import { inStoredUnit, measuresFor, namedUnit, OWN_MEASURE } from '../../../lib/
 import { typedNumber } from '../../../lib/typed-number'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { nameOfCurrency } from '../../../lib/currency-name'
+import { useIntlLocale } from '../../../hooks/use-intl-locale'
 
 /** A unit the business named itself carries this prefix inside the picker. */
 const CUSTOM = 'unit:'
 /** «واحد دیگر…» — type a new one. */
 const OTHER = '__other__'
-
-/** Persian labels for the codes a shop is most likely to display in. */
-const LABEL: Record<string, string> = {
-  AFN: 'افغانی',
-  IRT: 'تومان',
-  IRR: 'ریال',
-  USD: 'دالر',
-  EUR: 'یورو',
-  PKR: 'روپیه',
-  XAU: 'طلا (گرم)',
-  XAG: 'نقره (گرم)',
-  XPT: 'پلاتین (گرم)',
-  XPD: 'پالادیوم (گرم)',
-}
 
 export interface DisplayBasisPickerProps {
   t?: (key: string, fallback?: string) => string
@@ -79,11 +66,16 @@ export function DisplayBasisPicker({
   className,
 }: DisplayBasisPickerProps) {
   const hydrated = useAfterHydration()
+  const locale = useIntlLocale()
   const tr = (key: string, fallback: string) => (t ? t(key, fallback) : fallback)
 
   const label = (code: string): string => {
-    const name = nameOfCurrency(tr, code, LABEL[code] ?? code)
-    const sign = currencySign(code as keyof typeof CURRENCY_SIGN)
+    // ⚠️ The names come from the bundle, never from a Persian table in this
+    // file: a hardcoded map printed «افغانی / دالر» inside the English and Dari
+    // screens (live audit B6). `currencySign` takes the reader's locale so the
+    // afghani reads «AFN» in English and «افغانی» in Persian.
+    const sign = currencySign(code as keyof typeof CURRENCY_SIGN, locale)
+    const name = nameOfCurrency(tr, code, sign)
     return code === base
       ? `${name} — ${tr('display.ownCurrency', 'ارز دفاتر')}`
       : sign && sign !== name
@@ -151,6 +143,7 @@ export interface ConvertedAmountProps {
  * number, and the person reading it has no way to tell.
  */
 export function ConvertedAmount({ t, value, currency, format, className }: ConvertedAmountProps) {
+  const locale = useIntlLocale()
   const tr = (key: string, fallback: string) => (t ? t(key, fallback) : fallback)
 
   if (value === null) {
@@ -165,7 +158,9 @@ export function ConvertedAmount({ t, value, currency, format, className }: Conve
   }
 
   const sign =
-    currency in CURRENCY_SIGN ? currencySign(currency as keyof typeof CURRENCY_SIGN) : undefined
+    currency in CURRENCY_SIGN
+      ? currencySign(currency as keyof typeof CURRENCY_SIGN, locale)
+      : undefined
   return (
     <span className={className}>
       {format(value)}
@@ -235,6 +230,7 @@ export function ExchangeRateForm({
   onSaveUnit,
   onCancel,
 }: ExchangeRateFormProps) {
+  const locale = useIntlLocale()
   const tr = (key: string, fallback: string) => (t ? t(key, fallback) : fallback)
 
   // A unit the business names itself (live audit #82) sits beside the
@@ -260,12 +256,17 @@ export function ExchangeRateForm({
 
   if (currencies.length === 0) return null
 
-  const nameOf = (code: string) =>
-    code === OTHER
-      ? tr('display.otherUnit', 'واحد دیگر…')
-      : code.startsWith(CUSTOM)
-        ? code.slice(CUSTOM.length)
-        : nameOfCurrency(tr, code, LABEL[code] ?? code)
+  const nameOf = (code: string) => {
+    if (code === OTHER) return tr('display.otherUnit', 'واحد دیگر…')
+    if (code.startsWith(CUSTOM)) return code.slice(CUSTOM.length)
+    const sign = currencySign(code as keyof typeof CURRENCY_SIGN, locale)
+    const name = nameOfCurrency(tr, code, sign)
+    const isPersianChar = /[\u0600-\u06FF]/.test(sign)
+    const isEn = locale && /^en/i.test(locale)
+    const shouldAppend =
+      sign && sign.length === 1 && !name.includes(sign) && (!isEn || !isPersianChar)
+    return shouldAppend ? `${name} (${sign})` : name
+  }
   const option = (code: string) => ({
     value: code,
     label:

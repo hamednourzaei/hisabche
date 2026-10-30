@@ -546,7 +546,7 @@ Rendered programmatically by bespoke visual component.
 ## 11. Source Files
 
 - Reel definition: [`src/reels/reel-84-paper-pocket.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-84-paper-pocket.ts) (Lines 1–197)
-- Scene component: [`src/scenes/paper-pocket.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/paper-pocket.tsx) (Lines 1–1418)
+- Scene component: [`src/scenes/paper-pocket.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/paper-pocket.tsx) (Lines 1–1496)
 - Registry entry: [`src/data/reel-registry.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/data/reel-registry.ts)
 - Motion catalogue: [`docs/motion-catalogue/registry.json`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/docs/motion-catalogue/registry.json)
 

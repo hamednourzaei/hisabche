@@ -61,8 +61,8 @@ export function registerMeRoutes(router: Router): void {
     const { db, ctx } = c
     const user = db.get<{
       id: string
-      email: string
-      full_name: string
+      email: string | null
+      full_name: string | null
       role: string
       created_at: string
     }>('SELECT * FROM local_user LIMIT 1')
@@ -73,14 +73,18 @@ export function registerMeRoutes(router: Router): void {
       business_types_updated_at: string | null
     }>('SELECT name, business_types, business_types_updated_at FROM local_workspace LIMIT 1')
 
+    const email = user?.email || 'local@hisabche.local'
+    const fullName = user?.full_name?.trim() || ws?.name || ''
+    const businessName = ws?.name || null
+
     return {
       user: {
         id: user?.id || ctx.userId,
-        email: user?.email || 'local@hisabche.local',
-        fullName: user?.full_name || 'کاربر آفلاین',
-        full_name: user?.full_name || 'کاربر آفلاین',
-        businessName: ws?.name || 'حسابچه آفلاین',
-        business_name: ws?.name || 'حسابچه آفلاین',
+        email,
+        fullName,
+        full_name: fullName,
+        businessName,
+        business_name: businessName,
         businessTypes: splitBusinessTypes(ws?.business_types),
         business_types: splitBusinessTypes(ws?.business_types),
         businessTypesUpdatedAt: ws?.business_types_updated_at ?? null,
@@ -122,24 +126,53 @@ export function registerMeRoutes(router: Router): void {
       )
     }
 
+    if (input.businessName !== undefined && input.businessName.trim()) {
+      db.run('UPDATE local_workspace SET name = ?, updated_at = ? WHERE id = ?', [
+        input.businessName.trim(),
+        now,
+        ws.id,
+      ])
+    }
+
     const user = db.get<{
       id: string
-      email: string
-      full_name: string
+      email: string | null
+      full_name: string | null
       created_at: string
     }>('SELECT id, email, full_name, created_at FROM local_user LIMIT 1')
+
+    if (input.fullName !== undefined && input.fullName.trim() && user?.id) {
+      db.run('UPDATE local_user SET full_name = ?, updated_at = ? WHERE id = ?', [
+        input.fullName.trim(),
+        now,
+        user.id,
+      ])
+    }
+
     const fresh = db.get<{
       name: string
       business_types: string | null
       business_types_updated_at: string | null
     }>('SELECT name, business_types, business_types_updated_at FROM local_workspace LIMIT 1')
+    const freshUser = db.get<{
+      id: string
+      email: string | null
+      full_name: string | null
+      created_at: string
+    }>('SELECT id, email, full_name, created_at FROM local_user LIMIT 1')
+
+    const cleanEmail =
+      freshUser?.email && !freshUser.email.endsWith('.local') ? freshUser.email : ''
+    const effectiveFullName =
+      input.fullName?.trim() || freshUser?.full_name?.trim() || fresh?.name || ''
+    const effectiveBusinessName = input.businessName?.trim() || fresh?.name || null
 
     return {
       user: {
-        id: user?.id || 'local',
-        email: user?.email || 'local@hisabche.local',
-        fullName: input.fullName ?? user?.full_name ?? 'Local user',
-        businessName: input.businessName ?? fresh?.name ?? null,
+        id: freshUser?.id || user?.id || 'local',
+        email: cleanEmail,
+        fullName: effectiveFullName,
+        businessName: effectiveBusinessName,
         avatarUrl: input.avatarUrl ?? null,
         businessTypes: splitBusinessTypes(fresh?.business_types),
         businessTypesUpdatedAt: fresh?.business_types_updated_at ?? null,
@@ -147,7 +180,7 @@ export function registerMeRoutes(router: Router): void {
         storeSize: input.storeSize ?? null,
         businessNote: input.businessNote ?? null,
         role: 'owner',
-        createdAt: user?.created_at || now,
+        createdAt: freshUser?.created_at || user?.created_at || now,
       },
     }
   }

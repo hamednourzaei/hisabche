@@ -51,14 +51,18 @@ import { CloudRequiredNotice } from '../cloud-required-notice'
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const PERFORMANCE_MODES = [
-  { value: 'auto', labelKey: 'settings.perfAuto', fallback: 'خودکار' },
-  { value: 'normal', labelKey: 'settings.perfNormal', fallback: 'معمولی' },
-  { value: 'lite', labelKey: 'settings.perfLite', fallback: 'اقتصادی' },
+  { value: 'auto', labelKey: 'settings.perfAuto' },
+  { value: 'normal', labelKey: 'settings.perfNormal' },
+  { value: 'lite', labelKey: 'settings.perfLite' },
 ] as const
 
 // ─── Account Section ──────────────────────────────────────────────────────
 
-const AccountSection = memo(function AccountSection() {
+const AccountSection = memo(function AccountSection({
+  onLogout,
+}: {
+  onLogout?: (() => void | Promise<void>) | undefined
+} = {}) {
   const tOriginal = useTranslations()
   const intlLocale = useIntlLocale()
   const t = (key: string, fallback?: string): string => {
@@ -97,10 +101,10 @@ const AccountSection = memo(function AccountSection() {
 
   const startEditProfile = useCallback(() => {
     setFullNameDraft(user?.fullName ?? '')
-    setBusinessNameDraft(user?.businessName ?? '')
+    setBusinessNameDraft(user?.businessName ?? workspace?.name ?? '')
     setProfileError(null)
     setIsEditingProfile(true)
-  }, [user?.fullName, user?.businessName])
+  }, [user?.fullName, user?.businessName, workspace?.name])
 
   const cancelEditProfile = useCallback(() => {
     setIsEditingProfile(false)
@@ -110,7 +114,7 @@ const AccountSection = memo(function AccountSection() {
   const saveProfile = useCallback(async () => {
     const fullName = fullNameDraft.trim()
     if (!fullName) {
-      setProfileError(t('settings.fullNameRequired', 'نام نمی‌تواند خالی باشد'))
+      setProfileError(t('settings.fullNameRequired'))
       return
     }
     const businessName = businessNameDraft.trim()
@@ -131,33 +135,38 @@ const AccountSection = memo(function AccountSection() {
       }
 
       setIsEditingProfile(false)
-      toast.success(t('settings.profileSaved', 'اطلاعات ذخیره شد'))
+      toast.success(t('settings.profileSaved'))
     } catch (err) {
-      setProfileError(
-        err instanceof Error && err.message
-          ? err.message
-          : t('settings.saveFailed', 'ذخیره نشد. دوباره تلاش کنید.'),
-      )
+      setProfileError(err instanceof Error && err.message ? err.message : t('settings.saveFailed'))
     } finally {
       setIsSavingProfile(false)
     }
   }, [fullNameDraft, businessNameDraft, updateProfile, updateWorkspace, workspace, toast, t])
   const handleLogout = useCallback(() => {
-    logout()
-  }, [logout])
+    if (onLogout) {
+      void onLogout()
+    } else {
+      logout()
+    }
+  }, [onLogout, logout])
+
+  const showEmail = user?.email && !user.email.endsWith('.local')
+  const displayBusinessName = user?.businessName || workspace?.name || t('settings.notSet')
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
       <div className="p-6 space-y-5">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[hsl(var(--color-primary)/0.12)] text-lg font-bold text-[hsl(var(--color-primary))] shrink-0">
-            {user?.fullName?.charAt(0) || 'ح'}
+            {(user?.fullName?.trim() || displayBusinessName || '?').charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
             <h2 className="truncate font-semibold text-[hsl(var(--fg-primary))]">
               {user?.fullName || t('common.noName')}
             </h2>
-            <p className="truncate text-sm text-[hsl(var(--fg-secondary))]">{user?.email}</p>
+            {showEmail ? (
+              <p className="truncate text-sm text-[hsl(var(--fg-secondary))]">{user.email}</p>
+            ) : null}
           </div>
           <span className="ms-auto shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border border-[hsl(var(--color-success)/0.2)]">
             {t('common.active')}
@@ -171,7 +180,7 @@ const AccountSection = memo(function AccountSection() {
                 className="mb-1 block text-xs text-[hsl(var(--fg-tertiary))]"
                 htmlFor="profile-full-name"
               >
-                {t('settings.fullName', 'نام')}
+                {t('settings.fullName')}
               </label>
               <input
                 id="profile-full-name"
@@ -193,7 +202,7 @@ const AccountSection = memo(function AccountSection() {
                 id="profile-business-name"
                 value={businessNameDraft}
                 onChange={(e) => setBusinessNameDraft(e.target.value)}
-                placeholder={t('settings.businessNamePlaceholder', 'مثلاً: فروشگاه حسابچه')}
+                placeholder={t('settings.businessNamePlaceholder')}
                 className={
                   'w-full rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2 text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]'
                 }
@@ -209,9 +218,7 @@ const AccountSection = memo(function AccountSection() {
                 disabled={isSavingProfile}
                 className="rounded-full bg-[hsl(var(--color-primary))] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
               >
-                {isSavingProfile
-                  ? t('common.saving', 'در حال ذخیره...')
-                  : t('common.save', 'ذخیره')}
+                {isSavingProfile ? t('common.saving') : t('common.save')}
               </button>
               <button
                 type="button"
@@ -219,7 +226,7 @@ const AccountSection = memo(function AccountSection() {
                 disabled={isSavingProfile}
                 className="rounded-full border border-[hsl(var(--border-default))] px-4 py-2 text-sm text-[hsl(var(--fg-secondary))]"
               >
-                {t('common.cancel', 'انصراف')}
+                {t('common.cancel')}
               </button>
             </div>
           </div>
@@ -229,9 +236,7 @@ const AccountSection = memo(function AccountSection() {
               <p className="mb-1 text-xs text-[hsl(var(--fg-tertiary))]">
                 {t('settings.businessName')}
               </p>
-              <p className="font-medium text-[hsl(var(--fg-primary))]">
-                {user?.businessName || t('settings.notSet')}
-              </p>
+              <p className="font-medium text-[hsl(var(--fg-primary))]">{displayBusinessName}</p>
             </div>
             <div className="rounded-xl border border-[hsl(var(--border-default))] p-4 text-start">
               <p className="mb-1 text-xs text-[hsl(var(--fg-tertiary))]">
@@ -250,7 +255,7 @@ const AccountSection = memo(function AccountSection() {
             onClick={startEditProfile}
             className="w-full rounded-full border border-[hsl(var(--border-default))] px-4 py-2.5 text-sm font-medium text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
           >
-            {t('settings.editProfile', 'ویرایش اطلاعات')}
+            {t('settings.editProfile')}
           </button>
         ) : null}
 
@@ -291,10 +296,7 @@ function imageErrorMessage(error: unknown, t: (key: string, fallback?: string) =
   const message = error instanceof Error ? error.message : String(error ?? '')
 
   if (/not supported|-migration|signature-01/i.test(message)) {
-    return t(
-      'settings.imageNotSupported',
-      'ذخیره‌ی این تصویر روی این سرور هنوز فعال نیست. با پشتیبانی تماس بگیرید.',
-    )
+    return t('settings.imageNotSupported')
   }
 
   return t('settings.stampUploadFailed')
@@ -310,20 +312,17 @@ const BRAND_IMAGES: ReadonlyArray<{
   field: BrandImageField
   column: BrandImageColumn
   labelKey: string
-  fallback: string
 }> = [
-  { field: 'logoUrl', column: 'logo_url', labelKey: 'settings.brandImages.logo', fallback: 'لوگو' },
+  { field: 'logoUrl', column: 'logo_url', labelKey: 'settings.brandImages.logo' },
   {
     field: 'stampUrl',
     column: 'stamp_url',
     labelKey: 'settings.brandImages.stamp',
-    fallback: 'مهر',
   },
   {
     field: 'signatureUrl',
     column: 'signature_url',
     labelKey: 'settings.brandImages.signature',
-    fallback: 'امضا',
   },
 ]
 
@@ -367,18 +366,16 @@ const BrandImageSlot = memo(function BrandImageSlot({
       if (!workspaceId) {
         // Picking a file before the workspace query resolves used to do
         // nothing at all, with no explanation.
-        setError(
-          t('settings.stampNoWorkspace', 'کسب‌وکار هنوز بارگذاری نشده — کمی بعد دوباره تلاش کنید.'),
-        )
+        setError(t('settings.stampNoWorkspace'))
         return
       }
 
       if (!ALLOWED_STAMP_TYPES.includes(file.type)) {
-        setError(t('settings.stampInvalidType', 'فقط تصویر PNG یا SVG پذیرفته می‌شود.'))
+        setError(t('settings.stampInvalidType'))
         return
       }
       if (file.size > MAX_STAMP_SIZE) {
-        setError(t('settings.stampTooLarge', 'حجم تصویر باید کمتر از ۱ مگابایت باشد.'))
+        setError(t('settings.stampTooLarge'))
         return
       }
       setError(null)
@@ -395,21 +392,16 @@ const BrandImageSlot = memo(function BrandImageSlot({
               // That is a FAILURE from the user's side — never «saved».
               const saved = (updated as Record<string, unknown> | undefined)?.[column]
               if (saved) {
-                toast.success(t('settings.imageSaved', 'تصویر ذخیره شد'))
+                toast.success(t('settings.imageSaved'))
               } else {
-                setError(
-                  t(
-                    'settings.imageNotSupported',
-                    'ذخیره‌ی این تصویر روی این سرور هنوز فعال نیست. با پشتیبانی تماس بگیرید.',
-                  ),
-                )
+                setError(t('settings.imageNotSupported'))
               }
             },
             onError: (err) => setError(imageErrorMessage(err, t)),
           },
         )
       }
-      reader.onerror = () => setError(t('settings.stampUploadFailed', 'بارگذاری تصویر ناموفق بود.'))
+      reader.onerror = () => setError(t('settings.stampUploadFailed'))
       reader.readAsDataURL(file)
     },
     [workspaceId, updateWorkspace, field, column, t, toast],
@@ -422,7 +414,7 @@ const BrandImageSlot = memo(function BrandImageSlot({
       {
         onSuccess: () => {
           setError(null)
-          toast.success(t('settings.imageRemoved', 'تصویر حذف شد'))
+          toast.success(t('settings.imageRemoved'))
         },
         onError: (err) => setError(imageErrorMessage(err, t)),
       },
@@ -518,7 +510,7 @@ export const BusinessStampSection = memo(function BusinessStampSection() {
   if (stampAvailability.requiresOnline) {
     return (
       <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-6">
-        <CloudRequiredNotice variant="card" title={t('settings.businessStamp', 'مهر کسب‌وکار')} />
+        <CloudRequiredNotice variant="card" title={t('settings.businessStamp')} />
       </div>
     )
   }
@@ -540,7 +532,7 @@ export const BusinessStampSection = memo(function BusinessStampSection() {
               key={image.field}
               t={t}
               workspaceId={workspace?.id}
-              label={t(image.labelKey, image.fallback)}
+              label={t(image.labelKey)}
               field={image.field}
               column={image.column}
               current={workspace?.[image.column] ?? null}
@@ -613,11 +605,7 @@ const BackupSection = memo(function BackupSection() {
         type: 'manual',
         status: 'failed',
       })
-      setExportError(
-        err instanceof Error
-          ? err.message
-          : t('settings.backupFailed', 'دانلود پشتیبان ناموفق بود'),
-      )
+      setExportError(err instanceof Error ? err.message : t('settings.backupFailed'))
     } finally {
       setIsExporting(false)
     }
@@ -649,11 +637,7 @@ const BackupSection = memo(function BackupSection() {
         status: 'completed',
       })
     } catch (err) {
-      setExportError(
-        err instanceof Error
-          ? err.message
-          : t('settings.backupFailed', 'دانلود پشتیبان ناموفق بود'),
-      )
+      setExportError(err instanceof Error ? err.message : t('settings.backupFailed'))
     } finally {
       setIsExportingCsv(false)
     }
@@ -793,7 +777,7 @@ const PerformanceSection = memo(function PerformanceSection() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {PERFORMANCE_MODES.map(({ value, labelKey, fallback }) => (
+          {PERFORMANCE_MODES.map(({ value, labelKey }) => (
             <button
               key={value}
               type="button"
@@ -806,7 +790,7 @@ const PerformanceSection = memo(function PerformanceSection() {
                   : 'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]',
               )}
             >
-              {t(labelKey, fallback)}
+              {t(labelKey)}
             </button>
           ))}
         </div>
@@ -942,7 +926,7 @@ export const StorageSection = memo(function StorageSection() {
             <dd className="rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] px-2.5 py-0.5 text-xs font-medium tabular-nums text-[hsl(var(--fg-secondary))]">
               {entries === null
                 ? '—'
-                : `${formatNumber(entries, locale)} ${t('settings.cacheEntriesUnit', 'مورد')}`}
+                : `${formatNumber(entries, locale)} ${t('settings.cacheEntriesUnit')}`}
             </dd>
           </div>
           <div className="flex items-center justify-between gap-3">
@@ -1096,6 +1080,8 @@ DevelopersSection.displayName = 'DevelopersSection'
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export interface SettingsPageProps {
+  /** Custom logout handler (e.g. for offline checks / LogoutPendingDialog). */
+  onLogout?: (() => void | Promise<void>) | undefined
   /**
    * The account card. Windows and Android pass their own: signing out there
    * must ask about unsent offline changes first (LogoutPendingDialog).
@@ -1111,6 +1097,7 @@ export interface SettingsPageProps {
  * sections; now they render this one and fill only the two slots above.
  */
 export const SettingsPage = memo(function SettingsPage({
+  onLogout,
   accountSlot,
   deviceSlot,
 }: SettingsPageProps = {}) {
@@ -1129,7 +1116,7 @@ export const SettingsPage = memo(function SettingsPage({
         <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('settings.description')}</p>
       </div>
 
-      {accountSlot ?? <AccountSection />}
+      {accountSlot ?? <AccountSection onLogout={onLogout} />}
       <LanguageSection />
       <BusinessStampSection />
       <BookCurrencySection />

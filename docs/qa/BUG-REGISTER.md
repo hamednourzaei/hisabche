@@ -1,6 +1,6 @@
-# Hisabche QA — Bug & Triage Register
+# Hisabche QA — Bug & Triage Register (Phase 1 & Phase 2)
 
-**Audit Date:** 2026-10-29  
+**Audit Dates:** 2026-10-14, 2026-10-28, 2026-10-29  
 **Target Workspace:** `lolokhan` (`3f19d3ca-b024-4565-b5e3-47a078585c72`)  
 **Environment:** Live Web via Antigravity Internal Chromium CDP (Port 64571)
 
@@ -16,7 +16,7 @@ Every issue is strictly classified into one of three classes:
 
 ---
 
-## 2. Bug Register (Class A Findings)
+## 2. Phase 2 Verified Defects (Class A Findings)
 
 ### BUG-01: Notifications Display Raw Persian Strings on English/Dari UI
 
@@ -59,7 +59,36 @@ Every issue is strictly classified into one of three classes:
 
 ---
 
-## 3. Class B Triage Items (Correct Behavior / Not Bugs)
+## 3. Phase 1 Bug Register (B1–B22)
+
+| Bug ID  | Severity | Class   | Subsystem       | Description & Root Cause                                                                                      | Resolution Status | Live Verification                             | Fix Location                                                                               |
+| ------- | -------- | ------- | --------------- | ------------------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| **B1**  | P0       | Class A | Auth / API      | 429 Too Many Requests storm on multi-tab refresh (rate limit 100/min per IP exceeded by 10-20 calls per page) | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `backend/src/index.ts` (OPTIONS preflight excluded, rate limit bumped to 300)              |
+| **B2**  | P0       | Class A | Sync Engine     | Outbox transaction deadlocks under concurrent write bursts on mobile SQLite bridge                            | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `packages/local-engine/src/sync/worker.ts`                                                 |
+| **B3**  | P1       | Class A | Invoices Hub    | "No invoices have been recorded yet" flash during React Query loading state                                   | FIXED & TESTED    | **PROVED ON LIVE** (`/en/invoices`)           | `packages/ui/src/hooks/invoices/use-invoices-page.ts`                                      |
+| **B4**  | P1       | Class A | Invoice Print   | A4 layout clipped right margin in RTL mode; table overflowed printable canvas                                 | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `packages/ui/src/components/ui/invoices/print-template.tsx`                                |
+| **B5**  | P1       | Class A | Invoice Form    | Grid input accessible label printed Persian fallback «تعداد» on English form                                  | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `packages/ui/src/components/ui/invoice-builder/grid/grid-cell.tsx`                         |
+| **B6**  | P1       | Class A | Dashboard       | Display basis dropdown labels printed hardcoded Persian currency names                                        | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `packages/ui/src/components/ui/dashboard/display-basis-picker.tsx`                         |
+| **B7**  | P1       | Class A | Customer Detail | Return balance showed negative prefix mismatch                                                                | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `packages/ui/src/components/ui/customers/customer-detail-view.tsx`                         |
+| **B8**  | P1       | Class A | Team Hub        | "No branches defined" warning displayed on cold load despite branches existing                                | FIXED & TESTED    | **PROVED ON LIVE** (`/en/team-and-payroll`)   | `packages/ui/src/components/ui/team-and-payroll/containers/team-and-payroll-container.tsx` |
+| **B9**  | P1       | Class A | Onboarding      | Repeated step 1 redirect on cold load for established shops                                                   | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `apps/web/app/[lang]/(dashboard)/layout.tsx`                                               |
+| **B10** | P2       | Class A | Pluralization   | English grammar bug: "1 conflicts", "1 sales invoices are"                                                    | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `packages/ui/src/components/ui/dashboard/dashboard-container.tsx`                          |
+| **B11** | P2       | Class A | Analytics       | KPI cards showing invariant "100% vs last month"                                                              | DOCUMENTED        | Live behavior                                 | `backend/src/services/dashboard`                                                           |
+| **B12** | P2       | Class A | POS / Till      | Till recorded balance display vs opening float formula                                                        | DOCUMENTED        | Live behavior                                 | `packages/ui/src/components/ui/pos`                                                        |
+| **B13** | P2       | Class A | Warehouse       | Total headline mixes multiple currencies/units                                                                | DOCUMENTED        | Live behavior                                 | `packages/ui/src/components/ui/warehouse`                                                  |
+| **B14** | P2       | Class A | Warehouse       | Expiry report header vs list count discrepancy                                                                | DOCUMENTED        | Live behavior                                 | `packages/ui/src/components/ui/warehouse`                                                  |
+| **B15** | P2       | Class A | Navigation      | Breadcrumb printed raw route slug `sync-center`                                                               | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `packages/i18n/messages/{en,fa,af}/common.json`                                            |
+| **B16** | P2       | Class A | Web Routing     | `/audit` returned 404 on web while existing on desktop                                                        | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `apps/web/app/[lang]/(dashboard)/audit/page.tsx` & `apps/web/app/robots.ts`                |
+| **B17** | P2       | Class A | Accessibility   | Multiple `<h1>` tags on `/governance` and `/invoices/new`                                                     | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `approvals-view.tsx`, `approvals-container.tsx`, `invoice-builder-mobile.tsx`              |
+| **B18** | P2       | Class A | UX / Security   | Internal ops note "(third database script not run)" shown                                                     | FIXED & TESTED    | **PROVED ON LIVE** (`desktop-developers.png`) | `packages/i18n/messages/{en,fa,af}/common.json`                                            |
+| **B19** | P2       | Class A | Customers       | Customer form defaulted phone country prefix to +98                                                           | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `packages/ui/src/components/ui/customers/AddCustomerModal.tsx`                             |
+| **B20** | P2       | Class A | Performance     | Multi-second white screen before first paint                                                                  | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `apps/web` prefetch rules                                                                  |
+| **B21** | P2       | Class A | SSR / Hydration | Minified React error #418 on 7 routes                                                                         | FIXED & TESTED    | `IMPLEMENTED_NOT_LIVE_VERIFIED`               | `apps/web` date/token serialization                                                        |
+| **B22** | P2       | Class A | Accessibility   | Touch targets < 36px on mobile viewports                                                                      | DOCUMENTED        | Live behavior                                 | `docs/qa/DESKTOP-MOBILE-VERIFICATION.md`                                                   |
+
+---
+
+## 4. Class B Triage Items (Correct Behavior / Not Bugs)
 
 ### TRIAGE-01: "New Product" Button Behavior on Warehouse Overview
 
@@ -79,7 +108,7 @@ Every issue is strictly classified into one of three classes:
 
 ---
 
-## 4. Class C Triage Items (Hardware / Native Restricted)
+## 5. Class C Triage Items (Hardware / Native Restricted)
 
 ### TRIAGE-03: Native Shell & Camera Scanning
 

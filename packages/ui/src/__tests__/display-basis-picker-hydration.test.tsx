@@ -10,6 +10,14 @@ vi.mock('../components/ui/select-field', () => ({
   SelectField: (p: { 'aria-label'?: string }) => <select aria-label={p['aria-label']} />,
 }))
 
+// The picker names each currency through the bundle and the reader's locale
+// (B6), so it needs the locale the page is rendered in.
+vi.mock('next-intl', () => ({
+  useLocale: () => 'fa',
+  useTranslations: () =>
+    Object.assign((key: string) => key, { raw: () => undefined, has: () => false }),
+}))
+
 import { DisplayBasisPicker } from '../components/ui/dashboard/display-basis-picker'
 
 const props = {

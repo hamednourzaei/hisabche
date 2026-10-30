@@ -59,8 +59,14 @@ export function localizeNotificationText(raw: string | null | undefined, t: Tran
 
   // 1. Invoice created title
   // E.g. "✅ صورت‌حساب جدید ایجاد شد" or "صورت‌حساب جدید ایجاد شد" or "بل جدید ایجاد شد"
-  if (/^(?:✅\s*)?(?:صورت‌حساب|بل)\s*جدید\s*ایجاد\s*شد$/i.test(trimmed)) {
+  if (/^(?:✅\s*)?(?:صورت‌حساب|بل|invoice)\s*(?:جدید\s*ایجاد\s*شد|created)$/i.test(trimmed)) {
     return t('notifications.invoiceCreated')
+  }
+  if (/^(?:sales invoice registered|(?:فاکتور|بل)\s*فروش\s*ثبت\s*شد)$/i.test(trimmed)) {
+    return t('notifications.saleInvoiceCreated')
+  }
+  if (/^(?:purchase invoice registered|(?:فاکتور|بل)\s*خرید\s*ثبت\s*شد)$/i.test(trimmed)) {
+    return t('notifications.purchaseInvoiceCreated')
   }
 
   // 2. Invoice registered body
@@ -91,12 +97,21 @@ export function localizeNotificationText(raw: string | null | undefined, t: Tran
   if (paymentMatch?.[1]) {
     return t('notifications.paymentRecorded', { ref: paymentMatch[1] })
   }
+  if (/^(?:payment received|دریافت\s*(?:وجه|پول)\s*ثبت\s*شد)$/i.test(trimmed)) {
+    return t('notifications.paymentReceived')
+  }
+  if (/^(?:payment sent|پرداخت\s*ثبت\s*شد)$/i.test(trimmed)) {
+    return t('notifications.paymentSent')
+  }
 
   // 6. Customer created
   // E.g. "مشتری جدید: علی احمدی"
-  const custMatch = trimmed.match(/^مشتری\s*جدید:\s*(.+)$/)
+  const custMatch = trimmed.match(/^(?:مشتری\s*جدید:\s*|New customer:\s*)(.+)$/i)
   if (custMatch?.[1]) {
     return t('notifications.customerCreated', { name: custMatch[1] })
+  }
+  if (/^(?:new customer added|مشتری\s*(?:تازه|جدید)\s*اضافه\s*شد)$/i.test(trimmed)) {
+    return t('notifications.newCustomerAdded')
   }
 
   // 7. Overdue invoice

@@ -32,7 +32,7 @@ NOT EXPLICITLY DEFINED IN SOURCE
 | Scene count   | 5                                |
 | Theme         | dark-neon                        |
 | Music Mood    | NOT EXPLICITLY DEFINED IN SOURCE |
-| Camera noZoom | false (Dynamic Push-in)          |
+| Camera noZoom | true (Fixed 1.0x Scale)          |
 | Status        | NO_CUSTOM_SCENE                  |
 
 ## 3. Full Script
@@ -110,7 +110,7 @@ Scene 5:
 - Primary Motion: `impact-ripple`
 - Secondary Motion: `breathing-text`
 - Typography Motion: `entrance-spring + breathing (no static hold > 1.2s)`
-- Camera: from 1.06 to 1.14 (pan: 1.2, -0.8)
+- Camera: from 1 to 1 (pan: 0, 0)
 - Readability Window: [1.4s, 5.6s]
 
 **Transition**
@@ -151,7 +151,7 @@ Scene 5:
 - Primary Motion: `impact-ripple`
 - Secondary Motion: `breathing-text`
 - Typography Motion: `entrance-spring + breathing (no static hold > 1.2s)`
-- Camera: from 1.03 to 1.1 (pan: -1, 0.6)
+- Camera: from 1 to 1 (pan: 0, 0)
 - Readability Window: [1.4s, 7.6s]
 
 **Transition**
@@ -193,7 +193,7 @@ Scene 5:
 - Primary Motion: `entrance-spring`
 - Secondary Motion: `breathing-text`
 - Typography Motion: `entrance-spring + breathing (no static hold > 1.2s)`
-- Camera: from 1.04 to 1.16 (pan: 1.4, -1)
+- Camera: from 1 to 1 (pan: 0, 0)
 - Readability Window: [1.4s, 15.6s]
 
 **Transition**
@@ -238,7 +238,7 @@ Scene 5:
 - Primary Motion: `value-transform`
 - Secondary Motion: `breathing-text`
 - Typography Motion: `entrance-spring + breathing (no static hold > 1.2s)`
-- Camera: from 1.02 to 1.12 (pan: 0, -1.2)
+- Camera: from 1 to 1 (pan: 0, 0)
 - Readability Window: [1.4s, 13.6s]
 
 **Transition**
@@ -280,7 +280,7 @@ Rendered programmatically by bespoke visual component.
 - Primary Motion: `entrance-spring`
 - Secondary Motion: `breathing-text`
 - Typography Motion: `entrance-spring + breathing (no static hold > 1.2s)`
-- Camera: from 1.03 to 1.08 (pan: 0, 0)
+- Camera: from 1 to 1 (pan: 0, 0)
 - Readability Window: [1.4s, 14.6s]
 
 **Transition**
@@ -358,13 +358,13 @@ Rendered programmatically by bespoke visual component.
 
 - Framework: React + Remotion / Vite Motion Engine
 - Theme Engine: `dark-neon`
-- Zoom Constraint: `noZoom: false` (Layout Defect Law 9)
+- Zoom Constraint: `noZoom: true` (Layout Defect Law 9)
 - Numeric Safety: `faNumber` strict numeral mapping (Layout Defect Law 6)
 - Boundary Control: Strict `direction: 'ltr'` with container-local coordinates (Layout Defect Law 1)
 
 ## 11. Source Files
 
-- Reel definition: [`src/reels/reels-11-20.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reels-11-20.ts) (Lines 1–770)
+- Reel definition: [`src/reels/reels-11-20.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reels-11-20.ts) (Lines 1–772)
 - Registry entry: [`src/data/reel-registry.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/data/reel-registry.ts)
 - Motion catalogue: [`docs/motion-catalogue/registry.json`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/docs/motion-catalogue/registry.json)
 

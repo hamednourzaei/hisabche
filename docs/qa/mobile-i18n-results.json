@@ -1,0 +1,236 @@
+{
+  "mobile": [
+    {
+      "name": "dashboard",
+      "path": "/en/dashboard",
+      "clientWidth": 967,
+      "scrollWidth": 967,
+      "hasHorizontalOverflow": false,
+      "overflowDelta": 0,
+      "smallTargetsCount": 14,
+      "smallTargetsSample": [
+        {
+          "tag": "BUTTON",
+          "text": "🇬🇧English",
+          "width": 99,
+          "height": 34
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "width": 28,
+          "height": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Sales trend",
+          "width": 100,
+          "height": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Conversion funnel",
+          "width": 137,
+          "height": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Last 7 Days",
+          "width": 143,
+          "height": 36
+        }
+      ],
+      "hasBottomNav": true
+    },
+    {
+      "name": "invoices",
+      "path": "/en/invoices",
+      "clientWidth": 967,
+      "scrollWidth": 967,
+      "hasHorizontalOverflow": false,
+      "overflowDelta": 0,
+      "smallTargetsCount": 26,
+      "smallTargetsSample": [
+        {
+          "tag": "BUTTON",
+          "text": "🇬🇧English",
+          "width": 99,
+          "height": 34
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "width": 28,
+          "height": 28
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "width": 16,
+          "height": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "All",
+          "width": 48,
+          "height": 34
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Sale",
+          "width": 59,
+          "height": 34
+        }
+      ],
+      "hasBottomNav": true
+    },
+    {
+      "name": "customers",
+      "path": "/en/customers",
+      "clientWidth": 967,
+      "scrollWidth": 967,
+      "hasHorizontalOverflow": false,
+      "overflowDelta": 0,
+      "smallTargetsCount": 9,
+      "smallTargetsSample": [
+        {
+          "tag": "BUTTON",
+          "text": "🇬🇧English",
+          "width": 99,
+          "height": 34
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "width": 28,
+          "height": 28
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "width": 16,
+          "height": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "All",
+          "width": 48,
+          "height": 34
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Customer",
+          "width": 93,
+          "height": 34
+        }
+      ],
+      "hasBottomNav": true
+    },
+    {
+      "name": "till",
+      "path": "/en/till",
+      "clientWidth": 967,
+      "scrollWidth": 967,
+      "hasHorizontalOverflow": false,
+      "overflowDelta": 0,
+      "smallTargetsCount": 6,
+      "smallTargetsSample": [
+        {
+          "tag": "BUTTON",
+          "text": "🇬🇧English",
+          "width": 99,
+          "height": 34
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "width": 28,
+          "height": 28
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "width": 16,
+          "height": 16
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "width": 24,
+          "height": 24
+        },
+        {
+          "tag": "BUTTON",
+          "text": "صندوق تست",
+          "width": 73,
+          "height": 20
+        }
+      ],
+      "hasBottomNav": true
+    },
+    {
+      "name": "warehouse",
+      "path": "/en/warehouse",
+      "clientWidth": 967,
+      "scrollWidth": 967,
+      "hasHorizontalOverflow": false,
+      "overflowDelta": 0,
+      "smallTargetsCount": 16,
+      "smallTargetsSample": [
+        {
+          "tag": "BUTTON",
+          "text": "🇬🇧English",
+          "width": 99,
+          "height": 34
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "width": 28,
+          "height": 28
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "width": 16,
+          "height": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Warehouses",
+          "width": 109,
+          "height": 34
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Products",
+          "width": 88,
+          "height": 34
+        }
+      ],
+      "hasBottomNav": true
+    }
+  ],
+  "i18n": [
+    {
+      "lang": "fa",
+      "path": "/fa/dashboard",
+      "htmlDir": "rtl",
+      "bodyDir": null,
+      "effectiveDir": "rtl",
+      "h1": "ظهر بخیر",
+      "sampleText": "حسابچه | 1 | آنلاین | پنل مدیریت | 🇮🇷 | فارسی | ۸ | پرسش از دستیار | افغانی — ارز دفاتر | تبادل نرخ داشبورد | ظهر بخیر | امروز چه خبر از کسب‌وکارتان؟ | فروش کل | ۵۷۱٬۴۴۹٬۷۰۰ | ۱۰۰٪ | نسبت به ماه گذشته | فروش ۱۴۰۵/۰۷/۳۰ – ۱۴۰۵/۰۸/۰۶ | ۱۳۰٬۰۸۰ | ۱۰۰٪ | نسبت به 7 روز قبل | بدهی مشتریان | ۱۳۰٬۰۰۰ | — | ارزش کل انبار | ۱۵۰ | — | نمودار فروش | ",
+      "rawKeys": []
+    },
+    {
+      "lang": "af",
+      "path": "/af/dashboard",
+      "htmlDir": "rtl",
+      "bodyDir": null,
+      "effectiveDir": "rtl",
+      "h1": "ظهر بخیر",
+      "sampleText": "حسابچه | 1 | آنلاین | پنل مدیریت | 🇦🇫 | دری | 8 | پرسش از دستیار | افغانی — اسعار دفاتر | تبادل نرخ داشبورد | ظهر بخیر | امروز کسب‌وکارت چطوره؟ | فروش کل | 571,449,700 | 100٪ | نسبت به ماه گذشته | فروش 1405/07/30 – 1405/08/06 | 130,080 | 100٪ | نسبت به 7 روز قبل | قرض مشتریان | 130,000 | — | ارزش کل گدام | 150 | — | نمودار فروش | روند فرو",
+      "rawKeys": []
+    }
+  ]
+}

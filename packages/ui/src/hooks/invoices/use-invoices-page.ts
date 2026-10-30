@@ -191,7 +191,13 @@ export function useInvoicesPage() {
     invoices,
     statsInvoices,
     statsSummary,
-    // Pending, not «pending and fetching»: see the destructure above (B3).
+    // ⚠️ `isLoading` (react-query) is `isPending && isFetching`, so it is FALSE
+    // during two windows in which there is still no data: before the query is
+    // enabled (`authReady`) and during the retry backoff after a failed call.
+    // The view reads a false `isLoading` with no rows as «no invoices found»,
+    // and the user was told their invoices do not exist — three samples of
+    // «No invoices have been recorded yet» — seconds before 21 invoices
+    // appeared. `isPending` means «no answer yet» and is the honest flag.
     isLoading: isPending,
     total,
     searchValue: filters.search ?? '',

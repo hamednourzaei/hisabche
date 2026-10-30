@@ -379,8 +379,8 @@ Rendered programmatically by bespoke visual component.
 
 ## 11. Source Files
 
-- Reel definition: [`src/reels/reel-75-customer-credit-limit.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-75-customer-credit-limit.ts) (Lines 1–142)
-- Scene component: [`src/scenes/customer-credit-limit.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/customer-credit-limit.tsx) (Lines 1–912)
+- Reel definition: [`src/reels/reel-75-customer-credit-limit.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-75-customer-credit-limit.ts) (Lines 1–144)
+- Scene component: [`src/scenes/customer-credit-limit.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/customer-credit-limit.tsx) (Lines 1–923)
 - Registry entry: [`src/data/reel-registry.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/data/reel-registry.ts)
 - Motion catalogue: [`docs/motion-catalogue/registry.json`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/docs/motion-catalogue/registry.json)
 - Test file: [`src/__tests__/motion-plan-wiring.test.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/__tests__/motion-plan-wiring.test.ts)

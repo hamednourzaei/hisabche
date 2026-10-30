@@ -24,6 +24,8 @@ export type LocalWorkspaceLookup =
 
 export interface CreateLocalWorkspaceInput {
   name: string
+  ownerName?: string | undefined
+  ownerEmail?: string | undefined
   /** The books currency the person chose. Never a default. */
   baseCurrency: string
   /** The device's own time zone. */
@@ -57,6 +59,8 @@ export async function createLocalWorkspace(
 ): Promise<OfflineWorkspace> {
   const res = await apiClient.post<OfflineWorkspace>('/workspaces', {
     name: input.name.trim(),
+    ...(input.ownerName?.trim() ? { ownerName: input.ownerName.trim() } : {}),
+    ...(input.ownerEmail?.trim() ? { ownerEmail: input.ownerEmail.trim() } : {}),
     baseCurrency: input.baseCurrency,
     timeZone: input.timeZone,
   })

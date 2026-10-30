@@ -129,9 +129,11 @@ ApprovalInstanceCard.displayName = 'ApprovalInstanceCard'
 
 export const ApprovalsContainer = memo(function ApprovalsContainer({
   onDefineWorkflow,
+  showHeader,
 }: {
   /** Where «تعریف گردش‌کار» goes. Absent = the workflows page, as before. */
   onDefineWorkflow?: (() => void) | undefined
+  showHeader?: boolean | undefined
 }) {
   const tOriginal = useTranslations()
   const t = (key: string, fallback?: string): string => {
@@ -139,6 +141,9 @@ export const ApprovalsContainer = memo(function ApprovalsContainer({
     return v && v !== key ? v : (fallback ?? key)
   }
 
+  const isGovernance =
+    typeof window !== 'undefined' && window.location.pathname.includes('/governance')
+  const shouldShowHeader = showHeader ?? !isGovernance
   const availability = useActionAvailability('approvals.workflows')
 
   if (availability.requiresOnline) {
@@ -153,16 +158,24 @@ export const ApprovalsContainer = memo(function ApprovalsContainer({
     )
   }
 
-  return <ApprovalsContainerContent onDefineWorkflow={onDefineWorkflow} t={t} />
+  return (
+    <ApprovalsContainerContent
+      onDefineWorkflow={onDefineWorkflow}
+      showHeader={shouldShowHeader}
+      t={t}
+    />
+  )
 })
 
 ApprovalsContainer.displayName = 'ApprovalsContainer'
 
 const ApprovalsContainerContent = memo(function ApprovalsContainerContent({
   onDefineWorkflow,
+  showHeader,
   t,
 }: {
   onDefineWorkflow?: (() => void) | undefined
+  showHeader?: boolean | undefined
   t: (key: string, fallback?: string) => string
 }) {
   const { data, isLoading, error, refetch } = useWorkflowInstances()
@@ -204,6 +217,7 @@ const ApprovalsContainerContent = memo(function ApprovalsContainerContent({
       onRetry={() => void refetch()}
       hasActiveWorkflow={hasActiveWorkflow}
       onDefineWorkflow={onDefineWorkflow ?? (() => push('/approvals?tab=workflows'))}
+      showHeader={showHeader}
     />
   )
 })

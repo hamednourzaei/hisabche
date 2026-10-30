@@ -332,7 +332,7 @@ interface HeaderProps {
 /** Initials for an avatar, from whatever identity is actually known. */
 function initialsOf(name?: string, email?: string): string {
   const source = (name ?? '').trim() || (email ?? '').trim()
-  if (!source) return '؟'
+  if (!source) return '?'
   // An email has no meaningful second word — «h.nourzaei@gmail.com» would give
   // «HG» from the domain, which names nothing.
   if (!name?.trim() && source.includes('@')) return source[0]!.toUpperCase()
@@ -494,7 +494,7 @@ const IdentityMenu = memo(function IdentityMenu({
           {userName ? (
             <p className="truncate text-sm font-medium text-[hsl(var(--fg-primary))]">{userName}</p>
           ) : null}
-          {userEmail ? (
+          {userEmail && !userEmail.endsWith('.local') ? (
             // `dir="ltr"` — an address is Latin text and renders in the wrong
             // visual order inside an RTL block.
             <p dir="ltr" className="truncate text-start text-xs text-[hsl(var(--fg-tertiary))]">
@@ -561,7 +561,11 @@ const IdentityMenu = memo(function IdentityMenu({
                       : 'text-[hsl(var(--fg-tertiary))]',
                   )}
                 >
-                  {person.isOnline ? t('people.online') : t('people.offline')}
+                  {person.isOnline
+                    ? !isOnline
+                      ? t('sync.localActive')
+                      : t('people.online')
+                    : t('people.offline')}
                 </span>
               </li>
             ))}

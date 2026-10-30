@@ -22,6 +22,7 @@ const PAGES: Record<string, Mode> = {
   analysis: 'own-gates',
   approvals: 'page-gate',
   assistant: 'page-gate',
+  audit: 'own-gates',
   billing: 'page-gate',
   customers: 'own-gates',
   dashboard: 'own-gates',

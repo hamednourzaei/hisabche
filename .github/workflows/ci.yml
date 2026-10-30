@@ -32,7 +32,9 @@ jobs:
 
       - run: pnpm type-check
 
-      - run: pnpm test
+      # The desktop suites read the built renderer, so they run in desktop-build.yml
+      # after its build; here they would fail on a checkout that has not built.
+      - run: pnpm exec turbo run test --filter=!@hisabche/desktop
 
   web-build:
     name: Web build

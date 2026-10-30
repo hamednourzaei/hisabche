@@ -37,13 +37,18 @@ jobs:
       - name: Type-check (renderer + main/preload)
         run: pnpm --filter @hisabche/desktop type-check
 
-      - name: Unit tests (incl. IPC contract)
-        run: pnpm --filter @hisabche/desktop test
-
       # electron-vite build compiles main + preload + renderer — the exact
       # gate for preload/main contract mismatch.
+      #
+      # It runs BEFORE the tests: three suites read the built output
+      # (built-html-loads-under-file-protocol, built-css-contains-utilities, …) and
+      # fail on purpose when nothing has been built. They passed on any machine
+      # with an old out/ folder and failed on every clean CI checkout.
       - name: Build (electron-vite)
         run: pnpm --filter @hisabche/desktop build
+
+      - name: Unit tests (incl. IPC contract and the built output)
+        run: pnpm --filter @hisabche/desktop test
 
   package:
     name: Package ${{ matrix.os }}

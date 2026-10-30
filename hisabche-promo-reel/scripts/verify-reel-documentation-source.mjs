@@ -115,13 +115,16 @@ try {
     const sceneCount = reel.scenes?.length || 0
 
     // Axis 1: Metadata Check (ID, duration, sceneCount, title)
-    if (!md.includes(`| Reel ID | ${padId} |`)) {
+    const idPattern = new RegExp(`\\|\\s*Reel ID\\s*\\|\\s*${padId}\\s*\\|`)
+    if (!idPattern.test(md)) {
       results.mismatches.push({ reel: padId, error: `Reel ID mismatch in metadata table` })
     }
-    if (!md.includes(`| Duration | ${duration}s |`)) {
+    const durPattern = new RegExp(`\\|\\s*Duration\\s*\\|\\s*${duration}s\\s*\\|`)
+    if (!durPattern.test(md)) {
       results.mismatches.push({ reel: padId, error: `Duration mismatch (${duration}s expected)` })
     }
-    if (!md.includes(`| Scene count | ${sceneCount} |`)) {
+    const scenePattern = new RegExp(`\\|\\s*Scene count\\s*\\|\\s*${sceneCount}\\s*\\|`)
+    if (!scenePattern.test(md)) {
       results.mismatches.push({
         reel: padId,
         error: `Scene count mismatch (${sceneCount} expected)`,
@@ -210,7 +213,9 @@ try {
     const dur = reel.duration || (reel.scenes?.length ? reel.scenes[reel.scenes.length - 1].end : 0)
 
     // Deep check details
-    const metaCheck = md.includes(`| Reel ID | ${sId} |`) && md.includes(`| Duration | ${dur}s |`)
+    const metaCheck =
+      new RegExp(`\\|\\s*Reel ID\\s*\\|\\s*${sId}\\s*\\|`).test(md) &&
+      new RegExp(`\\|\\s*Duration\\s*\\|\\s*${dur}s\\s*\\|`).test(md)
     const scriptCheck = reel.scenes ? reel.scenes.every((s) => !s.vo || md.includes(s.vo)) : true
     const timelineCheck = md.includes('## 4. Timeline') && md.includes(`Scene 01`)
     const visualsCheck =

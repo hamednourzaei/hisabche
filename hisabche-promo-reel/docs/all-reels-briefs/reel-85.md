@@ -383,7 +383,7 @@ Rendered programmatically by bespoke visual component.
 ## 11. Source Files
 
 - Reel definition: [`src/reels/reel-85-distilbook.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-85-distilbook.ts) (Lines 1–139)
-- Scene component: [`src/scenes/distilbook.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/distilbook.tsx) (Lines 1–1363)
+- Scene component: [`src/scenes/distilbook.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/distilbook.tsx) (Lines 1–1390)
 - Registry entry: [`src/data/reel-registry.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/data/reel-registry.ts)
 - Motion catalogue: [`docs/motion-catalogue/registry.json`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/docs/motion-catalogue/registry.json)
 

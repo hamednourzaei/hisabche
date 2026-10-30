@@ -48,6 +48,9 @@ export interface OfflineWorkspace {
   id: string
   name: string
   ownerId?: string | undefined
+  ownerName?: string | undefined
+  ownerEmail?: string | undefined
+  createdAt?: string | undefined
   /**
    * The trades stored on THIS device. The first run and every restart build
    * the session from this field, so a fresh offline install resolves the same
@@ -63,17 +66,26 @@ export interface OfflineWorkspace {
  */
 export function localUserDisplayName(): string {
   const catalog = getMessages(toMessageLocale(i18n.language))
-  return resolveMessage(catalog, 'auth.localUser') ?? 'Local user'
+  return resolveMessage(catalog, 'auth.localUser') ?? ''
 }
 
 /** The one function that builds an offline session. */
 export function buildOfflineSession(workspace: OfflineWorkspace): Session {
+  const cleanEmail =
+    workspace.ownerEmail && !workspace.ownerEmail.endsWith('.local')
+      ? workspace.ownerEmail
+      : OFFLINE_SESSION_EMAIL
+
+  const fullName = workspace.ownerName?.trim() || localUserDisplayName()
+
   return {
     user: {
       id: workspace.ownerId || OFFLINE_FALLBACK_OWNER_ID,
-      email: OFFLINE_SESSION_EMAIL,
-      fullName: localUserDisplayName(),
-      createdAt: new Date().toISOString(),
+      email: cleanEmail,
+      fullName,
+      businessName: workspace.name,
+      role: 'owner',
+      createdAt: workspace.createdAt || new Date().toISOString(),
       ...(workspace.businessTypes ? { businessTypes: workspace.businessTypes } : {}),
     },
     token: OFFLINE_SESSION_TOKEN,

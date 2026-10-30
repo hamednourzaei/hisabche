@@ -124,7 +124,7 @@ describe('industry-diff.generated.md', () => {
   it('is protected against a changed generated value', () => {
     const markdown = readFileSync(DOC, 'utf8')
     const lines = markdown.split('\n')
-    const index = lines.findIndex((line) => line.startsWith('| طلا و جواهر |'))
+    const index = lines.findIndex((line) => /^\|\s*طلا و جواهر\s*\|/.test(line))
     expect(index, 'jewellery row exists').toBeGreaterThan(-1)
     const mutated = [...lines]
     mutated[index] = mutated[index]!.replace('measurement', 'gold_purity')

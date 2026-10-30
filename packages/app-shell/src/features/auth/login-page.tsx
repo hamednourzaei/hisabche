@@ -107,6 +107,8 @@ export function LoginPage() {
     Exclude<LicenceCheck, { ok: true }>['reason'] | null
   >(null)
   const [businessName, setBusinessName] = useState('')
+  const [ownerName, setOwnerName] = useState('')
+  const [ownerEmail, setOwnerEmail] = useState('')
   const [businessCurrency, setBusinessCurrency] = useState<string | null>(null)
   // The device's zone is the PREFILL, not the answer — the person edits it.
   const [businessTimeZone, setBusinessTimeZone] = useState(() => deviceTimeZone())
@@ -186,9 +188,7 @@ export function LoginPage() {
       // A fresh install: the business is made here, on this device.
       setOfflinePhase('firstRun')
     } catch (error) {
-      setOfflineError(
-        offlineFailureMessage(error, st('auth.offlineEditionFailed', 'نسخه‌ی محلی آماده نشد')),
-      )
+      setOfflineError(offlineFailureMessage(error, st('auth.offlineEditionFailed')))
       setOfflinePhase('checkFailed')
     }
   }, [navigate, redirectTarget, startOfflineSession, st])
@@ -216,9 +216,7 @@ export function LoginPage() {
 
     const tz = businessTimeZone.trim()
     if (!tz) {
-      setOfflineError(
-        st('auth.offlineFirstRun.timeZoneRequired', 'انتخاب منطقه‌ی زمانی الزامی است'),
-      )
+      setOfflineError(st('auth.offlineFirstRun.timeZoneRequired'))
       setOfflinePhase('createFailed')
       return
     }
@@ -229,18 +227,15 @@ export function LoginPage() {
     try {
       const created = await createLocalWorkspace({
         name,
+        ownerName: ownerName.trim() || undefined,
+        ownerEmail: ownerEmail.trim() || undefined,
         baseCurrency: businessCurrency,
         timeZone: tz,
       })
       startOfflineSession(created)
       navigate(redirectTarget, { replace: true })
     } catch (error) {
-      setOfflineError(
-        offlineFailureMessage(
-          error,
-          st('auth.offlineFirstRun.failed', 'ساخت کسب‌وکار محلی ناموفق بود'),
-        ),
-      )
+      setOfflineError(offlineFailureMessage(error, st('auth.offlineFirstRun.failed')))
       setOfflinePhase('createFailed')
     }
   }, [
@@ -248,6 +243,8 @@ export function LoginPage() {
     businessName,
     businessTimeZone,
     navigate,
+    ownerEmail,
+    ownerName,
     redirectTarget,
     startOfflineSession,
     st,
@@ -287,6 +284,10 @@ export function LoginPage() {
         <LocalFirstRunForm
           name={businessName}
           onNameChange={setBusinessName}
+          ownerName={ownerName}
+          onOwnerNameChange={setOwnerName}
+          ownerEmail={ownerEmail}
+          onOwnerEmailChange={setOwnerEmail}
           currency={businessCurrency}
           onCurrencyChange={setBusinessCurrency}
           timeZone={businessTimeZone}
@@ -354,8 +355,8 @@ export function LoginPage() {
           className="text-xs text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--color-primary))] underline transition-colors focus:outline-none disabled:opacity-50"
         >
           {offlinePhase === 'checking'
-            ? st('auth.offlineEditionPreparing', 'در حال آماده‌سازی…')
-            : st('auth.offlineEdition', 'نسخه‌ی محلی (بدون اینترنت)')}
+            ? st('auth.offlineEditionPreparing')
+            : st('auth.offlineEdition')}
         </button>
       </div>
     </div>

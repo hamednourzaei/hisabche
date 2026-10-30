@@ -85,12 +85,20 @@ export function createSessionStore(
  * server verifies the signature on every request and stays the only authority
  * on whether a token is good. All this decides is which screen to open on.
  */
+// `atob` is a global in browsers, Node and the WebViews, but this package builds
+// without DOM or node typings (a strict install, as CI does): read it off globalThis.
+const decodeBase64 = (value: string): string => {
+  const decode = (globalThis as { atob?: (data: string) => string }).atob
+  if (!decode) throw new Error('atob is not available')
+  return decode(value)
+}
+
 export function sessionExpiresAt(session: Session): number | null {
   const payload = session.token.split('.')[1]
   if (!payload) return null
 
   try {
-    const claims: unknown = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
+    const claims: unknown = JSON.parse(decodeBase64(payload.replace(/-/g, '+').replace(/_/g, '/')))
     const exp = (claims as { exp?: unknown }).exp
     return typeof exp === 'number' ? exp * 1000 : null
   } catch {

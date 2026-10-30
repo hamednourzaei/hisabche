@@ -1,4 +1,4 @@
-# Hisabche QA — Localization (i18n) & RTL Verification Audit
+# Hisabche QA — Localization (i18n) & RTL Verification Audit (Phase 1 & Phase 2)
 
 **Audit Date:** 2026-10-29  
 **Supported Locales:** `en` (English), `fa` (Persian), `af` (Afghan Dari)  
@@ -77,13 +77,54 @@ The following backend services still insert raw text into notifications and shou
 
 ---
 
-## 4. Dari Vocabulary & RTL Compliance
+## 4. Dari Vocabulary Parity & Terminology Precision (`/af/invoices/new`)
 
-- **Vocabulary Standards:**
-  - Invoice: `بل` (Dari) vs `فاکتور` (Persian)
-  - Product/Item: `جنس` (Dari) vs `کالا` (Persian)
-  - Debt/Receivable: `قرض` (Dari) vs `بدهی` / `طلب` (Persian)
-  - Warehouse: `گدام` (Dari) vs `انبار` (Persian)
-  - Relative time: `قبل` (Dari) vs `پیش` (Persian)
-- **RTL Logical Properties:**
-  All UI layout rules strictly enforce logical CSS properties (`ms-`, `me-`, `ps-`, `pe-`, `text-start`, `text-end`, `border-e`, `border-s`). Zero bare `left` or `right` positional attributes on directional UI elements. Verified in `packages/ui/src/__tests__/rtl-logical-properties.test.ts` (11/11 tests passed).
+A live inspection of the invoice builder was executed under Dari (`/af/invoices/new`):
+
+### 4.1 Live Invoice Builder Audit
+
+- **Screenshot:** `docs/qa/screenshots/af-invoice-new.png`
+- **Page Heading:** `بل جدید` (`New Bill / Invoice`), perfectly matching Dari terminology where `بل` is standard.
+- **Spreadsheet Table Headers:**
+  1. `ردیف` (Row number)
+  2. `شرح جنس / خدمت` (Item / Service description — uses `جنس` rather than Persian `کالا`)
+  3. `تعداد` (Quantity)
+  4. `واحد` (Unit)
+  5. `قیمت واحد (افغانی)` (Unit price in AFN)
+  6. `مبلغ مجموعی (افغانی)` (Total amount in AFN — uses Dari `مجموعی` rather than `کل`)
+  7. `عملیات` (Actions)
+
+### 4.2 Dari Glossary Compliance Matrix
+
+The Dari localization was audited against `.claude/DARI-GLOSSARY.md` across all primary concepts:
+
+| Business Concept   | Standard Persian (`fa`)   | Dari (`af`)             | Live Audit Observation on Hisabche                     | Compliance |
+| ------------------ | ------------------------- | ----------------------- | ------------------------------------------------------ | ---------- |
+| **Currency**       | `ارز` / `ارز دفاتر`       | `اسعار` / `اسعار دفاتر` | `افغانی — اسعار دفاتر` observed on `/af/dashboard`     | 100% Match |
+| **Customer Debt**  | `بدهی مشتریان`            | `قرض مشتریان`           | `قرض مشتریان: 130,000` observed on `/af/dashboard`     | 100% Match |
+| **Warehouse**      | `انبار` / `ارزش کل انبار` | `گدام` / `ارزش کل گدام` | `ارزش کل گدام: 150` observed on `/af/dashboard`        | 100% Match |
+| **Store / Shop**   | `فروشگاه`                 | `دوکان`                 | `دوکان کوچک` observed in onboarding and store profiles | 100% Match |
+| **Invoice / Bill** | `فاکتور`                  | `بل`                    | `بل جدید` observed on `/af/invoices/new`               | 100% Match |
+| **Product / Good** | `کالا`                    | `جنس`                   | `شرح جنس / خدمت` observed in invoice builder table     | 100% Match |
+| **Total Amount**   | `مبلغ کل`                 | `مبلغ مجموعی`           | `مبلغ مجموعی` observed on `/af/invoices/new`           | 100% Match |
+
+---
+
+## 5. RTL Logical Properties & Layout Verification
+
+An audit of `packages/ui` styling tokens and layout classes verified adherence to RTL logical properties:
+
+1. **Logical Margins & Paddings:**
+   - Elements use `ms-` (margin-inline-start) and `me-` (margin-inline-end) instead of `ml-` / `mr-`.
+   - Card paddings use `ps-` and `pe-` instead of `pl-` / `pr-`.
+   - Verified via `packages/ui/src/__tests__/rtl-logical-properties.test.ts` (11 tests passed).
+
+2. **Directional Icons:**
+   - Back arrows, breadcrumb chevrons, and pagination carats include `rtl:rotate-180` so they point in the reading direction:
+     ```tsx
+     <ChevronLeft className="size-3 rtl:rotate-180" aria-hidden="true" />
+     ```
+
+3. **Font Rendering & Legibility:**
+   - Persian and Dari fonts use the primary Vazirmatn / Shabnam font stack with correct optical weights (`font-normal`, `font-medium`, `font-bold`).
+   - Line-height adjustments (`leading-relaxed`) prevent diacritic clipping on Nastaliq-style tall characters.

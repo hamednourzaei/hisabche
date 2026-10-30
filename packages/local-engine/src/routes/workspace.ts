@@ -45,7 +45,10 @@ export interface LocalUserRow {
   updated_at: string
 }
 
-function mapWorkspace(row: LocalWorkspaceRow, ownerId: string) {
+function mapWorkspace(row: LocalWorkspaceRow, ownerId: string, user?: LocalUserRow | null) {
+  const cleanEmail = user?.email && !user.email.endsWith('.local') ? user.email : null
+  const ownerName = user?.full_name?.trim() || null
+
   return {
     id: row.id,
     name: row.name,
@@ -67,6 +70,8 @@ function mapWorkspace(row: LocalWorkspaceRow, ownerId: string) {
     signature_url: row.signature_url,
     ownerId,
     owner_id: ownerId,
+    ownerName,
+    ownerEmail: cleanEmail,
     isActive: true,
     is_active: true,
     createdAt: row.created_at,
@@ -85,7 +90,8 @@ export function registerWorkspaceRoutes(router: Router): void {
     if (!ws) {
       return []
     }
-    return [mapWorkspace(ws, ctx.userId)]
+    const user = db.get<LocalUserRow>('SELECT * FROM local_user LIMIT 1')
+    return [mapWorkspace(ws, ctx.userId, user)]
   })
 
   // ─── GET /workspaces/:id ─────────────────────────────────────
@@ -96,7 +102,8 @@ export function registerWorkspaceRoutes(router: Router): void {
     if (!ws) {
       throw new NotFoundError('Workspace', id)
     }
-    return mapWorkspace(ws, ctx.userId)
+    const user = db.get<LocalUserRow>('SELECT * FROM local_user LIMIT 1')
+    return mapWorkspace(ws, ctx.userId, user)
   })
 
   // ─── PATCH /workspaces/:id ───────────────────────────────────
@@ -200,6 +207,8 @@ export function registerWorkspaceRoutes(router: Router): void {
     }
     const b = parsed.data as {
       name?: string
+      ownerName?: string
+      ownerEmail?: string
       baseCurrency?: string
       timeZone?: string
       businessTypes?: string[]
@@ -235,6 +244,11 @@ export function registerWorkspaceRoutes(router: Router): void {
     const now = new Date().toISOString()
     const id = ctx.workspaceId
 
+    const ownerName =
+      typeof b.ownerName === 'string' && b.ownerName.trim() ? b.ownerName.trim() : name
+    const ownerEmail =
+      typeof b.ownerEmail === 'string' && b.ownerEmail.trim() ? b.ownerEmail.trim() : null
+
     // ⚠️ THE WORKSPACE AND ITS OWNER ARE ONE WRITE.
     //
     // `local_workspace` and `local_user` are written in the same transaction:
@@ -261,13 +275,15 @@ export function registerWorkspaceRoutes(router: Router): void {
 
       const owner = db.get<LocalUserRow>('SELECT id FROM local_user LIMIT 1')
       if (!owner) {
-        // The local owner: this device's person. The name typed here is the
-        // BUSINESS's name — the only thing the first run asks for — and the
-        // session shows the localized «local user» beside it.
         db.run(
           `INSERT INTO local_user (id, email, full_name, phone, role, created_at, updated_at)
            VALUES (?, ?, ?, NULL, 'owner', ?, ?)`,
-          [ctx.userId, 'local@hisabche.local', name, now, now],
+          [ctx.userId, ownerEmail, ownerName, now, now],
+        )
+      } else if (typeof b.ownerName === 'string' && b.ownerName.trim()) {
+        db.run(
+          `UPDATE local_user SET full_name = ?, email = COALESCE(?, email), updated_at = ? WHERE id = ?`,
+          [ownerName, ownerEmail, now, owner.id],
         )
       }
     })
@@ -276,23 +292,27 @@ export function registerWorkspaceRoutes(router: Router): void {
       'SELECT * FROM local_workspace WHERE id = ? LIMIT 1',
       [id],
     )
-    return mapWorkspace(created!, ctx.userId)
+    const ownerUser = db.get<LocalUserRow>('SELECT * FROM local_user LIMIT 1')
+    return mapWorkspace(created!, ctx.userId, ownerUser)
   })
 
   // ─── GET /workspaces/:id/members ─────────────────────────────
   router.get('/workspaces/:id/members', (c: RouteHandlerContext) => {
     const { db, ctx } = c
     const user = db.get<LocalUserRow>('SELECT * FROM local_user LIMIT 1')
-    const ws = db.get<LocalWorkspaceRow>('SELECT created_at FROM local_workspace LIMIT 1')
+    const ws = db.get<LocalWorkspaceRow>('SELECT created_at, name FROM local_workspace LIMIT 1')
+
+    const fullName = user?.full_name?.trim() || ws?.name || ''
+    const email = user?.email && !user.email.endsWith('.local') ? user.email : null
 
     return [
       {
         id: ctx.userId,
         user_id: ctx.userId,
         userId: ctx.userId,
-        email: user?.email || 'local@hisabche.local',
-        fullName: user?.full_name || 'کاربر آفلاین',
-        full_name: user?.full_name || 'کاربر آفلاین',
+        email,
+        fullName,
+        full_name: fullName,
         phone: user?.phone || null,
         role: 'owner',
         joinedAt: ws?.created_at || new Date().toISOString(),

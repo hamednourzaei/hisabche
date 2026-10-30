@@ -155,11 +155,15 @@ for (let i = 0; i < REELS.length; i++) {
 
   const expectedDuration =
     reel.duration || (reel.scenes?.length ? reel.scenes[reel.scenes.length - 1].end : 0)
-  if (!content.includes(`| Actual Duration | **${expectedDuration}s** |`)) {
+  const durPattern = new RegExp(
+    `\\|\\s*Actual Duration\\s*\\|\\s*\\*\\*${expectedDuration}s\\*\\*\\s*\\|`,
+  )
+  if (!durPattern.test(content)) {
     errors.push(`Reel ${padId} duration in brief does not match source (${expectedDuration}s)`)
   }
 
-  if (!content.includes(`| Reel ID | **${padId}** |`)) {
+  const idPattern = new RegExp(`\\|\\s*Reel ID\\s*\\|\\s*\\*\\*${padId}\\*\\*\\s*\\|`)
+  if (!idPattern.test(content)) {
     errors.push(`Reel ${padId} ID in brief identity table does not match`)
   }
 

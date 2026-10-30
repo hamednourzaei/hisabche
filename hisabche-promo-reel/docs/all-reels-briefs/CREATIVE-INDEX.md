@@ -141,7 +141,7 @@ Grouping of all 107 reels by business capability, problem domain and commercial 
 - [Reel 68 — دزد دخلت کیه وقتی نه دزدی شده و نه فروشت کمه؟](reel-68.md)
 - [Reel 74 — فرمول تولید و BOM: قیمت تمام‌شده را حدسی نزن!](reel-74.md)
 
-## Cashflow, Banking & Cheques (جریان نقدینگی، بانک و چک‌های صیادی) (27 ریل)
+## Cashflow, Banking & Cheques (جریان نقدینگی، بانک و چک‌های صیادی) (28 ریل)
 
 - [Reel 11 — چک و قسط فراموش‌شده](reel-11.md)
 - [Reel 17 — دخل امروز کو؟](reel-17.md)
@@ -170,6 +170,7 @@ Grouping of all 107 reels by business capability, problem domain and commercial 
 - [Reel 96 — مانده‌ی بانک با مانده‌ی دفاتر نمی‌خواند](reel-96.md)
 - [Reel 102 — تراز نقدینگی و مدیریت چک‌های سررسید — خداحافظی با چک برگشتی](reel-102.md)
 - [Reel 106 — یک خط — معرفی حسابچه](reel-106.md)
+- [Reel 108 — رادار نقدینگی و سنسور پالس زنده کسب‌وکار](reel-108.md)
 
 ## Payroll & Team Wages (حقوق و دستمزد و تسویه پرسنل) (7 ریل)
 

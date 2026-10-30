@@ -22,10 +22,11 @@ import { cn } from '../../../lib/utils'
 import { useCurrency } from '../../../hooks/use-currency'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { useNow } from '../../../hooks/use-now'
-import { useEntitySummary, useEntityActivities } from '@hisabche/api'
+import { useEntitySummary, useEntityActivities, type ActivityItemDto } from '@hisabche/api'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { timeAgo } from '../../../lib/time-ago'
 import { localizeNotification } from '../../../lib/localize-notification'
+import { CURRENCY_SIGN, formatMoney, formatNumber, isMetal } from '@hisabche/formatting'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,7 +34,7 @@ interface EntityActivityCardProps {
   entityType: string
   entityId: string
   hasUnread: boolean
-  onActivityClick: (activity: { id: string; [key: string]: unknown }) => void
+  onActivityClick: (activity: ActivityItemDto) => void
 }
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -48,15 +49,15 @@ const statusColors: Record<string, string> = {
   draft: 'text-gray-500 bg-gray-500/10',
 }
 
-const statusLabels: Record<string, string> = {
-  pending: 'در انتظار',
-  paid: 'پرداخت شده',
-  completed: 'تکمیل شده',
-  cancelled: 'لغو شده',
-  partial: 'بخشی پرداخت',
-  overdue: 'سررسید شده',
-  draft: 'پیش‌نویس',
-}
+const KNOWN_STATUSES = new Set([
+  'pending',
+  'paid',
+  'completed',
+  'cancelled',
+  'partial',
+  'overdue',
+  'draft',
+])
 
 const activityIcons: Record<string, LucideIcon> = {
   created: CheckCircle2,
@@ -72,19 +73,12 @@ const activityIcons: Record<string, LucideIcon> = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// The locale was pinned to 'fa-AF' and a missing currency fell back to the
-// literal 'AFN'. Digits follow the reader's language; the fallback is the
-// currency the user chose.
 function formatCurrency(amount: number, currency: string, locale: string): string {
-  try {
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  } catch {
-    return `${amount} ${currency}`
+  if (!Number.isFinite(Number(amount))) return ''
+  if (currency in CURRENCY_SIGN || isMetal(currency)) {
+    return formatMoney(Number(amount), currency as keyof typeof CURRENCY_SIGN, locale)
   }
+  return `${formatNumber(Number(amount), locale)} ${currency}`
 }
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
@@ -92,7 +86,7 @@ function formatCurrency(amount: number, currency: string, locale: string): strin
 const StatusBadge = memo(function StatusBadge({ status }: { status: string }) {
   const t = useTranslations()
   const colorClass = statusColors[status] || 'text-gray-500 bg-gray-500/10'
-  const label = status in statusLabels ? t(`status.${status}`) : status
+  const label = KNOWN_STATUSES.has(status) ? t(`status.${status}`) : status
 
   return (
     <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded', colorClass)}>{label}</span>

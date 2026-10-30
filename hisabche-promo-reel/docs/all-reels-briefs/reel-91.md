@@ -377,7 +377,7 @@ Rendered programmatically by bespoke visual component.
 ## 11. Source Files
 
 - Reel definition: [`src/reels/reel-91-profit-shock.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-91-profit-shock.ts) (Lines 1–106)
-- Scene component: [`src/scenes/profit-shock.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/profit-shock.tsx) (Lines 1–971)
+- Scene component: [`src/scenes/profit-shock.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/profit-shock.tsx) (Lines 1–1037)
 - Registry entry: [`src/data/reel-registry.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/data/reel-registry.ts)
 - Motion catalogue: [`docs/motion-catalogue/registry.json`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/docs/motion-catalogue/registry.json)
 

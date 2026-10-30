@@ -379,8 +379,8 @@ Rendered programmatically by bespoke visual component.
 
 ## 11. Source Files
 
-- Reel definition: [`src/reels/reel-76-warehouse-shelf-map.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-76-warehouse-shelf-map.ts) (Lines 1–142)
-- Scene component: [`src/scenes/warehouse-shelf-map.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/warehouse-shelf-map.tsx) (Lines 1–1045)
+- Reel definition: [`src/reels/reel-76-warehouse-shelf-map.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-76-warehouse-shelf-map.ts) (Lines 1–143)
+- Scene component: [`src/scenes/warehouse-shelf-map.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/warehouse-shelf-map.tsx) (Lines 1–1049)
 - Registry entry: [`src/data/reel-registry.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/data/reel-registry.ts)
 - Motion catalogue: [`docs/motion-catalogue/registry.json`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/docs/motion-catalogue/registry.json)
 

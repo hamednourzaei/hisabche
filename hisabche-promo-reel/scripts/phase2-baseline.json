@@ -1,0 +1,757 @@
+[
+  {
+    "reel": "06",
+    "seconds": 50,
+    "problems": [
+      {
+        "what": "معاملات چندارزی",
+        "side": "top",
+        "slack": 8,
+        "outside": false,
+        "second": 3.5
+      },
+      {
+        "what": "چطور حساب‌ها رو منظم نگه می‌داری؟",
+        "side": "right",
+        "slack": 10,
+        "outside": false,
+        "second": 3.5
+      },
+      {
+        "what": "Hisabche Cloud",
+        "side": "left",
+        "slack": -22,
+        "outside": true,
+        "second": 10.5
+      },
+      {
+        "what": "۵۰۰",
+        "side": "left",
+        "slack": -5,
+        "outside": true,
+        "second": 10.5
+      },
+      {
+        "what": "۷۱.۵۰",
+        "side": "left",
+        "slack": -5,
+        "outside": true,
+        "second": 10.5
+      },
+      {
+        "what": "آنلاین",
+        "side": "left",
+        "slack": -18,
+        "outside": true,
+        "second": 12
+      },
+      {
+        "what": "۳۵٬۷۵۰",
+        "side": "left",
+        "slack": -1,
+        "outside": true,
+        "second": 12
+      },
+      {
+        "what": "حساب مشتری",
+        "side": "right",
+        "slack": 0,
+        "outside": false,
+        "second": 26.5
+      },
+      {
+        "what": "مانده",
+        "side": "right",
+        "slack": 0,
+        "outside": false,
+        "second": 26.5
+      }
+    ]
+  },
+  {
+    "reel": "07",
+    "seconds": 50,
+    "problems": [
+      {
+        "what": "سیستم:",
+        "side": "right",
+        "slack": -45,
+        "outside": true,
+        "second": 4
+      },
+      {
+        "what": "اختلاف را",
+        "side": "right",
+        "slack": 19,
+        "outside": false,
+        "second": 12
+      },
+      {
+        "what": "موجود",
+        "side": "left",
+        "slack": -5,
+        "outside": true,
+        "second": 21.5
+      },
+      {
+        "what": "نیاز به شارژ",
+        "side": "left",
+        "slack": -5,
+        "outside": true,
+        "second": 21.5
+      },
+      {
+        "what": "۱۶۰ کیسه",
+        "side": "left",
+        "slack": 0,
+        "outside": false,
+        "second": 21.5
+      },
+      {
+        "what": "Hisabche Cloud",
+        "side": "left",
+        "slack": -23,
+        "outside": true,
+        "second": 22
+      },
+      {
+        "what": "آنلاین",
+        "side": "left",
+        "slack": -18,
+        "outside": true,
+        "second": 22
+      },
+      {
+        "what": "موجودی به تفکیک انبار",
+        "side": "right",
+        "slack": -39,
+        "outside": true,
+        "second": 23
+      },
+      {
+        "what": "شمارش و بررسی اختلاف",
+        "side": "right",
+        "slack": -2,
+        "outside": true,
+        "second": 35
+      }
+    ]
+  },
+  {
+    "reel": "08",
+    "seconds": 45,
+    "problems": [
+      {
+        "what": "امنیت و کنترل دسترسی",
+        "side": "top",
+        "slack": 8,
+        "outside": false,
+        "second": 3.5
+      },
+      {
+        "what": "تاریخچه فعالیت و لاگ دقیق",
+        "side": "top",
+        "slack": 2,
+        "outside": false,
+        "second": 35.5
+      }
+    ]
+  },
+  {
+    "reel": "09",
+    "seconds": 45,
+    "problems": [
+      {
+        "what": "انتقال آسان داده‌ها",
+        "side": "top",
+        "slack": 8,
+        "outside": false,
+        "second": 3.5
+      },
+      {
+        "what": "سال‌ها اطلاعات جمع کرده‌ای؛",
+        "side": "right",
+        "slack": 22,
+        "outside": false,
+        "second": 3.5
+      },
+      {
+        "what": "Hisabche Cloud",
+        "side": "left",
+        "slack": -22,
+        "outside": true,
+        "second": 10
+      },
+      {
+        "what": "تایید شد",
+        "side": "left",
+        "slack": -5,
+        "outside": true,
+        "second": 10
+      },
+      {
+        "what": "CSV / XLSX",
+        "side": "left",
+        "slack": -5,
+        "outside": true,
+        "second": 10
+      },
+      {
+        "what": "آنلاین",
+        "side": "left",
+        "slack": -18,
+        "outside": true,
+        "second": 11.5
+      },
+      {
+        "what": "۲۵۰ قلم کالا",
+        "side": "left",
+        "slack": -1,
+        "outside": true,
+        "second": 11.5
+      }
+    ]
+  },
+  {
+    "reel": "10",
+    "seconds": 59,
+    "problems": [
+      {
+        "what": "روزمرگی یک کاسب",
+        "side": "top",
+        "slack": 8,
+        "outside": false,
+        "second": 3.5
+      },
+      {
+        "what": "Hisabche Cloud",
+        "side": "left",
+        "slack": -22,
+        "outside": true,
+        "second": 11
+      },
+      {
+        "what": "۱٬۹۰۰",
+        "side": "left",
+        "slack": -5,
+        "outside": true,
+        "second": 11
+      },
+      {
+        "what": "۱٬۲۵۰",
+        "side": "left",
+        "slack": -5,
+        "outside": true,
+        "second": 11
+      },
+      {
+        "what": "آنلاین",
+        "side": "left",
+        "slack": -18,
+        "outside": true,
+        "second": 13
+      },
+      {
+        "what": "۳٬۱۵۰",
+        "side": "left",
+        "slack": -1,
+        "outside": true,
+        "second": 13
+      },
+      {
+        "what": "حساب مشتری",
+        "side": "right",
+        "slack": 0,
+        "outside": false,
+        "second": 24
+      },
+      {
+        "what": "مانده",
+        "side": "right",
+        "slack": 0,
+        "outside": false,
+        "second": 24
+      },
+      {
+        "what": "۳۳۴",
+        "side": "right",
+        "slack": 15,
+        "outside": false,
+        "second": 26.5
+      },
+      {
+        "what": "موجودی کالای پرفروش",
+        "side": "right",
+        "slack": -18,
+        "outside": true,
+        "second": 32
+      },
+      {
+        "what": "۳۴۰",
+        "side": "right",
+        "slack": -18,
+        "outside": true,
+        "second": 32
+      },
+      {
+        "what": "بعدازظهر: بررسی موجودی کالا",
+        "side": "top",
+        "slack": -13,
+        "outside": true,
+        "second": 32
+      },
+      {
+        "what": "روند سود و فروش در حسابچه",
+        "side": "right",
+        "slack": 24,
+        "outside": false,
+        "second": 32.5
+      },
+      {
+        "what": "پایان روز: مرور اطلاعات",
+        "side": "top",
+        "slack": 10,
+        "outside": false,
+        "second": 42
+      }
+    ]
+  },
+  {
+    "reel": "11",
+    "seconds": 59,
+    "problems": [
+      {
+        "what": "مدیریت سررسید و اقساط",
+        "side": "top",
+        "slack": 8,
+        "outside": false,
+        "second": 4
+      },
+      {
+        "what": "حساب مشتری",
+        "side": "right",
+        "slack": 0,
+        "outside": false,
+        "second": 28
+      },
+      {
+        "what": "مانده",
+        "side": "right",
+        "slack": 0,
+        "outside": false,
+        "second": 28
+      }
+    ]
+  },
+  {
+    "reel": "12",
+    "seconds": 59,
+    "problems": [
+      {
+        "what": "یک پنل،",
+        "side": "right",
+        "slack": 19,
+        "outside": false,
+        "second": 20
+      },
+      {
+        "what": "موجودی",
+        "side": "right",
+        "slack": -17,
+        "outside": true,
+        "second": 28
+      },
+      {
+        "what": "یک روز کاری در",
+        "side": "right",
+        "slack": -2,
+        "outside": true,
+        "second": 39
+      },
+      {
+        "what": "دو شعبه همزمان",
+        "side": "top",
+        "slack": 16,
+        "outside": false,
+        "second": 40
+      }
+    ]
+  },
+  {
+    "reel": "13",
+    "seconds": 59,
+    "problems": [
+      {
+        "what": "کارگاه و خط تولید",
+        "side": "top",
+        "slack": 8,
+        "outside": false,
+        "second": 4
+      },
+      {
+        "what": "تولید سنتی در برابر",
+        "side": "right",
+        "slack": 13,
+        "outside": false,
+        "second": 26
+      }
+    ]
+  },
+  {
+    "reel": "14",
+    "seconds": 59,
+    "problems": [
+      {
+        "what": "مشتری توی صف کلافه است…",
+        "side": "right",
+        "slack": 3,
+        "outside": false,
+        "second": 3.5
+      },
+      {
+        "what": "صندوق و فروشگاه",
+        "side": "top",
+        "slack": 8,
+        "outside": false,
+        "second": 4
+      },
+      {
+        "what": "فروش پرسرعت با بارکدخوان در",
+        "side": "top",
+        "slack": -13,
+        "outside": true,
+        "second": 25
+      }
+    ]
+  },
+  {
+    "reel": "15",
+    "seconds": 59,
+    "problems": [
+      {
+        "what": "حسابدار می‌گه ترازنامه…",
+        "side": "right",
+        "slack": 5,
+        "outside": false,
+        "second": 4
+      },
+      {
+        "what": "دیگر نیازی به مدرک حسابداری برای فهمیدن ",
+        "side": "right",
+        "slack": 21,
+        "outside": false,
+        "second": 4.5
+      },
+      {
+        "what": "Hisabche Cloud",
+        "side": "left",
+        "slack": -22,
+        "outside": true,
+        "second": 16.5
+      },
+      {
+        "what": "نقد",
+        "side": "left",
+        "slack": 9,
+        "outside": false,
+        "second": 18
+      },
+      {
+        "what": "دارایی",
+        "side": "left",
+        "slack": 9,
+        "outside": false,
+        "second": 18
+      },
+      {
+        "what": "طلب",
+        "side": "left",
+        "slack": 9,
+        "outside": false,
+        "second": 18
+      },
+      {
+        "what": "آنلاین",
+        "side": "left",
+        "slack": -18,
+        "outside": true,
+        "second": 19.5
+      },
+      {
+        "what": "۱٬۳۵۰٬۰۰۰",
+        "side": "left",
+        "slack": -1,
+        "outside": true,
+        "second": 19.5
+      },
+      {
+        "what": "۴۱۹٬۹۸۱",
+        "side": "right",
+        "slack": 17,
+        "outside": false,
+        "second": 25
+      },
+      {
+        "what": "سود ناخالص دوره",
+        "side": "right",
+        "slack": -18,
+        "outside": true,
+        "second": 32.5
+      },
+      {
+        "what": "+۲۴٪ این ماه",
+        "side": "right",
+        "slack": -18,
+        "outside": true,
+        "second": 32.5
+      },
+      {
+        "what": "۴۲۰٬۰۰۰",
+        "side": "right",
+        "slack": -18,
+        "outside": true,
+        "second": 32.5
+      },
+      {
+        "what": "رشد سود و فروش",
+        "side": "top",
+        "slack": -13,
+        "outside": true,
+        "second": 32.5
+      },
+      {
+        "what": "با تصمیم‌گیری بر پایه تراز",
+        "side": "top",
+        "slack": -13,
+        "outside": true,
+        "second": 32.5
+      },
+      {
+        "what": "روند سود و فروش در حسابچه",
+        "side": "right",
+        "slack": 24,
+        "outside": false,
+        "second": 33.5
+      }
+    ]
+  },
+  {
+    "reel": "16",
+    "seconds": 59,
+    "problems": [
+      {
+        "what": "سود واقعی یا تخفیف پنهان؟",
+        "side": "top",
+        "slack": 8,
+        "outside": false,
+        "second": 4
+      },
+      {
+        "what": "۱۸۴٬۹۹۲",
+        "side": "right",
+        "slack": 17,
+        "outside": false,
+        "second": 16
+      },
+      {
+        "what": "تحلیل حاشیه سود قبل و بعد از تخفیف",
+        "side": "right",
+        "slack": -18,
+        "outside": true,
+        "second": 23.5
+      },
+      {
+        "what": "سود واقعی با مارجین حسابچه",
+        "side": "right",
+        "slack": -18,
+        "outside": true,
+        "second": 23.5
+      },
+      {
+        "what": "کنترل‌شده",
+        "side": "right",
+        "slack": -18,
+        "outside": true,
+        "second": 23.5
+      },
+      {
+        "what": "۱۸۵٬۰۰۰",
+        "side": "right",
+        "slack": -18,
+        "outside": true,
+        "second": 23.5
+      },
+      {
+        "what": "روند سود و فروش در حسابچه",
+        "side": "right",
+        "slack": 24,
+        "outside": false,
+        "second": 24.5
+      }
+    ]
+  },
+  {
+    "reel": "17",
+    "seconds": 59,
+    "problems": [
+      {
+        "what": "یک روز با صندوق و کشوی دخل",
+        "side": "right",
+        "slack": -27,
+        "outside": true,
+        "second": 12
+      },
+      {
+        "what": "مغایرت صندوق",
+        "side": "right",
+        "slack": 2,
+        "outside": false,
+        "second": 18.5
+      },
+      {
+        "what": "بستن شیفت و تسویه دخل در",
+        "side": "right",
+        "slack": -39,
+        "outside": true,
+        "second": 32
+      },
+      {
+        "what": "تطبیق ۱۰۰٪ کشو بدون کوچک‌ترین کسری!",
+        "side": "right",
+        "slack": -39,
+        "outside": true,
+        "second": 32
+      },
+      {
+        "what": "حساب مشتری",
+        "side": "right",
+        "slack": 0,
+        "outside": false,
+        "second": 34.5
+      },
+      {
+        "what": "مانده",
+        "side": "right",
+        "slack": 0,
+        "outside": false,
+        "second": 34.5
+      },
+      {
+        "what": "کنترل دخل،",
+        "side": "right",
+        "slack": -2,
+        "outside": true,
+        "second": 41.5
+      }
+    ]
+  },
+  {
+    "reel": "18",
+    "seconds": 59,
+    "problems": [
+      {
+        "what": "دنبال گزارش مالی نگرد…",
+        "side": "right",
+        "slack": -23,
+        "outside": true,
+        "second": 4
+      },
+      {
+        "what": "از هوش مصنوعی بپرس!",
+        "side": "left",
+        "slack": 6,
+        "outside": false,
+        "second": 4
+      },
+      {
+        "what": "دستیار اختصاصی مدیر در تحلیل انبار، طلب‌",
+        "side": "right",
+        "slack": -13,
+        "outside": true,
+        "second": 5
+      },
+      {
+        "what": "هشدار افت خرید مشتری",
+        "side": "right",
+        "slack": -9,
+        "outside": true,
+        "second": 15
+      },
+      {
+        "what": "تحلیل نقطه سربه‌سر",
+        "side": "left",
+        "slack": -8,
+        "outside": true,
+        "second": 15.5
+      },
+      {
+        "what": "پیش‌بینی هوشمند فروش و موجودی انبار",
+        "side": "left",
+        "slack": 2,
+        "outside": false,
+        "second": 37.5
+      },
+      {
+        "what": "کالای پیشنهادی خرید",
+        "side": "right",
+        "slack": 18,
+        "outside": false,
+        "second": 39
+      },
+      {
+        "what": "۱۲۰",
+        "side": "right",
+        "slack": 18,
+        "outside": false,
+        "second": 39
+      },
+      {
+        "what": "پیش از اتمام موجودی",
+        "side": "right",
+        "slack": 18,
+        "outside": false,
+        "second": 39
+      },
+      {
+        "what": "پیش‌بینی هوشمند فروش و موجودی انبار",
+        "side": "right",
+        "slack": 1,
+        "outside": false,
+        "second": 41
+      }
+    ]
+  },
+  {
+    "reel": "19",
+    "seconds": 59,
+    "problems": [
+      {
+        "what": "۱۰۰ کارتن بار فرستادی مغازه…",
+        "side": "right",
+        "slack": 7,
+        "outside": false,
+        "second": 4
+      },
+      {
+        "what": "لجستیک و انبارداری",
+        "side": "top",
+        "slack": 8,
+        "outside": false,
+        "second": 4
+      }
+    ]
+  },
+  {
+    "reel": "20",
+    "seconds": 59,
+    "problems": [
+      {
+        "what": "از بحران تا شروع مجدد در",
+        "side": "top",
+        "slack": 16,
+        "outside": false,
+        "second": 39.5
+      }
+    ]
+  }
+]

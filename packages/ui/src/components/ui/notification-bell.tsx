@@ -17,6 +17,7 @@ import {
   Package,
   Users,
   Receipt,
+  type LucideIcon,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { routeForEntityOrList } from '../../lib/entity-route'
@@ -50,7 +51,7 @@ interface NotificationGroup {
   status?: string | undefined
   summary?: {
     title: string
-    icon: any
+    icon: LucideIcon
     color: string
   }
 }
@@ -63,7 +64,7 @@ interface NotificationBellProps {
 
 const entityConfig: Record<
   NotificationGroup['entityType'],
-  { icon: any; color: string; bg: string }
+  { icon: LucideIcon; color: string; bg: string }
 > = {
   invoice: { icon: FileText, color: 'text-blue-500', bg: 'bg-blue-500/10' },
   customer: { icon: Users, color: 'text-purple-500', bg: 'bg-purple-500/10' },
@@ -353,10 +354,8 @@ const GroupCard = memo(function GroupCard({
               )}
               <span className="text-[8px] md:text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
                 <Clock className="w-2.5 h-2.5 md:w-3 md:h-3" aria-hidden="true" />
-                {group.items.length === 1
-                  ? `1 ${t('notifications.activityOne')}`
-                  : `${group.items.length} ${t('notifications.activities')}`}{' '}
-                • {timeAgo(group.latestAt, now, t)}
+                {t('notifications.activityCount', { count: group.items.length })} •{' '}
+                {timeAgo(group.latestAt, now, t)}
               </span>
             </div>
           </div>

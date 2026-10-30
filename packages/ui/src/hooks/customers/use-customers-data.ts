@@ -196,6 +196,7 @@ export function useCustomersData(options: UseCustomersDataOptions = {}): UseCust
       )
       const applied = customerEffects.reduce((sum, row) => sum + row.applied, 0)
       const creditBalance = customerEffects.reduce((sum, row) => sum + row.credit, 0)
+      const closedByReturns = customerEffects.reduce((sum, row) => sum + row.closedInvoices, 0)
       const totalDebt = Math.max(0, Math.round((grossDebt - applied) * 100) / 100)
 
       // کل خریدها
@@ -229,7 +230,7 @@ export function useCustomersData(options: UseCustomersDataOptions = {}): UseCust
         phone: customer.phone || '',
         totalDebt,
         creditBalance,
-        openCount: openInvoices.length,
+        openCount: Math.max(0, openInvoices.length - closedByReturns),
         totalPurchases,
         lastInvoiceDate: lastInvoice?.date || null, // ✅ حالا در type وجود دارد
         isOverdue,

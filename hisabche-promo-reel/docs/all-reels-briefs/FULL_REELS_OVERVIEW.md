@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-- **Total Registered Reel IDs:** 107
-- **Total Verified Source-Backed Reels:** 107
-- **Total Documented Files:** 107
+- **Total Registered Reel IDs:** 108
+- **Total Verified Source-Backed Reels:** 108
+- **Total Documented Files:** 108
 - **Missing Source Count:** 0
 - **Duplicate IDs:** 0 (Orphan legacy file `reel-75-profit-or-loss.ts` documented in audit)
 - **Status in Motion Catalogue:** 107 reels fully compiled
@@ -128,6 +128,7 @@ All 107 reels have complete, fully implemented TypeScript source code in `src/re
 | 105 | Yes        | `src/reels/reel-105-landed-cost.ts`               | `src/scenes/landed-cost-plates.tsx`                                | Yes      |      37s |      6 | `VERIFIED_COMPLETE` |
 | 106 | Yes        | `src/reels/reel-106-single-thread.ts`             | `src/scenes/single-thread.tsx`                                     | Yes      |      42s |      6 | `VERIFIED_COMPLETE` |
 | 107 | Yes        | `src/reels/reel-107-need-blueprint.ts`            | `src/scenes/need-blueprint.tsx`                                    | Yes      |      42s |      6 | `VERIFIED_COMPLETE` |
+| 108 | Yes        | `src/reels/reel-108-cashflow-radar.ts`            | `src/scenes/cashflow-radar.tsx`                                    | Yes      |      42s |      6 | `VERIFIED_COMPLETE` |
 
 ## Reel Inventory
 
@@ -240,15 +241,16 @@ All 107 reels have complete, fully implemented TypeScript source code in `src/re
 | [105](reel-105.md) | بهای تمام‌شده — سود کاغذی، ضرر واقعی                                           |      37s |      6 | قیمت روی کالا فقط قیمت خرید است؛ کرایه و گمرک و بیمه دیده نمی‌شود و هر فروش بی‌صدا ضرر می‌سازد.                                 | HangingPriceTagStretch, CostPlateDrop, CostStackCrossOver, CartonGridMultiplier, LandedCostDocument, MarginBarHold                              | `VERIFIED_COMPLETE` |
 | [106](reel-106.md) | یک خط — معرفی حسابچه                                                           |      42s |      6 | پنج دفتر جدا — نسیه                                                                                                             | TangleRopeReveal, SingleLinePull, BeadThreading, OfflineThreadHold, LedgerOnThread, LoopIntoMark                                                | `VERIFIED_COMPLETE` |
 | [107](reel-107.md) | شکل نیاز — حسابچه چه چیزی را کامل می‌کند                                       |      42s |      6 | مغازه کار می‌کند                                                                                                                | HollowBlueprintReveal, TwoIslandSplit, UnrecordedExit, SolidBuildFill, SinglePathNodes, RingMarkClose                                           | `VERIFIED_COMPLETE` |
+| [108](reel-108.md) | رادار نقدینگی و سنسور پالس زنده کسب‌وکار                                       |      42s |      6 | بی‌اطلاعی از نشت‌های پنهان سود و کسری نقدینگی در پایان ماه با وجود دخل شلوغ                                                     | CashflowSonarSweep, OscilloscopeHarmonics, TelemetryNexusLock                                                                                   | `VERIFIED_COMPLETE` |
 
 ## Master Statistics
 
-- **Total Registered Reels:** 107
-- **Total Documented Files:** 107
-- **Total Verified Source-Backed Reels:** 107
+- **Total Registered Reels:** 108
+- **Total Documented Files:** 108
+- **Total Verified Source-Backed Reels:** 108
 - **Missing Source Count:** 0
 - **Duplicate Count:** 0
-- **Total Duration Across All Reels:** 4903.04s (82 minutes)
+- **Total Duration Across All Reels:** 4945.04s (82 minutes)
 - **Average Duration:** 45.8s
 - **Minimum Duration:** 15s (Reel 70: Genesis Block)
 - **Maximum Duration:** 59s
@@ -256,12 +258,12 @@ All 107 reels have complete, fully implemented TypeScript source code in `src/re
   - 1 scenes: 1 reels
   - 4 scenes: 2 reels
   - 5 scenes: 64 reels
-  - 6 scenes: 35 reels
+  - 6 scenes: 36 reels
   - 7 scenes: 4 reels
   - 10 scenes: 1 reels
-- **Reels with Custom/Bespoke Scene Components:** 37
+- **Reels with Custom/Bespoke Scene Components:** 38
 - **Reels Using Shared Motion Templates:** 70
-- **Reels with Explicit Voiceover:** 104
-- **Reels with Explicit Music Mood:** 39
-- **Reels with Explicit CTA:** 100
-- **Reels with `noZoom: true` (Layout Defect Law 9):** 38
+- **Reels with Explicit Voiceover:** 105
+- **Reels with Explicit Music Mood:** 40
+- **Reels with Explicit CTA:** 101
+- **Reels with `noZoom: true` (Layout Defect Law 9):** 59

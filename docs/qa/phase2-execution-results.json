@@ -1,0 +1,85 @@
+{
+  "timestamp": "2026-10-28T17:00:12.170Z",
+  "workspace": "lolokhan",
+  "workspaceId": "3f19d3ca-b024-4565-b5e3-47a078585c72",
+  "workflows": [
+    {
+      "name": "Customer Creation",
+      "identifier": "QA-2026-10-28-Cust1",
+      "route": "/en/customers",
+      "status": "VERIFIED_WITH_DEFECTS",
+      "screenshot": "wf1-customer-created.png"
+    },
+    {
+      "name": "Supplier Creation",
+      "identifier": "QA-2026-10-28-Supp1",
+      "route": "/en/customers",
+      "status": "VERIFIED_WITH_DEFECTS",
+      "screenshot": "wf1-supplier-created.png"
+    },
+    {
+      "name": "Sales Invoice Draft Builder",
+      "identifier": "QA-2026-10-28-InvDraft1",
+      "route": "/en/invoices/new",
+      "status": "VERIFIED_COMPLETE",
+      "screenshot": "wf3-invoice-saved.png"
+    },
+    {
+      "name": "Till Cash Management",
+      "identifier": "QA-2026-10-28-TillAudit",
+      "route": "/en/till",
+      "status": "VERIFIED_COMPLETE",
+      "screenshot": "wf4-till-overview.png"
+    },
+    {
+      "name": "Sync Center Offline/Online Simulation",
+      "identifier": "QA-2026-10-28-CDP-Offline",
+      "route": "/en/sync-center",
+      "status": "VERIFIED_COMPLETE",
+      "screenshot": "wf5-sync-online.png"
+    },
+    {
+      "name": "Backup and Sync Center Verification",
+      "identifier": "QA-2026-10-28-BackupExport",
+      "route": "/en/data-and-sync",
+      "status": "VERIFIED_COMPLETE",
+      "screenshot": "wf6-data-and-sync.png"
+    }
+  ],
+  "validations": [
+    {
+      "form": "Add Customer",
+      "field": "name",
+      "test": "empty",
+      "error": "customer.nameRequired",
+      "status": "VERIFIED"
+    }
+  ],
+  "i18nPasses": [],
+  "ledgerEntries": [
+    {
+      "type": "Customer",
+      "id": "QA-2026-10-28-Cust1",
+      "route": "/en/customers",
+      "createdAt": "2026-10-28T17:00:21.267Z",
+      "delta": "New customer entity created (0 balance)",
+      "cleanupStatus": "PENDING_OR_RETAINED"
+    },
+    {
+      "type": "Supplier",
+      "id": "QA-2026-10-28-Supp1",
+      "route": "/en/customers",
+      "createdAt": "2026-10-28T17:00:26.071Z",
+      "delta": "New supplier entity created (0 balance)",
+      "cleanupStatus": "PENDING_OR_RETAINED"
+    },
+    {
+      "type": "InvoiceDraft",
+      "id": "QA-2026-10-28-InvDraft1",
+      "route": "/en/invoices/new",
+      "createdAt": "2026-10-28T17:00:40.500Z",
+      "delta": "Line item created (Draft status, no financial ledger post until finalized)",
+      "cleanupStatus": "RETAINED_BY_DESIGN"
+    }
+  ]
+}

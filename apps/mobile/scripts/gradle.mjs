@@ -217,7 +217,13 @@ const result = spawnSync(`"${wrapper}"`, [task], {
   shell: true,
   // Passed explicitly so the build does not depend on what this shell happens
   // to have exported — which is exactly what made the failure confusing.
-  env: { ...process.env, JAVA_HOME: jdk.home, ANDROID_HOME: sdk, ANDROID_SDK_ROOT: sdk },
+  env: {
+    ...process.env,
+    JAVA_HOME: jdk.home,
+    ANDROID_HOME: sdk,
+    ANDROID_SDK_ROOT: sdk,
+    CMAKE_ARGS: '-DCMAKE_POLICY_VERSION_MINIMUM=3.5',
+  },
 })
 
 process.exit(result.status ?? 1)

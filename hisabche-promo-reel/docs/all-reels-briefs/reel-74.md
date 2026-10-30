@@ -380,8 +380,8 @@ Rendered programmatically by bespoke visual component.
 
 ## 11. Source Files
 
-- Reel definition: [`src/reels/reel-74-manufacturing-bom.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-74-manufacturing-bom.ts) (Lines 1–142)
-- Scene component: [`src/scenes/manufacturing-bom.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/manufacturing-bom.tsx) (Lines 1–920)
+- Reel definition: [`src/reels/reel-74-manufacturing-bom.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-74-manufacturing-bom.ts) (Lines 1–145)
+- Scene component: [`src/scenes/manufacturing-bom.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/manufacturing-bom.tsx) (Lines 1–930)
 - Registry entry: [`src/data/reel-registry.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/data/reel-registry.ts)
 - Motion catalogue: [`docs/motion-catalogue/registry.json`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/docs/motion-catalogue/registry.json)
 

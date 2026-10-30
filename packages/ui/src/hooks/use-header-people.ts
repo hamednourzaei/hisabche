@@ -69,10 +69,11 @@ export function useHeaderPeople(
     if (canSeePeople !== true || !user?.id) return []
 
     const myRole = roleLabelOf(user.role)
+    const cleanEmail = user.email && !user.email.endsWith('.local') ? user.email : undefined
     const me: HeaderPerson = {
       userId: user.id,
-      name: user.fullName || user.email || t('nav.account'),
-      ...(user.email ? { email: user.email } : {}),
+      name: user.fullName || cleanEmail || t('nav.account'),
+      ...(cleanEmail ? { email: cleanEmail } : {}),
       ...(myRole ? { roleLabel: myRole } : {}),
       isOnline: true,
     }

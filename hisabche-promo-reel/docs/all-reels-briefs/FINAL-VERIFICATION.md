@@ -11,7 +11,7 @@ Zero hallucinations, zero invented marketing copy, zero hardcoded currencies, an
 
 ### Runtime Inventory
 
-107 reels
+108 reels
 
 ### Structural Documentation Verification
 
@@ -19,7 +19,7 @@ Zero hallucinations, zero invented marketing copy, zero hardcoded currencies, an
 
 ### Semantic Verification
 
-107 / 107
+108 / 107
 
 ### Deep Sample Verification
 
@@ -41,8 +41,8 @@ Every single one of the 107 reels has undergone automated 7-axis semantic verifi
 
 | Metric                 |                                    Result |
 | ---------------------- | ----------------------------------------: |
-| Runtime reels          |                                       107 |
-| Generated reel briefs  |                                       107 |
+| Runtime reels          |                                       108 |
+| Generated reel briefs  |                                       108 |
 | Missing                |                                         0 |
 | Duplicate IDs          |                                         0 |
 | Orphan implementations | 1 (`src/reels/reel-75-profit-or-loss.ts`) |

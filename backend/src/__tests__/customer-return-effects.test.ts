@@ -73,6 +73,8 @@ describe('saleReturnEffects', () => {
     const rows = await effects()
     expect(rows.find((row) => row.customerId === 'c1')).toMatchObject({ applied: 0, credit: 80 })
     expect(rows.find((row) => row.customerId === 'c2')).toMatchObject({ applied: 30, credit: 0 })
+    // Neither invoice was closed by the return: c1's was already paid, c2 still owes 70.
+    expect(rows.every((row) => row.closedInvoices === 0)).toBe(true)
   })
 
   it('adds up a customer’s returns per currency, reading minor units by that currency', async () => {
@@ -95,5 +97,20 @@ describe('saleReturnEffects', () => {
     invoices = [inv({ id: 'walkin', customer_id: null })]
     returns = [ret({ original_invoice_id: 'walkin', grand_total_minor: 50 })]
     expect(await effects()).toEqual([])
+  })
+})
+
+describe('closedInvoices', () => {
+  it('counts an unpaid invoice whose whole debt the return cancelled, not a partial one', async () => {
+    invoices = [
+      inv({ id: 'whole', customer_id: 'c1', total: 100, paid_amount: 0 }),
+      inv({ id: 'part', customer_id: 'c1', total: 100, paid_amount: 0 }),
+    ]
+    returns = [
+      ret({ id: 'a', original_invoice_id: 'whole', grand_total_minor: 100 }),
+      ret({ id: 'b', original_invoice_id: 'part', grand_total_minor: 30 }),
+    ]
+    const [row] = await effects()
+    expect(row).toMatchObject({ customerId: 'c1', applied: 130, credit: 0, closedInvoices: 1 })
   })
 })

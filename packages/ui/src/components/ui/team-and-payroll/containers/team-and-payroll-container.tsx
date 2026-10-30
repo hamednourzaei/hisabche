@@ -480,7 +480,7 @@ function TeamAndPayrollScreen({ section }: { section: TeamTab | 'timesheets' }) 
       onViewEmployee={handleViewEmployee}
       onCreateEmployee={handleCreateEmployee}
       onDeleteEmployee={handleDeleteEmployee}
-      branches={branches}
+      branches={branches.length > 0 ? branches : (branchTree as unknown as typeof branches)}
       permissionProfiles={permissionProfiles}
       branchesTab={branchesTab}
       attendanceTab={tab === 'attendance' ? <AttendanceSheet /> : null}

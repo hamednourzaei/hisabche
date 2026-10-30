@@ -67,6 +67,9 @@ export const createWorkspaceSchema = workspaceSchema
     baseCurrency: currencyCodeSchema.optional(),
     /** IANA time zone of the business, e.g. `Asia/Kabul`. */
     timeZone: z.string().trim().min(1).max(64).optional(),
+    /** Real owner identity on initial onboarding / local creation. */
+    ownerName: z.string().trim().max(100).optional(),
+    ownerEmail: z.string().trim().email().max(255).optional(),
   })
 
 export type CreateWorkspace = z.infer<typeof createWorkspaceSchema>

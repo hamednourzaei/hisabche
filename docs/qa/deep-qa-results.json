@@ -1,0 +1,1190 @@
+{
+  "timestamp": "2026-10-28T16:25:06.226Z",
+  "formsAndModals": [
+    {
+      "modal": "Add Customer",
+      "fieldsCount": 1,
+      "fields": [
+        {
+          "name": "unnamed",
+          "type": "search",
+          "placeholder": "Search customers, products, invoices...",
+          "value": "",
+          "required": false,
+          "disabled": false
+        }
+      ],
+      "emptySubmitErrors": ["8", "100%"]
+    },
+    {
+      "modal": "Invoice Builder",
+      "inputsCount": 7,
+      "inputsSample": [
+        {
+          "name": "Search customers, products, invoices...",
+          "type": "search",
+          "placeholder": "Search customers, products, invoices...",
+          "value": "",
+          "ariaLabel": "Search customers, products, invoices..."
+        },
+        {
+          "name": "Item / service",
+          "type": "text",
+          "placeholder": "Type, or pick from stock",
+          "value": "",
+          "ariaLabel": "Item / service"
+        },
+        {
+          "name": "تعداد",
+          "type": "input",
+          "placeholder": "",
+          "value": "",
+          "ariaLabel": "تعداد"
+        },
+        {
+          "name": "قیمت واحد",
+          "type": "input",
+          "placeholder": "",
+          "value": "",
+          "ariaLabel": "قیمت واحد"
+        },
+        {
+          "name": "invoice-notes",
+          "type": "textarea",
+          "placeholder": "",
+          "value": "",
+          "ariaLabel": ""
+        },
+        {
+          "name": "Total discount",
+          "type": "input",
+          "placeholder": "",
+          "value": "",
+          "ariaLabel": "Total discount"
+        },
+        {
+          "name": "Tax (%)",
+          "type": "input",
+          "placeholder": "",
+          "value": "",
+          "ariaLabel": "Tax (%)"
+        }
+      ],
+      "buttonsCount": 84,
+      "buttonsSample": [
+        {
+          "text": "Today",
+          "disabled": false,
+          "title": ""
+        },
+        {
+          "text": "Get Paid",
+          "disabled": false,
+          "title": ""
+        },
+        {
+          "text": "Stock",
+          "disabled": false,
+          "title": ""
+        },
+        {
+          "text": "Money & Profit",
+          "disabled": false,
+          "title": ""
+        },
+        {
+          "text": "Till",
+          "disabled": false,
+          "title": ""
+        },
+        {
+          "text": "People",
+          "disabled": false,
+          "title": ""
+        },
+        {
+          "text": "Customers",
+          "disabled": false,
+          "title": ""
+        },
+        {
+          "text": "Coworkers",
+          "disabled": false,
+          "title": ""
+        },
+        {
+          "text": "Work",
+          "disabled": false,
+          "title": ""
+        },
+        {
+          "text": "Awaiting Your Approval",
+          "disabled": false,
+          "title": ""
+        }
+      ]
+    }
+  ],
+  "multiViewport": [
+    {
+      "width": 320,
+      "hub": "dashboard",
+      "targetWidth": 320,
+      "clientWidth": 320,
+      "scrollWidth": 320,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 23,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "8",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Ask the assistant",
+          "w": 165,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "افغانی — your books’",
+          "w": 231,
+          "h": 36
+        }
+      ],
+      "screenshot": "resp-320px-dashboard.png"
+    },
+    {
+      "width": 320,
+      "hub": "invoices",
+      "targetWidth": 320,
+      "clientWidth": 320,
+      "scrollWidth": 320,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 61,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "8",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Invoices",
+          "w": 86,
+          "h": 40
+        }
+      ],
+      "screenshot": "resp-320px-invoices.png"
+    },
+    {
+      "width": 320,
+      "hub": "customers",
+      "targetWidth": 320,
+      "clientWidth": 320,
+      "scrollWidth": 320,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 21,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "8",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Customers",
+          "w": 100,
+          "h": 40
+        }
+      ],
+      "screenshot": "resp-320px-customers.png"
+    },
+    {
+      "width": 320,
+      "hub": "till",
+      "targetWidth": 320,
+      "clientWidth": 320,
+      "scrollWidth": 320,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 20,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "8",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "w": 24,
+          "h": 24
+        }
+      ],
+      "screenshot": "resp-320px-till.png"
+    },
+    {
+      "width": 320,
+      "hub": "warehouse",
+      "targetWidth": 320,
+      "clientWidth": 320,
+      "scrollWidth": 320,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 35,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "8",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Stock",
+          "w": 72,
+          "h": 40
+        }
+      ],
+      "screenshot": "resp-320px-warehouse.png"
+    },
+    {
+      "width": 360,
+      "hub": "dashboard",
+      "targetWidth": 360,
+      "clientWidth": 360,
+      "scrollWidth": 360,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 19,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Ask the assistant",
+          "w": 165,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "افغانی — your books’",
+          "w": 231,
+          "h": 36
+        }
+      ],
+      "screenshot": "resp-360px-dashboard.png"
+    },
+    {
+      "width": 360,
+      "hub": "invoices",
+      "targetWidth": 360,
+      "clientWidth": 360,
+      "scrollWidth": 360,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 56,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Invoices",
+          "w": 88,
+          "h": 40
+        }
+      ],
+      "screenshot": "resp-360px-invoices.png"
+    },
+    {
+      "width": 360,
+      "hub": "customers",
+      "targetWidth": 360,
+      "clientWidth": 360,
+      "scrollWidth": 360,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 16,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Customers",
+          "w": 102,
+          "h": 40
+        }
+      ],
+      "screenshot": "resp-360px-customers.png"
+    },
+    {
+      "width": 360,
+      "hub": "till",
+      "targetWidth": 360,
+      "clientWidth": 360,
+      "scrollWidth": 360,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 15,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "w": 24,
+          "h": 24
+        }
+      ],
+      "screenshot": "resp-360px-till.png"
+    },
+    {
+      "width": 360,
+      "hub": "warehouse",
+      "targetWidth": 360,
+      "clientWidth": 360,
+      "scrollWidth": 360,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 30,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "8",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Stock",
+          "w": 74,
+          "h": 40
+        }
+      ],
+      "screenshot": "resp-360px-warehouse.png"
+    },
+    {
+      "width": 390,
+      "hub": "dashboard",
+      "targetWidth": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 19,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "8",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Ask the assistant",
+          "w": 165,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "افغانی — your books’",
+          "w": 231,
+          "h": 36
+        }
+      ],
+      "screenshot": "resp-390px-dashboard.png"
+    },
+    {
+      "width": 390,
+      "hub": "invoices",
+      "targetWidth": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 56,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "8",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Invoices",
+          "w": 91,
+          "h": 40
+        }
+      ],
+      "screenshot": "resp-390px-invoices.png"
+    },
+    {
+      "width": 390,
+      "hub": "customers",
+      "targetWidth": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 16,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "8",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Customers",
+          "w": 106,
+          "h": 40
+        }
+      ],
+      "screenshot": "resp-390px-customers.png"
+    },
+    {
+      "width": 390,
+      "hub": "till",
+      "targetWidth": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 15,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "8",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "w": 24,
+          "h": 24
+        }
+      ],
+      "screenshot": "resp-390px-till.png"
+    },
+    {
+      "width": 390,
+      "hub": "warehouse",
+      "targetWidth": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 30,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "8",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Stock",
+          "w": 77,
+          "h": 40
+        }
+      ],
+      "screenshot": "resp-390px-warehouse.png"
+    },
+    {
+      "width": 430,
+      "hub": "dashboard",
+      "targetWidth": 430,
+      "clientWidth": 430,
+      "scrollWidth": 430,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 19,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "8",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Ask the assistant",
+          "w": 165,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "افغانی — your books’",
+          "w": 231,
+          "h": 36
+        }
+      ],
+      "screenshot": "resp-430px-dashboard.png"
+    },
+    {
+      "width": 430,
+      "hub": "invoices",
+      "targetWidth": 430,
+      "clientWidth": 430,
+      "scrollWidth": 430,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 56,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "8",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Invoices",
+          "w": 99,
+          "h": 40
+        }
+      ],
+      "screenshot": "resp-430px-invoices.png"
+    },
+    {
+      "width": 430,
+      "hub": "customers",
+      "targetWidth": 430,
+      "clientWidth": 430,
+      "scrollWidth": 430,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 16,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Customers",
+          "w": 115,
+          "h": 40
+        }
+      ],
+      "screenshot": "resp-430px-customers.png"
+    },
+    {
+      "width": 430,
+      "hub": "till",
+      "targetWidth": 430,
+      "clientWidth": 430,
+      "scrollWidth": 430,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 15,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "w": 24,
+          "h": 24
+        }
+      ],
+      "screenshot": "resp-430px-till.png"
+    },
+    {
+      "width": 430,
+      "hub": "warehouse",
+      "targetWidth": 430,
+      "clientWidth": 430,
+      "scrollWidth": 430,
+      "hasOverflow": false,
+      "overflowDelta": 0,
+      "sub44Count": 30,
+      "sub44Sample": [
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 28,
+          "h": 28
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "w": 36,
+          "h": 36
+        },
+        {
+          "tag": "A",
+          "text": "Today",
+          "w": 16,
+          "h": 16
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Stock",
+          "w": 82,
+          "h": 40
+        }
+      ],
+      "screenshot": "resp-430px-warehouse.png"
+    }
+  ],
+  "i18nRtlForms": [
+    {
+      "locale": "af",
+      "screen": "New Invoice",
+      "bodyDir": "rtl",
+      "h1Text": "بل جدید",
+      "tableHeaders": [
+        "ردیف",
+        "شرح جنس / خدمت",
+        "تعداد",
+        "واحد",
+        "قیمت واحد\nافغانی",
+        "مبلغ مجموعی\nافغانی",
+        "عملیات"
+      ],
+      "snippet": "حسابچه | امروز | دریافت پول | موجودی | پول و سود | صندوق | مردم | طرف حساب‌ها | همکاران | کارها | در انتظار تأیید شما | ساخت و تولید | دوکان من در بازار | تحلیل کسب‌وکار | سیستم | تنظیمات | رخدادها | داده و همگام‌سازی | پلن و اشتراک | دستیار هوشمند | تفکیک وظایف | آنلاین | پنل مدیریت | همین الان | 🇦🇫 | دری | امروز | دریافت پول | new | بل‌ها | بل جدید | بل جدید | ذخیره پیش‌نویس | مرحله بعدی: پیش‌نمایش و تایید | مرحله ۱: معلومات و ثبت جنس/خدمت | افزودن ردیف | افزودن"
+    }
+  ],
+  "controlsTriage": [
+    {
+      "text": "Today",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Get Paid",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Stock",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Money & Profit",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Till",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "People",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Customers",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Coworkers",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Work",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Awaiting Your Approval",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Make & Produce",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "My marketplace shop",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Business analysis",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "System",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Settings",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Events",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Data & sync",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Plan & Billing",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "AI Assistant",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Separation of duties",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Online\nAdmin panel",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "🇬🇧\nEnglish",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Ask the assistant",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "افغانی — your books’ currency",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Dashboard exchange rate",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Total Sales\n\n571,449,700\n\n100%\nvs last m",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Sales 10/22/2026 – 10/28/2026\n\n130,080\n\n",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Customer Debt\n\n130,000\n\n—",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Total Warehouse Value\n\n150\n\n—",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    },
+    {
+      "text": "Sales trend",
+      "disabled": false,
+      "triageClass": "Class B",
+      "reason": "Standard safe interactive control"
+    }
+  ]
+}

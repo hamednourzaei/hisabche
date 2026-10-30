@@ -66,6 +66,7 @@ export default function robots(): MetadataRoute.Robots {
     '/*/permissions',
     '/*/approvals',
     '/*/activities',
+    '/*/audit',
     '/*/sync-center',
     '/*/quick-invoice',
     '/*/workflow-templates',

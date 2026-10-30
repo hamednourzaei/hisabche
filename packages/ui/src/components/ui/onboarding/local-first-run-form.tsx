@@ -41,6 +41,12 @@ export interface LocalFirstRunFormProps {
   /** The business name as typed. */
   name: string
   onNameChange: (name: string) => void
+  /** The owner's display name. */
+  ownerName?: string | undefined
+  onOwnerNameChange?: ((ownerName: string) => void) | undefined
+  /** Optional email or contact address. */
+  ownerEmail?: string | undefined
+  onOwnerEmailChange?: ((ownerEmail: string) => void) | undefined
   /** The chosen books currency, or null when nothing has been chosen. */
   currency: string | null
   onCurrencyChange: (code: string) => void
@@ -67,6 +73,10 @@ export interface LocalFirstRunFormProps {
 export const LocalFirstRunForm = memo(function LocalFirstRunForm({
   name,
   onNameChange,
+  ownerName = '',
+  onOwnerNameChange,
+  ownerEmail = '',
+  onOwnerEmailChange,
   currency,
   onCurrencyChange,
   timeZone,
@@ -82,28 +92,50 @@ export const LocalFirstRunForm = memo(function LocalFirstRunForm({
   return (
     <div className="mx-auto w-full max-w-3xl">
       <h2 className="mb-2 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-3 sm:text-2xl">
-        {t('auth.offlineFirstRun.title', 'کسب‌وکار خود را بسازید')}
+        {t('auth.offlineFirstRun.title')}
       </h2>
       <p className="mb-6 text-center text-sm text-[hsl(var(--fg-secondary))] sm:mb-8">
-        {t(
-          'auth.offlineFirstRun.description',
-          'این کسب‌وکار روی همین دستگاه ساخته می‌شود و به اینترنت نیاز ندارد.',
-        )}
+        {t('auth.offlineFirstRun.description')}
       </p>
+
+      {/* Owner name — real identity */}
+      {onOwnerNameChange ? (
+        <div className="mb-6 sm:mb-8">
+          <label
+            htmlFor="offline-first-run-owner-name"
+            className="mb-1.5 block text-sm font-semibold text-[hsl(var(--fg-primary))]"
+          >
+            {t('auth.offlineFirstRun.ownerName')}
+          </label>
+          <input
+            id="offline-first-run-owner-name"
+            type="text"
+            value={ownerName}
+            onChange={(event) => onOwnerNameChange(event.target.value)}
+            placeholder={t('auth.offlineFirstRun.ownerNamePlaceholder')}
+            className={cn(
+              'w-full rounded-xl border p-3 text-sm outline-none',
+              'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+              'text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))]',
+              'focus:border-[hsl(var(--color-primary))]',
+            )}
+          />
+        </div>
+      ) : null}
 
       <div className="mb-6 sm:mb-8">
         <label
           htmlFor="offline-first-run-name"
           className="mb-1.5 block text-sm font-semibold text-[hsl(var(--fg-primary))]"
         >
-          {t('auth.offlineFirstRun.name', 'نام کسب‌وکار')}
+          {t('auth.offlineFirstRun.name')}
         </label>
         <input
           id="offline-first-run-name"
           type="text"
           value={name}
           onChange={(event) => onNameChange(event.target.value)}
-          placeholder={t('auth.offlineFirstRun.namePlaceholder', 'مثلاً فروشگاه مرکزی')}
+          placeholder={t('auth.offlineFirstRun.namePlaceholder')}
           className={cn(
             'w-full rounded-xl border p-3 text-sm outline-none',
             'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
@@ -113,12 +145,37 @@ export const LocalFirstRunForm = memo(function LocalFirstRunForm({
         />
       </div>
 
+      {onOwnerEmailChange ? (
+        <div className="mb-6 sm:mb-8">
+          <label
+            htmlFor="offline-first-run-owner-email"
+            className="mb-1.5 block text-sm font-semibold text-[hsl(var(--fg-primary))]"
+          >
+            {t('auth.offlineFirstRun.ownerEmail')}
+          </label>
+          <input
+            id="offline-first-run-owner-email"
+            type="text"
+            dir="ltr"
+            value={ownerEmail}
+            onChange={(event) => onOwnerEmailChange(event.target.value)}
+            placeholder={t('auth.offlineFirstRun.ownerEmailPlaceholder')}
+            className={cn(
+              'w-full rounded-xl border p-3 text-sm outline-none text-start',
+              'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+              'text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))]',
+              'focus:border-[hsl(var(--color-primary))]',
+            )}
+          />
+        </div>
+      ) : null}
+
       <div className="mb-6 sm:mb-8">
         <label
           htmlFor="offline-first-run-time-zone"
           className="mb-1.5 block text-sm font-semibold text-[hsl(var(--fg-primary))]"
         >
-          {t('auth.offlineFirstRun.timeZone', 'منطقه‌ی زمانی')}
+          {t('auth.offlineFirstRun.timeZone')}
         </label>
         {/* A searchable list, not a text box: few people can type «Asia/Kabul»,
             and a misspelt zone is a book whose «today» is wrong. Same list
@@ -130,19 +187,16 @@ export const LocalFirstRunForm = memo(function LocalFirstRunForm({
           value={timeZone}
           onChange={onTimeZoneChange}
           options={timeZoneOptions(timeZone)}
-          aria-label={t('auth.offlineFirstRun.timeZone', 'منطقه‌ی زمانی')}
+          aria-label={t('auth.offlineFirstRun.timeZone')}
           className="w-full"
         />
         <p className="mt-1.5 text-xs text-[hsl(var(--fg-secondary))]">
-          {t(
-            'auth.offlineFirstRun.timeZoneHint',
-            'منطقه‌ی زمانی دستگاه پیشنهاد شده است؛ «امروز» در دفاتر با همین منطقه حساب می‌شود.',
-          )}
+          {t('auth.offlineFirstRun.timeZoneHint')}
         </p>
       </div>
 
       <h3 className="mb-5 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-8 sm:text-2xl">
-        {t('auth.offlineFirstRun.currency', 'ارز دفاتر')}
+        {t('auth.offlineFirstRun.currency')}
       </h3>
       <CurrencyPicker value={currency} onChange={onCurrencyChange} lang={lang} t={t} />
 
@@ -151,7 +205,7 @@ export const LocalFirstRunForm = memo(function LocalFirstRunForm({
       {isMetal(currency) ? (
         <div className="mt-5 flex flex-col items-center gap-2">
           <span className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
-            {t('settings.metalUnit.title', 'واحد نمایش فلز')}
+            {t('settings.metalUnit.title')}
           </span>
           <MetalUnitPicker />
         </div>
@@ -183,9 +237,7 @@ export const LocalFirstRunForm = memo(function LocalFirstRunForm({
             'motion-reduce:transition-none',
           )}
         >
-          {isSubmitting
-            ? t('auth.offlineFirstRun.creating', 'در حال ساخت…')
-            : t('auth.offlineFirstRun.submit', 'ساخت کسب‌وکار و شروع')}
+          {isSubmitting ? t('auth.offlineFirstRun.creating') : t('auth.offlineFirstRun.submit')}
         </button>
       </div>
     </div>

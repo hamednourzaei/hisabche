@@ -382,7 +382,7 @@ Rendered programmatically by bespoke visual component.
 
 ## 11. Source Files
 
-- Reel definition: [`src/reels/reel-71-full-cycle.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-71-full-cycle.ts) (Lines 1–142)
+- Reel definition: [`src/reels/reel-71-full-cycle.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-71-full-cycle.ts) (Lines 1–147)
 - Scene component: [`src/scenes/full-cycle.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/full-cycle.tsx) (Lines 1–823)
 - Registry entry: [`src/data/reel-registry.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/data/reel-registry.ts)
 - Motion catalogue: [`docs/motion-catalogue/registry.json`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/docs/motion-catalogue/registry.json)

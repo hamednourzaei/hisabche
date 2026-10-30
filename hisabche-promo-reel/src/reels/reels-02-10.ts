@@ -13,9 +13,11 @@ const reel = (
   title: string,
   parts: Parameters<typeof sequence>[0],
   theme?: Reel['theme'],
+  options?: { noZoom?: boolean | undefined } | undefined,
 ): Reel => {
-  const scenes = sequence(parts)
-  return { id, title, duration: total(scenes), scenes, theme }
+  const isNoZoom = options?.noZoom ?? true
+  const scenes = sequence(parts, { noZoom: isNoZoom })
+  return { id, title, duration: total(scenes), scenes, theme, noZoom: isNoZoom }
 }
 
 // ─── 02. One sale; multiple traceable effects (45s) [Theme: Dark-Neon] ───
@@ -112,6 +114,7 @@ export const reel02 = reel(
     ctaScene(6),
   ],
   'dark-neon',
+  { noZoom: true },
 )
 
 // ─── 03. You gave credit; what is the balance now? (50s) [Theme: Midnight-Gold] ─
@@ -185,6 +188,7 @@ export const reel03 = reel(
     ctaScene(12),
   ],
   'midnight-gold',
+  { noZoom: true },
 )
 
 // ─── 04. Sales were high; what about profit? (50s) [Theme: Financial-Intelligence] ─
@@ -263,6 +267,7 @@ export const reel04 = reel(
     ctaScene(11),
   ],
   'financial-intelligence',
+  { noZoom: true },
 )
 
 // ─── 05. Internet disconnected; what still works? (45s) [Theme: Procedural-Spatial] ─
@@ -332,6 +337,7 @@ export const reel05 = reel(
     ctaScene(8),
   ],
   'procedural-spatial',
+  { noZoom: true },
 )
 
 // ─── 06. Multiple currencies in one business (50s) [Theme: Cyber-Emerald] ─

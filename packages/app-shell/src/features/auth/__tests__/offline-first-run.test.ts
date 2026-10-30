@@ -83,6 +83,20 @@ describe('a fresh install', () => {
     // Not a Persian string written into the code: the catalog decides.
     expect(state.session?.user.fullName).toBe(localUserDisplayName())
   })
+
+  it('the owner is signed in with their real name and email when provided', () => {
+    const customWorkspace = {
+      ...WORKSPACE,
+      ownerName: 'حاجی حمید',
+      ownerEmail: 'haji@lolokhan.af',
+    }
+    useAuthStore.getState().startOfflineSession(customWorkspace)
+
+    const state = useAuthStore.getState()
+    expect(state.session?.user.fullName).toBe('حاجی حمید')
+    expect(state.session?.user.email).toBe('haji@lolokhan.af')
+    expect(state.session?.user.businessName).toBe(WORKSPACE.name)
+  })
 })
 
 describe('a restart', () => {

@@ -14,9 +14,11 @@ const reel = (
   title: string,
   parts: Parameters<typeof sequence>[0],
   theme?: Reel['theme'],
+  options?: { noZoom?: boolean | undefined } | undefined,
 ): Reel => {
-  const scenes = sequence(parts)
-  return { id, title, duration: total(scenes), scenes, theme }
+  const isNoZoom = options?.noZoom ?? true
+  const scenes = sequence(parts, { noZoom: isNoZoom })
+  return { id, title, duration: total(scenes), scenes, theme, noZoom: isNoZoom }
 }
 
 // ─── 11. Bounced cheque & forgotten installments (59s) ───────────────────

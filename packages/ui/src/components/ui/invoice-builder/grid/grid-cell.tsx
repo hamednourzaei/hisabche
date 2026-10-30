@@ -91,10 +91,10 @@ export const GridCell = memo(function GridCell({
     [onKeyDown, rowIndex, columnIndex],
   )
 
-  // ⚠️ The header translates `labelKey`; the cell used `column.label`, which is
-  // the schema's PERSIAN fallback. On the English invoice form every input was
-  // announced as «تعداد / واحد / قیمت واحد» by a screen reader and by the
-  // browser's own accessibility tree (live audit B5).
+  // The header translates `labelKey` (`invoice-items-grid.tsx`). The cell's
+  // accessible name has to be the same string: using the schema's `label`
+  // announced the Persian fallback — «تعداد», «قیمت واحد» — inside the English
+  // invoice builder, to a screen reader and to anything reading aria-label.
   const columnLabel = column.labelKey ? t(column.labelKey, column.label) : column.label
 
   // ── computed ───────────────────────────────────────────────────────────

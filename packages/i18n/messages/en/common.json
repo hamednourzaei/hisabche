@@ -1677,7 +1677,11 @@
       "submit": "Create the business and start",
       "creating": "Creating…",
       "failed": "The local business could not be created",
-      "timeZoneRequired": "Time zone is required"
+      "timeZoneRequired": "Time zone is required",
+      "ownerName": "Owner Name",
+      "ownerNamePlaceholder": "e.g. Haji Hamid",
+      "ownerEmail": "Email or contact (optional)",
+      "ownerEmailPlaceholder": "e.g. info@example.com"
     },
     "offlineLicense": {
       "title": "Offline-edition licence",
@@ -2091,7 +2095,7 @@
     "summaryUnavailable": "Unavailable",
     "deleteHasSales": "This product appears on invoices and can’t be deleted; deactivate it instead.",
     "deleteHasStockHistory": "This product has stock history and can’t be deleted; deactivate it instead.",
-    "deleteFailed": "The product could not be deleted.",
+    "deleteFailed": "Could not delete the account",
     "addWarehouse": "Add warehouse",
     "addWarehouseHint": "The name of the warehouse or branch where goods are kept.",
     "warehouseName": "Warehouse",
@@ -2164,7 +2168,7 @@
     "addProductDescription": "Enter the new product’s name, unit, price and opening stock.",
     "balance": "Balance",
     "change": "Change",
-    "deleteConfirm": "Delete this product?",
+    "deleteConfirm": "Delete this customer or supplier? This cannot be undone.",
     "noMovements": "No movements recorded for this product.",
     "notFound": "Product not found",
     "onHand": "On hand",
@@ -2743,7 +2747,8 @@
     "stable": "Stable",
     "localStorage": "Local storage",
     "syncNow_description": "Synchronize your data right away",
-    "pendingLabel": "Waiting to send"
+    "pendingLabel": "Waiting to send",
+    "localActive": "Active on this device"
   },
   "validation": {
     "required": "This field is required",
@@ -3897,7 +3902,13 @@
     "requiresApproval": "Requires approval",
     "approved": "Approved",
     "rejected": "Rejected",
-    "activityOne": "activity"
+    "activityOne": "activity",
+    "saleInvoiceCreated": "Sales invoice registered",
+    "purchaseInvoiceCreated": "Purchase invoice registered",
+    "paymentReceived": "Payment received",
+    "paymentSent": "Payment registered",
+    "newCustomerAdded": "New customer added",
+    "activityCount": "{count, plural, =1 {1 activity} other {# activities}}"
   },
   "time": {
     "justNow": "Just now",
@@ -3972,7 +3983,7 @@
     "paid": "Paid",
     "completed": "Completed",
     "cancelled": "Cancelled",
-    "partial": "Partially paid",
+    "partial": "Partial",
     "overdue": "Overdue",
     "draft": "Draft"
   },
@@ -7779,10 +7790,10 @@
   },
   "customer360": {
     "weOweIncludesReturns": "Includes credit from returns",
-    "deleteCustomer": "Delete customer",
+    "deleteCustomer": "Delete account",
     "deleteConfirm": "Delete this customer? This cannot be undone.",
     "deleteFailed": "Could not delete the customer",
-    "deleteBlocked": "This customer has invoices or payments and cannot be deleted.",
+    "deleteBlocked": "This customer or supplier has invoices or payments and cannot be deleted.",
     "netBalance": "Net balance",
     "netOwesUs": "owes us",
     "netWeOwe": "we owe",
@@ -8453,7 +8464,7 @@
     "listTitle": "Orders",
     "count": "Count",
     "loading": "Loading orders…",
-    "notConfigured": "Orders are not set up on the server yet (the third database script has not been run).",
+    "notConfigured": "The orders service is currently unavailable or undergoing setup. Please contact support if this persists.",
     "forbidden": "You are not allowed to see orders.",
     "loadError": "Orders could not be loaded.",
     "emptyAll": "No orders yet.",
@@ -8515,7 +8526,7 @@
   "storefront": {
     "title": "Sell from your own website",
     "help": "With a public key, your website reads products and availability from Hisabche and places orders. Prices and totals are always set by Hisabche, never by the website.",
-    "notConfigured": "The website storefront is not set up on the server yet (the third database script has not been run).",
+    "notConfigured": "The website storefront service is currently unavailable or undergoing setup. Please contact support if this persists.",
     "openOrders": "Open orders",
     "confirmation": "Website order confirmation",
     "confirmationManual": "Manual — I confirm each order",
@@ -10732,7 +10743,9 @@
     "operations": "Operations",
     "developers": "Developers",
     "marketplace": "Marketplace",
-    "stock-count": "Stock count"
+    "stock-count": "Stock count",
+    "sync-center": "Sync Center",
+    "onboarding": "Onboarding"
   },
   "warehouseShelves": {
     "all": "All warehouses",

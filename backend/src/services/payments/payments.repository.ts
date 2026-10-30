@@ -100,6 +100,8 @@ export interface ReturnEffectRow {
   applied: number
   /** Returns on money already paid: what the business now owes the customer. */
   credit: number
+  /** Invoices that were still owed and whose whole remaining debt the returns cancelled. */
+  closedInvoices: number
 }
 
 export interface PaymentRow {
@@ -708,9 +710,11 @@ export class PaymentsRepository {
         currency: invoice.currency,
         applied: 0,
         credit: 0,
+        closedInvoices: 0,
       }
       row.applied = Math.round((row.applied + effect.applied) * 100) / 100
       row.credit = Math.round((row.credit + effect.credit) * 100) / 100
+      if (effect.applied > 0 && effect.outstanding <= 0) row.closedInvoices += 1
       effects.set(key, row)
     }
     return [...effects.values()]

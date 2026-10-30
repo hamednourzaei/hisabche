@@ -66,6 +66,7 @@ interface ApprovalsViewProps {
   hasActiveWorkflow: boolean | null
   /** Take the user to where an approval workflow is actually defined. */
   onDefineWorkflow: () => void
+  showHeader?: boolean | undefined
 }
 
 const STATUS_TONE: Record<string, string> = { pending: 'warn', in_progress: 'neutral' }
@@ -94,6 +95,7 @@ export const ApprovalsView = memo(function ApprovalsView({
   onRetry,
   hasActiveWorkflow,
   onDefineWorkflow,
+  showHeader = true,
 }: ApprovalsViewProps) {
   const { date } = useDateFormat()
   const [statusFilter, setStatusFilter] = useState('all')
@@ -171,15 +173,17 @@ export const ApprovalsView = memo(function ApprovalsView({
 
   return (
     <CapabilityPage>
-      <CapabilityHeader
-        title={t('nav.approvals', 'در انتظار تأیید شما')}
-        description={t('nav.approvals_description', 'درخواست‌هایی که باید تأیید یا رد کنید')}
-        action={
-          <ActionButton variant="quiet" onClick={onRetry} disabled={isLoading}>
-            {t('common.refresh', 'تازه‌سازی')}
-          </ActionButton>
-        }
-      />
+      {showHeader && (
+        <CapabilityHeader
+          title={t('nav.approvals', 'در انتظار تأیید شما')}
+          description={t('nav.approvals_description', 'درخواست‌هایی که باید تأیید یا رد کنید')}
+          action={
+            <ActionButton variant="quiet" onClick={onRetry} disabled={isLoading}>
+              {t('common.refresh', 'تازه‌سازی')}
+            </ActionButton>
+          }
+        />
+      )}
 
       <StatGrid>
         <Stat

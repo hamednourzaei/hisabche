@@ -380,7 +380,7 @@ Rendered programmatically by bespoke visual component.
 ## 11. Source Files
 
 - Reel definition: [`src/reels/reel-78-fx-rate-fluctuation.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/reels/reel-78-fx-rate-fluctuation.ts) (Lines 1–142)
-- Scene component: [`src/scenes/fx-rate-fluctuation.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/fx-rate-fluctuation.tsx) (Lines 1–895)
+- Scene component: [`src/scenes/fx-rate-fluctuation.tsx`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/scenes/fx-rate-fluctuation.tsx) (Lines 1–997)
 - Registry entry: [`src/data/reel-registry.ts`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/src/data/reel-registry.ts)
 - Motion catalogue: [`docs/motion-catalogue/registry.json`](file:///C:/Users/hamed/Desktop/hisabche/hisabche-promo-reel/docs/motion-catalogue/registry.json)
 
