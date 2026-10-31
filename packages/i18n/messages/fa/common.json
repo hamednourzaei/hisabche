@@ -3380,6 +3380,9 @@
     "leaveFromToday": "از امروز، به مدت {days} روز (تا {end})",
     "leaveDaysInvalid": "تعداد روز باید عددی بزرگ‌تر از صفر باشد.",
     "payroll_paid": "پرداخت شده",
+    "payroll_booked": "ثبت‌شده در دفتر کل",
+    "payroll_not_booked": "ثبت‌نشده در دفتر کل",
+    "payroll_rebook": "ثبت مجدد در دفتر کل",
     "payroll_draft": "پیش‌نویس",
     "payroll_approved": "تأیید شده",
     "payroll_cancelled": "لغو شده",
@@ -3406,6 +3409,9 @@
       "confirmPaid": "تأیید پرداخت",
       "confirmNotPaid": "ثبت پرداخت‌نشدن",
       "alreadyPaid": "این حقوق قبلاً پرداخت‌شده ثبت شده و تغییر نمی‌کند.",
+      "rebook": "ثبت در دفتر کل",
+      "rebooked": "در دفتر کل ثبت شد.",
+      "notBooked": "در دفتر کل ثبت نشد: {reason}",
       "failed": "ذخیره نشد. دوباره تلاش کنید."
     },
     "leaveApprove": "تأیید مرخصی",
@@ -3543,6 +3549,8 @@
       "reports": "گزارش‌ها",
       "budgets": "بودجه",
       "people": "همکاران",
+      "purchasing": "خرید",
+      "stocktake": "شمارش انبار",
       "workspace": "کسب‌وکار و اعضا"
     },
     "lockedCell": "این خانه قابل تغییر نیست.",

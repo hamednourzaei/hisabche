@@ -3,16 +3,16 @@
 // Runs docs/cloud-migration-01-migration.sql TWICE on real Postgres.
 // ============================================
 
-import { mkdtempSync, readFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import EmbeddedPostgres from 'embedded-postgres'
 import postgres from 'postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { freePortSync } from './helpers/free-port'
+import { pgTempDir } from './helpers/pg-temp-dir'
 
 const PORT = freePortSync()
-const dir = mkdtempSync(join(tmpdir(), 'hisabche-pg-cmig-'))
+const dir = pgTempDir('hisabche-pg-cmig-')
 const pg = new EmbeddedPostgres({
   databaseDir: dir,
   port: PORT,

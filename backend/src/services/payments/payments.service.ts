@@ -11,6 +11,7 @@
 
 import { randomUUID } from 'node:crypto'
 import { baseCurrencyOf } from '../base-currency'
+import { businessDayOf } from '../../utils/local-day'
 import { ConflictError, NotFoundError } from '../../errors/database.error'
 import {
   asReplay,
@@ -98,7 +99,7 @@ export interface RecordPaymentInput {
   feeAmount?: number | undefined
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = (timeZone?: string) => businessDayOf(new Date(), timeZone)
 
 export class PaymentsService {
   private readonly repo: PaymentsRepository
@@ -194,7 +195,7 @@ export class PaymentsService {
     }
 
     const amount = round2(input.amount)
-    const entryDate = (input.entryDate ?? today()).slice(0, 10)
+    const entryDate = (input.entryDate ?? today(ctx?.timeZone)).slice(0, 10)
 
     const explicit = input.allocations && input.allocations.length > 0
 
@@ -767,7 +768,7 @@ export class PaymentsService {
   async getAging(
     ctx: TenancyContext,
     kind: 'receivable' | 'payable',
-    asOf: string = today(),
+    asOf: string = today(ctx.timeZone),
   ): Promise<{
     asOf: string
     totals: AgingBuckets
@@ -843,7 +844,7 @@ export class PaymentsService {
     ctx: TenancyContext,
     partyType: PartyType,
     partyId: string,
-    asOf: string = today(),
+    asOf: string = today(ctx.timeZone),
   ) {
     const rows = await this.repo.partyMovements(ctx.workspaceId, partyType, partyId)
     return buildPartySummary({
@@ -877,7 +878,7 @@ export class PaymentsService {
     ctx: TenancyContext,
     partyType: PartyType,
     partyId: string,
-    asOf: string = today(),
+    asOf: string = today(ctx.timeZone),
   ): Promise<{ monthly: MonthlyActivity[]; products: PartyProduct[] }> {
     const rows = await this.repo.partyMovements(ctx.workspaceId, partyType, partyId)
     const lines = await this.repo.invoiceLines(

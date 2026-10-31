@@ -3,14 +3,13 @@
 // rule — the engine calls the same functions (@hisabche/validation) the backend
 // does, so these tests fail if the device ever answers differently.
 import { describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WORKSPACE_ID } from './test-db'
+import { createTestDb, TEST_WORKSPACE_ID, createTestEngine } from './test-db'
 
 type Json = Record<string, any>
 
 function setup() {
   const db = createTestDb()
-  const engine = createLocalEngine(db)
+  const engine = createTestEngine(db)
   const call = async (method: any, path: string, body?: unknown) => {
     const res = await engine.request<Json>({
       method,

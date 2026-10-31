@@ -7,16 +7,16 @@
 // under real concurrency, so nothing here is mocked.
 // ============================================
 
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import EmbeddedPostgres from 'embedded-postgres'
 import postgres from 'postgres'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { freePortSync } from './helpers/free-port'
+import { pgTempDir } from './helpers/pg-temp-dir'
 
 const PORT = freePortSync()
-const dir = mkdtempSync(join(tmpdir(), 'hisabche-pg-'))
+const dir = pgTempDir('hisabche-pg-')
 // UTF8 like Supabase — Windows' initdb default (WIN1252) cannot store the migration's own text.
 const pg = new EmbeddedPostgres({
   databaseDir: dir,

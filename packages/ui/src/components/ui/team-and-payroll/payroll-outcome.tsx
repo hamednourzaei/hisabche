@@ -20,7 +20,7 @@
 
 import { useState } from 'react'
 import { CircleCheck, CircleX, Hourglass } from 'lucide-react'
-import { apiErrorMessage, useSettlePayroll } from '@hisabche/api'
+import { apiErrorMessage, useBookPayroll, useSettlePayroll } from '@hisabche/api'
 import { isPayrollFinal } from '@hisabche/validation'
 
 import { ActionButton, ErrorNote } from '../capability/capability-kit'
@@ -58,6 +58,8 @@ export function PayrollOutcome({
   row: PayrollOutcomeRow
 }) {
   const settle = useSettlePayroll()
+  const book = useBookPayroll()
+  const [bookNote, setBookNote] = useState<string | null>(null)
   const { date: fmtDay } = useDateFormat()
   const [asking, setAsking] = useState<Asking>(null)
   const [paidOn, setPaidOn] = useState('')
@@ -148,7 +150,40 @@ export function PayrollOutcome({
         ) : null}
       </span>
 
-      {isPaid ? null : (
+      {isPaid ? (
+        // ⚠️ A PAID SALARY IS FINAL, BUT ITS LEDGER ENTRY MAY NOT EXIST. When the
+        // chart of accounts could not express it at the time, the salary stayed
+        // out of the books and no screen could say so or fix it. Booking is
+        // idempotent on the server, so this is safe to press at any time.
+        <span className="flex shrink-0 flex-col items-end gap-1 text-xs">
+          <button
+            type="button"
+            className="rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] px-2 py-1 text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] disabled:opacity-50"
+            disabled={book.isPending}
+            onClick={async () => {
+              setBookNote(null)
+              try {
+                const result = await book.mutateAsync(row.id)
+                setBookNote(
+                  result.bookingStatus.booked
+                    ? t('hr.outcome.rebooked', 'در دفتر کل ثبت شد.')
+                    : t('hr.outcome.notBooked', 'در دفتر کل ثبت نشد: {reason}').replace(
+                        '{reason}',
+                        result.bookingStatus.reason ?? '',
+                      ),
+                )
+              } catch (err) {
+                setBookNote(apiErrorMessage(err, t('hr.outcome.failed', 'ذخیره نشد.')))
+              }
+            }}
+          >
+            {t('hr.outcome.rebook', 'ثبت در دفتر کل')}
+          </button>
+          {bookNote ? (
+            <span className="max-w-[16rem] text-[hsl(var(--fg-tertiary))]">{bookNote}</span>
+          ) : null}
+        </span>
+      ) : (
         <span className="flex shrink-0 items-center gap-1">
           <button
             type="button"

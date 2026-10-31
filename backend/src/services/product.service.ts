@@ -23,6 +23,7 @@ import type { TenancyContext } from './tenancy.service'
 import { logBusinessEvent } from './event-log.service'
 import { costing } from './inventory-costing'
 import { ledger } from './accounting'
+import { businessDayOf } from '../utils/local-day'
 import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
 import {
   asReplay,
@@ -530,7 +531,7 @@ export class ProductService {
   ): Promise<void> {
     const unitCost = Number(buyPrice) || 0
     if (unitCost <= 0) return
-    const entryDate = new Date().toISOString().slice(0, 10)
+    const entryDate = businessDayOf(new Date(), ctx?.timeZone)
     let valued = 0
     for (const entry of entries) {
       if (!(entry.quantity > 0)) continue

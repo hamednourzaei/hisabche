@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getAppEdition } from '@hisabche/api'
 
 import { bridge } from '@/shared/lib/bridge'
-import { runSync, startSyncStream } from './sync-engine'
+import { resetTransientFailuresOnReconnect, runSync, startSyncStream } from './sync-engine'
 import type { QueueEntry } from '@hisabche/app-bridge'
 
 const QUEUE_KEY = ['desktop', 'sync', 'queue'] as const
@@ -86,16 +86,18 @@ export function useBackgroundSync(workspaceId: string | null): void {
   useEffect(() => {
     if (typeof getAppEdition === 'function' && getAppEdition() === 'offline') return
     const trigger = () => void runSync(queryClient)
+    const onReconnect = () =>
+      void resetTransientFailuresOnReconnect().then(() => runSync(queryClient))
 
     trigger()
-    window.addEventListener('online', trigger)
+    window.addEventListener('online', onReconnect)
     const timer = window.setInterval(trigger, BACKGROUND_INTERVAL_MS)
     // Near-realtime: another device's sale reaches this one within seconds.
     // The interval above stays as the floor — the stream only makes it sooner.
     const stream = workspaceId ? startSyncStream(workspaceId, trigger) : null
 
     return () => {
-      window.removeEventListener('online', trigger)
+      window.removeEventListener('online', onReconnect)
       window.clearInterval(timer)
       stream?.stop()
     }

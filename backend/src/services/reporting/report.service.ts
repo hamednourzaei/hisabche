@@ -24,6 +24,7 @@
 // many groupings, a non-additive figure spread over time.
 // ============================================
 
+import { businessDayOf } from '../../utils/local-day'
 import { supabase } from '../../db'
 import { BaseError } from '../../errors/base.error'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
@@ -296,7 +297,7 @@ export class ReportService {
 
     return {
       report,
-      asOf: new Date().toISOString().slice(0, 10),
+      asOf: businessDayOf(new Date(), ctx.timeZone),
       totalRows: ordered.length,
       maxRows: REPORT_MAX_ROWS,
       rows: kept.map((group) => {

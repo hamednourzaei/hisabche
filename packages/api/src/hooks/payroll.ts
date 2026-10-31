@@ -4,8 +4,10 @@
 // ============================================
 'use client'
 
+import { useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../lib/client'
+import { isDefinitiveRefusal } from '../lib/intent-key'
 import { useAuthReady } from './useAuthReady'
 
 // ─── Keys ───────────────────────────────────────────────────
@@ -53,14 +55,60 @@ export function usePayrollSummary() {
   })
 }
 
+/** A fresh UUID for one intent, or undefined where the runtime cannot make one. */
+function newRequestId(): string | undefined {
+  return (globalThis as { crypto?: { randomUUID?: () => string } }).crypto?.randomUUID?.()
+}
+
 export function useCreatePayroll() {
   const qc = useQueryClient()
+  // ⚠️ ONE KEY PER SALARY, KEPT ACROSS RETRIES. A lost response or a second click
+  // used to record the salary twice — two rows and two journal entries. The
+  // server returns the first row for the same key; the key is dropped only once
+  // the server has given a final answer.
+  const requestId = useRef<string | null>(null)
   return useMutation({
     mutationFn: async (values: Record<string, unknown>) => {
-      const { data } = await apiClient.post('/payrolls', values)
+      requestId.current ??= newRequestId() ?? null
+      const clientRequestId = requestId.current
+      const { data } = await apiClient.post(
+        '/payrolls',
+        clientRequestId ? { ...values, clientRequestId } : values,
+      )
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: payrollKeys.all }),
+    onError: (error) => {
+      if (isDefinitiveRefusal(error)) requestId.current = null
+    },
+    onSuccess: () => {
+      requestId.current = null
+      return qc.invalidateQueries({ queryKey: payrollKeys.all })
+    },
+  })
+}
+
+export interface PayrollBooking {
+  bookingStatus: { booked: boolean; reason?: string }
+}
+
+/**
+ * Book a PAID salary into the ledger again. Idempotent on the server — a salary
+ * that is already booked answers booked, one whose accounts were missing is
+ * booked now — so it is safe to press twice. Without it a salary recorded as
+ * paid while the chart of accounts could not express it stayed out of the books
+ * for good (a paid salary is final and cannot be settled again).
+ */
+export function useBookPayroll() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await apiClient.post(`/payrolls/${id}/book`, {})
+      return data as PayrollBooking
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: payrollKeys.all })
+      void qc.invalidateQueries({ queryKey: ['ledger'] })
+    },
   })
 }
 

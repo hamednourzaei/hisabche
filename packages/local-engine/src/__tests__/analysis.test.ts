@@ -8,21 +8,20 @@
 // ============================================
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WAREHOUSE_ID, TEST_WORKSPACE_ID } from './test-db'
+import { createTestDb, TEST_WAREHOUSE_ID, TEST_WORKSPACE_ID, createTestEngine } from './test-db'
 
 const iso = (offsetDays: number) =>
   new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10)
 
 describe('analysis on the device', () => {
   let db: ReturnType<typeof createTestDb>
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
   let customerId: string
   let productId: string
 
   beforeEach(async () => {
     db = createTestDb()
-    engine = createLocalEngine(db)
+    engine = createTestEngine(db)
     const customer = await engine.request({
       method: 'POST',
       path: '/customers',

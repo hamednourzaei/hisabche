@@ -1,0 +1,1044 @@
+{
+  "audit": "BUG-DISCOVERY-100",
+  "date": "2026-10-31",
+  "status": "INCOMPLETE",
+  "previousRegistry": {
+    "source": "docs/qa/BUG-90-REMEDIATION-TRACKER.md",
+    "count90": 90,
+    "count30": 30,
+    "note": "the 30-scenario audit rows are listed by number in BUG-SCENARIO-DISCOVERY-30.md and were not re-verified one by one",
+    "rows": [
+      {
+        "previousId": "90-01A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Purchase Return Accounting",
+        "affectedFiles": "invoice-return-02-purchase-return-accounting-migration.sql",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-01B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Purchase Return Accounting",
+        "affectedFiles": "invoice-returns.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-01C",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Purchase Return Accounting",
+        "affectedFiles": "invoice-return-02-purchase-return-accounting-migration.sql",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-02A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Foreign-Currency Till Closing",
+        "affectedFiles": "pos.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-02B",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Foreign-Currency Till Closing",
+        "affectedFiles": "till.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "PARTIALLY_FIXED",
+        "currentEvidence": "enqueue exists (till.ts:805) but entity pos_session has no push endpoint (BUG-NEW-001)"
+      },
+      {
+        "previousId": "90-02C",
+        "originalStatus": "POTENTIAL_RISK",
+        "domain": "Foreign-Currency Till Closing",
+        "affectedFiles": "till.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-03A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Expired Subscription Renewal",
+        "affectedFiles": "subscription-upgrade.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-03B",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Expired Subscription Renewal",
+        "affectedFiles": "offline-license.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "PARTIALLY_FIXED",
+        "currentEvidence": "offline-license.ts verify() uses only SEEN_KEY as high-water mark; no comparison with local transaction timestamps as the tracker claims"
+      },
+      {
+        "previousId": "90-03C",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Expired Subscription Renewal",
+        "affectedFiles": "webhook.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-04A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Warehouse Cost Layers / AVCO",
+        "affectedFiles": "cost-layers.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-04B",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Warehouse Cost Layers / AVCO",
+        "affectedFiles": "invoice-return-02-purchase-return-accounting-migration.sql",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-04C",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Warehouse Cost Layers / AVCO",
+        "affectedFiles": "local-schema.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-05A",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Payment Cancellation Accounting",
+        "affectedFiles": "payments.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-05B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Payment Cancellation Accounting",
+        "affectedFiles": "payments.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-05C",
+        "originalStatus": "POTENTIAL_RISK",
+        "domain": "Payment Cancellation Accounting",
+        "affectedFiles": "payments.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-06A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Invoice Atomicity",
+        "affectedFiles": "invoice.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-06B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Invoice Atomicity",
+        "affectedFiles": "invoices.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-06C",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Invoice Atomicity",
+        "affectedFiles": "invoice.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-07A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Financial Idempotency",
+        "affectedFiles": "invoice-return.routes.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-07B",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Financial Idempotency",
+        "affectedFiles": "sync-engine.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-07C",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Financial Idempotency",
+        "affectedFiles": "client-request.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-08A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Financial Concurrency",
+        "affectedFiles": "payments.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-08B",
+        "originalStatus": "POTENTIAL_RISK",
+        "domain": "Financial Concurrency",
+        "affectedFiles": "invoices.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-08C",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Financial Concurrency",
+        "affectedFiles": "payment-allocation.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-09A",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Stock Concurrency",
+        "affectedFiles": "invoice.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-09B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Stock Concurrency",
+        "affectedFiles": "transfers.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-09C",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Stock Concurrency",
+        "affectedFiles": "invoice.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-10A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Till Concurrency",
+        "affectedFiles": "pos.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-10B",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Till Concurrency",
+        "affectedFiles": "till.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "PARTIALLY_FIXED",
+        "currentEvidence": "enqueue exists (till.ts:539) but entity pos_cash_movement has no push endpoint (BUG-NEW-001)"
+      },
+      {
+        "previousId": "90-10C",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Till Concurrency",
+        "affectedFiles": "pos.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-11A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Duplicate Payment Prevention",
+        "affectedFiles": "payments.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-11B",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Duplicate Payment Prevention",
+        "affectedFiles": "sync-engine.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-11C",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Duplicate Payment Prevention",
+        "affectedFiles": "payments.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-12A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Duplicate Sale Prevention",
+        "affectedFiles": "invoice.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-12B",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Duplicate Sale Prevention",
+        "affectedFiles": "invoices.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-12C",
+        "originalStatus": "POTENTIAL_RISK",
+        "domain": "Duplicate Sale Prevention",
+        "affectedFiles": "sync-engine.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-13A",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Offline Sync-Required Mutations",
+        "affectedFiles": "accounting.routes.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "STILL_PRESENT",
+        "currentEvidence": "routes/accounting.ts writes account/journal_entry/journal_line and the period lock with no buildEnqueue; journal_entry has no push endpoint"
+      },
+      {
+        "previousId": "90-13B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Offline Sync-Required Mutations",
+        "affectedFiles": "invoice-returns.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "PARTIALLY_FIXED",
+        "currentEvidence": "enqueue exists (invoice-returns.ts:154) but sync-engine has no endpoint for entity invoice_returns -> NO_ENDPOINT (see BUG-NEW-001)"
+      },
+      {
+        "previousId": "90-13C",
+        "originalStatus": "POTENTIAL_RISK",
+        "domain": "Offline Sync-Required Mutations",
+        "affectedFiles": "sync-engine.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-14A",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Parent/Child Sync Ordering",
+        "affectedFiles": "invoice.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-14B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Parent/Child Sync Ordering",
+        "affectedFiles": "sync-engine.ts و push-order.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-14C",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Parent/Child Sync Ordering",
+        "affectedFiles": "push-order.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-15A",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Offline Cancellation Sync",
+        "affectedFiles": "invoice.routes.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-15B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Offline Cancellation Sync",
+        "affectedFiles": "invoices.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-15C",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Offline Cancellation Sync",
+        "affectedFiles": "sync-engine.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-16A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Offline Payment Sync",
+        "affectedFiles": "payments.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-16B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Offline Payment Sync",
+        "affectedFiles": "payments.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-16C",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Offline Payment Sync",
+        "affectedFiles": "payments.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-17A",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Sync Retry / Deduplication",
+        "affectedFiles": "concurrency-safety-map.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-17B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Sync Retry / Deduplication",
+        "affectedFiles": "sync-engine.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "STILL_PRESENT",
+        "currentEvidence": "sync-engine.ts:736 skips entries with attempts >= MAX_ATTEMPTS; the only resets are buildEnqueue upsert and a manual retry"
+      },
+      {
+        "previousId": "90-17C",
+        "originalStatus": "POTENTIAL_RISK",
+        "domain": "Sync Retry / Deduplication",
+        "affectedFiles": "sync-identity.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-18A",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Sync Failure Recovery",
+        "affectedFiles": "database.error.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-18B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Sync Failure Recovery",
+        "affectedFiles": "sync-engine.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-18C",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Sync Failure Recovery",
+        "affectedFiles": "db.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-19A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Money Cache",
+        "affectedFiles": "currency.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-19B",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Money Cache",
+        "affectedFiles": "sync-engine.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-19C",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Money Cache",
+        "affectedFiles": "cache.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-20A",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Exchange Rate Cache",
+        "affectedFiles": "base-currency.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-20B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Exchange Rate Cache",
+        "affectedFiles": "invoices.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-20C",
+        "originalStatus": "POTENTIAL_RISK",
+        "domain": "Exchange Rate Cache",
+        "affectedFiles": "invoice.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-21A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Pricing Cache",
+        "affectedFiles": "price-lists.routes.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-21B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Pricing Cache",
+        "affectedFiles": "pricing.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "STILL_PRESENT",
+        "currentEvidence": "routes/pricing.ts has no buildEnqueue / sync_queue write; price_list is not in localTableSchema or ENDPOINT_BY_ENTITY"
+      },
+      {
+        "previousId": "90-21C",
+        "originalStatus": "POTENTIAL_RISK",
+        "domain": "Pricing Cache",
+        "affectedFiles": "price-list.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-22A",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Till Adjustment Cache",
+        "affectedFiles": "pos.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-22B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Till Adjustment Cache",
+        "affectedFiles": "till.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-22C",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Till Adjustment Cache",
+        "affectedFiles": "pos.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-23A",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Sensitive Mutation Concurrency",
+        "affectedFiles": "tenancy.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-23B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Sensitive Mutation Concurrency",
+        "affectedFiles": "sync.routes.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-23C",
+        "originalStatus": "POTENTIAL_RISK",
+        "domain": "Sensitive Mutation Concurrency",
+        "affectedFiles": "tenancy.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-24A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Invoice + Stock Concurrency",
+        "affectedFiles": "invoice.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-24B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Invoice + Stock Concurrency",
+        "affectedFiles": "stock-transfer.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-24C",
+        "originalStatus": "POTENTIAL_RISK",
+        "domain": "Invoice + Stock Concurrency",
+        "affectedFiles": "invoice-grid.tsx",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-25A",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Invoice + Stock Atomicity",
+        "affectedFiles": "invoice.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-25B",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Invoice + Stock Atomicity",
+        "affectedFiles": "invoices.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-25C",
+        "originalStatus": "POTENTIAL_RISK",
+        "domain": "Invoice + Stock Atomicity",
+        "affectedFiles": "invoice.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "STILL_PRESENT",
+        "currentEvidence": "plan-limits.service.ts counts rows then lets the insert run; no atomic increment as the tracker claims"
+      },
+      {
+        "previousId": "90-26A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Invoice + Ledger Consistency",
+        "affectedFiles": "invoice-posting.domain.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-26B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Invoice + Ledger Consistency",
+        "affectedFiles": "invoice.service.ts و costing",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-26C",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Invoice + Ledger Consistency",
+        "affectedFiles": "invoice.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-27A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Return + Stock/Ledger Consistency",
+        "affectedFiles": "invoice-return-02-purchase-return-accounting-migration.sql",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-27B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Return + Stock/Ledger Consistency",
+        "affectedFiles": "invoice-returns.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-27C",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Return + Stock/Ledger Consistency",
+        "affectedFiles": "invoice-return-02-purchase-return-accounting-migration.sql",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-28A",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Quantity Adjustment Safety",
+        "affectedFiles": "stock.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-28B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Quantity Adjustment Safety",
+        "affectedFiles": "sync-engine.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-28C",
+        "originalStatus": "POTENTIAL_RISK",
+        "domain": "Quantity Adjustment Safety",
+        "affectedFiles": "stock.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-29A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Sensitive Financial Idempotency",
+        "affectedFiles": "accounting.service.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "VERIFIED_FIXED",
+        "currentEvidence": "postYearEndClose keys the entry by sourceIdOf(workspace, year_end_close, from, to) on the unique source index; in-memory lock is only a fast path"
+      },
+      {
+        "previousId": "90-29B",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Sensitive Financial Idempotency",
+        "affectedFiles": "push-order.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-29C",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Sensitive Financial Idempotency",
+        "affectedFiles": "client-request.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-30A",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Authorization of Sensitive Operations",
+        "affectedFiles": "invoice.routes.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      },
+      {
+        "previousId": "90-30B",
+        "originalStatus": "CONFIRMED_BUG",
+        "domain": "Authorization of Sensitive Operations",
+        "affectedFiles": "local-engine",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "PARTIALLY_FIXED",
+        "currentEvidence": "auth.ts exists but 12 of 13 declared capabilities have zero callers in routes (verified by grep); till/accounting/transfers/payroll routes carry no guard"
+      },
+      {
+        "previousId": "90-30C",
+        "originalStatus": "HIGH_RISK_GAP",
+        "domain": "Authorization of Sensitive Operations",
+        "affectedFiles": "sync-engine.ts",
+        "reportedStatus": "FIXED_TESTED (tracker claim)",
+        "verificationStatus": "UNKNOWN",
+        "currentEvidence": "not re-verified in this audit pass (tracker claim only)"
+      }
+    ]
+  },
+  "newFindings": [
+    {
+      "id": "BUG-NEW-001",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P0",
+      "platform": "Offline",
+      "title": "Offline returns, till cash movements and till close are queued for an entity that has no push endpoint"
+    },
+    {
+      "id": "BUG-NEW-002",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P1",
+      "platform": "Both",
+      "title": "Ledger documents are dated with the UTC calendar day instead of the business day"
+    },
+    {
+      "id": "BUG-NEW-003",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P1",
+      "platform": "Offline",
+      "title": "Offline invoice cancel cancels payments but leaves their journal entries posted and hard-deletes allocations"
+    },
+    {
+      "id": "BUG-NEW-004",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P1",
+      "platform": "Offline",
+      "title": "Offline purchase-invoice cancel zeroes cost layers that later sales already consumed"
+    },
+    {
+      "id": "BUG-NEW-005",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P1",
+      "platform": "Online",
+      "title": "Cost-layer release failure is swallowed after the ledger and payments were already reversed"
+    },
+    {
+      "id": "BUG-NEW-006",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P1",
+      "platform": "Offline",
+      "title": "Local engine role is the first local_user row; user and workspace come from request headers"
+    },
+    {
+      "id": "BUG-NEW-007",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P1",
+      "platform": "Online",
+      "title": "Payroll, employee and leave mutation routes have no role or capability gate"
+    },
+    {
+      "id": "BUG-NEW-008",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P1",
+      "platform": "Online",
+      "title": "A paid payroll can stay without a journal entry and nothing can book it again"
+    },
+    {
+      "id": "BUG-NEW-009",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P1",
+      "platform": "Offline",
+      "title": "Local backup omits cost layers, per-warehouse stock, returns, till and the sync queue while meta claims completeness"
+    },
+    {
+      "id": "BUG-NEW-010",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P1",
+      "platform": "Online",
+      "title": "POST /api/payrolls is not idempotent: a retry creates a second payroll and a second journal entry"
+    },
+    {
+      "id": "BUG-NEW-011",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P2",
+      "platform": "Online",
+      "title": "Appointment conflict check reads only the first 1000 appointments and inserts without a database constraint"
+    },
+    {
+      "id": "BUG-NEW-012",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P1",
+      "platform": "Online",
+      "title": "Device activation has no seat cap, upserts on the primary key (moving a device between workspaces) and needs no capability"
+    },
+    {
+      "id": "BUG-NEW-013",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P1",
+      "platform": "Offline",
+      "title": "Local import writes customers and products as local_only and never queues them"
+    },
+    {
+      "id": "BUG-NEW-014",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P2",
+      "platform": "Offline",
+      "title": "Local import reports failed:0 always, has no duplicate handling and drops quantity"
+    },
+    {
+      "id": "BUG-NEW-015",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P1",
+      "platform": "Online",
+      "title": "Money and stock writes (purchase order receive, cycle count complete, raw transactions, licence seat/tier reports) are guarded by workspace membership alone"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "GAP-NEW-001",
+      "title": "Purchasing, payroll, installments, attendance, warehouses, branches, exchange rates and budgets write locally with no outbox path"
+    },
+    {
+      "id": "GAP-NEW-002",
+      "title": "resolveContext falls back to fixed DEFAULT_WORKSPACE_ID / DEFAULT_USER_ID when no local_workspace row exists"
+    },
+    {
+      "id": "GAP-NEW-003",
+      "title": "Licence high-water read fails open: a secure-store error or a deleted SEEN_KEY turns the clock-rollback guard off"
+    },
+    {
+      "id": "GAP-NEW-004",
+      "title": "Local backup has no restore path (meta.restorable=false)"
+    }
+  ],
+  "risks": [
+    {
+      "id": "RISK-NEW-001",
+      "title": "attendance_links.token is stored and selected as plain text while device keys are hashed"
+    }
+  ],
+  "reopened": [
+    {
+      "previousId": "90-30B",
+      "status": "PARTIALLY_FIXED",
+      "evidence": "auth.ts exists but 12 of 13 declared capabilities have zero callers in routes (verified by grep); till/accounting/transfers/payroll routes carry no guard"
+    },
+    {
+      "previousId": "90-21B",
+      "status": "STILL_PRESENT",
+      "evidence": "routes/pricing.ts has no buildEnqueue / sync_queue write; price_list is not in localTableSchema or ENDPOINT_BY_ENTITY"
+    },
+    {
+      "previousId": "90-13A",
+      "status": "STILL_PRESENT",
+      "evidence": "routes/accounting.ts writes account/journal_entry/journal_line and the period lock with no buildEnqueue; journal_entry has no push endpoint"
+    },
+    {
+      "previousId": "90-17B",
+      "status": "STILL_PRESENT",
+      "evidence": "sync-engine.ts:736 skips entries with attempts >= MAX_ATTEMPTS; the only resets are buildEnqueue upsert and a manual retry"
+    },
+    {
+      "previousId": "90-13B",
+      "status": "PARTIALLY_FIXED",
+      "evidence": "enqueue exists (invoice-returns.ts:154) but sync-engine has no endpoint for entity invoice_returns -> NO_ENDPOINT (see BUG-NEW-001)"
+    },
+    {
+      "previousId": "90-02B",
+      "status": "PARTIALLY_FIXED",
+      "evidence": "enqueue exists (till.ts:805) but entity pos_session has no push endpoint (BUG-NEW-001)"
+    },
+    {
+      "previousId": "90-10B",
+      "status": "PARTIALLY_FIXED",
+      "evidence": "enqueue exists (till.ts:539) but entity pos_cash_movement has no push endpoint (BUG-NEW-001)"
+    },
+    {
+      "previousId": "90-03B",
+      "status": "PARTIALLY_FIXED",
+      "evidence": "offline-license.ts verify() uses only SEEN_KEY as high-water mark; no comparison with local transaction timestamps as the tracker claims"
+    },
+    {
+      "previousId": "90-25C",
+      "status": "STILL_PRESENT",
+      "evidence": "plan-limits.service.ts counts rows then lets the insert run; no atomic increment as the tracker claims"
+    }
+  ],
+  "fixVerification": {
+    "date": "2026-10-31",
+    "document": "docs/qa/BUG-DISCOVERY-100-FIX-VERIFICATION.fa.md",
+    "overall": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "fixedTested": [
+      "BUG-NEW-001",
+      "BUG-NEW-002",
+      "BUG-NEW-003",
+      "BUG-NEW-004",
+      "BUG-NEW-005",
+      "BUG-NEW-007",
+      "BUG-NEW-008",
+      "BUG-NEW-009",
+      "BUG-NEW-010",
+      "BUG-NEW-013",
+      "BUG-NEW-014",
+      "21B",
+      "13A",
+      "17B",
+      "GAP-NEW-003"
+    ],
+    "partiallyFixed": ["BUG-NEW-006", "BUG-NEW-011", "BUG-NEW-012", "30B", "03B"],
+    "requiresProductDecision": ["BUG-NEW-012 seat cap", "GAP-NEW-001", "GAP-NEW-004"],
+    "open": ["25C", "GAP-NEW-002", "RISK-NEW-001", "BUG-NEW-015"],
+    "newFindingFromVerification": {
+      "id": "BUG-NEW-015",
+      "confidence": "SOURCE_CONFIRMED",
+      "severity": "P1",
+      "platform": "Online",
+      "title": "Money and stock writes (purchase order receive, cycle count complete, raw transactions, licence seat/tier reports) are guarded by workspace membership alone"
+    },
+    "regressionsCaughtInAgentWork": [
+      "purchase cancel 500 (wrong column initial_qty)",
+      "ctx.timeZone never populated",
+      "journal sync path 404",
+      "invented device seat caps",
+      "non-atomic plan-limit SQL overriding admin limits",
+      "uuid=text in device SQL",
+      "payroll idempotency key never sent by the client",
+      "2 unguarded attendance write routes",
+      "requireCapability fail-open on unknown names"
+    ]
+  }
+}

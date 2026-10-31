@@ -35,14 +35,6 @@ export const OFFLINE_SESSION_TOKEN = 'local-offline-session-token'
 /** The local owner's address. There is no mail server on a device. */
 export const OFFLINE_SESSION_EMAIL = 'local@hisabche.local'
 
-/**
- * The owner id used when the engine has not written one yet.
- *
- * The engine's own default (`22222222-…`) is what a fresh device has; this
- * one is the last resort so a session always has an id.
- */
-export const OFFLINE_FALLBACK_OWNER_ID = '00000000-0000-0000-0000-000000000001'
-
 /** What the shell needs to know about the local workspace. */
 export interface OfflineWorkspace {
   id: string
@@ -80,7 +72,10 @@ export function buildOfflineSession(workspace: OfflineWorkspace): Session {
 
   return {
     user: {
-      id: workspace.ownerId || OFFLINE_FALLBACK_OWNER_ID,
+      // ⚠️ NEVER INVENTED. The engine names the owner (workspaces list/create). With
+      // no id the requests carry no user and the engine refuses them, which is the
+      // honest outcome; a made-up id would only be refused one step later.
+      id: workspace.ownerId ?? '',
       email: cleanEmail,
       fullName,
       businessName: workspace.name,

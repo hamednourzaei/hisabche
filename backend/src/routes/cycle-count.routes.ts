@@ -14,6 +14,7 @@ import { z } from 'zod'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { CycleCountService, type CycleCountStatus } from '../services/inventory/cycle-count.service'
 
 const createSchema = z.object({
@@ -80,7 +81,7 @@ export async function cycleCountRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/cycle-counts',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('stocktake.write')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = createSchema.parse(request.body)
@@ -93,7 +94,7 @@ export async function cycleCountRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/cycle-counts/:id/lines',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('stocktake.write')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
@@ -110,7 +111,9 @@ export async function cycleCountRoutes(fastify: FastifyInstance) {
   // ⚠️ The irreversible one. This writes the ADJUSTMENT stock movements.
   fastify.post(
     '/api/cycle-counts/:id/complete',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('stocktake.complete')],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
@@ -123,7 +126,7 @@ export async function cycleCountRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/cycle-counts/:id/cancel',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('stocktake.write')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }

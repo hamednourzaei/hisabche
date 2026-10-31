@@ -9,13 +9,12 @@
 // ============================================
 
 import { describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WORKSPACE_ID, TEST_WAREHOUSE_ID } from './test-db'
+import { createTestDb, TEST_WORKSPACE_ID, TEST_WAREHOUSE_ID, createTestEngine } from './test-db'
 
 describe('Local Engine Authorization & Safety Guards (Scenarios 30B, 06B, 15B)', () => {
   it('Scenario 30B: seller role cannot delete or cancel invoices', async () => {
     const db = createTestDb()
-    const engine = createLocalEngine(db)
+    const engine = createTestEngine(db)
 
     // Seed customer and product via engine
     const custRes = await engine.request<{ id: string }>({
@@ -88,7 +87,7 @@ describe('Local Engine Authorization & Safety Guards (Scenarios 30B, 06B, 15B)',
 
   it('Scenario 30B: seller role cannot create price lists or promotions', async () => {
     const db = createTestDb()
-    const engine = createLocalEngine(db)
+    const engine = createTestEngine(db)
 
     // Seller tries to create a price list -> 403
     const sellerPriceRes = await engine.request({
@@ -134,7 +133,7 @@ describe('Local Engine Authorization & Safety Guards (Scenarios 30B, 06B, 15B)',
 
   it('Scenario 06B: DELETE /invoices/:id/projection preserves items when invoice is dirty', async () => {
     const db = createTestDb()
-    const engine = createLocalEngine(db)
+    const engine = createTestEngine(db)
 
     // Create an invoice
     const createRes = await engine.request<{ id: string }>({
@@ -184,7 +183,7 @@ describe('Local Engine Authorization & Safety Guards (Scenarios 30B, 06B, 15B)',
 
   it('Scenario 15B: cancelling an unsent offline invoice squashes its outbox create entry', async () => {
     const db = createTestDb()
-    const engine = createLocalEngine(db)
+    const engine = createTestEngine(db)
 
     // Create invoice with queue flag to record outbox entry
     const createRes = await engine.request<{ id: string }>({

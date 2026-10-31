@@ -101,8 +101,8 @@ const WS = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const OTHER = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 const INV = '11111111-1111-4111-8111-111111111111'
 const CUSTOMER = '33333333-3333-4333-8333-333333333333'
-const ctx = { workspaceId: WS, userId: 'u1', role: 'manager' } as never
-const theirs = { workspaceId: OTHER, userId: 'u2', role: 'manager' } as never
+const ctx = { workspaceId: WS, userId: 'u1', role: 'manager', timeZone: 'UTC' } as never
+const theirs = { workspaceId: OTHER, userId: 'u2', role: 'manager', timeZone: 'UTC' } as never
 
 const daysAgo = (days: number) =>
   new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10)

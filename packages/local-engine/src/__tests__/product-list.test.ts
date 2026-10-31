@@ -9,9 +9,8 @@
 // ============================================
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
 import type { LocalDb } from '../db'
-import { createTestDb, TEST_WAREHOUSE_ID, TEST_WORKSPACE_ID } from './test-db'
+import { createTestDb, TEST_WAREHOUSE_ID, TEST_WORKSPACE_ID, createTestEngine } from './test-db'
 
 const OTHER_WAREHOUSE_ID = '44444444-4444-4444-8444-444444444444'
 const OTHER_WORKSPACE_ID = '99999999-9999-4999-8999-999999999999'
@@ -25,7 +24,7 @@ interface ProductList {
 
 describe('GET /products on the device', () => {
   let db: LocalDb
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
 
   const list = async (query: Record<string, string> = {}) => {
     const res = await engine.request({ method: 'GET', path: '/products', params: query })
@@ -35,7 +34,7 @@ describe('GET /products on the device', () => {
 
   beforeEach(async () => {
     db = createTestDb()
-    engine = createLocalEngine(db)
+    engine = createTestEngine(db)
     db.run(
       `INSERT INTO warehouse (id, workspace_id, name, location, is_active, created_at, updated_at)
        VALUES (?, ?, 'انبار دوم', '', 1, datetime('now'), datetime('now'))`,

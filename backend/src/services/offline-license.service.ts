@@ -17,7 +17,7 @@ import {
 } from '@hisabche/validation'
 import { supabase } from '../db'
 import { BaseError } from '../errors/base.error'
-import { DatabaseError, NotFoundError } from '../errors/database.error'
+import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
 
 export class LicenseSigningNotConfiguredError extends BaseError {
   public readonly code = 'LICENSE_SIGNING_NOT_CONFIGURED'
@@ -35,6 +35,34 @@ export class OfflinePlanRequiredError extends BaseError {
     super(message, 403)
     this.name = 'OfflinePlanRequiredError'
   }
+}
+
+/**
+ * How many devices of one kind an offline licence holds: two computers
+ * (Windows, Mac) and two mobiles (Android, iOS) — four per account. The owner's
+ * decision (31 Oct 2026); the earlier figures in this file had no source.
+ */
+export const OFFLINE_SEATS_PER_KIND = 2
+
+/**
+ * The lowest numbered place on a seat that no active device holds. Rows from
+ * before the slot migration carry no number and hold none; they still count
+ * toward the cap, which the caller checks on the head count.
+ */
+export function nextFreeSlot(active: ReadonlyArray<{ slot?: number | null }>): number | null {
+  const used = new Set(active.map((d) => d.slot).filter((n): n is number => typeof n === 'number'))
+  for (let n = 1; n <= OFFLINE_SEATS_PER_KIND; n += 1) if (!used.has(n)) return n
+  return null
+}
+
+/** The unique index devices_active_slot_uq refused this row: someone took the place first. */
+function isSlotTaken(error: { code?: string; message?: string } | null): boolean {
+  return error?.code === '23505' && /slot/i.test(error.message ?? 'slot')
+}
+
+/** The database has no slot column yet (docs/device-slot-01-migration.sql not run). */
+function isSlotColumnMissing(error: { code?: string } | null): boolean {
+  return error?.code === '42703' || error?.code === 'PGRST204'
 }
 
 export class LicenseSeatsFullError extends BaseError {
@@ -100,6 +128,8 @@ export interface ActivateSeatParams {
   ipAddress?: string | undefined
   allowTransfer?: boolean | undefined
   adminOverride?: boolean | undefined
+  /** Internal: set on the single re-run after a concurrent activation took the same place. */
+  retried?: boolean | undefined
 }
 
 export interface DeviceRecord {
@@ -111,6 +141,8 @@ export interface DeviceRecord {
   public_key?: string | null
   ip_address?: string | null
   is_active?: boolean
+  /** The numbered place on the seat (1..OFFLINE_SEATS_PER_KIND); null on a row older than the slot migration. */
+  slot?: number | null
   label: string | null
   activated_at: string
   released_at: string | null
@@ -469,8 +501,9 @@ export class OfflineLicenseService {
   }
 
   /**
-   * Activates a device seat on the licence (1 computer + 1 mobile).
-   * - 2nd computer or 2nd mobile -> LICENSE_SEATS_FULL (refused, dashboard locked).
+   * Activates a device seat on the licence: up to OFFLINE_SEATS_PER_KIND
+   * computers (Windows, Mac) and as many mobiles (Android, iOS) — four devices.
+   * - One more than that -> LICENSE_SEATS_FULL (refused, dashboard locked).
    * - Reinstall on same device (matching stableId) -> free forever, rebinds seat.
    * - Transfer: max 3 per calendar year, admin override allowed.
    */
@@ -533,7 +566,7 @@ export class OfflineLicenseService {
     const now = new Date()
     const currentYear = now.getFullYear()
 
-    // 2. Check current active device for this seat
+    // 2. Check the active devices on this kind of seat
     const { data: activeDevices, error: devQueryError } = await supabase
       .from('devices')
       .select('*')
@@ -545,9 +578,17 @@ export class OfflineLicenseService {
       throw new DatabaseError('Failed to query device seats', devQueryError)
     }
 
-    const existingDevice = activeDevices && activeDevices.length > 0 ? activeDevices[0] : null
+    const onSeat = activeDevices ?? []
+    // A device that is already here is a reinstall whatever else is on the seat.
+    const sameDevice = onSeat.find((d) => d.stable_id === stableId) ?? null
+    // The one a transfer replaces: the device that has been on the seat longest.
+    const oldest =
+      [...onSeat].sort((a, b) =>
+        String(a.activated_at ?? '').localeCompare(String(b.activated_at ?? '')),
+      )[0] ?? null
+    const existingDevice = sameDevice ?? (onSeat.length >= OFFLINE_SEATS_PER_KIND ? oldest : null)
 
-    // Case A: Seat is vacant -> activate immediately
+    // Case A: There is room on the seat -> activate immediately
     if (!existingDevice) {
       const newDeviceId = randomUUID()
       const newDevice: DeviceRecord = {
@@ -560,6 +601,7 @@ export class OfflineLicenseService {
         ip_address: ipAddress ?? null,
         label: label ?? null,
         is_active: true,
+        slot: nextFreeSlot(onSeat),
         activated_at: now.toISOString(),
         released_at: null,
         last_verified_at: now.toISOString(),
@@ -567,7 +609,30 @@ export class OfflineLicenseService {
         updated_at: now.toISOString(),
       }
 
-      const { error: insertErr } = await supabase.from('devices').insert(newDevice)
+      // ⚠️ THE CAP IS THE DATABASE'S, NOT THIS CODE'S. Two activations that both read
+      // «one device» would both insert; the unique index on (licence, seat, slot)
+      // lets only one of them have the numbered place. The loser re-reads once and
+      // is answered by what is true now: full, or the same device (a reinstall).
+      let insertErr = (await supabase.from('devices').insert(newDevice)).error
+      if (insertErr && isSlotColumnMissing(insertErr)) {
+        const { slot: _omitted, ...withoutSlot } = newDevice
+        insertErr = (await supabase.from('devices').insert(withoutSlot)).error
+      }
+      if (insertErr && isSlotTaken(insertErr) && !params.retried) {
+        return this.activateSeat({ ...params, retried: true })
+      }
+      if (insertErr && isSlotTaken(insertErr)) {
+        await this.logEvent({
+          license_id: licenseId,
+          workspace_id: workspaceId,
+          event: 'rejected_activation',
+          device_seat: seat,
+          stable_id: stableId,
+          ip_address: ipAddress,
+          reason: 'LICENSE_SEATS_FULL',
+        })
+        throw new LicenseSeatsFullError(seat)
+      }
       if (insertErr) throw new DatabaseError('Failed to register device seat', insertErr)
 
       await this.logEvent({
@@ -584,7 +649,7 @@ export class OfflineLicenseService {
       return { device: newDevice, seat, isReinstall: false, isTransfer: false }
     }
 
-    // Case B: Seat is occupied
+    // Case B: Every place on the seat is taken
     // Sub-case B1: Reinstall on the same device (stable_id matches)
     if (existingDevice.stable_id === stableId) {
       const updatedFields = {
@@ -618,7 +683,7 @@ export class OfflineLicenseService {
 
     // Sub-case B2: Different physical device (stable_id differs)
     if (!allowTransfer) {
-      // 2nd computer or 2nd mobile -> refused!
+      // One computer or one mobile too many -> refused!
       await this.logEvent({
         license_id: licenseId,
         workspace_id: workspaceId,
@@ -663,6 +728,8 @@ export class OfflineLicenseService {
       ip_address: ipAddress ?? null,
       label: label ?? null,
       is_active: true,
+      // The place the released device held, or the lowest free one.
+      slot: existingDevice.slot ?? nextFreeSlot(onSeat.filter((d) => d !== existingDevice)),
       activated_at: now.toISOString(),
       released_at: null,
       last_verified_at: now.toISOString(),
@@ -670,7 +737,15 @@ export class OfflineLicenseService {
       updated_at: now.toISOString(),
     }
 
-    await supabase.from('devices').insert(newDevice)
+    let transferErr = (await supabase.from('devices').insert(newDevice)).error
+    if (transferErr && isSlotColumnMissing(transferErr)) {
+      const { slot: _omitted, ...withoutSlot } = newDevice
+      transferErr = (await supabase.from('devices').insert(withoutSlot)).error
+    }
+    // A concurrent transfer already took the released place: this one is too late.
+    if (transferErr && isSlotTaken(transferErr)) throw new LicenseSeatsFullError(seat)
+    if (transferErr)
+      throw new DatabaseError('Failed to register the transferred device', transferErr)
 
     // Increment transfer counter
     await supabase
@@ -949,9 +1024,57 @@ export class OfflineLicenseService {
     label?: string | null | undefined,
   ): Promise<DeviceRecord> {
     const now = new Date().toISOString()
-    const { data, error } = await supabase
+
+    // 1. A device belongs to one workspace: look it up before touching it
+    const { data: existing, error: findError } = await supabase
       .from('devices')
-      .upsert({
+      .select('*')
+      .eq('device_id', deviceId)
+      .maybeSingle()
+
+    if (findError) {
+      throw new DatabaseError('Failed to query device', findError)
+    }
+
+    if (existing && existing.workspace_id !== workspaceId) {
+      throw new ConflictError(
+        'DEVICE_CLAIMED_BY_ANOTHER_WORKSPACE: this device is registered to another workspace',
+      )
+    }
+
+    // ⚠️ NO SEAT CAP IS ENFORCED HERE. An earlier draft invented one (free 1,
+    // offline 2, pro 5 …) with no source in the plan definitions, so a paying
+    // workspace could have been refused its own device. How many seats each plan
+    // grants is a product decision (REQUIRES_PRODUCT_DECISION); until it is
+    // made, the only rule is the real one above: a device belongs to ONE
+    // workspace and is never taken over by another.
+
+    // 2. Update existing or insert new row without overwriting workspace_id
+    if (existing) {
+      const { data: updated, error: updateError } = await supabase
+        .from('devices')
+        .update({
+          is_active: true,
+          label: label !== undefined ? label : existing.label,
+          activated_at: existing.activated_at ?? now,
+          released_at: null,
+          last_verified_at: now,
+          updated_at: now,
+        })
+        .eq('device_id', deviceId)
+        .eq('workspace_id', workspaceId)
+        .select()
+        .single()
+
+      if (updateError || !updated) {
+        throw new DatabaseError('Failed to reactivate device', updateError)
+      }
+      return updated as DeviceRecord
+    }
+
+    const { data: inserted, error: insertError } = await supabase
+      .from('devices')
+      .insert({
         device_id: deviceId,
         workspace_id: workspaceId,
         label: label ?? null,
@@ -964,11 +1087,19 @@ export class OfflineLicenseService {
       .select()
       .single()
 
-    if (error || !data) {
-      throw new DatabaseError('Failed to activate device', error)
+    // Two first activations of one device racing: the primary key lets only one
+    // insert land, and the loser is told the device is taken, not that the
+    // database broke.
+    if (insertError?.code === '23505') {
+      throw new ConflictError(
+        'DEVICE_CLAIMED_BY_ANOTHER_WORKSPACE: this device is registered to another workspace',
+      )
+    }
+    if (insertError || !inserted) {
+      throw new DatabaseError('Failed to activate device', insertError)
     }
 
-    return data as DeviceRecord
+    return inserted as DeviceRecord
   }
 
   /** Releases a device from the workspace (e.g. from web portal or migration). */

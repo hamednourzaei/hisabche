@@ -27,6 +27,7 @@ import {
   type PromotionRow,
 } from '@hisabche/validation'
 import { z } from 'zod'
+import { buildEnqueue } from '@hisabche/app-bridge'
 import type { LocalDb } from '../db'
 import { NotFoundError, ValidationError } from '../errors'
 import { requireCapability } from '../auth'
@@ -164,7 +165,7 @@ export function registerPricingRoutes(router: Router): void {
     detailOf(db, ctx, params.id ?? ''),
   )
 
-  router.post('/price-lists', ({ db, ctx, body }: RouteHandlerContext) => {
+  router.post('/price-lists', ({ db, ctx, body, headers }: RouteHandlerContext) => {
     requireCapability(ctx, 'pricing.write')
     const input = parse(priceListInputSchema, body ?? {})
     const id = newId()
@@ -193,77 +194,121 @@ export function registerPricingRoutes(router: Router): void {
       }
       throw error
     }
+
+    if (headers?.['x-hisabche-queue'] === '1') {
+      const enqueue = buildEnqueue({
+        entity: 'price_list',
+        operation: 'create',
+        clientId: id,
+        payload: { id, ...input },
+        userId: headers?.['x-hisabche-user-id'] ?? ctx.userId,
+        workspaceId: ctx.workspaceId,
+      })
+      db.run(enqueue.sql, enqueue.params)
+    }
+
     return toSavedPriceList(listRow(db, ctx, id), 0, 0)
   })
 
-  router.patch('/price-lists/:id/active', ({ db, ctx, params, body }: RouteHandlerContext) => {
-    requireCapability(ctx, 'pricing.write')
-    const { isActive } = parse(z.object({ isActive: z.boolean() }), body ?? {})
-    const id = params.id ?? ''
-    listRow(db, ctx, id)
-    try {
-      db.run(
-        'UPDATE price_list SET is_active = ?, updated_at = ? WHERE workspace_id = ? AND id = ?',
-        [isActive ? 1 : 0, new Date().toISOString(), ctx.workspaceId, id],
-      )
-    } catch (error) {
-      if (/UNIQUE/i.test(error instanceof Error ? error.message : String(error))) {
-        throw new ValidationError('PRICE_LIST_NAME_TAKEN')
-      }
-      throw error
-    }
-    return toSavedPriceList(
-      listRow(db, ctx, id),
-      activeItems(db, ctx, id).length,
-      customersOn(db, ctx, id).length,
-    )
-  })
-
-  router.put('/price-lists/:id/items', ({ db, ctx, params, body }: RouteHandlerContext) => {
-    requireCapability(ctx, 'pricing.write')
-    const { items } = parse(priceListItemsSchema, body ?? {})
-    const id = params.id ?? ''
-    listRow(db, ctx, id)
-
-    const ids = [...new Set(items.map((item) => item.productId))]
-    if (ids.length !== items.length) throw new ValidationError('PRICE_LIST_PRODUCT_TWICE')
-    assertOwned(db, ctx, 'product', ids, 'PRICE_LIST_PRODUCT_NOT_FOUND')
-
-    const existing = new Map(
-      db
-        .all<{ product_id: string; unit_price_minor: number }>(
-          'SELECT product_id, unit_price_minor FROM price_list_item WHERE workspace_id = ? AND price_list_id = ?',
-          [ctx.workspaceId, id],
-        )
-        .map((row) => [row.product_id, Number(row.unit_price_minor)]),
-    )
-    const change = planPriceListChanges(items, existing)
-    if ('refusal' in change) throw new ValidationError(change.refusal)
-
-    const now = new Date().toISOString()
-    db.transaction(() => {
-      for (const row of change.rows) {
+  router.patch(
+    '/price-lists/:id/active',
+    ({ db, ctx, params, body, headers }: RouteHandlerContext) => {
+      requireCapability(ctx, 'pricing.write')
+      const { isActive } = parse(z.object({ isActive: z.boolean() }), body ?? {})
+      const id = params.id ?? ''
+      listRow(db, ctx, id)
+      try {
         db.run(
-          `INSERT INTO price_list_item
+          'UPDATE price_list SET is_active = ?, updated_at = ? WHERE workspace_id = ? AND id = ?',
+          [isActive ? 1 : 0, new Date().toISOString(), ctx.workspaceId, id],
+        )
+      } catch (error) {
+        if (/UNIQUE/i.test(error instanceof Error ? error.message : String(error))) {
+          throw new ValidationError('PRICE_LIST_NAME_TAKEN')
+        }
+        throw error
+      }
+
+      if (headers?.['x-hisabche-queue'] === '1') {
+        const enqueue = buildEnqueue({
+          entity: 'price_list',
+          operation: 'update',
+          clientId: `${id}-active`,
+          payload: { id, isActive },
+          userId: headers?.['x-hisabche-user-id'] ?? ctx.userId,
+          workspaceId: ctx.workspaceId,
+        })
+        db.run(enqueue.sql, enqueue.params)
+      }
+
+      return toSavedPriceList(
+        listRow(db, ctx, id),
+        activeItems(db, ctx, id).length,
+        customersOn(db, ctx, id).length,
+      )
+    },
+  )
+
+  router.put(
+    '/price-lists/:id/items',
+    ({ db, ctx, params, body, headers }: RouteHandlerContext) => {
+      requireCapability(ctx, 'pricing.write')
+      const { items } = parse(priceListItemsSchema, body ?? {})
+      const id = params.id ?? ''
+      listRow(db, ctx, id)
+
+      const ids = [...new Set(items.map((item) => item.productId))]
+      if (ids.length !== items.length) throw new ValidationError('PRICE_LIST_PRODUCT_TWICE')
+      assertOwned(db, ctx, 'product', ids, 'PRICE_LIST_PRODUCT_NOT_FOUND')
+
+      const existing = new Map(
+        db
+          .all<{ product_id: string; unit_price_minor: number }>(
+            'SELECT product_id, unit_price_minor FROM price_list_item WHERE workspace_id = ? AND price_list_id = ?',
+            [ctx.workspaceId, id],
+          )
+          .map((row) => [row.product_id, Number(row.unit_price_minor)]),
+      )
+      const change = planPriceListChanges(items, existing)
+      if ('refusal' in change) throw new ValidationError(change.refusal)
+
+      const now = new Date().toISOString()
+      db.transaction(() => {
+        for (const row of change.rows) {
+          db.run(
+            `INSERT INTO price_list_item
              (price_list_id, product_id, workspace_id, unit_price_minor, is_active, updated_by, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(price_list_id, product_id) DO UPDATE SET
              unit_price_minor = excluded.unit_price_minor, is_active = excluded.is_active,
              updated_by = excluded.updated_by, updated_at = excluded.updated_at`,
-          [
-            id,
-            row.product_id,
-            ctx.workspaceId,
-            row.unit_price_minor,
-            row.is_active ? 1 : 0,
-            ctx.userId,
-            now,
-          ],
-        )
-      }
-    })
-    return detailOf(db, ctx, id)
-  })
+            [
+              id,
+              row.product_id,
+              ctx.workspaceId,
+              row.unit_price_minor,
+              row.is_active ? 1 : 0,
+              ctx.userId,
+              now,
+            ],
+          )
+        }
+
+        if (headers?.['x-hisabche-queue'] === '1') {
+          const enqueue = buildEnqueue({
+            entity: 'price_list',
+            operation: 'update',
+            clientId: `${id}-items`,
+            payload: { id, items },
+            userId: headers?.['x-hisabche-user-id'] ?? ctx.userId,
+            workspaceId: ctx.workspaceId,
+          })
+          db.run(enqueue.sql, enqueue.params)
+        }
+      })
+      return detailOf(db, ctx, id)
+    },
+  )
 
   router.put(
     '/price-lists/customers/:customerId',
@@ -298,7 +343,7 @@ export function registerPricingRoutes(router: Router): void {
     return { promotions: rows.map(toSavedPromotion) }
   })
 
-  router.post('/promotions', ({ db, ctx, body }: RouteHandlerContext) => {
+  router.post('/promotions', ({ db, ctx, body, headers }: RouteHandlerContext) => {
     requireCapability(ctx, 'pricing.write')
     const input = parse(promotionInputSchema, body ?? {})
     assertOwned(db, ctx, 'product', input.productIds, 'PROMOTION_PRODUCT_NOT_FOUND')
@@ -328,23 +373,52 @@ export function registerPricingRoutes(router: Router): void {
         now,
       ],
     )
+
+    if (headers?.['x-hisabche-queue'] === '1') {
+      const enqueue = buildEnqueue({
+        entity: 'promotion',
+        operation: 'create',
+        clientId: id,
+        payload: { id, ...input },
+        userId: headers?.['x-hisabche-user-id'] ?? ctx.userId,
+        workspaceId: ctx.workspaceId,
+      })
+      db.run(enqueue.sql, enqueue.params)
+    }
+
     return toSavedPromotion(
       db.get<PromotionRow>(`SELECT ${PROMOTION_COLUMNS} FROM promotion WHERE id = ?`, [id])!,
     )
   })
 
-  router.patch('/promotions/:id/active', ({ db, ctx, params, body }: RouteHandlerContext) => {
-    requireCapability(ctx, 'pricing.write')
-    const { isActive } = parse(z.object({ isActive: z.boolean() }), body ?? {})
-    const result = db.run(
-      'UPDATE promotion SET is_active = ?, updated_at = ? WHERE workspace_id = ? AND id = ?',
-      [isActive ? 1 : 0, new Date().toISOString(), ctx.workspaceId, params.id ?? ''],
-    )
-    if (result.changes === 0) throw new NotFoundError('Promotion')
-    return toSavedPromotion(
-      db.get<PromotionRow>(`SELECT ${PROMOTION_COLUMNS} FROM promotion WHERE id = ?`, [
-        params.id ?? '',
-      ])!,
-    )
-  })
+  router.patch(
+    '/promotions/:id/active',
+    ({ db, ctx, params, body, headers }: RouteHandlerContext) => {
+      requireCapability(ctx, 'pricing.write')
+      const { isActive } = parse(z.object({ isActive: z.boolean() }), body ?? {})
+      const result = db.run(
+        'UPDATE promotion SET is_active = ?, updated_at = ? WHERE workspace_id = ? AND id = ?',
+        [isActive ? 1 : 0, new Date().toISOString(), ctx.workspaceId, params.id ?? ''],
+      )
+      if (result.changes === 0) throw new NotFoundError('Promotion')
+
+      if (headers?.['x-hisabche-queue'] === '1') {
+        const enqueue = buildEnqueue({
+          entity: 'promotion',
+          operation: 'update',
+          clientId: `${params.id}-active`,
+          payload: { id: params.id, isActive },
+          userId: headers?.['x-hisabche-user-id'] ?? ctx.userId,
+          workspaceId: ctx.workspaceId,
+        })
+        db.run(enqueue.sql, enqueue.params)
+      }
+
+      return toSavedPromotion(
+        db.get<PromotionRow>(`SELECT ${PROMOTION_COLUMNS} FROM promotion WHERE id = ?`, [
+          params.id ?? '',
+        ])!,
+      )
+    },
+  )
 }

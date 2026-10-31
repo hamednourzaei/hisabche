@@ -196,7 +196,7 @@ export async function transactionRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/transactions',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('payment.record')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as CreateTransactionBody

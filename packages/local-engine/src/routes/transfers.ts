@@ -7,6 +7,7 @@
 // ============================================
 
 import { stockTransferSchema } from '@hisabche/validation'
+import { requireCapability } from '../auth'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import { buildEnqueue } from '@hisabche/app-bridge'
 import type { Router } from '../router'
@@ -27,6 +28,7 @@ export function registerTransferRoutes(router: Router): void {
   // ─── POST /stock-transfers ──────────────────────────────────
   router.post('/stock-transfers', (c: RouteHandlerContext) => {
     const { db, ctx, body } = c
+    requireCapability(ctx, 'warehouse.manage')
     const { workspaceId } = ctx
     const raw = (body || {}) as Record<string, unknown>
 

@@ -21,6 +21,7 @@
 // nor by a terminal, so they stay cloud-only; see the endpoint matrix.
 // ============================================
 
+import { requireCapability } from '../auth'
 import {
   assignShiftBodySchema,
   attendanceMarkBodySchema,
@@ -119,6 +120,7 @@ export function registerAttendanceRoutes(router: Router): void {
   })
 
   router.put('/attendance-sheet', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'employee.write')
     const { db, ctx, body } = c
     const input = parseWith(attendanceMarkBodySchema, bodyOf(body))
     const plan = planAttendanceMark(input)
@@ -191,6 +193,7 @@ export function registerAttendanceRoutes(router: Router): void {
   })
 
   router.post('/shifts', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'employee.write')
     const { db, ctx, body } = c
     const input = parseWith(createShiftBodySchema, bodyOf(body))
     const draft: ShiftDefinition = { id: 'new', ...input }
@@ -223,6 +226,7 @@ export function registerAttendanceRoutes(router: Router): void {
 
   // Retire or bring back. Never a delete.
   router.patch('/shifts/:id/active', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'employee.write')
     const { db, ctx, params, body } = c
     const { isActive } = parseWith(setShiftActiveBodySchema, bodyOf(body))
     const result = db.run(
@@ -291,6 +295,7 @@ export function registerAttendanceRoutes(router: Router): void {
   })
 
   router.post('/shift-assignments', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'employee.write')
     const { db, ctx, body } = c
     const input = parseWith(assignShiftBodySchema, bodyOf(body))
     requireEmployee(db, ctx.workspaceId, input.employeeId)
@@ -350,6 +355,7 @@ export function registerAttendanceRoutes(router: Router): void {
 
   // Cancel one assignment. The row stays.
   router.post('/shift-assignments/:id/cancel', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'employee.write')
     const { db, ctx, params } = c
     const id = params.id ?? ''
     const result = db.run(

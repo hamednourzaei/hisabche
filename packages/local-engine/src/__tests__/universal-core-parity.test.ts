@@ -28,16 +28,15 @@ import {
   type SerialRecord,
   type ProductUnitOption,
 } from '@hisabche/validation'
-import { createLocalEngine } from '../index'
-import { createTestDb } from './test-db'
+import { createTestDb, createTestEngine } from './test-db'
 
 describe('Universal Core Parity & Golden Numeric Vectors', () => {
   let db: ReturnType<typeof createTestDb>
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
 
   beforeEach(() => {
     db = createTestDb()
-    engine = createLocalEngine(db)
+    engine = createTestEngine(db)
   })
 
   // ─── Vector 1: 2 cartons × 24 pieces = 48 pieces ──────────────

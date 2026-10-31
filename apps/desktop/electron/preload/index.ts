@@ -38,6 +38,7 @@ const bridge: HisabcheBridge = {
   },
   window: {
     control: (action) => ipcRenderer.invoke(IPC.windowControl, { action }),
+    setChrome: (color, symbolColor) => ipcRenderer.invoke(IPC.windowChrome, { color, symbolColor }),
   },
   app: {
     info: () => ipcRenderer.invoke(IPC.appInfo, {}),

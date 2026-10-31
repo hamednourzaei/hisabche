@@ -19,6 +19,7 @@
 // first, the invoice second, and a retry finds the invoice already there.
 // ============================================
 
+import { requireCapability } from '../auth'
 import {
   buildInstallmentPlan,
   buildLateFeePreview,
@@ -161,6 +162,7 @@ export function registerInstallmentRoutes(router: Router): void {
   })
 
   router.put('/invoices/:id/installments', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'ledger.post')
     const parsed = z
       .object({
         // A single payment is not a plan; five years of months is the ceiling.
@@ -204,6 +206,7 @@ export function registerInstallmentRoutes(router: Router): void {
   })
 
   router.delete('/invoices/:id/installments', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'ledger.post')
     const row = invoiceOf(c.db, c.ctx, c.params.id ?? '')
     c.db.run('DELETE FROM invoice_installment WHERE workspace_id = ? AND invoice_id = ?', [
       c.ctx.workspaceId,
@@ -218,6 +221,7 @@ export function registerInstallmentRoutes(router: Router): void {
   }))
 
   router.put('/late-fees/policy', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'ledger.post')
     const parsed = lateFeePolicySchema.safeParse(c.body ?? {})
     if (!parsed.success) {
       throw new ValidationError(parsed.error.errors[0]?.message ?? 'Validation failed')
@@ -261,6 +265,7 @@ export function registerInstallmentRoutes(router: Router): void {
   )
 
   router.post('/invoices/:id/late-fees', async (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'ledger.post')
     const language: LateFeeLanguage = z
       .object({ language: z.enum(LATE_FEE_LANGUAGES).default('fa') })
       .parse(c.body ?? {}).language

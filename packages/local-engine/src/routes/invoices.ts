@@ -24,7 +24,7 @@ import {
 } from '@hisabche/validation'
 import { buildEnqueue } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'
-import { NotFoundError, ValidationError } from '../errors'
+import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import type { LocalDb } from '../db'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -922,11 +922,61 @@ export function registerInvoiceRoutes(router: Router): void {
     const now = new Date().toISOString()
 
     return db.transaction(() => {
+      // 0. Preflight guards for purchase invoice cancellation
+      if (inv.type === 'purchase') {
+        const layers = db.all<{ id: string; remaining_qty: number; received_qty: number }>(
+          "SELECT id, remaining_qty, received_qty FROM cost_layer WHERE source_type = 'invoice' AND source_id = ? AND workspace_id = ? AND deleted_at IS NULL",
+          [id, workspaceId],
+        )
+        for (const layer of layers) {
+          if (Number(layer.remaining_qty) < Number(layer.received_qty)) {
+            throw new ConflictError(
+              'PURCHASE_CANCEL_LAYERS_CONSUMED',
+              'Cannot cancel purchase invoice: cost layers have already been consumed by subsequent sales',
+            )
+          }
+          const consumed = db.get<{ count: number }>(
+            'SELECT COUNT(*) as count FROM cost_consumption WHERE layer_id = ? AND workspace_id = ?',
+            [layer.id, workspaceId],
+          )
+          if ((consumed?.count ?? 0) > 0) {
+            throw new ConflictError(
+              'PURCHASE_CANCEL_LAYERS_CONSUMED',
+              'Cannot cancel purchase invoice: cost layers have already been consumed by subsequent sales',
+            )
+          }
+        }
+      }
+
       // 1. Reverse stock movements & product quantities
       const items = db.all<InvoiceItemRow>(
         'SELECT * FROM invoice_item WHERE invoice_id = ? AND workspace_id = ? AND deleted_at IS NULL',
         [id, workspaceId],
       )
+
+      if (inv.type === 'purchase') {
+        for (const item of items) {
+          if (item.product_id && item.quantity > 0) {
+            const baseQuantity = baseQuantityOf(
+              db,
+              workspaceId,
+              item.product_id,
+              Number(item.quantity),
+              item.unit,
+            )
+            const prod = db.get<{ quantity: number }>(
+              'SELECT quantity FROM product WHERE id = ? AND workspace_id = ?',
+              [item.product_id, workspaceId],
+            )
+            if (prod && Number(prod.quantity) - baseQuantity < 0) {
+              throw new ConflictError(
+                'INSUFFICIENT_STOCK_FOR_CANCEL',
+                'Cannot cancel purchase invoice: resulting product stock would become negative',
+              )
+            }
+          }
+        }
+      }
 
       // Determine assigned warehouse from cost records if present
       const assignedWarehouse =
@@ -1012,17 +1062,43 @@ export function registerInvoiceRoutes(router: Router): void {
         ])
       }
 
-      // 4. Cancel payment allocations
+      // 4. Cancel payment allocations, reverse payment journals, and soft-delete allocations
       const allocations = db.all<{ id: string; payment_id: string }>(
-        'SELECT id, payment_id FROM payment_allocation WHERE invoice_id = ? AND workspace_id = ?',
+        'SELECT id, payment_id FROM payment_allocation WHERE invoice_id = ? AND workspace_id = ? AND deleted_at IS NULL',
         [id, workspaceId],
       )
       for (const a of allocations) {
+        const payment = db.get<{ id: string; journal_entry_id?: string | null }>(
+          'SELECT id, journal_entry_id FROM payment WHERE id = ? AND workspace_id = ?',
+          [a.payment_id, workspaceId],
+        )
+        if (payment?.journal_entry_id) {
+          db.run(
+            "UPDATE journal_entry SET status = 'reversed', updated_at = ? WHERE id = ? AND workspace_id = ?",
+            [now, payment.journal_entry_id, workspaceId],
+          )
+        }
+
         db.run("UPDATE payment SET status = 'cancelled', updated_at = ? WHERE id = ?", [
           now,
           a.payment_id,
         ])
-        db.run('DELETE FROM payment_allocation WHERE id = ?', [a.id])
+        db.run(
+          'UPDATE payment_allocation SET deleted_at = ?, updated_at = ? WHERE id = ? AND workspace_id = ?',
+          [now, now, a.id, workspaceId],
+        )
+
+        if (c.headers?.['x-hisabche-queue'] === '1') {
+          const paymentEnqueue = buildEnqueue({
+            entity: 'payment',
+            operation: 'delete',
+            clientId: `${a.payment_id}-cancel`,
+            payload: { id: a.payment_id },
+            userId: c.headers?.['x-hisabche-user-id'] ?? ctx.userId,
+            workspaceId,
+          })
+          db.run(paymentEnqueue.sql, paymentEnqueue.params)
+        }
       }
 
       // 5. Mark invoice cancelled
@@ -1044,7 +1120,7 @@ export function registerInvoiceRoutes(router: Router): void {
         const enqueue = buildEnqueue({
           entity: 'invoice',
           operation: 'delete',
-          clientId: `${id}-cancel-${Date.now()}`,
+          clientId: `${id}-cancel`,
           payload: { id },
           userId: c.headers?.['x-hisabche-user-id'] ?? ctx.userId,
           workspaceId,

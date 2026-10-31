@@ -23,6 +23,7 @@ import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
 import { ledger, type DraftLine } from './accounting'
+import { businessDayOf } from '../utils/local-day'
 import type { AccountRole } from '@hisabche/validation'
 import {
   branchOnDate,
@@ -437,7 +438,7 @@ export class HumanResourcesService {
     if (branchError) throw new DatabaseError('Failed to verify branch', branchError)
     if (!branch) throw new NotFoundError('Branch')
 
-    const today = new Date().toISOString().slice(0, 10)
+    const today = businessDayOf(new Date(), ctx?.timeZone)
 
     const { error: closeError } = await supabase
       .from('employee_branch_assignments')
@@ -607,68 +608,103 @@ export class HumanResourcesService {
 
   async createPayroll(ctx: TenancyContext, data: CreatePayroll) {
     const { workspaceId, userId } = ctx
+
+    if (data.clientRequestId) {
+      const { data: existingByKey, error: keyErr } = await supabase
+        .from('payrolls')
+        .select(`${PAYROLL_COLUMNS}, client_request_id`)
+        .eq('workspace_id', workspaceId)
+        .eq('client_request_id', data.clientRequestId)
+        .maybeSingle()
+
+      if (keyErr && keyErr.code !== '42703' && keyErr.code !== 'PGRST204') {
+        throw new DatabaseError('Failed to query payroll idempotency', keyErr)
+      }
+
+      if (existingByKey) {
+        if (
+          existingByKey.employee_id === data.employeeId &&
+          existingByKey.period_start === data.periodStart &&
+          existingByKey.period_end === data.periodEnd &&
+          Number(existingByKey.base_salary) === Number(data.baseSalary)
+        ) {
+          // A replay reports what the books say NOW, not what the first answer
+          // hoped: booking is idempotent per payroll, so asking again either
+          // finds the entry or finishes it.
+          const replayBooking =
+            existingByKey.status === 'paid'
+              ? await this.bookPayroll(ctx, existingByKey as Record<string, unknown>)
+              : { booked: false, reason: 'draft' }
+          return { ...existingByKey, _replayed: true, bookingStatus: replayBooking }
+        } else {
+          throw new ConflictError(
+            'IDEMPOTENCY_PAYLOAD_MISMATCH: payroll clientRequestId already used with different parameters',
+          )
+        }
+      }
+    }
+
+    const { data: duplicatePeriod } = await supabase
+      .from('payrolls')
+      .select('id, status')
+      .eq('workspace_id', workspaceId)
+      .eq('employee_id', data.employeeId)
+      .eq('period_start', data.periodStart)
+      .eq('period_end', data.periodEnd)
+      .neq('status', 'cancelled')
+      .limit(1)
+      .maybeSingle()
+    if (duplicatePeriod) {
+      console.warn(
+        `[HumanResources] Payroll already exists for employee ${data.employeeId} in period ${data.periodStart} to ${data.periodEnd} (id: ${duplicatePeriod.id}, status: ${duplicatePeriod.status})`,
+      )
+    }
+
     // The figures are the shared rule (@hisabche/validation): the device computes the same.
     const { overtimeAmount, netSalary } = computePayrollFigures(data)
 
+    const insertPayload: Record<string, unknown> = {
+      employee_id: data.employeeId,
+      period_start: data.periodStart,
+      period_end: data.periodEnd,
+      base_salary: data.baseSalary,
+      bonuses: data.bonuses,
+      deductions: data.deductions,
+      overtime_hours: data.overtimeHours,
+      overtime_rate: data.overtimeRate,
+      overtime_amount: overtimeAmount,
+      tax_amount: data.taxAmount,
+      net_salary: netSalary,
+      currency: data.currency ?? (await baseCurrencyOf(ctx.workspaceId)),
+      status: data.status,
+      payment_date: data.paymentDate ?? null,
+      notes: data.notes || null,
+      workspace_id: workspaceId,
+      user_id: userId,
+    }
+    if (data.clientRequestId) {
+      insertPayload.client_request_id = data.clientRequestId
+    }
+
     const { data: payroll, error } = await supabase
       .from('payrolls')
-      .insert({
-        employee_id: data.employeeId,
-        period_start: data.periodStart,
-        period_end: data.periodEnd,
-        base_salary: data.baseSalary,
-        bonuses: data.bonuses,
-        deductions: data.deductions,
-        overtime_hours: data.overtimeHours,
-        overtime_rate: data.overtimeRate,
-        overtime_amount: overtimeAmount,
-        tax_amount: data.taxAmount,
-        net_salary: netSalary,
-        // None named = the currency this business keeps its books in.
-        currency: data.currency ?? (await baseCurrencyOf(ctx.workspaceId)),
-        // ═══════════════════════════════════════════════════════════════════
-        // ⚠️ THE CALLER'S STATUS AND PAYMENT DATE USED TO BE DISCARDED.
-        //
-        // This wrote `status: 'draft'` unconditionally and never wrote
-        // `payment_date` at all. «ثبت پرداخت» on an employee sends
-        // `status: 'paid'` with the date the owner picked — and got back a
-        // draft with no payment date. The row then rendered its PERIOD start
-        // instead of the payment date, and no payment ever counted as paid.
-        // That is «حقوق کار نمی‌کند» (request #98-ح).
-        //
-        // The schema's own default is 'draft', so a caller that says nothing
-        // still gets a draft; one that states an outcome is now believed.
-        // ═══════════════════════════════════════════════════════════════════
-        status: data.status,
-        payment_date: data.paymentDate ?? null,
-        notes: data.notes || null,
-        workspace_id: workspaceId,
-        user_id: userId,
-      })
+      .insert(insertPayload)
       .select(PAYROLL_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to create payroll', error)
 
-    // A salary recorded as already paid reaches the books too. Only the PATCH
-    // path booked, so «ثبت پرداخت» on an employee — which creates the row as
-    // `paid` — never produced a journal entry.
-    //
-    // The row is written; a booking failure must not turn that into a 500 the
-    // owner answers by recording the same salary twice.
+    let bookingStatus: { booked: boolean; reason?: string } = { booked: false, reason: 'draft' }
     if (data.status === 'paid') {
-      try {
-        await this.bookPayroll(ctx, payroll as Record<string, unknown>)
-      } catch (bookingError) {
-        console.error(
-          `[HumanResources] payroll ${String((payroll as { id?: unknown }).id)} recorded as paid but not booked:`,
-          bookingError,
-        )
-      }
+      bookingStatus = await this.bookPayroll(ctx, payroll as Record<string, unknown>)
     }
 
     await this.invalidatePayrollCache(workspaceId, data.employeeId)
-    return payroll
+    return {
+      ...payroll,
+      bookingStatus,
+      duplicatePeriodWarning: duplicatePeriod ? true : false,
+    }
   }
 
   async updatePayrollStatus(ctx: TenancyContext, id: string, data: UpdatePayroll) {
@@ -712,19 +748,16 @@ export class HumanResourcesService {
       )
     }
 
-    // ─── J4 — A PAID SALARY REACHES THE BOOKS ────────────────────────────────
-    //
-    // This method used to end here. A payroll moved to `paid` and nothing was
-    // written to the ledger: a salary expense and a cash outflow, both real and
-    // both material, happened entirely outside the books. Every income
-    // statement was short by exactly the payroll, every month, and nothing
-    // reported an error because nothing knew an entry was owed.
+    let bookingStatus: { booked: boolean; reason?: string } = { booked: false, reason: 'not_paid' }
     if (data.status === 'paid') {
-      await this.bookPayroll(ctx, payroll as Record<string, unknown>)
+      bookingStatus = await this.bookPayroll(ctx, payroll as Record<string, unknown>)
     }
 
     await this.invalidatePayrollCache(workspaceId)
-    return payroll
+    return {
+      ...payroll,
+      bookingStatus,
+    }
   }
 
   /**
@@ -732,46 +765,32 @@ export class HumanResourcesService {
    *
    * Booked through the ledger port, so it is idempotent per (sourceType,
    * sourceId): marking the same payroll paid twice books once.
-   *
-   * ⚠️ A chart of accounts that cannot express it leaves the payroll RECORDED
-   * and says so, rather than refusing to pay someone's wages. That is the same
-   * choice `payments.service.bookPayment` makes for the same reason — and it is
-   * why `payroll_posting_readiness` exists, so the gap is visible rather than
-   * only in a log line.
    */
-  private async bookPayroll(ctx: TenancyContext, payroll: Record<string, unknown>): Promise<void> {
-    // Gross is what the business BEARS: base plus bonuses plus overtime.
-    // `net_salary` is what the employee receives and is not the expense.
+  async bookPayroll(
+    ctx: TenancyContext,
+    payroll: Record<string, unknown>,
+  ): Promise<{ booked: boolean; reason?: string }> {
     const amounts = payrollBookingAmounts(
       payroll as unknown as Parameters<typeof payrollBookingAmounts>[0],
     )
 
-    // Cash unless the business keeps no cash account. A shop paying wages by
-    // transfer and one paying from the till book the same entry with a
-    // different credit side.
     const { accounts: available } = await ledger.resolveAccountsByRole(ctx, ['cash', 'bank'])
     const cashRole: 'cash' | 'bank' = available.cash ? 'cash' : 'bank'
 
     const lines = payrollLines(amounts, cashRole)
 
     if (lines.length === 0) {
-      // A payroll of zero. Not booked — `accounting_post_journal_entry` refuses
-      // a zero entry, and a zero payroll is a data problem to look at rather
-      // than an entry to file.
       console.warn(
         `[HumanResources] payroll ${String(payroll.id)} has no gross amount; not booked.`,
       )
-      return
+      return { booked: false, reason: 'NO_GROSS_AMOUNT' }
     }
 
     if (!linesBalance(lines)) {
-      // Refused here rather than discovered as a Postgres exception three
-      // layers down. If this ever fires, the payroll's own figures do not add
-      // up and the row is the thing to fix.
       console.error(
         `[HumanResources] payroll ${String(payroll.id)} produced unbalanced lines; not booked.`,
       )
-      return
+      return { booked: false, reason: 'UNBALANCED_LINES' }
     }
 
     const needed = [...new Set(lines.map((line) => line.role))] as AccountRole[]
@@ -781,24 +800,68 @@ export class HumanResourcesService {
       console.warn(
         `[HumanResources] payroll ${String(payroll.id)} not booked: no account for ${missing.join(', ')}. See payroll_posting_readiness.`,
       )
-      return
+      return { booked: false, reason: `MISSING_ACCOUNTS: ${missing.join(', ')}` }
     }
 
     const entryDate = String(payroll.payment_date ?? payroll.period_end ?? '').slice(0, 10)
 
-    await ledger.postDocument(ctx, {
-      sourceType: 'payroll',
-      sourceId: String(payroll.id),
-      // Lesson 7: the ACCOUNTING date, not created_at. A payroll for last month
-      // paid today belongs to last month's figures.
-      date: entryDate || new Date().toISOString().slice(0, 10),
-      description: `حقوق — ${String(payroll.period_start ?? '')} تا ${String(payroll.period_end ?? '')}`,
-      lines: lines.map((line) => ({
-        accountId: accounts[line.role as AccountRole] as string,
-        debit: line.debitMinor / 100,
-        credit: line.creditMinor / 100,
-      })) as DraftLine[],
-    })
+    try {
+      await ledger.postDocument(ctx, {
+        sourceType: 'payroll',
+        sourceId: String(payroll.id),
+        date: entryDate || businessDayOf(new Date(), ctx?.timeZone),
+        description: `حقوق — ${String(payroll.period_start ?? '')} تا ${String(payroll.period_end ?? '')}`,
+        lines: lines.map((line) => ({
+          accountId: accounts[line.role as AccountRole] as string,
+          debit: line.debitMinor / 100,
+          credit: line.creditMinor / 100,
+        })) as DraftLine[],
+      })
+      return { booked: true }
+    } catch (bookingError: unknown) {
+      const msg = bookingError instanceof Error ? bookingError.message : String(bookingError)
+      console.error(
+        `[HumanResources] payroll ${String(payroll.id)} recorded as paid but not booked:`,
+        bookingError,
+      )
+      return { booked: false, reason: msg }
+    }
+  }
+
+  /**
+   * The retry behind «ثبت در دفتر» on a salary that is already paid.
+   *
+   * `bookPayroll` leaves the row RECORDED and only a log line behind it when the
+   * chart of accounts cannot express the entry (see the note above). Once the
+   * accounts exist, this books it — and a retry is not a second booking: the
+   * ledger is idempotent per (sourceType, sourceId).
+   *
+   * ⚠️ Only a PAID salary has an entry to book. Booking a draft would expense
+   * wages the business has not agreed to pay; booking a cancelled one would
+   * expense money it decided not to spend.
+   */
+  async bookPayrollRetry(ctx: TenancyContext, id: string) {
+    const { data: payroll, error } = await supabase
+      .from('payrolls')
+      .select(PAYROLL_COLUMNS)
+      .eq('id', id)
+      .eq('workspace_id', ctx.workspaceId)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Failed to read payroll', error)
+    if (!payroll) throw new NotFoundError('Payroll')
+
+    const status = (payroll as { status?: string | null }).status
+    if (status !== 'paid') {
+      throw new ConflictError('PAYROLL_NOT_PAID: only a paid salary has an entry to book')
+    }
+
+    const bookingStatus = await this.bookPayroll(ctx, payroll as Record<string, unknown>)
+    await this.invalidatePayrollCache(ctx.workspaceId)
+    return {
+      ...payroll,
+      bookingStatus,
+    }
   }
 
   // ─── Payroll Summary (جمع حقوق) ──────────────────────────────

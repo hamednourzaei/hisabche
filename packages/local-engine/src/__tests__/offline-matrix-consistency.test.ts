@@ -4,13 +4,12 @@
 // 200 from a stub nobody listed.
 import { describe, expect, it } from 'vitest'
 import { OFFLINE_ENDPOINT_MATRIX, endpointAvailability } from '@hisabche/validation'
-import { createLocalEngine } from '../index'
-import { createTestDb } from './test-db'
+import { createTestDb, createTestEngine } from './test-db'
 
 const SOME_ID = '9b2f4c1e-0000-4000-8000-000000000001'
 
 describe('the engine and the offline endpoint matrix agree', () => {
-  const engine = createLocalEngine(createTestDb())
+  const engine = createTestEngine(createTestDb())
   const rows = Object.entries(OFFLINE_ENDPOINT_MATRIX)
 
   it('answers every `available` row and refuses every other with 501', async () => {

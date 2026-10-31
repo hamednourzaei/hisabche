@@ -50,13 +50,17 @@ describe('the built stylesheet carries the utilities the UI is written in', () =
     // come from the same generator as the rest.
     ['.ms-2', 'margin-inline-start'],
   ])('⚠️ %s is generated', (selector, declaration) => {
-    const rule = new RegExp(`\\${selector}\\s*\\{[^}]*${declaration}`)
+    // The declaration is checked as a property and a value, whatever whitespace the
+    // CSS minifier left between them (`display: flex` and `display:flex` are one rule).
+    const [property, value] = declaration.split(': ')
+    const wanted = value ? `${property}\\s*:\\s*${value}` : declaration
+    const rule = new RegExp(`\\${selector}\\s*\\{[^}]*${wanted}`)
     expect(rule.test(css)).toBe(true)
   })
 
   it('⚠️ Tailwind preflight ran', () => {
     // Preflight is `@tailwind base`. Without it every element keeps its
     // browser defaults and the layout is wrong in ways no single class fixes.
-    expect(css).toContain('box-sizing: border-box')
+    expect(css).toMatch(/box-sizing\s*:\s*border-box/)
   })
 })

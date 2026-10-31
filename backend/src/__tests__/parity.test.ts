@@ -19,9 +19,10 @@
 
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createLocalEngine } from '../../../packages/local-engine/src/index'
+
 import {
   createTestDb,
+  createTestEngine,
   TEST_WAREHOUSE_ID,
 } from '../../../packages/local-engine/src/__tests__/test-db'
 import { FakeDatabase, createFakeDb, fakeId, type Row } from './helpers/fake-supabase'
@@ -204,6 +205,10 @@ function registerRpcs() {
     return id
   })
 
+  // Reversing a sale gives its cost layers back; the service no longer swallows a
+  // failure of this call (BUG-NEW-005), so the fake must answer it.
+  db.rpc('inventory_release_consumption', () => ({ quantity: 0, total_cost: 0 }))
+
   db.rpc('inventory_consume_layers', () => {
     return {
       consumed: [],
@@ -246,7 +251,7 @@ function registerRpcs() {
     return id
   })
 
-  db.rpc('payments_record', (args) => {
+  const recordPayment = (args: Row): string => {
     const id = fakeId('payment')
     const payment = args.p_payment as Row
     db.seed('payments', [
@@ -297,7 +302,11 @@ function registerRpcs() {
       }
     }
     return id
-  })
+  }
+  db.rpc('payments_record', recordPayment)
+  // A keyed request (every invoice POST carries an Idempotency-Key) goes through
+  // the wrapper, which answers { payment_id, replayed } — payments.repository.
+  db.rpc('payments_record_keyed', (args) => ({ payment_id: recordPayment(args), replayed: false }))
 
   db.rpc('payments_cancel', (args) => {
     const payment = db
@@ -369,12 +378,12 @@ const headers = {
 
 describe('Real HTTP Server & Local Engine Parity Suite', () => {
   let localDb: ReturnType<typeof createTestDb>
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
 
   beforeEach(() => {
     resetWorld()
     localDb = createTestDb()
-    engine = createLocalEngine(localDb)
+    engine = createTestEngine(localDb)
   })
 
   // ─── 1. Product with Opening Stock Parity ────────────────────

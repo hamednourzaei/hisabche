@@ -21,7 +21,9 @@ describe('POST /api/invoices/:id/returns', () => {
   it('clears the money caches after the return is created', () => {
     const created = routes.indexOf('service.createReturn(')
     const cleared = routes.indexOf('invalidateMoneyCaches(workspaceId)')
-    const answered = routes.indexOf('reply.status(201)')
+    // The route answers through the shared helper (201 + envelope), no longer
+    // with a hand-written `reply.status(201)`.
+    const answered = routes.indexOf('sendCreated(reply')
     expect(created).toBeGreaterThan(-1)
     expect(cleared).toBeGreaterThan(created)
     expect(answered).toBeGreaterThan(cleared)

@@ -55,6 +55,7 @@ import {
 } from '@hisabche/validation'
 import { z } from 'zod'
 import { buildEnqueue } from '@hisabche/app-bridge'
+import { requireCapability, requireRole } from '../auth'
 import type { LocalDb } from '../db'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import type { Router } from '../router'
@@ -474,6 +475,8 @@ export function registerTillRoutes(router: Router): void {
   })
 
   router.post('/pos/orders/:id/void', ({ db, ctx, params }: RouteHandlerContext) => {
+    // The server asks for the same capability (pos.routes.ts): a void gives the sale back.
+    requireCapability(ctx, 'payment.cancel')
     const orderId = params.id ?? ''
     const order = db.get<{ session_id: string; status: string }>(
       'SELECT session_id, status FROM pos_order WHERE workspace_id = ? AND id = ?',
@@ -500,6 +503,7 @@ export function registerTillRoutes(router: Router): void {
   router.post(
     '/pos/sessions/:id/cash',
     ({ db, ctx, params, body, headers }: RouteHandlerContext) => {
+      requireRole(ctx, 'cashier', 'seller', 'manager', 'owner')
       const sessionId = params.id ?? ''
       const input = parse(movementSchema, body ?? {})
       const session = getSession(db, ctx, sessionId)
@@ -559,6 +563,7 @@ export function registerTillRoutes(router: Router): void {
   router.post(
     '/pos/sessions/:id/bank-transfer',
     ({ db, ctx, params, body }: RouteHandlerContext) => {
+      requireCapability(ctx, 'ledger.post')
       const sessionId = params.id ?? ''
       const input = parse(
         z.object({
@@ -630,6 +635,7 @@ export function registerTillRoutes(router: Router): void {
   )
 
   router.post('/pos/opening-capital', ({ db, ctx, body }: RouteHandlerContext) => {
+    requireCapability(ctx, 'ledger.post')
     const input = parse(
       z.object({
         entryId: z.string().uuid(),
@@ -706,6 +712,7 @@ export function registerTillRoutes(router: Router): void {
   router.post(
     '/pos/sessions/:id/close',
     ({ db, ctx, params, body, headers }: RouteHandlerContext) => {
+      requireRole(ctx, 'cashier', 'seller', 'manager', 'owner')
       const sessionId = params.id ?? ''
       const input = parse(closeSchema, body ?? {})
       const session = getSession(db, ctx, sessionId)
@@ -804,7 +811,7 @@ export function registerTillRoutes(router: Router): void {
           const enqueue = buildEnqueue({
             entity: 'pos_session',
             operation: 'update',
-            clientId: `${sessionId}-close-${Date.now()}`,
+            clientId: `${sessionId}-close`,
             payload: { id: sessionId, action: 'close', ...input },
             userId: headers?.['x-hisabche-user-id'] ?? ctx.userId,
             workspaceId: ctx.workspaceId,

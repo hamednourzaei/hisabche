@@ -35,6 +35,7 @@ export const IPC = {
 
   // Window / app
   windowControl: 'window:control',
+  windowChrome: 'window:chrome',
   appInfo: 'app:info',
   checkUpdates: 'app:checkUpdates',
   // Downloading is separate from checking on purpose: looking for an update
@@ -124,6 +125,9 @@ export const localTableSchema = z.enum([
   'pos_cash_movement',
   'invoice_returns',
   'invoice_return_lines',
+  'price_list',
+  'price_list_item',
+  'promotion',
 ])
 
 export type LocalTable = z.infer<typeof localTableSchema>
@@ -233,6 +237,22 @@ export const importFileSchema = z.object({
 
 export const windowControlSchema = z.object({
   action: z.enum(['minimize', 'maximize', 'unmaximize', 'close', 'toggleMaximize']),
+})
+
+/**
+ * The colours of the native minimise / maximise / close buttons that sit over
+ * the app's own title bar (Windows and Linux). The renderer reads them from
+ * its theme tokens, so the strict pattern keeps anything but a plain CSS colour
+ * out of the main process.
+ */
+const chromeColorSchema = z
+  .string()
+  .max(64)
+  .regex(/^(#[0-9a-fA-F]{3,8}|rgba?\(\s*[0-9.,\s/%]+\))$/)
+
+export const windowChromeSchema = z.object({
+  color: chromeColorSchema,
+  symbolColor: chromeColorSchema,
 })
 
 export const httpRequestSchema = z.object({
@@ -423,6 +443,11 @@ export interface HisabcheBridge {
     control(
       action: 'minimize' | 'maximize' | 'unmaximize' | 'close' | 'toggleMaximize',
     ): Promise<void>
+    /**
+     * Repaint the native window buttons to match the theme. Absent where the
+     * host has no such buttons (macOS draws its own, Android has no window).
+     */
+    setChrome?(color: string, symbolColor: string): Promise<void>
   }
   app: {
     info(): Promise<AppInfo>

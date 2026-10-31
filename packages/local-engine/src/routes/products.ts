@@ -17,6 +17,7 @@ import {
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import { requireCapability } from '../auth'
 import { buildEnqueue } from '@hisabche/app-bridge'
+import type { LocalDb } from '../db'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 
@@ -109,6 +110,86 @@ function stockSummaryOf(c: RouteHandlerContext) {
     [c.ctx.workspaceId],
   )
   return summarizeStock(rows)
+}
+
+/**
+ * The opening stock of a product, written the same way wherever a product is born
+ * with a quantity (the product form and a file import): a stock movement, the
+ * per-warehouse figure and — only when the buy price is known — a cost layer.
+ * Unknown is not zero: no price, no layer.
+ */
+export function recordOpeningStock(
+  db: LocalDb,
+  input: {
+    workspaceId: string
+    productId: string
+    quantity: number
+    buyPrice: number
+    warehouseId: string | null
+    baseCurrency: string
+    now: string
+  },
+): void {
+  const { workspaceId, productId: id, quantity, buyPrice, warehouseId, baseCurrency, now } = input
+  // Opening stock: a movement, the warehouse figure and, when the price is known, a cost layer.
+  if (quantity > 0) {
+    // Resolve target warehouse
+    let targetWh = warehouseId
+    if (!targetWh) {
+      const defaultWh = db.get<{ id: string }>(
+        'SELECT id FROM warehouse WHERE workspace_id = ? AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1',
+        [workspaceId],
+      )
+      targetWh = defaultWh?.id ?? null
+    }
+
+    if (targetWh) {
+      // Record stock movement
+      const movId = generateUuid()
+      db.run(
+        `INSERT INTO inventory_movement (
+          id, workspace_id, product_id, type, quantity, reference, date,
+          created_at, updated_at, origin, sync_state
+        ) VALUES (?, ?, ?, 'purchase', ?, 'product_opening', ?, ?, ?, 'local', 'local_only')`,
+        [movId, workspaceId, id, quantity, now.slice(0, 10), now, now],
+      )
+
+      // Update product_stock
+      const stockId = generateUuid()
+      db.run(
+        `INSERT INTO product_stock (id, workspace_id, product_id, warehouse_id, qty, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(workspace_id, product_id, warehouse_id) DO UPDATE SET qty = qty + excluded.qty, updated_at = excluded.updated_at`,
+        [stockId, workspaceId, id, targetWh, quantity, now, now],
+      )
+    }
+
+    // Cost layer: ONLY WHEN buyPrice > 0 (Unknown is not zero)
+    if (buyPrice > 0) {
+      const layerId = generateUuid()
+      db.run(
+        `INSERT INTO cost_layer (
+          id, workspace_id, product_id, warehouse_id, source_type, source_id,
+          received_qty, remaining_qty, unit_cost, currency, entry_date,
+          created_at, updated_at, origin, sync_state
+        ) VALUES (?, ?, ?, ?, 'product_opening', ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+        [
+          layerId,
+          workspaceId,
+          id,
+          targetWh,
+          id,
+          quantity,
+          quantity,
+          buyPrice,
+          baseCurrency,
+          now.slice(0, 10),
+          now,
+          now,
+        ],
+      )
+    }
+  }
 }
 
 export function registerProductRoutes(router: Router): void {
@@ -234,6 +315,7 @@ export function registerProductRoutes(router: Router): void {
 
   // ─── POST /products ─────────────────────────────────────────
   router.post('/products', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'product.write')
     const { db, ctx, body } = c
     const { workspaceId } = ctx
     const raw = (body || {}) as Record<string, unknown>
@@ -301,65 +383,15 @@ export function registerProductRoutes(router: Router): void {
         ],
       )
 
-      // 3. Handle opening stock
-      if (quantity > 0) {
-        // Resolve target warehouse
-        let targetWh = warehouseId
-        if (!targetWh) {
-          const defaultWh = db.get<{ id: string }>(
-            'SELECT id FROM warehouse WHERE workspace_id = ? AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1',
-            [workspaceId],
-          )
-          targetWh = defaultWh?.id ?? null
-        }
-
-        if (targetWh) {
-          // Record stock movement
-          const movId = generateUuid()
-          db.run(
-            `INSERT INTO inventory_movement (
-              id, workspace_id, product_id, type, quantity, reference, date,
-              created_at, updated_at, origin, sync_state
-            ) VALUES (?, ?, ?, 'purchase', ?, 'product_opening', ?, ?, ?, 'local', 'local_only')`,
-            [movId, workspaceId, id, quantity, now.slice(0, 10), now, now],
-          )
-
-          // Update product_stock
-          const stockId = generateUuid()
-          db.run(
-            `INSERT INTO product_stock (id, workspace_id, product_id, warehouse_id, qty, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?)
-             ON CONFLICT(workspace_id, product_id, warehouse_id) DO UPDATE SET qty = qty + excluded.qty, updated_at = excluded.updated_at`,
-            [stockId, workspaceId, id, targetWh, quantity, now, now],
-          )
-        }
-
-        // 4. Cost layer: ONLY WHEN buyPrice > 0 (Unknown is not zero)
-        if (buyPrice > 0) {
-          const layerId = generateUuid()
-          db.run(
-            `INSERT INTO cost_layer (
-              id, workspace_id, product_id, warehouse_id, source_type, source_id,
-              received_qty, remaining_qty, unit_cost, currency, entry_date,
-              created_at, updated_at, origin, sync_state
-            ) VALUES (?, ?, ?, ?, 'product_opening', ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
-            [
-              layerId,
-              workspaceId,
-              id,
-              targetWh,
-              id,
-              quantity,
-              quantity,
-              buyPrice,
-              ctx.baseCurrency,
-              now.slice(0, 10),
-              now,
-              now,
-            ],
-          )
-        }
-      }
+      recordOpeningStock(db, {
+        workspaceId,
+        productId: id,
+        quantity,
+        buyPrice,
+        warehouseId,
+        baseCurrency: ctx.baseCurrency,
+        now,
+      })
 
       const inserted = db.get<ProductRow>(
         'SELECT * FROM product WHERE id = ? AND workspace_id = ?',
@@ -385,6 +417,7 @@ export function registerProductRoutes(router: Router): void {
 
   // ─── PATCH /products/:id ────────────────────────────────────
   router.patch('/products/:id', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'product.write')
     const { db, ctx, params, body } = c
     const { id } = params
     const { workspaceId } = ctx

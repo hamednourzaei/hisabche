@@ -38,8 +38,21 @@ export async function appointmentRoutes(fastify: FastifyInstance) {
         endTime: string
         notes?: string | undefined
       }
-      const appointment = await service.createAppointment(workspaceId, body)
-      return reply.status(201).send({ data: appointment })
+      try {
+        const appointment = await service.createAppointment(workspaceId, body)
+        return reply.status(201).send({ data: appointment })
+      } catch (err: unknown) {
+        const error = err as { code?: string; message?: string }
+        if (
+          error.code === 'APPOINTMENT_CONFLICT' ||
+          error.message?.includes('APPOINTMENT_CONFLICT')
+        ) {
+          return reply
+            .status(409)
+            .send({ error: error.message || 'APPOINTMENT_CONFLICT', code: 'APPOINTMENT_CONFLICT' })
+        }
+        throw err
+      }
     },
   )
 }

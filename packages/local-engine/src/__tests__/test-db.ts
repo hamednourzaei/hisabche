@@ -7,6 +7,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { CREATE_STATEMENTS } from '@hisabche/app-bridge'
 import type { LocalDb, RunResult } from '../db'
+import { createLocalEngine, type LocalEngine } from '../index'
 
 export const TEST_WORKSPACE_ID = '11111111-1111-4111-8111-111111111111'
 export const TEST_USER_ID = '22222222-2222-4222-8222-222222222222'
@@ -75,5 +76,26 @@ export function createTestDb(): LocalDb {
         inTransaction = false
       }
     },
+  }
+}
+
+/**
+ * The engine as a SIGNED-IN device sees it: the host bridge stamps the session's
+ * user on every request (app-shell providers.tsx), so a request that names nobody
+ * is not a realistic one. A test that names a user itself — to be somebody else,
+ * or nobody — wins over this default. The identity tests use `createLocalEngine`
+ * directly, with no wrapper.
+ */
+export function createTestEngine(db: LocalDb): LocalEngine {
+  const engine = createLocalEngine(db)
+  return {
+    request: (req) =>
+      engine.request({
+        ...req,
+        headers: {
+          'x-user-id': TEST_USER_ID,
+          ...req.headers,
+        },
+      }),
   }
 }

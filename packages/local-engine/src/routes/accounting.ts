@@ -21,6 +21,8 @@ import {
   type ProfitInvoice,
   type ProfitLine,
 } from '@hisabche/validation'
+import { buildEnqueue } from '@hisabche/app-bridge'
+import { requireCapability } from '../auth'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import type { Router } from '../router'
 import { profitSources } from './report-sources'
@@ -101,6 +103,7 @@ export function registerAccountingRoutes(router: Router): void {
   // ─── GET /accounting/accounts ───────────────────────────────
   router.get('/accounting/accounts', (c: RouteHandlerContext) => {
     const { db, ctx } = c
+    requireCapability(ctx, 'ledger.read')
     const rows = db.all<AccountRow>(
       'SELECT * FROM account WHERE workspace_id = ? AND deleted_at IS NULL ORDER BY code ASC',
       [ctx.workspaceId],
@@ -110,8 +113,9 @@ export function registerAccountingRoutes(router: Router): void {
 
   // ─── POST /accounting/accounts ──────────────────────────────
   router.post('/accounting/accounts', (c: RouteHandlerContext) => {
-    const { db, ctx, body } = c
+    const { db, ctx, body, headers } = c
     const { workspaceId } = ctx
+    requireCapability(ctx, 'account.manage')
     const raw = (body || {}) as Record<string, unknown>
     const parsed = createAccountSchema.safeParse(raw)
     if (!parsed.success) {
@@ -146,6 +150,18 @@ export function registerAccountingRoutes(router: Router): void {
       [id, workspaceId, code, name, type, role, parentId, isGroup, isActive, now, now],
     )
 
+    if (headers?.['x-hisabche-queue'] === '1') {
+      const enqueue = buildEnqueue({
+        entity: 'account',
+        operation: 'create',
+        clientId: id,
+        payload: { id, code, name, type, role, parentId, isGroup, isActive },
+        userId: headers?.['x-hisabche-user-id'] ?? ctx.userId,
+        workspaceId,
+      })
+      db.run(enqueue.sql, enqueue.params)
+    }
+
     const created = db.get<AccountRow>('SELECT * FROM account WHERE id = ?', [id])
     return mapAccount(created!)
   })
@@ -154,6 +170,7 @@ export function registerAccountingRoutes(router: Router): void {
   router.get('/accounting/journal', (c: RouteHandlerContext) => {
     const { db, ctx, query } = c
     const { workspaceId } = ctx
+    requireCapability(ctx, 'ledger.read')
 
     const status = query.status?.trim()
     const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 200)
@@ -214,8 +231,9 @@ export function registerAccountingRoutes(router: Router): void {
 
   // ─── POST /accounting/journal ───────────────────────────────
   router.post('/accounting/journal', (c: RouteHandlerContext) => {
-    const { db, ctx, body } = c
+    const { db, ctx, body, headers } = c
     const { workspaceId } = ctx
+    requireCapability(ctx, 'ledger.post')
     const raw = (body || {}) as Record<string, unknown>
     const now = new Date().toISOString()
     const isoDate = raw.date
@@ -333,6 +351,25 @@ export function registerAccountingRoutes(router: Router): void {
         )
       }
 
+      if (headers?.['x-hisabche-queue'] === '1') {
+        const enqueue = buildEnqueue({
+          entity: 'journal_entry',
+          operation: 'create',
+          clientId: entryId,
+          payload: {
+            id: entryId,
+            entryNumber,
+            date,
+            description,
+            reference,
+            lines: rawLines,
+          },
+          userId: headers?.['x-hisabche-user-id'] ?? ctx.userId,
+          workspaceId,
+        })
+        db.run(enqueue.sql, enqueue.params)
+      }
+
       return {
         id: entryId,
         entryNumber,
@@ -346,9 +383,10 @@ export function registerAccountingRoutes(router: Router): void {
 
   // ─── POST /accounting/journal/:id/reverse ───────────────────
   router.post('/accounting/journal/:id/reverse', (c: RouteHandlerContext) => {
-    const { db, ctx, params, body } = c
+    const { db, ctx, params, body, headers } = c
     const { id } = params
     const { workspaceId } = ctx
+    requireCapability(ctx, 'ledger.reverse')
     const raw = (body || {}) as Record<string, unknown>
     const parsed = reverseJournalEntrySchema.safeParse(raw)
     if (!parsed.success) {
@@ -421,6 +459,23 @@ export function registerAccountingRoutes(router: Router): void {
 
       db.run("UPDATE journal_entry SET status = 'reversed', updated_at = ? WHERE id = ?", [now, id])
 
+      if (headers?.['x-hisabche-queue'] === '1') {
+        const enqueue = buildEnqueue({
+          entity: 'journal_entry',
+          operation: 'update',
+          clientId: `${id}-reverse`,
+          payload: {
+            id,
+            action: 'reverse',
+            reason,
+            date: revDate,
+          },
+          userId: headers?.['x-hisabche-user-id'] ?? ctx.userId,
+          workspaceId,
+        })
+        db.run(enqueue.sql, enqueue.params)
+      }
+
       return {
         id: revId,
         entryNumber: revNumber,
@@ -433,6 +488,7 @@ export function registerAccountingRoutes(router: Router): void {
   // ─── GET /accounting/trial-balance ──────────────────────────
   router.get('/accounting/trial-balance', (c: RouteHandlerContext) => {
     const { db, ctx, query } = c
+    requireCapability(ctx, 'ledger.read')
     const { workspaceId, baseCurrency } = ctx
 
     const toDate = query.date
@@ -531,6 +587,7 @@ export function registerAccountingRoutes(router: Router): void {
   // ─── GET /accounting/profit-report ──────────────────────────
   router.get('/accounting/profit-report', (c: RouteHandlerContext) => {
     const { db, ctx, query } = c
+    requireCapability(ctx, 'report.financial.read')
     const { workspaceId, baseCurrency } = ctx
 
     const from = query.from ? dateOnly(query.from) : `${dateOnly(new Date()).slice(0, 7)}-01`
@@ -554,7 +611,8 @@ export function registerAccountingRoutes(router: Router): void {
   })
 
   router.put('/accounting/period-lock', (c: RouteHandlerContext) => {
-    const { db, body } = c
+    const { db, ctx, body } = c
+    requireCapability(ctx, 'ledger.lock_period')
     const raw = (body || {}) as Record<string, unknown>
     if (!raw.lockedUntil) {
       db.run('DELETE FROM meta WHERE key = ?', ['period_lock'])

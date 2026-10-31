@@ -48,9 +48,19 @@ function makeQuery(table: string) {
   let ascending = true
   let limitN = Infinity
   let pendingUpdate: Row | null = null
+  let pendingDelete = false
 
   const exec = async (): Promise<{ data: unknown; error: unknown }> => {
     queryLog.push({ table, filters: [...filters] })
+
+    if (pendingDelete) {
+      const targets = rowsOf(table).filter((r) => passes(r, filters))
+      tables.set(
+        table,
+        rowsOf(table).filter((r) => !targets.includes(r)),
+      )
+      return { data: targets, error: null }
+    }
 
     if (pendingUpdate) {
       const patch = pendingUpdate
@@ -88,7 +98,10 @@ function makeQuery(table: string) {
       limitN = n
       return api
     },
-    delete: () => api,
+    delete: () => {
+      pendingDelete = true
+      return api
+    },
     update: (values: Row) => {
       pendingUpdate = values
       return api
@@ -99,6 +112,17 @@ function makeQuery(table: string) {
       const existing = rows.find((r) => r.id === values.id)
       if (existing && !opts?.ignoreDuplicates) Object.assign(existing, values)
       if (!existing) rows.push({ ...values })
+      return { data: [values], error: null }
+    },
+    // The claim: one row per event id, a second insert of the same id is a 23505
+    // (the webhook is already being, or has been, processed).
+    insert: async (values: Row) => {
+      queryLog.push({ table, filters: [] })
+      const rows = rowsOf(table)
+      if (rows.some((r) => r.id === values.id)) {
+        return { data: null, error: { code: '23505', message: 'duplicate key value' } }
+      }
+      rows.push({ ...values })
       return { data: [values], error: null }
     },
     single: async () => {
@@ -145,6 +169,7 @@ function seedSubscription(opts: {
   workspaceId?: string | null
   plan?: string
   createdAt: string
+  periodEnd?: string
   stripeCustomerId?: string
   stripeSubscriptionId?: string
 }): Row {
@@ -157,7 +182,7 @@ function seedSubscription(opts: {
     is_trial: false,
     trial_used: true,
     created_at: opts.createdAt,
-    period_end: '2026-01-15T00:00:00Z',
+    period_end: opts.periodEnd ?? '2026-01-15T00:00:00Z',
     ...(opts.stripeCustomerId !== undefined && { stripe_customer_id: opts.stripeCustomerId }),
     ...(opts.stripeSubscriptionId !== undefined && {
       stripe_subscription_id: opts.stripeSubscriptionId,
@@ -384,6 +409,10 @@ describe('mutations land on the resolved primary key', () => {
       userId: BUYER,
       stripeSubscriptionId: 'sub_r1',
       createdAt: '2026-01-01',
+      // In the future: a renewal of a LAPSED subscription starts from now
+      // (billing.extendSubscriptionRow), so a fixed past date made this test
+      // depend on the day it ran.
+      periodEnd: '2099-01-15T00:00:00Z',
     })
 
     const result = await service.processWebhook(
@@ -395,7 +424,7 @@ describe('mutations land on the resolved primary key', () => {
     expect(result.success).toBe(true)
     // toISOString() spells milliseconds explicitly — the month arithmetic is
     // what this pins.
-    expect(row.period_end).toBe('2026-02-15T00:00:00.000Z')
+    expect(row.period_end).toBe('2099-02-15T00:00:00.000Z')
   })
 
   it('a successful event is logged to webhook_events exactly once', async () => {
@@ -406,5 +435,99 @@ describe('mutations land on the resolved primary key', () => {
     const logged = rowsOf('webhook_events')
     expect(logged).toHaveLength(1)
     expect(logged[0]?.id).toBe('evt_log')
+  })
+})
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   A temporary failure must never poison a valid event
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+describe('a failed delivery can be retried; a successful one cannot be repeated', () => {
+  const renewal = (id: string) => event(id, 'invoice.paid', { subscription: 'sub_retry' })
+
+  it('fails while the subscription is not there yet, then succeeds on the retry', async () => {
+    const first = await service.processWebhook(renewal('evt_retry'))
+    expect(first.success).toBe(false)
+    // The claim was released: nothing is left that would answer the retry «already processed».
+    expect(rowsOf('webhook_events').filter((r) => r.id === 'evt_retry')).toHaveLength(0)
+
+    const row = seedSubscription({
+      userId: BUYER,
+      stripeSubscriptionId: 'sub_retry',
+      createdAt: '2026-01-01',
+      periodEnd: '2099-01-15T00:00:00Z',
+    })
+    const second = await service.processWebhook(renewal('evt_retry'))
+    expect(second.success).toBe(true)
+    expect(row.period_end).toBe('2099-02-15T00:00:00.000Z')
+  })
+
+  it('a successful event delivered again is answered, and applied once', async () => {
+    const row = seedSubscription({
+      userId: BUYER,
+      stripeSubscriptionId: 'sub_retry',
+      createdAt: '2026-01-01',
+      periodEnd: '2099-01-15T00:00:00Z',
+    })
+    await service.processWebhook(renewal('evt_once'))
+    const again = await service.processWebhook(renewal('evt_once'))
+
+    expect(again).toMatchObject({ success: true, action: 'already_processed' })
+    expect(row.period_end).toBe('2099-02-15T00:00:00.000Z')
+    expect(rowsOf('webhook_events').filter((r) => r.id === 'evt_once')).toHaveLength(1)
+  })
+
+  it('two deliveries at the same moment are applied once', async () => {
+    const row = seedSubscription({
+      userId: BUYER,
+      stripeSubscriptionId: 'sub_retry',
+      createdAt: '2026-01-01',
+      periodEnd: '2099-01-15T00:00:00Z',
+    })
+    const [a, b] = await Promise.all([
+      service.processWebhook(renewal('evt_twin')),
+      service.processWebhook(renewal('evt_twin')),
+    ])
+
+    expect([a.action, b.action].sort()).toEqual(['already_processed', 'invoice_paid'])
+    expect(row.period_end).toBe('2099-02-15T00:00:00.000Z')
+  })
+
+  it('a restarted process (a new service, the cache gone) still knows the event was applied', async () => {
+    const row = seedSubscription({
+      userId: BUYER,
+      stripeSubscriptionId: 'sub_retry',
+      createdAt: '2026-01-01',
+      periodEnd: '2099-01-15T00:00:00Z',
+    })
+    await service.processWebhook(renewal('evt_restart'))
+    const afterRestart = await new WebhookService().processWebhook(renewal('evt_restart'))
+
+    expect(afterRestart).toMatchObject({ success: true, action: 'already_processed' })
+    expect(row.period_end).toBe('2099-02-15T00:00:00.000Z')
+  })
+
+  it('an id reused with a different payload is the same event, not a second one', async () => {
+    const row = seedSubscription({
+      userId: BUYER,
+      stripeSubscriptionId: 'sub_retry',
+      createdAt: '2026-01-01',
+      periodEnd: '2099-01-15T00:00:00Z',
+    })
+    await service.processWebhook(renewal('evt_same_id'))
+    const other = await service.processWebhook(
+      event('evt_same_id', 'invoice.paid', { subscription: 'sub_other' }),
+    )
+
+    expect(other.action).toBe('already_processed')
+    expect(row.period_end).toBe('2099-02-15T00:00:00.000Z')
+  })
+
+  it('a failure that keeps failing never marks the event processed', async () => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const result = await service.processWebhook(renewal('evt_never'))
+      expect(result.success).toBe(false)
+    }
+    expect(rowsOf('webhook_events').filter((r) => r.id === 'evt_never')).toHaveLength(0)
   })
 })

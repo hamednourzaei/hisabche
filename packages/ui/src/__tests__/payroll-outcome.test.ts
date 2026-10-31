@@ -39,9 +39,23 @@ describe('one rule: a paid salary is final', () => {
     }
   })
 
-  it('the screen offers no button on it', () => {
+  it('the screen offers no way to CHANGE it — only to book it to the ledger again', () => {
     expect(control).toContain('const isPaid = isPayrollFinal(status)')
-    expect(control).toContain('{isPaid ? null : (')
+    // The branch rendered for a paid salary, and the one for everything else.
+    const start = control.lastIndexOf('{isPaid ? (')
+    const split = control.indexOf(') : (', start)
+    expect(start).toBeGreaterThan(-1)
+    expect(split).toBeGreaterThan(start)
+    const paid = control.slice(start, split)
+    const rest = control.slice(split)
+
+    // Booking is idempotent and changes nothing about the salary itself.
+    expect(paid).toContain('book.mutateAsync')
+    expect(paid).not.toContain("open('paid')")
+    expect(paid).not.toContain("open('notPaid')")
+    expect(paid).not.toContain('settle.')
+    // The buttons that settle it live only in the other branch.
+    expect(rest).toContain("open('paid')")
   })
 
   it('the server refuses it in the WHERE clause, not in a read before the write', () => {

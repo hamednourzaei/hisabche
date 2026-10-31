@@ -26,6 +26,7 @@
 //   · the audit trail of budget changes (audit.trail is a cloud feature).
 // ============================================
 
+import { requireCapability } from '../auth'
 import {
   actualsFromDays,
   approveBudgetBodySchema,
@@ -225,6 +226,7 @@ export function registerBudgetRoutes(router: Router): void {
   })
 
   router.put('/operations/budgets/:id', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'budget.manage')
     const { db, ctx, params, body } = c
     const input = parseWith(budgetBodySchema, { ...bodyOf(body), id: params.id ?? '' })
 
@@ -351,6 +353,7 @@ export function registerBudgetRoutes(router: Router): void {
   })
 
   router.post('/operations/budgets/:id/submit', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'budget.manage')
     const { db, ctx, params } = c
     const budget = oneBudget(db, ctx, params.id ?? '')
     const planned = planBudgetSubmit(budget)
@@ -359,6 +362,7 @@ export function registerBudgetRoutes(router: Router): void {
   })
 
   router.post('/operations/budgets/:id/approve', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'budget.manage')
     const { db, ctx, params, body } = c
     // An override reason belongs to a separation-of-duties policy; a one-person
     // device has none, so the body is validated and nothing more is asked of it.
@@ -370,6 +374,7 @@ export function registerBudgetRoutes(router: Router): void {
   })
 
   router.post('/operations/budgets/:id/archive', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'budget.manage')
     const { db, ctx, params } = c
     const budget = oneBudget(db, ctx, params.id ?? '')
     const planned = planBudgetArchive(budget)
@@ -380,6 +385,7 @@ export function registerBudgetRoutes(router: Router): void {
   // Revise an APPROVED budget. The previous version survives in budget_revision;
   // posted journal entries are never touched. Atomic and version-locked.
   router.post('/operations/budgets/:id/revise', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'budget.manage')
     const { db, ctx, params, body } = c
     const input = parseWith(reviseBudgetBodySchema, bodyOf(body))
     const budget = oneBudget(db, ctx, params.id ?? '')

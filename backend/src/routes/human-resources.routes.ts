@@ -20,6 +20,7 @@ import {
 } from '@hisabche/validation'
 import { HumanResourcesService } from '../services/human-resources.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
@@ -43,6 +44,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireCapability('employee.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'departments' }),
       ],
       schema: {
@@ -64,7 +66,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/departments',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')],
       schema: {
         body: toJsonSchema(createDepartmentSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -90,7 +92,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/departments/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateDepartmentSchema),
@@ -126,6 +128,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireCapability('employee.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'employees' }),
       ],
       schema: {
@@ -153,7 +156,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/employees',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')],
       schema: {
         body: toJsonSchema(createEmployeeSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -180,6 +183,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireCapability('employee.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'employee' }),
       ],
       schema: {
@@ -203,7 +207,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/employees/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateEmployeeSchema),
@@ -268,7 +272,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/attendance',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')],
       schema: {
         body: toJsonSchema(createAttendanceSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -294,7 +298,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/attendance/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateAttendanceSchema),
@@ -329,6 +333,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireCapability('payroll.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'payrolls-summary' }),
       ],
       schema: {
@@ -355,6 +360,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireCapability('payroll.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'payrolls' }),
       ],
       schema: {
@@ -378,7 +384,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/payrolls',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('payroll.write')],
       schema: {
         body: toJsonSchema(createPayrollSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -394,8 +400,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
         if (err instanceof z.ZodError) {
           return reply.code(400).send({ error: 'Validation failed', details: err.errors })
         }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to create payroll' })
+        return sendFailure(reply, fastify.log, err, 'Failed to create payroll')
       }
     },
   )
@@ -404,7 +409,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/payrolls/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('payroll.write')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updatePayrollSchema),
@@ -424,6 +429,28 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── POST /api/payrolls/:id/book ──────────────────────────
+  fastify.post(
+    '/api/payrolls/:id/book',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('payroll.post')],
+      schema: {
+        params: toJsonSchema(z.object({ id: z.string().uuid() })),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const result = await humanResourcesService.bookPayrollRetry(request.tenancy, id)
+        await clearCache('payrolls:*')
+        return reply.send(result)
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to book payroll')
+      }
+    },
+  )
+
   // ═══════════════════════════════════════════════════════════
   // LEAVES
   // ═══════════════════════════════════════════════════════════
@@ -437,6 +464,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireCapability('leave.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'leaves' }),
       ],
       schema: {
@@ -460,7 +488,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/leaves',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('leave.write')],
       schema: {
         body: toJsonSchema(createLeaveSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -486,7 +514,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/leaves/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('leave.write')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateLeaveSchema),
@@ -514,7 +542,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   // in the books. Was in KNOWN_MISSING — the client called it and it 404'd.
   fastify.delete(
     '/api/employees/:id',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }

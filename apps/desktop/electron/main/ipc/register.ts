@@ -25,8 +25,10 @@ import {
   secureKeySchema,
   secureSetSchema,
   windowControlSchema,
+  windowChromeSchema,
   httpRequestSchema,
 } from '@hisabche/app-bridge'
+import { TITLE_BAR_HEIGHT } from '../window'
 import { sessionCan } from '@hisabche/auth-core'
 import type { AppInfo, ImportedFile } from '@hisabche/app-bridge'
 import * as db from '../db/database'
@@ -249,6 +251,15 @@ export function registerIpcHandlers(): void {
       actions[action]()
     }),
   )
+
+  // The native buttons are window chrome, not business data: they must follow
+  // the theme on the login screen too, so this needs no session. It changes
+  // two colours and nothing else.
+  handle(IPC.windowChrome, windowChromeSchema, ({ color, symbolColor }, event) => {
+    if (process.platform === 'darwin') return
+    const win = BrowserWindow.fromWebContents(event.sender)
+    win?.setTitleBarOverlay({ color, symbolColor, height: TITLE_BAR_HEIGHT })
+  })
 
   // ─── App ──────────────────────────────────────────────── (Bootstrap)
   // Carries no business data — the renderer reads it before the login screen

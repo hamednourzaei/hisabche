@@ -12,6 +12,7 @@ import {
   type ProductStockRow,
 } from '@hisabche/validation'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
+import { requireCapability } from '../auth'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 
@@ -64,6 +65,7 @@ export function registerWarehouseRoutes(router: Router): void {
   // ─── POST /warehouses ───────────────────────────────────────
   router.post('/warehouses', (c: RouteHandlerContext) => {
     const { db, ctx, body } = c
+    requireCapability(ctx, 'warehouse.manage')
     const { workspaceId } = ctx
     const raw = (body || {}) as Record<string, unknown>
     const parsed = createwarehouseSchema.safeParse(raw)
@@ -93,6 +95,7 @@ export function registerWarehouseRoutes(router: Router): void {
   // ─── PATCH /warehouses/:id ──────────────────────────────────
   router.patch('/warehouses/:id', (c: RouteHandlerContext) => {
     const { db, ctx, params, body } = c
+    requireCapability(ctx, 'warehouse.manage')
     const { id } = params
     const { workspaceId } = ctx
     const raw = (body || {}) as Record<string, unknown>
@@ -133,6 +136,7 @@ export function registerWarehouseRoutes(router: Router): void {
   // ─── DELETE /warehouses/:id ─────────────────────────────────
   router.delete('/warehouses/:id', (c: RouteHandlerContext) => {
     const { db, ctx, params } = c
+    requireCapability(ctx, 'warehouse.manage')
     const { id } = params
     const { workspaceId } = ctx
 

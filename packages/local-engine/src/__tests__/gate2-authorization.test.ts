@@ -11,8 +11,7 @@
 // ============================================
 
 import { describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WORKSPACE_ID } from './test-db'
+import { createTestDb, TEST_WORKSPACE_ID, createTestEngine } from './test-db'
 
 describe('Gate 2: Critical Local Engine Authorization Verification', () => {
   it('prevents seller user from escalating to owner via headers', async () => {
@@ -20,7 +19,7 @@ describe('Gate 2: Critical Local Engine Authorization Verification', () => {
     // Explicitly set the logged-in user in SQLite as seller
     db.run(`UPDATE local_user SET role = 'seller'`)
 
-    const engine = createLocalEngine(db)
+    const engine = createTestEngine(db)
 
     // Seller tries to delete products while forging x-user-role: owner
     const prodRes = await engine.request<{ id: string }>({
@@ -47,12 +46,12 @@ describe('Gate 2: Critical Local Engine Authorization Verification', () => {
     expect(deleteRes.status).toBe(403)
   })
 
-  it('missing identity defaults to viewer, blocking mutations', async () => {
+  it('a user who is not on the device is refused, not given the lowest role', async () => {
     const db = createTestDb()
     // Remove all users from SQLite
     db.run(`DELETE FROM local_user`)
 
-    const engine = createLocalEngine(db)
+    const engine = createTestEngine(db)
 
     // Unauthenticated request attempting to create price list
     const res = await engine.request({
@@ -64,14 +63,15 @@ describe('Gate 2: Critical Local Engine Authorization Verification', () => {
       body: { name: 'لیست قیمت بدون هویت', currency: 'AFN' },
     })
 
-    // Default viewer is not authorized to create price lists
-    expect(res.status).toBe(403)
+    // The request names a user (the test engine stamps one) that no longer exists.
+    expect(res.status).toBe(401)
+    expect(res.data).toMatchObject({ code: 'UNKNOWN_USER' })
   })
 
   it('invalid/garbage role header is ignored and does not elevate privileges', async () => {
     const db = createTestDb()
     db.run(`UPDATE local_user SET role = 'seller'`)
-    const engine = createLocalEngine(db)
+    const engine = createTestEngine(db)
 
     const res = await engine.request({
       method: 'GET',
@@ -88,7 +88,7 @@ describe('Gate 2: Critical Local Engine Authorization Verification', () => {
   it('role change in SQLite during active session is immediately reflected', async () => {
     const db = createTestDb()
     db.run(`UPDATE local_user SET role = 'seller'`)
-    const engine = createLocalEngine(db)
+    const engine = createTestEngine(db)
 
     // First attempt as seller to access backup -> 403
     const res1 = await engine.request({
@@ -112,7 +112,7 @@ describe('Gate 2: Critical Local Engine Authorization Verification', () => {
 
   it('enforces workspace boundary: cannot access other workspace data', async () => {
     const db = createTestDb()
-    const engine = createLocalEngine(db)
+    const engine = createTestEngine(db)
 
     const otherWsId = '99999999-9999-4999-8999-999999999999'
 
@@ -123,8 +123,10 @@ describe('Gate 2: Critical Local Engine Authorization Verification', () => {
       headers: { 'x-workspace-id': otherWsId },
     })
 
-    // Returns empty list for the isolated foreign workspace
-    expect(res.status).toBe(200)
-    expect(res.data.invoices).toEqual([])
+    // This device does not hold that workspace: refused outright, which is a
+    // stronger answer than the empty list it used to give.
+    expect(res.status).toBe(403)
+    expect(res.data).toMatchObject({ code: 'WORKSPACE_MISMATCH' })
+    expect(res.data.invoices).toBeUndefined()
   })
 })

@@ -16,6 +16,7 @@ import { createHashRouter, Navigate, RouterProvider, useParams } from 'react-rou
 
 import { isPageDisabled } from '@hisabche/ui/menu'
 import { Providers } from './providers'
+import { DesktopTitleBar, useHasDesktopTitleBar } from '@/components/layout/desktop-title-bar'
 import { AppShell } from '@/components/layout/app-shell'
 import { RequireAuth } from '@/features/auth/require-auth'
 import { RouteErrorBoundary } from './route-error'
@@ -209,9 +210,16 @@ const router = createHashRouter([
 ])
 
 export function App() {
+  const hasTitleBar = useHasDesktopTitleBar()
   return (
     <Providers>
-      <RouterProvider router={router} />
+      {/* The same tree whether or not the strip is there, so nothing remounts. */}
+      <div className="flex h-full w-full flex-col">
+        {hasTitleBar ? <DesktopTitleBar /> : null}
+        <div className="relative min-h-0 flex-1">
+          <RouterProvider router={router} />
+        </div>
+      </div>
     </Providers>
   )
 }

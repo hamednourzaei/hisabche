@@ -28,6 +28,7 @@ import {
   getToken,
   getAppEdition,
   type ApiError,
+  localRequest,
 } from '@hisabche/api'
 import { decodePullPage, decodeSnapshotPage, HSB_CONTENT_TYPE } from '@hisabche/sync/wire'
 import { connectSyncStream, streamUrl, type StreamHandle } from '@hisabche/sync/stream'
@@ -35,7 +36,7 @@ import { connectSyncStream, streamUrl, type StreamHandle } from '@hisabche/sync/
 import { useCurrencyStore, useWorkspaceStore } from '@hisabche/store'
 
 import { API_BASE_URL, apiClient } from '@/shared/lib/api'
-import { bridge, localApi } from '@/shared/lib/bridge'
+import { bridge } from '@/shared/lib/bridge'
 import { currentOutboxOwner, headersForEntry, isOwnedBy } from './outbox-owner'
 import { markTableSynced } from './device-sync-state'
 import { useSyncStore } from '@hisabche/store'
@@ -365,9 +366,9 @@ async function removeInvoiceItems(invoiceIds: string[]): Promise<void> {
  */
 async function discardInvoiceProjection(invoiceId: string): Promise<void> {
   try {
-    const local = localApi()
-    if (!local) return
-    await local.request({ method: 'DELETE', path: `/invoices/${invoiceId}/projection` })
+    // Through the shared door, which stamps the signed-in user and the queue
+    // marker: the engine names nobody on its own.
+    await localRequest('DELETE', `/invoices/${invoiceId}/projection`)
   } catch {
     // Reconciled by the pull; never fatal to the push.
   }
@@ -554,13 +555,17 @@ export function startSyncStream(workspaceId: string, onWake: () => void): Stream
 // Push
 // ============================================
 
-const ENDPOINT_BY_ENTITY: Partial<Record<LocalTable, string>> = {
+export const ENDPOINT_BY_ENTITY: Partial<Record<LocalTable, string>> = {
   invoice: '/invoices',
   customer: '/customers',
   product: '/products',
   transaction: '/transactions',
   payment: '/payments',
   inventory_movement: '/stock-transfers',
+  price_list: '/price-lists',
+  promotion: '/promotions',
+  account: '/accounting/accounts',
+  journal_entry: '/accounting/journal',
 }
 
 function isPermanent(status: number): boolean {
@@ -586,13 +591,77 @@ async function pushEntry(entry: QueueEntry): Promise<void> {
     return
   }
 
-  const endpoint = ENDPOINT_BY_ENTITY[entry.entity]
-  if (!endpoint) throw new Error(`NO_ENDPOINT:${entry.entity}`)
-
   // ⚠️ THE ROW'S OWN WORKSPACE, NEVER THE ACTIVE ONE. A change made in
   // another business goes to that business's books, even while another
   // business is open on this device.
   const headers = headersForEntry(entry)
+
+  // ─── Domain Pushes with Custom Parameterized Routes ─────────
+  if (entry.entity === 'invoice_returns') {
+    const payload = entry.payload as Record<string, unknown>
+    const invoiceId = String(payload.originalInvoiceId ?? payload.id ?? '')
+    if (!invoiceId) throw new Error('MISSING_INVOICE_ID:invoice_returns')
+    await apiClient.post(`/invoices/${invoiceId}/returns`, entry.payload, { headers })
+    return
+  }
+
+  if (entry.entity === 'pos_cash_movement') {
+    const payload = entry.payload as Record<string, unknown>
+    const sessionId = String(payload.sessionId ?? '')
+    if (!sessionId) throw new Error('MISSING_SESSION_ID:pos_cash_movement')
+    await apiClient.post(`/pos/sessions/${sessionId}/cash`, entry.payload, { headers })
+    return
+  }
+
+  if (entry.entity === 'pos_session') {
+    const payload = entry.payload as Record<string, unknown>
+    const sessionId = String(payload.id ?? payload.sessionId ?? '')
+    if (!sessionId) throw new Error('MISSING_SESSION_ID:pos_session')
+    if (entry.operation === 'update' && payload.action === 'close') {
+      await apiClient.post(`/pos/sessions/${sessionId}/close`, entry.payload, { headers })
+      return
+    }
+  }
+
+  if (entry.entity === 'price_list' && entry.operation === 'update') {
+    const payload = entry.payload as Record<string, unknown>
+    const id = String(payload.id ?? '')
+    if (payload.items) {
+      await apiClient.put(`/price-lists/${id}/items`, { items: payload.items }, { headers })
+      return
+    }
+    if (payload.isActive !== undefined) {
+      await apiClient.patch(
+        `/price-lists/${id}/active`,
+        { isActive: payload.isActive },
+        { headers },
+      )
+      return
+    }
+  }
+
+  if (entry.entity === 'promotion' && entry.operation === 'update') {
+    const payload = entry.payload as Record<string, unknown>
+    const id = String(payload.id ?? '')
+    await apiClient.patch(`/promotions/${id}/active`, { isActive: payload.isActive }, { headers })
+    return
+  }
+
+  if (entry.entity === 'journal_entry' && entry.operation === 'update') {
+    const payload = entry.payload as Record<string, unknown>
+    const id = String(payload.id ?? '')
+    if (payload.action === 'reverse') {
+      await apiClient.post(`/accounting/journal/${id}/reverse`, payload, { headers })
+      return
+    }
+  }
+
+  const endpoint = ENDPOINT_BY_ENTITY[entry.entity]
+  if (!endpoint) {
+    const err = new Error(`NO_ENDPOINT:${entry.entity}`)
+    ;(err as unknown as { permanent: boolean }).permanent = true
+    throw err
+  }
 
   if (entry.operation === 'create') {
     await apiClient.post(endpoint, entry.payload, { headers })
@@ -722,6 +791,25 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
   running = true
   try {
     const queue = await desktop.db.queue()
+
+    // 17B: When sync runs upon reconnect, reset attempts for transient failures
+    // while keeping permanent rejections (starts with REJECTED_PREFIX) frozen.
+    for (const entry of queue) {
+      if (entry.attempts >= MAX_ATTEMPTS && !entry.lastError?.startsWith(REJECTED_PREFIX)) {
+        await desktop.db.enqueue({
+          entity: entry.entity,
+          operation: entry.operation,
+          clientId: entry.clientId,
+          payload: entry.payload,
+          userId: entry.userId,
+          workspaceId: entry.workspaceId,
+        })
+        entry.attempts = 0
+        entry.status = 'pending'
+        entry.lastError = null
+      }
+    }
+
     // An entry never goes before the create it refers to (push-order.ts): a
     // failed customer create keeps its invoice WAITING, not failed.
     const gate = createPushGate(queue)
@@ -787,7 +875,11 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
           message.includes('INVOICE_REFERENCE_MISSING') ||
           (apiError as Record<string, unknown>)?.code === 'INVOICE_REFERENCE_MISSING' ||
           message.includes('REFERENCE_MISSING')
-        const permanent = Boolean(apiError.status && isPermanent(apiError.status) && !isMissingRef)
+        const permanent = Boolean(
+          (apiError.status && isPermanent(apiError.status) && !isMissingRef) ||
+          (error as { permanent?: boolean })?.permanent ||
+          message.startsWith('NO_ENDPOINT'),
+        )
         await desktop.db.resolveQueue(
           entry.clientId,
           'failed',
@@ -824,4 +916,22 @@ async function invalidateAll(queryClient: QueryClient): Promise<void> {
     queryClient.invalidateQueries({ queryKey: productKeys.all }),
     queryClient.invalidateQueries({ queryKey: dashboardKeys.all }),
   ])
+}
+
+export async function resetTransientFailuresOnReconnect(): Promise<void> {
+  const desktop = bridge()
+  if (!desktop) return
+  const queue = await desktop.db.queue()
+  for (const entry of queue) {
+    if (entry.attempts >= MAX_ATTEMPTS && !entry.lastError?.startsWith(REJECTED_PREFIX)) {
+      await desktop.db.enqueue({
+        entity: entry.entity,
+        operation: entry.operation,
+        clientId: entry.clientId,
+        payload: entry.payload,
+        userId: entry.userId,
+        workspaceId: entry.workspaceId,
+      })
+    }
+  }
 }

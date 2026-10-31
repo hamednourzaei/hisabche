@@ -7,7 +7,6 @@
 // Enforces workspace_id tenancy boundary on every query.
 // ============================================
 
-import { hasAppointmentConflict } from '@hisabche/validation'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '../../db'
 
@@ -36,26 +35,24 @@ export class AppointmentService {
       notes?: string | undefined
     },
   ) {
-    const existing = await this.getAppointments(workspaceId)
-    const hasConflict = hasAppointmentConflict(
-      existing.map((a) => ({
-        id: a.id,
-        customerId: a.customer_id,
-        staffEmployeeId: a.staff_employee_id,
-        serviceProductId: a.service_product_id,
-        startTime: a.start_time,
-        endTime: a.end_time,
-        status: a.status,
-      })),
-      {
-        startTime: input.startTime,
-        endTime: input.endTime,
-        staffEmployeeId: input.staffEmployeeId,
-      },
-    )
+    // Check conflicts directly in SQL for the assigned staff member and time window
+    const { data: conflicts, error: conflictErr } = await this.db
+      .from('appointments')
+      .select('id, staff_employee_id, start_time, end_time, status')
+      .eq('workspace_id', workspaceId)
+      .eq('staff_employee_id', input.staffEmployeeId)
+      .neq('status', 'cancelled')
+      .lt('start_time', input.endTime)
+      .gt('end_time', input.startTime)
 
-    if (hasConflict) {
-      throw new Error('APPOINTMENT_CONFLICT')
+    if (conflictErr) throw conflictErr
+
+    if (conflicts && conflicts.length > 0) {
+      const err = new Error(
+        'APPOINTMENT_CONFLICT: Selected staff member is already booked during this time window.',
+      )
+      ;(err as { code?: string }).code = 'APPOINTMENT_CONFLICT'
+      throw err
     }
 
     const { data, error } = await this.db
@@ -73,6 +70,15 @@ export class AppointmentService {
       .select()
       .single()
 
+    // 23P01 = exclusion_violation: a concurrent booking took the window between the
+    // check above and this insert (docs/appointment-conflict-02-migration.sql).
+    if ((error as { code?: string } | null)?.code === '23P01') {
+      const clash = new Error(
+        'APPOINTMENT_CONFLICT: Selected staff member is already booked during this time window.',
+      )
+      ;(clash as { code?: string }).code = 'APPOINTMENT_CONFLICT'
+      throw clash
+    }
     if (error) throw error
     return data
   }

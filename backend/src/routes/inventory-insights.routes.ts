@@ -11,6 +11,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { ReorderService } from '../services/inventory/reorder.service'
 import { PurchasingService } from '../services/purchasing.service'
 
@@ -70,7 +71,7 @@ export async function inventoryInsightsRoutes(fastify: FastifyInstance) {
   // Creates draft POs grouped by supplier from suggestions. None are placed.
   fastify.post(
     '/api/inventory/reorder-suggestions/draft-po',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('purchase.write')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = (request.body ?? {}) as DraftPOBody

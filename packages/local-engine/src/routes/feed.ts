@@ -232,7 +232,9 @@ function newestAt(events: readonly FeedEvent[]): string {
 
 export function registerFeedRoutes(router: Router): void {
   const actorName = (c: RouteHandlerContext): string => {
-    const user = c.db.get<{ full_name: string }>('SELECT full_name FROM local_user LIMIT 1')
+    const user = c.db.get<{ full_name: string }>('SELECT full_name FROM local_user WHERE id = ?', [
+      c.ctx.userId,
+    ])
     return user?.full_name?.trim() || ''
   }
 

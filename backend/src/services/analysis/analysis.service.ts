@@ -24,6 +24,7 @@
 // scale stated in the field name. `invoice_outstanding.total` is MAJOR.
 // ============================================
 
+import { businessDayOf } from '../../utils/local-day'
 import {
   breakEvenAnalysis,
   cohortReport,
@@ -54,7 +55,7 @@ export type { CollectionsWorklist, CustomerAssessment, SupplierAnalysis, Working
 
 const toMinor = (major: unknown) => Math.round((Number(major) || 0) * 100)
 const day = (value: unknown) => String(value ?? '').slice(0, 10)
-const today = () => new Date().toISOString().slice(0, 10)
+const today = (timeZone?: string | null) => businessDayOf(new Date(), timeZone)
 
 export class AnalysisService {
   private readonly accounting = new AccountingService()
@@ -70,7 +71,7 @@ export class AnalysisService {
    * nothing is sent from here: this is a list for a person to act on.
    */
   async collections(ctx: TenancyContext): Promise<CollectionsWorklist> {
-    const asOf = today()
+    const asOf = today(ctx.timeZone)
     const { data, error } = await selectAllPages<
       OutstandingRow,
       { message: string; code?: string }
@@ -134,7 +135,7 @@ export class AnalysisService {
 
     const rows = data ?? []
     const settledOn = await this.lastAllocationDay(ctx.workspaceId, settledInvoiceIds(rows))
-    return customerAssessment({ customerId, rows, settledOn, asOf: today() })
+    return customerAssessment({ customerId, rows, settledOn, asOf: today(ctx.timeZone) })
   }
 
   /** invoiceId → the day its last payment was allocated. */
@@ -181,7 +182,7 @@ export class AnalysisService {
    * from the moment it was created.
    */
   async suppliers(ctx: TenancyContext): Promise<SupplierAnalysis> {
-    const asOf = today()
+    const asOf = today(ctx.timeZone)
 
     const { data: suppliers, error: supplierError } = await selectAllPages<
       { id: string; name: string; is_active: boolean | null },
@@ -343,7 +344,7 @@ export class AnalysisService {
 
   /** Customers grouped by the month of their first purchase, and who came back. */
   async cohorts(ctx: TenancyContext): Promise<{ asOf: string; cohorts: CohortRow[] }> {
-    const asOf = today()
+    const asOf = today(ctx.timeZone)
     const { data, error } = await selectAllPages<
       OutstandingRow,
       { message: string; code?: string }

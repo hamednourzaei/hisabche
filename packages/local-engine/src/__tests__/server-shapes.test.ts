@@ -4,14 +4,13 @@
 //   undefined (reading 'productCount')» on the warehouse page;
 // · /payments returned { payments } where the server sends an array.
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WAREHOUSE_ID } from './test-db'
+import { createTestDb, TEST_WAREHOUSE_ID, createTestEngine } from './test-db'
 
 describe('offline answers in the server shape', () => {
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
 
   beforeEach(async () => {
-    engine = createLocalEngine(createTestDb())
+    engine = createTestEngine(createTestDb())
     const res = await engine.request({
       method: 'POST',
       path: '/products',
@@ -77,11 +76,11 @@ describe('offline answers in the server shape', () => {
 // (24 Oct 2026): the books, the invoice's own payments, the recent-activity
 // feed and the bell. Each read the server's shape and none of them was served.
 describe('an offline paid sale is visible in the books, the feed and the bell', () => {
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
   let invoiceId: string
 
   beforeEach(async () => {
-    engine = createLocalEngine(createTestDb())
+    engine = createTestEngine(createTestDb())
     const res = await engine.request({
       method: 'POST',
       path: '/invoices',
@@ -164,7 +163,7 @@ describe('an offline paid sale is visible in the books, the feed and the bell', 
 // «مشتری / تأمین‌کننده» tabs offline. The device ignored `role`, so every tab
 // listed everybody (24 Oct 2026). The rule is the server's (resolveEffectiveRole).
 describe('the customer list filters by role like the server does', () => {
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
   const names = async (path: string) => {
     const res = await engine.request({ method: 'GET', path })
     const body = res.data as { customers: Array<{ fullName: string }>; total: number }
@@ -172,7 +171,7 @@ describe('the customer list filters by role like the server does', () => {
   }
 
   beforeEach(async () => {
-    engine = createLocalEngine(createTestDb())
+    engine = createTestEngine(createTestDb())
     for (const body of [
       { fullName: 'مشتری', declaredRole: 'buyer' },
       { fullName: 'تأمین‌کننده', declaredRole: 'seller' },
@@ -233,12 +232,12 @@ describe('the customer list filters by role like the server does', () => {
 // Branches offline (24 Oct 2026): «افزودن شعبه» answered «not available offline».
 // The rules are the server's (validateBranchPlacement / nestBranches).
 describe('branches work offline with the server rules', () => {
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
   const add = (body: Record<string, unknown>) =>
     engine.request({ method: 'POST', path: '/branches', body })
 
   beforeEach(() => {
-    engine = createLocalEngine(createTestDb())
+    engine = createTestEngine(createTestDb())
   })
 
   it('creates a branch and lists it, in the server shape', async () => {
@@ -305,7 +304,7 @@ describe('branches work offline with the server rules', () => {
 
 describe('settings and suggestions run on the device', () => {
   it('keeps the logo, the stamp and the signature in the device database', async () => {
-    const engine = createLocalEngine(createTestDb())
+    const engine = createTestEngine(createTestDb())
     const list = await engine.request({ method: 'GET', path: '/workspaces' })
     const workspace = (list.data as Array<{ id: string }>)[0]!
     const image = 'data:image/png;base64,iVBORw0KGgo='
@@ -327,7 +326,7 @@ describe('settings and suggestions run on the device', () => {
   })
 
   it('writes the dashboard suggestions from the device’s own products and sales', async () => {
-    const engine = createLocalEngine(createTestDb())
+    const engine = createTestEngine(createTestDb())
     await engine.request({
       method: 'POST',
       path: '/products',
@@ -354,7 +353,7 @@ describe('settings and suggestions run on the device', () => {
 
 describe('the units list runs on the device', () => {
   it('answers GET /units from the same seed the server falls back to', async () => {
-    const engine = createLocalEngine(createTestDb())
+    const engine = createTestEngine(createTestDb())
     const res = await engine.request({ method: 'GET', path: '/units' })
     expect(res.status).toBe(200)
     const body = res.data as { units: Array<{ code: string; dimension: string }>; source: string }

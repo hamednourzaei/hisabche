@@ -213,13 +213,37 @@ function makeQuery(table: string) {
   return api
 }
 
-// No database functions here: every write takes its pre-migration path
-// (e.g. invoice_write_document → the same rows, one statement at a time), which
-// is what this fake models row by row.
+// The one database function the invoice write needs is modelled row by row:
+// `invoice_write_document` writes the header and its lines, nothing else. Every
+// other function is absent (PGRST202), as before. The service REFUSES to fall
+// back to separate statements when this one is missing (ATOMIC_RPC_REQUIRED), so
+// a fake that answered "not found" made every invoice creation fail.
 vi.mock('../db', () => ({
   supabase: {
     from: (table: string) => makeQuery(table),
-    rpc: async () => ({ data: null, error: { code: 'PGRST202', message: 'not found' } }),
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      if (name === 'invoice_write_document') {
+        const header = args.p_header as Row | null
+        if (header) {
+          rowsOf('invoices').push({
+            ...header,
+            id: args.p_invoice_id as string,
+            workspace_id: args.p_workspace_id as string,
+            user_id: args.p_user_id as string,
+          })
+        }
+        for (const item of (args.p_items as Row[] | undefined) ?? []) {
+          rowsOf('invoice_items').push(item)
+        }
+        for (const movement of (args.p_movements as Row[] | undefined) ?? []) {
+          rowsOf('stock_movements').push(movement)
+        }
+        return { data: null, error: null }
+      }
+      if (name === 'get_next_invoice_number') return { data: 'INV-000001', error: null }
+      if (name === 'inventory_consume_layers') return { data: [], error: null }
+      return { data: null, error: { code: 'PGRST202', message: 'not found' } }
+    },
   },
 }))
 

@@ -217,13 +217,17 @@ export const payrollSchema = z.object({
 
 export type Payroll = z.infer<typeof payrollSchema>
 
-export const createPayrollSchema = payrollSchema.omit({
-  id: true,
-  netSalary: true,
-  overtimeAmount: true,
-  createdAt: true,
-  updatedAt: true,
-})
+export const createPayrollSchema = payrollSchema
+  .omit({
+    id: true,
+    netSalary: true,
+    overtimeAmount: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    clientRequestId: uuidSchema.optional(),
+  })
 
 export type CreatePayroll = z.infer<typeof createPayrollSchema>
 

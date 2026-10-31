@@ -311,6 +311,7 @@ export {
   usePayrollSummary,
   useCreatePayroll,
   useSettlePayroll,
+  useBookPayroll,
   payrollKeys,
 } from './hooks/payroll'
 

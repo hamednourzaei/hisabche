@@ -11,6 +11,7 @@ import {
   type ReturnLineRequest,
 } from '@hisabche/validation'
 import { buildEnqueue } from '@hisabche/app-bridge'
+import { requireRole } from '../auth'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -22,6 +23,7 @@ interface RowRecord {
 export function registerInvoiceReturnsRoutes(router: Router) {
   router.get('/invoices/:id/returns', async (c: RouteHandlerContext) => {
     const { db, ctx, params } = c
+    requireRole(ctx, 'seller', 'cashier', 'manager', 'owner')
     const originalInvoiceId = params.id
     const returns = db.all<RowRecord>(
       `SELECT * FROM invoice_returns
@@ -67,6 +69,7 @@ export function registerInvoiceReturnsRoutes(router: Router) {
 
   router.post('/invoices/:id/returns', async (c: RouteHandlerContext) => {
     const { db, ctx, params, body } = c
+    requireRole(ctx, 'seller', 'cashier', 'manager', 'owner')
     const originalInvoiceId = params.id || ''
     const payload = body as any
     if (!payload?.returnType || !payload?.lines || !Array.isArray(payload.lines)) {
@@ -153,7 +156,7 @@ export function registerInvoiceReturnsRoutes(router: Router) {
       const enqueue = buildEnqueue({
         entity: 'invoice_returns',
         operation: 'create',
-        clientId: `${returnId}-sync-${Date.now()}`,
+        clientId: returnId,
         payload: {
           id: returnId,
           originalInvoiceId,

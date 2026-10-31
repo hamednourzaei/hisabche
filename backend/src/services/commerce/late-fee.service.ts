@@ -27,6 +27,7 @@
 // ⚠️ NO FEE ON A FEE. An invoice that is itself a late fee is never assessed.
 // ============================================
 
+import { businessDayOf } from '../../utils/local-day'
 import {
   buildLateFeePreview,
   createInvoiceSchema,
@@ -77,7 +78,7 @@ function fail(error: DbError, what: string): never {
 
 type InvoiceFacts = LateFeeInvoiceFacts
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = (timeZone?: string) => businessDayOf(new Date(), timeZone)
 const major = (hundredths: number | string) => Number(hundredths) / 100
 
 export interface LateFeeInvoiceCreator {
@@ -166,7 +167,7 @@ export class LateFeeService {
       assessments,
       plannedLines: await this.plannedLines(ctx, invoice),
       isFeeInvoice,
-      asOf: today(),
+      asOf: today(ctx?.timeZone),
     })
   }
 
@@ -231,7 +232,7 @@ export class LateFeeService {
     const fee = major(assessment.feeMinor)
     const body = createInvoiceSchema.parse({
       type: 'sale',
-      date: `${today()}T00:00:00.000Z`,
+      date: `${today(ctx?.timeZone)}T00:00:00.000Z`,
       customerId: invoice.customerId,
       currency: invoice.currency,
       items: [

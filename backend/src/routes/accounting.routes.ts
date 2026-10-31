@@ -14,6 +14,7 @@
 // member's cached statements to a request that should have produced another's.
 // ============================================
 
+import { businessDayOf } from '../utils/local-day'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
@@ -64,7 +65,7 @@ const incomeStatementQuerySchema = z.object({
   limit: z.string().optional(),
 })
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = (timeZone?: string | null) => businessDayOf(new Date(), timeZone)
 
 /**
  * Which branches a statement covers.
@@ -374,7 +375,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
         const { date, fromDate } = request.query as { date?: string; fromDate?: string }
         const result = await accountingService.getTrialBalance(request.tenancy, {
           fromDate,
-          toDate: date ?? today(),
+          toDate: date ?? today(request.tenancy.timeZone),
           branchIds: await reportingBranches(request),
         })
         return reply.send(result)
@@ -405,7 +406,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
         return reply.send(
           await accountingService.getBalanceSheet(
             request.tenancy,
-            date ?? today(),
+            date ?? today(request.tenancy.timeZone),
             await reportingBranches(request),
           ),
         )

@@ -59,7 +59,7 @@ import { FinancingService } from '../services/financing/financing.service'
 
 const WS = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const OTHER = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
-const ctx = { workspaceId: WS, userId: 'u1', role: 'owner' } as never
+const ctx = { workspaceId: WS, userId: 'u1', role: 'owner', timeZone: 'UTC' } as never
 
 const daysAgo = (days: number) =>
   new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10)

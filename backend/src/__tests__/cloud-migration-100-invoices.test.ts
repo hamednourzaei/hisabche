@@ -19,12 +19,12 @@
 
 import {
   createExportPackage,
-  createLocalEngine,
   generatePreview,
   verifyExportPackage,
 } from '../../../packages/local-engine/src/index'
 import {
   createTestDb,
+  createTestEngine,
   TEST_WAREHOUSE_ID,
   TEST_WORKSPACE_ID,
 } from '../../../packages/local-engine/src/__tests__/test-db'
@@ -34,7 +34,7 @@ describe('Offline -> Cloud Safe Migration: 100 Invoices Suite (Step M4)', () => 
   // ─── Fixture Builder: Built strictly through the Local Engine ───────────────
   async function build100InvoiceDeviceDb(costingMethod: 'fifo' | 'avco' = 'fifo') {
     const db = createTestDb()
-    const engine = createLocalEngine(db)
+    const engine = createTestEngine(db)
 
     // Set costing method on local DB
     db.run(

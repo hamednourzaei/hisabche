@@ -25,6 +25,7 @@ import {
 } from '@hisabche/validation'
 import { sha256 } from '@noble/hashes/sha2.js'
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js'
+import { requireCapability } from '../auth'
 import { NotFoundError, ValidationError } from '../errors'
 import type { LocalDb } from '../db'
 import type { Router } from '../router'
@@ -100,6 +101,7 @@ export function registerCostingRoutes(router: Router): void {
   router.get('/inventory/settings', (c: RouteHandlerContext) => settingsOf(c.db, c.ctx.workspaceId))
 
   router.put('/inventory/settings', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'inventory.configure')
     const { db, ctx, body } = c
     const parsed = inventorySettingsInputSchema.safeParse(body ?? {})
     if (!parsed.success) {
@@ -124,15 +126,17 @@ export function registerCostingRoutes(router: Router): void {
   })
 
   // ─── GET /inventory/unvalued ────────────────────────────────
-  router.get('/inventory/unvalued', (c: RouteHandlerContext) =>
-    findUnvaluedStock(stockPositions(c.db, c.ctx.workspaceId)),
-  )
+  router.get('/inventory/unvalued', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'inventory.cost.read')
+    return findUnvaluedStock(stockPositions(c.db, c.ctx.workspaceId))
+  })
 
   // ─── POST /inventory/unvalued/value ─────────────────────────
   // An ACT, done by a person who has seen the list: each ready product gets a
   // cost layer at its own purchase price. Products without one are left alone
   // and reported back.
   router.post('/inventory/unvalued/value', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'inventory.cost.read')
     const { db, ctx } = c
     return db.transaction(() => {
       const found = findUnvaluedStock(stockPositions(db, ctx.workspaceId))
@@ -171,6 +175,7 @@ export function registerCostingRoutes(router: Router): void {
   // hold and what the ledger already holds for this sale.
   router.post('/invoices/:id/cost', (c: RouteHandlerContext) => {
     const { db, ctx, params } = c
+    requireCapability(ctx, 'inventory.cost.read')
     const id = params.id ?? ''
     const none = { cost: 0, posted: 0, unposted: 0, uncostedProducts: [] as string[] }
 

@@ -29,6 +29,7 @@
 // would travel with mutations and read as if it were part of the record.
 // ============================================
 
+import { workspaceTimeZoneOf } from '../services/workplace-time-zone'
 import { FastifyReply, FastifyRequest } from 'fastify'
 
 import { resolveWorkspaceAccess } from '../services/authorization/workspace-access.service'
@@ -103,6 +104,12 @@ export async function requireWorkspaceContext(request: FastifyRequest, reply: Fa
     }
 
     return reply.status(status).send({ error: message, code: 'WORKSPACE_FORBIDDEN' })
+  }
+
+  // The business's own day: services date documents with ctx.timeZone.
+  request.tenancy = {
+    ...request.tenancy,
+    timeZone: await workspaceTimeZoneOf(request.tenancy.workspaceId),
   }
 
   // The expired-subscription lock (402 SUBSCRIPTION_EXPIRED on writes). Here,

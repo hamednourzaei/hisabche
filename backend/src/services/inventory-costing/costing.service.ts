@@ -9,6 +9,7 @@
 // an average of everything ever bought, not sale price minus purchase price.
 // ============================================
 
+import { businessDayOf } from '../../utils/local-day'
 import { ConflictError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
@@ -175,7 +176,7 @@ export class CostingService implements CostingPort {
       throw new ConflictError('INVENTORY_SETTINGS_FORBIDDEN')
     }
     const found = await this.getUnvaluedStock(ctx)
-    const day = new Date().toISOString().slice(0, 10)
+    const day = businessDayOf(new Date(), ctx.timeZone)
 
     let valued = 0
     let quantity = 0

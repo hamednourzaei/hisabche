@@ -42,6 +42,7 @@
 // of manufacturing accounting.
 // ============================================
 
+import { businessDayOf } from '../utils/local-day'
 import {
   asProductionColumns,
   computeProductionCost,
@@ -891,7 +892,7 @@ export class ManufacturingService {
         currency: input.currency,
         columns: input.columns,
         notes: input.notes ?? null,
-        produced_on: input.producedOn ?? new Date().toISOString().slice(0, 10),
+        produced_on: input.producedOn ?? businessDayOf(new Date(), ctx.timeZone),
         labor: laborPayload(input.labor),
         components_cost: cost.componentsCost,
         labor_cost: cost.laborCost,

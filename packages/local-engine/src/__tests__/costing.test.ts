@@ -7,18 +7,17 @@
 // ============================================
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WAREHOUSE_ID, TEST_WORKSPACE_ID } from './test-db'
+import { createTestDb, TEST_WAREHOUSE_ID, TEST_WORKSPACE_ID, createTestEngine } from './test-db'
 
 describe('costing on the device', () => {
   let db: ReturnType<typeof createTestDb>
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
   let productId: string
   const today = new Date().toISOString().slice(0, 10)
 
   beforeEach(async () => {
     db = createTestDb()
-    engine = createLocalEngine(db)
+    engine = createTestEngine(db)
     // Stock with no purchase price: no layer behind it, cost UNKNOWN.
     const res = await engine.request({
       method: 'POST',

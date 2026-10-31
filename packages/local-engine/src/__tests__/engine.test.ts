@@ -12,16 +12,15 @@
 // ============================================
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WAREHOUSE_ID, TEST_WORKSPACE_ID } from './test-db'
+import { createTestDb, TEST_WAREHOUSE_ID, TEST_WORKSPACE_ID, createTestEngine } from './test-db'
 
 describe('Hisabche Local Business Engine', () => {
   let db: ReturnType<typeof createTestDb>
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
 
   beforeEach(() => {
     db = createTestDb()
-    engine = createLocalEngine(db)
+    engine = createTestEngine(db)
   })
 
   // ─── 1. Route Dispatching & 501 Honest Errors ────────────────

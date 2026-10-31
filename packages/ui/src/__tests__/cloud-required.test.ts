@@ -59,8 +59,10 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
     // the dashboard suggestions (dashboard.ai_insight) run on the device now.
     // 56 since 28 Oct 2026: customer.delete (the server checks invoices and payments) and
     // customer.return_effects (the list's credit after sale returns, read from invoice_returns).
-    it('has exactly 56 server-execution features in FEATURE_REGISTRY', () => {
-      expect(serverFeatures.length).toBe(56)
+    // 57 since 31 Oct 2026: hr.payroll_rebook (re-posting a paid salary to the ledger; the
+    // device books at the moment it settles, so the separate re-book call is server-only).
+    it('has exactly 57 server-execution features in FEATURE_REGISTRY', () => {
+      expect(serverFeatures.length).toBe(57)
     })
 
     it('refuses EVERY server-execution feature when offline with REQUIRES_ONLINE', () => {

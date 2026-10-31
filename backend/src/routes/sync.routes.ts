@@ -61,6 +61,8 @@ function actorFrom(request: FastifyRequest, deviceId: string) {
     userId: request.tenancy.userId,
     workspaceId: request.tenancy.workspaceId,
     deviceId,
+    role: request.tenancy.role,
+    capabilities: request.tenancy.capabilities,
   }
 }
 

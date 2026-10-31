@@ -55,9 +55,24 @@ const MANAGER_CAPABILITIES = new Set([
   'report.financial.read',
   'stock.adjust',
   'warehouse.manage',
+  'payroll.write',
+  'employee.write',
+  'leave.write',
+  'budget.manage',
+  'data.import',
 ])
 
 export function requireCapability(ctx: LocalContext, capability: string): void {
+  // ⚠️ AN UNKNOWN NAME IS REFUSED, NOT WAVED THROUGH. A typo in a route used to
+  // pass for every role, which is the same as having no guard at all — and
+  // nothing noticed, because the route kept working.
+  if (!OWNER_CAPABILITIES.has(capability) && !MANAGER_CAPABILITIES.has(capability)) {
+    throw new ForbiddenError(`Unknown capability ${capability}`, 'CAPABILITY_UNKNOWN', {
+      capability,
+      role: ctx.role,
+    })
+  }
+
   if (ctx.role === 'owner') return
 
   if (OWNER_CAPABILITIES.has(capability)) {

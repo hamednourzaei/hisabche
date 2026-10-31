@@ -182,7 +182,8 @@ describe('Gate 5: Offline Edition Local Transport & Network Isolation Suite', ()
         path: req.path,
         params: req.params,
         body: req.body,
-        headers: req.headers,
+        // The host bridge stamps the signed-in user on every request (providers.tsx).
+        headers: { 'x-hisabche-user-id': TEST_USER_ID, ...req.headers },
       })
       return {
         status: res.status,
@@ -864,7 +865,8 @@ describe('Gate 5: Offline Edition Local Transport & Network Isolation Suite', ()
           path: req.path,
           params: req.params,
           body: req.body,
-          headers: req.headers,
+          // The host bridge stamps the signed-in user on every request (providers.tsx).
+          headers: { 'x-hisabche-user-id': TEST_USER_ID, ...req.headers },
         })
         return {
           status: res.status,

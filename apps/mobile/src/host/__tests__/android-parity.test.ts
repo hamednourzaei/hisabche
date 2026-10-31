@@ -151,6 +151,14 @@ function normalizeForParity(val: unknown): unknown {
   return val
 }
 
+/** The host bridge stamps the signed-in user on every request; the tests do the same. */
+function signedIn(engine: LocalEngine): LocalEngine {
+  return {
+    request: (req) =>
+      engine.request({ ...req, headers: { 'x-user-id': TEST_USER_ID, ...req.headers } }),
+  }
+}
+
 describe('Android Mobile LocalDb Adapter Parity vs node:sqlite', () => {
   let nodeDb: ReturnType<typeof createNodeTestDb>
   let mobileExpoDb: ReturnType<typeof createSimulatedExpoSqliteDb>
@@ -163,8 +171,8 @@ describe('Android Mobile LocalDb Adapter Parity vs node:sqlite', () => {
     mobileExpoDb = createSimulatedExpoSqliteDb()
     mobileLocalDb = wrapExpoSqlite(mobileExpoDb)
 
-    engineNode = createLocalEngine(nodeDb)
-    engineMobile = createLocalEngine(mobileLocalDb)
+    engineNode = signedIn(createLocalEngine(nodeDb))
+    engineMobile = signedIn(createLocalEngine(mobileLocalDb))
   })
 
   afterAll(() => {

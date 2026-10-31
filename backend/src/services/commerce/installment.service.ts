@@ -18,6 +18,7 @@
 // ============================================
 
 import { supabase } from '../../db'
+import { businessDayOf } from '../../utils/local-day'
 import { BaseError } from '../../errors/base.error'
 import { DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
@@ -50,7 +51,7 @@ export class InstallmentsNotConfiguredError extends BaseError {
   }
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = (timeZone?: string) => businessDayOf(new Date(), timeZone)
 
 export class InstallmentService {
   private async invoice(ctx: TenancyContext, invoiceId: string) {
@@ -94,7 +95,7 @@ export class InstallmentService {
         due_date: string
         amount_minor: number | string
       }>,
-      asOf: today(),
+      asOf: today(ctx?.timeZone),
     })
   }
 

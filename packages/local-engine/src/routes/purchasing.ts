@@ -15,6 +15,7 @@
 // nested, as `GET /api/purchase-orders` sends them.
 // ============================================
 
+import { requireCapability } from '../auth'
 import {
   createPurchaseOrderSchema,
   flagFilter,
@@ -192,6 +193,7 @@ export function registerPurchasingRoutes(router: Router): void {
 
   // ─── POST /purchase-orders ──────────────────────────────────
   router.post('/purchase-orders', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'warehouse.manage')
     const { db, ctx, body } = c
     const raw = (body || {}) as Record<string, unknown>
     const parsed = createPurchaseOrderSchema.safeParse(raw)
@@ -267,6 +269,7 @@ export function registerPurchasingRoutes(router: Router): void {
   // first — conditioned on the status just read — so a second receive finds
   // nothing to claim and is refused, never a second arrival on the shelf.
   router.post('/purchase-orders/:id/receive', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'stock.adjust')
     const { db, ctx, params } = c
     const id = params.id ?? ''
 
@@ -350,6 +353,7 @@ export function registerPurchasingRoutes(router: Router): void {
 
   // ─── POST /inventory/reorder-suggestions/draft-po ───────────
   router.post('/inventory/reorder-suggestions/draft-po', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'warehouse.manage')
     const { db, ctx, body } = c
     const raw = (body ?? {}) as {
       suggestions?: Array<{

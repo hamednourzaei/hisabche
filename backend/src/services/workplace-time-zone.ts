@@ -86,6 +86,37 @@ export async function describeWorkplaceTimeZones(workspaceId: string): Promise<W
   }
 }
 
+const ZONE_TTL_MS = 5 * 60_000
+const zoneCache = new Map<string, { zone: string | undefined; at: number }>()
+
+/**
+ * The zone the owner chose for the business, or undefined when none is stored.
+ *
+ * Read on every request by the workspace middleware so that a document dated
+ * «today» is dated in the business's day, not the server's. Kept for a few
+ * minutes because the answer almost never changes; a failed read answers
+ * undefined (the explicit default applies) and is NOT cached, so one bad read
+ * cannot pin the wrong day for five minutes.
+ */
+export async function workspaceTimeZoneOf(workspaceId: string): Promise<string | undefined> {
+  const hit = zoneCache.get(workspaceId)
+  if (hit && Date.now() - hit.at < ZONE_TTL_MS) return hit.zone
+  try {
+    const { data, error } = await supabase
+      .from('workspaces')
+      .select('time_zone')
+      .eq('id', workspaceId)
+      .maybeSingle()
+    if (error) return undefined
+    const stored = (data as { time_zone?: string | null } | null)?.time_zone?.trim()
+    const zone = stored && isKnownTimeZone(stored) ? stored : undefined
+    zoneCache.set(workspaceId, { zone, at: Date.now() })
+    return zone
+  } catch {
+    return undefined
+  }
+}
+
 export async function setWorkspaceTimeZone(
   workspaceId: string,
   timeZone: string,
@@ -102,6 +133,7 @@ export async function setWorkspaceTimeZone(
     throw new DatabaseError('Failed to save the time zone', error)
   }
   if (!data) throw new NotFoundError('Workspace')
+  zoneCache.delete(workspaceId)
   return { timeZone }
 }
 

@@ -1,8 +1,7 @@
 // Budgets on the device: the lifecycle, the page, the spend check and a revision,
 // all through the same planning functions the server uses.
 import { describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WORKSPACE_ID } from './test-db'
+import { createTestDb, TEST_WORKSPACE_ID, createTestEngine } from './test-db'
 
 type Json = Record<string, any>
 const ACCOUNT = '9b2f4c1e-0000-4000-8000-0000000000a1'
@@ -10,7 +9,7 @@ const BUDGET = '9b2f4c1e-0000-4000-8000-0000000000b1'
 
 function setup() {
   const db = createTestDb()
-  const engine = createLocalEngine(db)
+  const engine = createTestEngine(db)
   const call = (method: any, path: string, body?: unknown) =>
     engine.request<Json>({ method, path, ...(body === undefined ? {} : { body }) })
   db.run(

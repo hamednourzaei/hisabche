@@ -6,6 +6,7 @@
 // ============================================
 
 import { validateVin } from '@hisabche/validation'
+import { requireCapability } from '../auth'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -40,6 +41,7 @@ export function registerFitmentsRoutes(router: Router) {
   })
 
   router.post('/products/:id/fitments', async (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'product.write')
     const { db, ctx, params, body } = c
     const productId = params.id
     const payload = body as any
@@ -112,6 +114,7 @@ export function registerFitmentsRoutes(router: Router) {
   })
 
   router.post('/vehicles', async (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'product.write')
     const { db, ctx, body } = c
     const payload = body as any
     if (!payload?.vin || !payload?.make || !payload?.model || !payload?.year) {

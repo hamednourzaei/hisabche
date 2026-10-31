@@ -4,6 +4,7 @@
 // Local Engine handlers for Metal Rates (Option 21 / Gold)
 // ============================================
 
+import { requireCapability } from '../auth'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -37,6 +38,7 @@ export function registerMetalRatesRoutes(router: Router) {
   })
 
   router.post('/metal-rates', async (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'product.write')
     const { db, ctx, body } = c
     const payload = body as any
     if (!payload?.rateDate || payload?.rate24kMinorPerGram === undefined) {

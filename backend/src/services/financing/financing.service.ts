@@ -15,6 +15,7 @@
 // A row is closed with `is_active = false`, never deleted.
 // ============================================
 
+import { businessDayOf } from '../../utils/local-day'
 import { supabase } from '../../db'
 import { BaseError } from '../../errors/base.error'
 import { DatabaseError, NotFoundError } from '../../errors/database.error'
@@ -98,7 +99,7 @@ interface HoldingRow {
 }
 
 const day = (value: string) => String(value).slice(0, 10)
-const today = () => new Date().toISOString().slice(0, 10)
+const today = (timeZone?: string | null) => businessDayOf(new Date(), timeZone)
 
 /** Whole charging periods between two days: months ÷ (12 ÷ chargesPerYear). */
 function periodsBetween(start: string, end: string, chargesPerYear: number): number {
@@ -182,7 +183,7 @@ export class FinancingService {
       accruedInterest: number
     }>
   }> {
-    const asOf = today()
+    const asOf = today(ctx.timeZone)
     const { data, error } = await supabase
       .from('loan_facilities')
       .select(FACILITY_COLUMNS)
@@ -259,7 +260,7 @@ export class FinancingService {
       .select(FACILITY_COLUMNS)
       .single()
     if (error) fail(error, 'Failed to save the loan')
-    return toFacility(data as FacilityRow, today())
+    return toFacility(data as FacilityRow, today(ctx.timeZone))
   }
 
   async setFacilityActive(
@@ -276,7 +277,7 @@ export class FinancingService {
       .maybeSingle()
     if (error) fail(error, 'Failed to update the loan')
     if (!data) throw new NotFoundError('Loan')
-    return toFacility(data as FacilityRow, today())
+    return toFacility(data as FacilityRow, today(ctx.timeZone))
   }
 
   // ─── Investments (#126) ──────────────────────────────────────

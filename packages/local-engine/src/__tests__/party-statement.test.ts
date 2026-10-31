@@ -2,11 +2,10 @@
 // routes answer from SQLite through the SAME assembly the server uses
 // (@hisabche/validation party-statement) — no second balance.
 import { describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb } from './test-db'
+import { createTestDb, createTestEngine } from './test-db'
 
 async function seed() {
-  const engine = createLocalEngine(createTestDb())
+  const engine = createTestEngine(createTestDb())
   const cust = await engine.request<{ id: string }>({
     method: 'POST',
     path: '/customers',

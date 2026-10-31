@@ -16,6 +16,7 @@
 // change reported profit.
 // ============================================
 
+import { businessDayOf } from '../utils/local-day'
 import { rateSchema, baseCurrencySchema } from '@hisabche/validation'
 import { describeBaseCurrency, setBaseCurrency } from '../services/base-currency'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
@@ -567,8 +568,8 @@ export async function financeOpsRoutes(fastify: FastifyInstance) {
         return reply.send(
           await dimensionsService.getTotals(request.tenancy, {
             dimensionId,
-            from: from ?? new Date().toISOString().slice(0, 10),
-            to: to ?? new Date().toISOString().slice(0, 10),
+            from: from ?? businessDayOf(new Date(), request.tenancy.timeZone),
+            to: to ?? businessDayOf(new Date(), request.tenancy.timeZone),
             ...(accountId ? { accountId } : {}),
             ...(valueId ? { valueId } : {}),
           }),

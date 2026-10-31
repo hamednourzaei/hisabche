@@ -4,8 +4,7 @@
 // the idempotency the till depends on, and that a close books the ledger.
 import { describe, expect, it } from 'vitest'
 import { FRACTION_DIGITS } from '@hisabche/formatting'
-import { createLocalEngine } from '../index'
-import { createTestDb } from './test-db'
+import { createTestDb, createTestEngine } from './test-db'
 
 const digits = (FRACTION_DIGITS as Record<string, number>).AFN ?? 2
 const minorOf = (major: number) => Math.round(major * 10 ** digits)
@@ -17,7 +16,7 @@ interface Totals {
 
 function setup() {
   const db = createTestDb()
-  const engine = createLocalEngine(db)
+  const engine = createTestEngine(db)
   const open = async (floatMajor = 1000) =>
     (
       await engine.request<{ id: string; status: string }>({

@@ -62,6 +62,8 @@ describe('Gate 5: Desktop Local Transport & IPC Layer', () => {
   })
 
   describe('In-Process Engine Dispatch', () => {
+    let ownerHeaders: Record<string, string> = {}
+
     it('executes GET /workspaces request in-process without network', async () => {
       const res = await handleLocalApiRequest<Array<{ id: string; baseCurrency: string }>>({
         method: 'GET',
@@ -74,9 +76,22 @@ describe('Gate 5: Desktop Local Transport & IPC Layer', () => {
     })
 
     it('executes POST /products request and persists to SQLite', async () => {
+      // A device has no owner until its workspace is made, and a product is a
+      // manager's to add: make the workspace first, as the first run does.
+      const made = await handleLocalApiRequest({
+        method: 'POST',
+        path: '/workspaces',
+        body: { name: 'دسکتاپ', baseCurrency: 'AFN' },
+      })
+      expect(made.status).toBe(201)
+      // The renderer names the owner on every later request (providers.tsx).
+      const owner = { 'x-user-id': (made.data as { ownerId: string }).ownerId }
+      ownerHeaders = owner
+
       const res = await handleLocalApiRequest<{ id: string; name: string; sellPrice: number }>({
         method: 'POST',
         path: '/products',
+        headers: owner,
         body: {
           name: 'روغن نباتی دسکتاپ',
           sellPrice: 1200,
@@ -93,6 +108,7 @@ describe('Gate 5: Desktop Local Transport & IPC Layer', () => {
       const getRes = await handleLocalApiRequest<{ id: string; name: string }>({
         method: 'GET',
         path: `/products/${res.data.id}`,
+        headers: owner,
       })
       expect(getRes.status).toBe(200)
       expect(getRes.data.name).toBe('روغن نباتی دسکتاپ')
@@ -102,6 +118,7 @@ describe('Gate 5: Desktop Local Transport & IPC Layer', () => {
       const res = await handleLocalApiRequest<{ error: string; code: string }>({
         method: 'GET',
         path: '/products/00000000-0000-0000-0000-000000000000',
+        headers: ownerHeaders,
       })
 
       expect(res.status).toBe(404)

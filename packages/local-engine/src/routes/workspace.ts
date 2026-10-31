@@ -4,8 +4,10 @@
 // Local workspace management and member queries.
 // ============================================
 
+import { requireCapability } from '../auth'
 import { createWorkspaceSchema, updateWorkspaceSchema } from '@hisabche/validation'
 import { NotFoundError, ValidationError } from '../errors'
+import { newId } from './people-common'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 
@@ -43,6 +45,13 @@ export interface LocalUserRow {
   role: string
   created_at: string
   updated_at: string
+}
+
+/** The workspace's owner: chosen by ROLE, never by being the first row. */
+function ownerRow(db: RouteHandlerContext['db']): LocalUserRow | undefined {
+  return db.get<LocalUserRow>(
+    "SELECT * FROM local_user WHERE role = 'owner' ORDER BY created_at, id LIMIT 1",
+  )
 }
 
 function mapWorkspace(row: LocalWorkspaceRow, ownerId: string, user?: LocalUserRow | null) {
@@ -90,8 +99,8 @@ export function registerWorkspaceRoutes(router: Router): void {
     if (!ws) {
       return []
     }
-    const user = db.get<LocalUserRow>('SELECT * FROM local_user LIMIT 1')
-    return [mapWorkspace(ws, ctx.userId, user)]
+    const owner = ownerRow(db)
+    return [mapWorkspace(ws, owner?.id ?? ctx.userId, owner)]
   })
 
   // ─── GET /workspaces/:id ─────────────────────────────────────
@@ -102,12 +111,13 @@ export function registerWorkspaceRoutes(router: Router): void {
     if (!ws) {
       throw new NotFoundError('Workspace', id)
     }
-    const user = db.get<LocalUserRow>('SELECT * FROM local_user LIMIT 1')
-    return mapWorkspace(ws, ctx.userId, user)
+    const owner = ownerRow(db)
+    return mapWorkspace(ws, owner?.id ?? ctx.userId, owner)
   })
 
   // ─── PATCH /workspaces/:id ───────────────────────────────────
   router.patch('/workspaces/:id', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'workspace.manage')
     const { db, ctx, params, body } = c
     const id = params.id
 
@@ -200,6 +210,14 @@ export function registerWorkspaceRoutes(router: Router): void {
   router.post('/workspaces', (c: RouteHandlerContext) => {
     const { db, ctx, body } = c
 
+    // ⚠️ THE FIRST WORKSPACE IS MADE BY NOBODY YET. On a fresh device there is no
+    // local user, so the caller is the least-privileged role by design; demanding
+    // `workspace.manage` there would refuse the very step that creates the owner.
+    // Once a workspace exists, making another is the owner's.
+    if (db.get('SELECT 1 AS present FROM local_workspace LIMIT 1')) {
+      requireCapability(ctx, 'workspace.manage')
+    }
+
     const parsed = createWorkspaceSchema.safeParse(body)
     if (!parsed.success) {
       const msg = parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
@@ -242,7 +260,9 @@ export function registerWorkspaceRoutes(router: Router): void {
     const timeZone = b.timeZone || ctx.timeZone
 
     const now = new Date().toISOString()
-    const id = ctx.workspaceId
+    // The first owner is created here, so no session could name them yet.
+    const newOwnerId = ctx.userId || newId()
+    const id = ctx.workspaceId || newId()
 
     const ownerName =
       typeof b.ownerName === 'string' && b.ownerName.trim() ? b.ownerName.trim() : name
@@ -273,12 +293,12 @@ export function registerWorkspaceRoutes(router: Router): void {
         ],
       )
 
-      const owner = db.get<LocalUserRow>('SELECT id FROM local_user LIMIT 1')
+      const owner = ownerRow(db)
       if (!owner) {
         db.run(
           `INSERT INTO local_user (id, email, full_name, phone, role, created_at, updated_at)
            VALUES (?, ?, ?, NULL, 'owner', ?, ?)`,
-          [ctx.userId, ownerEmail, ownerName, now, now],
+          [newOwnerId, ownerEmail, ownerName, now, now],
         )
       } else if (typeof b.ownerName === 'string' && b.ownerName.trim()) {
         db.run(
@@ -292,14 +312,14 @@ export function registerWorkspaceRoutes(router: Router): void {
       'SELECT * FROM local_workspace WHERE id = ? LIMIT 1',
       [id],
     )
-    const ownerUser = db.get<LocalUserRow>('SELECT * FROM local_user LIMIT 1')
-    return mapWorkspace(created!, ctx.userId, ownerUser)
+    const ownerUser = ownerRow(db)
+    return mapWorkspace(created!, ownerUser?.id ?? newOwnerId, ownerUser)
   })
 
   // ─── GET /workspaces/:id/members ─────────────────────────────
   router.get('/workspaces/:id/members', (c: RouteHandlerContext) => {
     const { db, ctx } = c
-    const user = db.get<LocalUserRow>('SELECT * FROM local_user LIMIT 1')
+    const user = db.get<LocalUserRow>('SELECT * FROM local_user WHERE id = ?', [ctx.userId])
     const ws = db.get<LocalWorkspaceRow>('SELECT created_at, name FROM local_workspace LIMIT 1')
 
     const fullName = user?.full_name?.trim() || ws?.name || ''

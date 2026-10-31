@@ -5,19 +5,18 @@
 // ============================================
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WAREHOUSE_ID, TEST_WORKSPACE_ID } from './test-db'
+import { createTestDb, TEST_WAREHOUSE_ID, TEST_WORKSPACE_ID, createTestEngine } from './test-db'
 
 const SUPPLIER = '55555555-5555-4555-8555-555555555555'
 
 describe('purchase orders on the device', () => {
   let db: ReturnType<typeof createTestDb>
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
   let productId: string
 
   beforeEach(async () => {
     db = createTestDb()
-    engine = createLocalEngine(db)
+    engine = createTestEngine(db)
     db.run(
       `INSERT INTO supplier (id, workspace_id, name, phone, email, notes, is_active, created_at, updated_at)
        VALUES (?, ?, 'تأمین‌کننده', '0700', '', '', 1, datetime('now'), datetime('now'))`,

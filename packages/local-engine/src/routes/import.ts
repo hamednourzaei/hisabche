@@ -3,6 +3,7 @@
 //
 // Migration inspect and commit handlers for offline mode.
 // Inspects CSV/TSV data and commits validated records into local SQLite tables.
+// Enqueues mutations to sync_queue when in queuing mode.
 // ============================================
 
 import {
@@ -12,7 +13,9 @@ import {
   XlsxError,
   type XlsxSheet,
 } from '@hisabche/validation'
-
+import { buildEnqueue } from '@hisabche/app-bridge'
+import { requireCapability } from '../auth'
+import { recordOpeningStock } from './products'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -33,7 +36,6 @@ function parseCsvLines(text: string, delimiter = ','): string[][] {
   const rawLines = text.split(/\r?\n/)
   for (const raw of rawLines) {
     if (!raw.trim()) continue
-    // Simple delimiter split respecting basic tokens
     const cells = raw.split(delimiter).map((c) => c.trim().replace(/^["']|["']$/g, ''))
     lines.push(cells)
   }
@@ -50,22 +52,14 @@ export function registerImportRoutes(router: Router): void {
     }
 
     let text = b.content || ''
-    // A workbook's rows are already a table: they skip the text step (this
-    // engine's CSV split does not handle quoted commas).
     let workbookRows: string[][] | null = null
     if (!text && b.contentBase64) {
-      // ⚠️ NOT `Buffer`: it is Node's, and Android's engine (Hermes) has none —
-      // every file failed there with «invalid base64», CSV included.
       let bytes: Uint8Array
       try {
         bytes = Uint8Array.from(atob(b.contentBase64.replace(/\s+/g, '')), (ch) => ch.charCodeAt(0))
       } catch {
         throw new ValidationError('MIGRATION_INSPECT_INVALID_BASE64')
       }
-      // An Excel workbook is a zip («PK»): read with the SAME reader the
-      // server uses (validation/schemas/xlsx-reader.ts — pure JS, so it runs
-      // in Hermes too), then into the same CSV path as a text file. Its
-      // refusals keep the server's codes, so the page explains them alike.
       if (looksLikeWorkbook(bytes)) {
         let sheets: XlsxSheet[]
         try {
@@ -93,7 +87,6 @@ export function registerImportRoutes(router: Router): void {
     const dataRows = rows.slice(1)
     const sampleRows = dataRows.slice(0, 5)
 
-    // Detect likely entity from filename and headers
     const fn = filename.toLowerCase()
     let likelyEntity = 'customers'
     if (fn.includes('prod') || fn.includes('kala') || fn.includes('جنس') || fn.includes('کالا')) {
@@ -117,7 +110,9 @@ export function registerImportRoutes(router: Router): void {
 
   // ─── POST /migrations/commit ─────────────────────────────────
   router.post('/migrations/commit', (c: RouteHandlerContext) => {
-    const { db, ctx, body } = c
+    const { db, ctx, body, headers } = c
+    requireCapability(ctx, 'data.import')
+
     const b = (body || {}) as {
       entity?: string
       records?: Array<Record<string, unknown>>
@@ -127,48 +122,157 @@ export function registerImportRoutes(router: Router): void {
     const records = Array.isArray(b.records) ? b.records : []
     const ws = ctx.workspaceId
     const now = new Date().toISOString()
+    const isQueued = headers?.['x-hisabche-queue'] === '1'
 
     let imported = 0
+    let skipped = 0
+    let failed = 0
+    const warnings: string[] = []
 
     db.transaction(() => {
       if (entity === 'customers' || entity === 'customer') {
         for (const r of records) {
           const name = String(r.name || r['نام'] || '').trim()
-          if (!name) continue
+          if (!name) {
+            skipped++
+            continue
+          }
           const id = String(r.id || generateUuid())
-          const phone = r.phone ? String(r.phone) : null
-          const email = r.email ? String(r.email) : null
-          const address = r.address ? String(r.address) : null
+          const phone = r.phone ? String(r.phone).trim() : null
+          const email = r.email ? String(r.email).trim() : null
+          const address = r.address ? String(r.address).trim() : null
 
-          db.run(
-            `INSERT INTO customer (
-              id, workspace_id, full_name, phone, email, address, opening_balance,
-              is_active, created_at, updated_at, deleted_at, origin, sync_state
-            ) VALUES (?, ?, ?, ?, ?, ?, 0, 1, ?, ?, NULL, 'local', 'local_only')`,
-            [id, ws, name, phone, email, address, now, now],
+          // Duplicate detection by id or non-empty phone
+          const existing = db.get<{ id: string }>(
+            `SELECT id FROM customer
+             WHERE workspace_id = ? AND deleted_at IS NULL AND (id = ? ${phone ? 'OR phone = ?' : ''})
+             LIMIT 1`,
+            phone ? [ws, id, phone] : [ws, id],
           )
-          imported++
+
+          if (existing) {
+            skipped++
+            continue
+          }
+
+          try {
+            db.run(
+              `INSERT INTO customer (
+                id, workspace_id, full_name, phone, email, address, opening_balance,
+                is_active, created_at, updated_at, deleted_at, origin, sync_state
+              ) VALUES (?, ?, ?, ?, ?, ?, 0, 1, ?, ?, NULL, 'local', ?)`,
+              [id, ws, name, phone, email, address, now, now, isQueued ? 'queued' : 'local_only'],
+            )
+
+            if (isQueued) {
+              const enqueue = buildEnqueue({
+                entity: 'customer',
+                operation: 'create',
+                clientId: id,
+                payload: {
+                  id,
+                  fullName: name,
+                  phone,
+                  email,
+                  address,
+                  openingBalance: 0,
+                },
+                userId: headers?.['x-hisabche-user-id'] ?? ctx.userId,
+                workspaceId: ws,
+              })
+              db.run(enqueue.sql, enqueue.params)
+            }
+
+            imported++
+          } catch {
+            failed++
+          }
         }
       } else if (entity === 'products' || entity === 'product') {
         for (const r of records) {
           const name = String(r.name || r['نام'] || '').trim()
-          if (!name) continue
+          if (!name) {
+            skipped++
+            continue
+          }
           const id = String(r.id || generateUuid())
-          const barcode = r.barcode ? String(r.barcode) : null
-          // ⚠️ The rounding is the shared money rule, not a local one.
+          const barcode = r.barcode ? String(r.barcode).trim() : null
           const sellPrice = round2(Number(r.sellPrice || r.sell_price || 0))
           const buyPrice = round2(Number(r.buyPrice || r.buy_price || 0))
           const unit = r.unit ? String(r.unit) : 'piece'
+          const qty = Number(r.quantity || r.qty || r['موجودی'] || 0)
 
-          db.run(
-            `INSERT INTO product (
-              id, workspace_id, name, barcode, sell_price, buy_price,
-              unit, quantity, min_stock_level, is_active,
-              created_at, updated_at, deleted_at, origin, sync_state
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 1, ?, ?, NULL, 'local', 'local_only')`,
-            [id, ws, name, barcode, sellPrice, buyPrice, unit, now, now],
+          // Duplicate detection by id or non-empty barcode
+          const existing = db.get<{ id: string }>(
+            `SELECT id FROM product
+             WHERE workspace_id = ? AND deleted_at IS NULL AND (id = ? ${barcode ? 'OR barcode = ?' : ''})
+             LIMIT 1`,
+            barcode ? [ws, id, barcode] : [ws, id],
           )
-          imported++
+
+          if (existing) {
+            skipped++
+            continue
+          }
+
+          try {
+            db.run(
+              `INSERT INTO product (
+                id, workspace_id, name, barcode, sell_price, buy_price,
+                unit, quantity, min_stock_level, is_active,
+                created_at, updated_at, deleted_at, origin, sync_state
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?, ?, NULL, 'local', ?)`,
+              [
+                id,
+                ws,
+                name,
+                barcode,
+                sellPrice,
+                buyPrice,
+                unit,
+                qty,
+                now,
+                now,
+                isQueued ? 'queued' : 'local_only',
+              ],
+            )
+
+            // The same opening-stock write the product form makes: a movement, the
+            // warehouse figure and (price known) a cost layer — not a bare quantity.
+            recordOpeningStock(db, {
+              workspaceId: ws,
+              productId: id,
+              quantity: qty,
+              buyPrice,
+              warehouseId: null,
+              baseCurrency: ctx.baseCurrency,
+              now,
+            })
+
+            if (isQueued) {
+              const enqueue = buildEnqueue({
+                entity: 'product',
+                operation: 'create',
+                clientId: id,
+                payload: {
+                  id,
+                  name,
+                  barcode,
+                  sellPrice,
+                  buyPrice,
+                  unit,
+                  quantity: qty,
+                },
+                userId: headers?.['x-hisabche-user-id'] ?? ctx.userId,
+                workspaceId: ws,
+              })
+              db.run(enqueue.sql, enqueue.params)
+            }
+
+            imported++
+          } catch {
+            failed++
+          }
         }
       }
     })
@@ -176,7 +280,9 @@ export function registerImportRoutes(router: Router): void {
     return {
       entity,
       imported,
-      failed: 0,
+      skipped,
+      failed,
+      warnings,
     }
   })
 }

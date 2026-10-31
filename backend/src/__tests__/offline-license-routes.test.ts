@@ -77,10 +77,25 @@ vi.mock('../db', () => ({
               },
             }),
           }),
+          // A first activation inserts; it never overwrites another workspace's row.
+          insert: (payload: Record<string, unknown>) => {
+            dbState.devices.push(payload)
+            return {
+              select: () => ({
+                single: async () => ({ data: payload, error: null }),
+              }),
+            }
+          },
           select: () => ({
-            eq: (_col: string, val: unknown) => ({
+            eq: (col: string, val: unknown) => ({
+              // The list of one workspace's devices.
               order: () => ({
                 data: dbState.devices.filter((d) => d.workspace_id === val),
+                error: null,
+              }),
+              // The lookup of one device by its id, before anything is written.
+              maybeSingle: async () => ({
+                data: dbState.devices.find((d) => d[col] === val) ?? null,
                 error: null,
               }),
             }),
@@ -275,6 +290,22 @@ describe('Offline Licence Endpoints', () => {
     const body = res.json()
     expect(body.device.device_id).toBe(devId)
     expect(body.device.workspace_id).toBe(WS_AFN)
+  })
+
+  it('POST /api/billing/devices/activate refuses a device another workspace already holds', async () => {
+    const devId = '77777777-7777-7777-7777-777777777777'
+    dbState.devices.push({ device_id: devId, workspace_id: WS_IRR, released_at: null })
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/billing/devices/activate',
+      payload: { deviceId: devId },
+      headers: { 'x-workspace-id': WS_AFN },
+    })
+
+    expect(res.statusCode).toBe(409)
+    // The row still belongs to the workspace that held it.
+    expect(dbState.devices.find((d) => d.device_id === devId)?.workspace_id).toBe(WS_IRR)
   })
 
   it('POST /api/billing/devices/:deviceId/release releases device from workspace', async () => {

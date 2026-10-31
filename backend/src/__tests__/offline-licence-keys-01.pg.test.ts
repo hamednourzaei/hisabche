@@ -3,16 +3,16 @@
 // read the signing key, there is one active key, and a key is permanent.
 // ============================================
 
-import { mkdtempSync, readFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import EmbeddedPostgres from 'embedded-postgres'
 import postgres from 'postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { freePortSync } from './helpers/free-port'
+import { pgTempDir } from './helpers/pg-temp-dir'
 
 const PORT = freePortSync()
-const dir = mkdtempSync(join(tmpdir(), 'hisabche-pg-licence-keys-'))
+const dir = pgTempDir('hisabche-pg-licence-keys-')
 const pg = new EmbeddedPostgres({
   databaseDir: dir,
   port: PORT,

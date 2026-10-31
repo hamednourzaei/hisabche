@@ -41,6 +41,7 @@ import {
 } from '@hisabche/validation'
 
 import { supabase } from '../db'
+import { holds, type Capability, type WorkspaceRole } from './authorization/authorization.domain'
 
 /**
  * The server does not have this column.
@@ -334,6 +335,34 @@ export interface SyncActor {
   userId: string
   workspaceId: string
   deviceId: string
+  /** The role and the workspace's effective capabilities, from the request's tenancy. */
+  role: WorkspaceRole
+  capabilities?: ReadonlySet<string> | undefined
+}
+
+/**
+ * What a device must HOLD to write each entity through /sync/push.
+ *
+ * ⚠️ THE PUSH WRITES STRAIGHT INTO THE TABLES. It used to ask only for
+ * membership, so a seller's device could create a product with any cost, move
+ * stock, post a cash transaction or set an exchange rate — all of which the
+ * domain routes refuse a seller. The same rule that guards the route now guards
+ * the mutation. `null` is an entity that is not a money or stock fact
+ * (a project time entry): any member may write their own.
+ */
+const SYNC_WRITE_CAPABILITY: Record<
+  SyncEntity,
+  { create: Capability | null; update: Capability | null }
+> = {
+  invoice: { create: 'invoice.create', update: 'invoice.update' },
+  customer: { create: 'customer.write', update: 'customer.write' },
+  product: { create: 'product.write', update: 'product.write' },
+  transaction: { create: 'payment.record', update: 'payment.record' },
+  time_entry: { create: null, update: null },
+  warehouse: { create: 'inventory.configure', update: 'inventory.configure' },
+  branch: { create: 'workspace.manage', update: 'workspace.manage' },
+  exchange_rate: { create: 'account.manage', update: 'account.manage' },
+  product_stock: { create: 'product.write', update: 'product.write' },
 }
 
 class SyncError extends Error {
@@ -536,6 +565,14 @@ export class SyncService {
     mutation: SyncMutation,
   ): Promise<{ entityVersion: number; syncVersion?: number }> {
     const table = ENTITY_TABLE[mutation.entityType]
+
+    const needed =
+      mutation.operation === 'create' || mutation.operation === 'update'
+        ? SYNC_WRITE_CAPABILITY[mutation.entityType][mutation.operation]
+        : null
+    if (needed && !holds(actor, needed)) {
+      throw new SyncError('forbidden', `This account may not write ${mutation.entityType}`)
+    }
 
     if (mutation.operation === 'delete') {
       throw new SyncError(

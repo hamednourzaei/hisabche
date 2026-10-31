@@ -3362,6 +3362,9 @@
     "leaveFromToday": "From today, for {days} days (until {end})",
     "leaveDaysInvalid": "The number of days must be greater than zero.",
     "payroll_paid": "Paid",
+    "payroll_booked": "Booked to Ledger",
+    "payroll_not_booked": "Not Booked to Ledger",
+    "payroll_rebook": "Re-book to Ledger",
     "payroll_draft": "Draft",
     "payroll_approved": "Approved",
     "payroll_cancelled": "Cancelled",
@@ -3388,6 +3391,9 @@
       "confirmPaid": "Confirm payment",
       "confirmNotPaid": "Record as not paid",
       "alreadyPaid": "This salary is already recorded as paid and no longer changes.",
+      "rebook": "Book to ledger",
+      "rebooked": "Booked to the ledger.",
+      "notBooked": "Not booked to the ledger: {reason}",
       "failed": "Could not save. Try again."
     },
     "leaveApprove": "Approve leave",
@@ -3525,6 +3531,8 @@
       "reports": "Reports",
       "budgets": "Budgets",
       "people": "Colleagues",
+      "purchasing": "Purchasing",
+      "stocktake": "Stock counts",
       "workspace": "Business & members"
     },
     "lockedCell": "This cell cannot be changed.",

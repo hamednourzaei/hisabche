@@ -86,6 +86,23 @@ export const CAPABILITIES = [
   // The workspace itself
   'member.manage',
   'workspace.manage',
+  // Human Resources & Payroll
+  'payroll.read',
+  'payroll.write',
+  'payroll.post',
+  'employee.read',
+  'employee.write',
+  'leave.read',
+  'leave.write',
+  // Buying and counting stock
+  'purchase.write',
+  'purchase.receive',
+  'stocktake.write',
+  'stocktake.complete',
+  // The subscription and the offline licence seats
+  'license.manage',
+  // The approval rules themselves: who must sign, in what order
+  'workflow.manage',
 ] as const
 
 export type Capability = (typeof CAPABILITIES)[number]
@@ -150,6 +167,26 @@ const MIN_ROLE: Record<Capability, WorkspaceRole> = {
 
   'member.manage': 'owner',
   'workspace.manage': 'owner',
+
+  'payroll.read': 'manager',
+  'payroll.write': 'manager',
+  'payroll.post': 'manager',
+  'employee.read': 'manager',
+  'employee.write': 'manager',
+  'leave.read': 'seller',
+  'leave.write': 'manager',
+
+  // Ordering stock commits money to a supplier; receiving it moves stock and
+  // writes its cost layer; completing a count writes the ADJUSTMENT movements.
+  // Membership alone used to be enough for all of them. The default is the
+  // owner and the admin; the owner can move any of them in the permissions matrix.
+  'purchase.write': 'manager',
+  'purchase.receive': 'manager',
+  'stocktake.write': 'manager',
+  'stocktake.complete': 'manager',
+  'license.manage': 'manager',
+  // Changing an approval rule changes who can approve money; running one stays open.
+  'workflow.manage': 'manager',
 }
 
 /**
@@ -470,18 +507,36 @@ export const PERMISSION_MODULES: readonly ModuleSpec[] = [
   {
     key: 'people',
     label: 'همکاران',
-    // Read is the whole module: there is nothing to write. Keeping it its own
-    // module is what lets the owner grant it to one person without also
-    // handing over member management, which lives in `workspace` below.
-    read: ['people.presence.read'],
-    write: [],
-    full: [],
+    // Keeping it its own module is what lets the owner grant it to one person
+    // without also handing over member management, which lives in `workspace`
+    // below.
+    //
+    // Salaries, employee records and paying a payroll sit in the TOP tier on
+    // purpose: tiers are cumulative, so granting someone «همکاران» to see who
+    // is around must never also hand them everyone's pay.
+    read: ['people.presence.read', 'leave.read'],
+    write: ['leave.write'],
+    full: ['employee.read', 'employee.write', 'payroll.read', 'payroll.write', 'payroll.post'],
+  },
+  {
+    key: 'purchasing',
+    label: 'خرید',
+    read: [],
+    write: ['purchase.write'],
+    full: ['purchase.receive'],
+  },
+  {
+    key: 'stocktake',
+    label: 'شمارش انبار',
+    read: [],
+    write: ['stocktake.write'],
+    full: ['stocktake.complete'],
   },
   {
     key: 'workspace',
     label: 'کسب‌وکار و اعضا',
     read: [],
-    write: ['data.import'],
+    write: ['data.import', 'license.manage', 'workflow.manage'],
     full: ['member.manage', 'workspace.manage'],
   },
 ] as const

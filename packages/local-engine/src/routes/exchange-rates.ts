@@ -5,6 +5,7 @@
 // and custom currency units.
 // ============================================
 
+import { requireCapability } from '../auth'
 import { CURRENCY_CODES, baseCurrencyInputSchema, rateInputSchema } from '@hisabche/validation'
 import { ConflictError, ValidationError } from '../errors'
 import type { Router } from '../router'
@@ -93,6 +94,7 @@ export function registerExchangeRateRoutes(router: Router): void {
 
   // ─── PUT /finance/currency/rates (and aliases) ──────────────
   const setRateHandler = (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'ledger.post')
     const { db, ctx, body } = c
     const raw = (body || {}) as Record<string, unknown>
     const parsed = rateInputSchema.safeParse(raw)
@@ -163,6 +165,7 @@ export function registerExchangeRateRoutes(router: Router): void {
 
   // ─── PUT /finance/currency/base ──────────────────────────────
   const setBaseCurrencyHandler = (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'workspace.manage')
     const { db, ctx, body } = c
     const raw = (body || {}) as Record<string, unknown>
     const parsed = baseCurrencyInputSchema.safeParse(raw)

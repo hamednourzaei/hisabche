@@ -29,6 +29,16 @@ function resolveIcon(): string | undefined {
 const MIN_WIDTH = 1024
 const MIN_HEIGHT = 680
 
+/**
+ * Height of the strip the app draws at the top of the window. The native
+ * minimise / maximise / close buttons are laid over its end edge, so the
+ * renderer's strip and the overlay must agree on this number.
+ */
+export const TITLE_BAR_HEIGHT = 40
+
+/** Window chrome until the renderer reads its theme and sends the real colours. */
+const INITIAL_CHROME = { color: '#101820', symbolColor: '#e5e7eb' } as const
+
 export function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1440,
@@ -43,7 +53,13 @@ export function createMainWindow(): BrowserWindow {
       const icon = resolveIcon()
       return icon ? { icon } : {}
     })(),
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    // The app draws its own title bar (DesktopTitleBar in the shell). On
+    // Windows and Linux the system buttons stay native, laid over that bar;
+    // macOS keeps its traffic lights inset.
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    ...(process.platform === 'darwin'
+      ? {}
+      : { titleBarOverlay: { ...INITIAL_CHROME, height: TITLE_BAR_HEIGHT } }),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,

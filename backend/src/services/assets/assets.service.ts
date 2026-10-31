@@ -4,6 +4,7 @@
 // Fixed assets: capitalise, depreciate on a schedule, dispose.
 // ============================================
 
+import { businessDayOf } from '../../utils/local-day'
 import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
@@ -199,7 +200,7 @@ export class AssetsService {
    * Each is keyed by (asset, period), so a run six weeks late posts the four
    * entries it owes — and a run repeated twice posts nothing the second time.
    */
-  async postDue(ctx: TenancyContext, asOf = new Date().toISOString().slice(0, 10)) {
+  async postDue(ctx: TenancyContext, asOf = businessDayOf(new Date(), ctx.timeZone)) {
     const { data, error } = await supabase
       .from('asset_depreciation_schedule')
       .select(

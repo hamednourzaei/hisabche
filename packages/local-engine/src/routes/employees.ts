@@ -19,6 +19,7 @@
 //   · a photo — `photo_url` is not stored.
 // ============================================
 
+import { requireCapability } from '../auth'
 import { createEmployeeSchema, updateEmployeeSchema } from '@hisabche/validation'
 import { NotFoundError, ValidationError } from '../errors'
 import type { LocalDb } from '../db'
@@ -171,6 +172,7 @@ export function registerEmployeeRoutes(router: Router): void {
   })
 
   router.post('/employees', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'employee.write')
     const { db, ctx, body } = c
     const raw = bodyOf(body)
     const data = parseWith(createEmployeeSchema, raw)
@@ -256,6 +258,7 @@ export function registerEmployeeRoutes(router: Router): void {
   })
 
   router.patch('/employees/:id', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'employee.write')
     const { db, ctx, params, body } = c
     const id = params.id ?? ''
     const data = parseWith(updateEmployeeSchema, { ...bodyOf(body), id })
@@ -294,6 +297,7 @@ export function registerEmployeeRoutes(router: Router): void {
   // The HTTP verb is DELETE because that is what the user means; the effect is a
   // deactivation because that is what the books require (an employee has payrolls).
   router.delete('/employees/:id', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'employee.write')
     const { db, ctx, params } = c
     const id = params.id ?? ''
     const result = db.run(

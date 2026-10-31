@@ -150,7 +150,7 @@ export default function SyncPage() {
         header: '',
         align: 'end',
         render: ({ entry, stage }) =>
-          stage === 'rejected' || stage === 'retrying' ? (
+          stage === 'rejected' || stage === 'retrying' || entry.attempts >= MAX_ATTEMPTS ? (
             <Button size="sm" variant="ghost" onClick={() => void retry(entry)}>
               {t('common.retry')}
             </Button>

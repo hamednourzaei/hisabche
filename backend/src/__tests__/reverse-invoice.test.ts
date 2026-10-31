@@ -228,6 +228,12 @@ function resetWorld() {
 }
 
 function registerRpcs() {
+  // Releasing a sale's cost layers (the real function restores layer quantities).
+  // Since a failed release is no longer swallowed by the invoice service, a test
+  // that deletes or cancels a sale must say what the release answers; these tests
+  // assert on the ledger, stock and cash, so it releases nothing here.
+  db.rpc('inventory_release_consumption', () => ({ quantity: 0, total_cost: 0 }))
+
   db.rpc('accounting_post_journal_entry', (args) => {
     const id = fakeId('entry')
     const posted = args.p_entry as Row

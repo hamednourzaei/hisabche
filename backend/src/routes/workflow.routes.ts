@@ -18,6 +18,7 @@ import {
 import { WorkflowService } from '../services/workflow.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { BaseError } from '../errors/base.error'
 import { NotFoundError } from '../errors/database.error'
@@ -40,7 +41,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/v1/workflows',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('workflow.manage')],
       schema: {
         body: toJsonSchema(createWorkflowSchema),
         response: { 201: toJsonSchema(z.object({ id: z.string().uuid() })) },
@@ -124,7 +125,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/v1/workflows/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('workflow.manage')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateWorkflowSchema),
@@ -156,7 +157,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/v1/workflows/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('workflow.manage')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         response: { 200: toJsonSchema(z.object({ success: z.boolean() })) },

@@ -3,8 +3,7 @@
 // prove the ROUTES: rows in SQLite → the shared builders → the shape the
 // screens read, and that the writes land.
 import { describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WAREHOUSE_ID } from './test-db'
+import { createTestDb, TEST_WAREHOUSE_ID, createTestEngine } from './test-db'
 
 const DAY = 86_400_000
 const isoDay = (offsetDays: number) =>
@@ -12,7 +11,7 @@ const isoDay = (offsetDays: number) =>
 
 async function world() {
   const db = createTestDb()
-  const engine = createLocalEngine(db)
+  const engine = createTestEngine(db)
   const customer = (
     await engine.request<{ id: string }>({
       method: 'POST',

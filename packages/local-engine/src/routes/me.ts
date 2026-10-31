@@ -42,6 +42,17 @@ export const ALL_CAPABILITIES = [
   'workspace.manage',
 ] as const
 
+const CLIENT_ROLE: Record<string, string> = {
+  owner: 'owner',
+  manager: 'admin',
+  seller: 'member',
+  viewer: 'viewer',
+}
+
+function clientRoleOf(role: string | undefined): string {
+  return (role && CLIENT_ROLE[role]) || 'viewer'
+}
+
 export function registerMeRoutes(router: Router): void {
   // ─── GET /governance/my-capabilities & /me/capabilities ───────
   const myCapabilitiesHandler = (_c: RouteHandlerContext) => {
@@ -65,7 +76,7 @@ export function registerMeRoutes(router: Router): void {
       full_name: string | null
       role: string
       created_at: string
-    }>('SELECT * FROM local_user LIMIT 1')
+    }>('SELECT * FROM local_user WHERE id = ?', [ctx.userId])
 
     const ws = db.get<{
       name: string
@@ -88,7 +99,8 @@ export function registerMeRoutes(router: Router): void {
         businessTypes: splitBusinessTypes(ws?.business_types),
         business_types: splitBusinessTypes(ws?.business_types),
         businessTypesUpdatedAt: ws?.business_types_updated_at ?? null,
-        role: 'owner',
+        // The caller's own role in the vocabulary the client uses, not a constant.
+        role: clientRoleOf(user?.role),
         createdAt: user?.created_at || new Date().toISOString(),
       },
     }
@@ -103,7 +115,7 @@ export function registerMeRoutes(router: Router): void {
    * sync conflict rule compares.
    */
   const patchProfileHandler = (c: RouteHandlerContext) => {
-    const { db, body } = c
+    const { db, ctx, body } = c
     const parsed = updateProfileSchema.safeParse(body)
     if (!parsed.success) {
       throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '))
@@ -139,7 +151,7 @@ export function registerMeRoutes(router: Router): void {
       email: string | null
       full_name: string | null
       created_at: string
-    }>('SELECT id, email, full_name, created_at FROM local_user LIMIT 1')
+    }>('SELECT id, email, full_name, created_at FROM local_user WHERE id = ?', [ctx.userId])
 
     if (input.fullName !== undefined && input.fullName.trim() && user?.id) {
       db.run('UPDATE local_user SET full_name = ?, updated_at = ? WHERE id = ?', [
@@ -159,7 +171,7 @@ export function registerMeRoutes(router: Router): void {
       email: string | null
       full_name: string | null
       created_at: string
-    }>('SELECT id, email, full_name, created_at FROM local_user LIMIT 1')
+    }>('SELECT id, email, full_name, created_at FROM local_user WHERE id = ?', [ctx.userId])
 
     const cleanEmail =
       freshUser?.email && !freshUser.email.endsWith('.local') ? freshUser.email : ''

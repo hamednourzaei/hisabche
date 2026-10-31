@@ -17,6 +17,7 @@ import type { TenancyContext } from '../tenancy.service'
 import { logBusinessEvent } from '../event-log.service'
 import { AccountingService, ledger } from '../accounting'
 import { baseCurrencyOf } from '../base-currency'
+import { businessDayOf } from '../../utils/local-day'
 
 import {
   buildDrawerLedger,
@@ -767,7 +768,7 @@ export class PosService {
     const outcome = await ledger.postDocument(ctx, {
       sourceType: 'till_transfer',
       sourceId: input.transferId,
-      date: new Date().toISOString().slice(0, 10),
+      date: businessDayOf(new Date(), ctx?.timeZone),
       description: TILL_TRANSFER_DESCRIPTION[input.direction],
       reference: input.reason.trim().slice(0, 200),
       lines: transferLines(input.direction, { cash: accounts.cash, bank: accounts.bank }, amount),
@@ -1026,7 +1027,7 @@ export class PosService {
     const outcome = await ledger.postDocument(ctx, {
       sourceType: 'pos_session',
       sourceId: session.id,
-      date: new Date().toISOString().slice(0, 10),
+      date: businessDayOf(new Date(), ctx?.timeZone),
       description: `بستن صندوق ${session.id.slice(0, 8)}`,
       reference: session.id,
       lines,

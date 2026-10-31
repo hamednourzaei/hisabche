@@ -144,7 +144,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/billing/upgrade',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('license.manage')],
       schema: {
         body: toJsonSchema(
           z.object({
@@ -209,7 +209,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
   // ─── POST /api/billing/upgrade-requests/:id/cancel ──────────
   fastify.post(
     '/api/billing/upgrade-requests/:id/cancel',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('license.manage')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!['owner', 'admin'].includes(request.tenancy.role)) {
         return reply.code(403).send({ error: 'UPGRADE_FORBIDDEN', code: 'UPGRADE_FORBIDDEN' })
@@ -518,7 +518,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
   // ─── POST /api/billing/offline-license/activate-seat ──────────
   fastify.post(
     '/api/billing/offline-license/activate-seat',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('license.manage')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const workspaceId = request.tenancy.workspaceId
       const body = (request.body ?? {}) as {
@@ -594,7 +594,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
   // ─── POST /api/billing/offline-license/connect ────────────────
   fastify.post(
     '/api/billing/offline-license/connect',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('license.manage')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const workspaceId = request.tenancy.workspaceId
       const body = (request.body ?? {}) as {
@@ -641,7 +641,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
   // person decides (BUG-138).
   fastify.post(
     '/api/billing/offline-license/tier1-report',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('license.manage')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const workspaceId = request.tenancy.workspaceId
       const body = (request.body ?? {}) as {
@@ -695,7 +695,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
   // ─── POST /api/billing/offline-license/tier2-report ───────────
   fastify.post(
     '/api/billing/offline-license/tier2-report',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('license.manage')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const workspaceId = request.tenancy.workspaceId
       const body = (request.body ?? {}) as {
@@ -770,7 +770,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
   // ─── POST /api/billing/devices/activate ───────────────────────
   fastify.post(
     '/api/billing/devices/activate',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const workspaceId = request.tenancy.workspaceId
       const body = (request.body ?? {}) as { deviceId?: string; device_id?: string; label?: string }
@@ -778,15 +778,29 @@ export async function billingRoutes(fastify: FastifyInstance) {
       if (!deviceId || !/^[0-9a-f-]{36}$/i.test(deviceId)) {
         return reply.code(400).send({ error: 'INVALID_DEVICE_ID', code: 'INVALID_DEVICE_ID' })
       }
-      const device = await offlineLicenseService.activateDevice(workspaceId, deviceId, body.label)
-      return reply.send({ device })
+      try {
+        const device = await offlineLicenseService.activateDevice(workspaceId, deviceId, body.label)
+        return reply.send({ device })
+      } catch (err: unknown) {
+        const error = err as { name?: string; code?: string; message?: string; statusCode?: number }
+        if (
+          error.name === 'ConflictError' ||
+          error.code === 'DEVICE_CLAIMED_BY_ANOTHER_WORKSPACE' ||
+          error.code === 'DEVICE_CAP_REACHED' ||
+          (error.message &&
+            (error.message.includes('DEVICE_CLAIMED') || error.message.includes('DEVICE_CAP')))
+        ) {
+          return reply.code(409).send({ error: error.message, code: error.code || 'CONFLICT' })
+        }
+        throw err
+      }
     },
   )
 
   // ─── POST /api/billing/devices/:deviceId/release ──────────────
   fastify.post(
     '/api/billing/devices/:deviceId/release',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const workspaceId = request.tenancy.workspaceId
       const { deviceId } = request.params as { deviceId: string }

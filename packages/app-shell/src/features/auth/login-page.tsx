@@ -303,42 +303,48 @@ export function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen">
-      <AuthShell
-        flipped={flipped}
-        st={st}
-        onSwitchMode={switchMode}
-        loginProps={{
-          st,
-          serverError,
-          isLoading,
-          errors: loginForm.formState.errors,
-          register: loginForm.register,
-          watch: loginForm.watch,
-          handleSubmit: loginForm.handleSubmit,
-          showPassword,
-          togglePassword,
-          onSwitchMode: switchMode,
-          onSubmit: submitLogin,
-          // Demo sign-in is a marketing affordance on the public site; a desktop
-          // install is already a deliberate download, so it has no place here.
-          onDemoLogin: () => undefined,
-        }}
-        signupProps={{
-          st,
-          serverError,
-          isLoading,
-          errors: signupForm.formState.errors,
-          register: signupForm.register,
-          watch: signupForm.watch,
-          handleSubmit: signupForm.handleSubmit,
-          showPassword,
-          togglePassword,
-          onSwitchMode: switchMode,
-          onSubmit: submitSignup,
-          translateError: (key?: string) => (key ? st(key, key) : undefined),
-        }}
-      />
+    // ⚠️ `h-full`, not `min-h-screen`: the desktop window has a title bar above this
+    // page, so 100vh is taller than the space the page really has and the offline
+    // button (anchored to the bottom) fell below the window edge — gone from sight.
+    // The shell scrolls inside; the button row is a sibling, so it never scrolls away.
+    <div className="relative h-full min-h-0">
+      <div className="h-full overflow-y-auto">
+        <AuthShell
+          flipped={flipped}
+          st={st}
+          onSwitchMode={switchMode}
+          loginProps={{
+            st,
+            serverError,
+            isLoading,
+            errors: loginForm.formState.errors,
+            register: loginForm.register,
+            watch: loginForm.watch,
+            handleSubmit: loginForm.handleSubmit,
+            showPassword,
+            togglePassword,
+            onSwitchMode: switchMode,
+            onSubmit: submitLogin,
+            // Demo sign-in is a marketing affordance on the public site; a desktop
+            // install is already a deliberate download, so it has no place here.
+            onDemoLogin: () => undefined,
+          }}
+          signupProps={{
+            st,
+            serverError,
+            isLoading,
+            errors: signupForm.formState.errors,
+            register: signupForm.register,
+            watch: signupForm.watch,
+            handleSubmit: signupForm.handleSubmit,
+            showPassword,
+            togglePassword,
+            onSwitchMode: switchMode,
+            onSubmit: submitSignup,
+            translateError: (key?: string) => (key ? st(key, key) : undefined),
+          }}
+        />
+      </div>
       {/* A full-width row centres in both directions; start-1/2 with a physical
           -translate-x pushed the link off the side of an RTL phone screen. */}
       <div className="absolute inset-x-0 bottom-3 z-30 flex flex-col items-center gap-1">

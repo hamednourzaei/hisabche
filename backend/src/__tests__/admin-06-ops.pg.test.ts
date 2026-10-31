@@ -4,16 +4,16 @@
 // and verifies table privileges, RLS, and constraints.
 // ============================================
 
-import { mkdtempSync, readFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import EmbeddedPostgres from 'embedded-postgres'
 import postgres from 'postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { freePortSync } from './helpers/free-port'
+import { pgTempDir } from './helpers/pg-temp-dir'
 
 const PORT = freePortSync()
-const dir = mkdtempSync(join(tmpdir(), 'hisabche-pg-admin-ops-'))
+const dir = pgTempDir('hisabche-pg-admin-ops-')
 const pg = new EmbeddedPostgres({
   databaseDir: dir,
   port: PORT,

@@ -12,6 +12,7 @@ import PurchasingService from '../services/purchasing.service'
 import { ConflictError, NotFoundError } from '../errors/database.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
@@ -77,7 +78,7 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/purchase-orders',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('purchase.write')],
       schema: {
         body: toJsonSchema(createPurchaseOrderSchema),
         response: {
@@ -109,7 +110,7 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/purchase-orders/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('purchase.write')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updatePurchaseOrderSchema),
@@ -142,7 +143,7 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/purchase-orders/:id/receive',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('purchase.receive')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         response: {

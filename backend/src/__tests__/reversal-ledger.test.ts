@@ -128,6 +128,9 @@ const LEDGER: Record<string, Record<string, Way>> = {
     '/api/employees': unproven('DELETE /api/employees/:id'),
     '/api/attendance': inert,
     '/api/payrolls': none('a paid payroll is final; nothing reverses its entry'),
+    // Re-booking is idempotent per (sourceType, sourceId), so a retry writes no
+    // second entry. If the entry itself was wrong, the ledger reverses it.
+    '/api/payrolls/:id/book': unproven('POST /journal/:id/reverse'),
     '/api/leaves': inert,
   },
   'cycle-count.routes.ts': {
@@ -213,6 +216,6 @@ describe('every way forward has a decided way back', () => {
       for (const way of Object.values(ways)) counts[way.kind]++
     }
     // Written down so a change to the register is a change someone reads.
-    expect(counts).toEqual({ proven: 9, unproven: 14, none: 17, inert: 14 })
+    expect(counts).toEqual({ proven: 9, unproven: 15, none: 17, inert: 14 })
   })
 })

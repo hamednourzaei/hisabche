@@ -21,16 +21,15 @@ import {
   roundInvoiceMoney,
   sumInvoiceLines,
 } from '@hisabche/validation'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WAREHOUSE_ID } from './test-db'
+import { createTestDb, TEST_WAREHOUSE_ID, createTestEngine } from './test-db'
 
 describe('Backend Financial Rules & Response Parity', () => {
   let db: ReturnType<typeof createTestDb>
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
 
   beforeEach(() => {
     db = createTestDb()
-    engine = createLocalEngine(db)
+    engine = createTestEngine(db)
   })
 
   // ─── 1. AFN Sale Parity ──────────────────────────────────────

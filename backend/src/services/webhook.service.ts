@@ -92,6 +92,8 @@ export class WebhookService {
 
   // ─── Process Incoming Webhook ──────────────────────────────────
   async processWebhook(event: WebhookEvent): Promise<WebhookResult> {
+    // Set once THIS call owns the event, so a failure releases only its own claim.
+    let claimedHere = false
     try {
       const cacheKey = this.getWebhookCacheKey(event.id)
       const cached = await memoryCache.get(cacheKey)
@@ -105,6 +107,7 @@ export class WebhookService {
         return { success: true, action: 'already_processed' }
       }
 
+      claimedHere = true
       let result: WebhookResult
 
       switch (event.type) {
@@ -135,11 +138,14 @@ export class WebhookService {
       if (result.success) {
         await this.logWebhook(event)
         await memoryCache.set(cacheKey, true, 86400)
+      } else {
+        await this.releaseClaim(event)
       }
 
       return result
     } catch (error) {
       console.error('Webhook processing error:', error)
+      if (claimedHere) await this.releaseClaim(event)
       return {
         success: false,
         action: 'error',
@@ -319,6 +325,21 @@ export class WebhookService {
       return true
     }
     return true
+  }
+
+  // ─── Private: Release a claim after a failure ───────────────────
+  //
+  // ⚠️ A CLAIM THAT OUTLIVES A FAILURE LOSES THE EVENT. The row is written before
+  // the work (so two deliveries cannot both run it); if the work then fails and
+  // the row stays, Stripe's retry finds it, is answered «already processed», and
+  // the upgrade or the renewal is never applied. The retry is the recovery — it
+  // must find the event unclaimed.
+  private async releaseClaim(event: WebhookEvent): Promise<void> {
+    try {
+      await supabase.from('webhook_events').delete().eq('id', event.id)
+    } catch (error) {
+      console.error('Failed to release webhook claim:', error)
+    }
   }
 
   // ─── Private: Log Webhook ──────────────────────────────────────

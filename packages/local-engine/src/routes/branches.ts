@@ -17,6 +17,7 @@
 //     `headCount: 0`. That is «unknown here», and the tab says nothing more.
 // ============================================
 
+import { requireCapability } from '../auth'
 import {
   nestBranches,
   validateBranchPlacement,
@@ -105,6 +106,7 @@ export function registerBranchRoutes(router: Router): void {
   })
 
   router.post('/branches', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'workspace.manage')
     const { db, ctx, body } = c
     const raw = (body ?? {}) as Record<string, unknown>
     const code = text(raw.code, MAX_CODE, 'code')
@@ -134,6 +136,7 @@ export function registerBranchRoutes(router: Router): void {
   })
 
   router.patch('/branches/:id', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'workspace.manage')
     const { db, ctx, params, body } = c
     const raw = (body ?? {}) as Record<string, unknown>
     const existing = branchesOf(db, ctx.workspaceId)

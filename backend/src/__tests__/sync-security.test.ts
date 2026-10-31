@@ -132,6 +132,7 @@ const ATTACKER = {
   userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   workspaceId: 'wwwwwwww-wwww-4www-8www-wwwwwwwwwwww',
   deviceId: 'attacker',
+  role: 'owner' as const,
 }
 
 const VICTIM_WORKSPACE = 'vvvvvvvv-vvvv-4vvv-8vvv-vvvvvvvvvvvv'
@@ -503,5 +504,56 @@ describe('the request itself is bounded', () => {
 
   it('rejects a negative cursor', () => {
     expect(syncPullRequestSchema.safeParse({ cursor: -1 }).success).toBe(false)
+  })
+})
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   The push holds the same capability the domain route would ask for
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+describe('a device writes only what its account may write', () => {
+  const as = (role: 'owner' | 'manager' | 'seller') => ({ ...ATTACKER, role })
+  const create = (
+    entityType: 'product' | 'invoice' | 'customer' | 'transaction' | 'warehouse',
+  ) => ({
+    mutationId: id(500),
+    entityType,
+    entityId: id(501),
+    operation: 'create' as const,
+    payload: { name: 'x' },
+  })
+
+  it.each(['product', 'warehouse'] as const)(
+    'a seller’s device cannot create a %s',
+    async (entity) => {
+      reset()
+      const [result] = (await syncService.push(as('seller'), [create(entity)])).results
+      expect(result?.status).toBe('rejected')
+      expect(result?.errorCode).toBe('forbidden')
+    },
+  )
+
+  it.each(['invoice', 'customer', 'transaction'] as const)(
+    'a seller’s device can still create a %s',
+    async (entity) => {
+      reset()
+      const [result] = (await syncService.push(as('seller'), [create(entity)])).results
+      expect(result?.errorCode).not.toBe('forbidden')
+    },
+  )
+
+  it('a manager’s device can create a product, the owner’s a warehouse', async () => {
+    reset()
+    const product = (await syncService.push(as('manager'), [create('product')])).results[0]
+    const warehouse = (await syncService.push(as('owner'), [create('warehouse')])).results[0]
+    expect(product?.errorCode).not.toBe('forbidden')
+    expect(warehouse?.errorCode).not.toBe('forbidden')
+  })
+
+  it('a capability the owner took away from a role is refused even for that role’s default', async () => {
+    reset()
+    const noProducts = { ...as('manager'), capabilities: new Set(['invoice.create']) }
+    const [result] = (await syncService.push(noProducts, [create('product')])).results
+    expect(result?.errorCode).toBe('forbidden')
   })
 })

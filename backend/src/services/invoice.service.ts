@@ -13,6 +13,7 @@
 // ============================================
 
 import { baseCurrencyOf } from './base-currency'
+import { businessDayOf } from '../utils/local-day'
 import { createHash, randomUUID } from 'node:crypto'
 import { PaymentsService } from './payments/payments.service'
 import { assertMayUseWarehouse } from './inventory/warehouse-access'
@@ -1287,8 +1288,8 @@ export class InvoiceService {
           // `data.total` here is what let a request say «total: 1» on a
           // five-million invoice and have the books believe it.
           total: money.total,
-          taxTotal: money.taxTotal,
           costOfGoodsSold: cogs,
+          taxTotal: money.taxTotal,
         })
         // J3 — `posted` is written HERE and nowhere earlier, because this is
         // the first moment it is true. An invoice marked posted whose ledger
@@ -1823,9 +1824,7 @@ export class InvoiceService {
     // A sale's consumed layers get their quantities back. A purchase's own
     // layers are NOT unwound here — later sales may already have drawn from
     // them, which is a revaluation and not a release (same limit as an edit).
-    await costing
-      .releaseDocument(ctx, 'invoice', invoiceId)
-      .catch((err) => console.error('[InvoiceService] cost release failed:', err))
+    await costing.releaseDocument(ctx, 'invoice', invoiceId)
 
     await this.releaseClaims(ctx, invoiceId)
   }
@@ -2299,9 +2298,7 @@ export class InvoiceService {
     // edited sale keeps holding stock it no longer sells, and the layers it
     // drew from stay short for good.
     if (direction === -1) {
-      await costing
-        .releaseDocument(ctx, 'invoice', invoiceId)
-        .catch((err) => console.error('[InvoiceService] cost release failed:', err))
+      await costing.releaseDocument(ctx, 'invoice', invoiceId)
     } else {
       // A purchase edit would have to unwind layers that later sales may
       // already have consumed. That is a revaluation, not a release, and it
@@ -2957,7 +2954,7 @@ export class InvoiceService {
      */
     exchangeRate = 1,
   ): Promise<number> {
-    const entryDate = date ? String(date).slice(0, 10) : new Date().toISOString().slice(0, 10)
+    const entryDate = date ? String(date).slice(0, 10) : businessDayOf(new Date(), ctx?.timeZone)
     // Lines without a product are services; they hold no stock and cost
     // nothing to deliver from inventory.
     const stocked = (items ?? []).filter((item) => item?.productId && Number(item.quantity) > 0)
@@ -3110,7 +3107,7 @@ export class InvoiceService {
     const outcome = await ledger.postDocument(ctx, {
       sourceType: 'invoice',
       sourceId: invoiceId,
-      date: data.date ? data.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      date: data.date ? data.date.slice(0, 10) : businessDayOf(new Date(), ctx?.timeZone),
       description: `${isPurchase ? 'فاکتور خرید' : 'فاکتور فروش'} ${
         data.invoiceNumber || invoiceId.slice(0, 8)
       }`,
@@ -3315,7 +3312,7 @@ export class InvoiceService {
     }))
     const date = String(invoice?.date ?? '')
 
-    const entryDate = date ? date.slice(0, 10) : new Date().toISOString().slice(0, 10)
+    const entryDate = date ? date.slice(0, 10) : businessDayOf(new Date(), ctx?.timeZone)
     const drawn = new Set(
       (await costing.explainDocumentCost(ctx, 'invoice', id)).lines.map((row) =>
         String(row.consumerLine ?? ''),
@@ -3374,7 +3371,7 @@ export class InvoiceService {
     const outcome = await ledger.postDocument(ctx, {
       sourceType: 'cost_repost',
       sourceId: key,
-      date: date ? date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      date: date ? date.slice(0, 10) : businessDayOf(new Date(), ctx?.timeZone),
       description: `بهای تمام‌شده‌ی فاکتور فروش ${
         invoice?.invoiceNumber ?? invoice?.invoice_number ?? id.slice(0, 8)
       }`,

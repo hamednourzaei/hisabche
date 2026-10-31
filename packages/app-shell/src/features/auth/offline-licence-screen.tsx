@@ -30,6 +30,8 @@ const PROBLEM_FALLBACK: Record<string, string> = {
   REVOKED: 'این لایسنس باطل شده است.',
   BANNED: 'این لایسنس مسدود است.',
   CLOCK_ROLLED_BACK: 'ساعت دستگاه به عقب برگشته است. تاریخ و ساعت را درست کنید.',
+  STORE_ERROR:
+    'حافظهٔ امن این دستگاه خوانده نشد، پس لایسنس بررسی نشد. برنامه را دوباره باز کنید و اگر تکرار شد پشتیبانی را خبر کنید.',
 }
 
 export function OfflineLicenceScreen({

@@ -58,7 +58,7 @@ import { InstallmentService } from '../services/commerce/installment.service'
 
 const WS = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const OTHER = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
-const ctx = { workspaceId: WS, userId: 'u', role: 'owner' } as never
+const ctx = { workspaceId: WS, userId: 'u', role: 'owner', timeZone: 'UTC' } as never
 const day = (offset: number) =>
   new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10)
 

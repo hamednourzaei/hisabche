@@ -8,6 +8,7 @@
 // recording money directly.
 // ============================================
 
+import { businessDayOf } from '../utils/local-day'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
@@ -158,7 +159,7 @@ export async function operationsRoutes(fastify: FastifyInstance) {
         return reply.send(
           await budgetService.performanceReport(
             request.tenancy,
-            query.onDate ?? new Date().toISOString().slice(0, 10),
+            query.onDate ?? businessDayOf(new Date(), request.tenancy.timeZone),
             { type: query.type, status: query.status, branchId: query.branchId },
           ),
         )
@@ -271,7 +272,7 @@ export async function operationsRoutes(fastify: FastifyInstance) {
         return reply.send(
           await budgetService.getVariance(
             request.tenancy,
-            onDate ?? new Date().toISOString().slice(0, 10),
+            onDate ?? businessDayOf(new Date(), request.tenancy.timeZone),
           ),
         )
       } catch (err) {
@@ -405,7 +406,7 @@ export async function operationsRoutes(fastify: FastifyInstance) {
         return reply.send(
           await traceabilityService.getExpiryReport(
             request.tenancy,
-            asOf ?? new Date().toISOString().slice(0, 10),
+            asOf ?? businessDayOf(new Date(), request.tenancy.timeZone),
             Number(nearExpiryDays) || 30,
           ),
         )

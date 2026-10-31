@@ -16,6 +16,7 @@
 // no entry behind it (the server cannot promise that; it books after the write).
 // ============================================
 
+import { requireCapability } from '../auth'
 import {
   STANDARD_ACCOUNT_FOR_ROLE,
   branchOnDate,
@@ -310,6 +311,7 @@ export function registerPayrollRoutes(router: Router): void {
   })
 
   router.post('/payrolls', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'payroll.write')
     const { db, ctx, body } = c
     const raw = bodyOf(body)
     const data = parseWith(createPayrollSchema, raw)
@@ -362,6 +364,7 @@ export function registerPayrollRoutes(router: Router): void {
   })
 
   router.patch('/payrolls/:id', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'payroll.write')
     const { db, ctx, params, body } = c
     const id = params.id ?? ''
     const data = parseWith(updatePayrollSchema, { ...bodyOf(body), id })
@@ -436,6 +439,7 @@ export function registerPayrollRoutes(router: Router): void {
   })
 
   router.post('/leaves', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'leave.write')
     const { db, ctx, body } = c
     const raw = bodyOf(body)
     const data = parseWith(createLeaveSchema, raw)
@@ -484,6 +488,7 @@ export function registerPayrollRoutes(router: Router): void {
   })
 
   router.patch('/leaves/:id', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'leave.write')
     const { db, ctx, params, body } = c
     const id = params.id ?? ''
     const data = parseWith(updateLeaveSchema, { ...bodyOf(body), id })

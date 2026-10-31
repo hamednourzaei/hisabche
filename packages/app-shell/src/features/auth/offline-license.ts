@@ -37,14 +37,18 @@ const PUBLIC_KEY_KEY = 'hisabche.licence.public-key'
 
 export type LicenceCheck =
   | { ok: true; expiresAt: string }
-  | { ok: false; reason: 'NOT_CONFIGURED' | 'MISSING' | 'INVALID_CODE' | LicenseVerdict }
+  | {
+      ok: false
+      reason: 'NOT_CONFIGURED' | 'MISSING' | 'INVALID_CODE' | 'STORE_ERROR' | LicenseVerdict
+    }
 
-async function read(key: string): Promise<string | null> {
-  return (
-    (await bridge()
-      ?.secure.get(key)
-      .catch(() => null)) ?? null
-  )
+async function read(key: string): Promise<{ value: string | null; error?: boolean }> {
+  try {
+    const val = await bridge()?.secure.get(key)
+    return { value: val ?? null }
+  } catch {
+    return { value: null, error: true }
+  }
 }
 
 async function write(key: string, value: string): Promise<void> {
@@ -54,7 +58,7 @@ async function write(key: string, value: string): Promise<void> {
 /** This install's licence id, created the first time it is asked for. */
 export async function deviceLicenceId(): Promise<string> {
   const existing = await read(DEVICE_KEY)
-  if (existing) return existing
+  if (existing.value) return existing.value
   const created = crypto.randomUUID()
   await write(DEVICE_KEY, created)
   return created
@@ -74,9 +78,9 @@ function asStoredKey(value: unknown): StoredKey | null {
 
 async function storedKey(): Promise<StoredKey | null> {
   const raw = await read(PUBLIC_KEY_KEY)
-  if (!raw) return null
+  if (!raw.value) return null
   try {
-    return asStoredKey(JSON.parse(raw))
+    return asStoredKey(JSON.parse(raw.value))
   } catch {
     return null
   }
@@ -111,12 +115,43 @@ async function verify(code: string): Promise<LicenceCheck> {
   const key = await publicKeyFor(license.payload.key_id)
   if (!key) return { ok: false, reason: 'NOT_CONFIGURED' }
 
-  const seen = await read(SEEN_KEY)
+  const seenRes = await read(SEEN_KEY)
+  if (seenRes.error) return { ok: false, reason: 'STORE_ERROR' }
+  const seen = seenRes.value
+
+  // Query latest invoice timestamp as additional high-water mark (GAP-NEW-003 / 03B)
+  let dbLatest: string | null = null
+  try {
+    // Newest row by the column the query builder really orders on (an unknown
+    // column name falls back to updated_at), and the later of its two stamps.
+    const inv = await bridge()?.db.query({
+      table: 'invoice',
+      orderBy: 'updated_at',
+      direction: 'desc',
+      limit: 1,
+    })
+    const rows = (
+      inv as { rows?: Array<{ created_at?: unknown; updated_at?: unknown }> } | undefined
+    )?.rows
+    const stamps = [rows?.[0]?.created_at, rows?.[0]?.updated_at].filter(
+      (v): v is string => typeof v === 'string' && v !== '',
+    )
+    dbLatest = stamps.sort().reverse()[0] ?? null
+  } catch {
+    // best-effort read
+  }
+
+  const effectiveHighWater =
+    [seen, dbLatest]
+      .filter((v): v is string => Boolean(v))
+      .sort()
+      .reverse()[0] ?? null
+
   const result = verifyOfflineLicense({
     license,
     publicKey: key,
     deviceId: await deviceLicenceId(),
-    highestSeenAt: seen,
+    highestSeenAt: effectiveHighWater,
   })
   if (!result.valid) return { ok: false, reason: result.verdict }
 
@@ -128,7 +163,9 @@ async function verify(code: string): Promise<LicenceCheck> {
 
 /** The licence this device already accepted, checked again (every entry, every start). */
 export async function checkStoredLicence(): Promise<LicenceCheck> {
-  const code = await read(CODE_KEY)
+  const codeRes = await read(CODE_KEY)
+  if (codeRes.error) return { ok: false, reason: 'STORE_ERROR' }
+  const code = codeRes.value
   if (!code) return { ok: false, reason: 'MISSING' }
   return verify(code)
 }

@@ -7,12 +7,11 @@
 // ============================================
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WORKSPACE_ID } from './test-db'
+import { createTestDb, TEST_WORKSPACE_ID, createTestEngine } from './test-db'
 
 describe('Target C: Offline Sync Outbox Enqueue Wiring', () => {
   let db: ReturnType<typeof createTestDb>
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
 
   const WH_FROM = '11111111-2222-3333-4444-555555555551'
   const WH_TO = '11111111-2222-3333-4444-555555555552'
@@ -21,7 +20,7 @@ describe('Target C: Offline Sync Outbox Enqueue Wiring', () => {
 
   beforeEach(() => {
     db = createTestDb()
-    engine = createLocalEngine(db)
+    engine = createTestEngine(db)
 
     // Seed two warehouses for transfer testing
     db.run(

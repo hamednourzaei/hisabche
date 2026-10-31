@@ -89,7 +89,7 @@ const P2 = '44444444-4444-4444-8444-444444444444'
 const P_THEIRS = '22222222-2222-4222-8222-222222222222'
 const C1 = '33333333-3333-4333-8333-333333333333'
 const C2 = '55555555-5555-4555-8555-555555555555'
-const ctx = { workspaceId: WS, userId: 'u1', role: 'manager' } as never
+const ctx = { workspaceId: WS, userId: 'u1', role: 'manager', timeZone: 'UTC' } as never
 const theirs = { workspaceId: OTHER, userId: 'u2', role: 'manager' } as never
 
 const TODAY = new Date().toISOString().slice(0, 10)

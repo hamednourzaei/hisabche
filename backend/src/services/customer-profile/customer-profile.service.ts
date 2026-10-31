@@ -3,6 +3,7 @@
 // Receivable/payable come from the Payments Core; nothing is totalled here.
 // ============================================
 
+import { businessDayOf } from '../../utils/local-day'
 import { PaymentsService } from '../payments'
 import { AccountingService } from '../accounting'
 import type { TenancyContext } from '../tenancy.service'
@@ -91,7 +92,7 @@ export class CustomerProfileService {
     ctx: TenancyContext,
     customerId: string,
   ): Promise<{ asOf: string; insights: Insight[] }> {
-    const asOf = new Date().toISOString().slice(0, 10)
+    const asOf = businessDayOf(new Date(), ctx.timeZone)
     const [profile, summary, activity, accounting] = await Promise.all([
       this.getProfile(ctx, customerId),
       this.payments.getPartySummary(ctx, 'customer', customerId, asOf),

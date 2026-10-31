@@ -12,8 +12,7 @@
 // ============================================
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_USER_ID, TEST_WORKSPACE_ID } from './test-db'
+import { createTestDb, TEST_USER_ID, TEST_WORKSPACE_ID, createTestEngine } from './test-db'
 
 const SALE = {
   type: 'sale',
@@ -33,11 +32,11 @@ interface QueueRow {
 
 describe('offline sale: one transaction, one outbox row', () => {
   let db: ReturnType<typeof createTestDb>
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
 
   beforeEach(() => {
     db = createTestDb()
-    engine = createLocalEngine(db)
+    engine = createTestEngine(db)
   })
 
   const queueRows = (): QueueRow[] =>

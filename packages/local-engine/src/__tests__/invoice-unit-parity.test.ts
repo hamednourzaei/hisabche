@@ -9,16 +9,15 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { computeItemTotalRounded, sumInvoiceLines, toBaseQuantity } from '@hisabche/validation'
 
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WAREHOUSE_ID } from './test-db'
+import { createTestDb, TEST_WAREHOUSE_ID, createTestEngine } from './test-db'
 
 describe('invoice unit conversion parity', () => {
   let db: ReturnType<typeof createTestDb>
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
 
   beforeEach(() => {
     db = createTestDb()
-    engine = createLocalEngine(db)
+    engine = createTestEngine(db)
   })
 
   it('2 cartons × 24 = 48 pieces in inventory while the document keeps 2 cartons', async () => {

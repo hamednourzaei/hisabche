@@ -26,6 +26,8 @@ interface MockState {
   reviewQueue: Array<Record<string, unknown>>
   events: Array<Record<string, unknown>>
   currentUserRole: 'owner' | 'manager' | 'seller'
+  /** Inserts the fake refused because the numbered place was already held. */
+  slotConflicts: number
   currentUserId: string
 }
 
@@ -38,6 +40,7 @@ const dbState: MockState = {
   events: [],
   currentUserRole: 'owner',
   currentUserId: ADMIN_ID,
+  slotConflicts: 0,
 }
 
 vi.mock('../db', () => ({
@@ -98,6 +101,28 @@ vi.mock('../db', () => ({
       if (table === 'devices') {
         return {
           insert: async (payload: Record<string, unknown>) => {
+            // Yield, so concurrent requests really interleave between their read and this write.
+            await Promise.resolve()
+            // devices_active_slot_uq: one ACTIVE device per numbered place (docs/device-slot-01-migration.sql).
+            const taken = dbState.devices.some(
+              (d) =>
+                d.is_active === true &&
+                payload.is_active === true &&
+                payload.slot != null &&
+                d.license_id === payload.license_id &&
+                d.seat === payload.seat &&
+                d.slot === payload.slot,
+            )
+            if (taken) {
+              dbState.slotConflicts += 1
+              return {
+                error: {
+                  code: '23505',
+                  message:
+                    'duplicate key value violates unique constraint "devices_active_slot_uq" (slot)',
+                },
+              }
+            }
             dbState.devices.push({ ...payload })
             return { error: null }
           },
@@ -127,7 +152,11 @@ vi.mock('../db', () => ({
                   const filtered = dbState.devices.filter(
                     (d) => d[col1] === val1 && d[col2] === val2 && d[col3] === val3,
                   )
-                  return { data: filtered, error: null }
+                  // Answer after a real delay: every concurrent request READS before any of them
+                  // WRITES, which is the interleaving a database race needs.
+                  return new Promise((resolve) =>
+                    setTimeout(() => resolve({ data: filtered, error: null }), 5),
+                  )
                 },
               }),
             }),
@@ -240,14 +269,15 @@ describe('E3 Offline Licence Policy Integration', () => {
     dbState.events = []
     dbState.currentUserRole = 'owner'
     dbState.currentUserId = ADMIN_ID
+    dbState.slotConflicts = 0
 
     app = fastify()
     await app.register(billingRoutes)
     await app.ready()
   })
 
-  // ─── 1. SEATS: 1 COMPUTER + 1 MOBILE ─────────────────────────────
-  it('allows 1 computer and 1 mobile concurrently', async () => {
+  // ─── 1. SEATS: 2 COMPUTERS + 2 MOBILES (windows, mac, android, ios) ──
+  it('allows two computers and two mobiles concurrently — four devices', async () => {
     // Activate 1st computer
     const compRes = await app.inject({
       method: 'POST',
@@ -284,13 +314,38 @@ describe('E3 Offline Licence Policy Integration', () => {
     expect(mobileRes.json().success).toBe(true)
     expect(mobileRes.json().seat).toBe('mobile')
 
-    // Both seats active
+    // The second computer (Mac next to Windows) and the second mobile (iOS next to Android)
+    const secondComputer = await app.inject({
+      method: 'POST',
+      url: '/api/billing/offline-license/activate-seat',
+      payload: {
+        licenseId,
+        seat: 'computer',
+        stableId: 'pc-stable-02',
+        devicePublicKey: 'pk-pc-stable-02',
+      },
+      headers: { 'x-workspace-id': WS_ID },
+    })
+    const secondMobile = await app.inject({
+      method: 'POST',
+      url: '/api/billing/offline-license/activate-seat',
+      payload: {
+        licenseId,
+        seat: 'mobile',
+        stableId: 'mobile-stable-02',
+        devicePublicKey: 'pk-mobile-stable-02',
+      },
+      headers: { 'x-workspace-id': WS_ID },
+    })
+    expect(secondComputer.statusCode).toBe(200)
+    expect(secondMobile.statusCode).toBe(200)
+
     const activeSeats = dbState.devices.filter((d) => d.is_active)
-    expect(activeSeats).toHaveLength(2)
+    expect(activeSeats).toHaveLength(4)
   })
 
-  it('refuses 2nd computer seat with LICENSE_SEATS_FULL (HTTP 409)', async () => {
-    // Occupy computer seat
+  it('refuses a 3rd computer with LICENSE_SEATS_FULL (HTTP 409)', async () => {
+    // Occupy both computer places
     await app.inject({
       method: 'POST',
       url: '/api/billing/offline-license/activate-seat',
@@ -298,20 +353,31 @@ describe('E3 Offline Licence Policy Integration', () => {
         licenseId,
         seat: 'computer',
         stableId: 'pc-stable-01',
-        devicePublicKey: 'pk-pc-01',
+        devicePublicKey: 'pk-pc-stable-01',
       },
       headers: { 'x-workspace-id': WS_ID },
     })
-
-    // Attempt 2nd computer activation with different device
-    const secondComp = await app.inject({
+    await app.inject({
       method: 'POST',
       url: '/api/billing/offline-license/activate-seat',
       payload: {
         licenseId,
         seat: 'computer',
         stableId: 'pc-stable-02',
-        devicePublicKey: 'pk-pc-02',
+        devicePublicKey: 'pk-pc-stable-02',
+      },
+      headers: { 'x-workspace-id': WS_ID },
+    })
+
+    // Attempt a 3rd computer with a different device
+    const secondComp = await app.inject({
+      method: 'POST',
+      url: '/api/billing/offline-license/activate-seat',
+      payload: {
+        licenseId,
+        seat: 'computer',
+        stableId: 'pc-stable-03',
+        devicePublicKey: 'pk-pc-03',
       },
       headers: { 'x-workspace-id': WS_ID },
     })
@@ -327,8 +393,8 @@ describe('E3 Offline Licence Policy Integration', () => {
     ).toBe(true)
   })
 
-  it('refuses 2nd mobile seat with LICENSE_SEATS_FULL (HTTP 409)', async () => {
-    // Occupy mobile seat
+  it('refuses a 3rd mobile with LICENSE_SEATS_FULL (HTTP 409)', async () => {
+    // Occupy both mobile places
     await app.inject({
       method: 'POST',
       url: '/api/billing/offline-license/activate-seat',
@@ -336,26 +402,85 @@ describe('E3 Offline Licence Policy Integration', () => {
         licenseId,
         seat: 'mobile',
         stableId: 'mob-stable-01',
-        devicePublicKey: 'pk-mob-01',
+        devicePublicKey: 'pk-mob-stable-01',
       },
       headers: { 'x-workspace-id': WS_ID },
     })
-
-    // Attempt 2nd mobile activation with different device
-    const secondMob = await app.inject({
+    await app.inject({
       method: 'POST',
       url: '/api/billing/offline-license/activate-seat',
       payload: {
         licenseId,
         seat: 'mobile',
         stableId: 'mob-stable-02',
-        devicePublicKey: 'pk-mob-02',
+        devicePublicKey: 'pk-mob-stable-02',
+      },
+      headers: { 'x-workspace-id': WS_ID },
+    })
+
+    // Attempt a 3rd mobile with a different device
+    const secondMob = await app.inject({
+      method: 'POST',
+      url: '/api/billing/offline-license/activate-seat',
+      payload: {
+        licenseId,
+        seat: 'mobile',
+        stableId: 'mob-stable-03',
+        devicePublicKey: 'pk-mob-03',
       },
       headers: { 'x-workspace-id': WS_ID },
     })
 
     expect(secondMob.statusCode).toBe(409)
     expect(secondMob.json().code).toBe('LICENSE_SEATS_FULL')
+  })
+
+  // ─── 1b. THE CAP HOLDS UNDER CONCURRENCY (25C) ───────────────────
+  const activate = (seat: 'computer' | 'mobile', id: string) =>
+    app.inject({
+      method: 'POST',
+      url: '/api/billing/offline-license/activate-seat',
+      payload: { licenseId, seat, stableId: id, devicePublicKey: 'pk-' + id },
+      headers: { 'x-workspace-id': WS_ID },
+    })
+
+  it('five devices activating at the same moment get four places, never five', async () => {
+    const results = await Promise.all([
+      activate('computer', 'pc-a'),
+      activate('computer', 'pc-b'),
+      activate('computer', 'pc-c'),
+      activate('mobile', 'mob-a'),
+      activate('mobile', 'mob-b'),
+      activate('mobile', 'mob-c'),
+    ])
+    const codes = results.map((r) => r.statusCode).sort()
+    expect(codes).toEqual([200, 200, 200, 200, 409, 409])
+    expect(
+      results
+        .filter((r) => r.statusCode === 409)
+        .every((r) => r.json().code === 'LICENSE_SEATS_FULL'),
+    ).toBe(true)
+
+    const active = dbState.devices.filter((d) => d.is_active)
+    expect(active).toHaveLength(4)
+    for (const seat of ['computer', 'mobile']) {
+      const places = active
+        .filter((d) => d.seat === seat)
+        .map((d) => d.slot)
+        .sort()
+      expect(places).toEqual([1, 2])
+    }
+    // The race really happened: at least one insert lost to the unique index.
+    expect(dbState.slotConflicts).toBeGreaterThan(0)
+  })
+
+  it('the same device asking twice at once is one device, not two', async () => {
+    const [a, b] = await Promise.all([
+      activate('computer', 'pc-twice'),
+      activate('computer', 'pc-twice'),
+    ])
+    expect([a.statusCode, b.statusCode]).toEqual([200, 200])
+    expect(dbState.devices.filter((d) => d.is_active && d.stable_id === 'pc-twice')).toHaveLength(1)
   })
 
   // ─── 2. REINSTALL ON SAME DEVICE: FREE FOREVER ──────────────────
@@ -405,16 +530,17 @@ describe('E3 Offline Licence Policy Integration', () => {
 
   // ─── 3. TRANSFERS: 3 PER YEAR & ADMIN OVERRIDE ───────────────────
   it('allows up to 3 transfers per calendar year and enforces 4th transfer refusal', async () => {
-    // Initial activation
+    // Initial activation: both computer places are taken, so a new device is a TRANSFER
     await app.inject({
       method: 'POST',
       url: '/api/billing/offline-license/activate-seat',
-      payload: {
-        licenseId,
-        seat: 'computer',
-        stableId: 'pc-0',
-        devicePublicKey: 'pk-0',
-      },
+      payload: { licenseId, seat: 'computer', stableId: 'pc-0', devicePublicKey: 'pk-pc-0' },
+      headers: { 'x-workspace-id': WS_ID },
+    })
+    await app.inject({
+      method: 'POST',
+      url: '/api/billing/offline-license/activate-seat',
+      payload: { licenseId, seat: 'computer', stableId: 'pc-00', devicePublicKey: 'pk-pc-00' },
       headers: { 'x-workspace-id': WS_ID },
     })
 

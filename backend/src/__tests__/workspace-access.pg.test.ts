@@ -8,16 +8,16 @@
 // active member of, and cannot be executed by a client role.
 // ============================================
 
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import EmbeddedPostgres from 'embedded-postgres'
 import postgres from 'postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { freePortSync } from './helpers/free-port'
+import { pgTempDir } from './helpers/pg-temp-dir'
 
 const PORT = freePortSync()
-const dir = mkdtempSync(join(tmpdir(), 'hisabche-pg-access-'))
+const dir = pgTempDir('hisabche-pg-access-')
 const pg = new EmbeddedPostgres({
   databaseDir: dir,
   port: PORT,

@@ -4,8 +4,7 @@
 // ============================================
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WAREHOUSE_ID } from './test-db'
+import { createTestDb, TEST_WAREHOUSE_ID, createTestEngine } from './test-db'
 
 interface Reorder {
   productId: string
@@ -23,7 +22,7 @@ interface Dead {
 
 describe('stock insights on the device', () => {
   let db: ReturnType<typeof createTestDb>
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
 
   async function product(name: string, quantity: number) {
     const res = await engine.request({
@@ -50,7 +49,7 @@ describe('stock insights on the device', () => {
 
   beforeEach(() => {
     db = createTestDb()
-    engine = createLocalEngine(db)
+    engine = createTestEngine(db)
   })
 
   it('suggests a reorder for what sold fast and is nearly gone — and only that', async () => {

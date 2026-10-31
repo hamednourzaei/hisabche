@@ -1,6 +1,7 @@
 // apps/web/proxy.ts
 import createMiddleware from 'next-intl/middleware'
-import type { NextRequest, NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { isPageDisabled } from '@hisabche/ui-contract'
 import { locales, defaultLocale } from './app/[lang]/i18n-config'
 
 const intlMiddleware = createMiddleware({
@@ -19,7 +20,29 @@ const intlMiddleware = createMiddleware({
   alternateLinks: false,
 }) as unknown as (req: NextRequest) => NextResponse
 
+/**
+ * Where a visitor to a switched-off page (`DISABLED_PAGES` in ui-contract) is
+ * sent. The page files stay as they were: this is the door, so a page is
+ * switched off in one list and the route files carry no switch of their own.
+ */
+const DISABLED_PAGE_TARGET: Readonly<Record<string, string>> = {
+  '/marketplace': '/settings',
+  '/market-seller': '/settings',
+}
+
 export default function middleware(req: NextRequest): ReturnType<typeof intlMiddleware> {
+  // /<lang>/<page>… — the locale is always in the path (localePrefix: 'always').
+  const match = /^\/([a-z]{2})(\/[^/]+)/.exec(req.nextUrl.pathname)
+  const page = match?.[2]
+  // A page that is switched off but has no entry above still goes somewhere:
+  // the settings page. Forgetting the entry must not leave the page reachable.
+  const target =
+    page && isPageDisabled(page) ? (DISABLED_PAGE_TARGET[page] ?? '/settings') : undefined
+  if (match && target) {
+    return NextResponse.redirect(new URL(`/${match[1]}${target}`, req.url)) as ReturnType<
+      typeof intlMiddleware
+    >
+  }
   return intlMiddleware(req)
 }
 

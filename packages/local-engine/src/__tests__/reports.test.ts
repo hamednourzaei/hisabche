@@ -9,8 +9,7 @@
 // ============================================
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
-import { createTestDb, TEST_WAREHOUSE_ID } from './test-db'
+import { createTestDb, TEST_WAREHOUSE_ID, createTestEngine } from './test-db'
 
 interface Statement {
   assets: Array<{ accountId: string; accountCode: string; balance: number }>
@@ -22,14 +21,14 @@ interface Statement {
 
 describe('statements on the device', () => {
   let db: ReturnType<typeof createTestDb>
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
   let productId: string
   let uncostedProductId: string
   const today = new Date().toISOString().slice(0, 10)
 
   beforeEach(async () => {
     db = createTestDb()
-    engine = createLocalEngine(db)
+    engine = createTestEngine(db)
     const costed = await engine.request({
       method: 'POST',
       path: '/products',

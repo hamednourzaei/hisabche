@@ -60,7 +60,7 @@ import { AnalysisService } from '../services/analysis/analysis.service'
 
 const WS = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const OTHER = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
-const ctx = { workspaceId: WS, userId: 'u', role: 'owner' } as never
+const ctx = { workspaceId: WS, userId: 'u', role: 'owner', timeZone: 'UTC' } as never
 
 const daysAgo = (days: number) => {
   const date = new Date()

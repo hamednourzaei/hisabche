@@ -7,9 +7,8 @@
 // ============================================
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createLocalEngine } from '../index'
 import type { LocalDb } from '../db'
-import { createTestDb, TEST_WAREHOUSE_ID, TEST_WORKSPACE_ID } from './test-db'
+import { createTestDb, TEST_WAREHOUSE_ID, TEST_WORKSPACE_ID, createTestEngine } from './test-db'
 
 const UNSET_FORMS: Array<Record<string, unknown>> = [
   {},
@@ -22,7 +21,7 @@ const UNSET_FORMS: Array<Record<string, unknown>> = [
 
 describe('list filters on the device', () => {
   let db: LocalDb
-  let engine: ReturnType<typeof createLocalEngine>
+  let engine: ReturnType<typeof createTestEngine>
 
   const get = async (path: string, params: Record<string, unknown> = {}) => {
     const res = await engine.request({ method: 'GET', path, params: params as never })
@@ -32,7 +31,7 @@ describe('list filters on the device', () => {
 
   beforeEach(async () => {
     db = createTestDb()
-    engine = createLocalEngine(db)
+    engine = createTestEngine(db)
     for (const name of ['علی', 'کریم', 'حاجی']) {
       const res = await engine.request({
         method: 'POST',

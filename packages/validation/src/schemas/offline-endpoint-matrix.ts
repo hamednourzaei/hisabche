@@ -448,6 +448,9 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /payments': ['payment.record', 'available'],
   'POST /payments/:x/cancel': ['payment.cancel', 'available'],
   'POST /payrolls': ['hr.payroll', 'available'],
+  // Re-posting a paid salary to the ledger. The device books at the moment it settles
+  // (payroll.ts), so there is no separate re-book route to run offline.
+  'POST /payrolls/:x/book': ['hr.payroll_rebook', 'online_required'],
   'POST /permissions/profiles/assign': ['governance.permission_matrix', 'online_required'],
   'POST /permissions/roles': ['governance.permission_matrix', 'online_required'],
   'POST /pos/opening-capital': ['till.opening_capital', 'available'],

@@ -227,6 +227,8 @@ export const FEATURE_REGISTRY = {
   'hr.leaves': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'hr.payroll': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'governance.permission_matrix': { execution: 'server', plans: CLOUD },
+  // Re-posting a paid salary to the ledger: the device books it when it settles it.
+  'hr.payroll_rebook': { execution: 'server', plans: CLOUD },
   'hr.attendance_devices': { execution: 'server', plans: CLOUD },
   'hr.attendance_links': { execution: 'server', plans: CLOUD },
   'team.members': { execution: 'server', plans: CLOUD },

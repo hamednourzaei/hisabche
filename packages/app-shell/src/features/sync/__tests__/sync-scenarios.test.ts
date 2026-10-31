@@ -59,6 +59,14 @@ jest.mock('@/shared/lib/bridge', () => ({
     db: {
       queue: async () => queue,
       resolveQueue,
+      // The real enqueue is an upsert by clientId that resets the attempt counter.
+      enqueue: async (e: { clientId: string }) => {
+        queue = queue.map((q) =>
+          q.clientId === e.clientId
+            ? { ...q, attempts: 0, status: 'pending' as const, lastError: null }
+            : q,
+        )
+      },
       upsertMany,
       removeMany,
       query,
@@ -127,7 +135,8 @@ jest.mock('@hisabche/store', () => ({
   useSyncStore: { getState: () => ({ setLastSynced: () => undefined }) },
 }))
 
-import { runSync } from '../sync-engine'
+import { resetTransientFailuresOnReconnect, runSync } from '../sync-engine'
+import { REJECTED_PREFIX } from '../outbox-stage'
 
 describe('Client Sync Integrity Scenarios with Unstable Transport', () => {
   const queryClient = { invalidateQueries: jest.fn(async () => undefined) } as never
@@ -280,5 +289,114 @@ describe('Client Sync Integrity Scenarios with Unstable Transport', () => {
     // Outbox preserved! Rehydration never wipes un-pushed local work
     expect(queue).toHaveLength(0) // Pushed successfully during the runSync drain
     expect(resolveQueue).toHaveBeenCalledWith('mut-pending-offline', 'done')
+  })
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Delivery: every entity the local engine QUEUES must have somewhere to go.
+  // Returns, till cash and till close were queued for years with no endpoint:
+  // the entry failed with NO_ENDPOINT and froze after five tries, so the money
+  // never reached the server. A test that only checks the entry was queued
+  // cannot see that.
+  // ──────────────────────────────────────────────────────────────────────────
+  const entry = (
+    clientId: string,
+    entity: QueueEntry['entity'],
+    operation: 'create' | 'update' | 'delete',
+    payload: Record<string, unknown>,
+  ) => ({
+    clientId,
+    entity,
+    operation,
+    payload,
+    attempts: 0,
+    status: 'pending' as const,
+    lastError: null,
+    createdAt: '2026-10-27T00:00:00Z',
+    userId: 'user-agent-1',
+    workspaceId: 'ws-test-alpha',
+  })
+
+  const deliveries: ReadonlyArray<{
+    name: string
+    entry: ReturnType<typeof entry>
+    url: string
+  }> = [
+    {
+      name: 'an invoice return',
+      entry: entry('ret-1', 'invoice_returns', 'create', {
+        id: 'ret-1',
+        originalInvoiceId: 'inv-9',
+      }),
+      url: '/invoices/inv-9/returns',
+    },
+    {
+      name: 'a till cash movement',
+      entry: entry('mov-1', 'pos_cash_movement', 'create', { id: 'mov-1', sessionId: 'ses-1' }),
+      url: '/pos/sessions/ses-1/cash',
+    },
+    {
+      name: 'a till close',
+      entry: entry('ses-1-close', 'pos_session', 'update', { id: 'ses-1', action: 'close' }),
+      url: '/pos/sessions/ses-1/close',
+    },
+    {
+      name: 'a manual journal entry',
+      entry: entry('je-1', 'journal_entry', 'create', { id: 'je-1', lines: [] }),
+      url: '/accounting/journal',
+    },
+    {
+      name: 'a price list',
+      entry: entry('pl-1', 'price_list', 'create', { id: 'pl-1', name: 'x' }),
+      url: '/price-lists',
+    },
+  ]
+
+  for (const d of deliveries) {
+    it(`delivers ${d.name} to ${d.url} with its own key, and drains it`, async () => {
+      queue = [d.entry]
+
+      await runSync(queryClient)
+
+      const sent = postCalls.find((c) => c.url === d.url)
+      expect(sent).toBeDefined()
+      expect((sent?.headers as Record<string, string>)['Idempotency-Key']).toBe(d.entry.clientId)
+      expect(queue).toHaveLength(0)
+      expect(resolveQueue).toHaveBeenCalledWith(d.entry.clientId, 'done')
+    })
+  }
+
+  it('coming back online gives a frozen retryable entry its tries back, and leaves a refusal alone', async () => {
+    const frozen = {
+      ...entry('f-1', 'payment', 'create', { id: 'p1' }),
+      attempts: 5,
+      status: 'failed' as const,
+      lastError: 'ECONNRESET',
+    }
+    const refused = {
+      ...entry('r-1', 'payment', 'create', { id: 'p2' }),
+      attempts: 5,
+      status: 'failed' as const,
+      lastError: REJECTED_PREFIX + 'PAYMENT_CURRENCY_MISMATCH',
+    }
+    queue = [frozen, refused]
+
+    await resetTransientFailuresOnReconnect()
+
+    expect(queue.find((q) => q.clientId === 'f-1')).toMatchObject({
+      attempts: 0,
+      status: 'pending',
+    })
+    expect(queue.find((q) => q.clientId === 'r-1')).toMatchObject({ attempts: 5, status: 'failed' })
+  })
+
+  it('an entity with no endpoint is refused at once and visibly, not retried five times', async () => {
+    queue = [entry('x-1', 'no_such_entity' as QueueEntry['entity'], 'create', { id: 'x-1' })]
+
+    await runSync(queryClient)
+
+    expect(postCalls).toHaveLength(0)
+    const stuck = queue[0]!
+    expect(stuck.status).toBe('failed')
+    expect(stuck.lastError).toContain('NO_ENDPOINT:no_such_entity')
   })
 })

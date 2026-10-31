@@ -110,7 +110,10 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
   return {
     async request<T = unknown>(req: LocalEngineRequest): Promise<LocalEngineResponse<T>> {
       try {
-        const ctx: LocalContext = resolveContext(db, req.headers)
+        const ctx: LocalContext = resolveContext(db, req.headers, {
+          method: req.method,
+          path: req.path,
+        })
         const match = router.find(req.method, req.path)
 
         if (!match) {

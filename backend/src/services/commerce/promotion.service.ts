@@ -18,6 +18,7 @@
 // rewrites an invoice. `quote` answers «what would this line cost today?».
 // ============================================
 
+import { businessDayOf } from '../../utils/local-day'
 import {
   priceListPricing,
   promotionColumns,
@@ -120,7 +121,7 @@ export class PromotionService {
     if (!product) throw new NotFoundError('Product')
 
     const promotions = promotionsFor(await this.list(ctx, { activeOnly: true }), input.currency)
-    const today = new Date().toISOString().slice(0, 10)
+    const today = businessDayOf(new Date(), ctx.timeZone)
     const onList = priceListPricing(
       await this.customerPriceList(ctx, input.customerId),
       input.productId,

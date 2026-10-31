@@ -135,12 +135,14 @@ const ACTOR_A = {
   userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   workspaceId: WORKSPACE_A,
   deviceId: 'device-a',
+  role: 'owner' as const,
 }
 
 const SELLER_ACTOR_A = {
   userId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   workspaceId: WORKSPACE_A,
   deviceId: 'device-seller',
+  role: 'seller' as const,
 }
 
 function uuid(n: number): string {

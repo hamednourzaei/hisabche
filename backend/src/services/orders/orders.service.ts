@@ -10,6 +10,7 @@
 // is idempotent. Nothing here writes an invoice, a movement or a journal.
 // ============================================
 
+import { businessDayOf } from '../../utils/local-day'
 import type { OrderCreateInput, OrderStatus, StorefrontSettings } from '@hisabche/validation'
 
 import { holds } from '../authorization'
@@ -216,7 +217,7 @@ export function createOrdersService(
         invoiceFromOrder({
           lines: order.items,
           customerId,
-          date: new Date().toISOString().slice(0, 10),
+          date: businessDayOf(new Date(), ctx.timeZone),
           orderNumber: order.order_number,
         }),
         null,

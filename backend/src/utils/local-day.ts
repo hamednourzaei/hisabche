@@ -73,3 +73,22 @@ export function startOfLocalDayISO(timeZone: string, now: Date = new Date()): st
   const guess = new Date(midnightAsUtc - offsetMs(timeZone, now))
   return new Date(midnightAsUtc - offsetMs(timeZone, guess)).toISOString()
 }
+
+/**
+ * The calendar date in YYYY-MM-DD for the given instant in business time zone.
+ * If no date is given, defaults to now. If no timeZone is given, defaults to DEFAULT_BUSINESS_TIME_ZONE.
+ */
+export function businessDayOf(date?: Date | string | null, timeZone?: string | null): string {
+  const tz = resolveTimeZone(timeZone)
+  let d: Date
+  if (!date) {
+    d = new Date()
+  } else if (typeof date === 'string') {
+    d = new Date(date)
+    if (isNaN(d.getTime())) d = new Date()
+  } else {
+    d = date
+  }
+  const p = partsIn(tz, d)
+  return `${String(p.year).padStart(4, '0')}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`
+}

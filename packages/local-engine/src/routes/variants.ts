@@ -4,6 +4,7 @@
 // Local Engine handlers for Product Variants (G-05 / Option 11)
 // ============================================
 
+import { requireCapability } from '../auth'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -38,6 +39,7 @@ export function registerVariantsRoutes(router: Router) {
   })
 
   router.post('/products/:id/variants', async (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'product.write')
     const { db, ctx, params, body } = c
     const templateProductId = params.id
     const payload = body as any

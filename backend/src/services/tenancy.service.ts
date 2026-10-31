@@ -144,6 +144,8 @@ export interface TenancyContext {
    * `capabilities`. Absent for a base role.
    */
   readonly hiddenModules?: readonly string[] | undefined
+  /** Workspace time zone (e.g. 'Asia/Kabul', 'Asia/Tehran'). */
+  readonly timeZone?: string | undefined
 }
 
 interface MembershipRow {

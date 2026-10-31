@@ -6,6 +6,7 @@
 // No position_x/y/width/height (warehouse map was removed).
 // ============================================
 
+import { requireCapability } from '../auth'
 import { createStorageLocationSchema } from '@hisabche/validation'
 import { NotFoundError, ValidationError } from '../errors'
 import type { Router } from '../router'
@@ -84,6 +85,7 @@ export function registerShelfRoutes(router: Router): void {
 
   // ─── POST /warehouses/:id/locations ─────────────────────────
   router.post('/warehouses/:id/locations', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'warehouse.manage')
     const { db, ctx, params, body } = c
     const { id: warehouseId } = params
     const { workspaceId } = ctx
@@ -117,6 +119,7 @@ export function registerShelfRoutes(router: Router): void {
 
   // ─── PATCH /storage-locations/:id ───────────────────────────
   router.patch('/storage-locations/:id', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'warehouse.manage')
     const { db, ctx, params, body } = c
     const { id } = params
     const { workspaceId } = ctx
@@ -154,6 +157,7 @@ export function registerShelfRoutes(router: Router): void {
 
   // ─── POST /storage-locations/:id/place ──────────────────────
   router.post('/storage-locations/:id/place', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'warehouse.manage')
     const { db, ctx, params, body } = c
     const { id } = params
     const { workspaceId } = ctx
