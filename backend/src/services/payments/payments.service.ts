@@ -190,7 +190,7 @@ export class PaymentsService {
         ctx.workspaceId,
         options.clientRequestId,
       )
-      if (existingId) return this.replayPayment(ctx, existingId)
+      if (existingId) return this.replayPayment(ctx, existingId, input)
     }
 
     const amount = round2(input.amount)
@@ -329,11 +329,18 @@ export class PaymentsService {
         fee > 0 ? fee : null,
       ))
     } catch (error) {
-      const code = (error as { code?: string } | null)?.code
+      const code = (error as { code?: string; constraint?: string } | null)?.code
+      const constraint = (error as { constraint?: string } | null)?.constraint
       if (clientRequestId && code === '23505') {
-        // A concurrent twin committed first; this attempt rolled back whole.
-        const winner = await this.repo.paymentIdByClientRequestId(ctx.workspaceId, clientRequestId)
-        if (winner) return this.replayPayment(ctx, winner)
+        const isClientRequestConstraint = !constraint || constraint.includes('client_request')
+        if (isClientRequestConstraint) {
+          // A concurrent twin committed first; this attempt rolled back whole.
+          const winner = await this.repo.paymentIdByClientRequestId(
+            ctx.workspaceId,
+            clientRequestId,
+          )
+          if (winner) return this.replayPayment(ctx, winner, input)
+        }
       }
       if (clientRequestId && isMissingIdempotencySupport(error as { code?: string })) {
         throw new IdempotencyUnavailableError('payment')
@@ -343,7 +350,7 @@ export class PaymentsService {
 
     // The keyed function answered with a payment a twin committed between our
     // lookup and our call: nothing new was written, so nothing is logged twice.
-    if (replayed) return this.replayPayment(ctx, paymentId)
+    if (replayed) return this.replayPayment(ctx, paymentId, input)
 
     // The facts the posting is derived FROM, kept beside the posting itself so
     // the shadow check can re-derive from the same operands rather than from
@@ -522,8 +529,25 @@ export class PaymentsService {
     return typeof rate === 'number' && rate > 0 ? rate : null
   }
 
-  private async replayPayment(ctx: TenancyContext, paymentId: string) {
+  private async replayPayment(
+    ctx: TenancyContext,
+    paymentId: string,
+    expected?: RecordPaymentInput,
+  ) {
     const payment = await this.getPayment(ctx, paymentId)
+    if (expected) {
+      const expAmount = round2(expected.amount)
+      if (
+        payment.direction !== expected.direction ||
+        payment.partyId !== (expected.partyId ?? null) ||
+        Math.abs(payment.amount - expAmount) > 0.001 ||
+        (expected.currency && payment.currency !== expected.currency)
+      ) {
+        throw new ConflictError(
+          'IDEMPOTENCY_KEY_PAYLOAD_MISMATCH: this idempotency key was previously used for a payment with different parameters',
+        )
+      }
+    }
     const bookCurrency = await baseCurrencyOf(ctx.workspaceId)
     const rate = await this.bookingRate(
       ctx,

@@ -61,7 +61,36 @@ export function registerTransferRoutes(router: Router): void {
     }
 
     const now = new Date().toISOString()
-    const transferId = generateUuid()
+    const transferId =
+      (raw.id as string) ||
+      (raw.transferId as string) ||
+      (c.headers?.['idempotency-key'] as string) ||
+      generateUuid()
+
+    const existingMovement = db.get<{ product_id: string; quantity: number }>(
+      'SELECT product_id, quantity FROM inventory_movement WHERE id = ? AND workspace_id = ?',
+      [transferId, workspaceId],
+    )
+    if (existingMovement) {
+      if (
+        existingMovement.product_id !== productId ||
+        Math.abs(existingMovement.quantity - quantity) > 0.0001
+      ) {
+        throw new ConflictError(
+          'IDEMPOTENCY_KEY_PAYLOAD_MISMATCH',
+          'An existing transfer with this ID has different parameters',
+        )
+      }
+      return {
+        success: true,
+        transferId,
+        productId,
+        fromWarehouseId,
+        toWarehouseId,
+        quantity,
+        replayed: true,
+      }
+    }
 
     return db.transaction(() => {
       // 1. Verify warehouses exist

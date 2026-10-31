@@ -64,6 +64,11 @@ describe('Target A1: Purchase return accounting correctness in migration SQL', (
     )
   })
 
+  it('locks original invoice line FOR UPDATE to serialize concurrent returns and prevent overdraft', () => {
+    expect(sql).toContain('FROM public.invoice_items')
+    expect(sql).toContain('FOR UPDATE;')
+  })
+
   it('uses specific Persian journal descriptions per return type', () => {
     expect(sql).toContain("v_journal_desc := 'برگشت فاکتور خرید ' ||")
     expect(sql).toContain("v_journal_desc := 'برگشت فاکتور فروش ' ||")

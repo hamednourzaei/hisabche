@@ -182,4 +182,70 @@ describe('Gate 3: Standard Database-Backed Payment Idempotency', () => {
     expect(res.id).toBe('pmt-winner')
     expect((res as any).idempotentReplay).toBe(true)
   })
+
+  it('rejects re-use of an Idempotency-Key with a different payload (Conflict 409)', async () => {
+    const fakeRepo: any = {
+      paymentIdByClientRequestId: vi.fn().mockResolvedValue('pmt-existing'),
+      getPayment: vi.fn().mockResolvedValue({
+        id: 'pmt-existing',
+        workspaceId: ctx.workspaceId,
+        paymentNumber: 'PMT-2026-000100',
+        direction: 'in',
+        partyType: 'customer',
+        partyId: 'cust-1',
+        amount: 500, // original amount was 500
+        currency: 'AFN',
+        entryDate: '2026-10-31',
+        allocations: [],
+        method: 'cash',
+      }),
+      bookingRate: vi.fn().mockResolvedValue(1.0),
+      feeOf: vi.fn().mockResolvedValue(0),
+    }
+
+    const service = new PaymentsService(fakeRepo)
+
+    // Attempt to reuse same key with amount: 999 instead of 500
+    await expect(
+      service.recordPayment(
+        ctx,
+        {
+          direction: 'in',
+          partyType: 'customer',
+          partyId: 'cust-1',
+          amount: 999, // Mismatched amount
+        },
+        { clientRequestId: 'req-pay-123' },
+      ),
+    ).rejects.toThrow(/IDEMPOTENCY_KEY_PAYLOAD_MISMATCH/)
+  })
+
+  it('does not replay when 23505 is caused by an unrelated constraint collision', async () => {
+    const fakeRepo: any = {
+      paymentIdByClientRequestId: vi.fn().mockResolvedValue(null),
+      lastPaymentSequence: vi.fn().mockResolvedValue(100),
+      openInvoicesFor: vi.fn().mockResolvedValue([]),
+      recordPayment: vi.fn().mockRejectedValue({
+        code: '23505',
+        constraint: 'payments_payment_number_key', // Not client_request!
+      }),
+      bookingRate: vi.fn().mockResolvedValue(1.0),
+      feeOf: vi.fn().mockResolvedValue(0),
+    }
+
+    const service = new PaymentsService(fakeRepo)
+
+    await expect(
+      service.recordPayment(
+        ctx,
+        {
+          direction: 'in',
+          partyType: 'customer',
+          partyId: 'cust-1',
+          amount: 500,
+        },
+        { clientRequestId: 'req-unrelated-collision' },
+      ),
+    ).rejects.toMatchObject({ code: '23505' })
+  })
 })

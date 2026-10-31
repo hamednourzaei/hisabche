@@ -196,6 +196,32 @@ export function registerPaymentRoutes(router: Router): void {
     const notes = data.notes?.trim() || ''
     const paymentId = (raw.id as string) || generateUuid()
 
+    const key = (c.headers?.['idempotency-key'] as string) || (raw.id as string) || null
+    if (key) {
+      const existing = db.get<PaymentRow>(
+        'SELECT * FROM payment WHERE workspace_id = ? AND (id = ? OR reference = ?)',
+        [workspaceId, key, key],
+      )
+      if (existing) {
+        if (
+          existing.direction !== data.direction ||
+          existing.amount !== amount ||
+          (partyId && existing.party_id !== partyId) ||
+          (data.currency && existing.currency !== currency)
+        ) {
+          throw new ConflictError(
+            'IDEMPOTENCY_KEY_PAYLOAD_MISMATCH',
+            'An existing payment with this idempotency key has different parameters',
+          )
+        }
+        return {
+          success: true,
+          payment: existing,
+          replayed: true,
+        }
+      }
+    }
+
     const rawAllocations = data.allocations || []
 
     // The till this cash goes into (money in) or comes out of (money out): a

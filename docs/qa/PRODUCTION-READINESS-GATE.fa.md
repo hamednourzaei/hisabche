@@ -93,12 +93,16 @@
 
 ### گیت ۶: آمادگی مایگریشن‌های پایگاه داده و مهار Edge Cases (Gate 6 — Database Migration Readiness)
 
-- **وضعیت:** **`PASS`**
+- **وضعیت:** **`LIVE_VERIFIED_BY_HUMAN (PASS)`**
 - **شواهد تایید زنده در پایگاه داده Supabase و رفع Edge Cases:**
   1. `docs/invoice-return-02-purchase-return-accounting-migration.sql` اجرا و تایید شد (`LIVE_VERIFIED_BY_HUMAN`).
-     - **مهار Edge Case 2:** حذف کامل `GREATEST(0, ...)` از تابع پایگاه داده. در صورت کسری موجودی کالا در انبار مبدا یا استهلاک لایه‌های هزینه خرید، استثناهای صریح `PURCHASE_RETURN_INSUFFICIENT_STOCK` و `PURCHASE_RETURN_COST_LAYER_DEPLETED` پرتاب شده و تراکنش برگشت خرید کاملاً Rollback می‌شود. تست‌های رگرسیون `backend/src/__tests__/purchase-return-accounting.test.ts` با ۵ آزمون سبز شدند.
+     - خروجی استعلام زنده `docs/VERIFY-invoice-return-02.sql`:
+       `has_insufficient_stock_guard: true`, `has_cost_layer_depleted_guard: true`, `has_invoice_line_lock_guard: true`, `has_zero_masking_eliminated: true`.
+     - **مهار قطعی:** حذف کامل `GREATEST(0, ...)`، قفل سطری اقلام فاکتور با `FOR UPDATE` و Rollback اتمیک کل تراکنش در صورت کسری موجودی کالا یا لایه‌های بهای تمام‌شده. تست‌های رگرسیون `backend/src/__tests__/purchase-return-accounting.test.ts` با ۶ آزمون سبز شدند.
   2. `docs/stock-transfer-02-cost-layers-migration.sql` اجرا و تایید شد (`LIVE_VERIFIED_BY_HUMAN`).
-     - **مهار Edge Case 1:** انتقال لایه‌های هزینه در حواله انبار محلی و سرور. در صورت کسری لایه‌های بهای تمام‌شده در انبار مبدا، خطای صریح `INSUFFICIENT_COST_LAYERS` ایجاد شده و از انتقال کالا بدون بهای تمام‌شده جلوگیری می‌شود. تست‌های رگرسیون `packages/local-engine/src/__tests__/transfer-cost-layers.test.ts` با ۴ آزمون سبز شدند.
+     - خروجی استعلام زنده `docs/VERIFY-stock-transfer-02.sql`:
+       `has_cost_layer_guard: true`, `has_payload_mismatch_guard: true`, `has_cost_layer_lock_guard: true`.
+     - **مهار قطعی:** انتقال لایه‌های هزینه همراه با کالا، قفل سطری لایه‌ها، Rollback تراکنش در غیاب لایه هزینه، و رد استفاده مجدد از `movement_id` با پی‌لود مغایر. تست‌های رگرسیون `packages/local-engine/src/__tests__/transfer-cost-layers.test.ts` با ۶ آزمون سبز شدند.
 
 ---
 

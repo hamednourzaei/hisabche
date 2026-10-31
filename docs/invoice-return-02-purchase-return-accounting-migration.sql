@@ -119,7 +119,8 @@ BEGIN
 
     SELECT * INTO v_item
       FROM public.invoice_items
-     WHERE id = v_orig_line_id AND invoice_id = v_invoice_id AND workspace_id = p_workspace_id;
+     WHERE id = v_orig_line_id AND invoice_id = v_invoice_id AND workspace_id = p_workspace_id
+     FOR UPDATE;
 
     IF NOT FOUND THEN
       RAISE EXCEPTION 'INVOICE_LINE_NOT_FOUND: %', v_orig_line_id USING ERRCODE = 'P0001';

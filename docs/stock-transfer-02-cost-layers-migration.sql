@@ -25,6 +25,7 @@ DECLARE
   v_qty         numeric(18, 4) := (p_payload ->> 'quantity')::numeric;
   v_available   numeric(18, 4);
   v_existing    uuid;
+  v_existing_rec record;
   v_need        numeric(18, 4);
   v_layer       record;
   v_take        numeric(18, 4);
@@ -37,10 +38,17 @@ BEGIN
   END IF;
 
   -- A replay: this request already moved the goods.
-  SELECT workspace_id INTO v_existing FROM stock_movements WHERE id = p_movement_id;
+  SELECT * INTO v_existing_rec FROM stock_movements WHERE id = p_movement_id;
   IF FOUND THEN
-    IF v_existing IS DISTINCT FROM p_workspace_id THEN
+    IF v_existing_rec.workspace_id IS DISTINCT FROM p_workspace_id THEN
       RAISE EXCEPTION 'WAREHOUSE_TRANSFER_ID_CONFLICT' USING ERRCODE = '42501';
+    END IF;
+    IF v_existing_rec.product_id IS DISTINCT FROM v_product
+       OR v_existing_rec.quantity IS DISTINCT FROM v_qty
+       OR v_existing_rec.from_warehouse_id IS DISTINCT FROM v_from
+       OR v_existing_rec.to_warehouse_id IS DISTINCT FROM v_to THEN
+      RAISE EXCEPTION 'WAREHOUSE_TRANSFER_PAYLOAD_MISMATCH: this movement ID was already used with a different transfer payload'
+        USING ERRCODE = 'P0001';
     END IF;
     RETURN jsonb_build_object(
       'replayed', true,

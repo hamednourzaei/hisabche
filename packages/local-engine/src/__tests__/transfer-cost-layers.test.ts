@@ -186,4 +186,79 @@ describe('Target D: Transfer cost layers with stock transfer', () => {
     )
     expect(sourceStock?.qty).toBe(50)
   })
+
+  it('preserves exact inventory conservation invariant across source and destination', async () => {
+    // Initial total units = 50 (WH_FROM: 50, WH_TO: 0)
+    // Initial total layer value = 20*100 + 30*120 = 5600
+    const res = await engine.request({
+      method: 'POST',
+      path: '/stock-transfers',
+      body: {
+        id: 'transfer-conservation-1',
+        productId: PROD_ID,
+        fromWarehouseId: WH_FROM,
+        toWarehouseId: WH_TO,
+        quantity: 25,
+      },
+    })
+    expect(res.status).toBe(201)
+
+    // Verify physical stock conservation
+    const sourceStock = db.get<{ qty: number }>(
+      'SELECT qty FROM product_stock WHERE product_id = ? AND warehouse_id = ?',
+      [PROD_ID, WH_FROM],
+    )
+    const destStock = db.get<{ qty: number }>(
+      'SELECT qty FROM product_stock WHERE product_id = ? AND warehouse_id = ?',
+      [PROD_ID, WH_TO],
+    )
+    expect(Number(sourceStock?.qty) + Number(destStock?.qty)).toBe(50)
+
+    // Verify cost layer value conservation
+    const allLayers = db.all<{ remaining_qty: number; unit_cost: number }>(
+      'SELECT remaining_qty, unit_cost FROM cost_layer WHERE product_id = ?',
+      [PROD_ID],
+    )
+    const totalValue = allLayers.reduce((sum, l) => sum + l.remaining_qty * l.unit_cost, 0)
+    expect(totalValue).toBe(5600)
+  })
+
+  it('replays existing transfer with same ID and rejects ID reuse with mismatched payload', async () => {
+    // Seed initial transfer movement
+    db.run(
+      `INSERT INTO inventory_movement (id, workspace_id, product_id, type, quantity, date, created_at, updated_at)
+       VALUES ('tx-move-100', ?, ?, 'transfer', 10, '2026-10-31', '2026-10-31', '2026-10-31')`,
+      [TEST_WORKSPACE_ID, PROD_ID],
+    )
+
+    // Replay with identical parameters -> 200/201 replay
+    const replayRes = await engine.request({
+      method: 'POST',
+      path: '/stock-transfers',
+      body: {
+        id: 'tx-move-100',
+        productId: PROD_ID,
+        fromWarehouseId: WH_FROM,
+        toWarehouseId: WH_TO,
+        quantity: 10,
+      },
+    })
+    expect([200, 201]).toContain(replayRes.status)
+    expect((replayRes.data as any).replayed).toBe(true)
+
+    // Replay with mismatched quantity -> 409 Conflict
+    const mismatchRes = await engine.request({
+      method: 'POST',
+      path: '/stock-transfers',
+      body: {
+        id: 'tx-move-100',
+        productId: PROD_ID,
+        fromWarehouseId: WH_FROM,
+        toWarehouseId: WH_TO,
+        quantity: 99,
+      },
+    })
+    expect(mismatchRes.status).toBe(409)
+    expect((mismatchRes.data as any).code).toBe('IDEMPOTENCY_KEY_PAYLOAD_MISMATCH')
+  })
 })
