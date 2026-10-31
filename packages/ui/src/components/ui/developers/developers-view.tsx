@@ -23,6 +23,7 @@ import { Card, CardContent } from '../card'
 import { Input } from '../input'
 import { CheckList } from './check-list'
 import { SecretRevealDialog } from './secret-reveal-dialog'
+import { isPanelDisabled } from '@hisabche/ui-contract'
 import { KeyUsagePanel } from './key-usage-panel'
 import { AiAssistantsPanel } from './ai-assistants-panel'
 import { OAuthAppsPanel, type OAuthAppsPanelProps } from './oauth-apps-panel'
@@ -193,9 +194,9 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
 
       <SandboxPanel t={t} {...props.sandbox} />
 
-      <StorefrontPanel t={t} {...props.storefront} />
+      {!isPanelDisabled('developers/storefront') && <StorefrontPanel t={t} {...props.storefront} />}
 
-      <OAuthAppsPanel t={t} {...props.oauth} />
+      {!isPanelDisabled('developers/oauth') && <OAuthAppsPanel t={t} {...props.oauth} />}
 
       {/* Connecting an AI assistant over MCP, and approving what it asks for. */}
       <AiAssistantsPanel />

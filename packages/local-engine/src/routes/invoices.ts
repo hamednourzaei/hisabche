@@ -1025,6 +1025,18 @@ export function registerInvoiceRoutes(router: Router): void {
         [now, id],
       )
 
+      if (c.headers?.['x-hisabche-queue'] === '1') {
+        const enqueue = buildEnqueue({
+          entity: 'invoice',
+          operation: 'delete',
+          clientId: `${id}-cancel-${Date.now()}`,
+          payload: { id },
+          userId: c.headers?.['x-hisabche-user-id'] ?? ctx.userId,
+          workspaceId,
+        })
+        db.run(enqueue.sql, enqueue.params)
+      }
+
       return { success: true }
     })
   }

@@ -190,6 +190,8 @@ export {
   isRouteDenied,
   DISABLED_PAGES,
   isPageDisabled,
+  DISABLED_PANELS,
+  isPanelDisabled,
 } from './navigation'
 
 export {

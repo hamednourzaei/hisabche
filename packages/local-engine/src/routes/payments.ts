@@ -29,6 +29,7 @@ import {
   type OpenInvoice,
 } from '@hisabche/validation'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
+import { buildEnqueue } from '@hisabche/app-bridge'
 import type { Router } from '../router'
 import { ensureDefaultAccounts } from './invoices'
 import type { RouteHandlerContext } from '../types'
@@ -441,6 +442,18 @@ export function registerPaymentRoutes(router: Router): void {
 
       db.run('UPDATE payment SET journal_entry_id = ? WHERE id = ?', [journalId, paymentId])
 
+      if (c.headers?.['x-hisabche-queue'] === '1') {
+        const enqueue = buildEnqueue({
+          entity: 'payment',
+          operation: 'create',
+          clientId: paymentId,
+          payload: { id: paymentId, ...data },
+          userId: c.headers?.['x-hisabche-user-id'] ?? ctx.userId,
+          workspaceId,
+        })
+        db.run(enqueue.sql, enqueue.params)
+      }
+
       const inserted = db.get<PaymentRow>('SELECT * FROM payment WHERE id = ?', [paymentId])
       return mapPayment(inserted!)
     })
@@ -505,6 +518,18 @@ export function registerPaymentRoutes(router: Router): void {
 
       // 3. Mark payment cancelled
       db.run("UPDATE payment SET status = 'cancelled', updated_at = ? WHERE id = ?", [now, id])
+
+      if (c.headers?.['x-hisabche-queue'] === '1') {
+        const enqueue = buildEnqueue({
+          entity: 'payment',
+          operation: 'delete',
+          clientId: `${id}-cancel-${Date.now()}`,
+          payload: { id },
+          userId: c.headers?.['x-hisabche-user-id'] ?? ctx.userId,
+          workspaceId,
+        })
+        db.run(enqueue.sql, enqueue.params)
+      }
 
       return { success: true }
     })

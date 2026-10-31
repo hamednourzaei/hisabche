@@ -519,15 +519,26 @@ export function isRouteDenied(pathname: string, deniedModules: readonly string[]
 }
 
 /**
- * Pages switched OFF for everyone, for now (owner's order): the app marketplace,
- * the developers/keys/OAuth/website-selling screen and the market seller shop.
+ * Pages switched OFF for everyone, for now (owner's order): the app marketplace
+ * and the market seller shop.
  *
  * ⚠️ THIS IS A SWITCH, NOT A DELETION. The pages, containers, API routes, SQL and
  * translations all stay; only the doors are closed — the menu, the settings hub
  * sections and the page itself (which redirects). To turn a feature back on,
  * remove its path from this list.
  */
-export const DISABLED_PAGES: readonly string[] = ['/market-seller', '/marketplace', '/developers']
+export const DISABLED_PAGES: readonly string[] = ['/market-seller', '/marketplace']
+
+/**
+ * Parts of a page that stays open, switched off the same way. «توسعه‌دهندگان»
+ * (keys, webhooks, sandbox, AI assistants) is open; its website-selling panel and
+ * «برنامه‌های متصل (OAuth)» are not.
+ */
+export const DISABLED_PANELS: readonly string[] = ['developers/storefront', 'developers/oauth']
+
+export function isPanelDisabled(panel: string): boolean {
+  return DISABLED_PANELS.includes(panel)
+}
 
 /** Whether this address (menu destination or the page the person is at) is switched off. */
 export function isPageDisabled(path: string): boolean {

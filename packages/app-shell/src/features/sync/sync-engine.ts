@@ -559,6 +559,8 @@ const ENDPOINT_BY_ENTITY: Partial<Record<LocalTable, string>> = {
   customer: '/customers',
   product: '/products',
   transaction: '/transactions',
+  payment: '/payments',
+  inventory_movement: '/stock-transfers',
 }
 
 function isPermanent(status: number): boolean {
@@ -598,6 +600,17 @@ async function pushEntry(entry: QueueEntry): Promise<void> {
   }
   if (entry.operation === 'update') {
     await apiClient.patch(`${endpoint}/${String(entry.payload.id)}`, entry.payload, { headers })
+    return
+  }
+  if (entry.entity === 'payment' && entry.operation === 'delete') {
+    try {
+      await apiClient.post(`${endpoint}/${String(entry.payload.id)}/cancel`, entry.payload, {
+        headers,
+      })
+    } catch (error) {
+      if ((error as Partial<ApiError>).status === 404) return
+      throw error
+    }
     return
   }
   try {
@@ -755,7 +768,13 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
         // exactly like a network drop, so the page could not tell «goes again
         // by itself» from «someone must look». The marker is what makes
         // stageOf() answer «rejected».
-        const permanent = Boolean(apiError.status && isPermanent(apiError.status))
+        // Exception: INVOICE_REFERENCE_MISSING occurs when a referenced offline customer
+        // or product has not landed yet. It must remain retriable, not permanently frozen.
+        const isMissingRef =
+          message.includes('INVOICE_REFERENCE_MISSING') ||
+          (apiError as Record<string, unknown>)?.code === 'INVOICE_REFERENCE_MISSING' ||
+          message.includes('REFERENCE_MISSING')
+        const permanent = Boolean(apiError.status && isPermanent(apiError.status) && !isMissingRef)
         await desktop.db.resolveQueue(
           entry.clientId,
           'failed',

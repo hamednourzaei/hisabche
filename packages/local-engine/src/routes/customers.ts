@@ -21,6 +21,7 @@ import {
   type PartyRole,
 } from '@hisabche/validation'
 import { NotFoundError, ValidationError } from '../errors'
+import { buildEnqueue } from '@hisabche/app-bridge'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 
@@ -244,6 +245,19 @@ export function registerCustomerRoutes(router: Router): void {
       id,
       workspaceId,
     ])
+
+    if (c.headers?.['x-hisabche-queue'] === '1') {
+      const enqueue = buildEnqueue({
+        entity: 'customer',
+        operation: 'create',
+        clientId: id,
+        payload: { id, ...data },
+        userId: c.headers?.['x-hisabche-user-id'] ?? ctx.userId,
+        workspaceId,
+      })
+      db.run(enqueue.sql, enqueue.params)
+    }
+
     return mapCustomer(row!)
   })
 
@@ -324,6 +338,19 @@ export function registerCustomerRoutes(router: Router): void {
       'SELECT * FROM customer WHERE id = ? AND workspace_id = ?',
       [id, workspaceId],
     )
+
+    if (c.headers?.['x-hisabche-queue'] === '1') {
+      const enqueue = buildEnqueue({
+        entity: 'customer',
+        operation: 'update',
+        clientId: `${id}-upd-${Date.now()}`,
+        payload: { ...data, id },
+        userId: c.headers?.['x-hisabche-user-id'] ?? ctx.userId,
+        workspaceId,
+      })
+      db.run(enqueue.sql, enqueue.params)
+    }
+
     return mapCustomer(updated!)
   })
 

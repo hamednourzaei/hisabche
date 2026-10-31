@@ -126,7 +126,7 @@ const router = createHashRouter([
       { path: 'sync-center', element: <SyncCenterPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'approvals', element: <ApprovalsPage /> },
-      { path: 'developers', element: gated('/developers', '/settings', <DevelopersPage />) },
+      { path: 'developers', element: <DevelopersPage /> },
       { path: 'marketplace', element: gated('/marketplace', '/settings', <MarketplacePage />) },
       { path: 'billing', element: <BillingPage /> },
       { path: 'market-seller', element: gated('/market-seller', '/', <MarketSellerPage />) },

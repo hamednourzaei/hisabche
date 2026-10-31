@@ -8,6 +8,7 @@
 
 import { stockTransferSchema } from '@hisabche/validation'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
+import { buildEnqueue } from '@hisabche/app-bridge'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 
@@ -120,6 +121,66 @@ export function registerTransferRoutes(router: Router): void {
           now,
         ],
       )
+
+      // 6. Transfer cost layers (Target D fix)
+      // When stock moves shelf, its cost layers travel with it so destination sales can consume them.
+      let need = quantity
+      const layers = db.all<{ id: string; unit_cost: number; remaining_qty: number }>(
+        `SELECT id, unit_cost, remaining_qty FROM cost_layer
+          WHERE workspace_id = ? AND product_id = ? AND warehouse_id = ? AND remaining_qty > 0 AND deleted_at IS NULL
+          ORDER BY entry_date ASC, created_at ASC`,
+        [workspaceId, productId, fromWarehouseId],
+      )
+
+      for (const layer of layers) {
+        const take = Math.min(layer.remaining_qty, need)
+        db.run(
+          'UPDATE cost_layer SET remaining_qty = remaining_qty - ?, updated_at = ? WHERE id = ?',
+          [take, now, layer.id],
+        )
+
+        db.run(
+          `INSERT INTO cost_layer (
+            id, workspace_id, product_id, warehouse_id, source_type, source_id, source_line,
+            received_qty, remaining_qty, unit_cost, currency, entry_date, created_at, updated_at, origin, sync_state
+          ) VALUES (?, ?, ?, ?, 'transfer', ?, 1, ?, ?, ?, 'AFN', ?, ?, ?, 'local', 'local_only')`,
+          [
+            generateUuid(),
+            workspaceId,
+            productId,
+            toWarehouseId,
+            transferId,
+            take,
+            take,
+            layer.unit_cost,
+            now.slice(0, 10),
+            now,
+            now,
+          ],
+        )
+
+        need -= take
+        if (need <= 0) break
+      }
+
+      if (c.headers?.['x-hisabche-queue'] === '1') {
+        const enqueue = buildEnqueue({
+          entity: 'inventory_movement',
+          operation: 'create',
+          clientId: transferId,
+          payload: {
+            id: transferId,
+            productId,
+            fromWarehouseId,
+            toWarehouseId,
+            quantity,
+            notes: normalized.notes,
+          },
+          userId: c.headers?.['x-hisabche-user-id'] ?? ctx.userId,
+          workspaceId,
+        })
+        db.run(enqueue.sql, enqueue.params)
+      }
 
       return {
         success: true,

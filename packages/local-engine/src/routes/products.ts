@@ -15,6 +15,7 @@ import {
   updateProductSchema,
 } from '@hisabche/validation'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
+import { buildEnqueue } from '@hisabche/app-bridge'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 
@@ -364,6 +365,19 @@ export function registerProductRoutes(router: Router): void {
         [id, workspaceId],
       )
       if (!inserted) throw new NotFoundError('Product', id)
+
+      if (c.headers?.['x-hisabche-queue'] === '1') {
+        const enqueue = buildEnqueue({
+          entity: 'product',
+          operation: 'create',
+          clientId: id,
+          payload: { id, ...data },
+          userId: c.headers?.['x-hisabche-user-id'] ?? ctx.userId,
+          workspaceId,
+        })
+        db.run(enqueue.sql, enqueue.params)
+      }
+
       return mapProduct(inserted)
     })
   })
@@ -454,6 +468,19 @@ export function registerProductRoutes(router: Router): void {
       id,
       workspaceId,
     ])
+
+    if (c.headers?.['x-hisabche-queue'] === '1') {
+      const enqueue = buildEnqueue({
+        entity: 'product',
+        operation: 'update',
+        clientId: `${id}-upd-${Date.now()}`,
+        payload: { ...data, id },
+        userId: c.headers?.['x-hisabche-user-id'] ?? ctx.userId,
+        workspaceId,
+      })
+      db.run(enqueue.sql, enqueue.params)
+    }
+
     return mapProduct(updated!)
   })
 
@@ -476,6 +503,19 @@ export function registerProductRoutes(router: Router): void {
       id,
       workspaceId,
     ])
+
+    if (c.headers?.['x-hisabche-queue'] === '1') {
+      const enqueue = buildEnqueue({
+        entity: 'product',
+        operation: 'delete',
+        clientId: `${id}-del-${Date.now()}`,
+        payload: { id },
+        userId: c.headers?.['x-hisabche-user-id'] ?? ctx.userId,
+        workspaceId,
+      })
+      db.run(enqueue.sql, enqueue.params)
+    }
+
     return { success: true }
   })
 
