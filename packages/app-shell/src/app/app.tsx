@@ -14,6 +14,7 @@
 import React, { lazy } from 'react'
 import { createHashRouter, Navigate, RouterProvider, useParams } from 'react-router-dom'
 
+import { isPageDisabled } from '@hisabche/ui/menu'
 import { Providers } from './providers'
 import { AppShell } from '@/components/layout/app-shell'
 import { RequireAuth } from '@/features/auth/require-auth'
@@ -62,6 +63,15 @@ const PublicTaskPage = lazy(() => import('@/features/public/public-task-page'))
 const PublicInvoicePage = lazy(() => import('@/features/public/public-invoice-page'))
 const PublicPortalPage = lazy(() => import('@/features/public/public-portal-page'))
 const AttendanceSelfPage = lazy(() => import('@/features/public/attendance-self-page'))
+
+/**
+ * A page switched off in `DISABLED_PAGES` (ui-contract) is not mounted: the route
+ * stays, and sends the person to a page that exists. Turning the feature back on
+ * is removing its path from that list.
+ */
+function gated(path: string, fallback: string, page: React.ReactElement) {
+  return isPageDisabled(path) ? <Navigate to={fallback} replace /> : page
+}
 
 /** Carries the invoice id across the `/sales/:id` → `/invoices/:id` rename. */
 function LegacyInvoiceRedirect() {
@@ -116,10 +126,10 @@ const router = createHashRouter([
       { path: 'sync-center', element: <SyncCenterPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'approvals', element: <ApprovalsPage /> },
-      { path: 'developers', element: <DevelopersPage /> },
-      { path: 'marketplace', element: <MarketplacePage /> },
+      { path: 'developers', element: gated('/developers', '/settings', <DevelopersPage />) },
+      { path: 'marketplace', element: gated('/marketplace', '/settings', <MarketplacePage />) },
       { path: 'billing', element: <BillingPage /> },
-      { path: 'market-seller', element: <MarketSellerPage /> },
+      { path: 'market-seller', element: gated('/market-seller', '/', <MarketSellerPage />) },
       { path: 'analysis', element: <AnalysisPage /> },
       { path: 'onboarding', element: <OnboardingPage /> },
       { path: 'manufacturing', element: <ManufacturingPage /> },

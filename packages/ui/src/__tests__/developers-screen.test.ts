@@ -73,7 +73,7 @@ describe('the screen', () => {
       '<DevelopersContainer />',
     )
     expect(read('packages/app-shell/src/app/app.tsx')).toContain(
-      "{ path: 'developers', element: <DevelopersPage /> }",
+      "{ path: 'developers', element: gated('/developers', '/settings', <DevelopersPage />) }",
     )
     // Raw: the comment stripper would read the '/*' of each path as a comment.
     expect(readFileSync(join(ROOT, 'apps/web/app/robots.ts'), 'utf8')).toContain("'/*/developers'")

@@ -40,6 +40,7 @@ import {
   MORE_GROUPS_CONTRACT,
   NAV_CONTRACT,
   SYNC_INTERVAL_MS,
+  isPageDisabled,
   type CommandItemContract,
   type NavGroupId,
   type NavId,
@@ -105,7 +106,9 @@ function withIcon(item: NavItemContract): NavItem {
   return { ...item, icon: NAV_ICONS[item.id] }
 }
 
-export const NAV_ITEMS: NavItem[] = NAV_CONTRACT.map(withIcon)
+export const NAV_ITEMS: NavItem[] = NAV_CONTRACT.filter((i) => !isPageDisabled(i.path)).map(
+  withIcon,
+)
 
 // آیتم‌های همیشه-دیده — کارهای هر روزِ یک فروشنده
 export const PRIMARY_ITEMS: NavItem[] = NAV_ITEMS.filter((i) => i.group === 'primary')
@@ -115,14 +118,14 @@ export const MORE_GROUPS: NavGroup[] = MORE_GROUPS_CONTRACT.map((group) => ({
   id: group.id,
   labelKey: group.labelKey,
   icon: GROUP_ICONS[group.id],
-  items: group.items.map(withIcon),
+  items: group.items.filter((i) => !isPageDisabled(i.path)).map(withIcon),
 }))
 
 // آیکون دکمه «بیشتر»
 export const MORE_ICON = EllipsisVertical
 
 // Command palette — همان واژگانِ ناوبری، بدون تکرار مقصد.
-export const COMMAND_ITEMS: CommandItem[] = [...COMMAND_CONTRACT]
+export const COMMAND_ITEMS: CommandItem[] = COMMAND_CONTRACT.filter((c) => !isPageDisabled(c.path))
 
 /** Whether a destination is locked for someone with these blocked modules (see ui-contract NAV_MODULE). */
-export { isNavLocked, isRouteDenied } from '@hisabche/ui-contract'
+export { isNavLocked, isRouteDenied, isPageDisabled } from '@hisabche/ui-contract'

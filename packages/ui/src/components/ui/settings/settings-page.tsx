@@ -38,7 +38,7 @@ import {
   Plug,
 } from 'lucide-react'
 import { buildCsvZip, formatBytes, formatNumber, toIsoDay } from '@hisabche/formatting'
-import { localizePath } from '@hisabche/ui-contract'
+import { isPageDisabled, localizePath } from '@hisabche/ui-contract'
 import { useRouteLang } from '../../../hooks/use-locale-push'
 import { useActionAvailability } from '../../../lib/capability'
 import { CloudRequiredNotice } from '../cloud-required-notice'
@@ -1126,7 +1126,7 @@ export const SettingsPage = memo(function SettingsPage({
       <WorkplaceTimeZoneSection />
       <BillingSection />
       <WorkflowTemplatesSection />
-      <DevelopersSection />
+      {!isPageDisabled('/developers') && <DevelopersSection />}
       <BackupSection />
       <HardwareSection />
       <PerformanceSection />

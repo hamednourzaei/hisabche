@@ -75,7 +75,7 @@ describe('where it lives', () => {
       '<MarketplaceContainer initialApp=',
     )
     expect(read('packages/app-shell/src/app/app.tsx')).toContain(
-      "{ path: 'marketplace', element: <MarketplacePage /> }",
+      "{ path: 'marketplace', element: gated('/marketplace', '/settings', <MarketplacePage />) }",
     )
     expect(read('packages/app-shell/src/features/marketplace/marketplace-page.tsx')).toContain(
       '<MarketplaceContainer initialApp=',

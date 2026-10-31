@@ -188,6 +188,8 @@ export {
   NAV_MODULE,
   isNavLocked,
   isRouteDenied,
+  DISABLED_PAGES,
+  isPageDisabled,
 } from './navigation'
 
 export {

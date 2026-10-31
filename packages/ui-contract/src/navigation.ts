@@ -518,8 +518,26 @@ export function isRouteDenied(pathname: string, deniedModules: readonly string[]
   return first !== undefined && isNavLocked(`/${first}`, deniedModules)
 }
 
+/**
+ * Pages switched OFF for everyone, for now (owner's order): the app marketplace,
+ * the developers/keys/OAuth/website-selling screen and the market seller shop.
+ *
+ * ⚠️ THIS IS A SWITCH, NOT A DELETION. The pages, containers, API routes, SQL and
+ * translations all stay; only the doors are closed — the menu, the settings hub
+ * sections and the page itself (which redirects). To turn a feature back on,
+ * remove its path from this list.
+ */
+export const DISABLED_PAGES: readonly string[] = ['/market-seller', '/marketplace', '/developers']
+
+/** Whether this address (menu destination or the page the person is at) is switched off. */
+export function isPageDisabled(path: string): boolean {
+  const first = (path.split('?')[0] ?? '').split('/').filter(Boolean)[0]
+  return first !== undefined && DISABLED_PAGES.includes(`/${first}`)
+}
+
 /** Whether this destination is locked for someone with these blocked modules. */
 export function isNavLocked(path: string, blockedModules: readonly string[]): boolean {
+  if (isPageDisabled(path)) return true
   if (blockedModules.length === 0) return false
   const bare = path.split('?')[0] ?? path
   const module = NAV_MODULE[bare]
