@@ -119,6 +119,11 @@ export const localTableSchema = z.enum([
   'shelf',
   'inventory_settings',
   'invoice_counter',
+  'pos_session',
+  'pos_order',
+  'pos_cash_movement',
+  'invoice_returns',
+  'invoice_return_lines',
 ])
 
 export type LocalTable = z.infer<typeof localTableSchema>

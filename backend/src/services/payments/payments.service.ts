@@ -9,6 +9,7 @@
 // and it keeps whatever was overpaid as an advance instead of losing it.
 // ============================================
 
+import { randomUUID } from 'node:crypto'
 import { baseCurrencyOf } from '../base-currency'
 import { ConflictError, NotFoundError } from '../../errors/database.error'
 import {
@@ -178,16 +179,16 @@ export class PaymentsService {
       }) => void
     } = {},
   ) {
-    const clientRequestId = options.clientRequestId ?? null
+    const clientRequestId = options.clientRequestId ?? randomUUID()
 
     // ⚠️ A REPLAYED PAYMENT IS NOT A SECOND PAYMENT. The same key answers with
     // the payment it already recorded. Its journal entry is (re)booked — the
     // ledger is idempotent per payment — in case the first attempt died
     // between the payment and the entry.
-    if (clientRequestId) {
+    if (options.clientRequestId) {
       const existingId = await this.repo.paymentIdByClientRequestId(
         ctx.workspaceId,
-        clientRequestId,
+        options.clientRequestId,
       )
       if (existingId) return this.replayPayment(ctx, existingId)
     }
@@ -703,6 +704,15 @@ export class PaymentsService {
     // control refused and offer the override where one is available.
     await sod.assertAllowed(ctx, 'payment.cancel', 'payment', paymentId, override)
 
+    // ⚠️ REVERSAL PRE-CHECK & EXECUTION (Target A3 fix)
+    //
+    // A cancelled payment must never leave an active, unreversed journal entry
+    // in the general ledger. The reversal is executed and asserted open first.
+    // If the accounting period is closed or the reversal cannot be posted,
+    // the operation fails closed BEFORE the payment row is marked cancelled.
+    // Silent catch/swallow is forbidden on the financial money path.
+    await ledger.reverseDocument(ctx, 'payment', paymentId, { reason })
+
     try {
       await this.repo.cancelPayment(ctx, paymentId)
     } catch (error) {
@@ -710,10 +720,6 @@ export class PaymentsService {
     }
 
     await sod.recordAction(ctx, 'payment.cancel', 'payment', paymentId)
-
-    await ledger
-      .reverseDocument(ctx, 'payment', paymentId, { reason })
-      .catch((err) => console.error(`[Payments] reversal failed for ${paymentId}:`, err))
 
     await this.invalidate(ctx.workspaceId)
 

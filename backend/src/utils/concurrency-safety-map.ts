@@ -921,6 +921,200 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
       },
     ],
   },
+  // ─── Invoice Returns ─────────────────────────────────────────────────────
+  {
+    routeFile: 'invoice-return.routes.ts',
+    route: 'POST /api/invoices/:id/returns',
+    mechanisms: ['db-function'],
+    evidence: [
+      {
+        file: `${SVC}/sales/invoice-return.service.ts`,
+        text: "rpc('invoice_return_create'",
+      },
+    ],
+  },
+  // ─── Order Deposits ──────────────────────────────────────────────────────
+  {
+    routeFile: 'order-deposit.routes.ts',
+    route: 'POST /api/orders/:id/deposits',
+    mechanisms: ['check-then-write'],
+    evidence: [
+      {
+        file: `${SVC}/sales/order-deposit.service.ts`,
+        text: "from('order_deposits')",
+      },
+    ],
+    gap: 'Simultaneous duplicate deposit posts can insert duplicate records',
+  },
+  // ─── Installments ────────────────────────────────────────────────────────
+  {
+    routeFile: 'installments.routes.ts',
+    route: 'PUT /api/invoices/:id/installments',
+    mechanisms: ['db-function'],
+    evidence: [
+      {
+        file: `${SVC}/commerce/installment.service.ts`,
+        text: "rpc('installments_save'",
+      },
+    ],
+  },
+  {
+    routeFile: 'installments.routes.ts',
+    route: 'DELETE /api/invoices/:id/installments',
+    mechanisms: ['db-function'],
+    evidence: [
+      {
+        file: `${SVC}/commerce/installment.service.ts`,
+        text: "rpc('installments_save'",
+      },
+    ],
+  },
+  // ─── Late Fees ───────────────────────────────────────────────────────────
+  {
+    routeFile: 'late-fees.routes.ts',
+    route: 'PUT /api/late-fees/policy',
+    mechanisms: ['state-idempotent', 'unique-constraint'],
+    evidence: [
+      {
+        file: `${SVC}/commerce/late-fee.service.ts`,
+        text: "onConflict: 'workspace_id'",
+      },
+    ],
+  },
+  {
+    routeFile: 'late-fees.routes.ts',
+    route: 'POST /api/invoices/:id/late-fees',
+    mechanisms: ['unique-constraint'],
+    evidence: [
+      {
+        file: `${SVC}/commerce/late-fee.service.ts`,
+        text: "error.code === '23505'",
+      },
+    ],
+  },
+  // ─── Orders ──────────────────────────────────────────────────────────────
+  {
+    routeFile: 'orders.routes.ts',
+    route: 'POST /api/orders',
+    mechanisms: ['idempotency-key'],
+    evidence: [
+      {
+        file: `${RT}/orders.routes.ts`,
+        text: 'readClientRequestId(request)',
+      },
+    ],
+  },
+  {
+    routeFile: 'orders.routes.ts',
+    route: 'POST /api/orders/:id/confirm',
+    mechanisms: ['db-function'],
+    evidence: [
+      {
+        file: `${SVC}/orders/orders.repository.ts`,
+        text: "rpc('transition_sales_order'",
+      },
+    ],
+  },
+  {
+    routeFile: 'orders.routes.ts',
+    route: 'POST /api/orders/:id/cancel',
+    mechanisms: ['db-function'],
+    evidence: [
+      {
+        file: `${SVC}/orders/orders.repository.ts`,
+        text: "rpc('transition_sales_order'",
+      },
+    ],
+  },
+  {
+    routeFile: 'orders.routes.ts',
+    route: 'POST /api/orders/:id/fulfill',
+    mechanisms: ['db-function'],
+    evidence: [
+      {
+        file: `${SVC}/orders/orders.repository.ts`,
+        text: "rpc('transition_sales_order'",
+      },
+    ],
+  },
+  {
+    routeFile: 'orders.routes.ts',
+    route: 'POST /api/orders/:id/invoice',
+    mechanisms: ['db-function'],
+    evidence: [
+      {
+        file: `${SVC}/orders/orders.repository.ts`,
+        text: "rpc('transition_sales_order'",
+      },
+    ],
+  },
+  {
+    routeFile: 'orders.routes.ts',
+    route: 'PUT /api/storefront/settings',
+    mechanisms: ['last-write-wins'],
+    evidence: [
+      {
+        file: `${RT}/orders.routes.ts`,
+        text: 'saveSettings',
+      },
+    ],
+  },
+  // ─── Products ────────────────────────────────────────────────────────────
+  {
+    routeFile: 'product.routes.ts',
+    route: 'POST /api/products',
+    mechanisms: ['idempotency-key'],
+    evidence: [
+      {
+        file: `${RT}/product.routes.ts`,
+        text: 'readClientRequestId(request)',
+      },
+    ],
+  },
+  {
+    routeFile: 'product.routes.ts',
+    route: 'PATCH /api/products/:id',
+    mechanisms: ['last-write-wins'],
+    evidence: [
+      {
+        file: `${SVC}/product.service.ts`,
+        text: 'async update',
+      },
+    ],
+  },
+  {
+    routeFile: 'product.routes.ts',
+    route: 'DELETE /api/products/:id',
+    mechanisms: ['conditional-update'],
+    evidence: [
+      {
+        file: `${SVC}/product.service.ts`,
+        text: 'async delete',
+      },
+    ],
+  },
+  {
+    routeFile: 'product.routes.ts',
+    route: 'POST /api/products/:id/barcodes',
+    mechanisms: ['unique-constraint'],
+    evidence: [
+      {
+        file: `${SVC}/product.service.ts`,
+        text: 'addBarcode',
+      },
+    ],
+  },
+  {
+    routeFile: 'product.routes.ts',
+    route: 'DELETE /api/products/:id/barcodes/:barcodeId',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      {
+        file: `${SVC}/product.service.ts`,
+        text: 'removeBarcode',
+      },
+    ],
+  },
 ]
 
 /** Route files whose every mutating handler must appear above. */

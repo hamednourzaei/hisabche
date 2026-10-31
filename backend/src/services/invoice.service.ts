@@ -1268,28 +1268,28 @@ export class InvoiceService {
       // Chaining them also stops a failed costing run from booking a sale with
       // a made-up cost of goods.
       const uncosted: string[] = []
-      this.applyCosting(
-        ctx,
-        invoice.id,
-        String(data.type ?? 'sale'),
-        lines,
-        data.date,
-        uncosted,
-        exchangeRate,
-      )
-        .then((cogs) =>
-          this.createAccountingEntries(ctx, invoice.id, {
-            ...data,
-            type: data.type ?? 'sale',
-            exchangeRate,
-            invoiceNumber,
-            // The SAME derived total the document carries. Booking
-            // `data.total` here is what let a request say «total: 1» on a
-            // five-million invoice and have the books believe it.
-            total: money.total,
-            costOfGoodsSold: cogs,
-          }),
+      try {
+        const cogs = await this.applyCosting(
+          ctx,
+          invoice.id,
+          String(data.type ?? 'sale'),
+          lines,
+          data.date,
+          uncosted,
+          exchangeRate,
         )
+        const result = await this.createAccountingEntries(ctx, invoice.id, {
+          ...data,
+          type: data.type ?? 'sale',
+          exchangeRate,
+          invoiceNumber,
+          // The SAME derived total the document carries. Booking
+          // `data.total` here is what let a request say «total: 1» on a
+          // five-million invoice and have the books believe it.
+          total: money.total,
+          taxTotal: money.taxTotal,
+          costOfGoodsSold: cogs,
+        })
         // J3 — `posted` is written HERE and nowhere earlier, because this is
         // the first moment it is true. An invoice marked posted whose ledger
         // write then failed would be a document claiming an effect it does not
@@ -1297,20 +1297,19 @@ export class InvoiceService {
         // ⚠️ ONLY WHEN SOMETHING WAS ACTUALLY BOOKED. This used to mark the
         // invoice posted even when the ledger SKIPPED it for a missing account,
         // so the document claimed an entry that did not exist.
-        .then((result) =>
-          result.status === 'posted' || result.status === 'already_posted'
-            ? this.markPosted(ctx, invoice.id)
-            : undefined,
-        )
-        .then(() => {
-          if (uncosted.length > 0) {
-            console.warn(
-              `[InvoiceService] invoice ${invoice.id} posted without cost of goods for products without cost layers:`,
-              uncosted,
-            )
-          }
-        })
-        .catch((err) => console.error('Accounting entry failed:', err))
+        if (result.status === 'posted' || result.status === 'already_posted') {
+          await this.markPosted(ctx, invoice.id)
+        }
+        if (uncosted.length > 0) {
+          console.warn(
+            `[InvoiceService] invoice ${invoice.id} posted without cost of goods for products without cost layers:`,
+            uncosted,
+          )
+        }
+      } catch (err) {
+        console.error('Accounting entry failed:', err)
+        throw err
+      }
     } else {
       // Held. The invoice exists and is visible — it is a draft, not a hidden
       // row — but nothing irreversible has happened to it. `postApprovedInvoice`
@@ -2093,9 +2092,22 @@ export class InvoiceService {
       ;({ error } = await call(InvoiceService.withoutDetailLabels(doc.detailRows)))
     }
     if (!error) return null
-    if (error.code !== 'PGRST202' && error.code !== '42883') return error
 
-    return this.writeInvoiceDocumentStepwise(ctx, doc)
+    // ⚠️ FAIL-CLOSED INTEGRITY GUARD (Target B / Rule 4)
+    //
+    // Multi-table invoice document writes MUST be atomic. supabase-js has no
+    // client-side transaction mechanism. If the Postgres RPC function
+    // invoice_write_document is missing (PGRST202 or 42883), silent stepwise
+    // degradation is strictly forbidden because a partial failure leaves
+    // orphan headers without stock movements or ledger lines.
+    if (error.code === 'PGRST202' || error.code === '42883') {
+      throw new DatabaseError(
+        'ATOMIC_RPC_REQUIRED: invoice_write_document RPC is missing. Apply docs/invoice-write-document-migration.sql. Stepwise un-atomic fallback is disabled to prevent orphan invoices.',
+        error,
+      )
+    }
+
+    return error
   }
 
   /** The pre-migration path. Same rows, one statement at a time. */
@@ -3037,6 +3049,7 @@ export class InvoiceService {
     data: {
       type: string
       total: number
+      taxTotal?: number | undefined
       items?: any[] | undefined
       invoiceNumber?: string | undefined
       date?: string | undefined
@@ -3059,9 +3072,18 @@ export class InvoiceService {
     const total = InvoiceService.inBooksCurrency(Number(data.total) || 0, rate)
     if (total <= 0) return { status: 'nothing_to_post' }
 
+    const taxAmount = Number(data.taxTotal ?? (data as Record<string, unknown>).tax_total) || 0
+    const taxTotal = taxAmount > 0 ? InvoiceService.inBooksCurrency(taxAmount, rate) : 0
+
     const needed: AccountRole[] = isPurchase
       ? ['inventory', 'payable']
-      : ['receivable', 'sales', 'cogs', 'inventory']
+      : [
+          'receivable',
+          'sales',
+          'cogs',
+          'inventory',
+          ...(taxTotal > 0 ? ['tax' as AccountRole] : []),
+        ]
 
     const { accounts, missing } = await ledger.ensureAccountsForRoles(ctx, needed)
 
@@ -3080,6 +3102,7 @@ export class InvoiceService {
     const lines: DraftLine[] = invoiceLedgerLines({
       isPurchase,
       total,
+      taxTotal: taxTotal > 0 ? taxTotal : undefined,
       costOfGoodsSold: data.costOfGoodsSold,
       accounts,
     })

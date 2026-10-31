@@ -10,6 +10,7 @@ import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { InvoiceReturnService } from '../services/sales/invoice-return.service'
 import { sendFailure } from '../errors/http-failure'
+import { readClientRequestId, sendCreated } from '../utils/client-request'
 import { invalidateMoneyCaches } from '../utils/money-cache'
 
 export async function invoiceReturnRoutes(fastify: FastifyInstance) {
@@ -40,6 +41,7 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
         const workspaceId = request.tenancy.workspaceId
         const userId = request.tenancy.userId
         const { id } = request.params as { id: string }
+        const clientRequestId = readClientRequestId(request)
         const body = request.body as {
           returnType: 'sale_return' | 'purchase_return'
           returnNumber: string
@@ -62,6 +64,7 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
         const ret = await service.createReturn(workspaceId, {
           originalInvoiceId: id,
           userId,
+          clientRequestId,
           returnType: body.returnType,
           returnNumber: body.returnNumber,
           returnDate: body.returnDate,
@@ -76,7 +79,7 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
         // stock; a cached copy would keep showing the figures from before it
         // (BUG-008: it stayed «unpaid» for two minutes after a payment).
         await invalidateMoneyCaches(workspaceId)
-        return reply.status(201).send({ data: ret })
+        return sendCreated(reply, { data: ret })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to create invoice return')
       }

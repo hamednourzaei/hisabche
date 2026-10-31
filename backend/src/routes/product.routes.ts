@@ -21,6 +21,7 @@ import {
 import { StockHistoryService } from '../services/inventory/stock-history.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { ConflictError, NotFoundError } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
 import { ForbiddenError } from '../errors/auth.error'
@@ -215,7 +216,7 @@ export async function productRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/products/:id/barcodes',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
@@ -231,7 +232,7 @@ export async function productRoutes(fastify: FastifyInstance) {
 
   fastify.delete(
     '/api/products/:id/barcodes/:barcodeId',
-    { preHandler: [authenticate, requireWorkspaceContext] },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id, barcodeId } = request.params as { id: string; barcodeId: string }
@@ -273,7 +274,7 @@ export async function productRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/products',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -313,7 +314,7 @@ export async function productRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/products/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -356,7 +357,7 @@ export async function productRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/products/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {

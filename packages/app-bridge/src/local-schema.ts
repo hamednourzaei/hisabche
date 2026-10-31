@@ -506,7 +506,7 @@ export const CREATE_STATEMENTS: readonly string[] = [
     source_id TEXT,
     source_line TEXT,
     received_qty REAL NOT NULL DEFAULT 0,
-    remaining_qty REAL NOT NULL DEFAULT 0,
+    remaining_qty REAL NOT NULL DEFAULT 0 CHECK (remaining_qty >= 0),
     unit_cost INTEGER NOT NULL DEFAULT 0,
     currency TEXT NOT NULL,
     entry_date TEXT NOT NULL,

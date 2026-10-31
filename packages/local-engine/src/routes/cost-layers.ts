@@ -54,6 +54,13 @@ export function drawFromLayers(
     now: string
   },
 ): { totalCost: number; shortfall: number } {
+  const params: unknown[] = [input.workspaceId, input.productId]
+  let warehouseFilter = ''
+  if (input.warehouseId) {
+    warehouseFilter = ' AND (warehouse_id = ? OR warehouse_id IS NULL)'
+    params.push(input.warehouseId)
+  }
+
   const layers = db.all<{
     id: string
     product_id: string
@@ -65,9 +72,9 @@ export function drawFromLayers(
   }>(
     `SELECT id, product_id, warehouse_id, remaining_qty, unit_cost, entry_date, created_at
        FROM cost_layer
-      WHERE workspace_id = ? AND product_id = ? AND remaining_qty > 0 AND deleted_at IS NULL
+      WHERE workspace_id = ? AND product_id = ? AND remaining_qty > 0 AND deleted_at IS NULL${warehouseFilter}
       ORDER BY entry_date ASC, created_at ASC`,
-    [input.workspaceId, input.productId],
+    params,
   )
 
   const plan = planConsumption(
@@ -86,11 +93,10 @@ export function drawFromLayers(
 
   for (const step of plan.steps) {
     if (!step.layerId || !(step.quantity > 0)) continue
-    db.run('UPDATE cost_layer SET remaining_qty = remaining_qty - ?, updated_at = ? WHERE id = ?', [
-      step.quantity,
-      input.now,
-      step.layerId,
-    ])
+    db.run(
+      'UPDATE cost_layer SET remaining_qty = remaining_qty - ?, updated_at = ? WHERE id = ? AND remaining_qty >= ?',
+      [step.quantity, input.now, step.layerId, step.quantity],
+    )
     db.run(
       `INSERT INTO cost_consumption (
         id, workspace_id, layer_id, product_id, warehouse_id, consumer_type,

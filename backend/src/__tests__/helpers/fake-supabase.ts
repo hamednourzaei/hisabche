@@ -62,6 +62,48 @@ export class FakeDatabase {
   readonly uniques: UniqueIndex[] = []
   readonly rpcs = new Map<string, (args: Row) => unknown>()
 
+  constructor() {
+    this.registerDefaultRpcs()
+  }
+
+  private registerDefaultRpcs() {
+    this.rpc('invoice_write_document', (args: Row) => {
+      const pHeader = args.p_header as Row | null
+      const pHeaderPatch = args.p_header_patch as Row | null
+      const pItems = (args.p_items as Row[]) ?? []
+      const pDetails = (args.p_details as Row[]) ?? []
+      const pMovements = (args.p_movements as Row[]) ?? []
+      const pReplaceItems = args.p_replace_items === true
+      const pInvoiceId = String(args.p_invoice_id)
+      const pWorkspaceId = String(args.p_workspace_id)
+
+      if (pHeader) {
+        this.ensure('invoices').push({ ...pHeader, id: pInvoiceId, workspace_id: pWorkspaceId })
+      }
+      if (pHeaderPatch) {
+        const invs = this.ensure('invoices')
+        const target = invs.find((i) => i.id === pInvoiceId && i.workspace_id === pWorkspaceId)
+        if (target) Object.assign(target, pHeaderPatch)
+      }
+      if (pReplaceItems) {
+        const remainingItems = this.ensure('invoice_items').filter(
+          (i) => i.invoice_id !== pInvoiceId,
+        )
+        this.tables.set('invoice_items', remainingItems)
+      }
+      if (pItems.length > 0) {
+        this.ensure('invoice_items').push(...pItems)
+      }
+      if (pDetails.length > 0) {
+        this.ensure('invoice_item_details').push(...pDetails)
+      }
+      if (pMovements.length > 0) {
+        this.ensure('stock_movements').push(...pMovements)
+      }
+      return { ok: true }
+    })
+  }
+
   /**
    * PostgREST's `max-rows`. When set, every select returns at most this many
    * rows whatever `.limit()` asked for — silently, exactly like production.

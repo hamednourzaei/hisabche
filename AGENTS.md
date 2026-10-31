@@ -224,47 +224,64 @@ When an exact source location is available:
 
 ---
 
-## 0.6. CODEBASE INTELLIGENCE & NAVIGATION SYSTEM — permanent laws
+## 0.6. CODEBASE INTELLIGENCE: MANDATORY PREFLIGHT & POSTFLIGHT PROTOCOL
 
-### The Index
+> **CANONICAL STATUS:** This file (`AGENTS.md`) is the canonical instruction file for all coding agents (Claude Code, Cursor, Codex, OpenCode, Antigravity). All other instruction files (`CLAUDE.md`, etc.) inherit directly from this protocol. For full operational details and examples, see `docs/ai/CODE-INTELLIGENCE-WORKFLOW-GUIDE.md`.
 
-Two artifacts live in `.ai/codebase/` and are the **single source of truth** for navigation:
+### The Canonical Index & Interfaces
 
-- `CODEBASE_MAP.md` — human-readable, <300 lines, read first every session
-- `graph.json` — machine-readable symbol/dependency index (git hash + timestamp for staleness)
+Two canonical artifacts live in `.ai/codebase/`:
 
-Regenerate with: `node scripts/build-ai-index.mjs` (<2s).
+- `CODEBASE_MAP.md` — human-readable architectural map (<300 lines)
+- `graph.json` — compiler-backed AST symbol and relationship graph (17,875 symbols, 63,830 relationships)
 
-### LAW 1: CACHE-FIRST & STALENESS CHECK
+Access interfaces:
 
-1. At the start of **ANY** task, read `.ai/codebase/CODEBASE_MAP.md` FIRST.
-2. If files changed significantly since the git commit recorded in `graph.json`, run `node scripts/build-ai-index.mjs` instead of scanning manually.
+- **CLI:** `pnpm code-intel <status|symbol|callers|callees|imports|tests|impact|source>`
+- **MCP Server (stdio):** `node scripts/code-intel-mcp.mjs` (or `pnpm code-intel:mcp`) exposing `code_intel_status`, `code_intel_find_symbols`, `code_intel_get_symbol`, `code_intel_get_relationships`, `code_intel_impact`, `code_intel_get_source`.
 
-### LAW 2: BUG-FIRST RESOLUTION PROTOCOL (Stack-Trace & Symbol Jump)
+---
 
-When given a bug, error message, TypeScript error, or crash (e.g., `Android import crashes with Buffer is not defined`):
+### MANDATORY PREFLIGHT (Execute Before Planning or Editing Code)
 
-1. **If a file:line is in the stack trace:** OPEN THAT EXACT FILE AND LINE FIRST. Zero exploration.
-2. **If an error string or symbol is given:** Query `.ai/codebase/graph.json` or run scoped `rg -n "exact_symbol"` ONLY inside the relevant domain/platform path identified in `CODEBASE_MAP.md`.
-3. Trace ONLY the minimal subgraph: `Error File → Direct Caller → Direct Callee → Schema/Type → Platform Adapter`.
-4. **HARD READ CAP:** Never open more than **5 source files** before diagnosing the root cause.
+1. **Preserve User Work & Working Tree Check:**
+   - Inspect `git status --short`, current branch, and HEAD.
+   - Never reset, checkout `--`, stash, or overwrite existing user modifications.
+   - **Rule 0:** Never `git commit`, `git push`, `git reset`, or rebase. Leave work in the working tree.
+2. **Verify Code Intelligence Availability & Freshness:**
+   - Run `pnpm code-intel status` (or MCP `code_intel_status`).
+   - Check whether `index.status === 'FRESH'`. If `STALE`, note the warning.
+   - If MCP is configured in your harness, verify the live connection with a status call. Do not assume MCP is connected solely because a config snippet exists.
+3. **Grounded Symbol & Impact Discovery:**
+   - **Find existing code before building:** `pnpm code-intel symbol find <name>` (or `code_intel_find_symbols`). Never invent a function or duplicate an existing service (Rule 2).
+   - **Inspect signatures:** `pnpm code-intel symbol show <id>` (or `code_intel_get_symbol`). Read real types and docstrings.
+   - **Inspect callers/callees:** `pnpm code-intel callers <id>` (or `code_intel_get_relationships`). Know who calls this symbol across Web, Desktop, Mobile, and Backend before modifying it.
+   - **Inspect blast radius:** `pnpm code-intel impact <target> --depth 2` (or `code_intel_impact`). Identify affected packages and dependency cycles.
+   - **Retrieve exact source:** `pnpm code-intel source <id> --context 3` (or `code_intel_get_source`). Read line-numbered excerpts without blowing context on 1,000-line files.
+4. **Fallback Protocol:**
+   - If MCP/CLI is unavailable, record the limitation.
+   - Fall back to scoped repository search (`rg -n "exact_symbol" packages/<domain>`).
+   - Never interpret an empty index query as proof that code does not exist. Verify against disk files before concluding.
 
-### LAW 3: FEATURE-FIRST RESOLUTION PROTOCOL
+---
 
-When asked to add or modify a feature:
+### MANDATORY POSTFLIGHT (Execute After Every Code Change)
 
-1. Classify the Domain and Platform (`SHARED` vs `WEB_ONLY` vs `MOBILE_ONLY` vs `WINDOWS_ONLY` vs `SERVER_ONLY` vs `PLATFORM_ADAPTER` vs `OFFLINE_ENGINE`) using `CODEBASE_MAP.md`.
-2. Check `graph.json` for existing hooks, services, Zod schemas, or components before creating anything new (**Reuse > Extend > Duplicate**).
-3. Business rules MUST live in shared/domain packages; platform-specific code must remain a thin adapter.
-4. Before reading or editing code, output an internal shortlist:
-   - `PRIMARY FILES` (max 2-3 files to open first)
-   - `SECONDARY FILES` (inspect only if contract changes)
-5. **HARD EDIT CAP:** Target changing **≤ 2-3 files** for normal work. Explain why before expanding the change surface.
-
-### LAW 4: INCREMENTAL UPDATE & HONEST VERIFICATION
-
-1. After modifying code, run `node scripts/build-ai-index.mjs` to keep the index fresh.
-2. Never claim `fixed`, `verified`, or `production-ready` without running the actual check. Explicitly label status as: `IMPLEMENTED` | `TYPECHECKED` | `UNIT TESTED` | `EMULATOR/LIVE VERIFIED`.
+1. **Verify Actual Changes:**
+   - Run `git diff --check` to catch whitespace or formatting errors.
+   - Inspect `git status --short` and `git diff --stat`. Confirm that **only** task-related files changed.
+   - Confirm no user changes were overwritten and no temporary artifacts were created.
+2. **Run Verification Gates:**
+   - From each modified package: `npx tsc --noEmit` and `npx vitest run <relevant-tests>`.
+   - Run `npx eslint <modified-file>`: **0 errors**.
+   - Do not claim tests passed unless the exit code was 0.
+3. **Check Code Intelligence Freshness:**
+   - Check if modified files altered index freshness state.
+   - If the index is stale, explicitly mark it as `STALE (requires rebuild upon completion)`.
+   - Never manually edit `graph.json`. Do not run automatic index rebuilds or claim incremental indexing exists unless explicitly approved for the task.
+4. **Standardized Status Reporting (Rule 9 Parity):**
+   - Report exactly one of: `VERIFIED_COMPLETE` (only with live HTTP/DB verification) · `IMPLEMENTED_NOT_LIVE_VERIFIED` · `VERIFIED_WITH_LIMITATIONS` · `BLOCKED` · `NOT_IMPLEMENTED`.
+   - Report separate statuses for: (1) Implementation, (2) Automated tests, (3) Runtime/device verification, (4) Production verification, (5) Harness/MCP integration, (6) Index freshness.
 
 ---
 

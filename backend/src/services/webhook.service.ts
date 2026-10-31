@@ -99,8 +99,8 @@ export class WebhookService {
         return { success: true, action: 'already_processed' }
       }
 
-      const processed = await this.isProcessed(event.id)
-      if (processed) {
+      const claimed = await this.claimWebhook(event)
+      if (!claimed) {
         await memoryCache.set(cacheKey, true, 86400)
         return { success: true, action: 'already_processed' }
       }
@@ -303,35 +303,27 @@ export class WebhookService {
     return { success: true, action: 'subscription_updated' }
   }
 
-  // ─── Private: Check Idempotency ─────────────────────────────────
-  private async isProcessed(eventId: string): Promise<boolean> {
-    const { data, error } = await supabase
-      .from('webhook_events')
-      .select('id')
-      .eq('id', eventId)
-      .single()
+  // ─── Private: Check & Claim Idempotency Atomically ──────────────
+  private async claimWebhook(event: WebhookEvent): Promise<boolean> {
+    const { error } = await supabase.from('webhook_events').insert({
+      id: event.id,
+      type: event.type,
+      payload: event.data,
+      processed_at: new Date().toISOString(),
+    })
 
-    return !error && !!data
+    if (error) {
+      if (error.code === '23505' || /duplicate|unique/i.test(error.message ?? '')) {
+        return false // already processed or concurrently claimed
+      }
+      return true
+    }
+    return true
   }
 
   // ─── Private: Log Webhook ──────────────────────────────────────
-  private async logWebhook(event: WebhookEvent): Promise<void> {
-    const { error } = await supabase.from('webhook_events').upsert(
-      {
-        id: event.id,
-        type: event.type,
-        payload: event.data,
-        processed_at: new Date().toISOString(),
-      },
-      {
-        onConflict: 'id',
-        ignoreDuplicates: true,
-      },
-    )
-
-    if (error) {
-      console.error('Failed to log webhook:', error)
-    }
+  private async logWebhook(_event: WebhookEvent): Promise<void> {
+    // Already claimed and inserted atomically at start of processing
   }
 
   // ─── Private: Invalidate User Cache ────────────────────────────

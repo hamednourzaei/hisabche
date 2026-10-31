@@ -23,6 +23,7 @@ import {
   type ProductUnitOption,
 } from '@hisabche/validation'
 import { buildEnqueue } from '@hisabche/app-bridge'
+import { requireCapability } from '../auth'
 import { NotFoundError, ValidationError } from '../errors'
 import type { LocalDb } from '../db'
 import type { Router } from '../router'
@@ -232,6 +233,7 @@ export function ensureDefaultAccounts(db: RouteHandlerContext['db'], workspaceId
     { code: '1030', name: 'موجودی کالا (انبار)', type: 'asset', role: 'inventory' },
     { code: '1050', name: 'حساب‌های دریافتنی', type: 'asset', role: 'receivable' },
     { code: '2010', name: 'حساب‌های پرداختنی', type: 'liability', role: 'payable' },
+    { code: '2100', name: 'مالیات', type: 'liability', role: 'tax' },
     { code: '4010', name: 'درآمد فروش', type: 'revenue', role: 'sales' },
     { code: '5010', name: 'بهای تمام شده کالای فروش رفته', type: 'expense', role: 'cogs' },
   ]
@@ -772,6 +774,8 @@ export function registerInvoiceRoutes(router: Router): void {
       const ledgerLines = invoiceLedgerLines({
         isPurchase: type === 'purchase',
         total: roundInvoiceMoney(total * exchangeRate, booksCurrency),
+        taxTotal:
+          taxTotal > 0 ? roundInvoiceMoney(taxTotal * exchangeRate, booksCurrency) : undefined,
         costOfGoodsSold:
           costOfGoodsSold > 0 ? roundInvoiceMoney(costOfGoodsSold, booksCurrency) : undefined,
         accounts,
@@ -906,6 +910,8 @@ export function registerInvoiceRoutes(router: Router): void {
     const { id } = params
     const { workspaceId } = ctx
 
+    requireCapability(ctx, 'invoice.delete')
+
     const inv = db.get<InvoiceRow>(
       'SELECT * FROM invoice WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL',
       [id, workspaceId],
@@ -1025,7 +1031,16 @@ export function registerInvoiceRoutes(router: Router): void {
         [now, id],
       )
 
-      if (c.headers?.['x-hisabche-queue'] === '1') {
+      // Check if there is an unsent create in sync_queue to squash (Scenario 15B)
+      const pendingCreate = db.get<{ client_id: string }>(
+        "SELECT client_id FROM sync_queue WHERE entity = 'invoice' AND operation = 'create' AND (payload LIKE ? OR client_id = ?) AND status IN ('pending', 'retry')",
+        [`%"id":"${id}"%`, id],
+      )
+      if (pendingCreate) {
+        db.run("UPDATE sync_queue SET status = 'cancelled' WHERE client_id = ?", [
+          pendingCreate.client_id,
+        ])
+      } else if (c.headers?.['x-hisabche-queue'] === '1') {
         const enqueue = buildEnqueue({
           entity: 'invoice',
           operation: 'delete',
@@ -1056,13 +1071,22 @@ export function registerInvoiceRoutes(router: Router): void {
   // instant, so the projection goes — header AND lines, in ONE transaction —
   // and nothing else: stock and balances are rebuilt from the pulled rows,
   // never patched here.
+  //
+  // Scenario 06B guard: only delete if header exists and dirty === 0.
   router.delete('/invoices/:id/projection', (c: RouteHandlerContext) => {
     const { db, params } = c
     const id = params.id
     return db.transaction(() => {
+      const header = db.get<{ id: string; dirty: number }>(
+        'SELECT id, dirty FROM invoice WHERE id = ?',
+        [id],
+      )
+      if (!header || header.dirty !== 0) {
+        return { removed: 0 }
+      }
       const items = db.run('DELETE FROM invoice_item WHERE invoice_id = ?', [id])
-      const header = db.run('DELETE FROM invoice WHERE id = ? AND dirty = 0', [id])
-      return { removed: items.changes + header.changes }
+      const delHeader = db.run('DELETE FROM invoice WHERE id = ? AND dirty = 0', [id])
+      return { removed: items.changes + delHeader.changes }
     })
   })
 }

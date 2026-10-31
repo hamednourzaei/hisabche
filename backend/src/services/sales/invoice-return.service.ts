@@ -12,6 +12,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
+import { asReplay } from '../../utils/client-request'
 import { invalidateMoneyCaches } from '../../utils/money-cache'
 
 export class InvoiceReturnService {
@@ -47,10 +48,25 @@ export class InvoiceReturnService {
       returnNumber: string
       returnDate: string
       userId?: string | undefined
+      clientRequestId?: string | null | undefined
       lines: readonly ReturnLineRequest[]
     },
   ) {
     if (!workspaceId) throw new ValidationError('ACCOUNTING_WORKSPACE_REQUIRED')
+
+    // Idempotency check: if clientRequestId provided, check if return already exists
+    if (input.clientRequestId) {
+      const { data: existing } = await this.db
+        .from('invoice_returns')
+        .select('*, lines:invoice_return_lines(*)')
+        .eq('workspace_id', workspaceId)
+        .eq('client_request_id', input.clientRequestId)
+        .maybeSingle()
+
+      if (existing) {
+        return asReplay(existing)
+      }
+    }
 
     // Fail closed: verify invoice belongs to workspace first and read currency for precision
     const { data: inv, error: invErr } = await this.db
@@ -119,6 +135,14 @@ export class InvoiceReturnService {
         throw new ConflictError('JOURNAL_ENTRY_UNBALANCED')
       }
       throw new DatabaseError(msg, error)
+    }
+
+    if (input.clientRequestId && data && typeof data === 'object' && 'id' in data) {
+      await this.db
+        .from('invoice_returns')
+        .update({ client_request_id: input.clientRequestId })
+        .eq('workspace_id', workspaceId)
+        .eq('id', (data as { id: string }).id)
     }
 
     // Invalidate financial and dashboard caches

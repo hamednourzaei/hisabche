@@ -11,6 +11,7 @@ import { supabase } from '../../db'
 import { ConflictError, DatabaseError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
+import { invalidateMoneyCaches } from '../../utils/money-cache'
 import type { TenancyContext } from '../tenancy.service'
 import { ledger } from '../accounting'
 
@@ -25,6 +26,7 @@ const isMissingTable = (error: { code?: string } | null | undefined) =>
 export class CurrencyService {
   private async invalidate(workspaceId: string) {
     await memoryCache.invalidate(`currency:${workspaceId}`)
+    await invalidateMoneyCaches(workspaceId)
   }
 
   async listRates(ctx: TenancyContext, currency?: string): Promise<RateQuote[]> {

@@ -15,6 +15,7 @@ import {
   updateProductSchema,
 } from '@hisabche/validation'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
+import { requireCapability } from '../auth'
 import { buildEnqueue } from '@hisabche/app-bridge'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -489,6 +490,8 @@ export function registerProductRoutes(router: Router): void {
     const { db, ctx, params } = c
     const { id } = params
     const { workspaceId } = ctx
+
+    requireCapability(ctx, 'product.write')
 
     const existing = db.get<ProductRow>(
       'SELECT * FROM product WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL',

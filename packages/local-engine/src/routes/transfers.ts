@@ -163,6 +163,13 @@ export function registerTransferRoutes(router: Router): void {
         if (need <= 0) break
       }
 
+      if (need > 0) {
+        throw new ConflictError(
+          'INSUFFICIENT_COST_LAYERS',
+          `Cannot transfer ${quantity} units: cost layers in source warehouse only cover ${quantity - need} units`,
+        )
+      }
+
       if (c.headers?.['x-hisabche-queue'] === '1') {
         const enqueue = buildEnqueue({
           entity: 'inventory_movement',

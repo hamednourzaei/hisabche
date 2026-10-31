@@ -39,18 +39,30 @@ export function currentOutboxOwner(): OutboxOwner {
 }
 
 /**
- * Only the account that made the change may send it.
+ * Only the account that made the change may send it, or a verified member of the same
+ * active workspace when draining shared workspace records (P0-B / Scenario 14B).
  *
  * ⚠️ A ROW WITH NO OWNER IS NEVER SENT. The sync centre shows the number of
  * such rows and offers an explicit action; sending it is a decision a person
  * makes, not something the drain does behind their back.
  *
- * ⚠️ A ROW OF ANOTHER ACCOUNT IS NOT THIS PERSON'S TO SEND. It belongs to
- * the account that made it, and it goes when they are here.
+ * ⚠️ A ROW OF ANOTHER WORKSPACE IS NOT THIS PERSON'S TO SEND. It belongs to
+ * that business's books and goes only when that business is active.
  */
-export function isOwnedBy(entry: QueueEntry, userId: string | null): boolean {
+export function isOwnedBy(
+  entry: QueueEntry,
+  userId: string | null,
+  activeWorkspaceId?: string | null,
+): boolean {
   if (!userId) return false
-  return entry.userId === userId
+  if (entry.userId === userId) return true
+  // In a shared workspace on this device, changes belonging to the active workspace
+  // can be sent by an active member of that workspace (Rule 1: workspace_id is the security boundary).
+  // This eliminates deadlocks where User B's invoice depends on User A's customer.
+  if (activeWorkspaceId && entry.workspaceId === activeWorkspaceId) {
+    return true
+  }
+  return false
 }
 
 /**

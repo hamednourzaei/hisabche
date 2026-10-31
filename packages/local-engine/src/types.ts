@@ -20,10 +20,13 @@ export interface LocalEngineResponse<T = unknown> {
   headers?: Record<string, string> | undefined
 }
 
+export type WorkspaceRole =
+  'owner' | 'admin' | 'manager' | 'cashier' | 'seller' | 'member' | 'viewer'
+
 export interface LocalContext {
   workspaceId: string
   userId: string
-  role: 'owner'
+  role: WorkspaceRole
   baseCurrency: string
   timeZone: string
 }

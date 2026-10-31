@@ -29,6 +29,7 @@ import {
 import { z } from 'zod'
 import type { LocalDb } from '../db'
 import { NotFoundError, ValidationError } from '../errors'
+import { requireCapability } from '../auth'
 import type { Router } from '../router'
 import type { LocalContext, RouteHandlerContext } from '../types'
 import { derivedId } from './derived-id'
@@ -164,6 +165,7 @@ export function registerPricingRoutes(router: Router): void {
   )
 
   router.post('/price-lists', ({ db, ctx, body }: RouteHandlerContext) => {
+    requireCapability(ctx, 'pricing.write')
     const input = parse(priceListInputSchema, body ?? {})
     const id = newId()
     const now = new Date().toISOString()
@@ -195,6 +197,7 @@ export function registerPricingRoutes(router: Router): void {
   })
 
   router.patch('/price-lists/:id/active', ({ db, ctx, params, body }: RouteHandlerContext) => {
+    requireCapability(ctx, 'pricing.write')
     const { isActive } = parse(z.object({ isActive: z.boolean() }), body ?? {})
     const id = params.id ?? ''
     listRow(db, ctx, id)
@@ -217,6 +220,7 @@ export function registerPricingRoutes(router: Router): void {
   })
 
   router.put('/price-lists/:id/items', ({ db, ctx, params, body }: RouteHandlerContext) => {
+    requireCapability(ctx, 'pricing.write')
     const { items } = parse(priceListItemsSchema, body ?? {})
     const id = params.id ?? ''
     listRow(db, ctx, id)
@@ -264,6 +268,7 @@ export function registerPricingRoutes(router: Router): void {
   router.put(
     '/price-lists/customers/:customerId',
     ({ db, ctx, params, body }: RouteHandlerContext) => {
+      requireCapability(ctx, 'pricing.write')
       const { priceListId } = parse(
         z.object({ priceListId: z.string().uuid().nullable() }),
         body ?? {},
@@ -294,6 +299,7 @@ export function registerPricingRoutes(router: Router): void {
   })
 
   router.post('/promotions', ({ db, ctx, body }: RouteHandlerContext) => {
+    requireCapability(ctx, 'pricing.write')
     const input = parse(promotionInputSchema, body ?? {})
     assertOwned(db, ctx, 'product', input.productIds, 'PROMOTION_PRODUCT_NOT_FOUND')
     assertOwned(db, ctx, 'customer', input.customerIds, 'PROMOTION_CUSTOMER_NOT_FOUND')
@@ -328,6 +334,7 @@ export function registerPricingRoutes(router: Router): void {
   })
 
   router.patch('/promotions/:id/active', ({ db, ctx, params, body }: RouteHandlerContext) => {
+    requireCapability(ctx, 'pricing.write')
     const { isActive } = parse(z.object({ isActive: z.boolean() }), body ?? {})
     const result = db.run(
       'UPDATE promotion SET is_active = ?, updated_at = ? WHERE workspace_id = ? AND id = ?',

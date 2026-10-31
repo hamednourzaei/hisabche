@@ -18,6 +18,7 @@
 // ============================================
 
 import type { DraftLine } from './accounting.domain'
+import { round2 } from './money'
 
 /** An invoice amount in the books currency at the invoice's frozen rate. */
 export function inBooksCurrency(amount: number, rate: number): number {
@@ -30,29 +31,49 @@ export interface InvoicePostingAccounts {
   receivable?: string | undefined
   sales?: string | undefined
   cogs?: string | undefined
+  tax?: string | undefined
 }
 
 export function invoiceLedgerLines(input: {
   isPurchase: boolean
   /** Books currency. */
   total: number
+  /** Books currency, tax portion of total. Sales only. */
+  taxTotal?: number | undefined
   /** Books currency, from the consumed cost layers. Sales only. */
   costOfGoodsSold?: number | undefined
   accounts: InvoicePostingAccounts
 }): DraftLine[] {
   const { isPurchase, total, accounts } = input
-  const lines: DraftLine[] = isPurchase
-    ? [
-        // Goods arrived and we owe the supplier. No revenue is involved —
-        // the version before this booked one, which inflated the income
-        // statement by the value of every purchase.
-        { accountId: accounts.inventory!, debit: total, credit: 0 },
-        { accountId: accounts.payable!, debit: 0, credit: total },
-      ]
-    : [
-        { accountId: accounts.receivable!, debit: total, credit: 0 },
-        { accountId: accounts.sales!, debit: 0, credit: total },
-      ]
+  const tax = Number(input.taxTotal) || 0
+
+  let lines: DraftLine[]
+  if (isPurchase) {
+    // Goods arrived and we owe the supplier. No revenue is involved —
+    // the version before this booked one, which inflated the income
+    // statement by the value of every purchase.
+    lines = [
+      { accountId: accounts.inventory!, debit: total, credit: 0 },
+      { accountId: accounts.payable!, debit: 0, credit: total },
+    ]
+  } else {
+    // Sales:
+    // When tax is present and tax account exists, separate sales revenue from tax payable:
+    // Debit receivable for full total
+    // Credit tax liability for tax portion
+    // Credit sales revenue for the net amount (total - tax)
+    lines = [{ accountId: accounts.receivable!, debit: total, credit: 0 }]
+
+    if (tax > 0 && accounts.tax) {
+      const netSales = round2(total - tax)
+      if (netSales > 0) {
+        lines.push({ accountId: accounts.sales!, debit: 0, credit: netSales })
+      }
+      lines.push({ accountId: accounts.tax, debit: 0, credit: tax })
+    } else {
+      lines.push({ accountId: accounts.sales!, debit: 0, credit: total })
+    }
+  }
 
   // Cost of goods sold, as the costing core actually consumed it — never the
   // product's CURRENT buy price (a phone bought at 10M and restocked at 9M had

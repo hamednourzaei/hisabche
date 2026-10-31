@@ -53,6 +53,7 @@ import type {
   RouteHandlerContext,
 } from './types'
 
+export * from './auth'
 export * from './context'
 export * from './db'
 export * from './errors'

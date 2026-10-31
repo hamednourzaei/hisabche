@@ -49,6 +49,13 @@ export class ConflictError extends HttpError {
   }
 }
 
+export class ForbiddenError extends HttpError {
+  constructor(message = 'Forbidden', code = 'CAPABILITY_REQUIRED', details?: unknown) {
+    super(403, code, message, details)
+    this.name = 'ForbiddenError'
+  }
+}
+
 export class OfflineNotAvailableError extends HttpError {
   /**
    * @param feature the feature the endpoint belongs to (the endpoint matrix), or

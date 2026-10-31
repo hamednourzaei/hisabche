@@ -8,11 +8,21 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs'
 import { join, extname, basename } from 'path'
 import { execSync } from 'child_process'
+import { extractSymbolsFromSource, inferPackageName } from './lib/ast-symbol-extractor.mjs'
+import { loadPathAliases, loadWorkspacePackageMap } from './lib/module-resolver.mjs'
+import { extractFileRelationships } from './lib/ast-relationship-extractor.mjs'
+import { buildDependencyGraph } from './lib/dependency-graph.mjs'
+import {
+  IncrementalIndexer,
+  computeConfigFingerprint,
+  computeSha256,
+} from './lib/incremental-indexer.mjs'
 
 const ROOT = process.cwd()
 const AI_DIR = join(ROOT, '.ai', 'codebase')
 const GRAPH_JSON = join(AI_DIR, 'graph.json')
 const MAP_MD = join(AI_DIR, 'CODEBASE_MAP.md')
+const CACHE_JSON = join(AI_DIR, 'cache.json')
 
 const IGNORE_DIRS = new Set([
   'node_modules',
@@ -226,11 +236,34 @@ function getAllSourceFiles(dir, prefix = '') {
     } else if (entry.isFile()) {
       const ext = extname(entry.name)
       if (SOURCE_EXTS.has(ext) && !IGNORE_FILES.has(entry.name) && !entry.name.endsWith('.d.ts')) {
-        files.push(join(prefix, entry.name))
+        files.push(normalizePath(join(prefix, entry.name)))
       }
     }
   }
   return files
+}
+
+function getAllTestFiles(dir, prefix = '') {
+  const testFiles = []
+  try {
+    const entries = readdirSync(dir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (
+          !['node_modules', '.p', '.git', '.next', 'dist', 'build', '.turbo', 'coverage'].includes(
+            entry.name,
+          )
+        ) {
+          testFiles.push(...getAllTestFiles(join(dir, entry.name), join(prefix, entry.name)))
+        }
+      } else if (entry.isFile()) {
+        if (/\.(test|spec)\.(ts|tsx|js|mjs)$/.test(entry.name)) {
+          testFiles.push(join(prefix, entry.name).replace(/\\/g, '/'))
+        }
+      }
+    }
+  } catch {}
+  return testFiles
 }
 
 function readFileContent(filePath) {
@@ -473,43 +506,91 @@ function buildIndex() {
   const symbolIndex = {}
   const packageDeps = {}
   const routes = []
+  const aliases = loadPathAliases()
+  const workspacePackages = loadWorkspacePackageMap(packages)
+  const allRelationships = []
 
   for (const file of allFiles) {
     const content = readFileContent(file)
     if (!content) continue
 
     const imports = extractImports(content)
-    const exports = extractExports(content)
     const platforms = detectPlatform(content, file)
     const domains = detectDomain(file, content)
+    const pkgInfo = packages.find((p) => file.startsWith(p.path))
+    const pkgName = pkgInfo ? pkgInfo.name : inferPackageName(file)
+
+    const astSymbols = extractSymbolsFromSource(file, content, {
+      packageName: pkgName,
+      domain: domains.length > 0 ? domains[0] : 'SHARED',
+      platform: platforms.length > 0 ? platforms[0] : 'SHARED',
+    })
+
+    // Fallback to regex exports only if AST parser produced no symbols on non-empty file
+    const effectiveSymbols =
+      astSymbols.length > 0
+        ? astSymbols
+        : extractExports(content).map((exp) => ({
+            schemaVersion: 1,
+            id: `${pkgName}/${file}#${exp.name}`,
+            name: exp.name,
+            kind: exp.kind,
+            signature: `export ${exp.name}`,
+            signatureStatus: 'unresolved',
+            file,
+            line: exp.line,
+            startLine: exp.line,
+            endLine: exp.line,
+            package: pkgName,
+            exported: true,
+            exportPaths: [exp.kind === 'default' ? 'default' : 'named'],
+            overloadGroup: null,
+            doc: null,
+            sourceHash: '',
+            fileHash: '',
+            extractionStatus: 'degraded',
+            domain: domains.length > 0 ? domains[0] : 'SHARED',
+            platform: platforms.length > 0 ? platforms[0] : 'SHARED',
+          }))
+
+    const exportedSymbols = effectiveSymbols.filter((s) => s.exported)
+    const exportNames =
+      exportedSymbols.length > 0
+        ? [...new Set(exportedSymbols.map((s) => s.name))]
+        : effectiveSymbols.map((s) => s.name)
 
     fileData[file] = {
       imports,
       importedBy: [],
       platform: platforms.length > 0 ? platforms : ['SHARED'],
       domain: domains.length > 0 ? domains : ['SHARED'],
-      exports: exports.map((e) => e.name),
+      exports: exportNames,
       size: content.length,
       lines: content.split('\n').length,
     }
 
-    for (const exp of exports) {
-      const key = `${file}::${exp.name}`
-      symbolIndex[key] = {
-        file,
-        line: exp.line,
-        name: exp.name,
-        kind: exp.kind,
-        domain: domains.length > 0 ? domains[0] : 'SHARED',
-        platform: platforms.length > 0 ? platforms[0] : 'SHARED',
+    for (const sym of effectiveSymbols) {
+      const primaryKey = `${file}::${sym.name}`
+      if (!symbolIndex[primaryKey]) {
+        symbolIndex[primaryKey] = sym
+      } else {
+        symbolIndex[sym.id] = sym
       }
     }
+
+    const fileRels = extractFileRelationships(file, content, {
+      packageName: pkgName,
+      aliases,
+      workspacePackages,
+      symbolIndex,
+      fileSymbols: effectiveSymbols,
+    })
+    allRelationships.push(...fileRels)
 
     if (file.includes('routes') && (file.endsWith('.routes.ts') || file.endsWith('.routes.js'))) {
       routes.push({ file, domain: domains[0] || 'SHARED' })
     }
 
-    const pkgInfo = packages.find((p) => file.startsWith(p.path))
     if (pkgInfo) {
       if (!packageDeps[pkgInfo.name])
         packageDeps[pkgInfo.name] = { deps: new Set(), dependents: new Set() }
@@ -542,8 +623,55 @@ function buildIndex() {
     pkg.dependents = Array.from(pkg.dependents)
   }
 
+  console.log('Extracting test-to-symbol relationships...')
+  const testFiles = getAllTestFiles(ROOT)
+  for (const tFile of testFiles) {
+    const tContent = readFileContent(tFile)
+    if (!tContent) continue
+    const tRels = extractFileRelationships(tFile, tContent, {
+      aliases,
+      workspacePackages,
+      symbolIndex,
+    })
+    for (const r of tRels) {
+      if (r.type === 'TESTS') {
+        allRelationships.push(r)
+      }
+    }
+  }
+
+  // Sort relationships deterministically by ID
+  allRelationships.sort((a, b) => a.id.localeCompare(b.id))
+
+  console.log(`Extracted ${allRelationships.length} relationships. Building dependency graphs...`)
+  const depGraph = buildDependencyGraph(allRelationships)
+
+  const relByType = {}
+  let relResolved = 0
+  let relUnresolved = 0
+  let relExternal = 0
+  let relAmbiguous = 0
+
+  for (const r of allRelationships) {
+    relByType[r.type] = (relByType[r.type] || 0) + 1
+    if (r.status === 'RESOLVED') relResolved++
+    else if (r.status === 'UNRESOLVED') relUnresolved++
+    else if (r.status === 'EXTERNAL') relExternal++
+    else if (r.status === 'AMBIGUOUS' || r.status === 'DYNAMIC_UNRESOLVED') relAmbiguous++
+  }
+
   const gitHash = getGitHash()
   const timestamp = new Date().toISOString()
+
+  const resolvedCount = Object.values(symbolIndex).filter(
+    (s) => s.signatureStatus === 'resolved',
+  ).length
+  const partialCount = Object.values(symbolIndex).filter(
+    (s) => s.signatureStatus === 'partially_resolved',
+  ).length
+  const unresolvedCount = Object.values(symbolIndex).filter(
+    (s) => s.signatureStatus === 'unresolved',
+  ).length
 
   const graph = {
     metadata: {
@@ -552,16 +680,55 @@ function buildIndex() {
       totalFiles: allFiles.length,
       totalSymbols: Object.keys(symbolIndex).length,
       totalPackages: packages.length,
+      astStats: {
+        resolved: resolvedCount,
+        partiallyResolved: partialCount,
+        unresolved: unresolvedCount,
+      },
+      relationshipStats: {
+        total: allRelationships.length,
+        byType: relByType,
+        resolved: relResolved,
+        unresolved: relUnresolved,
+        external: relExternal,
+        ambiguous: relAmbiguous,
+        fileCycles: depGraph.cycles.totalFileCycles,
+        packageCycles: depGraph.cycles.totalPackageCycles,
+      },
     },
     packages,
     packageDeps,
     files: fileData,
     symbols: symbolIndex,
+    relationships: allRelationships,
+    dependencies: depGraph,
     routes,
   }
 
   writeFileSync(GRAPH_JSON, JSON.stringify(graph, null, 2))
   console.log(`Graph written to ${GRAPH_JSON}`)
+
+  // Write fingerprint cache for incremental updates
+  const fileFingerprints = {}
+  for (const file of allFiles) {
+    const content = readFileContent(file)
+    fileFingerprints[file] = {
+      hash: computeSha256(content),
+      size: content.length,
+      lines: content.split('\n').length,
+    }
+  }
+
+  const cache = {
+    schemaVersion: 1,
+    indexerVersion: '2.0.0',
+    configHash: computeConfigFingerprint(),
+    lastFullBuild: timestamp,
+    lastIncrementalUpdate: timestamp,
+    fileFingerprints,
+  }
+  writeFileSync(CACHE_JSON, JSON.stringify(cache, null, 2))
+  console.log(`Cache written to ${CACHE_JSON}`)
 
   generateMarkdownMap(graph)
   console.log(`Map written to ${MAP_MD}`)
@@ -697,6 +864,17 @@ function generateMarkdownMap(graph) {
     }
   }
 
+  // 6. Relationship Intelligence
+  md += `\n## 6. Relationship & Dependency Intelligence\n\n`
+  md += `- **Total Typed Relationships**: ${graph.relationships ? graph.relationships.length : 0}\n`
+  if (graph.metadata.relationshipStats) {
+    const rs = graph.metadata.relationshipStats
+    md += `- **Verified Resolved Edges**: ${rs.resolved}\n`
+    md += `- **External Dependencies**: ${rs.external}\n`
+    md += `- **Detected File Cycles**: ${rs.fileCycles}\n`
+    md += `- **Detected Package Cycles**: ${rs.packageCycles}\n`
+  }
+
   writeFileSync(MAP_MD, md)
 }
 
@@ -752,7 +930,12 @@ function buildDomainMap(graph) {
     if (file.includes('domain') || file.includes('service') || file.includes('.domain.ts')) {
       domainMap[domain].sharedLogic.add(sym.file)
     }
-    if (file.includes('hook') || (file.includes('use') && sym.kind === 'declaration')) {
+    if (
+      file.includes('hook') ||
+      sym.kind === 'react_hook' ||
+      (file.includes('use') &&
+        (sym.kind === 'declaration' || sym.kind === 'function' || sym.kind === 'arrow_function'))
+    ) {
       domainMap[domain].hooks.add(sym.file)
     }
     if (file.includes('routes') && file.endsWith('.routes.ts')) {
@@ -765,6 +948,7 @@ function buildDomainMap(graph) {
       domainMap[domain].offlineSync.add(sym.file)
     }
     if (
+      sym.kind === 'react_component' ||
       file.includes('screen') ||
       file.includes('page') ||
       file.includes('component') ||
@@ -789,6 +973,30 @@ function buildDomainMap(graph) {
   return domainMap
 }
 
-// Run
-buildIndex()
-console.log('Done!')
+// CLI Execution
+const args = process.argv.slice(2)
+const isFull = args.includes('--full')
+const isDryRun = args.includes('--dry-run')
+const isIncremental = args.includes('--incremental')
+
+if (isFull || (!existsSync(CACHE_JSON) && !isDryRun)) {
+  console.log('Running full index build...')
+  buildIndex()
+  console.log('Full index build complete!')
+} else {
+  const indexer = new IncrementalIndexer()
+  const res = indexer.update({ dryRun: isDryRun, forceFull: isFull })
+  if (isDryRun) {
+    console.log(JSON.stringify(res, null, 2))
+  } else {
+    console.log(`Incremental index update completed: ${res.mode} (${res.status || 'DONE'})`)
+    if (res.stats) {
+      console.log(
+        `- Added: ${res.stats.added || 0}, Modified: ${res.stats.modified || 0}, Deleted: ${res.stats.deleted || 0}, Renamed: ${res.stats.renamed || 0}`,
+      )
+      console.log(
+        `- Reprocessed: ${res.stats.reprocessed || 0}, Invalidated: ${res.stats.invalidated || 0}`,
+      )
+    }
+  }
+}

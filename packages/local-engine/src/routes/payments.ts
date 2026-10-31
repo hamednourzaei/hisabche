@@ -29,6 +29,7 @@ import {
   type OpenInvoice,
 } from '@hisabche/validation'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
+import { requireCapability } from '../auth'
 import { buildEnqueue } from '@hisabche/app-bridge'
 import type { Router } from '../router'
 import { ensureDefaultAccounts } from './invoices'
@@ -465,6 +466,8 @@ export function registerPaymentRoutes(router: Router): void {
     const { id } = params
     const { workspaceId } = ctx
 
+    requireCapability(ctx, 'payment.cancel')
+
     const raw = (c.body || {}) as Record<string, unknown>
     const parsed = cancelPaymentSchema.safeParse(raw)
     if (!parsed.success) {
@@ -483,30 +486,28 @@ export function registerPaymentRoutes(router: Router): void {
     const now = new Date().toISOString()
 
     return db.transaction(() => {
-      // 1. Revert allocations on invoices
+      // 1. Revert allocations on invoices (Scenario 05C: atomic delta update)
       const allocations = db.all<{ id: string; invoice_id: string; amount: number }>(
-        'SELECT id, invoice_id, amount FROM payment_allocation WHERE payment_id = ? AND workspace_id = ?',
+        'SELECT id, invoice_id, amount FROM payment_allocation WHERE payment_id = ? AND workspace_id = ? AND deleted_at IS NULL',
         [id, workspaceId],
       )
 
       for (const a of allocations) {
-        const inv = db.get<{ total: number; paid_amount: number }>(
-          'SELECT total, paid_amount FROM invoice WHERE id = ?',
-          [a.invoice_id],
+        db.run(
+          `UPDATE invoice
+              SET paid_amount = MAX(0, paid_amount - ?),
+                  status = CASE WHEN MAX(0, paid_amount - ?) = 0 THEN 'unpaid' ELSE 'partial' END,
+                  updated_at = ?
+            WHERE id = ?`,
+          [a.amount, a.amount, now, a.invoice_id],
         )
-        if (inv) {
-          const nextPaid = Math.max(0, inv.paid_amount - a.amount)
-          const newStatus = nextPaid === 0 ? 'unpaid' : 'partial'
-          db.run('UPDATE invoice SET paid_amount = ?, status = ?, updated_at = ? WHERE id = ?', [
-            nextPaid,
-            newStatus,
-            now,
-            a.invoice_id,
-          ])
-        }
       }
 
-      db.run('DELETE FROM payment_allocation WHERE payment_id = ?', [id])
+      // Scenario 05B Fix: soft delete allocations instead of hard DELETE
+      db.run(
+        'UPDATE payment_allocation SET deleted_at = ?, updated_at = ? WHERE payment_id = ? AND deleted_at IS NULL',
+        [now, now, id],
+      )
 
       // 2. Reverse journal entry
       if (payment.journal_entry_id) {

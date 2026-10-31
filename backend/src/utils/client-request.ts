@@ -14,13 +14,25 @@
 // ============================================
 
 import type { FastifyReply, FastifyRequest } from 'fastify'
+import { BaseError } from '../errors/base.error'
 
 const KEY_PATTERN = /^[A-Za-z0-9_.:-]{8,128}$/
 
-/** The request's key, or null. Anything that is not a sane key is ignored. */
+export class InvalidIdempotencyKeyError extends BaseError {
+  constructor(key: string) {
+    super(`INVALID_IDEMPOTENCY_KEY_FORMAT: ${key}`, 400)
+    this.name = 'InvalidIdempotencyKeyError'
+  }
+}
+
+/** The request's key, or null. Throws InvalidIdempotencyKeyError if key is present but invalid. */
 export function readClientRequestId(request: FastifyRequest): string | null {
   const raw = request.headers['idempotency-key']
-  return typeof raw === 'string' && KEY_PATTERN.test(raw) ? raw : null
+  if (raw === undefined || raw === null || raw === '') return null
+  if (typeof raw !== 'string' || !KEY_PATTERN.test(raw)) {
+    throw new InvalidIdempotencyKeyError(String(raw))
+  }
+  return raw
 }
 
 /**

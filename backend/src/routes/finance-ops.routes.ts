@@ -30,6 +30,7 @@ import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
+import { invalidateMoneyCaches } from '../utils/money-cache'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -164,7 +165,9 @@ export async function financeOpsRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = assetSchema.parse(request.body)
-        return reply.code(201).send(await assetsService.create(request.tenancy, body))
+        const result = await assetsService.create(request.tenancy, body)
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.code(201).send(result)
       } catch (err) {
         return fail(reply, err, 'Failed to create the asset')
       }
@@ -193,7 +196,9 @@ export async function financeOpsRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { asOf } = request.body as { asOf?: string }
-        return reply.send(await assetsService.postDue(request.tenancy, asOf))
+        const result = await assetsService.postDue(request.tenancy, asOf)
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.send(result)
       } catch (err) {
         return fail(reply, err, 'Failed to run depreciation')
       }
@@ -210,7 +215,9 @@ export async function financeOpsRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const body = disposeSchema.parse(request.body)
-        return reply.send(await assetsService.dispose(request.tenancy, id, body))
+        const result = await assetsService.dispose(request.tenancy, id, body)
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.send(result)
       } catch (err) {
         return fail(reply, err, 'Failed to dispose of the asset')
       }
@@ -288,7 +295,9 @@ export async function financeOpsRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = reconcileSchema.parse(request.body)
-        return reply.send(await bankingService.reconcile(request.tenancy, body))
+        const result = await bankingService.reconcile(request.tenancy, body)
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.send(result)
       } catch (err) {
         return fail(reply, err, 'Failed to reconcile')
       }
@@ -302,6 +311,7 @@ export async function financeOpsRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         await bankingService.unmatch(request.tenancy, id)
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
         return reply.send({ unmatched: id })
       } catch (err) {
         return fail(reply, err, 'Failed to unmatch')
@@ -352,7 +362,9 @@ export async function financeOpsRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = baseCurrencySchema.parse(request.body)
-        return reply.send(await setBaseCurrency(request.tenancy, body.currency))
+        const result = await setBaseCurrency(request.tenancy, body.currency)
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.send(result)
       } catch (err) {
         return fail(reply, err, 'Failed to save the base currency')
       }
@@ -381,7 +393,9 @@ export async function financeOpsRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = rateSchema.parse(request.body)
-        return reply.send(await currencyService.setRate(request.tenancy, body))
+        const result = await currencyService.setRate(request.tenancy, body)
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.send(result)
       } catch (err) {
         return fail(reply, err, 'Failed to save the rate')
       }
@@ -441,7 +455,9 @@ export async function financeOpsRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = revalueSchema.parse(request.body)
-        return reply.send(await currencyService.revalue(request.tenancy, body))
+        const result = await currencyService.revalue(request.tenancy, body)
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.send(result)
       } catch (err) {
         return fail(reply, err, 'Failed to revalue')
       }

@@ -331,4 +331,93 @@ describe('the journal lines one invoice books (in the books currency)', () => {
     })
     expect(lines).toHaveLength(2)
   })
+
+  describe('Scenario 26A — VAT and revenue recognition separation', () => {
+    it('books revenue and tax liability separately on sale with tax', () => {
+      const lines = invoiceLedgerLines({
+        isPurchase: false,
+        total: 110,
+        taxTotal: 10,
+        accounts: {
+          receivable: 'receivable',
+          sales: 'sales',
+          tax: 'tax_payable',
+        },
+      })
+      expect(lines).toEqual([
+        { accountId: 'receivable', debit: 110, credit: 0 },
+        { accountId: 'sales', debit: 0, credit: 100 },
+        { accountId: 'tax_payable', debit: 0, credit: 10 },
+      ])
+      // Total debits equal total credits
+      expect(sumMinorUnits(lines.map((l) => l.debit))).toBe(
+        sumMinorUnits(lines.map((l) => l.credit)),
+      )
+    })
+
+    it('falls back to crediting full total to sales if no tax account is configured', () => {
+      const lines = invoiceLedgerLines({
+        isPurchase: false,
+        total: 110,
+        taxTotal: 10,
+        accounts: {
+          receivable: 'receivable',
+          sales: 'sales',
+        },
+      })
+      expect(lines).toEqual([
+        { accountId: 'receivable', debit: 110, credit: 0 },
+        { accountId: 'sales', debit: 0, credit: 110 },
+      ])
+    })
+
+    it('balances correctly when invoice has discount, tax, and COGS', () => {
+      // e.g. subtotal 100, discount 10, net taxable 90, tax 9, total 99
+      const lines = invoiceLedgerLines({
+        isPurchase: false,
+        total: 99,
+        taxTotal: 9,
+        costOfGoodsSold: 45,
+        accounts: {
+          receivable: 'receivable',
+          sales: 'sales',
+          tax: 'tax_payable',
+          cogs: 'cogs',
+          inventory: 'inventory',
+        },
+      })
+      expect(lines).toEqual([
+        { accountId: 'receivable', debit: 99, credit: 0 },
+        { accountId: 'sales', debit: 0, credit: 90 },
+        { accountId: 'tax_payable', debit: 0, credit: 9 },
+        { accountId: 'cogs', debit: 45, credit: 0 },
+        { accountId: 'inventory', debit: 0, credit: 45 },
+      ])
+      expect(sumMinorUnits(lines.map((l) => l.debit))).toBe(
+        sumMinorUnits(lines.map((l) => l.credit)),
+      )
+    })
+
+    it('handles decimal precision and rounding without debit/credit imbalance', () => {
+      // total 105.75, tax 5.75 -> net sales 100.00
+      const lines = invoiceLedgerLines({
+        isPurchase: false,
+        total: 105.75,
+        taxTotal: 5.75,
+        accounts: {
+          receivable: 'receivable',
+          sales: 'sales',
+          tax: 'tax_payable',
+        },
+      })
+      expect(lines).toEqual([
+        { accountId: 'receivable', debit: 105.75, credit: 0 },
+        { accountId: 'sales', debit: 0, credit: 100 },
+        { accountId: 'tax_payable', debit: 0, credit: 5.75 },
+      ])
+      expect(sumMinorUnits(lines.map((l) => l.debit))).toBe(
+        sumMinorUnits(lines.map((l) => l.credit)),
+      )
+    })
+  })
 })

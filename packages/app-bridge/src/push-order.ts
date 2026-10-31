@@ -43,6 +43,8 @@ export function ownId(entry: QueueEntry): string | null {
 export interface PushGate {
   /** The unsent create this entry waits for, or null if it may go now. */
   blockedBy(entry: QueueEntry): string | null
+  /** Returns the ID of a permanently failed dependency if blocked by one. */
+  permanentlyBlockedBy(entry: QueueEntry): string | null
   /** The entry reached the server: anything waiting on it may go. */
   markSent(entry: QueueEntry): void
 }
@@ -56,9 +58,19 @@ export interface PushGate {
  */
 export function createPushGate(queue: readonly QueueEntry[]): PushGate {
   const unsent = new Map<string, string>() // id → clientId of the create
+  const permanentlyFailed = new Set<string>() // ids of creates that cannot succeed without human intervention
+
   for (const entry of queue) {
     const id = ownId(entry)
-    if (entry.operation === 'create' && id && !unsent.has(id)) unsent.set(id, entry.clientId)
+    if (entry.operation === 'create' && id && !unsent.has(id)) {
+      unsent.set(id, entry.clientId)
+      if (
+        entry.attempts >= 5 ||
+        (typeof entry.lastError === 'string' && entry.lastError.startsWith('REJECTED:'))
+      ) {
+        permanentlyFailed.add(id)
+      }
+    }
   }
 
   return {
@@ -69,9 +81,18 @@ export function createPushGate(queue: readonly QueueEntry[]): PushGate {
       }
       return null
     },
+    permanentlyBlockedBy(entry) {
+      for (const ref of referencedIds(entry.payload)) {
+        if (permanentlyFailed.has(ref)) return ref
+      }
+      return null
+    },
     markSent(entry) {
       const id = ownId(entry)
-      if (entry.operation === 'create' && id && unsent.get(id) === entry.clientId) unsent.delete(id)
+      if (entry.operation === 'create' && id && unsent.get(id) === entry.clientId) {
+        unsent.delete(id)
+        permanentlyFailed.delete(id)
+      }
     },
   }
 }

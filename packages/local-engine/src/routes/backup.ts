@@ -5,6 +5,7 @@
 // Returns a full dump of local SQLite records in JSON format.
 // ============================================
 
+import { requireCapability } from '../auth'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 
@@ -13,6 +14,8 @@ export function registerBackupRoutes(router: Router): void {
   router.get('/workspaces/backup', (c: RouteHandlerContext) => {
     const { db, ctx } = c
     const ws = ctx.workspaceId
+
+    requireCapability(ctx, 'backup.manage')
 
     const customers = db.all(
       'SELECT * FROM customer WHERE workspace_id = ? ORDER BY created_at ASC',

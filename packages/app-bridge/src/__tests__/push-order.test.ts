@@ -71,4 +71,36 @@ describe('push order', () => {
     const gate = createPushGate([customer])
     expect(gate.blockedBy(customer)).toBeNull()
   })
+
+  describe('Scenario 14B — Multi-user sync queue deadlock and failed dependency detection', () => {
+    it('detects when an entry is blocked by a permanently failed dependency (attempts >= 5)', () => {
+      const failedCustomer: QueueEntry = {
+        ...customer,
+        attempts: 5,
+        lastError: 'HTTP_500: Internal Server Error',
+      }
+      const gate = createPushGate([failedCustomer, invoice])
+      expect(gate.blockedBy(invoice)).toBe(u(1))
+      expect(gate.permanentlyBlockedBy(invoice)).toBe(u(1))
+    })
+
+    it('detects when an entry is blocked by a rejected dependency (REJECTED:...)', () => {
+      const rejectedCustomer: QueueEntry = {
+        ...customer,
+        attempts: 1,
+        lastError: 'REJECTED: duplicate phone number',
+      }
+      const gate = createPushGate([rejectedCustomer, invoice])
+      expect(gate.blockedBy(invoice)).toBe(u(1))
+      expect(gate.permanentlyBlockedBy(invoice)).toBe(u(1))
+    })
+
+    it('allows invoice to proceed once dependency is successfully marked sent', () => {
+      const gate = createPushGate([customer, invoice])
+      expect(gate.blockedBy(invoice)).toBe(u(1))
+      gate.markSent(customer)
+      expect(gate.blockedBy(invoice)).toBeNull()
+      expect(gate.permanentlyBlockedBy(invoice)).toBeNull()
+    })
+  })
 })

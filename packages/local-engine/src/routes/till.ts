@@ -54,6 +54,7 @@ import {
   type SessionStatus,
 } from '@hisabche/validation'
 import { z } from 'zod'
+import { buildEnqueue } from '@hisabche/app-bridge'
 import type { LocalDb } from '../db'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import type { Router } from '../router'
@@ -496,42 +497,64 @@ export function registerTillRoutes(router: Router): void {
   })
 
   // ─── Cash ──────────────────────────────────────────────────
-  router.post('/pos/sessions/:id/cash', ({ db, ctx, params, body }: RouteHandlerContext) => {
-    const sessionId = params.id ?? ''
-    const input = parse(movementSchema, body ?? {})
-    const session = getSession(db, ctx, sessionId)
-    const problems = validateMovement(session, input)
-    if (problems.length > 0) throw new ValidationError(problems.join(', '))
+  router.post(
+    '/pos/sessions/:id/cash',
+    ({ db, ctx, params, body, headers }: RouteHandlerContext) => {
+      const sessionId = params.id ?? ''
+      const input = parse(movementSchema, body ?? {})
+      const session = getSession(db, ctx, sessionId)
+      const problems = validateMovement(session, input)
+      if (problems.length > 0) throw new ValidationError(problems.join(', '))
 
-    const id = input.movementId ?? newId()
-    try {
-      db.run(
-        `INSERT INTO pos_cash_movement
+      const id = input.movementId ?? newId()
+      try {
+        db.run(
+          `INSERT INTO pos_cash_movement
            (id, workspace_id, session_id, kind, amount_minor, reason, created_by, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          ctx.workspaceId,
-          sessionId,
-          input.kind,
-          input.amountMinor,
-          input.reason,
-          ctx.userId,
-          nowIso(),
-        ],
-      )
-    } catch (error) {
-      // The same key again: this movement is already in the drawer — answer with it,
-      // scoped to this workspace and session so a key cannot read another's.
-      if (isUnique(error) && input.movementId) {
-        const existing = loadMovements(db, ctx, sessionId).find((m) => m.id === input.movementId)
-        if (!existing) throw new ConflictError('POS_MOVEMENT_ID_TAKEN')
-        return existing
+          [
+            id,
+            ctx.workspaceId,
+            sessionId,
+            input.kind,
+            input.amountMinor,
+            input.reason,
+            ctx.userId,
+            nowIso(),
+          ],
+        )
+      } catch (error) {
+        // The same key again: this movement is already in the drawer — answer with it,
+        // scoped to this workspace and session so a key cannot read another's.
+        if (isUnique(error) && input.movementId) {
+          const existing = loadMovements(db, ctx, sessionId).find((m) => m.id === input.movementId)
+          if (!existing) throw new ConflictError('POS_MOVEMENT_ID_TAKEN')
+          return existing
+        }
+        throw error
       }
-      throw error
-    }
-    return loadMovements(db, ctx, sessionId).find((m) => m.id === id)
-  })
+
+      if (headers?.['x-hisabche-queue'] === '1') {
+        const enqueue = buildEnqueue({
+          entity: 'pos_cash_movement',
+          operation: 'create',
+          clientId: id,
+          payload: {
+            id,
+            sessionId,
+            kind: input.kind,
+            amountMinor: input.amountMinor,
+            reason: input.reason,
+          },
+          userId: headers?.['x-hisabche-user-id'] ?? ctx.userId,
+          workspaceId: ctx.workspaceId,
+        })
+        db.run(enqueue.sql, enqueue.params)
+      }
+
+      return loadMovements(db, ctx, sessionId).find((m) => m.id === id)
+    },
+  )
 
   router.post(
     '/pos/sessions/:id/bank-transfer',
@@ -680,102 +703,124 @@ export function registerTillRoutes(router: Router): void {
   })
 
   // ─── Close ─────────────────────────────────────────────────
-  router.post('/pos/sessions/:id/close', ({ db, ctx, params, body }: RouteHandlerContext) => {
-    const sessionId = params.id ?? ''
-    const input = parse(closeSchema, body ?? {})
-    const session = getSession(db, ctx, sessionId)
-    const { orders, movements, settlements } = loadContents(db, ctx, sessionId)
-    const totals = summarise(session, orders, movements, settlements)
+  router.post(
+    '/pos/sessions/:id/close',
+    ({ db, ctx, params, body, headers }: RouteHandlerContext) => {
+      const sessionId = params.id ?? ''
+      const input = parse(closeSchema, body ?? {})
+      const session = getSession(db, ctx, sessionId)
+      const { orders, movements, settlements } = loadContents(db, ctx, sessionId)
+      const totals = summarise(session, orders, movements, settlements)
 
-    const problems = validateClose(session, totals, { ...input, role: ctx.role })
-    if (problems.length > 0) throw new ValidationError(problems.join(', '))
+      const posRole: 'owner' | 'manager' | 'seller' =
+        ctx.role === 'owner'
+          ? 'owner'
+          : ctx.role === 'admin' || ctx.role === 'manager'
+            ? 'manager'
+            : 'seller'
 
-    const closed: PosSession = { ...session, countedCashMinor: input.countedCashMinor }
-    const finalTotals = summarise(closed, orders, movements, settlements)
-    const columns = closeColumns({
-      finalTotals,
-      countedCashMinor: input.countedCashMinor,
-      varianceReason: input.varianceReason,
-      force: input.force,
-      closedAt: nowIso(),
-      closedBy: ctx.userId,
-    })
+      const problems = validateClose(session, totals, { ...input, role: posRole })
+      if (problems.length > 0) throw new ValidationError(problems.join(', '))
 
-    const isForeign = Boolean(session.currency && session.currency !== ctx.baseCurrency)
+      const closed: PosSession = { ...session, countedCashMinor: input.countedCashMinor }
+      const finalTotals = summarise(closed, orders, movements, settlements)
+      const columns = closeColumns({
+        finalTotals,
+        countedCashMinor: input.countedCashMinor,
+        varianceReason: input.varianceReason,
+        force: input.force,
+        closedAt: nowIso(),
+        closedBy: ctx.userId,
+      })
 
-    return db.transaction(() => {
-      // Only an OPEN (or suspended) session closes: two devices closing at once
-      // means the second finds nothing to update rather than posting twice.
-      const result = db.run(
-        `UPDATE pos_session SET
+      const isForeign = Boolean(session.currency && session.currency !== ctx.baseCurrency)
+
+      return db.transaction(() => {
+        // Only an OPEN (or suspended) session closes: two devices closing at once
+        // means the second finds nothing to update rather than posting twice.
+        const result = db.run(
+          `UPDATE pos_session SET
            status = ?, counted_cash_minor = ?, variance_reason = ?, closed_at = ?, closed_by = ?,
            was_forced = ?, expected_cash_minor = ?, cash_sales_minor = ?, cash_in_minor = ?,
            cash_out_minor = ?, variance_minor = ?, updated_at = ?
          WHERE workspace_id = ? AND id = ? AND status IN ('open', 'closing', 'suspended')`,
-        [
-          columns.status,
-          columns.counted_cash_minor,
-          columns.variance_reason,
-          columns.closed_at,
-          columns.closed_by,
-          columns.was_forced ? 1 : 0,
-          columns.expected_cash_minor,
-          columns.cash_sales_minor,
-          columns.cash_in_minor,
-          columns.cash_out_minor,
-          columns.variance_minor,
-          columns.closed_at,
-          ctx.workspaceId,
-          sessionId,
-        ],
-      )
-      if (result.changes === 0) throw new ConflictError('POS_SESSION_NOT_OPEN')
-
-      let posted = false
-      let ledgerResult: { status: string; reason?: string }
-      if (isForeign) {
-        ledgerResult = { status: 'not_posted', reason: 'POS_FOREIGN_CURRENCY_NOT_IN_LEDGER' }
-      } else {
-        const posting = buildPosting(closed, finalTotals)
-        const { accounts, missing } = ensureAccountsForRoles(
-          db,
-          ctx.workspaceId,
-          SESSION_POSTING_ROLES,
+          [
+            columns.status,
+            columns.counted_cash_minor,
+            columns.variance_reason,
+            columns.closed_at,
+            columns.closed_by,
+            columns.was_forced ? 1 : 0,
+            columns.expected_cash_minor,
+            columns.cash_sales_minor,
+            columns.cash_in_minor,
+            columns.cash_out_minor,
+            columns.variance_minor,
+            columns.closed_at,
+            ctx.workspaceId,
+            sessionId,
+          ],
         )
-        const booked = sessionPostingLines({
-          posting,
-          tillCurrency: session.currency ?? ctx.baseCurrency,
-          accounts,
-          missing,
-        })
-        if (!('required' in booked)) {
-          const outcome = postDocument(db, ctx, {
-            sourceType: 'pos_session',
-            sourceId: sessionId,
-            date: nowIso().slice(0, 10),
-            description: `بستن صندوق ${sessionId.slice(0, 8)}`,
-            reference: sessionId,
-            lines: booked.lines,
-          })
-          if (outcome.status !== 'skipped') {
-            db.run(
-              'UPDATE pos_session SET journal_entry_id = ? WHERE workspace_id = ? AND id = ?',
-              [outcome.entryId, ctx.workspaceId, sessionId],
-            )
-            posted = true
-          }
-        }
-        ledgerResult = { status: posted ? 'posted' : 'not_posted' }
-      }
+        if (result.changes === 0) throw new ConflictError('POS_SESSION_NOT_OPEN')
 
-      return ok({
-        session: getSession(db, ctx, sessionId),
-        totals: finalTotals,
-        posted,
-        ledger: ledgerResult,
+        let posted = false
+        let ledgerResult: { status: string; reason?: string }
+        if (isForeign) {
+          ledgerResult = { status: 'not_posted', reason: 'POS_FOREIGN_CURRENCY_NOT_IN_LEDGER' }
+        } else {
+          const posting = buildPosting(closed, finalTotals)
+          const { accounts, missing } = ensureAccountsForRoles(
+            db,
+            ctx.workspaceId,
+            SESSION_POSTING_ROLES,
+          )
+          const booked = sessionPostingLines({
+            posting,
+            tillCurrency: session.currency ?? ctx.baseCurrency,
+            accounts,
+            missing,
+          })
+          if (!('required' in booked)) {
+            const outcome = postDocument(db, ctx, {
+              sourceType: 'pos_session',
+              sourceId: sessionId,
+              date: nowIso().slice(0, 10),
+              description: `بستن صندوق ${sessionId.slice(0, 8)}`,
+              reference: sessionId,
+              lines: booked.lines,
+            })
+            if (outcome.status !== 'skipped') {
+              db.run(
+                'UPDATE pos_session SET journal_entry_id = ? WHERE workspace_id = ? AND id = ?',
+                [outcome.entryId, ctx.workspaceId, sessionId],
+              )
+              posted = true
+            }
+          }
+          ledgerResult = { status: posted ? 'posted' : 'not_posted' }
+        }
+
+        if (headers?.['x-hisabche-queue'] === '1') {
+          const enqueue = buildEnqueue({
+            entity: 'pos_session',
+            operation: 'update',
+            clientId: `${sessionId}-close-${Date.now()}`,
+            payload: { id: sessionId, action: 'close', ...input },
+            userId: headers?.['x-hisabche-user-id'] ?? ctx.userId,
+            workspaceId: ctx.workspaceId,
+          })
+          db.run(enqueue.sql, enqueue.params)
+        }
+
+        return ok({
+          session: getSession(db, ctx, sessionId),
+          totals: finalTotals,
+          posted,
+          ledger: ledgerResult,
+        })
       })
-    })
-  })
+    },
+  )
 
   // ─── Suspend / resume / name / remove ──────────────────────
   const setSuspended =

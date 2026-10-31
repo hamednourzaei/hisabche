@@ -6,9 +6,11 @@
 
 import {
   calculateReturnDocument,
+  toMinorUnits,
   type OriginalInvoiceLine,
   type ReturnLineRequest,
 } from '@hisabche/validation'
+import { buildEnqueue } from '@hisabche/app-bridge'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -74,18 +76,18 @@ export function registerInvoiceReturnsRoutes(router: Router) {
     let originalLines: OriginalInvoiceLine[] = payload.originalLines
     if (!originalLines || originalLines.length === 0) {
       const invLines = db.all<RowRecord>(
-        `SELECT * FROM invoice_line WHERE invoice_id = ? AND deleted_at IS NULL`,
+        `SELECT * FROM invoice_item WHERE invoice_id = ? AND deleted_at IS NULL`,
         [originalInvoiceId],
       )
       originalLines = invLines.map((l: RowRecord) => ({
         lineId: l.id,
         productId: l.product_id,
         quantity: Number(l.quantity),
-        unitPriceMinor: Number(l.unit_price_minor || 0),
-        subtotalMinor: Number(l.subtotal_minor || 0),
-        discountMinor: 0,
-        taxMinor: 0,
-        totalMinor: Number(l.total_minor || 0),
+        unitPriceMinor: toMinorUnits(Number(l.unit_price || 0)),
+        subtotalMinor: toMinorUnits(Number(l.total || 0)),
+        discountMinor: toMinorUnits(Number(l.discount || 0)),
+        taxMinor: toMinorUnits(Number(l.tax || 0)),
+        totalMinor: toMinorUnits(Number(l.total || 0)),
       }))
     }
 
@@ -147,9 +149,28 @@ export function registerInvoiceReturnsRoutes(router: Router) {
       )
     }
 
+    if (c.headers?.['x-hisabche-queue'] === '1') {
+      const enqueue = buildEnqueue({
+        entity: 'invoice_returns',
+        operation: 'create',
+        clientId: `${returnId}-sync-${Date.now()}`,
+        payload: {
+          id: returnId,
+          originalInvoiceId,
+          returnType: payload.returnType,
+          returnNumber,
+          returnDate,
+          lines: payload.lines,
+        },
+        userId: c.headers?.['x-hisabche-user-id'] ?? ctx.userId,
+        workspaceId: ctx.workspaceId,
+      })
+      db.run(enqueue.sql, enqueue.params)
+    }
+
     return {
-      status: 201,
-      data: {
+      __status: 201,
+      __data: {
         id: returnId,
         originalInvoiceId,
         returnType: payload.returnType,

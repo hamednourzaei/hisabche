@@ -643,7 +643,7 @@ export class BillingService {
   async extendSubscriptionRow(rowId: string): Promise<void> {
     const { data: current, error: fetchError } = await supabase
       .from('subscriptions')
-      .select('period_end')
+      .select('period_start, period_end, plan')
       .eq('id', rowId)
       .single()
 
@@ -651,14 +651,31 @@ export class BillingService {
       throw new DatabaseError('Failed to fetch subscription for extension', fetchError)
     }
 
-    const newPeriodEnd = new Date(current.period_end)
-    newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1)
+    const interval = intervalOfPeriod(current.period_start, current.period_end)
+    const now = new Date()
+    const currentEnd = current.period_end ? new Date(current.period_end) : null
+
+    // Invariant: If expired in the past, renewal begins from NOW.
+    // If active and renewing early, renewal extends from current period_end.
+    const baseDate =
+      currentEnd && !Number.isNaN(currentEnd.getTime()) && currentEnd.getTime() > now.getTime()
+        ? currentEnd
+        : now
+
+    const newPeriodEnd = new Date(baseDate)
+    if (interval === 'year') {
+      newPeriodEnd.setFullYear(newPeriodEnd.getFullYear() + 1)
+    } else {
+      newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1)
+    }
 
     const { data, error } = await supabase
       .from('subscriptions')
       .update({
+        period_start: baseDate.toISOString(),
         period_end: newPeriodEnd.toISOString(),
         status: 'active',
+        cancel_at_period_end: false,
         updated_at: new Date().toISOString(),
       })
       .eq('id', rowId)

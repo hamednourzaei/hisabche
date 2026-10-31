@@ -1012,6 +1012,8 @@ export class AccountingService implements LedgerPort {
    * posted back could be minutes stale, and a closing entry built from stale
    * balances leaves the year open by exactly the amount that moved since.
    */
+  private static readonly activeCloses = new Set<string>()
+
   /**
    * The idempotency key of a year-end close.
    *
@@ -1046,38 +1048,48 @@ export class AccountingService implements LedgerPort {
     // description it is not free text somebody might edit.
     // ═══════════════════════════════════════════════════════════════════════
     const reference = AccountingService.yearEndReferenceOf(plan.from, plan.to)
-    const existing = await this.repo.findEntryByReference(ctx.workspaceId, reference)
-
-    if (existing) {
-      // Refused, not silently returned. A close that already happened is a
-      // fact the person needs to see — and the entry number tells them where
-      // to look. Returning it quietly would make a genuine second attempt
-      // indistinguishable from a retry.
-      throw new ValidationError(`YEAR_END_ALREADY_CLOSED:${existing.entryNumber ?? existing.id}`)
+    const lockKey = `${ctx.workspaceId}:${reference}`
+    if (AccountingService.activeCloses.has(lockKey)) {
+      throw new ConflictError('YEAR_END_CLOSE_IN_PROGRESS')
     }
+    AccountingService.activeCloses.add(lockKey)
 
-    // `createJournalEntry` — the same door every other posting uses. It runs
-    // the period lock and the postable-lines checks, which a closing entry
-    // needs at least as much as an ordinary one.
-    // ⚠️ AND KEYED IN THE DATABASE (27 Sep 2026). The lookup above answers a
-    // second close with a clear message, but two closes at the SAME moment
-    // both pass it. The period as the entry's source puts them on the unique
-    // index «one live entry per source»: the second gets the first's entry.
-    return this.createJournalEntry(
-      ctx,
-      {
-        date: plan.to,
-        description: `Year-end close ${plan.from} — ${plan.to}`,
-        reference,
-        lines: plan.lines,
-      } as CreateJournalEntry,
-      {
-        source: {
-          type: 'year_end_close',
-          id: sourceIdOf(ctx.workspaceId, 'year_end_close', plan.from, plan.to),
+    try {
+      const existing = await this.repo.findEntryByReference(ctx.workspaceId, reference)
+
+      if (existing) {
+        // Refused, not silently returned. A close that already happened is a
+        // fact the person needs to see — and the entry number tells them where
+        // to look. Returning it quietly would make a genuine second attempt
+        // indistinguishable from a retry.
+        throw new ValidationError(`YEAR_END_ALREADY_CLOSED:${existing.entryNumber ?? existing.id}`)
+      }
+
+      // `createJournalEntry` — the same door every other posting uses. It runs
+      // the period lock and the postable-lines checks, which a closing entry
+      // needs at least as much as an ordinary one.
+      // ⚠️ AND KEYED IN THE DATABASE (27 Sep 2026). The lookup above answers a
+      // second close with a clear message, but two closes at the SAME moment
+      // both pass it. The period as the entry's source puts them on the unique
+      // index «one live entry per source»: the second gets the first's entry.
+      return await this.createJournalEntry(
+        ctx,
+        {
+          date: plan.to,
+          description: `Year-end close ${plan.from} — ${plan.to}`,
+          reference,
+          lines: plan.lines,
+        } as CreateJournalEntry,
+        {
+          source: {
+            type: 'year_end_close',
+            id: sourceIdOf(ctx.workspaceId, 'year_end_close', plan.from, plan.to),
+          },
         },
-      },
-    )
+      )
+    } finally {
+      AccountingService.activeCloses.delete(lockKey)
+    }
   }
 
   /** Receivables and treasury reports. See operational-reports.ts. */

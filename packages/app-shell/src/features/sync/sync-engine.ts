@@ -732,12 +732,25 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
     const owner = currentOutboxOwner()
 
     for (const entry of queue) {
-      if (!isOwnedBy(entry, owner.userId)) continue
+      if (!isOwnedBy(entry, owner.userId, owner.workspaceId)) continue
       if (entry.attempts >= MAX_ATTEMPTS) continue
       // Refused by the server: resending the same request gets the same answer.
       // It waits for a person (the sync page's retry re-queues it fresh).
       if (entry.lastError?.startsWith(REJECTED_PREFIX)) continue
-      if (gate.blockedBy(entry)) continue
+      const blockedByRef = gate.blockedBy(entry)
+      if (blockedByRef) {
+        const permBlocked = gate.permanentlyBlockedBy?.(entry)
+        if (permBlocked) {
+          // A dependency failed permanently (rejected or exceeded max retries).
+          // Mark this entry so it is visible in the sync centre rather than waiting indefinitely.
+          await desktop.db.resolveQueue(
+            entry.clientId,
+            'failed',
+            `${REJECTED_PREFIX}BLOCKED_BY_DEPENDENCY:${permBlocked}`,
+          )
+        }
+        continue
+      }
 
       inFlight.add(entry.clientId)
       publishStages()
