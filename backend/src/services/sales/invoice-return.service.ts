@@ -15,6 +15,18 @@ import { ValidationError } from '../../errors/validation.error'
 import { asReplay } from '../../utils/client-request'
 import { invalidateMoneyCaches } from '../../utils/money-cache'
 
+interface ReturnRow {
+  id: string
+  original_invoice_id: string
+  return_type: 'sale_return' | 'purchase_return'
+  return_number: string
+  return_date: string
+  total_subtotal_minor: number | string
+  total_discount_minor: number | string
+  total_tax_minor: number | string
+  grand_total_minor: number | string
+}
+
 export class InvoiceReturnService {
   constructor(private readonly db: SupabaseClient = supabase) {}
 
@@ -32,12 +44,48 @@ export class InvoiceReturnService {
 
     const { data, error } = await this.db
       .from('invoice_returns')
-      .select('*, lines:invoice_return_lines(*)')
+      .select('*')
       .eq('workspace_id', workspaceId)
       .eq('original_invoice_id', originalInvoiceId)
+      .order('return_date', { ascending: false })
 
     if (error) throw new DatabaseError('Failed to fetch returns', error)
-    return data ?? []
+    return this.withLines(workspaceId, (data ?? []) as ReturnRow[])
+  }
+
+  /**
+   * ⚠️ NOT A PostgREST EMBED. `invoice_return_lines.return_id` has no foreign key, so
+   * `select('*, lines:invoice_return_lines(*)')` answered PGRST200 and the invoice page
+   * could never list its returns. The lines are read with a second query and joined here,
+   * and the rows leave in the camelCase shape the client types describe.
+   */
+  private async withLines(workspaceId: string, rows: ReturnRow[]) {
+    if (rows.length === 0) return []
+    const { data: lines, error } = await this.db
+      .from('invoice_return_lines')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .in(
+        'return_id',
+        rows.map((row) => row.id),
+      )
+    if (error) throw new DatabaseError('Failed to fetch return lines', error)
+    const byReturn = new Map<string, unknown[]>()
+    for (const line of (lines ?? []) as Array<{ return_id: string }>) {
+      byReturn.set(line.return_id, [...(byReturn.get(line.return_id) ?? []), line])
+    }
+    return rows.map((row) => ({
+      id: row.id,
+      originalInvoiceId: row.original_invoice_id,
+      returnType: row.return_type,
+      returnNumber: row.return_number,
+      returnDate: row.return_date,
+      totalSubtotalMinor: Number(row.total_subtotal_minor),
+      totalDiscountMinor: Number(row.total_discount_minor),
+      totalTaxMinor: Number(row.total_tax_minor),
+      grandTotalMinor: Number(row.grand_total_minor),
+      lines: byReturn.get(row.id) ?? [],
+    }))
   }
 
   async createReturn(
@@ -58,13 +106,14 @@ export class InvoiceReturnService {
     if (input.clientRequestId) {
       const { data: existing } = await this.db
         .from('invoice_returns')
-        .select('*, lines:invoice_return_lines(*)')
+        .select('*')
         .eq('workspace_id', workspaceId)
         .eq('client_request_id', input.clientRequestId)
         .maybeSingle()
 
       if (existing) {
-        return asReplay(existing)
+        const [replayed] = await this.withLines(workspaceId, [existing as ReturnRow])
+        return asReplay(replayed as object)
       }
     }
 
