@@ -115,6 +115,17 @@ export interface InvoiceRelatedPanelProps {
   isRecordingPayment?: boolean | undefined
   recordPaymentError?: string | null | undefined
 
+  /** Returns recorded against this invoice (amounts already in major units). */
+  returns?:
+    | ReadonlyArray<{
+        id: string
+        returnNumber: string
+        returnDate: string
+        returnType: 'sale_return' | 'purchase_return'
+        total: number
+      }>
+    | undefined
+
   /** Provide to offer «ثبت در دفتر» when the invoice has no journal entry. */
   onPostToLedger?: (() => void) | undefined
   isPostingToLedger?: boolean | undefined
@@ -159,6 +170,7 @@ export function InvoiceRelatedPanel({
   onPostToLedger,
   isPostingToLedger,
   ledgerPostMessage,
+  returns,
 }: InvoiceRelatedPanelProps) {
   const [adding, setAdding] = React.useState(false)
   // Close the form only once the server has ACCEPTED the payment. Closing on
@@ -455,6 +467,39 @@ export function InvoiceRelatedPanel({
           </div>
         )}
       </section>
+      {returns && returns.length > 0 ? (
+        <section className={card}>
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
+            {t('invoiceDetail.returns', 'مرجوعی‌ها')}
+            <span className="rounded-full bg-[hsl(var(--color-warning)/0.15)] px-2 py-0.5 text-xs font-medium text-[hsl(var(--color-warning))]">
+              {t('invoiceDetail.returnedBadge', 'مرجوع شده')}
+            </span>
+          </h2>
+          <ul className="space-y-2">
+            {returns.map((entry) => (
+              <li
+                key={entry.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border-default))] px-3 py-2 text-sm"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-[hsl(var(--fg-primary))]">
+                    {entry.returnType === 'purchase_return'
+                      ? t('invoiceDetail.returnTypePurchase', 'برگشت از خرید')
+                      : t('invoiceDetail.returnTypeSale', 'برگشت از فروش')}{' '}
+                    #{entry.returnNumber}
+                  </span>
+                  <span className="block text-xs text-[hsl(var(--fg-tertiary))]">
+                    {fmtDate(entry.returnDate)}
+                  </span>
+                </span>
+                <span className="shrink-0 font-medium tabular-nums text-[hsl(var(--fg-primary))]">
+                  {fmtMoney(entry.total)} {currency}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   )
 }

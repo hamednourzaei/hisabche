@@ -1,6 +1,8 @@
 // packages/ui/src/components/ui/accounting/components/CreateJournalEntryDialog.tsx
 'use client'
 
+import { JalaliDatePicker } from '../../jalali-datepicker'
+import { useNumberFormat } from '../../../../hooks/use-number-format'
 import { SelectField } from '../../select-field'
 import { memo, useState, useCallback, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
@@ -41,6 +43,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
   accounts,
 }: CreateJournalEntryDialogProps) {
   const t = useTranslations()
+  const fmtNum = useNumberFormat()
   const [date, setDate] = useState(() => toIsoDay(new Date()))
   const [description, setDescription] = useState('')
   const [reference, setReference] = useState('')
@@ -151,14 +154,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
               >
                 {t('accounting.journal.date')}
               </label>
-              <input
-                id="journal-date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-                className="w-full h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-              />
+              <JalaliDatePicker value={date} onChange={setDate} />
             </div>
             <div className="space-y-1 md:space-y-1.5">
               <label
@@ -260,10 +256,10 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
               )}
             >
               <span>
-                {t('accounting.journal.totalDebit')}: {totals.debit.toLocaleString()}
+                {t('accounting.journal.totalDebit')}: {fmtNum(totals.debit)}
               </span>
               <span>
-                {t('accounting.journal.totalCredit')}: {totals.credit.toLocaleString()}
+                {t('accounting.journal.totalCredit')}: {fmtNum(totals.credit)}
               </span>
               <span>
                 {totals.isBalanced

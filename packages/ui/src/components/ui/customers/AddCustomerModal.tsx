@@ -1,5 +1,6 @@
 'use client'
 
+import { useNumberFormat } from '../../../hooks/use-number-format'
 import { useCallback, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -25,8 +26,6 @@ const toNum = (v: string): number => {
   const n = Number(v)
   return Number.isFinite(n) ? n : 0
 }
-
-const fmt = (v: number): string => v.toLocaleString('fa-AF')
 
 const customerSchema = z.object({
   name: z.string().min(1, 'customers.form.nameRequired'),
@@ -56,6 +55,7 @@ export function AddCustomerModal({
   initialRole = 'buyer',
 }: AddCustomerModalProps) {
   const t = useTranslations()
+  const fmt = useNumberFormat()
   const createCustomer = useCreateCustomer()
   const createInvoice = useCreateInvoice()
   const { setSaveStatus } = useSyncStore()

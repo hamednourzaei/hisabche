@@ -1,0 +1,1451 @@
+{
+  "commit": "05f749a2818299d5c0995d557cc0ec40c1bd5740",
+  "date": "2026-11-01",
+  "screens": [
+    {
+      "id": "SCR-001",
+      "name": "/login",
+      "status": "PARTIAL",
+      "files": ["packages/app-shell/src/app/app.tsx:100"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-002",
+      "name": "/ (dashboard)",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/analytics.service.ts:132"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "14"]
+    },
+    {
+      "id": "SCR-003",
+      "name": "/onboarding",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/ui/src/components/ui/onboarding/containers/onboarding-container.tsx:91"],
+      "callers": [],
+      "callees": [],
+      "docs": ["01", "03"]
+    },
+    {
+      "id": "SCR-004",
+      "name": "/invoices",
+      "status": "PARTIAL",
+      "files": ["packages/app-shell/src/app/app.tsx:113"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-005",
+      "name": "/invoices/new",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/invoice.service.ts:789"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "05"]
+    },
+    {
+      "id": "SCR-006",
+      "name": "/invoices/new/preview",
+      "status": "PARTIAL",
+      "files": ["packages/app-shell/src/app/app.tsx:116"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-007",
+      "name": "/invoices/:id",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/invoice.service.ts:1803"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "05"]
+    },
+    {
+      "id": "SCR-008",
+      "name": "/warehouse",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/product.service.ts:700"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "07"]
+    },
+    {
+      "id": "SCR-009",
+      "name": "/warehouse/:id",
+      "status": "VERIFIED_SOURCE",
+      "files": [
+        "packages/ui/src/components/ui/warehouse-detail/containers/warehouse-detail-container.tsx:119"
+      ],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "02"]
+    },
+    {
+      "id": "SCR-010",
+      "name": "/customers",
+      "status": "PARTIAL",
+      "files": ["packages/app-shell/src/app/app.tsx:122"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-011",
+      "name": "/customers/:id",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/customer.service.ts:940"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "10"]
+    },
+    {
+      "id": "SCR-012",
+      "name": "/accounting",
+      "status": "PARTIAL",
+      "files": ["backend/src/services/accounting/accounting.service.ts:632"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "09"]
+    },
+    {
+      "id": "SCR-013",
+      "name": "/activities",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:126"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-014",
+      "name": "/sync-center",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:782"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "12"]
+    },
+    {
+      "id": "SCR-015",
+      "name": "/settings",
+      "status": "PARTIAL",
+      "files": ["packages/app-shell/src/features/settings/settings-page.tsx"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-016",
+      "name": "/approvals",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:129"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-017",
+      "name": "/developers",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:130"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-018",
+      "name": "/marketplace (gated)",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:131"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-019",
+      "name": "/billing",
+      "status": "PARTIAL",
+      "files": ["backend/src/services/plan-limits.service.ts:223"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "16"]
+    },
+    {
+      "id": "SCR-020",
+      "name": "/market-seller (gated)",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:133"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-021",
+      "name": "/analysis",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:134"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-022",
+      "name": "/manufacturing",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:136"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-023",
+      "name": "/assistant",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:137"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-024",
+      "name": "/operations",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:138"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-025",
+      "name": "/stock-count",
+      "status": "PARTIAL",
+      "files": ["backend/src/services/inventory/cycle-count.service.ts"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "07"]
+    },
+    {
+      "id": "SCR-026",
+      "name": "/team-and-payroll",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/human-resources.service.ts:710"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "11"]
+    },
+    {
+      "id": "SCR-027",
+      "name": "/team-and-payroll/:id",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:141"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-028",
+      "name": "/audit",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:142"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-029",
+      "name": "/till",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/pos/pos.service.ts:932"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "08"]
+    },
+    {
+      "id": "SCR-030",
+      "name": "/data-and-sync",
+      "status": "PARTIAL",
+      "files": ["packages/local-engine/src/routes/import.ts:47"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "16"]
+    },
+    {
+      "id": "SCR-031",
+      "name": "/governance",
+      "status": "PARTIAL",
+      "files": ["backend/src/services/authorization/authorization.domain.ts:50"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "13"]
+    },
+    {
+      "id": "SCR-032",
+      "name": "/public-task/:token",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:148"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-033",
+      "name": "/public-invoice/:token",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:149"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-034",
+      "name": "/portal/:token",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/app-shell/src/app/app.tsx:150"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03"]
+    },
+    {
+      "id": "SCR-035",
+      "name": "/my-attendance/:token",
+      "status": "PARTIAL",
+      "files": ["backend/src/services/payroll/attendance-link.service.ts"],
+      "callers": [],
+      "callees": [],
+      "docs": ["03", "11"]
+    }
+  ],
+  "flows": [
+    {
+      "id": "FLOW-001",
+      "name": "ثبت فاکتور فروش با پرداخت (آنلاین)",
+      "status": "VERIFIED_SOURCE",
+      "files": [
+        "backend/src/services/invoice.service.ts:789",
+        "backend/src/services/invoice.service.ts:1120",
+        "packages/validation/src/schemas/invoice-posting.domain.ts:37"
+      ],
+      "callers": ["SCR-005"],
+      "callees": ["CORE-001", "CORE-002", "CORE-003", "CORE-004"],
+      "docs": ["05"]
+    },
+    {
+      "id": "FLOW-002",
+      "name": "ثبت فاکتور فروش (آفلاین)",
+      "status": "VERIFIED_SOURCE",
+      "files": [
+        "packages/local-engine/src/routes/invoices.ts:482",
+        "packages/local-engine/src/routes/invoices.ts:885"
+      ],
+      "callers": ["SCR-005"],
+      "callees": ["CORE-010", "CORE-012"],
+      "docs": ["05", "12"]
+    },
+    {
+      "id": "FLOW-003",
+      "name": "لغو فاکتور",
+      "status": "VERIFIED_SOURCE",
+      "files": [
+        "backend/src/services/invoice.service.ts:1470",
+        "backend/src/services/invoice.service.ts:1803"
+      ],
+      "callers": ["SCR-007"],
+      "callees": ["CORE-001", "CORE-003", "CORE-002", "CORE-005"],
+      "docs": ["05"]
+    },
+    {
+      "id": "FLOW-004",
+      "name": "حذف فاکتور",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/invoice.service.ts:1675"],
+      "callers": ["SCR-007"],
+      "callees": ["CORE-001"],
+      "docs": ["05"]
+    },
+    {
+      "id": "FLOW-005",
+      "name": "برگشت فروش",
+      "status": "PARTIAL",
+      "files": [
+        "backend/src/services/sales/invoice-return.service.ts:43",
+        "docs/invoice-return-01-migration.sql",
+        "docs/invoice-return-02-purchase-return-accounting-migration.sql"
+      ],
+      "callers": ["SCR-007"],
+      "callees": ["CORE-003", "CORE-005"],
+      "docs": ["05"]
+    },
+    {
+      "id": "FLOW-006",
+      "name": "برگشت خرید",
+      "status": "VERIFIED_SOURCE",
+      "files": ["docs/invoice-return-02-purchase-return-accounting-migration.sql:266"],
+      "callers": ["SCR-007"],
+      "callees": ["CORE-003", "CORE-005"],
+      "docs": ["05", "06"]
+    },
+    {
+      "id": "FLOW-010",
+      "name": "ثبت پرداخت",
+      "status": "VERIFIED_SOURCE",
+      "files": [
+        "backend/src/services/payments/payments.service.ts:158",
+        "backend/src/services/payments/payments.service.ts:596"
+      ],
+      "callers": ["SCR-007"],
+      "callees": ["CORE-002", "CORE-003"],
+      "docs": ["08"]
+    },
+    {
+      "id": "FLOW-011",
+      "name": "لغو پرداخت",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/payments/payments.service.ts:691"],
+      "callers": ["SCR-007"],
+      "callees": ["CORE-002", "CORE-003"],
+      "docs": ["08"]
+    },
+    {
+      "id": "FLOW-012",
+      "name": "صندوق: باز/بستن",
+      "status": "VERIFIED_SOURCE",
+      "files": [
+        "backend/src/services/pos/pos.service.ts:932",
+        "packages/validation/src/schemas/till-view.ts:185"
+      ],
+      "callers": ["SCR-029"],
+      "callees": ["CORE-006", "CORE-003"],
+      "docs": ["08"]
+    },
+    {
+      "id": "FLOW-020",
+      "name": "ارسال یک mutation از outbox به سرور",
+      "status": "VERIFIED_SOURCE",
+      "files": [
+        "packages/app-shell/src/features/sync/sync-engine.ts:575",
+        "packages/app-shell/src/features/sync/sync-engine.ts:782"
+      ],
+      "callers": ["SCR-014"],
+      "callees": ["CORE-009", "CORE-001"],
+      "docs": ["12"]
+    },
+    {
+      "id": "FLOW-021",
+      "name": "ترتیب parent→child (push gate)",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-bridge/src/push-order.ts:59"],
+      "callers": ["SCR-014"],
+      "callees": ["CORE-009"],
+      "docs": ["12"]
+    },
+    {
+      "id": "FLOW-022",
+      "name": "بازیابی پس از reconnect",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:795"],
+      "callers": ["SCR-014"],
+      "callees": ["CORE-009"],
+      "docs": ["12", "15"]
+    },
+    {
+      "id": "FLOW-023",
+      "name": "pull دلتا با cursor",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:436"],
+      "callers": ["SCR-014"],
+      "callees": ["CORE-009"],
+      "docs": ["12"]
+    },
+    {
+      "id": "FLOW-024",
+      "name": "push versioned و conflict",
+      "status": "VERIFIED_SOURCE",
+      "files": [
+        "packages/app-shell/src/features/sync/sync-engine.ts:706",
+        "backend/src/services/sync.service.ts:353"
+      ],
+      "callers": ["SCR-030"],
+      "callees": ["CORE-009", "CORE-008"],
+      "docs": ["12"]
+    },
+    {
+      "id": "FLOW-025",
+      "name": "نسخهٔ آفلاین بدون sync و مهاجرت به ابر",
+      "status": "PARTIAL",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:783"],
+      "callers": ["SCR-030"],
+      "callees": ["CORE-009"],
+      "docs": ["12"]
+    },
+    {
+      "id": "FLOW-026",
+      "name": "ماتریس endpoint آفلاین",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/validation/src/schemas/offline-endpoint-matrix.ts"],
+      "callers": ["SCR-014"],
+      "callees": ["CORE-010"],
+      "docs": ["12"]
+    },
+    {
+      "id": "FLOW-030",
+      "name": "فاکتور خرید",
+      "status": "PARTIAL",
+      "files": ["backend/src/services/invoice.service.ts:1011"],
+      "callers": ["SCR-005"],
+      "callees": ["CORE-001", "CORE-003", "CORE-004"],
+      "docs": ["06"]
+    },
+    {
+      "id": "FLOW-031",
+      "name": "سفارش خرید و دریافت",
+      "status": "PARTIAL",
+      "files": ["backend/src/services/purchasing.service.ts:351"],
+      "callers": ["SCR-004"],
+      "callees": ["CORE-004", "CORE-005"],
+      "docs": ["06"]
+    },
+    {
+      "id": "FLOW-040",
+      "name": "حرکت موجودی از فاکتور",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/invoice.service.ts:1102"],
+      "callers": ["SCR-005"],
+      "callees": ["CORE-005"],
+      "docs": ["07"]
+    },
+    {
+      "id": "FLOW-041",
+      "name": "تعدیل موجودی",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/product.service.ts:730"],
+      "callers": ["SCR-008"],
+      "callees": ["CORE-005"],
+      "docs": ["07"]
+    },
+    {
+      "id": "FLOW-042",
+      "name": "انتقال بین انبارها",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/routes/warehouse.routes.ts:153"],
+      "callers": ["SCR-008"],
+      "callees": ["CORE-005"],
+      "docs": ["07"]
+    },
+    {
+      "id": "FLOW-043",
+      "name": "شمارش انبار",
+      "status": "NOT_VERIFIED",
+      "files": ["backend/src/services/inventory/cycle-count.service.ts"],
+      "callers": ["SCR-025"],
+      "callees": ["CORE-005"],
+      "docs": ["07"]
+    },
+    {
+      "id": "FLOW-044",
+      "name": "دریافت PO",
+      "status": "PARTIAL",
+      "files": ["backend/src/services/purchasing.service.ts:351"],
+      "callers": ["SCR-004"],
+      "callees": ["CORE-004", "CORE-005"],
+      "docs": ["06", "07"]
+    },
+    {
+      "id": "FLOW-050",
+      "name": "مانده مشتری",
+      "status": "PARTIAL",
+      "files": ["backend/src/services/customer.service.ts:940"],
+      "callers": ["SCR-011"],
+      "callees": [],
+      "docs": ["10"]
+    },
+    {
+      "id": "FLOW-051",
+      "name": "حذف مشتری",
+      "status": "NOT_VERIFIED",
+      "files": ["packages/validation/src/schemas/offline-endpoint-matrix.ts"],
+      "callers": ["SCR-010"],
+      "callees": [],
+      "docs": ["10"]
+    },
+    {
+      "id": "FLOW-060",
+      "name": "حقوق و ثبت دفتر",
+      "status": "PARTIAL",
+      "files": [
+        "backend/src/services/human-resources.service.ts:769",
+        "packages/validation/src/schemas/payroll-rules.ts:78"
+      ],
+      "callers": ["SCR-026"],
+      "callees": ["CORE-007", "CORE-003"],
+      "docs": ["11"]
+    },
+    {
+      "id": "FLOW-070",
+      "name": "ثبت‌نام",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/routes/auth.routes.ts:344"],
+      "callers": ["SCR-001"],
+      "callees": [],
+      "docs": ["01"]
+    },
+    {
+      "id": "FLOW-071",
+      "name": "ویزارد onboarding و ذخیرهٔ دسته",
+      "status": "VERIFIED_SOURCE",
+      "files": [
+        "packages/ui/src/components/ui/onboarding/containers/onboarding-container.tsx:91",
+        "backend/src/routes/auth.routes.ts:726",
+        "backend/src/services/profile-write.ts:49"
+      ],
+      "callers": ["SCR-003"],
+      "callees": [],
+      "docs": ["01", "02"]
+    },
+    {
+      "id": "FLOW-072",
+      "name": "اولین اجرای آفلاین و ساخت workspace محلی",
+      "status": "VERIFIED_SOURCE",
+      "files": [
+        "packages/app-shell/src/features/auth/offline-first-run.ts:60",
+        "packages/local-engine/src/routes/workspace.ts:232"
+      ],
+      "callers": ["SCR-001"],
+      "callees": ["CORE-010"],
+      "docs": ["01"]
+    }
+  ],
+  "cores": [
+    {
+      "id": "CORE-001",
+      "name": "Invoice",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/invoice.service.ts:789"],
+      "callers": [],
+      "callees": [],
+      "docs": ["04"]
+    },
+    {
+      "id": "CORE-002",
+      "name": "Payments",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/payments/payments.service.ts:158"],
+      "callers": [],
+      "callees": [],
+      "docs": ["04"]
+    },
+    {
+      "id": "CORE-003",
+      "name": "Ledger",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/accounting/accounting.service.ts:632"],
+      "callers": [],
+      "callees": [],
+      "docs": ["04"]
+    },
+    {
+      "id": "CORE-004",
+      "name": "Costing",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/inventory-costing"],
+      "callers": [],
+      "callees": [],
+      "docs": ["04"]
+    },
+    {
+      "id": "CORE-005",
+      "name": "Stock",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/product.service.ts:700"],
+      "callers": [],
+      "callees": [],
+      "docs": ["04"]
+    },
+    {
+      "id": "CORE-006",
+      "name": "Till",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/pos/pos.service.ts:932"],
+      "callers": [],
+      "callees": [],
+      "docs": ["04"]
+    },
+    {
+      "id": "CORE-007",
+      "name": "HR/Payroll",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/human-resources.service.ts:769"],
+      "callers": [],
+      "callees": [],
+      "docs": ["04"]
+    },
+    {
+      "id": "CORE-008",
+      "name": "Authorization",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/authorization/authorization.domain.ts:36"],
+      "callers": [],
+      "callees": [],
+      "docs": ["04"]
+    },
+    {
+      "id": "CORE-009",
+      "name": "Sync",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:782"],
+      "callers": [],
+      "callees": [],
+      "docs": ["04"]
+    },
+    {
+      "id": "CORE-010",
+      "name": "Local engine",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/local-engine/src/routes/invoices.ts:482"],
+      "callers": [],
+      "callees": [],
+      "docs": ["04"]
+    },
+    {
+      "id": "CORE-011",
+      "name": "Plan limits/Entitlement",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/plan-limits.service.ts:223"],
+      "callers": [],
+      "callees": [],
+      "docs": ["04"]
+    },
+    {
+      "id": "CORE-012",
+      "name": "Shared rules",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/validation/src/schemas/invoice-posting.domain.ts:37"],
+      "callers": [],
+      "callees": [],
+      "docs": ["04"]
+    }
+  ],
+  "entities": [
+    {
+      "id": "ENT-001",
+      "name": "invoices",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-002",
+      "name": "invoice_items",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-003",
+      "name": "payments",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-004",
+      "name": "payment_allocations",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-005",
+      "name": "journal_entries",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-006",
+      "name": "journal_lines",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-007",
+      "name": "stock_movements",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-008",
+      "name": "product_stock",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-009",
+      "name": "cost_layers",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-010",
+      "name": "cost_consumptions",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-011",
+      "name": "invoice_returns",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-012",
+      "name": "pos_sessions",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-013",
+      "name": "payrolls",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-014",
+      "name": "profiles",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-015",
+      "name": "workspaces",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-016",
+      "name": "workspace_members",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-017",
+      "name": "sync_queue (local outbox)",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    },
+    {
+      "id": "ENT-018",
+      "name": "purchase_orders",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["16"]
+    }
+  ],
+  "mutations": [
+    {
+      "id": "MUT-001",
+      "name": "invoice → /invoices",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:556"],
+      "callers": ["CORE-009"],
+      "callees": [],
+      "docs": ["12"]
+    },
+    {
+      "id": "MUT-002",
+      "name": "customer → /customers",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:556"],
+      "callers": ["CORE-009"],
+      "callees": [],
+      "docs": ["12"]
+    },
+    {
+      "id": "MUT-003",
+      "name": "product → /products",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:556"],
+      "callers": ["CORE-009"],
+      "callees": [],
+      "docs": ["12"]
+    },
+    {
+      "id": "MUT-004",
+      "name": "transaction → /transactions",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:556"],
+      "callers": ["CORE-009"],
+      "callees": [],
+      "docs": ["12"]
+    },
+    {
+      "id": "MUT-005",
+      "name": "payment → /payments",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:556"],
+      "callers": ["CORE-009"],
+      "callees": [],
+      "docs": ["12"]
+    },
+    {
+      "id": "MUT-006",
+      "name": "inventory_movement → /stock-transfers",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:556"],
+      "callers": ["CORE-009"],
+      "callees": [],
+      "docs": ["12"]
+    },
+    {
+      "id": "MUT-007",
+      "name": "price_list → /price-lists",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:556"],
+      "callers": ["CORE-009"],
+      "callees": [],
+      "docs": ["12"]
+    },
+    {
+      "id": "MUT-008",
+      "name": "promotion → /promotions",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:556"],
+      "callers": ["CORE-009"],
+      "callees": [],
+      "docs": ["12"]
+    },
+    {
+      "id": "MUT-009",
+      "name": "account → /accounting/accounts",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:556"],
+      "callers": ["CORE-009"],
+      "callees": [],
+      "docs": ["12"]
+    },
+    {
+      "id": "MUT-010",
+      "name": "journal_entry → /accounting/journal",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:556"],
+      "callers": ["CORE-009"],
+      "callees": [],
+      "docs": ["12"]
+    },
+    {
+      "id": "MUT-011",
+      "name": "invoice_returns → /invoices/:id/returns",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:556"],
+      "callers": ["CORE-009"],
+      "callees": [],
+      "docs": ["12"]
+    },
+    {
+      "id": "MUT-012",
+      "name": "pos_cash_movement → /pos/sessions/:id/cash",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:556"],
+      "callers": ["CORE-009"],
+      "callees": [],
+      "docs": ["12"]
+    },
+    {
+      "id": "MUT-013",
+      "name": "pos_session(close) → /pos/sessions/:id/close",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/features/sync/sync-engine.ts:556"],
+      "callers": ["CORE-009"],
+      "callees": [],
+      "docs": ["12"]
+    }
+  ],
+  "permissions": [
+    {
+      "id": "PERM-001",
+      "name": "زنجیرهٔ session→workspace→capability→service→DB",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/middleware/authorize.middleware.ts:28"],
+      "callers": [],
+      "callees": [],
+      "docs": ["13"]
+    },
+    {
+      "id": "PERM-002",
+      "name": "requireCapability route guard",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/middleware/authorize.middleware.ts:28"],
+      "callers": [],
+      "callees": [],
+      "docs": ["13"]
+    },
+    {
+      "id": "PERM-003",
+      "name": "scopes.assertMay (branch/owner)",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/invoice.service.ts:1470"],
+      "callers": [],
+      "callees": [],
+      "docs": ["13"]
+    },
+    {
+      "id": "PERM-004",
+      "name": "SoD (maker-checker)",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/invoice.service.ts:1222"],
+      "callers": [],
+      "callees": [],
+      "docs": ["13"]
+    },
+    {
+      "id": "PERM-005",
+      "name": "SYNC_WRITE_CAPABILITY",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/sync.service.ts:353"],
+      "callers": [],
+      "callees": [],
+      "docs": ["13"]
+    },
+    {
+      "id": "PERM-006",
+      "name": "local-engine requireCapability",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/local-engine/src/auth.ts"],
+      "callers": [],
+      "callees": [],
+      "docs": ["13"]
+    },
+    {
+      "id": "PERM-007",
+      "name": "UI gate isRouteDenied/NoAccessNotice",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/app-shell/src/components/layout/app-shell.tsx"],
+      "callers": [],
+      "callees": [],
+      "docs": ["13"]
+    },
+    {
+      "id": "PERM-008",
+      "name": "industry change owner-only",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/routes/auth.routes.ts:765"],
+      "callers": [],
+      "callees": [],
+      "docs": ["13"]
+    },
+    {
+      "id": "PERM-009",
+      "name": "plan limit assertWithinLimit",
+      "status": "VERIFIED_SOURCE",
+      "files": ["backend/src/services/plan-limits.service.ts:223"],
+      "callers": [],
+      "callees": [],
+      "docs": ["13"]
+    },
+    {
+      "id": "PERM-010",
+      "name": "offline matrix useActionAvailability",
+      "status": "VERIFIED_SOURCE",
+      "files": ["packages/validation/src/schemas/offline-endpoint-matrix.ts"],
+      "callers": [],
+      "callees": [],
+      "docs": ["13"]
+    }
+  ],
+  "journeys": [
+    {
+      "id": "JRN-01",
+      "name": "اولین ورود به سایت",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-02",
+      "name": "ثبت‌نام",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-03",
+      "name": "ورود",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-04",
+      "name": "ساخت workspace",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-05",
+      "name": "onboarding",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-06",
+      "name": "انتخاب دسته",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-07",
+      "name": "داشبورد",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-08",
+      "name": "ساخت کالا/مشتری/تأمین‌کننده/انبار",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-09",
+      "name": "ثبت فاکتور فروش",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-10",
+      "name": "دریافت پرداخت",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-11",
+      "name": "لغو فاکتور",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-12",
+      "name": "برگشت از فروش",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-13",
+      "name": "خرید",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-14",
+      "name": "پرداخت خرید",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-15",
+      "name": "برگشت خرید",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-16",
+      "name": "انتقال موجودی",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-17",
+      "name": "شمارش انبار",
+      "status": "NOT_VERIFIED",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-18",
+      "name": "باز/بستن صندوق",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-19",
+      "name": "بدهی مشتری/تأمین‌کننده",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-20",
+      "name": "کارمند/حضور/حقوق",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-21",
+      "name": "سند دفتر دستی",
+      "status": "NOT_VERIFIED",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-22",
+      "name": "گزارش‌ها",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-23",
+      "name": "حالت آفلاین",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-24",
+      "name": "اتصال مجدد",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-25",
+      "name": "sync",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-26",
+      "name": "تعارض",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-27",
+      "name": "رد مجوز",
+      "status": "VERIFIED_SOURCE",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-28",
+      "name": "لایسنس/اشتراک",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-29",
+      "name": "بکاپ/بازیابی",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-30",
+      "name": "ورود/خروج داده (import/export)",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-31",
+      "name": "تنظیمات",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-32",
+      "name": "جست‌وجو",
+      "status": "NOT_VERIFIED",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-33",
+      "name": "ادمین/حاکمیت",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-34",
+      "name": "بستن سال مالی",
+      "status": "PARTIAL",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-35",
+      "name": "ساخت و تولید (BOM)",
+      "status": "NOT_VERIFIED",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-36",
+      "name": "CRM / پیگیری",
+      "status": "NOT_VERIFIED",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-37",
+      "name": "AI دستیار",
+      "status": "NOT_VERIFIED",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    },
+    {
+      "id": "JRN-38",
+      "name": "بازار/Marketplace",
+      "status": "NOT_VERIFIED",
+      "files": [],
+      "callers": [],
+      "callees": [],
+      "docs": ["19"]
+    }
+  ]
+}

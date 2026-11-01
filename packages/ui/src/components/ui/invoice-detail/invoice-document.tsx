@@ -3,6 +3,8 @@
 import { Fragment, forwardRef, useEffect, useState } from 'react'
 import { Barcode, Calendar, Mail, MapPin, Phone, User } from 'lucide-react'
 import { buildInvoiceShareUrl as contractShareUrl } from '@hisabche/ui-contract'
+import { useLocale } from 'next-intl'
+import { formatDate, formatNumber, resolveIntlLocale } from '@hisabche/formatting'
 
 /** Used when there is no `window` — SSR and static rendering. */
 const DEFAULT_WEB_ORIGIN = 'https://hisabche.com'
@@ -225,16 +227,11 @@ export function buildInvoiceShareUrl(
   return contractShareUrl(origin, locale, invoiceId, publicToken)
 }
 
-const fmtDate = (d: string, locale: string) => {
-  try {
-    return new Date(d).toLocaleDateString(locale)
-  } catch {
-    return d
-  }
-}
-
 export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
   function InvoiceDocument({ t, data, display, locale = 'fa-AF', itemsSlot }, ref) {
+    // The reader's language decides digits and calendar — never the browser's.
+    const uiLang = useLocale()
+    const fmtNum = (value: number) => formatNumber(value, resolveIntlLocale(uiLang), 3)
     const {
       type = 'sale',
       invoiceId,
@@ -345,14 +342,14 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                 <div className="flex items-center gap-2">
                   <Calendar className="size-3.5 text-[hsl(var(--fg-tertiary))]" />
                   <span>
-                    {t('invoices.date', 'تاریخ')}: {fmtDate(date, locale)}
+                    {t('invoices.date', 'تاریخ')}: {formatDate(date, uiLang)}
                   </span>
                 </div>
                 {dueDate && (
                   <div className="flex items-center gap-2">
                     <Calendar className="size-3.5 text-[hsl(var(--fg-tertiary))]" />
                     <span>
-                      {t('invoices.dueDate', 'سررسید')}: {fmtDate(dueDate, locale)}
+                      {t('invoices.dueDate', 'سررسید')}: {formatDate(dueDate, uiLang)}
                     </span>
                   </div>
                 )}
@@ -447,7 +444,7 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                           {/* وزن جدا از تعداد است: «۱ عدد، ۱۲٫۵ گرم» */}
                           {item.weightGrams ? (
                             <span className="ms-1 text-[10px] font-normal text-[hsl(var(--fg-tertiary))]">
-                              ({item.weightGrams.toLocaleString()} {t('unit.gram', 'گرم')})
+                              ({fmtNum(item.weightGrams)} {t('unit.gram', 'گرم')})
                             </span>
                           ) : null}
                         </td>
@@ -458,7 +455,7 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                           {unitText(item.unit, item.unitLabel)}
                         </td>
                         <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end tabular-nums text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">
-                          {item.unitPrice.toLocaleString()} {currency}
+                          {fmtNum(item.unitPrice)} {currency}
                         </td>
                         <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end tabular-nums text-[hsl(var(--fg-tertiary))] sm:px-2 sm:py-3">
                           {item.discount ? `${item.discount}%` : '—'}
@@ -467,7 +464,7 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                           {/* سهم خودِ این قلم — بدون اجزا. اجزا ردیف خودشان را
                             دارند و جداگانه شمرده می‌شوند، وگرنه خواننده مبلغ
                             جزء را دوبار می‌بیند و جمع غلط به نظر می‌رسد. */}
-                          {baseTotalOf(item).toLocaleString()} {currency}
+                          {fmtNum(baseTotalOf(item))} {currency}
                         </td>
                       </tr>
 
@@ -488,11 +485,11 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                             {unitText(detail.unit, detail.unitLabel)}
                           </td>
                           <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 text-end text-[11px] tabular-nums text-[hsl(var(--fg-secondary))] sm:px-2">
-                            {detail.amount.toLocaleString()} {currency}
+                            {fmtNum(detail.amount)} {currency}
                           </td>
                           <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 sm:px-2" />
                           <td className="px-1.5 py-1 text-end text-[11px] tabular-nums text-[hsl(var(--fg-tertiary))] sm:px-2">
-                            {(detail.quantity * detail.amount).toLocaleString()} {currency}
+                            {fmtNum(detail.quantity * detail.amount)} {currency}
                           </td>
                         </tr>
                       ))}
@@ -508,7 +505,7 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                       {t('invoices.subtotal', 'جمع')}
                     </td>
                     <td className="px-1.5 py-2 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">
-                      {subtotal.toLocaleString()} {currency}
+                      {fmtNum(subtotal)} {currency}
                     </td>
                   </tr>
                   {discountTotal > 0 && (
@@ -520,7 +517,7 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                         {t('invoices.discount', 'تخفیف')}
                       </td>
                       <td className="px-2 py-2 text-end text-[hsl(var(--color-destructive))] tabular-nums">
-                        -{discountTotal.toLocaleString()} {currency}
+                        -{fmtNum(discountTotal)} {currency}
                       </td>
                     </tr>
                   )}
@@ -533,7 +530,7 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                         {t('invoices.tax', 'مالیات')}
                       </td>
                       <td className="px-2 py-2 text-end tabular-nums text-[hsl(var(--fg-primary))]">
-                        {taxTotal.toLocaleString()} {currency}
+                        {fmtNum(taxTotal)} {currency}
                       </td>
                     </tr>
                   )}
@@ -546,7 +543,7 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                         {t('invoices.shipping', 'هزینه ارسال')}
                       </td>
                       <td className="px-2 py-2 text-end tabular-nums text-[hsl(var(--fg-primary))]">
-                        {shippingTotal.toLocaleString()} {currency}
+                        {fmtNum(shippingTotal)} {currency}
                       </td>
                     </tr>
                   )}
@@ -558,7 +555,7 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                       {t('invoices.total', 'مجموع')}
                     </td>
                     <td className="px-2 py-3 text-end text-lg font-bold text-[hsl(var(--color-primary))] tabular-nums">
-                      {total.toLocaleString()} {currency}
+                      {fmtNum(total)} {currency}
                     </td>
                   </tr>
                   {paidAmount > 0 && (
@@ -572,7 +569,7 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                       <td className="px-2 py-2 text-end text-[hsl(var(--color-success))] tabular-nums">
                         {/* No leading «-»: it read as a NEGATIVE payment
                             («پرداخت شده -۱۴۸٬۵۰۰٬۰۰۰») rather than a deduction. */}
-                        {paidAmount.toLocaleString()} {currency}
+                        {fmtNum(paidAmount)} {currency}
                       </td>
                     </tr>
                   )}
@@ -585,7 +582,7 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                         {t('invoices.remaining', 'باقیمانده')}
                       </td>
                       <td className="px-2 py-2 text-end font-medium text-[hsl(var(--color-destructive))] tabular-nums">
-                        {remaining.toLocaleString()} {currency}
+                        {fmtNum(remaining)} {currency}
                       </td>
                     </tr>
                   )}

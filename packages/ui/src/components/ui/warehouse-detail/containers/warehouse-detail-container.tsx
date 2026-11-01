@@ -1,5 +1,6 @@
 'use client'
 
+import { useNumberFormat } from '../../../../hooks/use-number-format'
 import { toValidUnit } from '../../units/unit-select'
 import { useState, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -71,8 +72,6 @@ const num = (v: unknown): number => {
   return Number.isFinite(n) ? n : 0
 }
 
-const fmt = (v: unknown): string => num(v).toLocaleString('fa-AF')
-
 /**
  * ⚠️ THIS USED TO REWRITE THE PRODUCT'S UNIT.
  *
@@ -116,6 +115,8 @@ type StockStatus = 'success' | 'warning' | 'destructive' | 'secondary'
 
 export function ProductDetailContainer() {
   const t = useTranslations()
+  const fmtNum = useNumberFormat()
+  const fmt = (v: unknown): string => fmtNum(num(v))
   const { profile } = useBusinessProfile()
   const router = useRouter()
   const push = useLocalePush()

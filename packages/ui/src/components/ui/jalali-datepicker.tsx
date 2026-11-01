@@ -24,6 +24,8 @@ interface JalaliDatePickerProps {
    * on-screen month/day grid changes.
    */
   locale?: string
+  /** The API's name for this field, so a server refusal can point at it. */
+  'data-field'?: string | undefined
 }
 
 // Iranian Jalali month names (fa-IR)
@@ -229,6 +231,7 @@ export function JalaliDatePicker({
   disabled = false,
   dropUp = false,
   locale,
+  'data-field': dataField,
 }: JalaliDatePickerProps) {
   const tOriginal = useTranslations()
   const t = (key: string, fallback?: string) => {
@@ -373,7 +376,7 @@ export function JalaliDatePicker({
     : ''
 
   return (
-    <div className={cn('relative', className)}>
+    <div className={cn('relative', className)} data-field={dataField}>
       <button
         ref={btnRef}
         type="button"

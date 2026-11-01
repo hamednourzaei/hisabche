@@ -325,6 +325,9 @@ export function useRecordPayment() {
       // without anyone entering it again.
       queryClient.invalidateQueries({ queryKey: ['till'] })
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      // The invoice page reads its payments from `invoice-related`; without this it
+      // kept saying «no payment» until a manual reload.
+      queryClient.invalidateQueries({ queryKey: ['invoice-related'] })
       queryClient.invalidateQueries({ queryKey: ['customers'] })
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['ledger'] })
@@ -371,6 +374,7 @@ export function useCancelPayment() {
       // balance, the customer's debt, the ledger and the dashboard.
       queryClient.invalidateQueries({ queryKey: paymentKeys.all })
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['invoice-related'] })
       queryClient.invalidateQueries({ queryKey: ['customers'] })
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['ledger'] })

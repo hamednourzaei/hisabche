@@ -186,7 +186,7 @@ describe('the funnel card layout', () => {
     // It follows the hovered tile, so a changing big number without its own
     // changing label would be a number of nothing in particular.
     expect(funnel).toContain('focused ? focused.label :')
-    expect(funnel).toContain('focused ? focused.count.toLocaleString')
+    expect(funnel).toContain('focused ? fmtNum(focused.count)')
   })
 
   it('⚠️ the bar is laid out with logical properties, not left/right', () => {

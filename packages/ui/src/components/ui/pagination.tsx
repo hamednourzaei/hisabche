@@ -1,5 +1,6 @@
 'use client'
 
+import { useNumberFormat } from '../../hooks/use-number-format'
 import * as React from 'react'
 import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react'
 import { cn } from '../../lib/utils'
@@ -113,6 +114,7 @@ export function PaginationBar({
   nextLabel = 'بعدی',
   className,
 }: PaginationBarProps) {
+  const fmtNum = useNumberFormat()
   if (total <= pageSize) return null
 
   const from = total === 0 ? 0 : page * pageSize + 1
@@ -124,8 +126,7 @@ export function PaginationBar({
       className={cn('flex flex-wrap items-center justify-between gap-3', className)}
     >
       <span className="text-sm text-[hsl(var(--fg-secondary))]">
-        {showingLabel ??
-          `${from.toLocaleString()}–${to.toLocaleString()} از ${total.toLocaleString()}`}
+        {showingLabel ?? `${fmtNum(from)}–${fmtNum(to)} از ${fmtNum(total)}`}
       </span>
       <div className="flex gap-2">
         <button

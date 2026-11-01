@@ -6,6 +6,7 @@
 
 'use client'
 
+import { useNumberFormat } from '../../../hooks/use-number-format'
 import React from 'react'
 import { HardDrive, Monitor, Key, ArrowUpRight, Download } from 'lucide-react'
 import { useTranslations, useLocale } from 'next-intl'
@@ -54,6 +55,7 @@ export function OfflinePortalView({
 }: OfflinePortalViewProps) {
   const t = useTranslations()
   const locale = useLocale()
+  const fmtNum = useNumberFormat()
 
   const safeT = (key: string, fallback: string): string => {
     try {
@@ -209,7 +211,7 @@ export function OfflinePortalView({
               <div>
                 <p className="text-xs text-[hsl(var(--fg-tertiary))]">مبلغ پرداختی اولیه</p>
                 <p className="font-semibold text-[hsl(var(--fg-primary))]">
-                  {creditBreakdown.amountPaid.toLocaleString()} {creditBreakdown.currency}
+                  {fmtNum(creditBreakdown.amountPaid)} {creditBreakdown.currency}
                 </p>
               </div>
               <div>
@@ -221,7 +223,7 @@ export function OfflinePortalView({
               <div>
                 <p className="text-xs text-[hsl(var(--fg-tertiary))]">اعتبار قابل کسر</p>
                 <p className="font-semibold text-[hsl(var(--color-primary))]">
-                  {creditBreakdown.creditAmount.toLocaleString()} {creditBreakdown.currency}
+                  {fmtNum(creditBreakdown.creditAmount)} {creditBreakdown.currency}
                 </p>
               </div>
             </div>

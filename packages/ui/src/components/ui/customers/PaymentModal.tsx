@@ -1,5 +1,6 @@
 'use client'
 
+import { useNumberFormat } from '../../../hooks/use-number-format'
 import { SelectField } from '../select-field'
 import { TillSelectField } from '../till/till-select-field'
 import { useTillChoice } from '../../../hooks/use-till-choice'
@@ -50,8 +51,6 @@ const toNum = (v: string): number => {
   return Number.isFinite(n) ? n : 0
 }
 
-const fmt = (v: number): string => v.toLocaleString('fa-AF')
-
 const remaining = (inv: InvoiceRecord): number => Math.max(0, inv.total - inv.paidAmount)
 
 const paymentSchema = z.object({
@@ -70,6 +69,7 @@ interface PaymentModalProps {
 
 export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: PaymentModalProps) {
   const t = useTranslations()
+  const fmt = useNumberFormat()
   const recordPayment = useRecordPayment()
   // This form records cash in the books currency: the till it goes into.
   const till = useTillChoice(undefined)

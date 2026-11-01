@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/manufacturing/components/CreateWorkOrderDialog.tsx
 'use client'
 
+import { JalaliDatePicker } from '../../jalali-datepicker'
 import { SelectField } from '../../select-field'
 import { memo, useState, useCallback, useEffect, useMemo } from 'react'
 import { X, Loader2 } from 'lucide-react'
@@ -214,13 +215,7 @@ export const CreateWorkOrderDialog = memo(function CreateWorkOrderDialog({
               >
                 {t('manufacturing.workOrders.startDate', 'تاریخ شروع')}
               </label>
-              <input
-                id="wo-start-date"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-              />
+              <JalaliDatePicker value={startDate} onChange={setStartDate} />
             </div>
             <div className="space-y-1 md:space-y-1.5">
               <label
@@ -229,13 +224,7 @@ export const CreateWorkOrderDialog = memo(function CreateWorkOrderDialog({
               >
                 {t('manufacturing.workOrders.endDate', 'تاریخ پایان')}
               </label>
-              <input
-                id="wo-end-date"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-              />
+              <JalaliDatePicker value={endDate} onChange={setEndDate} />
             </div>
           </div>
 

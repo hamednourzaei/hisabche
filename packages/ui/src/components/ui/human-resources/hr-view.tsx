@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/human-resources/hr-view.tsx
 'use client'
 
+import { useNumberFormat } from '../../../hooks/use-number-format'
 import { KpiCard } from '../kpi-card'
 import { SelectField } from '../select-field'
 import { cn } from '../../../lib/utils'
@@ -198,6 +199,7 @@ export const HumanResourcesView = memo(function HumanResourcesView({
   onDelete,
   onView,
 }: HumanResourcesViewProps) {
+  const fmtNum = useNumberFormat()
   // ⚠️ The calendar follows the language; these were hardcoded to `'fa-AF'`.
   const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
 
@@ -352,7 +354,7 @@ export const HumanResourcesView = memo(function HumanResourcesView({
       <div className="flex gap-4 flex-wrap">
         <KpiCard
           label={t('hr.totalPayroll', 'جمع حقوق پرداختی')}
-          value={`${payrollTotal.toLocaleString('fa-AF')} AFN`}
+          value={`${fmtNum(payrollTotal)} AFN`}
           icon={Wallet}
           className="min-w-[180px] flex-1"
         />
@@ -657,7 +659,7 @@ export const HumanResourcesView = memo(function HumanResourcesView({
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{getStatusBadge(emp.status, t)}</td>
                     <td className="px-4 py-3 text-xs font-medium whitespace-nowrap tabular-nums">
-                      {(payrollByEmployee[emp.id] || 0).toLocaleString('fa-AF')} AFN
+                      {fmtNum(payrollByEmployee[emp.id] || 0)} AFN
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">

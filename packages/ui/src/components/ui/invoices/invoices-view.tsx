@@ -1,5 +1,6 @@
 'use client'
 
+import { useNumberFormat } from '../../../hooks/use-number-format'
 import { SegmentedControl } from '../segmented-control'
 import { INVOICE_STATUS_FILTERS } from '../../../lib/invoices/invoices-format'
 import { memo, useCallback, useEffect, useMemo, type ReactNode } from 'react'
@@ -366,6 +367,7 @@ function useInvoiceColumns(
   onDeleteInvoice: InvoicesViewProps['onDeleteInvoice'],
   onNavigateParty: InvoicesViewProps['onNavigateParty'],
 ): TableColumn<Invoice>[] {
+  const fmtNum = useNumberFormat()
   return useMemo(
     () => [
       {
@@ -469,7 +471,7 @@ function useInvoiceColumns(
         sortValue: (inv) => inv.total,
         render: (inv) => (
           <span className="font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
-            {inv.total.toLocaleString()} {inv.currency}
+            {fmtNum(inv.total)} {inv.currency}
           </span>
         ),
       },
@@ -514,6 +516,7 @@ function useInvoiceColumns(
       },
     ],
     [
+      fmtNum,
       onDeleteInvoice,
       onNavigateInvoice,
       onNavigateInvoiceAction,

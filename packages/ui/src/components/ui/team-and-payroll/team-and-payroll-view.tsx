@@ -1,5 +1,6 @@
 'use client'
 
+import { JalaliDatePicker } from '../jalali-datepicker'
 import { SUPPORTED_CURRENCIES } from '@hisabche/store'
 import { SelectField } from '../select-field'
 import { Switch } from '../switch'
@@ -604,12 +605,10 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <span className="text-xs text-[hsl(var(--fg-secondary))]">
                 {t('hr.dateOfBirth', 'تاریخ تولد')}
               </span>
-              <input
-                type="date"
+              <JalaliDatePicker
                 value={form.dateOfBirth}
-                onChange={(e) => setField('dateOfBirth')(e.target.value)}
-                name="dateOfBirth"
-                className={FORM_FIELD}
+                onChange={setField('dateOfBirth')}
+                data-field="dateOfBirth"
                 disabled={isSubmitting}
               />
               {fieldError('dateOfBirth')}
@@ -797,12 +796,10 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <span className="text-xs text-[hsl(var(--fg-secondary))]">
                 {t('team.hireDate', 'تاریخ استخدام')}
               </span>
-              <input
-                type="date"
+              <JalaliDatePicker
                 value={form.hireDate}
-                onChange={(e) => setField('hireDate')(e.target.value)}
-                name="hireDate"
-                className={FORM_FIELD}
+                onChange={setField('hireDate')}
+                data-field="hireDate"
                 disabled={isSubmitting}
               />
               {fieldError('hireDate')}

@@ -73,6 +73,7 @@ win:
   artifactName: ${productName}-${version}-setup.${ext}
 
 nsis:
+  include: resources/installer.nsh
   # ⚠️ THE PACKAGING STEP FAILED HERE, REPRODUCIBLY.
   #
   #     ⨯ ENOENT: no such file or directory, stat '…-x64.nsis.7z'

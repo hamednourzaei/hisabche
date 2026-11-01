@@ -41,6 +41,7 @@
 // from the sign of the delta.
 // ============================================
 
+import { useNumberFormat } from '../../../hooks/use-number-format'
 import { headlineFontClass } from '../kpi-card'
 import * as React from 'react'
 
@@ -138,6 +139,7 @@ export function SalesFunnel({
   height?: number | undefined
   t: (key: string, fallback?: string) => string
 }) {
+  const fmtNum = useNumberFormat()
   /** Which stage the cursor is on — the headline follows it. */
   const [hovered, setHovered] = React.useState<string | null>(null)
 
@@ -305,10 +307,10 @@ export function SalesFunnel({
           <p
             className={cn(
               'font-bold tabular-nums text-[hsl(var(--fg-primary))]',
-              headlineFontClass(focused ? focused.count.toLocaleString('fa-AF') : fmt(shownTotal)),
+              headlineFontClass(focused ? fmtNum(focused.count) : fmt(shownTotal)),
             )}
           >
-            {focused ? focused.count.toLocaleString('fa-AF') : fmt(shownTotal)}
+            {focused ? fmtNum(focused.count) : fmt(shownTotal)}
           </p>
         </div>
         <TrendMark
@@ -358,7 +360,7 @@ export function SalesFunnel({
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
                   <span className="text-sm font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-                    {stage.count.toLocaleString('fa-AF')}
+                    {fmtNum(stage.count)}
                   </span>
                   {/*
                     The first stage is always 100% of itself — true, and worth

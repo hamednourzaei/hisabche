@@ -1,5 +1,6 @@
 'use client'
 
+import { useNumberFormat } from '../../../hooks/use-number-format'
 import { memo, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../../../lib/utils'
@@ -62,6 +63,7 @@ export const InvoiceRowActions = memo(function InvoiceRowActions({
   onNavigateAction,
   onDelete,
 }: InvoiceRowActionsProps) {
+  const fmtNum = useNumberFormat()
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -93,7 +95,7 @@ export const InvoiceRowActions = memo(function InvoiceRowActions({
   const message = buildInvoiceShareMessage(
     {
       invoiceNumber: inv.invoiceNumber,
-      formattedTotal: `${inv.total.toLocaleString()} ${inv.currency}`,
+      formattedTotal: `${fmtNum(inv.total)} ${inv.currency}`,
       shareUrl,
     },
     t,

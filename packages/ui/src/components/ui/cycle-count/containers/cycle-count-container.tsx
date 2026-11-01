@@ -6,6 +6,7 @@
 // T11 / L2 — wiring the counting screen to the endpoints that had no caller.
 // ============================================
 
+import { useNumberFormat } from '../../../../hooks/use-number-format'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 
@@ -24,6 +25,7 @@ import { readProducts } from '../../../../lib/invoices/products'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 
 export function CycleCountContainer() {
+  const fmtNum = useNumberFormat()
   const t = useTranslations()
   // ⚠️ THE CALENDAR FOLLOWS THE LANGUAGE. These were hardcoded to `'fa-AF'`,
   // so every reader got the Afghan solar calendar whatever they chose.
@@ -78,7 +80,7 @@ export function CycleCountContainer() {
   return (
     <CycleCountView
       t={safeT}
-      fmtMoney={(value) => value.toLocaleString('fa-AF')}
+      fmtMoney={(value) => fmtNum(value)}
       fmtDate={(value) => fmtIntlDate(value)}
       productName={productName}
       counts={counts.data ?? []}

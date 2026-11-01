@@ -808,7 +808,7 @@ describe('Gate 5: Offline Edition Local Transport & Network Isolation Suite', ()
           grossProfit: number | null
           costStatus: string
         }
-      }>('/accounting/profit-report?currency=AFN')
+      }>('/accounting/profit-report?currency=AFN&from=2026-10-01&to=2026-10-31')
 
       expect(profitRes.status).toBe(200)
       // Guard Rule: Unknown is not zero. If cost is unknown, profit is null, NEVER 0.

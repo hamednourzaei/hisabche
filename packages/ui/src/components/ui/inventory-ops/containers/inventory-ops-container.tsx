@@ -6,6 +6,7 @@
 // in «مشتریان»).
 // ============================================
 
+import { useNumberFormat } from '../../../../hooks/use-number-format'
 import { useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 
@@ -23,6 +24,7 @@ import { useDateFormat } from '../../../../hooks/use-date-format'
 
 /** What every part needs: the fallback translator and the two formatters. */
 function useOpsProps(): InventoryOpsViewProps {
+  const fmtNum = useNumberFormat()
   const t = useTranslations()
   // ⚠️ THE CALENDAR FOLLOWS THE LANGUAGE. These were hardcoded to `'fa-AF'`,
   // so every reader got the Afghan solar calendar whatever they chose.
@@ -42,7 +44,7 @@ function useOpsProps(): InventoryOpsViewProps {
 
   return {
     t: safeT,
-    fmtMoney: (value) => value.toLocaleString('fa-AF'),
+    fmtMoney: (value) => fmtNum(value),
     fmtDate: (value) => fmtIntlDate(value),
   }
 }

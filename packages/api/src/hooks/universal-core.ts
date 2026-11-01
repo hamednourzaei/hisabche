@@ -397,6 +397,11 @@ export function useCreateInvoiceReturn(invoiceId: string) {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
       queryClient.invalidateQueries({ queryKey: paymentKeys.all })
       queryClient.invalidateQueries({ queryKey: productKeys.all })
+      // The invoice page, the party balance and the books all move with a return.
+      queryClient.invalidateQueries({ queryKey: ['invoice-related'] })
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['ledger'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }

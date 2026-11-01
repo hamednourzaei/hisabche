@@ -15,6 +15,7 @@
 // which is exactly what the owner reported.
 // ============================================
 
+import { useNumberFormat } from '../../../hooks/use-number-format'
 import { memo, useMemo, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 
@@ -68,6 +69,7 @@ export const EmployeeListTable = memo(function EmployeeListTable({
   onAdd: () => void
   canAdd: boolean
 }) {
+  const fmtNum = useNumberFormat()
   const [search, setSearch] = useState('')
   const { date: fmtDay } = useDateFormat()
 
@@ -158,7 +160,7 @@ export const EmployeeListTable = memo(function EmployeeListTable({
         render: (row) => (
           <span className="tabular-nums font-medium">
             {typeof row.salary === 'number'
-              ? `${row.salary.toLocaleString('fa-AF')} ${row.salary_currency || ''}`
+              ? `${fmtNum(row.salary)} ${row.salary_currency || ''}`
               : '—'}
           </span>
         ),
@@ -203,7 +205,7 @@ export const EmployeeListTable = memo(function EmployeeListTable({
           ) : null,
       },
     ],
-    [fmtDay, onDelete, t],
+    [fmtDay, fmtNum, onDelete, t],
   )
 
   return (

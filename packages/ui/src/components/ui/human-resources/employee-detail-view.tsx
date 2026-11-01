@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/human-resources/employee-detail-view.tsx
 'use client'
 
+import { useNumberFormat } from '../../../hooks/use-number-format'
 import { cn } from '../../../lib/utils'
 import {
   ArrowRight,
@@ -385,6 +386,7 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
   onBack,
   extraSlot,
 }: EmployeeDetailViewProps) {
+  const fmtNum = useNumberFormat()
   const [isEditing, setIsEditing] = useState(false)
   const [form, setForm] = useState<Partial<EmployeeData>>({})
   const [showAddPayment, setShowAddPayment] = useState(false)
@@ -613,7 +615,7 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
           <Field
             icon={Banknote}
             label={t('hr.salary', 'معاش')}
-            value={`${(employee.salary || 0).toLocaleString('fa-AF')} ${employee.salary_currency || ''}`}
+            value={`${fmtNum(employee.salary || 0)} ${employee.salary_currency || ''}`}
             field="salary"
             editable
             type="number"
@@ -704,7 +706,7 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
               >
                 <span className="flex min-w-0 flex-col text-xs text-[hsl(var(--fg-secondary))]">
                   <span className="text-sm font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-                    {Number(p.net_salary).toLocaleString('fa-AF')} {p.currency || ''}
+                    {fmtNum(p.net_salary)} {p.currency || ''}
                   </span>
                   <span className="tabular-nums">{fmtDay(p.payment_date || p.period_start)}</span>
                   {p.notes && p.status !== 'cancelled' && (

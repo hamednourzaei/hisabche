@@ -28,6 +28,7 @@
 // form's job, because this form settles ONE invoice.
 // ============================================
 
+import { JalaliDatePicker } from '../jalali-datepicker'
 import * as React from 'react'
 
 import { Plus, X } from 'lucide-react'
@@ -157,13 +158,7 @@ export function RecordPaymentForm({
 
         <div className="space-y-1">
           <Label htmlFor="payment-date">{t('invoiceDetail.date', 'تاریخ')}</Label>
-          <Input
-            id="payment-date"
-            type="date"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            disabled={isSubmitting}
-          />
+          <JalaliDatePicker value={date} onChange={setDate} disabled={isSubmitting} />
         </div>
       </div>
 

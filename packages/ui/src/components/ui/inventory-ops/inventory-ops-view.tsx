@@ -15,6 +15,7 @@
 // zero would read as a fact.
 // ============================================
 
+import { useNumberFormat } from '../../../hooks/use-number-format'
 import { useState } from 'react'
 import {
   useCashForecast,
@@ -47,7 +48,6 @@ function orDash(value: number | null | undefined, format: (value: number) => str
   return value === null || value === undefined ? '—' : format(value)
 }
 
-const num = (value: number) => value.toLocaleString('fa-AF')
 const translator =
   (t: OpsSectionProps['t']) =>
   (key: string, fallback: string): string =>
@@ -69,6 +69,7 @@ function Failed({ text }: { text: string }) {
 // ─── L3 · reorder suggestions ────────────────────────────────────────────
 
 export function OpsReorderSection({ t }: OpsSectionProps) {
+  const num = useNumberFormat()
   const tr = translator(t)
   const reorder = useReorderSuggestions()
   if (reorder.isLoading) return <Waiting text={tr('common.loading', 'در حال بارگذاری…')} />
@@ -138,6 +139,7 @@ export function OpsReorderSection({ t }: OpsSectionProps) {
 // ─── L4 · dead stock ─────────────────────────────────────────────────────
 
 export function OpsDeadStockSection({ t, fmtDate }: OpsSectionProps) {
+  const num = useNumberFormat()
   const tr = translator(t)
   const deadStock = useDeadStock()
   if (deadStock.isLoading) return <Waiting text={tr('common.loading', 'در حال بارگذاری…')} />
@@ -190,6 +192,7 @@ export function OpsDeadStockSection({ t, fmtDate }: OpsSectionProps) {
 // ─── N3 · cash forecast ──────────────────────────────────────────────────
 
 export function OpsCashForecastSection({ t, fmtMoney, fmtDate }: OpsSectionProps) {
+  const num = useNumberFormat()
   const tr = translator(t)
   const forecast = useCashForecast()
   if (!forecast.data) {
@@ -320,6 +323,7 @@ export function OpsShiftHistorySection({ t, fmtMoney, fmtDate }: OpsSectionProps
 // ─── N4 · stale opportunities ────────────────────────────────────────────
 
 export function OpsStaleOpportunitiesSection({ t, fmtMoney }: OpsSectionProps) {
+  const num = useNumberFormat()
   const tr = translator(t)
   const stale = useStaleOpportunities()
   if (stale.isLoading) return <Waiting text={tr('common.loading', 'در حال بارگذاری…')} />

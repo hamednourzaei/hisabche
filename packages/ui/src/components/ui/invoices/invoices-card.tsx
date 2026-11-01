@@ -1,5 +1,6 @@
 'use client'
 
+import { useNumberFormat } from '../../../hooks/use-number-format'
 import { memo, useCallback, useMemo } from 'react' // ✅ اضافه شد
 import { cn } from '../../../lib/utils'
 import { FOCUS_RING } from '../focus-ring'
@@ -39,6 +40,7 @@ export const InvoiceCard = memo(function InvoiceCard({
   onDelete,
   statusVariant,
 }: InvoiceCardProps) {
+  const fmtNum = useNumberFormat()
   // ✅ useMemo: فقط زمانی محاسبه می‌شود که status یا statusVariant تغییر کند
   const badgeStyle = useMemo(
     () => statusBadgeStyles[statusVariant(inv.status)] ?? statusBadgeStyles.secondary,
@@ -125,7 +127,7 @@ export const InvoiceCard = memo(function InvoiceCard({
             {t('invoices.total', 'مجموع')}
           </p>
           <p className="text-xl font-bold sm:text-2xl tabular-nums text-[hsl(var(--fg-primary))]">
-            {inv.total.toLocaleString()}{' '}
+            {fmtNum(inv.total)}{' '}
             <span className="text-sm sm:text-base font-medium text-[hsl(var(--fg-tertiary))]">
               {inv.currency}
             </span>

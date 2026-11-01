@@ -13,6 +13,7 @@ import {
   useInvoiceRelated,
   useRecordHistory,
   useRecordPayment,
+  useInvoiceReturns,
   useCancelPayment,
   usePostInvoiceToLedger,
   type InvoiceLedgerPostResult,
@@ -30,7 +31,7 @@ import { InvoiceReturnsDialog } from '../../invoices/invoice-returns-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { useReceiptPrint } from '../../../../hooks/use-receipt-print'
-import { formatNumber } from '@hisabche/formatting'
+import { fractionDigits, formatNumber, type KnownCurrency } from '@hisabche/formatting'
 import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { displayedInvoiceStatus } from '../../../../lib/invoices/invoices-format'
@@ -209,6 +210,7 @@ export function InvoiceDetailContainer() {
   // would write (payments, workflow actions) are withheld.
   const subscriptionLocked = useSubscriptionLocked()
   const recordPayment = useRecordPayment()
+  const invoiceReturns = useInvoiceReturns(id)
   const cancelPayment = useCancelPayment()
   const postToLedger = usePostInvoiceToLedger()
   const [ledgerResult, setLedgerResult] = useState<InvoiceLedgerPostResult | null>(null)
@@ -300,8 +302,8 @@ export function InvoiceDetailContainer() {
 
   const buildMessage = useCallback(
     (inv: Record<string, unknown>) =>
-      `🧾 ${t('invoices.title')}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n📅 ${fmtIntlDate(inv.date as string)}\n${getField(inv.customerName, inv.customer_name) ? `👤 ${getField(inv.customerName, inv.customer_name)}\n` : ''}💰 *${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || ''}*\n📌 ${t(`invoices.${(inv.status as string) || 'pending'}`)}`,
-    [t, fmtIntlDate],
+      `🧾 ${t('invoices.title')}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n📅 ${fmtIntlDate(inv.date as string)}\n${getField(inv.customerName, inv.customer_name) ? `👤 ${getField(inv.customerName, inv.customer_name)}\n` : ''}💰 *${formatNumber((inv.total as number) ?? 0, intlLocale, 3)} ${(inv.currency as string) || ''}*\n📌 ${t(`invoices.${(inv.status as string) || 'pending'}`)}`,
+    [t, fmtIntlDate, intlLocale],
   )
 
   const handlePrint = useCallback(() => {
@@ -405,10 +407,10 @@ export function InvoiceDetailContainer() {
     if (!invoice) return
     const inv = invoice as unknown as Record<string, unknown>
     window.open(
-      `mailto:?subject=${encodeURIComponent(`${t('invoices.title')} #${getField(inv.invoiceNumber, inv.invoice_number)}`)}&body=${encodeURIComponent(`${t('invoices.title')}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n${t('invoices.date')}: ${fmtIntlDate(inv.date as string)}\n${t('invoices.total')}: ${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || ''}`)}`,
+      `mailto:?subject=${encodeURIComponent(`${t('invoices.title')} #${getField(inv.invoiceNumber, inv.invoice_number)}`)}&body=${encodeURIComponent(`${t('invoices.title')}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n${t('invoices.date')}: ${fmtIntlDate(inv.date as string)}\n${t('invoices.total')}: ${formatNumber((inv.total as number) ?? 0, intlLocale, 3)} ${(inv.currency as string) || ''}`)}`,
       '_blank',
     )
-  }, [invoice, t, fmtIntlDate])
+  }, [invoice, t, fmtIntlDate, intlLocale])
 
   const statusVariant = useCallback((s: string) => STATUS_MAP[s] || 'secondary', [])
 
@@ -430,6 +432,10 @@ export function InvoiceDetailContainer() {
       id,
     ],
   )
+
+  const returnFractionDigits = display
+    ? (fractionDigits(display.currency as KnownCurrency) ?? 2)
+    : 2
 
   return (
     <>
@@ -502,6 +508,13 @@ export function InvoiceDetailContainer() {
               isPostingToLedger={postToLedger.isPending}
               ledgerPostMessage={ledgerPostMessageOf(ledgerResult, safeT)}
               recordPaymentError={paymentErrorMessage(recordPayment.error, safeT)}
+              returns={(invoiceReturns.data ?? []).map((entry) => ({
+                id: entry.id,
+                returnNumber: entry.returnNumber,
+                returnDate: entry.returnDate,
+                returnType: entry.returnType,
+                total: entry.grandTotalMinor / 10 ** returnFractionDigits,
+              }))}
               relatedFailed={!relatedLoading && !relatedKnown}
               onRetryRelated={() => void refetchRelated()}
               onRecordPayment={

@@ -1,5 +1,6 @@
 'use client'
 
+import { useNumberFormat } from '../../hooks/use-number-format'
 import { useState, useCallback, useMemo, forwardRef, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { Package, Loader2, Search } from 'lucide-react'
@@ -29,6 +30,7 @@ interface ProductPickerProps {
 export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
   ({ value, onChange, placeholder, disabled = false, className }, _ref) => {
     const t = useTranslations()
+    const fmtNum = useNumberFormat()
     const [open, setOpen] = useState(false)
     const [search, setSearch] = useState('')
     const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -140,7 +142,7 @@ export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
                 <div className="flex flex-col gap-0.5">
                   <span className="font-medium text-[hsl(var(--fg-primary))]">{product.name}</span>
                   <span className="text-xs text-[hsl(var(--fg-tertiary))]">
-                    {(product.sellPrice ?? 0).toLocaleString()} AFN /{' '}
+                    {fmtNum(product.sellPrice ?? 0)} AFN /{' '}
                     {product.unit ?? t('warehouse.units.piece')}
                   </span>
                 </div>
