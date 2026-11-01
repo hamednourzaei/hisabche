@@ -176,6 +176,10 @@ export class InvoiceReturnService {
           error,
         )
       }
+      // The one-per-invoice trigger (invoice-return-04) caught a concurrent second return.
+      if (msg.includes('INVOICE_ALREADY_RETURNED')) {
+        throw new ConflictError('INVOICE_ALREADY_RETURNED')
+      }
       if (msg.includes('INVOICE_NOT_FOUND')) throw new NotFoundError('Invoice')
       if (msg.includes('INVOICE_LINE_NOT_FOUND')) throw new NotFoundError('Invoice line')
       if (msg.includes('RETURN_QUANTITY_EXCEEDS_ORIGINAL')) {
