@@ -158,15 +158,20 @@ export const InvoiceReturnsDialog = memo(function InvoiceReturnsDialog({
       const code = apiErrorCode(cause)
       const message = apiErrorMessage(cause, '')
       setError(
-        code === 'RETURN_FUNCTION_MISSING'
+        code === 'INVOICE_ALREADY_RETURNED' || message.includes('INVOICE_ALREADY_RETURNED')
           ? (t?.(
-              'invoices.returnNotReady',
-              'مرجوعی هنوز روی سرور فعال نشده است. با پشتیبانی تماس بگیرید.',
-            ) ?? 'مرجوعی هنوز روی سرور فعال نشده است. با پشتیبانی تماس بگیرید.')
-          : `${
-              message ||
-              (t?.('invoices.returnFailed', 'ثبت مرجوعی انجام نشد') ?? 'ثبت مرجوعی انجام نشد')
-            }${code ? ` (${code})` : ''}`,
+              'invoices.returnAlreadyDone',
+              'برای این فاکتور قبلاً مرجوعی ثبت شده است و فقط یک‌بار ممکن است.',
+            ) ?? 'برای این فاکتور قبلاً مرجوعی ثبت شده است و فقط یک‌بار ممکن است.')
+          : code === 'RETURN_FUNCTION_MISSING'
+            ? (t?.(
+                'invoices.returnNotReady',
+                'مرجوعی هنوز روی سرور فعال نشده است. با پشتیبانی تماس بگیرید.',
+              ) ?? 'مرجوعی هنوز روی سرور فعال نشده است. با پشتیبانی تماس بگیرید.')
+            : `${
+                message ||
+                (t?.('invoices.returnFailed', 'ثبت مرجوعی انجام نشد') ?? 'ثبت مرجوعی انجام نشد')
+              }${code ? ` (${code})` : ''}`,
       )
     }
   }, [

@@ -599,7 +599,11 @@ export function InvoiceDetailContainer() {
         workflowSteps={workflowData?.steps ?? []}
         workflowPending={workflowData?.instance?.status === 'in_progress'}
         onWorkflowAction={handleWorkflowAction}
-        onReturn={() => setReturnsDialogOpen(true)}
+        onReturn={
+          invoiceReturns.data && invoiceReturns.data.length === 0
+            ? () => setReturnsDialogOpen(true)
+            : undefined
+        }
       />
       {display ? (
         <InvoiceReturnsDialog

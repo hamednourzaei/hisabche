@@ -128,6 +128,17 @@ export class InvoiceReturnService {
     if (invErr) throw new DatabaseError('Failed to verify invoice ownership', invErr)
     if (!inv) throw new NotFoundError('Invoice')
 
+    // One return per invoice. The idempotent replay above already answered a retry of
+    // the same request, so anything reaching here with an existing return is a second,
+    // different one — the same goods would come back twice.
+    const { count: existingReturns, error: countErr } = await this.db
+      .from('invoice_returns')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .eq('original_invoice_id', input.originalInvoiceId)
+    if (countErr) throw new DatabaseError('Failed to check existing returns', countErr)
+    if ((existingReturns ?? 0) > 0) throw new ConflictError('INVOICE_ALREADY_RETURNED')
+
     const p_fraction_digits = inv.currency
       ? (fractionDigits(inv.currency as KnownCurrency) ?? 2)
       : 2

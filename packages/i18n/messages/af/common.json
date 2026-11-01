@@ -1843,6 +1843,7 @@
     "returnQuantity": "تعداد بازگشتی",
     "returnReason": "دلیل بازگشت",
     "returnFailed": "ثبت بازگشت انجام نشد",
+    "returnAlreadyDone": "برای این فاکتور قبلاً بازگشت ثبت شده است و فقط یک‌بار ممکن است.",
     "returnNotReady": "بازگشت هنوز روی سرور فعال نشده است. با پشتیبانی تماس بگیرید.",
     "returnReasonPlaceholder": "دلیل بازگشت مال",
     "submitReturn": "ثبت و بازگشت به گدام",

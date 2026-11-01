@@ -1839,6 +1839,7 @@
     "returnQuantity": "تعداد مرجوعی",
     "returnReason": "علت مرجوعی",
     "returnFailed": "ثبت مرجوعی انجام نشد",
+    "returnAlreadyDone": "برای این فاکتور قبلاً مرجوعی ثبت شده است و فقط یک‌بار ممکن است.",
     "returnNotReady": "مرجوعی هنوز روی سرور فعال نشده است. با پشتیبانی تماس بگیرید.",
     "returnReasonPlaceholder": "علت برگشت کالا",
     "submitReturn": "ثبت و برگشت به انبار",
