@@ -325,10 +325,11 @@ export function InvoiceDetailPage({
               quick-invoice preview — which reuses the sidebar above for an
               invoice that does not exist yet — is unaffected. */}
           {relatedSlot ? <div className="mt-6">{relatedSlot}</div> : null}
-          {evidenceSlot ? <div className="mt-6">{evidenceSlot}</div> : null}
           {historySlot ? <div className="mt-6">{historySlot}</div> : null}
         </div>
       </div>
+      {/* Full width, under both columns: installments, late fee and profit evidence sit side by side. */}
+      {evidenceSlot ? <div className="no-print mt-6">{evidenceSlot}</div> : null}
     </div>
   )
 }

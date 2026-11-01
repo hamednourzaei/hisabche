@@ -457,7 +457,7 @@ export function InvoiceDetailContainer() {
         // «Why this profit?» — loads only when the person opens it.
         evidenceSlot={
           display && id ? (
-            <div className="space-y-4">
+            <div className="flex flex-wrap items-start gap-4 [&>*]:min-w-[16rem] [&>*]:flex-1">
               {/* When the unpaid part is due, in parts (#123). Sales only. */}
               {display.type === 'sale' ? <InvoiceInstallmentsPanel invoiceId={id} /> : null}
               {/* What a late payment costs, and charging it (#124). Sales only. */}

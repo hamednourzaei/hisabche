@@ -111,12 +111,41 @@ const Toggle = ({
   </label>
 )
 
-const Card = ({ title, children }: { title: string; children: ReactNode }) => (
-  <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4">
-    <p className="mb-3 text-xs font-semibold text-[hsl(var(--fg-tertiary))]">{title}</p>
-    {children}
-  </div>
-)
+/** A titled panel whose body folds away, like the share panel below. */
+const Card = ({
+  title,
+  children,
+  defaultOpen = true,
+}: {
+  title: string
+  children: ReactNode
+  defaultOpen?: boolean
+}) => {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className={cn(
+          'flex w-full items-center justify-between gap-2 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
+          open && 'mb-3',
+        )}
+      >
+        <span className="text-xs font-semibold text-[hsl(var(--fg-tertiary))]">{title}</span>
+        <ChevronDown
+          className={cn(
+            'size-4 text-[hsl(var(--fg-tertiary))] transition-transform duration-150 motion-reduce:transition-none',
+            open && 'rotate-180',
+          )}
+          aria-hidden="true"
+        />
+      </button>
+      {open ? children : null}
+    </div>
+  )
+}
 
 // آیکون‌های کانال‌های اشتراک‌گذاری در یک شبکه‌ی فشرده به‌جای لیست بلند عمودی
 const IconAction = ({
@@ -321,7 +350,7 @@ export function InvoiceSidebar({
       )}
 
       {metadata && (
-        <Card title={t('invoices.metadata', 'اطلاعات فاکتور')}>
+        <Card title={t('invoices.metadata', 'اطلاعات فاکتور')} defaultOpen={false}>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-[hsl(var(--fg-secondary))]">
@@ -351,7 +380,7 @@ export function InvoiceSidebar({
         </Card>
       )}
 
-      <Card title={t('invoices.displaySettings', 'تنظیمات نمایش')}>
+      <Card title={t('invoices.displaySettings', 'تنظیمات نمایش')} defaultOpen={false}>
         <Toggle
           label={t('invoices.showSignature', 'نمایش امضا')}
           checked={display.showSignature}
