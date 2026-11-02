@@ -119,3 +119,17 @@ once after the owner copied it (the fingerprint became specific to the corrected
 | docs/VERIFY-m5-combined.sql          | e8845a2c1eaf67d4195968f6c2c13dc59a201e25b82b0861ad66eedc5c373276 |
 
 The forward-fix embeds the function bodies of the originals; a guard test (`backend/src/__tests__/m5-forward-fix-drift.test.ts`) fails if they drift.
+
+## 12. Combined VERIFY after the forward-fix — owner output (3 Nov 2026)
+
+`docs/VERIFY-m5-combined.sql` run by the owner after applying `m5-forward-fix-01-migration.sql`: **27 of 27 rows `pass = true`.**
+
+| Rows                                                     | Result                                                                                                                                                                                                   |
+| :------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1–19 schema shape, triggers, privileges, RLS, role check | all true (unchanged from section 10)                                                                                                                                                                     |
+| 20–22 fingerprints of the installed function text        | all true                                                                                                                                                                                                 |
+| 23–27 version markers                                    | now `m5:package_credit_allocate:rev2`, `m5:accounting_deferred_revenue_change:rev2`, `m5:accounting_profit_ledger_totals:rev2`, `m5:invoice_write_document_11:rev2`, `m5:invoice_return_scrap_loss:rev2` |
+
+Reading: the owner's database is on the current definitions of all five changed objects, readable from the markers (exact, not a fingerprint). Release-gate steps 3 and 4 are done by the owner's own output.
+
+What this does NOT prove: that the objects behave correctly under load (no multi-connection test has run), that RLS holds with real roles (the real-role tests have not run), that the backend works against this database (not deployed), or anything on Web / Windows / Android. Production status therefore stays `IMPLEMENTED_NOT_LIVE_VERIFIED` for behaviour, with the **schema state now owner-verified**. Remaining gate steps: 5 (FINDING blocks), 6 (snapshot), 7–8 (disposable PostgreSQL + `*.pg.test.ts`), 9–12 (deploy, smoke, platforms), 13–14 (decisions, go/no-go).

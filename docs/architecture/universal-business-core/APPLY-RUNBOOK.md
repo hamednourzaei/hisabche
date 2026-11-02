@@ -65,7 +65,7 @@ forward-fix has been applied, which is expected on a database that was applied b
 
 ## 6b. Owner database — first combined VERIFY (2 Nov 2026)
 
-22 of 27 rows `pass`; the 5 version-marker rows read `(none)` because the forward-fix had not been applied yet. Reading: the schema objects exist
+22 of 27 rows `pass` first (the 5 marker rows read `(none)` before the forward-fix); AFTER the forward-fix the owner reported 27 of 27 (checklist section 12). Reading: the schema objects exist
 with the event-shaped suspensions and the corrected fingerprints; apply the forward-fix (S3 path) and re-run to get 27/27.
 
 ## 7. Backend deployment

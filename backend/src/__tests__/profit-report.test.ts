@@ -88,6 +88,7 @@ describe('profit report', () => {
       payrolls: [{ currency: 'AFN', baseSalary: 200, bonuses: 30, overtimeAmount: 20 }],
     })
     expect(report.totals).toEqual({
+      basis: 'drill_down', // no ledger totals were supplied, so the headline says it is not ledger-based
       revenue: 1000,
       cost: 600,
       costStatus: 'known',
