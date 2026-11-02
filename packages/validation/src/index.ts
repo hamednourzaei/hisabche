@@ -494,8 +494,44 @@ export {
   type LedgerTotals,
 } from './schemas/accounting.reports'
 
-export { inBooksCurrency, invoiceLedgerLines } from './schemas/invoice-posting.domain'
-export type { InvoicePostingAccounts } from './schemas/invoice-posting.domain'
+export {
+  planReturnDisposition,
+  RETURN_DISPOSITIONS,
+} from './schemas/universal-core/return-disposition.domain'
+export type {
+  ReturnDisposition,
+  ReturnDispositionPlan,
+} from './schemas/universal-core/return-disposition.domain'
+export {
+  computePackageDeferrals,
+  inBooksCurrency,
+  invoiceLedgerLines,
+} from './schemas/invoice-posting.domain'
+export type {
+  InvoicePostingAccounts,
+  PackageLineForDeferral,
+} from './schemas/invoice-posting.domain'
+export {
+  addMonthsIso,
+  allocatableGrantsFromFacts,
+  grantEndsOn,
+  grantStateOn,
+  grantStatuses,
+  planGrantConsumption,
+  suspensionIntervals,
+  unattributedBalance,
+} from './schemas/universal-core/package-grant-allocation.domain'
+export type {
+  AllocatableGrant,
+  GrantAllocation,
+  GrantConsumePlan,
+  GrantState,
+  GrantStatus,
+  GrantSuspension,
+  GrantSuspensionEvent,
+  LedgerAllocationFact,
+  LedgerGrantFact,
+} from './schemas/universal-core/package-grant-allocation.domain'
 
 // ---------- Sync protocol (local-first push/pull) ----------
 export {

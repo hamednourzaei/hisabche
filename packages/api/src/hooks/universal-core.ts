@@ -790,6 +790,62 @@ export function usePackageCreditLedger(customerId?: string, packageProductId?: s
   })
 }
 
+/** One GRANT of a customer's package, as the server (or the device) derives it today. */
+export interface PackageGrantStatusItem {
+  readonly id: string
+  readonly customerId: string
+  readonly packageProductId: string
+  readonly soldOn: string
+  readonly quantity: number
+  readonly remaining: number
+  readonly termMonths: number | null
+  /** null = never used: the term has not started (SOLD != ACTIVATED). */
+  readonly activatedOn: string | null
+  readonly endsOn: string | null
+  readonly state: 'not_started' | 'active' | 'expired' | 'suspended'
+  readonly deferredAmount: number | null
+}
+
+export function usePackageGrants(customerId?: string, packageProductId?: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: [...universalCoreKeys.packageCredits(customerId, packageProductId), 'grants'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<PackageGrantStatusItem[]>('/package-credits/grants', {
+        params: { customerId, packageProductId },
+      })
+      return asList<PackageGrantStatusItem>(data, '/package-credits/grants')
+    },
+    enabled: authReady && Boolean(customerId),
+  })
+}
+
+/** SUSPEND or RESUME ONE GRANT (append-only events; never the whole customer). */
+export function useRecordGrantSuspension() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      grantId: string
+      customerId: string
+      kind: 'SUSPEND' | 'RESUME'
+      reason: string
+      effectiveOn?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{ id: string }>(
+        `/package-credits/grants/${input.grantId}/suspension`,
+        { kind: input.kind, reason: input.reason, effectiveOn: input.effectiveOn },
+      )
+      return data
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: universalCoreKeys.packageCredits(variables.customerId),
+      })
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.all })
+    },
+  })
+}
+
 export function useConsumePackageCredit() {
   const queryClient = useQueryClient()
   return useMutation({

@@ -143,6 +143,9 @@ export interface ProfitSources {
   consumptions: ProfitConsumption[]
   /** The device has no payroll; the report takes none. */
   payrolls: []
+  /** The LEDGER's net change of the deferred-revenue liability in the window (books currency) - M5 / B2-5. */
+  deferredRevenueChange?: number
+  booksCurrency?: string
 }
 
 /**
@@ -160,10 +163,36 @@ export function profitSources(
     `SELECT id, currency, subtotal, discount_total, exchange_rate
        FROM invoice
       WHERE workspace_id = ? AND date >= ? AND date <= ? AND status <> 'cancelled'
-        AND deleted_at IS NULL AND type = 'sale'`,
+        AND deleted_at IS NULL AND type = 'sale'
+        -- C2: profit comes from the ledger - an invoice with no posted journal entry is a reference, not a figure
+        AND EXISTS (SELECT 1 FROM journal_entry je WHERE je.workspace_id = invoice.workspace_id
+                      AND je.source_type = 'invoice' AND je.source_id = invoice.id
+                      AND je.status = 'posted' AND je.deleted_at IS NULL)`,
     [workspaceId, from, to],
   )
-  return sourcesOf(db, workspaceId, invoiceRows, booksCurrency)
+  return {
+    ...sourcesOf(db, workspaceId, invoiceRows, booksCurrency),
+    deferredRevenueChange: deferredRevenueChange(db, workspaceId, from, to),
+    booksCurrency,
+  }
+}
+
+/**
+ * The ledger's net change of the deferred-revenue liability in the window: credits at the sale minus releases at delivery,
+ * read from the device's own journal (the same fact the server's accounting_deferred_revenue_change reads). No deferred-revenue
+ * account means no deferral, so 0 is the true answer.
+ */
+function deferredRevenueChange(db: LocalDb, workspaceId: string, from: string, to: string): number {
+  const row = db.get<{ c: number | null }>(
+    `SELECT SUM(jl.credit - jl.debit) AS c
+       FROM journal_line jl
+       JOIN journal_entry je ON je.id = jl.journal_id
+       JOIN account a ON a.id = jl.account_id
+      WHERE je.workspace_id = ? AND a.role = 'deferred_revenue' AND je.status = 'posted'
+        AND je.deleted_at IS NULL AND jl.deleted_at IS NULL AND je.date >= ? AND je.date <= ?`,
+    [workspaceId, from, to],
+  )
+  return round2(Number(row?.c) || 0)
 }
 
 /** The sale invoices of the window or the one invoice, with what the report reads of them. */

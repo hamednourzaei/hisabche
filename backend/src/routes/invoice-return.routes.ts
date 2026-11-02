@@ -7,9 +7,16 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
+import { holds } from '../services/authorization/authorization.domain'
+import { ForbiddenError } from '../errors/auth.error'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { ValidationError } from '../errors/validation.error'
-import type { ReturnCondition, ReturnDeductionRequest } from '@hisabche/validation'
+import {
+  planReturnDisposition,
+  type ReturnCondition,
+  type ReturnDeductionRequest,
+} from '@hisabche/validation'
+import { ledger } from '../services/accounting'
 import { InvoiceReturnService } from '../services/sales/invoice-return.service'
 import { sendFailure } from '../errors/http-failure'
 import { readClientRequestId, sendCreated } from '../utils/client-request'
@@ -73,6 +80,34 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
         // service as a TypeError (a 500) — and the one return an invoice may have is not
         // to be spent on an empty document.
         if (!Array.isArray(body?.lines)) throw new ValidationError('RETURN_LINES_REQUIRED')
+        // C5: RETURN and SCRAP are different events. A sound return goes back on the shelf with the permission a return
+        // already has (invoice.create); only a line that WRITES GOODS OFF needs stock.adjust (manager by default, delegable
+        // by the owner). A line that says neither is refused whole - nothing is defaulted.
+        let disposition: ReturnType<typeof planReturnDisposition>
+        try {
+          disposition = planReturnDisposition({ returnType: body.returnType, lines: body.lines })
+        } catch (cause) {
+          throw new ValidationError(
+            cause instanceof Error ? cause.message : 'RETURN_DISPOSITION_REQUIRED',
+          )
+        }
+        if (disposition.needsStockAdjust && !holds(request.tenancy, 'stock.adjust')) {
+          throw new ForbiddenError('RETURN_STOCK_DECISION_NOT_PERMITTED')
+        }
+        // RG-1: a scrapped line books its purchase cost as a LOSS (docs/invoice-return-06-scrap-loss-migration.sql). The
+        // loss account is made on first use, like every other role; a workspace that cannot have it refuses the return.
+        if (
+          body.returnType === 'sale_return' &&
+          body.lines.some((l) => l.restockChoice === 'scrap')
+        ) {
+          const ensured = await ledger.ensureAccountsForRoles(request.tenancy, [
+            'inventory_loss',
+            'cogs',
+          ])
+          if (ensured.missing.length > 0) {
+            throw new ValidationError(`RETURN_ACCOUNTS_MISSING: ${ensured.missing.join(', ')}`)
+          }
+        }
         const ret = await service.createReturn(workspaceId, {
           originalInvoiceId: id,
           userId,
@@ -86,7 +121,7 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
           lines: body.lines.map((l) => ({
             originalLineId: l.originalLineId,
             returnQuantity: l.returnQuantity ?? l.quantity ?? 1,
-            restockChoice: l.restockChoice ?? 'restock',
+            restockChoice: l.restockChoice as 'restock' | 'scrap',
             reasonCode: l.reasonCode ?? 'other',
             conditionCode: l.conditionCode,
           })),

@@ -23,6 +23,7 @@ export const ALL_CAPABILITIES = [
   'inventory.read',
   'inventory.cost.read',
   'inventory.configure',
+  'stock.adjust',
   'invoice.read',
   'invoice.create',
   'invoice.update',

@@ -140,6 +140,12 @@ export interface ProfitReport {
     knownGrossProfit: number
     /** null when any sold product has no known cost. */
     grossProfit: number | null
+    /**
+     * M5 (B2-5): revenue the ledger HOLDS BACK as deferred revenue in this window (package sold, not yet delivered) minus what
+     * deliveries released. Present only when the books currency report carries it; `revenue` already has it taken off, so
+     * revenue = the invoices' net sales - this. Package revenue is recognised at DELIVERY, as the ledger says.
+     */
+    deferredRevenueChange?: number
     salaries: number
     netProfit: number | null
     netMarginPercent: number | null
@@ -221,7 +227,19 @@ export function buildProfitReport(input: {
   lines: ProfitLine[]
   consumptions: ProfitConsumption[]
   payrolls: ProfitPayroll[]
+  /**
+   * The accounting ledger's net change of the deferred-revenue liability over the window, in the BOOKS currency (credits at
+   * sale minus releases at delivery). Taken off the revenue of the books-currency report ONLY - never converted, never guessed
+   * for another currency (a document in another currency without a rate stays out of the figures, as before).
+   */
+  deferredRevenueChange?: number | undefined
+  /** The books currency, so the change above lands on the right report. */
+  booksCurrency?: string | undefined
 }): ProfitReport {
+  const deferredChange =
+    input.booksCurrency !== undefined && input.booksCurrency === input.currency
+      ? round2(Number(input.deferredRevenueChange) || 0)
+      : 0
   const inCurrency = new Map(
     input.invoices
       .filter((invoice) => invoice.currency === input.currency)
@@ -385,7 +403,7 @@ export function buildProfitReport(input: {
       0,
     ),
   )
-  const revenue = round2(products.reduce((sum, row) => sum + row.revenue, 0))
+  const revenue = round2(products.reduce((sum, row) => sum + row.revenue, 0) - deferredChange)
   const cost = round2(products.reduce((sum, row) => sum + row.cost, 0))
   const undetermined = products.filter((row) => row.costMissing)
   const stocked = products.filter((row) => row.costStatus !== 'none')
@@ -402,7 +420,8 @@ export function buildProfitReport(input: {
             : 'known'
   const uncostedRevenue = round2(undetermined.reduce((sum, row) => sum + row.revenue, 0))
   const knownGrossProfit = round2(
-    products.reduce((sum, row) => (row.profit === null ? sum : sum + row.profit), 0),
+    products.reduce((sum, row) => (row.profit === null ? sum : sum + row.profit), 0) -
+      deferredChange,
   )
   const grossProfit = isCostDeterminate(costStatus) ? round2(revenue - cost) : null
   const netProfit = grossProfit === null ? null : round2(grossProfit - salaries)
@@ -433,6 +452,7 @@ export function buildProfitReport(input: {
       uncostedRevenue,
       knownGrossProfit,
       grossProfit,
+      ...(deferredChange !== 0 ? { deferredRevenueChange: deferredChange } : {}),
       salaries,
       netProfit,
       netMarginPercent: netProfit === null ? null : percent(netProfit, revenue),

@@ -838,16 +838,27 @@ export class AccountingRepository {
           .range(a, b),
       ),
     ])
-    const read = invoiceRows.map((row) => this.mapProfitInvoice(row))
+    // C2: PROFIT COMES FROM THE LEDGER. An invoice that has no posted journal entry is not a financial document yet
+    // (never booked, or the books lacked an account): it is a reference, not a figure, and it is not reported as profit.
+    const booked = await this.invoicesWithPostedEntry(
+      workspaceId,
+      invoiceRows.map((row) => String(row.id)),
+    )
+    const read = invoiceRows
+      .filter((row) => booked.has(String(row.id)))
+      .map((row) => this.mapProfitInvoice(row))
     const details = await this.profitDetails(
       workspaceId,
       read.map((invoice) => invoice.id),
     )
     const { invoices, lines } = await this.restateInBooksCurrency(workspaceId, read, details.lines)
+    const deferredRevenueChange = await this.deferredRevenueChange(workspaceId, from, to)
     return {
       invoices,
       ...details,
       lines,
+      deferredRevenueChange,
+      booksCurrency: await baseCurrencyOf(workspaceId),
       payrolls: payrollRows
         .filter((row) => !['cancelled', 'rejected'].includes(String(row.status ?? '')))
         .map((row) => ({
@@ -857,6 +868,51 @@ export class AccountingRepository {
           overtimeAmount: Number(row.overtime_amount) || 0,
         })),
     }
+  }
+
+  /** The ids (of those given) that have a posted, uncancelled journal entry of source 'invoice'. */
+  private async invoicesWithPostedEntry(
+    workspaceId: string,
+    invoiceIds: string[],
+  ): Promise<Set<string>> {
+    const booked = new Set<string>()
+    for (let i = 0; i < invoiceIds.length; i += 200) {
+      const { data, error } = await supabase
+        .from('journal_entries')
+        .select('source_id')
+        .eq('workspace_id', workspaceId)
+        .eq('source_type', 'invoice')
+        .eq('status', 'posted')
+        .in('source_id', invoiceIds.slice(i, i + 200))
+      if (error)
+        throw new DatabaseError('Failed to read the journal entries of the invoices', error)
+      for (const row of (data ?? []) as Array<{ source_id: string | null }>) {
+        if (row.source_id) booked.add(String(row.source_id))
+      }
+    }
+    return booked
+  }
+
+  /**
+   * The ledger's net change of the deferred-revenue liability in the window (credits at sale minus releases at delivery),
+   * books currency. A database without the function has no deferral, so 0 is the TRUE answer there - any other failure is
+   * an error (a profit report must not quietly drop the ledger).
+   */
+  private async deferredRevenueChange(
+    workspaceId: string,
+    from: string,
+    to: string,
+  ): Promise<number> {
+    const { data, error } = await supabase.rpc('accounting_deferred_revenue_change', {
+      p_workspace_id: workspaceId,
+      p_from: from,
+      p_to: to,
+    })
+    if (error) {
+      if (error.code === 'PGRST202' || error.code === '42883') return 0
+      throw new DatabaseError('Failed to read the deferred revenue change', error)
+    }
+    return Number(data) || 0
   }
 
   /** The same sources for specific invoices (the till's per-transaction margin). */

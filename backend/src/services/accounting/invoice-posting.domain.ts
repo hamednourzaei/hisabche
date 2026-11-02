@@ -11,6 +11,6 @@
 // shared file.
 // ============================================
 
-export { inBooksCurrency, invoiceLedgerLines } from '@hisabche/validation'
+export { computePackageDeferrals, inBooksCurrency, invoiceLedgerLines } from '@hisabche/validation'
 
 export type { InvoicePostingAccounts } from '@hisabche/validation'

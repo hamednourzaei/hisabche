@@ -59,14 +59,14 @@ export interface PackageCreditMovement {
 
 ---
 
-## 3. Operation Lifecycle & Multi-Ledger Matrix
+## 3. Operation Lifecycle & Multi-Ledger Matrix (Updated 2 Nov 2026 per Owner Decisions M5-1, M5-2, M5-4, OD-5)
 
-| Action                  | Operational Effect               | Payment / Cash Effect                       | Credit Ledger Effect                       | Accounting Journal Entry                                                    |
-| :---------------------- | :------------------------------- | :------------------------------------------ | :----------------------------------------- | :-------------------------------------------------------------------------- |
-| **1. Package Purchase** | Issues `PackageCreditAccount`    | Cash/Bank debited for invoice total         | $+N$ credits added to customer balance     | **Debit**: Cash / Till (1000)<br>**Credit**: Unearned Revenue (1000)        |
-| **2. Session Delivery** | Records `ServiceDeliverySession` | Zero cash movement                          | $-1$ credit deducted from customer balance | **Debit**: Unearned Revenue (100)<br>**Credit**: Service Revenue (100)      |
-| **3. Package Expiry**   | Status $\rightarrow$ `expired`   | Zero cash movement                          | Remaining credits set to 0                 | **Debit**: Unearned Revenue (Unused)<br>**Credit**: Breakage / Other Income |
-| **4. Package Refund**   | Unused credits revoked           | Cash/Bank refunded (subject to lease quota) | $-M$ unused credits cancelled              | **Debit**: Unearned Revenue (Unused)<br>**Credit**: Cash / Till             |
+| Action                             | Operational Effect                                                    | Payment / Cash Effect                     | Credit Ledger Effect                                   | Accounting Journal Entry                                                                                      |
+| :--------------------------------- | :-------------------------------------------------------------------- | :---------------------------------------- | :----------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
+| **1. Package Purchase**            | Issues `PackageCreditAccount`                                         | Cash/Receivable debited for invoice total | $+N$ credits added to customer balance (`GRANT`)       | **Debit**: Accounts Receivable (Total)<br>**Credit**: Deferred Revenue (Net)<br>**Credit**: Tax (Tax portion) |
+| **2. Session Delivery**            | Records `ServiceDeliverySession`                                      | Zero cash movement                        | $-1$ credit deducted from customer balance (`CONSUME`) | **Debit**: Deferred Revenue (Unit value)<br>**Credit**: Sales Revenue (Unit value)                            |
+| **3. Term End / Suspended (OD-5)** | Status $\rightarrow$ `suspended` (cannot consume until renewed)       | Zero cash movement                        | Unused credits KEPT; cannot consume until renewed      | **No accounting entry** (no forfeit, no breakage; liability remains on the books)                             |
+| **4. Package Refund (M5-2)**       | **NOT OFFERED** (Owner decision M5-2: «نه هیچ بازپرداختی وجود ندارد») | Zero cash movement                        | No refund entry type exists                            | **No refund entry**                                                                                           |
 
 ---
 

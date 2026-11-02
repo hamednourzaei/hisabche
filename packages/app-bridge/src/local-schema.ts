@@ -12,7 +12,7 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 16
+export const SCHEMA_VERSION = 17
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
@@ -35,6 +35,7 @@ export const CREATE_STATEMENTS: readonly string[] = [
     wholesale_price INTEGER DEFAULT 0,
     is_active INTEGER NOT NULL DEFAULT 1,
     offering_type TEXT NOT NULL DEFAULT 'goods',
+    package_term_months INTEGER,
     image_url TEXT,
     created_at TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL,
@@ -1115,6 +1116,8 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'notes',
     'expires_at',
     'effective_date',
+    'deferred_amount',
+    'term_months',
     'created_at',
     'updated_at',
     'deleted_at',

@@ -32,4 +32,6 @@ export const STANDARD_ACCOUNT_FOR_ROLE: Partial<Record<AccountRole, StandardAcco
   fx_gain_loss: { code: '4900', name: 'سود و زیان تسعیر ارز', type: 'revenue' },
   owner_capital: { code: '3200', name: 'سرمایه', type: 'equity' },
   bank_fees: { code: '6100', name: 'کارمزد بانک و صرافی', type: 'expense' },
+  deferred_revenue: { code: '2200', name: 'درآمد انتقالی (پیش‌دریافت)', type: 'liability' },
+  inventory_loss: { code: '5200', name: 'ضرر و زیان ضایعات کالا', type: 'expense' },
 }

@@ -9,13 +9,17 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { PackageCreditsService } from '../services/package-credits/package-credits.service'
+import { PackageGrantsService } from '../services/package-credits/package-grants.service'
 import { sendFailure } from '../errors/http-failure'
 import { readClientRequestId, sendCreated } from '../utils/client-request'
 
 export async function packageCreditsRoutes(fastify: FastifyInstance) {
   const service = new PackageCreditsService()
+  const grants = new PackageGrantsService()
   const read = [authenticate, requireWorkspaceContext, requireCapability('invoice.read')]
   const write = [authenticate, requireWorkspaceContext, requireCapability('invoice.create')]
+  // Stopping (or letting go of) a customer's prepaid credit is a decision above a sale: manager by default, delegable.
+  const suspend = [authenticate, requireWorkspaceContext, requireCapability('payment.cancel')]
 
   fastify.get(
     '/api/package-credits/balance',
@@ -34,6 +38,48 @@ export async function packageCreditsRoutes(fastify: FastifyInstance) {
         return reply.send({ data: balance })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to fetch package credit balance')
+      }
+    },
+  )
+
+  // M5 / C: every GRANT of a customer with its term, activation, expiry, suspension and what is left.
+  fastify.get(
+    '/api/package-credits/grants',
+    { preHandler: read },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = (request.query || {}) as { customerId?: string; packageProductId?: string }
+        if (!query.customerId) {
+          return reply.code(400).send({ error: 'customerId query parameter is required' })
+        }
+        const data = await grants.list(request.tenancy, query.customerId, query.packageProductId)
+        return reply.send({ data })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to fetch package grants')
+      }
+    },
+  )
+
+  // Suspension of ONE GRANT: append-only events (a RESUME is a later row), never the whole customer.
+  fastify.post(
+    '/api/package-credits/grants/:grantId/suspension',
+    { preHandler: suspend },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { grantId } = request.params as { grantId: string }
+        const body = (request.body || {}) as {
+          kind?: string
+          effectiveOn?: string
+          reason?: string
+        }
+        const result = await grants.recordSuspension(request.tenancy, grantId, {
+          kind: body.kind as 'SUSPEND' | 'RESUME',
+          effectiveOn: body.effectiveOn,
+          reason: body.reason ?? '',
+        })
+        return sendCreated(reply, result)
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to record the package suspension')
       }
     },
   )

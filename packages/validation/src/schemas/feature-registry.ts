@@ -314,6 +314,8 @@ export const FEATURE_REGISTRY = {
   'order.deposits': { execution: 'local', plans: ALL },
   'trade.appointments': { execution: 'server', plans: CLOUD },
   'operations.service_delivery': { execution: 'local', plans: ALL },
+  // Suspending ONE package GRANT is a manager's decision recorded on the server (append-only events): online only.
+  'operations.package_suspension': { execution: 'server', plans: ALL },
   'trade.agriculture': { execution: 'server', plans: CLOUD },
   'trade.freight': { execution: 'server', plans: CLOUD },
   'trade.courier': { execution: 'server', plans: CLOUD },

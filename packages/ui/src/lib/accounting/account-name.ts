@@ -25,6 +25,8 @@ const STANDARD_NAMES: Record<string, string> = {
   'سود و زیان تسعیر ارز': 'fx_gain_loss',
   سرمایه: 'owner_capital',
   'کارمزد بانک و صرافی': 'bank_fees',
+  'درآمد انتقالی (پیش‌دریافت)': 'deferred_revenue',
+  'ضرر و زیان ضایعات کالا': 'inventory_loss',
 }
 
 /** The default name in the reader's language; any other name as it is. */

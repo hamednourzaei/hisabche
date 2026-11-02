@@ -220,6 +220,8 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   // Package credit is the settlement currency of a service session; the device
   // answers all of it (routes/package-credits.ts).
   'GET /package-credits/balance': ['operations.service_delivery', 'available'],
+  // M5 / C: per-GRANT status (term, activation, expiry, suspension) - the device answers with the same shared function.
+  'GET /package-credits/grants': ['operations.service_delivery', 'available'],
   'GET /package-credits/ledger': ['operations.service_delivery', 'available'],
   'GET /payments': ['payment.record', 'available'],
   'GET /payments/activity/:x/:x': ['customer.accounting', 'available'],
@@ -453,6 +455,11 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /orders/:x/deposits': ['order.deposits', 'available'],
   'POST /package-credits/consume': ['operations.service_delivery', 'available'],
   'POST /package-credits/expire': ['operations.service_delivery', 'available'],
+  // Suspending ONE GRANT is a manager's decision recorded on the server (append-only SUSPEND / RESUME events).
+  'POST /package-credits/grants/:x/suspension': [
+    'operations.package_suspension',
+    'online_required',
+  ],
   'POST /package-credits/reverse': ['operations.service_delivery', 'available'],
   'POST /payments': ['payment.record', 'available'],
   'POST /payments/:x/cancel': ['payment.cancel', 'available'],

@@ -62,6 +62,9 @@ export const CAPABILITIES = [
   'inventory.read',
   'inventory.cost.read',
   'inventory.configure',
+  // Putting goods back on the shelf, or writing them off (a returned item, a count correction). Stock-scoped:
+  // it grants nothing over accounting or payments. The device has always called it stock.adjust.
+  'stock.adjust',
   // Documents
   'invoice.read',
   'invoice.create',
@@ -131,6 +134,8 @@ const MIN_ROLE: Record<Capability, WorkspaceRole> = {
   // and has no reason to know what it was bought for.
   'inventory.cost.read': 'manager',
   'inventory.configure': 'owner',
+  // The owner can hand it to an employee through a custom role (module «انبار و کالا», write level).
+  'stock.adjust': 'manager',
 
   'invoice.read': 'seller',
   'invoice.create': 'seller',
@@ -473,7 +478,7 @@ export const PERMISSION_MODULES: readonly ModuleSpec[] = [
     key: 'inventory',
     label: 'انبار و کالا',
     read: ['inventory.read', 'product.read'],
-    write: ['product.write'],
+    write: ['product.write', 'stock.adjust'],
     full: ['inventory.configure'],
   },
   {

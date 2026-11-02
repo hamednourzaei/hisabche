@@ -2071,7 +2071,10 @@
       "type": "Type",
       "company": "Company",
       "itemsSent": "Items sent"
-    }
+    },
+    "returnErrStockDecision": "Putting returned goods back on the shelf, or writing them off, needs a manager or owner.",
+    "returnErrScrapCostUnknown": "The purchase cost of these goods was not recorded, so the loss cannot be valued and the write-off is not approved.",
+    "returnScrapNeedsPermission": "Writing goods off needs the «adjust stock» permission - ask a manager or the owner."
   },
   "warehouse": {
     "deleteWarehouse": "Delete warehouse",
@@ -3324,7 +3327,9 @@
       "salary_expense": "Salary expense",
       "fx_gain_loss": "Exchange gain and loss",
       "owner_capital": "Owner capital",
-      "bank_fees": "Bank and exchange fees"
+      "bank_fees": "Bank and exchange fees",
+      "deferred_revenue": "Deferred revenue",
+      "inventory_loss": "Inventory scrap loss"
     }
   },
   "hr": {
@@ -8428,7 +8433,13 @@
     "offeringType": "Offering Type",
     "goods": "Goods",
     "service": "Service",
-    "package": "Package"
+    "package": "Package",
+    "packageTerm": "Package term",
+    "packageTermNone": "No term",
+    "packageTerm1": "1 month",
+    "packageTerm6": "6 months",
+    "packageTerm12": "12 months",
+    "packageTermHint": "The term starts at the first use, not at the sale."
   },
   "table": {
     "columns": "Table settings",
@@ -10702,7 +10713,11 @@
       "CONSUMPTION_QUANTITY_MUST_BE_POSITIVE": "The quantity must be greater than zero.",
       "SERVICE_DELIVERY_MIGRATION_REQUIRED": "This build does not have the service session table yet.",
       "WORKSPACE_REQUIRED": "No active business is selected.",
-      "unknown": "That did not go through, and the reason could not be read."
+      "unknown": "That did not go through, and the reason could not be read.",
+      "INSUFFICIENT_ELIGIBLE_PACKAGE_CREDIT": "No usable credit covers this delivery: the customer's package term has ended or the package is suspended.",
+      "PACKAGE_INVOICE_NOT_BOOKED": "The invoice that sold this package is not in the books yet; book it first.",
+      "DEFERRED_REVENUE_ACCOUNT_MISSING": "Your books have no «deferred revenue» account.",
+      "ACCOUNTING_PERIOD_LOCKED": "The session date is in a closed accounting period."
     }
   },
   "teamHub": {
@@ -11283,5 +11298,30 @@
       "singlePurchaseDefault": "Only one unit can be the default purchase unit",
       "singleSaleDefault": "Only one unit can be the default sale unit"
     }
+  },
+  "packageGrants": {
+    "title": "The customer's packages",
+    "empty": "This customer has not bought a package yet.",
+    "unread": "This customer's packages could not be read.",
+    "soldOn": "Bought on",
+    "term": "Term",
+    "months": "{n} months",
+    "noTerm": "No term",
+    "activatedOn": "Term started",
+    "notStarted": "Not used yet",
+    "endsOn": "Term ends",
+    "reason": "Reason",
+    "reasonRequired": "Write the reason.",
+    "confirm": "Record",
+    "cancel": "Cancel",
+    "suspend": "Suspend this package",
+    "resume": "Resume this package",
+    "state": {
+      "active": "Active",
+      "not_started": "Not started",
+      "expired": "Term ended",
+      "suspended": "Suspended"
+    },
+    "failed": "Could not be recorded."
   }
 }

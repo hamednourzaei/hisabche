@@ -20,9 +20,9 @@ SELECT
   EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'service_delivery_sessions'
            AND column_name = 'settlement_method')                                      AS has_session_settlement;
 
--- ── BLOCK 1 ── package invoice lines that never produced a GRANT.
--- The grant is written by a SECOND call after the invoice is saved and its failure is only logged
--- (backend/src/services/invoice.service.ts, grantPackageCreditsForInvoice): a paid package can exist with no credit.
+-- ── BLOCK 1 ── package invoice lines that never produced a GRANT (LEGACY GAP MEASUREMENT).
+-- For new invoices, docs/invoice-write-grant-01-migration.sql makes invoice + grant atomic inside invoice_write_document.
+-- This block measures only legacy gaps from before that migration (when the grant was written by a second call).
 SELECT i.workspace_id,
        COUNT(*)                         AS package_lines_without_grant,
        COUNT(DISTINCT i.id)             AS invoices_affected

@@ -28,6 +28,16 @@ import { ConflictError, DatabaseError, NotFoundError } from '../../errors/databa
 import { ValidationError } from '../../errors/validation.error'
 import type { TenancyContext } from '../tenancy.service'
 
+/** The codes the M5 allocation trigger refuses a consume with (docs/package-deferred-revenue-01-migration.sql). */
+const M5_REFUSAL_CODES = [
+  'INSUFFICIENT_ELIGIBLE_PACKAGE_CREDIT',
+  'PACKAGE_INVOICE_NOT_BOOKED',
+  'DEFERRED_REVENUE_ACCOUNT_MISSING',
+  'SALES_ACCOUNT_MISSING',
+  'PACKAGE_RELEASE_ENTRY_MISSING',
+  'ACCOUNTING_PERIOD_LOCKED',
+] as const
+
 export interface GrantPackageCreditInput {
   customerId: string
   packageProductId: string
@@ -345,6 +355,9 @@ export class PackageCreditsService {
 
     if (rpcError) {
       const msg = rpcError.message || ''
+      // M5: the allocation trigger refuses with its own codes (no eligible GRANT, sale not booked, closed period ...).
+      const m5 = M5_REFUSAL_CODES.find((code) => msg.includes(code))
+      if (m5) throw new ConflictError(m5)
       if (rpcError.code === 'P0001' || msg.includes('INSUFFICIENT_PACKAGE_CREDIT')) {
         throw new ConflictError(
           `INSUFFICIENT_PACKAGE_CREDIT: ${msg || 'Requested quantity exceeds available credit balance'}`,

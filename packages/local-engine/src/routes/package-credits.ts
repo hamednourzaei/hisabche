@@ -20,6 +20,7 @@ import { requireCapability } from '../auth'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
+import { listGrantStatuses } from './package-allocation'
 
 interface PackageCreditLedgerRow {
   id: string
@@ -113,6 +114,18 @@ export function registerPackageCreditsRoutes(router: Router): void {
   })
 
   // ─── 2. Get Ledger Entries ───────────────────────────────────────
+  // M5 / C: every GRANT of a customer with its term, activation, expiry, suspension and what is left - the SAME shared
+  // function the server answers with. Suspending is online-only (a manager's decision), so no device write route.
+  router.get('/package-credits/grants', async (c: RouteHandlerContext) => {
+    const { query } = c
+    if (!query.customerId) throw new ValidationError('CUSTOMER_ID_REQUIRED')
+    const today = new Date().toISOString().slice(0, 10)
+    return {
+      __status: 200,
+      __data: listGrantStatuses(c, query.customerId, query.packageProductId, today),
+    }
+  })
+
   router.get('/package-credits/ledger', async (c: RouteHandlerContext) => {
     const { db, ctx, query } = c
     const customerId = query.customerId

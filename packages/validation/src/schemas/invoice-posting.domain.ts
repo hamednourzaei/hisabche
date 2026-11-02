@@ -32,6 +32,7 @@ export interface InvoicePostingAccounts {
   sales?: string | undefined
   cogs?: string | undefined
   tax?: string | undefined
+  deferred_revenue?: string | undefined
 }
 
 export function invoiceLedgerLines(input: {
@@ -42,6 +43,11 @@ export function invoiceLedgerLines(input: {
   taxTotal?: number | undefined
   /** Books currency, from the consumed cost layers. Sales only. */
   costOfGoodsSold?: number | undefined
+  /**
+   * Books currency, the NET (after discount, before tax) amount of package lines. It is credited to deferred revenue
+   * instead of sales and released at delivery (M5-1). Tax is NOT deferred (M5-4). Sales only.
+   */
+  deferredRevenue?: number | undefined
   accounts: InvoicePostingAccounts
 }): DraftLine[] {
   const { isPurchase, total, accounts } = input
@@ -57,21 +63,33 @@ export function invoiceLedgerLines(input: {
       { accountId: accounts.payable!, debit: 0, credit: total },
     ]
   } else {
-    // Sales:
-    // When tax is present and tax account exists, separate sales revenue from tax payable:
-    // Debit receivable for full total
-    // Credit tax liability for tax portion
-    // Credit sales revenue for the net amount (total - tax)
-    lines = [{ accountId: accounts.receivable!, debit: total, credit: 0 }]
+    // Sales: debit receivable for the full total; credit the tax liability for the tax (when there is a tax account);
+    // credit deferred revenue for the package part of the net; credit sales for the rest of the net.
+    const taxApplied = tax > 0 && accounts.tax ? tax : 0
+    const netSales = round2(total - taxApplied)
+    const deferred = Math.min(
+      Math.max(0, Number(input.deferredRevenue) || 0),
+      Math.max(0, netSales),
+    )
+    // ⚠️ No silent fallback: a deferred amount with no account to hold it would book the package as plain revenue.
+    if (deferred > 0 && !accounts.deferred_revenue) {
+      throw new Error('DEFERRED_REVENUE_ACCOUNT_MISSING')
+    }
+    const recognised = round2(netSales - deferred)
 
-    if (tax > 0 && accounts.tax) {
-      const netSales = round2(total - tax)
-      if (netSales > 0) {
-        lines.push({ accountId: accounts.sales!, debit: 0, credit: netSales })
-      }
-      lines.push({ accountId: accounts.tax, debit: 0, credit: tax })
-    } else {
-      lines.push({ accountId: accounts.sales!, debit: 0, credit: total })
+    lines = [{ accountId: accounts.receivable!, debit: total, credit: 0 }]
+    if (deferred > 0) {
+      lines.push({ accountId: accounts.deferred_revenue!, debit: 0, credit: deferred })
+    }
+    if (recognised > 0 || (deferred === 0 && taxApplied === 0)) {
+      lines.push({
+        accountId: accounts.sales!,
+        debit: 0,
+        credit: taxApplied > 0 ? recognised : total,
+      })
+    }
+    if (taxApplied > 0) {
+      lines.push({ accountId: accounts.tax!, debit: 0, credit: taxApplied })
     }
   }
 
@@ -88,4 +106,36 @@ export function invoiceLedgerLines(input: {
     }
   }
   return lines
+}
+
+export interface PackageLineForDeferral {
+  offeringType?: string | null | undefined
+  quantity: number
+  unitPrice?: number | undefined
+  totalPrice?: number | undefined
+  discount?: number | undefined
+}
+
+/**
+ * The net (after discount, before tax) value of every PACKAGE line in the BOOKS currency, line by line, and their sum.
+ * The invoice's deferred credit and each GRANT's deferred amount both come from this one function, so the journal and
+ * the ledger cannot disagree: the total is the sum of the rounded line values, never a second rounding of the sum.
+ */
+export function computePackageDeferrals(
+  lines: PackageLineForDeferral[],
+  exchangeRate = 1,
+): { perLine: number[]; total: number } {
+  const perLine = lines.map((line) => {
+    if (line.offeringType !== 'package' || !(line.quantity > 0)) return 0
+    const quantity = Number(line.quantity) || 0
+    let net = 0
+    if (line.unitPrice !== undefined) {
+      const gross = round2(quantity * (Number(line.unitPrice) || 0))
+      net = round2(gross - Math.min(gross, Number(line.discount) || 0))
+    } else if (line.totalPrice !== undefined) {
+      net = Number(line.totalPrice) || 0
+    }
+    return inBooksCurrency(Math.max(0, net), exchangeRate)
+  })
+  return { perLine, total: round2(perLine.reduce((sum, value) => sum + value, 0)) }
 }

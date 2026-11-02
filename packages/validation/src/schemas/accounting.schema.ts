@@ -55,6 +55,8 @@ export const accountRoles = [
   // money changer kept of a payment (docs/opening-capital-and-fees-01-migration.sql).
   'owner_capital',
   'bank_fees',
+  'deferred_revenue',
+  'inventory_loss',
 ] as const
 
 export type AccountRole = (typeof accountRoles)[number]

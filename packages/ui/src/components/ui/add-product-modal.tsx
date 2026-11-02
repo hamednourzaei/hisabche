@@ -42,7 +42,9 @@ type FormData = {
   buyPrice: number
   sellPrice: number
   unit: UnitType
-  offeringType: 'goods' | 'service'
+  offeringType: 'goods' | 'service' | 'package'
+  /** 1 / 6 / 12 months once the package is first used; null = it never expires. Only a package has one. */
+  packageTermMonths: 1 | 6 | 12 | null
 }
 
 const inputClass =
@@ -68,6 +70,7 @@ export const AddProductModal = memo(function AddProductModal({
     sellPrice: 0,
     unit: profile.productDefaults.unit,
     offeringType: 'goods',
+    packageTermMonths: null,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -109,7 +112,8 @@ export const AddProductModal = memo(function AddProductModal({
     setIsSubmitting(true)
     setSaveStatus('saving')
 
-    const isService = formData.offeringType === 'service'
+    // A service and a package move no stock; only a package carries a term.
+    const isService = formData.offeringType !== 'goods'
     const unit = toValidUnit(formData.unit) || 'piece'
     if (!unit) {
       setErrors((prev) => ({
@@ -130,6 +134,9 @@ export const AddProductModal = memo(function AddProductModal({
         minStockLevel: 0,
         category: 'general',
         offeringType: formData.offeringType,
+        ...(formData.offeringType === 'package' && formData.packageTermMonths
+          ? { packageTermMonths: formData.packageTermMonths }
+          : {}),
         isActive: true,
       })
 
@@ -151,6 +158,7 @@ export const AddProductModal = memo(function AddProductModal({
         sellPrice: 0,
         unit: profile.productDefaults.unit,
         offeringType: 'goods',
+        packageTermMonths: null,
       })
       setErrors({})
 
@@ -186,6 +194,7 @@ export const AddProductModal = memo(function AddProductModal({
       sellPrice: 0,
       unit: profile.productDefaults.unit,
       offeringType: 'goods',
+      packageTermMonths: null,
     })
     setErrors({})
     onClose()
@@ -236,9 +245,37 @@ export const AddProductModal = memo(function AddProductModal({
               options={[
                 { value: 'goods', label: t('product.goods') || 'کالا' },
                 { value: 'service', label: t('product.service') || 'خدمت' },
+                { value: 'package', label: t('product.package') || 'بسته' },
               ]}
             />
           </div>
+
+          {/* A package has a term: it starts at its first use (never at the sale) and ends 1 / 6 / 12 months later. */}
+          {formData.offeringType === 'package' ? (
+            <div className="space-y-1">
+              <Label>{t('product.packageTerm') || 'مدت بسته'}</Label>
+              <SegmentedControl
+                label={t('product.packageTerm') || 'مدت بسته'}
+                value={String(formData.packageTermMonths ?? 'none')}
+                onChange={(val) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    packageTermMonths: val === '1' ? 1 : val === '6' ? 6 : val === '12' ? 12 : null,
+                  }))
+                }
+                options={[
+                  { value: 'none', label: t('product.packageTermNone') || 'بدون مدت' },
+                  { value: '1', label: t('product.packageTerm1') || '۱ ماه' },
+                  { value: '6', label: t('product.packageTerm6') || '۶ ماه' },
+                  { value: '12', label: t('product.packageTerm12') || '۱۲ ماه' },
+                ]}
+              />
+              <p className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('product.packageTermHint') ||
+                  'مدت از اولین استفاده شروع می‌شود، نه از تاریخ فروش.'}
+              </p>
+            </div>
+          ) : null}
 
           {/* Name */}
           <div className="space-y-2">

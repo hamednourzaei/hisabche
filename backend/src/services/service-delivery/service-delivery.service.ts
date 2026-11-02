@@ -364,6 +364,12 @@ export class ServiceDeliveryService {
     if (code === 'SERVICE_DELIVERY_SESSION_NOT_FOUND') return new NotFoundError(code)
     if (
       code === 'INSUFFICIENT_PACKAGE_CREDIT' ||
+      code === 'INSUFFICIENT_ELIGIBLE_PACKAGE_CREDIT' ||
+      code === 'PACKAGE_INVOICE_NOT_BOOKED' ||
+      code === 'DEFERRED_REVENUE_ACCOUNT_MISSING' ||
+      code === 'SALES_ACCOUNT_MISSING' ||
+      code === 'PACKAGE_RELEASE_ENTRY_MISSING' ||
+      code === 'ACCOUNTING_PERIOD_LOCKED' ||
       code === 'SESSION_CHANGED' ||
       code === 'SESSION_ALREADY_DELIVERED_DIFFERENTLY' ||
       code === 'IDEMPOTENCY_KEY_PAYLOAD_MISMATCH' ||

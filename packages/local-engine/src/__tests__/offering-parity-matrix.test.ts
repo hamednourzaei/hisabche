@@ -197,7 +197,7 @@ describe('M2.1 Offering Parity Matrix (10 Core Scenarios)', () => {
       body: {
         returnType: 'sale_return',
         returnNumber: 'RET-001',
-        lines: [{ originalLineId: returnItem?.id, quantity: 1 }],
+        lines: [{ originalLineId: returnItem?.id, quantity: 1, restockChoice: 'restock' }],
       },
     })
     expect(returnRes.status).toBe(201)
@@ -266,7 +266,7 @@ describe('M2.1 Offering Parity Matrix (10 Core Scenarios)', () => {
       body: {
         returnType: 'sale_return',
         returnNumber: 'RET-002',
-        lines: [{ originalLineId: returnItem?.id, quantity: 1 }],
+        lines: [{ originalLineId: returnItem?.id, quantity: 1, restockChoice: 'restock' }],
       },
     })
     expect(returnRes.status).toBe(201)

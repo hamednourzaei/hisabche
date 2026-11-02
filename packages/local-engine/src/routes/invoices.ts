@@ -13,6 +13,7 @@
 import {
   computeItemTotal,
   createInvoiceSchema,
+  computePackageDeferrals,
   invoiceLedgerLines,
   isPackageOffering,
   movesStock,
@@ -231,6 +232,14 @@ export function mapInvoice(
   }
 }
 
+/** The owner's switch for deferring package revenue: off unless the device's meta says 'on'. */
+function isPackageDeferralOn(db: RouteHandlerContext['db']): boolean {
+  return (
+    db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', ['package_deferred_revenue'])
+      ?.value === 'on'
+  )
+}
+
 export function ensureDefaultAccounts(db: RouteHandlerContext['db'], workspaceId: string) {
   const defaults = [
     { code: '1010', name: 'صندوق نقدی', type: 'asset', role: 'cash' },
@@ -240,6 +249,13 @@ export function ensureDefaultAccounts(db: RouteHandlerContext['db'], workspaceId
     { code: '2100', name: 'مالیات', type: 'liability', role: 'tax' },
     { code: '4010', name: 'درآمد فروش', type: 'revenue', role: 'sales' },
     { code: '5010', name: 'بهای تمام شده کالای فروش رفته', type: 'expense', role: 'cogs' },
+    {
+      code: '2200',
+      name: 'درآمد انتقالی (پیش‌دریافت)',
+      type: 'liability',
+      role: 'deferred_revenue',
+    },
+    { code: '5200', name: 'ضرر و زیان ضایعات کالا', type: 'expense', role: 'inventory_loss' },
   ]
 
   const now = new Date().toISOString()
@@ -655,6 +671,7 @@ export function registerInvoiceRoutes(router: Router): void {
       )
 
       // 4. Insert invoice items
+      let deferredTotal = 0 // M5-1: books-currency package net deferred by this sale (0 unless the owner switched deferral on)
       for (const item of derivedItems) {
         db.run(
           `INSERT INTO invoice_item (
@@ -730,6 +747,22 @@ export function registerInvoiceRoutes(router: Router): void {
           item.quantity > 0 &&
           isPackageOffering(item.offeringType)
         ) {
+          // M5-1: the owner's switch (meta key package_deferred_revenue = 'on', default OFF - the same switch as the server's
+          // PACKAGE_DEFERRED_REVENUE). The amount comes from the SAME shared function the server uses, line by line.
+          const deferring = isPackageDeferralOn(db)
+          const deferral = deferring
+            ? computePackageDeferrals(
+                [{ offeringType: 'package', quantity: item.quantity, totalPrice: item.totalPrice }],
+                exchangeRate,
+              ).total
+            : null
+          const termRow = deferring
+            ? db.get<{ package_term_months: number | null }>(
+                'SELECT package_term_months FROM product WHERE id = ? AND workspace_id = ?',
+                [item.productId, workspaceId],
+              )
+            : undefined
+          deferredTotal = deferral === null ? deferredTotal : round2(deferredTotal + deferral)
           const grant = planPackageGrant({
             workspaceId,
             customerId,
@@ -747,8 +780,8 @@ export function registerInvoiceRoutes(router: Router): void {
             `INSERT INTO package_credit_ledger (
               id, workspace_id, customer_id, package_product_id, entry_type, quantity,
               unit, source_document_type, source_document_id, source_line_id,
-              idempotency_key, notes, effective_date, created_at, updated_at, origin, sync_state
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+              idempotency_key, notes, effective_date, deferred_amount, term_months, created_at, updated_at, origin, sync_state
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
             [
               grant.id,
               workspaceId,
@@ -763,6 +796,8 @@ export function registerInvoiceRoutes(router: Router): void {
               grant.idempotencyKey,
               grant.notes,
               grant.effectiveDate,
+              deferral,
+              termRow?.package_term_months ?? null,
               grant.createdAt,
               now,
             ],
@@ -841,6 +876,7 @@ export function registerInvoiceRoutes(router: Router): void {
       // 7. General Ledger Posting
       const accounts = ensureDefaultAccounts(db, workspaceId)
       const ledgerLines = invoiceLedgerLines({
+        ...(deferredTotal > 0 ? { deferredRevenue: deferredTotal } : {}),
         isPurchase: type === 'purchase',
         total: roundInvoiceMoney(total * exchangeRate, booksCurrency),
         taxTotal:

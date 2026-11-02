@@ -1188,6 +1188,18 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   },
   {
     routeFile: 'package-credits.routes.ts',
+    route: 'POST /api/package-credits/grants/:grantId/suspension',
+    // An append-only EVENT: a second SUSPEND while suspended, or a RESUME with nothing suspended, changes no state (the
+    // intervals are derived from the events, so a duplicate or racing pair yields the same answer).
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      { file: `${RT}/package-credits.routes.ts`, text: 'recordSuspension' },
+      { file: `${SVC}/package-credits/package-grants.service.ts`, text: 'recordSuspension' },
+      { file: 'docs/package-deferred-revenue-01-migration.sql', text: 'trg_pkg_susp_immutable' },
+    ],
+  },
+  {
+    routeFile: 'package-credits.routes.ts',
     route: 'POST /api/package-credits/adjust',
     mechanisms: ['idempotency-key', 'unique-constraint'],
     evidence: [

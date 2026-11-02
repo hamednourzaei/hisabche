@@ -24,6 +24,7 @@ import {
   apiErrorCode,
   apiErrorMessage,
   useCreateInvoiceReturn,
+  useMyCapabilities,
   useRefundInvoiceReturn,
 } from '@hisabche/api'
 import { fractionDigits, toIsoDay, type KnownCurrency } from '@hisabche/formatting'
@@ -160,6 +161,16 @@ const ERROR_SENTENCE: Array<[string, string, string]> = [
   ],
   ['RETURN_LINES_REQUIRED', 'returnErrNoLines', 'حداقل یک قلم را برای مرجوعی انتخاب کنید.'],
   [
+    'RETURN_STOCK_DECISION_NOT_PERMITTED',
+    'returnErrStockDecision',
+    'برگرداندن کالا به انبار یا حذف آن از انبار نیاز به مجوز مدیر یا مالک دارد.',
+  ],
+  [
+    'SCRAP_COST_UNKNOWN',
+    'returnErrScrapCostUnknown',
+    'بهای خرید این کالا ثبت نشده است؛ ضرر آن قابل محاسبه نیست و ضایعات تأیید نمی‌شود.',
+  ],
+  [
     'RETURN_MIGRATION_05_REQUIRED',
     'returnMigrationNeeded',
     'کسورات روی سرور فعال نشده است. با پشتیبانی تماس بگیرید.',
@@ -233,6 +244,9 @@ function ReturnForm({ invoiceId, onClose, items, invoice, t }: ReturnFormProps) 
     () => returnPolicyFor(canonicalIndustryTypes(businessTypes ?? []).known),
     [businessTypes],
   )
+
+  // C5: a sound return needs only the return permission; WRITING GOODS OFF (scrap -> inventory loss) is a stock decision.
+  const mayScrap = useMyCapabilities().can('stock.adjust') === true
 
   const currency = invoice?.currency ?? ''
   const digits = currency ? (fractionDigits(currency as KnownCurrency) ?? 2) : 2
@@ -333,6 +347,23 @@ function ReturnForm({ invoiceId, onClose, items, invoice, t }: ReturnFormProps) 
       return
     }
 
+    // C5: the server refuses a scrap without stock.adjust; say so BEFORE sending, naming the way out.
+    if (
+      !mayScrap &&
+      lines.some(
+        (item) =>
+          qtyOf(item.id as string, item) > 0 && rows[item.id as string]?.destination === 'scrap',
+      )
+    ) {
+      setError(
+        tr(
+          'returnErrStockDecision',
+          'برگرداندن کالا به انبار یا حذف آن از انبار نیاز به مجوز مدیر یا مالک دارد.',
+        ),
+      )
+      return
+    }
+
     setError(null)
     let created: Awaited<ReturnType<typeof createReturn.mutateAsync>>
     try {
@@ -421,6 +452,7 @@ function ReturnForm({ invoiceId, onClose, items, invoice, t }: ReturnFormProps) 
     {
       value: 'scrap',
       label: tr('restockChoiceScrap', 'اسقاط / ضایعات (بدون افزایش موجودی)'),
+      disabled: !mayScrap,
     },
   ]
   const deductionReasonOptions: SelectFieldOption[] = DEDUCTION_REASONS.map((value) => ({
@@ -555,6 +587,14 @@ function ReturnForm({ invoiceId, onClose, items, invoice, t }: ReturnFormProps) 
                           }
                           options={destinationOptions}
                         />
+                        {!mayScrap ? (
+                          <p className="mt-1 text-xs text-[hsl(var(--fg-secondary))]">
+                            {tr(
+                              'returnScrapNeedsPermission',
+                              'اسقاط کالا نیاز به مجوز «تعدیل موجودی» دارد؛ از مدیر یا مالک بخواهید.',
+                            )}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                   ) : null}

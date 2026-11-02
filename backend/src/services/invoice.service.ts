@@ -40,7 +40,11 @@ import {
   type AccountRole,
 } from '@hisabche/validation'
 import { ledger, type DraftLine } from './accounting'
-import { inBooksCurrency, invoiceLedgerLines } from './accounting/invoice-posting.domain'
+import {
+  computePackageDeferrals,
+  inBooksCurrency,
+  invoiceLedgerLines,
+} from './accounting/invoice-posting.domain'
 import { costing } from './inventory-costing'
 import { rules } from './rules'
 import { tax } from './tax'
@@ -1111,12 +1115,23 @@ export class InvoiceService {
           )
         : []
 
+    // M5 SLICE D: Build atomic package credit grant rows BEFORE writing document
+    const grantRows =
+      direction === -1 && header.customer_id
+        ? await this.buildPackageGrantRows(
+            ctx,
+            invoiceId,
+            header.customer_id,
+            lines,
+            itemRows,
+            data.date,
+            exchangeRate,
+          )
+        : []
+
     // ═══════════════════════════════════════════════════════════════════════
-    // ⚠️ ONE WRITE (27 Sep 2026): header, items, their details and the stock
-    // movements in one transaction (docs/invoice-write-document-migration.sql).
-    // It used to be four statements, and a failure between them left a header
-    // with no items, or — through a compensating DELETE — no invoice at all
-    // after the details failed.
+    // ⚠️ ONE WRITE (27 Sep 2026 + M5 Slice D): header, items, their details,
+    // stock movements AND package credit grants in one transaction.
     // ═══════════════════════════════════════════════════════════════════════
     const invoiceError = await this.writeInvoiceDocument(ctx, {
       invoiceId,
@@ -1124,6 +1139,7 @@ export class InvoiceService {
       itemRows,
       detailRows: this.buildDetailRows(lines, itemRows),
       movementRows,
+      grantRows,
     })
 
     if (invoiceError && clientRequestId) {
@@ -1145,7 +1161,15 @@ export class InvoiceService {
         'INVOICE_REFERENCE_MISSING: a product or party on this invoice no longer exists',
       )
     }
-    if (invoiceError) throw new DatabaseError('Failed to create invoice', invoiceError)
+    if (invoiceError) {
+      if (invoiceError.code === '42P01' || invoiceError.code === 'PGRST205') {
+        throw new DatabaseError(
+          'PACKAGE_CREDIT_MIGRATION_REQUIRED: package_credit_ledger table missing. Run package-credit-ledger-01-migration.sql',
+          invoiceError,
+        )
+      }
+      throw new DatabaseError('Failed to create invoice', invoiceError)
+    }
 
     const invoice = {
       id: invoiceId,
@@ -1157,18 +1181,6 @@ export class InvoiceService {
     // M2 — did this sale take stock below zero? Read back after the write.
     if (movementRows.length > 0 && direction === -1) {
       await this.flagNegativeStock(ctx, invoiceId, movementRows)
-    }
-
-    // M3 — Grant package credits for any package lines on this sales invoice
-    if (direction === -1 && header.customer_id) {
-      await this.grantPackageCreditsForInvoice(
-        ctx,
-        invoiceId,
-        header.customer_id,
-        lines,
-        itemRows,
-        data.date,
-      )
     }
 
     if (approvalOutcome.kind === 'hold') {
@@ -1819,6 +1831,8 @@ export class InvoiceService {
     paymentIds: readonly string[],
     reason: string,
   ): Promise<void> {
+    // A used package cannot be undone by reversing its sale (refuses BEFORE anything changes).
+    await this.assertPackageInvoiceUnused(ctx, invoiceId)
     await ledger.reverseDocument(ctx, 'invoice', invoiceId, { reason })
     // The cost a sale was given later is its own entry (costUncostedSale); it
     // goes with the sale.
@@ -1846,49 +1860,97 @@ export class InvoiceService {
   }
 
   /**
-   * M3: Automatically grant package credits for any invoice lines that are packages.
+   * M5 SLICE D: Lookup which product IDs have offering_type = 'package'.
+   * Fails loud if product read fails, never swallows errors.
+   */
+  private async findPackageProductIds(
+    workspaceId: string,
+    productIds: string[],
+  ): Promise<Set<string>> {
+    if (!productIds.length) return new Set()
+
+    const { data: prods, error } = await supabase
+      .from('products')
+      .select('id, offering_type')
+      .eq('workspace_id', workspaceId)
+      .in('id', productIds)
+
+    if (error) {
+      throw new DatabaseError('Failed to fetch product offering types for invoice', error)
+    }
+    if (!prods) return new Set()
+
+    return new Set(
+      prods
+        .filter((p: { offering_type?: string | null }) => p.offering_type === 'package')
+        .map((p: { id: string }) => p.id),
+    )
+  }
+
+  /**
+   * M5 SLICE D: Build package credit grant rows to be committed atomically
+   * inside the invoice write document transaction.
+   *
    * Invariants:
    * 1. 1 package invoice line = 1 entitlement grant in package_credit_ledger.
    * 2. Idempotent on retries: idempotency_key is `invoice:<invoiceId>:<lineId>`.
-   * 3. Zero cash/payment movement; payment and double-entry accounting remain untouched.
+   * 3. Committed atomically with invoice document; no orphan payment or swallowed errors.
    */
-  private async grantPackageCreditsForInvoice(
+  private async buildPackageGrantRows(
     ctx: TenancyContext,
     invoiceId: string,
     customerId: string | null | undefined,
     lines: any[],
     itemRows: Array<{ id: string; product_id?: string; quantity?: number; unit?: string }>,
     effectiveDate?: string,
-  ): Promise<void> {
-    if (!customerId || !itemRows.length) return
+    exchangeRate = 1,
+  ): Promise<Array<Record<string, unknown>>> {
+    if (!customerId || !itemRows.length) return []
 
     const productIds = [...new Set(itemRows.map((r) => r.product_id).filter(Boolean))]
-    if (!productIds.length) return
+    if (!productIds.length) return []
 
-    const { data: prods, error } = await supabase
-      .from('products')
-      .select('id, offering_type')
-      .eq('workspace_id', ctx.workspaceId)
-      .in('id', productIds)
-
-    if (error || !prods) return
-
-    const packageProductIds = new Set(
-      prods
-        .filter((p: { offering_type?: string | null }) => p.offering_type === 'package')
-        .map((p: { id: string }) => p.id),
+    const packageProductIds = await this.findPackageProductIds(
+      ctx.workspaceId,
+      productIds as string[],
     )
-    if (packageProductIds.size === 0) return
+    if (packageProductIds.size === 0) return []
 
     const now = new Date().toISOString()
     const effDate = effectiveDate ? String(effectiveDate).slice(0, 10) : now.split('T')[0]!
 
-    const grantRows = itemRows
+    // M5-1 / B2-4: the GRANT remembers its own deferred amount and the term it was sold with. Both exist only when the
+    // owner has switched deferral on (PACKAGE_DEFERRED_REVENUE=on) - the SAME per-line number the journal credit sums.
+    const deferring = InvoiceService.deferralEnabled()
+    const deferral = deferring
+      ? computePackageDeferrals(
+          itemRows.map((row, index) => ({
+            offeringType:
+              row.product_id && packageProductIds.has(row.product_id) ? 'package' : null,
+            quantity: Number(row.quantity) || 0,
+            totalPrice:
+              Number((lines[index] as { totalPrice?: number } | undefined)?.totalPrice) || 0,
+          })),
+          exchangeRate,
+        )
+      : null
+    const terms = deferring
+      ? await this.findPackageTerms(ctx.workspaceId, [...packageProductIds])
+      : new Map<string, number | null>()
+    const lineIndex = new Map(itemRows.map((row, index) => [row.id, index]))
+
+    return itemRows
       .filter(
         (row) =>
           row.product_id && packageProductIds.has(row.product_id) && Number(row.quantity) > 0,
       )
       .map((row) => ({
+        ...(deferral
+          ? {
+              deferred_amount: deferral.perLine[lineIndex.get(row.id) ?? -1] ?? 0,
+              term_months: terms.get(row.product_id as string) ?? null,
+            }
+          : {}),
         id: randomUUID(),
         workspace_id: ctx.workspaceId,
         customer_id: customerId,
@@ -1904,18 +1966,100 @@ export class InvoiceService {
         created_at: now,
         updated_at: now,
       }))
+  }
 
-    if (grantRows.length === 0) return
+  /**
+   * M5: package deferral is the owner's switch. Off (the default) the sale books its revenue as it always did and the
+   * GRANT carries no deferred amount; on, the package net goes to deferred revenue and is released per delivery.
+   * It needs docs/package-deferred-revenue-01-migration.sql; without it the grant insert fails loudly.
+   */
+  private static deferralEnabled(): boolean {
+    return process.env.PACKAGE_DEFERRED_REVENUE === 'on'
+  }
 
-    try {
-      const { error: grantErr } = await supabase.from('package_credit_ledger').insert(grantRows)
-      if (grantErr) {
-        if (grantErr.code === '23505') return
-        if (grantErr.code === '42P01' || grantErr.code === 'PGRST205') return
-        console.warn('[InvoiceService] Failed to record package credit grant:', grantErr.message)
-      }
-    } catch (err) {
-      console.warn('[InvoiceService] Error recording package credit grant:', err)
+  /** The term (1 / 6 / 12 months, or null) each package product is sold with. A database without the column has none. */
+  private async findPackageTerms(
+    workspaceId: string,
+    productIds: string[],
+  ): Promise<Map<string, number | null>> {
+    const out = new Map<string, number | null>()
+    if (productIds.length === 0) return out
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, package_term_months')
+      .eq('workspace_id', workspaceId)
+      .in('id', productIds)
+    if (error) {
+      if (error.code === '42703' || error.code === 'PGRST204') return out // column not migrated: no term
+      throw new DatabaseError('Failed to read package terms', error)
+    }
+    for (const row of (data ?? []) as Array<{ id: string; package_term_months?: number | null }>) {
+      out.set(row.id, row.package_term_months ?? null)
+    }
+    return out
+  }
+
+  /**
+   * The deferred revenue a SALE must credit: exactly the sum of the deferred amounts its GRANTs recorded, in the books
+   * currency. One source for the journal and the ledger, so they cannot disagree (B2-4). 0 when deferral is off, when the
+   * invoice sold no package, or for a sale made before the cut-over.
+   */
+  private async deferredRevenueOfInvoice(ctx: TenancyContext, invoiceId: string): Promise<number> {
+    if (!InvoiceService.deferralEnabled()) return 0
+    const { data, error } = await supabase
+      .from('package_credit_ledger')
+      .select('deferred_amount')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('source_document_id', invoiceId)
+      .eq('entry_type', 'GRANT')
+      .is('deleted_at', null)
+    if (error) throw new DatabaseError('Failed to read the deferred revenue of the invoice', error)
+    const total = ((data ?? []) as Array<{ deferred_amount?: number | string | null }>).reduce(
+      (sum, row) => sum + (Number(row.deferred_amount) || 0),
+      0,
+    )
+    return Math.round(total * 100) / 100
+  }
+
+  /**
+   * A package invoice whose credit has been (even partly) used cannot be deleted, cancelled or have its package line
+   * edited: the sale's journal reversal would remove a liability that deliveries have already started releasing.
+   * Pooled check on purpose (a consumption written before the allocation table names no GRANT): any net consumption of
+   * the customer's package since the first GRANT of this invoice refuses. Correcting a used package is the M5-3 family.
+   */
+  private async assertPackageInvoiceUnused(ctx: TenancyContext, invoiceId: string): Promise<void> {
+    const { data: grants, error } = await supabase
+      .from('package_credit_ledger')
+      .select('customer_id, package_product_id, effective_date')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('source_document_id', invoiceId)
+      .eq('entry_type', 'GRANT')
+      .is('deleted_at', null)
+    if (error) {
+      if (error.code === '42P01' || error.code === 'PGRST205') return // no credit ledger: nothing was granted
+      throw new DatabaseError('Failed to read the package grants of the invoice', error)
+    }
+    for (const grant of (grants ?? []) as Array<{
+      customer_id: string
+      package_product_id: string
+      effective_date: string
+    }>) {
+      const { data: rows, error: readError } = await supabase
+        .from('package_credit_ledger')
+        .select('entry_type, quantity')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('customer_id', grant.customer_id)
+        .eq('package_product_id', grant.package_product_id)
+        .in('entry_type', ['CONSUME', 'REVERSAL'])
+        .gte('effective_date', grant.effective_date)
+        .is('deleted_at', null)
+      if (readError)
+        throw new DatabaseError('Failed to read the package use of the invoice', readError)
+      const net = ((rows ?? []) as Array<{ entry_type: string; quantity: number | string }>).reduce(
+        (sum, row) => sum + (row.entry_type === 'CONSUME' ? 1 : -1) * (Number(row.quantity) || 0),
+        0,
+      )
+      if (net > 0) throw new ConflictError('PACKAGE_INVOICE_PARTLY_CONSUMED')
     }
   }
 
@@ -2205,6 +2349,7 @@ export class InvoiceService {
       itemRows: Array<Record<string, unknown>>
       detailRows: Array<Record<string, unknown>>
       movementRows: Array<Record<string, unknown>>
+      grantRows?: Array<Record<string, unknown>> | undefined
       replaceItems?: boolean | undefined
       /** Edit: the header's money, derived from the new lines. */
       headerPatch?: Record<string, unknown> | undefined
@@ -2224,6 +2369,9 @@ export class InvoiceService {
         p_replace_items: doc.replaceItems === true,
         p_header_patch: doc.headerPatch ?? null,
         p_expected_version: doc.expectedVersion ?? null,
+        // Named only when there is something to grant: a sale without a package keeps working
+        // on a database that has not run invoice-write-grant-01 (the 10-argument function).
+        ...(doc.grantRows && doc.grantRows.length > 0 ? { p_grants: doc.grantRows } : {}),
       })
 
     let { error } = await call(doc.detailRows)
@@ -2242,6 +2390,14 @@ export class InvoiceService {
     // invoice_write_document is missing (PGRST202 or 42883), silent stepwise
     // degradation is strictly forbidden because a partial failure leaves
     // orphan headers without stock movements or ledger lines.
+    // M5 deployment order: a sale WITH a package line names p_grants, which exists only after invoice-write-grant-01. The
+    // refusal says exactly that (and a sale without a package line never names it, so it keeps working before the migration).
+    if ((error.code === 'PGRST202' || error.code === '42883') && (doc.grantRows?.length ?? 0) > 0) {
+      throw new DatabaseError(
+        'PACKAGE_GRANT_MIGRATION_REQUIRED: apply docs/invoice-write-grant-01-migration.sql (after docs/invoice-write-document-migration.sql) before selling a package. Nothing was written.',
+        error,
+      )
+    }
     if (error.code === 'PGRST202' || error.code === '42883') {
       throw new DatabaseError(
         'ATOMIC_RPC_REQUIRED: invoice_write_document RPC is missing. Apply docs/invoice-write-document-migration.sql. Stepwise un-atomic fallback is disabled to prevent orphan invoices.',
@@ -2393,11 +2549,39 @@ export class InvoiceService {
     currency: string,
     edit: { expectedVersion: number; moneyPatch: Record<string, unknown> },
   ): Promise<void> {
+    // M5 SLICE D / A8: Protect package grants from un-atomic line replacement.
+    // If this invoice already issued package grants or new lines include packages,
+    // editing lines is strictly forbidden to preserve entitlement and liability integrity.
+    const { data: existingGrants } = await supabase
+      .from('package_credit_ledger')
+      .select('id')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('source_document_id', invoiceId)
+      .eq('entry_type', 'GRANT')
+      .is('deleted_at', null)
+
+    if (existingGrants && existingGrants.length > 0) {
+      throw new ValidationError(
+        'PACKAGE_INVOICE_LINES_LOCKED: Cannot replace lines on an invoice that issued package credit',
+      )
+    }
+
     const direction: 1 | -1 = type === 'purchase' ? 1 : -1
     // ⚠️ An EDITED line is derived exactly as a created one is. Without this,
     // the one write path that took `total_price` from the request would still
     // be reachable — on the edit screen instead of the create screen.
     const lines = this.withDerivedLineTotals(items, currency)
+
+    const newPkgIds = await this.findPackageProductIds(
+      ctx.workspaceId,
+      lines.map((l: any) => l.productId).filter(Boolean),
+    )
+    if (newPkgIds.size > 0) {
+      throw new ValidationError(
+        'PACKAGE_LINE_EDIT_NOT_SUPPORTED: Cannot add or edit package lines via replace items',
+      )
+    }
+
     const warehouseId =
       (await this.invoiceWarehouseId(ctx.workspaceId, invoiceId)) ??
       (await this.soleWarehouseId(ctx.workspaceId))
@@ -3232,6 +3416,9 @@ export class InvoiceService {
     const taxAmount = Number(data.taxTotal ?? (data as Record<string, unknown>).tax_total) || 0
     const taxTotal = taxAmount > 0 ? InvoiceService.inBooksCurrency(taxAmount, rate) : 0
 
+    // M5-1: the package net the GRANTs recorded as deferred - credited to deferred revenue, released per delivery.
+    const deferredRevenue = isPurchase ? 0 : await this.deferredRevenueOfInvoice(ctx, invoiceId)
+
     const needed: AccountRole[] = isPurchase
       ? ['inventory', 'payable']
       : [
@@ -3240,6 +3427,7 @@ export class InvoiceService {
           'cogs',
           'inventory',
           ...(taxTotal > 0 ? ['tax' as AccountRole] : []),
+          ...(deferredRevenue > 0 ? ['deferred_revenue' as AccountRole] : []),
         ]
 
     const { accounts, missing } = await ledger.ensureAccountsForRoles(ctx, needed)
@@ -3261,6 +3449,7 @@ export class InvoiceService {
       total,
       taxTotal: taxTotal > 0 ? taxTotal : undefined,
       costOfGoodsSold: data.costOfGoodsSold,
+      ...(deferredRevenue > 0 ? { deferredRevenue } : {}),
       accounts,
     })
 

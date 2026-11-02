@@ -1,5 +1,7 @@
 # PROMPT FOR ANOTHER AGENT — COMPLETE M5 (package credit: refund, expiry, deferred revenue, fiscal proofs)
 
+> **SUPERSEDED for refund and one-balance-rule, 2 Nov 2026 (see PROMPT-M5-IMPLEMENT.md)**
+>
 > Version 2, written 2 Nov 2026 after (a) the M4 integrity audit, (b) M4.2 (UI) + its follow-up that made a cancellation carry a reason
 > (migration 03, device schema v16), and (c) the first M5 attempt, which correctly stopped at the entry gate and wrote only the decisions
 > document. This prompt does **not** repeat the general rules of the first M5 prompt; it ADDS to it. Read both:

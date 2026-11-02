@@ -21,6 +21,7 @@ import { SALES_SIDE_ALTERS, SALES_SIDE_STATEMENTS } from './local-sales-schema'
 import { SCHEMA_VERSION } from './local-schema'
 import {
   PACKAGE_CREDIT_LEDGER_STATEMENTS,
+  PACKAGE_DEFERRED_REVENUE_ALTERS,
   RETURN_DEDUCTIONS_STATEMENTS,
   RETURNS_CORE_ALTERS,
   SERVICE_CANCELLATION_REASON_ALTERS,
@@ -620,6 +621,15 @@ const V16_SERVICE_CANCELLATION_REASON: LocalMigration = {
   statements: [...SERVICE_CANCELLATION_REASON_ALTERS],
 }
 
+/**
+ * v16 -> v17 (M5): the GRANT remembers its deferred amount and term, a package product has a term, and the device keeps
+ * the allocation and suspension tables the shared allocation rule reads.
+ */
+const V17_PACKAGE_DEFERRED_REVENUE: LocalMigration = {
+  to: 17,
+  statements: [...PACKAGE_DEFERRED_REVENUE_ALTERS],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -636,6 +646,7 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V14_SERVICE_DELIVERY,
   V15_SERVICE_DELIVERY_AUDIT,
   V16_SERVICE_CANCELLATION_REASON,
+  V17_PACKAGE_DEFERRED_REVENUE,
 ]
 
 /**

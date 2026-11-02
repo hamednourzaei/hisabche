@@ -1,0 +1,476 @@
+{
+  "vectors": [
+    {
+      "id": "single-grant-unit-value",
+      "title": "one GRANT: one unit releases a tenth of the deferred amount",
+      "onDate": "2026-11-02",
+      "quantity": 1,
+      "unattributed": 0,
+      "grants": [
+        {
+          "id": "g1",
+          "startsOn": "2026-10-01",
+          "quantity": 10,
+          "adjustments": 0,
+          "deferredAmount": 10000,
+          "termMonths": null,
+          "activatedOn": null,
+          "consumedQuantity": 0,
+          "releasedAmount": 0,
+          "suspensions": []
+        }
+      ],
+      "expected": {
+        "allocations": [
+          {
+            "grantId": "g1",
+            "quantity": 1,
+            "releasedAmount": 1000
+          }
+        ],
+        "totalReleasedAmount": 1000,
+        "shortfall": 0
+      }
+    },
+    {
+      "id": "last-unit-takes-the-exact-rest",
+      "title": "the last unit of a GRANT releases the exact remainder (no rounding drift)",
+      "onDate": "2026-11-02",
+      "quantity": 1,
+      "unattributed": 0,
+      "grants": [
+        {
+          "id": "g1",
+          "startsOn": "2026-10-01",
+          "quantity": 3,
+          "adjustments": 0,
+          "deferredAmount": 100,
+          "termMonths": null,
+          "activatedOn": null,
+          "consumedQuantity": 2,
+          "releasedAmount": 66.66,
+          "suspensions": []
+        }
+      ],
+      "expected": {
+        "allocations": [
+          {
+            "grantId": "g1",
+            "quantity": 1,
+            "releasedAmount": 33.34
+          }
+        ],
+        "totalReleasedAmount": 33.34,
+        "shortfall": 0
+      }
+    },
+    {
+      "id": "two-grants-two-prices",
+      "title": "a consume spanning two GRANTs releases each GRANT its own value",
+      "onDate": "2026-11-02",
+      "quantity": 3,
+      "unattributed": 0,
+      "grants": [
+        {
+          "id": "g2",
+          "startsOn": "2026-11-01",
+          "quantity": 5,
+          "adjustments": 0,
+          "deferredAmount": 1000,
+          "termMonths": null,
+          "activatedOn": null,
+          "consumedQuantity": 0,
+          "releasedAmount": 0,
+          "suspensions": []
+        },
+        {
+          "id": "g1",
+          "startsOn": "2026-10-01",
+          "quantity": 2,
+          "adjustments": 0,
+          "deferredAmount": 200,
+          "termMonths": null,
+          "activatedOn": null,
+          "consumedQuantity": 0,
+          "releasedAmount": 0,
+          "suspensions": []
+        }
+      ],
+      "expected": {
+        "allocations": [
+          {
+            "grantId": "g1",
+            "quantity": 2,
+            "releasedAmount": 200
+          },
+          {
+            "grantId": "g2",
+            "quantity": 1,
+            "releasedAmount": 200
+          }
+        ],
+        "totalReleasedAmount": 400,
+        "shortfall": 0
+      }
+    },
+    {
+      "id": "legacy-grant-releases-nothing",
+      "title": "a GRANT sold before the cut-over (deferred amount unknown) is used first and releases nothing",
+      "onDate": "2026-11-02",
+      "quantity": 4,
+      "unattributed": 0,
+      "grants": [
+        {
+          "id": "g0",
+          "startsOn": "2026-01-01",
+          "quantity": 2,
+          "adjustments": 0,
+          "deferredAmount": null,
+          "termMonths": null,
+          "activatedOn": null,
+          "consumedQuantity": 0,
+          "releasedAmount": 0,
+          "suspensions": []
+        },
+        {
+          "id": "g1",
+          "startsOn": "2026-10-01",
+          "quantity": 5,
+          "adjustments": 0,
+          "deferredAmount": 500,
+          "termMonths": null,
+          "activatedOn": null,
+          "consumedQuantity": 0,
+          "releasedAmount": 0,
+          "suspensions": []
+        }
+      ],
+      "expected": {
+        "allocations": [
+          {
+            "grantId": "g0",
+            "quantity": 2,
+            "releasedAmount": 0
+          },
+          {
+            "grantId": "g1",
+            "quantity": 2,
+            "releasedAmount": 200
+          }
+        ],
+        "totalReleasedAmount": 200,
+        "shortfall": 0
+      }
+    },
+    {
+      "id": "expired-grant-is-skipped",
+      "title": "an expired GRANT is skipped, never merged into the next one",
+      "onDate": "2026-11-02",
+      "quantity": 2,
+      "unattributed": 0,
+      "grants": [
+        {
+          "id": "g1",
+          "startsOn": "2026-08-15",
+          "quantity": 5,
+          "adjustments": 0,
+          "deferredAmount": 500,
+          "termMonths": 1,
+          "activatedOn": "2026-09-01",
+          "consumedQuantity": 1,
+          "releasedAmount": 100,
+          "suspensions": []
+        },
+        {
+          "id": "g2",
+          "startsOn": "2026-10-15",
+          "quantity": 5,
+          "adjustments": 0,
+          "deferredAmount": 1000,
+          "termMonths": null,
+          "activatedOn": null,
+          "consumedQuantity": 0,
+          "releasedAmount": 0,
+          "suspensions": []
+        }
+      ],
+      "expected": {
+        "allocations": [
+          {
+            "grantId": "g2",
+            "quantity": 2,
+            "releasedAmount": 400
+          }
+        ],
+        "totalReleasedAmount": 400,
+        "shortfall": 0
+      }
+    },
+    {
+      "id": "not-started-grant",
+      "title": "a GRANT cannot be used before the day it was sold",
+      "onDate": "2026-11-02",
+      "quantity": 1,
+      "unattributed": 0,
+      "grants": [
+        {
+          "id": "g1",
+          "startsOn": "2026-12-01",
+          "quantity": 5,
+          "adjustments": 0,
+          "deferredAmount": 500,
+          "termMonths": null,
+          "activatedOn": null,
+          "consumedQuantity": 0,
+          "releasedAmount": 0,
+          "suspensions": []
+        }
+      ],
+      "expected": {
+        "allocations": [],
+        "totalReleasedAmount": 0,
+        "shortfall": 1
+      }
+    },
+    {
+      "id": "suspended-grant-is-skipped",
+      "title": "a suspension stops ONE GRANT; the next one is used",
+      "onDate": "2026-11-02",
+      "quantity": 1,
+      "unattributed": 0,
+      "grants": [
+        {
+          "id": "g1",
+          "startsOn": "2026-10-01",
+          "quantity": 5,
+          "adjustments": 0,
+          "deferredAmount": 500,
+          "termMonths": null,
+          "activatedOn": null,
+          "consumedQuantity": 0,
+          "releasedAmount": 0,
+          "suspensions": [
+            {
+              "startsOn": "2026-11-01",
+              "endsOn": null
+            }
+          ]
+        },
+        {
+          "id": "g2",
+          "startsOn": "2026-10-05",
+          "quantity": 5,
+          "adjustments": 0,
+          "deferredAmount": 1000,
+          "termMonths": null,
+          "activatedOn": null,
+          "consumedQuantity": 0,
+          "releasedAmount": 0,
+          "suspensions": []
+        }
+      ],
+      "expected": {
+        "allocations": [
+          {
+            "grantId": "g2",
+            "quantity": 1,
+            "releasedAmount": 200
+          }
+        ],
+        "totalReleasedAmount": 200,
+        "shortfall": 0
+      }
+    },
+    {
+      "id": "shortfall",
+      "title": "more than the GRANTs hold is a shortfall the caller must refuse",
+      "onDate": "2026-11-02",
+      "quantity": 5,
+      "unattributed": 0,
+      "grants": [
+        {
+          "id": "g1",
+          "startsOn": "2026-10-01",
+          "quantity": 2,
+          "adjustments": 0,
+          "deferredAmount": 200,
+          "termMonths": null,
+          "activatedOn": null,
+          "consumedQuantity": 0,
+          "releasedAmount": 0,
+          "suspensions": []
+        }
+      ],
+      "expected": {
+        "allocations": [
+          {
+            "grantId": "g1",
+            "quantity": 2,
+            "releasedAmount": 200
+          }
+        ],
+        "totalReleasedAmount": 200,
+        "shortfall": 3
+      }
+    },
+    {
+      "id": "unattributed-balance-last",
+      "title": "balance that no GRANT owns (a manual top-up) is used only after the GRANTs and releases nothing",
+      "onDate": "2026-11-02",
+      "quantity": 3,
+      "unattributed": 2,
+      "grants": [
+        {
+          "id": "g1",
+          "startsOn": "2026-10-01",
+          "quantity": 1,
+          "adjustments": 0,
+          "deferredAmount": 100,
+          "termMonths": null,
+          "activatedOn": null,
+          "consumedQuantity": 0,
+          "releasedAmount": 0,
+          "suspensions": []
+        }
+      ],
+      "expected": {
+        "allocations": [
+          {
+            "grantId": "g1",
+            "quantity": 1,
+            "releasedAmount": 100
+          },
+          {
+            "grantId": null,
+            "quantity": 2,
+            "releasedAmount": 0
+          }
+        ],
+        "totalReleasedAmount": 100,
+        "shortfall": 0
+      }
+    },
+    {
+      "id": "term-ends-on-clamped-month-end",
+      "title": "one month from 31 January ends on 28 February (inclusive)",
+      "onDate": "2026-02-28",
+      "quantity": 1,
+      "unattributed": 0,
+      "grants": [
+        {
+          "id": "g1",
+          "startsOn": "2026-01-01",
+          "quantity": 5,
+          "adjustments": 0,
+          "deferredAmount": 500,
+          "termMonths": 1,
+          "activatedOn": "2026-01-31",
+          "consumedQuantity": 1,
+          "releasedAmount": 100,
+          "suspensions": []
+        }
+      ],
+      "expected": {
+        "allocations": [
+          {
+            "grantId": "g1",
+            "quantity": 1,
+            "releasedAmount": 100
+          }
+        ],
+        "totalReleasedAmount": 100,
+        "shortfall": 0
+      }
+    },
+    {
+      "id": "term-expired-day-after",
+      "title": "the day after the term ends the GRANT is expired",
+      "onDate": "2026-03-01",
+      "quantity": 1,
+      "unattributed": 0,
+      "grants": [
+        {
+          "id": "g1",
+          "startsOn": "2026-01-01",
+          "quantity": 5,
+          "adjustments": 0,
+          "deferredAmount": 500,
+          "termMonths": 1,
+          "activatedOn": "2026-01-31",
+          "consumedQuantity": 1,
+          "releasedAmount": 100,
+          "suspensions": []
+        }
+      ],
+      "expected": {
+        "allocations": [],
+        "totalReleasedAmount": 0,
+        "shortfall": 1
+      }
+    },
+    {
+      "id": "never-used-never-expires",
+      "title": "SOLD != ACTIVATED: a GRANT with a term that was never used is not expired by the sale date",
+      "onDate": "2026-11-02",
+      "quantity": 1,
+      "unattributed": 0,
+      "grants": [
+        {
+          "id": "g1",
+          "startsOn": "2025-01-01",
+          "quantity": 5,
+          "adjustments": 0,
+          "deferredAmount": 500,
+          "termMonths": 1,
+          "activatedOn": null,
+          "consumedQuantity": 0,
+          "releasedAmount": 0,
+          "suspensions": []
+        }
+      ],
+      "expected": {
+        "allocations": [
+          {
+            "grantId": "g1",
+            "quantity": 1,
+            "releasedAmount": 100
+          }
+        ],
+        "totalReleasedAmount": 100,
+        "shortfall": 0
+      }
+    },
+    {
+      "id": "adjustment-reduces-the-grant",
+      "title": "an ADJUSTMENT that names a GRANT reduces what it can give",
+      "onDate": "2026-11-02",
+      "quantity": 3,
+      "unattributed": 0,
+      "grants": [
+        {
+          "id": "g1",
+          "startsOn": "2026-10-01",
+          "quantity": 5,
+          "adjustments": -3,
+          "deferredAmount": 500,
+          "termMonths": null,
+          "activatedOn": null,
+          "consumedQuantity": 0,
+          "releasedAmount": 0,
+          "suspensions": []
+        }
+      ],
+      "expected": {
+        "allocations": [
+          {
+            "grantId": "g1",
+            "quantity": 2,
+            "releasedAmount": 200
+          }
+        ],
+        "totalReleasedAmount": 200,
+        "shortfall": 1
+      }
+    }
+  ]
+}

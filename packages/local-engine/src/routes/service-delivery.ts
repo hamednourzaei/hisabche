@@ -22,6 +22,7 @@ import { requireCapability } from '../auth'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
+import { allocateConsume, reverseConsume } from './package-allocation'
 
 interface ServiceDeliverySessionRow {
   id: string
@@ -343,6 +344,15 @@ export function registerServiceDeliveryRoutes(router: Router): void {
       if (entry) {
         // The ledger refuses a second consume for this session (unique index): that failure rolls the whole thing back.
         insertLedgerEntry(c, entry, sessionId)
+        // M5: the same allocation rule the server's trigger runs. A refusal (nothing eligible, closed period, no account)
+        // rolls the whole delivery back; the server remains the final authority when the command syncs.
+        allocateConsume(c, {
+          id: entry.id,
+          customerId: entry.customerId,
+          packageProductId: entry.packageProductId,
+          quantity: entry.quantity,
+          effectiveDate: entry.effectiveDate,
+        })
       }
 
       if (c.headers?.['x-hisabche-queue'] === '1') {
@@ -417,7 +427,16 @@ export function registerServiceDeliveryRoutes(router: Router): void {
       )
       if (changed.changes !== 1) throw new ConflictError('SESSION_CHANGED')
 
-      if (plan.reversalEntry) insertLedgerEntry(c, plan.reversalEntry, sessionId)
+      if (plan.reversalEntry) {
+        insertLedgerEntry(c, plan.reversalEntry, sessionId)
+        if (plan.reversalEntry.referenceEntryId) {
+          reverseConsume(c, {
+            id: plan.reversalEntry.id,
+            referenceEntryId: plan.reversalEntry.referenceEntryId,
+            effectiveDate: plan.reversalEntry.effectiveDate,
+          })
+        }
+      }
 
       if (c.headers?.['x-hisabche-queue'] === '1') {
         enqueueSessionCommand(c, `${sessionId}-cancel`, 'update', {

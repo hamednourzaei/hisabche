@@ -361,6 +361,7 @@ function ServiceDeliveryContent() {
         session={detailRow}
         hasBranches={hasBranches}
         onOpenInvoice={(invoiceId) => push(`/invoices/${invoiceId}`)}
+        maySuspendPackage={capabilities.can('payment.cancel') === true}
         {...(sync.available
           ? { onOpenSyncCentre: () => push('/data-and-sync?tab=details&view=sync') }
           : {})}

@@ -392,7 +392,7 @@ describe('M2.2 Mixed Commerce Invoicing', () => {
       body: {
         returnType: 'sale_return',
         returnNumber: 'RET-MIX-001',
-        lines: [{ originalLineId: serviceItem?.id, quantity: 1 }],
+        lines: [{ originalLineId: serviceItem?.id, quantity: 1, restockChoice: 'restock' }],
       },
     })
     expect(returnRes.status).toBe(201)

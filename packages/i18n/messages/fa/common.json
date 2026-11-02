@@ -2078,7 +2078,10 @@
       "type": "نوع",
       "company": "شرکت",
       "itemsSent": "ارسال‌شده"
-    }
+    },
+    "returnErrStockDecision": "برگرداندن کالا به انبار یا حذف آن از انبار نیاز به مجوز مدیر یا مالک دارد.",
+    "returnErrScrapCostUnknown": "بهای خرید این کالا ثبت نشده است؛ ضرر آن قابل محاسبه نیست و ضایعات تأیید نمی‌شود.",
+    "returnScrapNeedsPermission": "اسقاط کالا نیاز به مجوز «تعدیل موجودی» دارد؛ از مدیر یا مالک بخواهید."
   },
   "warehouse": {
     "deleteWarehouse": "حذف انبار",
@@ -3342,7 +3345,9 @@
       "salary_expense": "هزینه‌ی حقوق",
       "fx_gain_loss": "سود و زیان تسعیر ارز",
       "owner_capital": "سرمایه",
-      "bank_fees": "کارمزد بانک و صرافی"
+      "bank_fees": "کارمزد بانک و صرافی",
+      "deferred_revenue": "درآمد انتقالی (پیش‌دریافت)",
+      "inventory_loss": "ضرر و زیان ضایعات کالا"
     }
   },
   "hr": {
@@ -8435,7 +8440,13 @@
     "offeringType": "نوع آیتم",
     "goods": "کالا",
     "service": "خدمت",
-    "package": "بسته خدماتی"
+    "package": "بسته خدماتی",
+    "packageTerm": "مدت بسته",
+    "packageTermNone": "بدون مدت",
+    "packageTerm1": "۱ ماه",
+    "packageTerm6": "۶ ماه",
+    "packageTerm12": "۱۲ ماه",
+    "packageTermHint": "مدت از اولین استفاده شروع می‌شود، نه از تاریخ فروش."
   },
   "table": {
     "columns": "تنظیمات جدول",
@@ -10709,7 +10720,11 @@
       "CONSUMPTION_QUANTITY_MUST_BE_POSITIVE": "تعداد باید بزرگ‌تر از صفر باشد.",
       "SERVICE_DELIVERY_MIGRATION_REQUIRED": "این نسخه‌ی برنامه هنوز جدول جلسه‌های خدمت را ندارد.",
       "WORKSPACE_REQUIRED": "کسب‌وکار فعال انتخاب نشده است.",
-      "unknown": "این کار انجام نشد؛ دلیل آن خوانده نشد."
+      "unknown": "این کار انجام نشد؛ دلیل آن خوانده نشد.",
+      "INSUFFICIENT_ELIGIBLE_PACKAGE_CREDIT": "اعتبار قابل‌استفاده‌ای برای این تحویل نیست؛ مدت بسته‌ی مشتری تمام شده یا بسته معلق است.",
+      "PACKAGE_INVOICE_NOT_BOOKED": "فاکتور فروش این بسته در دفتر ثبت نشده است؛ ابتدا آن را در دفتر ثبت کنید.",
+      "DEFERRED_REVENUE_ACCOUNT_MISSING": "حساب «درآمد انتقالی» در دفتر شما وجود ندارد.",
+      "ACCOUNTING_PERIOD_LOCKED": "تاریخ این جلسه در دوره‌ی بسته‌شده‌ی حسابداری است."
     }
   },
   "teamHub": {
@@ -11290,5 +11305,30 @@
       "singlePurchaseDefault": "فقط یک واحد می‌تواند پیش‌فرض خرید باشد",
       "singleSaleDefault": "فقط یک واحد می‌تواند پیش‌فرض فروش باشد"
     }
+  },
+  "packageGrants": {
+    "title": "بسته‌های مشتری",
+    "empty": "این مشتری هنوز بسته‌ای نخریده است.",
+    "unread": "بسته‌های این مشتری خوانده نشد.",
+    "soldOn": "تاریخ خرید",
+    "term": "مدت",
+    "months": "{n} ماه",
+    "noTerm": "بدون مدت",
+    "activatedOn": "شروع مدت",
+    "notStarted": "هنوز استفاده نشده",
+    "endsOn": "پایان مدت",
+    "reason": "دلیل",
+    "reasonRequired": "دلیل را بنویسید.",
+    "confirm": "ثبت",
+    "cancel": "انصراف",
+    "suspend": "تعلیق این بسته",
+    "resume": "ازسرگیری این بسته",
+    "state": {
+      "active": "فعال",
+      "not_started": "هنوز شروع نشده",
+      "expired": "مدت تمام شده",
+      "suspended": "معلق"
+    },
+    "failed": "ثبت نشد."
   }
 }

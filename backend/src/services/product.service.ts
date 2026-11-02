@@ -383,6 +383,12 @@ export class ProductService {
     if (split.length > 0) return this.createWithOpeningStock(ctx, data, clientRequestId, split)
     const offeringType = (data as any).offeringType || 'goods'
     const isService = offeringType === 'service'
+    const packageTermMonths =
+      (data as { packageTermMonths?: number | null }).packageTermMonths ?? null
+    // M5 / OD-5: only a PACKAGE has a term. Refused here, not silently dropped.
+    if (packageTermMonths !== null && offeringType !== 'package') {
+      throw new ValidationError('PACKAGE_TERM_ONLY_FOR_PACKAGES')
+    }
     // Request #94 — «افزودن به انبار»: the opening stock lands in a warehouse —
     // the one named, or the business's only one (stockEditWarehouse).
     const openingWarehouseId =
@@ -423,6 +429,8 @@ export class ProductService {
         wholesale_price: data.wholesalePrice || null,
         is_active: data.isActive !== false,
         offering_type: offeringType,
+        // Named only when set: a database that has not run package-deferred-revenue-01 has no such column.
+        ...(packageTermMonths !== null ? { package_term_months: packageTermMonths } : {}),
         workspace_id: workspaceId,
         user_id: userId,
         ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
@@ -721,6 +729,13 @@ export class ProductService {
     if (data.wholesalePrice !== undefined) updates.wholesale_price = data.wholesalePrice
     if (data.isActive !== undefined) updates.is_active = data.isActive
     if (data.offeringType !== undefined) updates.offering_type = data.offeringType
+    if ((data as { packageTermMonths?: number | null }).packageTermMonths !== undefined) {
+      const term = (data as { packageTermMonths?: number | null }).packageTermMonths ?? null
+      if (term !== null && data.offeringType !== undefined && data.offeringType !== 'package') {
+        throw new ValidationError('PACKAGE_TERM_ONLY_FOR_PACKAGES')
+      }
+      updates.package_term_months = term
+    }
 
     if (quantityTarget !== undefined) {
       const target = Number(quantityTarget)

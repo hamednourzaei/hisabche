@@ -15,6 +15,8 @@
 
 import {
   buildReturnDocument,
+  planReturnDisposition,
+  type ReturnDispositionPlan,
   type ReturnCondition,
   type ReturnDeductionRequest,
   type RestockChoice,
@@ -23,7 +25,7 @@ import {
 } from '@hisabche/validation'
 import { fractionDigits, type KnownCurrency } from '@hisabche/formatting'
 import { buildEnqueue } from '@hisabche/app-bridge'
-import { requireRole } from '../auth'
+import { requireCapability, requireRole } from '../auth'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import type { LocalDb } from '../db'
 import type { Router } from '../router'
@@ -171,6 +173,18 @@ export function registerInvoiceReturnsRoutes(router: Router) {
       throw new ValidationError('returnType must be sale_return or purchase_return')
     }
     if (!Array.isArray(payload.lines)) throw new ValidationError('RETURN_LINES_REQUIRED')
+    // C5: RETURN and SCRAP are different events - the SAME rule the server's route applies (planReturnDisposition). A sound
+    // return goes back on the shelf with the permission a return already has; only a line that WRITES GOODS OFF needs
+    // stock.adjust (manager by default, delegable). A line that says neither is refused whole.
+    let disposition: ReturnDispositionPlan
+    try {
+      disposition = planReturnDisposition({ returnType: payload.returnType, lines: payload.lines })
+    } catch (cause) {
+      throw new ValidationError(
+        cause instanceof Error ? cause.message : 'RETURN_DISPOSITION_REQUIRED',
+      )
+    }
+    if (disposition.needsStockAdjust) requireCapability(ctx, 'stock.adjust')
     const returnNumber = (payload.returnNumber ?? '').trim()
     if (!returnNumber)
       throw new ValidationError('INVALID_RETURN_PARAMETERS: returnNumber is required')
@@ -228,7 +242,7 @@ export function registerInvoiceReturnsRoutes(router: Router) {
         lines: payload.lines.map((line) => ({
           originalLineId: line.originalLineId,
           quantity: Number(line.returnQuantity ?? line.quantity ?? 0),
-          restockChoice: line.restockChoice ?? 'restock',
+          restockChoice: line.restockChoice as RestockChoice,
           reasonCode: line.reasonCode ?? 'other',
           conditionCode: line.conditionCode,
         })),

@@ -5,6 +5,10 @@
 import { z } from 'zod'
 import { flagFilter } from './filter-contract'
 import { offeringTypeSchema } from './universal-core/offerings.domain'
+
+/** The terms a package is sold with. */
+export const PACKAGE_TERM_MONTHS = [1, 6, 12] as const
+export const packageTermMonthsSchema = z.union([z.literal(1), z.literal(6), z.literal(12)])
 import {
   uuidSchema,
   positiveNumberSchema,
@@ -42,6 +46,9 @@ export const productSchema = z.object({
   // Offering Type (goods | service | package)
   offeringType: offeringTypeSchema.optional().default('goods'),
 
+  // How long a PACKAGE lasts once it is first used (M5, OD-5): 1, 6 or 12 months; none = it never expires.
+  packageTermMonths: packageTermMonthsSchema.nullish(),
+
   // Pricing
   buyPrice: nonNegativeNumberSchema.default(0),
   sellPrice: nonNegativeNumberSchema.default(0),
@@ -73,6 +80,7 @@ export const createProductSchema = productSchema
      */
     warehouseId: uuidSchema.nullable().optional(),
     offeringType: offeringTypeSchema.optional(),
+    packageTermMonths: packageTermMonthsSchema.nullish(),
   })
 
 export type CreateProduct = z.infer<typeof createProductSchema>

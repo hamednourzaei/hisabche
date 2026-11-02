@@ -52,6 +52,8 @@ export const PACKAGE_CREDIT_LEDGER_STATEMENTS: readonly string[] = [
     notes TEXT,
     expires_at TEXT,
     effective_date TEXT NOT NULL,
+    deferred_amount REAL,
+    term_months INTEGER,
     created_at TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL DEFAULT '',
     deleted_at TEXT,
@@ -64,6 +66,46 @@ export const PACKAGE_CREDIT_LEDGER_STATEMENTS: readonly string[] = [
   // One consume and one reversal per service session: the ledger itself refuses a second.
   `CREATE UNIQUE INDEX IF NOT EXISTS uq_pkg_credit_service_consume ON package_credit_ledger(workspace_id, source_document_id) WHERE source_document_type = 'service_delivery' AND entry_type = 'CONSUME' AND deleted_at IS NULL`,
   `CREATE UNIQUE INDEX IF NOT EXISTS uq_pkg_credit_service_reversal ON package_credit_ledger(workspace_id, source_document_id) WHERE source_document_type = 'service_delivery' AND entry_type = 'REVERSAL' AND deleted_at IS NULL`,
+]
+
+/**
+ * v17 (M5): the tables the allocation rule needs on the device. Same shape as the server's
+ * package_credit_allocations / package_credit_suspensions (docs/package-deferred-revenue-01-migration.sql); append-only by
+ * convention here (no route updates or deletes them). Not synced: the server derives its own from the same rule.
+ */
+export const PACKAGE_ALLOCATION_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS package_credit_allocations (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    entry_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    grant_entry_id TEXT,
+    quantity REAL NOT NULL,
+    released_amount REAL NOT NULL DEFAULT 0,
+    effective_date TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT ''
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS uq_pkg_alloc_entry_grant ON package_credit_allocations(entry_id, COALESCE(grant_entry_id, ''))`,
+  `CREATE INDEX IF NOT EXISTS idx_pkg_alloc_grant ON package_credit_allocations(workspace_id, grant_entry_id)`,
+  `CREATE TABLE IF NOT EXISTS package_credit_suspensions (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    grant_entry_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    effective_on TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    created_by TEXT,
+    created_at TEXT NOT NULL DEFAULT ''
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_pkg_susp_grant ON package_credit_suspensions(workspace_id, grant_entry_id)`,
+]
+
+/** v17 on an existing v16 cache: the GRANT remembers its deferred amount and term; a package product has a term. */
+export const PACKAGE_DEFERRED_REVENUE_ALTERS: readonly string[] = [
+  `ALTER TABLE package_credit_ledger ADD COLUMN deferred_amount REAL`,
+  `ALTER TABLE package_credit_ledger ADD COLUMN term_months INTEGER`,
+  `ALTER TABLE product ADD COLUMN package_term_months INTEGER`,
+  ...PACKAGE_ALLOCATION_STATEMENTS,
 ]
 
 export const SERVICE_DELIVERY_STATEMENTS: readonly string[] = [
@@ -268,6 +310,9 @@ export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
 
   // ─── 9. Service Delivery & Attendance (v14) ───────────────────
   ...SERVICE_DELIVERY_STATEMENTS,
+
+  // ─── 10. Package term, deferred revenue and allocation (v17) ───
+  ...PACKAGE_ALLOCATION_STATEMENTS,
 ]
 
 /** v10 on an existing v9 cache: the same columns a fresh cache is born with. */

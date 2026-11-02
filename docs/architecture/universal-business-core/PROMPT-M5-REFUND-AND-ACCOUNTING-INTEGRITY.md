@@ -1,5 +1,7 @@
 # PROMPT FOR ANOTHER AGENT — M5 REFUND & ACCOUNTING INTEGRITY (package credit)
 
+> **SUPERSEDED for refund and one-balance-rule, 2 Nov 2026 (see PROMPT-M5-IMPLEMENT.md)**
+>
 > Written 1 Nov 2026 after the M4 integrity audit. **Do not start this until the entry gate in section 1 is green.**
 > M5 is where the product first decides _what money means_ for prepaid service credit. Several of those decisions belong to the
 > owner, not to you. The rule of this prompt: **implement everything that needs no decision, fail closed on everything that does,
