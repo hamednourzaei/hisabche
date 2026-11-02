@@ -62,6 +62,7 @@ const report = (
     uncostedRevenue: 0,
     knownGrossProfit: 600,
     grossProfit: 600,
+    basis: 'drill_down',
     salaries: 500,
     netProfit: 100,
     netMarginPercent: 10,

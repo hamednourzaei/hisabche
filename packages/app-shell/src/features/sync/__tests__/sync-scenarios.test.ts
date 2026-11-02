@@ -411,6 +411,76 @@ describe('Client Sync Integrity Scenarios with Unstable Transport', () => {
     expect(queue.find((q) => q.clientId === 'pay-before')?.status).toBe('failed')
   })
 
+  for (const [name, status, code] of [
+    ['expired', 409, 'INSUFFICIENT_ELIGIBLE_PACKAGE_CREDIT'],
+    ['suspended-only', 409, 'INSUFFICIENT_ELIGIBLE_PACKAGE_CREDIT'],
+    ['closed period', 409, 'ACCOUNTING_PERIOD_LOCKED'],
+    ['sale not booked', 409, 'PACKAGE_INVOICE_NOT_BOOKED'],
+  ] as const) {
+    it(`M5: an offline delivery the server refuses (${name}) stays VISIBLE as a rejection with its reason, is never re-sent by itself, and the rest still goes`, async () => {
+      post.mockImplementationOnce(async () => {
+        const err = new Error(code) as Error & { status?: number }
+        err.status = status
+        throw err
+      })
+      queue = [
+        entry('deliver-1', 'service_delivery_sessions', 'update', {
+          id: 'sess-1',
+          status: 'delivered',
+          settlementMethod: 'package_credit',
+          packageProductId: 'pkg-1',
+          quantity: 1,
+          consumptionEntryId: 'c-1',
+        }),
+        entry('cust-after', 'customer', 'create', { id: 'cust-after', fullName: 'x' }),
+      ]
+
+      await runSync(queryClient)
+
+      const refused = queue.find((q) => q.clientId === 'deliver-1')
+      expect(refused?.status).toBe('failed')
+      expect(refused?.lastError?.startsWith(REJECTED_PREFIX)).toBe(true)
+      expect(refused?.lastError).toContain(code)
+      expect(queue.find((q) => q.clientId === 'cust-after')).toBeUndefined() // one refusal does not stop the queue
+
+      // the command is kept (not deleted, not turned into another one), and a second run does not re-send it
+      const sent = postCalls.length
+      await runSync(queryClient)
+      expect(postCalls.length).toBe(sent)
+      expect(queue.find((q) => q.clientId === 'deliver-1')?.status).toBe('failed')
+    })
+  }
+
+  it('M5 / C5: a return queued before the disposition became mandatory (no restock/scrap choice) is refused by the server, kept visible and recoverable - never silently turned into a restock', async () => {
+    post.mockImplementationOnce(async () => {
+      const err = new Error('RETURN_DISPOSITION_REQUIRED') as Error & { status?: number }
+      err.status = 400
+      throw err
+    })
+    queue = [
+      entry('ret-legacy', 'invoice_returns', 'create', {
+        id: 'ret-legacy',
+        originalInvoiceId: 'inv-1',
+        returnType: 'sale_return',
+        returnNumber: 'R-1',
+        returnDate: '2026-11-02',
+        lines: [{ originalLineId: 'l-1', quantity: 1 }],
+      }),
+    ]
+
+    await runSync(queryClient)
+
+    const refused = queue.find((q) => q.clientId === 'ret-legacy')
+    expect(refused?.status).toBe('failed')
+    expect(refused?.lastError?.startsWith(REJECTED_PREFIX)).toBe(true)
+    expect(refused?.lastError).toContain('RETURN_DISPOSITION_REQUIRED')
+    // the queued payload is untouched: nothing was defaulted on the way
+    expect(
+      (refused as unknown as { payload?: { lines?: Array<Record<string, unknown>> } })?.payload
+        ?.lines?.[0],
+    ).not.toHaveProperty('restockChoice')
+  })
+
   it('a package GRANT is never sent to the consume endpoint: it is refused, permanently and visibly', async () => {
     queue = [
       entry('grant-1', 'package_credit_ledger', 'create', {

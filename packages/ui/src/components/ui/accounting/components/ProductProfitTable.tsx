@@ -219,6 +219,23 @@ export const ProductProfitTable = memo(function ProductProfitTable({
           undefined,
           tone(totals.grossProfit),
         )}
+        {totals.basis === 'drill_down' ? (
+          <p className="px-4 py-2 text-xs text-[hsl(var(--color-warning))]" role="note">
+            {t(
+              'accounting.profit.notLedgerBased',
+              'این گزارش از دفتر کل خوانده نشده است؛ ارقام از ردیف‌های فاکتور جمع شده‌اند.',
+            )}
+          </p>
+        ) : null}
+        {totals.basis === 'ledger' &&
+        totals.reconciliation &&
+        (totals.reconciliation.revenue !== 0 || totals.reconciliation.cost !== 0)
+          ? footerRow(
+              t('accounting.profit.reconciliation', 'تفاوت ردیف‌های فاکتور با دفتر کل'),
+              money(totals.reconciliation.revenue),
+              `${t('accounting.profit.reconciliationCost', 'بها')}: ${money(totals.reconciliation.cost)}`,
+            )
+          : null}
         {totals.grossProfit === null ? (
           <>
             {footerRow(

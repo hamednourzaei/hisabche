@@ -146,6 +146,8 @@ export interface ProfitSources {
   /** The LEDGER's net change of the deferred-revenue liability in the window (books currency) - M5 / B2-5. */
   deferredRevenueChange?: number
   booksCurrency?: string
+  /** The ledger's own sums by account role for the window (books currency) - M5 / C2. */
+  ledgerTotals?: { revenue: number; cost: number; inventoryLoss: number }
 }
 
 /**
@@ -174,6 +176,32 @@ export function profitSources(
     ...sourcesOf(db, workspaceId, invoiceRows, booksCurrency),
     deferredRevenueChange: deferredRevenueChange(db, workspaceId, from, to),
     booksCurrency,
+    ledgerTotals: profitLedgerTotals(db, workspaceId, from, to),
+  }
+}
+
+/** The ledger's sums by account role for the window, read from the device's own journal (same fact the server's function reads). */
+function profitLedgerTotals(
+  db: LocalDb,
+  workspaceId: string,
+  from: string,
+  to: string,
+): { revenue: number; cost: number; inventoryLoss: number } {
+  const rows = db.all<{ role: string; credit: number | null; debit: number | null }>(
+    `SELECT a.role AS role, SUM(jl.credit) AS credit, SUM(jl.debit) AS debit
+       FROM journal_line jl
+       JOIN journal_entry je ON je.id = jl.journal_id
+       JOIN account a ON a.id = jl.account_id
+      WHERE je.workspace_id = ? AND je.status IN ('posted', 'reversed') AND je.deleted_at IS NULL AND jl.deleted_at IS NULL
+        AND a.role IN ('sales', 'cogs', 'inventory_loss') AND je.date >= ? AND je.date <= ?
+      GROUP BY a.role`,
+    [workspaceId, from, to],
+  )
+  const of = (role: string) => rows.find((r) => r.role === role)
+  return {
+    revenue: round2((of('sales')?.credit ?? 0) - (of('sales')?.debit ?? 0)),
+    cost: round2((of('cogs')?.debit ?? 0) - (of('cogs')?.credit ?? 0)),
+    inventoryLoss: round2((of('inventory_loss')?.debit ?? 0) - (of('inventory_loss')?.credit ?? 0)),
   }
 }
 
@@ -188,7 +216,7 @@ function deferredRevenueChange(db: LocalDb, workspaceId: string, from: string, t
        FROM journal_line jl
        JOIN journal_entry je ON je.id = jl.journal_id
        JOIN account a ON a.id = jl.account_id
-      WHERE je.workspace_id = ? AND a.role = 'deferred_revenue' AND je.status = 'posted'
+      WHERE je.workspace_id = ? AND a.role = 'deferred_revenue' AND je.status IN ('posted', 'reversed')
         AND je.deleted_at IS NULL AND jl.deleted_at IS NULL AND je.date >= ? AND je.date <= ?`,
     [workspaceId, from, to],
   )

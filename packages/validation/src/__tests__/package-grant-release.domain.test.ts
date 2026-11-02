@@ -415,3 +415,63 @@ describe('C1: an expired GRANT is never revived; a renewal is always a NEW GRANT
     expect(plan.totalReleasedAmount).toBe(800)
   })
 })
+
+describe('C2: the ledger is the headline and the drill-down reconciles to it', () => {
+  const invoice = { id: 'i1', currency: 'AFN', subtotal: 300, discountTotal: 0 }
+  const line = { invoiceId: 'i1', productId: 'p', productName: 'Pen', quantity: 2, totalPrice: 300 }
+  const consumption = {
+    invoiceId: 'i1',
+    productId: 'p',
+    amount: 200,
+    isEstimated: false,
+    quantity: 2,
+  }
+  const base = {
+    from: '2026-11-01',
+    to: '2026-11-30',
+    currency: 'AFN',
+    booksCurrency: 'AFN',
+    invoices: [invoice],
+    lines: [line],
+    consumptions: [consumption],
+    payrolls: [],
+  }
+
+  it('sum(drill-down) + reconciliation == ledger, for revenue and for cost + loss', async () => {
+    const { buildProfitReport } = await import('../index')
+    const report = buildProfitReport({
+      ...base,
+      ledgerTotals: { revenue: 500, cost: 140, inventoryLoss: 60 },
+    })
+    expect(report.totals.ledger).toEqual({
+      revenue: 500,
+      cost: 140,
+      inventoryLoss: 60,
+      grossProfit: 300,
+    })
+    expect(report.totals.reconciliation).toEqual({ revenue: 200, cost: 0 }) // the ledger holds 200 of revenue the lines do not show
+    // the HEADLINE is the ledger; the rows are drill-down and reconcile to it
+    expect(report.totals.basis).toBe('ledger')
+    expect(report.totals.revenue).toBe(500)
+    expect(report.totals.cost).toBe(200) // cost of sales 140 + inventory loss 60
+    expect(report.totals.drillDown).toEqual({ revenue: 300, cost: 200 })
+    expect(report.totals.drillDown!.revenue + report.totals.reconciliation!.revenue).toBe(
+      report.totals.ledger!.revenue,
+    )
+    expect(report.totals.drillDown!.cost + report.totals.reconciliation!.cost).toBe(
+      report.totals.ledger!.cost + report.totals.ledger!.inventoryLoss,
+    )
+  })
+
+  it("no ledger block unless the ledger was read, and never on another currency's report", async () => {
+    const { buildProfitReport } = await import('../index')
+    expect('ledger' in buildProfitReport({ ...base }).totals).toBe(false)
+    const usd = buildProfitReport({
+      ...base,
+      invoices: [{ ...invoice, currency: 'USD' }],
+      currency: 'USD',
+      ledgerTotals: { revenue: 500, cost: 0, inventoryLoss: 0 },
+    })
+    expect('ledger' in usd.totals).toBe(false)
+  })
+})

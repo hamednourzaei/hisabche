@@ -389,7 +389,9 @@ AS $fn$
     JOIN public.journal_entries je ON je.id = jl.journal_id
     JOIN public.accounts a ON a.id = jl.account_id
    WHERE je.workspace_id = p_workspace_id AND a.workspace_id = p_workspace_id
-     AND a.role = 'deferred_revenue' AND je.status = 'posted'
+     -- 'reversed' originals COUNT: the reversal entry that cancels them is 'posted', and a sum that kept only one of the
+     -- two would be wrong by exactly the reversed amount
+     AND a.role = 'deferred_revenue' AND je.status IN ('posted', 'reversed')
      AND je.date >= p_from AND je.date <= p_to;
 $fn$;
 

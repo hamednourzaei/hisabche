@@ -255,6 +255,7 @@ describe('the report, product by product', () => {
       uncostedRevenue: 0,
       knownGrossProfit: 400,
       grossProfit: 400,
+      basis: 'drill_down', // no ledger was read: the headline is labelled NOT_LEDGER_BASED
       salaries: 250,
       netProfit: 150,
       netMarginPercent: 15,

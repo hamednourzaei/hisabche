@@ -439,6 +439,11 @@ export interface ProfitReport {
     knownGrossProfit: number
     /** null when any sold product has no known cost. */
     grossProfit: number | null
+    /** Where the headline comes from: the accounting ledger, or (NOT_LEDGER_BASED) the drill-down rows. */
+    basis?: 'ledger' | 'drill_down' | undefined
+    /** When the headline is the ledger: the operational figures behind it, and the explicit difference. */
+    drillDown?: { revenue: number; cost: number } | undefined
+    reconciliation?: { revenue: number; cost: number } | undefined
     salaries: number
     netProfit: number | null
     netMarginPercent: number | null

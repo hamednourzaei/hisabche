@@ -105,6 +105,9 @@ export async function setupDeferredRevenue(run: Run): Promise<void> {
   const migration = doc('package-deferred-revenue-01-migration.sql')
   await run(migration)
   await run(migration) // idempotent: a second run changes nothing and does not fail
+  const profit = doc('profit-ledger-totals-01-migration.sql')
+  await run(profit)
+  await run(profit)
 }
 
 let seq = 1000
@@ -565,9 +568,25 @@ export const scenarios: Scenario[] = [
         [sale, WS, uid('e7100000')],
       )
       await run(`INSERT INTO public.journal_lines VALUES ($1, '${ACC_DEFERRED}', 0, 10000)`, [sale])
+      // the other side of the sale (receivable), so the fixture ledger balances like a real posting
+      const receivable = uid('a1000000')
+      await run(
+        `INSERT INTO public.accounts (id, workspace_id, role) VALUES ($1, $2, 'receivable')`,
+        [receivable, WS],
+      )
+      await run(`INSERT INTO public.journal_lines VALUES ($1, $2, 10000, 0)`, [sale, receivable])
       for (let i = 0; i < 3; i++) await deliver(run, await newSession(run, customer, '2026-11-21'))
       // 10 000 credited, 3 x 1 000 released: the liability moved by 7 000 in the window, and revenue is recognised only for 3 000
       assert.equal((await probe('2026-11-20', '2026-11-30')) - before, 7000)
+      // the TypeScript reversal path marks the ORIGINAL entry 'reversed' and posts the cancelling entry: the sum must keep both
+      const total = await probe('2026-11-20', '2026-11-30')
+      await run(`UPDATE public.journal_entries SET status = 'reversed' WHERE id = $1`, [sale])
+      assert.equal(
+        await probe('2026-11-20', '2026-11-30'),
+        total,
+        'a reversed original still counts',
+      )
+      await run(`UPDATE public.journal_entries SET status = 'posted' WHERE id = $1`, [sale])
       // a window that holds neither the sale nor the deliveries sees nothing
       assert.equal(await probe('2026-12-01', '2026-12-31'), 0)
       // another workspace's ledger is never read
@@ -631,6 +650,118 @@ export const scenarios: Scenario[] = [
           [WS],
         ),
         'accounts_role_check',
+      )
+    },
+  },
+  {
+    name: 'docs/FINDING-m5-post-apply.sql blocks 1-7 are valid SQL on the migrated schema (block 4 reads the sale credit the fixtures do not all post)',
+    run: async (run) => {
+      const text = doc('FINDING-m5-post-apply.sql')
+      const blocks = text
+        .split(new RegExp('^-- [0-9]+' + String.fromCharCode(46) + ' ', 'm'))
+        .slice(1)
+        .map((b) =>
+          b
+            .slice(b.indexOf(String.fromCharCode(10)) + 1)
+            .trim()
+            .replace(/;\s*$/, ''),
+        )
+      assert.equal(blocks.length, 9)
+      for (const [index, block] of blocks.slice(0, 7).entries()) {
+        await run(`SELECT count(*) FROM (${block}) q`).catch((error: Error) => {
+          throw new Error(`block ${index + 1}: ${error.message}`)
+        })
+      }
+      // block 1 and 2 must be EMPTY on a ledger the trigger and the migration produced
+      for (const index of [0, 1]) {
+        const rows = await run(blocks[index]!)
+        assert.equal(rows.length, 0, `block ${index + 1} found ${rows.length} anomaly row(s)`)
+      }
+    },
+  },
+  {
+    name: 'C2: accounting_profit_ledger_totals sums sales / cost of sales / inventory loss from the LEDGER, counts reversed originals once, and never reads another workspace',
+    run: async (run) => {
+      const OTHER = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+      const mk = async (role: string, ws = WS) => {
+        const id = uid('a2000000')
+        await run(`INSERT INTO public.accounts (id, workspace_id, role) VALUES ($1, $2, $3)`, [
+          id,
+          ws,
+          role,
+        ])
+        return id
+      }
+      const cash = await mk('cash'),
+        sales = await mk('sales'),
+        cogs = await mk('cogs'),
+        loss = await mk('inventory_loss')
+      const entry = async (
+        date: string,
+        status: string,
+        lines: Array<[string, number, number]>,
+        ws = WS,
+      ) => {
+        const id = uid('e8000000')
+        await run(
+          `INSERT INTO public.journal_entries (id, workspace_id, date, source_type, source_id, status) VALUES ($1, $2, $3, 'invoice', $4, $5)`,
+          [id, ws, date, uid('e8100000'), status],
+        )
+        for (const [account, debit, credit] of lines)
+          await run(`INSERT INTO public.journal_lines VALUES ($1, $2, $3, $4)`, [
+            id,
+            account,
+            debit,
+            credit,
+          ])
+        return id
+      }
+      const probe = (ws: string, from: string, to: string) =>
+        run(`SELECT public.accounting_profit_ledger_totals($1::uuid, $2::date, $3::date) AS t`, [
+          ws,
+          from,
+          to,
+        ]).then((r) => r[0]!.t as Record<string, number>)
+      const before = await probe(WS, '2027-03-01', '2027-03-31')
+      const sale = await entry('2027-03-10', 'posted', [
+        [cash, 500, 0],
+        [sales, 0, 500],
+        [cogs, 200, 0],
+        [cash, 0, 200],
+      ])
+      await entry('2027-03-12', 'posted', [
+        [loss, 60, 0],
+        [cogs, 0, 60],
+      ]) // a scrapped return moves cost of sales to loss
+      await entry(
+        '2027-03-15',
+        'posted',
+        [
+          [cash, 999, 0],
+          [sales, 0, 999],
+        ],
+        OTHER,
+      ) // another workspace
+      const t = await probe(WS, '2027-03-01', '2027-03-31')
+      assert.equal(Number(t.revenue) - Number(before.revenue), 500)
+      assert.equal(Number(t.cost) - Number(before.cost), 140) // 200 - 60 moved to loss
+      assert.equal(Number(t.inventory_loss) - Number(before.inventory_loss), 60)
+      // the TypeScript reversal marks the original 'reversed' and posts the cancelling entry: both must be kept so they cancel
+      await run(`UPDATE public.journal_entries SET status = 'reversed' WHERE id = $1`, [sale])
+      await entry('2027-03-20', 'posted', [
+        [cash, 0, 500],
+        [sales, 500, 0],
+        [cogs, 0, 200],
+        [cash, 200, 0],
+      ])
+      const reversed = await probe(WS, '2027-03-01', '2027-03-31')
+      assert.equal(Number(reversed.revenue) - Number(before.revenue), 0)
+      assert.equal(Number(reversed.cost) - Number(before.cost), -60)
+      // a window with nothing in it
+      const empty = await probe(WS, '2030-01-01', '2030-01-31')
+      assert.deepEqual(
+        [Number(empty.revenue), Number(empty.cost), Number(empty.inventory_loss)],
+        [0, 0, 0],
       )
     },
   },

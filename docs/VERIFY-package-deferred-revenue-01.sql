@@ -36,6 +36,15 @@ SELECT
                  AND privilege_type IN ('INSERT', 'UPDATE', 'DELETE')) AS no_browser_writes_ok,
   -- the trigger function is not callable by anyone
   NOT has_function_privilege('authenticated', 'public.package_credit_allocate()', 'EXECUTE') AS trigger_fn_private_ok,
+  -- the suspension table is the EVENT shape (kind + effective_on), not an older interval shape
+  (SELECT count(*) = 2 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'package_credit_suspensions' AND column_name IN ('kind', 'effective_on'))
+    AS suspension_event_shape_ok,
+  -- the ledger function the profit report reads exists and is private
+  to_regprocedure('public.accounting_deferred_revenue_change(uuid, date, date)') IS NOT NULL
+    AS deferred_change_function_ok,
+  NOT has_function_privilege('authenticated', 'public.accounting_deferred_revenue_change(uuid, date, date)', 'EXECUTE')
+    AS deferred_change_function_private_ok,
   -- legacy facts (informational, expected: every package sold before the cut-over has no deferred amount)
   (SELECT count(*) FROM public.package_credit_ledger WHERE entry_type = 'GRANT' AND deferred_amount IS NULL)
     AS legacy_grants_without_deferred_amount,

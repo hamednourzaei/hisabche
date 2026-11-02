@@ -853,11 +853,13 @@ export class AccountingRepository {
     )
     const { invoices, lines } = await this.restateInBooksCurrency(workspaceId, read, details.lines)
     const deferredRevenueChange = await this.deferredRevenueChange(workspaceId, from, to)
+    const ledgerTotals = await this.profitLedgerTotals(workspaceId, from, to)
     return {
       invoices,
       ...details,
       lines,
       deferredRevenueChange,
+      ...(ledgerTotals ? { ledgerTotals } : {}),
       booksCurrency: await baseCurrencyOf(workspaceId),
       payrolls: payrollRows
         .filter((row) => !['cancelled', 'rejected'].includes(String(row.status ?? '')))
@@ -867,6 +869,36 @@ export class AccountingRepository {
           bonuses: Number(row.bonuses) || 0,
           overtimeAmount: Number(row.overtime_amount) || 0,
         })),
+    }
+  }
+
+  /**
+   * The ledger's own sums for the window by account role (revenue, cost of sales, inventory loss), books currency.
+   * null when the function is not installed (the report then simply has no ledger block - never a made-up zero).
+   */
+  private async profitLedgerTotals(
+    workspaceId: string,
+    from: string,
+    to: string,
+  ): Promise<{ revenue: number; cost: number; inventoryLoss: number } | null> {
+    const { data, error } = await supabase.rpc('accounting_profit_ledger_totals', {
+      p_workspace_id: workspaceId,
+      p_from: from,
+      p_to: to,
+    })
+    if (error) {
+      if (error.code === 'PGRST202' || error.code === '42883') return null
+      throw new DatabaseError('Failed to read the ledger totals for profit', error)
+    }
+    const row = (data ?? {}) as {
+      revenue?: number | string
+      cost?: number | string
+      inventory_loss?: number | string
+    }
+    return {
+      revenue: Number(row.revenue) || 0,
+      cost: Number(row.cost) || 0,
+      inventoryLoss: Number(row.inventory_loss) || 0,
     }
   }
 

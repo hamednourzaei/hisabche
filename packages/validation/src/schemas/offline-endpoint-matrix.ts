@@ -456,10 +456,7 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /package-credits/consume': ['operations.service_delivery', 'available'],
   'POST /package-credits/expire': ['operations.service_delivery', 'available'],
   // Suspending ONE GRANT is a manager's decision recorded on the server (append-only SUSPEND / RESUME events).
-  'POST /package-credits/grants/:x/suspension': [
-    'operations.package_suspension',
-    'online_required',
-  ],
+  'POST /package-credits/grants/:x/suspension': ['operations.pkg_suspension', 'online_required'],
   'POST /package-credits/reverse': ['operations.service_delivery', 'available'],
   'POST /payments': ['payment.record', 'available'],
   'POST /payments/:x/cancel': ['payment.cancel', 'available'],

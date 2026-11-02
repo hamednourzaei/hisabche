@@ -3239,7 +3239,10 @@
       "unknown": "Cannot be calculated",
       "knownProfit": "Profit on sales with a recorded cost",
       "uncostedRevenue": "Sales with no recorded cost",
-      "unknownNote": "Part of this period’s sales has no recorded cost of goods. Until it is recorded, gross and net profit cannot be calculated — sales are not profit."
+      "unknownNote": "Part of this period’s sales has no recorded cost of goods. Until it is recorded, gross and net profit cannot be calculated — sales are not profit.",
+      "notLedgerBased": "This report was not read from the ledger; the figures are summed from the invoice rows.",
+      "reconciliation": "Difference between the invoice rows and the ledger",
+      "reconciliationCost": "Cost"
     },
     "closingBalance": "Closing balance",
     "generalLedger": {

@@ -18,6 +18,9 @@ const read = (...p: string[]) =>
   readFileSync(join(ROOT, ...p), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/^\s*\/\/.*$/gm, '')
+    // whitespace flattened: the formatter re-wraps long lines after every save, and a guard must not care
+    .split(/\s+/)
+    .join(' ')
 const form = read('packages', 'ui', 'src', 'components', 'ui', 'add-product-modal.tsx')
 const dialog = read(
   'packages',

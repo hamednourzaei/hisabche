@@ -146,6 +146,21 @@ export interface ProfitReport {
      * revenue = the invoices' net sales - this. Package revenue is recognised at DELIVERY, as the ledger says.
      */
     deferredRevenueChange?: number
+    /**
+     * M5 / C2: what the accounting LEDGER says for the window (books currency): revenue = sales accounts, cost = cost-of-sales
+     * accounts, inventoryLoss = write-offs. The ledger is the truth of profit; the rows above are operational drill-down.
+     * Present only on the books-currency report and only when the ledger was read.
+     */
+    ledger?: { revenue: number; cost: number; inventoryLoss: number; grossProfit: number }
+    /** Where the headline `revenue` / `cost` / `grossProfit` come from: the ledger, or (labelled NOT_LEDGER_BASED) the drill-down rows. */
+    basis: 'ledger' | 'drill_down'
+    /** The operational figures behind the headline when it is the ledger: sum(drillDown) + reconciliation = the ledger. */
+    drillDown?: { revenue: number; cost: number }
+    /**
+     * ledger − drill-down, shown explicitly and never absorbed: `revenue` = ledger revenue − totals.revenue,
+     * `cost` = (ledger cost + loss) − totals.cost. sum(drill-down) + reconciliation = ledger total.
+     */
+    reconciliation?: { revenue: number; cost: number }
     salaries: number
     netProfit: number | null
     netMarginPercent: number | null
@@ -235,6 +250,8 @@ export function buildProfitReport(input: {
   deferredRevenueChange?: number | undefined
   /** The books currency, so the change above lands on the right report. */
   booksCurrency?: string | undefined
+  /** The ledger's own sums for the window, books currency (see ProfitReport.totals.ledger). */
+  ledgerTotals?: { revenue: number; cost: number; inventoryLoss: number } | undefined
 }): ProfitReport {
   const deferredChange =
     input.booksCurrency !== undefined && input.booksCurrency === input.currency
@@ -403,8 +420,38 @@ export function buildProfitReport(input: {
       0,
     ),
   )
-  const revenue = round2(products.reduce((sum, row) => sum + row.revenue, 0) - deferredChange)
-  const cost = round2(products.reduce((sum, row) => sum + row.cost, 0))
+  // The OPERATIONAL (drill-down) figures: the product rows summed, with the ledger's deferral taken off.
+  const drillRevenue = round2(products.reduce((sum, row) => sum + row.revenue, 0) - deferredChange)
+  const drillCost = round2(products.reduce((sum, row) => sum + row.cost, 0))
+  // M5 / C2: the ledger's own figures and the explicit difference to the drill-down (books currency report only).
+  const ledgerBlock =
+    input.ledgerTotals !== undefined &&
+    input.booksCurrency !== undefined &&
+    input.booksCurrency === input.currency
+      ? (() => {
+          const ledgerRevenue = round2(input.ledgerTotals.revenue)
+          const ledgerCost = round2(input.ledgerTotals.cost)
+          const ledgerLoss = round2(input.ledgerTotals.inventoryLoss)
+          return {
+            ledger: {
+              revenue: ledgerRevenue,
+              cost: ledgerCost,
+              inventoryLoss: ledgerLoss,
+              grossProfit: round2(ledgerRevenue - ledgerCost - ledgerLoss),
+            },
+            reconciliation: {
+              revenue: round2(ledgerRevenue - drillRevenue),
+              cost: round2(ledgerCost + ledgerLoss - drillCost),
+            },
+          }
+        })()
+      : null
+  // C2: when the ledger was read, the HEADLINE is the ledger (revenue = sales accounts; cost = cost of sales + inventory loss, where a
+  // scrapped return only moves cost from the first to the second). The rows stay as drill-down and the difference is `reconciliation`.
+  const revenue = ledgerBlock ? ledgerBlock.ledger.revenue : drillRevenue
+  const cost = ledgerBlock
+    ? round2(ledgerBlock.ledger.cost + ledgerBlock.ledger.inventoryLoss)
+    : drillCost
   const undetermined = products.filter((row) => row.costMissing)
   const stocked = products.filter((row) => row.costStatus !== 'none')
   const costStatus: CostStatus =
@@ -453,6 +500,11 @@ export function buildProfitReport(input: {
       knownGrossProfit,
       grossProfit,
       ...(deferredChange !== 0 ? { deferredRevenueChange: deferredChange } : {}),
+      // NOT_LEDGER_BASED is visible: `basis` says where the headline came from.
+      basis: ledgerBlock ? ('ledger' as const) : ('drill_down' as const),
+      ...(ledgerBlock
+        ? { ...ledgerBlock, drillDown: { revenue: drillRevenue, cost: drillCost } }
+        : {}),
       salaries,
       netProfit,
       netMarginPercent: netProfit === null ? null : percent(netProfit, revenue),
