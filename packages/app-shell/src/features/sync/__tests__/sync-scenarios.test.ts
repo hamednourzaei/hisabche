@@ -365,6 +365,72 @@ describe('Client Sync Integrity Scenarios with Unstable Transport', () => {
     })
   }
 
+  it('a payment is delivered with its body untouched: autoAllocate:false and the named allocations reach the server', async () => {
+    const body = {
+      id: 'pay-9',
+      direction: 'in',
+      partyType: 'customer',
+      partyId: 'c-1',
+      amount: 100,
+      allocations: [{ invoiceId: 'inv-1', amount: 60 }],
+      autoAllocate: false,
+    }
+    queue = [entry('pay-9', 'payment', 'create', body)]
+
+    await runSync(queryClient)
+
+    const sent = postCalls.find((c) => c.url === '/payments')
+    expect(sent?.body).toEqual(body)
+    expect((sent?.headers as Record<string, string>)['Idempotency-Key']).toBe('pay-9')
+  })
+
+  it('a command queued before a capability was taken away is re-judged by the server: refused, kept visible, never re-sent, and the rest still goes', async () => {
+    post.mockImplementationOnce(async () => {
+      const err = new Error('CAPABILITY_REQUIRED') as Error & { status?: number }
+      err.status = 403
+      throw err
+    })
+    queue = [
+      entry('pay-before', 'payment', 'create', { id: 'pay-before', amount: 10 }),
+      entry('cust-after', 'customer', 'create', { id: 'cust-after', fullName: 'x' }),
+    ]
+
+    await runSync(queryClient)
+
+    // the refused one is NOT dropped: it stays, marked as a refusal someone must look at
+    const refused = queue.find((q) => q.clientId === 'pay-before')
+    expect(refused?.status).toBe('failed')
+    expect(refused?.lastError?.startsWith(REJECTED_PREFIX)).toBe(true)
+    // the other one is delivered and drained: one refusal does not stop the queue
+    expect(queue.find((q) => q.clientId === 'cust-after')).toBeUndefined()
+
+    // a second run (the capability may even be back) does not send the refused command again by itself
+    const sentBefore = postCalls.filter((c) => c.url === '/payments').length
+    await runSync(queryClient)
+    expect(postCalls.filter((c) => c.url === '/payments').length).toBe(sentBefore)
+    expect(queue.find((q) => q.clientId === 'pay-before')?.status).toBe('failed')
+  })
+
+  it('a package GRANT is never sent to the consume endpoint: it is refused, permanently and visibly', async () => {
+    queue = [
+      entry('grant-1', 'package_credit_ledger', 'create', {
+        id: 'grant-1',
+        entry_type: 'GRANT',
+        quantity: 10,
+        customer_id: 'c-1',
+        package_product_id: 'pkg-1',
+      }),
+    ]
+
+    await runSync(queryClient)
+
+    expect(postCalls.filter((c) => c.url.startsWith('/package-credits'))).toHaveLength(0)
+    const refused = queue.find((q) => q.clientId === 'grant-1')
+    expect(refused?.status).toBe('failed')
+    expect(refused?.lastError?.startsWith(REJECTED_PREFIX)).toBe(true)
+    expect(refused?.lastError).toContain('PACKAGE_GRANT_TRAVELS_WITH_THE_INVOICE')
+  })
+
   it('coming back online gives a frozen retryable entry its tries back, and leaves a refusal alone', async () => {
     const frozen = {
       ...entry('f-1', 'payment', 'create', { id: 'p1' }),

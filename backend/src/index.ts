@@ -133,6 +133,8 @@ import { metalRatesRoutes } from './routes/metal-rates.routes'
 import { fitmentRoutes } from './routes/fitment.routes'
 import { warrantyRoutes } from './routes/warranty.routes'
 import { invoiceReturnRoutes } from './routes/invoice-return.routes'
+import { packageCreditsRoutes } from './routes/package-credits.routes'
+import { serviceDeliveryRoutes } from './routes/service-delivery.routes'
 import { orderDepositRoutes } from './routes/order-deposit.routes'
 import { transportRoutes } from './routes/transport.routes'
 import { appointmentRoutes } from './routes/appointment.routes'
@@ -791,6 +793,8 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(fitmentRoutes)
   await server.register(warrantyRoutes)
   await server.register(invoiceReturnRoutes)
+  await server.register(packageCreditsRoutes)
+  await server.register(serviceDeliveryRoutes)
   await server.register(orderDepositRoutes)
   await server.register(transportRoutes)
   await server.register(appointmentRoutes)

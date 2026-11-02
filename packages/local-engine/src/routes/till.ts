@@ -370,6 +370,7 @@ export function registerTillRoutes(router: Router): void {
 
   // ─── Open ──────────────────────────────────────────────────
   router.post('/pos/sessions', ({ db, ctx, body }: RouteHandlerContext) => {
+    requireCapability(ctx, 'invoice.create')
     const input = parse(openSchema, body ?? {})
     const booksCurrency = ctx.baseCurrency
     const targetCurrency = input.currency ? input.currency.toUpperCase() : booksCurrency
@@ -408,6 +409,7 @@ export function registerTillRoutes(router: Router): void {
 
   // ─── Orders ────────────────────────────────────────────────
   router.post('/pos/sessions/:id/orders', ({ db, ctx, params, body }: RouteHandlerContext) => {
+    requireCapability(ctx, 'invoice.create')
     const sessionId = params.id ?? ''
     const input = parse(orderSchema, body ?? {})
     const session = getSession(db, ctx, sessionId)
@@ -833,6 +835,7 @@ export function registerTillRoutes(router: Router): void {
   const setSuspended =
     (suspended: boolean) =>
     ({ db, ctx, params }: RouteHandlerContext) => {
+      requireCapability(ctx, 'invoice.create')
       const sessionId = params.id ?? ''
       const session = getSession(db, ctx, sessionId)
       const refusal = checkSuspendChange(session.status, suspended ? 'suspended' : 'open')
@@ -857,6 +860,7 @@ export function registerTillRoutes(router: Router): void {
   router.post('/pos/sessions/:id/resume', setSuspended(false))
 
   router.patch('/pos/sessions/:id/label', ({ db, ctx, params, body }: RouteHandlerContext) => {
+    requireCapability(ctx, 'invoice.create')
     const sessionId = params.id ?? ''
     const { label } = parse(
       z.object({ label: z.string().trim().min(1).max(80).nullable() }).strict(),
@@ -874,6 +878,7 @@ export function registerTillRoutes(router: Router): void {
   })
 
   router.delete('/pos/sessions/:id', ({ db, ctx, params }: RouteHandlerContext) => {
+    requireCapability(ctx, 'invoice.create')
     const sessionId = params.id ?? ''
     const session = getSession(db, ctx, sessionId)
     if (session.status !== 'open' && session.status !== 'suspended') {

@@ -61,6 +61,7 @@ function v8Synthetic(): DatabaseSync {
     );
     CREATE TABLE product (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL DEFAULT '', name TEXT);
     CREATE TABLE invoice (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL DEFAULT '');
+    CREATE TABLE inventory_movement (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL DEFAULT '', product_id TEXT NOT NULL DEFAULT '', type TEXT NOT NULL DEFAULT '', quantity REAL NOT NULL DEFAULT 0, reference TEXT, date TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT '');
     INSERT INTO local_workspace (id, name, base_currency, business_types) VALUES ('w1', 'Kabul Traders', 'AFN', 'grocery,fabric');
     INSERT INTO product (id, name) VALUES ('p1', 'Existing sugar bag');
     INSERT INTO invoice (id) VALUES ('i1');
@@ -90,7 +91,7 @@ describe('v8 → v9 migration', () => {
     const versionRow = db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get() as {
       value: string
     }
-    expect(versionRow.value).toBe('9')
+    expect(versionRow.value).toBe(String(SCHEMA_VERSION))
 
     // Check prior data preserved
     const ws = db

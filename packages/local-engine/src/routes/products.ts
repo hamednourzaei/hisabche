@@ -10,6 +10,7 @@
 import {
   createProductSchema,
   flagFilter,
+  movesStock,
   normalizeBarcode,
   summarizeStock,
   updateProductSchema,
@@ -36,6 +37,7 @@ export interface ProductRow {
   wholesale_price: number | null
   is_active: number
   image_url: string | null
+  offering_type?: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null
@@ -60,6 +62,8 @@ export function mapProduct(raw: ProductRow) {
     sell_price: raw.sell_price,
     wholesalePrice: raw.wholesale_price,
     wholesale_price: raw.wholesale_price,
+    offeringType: raw.offering_type ?? 'goods',
+    offering_type: raw.offering_type ?? 'goods',
     isActive: Boolean(raw.is_active),
     is_active: Boolean(raw.is_active),
     createdAt: raw.created_at,
@@ -279,8 +283,8 @@ export function registerProductRoutes(router: Router): void {
     const lowStock = flagFilter(query.lowStock)
     if (lowStock !== undefined) {
       products = lowStock
-        ? products.filter((p) => p.quantity <= p.minStockLevel)
-        : products.filter((p) => p.quantity > p.minStockLevel)
+        ? products.filter((p) => movesStock(p.offeringType) && p.quantity <= p.minStockLevel)
+        : products.filter((p) => !movesStock(p.offeringType) || p.quantity > p.minStockLevel)
     }
 
     const includeSummary = flagFilter(query.includeSummary) === true

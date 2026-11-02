@@ -193,6 +193,8 @@ export {
   rankPartyProducts,
   runningLedger,
   settlesInCurrency,
+  invoicesOfAnotherParty,
+  resolveBookingRate,
   returnEffectOfInvoice,
   summarizeParty,
   summarizePartyByCurrency,

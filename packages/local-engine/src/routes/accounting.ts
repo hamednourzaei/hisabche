@@ -25,6 +25,7 @@ import { buildEnqueue } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import type { Router } from '../router'
+import { assertPeriodOpen, reverseLedgerEntry } from './local-ledger'
 import { profitSources } from './report-sources'
 import type { RouteHandlerContext } from '../types'
 
@@ -271,16 +272,7 @@ export function registerAccountingRoutes(router: Router): void {
     const description = data.description?.trim() || ''
     const reference = data.reference?.trim() || ''
 
-    // Check period lock
-    const lockRow = db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', [
-      'period_lock',
-    ])
-    if (lockRow?.value && date <= lockRow.value) {
-      throw new ConflictError(
-        'ACCOUNTING_PERIOD_LOCKED',
-        `Accounting period is locked through ${lockRow.value}`,
-      )
-    }
+    assertPeriodOpen(db, date)
 
     // Check line balance
     let totalDebit = 0
@@ -406,58 +398,12 @@ export function registerAccountingRoutes(router: Router): void {
     const now = new Date().toISOString()
     const revDate = (data.date as string)?.slice(0, 10) || now.slice(0, 10)
     const reason = (data.reason as string) || `Reversal of ${entry.entry_number}`
-
     return db.transaction(() => {
-      const lines = db.all<JournalLineRow>(
-        'SELECT * FROM journal_line WHERE journal_id = ? AND workspace_id = ? AND deleted_at IS NULL',
-        [id, workspaceId],
-      )
-
-      const revId = generateUuid()
-      const revNumber = `REV-${entry.entry_number || entry.id}`
-
-      db.run(
-        `INSERT INTO journal_entry (
-          id, workspace_id, entry_number, date, description, reference, status,
-          source_type, source_id, reversal_of, posted_at, created_at, updated_at, origin, sync_state
-        ) VALUES (?, ?, ?, ?, ?, ?, 'posted', 'reversal', ?, ?, ?, ?, ?, 'local', 'local_only')`,
-        [
-          revId,
-          workspaceId,
-          revNumber,
-          revDate,
-          reason,
-          entry.entry_number || '',
-          entry.source_id,
-          id,
-          now,
-          now,
-          now,
-        ],
-      )
-
-      // Invert debit and credit lines
-      for (const line of lines) {
-        db.run(
-          `INSERT INTO journal_line (
-            id, workspace_id, journal_id, account_id, debit, credit, description,
-            created_at, updated_at, origin, sync_state
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
-          [
-            generateUuid(),
-            workspaceId,
-            revId,
-            line.account_id,
-            line.credit, // Debit becomes old Credit
-            line.debit, // Credit becomes old Debit
-            `Reversal of line in ${entry.entry_number}`,
-            now,
-            now,
-          ],
-        )
-      }
-
-      db.run("UPDATE journal_entry SET status = 'reversed', updated_at = ? WHERE id = ?", [now, id])
+      // ONE reversal function for every cancel on the device (local-ledger.ts): a new dated entry, lines inverted.
+      const reversal = reverseLedgerEntry(db, ctx, entry.id, { date: revDate, reason, now })
+      if (!reversal) throw new ConflictError('Entry is already reversed')
+      const revId = reversal.id
+      const revNumber = reversal.entryNumber
 
       if (headers?.['x-hisabche-queue'] === '1') {
         const enqueue = buildEnqueue({

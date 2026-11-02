@@ -32,6 +32,7 @@ import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 import { costingMethodOf, drawFromLayers, receiveLayer } from './cost-layers'
 import { ensureDefaultAccounts } from './invoices'
+import { periodLockDecision } from './local-ledger'
 
 function generateUuid(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -344,10 +345,7 @@ export function registerCostingRoutes(router: Router): void {
         })
       }
 
-      const lock = db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', [
-        'period_lock',
-      ])
-      if (lock?.value && entryDate <= lock.value) {
+      if (periodLockDecision(db, entryDate).locked) {
         return answered({
           status: 'ledger_incomplete',
           cost,

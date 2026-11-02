@@ -169,10 +169,24 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'balance', bodyCount: 2 },
       { id: 'overdue', bodyCount: 1 },
     ],
-    related: ['invoices', 'accounting', 'pos', 'campaigns'],
+    related: ['invoices', 'accounting', 'pos', 'campaigns', 'service-delivery'],
     outbound: [
       { href: '/features/customer-debt', labelKey: 'landing.featurePage.customerDebt.h1' },
     ],
+  },
+  {
+    // The service-session tab of the customers page. A separate article
+    // because «how a session is settled» is a different question from «what a
+    // customer owes», and the tab is where both are answered.
+    slug: 'service-delivery',
+    group: 'sell',
+    sections: [
+      { id: 'what', bodyCount: 2 },
+      { id: 'create', bodyCount: 2, stepCount: 3 },
+      { id: 'settle', bodyCount: 2 },
+      { id: 'sync', bodyCount: 2 },
+    ],
+    related: ['customers', 'invoices', 'offline'],
   },
   {
     slug: 'inventory',

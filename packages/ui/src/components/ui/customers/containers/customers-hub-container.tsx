@@ -4,9 +4,11 @@
 // «مشتریان» — everything about the people a business sells to, at one address:
 // `/customers`.
 //
-// Two tabs, and only two:
+// Three tabs:
 //
 //   customers   the list (search, roles, bulk actions) — the page as it was
+//   sessions    «جلسات خدمت»: each service session with one of these customers,
+//               its settlement and where it stands with the server
 //   outreach    what is done WITH customers, one at a time behind a switch:
 //               «پیگیری» (was /tasks) or «کمپین‌ها» (was /campaigns)
 //
@@ -16,12 +18,16 @@
 // `useHubTab` / `useHubSection`.
 //
 // ⚠️ A part whose module is locked for this person is not offered — the same
-// lock the menu applied to the page it came from (`isNavLocked`).
+// lock the menu applied to the page it came from (`isNavLocked`). The sessions
+// tab follows the capability its endpoints require (`invoice.read`).
+//
+// ⚠️ THE SESSIONS TAB IS NOT A NEW ROUTE: it is `?tab=sessions` on the page
+// that already holds the customers, because a session belongs to a customer.
 // ============================================
 
 import { Suspense, lazy } from 'react'
 import { useTranslations } from 'next-intl'
-import { Megaphone, Users } from 'lucide-react'
+import { CalendarClock, Megaphone, Users } from 'lucide-react'
 import { useMyCapabilities } from '@hisabche/api'
 import { isNavLocked } from '@hisabche/ui-contract'
 import { useActionAvailability } from '../../../../lib/capability/use-action-availability'
@@ -44,8 +50,13 @@ const OpsSectionContainer = lazy(() =>
 const CampaignsContainer = lazy(() =>
   import('../../campaigns/campaigns-container').then((m) => ({ default: m.CampaignsContainer })),
 )
+const ServiceDeliveryContainer = lazy(() =>
+  import('../../service-delivery/containers/service-delivery-container').then((m) => ({
+    default: m.ServiceDeliveryContainer,
+  })),
+)
 
-export const CUSTOMERS_HUB_TABS = ['customers', 'outreach'] as const
+export const CUSTOMERS_HUB_TABS = ['customers', 'sessions', 'outreach'] as const
 export type CustomersHubTab = (typeof CUSTOMERS_HUB_TABS)[number]
 
 export const CUSTOMER_ROLES = ['all', 'buyer', 'seller'] as const
@@ -62,7 +73,7 @@ export const OUTREACH_SOURCE: Record<OutreachSection, string> = {
   stale: '/customers',
 }
 
-const TAB_ICON = { customers: Users, outreach: Megaphone } as const
+const TAB_ICON = { customers: Users, sessions: CalendarClock, outreach: Megaphone } as const
 
 export function CustomersHubContainer() {
   return <CustomersHub />
@@ -70,23 +81,31 @@ export function CustomersHubContainer() {
 
 function CustomersHub() {
   const t = useTranslations()
-  const blocked = useMyCapabilities().data?.blockedModules ?? []
+  const capabilities = useMyCapabilities()
+  const blocked = capabilities.data?.blockedModules ?? []
   // The offline edition (Windows, mobile) has no follow-up, campaign or stale-sale
   // engine, so the whole tab is not offered there — same rule as a locked module.
   const outreachOffline = useActionAvailability('customer.outreach').requiresOnline
+  // The service-delivery endpoints require `invoice.read`; a role without it
+  // gets no tab rather than a screen of 403s. Undefined (still loading) is not
+  // «no access».
+  const mayReadSessions = capabilities.can('invoice.read') !== false
   const allowedSections = OUTREACH_SECTIONS.filter(
     (section) => !outreachOffline && !isNavLocked(OUTREACH_SOURCE[section], blocked),
   )
-  const allowedTabs = CUSTOMERS_HUB_TABS.filter(
-    (tab) => tab !== 'outreach' || allowedSections.length > 0,
-  )
+  const allowedTabs = CUSTOMERS_HUB_TABS.filter((tab) => {
+    if (tab === 'outreach') return allowedSections.length > 0
+    if (tab === 'sessions') return mayReadSessions
+    return true
+  })
 
   const look = usePageLook('hub:customers')
 
   const sections = allowedSections.filter((sec) => look.shows(hubLookId('outreach', sec)))
-  const offered = allowedTabs.filter((tab) =>
-    tab === 'customers' ? look.shows(hubLookId('customers', 'customers')) : sections.length > 0,
-  )
+  const offered = allowedTabs.filter((tab) => {
+    if (tab === 'outreach') return sections.length > 0
+    return look.shows(hubLookId(tab, tab))
+  })
 
   const [active, select] = useHubTab(offered)
   const [role, selectRole] = useHubSection(CUSTOMER_ROLES)
@@ -101,14 +120,12 @@ function CustomersHub() {
             look,
             keepOne: true,
             items: [
-              ...(allowedTabs.includes('customers')
-                ? [
-                    {
-                      id: hubLookId('customers', 'customers'),
-                      label: t('customersHub.tabs.customers'),
-                    },
-                  ]
-                : []),
+              ...allowedTabs
+                .filter((tab) => tab !== 'outreach')
+                .map((tab) => ({
+                  id: hubLookId(tab, tab),
+                  label: t(`customersHub.tabs.${tab}`),
+                })),
               ...allowedSections.map((sec) => ({
                 id: hubLookId('outreach', sec),
                 label: t(`customersHub.sections.${sec}`),
@@ -157,6 +174,16 @@ function CustomersHub() {
               )}
             </Suspense>
           </>
+        ) : active === 'sessions' ? (
+          <Suspense
+            fallback={
+              <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
+                {t('customersHub.loading')}
+              </p>
+            }
+          >
+            <ServiceDeliveryContainer />
+          </Suspense>
         ) : (
           <>
             <SegmentedControl

@@ -25,6 +25,7 @@
 // workspace onto the movement row.
 // ============================================
 
+import { movesStock } from '@hisabche/validation'
 import { sourceIdOf } from '../utils/deterministic-id'
 import { IdempotencyUnavailableError, isMissingIdempotencySupport } from '../utils/client-request'
 import { supabase } from '../db'
@@ -260,6 +261,18 @@ export class WarehouseService {
     }
 
     await this.assertWarehousesInWorkspace(ctx, [data.fromWarehouseId, data.toWarehouseId])
+
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('id, offering_type')
+      .eq('id', data.productId)
+      .eq('workspace_id', ctx.workspaceId)
+      .maybeSingle()
+    if (productError) throw new DatabaseError('Failed to read product', productError)
+    if (!product) throw new NotFoundError('Product')
+    if (!movesStock((product as { offering_type?: string | null }).offering_type ?? 'goods')) {
+      throw new ValidationError('CANNOT_TRANSFER_SERVICE_STOCK')
+    }
 
     const payload = {
       product_id: data.productId,

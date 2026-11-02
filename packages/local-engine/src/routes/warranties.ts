@@ -6,6 +6,7 @@
 
 import { calculateWarrantyEndDate } from '@hisabche/validation'
 import { ValidationError } from '../errors'
+import { requireCapability } from '../auth'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 
@@ -39,6 +40,7 @@ export function registerWarrantiesRoutes(router: Router) {
 
   router.post('/warranties', async (c: RouteHandlerContext) => {
     const { db, ctx, body } = c
+    requireCapability(ctx, 'invoice.create')
     const payload = body as any
     if (
       !payload?.invoiceId ||

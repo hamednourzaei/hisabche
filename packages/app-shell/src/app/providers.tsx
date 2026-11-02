@@ -6,6 +6,7 @@ import {
   createNotificationMutationCache,
   LOCAL_OWNER_HEADER,
   readStorage,
+  registerEntitySyncReader,
   registerLocalTransport,
   registerOfflineQueue,
   setAppEdition,
@@ -20,6 +21,8 @@ import { bindActiveWorkspace, useWorkspaceStore } from '@hisabche/store'
 import { useAuthStore } from '@/features/auth/auth.store'
 import { currentOutboxOwner } from '@/features/sync/outbox-owner'
 import { hasSyncedTable } from '@/features/sync/device-sync-state'
+import { MAX_ATTEMPTS, stagesSnapshot } from '@/features/sync/sync-engine'
+import { reasonOf, stageOf } from '@/features/sync/outbox-stage'
 import { bridge, localApi } from '@/shared/lib/bridge'
 import {
   PERSISTED_CACHE_MAX_AGE_MS,
@@ -27,6 +30,30 @@ import {
   createPersistedQueryCache,
   createQueryCachePersister,
 } from '@hisabche/api/src/lib/persisted-query-cache'
+
+// The session a queued change belongs to. The local engine writes the domain
+// row into the payload; a delivery / cancellation key ends with its own verb,
+// so the clientId is the fallback when the payload carries no id.
+function queuedEntityId(payload: Record<string, unknown>, clientId: string): string {
+  const id = payload.id
+  if (typeof id === 'string' && id.length > 0) return id
+  return clientId.replace(/-(deliver|cancel)$/, '')
+}
+
+/**
+ * Refusals that need a person's DECISION, not a retry: the settlement the
+ * device chose could not be honoured, so the delivery has to be decided again.
+ * Everything else the server refuses is `rejected` — still a person's job, but
+ * the row itself is what it says it is.
+ */
+const ATTENTION_CODES = new Set([
+  'INSUFFICIENT_PACKAGE_CREDIT',
+  'SESSION_CHANGED',
+  'SESSION_ALREADY_DELIVERED_DIFFERENTLY',
+  'DELIVERED_INVOICE_CORRECTION_REQUIRED',
+  'CREDIT_REFERENCE_MISSING',
+  'SETTLEMENT_INVOICE_INVALID',
+])
 
 // Publish the active workspace into @hisabche/api, which scopes every realtime
 // subscription to one business. At module scope rather than in an effect:
@@ -99,6 +126,33 @@ if (typeof window !== 'undefined') {
             limit: 5,
           })
           .then((page) => page.rows),
+    })
+
+    // ⚠️ A ROW'S OWN SYNC STATE, FROM THIS DEVICE'S OWN OUTBOX.
+    //
+    // The service-delivery list shows «in the queue» / «the server refused
+    // this» beside each session. Only the host has a queue, so the host
+    // registers the reader (`packages/api/src/lib/entity-sync-state.ts`) — the
+    // same seam the offline queue uses. The browser registers nothing and the
+    // column says «نامعلوم» instead of promising a server it never asked.
+    registerEntitySyncReader(async (entityType) => {
+      const entries = await device.db.queue()
+      return entries
+        .filter((entry) => entry.entity === entityType)
+        .map((entry) => {
+          const id = queuedEntityId(entry.payload, entry.clientId)
+          const stage = stageOf(entry, stagesSnapshot().inFlight, MAX_ATTEMPTS)
+          if (stage === 'rejected') {
+            const code = reasonOf(entry.lastError)
+            return {
+              entityType,
+              entityId: id,
+              state: code && ATTENTION_CODES.has(code) ? 'attention' : 'rejected',
+              code,
+            } as const
+          }
+          return { entityType, entityId: id, state: 'pending', code: null } as const
+        })
     })
 
     // Receipts print silently to the chosen printer — a host capability the

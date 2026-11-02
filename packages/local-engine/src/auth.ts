@@ -34,6 +34,15 @@ export function requireRole(ctx: LocalContext, ...allowedRoles: WorkspaceRole[])
   }
 }
 
+// The lowest role is the server's (`minRoleFor` in backend/src/services/authorization); the parity test
+// `viewer-cannot-write.test.ts` reads both tables and fails when they differ.
+const SELLER_CAPABILITIES = new Set([
+  'invoice.create',
+  'invoice.update',
+  'payment.record',
+  'customer.write',
+])
+
 const OWNER_CAPABILITIES = new Set([
   'ledger.reverse',
   'ledger.lock_period',
@@ -66,7 +75,11 @@ export function requireCapability(ctx: LocalContext, capability: string): void {
   // ⚠️ AN UNKNOWN NAME IS REFUSED, NOT WAVED THROUGH. A typo in a route used to
   // pass for every role, which is the same as having no guard at all — and
   // nothing noticed, because the route kept working.
-  if (!OWNER_CAPABILITIES.has(capability) && !MANAGER_CAPABILITIES.has(capability)) {
+  if (
+    !OWNER_CAPABILITIES.has(capability) &&
+    !MANAGER_CAPABILITIES.has(capability) &&
+    !SELLER_CAPABILITIES.has(capability)
+  ) {
     throw new ForbiddenError(`Unknown capability ${capability}`, 'CAPABILITY_UNKNOWN', {
       capability,
       role: ctx.role,
@@ -88,6 +101,14 @@ export function requireCapability(ctx: LocalContext, capability: string): void {
       `Capability ${capability} requires manager role`,
       'CAPABILITY_REQUIRED',
       { capability, requiredRole: 'manager', role: ctx.role },
+    )
+  }
+
+  if (SELLER_CAPABILITIES.has(capability) && !roleAtLeast(ctx.role, 'seller')) {
+    throw new ForbiddenError(
+      `Capability ${capability} requires seller role`,
+      'CAPABILITY_REQUIRED',
+      { capability, requiredRole: 'seller', role: ctx.role },
     )
   }
 }

@@ -1,0 +1,217 @@
+{
+  "version": "1.0.0",
+  "description": "Golden vectors of the RETURN DOCUMENT. Executed by buildReturnDocument (validation), by the real invoice_return_create SQL on a real Postgres engine (backend), and by the offline route of the local engine (local-engine). Money is integer MINOR units; the invoice below has fractionDigits 2. Expected numbers are written by hand from the rule, never copied from a run.",
+  "vectors": [
+    {
+      "id": "RET-001-PARTIAL-TAX-30PCT",
+      "title": "2 of 5 units, tax 10%, 30% of the net goods kept",
+      "fractionDigits": 2,
+      "invoice": {
+        "taxMinor": 10000,
+        "lines": [
+          { "id": "a", "quantity": 5, "unitPriceMinor": 10000, "discountMinor": 0 },
+          { "id": "b", "quantity": 5, "unitPriceMinor": 10000, "discountMinor": 0 }
+        ]
+      },
+      "request": {
+        "lines": [{ "originalLineId": "a", "quantity": 2 }],
+        "deductions": [{ "reason": "return_fee", "mode": "percent", "percent": 30 }]
+      },
+      "expected": {
+        "subtotalMinor": 20000,
+        "discountMinor": 0,
+        "taxMinor": 2000,
+        "deductionMinor": 6000,
+        "netCreditMinor": 16000,
+        "lines": [
+          { "originalLineId": "a", "subtotalMinor": 20000, "discountMinor": 0, "taxMinor": 2000 }
+        ]
+      }
+    },
+    {
+      "id": "RET-002-EVERY-LINE-RETURNS-WHOLE-TAX",
+      "title": "both lines back: the whole tax comes back",
+      "fractionDigits": 2,
+      "invoice": {
+        "taxMinor": 10000,
+        "lines": [
+          { "id": "a", "quantity": 5, "unitPriceMinor": 10000, "discountMinor": 0 },
+          { "id": "b", "quantity": 5, "unitPriceMinor": 10000, "discountMinor": 0 }
+        ]
+      },
+      "request": {
+        "lines": [
+          { "originalLineId": "a", "quantity": 5 },
+          { "originalLineId": "b", "quantity": 5 }
+        ]
+      },
+      "expected": {
+        "subtotalMinor": 100000,
+        "discountMinor": 0,
+        "taxMinor": 10000,
+        "deductionMinor": 0,
+        "netCreditMinor": 110000,
+        "lines": [
+          { "originalLineId": "a", "subtotalMinor": 50000, "discountMinor": 0, "taxMinor": 5000 },
+          { "originalLineId": "b", "subtotalMinor": 50000, "discountMinor": 0, "taxMinor": 5000 }
+        ]
+      }
+    },
+    {
+      "id": "RET-003-LINE-DISCOUNT-FIXED-DEDUCTION",
+      "title": "a discounted line returned in part, a fixed amount kept, no tax",
+      "fractionDigits": 2,
+      "invoice": {
+        "taxMinor": 0,
+        "lines": [{ "id": "a", "quantity": 4, "unitPriceMinor": 5000, "discountMinor": 2000 }]
+      },
+      "request": {
+        "lines": [{ "originalLineId": "a", "quantity": 2 }],
+        "deductions": [{ "reason": "damage", "mode": "fixed", "amount": 10, "note": "dent" }]
+      },
+      "expected": {
+        "subtotalMinor": 10000,
+        "discountMinor": 1000,
+        "taxMinor": 0,
+        "deductionMinor": 1000,
+        "netCreditMinor": 8000,
+        "lines": [
+          { "originalLineId": "a", "subtotalMinor": 10000, "discountMinor": 1000, "taxMinor": 0 }
+        ]
+      }
+    },
+    {
+      "id": "RET-004-TWO-DEDUCTIONS-SAME-BASE",
+      "title": "two percentages are both taken of the same net base",
+      "fractionDigits": 2,
+      "invoice": {
+        "taxMinor": 0,
+        "lines": [{ "id": "a", "quantity": 10, "unitPriceMinor": 1000, "discountMinor": 0 }]
+      },
+      "request": {
+        "lines": [{ "originalLineId": "a", "quantity": 10 }],
+        "deductions": [
+          { "reason": "return_fee", "mode": "percent", "percent": 10 },
+          { "reason": "damage", "mode": "percent", "percent": 20 }
+        ]
+      },
+      "expected": {
+        "subtotalMinor": 10000,
+        "discountMinor": 0,
+        "taxMinor": 0,
+        "deductionMinor": 3000,
+        "netCreditMinor": 7000,
+        "lines": [
+          { "originalLineId": "a", "subtotalMinor": 10000, "discountMinor": 0, "taxMinor": 0 }
+        ]
+      }
+    },
+    {
+      "id": "RET-005-FRACTIONAL-QUANTITY",
+      "title": "a fractional quantity rounds once, at the minor unit",
+      "fractionDigits": 2,
+      "invoice": {
+        "taxMinor": 0,
+        "lines": [{ "id": "a", "quantity": 2.5, "unitPriceMinor": 333, "discountMinor": 0 }]
+      },
+      "request": { "lines": [{ "originalLineId": "a", "quantity": 1.5 }] },
+      "expected": {
+        "subtotalMinor": 500,
+        "discountMinor": 0,
+        "taxMinor": 0,
+        "deductionMinor": 0,
+        "netCreditMinor": 500,
+        "lines": [
+          { "originalLineId": "a", "subtotalMinor": 500, "discountMinor": 0, "taxMinor": 0 }
+        ]
+      }
+    },
+    {
+      "id": "RET-006-ZERO-DECIMAL-CURRENCY",
+      "title": "a currency with no decimals (factor 1)",
+      "fractionDigits": 0,
+      "invoice": {
+        "taxMinor": 100,
+        "lines": [{ "id": "a", "quantity": 10, "unitPriceMinor": 100, "discountMinor": 0 }]
+      },
+      "request": {
+        "lines": [{ "originalLineId": "a", "quantity": 4 }],
+        "deductions": [{ "reason": "return_fee", "mode": "percent", "percent": 25 }]
+      },
+      "expected": {
+        "subtotalMinor": 400,
+        "discountMinor": 0,
+        "taxMinor": 40,
+        "deductionMinor": 100,
+        "netCreditMinor": 340,
+        "lines": [
+          { "originalLineId": "a", "subtotalMinor": 400, "discountMinor": 0, "taxMinor": 40 }
+        ]
+      }
+    },
+    {
+      "id": "RET-007-REFUSED-DEDUCTION-ABOVE-GOODS",
+      "title": "the shop cannot keep more than the net goods",
+      "fractionDigits": 2,
+      "invoice": {
+        "taxMinor": 0,
+        "lines": [{ "id": "a", "quantity": 10, "unitPriceMinor": 1000, "discountMinor": 0 }]
+      },
+      "request": {
+        "lines": [{ "originalLineId": "a", "quantity": 1 }],
+        "deductions": [{ "reason": "agreed", "mode": "fixed", "amount": 10.01 }]
+      },
+      "expectedError": "RETURN_DEDUCTION_EXCEEDS_BASE"
+    },
+    {
+      "id": "RET-008-REFUSED-OTHER-WITHOUT-NOTE",
+      "title": "a deduction of type «other» must be explained",
+      "fractionDigits": 2,
+      "invoice": {
+        "taxMinor": 0,
+        "lines": [{ "id": "a", "quantity": 10, "unitPriceMinor": 1000, "discountMinor": 0 }]
+      },
+      "request": {
+        "lines": [{ "originalLineId": "a", "quantity": 1 }],
+        "deductions": [{ "reason": "other", "mode": "fixed", "amount": 1 }]
+      },
+      "expectedError": "RETURN_DEDUCTION_NOTE_REQUIRED"
+    },
+    {
+      "id": "RET-009-REFUSED-PERCENT-ABOVE-100",
+      "title": "a percentage above 100 is not a deduction",
+      "fractionDigits": 2,
+      "invoice": {
+        "taxMinor": 0,
+        "lines": [{ "id": "a", "quantity": 10, "unitPriceMinor": 1000, "discountMinor": 0 }]
+      },
+      "request": {
+        "lines": [{ "originalLineId": "a", "quantity": 1 }],
+        "deductions": [{ "reason": "agreed", "mode": "percent", "percent": 101 }]
+      },
+      "expectedError": "RETURN_DEDUCTION_PERCENT_INVALID"
+    },
+    {
+      "id": "RET-010-REFUSED-QUANTITY-ABOVE-ORIGINAL",
+      "title": "more than was sold cannot come back",
+      "fractionDigits": 2,
+      "invoice": {
+        "taxMinor": 0,
+        "lines": [{ "id": "a", "quantity": 3, "unitPriceMinor": 1000, "discountMinor": 0 }]
+      },
+      "request": { "lines": [{ "originalLineId": "a", "quantity": 4 }] },
+      "expectedError": "RETURN_QUANTITY_EXCEEDS_ORIGINAL"
+    },
+    {
+      "id": "RET-011-REFUSED-UNKNOWN-CONDITION",
+      "title": "an unknown condition of the goods is refused",
+      "fractionDigits": 2,
+      "invoice": {
+        "taxMinor": 0,
+        "lines": [{ "id": "a", "quantity": 3, "unitPriceMinor": 1000, "discountMinor": 0 }]
+      },
+      "request": { "lines": [{ "originalLineId": "a", "quantity": 1, "conditionCode": "wet" }] },
+      "expectedError": "INVALID_RETURN_CONDITION"
+    }
+  ]
+}

@@ -28,6 +28,10 @@ import { InvoiceLateFeePanel } from '../invoice-late-fee-panel'
 import { InvoiceRelatedPanel } from '../invoice-related-panel'
 import { RecordHistoryPanel } from '../../activity/record-history-panel'
 import { InvoiceReturnsDialog } from '../../invoices/invoice-returns-dialog'
+import {
+  InvoiceReturnRefundDialog,
+  type RefundTarget,
+} from '../../invoices/invoice-return-refund-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { useReceiptPrint } from '../../../../hooks/use-receipt-print'
@@ -140,6 +144,7 @@ export function InvoiceDetailContainer() {
   const queryClient = useQueryClient()
   const [exportingPNG, setExportingPNG] = useState(false)
   const [returnsDialogOpen, setReturnsDialogOpen] = useState(false)
+  const [refundTarget, setRefundTarget] = useState<RefundTarget | null>(null)
 
   const { data: invoice, isLoading } = useInvoice(id)
 
@@ -514,7 +519,24 @@ export function InvoiceDetailContainer() {
                 returnDate: entry.returnDate,
                 returnType: entry.returnType,
                 total: entry.grandTotalMinor / 10 ** returnFractionDigits,
+                deduction: (entry.deductionMinor ?? 0) / 10 ** returnFractionDigits,
+                refundStatus: entry.refundStatus,
+                refunded: (entry.refundedMinor ?? 0) / 10 ** returnFractionDigits,
+                refundable: (entry.refundableMinor ?? 0) / 10 ** returnFractionDigits,
               }))}
+              onRefundReturn={
+                subscriptionLocked
+                  ? undefined
+                  : (returnId) => {
+                      const entry = invoiceReturns.data?.find((row) => row.id === returnId)
+                      if (entry)
+                        setRefundTarget({
+                          id: entry.id,
+                          returnNumber: entry.returnNumber,
+                          refundableMinor: entry.refundableMinor ?? 0,
+                        })
+                    }
+              }
               relatedFailed={!relatedLoading && !relatedKnown}
               onRetryRelated={() => void refetchRelated()}
               onRecordPayment={
@@ -610,12 +632,39 @@ export function InvoiceDetailContainer() {
           invoiceId={display.id}
           open={returnsDialogOpen}
           onOpenChange={setReturnsDialogOpen}
+          invoice={returnMoneyOf(display)}
           items={display.items}
+          t={safeT}
+        />
+      ) : null}
+      {display ? (
+        <InvoiceReturnRefundDialog
+          invoiceId={display.id}
+          currency={display.currency}
+          target={refundTarget}
+          onOpenChange={(next) => {
+            if (!next) setRefundTarget(null)
+          }}
           t={safeT}
         />
       ) : null}
     </>
   )
+}
+
+/** What the return form needs of the invoice: its currency, tax and how much of it was paid. */
+function returnMoneyOf(shown: {
+  currency: string
+  taxTotal?: number | undefined
+  total: number
+  paidAmount?: number | undefined
+}) {
+  return {
+    currency: shown.currency,
+    taxTotal: shown.taxTotal ?? 0,
+    total: shown.total,
+    paidAmount: shown.paidAmount ?? 0,
+  }
 }
 
 /**

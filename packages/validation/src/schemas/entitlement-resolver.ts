@@ -89,18 +89,6 @@ export function resolveEntitlement(
   // held hostage).
   const alwaysAllowed = definition.alwaysAllowed === true
 
-  if (input.state === 'OFFLINE_BANNED') {
-    return alwaysAllowed ? { kind: 'AVAILABLE' } : { kind: 'NOT_ENTITLED' }
-  }
-
-  if (input.state === 'ONLINE_EXPIRED' || input.state === 'OFFLINE_EXPIRED') {
-    return alwaysAllowed ? { kind: 'AVAILABLE' } : { kind: 'EXPIRED' }
-  }
-
-  if (input.state === 'FREE_EXHAUSTED' || input.usageExhausted === true) {
-    return alwaysAllowed ? { kind: 'AVAILABLE' } : { kind: 'EXHAUSTED' }
-  }
-
   // The place it runs. A hybrid feature has a local part — that part is
   // available offline; only the server part needs the cloud.
   const needsTheServer =
@@ -114,7 +102,30 @@ export function resolveEntitlement(
   const deviceCannotRunIt =
     definition.execution === 'local' && featureOfflineAvailability(feature) !== 'available'
 
-  if (input.edition === 'local' && (needsTheServer || deviceCannotRunIt)) {
+  const cannotRunHere = input.edition === 'local' && (needsTheServer || deviceCannotRunIt)
+
+  // ⚠️ «ALWAYS ALLOWED» IS ABOUT THE PLAN, NOT ABOUT THE DEVICE. An ended plan does not take a record away, but a
+  // feature that lives ONLY on the server cannot be shown by a device that is offline: that is «go online», never
+  // «available» followed by a 501. (Only the server-only case is decided here: a local feature whose one endpoint
+  // is server-side — printing a PDF — keeps its «always» answer, the screen prints on the device.)
+  const allowed: EntitlementVerdict =
+    input.edition === 'local' && definition.execution === 'server'
+      ? { kind: 'REQUIRES_ONLINE' }
+      : { kind: 'AVAILABLE' }
+
+  if (input.state === 'OFFLINE_BANNED') {
+    return alwaysAllowed ? allowed : { kind: 'NOT_ENTITLED' }
+  }
+
+  if (input.state === 'ONLINE_EXPIRED' || input.state === 'OFFLINE_EXPIRED') {
+    return alwaysAllowed ? allowed : { kind: 'EXPIRED' }
+  }
+
+  if (input.state === 'FREE_EXHAUSTED' || input.usageExhausted === true) {
+    return alwaysAllowed ? allowed : { kind: 'EXHAUSTED' }
+  }
+
+  if (cannotRunHere) {
     return { kind: 'REQUIRES_ONLINE' }
   }
 

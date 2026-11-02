@@ -933,6 +933,31 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
       },
     ],
   },
+  {
+    routeFile: 'invoice-return.routes.ts',
+    route: 'POST /api/invoices/:id/returns/:returnId/refunds',
+    mechanisms: ['idempotency-key', 'db-function', 'conditional-update'],
+    evidence: [
+      {
+        file: `${SVC}/sales/invoice-return.service.ts`,
+        text: "rpc('invoice_return_refund_reserve'",
+      },
+      {
+        // One refund at a time per invoice: the cap is an invoice-level figure.
+        file: 'docs/invoice-return-05-core-migration.sql',
+        text: 'pg_advisory_xact_lock(hashtextextended(v_ret.original_invoice_id::text, 1))',
+      },
+      {
+        // A reservation is a status in a WHERE: pending -> paid | failed, once.
+        file: 'docs/invoice-return-05-core-migration.sql',
+        text: "IF v_refund.status = 'pending' THEN",
+      },
+      {
+        file: 'docs/invoice-return-05-core-migration.sql',
+        text: 'invoice_return_refunds_request_idx',
+      },
+    ],
+  },
   // ─── Order Deposits ──────────────────────────────────────────────────────
   {
     routeFile: 'order-deposit.routes.ts',
@@ -1112,6 +1137,119 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
       {
         file: `${SVC}/product.service.ts`,
         text: 'removeBarcode',
+      },
+    ],
+  },
+  // ─── Package Credits (M3) ──────────────────────────────────────────────
+  {
+    routeFile: 'package-credits.routes.ts',
+    route: 'POST /api/package-credits/consume',
+    mechanisms: ['idempotency-key', 'db-function'],
+    evidence: [
+      { file: `${RT}/package-credits.routes.ts`, text: 'readClientRequestId' },
+      {
+        file: `${SVC}/package-credits/package-credits.service.ts`,
+        text: "this.db.rpc('package_credit_consume'",
+      },
+      {
+        file: 'docs/package-credit-ledger-01-migration.sql',
+        text: 'CREATE OR REPLACE FUNCTION public.package_credit_consume(',
+      },
+    ],
+  },
+  {
+    routeFile: 'package-credits.routes.ts',
+    route: 'POST /api/package-credits/grant',
+    mechanisms: ['idempotency-key', 'unique-constraint'],
+    evidence: [
+      { file: `${RT}/package-credits.routes.ts`, text: 'readClientRequestId' },
+      { file: `${SVC}/package-credits/package-credits.service.ts`, text: "entry_type: 'GRANT'" },
+      { file: 'docs/package-credit-ledger-01-migration.sql', text: 'uq_pkg_credit_idempotency' },
+    ],
+  },
+  {
+    routeFile: 'package-credits.routes.ts',
+    route: 'POST /api/package-credits/reverse',
+    mechanisms: ['idempotency-key', 'unique-constraint'],
+    evidence: [
+      { file: `${RT}/package-credits.routes.ts`, text: 'readClientRequestId' },
+      { file: `${SVC}/package-credits/package-credits.service.ts`, text: "entry_type: 'REVERSAL'" },
+      { file: 'docs/package-credit-ledger-01-migration.sql', text: 'uq_pkg_credit_idempotency' },
+    ],
+  },
+  {
+    routeFile: 'package-credits.routes.ts',
+    route: 'POST /api/package-credits/expire',
+    mechanisms: ['idempotency-key', 'state-idempotent'],
+    evidence: [
+      { file: `${RT}/package-credits.routes.ts`, text: 'readClientRequestId' },
+      { file: `${SVC}/package-credits/package-credits.service.ts`, text: "entry_type: 'EXPIRE'" },
+    ],
+  },
+  {
+    routeFile: 'package-credits.routes.ts',
+    route: 'POST /api/package-credits/adjust',
+    mechanisms: ['idempotency-key', 'unique-constraint'],
+    evidence: [
+      { file: `${RT}/package-credits.routes.ts`, text: 'readClientRequestId' },
+      {
+        file: `${SVC}/package-credits/package-credits.service.ts`,
+        text: "entry_type: 'ADJUSTMENT'",
+      },
+      { file: 'docs/package-credit-ledger-01-migration.sql', text: 'uq_pkg_credit_idempotency' },
+    ],
+  },
+  // ─── Service Delivery (M4) ──────────────────────────────────────────────
+  {
+    routeFile: 'service-delivery.routes.ts',
+    route: 'POST /api/service-delivery/sessions',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      { file: `${RT}/service-delivery.routes.ts`, text: 'service.create' },
+      {
+        file: `${SVC}/service-delivery/service-delivery.service.ts`,
+        text: 'calculateSessionDurationMinutes',
+      },
+    ],
+  },
+  {
+    routeFile: 'service-delivery.routes.ts',
+    route: 'POST /api/service-delivery/sessions/:id/deliver',
+    // One transaction with the session row locked; the identity of a delivery is the SESSION (delivery_<id>), not the
+    // request header; the ledger refuses a second consume for one session.
+    mechanisms: ['db-function', 'state-idempotent', 'unique-constraint'],
+    evidence: [
+      {
+        file: `${SVC}/service-delivery/service-delivery.service.ts`,
+        text: "this.db.rpc('service_delivery_deliver'",
+      },
+      {
+        file: 'docs/service-delivery-02-atomic-migration.sql',
+        text: 'CREATE OR REPLACE FUNCTION public.service_delivery_deliver(',
+      },
+      { file: 'docs/service-delivery-02-atomic-migration.sql', text: 'FOR UPDATE' },
+      {
+        file: 'docs/service-delivery-02-atomic-migration.sql',
+        text: 'uq_pkg_credit_service_consume',
+      },
+    ],
+  },
+  {
+    routeFile: 'service-delivery.routes.ts',
+    route: 'POST /api/service-delivery/sessions/:id/cancel',
+    mechanisms: ['db-function', 'state-idempotent', 'unique-constraint'],
+    evidence: [
+      {
+        file: `${SVC}/service-delivery/service-delivery.service.ts`,
+        text: "this.db.rpc('service_delivery_cancel'",
+      },
+      {
+        file: 'docs/service-delivery-03-cancellation-reason-migration.sql',
+        text: 'CREATE OR REPLACE FUNCTION public.service_delivery_cancel(',
+      },
+      {
+        file: 'docs/service-delivery-02-atomic-migration.sql',
+        text: 'uq_pkg_credit_service_reversal',
       },
     ],
   },

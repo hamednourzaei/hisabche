@@ -38,6 +38,7 @@ import {
   type AccountRole,
 } from '@hisabche/validation'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
+import { assertPeriodOpen } from './local-ledger'
 import type { LocalDb } from '../db'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -239,6 +240,8 @@ function bookPayroll(db: LocalDb, workspaceId: string, payroll: PayrollRow): str
 
   const entryDate = String(payroll.payment_date ?? payroll.period_end ?? '').slice(0, 10)
   const date = entryDate || nowIso().slice(0, 10)
+  // Inside the salary's own transaction: a closed period refuses the booking AND the status change.
+  assertPeriodOpen(db, date)
   const journalId = newId()
   const now = nowIso()
   db.run(

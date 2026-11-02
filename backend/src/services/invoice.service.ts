@@ -36,6 +36,7 @@ import {
   InvoiceFilters,
   computeInvoiceMoney,
   computeItemTotalRounded,
+  movesStock,
   type AccountRole,
 } from '@hisabche/validation'
 import { ledger, type DraftLine } from './accounting'
@@ -1158,6 +1159,18 @@ export class InvoiceService {
       await this.flagNegativeStock(ctx, invoiceId, movementRows)
     }
 
+    // M3 — Grant package credits for any package lines on this sales invoice
+    if (direction === -1 && header.customer_id) {
+      await this.grantPackageCreditsForInvoice(
+        ctx,
+        invoiceId,
+        header.customer_id,
+        lines,
+        itemRows,
+        data.date,
+      )
+    }
+
     if (approvalOutcome.kind === 'hold') {
       const started = await this.startApprovalWorkflows(ctx, invoiceId, approvalOutcome.workflowIds)
       if (!started) {
@@ -1826,7 +1839,137 @@ export class InvoiceService {
     // them, which is a revaluation and not a release (same limit as an edit).
     await costing.releaseDocument(ctx, 'invoice', invoiceId)
 
+    // M3: Reverse any package credit grants issued by this invoice
+    await this.reversePackageCreditsForInvoice(ctx, invoiceId, reason)
+
     await this.releaseClaims(ctx, invoiceId)
+  }
+
+  /**
+   * M3: Automatically grant package credits for any invoice lines that are packages.
+   * Invariants:
+   * 1. 1 package invoice line = 1 entitlement grant in package_credit_ledger.
+   * 2. Idempotent on retries: idempotency_key is `invoice:<invoiceId>:<lineId>`.
+   * 3. Zero cash/payment movement; payment and double-entry accounting remain untouched.
+   */
+  private async grantPackageCreditsForInvoice(
+    ctx: TenancyContext,
+    invoiceId: string,
+    customerId: string | null | undefined,
+    lines: any[],
+    itemRows: Array<{ id: string; product_id?: string; quantity?: number; unit?: string }>,
+    effectiveDate?: string,
+  ): Promise<void> {
+    if (!customerId || !itemRows.length) return
+
+    const productIds = [...new Set(itemRows.map((r) => r.product_id).filter(Boolean))]
+    if (!productIds.length) return
+
+    const { data: prods, error } = await supabase
+      .from('products')
+      .select('id, offering_type')
+      .eq('workspace_id', ctx.workspaceId)
+      .in('id', productIds)
+
+    if (error || !prods) return
+
+    const packageProductIds = new Set(
+      prods
+        .filter((p: { offering_type?: string | null }) => p.offering_type === 'package')
+        .map((p: { id: string }) => p.id),
+    )
+    if (packageProductIds.size === 0) return
+
+    const now = new Date().toISOString()
+    const effDate = effectiveDate ? String(effectiveDate).slice(0, 10) : now.split('T')[0]!
+
+    const grantRows = itemRows
+      .filter(
+        (row) =>
+          row.product_id && packageProductIds.has(row.product_id) && Number(row.quantity) > 0,
+      )
+      .map((row) => ({
+        id: randomUUID(),
+        workspace_id: ctx.workspaceId,
+        customer_id: customerId,
+        package_product_id: row.product_id,
+        entry_type: 'GRANT',
+        quantity: Number(row.quantity),
+        unit: row.unit ?? null,
+        source_document_type: 'invoice',
+        source_document_id: invoiceId,
+        source_line_id: row.id,
+        idempotency_key: `invoice:${invoiceId}:${row.id}`,
+        effective_date: effDate,
+        created_at: now,
+        updated_at: now,
+      }))
+
+    if (grantRows.length === 0) return
+
+    try {
+      const { error: grantErr } = await supabase.from('package_credit_ledger').insert(grantRows)
+      if (grantErr) {
+        if (grantErr.code === '23505') return
+        if (grantErr.code === '42P01' || grantErr.code === 'PGRST205') return
+        console.warn('[InvoiceService] Failed to record package credit grant:', grantErr.message)
+      }
+    } catch (err) {
+      console.warn('[InvoiceService] Error recording package credit grant:', err)
+    }
+  }
+
+  /**
+   * M3: Reverse any package credit grants issued by this invoice.
+   */
+  private async reversePackageCreditsForInvoice(
+    ctx: TenancyContext,
+    invoiceId: string,
+    reason: string,
+  ): Promise<void> {
+    try {
+      const { data: grants, error } = await supabase
+        .from('package_credit_ledger')
+        .select('*')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('source_document_id', invoiceId)
+        .eq('entry_type', 'GRANT')
+        .is('deleted_at', null)
+
+      if (error || !grants || grants.length === 0) return
+
+      const now = new Date().toISOString()
+      const effDate = now.split('T')[0]!
+
+      const reversals = grants.map((g: any) => ({
+        id: randomUUID(),
+        workspace_id: ctx.workspaceId,
+        customer_id: g.customer_id,
+        package_product_id: g.package_product_id,
+        entry_type: 'ADJUSTMENT',
+        quantity: -Number(g.quantity),
+        unit: g.unit ?? null,
+        source_document_type: 'invoice_deletion',
+        source_document_id: invoiceId,
+        source_line_id: g.source_line_id ?? null,
+        reference_entry_id: g.id,
+        idempotency_key: `reversal:invoice:${invoiceId}:${g.id}`,
+        notes: reason || 'حذف فاکتور',
+        effective_date: effDate,
+        created_at: now,
+        updated_at: now,
+      }))
+
+      const { error: revErr } = await supabase.from('package_credit_ledger').insert(reversals)
+      if (revErr && revErr.code !== '23505') {
+        console.warn(
+          '[InvoiceService] Failed to reverse package credits on invoice deletion:',
+          revErr.message,
+        )
+      }
+    } catch (err) {
+      console.warn('[InvoiceService] Error reversing package credits:', err)
+    }
   }
 
   /**
@@ -2624,7 +2767,7 @@ export class InvoiceService {
     // map below silently skips them.
     const { data: products, error: productsError } = await supabase
       .from('products')
-      .select('id, quantity')
+      .select('id, quantity, offering_type')
       .eq('workspace_id', workspaceId)
       .in('id', productIds)
 
@@ -2634,7 +2777,9 @@ export class InvoiceService {
 
     const productMap = new Map()
     for (const product of products) {
-      productMap.set(product.id, product.quantity)
+      if (movesStock(product.offering_type)) {
+        productMap.set(product.id, product.quantity)
+      }
     }
 
     // ─── L1 — MULTI-UOM: the line's unit becomes the BASE quantity ──────────
@@ -2960,9 +3105,24 @@ export class InvoiceService {
     const stocked = (items ?? []).filter((item) => item?.productId && Number(item.quantity) > 0)
     if (stocked.length === 0) return 0
 
+    const productIds = [...new Set(stocked.map((item) => item.productId))]
+    const { data: prods } = await supabase
+      .from('products')
+      .select('id, offering_type')
+      .eq('workspace_id', ctx.workspaceId)
+      .in('id', productIds)
+    const movesStockMap = new Map(
+      (prods ?? []).map((p: { id: string; offering_type?: string | null }) => [
+        p.id,
+        movesStock(p.offering_type),
+      ]),
+    )
+    const physicalStocked = stocked.filter((item) => movesStockMap.get(item.productId) ?? true)
+    if (physicalStocked.length === 0) return 0
+
     let costOfGoodsSold = 0
 
-    for (const [index, item] of stocked.entries()) {
+    for (const [index, item] of physicalStocked.entries()) {
       const quantity = Number(item.quantity) || 0
       // The line index makes two lines of the same product on one invoice
       // distinct, which is what keeps the idempotency key honest.
@@ -3326,8 +3486,18 @@ export class InvoiceService {
     // the product's purchase price — and only a covered line is issued.
     const uncosted: string[] = []
     const toIssue: typeof items = []
+    const itemProductIds = [
+      ...new Set(items.filter((i) => i.productId && i.quantity > 0).map((i) => i.productId)),
+    ]
+    const { data: itemProds } = await supabase
+      .from('products')
+      .select('id, offering_type')
+      .eq('workspace_id', ctx.workspaceId)
+      .in('id', itemProductIds)
+    const movesMap = new Map((itemProds ?? []).map((p: any) => [p.id, movesStock(p.offering_type)]))
+
     for (const [index, item] of items.entries()) {
-      if (!item.productId || item.quantity <= 0) continue
+      if (!item.productId || item.quantity <= 0 || movesMap.get(item.productId) === false) continue
       const line = String(item.id ?? index)
       if (drawn.has(line)) continue
       const { covered } = await costing.coverSoldUnits(ctx, {

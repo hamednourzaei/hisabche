@@ -19,7 +19,16 @@
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_ALTERS, SALES_SIDE_STATEMENTS } from './local-sales-schema'
 import { SCHEMA_VERSION } from './local-schema'
-import { UNIVERSAL_CORE_ALTERS, UNIVERSAL_CORE_STATEMENTS } from './local-universal-core-schema'
+import {
+  PACKAGE_CREDIT_LEDGER_STATEMENTS,
+  RETURN_DEDUCTIONS_STATEMENTS,
+  RETURNS_CORE_ALTERS,
+  SERVICE_CANCELLATION_REASON_ALTERS,
+  SERVICE_DELIVERY_AUDIT_ALTERS,
+  SERVICE_DELIVERY_STATEMENTS,
+  UNIVERSAL_CORE_ALTERS,
+  UNIVERSAL_CORE_STATEMENTS,
+} from './local-universal-core-schema'
 
 export interface LocalMigration {
   /** The version this migration brings the cache UP TO. */
@@ -538,6 +547,79 @@ const V9_UNIVERSAL_CORE: LocalMigration = {
   statements: [...UNIVERSAL_CORE_ALTERS, ...UNIVERSAL_CORE_STATEMENTS],
 }
 
+/**
+ * v10 — the return document is complete on the device.
+ *
+ * What the shop kept, why, the caller's key and the condition of each line are stored, and the deductions
+ * get their table. Existing return rows keep their meaning: nothing is converted (the migration test
+ * proves a v9 row survives untouched).
+ */
+const V10_RETURNS_CORE: LocalMigration = {
+  to: 10,
+  statements: [...RETURNS_CORE_ALTERS, ...RETURN_DEDUCTIONS_STATEMENTS],
+}
+
+/**
+ * v11 — a stock movement remembers WHERE it went.
+ *
+ * A transfer is identified by its movement id; the server compares product, quantity, source AND destination when the
+ * same id arrives twice. The device kept only the first two, so a retry naming another destination read as «already
+ * done». Nullable and additive: movements recorded before v11 have no pair and are compared on product and quantity,
+ * as before — nothing is guessed for them.
+ */
+const V11_MOVEMENT_PLACES: LocalMigration = {
+  to: 11,
+  statements: [
+    `ALTER TABLE inventory_movement ADD COLUMN from_warehouse_id TEXT`,
+    `ALTER TABLE inventory_movement ADD COLUMN to_warehouse_id TEXT`,
+  ],
+}
+
+/**
+ * v12 — Offering type polymorphism (goods vs service vs package).
+ *
+ * Adds offering_type to product on the device so offline execution knows
+ * whether a line moves physical stock and consumes cost layers. Existing
+ * rows default to 'goods'.
+ */
+const V12_OFFERING_TYPE: LocalMigration = {
+  to: 12,
+  statements: [`ALTER TABLE product ADD COLUMN offering_type TEXT NOT NULL DEFAULT 'goods'`],
+}
+
+/**
+ * v12 -> v13: Package credit and entitlement ledger (M3).
+ */
+const V13_PACKAGE_CREDIT_LEDGER: LocalMigration = {
+  to: 13,
+  statements: [...PACKAGE_CREDIT_LEDGER_STATEMENTS],
+}
+
+/**
+ * v13 -> v14: Service delivery and attendance core (M4).
+ */
+const V14_SERVICE_DELIVERY: LocalMigration = {
+  to: 14,
+  statements: [...SERVICE_DELIVERY_STATEMENTS],
+}
+
+/**
+ * v14 -> v15: service delivery audit - a free session keeps its reason, and the ledger holds at most one consume and one
+ * reversal per service session.
+ */
+const V15_SERVICE_DELIVERY_AUDIT: LocalMigration = {
+  to: 15,
+  statements: [...SERVICE_DELIVERY_AUDIT_ALTERS],
+}
+
+/**
+ * v15 -> v16: a cancelled service session keeps why it was cancelled.
+ */
+const V16_SERVICE_CANCELLATION_REASON: LocalMigration = {
+  to: 16,
+  statements: [...SERVICE_CANCELLATION_REASON_ALTERS],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -547,6 +629,13 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V7_BOOKS_AND_STOCK,
   V8_INDUSTRY_AND_UNITS,
   V9_UNIVERSAL_CORE,
+  V10_RETURNS_CORE,
+  V11_MOVEMENT_PLACES,
+  V12_OFFERING_TYPE,
+  V13_PACKAGE_CREDIT_LEDGER,
+  V14_SERVICE_DELIVERY,
+  V15_SERVICE_DELIVERY_AUDIT,
+  V16_SERVICE_CANCELLATION_REASON,
 ]
 
 /**

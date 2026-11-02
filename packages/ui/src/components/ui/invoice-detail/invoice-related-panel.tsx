@@ -41,6 +41,20 @@ import {
 } from './record-payment-form'
 import { cn } from '../../../lib/utils'
 
+const REFUND_STATUS_KEY = {
+  not_due: 'NotDue',
+  pending: 'Pending',
+  partial: 'Partial',
+  refunded: 'Refunded',
+} as const
+
+const REFUND_STATUS_FALLBACK = {
+  not_due: 'بدون بازپرداخت نقدی',
+  pending: 'منتظر بازپرداخت',
+  partial: 'بازپرداخت جزئی',
+  refunded: 'بازپرداخت شد',
+} as const
+
 export interface InvoiceRelatedPayment {
   paymentId: string
   allocationId: string
@@ -122,9 +136,21 @@ export interface InvoiceRelatedPanelProps {
         returnNumber: string
         returnDate: string
         returnType: 'sale_return' | 'purchase_return'
+        /** What the return credits the customer (goods + tax − what the shop kept). */
         total: number
+        /** What the shop kept, major units; absent/0 = nothing. */
+        deduction?: number | undefined
+        refundStatus?: 'not_due' | 'pending' | 'partial' | 'refunded' | undefined
+        /** Major units paid back so far. */
+        refunded?: number | undefined
+        /** Major units that can still be paid back. */
+        refundable?: number | undefined
+        /** Why the goods came back (translated label), when known. */
+        reasonLabel?: string | undefined
       }>
     | undefined
+  /** Provide to show «ثبت بازپرداخت» on a return that still has money to pay back. */
+  onRefundReturn?: ((returnId: string) => void) | undefined
 
   /** Provide to offer «ثبت در دفتر» when the invoice has no journal entry. */
   onPostToLedger?: (() => void) | undefined
@@ -171,6 +197,7 @@ export function InvoiceRelatedPanel({
   isPostingToLedger,
   ledgerPostMessage,
   returns,
+  onRefundReturn,
 }: InvoiceRelatedPanelProps) {
   const [adding, setAdding] = React.useState(false)
   // Close the form only once the server has ACCEPTED the payment. Closing on
@@ -479,7 +506,7 @@ export function InvoiceRelatedPanel({
             {returns.map((entry) => (
               <li
                 key={entry.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border-default))] px-3 py-2 text-sm"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border-default))] px-3 py-2 text-sm"
               >
                 <span className="min-w-0">
                   <span className="block truncate text-[hsl(var(--fg-primary))]">
@@ -492,9 +519,58 @@ export function InvoiceRelatedPanel({
                     {fmtDate(entry.returnDate)}
                   </span>
                 </span>
-                <span className="shrink-0 font-medium tabular-nums text-[hsl(var(--fg-primary))]">
-                  {fmtMoney(entry.total)} {currency}
+                <span className="shrink-0 text-end">
+                  <span className="block font-medium tabular-nums text-[hsl(var(--fg-primary))]">
+                    {fmtMoney(entry.total)} {currency}
+                  </span>
+                  {entry.deduction && entry.deduction > 0 ? (
+                    <span className="block text-xs tabular-nums text-[hsl(var(--fg-tertiary))]">
+                      {t('invoices.returnsKept', 'کسر شده')}: {fmtMoney(entry.deduction)} {currency}
+                    </span>
+                  ) : null}
                 </span>
+                {entry.returnType === 'sale_return' && entry.refundStatus ? (
+                  <span className="basis-full space-y-1 text-xs">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={cn(
+                          'rounded-full px-2 py-0.5 font-medium',
+                          entry.refundStatus === 'refunded'
+                            ? 'bg-[hsl(var(--color-success)/0.15)] text-[hsl(var(--color-success))]'
+                            : entry.refundStatus === 'not_due'
+                              ? 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]'
+                              : 'bg-[hsl(var(--color-warning)/0.15)] text-[hsl(var(--color-warning))]',
+                        )}
+                      >
+                        {t(
+                          `invoices.refundStatus${REFUND_STATUS_KEY[entry.refundStatus]}`,
+                          REFUND_STATUS_FALLBACK[entry.refundStatus],
+                        )}
+                      </span>
+                      {entry.refunded && entry.refunded > 0 ? (
+                        <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
+                          {t('invoices.returnsRefunded', 'بازپرداخت‌شده')}:{' '}
+                          {fmtMoney(entry.refunded)} {currency}
+                        </span>
+                      ) : null}
+                      {entry.refundable && entry.refundable > 0 ? (
+                        <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
+                          {t('invoices.returnsRefundable', 'قابل بازپرداخت')}:{' '}
+                          {fmtMoney(entry.refundable)} {currency}
+                        </span>
+                      ) : null}
+                      {onRefundReturn && entry.refundable && entry.refundable > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => onRefundReturn(entry.id)}
+                          className="ms-auto rounded-lg border border-[hsl(var(--border-default))] px-2 py-1 font-medium text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--surface-muted))]"
+                        >
+                          {t('invoices.refundButton', 'ثبت بازپرداخت')}
+                        </button>
+                      ) : null}
+                    </span>
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>

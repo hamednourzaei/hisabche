@@ -74,6 +74,55 @@ export function settlesInCurrency(
   return (invoice.currency || bookCurrency) === paymentCurrency
 }
 
+/**
+ * The invoices a payment may NOT be named against: those that belong to another party.
+ *
+ * `openInvoicesByIds` is scoped by workspace, which stops cross-tenant settlement. It does not stop settling one
+ * customer's debt with another customer's money inside the same workspace — both rows are legitimately visible.
+ * Both parties unnamed is the walk-in cash sale: allowed. Returns the ids to refuse (empty = fine).
+ */
+export function invoicesOfAnotherParty(
+  partyType: 'customer' | 'supplier',
+  partyId: string | null,
+  invoices: ReadonlyArray<{
+    invoiceId: string
+    customerId?: string | null | undefined
+    supplierId?: string | null | undefined
+  }>,
+): string[] {
+  return invoices
+    .filter((invoice) => {
+      const owner =
+        partyType === 'customer' ? (invoice.customerId ?? null) : (invoice.supplierId ?? null)
+      return owner !== (partyId ?? null)
+    })
+    .map((invoice) => invoice.invoiceId)
+}
+
+/**
+ * The rate a payment is booked at (books-currency units per 1 payment-currency unit), or `null` = cannot be booked.
+ *
+ * Books currency: 1. Otherwise the rate the person gave; else the one rate every named invoice was frozen at.
+ * ⚠️ NEVER A SILENT 1. A dollar payment booked at 1 puts a dollar in the books as an afghani. `invoiceRates` is
+ * `null` when the database carries no rate column at all.
+ */
+export function resolveBookingRate(input: {
+  currency: string
+  bookCurrency: string
+  given: number | undefined
+  invoiceRates: ReadonlyArray<number | null> | null
+}): number | null {
+  if (input.currency === input.bookCurrency) return 1
+  if (typeof input.given === 'number' && input.given > 0 && Number.isFinite(input.given)) {
+    return input.given
+  }
+  if (input.invoiceRates === null || input.invoiceRates.length === 0) return null
+  const rates = new Set(input.invoiceRates)
+  if (rates.size !== 1) return null
+  const [rate] = [...rates]
+  return typeof rate === 'number' && rate > 0 ? rate : null
+}
+
 export interface AllocationRequest {
   invoiceId: string
   amount: number
@@ -393,13 +442,19 @@ export function returnEffectOfInvoice(
   total: number,
   paid: number,
   returned: number,
+  /**
+   * Cash already handed back to the customer against the credit. It only ever
+   * lowers `credit` — money given back is no longer owed — and never the debt a
+   * return cancelled.
+   */
+  refunded = 0,
 ): { outstanding: number; applied: number; credit: number } {
   const gross = Math.max(0, round2(total - paid))
   const applied = Math.min(Math.max(0, returned), gross)
   return {
     outstanding: round2(gross - applied),
     applied: round2(applied),
-    credit: round2(Math.max(0, returned) - applied),
+    credit: Math.max(0, round2(Math.max(0, returned) - applied - Math.max(0, refunded))),
   }
 }
 
@@ -410,6 +465,8 @@ export interface SummaryReturn {
   amount: number
   returnDate: string
   currency: string
+  /** Cash already paid back against this return, MAJOR units (absent = none). */
+  refunded?: number | undefined
 }
 
 export interface PartySummary {
@@ -476,6 +533,15 @@ export function summarizeParty(
   }
   const returnedOf = (invoice: SummaryInvoice) =>
     invoice.type === 'sale' ? (returnedOn.get(invoice.id) ?? 0) : 0
+  const refundedOn = new Map<string, number>()
+  for (const entry of returns) {
+    refundedOn.set(
+      entry.invoiceId,
+      round2((refundedOn.get(entry.invoiceId) ?? 0) + (entry.refunded ?? 0)),
+    )
+  }
+  const refundedOf = (invoice: SummaryInvoice) =>
+    invoice.type === 'sale' ? (refundedOn.get(invoice.id) ?? 0) : 0
   const outstanding = (invoice: SummaryInvoice) =>
     returnEffectOfInvoice(invoice.total, invoice.paidAmount, returnedOf(invoice)).outstanding
 
@@ -505,7 +571,12 @@ export function summarizeParty(
   const returnCredit = sum(
     sales.map(
       (invoice) =>
-        returnEffectOfInvoice(invoice.total, invoice.paidAmount, returnedOf(invoice)).credit,
+        returnEffectOfInvoice(
+          invoice.total,
+          invoice.paidAmount,
+          returnedOf(invoice),
+          refundedOf(invoice),
+        ).credit,
     ),
   )
   const receivable = sum([...sales.map(outstanding), Math.max(0, opening)])
@@ -816,6 +887,13 @@ export const recordPaymentSchema = z
     allocations: z
       .array(z.object({ invoiceId: uuidSchema, amount: z.number().positive() }))
       .optional(),
+    /**
+     * `false` = the allocations above are FINAL, even when there are none: the server spreads nothing over the
+     * oldest invoices. A payment recorded on a device already told its person which invoices (if any) it settled;
+     * settling others on sync would make the two sides disagree about the same payment. Absent = unchanged
+     * (online: no allocations means «settle what this party owes, oldest first»).
+     */
+    autoAllocate: z.boolean().optional(),
   })
   .refine((body) => body.partyId !== null || (body.allocations?.length ?? 0) > 0, {
     message: 'PAYMENT_WITHOUT_PARTY_NEEDS_ALLOCATION',

@@ -14,6 +14,9 @@ import {
   buildPartyLedger,
   buildPartySummary,
   cancelPaymentSchema,
+  invoicesOfAnotherParty,
+  resolveBookingRate,
+  unallocatedOf,
   partyActivityInvoices,
   statementDocumentsOf,
   type EntryInput,
@@ -29,6 +32,7 @@ import {
   type OpenInvoice,
 } from '@hisabche/validation'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
+import { assertPeriodOpen, reverseLedgerEntry } from './local-ledger'
 import { requireCapability } from '../auth'
 import { buildEnqueue } from '@hisabche/app-bridge'
 import type { Router } from '../router'
@@ -173,6 +177,7 @@ export function registerPaymentRoutes(router: Router): void {
   // ─── POST /payments ─────────────────────────────────────────
   router.post('/payments', (c: RouteHandlerContext) => {
     const { db, ctx, body } = c
+    requireCapability(ctx, 'payment.record')
     const { workspaceId, baseCurrency } = ctx
     const raw = (body || {}) as Record<string, unknown>
     const parsed = recordPaymentSchema.safeParse(raw)
@@ -182,6 +187,10 @@ export function registerPaymentRoutes(router: Router): void {
       )
     }
     const data = parsed.data
+    // The fee is booked by the server (a separate ledger line and a smaller till movement). The device has no
+    // such booking, and the fee travels in the queued payload: recording it here without the line would make the
+    // two books differ. Refused, not dropped.
+    if (data.feeAmount && data.feeAmount > 0) throw new ValidationError('PAYMENT_FEE_ONLINE_ONLY')
 
     const amount = Number(data.amount) || 0
     const direction = data.direction || 'in'
@@ -252,6 +261,9 @@ export function registerPaymentRoutes(router: Router): void {
     }
 
     return db.transaction(() => {
+      // 0. A payment dated inside a closed period is refused, as on the server.
+      assertPeriodOpen(db, entryDate)
+
       // 1. Fetch target open invoices if allocations requested
       if (rawAllocations.length > 0) {
         const invoiceIds = rawAllocations.map((a) => a.invoiceId)
@@ -265,8 +277,10 @@ export function registerPaymentRoutes(router: Router): void {
           date: string
           due_date: string | null
           status: string
+          customer_id: string | null
+          supplier_id: string | null
         }>(
-          `SELECT id, invoice_number, total, paid_amount, currency, date, due_date, status
+          `SELECT id, invoice_number, total, paid_amount, currency, date, due_date, status, customer_id, supplier_id
            FROM invoice
            WHERE id IN (${placeholders}) AND workspace_id = ? AND status <> 'cancelled'`,
           [...invoiceIds, workspaceId],
@@ -285,6 +299,21 @@ export function registerPaymentRoutes(router: Router): void {
           }
         }
 
+        // One customer's debt is not settled with another customer's money (the server's own rule).
+        if (
+          invoicesOfAnotherParty(
+            partyType,
+            partyId,
+            openInvoices.map((inv) => ({
+              invoiceId: inv.id,
+              customerId: inv.customer_id,
+              supplierId: inv.supplier_id,
+            })),
+          ).length > 0
+        ) {
+          throw new ValidationError('PAYMENT_ALLOCATION_PARTY_MISMATCH')
+        }
+
         // Validate allocation limits
         const domainInvoices: OpenInvoice[] = openInvoices.map((inv) => ({
           invoiceId: inv.id,
@@ -301,6 +330,24 @@ export function registerPaymentRoutes(router: Router): void {
           throw new ConflictError(problems[0]!, problems[0]!)
         }
       }
+
+      // 1b. The rate this payment is booked at — the server's rule, decided BEFORE anything is written.
+      //     No rate = refused; a foreign payment is never booked as if it were the books currency.
+      const namedRates = rawAllocations.length
+        ? db.all<{ exchange_rate: number | null }>(
+            `SELECT exchange_rate FROM invoice WHERE workspace_id = ? AND id IN (${rawAllocations
+              .map(() => '?')
+              .join(', ')})`,
+            [workspaceId, ...rawAllocations.map((a) => a.invoiceId)],
+          )
+        : []
+      const bookingRate = resolveBookingRate({
+        currency,
+        bookCurrency: baseCurrency,
+        given: data.exchangeRate,
+        invoiceRates: namedRates.map((row) => row.exchange_rate),
+      })
+      if (bookingRate === null) throw new ValidationError('PAYMENT_EXCHANGE_RATE_REQUIRED')
 
       // 2. Generate payment number
       const prefix = direction === 'in' ? 'RCT' : 'VCH'
@@ -371,7 +418,7 @@ export function registerPaymentRoutes(router: Router): void {
 
       // 5. Post General Ledger lines
       const accounts = ensureDefaultAccounts(db, workspaceId)
-      const paymentRate = Number(data.exchangeRate) > 0 ? Number(data.exchangeRate) : 1.0
+      const paymentRate = bookingRate
 
       const posting = paymentPosting({
         direction,
@@ -474,7 +521,8 @@ export function registerPaymentRoutes(router: Router): void {
           entity: 'payment',
           operation: 'create',
           clientId: paymentId,
-          payload: { id: paymentId, ...data },
+          // `autoAllocate: false`: the allocations above are final — the server settles nothing else on sync.
+          payload: { id: paymentId, ...data, autoAllocate: false },
           userId: c.headers?.['x-hisabche-user-id'] ?? ctx.userId,
           workspaceId,
         })
@@ -482,7 +530,11 @@ export function registerPaymentRoutes(router: Router): void {
       }
 
       const inserted = db.get<PaymentRow>('SELECT * FROM payment WHERE id = ?', [paymentId])
-      return mapPayment(inserted!)
+      return {
+        ...mapPayment(inserted!),
+        // What no invoice was named for: visible, traceable, and nothing was settled on its behalf.
+        unallocated: unallocatedOf(amount, rawAllocations),
+      }
     })
   })
 
@@ -536,11 +588,13 @@ export function registerPaymentRoutes(router: Router): void {
       )
 
       // 2. Reverse journal entry
+      // A dated reversal entry, never an in-place edit; a closed day refuses the whole cancel.
       if (payment.journal_entry_id) {
-        db.run("UPDATE journal_entry SET status = 'reversed', updated_at = ? WHERE id = ?", [
+        reverseLedgerEntry(db, ctx, payment.journal_entry_id, {
+          date: now.slice(0, 10),
+          reason: parsed.data.reason,
           now,
-          payment.journal_entry_id,
-        ])
+        })
       }
 
       // 3. Mark payment cancelled

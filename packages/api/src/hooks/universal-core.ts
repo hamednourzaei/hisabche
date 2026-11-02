@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { asList } from '../lib/as-list'
 import { apiClient } from '../lib/client'
+import { useIntentKey } from '../lib/intent-key'
 import { useAuthReady } from './useAuthReady'
 import { invoiceKeys } from './invoices'
 import { paymentKeys } from './payments'
@@ -43,6 +44,10 @@ export const universalCoreKeys = {
   courier: () => [...universalCoreKeys.all, 'courier'] as const,
   deliveryNotes: (invoiceId?: string) =>
     [...universalCoreKeys.all, 'delivery-notes', invoiceId ?? 'all'] as const,
+  packageCredits: (customerId?: string, productId?: string) =>
+    [...universalCoreKeys.all, 'package-credits', customerId ?? 'all', productId ?? 'all'] as const,
+  serviceDelivery: (filters?: Record<string, string | undefined>) =>
+    [...universalCoreKeys.all, 'service-delivery', filters ?? {}] as const,
 }
 
 // ─── Types ───────────────────────────────────────────────────────
@@ -116,16 +121,84 @@ export interface WarrantyItem {
   customerId?: string | null
 }
 
+export type ReturnRefundStatus = 'not_due' | 'pending' | 'partial' | 'refunded'
+
+export interface InvoiceReturnDeductionRecord {
+  reason: string
+  mode: 'percent' | 'fixed'
+  percent: number | null
+  amountMinor: number
+  note: string
+}
+
+export interface InvoiceReturnLineRecord {
+  id: string
+  originalLineId: string
+  productId: string | null
+  quantity: number
+  restockChoice: 'restock' | 'scrap'
+  reasonCode: string
+  conditionCode: string | null
+  subtotalMinor: number
+  discountMinor: number
+  taxMinor: number
+  totalMinor: number
+}
+
 export interface InvoiceReturnRecord {
   id: string
   originalInvoiceId: string
   returnType: 'sale_return' | 'purchase_return'
   returnNumber: string
   returnDate: string
+  reasonCode?: string | null
+  notes?: string | null
   totalSubtotalMinor: number
   totalDiscountMinor: number
   totalTaxMinor: number
+  /** What the shop kept (restocking fee, damage, agreed …), minor units. */
+  deductionMinor?: number
+  /** What the return CREDITS the customer: goods + tax - deductions, minor units. */
   grandTotalMinor: number
+  /** Cash already paid back against the credit. */
+  refundedMinor?: number
+  /** Set aside for a refund that is being paid. */
+  pendingRefundMinor?: number
+  /** What can still be paid back in cash or by bank. */
+  refundableMinor?: number
+  refundStatus?: ReturnRefundStatus
+  deductions?: InvoiceReturnDeductionRecord[]
+  lines?: InvoiceReturnLineRecord[]
+}
+
+export interface CreateInvoiceReturnInput {
+  returnType: 'sale_return' | 'purchase_return'
+  returnNumber: string
+  returnDate: string
+  reasonCode?: string | undefined
+  notes?: string | undefined
+  deductions?: Array<{
+    reason: string
+    mode: 'percent' | 'fixed'
+    percent?: number | undefined
+    /** Major units of the invoice currency. */
+    amount?: number | undefined
+    note?: string | undefined
+  }>
+  lines: Array<{
+    originalLineId: string
+    quantity: number
+    restockChoice?: 'restock' | 'scrap' | undefined
+    reasonCode?: string | undefined
+    conditionCode?: string | undefined
+  }>
+}
+
+export interface RefundInvoiceReturnInput {
+  /** Major units of the invoice currency. */
+  amount: number
+  method: 'cash' | 'bank'
+  tillSessionId?: string | null | undefined
 }
 
 export interface OrderDepositRecord {
@@ -374,36 +447,61 @@ export function useInvoiceReturns(invoiceId: string | undefined) {
 
 export function useCreateInvoiceReturn(invoiceId: string) {
   const queryClient = useQueryClient()
+  // The same key while the same return is retried after a lost response: the server then answers
+  // with the return it already made instead of refusing the second as «already returned».
+  const intent = useIntentKey('ret')
   return useMutation({
-    mutationFn: async (input: {
-      returnType: 'sale_return' | 'purchase_return'
-      returnNumber: string
-      returnDate: string
-      lines: Array<{
-        originalLineId: string
-        quantity: number
-        restockChoice?: 'restock' | 'scrap'
-        reasonCode?: string
-      }>
-    }) => {
+    mutationFn: async (input: CreateInvoiceReturnInput) => {
       const { data } = await apiClient.post<{ data: InvoiceReturnRecord }>(
         `/invoices/${invoiceId}/returns`,
         input,
+        { headers: { 'Idempotency-Key': intent.current() } },
       )
       return data.data
     },
+    onError: (error) => intent.settle(error),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: universalCoreKeys.returns(invoiceId) })
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
-      queryClient.invalidateQueries({ queryKey: paymentKeys.all })
-      queryClient.invalidateQueries({ queryKey: productKeys.all })
-      // The invoice page, the party balance and the books all move with a return.
-      queryClient.invalidateQueries({ queryKey: ['invoice-related'] })
-      queryClient.invalidateQueries({ queryKey: ['customers'] })
-      queryClient.invalidateQueries({ queryKey: ['ledger'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      intent.settle()
+      invalidateAfterReturn(queryClient, invoiceId)
     },
   })
+}
+
+/** Money paid back against a return — its own event, recorded by the payment core. */
+export function useRefundInvoiceReturn(invoiceId: string) {
+  const queryClient = useQueryClient()
+  // Money out: a retry after a timeout must be the SAME refund, never a second one.
+  const intent = useIntentKey('refund')
+  return useMutation({
+    // The return is named when the refund is paid: the return that a form has just created
+    // does not exist yet when the hook is mounted.
+    mutationFn: async ({ returnId, ...body }: RefundInvoiceReturnInput & { returnId: string }) => {
+      const { data } = await apiClient.post<{
+        data: { refundId: string; paymentId: string; amountMinor: number }
+      }>(`/invoices/${invoiceId}/returns/${returnId}/refunds`, body, {
+        headers: { 'Idempotency-Key': intent.current() },
+      })
+      return data.data
+    },
+    onError: (error) => intent.settle(error),
+    onSuccess: () => {
+      intent.settle()
+      invalidateAfterReturn(queryClient, invoiceId)
+    },
+  })
+}
+
+// The invoice page, the party balance, the books, the till and the dashboard all move with a
+// return and with the cash paid back for it.
+function invalidateAfterReturn(queryClient: ReturnType<typeof useQueryClient>, invoiceId: string) {
+  queryClient.invalidateQueries({ queryKey: universalCoreKeys.returns(invoiceId) })
+  queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
+  queryClient.invalidateQueries({ queryKey: paymentKeys.all })
+  queryClient.invalidateQueries({ queryKey: productKeys.all })
+  queryClient.invalidateQueries({ queryKey: ['invoice-related'] })
+  queryClient.invalidateQueries({ queryKey: ['customers'] })
+  queryClient.invalidateQueries({ queryKey: ['ledger'] })
+  queryClient.invalidateQueries({ queryKey: ['dashboard'] })
 }
 
 // ─── 9. Order Deposits (G-17) ────────────────────────────────────
@@ -629,6 +727,266 @@ export function useCreateDeliveryNote() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: universalCoreKeys.deliveryNotes() })
+    },
+  })
+}
+
+// ─── 15. Package Credit & Entitlement Ledger (M3) ───────────────────
+
+export interface PackageCreditBalanceResponse {
+  readonly customerId: string
+  readonly packageProductId?: string | undefined
+  readonly balance?: number | undefined
+  readonly balances?: Array<{ packageProductId: string; balance: number }> | undefined
+}
+
+export interface PackageCreditLedgerItem {
+  readonly id: string
+  readonly workspaceId: string
+  readonly customerId: string
+  readonly packageProductId: string
+  readonly entryType: 'GRANT' | 'CONSUME' | 'REVERSAL' | 'EXPIRE' | 'ADJUSTMENT'
+  readonly quantity: number
+  readonly unit?: string | null | undefined
+  readonly sourceDocumentType?: string | undefined
+  readonly sourceDocumentId?: string | null | undefined
+  readonly sourceLineId?: string | null | undefined
+  readonly referenceEntryId?: string | null | undefined
+  readonly idempotencyKey?: string | null | undefined
+  readonly notes?: string | null | undefined
+  readonly expiresAt?: string | null | undefined
+  readonly effectiveDate: string
+  readonly createdAt: string
+}
+
+export function usePackageCreditBalance(customerId?: string, packageProductId?: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: universalCoreKeys.packageCredits(customerId, packageProductId),
+    queryFn: async () => {
+      const { data } = await apiClient.get<PackageCreditBalanceResponse>(
+        '/package-credits/balance',
+        {
+          params: { customerId, packageProductId },
+        },
+      )
+      return data
+    },
+    enabled: authReady && Boolean(customerId),
+  })
+}
+
+export function usePackageCreditLedger(customerId?: string, packageProductId?: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: [...universalCoreKeys.packageCredits(customerId, packageProductId), 'ledger'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<PackageCreditLedgerItem[]>('/package-credits/ledger', {
+        params: { customerId, packageProductId },
+      })
+      return asList<PackageCreditLedgerItem>(data, '/package-credits/ledger')
+    },
+    enabled: authReady && Boolean(customerId),
+  })
+}
+
+export function useConsumePackageCredit() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      customerId: string
+      packageProductId: string
+      quantity: number
+      unit?: string | undefined
+      sourceDocumentType?: string | undefined
+      sourceDocumentId?: string | undefined
+      idempotencyKey?: string | undefined
+      notes?: string | undefined
+      effectiveDate?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{ entry: PackageCreditLedgerItem; balance: number }>(
+        '/package-credits/consume',
+        input,
+      )
+      return data
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: universalCoreKeys.packageCredits(
+          variables.customerId,
+          variables.packageProductId,
+        ),
+      })
+    },
+  })
+}
+
+export function useReversePackageCredit() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      referenceEntryId: string
+      quantity?: number | undefined
+      idempotencyKey?: string | undefined
+      notes?: string | undefined
+      effectiveDate?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{ entry: PackageCreditLedgerItem; balance: number }>(
+        '/package-credits/reverse',
+        input,
+      )
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: universalCoreKeys.all,
+      })
+    },
+  })
+}
+
+export function useExpirePackageCredit() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      customerId: string
+      packageProductId: string
+      notes?: string | undefined
+      effectiveDate?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{ entry: PackageCreditLedgerItem; balance: number }>(
+        '/package-credits/expire',
+        input,
+      )
+      return data
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: universalCoreKeys.packageCredits(
+          variables.customerId,
+          variables.packageProductId,
+        ),
+      })
+    },
+  })
+}
+
+// ─── Service Delivery Hooks (M4) ─────────────────────────────────
+
+export interface ServiceDeliverySessionItem {
+  id: string
+  workspaceId: string
+  customerId: string
+  serviceOfferingId: string
+  practitionerId?: string | null | undefined
+  branchId?: string | null | undefined
+  sessionDate: string
+  startTime: string
+  endTime: string
+  durationMinutes: number
+  status: string
+  settlementMethod: string
+  packageCreditId?: string | null | undefined
+  invoiceId?: string | null | undefined
+  /** Why a complementary session was free. */
+  settlementReason?: string | null | undefined
+  /** Why the session was cancelled. */
+  cancellationReason?: string | null | undefined
+  clientNotes?: string | null | undefined
+  internalNotes?: string | null | undefined
+  createdAt?: string | undefined
+  updatedAt?: string | undefined
+}
+
+export function useServiceDeliverySessions(filters?: {
+  date?: string | undefined
+  customerId?: string | undefined
+  practitionerId?: string | undefined
+  status?: string | undefined
+}) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: universalCoreKeys.serviceDelivery(filters),
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: ServiceDeliverySessionItem[] }>(
+        '/service-delivery/sessions',
+        { params: filters },
+      )
+      return asList<ServiceDeliverySessionItem>(data.data)
+    },
+    enabled: authReady,
+  })
+}
+
+export function useCreateServiceDeliverySession() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      customerId: string
+      serviceOfferingId: string
+      practitionerId?: string | null | undefined
+      branchId?: string | null | undefined
+      sessionDate: string
+      startTime: string
+      endTime: string
+      settlementMethod?: string | undefined
+      clientNotes?: string | null | undefined
+      internalNotes?: string | null | undefined
+    }) => {
+      const { data } = await apiClient.post<ServiceDeliverySessionItem>(
+        '/service-delivery/sessions',
+        input,
+      )
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.all })
+    },
+  })
+}
+export function useDeliverServiceDeliverySession() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...body
+    }: {
+      id: string
+      /** package_credit: the package whose credit is consumed. Required for that settlement. */
+      packageProductId?: string | undefined
+      /** package_credit | invoice | complementary - CHOSEN, never inferred; a delivery that cannot honour it is refused. */
+      settlementMethod?: string | undefined
+      quantity?: number | undefined
+      /** invoice: the existing invoice of this customer that bills the session. */
+      invoiceId?: string | undefined
+      /** complementary: why the session is free. Required for that settlement. */
+      reason?: string | undefined
+      /** Refuse when the session changed since it was read. */
+      expectedUpdatedAt?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{
+        session: ServiceDeliverySessionItem
+        consumptionEntry: unknown | null
+      }>(`/service-delivery/sessions/${id}/deliver`, body)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.all })
+    },
+  })
+}
+export function useCancelServiceDeliverySession() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { data } = await apiClient.post<{
+        session: ServiceDeliverySessionItem
+        reversalEntry: unknown | null
+      }>(`/service-delivery/sessions/${id}/cancel`, { reason })
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.all })
     },
   })
 }

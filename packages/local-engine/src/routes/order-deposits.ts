@@ -5,6 +5,7 @@
 // ============================================
 
 import { ValidationError } from '../errors'
+import { requireCapability } from '../auth'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 
@@ -37,6 +38,7 @@ export function registerOrderDepositsRoutes(router: Router) {
 
   router.post('/orders/:id/deposits', async (c: RouteHandlerContext) => {
     const { db, ctx, params, body } = c
+    requireCapability(ctx, 'invoice.create')
     const orderId = params.id
     const payload = body as any
     if (!payload?.customerId || payload?.amountMinor === undefined) {

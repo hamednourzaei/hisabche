@@ -30,6 +30,7 @@ function fakeDb(existingReturns: number) {
       const chain: Record<string, unknown> = {
         select: () => chain,
         eq: () => chain,
+        in: () => chain,
         maybeSingle: async () => ({
           data: table === 'invoices' ? { id: 'inv-1', currency: 'AFN' } : null,
           error: null,

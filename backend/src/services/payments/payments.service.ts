@@ -66,7 +66,9 @@ import {
   buildPartyActivity,
   buildPartyLedger,
   buildPartySummary,
+  invoicesOfAnotherParty,
   partyActivityInvoices,
+  resolveBookingRate,
 } from '@hisabche/validation'
 import { PaymentsRepository, domainErrorCode, type PaymentRow } from './payments.repository'
 
@@ -85,6 +87,11 @@ export interface RecordPaymentInput {
   notes?: string | undefined
   /** Omit to settle the oldest open invoices first. */
   allocations?: AllocationRequest[] | undefined
+  /**
+   * `false`: `allocations` is FINAL, even when empty — nothing is spread over the oldest invoices. Sent by a device
+   * that already told its person what the payment settled. Absent: the behaviour above.
+   */
+  autoAllocate?: boolean | undefined
   /**
    * The till this cash goes into (money in) or comes out of (money out).
    * A REQUEST: the till is read and checked on the server. Cash only.
@@ -198,6 +205,11 @@ export class PaymentsService {
     const entryDate = (input.entryDate ?? today(ctx?.timeZone)).slice(0, 10)
 
     const explicit = input.allocations && input.allocations.length > 0
+    // ⚠️ MONEY GIVEN TO A CUSTOMER SETTLES NOTHING THEY OWE. A refund of a return
+    // is cash going out against the credit the return created; handing it to the
+    // oldest open invoice would silently re-open the debt the customer was just
+    // credited for.
+    const paysCustomerOut = input.direction === 'out' && input.partyType === 'customer'
 
     // ─── T9 — WHERE THE CANDIDATE INVOICES COME FROM ────────────────────────
     //
@@ -221,7 +233,7 @@ export class PaymentsService {
           ctx.workspaceId,
           input.allocations!.map((a) => a.invoiceId),
         )
-      : input.partyId
+      : input.partyId && !paysCustomerOut && input.autoAllocate !== false
         ? await this.repo.openInvoicesFor(ctx.workspaceId, input.partyType, input.partyId)
         : []
 
@@ -248,22 +260,16 @@ export class PaymentsService {
     // settlement. It does NOT stop settling one customer's debt with another
     // customer's money inside the same workspace — both rows are legitimately
     // visible. Nothing else in the chain checks this, so it is checked here.
+    // The rule is shared with the device (`invoicesOfAnotherParty`): both unnamed is the walk-in cash sale.
     if (explicit) {
-      for (const invoice of invoices as Array<
-        (typeof invoices)[number] & { customerId?: string | null; supplierId?: string | null }
-      >) {
-        const owner =
-          input.partyType === 'customer'
-            ? (invoice.customerId ?? null)
-            : (invoice.supplierId ?? null)
-        const payer = input.partyId ?? null
-
-        // Both null is the walk-in cash sale — the case this change exists to
-        // support. A mismatch either way is refused.
-        if (owner !== payer) {
-          throw new ValidationError('PAYMENT_ALLOCATION_PARTY_MISMATCH')
-        }
-      }
+      const foreign = invoicesOfAnotherParty(
+        input.partyType,
+        input.partyId ?? null,
+        invoices as Array<
+          (typeof invoices)[number] & { customerId?: string | null; supplierId?: string | null }
+        >,
+      )
+      if (foreign.length > 0) throw new ValidationError('PAYMENT_ALLOCATION_PARTY_MISMATCH')
     }
 
     const allocations = explicit
@@ -373,6 +379,7 @@ export class PaymentsService {
       posting,
       entryDate,
       paymentNumber,
+      input.partyType,
     )
 
     // Diagnostic only: see `onPosted`. Bound after the write, so a hook that
@@ -518,16 +525,15 @@ export class PaymentsService {
     given: number | undefined,
     invoiceIds: string[],
   ): Promise<number | null> {
-    if (currency === bookCurrency) return 1
-    if (typeof given === 'number' && given > 0 && Number.isFinite(given)) return given
-    if (invoiceIds.length === 0) return null
-    const read = await this.repo.invoiceExchangeRates(ctx.workspaceId, invoiceIds)
-    // No column = no invoice of this database carries a rate.
-    if (read === null) return null
-    const rates = new Set(read)
-    if (rates.size !== 1) return null
-    const [rate] = [...rates]
-    return typeof rate === 'number' && rate > 0 ? rate : null
+    // One rule for the server and the device (`resolveBookingRate`); this method only does the read.
+    const needsInvoiceRates =
+      currency !== bookCurrency &&
+      !(typeof given === 'number' && given > 0 && Number.isFinite(given))
+    const invoiceRates =
+      needsInvoiceRates && invoiceIds.length > 0
+        ? await this.repo.invoiceExchangeRates(ctx.workspaceId, invoiceIds)
+        : []
+    return resolveBookingRate({ currency, bookCurrency, given, invoiceRates })
   }
 
   private async replayPayment(
@@ -581,6 +587,7 @@ export class PaymentsService {
       }),
       payment.entryDate,
       payment.paymentNumber ?? '',
+      payment.partyType,
     )
     const allocated = payment.allocations.reduce((sum, a) => sum + a.amount, 0)
     return asReplay({ ...payment, unallocated: round2(payment.amount - allocated) })
@@ -605,8 +612,13 @@ export class PaymentsService {
     posting: PaymentPosting,
     entryDate: string,
     paymentNumber: string,
+    partyType?: PartyType | undefined,
   ) {
     const isIncoming = direction === 'in'
+    // Money out to a CUSTOMER is the credit of a return being paid back: it
+    // closes what the business owes on the receivable account (where the return
+    // put it), not the supplier payable.
+    const partyRole = !isIncoming && partyType === 'customer' ? 'receivable' : 'payable'
     // ⚠️ Where the money is: cash in the drawer, anything else in the bank —
     // the same split the till close makes for card and transfer takings. A
     // «بانکی / حواله» payment was debited to صندوق on the live site (14 Oct),
@@ -614,7 +626,7 @@ export class PaymentsService {
     const moneyRole = moneyAccountRole(method)
     const needed = isIncoming
       ? ([moneyRole, 'receivable'] as const)
-      : (['payable', moneyRole] as const)
+      : ([partyRole, moneyRole] as const)
 
     const { accounts, missing } = await ledger.ensureAccountsForRoles(ctx, [...needed])
 
@@ -669,7 +681,7 @@ export class PaymentsService {
             ...differenceLine,
           ]
         : [
-            { accountId: accounts.payable!, debit: party, credit: 0 },
+            { accountId: accounts[partyRole]!, debit: party, credit: 0 },
             ...feeLine,
             { accountId: accounts[moneyRole]!, debit: 0, credit: cash },
             ...differenceLine,
@@ -696,6 +708,14 @@ export class PaymentsService {
   ) {
     const payment = await this.getPayment(ctx, paymentId)
     if (payment.status !== 'posted') throw new ConflictError('PAYMENT_NOT_CANCELLABLE')
+
+    // ⚠️ A REFUND IS NOT CANCELLED FROM THE PAYMENT SIDE. The return counts it as paid back
+    // (its credit, its cap, the customer's balance); cancelling only the payment would put the
+    // money back in the books while the return still says «paid», and the credit could then
+    // never be refunded again. Reversing a refund is a decision about the return, not a click here.
+    if (await this.repo.refundOfPayment(ctx.workspaceId, paymentId)) {
+      throw new ConflictError('PAYMENT_BELONGS_TO_A_REFUND')
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // ⚠️ RECORD SCOPE — THE RULE WAS DECLARED AND NEVER ASKED HERE.

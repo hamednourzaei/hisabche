@@ -22,6 +22,13 @@ export {
   type LocalTransportAdapter,
 } from './lib/client'
 export { registerOfflineQueue, type OfflineQueue } from './lib/offline-queue'
+export {
+  registerEntitySyncReader,
+  getEntitySyncReader,
+  type EntitySyncEntry,
+  type EntitySyncReader,
+  type EntitySyncState,
+} from './lib/entity-sync-state'
 export { asList } from './lib/as-list'
 export type { ApiResponse, ApiError } from './lib/client'
 
@@ -1160,6 +1167,9 @@ export {
   type SyncFailedChange,
   type DuplicateSummary,
 } from './hooks/sync-overview'
+
+// ─── Per-row sync state (host-registered outbox reader) ─────
+export { useEntitySyncStates, type EntitySyncStatesResult } from './hooks/entity-sync-state'
 
 // ─── Customer Profile (Customer 360 phase 3) ─────────────
 export {

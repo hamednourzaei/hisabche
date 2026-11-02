@@ -211,6 +211,10 @@ export const PULL_COLUMNS: Record<SyncEntity, readonly string[] | null> = {
     'buy_price',
     'sell_price',
     'is_active',
+    // goods | service | package - the device must know a service has no stock and a package grants credit.
+    // ⚠️ NEEDS docs/offering-type-01-migration.sql on the database BEFORE this backend is deployed: a pull that selects a
+    // column the database lacks answers 500 for everybody (VERIFY-offering-type-01.sql).
+    'offering_type',
     'updated_at',
   ],
   customer: [

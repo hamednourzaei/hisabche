@@ -11,6 +11,104 @@
 // - Vehicles store unit attributes in `vehicle_attributes`
 // ============================================
 
+/**
+ * What the shop kept on a return, one row per reason (v10). The same table, columns and meaning as
+ * `invoice_return_deductions` on the server — the device records them, it does not re-derive them.
+ * (Declared BEFORE `UNIVERSAL_CORE_STATEMENTS`, which spreads it at module load.)
+ */
+export const RETURN_DEDUCTIONS_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS invoice_return_deductions (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    return_id TEXT NOT NULL,
+    reason_code TEXT NOT NULL,
+    mode TEXT NOT NULL,
+    percent REAL,
+    amount_minor INTEGER NOT NULL,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_return_deductions_return ON invoice_return_deductions(workspace_id, return_id)`,
+]
+
+export const PACKAGE_CREDIT_LEDGER_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS package_credit_ledger (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    customer_id TEXT NOT NULL,
+    package_product_id TEXT NOT NULL,
+    entry_type TEXT NOT NULL,
+    quantity REAL NOT NULL DEFAULT 0,
+    unit TEXT,
+    source_document_type TEXT,
+    source_document_id TEXT,
+    source_line_id TEXT,
+    reference_entry_id TEXT,
+    idempotency_key TEXT,
+    notes TEXT,
+    expires_at TEXT,
+    effective_date TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_pkg_credit_customer ON package_credit_ledger(workspace_id, customer_id, package_product_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_pkg_credit_idempotency ON package_credit_ledger(workspace_id, idempotency_key)`,
+  `CREATE INDEX IF NOT EXISTS idx_pkg_credit_ref ON package_credit_ledger(workspace_id, reference_entry_id)`,
+  // One consume and one reversal per service session: the ledger itself refuses a second.
+  `CREATE UNIQUE INDEX IF NOT EXISTS uq_pkg_credit_service_consume ON package_credit_ledger(workspace_id, source_document_id) WHERE source_document_type = 'service_delivery' AND entry_type = 'CONSUME' AND deleted_at IS NULL`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS uq_pkg_credit_service_reversal ON package_credit_ledger(workspace_id, source_document_id) WHERE source_document_type = 'service_delivery' AND entry_type = 'REVERSAL' AND deleted_at IS NULL`,
+]
+
+export const SERVICE_DELIVERY_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS service_delivery_sessions (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    customer_id TEXT NOT NULL,
+    service_offering_id TEXT NOT NULL,
+    practitioner_id TEXT,
+    branch_id TEXT,
+    session_date TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    duration_minutes INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL,
+    settlement_method TEXT NOT NULL,
+    package_credit_id TEXT,
+    invoice_id TEXT,
+    settlement_reason TEXT,
+    cancellation_reason TEXT,
+    client_notes TEXT,
+    internal_notes TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_service_delivery_workspace_date ON service_delivery_sessions(workspace_id, session_date)`,
+  `CREATE INDEX IF NOT EXISTS idx_service_delivery_customer ON service_delivery_sessions(workspace_id, customer_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_service_delivery_practitioner ON service_delivery_sessions(workspace_id, practitioner_id)`,
+]
+
+/** v15 on an existing v14 cache: the reason a free session was free, and the one-consume-per-session guard. */
+export const SERVICE_DELIVERY_AUDIT_ALTERS: readonly string[] = [
+  `ALTER TABLE service_delivery_sessions ADD COLUMN settlement_reason TEXT`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS uq_pkg_credit_service_consume ON package_credit_ledger(workspace_id, source_document_id) WHERE source_document_type = 'service_delivery' AND entry_type = 'CONSUME' AND deleted_at IS NULL`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS uq_pkg_credit_service_reversal ON package_credit_ledger(workspace_id, source_document_id) WHERE source_document_type = 'service_delivery' AND entry_type = 'REVERSAL' AND deleted_at IS NULL`,
+]
+
+/** v16 on an existing v15 cache: why a service session was cancelled. */
+export const SERVICE_CANCELLATION_REASON_ALTERS: readonly string[] = [
+  `ALTER TABLE service_delivery_sessions ADD COLUMN cancellation_reason TEXT`,
+]
+
 export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
   // ─── 1. Product Variants (v9) ─────────────────────────────────
   `CREATE TABLE IF NOT EXISTS product_variants (
@@ -112,6 +210,10 @@ export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
     total_discount_minor INTEGER NOT NULL DEFAULT 0,
     total_tax_minor INTEGER NOT NULL DEFAULT 0,
     grand_total_minor INTEGER NOT NULL,
+    deduction_minor INTEGER NOT NULL DEFAULT 0,
+    reason_code TEXT,
+    notes TEXT,
+    client_request_id TEXT,
     created_at TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL DEFAULT '',
     deleted_at TEXT,
@@ -119,6 +221,7 @@ export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
     sync_state TEXT NOT NULL DEFAULT 'local_only'
   )`,
   `CREATE INDEX IF NOT EXISTS idx_invoice_returns_orig ON invoice_returns(workspace_id, original_invoice_id)`,
+  ...RETURN_DEDUCTIONS_STATEMENTS,
 
   `CREATE TABLE IF NOT EXISTS invoice_return_lines (
     id TEXT PRIMARY KEY,
@@ -129,6 +232,7 @@ export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
     quantity REAL NOT NULL,
     restock_choice TEXT NOT NULL,
     reason_code TEXT NOT NULL,
+    condition_code TEXT,
     subtotal_minor INTEGER NOT NULL,
     discount_minor INTEGER NOT NULL DEFAULT 0,
     tax_minor INTEGER NOT NULL DEFAULT 0,
@@ -158,6 +262,21 @@ export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
     sync_state TEXT NOT NULL DEFAULT 'local_only'
   )`,
   `CREATE INDEX IF NOT EXISTS idx_order_deposits_order ON order_deposits(workspace_id, order_id)`,
+
+  // ─── 8. Package Credit & Entitlement Ledger (v13) ────────────
+  ...PACKAGE_CREDIT_LEDGER_STATEMENTS,
+
+  // ─── 9. Service Delivery & Attendance (v14) ───────────────────
+  ...SERVICE_DELIVERY_STATEMENTS,
+]
+
+/** v10 on an existing v9 cache: the same columns a fresh cache is born with. */
+export const RETURNS_CORE_ALTERS: readonly string[] = [
+  `ALTER TABLE invoice_returns ADD COLUMN deduction_minor INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE invoice_returns ADD COLUMN reason_code TEXT`,
+  `ALTER TABLE invoice_returns ADD COLUMN notes TEXT`,
+  `ALTER TABLE invoice_returns ADD COLUMN client_request_id TEXT`,
+  `ALTER TABLE invoice_return_lines ADD COLUMN condition_code TEXT`,
 ]
 
 export const UNIVERSAL_CORE_ALTERS: readonly string[] = [

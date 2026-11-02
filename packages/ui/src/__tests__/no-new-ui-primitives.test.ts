@@ -103,6 +103,13 @@ const SECTION_FILES = [
   join(UI_COMPONENTS_DIR, 'invoices', 'warranties-section.tsx'),
   join(UI_COMPONENTS_DIR, 'invoices', 'invoice-returns-dialog.tsx'),
   join(UI_COMPONENTS_DIR, 'settings', 'credit-limit-mode-section.tsx'),
+  // M4.2 — service delivery. The list is the shared `DataTable`; the forms are
+  // the shared `Dialog`; every dropdown is the shared `SelectField`.
+  join(UI_COMPONENTS_DIR, 'service-delivery', 'service-delivery-view.tsx'),
+  join(UI_COMPONENTS_DIR, 'service-delivery', 'service-session-create-dialog.tsx'),
+  join(UI_COMPONENTS_DIR, 'service-delivery', 'service-session-deliver-dialog.tsx'),
+  join(UI_COMPONENTS_DIR, 'service-delivery', 'service-session-cancel-dialog.tsx'),
+  join(UI_COMPONENTS_DIR, 'service-delivery', 'service-session-details.tsx'),
 ]
 
 describe('UI Primitives & Section Component Guard', () => {

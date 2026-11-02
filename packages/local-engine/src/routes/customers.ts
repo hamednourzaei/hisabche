@@ -21,6 +21,7 @@ import {
   type PartyRole,
 } from '@hisabche/validation'
 import { NotFoundError, ValidationError } from '../errors'
+import { requireCapability } from '../auth'
 import { buildEnqueue } from '@hisabche/app-bridge'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -191,6 +192,7 @@ export function registerCustomerRoutes(router: Router): void {
   // ─── POST /customers ────────────────────────────────────────
   router.post('/customers', (c: RouteHandlerContext) => {
     const { db, ctx, body } = c
+    requireCapability(ctx, 'customer.write')
     const { workspaceId } = ctx
     const raw = (body || {}) as Record<string, unknown>
     const normalized = {
@@ -264,6 +266,7 @@ export function registerCustomerRoutes(router: Router): void {
   // ─── PATCH /customers/:id ───────────────────────────────────
   router.patch('/customers/:id', (c: RouteHandlerContext) => {
     const { db, ctx, params, body } = c
+    requireCapability(ctx, 'customer.write')
     const { id } = params
     const { workspaceId } = ctx
     const raw = (body || {}) as Record<string, unknown>

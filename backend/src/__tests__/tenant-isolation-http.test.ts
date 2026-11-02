@@ -437,6 +437,51 @@ describe('Tenant Isolation HTTP Gate (Cross-Workspace Token Negative Tests)', ()
       const returns = db.tables.get('invoice_returns') || []
       expect(returns.length).toBe(0)
     })
+
+    it('GET /api/invoices/:id/returns refuses a cross-tenant read (404)', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/invoices/${INVA_ID}/returns`,
+        headers: asUserB,
+      })
+      expect([403, 404]).toContain(res.statusCode)
+    })
+
+    it('POST /api/invoices/:id/returns/:returnId/refunds refuses to pay back another business’s return', async () => {
+      const returnId = fakeId('return-a')
+      const returns = db.tables.get('invoice_returns') ?? []
+      db.tables.set('invoice_returns', [
+        ...returns,
+        {
+          id: returnId,
+          workspace_id: WORKSPACE_A,
+          original_invoice_id: INVA_ID,
+          return_type: 'sale_return',
+          return_number: 'R-A',
+          grand_total_minor: 10000,
+        },
+      ])
+      const paymentsBefore = (db.tables.get('payments') ?? []).length
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/invoices/${INVA_ID}/returns/${returnId}/refunds`,
+        headers: asUserB,
+        payload: { amount: 10, method: 'cash' },
+      })
+      expect([403, 404]).toContain(res.statusCode)
+      // no money moved, and nothing was reserved against the return
+      expect((db.tables.get('payments') ?? []).length).toBe(paymentsBefore)
+      expect(db.tables.get('invoice_return_refunds') ?? []).toHaveLength(0)
+    })
+
+    it('a refund with no token at all is refused (401)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/invoices/${INVA_ID}/returns/${fakeId('return-a')}/refunds`,
+        payload: { amount: 10, method: 'cash' },
+      })
+      expect(res.statusCode).toBe(401)
+    })
   })
 
   // ── 6. Warehouse CRUD ──────────────────────────────────────────────────────

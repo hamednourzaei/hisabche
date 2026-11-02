@@ -9,7 +9,7 @@ import { Input } from './input'
 import { MoneyInput } from './money-input'
 import { Label } from './label'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
+import { SegmentedControl } from './segmented-control'
 import { useCreateProduct } from '@hisabche/api'
 import { useSyncStore, useBackupStore } from '@hisabche/store'
 import { barcodeTakenMessage } from '../../lib/barcode/barcode-errors'
@@ -42,15 +42,8 @@ type FormData = {
   buyPrice: number
   sellPrice: number
   unit: UnitType
+  offeringType: 'goods' | 'service'
 }
-
-const UNIT_OPTIONS: { value: UnitType; labelKey: string; fallback: string }[] = [
-  { value: 'piece', labelKey: 'warehouse.units.piece', fallback: 'عدد' },
-  { value: 'kg', labelKey: 'warehouse.units.kg', fallback: 'کیلوگرم' },
-  { value: 'liter', labelKey: 'warehouse.units.liter', fallback: 'لیتر' },
-  { value: 'meter', labelKey: 'warehouse.units.meter', fallback: 'متر' },
-  { value: 'box', labelKey: 'warehouse.units.box', fallback: 'کارتن' },
-]
 
 const inputClass =
   'bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)] min-h-[44px]'
@@ -74,6 +67,7 @@ export const AddProductModal = memo(function AddProductModal({
     buyPrice: 0,
     sellPrice: 0,
     unit: profile.productDefaults.unit,
+    offeringType: 'goods',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -87,7 +81,7 @@ export const AddProductModal = memo(function AddProductModal({
     if (!formData.name.trim()) {
       newErrors.name = t('product.nameRequired')
     }
-    if (formData.quantity < 0) {
+    if (formData.offeringType !== 'service' && formData.quantity < 0) {
       newErrors.quantity = t('validation.min')
     }
     if (formData.buyPrice < 0) {
@@ -115,11 +109,8 @@ export const AddProductModal = memo(function AddProductModal({
     setIsSubmitting(true)
     setSaveStatus('saving')
 
-    // The picker can display a unit this build does not know (a code added to
-    // the `units` table after this deploy). Saving one would push a value the
-    // API rejects, so it is refused HERE with a message — not silently turned
-    // into 'piece', which is the coercion T2 removed.
-    const unit = toValidUnit(formData.unit)
+    const isService = formData.offeringType === 'service'
+    const unit = toValidUnit(formData.unit) || 'piece'
     if (!unit) {
       setErrors((prev) => ({
         ...prev,
@@ -132,12 +123,13 @@ export const AddProductModal = memo(function AddProductModal({
       const product = await createProduct.mutateAsync({
         name: formData.name.trim(),
         barcode: formData.barcode,
-        quantity: formData.quantity,
+        quantity: isService ? 0 : formData.quantity,
         buyPrice: formData.buyPrice,
         sellPrice: formData.sellPrice,
         unit,
         minStockLevel: 0,
         category: 'general',
+        offeringType: formData.offeringType,
         isActive: true,
       })
 
@@ -158,6 +150,7 @@ export const AddProductModal = memo(function AddProductModal({
         buyPrice: 0,
         sellPrice: 0,
         unit: profile.productDefaults.unit,
+        offeringType: 'goods',
       })
       setErrors({})
 
@@ -192,6 +185,7 @@ export const AddProductModal = memo(function AddProductModal({
       buyPrice: 0,
       sellPrice: 0,
       unit: profile.productDefaults.unit,
+      offeringType: 'goods',
     })
     setErrors({})
     onClose()
@@ -232,6 +226,20 @@ export const AddProductModal = memo(function AddProductModal({
           }}
           className="space-y-4"
         >
+          {/* Offering Type Switcher */}
+          <div className="space-y-1">
+            <Label>{t('product.offeringType') || 'نوع آیتم'}</Label>
+            <SegmentedControl
+              label={t('product.offeringType') || 'نوع آیتم'}
+              value={formData.offeringType}
+              onChange={(val) => handleChange('offeringType', val)}
+              options={[
+                { value: 'goods', label: t('product.goods') || 'کالا' },
+                { value: 'service', label: t('product.service') || 'خدمت' },
+              ]}
+            />
+          </div>
+
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="product-name">
@@ -284,26 +292,39 @@ export const AddProductModal = memo(function AddProductModal({
           </div>
 
           {/* Quantity + Unit */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="product-quantity">{t('warehouse.initialStock')}</Label>
-              <Input
-                id="product-quantity"
-                value={formData.quantity}
-                onChange={(e) => handleChange('quantity', Number(e.target.value))}
-                type="number"
-                min={0}
-                placeholder="0"
-                className={inputClass}
-                disabled={isPending}
-              />
-              {errors.quantity && (
-                <p className="text-sm text-[hsl(var(--color-destructive))]">{errors.quantity}</p>
-              )}
+          {formData.offeringType === 'goods' ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="product-quantity">{t('warehouse.initialStock')}</Label>
+                <Input
+                  id="product-quantity"
+                  value={formData.quantity}
+                  onChange={(e) => handleChange('quantity', Number(e.target.value))}
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  className={inputClass}
+                  disabled={isPending}
+                />
+                {errors.quantity && (
+                  <p className="text-sm text-[hsl(var(--color-destructive))]">{errors.quantity}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="product-unit">{t('warehouse.unit')}</Label>
+                <UnitSelect
+                  value={formData.unit}
+                  onChange={(unit) => handleChange('unit', unit)}
+                  disabled={isPending}
+                  className="w-full min-h-[44px]"
+                  placeholder={t('warehouse.unit')}
+                  t={(key, fallback) => t(key) || (fallback ?? key)}
+                />
+              </div>
             </div>
+          ) : (
             <div className="space-y-2">
-              <Label htmlFor="product-unit">{t('warehouse.unit')}</Label>
-              {/* Was five hardcoded units. The list comes from `units` (T2). */}
+              <Label htmlFor="product-unit">{t('warehouse.unit') || 'واحد تعرفه / خدمت'}</Label>
               <UnitSelect
                 value={formData.unit}
                 onChange={(unit) => handleChange('unit', unit)}
@@ -313,7 +334,7 @@ export const AddProductModal = memo(function AddProductModal({
                 t={(key, fallback) => t(key) || (fallback ?? key)}
               />
             </div>
-          </div>
+          )}
 
           {/* Buy Price + Sell Price */}
           <div className="grid grid-cols-2 gap-3">

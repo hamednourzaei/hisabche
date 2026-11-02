@@ -151,6 +151,7 @@ describe('nothing «بعد» needs went with «قبل»', () => {
       'customers/containers/customers-hub-container.tsx',
       [
         '<CustomersContainer role={role} />',
+        '<ServiceDeliveryContainer />',
         '<CrmContainer />',
         '<CampaignsContainer />',
         '<OpsSectionContainer',

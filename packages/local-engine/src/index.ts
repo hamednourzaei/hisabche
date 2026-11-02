@@ -25,6 +25,7 @@ import { registerFeedRoutes } from './routes/feed'
 import { registerImportRoutes } from './routes/import'
 import { registerInsightRoutes } from './routes/insights'
 import { registerInstallmentRoutes } from './routes/installments'
+import { registerInvoiceReturnsRoutes } from './routes/invoice-returns'
 import { registerInvoiceRoutes } from './routes/invoices'
 import { registerMeRoutes } from './routes/me'
 import { registerPartyStatementRoutes, registerPaymentRoutes } from './routes/payments'
@@ -43,6 +44,8 @@ import { registerMetalRatesRoutes } from './routes/metal-rates'
 import { registerFitmentsRoutes } from './routes/fitments'
 import { registerWarrantiesRoutes } from './routes/warranties'
 import { registerOrderDepositsRoutes } from './routes/order-deposits'
+import { registerPackageCreditsRoutes } from './routes/package-credits'
+import { registerServiceDeliveryRoutes } from './routes/service-delivery'
 import { registerTaxRoutes } from './routes/tax'
 import { registerWarehouseRoutes } from './routes/warehouses'
 import { registerWorkspaceRoutes } from './routes/workspace'
@@ -63,6 +66,8 @@ export * from './types'
 
 export interface LocalEngine {
   request<T = unknown>(req: LocalEngineRequest): Promise<LocalEngineResponse<T>>
+  /** The registered routes — read-only, for tests that must cover the whole table. */
+  routeTable(): ReadonlyArray<{ method: string; path: string }>
 }
 
 export function createLocalEngine(db: LocalDb): LocalEngine {
@@ -72,6 +77,7 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
   registerProductRoutes(router)
   registerCustomerRoutes(router)
   registerInvoiceRoutes(router)
+  registerInvoiceReturnsRoutes(router)
   registerPaymentRoutes(router)
   registerPartyStatementRoutes(router)
   registerWarehouseRoutes(router)
@@ -105,9 +111,12 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
   registerFitmentsRoutes(router)
   registerWarrantiesRoutes(router)
   registerOrderDepositsRoutes(router)
+  registerPackageCreditsRoutes(router)
+  registerServiceDeliveryRoutes(router)
   registerTaxRoutes(router)
 
   return {
+    routeTable: () => router.table(),
     async request<T = unknown>(req: LocalEngineRequest): Promise<LocalEngineResponse<T>> {
       try {
         const ctx: LocalContext = resolveContext(db, req.headers, {

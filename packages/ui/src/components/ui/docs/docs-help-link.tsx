@@ -60,6 +60,10 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
   // «؟» never fired for them, and they only risked being picked as the reverse
   // link for their article. `till` covers the POS screen that does exist.
   customers: 'customers',
+  // The service-session tab of the customers page. A key with a query never
+  // matches a pathname (see above); it exists so the article's «باز کردن در
+  // برنامه» opens the tab the article is about.
+  'customers?tab=sessions': 'service-delivery',
 
   // Stock
   warehouse: 'inventory',

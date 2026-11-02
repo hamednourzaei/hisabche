@@ -69,6 +69,8 @@ export interface PartyReturnRow {
   return_number?: Loose
   return_date?: Loose
   grand_total_minor?: Loose
+  /** Cash already paid back against this return, minor units (absent on a database without refunds). */
+  refunded_minor?: Loose
   /** The original invoice's currency; empty = the books currency. */
   currency?: Loose
 }
@@ -116,6 +118,7 @@ export function saleReturnsOf(
         returnDate: day(entry.return_date),
         currency,
         amount: round2(num(entry.grand_total_minor) / 10 ** digits),
+        refunded: round2(num(entry.refunded_minor) / 10 ** digits),
       }
     })
 }
@@ -254,11 +257,12 @@ export function buildPartySummary(input: {
     currency: String(payment.currency ?? ''),
   }))
   const summaryReturns: SummaryReturn[] = saleReturnsOf(input.rows.returns).map(
-    ({ amount, returnDate, currency, invoiceId }) => ({
+    ({ amount, returnDate, currency, invoiceId, refunded }) => ({
       amount,
       returnDate,
       currency,
       invoiceId,
+      refunded,
     }),
   )
   return {

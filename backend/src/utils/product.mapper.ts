@@ -18,6 +18,7 @@ export function mapProduct(raw: Record<string, any>) {
     sellPrice: raw.sell_price,
     wholesalePrice: raw.wholesale_price,
     isActive: raw.is_active,
+    offeringType: raw.offering_type ?? raw.offeringType ?? 'goods',
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
   }

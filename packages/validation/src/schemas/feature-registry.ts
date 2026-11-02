@@ -111,7 +111,7 @@ export const FEATURE_REGISTRY = {
   'dashboard.currency_rates': { execution: 'local', plans: ALL },
 
   // ─── Invoices ───────────────────────────────────────────────────────────
-  'invoice.list': { execution: 'local', plans: ALL },
+  'invoice.list': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'invoice.detail': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'invoice.related': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'invoice.create': { execution: 'local', plans: ALL },
@@ -168,7 +168,7 @@ export const FEATURE_REGISTRY = {
   // Delete asks the server whether the customer has invoices or payments.
   'customer.delete': { execution: 'server', plans: CLOUD },
   // The list's credit/debt after returns is read from the server; without it the list shows what it always did.
-  'customer.return_effects': { execution: 'server', plans: CLOUD },
+  'customer.return_effects': { execution: 'server', plans: CLOUD, alwaysAllowed: true },
   'customer.accounting': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'customer.risk': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'customer.crm': { execution: 'local', plans: ALL, alwaysAllowed: true },
@@ -205,12 +205,12 @@ export const FEATURE_REGISTRY = {
   'till.shift_history': { execution: 'local', plans: ALL, alwaysAllowed: true },
 
   // ─── Manufacturing (C in v1 — the owner's 19 Oct 2026 amendment) ─────────
-  'manufacturing.bom': { execution: 'server', plans: CLOUD },
+  'manufacturing.bom': { execution: 'server', plans: CLOUD, alwaysAllowed: true },
   'manufacturing.definition': { execution: 'server', plans: CLOUD },
   'manufacturing.produce': { execution: 'server', plans: CLOUD },
-  'manufacturing.runs': { execution: 'server', plans: CLOUD },
+  'manufacturing.runs': { execution: 'server', plans: CLOUD, alwaysAllowed: true },
   'manufacturing.work_orders': { execution: 'server', plans: CLOUD },
-  'manufacturing.report': { execution: 'server', plans: CLOUD },
+  'manufacturing.report': { execution: 'server', plans: CLOUD, alwaysAllowed: true },
 
   // ─── Stock count ────────────────────────────────────────────────────────
   'stockcount.list': { execution: 'local', plans: ALL, alwaysAllowed: true },
@@ -293,12 +293,12 @@ export const FEATURE_REGISTRY = {
   'referral.program': { execution: 'server', plans: CLOUD },
   'saved.views': { execution: 'server', plans: CLOUD },
   'timesheet.manage': { execution: 'server', plans: CLOUD },
-  'activity.entity_timeline': { execution: 'server', plans: CLOUD },
+  'activity.entity_timeline': { execution: 'server', plans: CLOUD, alwaysAllowed: true },
   'settings.currency_catalogue': { execution: 'server', plans: CLOUD },
   'settings.custom_units': { execution: 'server', plans: CLOUD },
   'stock.auto_shelf': { execution: 'server', plans: CLOUD },
   'unit.conversion': { execution: 'server', plans: CLOUD },
-  'accounting.tax_return': { execution: 'server', plans: CLOUD },
+  'accounting.tax_return': { execution: 'server', plans: CLOUD, alwaysAllowed: true },
   'accounting.legacy_transactions': { execution: 'server', plans: CLOUD },
   'inventory.insights': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'product.variants': { execution: 'local', plans: ALL },
@@ -306,9 +306,14 @@ export const FEATURE_REGISTRY = {
   'product.fitments': { execution: 'local', plans: ALL },
   'trade.vehicles': { execution: 'local', plans: ALL },
   'trade.warranties': { execution: 'local', plans: ALL },
+  // The device RECORDS the return document with the same reference function the server is measured
+  // against (golden vectors) and queues it; stock, cost and ledger move when the server applies it.
   'invoice.returns': { execution: 'local', plans: ALL },
+  // Paying the customer back needs the cap read under a lock the device cannot hold: online only.
+  'invoice.return_refund': { execution: 'server', plans: ALL },
   'order.deposits': { execution: 'local', plans: ALL },
   'trade.appointments': { execution: 'server', plans: CLOUD },
+  'operations.service_delivery': { execution: 'local', plans: ALL },
   'trade.agriculture': { execution: 'server', plans: CLOUD },
   'trade.freight': { execution: 'server', plans: CLOUD },
   'trade.courier': { execution: 'server', plans: CLOUD },

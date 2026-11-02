@@ -89,6 +89,7 @@ export function createTestDb(): LocalDb {
 export function createTestEngine(db: LocalDb): LocalEngine {
   const engine = createLocalEngine(db)
   return {
+    routeTable: () => engine.routeTable(),
     request: (req) =>
       engine.request({
         ...req,

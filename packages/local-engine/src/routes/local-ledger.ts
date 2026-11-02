@@ -14,9 +14,15 @@
 // loudly, not booked.
 // ============================================
 
-import { round2, STANDARD_ACCOUNT_FOR_ROLE, type AccountRole } from '@hisabche/validation'
+import {
+  evaluatePeriodLock,
+  round2,
+  STANDARD_ACCOUNT_FOR_ROLE,
+  type AccountRole,
+  type PeriodLockDecision,
+} from '@hisabche/validation'
 import type { LocalDb } from '../db'
-import { ValidationError } from '../errors'
+import { ConflictError, ValidationError } from '../errors'
 import type { LocalContext } from '../types'
 import { derivedId } from './derived-id'
 
@@ -24,6 +30,31 @@ const newId = (...parts: string[]) =>
   typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : derivedId('local', 'row', ...parts, String(Date.now()), String(Math.random()))
+
+/**
+ * Is the ledger closed on this day? The decision is the SERVER's own function (`evaluatePeriodLock`); the
+ * device only supplies the locks it holds — a company lock, one date in `meta`. No branch locks exist
+ * locally, so a branch-scoped server lock is applied on sync, not here.
+ */
+export function periodLockDecision(db: LocalDb, entryDate: string): PeriodLockDecision {
+  const row = db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', ['period_lock'])
+  const locks = row?.value ? [{ branchId: null, lockedUntil: row.value, reason: '' }] : []
+  return evaluatePeriodLock(entryDate, null, locks)
+}
+
+/**
+ * Refuse a ledger write dated inside a closed period — the same refusal (409 `ACCOUNTING_PERIOD_LOCKED`) the
+ * server gives. Call it BEFORE the first write of the document, inside its transaction, so nothing is left behind.
+ */
+export function assertPeriodOpen(db: LocalDb, entryDate: string): void {
+  const decision = periodLockDecision(db, entryDate)
+  if (decision.locked) {
+    throw new ConflictError(
+      'ACCOUNTING_PERIOD_LOCKED',
+      `Accounting period is locked through ${decision.lockedUntil}`,
+    )
+  }
+}
 
 /**
  * The account for each role: the business's own (first by code), else the
@@ -99,6 +130,7 @@ export function postDocument(db: LocalDb, ctx: LocalContext, draft: DocumentDraf
   )
   if (existing) return { status: 'already_posted', entryId: existing.id }
 
+  assertPeriodOpen(db, draft.date.slice(0, 10))
   const lines = draft.lines.filter((line) => line.debit !== 0 || line.credit !== 0)
   const debit = round2(lines.reduce((sum, line) => sum + line.debit, 0))
   const credit = round2(lines.reduce((sum, line) => sum + line.credit, 0))
@@ -148,4 +180,92 @@ export function postDocument(db: LocalDb, ctx: LocalContext, draft: DocumentDraf
     )
   }
   return { status: 'posted', entryId }
+}
+
+export interface LedgerReversal {
+  id: string
+  entryNumber: string
+}
+
+/**
+ * Reverse ONE posted entry the way the server does: a NEW entry (`source_type = 'reversal'`, `reversal_of` = the
+ * original) with every line inverted, dated `date`, and the original marked `reversed`. The original's date and lines
+ * are never edited — a report for the period it fell in still shows it, and the reversal shows from its own date on.
+ *
+ * ⚠️ The reversal's date must be open (\`assertPeriodOpen\`): a closed day refuses the whole cancel. Call it inside
+ * the document's transaction so a refusal leaves nothing half done. An entry that is not \`posted\` (already reversed,
+ * or never booked) returns \`null\` — a second cancel does not post a second reversal.
+ */
+export function reverseLedgerEntry(
+  db: LocalDb,
+  ctx: LocalContext,
+  entryId: string,
+  options: { date: string; reason: string; now: string },
+): LedgerReversal | null {
+  const entry = db.get<{
+    id: string
+    entry_number: string | null
+    source_id: string | null
+    status: string
+  }>(
+    `SELECT id, entry_number, source_id, status FROM journal_entry
+      WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL`,
+    [entryId, ctx.workspaceId],
+  )
+  if (!entry || entry.status !== 'posted') return null
+
+  const date = options.date.slice(0, 10)
+  assertPeriodOpen(db, date)
+
+  const lines = db.all<{ account_id: string; debit: number; credit: number }>(
+    `SELECT account_id, debit, credit FROM journal_line
+      WHERE journal_id = ? AND workspace_id = ? AND deleted_at IS NULL`,
+    [entryId, ctx.workspaceId],
+  )
+  const reversalId = newId(ctx.workspaceId, 'reversal', entryId)
+  const entryNumber = `REV-${entry.entry_number || entry.id}`
+
+  db.run(
+    `INSERT INTO journal_entry (
+       id, workspace_id, entry_number, date, description, reference, status,
+       source_type, source_id, reversal_of, posted_at, created_at, updated_at, origin, sync_state
+     ) VALUES (?, ?, ?, ?, ?, ?, 'posted', 'reversal', ?, ?, ?, ?, ?, 'local', 'local_only')`,
+    [
+      reversalId,
+      ctx.workspaceId,
+      entryNumber,
+      date,
+      options.reason,
+      entry.entry_number || '',
+      entry.source_id,
+      entryId,
+      options.now,
+      options.now,
+      options.now,
+    ],
+  )
+  for (const line of lines) {
+    db.run(
+      `INSERT INTO journal_line (
+         id, workspace_id, journal_id, account_id, debit, credit, description,
+         created_at, updated_at, origin, sync_state
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+      [
+        newId(ctx.workspaceId, 'reversal-line', reversalId, line.account_id),
+        ctx.workspaceId,
+        reversalId,
+        line.account_id,
+        line.credit, // the old credit becomes the debit
+        line.debit,
+        `Reversal of line in ${entry.entry_number ?? entry.id}`,
+        options.now,
+        options.now,
+      ],
+    )
+  }
+  db.run("UPDATE journal_entry SET status = 'reversed', updated_at = ? WHERE id = ?", [
+    options.now,
+    entryId,
+  ])
+  return { id: reversalId, entryNumber }
 }

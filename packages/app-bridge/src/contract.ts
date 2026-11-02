@@ -125,9 +125,12 @@ export const localTableSchema = z.enum([
   'pos_cash_movement',
   'invoice_returns',
   'invoice_return_lines',
+  'invoice_return_deductions',
   'price_list',
   'price_list_item',
   'promotion',
+  'package_credit_ledger',
+  'service_delivery_sessions',
 ])
 
 export type LocalTable = z.infer<typeof localTableSchema>

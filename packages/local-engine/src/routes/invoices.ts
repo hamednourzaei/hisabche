@@ -14,6 +14,9 @@ import {
   computeItemTotal,
   createInvoiceSchema,
   invoiceLedgerLines,
+  isPackageOffering,
+  movesStock,
+  planPackageGrant,
   round2,
   roundInvoiceMoney,
   sumInvoiceLines,
@@ -25,6 +28,7 @@ import {
 import { buildEnqueue } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
+import { assertPeriodOpen, reverseLedgerEntry } from './local-ledger'
 import type { LocalDb } from '../db'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -481,6 +485,7 @@ export function registerInvoiceRoutes(router: Router): void {
   // ─── POST /invoices ─────────────────────────────────────────
   router.post('/invoices', (c: RouteHandlerContext) => {
     const { db, ctx, body } = c
+    requireCapability(ctx, 'invoice.create')
     const { workspaceId } = ctx
     const raw = (body || {}) as Record<string, unknown>
     // `localRequest` (cloud edition, offline) asks for the outbox row with
@@ -523,6 +528,10 @@ export function registerInvoiceRoutes(router: Router): void {
     const rawItems = data.items
 
     return db.transaction(() => {
+      // 0. The books are closed through some day? Then nothing dated inside it is written — the server
+      //    refuses it too, and finding that out on sync is after the person was told it was saved.
+      assertPeriodOpen(db, date)
+
       // 1. The number this device gives the invoice.
       //
       // A TEMPORARY ID, NOT A NUMBER. The official number comes from the
@@ -556,6 +565,13 @@ export function registerInvoiceRoutes(router: Router): void {
         const derivedTotal = computeItemTotal({ quantity: qty, unitPrice, discount })
         const roundedTotal = roundInvoiceMoney(derivedTotal, currency)
         const productId = item.productId || null
+        const prod = productId
+          ? db.get<{ offering_type?: string }>(
+              'SELECT offering_type FROM product WHERE id = ? AND workspace_id = ?',
+              [productId, workspaceId],
+            )
+          : undefined
+        const itemMovesStock = movesStock(prod?.offering_type)
         // The document keeps the quantity the person typed («2 cartons»);
         // INVENTORY is always the product's base unit («48 pieces»). The
         // conversion is the shared function, not a local copy.
@@ -568,6 +584,8 @@ export function registerInvoiceRoutes(router: Router): void {
           productName: String(item.productName || 'کالا').trim(),
           quantity: qty,
           baseQuantity,
+          movesStock: itemMovesStock,
+          offeringType: prod?.offering_type || 'goods',
           unit: (item.unit as string) || 'piece',
           unitPrice,
           buyPrice: 0,
@@ -664,7 +682,7 @@ export function registerInvoiceRoutes(router: Router): void {
         )
 
         // 5. Stock movements & Warehouse inventory
-        if (item.productId && item.baseQuantity > 0) {
+        if (item.productId && item.baseQuantity > 0 && item.movesStock) {
           const movId = generateUuid()
           const movType = type === 'purchase' ? 'purchase' : 'sale'
           db.run(
@@ -703,6 +721,57 @@ export function registerInvoiceRoutes(router: Router): void {
             )
           }
         }
+
+        // 5b. Package credit grant
+        if (
+          type === 'sale' &&
+          customerId &&
+          item.productId &&
+          item.quantity > 0 &&
+          isPackageOffering(item.offeringType)
+        ) {
+          const grant = planPackageGrant({
+            workspaceId,
+            customerId,
+            packageProductId: item.productId,
+            quantity: item.quantity,
+            unit: item.unit,
+            sourceDocumentType: 'invoice',
+            sourceDocumentId: invoiceId,
+            sourceLineId: item.id,
+            notes: `Invoice ${invoiceNumber || invoiceId}`,
+            effectiveDate: date,
+          })
+
+          db.run(
+            `INSERT INTO package_credit_ledger (
+              id, workspace_id, customer_id, package_product_id, entry_type, quantity,
+              unit, source_document_type, source_document_id, source_line_id,
+              idempotency_key, notes, effective_date, created_at, updated_at, origin, sync_state
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+            [
+              grant.id,
+              workspaceId,
+              customerId,
+              item.productId,
+              grant.entryType,
+              grant.quantity,
+              grant.unit,
+              grant.sourceDocumentType,
+              grant.sourceDocumentId,
+              grant.sourceLineId,
+              grant.idempotencyKey,
+              grant.notes,
+              grant.effectiveDate,
+              grant.createdAt,
+              now,
+            ],
+          )
+
+          // NO separate ledger command. The credit reaches the server THROUGH THE INVOICE (the server grants it when it
+          // saves the invoice line); a second `package_credit_ledger` command for the same fact was routed by the sync engine
+          // to the CONSUME endpoint - it spent the credit it was meant to grant.
+        }
       }
 
       // 6. Cost layers (FIFO or AVCO based on inventory_settings)
@@ -717,7 +786,7 @@ export function registerInvoiceRoutes(router: Router): void {
       if (type === 'purchase') {
         // Purchases create cost layers (in books currency)
         for (const item of derivedItems) {
-          if (item.productId && item.baseQuantity > 0) {
+          if (item.productId && item.baseQuantity > 0 && item.movesStock) {
             const layerId = generateUuid()
             // A layer is in BASE units at a BASE-unit cost. The line price is
             // per line unit, so «33,000,000 per gram» stays per gram while
@@ -751,7 +820,7 @@ export function registerInvoiceRoutes(router: Router): void {
       } else {
         // Sales consume cost layers via configured costing method (FIFO or AVCO)
         for (const item of derivedItems) {
-          if (item.productId && item.baseQuantity > 0) {
+          if (item.productId && item.baseQuantity > 0 && item.movesStock) {
             const drawn = drawFromLayers(db, {
               workspaceId,
               productId: item.productId,
@@ -922,6 +991,26 @@ export function registerInvoiceRoutes(router: Router): void {
     const now = new Date().toISOString()
 
     return db.transaction(() => {
+      // 0a. A payment that also settles ANOTHER invoice is not this invoice's to cancel — the server refuses
+      //     (INVOICE_PAYMENT_SHARED), because cancelling it would un-settle a document nobody asked to touch and
+      //     leaving it would keep money allocated to an invoice that is gone. Refused before anything changes.
+      const sharedPayment = db.get<{ payment_id: string }>(
+        `SELECT mine.payment_id AS payment_id
+           FROM payment_allocation mine
+           JOIN payment_allocation other
+             ON other.payment_id = mine.payment_id AND other.workspace_id = mine.workspace_id
+          WHERE mine.invoice_id = ? AND mine.workspace_id = ? AND mine.deleted_at IS NULL
+            AND other.invoice_id <> mine.invoice_id AND other.deleted_at IS NULL
+          LIMIT 1`,
+        [id, workspaceId],
+      )
+      if (sharedPayment) {
+        throw new ConflictError(
+          'INVOICE_PAYMENT_SHARED',
+          'A payment of this invoice also settles another invoice: deal with the payment first',
+        )
+      }
+
       // 0. Preflight guards for purchase invoice cancellation
       if (inv.type === 'purchase') {
         const layers = db.all<{ id: string; remaining_qty: number; received_qty: number }>(
@@ -991,7 +1080,13 @@ export function registerInvoiceRoutes(router: Router): void {
             )?.warehouse_id) ?? null
 
       for (const item of items) {
-        if (item.product_id && item.quantity > 0) {
+        const prod = item.product_id
+          ? db.get<{ offering_type?: string }>(
+              'SELECT offering_type FROM product WHERE id = ? AND workspace_id = ?',
+              [item.product_id, workspaceId],
+            )
+          : undefined
+        if (item.product_id && item.quantity > 0 && movesStock(prod?.offering_type)) {
           // The stored line quantity is in the line's unit; the stock it moved
           // was the base quantity. Reversing must undo the base figure.
           const baseQuantity = baseQuantityOf(
@@ -1050,16 +1145,83 @@ export function registerInvoiceRoutes(router: Router): void {
         )
       }
 
+      // 2b. Reverse package credit grants
+      const packageGrants = db.all<{
+        id: string
+        customer_id: string
+        package_product_id: string
+        quantity: number
+        unit: string | null
+      }>(
+        `SELECT id, customer_id, package_product_id, quantity, unit FROM package_credit_ledger
+         WHERE workspace_id = ? AND source_document_type = 'invoice' AND source_document_id = ? AND entry_type = 'GRANT' AND deleted_at IS NULL`,
+        [workspaceId, id],
+      )
+      for (const grant of packageGrants) {
+        const revId = generateUuid()
+        db.run(
+          `INSERT INTO package_credit_ledger (
+            id, workspace_id, customer_id, package_product_id, entry_type, quantity,
+            unit, source_document_type, source_document_id, reference_entry_id,
+            notes, effective_date, created_at, updated_at, origin, sync_state
+          ) VALUES (?, ?, ?, ?, 'ADJUSTMENT', ?, ?, 'cancellation', ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+          [
+            revId,
+            workspaceId,
+            grant.customer_id,
+            grant.package_product_id,
+            -grant.quantity,
+            grant.unit,
+            id,
+            grant.id,
+            `Cancellation of invoice ${inv.invoice_number || id}`,
+            now.slice(0, 10),
+            now,
+            now,
+          ],
+        )
+        if (c.headers?.['x-hisabche-queue'] === '1') {
+          const eq = buildEnqueue({
+            entity: 'package_credit_ledger',
+            operation: 'create',
+            clientId: revId,
+            payload: {
+              id: revId,
+              workspace_id: workspaceId,
+              customer_id: grant.customer_id,
+              package_product_id: grant.package_product_id,
+              entry_type: 'ADJUSTMENT',
+              quantity: -grant.quantity,
+              unit: grant.unit,
+              source_document_type: 'cancellation',
+              source_document_id: id,
+              reference_entry_id: grant.id,
+              notes: `Cancellation of invoice ${inv.invoice_number || id}`,
+              effective_date: now.slice(0, 10),
+              created_at: now,
+              updated_at: now,
+            },
+            userId: ctx.userId ?? null,
+            workspaceId,
+          })
+          db.run(eq.sql, eq.params)
+        }
+      }
+
       // 3. Reverse journal entry
       const journalEntry = db.get<{ id: string }>(
         "SELECT id FROM journal_entry WHERE source_type = 'invoice' AND source_id = ? AND workspace_id = ? AND status = 'posted'",
         [id, workspaceId],
       )
+      // A dated reversal entry, not an edit of the original (the server's own pattern). A closed day refuses
+      // the cancel — inside this transaction, so nothing above stays done.
+      const reversalDate = now.slice(0, 10)
       if (journalEntry) {
-        db.run("UPDATE journal_entry SET status = 'reversed', updated_at = ? WHERE id = ?", [
+        reverseLedgerEntry(db, ctx, journalEntry.id, {
+          date: reversalDate,
+          reason: `Cancelled invoice ${inv.invoice_number ?? id}`,
           now,
-          journalEntry.id,
-        ])
+        })
       }
 
       // 4. Cancel payment allocations, reverse payment journals, and soft-delete allocations
@@ -1073,10 +1235,11 @@ export function registerInvoiceRoutes(router: Router): void {
           [a.payment_id, workspaceId],
         )
         if (payment?.journal_entry_id) {
-          db.run(
-            "UPDATE journal_entry SET status = 'reversed', updated_at = ? WHERE id = ? AND workspace_id = ?",
-            [now, payment.journal_entry_id, workspaceId],
-          )
+          reverseLedgerEntry(db, ctx, payment.journal_entry_id, {
+            date: reversalDate,
+            reason: `Cancelled invoice ${inv.invoice_number ?? id}`,
+            now,
+          })
         }
 
         db.run("UPDATE payment SET status = 'cancelled', updated_at = ? WHERE id = ?", [

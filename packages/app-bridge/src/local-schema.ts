@@ -12,7 +12,7 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 9
+export const SCHEMA_VERSION = 16
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
@@ -34,6 +34,7 @@ export const CREATE_STATEMENTS: readonly string[] = [
     sell_price INTEGER NOT NULL DEFAULT 0,
     wholesale_price INTEGER DEFAULT 0,
     is_active INTEGER NOT NULL DEFAULT 1,
+    offering_type TEXT NOT NULL DEFAULT 'goods',
     image_url TEXT,
     created_at TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL,
@@ -179,6 +180,8 @@ export const CREATE_STATEMENTS: readonly string[] = [
     type TEXT NOT NULL,
     quantity REAL NOT NULL DEFAULT 0,
     reference TEXT,
+    from_warehouse_id TEXT,
+    to_warehouse_id TEXT,
     date TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL,
@@ -1096,6 +1099,53 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
   ],
   inventory_settings: ['workspace_id', 'costing_method', 'negative_stock', 'updated_at'],
   invoice_counter: ['workspace_id', 'prefix', 'next', 'updated_at'],
+  package_credit_ledger: [
+    'id',
+    'workspace_id',
+    'customer_id',
+    'package_product_id',
+    'entry_type',
+    'quantity',
+    'unit',
+    'source_document_type',
+    'source_document_id',
+    'source_line_id',
+    'reference_entry_id',
+    'idempotency_key',
+    'notes',
+    'expires_at',
+    'effective_date',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'origin',
+    'sync_state',
+  ],
+  service_delivery_sessions: [
+    'id',
+    'workspace_id',
+    'customer_id',
+    'service_offering_id',
+    'practitioner_id',
+    'branch_id',
+    'session_date',
+    'start_time',
+    'end_time',
+    'duration_minutes',
+    'status',
+    'settlement_method',
+    'package_credit_id',
+    'invoice_id',
+    'settlement_reason',
+    'cancellation_reason',
+    'client_notes',
+    'internal_notes',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'origin',
+    'sync_state',
+  ],
 }
 
 /** Columns a free-text search may target per table. */
@@ -1119,4 +1169,6 @@ export const SEARCHABLE_COLUMNS: Record<string, readonly string[]> = {
   account: ['name', 'code'],
   journal_entry: ['entry_number', 'description', 'reference'],
   payment: ['payment_number', 'reference', 'notes'],
+  package_credit_ledger: ['notes', 'idempotency_key'],
+  service_delivery_sessions: ['client_notes', 'internal_notes'],
 }

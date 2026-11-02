@@ -119,6 +119,7 @@ const FROM_LOG: Record<DeltaEntity, (r: Record<string, unknown>) => Record<strin
     min_stock_level: num(r.min_stock_level),
     buy_price: num(r.buy_price),
     sell_price: num(r.sell_price),
+    offering_type: str(r.offering_type) ?? 'goods',
     // `deleted_at` was read here too; no such column exists (a delete is a
     // `delete` change), so it was always undefined. Guard: sync-pull-columns.test.ts.
     is_active: r.is_active === false ? 0 : 1,
@@ -566,6 +567,8 @@ export const ENDPOINT_BY_ENTITY: Partial<Record<LocalTable, string>> = {
   promotion: '/promotions',
   account: '/accounting/accounts',
   journal_entry: '/accounting/journal',
+  package_credit_ledger: '/package-credits/consume',
+  service_delivery_sessions: '/service-delivery/sessions',
 }
 
 function isPermanent(status: number): boolean {
@@ -597,6 +600,47 @@ async function pushEntry(entry: QueueEntry): Promise<void> {
   const headers = headersForEntry(entry)
 
   // ─── Domain Pushes with Custom Parameterized Routes ─────────
+  if (entry.entity === 'package_credit_ledger') {
+    const payload = entry.payload as Record<string, unknown>
+    const entryType = String(payload.entry_type ?? payload.entryType ?? '')
+    if (entryType === 'GRANT') {
+      // A grant is made by the INVOICE that sold the package, on the server. Sending it as a ledger command used to land on the
+      // consume endpoint below and spend the credit instead of granting it: refuse it, permanently and visibly.
+      const refusal = new Error('PACKAGE_GRANT_TRAVELS_WITH_THE_INVOICE') as Error & {
+        permanent: boolean
+      }
+      refusal.permanent = true
+      throw refusal
+    }
+    if (entryType === 'REVERSAL') {
+      await apiClient.post('/package-credits/reverse', entry.payload, { headers })
+    } else if (entryType === 'EXPIRE') {
+      await apiClient.post('/package-credits/expire', entry.payload, { headers })
+    } else if (entryType === 'ADJUSTMENT') {
+      await apiClient.post('/package-credits/adjust', entry.payload, { headers })
+    } else {
+      await apiClient.post('/package-credits/consume', entry.payload, { headers })
+    }
+    return
+  }
+
+  if (entry.entity === 'service_delivery_sessions') {
+    const payload = entry.payload as Record<string, unknown>
+    const sessionId = String(payload.id ?? '')
+    if (payload.status === 'delivered') {
+      await apiClient.post(`/service-delivery/sessions/${sessionId}/deliver`, entry.payload, {
+        headers,
+      })
+    } else if (payload.status === 'cancelled') {
+      await apiClient.post(`/service-delivery/sessions/${sessionId}/cancel`, entry.payload, {
+        headers,
+      })
+    } else {
+      await apiClient.post('/service-delivery/sessions', entry.payload, { headers })
+    }
+    return
+  }
+
   if (entry.entity === 'invoice_returns') {
     const payload = entry.payload as Record<string, unknown>
     const invoiceId = String(payload.originalInvoiceId ?? payload.id ?? '')

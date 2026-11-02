@@ -40,6 +40,32 @@ async function readAll(
   }
 }
 
+const RETURN_COLUMNS =
+  'id, original_invoice_id, return_type, return_number, return_date, grand_total_minor'
+
+/**
+ * One page of `invoice_returns`. `refunded_minor` (invoice-return-05) is read
+ * with the rest; a database that has not run that migration answers 42703 and is
+ * read again without it — no refund has ever been paid there, so «0 refunded» is
+ * the truth, not a guess.
+ */
+async function selectReturnPage(workspaceId: string, from: number, invoiceIds?: readonly string[]) {
+  const page = (columns: string) => {
+    const query = supabase
+      .from('invoice_returns')
+      .select(columns)
+      .eq('workspace_id', workspaceId)
+      .eq('return_type', 'sale_return')
+    return (invoiceIds ? query.in('original_invoice_id', [...invoiceIds]) : query)
+      .order('return_date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1)
+  }
+  const withRefund = await page(`${RETURN_COLUMNS}, refunded_minor`)
+  if (withRefund.error?.code === '42703') return page(RETURN_COLUMNS)
+  return withRefund
+}
+
 /**
  * The sale returns of the given invoices, all pages. A database that has not
  * run docs/invoice-return-01-migration.sql has no `invoice_returns` table: that
@@ -51,20 +77,12 @@ async function readSaleReturns(
 ): Promise<Array<Omit<PartyReturnRow, 'currency'>>> {
   const rows: Array<Omit<PartyReturnRow, 'currency'>> = []
   for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from('invoice_returns')
-      .select('id, original_invoice_id, return_type, return_number, return_date, grand_total_minor')
-      .eq('workspace_id', workspaceId)
-      .eq('return_type', 'sale_return')
-      .in('original_invoice_id', [...invoiceIds])
-      .order('return_date', { ascending: true })
-      .order('id', { ascending: true })
-      .range(from, from + PAGE - 1)
+    const { data, error } = await selectReturnPage(workspaceId, from, invoiceIds)
     if (error) {
       if (error.code === '42P01' || error.code === 'PGRST205') return []
       throw new DatabaseError('Failed to fetch party returns', error)
     }
-    rows.push(...((data ?? []) as Array<Omit<PartyReturnRow, 'currency'>>))
+    rows.push(...((data ?? []) as unknown as Array<Omit<PartyReturnRow, 'currency'>>))
     if (!data || data.length < PAGE) return rows
   }
 }
@@ -75,19 +93,12 @@ async function readAllSaleReturns(
 ): Promise<Array<Omit<PartyReturnRow, 'currency'>>> {
   const rows: Array<Omit<PartyReturnRow, 'currency'>> = []
   for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from('invoice_returns')
-      .select('id, original_invoice_id, return_type, return_number, return_date, grand_total_minor')
-      .eq('workspace_id', workspaceId)
-      .eq('return_type', 'sale_return')
-      .order('return_date', { ascending: true })
-      .order('id', { ascending: true })
-      .range(from, from + PAGE - 1)
+    const { data, error } = await selectReturnPage(workspaceId, from)
     if (error) {
       if (error.code === '42P01' || error.code === 'PGRST205') return []
       throw new DatabaseError('Failed to fetch returns', error)
     }
-    rows.push(...((data ?? []) as Array<Omit<PartyReturnRow, 'currency'>>))
+    rows.push(...((data ?? []) as unknown as Array<Omit<PartyReturnRow, 'currency'>>))
     if (!data || data.length < PAGE) return rows
   }
 }
@@ -188,6 +199,25 @@ export class PaymentsRepository {
     if (error) {
       if (isMissingIdempotencySupport(error)) throw new IdempotencyUnavailableError('payment')
       throw new DatabaseError('Failed to look up the request', error)
+    }
+    return (data as { id: string } | null)?.id ?? null
+  }
+
+  /**
+   * The refund this payment paid, if it is one. A database without invoice-return-05 has no
+   * refunds, so a missing table is «no», not a failed lookup.
+   */
+  async refundOfPayment(workspaceId: string, paymentId: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('invoice_return_refunds')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('payment_id', paymentId)
+      .eq('status', 'paid')
+      .maybeSingle()
+    if (error) {
+      if (error.code === '42P01' || error.code === 'PGRST205') return null
+      throw new DatabaseError('Failed to look up the refund of a payment', error)
     }
     return (data as { id: string } | null)?.id ?? null
   }
@@ -690,6 +720,7 @@ export class PaymentsRepository {
     }
 
     const returnedOn = new Map<string, number>()
+    const refundedOn = new Map<string, number>()
     for (const entry of saleReturnsOf(
       returns.map((row) => ({
         ...row,
@@ -697,13 +728,22 @@ export class PaymentsRepository {
       })),
     )) {
       returnedOn.set(entry.invoiceId, (returnedOn.get(entry.invoiceId) ?? 0) + entry.amount)
+      refundedOn.set(
+        entry.invoiceId,
+        (refundedOn.get(entry.invoiceId) ?? 0) + (entry.refunded ?? 0),
+      )
     }
 
     const effects = new Map<string, ReturnEffectRow>()
     for (const [invoiceId, returned] of returnedOn) {
       const invoice = invoices.get(invoiceId)
       if (!invoice) continue
-      const effect = returnEffectOfInvoice(invoice.total, invoice.paid, returned)
+      const effect = returnEffectOfInvoice(
+        invoice.total,
+        invoice.paid,
+        returned,
+        refundedOn.get(invoiceId) ?? 0,
+      )
       const key = `${invoice.customerId}|${invoice.currency}`
       const row = effects.get(key) ?? {
         customerId: invoice.customerId,

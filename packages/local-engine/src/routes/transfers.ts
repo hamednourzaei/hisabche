@@ -6,7 +6,12 @@
 // Prevents negative stock in source warehouse.
 // ============================================
 
-import { stockTransferSchema } from '@hisabche/validation'
+import {
+  movesStock,
+  planConsumption,
+  stockTransferSchema,
+  type CostLayer,
+} from '@hisabche/validation'
 import { requireCapability } from '../auth'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import { buildEnqueue } from '@hisabche/app-bridge'
@@ -69,14 +74,25 @@ export function registerTransferRoutes(router: Router): void {
       (c.headers?.['idempotency-key'] as string) ||
       generateUuid()
 
-    const existingMovement = db.get<{ product_id: string; quantity: number }>(
-      'SELECT product_id, quantity FROM inventory_movement WHERE id = ? AND workspace_id = ?',
+    const existingMovement = db.get<{
+      product_id: string
+      quantity: number
+      from_warehouse_id: string | null
+      to_warehouse_id: string | null
+    }>(
+      'SELECT product_id, quantity, from_warehouse_id, to_warehouse_id FROM inventory_movement WHERE id = ? AND workspace_id = ?',
       [transferId, workspaceId],
     )
     if (existingMovement) {
+      // The server compares product, quantity, source AND destination. A movement recorded before the places
+      // were stored (null) is compared on what it has — nothing is guessed for it.
       if (
         existingMovement.product_id !== productId ||
-        Math.abs(existingMovement.quantity - quantity) > 0.0001
+        Math.abs(existingMovement.quantity - quantity) > 0.0001 ||
+        (existingMovement.from_warehouse_id !== null &&
+          existingMovement.from_warehouse_id !== fromWarehouseId) ||
+        (existingMovement.to_warehouse_id !== null &&
+          existingMovement.to_warehouse_id !== toWarehouseId)
       ) {
         throw new ConflictError(
           'IDEMPOTENCY_KEY_PAYLOAD_MISMATCH',
@@ -108,6 +124,16 @@ export function registerTransferRoutes(router: Router): void {
       )
       if (!destWh) throw new NotFoundError('Destination warehouse', toWarehouseId)
 
+      // 1.5. Verify product exists and is eligible for stock movement
+      const productRow = db.get<{ offering_type: string | null }>(
+        'SELECT offering_type FROM product WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL',
+        [productId, workspaceId],
+      )
+      if (!productRow) throw new NotFoundError('Product', productId)
+      if (!movesStock(productRow.offering_type ?? 'goods')) {
+        throw new ValidationError('CANNOT_TRANSFER_SERVICE_STOCK')
+      }
+
       // 2. Check stock in source warehouse
       const stockRow = db.get<{ qty: number }>(
         'SELECT qty FROM product_stock WHERE workspace_id = ? AND product_id = ? AND warehouse_id = ? AND deleted_at IS NULL',
@@ -138,66 +164,83 @@ export function registerTransferRoutes(router: Router): void {
       // 5. Record movement
       db.run(
         `INSERT INTO inventory_movement (
-          id, workspace_id, product_id, type, quantity, reference, date,
+          id, workspace_id, product_id, type, quantity, reference, from_warehouse_id, to_warehouse_id, date,
           created_at, updated_at, origin, sync_state
-        ) VALUES (?, ?, ?, 'transfer', ?, ?, ?, ?, ?, 'local', 'local_only')`,
+        ) VALUES (?, ?, ?, 'transfer', ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
         [
           transferId,
           workspaceId,
           productId,
           quantity,
           `Transfer from ${sourceWh.name} to ${destWh.name}${notes ? ` - ${notes}` : ''}`,
+          fromWarehouseId,
+          toWarehouseId,
           now.slice(0, 10),
           now,
           now,
         ],
       )
 
-      // 6. Transfer cost layers (Target D fix)
-      // When stock moves shelf, its cost layers travel with it so destination sales can consume them.
-      let need = quantity
-      const layers = db.all<{ id: string; unit_cost: number; remaining_qty: number }>(
-        `SELECT id, unit_cost, remaining_qty FROM cost_layer
-          WHERE workspace_id = ? AND product_id = ? AND warehouse_id = ? AND remaining_qty > 0 AND deleted_at IS NULL
-          ORDER BY entry_date ASC, created_at ASC`,
+      // 6. Cost layers travel with the goods. WHICH layers and how much of each is the shared FIFO plan
+      //    (`planConsumption`, the rule the server's SQL follows: oldest arrival first, row creation breaks a tie);
+      //    this route only applies it. The arriving layer keeps the source layer's currency.
+      const layers = db.all<{
+        id: string
+        unit_cost: number
+        remaining_qty: number
+        entry_date: string
+        created_at: string
+        currency: string | null
+      }>(
+        `SELECT id, unit_cost, remaining_qty, entry_date, created_at, currency FROM cost_layer
+          WHERE workspace_id = ? AND product_id = ? AND warehouse_id = ? AND remaining_qty > 0 AND deleted_at IS NULL`,
         [workspaceId, productId, fromWarehouseId],
       )
-
-      for (const layer of layers) {
-        const take = Math.min(layer.remaining_qty, need)
+      const byId = new Map(layers.map((layer) => [layer.id, layer]))
+      const plan = planConsumption(
+        layers.map((layer): CostLayer => ({
+          id: layer.id,
+          productId,
+          warehouseId: fromWarehouseId,
+          remainingQty: layer.remaining_qty,
+          unitCost: layer.unit_cost,
+          entryDate: layer.entry_date,
+          createdAt: layer.created_at,
+        })),
+        quantity,
+        { method: 'fifo' },
+      )
+      if (plan.shortfall > 0) {
+        throw new ConflictError(
+          'INSUFFICIENT_COST_LAYERS',
+          `Cannot transfer ${quantity} units: cost layers in source warehouse only cover ${quantity - plan.shortfall} units`,
+        )
+      }
+      for (const step of plan.steps) {
+        const layer = byId.get(step.layerId ?? '')!
         db.run(
           'UPDATE cost_layer SET remaining_qty = remaining_qty - ?, updated_at = ? WHERE id = ?',
-          [take, now, layer.id],
+          [step.quantity, now, layer.id],
         )
-
         db.run(
           `INSERT INTO cost_layer (
             id, workspace_id, product_id, warehouse_id, source_type, source_id, source_line,
             received_qty, remaining_qty, unit_cost, currency, entry_date, created_at, updated_at, origin, sync_state
-          ) VALUES (?, ?, ?, ?, 'transfer', ?, 1, ?, ?, ?, 'AFN', ?, ?, ?, 'local', 'local_only')`,
+          ) VALUES (?, ?, ?, ?, 'transfer', ?, 1, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
           [
             generateUuid(),
             workspaceId,
             productId,
             toWarehouseId,
             transferId,
-            take,
-            take,
+            step.quantity,
+            step.quantity,
             layer.unit_cost,
+            layer.currency ?? ctx.baseCurrency,
             now.slice(0, 10),
             now,
             now,
           ],
-        )
-
-        need -= take
-        if (need <= 0) break
-      }
-
-      if (need > 0) {
-        throw new ConflictError(
-          'INSUFFICIENT_COST_LAYERS',
-          `Cannot transfer ${quantity} units: cost layers in source warehouse only cover ${quantity - need} units`,
         )
       }
 

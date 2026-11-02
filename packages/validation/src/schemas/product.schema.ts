@@ -4,6 +4,7 @@
 
 import { z } from 'zod'
 import { flagFilter } from './filter-contract'
+import { offeringTypeSchema } from './universal-core/offerings.domain'
 import {
   uuidSchema,
   positiveNumberSchema,
@@ -38,6 +39,9 @@ export const productSchema = z.object({
   unitLabel: unitLabelSchema.nullish(),
   minStockLevel: nonNegativeNumberSchema.default(5),
 
+  // Offering Type (goods | service | package)
+  offeringType: offeringTypeSchema.optional().default('goods'),
+
   // Pricing
   buyPrice: nonNegativeNumberSchema.default(0),
   sellPrice: nonNegativeNumberSchema.default(0),
@@ -68,6 +72,7 @@ export const createProductSchema = productSchema
      * («بدون انبار»), to be moved with «افزودن کالا به انبار».
      */
     warehouseId: uuidSchema.nullable().optional(),
+    offeringType: offeringTypeSchema.optional(),
   })
 
 export type CreateProduct = z.infer<typeof createProductSchema>

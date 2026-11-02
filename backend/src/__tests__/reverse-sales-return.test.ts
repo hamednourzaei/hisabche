@@ -32,6 +32,12 @@ vi.mock('../db', () => ({
     from: (table: string) => ({
       select: () => ({
         eq: (_col: string, val: unknown) => ({
+          // the service now reads the lines' products with `.in(...)` (the package-return guard): none here
+          in: () => ({
+            then: (resolve: (res: unknown) => void) => {
+              resolve({ data: [], error: null })
+            },
+          }),
           eq: (_col2: string, val2: unknown) => ({
             maybeSingle: async () => {
               if (table === 'invoices' && val === INVOICE_B_ID && val2 === WORKSPACE_A) {

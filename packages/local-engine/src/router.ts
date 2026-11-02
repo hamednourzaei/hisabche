@@ -10,6 +10,8 @@
 import type { HttpMethod, RouteHandler } from './types'
 
 interface RegisteredRoute {
+  /** The path as registered (`/invoices/:id/cancel`), kept so the table can be listed. */
+  path: string
   method: HttpMethod
   pattern: RegExp
   paramNames: string[]
@@ -32,7 +34,12 @@ export class Router {
       .replace(/\//g, '\\/')
 
     const pattern = new RegExp(`^${regexPattern}$`)
-    this.routes.push({ method, pattern, paramNames, handler })
+    this.routes.push({ method, path: clean, pattern, paramNames, handler })
+  }
+
+  /** Every registered route, in registration order. For guards that must look at the whole table. */
+  table(): ReadonlyArray<{ method: HttpMethod; path: string }> {
+    return this.routes.map((route) => ({ method: route.method, path: route.path }))
   }
 
   get(path: string, handler: RouteHandler): void {

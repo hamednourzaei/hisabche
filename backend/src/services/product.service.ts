@@ -3,6 +3,7 @@
 // FIXED: Removed supabase.raw(), use JavaScript filter
 // ============================================
 
+import { movesStock } from '@hisabche/validation'
 import { supabase } from '../db'
 import { scopes } from './authorization/scope.service'
 import {
@@ -60,11 +61,11 @@ export interface ExtraBarcode {
 const PRODUCT_LIST_COLUMNS = `
   id, name, barcode, sku, category, quantity, unit,
   sell_price, buy_price, wholesale_price, min_stock_level,
-  is_active, image_url, created_at, updated_at
+  is_active, image_url, offering_type, created_at, updated_at
 `
 
 const PRODUCT_MINIMAL = `
-  id, name, quantity, min_stock_level, unit, sell_price
+  id, name, quantity, min_stock_level, unit, sell_price, offering_type
 `
 
 const SORT_BY_MAP: Record<string, string> = {
@@ -380,10 +381,12 @@ export class ProductService {
     const clientRequestId = options.clientRequestId ?? null
     const split = (options.openingStock ?? []).filter((entry) => entry.quantity !== 0)
     if (split.length > 0) return this.createWithOpeningStock(ctx, data, clientRequestId, split)
+    const offeringType = (data as any).offeringType || 'goods'
+    const isService = offeringType === 'service'
     // Request #94 — «افزودن به انبار»: the opening stock lands in a warehouse —
     // the one named, or the business's only one (stockEditWarehouse).
     const openingWarehouseId =
-      (Number(data.quantity) || 0) > 0
+      !isService && (Number(data.quantity) || 0) > 0
         ? await this.stockWarehouse(
             workspaceId,
             (data as { warehouseId?: string | null }).warehouseId,
@@ -419,6 +422,7 @@ export class ProductService {
         sell_price: data.sellPrice || 0,
         wholesale_price: data.wholesalePrice || null,
         is_active: data.isActive !== false,
+        offering_type: offeringType,
         workspace_id: workspaceId,
         user_id: userId,
         ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
@@ -716,6 +720,7 @@ export class ProductService {
     if (data.sellPrice !== undefined) updates.sell_price = data.sellPrice
     if (data.wholesalePrice !== undefined) updates.wholesale_price = data.wholesalePrice
     if (data.isActive !== undefined) updates.is_active = data.isActive
+    if (data.offeringType !== undefined) updates.offering_type = data.offeringType
 
     if (quantityTarget !== undefined) {
       const target = Number(quantityTarget)
@@ -723,37 +728,41 @@ export class ProductService {
 
       const { data: current, error: readError } = await supabase
         .from('products')
-        .select('quantity')
+        .select('quantity, offering_type')
         .eq('id', id)
         .eq('workspace_id', workspaceId)
         .maybeSingle()
       if (readError) throw new DatabaseError('Failed to read product stock', readError)
       if (!current) throw new NotFoundError('Product')
 
-      const delta = target - (Number((current as { quantity: unknown }).quantity) || 0)
-      if (delta !== 0) {
-        // ⚠️ INTO A WAREHOUSE. Recorded with none, a refill sat in «بدون انبار»
-        // while sales left the warehouse: 20 on the product page, −10 in the
-        // warehouse (BUG-080).
-        const warehouseId = await this.stockWarehouse(
-          workspaceId,
-          (data as { warehouseId?: string | null }).warehouseId,
-          'edit',
-        )
-        const { error: movementError } = await supabase.from('stock_movements').insert({
-          product_id: id,
-          type: 'adjustment',
-          quantity: delta,
-          reference_type: 'product_edit',
-          reference_id: id,
-          ...(warehouseId ? { to_warehouse_id: warehouseId } : {}),
-          workspace_id: workspaceId,
-          user_id: ctx.userId,
-          notes: `stock set to ${target} from the product page`,
-        })
-        // Not swallowed: a stock edit that did not land must not report success.
-        if (movementError)
-          throw new DatabaseError('Failed to record the stock adjustment', movementError)
+      const currentOfferingType =
+        (current as { offering_type?: string | null }).offering_type ?? 'goods'
+      if (movesStock(currentOfferingType)) {
+        const delta = target - (Number((current as { quantity: unknown }).quantity) || 0)
+        if (delta !== 0) {
+          // ⚠️ INTO A WAREHOUSE. Recorded with none, a refill sat in «بدون انبار»
+          // while sales left the warehouse: 20 on the product page, −10 in the
+          // warehouse (BUG-080).
+          const warehouseId = await this.stockWarehouse(
+            workspaceId,
+            (data as { warehouseId?: string | null }).warehouseId,
+            'edit',
+          )
+          const { error: movementError } = await supabase.from('stock_movements').insert({
+            product_id: id,
+            type: 'adjustment',
+            quantity: delta,
+            reference_type: 'product_edit',
+            reference_id: id,
+            ...(warehouseId ? { to_warehouse_id: warehouseId } : {}),
+            workspace_id: workspaceId,
+            user_id: ctx.userId,
+            notes: `stock set to ${target} from the product page`,
+          })
+          // Not swallowed: a stock edit that did not land must not report success.
+          if (movementError)
+            throw new DatabaseError('Failed to record stock adjustment', movementError)
+        }
       }
     }
 
@@ -862,7 +871,9 @@ export class ProductService {
 
     const products = (data || [])
       .map(mapProduct)
-      .filter((product: any) => product.quantity <= product.minStockLevel)
+      .filter(
+        (product) => movesStock(product.offeringType) && product.quantity <= product.minStockLevel,
+      )
 
     await memoryCache.set(cacheKey, products, 60)
     return products

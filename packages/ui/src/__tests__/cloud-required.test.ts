@@ -61,8 +61,11 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
     // customer.return_effects (the list's credit after sale returns, read from invoice_returns).
     // 57 since 31 Oct 2026: hr.payroll_rebook (re-posting a paid salary to the ledger; the
     // device books at the moment it settles, so the separate re-book call is server-only).
-    it('has exactly 57 server-execution features in FEATURE_REGISTRY', () => {
-      expect(serverFeatures.length).toBe(57)
+    // 58 since 1 Nov 2026: invoice.return_refund — paying the customer back needs the cap read under a
+    // lock the device cannot hold. (invoice.returns itself is local again: the device records the
+    // document with the reference function and queues it; the server applies stock, cost and ledger.)
+    it('has exactly 58 server-execution features in FEATURE_REGISTRY', () => {
+      expect(serverFeatures.length).toBe(58)
     })
 
     it('refuses EVERY server-execution feature when offline with REQUIRES_ONLINE', () => {
