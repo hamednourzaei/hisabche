@@ -28,7 +28,7 @@ import {
 } from '@hisabche/validation'
 import { buildEnqueue } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'
-import { ConflictError, NotFoundError, ValidationError } from '../errors'
+import { ConflictError, NotFoundError, OfflineNotAvailableError, ValidationError } from '../errors'
 import { assertPeriodOpen, reverseLedgerEntry } from './local-ledger'
 import type { LocalDb } from '../db'
 import type { Router } from '../router'
@@ -546,7 +546,7 @@ export function registerInvoiceRoutes(router: Router): void {
     return db.transaction(() => {
       // 0. The books are closed through some day? Then nothing dated inside it is written — the server
       //    refuses it too, and finding that out on sync is after the person was told it was saved.
-      assertPeriodOpen(db, date)
+      assertPeriodOpen(db, date, branchId)
 
       // 1. The number this device gives the invoice.
       //
@@ -1024,6 +1024,11 @@ export function registerInvoiceRoutes(router: Router): void {
     if (!inv) throw new NotFoundError('Invoice', id)
     if (inv.status === 'cancelled') return { success: true }
 
+    // A purchase is un-bought on the SERVER only: whether the goods were already sold, transferred or returned is known there
+    // (other devices consume the same layers), and the server refuses the cancel when a layer was drawn from. Doing it here and
+    // finding out on sync left this device cancelled and the server not.
+    if (inv.type === 'purchase') throw new OfflineNotAvailableError('invoice.delete')
+
     const now = new Date().toISOString()
 
     return db.transaction(() => {
@@ -1047,73 +1052,17 @@ export function registerInvoiceRoutes(router: Router): void {
         )
       }
 
-      // 0. Preflight guards for purchase invoice cancellation
-      if (inv.type === 'purchase') {
-        const layers = db.all<{ id: string; remaining_qty: number; received_qty: number }>(
-          "SELECT id, remaining_qty, received_qty FROM cost_layer WHERE source_type = 'invoice' AND source_id = ? AND workspace_id = ? AND deleted_at IS NULL",
-          [id, workspaceId],
-        )
-        for (const layer of layers) {
-          if (Number(layer.remaining_qty) < Number(layer.received_qty)) {
-            throw new ConflictError(
-              'PURCHASE_CANCEL_LAYERS_CONSUMED',
-              'Cannot cancel purchase invoice: cost layers have already been consumed by subsequent sales',
-            )
-          }
-          const consumed = db.get<{ count: number }>(
-            'SELECT COUNT(*) as count FROM cost_consumption WHERE layer_id = ? AND workspace_id = ?',
-            [layer.id, workspaceId],
-          )
-          if ((consumed?.count ?? 0) > 0) {
-            throw new ConflictError(
-              'PURCHASE_CANCEL_LAYERS_CONSUMED',
-              'Cannot cancel purchase invoice: cost layers have already been consumed by subsequent sales',
-            )
-          }
-        }
-      }
-
-      // 1. Reverse stock movements & product quantities
       const items = db.all<InvoiceItemRow>(
         'SELECT * FROM invoice_item WHERE invoice_id = ? AND workspace_id = ? AND deleted_at IS NULL',
         [id, workspaceId],
       )
 
-      if (inv.type === 'purchase') {
-        for (const item of items) {
-          if (item.product_id && item.quantity > 0) {
-            const baseQuantity = baseQuantityOf(
-              db,
-              workspaceId,
-              item.product_id,
-              Number(item.quantity),
-              item.unit,
-            )
-            const prod = db.get<{ quantity: number }>(
-              'SELECT quantity FROM product WHERE id = ? AND workspace_id = ?',
-              [item.product_id, workspaceId],
-            )
-            if (prod && Number(prod.quantity) - baseQuantity < 0) {
-              throw new ConflictError(
-                'INSUFFICIENT_STOCK_FOR_CANCEL',
-                'Cannot cancel purchase invoice: resulting product stock would become negative',
-              )
-            }
-          }
-        }
-      }
-
       // Determine assigned warehouse from cost records if present
       const assignedWarehouse =
-        (inv.type === 'purchase'
-          ? db.get<{ warehouse_id: string }>(
-              "SELECT warehouse_id FROM cost_layer WHERE source_type = 'invoice' AND source_id = ? AND workspace_id = ? AND warehouse_id IS NOT NULL LIMIT 1",
-              [id, workspaceId],
-            )?.warehouse_id
-          : db.get<{ warehouse_id: string }>(
-              "SELECT warehouse_id FROM cost_consumption WHERE consumer_type = 'invoice' AND consumer_id = ? AND workspace_id = ? AND warehouse_id IS NOT NULL LIMIT 1",
-              [id, workspaceId],
-            )?.warehouse_id) ?? null
+        db.get<{ warehouse_id: string }>(
+          "SELECT warehouse_id FROM cost_consumption WHERE consumer_type = 'invoice' AND consumer_id = ? AND workspace_id = ? AND warehouse_id IS NOT NULL LIMIT 1",
+          [id, workspaceId],
+        )?.warehouse_id ?? null
 
       for (const item of items) {
         const prod = item.product_id
@@ -1132,7 +1081,7 @@ export function registerInvoiceRoutes(router: Router): void {
             Number(item.quantity),
             item.unit,
           )
-          const qtyDelta = inv.type === 'purchase' ? -baseQuantity : baseQuantity
+          const qtyDelta = baseQuantity
 
           db.run(
             'UPDATE product SET quantity = quantity + ?, updated_at = ? WHERE id = ? AND workspace_id = ?',
@@ -1157,29 +1106,21 @@ export function registerInvoiceRoutes(router: Router): void {
       ])
 
       // 2. Release cost layers
-      if (inv.type === 'purchase') {
-        // Delete or zero cost layers created by this purchase
+      // Restore remaining_qty for the layers this sale consumed
+      const consumptions = db.all<{ layer_id: string; quantity: number }>(
+        "SELECT layer_id, quantity FROM cost_consumption WHERE consumer_type = 'invoice' AND consumer_id = ? AND workspace_id = ?",
+        [id, workspaceId],
+      )
+      for (const cons of consumptions) {
         db.run(
-          "UPDATE cost_layer SET remaining_qty = 0, deleted_at = ?, updated_at = ? WHERE source_type = 'invoice' AND source_id = ? AND workspace_id = ?",
-          [now, now, id, workspaceId],
-        )
-      } else {
-        // Restore remaining_qty for consumed layers
-        const consumptions = db.all<{ layer_id: string; quantity: number }>(
-          "SELECT layer_id, quantity FROM cost_consumption WHERE consumer_type = 'invoice' AND consumer_id = ? AND workspace_id = ?",
-          [id, workspaceId],
-        )
-        for (const cons of consumptions) {
-          db.run(
-            'UPDATE cost_layer SET remaining_qty = remaining_qty + ?, updated_at = ? WHERE id = ?',
-            [cons.quantity, now, cons.layer_id],
-          )
-        }
-        db.run(
-          "DELETE FROM cost_consumption WHERE consumer_type = 'invoice' AND consumer_id = ? AND workspace_id = ?",
-          [id, workspaceId],
+          'UPDATE cost_layer SET remaining_qty = remaining_qty + ?, updated_at = ? WHERE id = ?',
+          [cons.quantity, now, cons.layer_id],
         )
       }
+      db.run(
+        "DELETE FROM cost_consumption WHERE consumer_type = 'invoice' AND consumer_id = ? AND workspace_id = ?",
+        [id, workspaceId],
+      )
 
       // 2b. Reverse package credit grants
       const packageGrants = db.all<{
@@ -1257,6 +1198,7 @@ export function registerInvoiceRoutes(router: Router): void {
           date: reversalDate,
           reason: `Cancelled invoice ${inv.invoice_number ?? id}`,
           now,
+          branchId: inv.branch_id,
         })
       }
 
@@ -1275,6 +1217,7 @@ export function registerInvoiceRoutes(router: Router): void {
             date: reversalDate,
             reason: `Cancelled invoice ${inv.invoice_number ?? id}`,
             now,
+            branchId: inv.branch_id,
           })
         }
 

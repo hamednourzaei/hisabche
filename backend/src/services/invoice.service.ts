@@ -1833,6 +1833,8 @@ export class InvoiceService {
   ): Promise<void> {
     // A used package cannot be undone by reversing its sale (refuses BEFORE anything changes).
     await this.assertPackageInvoiceUnused(ctx, invoiceId)
+    // A purchase whose goods were already sold, transferred or returned cannot be un-bought: refuse BEFORE anything changes.
+    await costing.assertReceiptUntouched(ctx, 'invoice', invoiceId)
     await ledger.reverseDocument(ctx, 'invoice', invoiceId, { reason })
     // The cost a sale was given later is its own entry (costUncostedSale); it
     // goes with the sale.
@@ -1848,10 +1850,10 @@ export class InvoiceService {
       if (error) throw new DatabaseError('Failed to return the invoice stock', error)
     }
 
-    // A sale's consumed layers get their quantities back. A purchase's own
-    // layers are NOT unwound here — later sales may already have drawn from
-    // them, which is a revaluation and not a release (same limit as an edit).
+    // A sale's consumed layers get their quantities back. A purchase's own layers are taken out of the valuation, but only
+    // while none of them was drawn from (asserted above, re-checked in the database); an edit keeps its old limit.
     await costing.releaseDocument(ctx, 'invoice', invoiceId)
+    await costing.voidReceipt(ctx, 'invoice', invoiceId)
 
     // M3: Reverse any package credit grants issued by this invoice
     await this.reversePackageCreditsForInvoice(ctx, invoiceId, reason)

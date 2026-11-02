@@ -37,6 +37,14 @@ export interface ConsumptionRow {
   entryDate: string
 }
 
+/** The column is not there yet (a migration the human has not run): 42703 from Postgres, PGRST204 from PostgREST. */
+function isMissingColumn(error: { code?: string; message?: string }, column: string): boolean {
+  return (
+    (error.code === '42703' || error.code === 'PGRST204') &&
+    String(error.message ?? '').includes(column)
+  )
+}
+
 /** A domain refusal raised by our own RAISE EXCEPTION, not a driver failure. */
 export function domainErrorCode(error: unknown): string | null {
   const message = (error as { message?: string } | null)?.message ?? ''
@@ -189,6 +197,50 @@ export class CostingRepository {
 
     const result = (data ?? {}) as Record<string, unknown>
     return { quantity: Number(result.quantity) || 0, totalCost: Number(result.total_cost) || 0 }
+  }
+
+  /**
+   * How many layers of a receipt were already drawn from (and not voided). null = the void schema (cost_layers.voided_at) is not
+   * applied, so no layer can have been voided and nothing here can be refused or voided.
+   */
+  async consumedLayersOfReceipt(
+    ctx: TenancyContext,
+    sourceType: string,
+    sourceId: string,
+  ): Promise<number | null> {
+    const { data, error } = await supabase
+      .from('cost_layers')
+      .select('received_qty, remaining_qty, voided_at')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('source_type', sourceType)
+      .eq('source_id', sourceId)
+    if (error) {
+      if (isMissingColumn(error, 'voided_at')) return null
+      throw new DatabaseError('Failed to read the cost layers of the receipt', error)
+    }
+    return (data ?? []).filter(
+      (layer: Record<string, any>) =>
+        layer.voided_at === null && Number(layer.remaining_qty) < Number(layer.received_qty),
+    ).length
+  }
+
+  async voidReceipt(
+    ctx: TenancyContext,
+    sourceType: string,
+    sourceId: string,
+  ): Promise<{ layers: number; quantity: number } | null> {
+    const { data, error } = await supabase.rpc('inventory_void_receipt', {
+      p_workspace_id: ctx.workspaceId,
+      p_user_id: ctx.userId,
+      p_source_type: sourceType,
+      p_source_id: sourceId,
+    })
+    if (error) {
+      if (['42883', 'PGRST202'].includes(String(error.code ?? ''))) return null
+      throw error
+    }
+    const result = (data ?? {}) as Record<string, unknown>
+    return { layers: Number(result.layers) || 0, quantity: Number(result.quantity) || 0 }
   }
 
   async valuation(workspaceId: string, productId?: string): Promise<ValuationRow[]> {

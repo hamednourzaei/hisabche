@@ -16,6 +16,9 @@
 //     are listed so the gap is counted, not forgotten. The count is asserted so it can only go down.
 // ============================================
 
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 import { readRoutes } from './helpers/route-source'
 
@@ -26,6 +29,8 @@ type Why =
   | 'MEMBER_USE'
   /** the service behind the route decides; the guard here cannot see it — reviewed by family, not per route */
   | 'SERVICE_DECIDES'
+  /** the handler itself calls requireRole(...) or holds(...) before it writes — proven below, per route */
+  | 'CHECKED_IN_HANDLER'
   /** no capability exists for this action yet — a permission-policy decision for the owner */
   | 'NEEDS_OWNER_DECISION'
 
@@ -69,39 +74,39 @@ const LEDGER: Readonly<Record<string, Why>> = {
   'sync.routes.ts DELETE /api/sync/lease': 'SERVICE_DECIDES',
   'workflow.routes.ts POST /api/v1/workflows/instances': 'SERVICE_DECIDES',
   'workflow.routes.ts POST /api/v1/workflows/instances/:id/action': 'SERVICE_DECIDES',
-  'attendance-device.routes.ts POST /api/attendance-devices': 'NEEDS_OWNER_DECISION',
-  'attendance-device.routes.ts POST /api/attendance-devices/:id/key': 'NEEDS_OWNER_DECISION',
-  'attendance-device.routes.ts DELETE /api/attendance-devices/:id': 'NEEDS_OWNER_DECISION',
-  'attendance-device.routes.ts POST /api/attendance-devices/held/accept': 'NEEDS_OWNER_DECISION',
-  'attendance-device.routes.ts PUT /api/attendance-devices/:id/identities': 'NEEDS_OWNER_DECISION',
-  'attendance.routes.ts PUT /api/attendance-sheet': 'NEEDS_OWNER_DECISION',
-  'attendance.routes.ts POST /api/shifts': 'NEEDS_OWNER_DECISION',
-  'attendance.routes.ts PATCH /api/shifts/:id/active': 'NEEDS_OWNER_DECISION',
-  'attendance.routes.ts POST /api/shift-assignments': 'NEEDS_OWNER_DECISION',
-  'attendance.routes.ts POST /api/shift-assignments/:id/cancel': 'NEEDS_OWNER_DECISION',
-  'campaigns.routes.ts POST /api/campaigns': 'NEEDS_OWNER_DECISION',
-  'campaigns.routes.ts POST /api/campaigns/:id/launch': 'NEEDS_OWNER_DECISION',
-  'campaigns.routes.ts POST /api/campaigns/:id/cancel': 'NEEDS_OWNER_DECISION',
-  'custom-fields.routes.ts PATCH /api/custom-fields/definitions/:id/active': 'NEEDS_OWNER_DECISION',
-  'custom-fields.routes.ts POST /api/custom-fields/:entity': 'NEEDS_OWNER_DECISION',
-  'custom-fields.routes.ts PUT /api/custom-fields/:entity/:entityId/values': 'NEEDS_OWNER_DECISION',
-  'escalation.routes.ts PUT /api/v1/workflows/:id/escalation': 'NEEDS_OWNER_DECISION',
-  'notes.routes.ts POST /api/notes': 'NEEDS_OWNER_DECISION',
-  'project.routes.ts POST /api/projects': 'NEEDS_OWNER_DECISION',
-  'project.routes.ts PATCH /api/projects/:id': 'NEEDS_OWNER_DECISION',
-  'project.routes.ts DELETE /api/projects/:id': 'NEEDS_OWNER_DECISION',
-  'project.routes.ts POST /api/projects/:projectId/tasks': 'NEEDS_OWNER_DECISION',
-  'project.routes.ts PATCH /api/tasks/:id': 'NEEDS_OWNER_DECISION',
-  'project.routes.ts DELETE /api/tasks/:id': 'NEEDS_OWNER_DECISION',
-  'project.routes.ts POST /api/projects/:projectId/members': 'NEEDS_OWNER_DECISION',
-  'project.routes.ts DELETE /api/projects/:projectId/members/:memberId': 'NEEDS_OWNER_DECISION',
-  'project.routes.ts POST /api/projects/:projectId/time-entries': 'NEEDS_OWNER_DECISION',
-  'project.routes.ts PATCH /api/time-entries/:id': 'NEEDS_OWNER_DECISION',
-  'project.routes.ts DELETE /api/time-entries/:id': 'NEEDS_OWNER_DECISION',
-  'snapshots.routes.ts POST /api/snapshots': 'NEEDS_OWNER_DECISION',
+  'attendance-device.routes.ts POST /api/attendance-devices': 'CHECKED_IN_HANDLER',
+  'attendance-device.routes.ts POST /api/attendance-devices/:id/key': 'CHECKED_IN_HANDLER',
+  'attendance-device.routes.ts DELETE /api/attendance-devices/:id': 'CHECKED_IN_HANDLER',
+  'attendance-device.routes.ts POST /api/attendance-devices/held/accept': 'CHECKED_IN_HANDLER',
+  'attendance-device.routes.ts PUT /api/attendance-devices/:id/identities': 'CHECKED_IN_HANDLER',
+  'attendance.routes.ts PUT /api/attendance-sheet': 'CHECKED_IN_HANDLER',
+  'attendance.routes.ts POST /api/shifts': 'CHECKED_IN_HANDLER',
+  'attendance.routes.ts PATCH /api/shifts/:id/active': 'CHECKED_IN_HANDLER',
+  'attendance.routes.ts POST /api/shift-assignments': 'CHECKED_IN_HANDLER',
+  'attendance.routes.ts POST /api/shift-assignments/:id/cancel': 'CHECKED_IN_HANDLER',
+  'campaigns.routes.ts POST /api/campaigns': 'CHECKED_IN_HANDLER',
+  'campaigns.routes.ts POST /api/campaigns/:id/launch': 'CHECKED_IN_HANDLER',
+  'campaigns.routes.ts POST /api/campaigns/:id/cancel': 'CHECKED_IN_HANDLER',
+  'custom-fields.routes.ts PATCH /api/custom-fields/definitions/:id/active': 'CHECKED_IN_HANDLER',
+  'custom-fields.routes.ts POST /api/custom-fields/:entity': 'CHECKED_IN_HANDLER',
+  'custom-fields.routes.ts PUT /api/custom-fields/:entity/:entityId/values': 'CHECKED_IN_HANDLER',
+  'escalation.routes.ts PUT /api/v1/workflows/:id/escalation': 'CHECKED_IN_HANDLER',
+  'notes.routes.ts POST /api/notes': 'SERVICE_DECIDES',
+  'project.routes.ts POST /api/projects': 'CHECKED_IN_HANDLER',
+  'project.routes.ts PATCH /api/projects/:id': 'CHECKED_IN_HANDLER',
+  'project.routes.ts DELETE /api/projects/:id': 'CHECKED_IN_HANDLER',
+  'project.routes.ts POST /api/projects/:projectId/tasks': 'MEMBER_USE',
+  'project.routes.ts PATCH /api/tasks/:id': 'MEMBER_USE',
+  'project.routes.ts DELETE /api/tasks/:id': 'MEMBER_USE',
+  'project.routes.ts POST /api/projects/:projectId/members': 'CHECKED_IN_HANDLER',
+  'project.routes.ts DELETE /api/projects/:projectId/members/:memberId': 'CHECKED_IN_HANDLER',
+  'project.routes.ts POST /api/projects/:projectId/time-entries': 'MEMBER_USE',
+  'project.routes.ts PATCH /api/time-entries/:id': 'MEMBER_USE',
+  'project.routes.ts DELETE /api/time-entries/:id': 'MEMBER_USE',
+  'snapshots.routes.ts POST /api/snapshots': 'CHECKED_IN_HANDLER',
 }
 
-const NEEDS_OWNER_DECISION_NOW = 30
+const NEEDS_OWNER_DECISION_NOW = 0
 
 const writesWithoutCapability = () =>
   readRoutes()
@@ -129,6 +134,54 @@ describe('write routes and the capability they need', () => {
   it('the routes waiting for an owner decision can only be fewer, never more', () => {
     const waiting = Object.values(LEDGER).filter((why) => why === 'NEEDS_OWNER_DECISION').length
     expect(waiting).toBeLessThanOrEqual(NEEDS_OWNER_DECISION_NOW)
+  })
+
+  it('every CHECKED_IN_HANDLER route really calls requireRole or holds before it writes', () => {
+    const missing: string[] = []
+    for (const [key, why] of Object.entries(LEDGER)) {
+      if (why !== 'CHECKED_IN_HANDLER') continue
+      const [file, method, path] = key.split(' ') as [string, string, string]
+      const text = readFileSync(join(__dirname, '..', 'routes', file), 'utf8')
+      const starts = [
+        ...text.matchAll(/fastify\.(get|post|put|patch|delete)\(\s*['"`]([^'"`]+)['"`]/g),
+      ]
+      const at = starts.findIndex(
+        (match) => match[1]!.toUpperCase() === method && match[2] === path,
+      )
+      if (at < 0) {
+        missing.push(`${key} (route not found)`)
+        continue
+      }
+      const end = at + 1 < starts.length ? starts[at + 1]!.index : text.length
+      const body = text.slice(starts[at]!.index, end)
+      if (!/requireRole\(|holds\(/.test(body)) missing.push(key)
+    }
+    expect(missing, 'the ledger says the handler checks; the handler does not').toEqual([])
+  })
+
+  it('every project write method stays inside the workspace of the caller', () => {
+    const source = readFileSync(join(__dirname, '..', 'services', 'project.service.ts'), 'utf8')
+    const methods = [
+      'updateProject',
+      'deleteProject',
+      'createTask',
+      'updateTask',
+      'deleteTask',
+      'addMember',
+      'removeMember',
+      'createTimeEntry',
+      'updateTimeEntry',
+      'deleteTimeEntry',
+    ]
+    const open: string[] = []
+    for (const name of methods) {
+      const start = source.indexOf(`async ${name}(`)
+      expect(start, name).toBeGreaterThan(0)
+      const next = source.indexOf('\n  async ', start + 10)
+      const body = source.slice(start, next < 0 ? source.length : next)
+      if (!/workspace_id|assertProjectOwned/.test(body)) open.push(name)
+    }
+    expect(open, 'a project write that never names the workspace').toEqual([])
   })
 
   it('the money and stock families carry no exemption at all', () => {

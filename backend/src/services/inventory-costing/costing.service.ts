@@ -138,6 +138,33 @@ export class CostingService implements CostingPort {
     }
   }
 
+  async assertReceiptUntouched(
+    ctx: TenancyContext,
+    sourceType: CostingSourceType,
+    sourceId: string,
+  ): Promise<void> {
+    const consumed = await this.repo.consumedLayersOfReceipt(ctx, sourceType, sourceId)
+    if (consumed !== null && consumed > 0) throw new ConflictError('PURCHASE_LAYER_CONSUMED')
+  }
+
+  async voidReceipt(
+    ctx: TenancyContext,
+    sourceType: CostingSourceType,
+    sourceId: string,
+  ): Promise<boolean> {
+    try {
+      const result = await this.repo.voidReceipt(ctx, sourceType, sourceId)
+      if (result === null) return false
+      await this.invalidate(ctx.workspaceId)
+      return true
+    } catch (error) {
+      if (domainErrorCode(error) === 'PURCHASE_LAYER_CONSUMED') {
+        throw new ConflictError('PURCHASE_LAYER_CONSUMED')
+      }
+      this.rethrow(error)
+    }
+  }
+
   async getValuation(ctx: TenancyContext, productId?: string): Promise<ValuationRow[]> {
     const cacheKey = `costing:${ctx.workspaceId}:valuation:${productId ?? 'all'}`
 

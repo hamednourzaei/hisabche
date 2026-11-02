@@ -19,6 +19,7 @@ import {
   round2,
   STANDARD_ACCOUNT_FOR_ROLE,
   type AccountRole,
+  type LedgerPeriodLock,
   type PeriodLockDecision,
 } from '@hisabche/validation'
 import type { LocalDb } from '../db'
@@ -32,22 +33,60 @@ const newId = (...parts: string[]) =>
     : derivedId('local', 'row', ...parts, String(Date.now()), String(Math.random()))
 
 /**
- * Is the ledger closed on this day? The decision is the SERVER's own function (`evaluatePeriodLock`); the
- * device only supplies the locks it holds — a company lock, one date in `meta`. No branch locks exist
- * locally, so a branch-scoped server lock is applied on sync, not here.
+ * Is the ledger closed on this day, for this branch? The decision is the SERVER's own function (`evaluatePeriodLock`); the
+ * device only supplies the locks it holds in `meta`: the company lock (`period_lock`) and one per branch
+ * (`period_lock_branch:<branchId>`). A document with no branch meets the company lock alone, as on the server.
  */
-export function periodLockDecision(db: LocalDb, entryDate: string): PeriodLockDecision {
-  const row = db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', ['period_lock'])
-  const locks = row?.value ? [{ branchId: null, lockedUntil: row.value, reason: '' }] : []
-  return evaluatePeriodLock(entryDate, null, locks)
+export const BRANCH_LOCK_PREFIX = 'period_lock_branch:'
+
+export function periodLockDecision(
+  db: LocalDb,
+  entryDate: string,
+  branchId: string | null = null,
+): PeriodLockDecision {
+  const company = db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', ['period_lock'])
+  const locks: LedgerPeriodLock[] = company?.value
+    ? [{ branchId: null, lockedUntil: company.value, reason: '' }]
+    : []
+  if (branchId) {
+    const branch = db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', [
+      BRANCH_LOCK_PREFIX + branchId,
+    ])
+    if (branch?.value) locks.push({ branchId, lockedUntil: branch.value, reason: '' })
+  }
+  return evaluatePeriodLock(entryDate, branchId, locks)
+}
+
+/**
+ * The branch a payment belongs to: the branch of the invoices it settles, when they all share ONE. A payment that settles
+ * invoices of two branches, or none, belongs to no single branch and meets the company lock alone — nothing is guessed.
+ */
+export function branchOfInvoices(
+  db: LocalDb,
+  workspaceId: string,
+  invoiceIds: readonly string[],
+): string | null {
+  if (invoiceIds.length === 0) return null
+  const rows = db.all<{ branch_id: string | null }>(
+    `SELECT branch_id FROM invoice WHERE workspace_id = ? AND id IN (${invoiceIds.map(() => '?').join(', ')})`,
+    [workspaceId, ...invoiceIds],
+  )
+  const branches = new Set(rows.map((row) => row.branch_id))
+  if (branches.size !== 1) return null
+  const [only] = [...branches]
+  return only ?? null
 }
 
 /**
  * Refuse a ledger write dated inside a closed period — the same refusal (409 `ACCOUNTING_PERIOD_LOCKED`) the
  * server gives. Call it BEFORE the first write of the document, inside its transaction, so nothing is left behind.
  */
-export function assertPeriodOpen(db: LocalDb, entryDate: string): void {
-  const decision = periodLockDecision(db, entryDate)
+export function assertPeriodOpen(
+  db: LocalDb,
+  entryDate: string,
+  branchId: string | null = null,
+): void {
+  const decision = periodLockDecision(db, entryDate, branchId)
   if (decision.locked) {
     throw new ConflictError(
       'ACCOUNTING_PERIOD_LOCKED',
@@ -112,6 +151,8 @@ export interface DocumentDraft {
   date: string
   description: string
   reference: string
+  /** The branch the document belongs to, when it has one: that branch's lock applies as well as the company's. */
+  branchId?: string | null | undefined
   lines: ReadonlyArray<{ accountId: string; debit: number; credit: number }>
 }
 
@@ -130,7 +171,7 @@ export function postDocument(db: LocalDb, ctx: LocalContext, draft: DocumentDraf
   )
   if (existing) return { status: 'already_posted', entryId: existing.id }
 
-  assertPeriodOpen(db, draft.date.slice(0, 10))
+  assertPeriodOpen(db, draft.date.slice(0, 10), draft.branchId ?? null)
   const lines = draft.lines.filter((line) => line.debit !== 0 || line.credit !== 0)
   const debit = round2(lines.reduce((sum, line) => sum + line.debit, 0))
   const credit = round2(lines.reduce((sum, line) => sum + line.credit, 0))
@@ -200,7 +241,7 @@ export function reverseLedgerEntry(
   db: LocalDb,
   ctx: LocalContext,
   entryId: string,
-  options: { date: string; reason: string; now: string },
+  options: { date: string; reason: string; now: string; branchId?: string | null | undefined },
 ): LedgerReversal | null {
   const entry = db.get<{
     id: string
@@ -215,7 +256,7 @@ export function reverseLedgerEntry(
   if (!entry || entry.status !== 'posted') return null
 
   const date = options.date.slice(0, 10)
-  assertPeriodOpen(db, date)
+  assertPeriodOpen(db, date, options.branchId ?? null)
 
   const lines = db.all<{ account_id: string; debit: number; credit: number }>(
     `SELECT account_id, debit, credit FROM journal_line

@@ -20,6 +20,7 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
+import { ForbiddenError } from '../errors/auth.error'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
@@ -29,12 +30,19 @@ import {
   customFieldsService,
   type CustomFieldEntity,
 } from '../services/extensions/custom-fields.service'
+import { holds, type Capability } from '../services/authorization'
 import { requireRole } from '../services/tenancy.service'
 
 const MEMBER = [authenticate, requireWorkspaceContext]
 const entity = z.enum(
   Object.keys(CUSTOM_FIELD_ENTITIES) as [CustomFieldEntity, ...CustomFieldEntity[]],
 )
+// Writing a custom field's value writes the record it sits on, so it needs what writing that record needs.
+const WRITE_CAPABILITY: Record<CustomFieldEntity, Capability> = {
+  customer: 'customer.write',
+  supplier: 'customer.write',
+  product: 'product.write',
+}
 const entityParams = z.object({ entity })
 const recordParams = z.object({ entity, entityId: z.string().uuid() })
 
@@ -139,6 +147,8 @@ export async function customFieldRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply) => {
       try {
         const params = recordParams.parse(request.params)
+        const needed = WRITE_CAPABILITY[params.entity]
+        if (!holds(request.tenancy, needed)) throw new ForbiddenError(`Requires ${needed}`)
         const { values } = z.object({ values: z.record(z.unknown()) }).parse(request.body)
         return reply.send(
           await customFieldsService.write(request.tenancy, params.entity, params.entityId, values),

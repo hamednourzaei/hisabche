@@ -25,7 +25,7 @@ import { buildEnqueue } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import type { Router } from '../router'
-import { assertPeriodOpen, reverseLedgerEntry } from './local-ledger'
+import { assertPeriodOpen, BRANCH_LOCK_PREFIX, reverseLedgerEntry } from './local-ledger'
 import { profitSources } from './report-sources'
 import type { RouteHandlerContext } from '../types'
 
@@ -553,16 +553,27 @@ export function registerAccountingRoutes(router: Router): void {
   router.get('/accounting/period-lock', (c: RouteHandlerContext) => {
     const { db } = c
     const row = db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', ['period_lock'])
-    return { lockedUntil: row?.value ?? null }
+    const branchLocks = db
+      .all<{ key: string; value: string }>('SELECT key, value FROM meta WHERE key LIKE ?', [
+        BRANCH_LOCK_PREFIX + '%',
+      ])
+      .map((entry) => ({
+        branchId: entry.key.slice(BRANCH_LOCK_PREFIX.length),
+        lockedUntil: entry.value,
+      }))
+    return { lockedUntil: row?.value ?? null, branchLocks }
   })
 
   router.put('/accounting/period-lock', (c: RouteHandlerContext) => {
     const { db, ctx, body } = c
     requireCapability(ctx, 'ledger.lock_period')
     const raw = (body || {}) as Record<string, unknown>
+    // One lock per scope: the company's (no branchId) or one branch's. Setting or clearing one never touches the others.
+    const branchId = typeof raw.branchId === 'string' && raw.branchId ? raw.branchId : null
+    const metaKey = branchId ? BRANCH_LOCK_PREFIX + branchId : 'period_lock'
     if (!raw.lockedUntil) {
-      db.run('DELETE FROM meta WHERE key = ?', ['period_lock'])
-      return { lockedUntil: null }
+      db.run('DELETE FROM meta WHERE key = ?', [metaKey])
+      return { lockedUntil: null, branchId }
     }
 
     const isoDate = String(raw.lockedUntil).includes('T')
@@ -577,8 +588,8 @@ export function registerAccountingRoutes(router: Router): void {
     }
     const lockedUntil = parsed.data.lockedUntil.slice(0, 10)
 
-    db.run('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)', ['period_lock', lockedUntil])
+    db.run('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)', [metaKey, lockedUntil])
 
-    return { lockedUntil }
+    return { lockedUntil, branchId }
   })
 }

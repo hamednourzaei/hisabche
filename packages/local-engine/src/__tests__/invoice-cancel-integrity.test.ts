@@ -67,8 +67,9 @@ describe('offline invoice cancel keeps cost and ledger intact', () => {
 
     const cancel = await engine.request({ method: 'POST', path: `/invoices/${purchase.id}/cancel` })
 
-    expect(cancel.status).toBe(409)
-    expect((cancel.data as { code: string }).code).toBe('PURCHASE_CANCEL_LAYERS_CONSUMED')
+    // A purchase is un-bought on the server only (it alone knows what other devices drew from the layers).
+    expect(cancel.status).toBe(501)
+    expect((cancel.data as { code: string }).code).toBe('OFFLINE_NOT_AVAILABLE')
     // Nothing moved: the layer is whole, the stock is what the sale left.
     const layer = db.get<{ remaining_qty: number; deleted_at: string | null }>(
       "SELECT remaining_qty, deleted_at FROM cost_layer WHERE source_type = 'invoice' AND source_id = ?",
@@ -82,16 +83,29 @@ describe('offline invoice cancel keeps cost and ledger intact', () => {
     ).toBe(6)
   })
 
-  it('still cancels a purchase nobody has sold from', async () => {
+  it('does not cancel a purchase offline, even one nobody has sold from, and changes nothing', async () => {
     const { product, purchase } = await productWith(10)
 
     const cancel = await engine.request({ method: 'POST', path: `/invoices/${purchase.id}/cancel` })
+    const removed = await engine.request({ method: 'DELETE', path: `/invoices/${purchase.id}` })
 
-    expect(cancel.status).toBeLessThan(300)
+    for (const answer of [cancel, removed]) {
+      expect(answer.status).toBe(501)
+      expect((answer.data as { code: string }).code).toBe('OFFLINE_NOT_AVAILABLE')
+    }
     expect(
       db.get<{ quantity: number }>('SELECT quantity FROM product WHERE id = ?', [product.id])
         ?.quantity,
-    ).toBe(0)
+    ).toBe(10)
+    expect(
+      db.get<{ remaining_qty: number; deleted_at: string | null }>(
+        "SELECT remaining_qty, deleted_at FROM cost_layer WHERE source_type = 'invoice' AND source_id = ?",
+        [purchase.id],
+      ),
+    ).toEqual({ remaining_qty: 10, deleted_at: null })
+    expect(
+      db.get<{ status: string }>('SELECT status FROM invoice WHERE id = ?', [purchase.id])?.status,
+    ).not.toBe('cancelled')
   })
 
   it('cancelling a paid sale reverses the payment ledger entry and keeps the allocation row', async () => {

@@ -67,6 +67,29 @@ export function onActiveWorkspaceChange(listener: Listener): () => void {
   }
 }
 
+/**
+ * Resolves with the workspace once one is published, or with null after
+ * `timeoutMs`. A request that went out before the app knew its business (the
+ * first burst after a fresh sign-in, or after the saved choice was cleared) is
+ * refused by the server when the person has more than one; this lets it wait
+ * for the answer and be sent again with the header, instead of staying a 403.
+ */
+export function whenWorkspaceKnown(timeoutMs: number): Promise<string | null> {
+  if (activeWorkspaceId) return Promise.resolve(activeWorkspaceId)
+  return new Promise((resolve) => {
+    const stop = onActiveWorkspaceChange((id) => {
+      if (!id) return
+      clearTimeout(timer)
+      stop()
+      resolve(id)
+    })
+    const timer = setTimeout(() => {
+      stop()
+      resolve(null)
+    }, timeoutMs)
+  })
+}
+
 /** Test-only reset. */
 export function __resetActiveWorkspaceForTests(): void {
   activeWorkspaceId = null

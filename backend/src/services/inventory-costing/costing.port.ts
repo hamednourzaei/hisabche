@@ -68,6 +68,26 @@ export interface CostingPort {
     consumerId: string,
   ): Promise<{ quantity: number; totalCost: number }>
 
+  /**
+   * Refuse (ConflictError PURCHASE_LAYER_CONSUMED) when any cost layer of this receipt was already drawn from. Reads only;
+   * called BEFORE a cancel changes anything, so a refusal leaves the document exactly as it was.
+   */
+  assertReceiptUntouched(
+    ctx: TenancyContext,
+    sourceType: CostingSourceType,
+    sourceId: string,
+  ): Promise<void>
+
+  /**
+   * Take a cancelled receipt's layers out of the valuation (remaining 0, rows kept). Atomic and re-checked in the database;
+   * a retry is a no-op. Returns false when the database function is not applied yet — the caller then behaves as before.
+   */
+  voidReceipt(
+    ctx: TenancyContext,
+    sourceType: CostingSourceType,
+    sourceId: string,
+  ): Promise<boolean>
+
   /** Σ(remaining × unit cost). What the stock account must agree with. */
   getValuation(ctx: TenancyContext, productId?: string): Promise<ValuationRow[]>
 }

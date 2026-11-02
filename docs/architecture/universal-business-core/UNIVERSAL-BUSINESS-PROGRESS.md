@@ -1,6 +1,6 @@
 # UNIVERSAL BUSINESS CORE — PROGRESS (v51.0-NEAR9-UNIFIED)
 
-**Last updated**: 2026-11-01 · **Current milestone**: M0 **PASSED** · M1.0 (owner decisions OD-1, OD-2 applied) **DONE** · **M1.1–M1.5** `IMPLEMENTED_NOT_LIVE_VERIFIED` · **M2.1 offering_type** `IMPLEMENTED_NOT_LIVE_VERIFIED` · **M2.2 mixed_commerce** `IMPLEMENTED_NOT_LIVE_VERIFIED` · **Next**: M3 (Package Credit & Entitlement Ledger)
+**Last updated**: 2026-11-01 · **Current milestone**: M0 **PASSED** · M1.0 (owner decisions OD-1, OD-2 applied) **DONE** · **M1.1–M1.5** `IMPLEMENTED_NOT_LIVE_VERIFIED` (v51.2 closure: AUDIT §19; v52.0 gate: AUDIT §20 and PRODUCTION-DEPLOY-CHECKLIST.md) · **M2.1 offering_type** `IMPLEMENTED_NOT_LIVE_VERIFIED` · **M2.2 mixed_commerce** `IMPLEMENTED_NOT_LIVE_VERIFIED` · **Next**: M3 (Package Credit & Entitlement Ledger)
 
 Canonical documents for this program: this directory. `docs/architecture/UNIFIED-CORE-AUDIT.md` and `UNIFIED-CORE-PROGRESS.md`
 (a parallel set written under another label) are **history**; where they conflict with this file, this file wins.

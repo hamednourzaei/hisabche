@@ -32,7 +32,7 @@ import {
   type OpenInvoice,
 } from '@hisabche/validation'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
-import { assertPeriodOpen, reverseLedgerEntry } from './local-ledger'
+import { assertPeriodOpen, branchOfInvoices, reverseLedgerEntry } from './local-ledger'
 import { requireCapability } from '../auth'
 import { buildEnqueue } from '@hisabche/app-bridge'
 import type { Router } from '../router'
@@ -233,6 +233,26 @@ export function registerPaymentRoutes(router: Router): void {
 
     const rawAllocations = data.allocations || []
 
+    // The ONE rate this payment is booked at — the server's rule (resolveBookingRate): the body, else the frozen rate of the
+    // invoices it names. The till movement and the ledger both read it; a second reading of the body is how a dollar payment
+    // went into the drawer at 1 while the books had it at 70. null = no rate, refused by the caller.
+    const bookingRateOf = (): number | null => {
+      const namedRates = rawAllocations.length
+        ? db.all<{ exchange_rate: number | null }>(
+            `SELECT exchange_rate FROM invoice WHERE workspace_id = ? AND id IN (${rawAllocations
+              .map(() => '?')
+              .join(', ')})`,
+            [workspaceId, ...rawAllocations.map((a) => a.invoiceId)],
+          )
+        : []
+      return resolveBookingRate({
+        currency,
+        bookCurrency: baseCurrency,
+        given: data.exchangeRate,
+        invoiceRates: namedRates.map((row) => row.exchange_rate),
+      })
+    }
+
     // The till this cash goes into (money in) or comes out of (money out): a
     // REQUEST, read and checked here. Cash only; the till must be open; what
     // moves is stored in the till's own currency (payments.pos_session_id /
@@ -249,20 +269,31 @@ export function registerPaymentRoutes(router: Router): void {
       // Closed, being counted, or suspended: its count must not move under it.
       if (row.status !== 'open')
         throw new ConflictError('PAYMENT_TILL_NOT_OPEN', 'PAYMENT_TILL_NOT_OPEN')
+      const tillRate = bookingRateOf()
+      if (tillRate === null) throw new ValidationError('PAYMENT_EXCHANGE_RATE_REQUIRED')
       const amountMinor = tillAmountMinor({
         amount,
         currency,
         tillCurrency: row.currency ?? baseCurrency,
         bookCurrency: baseCurrency,
-        rate: Number(data.exchangeRate) > 0 ? Number(data.exchangeRate) : 1,
+        rate: tillRate,
       })
       if (amountMinor === null) throw new ValidationError('PAYMENT_TILL_CURRENCY_MISMATCH')
       till = { sessionId: row.id, amountMinor }
     }
 
     return db.transaction(() => {
-      // 0. A payment dated inside a closed period is refused, as on the server.
-      assertPeriodOpen(db, entryDate)
+      // 0. A payment dated inside a closed period is refused, as on the server — the company's lock, and the lock of the
+      //    branch of the invoices it settles.
+      assertPeriodOpen(
+        db,
+        entryDate,
+        branchOfInvoices(
+          db,
+          workspaceId,
+          rawAllocations.map((a) => a.invoiceId),
+        ),
+      )
 
       // 1. Fetch target open invoices if allocations requested
       if (rawAllocations.length > 0) {
@@ -333,20 +364,7 @@ export function registerPaymentRoutes(router: Router): void {
 
       // 1b. The rate this payment is booked at — the server's rule, decided BEFORE anything is written.
       //     No rate = refused; a foreign payment is never booked as if it were the books currency.
-      const namedRates = rawAllocations.length
-        ? db.all<{ exchange_rate: number | null }>(
-            `SELECT exchange_rate FROM invoice WHERE workspace_id = ? AND id IN (${rawAllocations
-              .map(() => '?')
-              .join(', ')})`,
-            [workspaceId, ...rawAllocations.map((a) => a.invoiceId)],
-          )
-        : []
-      const bookingRate = resolveBookingRate({
-        currency,
-        bookCurrency: baseCurrency,
-        given: data.exchangeRate,
-        invoiceRates: namedRates.map((row) => row.exchange_rate),
-      })
+      const bookingRate = bookingRateOf()
       if (bookingRate === null) throw new ValidationError('PAYMENT_EXCHANGE_RATE_REQUIRED')
 
       // 2. Generate payment number
@@ -594,6 +612,11 @@ export function registerPaymentRoutes(router: Router): void {
           date: now.slice(0, 10),
           reason: parsed.data.reason,
           now,
+          branchId: branchOfInvoices(
+            db,
+            workspaceId,
+            allocations.map((a) => a.invoice_id),
+          ),
         })
       }
 

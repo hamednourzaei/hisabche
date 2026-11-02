@@ -19,6 +19,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { sendFailure } from '../errors/http-failure'
+import { requireRole } from '../services/tenancy.service'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -76,6 +77,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        requireRole(request.tenancy, 'manager')
         const data = createProjectSchema.parse(request.body)
         const project = await projectService.createProject(request.tenancy, data)
         await clearCache(`projects:${request.tenancy.workspaceId}:*`)
@@ -124,6 +126,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        requireRole(request.tenancy, 'manager')
         const { id } = request.params as { id: string }
         const data = updateProjectSchema.parse(request.body)
         const project = await projectService.updateProject(request.tenancy, id, data)
@@ -148,6 +151,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        requireRole(request.tenancy, 'manager')
         const { id } = request.params as { id: string }
         const result = await projectService.deleteProject(request.tenancy, id)
         await clearCache(`project:${request.tenancy.workspaceId}:${id}`)
@@ -309,6 +313,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        requireRole(request.tenancy, 'manager')
         const { projectId } = request.params as { projectId: string }
         const body = (request.body as Record<string, unknown>) || {}
         const data = createProjectMemberSchema.parse({ ...body, projectId })
@@ -335,6 +340,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        requireRole(request.tenancy, 'manager')
         const { projectId, memberId } = request.params as { projectId: string; memberId: string }
         const result = await projectService.removeMember(request.tenancy, projectId, memberId)
         await clearCache(`project-members:${request.tenancy.workspaceId}:${projectId}:*`)

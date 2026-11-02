@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosError, type AxiosAdapter } from 'axios'
 import { getToken, tokenReady, setOfflineTokenMode } from './tokenProvider'
-import { getActiveWorkspaceId } from './active-workspace'
+import { getActiveWorkspaceId, whenWorkspaceKnown } from './active-workspace'
 import { endpointAvailability } from '@hisabche/validation'
 import {
   activeBaseUrl,
@@ -655,6 +655,33 @@ apiClient.interceptors.response.use(
           original.headers = original.headers ?? {}
           ;(original.headers as Record<string, string>).Authorization = `Bearer ${token}`
           return apiClient.request(original)
+        })
+      }
+    }
+
+    // ─── Sent before the business was known → send again once it is ─────────
+    // The server refuses a request without `x-workspace-id` when the person has
+    // more than one business (WORKSPACE_FORBIDDEN, 403). The first burst after a
+    // fresh sign-in leaves before the workspace list has answered, so those
+    // reads stayed 403 until a manual reload. Only a request that carried NO
+    // workspace is replayed, once; a stale id the server rejected is not.
+    {
+      const sent = error.config as
+        (typeof error.config & { _retriedWithWorkspace?: boolean }) | undefined
+      if (
+        error.response?.status === 403 &&
+        responseData?.code === 'WORKSPACE_FORBIDDEN' &&
+        sent &&
+        !sent._retriedWithWorkspace &&
+        !sent.headers?.[WORKSPACE_HEADER]
+      ) {
+        sent._retriedWithWorkspace = true
+        // Replayed even when no workspace arrives: the flag above makes that
+        // second refusal take the normal path below, wrapped like any other error.
+        return whenWorkspaceKnown(5000).then((workspace) => {
+          sent.headers = sent.headers ?? {}
+          if (workspace) (sent.headers as Record<string, string>)[WORKSPACE_HEADER] = workspace
+          return apiClient.request(sent)
         })
       }
     }
